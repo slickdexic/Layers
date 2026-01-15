@@ -352,9 +352,11 @@ Keep this doc aligned with code. When you change public behavior (API, schema, m
 
 **IMPORTANT:** Before committing changes that affect version, metrics, features, or API, consult `docs/DOCUMENTATION_UPDATE_GUIDE.md` for the complete checklist of files that must be updated.
 
+⚠️ **CRITICAL: Don't forget `Mediawiki-Extension-Layers.mediawiki`** — This file is the source for the MediaWiki.org extension page and is frequently overlooked during updates!
+
 Key documents that frequently need updates:
 - `README.md` — Main project documentation
-- `Mediawiki-Extension-Layers.txt` — MediaWiki.org extension page content
+- `Mediawiki-Extension-Layers.mediawiki` — MediaWiki.org extension page content ⚠️
 - `CHANGELOG.md` + `wiki/Changelog.md` — Version history (must mirror each other)
 - `wiki/Home.md` — GitHub Wiki homepage with metrics
 - `codebase_review.md` and `improvement_plan.md` — Technical assessment documents

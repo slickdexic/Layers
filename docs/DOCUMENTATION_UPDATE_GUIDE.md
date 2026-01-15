@@ -4,7 +4,7 @@
 
 This guide ensures all documentation stays synchronized when making changes to the Layers extension. **This is a MANDATORY checklist before every release.**
 
-> ⚠️ **CRITICAL:** Version 1.5.1 was released with outdated documentation in wiki/Home.md, wiki/Installation.md, and Mediawiki-Extension-Layers.txt. This guide exists to prevent that from happening again.
+> ⚠️ **CRITICAL:** Version 1.5.1 was released with outdated documentation in wiki/Home.md, wiki/Installation.md, and Mediawiki-Extension-Layers.mediawiki. This guide exists to prevent that from happening again.
 
 ---
 
@@ -45,7 +45,7 @@ grep -rn --include="*.md" --include="*.txt" "1.5.1" . | grep -v node_modules | g
 | 2 | `package.json` | `"version"` field | `grep version package.json` |
 | 3 | `README.md` | Version line, metrics | `grep -n "Version:" README.md` |
 | 4 | `CHANGELOG.md` | New version section | `head -20 CHANGELOG.md` |
-| 5 | `Mediawiki-Extension-Layers.txt` | `\|version =`, test counts | `grep -n "version\|Stability" Mediawiki-Extension-Layers.txt` |
+| 5 | `Mediawiki-Extension-Layers.mediawiki` | `\|version =`, test counts | `grep -n "version\|Stability" Mediawiki-Extension-Layers.mediawiki` |
 | 6 | `wiki/Home.md` | "What's New", Project Status table | `grep -n "Version\|Tests" wiki/Home.md` |
 | 7 | `wiki/Installation.md` | Branch version table | `grep -n "main\|REL1_43" wiki/Installation.md` |
 | 8 | `wiki/Changelog.md` | Mirror of CHANGELOG.md | `head -30 wiki/Changelog.md` |
@@ -63,7 +63,7 @@ grep -rn --include="*.md" --include="*.txt" "1.5.1" . | grep -v node_modules | g
 | File | What to Update |
 |------|----------------|
 | `README.md` | Badge + "Quality Metrics" table |
-| `Mediawiki-Extension-Layers.txt` | "Technical Details" section |
+| `Mediawiki-Extension-Layers.mediawiki` | "Technical Details" section |
 | `wiki/Home.md` | Badge + "Project Status" table |
 | `codebase_review.md` | Multiple metrics sections |
 | `improvement_plan.md` | "Test Summary" section |
@@ -92,7 +92,7 @@ When adding or removing drawing tools, update these 8 files:
 | File | What to Update |
 |------|----------------|
 | `README.md` | Drawing Tools table |
-| `Mediawiki-Extension-Layers.txt` | "Drawing Tools" table, description count |
+| `Mediawiki-Extension-Layers.mediawiki` | "Drawing Tools" table, description count |
 | `wiki/Home.md` | Highlights section if applicable |
 | `wiki/Drawing-Tools.md` | Complete tool documentation |
 | `wiki/Quick-Start-Guide.md` | Tool count mentions |
@@ -116,7 +116,7 @@ When adding or removing drawing tools, update these 8 files:
 | `extension.json` | Config defaults |
 | `wiki/Configuration-Reference.md` | All config options |
 | `wiki/Installation.md` | Common configuration examples |
-| `Mediawiki-Extension-Layers.txt` | `|parameters =` list |
+| `Mediawiki-Extension-Layers.mediawiki` | `|parameters =` list |
 | `.github/copilot-instructions.md` | Configuration section |
 | `README.md` | Configuration section |
 
@@ -127,7 +127,7 @@ When adding or removing drawing tools, update these 8 files:
 | `extension.json` | Rights definitions |
 | `wiki/Permissions.md` | Full permissions documentation |
 | `wiki/Installation.md` | Permission setup examples |
-| `Mediawiki-Extension-Layers.txt` | `|rights =` list |
+| `Mediawiki-Extension-Layers.mediawiki` | `|rights =` list |
 | `README.md` | Permissions section if mentioned |
 
 ---
@@ -144,7 +144,7 @@ Work through this checklist **in order** for every release:
 □ 5. Run tests: npm run test:js -- --coverage
 □ 6. Record metrics: _____ tests, ___% statement coverage
 □ 7. Update README.md (version line, badge, metrics table)
-□ 8. Update Mediawiki-Extension-Layers.txt (|version=, |update=, test count)
+□ 8. Update Mediawiki-Extension-Layers.mediawiki (|version=, |update=, test count)
 □ 9. Update wiki/Home.md (What's New section, Project Status table)
 □ 10. Update wiki/Installation.md (branch version table)
 □ 11. Update codebase_review.md (version header, metrics)
@@ -164,7 +164,7 @@ Work through this checklist **in order** for every release:
 | Updating CHANGELOG.md but not wiki/Changelog.md | Wiki shows old info | They must mirror each other |
 | Updating test count in one file only | 5 other files are wrong | Use the "6 files" list |
 | Updating version in extension.json only | 11 other files are wrong | Use the "12 files" list |
-| Forgetting Mediawiki-Extension-Layers.txt | MediaWiki.org page is stale | It's file #5 in checklist |
+| Forgetting Mediawiki-Extension-Layers.mediawiki | MediaWiki.org page is stale | It's file #5 in checklist |
 | Releasing without grep verification | Old versions slip through | Always run step #14 |
 
 ---
@@ -178,7 +178,7 @@ When a user asks to update documentation or prepare a release:
 3. **ALWAYS** run grep verification for the old version number
 4. **ALWAYS** update wiki/Home.md when updating README.md
 5. **ALWAYS** update wiki/Changelog.md when updating CHANGELOG.md
-6. **ALWAYS** update Mediawiki-Extension-Layers.txt — it's often forgotten
+6. **ALWAYS** update Mediawiki-Extension-Layers.mediawiki — it's often forgotten
 
 When asked for a code review or metrics update:
 - Run `npm run test:js -- --coverage` to get real numbers
@@ -190,7 +190,7 @@ When asked for a code review or metrics update:
 
 ### Primary (Must Always Be Accurate)
 1. `README.md` — First thing users see
-2. `Mediawiki-Extension-Layers.txt` — MediaWiki.org page source
+2. `Mediawiki-Extension-Layers.mediawiki` — MediaWiki.org page source
 3. `CHANGELOG.md` — Version history
 4. `wiki/Home.md` — GitHub Wiki homepage
 
