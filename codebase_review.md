@@ -69,7 +69,7 @@ The extension is **production-ready** with excellent security, comprehensive tes
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| Total PHP files | **32** | ✅ Verified |
+| Total PHP files | **33** | ✅ Verified |
 | Total PHP lines | **~11,828** | ✅ Verified |
 | PHPCS errors | **0** | ✅ Clean (5 line ending issues auto-fixed) |
 | PHPUnit tests | - | Requires MediaWiki test environment |

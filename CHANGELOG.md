@@ -34,6 +34,12 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Test Coverage** — Branch coverage improved from 84.92% to 84.98%
   - Added 9 new tests for GradientEditor edge cases
 
+### Refactored
+- **ForeignFileHelperTrait** — Extracted duplicate code from 4 API modules into shared trait
+  - New `src/Api/Traits/ForeignFileHelperTrait.php` with `isForeignFile()` and `getFileSha1()` methods
+  - Eliminates ~90 lines of duplicated code across ApiLayersSave, ApiLayersInfo, ApiLayersDelete, ApiLayersRename
+  - Consistent InstantCommons/foreign file handling across all API endpoints
+
 ### Tests
 - **Test Count** — 9,469 tests passing (147 suites)
 - Added 4 CanvasManager tests for autoNumber property and finishDrawing behavior

@@ -22,7 +22,7 @@ The extension is **production-ready and fully functional** with **excellent secu
 | **Testing** | ✅ Excellent | 9,469 tests, 95.05% statement, 84.98% branch |
 | **Code Quality** | ✅ Good | No TODOs, no console.log, proper error handling |
 | **God Classes** | ✅ 16 Files | 32% of codebase in files >1,000 lines ([Refactoring Plan](docs/GOD_CLASS_REFACTORING_PLAN.md)) |
-| **Codebase Size** | ✅ Under Limit | ~69,090 JS lines (115 files), ~11,828 PHP lines (32 files) |
+| **Codebase Size** | ✅ Under Limit | ~69,090 JS lines (115 files), ~11,743 PHP lines (33 files) |
 | **Code Review** | ✅ Complete | All 28 issues resolved |
 
 ---
@@ -33,7 +33,7 @@ The extension is **production-ready and fully functional** with **excellent secu
 |--------|----------------|--------|
 | JS files | **115** | ✅ Verified |
 | JS lines | **~69,090** | ✅ Verified |
-| PHP files | **32** | ✅ Verified |
+| PHP files | **33** | ✅ Verified |
 | PHP lines | **~11,828** | ✅ Verified |
 | Tests passing | **9,469** | 147 suites |
 | Statement coverage | **95.05%** | ✅ Excellent |
