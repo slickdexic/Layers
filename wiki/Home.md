@@ -157,6 +157,7 @@ See [[Changelog]] for full details.
 | **Release Date** | January 2026 |
 | **Test Suites** | 147 |
 | **Total Tests** | 9,469 |
+| **PHPUnit Test Files** | 23 |
 | **Statement Coverage** | 95% |
 | **Branch Coverage** | 85% |
 | **JavaScript Files** | 115 |
