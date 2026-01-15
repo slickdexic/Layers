@@ -246,7 +246,8 @@ tests/phpunit/
     ├── Hooks/
     │   └── Processors/        # Hook processor unit tests
     ├── Logging/
-    │   └── LoggerAwareTraitTest.php
+    │   ├── LoggerAwareTraitTest.php
+    │   └── StaticLoggerAwareTraitTest.php
     ├── Security/
     │   └── RateLimiterTest.php
     ├── Validation/            # Validation class tests

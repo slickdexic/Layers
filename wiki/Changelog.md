@@ -25,6 +25,7 @@ Version history for the Layers extension.
 
 ### Tests
 - **Test Count** — 9,469 tests passing (147 suites)
+- Added PHPUnit tests for StaticLoggerAwareTrait (10 test methods)
 - Added PHPUnit tests for ForeignFileHelperTrait and ApiLayersRename validation
 
 ---
