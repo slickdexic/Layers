@@ -42,6 +42,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Tests
 - **Test Count** — 9,469 tests passing (147 suites)
+- Added PHPUnit tests for `ForeignFileHelperTrait` (8 test methods covering foreign file detection and SHA1 fallback)
+- Added PHPUnit tests for `ApiLayersRename` set name validation (12 test methods covering valid/invalid patterns)
 - Added 4 CanvasManager tests for autoNumber property and finishDrawing behavior
 - Added 5 ToolbarStyleControls tests for marker controls UI and visibility
 - Added 9 GradientEditor tests for edge cases and defensive code
