@@ -52,7 +52,9 @@ src/
 │   ├── ApiLayersInfo.php      # Read layer data
 │   ├── ApiLayersSave.php      # Save layer data
 │   ├── ApiLayersDelete.php    # Delete layer sets
-│   └── ApiLayersRename.php    # Rename layer sets
+│   ├── ApiLayersRename.php    # Rename layer sets
+│   └── Traits/
+│       └── ForeignFileHelperTrait.php  # Shared foreign file detection
 ├── Action/
 │   └── EditLayersAction.php   # "Edit Layers" tab action
 ├── Database/
@@ -69,7 +71,9 @@ src/
 └── Validation/
     ├── ColorValidator.php     # Color validation
     ├── ServerSideLayerValidator.php # Layer validation
-    └── TextSanitizer.php      # Text sanitization
+    ├── SetNameSanitizer.php   # Set name sanitization
+    ├── TextSanitizer.php      # Text sanitization
+    └── ValidationResult.php   # Validation result container
 ```
 
 ### API Modules
