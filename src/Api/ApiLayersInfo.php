@@ -12,11 +12,13 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use ApiMain;
 use ApiResult;
+use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
 class ApiLayersInfo extends ApiBase {
+	use ForeignFileHelperTrait;
 	use LayersContinuationTrait;
 
 	/**
@@ -493,55 +495,5 @@ class ApiLayersInfo extends ApiBase {
 	 */
 	protected function getTitleFromFilename( string $filename ) {
 		return Title::makeTitleSafe( NS_FILE, $filename );
-	}
-
-	/**
-	 * Get a stable SHA1 identifier for a file.
-	 *
-	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
-	 * we generate a stable fallback identifier based on the filename.
-	 * Uses the DB key form for consistency with ApiLayersSave.php.
-	 *
-	 * @param mixed $file File object
-	 * @param string $imgName The image name (DB key form) to use for fallback hash
-	 * @return string SHA1 hash or fallback identifier
-	 */
-	private function getFileSha1( $file, string $imgName ): string {
-		$sha1 = $file->getSha1();
-		if ( !empty( $sha1 ) ) {
-			return $sha1;
-		}
-
-		// Check if this is a foreign file
-		if ( $this->isForeignFile( $file ) ) {
-			// Use a hash of the DB key for consistency with ApiLayersSave
-			return 'foreign_' . sha1( $imgName );
-		}
-
-		return $sha1 ?? '';
-	}
-
-	/**
-	 * Check if a file is from a foreign repository (like InstantCommons)
-	 *
-	 * @param mixed $file File object
-	 * @return bool True if the file is from a foreign repository
-	 */
-	private function isForeignFile( $file ): bool {
-		// Check if file is a ForeignAPIFile or ForeignDBFile
-		$className = get_class( $file );
-		if ( strpos( $className, 'Foreign' ) !== false ) {
-			return true;
-		}
-
-		// Check if the file's repository is not local
-		if ( method_exists( $file, 'getRepo' ) ) {
-			$repo = $file->getRepo();
-			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 }
