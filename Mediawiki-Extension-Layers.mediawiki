@@ -7,8 +7,8 @@
 |type3           = page action
 |type4           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.11
-|update          = 2026-01-17
+|version         = 1.5.12
+|update          = 2025-06-15
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
@@ -71,9 +71,9 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.11
+| 1.44+ || <code>main</code> || 1.5.12
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.11-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.12-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}
@@ -116,7 +116,8 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 * '''Callouts & Speech Bubbles''': Professional callouts with draggable tail positioning, three tail styles (triangle, curved, line), and rounded corners—perfect for tutorials and explanations.
 * '''Curved Arrows''': Arrows support curved paths via a draggable control point, with configurable head types (arrow, circle, diamond, triangle) and line styles (solid, dashed, dotted).
 * '''Text & Text Boxes''': Simple click-to-place text or advanced text boxes with word wrap, vertical alignment, padding, and corner radius.
-* '''Shape Library (374 Shapes)''': Built-in library with 10 categories including arrows, basic shapes, callouts, flowchart, ISO 7010 safety symbols, math, and more. All shapes render as crisp SVG vectors. ''More shapes to come soon!''
+* '''Shape Library (1,310 Shapes)''': Built-in library with 10 categories including arrows, basic shapes, callouts, flowchart, ISO 7010 safety symbols, IEC 60417, ISO 7000, GHS, ECB, math, and more. All shapes render as crisp SVG vectors.
+* '''Emoji Library (2,817 Emoji)''': Google Noto Color Emoji library with 19 categories (smileys, gestures, people, animals, food, travel, sports, and more). Lazy-loaded SVG thumbnails for fast browsing.
 
 === Visual Effects ===
 * '''Blur Fill''': Apply a "frosted glass" blur effect to any shape—blur what's beneath instead of using a solid fill.
@@ -205,6 +206,8 @@ Control how users interact with layered images using the <code>layerslink</code>
 | Dimension || {{key press|D}} || Measurements || Technical dimension annotations with tick marks
 |-
 | Custom Shape || — || Shape Library || Arrows, symbols, flowchart shapes, and more
+|-
+| Emoji || — || Emoji Library || 2,817 Noto Color Emoji in 19 categories
 |}
 
 == Keyboard Shortcuts ==

@@ -4,6 +4,18 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.12 (January 17, 2026)
+
+### Added
+- **Emoji Picker** — New toolbar button opens a searchable emoji library with 2,817 Noto Color Emoji SVGs
+  - Lazy-loaded SVG thumbnails using IntersectionObserver for performance
+  - 19 well-organized categories: Smileys, Gestures, People, Animals, Nature, Food, Travel, Places, Weather, Sports, Entertainment, Objects, Hearts, Symbols, Zodiac, Arrows, Warnings, Household, Miscellaneous
+  - Full-text search with descriptive names and keywords
+  - Gradient colors preserved in SVG thumbnails
+  - Lightweight index architecture: 196.7KB metadata, SVGs loaded on-demand
+
+---
+
 ## Version 1.5.11 (January 17, 2026)
 
 ### Added

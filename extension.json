@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.11-REL1_43",
+	"version": "1.5.12-REL1_43",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -869,6 +869,32 @@
 				"layers-shape-library-count",
 				"layers-shape-library-empty",
 				"layers-shape-library-not-loaded",
+				"layers-close"
+			]
+		},
+		"ext.layers.emojiPicker": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [
+				"mediawiki.util"
+			],
+			"scripts": [
+				"EmojiLibraryIndex.js",
+				"EmojiPickerPanel.js"
+			],
+			"styles": [
+				"emoji-picker.css"
+			],
+			"messages": [
+				"layers-emoji-picker-title",
+				"layers-emoji-picker-button",
+				"layers-emoji-picker-tooltip",
+				"layers-emoji-search-placeholder",
+				"layers-emoji-no-results",
+				"layers-emoji-not-loaded",
+				"layers-emoji-load-error",
+				"layers-loading",
 				"layers-close"
 			]
 		}

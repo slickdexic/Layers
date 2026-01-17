@@ -619,5 +619,13 @@
 	"layers-shape-library-not-loaded": "Error shown when the shape library module is not available",
 	"layers-shape-library-button": "Button label for opening the shape library",
 	"layers-shape-library-tooltip": "Tooltip for the shape library button",
+	"layers-emoji-picker-title": "Dialog title for the emoji picker panel",
+	"layers-emoji-picker-button": "Button label for opening the emoji picker",
+	"layers-emoji-picker-tooltip": "Tooltip for the emoji picker button",
+	"layers-emoji-search-placeholder": "Placeholder text for the search input in the emoji picker",
+	"layers-emoji-no-results": "Message shown when no emoji match the search query",
+	"layers-emoji-not-loaded": "Error shown when the emoji library module is not available",
+	"layers-emoji-load-error": "Error message when an emoji SVG fails to load",
+	"layers-loading": "Generic loading indicator text",
 	"layers-close": "Generic close button label used in dialogs"
 }

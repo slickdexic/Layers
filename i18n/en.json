@@ -623,5 +623,13 @@
 	"layers-shape-library-not-loaded": "Shape library is not available",
 	"layers-shape-library-button": "Shape Library",
 	"layers-shape-library-tooltip": "Insert a shape from the library",
+	"layers-emoji-picker-title": "Emoji Picker",
+	"layers-emoji-picker-button": "Emoji",
+	"layers-emoji-picker-tooltip": "Insert an emoji icon",
+	"layers-emoji-search-placeholder": "Search emoji...",
+	"layers-emoji-no-results": "No emoji found",
+	"layers-emoji-not-loaded": "Emoji library is not available",
+	"layers-emoji-load-error": "Failed to load emoji",
+	"layers-loading": "Loading...",
 	"layers-close": "Close"
 }

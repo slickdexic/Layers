@@ -2,6 +2,27 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.12] - 2026-01-17
+
+### Added
+- **Emoji Picker** — New toolbar button opens a searchable emoji library with 2,817 Noto Color Emoji SVGs
+  - Lazy-loaded SVG thumbnails using IntersectionObserver for performance
+  - 19 well-organized categories: Smileys, Gestures, People, Animals, Nature, Food, Travel, Places, Weather, Sports, Entertainment, Objects, Hearts, Symbols, Zodiac, Arrows, Warnings, Household, Miscellaneous
+  - Priority-based category matching ensures accurate emoji categorization (e.g., footballs in Sports, not People)
+  - Full-text search with descriptive names and keywords (587 emoji have searchable names)
+  - Gradient colors preserved in SVG thumbnails via unique ID renaming
+  - Filters out 914 problematic emoji (regional indicators, complex ZWJ sequences, Unicode 13.0+ blocks)
+  - Lightweight index architecture: 196.7KB metadata file, SVGs loaded on-demand from server
+
+### Technical Details
+- New files: `EmojiPickerPanel.js`, `EmojiLibraryIndex.js`, `emoji-names.json`, `generate-emoji-index.js`
+- 3,731 Noto Color Emoji SVG files in `assets/noto_emoji/` (~38MB total)
+- Toolbar integration via `createEmojiPickerButton()` and `openEmojiPicker()` methods
+- Modal dialog matches existing Shape Library panel UI (800×600px)
+- Creates image layers with proper Canvas rendering
+
+---
+
 ## [1.5.11] - 2026-01-17
 
 ### Added

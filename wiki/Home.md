@@ -20,15 +20,25 @@
 
 ---
 
-## 🆕 What's New in v1.5.11
+## 🆕 What's New in v1.5.12
 
-- **Expanded Shape Library** — 216 new shapes across 3 new categories:
+- **Emoji Picker** — New toolbar button opens a searchable emoji library with 2,817 Noto Color Emoji SVGs
+  - Lazy-loaded SVG thumbnails using IntersectionObserver for performance
+  - 19 well-organized categories: Smileys, Gestures, People, Animals, Food, Travel, Sports, Entertainment, Objects, Symbols, and more
+  - Full-text search with descriptive names and keywords
+  - Gradient colors preserved in SVG thumbnails
+  - Lightweight index architecture: 196.7KB metadata, SVGs loaded on-demand
+- **9,469 tests passing** (147 suites)
+
+### Previous v1.5.11 Highlights
+
+- **Expanded Shape Library** — 951 new shapes across 4 new categories:
+  - IEC 60417 Symbols (735 shapes): International Electrotechnical Commission graphical symbols
   - ISO 7000 Symbols (198 shapes): Equipment and graphical symbols
   - GHS Hazard Pictograms (8 shapes): Chemical hazard warning pictograms
   - ECB Hazard Symbols (10 shapes): European chemical hazard symbols
-  - Total library now contains **590 shapes** across **9 categories**
+  - Total library now contains **1,310 shapes** across **10 categories**
 - **Shape Library Rendering Fix** — Fixed critical bug where custom shapes failed to render
-- **9,469 tests passing** (147 suites)
 
 ### Previous v1.5.10 Highlights
 
