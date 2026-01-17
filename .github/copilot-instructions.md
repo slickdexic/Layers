@@ -38,7 +38,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,927 lines - facade coordinating controllers), `ToolManager.js` (~1,214 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,137 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,419 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,132 lines)
+  - Core editor modules: `CanvasManager.js` (~1,981 lines - facade coordinating controllers), `ToolManager.js` (~1,219 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,132 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,426 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,132 lines)
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
     - `TextToolHandler.js` (~207 lines) - inline text input UI for creating text layers
     - `PathToolHandler.js` (~229 lines) - freeform path drawing with click-to-add points
@@ -365,10 +365,10 @@ Key documents that frequently need updates:
 Common metrics to keep synchronized:
 - Test count (currently 9,469 tests, 147 suites)
 - Coverage (95% statement, 85% branch)
-- JavaScript file count (115 files, ~69,090 lines)
+- JavaScript file count (117 files total, 115 production, ~68,458 lines)
 - PHP file count (33 files, ~11,743 lines)
 - God class count (16 files >1,000 lines)
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
-- Shape library count (374 shapes in 10 categories)
-- Version number (1.5.10)
+- Shape library count (590 shapes in 9 categories)
+- Version number (1.5.11)

@@ -20,7 +20,17 @@
 
 ---
 
-## 🆕 What's New in v1.5.10
+## 🆕 What's New in v1.5.11
+
+- **Expanded Shape Library** — 216 new shapes across 3 new categories:
+  - ISO 7000 Symbols (198 shapes): Equipment and graphical symbols
+  - GHS Hazard Pictograms (8 shapes): Chemical hazard warning pictograms
+  - ECB Hazard Symbols (10 shapes): European chemical hazard symbols
+  - Total library now contains **590 shapes** across **9 categories**
+- **Shape Library Rendering Fix** — Fixed critical bug where custom shapes failed to render
+- **9,469 tests passing** (147 suites)
+
+### Previous v1.5.10 Highlights
 
 - **Marker Auto-Number** — New feature for placing multiple markers quickly
   - "Auto-number" checkbox in toolbar when marker tool is selected
@@ -28,11 +38,6 @@
   - Tool remains active after placing a marker for rapid sequential placement
 - **Arrow Fill Fix** — Arrows now properly support fill colors for fat/storage styles
 - **9,469 tests passing** (147 suites)
-
-### Previous v1.5.9 Highlights
-
-- **Dead Code Removal** — Removed 1,535 lines of unreachable SVG export code
-- All coverage targets now met: 95.10% statement, 85.11% branch
 
 ### Previous v1.5.8 Highlights
 

@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.11] - 2026-01-17
+
+### Added
+- **Expanded Shape Library** — Added 216 new shapes across 3 new categories:
+  - **ISO 7000 Symbols** (198 shapes): Equipment and graphical symbols
+  - **GHS Hazard Pictograms** (8 shapes): Chemical hazard warning pictograms
+  - **ECB Hazard Symbols** (10 shapes): European chemical hazard symbols
+  - Total library now contains **590 shapes** across **9 categories**
+
+### Fixed
+- **Shape Library Rendering** — Fixed critical bug where custom shapes failed to render
+  - Root cause: `ShapeLibraryData.js` was overwriting `window.Layers.ShapeLibrary` object, destroying the `CustomShapeRenderer` reference
+  - Solution: Changed to use `Object.assign()` to merge data methods while preserving existing properties
+- **SVG Cleanup** — Sanitized 214 SVG files, removing unnecessary metadata (saved ~242KB)
+
+### Changed
+- **Shape Library Generator** — Updated `generate-library.js` to use `Object.assign()` pattern for namespace safety
+
+---
+
 ## [1.5.10] - 2026-01-14
 
 ### Added

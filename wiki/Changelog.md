@@ -4,6 +4,23 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.11 (January 17, 2026)
+
+### Added
+- **Expanded Shape Library** — 216 new shapes across 3 new categories:
+  - ISO 7000 Symbols (198 shapes): Equipment and graphical symbols
+  - GHS Hazard Pictograms (8 shapes): Chemical hazard warning pictograms
+  - ECB Hazard Symbols (10 shapes): European chemical hazard symbols
+  - Total library now contains **590 shapes** across **9 categories**
+
+### Fixed
+- **Shape Library Rendering** — Fixed critical bug where custom shapes failed to render
+  - Root cause: ShapeLibraryData.js was overwriting the CustomShapeRenderer reference
+  - Solution: Use Object.assign() to preserve existing properties
+- **SVG Cleanup** — Sanitized 214 SVG files (~242KB saved)
+
+---
+
 ## Version 1.5.10 (January 14, 2026)
 
 ### Added

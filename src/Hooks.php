@@ -11,6 +11,7 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Hooks\WikitextHooks;
+use MediaWiki\MediaWikiServices;
 
 // Avoid direct hard dependency on MediaWiki classes for static analysis
 

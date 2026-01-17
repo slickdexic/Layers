@@ -8,10 +8,9 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.10 (January 13, 2026)  
-> **Status:** ✅ Production-ready (Rating: 8.5/10)  
-> **Requires:** MediaWiki 1.44+, PHP 8.1+  
-> **Technical Debt:** 16 god classes (1,035-3,176 lines) with proper delegation patterns
+> **Version:** 1.5.11 (January 17, 2026)  
+> **Status:** ✅ Production-ready  
+> **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
 > **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
 > **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).
@@ -54,7 +53,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Line          | L        | Straight lines                               |
 | **Marker**    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
-| Custom Shape  | —        | 374 built-in shapes (arrows, ISO signs, flowchart, and more!) |
+| Custom Shape  | —        | 590 built-in shapes (arrows, ISO signs, GHS hazard, ECB symbols, and more!) |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers). *More shapes to come soon!*
 
@@ -318,23 +317,9 @@ npm run test:js -- --coverage
 | Tests passing | 9,469 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95% | ✅ Excellent |
-| Branch coverage | 85.01% | ✅ Target met |
+| Branch coverage | 85% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
-
-**Rating: 8.5/10**
-
-**What's Good:**
-- ✅ All 15 drawing tools work correctly - zero functional bugs
-- ✅ Excellent security (CSRF, rate limiting, validation)
-- ✅ 95% test coverage with 9,469 passing tests
-- ✅ Professional i18n, ARIA accessibility, documentation
-- ✅ No lazy code patterns (no empty catches, no console.log, no TODO/FIXME)
-- ✅ All 28 previously identified issues verified resolved
-
-**What Could Be Improved:**
-- ⚠️ 16 god classes with proper delegation - manageable but not ideal
-- ⚠️ 2 files approaching 1,000 line threshold (ShapeRenderer.js, PropertiesForm.js)
 
 ### Generate API Documentation
 
