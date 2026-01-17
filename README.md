@@ -53,7 +53,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Line          | L        | Straight lines                               |
 | **Marker**    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
-| Custom Shape  | —        | 1,325 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
+| Custom Shape  | —        | 1,310 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers).
 
