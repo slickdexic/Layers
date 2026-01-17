@@ -1,0 +1,25 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <rect x="16.5" y="52.982" width="167" height="94" rx="0" ry="0" fill="none" stroke="#000" stroke-width="5"/>
+ <g>
+  <rect x="35.127" y="67.6" width="15" height="15" rx="0" ry="0"/>
+  <rect x="58.085" y="67.6" width="15" height="15" rx="0" ry="0"/>
+  <rect x="81.042" y="67.6" width="15" height="15" rx="0" ry="0"/>
+  <rect x="104" y="67.6" width="15" height="15" rx="0" ry="0"/>
+  <rect x="126.96" y="67.6" width="15" height="15" rx="0" ry="0"/>
+  <rect x="149.92" y="67.6" width="15" height="15" rx="0" ry="0"/>
+  <rect x="46.665" y="92.5" width="15" height="15" rx="0" ry="0"/>
+  <rect x="69.623" y="92.5" width="15" height="15" rx="0" ry="0"/>
+  <rect x="92.58" y="92.5" width="15" height="15" rx="0" ry="0"/>
+  <rect x="115.54" y="92.5" width="15" height="15" rx="0" ry="0"/>
+  <rect x="138.5" y="92.5" width="15" height="15" rx="0" ry="0"/>
+  <rect x="63.251" y="117.58" width="73.658" height="14.636" rx="0" ry="0"/>
+  <rect x="39.165" y="117.4" width="15" height="15" rx="0" ry="0"/>
+  <rect x="145.95" y="117.4" width="15" height="15" rx="0" ry="0"/>
+ </g>
+ 
+<g fill="none" stroke="#999" stroke-width="3">
+  <path d="m0 16v-16h16"/>
+  <path d="m200 16v-16h-16"/>
+  <path d="m0 184v16h16"/>
+  <path d="m200 184v16h-16"/>
+ </g></svg>

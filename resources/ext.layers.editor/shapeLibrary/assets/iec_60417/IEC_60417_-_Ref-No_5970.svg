@@ -1,0 +1,22 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <g stroke="#000" stroke-width="5">
+   <path d="m33.5,33.5h133v133h-133z"/>
+   <path d="m33.5,166.5 133,-133"/>
+  </g>
+ </g>
+ <g style="font-style:italic;font-size:45px;font-family:sans-serif">
+  <text x="57.5" y="88">
+   f<tspan style="font-style:normal;font-size:30px" dy="8">1</tspan>
+  </text>
+  <text x="111" y="142">
+   f<tspan style="font-style:normal;font-size:30px" dy="8">2</tspan>
+  </text>
+ </g>
+</svg>

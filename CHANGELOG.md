@@ -5,11 +5,12 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ## [1.5.11] - 2026-01-17
 
 ### Added
-- **Expanded Shape Library** — Added 216 new shapes across 3 new categories:
+- **Expanded Shape Library** — Added 951 new shapes across 4 new categories:
+  - **IEC 60417 Symbols** (735 shapes): International Electrotechnical Commission graphical symbols for equipment
   - **ISO 7000 Symbols** (198 shapes): Equipment and graphical symbols
   - **GHS Hazard Pictograms** (8 shapes): Chemical hazard warning pictograms
   - **ECB Hazard Symbols** (10 shapes): European chemical hazard symbols
-  - Total library now contains **590 shapes** across **9 categories**
+  - Total library now contains **1,325 shapes** across **10 categories**
 
 ### Fixed
 - **Shape Library Rendering** — Fixed critical bug where custom shapes failed to render

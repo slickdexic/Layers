@@ -1,0 +1,20 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <g stroke="#000">
+   <g stroke-width="5">
+    <rect x="32.809" y="67.115" width="33.37" height="65.767"/>
+    <path d="m99.549 64.615v68.267h-33.37"/>
+    <path d="m132.92 64.615v68.267h-33.37"/>
+    <path d="m166.29 64.615v68.267h-33.37"/>
+    <path d="m168.79 33.558h-52.556"/>
+   </g>
+   <path d="m116.23 46.891v-15.833" stroke-width="11"/>
+  </g>
+ </g>
+</svg>

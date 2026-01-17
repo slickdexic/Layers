@@ -1,0 +1,13 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <g stroke="#000" stroke-width="5.5">
+    <path d="M20,167 100,33 180,167ZM133,150H67M83,137C99,115 69,109 83,86M100,137C116,115 86,109 100,86M117,137C133,115 103,109 117,86"/>
+  </g>
+ </g>
+</svg>

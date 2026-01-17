@@ -1,0 +1,14 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <g stroke="#000" stroke-width="5">
+   <path d="M69,31C100,40 120,55 140,80M99,68 140.3,80.3 131,38M23.75,157.15 162,76"/>
+   <path d="M22.5,160H182" stroke-width="10"/>
+  </g>
+ </g>
+</svg>

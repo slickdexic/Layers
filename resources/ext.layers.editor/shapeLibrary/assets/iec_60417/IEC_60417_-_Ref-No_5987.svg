@@ -1,0 +1,12 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <ellipse cx="100" cy="51.911" rx="62.712" ry="31.568" stroke="#000" stroke-width="5"/>
+  <path d="m37.288 51.911v96.179c1e-6 17.434 28.077 31.568 62.712 31.568 34.635 0 62.712-14.133 62.712-31.568v-96.179" stroke="#000" stroke-width="5"/>
+ </g>
+</svg>

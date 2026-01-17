@@ -1,0 +1,11 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <circle cx="100" cy="100" r="75.424" fill="none" stroke="#000" stroke-width="5"/>
+ <circle cx="100" cy="100" r="10.593"/>
+ <path d="m100 34.746v65.254h-43.644" fill="none" stroke="#000" stroke-width="5"/>
+ 
+<g fill="none" stroke="#999" stroke-width="3">
+  <path d="m0 16v-16h16"/>
+  <path d="m200 16v-16h-16"/>
+  <path d="m0 184v16h16"/>
+  <path d="m200 184v16h-16"/>
+ </g></svg>
