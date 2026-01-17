@@ -1,0 +1,10 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none" stroke="#999" stroke-width="3">
+  <path d="m0 16v-16h16"/>
+  <path d="m200 16v-16h-16"/>
+  <path d="m0 184v16h16"/>
+  <path d="m200 184v16h-16"/>
+ </g>
+ <path d="m70.117 72.65v17.414h12.965v63.305h-12.965v17.416h59.766v-17.416h-12.965v-80.719z"/>
+ <circle cx="100" cy="43.962" r="18.538"/>
+</svg>

@@ -1,0 +1,25 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <ellipse cx="100" cy="100" rx="28.313" ry="28.455" stroke="#000" stroke-width="5"/>
+  <path d="m89.494 73.616v-20.817h21.012v20.78" stroke="#000" stroke-width="5"/>
+ </g>
+ <g stroke="#000" stroke-width="5">
+  <path d="m100 151.16v-15.131"/>
+  <path d="m63.825 63.825 10.699 10.699"/>
+  <path d="m48.841 100 15.131-2e-6"/>
+  <path d="m63.825 136.17 10.699-10.699"/>
+  <path d="m136.17 136.17-10.699-10.699"/>
+  <path d="m151.16 100h-15.131"/>
+  <path d="m136.17 63.825-10.699 10.699"/>
+  <path d="m38.983 16.992v166.02"/>
+  <path d="m161.02 16.992v166.02"/>
+  <path d="m16.992 38.983h166.02"/>
+  <path d="m16.992 161.02h166.02"/>
+ </g>
+</svg>

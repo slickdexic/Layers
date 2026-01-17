@@ -4,7 +4,8 @@
 |status          = stable
 |type1           = media
 |type2           = interface
-|type3           = api
+|type3           = page action
+|type4           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
 |version         = 1.5.11
 |update          = 2026-01-17
@@ -34,7 +35,7 @@
 |hook11          = ParserMakeImageParams
 |hook12          = SkinTemplateNavigation::Universal
 |hook13          = ThumbnailBeforeProduceHTML
-|description     = A professional-grade, non-destructive image annotation system with 15 drawing tools, 590 built-in shapes, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
+|description     = A professional-grade, non-destructive image annotation system with 15 drawing tools, 1,325 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI), curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
 }}
 
 The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.

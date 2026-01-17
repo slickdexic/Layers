@@ -1,0 +1,17 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <g stroke="#000" stroke-width="5">
+    <path d="M33,167V33H167L166,167z"/>
+    <path id="a" d="M 51,102 71,90 C 76,87 83,87 87,90 L 113,110 C 117,113 124,113 129,110 L 149,98"/>
+	<use xlink:href="#a" y="33"/>
+	<use xlink:href="#a" y="-33"/>
+    <path d="M 106.5,123 93.5,144 M 106.5,56 93.5,77"/>
+  </g>
+ </g>
+</svg>

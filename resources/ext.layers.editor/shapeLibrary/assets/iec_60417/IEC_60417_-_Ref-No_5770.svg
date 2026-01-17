@@ -1,0 +1,24 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <g stroke="#000" stroke-width="5">
+   <rect x="107.04" y="41.305" width="29.749" height="29.749"/>
+   <rect x="63.215" y="41.305" width="29.749" height="29.749"/>
+   <rect x="19.395" y="41.305" width="29.749" height="29.749"/>
+   <rect x="150.86" y="41.305" width="29.749" height="29.749"/>
+   <rect transform="rotate(90)" x="128.95" y="-49.143" width="29.749" height="29.749"/>
+   <rect transform="rotate(90)" x="85.126" y="-49.143" width="29.749" height="29.749"/>
+   <rect x="107.04" y="85.126" width="29.749" height="29.749"/>
+   <rect x="63.215" y="85.126" width="29.749" height="29.749"/>
+   <rect x="150.86" y="85.126" width="29.749" height="29.749"/>
+   <rect x="107.04" y="128.95" width="29.749" height="29.749"/>
+   <rect x="63.215" y="128.95" width="29.749" height="29.749"/>
+   <rect x="150.86" y="128.95" width="29.749" height="29.749"/>
+  </g>
+ </g>
+</svg>

@@ -1,0 +1,24 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+ <g fill="none">
+  <g stroke="#999" stroke-width="3">
+   <path d="m0 16v-16h16"/>
+   <path d="m200 16v-16h-16"/>
+   <path d="m0 184v16h16"/>
+   <path d="m200 184v16h-16"/>
+  </g>
+  <g stroke="#000">
+   <path d="m102.54 77.436h-25.212" stroke-width="11"/>
+   <g stroke-width="5">
+    <path d="m192.81 93.782h-20.241"/>
+    <path d="m18.432 162.92h22.881l24.854-20.855v-84.137l-24.854-20.855h-22.881"/>
+    <path d="m34.322 162.92v-125.85"/>
+    <path d="m172.57 114.73-55.192 25.737h-14.831v-80.932h14.831l55.192 25.737v29.459z"/>
+   </g>
+   <g>
+    <path d="m102.54 122.56h-25.212" stroke-width="11"/>
+    <path d="m192.81 106.22h-20.241" stroke-width="5"/>
+    <path d="m102.54 100h-25.212" stroke-width="11"/>
+   </g>
+  </g>
+ </g>
+</svg>

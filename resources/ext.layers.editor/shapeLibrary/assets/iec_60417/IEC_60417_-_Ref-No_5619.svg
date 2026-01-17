@@ -1,0 +1,7 @@
+<svg width="200" height="200" version="1.1" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#000"><g stroke-width="5"><rect transform="scale(1,-1)" x="16.5" y="-167" width="167" height="134" rx="8" ry="8"/><circle cx="100" cy="100" r="28.913"/><path d="m100 137.23v15.58"/><path d="m126.32 126.32 11.017 11.017"/><path d="m137.23 100h15.58"/><path d="m126.32 73.677 11.017-11.017"/><path d="m73.677 73.677-11.017-11.017"/><path d="m62.773 100h-15.58"/><path d="m73.677 126.32-11.017 11.017"/></g><path d="m87.789 73.792v-23.569h24.422v23.569" stroke-width="5"/></g> 
+<g fill="none" stroke="#999" stroke-width="3">
+  <path d="m0 16v-16h16"/>
+  <path d="m200 16v-16h-16"/>
+  <path d="m0 184v16h16"/>
+  <path d="m200 184v16h-16"/>
+ </g></svg>

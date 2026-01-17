@@ -85,6 +85,21 @@ function generateName( filename ) {
 		return iso7000Match[ 1 ];
 	}
 
+	// Handle IEC 60417 patterns: IEC_60417_-_Ref-No_5001A.svg
+	const iec60417Match = name.match( /IEC_60417_-_Ref-No_(\d+[A-Z]?(?:-\d+)?)/i );
+	if ( iec60417Match ) {
+		return iec60417Match[ 1 ];
+	}
+	// Handle IEC style patterns: IEC_style_chassis_ground.svg
+	const iecStyleMatch = name.match( /IEC_style_(.+)/i );
+	if ( iecStyleMatch ) {
+		return iecStyleMatch[ 1 ].replace( /_/g, ' ' ).replace( /\b\w/g, ( c ) => c.toUpperCase() );
+	}
+	// Handle Keyboard Symbol pattern
+	if ( name.match( /Keyboard_Symbol/i ) ) {
+		return 'Keyboard Symbol';
+	}
+
 	// Handle GHS patterns: GHS-pictogram-acid.svg
 	const ghsMatch = name.match( /GHS-pictogram-(.+)/i );
 	if ( ghsMatch ) {
@@ -136,6 +151,7 @@ function generateTags( name, filename, category ) {
 		'iso7010-p': [ 'prohibition', 'forbidden', 'no', 'red', 'banned' ],
 		'iso7010-w': [ 'warning', 'danger', 'caution', 'yellow', 'hazard' ],
 		iso7000: [ 'symbol', 'equipment', 'industrial', 'graphical', 'iso' ],
+		iec60417: [ 'symbol', 'equipment', 'iec', 'electrical', 'electronic', 'graphical', 'industrial' ],
 		ghs: [ 'hazard', 'chemical', 'danger', 'ghs', 'pictogram', 'classification' ],
 		ecb: [ 'hazard', 'chemical', 'european', 'danger', 'warning' ],
 		ansi: [ 'safety', 'hazard', 'warning', 'american', 'osha' ]
@@ -211,6 +227,13 @@ function getCategoryInfo( dir ) {
 			prefix: 'ISO7000',
 			color: '#333333',
 			description: 'ISO 7000 graphical symbols for use on equipment'
+		},
+		iec_60417: {
+			id: 'iec60417',
+			name: 'IEC 60417 Symbols',
+			prefix: 'IEC',
+			color: '#1a5276',
+			description: 'IEC 60417 graphical symbols for use on equipment'
 		},
 		ghs: {
 			id: 'ghs',
@@ -401,6 +424,13 @@ let output = `/**
 			description: 'ISO 7000 graphical symbols for use on equipment'
 		},
 		{
+			id: 'iec60417',
+			name: 'IEC 60417 Symbols',
+			prefix: 'IEC',
+			color: '#1a5276',
+			description: 'IEC 60417 graphical symbols for use on equipment'
+		},
+		{
 			id: 'ghs',
 			name: 'GHS Hazard',
 			prefix: 'GHS',
@@ -432,7 +462,7 @@ let output = `/**
 `;
 
 // Add shapes
-for ( const cat of [ 'iso7010-w', 'iso7010-p', 'iso7010-m', 'iso7010-e', 'iso7010-f', 'iso7000', 'ghs', 'ecb', 'ansi' ] ) {
+for ( const cat of [ 'iso7010-w', 'iso7010-p', 'iso7010-m', 'iso7010-e', 'iso7010-f', 'iso7000', 'iec60417', 'ghs', 'ecb', 'ansi' ] ) {
 	if ( !categories[ cat ] ) {
 		continue;
 	}
