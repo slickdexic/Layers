@@ -10,7 +10,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - **ISO 7000 Symbols** (198 shapes): Equipment and graphical symbols
   - **GHS Hazard Pictograms** (8 shapes): Chemical hazard warning pictograms
   - **ECB Hazard Symbols** (10 shapes): European chemical hazard symbols
-  - Total library now contains **1,325 shapes** across **10 categories**
+  - Total library now contains **1,310 shapes** across **10 categories**
 
 ### Fixed
 - **Shape Library Rendering** — Fixed critical bug where custom shapes failed to render
