@@ -177,7 +177,7 @@ class LayersHtmlInjector {
 			// Check if class already exists
 			if ( preg_match( '/(^|\s)' . preg_quote( $className, '/' ) . '(\s|$)/', $existingClasses ) ) {
 				// Class already present
-			return $attrs;
+				return $attrs;
 			}
 
 			// Add class to existing

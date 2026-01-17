@@ -160,7 +160,7 @@ class LayersDatabase {
 					return null;
 				}
 
-				list( $majorMime, $minorMime ) = explode( '/', $mime, 2 ) + [ '', '' ];
+				[ $majorMime, $minorMime ] = explode( '/', $mime, 2 ) + [ '', '' ];
 
 				$row = [
 					'ls_img_name' => $normalizedImgName,

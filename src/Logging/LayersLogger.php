@@ -121,7 +121,7 @@ class LayersLogger implements LoggerInterface {
 	/**
 	 * Log errors with full context
 	 */
-	public function logError( string $message, \Exception $e = null, array $context = [] ): void {
+	public function logError( string $message, ?\Exception $e = null, array $context = [] ): void {
 		if ( $e ) {
 			$context['exception'] = $e;
 			$context['trace'] = $e->getTraceAsString();

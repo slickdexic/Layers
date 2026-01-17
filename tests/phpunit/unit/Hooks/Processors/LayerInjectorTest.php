@@ -51,8 +51,8 @@ class LayerInjectorTest extends TestCase {
 		$file->sha1 = $sha1;
 
 		// Add methods as closures
-		$file->getName = fn() => $file->name;
-		$file->getSha1 = fn() => $file->sha1;
+		$file->getName = static fn () => $name;
+		$file->getSha1 = static fn () => $sha1;
 
 		return $file;
 	}
@@ -344,7 +344,7 @@ class LayerInjectorTest extends TestCase {
 			->method( 'injectIntoAttributes' )
 			->with(
 				$this->identicalTo( $attribs ),
-				$this->callback( fn( $layers ) => count( $layers ) === 1 && $layers[0]['id'] === 'injected' ),
+				$this->callback( static fn ( $layers ) => count( $layers ) === 1 && $layers[0]['id'] === 'injected' ),
 				800,
 				600
 			);
