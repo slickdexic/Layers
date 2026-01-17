@@ -398,10 +398,10 @@ class ThumbnailProcessorTest extends TestCase {
 		$file->sha1 = 'abc123';
 
 		// Use closure binding for method simulation
-		$file->getName = static fn() => $name;
-		$file->getWidth = static fn() => $width;
-		$file->getHeight = static fn() => $height;
-		$file->getSha1 = static fn() => 'abc123';
+		$file->getName = static fn () => $name;
+		$file->getWidth = static fn () => $width;
+		$file->getHeight = static fn () => $height;
+		$file->getSha1 = static fn () => 'abc123';
 
 		return $file;
 	}
@@ -417,8 +417,8 @@ class ThumbnailProcessorTest extends TestCase {
 		$thumbnail = new \stdClass();
 
 		// Add methods as closures
-		$thumbnail->getFile = static fn() => $file;
-		$thumbnail->getParams = static fn() => $params;
+		$thumbnail->getFile = static fn () => $file;
+		$thumbnail->getParams = static fn () => $params;
 
 		return $thumbnail;
 	}

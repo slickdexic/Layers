@@ -40,7 +40,7 @@ class ValidationResult {
 		array $errors = [],
 		array $warnings = [],
 		array $metadata = []
- ) {
+	) {
 		$this->isValid = $isValid;
 		$this->data = $data;
 		$this->errors = $errors;

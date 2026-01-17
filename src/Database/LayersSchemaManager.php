@@ -307,11 +307,10 @@ class LayersSchemaManager {
 			// Check if it's a required column (always available)
 			if ( in_array( $feature, $requirements['required_columns'], true ) ) {
 				$available = true;
-			}
-			// Check if it's an optional column that exists
- elseif ( isset( $requirements['optional_columns'][$feature] ) ) {
+			} elseif ( isset( $requirements['optional_columns'][$feature] ) ) {
+				// Check if it's an optional column that exists
 				$available = $this->columnExists( $table, $feature );
- }
+			}
 		}
 
 		$this->schemaCache[$cacheKey] = $available;

@@ -248,8 +248,8 @@ class ApiLayersInfo extends ApiBase {
 
 			// Preserve layer-level boolean properties
 			if ( isset( $result['layerset']['data']['layers'] )
-			&& is_array( $result['layerset']['data']['layers'] )
-		) {
+				&& is_array( $result['layerset']['data']['layers'] )
+			) {
 				foreach ( $result['layerset']['data']['layers'] as &$layer ) {
 					// Convert boolean properties to integers for proper serialization
 					$booleanProps = [
