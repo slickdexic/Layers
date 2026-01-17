@@ -154,7 +154,8 @@ function generateTags( name, filename, category ) {
 		iec60417: [ 'symbol', 'equipment', 'iec', 'electrical', 'electronic', 'graphical', 'industrial' ],
 		ghs: [ 'hazard', 'chemical', 'danger', 'ghs', 'pictogram', 'classification' ],
 		ecb: [ 'hazard', 'chemical', 'european', 'danger', 'warning' ],
-		ansi: [ 'safety', 'hazard', 'warning', 'american', 'osha' ]
+		ansi: [ 'safety', 'hazard', 'warning', 'american', 'osha' ],
+		emoji: [ 'emoji', 'noto', 'google', 'icon', 'expression', 'face', 'symbol' ]
 	};
 
 	if ( categoryTags[ category ] ) {
@@ -255,6 +256,13 @@ function getCategoryInfo( dir ) {
 			prefix: 'ANSI',
 			color: '#000000',
 			description: 'American National Standards Institute safety symbols'
+		},
+		noto_emoji: {
+			id: 'emoji',
+			name: 'Noto Emoji',
+			prefix: 'Emoji',
+			color: '#FFD93D',
+			description: 'Google Noto Color Emoji - expressive emoji icons'
 		}
 	};
 
@@ -450,6 +458,13 @@ let output = `/**
 			prefix: 'ANSI',
 			color: '#000000',
 			description: 'ANSI Z535 safety symbols'
+		},
+		{
+			id: 'other',
+			name: 'Other Symbols',
+			prefix: '',
+			color: '#666666',
+			description: 'Miscellaneous symbols and icons'
 		}
 	];
 
@@ -462,7 +477,7 @@ let output = `/**
 `;
 
 // Add shapes
-for ( const cat of [ 'iso7010-w', 'iso7010-p', 'iso7010-m', 'iso7010-e', 'iso7010-f', 'iso7000', 'iec60417', 'ghs', 'ecb', 'ansi' ] ) {
+for ( const cat of [ 'iso7010-w', 'iso7010-p', 'iso7010-m', 'iso7010-e', 'iso7010-f', 'iso7000', 'iec60417', 'ghs', 'ecb', 'ansi', 'other' ] ) {
 	if ( !categories[ cat ] ) {
 		continue;
 	}

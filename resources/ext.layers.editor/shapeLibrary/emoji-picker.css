@@ -1,0 +1,57 @@
+/**
+ * Emoji Picker Panel Styles
+ *
+ * Note: Most styles are inline in EmojiPickerPanel.js for consistency with ShapeLibraryPanel.
+ * This file contains only dark mode overrides and scrollbar styling.
+ *
+ * @file
+ */
+
+/* Dark mode support */
+.skin-vector-2022.client-dark-mode .layers-emoji-picker,
+.skin-vector.client-darkmode .layers-emoji-picker {
+	background: var( --background-color-base, #1e1e1e );
+	border-color: var( --border-color-base, #3c3c3c );
+}
+
+.skin-vector-2022.client-dark-mode .layers-emoji-picker-header,
+.skin-vector.client-darkmode .layers-emoji-picker-header {
+	background: var( --background-color-interactive, #2a2a2a );
+	border-color: var( --border-color-base, #3c3c3c );
+}
+
+.skin-vector-2022.client-dark-mode .layers-emoji-picker-categories,
+.skin-vector.client-darkmode .layers-emoji-picker-categories {
+	background: var( --background-color-interactive, #2a2a2a );
+	border-color: var( --border-color-base, #3c3c3c );
+}
+
+.skin-vector-2022.client-dark-mode .layers-emoji-picker-search-input,
+.skin-vector.client-darkmode .layers-emoji-picker-search-input {
+	background: var( --background-color-base, #1e1e1e );
+	border-color: var( --border-color-base, #4a4a4a );
+	color: var( --color-base, #eaecf0 );
+}
+
+/* Scrollbar styling */
+.layers-emoji-picker-grid::-webkit-scrollbar,
+.layers-emoji-picker-categories::-webkit-scrollbar {
+	width: 8px;
+}
+
+.layers-emoji-picker-grid::-webkit-scrollbar-track,
+.layers-emoji-picker-categories::-webkit-scrollbar-track {
+	background: var( --background-color-interactive-subtle, #f0f0f0 );
+	border-radius: 4px;
+}
+
+.layers-emoji-picker-grid::-webkit-scrollbar-thumb,
+.layers-emoji-picker-categories::-webkit-scrollbar-thumb {
+	background: var( --border-color-base, #c0c0c0 );
+	border-radius: 4px;
+}
+
+.layers-emoji-picker-grid::-webkit-scrollbar-thumb:hover,
+.layers-emoji-picker-categories::-webkit-scrollbar-thumb:hover {
+	background: var( --border-color-interactive, #a0a0a0 );
+}

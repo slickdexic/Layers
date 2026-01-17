@@ -224,7 +224,7 @@ Export layers as SVG for vector editing.
 | Live Article Preview | v1.3.3 | ✅ |
 | Wikitext `layerset=` Parameter | v1.5.0-beta.3 | ✅ |
 | Named Layer Sets | v1.5.0 | ✅ |
-| Shape Library (374 shapes) | v1.5.2 | ✅ |
+| Shape Library (1,310 shapes) | v1.5.11 | ✅ |
 | Mobile Keyboard Handling | v1.4.8 | ✅ |
 
 ---

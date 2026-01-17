@@ -365,10 +365,10 @@ Key documents that frequently need updates:
 Common metrics to keep synchronized:
 - Test count (currently 9,469 tests, 147 suites)
 - Coverage (95% statement, 85% branch)
-- JavaScript file count (117 files total, 115 production, ~68,458 lines)
+- JavaScript file count (117 files total, 115 production, ~76,721 lines)
 - PHP file count (33 files, ~11,743 lines)
 - God class count (16 files >1,000 lines)
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
-- Version number (1.5.11)
+- Version number (1.5.12)

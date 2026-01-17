@@ -731,6 +731,12 @@
 				toolGroup.appendChild( shapeLibraryBtn );
 			}
 
+			// Add Emoji Picker button
+			const emojiBtn = this.createEmojiPickerButton();
+			if ( emojiBtn ) {
+				toolGroup.appendChild( emojiBtn );
+			}
+
 			this.container.appendChild( toolGroup );
 		}
 
@@ -801,6 +807,59 @@
 					name: shape.name
 				} );
 			}
+		}
+
+		/**
+		 * Create the emoji picker button
+		 *
+		 * @return {HTMLElement|null} The button element
+		 */
+		createEmojiPickerButton() {
+			const t = this.msg.bind( this );
+
+			const button = document.createElement( 'button' );
+			button.className = 'toolbar-button emoji-picker-button';
+			button.type = 'button';
+			button.title = t( 'layers-emoji-picker-tooltip', 'Insert an emoji icon' );
+			button.setAttribute( 'aria-label', t( 'layers-emoji-picker-button', 'Emoji' ) );
+
+			// Use a smiley face icon
+			button.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">' +
+				'<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>' +
+				'<circle cx="8" cy="10" r="1.5"/>' +
+				'<circle cx="16" cy="10" r="1.5"/>' +
+				'<path d="M8 14c1.5 2 6.5 2 8 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+				'</svg>';
+
+			button.addEventListener( 'click', () => {
+				this.openEmojiPicker();
+			} );
+
+			return button;
+		}
+
+		/**
+		 * Open the emoji picker panel
+		 */
+		openEmojiPicker() {
+			// Load the emoji picker module if not already loaded
+			mw.loader.using( 'ext.layers.emojiPicker' ).then( () => {
+				if ( !window.Layers || !window.Layers.EmojiPickerPanel ) {
+					mw.log.error( 'Emoji picker module not available' );
+					return;
+				}
+
+				// Create panel if it doesn't exist
+				if ( !this.emojiPickerPanel ) {
+					this.emojiPickerPanel = new window.Layers.EmojiPickerPanel( {
+						onSelect: ( shape ) => {
+							this.insertShape( shape );
+						}
+					} );
+				}
+
+				this.emojiPickerPanel.open();
+			} );
 		}
 
 		createToolButton( tool ) {
