@@ -47,6 +47,7 @@
 				"resources/ext.layers.editor/*.js",
 				"resources/ext.layers.editor/canvas/*.js",
 				"resources/ext.layers.editor/editor/*.js",
+				"resources/ext.layers.editor/export/*.js",
 				"resources/ext.layers.editor/ui/*.js",
 				"resources/ext.layers.editor/tools/*.js",
 				"resources/ext.layers.editor/presets/*.js",

@@ -102,7 +102,14 @@
 	_scheduleTimeout( callback, delay ) {
 		const timeoutId = setTimeout( () => {
 			this.activeTimeouts.delete( timeoutId );
-			callback();
+			try {
+				callback();
+			} catch ( error ) {
+				// Log callback errors but don't let them crash the application
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+					mw.log.error( 'Layers APIManager: Scheduled callback error:', error );
+				}
+			}
 		}, delay );
 		this.activeTimeouts.add( timeoutId );
 		return timeoutId;
@@ -163,6 +170,10 @@
 	 */
 	loadLayers() {
 		return new Promise( ( resolve, reject ) => {
+			// Set loading state to prevent user interactions during load
+			if ( this.editor.stateManager ) {
+				this.editor.stateManager.set( 'isLoading', true );
+			}
 			this.editor.uiManager.showSpinner( this.getMessage( 'layers-loading' ) );
 
 			this.api.get( {
@@ -173,6 +184,10 @@
 			} ).then( ( data ) => {
 				this.editor.uiManager.hideSpinner();
 				this.processLayersData( data );
+				// Clear loading state after processing
+				if ( this.editor.stateManager ) {
+					this.editor.stateManager.set( 'isLoading', false );
+				}
 				resolve( {
 					layers: this.editor.stateManager.get( 'layers' ) || [],
 					baseWidth: this.editor.stateManager.get( 'baseWidth' ),
@@ -182,6 +197,10 @@
 				} );
 			} ).catch( ( code, result ) => {
 				this.editor.uiManager.hideSpinner();
+				// Clear loading state on error
+				if ( this.editor.stateManager ) {
+					this.editor.stateManager.set( 'isLoading', false );
+				}
 				const standardizedError = this.handleLoadError( code, result );
 				reject( standardizedError );
 			} );
@@ -435,6 +454,10 @@
 				return;
 			}
 
+			// Set loading state to prevent user interactions during load
+			if ( this.editor.stateManager ) {
+				this.editor.stateManager.set( 'isLoading', true );
+			}
 			this.editor.uiManager.showSpinner( this.getMessage( 'layers-loading' ) );
 
 			const jqXHR = this.api.get( {
@@ -517,6 +540,11 @@
 				this.editor.stateManager.set( 'hasUnsavedChanges', false );
 				this.editor.stateManager.set( 'isDirty', false );
 
+				// Clear loading state after successful load
+				if ( this.editor.stateManager ) {
+					this.editor.stateManager.set( 'isLoading', false );
+				}
+
 				// Debug logging controlled by extension config
 				if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 					mw.log( '[APIManager] Loaded layer set by name:', {
@@ -538,9 +566,17 @@
 				this._clearRequest( 'loadSetByName' );
 				// Ignore aborted requests (user switched before this completed)
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {
+					// Clear loading state even for aborted requests
+					if ( this.editor.stateManager ) {
+						this.editor.stateManager.set( 'isLoading', false );
+					}
 					return;
 				}
 				this.editor.uiManager.hideSpinner();
+				// Clear loading state on error
+				if ( this.editor.stateManager ) {
+					this.editor.stateManager.set( 'isLoading', false );
+				}
 				const standardizedError = this.handleError(
 					{ error: { code: code, info: result && result.error && result.error.info } },
 					'load',

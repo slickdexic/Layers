@@ -107,11 +107,32 @@ class InteractionController {
 	}
 
 	/**
-	 * Check if any interaction is active
+	 * Check if API is currently loading data
+	 * Prevents user interactions during load to avoid race conditions
+	 * @return {boolean}
+	 */
+	isLoading() {
+		const cm = this.canvasManager;
+		if ( cm && cm.editor && cm.editor.stateManager ) {
+			return cm.editor.stateManager.get( 'isLoading' ) === true;
+		}
+		return false;
+	}
+
+	/**
+	 * Check if any interaction is active (or if blocked due to loading)
 	 * @return {boolean}
 	 */
 	isInteracting () {
 		return this.isManipulating() || this.isPanning || this.isMarqueeSelecting;
+	}
+
+	/**
+	 * Check if interactions should be blocked
+	 * @return {boolean}
+	 */
+	shouldBlockInteraction() {
+		return this.isLoading();
 	}
 
 	/**

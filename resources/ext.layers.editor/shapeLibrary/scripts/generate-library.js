@@ -55,6 +55,9 @@ function generateName( filename ) {
 	// ISO_7010_W001.svg -> "W001"
 	// ISO_7010_W033_warning;_barbed_wire.svg -> "W033: Barbed Wire"
 	// ANSI_Z535_-_Figure_A17,_Poison.svg -> "Poison"
+	// ISO_7000_-_Ref-No_0001.svg -> "0001"
+	// GHS-pictogram-acid.svg -> "Acid"
+	// ECB_Hazard_Symbol_C.svg -> "C"
 
 	// Handle ISO 7010 patterns
 	const isoMatch = name.match( /ISO_7010_([A-Z])(\d+)(?:[_;,]+(.+))?/ );
@@ -74,6 +77,26 @@ function generateName( filename ) {
 			return `${ code }: ${ desc }`;
 		}
 		return code;
+	}
+
+	// Handle ISO 7000 patterns: ISO_7000_-_Ref-No_0001.svg
+	const iso7000Match = name.match( /ISO_7000_-_Ref-No_(\d+[A-Z]?)/ );
+	if ( iso7000Match ) {
+		return iso7000Match[ 1 ];
+	}
+
+	// Handle GHS patterns: GHS-pictogram-acid.svg
+	const ghsMatch = name.match( /GHS-pictogram-(.+)/i );
+	if ( ghsMatch ) {
+		return ghsMatch[ 1 ]
+			.replace( /-/g, ' ' )
+			.replace( /\b\w/g, ( c ) => c.toUpperCase() );
+	}
+
+	// Handle ECB patterns: ECB_Hazard_Symbol_C.svg
+	const ecbMatch = name.match( /ECB_Hazard_Symbol_(.+)/i );
+	if ( ecbMatch ) {
+		return ecbMatch[ 1 ];
 	}
 
 	// Handle ANSI patterns
@@ -112,6 +135,9 @@ function generateTags( name, filename, category ) {
 		'iso7010-m': [ 'mandatory', 'required', 'blue', 'must', 'wear' ],
 		'iso7010-p': [ 'prohibition', 'forbidden', 'no', 'red', 'banned' ],
 		'iso7010-w': [ 'warning', 'danger', 'caution', 'yellow', 'hazard' ],
+		iso7000: [ 'symbol', 'equipment', 'industrial', 'graphical', 'iso' ],
+		ghs: [ 'hazard', 'chemical', 'danger', 'ghs', 'pictogram', 'classification' ],
+		ecb: [ 'hazard', 'chemical', 'european', 'danger', 'warning' ],
 		ansi: [ 'safety', 'hazard', 'warning', 'american', 'osha' ]
 	};
 
@@ -178,6 +204,27 @@ function getCategoryInfo( dir ) {
 			prefix: 'W',
 			color: '#F9A800',
 			description: 'Yellow triangle signs for warnings and hazards'
+		},
+		'iso/iso_7000': {
+			id: 'iso7000',
+			name: 'ISO 7000 Symbols',
+			prefix: 'ISO7000',
+			color: '#333333',
+			description: 'ISO 7000 graphical symbols for use on equipment'
+		},
+		ghs: {
+			id: 'ghs',
+			name: 'GHS Hazard',
+			prefix: 'GHS',
+			color: '#CC0000',
+			description: 'Globally Harmonized System of Classification and Labelling of Chemicals pictograms'
+		},
+		ecb: {
+			id: 'ecb',
+			name: 'ECB Hazard',
+			prefix: 'ECB',
+			color: '#FF6600',
+			description: 'European hazard symbols for chemical classification'
 		},
 		ansi: {
 			id: 'ansi',
@@ -296,40 +343,76 @@ let output = `/**
 	 * @type {Object[]}
 	 */
 	const CATEGORIES = [
+		// Parent category for ISO 7010
+		{
+			id: 'iso7010',
+			name: 'ISO 7010 Safety Signs',
+			color: '#333333',
+			description: 'International safety signs standard',
+			isParent: true
+		},
+		// ISO 7010 subcategories
 		{
 			id: 'iso7010-w',
 			name: 'Warning Signs',
 			prefix: 'W',
 			color: '#F9A800',
-			description: 'ISO 7010 yellow triangle warning signs'
+			description: 'ISO 7010 yellow triangle warning signs',
+			parentId: 'iso7010'
 		},
 		{
 			id: 'iso7010-p',
 			name: 'Prohibition Signs',
 			prefix: 'P',
 			color: '#b71f2e',
-			description: 'ISO 7010 red circle prohibition signs'
+			description: 'ISO 7010 red circle prohibition signs',
+			parentId: 'iso7010'
 		},
 		{
 			id: 'iso7010-m',
 			name: 'Mandatory Signs',
 			prefix: 'M',
 			color: '#24578e',
-			description: 'ISO 7010 blue circle mandatory action signs'
+			description: 'ISO 7010 blue circle mandatory action signs',
+			parentId: 'iso7010'
 		},
 		{
 			id: 'iso7010-e',
 			name: 'Emergency Signs',
 			prefix: 'E',
 			color: '#008855',
-			description: 'ISO 7010 green emergency and escape signs'
+			description: 'ISO 7010 green emergency and escape signs',
+			parentId: 'iso7010'
 		},
 		{
 			id: 'iso7010-f',
 			name: 'Fire Signs',
 			prefix: 'F',
 			color: '#a92121',
-			description: 'ISO 7010 red fire protection signs'
+			description: 'ISO 7010 red fire protection signs',
+			parentId: 'iso7010'
+		},
+		// Standalone categories (no parent)
+		{
+			id: 'iso7000',
+			name: 'ISO 7000 Symbols',
+			prefix: 'ISO7000',
+			color: '#333333',
+			description: 'ISO 7000 graphical symbols for use on equipment'
+		},
+		{
+			id: 'ghs',
+			name: 'GHS Hazard',
+			prefix: 'GHS',
+			color: '#CC0000',
+			description: 'GHS chemical hazard pictograms'
+		},
+		{
+			id: 'ecb',
+			name: 'ECB Hazard',
+			prefix: 'ECB',
+			color: '#FF6600',
+			description: 'European chemical hazard symbols'
 		},
 		{
 			id: 'ansi',
@@ -349,7 +432,7 @@ let output = `/**
 `;
 
 // Add shapes
-for ( const cat of [ 'iso7010-w', 'iso7010-p', 'iso7010-m', 'iso7010-e', 'iso7010-f', 'ansi' ] ) {
+for ( const cat of [ 'iso7010-w', 'iso7010-p', 'iso7010-m', 'iso7010-e', 'iso7010-f', 'iso7000', 'ghs', 'ecb', 'ansi' ] ) {
 	if ( !categories[ cat ] ) {
 		continue;
 	}
@@ -376,7 +459,10 @@ output += `\t];
 	 * @namespace
 	 */
 	window.Layers = window.Layers || {};
-	window.Layers.ShapeLibrary = {
+	window.Layers.ShapeLibrary = window.Layers.ShapeLibrary || {};
+
+	// Extend ShapeLibrary with data methods (preserves CustomShapeRenderer if already attached)
+	Object.assign( window.Layers.ShapeLibrary, {
 		/**
 		 * Get all categories
 		 *
@@ -451,7 +537,7 @@ output += `\t];
 		getCount: function () {
 			return SHAPES.length;
 		}
-	};
+	} );
 }() );
 `;
 

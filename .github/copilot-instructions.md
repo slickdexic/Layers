@@ -17,7 +17,7 @@ This extension is feature-rich by design with **15 drawing tools**, multiple ren
 Separation of concerns is strict: PHP integrates with MediaWiki and storage; JavaScript implements the editor UI/state.
 
 - Backend (PHP, `src/`)
-  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.43)
+  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.44.0)
   - Service wiring: `services.php` registers 3 services: LayersLogger, LayersSchemaManager, LayersDatabase (uses DI pattern)
   - Logging: `src/Logging/` provides `LoggerAwareTrait` (for objects with getLogger/setLogger), `StaticLoggerAwareTrait` (for static contexts), and `LayersLogger` (factory via service container)
   - API modules (`src/Api/`)
@@ -25,6 +25,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ApiLayersSave`: write endpoint to save a new layer set revision (requires CSRF token + rights)
     - `ApiLayersDelete`: delete endpoint to remove an entire named layer set (requires CSRF token, owner or admin)
     - `ApiLayersRename`: rename endpoint to rename a named layer set (requires CSRF token, owner or admin)
+  - Shared traits (`src/Api/Traits/`)
+    - `ForeignFileHelperTrait`: shared by all 4 API modules; provides `isForeignFile()` (detects InstantCommons/foreign files) and `getFileSha1()` (deterministic fallback hash for foreign files)
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
     - Uses LoadBalancer for DB connections (lazy init pattern with getWriteDb/getReadDb)
     - Implements retry logic with exponential backoff (3 retries, 100ms base delay) for transaction conflicts
@@ -36,7 +38,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,927 lines - facade coordinating controllers), `ToolManager.js` (~1,214 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,137 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,419 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,132 lines)
+  - Core editor modules: `CanvasManager.js` (~1,981 lines - facade coordinating controllers), `ToolManager.js` (~1,219 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,132 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,426 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,132 lines)
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
     - `TextToolHandler.js` (~207 lines) - inline text input UI for creating text layers
     - `PathToolHandler.js` (~229 lines) - freeform path drawing with click-to-add points
@@ -350,21 +352,23 @@ Keep this doc aligned with code. When you change public behavior (API, schema, m
 
 **IMPORTANT:** Before committing changes that affect version, metrics, features, or API, consult `docs/DOCUMENTATION_UPDATE_GUIDE.md` for the complete checklist of files that must be updated.
 
+⚠️ **CRITICAL: Don't forget `Mediawiki-Extension-Layers.mediawiki`** — This file is the source for the MediaWiki.org extension page and is frequently overlooked during updates!
+
 Key documents that frequently need updates:
 - `README.md` — Main project documentation
-- `Mediawiki-Extension-Layers.txt` — MediaWiki.org extension page content
+- `Mediawiki-Extension-Layers.mediawiki` — MediaWiki.org extension page content ⚠️
 - `CHANGELOG.md` + `wiki/Changelog.md` — Version history (must mirror each other)
 - `wiki/Home.md` — GitHub Wiki homepage with metrics
 - `codebase_review.md` and `improvement_plan.md` — Technical assessment documents
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (currently 9,460 tests, 147 suites)
+- Test count (currently 9,469 tests, 147 suites)
 - Coverage (95% statement, 85% branch)
-- JavaScript file count (115 files, ~68,785 lines)
-- PHP file count (32 files, ~8,891 lines)
+- JavaScript file count (117 files total, 115 production, ~68,458 lines)
+- PHP file count (33 files, ~11,743 lines)
 - God class count (16 files >1,000 lines)
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
-- Shape library count (374 shapes in 10 categories)
-- Version number (1.5.10)
+- Shape library count (590 shapes in 9 categories)
+- Version number (1.5.11)

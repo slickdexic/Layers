@@ -1524,6 +1524,209 @@ body.layers-editor-open .mw-body-content {
 }
 /* stylelint-enable declaration-no-important */
 
+/* ===== Gradient Editor ===== */
+.gradient-editor {
+	width: 100%;
+	padding: 4px 0;
+}
+
+/* stylelint-disable-next-line no-descending-specificity -- gradient editor is a distinct component */
+.gradient-editor .property-field {
+	display: grid;
+	grid-template-columns: 70px 1fr auto;
+	gap: 8px;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.gradient-editor .gradient-type-select {
+	grid-column: 2 / -1;
+	height: 28px;
+	padding: 2px 8px;
+	border: 1px solid #ced4da;
+	border-radius: 4px;
+	font-size: 0.85em;
+	background-color: #fff;
+}
+
+/* Preset swatches */
+.gradient-editor .gradient-presets {
+	grid-template-columns: 70px 1fr;
+}
+
+.gradient-editor .gradient-preset-swatches {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.gradient-editor .gradient-preset-swatch {
+	width: 28px;
+	height: 28px;
+	border: 2px solid transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.gradient-editor .gradient-preset-swatch:hover {
+	border-color: #2196f3;
+	transform: scale( 1.08 );
+}
+
+.gradient-editor .gradient-preset-swatch:focus {
+	outline: 0;
+	border-color: #2196f3;
+	box-shadow: 0 0 0 2px rgba( 33, 150, 243, 0.3 );
+}
+
+/* Angle and radius sliders */
+.gradient-editor .gradient-angle-slider,
+.gradient-editor .gradient-radius-slider {
+	flex: 1;
+	height: 6px;
+	border-radius: 3px;
+	background: linear-gradient( to right, #e0e0e0, #d0d0d0 );
+	appearance: none;
+	cursor: pointer;
+}
+
+.gradient-editor .gradient-angle-slider::-webkit-slider-thumb,
+.gradient-editor .gradient-radius-slider::-webkit-slider-thumb {
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: linear-gradient( 135deg, #2196f3, #1976d2 );
+	cursor: pointer;
+	border: 2px solid #fff;
+	box-shadow: 0 2px 4px rgba( 0, 0, 0, 0.2 );
+}
+
+.gradient-editor .gradient-angle-value,
+.gradient-editor .gradient-radius-value {
+	min-width: 40px;
+	text-align: right;
+	font-size: 0.8em;
+	color: #666;
+}
+
+/* Color stops editor */
+.gradient-editor .gradient-stops-editor {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid #e0e0e0;
+}
+
+.gradient-editor .gradient-stops-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.gradient-editor .gradient-stops-header label {
+	font-size: 0.85em;
+	font-weight: 500;
+	color: #495057;
+}
+
+.gradient-editor .gradient-add-stop {
+	width: 24px;
+	height: 24px;
+	border: 1px solid #28a745;
+	border-radius: 4px;
+	background: #fff;
+	color: #28a745;
+	font-size: 1.2em;
+	font-weight: bold;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.gradient-editor .gradient-add-stop:hover {
+	background: #28a745;
+	color: #fff;
+}
+
+.gradient-editor .gradient-stops-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.gradient-editor .gradient-stop-row {
+	display: grid;
+	grid-template-columns: 36px 1fr 36px 24px;
+	gap: 6px;
+	align-items: center;
+}
+
+.gradient-editor .gradient-stop-color {
+	width: 36px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid #ced4da;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.gradient-editor .gradient-stop-offset {
+	height: 6px;
+	border-radius: 3px;
+	background: linear-gradient( to right, #e0e0e0, #d0d0d0 );
+	appearance: none;
+	cursor: pointer;
+}
+
+.gradient-editor .gradient-stop-offset::-webkit-slider-thumb {
+	appearance: none;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #fff;
+	cursor: pointer;
+	border: 2px solid #2196f3;
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.2 );
+}
+
+.gradient-editor .gradient-stop-offset-value {
+	font-size: 0.75em;
+	color: #666;
+	text-align: right;
+}
+
+.gradient-editor .gradient-stop-delete {
+	width: 24px;
+	height: 24px;
+	border: 1px solid #dc3545;
+	border-radius: 4px;
+	background: #fff;
+	color: #dc3545;
+	font-size: 1em;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.gradient-editor .gradient-stop-delete:hover:not( :disabled ) {
+	background: #dc3545;
+	color: #fff;
+}
+
+/* stylelint-disable-next-line no-descending-specificity -- disabled state defined after hover for cascade */
+.gradient-editor .gradient-stop-delete:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+
+/* ===== End Gradient Editor ===== */
+
 .layers-code-panel .layers-code {
 	display: block;
 	background: #f8f9fa;
@@ -3258,6 +3461,67 @@ body.layers-resize-cursor {
 		background: linear-gradient( to right, #4a4d53, var( --layers-border-color ) );
 	}
 
+	/* Gradient Editor dark mode */
+	html.skin-theme-clientpref-night .gradient-editor label {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-type-select {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-preset-swatch {
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-angle-slider,
+	html.skin-theme-clientpref-night .gradient-editor .gradient-radius-slider,
+	html.skin-theme-clientpref-night .gradient-editor .gradient-stop-offset {
+		background: linear-gradient( to right, #4a4d53, var( --layers-border-color ) );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-angle-value,
+	html.skin-theme-clientpref-night .gradient-editor .gradient-radius-value,
+	html.skin-theme-clientpref-night .gradient-editor .gradient-stop-offset-value {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-stops-editor {
+		border-top-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-stops-header label {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-add-stop {
+		background: var( --layers-bg-secondary );
+		border-color: #4caf50;
+		color: #4caf50;
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-add-stop:hover {
+		background: #4caf50;
+		color: #fff;
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-stop-color {
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-stop-delete {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-error );
+		color: var( --layers-error );
+	}
+
+	html.skin-theme-clientpref-night .gradient-editor .gradient-stop-delete:hover:not( :disabled ) {
+		background: var( --layers-error );
+		color: #fff;
+	}
+
 	/* Footer code area - must come before code-panel for specificity */
 	html.skin-theme-clientpref-night .layers-footer-code {
 		background: var( --layers-bg-tertiary );
@@ -3792,6 +4056,67 @@ body.layers-resize-cursor {
 
 	html.skin-theme-clientpref-os .compact-range {
 		background: linear-gradient( to right, #4a4d53, var( --layers-border-color ) );
+	}
+
+	/* Gradient Editor dark mode (OS preference) */
+	html.skin-theme-clientpref-os .gradient-editor label {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-type-select {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-border-color );
+		color: var( --layers-text-primary );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-preset-swatch {
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-angle-slider,
+	html.skin-theme-clientpref-os .gradient-editor .gradient-radius-slider,
+	html.skin-theme-clientpref-os .gradient-editor .gradient-stop-offset {
+		background: linear-gradient( to right, #4a4d53, var( --layers-border-color ) );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-angle-value,
+	html.skin-theme-clientpref-os .gradient-editor .gradient-radius-value,
+	html.skin-theme-clientpref-os .gradient-editor .gradient-stop-offset-value {
+		color: var( --layers-text-muted );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-stops-editor {
+		border-top-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-stops-header label {
+		color: var( --layers-text-secondary );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-add-stop {
+		background: var( --layers-bg-secondary );
+		border-color: #4caf50;
+		color: #4caf50;
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-add-stop:hover {
+		background: #4caf50;
+		color: #fff;
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-stop-color {
+		border-color: var( --layers-border-color );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-stop-delete {
+		background: var( --layers-bg-secondary );
+		border-color: var( --layers-error );
+		color: var( --layers-error );
+	}
+
+	html.skin-theme-clientpref-os .gradient-editor .gradient-stop-delete:hover:not( :disabled ) {
+		background: var( --layers-error );
+		color: #fff;
 	}
 
 	/* Footer code area - must come before code-panel for specificity */

@@ -4,6 +4,23 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.11 (January 17, 2026)
+
+### Added
+- **Expanded Shape Library** — 216 new shapes across 3 new categories:
+  - ISO 7000 Symbols (198 shapes): Equipment and graphical symbols
+  - GHS Hazard Pictograms (8 shapes): Chemical hazard warning pictograms
+  - ECB Hazard Symbols (10 shapes): European chemical hazard symbols
+  - Total library now contains **590 shapes** across **9 categories**
+
+### Fixed
+- **Shape Library Rendering** — Fixed critical bug where custom shapes failed to render
+  - Root cause: ShapeLibraryData.js was overwriting the CustomShapeRenderer reference
+  - Solution: Use Object.assign() to preserve existing properties
+- **SVG Cleanup** — Sanitized 214 SVG files (~242KB saved)
+
+---
+
 ## Version 1.5.10 (January 14, 2026)
 
 ### Added
@@ -16,9 +33,18 @@ Version history for the Layers extension.
 - **Arrow Fill** — Arrows now properly support fill colors for fat/storage styles
 - **Marker Incrementing** — Fixed markers showing same value instead of incrementing
 - **Marker Controls** — Fixed auto-number checkbox disappearing after first marker
+- **Ellipse Resize** — Fixed ellipse resize to keep opposite edge fixed
+
+### Refactored
+- **ForeignFileHelperTrait** — Extracted duplicate code from 4 API modules into shared trait
+  - Eliminates ~90 lines of duplicated code
+  - Consistent InstantCommons/foreign file handling across all API endpoints
 
 ### Tests
-- **Test Count** — 9,460 tests passing (147 suites)
+- **Test Count** — 9,469 tests passing (147 suites)
+- Added PHPUnit tests for LayersContinuationTrait (14 test methods)
+- Added PHPUnit tests for StaticLoggerAwareTrait (10 test methods)
+- Added PHPUnit tests for ForeignFileHelperTrait and ApiLayersRename validation
 
 ---
 

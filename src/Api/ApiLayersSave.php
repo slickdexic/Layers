@@ -4,6 +4,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiUsageException;
+use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
@@ -57,6 +58,7 @@ use Psr\Log\LoggerInterface;
  * @see LayersDatabase::saveLayerSet() for persistence logic
  */
 class ApiLayersSave extends ApiBase {
+	use ForeignFileHelperTrait;
 	use LayerSaveGuardsTrait;
 
 	/** @var LoggerInterface|null */
@@ -556,34 +558,5 @@ class ApiLayersSave extends ApiBase {
 				]
 			);
 		}
-	}
-
-	/**
-	 * Check if a file is from a foreign repository (like InstantCommons)
-	 *
-	 * @param mixed $file File object
-	 * @return bool True if the file is from a foreign repository
-	 */
-	private function isForeignFile( $file ): bool {
-		// Check for ForeignAPIFile or ForeignDBFile
-		if ( $file instanceof \ForeignAPIFile || $file instanceof \ForeignDBFile ) {
-			return true;
-		}
-
-		// Check using class name (for namespaced classes)
-		$className = get_class( $file );
-		if ( strpos( $className, 'Foreign' ) !== false ) {
-			return true;
-		}
-
-		// Check if the file's repo is foreign
-		if ( method_exists( $file, 'getRepo' ) ) {
-			$repo = $file->getRepo();
-			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 }

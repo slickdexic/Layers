@@ -1394,8 +1394,8 @@
 		const exportImageButton = document.createElement( 'button' );
 		exportImageButton.className = 'toolbar-button export-image-button';
 		exportImageButton.innerHTML = icons.exportImage;
-		exportImageButton.title = t( 'layers-export-image-tooltip', 'Download the image with annotations' );
-		exportImageButton.setAttribute( 'aria-label', t( 'layers-export-image', 'Export as Image' ) );
+		exportImageButton.title = t( 'layers-export-image-tooltip', 'Download the image with annotations (PNG)' );
+		exportImageButton.setAttribute( 'aria-label', t( 'layers-export-image', 'Export as PNG' ) );
 		actionGroup.appendChild( exportImageButton );
 
 		// Import Image Layer button + hidden file input (icon-only with tooltip)

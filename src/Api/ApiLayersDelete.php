@@ -3,6 +3,7 @@
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
+use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
@@ -30,6 +31,7 @@ use Psr\Log\LoggerInterface;
  *   });
  */
 class ApiLayersDelete extends ApiBase {
+	use ForeignFileHelperTrait;
 
 	/** @var LoggerInterface|null */
 	private ?LoggerInterface $logger = null;
@@ -142,7 +144,7 @@ class ApiLayersDelete extends ApiBase {
 			// Perform the delete
 			$rowsDeleted = $db->deleteNamedSet( $imgName, $sha1, $setName );
 
-			if ( $rowsDeleted < 0 ) {
+			if ( $rowsDeleted === null ) {
 				$this->getLogger()->error( 'Failed to delete layer set', [
 					'filename' => $requestedFilename,
 					'setname' => $setName,
@@ -236,55 +238,5 @@ class ApiLayersDelete extends ApiBase {
 	 */
 	protected function createRateLimiter(): RateLimiter {
 		return new RateLimiter();
-	}
-
-	/**
-	 * Get a stable SHA1 identifier for a file.
-	 *
-	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
-	 * we generate a stable fallback identifier based on the filename.
-	 * Uses the DB key form for consistency with ApiLayersSave.php.
-	 *
-	 * @param mixed $file File object
-	 * @param string $imgName The image name (DB key form) to use for fallback hash
-	 * @return string SHA1 hash or fallback identifier
-	 */
-	private function getFileSha1( $file, string $imgName ): string {
-		$sha1 = $file->getSha1();
-		if ( !empty( $sha1 ) ) {
-			return $sha1;
-		}
-
-		// Check if this is a foreign file
-		if ( $this->isForeignFile( $file ) ) {
-			// Use a hash of the DB key for consistency with ApiLayersSave
-			return 'foreign_' . sha1( $imgName );
-		}
-
-		return $sha1 ?? '';
-	}
-
-	/**
-	 * Check if a file is from a foreign repository (like InstantCommons)
-	 *
-	 * @param mixed $file File object
-	 * @return bool True if the file is from a foreign repository
-	 */
-	private function isForeignFile( $file ): bool {
-		// Check if file is a ForeignAPIFile or ForeignDBFile
-		$className = get_class( $file );
-		if ( strpos( $className, 'Foreign' ) !== false ) {
-			return true;
-		}
-
-		// Check if the file's repository is not local
-		if ( method_exists( $file, 'getRepo' ) ) {
-			$repo = $file->getRepo();
-			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 }

@@ -229,9 +229,36 @@ php tests/phpunit/phpunit.php extensions/Layers/tests/phpunit/ApiLayersSaveTest.
 
 ```
 tests/phpunit/
-├── ApiLayersInfoTest.php
-├── ApiLayersSaveTest.php
-└── ...
+├── bootstrap.php              # Test bootstrap
+├── Hooks/                     # Hook processor tests
+│   └── Processors/
+│       └── ImageLinkProcessorTest.php
+└── unit/
+    ├── Api/                   # API module tests
+    │   ├── ApiLayersInfoTest.php
+    │   ├── ApiLayersInfoBooleanPreservationTest.php
+    │   ├── ApiLayersRenameValidationTest.php
+    │   ├── ApiLayersSaveTest.php
+    │   ├── ApiLayersSaveGuardsTest.php
+    │   ├── ForeignFileHelperTraitTest.php
+    │   └── LayersContinuationTraitTest.php
+    ├── Database/
+    │   └── LayersDatabaseTest.php
+    ├── Hooks/
+    │   └── Processors/        # Hook processor unit tests
+    ├── Logging/
+    │   ├── LoggerAwareTraitTest.php
+    │   └── StaticLoggerAwareTraitTest.php
+    ├── Security/
+    │   └── RateLimiterTest.php
+    ├── Validation/            # Validation class tests
+    │   ├── ColorValidatorTest.php
+    │   ├── ServerSideLayerValidatorTest.php
+    │   ├── SetNameSanitizerTest.php
+    │   ├── TextSanitizerTest.php
+    │   └── ValidationResultTest.php
+    ├── HooksTest.php
+    └── ThumbnailRendererTest.php
 ```
 
 ### Writing Tests

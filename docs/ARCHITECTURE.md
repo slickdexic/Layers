@@ -1,9 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 7, 2026  
-**Version:** 1.5.0
-
-This document explains the architectural decisions and patterns used in the Layers MediaWiki extension. It's intended for contributors (human and AI) working on the codebase.
+**Last Updated:** January 14, 2026
+**Version:** 1.5.10
 
 ---
 
@@ -26,14 +24,14 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Viewer module | ~850 lines |
 | Shared module | ~6,500 lines |
 | Editor module | ~54,000 lines |
-| Total JS lines | **~61,452** |
+| Total JS lines | **~69,090** |
 | ES6 classes | **95+** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **94.6% stmt, 83.3% branch, 93.1% func** |
-| Jest tests | **8,551** (146 suites) |
-| PHPUnit test files | 19 |
-| God classes (>1000 lines) | **12** (all use delegation patterns) |
-| Drawing tools | **13** (pointer, text, textbox, callout, pen, rectangle, circle, ellipse, polygon, star, arrow, line, custom shape) |
+| Test coverage | **95.05% stmt, 84.98% branch** |
+| Jest tests | **9,469** (147 suites) |
+| PHPUnit test files | 24 |
+| God classes (>1000 lines) | **16** (all use delegation patterns) |
+| Drawing tools | **15** (pointer, text, textbox, callout, pen, rectangle, circle, ellipse, polygon, star, arrow, line, marker, dimension, custom shape) |
 | eslint-disable comments | **9** ✅ (below <15 target) |
 
 ---

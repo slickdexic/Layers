@@ -8,6 +8,7 @@ class StateManager {
 		this.state = {
 			// Core editor state
 			isDirty: false,
+			isLoading: false, // Prevents user interactions during API load
 			currentTool: 'pointer',
 			selectedLayerIds: [],
 			layers: [],
@@ -304,6 +305,10 @@ class StateManager {
 
 		this.atomic( ( state ) => {
 			const layerIndex = state.layers.findIndex( layer => layer.id === layerId );
+			// Guard against race condition where layer was removed between check and update
+			if ( layerIndex === -1 ) {
+				return null; // No changes - layer was removed
+			}
 			const newLayers = [ ...state.layers ];
 			newLayers[ layerIndex ] = Object.assign( {}, newLayers[ layerIndex ], updates );
 			

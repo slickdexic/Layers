@@ -633,24 +633,31 @@
 			let maxX = -Infinity;
 			let maxY = -Infinity;
 
+			/**
+			 * Helper to validate and update bounds, guards against NaN values
+			 * @param {Object} bounds Bounds object to merge
+			 */
+			const updateBounds = ( bounds ) => {
+				if ( !bounds ) {
+					return;
+				}
+				// Guard against NaN values which would poison the Math.min/max calculations
+				const bx = Number.isFinite( bounds.x ) ? bounds.x : 0;
+				const by = Number.isFinite( bounds.y ) ? bounds.y : 0;
+				const bw = Number.isFinite( bounds.width ) ? bounds.width : 0;
+				const bh = Number.isFinite( bounds.height ) ? bounds.height : 0;
+				minX = Math.min( minX, bx );
+				minY = Math.min( minY, by );
+				maxX = Math.max( maxX, bx + bw );
+				maxY = Math.max( maxY, by + bh );
+			};
+
 			selectedLayers.forEach( ( layer ) => {
 				// For groups, get bounds of all children
 				if ( layer.type === 'group' ) {
-					const groupBounds = this._getGroupBounds( layer );
-					if ( groupBounds ) {
-						minX = Math.min( minX, groupBounds.x );
-						minY = Math.min( minY, groupBounds.y );
-						maxX = Math.max( maxX, groupBounds.x + groupBounds.width );
-						maxY = Math.max( maxY, groupBounds.y + groupBounds.height );
-					}
+					updateBounds( this._getGroupBounds( layer ) );
 				} else {
-					const bounds = this.getLayerBoundsCompat( layer );
-					if ( bounds ) {
-						minX = Math.min( minX, bounds.x );
-						minY = Math.min( minY, bounds.y );
-						maxX = Math.max( maxX, bounds.x + bounds.width );
-						maxY = Math.max( maxY, bounds.y + bounds.height );
-					}
+					updateBounds( this.getLayerBoundsCompat( layer ) );
 				}
 			} );
 

@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 11, 2026  
-**Version:** 1.5.3
+**Last Updated:** January 17, 2026  
+**Version:** 1.5.11
 
 This document lists known functionality issues and their current status.
 
@@ -226,16 +226,15 @@ ServerLogger.js (198 lines) and ApiLayersLog.php were dead code that was never c
 
 ### P2.1 ESLint Disable Comments
 
-**Status:** ✅ Well below target  
-**Count:** 8 eslint-disable comments (reduced from 17 → 13 → 8)
+**Status:** ✅ Target met!  
+**Count:** 9 eslint-disable comments (target: <15)
 
 | Rule | Count | Reason |
 |------|-------|--------|
 | no-alert | 8 | ✅ Intentional fallbacks when DialogManager unavailable |
+| no-control-regex | 1 | ✅ Filename sanitization |
 
-**Improvements Made:**
-- Refactored GroupManager.js to use `omitProperty` utility (removed 4)
-- Added underscore-prefix pattern to .eslintrc.json for intentionally unused params (removed 5)
+**Resolution (January 13, 2026):** Removed 12 unnecessary `no-undef` disables from SVG converter modules. The `module` global was already defined in .eslintrc.json overrides.
 
 ### P2.2 Test Coverage
 
@@ -262,10 +261,10 @@ Remaining deprecated items (all are legitimate fallbacks):
 ### P2.5 Codebase Size
 
 **Status:** ✅ Healthy  
-**Current:** ~67,347 JS lines (115 files), ~8,801 PHP lines (32 files)  
+**Current:** ~71,629 JS lines (122 files), ~8,914 PHP lines (32 files)  
 **Target:** <75,000 lines
 
-The extension is feature-rich with 13 drawing tools (pointer, text, textbox, callout, pen, rectangle, circle, ellipse, polygon, star, arrow, line, custom shape), layer grouping, multiple rendering systems, comprehensive validation, and extensive test coverage.
+The extension is feature-rich with 15 drawing tools (pointer, text, textbox, callout, pen, rectangle, circle, ellipse, polygon, star, arrow, line, marker, dimension, custom shape), layer grouping, multiple rendering systems, comprehensive validation, gradient fills, SVG export, and extensive test coverage.
 
 ---
 
@@ -359,9 +358,7 @@ The extension is feature-rich with 13 drawing tools (pointer, text, textbox, cal
 | Feature | Priority | Effort | Status |
 |---------|----------|--------|--------|
 | Mobile-Optimized UI | MEDIUM | 3-4 weeks | ⏳ Basic touch works |
-| Gradient Fills | LOW | 1 week | Not started |
 | Custom Fonts | LOW | 2 weeks | Not started |
-| SVG Export | LOW | 1 week | Not started |
 
 ### ❌ SVG Images Not Supported
 

@@ -215,11 +215,13 @@
 		 * Create a star layer
 		 *
 		 * @param {Object} point Center point
-		 * @param {number} [points=5] Number of star points
+		 * @param {number} [points=5] Number of star points (minimum 3)
 		 * @return {Object} Star layer object
 		 */
 		createStar( point, points ) {
 			const style = this.getCurrentStyle();
+			// Validate points: must be at least 3 to form a valid star
+			const validatedPoints = Math.max( 3, parseInt( points, 10 ) || 5 );
 			const layer = {
 				type: 'star',
 				x: point.x,
@@ -227,7 +229,7 @@
 				outerRadius: 0,
 				innerRadius: 0,
 				radius: 0, // For compatibility
-				points: points || 5,
+				points: validatedPoints,
 				pointRadius: 0,
 				valleyRadius: 0,
 				stroke: style.color,

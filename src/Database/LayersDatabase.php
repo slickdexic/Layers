@@ -103,7 +103,13 @@ class LayersDatabase {
 		}
 
 		// Check named set limit for new sets
-		if ( !$this->namedSetExists( $normalizedImgName, $sha1, $setName ) ) {
+		$setExists = $this->namedSetExists( $normalizedImgName, $sha1, $setName );
+		if ( $setExists === null ) {
+			// Database connection failed - don't proceed with save
+			$this->logError( 'Cannot verify set existence, database unavailable' );
+			return null;
+		}
+		if ( $setExists === false ) {
 			$maxSets = $this->config->get( 'LayersMaxNamedSets' );
 			$setCount = $this->countNamedSets( $normalizedImgName, $sha1 );
 			if ( $setCount >= $maxSets ) {
@@ -115,10 +121,21 @@ class LayersDatabase {
 		}
 
 		$maxRetries = 3;
+		// 5 second total timeout
+		$maxTotalTimeMs = 5000;
+		// Convert nanoseconds to milliseconds
+		$startTime = hrtime( true ) / 1e6;
+
 		for ( $retryCount = 0; $retryCount < $maxRetries; $retryCount++ ) {
-			// PERFORMANCE FIX: Add exponential backoff to prevent DB hammering
+			// Check total elapsed time to prevent indefinite blocking
+			$elapsedMs = ( hrtime( true ) / 1e6 ) - $startTime;
+			if ( $elapsedMs >= $maxTotalTimeMs ) {
+				$this->logError( 'saveLayerSet timed out after ' . round( $elapsedMs ) . 'ms' );
+				return null;
+			}
+
+			// Exponential backoff to prevent DB hammering (100ms, 200ms)
 			if ( $retryCount > 0 ) {
-				// 100ms, 200ms on retries
 				usleep( $retryCount * 100000 );
 			}
 			$dbw->startAtomic( __METHOD__ );
@@ -341,12 +358,13 @@ class LayersDatabase {
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string $setName Named set name
-	 * @return bool True if the named set exists
+	 * @return bool|null True if exists, false if not found, null on DB error
 	 */
-	public function namedSetExists( string $imgName, string $sha1, string $setName ): bool {
+	public function namedSetExists( string $imgName, string $sha1, string $setName ): ?bool {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
-			return false;
+			$this->logError( 'namedSetExists: Database connection unavailable' );
+			return null;
 		}
 
 		$count = $dbr->selectField(
@@ -568,14 +586,23 @@ class LayersDatabase {
 			return 0;
 		}
 
+		// Validate keepIds contains only integers (defensive, since they come from our own query)
+		$safeKeepIds = array_map( 'intval', $keepIds );
+		if ( empty( $safeKeepIds ) ) {
+			return 0;
+		}
+
 		// Delete all revisions for this set that are NOT in the keep list
+		// Using raw condition with makeList is safe here because:
+		// 1. $safeKeepIds are integers validated above
+		// 2. makeList() properly escapes values for SQL
 		$dbw->delete(
 			'layer_sets',
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
 				'ls_name' => $setName,
-				'ls_id NOT IN (' . $dbw->makeList( $keepIds ) . ')'
+				'ls_id NOT IN (' . $dbw->makeList( $safeKeepIds ) . ')'
 			],
 			__METHOD__
 		);
@@ -673,13 +700,13 @@ class LayersDatabase {
 	 * @param string $imgName The image name
 	 * @param string $sha1 The SHA1 hash of the image
 	 * @param string $setName The name of the layer set to delete
-	 * @return int Number of rows deleted, or -1 on error
+	 * @return int|null Number of rows deleted, or null on error
 	 */
-	public function deleteNamedSet( string $imgName, string $sha1, string $setName ): int {
+	public function deleteNamedSet( string $imgName, string $sha1, string $setName ): ?int {
 		try {
 			$dbw = $this->getWriteDb();
 			if ( !$dbw ) {
-				return -1;
+				return null;
 			}
 
 			$normalizedImgName = $this->normalizeImageName( $imgName );
@@ -687,7 +714,7 @@ class LayersDatabase {
 				$this->logError( 'Invalid parameters for deleteNamedSet', [
 					'imgName' => $imgName, 'sha1' => $sha1, 'setName' => $setName
 				] );
-				return -1;
+				return null;
 			}
 
 			$dbw->delete(
@@ -718,7 +745,7 @@ class LayersDatabase {
 				'message' => $e->getMessage(),
 				'setName' => $setName
 			] );
-			return -1;
+			return null;
 		}
 	}
 

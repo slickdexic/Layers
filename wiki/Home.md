@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C460%20Passing-brightgreen" alt="9,460 Tests">
+  <img src="https://img.shields.io/badge/Tests-9%2C469%20Passing-brightgreen" alt="9,469 Tests">
   <img src="https://img.shields.io/badge/Coverage-95%25-brightgreen" alt="95% Coverage">
 </p>
 
@@ -20,19 +20,24 @@
 
 ---
 
-## 🆕 What's New in v1.5.10
+## 🆕 What's New in v1.5.11
+
+- **Expanded Shape Library** — 216 new shapes across 3 new categories:
+  - ISO 7000 Symbols (198 shapes): Equipment and graphical symbols
+  - GHS Hazard Pictograms (8 shapes): Chemical hazard warning pictograms
+  - ECB Hazard Symbols (10 shapes): European chemical hazard symbols
+  - Total library now contains **590 shapes** across **9 categories**
+- **Shape Library Rendering Fix** — Fixed critical bug where custom shapes failed to render
+- **9,469 tests passing** (147 suites)
+
+### Previous v1.5.10 Highlights
 
 - **Marker Auto-Number** — New feature for placing multiple markers quickly
   - "Auto-number" checkbox in toolbar when marker tool is selected
   - Marker values auto-increment (1→2→3... or A→B→C...)
   - Tool remains active after placing a marker for rapid sequential placement
 - **Arrow Fill Fix** — Arrows now properly support fill colors for fat/storage styles
-- **9,460 tests passing** (147 suites)
-
-### Previous v1.5.9 Highlights
-
-- **Dead Code Removal** — Removed 1,535 lines of unreachable SVG export code
-- All coverage targets now met: 95.10% statement, 85.11% branch
+- **9,469 tests passing** (147 suites)
 
 ### Previous v1.5.8 Highlights
 
@@ -151,15 +156,16 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.8 |
-| **Version (REL1_43)** | 1.5.8-REL1_43 |
+| **Version (main)** | 1.5.10 |
+| **Version (REL1_43)** | 1.5.10-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
-| **Test Suites** | 149 |
-| **Total Tests** | 9,602 |
+| **Test Suites** | 147 |
+| **Total Tests** | 9,469 |
+| **PHPUnit Test Files** | 24 |
 | **Statement Coverage** | 95% |
 | **Branch Coverage** | 85% |
-| **JavaScript Files** | 122 |
+| **JavaScript Files** | 115 |
 | **ES6 Classes** | 100+ |
 
 ---

@@ -3,15 +3,14 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-9%2C460%20passing%20(100%25)-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-9%2C469%20passing%20(100%25)-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.10 (January 13, 2026)  
-> **Status:** ✅ Production-ready (Rating: 7.5/10)  
-> **Requires:** MediaWiki 1.44+, PHP 8.1+  
-> **Technical Debt:** 16 god classes (1,035-3,176 lines) with proper delegation patterns
+> **Version:** 1.5.11 (January 17, 2026)  
+> **Status:** ✅ Production-ready  
+> **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
 > **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
 > **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).
@@ -54,7 +53,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Line          | L        | Straight lines                               |
 | **Marker**    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
-| Custom Shape  | —        | 374 built-in shapes (arrows, ISO signs, flowchart, and more!) |
+| Custom Shape  | —        | 590 built-in shapes (arrows, ISO signs, GHS hazard, ECB symbols, and more!) |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers). *More shapes to come soon!*
 
@@ -244,11 +243,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~8,914 lines across 32 files
-- **Frontend:** HTML5 Canvas editor with 122 JS files (~71,629 lines), 100+ ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,743 lines across 33 files
+- **Frontend:** HTML5 Canvas editor with 115 JS files (~68,959 lines), 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** 17 god classes (1,035-3,176 lines) = 32% of JS codebase, all use delegation patterns
+- **Technical Debt:** 16 god classes (1,035-3,176 lines) = 32% of JS codebase, all use delegation patterns
   - ShapeLibraryData.js (3,176 lines) - generated shape definitions, exempt from limit
   - LayerPanel.js (1,806 lines) - delegates to 9 controllers
 
@@ -256,10 +255,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 9,602 passing (100%) |
+| Jest tests | 9,469 passing (100%) |
+| PHPUnit tests | 24 test files |
 | Statement coverage | 95% |
 | Branch coverage | 85% |
-| Test suites | 149 |
+| Test suites | 147 |
 
 **Security:**
 
@@ -280,7 +280,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
-- ⚠️ **17 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
+- ⚠️ **16 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
 
 **Resolved Issues:**
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
@@ -310,30 +310,16 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 122 | ✅ |
-| Total JS lines | ~71,629 | ✅ Under 75K target |
+| Total JS files | 115 | ✅ |
+| Total JS lines | ~68,959 | ✅ Under 75K target |
 | ES6 classes | 100+ | ✅ |
-| God classes (>1000 lines) | 17 | ⚠️ Managed with delegation |
-| Tests passing | 9,562 | ✅ |
+| God classes (>1000 lines) | 16 | ⚠️ Managed with delegation |
+| Tests passing | 9,469 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95% | ✅ Excellent |
-| Branch coverage | 85.01% | ✅ Target met |
+| Branch coverage | 85% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
-
-**Rating: 8.0/10**
-
-**What's Good:**
-- ✅ All 15 drawing tools work correctly - zero functional bugs
-- ✅ Excellent security (CSRF, rate limiting, validation)
-- ✅ 94% test coverage with 9,319 passing tests
-- ✅ Professional i18n, ARIA accessibility, documentation
-- ✅ No lazy code patterns (no empty catches, no console.log, no TODO/FIXME)
-
-**What Could Be Improved:**
-- ⚠️ 12 god classes with proper delegation - manageable but not ideal
-- ⚠️ LayerPanel.js at 2,193 lines (at soft limit)
-- ✅ Branch coverage at 85.01% (target met!)
 
 ### Generate API Documentation
 

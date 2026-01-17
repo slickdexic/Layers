@@ -61,6 +61,8 @@ class UIHooks {
 				$dbg = (bool)$dbgCfg;
 			}
 		} catch ( \Throwable $e ) {
+			// Fail silently on config access errors - default to no debug
+			// This can happen during early initialization
 		}
 		$log = static function ( $msg ) use ( $dbg ) {
 			if ( !$dbg ) {
@@ -72,6 +74,7 @@ class UIHooks {
 					$logger->info( '[Tab] ' . $msg );
 				}
 			} catch ( \Throwable $e ) {
+				// Fail silently if logger unavailable - cannot log about logging failure
 			}
 		};
 		// Be defensive about how we get Title/User across skins/versions

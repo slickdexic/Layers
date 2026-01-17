@@ -1,0 +1,244 @@
+{{Extension
+|image           = ExtensionLayersEditor.png
+|name            = Layers
+|status          = stable
+|type1           = media
+|type2           = interface
+|type3           = api
+|author          = [[User:Pvodrazka|Paul Vodrazka]]
+|version         = 1.5.11
+|update          = 2026-01-17
+|download        = {{GithubDownload|slickdexic|Layers}}
+|readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
+|changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
+|license         = GPL-2.0-or-later
+|tags            = {{bulleted list|{{tag|annotation|o}}|{{tag|canvas|o}}|{{tag|drawing|o}}|{{tag|image editor|o}}|{{tag|image markup|o}}|{{tag|non-destructive|o}}}}
+|mediawiki       = >= 1.44
+|php             = >= 8.1
+|needs-updatephp = yes
+|table1          = layer_assets
+|table2          = layer_set_usage
+|table3          = layer_sets
+|rights          = {{bulleted list|editlayers|managelayerlibrary}}
+|parameters      = {{bulleted list|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet}}
+|hook1           = BeforePageDisplay
+|hook2           = BitmapHandlerTransform
+|hook3           = FileDeleteComplete
+|hook4           = ImageBeforeProduceHTML
+|hook5           = ImagePageAfterImageLinks
+|hook6           = LinkerMakeMediaLinkFile
+|hook7           = LoadExtensionSchemaUpdates
+|hook8           = MakeGlobalVariablesScript
+|hook9           = ParserBeforeInternalParse
+|hook10          = ParserFirstCallInit
+|hook11          = ParserMakeImageParams
+|hook12          = SkinTemplateNavigation::Universal
+|hook13          = ThumbnailBeforeProduceHTML
+|description     = A professional-grade, non-destructive image annotation system with 15 drawing tools, 590 built-in shapes, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
+}}
+
+The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
+
+All edits are stored as validated JSON and rendered client-side for precise positioning. The system fully integrates into MediaWiki's file pages and parser. Click the {{key press|'''Edit layers'''}} tab on any image's <code>File:</code> page to access the editor.
+
+== Why Layers? ==
+* '''Professional Tools:''' 15 drawing tools, style presets, and industry-standard alignment—everything needed to annotate like a pro.
+* '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
+* '''Accessible:''' WCAG 2.1 compliant with full keyboard navigation, screen reader support, and high-contrast indicators.
+
+== Use Cases ==
+{| class="wikitable"
+! Use Case !! Example !! Features Used
+|-
+| '''Educational Content''' || Label anatomy diagrams, annotate historical photos || Callouts, arrows, text boxes, named sets for different topics
+|-
+| '''Technical Documentation''' || Highlight UI elements, show click sequences || Numbered labels, curved arrows, blur to de-emphasize
+|-
+| '''Step-by-Step Guides''' || Multi-step tutorials on a single image || Named layer sets ("Step 1", "Step 2"), revision history
+|-
+| '''Collaborative Review''' || Multiple annotators on the same image || Named layer sets per reviewer, revision tracking
+|-
+| '''Maps & Geography''' || Mark locations, draw routes, highlight regions || Shapes, arrows, polygon tool, opacity controls
+|-
+| '''Scientific Imagery''' || Label specimens, mark measurement points || Text boxes, arrows, style presets for consistency
+|}
+
+== Installation ==
+=== Branch Selection ===
+{{Note|text=MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_43 branch provides full feature parity with main and is recommended for MediaWiki 1.43 users.}}
+
+{| class="wikitable"
+! MediaWiki Version !! Branch !! Current Version
+|-
+| 1.44+ || <code>main</code> || 1.5.11
+|-
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.11-REL1_43
+|-
+| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
+|}
+{{ExtensionInstall
+|registration=required
+|db-update=yes
+|custom-steps=
+*Developers considering running tests, linting, etc. should run <code>composer install</code> and <code>npm install</code> within the newly created <code>Layers</code> directory.
+|download-link=Download the suitable binary for your MediaWiki version (either [https://github.com/slickdexic/Layers/archive/refs/heads/main.zip main], [https://github.com/slickdexic/Layers/archive/refs/heads/REL1_43.zip REL1_43] or [https://github.com/slickdexic/Layers/archive/refs/heads/REL1_39.zip REL1_39])
+}}
+
+== Configuration ==
+=== Parameters ===
+{| class="wikitable"
+! Variable !! Type !! Default !! Description
+|-
+| <code>$wgLayersMaxLayerCount</code> || integer || <code>100</code> || Max layers per set.
+|-
+| <code>$wgLayersMaxNamedSets</code> || integer || <code>15</code> || Max named sets per image.
+|-
+| <code>$wgLayersMaxRevisionsPerSet</code> || integer || <code>50</code> || Historical revisions to keep.
+|-
+| <code>$wgLayersMaxImageBytes</code> || integer || <code>1048576</code> || Max size for imported image layers.
+|-
+| <code>$wgLayersMaxBytes</code> || integer || <code>2097152</code> || Max JSON size for a single layer set.
+|}
+
+=== Permissions ===
+{| class="wikitable"
+! Right !! Description !! Default Groups
+|-
+| <code>editlayers</code> || Create and edit layer sets || <code>user</code>
+|-
+| <code>managelayerlibrary</code> || Manage global layer library || <code>sysop</code>
+|}
+
+== Key Features ==
+
+=== Annotation Tools ===
+* '''Callouts & Speech Bubbles''': Professional callouts with draggable tail positioning, three tail styles (triangle, curved, line), and rounded corners—perfect for tutorials and explanations.
+* '''Curved Arrows''': Arrows support curved paths via a draggable control point, with configurable head types (arrow, circle, diamond, triangle) and line styles (solid, dashed, dotted).
+* '''Text & Text Boxes''': Simple click-to-place text or advanced text boxes with word wrap, vertical alignment, padding, and corner radius.
+* '''Shape Library (374 Shapes)''': Built-in library with 10 categories including arrows, basic shapes, callouts, flowchart, ISO 7010 safety symbols, math, and more. All shapes render as crisp SVG vectors. ''More shapes to come soon!''
+
+=== Visual Effects ===
+* '''Blur Fill''': Apply a "frosted glass" blur effect to any shape—blur what's beneath instead of using a solid fill.
+* '''Shadow & Glow''': Add drop shadows with configurable blur, offset, and spread. Glow effects for emphasis.
+* '''Blend Modes''': Standard blend modes (multiply, screen, overlay, etc.) for professional compositing.
+* '''Opacity Controls''': Independent fill and stroke opacity for fine-tuned transparency.
+
+=== Layer Management ===
+* '''Layer Folders''': Group layers into collapsible folders for organization. Visibility and lock states cascade to children.
+* '''Named Layer Sets''': Create multiple annotation sets per image (e.g., "default", "anatomy-labels", "step-by-step").
+* '''Revision History''': Automatically tracks up to 50 revisions per layer set with one-click restore.
+* '''Lock & Visibility''': Lock layers to prevent accidental edits; toggle visibility for complex compositions.
+
+=== Professional Workflow ===
+* '''Style Presets''': Save and reuse style configurations (colors, stroke width, fonts) per tool type.
+* '''Smart Guides''': Snap to edges and centers of other objects with visual alignment guides.
+* '''Key Object Alignment''': Industry-standard alignment matching Adobe Illustrator—last selected object becomes the alignment anchor.
+* '''Distribute Tools''': Evenly space selected layers horizontally or vertically.
+
+=== Real-Time Editing ===
+* '''Live Color Preview''': Canvas updates in real-time as colors are selected in the color picker.
+* '''Live Article Preview''': Layer changes appear immediately on article pages after saving—no page reload needed.
+* '''Instant Feedback''': All property changes (stroke width, font size, opacity) update the canvas immediately.
+
+=== Integration ===
+* '''Import Images''': Add external images as layers (PNG, JPG, GIF, WebP).
+* '''Export as PNG''': Download the annotated image as a single PNG file.
+* '''InstantCommons Support''': Works seamlessly with files from Wikimedia Commons and other foreign repositories.
+* '''Vector 2022 Dark Mode''': Full support for MediaWiki's Vector 2022 skin night mode.
+
+=== Deep Linking (v1.2.0+) ===
+Control how users interact with layered images using the <code>layerslink</code> parameter:
+
+{| class="wikitable"
+! Parameter !! Behavior !! Use Case
+|-
+| <code>layerslink=viewer</code> || Opens fullscreen lightbox viewer || Enlarged view for detailed inspection
+|-
+| <code>layerslink=editor</code> || Opens layer editor directly || Quick access from article to editing
+|-
+| <code>layerslink=editor-newtab</code> || Opens editor in new browser tab || Edit without losing article context
+|-
+| <code>layerslink=editor-modal</code> || Opens editor in iframe overlay || Perfect for Page Forms integration
+|}
+
+{{note|text=Please note that {{para|layerslink|editor-modal}} requires <code>{{ll|1=Manual:$wgEditPageFrameOptions|2=$wgEditPageFrameOptions}} {{=}} 'SAMEORIGIN';</code> in {{ll|1=LocalSettings.php}}.}}
+
+'''Example usage:'''
+<syntaxhighlight lang="wikitext">
+[[File:Anatomy.png|thumb|layerset=anatomy|layerslink=viewer]]
+[[File:Diagram.png|thumb|layerset=labels|layerslink=editor]]
+'layers=' was changed to 'layerset=' to be more consistent with the terminology used in the editor.
+'layers=' is still supported for backwards compatibility.
+</syntaxhighlight>
+
+== Drawing Tools ==
+{| class="wikitable"
+! Tool !! Shortcut !! Purpose !! Key Features
+|-
+| Pointer || {{key press|V}} || Select/manipulate || Multi-select, resize, rotate, Key Object alignment
+|-
+| Text || {{key press|T}} || Simple Text || Click to place, inline editing
+|-
+| Text Box || {{key press|X}} || Advanced Text || Word wrap, alignment, padding, corner radius
+|-
+| Callout || {{key press|B}} || Speech Bubbles || Draggable tail, 3 tail styles, rounded corners
+|-
+| Pen || {{key press|P}} || Freehand || Smooth paths, adjustable stroke
+|-
+| Rectangle || {{key press|R}} || Basic Shape || Adjustable stroke, fill, corner radius
+|-
+| Circle || {{key press|C}} || Basic Shape || Perfect circles with stroke and fill
+|-
+| Ellipse || {{key press|E}} || Basic Shape || Oval shapes with independent radii
+|-
+| Polygon || {{key press|Y}} || Complex Shape || Configurable sides, rounded corners
+|-
+| Star || {{key press|S}} || Complex Shape || Configurable points and radii
+|-
+| Arrow || {{key press|A}} || Annotations || Configurable head types, curved paths, line styles
+|-
+| Line || {{key press|L}} || Annotations || Simple lines with adjustable stroke
+|-
+| Marker || {{key press|M}} || Sequence Markers || Numbered/lettered markers with optional leader lines
+|-
+| Dimension || {{key press|D}} || Measurements || Technical dimension annotations with tick marks
+|-
+| Custom Shape || — || Shape Library || Arrows, symbols, flowchart shapes, and more
+|}
+
+== Keyboard Shortcuts ==
+Full keyboard accessibility with over 20 shortcuts:
+
+{| class="wikitable"
+! Action !! Shortcut !! Action !! Shortcut
+|-
+| Pointer Tool || {{key press|V}} || Undo || {{key press|Ctrl}}+{{key press|Z}}
+|-
+| Text Tool || {{key press|T}} || Redo || {{key press|Ctrl}}+{{key press|Shift}}+{{key press|Z}}
+|-
+| Arrow Tool || {{key press|A}} || Delete Layer || {{key press|Delete}} or {{key press|Backspace}}
+|-
+| Rectangle Tool || {{key press|R}} || Duplicate || {{key press|Ctrl}}+{{key press|D}}
+|-
+| Circle Tool || {{key press|C}} || Group Layers || {{key press|Ctrl}}+{{key press|G}}
+|-
+| Ellipse Tool || {{key press|E}} || Ungroup || {{key press|Ctrl}}+{{key press|Shift}}+{{key press|G}}
+|-
+| Polygon Tool || {{key press|Y}} || Select All || {{key press|Ctrl}}+{{key press|A}}
+|-
+| Star Tool || {{key press|S}} || Toggle Smart Guides || {{key press|;}}
+|-
+| Pen Tool || {{key press|P}} || Save || {{key press|Ctrl}}+{{key press|S}}
+|-
+| Marker Tool || {{key press|M}} || Dimension Tool || {{key press|D}}
+|}
+
+== Technical Details ==
+* '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~64k lines).
+* '''Stability:''' 9,469 Jest tests across 147 test suites achieving 95% statement coverage, 85% branch coverage.
+* '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
+* '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
+
+== See also ==
+* [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md Full Changelog]
+* [https://github.com/slickdexic/Layers/wiki Project Wiki]

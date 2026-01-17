@@ -31,6 +31,14 @@
 		this.activeCategory = 'iso7010-w'; // Default to warning signs
 
 		this.isOpen = false;
+		this.isDestroyed = false;
+
+		// Bound event handlers for cleanup
+		this._boundEscapeHandler = null;
+		this._boundOverlayClickHandler = null;
+		this._boundCloseClickHandler = null;
+		this._boundSearchInputHandler = null;
+		this._searchTimeout = null;
 
 		this.init();
 	}
@@ -643,31 +651,35 @@
 	ShapeLibraryPanel.prototype.bindEvents = function () {
 		const self = this;
 
-		// Close button
+		// Close button - bind handler for cleanup
+		this._boundCloseClickHandler = function () {
+			self.close();
+		};
 		const closeBtn = this.panel.querySelector( '.layers-shape-library-close' );
-		closeBtn.addEventListener( 'click', function () {
-			self.close();
-		} );
+		if ( closeBtn ) {
+			closeBtn.addEventListener( 'click', this._boundCloseClickHandler );
+		}
 
-		// Overlay click
-		this.overlay.addEventListener( 'click', function () {
+		// Overlay click - bind handler for cleanup
+		this._boundOverlayClickHandler = function () {
 			self.close();
-		} );
+		};
+		this.overlay.addEventListener( 'click', this._boundOverlayClickHandler );
 
-		// Escape key
-		document.addEventListener( 'keydown', function ( e ) {
+		// Escape key - bind handler for cleanup
+		this._boundEscapeHandler = function ( e ) {
 			if ( e.key === 'Escape' && self.isOpen ) {
 				self.close();
 			}
-		} );
+		};
+		document.addEventListener( 'keydown', this._boundEscapeHandler );
 
-		// Search input
-		let searchTimeout;
-		this.searchInput.addEventListener( 'input', function () {
-			clearTimeout( searchTimeout );
+		// Search input - bind handler for cleanup
+		this._boundSearchInputHandler = function () {
+			clearTimeout( self._searchTimeout );
 			const query = this.value.trim();
 
-			searchTimeout = setTimeout( function () {
+			self._searchTimeout = setTimeout( function () {
 				if ( query.length >= 2 ) {
 					const results = window.Layers.ShapeLibrary.search( query );
 					self.showShapes( results );
@@ -681,13 +693,19 @@
 					self.selectCategory( self.activeCategory );
 				}
 			}, 200 );
-		} );
+		};
+		this.searchInput.addEventListener( 'input', this._boundSearchInputHandler );
 	};
 
 	/**
 	 * Open the panel
 	 */
 	ShapeLibraryPanel.prototype.open = function () {
+		// Don't open if destroyed
+		if ( this.isDestroyed ) {
+			return;
+		}
+
 		// Check if library is loaded
 		if ( !window.Layers || !window.Layers.ShapeLibrary ) {
 			mw.notify( mw.message( 'layers-shape-library-not-loaded' ).text(), { type: 'error' } );
@@ -710,20 +728,74 @@
 	 */
 	ShapeLibraryPanel.prototype.close = function () {
 		this.isOpen = false;
-		this.overlay.style.display = 'none';
-		this.panel.style.display = 'none';
+		// Defensive checks for null DOM elements (e.g., after partial cleanup)
+		if ( this.overlay ) {
+			this.overlay.style.display = 'none';
+		}
+		if ( this.panel ) {
+			this.panel.style.display = 'none';
+		}
 	};
 
 	/**
-	 * Destroy the panel
+	 * Destroy the panel and cleanup all resources
 	 */
 	ShapeLibraryPanel.prototype.destroy = function () {
+		// Prevent double destroy
+		if ( this.isDestroyed ) {
+			return;
+		}
+		this.isDestroyed = true;
+
+		// Clear any pending timeout
+		if ( this._searchTimeout ) {
+			clearTimeout( this._searchTimeout );
+			this._searchTimeout = null;
+		}
+
+		// Remove escape key listener from document
+		if ( this._boundEscapeHandler ) {
+			document.removeEventListener( 'keydown', this._boundEscapeHandler );
+			this._boundEscapeHandler = null;
+		}
+
+		// Remove overlay click listener
+		if ( this.overlay && this._boundOverlayClickHandler ) {
+			this.overlay.removeEventListener( 'click', this._boundOverlayClickHandler );
+			this._boundOverlayClickHandler = null;
+		}
+
+		// Remove close button listener
+		if ( this.panel && this._boundCloseClickHandler ) {
+			const closeBtn = this.panel.querySelector( '.layers-shape-library-close' );
+			if ( closeBtn ) {
+				closeBtn.removeEventListener( 'click', this._boundCloseClickHandler );
+			}
+			this._boundCloseClickHandler = null;
+		}
+
+		// Remove search input listener
+		if ( this.searchInput && this._boundSearchInputHandler ) {
+			this.searchInput.removeEventListener( 'input', this._boundSearchInputHandler );
+			this._boundSearchInputHandler = null;
+		}
+
+		// Remove DOM elements
 		if ( this.panel && this.panel.parentNode ) {
 			this.panel.parentNode.removeChild( this.panel );
 		}
 		if ( this.overlay && this.overlay.parentNode ) {
 			this.overlay.parentNode.removeChild( this.overlay );
 		}
+
+		// Clear all references
+		this.panel = null;
+		this.overlay = null;
+		this.searchInput = null;
+		this.categoryList = null;
+		this.shapeGrid = null;
+		this.onSelect = null;
+		this.options = null;
 	};
 
 	// Export

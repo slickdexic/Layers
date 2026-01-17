@@ -312,7 +312,56 @@ describe( 'Toolbar', function () {
 
 			expect( mockEditor.setCurrentTool ).toHaveBeenCalledWith( 'text', { skipToolbarSync: true } );
 		} );
-	} );
+
+		it( 'should update dropdown active states when toolDropdowns exist', function () {
+			const mockDropdown1 = {
+				hasTool: jest.fn( ( id ) => id === 'rectangle' ),
+				setActive: jest.fn(),
+				selectTool: jest.fn()
+			};
+			const mockDropdown2 = {
+				hasTool: jest.fn( ( id ) => id === 'circle' ),
+				setActive: jest.fn(),
+				selectTool: jest.fn()
+			};
+			toolbar.toolDropdowns = [ mockDropdown1, mockDropdown2 ];
+
+			toolbar.selectTool( 'rectangle' );
+
+			expect( mockDropdown1.hasTool ).toHaveBeenCalledWith( 'rectangle' );
+			expect( mockDropdown1.setActive ).toHaveBeenCalledWith( true );
+			expect( mockDropdown1.selectTool ).toHaveBeenCalledWith( 'rectangle', true, true );
+			expect( mockDropdown2.setActive ).toHaveBeenCalledWith( false );
+		} );
+
+		it( 'should deactivate all dropdowns when tool is not in any dropdown', function () {
+			const mockDropdown1 = {
+				hasTool: jest.fn( () => false ),
+				setActive: jest.fn(),
+				selectTool: jest.fn()
+			};
+			const mockDropdown2 = {
+				hasTool: jest.fn( () => false ),
+				setActive: jest.fn(),
+				selectTool: jest.fn()
+			};
+			toolbar.toolDropdowns = [ mockDropdown1, mockDropdown2 ];
+
+			toolbar.selectTool( 'pointer' );
+
+			expect( mockDropdown1.setActive ).toHaveBeenCalledWith( false );
+			expect( mockDropdown2.setActive ).toHaveBeenCalledWith( false );
+			expect( mockDropdown1.selectTool ).not.toHaveBeenCalled();
+			expect( mockDropdown2.selectTool ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle empty toolDropdowns array', function () {
+			toolbar.toolDropdowns = [];
+
+			expect( () => toolbar.selectTool( 'rectangle' ) ).not.toThrow();
+			expect( toolbar.currentTool ).toBe( 'rectangle' );
+		} );
+	});
 
 	describe( 'setActiveTool', function () {
 		beforeEach( function () {
@@ -1880,6 +1929,11 @@ describe( 'Toolbar', function () {
 			mockEditor.apiManager = { downloadAsImage: jest.fn() };
 			toolbar.exportImageButton.click();
 			expect( mockEditor.apiManager.downloadAsImage ).toHaveBeenCalledWith( { format: 'png' } );
+		} );
+
+		it( 'should not throw when export image clicked and apiManager missing', function () {
+			mockEditor.apiManager = null;
+			expect( () => toolbar.exportImageButton.click() ).not.toThrow();
 		} );
 
 		it( 'should trigger file input on import image button click', function () {

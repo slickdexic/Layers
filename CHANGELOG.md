@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.11] - 2026-01-17
+
+### Added
+- **Expanded Shape Library** — Added 216 new shapes across 3 new categories:
+  - **ISO 7000 Symbols** (198 shapes): Equipment and graphical symbols
+  - **GHS Hazard Pictograms** (8 shapes): Chemical hazard warning pictograms
+  - **ECB Hazard Symbols** (10 shapes): European chemical hazard symbols
+  - Total library now contains **590 shapes** across **9 categories**
+
+### Fixed
+- **Shape Library Rendering** — Fixed critical bug where custom shapes failed to render
+  - Root cause: `ShapeLibraryData.js` was overwriting `window.Layers.ShapeLibrary` object, destroying the `CustomShapeRenderer` reference
+  - Solution: Changed to use `Object.assign()` to merge data methods while preserving existing properties
+- **SVG Cleanup** — Sanitized 214 SVG files, removing unnecessary metadata (saved ~242KB)
+
+### Changed
+- **Shape Library Generator** — Updated `generate-library.js` to use `Object.assign()` pattern for namespace safety
+
+---
+
 ## [1.5.10] - 2026-01-14
 
 ### Added
@@ -22,11 +42,35 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Marker Controls Visibility** — Fixed auto-number checkbox disappearing after first marker
   - Added CSS rule for `.style-control:not(.context-hidden)` visibility
   - Use `addLayerWithoutSelection()` in auto-number mode to keep controls visible
+- **Ellipse Resize Behavior** — Fixed ellipse resize to keep opposite edge fixed (matches rectangles and preview)
+- **Canvas Size Hardcoding** — Canvas dimensions now configurable via `LayersConstants.LIMITS`
+- **Race Condition in updateLayer** — Added guard to handle layer removal during atomic operations
+- **Database Return Type Inconsistency** — `deleteNamedSet()` now returns `?int` (null on error) consistently
+
+### Improved
+- **Code Review Complete** — All 28 identified issues resolved (17 fixed, 11 verified correct)
+  - 3 CRITICAL, 7 HIGH, 11 MEDIUM, 7 LOW issues addressed
+  - Overall rating improved from 7.5/10 to 9.0/10
+- **Test Coverage** — Branch coverage improved from 84.92% to 84.98%
+  - Added 9 new tests for GradientEditor edge cases
+
+### Refactored
+- **ForeignFileHelperTrait** — Extracted duplicate code from 4 API modules into shared trait
+  - New `src/Api/Traits/ForeignFileHelperTrait.php` with `isForeignFile()` and `getFileSha1()` methods
+  - Eliminates ~90 lines of duplicated code across ApiLayersSave, ApiLayersInfo, ApiLayersDelete, ApiLayersRename
+  - Consistent InstantCommons/foreign file handling across all API endpoints
 
 ### Tests
-- **Test Count** — 9,460 tests passing (147 suites)
+- **Test Count** — 9,469 tests passing (147 suites)
+- Added PHPUnit tests for `LayersContinuationTrait` (14 test methods covering pagination parsing and formatting)
+- Added PHPUnit tests for `StaticLoggerAwareTrait` (10 test methods covering static logger injection and log methods)
+- Added PHPUnit tests for `ForeignFileHelperTrait` (8 test methods covering foreign file detection and SHA1 fallback)
+- Added PHPUnit tests for `ApiLayersRename` set name validation (12 test methods covering valid/invalid patterns)
+- Added PHPUnit tests for `ValidationResult` class (19 test methods covering factory methods, merge, metadata)
+- Added PHPUnit tests for `LoggerAwareTrait` (7 test methods covering log methods and prefix formatting)
 - Added 4 CanvasManager tests for autoNumber property and finishDrawing behavior
 - Added 5 ToolbarStyleControls tests for marker controls UI and visibility
+- Added 9 GradientEditor tests for edge cases and defensive code
 - Fixed 3 arrow fill tests (StyleController, ToolbarStyleControls)
 - Updated DrawingController tests for new `editor.layers` path
 
