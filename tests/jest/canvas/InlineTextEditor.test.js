@@ -47,7 +47,17 @@ describe( 'InlineTextEditor', () => {
 				measureText: jest.fn( () => ( { width: 100 } ) )
 			},
 			editor: {
-				layers: []
+				layers: [],
+				updateLayer: jest.fn( ( layerId, changes ) => {
+					// Simulate updating the layer in the layers array
+					const layer = mockCanvasManager.editor.layers.find( l => l.id === layerId );
+					if ( layer ) {
+						Object.assign( layer, changes );
+					}
+				} ),
+				getLayerById: jest.fn( ( layerId ) => {
+					return mockCanvasManager.editor.layers.find( l => l.id === layerId ) || null;
+				} )
 			},
 			zoom: 1.0,
 			panX: 0,
@@ -497,12 +507,16 @@ describe( 'InlineTextEditor', () => {
 			};
 
 			const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 0, y: 0, fontSize: 16 };
+			// Add layer to layers array so updateLayer and getLayerById work
+			mockCanvasManager.editor.layers = [ layer ];
 			editor.startEditing( layer );
 
 			// Call _applyFormat which should trigger _syncPropertiesPanel
 			editor._applyFormat( 'fontSize', 24 );
 
 			expect( mockUpdatePropertiesPanel ).toHaveBeenCalledWith( 'layer-1' );
+			// updateLayer should have been called
+			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', { fontSize: 24 } );
 			expect( layer.fontSize ).toBe( 24 );
 		} );
 
@@ -524,6 +538,8 @@ describe( 'InlineTextEditor', () => {
 				textAlign: 'left',
 				color: '#000000'
 			};
+			// Add layer to layers array so updateLayer and getLayerById work
+			mockCanvasManager.editor.layers = [ layer ];
 			editor.startEditing( layer );
 
 			// Apply multiple format changes
@@ -536,12 +552,41 @@ describe( 'InlineTextEditor', () => {
 			// Should have been called 5 times (once per format change)
 			expect( mockUpdatePropertiesPanel ).toHaveBeenCalledTimes( 5 );
 
+			// Verify updateLayer was called for each change
+			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledTimes( 5 );
+
 			// Verify layer was updated
 			expect( layer.fontFamily ).toBe( 'Georgia' );
 			expect( layer.fontWeight ).toBe( 'bold' );
 			expect( layer.fontStyle ).toBe( 'italic' );
 			expect( layer.textAlign ).toBe( 'center' );
 			expect( layer.color ).toBe( '#ff0000' );
+		} );
+
+		test( 'should use editor.updateLayer to persist font changes', () => {
+			const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 0, y: 0, fontFamily: 'Arial' };
+			mockCanvasManager.editor.layers = [ layer ];
+			editor.startEditing( layer );
+
+			// Change font family via _applyFormat
+			editor._applyFormat( 'fontFamily', 'Times New Roman' );
+
+			// Verify updateLayer was called with the font change
+			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', { fontFamily: 'Times New Roman' } );
+			// Layer should be updated
+			expect( layer.fontFamily ).toBe( 'Times New Roman' );
+		} );
+
+		test( 'should fall back to direct update when updateLayer unavailable', () => {
+			// Remove updateLayer
+			delete mockCanvasManager.editor.updateLayer;
+
+			const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 0, y: 0, fontFamily: 'Arial' };
+			editor.startEditing( layer );
+
+			// Should not throw and should still update the layer directly
+			expect( () => editor._applyFormat( 'fontFamily', 'Georgia' ) ).not.toThrow();
+			expect( layer.fontFamily ).toBe( 'Georgia' );
 		} );
 	} );
 

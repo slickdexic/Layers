@@ -984,6 +984,9 @@
 		/**
 		 * Apply a format change to the layer and editor
 		 *
+		 * Uses editor.updateLayer() to ensure changes are properly persisted
+		 * through StateManager and saved when the document is saved.
+		 *
 		 * @private
 		 * @param {string} property - Property name
 		 * @param {*} value - New value
@@ -993,7 +996,23 @@
 				return;
 			}
 
-			this.editingLayer[ property ] = value;
+			const layerId = this.editingLayer.id;
+
+			// Use editor.updateLayer() to properly persist the change through StateManager
+			// This ensures the change is saved when the document is saved
+			const editor = this.canvasManager && this.canvasManager.editor;
+			if ( editor && typeof editor.updateLayer === 'function' ) {
+				editor.updateLayer( layerId, { [ property ]: value } );
+
+				// Refresh our reference to the layer since updateLayer creates a new object
+				const updatedLayer = editor.getLayerById ? editor.getLayerById( layerId ) : null;
+				if ( updatedLayer ) {
+					this.editingLayer = updatedLayer;
+				}
+			} else {
+				// Fallback: direct update (won't persist properly but at least shows on canvas)
+				this.editingLayer[ property ] = value;
+			}
 
 			// Update editor element style if applicable
 			if ( this.editorElement ) {
