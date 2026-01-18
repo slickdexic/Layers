@@ -579,9 +579,7 @@
 		 * @return {string} Translated message or fallback
 		 */
 		_msg( key, fallback ) {
-			// eslint-disable-next-line no-undef
 			if ( typeof mw !== 'undefined' && mw.message ) {
-				// eslint-disable-next-line no-undef
 				return mw.message( key ).text();
 			}
 			return fallback || key;

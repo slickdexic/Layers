@@ -587,6 +587,10 @@
 	"layers-lightbox-close-tooltip": "Tooltip for the close button in the layers lightbox viewer",
 	"layers-lightbox-loading": "Loading message shown while the lightbox is fetching layer data",
 
+	"layers-viewer-overlay-label": "Accessible label for the hover overlay toolbar on images with layers",
+	"layers-viewer-edit": "Tooltip for the edit button in the viewer overlay (opens layer editor)",
+	"layers-viewer-view": "Tooltip for the view button in the viewer overlay (opens full size view)",
+
 	"apihelp-layersinfo-summary": "Short summary shown on Special:ApiHelp describing what layersinfo does",
 	"apihelp-layersinfo-param-filename": "Parameter documentation string for the filename parameter of layersinfo",
 	"apihelp-layersinfo-param-layersetid": "Parameter documentation string for the optional layersetid parameter",

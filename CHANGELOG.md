@@ -2,9 +2,16 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.14] - 2026-01-18
+## [1.5.15] - 2026-01-18
 
 ### Added
+- **Hover Overlay Actions** — Edit/View icons appear on hover over layered images
+  - **Edit button** (pencil icon): Opens layer editor — respects `editlayers` permission
+  - **View button** (expand icon): Opens full-size lightbox viewer
+  - Touch support with auto-hide after 3 seconds
+  - Modal editor integration on article pages, direct navigation on File: pages
+  - Full accessibility: ARIA labels, keyboard navigation, reduced-motion support
+  - Dark mode and high-contrast mode support
 - **Floating Text Formatting Toolbar** — When editing text inline, a draggable floating toolbar appears with:
   - Font family dropdown (Arial, Helvetica, Times New Roman, Georgia, Verdana, Courier New, Comic Sans MS, Impact)
   - Font size input (8-200px)
@@ -18,6 +25,12 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Textbox Background Visibility** — Textbox layers now keep their background visible during inline editing (text is cleared instead of hiding the layer)
 - **Font Selector Focus** — Fixed font dropdown closing immediately after opening
 - **Color Picker Integration** — Color button now opens the full ColorPickerDialog with swatches, saved colors, and OK/Cancel buttons
+
+### Technical Details
+- New files: `ViewerOverlay.js` (~490 lines) in `resources/ext.layers/viewer/`
+- Added `wgLayersCanEdit` config variable in PHP for permission-aware client UI
+- 24 new unit tests for ViewerOverlay
+- New icons in `IconFactory.js`: `createPencilIcon()`, `createFullscreenIcon()`
 
 ---
 

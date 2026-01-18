@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.14",
+	"version": "1.5.15",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -190,6 +190,7 @@
 				"LayersViewer.js",
 				"viewer/UrlParser.js",
 				"viewer/FreshnessChecker.js",
+				"viewer/ViewerOverlay.js",
 				"viewer/ViewerManager.js",
 				"viewer/ApiFallback.js",
 				"viewer/LayersLightbox.js",
@@ -204,7 +205,10 @@
 				"layers-code-title",
 				"layers-lightbox-close",
 				"layers-lightbox-close-tooltip",
-				"layers-lightbox-loading"
+				"layers-lightbox-loading",
+				"layers-viewer-overlay-label",
+				"layers-viewer-edit",
+				"layers-viewer-view"
 			]
 		},
 		"ext.layers.modal": {

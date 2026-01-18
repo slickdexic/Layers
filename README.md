@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-9%2C535%20passing%20(100%25)-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-92.53%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-9%2C559%20passing%20(100%25)-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.14 (January 18, 2026)  
+> **Version:** 1.5.15 (January 18, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -98,6 +98,16 @@ The canvas updates in real-time as you select colors in the color picker:
 - Preview changes on the canvas before applying
 - Cancel or press Escape to restore the original color
 - Matches professional editor UX (Figma, Photoshop, Illustrator)
+
+### Hover Overlay Actions (v1.5.15+)
+
+Images with layers display action buttons on hover for quick access:
+
+- **Edit button** (pencil icon): Opens the layer editor — only visible if you have `editlayers` permission
+- **View button** (expand icon): Opens the full-size lightbox viewer
+- Touch-friendly: tap and hold to reveal buttons on mobile
+- Fully accessible with ARIA labels and keyboard support
+- Respects dark mode and high-contrast preferences
 
 ### Live Article Preview (v1.3.3+)
 
@@ -257,11 +267,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 9,469 passing (100%) |
+| Jest tests | 9,535 passing (100%) |
 | PHPUnit tests | 24 test files |
-| Statement coverage | 95% |
-| Branch coverage | 85% |
-| Test suites | 147 |
+| Statement coverage | 92.53% |
+| Branch coverage | 83.56% |
+| Test suites | 148 |
 
 **Security:**
 
@@ -312,14 +322,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 120 | ✅ |
-| Total JS lines | ~108,712 | ✅ Includes generated data |
+| Total JS files | 121 | ✅ |
+| Total JS lines | ~110,000 | ✅ Includes generated data |
 | ES6 classes | 100+ | ✅ |
-| God classes (>1000 lines) | 18 | ⚠️ 3 generated, 15 with delegation |
-| Tests passing | 9,469 | ✅ |
+| God classes (>1000 lines) | 19 | ⚠️ 3 generated, 16 with delegation |
+| Tests passing | 9,535 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 95% | ✅ Excellent |
-| Branch coverage | 85% | ✅ Target met |
+| Statement coverage | 92.53% | ✅ Excellent |
+| Branch coverage | 83.56% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

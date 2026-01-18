@@ -37,6 +37,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
+  - Viewer modules (`resources/ext.layers/viewer/`): Lightweight viewer for displaying layered images
+    - `ViewerManager.js` (~750 lines) - manages viewer instances, lazy initialization
+    - `LayersViewer.js` (~600 lines) - canvas-based layer rendering for thumbnails
+    - `LayersLightbox.js` (~560 lines) - full-screen lightbox viewer
+    - `ViewerOverlay.js` (~490 lines) - hover action buttons (edit/view) with permission checking
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
   - Core editor modules: `CanvasManager.js` (~1,981 lines - facade coordinating controllers), `ToolManager.js` (~1,219 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,132 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,426 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,132 lines)
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
@@ -94,9 +99,9 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 17 files exceed 1,000 lines:
+  - **God classes:** 19 files exceed 1,000 lines:
     - **Generated data files (exempt from refactoring):** EmojiLibraryData.js (~26,277 lines), ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,003 lines)
-    - **Hand-written files:** CanvasManager, LayerPanel, Toolbar, LayersEditor, SelectionManager, APIManager, ArrowRenderer, CalloutRenderer, PropertyBuilders, ToolManager, CanvasRenderer, GroupManager, ResizeCalculator, ToolbarStyleControls
+    - **Hand-written files:** CanvasManager, LayerPanel, Toolbar, LayersEditor, SelectionManager, APIManager, ArrowRenderer, CalloutRenderer, PropertyBuilders, ToolManager, InlineTextEditor, CanvasRenderer, GroupManager, ResizeCalculator, ToolbarStyleControls, TransformController
     - All hand-written files use delegation patterns, see improvement_plan.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -373,13 +378,13 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (currently 9,535 tests, 148 suites)
-- Coverage (92.94% statement, 83.75% branch)
-- JavaScript file count (121 files total, ~109,500 lines)
+- Test count (currently 9,559 tests, 149 suites)
+- Coverage (92.53% statement, 83.56% branch)
+- JavaScript file count (122 files total, ~110,000 lines)
 - PHP file count (33 files, ~11,743 lines)
-- God class count (17 files >1,000 lines; 3 generated data files, 14 hand-written)
+- God class count (19 files >1,000 lines; 3 generated data files, 16 hand-written)
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
 - Emoji library count (2,817 emoji in 19 categories)
-- Version number (1.5.14)
+- Version number (1.5.15)

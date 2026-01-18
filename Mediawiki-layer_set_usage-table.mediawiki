@@ -13,15 +13,13 @@ The '''layer_set_usage''' table tracks article usage for the [[Extension:Layers|
 {| class="wikitable"
 ! Column !! Type !! Nullable !! Default !! Description
 |-
-| <code>lsu_id</code> || int unsigned || No || Auto-increment || Primary key, unique identifier
+| <code>lsu_layer_set_id</code> || int unsigned || No || — || Layer set ID (foreign key to layer_sets.ls_id)
 |-
-| <code>lsu_page_id</code> || int unsigned || No || — || Page ID of the article using the layered image
-|-
-| <code>lsu_file_name</code> || varchar(255) || No || — || Filename of the layered image (e.g., "Example.jpg")
-|-
-| <code>lsu_set_name</code> || varchar(50) || No || 'default' || Named layer set being used
+| <code>lsu_page_id</code> || int unsigned || No || — || Page ID of the article using the layered image (foreign key to page.page_id)
 |-
 | <code>lsu_timestamp</code> || binary(14) || No || — || When the usage was recorded
+|-
+| <code>lsu_usage_count</code> || int unsigned || No || 1 || Number of times this layer set is used on the page
 |}
 
 == Indexes ==
@@ -29,23 +27,36 @@ The '''layer_set_usage''' table tracks article usage for the [[Extension:Layers|
 {| class="wikitable"
 ! Index Name !! Columns !! Type !! Purpose
 |-
-| PRIMARY || <code>lsu_id</code> || Primary || Unique row identifier
+| PRIMARY || <code>lsu_layer_set_id</code>, <code>lsu_page_id</code> || Composite Primary || Unique per layer set + page combination
 |-
-| <code>lsu_page_file_idx</code> || <code>lsu_page_id</code>, <code>lsu_file_name</code>, <code>lsu_set_name</code> || Unique || Prevent duplicate entries, fast lookup
+| <code>lsu_page_id</code> || <code>lsu_page_id</code> || Index || Find all layer sets used on a specific page
 |-
-| <code>lsu_file_idx</code> || <code>lsu_file_name</code> || Index || Find all pages using a specific image
+| <code>lsu_timestamp</code> || <code>lsu_timestamp</code> || Index || Query usages by date
+|-
+| <code>lsu_usage_count</code> || <code>lsu_usage_count</code> || Index || Find frequently used layer sets
+|}
+
+== Foreign Keys ==
+
+{| class="wikitable"
+! Column !! References !! On Delete
+|-
+| <code>lsu_layer_set_id</code> || <code>layer_sets.ls_id</code> || CASCADE
+|-
+| <code>lsu_page_id</code> || <code>page.page_id</code> || CASCADE
 |}
 
 == Usage ==
 
 This table is populated automatically when:
-* An article is parsed that contains <code><nowiki>[[File:Example.jpg|layers=setname]]</nowiki></code>
-* The parser hook <code>ParserMakeImageParams</code> detects the <code>layers</code> parameter
+* An article is parsed that contains <code><nowiki>[[File:Example.jpg|layerset=setname]]</nowiki></code>
+* The parser hook <code>ParserMakeImageParams</code> detects the <code>layerset</code> parameter
 
 The table enables:
 * '''Cache invalidation''': When layer data changes, all pages using that layer set can be purged
 * '''Usage statistics''': Track which images have active layer annotations
 * '''Orphan detection''': Find layer sets that are no longer used by any article
+* '''Usage counting''': Track how many times each layer set is embedded per page
 
 == Cleanup ==
 

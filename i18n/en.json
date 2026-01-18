@@ -591,6 +591,10 @@
 	"layers-lightbox-close-tooltip": "Close viewer (Escape)",
 	"layers-lightbox-loading": "Loading layers...",
 
+	"layers-viewer-overlay-label": "Layer actions",
+	"layers-viewer-edit": "Edit layers",
+	"layers-viewer-view": "View full size",
+
 	"apihelp-layersinfo-summary": "Fetch saved layer sets for a file, optionally forcing a specific revision.",
 	"apihelp-layersinfo-param-filename": "Title or bare filename of the file whose layer data should be returned.",
 	"apihelp-layersinfo-param-layersetid": "Numeric layer set identifier to load instead of the latest revision.",

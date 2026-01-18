@@ -15,17 +15,27 @@ The '''layer_sets''' table stores layer set revisions for the [[Extension:Layers
 |-
 | <code>ls_id</code> || int unsigned || No || Auto-increment || Primary key, unique identifier for each revision
 |-
-| <code>ls_file_name</code> || varchar(255) || No || — || Target filename (e.g., "Example.jpg")
+| <code>ls_img_name</code> || varchar(255) binary || No || — || Target image filename (e.g., "Example.jpg")
 |-
-| <code>ls_name</code> || varchar(50) || No || 'default' || Named set identifier (e.g., "default", "anatomy-labels")
+| <code>ls_img_major_mime</code> || varchar(16) || No || — || Major MIME type (e.g., "image")
 |-
-| <code>ls_user_id</code> || int unsigned || No || — || User ID who created this revision
+| <code>ls_img_minor_mime</code> || varchar(100) || No || — || Minor MIME type (e.g., "jpeg", "png")
+|-
+| <code>ls_img_sha1</code> || varchar(32) || No || — || SHA-1 hash of the image file (for versioning)
+|-
+| <code>ls_json_blob</code> || mediumblob || No || — || JSON-encoded layer data (validated, sanitized)
+|-
+| <code>ls_user_id</code> || int unsigned || No || — || User ID who created this revision (foreign key to user table)
 |-
 | <code>ls_timestamp</code> || binary(14) || No || — || MediaWiki timestamp when revision was saved
 |-
-| <code>ls_revision</code> || int unsigned || No || — || Revision number within the named set (1, 2, 3...)
+| <code>ls_revision</code> || int unsigned || No || 1 || Revision number within the named set (1, 2, 3...)
 |-
-| <code>ls_data</code> || mediumblob || No || — || JSON-encoded layer data (validated, sanitized)
+| <code>ls_name</code> || varchar(255) || Yes || NULL || Named set identifier (e.g., "default", "anatomy-labels")
+|-
+| <code>ls_size</code> || int unsigned || No || 0 || Size of the JSON blob in bytes
+|-
+| <code>ls_layer_count</code> || tinyint unsigned || No || 0 || Number of layers in this revision
 |}
 
 == Indexes ==
@@ -35,16 +45,28 @@ The '''layer_sets''' table stores layer set revisions for the [[Extension:Layers
 |-
 | PRIMARY || <code>ls_id</code> || Primary || Unique row identifier
 |-
-| <code>ls_file_name_idx</code> || <code>ls_file_name</code>, <code>ls_name</code>, <code>ls_revision</code> || Unique || Fast lookup by file and set name, ensures unique revisions
+| <code>ls_img_name_revision</code> || <code>ls_img_name</code>, <code>ls_img_sha1</code>, <code>ls_revision</code> || Unique || Ensures unique revisions per image version
 |-
-| <code>ls_user_idx</code> || <code>ls_user_id</code> || Index || Query sets by user
+| <code>ls_img_lookup</code> || <code>ls_img_name</code>, <code>ls_img_sha1</code> || Index || Fast lookup by image name and hash
 |-
-| <code>ls_timestamp_idx</code> || <code>ls_timestamp</code> || Index || Query sets by date
+| <code>ls_user_timestamp</code> || <code>ls_user_id</code>, <code>ls_timestamp</code> || Index || Query sets by user with time ordering
+|-
+| <code>ls_timestamp</code> || <code>ls_timestamp</code> || Index || Query sets by date
+|-
+| <code>ls_size_performance</code> || <code>ls_size</code>, <code>ls_layer_count</code> || Index || Performance queries on size/count
+|}
+
+== Foreign Keys ==
+
+{| class="wikitable"
+! Column !! References !! On Delete
+|-
+| <code>ls_user_id</code> || <code>user.user_id</code> || CASCADE
 |}
 
 == Data Format ==
 
-The <code>ls_data</code> column contains a JSON structure:
+The <code>ls_json_blob</code> column contains a JSON structure:
 
 <syntaxhighlight lang="json">
 {
