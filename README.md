@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-9%2C469%20passing%20(100%25)-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-9%2C535%20passing%20(100%25)-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.12 (January 17, 2026)  
+> **Version:** 1.5.13 (January 17, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -51,7 +51,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Star          | S        | Draw star shapes                             |
 | Arrow         | A        | Annotation arrows                            |
 | Line          | L        | Straight lines                               |
-| **Marker**    | M        | Numbered/lettered markers with optional arrows |
+| Marker    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
 | Custom Shape  | —        | 1,310 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
 | Emoji         | —        | 2,817 Noto Color Emoji with search and categories |
@@ -245,12 +245,13 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,743 lines across 33 files
-- **Frontend:** HTML5 Canvas editor with 115 JS files (~68,959 lines), 100+ ES6 classes
+- **Frontend:** HTML5 Canvas editor with 120 JS files (~108,712 lines), 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** 16 god classes (1,035-3,176 lines) = 32% of JS codebase, all use delegation patterns
-  - ShapeLibraryData.js (3,176 lines) - generated shape definitions, exempt from limit
-  - LayerPanel.js (1,806 lines) - delegates to 9 controllers
+- **Technical Debt:** 18 god classes (files >1,000 lines), 3 are generated data files (exempt)
+  - EmojiLibraryData.js (26,277 lines) - generated emoji index data
+  - ShapeLibraryData.js (11,299 lines) - generated shape definitions
+  - 15 hand-written files with proper delegation patterns
 
 **Test Coverage (January 2026):**
 
@@ -311,10 +312,10 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 115 | ✅ |
-| Total JS lines | ~68,959 | ✅ Under 75K target |
+| Total JS files | 120 | ✅ |
+| Total JS lines | ~108,712 | ✅ Includes generated data |
 | ES6 classes | 100+ | ✅ |
-| God classes (>1000 lines) | 16 | ⚠️ Managed with delegation |
+| God classes (>1000 lines) | 18 | ⚠️ 3 generated, 15 with delegation |
 | Tests passing | 9,469 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95% | ✅ Excellent |

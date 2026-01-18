@@ -4,6 +4,19 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.13 (January 18, 2026)
+
+### Added
+- **Inline Canvas Text Editing** — Figma/Canva-style direct text editing on the canvas
+  - Double-click any text or textbox layer to edit in place
+  - HTML textarea overlay matches layer position, size, and styling
+  - Real-time preview while typing
+  - Keyboard shortcuts: Enter to confirm (text), Ctrl+Enter (textbox), Escape to cancel
+  - Mobile keyboard optimization with Visual Viewport API support
+  - Full Unicode and special character support
+
+---
+
 ## Version 1.5.12 (January 17, 2026)
 
 ### Added
