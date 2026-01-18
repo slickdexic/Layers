@@ -444,6 +444,107 @@ describe( 'InlineTextEditor', () => {
 		} );
 	} );
 
+	describe( '_syncPropertiesPanel', () => {
+		test( 'should call updatePropertiesPanel when editor.layerPanel exists', () => {
+			const mockUpdatePropertiesPanel = jest.fn();
+			mockCanvasManager.editor.layerPanel = {
+				updatePropertiesPanel: mockUpdatePropertiesPanel
+			};
+
+			const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 0, y: 0 };
+			editor.startEditing( layer );
+
+			// Manually call _syncPropertiesPanel
+			editor._syncPropertiesPanel();
+
+			expect( mockUpdatePropertiesPanel ).toHaveBeenCalledWith( 'layer-1' );
+		} );
+
+		test( 'should not throw when layerPanel is missing', () => {
+			delete mockCanvasManager.editor.layerPanel;
+
+			const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 0, y: 0 };
+			editor.startEditing( layer );
+
+			expect( () => editor._syncPropertiesPanel() ).not.toThrow();
+		} );
+
+		test( 'should not throw when updatePropertiesPanel is not a function', () => {
+			mockCanvasManager.editor.layerPanel = {};
+
+			const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 0, y: 0 };
+			editor.startEditing( layer );
+
+			expect( () => editor._syncPropertiesPanel() ).not.toThrow();
+		} );
+
+		test( 'should not call updatePropertiesPanel when not editing', () => {
+			const mockUpdatePropertiesPanel = jest.fn();
+			mockCanvasManager.editor.layerPanel = {
+				updatePropertiesPanel: mockUpdatePropertiesPanel
+			};
+
+			// Don't start editing, just call sync
+			editor._syncPropertiesPanel();
+
+			expect( mockUpdatePropertiesPanel ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should be called when _applyFormat is called', () => {
+			const mockUpdatePropertiesPanel = jest.fn();
+			mockCanvasManager.editor.layerPanel = {
+				updatePropertiesPanel: mockUpdatePropertiesPanel
+			};
+
+			const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 0, y: 0, fontSize: 16 };
+			editor.startEditing( layer );
+
+			// Call _applyFormat which should trigger _syncPropertiesPanel
+			editor._applyFormat( 'fontSize', 24 );
+
+			expect( mockUpdatePropertiesPanel ).toHaveBeenCalledWith( 'layer-1' );
+			expect( layer.fontSize ).toBe( 24 );
+		} );
+
+		test( 'should sync properties panel for all formatting changes', () => {
+			const mockUpdatePropertiesPanel = jest.fn();
+			mockCanvasManager.editor.layerPanel = {
+				updatePropertiesPanel: mockUpdatePropertiesPanel
+			};
+
+			const layer = {
+				id: 'layer-1',
+				type: 'text',
+				text: 'Test',
+				x: 0, y: 0,
+				fontFamily: 'Arial',
+				fontSize: 16,
+				fontWeight: 'normal',
+				fontStyle: 'normal',
+				textAlign: 'left',
+				color: '#000000'
+			};
+			editor.startEditing( layer );
+
+			// Apply multiple format changes
+			editor._applyFormat( 'fontFamily', 'Georgia' );
+			editor._applyFormat( 'fontWeight', 'bold' );
+			editor._applyFormat( 'fontStyle', 'italic' );
+			editor._applyFormat( 'textAlign', 'center' );
+			editor._applyFormat( 'color', '#ff0000' );
+
+			// Should have been called 5 times (once per format change)
+			expect( mockUpdatePropertiesPanel ).toHaveBeenCalledTimes( 5 );
+
+			// Verify layer was updated
+			expect( layer.fontFamily ).toBe( 'Georgia' );
+			expect( layer.fontWeight ).toBe( 'bold' );
+			expect( layer.fontStyle ).toBe( 'italic' );
+			expect( layer.textAlign ).toBe( 'center' );
+			expect( layer.color ).toBe( '#ff0000' );
+		} );
+	} );
+
 	describe( 'destroy', () => {
 		test( 'should clean up editor element if present', () => {
 			editor.startEditing( { type: 'text', text: 'Test', x: 0, y: 0 } );

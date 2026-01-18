@@ -1013,6 +1013,29 @@
 					this.editorElement.style[ styleMap[ property ] ] = value;
 				}
 			}
+
+			// Sync with properties panel so both UI elements show the same values
+			this._syncPropertiesPanel();
+		}
+
+		/**
+		 * Synchronize the properties panel with current layer state
+		 *
+		 * When the floating toolbar changes a property, this ensures the
+		 * properties panel (LayerPanel) is updated to reflect the change.
+		 *
+		 * @private
+		 */
+		_syncPropertiesPanel() {
+			if ( !this.editingLayer || !this.canvasManager ) {
+				return;
+			}
+
+			const editor = this.canvasManager.editor;
+			if ( editor && editor.layerPanel &&
+				typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+				editor.layerPanel.updatePropertiesPanel( this.editingLayer.id );
+			}
 		}
 
 		/**
