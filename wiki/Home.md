@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C469%20Passing-brightgreen" alt="9,469 Tests">
+  <img src="https://img.shields.io/badge/Tests-9%2C535%20Passing-brightgreen" alt="9,535 Tests">
   <img src="https://img.shields.io/badge/Coverage-95%25-brightgreen" alt="95% Coverage">
 </p>
 
@@ -20,7 +20,17 @@
 
 ---
 
-## 🆕 What's New in v1.5.12
+## 🆕 What's New in v1.5.13
+
+- **Inline Canvas Text Editing (FR-8)** — Double-click text or textbox layers to edit directly on the canvas
+  - Figma/Canva-style editing experience — no modal dialogs required
+  - Real-time canvas preview as you type
+  - Mobile-optimized with keyboard-aware positioning (Visual Viewport API)
+  - Keyboard shortcuts: Enter to confirm, Escape to cancel
+  - InlineTextEditor controller with full undo/redo integration
+- **9,535 tests passing** (148 suites)
+
+### Previous v1.5.12 Highlights
 
 - **Emoji Picker** — New toolbar button opens a searchable emoji library with 2,817 Noto Color Emoji SVGs
   - Lazy-loaded SVG thumbnails using IntersectionObserver for performance
@@ -28,7 +38,6 @@
   - Full-text search with descriptive names and keywords
   - Gradient colors preserved in SVG thumbnails
   - Lightweight index architecture: 196.7KB metadata, SVGs loaded on-demand
-- **9,469 tests passing** (147 suites)
 
 ### Previous v1.5.11 Highlights
 
@@ -166,7 +175,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.10 |
+| **Version (main)** | 1.5.12 |
 | **Version (REL1_43)** | 1.5.10-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
@@ -175,7 +184,7 @@ See [[Changelog]] for full details.
 | **PHPUnit Test Files** | 24 |
 | **Statement Coverage** | 95% |
 | **Branch Coverage** | 85% |
-| **JavaScript Files** | 115 |
+| **JavaScript Files** | 120 |
 | **ES6 Classes** | 100+ |
 
 ---

@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.12",
+	"version": "1.5.13",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -280,6 +280,7 @@
 				"canvas/RenderCoordinator.js",
 				"canvas/InteractionController.js",
 				"canvas/TextInputController.js",
+				"canvas/InlineTextEditor.js",
 				"ui/IconFactory.js",
 				"ui/LayerItemFactory.js",
 				"ui/BackgroundLayerController.js",

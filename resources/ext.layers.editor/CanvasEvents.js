@@ -28,6 +28,7 @@
 			this.onKeyDown = this.handleKeyDown.bind( this );
 			this.onKeyUp = this.handleKeyUp.bind( this );
 			this.onContextMenu = this.handleContextMenu.bind( this );
+			this.onDoubleClick = this.handleDoubleClick.bind( this );
 
 			// Attach to canvas
 			this.canvas.addEventListener( 'mousedown', this.onMouseDown );
@@ -35,6 +36,7 @@
 			this.canvas.addEventListener( 'mouseup', this.onMouseUp );
 			this.canvas.addEventListener( 'wheel', this.onWheel, { passive: false } );
 			this.canvas.addEventListener( 'contextmenu', this.onContextMenu );
+			this.canvas.addEventListener( 'dblclick', this.onDoubleClick );
 
 			// Attach to document
 			document.addEventListener( 'keydown', this.onKeyDown );
@@ -57,6 +59,7 @@
 			this.canvas.removeEventListener( 'mouseup', this.onMouseUp );
 			this.canvas.removeEventListener( 'wheel', this.onWheel );
 			this.canvas.removeEventListener( 'contextmenu', this.onContextMenu );
+			this.canvas.removeEventListener( 'dblclick', this.onDoubleClick );
 			this.canvas.removeEventListener( 'touchstart', this.onTouchStart );
 			this.canvas.removeEventListener( 'touchmove', this.onTouchMove );
 			this.canvas.removeEventListener( 'touchend', this.onTouchEnd );
@@ -68,6 +71,96 @@
 
 		handleContextMenu( e ) {
 			e.preventDefault();
+		}
+
+		/**
+		 * Handle double-click for inline text editing
+		 *
+		 * @param {MouseEvent} e
+		 */
+		handleDoubleClick( e ) {
+			const cm = this.cm;
+
+			// Block if already editing or during interactions
+			if ( cm.isTextEditing ) {
+				return;
+			}
+
+			// Block interactions during API loading
+			if ( cm.interactionController && cm.interactionController.shouldBlockInteraction() ) {
+				return;
+			}
+
+			// Only handle with pointer tool
+			if ( cm.currentTool !== 'pointer' ) {
+				return;
+			}
+
+			const point = cm.getMousePoint( e );
+			const layers = cm.editor?.layers || [];
+
+			// Find the topmost text or textbox layer at this point
+			const textLayer = this.findTextLayerAtPoint( point, layers );
+
+			if ( textLayer && cm.inlineTextEditor ) {
+				e.preventDefault();
+				cm.inlineTextEditor.startEditing( textLayer );
+			}
+		}
+
+		/**
+		 * Find the topmost text or textbox layer at the given point
+		 *
+		 * @param {{x: number, y: number}} point
+		 * @param {Array} layers
+		 * @return {Object|null}
+		 */
+		findTextLayerAtPoint( point, layers ) {
+			// Iterate in reverse to find topmost layer first
+			for ( let i = layers.length - 1; i >= 0; i-- ) {
+				const layer = layers[ i ];
+
+				// Skip hidden or locked layers
+				if ( layer.visible === false || layer.visible === 0 ) {
+					continue;
+				}
+
+				// Only handle text and textbox layers
+				if ( layer.type !== 'text' && layer.type !== 'textbox' ) {
+					continue;
+				}
+
+				// Check if point is within layer bounds
+				if ( this.isPointInLayer( point, layer ) ) {
+					return layer;
+				}
+			}
+			return null;
+		}
+
+		/**
+		 * Check if a point is within a layer's bounding box
+		 *
+		 * @param {{x: number, y: number}} point
+		 * @param {Object} layer
+		 * @return {boolean}
+		 */
+		isPointInLayer( point, layer ) {
+			const cm = this.cm;
+
+			// Use HitTestController if available for accurate hit testing
+			if ( cm.hitTestController && typeof cm.hitTestController.hitTestLayer === 'function' ) {
+				return cm.hitTestController.hitTestLayer( layer, point );
+			}
+
+			// Fallback to basic bounding box check
+			const x = layer.x || 0;
+			const y = layer.y || 0;
+			const width = layer.width || 100;
+			const height = layer.height || 50;
+
+			return point.x >= x && point.x <= x + width &&
+				point.y >= y && point.y <= y + height;
 		}
 
 		handleMouseDown( e ) {

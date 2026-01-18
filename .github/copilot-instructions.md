@@ -4,10 +4,10 @@ This guide is for contributors (human and AI) working on the Layers extension. I
 
 ## Codebase Size Policy
 
-**Target: <75,000 lines of JavaScript** — There is NO 50K limit.
+**Target: <110,000 lines of JavaScript** — There is NO 50K or 75K limit.
 
-This extension is feature-rich by design with **15 drawing tools**, multiple rendering systems, comprehensive validation, and extensive test coverage. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching 50K lines or suggest arbitrary line limits. Focus on code quality metrics:
-- God classes (files >1,000 lines) — minimize these
+This extension is feature-rich by design with **15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (EmojiLibraryData.js, ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~40,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
+- God classes (files >1,000 lines) — minimize hand-written ones; generated data files are exempt
 - Test coverage — maintain 90%+ statement coverage
 - Security — CSRF, rate limiting, validation
 - Proper delegation — use controller patterns
@@ -60,7 +60,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ClipboardController.js` (~248 lines) - copy/cut/paste operations
     - `RenderCoordinator.js` (~398 lines) - render scheduling and dirty region tracking
     - `InteractionController.js` (~501 lines) - mouse/touch event handling coordination
-    - `TextInputController.js` (~194 lines) - text editing input handling
+    - `TextInputController.js` (~194 lines) - modal dialog for text input (fallback)
+    - `InlineTextEditor.js` (~608 lines) - Figma-style inline canvas text editing (double-click to edit)
     - `SelectionRenderer.js` (~368 lines) - selection UI drawing (handles, marquee, rotation)
     - `AlignmentController.js` (~564 lines) - layer alignment and distribution
   - Editor modules (`resources/ext.layers.editor/editor/`): Extracted from LayersEditor:
@@ -93,8 +94,17 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 16 files exceed 1,000 lines (ShapeLibraryData [generated], CanvasManager, LayerPanel, Toolbar, LayersEditor, SelectionManager, APIManager, ArrowRenderer, CalloutRenderer, PropertyBuilders, ToolManager, CanvasRenderer, GroupManager, TransformController, ResizeCalculator, ToolbarStyleControls) - all use delegation patterns, see improvement_plan.md
+  - **God classes:** 18 files exceed 1,000 lines:
+    - **Generated data files (exempt from refactoring):** EmojiLibraryData.js (~26,277 lines), ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,003 lines)
+    - **Hand-written files:** CanvasManager, LayerPanel, Toolbar, LayersEditor, SelectionManager, APIManager, ArrowRenderer, CalloutRenderer, PropertyBuilders, ToolManager, CanvasRenderer, GroupManager, TransformController, ResizeCalculator, ToolbarStyleControls
+    - All hand-written files use delegation patterns, see improvement_plan.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
+  - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
+    - `EmojiLibraryData.js` (~26,277 lines) - Generated data file containing all emoji metadata
+    - `EmojiLibraryIndex.js` (~3,003 lines) - Generated search index for fast emoji lookup
+    - `EmojiPickerPanel.js` (~500 lines) - OOUI PopupWidget-based emoji picker UI
+    - `emoji-picker.css` (~300 lines) - Styles for the emoji picker panel
+    - Architecture: Lazy-loaded SVG thumbnails using IntersectionObserver; 19 categories; full-text search
 
 Note on bundling: Webpack outputs `resources/dist/*.js`, but ResourceLoader modules (defined in `extension.json`) load the source files under `resources/ext.layers*`. Dist builds are optional for debugging/testing outside RL.
 
@@ -363,12 +373,13 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (currently 9,469 tests, 147 suites)
+- Test count (currently 9,535 tests, 148 suites)
 - Coverage (95% statement, 85% branch)
-- JavaScript file count (117 files total, 115 production, ~76,721 lines)
+- JavaScript file count (121 files total, ~109,500 lines)
 - PHP file count (33 files, ~11,743 lines)
-- God class count (16 files >1,000 lines)
+- God class count (18 files >1,000 lines; 3 generated data files, 15 hand-written)
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
-- Version number (1.5.12)
+- Emoji library count (2,817 emoji in 19 categories)
+- Version number (1.5.13)

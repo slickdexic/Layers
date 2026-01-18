@@ -4261,3 +4261,101 @@ body.layers-resize-cursor {
 		color: var( --layers-text-secondary );
 	}
 }
+
+/* =====================================================
+   INLINE TEXT EDITOR
+   Overlay textarea for direct text editing on canvas
+   ===================================================== */
+
+.layers-inline-text-editor {
+	position: absolute;
+	z-index: 1000;
+	box-sizing: border-box;
+	background: transparent;
+	border: 2px solid #0366d6;
+	border-radius: 2px;
+	padding: 2px 4px;
+	margin: 0;
+	resize: none;
+	overflow: hidden;
+	outline: 0;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	cursor: text;
+	transform-origin: center center;
+}
+
+.layers-inline-text-editor:focus {
+	border-color: #0366d6;
+	box-shadow: 0 0 0 3px rgba( 3, 102, 214, 0.3 );
+}
+
+/* Textbox variant - visible background */
+.layers-inline-text-editor.textbox {
+	background: rgba( 255, 255, 255, 0.95 );
+}
+
+/* Ensure text matches canvas styling */
+.layers-inline-text-editor::placeholder {
+	color: rgba( 128, 128, 128, 0.6 );
+	font-style: italic;
+}
+
+/* Hint message shown near the editor */
+.layers-inline-text-hint {
+	position: absolute;
+	z-index: 1001;
+	background: rgba( 0, 0, 0, 0.8 );
+	color: #fff;
+	font-size: 0.6875em;
+	padding: 4px 8px;
+	border-radius: 4px;
+	white-space: nowrap;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.layers-inline-text-hint.visible {
+	opacity: 1;
+}
+
+/* Dark mode support */
+html.skin-theme-clientpref-night .layers-inline-text-editor {
+	border-color: #58a6ff;
+}
+
+html.skin-theme-clientpref-night .layers-inline-text-editor:focus {
+	border-color: #58a6ff;
+	box-shadow: 0 0 0 3px rgba( 88, 166, 255, 0.3 );
+}
+
+html.skin-theme-clientpref-night .layers-inline-text-editor.textbox {
+	background: rgba( 30, 30, 30, 0.95 );
+}
+
+html.skin-theme-clientpref-night .layers-inline-text-hint {
+	background: rgba( 255, 255, 255, 0.9 );
+	color: #000;
+}
+
+/* OS preference dark mode */
+@media ( prefers-color-scheme: dark ) {
+	html.skin-theme-clientpref-os .layers-inline-text-editor {
+		border-color: #58a6ff;
+	}
+
+	html.skin-theme-clientpref-os .layers-inline-text-editor:focus {
+		border-color: #58a6ff;
+		box-shadow: 0 0 0 3px rgba( 88, 166, 255, 0.3 );
+	}
+
+	html.skin-theme-clientpref-os .layers-inline-text-editor.textbox {
+		background: rgba( 30, 30, 30, 0.95 );
+	}
+
+	html.skin-theme-clientpref-os .layers-inline-text-hint {
+		background: rgba( 255, 255, 255, 0.9 );
+		color: #000;
+	}
+}

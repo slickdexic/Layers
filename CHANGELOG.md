@@ -2,6 +2,27 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.13] - 2026-01-18
+
+### Added
+- **Inline Canvas Text Editing** — Figma/Canva-style direct text editing on the canvas
+  - Double-click any text or textbox layer to edit in place
+  - HTML textarea overlay matches layer position, size, and styling
+  - Real-time preview while typing
+  - Keyboard shortcuts: Enter to confirm (text), Ctrl+Enter (textbox), Escape to cancel
+  - Mobile keyboard optimization with Visual Viewport API support
+  - Full Unicode and special character support
+  - Proper undo/redo integration with history system
+
+### Technical Details
+- New files: `InlineTextEditor.js` (~600 lines) in `resources/ext.layers.editor/canvas/`
+- Extended `CanvasEvents.js` with double-click handling for text layers
+- Added `setTextEditingMode()` and `isTextEditing` state to `CanvasManager.js`
+- CSS styles for `.layers-inline-text-editor` with dark mode support
+- 66 new unit tests covering all functionality
+
+---
+
 ## [1.5.12] - 2026-01-17
 
 ### Added

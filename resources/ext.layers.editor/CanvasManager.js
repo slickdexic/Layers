@@ -32,6 +32,7 @@
 		DrawingController: 'Canvas.DrawingController',
 		ClipboardController: 'Canvas.ClipboardController',
 		TextInputController: 'Canvas.TextInputController',
+		InlineTextEditor: 'Canvas.InlineTextEditor',
 		AlignmentController: 'Canvas.AlignmentController',
 		SmartGuidesController: 'Canvas.SmartGuidesController',
 		RenderCoordinator: 'Canvas.RenderCoordinator',
@@ -216,6 +217,9 @@ class CanvasManager {
 		this.lastPanPoint = null;
 		this.userHasSetZoom = false; // Track if user has manually adjusted zoom
 
+		// Inline text editing state
+		this.isTextEditing = false;
+
 		// Smooth zoom animation properties
 		this.isAnimatingZoom = false;
 		this.zoomAnimationDuration = uiConsts ? uiConsts.ANIMATION_DURATION : 300;
@@ -295,6 +299,7 @@ class CanvasManager {
 			[ 'DrawingController', 'drawingController' ],
 			[ 'ClipboardController', 'clipboardController' ],
 			[ 'TextInputController', 'textInputController' ],
+			[ 'InlineTextEditor', 'inlineTextEditor' ],
 			[ 'AlignmentController', 'alignmentController' ],
 			[ 'SmartGuidesController', 'smartGuidesController' ]
 		];
@@ -1734,6 +1739,24 @@ class CanvasManager {
 		this.canvas.style.cursor = this.getToolCursor( tool );
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {
 			this.editor.updateStatus( { tool: tool } );
+		}
+	}
+
+	/**
+	 * Set text editing mode (used by InlineTextEditor)
+	 * When active, suppresses selection handles and drag operations
+	 *
+	 * @param {boolean} isEditing Whether inline text editing is active
+	 */
+	setTextEditingMode ( isEditing ) {
+		this.isTextEditing = isEditing;
+		if ( isEditing ) {
+			// Prevent selection changes while editing
+			this.canvas.style.cursor = 'text';
+		} else {
+			// Restore normal cursor
+			this.canvas.style.cursor = this.getToolCursor( this.currentTool );
+			this.redraw( this.editor?.layers );
 		}
 	}
 
