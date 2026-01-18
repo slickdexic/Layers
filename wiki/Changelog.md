@@ -4,6 +4,25 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.14 (January 18, 2026)
+
+### Added
+- **Floating Text Formatting Toolbar** — When editing text inline, a draggable floating toolbar appears with:
+  - Font family dropdown (Arial, Helvetica, Times New Roman, Georgia, Verdana, Courier New, Comic Sans MS, Impact)
+  - Font size input (8-200px)
+  - Bold and Italic toggle buttons
+  - Text alignment buttons (left, center, right)
+  - Color picker button with full swatch palette (uses ColorPickerDialog)
+  - Draggable via grab handle for optimal positioning
+  - Full dark mode support
+
+### Fixed
+- **Textbox Background Visibility** — Textbox layers now keep their background visible during inline editing
+- **Font Selector Focus** — Fixed font dropdown closing immediately after opening
+- **Color Picker Integration** — Color button now opens the full ColorPickerDialog with swatches and OK/Cancel buttons
+
+---
+
 ## Version 1.5.13 (January 18, 2026)
 
 ### Added

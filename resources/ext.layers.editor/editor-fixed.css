@@ -4359,3 +4359,260 @@ html.skin-theme-clientpref-night .layers-inline-text-hint {
 		color: #000;
 	}
 }
+
+/* =====================================================
+   INLINE TEXT TOOLBAR
+   Floating formatting toolbar for text editing
+   ===================================================== */
+
+.layers-text-toolbar {
+	position: absolute;
+	z-index: 10002;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 8px;
+	background: #fff;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.15 );
+	font-size: 0.8125em;
+	user-select: none;
+}
+
+.layers-text-toolbar-handle {
+	cursor: grab;
+	padding: 2px 4px;
+	color: #999;
+	font-size: 0.75em;
+	letter-spacing: -2px;
+	margin-right: 4px;
+}
+
+.layers-text-toolbar-handle:hover {
+	color: #666;
+}
+
+.layers-text-toolbar-handle:active {
+	cursor: grabbing;
+}
+
+.layers-text-toolbar-separator {
+	width: 1px;
+	height: 20px;
+	background: #ddd;
+	margin: 0 2px;
+}
+
+.layers-text-toolbar-font {
+	padding: 4px 6px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 0.75em;
+	max-width: 100px;
+	background: #fff;
+}
+
+.layers-text-toolbar-font:focus {
+	outline: 0;
+	border-color: #0366d6;
+}
+
+.layers-text-toolbar-size-group {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+}
+
+.layers-text-toolbar-size {
+	width: 45px;
+	padding: 4px 6px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	font-size: 0.75em;
+	text-align: center;
+}
+
+.layers-text-toolbar-size:focus {
+	outline: 0;
+	border-color: #0366d6;
+}
+
+.layers-text-toolbar-size-label {
+	color: #666;
+	font-size: 0.6875em;
+}
+
+.layers-text-toolbar-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: transparent;
+	color: #333;
+	font-size: 0.875em;
+	font-weight: bold;
+	cursor: pointer;
+}
+
+.layers-text-toolbar-btn:hover {
+	background: #f0f0f0;
+	border-color: #ddd;
+}
+
+.layers-text-toolbar-btn.active {
+	background: #e0e0ff;
+	border-color: #0366d6;
+	color: #0366d6;
+}
+
+/* stylelint-disable-next-line no-descending-specificity */
+.layers-text-toolbar-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
+.layers-text-toolbar-color-wrapper {
+	display: flex;
+	align-items: center;
+}
+
+.layers-text-toolbar-color {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.layers-text-toolbar-color::-webkit-color-swatch-wrapper {
+	padding: 2px;
+}
+
+.layers-text-toolbar-color::-webkit-color-swatch {
+	border: 0;
+	border-radius: 2px;
+}
+
+/* Color picker dialog button in toolbar - override ColorPickerDialog defaults */
+.layers-text-toolbar-color-wrapper .layers-text-toolbar-color-button.color-display-button {
+	width: 28px;
+	height: 28px;
+	margin-left: 0;
+	border-radius: 4px;
+}
+
+/* Dark mode support for toolbar */
+html.skin-theme-clientpref-night .layers-text-toolbar {
+	background: #2d2d2d;
+	border-color: #444;
+	box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.4 );
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-handle {
+	color: #888;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-handle:hover {
+	color: #aaa;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-separator {
+	background: #444;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-font,
+html.skin-theme-clientpref-night .layers-text-toolbar-size {
+	background: #3d3d3d;
+	border-color: #555;
+	color: #eee;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-font:focus,
+html.skin-theme-clientpref-night .layers-text-toolbar-size:focus {
+	border-color: #58a6ff;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-size-label {
+	color: #999;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-btn {
+	color: #eee;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-btn:hover {
+	background: #444;
+	border-color: #555;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-btn.active {
+	background: #1a3a5c;
+	border-color: #58a6ff;
+	color: #58a6ff;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-color {
+	border-color: #555;
+}
+
+/* OS preference dark mode for toolbar */
+@media ( prefers-color-scheme: dark ) {
+	html.skin-theme-clientpref-os .layers-text-toolbar {
+		background: #2d2d2d;
+		border-color: #444;
+		box-shadow: 0 2px 8px rgba( 0, 0, 0, 0.4 );
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-handle {
+		color: #888;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-handle:hover {
+		color: #aaa;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-separator {
+		background: #444;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-font,
+	html.skin-theme-clientpref-os .layers-text-toolbar-size {
+		background: #3d3d3d;
+		border-color: #555;
+		color: #eee;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-font:focus,
+	html.skin-theme-clientpref-os .layers-text-toolbar-size:focus {
+		border-color: #58a6ff;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-size-label {
+		color: #999;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-btn {
+		color: #eee;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-btn:hover {
+		background: #444;
+		border-color: #555;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-btn.active {
+		background: #1a3a5c;
+		border-color: #58a6ff;
+		color: #58a6ff;
+	}
+
+	html.skin-theme-clientpref-os .layers-text-toolbar-color {
+		border-color: #555;
+	}
+}

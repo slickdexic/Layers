@@ -20,7 +20,18 @@
 
 ---
 
-## 🆕 What's New in v1.5.13
+## 🆕 What's New in v1.5.14
+
+- **Floating Text Formatting Toolbar** — When editing text inline, a draggable floating toolbar appears with:
+  - Font family dropdown, font size input (8-200px), bold/italic toggles
+  - Text alignment buttons (left, center, right)
+  - Color picker button with full swatch palette and OK/Cancel
+  - Draggable via grab handle for optimal positioning
+  - Full dark mode support
+- **Textbox Background Visibility** — Textbox layers keep their background visible during editing
+- **9,535 tests passing** (148 suites)
+
+### Previous v1.5.13 Highlights
 
 - **Inline Canvas Text Editing (FR-8)** — Double-click text or textbox layers to edit directly on the canvas
   - Figma/Canva-style editing experience — no modal dialogs required
@@ -28,16 +39,6 @@
   - Mobile-optimized with keyboard-aware positioning (Visual Viewport API)
   - Keyboard shortcuts: Enter to confirm, Escape to cancel
   - InlineTextEditor controller with full undo/redo integration
-- **9,535 tests passing** (148 suites)
-
-### Previous v1.5.12 Highlights
-
-- **Emoji Picker** — New toolbar button opens a searchable emoji library with 2,817 Noto Color Emoji SVGs
-  - Lazy-loaded SVG thumbnails using IntersectionObserver for performance
-  - 19 well-organized categories: Smileys, Gestures, People, Animals, Food, Travel, Sports, Entertainment, Objects, Symbols, and more
-  - Full-text search with descriptive names and keywords
-  - Gradient colors preserved in SVG thumbnails
-  - Lightweight index architecture: 196.7KB metadata, SVGs loaded on-demand
 
 ### Previous v1.5.11 Highlights
 
@@ -175,16 +176,16 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.12 |
+| **Version (main)** | 1.5.13 |
 | **Version (REL1_43)** | 1.5.10-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
-| **Test Suites** | 147 |
-| **Total Tests** | 9,469 |
+| **Test Suites** | 148 |
+| **Total Tests** | 9,535 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 95% |
-| **Branch Coverage** | 85% |
-| **JavaScript Files** | 120 |
+| **Statement Coverage** | 92.94% |
+| **Branch Coverage** | 83.75% |
+| **JavaScript Files** | 121 |
 | **ES6 Classes** | 100+ |
 
 ---

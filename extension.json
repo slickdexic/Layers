@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.13",
+	"version": "1.5.14",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -850,7 +850,16 @@
 				"layers-shape-library-not-loaded",
 				"layers-shape-library-button",
 				"layers-shape-library-tooltip",
-				"layers-close"
+				"layers-close",
+				"layers-text-toolbar-drag",
+				"layers-text-toolbar-font",
+				"layers-text-toolbar-size",
+				"layers-text-toolbar-bold",
+				"layers-text-toolbar-italic",
+				"layers-text-toolbar-align-left",
+				"layers-text-toolbar-align-center",
+				"layers-text-toolbar-align-right",
+				"layers-text-toolbar-color"
 			]
 		},
 		"ext.layers.shapeLibrary": {

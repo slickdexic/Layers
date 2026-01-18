@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 17, 2026 (v1.5.13 release)  
+**Last Updated:** January 18, 2026 (v1.5.14 release)  
 **Status:** ✅ Production-Ready — All Identified Issues Resolved  
-**Version:** 1.5.13  
+**Version:** 1.5.14  
 **Rating:** 9.0/10
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues and improve branch coverage.
@@ -350,6 +350,6 @@ The Layers extension is **production-ready and fully functional** with **excelle
 
 ---
 
-*Plan updated: January 14, 2026*  
-*Version: 1.5.10*  
+*Plan updated: January 18, 2026*  
+*Version: 1.5.13*  
 *Rating: 9.0/10*
