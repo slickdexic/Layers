@@ -157,6 +157,7 @@
 			"remoteExtPath": "Layers/resources/ext.layers.shared",
 			"targets": [ "desktop", "mobile" ],
 			"scripts": [
+				"FontConfig.js",
 				"MathUtils.js",
 				"LayerDataNormalizer.js",
 				"DeepClone.js",

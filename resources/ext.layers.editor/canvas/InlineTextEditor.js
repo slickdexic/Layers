@@ -686,17 +686,24 @@
 			select.className = 'layers-text-toolbar-font';
 			select.title = this._msg( 'layers-text-toolbar-font', 'Font family' );
 
-			const fonts = [
-				'Arial', 'Helvetica', 'Times New Roman', 'Georgia',
-				'Verdana', 'Courier New', 'Comic Sans MS', 'Impact'
+			// Get fonts from centralized FontConfig
+			const FontConfig = window.Layers && window.Layers.FontConfig;
+			const fonts = FontConfig ? FontConfig.getFonts() : [
+				'Arial', 'Roboto', 'Noto Sans', 'Times New Roman', 'Georgia',
+				'Verdana', 'Courier New', 'Helvetica'
 			];
+
+			// Find the matching font for the current layer
+			const currentFont = FontConfig ?
+				FontConfig.findMatchingFont( layer.fontFamily || 'Arial' ) :
+				( layer.fontFamily || 'Arial' );
 
 			fonts.forEach( ( font ) => {
 				const option = document.createElement( 'option' );
 				option.value = font;
 				option.textContent = font;
 				option.style.fontFamily = font;
-				if ( ( layer.fontFamily || 'Arial' ).includes( font ) ) {
+				if ( font === currentFont ) {
 					option.selected = true;
 				}
 				select.appendChild( option );

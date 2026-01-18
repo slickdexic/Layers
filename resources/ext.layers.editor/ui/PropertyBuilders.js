@@ -131,16 +131,24 @@
 			}
 		} );
 
-		// Font family dropdown
-		const defaultFonts = ( typeof mw !== 'undefined' && mw.config ) ?
-			mw.config.get( 'LayersDefaultFonts' ) || [ 'Arial', 'Roboto', 'Noto Sans', 'Times New Roman', 'Courier New' ] :
-			[ 'Arial', 'Roboto', 'Noto Sans', 'Times New Roman', 'Courier New' ];
-		const fontOptions = defaultFonts.map( function ( font ) {
-			return { value: font, text: font };
-		} );
+		// Font family dropdown - use centralized FontConfig
+		const FontConfig = window.Layers && window.Layers.FontConfig;
+		const fontOptions = FontConfig ? FontConfig.getFontOptions() : [
+			{ value: 'Arial', text: 'Arial' },
+			{ value: 'Roboto', text: 'Roboto' },
+			{ value: 'Noto Sans', text: 'Noto Sans' },
+			{ value: 'Times New Roman', text: 'Times New Roman' },
+			{ value: 'Courier New', text: 'Courier New' }
+		];
+
+		// Get the matching font value for the dropdown
+		const currentFontValue = FontConfig ?
+			FontConfig.findMatchingFont( layer.fontFamily || 'Arial' ) :
+			( layer.fontFamily || 'Arial' );
+
 		ctx.addSelect( {
 			label: t( 'layers-prop-font-family', 'Font' ),
-			value: layer.fontFamily || 'Arial, sans-serif',
+			value: currentFontValue,
 			options: fontOptions,
 			onChange: function ( v ) {
 				editor.updateLayer( layer.id, { fontFamily: v } );
