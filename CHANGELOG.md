@@ -2,6 +2,25 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.14] - 2026-01-18
+
+### Added
+- **Floating Text Formatting Toolbar** — When editing text inline, a draggable floating toolbar appears with:
+  - Font family dropdown (Arial, Helvetica, Times New Roman, Georgia, Verdana, Courier New, Comic Sans MS, Impact)
+  - Font size input (8-200px)
+  - Bold and Italic toggle buttons
+  - Text alignment buttons (left, center, right)
+  - Color picker button with full swatch palette (uses ColorPickerDialog)
+  - Draggable via grab handle for optimal positioning
+  - Full dark mode support
+
+### Fixed
+- **Textbox Background Visibility** — Textbox layers now keep their background visible during inline editing (text is cleared instead of hiding the layer)
+- **Font Selector Focus** — Fixed font dropdown closing immediately after opening
+- **Color Picker Integration** — Color button now opens the full ColorPickerDialog with swatches, saved colors, and OK/Cancel buttons
+
+---
+
 ## [1.5.13] - 2026-01-18
 
 ### Added

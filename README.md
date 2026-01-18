@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.13 (January 17, 2026)  
+> **Version:** 1.5.14 (January 18, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -282,7 +282,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
-- ⚠️ **16 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
+- ⚠️ **17 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
 
 **Resolved Issues:**
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  

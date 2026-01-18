@@ -1,12 +1,14 @@
 /**
  * InlineTextEditor - Canvas-based inline text editing
  *
- * Enables direct text editing on the canvas by overlaying an HTML textarea
- * that matches the text layer's position, size, and styling. This provides
- * a Figma/Canva-like editing experience where users can:
- * - Double-click a text layer to edit in place
- * - See real-time preview while typing
+ * Enables direct text editing on the canvas by overlaying a transparent HTML
+ * textarea that matches the text layer's exact position, size, and styling.
+ * This provides a true in-place editing experience where:
+ * - Double-click a text layer to edit directly in place
+ * - The editor is nearly invisible - you edit the text as it appears on canvas
  * - Use standard text selection and cursor positioning
+ * - Move/resize the layer using selection handles (not the editor)
+ * - Press Escape to cancel, Enter (or Ctrl+Enter for textbox) to save
  *
  * @module ext.layers.editor.canvas.InlineTextEditor
  * @since 1.5.13
@@ -42,8 +44,13 @@
 			this._boundInputHandler = null;
 			this._boundResizeHandler = null;
 
-			// Debounce timer for input
-			this._inputDebounceTimer = null;
+			// Toolbar elements
+			this.toolbarElement = null;
+			this._isDraggingToolbar = false;
+			this._toolbarDragOffset = { x: 0, y: 0 };
+			this._boundToolbarMouseMove = null;
+			this._boundToolbarMouseUp = null;
+			this._isToolbarInteraction = false;
 		}
 
 		/**
@@ -91,14 +98,36 @@
 				return false;
 			}
 
-			this.editingLayer = layer;
+					this.editingLayer = layer;
 			this.originalText = layer.text || '';
 			this.isEditing = true;
 
-			// Create and position the editor
+			// Create and position the editor FIRST (before modifying layer)
 			this._createEditor();
 			this._positionEditor();
 			this._setupEventHandlers();
+
+			// For textbox layers, keep the background visible by clearing the text
+			// For simple text layers, hide the layer entirely
+			// Do this AFTER creating the editor so it gets the original text
+			if ( layer.type === 'textbox' ) {
+				// Clear layer text so only background renders on canvas
+				this._originalVisible = true;
+				layer.text = '';
+			} else {
+				// Hide simple text layers entirely
+				this._originalVisible = layer.visible !== false;
+				layer.visible = false;
+			}
+
+			// Re-render to show changes (hidden text or hidden layer)
+			if ( this.canvasManager && typeof this.canvasManager.renderLayers === 'function' &&
+				this.canvasManager.editor && this.canvasManager.editor.layers ) {
+				this.canvasManager.renderLayers( this.canvasManager.editor.layers );
+			}
+
+			// Create floating toolbar
+			this._createToolbar();
 
 			// Focus the editor
 			if ( this.editorElement ) {
@@ -128,6 +157,7 @@
 
 			const shouldApply = apply !== false;
 			let changesApplied = false;
+			const wasTextbox = this.editingLayer && this.editingLayer.type === 'textbox';
 
 			if ( shouldApply && this.editorElement && this.editingLayer ) {
 				const newText = this.editorElement.value;
@@ -142,18 +172,26 @@
 					// Update the layer
 					this.editingLayer.text = newText;
 
-					// For textbox, recalculate dimensions if needed
-					if ( this.editingLayer.type === 'textbox' ) {
-						this._updateTextBoxDimensions();
-					}
-
 					changesApplied = true;
+				} else if ( wasTextbox ) {
+					// Restore original text for textbox (we cleared it for editing)
+					this.editingLayer.text = this.originalText;
 				}
+			} else if ( !shouldApply && wasTextbox && this.editingLayer ) {
+				// Canceled - restore original text for textbox
+				this.editingLayer.text = this.originalText;
 			}
 
 			// Cleanup
 			this._removeEditor();
+			this._removeToolbar();
 			this._removeEventHandlers();
+
+			// Restore layer visibility (for simple text layers)
+			if ( this.editingLayer && !wasTextbox && this._originalVisible !== undefined ) {
+				this.editingLayer.visible = this._originalVisible;
+			}
+			this._originalVisible = undefined;
 
 			// Clear state
 			this.isEditing = false;
@@ -205,7 +243,7 @@
 		}
 
 		/**
-		 * Create the editor element
+		 * Create the editor element - a transparent overlay matching the layer
 		 *
 		 * @private
 		 */
@@ -218,7 +256,7 @@
 			// Determine if we need a textarea (multiline) or input (single line)
 			const isMultiline = layer.type === 'textbox';
 
-			// Create the appropriate element
+			// Create the appropriate text element
 			if ( isMultiline ) {
 				this.editorElement = document.createElement( 'textarea' );
 				this.editorElement.style.resize = 'none';
@@ -235,20 +273,22 @@
 			}
 			this.editorElement.value = layer.text || '';
 
-			// Apply text styling to match the layer
+			// Apply text styling to match the layer exactly
 			this._applyLayerStyle();
 
-			// Base styles for positioning
+			// Base styles - transparent background, minimal border for visibility
 			const baseStyles = {
 				position: 'absolute',
 				boxSizing: 'border-box',
 				border: '2px solid #0066cc',
 				borderRadius: '2px',
 				outline: 'none',
-				background: 'rgba(255, 255, 255, 0.95)',
+				// Transparent background so canvas shows through
+				background: 'transparent',
+				// Ensure text is visible with a subtle text shadow
+				textShadow: '0 0 2px rgba(255, 255, 255, 0.8)',
 				zIndex: '10001',
-				minWidth: '50px',
-				minHeight: isMultiline ? '40px' : '20px'
+				margin: '0'
 			};
 
 			Object.assign( this.editorElement.style, baseStyles );
@@ -280,8 +320,7 @@
 			const layer = this.editingLayer;
 			const style = this.editorElement.style;
 
-			// Font properties
-			style.fontSize = ( layer.fontSize || 16 ) + 'px';
+			// Font properties - will be scaled in _positionEditor
 			style.fontFamily = layer.fontFamily || 'Arial, sans-serif';
 			style.fontWeight = layer.fontWeight || 'normal';
 			style.fontStyle = layer.fontStyle || 'normal';
@@ -291,15 +330,14 @@
 			if ( layer.type === 'textbox' ) {
 				style.textAlign = layer.textAlign || 'left';
 				style.lineHeight = ( layer.lineHeight || 1.2 ).toString();
-				style.padding = ( layer.padding || 8 ) + 'px';
 			} else {
 				style.textAlign = 'left';
-				style.padding = '4px';
+				style.lineHeight = '1.2';
 			}
 		}
 
 		/**
-		 * Position the editor element to match the layer on canvas
+		 * Position the editor element to match the layer on canvas exactly
 		 *
 		 * @private
 		 */
@@ -317,44 +355,53 @@
 			// Get canvas bounding rect for coordinate conversion
 			const canvasRect = canvas.getBoundingClientRect();
 
+			// Get container rect to calculate relative position
+			const containerRect = ( this.containerElement &&
+				typeof this.containerElement.getBoundingClientRect === 'function' ) ?
+				this.containerElement.getBoundingClientRect() :
+				{ left: 0, top: 0 };
+
 			// Calculate scale from logical canvas to displayed size
 			const scaleX = canvasRect.width / canvas.width;
 			const scaleY = canvasRect.height / canvas.height;
 
-			// Get layer position in canvas coordinates
+			// Get layer position and dimensions in canvas coordinates
 			const x = layer.x || 0;
 			let y = layer.y || 0;
 			let width, height;
+			let padding = 0;
 
 			if ( layer.type === 'textbox' ) {
 				width = layer.width || 200;
 				height = layer.height || 100;
+				padding = layer.padding || 8;
 			} else {
 				// For simple text, measure the text to determine width
-				width = this._measureTextWidth( layer ) + 20; // Add padding
-				height = ( layer.fontSize || 16 ) + 16; // Font size + padding
+				width = this._measureTextWidth( layer ) + 20;
+				height = ( layer.fontSize || 16 ) * 1.5;
 				// Text baseline is at y, so adjust for top-left positioning
 				y = y - ( layer.fontSize || 16 );
 			}
 
-			// Convert to screen coordinates
-			const screenX = canvasRect.left + ( x * scaleX );
-			const screenY = canvasRect.top + ( y * scaleY );
+			// Convert to screen coordinates, relative to container
+			const screenX = canvasRect.left + ( x * scaleX ) - containerRect.left;
+			const screenY = canvasRect.top + ( y * scaleY ) - containerRect.top;
 			const screenWidth = width * scaleX;
 			const screenHeight = height * scaleY;
 
-			// Apply position
-			this.editorElement.style.left = screenX + 'px';
-			this.editorElement.style.top = screenY + 'px';
-			this.editorElement.style.width = Math.max( 50, screenWidth ) + 'px';
-
-			if ( layer.type === 'textbox' ) {
-				this.editorElement.style.height = Math.max( 40, screenHeight ) + 'px';
-			}
-
 			// Scale font to match displayed size
-			const fontSize = ( layer.fontSize || 16 ) * scaleY;
-			this.editorElement.style.fontSize = fontSize + 'px';
+			const scaledFontSize = ( layer.fontSize || 16 ) * Math.min( scaleX, scaleY );
+			const scaledPadding = padding * Math.min( scaleX, scaleY );
+
+			// Apply position and size
+			Object.assign( this.editorElement.style, {
+				left: screenX + 'px',
+				top: screenY + 'px',
+				width: Math.max( 50, screenWidth ) + 'px',
+				height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
+				fontSize: scaledFontSize + 'px',
+				padding: scaledPadding + 'px'
+			} );
 		}
 
 		/**
@@ -371,7 +418,10 @@
 
 			const ctx = this.canvasManager.ctx;
 			ctx.save();
-			ctx.font = ( layer.fontSize || 16 ) + 'px ' + ( layer.fontFamily || 'Arial' );
+			ctx.font = ( layer.fontWeight || 'normal' ) + ' ' +
+				( layer.fontStyle || 'normal' ) + ' ' +
+				( layer.fontSize || 16 ) + 'px ' +
+				( layer.fontFamily || 'Arial' );
 			const metrics = ctx.measureText( layer.text || '' );
 			ctx.restore();
 
@@ -413,16 +463,83 @@
 			this.editorElement.addEventListener( 'keydown', this._boundKeyHandler );
 
 			// Blur handler
-			this._boundBlurHandler = ( e ) => this._handleBlur( e );
+			this._boundBlurHandler = () => this._handleBlur();
 			this.editorElement.addEventListener( 'blur', this._boundBlurHandler );
 
 			// Input handler for real-time preview
-			this._boundInputHandler = ( e ) => this._handleInput( e );
+			this._boundInputHandler = () => this._handleInput();
 			this.editorElement.addEventListener( 'input', this._boundInputHandler );
 
 			// Resize handler to reposition on window resize
 			this._boundResizeHandler = () => this._positionEditor();
 			window.addEventListener( 'resize', this._boundResizeHandler );
+		}
+
+		/**
+		 * Handle keydown events
+		 *
+		 * @private
+		 * @param {KeyboardEvent} e - Keyboard event
+		 */
+		_handleKeyDown( e ) {
+			if ( e.key === 'Escape' ) {
+				e.preventDefault();
+				e.stopPropagation();
+				this.cancelEditing();
+				return;
+			}
+
+			// Ctrl+Enter or Cmd+Enter to finish for textbox
+			if ( e.key === 'Enter' && ( e.ctrlKey || e.metaKey ) ) {
+				e.preventDefault();
+				this.finishEditing( true );
+				return;
+			}
+
+			// Enter to finish for simple text (not textbox)
+			if ( e.key === 'Enter' && this.editingLayer && this.editingLayer.type === 'text' ) {
+				e.preventDefault();
+				this.finishEditing( true );
+			}
+		}
+
+		/**
+		 * Handle blur events
+		 *
+		 * @private
+		 */
+		_handleBlur() {
+			// Use setTimeout to allow click events to process first
+			setTimeout( () => {
+				// Don't finish editing if we're interacting with the toolbar or a dialog
+				if ( this._isToolbarInteraction ) {
+					// Don't reset the flag here - let the control that set it reset it
+					return;
+				}
+				// Check if focus moved to toolbar
+				if ( this.toolbarElement && this.toolbarElement.contains( document.activeElement ) ) {
+					return;
+				}
+				// Check if a color picker dialog is open
+				if ( document.querySelector( '.color-picker-dialog' ) ) {
+					return;
+				}
+				if ( this.isEditing ) {
+					this.finishEditing( true );
+				}
+			}, 150 );
+		}
+
+		/**
+		 * Handle input events - just update the layer text for when editing finishes
+		 *
+		 * @private
+		 */
+		_handleInput() {
+			// Update layer text as user types (layer is hidden, so no visual update needed)
+			if ( this.editingLayer && this.editorElement ) {
+				this.editingLayer.text = this.editorElement.value;
+			}
 		}
 
 		/**
@@ -447,12 +564,6 @@
 				window.removeEventListener( 'resize', this._boundResizeHandler );
 			}
 
-			// Clear debounce timer
-			if ( this._inputDebounceTimer ) {
-				clearTimeout( this._inputDebounceTimer );
-				this._inputDebounceTimer = null;
-			}
-
 			this._boundKeyHandler = null;
 			this._boundBlurHandler = null;
 			this._boundInputHandler = null;
@@ -460,106 +571,570 @@
 		}
 
 		/**
-		 * Handle keyboard events
+		 * Get a translated message with fallback for test environments
 		 *
 		 * @private
-		 * @param {KeyboardEvent} e - Keyboard event
+		 * @param {string} key - Message key
+		 * @param {string} [fallback] - Fallback text if mw.message unavailable
+		 * @return {string} Translated message or fallback
 		 */
-		_handleKeyDown( e ) {
-			// Escape cancels editing
-			if ( e.key === 'Escape' ) {
+		_msg( key, fallback ) {
+			// eslint-disable-next-line no-undef
+			if ( typeof mw !== 'undefined' && mw.message ) {
+				// eslint-disable-next-line no-undef
+				return mw.message( key ).text();
+			}
+			return fallback || key;
+		}
+
+		/**
+		 * Create the floating formatting toolbar
+		 *
+		 * @private
+		 */
+		_createToolbar() {
+			if ( !this.editingLayer || !this.editorElement ) {
+				return;
+			}
+
+			this.toolbarElement = document.createElement( 'div' );
+			this.toolbarElement.className = 'layers-text-toolbar';
+
+			// Create toolbar content
+			const layer = this.editingLayer;
+
+			// Drag handle
+			const dragHandle = document.createElement( 'div' );
+			dragHandle.className = 'layers-text-toolbar-handle';
+			dragHandle.innerHTML = '⋮⋮';
+			dragHandle.title = this._msg( 'layers-text-toolbar-drag', 'Drag to move' );
+			this.toolbarElement.appendChild( dragHandle );
+
+			// Font family select
+			const fontSelect = this._createFontSelect( layer );
+			this.toolbarElement.appendChild( fontSelect );
+
+			// Separator
+			this.toolbarElement.appendChild( this._createSeparator() );
+
+			// Font size input
+			const sizeGroup = this._createFontSizeInput( layer );
+			this.toolbarElement.appendChild( sizeGroup );
+
+			// Separator
+			this.toolbarElement.appendChild( this._createSeparator() );
+
+			// Bold button
+			const boldBtn = this._createFormatButton( 'B', 'bold',
+				layer.fontWeight === 'bold', this._msg( 'layers-text-toolbar-bold', 'Bold' ) );
+			this.toolbarElement.appendChild( boldBtn );
+
+			// Italic button
+			const italicBtn = this._createFormatButton( 'I', 'italic',
+				layer.fontStyle === 'italic', this._msg( 'layers-text-toolbar-italic', 'Italic' ) );
+			italicBtn.style.fontStyle = 'italic';
+			this.toolbarElement.appendChild( italicBtn );
+
+			// Separator
+			this.toolbarElement.appendChild( this._createSeparator() );
+
+			// Alignment buttons
+			const alignLeft = this._createAlignButton( 'left', layer.textAlign );
+			const alignCenter = this._createAlignButton( 'center', layer.textAlign );
+			const alignRight = this._createAlignButton( 'right', layer.textAlign );
+			this.toolbarElement.appendChild( alignLeft );
+			this.toolbarElement.appendChild( alignCenter );
+			this.toolbarElement.appendChild( alignRight );
+
+			// Separator
+			this.toolbarElement.appendChild( this._createSeparator() );
+
+			// Color picker
+			const colorPicker = this._createColorPicker( layer );
+			this.toolbarElement.appendChild( colorPicker );
+
+			// Setup drag handlers
+			this._setupToolbarDrag( dragHandle );
+
+			// Prevent clicks on toolbar from closing the editor
+			this.toolbarElement.addEventListener( 'mousedown', ( e ) => {
+				// Mark that we're interacting with the toolbar
+				this._isToolbarInteraction = true;
+				// Don't prevent default for inputs/selects that need focus
+				const tagName = e.target.tagName.toLowerCase();
+				if ( tagName !== 'input' && tagName !== 'select' ) {
+					e.preventDefault();
+				}
+			} );
+
+			// Position toolbar above the editor
+			this._positionToolbar();
+
+			// Append to container
+			if ( this.containerElement ) {
+				this.containerElement.appendChild( this.toolbarElement );
+			}
+		}
+
+		/**
+		 * Create font family dropdown
+		 *
+		 * @private
+		 * @param {Object} layer - Current layer
+		 * @return {HTMLElement} Select element
+		 */
+		_createFontSelect( layer ) {
+			const select = document.createElement( 'select' );
+			select.className = 'layers-text-toolbar-font';
+			select.title = this._msg( 'layers-text-toolbar-font', 'Font family' );
+
+			const fonts = [
+				'Arial', 'Helvetica', 'Times New Roman', 'Georgia',
+				'Verdana', 'Courier New', 'Comic Sans MS', 'Impact'
+			];
+
+			fonts.forEach( ( font ) => {
+				const option = document.createElement( 'option' );
+				option.value = font;
+				option.textContent = font;
+				option.style.fontFamily = font;
+				if ( ( layer.fontFamily || 'Arial' ).includes( font ) ) {
+					option.selected = true;
+				}
+				select.appendChild( option );
+			} );
+
+			select.addEventListener( 'change', () => {
+				this._applyFormat( 'fontFamily', select.value );
+				// Reset flag and re-focus editor after selection
+				this._isToolbarInteraction = false;
+				if ( this.editorElement ) {
+					this.editorElement.focus();
+				}
+			} );
+
+			// Mark as interacting when dropdown opens
+			select.addEventListener( 'mousedown', () => {
+				this._isToolbarInteraction = true;
+			} );
+
+			// Also mark on focus for keyboard navigation
+			select.addEventListener( 'focus', () => {
+				this._isToolbarInteraction = true;
+			} );
+
+			// Reset flag if user clicks away without selecting
+			select.addEventListener( 'blur', () => {
+				// Small delay to allow change event to fire first
+				setTimeout( () => {
+					if ( this._isToolbarInteraction && document.activeElement !== select ) {
+						this._isToolbarInteraction = false;
+						if ( this.editorElement ) {
+							this.editorElement.focus();
+						}
+					}
+				}, 100 );
+			} );
+
+			return select;
+		}
+
+		/**
+		 * Create font size input
+		 *
+		 * @private
+		 * @param {Object} layer - Current layer
+		 * @return {HTMLElement} Size input group
+		 */
+		_createFontSizeInput( layer ) {
+			const group = document.createElement( 'div' );
+			group.className = 'layers-text-toolbar-size-group';
+
+			const input = document.createElement( 'input' );
+			input.type = 'number';
+			input.className = 'layers-text-toolbar-size';
+			input.value = layer.fontSize || 16;
+			input.min = 8;
+			input.max = 200;
+			input.title = this._msg( 'layers-text-toolbar-size', 'Font size' );
+
+			input.addEventListener( 'change', () => {
+				const size = Math.max( 8, Math.min( 200, parseInt( input.value, 10 ) || 16 ) );
+				input.value = size;
+				this._applyFormat( 'fontSize', size );
+				// Re-focus editor after change
+				if ( this.editorElement ) {
+					this.editorElement.focus();
+				}
+			} );
+
+			// Mark interaction and refocus on blur
+			input.addEventListener( 'focus', () => {
+				this._isToolbarInteraction = true;
+			} );
+			input.addEventListener( 'blur', () => {
+				if ( this.editorElement ) {
+					this.editorElement.focus();
+				}
+			} );
+
+			const label = document.createElement( 'span' );
+			label.className = 'layers-text-toolbar-size-label';
+			label.textContent = 'px';
+
+			group.appendChild( input );
+			group.appendChild( label );
+
+			return group;
+		}
+
+		/**
+		 * Create a format toggle button (bold/italic)
+		 *
+		 * @private
+		 * @param {string} label - Button label
+		 * @param {string} format - Format type ('bold' or 'italic')
+		 * @param {boolean} active - Whether currently active
+		 * @param {string} title - Button title/tooltip
+		 * @return {HTMLElement} Button element
+		 */
+		_createFormatButton( label, format, active, title ) {
+			const btn = document.createElement( 'button' );
+			btn.className = 'layers-text-toolbar-btn';
+			btn.textContent = label;
+			btn.title = title;
+			btn.setAttribute( 'data-format', format );
+
+			if ( active ) {
+				btn.classList.add( 'active' );
+			}
+
+			btn.addEventListener( 'click', ( e ) => {
 				e.preventDefault();
-				e.stopPropagation();
-				this.cancelEditing();
-				return;
-			}
+				btn.classList.toggle( 'active' );
 
-			// Enter finishes editing for single-line text
-			// Ctrl+Enter or Cmd+Enter finishes for multiline
-			if ( e.key === 'Enter' ) {
-				if ( this.editingLayer && this.editingLayer.type !== 'textbox' ) {
-					// Single-line: Enter confirms
-					e.preventDefault();
-					e.stopPropagation();
-					this.finishEditing( true );
-				} else if ( e.ctrlKey || e.metaKey ) {
-					// Multiline: Ctrl+Enter confirms
-					e.preventDefault();
-					e.stopPropagation();
-					this.finishEditing( true );
+				if ( format === 'bold' ) {
+					this._applyFormat( 'fontWeight', btn.classList.contains( 'active' ) ? 'bold' : 'normal' );
+				} else if ( format === 'italic' ) {
+					this._applyFormat( 'fontStyle', btn.classList.contains( 'active' ) ? 'italic' : 'normal' );
 				}
-				// Otherwise, allow Enter for new line in textbox
-			}
+			} );
 
-			// Prevent event from bubbling to canvas handlers
-			e.stopPropagation();
+			// Prevent blur
+			btn.addEventListener( 'mousedown', ( e ) => e.preventDefault() );
+
+			return btn;
 		}
 
 		/**
-		 * Handle blur event (clicking outside)
+		 * Create alignment button
 		 *
 		 * @private
-		 * @param {FocusEvent} _e - Blur event (unused)
+		 * @param {string} align - Alignment value (left/center/right)
+		 * @param {string} currentAlign - Current alignment
+		 * @return {HTMLElement} Button element
 		 */
-		_handleBlur( _e ) {
-			// Use a small delay to allow for internal focus changes
-			setTimeout( () => {
-				// Check if we're still supposed to be editing
-				if ( this.isEditing ) {
-					this.finishEditing( true );
+		_createAlignButton( align, currentAlign ) {
+			const btn = document.createElement( 'button' );
+			btn.className = 'layers-text-toolbar-btn layers-text-toolbar-align';
+			btn.setAttribute( 'data-align', align );
+			btn.title = this._msg( 'layers-text-toolbar-align-' + align, 'Align ' + align );
+
+			// SVG icons for alignment
+			const icons = {
+				left: '<svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M2 3h12v2H2zm0 4h8v2H2zm0 4h10v2H2z"/></svg>',
+				center: '<svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M2 3h12v2H2zm2 4h8v2H4zm1 4h6v2H5z"/></svg>',
+				right: '<svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M2 3h12v2H2zm4 4h8v2H6zm2 4h6v2H8z"/></svg>'
+			};
+			btn.innerHTML = icons[ align ];
+
+			if ( ( currentAlign || 'left' ) === align ) {
+				btn.classList.add( 'active' );
+			}
+
+			btn.addEventListener( 'click', ( e ) => {
+				e.preventDefault();
+				// Deactivate siblings
+				const siblings = this.toolbarElement.querySelectorAll( '.layers-text-toolbar-align' );
+				siblings.forEach( ( s ) => s.classList.remove( 'active' ) );
+				btn.classList.add( 'active' );
+				this._applyFormat( 'textAlign', align );
+			} );
+
+			// Prevent blur
+			btn.addEventListener( 'mousedown', ( e ) => e.preventDefault() );
+
+			return btn;
+		}
+
+		/**
+		 * Create color picker
+		 *
+		 * @private
+		 * @param {Object} layer - Current layer
+		 * @return {HTMLElement} Color picker element
+		 */
+		_createColorPicker( layer ) {
+			const wrapper = document.createElement( 'div' );
+			wrapper.className = 'layers-text-toolbar-color-wrapper';
+
+			const currentColor = layer.color || layer.fill || '#000000';
+			const ColorPickerDialog = window.Layers && window.Layers.UI && window.Layers.UI.ColorPickerDialog;
+
+			// Get i18n strings for color picker
+			const colorPickerStrings = {
+				title: this._msg( 'layers-color-picker-title', 'Choose color' ),
+				standard: this._msg( 'layers-color-picker-standard', 'Standard colors' ),
+				saved: this._msg( 'layers-color-picker-saved', 'Saved colors' ),
+				customSection: this._msg( 'layers-color-picker-custom-section', 'Custom color' ),
+				none: this._msg( 'layers-color-picker-none', 'No fill (transparent)' ),
+				emptySlot: this._msg( 'layers-color-picker-empty-slot', 'Empty slot' ),
+				cancel: this._msg( 'layers-color-picker-cancel', 'Cancel' ),
+				apply: this._msg( 'layers-color-picker-apply', 'Apply' ),
+				transparent: this._msg( 'layers-color-picker-transparent', 'Transparent' ),
+				swatchTemplate: this._msg( 'layers-color-picker-color-swatch', 'Set color to $1' ),
+				previewTemplate: this._msg( 'layers-color-picker-color-preview', 'Current color: $1' )
+			};
+
+			let colorButton;
+			let storedColor = currentColor;
+			const self = this;
+
+			if ( ColorPickerDialog && typeof ColorPickerDialog.createColorButton === 'function' ) {
+				// Use full color picker dialog with swatches
+				colorButton = ColorPickerDialog.createColorButton( {
+					color: currentColor,
+					strings: colorPickerStrings,
+					onClick: () => {
+						const originalColor = storedColor;
+						self._isToolbarInteraction = true;
+
+						const dialog = new ColorPickerDialog( {
+							currentColor: storedColor,
+							strings: colorPickerStrings,
+							anchorElement: colorButton,
+							onApply: ( newColor ) => {
+								storedColor = newColor;
+								self._applyFormat( 'color', newColor );
+								ColorPickerDialog.updateColorButton( colorButton, newColor, colorPickerStrings );
+								// Reset flag and refocus editor after dialog closes
+								self._isToolbarInteraction = false;
+								if ( self.editorElement ) {
+									self.editorElement.focus();
+								}
+							},
+							onPreview: ( previewColor ) => {
+								self._applyFormat( 'color', previewColor );
+							},
+							onCancel: () => {
+								self._applyFormat( 'color', originalColor );
+								// Reset flag and refocus editor after dialog closes
+								self._isToolbarInteraction = false;
+								if ( self.editorElement ) {
+									self.editorElement.focus();
+								}
+							}
+						} );
+						dialog.open();
+					}
+				} );
+				colorButton.className += ' layers-text-toolbar-color-button';
+			} else {
+				// Fallback: basic color input
+				const input = document.createElement( 'input' );
+				input.type = 'color';
+				input.className = 'layers-text-toolbar-color';
+				input.value = currentColor;
+				input.title = this._msg( 'layers-text-toolbar-color', 'Text color' );
+
+				input.addEventListener( 'input', () => {
+					this._applyFormat( 'color', input.value );
+				} );
+
+				// Mark interaction and delay refocus
+				input.addEventListener( 'focus', () => {
+					this._isToolbarInteraction = true;
+				} );
+				input.addEventListener( 'blur', () => {
+					setTimeout( () => {
+						this._isToolbarInteraction = false;
+						if ( this.editorElement ) {
+							this.editorElement.focus();
+						}
+					}, 100 );
+				} );
+
+				colorButton = input;
+			}
+
+			wrapper.appendChild( colorButton );
+			return wrapper;
+		}
+
+		/**
+		 * Create a separator element
+		 *
+		 * @private
+		 * @return {HTMLElement} Separator element
+		 */
+		_createSeparator() {
+			const sep = document.createElement( 'div' );
+			sep.className = 'layers-text-toolbar-separator';
+			return sep;
+		}
+
+		/**
+		 * Apply a format change to the layer and editor
+		 *
+		 * @private
+		 * @param {string} property - Property name
+		 * @param {*} value - New value
+		 */
+		_applyFormat( property, value ) {
+			if ( !this.editingLayer ) {
+				return;
+			}
+
+			this.editingLayer[ property ] = value;
+
+			// Update editor element style if applicable
+			if ( this.editorElement ) {
+				const styleMap = {
+					fontFamily: 'fontFamily',
+					fontSize: null, // Handled specially due to scaling
+					fontWeight: 'fontWeight',
+					fontStyle: 'fontStyle',
+					textAlign: 'textAlign',
+					color: 'color'
+				};
+
+				if ( property === 'fontSize' ) {
+					// Recalculate scaled size
+					this._positionEditor();
+				} else if ( styleMap[ property ] ) {
+					this.editorElement.style[ styleMap[ property ] ] = value;
 				}
-			}, 100 );
+			}
 		}
 
 		/**
-		 * Handle input event for real-time preview
+		 * Setup toolbar drag functionality
 		 *
 		 * @private
-		 * @param {InputEvent} _e - Input event (unused)
+		 * @param {HTMLElement} handle - Drag handle element
 		 */
-		_handleInput( _e ) {
-			if ( !this.editorElement || !this.editingLayer ) {
+		_setupToolbarDrag( handle ) {
+			handle.addEventListener( 'mousedown', ( e ) => {
+				e.preventDefault();
+				this._isDraggingToolbar = true;
+
+				const rect = this.toolbarElement.getBoundingClientRect();
+				this._toolbarDragOffset = {
+					x: e.clientX - rect.left,
+					y: e.clientY - rect.top
+				};
+
+				this._boundToolbarMouseMove = ( me ) => this._handleToolbarDrag( me );
+				this._boundToolbarMouseUp = () => this._stopToolbarDrag();
+
+				document.addEventListener( 'mousemove', this._boundToolbarMouseMove );
+				document.addEventListener( 'mouseup', this._boundToolbarMouseUp );
+			} );
+		}
+
+		/**
+		 * Handle toolbar drag movement
+		 *
+		 * @private
+		 * @param {MouseEvent} e - Mouse event
+		 */
+		_handleToolbarDrag( e ) {
+			if ( !this._isDraggingToolbar || !this.toolbarElement ) {
 				return;
 			}
 
-			// Debounce preview updates to avoid excessive rendering
-			if ( this._inputDebounceTimer ) {
-				clearTimeout( this._inputDebounceTimer );
-			}
+			const containerRect = this.containerElement ?
+				this.containerElement.getBoundingClientRect() :
+				{ left: 0, top: 0 };
 
-			this._inputDebounceTimer = setTimeout( () => {
-				this._updatePreview();
-			}, 50 );
+			const newX = e.clientX - this._toolbarDragOffset.x - containerRect.left;
+			const newY = e.clientY - this._toolbarDragOffset.y - containerRect.top;
+
+			this.toolbarElement.style.left = newX + 'px';
+			this.toolbarElement.style.top = newY + 'px';
 		}
 
 		/**
-		 * Update canvas preview with current editor text
+		 * Stop toolbar drag
 		 *
 		 * @private
 		 */
-		_updatePreview() {
-			if ( !this.editorElement || !this.editingLayer || !this.canvasManager ) {
+		_stopToolbarDrag() {
+			this._isDraggingToolbar = false;
+
+			if ( this._boundToolbarMouseMove ) {
+				document.removeEventListener( 'mousemove', this._boundToolbarMouseMove );
+			}
+			if ( this._boundToolbarMouseUp ) {
+				document.removeEventListener( 'mouseup', this._boundToolbarMouseUp );
+			}
+
+			this._boundToolbarMouseMove = null;
+			this._boundToolbarMouseUp = null;
+		}
+
+		/**
+		 * Position the toolbar above the editor
+		 *
+		 * @private
+		 */
+		_positionToolbar() {
+			if ( !this.toolbarElement || !this.editorElement ) {
 				return;
 			}
 
-			// Temporarily update layer text for preview
-			const previewText = this.editorElement.value;
-			this.editingLayer.text = previewText;
-
-			// Re-render canvas to show preview
-			if ( this.canvasManager.editor && this.canvasManager.editor.layers ) {
-				this.canvasManager.renderLayers( this.canvasManager.editor.layers );
+			// Safety check for test environments where getBoundingClientRect may not exist
+			if ( typeof this.editorElement.getBoundingClientRect !== 'function' ) {
+				return;
 			}
+
+			const containerRect = ( this.containerElement &&
+				typeof this.containerElement.getBoundingClientRect === 'function' ) ?
+				this.containerElement.getBoundingClientRect() :
+				{ left: 0, top: 0, width: window.innerWidth };
+
+			const editorRect = this.editorElement.getBoundingClientRect();
+
+			// Position above the editor, left-aligned
+			let left = editorRect.left - containerRect.left;
+			let top = editorRect.top - containerRect.top - 44; // 36px toolbar + 8px gap
+
+			// Keep within container bounds
+			const toolbarWidth = 420; // Approximate toolbar width
+			if ( left + toolbarWidth > containerRect.width ) {
+				left = Math.max( 0, containerRect.width - toolbarWidth );
+			}
+			if ( top < 0 ) {
+				// Show below editor if not enough room above
+				top = editorRect.bottom - containerRect.top + 8;
+			}
+
+			this.toolbarElement.style.left = left + 'px';
+			this.toolbarElement.style.top = top + 'px';
 		}
 
 		/**
-		 * Update textbox dimensions after editing
+		 * Remove the toolbar from DOM
 		 *
 		 * @private
 		 */
-		_updateTextBoxDimensions() {
-			// For textbox, we could optionally auto-resize based on content
-			// For now, keep existing dimensions
+		_removeToolbar() {
+			this._stopToolbarDrag();
+
+			if ( this.toolbarElement && this.toolbarElement.parentNode ) {
+				this.toolbarElement.parentNode.removeChild( this.toolbarElement );
+			}
+			this.toolbarElement = null;
 		}
 
 		/**
@@ -571,6 +1146,7 @@
 			if ( this.editorElement && this.editorElement.parentNode ) {
 				this.editorElement.parentNode.removeChild( this.editorElement );
 			}
+
 			this.editorElement = null;
 			this.containerElement = null;
 		}
@@ -581,6 +1157,7 @@
 		destroy() {
 			this.finishEditing( false );
 			this._removeEventHandlers();
+			this._removeToolbar();
 			this._removeEditor();
 
 			this.canvasManager = null;

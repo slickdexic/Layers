@@ -627,5 +627,14 @@
 	"layers-emoji-not-loaded": "Error shown when the emoji library module is not available",
 	"layers-emoji-load-error": "Error message when an emoji SVG fails to load",
 	"layers-loading": "Generic loading indicator text",
-	"layers-close": "Generic close button label used in dialogs"
+	"layers-close": "Generic close button label used in dialogs",
+	"layers-text-toolbar-drag": "Tooltip for the drag handle on the floating text formatting toolbar",
+	"layers-text-toolbar-font": "Tooltip for the font family dropdown in the text toolbar",
+	"layers-text-toolbar-size": "Tooltip for the font size input in the text toolbar",
+	"layers-text-toolbar-bold": "Tooltip for the bold toggle button in the text toolbar, includes keyboard shortcut",
+	"layers-text-toolbar-italic": "Tooltip for the italic toggle button in the text toolbar, includes keyboard shortcut",
+	"layers-text-toolbar-align-left": "Tooltip for the left alignment button in the text toolbar",
+	"layers-text-toolbar-align-center": "Tooltip for the center alignment button in the text toolbar",
+	"layers-text-toolbar-align-right": "Tooltip for the right alignment button in the text toolbar",
+	"layers-text-toolbar-color": "Tooltip for the text color picker in the text toolbar"
 }
