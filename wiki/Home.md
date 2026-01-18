@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C535%20Passing-brightgreen" alt="9,535 Tests">
-  <img src="https://img.shields.io/badge/Coverage-95%25-brightgreen" alt="95% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C559%20Passing-brightgreen" alt="9,559 Tests">
+  <img src="https://img.shields.io/badge/Coverage-92.53%25-brightgreen" alt="92.53% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,8 +20,13 @@
 
 ---
 
-## 🆕 What's New in v1.5.14
+## 🆕 What's New in v1.5.15
 
+- **Hover Overlay Actions** — Edit/View icons appear on hover over layered images
+  - **Edit button** (pencil icon): Opens layer editor — respects `editlayers` permission
+  - **View button** (expand icon): Opens full-size lightbox viewer
+  - Touch support with auto-hide, modal editor on article pages
+  - Full accessibility: ARIA labels, keyboard nav, reduced-motion, dark mode
 - **Floating Text Formatting Toolbar** — When editing text inline, a draggable floating toolbar appears with:
   - Font family dropdown, font size input (8-200px), bold/italic toggles
   - Text alignment buttons (left, center, right)
@@ -29,7 +34,7 @@
   - Draggable via grab handle for optimal positioning
   - Full dark mode support
 - **Textbox Background Visibility** — Textbox layers keep their background visible during editing
-- **9,535 tests passing** (148 suites)
+- **9,559 tests passing** (149 suites)
 
 ### Previous v1.5.13 Highlights
 
@@ -176,17 +181,18 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.13 |
-| **Version (REL1_43)** | 1.5.10-REL1_43 |
+| **Version (main)** | 1.5.15 |
+| **Version (REL1_43)** | 1.5.15-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
-| **Test Suites** | 148 |
-| **Total Tests** | 9,535 |
+| **Test Suites** | 149 |
+| **Total Tests** | 9,559 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 92.94% |
-| **Branch Coverage** | 83.75% |
-| **JavaScript Files** | 121 |
+| **Statement Coverage** | 92.53% |
+| **Branch Coverage** | 83.56% |
+| **JavaScript Files** | 122 |
 | **ES6 Classes** | 100+ |
+| **God Classes** | 19 (3 generated data, 16 hand-written) |
 
 ---
 

@@ -143,6 +143,13 @@ class Hooks {
 				$vars['wgLayersDebug'] = false;
 				$vars['wgLayersMaxBytes'] = 0;
 			}
+			// Expose editlayers permission for viewer overlay UI
+			try {
+				$user = $out->getUser();
+				$vars['wgLayersCanEdit'] = $user && $user->isAllowed( 'editlayers' );
+			} catch ( \Throwable $e3 ) {
+				$vars['wgLayersCanEdit'] = false;
+			}
 			// Provide the raw page-level layers query param to the client, if present
 			try {
 				$layersParam = null;

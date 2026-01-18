@@ -7,7 +7,7 @@
 |type3           = page action
 |type4           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.14
+|version         = 1.5.15
 |update          = 2026-01-18
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -71,9 +71,9 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.14
+| 1.44+ || <code>main</code> || 1.5.15
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.14-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.15-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}
@@ -141,6 +141,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 * '''Live Color Preview''': Canvas updates in real-time as colors are selected in the color picker.
 * '''Live Article Preview''': Layer changes appear immediately on article pages after saving—no page reload needed.
 * '''Instant Feedback''': All property changes (stroke width, font size, opacity) update the canvas immediately.
+* '''Hover Overlay Actions''': Edit/View icons appear on hover over layered images—respects <code>editlayers</code> permission for edit button visibility.
 
 === Integration ===
 * '''Import Images''': Add external images as layers (PNG, JPG, GIF, WebP).
@@ -238,8 +239,8 @@ Full keyboard accessibility with over 20 shortcuts:
 |}
 
 == Technical Details ==
-* '''Performance:''' Architecture splits the lightweight Viewer (~2,800 lines) from the Editor (~108k lines including generated shape/emoji data).
-* '''Stability:''' 9,469 Jest tests across 147 test suites achieving 95% statement coverage, 85% branch coverage.
+* '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~108k lines including generated shape/emoji data).
+* '''Stability:''' 9,559 Jest tests across 149 test suites achieving 92.53% statement coverage, 83.56% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

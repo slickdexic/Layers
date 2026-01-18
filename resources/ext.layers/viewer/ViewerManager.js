@@ -131,6 +131,9 @@ class ViewerManager {
 				layerData: data
 			} );
 
+			// Initialize hover overlay with edit/view buttons
+			this._initializeOverlay( img, container );
+
 			let count = 0;
 			if ( data.layers && data.layers.length ) {
 				count = data.layers.length;
@@ -141,6 +144,51 @@ class ViewerManager {
 		} catch ( e ) {
 			this.debugWarn( 'Viewer init error:', e );
 			return false;
+		}
+	}
+
+	/**
+	 * Initialize the hover overlay for an image with layers.
+	 *
+	 * @private
+	 * @param {HTMLImageElement} img Image element
+	 * @param {HTMLElement} container Positioned container
+	 */
+	_initializeOverlay( img, container ) {
+		// Skip if overlay already exists
+		if ( img.layersOverlay ) {
+			return;
+		}
+
+		// Extract filename from image
+		const filename = this.extractFilenameFromImg( img );
+		if ( !filename ) {
+			this.debugLog( 'No filename for overlay, skipping' );
+			return;
+		}
+
+		// Get set name from data attribute
+		const setname = img.getAttribute( 'data-layer-setname' ) ||
+			img.getAttribute( 'data-layers-intent' ) || 'default';
+
+		// Get ViewerOverlay class
+		const ViewerOverlay = getClass( 'Viewer.Overlay', 'ViewerOverlay' );
+		if ( !ViewerOverlay ) {
+			this.debugLog( 'ViewerOverlay class not available' );
+			return;
+		}
+
+		try {
+			img.layersOverlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: filename,
+				setname: setname,
+				debug: this.debug
+			} );
+			this.debugLog( 'Overlay initialized for', filename );
+		} catch ( e ) {
+			this.debugWarn( 'Overlay init error:', e );
 		}
 	}
 
@@ -164,6 +212,9 @@ class ViewerManager {
 				}
 				img.layersViewer = null;
 			}
+
+			// Note: We don't destroy the overlay on reinitialize since
+			// the overlay is reused (same buttons, just viewer data changes)
 
 			// Clear any pending flags
 			img.layersPending = false;

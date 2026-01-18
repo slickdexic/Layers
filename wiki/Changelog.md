@@ -4,9 +4,16 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.14 (January 18, 2026)
+## Version 1.5.15 (January 18, 2026)
 
 ### Added
+- **Hover Overlay Actions** — Edit/View icons appear on hover over layered images
+  - **Edit button** (pencil icon): Opens layer editor — respects `editlayers` permission
+  - **View button** (expand icon): Opens full-size lightbox viewer
+  - Touch support with auto-hide after 3 seconds
+  - Modal editor integration on article pages, direct navigation on File: pages
+  - Full accessibility: ARIA labels, keyboard navigation, reduced-motion support
+  - Dark mode and high-contrast mode support
 - **Floating Text Formatting Toolbar** — When editing text inline, a draggable floating toolbar appears with:
   - Font family dropdown (Arial, Helvetica, Times New Roman, Georgia, Verdana, Courier New, Comic Sans MS, Impact)
   - Font size input (8-200px)

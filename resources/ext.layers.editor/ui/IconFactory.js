@@ -503,6 +503,121 @@
 	};
 
 	/**
+	 * Create a pencil/edit icon
+	 * Modern minimal design for edit actions
+	 * @param {Object} [options] - Icon options
+	 * @param {number} [options.size=18] - Icon size
+	 * @param {string} [options.color='#fff'] - Icon color
+	 * @return {SVGSVGElement} Pencil icon SVG
+	 */
+	IconFactory.createPencilIcon = function ( options ) {
+		options = options || {};
+		const size = options.size || 18;
+		const color = options.color || '#fff';
+
+		const svg = IconFactory.createSVGElement( 'svg', {
+			width: String( size ),
+			height: String( size ),
+			viewBox: '0 0 24 24',
+			fill: 'none',
+			'aria-hidden': 'true'
+		} );
+
+		// Pencil body with tip
+		const path = IconFactory.createSVGElement( 'path', {
+			d: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7',
+			stroke: color,
+			'stroke-width': '2',
+			'stroke-linecap': 'round',
+			'stroke-linejoin': 'round',
+			fill: 'none'
+		} );
+		svg.appendChild( path );
+
+		// Pencil edit line
+		const editPath = IconFactory.createSVGElement( 'path', {
+			d: 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z',
+			stroke: color,
+			'stroke-width': '2',
+			'stroke-linecap': 'round',
+			'stroke-linejoin': 'round',
+			fill: 'none'
+		} );
+		svg.appendChild( editPath );
+
+		return svg;
+	};
+
+	/**
+	 * Create an expand/fullscreen icon (diagonal arrows)
+	 * Modern minimal design for view/expand actions
+	 * @param {Object} [options] - Icon options
+	 * @param {number} [options.size=18] - Icon size
+	 * @param {string} [options.color='#fff'] - Icon color
+	 * @return {SVGSVGElement} Expand icon SVG
+	 */
+	IconFactory.createFullscreenIcon = function ( options ) {
+		options = options || {};
+		const size = options.size || 18;
+		const color = options.color || '#fff';
+
+		const svg = IconFactory.createSVGElement( 'svg', {
+			width: String( size ),
+			height: String( size ),
+			viewBox: '0 0 24 24',
+			fill: 'none',
+			'aria-hidden': 'true'
+		} );
+
+		// Top-right corner
+		const path1 = IconFactory.createSVGElement( 'path', {
+			d: 'M15 3h6v6',
+			stroke: color,
+			'stroke-width': '2',
+			'stroke-linecap': 'round',
+			'stroke-linejoin': 'round',
+			fill: 'none'
+		} );
+		svg.appendChild( path1 );
+
+		// Top-right diagonal
+		const path2 = IconFactory.createSVGElement( 'path', {
+			d: 'M9 21H3v-6',
+			stroke: color,
+			'stroke-width': '2',
+			'stroke-linecap': 'round',
+			'stroke-linejoin': 'round',
+			fill: 'none'
+		} );
+		svg.appendChild( path2 );
+
+		// Diagonal lines
+		const line1 = IconFactory.createSVGElement( 'line', {
+			x1: '21',
+			y1: '3',
+			x2: '14',
+			y2: '10',
+			stroke: color,
+			'stroke-width': '2',
+			'stroke-linecap': 'round'
+		} );
+		svg.appendChild( line1 );
+
+		const line2 = IconFactory.createSVGElement( 'line', {
+			x1: '3',
+			y1: '21',
+			x2: '10',
+			y2: '14',
+			stroke: color,
+			'stroke-width': '2',
+			'stroke-linecap': 'round'
+		} );
+		svg.appendChild( line2 );
+
+		return svg;
+	};
+
+	/**
 	 * Create a folder icon with a plus badge (for "Add Folder" button)
 	 * @param {Object} [options] - Icon options
 	 * @param {number} [options.size=20] - Icon size
