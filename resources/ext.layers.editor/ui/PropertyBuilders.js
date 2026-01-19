@@ -225,6 +225,7 @@
 
 	/**
 	 * Add text shadow properties section
+	 * Shadow settings are hidden until "Enable Text Shadow" is checked
 	 * @param {Object} ctx - Context with addSection, addCheckbox, addColorPicker, addInput, layer, editor
 	 */
 	PropertyBuilders.addTextShadowSection = function ( ctx ) {
@@ -238,63 +239,88 @@
 			label: t( 'layers-prop-text-shadow', 'Enable Text Shadow' ),
 			value: layer.textShadow === true,
 			onChange: function ( checked ) {
-				editor.updateLayer( layer.id, { textShadow: checked } );
+				const updates = { textShadow: checked };
+				// Set default values when enabling
+				if ( checked ) {
+					if ( !layer.textShadowColor ) {
+						updates.textShadowColor = 'rgba(0,0,0,0.5)';
+					}
+					if ( typeof layer.textShadowBlur === 'undefined' ) {
+						updates.textShadowBlur = 4;
+					}
+					if ( typeof layer.textShadowOffsetX === 'undefined' ) {
+						updates.textShadowOffsetX = 2;
+					}
+					if ( typeof layer.textShadowOffsetY === 'undefined' ) {
+						updates.textShadowOffsetY = 2;
+					}
+				}
+				editor.updateLayer( layer.id, updates );
+				// Refresh properties panel to show/hide text shadow settings
+				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+					setTimeout( function () {
+						editor.layerPanel.updatePropertiesPanel( layer.id );
+					}, 0 );
+				}
 			}
 		} );
 
-		ctx.addColorPicker( {
-			label: t( 'layers-prop-text-shadow-color', 'Shadow Color' ),
-			value: layer.textShadowColor || 'rgba(0,0,0,0.5)',
-			property: 'textShadowColor',
-			onChange: function ( newColor ) {
-				editor.updateLayer( layer.id, { textShadowColor: newColor } );
-			}
-		} );
+		// Only show text shadow settings when enabled
+		if ( layer.textShadow === true ) {
+			ctx.addColorPicker( {
+				label: t( 'layers-prop-text-shadow-color', 'Shadow Color' ),
+				value: layer.textShadowColor || 'rgba(0,0,0,0.5)',
+				property: 'textShadowColor',
+				onChange: function ( newColor ) {
+					editor.updateLayer( layer.id, { textShadowColor: newColor } );
+				}
+			} );
 
-		ctx.addInput( {
-			label: t( 'layers-prop-text-shadow-blur', 'Shadow Blur' ),
-			type: 'number',
-			value: layer.textShadowBlur || 4,
-			min: 0,
-			max: 50,
-			step: 1,
-			prop: 'textShadowBlur',
-			onChange: function ( v ) {
-				editor.updateLayer( layer.id, {
-					textShadowBlur: Math.max( 0, Math.min( 50, parseFloat( v ) ) )
-				} );
-			}
-		} );
+			ctx.addInput( {
+				label: t( 'layers-prop-text-shadow-blur', 'Shadow Blur' ),
+				type: 'number',
+				value: layer.textShadowBlur || 4,
+				min: 0,
+				max: 50,
+				step: 1,
+				prop: 'textShadowBlur',
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, {
+						textShadowBlur: Math.max( 0, Math.min( 50, parseFloat( v ) ) )
+					} );
+				}
+			} );
 
-		ctx.addInput( {
-			label: t( 'layers-prop-text-shadow-offset-x', 'Shadow Offset X' ),
-			type: 'number',
-			value: typeof layer.textShadowOffsetX === 'number' ? layer.textShadowOffsetX : 2,
-			min: -100,
-			max: 100,
-			step: 1,
-			prop: 'textShadowOffsetX',
-			onChange: function ( v ) {
-				editor.updateLayer( layer.id, {
-					textShadowOffsetX: Math.max( -100, Math.min( 100, parseFloat( v ) ) )
-				} );
-			}
-		} );
+			ctx.addInput( {
+				label: t( 'layers-prop-text-shadow-offset-x', 'Shadow Offset X' ),
+				type: 'number',
+				value: typeof layer.textShadowOffsetX === 'number' ? layer.textShadowOffsetX : 2,
+				min: -100,
+				max: 100,
+				step: 1,
+				prop: 'textShadowOffsetX',
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, {
+						textShadowOffsetX: Math.max( -100, Math.min( 100, parseFloat( v ) ) )
+					} );
+				}
+			} );
 
-		ctx.addInput( {
-			label: t( 'layers-prop-text-shadow-offset-y', 'Shadow Offset Y' ),
-			type: 'number',
-			value: typeof layer.textShadowOffsetY === 'number' ? layer.textShadowOffsetY : 2,
-			min: -100,
-			max: 100,
-			step: 1,
-			prop: 'textShadowOffsetY',
-			onChange: function ( v ) {
-				editor.updateLayer( layer.id, {
-					textShadowOffsetY: Math.max( -100, Math.min( 100, parseFloat( v ) ) )
-				} );
-			}
-		} );
+			ctx.addInput( {
+				label: t( 'layers-prop-text-shadow-offset-y', 'Shadow Offset Y' ),
+				type: 'number',
+				value: typeof layer.textShadowOffsetY === 'number' ? layer.textShadowOffsetY : 2,
+				min: -100,
+				max: 100,
+				step: 1,
+				prop: 'textShadowOffsetY',
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, {
+						textShadowOffsetY: Math.max( -100, Math.min( 100, parseFloat( v ) ) )
+					} );
+				}
+			} );
+		}
 	};
 
 	/**

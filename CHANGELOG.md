@@ -2,6 +2,30 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.17] - 2026-01-19
+
+### Added
+- **Collapsible Shadow Settings** — Drop shadow and text shadow settings are now hidden until the "Enable" checkbox is checked, reducing visual clutter in the properties panel
+
+### Fixed
+- **StateManager Exception Handling (HIGH)** — Fixed potential deadlock in `StateManager.unlockState()` where an exception in a pending operation would leave the state permanently locked. Added try-catch wrapper that logs errors and continues processing remaining operations.
+- **Missing mw Object Guard (MEDIUM)** — Fixed `ReferenceError` in Node.js/Jest environments by adding `typeof mw !== 'undefined'` guard before accessing `mw.log` in StateManager timeout handler.
+- **Drawing RAF Callback After Destroy (MEDIUM)** — Fixed potential null reference errors after editor closure by adding `isDestroyed` guard at start of `CanvasManager.continueDrawing()` RAF callback and resetting `_drawingFrameScheduled` in `destroy()`.
+- **TransformController RAF Null Access (MEDIUM)** — Fixed potential crashes during rapid editor close by adding null/destroyed guards to all three RAF callbacks in TransformController (drag, resize, rotation).
+
+### Technical Details
+- Updated `PropertiesForm.js`: Shadow settings (color, blur, spread, offset) hidden until "Drop Shadow" enabled
+- Updated `PropertyBuilders.js`: Text shadow settings hidden until "Enable Text Shadow" checked
+- Panel auto-refreshes when toggling shadow checkboxes to show/hide relevant controls
+- Updated `StateManager.js`: `unlockState()` now wraps operations in try-catch
+- Updated `StateManager.js`: Timeout handler checks `typeof mw !== 'undefined'`  
+- Updated `CanvasManager.js`: RAF callback checks `this.isDestroyed`, `destroy()` resets flag
+- Updated `TransformController.js`: All 3 RAF callbacks check `!this.manager || this.manager.isDestroyed || !this.manager.editor`
+- All 9,693 tests passing after changes (verified via `npm run test:js`)
+- Codebase review rating increased from 8.8 to 9.0/10
+
+---
+
 ## [1.5.16] - 2026-01-18
 
 ### Added

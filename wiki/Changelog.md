@@ -4,6 +4,19 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.17 (January 19, 2026)
+
+### Added
+- **Collapsible Shadow Settings** — Drop shadow and text shadow settings are now hidden until enabled, reducing properties panel clutter
+
+### Fixed
+- **StateManager Exception Handling (HIGH)** — Added try-catch in unlockState() to prevent potential deadlock if callback throws
+- **Missing mw Object Guard (MEDIUM)** — Added typeof check for `mw` object to prevent ReferenceError in Node.js/Jest environments  
+- **Drawing RAF Callback Cleanup (MEDIUM)** — Fixed null reference errors after editor closure in CanvasManager
+- **TransformController RAF Guards (MEDIUM)** — Added isDestroyed checks to prevent crashes during rapid editor close
+
+---
+
 ## Version 1.5.16 (January 18, 2026)
 
 ### Added

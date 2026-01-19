@@ -1678,6 +1678,10 @@ class CanvasManager {
 				this._drawingFrameScheduled = true;
 				window.requestAnimationFrame( () => {
 					this._drawingFrameScheduled = false;
+					// Guard against destroyed state to prevent null reference errors
+					if ( this.isDestroyed ) {
+						return;
+					}
 					if ( this.tempLayer ) {
 						this.renderLayers( this.editor.layers );
 						this.drawingController.drawPreview();
@@ -1912,6 +1916,8 @@ class CanvasManager {
 			this.fallbackTimeoutId = null;
 		}
 		this.redrawScheduled = false;
+		// Reset drawing frame flag to prevent stale RAF callbacks
+		this._drawingFrameScheduled = false;
 
 		// Clean up all controllers - order matters for dependencies
 		const controllersToDestroy = [

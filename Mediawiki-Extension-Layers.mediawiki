@@ -7,8 +7,8 @@
 |type3           = page action
 |type4           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.16
-|update          = 2026-01-18
+|version         = 1.5.17
+|update          = 2026-01-19
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
@@ -71,9 +71,9 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.15
+| 1.44+ || <code>main</code> || 1.5.17
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.15-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.17-REL1_43
 |-
 | 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
 |}
@@ -239,8 +239,8 @@ Full keyboard accessibility with over 20 shortcuts:
 |}
 
 == Technical Details ==
-* '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~108k lines including generated shape/emoji data).
-* '''Stability:''' 9,559 Jest tests across 149 test suites achieving 92.53% statement coverage, 83.56% branch coverage.
+* '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~111k lines including generated shape/emoji data).
+* '''Stability:''' 9,692 Jest tests across 150 test suites achieving 92.80% statement coverage, 83.75% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

@@ -2419,8 +2419,13 @@ describe( 'PropertiesForm', () => {
 				textShadowCheckbox.checked = true;
 				textShadowCheckbox.dispatchEvent( new Event( 'change' ) );
 
+				// Now passes defaults when enabling text shadow
 				const call = mockEditor.updateLayer.mock.calls.find( ( c ) => c[ 1 ].textShadow === true );
 				expect( call ).toBeDefined();
+				expect( call[ 1 ].textShadowColor ).toBe( 'rgba(0,0,0,0.5)' );
+				expect( call[ 1 ].textShadowBlur ).toBe( 4 );
+				expect( call[ 1 ].textShadowOffsetX ).toBe( 2 );
+				expect( call[ 1 ].textShadowOffsetY ).toBe( 2 );
 			}
 		} );
 
@@ -3754,7 +3759,13 @@ describe( 'PropertiesForm', () => {
 				textShadowCheckbox.checked = true;
 				textShadowCheckbox.dispatchEvent( new Event( 'change' ) );
 
-				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'callout-1', { textShadow: true } );
+				// Now passes defaults when enabling text shadow
+				const call = mockEditor.updateLayer.mock.calls.find( ( c ) => c[ 1 ].textShadow === true );
+				expect( call ).toBeDefined();
+				expect( call[ 1 ].textShadowColor ).toBe( 'rgba(0,0,0,0.5)' );
+				expect( call[ 1 ].textShadowBlur ).toBe( 4 );
+				expect( call[ 1 ].textShadowOffsetX ).toBe( 2 );
+				expect( call[ 1 ].textShadowOffsetY ).toBe( 2 );
 			}
 		} );
 
