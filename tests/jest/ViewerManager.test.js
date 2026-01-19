@@ -1426,6 +1426,54 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 
+		describe( 'initializeOverlayOnly', () => {
+			it( 'should return false if img is null', () => {
+				const result = manager.initializeOverlayOnly( null );
+				expect( result ).toBe( false );
+			} );
+
+			it( 'should return false if overlay already exists', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', 'test.jpg' );
+				img.layersOverlay = {};
+
+				const result = manager.initializeOverlayOnly( img, 'my-set' );
+
+				expect( result ).toBe( false );
+			} );
+
+			it( 'should create container and initialize overlay', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', '/wiki/images/test.jpg' );
+				document.body.appendChild( img );
+
+				const result = manager.initializeOverlayOnly( img, 'my-set' );
+
+				expect( result ).toBe( true );
+				expect( img.getAttribute( 'data-layer-setname' ) ).toBe( 'my-set' );
+			} );
+
+			it( 'should not set data attribute for default setname', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', '/wiki/images/test.jpg' );
+				document.body.appendChild( img );
+
+				manager.initializeOverlayOnly( img, 'default' );
+
+				expect( img.hasAttribute( 'data-layer-setname' ) ).toBe( false );
+			} );
+
+			it( 'should not set data attribute when setname is undefined', () => {
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'src', '/wiki/images/test.jpg' );
+				document.body.appendChild( img );
+
+				manager.initializeOverlayOnly( img );
+
+				expect( img.hasAttribute( 'data-layer-setname' ) ).toBe( false );
+			} );
+		} );
+
 		describe( 'checkAndRefreshStaleViewers', () => {
 			it( 'should skip if no freshnessChecker', () => {
 				const managerNoChecker = new ViewerManager( {

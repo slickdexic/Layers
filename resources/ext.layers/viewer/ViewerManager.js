@@ -240,6 +240,44 @@ class ViewerManager {
 	}
 
 	/**
+	 * Initialize only the edit/view overlay for an image, without a viewer.
+	 *
+	 * This is used when a layer set is referenced but doesn't exist yet,
+	 * allowing users to click the edit button to create the new set.
+	 *
+	 * @param {HTMLImageElement} img Image element
+	 * @param {string} [setname='default'] The layer set name
+	 * @return {boolean} True if overlay was initialized
+	 */
+	initializeOverlayOnly( img, setname ) {
+		if ( !img ) {
+			return false;
+		}
+
+		// Skip if overlay already exists
+		if ( img.layersOverlay ) {
+			this.debugLog( 'initializeOverlayOnly: overlay already exists' );
+			return false;
+		}
+
+		try {
+			const container = this.ensurePositionedContainer( img );
+
+			// Store the intended setname for overlay use
+			if ( setname && setname !== 'default' ) {
+				img.setAttribute( 'data-layer-setname', setname );
+			}
+
+			this._initializeOverlay( img, container );
+			this.debugLog( 'Overlay-only initialized for non-existent set:', setname || 'default' );
+			return true;
+		} catch ( e ) {
+			this.debugWarn( 'Overlay-only init error:', e );
+			return false;
+		}
+	}
+
+	/**
 	 * Completely destroy a viewer and clean up all created DOM elements.
 	 *
 	 * This should be called when permanently removing a viewer from an image,

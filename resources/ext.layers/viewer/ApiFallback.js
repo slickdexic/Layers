@@ -307,6 +307,12 @@ class ApiFallback {
 		api.get( apiParams ).then( ( data ) => {
 			try {
 				if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
+					// Layer set doesn't exist, but if intent was specified,
+					// still show the overlay so users can create the set
+					if ( intent && intent !== 'off' && intent !== 'none' ) {
+						this.viewerManager.initializeOverlayOnly( img, setName || 'default' );
+						this.debugLog( 'Layer set not found, showing overlay-only for:', setName || 'default' );
+					}
 					return;
 				}
 
