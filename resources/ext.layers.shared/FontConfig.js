@@ -16,6 +16,7 @@
 /**
  * Default fonts used when MediaWiki config is not available.
  * These are web-safe fonts that work across all platforms.
+ * This list should match $wgLayersDefaultFonts in extension.json.
  *
  * @type {string[]}
  */
@@ -27,6 +28,7 @@ const DEFAULT_FONTS = [
 	'Georgia',
 	'Verdana',
 	'Courier New',
+	'Courier',
 	'Helvetica'
 ];
 

@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** January 18, 2026 (Comprehensive Audit v6)  
-**Version:** 1.5.14  
+**Version:** 1.5.16  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -16,8 +16,8 @@ The extension is **production-ready** with excellent security, comprehensive tes
 
 **Key Strengths (Verified January 18, 2026):**
 
-- ✅ **9,559 unit tests passing (100%)** — verified via `npm run test:js`
-- ✅ **92.53% statement coverage, 83.56% branch coverage** — excellent (actual values from coverage report)
+- ✅ **9,607 unit tests passing (100%)** — verified via `npm run test:js`
+- ✅ **92.80% statement coverage, 83.75% branch coverage** — excellent (actual values from coverage report)
 - ✅ Professional PHP backend security (CSRF, rate limiting, validation on all 4 API endpoints)
 - ✅ **15 working drawing tools** including Marker and Dimension annotation tools
 - ✅ **1,310 shapes** in library across 10 categories

@@ -166,6 +166,13 @@
 		handleMouseDown( e ) {
 			const cm = this.cm;
 
+			// If inline text editing is active, finish it first
+			// This allows clicking elsewhere to deselect properly
+			if ( cm.isTextEditing && cm.inlineTextEditor ) {
+				cm.inlineTextEditor.finishEditing( true );
+				// Let the editor close, then continue with normal click handling
+			}
+
 			// Block interactions during API loading to prevent race conditions
 			if ( cm.interactionController && cm.interactionController.shouldBlockInteraction() ) {
 				return;

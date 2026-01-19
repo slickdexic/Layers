@@ -393,15 +393,42 @@
 			const scaledFontSize = ( layer.fontSize || 16 ) * Math.min( scaleX, scaleY );
 			const scaledPadding = padding * Math.min( scaleX, scaleY );
 
+			// Calculate rotation - need to rotate around the center of the element
+			const rotation = layer.rotation || 0;
+
+			// For rotated layers, position at the center and use transform
+			// This matches how the canvas renders rotated text boxes
+			let positionStyles;
+			if ( rotation !== 0 ) {
+				// Position at center of the text box
+				const centerX = screenX + screenWidth / 2;
+				const centerY = screenY + screenHeight / 2;
+				positionStyles = {
+					left: centerX + 'px',
+					top: centerY + 'px',
+					width: Math.max( 50, screenWidth ) + 'px',
+					height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
+					fontSize: scaledFontSize + 'px',
+					padding: scaledPadding + 'px',
+					transform: `translate(-50%, -50%) rotate(${ rotation }deg)`,
+					transformOrigin: 'center center'
+				};
+			} else {
+				// No rotation - use simple positioning
+				positionStyles = {
+					left: screenX + 'px',
+					top: screenY + 'px',
+					width: Math.max( 50, screenWidth ) + 'px',
+					height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
+					fontSize: scaledFontSize + 'px',
+					padding: scaledPadding + 'px',
+					transform: 'none',
+					transformOrigin: 'center center'
+				};
+			}
+
 			// Apply position and size
-			Object.assign( this.editorElement.style, {
-				left: screenX + 'px',
-				top: screenY + 'px',
-				width: Math.max( 50, screenWidth ) + 'px',
-				height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
-				fontSize: scaledFontSize + 'px',
-				padding: scaledPadding + 'px'
-			} );
+			Object.assign( this.editorElement.style, positionStyles );
 		}
 
 		/**
