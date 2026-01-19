@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** January 18, 2026  
-**Version:** 1.5.14
+**Version:** 1.5.16
 
 This document lists known functionality issues and their current status.
 

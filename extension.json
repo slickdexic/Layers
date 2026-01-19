@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.15-REL1_43",
+	"version": "1.5.16-REL1_43",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -91,7 +91,11 @@
 				"Roboto",
 				"Noto Sans",
 				"Times New Roman",
-				"Courier New"
+				"Georgia",
+				"Verdana",
+				"Courier New",
+				"Courier",
+				"Helvetica"
 			]
 		},
 		"LayersMaxImageSize": {
@@ -157,6 +161,7 @@
 			"remoteExtPath": "Layers/resources/ext.layers.shared",
 			"targets": [ "desktop", "mobile" ],
 			"scripts": [
+				"FontConfig.js",
 				"MathUtils.js",
 				"LayerDataNormalizer.js",
 				"DeepClone.js",

@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C559%20Passing-brightgreen" alt="9,559 Tests">
-  <img src="https://img.shields.io/badge/Coverage-92.53%25-brightgreen" alt="92.53% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C607%20Passing-brightgreen" alt="9,607 Tests">
+  <img src="https://img.shields.io/badge/Coverage-92.80%25-brightgreen" alt="92.80% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,7 +20,15 @@
 
 ---
 
-## 🆕 What's New in v1.5.15
+## 🆕 What's New in v1.5.16
+
+- **Additional Font Support** — Added Courier, Georgia, Verdana, and Helvetica to allowed fonts
+- **Font Not Saving Fix** — Fixed issue where fonts (especially Courier) were silently rejected by server validation
+- **Rotated Text Box Editing** — Inline text editor now correctly rotates to match the layer's rotation angle
+- **Layer Deselection Fix** — Fixed issue where clicking elsewhere while editing a rotated text layer would not deselect it
+- **9,607 tests passing** (150 suites), 92.80% coverage
+
+### Previous v1.5.15 Highlights
 
 - **Hover Overlay Actions** — Edit/View icons appear on hover over layered images
   - **Edit button** (pencil icon): Opens layer editor — respects `editlayers` permission
@@ -34,7 +42,6 @@
   - Draggable via grab handle for optimal positioning
   - Full dark mode support
 - **Textbox Background Visibility** — Textbox layers keep their background visible during editing
-- **9,559 tests passing** (149 suites)
 
 ### Previous v1.5.13 Highlights
 

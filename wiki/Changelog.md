@@ -4,6 +4,18 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.16 (January 18, 2026)
+
+### Added
+- **Additional Font Support** — Added Courier, Georgia, Verdana, and Helvetica to the allowed fonts list
+
+### Fixed
+- **Font Not Saving in TextBox Layers** — Fixed issue where fonts (especially Courier) were silently rejected by server validation and fell back to Arial
+- **Rotated Text Box Inline Editing** — The inline text editor now correctly rotates to match the layer's rotation angle
+- **Layer Deselection When Editing Rotated Text** — Fixed issue where clicking elsewhere on canvas while editing a rotated text layer would not deselect it
+
+---
+
 ## Version 1.5.15 (January 18, 2026)
 
 ### Added

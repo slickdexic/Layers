@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 18, 2026 (v1.5.14 release)  
+**Last Updated:** January 18, 2026 (v1.5.16 release)  
 **Status:** ✅ Production-Ready — All Identified Issues Resolved  
-**Version:** 1.5.14  
+**Version:** 1.5.16  
 **Rating:** 9.0/10
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues and improve branch coverage.
@@ -19,7 +19,7 @@ The extension is **production-ready and fully functional** with **excellent secu
 |------|--------|---------|
 | **Functionality** | ✅ Complete | **15 tools**, all working correctly (added Marker, Dimension) |
 | **Security** | ✅ Excellent | CSRF, rate limiting, validation |
-| **Testing** | ✅ Excellent | 9,559 tests, 92.53% statement, 83.56% branch |
+| **Testing** | ✅ Excellent | 9,607 tests, 92.80% statement, 83.75% branch |
 | **Code Quality** | ✅ Good | No TODOs, no console.log, proper error handling |
 | **God Classes** | ✅ 19 Files | 3 generated data, 16 with delegation ([Refactoring Plan](docs/GOD_CLASS_REFACTORING_PLAN.md)) |
 | **Codebase Size** | ✅ Managed | ~110,000 JS lines (121 files), ~11,743 PHP lines (33 files) |
@@ -36,9 +36,9 @@ The extension is **production-ready and fully functional** with **excellent secu
 | JS lines | **~110,000** | ✅ Verified |
 | PHP files | **33** | ✅ Verified |
 | PHP lines | **~11,743** | ✅ Verified |
-| Tests passing | **9,559** | 149 suites |
-| Statement coverage | **92.53%** | ✅ Excellent |
-| Branch coverage | **83.56%** | ✅ Target met! |
+| Tests passing | **9,607** | 150 suites |
+| Statement coverage | **92.80%** | ✅ Excellent |
+| Branch coverage | **83.75%** | ✅ Target met! |
 | ESLint errors | **0** | ✅ |
 | ESLint disables | **9** | ✅ Target met! |
 | PHPCS errors | **0** | ✅ |

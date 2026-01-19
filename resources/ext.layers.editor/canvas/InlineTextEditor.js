@@ -393,15 +393,42 @@
 			const scaledFontSize = ( layer.fontSize || 16 ) * Math.min( scaleX, scaleY );
 			const scaledPadding = padding * Math.min( scaleX, scaleY );
 
+			// Calculate rotation - need to rotate around the center of the element
+			const rotation = layer.rotation || 0;
+
+			// For rotated layers, position at the center and use transform
+			// This matches how the canvas renders rotated text boxes
+			let positionStyles;
+			if ( rotation !== 0 ) {
+				// Position at center of the text box
+				const centerX = screenX + screenWidth / 2;
+				const centerY = screenY + screenHeight / 2;
+				positionStyles = {
+					left: centerX + 'px',
+					top: centerY + 'px',
+					width: Math.max( 50, screenWidth ) + 'px',
+					height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
+					fontSize: scaledFontSize + 'px',
+					padding: scaledPadding + 'px',
+					transform: `translate(-50%, -50%) rotate(${ rotation }deg)`,
+					transformOrigin: 'center center'
+				};
+			} else {
+				// No rotation - use simple positioning
+				positionStyles = {
+					left: screenX + 'px',
+					top: screenY + 'px',
+					width: Math.max( 50, screenWidth ) + 'px',
+					height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
+					fontSize: scaledFontSize + 'px',
+					padding: scaledPadding + 'px',
+					transform: 'none',
+					transformOrigin: 'center center'
+				};
+			}
+
 			// Apply position and size
-			Object.assign( this.editorElement.style, {
-				left: screenX + 'px',
-				top: screenY + 'px',
-				width: Math.max( 50, screenWidth ) + 'px',
-				height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
-				fontSize: scaledFontSize + 'px',
-				padding: scaledPadding + 'px'
-			} );
+			Object.assign( this.editorElement.style, positionStyles );
 		}
 
 		/**
@@ -686,17 +713,24 @@
 			select.className = 'layers-text-toolbar-font';
 			select.title = this._msg( 'layers-text-toolbar-font', 'Font family' );
 
-			const fonts = [
-				'Arial', 'Helvetica', 'Times New Roman', 'Georgia',
-				'Verdana', 'Courier New', 'Comic Sans MS', 'Impact'
+			// Get fonts from centralized FontConfig
+			const FontConfig = window.Layers && window.Layers.FontConfig;
+			const fonts = FontConfig ? FontConfig.getFonts() : [
+				'Arial', 'Roboto', 'Noto Sans', 'Times New Roman', 'Georgia',
+				'Verdana', 'Courier New', 'Helvetica'
 			];
+
+			// Find the matching font for the current layer
+			const currentFont = FontConfig ?
+				FontConfig.findMatchingFont( layer.fontFamily || 'Arial' ) :
+				( layer.fontFamily || 'Arial' );
 
 			fonts.forEach( ( font ) => {
 				const option = document.createElement( 'option' );
 				option.value = font;
 				option.textContent = font;
 				option.style.fontFamily = font;
-				if ( ( layer.fontFamily || 'Arial' ).includes( font ) ) {
+				if ( font === currentFont ) {
 					option.selected = true;
 				}
 				select.appendChild( option );
@@ -984,6 +1018,9 @@
 		/**
 		 * Apply a format change to the layer and editor
 		 *
+		 * Uses editor.updateLayer() to ensure changes are properly persisted
+		 * through StateManager and saved when the document is saved.
+		 *
 		 * @private
 		 * @param {string} property - Property name
 		 * @param {*} value - New value
@@ -993,7 +1030,23 @@
 				return;
 			}
 
-			this.editingLayer[ property ] = value;
+			const layerId = this.editingLayer.id;
+
+			// Use editor.updateLayer() to properly persist the change through StateManager
+			// This ensures the change is saved when the document is saved
+			const editor = this.canvasManager && this.canvasManager.editor;
+			if ( editor && typeof editor.updateLayer === 'function' ) {
+				editor.updateLayer( layerId, { [ property ]: value } );
+
+				// Refresh our reference to the layer since updateLayer creates a new object
+				const updatedLayer = editor.getLayerById ? editor.getLayerById( layerId ) : null;
+				if ( updatedLayer ) {
+					this.editingLayer = updatedLayer;
+				}
+			} else {
+				// Fallback: direct update (won't persist properly but at least shows on canvas)
+				this.editingLayer[ property ] = value;
+			}
 
 			// Update editor element style if applicable
 			if ( this.editorElement ) {
@@ -1012,6 +1065,29 @@
 				} else if ( styleMap[ property ] ) {
 					this.editorElement.style[ styleMap[ property ] ] = value;
 				}
+			}
+
+			// Sync with properties panel so both UI elements show the same values
+			this._syncPropertiesPanel();
+		}
+
+		/**
+		 * Synchronize the properties panel with current layer state
+		 *
+		 * When the floating toolbar changes a property, this ensures the
+		 * properties panel (LayerPanel) is updated to reflect the change.
+		 *
+		 * @private
+		 */
+		_syncPropertiesPanel() {
+			if ( !this.editingLayer || !this.canvasManager ) {
+				return;
+			}
+
+			const editor = this.canvasManager.editor;
+			if ( editor && editor.layerPanel &&
+				typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+				editor.layerPanel.updatePropertiesPanel( this.editingLayer.id );
 			}
 		}
 
