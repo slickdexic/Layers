@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C607%20Passing-brightgreen" alt="9,607 Tests">
-  <img src="https://img.shields.io/badge/Coverage-92.80%25-brightgreen" alt="92.80% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C693%20Passing-brightgreen" alt="9,693 Tests">
+  <img src="https://img.shields.io/badge/Coverage-92.65%25-brightgreen" alt="92.65% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,13 +20,14 @@
 
 ---
 
-## 🆕 What's New in v1.5.16
+## 🆕 What's New in v1.5.17
 
-- **Additional Font Support** — Added Courier, Georgia, Verdana, and Helvetica to allowed fonts
-- **Font Not Saving Fix** — Fixed issue where fonts (especially Courier) were silently rejected by server validation
-- **Rotated Text Box Editing** — Inline text editor now correctly rotates to match the layer's rotation angle
-- **Layer Deselection Fix** — Fixed issue where clicking elsewhere while editing a rotated text layer would not deselect it
-- **9,607 tests passing** (150 suites), 92.80% coverage
+- **Collapsible Shadow Settings** — Drop shadow and text shadow settings now hidden until enabled, reducing UI clutter
+- **StateManager Exception Handling (HIGH)** — Fixed potential deadlock in unlockState()
+- **Missing mw Object Guard (MEDIUM)** — Fixed ReferenceError in Node.js/Jest environments
+- **Drawing RAF Callback Cleanup (MEDIUM)** — Fixed null reference errors after editor closure
+- **TransformController RAF Guards (MEDIUM)** — Fixed crashes during rapid editor close
+- **9,693 tests passing** (150 suites), 92.65% coverage
 
 ### Previous v1.5.15 Highlights
 
@@ -188,16 +189,16 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.15 |
-| **Version (REL1_43)** | 1.5.15-REL1_43 |
+| **Version (main)** | 1.5.16 |
+| **Version (REL1_43)** | 1.5.16-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
-| **Test Suites** | 149 |
-| **Total Tests** | 9,559 |
+| **Test Suites** | 150 |
+| **Total Tests** | 9,692 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 92.53% |
-| **Branch Coverage** | 83.56% |
-| **JavaScript Files** | 122 |
+| **Statement Coverage** | 92.80% |
+| **Branch Coverage** | 83.75% |
+| **JavaScript Files** | 123 |
 | **ES6 Classes** | 100+ |
 | **God Classes** | 19 (3 generated data, 16 hand-written) |
 

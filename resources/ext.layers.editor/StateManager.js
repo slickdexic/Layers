@@ -172,7 +172,7 @@ class StateManager {
 		}
 		this.lockTimeout = setTimeout( () => {
 			// SECURITY FIX: Use mw.log instead of console.warn
-			if ( mw.log ) {
+			if ( typeof mw !== 'undefined' && mw.log ) {
 				mw.log.warn( '[StateManager] Force unlocking state after timeout' );
 			}
 			this.unlockState();
@@ -191,13 +191,21 @@ class StateManager {
 		}
 
 		// Process any pending operations in order
+		// Wrap in try-catch to prevent deadlock if an operation throws
 		while ( this.pendingOperations.length > 0 ) {
 			const operation = this.pendingOperations.shift();
 			
-			if ( operation.type === 'set' ) {
-				this.set( operation.key, operation.value );
-			} else if ( operation.type === 'update' ) {
-				this.update( operation.updates );
+			try {
+				if ( operation.type === 'set' ) {
+					this.set( operation.key, operation.value );
+				} else if ( operation.type === 'update' ) {
+					this.update( operation.updates );
+				}
+			} catch ( error ) {
+				// Log the error but continue processing remaining operations
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[StateManager] Error processing pending operation:', error.message || error );
+				}
 			}
 		}
 	}

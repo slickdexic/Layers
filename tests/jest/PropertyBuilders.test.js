@@ -292,7 +292,23 @@ describe( 'PropertyBuilders', () => {
 			expect( ctx.addInput ).toHaveBeenCalled();
 		} );
 
-		test( 'text shadow checkbox onChange should update layer', () => {
+		test( 'should hide text shadow controls when disabled', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				textShadow: false
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			expect( ctx.addSection ).toHaveBeenCalled();
+			expect( ctx.addCheckbox ).toHaveBeenCalled();
+			// Color picker and inputs should NOT be called when textShadow is false
+			expect( ctx.addColorPicker ).not.toHaveBeenCalled();
+			expect( ctx.addInput ).not.toHaveBeenCalled();
+		} );
+
+		test( 'text shadow checkbox onChange should update layer with defaults', () => {
 			const ctx = createMockContext( { type: 'textbox', textShadow: false } );
 			const Builders = window.Layers.UI.PropertyBuilders;
 
@@ -303,14 +319,22 @@ describe( 'PropertyBuilders', () => {
 
 			onChange( true );
 
-			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
-				'test-layer-1',
-				{ textShadow: true }
-			);
+			// Now passes defaults when enabling text shadow
+			const call = ctx.editor.updateLayer.mock.calls.find( ( c ) => c[ 1 ].textShadow === true );
+			expect( call ).toBeDefined();
+			expect( call[ 1 ].textShadowColor ).toBe( 'rgba(0,0,0,0.5)' );
+			expect( call[ 1 ].textShadowBlur ).toBe( 4 );
+			expect( call[ 1 ].textShadowOffsetX ).toBe( 2 );
+			expect( call[ 1 ].textShadowOffsetY ).toBe( 2 );
 		} );
 
 		test( 'text shadow color onChange should update layer', () => {
-			const ctx = createMockContext( { type: 'textbox', textShadowColor: '#000000' } );
+			// Must have textShadow: true for color picker to be shown
+			const ctx = createMockContext( {
+				type: 'textbox',
+				textShadow: true,
+				textShadowColor: '#000000'
+			} );
 			const Builders = window.Layers.UI.PropertyBuilders;
 
 			Builders.addTextShadowSection( ctx );
@@ -327,7 +351,12 @@ describe( 'PropertyBuilders', () => {
 		} );
 
 		test( 'text shadow blur onChange should clamp value', () => {
-			const ctx = createMockContext( { type: 'textbox', textShadowBlur: 4 } );
+			// Must have textShadow: true for blur input to be shown
+			const ctx = createMockContext( {
+				type: 'textbox',
+				textShadow: true,
+				textShadowBlur: 4
+			} );
 			const Builders = window.Layers.UI.PropertyBuilders;
 
 			Builders.addTextShadowSection( ctx );
@@ -346,7 +375,12 @@ describe( 'PropertyBuilders', () => {
 		} );
 
 		test( 'text shadow offset X onChange should clamp value', () => {
-			const ctx = createMockContext( { type: 'textbox', textShadowOffsetX: 2 } );
+			// Must have textShadow: true for offset input to be shown
+			const ctx = createMockContext( {
+				type: 'textbox',
+				textShadow: true,
+				textShadowOffsetX: 2
+			} );
 			const Builders = window.Layers.UI.PropertyBuilders;
 
 			Builders.addTextShadowSection( ctx );
@@ -365,7 +399,12 @@ describe( 'PropertyBuilders', () => {
 		} );
 
 		test( 'text shadow offset Y onChange should clamp value', () => {
-			const ctx = createMockContext( { type: 'textbox', textShadowOffsetY: 2 } );
+			// Must have textShadow: true for offset input to be shown
+			const ctx = createMockContext( {
+				type: 'textbox',
+				textShadow: true,
+				textShadowOffsetY: 2
+			} );
 			const Builders = window.Layers.UI.PropertyBuilders;
 
 			Builders.addTextShadowSection( ctx );

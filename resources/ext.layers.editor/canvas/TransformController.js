@@ -257,6 +257,10 @@ class TransformController {
 				this._resizeRenderScheduled = true;
 				window.requestAnimationFrame( () => {
 					this._resizeRenderScheduled = false;
+					// Guard against destroyed manager to prevent null reference errors
+					if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
+						return;
+					}
 					if ( this._pendingResizeLayer ) {
 						this.manager.renderLayers( this.manager.editor.layers );
 						this.emitTransforming( this._pendingResizeLayer );
@@ -592,6 +596,10 @@ class TransformController {
 			this._rotationRenderScheduled = true;
 			window.requestAnimationFrame( () => {
 				this._rotationRenderScheduled = false;
+				// Guard against destroyed manager to prevent null reference errors
+				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
+					return;
+				}
 				if ( this._pendingRotationLayer ) {
 					this.manager.renderLayers( this.manager.editor.layers );
 					this.emitTransforming( this._pendingRotationLayer );
@@ -762,6 +770,10 @@ class TransformController {
 			this._dragRenderScheduled = true;
 			window.requestAnimationFrame( () => {
 				this._dragRenderScheduled = false;
+				// Guard against destroyed manager to prevent null reference errors
+				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
+					return;
+				}
 				this.manager.renderLayers( this.manager.editor.layers );
 				// Emit transform event after render (inside rAF to reduce per-frame work)
 				if ( this._pendingDragLayerId ) {

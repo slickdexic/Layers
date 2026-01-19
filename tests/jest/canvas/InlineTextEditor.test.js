@@ -657,6 +657,991 @@ describe( 'InlineTextEditor', () => {
 	} );
 } );
 
+describe( 'InlineTextEditor - Toolbar functionality', () => {
+	let mockCanvasManager;
+	let mockCanvas;
+	let mockContainer;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvas = {
+			width: 800,
+			height: 600,
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 100,
+				top: 100,
+				width: 800,
+				height: 600
+			} ) )
+		};
+
+		mockContainer = {
+			appendChild: jest.fn(),
+			removeChild: jest.fn(),
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 0,
+				top: 0,
+				width: 1000,
+				height: 800
+			} ) )
+		};
+
+		mockCanvasManager = {
+			canvas: mockCanvas,
+			container: mockContainer,
+			ctx: {
+				save: jest.fn(),
+				restore: jest.fn(),
+				font: '',
+				measureText: jest.fn( () => ( { width: 100 } ) )
+			},
+			editor: {
+				layers: [],
+				updateLayer: jest.fn(),
+				getLayerById: jest.fn()
+			},
+			zoom: 1.0,
+			panX: 0,
+			panY: 0,
+			setTextEditingMode: jest.fn(),
+			saveState: jest.fn(),
+			redraw: jest.fn(),
+			renderLayers: jest.fn(),
+			isDestroyed: false
+		};
+
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( editor && typeof editor.destroy === 'function' ) {
+			editor.destroy();
+		}
+		jest.clearAllMocks();
+	} );
+
+	describe( '_createToolbar', () => {
+		test( 'should create toolbar element when editing starts', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100, fontSize: 16 };
+			editor.startEditing( layer );
+
+			// Toolbar should be created
+			expect( editor.toolbarElement ).toBeDefined();
+			expect( editor.toolbarElement ).not.toBeNull();
+		} );
+
+		test( 'should add toolbar to container', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			editor.startEditing( layer );
+
+			// appendChild should be called for both editor and toolbar
+			expect( mockContainer.appendChild ).toHaveBeenCalled();
+		} );
+
+		test( 'should have formatting controls', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			editor.startEditing( layer );
+
+			const toolbar = editor.toolbarElement;
+			expect( toolbar ).toBeDefined();
+			expect( toolbar.className ).toContain( 'layers-text-toolbar' );
+		} );
+	} );
+
+	describe( '_removeToolbar', () => {
+		test( 'should remove toolbar element on finish editing', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			mockCanvasManager.editor.layers = [ layer ];
+			editor.startEditing( layer );
+
+			expect( editor.toolbarElement ).not.toBeNull();
+
+			editor.finishEditing( true );
+
+			expect( editor.toolbarElement ).toBeNull();
+		} );
+
+		test( 'should handle missing toolbar gracefully', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			mockCanvasManager.editor.layers = [ layer ];
+			editor.startEditing( layer );
+
+			// Manually null out toolbar
+			editor.toolbarElement = null;
+
+			// Should not throw
+			expect( () => editor._removeToolbar() ).not.toThrow();
+		} );
+	} );
+
+	describe( '_positionToolbar', () => {
+		test( 'should position toolbar above editor element', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 200 };
+			editor.startEditing( layer );
+
+			// Mock editor element rect
+			if ( editor.editorElement ) {
+				editor.editorElement.getBoundingClientRect = jest.fn( () => ( {
+					left: 100,
+					top: 200,
+					right: 300,
+					bottom: 250,
+					width: 200,
+					height: 50
+				} ) );
+			}
+
+			// Position should be above editor
+			editor._positionToolbar();
+
+			if ( editor.toolbarElement ) {
+				const top = parseFloat( editor.toolbarElement.style.top );
+				// Should be above editor (top 200 - 44 = 156)
+				expect( top ).toBeLessThan( 200 );
+			}
+		} );
+
+		test( 'should handle missing toolbar element', () => {
+			// Should not throw when toolbar is null
+			editor.toolbarElement = null;
+			expect( () => editor._positionToolbar() ).not.toThrow();
+		} );
+
+		test( 'should handle missing editor element', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			editor.startEditing( layer );
+
+			editor.editorElement = null;
+			expect( () => editor._positionToolbar() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'Toolbar drag functionality', () => {
+		test( 'should setup drag handler on toolbar', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			editor.startEditing( layer );
+
+			// Toolbar should be draggable
+			expect( editor.toolbarElement ).toBeDefined();
+			// _isDraggingToolbar should initially be false
+			expect( editor._isDraggingToolbar ).toBeFalsy();
+		} );
+
+		test( 'should track dragging state', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			editor.startEditing( layer );
+
+			// Simulate mousedown on drag handle
+			const dragHandle = editor.toolbarElement?.querySelector( '.toolbar-drag-handle' );
+			if ( dragHandle ) {
+				const mousedownEvent = new MouseEvent( 'mousedown', {
+					clientX: 150,
+					clientY: 50,
+					bubbles: true
+				} );
+				dragHandle.dispatchEvent( mousedownEvent );
+
+				expect( editor._isDraggingToolbar ).toBe( true );
+			}
+		} );
+
+		test( '_stopToolbarDrag should reset dragging state', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			editor.startEditing( layer );
+
+			// Set dragging state
+			editor._isDraggingToolbar = true;
+			editor._boundToolbarMouseMove = jest.fn();
+			editor._boundToolbarMouseUp = jest.fn();
+
+			// Stop drag
+			editor._stopToolbarDrag();
+
+			expect( editor._isDraggingToolbar ).toBe( false );
+			expect( editor._boundToolbarMouseMove ).toBeNull();
+			expect( editor._boundToolbarMouseUp ).toBeNull();
+		} );
+
+		test( '_handleToolbarDrag should update toolbar position', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			editor.startEditing( layer );
+
+			editor._isDraggingToolbar = true;
+			editor._toolbarDragOffset = { x: 10, y: 10 };
+
+			const mockEvent = { clientX: 200, clientY: 100 };
+			editor._handleToolbarDrag( mockEvent );
+
+			expect( editor.toolbarElement.style.left ).toBeDefined();
+			expect( editor.toolbarElement.style.top ).toBeDefined();
+		} );
+
+		test( '_handleToolbarDrag should do nothing when not dragging', () => {
+			const layer = { type: 'text', text: 'Test', x: 100, y: 100 };
+			editor.startEditing( layer );
+
+			const originalLeft = editor.toolbarElement.style.left;
+			editor._isDraggingToolbar = false;
+
+			editor._handleToolbarDrag( { clientX: 500, clientY: 500 } );
+
+			// Position should not change
+			expect( editor.toolbarElement.style.left ).toBe( originalLeft );
+		} );
+	} );
+} );
+
+describe( 'InlineTextEditor - Rotation handling', () => {
+	let mockCanvasManager;
+	let mockCanvas;
+	let mockContainer;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvas = {
+			width: 800,
+			height: 600,
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 100,
+				top: 100,
+				width: 800,
+				height: 600
+			} ) )
+		};
+
+		mockContainer = {
+			appendChild: jest.fn(),
+			removeChild: jest.fn(),
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 0,
+				top: 0,
+				width: 1000,
+				height: 800
+			} ) )
+		};
+
+		mockCanvasManager = {
+			canvas: mockCanvas,
+			container: mockContainer,
+			ctx: {
+				save: jest.fn(),
+				restore: jest.fn(),
+				font: '',
+				measureText: jest.fn( () => ( { width: 100 } ) )
+			},
+			editor: { layers: [], updateLayer: jest.fn(), getLayerById: jest.fn() },
+			zoom: 1.0,
+			panX: 0,
+			panY: 0,
+			setTextEditingMode: jest.fn(),
+			saveState: jest.fn(),
+			redraw: jest.fn(),
+			renderLayers: jest.fn(),
+			isDestroyed: false
+		};
+
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( editor && typeof editor.destroy === 'function' ) {
+			editor.destroy();
+		}
+		jest.clearAllMocks();
+	} );
+
+	test( 'should handle rotated text layer positioning', () => {
+		const rotatedLayer = {
+			type: 'text',
+			text: 'Rotated Text',
+			x: 200,
+			y: 200,
+			rotation: 45,
+			fontSize: 16
+		};
+
+		editor.startEditing( rotatedLayer );
+
+		// Editor element should have rotation transform
+		const transform = editor.editorElement.style.transform;
+		expect( transform ).toContain( 'rotate' );
+		expect( transform ).toContain( '45' );
+	} );
+
+	test( 'should not apply rotation for zero rotation', () => {
+		const layer = {
+			type: 'text',
+			text: 'Normal Text',
+			x: 100,
+			y: 100,
+			rotation: 0,
+			fontSize: 16
+		};
+
+		editor.startEditing( layer );
+
+		const transform = editor.editorElement.style.transform;
+		expect( transform ).toBe( 'none' );
+	} );
+
+	test( 'should handle undefined rotation', () => {
+		const layer = {
+			type: 'text',
+			text: 'No Rotation',
+			x: 100,
+			y: 100,
+			fontSize: 16
+			// rotation not defined
+		};
+
+		editor.startEditing( layer );
+
+		const transform = editor.editorElement.style.transform;
+		expect( transform ).toBe( 'none' );
+	} );
+
+	test( 'should position rotated element from center', () => {
+		const rotatedLayer = {
+			type: 'textbox',
+			text: 'Rotated Box',
+			x: 200,
+			y: 200,
+			width: 100,
+			height: 50,
+			rotation: 90,
+			fontSize: 14
+		};
+
+		editor.startEditing( rotatedLayer );
+
+		const transform = editor.editorElement.style.transform;
+		expect( transform ).toContain( 'translate(-50%, -50%)' );
+		expect( transform ).toContain( 'rotate(90deg)' );
+	} );
+} );
+
+describe( 'InlineTextEditor - Blur handling', () => {
+	let mockCanvasManager;
+	let mockCanvas;
+	let mockContainer;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvas = {
+			width: 800,
+			height: 600,
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 100,
+				top: 100,
+				width: 800,
+				height: 600
+			} ) )
+		};
+
+		mockContainer = {
+			appendChild: jest.fn(),
+			removeChild: jest.fn(),
+			contains: jest.fn( () => true ),
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 0,
+				top: 0,
+				width: 1000,
+				height: 800
+			} ) )
+		};
+
+		mockCanvasManager = {
+			canvas: mockCanvas,
+			container: mockContainer,
+			ctx: {
+				save: jest.fn(),
+				restore: jest.fn(),
+				font: '',
+				measureText: jest.fn( () => ( { width: 100 } ) )
+			},
+			editor: { layers: [], updateLayer: jest.fn(), getLayerById: jest.fn() },
+			zoom: 1.0,
+			panX: 0,
+			panY: 0,
+			setTextEditingMode: jest.fn(),
+			saveState: jest.fn(),
+			redraw: jest.fn(),
+			renderLayers: jest.fn(),
+			isDestroyed: false
+		};
+
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( editor && typeof editor.destroy === 'function' ) {
+			editor.destroy();
+		}
+		jest.clearAllMocks();
+	} );
+
+	test( 'should have _handleBlur method', () => {
+		expect( typeof editor._handleBlur ).toBe( 'function' );
+	} );
+
+	test( 'should not finish editing when toolbar has focus', ( done ) => {
+		const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 100, y: 100 };
+		mockCanvasManager.editor.layers = [ layer ];
+		editor.startEditing( layer );
+
+		const finishSpy = jest.spyOn( editor, 'finishEditing' );
+
+		// Mock toolbar.contains to return true (simulating focus is on toolbar)
+		if ( editor.toolbarElement ) {
+			editor.toolbarElement.contains = jest.fn( () => true );
+		}
+
+		editor._handleBlur();
+
+		// Wait for the setTimeout (150ms in implementation)
+		setTimeout( () => {
+			// Should NOT finish editing when clicking toolbar
+			expect( finishSpy ).not.toHaveBeenCalled();
+			done();
+		}, 200 );
+	} );
+
+	test( 'should not finish editing when child of toolbar has focus', ( done ) => {
+		const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 100, y: 100 };
+		mockCanvasManager.editor.layers = [ layer ];
+		editor.startEditing( layer );
+
+		const finishSpy = jest.spyOn( editor, 'finishEditing' );
+
+		// Mock toolbar.contains to return true
+		if ( editor.toolbarElement ) {
+			editor.toolbarElement.contains = jest.fn( () => true );
+		}
+
+		editor._handleBlur();
+
+		// Wait for the setTimeout
+		setTimeout( () => {
+			// Should NOT finish editing when clicking toolbar child
+			expect( finishSpy ).not.toHaveBeenCalled();
+			done();
+		}, 200 );
+	} );
+
+	test( 'should finish editing when focus is lost to outside element', ( done ) => {
+		const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 100, y: 100 };
+		mockCanvasManager.editor.layers = [ layer ];
+		editor.startEditing( layer );
+
+		const finishSpy = jest.spyOn( editor, 'finishEditing' );
+
+		// Mock toolbar.contains to return false
+		if ( editor.toolbarElement ) {
+			editor.toolbarElement.contains = jest.fn( () => false );
+		}
+
+		// The _handleBlur uses setTimeout and checks document.activeElement
+		// We need to call _handleBlur and wait for the timeout
+		editor._handleBlur();
+
+		// Wait for the setTimeout (150ms in implementation)
+		setTimeout( () => {
+			expect( finishSpy ).toHaveBeenCalledWith( true );
+			done();
+		}, 200 );
+	} );
+
+	test( 'should not finish editing when color picker dialog is open', ( done ) => {
+		const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 100, y: 100 };
+		mockCanvasManager.editor.layers = [ layer ];
+		editor.startEditing( layer );
+
+		const finishSpy = jest.spyOn( editor, 'finishEditing' );
+
+		// Create a mock color picker dialog in the document
+		const mockDialog = document.createElement( 'div' );
+		mockDialog.className = 'color-picker-dialog';
+		document.body.appendChild( mockDialog );
+
+		if ( editor.toolbarElement ) {
+			editor.toolbarElement.contains = jest.fn( () => false );
+		}
+
+		editor._handleBlur();
+
+		// Wait for the setTimeout
+		setTimeout( () => {
+			// Should NOT finish editing when color picker is open
+			expect( finishSpy ).not.toHaveBeenCalled();
+			// Cleanup
+			document.body.removeChild( mockDialog );
+			done();
+		}, 200 );
+	} );
+
+	test( 'should handle blur without throwing', () => {
+		const layer = { id: 'layer-1', type: 'text', text: 'Test', x: 100, y: 100 };
+		mockCanvasManager.editor.layers = [ layer ];
+		editor.startEditing( layer );
+
+		// Should not throw
+		expect( () => editor._handleBlur() ).not.toThrow();
+	} );
+} );
+
+describe( 'InlineTextEditor - Text measurement', () => {
+	let mockCanvasManager;
+	let mockCanvas;
+	let mockContainer;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvas = {
+			width: 800,
+			height: 600,
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 100,
+				top: 100,
+				width: 800,
+				height: 600
+			} ) )
+		};
+
+		mockContainer = {
+			appendChild: jest.fn(),
+			removeChild: jest.fn(),
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 0,
+				top: 0,
+				width: 1000,
+				height: 800
+			} ) )
+		};
+
+		mockCanvasManager = {
+			canvas: mockCanvas,
+			container: mockContainer,
+			ctx: {
+				save: jest.fn(),
+				restore: jest.fn(),
+				font: '',
+				measureText: jest.fn( () => ( { width: 150 } ) )
+			},
+			editor: { layers: [], updateLayer: jest.fn(), getLayerById: jest.fn() },
+			zoom: 1.0,
+			panX: 0,
+			panY: 0,
+			setTextEditingMode: jest.fn(),
+			saveState: jest.fn(),
+			redraw: jest.fn(),
+			renderLayers: jest.fn(),
+			isDestroyed: false
+		};
+
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( editor && typeof editor.destroy === 'function' ) {
+			editor.destroy();
+		}
+		jest.clearAllMocks();
+	} );
+
+	test( '_measureTextWidth should use canvas context', () => {
+		const layer = {
+			type: 'text',
+			text: 'Test measurement',
+			fontSize: 20,
+			fontFamily: 'Georgia',
+			fontWeight: 'bold',
+			fontStyle: 'italic'
+		};
+
+		const width = editor._measureTextWidth( layer );
+
+		expect( mockCanvasManager.ctx.save ).toHaveBeenCalled();
+		expect( mockCanvasManager.ctx.measureText ).toHaveBeenCalledWith( 'Test measurement' );
+		expect( mockCanvasManager.ctx.restore ).toHaveBeenCalled();
+		expect( width ).toBe( 150 );
+	} );
+
+	test( '_measureTextWidth should return default for missing context', () => {
+		editor.canvasManager.ctx = null;
+
+		const layer = { type: 'text', text: 'Test', fontSize: 16 };
+		const width = editor._measureTextWidth( layer );
+
+		expect( width ).toBe( 100 ); // Default value
+	} );
+
+	test( '_measureTextWidth should handle empty text', () => {
+		mockCanvasManager.ctx.measureText.mockReturnValue( { width: 0 } );
+
+		const layer = { type: 'text', text: '', fontSize: 16 };
+		const width = editor._measureTextWidth( layer );
+
+		expect( mockCanvasManager.ctx.measureText ).toHaveBeenCalledWith( '' );
+	} );
+
+	test( '_measureTextWidth should use layer font properties', () => {
+		const layer = {
+			type: 'text',
+			text: 'Font test',
+			fontSize: 24,
+			fontFamily: 'Helvetica',
+			fontWeight: 'normal',
+			fontStyle: 'normal'
+		};
+
+		editor._measureTextWidth( layer );
+
+		// Check that font was set on context
+		expect( mockCanvasManager.ctx.font ).toContain( '24' );
+	} );
+} );
+
+describe( 'InlineTextEditor - Style application', () => {
+	let mockCanvasManager;
+	let mockCanvas;
+	let mockContainer;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvas = {
+			width: 800,
+			height: 600,
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 100,
+				top: 100,
+				width: 800,
+				height: 600
+			} ) )
+		};
+
+		mockContainer = {
+			appendChild: jest.fn(),
+			removeChild: jest.fn(),
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 0,
+				top: 0,
+				width: 1000,
+				height: 800
+			} ) )
+		};
+
+		mockCanvasManager = {
+			canvas: mockCanvas,
+			container: mockContainer,
+			ctx: {
+				save: jest.fn(),
+				restore: jest.fn(),
+				font: '',
+				measureText: jest.fn( () => ( { width: 100 } ) )
+			},
+			editor: { layers: [], updateLayer: jest.fn(), getLayerById: jest.fn() },
+			zoom: 1.0,
+			panX: 0,
+			panY: 0,
+			setTextEditingMode: jest.fn(),
+			saveState: jest.fn(),
+			redraw: jest.fn(),
+			renderLayers: jest.fn(),
+			isDestroyed: false
+		};
+
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( editor && typeof editor.destroy === 'function' ) {
+			editor.destroy();
+		}
+		jest.clearAllMocks();
+	} );
+
+	test( '_applyLayerStyle should apply font properties', () => {
+		const layer = {
+			type: 'text',
+			text: 'Styled text',
+			x: 100,
+			y: 100,
+			fontFamily: 'Georgia',
+			fontWeight: 'bold',
+			fontStyle: 'italic',
+			color: '#ff0000'
+		};
+
+		editor.startEditing( layer );
+
+		const style = editor.editorElement.style;
+		expect( style.fontFamily ).toBe( 'Georgia' );
+		expect( style.fontWeight ).toBe( 'bold' );
+		expect( style.fontStyle ).toBe( 'italic' );
+		expect( style.color ).toBe( 'rgb(255, 0, 0)' );
+	} );
+
+	test( '_applyLayerStyle should use defaults for missing properties', () => {
+		const layer = {
+			type: 'text',
+			text: 'Default styled',
+			x: 100,
+			y: 100
+			// No font properties
+		};
+
+		editor.startEditing( layer );
+
+		const style = editor.editorElement.style;
+		expect( style.fontFamily ).toContain( 'Arial' );
+		expect( style.fontWeight ).toBe( 'normal' );
+		expect( style.fontStyle ).toBe( 'normal' );
+	} );
+
+	test( '_applyLayerStyle should handle textbox alignment', () => {
+		const layer = {
+			type: 'textbox',
+			text: 'Aligned text',
+			x: 100,
+			y: 100,
+			width: 200,
+			height: 100,
+			textAlign: 'center',
+			lineHeight: 1.5
+		};
+
+		editor.startEditing( layer );
+
+		const style = editor.editorElement.style;
+		expect( style.textAlign ).toBe( 'center' );
+		expect( style.lineHeight ).toBe( '1.5' );
+	} );
+
+	test( '_applyLayerStyle should use fill color as fallback', () => {
+		const layer = {
+			type: 'text',
+			text: 'Fill color',
+			x: 100,
+			y: 100,
+			fill: '#00ff00'
+			// No 'color' property
+		};
+
+		editor.startEditing( layer );
+
+		const style = editor.editorElement.style;
+		expect( style.color ).toBe( 'rgb(0, 255, 0)' );
+	} );
+
+	test( '_applyLayerStyle should not throw for null editor element', () => {
+		editor.editorElement = null;
+		editor.editingLayer = { type: 'text', text: 'Test' };
+
+		expect( () => editor._applyLayerStyle() ).not.toThrow();
+	} );
+
+	test( '_applyLayerStyle should not throw for null editing layer', () => {
+		const layer = { type: 'text', text: 'Test', x: 0, y: 0 };
+		editor.startEditing( layer );
+
+		editor.editingLayer = null;
+
+		expect( () => editor._applyLayerStyle() ).not.toThrow();
+	} );
+} );
+
+describe( 'InlineTextEditor - isActive and getEditingLayer', () => {
+	let mockCanvasManager;
+	let mockCanvas;
+	let mockContainer;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvas = {
+			width: 800,
+			height: 600,
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 100,
+				top: 100,
+				width: 800,
+				height: 600
+			} ) )
+		};
+
+		mockContainer = {
+			appendChild: jest.fn(),
+			removeChild: jest.fn(),
+			style: {}
+		};
+
+		mockCanvasManager = {
+			canvas: mockCanvas,
+			container: mockContainer,
+			ctx: {
+				save: jest.fn(),
+				restore: jest.fn(),
+				font: '',
+				measureText: jest.fn( () => ( { width: 100 } ) )
+			},
+			editor: { layers: [], updateLayer: jest.fn(), getLayerById: jest.fn() },
+			zoom: 1.0,
+			panX: 0,
+			panY: 0,
+			setTextEditingMode: jest.fn(),
+			saveState: jest.fn(),
+			redraw: jest.fn(),
+			renderLayers: jest.fn(),
+			isDestroyed: false
+		};
+
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( editor && typeof editor.destroy === 'function' ) {
+			editor.destroy();
+		}
+		jest.clearAllMocks();
+	} );
+
+	test( 'isActive should return true when editing', () => {
+		const layer = { type: 'text', text: 'Test', x: 0, y: 0 };
+		editor.startEditing( layer );
+
+		expect( editor.isActive() ).toBe( true );
+	} );
+
+	test( 'isActive should return false when not editing', () => {
+		expect( editor.isActive() ).toBe( false );
+	} );
+
+	test( 'getEditingLayer should return current layer when editing', () => {
+		const layer = { id: 'test-layer', type: 'text', text: 'Test', x: 0, y: 0 };
+		editor.startEditing( layer );
+
+		expect( editor.getEditingLayer() ).toBe( layer );
+	} );
+
+	test( 'getEditingLayer should return null when not editing', () => {
+		expect( editor.getEditingLayer() ).toBeNull();
+	} );
+} );
+
+describe( 'InlineTextEditor - Visibility handling for text layers', () => {
+	let mockCanvasManager;
+	let mockCanvas;
+	let mockContainer;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvas = {
+			width: 800,
+			height: 600,
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 100,
+				top: 100,
+				width: 800,
+				height: 600
+			} ) )
+		};
+
+		mockContainer = {
+			appendChild: jest.fn(),
+			removeChild: jest.fn(),
+			style: {}
+		};
+
+		mockCanvasManager = {
+			canvas: mockCanvas,
+			container: mockContainer,
+			ctx: {
+				save: jest.fn(),
+				restore: jest.fn(),
+				font: '',
+				measureText: jest.fn( () => ( { width: 100 } ) )
+			},
+			editor: { layers: [], updateLayer: jest.fn(), getLayerById: jest.fn() },
+			zoom: 1.0,
+			panX: 0,
+			panY: 0,
+			setTextEditingMode: jest.fn(),
+			saveState: jest.fn(),
+			redraw: jest.fn(),
+			renderLayers: jest.fn(),
+			isDestroyed: false
+		};
+
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( editor && typeof editor.destroy === 'function' ) {
+			editor.destroy();
+		}
+		jest.clearAllMocks();
+	} );
+
+	test( 'should store original visibility for text layers', () => {
+		const layer = {
+			type: 'text',
+			text: 'Visible text',
+			x: 100,
+			y: 100,
+			visible: true
+		};
+
+		editor.startEditing( layer );
+
+		expect( editor._originalVisible ).toBe( true );
+	} );
+
+	test( 'should restore visibility after finishing editing', () => {
+		const layer = {
+			id: 'layer-1',
+			type: 'text',
+			text: 'Test',
+			x: 100,
+			y: 100,
+			visible: true
+		};
+		mockCanvasManager.editor.layers = [ layer ];
+
+		editor.startEditing( layer );
+		editor.finishEditing( true );
+
+		expect( layer.visible ).toBe( true );
+	} );
+
+	test( 'should handle layers without visible property', () => {
+		const layer = {
+			type: 'text',
+			text: 'No visible prop',
+			x: 100,
+			y: 100
+			// visible not defined
+		};
+		mockCanvasManager.editor.layers = [ layer ];
+
+		editor.startEditing( layer );
+		editor.finishEditing( true );
+
+		// Should not throw
+		expect( true ).toBe( true );
+	} );
+} );
+
 describe( 'CanvasEvents - Double-click handling', () => {
 	let CanvasEvents;
 	let mockCanvasManager;
