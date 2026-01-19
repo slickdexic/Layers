@@ -599,9 +599,51 @@ describe( 'ViewerOverlay', () => {
 			editBtn.click();
 
 			expect( mockModal ).toHaveBeenCalled();
-			expect( mockOpen ).toHaveBeenCalledWith( 'Test_image.jpg', 'default' );
+			expect( mockOpen ).toHaveBeenCalledWith( 'Test_image.jpg', 'default', { autoCreate: false } );
 
 			delete window.Layers.Modal;
+		} );
+
+		it( 'should pass autoCreate=true when overlay is for non-existent set', () => {
+			const mockOpen = jest.fn().mockResolvedValue( { saved: false } );
+			const mockModal = jest.fn( () => ( { open: mockOpen } ) );
+
+			window.Layers.Modal = {
+				LayersEditorModal: mockModal
+			};
+
+			// Mark the image as needing auto-create
+			img.setAttribute( 'data-layer-autocreate', '1' );
+
+			const overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Test_image.jpg',
+				setname: 'new-set'
+			} );
+
+			const editBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
+			editBtn.click();
+
+			expect( mockModal ).toHaveBeenCalled();
+			expect( mockOpen ).toHaveBeenCalledWith( 'Test_image.jpg', 'new-set', { autoCreate: true } );
+
+			delete window.Layers.Modal;
+		} );
+
+		it( 'should include autocreate in URL when autoCreate is true', () => {
+			img.setAttribute( 'data-layer-autocreate', '1' );
+
+			const overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Test_image.jpg',
+				setname: 'my-new-set'
+			} );
+
+			const url = overlay._buildEditUrl();
+			expect( url ).toContain( 'autocreate=1' );
+			expect( url ).toContain( 'setname=my-new-set' );
 		} );
 
 		it( 'should not use modal when on File page', () => {

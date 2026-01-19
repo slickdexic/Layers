@@ -176,8 +176,15 @@ class ViewerManager {
 		}
 
 		// Get set name from data attribute
-		const setname = img.getAttribute( 'data-layer-setname' ) ||
-			img.getAttribute( 'data-layers-intent' ) || 'default';
+		// data-layer-setname is explicit set name from existing layer data
+		// data-layers-intent may be 'on', 'true', or a specific set name
+		let setname = img.getAttribute( 'data-layer-setname' );
+		if ( !setname ) {
+			const intent = img.getAttribute( 'data-layers-intent' ) || '';
+			// Generic enable values should use 'default', specific names pass through
+			const genericValues = [ 'on', 'true', 'all', '1' ];
+			setname = genericValues.includes( intent.toLowerCase() ) ? 'default' : ( intent || 'default' );
+		}
 
 		// Get ViewerOverlay class
 		const ViewerOverlay = getClass( 'Viewer.Overlay', 'ViewerOverlay' );
@@ -267,6 +274,9 @@ class ViewerManager {
 			if ( setname && setname !== 'default' ) {
 				img.setAttribute( 'data-layer-setname', setname );
 			}
+
+			// Mark that this set needs to be auto-created when editing
+			img.setAttribute( 'data-layer-autocreate', '1' );
 
 			this._initializeOverlay( img, container );
 			this.debugLog( 'Overlay-only initialized for non-existent set:', setname || 'default' );
