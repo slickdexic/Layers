@@ -48,6 +48,9 @@ class ViewerManager {
 		const FreshnessChecker = getClass( 'Viewer.FreshnessChecker', 'FreshnessChecker' );
 		this.freshnessChecker = ( options && options.freshnessChecker ) ||
 			( FreshnessChecker ? new FreshnessChecker( { debug: this.debug } ) : null );
+
+		// Track created wrappers for cleanup
+		this._createdWrappers = new WeakMap();
 	}
 
 	/**
@@ -91,6 +94,11 @@ class ViewerManager {
 			container.insertBefore( wrapper, img );
 			wrapper.appendChild( img );
 			container = wrapper;
+
+			// Track the wrapper we created for this image (for cleanup)
+			if ( this._createdWrappers ) {
+				this._createdWrappers.set( img, wrapper );
+			}
 		}
 		return container;
 	}
@@ -229,6 +237,52 @@ class ViewerManager {
 			this.debugWarn( 'Viewer reinit error:', e );
 			return false;
 		}
+	}
+
+	/**
+	 * Completely destroy a viewer and clean up all created DOM elements.
+	 *
+	 * This should be called when permanently removing a viewer from an image,
+	 * such as during page teardown or when layers are removed from an image.
+	 *
+	 * @param {HTMLImageElement} img Image element with viewer to destroy
+	 */
+	destroyViewer( img ) {
+		if ( !img ) {
+			return;
+		}
+
+		// Destroy the viewer instance
+		if ( img.layersViewer ) {
+			if ( typeof img.layersViewer.destroy === 'function' ) {
+				img.layersViewer.destroy();
+			}
+			img.layersViewer = null;
+		}
+
+		// Destroy the overlay
+		if ( img.layersOverlay ) {
+			if ( typeof img.layersOverlay.destroy === 'function' ) {
+				img.layersOverlay.destroy();
+			}
+			img.layersOverlay = null;
+		}
+
+		// Clean up wrapper element if we created one
+		if ( this._createdWrappers ) {
+			const wrapper = this._createdWrappers.get( img );
+			if ( wrapper && wrapper.parentNode ) {
+				// Move image back to parent before removing wrapper
+				wrapper.parentNode.insertBefore( img, wrapper );
+				wrapper.parentNode.removeChild( wrapper );
+				this._createdWrappers.delete( img );
+			}
+		}
+
+		// Clear flags
+		img.layersPending = false;
+
+		this.debugLog( 'Viewer destroyed and cleaned up' );
 	}
 
 	/**
@@ -708,12 +762,20 @@ class ViewerManager {
 						return;
 					}
 
-					const payload = {
-						layers: layersArr,
-						baseWidth: layerset.baseWidth || img.naturalWidth || img.width || null,
-						baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null,
-						backgroundVisible: layerset.data.backgroundVisible !== undefined ? layerset.data.backgroundVisible : true,
-						backgroundOpacity: layerset.data.backgroundOpacity !== undefined ? layerset.data.backgroundOpacity : 1.0
+				// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
+				let bgVisible = true;
+				if ( layerset.data.backgroundVisible !== undefined ) {
+					const bgVal = layerset.data.backgroundVisible;
+					bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
+				}
+
+				const payload = {
+					layers: layersArr,
+					baseWidth: layerset.baseWidth || img.naturalWidth || img.width || null,
+					baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null,
+					backgroundVisible: bgVisible,
+					backgroundOpacity: layerset.data.backgroundOpacity !== undefined
+						? parseFloat( layerset.data.backgroundOpacity ) : 1.0
 					};
 
 					this.initializeViewer( img, payload );

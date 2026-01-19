@@ -202,6 +202,14 @@
 			layer.y2 = ( layer.y2 || 0 ) + PASTE_OFFSET;
 		}
 
+		// Offset curved arrow control points
+		if ( layer.controlX !== undefined ) {
+			layer.controlX = ( layer.controlX || 0 ) + PASTE_OFFSET;
+		}
+		if ( layer.controlY !== undefined ) {
+			layer.controlY = ( layer.controlY || 0 ) + PASTE_OFFSET;
+		}
+
 		// Offset polygon/path points
 		if ( layer.points && Array.isArray( layer.points ) ) {
 			layer.points = layer.points.map( ( p ) => {

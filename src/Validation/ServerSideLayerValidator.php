@@ -777,13 +777,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			// Clamp to 0-1 range
 			$offset = max( 0, min( 1, $offset ) );
 
-			// Validate color (basic check for hex, rgb, rgba, named)
-			$color = trim( $stop['color'] );
-			if ( strlen( $color ) > 50 ) {
-				$color = substr( $color, 0, 50 );
-			}
-			// Strip dangerous characters (allow only safe CSS color chars)
-			$color = preg_replace( '/[^a-zA-Z0-9#(),.\s]/', '', $color );
+			// Use ColorValidator for proper color validation and sanitization
+			$color = $this->colorValidator->sanitizeColor( $stop['color'] );
 
 			$validColors[] = [
 				'offset' => $offset,
