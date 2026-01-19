@@ -433,6 +433,11 @@ class ThumbnailProcessor {
 				// Use the actual set name for named sets, 'on' for generic enable
 				$intentValue = in_array( $layersFlag, [ 'on', 'all', 'true', true ], true ) ? 'on' : $layersFlag;
 				$attribs['data-layers-intent'] = $intentValue;
+				// Add filename for API lookup (needed for overlay edit URL)
+				$file = method_exists( $thumbnail, 'getFile' ) ? $thumbnail->getFile() : null;
+				if ( $file && method_exists( $file, 'getName' ) ) {
+					$attribs['data-file-name'] = $file->getName();
+				}
 				$this->log( "Set data-layers-intent: $intentValue" );
 			}
 		}
