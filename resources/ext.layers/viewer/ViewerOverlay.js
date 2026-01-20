@@ -364,10 +364,10 @@
 
 			if ( useModal && typeof window !== 'undefined' && window.Layers &&
 				window.Layers.Modal && window.Layers.Modal.LayersEditorModal ) {
-				// Open in modal
+				// Open in modal - build URL with autocreate flag included
 				const modal = new window.Layers.Modal.LayersEditorModal();
-				// Pass autoCreate flag if this is for a non-existent set
-				modal.open( this.filename, this.setname, { autoCreate: this.autoCreate } ).then( ( result ) => {
+				const editorUrl = this._buildEditUrl() + '&modal=1';
+				modal.open( this.filename, this.setname, editorUrl ).then( ( result ) => {
 					if ( result && result.saved ) {
 						// Refresh viewers when modal closes after save
 						if ( typeof mw !== 'undefined' && mw.layers && mw.layers.viewerManager ) {

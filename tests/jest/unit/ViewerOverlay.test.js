@@ -599,7 +599,12 @@ describe( 'ViewerOverlay', () => {
 			editBtn.click();
 
 			expect( mockModal ).toHaveBeenCalled();
-			expect( mockOpen ).toHaveBeenCalledWith( 'Test_image.jpg', 'default', { autoCreate: false } );
+			// Modal receives filename, setname, and the built URL
+			expect( mockOpen ).toHaveBeenCalledWith(
+				'Test_image.jpg',
+				'default',
+				expect.stringContaining( 'action=editlayers' )
+			);
 
 			delete window.Layers.Modal;
 		} );
@@ -626,7 +631,12 @@ describe( 'ViewerOverlay', () => {
 			editBtn.click();
 
 			expect( mockModal ).toHaveBeenCalled();
-			expect( mockOpen ).toHaveBeenCalledWith( 'Test_image.jpg', 'new-set', { autoCreate: true } );
+			// Modal receives filename, setname, and built URL with autocreate
+			expect( mockOpen ).toHaveBeenCalledWith(
+				'Test_image.jpg',
+				'new-set',
+				expect.stringContaining( 'autocreate=1' )
+			);
 
 			delete window.Layers.Modal;
 		} );
