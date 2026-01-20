@@ -32,7 +32,8 @@
 		constructor( config ) {
 			this.container = config.container;
 			this.imageElement = config.imageElement;
-			this.filename = config.filename || '';
+			// Sanitize filename - strip any wikitext brackets that might have leaked through
+			this.filename = ( config.filename || '' ).replace( /[\x5B\x5D]/g, '' );
 			this.setname = config.setname || 'default';
 			this.canEdit = config.canEdit !== false && this._checkEditPermission();
 			this.debug = config.debug || false;

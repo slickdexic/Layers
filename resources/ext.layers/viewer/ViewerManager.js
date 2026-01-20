@@ -702,33 +702,39 @@ class ViewerManager {
 	 * @return {string|null} Filename or null if not found
 	 */
 	extractFilenameFromImg( img ) {
+		let filename = null;
+
 		// Try data-file-name attribute first
 		const fileNameAttr = img.getAttribute( 'data-file-name' );
 		if ( fileNameAttr ) {
-			return fileNameAttr;
-		}
-
-		// Try extracting from src URL
-		const src = img.src || '';
-		const srcMatch = src.match( /\/(?:images\/.*?\/)?([^/]+\.[a-zA-Z]+)(?:[?]|$)/ );
-		if ( srcMatch && srcMatch[ 1 ] ) {
-			let filename = decodeURIComponent( srcMatch[ 1 ] );
-			// Remove any thumbnail prefix like "123px-"
-			filename = filename.replace( /^\d+px-/, '' );
-			return filename;
-		}
-
-		// Try extracting from parent link href
-		const parent = img.parentNode;
-		if ( parent && parent.tagName === 'A' ) {
-			const href = parent.getAttribute( 'href' ) || '';
-			const hrefMatch = href.match( /\/File:([^/?#]+)/ );
-			if ( hrefMatch && hrefMatch[ 1 ] ) {
-				return decodeURIComponent( hrefMatch[ 1 ].replace( /_/g, ' ' ) );
+			filename = fileNameAttr;
+		} else {
+			// Try extracting from src URL
+			const src = img.src || '';
+			const srcMatch = src.match( /\/(?:images\/.*?\/)?([^/]+\.[a-zA-Z]+)(?:[?]|$)/ );
+			if ( srcMatch && srcMatch[ 1 ] ) {
+				filename = decodeURIComponent( srcMatch[ 1 ] );
+				// Remove any thumbnail prefix like "123px-"
+				filename = filename.replace( /^\d+px-/, '' );
+			} else {
+				// Try extracting from parent link href
+				const parent = img.parentNode;
+				if ( parent && parent.tagName === 'A' ) {
+					const href = parent.getAttribute( 'href' ) || '';
+					const hrefMatch = href.match( /\/File:([^/?#]+)/ );
+					if ( hrefMatch && hrefMatch[ 1 ] ) {
+						filename = decodeURIComponent( hrefMatch[ 1 ].replace( /_/g, ' ' ) );
+					}
+				}
 			}
 		}
 
-		return null;
+		// Sanitize: strip any wikitext brackets that might have leaked through
+		if ( filename ) {
+			filename = filename.replace( /[\x5B\x5D]/g, '' );
+		}
+
+		return filename;
 	}
 
 	/**

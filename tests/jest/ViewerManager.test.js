@@ -1131,6 +1131,24 @@ describe( 'ViewerManager', () => {
 
 			expect( result ).toBe( 'Test Image.jpg' );
 		} );
+
+		it( 'should strip wikitext brackets from filename', () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', '[[Test.jpg]]' );
+
+			const result = manager.extractFilenameFromImg( img );
+
+			expect( result ).toBe( 'Test.jpg' );
+		} );
+
+		it( 'should strip brackets from extracted src filename', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/images/[Test].jpg';
+
+			const result = manager.extractFilenameFromImg( img );
+
+			expect( result ).toBe( 'Test.jpg' );
+		} );
 	} );
 
 	describe( 'getClass fallback behavior', () => {
