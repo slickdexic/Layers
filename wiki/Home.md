@@ -20,14 +20,21 @@
 
 ---
 
-## 🆕 What's New in v1.5.17
+## 🆕 What's New in v1.5.18
+
+- **Critical Bug Fix: Non-Existent Layer Set Handling** — Fixed production issue where `layerset=X` with a non-existent set name would not show the edit overlay, preventing new set creation from wikitext
+- **Fixed edit overlay not initializing** when layer set doesn't exist but intent was specified
+- **Fixed PHP `data-layers-intent`** — Now correctly sets intent for named sets (not just 'on'/'all')
+- **Fixed `autocreate=1` parameter passing** — Editor now receives flag to auto-create the layer set
+- **Fixed `data-file-name` injection** — PHP now sets filename attribute even when layer data doesn't exist
+- **Fixed modal URL parameter** — Modal now receives proper URL string instead of object
+- **9,693 tests passing** (150 suites), 92.65% coverage
+
+### Previous v1.5.17 Highlights
 
 - **Collapsible Shadow Settings** — Drop shadow and text shadow settings now hidden until enabled, reducing UI clutter
 - **StateManager Exception Handling (HIGH)** — Fixed potential deadlock in unlockState()
 - **Missing mw Object Guard (MEDIUM)** — Fixed ReferenceError in Node.js/Jest environments
-- **Drawing RAF Callback Cleanup (MEDIUM)** — Fixed null reference errors after editor closure
-- **TransformController RAF Guards (MEDIUM)** — Fixed crashes during rapid editor close
-- **9,693 tests passing** (150 suites), 92.65% coverage
 
 ### Previous v1.5.15 Highlights
 
