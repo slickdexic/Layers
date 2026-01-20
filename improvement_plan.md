@@ -16,7 +16,7 @@ The extension is **production-ready and fully functional** with **excellent secu
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **9,753** (152 suites) | ✅ Excellent |
+| Tests passing | **9,769** (153 suites) | ✅ Excellent |
 | Statement coverage | **93.52%** | ✅ Excellent |
 | Branch coverage | **83.89%** | ✅ Good |
 | Function coverage | **91.37%** | ✅ Excellent |
@@ -82,10 +82,14 @@ jsdom "Not implemented" warnings have been suppressed in `tests/jest/setup.js`. 
 
 ### P2.1 Layer List Virtualization
 
-**Status:** Not started  
+**Status:** ✅ COMPLETED (January 21, 2026)  
 **Priority:** P2
 
-Prevent UI slowdowns when layer counts exceed ~50. Consider virtual scrolling for layer panel.
+Virtual scrolling implemented in `VirtualLayerList.js`:
+- Only renders visible layers plus overscan buffer
+- Automatically activates for 30+ layers
+- DOM element recycling for smooth scrolling
+- 16 new tests added
 
 ### P2.2 Coverage Improvements
 
@@ -174,7 +178,7 @@ Track render time and interaction latency for large images/layer sets.
 
 1. ✅ Documentation metrics are consistent across all public-facing docs
 2. ✅ Jest runs without console errors from jsdom
-3. ⏳ Large layer sets remain responsive in the editor UI
+3. ✅ Large layer sets remain responsive in the editor UI (virtualization added)
 
 ---
 

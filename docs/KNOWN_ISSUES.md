@@ -47,7 +47,9 @@ jsdom "Not implemented" warnings for navigation and prompt have been suppressed 
 
 ### F1. Layer List Virtualization
 
-Large layer sets (50+) can cause UI slowdowns. Virtual scrolling would help.
+**Status:** ✅ COMPLETED (January 21, 2026)
+
+Virtual scrolling implemented for layer lists with 30+ items. The layer panel now only renders visible layers plus a buffer, preventing UI slowdowns with large layer counts.
 
 ### F2. Layer Search/Filter
 

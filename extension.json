@@ -306,6 +306,7 @@
 				"ui/PropertyBuilders.js",
 				"ui/GradientEditor.js",
 				"ui/PropertiesForm.js",
+				"ui/VirtualLayerList.js",
 				"ui/LayerListRenderer.js",
 				"ui/LayerDragDrop.js",
 				"presets/BuiltInPresets.js",
