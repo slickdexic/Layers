@@ -35,24 +35,27 @@ grep -rn --include="*.md" --include="*.txt" "1.5.1" . | grep -v node_modules | g
 
 ---
 
-## 📋 The "12 Files" Rule
+## 📋 The "11 Files" Rule
 
-**TWELVE files must be updated for every version change.** No exceptions.
+**ELEVEN files must be updated for every version change.** No exceptions.
+
+> **Note:** This was previously the "12 Files" rule, but `package.json` doesn't have a version field.
 
 | # | File | What to Update | Verification |
 |---|------|----------------|--------------|
 | 1 | `extension.json` | `"version"` field | Source of truth |
-| 2 | `package.json` | `"version"` field | `grep version package.json` |
-| 3 | `README.md` | Version line, metrics | `grep -n "Version:" README.md` |
-| 4 | `CHANGELOG.md` | New version section | `head -20 CHANGELOG.md` |
-| 5 | `Mediawiki-Extension-Layers.mediawiki` | `\|version =`, test counts | `grep -n "version\|Stability" Mediawiki-Extension-Layers.mediawiki` |
-| 6 | `wiki/Home.md` | "What's New", Project Status table | `grep -n "Version\|Tests" wiki/Home.md` |
-| 7 | `wiki/Installation.md` | Branch version table | `grep -n "main\|REL1_43" wiki/Installation.md` |
-| 8 | `wiki/Changelog.md` | Mirror of CHANGELOG.md | `head -30 wiki/Changelog.md` |
-| 9 | `codebase_review.md` | Version header, metrics | `grep -n "Version" codebase_review.md` |
-| 10 | `improvement_plan.md` | Version header | `grep -n "Version" improvement_plan.md` |
-| 11 | `docs/KNOWN_ISSUES.md` | Version header | `grep -n "Version" docs/KNOWN_ISSUES.md` |
-| 12 | `.github/copilot-instructions.md` | Version number (if present) | `grep -n "1\.[0-9]\.[0-9]" .github/copilot-instructions.md` |
+| 2 | `README.md` | Version line, metrics | `grep -n "Version:" README.md` |
+| 3 | `CHANGELOG.md` | New version section | `head -20 CHANGELOG.md` |
+| 4 | `Mediawiki-Extension-Layers.mediawiki` | `\|version =`, test counts | `grep -n "version\|Stability" Mediawiki-Extension-Layers.mediawiki` |
+| 5 | `wiki/Home.md` | "What's New", Project Status table | `grep -n "Version\|Tests" wiki/Home.md` |
+| 6 | `wiki/Installation.md` | Branch version table | `grep -n "main\|REL1_43" wiki/Installation.md` |
+| 7 | `wiki/Changelog.md` | Mirror of CHANGELOG.md | `head -30 wiki/Changelog.md` |
+| 8 | `codebase_review.md` | Version header, metrics | `grep -n "Version" codebase_review.md` |
+| 9 | `improvement_plan.md` | Version header | `grep -n "Version" improvement_plan.md` |
+| 10 | `docs/KNOWN_ISSUES.md` | Version header | `grep -n "Version" docs/KNOWN_ISSUES.md` |
+| 11 | `.github/copilot-instructions.md` | Version number (if present) | `grep -n "1\.[0-9]\.[0-9]" .github/copilot-instructions.md` |
+
+> **Note:** `package.json` does NOT have a `version` field in this project — the authoritative version is in `extension.json`.
 
 ---
 
@@ -138,20 +141,19 @@ Work through this checklist **in order** for every release:
 
 ```
 □ 1. Update extension.json version
-□ 2. Update package.json version  
-□ 3. Add CHANGELOG.md entry at top
-□ 4. Copy CHANGELOG entry to wiki/Changelog.md
-□ 5. Run tests: npm run test:js -- --coverage
-□ 6. Record metrics: _____ tests, ___% statement coverage
-□ 7. Update README.md (version line, badge, metrics table)
-□ 8. Update Mediawiki-Extension-Layers.mediawiki (|version=, |update=, test count)
-□ 9. Update wiki/Home.md (What's New section, Project Status table)
-□ 10. Update wiki/Installation.md (branch version table)
-□ 11. Update codebase_review.md (version header, metrics)
-□ 12. Update improvement_plan.md (version header)
-□ 13. Update docs/KNOWN_ISSUES.md (version header)
-□ 14. VERIFY: grep -r "OLD_VERSION" --include="*.md" . | grep -v node_modules
-□ 15. Commit: git commit -m "docs: update documentation for vX.Y.Z"
+□ 2. Add CHANGELOG.md entry at top
+□ 3. Copy CHANGELOG entry to wiki/Changelog.md
+□ 4. Run tests: npm run test:js -- --coverage
+□ 5. Record metrics: _____ tests, ___% statement coverage
+□ 6. Update README.md (version line, badge, metrics table)
+□ 7. Update Mediawiki-Extension-Layers.mediawiki (|version=, |update=, test count)
+□ 8. Update wiki/Home.md (What's New section, Project Status table)
+□ 9. Update wiki/Installation.md (branch version table)
+□ 10. Update codebase_review.md (version header, metrics)
+□ 11. Update improvement_plan.md (version header)
+□ 12. Update docs/KNOWN_ISSUES.md (version header)
+□ 13. VERIFY: grep -r "OLD_VERSION" --include="*.md" . | grep -v node_modules
+□ 14. Commit: git commit -m "docs: update documentation for vX.Y.Z"
 ```
 
 ---

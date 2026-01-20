@@ -21,7 +21,7 @@
 |table2          = layer_set_usage
 |table3          = layer_sets
 |rights          = {{bulleted list|editlayers|managelayerlibrary}}
-|parameters      = {{bulleted list|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet}}
+|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersContextAwareToolbar|$wgLayersUseBinaryOverlays|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersThumbnailCache|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions}}
 |hook1           = BeforePageDisplay
 |hook2           = BitmapHandlerTransform
 |hook3           = FileDeleteComplete
@@ -90,6 +90,10 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! Variable !! Type !! Default !! Description
 |-
+| <code>$wgLayersEnable</code> || boolean || <code>true</code> || Master switch for Layers.
+|-
+| <code>$wgLayersDebug</code> || boolean || <code>false</code> || Enable verbose debug logging.
+|-
 | <code>$wgLayersMaxLayerCount</code> || integer || <code>100</code> || Max layers per set.
 |-
 | <code>$wgLayersMaxNamedSets</code> || integer || <code>15</code> || Max named sets per image.
@@ -99,6 +103,22 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 | <code>$wgLayersMaxImageBytes</code> || integer || <code>1048576</code> || Max size for imported image layers.
 |-
 | <code>$wgLayersMaxBytes</code> || integer || <code>2097152</code> || Max JSON size for a single layer set.
+|-
+| <code>$wgLayersDefaultSetName</code> || string || <code>"default"</code> || Default named set when none is specified.
+|-
+| <code>$wgLayersContextAwareToolbar</code> || boolean || <code>true</code> || Context-aware toolbar (set false for classic mode).
+|-
+| <code>$wgLayersUseBinaryOverlays</code> || boolean || <code>false</code> || Enable legacy binary overlay files.
+|-
+| <code>$wgLayersDefaultFonts</code> || array || (see extension.json) || Allowed fonts list for the editor.
+|-
+| <code>$wgLayersMaxImageSize</code> || integer || <code>4096</code> || Max image size for editing (px).
+|-
+| <code>$wgLayersThumbnailCache</code> || boolean || <code>true</code> || Cache composite thumbnails.
+|-
+| <code>$wgLayersImageMagickTimeout</code> || integer || <code>30</code> || ImageMagick timeout (seconds).
+|-
+| <code>$wgLayersMaxImageDimensions</code> || integer || <code>8192</code> || Max width/height for processing.
 |}
 
 === Permissions ===
@@ -240,7 +260,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~111k lines including generated shape/emoji data).
-* '''Stability:''' 9,692 Jest tests across 150 test suites achieving 92.80% statement coverage, 83.75% branch coverage.
+* '''Stability:''' 9,753 Jest tests (152 suites) with 93.52% statement coverage and 83.89% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

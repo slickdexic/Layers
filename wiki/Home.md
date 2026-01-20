@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C753%20Passing-brightgreen" alt="9,753 Tests">
-  <img src="https://img.shields.io/badge/Coverage-92.80%25-brightgreen" alt="92.80% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C753%20passing-brightgreen" alt="9,753 Tests">
+  <img src="https://img.shields.io/badge/Coverage-93.52%25-brightgreen" alt="93.52% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -24,7 +24,7 @@
 
 - **Shared IdGenerator Utility** — New centralized ID generation with monotonic counter guarantees unique layer IDs even during rapid operations (paste, duplicate, bulk imports)
 - **ViewerManager Error Tracking** — `refreshAllViewers()` now returns detailed result object with error tracking for better debugging
-- **9,753 tests passing** (152 suites), 92.80% coverage
+- **9,753 tests passing** (152 suites), 93.52% statement coverage, 83.89% branch coverage
 
 ### Previous v1.5.18 Highlights
 
@@ -196,18 +196,18 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.16 |
-| **Version (REL1_43)** | 1.5.16-REL1_43 |
+| **Version (main)** | 1.5.19 |
+| **Version (REL1_43)** | 1.5.19-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
-| **Test Suites** | 150 |
-| **Total Tests** | 9,692 |
+| **Test Suites** | 152 |
+| **Total Tests** | 9,753 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 92.80% |
-| **Branch Coverage** | 83.75% |
-| **JavaScript Files** | 123 |
+| **Statement Coverage** | 93.52% |
+| **Branch Coverage** | 83.89% |
+| **JavaScript Files** | 124 |
 | **ES6 Classes** | 100+ |
-| **God Classes** | 19 (3 generated data, 16 hand-written) |
+| **God Classes** | 20 (3 generated data, 17 hand-written) |
 
 ---
 
