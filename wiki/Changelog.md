@@ -4,6 +4,25 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.18 (January 19, 2026)
+
+### Fixed
+- **Critical: Non-Existent Layer Set Handling** — Fixed production issue where `layerset=X` with a non-existent set name would not show the edit overlay, preventing new set creation from wikitext
+  - **Edit overlay not initializing** — When layer set doesn't exist but intent was specified, the overlay now correctly shows with edit button
+  - **PHP `data-layers-intent` for named sets** — Now correctly sets intent for custom set names (was only triggering for 'on'/'all')
+  - **`autocreate=1` parameter passing** — Editor now receives flag to auto-create the layer set on first save
+  - **`data-file-name` attribute injection** — PHP now sets filename attribute even when no layer data exists
+  - **Filename sanitization** — Added defensive sanitization to strip bracket characters from filenames
+  - **Modal URL parameter** — Fixed modal receiving object instead of URL string, which caused "invalid characters" error
+
+### Technical Details
+- Files modified: ThumbnailProcessor.php, ViewerManager.js, ViewerOverlay.js, ApiFallback.js
+- Added `initializeOverlayOnly()` method to ViewerManager for cases where layer data doesn't exist
+- Fixed intent detection in ThumbnailProcessor to allow any non-disabled layersFlag value
+- 6 commits for this fix, thoroughly tested across all browsers
+
+---
+
 ## Version 1.5.17 (January 19, 2026)
 
 ### Added

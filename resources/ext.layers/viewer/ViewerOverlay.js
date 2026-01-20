@@ -32,10 +32,14 @@
 		constructor( config ) {
 			this.container = config.container;
 			this.imageElement = config.imageElement;
-			this.filename = config.filename || '';
+			// Sanitize filename - strip any wikitext brackets that might have leaked through
+			this.filename = ( config.filename || '' ).replace( /[\x5B\x5D]/g, '' );
 			this.setname = config.setname || 'default';
 			this.canEdit = config.canEdit !== false && this._checkEditPermission();
 			this.debug = config.debug || false;
+			// Check if this is for a non-existent set that needs auto-creation
+			this.autoCreate = config.autoCreate ||
+				( this.imageElement && this.imageElement.getAttribute( 'data-layer-autocreate' ) === '1' );
 
 			/** @type {HTMLElement|null} */
 			this.overlay = null;
@@ -353,16 +357,17 @@
 		 * @private
 		 */
 		_handleEditClick() {
-			this.debugLog( 'Edit clicked for', this.filename );
+			this.debugLog( 'Edit clicked for', this.filename, 'autoCreate:', this.autoCreate );
 
 			// Check if modal editor is available and preferred
 			const useModal = this._shouldUseModal();
 
 			if ( useModal && typeof window !== 'undefined' && window.Layers &&
 				window.Layers.Modal && window.Layers.Modal.LayersEditorModal ) {
-				// Open in modal
+				// Open in modal - build URL with autocreate flag included
 				const modal = new window.Layers.Modal.LayersEditorModal();
-				modal.open( this.filename, this.setname ).then( ( result ) => {
+				const editorUrl = this._buildEditUrl() + '&modal=1';
+				modal.open( this.filename, this.setname, editorUrl ).then( ( result ) => {
 					if ( result && result.saved ) {
 						// Refresh viewers when modal closes after save
 						if ( typeof mw !== 'undefined' && mw.layers && mw.layers.viewerManager ) {
@@ -409,8 +414,12 @@
 		_buildEditUrl() {
 			if ( typeof mw === 'undefined' || !mw.util ) {
 				// Fallback URL construction
-				return '/wiki/File:' + encodeURIComponent( this.filename ) +
+				let url = '/wiki/File:' + encodeURIComponent( this.filename ) +
 					'?action=editlayers&setname=' + encodeURIComponent( this.setname );
+				if ( this.autoCreate ) {
+					url += '&autocreate=1';
+				}
+				return url;
 			}
 
 			const params = new URLSearchParams( {
@@ -418,6 +427,10 @@
 			} );
 			if ( this.setname && this.setname !== 'default' ) {
 				params.set( 'setname', this.setname );
+			}
+			// Include autocreate flag for non-existent sets
+			if ( this.autoCreate ) {
+				params.set( 'autocreate', '1' );
 			}
 
 			return mw.util.getUrl( 'File:' + this.filename ) + '?' + params.toString();

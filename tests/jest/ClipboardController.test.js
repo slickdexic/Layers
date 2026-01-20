@@ -56,6 +56,20 @@ describe('ClipboardController', () => {
                 strokeWidth: 3,
                 visible: true,
                 locked: false
+            },
+            {
+                id: 'layer5',
+                type: 'arrow',
+                x1: 100,
+                y1: 500,
+                x2: 300,
+                y2: 550,
+                controlX: 200,
+                controlY: 450,
+                arrowhead: 'arrow',
+                strokeWidth: 2,
+                visible: true,
+                locked: false
             }
         ];
 
@@ -176,7 +190,7 @@ describe('ClipboardController', () => {
             const pastedIds = clipboardController.paste();
 
             expect(pastedIds.length).toBe(1);
-            expect(mockEditor.layers.length).toBe(5); // Original 4 + 1 pasted
+            expect(mockEditor.layers.length).toBe(6); // Original 5 + 1 pasted
             expect(mockEditor.saveState).toHaveBeenCalled();
             expect(mockEditor.markDirty).toHaveBeenCalled();
             expect(mockCanvasManager.renderLayers).toHaveBeenCalled();
@@ -216,6 +230,21 @@ describe('ClipboardController', () => {
             expect(pastedPath.points[0].x).toBe(120); // 100 + 20
             expect(pastedPath.points[0].y).toBe(420); // 400 + 20
             expect(pastedPath.points[1].x).toBe(170); // 150 + 20
+        });
+
+        test('should apply paste offset to curved arrow control points', () => {
+            mockCanvasManager.selectedLayerIds = ['layer5'];
+            clipboardController.copySelected();
+
+            clipboardController.paste();
+
+            const pastedArrow = mockEditor.layers[0];
+            expect(pastedArrow.x1).toBe(120);       // 100 + 20
+            expect(pastedArrow.y1).toBe(520);       // 500 + 20
+            expect(pastedArrow.x2).toBe(320);       // 300 + 20
+            expect(pastedArrow.y2).toBe(570);       // 550 + 20
+            expect(pastedArrow.controlX).toBe(220); // 200 + 20
+            expect(pastedArrow.controlY).toBe(470); // 450 + 20
         });
 
         test('should generate new unique ID for pasted layers', () => {
@@ -262,7 +291,7 @@ describe('ClipboardController', () => {
 
             expect(count).toBe(1);
             expect(clipboardController.clipboard.length).toBe(1);
-            expect(mockEditor.layers.length).toBe(3); // 4 - 1 deleted
+            expect(mockEditor.layers.length).toBe(4); // 5 - 1 deleted
             expect(mockEditor.layers.find(l => l.id === 'layer1')).toBeUndefined();
         });
 
@@ -272,7 +301,7 @@ describe('ClipboardController', () => {
             const count = clipboardController.cutSelected();
 
             expect(count).toBe(2);
-            expect(mockEditor.layers.length).toBe(2);
+            expect(mockEditor.layers.length).toBe(3); // 5 - 2 deleted
         });
 
         test('should call deselectAll after cut', () => {

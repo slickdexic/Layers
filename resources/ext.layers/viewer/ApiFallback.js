@@ -305,6 +305,7 @@ class ApiFallback {
 		// 2. data-layers-intent on the image (if it's a specific set name, not 'on')
 		// 3. layers= parameter from the href (if it's a specific set name, not 'on'/'true'/etc)
 		let setName = null;
+		const imgIntent = img.getAttribute( 'data-layers-intent' ) || '';
 
 		// Check anchor's data-layers-setname first (reuse anchor from above)
 		if ( anchor ) {
@@ -317,9 +318,8 @@ class ApiFallback {
 
 		// Fallback to data-layers-intent
 		if ( !setName ) {
-			const intent = img.getAttribute( 'data-layers-intent' ) || '';
-			if ( intent && intent !== 'on' && intent !== 'none' && intent !== 'off' ) {
-				setName = intent;
+			if ( imgIntent && imgIntent !== 'on' && imgIntent !== 'none' && imgIntent !== 'off' ) {
+				setName = imgIntent;
 				this.debugLog( 'Using set name from data-layers-intent:', setName );
 			}
 		}
@@ -356,6 +356,12 @@ class ApiFallback {
 		api.get( apiParams ).then( ( data ) => {
 			try {
 				if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
+					// Layer set doesn't exist, but if intent was specified,
+					// still show the overlay so users can create the set
+					if ( imgIntent && imgIntent !== 'off' && imgIntent !== 'none' ) {
+						this.viewerManager.initializeOverlayOnly( img, setName || 'default' );
+						this.debugLog( 'Layer set not found, showing overlay-only for:', setName || 'default' );
+					}
 					return;
 				}
 

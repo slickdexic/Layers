@@ -38,7 +38,8 @@ describe( 'ApiFallback', () => {
 
 		// Create mock viewer manager
 		mockViewerManager = {
-			initializeViewer: jest.fn()
+			initializeViewer: jest.fn(),
+			initializeOverlayOnly: jest.fn()
 		};
 
 		// Create mock API
@@ -561,16 +562,52 @@ describe( 'ApiFallback', () => {
 			);
 		} );
 
-		it( 'should not initialize viewer when API returns no layerset', async () => {
+		it( 'should not initialize viewer or overlay when API returns no layerset and no intent', async () => {
 			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
 			mockApi.get.mockResolvedValue( { layersinfo: {} } );
 
 			const img = document.createElement( 'img' );
+			// No data-layers-intent attribute set
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
 
 			expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
+			expect( mockViewerManager.initializeOverlayOnly ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should initialize overlay-only when layerset missing but intent specified', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( { layersinfo: {} } );
+
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'my-custom-set' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
+			expect( mockViewerManager.initializeOverlayOnly ).toHaveBeenCalledWith(
+				img,
+				'my-custom-set'
+			);
+		} );
+
+		it( 'should initialize overlay-only with default when intent is "on"', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( { layersinfo: {} } );
+
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
+			expect( mockViewerManager.initializeOverlayOnly ).toHaveBeenCalledWith(
+				img,
+				'default'
+			);
 		} );
 
 		it( 'should not initialize viewer when layers array is empty', async () => {

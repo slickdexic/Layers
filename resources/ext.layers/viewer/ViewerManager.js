@@ -48,6 +48,9 @@ class ViewerManager {
 		const FreshnessChecker = getClass( 'Viewer.FreshnessChecker', 'FreshnessChecker' );
 		this.freshnessChecker = ( options && options.freshnessChecker ) ||
 			( FreshnessChecker ? new FreshnessChecker( { debug: this.debug } ) : null );
+
+		// Track created wrappers for cleanup
+		this._createdWrappers = new WeakMap();
 	}
 
 	/**
@@ -91,6 +94,11 @@ class ViewerManager {
 			container.insertBefore( wrapper, img );
 			wrapper.appendChild( img );
 			container = wrapper;
+
+			// Track the wrapper we created for this image (for cleanup)
+			if ( this._createdWrappers ) {
+				this._createdWrappers.set( img, wrapper );
+			}
 		}
 		return container;
 	}
@@ -168,8 +176,15 @@ class ViewerManager {
 		}
 
 		// Get set name from data attribute
-		const setname = img.getAttribute( 'data-layer-setname' ) ||
-			img.getAttribute( 'data-layers-intent' ) || 'default';
+		// data-layer-setname is explicit set name from existing layer data
+		// data-layers-intent may be 'on', 'true', or a specific set name
+		let setname = img.getAttribute( 'data-layer-setname' );
+		if ( !setname ) {
+			const intent = img.getAttribute( 'data-layers-intent' ) || '';
+			// Generic enable values should use 'default', specific names pass through
+			const genericValues = [ 'on', 'true', 'all', '1' ];
+			setname = genericValues.includes( intent.toLowerCase() ) ? 'default' : ( intent || 'default' );
+		}
 
 		// Get ViewerOverlay class
 		const ViewerOverlay = getClass( 'Viewer.Overlay', 'ViewerOverlay' );
@@ -229,6 +244,93 @@ class ViewerManager {
 			this.debugWarn( 'Viewer reinit error:', e );
 			return false;
 		}
+	}
+
+	/**
+	 * Initialize only the edit/view overlay for an image, without a viewer.
+	 *
+	 * This is used when a layer set is referenced but doesn't exist yet,
+	 * allowing users to click the edit button to create the new set.
+	 *
+	 * @param {HTMLImageElement} img Image element
+	 * @param {string} [setname='default'] The layer set name
+	 * @return {boolean} True if overlay was initialized
+	 */
+	initializeOverlayOnly( img, setname ) {
+		if ( !img ) {
+			return false;
+		}
+
+		// Skip if overlay already exists
+		if ( img.layersOverlay ) {
+			this.debugLog( 'initializeOverlayOnly: overlay already exists' );
+			return false;
+		}
+
+		try {
+			const container = this.ensurePositionedContainer( img );
+
+			// Store the intended setname for overlay use
+			if ( setname && setname !== 'default' ) {
+				img.setAttribute( 'data-layer-setname', setname );
+			}
+
+			// Mark that this set needs to be auto-created when editing
+			img.setAttribute( 'data-layer-autocreate', '1' );
+
+			this._initializeOverlay( img, container );
+			this.debugLog( 'Overlay-only initialized for non-existent set:', setname || 'default' );
+			return true;
+		} catch ( e ) {
+			this.debugWarn( 'Overlay-only init error:', e );
+			return false;
+		}
+	}
+
+	/**
+	 * Completely destroy a viewer and clean up all created DOM elements.
+	 *
+	 * This should be called when permanently removing a viewer from an image,
+	 * such as during page teardown or when layers are removed from an image.
+	 *
+	 * @param {HTMLImageElement} img Image element with viewer to destroy
+	 */
+	destroyViewer( img ) {
+		if ( !img ) {
+			return;
+		}
+
+		// Destroy the viewer instance
+		if ( img.layersViewer ) {
+			if ( typeof img.layersViewer.destroy === 'function' ) {
+				img.layersViewer.destroy();
+			}
+			img.layersViewer = null;
+		}
+
+		// Destroy the overlay
+		if ( img.layersOverlay ) {
+			if ( typeof img.layersOverlay.destroy === 'function' ) {
+				img.layersOverlay.destroy();
+			}
+			img.layersOverlay = null;
+		}
+
+		// Clean up wrapper element if we created one
+		if ( this._createdWrappers ) {
+			const wrapper = this._createdWrappers.get( img );
+			if ( wrapper && wrapper.parentNode ) {
+				// Move image back to parent before removing wrapper
+				wrapper.parentNode.insertBefore( img, wrapper );
+				wrapper.parentNode.removeChild( wrapper );
+				this._createdWrappers.delete( img );
+			}
+		}
+
+		// Clear flags
+		img.layersPending = false;
+
+		this.debugLog( 'Viewer destroyed and cleaned up' );
 	}
 
 	/**
@@ -600,33 +702,39 @@ class ViewerManager {
 	 * @return {string|null} Filename or null if not found
 	 */
 	extractFilenameFromImg( img ) {
+		let filename = null;
+
 		// Try data-file-name attribute first
 		const fileNameAttr = img.getAttribute( 'data-file-name' );
 		if ( fileNameAttr ) {
-			return fileNameAttr;
-		}
-
-		// Try extracting from src URL
-		const src = img.src || '';
-		const srcMatch = src.match( /\/(?:images\/.*?\/)?([^/]+\.[a-zA-Z]+)(?:[?]|$)/ );
-		if ( srcMatch && srcMatch[ 1 ] ) {
-			let filename = decodeURIComponent( srcMatch[ 1 ] );
-			// Remove any thumbnail prefix like "123px-"
-			filename = filename.replace( /^\d+px-/, '' );
-			return filename;
-		}
-
-		// Try extracting from parent link href
-		const parent = img.parentNode;
-		if ( parent && parent.tagName === 'A' ) {
-			const href = parent.getAttribute( 'href' ) || '';
-			const hrefMatch = href.match( /\/File:([^/?#]+)/ );
-			if ( hrefMatch && hrefMatch[ 1 ] ) {
-				return decodeURIComponent( hrefMatch[ 1 ].replace( /_/g, ' ' ) );
+			filename = fileNameAttr;
+		} else {
+			// Try extracting from src URL
+			const src = img.src || '';
+			const srcMatch = src.match( /\/(?:images\/.*?\/)?([^/]+\.[a-zA-Z]+)(?:[?]|$)/ );
+			if ( srcMatch && srcMatch[ 1 ] ) {
+				filename = decodeURIComponent( srcMatch[ 1 ] );
+				// Remove any thumbnail prefix like "123px-"
+				filename = filename.replace( /^\d+px-/, '' );
+			} else {
+				// Try extracting from parent link href
+				const parent = img.parentNode;
+				if ( parent && parent.tagName === 'A' ) {
+					const href = parent.getAttribute( 'href' ) || '';
+					const hrefMatch = href.match( /\/File:([^/?#]+)/ );
+					if ( hrefMatch && hrefMatch[ 1 ] ) {
+						filename = decodeURIComponent( hrefMatch[ 1 ].replace( /_/g, ' ' ) );
+					}
+				}
 			}
 		}
 
-		return null;
+		// Sanitize: strip any wikitext brackets that might have leaked through
+		if ( filename ) {
+			filename = filename.replace( /[\x5B\x5D]/g, '' );
+		}
+
+		return filename;
 	}
 
 	/**
@@ -708,12 +816,20 @@ class ViewerManager {
 						return;
 					}
 
-					const payload = {
-						layers: layersArr,
-						baseWidth: layerset.baseWidth || img.naturalWidth || img.width || null,
-						baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null,
-						backgroundVisible: layerset.data.backgroundVisible !== undefined ? layerset.data.backgroundVisible : true,
-						backgroundOpacity: layerset.data.backgroundOpacity !== undefined ? layerset.data.backgroundOpacity : 1.0
+				// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
+				let bgVisible = true;
+				if ( layerset.data.backgroundVisible !== undefined ) {
+					const bgVal = layerset.data.backgroundVisible;
+					bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
+				}
+
+				const payload = {
+					layers: layersArr,
+					baseWidth: layerset.baseWidth || img.naturalWidth || img.width || null,
+					baseHeight: layerset.baseHeight || img.naturalHeight || img.height || null,
+					backgroundVisible: bgVisible,
+					backgroundOpacity: layerset.data.backgroundOpacity !== undefined
+						? parseFloat( layerset.data.backgroundOpacity ) : 1.0
 					};
 
 					this.initializeViewer( img, payload );

@@ -2,6 +2,29 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.18] - 2026-01-19
+
+### Fixed
+- **Critical: Edit Overlay Fails for Non-Existent Layer Sets** — Fixed a serious production bug where clicking the edit overlay for a non-existent layer set (e.g., `layerset=888`) would produce a "Bad title: contains invalid characters" error. Multiple issues were corrected:
+  - PHP: `ThumbnailProcessor` now sets `data-file-name` attribute even when no layer data exists, preventing fallback filename extraction from failing
+  - PHP: `ThumbnailProcessor` now sets `data-layers-intent` for named sets (not just 'on'/'all')
+  - JS: `ViewerOverlay` now passes the pre-built URL to the modal instead of an options object
+  - JS: Added defensive sanitization to strip wikitext bracket characters from filenames
+  - JS: `ApiFallback` now calls `initializeOverlayOnly()` when layer set doesn't exist but intent was specified
+
+### Technical Details
+- Updated `ThumbnailProcessor.php`: Added `data-file-name` to else branch (no layer data case)
+- Updated `ThumbnailProcessor.php`: Changed intent detection to allow any non-disabled layersFlag value
+- Updated `ViewerOverlay.js`: `_handleEditClick()` builds URL with `_buildEditUrl()` instead of passing options object
+- Updated `ViewerOverlay.js`: Constructor sanitizes filename with `/[\x5B\x5D]/g` regex (hex escapes for brackets)
+- Updated `ViewerManager.js`: `extractFilenameFromImg()` sanitizes extracted filenames to strip brackets
+- Updated `ViewerManager.js`: `initializeOverlayOnly()` sets `data-layer-autocreate='1'` for non-existent sets
+- Updated `ApiFallback.js`: Calls `initializeOverlayOnly()` when API returns no data but intent exists
+- Added 2 new tests for bracket sanitization in `ViewerManager.test.js`
+- All viewer-related tests passing (209 tests: 96 ViewerManager + 64 ApiFallback + 51 ViewerOverlay)
+
+---
+
 ## [1.5.17] - 2026-01-19
 
 ### Added

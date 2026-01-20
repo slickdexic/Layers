@@ -419,12 +419,25 @@ class ThumbnailProcessor {
 			$msg = 'Added %d layers, instance: %s, JSON size: %d bytes, revision: %s';
 			$this->log( sprintf( $msg, count( $layers ), $instanceId, $jsonSize, $revision ?? 'null' ) );
 		} else {
-			$this->log( "No layer data, instance: $instanceId" );
+			$this->log( "No layer data, instance: $instanceId, layersFlag: " . ( $layersFlag ?? 'null' ) );
 
 			// Mark intent for client-side API fetch
-			if ( in_array( $layersFlag, [ 'on', 'all', true ], true ) ) {
+			// Include named sets (any non-null, non-empty, non-disabled value)
+			$disabledValues = [ 'off', 'none', 'false', '0' ];
+			$shouldAddIntent = $layersFlag !== null
+				&& $layersFlag !== ''
+				&& !in_array( strtolower( $layersFlag ), $disabledValues, true );
+
+			if ( $shouldAddIntent ) {
 				$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
-				$attribs['data-layers-intent'] = 'on';
+				// Use the actual set name for named sets, 'on' for generic enable
+				$intentValue = in_array( $layersFlag, [ 'on', 'all', 'true', true ], true ) ? 'on' : $layersFlag;
+				$attribs['data-layers-intent'] = $intentValue;
+				$this->log( "Set data-layers-intent: $intentValue" );
+				// Also add filename for API lookup (needed by JS viewers)
+				if ( $file && method_exists( $file, 'getName' ) ) {
+					$attribs['data-file-name'] = $file->getName();
+				}
 			}
 		}
 	}
