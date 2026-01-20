@@ -3,6 +3,7 @@
  * Handles DOM creation and updates for layer items in the layer panel
  *
  * Extracted from LayerPanel.js for better separation of concerns
+ * Supports virtual scrolling for large layer counts (30+) via VirtualLayerList
  */
 ( function () {
 	'use strict';
@@ -10,6 +11,15 @@
 	// Import dependencies (available from Layers namespace or legacy global)
 	const IconFactory = ( window.Layers && window.Layers.UI && window.Layers.UI.IconFactory ) ||
 		window.IconFactory;
+
+	/**
+	 * Get VirtualLayerList class from namespace
+	 *
+	 * @return {Function|null} VirtualLayerList class or null
+	 */
+	function getVirtualLayerList() {
+		return ( window.Layers && window.Layers.UI && window.Layers.UI.VirtualLayerList ) || null;
+	}
 
 	/**
 	 * LayerListRenderer class
@@ -25,6 +35,7 @@
 		 * @param {Function} config.getSelectedLayerId Function to get currently selected layer ID
 		 * @param {Function} config.getLayers Function to get current layers array
 		 * @param {Function} [config.onMoveLayer] Callback for keyboard layer reordering
+		 * @param {HTMLElement} [config.scrollContainer] Scrollable container for virtualization
 		 */
 		constructor( config ) {
 			this.layerList = config.layerList;
@@ -34,9 +45,55 @@
 			this.getLayers = config.getLayers || ( () => [] );
 			this.onMoveLayer = config.onMoveLayer || null;
 			this.onToggleGroupExpand = config.onToggleGroupExpand || null;
+			this.scrollContainer = config.scrollContainer || null;
 
 			// Indentation per nesting level in pixels
 			this.indentPerLevel = 20;
+
+			// Virtual list for large layer counts
+			this._virtualList = null;
+			this._initVirtualList();
+		}
+
+		/**
+		 * Initialize virtual list if available and container is provided
+		 *
+		 * @private
+		 */
+		_initVirtualList() {
+			const VirtualLayerList = getVirtualLayerList();
+			const container = this.scrollContainer || this._findScrollContainer();
+
+			if ( VirtualLayerList && container && this.layerList ) {
+				this._virtualList = new VirtualLayerList( {
+					container: container,
+					listElement: this.layerList,
+					getLayers: this.getLayers,
+					createItem: this.createLayerItem.bind( this ),
+					updateItem: this.updateLayerItem.bind( this ),
+					itemHeight: 44,
+					overscan: 5,
+					threshold: 30
+				} );
+			}
+		}
+
+		/**
+		 * Find the scroll container (parent with overflow)
+		 *
+		 * @return {HTMLElement|null} Scroll container or null
+		 * @private
+		 */
+		_findScrollContainer() {
+			let el = this.layerList;
+			while ( el && el.parentElement ) {
+				el = el.parentElement;
+				const style = window.getComputedStyle( el );
+				if ( style.overflowY === 'auto' || style.overflowY === 'scroll' ) {
+					return el;
+				}
+			}
+			return null;
 		}
 
 		/**
@@ -67,6 +124,7 @@
 
 		/**
 		 * Render the layer list
+		 * Uses virtual scrolling for large layer counts (30+) to prevent UI slowdowns
 		 */
 		render() {
 			const layers = this.getLayers();
@@ -76,15 +134,12 @@
 				return;
 			}
 
-			// Map existing DOM items by ID (exclude background layer item)
-			const existingItems = {};
-			const domItems = listContainer.querySelectorAll( '.layer-item:not(.background-layer-item)' );
-			for ( let i = 0; i < domItems.length; i++ ) {
-				existingItems[ domItems[ i ].dataset.layerId ] = domItems[ i ];
-			}
-
+			// Handle empty state
 			if ( layers.length === 0 ) {
-				// Handle empty state
+				// Disable virtualization if active
+				if ( this._virtualList ) {
+					this._virtualList.disable();
+				}
 				while ( listContainer.firstChild ) {
 					listContainer.removeChild( listContainer.firstChild );
 				}
@@ -99,6 +154,31 @@
 			const emptyMsg = listContainer.querySelector( '.layers-empty' );
 			if ( emptyMsg ) {
 				listContainer.removeChild( emptyMsg );
+			}
+
+			// Try virtual rendering for large layer counts
+			if ( this._virtualList && this._virtualList.render() ) {
+				// Virtualization handled the render
+				return;
+			}
+
+			// Standard rendering for smaller layer counts
+			this._renderStandard( layers, listContainer );
+		}
+
+		/**
+		 * Standard (non-virtual) rendering for smaller layer counts
+		 *
+		 * @param {Array} layers Array of layer objects
+		 * @param {HTMLElement} listContainer Layer list container
+		 * @private
+		 */
+		_renderStandard( layers, listContainer ) {
+			// Map existing DOM items by ID (exclude background layer item)
+			const existingItems = {};
+			const domItems = listContainer.querySelectorAll( '.layer-item:not(.background-layer-item)' );
+			for ( let i = 0; i < domItems.length; i++ ) {
+				existingItems[ domItems[ i ].dataset.layerId ] = domItems[ i ];
 			}
 
 			// First pass: Remove items that are no longer in the layer list

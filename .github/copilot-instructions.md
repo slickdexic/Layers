@@ -99,7 +99,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 19 files exceed 1,000 lines:
+  - **God classes:** 20 files exceed 1,000 lines:
     - **Generated data files (exempt from refactoring):** EmojiLibraryData.js (~26,277 lines), ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,003 lines)
     - **Hand-written files:** CanvasManager, LayerPanel, Toolbar, LayersEditor, SelectionManager, APIManager, ArrowRenderer, CalloutRenderer, PropertyBuilders, ToolManager, InlineTextEditor, CanvasRenderer, GroupManager, ResizeCalculator, ToolbarStyleControls, TransformController
     - All hand-written files use delegation patterns, see improvement_plan.md
@@ -378,11 +378,11 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (currently 9,718 tests, 151 suites)
-- Coverage (92.80% statement, 83.75% branch)
-- JavaScript file count (124 files total, ~111,289 lines)
+- Test count (9,783 tests in 153 suites — verified January 21, 2026)
+- Coverage (93.52% statement, 83.89% branch — verified January 21, 2026)
+- JavaScript file count (124 files total, ~111,382 lines)
 - PHP file count (33 files, ~11,758 lines)
-- God class count (19 files >1,000 lines; 3 generated data files, 16 hand-written)
+- God class count (20 files >1,000 lines; 3 generated data files, 17 hand-written)
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)

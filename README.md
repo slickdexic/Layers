@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-92.80%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-9%2C718%20passing%20(100%25)-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-93.52%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-9%2C753%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -239,6 +239,19 @@ $wgLayersMaxNamedSets = 15;            // Max named sets per image
 $wgLayersMaxRevisionsPerSet = 50;      // Max revisions per set
 $wgLayersMaxImageBytes = 1048576;      // 1 MB for imported images
 
+// Default set name
+$wgLayersDefaultSetName = 'default';
+
+// Editor behavior
+$wgLayersContextAwareToolbar = true;   // Context-aware toolbar (set false for classic mode)
+$wgLayersUseBinaryOverlays = false;    // Legacy binary overlay files
+
+// Image and rendering limits
+$wgLayersMaxImageSize = 4096;          // Max image size for editing (px)
+$wgLayersThumbnailCache = true;        // Cache composite thumbnails
+$wgLayersImageMagickTimeout = 30;      // ImageMagick timeout (seconds)
+$wgLayersMaxImageDimensions = 8192;    // Max width/height for processing
+
 // Permissions
 $wgGroupPermissions['user']['editlayers'] = true;
 $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
@@ -254,24 +267,25 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), ~11,743 lines across 33 files
-- **Frontend:** HTML5 Canvas editor with 120 JS files (~108,712 lines), 100+ ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), **11,758 lines across 33 files**
+- **Frontend:** HTML5 Canvas editor with **124 JS files (111,382 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** 18 god classes (files >1,000 lines), 3 are generated data files (exempt)
+- **Technical Debt:** **20 god classes** (files >1,000 lines), 3 are generated data files (exempt)
   - EmojiLibraryData.js (26,277 lines) - generated emoji index data
   - ShapeLibraryData.js (11,299 lines) - generated shape definitions
-  - 15 hand-written files with proper delegation patterns
+    - 17 hand-written files with proper delegation patterns
 
-**Test Coverage (January 2026):**
+**Test Coverage (Last recorded):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 9,693 passing (100%) |
+| Jest tests | 9,783 passing (153 suites) |
 | PHPUnit tests | 24 test files |
-| Statement coverage | 92.80% |
-| Branch coverage | 83.75% |
-| Test suites | 150 |
+| Statement coverage | 93.52% |
+| Branch coverage | 83.89% |
+| Function coverage | 91.37% |
+| Line coverage | 93.68% |
 
 **Security:**
 
@@ -292,7 +306,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
-- ⚠️ **17 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
+- ⚠️ **20 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
 
 **Resolved Issues:**
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
@@ -322,14 +336,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 123 | ✅ |
-| Total JS lines | ~111,000 | ✅ Includes generated data |
+| Total JS files | 124 | ✅ |
+| Total JS lines | 111,382 | ✅ Includes generated data |
 | ES6 classes | 100+ | ✅ |
-| God classes (>1000 lines) | 19 | ⚠️ 3 generated, 16 with delegation |
-| Tests passing | 9,693 | ✅ |
+| God classes (>1000 lines) | 20 | ⚠️ 3 generated, 17 with delegation |
+| Tests passing | 9,783 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 92.80% | ✅ Excellent |
-| Branch coverage | 83.75% | ✅ Target met |
+| Statement coverage | 93.52% | ✅ Excellent |
+| Branch coverage | 83.89% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
@@ -352,7 +366,7 @@ npm run docs:markdown # Markdown in docs/API.md
 | [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) | Getting started for contributors |
 | [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) | Named sets feature documentation |
 | [WIKITEXT_USAGE.md](docs/WIKITEXT_USAGE.md) | Wikitext syntax guide |
-| [codebase_review.md](codebase_review.md) | Technical assessment (Rating: 8.0/10) |
+| [codebase_review.md](codebase_review.md) | Technical assessment (January 20, 2026) |
 | [improvement_plan.md](improvement_plan.md) | Development roadmap with priorities |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 

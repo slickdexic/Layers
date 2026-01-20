@@ -4,6 +4,22 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.20 (January 20, 2026)
+
+### Added
+- **Virtual Scrolling for Layer Lists (P2.1)** — Layer panel now uses virtual scrolling for lists with 30+ layers, dramatically improving performance and preventing browser slowdowns with large layer counts
+  - DOM element recycling prevents memory issues
+  - Automatic activation threshold at 30 layers
+  - Smooth scroll performance maintained regardless of layer count
+
+### Technical Details
+- Created `VirtualLayerList.js` in `ext.layers.editor/ui` (381 lines)
+- Integrated with `LayerListRenderer.js` for seamless activation
+- 30 tests for VirtualLayerList (9,783 total tests, 153 suites)
+- Test coverage: 93.52% statement, 83.89% branch
+
+---
+
 ## Version 1.5.19 (January 20, 2026)
 
 ### Added
@@ -15,7 +31,8 @@ Version history for the Layers extension.
 ### Technical Details
 - Created `IdGenerator.js` in `ext.layers.shared` with session counter + timestamp + random suffix
 - Updated StateManager, APIManager, ToolManager, SelectionManager to use shared generator
-- 13 new tests for IdGenerator (9,718 total tests)
+- 13 new tests for IdGenerator
+- 35 new tests for EmojiPickerPanel (9,753 total tests)
 - Codebase review Audit v12: rating 9.2/10
 
 ---

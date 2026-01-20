@@ -6,12 +6,29 @@
 // Import Jest DOM matchers (skip for now to avoid ES6 issues)
 // require('@testing-library/jest-dom');
 
+// Suppress jsdom "Not implemented" errors (navigation, prompt, etc.)
+// These are expected in a test environment and create noise in test output
+const originalConsoleError = console.error;
+global.console.error = function ( ...args ) {
+    // Filter out jsdom "Not implemented" warnings
+    if ( args[ 0 ] && typeof args[ 0 ] === 'string' &&
+         args[ 0 ].includes( 'Not implemented' ) ) {
+        return;
+    }
+    // Filter out jsdom navigation errors
+    if ( args[ 0 ] && typeof args[ 0 ] === 'object' &&
+         args[ 0 ].type === 'not implemented' ) {
+        return;
+    }
+    originalConsoleError.apply( console, args );
+};
+
 // Mock console methods in tests to avoid noise
 global.console = Object.assign({}, console, {
     // Keep log, warn, error for debugging
     log: jest.fn(),
     warn: jest.fn(),
-    error: jest.fn(),
+    // error is already handled above
     // Silence debug and info
     debug: jest.fn(),
     info: jest.fn()
