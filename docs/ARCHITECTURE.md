@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 14, 2026
-**Version:** 1.5.10
+**Last Updated:** January 21, 2026
+**Version:** 1.5.20
 
 ---
 
@@ -16,80 +16,90 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (January 7, 2026)
+## Codebase Statistics (January 21, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **113** |
-| Viewer module | ~850 lines |
-| Shared module | ~6,500 lines |
-| Editor module | ~54,000 lines |
-| Total JS lines | **~69,090** |
-| ES6 classes | **95+** |
+| Total JS files | **125** |
+| Total JS lines | **~111,848** |
+| Viewer module | ~2,500 lines |
+| Shared module | ~8,000 lines |
+| Editor module | ~60,000 lines |
+| Shape/Emoji data | ~40,000 lines (generated) |
+| ES6 classes | **100+** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.05% stmt, 84.98% branch** |
-| Jest tests | **9,469** (147 suites) |
+| Test coverage | **93.52% stmt, 83.89% branch** |
+| Jest tests | **9,783** (153 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **16** (all use delegation patterns) |
-| Drawing tools | **15** (pointer, text, textbox, callout, pen, rectangle, circle, ellipse, polygon, star, arrow, line, marker, dimension, custom shape) |
-| eslint-disable comments | **9** ✅ (below <15 target) |
+| God classes (>1000 lines) | **20** (3 generated, 17 hand-written) |
+| Drawing tools | **15** |
+| Shape library | **1,310 shapes** |
+| Emoji library | **2,817 emoji** |
+| eslint-disable comments | **9** ✅ |
 
 ---
 
-### Recent Architecture Changes
+## Recent Architecture Changes
 
-### January 2026: v1.4.0-v1.4.8
+### January 2026: v1.5.15-v1.5.20
 
-**v1.4.8 - Mobile UI Polish:**
-- Collapsible layer panel for mobile (toggle button, collapsed state)
-- On-screen keyboard handling for text input (Visual Viewport API)
-- Touch-friendly selection handles (14px on touch vs 8px on mouse)
-- Responsive toolbar with 768px and 480px breakpoints
+**v1.5.20 - Virtual Scrolling:**
+- VirtualLayerList.js for layer panels with 30+ layers
+- DOM element recycling prevents memory issues
+- Modal overlay UX fix (duplicate close button removed)
 
-**v1.4.0-v1.4.1 - Major Feature Release:**
-- Curved arrows with Bézier curves (FR-4 complete)
-- Live color picker preview (FR-9 complete)
-- Live article preview without page edit (FR-10 complete)
-- Real-time property panel updates during drag/resize
-- eslint-disable count reduced from 13 to 8
-- Toolbar dropdown grouping for tool organization
+**v1.5.19 - Shared Utilities:**
+- IdGenerator.js for unique layer ID generation
+- ViewerManager error tracking improvements
 
-### December 2025: Layer Grouping & Folders
+**v1.5.18 - Critical Bug Fixes:**
+- Non-existent layer set handling fixed
+- Edit overlay initialization for missing sets
 
-**v1.2.13-v1.2.16 - Layer Grouping Feature:**
-- New GroupManager.js (1,132 lines) for folder/grouping operations
-- FolderOperationsController for folder create/delete, visibility toggle
-- SetSelectorController for named layer set management
-- omitProperty utility for clean property removal
+**v1.5.15 - Hover Overlay Actions:**
+- Edit/View icons on hover over layered images
+- Floating text formatting toolbar for inline editing
+- Modal editor integration on article pages
 
-**v1.2.8 - Blur Fill Bug Fix:**
-- Fixed coordinate transformation issues for blur fill
-- Rectangle blur regions now render correctly
+### Previous Releases
 
-**v1.2.0 - Named Layer Sets:**
-- Multiple named annotation sets per image
-- SetSelectorController extracted from UIManager
-- Full version history per named set
+**v1.5.11-v1.5.12 - Libraries:**
+- Shape Library with 1,310 shapes (ISO 7010, IEC 60417, etc.)
+- Emoji Picker with 2,817 Noto Color Emoji
 
-### Known Technical Debt
+### God Classes (20 Files ≥1,000 Lines)
 
-**12 files exceed 1,000 lines (god classes) - all use delegation patterns:**
-- LayerPanel.js (2,191) - facade with 9 controllers
-- CanvasManager.js (1,934) - facade with 10+ controllers
-- Toolbar.js (1,658) - UI controls consolidation
-- LayersEditor.js (1,482) - main entry point/orchestrator
-- SelectionManager.js (1,388) - delegates to SelectionState, MarqueeSelection
-- ArrowRenderer.js (1,356) - rendering logic (grew with curved arrows in v1.3.3)
-- CalloutRenderer.js (1,291) - rendering logic
-- APIManager.js (1,254) - API integration layer
-- ToolManager.js (1,214) - tool delegation pattern
-- GroupManager.js (1,132) - layer grouping operations (new in v1.2.13)
-- CanvasRenderer.js (1,113) - delegates to SelectionRenderer
-- ToolbarStyleControls.js (1,014) - style controls (grew with live preview in v1.3.3)
+**Generated Data Files (exempt from refactoring):**
+| File | Lines | Notes |
+|------|-------|-------|
+| EmojiLibraryData.js | ~26,277 | Generated emoji metadata |
+| ShapeLibraryData.js | ~11,299 | Generated shape definitions |
+| EmojiLibraryIndex.js | ~3,003 | Generated search index |
 
-**Note:** All 12 god classes use delegation patterns. Code quality is maintained with 94.6% test coverage. Files approaching the limit (ShapeRenderer at 924 lines) are monitored.
+**Hand-Written Files with Delegation Patterns:**
+| File | Lines | Delegation Status |
+|------|-------|-------------------|
+| CanvasManager.js | 2,010 | ✅ 10+ controllers |
+| Toolbar.js | 1,847 | ✅ 4 modules |
+| LayerPanel.js | 1,806 | ✅ 9 controllers |
+| LayersEditor.js | 1,715 | ✅ 3 modules |
+| SelectionManager.js | 1,431 | ✅ 3 modules |
+| APIManager.js | 1,420 | ✅ APIErrorHandler |
+| ArrowRenderer.js | 1,301 | Feature complexity |
+| CalloutRenderer.js | 1,291 | Feature complexity |
+| PropertyBuilders.js | 1,284 | UI builders |
+| InlineTextEditor.js | 1,258 | Feature complexity |
+| ToolManager.js | 1,224 | ✅ 2 handlers |
+| GroupManager.js | 1,132 | Group operations |
+| CanvasRenderer.js | 1,132 | ✅ SelectionRenderer |
+| TransformController.js | 1,109 | Transform engine |
+| ResizeCalculator.js | 1,105 | Shape calculations |
+| ToolbarStyleControls.js | 1,099 | ✅ Style controls |
+| PropertiesForm.js | 1,001 | ✅ PropertyBuilders |
 
-See [improvement_plan.md](../improvement_plan.md) for remediation plan.
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 93.52% test coverage.
+
+See [improvement_plan.md](../improvement_plan.md) for detailed status.
 
 ---
 
@@ -176,7 +186,7 @@ graph TB
 ```mermaid
 graph LR
     subgraph Facade["CanvasManager (Facade)"]
-        cm["CanvasManager<br/>1,877 lines"]
+        cm["CanvasManager<br/>2,010 lines"]
     end
 
     subgraph Zoom["Zoom/Pan"]
@@ -188,8 +198,8 @@ graph LR
     end
 
     subgraph Transform["Transforms"]
-        tc["TransformController<br/>779 lines"]
-        rc["ResizeCalculator<br/>822 lines"]
+        tc["TransformController<br/>1,109 lines"]
+        rc["ResizeCalculator<br/>1,105 lines"]
     end
 
     subgraph Hit["Hit Testing"]
@@ -482,14 +492,17 @@ ZoomPanController.prototype.zoomIn = function() {
 |------------|----------------|-------|
 | ZoomPanController | Zoom, pan, fit-to-window | ~370 |
 | GridRulersController | Grid, rulers, snap-to-grid | ~385 |
-| TransformController | Resize, rotate, drag | ~779 |
+| TransformController | Resize, rotate, drag | ~1,109 |
 | HitTestController | Click detection, selection | ~382 |
 | DrawingController | Shape creation | ~630 |
 | ClipboardController | Copy, cut, paste | ~248 |
 | InteractionController | Mouse/touch events | ~501 |
 | RenderCoordinator | Render scheduling | ~398 |
 | StyleController | Style options | ~100 |
-| ResizeCalculator | Shape resize calculations | ~822 |
+| ResizeCalculator | Shape resize calculations | ~1,105 |
+| SmartGuidesController | Alignment guides | ~568 |
+| AlignmentController | Layer alignment | ~564 |
+| InlineTextEditor | Inline text editing | ~1,258 |
 
 ### 3. Editor Module Extraction Pattern
 
@@ -855,19 +868,23 @@ tests/jest/
 ├── CanvasManager.test.js       # Core canvas tests
 ├── ZoomPanController.test.js   # Controller-specific
 ├── SelectionManager.test.js    # Selection logic
-├── integration/                # Multi-module tests (138 tests)
-│   ├── SelectionWorkflow.test.js (44 tests)
-│   ├── LayerWorkflow.test.js (70 tests)
-│   └── SaveLoadWorkflow.test.js (24 tests)
+├── VirtualLayerList.test.js    # Virtual scrolling (30 tests)
+├── integration/                # Multi-module tests
+│   ├── SelectionWorkflow.test.js
+│   ├── LayerWorkflow.test.js
+│   └── SaveLoadWorkflow.test.js
+├── shapeLibrary/               # Library tests
+│   ├── EmojiPickerPanel.test.js (35 tests)
+│   └── ShapeLibraryPanel.test.js
 └── RegressionTests.test.js     # Bug fix validation
 ```
 
 **Key patterns:**
-- Each controller has its own test file (92 test files total)
+- Each controller has its own test file (100+ test files)
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- 4,714 tests, 91% coverage
+- **9,783 tests, 93.52% statement coverage, 83.89% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -886,50 +903,67 @@ E2E tests run against a real MediaWiki installation in CI.
 extensions/Layers/
 ├── extension.json           # MW manifest
 ├── services.php             # DI container setup
-├── src/                     # PHP backend
-│   ├── Api/                 # API modules
+├── src/                     # PHP backend (~11,758 lines)
+│   ├── Api/                 # API modules (4 endpoints)
 │   ├── Database/            # Data access
 │   ├── Hooks/               # MW hook handlers
 │   ├── Logging/             # LoggerAwareTrait, etc.
 │   ├── Security/            # RateLimiter
 │   └── Validation/          # Server-side validators
 ├── resources/
-│   ├── ext.layers/          # Viewer (article pages)
+│   ├── ext.layers/          # Viewer (article pages, ~2,500 lines)
 │   │   ├── init.js
-│   │   └── LayersViewer.js
-│   ├── ext.layers.shared/   # Shared modules (3,888 lines)
-│   │   ├── LayerRenderer.js     # Facade/dispatcher (371 lines)
-│   │   ├── ShapeRenderer.js     # Shape rendering (1,050 lines)
-│   │   ├── ArrowRenderer.js     # Arrow rendering (702 lines)
-│   │   ├── ShadowRenderer.js    # Shadow effects (521 lines)
-│   │   ├── TextRenderer.js      # Text rendering (343 lines)
-│   │   ├── EffectsRenderer.js   # Blur effects (245 lines)
-│   │   ├── BoundsCalculator.js  # Layer bounds (340 lines)
-│   │   └── PolygonGeometry.js   # Polygon math (213 lines)
-│   └── ext.layers.editor/   # Editor (~31,881 lines)
-│       ├── LayersEditor.js  # Main orchestrator (1,284 lines)
-│       ├── CanvasManager.js # Canvas facade (1,975 lines)
-│       ├── AccessibilityAnnouncer.js  # ARIA live regions
-│       ├── editor/          # Extracted editor modules
-│       │   ├── EditorBootstrap.js   # Init, hooks, cleanup
-│       │   ├── RevisionManager.js   # Revision management
-│       │   └── DialogManager.js     # Modal dialogs
-│       ├── canvas/          # Extracted controllers (11 files)
-│       │   ├── ZoomPanController.js
-│       │   ├── GridRulersController.js
-│       │   ├── TransformController.js
-│       │   ├── ResizeCalculator.js
-│       │   ├── HitTestController.js
-│       │   ├── DrawingController.js
-│       │   ├── ClipboardController.js
-│       │   ├── InteractionController.js
-│       │   ├── RenderCoordinator.js
-│       │   └── StyleController.js
-│       └── *.js             # Other modules
+│   │   ├── viewer/
+│   │   │   ├── ViewerManager.js
+│   │   │   ├── LayersViewer.js
+│   │   │   ├── LayersLightbox.js
+│   │   │   └── ViewerOverlay.js
+│   ├── ext.layers.shared/   # Shared modules (~8,000 lines)
+│   │   ├── LayerRenderer.js     # Facade/dispatcher
+│   │   ├── ShapeRenderer.js     # Shape rendering (~994 lines)
+│   │   ├── ArrowRenderer.js     # Arrow rendering (~1,301 lines)
+│   │   ├── CalloutRenderer.js   # Callout rendering (~1,291 lines)
+│   │   ├── ShadowRenderer.js    # Shadow effects
+│   │   ├── TextRenderer.js      # Text rendering
+│   │   ├── TextBoxRenderer.js   # Text box rendering
+│   │   ├── MarkerRenderer.js    # Numbered markers
+│   │   ├── DimensionRenderer.js # Technical measurements
+│   │   ├── EffectsRenderer.js   # Blur effects
+│   │   ├── GradientRenderer.js  # Gradient fills
+│   │   └── ImageLayerRenderer.js # Image layers
+│   ├── ext.layers.editor/   # Editor (~60,000 lines)
+│   │   ├── LayersEditor.js  # Main orchestrator (1,715 lines)
+│   │   ├── CanvasManager.js # Canvas facade (2,010 lines)
+│   │   ├── AccessibilityAnnouncer.js  # ARIA live regions
+│   │   ├── editor/          # Editor modules
+│   │   │   ├── EditorBootstrap.js
+│   │   │   ├── RevisionManager.js
+│   │   │   └── DialogManager.js
+│   │   ├── canvas/          # Canvas controllers (12 files)
+│   │   │   ├── ZoomPanController.js
+│   │   │   ├── TransformController.js (1,109 lines)
+│   │   │   ├── ResizeCalculator.js (1,105 lines)
+│   │   │   ├── InlineTextEditor.js (1,258 lines)
+│   │   │   └── ... (8 more controllers)
+│   │   ├── ui/              # UI controllers (15+ files)
+│   │   │   ├── LayerListRenderer.js
+│   │   │   ├── VirtualLayerList.js  # NEW: Virtual scrolling
+│   │   │   ├── PropertyBuilders.js (1,284 lines)
+│   │   │   └── PropertiesForm.js (1,001 lines)
+│   │   ├── shapeLibrary/    # Shape & Emoji libraries (~40,000 lines)
+│   │   │   ├── ShapeLibraryData.js (~11,299 lines, generated)
+│   │   │   ├── EmojiLibraryData.js (~26,277 lines, generated)
+│   │   │   ├── EmojiLibraryIndex.js (~3,003 lines, generated)
+│   │   │   ├── ShapeLibraryPanel.js
+│   │   │   └── EmojiPickerPanel.js
+│   │   └── *.js             # Other modules
+│   └── ext.layers.modal/    # Modal editor overlay
+│       ├── LayersEditorModal.js
+│       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (4,300 tests, 87 files)
+│   ├── jest/                # Unit tests (9,783 tests, 153 suites)
 │   ├── e2e/                 # End-to-end tests
-│   └── phpunit/             # PHP tests (17 files)
+│   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation
 ```
 

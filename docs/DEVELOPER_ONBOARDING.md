@@ -1,6 +1,6 @@
 # Layers Extension Developer Onboarding & Architecture Overview
 
-**Last Updated:** December 2025
+**Last Updated:** January 2026
 
 ## Introduction
 This document provides an overview of the Layers extension architecture and onboarding steps for new developers.
@@ -14,20 +14,20 @@ This document provides an overview of the Layers extension architecture and onbo
 
 | Module | Purpose | Lines |
 |--------|---------|-------|
-| `LayersEditor.js` | Main orchestrator | ~1,465 |
-| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~1,877 |
-| `LayerPanel.js` | Layer list UI component | ~2,140 |
-| `SelectionManager.js` | Selection state management | ~1,359 |
-| `ToolManager.js` | Tool state and switching | ~1,259 |
-| `ArrowRenderer.js` | Arrow rendering (curved support) | ~1,217 |
-| `ShapeRenderer.js` | Shape rendering (shared) | ~909 |
-| `LayerRenderer.js` | Shared rendering engine | ~821 |
-| `TransformController.js` | Resize, rotate, drag operations | ~779 |
-| `DialogManager.js` | Modal dialogs with ARIA | ~737 |
-| `ShadowRenderer.js` | Shadow effect rendering | ~556 |
-| `RevisionManager.js` | Revision and named set management | ~494 |
-| `EditorBootstrap.js` | Initialization, hooks, cleanup | ~473 |
-| `AccessibilityAnnouncer.js` | Screen reader support | ~225 |
+| `LayersEditor.js` | Main orchestrator | ~1,715 |
+| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,010 |
+| `LayerPanel.js` | Layer list UI component | ~1,806 |
+| `SelectionManager.js` | Selection state management | ~1,431 |
+| `ToolManager.js` | Tool state and switching | ~1,224 |
+| `ArrowRenderer.js` | Arrow rendering (curved support) | ~1,301 |
+| `ShapeRenderer.js` | Shape rendering (shared) | ~994 |
+| `LayerRenderer.js` | Shared rendering engine | ~963 |
+| `TransformController.js` | Resize, rotate, drag operations | ~1,109 |
+| `DialogManager.js` | Modal dialogs with ARIA | ~736 |
+| `ShadowRenderer.js` | Shadow effect rendering | ~576 |
+| `RevisionManager.js` | Revision and named set management | ~499 |
+| `EditorBootstrap.js` | Initialization, hooks, cleanup | ~482 |
+| `AccessibilityAnnouncer.js` | Screen reader support | ~241 |
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full module dependency graph.
 
