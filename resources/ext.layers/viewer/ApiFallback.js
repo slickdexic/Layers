@@ -256,23 +256,6 @@ class ApiFallback {
 			return;
 		}
 
-		// Skip images with layerslink (viewer/editor) - these are handled by click handlers
-		// and should only display layers via the lightbox/editor, not on the thumbnail
-		// unless the server explicitly injected inline data (which means the set exists)
-		if ( img.hasAttribute( 'data-layers-link' ) ) {
-			const linkType = img.getAttribute( 'data-layers-link' );
-			this.debugLog( 'Skipping image with data-layers-link:', linkType );
-			return;
-		}
-
-		// Also check parent anchor for data-layers-link
-		const anchor = img.closest( 'a' );
-		if ( anchor && anchor.hasAttribute( 'data-layers-link' ) ) {
-			const linkType = anchor.getAttribute( 'data-layers-link' );
-			this.debugLog( 'Skipping image inside link with data-layers-link:', linkType );
-			return;
-		}
-
 		// Check for explicit no-layers intent early
 		if ( img.hasAttribute( 'data-layers-intent' ) ) {
 			const intentEarly = ( img.getAttribute( 'data-layers-intent' ) || '' ).toLowerCase();
@@ -306,8 +289,9 @@ class ApiFallback {
 		// 3. layers= parameter from the href (if it's a specific set name, not 'on'/'true'/etc)
 		let setName = null;
 		const imgIntent = img.getAttribute( 'data-layers-intent' ) || '';
+		const anchor = img.closest( 'a' );
 
-		// Check anchor's data-layers-setname first (reuse anchor from above)
+		// Check anchor's data-layers-setname first
 		if ( anchor ) {
 			const anchorSetName = anchor.getAttribute( 'data-layers-setname' );
 			if ( anchorSetName && anchorSetName !== '' ) {
