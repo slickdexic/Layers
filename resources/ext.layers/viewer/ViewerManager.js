@@ -339,7 +339,11 @@ class ViewerManager {
 	 * This is called when the modal editor closes after saving to ensure
 	 * all viewers display the latest layer data without requiring a page refresh.
 	 *
-	 * @return {Promise<number>} Promise resolving to number of viewers refreshed
+	 * @return {Promise<Object>} Promise resolving to result object:
+	 *   - refreshed: number of viewers successfully refreshed
+	 *   - failed: number of viewers that failed to refresh
+	 *   - total: total number of viewers attempted
+	 *   - errors: array of {filename, error} objects for failed refreshes
 	 */
 	refreshAllViewers() {
 		this.debugLog( 'refreshAllViewers: starting' );
@@ -351,7 +355,7 @@ class ViewerManager {
 
 		if ( viewerImages.length === 0 ) {
 			this.debugLog( 'refreshAllViewers: no viewers found' );
-			return Promise.resolve( 0 );
+			return Promise.resolve( { refreshed: 0, failed: 0, total: 0, errors: [] } );
 		}
 
 		this.debugLog( 'refreshAllViewers: found', viewerImages.length, 'viewers' );
@@ -370,12 +374,18 @@ class ViewerManager {
 		// Fetch fresh data for each viewer via API
 		if ( typeof mw === 'undefined' || !mw.Api ) {
 			this.debugWarn( 'refreshAllViewers: mw.Api not available' );
-			return Promise.resolve( 0 );
+			return Promise.resolve( {
+				refreshed: 0,
+				failed: viewerImages.length,
+				total: viewerImages.length,
+				errors: [ { filename: null, error: 'mw.Api not available' } ]
+			} );
 		}
 
 		const api = new mw.Api();
 		const self = this;
 		let refreshCount = 0;
+		const errors = [];
 
 		const refreshPromises = viewerImages.map( ( img ) => {
 			const filename = this.extractFilenameFromImg( img );
@@ -438,20 +448,33 @@ class ViewerManager {
 						refreshCount++;
 						self.debugLog( 'refreshAllViewers: refreshed viewer for', filename );
 					}
-					return success;
+					return { success: success, filename: filename };
 				} catch ( e ) {
 					self.debugWarn( 'refreshAllViewers: error processing', filename, e );
-					return false;
+					errors.push( { filename: filename, error: e.message || String( e ) } );
+					return { success: false, filename: filename };
 				}
 			} ).catch( ( apiErr ) => {
 				self.debugWarn( 'refreshAllViewers: API error for', filename, apiErr );
-				return false;
+				const errMsg = apiErr && apiErr.message ? apiErr.message :
+					( apiErr && apiErr.error && apiErr.error.info ? apiErr.error.info : String( apiErr ) );
+				errors.push( { filename: filename, error: errMsg } );
+				return { success: false, filename: filename };
 			} );
 		} );
 
-		return Promise.all( refreshPromises ).then( () => {
-			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'viewers' );
-			return refreshCount;
+		return Promise.all( refreshPromises ).then( ( results ) => {
+			const failed = results.filter( ( r ) => !r.success ).length;
+			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'of', viewerImages.length, 'viewers' );
+			if ( errors.length > 0 ) {
+				self.debugWarn( 'refreshAllViewers:', errors.length, 'errors occurred:', errors );
+			}
+			return {
+				refreshed: refreshCount,
+				failed: failed,
+				total: viewerImages.length,
+				errors: errors
+			};
 		} );
 	}
 

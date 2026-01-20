@@ -163,6 +163,7 @@
 			"scripts": [
 				"FontConfig.js",
 				"MathUtils.js",
+				"IdGenerator.js",
 				"LayerDataNormalizer.js",
 				"DeepClone.js",
 				"BoundsCalculator.js",
