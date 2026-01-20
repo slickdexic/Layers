@@ -15,7 +15,8 @@ Version history for the Layers extension.
 ### Technical Details
 - Created `IdGenerator.js` in `ext.layers.shared` with session counter + timestamp + random suffix
 - Updated StateManager, APIManager, ToolManager, SelectionManager to use shared generator
-- 13 new tests for IdGenerator (9,718 total tests)
+- 13 new tests for IdGenerator
+- 35 new tests for EmojiPickerPanel (9,753 total tests)
 - Codebase review Audit v12: rating 9.2/10
 
 ---

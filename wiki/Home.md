@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C718%20Passing-brightgreen" alt="9,718 Tests">
+  <img src="https://img.shields.io/badge/Tests-9%2C753%20Passing-brightgreen" alt="9,753 Tests">
   <img src="https://img.shields.io/badge/Coverage-92.80%25-brightgreen" alt="92.80% Coverage">
 </p>
 
@@ -24,7 +24,7 @@
 
 - **Shared IdGenerator Utility** — New centralized ID generation with monotonic counter guarantees unique layer IDs even during rapid operations (paste, duplicate, bulk imports)
 - **ViewerManager Error Tracking** — `refreshAllViewers()` now returns detailed result object with error tracking for better debugging
-- **9,718 tests passing** (151 suites), 92.80% coverage
+- **9,753 tests passing** (152 suites), 92.80% coverage
 
 ### Previous v1.5.18 Highlights
 

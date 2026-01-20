@@ -13,7 +13,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Technical Details
 - Created `IdGenerator.js` in `ext.layers.shared` with session-level counter + timestamp + random suffix
 - Updated `StateManager`, `APIManager`, `ToolManager`, `SelectionManager` to use shared generator
-- Added 13 new tests for IdGenerator (9,718 total tests)
+- Added 13 new tests for IdGenerator
+- Added 35 new tests for EmojiPickerPanel (9,753 total tests)
 - Codebase review Audit v12: rating 9.2/10
 
 ---
