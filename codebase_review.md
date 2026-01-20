@@ -21,7 +21,7 @@ The Layers extension is **production-ready** with excellent test coverage, stron
 
 1. **Documentation was inconsistent** — now synchronized across all files in this review
 2. **Jest console noise** remains (jsdom warnings) — low-priority cleanup item
-3. **Excellent test coverage** — 93.52% statements, 83.89% branches, 9,753 tests passing
+3. **Excellent test coverage** — 93.52% statements, 83.89% branches, 9,769 tests passing
 
 **Overall Assessment:** **9.0/10** — Production-ready, professional-grade extension.
 
@@ -33,7 +33,7 @@ The Layers extension is **production-ready** with excellent test coverage, stron
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests Passing | **9,753** | ✅ 100% |
+| Tests Passing | **9,769** | ✅ 100% |
 | Test Suites | **152** | ✅ All passing |
 | Statement Coverage | **93.52%** | ✅ Excellent |
 | Branch Coverage | **83.89%** | ✅ Target met |

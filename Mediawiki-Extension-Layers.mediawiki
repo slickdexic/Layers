@@ -260,7 +260,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~111k lines including generated shape/emoji data).
-* '''Stability:''' 9,753 Jest tests (152 suites) with 93.52% statement coverage and 83.89% branch coverage.
+* '''Stability:''' 9,769 Jest tests (153 suites) with 93.52% statement coverage and 83.89% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 
