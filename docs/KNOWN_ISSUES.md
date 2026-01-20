@@ -13,7 +13,7 @@ This document lists known issues and current gaps for the Layers extension.
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ None known |
 | P1 (Stability) | 0 | ✅ No known crashes/memory leaks |
-| P2 (Code Quality) | 2 | ⚠️ Active items (low priority) |
+| P2 (Code Quality) | 1 | ⚠️ ShapeLibraryPanel coverage |
 | Feature Gaps | 3 | ⏳ Planned |
 
 ---
@@ -22,13 +22,10 @@ This document lists known issues and current gaps for the Layers extension.
 
 ### P2.1 Jest Console Noise
 
-**Status:** OPEN  
+**Status:** ✅ RESOLVED (January 21, 2026)  
 **Severity:** LOW  
-**Evidence:** `coverage_output.txt` contains `jsdom` warnings for `window.location` and `window.prompt`.
 
-**Impact:** Cosmetic only — noisy test output but all 9,753 tests pass.
-
-**Suggested Fix:** Mock these in test setup files.
+jsdom "Not implemented" warnings for navigation and prompt have been suppressed in `tests/jest/setup.js`. Test output is now clean.
 
 ---
 

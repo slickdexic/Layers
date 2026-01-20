@@ -66,13 +66,9 @@ All documentation files now have consistent, verified metrics:
 - ✅ codebase_review.md
 - ✅ improvement_plan.md (this file)
 
-### P1.2 Jest Console Noise — LOW PRIORITY
+### P1.2 Jest Console Noise — ✅ RESOLVED (January 21, 2026)
 
-**Issue:** jsdom warnings for `window.location` and `window.prompt` during tests.
-
-**Impact:** Cosmetic only — no functional issues, all tests pass.
-
-**Resolution:** Could mock these in test setup, but not blocking.
+jsdom "Not implemented" warnings have been suppressed in `tests/jest/setup.js`. Test output is now clean.
 
 ### P1.3 ShapeLibraryPanel Coverage — LOW PRIORITY
 
@@ -177,7 +173,7 @@ Track render time and interaction latency for large images/layer sets.
 ## Success Criteria
 
 1. ✅ Documentation metrics are consistent across all public-facing docs
-2. ⏳ Jest runs without console errors from jsdom (low priority)
+2. ✅ Jest runs without console errors from jsdom
 3. ⏳ Large layer sets remain responsive in the editor UI
 
 ---
