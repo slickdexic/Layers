@@ -39,6 +39,27 @@
 		}
 
 		/**
+		 * Deep clone a layer using the shared DeepClone utility
+		 * Falls back to structuredClone or JSON if utility unavailable
+		 *
+		 * @private
+		 * @param {Object} layer - Layer to clone
+		 * @return {Object} Cloned layer
+		 */
+		_cloneLayer( layer ) {
+			// Prefer the shared utility which handles all edge cases
+			if ( window.Layers?.Utils?.deepCloneLayer ) {
+				return window.Layers.Utils.deepCloneLayer( layer );
+			}
+			// Fallback to structuredClone (modern browsers)
+			if ( typeof structuredClone === 'function' ) {
+				return structuredClone( layer );
+			}
+			// Last resort: JSON (loses some types but works)
+			return JSON.parse( JSON.stringify( layer ) );
+		}
+
+		/**
 		 * Copy selected layers to the clipboard
 		 *
 		 * @return {number} Number of layers copied
@@ -53,8 +74,8 @@
 		selectedIds.forEach( ( id ) => {
 			const layer = editor.getLayerById( id );
 			if ( layer ) {
-				// Deep clone the layer
-				this.clipboard.push( JSON.parse( JSON.stringify( layer ) ) );
+				// Deep clone the layer using shared utility
+				this.clipboard.push( this._cloneLayer( layer ) );
 			}
 		} );
 
@@ -78,7 +99,7 @@
 		editor.saveState();
 
 		this.clipboard.forEach( ( layer ) => {
-			const clone = JSON.parse( JSON.stringify( layer ) );
+			const clone = this._cloneLayer( layer );
 
 			// Apply offset to pasted layers
 			this.applyPasteOffset( clone );
