@@ -20,15 +20,16 @@
 
 ---
 
-## 🆕 What's New in v1.5.19
+## 🆕 What's New in v1.5.20
+
+- **Virtual Scrolling for Layer Lists (P2.1)** — Layer panel now uses virtual scrolling for 30+ layers, preventing UI slowdowns with large layer counts
+- **Duplicate Close Button Fix** — Modal overlay no longer shows redundant close button
+- **9,783 tests passing** (153 suites), 93.52% statement coverage, 83.89% branch coverage
+
+### Previous v1.5.19 Highlights
 
 - **Shared IdGenerator Utility** — New centralized ID generation with monotonic counter guarantees unique layer IDs even during rapid operations (paste, duplicate, bulk imports)
 - **ViewerManager Error Tracking** — `refreshAllViewers()` now returns detailed result object with error tracking for better debugging
-- **9,783 tests passing** (153 suites), 93.52% statement coverage, 83.89% branch coverage
-
-### Previous v1.5.18 Highlights
-
-- **Critical Bug Fix: Non-Existent Layer Set Handling** — Fixed production issue where `layerset=X` with a non-existent set name would not show the edit overlay
 
 ### Previous v1.5.17 Highlights
 
@@ -196,8 +197,8 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.19 |
-| **Version (REL1_43)** | 1.5.19-REL1_43 |
+| **Version (main)** | 1.5.20 |
+| **Version (REL1_43)** | 1.5.20-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
 | **Test Suites** | 152 |

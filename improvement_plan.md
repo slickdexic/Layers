@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** January 21, 2026  
-**Version:** 1.5.19  
+**Version:** 1.5.20  
 **Status:** ✅ Production-Ready (9.0/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
@@ -226,5 +226,5 @@ All metrics in documentation must be verifiable with commands documented in code
 ---
 
 *Plan updated: January 21, 2026*  
-*Version: 1.5.19*  
+*Version: 1.5.20*  
 *Based on verified test run: 9,783 tests, 93.52% coverage*
