@@ -361,6 +361,11 @@
 	}
 
 	generateLayerId() {
+		// Use shared IdGenerator for guaranteed uniqueness with monotonic counter
+		if ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId ) {
+			return window.Layers.Utils.generateLayerId();
+		}
+		// Fallback (should not be reached in production)
 		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	}
 

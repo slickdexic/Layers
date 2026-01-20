@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C693%20Passing-brightgreen" alt="9,693 Tests">
-  <img src="https://img.shields.io/badge/Coverage-92.65%25-brightgreen" alt="92.65% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C718%20Passing-brightgreen" alt="9,718 Tests">
+  <img src="https://img.shields.io/badge/Coverage-92.80%25-brightgreen" alt="92.80% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,15 +20,15 @@
 
 ---
 
-## 🆕 What's New in v1.5.18
+## 🆕 What's New in v1.5.19
 
-- **Critical Bug Fix: Non-Existent Layer Set Handling** — Fixed production issue where `layerset=X` with a non-existent set name would not show the edit overlay, preventing new set creation from wikitext
-- **Fixed edit overlay not initializing** when layer set doesn't exist but intent was specified
-- **Fixed PHP `data-layers-intent`** — Now correctly sets intent for named sets (not just 'on'/'all')
-- **Fixed `autocreate=1` parameter passing** — Editor now receives flag to auto-create the layer set
-- **Fixed `data-file-name` injection** — PHP now sets filename attribute even when layer data doesn't exist
-- **Fixed modal URL parameter** — Modal now receives proper URL string instead of object
-- **9,693 tests passing** (150 suites), 92.65% coverage
+- **Shared IdGenerator Utility** — New centralized ID generation with monotonic counter guarantees unique layer IDs even during rapid operations (paste, duplicate, bulk imports)
+- **ViewerManager Error Tracking** — `refreshAllViewers()` now returns detailed result object with error tracking for better debugging
+- **9,718 tests passing** (151 suites), 92.80% coverage
+
+### Previous v1.5.18 Highlights
+
+- **Critical Bug Fix: Non-Existent Layer Set Handling** — Fixed production issue where `layerset=X` with a non-existent set name would not show the edit overlay
 
 ### Previous v1.5.17 Highlights
 

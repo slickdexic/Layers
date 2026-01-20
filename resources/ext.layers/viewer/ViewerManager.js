@@ -45,9 +45,12 @@ class ViewerManager {
 		this.urlParser = ( options && options.urlParser ) || new LayersUrlParser( { debug: this.debug } );
 
 		// Create freshness checker for FR-10: Live Preview Without Page Edit/Save
-		const FreshnessChecker = getClass( 'Viewer.FreshnessChecker', 'FreshnessChecker' );
-		this.freshnessChecker = ( options && options.freshnessChecker ) ||
-			( FreshnessChecker ? new FreshnessChecker( { debug: this.debug } ) : null );
+		if ( options && options.freshnessChecker ) {
+			this.freshnessChecker = options.freshnessChecker;
+		} else {
+			const FreshnessChecker = getClass( 'Viewer.FreshnessChecker', 'FreshnessChecker' );
+			this.freshnessChecker = FreshnessChecker ? new FreshnessChecker( { debug: this.debug } ) : null;
+		}
 
 		// Track created wrappers for cleanup
 		this._createdWrappers = new WeakMap();
@@ -339,7 +342,11 @@ class ViewerManager {
 	 * This is called when the modal editor closes after saving to ensure
 	 * all viewers display the latest layer data without requiring a page refresh.
 	 *
-	 * @return {Promise<number>} Promise resolving to number of viewers refreshed
+	 * @return {Promise<Object>} Promise resolving to result object:
+	 *   - refreshed: number of viewers successfully refreshed
+	 *   - failed: number of viewers that failed to refresh
+	 *   - total: total number of viewers attempted
+	 *   - errors: array of {filename, error} objects for failed refreshes
 	 */
 	refreshAllViewers() {
 		this.debugLog( 'refreshAllViewers: starting' );
@@ -351,7 +358,7 @@ class ViewerManager {
 
 		if ( viewerImages.length === 0 ) {
 			this.debugLog( 'refreshAllViewers: no viewers found' );
-			return Promise.resolve( 0 );
+			return Promise.resolve( { refreshed: 0, failed: 0, total: 0, errors: [] } );
 		}
 
 		this.debugLog( 'refreshAllViewers: found', viewerImages.length, 'viewers' );
@@ -370,12 +377,18 @@ class ViewerManager {
 		// Fetch fresh data for each viewer via API
 		if ( typeof mw === 'undefined' || !mw.Api ) {
 			this.debugWarn( 'refreshAllViewers: mw.Api not available' );
-			return Promise.resolve( 0 );
+			return Promise.resolve( {
+				refreshed: 0,
+				failed: viewerImages.length,
+				total: viewerImages.length,
+				errors: [ { filename: null, error: 'mw.Api not available' } ]
+			} );
 		}
 
 		const api = new mw.Api();
 		const self = this;
 		let refreshCount = 0;
+		const errors = [];
 
 		const refreshPromises = viewerImages.map( ( img ) => {
 			const filename = this.extractFilenameFromImg( img );
@@ -438,20 +451,33 @@ class ViewerManager {
 						refreshCount++;
 						self.debugLog( 'refreshAllViewers: refreshed viewer for', filename );
 					}
-					return success;
+					return { success: success, filename: filename };
 				} catch ( e ) {
 					self.debugWarn( 'refreshAllViewers: error processing', filename, e );
-					return false;
+					errors.push( { filename: filename, error: e.message || String( e ) } );
+					return { success: false, filename: filename };
 				}
 			} ).catch( ( apiErr ) => {
 				self.debugWarn( 'refreshAllViewers: API error for', filename, apiErr );
-				return false;
+				const errMsg = apiErr && apiErr.message ? apiErr.message :
+					( apiErr && apiErr.error && apiErr.error.info ? apiErr.error.info : String( apiErr ) );
+				errors.push( { filename: filename, error: errMsg } );
+				return { success: false, filename: filename };
 			} );
 		} );
 
-		return Promise.all( refreshPromises ).then( () => {
-			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'viewers' );
-			return refreshCount;
+		return Promise.all( refreshPromises ).then( ( results ) => {
+			const failed = results.filter( ( r ) => !r.success ).length;
+			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'of', viewerImages.length, 'viewers' );
+			if ( errors.length > 0 ) {
+				self.debugWarn( 'refreshAllViewers:', errors.length, 'errors occurred:', errors );
+			}
+			return {
+				refreshed: refreshCount,
+				failed: failed,
+				total: viewerImages.length,
+				errors: errors
+			};
 		} );
 	}
 
@@ -696,6 +722,28 @@ class ViewerManager {
 	}
 
 	/**
+	 * Regex patterns for filename extraction
+	 *
+	 * @private
+	 * @type {Object}
+	 */
+	static FILENAME_PATTERNS = {
+		// Matches: /images/a/ab/Filename.ext or /Filename.ext at end of URL
+		// Captures the filename including extension
+		SRC_URL: /\/(?:images\/.*?\/)?([^/]+\.[a-zA-Z]+)(?:[?]|$)/,
+
+		// Matches: /File:Filename in href links
+		// Captures the filename after "File:"
+		FILE_HREF: /\/File:([^/?#]+)/,
+
+		// Matches: MediaWiki thumbnail prefix like "123px-" or "800px-"
+		THUMBNAIL_PREFIX: /^\d+px-/,
+
+		// Matches: Wikitext bracket characters that should be stripped
+		WIKITEXT_BRACKETS: /[\x5B\x5D]/g
+	};
+
+	/**
 	 * Extract filename from an image element.
 	 *
 	 * @param {HTMLImageElement} img Image element
@@ -703,6 +751,7 @@ class ViewerManager {
 	 */
 	extractFilenameFromImg( img ) {
 		let filename = null;
+		const patterns = ViewerManager.FILENAME_PATTERNS;
 
 		// Try data-file-name attribute first
 		const fileNameAttr = img.getAttribute( 'data-file-name' );
@@ -711,17 +760,17 @@ class ViewerManager {
 		} else {
 			// Try extracting from src URL
 			const src = img.src || '';
-			const srcMatch = src.match( /\/(?:images\/.*?\/)?([^/]+\.[a-zA-Z]+)(?:[?]|$)/ );
+			const srcMatch = src.match( patterns.SRC_URL );
 			if ( srcMatch && srcMatch[ 1 ] ) {
 				filename = decodeURIComponent( srcMatch[ 1 ] );
 				// Remove any thumbnail prefix like "123px-"
-				filename = filename.replace( /^\d+px-/, '' );
+				filename = filename.replace( patterns.THUMBNAIL_PREFIX, '' );
 			} else {
 				// Try extracting from parent link href
 				const parent = img.parentNode;
 				if ( parent && parent.tagName === 'A' ) {
 					const href = parent.getAttribute( 'href' ) || '';
-					const hrefMatch = href.match( /\/File:([^/?#]+)/ );
+					const hrefMatch = href.match( patterns.FILE_HREF );
 					if ( hrefMatch && hrefMatch[ 1 ] ) {
 						filename = decodeURIComponent( hrefMatch[ 1 ].replace( /_/g, ' ' ) );
 					}
@@ -731,7 +780,7 @@ class ViewerManager {
 
 		// Sanitize: strip any wikitext brackets that might have leaked through
 		if ( filename ) {
-			filename = filename.replace( /[\x5B\x5D]/g, '' );
+			filename = filename.replace( patterns.WIKITEXT_BRACKETS, '' );
 		}
 
 		return filename;

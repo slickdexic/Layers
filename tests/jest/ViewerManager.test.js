@@ -1688,12 +1688,12 @@ describe( 'ViewerManager', () => {
 				} );
 			} );
 
-			it( 'should return 0 when no viewers exist', async () => {
+			it( 'should return result object with 0 refreshed when no viewers exist', async () => {
 				document.body.innerHTML = '<div><img src="test.jpg"></div>';
 
-				const count = await manager.refreshAllViewers();
+				const result = await manager.refreshAllViewers();
 
-				expect( count ).toBe( 0 );
+				expect( result ).toEqual( { refreshed: 0, failed: 0, total: 0, errors: [] } );
 			} );
 
 			it( 'should clear freshness cache for each viewer', async () => {
@@ -1758,9 +1758,11 @@ describe( 'ViewerManager', () => {
 					}
 				} );
 
-				const count = await manager.refreshAllViewers();
+				const result = await manager.refreshAllViewers();
 
-				expect( count ).toBe( 1 );
+				expect( result.refreshed ).toBe( 1 );
+				expect( result.failed ).toBe( 0 );
+				expect( result.errors ).toHaveLength( 0 );
 				expect( mockDestroy ).toHaveBeenCalled();
 				expect( mockLayersViewer ).toHaveBeenCalled();
 			} );
@@ -1782,9 +1784,12 @@ describe( 'ViewerManager', () => {
 
 				mockApi.get.mockRejectedValue( new Error( 'Network error' ) );
 
-				const count = await manager.refreshAllViewers();
+				const result = await manager.refreshAllViewers();
 
-				expect( count ).toBe( 0 );
+				expect( result.refreshed ).toBe( 0 );
+				expect( result.failed ).toBe( 1 );
+				expect( result.errors ).toHaveLength( 1 );
+				expect( result.errors[ 0 ].error ).toContain( 'Network error' );
 			} );
 
 			it( 'should handle missing layerset in API response', async () => {
@@ -1806,9 +1811,10 @@ describe( 'ViewerManager', () => {
 					layersinfo: {}
 				} );
 
-				const count = await manager.refreshAllViewers();
+				const result = await manager.refreshAllViewers();
 
-				expect( count ).toBe( 0 );
+				expect( result.refreshed ).toBe( 0 );
+				expect( result.total ).toBe( 1 );
 			} );
 
 			it( 'should refresh multiple viewers in parallel', async () => {
@@ -1836,9 +1842,11 @@ describe( 'ViewerManager', () => {
 					}
 				} );
 
-				const count = await manager.refreshAllViewers();
+				const result = await manager.refreshAllViewers();
 
-				expect( count ).toBe( 2 );
+				expect( result.refreshed ).toBe( 2 );
+				expect( result.failed ).toBe( 0 );
+				expect( result.total ).toBe( 2 );
 				expect( mockDestroy1 ).toHaveBeenCalled();
 				expect( mockDestroy2 ).toHaveBeenCalled();
 			} );

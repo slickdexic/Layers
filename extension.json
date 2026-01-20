@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.18-REL1_43",
+	"version": "1.5.19-REL1_43",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -163,6 +163,7 @@
 			"scripts": [
 				"FontConfig.js",
 				"MathUtils.js",
+				"IdGenerator.js",
 				"LayerDataNormalizer.js",
 				"DeepClone.js",
 				"BoundsCalculator.js",
