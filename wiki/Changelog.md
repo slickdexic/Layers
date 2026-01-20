@@ -4,6 +4,22 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.19 (January 20, 2026)
+
+### Added
+- **Shared IdGenerator Utility** — New centralized ID generation with monotonic counter guarantees unique layer IDs even during rapid operations (paste, duplicate, bulk imports)
+
+### Improved
+- **ViewerManager Error Tracking** — `refreshAllViewers()` now returns detailed result object `{refreshed, failed, total, errors}` instead of just a count
+
+### Technical Details
+- Created `IdGenerator.js` in `ext.layers.shared` with session counter + timestamp + random suffix
+- Updated StateManager, APIManager, ToolManager, SelectionManager to use shared generator
+- 13 new tests for IdGenerator (9,718 total tests)
+- Codebase review Audit v12: rating 9.2/10
+
+---
+
 ## Version 1.5.18 (January 19, 2026)
 
 ### Fixed

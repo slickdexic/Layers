@@ -2,6 +2,22 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.19] - 2026-01-20
+
+### Added
+- **Shared IdGenerator Utility** — New centralized ID generation with monotonic counter guarantees unique layer IDs even during rapid operations (paste, duplicate, bulk imports)
+
+### Improved
+- **ViewerManager Error Tracking** — `refreshAllViewers()` now returns detailed result object `{refreshed, failed, total, errors}` instead of just a count, enabling better debugging of viewer refresh failures
+
+### Technical Details
+- Created `IdGenerator.js` in `ext.layers.shared` with session-level counter + timestamp + random suffix
+- Updated `StateManager`, `APIManager`, `ToolManager`, `SelectionManager` to use shared generator
+- Added 13 new tests for IdGenerator (9,718 total tests)
+- Codebase review Audit v12: rating 9.2/10
+
+---
+
 ## [1.5.18] - 2026-01-19
 
 ### Fixed

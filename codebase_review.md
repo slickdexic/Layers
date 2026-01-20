@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** January 20, 2026 (Comprehensive Audit v12)  
-**Version:** 1.5.18  
+**Version:** 1.5.19  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -242,8 +242,8 @@ All core documentation files have been reviewed and verified:
 | README.md | ✅ Updated | Test count 9,718, coverage 92.80% |
 | codebase_review.md | ✅ Updated | This file — Audit v12 |
 | improvement_plan.md | ✅ Accurate | Metrics verified |
-| CHANGELOG.md | ✅ Accurate | v1.5.18 documented |
-| Mediawiki-Extension-Layers.mediawiki | ✅ Accurate | Version 1.5.18 |
+| CHANGELOG.md | ✅ Accurate | v1.5.19 documented |
+| Mediawiki-Extension-Layers.mediawiki | ✅ Accurate | Version 1.5.19 |
 | wiki/Home.md | ✅ Accurate | Metrics verified |
 | copilot-instructions.md | ✅ Accurate | Metrics verified |
 
