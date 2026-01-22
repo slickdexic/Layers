@@ -225,4 +225,18 @@
 		mw.layers.init();
 	}
 
+	// Handle back-forward cache (bfcache) navigation
+	// When user returns to page via browser back button (e.g., after closing slide editor),
+	// the page may be restored from bfcache without running JavaScript.
+	// The pageshow event fires in this case with event.persisted=true.
+	window.addEventListener( 'pageshow', function ( event ) {
+		if ( event.persisted ) {
+			// Page was restored from bfcache - refresh all viewers to show latest data
+			if ( mw && mw.layers && mw.layers.viewerManager ) {
+				mw.layers.debugLog( 'pageshow: page restored from bfcache, refreshing viewers' );
+				mw.layers.viewerManager.refreshAllViewers();
+			}
+		}
+	} );
+
 }() );

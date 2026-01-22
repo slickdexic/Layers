@@ -432,4 +432,55 @@ describe( 'mw.layers (init.js)', () => {
 			expect( mockApiFallback.initialize ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'pageshow event (bfcache navigation)', () => {
+		test( 'should refresh viewers when page is restored from bfcache', () => {
+			// Add refreshAllViewers to mock
+			mockViewerManager.refreshAllViewers = jest.fn().mockResolvedValue( { refreshed: 1 } );
+
+			// Track event listeners
+			const eventListeners = {};
+			const originalAddEventListener = window.addEventListener;
+			window.addEventListener = jest.fn( ( event, handler ) => {
+				eventListeners[ event ] = handler;
+			} );
+
+			require( '../../../resources/ext.layers/init.js' );
+
+			// Restore addEventListener
+			window.addEventListener = originalAddEventListener;
+
+			// Verify pageshow listener was registered
+			expect( eventListeners.pageshow ).toBeDefined();
+
+			// Simulate bfcache restoration (event.persisted = true)
+			eventListeners.pageshow( { persisted: true } );
+
+			// Should have called refreshAllViewers
+			expect( mockViewerManager.refreshAllViewers ).toHaveBeenCalled();
+		} );
+
+		test( 'should not refresh viewers on normal page load', () => {
+			// Add refreshAllViewers to mock
+			mockViewerManager.refreshAllViewers = jest.fn().mockResolvedValue( { refreshed: 0 } );
+
+			// Track event listeners
+			const eventListeners = {};
+			const originalAddEventListener = window.addEventListener;
+			window.addEventListener = jest.fn( ( event, handler ) => {
+				eventListeners[ event ] = handler;
+			} );
+
+			require( '../../../resources/ext.layers/init.js' );
+
+			// Restore addEventListener
+			window.addEventListener = originalAddEventListener;
+
+			// Simulate normal page load (event.persisted = false)
+			eventListeners.pageshow( { persisted: false } );
+
+			// Should NOT have called refreshAllViewers
+			expect( mockViewerManager.refreshAllViewers ).not.toHaveBeenCalled();
+		} );
+	} );
 } );
