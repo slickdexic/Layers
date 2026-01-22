@@ -230,5 +230,5 @@ All metrics in documentation must be verifiable with commands documented in code
 ---
 
 *Plan updated: January 20, 2026*  
-*Version: 1.5.20*  
+*Version: 1.5.25*  
 *Based on verified test run: 9,783 tests, 92.80% coverage*
