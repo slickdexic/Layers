@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.25-REL1_43",
+	"version": "1.5.26-REL1_43",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -41,7 +41,12 @@
 		"MediaWiki\\Extension\\Layers\\Validation\\ValidationResult": "src/Validation/ValidationResult.php",
 		"MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator": "src/Validation/ServerSideLayerValidator.php",
 		"MediaWiki\\Extension\\Layers\\Validation\\TextSanitizer": "src/Validation/TextSanitizer.php",
-		"MediaWiki\\Extension\\Layers\\Validation\\ColorValidator": "src/Validation/ColorValidator.php"
+		"MediaWiki\\Extension\\Layers\\Validation\\ColorValidator": "src/Validation/ColorValidator.php",
+		"MediaWiki\\Extension\\Layers\\Validation\\SlideNameValidator": "src/Validation/SlideNameValidator.php",
+		"MediaWiki\\Extension\\Layers\\Hooks\\SlideHooks": "src/Hooks/SlideHooks.php",
+		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersList": "src/Api/ApiLayersList.php",
+		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides": "src/SpecialPages/SpecialSlides.php",
+		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide": "src/SpecialPages/SpecialEditSlide.php"
 	},
 	"config": {
 		"LayersEnable": {
@@ -148,6 +153,9 @@
 		},
 		"LayersWikitextHooks": {
 			"class": "MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks"
+		},
+		"LayersSlideHooks": {
+			"class": "MediaWiki\\Extension\\Layers\\Hooks\\SlideHooks"
 		}
 	},
 	"Hooks": {
@@ -156,7 +164,7 @@
 		"ImagePageAfterImageLinks": "LayersUIHooks",
 		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Database\\LayersSchemaManager::onLoadExtensionSchemaUpdates",
 		"MakeGlobalVariablesScript": "LayersHooks",
-		"ParserFirstCallInit": "LayersWikitextHooks",
+		"ParserFirstCallInit": [ "LayersWikitextHooks", "LayersSlideHooks" ],
 		"ParserBeforeInternalParse": "LayersWikitextHooks",
 		"LinkerMakeMediaLinkFile": "LayersWikitextHooks",
 		"ImageBeforeProduceHTML": "LayersWikitextHooks",
@@ -169,12 +177,15 @@
 		"editlayers": "MediaWiki\\Extension\\Layers\\Action\\EditLayersAction"
 	},
 	"SpecialPages": {
+		"Slides": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides",
+		"EditSlide": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide"
 	},
 	"APIModules": {
 		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
 		"layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo",
 		"layersdelete": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersDelete",
-		"layersrename": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersRename"
+		"layersrename": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersRename",
+		"layerslist": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersList"
 	},
 	"MessagesDirs": {
 		"Layers": [
@@ -193,6 +204,7 @@
 				"FontConfig.js",
 				"MathUtils.js",
 				"IdGenerator.js",
+				"TimeoutTracker.js",
 				"LayerDataNormalizer.js",
 				"DeepClone.js",
 				"BoundsCalculator.js",
@@ -219,7 +231,8 @@
 			"targets": [ "desktop", "mobile" ],
 			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util", "ext.layers.shared", "ext.layers.modal" ],
 			"styles": [
-				"viewer/LayersLightbox.css"
+				"viewer/LayersLightbox.css",
+				"viewer/SlideViewer.css"
 			],
 			"scripts": [
 				"LayersViewer.js",
@@ -337,6 +350,7 @@
 				"ui/PropertyBuilders.js",
 				"ui/GradientEditor.js",
 				"ui/PropertiesForm.js",
+				"ui/SlidePropertiesPanel.js",
 				"ui/VirtualLayerList.js",
 				"ui/LayerListRenderer.js",
 				"ui/LayerDragDrop.js",
@@ -978,6 +992,63 @@
 				"layers-emoji-load-error",
 				"layers-loading",
 				"layers-close"
+			]
+		},
+		"ext.layers.slides": {
+			"localBasePath": "resources/ext.layers.slides",
+			"remoteExtPath": "Layers/resources/ext.layers.slides",
+			"targets": [ "desktop" ],
+			"dependencies": [
+				"mediawiki.api",
+				"mediawiki.util",
+				"oojs-ui-core",
+				"oojs-ui-widgets",
+				"oojs-ui-windows"
+			],
+			"scripts": [
+				"SpecialSlides.js"
+			],
+			"messages": [
+				"special-slides",
+				"special-slides-create",
+				"special-slides-create-and-edit",
+				"special-slides-search",
+				"special-slides-sort",
+				"special-slides-sort-name",
+				"special-slides-sort-modified",
+				"special-slides-sort-created",
+				"special-slides-loading",
+				"special-slides-empty",
+				"special-slides-error",
+				"special-slides-layers",
+				"special-slides-modified-by",
+				"special-slides-edit",
+				"special-slides-delete",
+				"special-slides-delete-confirm",
+				"special-slides-deleted",
+				"special-slides-delete-failed",
+				"special-slides-count",
+				"special-slides-prev",
+				"special-slides-next",
+				"special-slides-just-now",
+				"special-slides-minutes-ago",
+				"special-slides-hours-ago",
+				"special-slides-days-ago",
+				"special-slides-create-failed",
+				"layers-slide-name",
+				"layers-slide-canvas-size",
+				"layers-slide-size-custom",
+				"layers-slide-background",
+				"layers-slide-invalid-name",
+				"cancel"
+			]
+		},
+		"ext.layers.slides.styles": {
+			"localBasePath": "resources/ext.layers.slides",
+			"remoteExtPath": "Layers/resources/ext.layers.slides",
+			"targets": [ "desktop" ],
+			"styles": [
+				"special-slides.css"
 			]
 		}
 	},

@@ -166,17 +166,18 @@ class StateManager {
 	lockState() {
 		this.isLocked = true;
 		
-		// Set a timeout to automatically unlock if something goes wrong
+		// Set a timeout to detect stuck locks (but don't force unlock - that could corrupt state)
 		if ( this.lockTimeout ) {
 			clearTimeout( this.lockTimeout );
 		}
 		this.lockTimeout = setTimeout( () => {
-			// SECURITY FIX: Use mw.log instead of console.warn
+			// Log error but DON'T force unlock - force unlocking during an active operation
+			// could corrupt state. Instead, set a flag so the next operation knows there was an issue.
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[StateManager] Force unlocking state after timeout' );
+				mw.log.error( '[StateManager] Lock held for >5s - possible deadlock. Lock will remain until manually resolved.' );
 			}
-			this.unlockState();
-		}, 5000 ); // 5 second timeout
+			this.lockStuckSince = Date.now();
+		}, 5000 ); // 5 second detection timeout
 	}
 
 	/**

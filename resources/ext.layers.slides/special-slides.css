@@ -1,0 +1,434 @@
+/**
+ * Styles for Special:Slides management page.
+ *
+ * @file special-slides.css
+ * @see docs/SLIDE_MODE.md Section 7 for UI specification
+ */
+
+/* Container */
+.layers-slides-container {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 1rem;
+}
+
+/* Header with create button */
+.layers-slides-header {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 1rem;
+}
+
+.layers-slides-create-btn .cdx-button__icon::before {
+	content: '+';
+	font-size: 1.2em;
+	margin-right: 0.25em;
+}
+
+/* Toolbar with search and sort */
+.layers-slides-toolbar {
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 1rem;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.layers-slides-search {
+	flex: 1;
+	min-width: 200px;
+	max-width: 400px;
+}
+
+.layers-slides-search-input {
+	width: 100%;
+	padding: 0.5rem;
+	border: 1px solid #a2a9b1;
+	border-radius: 2px;
+}
+
+.layers-slides-search-input:focus {
+	border-color: #36c;
+	box-shadow: inset 0 0 0 1px #36c;
+}
+
+.layers-slides-sort {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.layers-slides-sort-select {
+	padding: 0.4rem 0.5rem;
+	border: 1px solid #a2a9b1;
+	border-radius: 2px;
+	background: #fff;
+}
+
+/* Slides list */
+.layers-slides-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	min-height: 200px;
+}
+
+.layers-slides-loading,
+.layers-slides-empty,
+.layers-slides-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 3rem;
+	color: #54595d;
+	font-style: italic;
+}
+
+.layers-slides-error {
+	color: #d33;
+}
+
+/* Slide item */
+.layers-slide-item {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem;
+	background: #fff;
+	border: 1px solid #c8ccd1;
+	border-radius: 4px;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.layers-slide-item:hover {
+	border-color: #72777d;
+	box-shadow: 0 1px 3px rgba( 0, 0, 0, 0.1 );
+}
+
+.layers-slide-icon {
+	font-size: 2rem;
+	width: 3rem;
+	height: 3rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #eaecf0;
+	border-radius: 4px;
+	flex-shrink: 0;
+}
+
+.layers-slide-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.layers-slide-name {
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: #202122;
+	margin-bottom: 0.25rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.layers-slide-meta {
+	font-size: 0.875rem;
+	color: #54595d;
+}
+
+.layers-slide-actions {
+	display: flex;
+	gap: 0.5rem;
+	flex-shrink: 0;
+}
+
+/* Pagination */
+.layers-slides-pagination {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid #eaecf0;
+}
+
+.layers-pagination-count {
+	color: #54595d;
+	font-size: 0.875rem;
+}
+
+.layers-pagination-buttons {
+	display: flex;
+	gap: 0.5rem;
+}
+
+/* Create form (for Special:Slides/NewName) */
+.layers-slide-create-form {
+	max-width: 500px;
+	margin: 2rem auto;
+	padding: 1.5rem;
+	background: #fff;
+	border: 1px solid #c8ccd1;
+	border-radius: 4px;
+}
+
+.layers-form-field {
+	margin-bottom: 1.25rem;
+}
+
+.layers-form-field label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+}
+
+.layers-form-field input[ type='text' ],
+.layers-form-field input[ type='number' ] {
+	width: 100%;
+	padding: 0.5rem;
+	border: 1px solid #a2a9b1;
+	border-radius: 2px;
+}
+
+.layers-form-hint {
+	font-size: 0.8rem;
+	color: #72777d;
+	margin-top: 0.25rem;
+}
+
+.layers-size-presets {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.layers-size-preset {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+}
+
+.layers-size-custom-fields {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+	margin-left: 1.5rem;
+}
+
+.layers-size-custom-fields input {
+	width: 80px;
+}
+
+.layers-color-input {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.layers-color-input input[ type='color' ] {
+	width: 40px;
+	height: 34px;
+	padding: 0;
+	border: 1px solid #a2a9b1;
+	border-radius: 2px;
+	cursor: pointer;
+}
+
+.layers-color-input input[ type='text' ] {
+	flex: 1;
+}
+
+.layers-form-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 1.5rem;
+}
+
+/* Slide editor container */
+.layers-slide-editor-container {
+	width: 100%;
+	height: 100%;
+}
+
+.layers-slide-editor-header {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 0.75rem 1rem;
+	background: #f8f9fa;
+	border-bottom: 1px solid #c8ccd1;
+}
+
+.layers-back-link {
+	color: #36c;
+	text-decoration: none;
+}
+
+.layers-back-link:hover {
+	text-decoration: underline;
+}
+
+.layers-slide-editor-header .layers-slide-name {
+	font-weight: 600;
+	color: #202122;
+}
+
+/* Dark mode support */
+@media ( prefers-color-scheme: dark ) {
+	.layers-slides-search-input,
+	.layers-slides-sort-select {
+		background: #27292d;
+		color: #eaecf0;
+		border-color: #54595d;
+	}
+
+	.layers-slide-item {
+		background: #27292d;
+		border-color: #54595d;
+	}
+
+	.layers-slide-icon {
+		background: #3b3d41;
+	}
+
+	.layers-slide-name {
+		color: #eaecf0;
+	}
+
+	.layers-slide-meta,
+	.layers-pagination-count,
+	.layers-slides-loading,
+	.layers-slides-empty {
+		color: #a2a9b1;
+	}
+
+	.layers-slide-create-form {
+		background: #27292d;
+		border-color: #54595d;
+	}
+
+	.layers-form-field input[ type='text' ],
+	.layers-form-field input[ type='number' ] {
+		background: #1a1a1a;
+		color: #eaecf0;
+		border-color: #54595d;
+	}
+
+	.layers-form-hint {
+		color: #a2a9b1;
+	}
+
+	.layers-slide-editor-header {
+		background: #27292d;
+		border-color: #54595d;
+	}
+}
+
+@media ( prefers-color-scheme: dark ) {
+	.layers-slide-item:hover {
+		border-color: #72777d;
+	}
+
+	.layers-slide-editor-header .layers-slide-name {
+		color: #eaecf0;
+	}
+}
+
+/* Vector 2022 dark mode (class-based) */
+html.skin-theme-clientpref-night .layers-slides-search-input,
+html.skin-theme-clientpref-night .layers-slides-sort-select,
+html.skin-theme-clientpref-os.client-darkmode .layers-slides-search-input,
+html.skin-theme-clientpref-os.client-darkmode .layers-slides-sort-select {
+	background: #27292d;
+	color: #eaecf0;
+	border-color: #54595d;
+}
+
+html.skin-theme-clientpref-night .layers-slide-item,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-item {
+	background: #27292d;
+	border-color: #54595d;
+}
+
+html.skin-theme-clientpref-night .layers-slide-item:hover,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-item:hover {
+	border-color: #72777d;
+}
+
+html.skin-theme-clientpref-night .layers-slide-icon,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-icon {
+	background: #3b3d41;
+}
+
+html.skin-theme-clientpref-night .layers-slide-name,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-name {
+	color: #eaecf0;
+}
+
+html.skin-theme-clientpref-night .layers-slide-meta,
+html.skin-theme-clientpref-night .layers-pagination-count,
+html.skin-theme-clientpref-night .layers-slides-loading,
+html.skin-theme-clientpref-night .layers-slides-empty,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-meta,
+html.skin-theme-clientpref-os.client-darkmode .layers-pagination-count,
+html.skin-theme-clientpref-os.client-darkmode .layers-slides-loading,
+html.skin-theme-clientpref-os.client-darkmode .layers-slides-empty {
+	color: #a2a9b1;
+}
+
+html.skin-theme-clientpref-night .layers-slide-create-form,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-create-form {
+	background: #27292d;
+	border-color: #54595d;
+}
+
+html.skin-theme-clientpref-night .layers-form-field input[ type='text' ],
+html.skin-theme-clientpref-night .layers-form-field input[ type='number' ],
+html.skin-theme-clientpref-os.client-darkmode .layers-form-field input[ type='text' ],
+html.skin-theme-clientpref-os.client-darkmode .layers-form-field input[ type='number' ] {
+	background: #1a1a1a;
+	color: #eaecf0;
+	border-color: #54595d;
+}
+
+html.skin-theme-clientpref-night .layers-slide-editor-header,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-editor-header {
+	background: #27292d;
+	border-color: #54595d;
+}
+
+html.skin-theme-clientpref-night .layers-slide-editor-header .layers-slide-name,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-editor-header .layers-slide-name {
+	color: #eaecf0;
+}
+
+/* Mobile responsive */
+@media ( max-width: 600px ) {
+	.layers-slides-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.layers-slides-search {
+		max-width: none;
+	}
+
+	.layers-slide-item {
+		flex-wrap: wrap;
+	}
+
+	.layers-slide-actions {
+		width: 100%;
+		justify-content: flex-end;
+		margin-top: 0.5rem;
+	}
+
+	.layers-slides-pagination {
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+}
