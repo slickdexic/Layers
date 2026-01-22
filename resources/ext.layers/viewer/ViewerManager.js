@@ -610,12 +610,9 @@ class ViewerManager {
 				return Promise.resolve( { success: false, slideName: null } );
 			}
 
-			// Slides are stored with filename format 'Slide:SlideName'
-			const slideFilename = 'Slide:' + slideName;
-
 			return api.get( {
 				action: 'layersinfo',
-				filename: slideFilename,
+				slidename: slideName,
 				setname: setName,
 				format: 'json',
 				formatversion: 2
@@ -970,12 +967,9 @@ class ViewerManager {
 
 			self.debugLog( 'Fetching slide data for:', slideName, 'set:', setName );
 
-			// Slides are stored with filename format 'Slide:SlideName'
-			const slideFilename = 'Slide:' + slideName;
-
 			api.get( {
 				action: 'layersinfo',
-				filename: slideFilename,
+				slidename: slideName,
 				setname: setName,
 				format: 'json',
 				formatversion: 2
