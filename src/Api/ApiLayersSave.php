@@ -88,12 +88,27 @@ class ApiLayersSave extends ApiBase {
 		// MediaWiki guarantees $user is valid (anonymous or logged in)
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
-		$requestedFilename = $params['filename'];
+		$requestedFilename = $params['filename'] ?? null;
+		$slidename = $params['slidename'] ?? null;
 
 		// SECURITY: Verify user has editlayers permission
 		// This throws ApiUsageException if user lacks the right
 		// CSRF token is automatically checked by needsToken() return value
 		$this->checkUserRightsAny( 'editlayers' );
+
+		// Handle slide saves (slidename parameter)
+		if ( $slidename !== null && $slidename !== '' ) {
+			$this->executeSlideSave( $user, $params, $slidename );
+			return;
+		}
+
+		// Require filename for non-slide requests
+		if ( $requestedFilename === null || $requestedFilename === '' ) {
+			$this->dieWithError(
+				[ 'apierror-missingparam', 'filename' ],
+				'missingparam'
+			);
+		}
 
 		try {
 			// Get LayersDatabase service via dependency injection
@@ -361,6 +376,133 @@ class ApiLayersSave extends ApiBase {
 	}
 
 	/**
+	 * Handle slide-specific save requests.
+	 *
+	 * Slides are stored with imgName='Slide:{name}' and sha1='slide'.
+	 *
+	 * @param \User $user The current user
+	 * @param array $params API request parameters
+	 * @param string $slidename The slide name (without 'Slide:' prefix)
+	 */
+	private function executeSlideSave( $user, array $params, string $slidename ): void {
+		try {
+			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+
+			if ( !$db->isSchemaReady() ) {
+				$this->dieWithError(
+					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+					'dbschema-missing'
+				);
+			}
+
+			$data = $params['data'];
+			$rawSetName = $params['setname'] ?? 'default';
+			$setName = SetNameSanitizer::sanitize( $rawSetName );
+
+			// Size limit check
+			$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
+			if ( strlen( $data ) > $maxBytes ) {
+				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
+			}
+
+			// Parse JSON
+			try {
+				$rawData = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+			} catch ( \JsonException $e ) {
+				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
+			}
+
+			// Handle both old and new data formats
+			$layersData = [];
+			$backgroundSettings = [];
+			$slideSettings = [];
+
+			if ( isset( $rawData['layers'] ) && is_array( $rawData['layers'] ) ) {
+				$layersData = $rawData['layers'];
+				$backgroundSettings = [
+					'backgroundVisible' => isset( $rawData['backgroundVisible'] )
+						? (bool)$rawData['backgroundVisible'] : true,
+					'backgroundOpacity' => isset( $rawData['backgroundOpacity'] )
+						? max( 0.0, min( 1.0, (float)$rawData['backgroundOpacity'] ) ) : 1.0
+				];
+				// Extract slide-specific settings
+				$slideSettings = [
+					'isSlide' => true,
+					'canvasWidth' => isset( $rawData['canvasWidth'] )
+						? (int)$rawData['canvasWidth'] : 800,
+					'canvasHeight' => isset( $rawData['canvasHeight'] )
+						? (int)$rawData['canvasHeight'] : 600,
+					'backgroundColor' => $rawData['backgroundColor'] ?? '#ffffff'
+				];
+			} elseif ( is_array( $rawData ) && !isset( $rawData['layers'] ) ) {
+				$layersData = $rawData;
+			}
+
+			// Validate layers
+			$validator = new ServerSideLayerValidator();
+			$validationResult = $validator->validateLayers( $layersData );
+
+			if ( !$validationResult->isValid() ) {
+				$errors = implode( '; ', $validationResult->getErrors() );
+				$this->dieWithError( [ 'layers-validation-failed', $errors ], 'validationfailed' );
+			}
+
+			$sanitizedData = $validationResult->getData();
+			$layerCount = count( $sanitizedData );
+
+			// Rate limiting
+			$rateLimiter = $this->createRateLimiter();
+			$this->enforceLayerLimits( $rateLimiter, $sanitizedData, $layerCount );
+			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
+				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+			}
+
+			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
+			$normalizedName = 'Slide:' . $slidename;
+			$imgMetadata = [
+				'mime' => 'application/x-layers-slide',
+				'sha1' => 'slide',
+			];
+
+			// Merge slide settings into background settings for storage
+			$backgroundSettings = array_merge( $backgroundSettings, $slideSettings );
+
+			// Save to database
+			$layerSetId = $db->saveLayerSet(
+				$normalizedName,
+				$imgMetadata,
+				$sanitizedData,
+				$user->getId(),
+				$setName,
+				$backgroundSettings
+			);
+
+			if ( $layerSetId ) {
+				$resultData = [
+					'success' => 1,
+					'layersetid' => $layerSetId,
+					'result' => 'Success'
+				];
+				$this->getResult()->addValue( null, $this->getModuleName(), $resultData );
+			} else {
+				$this->dieWithError( 'layers-save-failed', 'savefailed' );
+			}
+		} catch ( ApiUsageException $e ) {
+			throw $e;
+		} catch ( \OverflowException $e ) {
+			$this->dieWithError( $e->getMessage(), 'maxsetsreached' );
+		} catch ( \Throwable $e ) {
+			$this->getLogger()->error( 'Slide save failed: {message}', [
+				'message' => $e->getMessage(),
+				'exception' => $e,
+				'user_id' => $user->getId(),
+				'slidename' => $slidename
+			] );
+			$this->dieWithError( 'layers-save-failed', 'savefailed' );
+		}
+	}
+
+	/**
 	 * Factory for RateLimiter to allow overrides in tests.
 	 */
 	protected function createRateLimiter(): RateLimiter {
@@ -395,7 +537,11 @@ class ApiLayersSave extends ApiBase {
 		return [
 			'filename' => [
 				ApiBase::PARAM_TYPE => 'string',
-				ApiBase::PARAM_REQUIRED => true,
+				ApiBase::PARAM_REQUIRED => false,
+			],
+			'slidename' => [
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false,
 			],
 			'data' => [
 				ApiBase::PARAM_TYPE => 'string',

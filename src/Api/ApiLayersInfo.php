@@ -39,7 +39,8 @@ class ApiLayersInfo extends ApiBase {
 	public function execute() {
 		// Get parameters
 		$params = $this->extractRequestParams();
-		$filename = $params['filename'];
+		$filename = $params['filename'] ?? null;
+		$slidename = $params['slidename'] ?? null;
 		$layerSetId = $params['layersetid'] ?? null;
 		$setName = $params['setname'] ?? null;
 		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : 50;
@@ -48,6 +49,20 @@ class ApiLayersInfo extends ApiBase {
 		$offset = max( 0, $offset );
 		if ( isset( $params['continue'] ) && $params['continue'] !== '' ) {
 			$offset = max( $offset, $this->parseContinueParameter( (string)$params['continue'] ) );
+		}
+
+		// Handle slide requests (slidename parameter)
+		if ( $slidename !== null && $slidename !== '' ) {
+			$this->executeSlideRequest( $slidename, $setName, $limit );
+			return;
+		}
+
+		// Require filename for non-slide requests
+		if ( $filename === null || $filename === '' ) {
+			$this->dieWithError(
+				[ 'apierror-missingparam', 'filename' ],
+				'missingparam'
+			);
 		}
 
 		$title = $this->getTitleFromFilename( $filename );
@@ -231,6 +246,70 @@ class ApiLayersInfo extends ApiBase {
 	}
 
 	/**
+	 * Handle slide-specific requests.
+	 *
+	 * Slides are stored with imgName='Slide:{name}' and sha1='slide'.
+	 *
+	 * @param string $slidename The slide name (without 'Slide:' prefix)
+	 * @param string|null $setName The named set (default: 'default')
+	 * @param int $limit Maximum revisions to return
+	 */
+	private function executeSlideRequest( string $slidename, ?string $setName, int $limit ): void {
+		// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
+		$normalizedName = 'Slide:' . $slidename;
+		$fileSha1 = 'slide';
+		$setName = $setName ?? 'default';
+
+		$db = $this->getLayersDatabase();
+
+		// Get the slide layer set
+		$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName );
+
+		if ( !$layerSet ) {
+			$result = [
+				'layerset' => null,
+				'message' => $this->msg( 'layers-no-layers' )->text()
+			];
+		} else {
+			// Extract canvas dimensions from data for baseWidth/baseHeight
+			$data = $layerSet['data'] ?? [];
+			$canvasWidth = $data['canvasWidth'] ?? 800;
+			$canvasHeight = $data['canvasHeight'] ?? 600;
+
+			// Normalize response format
+			$layerSet = [
+				'id' => $layerSet['id'],
+				'imgName' => $layerSet['imgName'],
+				'userId' => $layerSet['userId'],
+				'timestamp' => $layerSet['timestamp'],
+				'revision' => $layerSet['revision'],
+				'name' => $layerSet['setName'],
+				'data' => $data,
+				'baseWidth' => $canvasWidth,
+				'baseHeight' => $canvasHeight
+			];
+			$result = [
+				'layerset' => $layerSet
+			];
+		}
+
+		// Get revision history for this slide
+		$setRevisions = $db->getSetRevisions( $normalizedName, $fileSha1, $setName, $limit );
+		$setRevisions = $this->enrichWithUserNames( $setRevisions );
+		$result['set_revisions'] = $setRevisions;
+
+		// Get named sets for this slide
+		$namedSets = $db->getNamedSetsForImage( $normalizedName, $fileSha1 );
+		$namedSets = $this->enrichNamedSetsWithUserNames( $namedSets );
+		$result['named_sets'] = $namedSets;
+
+		// Preserve boolean values
+		$result = $this->preserveLayerBooleans( $result );
+
+		$this->getResult()->addValue( null, $this->getModuleName(), $result, ApiResult::NO_SIZE_CHECK );
+	}
+
+	/**
 	 * Preserve boolean values in layer data by converting to integers.
 	 * MediaWiki's API result system can drop boolean false values during serialization.
 	 * This converts booleans to 0/1 integers which serialize correctly.
@@ -384,7 +463,11 @@ class ApiLayersInfo extends ApiBase {
 		return [
 			'filename' => [
 				ApiBase::PARAM_TYPE => 'string',
-				ApiBase::PARAM_REQUIRED => true,
+				ApiBase::PARAM_REQUIRED => false,
+			],
+			'slidename' => [
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false,
 			],
 			'layersetid' => [
 				ApiBase::PARAM_TYPE => 'integer',
