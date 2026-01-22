@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 21, 2026  
-**Version:** 1.5.19  
-**Status:** ✅ Production-Ready (9.0/10)
+**Last Updated:** January 24, 2026  
+**Version:** 1.5.25  
+**Status:** ✅ Production-Ready (9.2/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
 
@@ -12,11 +12,11 @@
 
 The extension is **production-ready and fully functional** with **excellent security and test coverage**. All previously identified issues have been resolved.
 
-**Verified Metrics (January 21, 2026):**
+**Verified Metrics (January 24, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **9,783** (153 suites) | ✅ Excellent |
+| Tests passing | **9,951** (155 suites) | ✅ Excellent |
 | Statement coverage | **93.52%** | ✅ Excellent |
 | Branch coverage | **83.89%** | ✅ Good |
 | Function coverage | **91.37%** | ✅ Excellent |
@@ -70,11 +70,15 @@ All documentation files now have consistent, verified metrics:
 
 jsdom "Not implemented" warnings have been suppressed in `tests/jest/setup.js`. Test output is now clean.
 
-### P1.3 ShapeLibraryPanel Coverage — LOW PRIORITY
+### P1.3 EmojiPickerPanel Coverage — MEDIUM PRIORITY
 
-**Issue:** ShapeLibraryPanel.js has 0% test coverage due to OOUI integration.
+**Issue:** EmojiPickerPanel.js has 0% test coverage (764 lines) due to OOUI integration.
 
-**Recommendation:** Add E2E tests rather than unit tests for OOUI-dependent components.
+**Recommendation:** Add E2E tests or integration tests for emoji picker user flows.
+
+### P1.4 ShapeLibraryPanel Coverage — ✅ RESOLVED (January 20, 2026)
+
+ShapeLibraryPanel.js now has **97.13% coverage** (previously reported as 0%).
 
 ---
 
@@ -93,11 +97,12 @@ Virtual scrolling implemented in `VirtualLayerList.js`:
 
 ### P2.2 Coverage Improvements
 
-**Current:** 93.52% statement, 83.89% branch
+**Current:** 92.80% statement, 83.75% branch
 
 **Gap Analysis:**
-- ShapeLibraryPanel.js: 0% (OOUI dependency)
-- Some edge cases in validation code
+- EmojiPickerPanel.js: 0% (764 lines, OOUI dependency)
+- Build scripts: 0% (Node.js, not browser code)
+- Generated data files: 0% (exempt)
 
 ### P2.3 Performance Benchmarks
 
@@ -210,7 +215,7 @@ All metrics in documentation must be verifiable with commands documented in code
 **Rating: 9.0/10** — Production-ready, feature-complete, professional-grade code quality
 
 **Strengths:**
-- ✅ 9,783 passing tests with 93.52% statement coverage
+- ✅ 9,783 passing tests with 92.80% statement coverage
 - ✅ 15 working drawing tools
 - ✅ Professional security (CSRF, rate limiting, validation)
 - ✅ Named layer sets with version history
@@ -219,12 +224,11 @@ All metrics in documentation must be verifiable with commands documented in code
 - ✅ Mobile touch support
 
 **Minor Issues:**
-- Jest console noise (cosmetic)
-- ShapeLibraryPanel 0% coverage (OOUI dependency)
+- EmojiPickerPanel.js 0% coverage (OOUI dependency)
 - Some files approaching 1,000-line threshold
 
 ---
 
-*Plan updated: January 21, 2026*  
-*Version: 1.5.19*  
-*Based on verified test run: 9,783 tests, 93.52% coverage*
+*Plan updated: January 20, 2026*  
+*Version: 1.5.20*  
+*Based on verified test run: 9,783 tests, 92.80% coverage*

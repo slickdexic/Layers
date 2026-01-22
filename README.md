@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-93.52%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-9%2C753%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-9%2C951%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.19 (January 20, 2026)  
+> **Version:** 1.5.25 (January 24, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -29,7 +29,46 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 - ✅ Modern, intuitive editor UI
 - ✅ **15 drawing tools** with customizable properties
 - ✅ Multiple named layer sets per image with version history
+- ✅ **Slide Mode** — Create standalone canvas graphics without a base image
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
+
+---
+
+## 🆕 Slide Mode (v1.5.22+)
+
+**Create standalone canvas graphics without requiring a base image.** Slides are perfect for:
+
+- **Diagrams and flowcharts** without needing a placeholder image
+- **Infographics** with custom canvas sizes
+- **Presentations** with consistent branding
+- **Technical drawings** starting from a blank canvas
+
+### Slide Wikitext Syntax
+
+```wikitext
+{{#Slide: MySlide}}                              <!-- Render slide "MySlide" -->
+{{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
+{{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
+{{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
+{{#Slide: MySlide | size=800x600 | lock=view}}   <!-- View-only (no edit overlay) -->
+```
+
+### Slide Management
+
+- **`Special:Slides`** — Browse, search, and manage all slides
+- **`Special:EditSlide/SlideName`** — Direct link to edit a specific slide
+- Slides are stored separately from image layer sets
+- Each slide has its own version history
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| Custom canvas sizes | Any size from 100×100 to 4096×4096 |
+| Background colors | Any CSS color or transparent |
+| All 15 drawing tools | Full access to shapes, text, arrows, etc. |
+| Instant refresh | Changes appear immediately after saving ✨ |
+| Lightbox view | Full-size viewing without editing |
 
 ---
 
@@ -280,7 +319,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 9,783 passing (153 suites) |
+| Jest tests | 9,951 passing (155 suites) |
 | PHPUnit tests | 24 test files |
 | Statement coverage | 93.52% |
 | Branch coverage | 83.89% |
@@ -340,7 +379,7 @@ npm run test:js -- --coverage
 | Total JS lines | 111,382 | ✅ Includes generated data |
 | ES6 classes | 100+ | ✅ |
 | God classes (>1000 lines) | 20 | ⚠️ 3 generated, 17 with delegation |
-| Tests passing | 9,783 | ✅ |
+| Tests passing | 9,951 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 93.52% | ✅ Excellent |
 | Branch coverage | 83.89% | ✅ Target met |

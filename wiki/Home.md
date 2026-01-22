@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C783%20passing-brightgreen" alt="9,783 Tests">
+  <img src="https://img.shields.io/badge/Tests-9%2C951%20passing-brightgreen" alt="9,951 Tests">
   <img src="https://img.shields.io/badge/Coverage-93.52%25-brightgreen" alt="93.52% Coverage">
 </p>
 
@@ -14,21 +14,42 @@
 
 ## ✨ Highlights
 
-| 🎨 **Professional Tools** | 🔒 **Non-Destructive** | ♿ **Accessible** |
-|---------------------------|------------------------|------------------|
-| **15 drawing tools**, style presets, alignment & distribution | Original images never modified | WCAG 2.1 compliant, full keyboard support |
+| 🎨 **Professional Tools** | 🔒 **Non-Destructive** | 🖼️ **Slide Mode** | ♿ **Accessible** |
+|---------------------------|------------------------|-------------------|------------------|
+| **15 drawing tools**, style presets, alignment & distribution | Original images never modified | Create standalone graphics without a base image | WCAG 2.1 compliant, full keyboard support |
 
 ---
 
-## 🆕 What's New in v1.5.19
+## 🆕 What's New in v1.5.25
+
+- **Slide Refresh Fix** — Slides now refresh immediately after closing the editor (like images do)
+- **bfcache Support** — Added `pageshow` event handler to detect browser back-forward cache restoration
+- **13 new tests** — Comprehensive test coverage for slide refresh functionality
+- **9,951 tests passing** (155 suites), 93.52% statement coverage, 83.89% branch coverage
+
+### 🖼️ Slide Mode (v1.5.22+)
+
+**Create standalone canvas graphics without requiring a base image!** This major feature includes:
+
+- **`{{#Slide: SlideName}}`** — Wikitext parser function for embedding slides
+- **`Special:Slides`** — Browse, search, create, and delete slides
+- **`Special:EditSlide/SlideName`** — Direct editor access
+- **Custom canvas sizes** — Any size from 100×100 to 4096×4096
+- **Background colors** — Any CSS color or transparent
+- **Instant refresh** — Changes appear immediately after saving ✨
+
+Perfect for diagrams, infographics, flowcharts, and presentations!
+
+### Previous v1.5.24 Highlights
+
+- **Virtual Scrolling for Layer Lists (P2.1)** — Layer panel now uses virtual scrolling for 30+ layers, preventing UI slowdowns with large layer counts
+- **Duplicate Close Button Fix** — Modal overlay no longer shows redundant close button
+- **9,783 tests passing** (153 suites), 92.80% statement coverage, 83.75% branch coverage
+
+### Previous v1.5.19 Highlights
 
 - **Shared IdGenerator Utility** — New centralized ID generation with monotonic counter guarantees unique layer IDs even during rapid operations (paste, duplicate, bulk imports)
 - **ViewerManager Error Tracking** — `refreshAllViewers()` now returns detailed result object with error tracking for better debugging
-- **9,783 tests passing** (153 suites), 93.52% statement coverage, 83.89% branch coverage
-
-### Previous v1.5.18 Highlights
-
-- **Critical Bug Fix: Non-Existent Layer Set Handling** — Fixed production issue where `layerset=X` with a non-existent set name would not show the edit overlay
 
 ### Previous v1.5.17 Highlights
 
@@ -196,12 +217,12 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.19 |
-| **Version (REL1_43)** | 1.5.19-REL1_43 |
+| **Version (main)** | 1.5.25 |
+| **Version (REL1_43)** | 1.5.25-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
-| **Test Suites** | 152 |
-| **Total Tests** | 9,783 |
+| **Test Suites** | 155 |
+| **Total Tests** | 9,951 |
 | **PHPUnit Test Files** | 24 |
 | **Statement Coverage** | 93.52% |
 | **Branch Coverage** | 83.89% |

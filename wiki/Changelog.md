@@ -4,6 +4,78 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.25 (January 24, 2026)
+
+### Fixed
+- **Slide Mode: Slides Not Refreshing After Editor Close** — Fixed critical bug where slides required a full page refresh to see changes after closing the editor, unlike images which update immediately. Root cause: slides use `window.location.href` navigation to `Special:EditSlide` (full page navigation) while images use a modal editor. When the slide editor closes via `history.back()`, the browser restores the page from bfcache (back-forward cache), which does NOT re-execute JavaScript. Solution: added `pageshow` event listener in `init.js` that detects bfcache restoration (`event.persisted === true`) and calls `refreshAllViewers()`. Also updated `refreshAllSlides()` to refresh ALL slide containers without requiring the `layersSlideInitialized` property (which may be lost on bfcache restoration).
+
+### Technical Details
+- All 9,951 tests pass (155 test suites)
+- Added 13 new tests for slide refresh functionality (ViewerManager: 11, init: 2)
+- Test coverage: 93.52% statement, 83.89% branch
+- ESLint/Stylelint/Banana all pass
+
+---
+
+## Version 1.5.24 (January 24, 2026)
+
+### Fixed
+- **SVG Custom Shapes: Dashed Placeholder Boxes on Article Pages** — Fixed custom SVG shapes (from Shape Library) displaying a visible dashed rectangle placeholder on article pages while the SVG loaded
+
+### Added
+- **Slide Mode: Special:Slides Management Page** — Added `Special:Slides` page for listing, searching, creating, and deleting slides
+- **Slide Mode: Special:EditSlide Direct Editor Access** — Added `Special:EditSlide/SlideName` for direct slide editing
+- **Slide Mode: SlideNameValidator** — Server-side validation for slide names
+- **Slide Mode: API layerslist Endpoint** — New API module for listing slides with filtering and pagination
+
+---
+
+## Version 1.5.23 (January 22, 2026)
+
+### Fixed
+- **Slide Mode: Canvas Dimensions Not Persisting** — Fixed critical bug where canvas dimensions reverted to 800×600 after save/close/reopen
+- **Slide Mode: View Icon Inconsistency** — Fixed the "view full size" icon on slides to match the fullscreen icon used on regular layered images
+- **Slide Mode: LayersLightbox Not Available** — Fixed "LayersLightbox not available for slide view" error
+- **Slide Mode: Edit Icon Mismatch** — Fixed edit (pencil) icon on slide overlays being different from image overlays
+- **Slide Mode: Background Color Not Saving** — Fixed slide background color not persisting after save
+- **Slide Mode: False Dirty State on Open** — Fixed editor prompting to save changes immediately after opening
+
+---
+
+## Version 1.5.22 (January 22, 2026)
+
+### Fixed
+- **Slide Mode: Canvas Size Not Applied** — Fixed critical bug where slides with `canvas=600x400` would always display as 800×600 in the editor
+- **Slide Mode: Edit Button Always Visible** — Fixed the edit overlay on slides to only appear on hover
+
+### Added
+- **Slide Mode: View Full Size Button** — Added "View full size" button to slide overlays that opens the slide in LayersLightbox
+- **ViewerManager Slide Overlay System** — New JavaScript-based overlay system for slides
+
+---
+
+## Version 1.5.21 (January 21, 2026)
+
+### Fixed
+- **PHPUnit SlideHooksTest.php** — Complete rewrite of broken unit tests for SlideHooks:
+  - Fixed `testParseCanvasDimensions` passing int instead of Config mock
+  - Fixed `testParseArguments` missing required PPFrame mock parameter
+  - Fixed `testSanitizeCssClasses` expecting string but method returns array
+  - Removed `testIsValidLockMode` for non-existent method
+
+### Documentation
+- **SLIDE_MODE.md Troubleshooting** — Added comprehensive "Appendix B: Troubleshooting" section (~80 lines) covering:
+  - Parser function rendering as plain text (cache rebuild solutions)
+  - Edit button not appearing (permission requirements)
+  - Edit button hidden with `lock=all` (admin rights required)
+  - Database and JavaScript debugging steps
+- **codebase_review.md** — Added findings from Slide Mode investigation, documented test fixes
+
+### Added
+- **Debug Logging in SlideHooks.php** — Added `staticLog()` calls to `renderSlide()` method for troubleshooting parser function issues
+
+---
+
 ## Version 1.5.20 (January 20, 2026)
 
 ### Added

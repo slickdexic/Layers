@@ -1,6 +1,6 @@
 # Accessibility Guide
 
-**Last Updated:** December 2025
+**Last Updated:** January 2026
 
 This document describes the accessibility features of the Layers extension and provides guidance for contributors to maintain and improve accessibility compliance.
 

@@ -102,9 +102,14 @@
 				this.iframe.src = editorUrl;
 				this.iframe.setAttribute( 'title', 'Layers Editor' );
 
-				// Handle iframe load
+				// Handle iframe load - hide modal header since editor has its own
 				this.iframe.addEventListener( 'load', () => {
 					this.setupMessageListener();
+					// Hide the modal's header bar - the editor has its own close button
+					// This avoids the confusing "two X buttons" UX
+					if ( header && header.parentNode ) {
+						header.style.display = 'none';
+					}
 					// Focus the iframe for keyboard accessibility
 					this.iframe.focus();
 				} );

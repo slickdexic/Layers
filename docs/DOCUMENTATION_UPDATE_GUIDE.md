@@ -1,6 +1,6 @@
 # Documentation Update Guide
 
-**Last Updated:** January 7, 2026
+**Last Updated:** January 21, 2026
 
 This guide ensures all documentation stays synchronized when making changes to the Layers extension. **This is a MANDATORY checklist before every release.**
 

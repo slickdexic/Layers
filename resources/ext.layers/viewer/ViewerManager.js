@@ -250,6 +250,80 @@ class ViewerManager {
 	}
 
 	/**
+	 * Reinitialize a slide viewer with fresh layer data.
+	 *
+	 * This is called when a slide's data needs to be refreshed after editing.
+	 * It clears the canvas and re-renders all layers with the fresh data.
+	 *
+	 * @param {HTMLElement} container Slide container element
+	 * @param {Object} payload Fresh layer data payload
+	 * @return {boolean} True if slide viewer was reinitialized
+	 */
+	reinitializeSlideViewer( container, payload ) {
+		try {
+			const canvas = container.querySelector( 'canvas' );
+			if ( !canvas ) {
+				this.debugWarn( 'reinitializeSlideViewer: No canvas found' );
+				return false;
+			}
+
+			const ctx = canvas.getContext( '2d' );
+			if ( !ctx ) {
+				this.debugWarn( 'reinitializeSlideViewer: Could not get 2d context' );
+				return false;
+			}
+
+			// Clear canvas completely
+			ctx.clearRect( 0, 0, canvas.width, canvas.height );
+
+			// Update canvas dimensions if payload specifies new ones
+			if ( payload.baseWidth && payload.baseHeight ) {
+				canvas.width = payload.baseWidth;
+				canvas.height = payload.baseHeight;
+			}
+
+			// Fill background
+			const bgColor = payload.backgroundColor || container.getAttribute( 'data-background' ) || '#ffffff';
+			const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'none';
+
+			if ( !isTransparent ) {
+				ctx.fillStyle = bgColor;
+				ctx.fillRect( 0, 0, canvas.width, canvas.height );
+			}
+
+			// Get LayerRenderer for rendering
+			const LayerRenderer = ( window.Layers && window.Layers.LayerRenderer ) || window.LayerRenderer;
+			if ( !LayerRenderer ) {
+				this.debugWarn( 'reinitializeSlideViewer: LayerRenderer not available' );
+				return false;
+			}
+
+			// Render layers
+			const renderer = new LayerRenderer( ctx, {
+				canvas: canvas,
+				zoom: 1
+			} );
+
+			if ( payload.layers && Array.isArray( payload.layers ) ) {
+				payload.layers.forEach( ( layer ) => {
+					if ( layer.visible !== false && layer.visible !== 0 ) {
+						renderer.drawLayer( layer );
+					}
+				} );
+			}
+
+			// Update the stored payload for the overlay (for view full size)
+			container._layersPayload = payload;
+
+			this.debugLog( 'Slide viewer reinitialized:', container.getAttribute( 'data-slide-name' ) );
+			return true;
+		} catch ( e ) {
+			this.debugWarn( 'Slide viewer reinit error:', e );
+			return false;
+		}
+	}
+
+	/**
 	 * Initialize only the edit/view overlay for an image, without a viewer.
 	 *
 	 * This is used when a layer set is referenced but doesn't exist yet,
@@ -357,8 +431,9 @@ class ViewerManager {
 		).filter( ( img ) => img.layersViewer );
 
 		if ( viewerImages.length === 0 ) {
-			this.debugLog( 'refreshAllViewers: no viewers found' );
-			return Promise.resolve( { refreshed: 0, failed: 0, total: 0, errors: [] } );
+			this.debugLog( 'refreshAllViewers: no image viewers found, checking for slides' );
+			// Even if no images, still refresh slides
+			return this.refreshAllSlides();
 		}
 
 		this.debugLog( 'refreshAllViewers: found', viewerImages.length, 'viewers' );
@@ -468,14 +543,135 @@ class ViewerManager {
 
 		return Promise.all( refreshPromises ).then( ( results ) => {
 			const failed = results.filter( ( r ) => !r.success ).length;
-			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'of', viewerImages.length, 'viewers' );
+			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'of', viewerImages.length, 'image viewers' );
 			if ( errors.length > 0 ) {
 				self.debugWarn( 'refreshAllViewers:', errors.length, 'errors occurred:', errors );
+			}
+
+			// Also refresh all slide viewers
+			return self.refreshAllSlides().then( ( slideResults ) => {
+				return {
+					refreshed: refreshCount + slideResults.refreshed,
+					failed: failed + slideResults.failed,
+					total: viewerImages.length + slideResults.total,
+					errors: errors.concat( slideResults.errors )
+				};
+			} );
+		} );
+	}
+
+	/**
+	 * Refresh all slide viewers on the page by fetching fresh data from the API.
+	 *
+	 * This is called by refreshAllViewers() to ensure slides are also updated
+	 * when the modal editor closes after saving.
+	 *
+	 * @return {Promise<Object>} Promise resolving to result object
+	 */
+	refreshAllSlides() {
+		this.debugLog( 'refreshAllSlides: starting' );
+
+		// Find all slide containers (don't require layersSlideInitialized flag
+		// since this may be called after bfcache restore where DOM properties may be lost)
+		const slideContainers = Array.prototype.slice.call(
+			document.querySelectorAll( '.layers-slide-container[data-slide-name]' )
+		);
+
+		if ( slideContainers.length === 0 ) {
+			this.debugLog( 'refreshAllSlides: no slides found' );
+			return Promise.resolve( { refreshed: 0, failed: 0, total: 0, errors: [] } );
+		}
+
+		this.debugLog( 'refreshAllSlides: found', slideContainers.length, 'slides' );
+
+		// Fetch fresh data for each slide via API
+		if ( typeof mw === 'undefined' || !mw.Api ) {
+			this.debugWarn( 'refreshAllSlides: mw.Api not available' );
+			return Promise.resolve( {
+				refreshed: 0,
+				failed: slideContainers.length,
+				total: slideContainers.length,
+				errors: [ { slideName: null, error: 'mw.Api not available' } ]
+			} );
+		}
+
+		const api = new mw.Api();
+		const self = this;
+		let refreshCount = 0;
+		const errors = [];
+
+		const refreshPromises = slideContainers.map( ( container ) => {
+			const slideName = container.getAttribute( 'data-slide-name' );
+			const setName = container.getAttribute( 'data-layerset' ) || 'default';
+			const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
+			const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
+
+			if ( !slideName ) {
+				return Promise.resolve( { success: false, slideName: null } );
+			}
+
+			return api.get( {
+				action: 'layersinfo',
+				slidename: slideName,
+				setname: setName,
+				format: 'json',
+				formatversion: 2
+			} ).then( ( data ) => {
+				try {
+					if ( !data || !data.layersinfo ) {
+						self.debugLog( 'refreshAllSlides: no layersinfo for', slideName );
+						return { success: false, slideName: slideName };
+					}
+
+					const layerset = data.layersinfo.layerset;
+					let layersArr = [];
+
+					if ( layerset && layerset.data && layerset.data.layers ) {
+						layersArr = layerset.data.layers;
+					}
+
+					// Build payload for slide viewer
+					const payload = {
+						layers: layersArr,
+						baseWidth: ( layerset && layerset.baseWidth ) || ( layerset && layerset.data && layerset.data.canvasWidth ) || canvasWidth,
+						baseHeight: ( layerset && layerset.baseHeight ) || ( layerset && layerset.data && layerset.data.canvasHeight ) || canvasHeight,
+						backgroundVisible: true,
+						backgroundOpacity: 1.0,
+						isSlide: true,
+						backgroundColor: ( layerset && layerset.data && layerset.data.backgroundColor ) ||
+							container.getAttribute( 'data-background' ) || '#ffffff'
+					};
+
+					const success = self.reinitializeSlideViewer( container, payload );
+					if ( success ) {
+						refreshCount++;
+						self.debugLog( 'refreshAllSlides: refreshed slide', slideName );
+					}
+					return { success: success, slideName: slideName };
+				} catch ( e ) {
+					self.debugWarn( 'refreshAllSlides: error processing', slideName, e );
+					errors.push( { slideName: slideName, error: e.message || String( e ) } );
+					return { success: false, slideName: slideName };
+				}
+			} ).catch( ( apiErr ) => {
+				self.debugWarn( 'refreshAllSlides: API error for', slideName, apiErr );
+				const errMsg = apiErr && apiErr.message ? apiErr.message :
+					( apiErr && apiErr.error && apiErr.error.info ? apiErr.error.info : String( apiErr ) );
+				errors.push( { slideName: slideName, error: errMsg } );
+				return { success: false, slideName: slideName };
+			} );
+		} );
+
+		return Promise.all( refreshPromises ).then( ( results ) => {
+			const failed = results.filter( ( r ) => !r.success ).length;
+			self.debugLog( 'refreshAllSlides: completed, refreshed', refreshCount, 'of', slideContainers.length, 'slides' );
+			if ( errors.length > 0 ) {
+				self.debugWarn( 'refreshAllSlides:', errors.length, 'errors occurred:', errors );
 			}
 			return {
 				refreshed: refreshCount,
 				failed: failed,
-				total: viewerImages.length,
+				total: slideContainers.length,
 				errors: errors
 			};
 		} );
@@ -534,6 +730,7 @@ class ViewerManager {
 	 * 1. img[data-layer-data] - images with direct layer data
 	 * 2. a[data-layer-data] > img - images inside links with layer data
 	 * 3. img[data-layers-large] - images with large data that need API fetch
+	 * 4. .layers-slide-container - slides (canvas without parent image)
 	 */
 	initializeLayerViewers () {
 		// Primary: attributes directly on <img>
@@ -548,6 +745,9 @@ class ViewerManager {
 
 		// Fetch layer data via API for large images
 		this.initializeLargeImages( largeImages );
+
+		// Initialize slides (canvas without parent image)
+		this.initializeSlides();
 
 		// Ensure the marker class exists for any img we found
 		images.forEach( ( img ) => {
@@ -719,6 +919,705 @@ class ViewerManager {
 				img.layersPending = false;
 			} );
 		} );
+	}
+
+	/**
+	 * Initialize slides (canvas-based layers without parent images).
+	 * Finds all .layers-slide-container elements and fetches their layer data via API.
+	 */
+	initializeSlides() {
+		const containers = Array.prototype.slice.call(
+			document.querySelectorAll( '.layers-slide-container' )
+		);
+
+		if ( containers.length === 0 ) {
+			return;
+		}
+
+		this.debugLog( 'Found', containers.length, 'slide containers' );
+
+		if ( typeof mw === 'undefined' || !mw.Api ) {
+			this.debugWarn( 'mw.Api not available for slide fetch' );
+			return;
+		}
+
+		const api = new mw.Api();
+		const self = this;
+
+		containers.forEach( ( container ) => {
+			// Skip if already initialized
+			if ( container.layersSlideInitialized ) {
+				return;
+			}
+
+			const slideName = container.getAttribute( 'data-slide-name' );
+			if ( !slideName ) {
+				self.debugWarn( 'Slide container missing data-slide-name attribute' );
+				return;
+			}
+
+			// Get canvas dimensions from data attributes
+			const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
+			const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
+			// Slides use data-layerset (from SlideHooks.php)
+			const setName = container.getAttribute( 'data-layerset' ) || 'default';
+
+			// Mark as pending
+			container.layersSlideInitialized = true;
+
+			self.debugLog( 'Fetching slide data for:', slideName, 'set:', setName );
+
+			api.get( {
+				action: 'layersinfo',
+				slidename: slideName,
+				setname: setName,
+				format: 'json',
+				formatversion: 2
+			} ).then( ( data ) => {
+				try {
+					if ( !data || !data.layersinfo ) {
+						self.debugLog( 'No layersinfo returned for slide:', slideName );
+						self.renderEmptySlide( container, canvasWidth, canvasHeight );
+						return;
+					}
+
+					const layersInfo = data.layersinfo;
+					const layerset = layersInfo.layerset;
+
+					if ( !layerset || !layerset.data || !layerset.data.layers || layerset.data.layers.length === 0 ) {
+						self.debugLog( 'No layers in fetched data for slide:', slideName );
+						self.renderEmptySlide( container, canvasWidth, canvasHeight );
+						return;
+					}
+
+					// Build payload for slide viewer
+					const payload = {
+						layers: layerset.data.layers,
+						baseWidth: layerset.baseWidth || layerset.data.canvasWidth || canvasWidth,
+						baseHeight: layerset.baseHeight || layerset.data.canvasHeight || canvasHeight,
+						backgroundVisible: true,
+						backgroundOpacity: 1.0,
+						isSlide: true,
+						backgroundColor: layerset.data.backgroundColor || container.getAttribute( 'data-background-color' ) || '#ffffff'
+					};
+
+					self.initializeSlideViewer( container, payload );
+				} catch ( e ) {
+					self.debugWarn( 'Error processing slide data:', e );
+					self.renderEmptySlide( container, canvasWidth, canvasHeight );
+				}
+			} ).catch( ( apiErr ) => {
+				self.debugWarn( 'API request failed for slide:', slideName, apiErr );
+				self.renderEmptySlide( container, canvasWidth, canvasHeight );
+			} );
+		} );
+	}
+
+	/**
+	 * Initialize a slide viewer for a container element.
+	 *
+	 * @param {HTMLElement} container Slide container element
+	 * @param {Object} payload Layer data payload
+	 */
+	initializeSlideViewer( container, payload ) {
+		const canvas = container.querySelector( 'canvas' );
+		if ( !canvas ) {
+			this.debugWarn( 'No canvas found in slide container' );
+			return;
+		}
+
+		// Get display dimensions from container data attributes (how slide appears on page)
+		const displayWidth = parseInt( container.getAttribute( 'data-display-width' ), 10 );
+		const displayHeight = parseInt( container.getAttribute( 'data-display-height' ), 10 );
+		const displayScale = parseFloat( container.getAttribute( 'data-display-scale' ) ) || 1;
+
+		// Set canvas internal dimensions (source resolution for rendering)
+		canvas.width = payload.baseWidth;
+		canvas.height = payload.baseHeight;
+
+		// If display dimensions differ from canvas dimensions, scale the canvas with CSS
+		if ( displayWidth && displayHeight && displayScale !== 1 ) {
+			canvas.style.width = displayWidth + 'px';
+			canvas.style.height = displayHeight + 'px';
+			this.debugLog( 'Slide canvas scaled: ' + payload.baseWidth + 'x' + payload.baseHeight +
+				' -> ' + displayWidth + 'x' + displayHeight + ' (scale: ' + displayScale + ')' );
+		}
+
+		// Get LayerRenderer for rendering
+		const LayerRenderer = ( window.Layers && window.Layers.LayerRenderer ) || window.LayerRenderer;
+		if ( !LayerRenderer ) {
+			this.debugWarn( 'LayerRenderer not available for slide' );
+			return;
+		}
+
+		const ctx = canvas.getContext( '2d' );
+		if ( !ctx ) {
+			this.debugWarn( 'Could not get 2d context for slide canvas' );
+			return;
+		}
+
+		// Clear and fill background
+		const bgColor = payload.backgroundColor || '#ffffff';
+		const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'none';
+
+		if ( !isTransparent ) {
+			// Only fill background if it's a solid color
+			ctx.fillStyle = bgColor;
+			ctx.fillRect( 0, 0, canvas.width, canvas.height );
+		}
+		// If transparent, don't fill - let the page background show through
+
+		// Render layers using the shared LayerRenderer
+		const renderer = new LayerRenderer( ctx, {
+			canvas: canvas,
+			zoom: 1
+		} );
+		payload.layers.forEach( ( layer ) => {
+			if ( layer.visible !== false && layer.visible !== 0 ) {
+				renderer.drawLayer( layer );
+			}
+		} );
+
+		// Remove loading placeholder
+		const placeholder = container.querySelector( '.layers-slide-placeholder' );
+		if ( placeholder ) {
+			placeholder.style.display = 'none';
+		}
+
+		// Set up slide overlay with edit and view buttons
+		this.setupSlideOverlay( container, payload );
+
+		this.debugLog( 'Slide viewer initialized:', container.getAttribute( 'data-slide-name' ) );
+	}
+
+	/**
+	 * Check if current user has edit permission for layers.
+	 *
+	 * @private
+	 * @return {boolean} True if user can edit layers
+	 */
+	canUserEdit() {
+		if ( typeof mw === 'undefined' || !mw.config ) {
+			return false;
+		}
+		// Check the dedicated config var exposed by Layers extension
+		const canEdit = mw.config.get( 'wgLayersCanEdit' );
+		if ( canEdit !== null && canEdit !== undefined ) {
+			return !!canEdit;
+		}
+		// Fallback: check wgUserRights if available
+		const rights = mw.config.get( 'wgUserRights' );
+		if ( rights && Array.isArray( rights ) ) {
+			return rights.indexOf( 'editlayers' ) !== -1;
+		}
+		return false;
+	}
+
+	/**
+	 * Set up click handler for slide edit button.
+	 *
+	 * @param {HTMLElement} container Slide container element
+	 */
+	setupSlideEditButton( container ) {
+		const editButton = container.querySelector( '.layers-slide-edit-button' );
+		if ( !editButton ) {
+			return;
+		}
+
+		// Check if user has permission to edit - hide button if not
+		if ( !this.canUserEdit() ) {
+			editButton.style.display = 'none';
+			this.debugLog( 'Edit button hidden - user lacks editlayers permission' );
+			return;
+		}
+
+		// Prevent double-binding
+		if ( editButton.layersClickBound ) {
+			return;
+		}
+		editButton.layersClickBound = true;
+
+		const self = this;
+
+		editButton.addEventListener( 'click', ( e ) => {
+			e.preventDefault();
+			e.stopPropagation();
+
+			// Get slide data from container attributes
+			const slideName = container.getAttribute( 'data-slide-name' );
+			const lockMode = container.getAttribute( 'data-lock-mode' ) || 'none';
+			const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
+			const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
+			const backgroundColor = container.getAttribute( 'data-background' ) || '#ffffff';
+			const layerSetName = container.getAttribute( 'data-layerset' ) || 'default';
+
+			self.debugLog( 'Slide edit clicked:', slideName, 'lockMode:', lockMode );
+
+			self.openSlideEditor( {
+				slideName: slideName,
+				lockMode: lockMode,
+				canvasWidth: canvasWidth,
+				canvasHeight: canvasHeight,
+				backgroundColor: backgroundColor,
+				layerSetName: layerSetName
+			} );
+		} );
+	}
+
+	/**
+	 * Set up the slide overlay with edit and view buttons.
+	 * This replaces the old single edit button with a proper overlay.
+	 *
+	 * @param {HTMLElement} container Slide container element
+	 * @param {Object} payload Layer data payload
+	 */
+	setupSlideOverlay( container, payload ) {
+		// Remove old edit button if present (replaced by overlay)
+		const oldEditButton = container.querySelector( '.layers-slide-edit-button' );
+		if ( oldEditButton ) {
+			oldEditButton.remove();
+		}
+
+		// Check if overlay already exists (from a previous init)
+		if ( container.querySelector( '.layers-slide-overlay' ) ) {
+			return;
+		}
+
+		const canEdit = this.canUserEdit();
+		const self = this;
+
+		// Create overlay container
+		const overlay = document.createElement( 'div' );
+		overlay.className = 'layers-slide-overlay';
+		overlay.setAttribute( 'role', 'toolbar' );
+		overlay.setAttribute( 'aria-label', this._msg( 'layers-viewer-overlay-label', 'Slide actions' ) );
+
+		// Create edit button if user has permission
+		if ( canEdit ) {
+			const editBtn = document.createElement( 'button' );
+			editBtn.className = 'layers-slide-overlay-btn layers-slide-overlay-btn--edit';
+			editBtn.setAttribute( 'type', 'button' );
+			editBtn.setAttribute( 'title', this._msg( 'layers-viewer-edit', 'Edit layers' ) );
+			editBtn.setAttribute( 'aria-label', this._msg( 'layers-viewer-edit', 'Edit layers' ) );
+			editBtn.appendChild( this._createPencilIcon() );
+
+			editBtn.addEventListener( 'click', ( e ) => {
+				e.preventDefault();
+				e.stopPropagation();
+				self.handleSlideEditClick( container );
+			} );
+
+			overlay.appendChild( editBtn );
+		}
+
+		// Create view full size button (always visible)
+		const viewBtn = document.createElement( 'button' );
+		viewBtn.className = 'layers-slide-overlay-btn layers-slide-overlay-btn--view';
+		viewBtn.setAttribute( 'type', 'button' );
+		viewBtn.setAttribute( 'title', this._msg( 'layers-viewer-view', 'View full size' ) );
+		viewBtn.setAttribute( 'aria-label', this._msg( 'layers-viewer-view', 'View full size' ) );
+		viewBtn.appendChild( this._createExpandIcon() );
+
+		viewBtn.addEventListener( 'click', ( e ) => {
+			e.preventDefault();
+			e.stopPropagation();
+			self.handleSlideViewClick( container, payload );
+		} );
+
+		overlay.appendChild( viewBtn );
+
+		// Add overlay to container
+		container.appendChild( overlay );
+
+		this.debugLog( 'Slide overlay created for:', container.getAttribute( 'data-slide-name' ),
+			'canEdit:', canEdit );
+	}
+
+	/**
+	 * Handle click on slide edit button.
+	 *
+	 * @private
+	 * @param {HTMLElement} container Slide container element
+	 */
+	handleSlideEditClick( container ) {
+		const slideName = container.getAttribute( 'data-slide-name' );
+		const lockMode = container.getAttribute( 'data-lock-mode' ) || 'none';
+		const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
+		const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
+		const backgroundColor = container.getAttribute( 'data-background' ) || '#ffffff';
+		const layerSetName = container.getAttribute( 'data-layerset' ) || 'default';
+
+		this.debugLog( 'Slide edit clicked:', slideName );
+
+		this.openSlideEditor( {
+			slideName: slideName,
+			lockMode: lockMode,
+			canvasWidth: canvasWidth,
+			canvasHeight: canvasHeight,
+			backgroundColor: backgroundColor,
+			layerSetName: layerSetName
+		} );
+	}
+
+	/**
+	 * Handle click on slide view (full size) button.
+	 * Opens the slide in a lightbox for full-size viewing.
+	 *
+	 * @private
+	 * @param {HTMLElement} container Slide container element
+	 * @param {Object} payload Layer data payload
+	 */
+	handleSlideViewClick( container, payload ) {
+		const slideName = container.getAttribute( 'data-slide-name' );
+		this.debugLog( 'Slide view clicked:', slideName );
+
+		// Get LayersLightbox class - check multiple export locations
+		const LightboxClass = ( window.Layers && window.Layers.Viewer && window.Layers.Viewer.Lightbox ) ||
+			( window.Layers && window.Layers.LayersLightbox ) ||
+			window.LayersLightbox;
+		if ( !LightboxClass ) {
+			this.debugWarn( 'LayersLightbox not available for slide view' );
+			return;
+		}
+
+		// Create a synthetic image data object for the lightbox
+		const canvas = container.querySelector( 'canvas' );
+		if ( !canvas ) {
+			return;
+		}
+
+		// Create a data URL from the current canvas state
+		const dataUrl = canvas.toDataURL( 'image/png' );
+
+		// Create lightbox and open with proper config
+		// LayersLightbox.open() expects { filename, imageUrl, layerData }
+		const lightbox = new LightboxClass( { debug: this.debug } );
+		lightbox.open( {
+			filename: slideName,
+			imageUrl: dataUrl,
+			layerData: {
+				layers: payload.layers || [],
+				baseWidth: payload.baseWidth,
+				baseHeight: payload.baseHeight,
+				backgroundVisible: true,
+				backgroundOpacity: 1.0,
+				backgroundColor: payload.backgroundColor
+			}
+		} );
+	}
+
+	/**
+	 * Get localized message with fallback (for slides).
+	 *
+	 * @private
+	 * @param {string} key Message key
+	 * @param {string} fallback Fallback text
+	 * @return {string} Message text
+	 */
+	_msg( key, fallback ) {
+		if ( typeof mw !== 'undefined' && mw.message ) {
+			const msg = mw.message( key );
+			if ( msg.exists() ) {
+				return msg.text();
+			}
+		}
+		return fallback;
+	}
+
+	/**
+	 * Create pencil icon SVG for edit button.
+	 *
+	 * @private
+	 * @return {SVGElement} Pencil icon
+	 */
+	_createPencilIcon() {
+		const SVG_NS = 'http://www.w3.org/2000/svg';
+
+		// Try to use IconFactory if available (matches ViewerOverlay)
+		if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
+			window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createPencilIcon ) {
+			return window.Layers.UI.IconFactory.createPencilIcon( { size: 16, color: '#fff' } );
+		}
+
+		// Fallback: same SVG as ViewerOverlay (pencil with document icon)
+		const svg = document.createElementNS( SVG_NS, 'svg' );
+		svg.setAttribute( 'width', '16' );
+		svg.setAttribute( 'height', '16' );
+		svg.setAttribute( 'viewBox', '0 0 24 24' );
+		svg.setAttribute( 'fill', 'none' );
+		svg.setAttribute( 'aria-hidden', 'true' );
+
+		const path1 = document.createElementNS( SVG_NS, 'path' );
+		path1.setAttribute( 'd', 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' );
+		path1.setAttribute( 'stroke', '#fff' );
+		path1.setAttribute( 'stroke-width', '2' );
+		path1.setAttribute( 'stroke-linecap', 'round' );
+		path1.setAttribute( 'stroke-linejoin', 'round' );
+		svg.appendChild( path1 );
+
+		const path2 = document.createElementNS( SVG_NS, 'path' );
+		path2.setAttribute( 'd', 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' );
+		path2.setAttribute( 'stroke', '#fff' );
+		path2.setAttribute( 'stroke-width', '2' );
+		path2.setAttribute( 'stroke-linecap', 'round' );
+		path2.setAttribute( 'stroke-linejoin', 'round' );
+		svg.appendChild( path2 );
+
+		return svg;
+	}
+
+	/**
+	 * Create expand icon SVG for view button.
+	 *
+	 * @private
+	 * @return {SVGElement} Expand icon
+	 */
+	_createExpandIcon() {
+		// Use IconFactory if available for consistency with ViewerOverlay
+		if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
+			window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createFullscreenIcon ) {
+			return window.Layers.UI.IconFactory.createFullscreenIcon( { size: 16, color: '#fff' } );
+		}
+
+		// Fallback: same SVG as ViewerOverlay (expand arrows icon)
+		const SVG_NS = 'http://www.w3.org/2000/svg';
+		const svg = document.createElementNS( SVG_NS, 'svg' );
+		svg.setAttribute( 'width', '16' );
+		svg.setAttribute( 'height', '16' );
+		svg.setAttribute( 'viewBox', '0 0 24 24' );
+		svg.setAttribute( 'fill', 'none' );
+		svg.setAttribute( 'aria-hidden', 'true' );
+
+		// Top-right corner
+		const path1 = document.createElementNS( SVG_NS, 'path' );
+		path1.setAttribute( 'd', 'M15 3h6v6' );
+		path1.setAttribute( 'stroke', '#fff' );
+		path1.setAttribute( 'stroke-width', '2' );
+		path1.setAttribute( 'stroke-linecap', 'round' );
+		path1.setAttribute( 'stroke-linejoin', 'round' );
+		svg.appendChild( path1 );
+
+		// Bottom-left corner
+		const path2 = document.createElementNS( SVG_NS, 'path' );
+		path2.setAttribute( 'd', 'M9 21H3v-6' );
+		path2.setAttribute( 'stroke', '#fff' );
+		path2.setAttribute( 'stroke-width', '2' );
+		path2.setAttribute( 'stroke-linecap', 'round' );
+		path2.setAttribute( 'stroke-linejoin', 'round' );
+		svg.appendChild( path2 );
+
+		// Diagonal lines
+		const line1 = document.createElementNS( SVG_NS, 'line' );
+		line1.setAttribute( 'x1', '21' );
+		line1.setAttribute( 'y1', '3' );
+		line1.setAttribute( 'x2', '14' );
+		line1.setAttribute( 'y2', '10' );
+		line1.setAttribute( 'stroke', '#fff' );
+		line1.setAttribute( 'stroke-width', '2' );
+		line1.setAttribute( 'stroke-linecap', 'round' );
+		svg.appendChild( line1 );
+
+		const line2 = document.createElementNS( SVG_NS, 'line' );
+		line2.setAttribute( 'x1', '3' );
+		line2.setAttribute( 'y1', '21' );
+		line2.setAttribute( 'x2', '10' );
+		line2.setAttribute( 'y2', '14' );
+		line2.setAttribute( 'stroke', '#fff' );
+		line2.setAttribute( 'stroke-width', '2' );
+		line2.setAttribute( 'stroke-linecap', 'round' );
+		svg.appendChild( line2 );
+
+		return svg;
+	}
+
+	/**
+	 * Open the slide editor.
+	 *
+	 * @param {Object} slideData Slide configuration data
+	 * @param {string} slideData.slideName Slide name
+	 * @param {string} slideData.lockMode Lock mode (none, size, all)
+	 * @param {number} slideData.canvasWidth Canvas width
+	 * @param {number} slideData.canvasHeight Canvas height
+	 * @param {string} slideData.backgroundColor Background color
+	 * @param {string} slideData.layerSetName Layer set name
+	 */
+	openSlideEditor( slideData ) {
+		// Fire a hook that the editor module can listen to
+		// This allows the modal or inline editor to handle slide editing
+		if ( typeof mw !== 'undefined' && mw.hook ) {
+			mw.hook( 'layers.slide.edit' ).fire( {
+				slideName: slideData.slideName,
+				lockMode: slideData.lockMode,
+				canvasWidth: slideData.canvasWidth,
+				canvasHeight: slideData.canvasHeight,
+				backgroundColor: slideData.backgroundColor,
+				layerSetName: slideData.layerSetName,
+				isSlide: true
+			} );
+		}
+
+		// Navigate to slide editor page
+		// Note: Modal editing for slides is not yet supported - slides use Special:EditSlide
+		const editUrl = this.buildSlideEditorUrl( slideData );
+		window.location.href = editUrl;
+	}
+
+	/**
+	 * Build the URL for the slide editor.
+	 *
+	 * @private
+	 * @param {Object} slideData Slide data
+	 * @return {string} Editor URL
+	 */
+	buildSlideEditorUrl( slideData ) {
+		if ( typeof mw === 'undefined' || !mw.util ) {
+			// Fallback URL construction
+			let url = '/wiki/Special:EditSlide/' + encodeURIComponent( slideData.slideName );
+			url += '?setname=' + encodeURIComponent( slideData.layerSetName );
+			if ( slideData.lockMode && slideData.lockMode !== 'none' ) {
+				url += '&lockmode=' + encodeURIComponent( slideData.lockMode );
+			}
+			return url;
+		}
+
+		const params = new URLSearchParams();
+		params.set( 'action', 'editslide' );
+		params.set( 'slidename', slideData.slideName );
+		if ( slideData.layerSetName && slideData.layerSetName !== 'default' ) {
+			params.set( 'setname', slideData.layerSetName );
+		}
+		if ( slideData.lockMode && slideData.lockMode !== 'none' ) {
+			params.set( 'lockmode', slideData.lockMode );
+		}
+		// Note: Do NOT pass canvaswidth/canvasheight here!
+		// Saved dimensions take precedence; server will load from database.
+		// Only pass lock mode and set name to let the API determine actual dimensions.
+
+		// Use Special:Slides page for editing (will be created in Phase 3)
+		// For now, use a slide-specific URL pattern
+		return mw.util.getUrl( 'Special:EditSlide/' + slideData.slideName ) + '?' + params.toString();
+	}
+
+	/**
+	 * Render an empty slide (placeholder for slides with no content).
+	 *
+	 * @param {HTMLElement} container Slide container element
+	 * @param {number} width Canvas width
+	 * @param {number} height Canvas height
+	 */
+	renderEmptySlide( container, width, height ) {
+		const canvas = container.querySelector( 'canvas' );
+		if ( !canvas ) {
+			return;
+		}
+
+		canvas.width = width;
+		canvas.height = height;
+
+		const ctx = canvas.getContext( '2d' );
+		if ( !ctx ) {
+			return;
+		}
+
+		// Fill with background color
+		const bgColor = container.getAttribute( 'data-background' ) || '#ffffff';
+		ctx.fillStyle = bgColor;
+		ctx.fillRect( 0, 0, width, height );
+
+		// Draw empty state content
+		this.drawEmptyStateContent( ctx, width, height, container );
+
+		// Set up edit button even for empty slides
+		this.setupSlideEditButton( container );
+
+		this.debugLog( 'Rendered empty slide:', container.getAttribute( 'data-slide-name' ) );
+	}
+
+	/**
+	 * Draw empty state content on canvas (icon, message, hint).
+	 *
+	 * @private
+	 * @param {CanvasRenderingContext2D} ctx Canvas context
+	 * @param {number} width Canvas width
+	 * @param {number} height Canvas height
+	 * @param {HTMLElement} container Slide container for placeholder text
+	 */
+	drawEmptyStateContent( ctx, width, height, container ) {
+		const centerX = width / 2;
+		const centerY = height / 2;
+
+		// Get placeholder text from container or use default
+		const placeholder = container.getAttribute( 'data-placeholder' ) || '';
+
+		// Calculate scale based on canvas size (minimum readable size)
+		const scale = Math.min( width, height ) / 400;
+		const iconSize = Math.max( 32, Math.min( 64, 48 * scale ) );
+		const fontSize = Math.max( 12, Math.min( 18, 14 * scale ) );
+		const smallFontSize = Math.max( 10, Math.min( 14, 12 * scale ) );
+
+		// Draw icon (📊 chart icon using simple shapes)
+		ctx.save();
+		ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+		ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)';
+		ctx.lineWidth = 2;
+
+		// Draw a simple chart/diagram icon
+		const iconY = centerY - 40 * scale;
+		const barWidth = iconSize * 0.2;
+		const gap = iconSize * 0.15;
+		const startX = centerX - iconSize * 0.4;
+
+		// Three bars of different heights
+		ctx.fillRect( startX, iconY, barWidth, iconSize * 0.4 );
+		ctx.fillRect( startX + barWidth + gap, iconY - iconSize * 0.2, barWidth, iconSize * 0.6 );
+		ctx.fillRect( startX + 2 * ( barWidth + gap ), iconY - iconSize * 0.1, barWidth, iconSize * 0.5 );
+
+		ctx.restore();
+
+		// Draw main message
+		ctx.save();
+		ctx.fillStyle = 'rgba(80, 80, 80, 0.6)';
+		ctx.font = `${fontSize}px system-ui, -apple-system, sans-serif`;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+
+		const message = this.getEmptyStateMessage();
+		ctx.fillText( message, centerX, centerY + 20 * scale );
+
+		// Draw placeholder or hint below
+		ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
+		ctx.font = `${smallFontSize}px system-ui, -apple-system, sans-serif`;
+
+		const hint = placeholder || this.getEmptyStateHint();
+		ctx.fillText( hint, centerX, centerY + 45 * scale );
+
+		ctx.restore();
+	}
+
+	/**
+	 * Get the empty state main message.
+	 *
+	 * @private
+	 * @return {string} Message text
+	 */
+	getEmptyStateMessage() {
+		if ( typeof mw !== 'undefined' && mw.message ) {
+			return mw.message( 'layers-slide-empty' ).text();
+		}
+		return 'Empty Slide';
+	}
+
+	/**
+	 * Get the empty state hint text.
+	 *
+	 * @private
+	 * @return {string} Hint text
+	 */
+	getEmptyStateHint() {
+		if ( typeof mw !== 'undefined' && mw.message ) {
+			return mw.message( 'layers-slide-empty-hint' ).text();
+		}
+		return 'Use the Edit button to add content';
 	}
 
 	/**
