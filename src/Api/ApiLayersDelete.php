@@ -55,6 +55,13 @@ class ApiLayersDelete extends ApiBase {
 			return;
 		}
 
+		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
+		if ( $requestedFilename !== null && strpos( $requestedFilename, 'Slide:' ) === 0 ) {
+			$slidename = substr( $requestedFilename, 6 ); // Remove 'Slide:' prefix
+			$this->executeSlideDelete( $user, $slidename, $setName );
+			return;
+		}
+
 		// Require filename for non-slide requests
 		if ( $requestedFilename === null || $requestedFilename === '' ) {
 			$this->dieWithError(
