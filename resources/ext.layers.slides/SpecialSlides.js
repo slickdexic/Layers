@@ -278,9 +278,11 @@
 		 * @param {string} name Slide name
 		 */
 		deleteSlide( name ) {
+			// Slides are stored with filename format 'Slide:SlideName'
+			const slideFilename = 'Slide:' + name;
 			this.api.postWithToken( 'csrf', {
 				action: 'layersdelete',
-				slidename: name,
+				filename: slideFilename,
 				setname: 'default'
 			} ).then( () => {
 				mw.notify( mw.message( 'special-slides-deleted', name ).text(), { type: 'success' } );
@@ -487,10 +489,12 @@
 					const background = this.backgroundInput.getValue() || '#ffffff';
 
 					// Create the slide by saving an empty layer set
+					// Slides are stored with filename format 'Slide:SlideName'
+					const slideFilename = 'Slide:' + name;
 					const api = new mw.Api();
 					return api.postWithToken( 'csrf', {
 						action: 'layerssave',
-						slidename: name,
+						filename: slideFilename,
 						data: JSON.stringify( {
 							schema: 2,
 							isSlide: true,
