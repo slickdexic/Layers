@@ -12,7 +12,7 @@
 
 This document outlines a comprehensive, phased plan to address the god class files (files >1,000 lines) in the Layers extension.
 
-### Current State (January 21, 2026) - v1.5.20
+### Current State (January 24, 2026) - v1.5.25
 
 | Metric | Previous | Current | Target | Status |
 |--------|----------|---------|--------|--------|
