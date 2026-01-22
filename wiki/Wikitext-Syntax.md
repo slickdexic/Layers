@@ -305,6 +305,43 @@ The `layerset` parameter can appear anywhere in the parameter list:
 
 ---
 
+## Slide Mode (v1.5.22+)
+
+Create standalone graphics without a base image using the `{{#Slide:}}` parser function:
+
+```wikitext
+{{#Slide: MySlideName}}
+```
+
+### Slide Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `canvas` | Canvas size (WxH) | `canvas=1920x1080` |
+| `size` | Display size | `size=800x600` |
+| `bgcolor` | Background color | `bgcolor=#f0f0f0` |
+| `lock` | Lock mode | `lock=view` |
+
+### Examples
+
+```wikitext
+<!-- Basic slide -->
+{{#Slide: MyDiagram}}
+
+<!-- Custom canvas and display size -->
+{{#Slide: Infographic | canvas=1200x800 | size=600x400}}
+
+<!-- With background color -->
+{{#Slide: Blueprint | bgcolor=#e8f4fc}}
+
+<!-- View-only mode -->
+{{#Slide: Published | lock=view}}
+```
+
+See [[Slide Mode]] for complete documentation.
+
+---
+
 ## Backwards Compatibility
 
 The `layers=` parameter is still fully supported for backwards compatibility:
@@ -356,5 +393,6 @@ The `layers=` parameter is still fully supported for backwards compatibility:
 ## See Also
 
 - [[Named Layer Sets]] — Creating and managing sets
+- [[Slide Mode]] — Standalone graphics without base images
 - [[Quick Start Guide]] — Getting started
 - [[Configuration Reference]] — Extension settings
