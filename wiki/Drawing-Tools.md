@@ -1,6 +1,6 @@
 # Drawing Tools
 
-Layers provides 13 professional drawing tools for comprehensive image annotation.
+Layers provides **15 professional drawing tools** for comprehensive image annotation.
 
 ---
 
@@ -18,7 +18,9 @@ Layers provides 13 professional drawing tools for comprehensive image annotation
 | **Ellipse** | `E` | ⬭ | Shape | Ovals with independent radii |
 | **Polygon** | `Y` | ⬡ | Shape | Multi-sided polygons |
 | **Star** | `S` | ★ | Shape | Star shapes |
-| **Custom Shape** | — | 📎 | Shape | Built-in shape library |
+| **Custom Shape** | — | 📎 | Shape | Built-in shape library (1,310 shapes) |
+| **Emoji** | — | 😀 | Media | Emoji picker (2,817 Noto Color Emoji) |
+| **Image** | — | 🖼️ | Media | Import images from clipboard or file |
 | **Arrow** | `A` | ➔ | Line | Arrows with customizable heads |
 | **Line** | `L` | ╱ | Line | Straight lines |
 
@@ -333,7 +335,7 @@ Any filled shape can use **blur fill** instead of a solid color — creating a "
 
 ## Custom Shape Tool (v1.5.0+)
 
-Access a built-in library of **374 pre-made shapes** organized by category. *More shapes to come soon!*
+Access a built-in library of **1,310 pre-made shapes** organized by category.
 
 ### How to Use
 1. Click the **Custom Shape** tool in the toolbar (or use the toolbar dropdown)
@@ -363,6 +365,77 @@ Access a built-in library of **374 pre-made shapes** organized by category. *Mor
 
 ---
 
+## Emoji Picker (v1.5.12+)
+
+Add expressive **Noto Color Emoji** to your annotations from a searchable library of **2,817 emoji**.
+
+### How to Use
+1. Click the **Emoji** button in the toolbar (😀 icon)
+2. Browse by category or use the search box
+3. Click an emoji to insert it at the canvas center
+4. Resize and position the emoji like any other layer
+
+### Emoji Categories
+| Category | Examples |
+|----------|----------|
+| **Smileys & Emotion** | 😀 😂 🥰 😎 🤔 |
+| **People & Body** | 👋 👍 🙌 🤝 💪 |
+| **Animals & Nature** | 🐱 🐶 🌸 🌳 🦋 |
+| **Food & Drink** | 🍕 🍔 🍎 ☕ 🍰 |
+| **Travel & Places** | ✈️ 🚗 🏠 🏔️ 🌍 |
+| **Activities** | ⚽ 🎮 🎨 🎵 🏆 |
+| **Objects** | 💡 🔧 📱 💻 📚 |
+| **Symbols** | ✅ ❌ ⚠️ ❤️ ⭐ |
+| **Flags** | 🏁 🚩 🏳️ Country flags |
+
+### Features
+- **Full-text search** — Find emoji by name or keywords
+- **Lazy loading** — Thumbnails load as you scroll for fast performance
+- **SVG quality** — Emoji are vector graphics that scale perfectly
+- **Standard layer controls** — Resize, rotate, adjust opacity like any layer
+
+### Tips
+- Emoji make great visual callouts for documentation
+- Use emoji for status indicators (✅ ❌ ⚠️)
+- Combine with text boxes for rich annotations
+- Search works with descriptive words (e.g., "happy", "warning", "check")
+
+---
+
+## Image Tool (v1.3.0+)
+
+Import external images into your annotations from clipboard or file.
+
+### How to Use
+1. Click the **Image** button in the toolbar (🖼️ icon)
+2. Choose an image file (PNG, JPG, GIF, SVG, WebP)
+3. The image is inserted at the canvas center
+4. Resize and position as needed
+
+### Alternative: Paste from Clipboard
+- Copy any image to your clipboard
+- Press `Ctrl+V` (or `Cmd+V` on Mac) in the editor
+- The image is automatically inserted as a new layer
+
+### Properties
+| Property | Description |
+|----------|-------------|
+| preserveAspectRatio | Lock aspect ratio when resizing (default: true) |
+| opacity | Transparency (0-1) |
+| rotation | Rotation angle in degrees |
+
+### Size Limits
+Images are stored as base64 data URLs. The maximum size is configurable:
+- Default: 1MB per image
+- Server setting: `$wgLayersMaxImageBytes`
+
+### Tips
+- Use for logos, icons, or reference images
+- Screenshots can be pasted directly from clipboard
+- Hold `Shift` while resizing to maintain aspect ratio
+
+---
+
 ## Tips
 
 ### Drawing Efficiently
@@ -382,6 +455,9 @@ Access a built-in library of **374 pre-made shapes** organized by category. *Mor
 | Blur background | Any shape with `fill: blur` |
 | Freehand annotation | Pen (P) |
 | Decorative arrow | Custom Shape (arrows category) |
+| Visual indicator/emotion | Emoji (✅ ⚠️ 😀) |
+| External logo/screenshot | Image (paste or import) |
+| Industry symbols | Custom Shape (ISO 7010 categories) |
 
 ---
 
