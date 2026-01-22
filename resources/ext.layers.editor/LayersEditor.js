@@ -237,6 +237,18 @@ class LayersEditor {
 			// Named Layer Sets state
 			this.stateManager.set( 'namedSets', [] );
 			this.stateManager.set( 'currentSetName', 'default' );
+
+			// Slide mode state - initialized from config
+			this.stateManager.set( 'isSlide', this.config.isSlide || false );
+			this.stateManager.set( 'slideName', this.config.slideName || null );
+			if ( this.config.isSlide ) {
+				// For slides, use config dimensions as base dimensions
+				this.stateManager.set( 'slideCanvasWidth', this.config.canvasWidth || 800 );
+				this.stateManager.set( 'slideCanvasHeight', this.config.canvasHeight || 600 );
+				this.stateManager.set( 'slideBackgroundColor', this.config.backgroundColor || 'transparent' );
+				this.stateManager.set( 'baseWidth', this.config.canvasWidth || 800 );
+				this.stateManager.set( 'baseHeight', this.config.canvasHeight || 600 );
+			}
 		}
 	}
 
@@ -494,6 +506,23 @@ class LayersEditor {
 		this.toolbar = this.registry.get( 'Toolbar' );
 		this.layerPanel = this.registry.get( 'LayerPanel' );
 		this.canvasManager = this.registry.get( 'CanvasManager' );
+
+		// Configure slide mode if applicable
+		if ( this.stateManager.get( 'isSlide' ) && this.canvasManager ) {
+			const slideWidth = this.stateManager.get( 'slideCanvasWidth' ) || 800;
+			const slideHeight = this.stateManager.get( 'slideCanvasHeight' ) || 600;
+			const slideBackgroundColor = this.stateManager.get( 'slideBackgroundColor' ) || 'transparent';
+
+			// Set canvas dimensions for slide
+			this.canvasManager.setBaseDimensions( slideWidth, slideHeight );
+			// Enable slide mode (no background image)
+			this.canvasManager.setSlideMode( true );
+			// Set slide background color
+			this.canvasManager.setBackgroundColor( slideBackgroundColor );
+
+			this.debugLog( '[LayersEditor] Slide mode configured: ' +
+				slideWidth + 'x' + slideHeight + ', bg=' + slideBackgroundColor );
+		}
 
 		// Subscribe to selection changes to update toolbar alignment buttons
 		this.subscribeToSelectionChanges();

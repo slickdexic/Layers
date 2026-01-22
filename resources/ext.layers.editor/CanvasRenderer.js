@@ -62,6 +62,10 @@
 			this.canvasStateStack = [];
 			this.backgroundImage = null;
 
+			// Slide mode properties
+			this.isSlideMode = false;
+			this.slideBackgroundColor = 'transparent';
+
 			// Transformation state
 			this.zoom = 1.0;
 			this.panX = 0;
@@ -159,6 +163,24 @@
 			}
 		}
 
+		/**
+		 * Set slide mode (no background image, use slide dimensions and color)
+		 *
+		 * @param {boolean} isSlide - Whether editor is in slide mode
+		 */
+		setSlideMode( isSlide ) {
+			this.isSlideMode = isSlide;
+		}
+
+		/**
+		 * Set slide background color
+		 *
+		 * @param {string} color - Background color (e.g. '#ffffff', 'transparent')
+		 */
+		setSlideBackgroundColor( color ) {
+			this.slideBackgroundColor = color || 'transparent';
+		}
+
 		setSelection( selectedLayerIds ) {
 			this.selectedLayerIds = selectedLayerIds || [];
 		}
@@ -209,7 +231,11 @@
 
 			// Check background visibility from state
 			const bgVisible = this.getBackgroundVisible();
-			if ( bgVisible && this.backgroundImage && this.backgroundImage.complete ) {
+
+			// Handle slide mode (no background image)
+			if ( this.isSlideMode ) {
+				this.drawSlideBackground();
+			} else if ( bgVisible && this.backgroundImage && this.backgroundImage.complete ) {
 				this.drawBackgroundImage();
 			} else if ( !bgVisible ) {
 				// Draw checker pattern when background is hidden
@@ -285,6 +311,27 @@
 			const canvasW = this.canvas.width / this.zoom;
 			const canvasH = this.canvas.height / this.zoom;
 			this.ctx.drawImage( this.backgroundImage, 0, 0, canvasW, canvasH );
+			this.ctx.restore();
+		}
+
+		/**
+		 * Draw slide background (solid color or transparent checkerboard)
+		 * Used in slide mode when there is no background image
+		 */
+		drawSlideBackground() {
+			const color = this.slideBackgroundColor || 'transparent';
+			const canvasW = this.canvas.width / this.zoom;
+			const canvasH = this.canvas.height / this.zoom;
+
+			this.ctx.save();
+			if ( color === 'transparent' ) {
+				// Draw checkerboard pattern for transparent background
+				this.drawCheckerPatternToContext();
+			} else {
+				// Draw solid color background
+				this.ctx.fillStyle = color;
+				this.ctx.fillRect( 0, 0, canvasW, canvasH );
+			}
 			this.ctx.restore();
 		}
 
