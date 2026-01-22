@@ -53,6 +53,7 @@ src/
 │   ├── ApiLayersSave.php      # Save layer data
 │   ├── ApiLayersDelete.php    # Delete layer sets
 │   ├── ApiLayersRename.php    # Rename layer sets
+│   ├── ApiLayersList.php      # List slides (NEW)
 │   └── Traits/
 │       └── ForeignFileHelperTrait.php  # Shared foreign file detection
 ├── Action/
@@ -61,17 +62,22 @@ src/
 │   ├── LayersDatabase.php     # Database operations
 │   └── LayersSchemaManager.php # Schema management
 ├── Hooks/
-│   └── ...                    # MediaWiki hook handlers
+│   ├── ...                    # MediaWiki hook handlers
+│   └── SlideHooks.php         # Slide parser function (NEW)
 ├── Logging/
 │   ├── LayersLogger.php       # Logger factory
 │   ├── LoggerAwareTrait.php   # Trait for objects
 │   └── StaticLoggerAwareTrait.php # Trait for static contexts
 ├── Security/
 │   └── RateLimiter.php        # Rate limiting
+├── SpecialPages/              # (NEW)
+│   ├── SpecialSlides.php      # Slide management page
+│   └── SpecialEditSlide.php   # Direct slide editor
 └── Validation/
     ├── ColorValidator.php     # Color validation
     ├── ServerSideLayerValidator.php # Layer validation
     ├── SetNameSanitizer.php   # Set name sanitization
+    ├── SlideNameValidator.php # Slide name validation (NEW)
     ├── TextSanitizer.php      # Text sanitization
     └── ValidationResult.php   # Validation result container
 ```
@@ -84,6 +90,7 @@ src/
 | `ApiLayersSave` | POST | Save layer set with CSRF token |
 | `ApiLayersDelete` | POST | Delete named layer set |
 | `ApiLayersRename` | POST | Rename named layer set |
+| `ApiLayersList` | GET | List all slides (NEW) |
 
 ### Database Schema
 

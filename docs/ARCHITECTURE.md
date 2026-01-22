@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 21, 2026
-**Version:** 1.5.20
+**Last Updated:** January 24, 2026
+**Version:** 1.5.25
 
 ---
 
@@ -29,7 +29,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | ES6 classes | **100+** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **93.52% stmt, 83.89% branch** |
-| Jest tests | **9,783** (153 suites) |
+| Jest tests | **9,951** (155 suites) |
 | PHPUnit test files | 24 |
 | God classes (>1000 lines) | **20** (3 generated, 17 hand-written) |
 | Drawing tools | **15** |
@@ -40,6 +40,19 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 ---
 
 ## Recent Architecture Changes
+
+### January 2026: v1.5.22-v1.5.25
+
+**v1.5.25 - Slide Refresh Fix:**
+- Added `pageshow` event listener in init.js for bfcache detection
+- Slides now refresh immediately after editor close (like images)
+- Added `refreshAllSlides()` to ViewerManager
+
+**v1.5.22-v1.5.24 - Slide Mode:**
+- New `{{#Slide: SlideName}}` parser function for standalone graphics
+- `Special:Slides` management page
+- `Special:EditSlide/SlideName` direct editor access
+- Custom canvas sizes, background colors, view/edit overlays
 
 ### January 2026: v1.5.15-v1.5.20
 

@@ -60,6 +60,17 @@ Yes! Named layer sets allow multiple independent annotation sets per image:
 
 See [[Named Layer Sets]] for details.
 
+### Can I create graphics without a base image?
+
+Yes! Slide Mode (v1.5.22+) lets you create standalone canvas graphics:
+
+```wikitext
+{{#Slide: MyDiagram}}
+{{#Slide: Infographic | canvas=1200x800 | size=600x400}}
+```
+
+See [[Slide Mode]] for details.
+
 ### How do I hide layers?
 
 Use `layerset=off` or `layerset=none`:
@@ -192,9 +203,10 @@ Slightly. The viewer JavaScript must load, and layer data must be fetched. For t
 
 | Feature | Layers | ImageAnnotator |
 |---------|--------|----------------|
-| Tools | 13 drawing tools | Basic annotations |
+| Tools | 15 drawing tools | Basic annotations |
 | Style presets | Yes | No |
 | Named sets | Yes | No |
+| Slide Mode | Yes | No |
 | Non-destructive | Yes | Varies |
 | Accessibility | WCAG 2.1 | Basic |
 

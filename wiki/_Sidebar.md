@@ -11,6 +11,7 @@
 * [[Keyboard Shortcuts]]
 * [[Style Presets]]
 * [[Named Layer Sets]]
+* [[Slide Mode]] 🆕
 * [[Alignment and Distribution]]
 * [[Wikitext Syntax]]
 
