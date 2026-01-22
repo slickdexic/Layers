@@ -42,11 +42,26 @@ class ApiLayersDelete extends ApiBase {
 	public function execute() {
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
-		$requestedFilename = $params['filename'];
+		$requestedFilename = $params['filename'] ?? null;
+		$slidename = $params['slidename'] ?? null;
 		$setName = SetNameSanitizer::sanitize( $params['setname'] );
 
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );
+
+		// Handle slide deletes (slidename parameter)
+		if ( $slidename !== null && $slidename !== '' ) {
+			$this->executeSlideDelete( $user, $slidename, $setName );
+			return;
+		}
+
+		// Require filename for non-slide requests
+		if ( $requestedFilename === null || $requestedFilename === '' ) {
+			$this->dieWithError(
+				[ 'apierror-missingparam', 'filename' ],
+				'missingparam'
+			);
+		}
 
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
@@ -176,6 +191,86 @@ class ApiLayersDelete extends ApiBase {
 	}
 
 	/**
+	 * Handle slide-specific delete requests.
+	 *
+	 * Slides are stored with imgName='Slide:{name}' and sha1='slide'.
+	 *
+	 * @param \User $user The current user
+	 * @param string $slidename The slide name (without 'Slide:' prefix)
+	 * @param string $setName The named set to delete
+	 */
+	private function executeSlideDelete( $user, string $slidename, string $setName ): void {
+		try {
+			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+
+			if ( !$db->isSchemaReady() ) {
+				$this->dieWithError(
+					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+					'dbschema-missing'
+				);
+			}
+
+			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
+			$imgName = 'Slide:' . $slidename;
+			$sha1 = 'slide';
+
+			// Check if the set exists
+			$exists = $db->namedSetExists( $imgName, $sha1, $setName );
+			if ( !$exists ) {
+				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
+			}
+
+			// Permission check: only owner or admin can delete
+			$ownerId = $db->getNamedSetOwner( $imgName, $sha1, $setName );
+			$userId = $user->getId();
+			$isOwner = ( $ownerId !== null && $ownerId === $userId );
+			$isAdmin = $user->isAllowed( 'delete' );
+
+			if ( !$isOwner && !$isAdmin ) {
+				$this->dieWithError( 'layers-delete-permission-denied', 'permissiondenied' );
+			}
+
+			// Rate limiting
+			$rateLimiter = $this->createRateLimiter();
+			if ( !$rateLimiter->checkRateLimit( $user, 'delete' ) ) {
+				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+			}
+
+			// Perform the delete
+			$rowsDeleted = $db->deleteNamedSet( $imgName, $sha1, $setName );
+
+			if ( $rowsDeleted === null ) {
+				$this->getLogger()->error( 'Failed to delete slide layer set', [
+					'slidename' => $slidename,
+					'setname' => $setName,
+					'user' => $user->getName()
+				] );
+				$this->dieWithError( 'layers-delete-failed', 'deletefailed' );
+			}
+
+			$this->getLogger()->info( 'Slide layer set deleted', [
+				'slidename' => $slidename,
+				'setname' => $setName,
+				'user' => $user->getName(),
+				'rowsDeleted' => $rowsDeleted
+			] );
+
+			// Return success
+			$this->getResult()->addValue( 'layersdelete', 'success', 1 );
+			$this->getResult()->addValue( 'layersdelete', 'setname', $setName );
+			$this->getResult()->addValue( 'layersdelete', 'revisionsDeleted', $rowsDeleted );
+
+		} catch ( \Exception $e ) {
+			$this->getLogger()->error( 'Exception during slide delete: {message}', [
+				'message' => $e->getMessage(),
+				'slidename' => $slidename,
+				'setname' => $setName
+			] );
+			$this->dieWithError( 'layers-delete-failed', 'deletefailed' );
+		}
+	}
+
+	/**
 	 * Define allowed parameters for this API module.
 	 *
 	 * @return array Parameter definitions
@@ -184,7 +279,11 @@ class ApiLayersDelete extends ApiBase {
 		return [
 			'filename' => [
 				ApiBase::PARAM_TYPE => 'string',
-				ApiBase::PARAM_REQUIRED => true,
+				ApiBase::PARAM_REQUIRED => false,
+			],
+			'slidename' => [
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false,
 			],
 			'setname' => [
 				ApiBase::PARAM_TYPE => 'string',
