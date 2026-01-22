@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.25",
+	"version": "1.5.26",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -204,6 +204,7 @@
 				"FontConfig.js",
 				"MathUtils.js",
 				"IdGenerator.js",
+				"TimeoutTracker.js",
 				"LayerDataNormalizer.js",
 				"DeepClone.js",
 				"BoundsCalculator.js",

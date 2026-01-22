@@ -242,17 +242,22 @@ describe( 'StateManager', () => {
 			expect( stateManager.pendingOperations.length ).toBe( 0 );
 		} );
 
-		it( 'should force unlock after timeout', () => {
+		it( 'should detect stuck lock after timeout but not force unlock (safer behavior)', () => {
 			stateManager.lockState();
 			expect( stateManager.isLocked ).toBe( true );
 
 			// Fast-forward 5 seconds
 			jest.advanceTimersByTime( 5000 );
 
-			expect( stateManager.isLocked ).toBe( false );
-			expect( mw.log.warn ).toHaveBeenCalledWith(
-				'[StateManager] Force unlocking state after timeout'
+			// State should REMAIN locked to prevent corruption
+			expect( stateManager.isLocked ).toBe( true );
+			// Should log an error (not warning) about the stuck lock
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				'[StateManager] Lock held for >5s - possible deadlock. Lock will remain until manually resolved.'
 			);
+			// Should set a flag indicating when the lock got stuck
+			expect( stateManager.lockStuckSince ).toBeDefined();
+			expect( typeof stateManager.lockStuckSince ).toBe( 'number' );
 		} );
 
 		it( 'should clear lock timeout on normal unlock', () => {

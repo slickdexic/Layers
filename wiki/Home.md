@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C951%20passing-brightgreen" alt="9,951 Tests">
-  <img src="https://img.shields.io/badge/Coverage-93.52%25-brightgreen" alt="93.52% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C936%20passing-brightgreen" alt="9,936 Tests">
+  <img src="https://img.shields.io/badge/Coverage-92.59%25-brightgreen" alt="92.59% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -25,7 +25,7 @@
 - **Slide Refresh Fix** — Slides now refresh immediately after closing the editor (like images do)
 - **bfcache Support** — Added `pageshow` event handler to detect browser back-forward cache restoration
 - **13 new tests** — Comprehensive test coverage for slide refresh functionality
-- **9,951 tests passing** (155 suites), 93.52% statement coverage, 83.89% branch coverage
+- **9,936 tests passing** (156 suites), 92.59% statement coverage, 83.02% branch coverage
 
 ### 🖼️ Slide Mode (v1.5.22+)
 
@@ -221,11 +221,11 @@ See [[Changelog]] for full details.
 | **Version (REL1_43)** | 1.5.25-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
-| **Test Suites** | 155 |
-| **Total Tests** | 9,951 |
+| **Test Suites** | 156 |
+| **Total Tests** | 9,936 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 93.52% |
-| **Branch Coverage** | 83.89% |
+| **Statement Coverage** | 92.59% |
+| **Branch Coverage** | 83.02% |
 | **JavaScript Files** | 124 |
 | **ES6 Classes** | 100+ |
 | **God Classes** | 20 (3 generated data, 17 hand-written) |

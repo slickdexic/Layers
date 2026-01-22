@@ -59,6 +59,11 @@
 		 * Close the emoji picker panel
 		 */
 		close() {
+			// Clean up search timeout
+			if ( this.searchTimeout ) {
+				clearTimeout( this.searchTimeout );
+				this.searchTimeout = null;
+			}
 			// Clean up observer
 			if ( this.thumbnailObserver ) {
 				this.thumbnailObserver.disconnect();
@@ -75,6 +80,10 @@
 			if ( this._boundEscapeHandler ) {
 				document.removeEventListener( 'keydown', this._boundEscapeHandler );
 				this._boundEscapeHandler = null;
+			}
+			if ( this._boundOverlayClickHandler ) {
+				// Overlay may already be removed, but clean up the reference
+				this._boundOverlayClickHandler = null;
 			}
 			this.isOpen = false;
 		}
@@ -750,10 +759,18 @@
 		}
 
 		/**
-		 * Destroy the panel and clean up
+		 * Destroy the panel and clean up all resources.
+		 * Call this when the parent component is destroyed to prevent memory leaks.
 		 */
 		destroy() {
 			this.close();
+			// Clear all references to allow garbage collection
+			this.options = null;
+			this.onSelect = null;
+			this.categoryList = null;
+			this.emojiGrid = null;
+			this.searchInput = null;
+			this.currentCategory = null;
 		}
 	}
 

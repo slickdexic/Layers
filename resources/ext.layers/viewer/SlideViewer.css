@@ -1,0 +1,238 @@
+/**
+ * Styles for slide containers rendered by {{#Slide:}} parser function.
+ *
+ * @file SlideViewer.css
+ * @see src/Hooks/SlideHooks.php for HTML structure
+ * @see docs/SLIDE_MODE.md for specification
+ */
+
+/* Slide container */
+.layers-slide-container {
+	position: relative;
+	display: inline-block;
+	overflow: hidden;
+	border-radius: 4px;
+}
+
+/* Canvas element */
+.layers-slide-canvas {
+	display: block;
+	max-width: 100%;
+	height: auto;
+}
+
+/* Placeholder shown when slide is empty or loading */
+.layers-slide-placeholder {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	color: #72777d;
+	font-size: 1rem;
+	text-align: center;
+	padding: 1rem;
+	pointer-events: none;
+}
+
+/* Slide overlay - contains action buttons (edit, view) */
+.layers-slide-overlay {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: flex;
+	gap: 4px;
+	padding: 4px;
+	background: rgba( 0, 0, 0, 0.6 );
+	border-radius: 6px;
+	z-index: 10;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.2s ease, visibility 0.2s ease;
+	backdrop-filter: blur( 4px );
+	-webkit-backdrop-filter: blur( 4px );
+}
+
+/* Show overlay on hover or focus-within */
+.layers-slide-container:hover .layers-slide-overlay,
+.layers-slide-container:focus-within .layers-slide-overlay,
+.layers-slide-overlay--visible {
+	opacity: 1;
+	visibility: visible;
+}
+
+/* Shared button styles for overlay buttons */
+.layers-slide-overlay-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+	margin: 0;
+	background: rgba( 255, 255, 255, 0.1 );
+	border-width: 0;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.layers-slide-overlay-btn:hover {
+	background: rgba( 255, 255, 255, 0.25 );
+	transform: scale( 1.05 );
+}
+
+.layers-slide-overlay-btn:focus {
+	outline: 2px solid #36c;
+	outline-offset: 2px;
+}
+
+.layers-slide-overlay-btn:active {
+	transform: scale( 0.95 );
+}
+
+/* Edit button - blue tint on hover */
+.layers-slide-overlay-btn--edit:hover {
+	background: rgba( 66, 133, 244, 0.4 );
+}
+
+/* View button - green tint on hover */
+.layers-slide-overlay-btn--view:hover {
+	background: rgba( 52, 168, 83, 0.4 );
+}
+
+/* Icon styling */
+.layers-slide-overlay-btn svg {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+}
+
+/* DEPRECATED: Old single edit button - keep for backwards compatibility */
+.layers-slide-edit-button {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	padding: 0;
+	background: rgba( 255, 255, 255, 0.9 );
+	border: 1px solid #a2a9b1;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: opacity 0.2s ease, visibility 0.2s ease, background-color 0.15s, border-color 0.15s;
+	z-index: 10;
+	/* Hidden by default, shown on hover */
+	opacity: 0;
+	visibility: hidden;
+}
+
+.layers-slide-edit-button:hover {
+	background: #fff;
+	border-color: #36c;
+}
+
+.layers-slide-edit-button:focus {
+	border-color: #36c;
+	box-shadow: 0 0 0 2px rgba( 51, 102, 204, 0.25 );
+}
+
+.layers-slide-edit-button:active {
+	background: #eaecf0;
+}
+
+/* Show old button on hover (backwards compat) */
+.layers-slide-container:hover .layers-slide-edit-button,
+.layers-slide-container:focus-within .layers-slide-edit-button {
+	opacity: 1;
+	visibility: visible;
+}
+
+/* Edit icon (pencil) */
+.layers-slide-edit-icon {
+	display: block;
+	width: 1.25rem;
+	height: 1.25rem;
+	background-image: url( data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20fill%3D%22%23202122%22%20d%3D%22M16.77%208l1.94-2a1%201%200%200%200%200-1.41l-3.34-3.3a1%201%200%200%200-1.41%200L12%203.23zM1%2014.25V19h4.75l9.96-9.96-4.75-4.75z%22%2F%3E%3C%2Fsvg%3E );
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: contain;
+}
+
+/* Error state */
+.layers-slide-error {
+	padding: 1rem;
+	color: #d33;
+	background: #fee7e6;
+	border: 1px solid #d33;
+	border-radius: 4px;
+}
+
+/* Dark mode support - OS preference */
+@media ( prefers-color-scheme: dark ) {
+	.layers-slide-placeholder {
+		color: #a2a9b1;
+	}
+
+	.layers-slide-edit-button {
+		background: rgba( 39, 41, 45, 0.9 );
+		border-color: #72777d;
+	}
+
+	.layers-slide-edit-button:hover {
+		background: #3b3d41;
+		border-color: #36c;
+	}
+
+	.layers-slide-edit-button:active {
+		background: #27292d;
+	}
+
+	.layers-slide-edit-icon {
+		background-image: url( data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20fill%3D%22%23eaecf0%22%20d%3D%22M16.77%208l1.94-2a1%201%200%200%200%200-1.41l-3.34-3.3a1%201%200%200%200-1.41%200L12%203.23zM1%2014.25V19h4.75l9.96-9.96-4.75-4.75z%22%2F%3E%3C%2Fsvg%3E );
+	}
+
+	.layers-slide-error {
+		background: #442726;
+		border-color: #d33;
+	}
+}
+
+/* Dark mode support - Vector 2022 class-based */
+/* stylelint-disable no-descending-specificity -- intentional override for deprecated edit button */
+html.skin-theme-clientpref-night .layers-slide-placeholder,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-placeholder {
+	color: #a2a9b1;
+}
+
+html.skin-theme-clientpref-night .layers-slide-edit-button,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-edit-button {
+	background: rgba( 39, 41, 45, 0.9 );
+	border-color: #72777d;
+}
+
+html.skin-theme-clientpref-night .layers-slide-edit-button:hover,
+html.skin-theme-clientpref-night .layers-slide-edit-button:active,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-edit-button:hover,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-edit-button:active {
+	background: #3b3d41;
+	border-color: #36c;
+}
+
+html.skin-theme-clientpref-night .layers-slide-edit-icon,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-edit-icon {
+	background-image: url( data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20fill%3D%22%23eaecf0%22%20d%3D%22M16.77%208l1.94-2a1%201%200%200%200%200-1.41l-3.34-3.3a1%201%200%200%200-1.41%200L12%203.23zM1%2014.25V19h4.75l9.96-9.96-4.75-4.75z%22%2F%3E%3C%2Fsvg%3E );
+}
+
+html.skin-theme-clientpref-night .layers-slide-error,
+html.skin-theme-clientpref-os.client-darkmode .layers-slide-error {
+	background: #442726;
+	border-color: #d33;
+}
