@@ -40,8 +40,8 @@ The Layers extension is a mature, feature-rich MediaWiki extension with strong s
 | CORE-3 | **APIManager save race condition with retry** | **High** | ✅ **FIXED** | Editor |
 | CORE-4 | **GroupManager circular reference incomplete** | **High** | ✅ **FIXED** | Editor |
 | CORE-5 | **LayersEditor event listener leaks** | **High** | 🟡 Reviewed OK | Editor |
-| SM-1 | Canvas layer not showing in Layer Manager | Critical | 🟡 Needs debug | Slides |
-| SM-5 | Exiting editor jumps back extra page | High | 🔴 Open | Slides |
+| SM-1 | Canvas layer not showing in Layer Manager | Critical | ✅ Closed | Not reproducible |
+| SM-5 | Exiting editor jumps back extra page | High | ✅ Closed | Not reproducible |
 
 See detailed analysis below for each issue.
 
@@ -678,13 +678,20 @@ this.lockTimeout = setTimeout( () => {
 
 **Severity:** Medium  
 **Category:** Error Handling  
-**File:** [resources/ext.layers.editor/APIManager.js](resources/ext.layers.editor/APIManager.js)
+**File:** [resources/ext.layers.editor/APIManager.js](resources/ext.layers.editor/APIManager.js)  
+**Status:** ✅ ALREADY HANDLED
 
-**Problem:** No request timeout is configured on any API calls. If the server hangs, the editor will wait indefinitely.
+**Problem:** ~~No request timeout is configured on any API calls. If the server hangs, the editor will wait indefinitely.~~
 
-**Impact:** Poor user experience when server is slow or unresponsive.
+**Resolution (January 23, 2026):**
+This issue was a false positive. MediaWiki's `mw.Api` already has a **default 30-second timeout** built in (see `resources/src/mediawiki.api/index.js` line 26: `timeout: 30 * 1000`).
 
-**Recommended Fix:** Add explicit timeout configuration to mw.Api calls.
+Additionally:
+- `APIErrorHandler.js` already maps the `'timeout'` error code to `'layers-timeout-error'`
+- All API calls have proper `.catch()` handlers that hide spinners and display errors
+- Added missing i18n messages for `layers-timeout-error` and `layers-network-error`
+
+**No code changes needed** — the timeout handling was already in place.
 
 ---
 
@@ -1342,11 +1349,11 @@ For quick reference, here are all Slide Mode issues identified in this review:
 
 | # | Issue | Severity | Status | Notes |
 |---|-------|----------|--------|-------|
-| SM-1 | Canvas layer not showing in Layer Manager | Critical | 🔴 Open | isSlide state may not be set |
+| SM-1 | Canvas layer not showing in Layer Manager | Critical | ✅ Closed | Not reproducible - user confirmed working |
 | SM-2 | Canvas layer missing color swatch | High | 🔴 Open | Depends on SM-1 |
 | SM-3 | Canvas layer missing W/H properties | High | 🔴 Open | Depends on SM-1 |
 | SM-4 | SVG shapes show dashed boxes on articles | Critical | 🔴 Open | Changelog claims fixed but regressed |
-| SM-5 | Exiting editor jumps back extra page | High | 🔴 Open | history.back() called incorrectly |
+| SM-5 | Exiting editor jumps back extra page | High | ✅ Closed | Not reproducible - user confirmed working |
 | 1 | No modal editor — requires page refresh | Critical | ✅ Fixed | But SM-5 suggests navigation issues remain |
 | 2 | Missing canvas size controls in editor | Critical | ✅ Fixed | Code exists but depends on SM-1 |
 | 3 | Background layer shows wrong icon for slides | Medium | ✅ Fixed | Code exists but depends on SM-1 |

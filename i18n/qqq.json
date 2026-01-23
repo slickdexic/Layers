@@ -384,6 +384,8 @@
 	"layers-no-layers": "Message shown when no layers exist yet for the image",
 	"layers-rate-limited": "Error shown when user hits rate limits saving or rendering",
 	"layers-session-expired": "Error shown when the user's session has expired and they need to refresh the page",
+	"layers-network-error": "Error shown when a network connection problem occurs during an API request",
+	"layers-timeout-error": "Error shown when an API request exceeds the timeout limit",
 	"layers-invalid-filename": "Error shown when the provided filename is invalid or unsafe",
 	"layers-too-many-layers": "Error shown when a save attempts to include too many layers",
 	"layers-too-complex": "Error shown when the calculated complexity exceeds a safe threshold",
