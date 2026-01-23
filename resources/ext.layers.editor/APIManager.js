@@ -841,6 +841,11 @@
 		if ( data.layerssave && data.layerssave.success ) {
 			this.editor.stateManager.markClean();
 
+			// CORE-2 FIX: Mark history as saved for efficient hasUnsavedChanges()
+			if ( this.editor.historyManager && typeof this.editor.historyManager.markAsSaved === 'function' ) {
+				this.editor.historyManager.markAsSaved();
+			}
+
 			// Clear the FreshnessChecker cache for this file so FR-10 will check
 			// the API for fresh data when the user views the page after saving.
 			// This prevents stale sessionStorage cache from causing reinitialization to be skipped.
