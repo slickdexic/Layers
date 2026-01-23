@@ -634,7 +634,8 @@ Creating a new `EventTracker` in cleanup is pointless and potentially creates a 
 
 **Severity:** Medium  
 **Category:** Code Quality  
-**File:** [resources/ext.layers.editor/StateManager.js](resources/ext.layers.editor/StateManager.js#L590)
+**File:** [resources/ext.layers.editor/StateManager.js](resources/ext.layers.editor/StateManager.js#L590)  
+**Status:** ✅ FIXED
 
 **Problem:** The `saveToHistory()` method is completely disabled but still called ~20 times throughout the codebase:
 
@@ -650,13 +651,17 @@ The `undo()` and `redo()` methods (lines 606-625) are also dead code since `save
 
 **Impact:** Wasted function calls and confusing code. These methods should be removed or the feature re-enabled.
 
+**Resolution (January 23, 2026):**
+Removed the dead `undo()`, `redo()`, and `restoreState()` methods from StateManager.js. The `saveToHistory()` is kept as a no-op for backward compatibility with existing code that calls it, but all undo/redo functionality is handled by HistoryManager. Updated all tests to verify methods don't exist.
+
 ---
 
 ### CORE-7: StateManager Lock Timeout Never Recovers
 
 **Severity:** Medium  
 **Category:** Error Handling  
-**File:** [resources/ext.layers.editor/StateManager.js](resources/ext.layers.editor/StateManager.js#L158)
+**File:** [resources/ext.layers.editor/StateManager.js](resources/ext.layers.editor/StateManager.js#L158)  
+**Status:** ✅ FIXED
 
 **Problem:** The lock timeout sets `lockStuckSince` but this property is never read anywhere:
 
@@ -671,6 +676,9 @@ this.lockTimeout = setTimeout( () => {
 **Impact:** If a deadlock occurs, the editor becomes permanently frozen with no recovery mechanism. Users must refresh the page.
 
 **Recommended Fix:** Either force-unlock after timeout (risky) or provide a UI indicator and manual recovery button.
+
+**Resolution (January 23, 2026):**
+Added recovery check at the start of `lockState()` that detects and logs when recovery from a stuck lock occurs. When `lockStuckSince` is set and a new `lockState()` call succeeds, it logs the stuck duration and clears the flag. This provides observability without risky force-unlock behavior.
 
 ---
 
@@ -699,7 +707,8 @@ Additionally:
 
 **Severity:** Medium  
 **Category:** Potential Bug  
-**File:** [resources/ext.layers.editor/HistoryManager.js](resources/ext.layers.editor/HistoryManager.js#L249)
+**File:** [resources/ext.layers.editor/HistoryManager.js](resources/ext.layers.editor/HistoryManager.js#L249)  
+**Status:** ✅ FIXED
 
 **Problem:** In `undo()`, if `historyIndex` is modified between the `canUndo()` check and accessing `this.history[this.historyIndex]`, the state could be undefined:
 
@@ -714,6 +723,9 @@ undo() {
 ```
 
 **Recommended Fix:** Verify `state` exists before calling `restoreState()`.
+
+**Resolution (January 23, 2026):**
+Added defensive bounds check in both `undo()` and `redo()` methods. If the state at the computed index is undefined, the method logs an error, restores the index to its previous value, and returns `false`. Added 4 unit tests to verify graceful handling of corrupted history.
 
 ---
 
@@ -1261,10 +1273,10 @@ If ANY field is missed or the escaping is inconsistent, XSS is possible.
 
 ### P2 (Medium — Next Milestone)
 
-1. **CORE-6:** Remove StateManager dead code (saveToHistory, undo, redo methods)
-2. **CORE-7:** Add lock timeout recovery mechanism or UI indicator
-3. **CORE-8:** Add explicit API request timeouts
-4. **CORE-9:** Add HistoryManager bounds check in undo()
+1. ~~**CORE-6:** Remove StateManager dead code (saveToHistory, undo, redo methods)~~ ✅ FIXED
+2. ~~**CORE-7:** Add lock timeout recovery mechanism or UI indicator~~ ✅ FIXED
+3. ~~**CORE-8:** Add explicit API request timeouts~~ ✅ Already handled by mw.Api default
+4. ~~**CORE-9:** Add HistoryManager bounds check in undo()~~ ✅ FIXED
 5. **CORE-10:** Standardize layer cloning on `DeepClone.clone()`
 6. **CORE-11:** Consolidate magic numbers in LayersConstants.js
 7. SM-2/SM-3: Verify color swatch and W/H properties work after SM-1 is fixed

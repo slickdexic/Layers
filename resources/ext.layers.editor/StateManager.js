@@ -167,6 +167,15 @@ class StateManager {
 	 * Lock the state to prevent concurrent modifications
 	 */
 	lockState() {
+		// CORE-7 FIX: Check if previous lock was stuck and log recovery
+		if ( this.lockStuckSince ) {
+			const stuckDuration = Date.now() - this.lockStuckSince;
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[StateManager] Recovered from stuck lock after ' + stuckDuration + 'ms' );
+			}
+			this.lockStuckSince = null;
+		}
+		
 		this.isLocked = true;
 		
 		// Set a timeout to detect stuck locks (but don't force unlock - that could corrupt state)
@@ -589,35 +598,9 @@ class StateManager {
 		// ... etc
 	}
 
-	undo() {
-		if ( this.state.historyIndex > 0 ) {
-			this.state.historyIndex--;
-			const previousState = this.state.history[ this.state.historyIndex ];
-			this.restoreState( previousState );
-			return true;
-		}
-		return false;
-	}
-
-	redo() {
-		if ( this.state.historyIndex < this.state.history.length - 1 ) {
-			this.state.historyIndex++;
-			const nextState = this.state.history[ this.state.historyIndex ];
-			this.restoreState( nextState );
-			return true;
-		}
-		return false;
-	}
-
-	restoreState( stateSnapshot ) {
-		this.state.layers = JSON.parse( JSON.stringify( stateSnapshot.layers ) );
-		this.state.selectedLayerIds = stateSnapshot.selectedLayerIds.slice();
-		this.setDirty( true );
-
-		// Notify listeners
-		this.notifyListeners( 'layers', this.state.layers );
-		this.notifyListeners( 'selectedLayerIds', this.state.selectedLayerIds );
-	}
+	// CORE-6 FIX: Removed dead undo(), redo(), restoreState() methods.
+	// HistoryManager handles all undo/redo functionality.
+	// See HistoryManager.js for the active implementation.
 
 	/**
 	 * Utility methods

@@ -256,6 +256,15 @@
 			this.historyIndex--;
 			const state = this.history[ this.historyIndex ];
 
+			// CORE-9 FIX: Defensive bounds check
+			if ( !state ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[HistoryManager] undo() - state at index', this.historyIndex, 'is undefined' );
+				}
+				this.historyIndex++; // Restore index
+				return false;
+			}
+
 			this.restoreState( state );
 			this.updateUndoRedoButtons();
 
@@ -273,7 +282,18 @@
 			}
 
 			this.historyIndex++;
-			this.restoreState( this.history[ this.historyIndex ] );
+			const state = this.history[ this.historyIndex ];
+
+			// CORE-9 FIX: Defensive bounds check
+			if ( !state ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[HistoryManager] redo() - state at index', this.historyIndex, 'is undefined' );
+				}
+				this.historyIndex--; // Restore index
+				return false;
+			}
+
+			this.restoreState( state );
 			this.updateUndoRedoButtons();
 
 			return true;

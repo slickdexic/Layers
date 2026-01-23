@@ -1620,4 +1620,65 @@ describe('HistoryManager', () => {
             expect(historyManager.hasUnsavedChanges()).toBe(false);
         });
     });
+
+    describe('undo/redo defensive bounds check (CORE-9)', () => {
+        test('undo should handle corrupted history gracefully', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            
+            // Corrupt the history by removing an entry
+            historyManager.history[0] = undefined;
+            historyManager.historyIndex = 1;
+            
+            // undo should not crash, should return false
+            const result = historyManager.undo();
+            
+            expect(result).toBe(false);
+            // Index should be restored to 1
+            expect(historyManager.historyIndex).toBe(1);
+        });
+
+        test('redo should handle corrupted history gracefully', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            historyManager.undo();
+            
+            // Corrupt the history by removing the next entry
+            historyManager.history[1] = undefined;
+            
+            // redo should not crash, should return false
+            const result = historyManager.redo();
+            
+            expect(result).toBe(false);
+            // Index should be restored to 0
+            expect(historyManager.historyIndex).toBe(0);
+        });
+
+        test('undo should work normally when history is valid', () => {
+            historyManager.saveState('State 1');
+            mockLayers[0].x = 100;
+            historyManager.saveState('State 2');
+            
+            expect(historyManager.historyIndex).toBe(1);
+            
+            const result = historyManager.undo();
+            
+            expect(result).toBe(true);
+            expect(historyManager.historyIndex).toBe(0);
+        });
+
+        test('redo should work normally when history is valid', () => {
+            historyManager.saveState('State 1');
+            mockLayers[0].x = 100;
+            historyManager.saveState('State 2');
+            historyManager.undo();
+            
+            expect(historyManager.historyIndex).toBe(0);
+            
+            const result = historyManager.redo();
+            
+            expect(result).toBe(true);
+            expect(historyManager.historyIndex).toBe(1);
+        });
+    });
 });
