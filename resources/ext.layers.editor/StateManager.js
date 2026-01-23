@@ -33,6 +33,9 @@ class StateManager {
 			backgroundVisible: true,
 			backgroundOpacity: 1.0,
 
+			// Canvas/slide layer selection state
+			canvasLayerSelected: false,
+
 			// History state
 			history: [],
 			historyIndex: -1,
@@ -222,6 +225,10 @@ class StateManager {
 
 		// Return unsubscribe function
 		return () => {
+			// Guard against destroyed state or missing key
+			if ( !this.listeners || !this.listeners[ key ] ) {
+				return;
+			}
 			const index = this.listeners[ key ].indexOf( callback );
 			if ( index > -1 ) {
 				this.listeners[ key ].splice( index, 1 );

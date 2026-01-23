@@ -23,7 +23,9 @@
 		"node_modules",
 		"resources/dist",
 		"coverage",
-		"test-results"
+		"test-results",
+		"resources/ext.layers.editor/shapeLibrary/assets",
+		"*.log"
 	],
 	"typeAcquisition": {
 		"enable": true

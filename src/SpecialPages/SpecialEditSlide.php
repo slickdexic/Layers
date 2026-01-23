@@ -78,6 +78,9 @@ class SpecialEditSlide extends SpecialPage {
 		$canvasHeight = $request->getInt( 'canvasheight', 0 ) ?: $request->getInt( 'height', 0 );
 		$backgroundColor = $request->getText( 'bgcolor', '' ) ?: $request->getText( 'background', '' );
 
+		// Check if editor is in modal mode (opened as popup/iframe from article page)
+		$isModalMode = $request->getBool( 'modal' );
+
 		// Extract dimensions from existing slide or use defaults
 		if ( $layerSet && isset( $layerSet['data'] ) ) {
 			$data = $layerSet['data'];
@@ -124,6 +127,7 @@ class SpecialEditSlide extends SpecialPage {
 				'canvasWidth' => $canvasWidth,
 				'canvasHeight' => $canvasHeight,
 				'backgroundColor' => $backgroundColor,
+				'isModalMode' => $isModalMode,
 			],
 			'wgLayersSlideConfig' => [
 				'slideName' => $slideName,
@@ -137,6 +141,7 @@ class SpecialEditSlide extends SpecialPage {
 				'maxWidth' => $config->get( 'LayersSlideMaxWidth' ),
 				'maxHeight' => $config->get( 'LayersSlideMaxHeight' ),
 			],
+			'wgLayersIsModalMode' => $isModalMode,
 			'wgLayersMaxNamedSets' => $config->get( 'LayersMaxNamedSets' ),
 			'wgLayersMaxRevisionsPerSet' => $config->get( 'LayersMaxRevisionsPerSet' ),
 			'wgLayersDefaultSetName' => $config->get( 'LayersDefaultSetName' ),

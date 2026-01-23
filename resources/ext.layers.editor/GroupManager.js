@@ -265,6 +265,39 @@
 		}
 
 		/**
+		 * Check if a layer is a descendant of another layer (folder).
+		 * Used to prevent circular references when moving folders.
+		 *
+		 * @param {string} potentialDescendantId ID of the layer to check
+		 * @param {string} ancestorId ID of the potential ancestor
+		 * @param {Array} layers Current layers array
+		 * @return {boolean} True if potentialDescendantId is inside ancestorId's tree
+		 */
+		isDescendantOf( potentialDescendantId, ancestorId, layers ) {
+			const ancestor = layers.find( ( l ) => l.id === ancestorId );
+			if ( !ancestor || ancestor.type !== 'group' || !ancestor.children ) {
+				return false;
+			}
+
+			// Direct child check
+			if ( ancestor.children.includes( potentialDescendantId ) ) {
+				return true;
+			}
+
+			// Recursive check through all children that are groups
+			for ( const childId of ancestor.children ) {
+				const child = layers.find( ( l ) => l.id === childId );
+				if ( child && child.type === 'group' ) {
+					if ( this.isDescendantOf( potentialDescendantId, childId, layers ) ) {
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
+		/**
 		 * Move a layer into a folder
 		 *
 		 * @param {string} layerId ID of the layer to move
@@ -286,6 +319,12 @@
 
 			// Don't move a folder into itself or its children
 			if ( layerId === folderId ) {
+				return false;
+			}
+
+			// CORE-4 fix: Prevent circular references - don't allow moving a folder
+			// into one of its own descendants
+			if ( layer.type === 'group' && this.isDescendantOf( folderId, layerId, layers ) ) {
 				return false;
 			}
 

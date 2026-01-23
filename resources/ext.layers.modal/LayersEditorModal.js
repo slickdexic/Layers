@@ -10,6 +10,11 @@
 ( function () {
 	'use strict';
 
+	// Debug log for module loading verification
+	if ( typeof console !== 'undefined' && console.log ) {
+		console.log( '[LayersEditorModal] Module loading...' );
+	}
+
 	/**
 	 * Get message from MediaWiki i18n
 	 * @param {string} key Message key
@@ -276,5 +281,10 @@
 		window.Layers.Modal = window.Layers.Modal || {};
 		window.Layers.Modal.LayersEditorModal = LayersEditorModal;
 		window.Layers.Modal.initModalTriggers = initModalTriggers;
+
+		// Debug log for module export verification
+		if ( typeof console !== 'undefined' && console.log ) {
+			console.log( '[LayersEditorModal] Module exported to window.Layers.Modal.LayersEditorModal' );
+		}
 	}
 }() );

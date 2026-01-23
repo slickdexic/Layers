@@ -800,6 +800,12 @@ describe( 'LayersEditor Coverage Extension', () => {
 				imageUrl: '/test.jpg'
 			} );
 
+			// Ensure isSlide is false for this test (file mode, not slide mode)
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'isSlide' ) return false;
+				return [];
+			} );
+
 			// Mock window.location.href setter
 			const originalLocation = window.location;
 			delete window.location;
@@ -810,6 +816,49 @@ describe( 'LayersEditor Coverage Extension', () => {
 			expect( window.mw.util.getUrl ).toHaveBeenCalledWith( 'File:Test.jpg', { layers: 'on' } );
 
 			window.location = originalLocation;
+		} );
+
+		it( 'should use history.back for slide mode', () => {
+			window.mw.util = {
+				getUrl: jest.fn( () => '/wiki/Special:Slides' )
+			};
+
+			editor = new LayersEditor( {
+				filename: 'Slide:TestSlide',
+				imageUrl: null,
+				isSlide: true
+			} );
+
+			// Ensure isSlide is true for this test (slide mode)
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'isSlide' ) return true;
+				return [];
+			} );
+
+			// Mock window.location and history
+			const originalLocation = window.location;
+			delete window.location;
+			window.location = { href: '' };
+			const mockBack = jest.fn();
+			const originalHistory = window.history;
+			Object.defineProperty( window, 'history', {
+				value: { length: 2, back: mockBack },
+				writable: true
+			} );
+
+			editor.navigateBackToFile();
+
+			expect( mockBack ).toHaveBeenCalled();
+			expect( window.mw.util.getUrl ).not.toHaveBeenCalledWith(
+				expect.stringContaining( 'File:' ),
+				expect.anything()
+			);
+
+			window.location = originalLocation;
+			Object.defineProperty( window, 'history', {
+				value: originalHistory,
+				writable: true
+			} );
 		} );
 	} );
 

@@ -492,12 +492,11 @@ class LayerRenderer {
 		const opts = this._prepareRenderOptions( options );
 		const scale = opts.scale;
 
-		// Get CustomShapeRenderer from namespace
-		const CustomShapeRenderer = ( typeof window !== 'undefined' &&
-			window.Layers &&
-			window.Layers.ShapeLibrary &&
-			window.Layers.ShapeLibrary.CustomShapeRenderer ) ?
-			window.Layers.ShapeLibrary.CustomShapeRenderer : null;
+		// Get CustomShapeRenderer from namespace (check multiple export locations)
+		const CustomShapeRenderer = ( typeof window !== 'undefined' ) ? (
+			( window.Layers && window.Layers.ShapeLibrary && window.Layers.ShapeLibrary.CustomShapeRenderer ) ||
+			window.CustomShapeRenderer
+		) : null;
 
 		if ( CustomShapeRenderer ) {
 			// Use dedicated custom shape renderer

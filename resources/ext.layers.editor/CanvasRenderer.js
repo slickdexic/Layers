@@ -234,7 +234,12 @@
 
 			// Handle slide mode (no background image)
 			if ( this.isSlideMode ) {
-				this.drawSlideBackground();
+				if ( bgVisible ) {
+					this.drawSlideBackground();
+				} else {
+					// Draw checker pattern when canvas background is hidden
+					this.drawCheckerPattern();
+				}
 			} else if ( bgVisible && this.backgroundImage && this.backgroundImage.complete ) {
 				this.drawBackgroundImage();
 			} else if ( !bgVisible ) {
@@ -320,13 +325,26 @@
 		 */
 		drawSlideBackground() {
 			const color = this.slideBackgroundColor || 'transparent';
+			// Use logical canvas dimensions (pre-zoom) since transform is applied
 			const canvasW = this.canvas.width / this.zoom;
 			const canvasH = this.canvas.height / this.zoom;
+			const isTransparent = !color || color === 'transparent' || color === 'none';
 
 			this.ctx.save();
-			if ( color === 'transparent' ) {
+			if ( isTransparent ) {
 				// Draw checkerboard pattern for transparent background
-				this.drawCheckerPatternToContext();
+				// First fill with white
+				this.ctx.fillStyle = '#ffffff';
+				this.ctx.fillRect( 0, 0, canvasW, canvasH );
+				// Then draw gray checks
+				this.ctx.fillStyle = '#e8e8e8';
+				const checkerSize = 20;
+				for ( let x = 0; x < canvasW; x += checkerSize * 2 ) {
+					for ( let y = 0; y < canvasH; y += checkerSize * 2 ) {
+						this.ctx.fillRect( x, y, checkerSize, checkerSize );
+						this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
+					}
+				}
 			} else {
 				// Draw solid color background
 				this.ctx.fillStyle = color;

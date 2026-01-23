@@ -616,6 +616,16 @@
 	"layers-filepage-view": "Link text for viewing/previewing a layer set from the File page list",
 	"layers-filepage-usage-hint": "Hint text shown below the layer sets table explaining wikitext syntax to display layers",
 
+	"layers-slide-properties": "Title for the slide properties panel in the editor sidebar",
+	"layers-slide-prop-name": "Label for the slide name field in the properties panel",
+	"layers-slide-prop-size": "Label for the slide size (width/height) section in the properties panel",
+	"layers-slide-prop-background": "Label for the background color section in the properties panel",
+	"layers-slide-copy-embed": "Button text for copying the slide embed wikitext code",
+	"layers-slide-canvas-layer": "Name shown for the canvas/background layer in the layer panel for slides",
+	"layers-slide-canvas-size": "Tooltip for canvas size controls",
+	"layers-slide-background-color": "Tooltip for background color control",
+	"layers-slide-change-color": "Tooltip for clicking to change background color",
+
 	"layers-shape-library-title": "Dialog title for the shape library browser panel",
 	"layers-shape-library-search": "Placeholder text for the search input in the shape library",
 	"layers-shape-library-count": "Text showing the number of shapes in a category. $1 is the count.",

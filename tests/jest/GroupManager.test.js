@@ -554,6 +554,57 @@ describe( 'GroupManager', () => {
 		} );
 	} );
 
+	describe( 'isDescendantOf (CORE-4)', () => {
+		it( 'should return true for direct child', () => {
+			const folder = groupManager.createFolder( null, 'Parent' );
+			groupManager.moveToFolder( 'layer-1', folder.id );
+
+			const layers = mockStateManager.get( 'layers' );
+			const result = groupManager.isDescendantOf( 'layer-1', folder.id, layers );
+
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should return true for nested descendant', () => {
+			const parentFolder = groupManager.createFolder( null, 'Parent' );
+			const childFolder = groupManager.createFolder( null, 'Child' );
+
+			groupManager.moveToFolder( childFolder.id, parentFolder.id );
+			groupManager.moveToFolder( 'layer-1', childFolder.id );
+
+			const layers = mockStateManager.get( 'layers' );
+			const result = groupManager.isDescendantOf( 'layer-1', parentFolder.id, layers );
+
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should return false for non-descendant', () => {
+			const folder1 = groupManager.createFolder( null, 'Folder 1' );
+			const folder2 = groupManager.createFolder( null, 'Folder 2' );
+
+			groupManager.moveToFolder( 'layer-1', folder1.id );
+
+			const layers = mockStateManager.get( 'layers' );
+			const result = groupManager.isDescendantOf( 'layer-1', folder2.id, layers );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for non-existent ancestor', () => {
+			const layers = mockStateManager.get( 'layers' );
+			const result = groupManager.isDescendantOf( 'layer-1', 'nonexistent', layers );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false for non-group ancestor', () => {
+			const layers = mockStateManager.get( 'layers' );
+			const result = groupManager.isDescendantOf( 'layer-2', 'layer-1', layers );
+
+			expect( result ).toBe( false );
+		} );
+	} );
+
 	describe( 'isGroup', () => {
 		it( 'should return true for group layers', () => {
 			const group = groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
@@ -894,6 +945,40 @@ describe( 'GroupManager', () => {
 			const layerIndex = layers.findIndex( ( l ) => l.id === 'layer-1' );
 
 			expect( layerIndex ).toBeGreaterThan( folderIndex );
+		} );
+
+		it( 'should prevent circular reference when moving folder into its descendant (CORE-4)', () => {
+			// Create nested folder structure: parentFolder > childFolder > grandchildFolder
+			const parentFolder = groupManager.createFolder( null, 'Parent' );
+			const childFolder = groupManager.createFolder( null, 'Child' );
+			const grandchildFolder = groupManager.createFolder( null, 'Grandchild' );
+
+			// Build the hierarchy
+			groupManager.moveToFolder( childFolder.id, parentFolder.id );
+			groupManager.moveToFolder( grandchildFolder.id, childFolder.id );
+
+			// Try to move parentFolder into childFolder (would create circular reference)
+			const result1 = groupManager.moveToFolder( parentFolder.id, childFolder.id );
+			expect( result1 ).toBe( false );
+
+			// Try to move parentFolder into grandchildFolder (would create circular reference)
+			const result2 = groupManager.moveToFolder( parentFolder.id, grandchildFolder.id );
+			expect( result2 ).toBe( false );
+
+			// Moving childFolder into grandchildFolder should also fail
+			const result3 = groupManager.moveToFolder( childFolder.id, grandchildFolder.id );
+			expect( result3 ).toBe( false );
+
+			// Verify structure is still intact
+			const layers = mockStateManager.get( 'layers' );
+			const parent = layers.find( ( l ) => l.id === parentFolder.id );
+			const child = layers.find( ( l ) => l.id === childFolder.id );
+			const grandchild = layers.find( ( l ) => l.id === grandchildFolder.id );
+
+			expect( parent.children ).toContain( childFolder.id );
+			expect( child.children ).toContain( grandchildFolder.id );
+			expect( child.parentGroup ).toBe( parentFolder.id );
+			expect( grandchild.parentGroup ).toBe( childFolder.id );
 		} );
 	} );
 
