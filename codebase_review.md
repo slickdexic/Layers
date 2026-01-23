@@ -9,8 +9,8 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git status`)
-- **Tests:** 9,946 tests in 156 suites (all passing, verified January 23, 2026)
-- **Coverage:** 92.59% statements, 83.02% branches (verified January 22, 2026)
+- **Tests:** 9,967 tests in 156 suites (all passing, verified January 23, 2026)
+- **Coverage:** 92.59% statements, 83.02% branches (verified January 23, 2026)
 - **JS files:** 124 (excludes `resources/dist/` and build scripts)
 - **PHP files:** 33+
 

@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C936%20passing-brightgreen" alt="9,936 Tests">
+  <img src="https://img.shields.io/badge/Tests-9%2C967%20passing-brightgreen" alt="9,967 Tests">
   <img src="https://img.shields.io/badge/Coverage-92.59%25-brightgreen" alt="92.59% Coverage">
 </p>
 
@@ -20,12 +20,12 @@
 
 ---
 
-## 🆕 What's New in v1.5.25
+## 🆕 What's New in v1.5.26
 
-- **Slide Refresh Fix** — Slides now refresh immediately after closing the editor (like images do)
-- **bfcache Support** — Added `pageshow` event handler to detect browser back-forward cache restoration
-- **13 new tests** — Comprehensive test coverage for slide refresh functionality
-- **9,936 tests passing** (156 suites), 92.59% statement coverage, 83.02% branch coverage
+- **CORE-6: Dead Code Removal** — Removed unused StateManager undo/redo methods
+- **CORE-7: Stuck Lock Recovery** — Added logging for lock timeout recovery
+- **CORE-9: History Bounds Check** — Defensive bounds checking in HistoryManager undo/redo
+- **9,967 tests passing** (156 suites), 92.59% statement coverage, 83.02% branch coverage
 
 ### 🖼️ Slide Mode (v1.5.22+)
 
@@ -217,12 +217,12 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.25 |
-| **Version (REL1_43)** | 1.5.25-REL1_43 |
+| **Version (main)** | 1.5.26 |
+| **Version (REL1_43)** | 1.5.26-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
 | **Test Suites** | 156 |
-| **Total Tests** | 9,936 |
+| **Total Tests** | 9,967 |
 | **PHPUnit Test Files** | 24 |
 | **Statement Coverage** | 92.59% |
 | **Branch Coverage** | 83.02% |

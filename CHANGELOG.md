@@ -2,6 +2,26 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.26] - 2026-01-23
+
+### Fixed
+- **CORE-6: StateManager Dead Code** — Removed dead `undo()`, `redo()`, and `restoreState()` methods from StateManager. These methods were never called since `saveToHistory()` is disabled. HistoryManager handles all undo/redo functionality.
+- **CORE-7: StateManager Lock Timeout Recovery** — Added recovery check at start of `lockState()` that detects and logs when recovery from a stuck lock occurs. When `lockStuckSince` is set and a new lock succeeds, it logs the stuck duration and clears the flag.
+- **CORE-9: HistoryManager Bounds Check** — Added defensive bounds check in `undo()` and `redo()` methods. If the state at the computed index is undefined, the method logs an error, restores the index, and returns `false`.
+- **CORE-8: API Timeout Handling** — Verified already handled by mw.Api default 30-second timeout. Added missing i18n messages for `layers-timeout-error` and `layers-network-error`.
+
+### Changed
+- **SM-1, SM-5 Closed** — User testing confirmed these were not reproducible bugs
+
+### Technical Details
+- All 9,967 tests pass (156 test suites)
+- Added 4 new CORE-9 bounds check tests for HistoryManager
+- Updated StateManager and LayerWorkflow integration tests for removed methods
+- Test coverage: 92.59% statement, 83.02% branch
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## [1.5.25] - 2026-01-24
 
 ### Fixed

@@ -4,6 +4,20 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.26 (January 23, 2026)
+
+### Fixed
+- **CORE-6: StateManager Dead Code** — Removed dead `undo()`, `redo()`, and `restoreState()` methods from StateManager. HistoryManager handles all undo/redo functionality.
+- **CORE-7: StateManager Lock Timeout Recovery** — Added recovery check for stuck locks with logging.
+- **CORE-9: HistoryManager Bounds Check** — Added defensive bounds check in `undo()` and `redo()` methods.
+- **CORE-8: API Timeout Handling** — Verified already handled by mw.Api default timeout. Added missing i18n messages.
+
+### Technical Details
+- All 9,967 tests pass (156 test suites)
+- Test coverage: 92.59% statement, 83.02% branch
+
+---
+
 ## Version 1.5.25 (January 24, 2026)
 
 ### Fixed
