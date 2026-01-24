@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 23, 2026 (Comprehensive Critical Audit v23)  
+**Review Date:** January 23, 2026 (Comprehensive Critical Audit v24)  
 **Version:** 1.5.26  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
@@ -10,7 +10,7 @@
 
 - **Branch:** main (verified via `git status`)
 - **Tests:** 9,967 tests in 156 suites (all passing, verified January 23, 2026)
-- **Coverage:** 92.59% statements, 83.02% branches (verified January 23, 2026)
+- **Coverage:** 91.60% statements, 82.09% branches (verified January 23, 2026)
 - **JS files:** 124 (excludes `resources/dist/` and build scripts)
 - **PHP files:** 33+
 
@@ -18,13 +18,13 @@
 
 ## Executive Summary
 
-The Layers extension is a mature, feature-rich MediaWiki extension with strong security practices and excellent test coverage. However, a critical audit identified **5 Slide Mode issues** (1 now diagnosed with fix), **10+ core architectural issues** including race conditions and memory leaks, and several code quality concerns.
+The Layers extension is a mature, feature-rich MediaWiki extension with strong security practices and excellent test coverage. This comprehensive critical audit identified **5 Slide Mode issues**, **11 core architectural issues** including race conditions and memory leaks, **6 new code quality concerns**, and several documentation inconsistencies.
 
-**Overall Assessment:** **7.2/10** — Production-ready for image layers, but Slide Mode and core components have significant bugs that need resolution.
+**Overall Assessment:** **7.0/10** — Production-ready for image layers, but has significant technical debt, coverage gaps in critical components, and architectural issues that need resolution before being considered world-class.
 
 ### Key Strengths
 - Excellent security model (CSRF, rate limiting, validation)
-- Strong test coverage (92.59% statement, 83.02% branch)
+- Good test coverage (91.60% statement, 82.09% branch — but coverage dropped from previous reports)
 - Well-documented with comprehensive inline comments
 - Modern ES6 class-based architecture
 - Proper delegation patterns in large files
@@ -40,15 +40,20 @@ The Layers extension is a mature, feature-rich MediaWiki extension with strong s
 | CORE-3 | **APIManager save race condition with retry** | **High** | ✅ **FIXED** | Editor |
 | CORE-4 | **GroupManager circular reference incomplete** | **High** | ✅ **FIXED** | Editor |
 | CORE-5 | **LayersEditor event listener leaks** | **High** | 🟡 Reviewed OK | Editor |
+| NEW-1 | **ViewerManager.js only 63.73% coverage** | **High** | 🔴 Open | Viewer |
+| NEW-2 | **innerHTML XSS vectors in multiple files** | **Medium** | 🔴 Open | Security |
+| NEW-3 | **console.log statements in production code** | **Low** | 🔴 Open | Code Quality |
+| NEW-4 | **localStorage operations without quota handling** | **Medium** | 🔴 Open | Robustness |
 | SM-1 | Canvas layer not showing in Layer Manager | Critical | ✅ Closed | Not reproducible |
 | SM-5 | Exiting editor jumps back extra page | High | ✅ Closed | Not reproducible |
 
 See detailed analysis below for each issue.
 
 ### Test Coverage (January 23, 2026)
-- ✅ **9,954 Jest tests passing** — 8 new tests added for CORE-3 and CORE-4 fixes
+- ✅ **9,967 Jest tests passing** (156 suites)
 - ✅ **All slide mode tests passing** — BackgroundLayerController has 52 tests
-- ⚠️ **ViewerManager has 64.84% coverage** — significant coverage gap
+- ⚠️ **ViewerManager has 63.73% coverage** — critical coverage gap (was reported as 64.84%)
+- ⚠️ **Overall coverage dropped**: 91.60% statement (previously reported 92.59%)
 
 ### Fixes Applied (January 23, 2026)
 - ✅ **SM-4 FIXED** — Added `onImageLoad` callback to slide viewers for SVG re-render
@@ -1162,6 +1167,186 @@ If ANY field is missed or the escaping is inconsistent, XSS is possible.
 
 ---
 
+## 🔴 NEW Issues Identified (January 23, 2026)
+
+### NEW-1: ViewerManager.js Critical Coverage Gap
+
+**Severity:** High  
+**Category:** Test Coverage  
+**File:** [resources/ext.layers/viewer/ViewerManager.js](resources/ext.layers/viewer/ViewerManager.js)
+
+**Description:** ViewerManager.js is a 1,964-line critical component with only **63.73% line coverage** (down from previously reported 64.84%). This is the core viewer that renders layers on article pages. Major uncovered code paths include:
+
+- Lines 1027-1195 (~168 lines) — slide viewer initialization and overlay setup
+- Lines 1281-1535 (~254 lines) — slide editing and navigation
+- Lines 1572-1582, 1602-1603, 1673 — error handling paths
+- Lines 1924-1925, 1940 — cleanup and destruction
+
+**Impact:** Insufficient testing of the production viewer increases regression risk significantly.
+
+**Recommendation:** Prioritize adding tests for slide viewer functionality and error handling paths.
+
+---
+
+### NEW-2: innerHTML XSS Vectors
+
+**Severity:** Medium  
+**Category:** Security  
+**Files:** Multiple (20+ occurrences)
+
+**Description:** The codebase uses `innerHTML` assignment in multiple places:
+
+```javascript
+// Examples found:
+closeBtn.innerHTML = '&times;';
+iconSpan.innerHTML = tool.icon;
+container.innerHTML = '';
+```
+
+While many of these are setting static SVG content or clearing containers, the pattern is risky. Found in:
+- `LayersEditorModal.js` (line 88)
+- `UIManager.js` (line 273)
+- `ToolDropdown.js` (lines 177, 219, 224, 230)
+- `Toolbar.js` (lines 487, 758, 827, 871, 1029, 1046, 1064)
+- `BackgroundLayerController.js` (line 458)
+- `SetSelectorController.js` (lines 116, 125)
+- `GradientEditor.js` (lines 93, 573)
+- `SlidePropertiesPanel.js` (lines 157, 435)
+
+**Impact:** If any user-controlled data flows into these patterns, XSS is possible.
+
+**Recommendation:** Replace `innerHTML` with DOM construction methods (`createElement`, `textContent`, `appendChild`) or use a trusted types policy.
+
+---
+
+### NEW-3: console.log Statements in Production Code
+
+**Severity:** Low  
+**Category:** Code Quality  
+**Files:** SlideManager.js, LayersEditorModal.js
+
+**Description:** Production code contains `console.log` and `console.error` statements that should use MediaWiki's logging infrastructure:
+
+```javascript
+// SlideManager.js
+console.error( '[SlideManager] Editor container not found' );
+console.error( '[SlideManager] Failed to load editor module:', err );
+console.error( '[SlideManager] LayersEditor class not available' );
+console.error( '[SlideManager] Failed to initialize editor:', err );
+console.error( '[SlideManager] Save error:', err );
+console.error( '[SlideViewer] Failed to parse layer data:', e );
+console.error( '[SlideViewer] Canvas not found in container' );
+
+// LayersEditorModal.js
+console.log( '[LayersEditorModal] Module loading...' );
+console.log( '[LayersEditorModal] Module exported to window.Layers.Modal.LayersEditorModal' );
+```
+
+**Impact:** Debug output visible in production, inconsistent with rest of codebase which uses `mw.log`.
+
+**Recommendation:** Replace with `mw.log.error()` or `mw.log.warn()` for consistency.
+
+---
+
+### NEW-4: localStorage Operations Without Quota Handling
+
+**Severity:** Medium  
+**Category:** Robustness  
+**Files:** PresetStorage.js, ColorPickerDialog.js, ToolDropdown.js
+
+**Description:** LocalStorage operations catch errors but don't specifically handle quota exceeded errors:
+
+```javascript
+// PresetStorage.js - save() method
+try {
+    localStorage.setItem( this.storageKey, JSON.stringify( saveData ) );
+    return true;
+} catch ( err ) {
+    this.logError( 'Failed to save presets:', err );
+    return false;
+}
+```
+
+**Impact:** If user's localStorage is full, presets and custom colors will silently fail to save. Users may lose work without understanding why.
+
+**Recommendation:** 
+1. Detect `QuotaExceededError` specifically
+2. Show user notification when storage is full
+3. Consider implementing storage cleanup/rotation for old data
+
+---
+
+### NEW-5: Missing parseInt Radix Parameter
+
+**Severity:** Low  
+**Category:** Code Quality  
+**Files:** LayersValidator.js
+
+**Description:** Some `parseInt()` calls don't specify the radix parameter:
+
+```javascript
+// LayersValidator.js line 560
+parseInt( matches[ i ] ) < 0 || parseInt( matches[ i ] ) > 255
+```
+
+**Impact:** Could cause unexpected behavior with strings starting with "0" (octal interpretation in older environments).
+
+**Recommendation:** Always use `parseInt(value, 10)` for decimal parsing.
+
+---
+
+### NEW-6: Deprecated Global Exports Still Present
+
+**Severity:** Low  
+**Category:** Technical Debt  
+**Files:** compat.js, multiple module files
+
+**Description:** The codebase maintains deprecated global exports for backward compatibility:
+
+```javascript
+// From compat.js tests
+'[Layers] Deprecated global exports detected. These will be removed in v1.0:'
+```
+
+These deprecated exports add code complexity and potential confusion.
+
+**Impact:** Technical debt that slows maintenance.
+
+**Recommendation:** Document migration path and set deprecation timeline.
+
+---
+
+### NEW-7: Inconsistent Error Boundary Handling
+
+**Severity:** Medium  
+**Category:** Robustness  
+**Files:** Various
+
+**Description:** Error handling is inconsistent across the codebase:
+- Some methods have try-catch blocks that log and continue
+- Some methods throw errors up the call stack
+- Some promise chains have `.catch()` that just logs
+- Some operations have no error handling
+
+**Example inconsistency:**
+```javascript
+// SlideManager.js - swallows error
+} catch ( err ) {
+    console.error( '[SlideManager] Failed to initialize editor:', err );
+}
+
+// vs. APIManager.js - propagates error
+}).catch( ( code, result ) => {
+    reject( this.handleError( code, operation, context ) );
+});
+```
+
+**Impact:** Difficult to predict and test error behavior. Some errors may silently fail while others crash the editor.
+
+**Recommendation:** Establish error handling guidelines and apply consistently.
+
+---
+
 ## ✅ Recently Fixed Issues
 
 ### BUG: Slide Viewers Partially Refresh After Editor Close (January 24, 2026)
@@ -1299,15 +1484,18 @@ If ANY field is missed or the escaping is inconsistent, XSS is possible.
 
 | Category | Score | Weight | Notes |
 |----------|-------|--------|-------|
-| Security | 9.5/10 | 25% | Excellent CSRF, validation, rate limiting |
-| Test Coverage | 8.0/10 | 25% | 92.59% overall but ViewerManager gap; no tests for race conditions |
+| Security | 9.0/10 | 25% | Excellent CSRF, validation, rate limiting; minor innerHTML concerns |
+| Test Coverage | 7.5/10 | 25% | 91.60% overall but ViewerManager at 63.73% is critical gap |
 | Functionality | 6.0/10 | 25% | **Slide Mode bugs + core race conditions** |
 | Architecture | 7.0/10 | 15% | Good delegation, but race conditions and memory leaks |
-| Documentation | 8.0/10 | 10% | Good but some inconsistencies |
+| Documentation | 7.0/10 | 10% | Inconsistent metrics across files, outdated coverage numbers |
 
-**Weighted Total: 7.23/10 → Overall: 7.2/10**
+**Weighted Total: 7.0/10 → Overall: 7.0/10**
 
-**Note:** Score reduced from 7.8 to 7.2 due to newly discovered core issues (race conditions, memory leaks, missing callbacks).
+**Score History:**
+- v24 (Jan 23, 2026): 7.0/10 — NEW-1 through NEW-7 issues identified, coverage numbers corrected
+- v23 (Jan 23, 2026): 7.2/10 — Core issues (race conditions, memory leaks)
+- Earlier: 7.8/10 — Before comprehensive audit
 
 ---
 

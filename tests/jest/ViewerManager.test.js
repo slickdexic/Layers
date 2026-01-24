@@ -2742,4 +2742,481 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 	} );
+
+	describe( 'Slide Overlay Functionality', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		describe( 'setupSlideOverlay', () => {
+			it( 'should create overlay with edit and view buttons when user can edit', () => {
+				global.mw.config.get = jest.fn( ( key ) => {
+					if ( key === 'wgLayersCanEdit' ) return true;
+					return null;
+				} );
+
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'TestSlide' );
+				document.body.appendChild( container );
+
+				const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+				manager.setupSlideOverlay( container, payload );
+
+				const overlay = container.querySelector( '.layers-slide-overlay' );
+				expect( overlay ).toBeTruthy();
+
+				const editBtn = overlay.querySelector( '.layers-slide-overlay-btn--edit' );
+				const viewBtn = overlay.querySelector( '.layers-slide-overlay-btn--view' );
+
+				expect( editBtn ).toBeTruthy();
+				expect( viewBtn ).toBeTruthy();
+			} );
+
+			it( 'should create overlay with only view button when user cannot edit', () => {
+				global.mw.config.get = jest.fn( ( key ) => {
+					if ( key === 'wgLayersCanEdit' ) return false;
+					return null;
+				} );
+
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'TestSlide' );
+				document.body.appendChild( container );
+
+				const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+				manager.setupSlideOverlay( container, payload );
+
+				const overlay = container.querySelector( '.layers-slide-overlay' );
+				expect( overlay ).toBeTruthy();
+
+				const editBtn = overlay.querySelector( '.layers-slide-overlay-btn--edit' );
+				const viewBtn = overlay.querySelector( '.layers-slide-overlay-btn--view' );
+
+				expect( editBtn ).toBeNull();
+				expect( viewBtn ).toBeTruthy();
+			} );
+
+			it( 'should remove old edit button if present', () => {
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'TestSlide' );
+				const oldButton = document.createElement( 'button' );
+				oldButton.className = 'layers-slide-edit-button';
+				container.appendChild( oldButton );
+				document.body.appendChild( container );
+
+				const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+				manager.setupSlideOverlay( container, payload );
+
+				expect( container.querySelector( '.layers-slide-edit-button' ) ).toBeNull();
+			} );
+
+			it( 'should not create duplicate overlay', () => {
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'TestSlide' );
+				document.body.appendChild( container );
+
+				const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+				manager.setupSlideOverlay( container, payload );
+				manager.setupSlideOverlay( container, payload );
+
+				const overlays = container.querySelectorAll( '.layers-slide-overlay' );
+				expect( overlays.length ).toBe( 1 );
+			} );
+		} );
+
+		describe( 'handleSlideEditClick', () => {
+			it( 'should call openSlideEditor with correct parameters', () => {
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'MySlide' );
+				container.setAttribute( 'data-lock-mode', 'size' );
+				container.setAttribute( 'data-canvas-width', '1024' );
+				container.setAttribute( 'data-canvas-height', '768' );
+				container.setAttribute( 'data-background', '#ff0000' );
+				container.setAttribute( 'data-layerset', 'custom-set' );
+
+				manager.openSlideEditor = jest.fn();
+				manager.handleSlideEditClick( container );
+
+				expect( manager.openSlideEditor ).toHaveBeenCalledWith( {
+					slideName: 'MySlide',
+					lockMode: 'size',
+					canvasWidth: 1024,
+					canvasHeight: 768,
+					backgroundColor: '#ff0000',
+					layerSetName: 'custom-set'
+				} );
+			} );
+
+			it( 'should use default values for missing attributes', () => {
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'MinimalSlide' );
+
+				manager.openSlideEditor = jest.fn();
+				manager.handleSlideEditClick( container );
+
+				expect( manager.openSlideEditor ).toHaveBeenCalledWith(
+					expect.objectContaining( {
+						slideName: 'MinimalSlide',
+						lockMode: 'none',
+						canvasWidth: 800,
+						canvasHeight: 600,
+						backgroundColor: '#ffffff',
+						layerSetName: 'default'
+					} )
+				);
+			} );
+		} );
+
+		describe( 'handleSlideViewClick', () => {
+			it( 'should open lightbox with canvas data', () => {
+				const mockLightbox = {
+					open: jest.fn()
+				};
+				const MockLightboxClass = jest.fn( () => mockLightbox );
+				window.Layers = window.Layers || {};
+				window.Layers.Viewer = { Lightbox: MockLightboxClass };
+
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'ViewSlide' );
+				const canvas = document.createElement( 'canvas' );
+				canvas.width = 800;
+				canvas.height = 600;
+				canvas.getContext = jest.fn( () => ( {
+					fillRect: jest.fn()
+				} ) );
+				canvas.toDataURL = jest.fn( () => 'data:image/png;base64,test' );
+				container.appendChild( canvas );
+
+				const payload = {
+					layers: [ { id: '1', type: 'rectangle' } ],
+					baseWidth: 800,
+					baseHeight: 600,
+					backgroundColor: '#ffffff'
+				};
+
+				manager.handleSlideViewClick( container, payload );
+
+				expect( MockLightboxClass ).toHaveBeenCalledWith( { debug: true } );
+				expect( mockLightbox.open ).toHaveBeenCalledWith(
+					expect.objectContaining( {
+						filename: 'ViewSlide',
+						imageUrl: 'data:image/png;base64,test',
+						layerData: expect.objectContaining( {
+							layers: [ { id: '1', type: 'rectangle' } ],
+							baseWidth: 800,
+							baseHeight: 600
+						} )
+					} )
+				);
+			} );
+
+			it( 'should handle missing lightbox class gracefully', () => {
+				delete window.Layers;
+				delete window.LayersLightbox;
+
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'ViewSlide' );
+				const canvas = document.createElement( 'canvas' );
+				container.appendChild( canvas );
+
+				const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+				// Should not throw
+				expect( () => manager.handleSlideViewClick( container, payload ) ).not.toThrow();
+			} );
+
+			it( 'should handle missing canvas gracefully', () => {
+				const container = document.createElement( 'div' );
+				container.setAttribute( 'data-slide-name', 'NoCanvasSlide' );
+
+				const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+				// Should not throw
+				expect( () => manager.handleSlideViewClick( container, payload ) ).not.toThrow();
+			} );
+		} );
+
+		describe( '_createPencilIcon', () => {
+			it( 'should create SVG icon', () => {
+				const icon = manager._createPencilIcon();
+				expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+				expect( icon.getAttribute( 'width' ) ).toBe( '16' );
+				expect( icon.getAttribute( 'height' ) ).toBe( '16' );
+			} );
+
+			it( 'should use IconFactory if available', () => {
+				const mockIcon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+				window.Layers = {
+					UI: {
+						IconFactory: {
+							createPencilIcon: jest.fn( () => mockIcon )
+						}
+					}
+				};
+
+				const icon = manager._createPencilIcon();
+				expect( window.Layers.UI.IconFactory.createPencilIcon ).toHaveBeenCalled();
+				expect( icon ).toBe( mockIcon );
+			} );
+		} );
+
+		describe( '_createExpandIcon', () => {
+			it( 'should create SVG icon', () => {
+				const icon = manager._createExpandIcon();
+				expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+				expect( icon.getAttribute( 'width' ) ).toBe( '16' );
+				expect( icon.getAttribute( 'height' ) ).toBe( '16' );
+			} );
+
+			it( 'should use IconFactory if available', () => {
+				const mockIcon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+				window.Layers = {
+					UI: {
+						IconFactory: {
+							createFullscreenIcon: jest.fn( () => mockIcon )
+						}
+					}
+				};
+
+				const icon = manager._createExpandIcon();
+				expect( window.Layers.UI.IconFactory.createFullscreenIcon ).toHaveBeenCalled();
+				expect( icon ).toBe( mockIcon );
+			} );
+		} );
+
+		describe( '_msg helper', () => {
+			it( 'should return message from mw.message if exists', () => {
+				global.mw.message = jest.fn( () => ( {
+					exists: () => true,
+					text: () => 'Localized Message'
+				} ) );
+
+				const result = manager._msg( 'layers-test-key', 'Fallback' );
+				expect( result ).toBe( 'Localized Message' );
+			} );
+
+			it( 'should return fallback if message does not exist', () => {
+				global.mw.message = jest.fn( () => ( {
+					exists: () => false,
+					text: () => ''
+				} ) );
+
+				const result = manager._msg( 'layers-missing-key', 'Fallback Text' );
+				expect( result ).toBe( 'Fallback Text' );
+			} );
+
+			it( 'should return fallback if mw.message not available', () => {
+				delete global.mw.message;
+
+				const result = manager._msg( 'layers-test-key', 'Fallback' );
+				expect( result ).toBe( 'Fallback' );
+			} );
+		} );
+	} );
+
+	describe( 'initializeSlideViewer', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should initialize slide with layers and render them', () => {
+			const mockDrawLayer = jest.fn();
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( {
+					drawLayer: mockDrawLayer
+				} ) )
+			};
+
+			const container = document.createElement( 'div' );
+			container.setAttribute( 'data-slide-name', 'RenderSlide' );
+			const canvas = document.createElement( 'canvas' );
+			const mockCtx = {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: ''
+			};
+			canvas.getContext = jest.fn( () => mockCtx );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			const payload = {
+				layers: [
+					{ id: '1', type: 'rectangle', visible: true },
+					{ id: '2', type: 'circle', visible: true }
+				],
+				baseWidth: 1024,
+				baseHeight: 768,
+				backgroundColor: '#0000ff',
+				backgroundVisible: true
+			};
+
+			manager.setupSlideOverlay = jest.fn();
+			manager.initializeSlideViewer( container, payload );
+
+			// Canvas dimensions should be set
+			expect( canvas.width ).toBe( 1024 );
+			expect( canvas.height ).toBe( 768 );
+
+			// Background should be filled
+			expect( mockCtx.fillRect ).toHaveBeenCalled();
+
+			// Layers should be rendered
+			expect( mockDrawLayer ).toHaveBeenCalledTimes( 2 );
+		} );
+
+		it( 'should skip hidden layers', () => {
+			const mockDrawLayer = jest.fn();
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( {
+					drawLayer: mockDrawLayer
+				} ) )
+			};
+
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: ''
+			} ) );
+			container.appendChild( canvas );
+
+			const payload = {
+				layers: [
+					{ id: '1', type: 'rectangle', visible: true },
+					{ id: '2', type: 'circle', visible: false },
+					{ id: '3', type: 'text', visible: 0 }
+				],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundVisible: true
+			};
+
+			manager.setupSlideOverlay = jest.fn();
+			manager.initializeSlideViewer( container, payload );
+
+			// Only visible layer should be rendered
+			expect( mockDrawLayer ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'should handle transparent background', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			const mockCtx = {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: ''
+			};
+			canvas.getContext = jest.fn( () => mockCtx );
+			container.appendChild( canvas );
+
+			const payload = {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: 'transparent',
+				backgroundVisible: true
+			};
+
+			manager.setupSlideOverlay = jest.fn();
+			manager.initializeSlideViewer( container, payload );
+
+			// fillRect should still be called for clearRect, but bg should not be filled
+			expect( mockCtx.clearRect ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing canvas gracefully', () => {
+			const container = document.createElement( 'div' );
+
+			const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+			// Should not throw
+			expect( () => manager.initializeSlideViewer( container, payload ) ).not.toThrow();
+		} );
+
+		it( 'should handle missing LayerRenderer gracefully', () => {
+			delete window.Layers;
+			delete window.LayerRenderer;
+
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => ( { clearRect: jest.fn() } ) );
+			container.appendChild( canvas );
+
+			const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+			// Should not throw
+			expect( () => manager.initializeSlideViewer( container, payload ) ).not.toThrow();
+		} );
+
+		it( 'should hide placeholder after initialization', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: ''
+			} ) );
+			container.appendChild( canvas );
+
+			const placeholder = document.createElement( 'div' );
+			placeholder.className = 'layers-slide-placeholder';
+			container.appendChild( placeholder );
+
+			const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+			manager.setupSlideOverlay = jest.fn();
+			manager.initializeSlideViewer( container, payload );
+
+			expect( placeholder.style.display ).toBe( 'none' );
+		} );
+
+		it( 'should scale canvas when display dimensions differ', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			container.setAttribute( 'data-display-width', '400' );
+			container.setAttribute( 'data-display-height', '300' );
+			container.setAttribute( 'data-display-scale', '0.5' );
+
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: ''
+			} ) );
+			container.appendChild( canvas );
+
+			const payload = {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundVisible: true
+			};
+
+			manager.setupSlideOverlay = jest.fn();
+			manager.initializeSlideViewer( container, payload );
+
+			// Canvas should be scaled via CSS
+			expect( canvas.style.width ).toBe( '400px' );
+			expect( canvas.style.height ).toBe( '300px' );
+		} );
+	} );
 } );

@@ -44,7 +44,7 @@
 		async init() {
 			const container = document.getElementById( 'layers-slide-editor-container' );
 			if ( !container ) {
-				console.error( '[SlideManager] Editor container not found' );
+				mw.log.error( '[SlideManager] Editor container not found' );
 				return;
 			}
 
@@ -105,7 +105,7 @@
 				mw.loader.using( 'ext.layers.editor' ).then( () => {
 					resolve();
 				} ).catch( ( err ) => {
-					console.error( '[SlideManager] Failed to load editor module:', err );
+					mw.log.error( '[SlideManager] Failed to load editor module:', err );
 					reject( err );
 				} );
 			} );
@@ -122,7 +122,7 @@
 				window.LayersEditor;
 
 			if ( !EditorClass ) {
-				console.error( '[SlideManager] LayersEditor class not available' );
+				mw.log.error( '[SlideManager] LayersEditor class not available' );
 				return;
 			}
 
@@ -147,7 +147,7 @@
 				this.editor = new EditorClass( this.container, editorConfig );
 				this.editor.init();
 			} catch ( err ) {
-				console.error( '[SlideManager] Failed to initialize editor:', err );
+				mw.log.error( '[SlideManager] Failed to initialize editor:', err );
 			}
 		}
 
@@ -182,7 +182,7 @@
 					throw new Error( 'Save failed' );
 				}
 			} catch ( err ) {
-				console.error( '[SlideManager] Save error:', err );
+				mw.log.error( '[SlideManager] Save error:', err );
 				mw.notify( mw.message( 'layers-slide-save-error' ).text(), { type: 'error' } );
 				return { success: false, error: err.message };
 			}
@@ -282,7 +282,7 @@
 				try {
 					this.layerData = JSON.parse( layersJson );
 				} catch ( e ) {
-					console.error( '[SlideViewer] Failed to parse layer data:', e );
+					mw.log.error( '[SlideViewer] Failed to parse layer data:', e );
 				}
 			}
 		}
@@ -293,7 +293,7 @@
 		init() {
 			const canvas = this.container.querySelector( '.layers-slide-canvas' );
 			if ( !canvas ) {
-				console.error( '[SlideViewer] Canvas not found in container' );
+				mw.log.error( '[SlideViewer] Canvas not found in container' );
 				return;
 			}
 
