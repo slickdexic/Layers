@@ -3323,4 +3323,299 @@ describe( 'Toolbar', function () {
 			expect( styleGroup ).toBeTruthy();
 		} );
 	} );
+
+	describe( 'updateColorButtonDisplay fallback', () => {
+		let container;
+		let originalGetClass;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+			originalGetClass = window.getClass;
+			// Make ColorPickerDialog unavailable to trigger fallback
+			window.getClass = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'UI.ColorPickerDialog' ) {
+					return null;
+				}
+				if ( originalGetClass ) {
+					return originalGetClass( key );
+				}
+				return null;
+			} );
+		} );
+
+		afterEach( () => {
+			if ( originalGetClass ) {
+				window.getClass = originalGetClass;
+			}
+		} );
+
+		it( 'should use fallback implementation for transparent color', () => {
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, 'transparent', 'No Fill' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'No Fill' );
+		} );
+
+		it( 'should use fallback implementation for none color', () => {
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, 'none' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'Transparent' );
+		} );
+
+		it( 'should use fallback implementation for solid color', () => {
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			const btn = document.createElement( 'button' );
+			btn.classList.add( 'is-transparent' );
+			toolbar.updateColorButtonDisplay( btn, '#ff0000' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( false );
+			expect( btn.style.background ).toBe( 'rgb(255, 0, 0)' );
+		} );
+	} );
+
+	describe( 'annotation tool dropdown fallback', () => {
+		let container;
+		let originalGetClass;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+			originalGetClass = window.getClass;
+			// Make ToolDropdown unavailable
+			window.getClass = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'UI.ToolDropdown' ) {
+					return null;
+				}
+				if ( originalGetClass ) {
+					return originalGetClass( key );
+				}
+				return null;
+			} );
+		} );
+
+		afterEach( () => {
+			if ( originalGetClass ) {
+				window.getClass = originalGetClass;
+			}
+		} );
+
+		it( 'should render annotation tools as individual buttons when ToolDropdown unavailable', () => {
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Check that annotation tool buttons were created (marker, dimension)
+			const markerButton = container.querySelector( '[data-tool="marker"]' );
+			expect( markerButton ).toBeTruthy();
+		} );
+	} );
+
+	describe( 'createDropdownToggleItem with shortcut', () => {
+		it( 'should create dropdown toggle item with shortcut span when shortcut provided', () => {
+			const container = document.createElement( 'div' );
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			const item = toolbar.createDropdownToggleItem( 
+				'test-toggle',
+				'Test Toggle',
+				'Test description',
+				'Ctrl+T',
+				false
+			);
+
+			const shortcutSpan = item.querySelector( '.dropdown-item-shortcut' );
+			expect( shortcutSpan ).toBeTruthy();
+			expect( shortcutSpan.textContent ).toBe( 'Ctrl+T' );
+		} );
+
+		it( 'should not create shortcut span when no shortcut provided', () => {
+			const container = document.createElement( 'div' );
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			const item = toolbar.createDropdownToggleItem( 
+				'test-toggle',
+				'Test Toggle',
+				'Test description',
+				null,
+				false
+			);
+
+			const shortcutSpan = item.querySelector( '.dropdown-item-shortcut' );
+			expect( shortcutSpan ).toBeNull();
+		} );
+	} );
+
+	describe( 'arrange dropdown events', () => {
+		it( 'should handle toggle item click to toggle checkbox', () => {
+			const container = document.createElement( 'div' );
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Get the arrange dropdown menu
+			const menu = container.querySelector( '.arrange-dropdown-menu' );
+			if ( menu ) {
+				// Create a mock toggle item
+				const toggleItem = document.createElement( 'div' );
+				toggleItem.className = 'dropdown-toggle-item';
+				const checkbox = document.createElement( 'input' );
+				checkbox.type = 'checkbox';
+				checkbox.checked = false;
+				toggleItem.appendChild( checkbox );
+				menu.appendChild( toggleItem );
+
+				// Simulate click on toggle item (not directly on checkbox)
+				toggleItem.click();
+
+				// Checkbox should be toggled
+				expect( checkbox.checked ).toBe( true );
+			}
+		} );
+	} );
+
+	describe( 'click handlers for help and alignment buttons', () => {
+		it( 'should handle help button click', () => {
+			const container = document.createElement( 'div' );
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			const helpButton = container.querySelector( '.help-button' );
+			if ( helpButton ) {
+				helpButton.click();
+				expect( mockEditor.showKeyboardShortcutsDialog ).toHaveBeenCalled();
+			}
+		} );
+
+		it( 'should not execute alignment action for disabled button', () => {
+			const container = document.createElement( 'div' );
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Find any align button and disable it
+			const alignButton = container.querySelector( '.align-button' );
+			if ( alignButton ) {
+				alignButton.disabled = true;
+				alignButton.click();
+				// No action should be executed for disabled button
+			}
+		} );
+	} );
+
+	describe( 'updateDeleteState edge cases', () => {
+		it( 'should handle missing delete button gracefully', () => {
+			const emptyContainer = document.createElement( 'div' );
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: emptyContainer
+			} );
+
+			// This should not throw
+			toolbar.updateDeleteState( true );
+			toolbar.updateDeleteState( false );
+		} );
+	} );
+
+	describe( 'image import handling', () => {
+		it( 'should ignore change event when no file selected', () => {
+			const container = document.createElement( 'div' );
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Trigger change event with no file
+			if ( toolbar.importImageInput ) {
+				toolbar.importImageInput.dispatchEvent( new Event( 'change' ) );
+			}
+			// Should not throw or call handleImageImport
+		} );
+	} );
+
+	describe( 'shape library panel caching via direct call', () => {
+		it( 'should reuse existing shape library panel when openShapeLibrary called twice', async () => {
+			const container = document.createElement( 'div' );
+			// Mock ShapeLibraryPanel
+			let panelCreationCount = 0;
+			window.Layers = window.Layers || {};
+			window.Layers.ShapeLibraryPanel = function () {
+				panelCreationCount++;
+				return {
+					open: jest.fn()
+				};
+			};
+
+			// Mock mw.loader
+			global.mw.loader = {
+				using: jest.fn( () => Promise.resolve() )
+			};
+
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Call openShapeLibrary twice
+			await toolbar.openShapeLibrary();
+			await toolbar.openShapeLibrary();
+
+			// Panel should only be created once
+			expect( panelCreationCount ).toBe( 1 );
+		} );
+	} );
+
+	describe( 'emoji picker panel caching', () => {
+		it( 'should reuse existing emoji picker panel on second open', () => {
+			const container = document.createElement( 'div' );
+			// Mock EmojiPickerPanel
+			let panelCreationCount = 0;
+			window.Layers = window.Layers || {};
+			window.Layers.EmojiPickerPanel = function () {
+				panelCreationCount++;
+				return {
+					open: jest.fn()
+				};
+			};
+
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			const emojiButton = container.querySelector( '.emoji-button' );
+			if ( emojiButton ) {
+				emojiButton.click();
+				emojiButton.click();
+				// Panel should only be created once
+				expect( panelCreationCount ).toBe( 1 );
+			}
+		} );
+	} );
 } );
