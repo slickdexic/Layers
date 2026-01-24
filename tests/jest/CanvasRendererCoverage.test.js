@@ -1555,4 +1555,220 @@ describe( 'CanvasRenderer Coverage Extension', () => {
 			expect( ctx.quadraticCurveTo ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'constructor edge cases', () => {
+		it( 'should log error when canvas context unavailable', () => {
+			const badCanvas = document.createElement( 'canvas' );
+			badCanvas.getContext = jest.fn( () => null );
+
+			// Constructor logs error then init() throws because ctx is null
+			// This tests the error path logging happens before failure
+			try {
+				// eslint-disable-next-line no-new
+				new CanvasRenderer( badCanvas, {} );
+			} catch ( e ) {
+				// Expected - init() fails on null ctx
+			}
+
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				expect.stringContaining( 'Could not get 2D canvas context' )
+			);
+		} );
+	} );
+
+	describe( 'setBackgroundImage edge cases', () => {
+		it( 'should set background to null', () => {
+			renderer.setBackgroundImage( null );
+			expect( renderer.backgroundImage ).toBeNull();
+		} );
+
+		it( 'should sync to layerRenderer when available', () => {
+			const mockImage = { complete: true, width: 100, height: 100 };
+			renderer.layerRenderer = { setBackgroundImage: jest.fn(), setZoom: jest.fn() };
+
+			renderer.setBackgroundImage( mockImage );
+
+			expect( renderer.backgroundImage ).toBe( mockImage );
+			expect( renderer.layerRenderer.setBackgroundImage ).toHaveBeenCalledWith( mockImage );
+		} );
+
+		it( 'should handle missing layerRenderer gracefully', () => {
+			renderer.layerRenderer = null;
+			const mockImage = { complete: true, width: 100, height: 100 };
+
+			expect( () => renderer.setBackgroundImage( mockImage ) ).not.toThrow();
+			expect( renderer.backgroundImage ).toBe( mockImage );
+		} );
+	} );
+
+	describe( 'redraw background visibility branches', () => {
+		it( 'should draw checker pattern when slide mode is on and bgVisible is false', () => {
+			renderer.isSlideMode = true;
+			renderer.drawCheckerPattern = jest.fn();
+			renderer.drawSlideBackground = jest.fn();
+
+			// Mock stateManager to return false for backgroundVisible
+			mockEditor.stateManager = { get: jest.fn( () => false ) };
+			renderer.editor = mockEditor;
+
+			renderer.redraw( [] );
+
+			expect( renderer.drawCheckerPattern ).toHaveBeenCalled();
+			expect( renderer.drawSlideBackground ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should draw slide background when slide mode is on and bgVisible is true', () => {
+			renderer.isSlideMode = true;
+			renderer.drawCheckerPattern = jest.fn();
+			renderer.drawSlideBackground = jest.fn();
+
+			// Mock stateManager to return true for backgroundVisible
+			mockEditor.stateManager = { get: jest.fn( () => true ) };
+			renderer.editor = mockEditor;
+
+			renderer.redraw( [] );
+
+			expect( renderer.drawSlideBackground ).toHaveBeenCalled();
+			expect( renderer.drawCheckerPattern ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should draw checker pattern when not slide mode and bgVisible is false', () => {
+			renderer.isSlideMode = false;
+			renderer.backgroundImage = { complete: true, width: 100, height: 100 };
+			renderer.drawCheckerPattern = jest.fn();
+			renderer.drawBackgroundImage = jest.fn();
+
+			mockEditor.stateManager = { get: jest.fn( () => false ) };
+			renderer.editor = mockEditor;
+
+			renderer.redraw( [] );
+
+			expect( renderer.drawCheckerPattern ).toHaveBeenCalled();
+			expect( renderer.drawBackgroundImage ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should skip background drawing when image incomplete and bgVisible true', () => {
+			renderer.isSlideMode = false;
+			renderer.backgroundImage = { complete: false };
+			renderer.drawCheckerPattern = jest.fn();
+			renderer.drawBackgroundImage = jest.fn();
+
+			mockEditor.stateManager = { get: jest.fn( () => true ) };
+			renderer.editor = mockEditor;
+
+			renderer.redraw( [] );
+
+			expect( renderer.drawBackgroundImage ).not.toHaveBeenCalled();
+			expect( renderer.drawCheckerPattern ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'drawMultiSelectionIndicators fallback', () => {
+		it( 'should use empty handles when selectionRenderer unavailable', () => {
+			renderer._selectionRenderer = null;
+
+			renderer.drawMultiSelectionIndicators( 'key-layer-id' );
+
+			expect( renderer.selectionHandles ).toEqual( [] );
+		} );
+	} );
+
+	describe( 'applyLayerStyle branches', () => {
+		it( 'should apply fill from color when fill is not set', () => {
+			const layer = { color: '#ff0000' };
+
+			renderer.applyLayerStyle( layer );
+
+			expect( ctx.fillStyle ).toBe( '#ff0000' );
+		} );
+
+		it( 'should apply fill over color when both are set', () => {
+			const layer = { fill: '#00ff00', color: '#ff0000' };
+
+			renderer.applyLayerStyle( layer );
+
+			expect( ctx.fillStyle ).toBe( '#00ff00' );
+		} );
+
+		it( 'should apply strokeWidth', () => {
+			const layer = { strokeWidth: 5 };
+
+			renderer.applyLayerStyle( layer );
+
+			expect( ctx.lineWidth ).toBe( 5 );
+		} );
+
+		it( 'should apply blend mode from blendMode property', () => {
+			const layer = { blendMode: 'multiply' };
+
+			renderer.applyLayerStyle( layer );
+
+			expect( ctx.globalCompositeOperation ).toBe( 'multiply' );
+		} );
+
+		it( 'should apply blend mode from blend property as fallback', () => {
+			const layer = { blend: 'screen' };
+
+			renderer.applyLayerStyle( layer );
+
+			expect( ctx.globalCompositeOperation ).toBe( 'screen' );
+		} );
+
+		it( 'should apply rotation transform', () => {
+			const layer = { rotation: 45, x: 50, y: 50, width: 100, height: 100 };
+
+			renderer.applyLayerStyle( layer );
+
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( '_drawBlurClipPath text type', () => {
+		it( 'should draw rect for text layer type', () => {
+			const layer = {
+				type: 'text',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50
+			};
+
+			renderer._drawBlurClipPath( layer );
+
+			expect( ctx.rect ).toHaveBeenCalledWith( 10, 10, 100, 50 );
+		} );
+	} );
+
+	describe( 'blur error handling', () => {
+		it( 'should handle blur blend mode failure gracefully', () => {
+			// Make drawImage throw to trigger the catch block
+			ctx.drawImage = jest.fn( () => {
+				throw new Error( 'Canvas tainted' );
+			} );
+
+			const layer = {
+				id: 'blur-layer',
+				type: 'rectangle',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				fill: 'blur',
+				blurRadius: 8
+			};
+
+			// Should not throw
+			expect( () => renderer.drawLayerWithBlurBlend( layer ) ).not.toThrow();
+
+			// Should log warning
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				expect.stringContaining( 'Blur blend mode failed' ),
+				expect.any( String )
+			);
+
+			// Should draw fallback fill
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+	} );
 } );
