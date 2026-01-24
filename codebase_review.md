@@ -9,7 +9,7 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git status`)
-- **Tests:** 10,150 tests in 156 suites (all passing, verified January 26, 2026)
+- **Tests:** 10,207 tests in 156 suites (all passing, verified January 27, 2025)
 - **Coverage:** 92.96% statements, 83.27% branches (verified January 26, 2026)
 - **JS files:** 126 (excludes `resources/dist/` and build scripts)
 - **JS lines:** ~113,870 total
@@ -26,7 +26,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ### Key Strengths
 - Excellent security model (CSRF protection, rate limiting, comprehensive validation)
-- Strong test coverage (92.96% statement, 83.27% branch, 10,150 tests)
+- Strong test coverage (93.27% statement, 83.59% branch, 10,207 tests)
 - Well-documented with comprehensive inline comments and 25+ documentation files
 - Modern ES6 class-based architecture (100% migrated)
 - Proper delegation patterns in large files
@@ -57,7 +57,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | SEC-2 | CSRF tokens verified | Info | ✅ Verified | Security |
 
 ### Test Coverage Summary (January 26, 2026)
-- ✅ **10,150 Jest tests passing** (156 suites)
+- ✅ **10,207 Jest tests passing** (156 suites)
 - ✅ **92.96% statement coverage**
 - ✅ **83.27% branch coverage**
 - ✅ **91.48% function coverage**
@@ -443,7 +443,7 @@ All write API endpoints properly implement CSRF protection:
 ### Test Coverage (8.5/10)
 - ✅ 92.96% statement coverage (target: 90%)
 - ✅ 83.27% branch coverage (target: 80%)
-- ✅ 10,150 tests in 156 suites
+- ✅ 10,207 tests in 156 suites
 - ✅ E2E tests with Playwright (8 spec files)
 - ✅ Performance benchmarks in test suite
 - ✅ SlidePropertiesPanel fully tested (75 tests)
@@ -509,7 +509,8 @@ No critical issues. Codebase is production-ready.
 **Weighted Total: 8.60/10 → Overall: 8.5/10** (all P0/P1/P2 items now complete)
 
 **Score History:**
-- v27 (Jan 26, 2026): **8.5/10** — All P0/P1/P2 complete, 10,150 tests passing
+- v27 (Jan 26, 2025): **8.5/10** — All P0/P1/P2 complete, 10,150 tests passing
+- v28 (Jan 27, 2025): **8.5/10** — Test improvements, 10,207 tests passing
 - v26 (Jan 24, 2026): **8.3/10** — Fresh comprehensive audit, verified all metrics
 - v25 (Jan 24, 2026): 8.0/10 — Previous audit with CORE-3/CORE-4 fixes
 - v24 (Jan 23, 2026): 7.0/10 — Initial new-issue identification

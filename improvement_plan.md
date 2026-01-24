@@ -16,7 +16,7 @@ The extension is **production-ready and high quality** with **excellent security
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **10,150** (156 suites) | ✅ Excellent |
+| Tests passing | **10,207** (156 suites) | ✅ Excellent |
 | Statement coverage | **92.96%** | ✅ Excellent |
 | Branch coverage | **83.27%** | ✅ Excellent |
 | Function coverage | **91.48%** | ✅ Excellent |
@@ -402,7 +402,7 @@ When calling getContext('2d'):
 **Rating: 8.5/10** — Production-ready, feature-complete, high quality
 
 **Strengths:**
-- ✅ 10,150 passing tests with 92.96% statement coverage
+- ✅ 10,207 passing tests with 93.27% statement coverage
 - ✅ 15 working drawing tools + Slide Mode
 - ✅ Professional security (CSRF, rate limiting, validation)
 - ✅ Named layer sets with version history
@@ -429,4 +429,4 @@ When calling getContext('2d'):
 
 *Plan updated: January 26, 2026*  
 *Version: 1.5.28*  
-*Based on verified test run: 10,150 tests, 92.96% statement coverage, 83.27% branch coverage*
+*Based on verified test run: 10,207 tests, 93.27% statement coverage, 83.59% branch coverage*
