@@ -99,6 +99,10 @@
 			this.batchOperations = this.batchChanges;
 			this.batchStartSnapshot = null;
 
+			// Track which history index corresponds to last save (CORE-2 fix)
+			// -1 means no save has been made yet
+			this.lastSaveHistoryIndex = -1;
+
 			// Destruction flag - prevents operations after cleanup
 			this.isDestroyed = false;
 		}
@@ -252,6 +256,15 @@
 			this.historyIndex--;
 			const state = this.history[ this.historyIndex ];
 
+			// CORE-9 FIX: Defensive bounds check
+			if ( !state ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[HistoryManager] undo() - state at index', this.historyIndex, 'is undefined' );
+				}
+				this.historyIndex++; // Restore index
+				return false;
+			}
+
 			this.restoreState( state );
 			this.updateUndoRedoButtons();
 
@@ -269,7 +282,18 @@
 			}
 
 			this.historyIndex++;
-			this.restoreState( this.history[ this.historyIndex ] );
+			const state = this.history[ this.historyIndex ];
+
+			// CORE-9 FIX: Defensive bounds check
+			if ( !state ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[HistoryManager] redo() - state at index', this.historyIndex, 'is undefined' );
+				}
+				this.historyIndex--; // Restore index
+				return false;
+			}
+
+			this.restoreState( state );
 			this.updateUndoRedoButtons();
 
 			return true;
@@ -582,7 +606,11 @@
 		}
 
 		/**
-		 * Check if current state differs from last saved state
+		 * Check if current state differs from last saved state.
+		 *
+		 * CORE-2 FIX: Uses efficient comparison that avoids serializing large
+		 * base64 image data (500KB+ per image). Falls back to layersEqual()
+		 * which compares properties individually.
 		 *
 		 * @return {boolean} True if state has changed
 		 */
@@ -594,10 +622,105 @@
 				return initialLayers.length > 0;
 			}
 
-			const currentLayers = this.getLayersSnapshot();
-			const lastSavedLayers = this.history[ this.historyIndex ].layers;
+			// Fast path: if historyIndex matches lastSaveHistoryIndex and
+			// no edits have been made since, there are no unsaved changes
+			if ( this.lastSaveHistoryIndex >= 0 && this.historyIndex === this.lastSaveHistoryIndex ) {
+				return false;
+			}
 
-			return JSON.stringify( currentLayers ) !== JSON.stringify( lastSavedLayers );
+			// Need to compare current state with saved state
+			const currentLayers = this.getLayersSnapshot();
+
+			// If we have a saved index, compare against that entry
+			if ( this.lastSaveHistoryIndex >= 0 && this.history[ this.lastSaveHistoryIndex ] ) {
+				return !this.layersEqual( currentLayers, this.history[ this.lastSaveHistoryIndex ].layers );
+			}
+
+			// Fall back to comparing with initial state (index 0)
+			const referenceIndex = 0;
+			if ( this.history[ referenceIndex ] ) {
+				return !this.layersEqual( currentLayers, this.history[ referenceIndex ].layers );
+			}
+
+			return true;
+		}
+
+		/**
+		 * Compare two layer arrays for equality efficiently.
+		 *
+		 * CORE-2 FIX: For large immutable properties (src, path), uses reference
+		 * comparison instead of value comparison since cloneLayersEfficient
+		 * preserves these references.
+		 *
+		 * @param {Array} layers1 - First layers array
+		 * @param {Array} layers2 - Second layers array
+		 * @return {boolean} True if layers are equal
+		 */
+		layersEqual( layers1, layers2 ) {
+			if ( !Array.isArray( layers1 ) || !Array.isArray( layers2 ) ) {
+				return layers1 === layers2;
+			}
+
+			if ( layers1.length !== layers2.length ) {
+				return false;
+			}
+
+			// Properties that are large and immutable - compare by reference
+			const immutableProps = [ 'src', 'path' ];
+
+			for ( let i = 0; i < layers1.length; i++ ) {
+				const l1 = layers1[ i ];
+				const l2 = layers2[ i ];
+
+				// Get all keys from both objects
+				const keys1 = Object.keys( l1 || {} );
+				const keys2 = Object.keys( l2 || {} );
+
+				// Quick length check
+				if ( keys1.length !== keys2.length ) {
+					return false;
+				}
+
+				// Compare each key
+				for ( const key of keys1 ) {
+					const v1 = l1[ key ];
+					const v2 = l2[ key ];
+
+					// For immutable large props, reference equality is sufficient
+					if ( immutableProps.includes( key ) ) {
+						if ( v1 !== v2 ) {
+							return false;
+						}
+					} else if ( key === 'points' && Array.isArray( v1 ) && Array.isArray( v2 ) ) {
+						// Points array - compare length and values
+						if ( v1.length !== v2.length ) {
+							return false;
+						}
+						for ( let j = 0; j < v1.length; j++ ) {
+							if ( v1[ j ].x !== v2[ j ].x || v1[ j ].y !== v2[ j ].y ) {
+								return false;
+							}
+						}
+					} else if ( key === 'children' && Array.isArray( v1 ) && Array.isArray( v2 ) ) {
+						// Children array (for groups) - compare by JSON
+						if ( JSON.stringify( v1 ) !== JSON.stringify( v2 ) ) {
+							return false;
+						}
+					} else if ( v1 !== null && typeof v1 === 'object' ) {
+						// Other objects - use JSON comparison (these are typically small)
+						if ( JSON.stringify( v1 ) !== JSON.stringify( v2 ) ) {
+							return false;
+						}
+					} else {
+						// Primitives
+						if ( v1 !== v2 ) {
+							return false;
+						}
+					}
+				}
+			}
+
+			return true;
 		}
 
 		/**
@@ -607,6 +730,17 @@
 		saveInitialState() {
 			this.clearHistory();
 			this.saveState( 'Initial state' );
+			// Mark initial state as saved (CORE-2 fix)
+			this.lastSaveHistoryIndex = this.historyIndex;
+		}
+
+		/**
+		 * Mark current history state as saved.
+		 * Called by APIManager after successful save to API.
+		 * CORE-2 FIX: Enables efficient hasUnsavedChanges() check.
+		 */
+		markAsSaved() {
+			this.lastSaveHistoryIndex = this.historyIndex;
 		}
 
 		/**

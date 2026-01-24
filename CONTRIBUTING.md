@@ -4,24 +4,24 @@ Thanks for helping improve Layers! This guide covers local setup, how to run che
 
 ## Codebase Size Policy
 
-**Target: <75,000 lines of JavaScript**
+**Target: <110,000 lines of JavaScript**
 
-This extension is feature-rich by design—13 drawing tools, multiple rendering systems, comprehensive validation, and extensive test coverage. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension. The 75K target provides room for continued feature development.
+This extension is feature-rich by design—**15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (EmojiLibraryData.js, ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~40,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension.
 
-**There is no arbitrary 50K limit.** The focus is on code quality, not line counts:
+**There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns
 - ✅ Secure with CSRF protection, rate limiting, validation
-- ✅ Thoroughly tested (94%+ coverage, 7,688+ tests)
+- ✅ Thoroughly tested (92.59% coverage, 9,967+ tests)
 - ✅ Properly delegated (god classes use controller patterns)
 
 ---
 
 ## ⚠️ MANDATORY: God Class Rules
 
-**We have 8 "god classes" (files >1,000 lines) that represent technical debt. These rules are enforced by CI:**
+**We have 20 "god classes" (files >1,000 lines) that represent technical debt. 3 are generated data files (exempt), 17 are hand-written. These rules are enforced by CI:**
 
 ### Rule 1: No God Class Growth
-- **CI will BLOCK your PR** if you increase the size of any god class
+- **CI will BLOCK your PR** if you increase the size of any hand-written god class
 - If you need to add code to a god class, you must extract code first
 - Target: Net zero or negative line changes to god classes
 
@@ -36,16 +36,29 @@ This extension is feature-rich by design—13 drawing tools, multiple rendering 
 - Not enforced by CI, but strongly encouraged
 
 ### Current God Classes (Do Not Grow These)
+
+**Generated data files (exempt from refactoring):**
+- EmojiLibraryData.js (~26,277 lines)
+- ShapeLibraryData.js (~11,299 lines)
+- EmojiLibraryIndex.js (~3,003 lines)
+
+**Hand-written files (use delegation patterns):**
 | File | Lines | Status |
 |------|-------|--------|
-| CanvasManager.js | 1,877 | Facade - delegates to 10+ controllers |
-| LayerPanel.js | 1,838 | Delegates to 7 controllers |
-| Toolbar.js | 1,537 | Needs split |
-| LayersEditor.js | 1,355 | Partial delegation |
-| ToolManager.js | 1,261 | Delegates to 2 handlers |
-| CanvasRenderer.js | 1,242 | Delegates to SelectionRenderer |
-| SelectionManager.js | 1,194 | Delegates to SelectionState, SelectionHandles |
-| APIManager.js | 1,182 | Delegates to APIErrorHandler |
+| CanvasManager.js | ~1,981 | Facade - delegates to 10+ controllers |
+| LayerPanel.js | ~1,806 | Delegates to 9 controllers |
+| Toolbar.js | ~1,652 | Needs split |
+| LayersEditor.js | ~1,472 | Partial delegation |
+| SelectionManager.js | ~1,426 | Delegates to SelectionState, SelectionHandles |
+| ArrowRenderer.js | ~1,310 | Complex curved arrow math |
+| PropertyBuilders.js | ~1,250 | Reusable property builders |
+| ToolManager.js | ~1,219 | Delegates to tool handlers |
+| CanvasRenderer.js | ~1,132 | Delegates to SelectionRenderer |
+| GroupManager.js | ~1,132 | Layer grouping logic |
+| APIManager.js | ~1,116 | Delegates to APIErrorHandler |
+| TransformController.js | ~1,097 | Multi-layer transforms |
+| ResizeCalculator.js | ~1,090 | Shape-specific resize math |
+| ToolbarStyleControls.js | ~1,050 | Style control UI |
 
 See [`improvement_plan.md`](improvement_plan.md) for refactoring guidance.
 
@@ -108,6 +121,55 @@ Fixes:
 ---
 
 ## Code Quality Standards
+
+### Error Handling Guidelines
+
+**Principle:** Errors should be handled consistently to aid debugging and provide good UX.
+
+#### Pattern 1: Log and Continue (for non-critical operations)
+Use when the operation can fail gracefully without blocking the user:
+```javascript
+try {
+    localStorage.setItem( key, value );
+} catch ( err ) {
+    mw.log.warn( '[Module] localStorage save failed:', err.message );
+    // Continue - feature works without persistence
+}
+```
+**Used by:** PresetStorage, ColorPickerDialog, ToolDropdown
+
+#### Pattern 2: Log and Reject (for API operations)
+Use for async operations where the caller needs to handle failure:
+```javascript
+return this.api.postWithToken( 'csrf', params )
+    .then( ( data ) => data )
+    .catch( ( code, result ) => {
+        mw.log.error( '[APIManager] Save failed:', code );
+        throw this.errorHandler.handle( code, result );
+    } );
+```
+**Used by:** APIManager, RevisionManager
+
+#### Pattern 3: Validate and Return (for input validation)
+Use for validation that returns a result object:
+```javascript
+validateLayer( layer ) {
+    const result = { isValid: true, errors: [] };
+    if ( !layer.id ) {
+        result.isValid = false;
+        result.errors.push( this.getMessage( 'layers-validation-id-required' ) );
+    }
+    return result;
+}
+```
+**Used by:** LayersValidator, NumericValidator
+
+#### Rules:
+1. **Never use console.log/error** in production code — use `mw.log` instead
+2. **Never swallow errors silently** — at minimum, log them
+3. **Use i18n for user-facing messages** — error codes for logs
+4. **Propagate errors** when the caller needs to react to them
+5. **Clean up resources** in finally blocks or catch handlers
 
 ### File Size Limits
 - **Hard limit:** 1,000 lines (CI blocks PRs exceeding this)

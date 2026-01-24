@@ -367,59 +367,30 @@ describe('Integration: Layer Workflows', () => {
         });
     });
 
-    describe('Undo/Redo Workflow (StateManager history DISABLED)', () => {
-        // NOTE: StateManager's internal history is disabled for performance.
-        // LayersEditor uses HistoryManager for undo/redo, not StateManager.
-        // These tests verify that StateManager's undo/redo are no-ops.
+    describe('Undo/Redo Methods (CORE-6: removed dead code)', () => {
+        // NOTE: StateManager's undo/redo methods were removed in CORE-6.
+        // LayersEditor uses HistoryManager for all undo/redo functionality.
+        // These tests verify the methods no longer exist.
 
-        test('should NOT undo layer addition (history disabled)', () => {
-            stateManager.addLayer({ type: 'rectangle', name: 'Layer 1' });
-            expect(stateManager.getLayers()).toHaveLength(1);
-
-            const result = stateManager.undo();
-
-            // Undo returns false because history is disabled
-            expect(result).toBe(false);
-            // Layer still exists
-            expect(stateManager.getLayers()).toHaveLength(1);
+        test('undo method should not exist', () => {
+            expect(typeof stateManager.undo).toBe('undefined');
         });
 
-        test('should NOT redo (history disabled)', () => {
-            stateManager.addLayer({ type: 'rectangle', name: 'Layer 1' });
-            expect(stateManager.getLayers()).toHaveLength(1);
-            
-            const undoResult = stateManager.undo();
-            expect(undoResult).toBe(false);
-
-            const redoResult = stateManager.redo();
-            expect(redoResult).toBe(false);
+        test('redo method should not exist', () => {
+            expect(typeof stateManager.redo).toBe('undefined');
         });
 
-        test('undo should be no-op for multiple layers', () => {
+        test('restoreState method should not exist', () => {
+            expect(typeof stateManager.restoreState).toBe('undefined');
+        });
+
+        test('layers remain after operations (no undo side effects)', () => {
             stateManager.addLayer({ type: 'rectangle', name: 'First' });
             stateManager.addLayer({ type: 'circle', name: 'Second' });
             stateManager.addLayer({ type: 'text', name: 'Third' });
 
             expect(stateManager.getLayers()).toHaveLength(3);
-
-            // All undos return false and don't change layers
-            expect(stateManager.undo()).toBe(false);
-            expect(stateManager.getLayers()).toHaveLength(3);
-
-            expect(stateManager.undo()).toBe(false);
-            expect(stateManager.getLayers()).toHaveLength(3);
-        });
-
-        test('redo should always return false (history disabled)', () => {
-            stateManager.addLayer({ type: 'rectangle', name: 'Layer 1' });
-            stateManager.addLayer({ type: 'circle', name: 'Layer 2' });
-
-            stateManager.undo();
-
-            stateManager.addLayer({ type: 'text', name: 'New Layer' });
-
-            const result = stateManager.redo();
-            expect(result).toBe(false);
+            // No undo method to call - layers persist as expected
         });
     });
 
@@ -859,16 +830,17 @@ describe('Integration: Layer Ordering Operations', () => {
             expect(result).toBe(false);
         });
 
-        test('undo should be no-op (history disabled)', () => {
+        test('move persists (undo method removed per CORE-6)', () => {
             stateManager.moveLayerUp(layer1.id);
             const positionAfterMove = stateManager.getLayers().findIndex(l => l.name === 'Layer 1');
             
-            stateManager.undo(); // No-op because history is disabled
+            // undo() method no longer exists (CORE-6)
+            // HistoryManager handles undo/redo in the editor
 
             const layers = stateManager.getLayers();
-            const positionAfterUndo = layers.findIndex(l => l.name === 'Layer 1');
-            // Position unchanged because undo is a no-op
-            expect(positionAfterUndo).toBe(positionAfterMove);
+            const currentPosition = layers.findIndex(l => l.name === 'Layer 1');
+            // Position unchanged - no undo available at StateManager level
+            expect(currentPosition).toBe(positionAfterMove);
         });
     });
 
@@ -893,16 +865,17 @@ describe('Integration: Layer Ordering Operations', () => {
             expect(result).toBe(false);
         });
 
-        test('undo should be no-op (history disabled)', () => {
+        test('move persists (undo method removed per CORE-6)', () => {
             stateManager.moveLayerDown(layer4.id);
             const positionAfterMove = stateManager.getLayers().findIndex(l => l.name === 'Layer 4');
             
-            stateManager.undo(); // No-op because history is disabled
+            // undo() method no longer exists (CORE-6)
+            // HistoryManager handles undo/redo in the editor
 
             const layers = stateManager.getLayers();
-            const positionAfterUndo = layers.findIndex(l => l.name === 'Layer 4');
-            // Position unchanged because undo is a no-op
-            expect(positionAfterUndo).toBe(positionAfterMove);
+            const currentPosition = layers.findIndex(l => l.name === 'Layer 4');
+            // Position unchanged - no undo available at StateManager level
+            expect(currentPosition).toBe(positionAfterMove);
         });
     });
 
@@ -935,16 +908,17 @@ describe('Integration: Layer Ordering Operations', () => {
             expect(layers[3].name).toBe('Layer 2');
         });
 
-        test('undo should be no-op (history disabled)', () => {
+        test('move persists (undo method removed per CORE-6)', () => {
             stateManager.bringToFront(layer1.id);
             const positionAfterMove = stateManager.getLayers().findIndex(l => l.name === 'Layer 1');
             
-            stateManager.undo(); // No-op because history is disabled
+            // undo() method no longer exists (CORE-6)
+            // HistoryManager handles undo/redo in the editor
 
             const layers = stateManager.getLayers();
-            const positionAfterUndo = layers.findIndex(l => l.name === 'Layer 1');
-            // Position unchanged because undo is a no-op
-            expect(positionAfterUndo).toBe(positionAfterMove);
+            const currentPosition = layers.findIndex(l => l.name === 'Layer 1');
+            // Position unchanged - no undo available at StateManager level
+            expect(currentPosition).toBe(positionAfterMove);
         });
     });
 
@@ -977,16 +951,17 @@ describe('Integration: Layer Ordering Operations', () => {
             expect(layers[3].name).toBe('Layer 4');
         });
 
-        test('undo should be no-op (history disabled)', () => {
+        test('move persists (undo method removed per CORE-6)', () => {
             stateManager.sendToBack(layer4.id);
             const positionAfterMove = stateManager.getLayers().findIndex(l => l.name === 'Layer 4');
             
-            stateManager.undo(); // No-op because history is disabled
+            // undo() method no longer exists (CORE-6)
+            // HistoryManager handles undo/redo in the editor
 
             const layers = stateManager.getLayers();
-            const positionAfterUndo = layers.findIndex(l => l.name === 'Layer 4');
-            // Position unchanged because undo is a no-op
-            expect(positionAfterUndo).toBe(positionAfterMove);
+            const currentPosition = layers.findIndex(l => l.name === 'Layer 4');
+            // Position unchanged - no undo available at StateManager level
+            expect(currentPosition).toBe(positionAfterMove);
         });
     });
 
@@ -1001,18 +976,16 @@ describe('Integration: Layer Ordering Operations', () => {
             expect(layers[1].name).toBe('Layer 1');
         });
 
-        test('undo should be no-op for multiple moves (history disabled)', () => {
+        test('moves persist without undo (CORE-6)', () => {
             stateManager.bringToFront(layer1.id);
             stateManager.bringToFront(layer2.id);
 
-            // Undo is a no-op
-            stateManager.undo();
+            // undo() method no longer exists (CORE-6)
+            // HistoryManager handles undo/redo in the editor
+            
             let layers = stateManager.getLayers();
-            expect(layers[0].name).toBe('Layer 2'); // No change
-
-            stateManager.undo();
-            layers = stateManager.getLayers();
-            expect(layers[0].name).toBe('Layer 2'); // Still no change
+            expect(layers[0].name).toBe('Layer 2'); // Layer 2 at front
+            expect(layers[1].name).toBe('Layer 1'); // Layer 1 second
         });
 
         test('should mark state as dirty after ordering changes', () => {

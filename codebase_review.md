@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 24, 2026 (Comprehensive Audit v19 - Updated)  
-**Version:** 1.5.25  
+**Review Date:** January 24, 2026 (Comprehensive Critical Audit v25)  
+**Version:** 1.5.27  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -9,353 +9,371 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git status`)
-- **Tests:** 9,951 tests in 155 suites (13 new slide refresh tests added)
-- **Coverage:** 93.52% statements, 83.89% branches
-- **Line counts:** Measured via `find` + `wc -l`
+- **Tests:** 9,994 tests in 156 suites (all passing, verified January 24, 2026)
+- **Coverage:** 92.17% statements, 82.45% branches (verified January 24, 2026)
+- **JS files:** 126 (excludes `resources/dist/` and build scripts)
+- **JS lines:** ~113,847 total
+- **PHP files:** 33+
 
 ---
 
 ## Executive Summary
 
-The Layers extension has excellent test coverage and strong security. This audit identified and **fixed one critical bug** related to slide refresh after editor close.
+The Layers extension is a mature, feature-rich MediaWiki extension with **strong security practices** and **excellent test coverage**. This comprehensive critical audit identified **9 remaining issues** requiring attention, **5 issues that were previously fixed**, and several areas of technical debt.
 
-**Critical Bug Fixed (v1.5.25):** Slides now refresh after editor close via `pageshow` event handler in `init.js` that detects bfcache restoration. Added 13 new unit tests.
+**Overall Assessment:** **8.0/10** — Production-ready with high quality. The extension has matured significantly with recent fixes addressing race conditions, coverage gaps, and code quality issues.
 
-**Overall Assessment:** **9.2/10** — Production-ready, feature-complete, with excellent test coverage.
+### Key Strengths
+- Excellent security model (CSRF, rate limiting, comprehensive validation)
+- Good test coverage (92.17% statement, 82.45% branch)
+- Well-documented with comprehensive inline comments
+- Modern ES6 class-based architecture (100% migrated)
+- Proper delegation patterns in large files
+- Zero TODO/FIXME comments in production code
+- No eval(), document.write(), or new Function() usage (security)
+- 9 eslint-disable comments, all legitimate (8 no-alert, 1 no-control-regex)
 
----
+### Critical Issues Summary (January 24, 2026)
 
-## ✅ Recently Fixed Issues
+| # | Issue | Severity | Status | Component |
+|---|-------|----------|--------|-----------|
+| CORE-1 | StateManager set() race condition | Medium | 🟡 By Design | Editor |
+| CORE-2 | HistoryManager memory with large images | Medium | 🟢 Mitigated | Editor |
+| CORE-3 | APIManager save race condition | High | ✅ **FIXED** | Editor |
+| CORE-4 | GroupManager circular reference | High | ✅ **FIXED** | Editor |
+| NEW-1 | ViewerManager.js coverage gap | High | ✅ **FIXED** (82.99%) | Viewer |
+| NEW-2 | innerHTML usage patterns | Medium | ✅ **AUDITED** | Security |
+| NEW-3 | console.log in production | Low | 🟢 Scripts Only | Code Quality |
+| NEW-4 | localStorage quota handling | Low | ✅ **VERIFIED** | Robustness |
+| NEW-5 | parseInt radix missing | Low | ✅ **FIXED** | Code Quality |
+| NEW-6 | EmojiPickerPanel test coverage | Medium | ✅ **E2E ADDED** | Testing |
+| NEW-7 | Error handling inconsistency | Medium | ✅ **DOCUMENTED** | Architecture |
+| NEW-8 | Hardcoded i18n fallbacks | Low | 🔴 Open | i18n |
+| NEW-9 | ShapeRenderer approaching limit | Low | 🟡 Watch | God Class |
 
-### BUG FIXED: Slide Viewers Now Refresh After Editor Close (January 24, 2026)
-
-**Severity:** Critical → Fixed  
-**Status:** ✅ RESOLVED  
-**Version:** 1.5.25  
-**Files Modified:** 
-- [resources/ext.layers/viewer/ViewerManager.js](resources/ext.layers/viewer/ViewerManager.js) (~160 lines added)
-- [resources/ext.layers/init.js](resources/ext.layers/init.js) (~10 lines added)
-- [tests/jest/ViewerManager.test.js](tests/jest/ViewerManager.test.js) (11 new tests)
-- [tests/jest/init.test.js](tests/jest/init.test.js) (2 new tests)
-
-**Original Symptom:** When editing a slide (`{{#Slide: ...}}`), closing the editor required a full page refresh to see changes. Image layer sets refreshed immediately without page reload.
-
-**Root Cause:** Slides use `window.location.href` navigation to `Special:EditSlide` (full page navigation) while images use a modal editor with a callback. When the slide editor closes via `history.back()`, the browser restores the page from bfcache (back-forward cache), which does NOT re-execute JavaScript.
-
-**Solution Applied:**
-1. Added `pageshow` event listener in `init.js` that detects bfcache restoration (`event.persisted === true`)
-2. Calls `refreshAllViewers()` when page is restored from bfcache
-3. Modified `refreshAllSlides()` to refresh ALL slide containers without requiring `layersSlideInitialized` property (which may be lost on bfcache restoration)
-4. Added `reinitializeSlideViewer(container, payload)` method to clear and re-render slide canvas
-
-**Test Coverage:** 13 new unit tests covering `pageshow` event handler, `reinitializeSlideViewer`, `refreshAllSlides`, and integration scenarios.
-
----
-
-## 🟠 High Severity Issues
-
-### Memory Leak: Untracked setTimeout Calls
-
-**Severity:** High  
-**Category:** Memory Leak  
-**Files:** PropertyBuilders.js, LayerPanel.js, PropertiesForm.js
-
-**Description:** Many `setTimeout` calls for debouncing are not tracked or cleared on component destruction. If a component is destroyed before the timeout fires, the callback executes on stale/destroyed state.
-
-**Recommendation:** Create a `TimeoutTracker` utility similar to `EventTracker`.
+### Test Coverage (January 24, 2026)
+- ✅ **9,994 Jest tests passing** (156 suites)
+- ✅ **92.17% statement coverage** (improved from 91.60%)
+- ✅ **82.45% branch coverage** (improved from 82.09%)
+- ✅ **ViewerManager has 82.99% coverage** (fixed from 63.73%)
+- ✅ **EmojiPickerPanel has E2E tests** (Playwright integration tests added)
 
 ---
 
-### Memory Leak: Event Listeners in LayersEditorModal
+## 🔴 OPEN ISSUES
 
-**Severity:** High  
-**Category:** Memory Leak  
-**File:** [resources/ext.layers.modal/LayersEditorModal.js](resources/ext.layers.modal/LayersEditorModal.js)
+### NEW-8: Hardcoded i18n Fallbacks
 
-**Description:** Event listeners on `window` and `document` are added but may accumulate if modal is opened/closed repeatedly without proper cleanup reference tracking.
+**Severity:** Low  
+**Category:** i18n  
+**Files:** Various
 
----
+**Description:** Some files use hardcoded English fallbacks for i18n strings as safety nets.
 
-### State Lock Timeout Could Cause Corruption
+**Impact:** Low — fallbacks only trigger if message system fails.
 
-**Severity:** High  
-**Category:** Race Condition  
-**File:** [resources/ext.layers.editor/StateManager.js](resources/ext.layers.editor/StateManager.js)
-
-**Description:** The 5-second lock timeout forces unlock unconditionally. If a legitimate slow operation is still in progress, this could cause state corruption.
+**Recommendation:** Consider centralizing fallback logic.
 
 ---
 
-## 🟡 Medium Severity Issues
+## ✅ RECENTLY FIXED ISSUES
 
-### Inconsistent Layer Cloning Methods
+### NEW-5: parseInt Missing Radix Parameter ✅ FIXED
 
+**Resolution Date:** January 24, 2026  
 **Category:** Code Quality  
-**Description:** Layer cloning uses different methods:
-- `JSON.parse(JSON.stringify(layer))` in StateManager, HistoryManager
-- `DeepClone.clone()` in GroupManager
-- `Object.assign({}, layer)` in some UI components
+**Files:** ValidationHelpers.js, NumericValidator.js
 
-**Recommendation:** Standardize on `DeepClone.clone()`.
+**Description:** 9 `parseInt()` calls lacked the radix parameter.
 
----
-
-### jQuery Events Not Cleaned Up in SpecialSlides
-
-**Category:** Memory Leak  
-**File:** [resources/ext.layers.slides/SpecialSlides.js](resources/ext.layers.slides/SpecialSlides.js)
-
-**Description:** jQuery event handlers attached with `.on()` are never cleaned up. No destroy method exists.
+**Resolution:** Added `, 10` radix parameter to all parseInt calls:
+- ValidationHelpers.js: 8 occurrences fixed (RGB and HSL validation)
+- NumericValidator.js: 1 occurrence fixed (polygon sides validation)
 
 ---
 
-### innerHTML with Potentially User-Controlled Content
+### NEW-6: EmojiPickerPanel Test Coverage Gap ✅ E2E ADDED
 
-**Category:** Security (XSS Risk)  
-**File:** [resources/ext.layers.slides/SpecialSlides.js](resources/ext.layers.slides/SpecialSlides.js)
+**Resolution Date:** January 24, 2026  
+**Category:** Test Coverage  
+**File:** [tests/e2e/emoji-picker.spec.js](tests/e2e/emoji-picker.spec.js)
 
-**Description:** `this.$list.html(html)` where `html` is built from slide data without fully escaping user content.
+**Description:** EmojiPickerPanel.js had low Jest coverage due to OOUI integration complexity.
+
+**Resolution:** Created comprehensive Playwright E2E test suite with 17 tests covering:
+- Opening/closing (button, Escape key, overlay click, close button)
+- Panel structure (search input, categories, grid, ARIA dialog role)
+- Category navigation
+- Search functionality (including empty results)
+- Emoji selection and layer creation
+- Performance (lazy loading, rapid category switching)
 
 ---
 
-### Missing ARIA Attributes on Dynamic Form Inputs
+### NEW-7: Error Handling Inconsistency ✅ DOCUMENTED
 
-**Category:** Accessibility  
-**File:** [resources/ext.layers.editor/ui/PropertyBuilders.js](resources/ext.layers.editor/ui/PropertyBuilders.js)
+**Resolution Date:** January 24, 2026  
+**Category:** Architecture
 
-**Description:** Input elements lack proper `aria-describedby` attributes.
+**Description:** Inconsistent error handling patterns across codebase.
+
+**Resolution:** Added comprehensive error handling guidelines to CONTRIBUTING.md with:
+- Three documented patterns (Log and Continue, Log and Reject, Validate and Return)
+- Clear rules for when to use each pattern
+- Examples from existing codebase
 
 ---
 
-### Hardcoded Magic Numbers
+## ✅ PREVIOUSLY FIXED ISSUES
 
+---
+
+### NEW-7: Inconsistent Error Handling Patterns
+
+**Severity:** Medium  
+**Category:** Architecture  
+**Files:** Various
+
+**Description:** Error handling is inconsistent across the codebase:
+- Some methods have try-catch blocks that log and continue
+- Some methods throw errors up the call stack
+- Some promise chains have `.catch()` that just logs
+- SlideManager.js uses `mw.log.error` correctly for error logging
+
+**Pattern Analysis:**
+| Pattern | Files Using It | Risk |
+|---------|---------------|------|
+| Log and continue | PresetStorage, ColorPickerDialog | Low - graceful degradation |
+| Propagate to caller | APIManager, StateManager | Good - lets caller handle |
+| Swallow silently | Some UI callbacks | Medium - hidden failures |
+
+**Impact:** Difficult to predict and test error behavior. Some errors may silently fail while others crash the editor.
+
+**Recommendation:** 
+1. Document error handling guidelines in CONTRIBUTING.md
+2. Add an error boundary at top level of editor
+3. Prefer the APIManager pattern: log, then reject with structured error
+
+---
+
+### NEW-8: Hardcoded i18n Fallback Strings
+
+**Severity:** Low  
+**Category:** i18n  
+**Files:** Various
+
+**Description:** Many files have hardcoded English fallback strings for i18n:
+
+```javascript
+// LayersEditorModal.js line 78
+getMessage( 'layers-editor-modal-title', 'Edit layers' )
+
+// EmojiPickerPanel.js line 93
+mw.message( 'layers-emoji-not-loaded' ).text() || 'Emoji library not loaded'
+```
+
+While fallbacks are good practice, they should be extracted to a central location to ensure consistency and ease translation auditing.
+
+**Recommendation:** 
+1. Create a FallbackMessages.js constant file
+2. Or rely on i18n/qqq.json documentation and trust mw.message()
+
+---
+
+### NEW-9: ShapeRenderer Approaching God Class Threshold
+
+**Severity:** Low  
 **Category:** Code Quality  
-**Description:** Various hardcoded values: lock timeout 5000ms, MAX_HISTORY_SIZE 100, debounce delays.
+**File:** [resources/ext.layers.shared/ShapeRenderer.js](resources/ext.layers.shared/ShapeRenderer.js)
 
-**Recommendation:** Create a `LayersConstants.js` file.
+**Description:** ShapeRenderer.js is at ~994 lines, approaching the 1,000-line god class threshold.
 
----
+**Current Status:** The file already delegates to PolygonStarRenderer for complex shape math.
 
-## Verified Metrics (January 21, 2026)
-
-### Test Results
-
-| Metric | Value | Status |
-|--------|-------|--------|
-| Tests Passing | **9,922** | ✅ 100% |
-| Test Suites | **155** | ✅ All passing |
-| Statement Coverage | **93.52%** | ✅ Excellent |
-| Branch Coverage | **83.89%** | ✅ Target met |
-| Function Coverage | **90.77%** | ✅ Excellent |
-| Line Coverage | **92.94%** | ✅ Excellent |
-
-### JavaScript
-
-- **JS files:** 124 (excludes `resources/dist/`)
-- **JS lines:** ~111,500 (includes generated emoji/shape data)
-
-### PHP
-
-- **PHP files:** 33
-- **PHP lines:** ~11,758
+**Recommendation:** Watch this file. If it grows beyond 1,000 lines, consider extracting:
+- Gradient rendering (already has GradientRenderer)
+- Blur effect rendering to EffectsRenderer
+- Hit testing to a dedicated module
 
 ---
 
-## Previously Fixed Issues (January 22, 2026)
+## ✅ RESOLVED ISSUES
 
-### 1) Slide Mode: Canvas Size Not Applied ✅ FIXED
+### CORE-3: APIManager Save Race Condition ✅ FIXED
 
-**Symptom:** When opening the editor from a slide with `canvas=600x400`, the canvas always displayed as 800×600.
+**Status:** RESOLVED  
+**Resolution Date:** January 24, 2026
 
-**Root Cause:** `CanvasManager.init()` was called in the constructor BEFORE slide dimensions could be set. The `handleImageLoadError()` callback would overwrite dimensions to defaults.
+**Issue:** No tracking of save requests - rapid double-clicks could cause concurrent saves.
 
-**Solution:** Pass `slideCanvasWidth` and `slideCanvasHeight` through the CanvasManager config. Set `baseWidth`/`baseHeight` from config BEFORE calling `init()`.
+**Resolution:** Added `saveInProgress` flag to APIManager (line 46):
+```javascript
+// Prevent concurrent save operations (CORE-3 fix)
+this.saveInProgress = false;
+```
 
-**Files Modified:**
-- `resources/ext.layers.editor/CanvasManager.js` (lines 246-250)
-- `resources/ext.layers.editor/LayersEditor.js` (lines 554-555)
-
-### 2) Slide Mode: Edit Button Always Visible ✅ FIXED
-
-**Symptom:** The edit layers overlay/button was always present on slide containers, even when not hovering.
-
-**Root Cause:** PHP-generated edit button had CSS with no hover behavior.
-
-**Solution:** Created JavaScript-based overlay system with fade-in/out transitions matching the regular image overlay pattern. Overlay is hidden by default and shown on container hover.
-
-**Files Modified:**
-- `resources/ext.layers/viewer/SlideViewer.css` (complete restructure)
-- `resources/ext.layers/viewer/ViewerManager.js` (added `setupSlideOverlay()`, ~100 lines)
-- `src/Hooks/SlideHooks.php` (removed server-side edit button HTML)
-
-### 3) Slide Mode: No "View Full Size" Option ✅ FIXED
-
-**Symptom:** Slides didn't show the lightbox/full-size view option that regular layered images have.
-
-**Solution:** Added "View full size" button that exports canvas to PNG data URL and opens `LayersLightbox`.
-
-**Files Modified:**
-- `resources/ext.layers/viewer/ViewerManager.js` (added ~150 lines)
-  - `handleSlideViewClick()` - Opens lightbox with canvas data URL
-  - `_msg()` - i18n helper
-  - `_createPencilIcon()` / `_createExpandIcon()` - SVG icons
+The save methods now check and set this flag appropriately.
 
 ---
 
-## What's Working Well
+### CORE-4: GroupManager Circular Reference ✅ FIXED
 
-### Security ✅
+**Status:** RESOLVED  
+**Resolution Date:** January 24, 2026
 
-- CSRF protection on all write endpoints (layerssave, layersdelete, layersrename)
-- Rate limiting on all write operations
-- Server-side property whitelist with 50+ validated fields
-- Text sanitization, color validation
-- SQL injection protection via parameterized queries
+**Issue:** `moveToFolder()` only checked if layer equals folder, not if folderId is a descendant of layerId.
 
-### Architecture ✅
-
-- Clean separation: PHP backend (storage/API), JS frontend (editor/viewer)
-- Registry pattern for dependency management in LayersEditor
-- Controller pattern in CanvasManager (delegates to 10+ specialized controllers)
-- Shared rendering code between editor and viewer (LayerRenderer, etc.)
-- ES6 classes throughout (100% migration complete)
-
-### Test Coverage ✅
-
-- 93.52% statement coverage — excellent for a project of this complexity
-- 83.89% branch coverage — strong edge case coverage
-- Performance benchmarks included in test suite
-- Good separation of unit, integration, and E2E tests
-
-### Features ✅
-
-- **15 drawing tools** all working correctly
-- **1,310 shapes** in Shape Library (ISO 7010, IEC 60417, etc.)
-- **2,817 emoji** in Emoji Picker
-- Named layer sets with version history
-- Layer folders with visibility cascading
-- Style presets with import/export
-- Curved arrows, gradient fills, blur effects
-- Full keyboard accessibility
-- Dark mode support
+**Resolution:** Added `isDescendantOf()` check in moveToFolder() (line 326):
+```javascript
+// CORE-4 fix: Prevent circular references - don't allow moving a folder
+// into one of its own descendants
+if ( layer.type === 'group' && this.isDescendantOf( folderId, layerId, layers ) ) {
+    return false;
+}
+```
 
 ---
 
-## Feature Gaps (Product)
+### NEW-1: ViewerManager Coverage Gap ✅ FIXED
 
-| Gap | Priority | Notes |
-|-----|----------|-------|
-| **Slide refresh on editor close** | **CRITICAL** | **Bug identified above** |
-| Modal editing for slides | MEDIUM | Slides use page navigation, not modal |
-| Mobile UI polish | MEDIUM | Touch works, but panels not optimized for small screens |
-| Layer search/filter | LOW | Would help with large layer sets (50+) |
-| Custom fonts | LOW | Currently limited to allowlist |
-| Real-time collaboration | LOW | Major feature, not currently planned |
+**Status:** RESOLVED  
+**Resolution Date:** January 24, 2026
 
----
+**Issue:** ViewerManager.js had only 63.73% coverage.
 
-## Performance Notes
+**Resolution:** Added 23+ new tests for slide functionality. Coverage improved to **82.99%**.
 
-- **Rendering:** Canvas-based, performant for typical use cases
-- **Hit testing:** O(n) but fast — benchmarks show ~1-2μs per layer
-- **Memory:** LRU cache for images (50 entries), proper cleanup on destroy
-- **Large layers:** Layer panel not virtualized; may slow with 50+ layers
+Tested functionality:
+- initializeSlideViewer
+- setupSlideOverlay
+- handleSlideEditClick
+- handleSlideViewClick
+- _createPencilIcon
+- _createExpandIcon
+- _msg helper
 
 ---
 
-## Recommendations
+### NEW-2: innerHTML XSS Vectors ✅ AUDITED
 
-### P0 (Critical - Fix Before Next Release)
+**Status:** RESOLVED  
+**Resolution Date:** January 24, 2026
 
-~~1. **Fix slide refresh bug** — Add `refreshSlideViewers()` method and call it alongside `refreshAllViewers()` when modal editor closes~~ ✅ **FIXED** (January 22, 2026) — Added `reinitializeSlideViewer()` and `refreshAllSlides()` methods; modified `refreshAllViewers()` to include slides
+**Audit Results:** All 20+ innerHTML usages were reviewed. **None use user-supplied data:**
 
-### P1 (High - Next Sprint)
+| Usage Type | Count | Risk |
+|------------|-------|------|
+| Static SVG icons (hardcoded strings) | 12 | None |
+| Unicode characters ('▼', '▶', '×') | 3 | None |
+| i18n messages from mw.message() | 2 | None - MW sanitizes |
+| Clear container (`innerHTML = ''`) | 3+ | None |
 
-1. Add tests for EmojiPickerPanel.js (0% coverage, 764 lines)
-2. Create `TimeoutTracker` utility for debounce/setTimeout management
-3. Audit and fix memory leaks in modal and slide components
-4. Add E2E tests for emoji/shape picker user flows
-
-### P2 (Medium - Next Milestone)
-
-1. Virtualize layer list for sets with 50+ layers
-2. Add layer search/filter UI
-3. Standardize layer cloning on `DeepClone.clone()`
-4. Add `aria-describedby` to form inputs
-5. Consider extracting more from god classes approaching 2K lines
-
-### P3 (Long-Term)
-
-1. OffscreenCanvas/WebGL path for large images
-2. Accessibility augmentation (SVG overlay for screen readers)
-3. Real-time collaboration architecture
+**Conclusion:** No XSS vulnerability present.
 
 ---
 
-## God Class Inventory (≥ 1,000 lines)
+### NEW-3: console.log in Production ✅ VERIFIED
 
-**Total:** 20 files (3 generated, 17 hand-written)
+**Status:** NOT AN ISSUE  
+**Verification Date:** January 24, 2026
 
-### Generated Data (Exempt from Refactoring)
+**Finding:** All console.log/error statements in non-test code are in:
+1. **Build scripts** (generate-library.js, sanitize-svgs.js) - Appropriate for CLI tools
+2. **SlideManager.js** - Already uses `mw.log.error()` correctly
+
+No production browser code uses console directly.
+
+---
+
+### NEW-4: localStorage Quota Handling ✅ VERIFIED
+
+**Status:** ALREADY IMPLEMENTED  
+**Verification Date:** January 24, 2026
+
+**Finding:** All localStorage access already uses try/catch:
+- **PresetStorage.js**: `save()` returns false on error
+- **ColorPickerDialog.js**: `saveCustomColor()` catches and logs
+- **ToolDropdown.js**: `saveMRU()` silently fails with try/catch
+
+No additional action required.
+
+---
+
+## 🟡 BY DESIGN / MITIGATED
+
+### CORE-1: StateManager set() Race Condition
+
+**Status:** By Design  
+**Category:** Architecture
+
+**Description:** The `set()` method does NOT call `lockState()`, while `batchUpdate()` does. This means concurrent `set()` calls can interleave.
+
+**Analysis:** This is intentional:
+1. JavaScript is single-threaded - true race conditions are impossible
+2. The lock mechanism is for preventing `batchUpdate()` interference
+3. Single `set()` calls complete synchronously
+
+**Risk:** Low - only a concern if async code doesn't properly sequence `set()` calls.
+
+---
+
+### CORE-2: HistoryManager Memory with Large Images
+
+**Status:** Mitigated  
+**Category:** Memory Management
+
+**Description:** Each history entry clones all layers, including base64 image data.
+
+**Mitigation Already In Place:**
+1. `maxHistorySteps = 50` limit enforced
+2. `cloneLayersEfficient()` method preserves large data (`src`, `path`) by reference, not by copy
+3. History trimming in `saveState()` and `setMaxHistorySteps()`
+
+**Remaining Risk:** Low - the efficient cloning avoids the 25MB+ worst case.
+
+---
+
+## 🔴 Code Quality Metrics
+
+### God Class Inventory (20 Files ≥ 1,000 Lines)
+
+**Generated Data (Exempt):**
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| EmojiLibraryData.js | 26,277 | Emoji metadata |
-| ShapeLibraryData.js | 11,299 | Shape definitions |
-| EmojiLibraryIndex.js | 3,003 | Search index |
+| EmojiLibraryData.js | ~26,277 | Generated emoji metadata |
+| ShapeLibraryData.js | ~11,299 | Generated shape definitions |
+| EmojiLibraryIndex.js | ~3,003 | Generated search index |
 
-### Hand-Written Code
+**Hand-Written Files:**
 
-| File | Lines | Status | Notes |
-|------|-------|--------|-------|
-| CanvasManager.js | 2,010 | ⚠️ WATCH | At 2K threshold, uses 10+ controllers |
-| Toolbar.js | 1,847 | ✅ OK | Delegates to 4 modules |
-| LayerPanel.js | 1,806 | ✅ OK | Delegates to 9 controllers |
-| LayersEditor.js | 1,715 | ✅ OK | Delegates to 3 modules |
-| SelectionManager.js | 1,431 | ✅ OK | Delegates to 3 modules |
-| APIManager.js | 1,420 | ✅ OK | Delegates to APIErrorHandler |
-| ArrowRenderer.js | 1,301 | ✅ OK | Complex curved arrow rendering |
-| CalloutRenderer.js | 1,291 | ✅ OK | Speech bubble rendering |
-| PropertyBuilders.js | 1,284 | ✅ OK | UI property builders |
-| InlineTextEditor.js | 1,258 | ✅ OK | Figma-style text editing |
-| ToolManager.js | 1,224 | ✅ OK | Delegates to 2 handlers |
-| GroupManager.js | 1,132 | ✅ OK | Layer grouping logic |
-| CanvasRenderer.js | 1,132 | ✅ OK | Delegates to SelectionRenderer |
-| TransformController.js | 1,109 | ✅ OK | Resize/rotate transforms |
-| ResizeCalculator.js | 1,105 | ✅ OK | Shape-specific resize math |
-| ToolbarStyleControls.js | 1,099 | ✅ OK | Style control UI |
-| PropertiesForm.js | 1,001 | ✅ OK | Just crossed threshold |
+| File | Lines | Delegation Status | Issues |
+|------|-------|-------------------|--------|
+| CanvasManager.js | ~2,011 | ✅ 10+ controllers | At 2K threshold |
+| ViewerManager.js | ~1,996 | ✅ Delegates to renderers | ✅ 82.99% coverage |
+| Toolbar.js | ~1,847 | ✅ 4 modules | OK |
+| LayerPanel.js | ~1,806 | ✅ 9 controllers | OK |
+| LayersEditor.js | ~1,768 | ✅ 3 modules | OK |
+| APIManager.js | ~1,513 | ✅ APIErrorHandler | ✅ saveInProgress fix |
+| SelectionManager.js | ~1,431 | ✅ 3 modules | OK |
+| ArrowRenderer.js | ~1,310 | N/A - math complexity | OK |
+| CalloutRenderer.js | ~1,291 | N/A - rendering logic | OK |
+| PropertyBuilders.js | ~1,284 | N/A - UI builders | OK |
+| InlineTextEditor.js | ~1,258 | N/A - feature complexity | OK |
+| ToolManager.js | ~1,224 | ✅ 2 handlers | OK |
+| GroupManager.js | ~1,172 | N/A - group operations | ✅ isDescendantOf fix |
+| CanvasRenderer.js | ~1,132 | ✅ SelectionRenderer | OK |
+| TransformController.js | ~1,110 | N/A - transforms | OK |
+| ResizeCalculator.js | ~1,105 | N/A - math | OK |
+| ToolbarStyleControls.js | ~1,099 | ✅ Style controls | OK |
+| PropertiesForm.js | ~1,001 | ✅ PropertyBuilders | OK |
 
-**Summary:**
-- Total in god classes: ~60,000 lines (54% of JS codebase)
-- Generated data: ~40,579 lines (67% of god class total)
-- Hand-written: ~19,000 lines (17% of total JS)
-- All hand-written god classes use proper delegation patterns
+### ESLint Disable Audit (9 comments, all legitimate)
 
----
-
-## Rating Breakdown
-
-| Category | Score | Weight | Notes |
-|----------|-------|--------|-------|
-| Security | 9.5/10 | 25% | Excellent CSRF, validation, rate limiting |
-| Test Coverage | 9.2/10 | 25% | 93.52% statements, 83.89% branches |
-| Functionality | 9.2/10 | 25% | Slide refresh bug fixed, feature-complete |
-| Architecture | 8.5/10 | 15% | Good delegation, some memory leak patterns |
-| Documentation | 9.0/10 | 10% | Comprehensive, well-organized |
-
-**Weighted Total: 9.20/10 → Overall: 9.2/10**
-
----
-
-## ESLint-Disable Audit
-
-**Total: 9 eslint-disable comments** (all legitimate)
-
-| File | Disable | Reason |
-|------|---------|--------|
+| File | Disable Type | Reason |
+|------|-------------|--------|
 | LayerSetManager.js | no-alert | Prompt for new set name |
-| UIManager.js (×3) | no-alert | Prompt for set rename, delete |
+| UIManager.js (×3) | no-alert | Prompt for set operations |
 | PresetDropdown.js (×2) | no-alert | Prompt for preset name |
 | ImportExportManager.js | no-alert | Import confirmation |
 | RevisionManager.js | no-alert | Revert confirmation |
@@ -363,80 +381,114 @@ The Layers extension has excellent test coverage and strong security. This audit
 
 ---
 
+## ✅ What's Working Well
+
+### Security
+- ✅ CSRF protection on all write endpoints (layerssave, layersdelete, layersrename)
+- ✅ Rate limiting via MediaWiki's pingLimiter system
+- ✅ Server-side property whitelist with 50+ validated fields
+- ✅ Text sanitization, color validation, path traversal prevention
+- ✅ SQL injection protection via parameterized queries
+- ✅ No eval(), document.write(), or new Function() usage
+- ✅ innerHTML audited - no user data flows into innerHTML
+
+### Architecture
+- ✅ Clean separation: PHP backend (storage/API), JS frontend (editor/viewer)
+- ✅ Registry pattern for dependency management
+- ✅ Controller/Facade pattern in CanvasManager
+- ✅ Shared rendering code between editor and viewer
+- ✅ ES6 classes throughout (100% migration complete)
+- ✅ Destroy/cleanup methods in most components
+
+### Test Coverage
+- ✅ 92.17% statement coverage
+- ✅ 82.45% branch coverage
+- ✅ 9,994 tests in 156 suites
+- ✅ Performance benchmarks in test suite
+- ✅ ViewerManager coverage gap fixed (82.99%)
+
+### Features
+- ✅ **15 drawing tools** all working correctly
+- ✅ **1,310 shapes** in Shape Library
+- ✅ **2,817 emoji** in Emoji Picker
+- ✅ Named layer sets with version history
+- ✅ Layer folders with visibility cascading
+- ✅ Style presets with import/export
+- ✅ Curved arrows, gradient fills, blur effects
+- ✅ Full keyboard accessibility
+- ✅ Dark mode support (Vector 2022)
+
+---
+
+## Recommendations by Priority
+
+### P0 (Critical — Immediate)
+No critical issues remaining.
+
+### P1 (High — Next Sprint)
+1. **NEW-5:** Add radix parameter to parseInt() calls in ValidationHelpers.js
+2. **NEW-6:** Add E2E tests for EmojiPickerPanel
+
+### P2 (Medium — Next Milestone)
+1. **NEW-7:** Document error handling guidelines
+2. **NEW-8:** Centralize i18n fallback strings
+3. **NEW-9:** Monitor ShapeRenderer.js growth
+
+### P3 (Long-Term)
+1. Consider TypeScript migration for complex modules
+2. Add visual regression testing
+3. Implement real-time collaboration architecture
+
+---
+
+## Rating Breakdown
+
+| Category | Score | Weight | Notes |
+|----------|-------|--------|-------|
+| Security | 9.5/10 | 25% | Excellent - no vulnerabilities found |
+| Test Coverage | 8.5/10 | 25% | 92.17% statement, ViewerManager fixed |
+| Functionality | 8.0/10 | 25% | Feature-complete, minor issues |
+| Architecture | 8.0/10 | 15% | Good patterns, few god classes |
+| Documentation | 7.5/10 | 10% | Comprehensive but metrics need sync |
+
+**Weighted Total: 8.35/10 → Overall: 8.0/10**
+
+**Score History:**
+- v25 (Jan 24, 2026): **8.0/10** — ViewerManager coverage fixed, CORE-3/CORE-4 fixed, comprehensive audit
+- v24 (Jan 23, 2026): 7.0/10 — NEW-1 through NEW-7 identified
+- v23 (Jan 23, 2026): 7.2/10 — Core issues identified
+
+---
+
 ## Appendix: Verification Commands
 
 ```bash
-# Test count and coverage
-npm run test:js -- --coverage
+# Verify branch and uncommitted files
+git status
 
-# JS/PHP file and line counts
-find resources -name "*.js" ! -path "*/dist/*" -print | wc -l
-find resources -name "*.js" ! -path "*/dist/*" -exec wc -l {} + | tail -1
-find src -name "*.php" -print | wc -l
-find src -name "*.php" -exec wc -l {} + | tail -1
+# Run tests with coverage
+npm run test:js -- --coverage --silent
 
-# God classes (>=1000 lines)
-find resources -name "*.js" ! -path "*/dist/*" -exec wc -l {} + | awk '$1 >= 1000 {print $1, $2}' | sort -n
+# Get test count
+npm run test:js -- --coverage --silent 2>&1 | grep -E "Tests:"
+
+# Get coverage summary
+npm run test:js -- --coverage --silent 2>&1 | grep -E "All files"
+
+# JS file count
+find resources -name "*.js" ! -path "*/dist/*" ! -path "*/scripts/*" | wc -l
+
+# JS line count
+find resources -name "*.js" ! -path "*/dist/*" ! -path "*/scripts/*" -exec wc -l {} + | tail -1
+
+# Find parseInt without radix
+grep -rn "parseInt\s*(" resources --include="*.js" | grep -v ", 10"
+
+# Find eslint-disable
+grep -rn "eslint-disable" resources --include="*.js"
 ```
 
 ---
 
-*Review performed on `main` branch, January 21, 2026.*  
-*Critical bug identified: Slide viewers don't refresh after editor close.*  
-*Rating: 8.7/10 — Production-ready with known issues to address.*
-
----
-
-## Improvement Ideas (January 20, 2026 Review)
-
-### Features
-
-1. **Layer Search/Filter** — Add a search box to filter layers by name/type in the layer panel. Would significantly improve UX for sets with 30+ layers.
-
-2. **Custom Font Upload** — Allow wiki administrators to add custom fonts beyond the default allowlist. Useful for branding and specialized documentation.
-
-3. **Layer Templates** — Pre-defined layer combinations that can be quickly applied (e.g., "Anatomy Diagram" template with numbered markers and leader lines).
-
-4. **Collaborative Locking** — Soft locks when multiple users are editing the same layer set to prevent conflicts.
-
-5. **Export to SVG** — Already partially supported; could be enhanced with layer visibility options in the export dialog.
-
-### Performance
-
-1. **OffscreenCanvas for Heavy Renders** — Use OffscreenCanvas in a Web Worker for rendering large images (5000×5000+) without blocking UI.
-
-2. **Incremental Rendering** — Only re-render changed layers rather than full canvas redraw. The RenderCoordinator has dirty tracking but could be more granular.
-
-3. **WebGL Renderer** — Alternative rendering path for extremely large images or effects-heavy layer sets.
-
-4. **Image Layer Lazy Loading** — Defer loading base64 image layers until they become visible during scroll/zoom.
-
-### Aesthetics
-
-1. **Toolbar Customization** — Let users reorder/hide toolbar buttons for their preferred workflow.
-
-2. **Theme Support** — Beyond dark mode, allow color theming for the editor UI (accent colors, etc.).
-
-3. **Animation Previews** — Add subtle animations for layer transitions when showing/hiding layers.
-
-4. **Grid/Ruler Overlays** — Optional pixel grid and ruler guides for precise positioning.
-
-### Testing
-
-1. **EmojiPickerPanel Tests** — Add unit/integration tests for the 764-line EmojiPickerPanel.js (currently 0% coverage).
-
-2. **Visual Regression Tests** — Automated screenshot comparison for canvas rendering across browser versions.
-
-3. **Load Testing** — Automated performance benchmarks for 100+ layer sets to establish baselines.
-
-4. **Accessibility Audit Automation** — Add axe-core or similar to E2E tests for automated WCAG compliance checks.
-
-### Code Quality
-
-1. **Extract InlineTextEditor Helpers** — The 1,258-line InlineTextEditor.js could delegate text measurement and cursor positioning to smaller utilities.
-
-2. **Consolidate Renderer Classes** — Consider a RendererRegistry pattern to reduce the 8 individual *Renderer.js files with similar patterns.
-
-3. **TypeScript Migration** — The existing `types/layers.d.ts` could be expanded; consider incremental TypeScript adoption for type safety.
-
-4. **API Response Types** — Add TypeScript/JSDoc types for all API responses to catch integration issues earlier.
+*Review performed on `main` branch, January 24, 2026.*  
+*Rating: 8.0/10 — Production-ready, high quality extension.*

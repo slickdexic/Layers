@@ -62,6 +62,10 @@
 			this.canvasStateStack = [];
 			this.backgroundImage = null;
 
+			// Slide mode properties
+			this.isSlideMode = false;
+			this.slideBackgroundColor = 'transparent';
+
 			// Transformation state
 			this.zoom = 1.0;
 			this.panX = 0;
@@ -159,6 +163,24 @@
 			}
 		}
 
+		/**
+		 * Set slide mode (no background image, use slide dimensions and color)
+		 *
+		 * @param {boolean} isSlide - Whether editor is in slide mode
+		 */
+		setSlideMode( isSlide ) {
+			this.isSlideMode = isSlide;
+		}
+
+		/**
+		 * Set slide background color
+		 *
+		 * @param {string} color - Background color (e.g. '#ffffff', 'transparent')
+		 */
+		setSlideBackgroundColor( color ) {
+			this.slideBackgroundColor = color || 'transparent';
+		}
+
 		setSelection( selectedLayerIds ) {
 			this.selectedLayerIds = selectedLayerIds || [];
 		}
@@ -209,7 +231,16 @@
 
 			// Check background visibility from state
 			const bgVisible = this.getBackgroundVisible();
-			if ( bgVisible && this.backgroundImage && this.backgroundImage.complete ) {
+
+			// Handle slide mode (no background image)
+			if ( this.isSlideMode ) {
+				if ( bgVisible ) {
+					this.drawSlideBackground();
+				} else {
+					// Draw checker pattern when canvas background is hidden
+					this.drawCheckerPattern();
+				}
+			} else if ( bgVisible && this.backgroundImage && this.backgroundImage.complete ) {
 				this.drawBackgroundImage();
 			} else if ( !bgVisible ) {
 				// Draw checker pattern when background is hidden
@@ -285,6 +316,57 @@
 			const canvasW = this.canvas.width / this.zoom;
 			const canvasH = this.canvas.height / this.zoom;
 			this.ctx.drawImage( this.backgroundImage, 0, 0, canvasW, canvasH );
+			this.ctx.restore();
+		}
+
+		/**
+		 * Draw slide background (solid color or transparent checkerboard)
+		 * Used in slide mode when there is no background image
+		 */
+		drawSlideBackground() {
+			const color = this.slideBackgroundColor || 'transparent';
+			const opacity = this.getBackgroundOpacity();
+			// Use logical canvas dimensions (pre-zoom) since transform is applied
+			const canvasW = this.canvas.width / this.zoom;
+			const canvasH = this.canvas.height / this.zoom;
+			const isTransparent = !color || color === 'transparent' || color === 'none';
+
+			this.ctx.save();
+
+			if ( isTransparent ) {
+				// Draw checkerboard pattern for transparent background
+				// First fill with white
+				this.ctx.fillStyle = '#ffffff';
+				this.ctx.fillRect( 0, 0, canvasW, canvasH );
+				// Then draw gray checks
+				this.ctx.fillStyle = '#e8e8e8';
+				const checkerSize = 20;
+				for ( let x = 0; x < canvasW; x += checkerSize * 2 ) {
+					for ( let y = 0; y < canvasH; y += checkerSize * 2 ) {
+						this.ctx.fillRect( x, y, checkerSize, checkerSize );
+						this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
+					}
+				}
+			} else {
+				// When opacity is reduced, first draw checker pattern for visualization
+				if ( opacity < 1 ) {
+					this.ctx.fillStyle = '#ffffff';
+					this.ctx.fillRect( 0, 0, canvasW, canvasH );
+					this.ctx.fillStyle = '#e8e8e8';
+					const checkerSize = 20;
+					for ( let x = 0; x < canvasW; x += checkerSize * 2 ) {
+						for ( let y = 0; y < canvasH; y += checkerSize * 2 ) {
+							this.ctx.fillRect( x, y, checkerSize, checkerSize );
+							this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
+						}
+					}
+				}
+
+				// Draw solid color background with opacity
+				this.ctx.globalAlpha = opacity;
+				this.ctx.fillStyle = color;
+				this.ctx.fillRect( 0, 0, canvasW, canvasH );
+			}
 			this.ctx.restore();
 		}
 

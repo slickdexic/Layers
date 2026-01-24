@@ -327,7 +327,7 @@
 				return;
 			}
 
-			const sides = parseInt( layer.sides );
+			const sides = parseInt( layer.sides, 10 );
 			const { min, max } = this.rules.sides;
 
 			if ( sides < min || sides > max ) {

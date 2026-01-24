@@ -151,6 +151,15 @@ class LayersDatabase {
 					'backgroundVisible' => $backgroundSettings['backgroundVisible'] ?? true,
 					'backgroundOpacity' => $backgroundSettings['backgroundOpacity'] ?? 1.0
 				];
+
+				// Add slide-specific settings if present (isSlide, canvasWidth, canvasHeight, backgroundColor)
+				if ( !empty( $backgroundSettings['isSlide'] ) ) {
+					$dataStructure['isSlide'] = true;
+					$dataStructure['canvasWidth'] = $backgroundSettings['canvasWidth'] ?? 800;
+					$dataStructure['canvasHeight'] = $backgroundSettings['canvasHeight'] ?? 600;
+					$dataStructure['backgroundColor'] = $backgroundSettings['backgroundColor'] ?? '#ffffff';
+				}
+
 				$jsonBlob = json_encode( $dataStructure, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
 
 				$maxAllowedSize = $this->config->get( 'LayersMaxBytes' );

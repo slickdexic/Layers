@@ -300,7 +300,7 @@ describe( 'BackgroundLayerController', () => {
 
 		it( 'should include visibility button', () => {
 			const item = controller.createBackgroundLayerItem();
-			const visBtn = item.querySelector( '.background-visibility' );
+			const visBtn = item.querySelector( '.background-visibility-btn' );
 
 			expect( visBtn ).not.toBe( null );
 			expect( visBtn.getAttribute( 'aria-label' ) ).toBe( 'Toggle background visibility' );
@@ -381,7 +381,7 @@ describe( 'BackgroundLayerController', () => {
 
 			controller.updateBackgroundLayerItem( bgItem );
 
-			const visBtn = bgItem.querySelector( '.background-visibility' );
+			const visBtn = bgItem.querySelector( '.background-visibility-btn' );
 			expect( visBtn.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
 		} );
 
@@ -460,7 +460,7 @@ describe( 'BackgroundLayerController', () => {
 
 		it( 'should toggle visibility when visibility button clicked', () => {
 			mockStateManager._stateMap.set( 'backgroundVisible', true );
-			const visBtn = mockLayerList.querySelector( '.background-visibility' );
+			const visBtn = mockLayerList.querySelector( '.background-visibility-btn' );
 
 			visBtn.click();
 
@@ -488,7 +488,7 @@ describe( 'BackgroundLayerController', () => {
 
 			// Visibility button should still work via direct addEventListener
 			mockStateManager._stateMap.set( 'backgroundVisible', true );
-			const visBtn = mockLayerList.querySelector( '.background-visibility' );
+			const visBtn = mockLayerList.querySelector( '.background-visibility-btn' );
 
 			visBtn.click();
 
@@ -512,6 +512,155 @@ describe( 'BackgroundLayerController', () => {
 
 		it( 'should register in window.Layers.UI namespace', () => {
 			expect( window.Layers.UI.BackgroundLayerController ).toBe( BackgroundLayerController );
+		} );
+	} );
+
+	// ============================================================
+	// SM-1: Slide Mode - Canvas Layer Tests
+	// ============================================================
+	describe( 'slide mode (SM-1 fix verification)', () => {
+		beforeEach( () => {
+			// Set up slide mode state
+			mockStateManager._stateMap.set( 'isSlide', true );
+			mockStateManager._stateMap.set( 'slideBackgroundColor', '#ff0000' );
+			mockStateManager._stateMap.set( 'slideCanvasWidth', 1024 );
+			mockStateManager._stateMap.set( 'slideCanvasHeight', 768 );
+		} );
+
+		it( 'isSlideMode() should return true when isSlide state is true', () => {
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+
+			expect( controller.isSlideMode() ).toBe( true );
+		} );
+
+		it( 'isSlideMode() should return false when isSlide state is false', () => {
+			mockStateManager._stateMap.set( 'isSlide', false );
+
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+
+			expect( controller.isSlideMode() ).toBe( false );
+		} );
+
+		it( 'should create Canvas layer item in slide mode', () => {
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+			controller.render();
+
+			const bgItem = mockLayerList.querySelector( '.background-layer-item' );
+			expect( bgItem ).not.toBe( null );
+			expect( bgItem.classList.contains( 'canvas-layer-item' ) ).toBe( true );
+			expect( bgItem.classList.contains( 'background-layer-item--slide' ) ).toBe( true );
+		} );
+
+		it( 'should show "Canvas" label in slide mode', () => {
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+			controller.render();
+
+			const bgItem = mockLayerList.querySelector( '.background-layer-item' );
+			expect( bgItem.getAttribute( 'aria-label' ) ).toBe( 'Canvas' );
+
+			// Canvas name text should be present
+			const nameEl = bgItem.querySelector( '.canvas-name' );
+			expect( nameEl ).not.toBe( null );
+			expect( nameEl.textContent ).toBe( 'Canvas' );
+		} );
+
+		it( 'should include color swatch in slide mode', () => {
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+			controller.render();
+
+			const bgItem = mockLayerList.querySelector( '.background-layer-item' );
+			const colorSwatch = bgItem.querySelector( '.layer-background-color-swatch' );
+			expect( colorSwatch ).not.toBe( null );
+			expect( colorSwatch.style.backgroundColor ).toBe( 'rgb(255, 0, 0)' ); // #ff0000
+		} );
+
+		it( 'should include opacity slider in slide mode', () => {
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+			controller.render();
+
+			const bgItem = mockLayerList.querySelector( '.background-layer-item' );
+			const opacitySlider = bgItem.querySelector( '.background-opacity-slider' );
+			// Slide mode canvas now has opacity slider (SM-1c fix)
+			expect( opacitySlider ).not.toBe( null );
+		} );
+
+		it( 'getSlideBackgroundColor() should return color from state', () => {
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+
+			expect( controller.getSlideBackgroundColor() ).toBe( '#ff0000' );
+		} );
+
+		it( 'getSlideBackgroundColor() should return default white if not set', () => {
+			mockStateManager._stateMap.delete( 'slideBackgroundColor' );
+
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+
+			expect( controller.getSlideBackgroundColor() ).toBe( '#ffffff' );
+		} );
+	} );
+
+	describe( 'image mode vs slide mode (SM-1 regression check)', () => {
+		it( 'should create Background Image layer in image mode (not slide)', () => {
+			mockStateManager._stateMap.set( 'isSlide', false );
+			mockStateManager._stateMap.set( 'backgroundVisible', true );
+			mockStateManager._stateMap.set( 'backgroundOpacity', 0.8 );
+
+			controller = new BackgroundLayerController( {
+				editor: mockEditor,
+				layerList: mockLayerList,
+				msg: ( key, fallback ) => fallback
+			} );
+			controller.render();
+
+			const bgItem = mockLayerList.querySelector( '.background-layer-item' );
+			expect( bgItem ).not.toBe( null );
+
+			// Should NOT have slide-specific classes
+			expect( bgItem.classList.contains( 'canvas-layer-item' ) ).toBe( false );
+			expect( bgItem.classList.contains( 'background-layer-item--slide' ) ).toBe( false );
+
+			// Should have "Background Image" label
+			expect( bgItem.getAttribute( 'aria-label' ) ).toBe( 'Background Image' );
+
+			// Should have opacity slider (image mode has this)
+			const opacitySlider = bgItem.querySelector( '.background-opacity-slider' );
+			expect( opacitySlider ).not.toBe( null );
+
+			// Should NOT have color swatch (image mode uses background image)
+			const colorSwatch = bgItem.querySelector( '.layer-background-color-swatch' );
+			expect( colorSwatch ).toBe( null );
 		} );
 	} );
 } );

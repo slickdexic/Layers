@@ -57,6 +57,13 @@ class ApiLayersInfo extends ApiBase {
 			return;
 		}
 
+		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
+		if ( $filename !== null && strpos( $filename, 'Slide:' ) === 0 ) {
+			$slidename = substr( $filename, 6 ); // Remove 'Slide:' prefix
+			$this->executeSlideRequest( $slidename, $setName, $limit );
+			return;
+		}
+
 		// Require filename for non-slide requests
 		if ( $filename === null || $filename === '' ) {
 			$this->dieWithError(

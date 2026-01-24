@@ -116,6 +116,222 @@
 		}
 
 		/**
+		 * Show canvas properties in the properties panel (for slides)
+		 * Called when the Canvas layer is selected
+		 */
+		showCanvasProperties() {
+		if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log( '[LayerPanel] showCanvasProperties called' );
+		}
+
+		if ( !this.propertiesPanel ) {
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[LayerPanel] showCanvasProperties: propertiesPanel is null' );
+			}
+			return;
+		}
+
+		const contentDiv = this.propertiesPanel.querySelector( '.properties-content' );
+		if ( !contentDiv ) {
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[LayerPanel] showCanvasProperties: contentDiv not found' );
+			}
+			return;
+		}
+
+		// Clear existing content
+		while ( contentDiv.firstChild ) {
+			contentDiv.removeChild( contentDiv.firstChild );
+		}
+
+		const t = this.msg.bind( this );
+		const form = document.createElement( 'form' );
+		form.className = 'canvas-properties-form';
+
+		// Title
+		const title = document.createElement( 'h4' );
+		title.textContent = t( 'layers-slide-canvas-layer', 'Canvas' );
+		title.style.cssText = 'margin: 0 0 12px 0; font-size: 14px;';
+		form.appendChild( title );
+
+		// Size controls
+		const sizeGroup = document.createElement( 'div' );
+		sizeGroup.className = 'canvas-size-group';
+		sizeGroup.style.cssText = 'margin-bottom: 12px;';
+
+		const sizeLabel = document.createElement( 'label' );
+		sizeLabel.textContent = t( 'layers-slide-canvas-size', 'Canvas size' );
+		sizeLabel.style.cssText = 'display: block; margin-bottom: 4px; font-weight: 600;';
+		sizeGroup.appendChild( sizeLabel );
+
+		const sizeRow = document.createElement( 'div' );
+		sizeRow.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+		// Width
+		const widthInput = this.createCanvasSizeInput( 'width', t );
+		sizeRow.appendChild( widthInput );
+
+		const separator = document.createElement( 'span' );
+		separator.textContent = '×';
+		sizeRow.appendChild( separator );
+
+		// Height
+		const heightInput = this.createCanvasSizeInput( 'height', t );
+		sizeRow.appendChild( heightInput );
+
+		sizeGroup.appendChild( sizeRow );
+		form.appendChild( sizeGroup );
+
+		// Background color
+		const colorGroup = document.createElement( 'div' );
+		colorGroup.className = 'canvas-color-group';
+		colorGroup.style.cssText = 'margin-bottom: 12px;';
+
+		const colorLabel = document.createElement( 'label' );
+		colorLabel.textContent = t( 'layers-slide-background-color', 'Background color' );
+		colorLabel.style.cssText = 'display: block; margin-bottom: 4px; font-weight: 600;';
+		colorGroup.appendChild( colorLabel );
+
+		const colorRow = document.createElement( 'div' );
+		colorRow.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+		const colorSwatch = this.createCanvasColorSwatch( t );
+		colorRow.appendChild( colorSwatch );
+
+		colorGroup.appendChild( colorRow );
+		form.appendChild( colorGroup );
+
+		contentDiv.appendChild( form );
+
+		if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log( '[LayerPanel] showCanvasProperties: form created and appended' );
+		}
+	}
+
+	/**
+	 * Create a size input for canvas properties
+	 *
+	 * @param {string} dimension 'width' or 'height'
+	 * @param {Function} t Translation function
+	 * @return {HTMLElement} Input element
+	 */
+	createCanvasSizeInput( dimension, t ) {
+			const group = document.createElement( 'div' );
+			group.style.cssText = 'display: flex; align-items: center; gap: 4px;';
+
+			const label = document.createElement( 'span' );
+			label.textContent = dimension === 'width' ? 'W:' : 'H:';
+			label.style.cssText = 'font-size: 11px; color: #666;';
+
+			const input = document.createElement( 'input' );
+			input.type = 'number';
+			input.min = '100';
+			input.max = '4000';
+			input.step = '10';
+			input.style.cssText = 'width: 60px; padding: 4px 6px;';
+			input.setAttribute( 'aria-label', dimension === 'width' ?
+				t( 'layers-slide-canvas-width', 'Width' ) :
+				t( 'layers-slide-canvas-height', 'Height' ) );
+
+			// Get current value
+			const stateKey = dimension === 'width' ? 'slideCanvasWidth' : 'slideCanvasHeight';
+			const defaultVal = dimension === 'width' ? 800 : 600;
+			if ( this.editor && this.editor.stateManager ) {
+				input.value = String( this.editor.stateManager.get( stateKey ) || defaultVal );
+			} else {
+				input.value = String( defaultVal );
+			}
+
+			// Handle changes
+			const self = this;
+			const handler = function () {
+				const value = parseInt( input.value, 10 );
+				if ( !isNaN( value ) && value >= 100 && value <= 4000 ) {
+					if ( self.backgroundLayerController && self.backgroundLayerController.setCanvasDimension ) {
+						self.backgroundLayerController.setCanvasDimension( dimension, value );
+					}
+				}
+			};
+
+			this.addTargetListener( input, 'change', handler );
+			this.addTargetListener( input, 'blur', handler );
+
+			group.appendChild( label );
+			group.appendChild( input );
+
+			return group;
+		}
+
+		/**
+		 * Create a color swatch button for canvas background
+		 *
+		 * @param {Function} t Translation function
+		 * @return {HTMLElement} Color swatch button
+		 */
+		createCanvasColorSwatch( t ) {
+			const color = this.editor && this.editor.stateManager ?
+				this.editor.stateManager.get( 'slideBackgroundColor' ) || '#ffffff' :
+				'#ffffff';
+
+			const swatch = document.createElement( 'button' );
+			swatch.type = 'button';
+			swatch.className = 'canvas-color-swatch';
+			swatch.title = t( 'layers-slide-change-color', 'Change background color' );
+			swatch.setAttribute( 'aria-label', t( 'layers-slide-change-color', 'Change background color' ) );
+
+			// Apply initial color using shared helper
+			this.updateSwatchColor( swatch, color );
+
+			const self = this;
+			const clickHandler = function () {
+				if ( self.backgroundLayerController && self.backgroundLayerController.openColorPicker ) {
+					self.backgroundLayerController.openColorPicker( swatch );
+				}
+			};
+
+			this.addTargetListener( swatch, 'click', clickHandler );
+
+			// Store reference for updates
+			this.canvasColorSwatch = swatch;
+
+			return swatch;
+		}
+
+		/**
+		 * Update a color swatch's appearance
+		 * Uses consistent transparency pattern matching ColorPickerDialog
+		 *
+		 * @param {HTMLElement} swatch The swatch element
+		 * @param {string} color The color value
+		 */
+		updateSwatchColor( swatch, color ) {
+			if ( !swatch ) {
+				return;
+			}
+
+			const isTransparent = !color || color === 'transparent' || color === 'none';
+
+			// Base styles always applied
+			const baseStyles = 'width: 32px; height: 32px; border: 2px solid #ccc; border-radius: 4px; cursor: pointer;';
+
+			if ( isTransparent ) {
+				// Red diagonal stripe pattern - matches ColorPickerDialog exactly
+				swatch.style.cssText = baseStyles + ' background: repeating-linear-gradient(45deg, #ff0000 0, #ff0000 4px, transparent 4px, transparent 8px);';
+			} else {
+				swatch.style.cssText = baseStyles + ' background-color: ' + color + ';';
+			}
+		}
+
+		/**
+		 * Update canvas color swatch when background color changes
+		 *
+		 * @param {string} color The new background color
+		 */
+		updateCanvasColorSwatch( color ) {
+			this.updateSwatchColor( this.canvasColorSwatch, color );
+		}
+
+		/**
 		 * Initialize the LayerItemFactory with appropriate callbacks
 		 */
 		initLayerItemFactory() {
@@ -297,8 +513,21 @@
 			// Subscribe to selection changes
 			const unsubSelection = this.editor.stateManager.subscribe( 'selectedLayerIds', ( newIds ) => {
 				const selectedId = newIds && newIds.length > 0 ? newIds[ newIds.length - 1 ] : null;
+				// Clear canvas layer selection when a regular layer is selected
+				if ( selectedId && this.editor.stateManager.get( 'canvasLayerSelected' ) ) {
+					this.editor.stateManager.set( 'canvasLayerSelected', false );
+					// Remove selection from canvas layer item
+					const canvasItem = this.layerList && this.layerList.querySelector( '.background-layer-item' );
+					if ( canvasItem ) {
+						canvasItem.classList.remove( 'selected' );
+						canvasItem.setAttribute( 'aria-selected', 'false' );
+					}
+				}
 				this.renderLayerList();
-				this.updatePropertiesPanel( selectedId );
+				// Don't update properties panel if canvas layer is selected (handled separately)
+				if ( !this.editor.stateManager.get( 'canvasLayerSelected' ) ) {
+					this.updatePropertiesPanel( selectedId );
+				}
 			} );
 			this.stateSubscriptions.push( unsubSelection );
 		}

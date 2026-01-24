@@ -273,22 +273,101 @@ class ViewerManager {
 				return false;
 			}
 
-			// Clear canvas completely
-			ctx.clearRect( 0, 0, canvas.width, canvas.height );
+			// Get the original canvas/display dimensions from data attributes
+			const origCanvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
+			const origCanvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
+			const origDisplayWidth = parseInt( container.getAttribute( 'data-display-width' ), 10 ) || origCanvasWidth;
+			const origDisplayHeight = parseInt( container.getAttribute( 'data-display-height' ), 10 ) || origCanvasHeight;
 
 			// Update canvas dimensions if payload specifies new ones
 			if ( payload.baseWidth && payload.baseHeight ) {
 				canvas.width = payload.baseWidth;
 				canvas.height = payload.baseHeight;
+
+				// Update data attributes to reflect new canvas size
+				container.setAttribute( 'data-canvas-width', payload.baseWidth );
+				container.setAttribute( 'data-canvas-height', payload.baseHeight );
+
+				// Determine if this slide was originally unconstrained (display == canvas)
+				// or constrained (display < canvas)
+				const wasUnconstrained = origDisplayWidth === origCanvasWidth &&
+					origDisplayHeight === origCanvasHeight;
+
+				if ( wasUnconstrained ) {
+					// Unconstrained slide: display at full canvas size
+					const newDisplayWidth = payload.baseWidth;
+					const newDisplayHeight = payload.baseHeight;
+
+					canvas.style.width = newDisplayWidth + 'px';
+					canvas.style.height = newDisplayHeight + 'px';
+					container.style.width = newDisplayWidth + 'px';
+					container.style.height = newDisplayHeight + 'px';
+
+					// Update data attributes
+					container.setAttribute( 'data-display-width', newDisplayWidth );
+					container.setAttribute( 'data-display-height', newDisplayHeight );
+					container.setAttribute( 'data-display-scale', '1' );
+
+					this.debugLog( 'Slide resized (unconstrained): ' + newDisplayWidth + 'x' + newDisplayHeight );
+				} else {
+					// Constrained slide: recalculate display size to fit within original constraint
+					// while maintaining new aspect ratio
+					const newAspect = payload.baseWidth / payload.baseHeight;
+					const constraintAspect = origDisplayWidth / origDisplayHeight;
+
+					let newDisplayWidth, newDisplayHeight;
+					if ( newAspect > constraintAspect ) {
+						// New aspect is wider - fit to width
+						newDisplayWidth = origDisplayWidth;
+						newDisplayHeight = Math.round( origDisplayWidth / newAspect );
+					} else {
+						// New aspect is taller - fit to height
+						newDisplayHeight = origDisplayHeight;
+						newDisplayWidth = Math.round( origDisplayHeight * newAspect );
+					}
+
+					const newScale = newDisplayWidth / payload.baseWidth;
+
+					canvas.style.width = newDisplayWidth + 'px';
+					canvas.style.height = newDisplayHeight + 'px';
+					container.style.width = newDisplayWidth + 'px';
+					container.style.height = newDisplayHeight + 'px';
+
+					// Update data attributes
+					container.setAttribute( 'data-display-width', newDisplayWidth );
+					container.setAttribute( 'data-display-height', newDisplayHeight );
+					container.setAttribute( 'data-display-scale', newScale.toFixed( 4 ) );
+
+					this.debugLog( 'Slide resized (constrained): ' + payload.baseWidth + 'x' + payload.baseHeight +
+						' -> ' + newDisplayWidth + 'x' + newDisplayHeight );
+				}
 			}
 
-			// Fill background
+			// Get background color
 			const bgColor = payload.backgroundColor || container.getAttribute( 'data-background' ) || '#ffffff';
 			const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'none';
+			// Check background visibility - handle both boolean and integer from API
+			const bgVisible = payload.backgroundVisible !== false && payload.backgroundVisible !== 0;
+			// Get background opacity - default to 1.0 (fully opaque)
+			const bgOpacity = typeof payload.backgroundOpacity === 'number' ? payload.backgroundOpacity : 1.0;
 
-			if ( !isTransparent ) {
-				ctx.fillStyle = bgColor;
-				ctx.fillRect( 0, 0, canvas.width, canvas.height );
+			// Update container background style and data attribute
+			if ( payload.backgroundColor ) {
+				container.setAttribute( 'data-background', payload.backgroundColor );
+				if ( isTransparent ) {
+					// Transparent: show checkerboard pattern
+					container.style.backgroundColor = 'transparent';
+					container.style.backgroundImage = 'url(data:image/svg+xml,' +
+						'base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+' +
+						'PHJlY3Qgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0iI2NjYyIvPjxyZWN0IHg9IjgiIHk9IjgiIHdpZHRoPSI4' +
+						'IiBoZWlnaHQ9IjgiIGZpbGw9IiNjY2MiLz48L3N2Zz4=)';
+				} else {
+					// Clear container background - canvas handles the background with opacity
+					// If we set container.style.backgroundColor, it shows through the semi-transparent
+					// canvas background, making opacity appear as 100%
+					container.style.backgroundColor = 'transparent';
+					container.style.backgroundImage = '';
+				}
 			}
 
 			// Get LayerRenderer for rendering
@@ -298,19 +377,39 @@ class ViewerManager {
 				return false;
 			}
 
-			// Render layers
+			/**
+			 * Helper function to render all layers.
+			 * Called initially and again when async resources (SVGs) finish loading.
+			 */
+			const renderAllLayers = () => {
+				ctx.clearRect( 0, 0, canvas.width, canvas.height );
+				if ( !isTransparent && bgVisible ) {
+					// Draw background color with opacity (no checkerboard in viewer - that's editor-only)
+					ctx.save();
+					ctx.globalAlpha = bgOpacity;
+					ctx.fillStyle = bgColor;
+					ctx.fillRect( 0, 0, canvas.width, canvas.height );
+					ctx.restore();
+				}
+				if ( payload.layers && Array.isArray( payload.layers ) ) {
+					payload.layers.forEach( ( layer ) => {
+						if ( layer.visible !== false && layer.visible !== 0 ) {
+							renderer.drawLayer( layer );
+						}
+					} );
+				}
+			};
+
+			// Render layers - use single renderer instance to maintain SVG image cache
+			// onImageLoad callback triggers re-render when async SVGs finish loading
 			const renderer = new LayerRenderer( ctx, {
 				canvas: canvas,
-				zoom: 1
+				zoom: 1,
+				onImageLoad: renderAllLayers
 			} );
 
-			if ( payload.layers && Array.isArray( payload.layers ) ) {
-				payload.layers.forEach( ( layer ) => {
-					if ( layer.visible !== false && layer.visible !== 0 ) {
-						renderer.drawLayer( layer );
-					}
-				} );
-			}
+			// Initial render
+			renderAllLayers();
 
 			// Update the stored payload for the overlay (for view full size)
 			container._layersPayload = payload;
@@ -476,7 +575,9 @@ class ViewerManager {
 			const params = {
 				action: 'layersinfo',
 				format: 'json',
-				filename: filename
+				filename: filename,
+				// Cache buster to ensure fresh data after save
+				_: Date.now()
 			};
 			if ( setName && setName !== 'on' && setName !== 'default' ) {
 				params.setname = setName;
@@ -615,7 +716,9 @@ class ViewerManager {
 				slidename: slideName,
 				setname: setName,
 				format: 'json',
-				formatversion: 2
+				formatversion: 2,
+				// Cache buster to ensure fresh data after save
+				_: Date.now()
 			} ).then( ( data ) => {
 				try {
 					if ( !data || !data.layersinfo ) {
@@ -635,8 +738,14 @@ class ViewerManager {
 						layers: layersArr,
 						baseWidth: ( layerset && layerset.baseWidth ) || ( layerset && layerset.data && layerset.data.canvasWidth ) || canvasWidth,
 						baseHeight: ( layerset && layerset.baseHeight ) || ( layerset && layerset.data && layerset.data.canvasHeight ) || canvasHeight,
-						backgroundVisible: true,
-						backgroundOpacity: 1.0,
+						backgroundVisible: layerset && layerset.data && layerset.data.backgroundVisible !== undefined
+							? ( layerset.data.backgroundVisible !== false && layerset.data.backgroundVisible !== 0 )
+							: true,
+						backgroundOpacity: layerset && layerset.data && typeof layerset.data.backgroundOpacity === 'number'
+							? layerset.data.backgroundOpacity
+							: ( layerset && layerset.data && layerset.data.backgroundOpacity !== undefined
+								? parseFloat( layerset.data.backgroundOpacity )
+								: 1.0 ),
 						isSlide: true,
 						backgroundColor: ( layerset && layerset.data && layerset.data.backgroundColor ) ||
 							container.getAttribute( 'data-background' ) || '#ffffff'
@@ -991,12 +1100,15 @@ class ViewerManager {
 					}
 
 					// Build payload for slide viewer
+					// Handle backgroundVisible - API returns 0/1 integers, need to normalize
+					const bgVal = layerset.data.backgroundVisible;
+					const bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
 					const payload = {
 						layers: layerset.data.layers,
 						baseWidth: layerset.baseWidth || layerset.data.canvasWidth || canvasWidth,
 						baseHeight: layerset.baseHeight || layerset.data.canvasHeight || canvasHeight,
-						backgroundVisible: true,
-						backgroundOpacity: 1.0,
+						backgroundVisible: bgVisible,
+						backgroundOpacity: typeof layerset.data.backgroundOpacity === 'number' ? layerset.data.backgroundOpacity : 1.0,
 						isSlide: true,
 						backgroundColor: layerset.data.backgroundColor || container.getAttribute( 'data-background-color' ) || '#ffffff'
 					};
@@ -1059,24 +1171,49 @@ class ViewerManager {
 		// Clear and fill background
 		const bgColor = payload.backgroundColor || '#ffffff';
 		const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'none';
+		// Check background visibility - handle both boolean and integer from API
+		const bgVisible = payload.backgroundVisible !== false && payload.backgroundVisible !== 0;
+		// Get background opacity - default to 1 if not specified
+		const bgOpacity = typeof payload.backgroundOpacity === 'number' ? payload.backgroundOpacity : 1.0;
 
-		if ( !isTransparent ) {
-			// Only fill background if it's a solid color
-			ctx.fillStyle = bgColor;
-			ctx.fillRect( 0, 0, canvas.width, canvas.height );
+		// Clear container background since canvas handles it with opacity
+		// The PHP-rendered HTML sets container background, but we need to clear it
+		// so the canvas-drawn background (with opacity) is the only source
+		if ( !isTransparent && bgOpacity < 1.0 ) {
+			container.style.backgroundColor = 'transparent';
 		}
-		// If transparent, don't fill - let the page background show through
 
-		// Render layers using the shared LayerRenderer
+		/**
+		 * Helper function to render all layers.
+		 * Called initially and again when async resources (SVGs) finish loading.
+		 */
+		const renderAllLayers = () => {
+			ctx.clearRect( 0, 0, canvas.width, canvas.height );
+			if ( !isTransparent && bgVisible ) {
+				// Draw background color with opacity (no checkerboard in viewer - that's editor-only)
+				ctx.save();
+				ctx.globalAlpha = bgOpacity;
+				ctx.fillStyle = bgColor;
+				ctx.fillRect( 0, 0, canvas.width, canvas.height );
+				ctx.restore();
+			}
+			payload.layers.forEach( ( layer ) => {
+				if ( layer.visible !== false && layer.visible !== 0 ) {
+					renderer.drawLayer( layer );
+				}
+			} );
+		};
+
+		// Render layers using single renderer instance to maintain SVG image cache
+		// onImageLoad callback triggers re-render when async SVGs finish loading
 		const renderer = new LayerRenderer( ctx, {
 			canvas: canvas,
-			zoom: 1
+			zoom: 1,
+			onImageLoad: renderAllLayers
 		} );
-		payload.layers.forEach( ( layer ) => {
-			if ( layer.visible !== false && layer.visible !== 0 ) {
-				renderer.drawLayer( layer );
-			}
-		} );
+
+		// Initial render
+		renderAllLayers();
 
 		// Remove loading placeholder
 		const placeholder = container.querySelector( '.layers-slide-placeholder' );
@@ -1456,10 +1593,59 @@ class ViewerManager {
 			} );
 		}
 
-		// Navigate to slide editor page
-		// Note: Modal editing for slides is not yet supported - slides use Special:EditSlide
-		const editUrl = this.buildSlideEditorUrl( slideData );
-		window.location.href = editUrl;
+		// Check if modal editor should be used (same pattern as ViewerOverlay for images)
+		const useModal = this._shouldUseModalForSlide();
+
+		console.log( '[Layers:ViewerManager] openSlideEditor: useModal=', useModal );
+
+		if ( useModal && typeof window !== 'undefined' && window.Layers &&
+			window.Layers.Modal && window.Layers.Modal.LayersEditorModal ) {
+			// Open in modal - build URL with modal flag
+			const modal = new window.Layers.Modal.LayersEditorModal();
+			const editorUrl = this.buildSlideEditorUrl( slideData ) + '&modal=1';
+
+			// For slides, we pass the slide name as the "filename" for the modal
+			const slideFilename = 'Slide:' + slideData.slideName;
+			const setName = slideData.layerSetName || 'default';
+
+			modal.open( slideFilename, setName, editorUrl ).then( ( result ) => {
+				if ( result && result.saved ) {
+					// Refresh all slide viewers when modal closes after save
+					this.refreshAllViewers();
+				}
+			} );
+		} else {
+			// Fallback: Navigate to slide editor page (full page navigation)
+			const editUrl = this.buildSlideEditorUrl( slideData );
+			window.location.href = editUrl;
+		}
+	}
+
+	/**
+	 * Check if modal editor should be used for slides.
+	 * Matches the logic in ViewerOverlay._shouldUseModal().
+	 *
+	 * @private
+	 * @return {boolean} True if modal should be used
+	 */
+	_shouldUseModalForSlide() {
+		// Use modal if modal module is available
+		if ( typeof mw === 'undefined' || !mw.config ) {
+			console.log( '[Layers:ViewerManager] _shouldUseModalForSlide: mw or mw.config undefined' );
+			return false;
+		}
+
+		// Check if modal module is available
+		const hasLayers = !!window.Layers;
+		const hasModal = !!( window.Layers && window.Layers.Modal );
+		const hasClass = !!( window.Layers && window.Layers.Modal && window.Layers.Modal.LayersEditorModal );
+
+		console.log( '[Layers:ViewerManager] _shouldUseModalForSlide:',
+			'window.Layers:', hasLayers,
+			'window.Layers.Modal:', hasModal,
+			'LayersEditorModal:', hasClass );
+
+		return hasClass;
 	}
 
 	/**

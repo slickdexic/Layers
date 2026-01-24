@@ -237,6 +237,19 @@ class LayersEditor {
 			// Named Layer Sets state
 			this.stateManager.set( 'namedSets', [] );
 			this.stateManager.set( 'currentSetName', 'default' );
+
+			// Slide mode state - initialized from config
+			this.stateManager.set( 'isSlide', this.config.isSlide || false );
+			this.stateManager.set( 'slideName', this.config.slideName || null );
+			if ( this.config.isSlide ) {
+				// For slides, use config dimensions as base dimensions
+				this.stateManager.set( 'slideCanvasWidth', this.config.canvasWidth || 800 );
+				this.stateManager.set( 'slideCanvasHeight', this.config.canvasHeight || 600 );
+				// Default to white background if not specified (matches server config LayersSlideDefaultBackground)
+				this.stateManager.set( 'slideBackgroundColor', this.config.backgroundColor || '#ffffff' );
+				this.stateManager.set( 'baseWidth', this.config.canvasWidth || 800 );
+				this.stateManager.set( 'baseHeight', this.config.canvasHeight || 600 );
+			}
 		}
 	}
 
@@ -494,6 +507,23 @@ class LayersEditor {
 		this.toolbar = this.registry.get( 'Toolbar' );
 		this.layerPanel = this.registry.get( 'LayerPanel' );
 		this.canvasManager = this.registry.get( 'CanvasManager' );
+
+		// Configure slide mode if applicable
+		if ( this.stateManager.get( 'isSlide' ) && this.canvasManager ) {
+			const slideWidth = this.stateManager.get( 'slideCanvasWidth' ) || 800;
+			const slideHeight = this.stateManager.get( 'slideCanvasHeight' ) || 600;
+			const slideBackgroundColor = this.stateManager.get( 'slideBackgroundColor' ) || 'transparent';
+
+			// Set canvas dimensions for slide
+			this.canvasManager.setBaseDimensions( slideWidth, slideHeight );
+			// Enable slide mode (no background image)
+			this.canvasManager.setSlideMode( true );
+			// Set slide background color
+			this.canvasManager.setBackgroundColor( slideBackgroundColor );
+
+			this.debugLog( '[LayersEditor] Slide mode configured: ' +
+				slideWidth + 'x' + slideHeight + ', bg=' + slideBackgroundColor );
+		}
 
 		// Subscribe to selection changes to update toolbar alignment buttons
 		this.subscribeToSelectionChanges();
@@ -1338,6 +1368,28 @@ class LayersEditor {
 			const returnToUrl = mw && mw.config && mw.config.get( 'wgLayersReturnToUrl' );
 			if ( returnToUrl ) {
 				window.location.href = returnToUrl;
+				return;
+			}
+
+			// For slides, navigate back to the referring page or Special:Slides
+			// Slides don't have a File: page, so we use history.back() by default
+			const isSlide = this.stateManager && this.stateManager.get( 'isSlide' );
+			if ( isSlide ) {
+				// IMPORTANT: In modal mode, the postMessage above already handled closing.
+				// This code only runs in non-modal mode (direct URL navigation).
+				
+				// Use history.back() to return to the page that opened the editor
+				// This handles: embedded slides, Special:Slides, and any other context
+				if ( window.history && window.history.length > 1 ) {
+					window.history.back();
+					return;
+				}
+				// Fallback: go to Special:Slides if no history
+				if ( mw && mw.util && typeof mw.util.getUrl === 'function' ) {
+					window.location.href = mw.util.getUrl( 'Special:Slides' );
+					return;
+				}
+				window.location.reload();
 				return;
 			}
 

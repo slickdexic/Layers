@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.26-REL1_43",
+	"version": "1.5.27-REL1_43",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -695,10 +695,12 @@
 				"layers-editor-slide-mode",
 				"layers-editor-slide-canvas-size",
 				"layers-editor-slide-background",
+				"layers-slide-canvas-layer",
 				"layers-slide-canvas-size",
 				"layers-slide-canvas-width",
 				"layers-slide-canvas-height",
 				"layers-slide-background-color",
+				"layers-slide-change-color",
 				"layers-slide-properties",
 				"layers-slide-prop-name",
 				"layers-slide-prop-size",

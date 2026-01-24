@@ -1478,4 +1478,207 @@ describe('HistoryManager', () => {
             window.Layers = originalLayers;
         });
     });
+
+    // CORE-2 FIX: Tests for efficient layer comparison and markAsSaved
+    describe('layersEqual (CORE-2)', () => {
+        test('should return true for identical layer arrays', () => {
+            const layers1 = [
+                { id: '1', type: 'rectangle', x: 10, y: 20 },
+                { id: '2', type: 'text', x: 30, y: 40, text: 'Hello' }
+            ];
+            const layers2 = [
+                { id: '1', type: 'rectangle', x: 10, y: 20 },
+                { id: '2', type: 'text', x: 30, y: 40, text: 'Hello' }
+            ];
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(true);
+        });
+
+        test('should return false for different layer counts', () => {
+            const layers1 = [{ id: '1', x: 10 }];
+            const layers2 = [{ id: '1', x: 10 }, { id: '2', x: 20 }];
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(false);
+        });
+
+        test('should return false for different property values', () => {
+            const layers1 = [{ id: '1', x: 10 }];
+            const layers2 = [{ id: '1', x: 999 }];
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(false);
+        });
+
+        test('should use reference comparison for src property (image data)', () => {
+            const largeBase64 = 'data:image/png;base64,' + 'A'.repeat(100000);
+            const layers1 = [{ id: '1', type: 'image', src: largeBase64 }];
+            const layers2 = [{ id: '1', type: 'image', src: largeBase64 }]; // Same reference
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(true);
+        });
+
+        test('should use reference comparison for path property (SVG data)', () => {
+            const svgPath = 'M0,0 L100,100 Z'.repeat(1000);
+            const layers1 = [{ id: '1', type: 'customShape', path: svgPath }];
+            const layers2 = [{ id: '1', type: 'customShape', path: svgPath }];
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(true);
+        });
+
+        test('should compare points arrays correctly', () => {
+            const layers1 = [{ id: '1', type: 'path', points: [{ x: 0, y: 0 }, { x: 10, y: 10 }] }];
+            const layers2 = [{ id: '1', type: 'path', points: [{ x: 0, y: 0 }, { x: 10, y: 10 }] }];
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(true);
+        });
+
+        test('should detect different points arrays', () => {
+            const layers1 = [{ id: '1', type: 'path', points: [{ x: 0, y: 0 }] }];
+            const layers2 = [{ id: '1', type: 'path', points: [{ x: 0, y: 999 }] }];
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(false);
+        });
+
+        test('should handle null/undefined inputs', () => {
+            expect(historyManager.layersEqual(null, null)).toBe(true);
+            expect(historyManager.layersEqual(null, [])).toBe(false);
+            expect(historyManager.layersEqual([], null)).toBe(false);
+        });
+
+        test('should compare children arrays for groups', () => {
+            const layers1 = [{ id: '1', type: 'group', children: ['a', 'b'] }];
+            const layers2 = [{ id: '1', type: 'group', children: ['a', 'b'] }];
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(true);
+        });
+
+        test('should detect different children arrays', () => {
+            const layers1 = [{ id: '1', type: 'group', children: ['a', 'b'] }];
+            const layers2 = [{ id: '1', type: 'group', children: ['a', 'c'] }];
+            
+            expect(historyManager.layersEqual(layers1, layers2)).toBe(false);
+        });
+    });
+
+    describe('markAsSaved (CORE-2)', () => {
+        test('should set lastSaveHistoryIndex to current historyIndex', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            
+            expect(historyManager.lastSaveHistoryIndex).toBe(-1);
+            
+            historyManager.markAsSaved();
+            
+            expect(historyManager.lastSaveHistoryIndex).toBe(historyManager.historyIndex);
+        });
+
+        test('should make hasUnsavedChanges return false after marking as saved', () => {
+            // Initial save
+            historyManager.saveState('State 1');
+            
+            // Modify layers to create actual change
+            mockLayers[0].x = 50;
+            historyManager.saveState('State 2');
+            
+            // Before marking as saved, changes exist relative to initial state
+            expect(historyManager.hasUnsavedChanges()).toBe(true);
+            
+            historyManager.markAsSaved();
+            
+            // After marking as saved, no unsaved changes (current matches saved)
+            expect(historyManager.hasUnsavedChanges()).toBe(false);
+        });
+
+        test('should detect changes after undo from saved state', () => {
+            // Initial save
+            historyManager.saveState('State 1');
+            
+            // Modify layers to create actual change
+            mockLayers[0].x = 50;
+            historyManager.saveState('State 2');
+            historyManager.markAsSaved();
+            
+            expect(historyManager.hasUnsavedChanges()).toBe(false);
+            
+            // Undo reverts layers and changes historyIndex
+            historyManager.undo();
+            
+            // After undo, historyIndex differs from lastSaveHistoryIndex
+            expect(historyManager.hasUnsavedChanges()).toBe(true);
+        });
+    });
+
+    describe('saveInitialState lastSaveHistoryIndex (CORE-2)', () => {
+        test('should set lastSaveHistoryIndex after saveInitialState', () => {
+            historyManager.saveInitialState();
+            
+            expect(historyManager.lastSaveHistoryIndex).toBe(0);
+        });
+
+        test('should make hasUnsavedChanges return false after saveInitialState', () => {
+            historyManager.saveInitialState();
+            
+            expect(historyManager.hasUnsavedChanges()).toBe(false);
+        });
+    });
+
+    describe('undo/redo defensive bounds check (CORE-9)', () => {
+        test('undo should handle corrupted history gracefully', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            
+            // Corrupt the history by removing an entry
+            historyManager.history[0] = undefined;
+            historyManager.historyIndex = 1;
+            
+            // undo should not crash, should return false
+            const result = historyManager.undo();
+            
+            expect(result).toBe(false);
+            // Index should be restored to 1
+            expect(historyManager.historyIndex).toBe(1);
+        });
+
+        test('redo should handle corrupted history gracefully', () => {
+            historyManager.saveState('State 1');
+            historyManager.saveState('State 2');
+            historyManager.undo();
+            
+            // Corrupt the history by removing the next entry
+            historyManager.history[1] = undefined;
+            
+            // redo should not crash, should return false
+            const result = historyManager.redo();
+            
+            expect(result).toBe(false);
+            // Index should be restored to 0
+            expect(historyManager.historyIndex).toBe(0);
+        });
+
+        test('undo should work normally when history is valid', () => {
+            historyManager.saveState('State 1');
+            mockLayers[0].x = 100;
+            historyManager.saveState('State 2');
+            
+            expect(historyManager.historyIndex).toBe(1);
+            
+            const result = historyManager.undo();
+            
+            expect(result).toBe(true);
+            expect(historyManager.historyIndex).toBe(0);
+        });
+
+        test('redo should work normally when history is valid', () => {
+            historyManager.saveState('State 1');
+            mockLayers[0].x = 100;
+            historyManager.saveState('State 2');
+            historyManager.undo();
+            
+            expect(historyManager.historyIndex).toBe(0);
+            
+            const result = historyManager.redo();
+            
+            expect(result).toBe(true);
+            expect(historyManager.historyIndex).toBe(1);
+        });
+    });
 });

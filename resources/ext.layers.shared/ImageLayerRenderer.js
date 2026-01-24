@@ -82,8 +82,8 @@
 
 			// Get the cached image, or load it if not cached
 			const img = this._getImageElement( layer );
-			if ( !img || !img.complete ) {
-				// Image not ready yet - draw a placeholder
+			if ( !img || !img.complete || ( img.naturalWidth === 0 && img.naturalHeight === 0 ) ) {
+				// Image not ready yet or failed to load - draw a placeholder
 				this._drawPlaceholder( layer, scale );
 				return;
 			}

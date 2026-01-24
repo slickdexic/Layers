@@ -43,6 +43,9 @@
 		// Values: jqXHR object (has abort() method)
 		this.pendingRequests = new Map();
 		
+		// Prevent concurrent save operations (CORE-3 fix)
+		this.saveInProgress = false;
+		
 		// Initialize error handler (extracted for separation of concerns)
 		this.errorHandler = new APIErrorHandler( {
 			editor: editor
@@ -166,6 +169,27 @@
 	}
 	
 	/**
+	 * Show spinner if uiManager is available
+	 * @param {string} [message] - Optional message to display
+	 * @private
+	 */
+	showSpinner( message ) {
+		if ( this.editor && this.editor.uiManager && typeof this.editor.uiManager.showSpinner === 'function' ) {
+			this.editor.uiManager.showSpinner( message );
+		}
+	}
+
+	/**
+	 * Hide spinner if uiManager is available
+	 * @private
+	 */
+	hideSpinner() {
+		if ( this.editor && this.editor.uiManager && typeof this.editor.uiManager.hideSpinner === 'function' ) {
+			this.editor.uiManager.hideSpinner();
+		}
+	}
+
+	/**
 	 * Load layers for the current file
 	 */
 	loadLayers() {
@@ -174,7 +198,7 @@
 			if ( this.editor.stateManager ) {
 				this.editor.stateManager.set( 'isLoading', true );
 			}
-			this.editor.uiManager.showSpinner( this.getMessage( 'layers-loading' ) );
+			this.showSpinner( this.getMessage( 'layers-loading' ) );
 
 			this.api.get( {
 				action: 'layersinfo',
@@ -182,7 +206,7 @@
 				format: 'json',
 				formatversion: 2
 			} ).then( ( data ) => {
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 				this.processLayersData( data );
 				// Clear loading state after processing
 				if ( this.editor.stateManager ) {
@@ -196,7 +220,7 @@
 					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' )
 				} );
 			} ).catch( ( code, result ) => {
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 				// Clear loading state on error
 				if ( this.editor.stateManager ) {
 					this.editor.stateManager.set( 'isLoading', false );
@@ -301,6 +325,9 @@
 		let rawLayers;
 		let backgroundVisible = true;
 		let backgroundOpacity = 1.0;
+		let slideCanvasWidth = null;
+		let slideCanvasHeight = null;
+		let slideBackgroundColor = null;
 		
 		if ( layerSet.data ) {
 			if ( Array.isArray( layerSet.data ) ) {
@@ -321,6 +348,17 @@
 				}
 				backgroundOpacity = layerSet.data.backgroundOpacity !== undefined ? 
 					layerSet.data.backgroundOpacity : 1.0;
+				
+				// Extract slide-specific data if present
+				if ( layerSet.data.canvasWidth ) {
+					slideCanvasWidth = layerSet.data.canvasWidth;
+				}
+				if ( layerSet.data.canvasHeight ) {
+					slideCanvasHeight = layerSet.data.canvasHeight;
+				}
+				if ( layerSet.data.backgroundColor ) {
+					slideBackgroundColor = layerSet.data.backgroundColor;
+				}
 			} else {
 				rawLayers = [];
 			}
@@ -334,6 +372,34 @@
 		// This ensures correct values are available when the layers subscription triggers renderLayerList
 		this.editor.stateManager.set( 'backgroundVisible', backgroundVisible );
 		this.editor.stateManager.set( 'backgroundOpacity', backgroundOpacity );
+
+		// Update slide-specific state if we loaded slide data
+		const isSlide = this.editor.stateManager.get( 'isSlide' );
+		if ( isSlide ) {
+			if ( slideCanvasWidth ) {
+				this.editor.stateManager.set( 'slideCanvasWidth', slideCanvasWidth );
+				this.editor.stateManager.set( 'baseWidth', slideCanvasWidth );
+			}
+			if ( slideCanvasHeight ) {
+				this.editor.stateManager.set( 'slideCanvasHeight', slideCanvasHeight );
+				this.editor.stateManager.set( 'baseHeight', slideCanvasHeight );
+			}
+			if ( slideBackgroundColor ) {
+				this.editor.stateManager.set( 'slideBackgroundColor', slideBackgroundColor );
+				// Update canvas manager
+				if ( this.editor.canvasManager && this.editor.canvasManager.setBackgroundColor ) {
+					this.editor.canvasManager.setBackgroundColor( slideBackgroundColor );
+				}
+			}
+			// Resize canvas if dimensions changed
+			if ( ( slideCanvasWidth || slideCanvasHeight ) && this.editor.canvasManager ) {
+				const width = slideCanvasWidth || this.editor.stateManager.get( 'slideCanvasWidth' ) || 800;
+				const height = slideCanvasHeight || this.editor.stateManager.get( 'slideCanvasHeight' ) || 600;
+				if ( this.editor.canvasManager.setBaseDimensions ) {
+					this.editor.canvasManager.setBaseDimensions( width, height );
+				}
+			}
+		}
 		
 		// Now set layers - this triggers the subscription which renders the layer list
 		// including the background layer item (which now has correct visibility/opacity values)
@@ -380,7 +446,7 @@
 	 */
 	loadRevisionById( revisionId ) {
 		return new Promise( ( resolve, reject ) => {
-			this.editor.uiManager.showSpinner( this.getMessage( 'layers-loading' ) );
+			this.showSpinner( this.getMessage( 'layers-loading' ) );
 
 			const jqXHR = this.api.get( {
 				action: 'layersinfo',
@@ -395,7 +461,7 @@
 
 			jqXHR.then( ( data ) => {
 				this._clearRequest( 'loadRevision' );
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 				if ( data.layersinfo && data.layersinfo.layerset ) {
 					this.extractLayerSetData( data.layersinfo.layerset );
 					// Only update allLayerSets if response contains data (preserve existing list)
@@ -436,7 +502,7 @@
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {
 					return;
 				}
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 				const errorMsg = result && result.error && result.error.info
 					? result.error.info
 					: this.getMessage( 'layers-revision-not-found' );
@@ -463,7 +529,7 @@
 			if ( this.editor.stateManager ) {
 				this.editor.stateManager.set( 'isLoading', true );
 			}
-			this.editor.uiManager.showSpinner( this.getMessage( 'layers-loading' ) );
+			this.showSpinner( this.getMessage( 'layers-loading' ) );
 
 			const jqXHR = this.api.get( {
 				action: 'layersinfo',
@@ -478,7 +544,7 @@
 
 			jqXHR.then( ( data ) => {
 				this._clearRequest( 'loadSetByName' );
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 
 				if ( !data || !data.layersinfo ) {
 					reject( new Error( 'Invalid API response' ) );
@@ -577,7 +643,7 @@
 					}
 					return;
 				}
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 				// Clear loading state on error
 				if ( this.editor.stateManager ) {
 					this.editor.stateManager.set( 'isLoading', false );
@@ -593,13 +659,23 @@
 	}
 	saveLayers() {
 		return new Promise( ( resolve, reject ) => {
+			// Prevent concurrent save operations (CORE-3 fix)
+			if ( this.saveInProgress ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[APIManager] Save already in progress, ignoring duplicate request' );
+				}
+				reject( new Error( 'Save already in progress' ) );
+				return;
+			}
+
 			if ( !this.validateBeforeSave() ) {
 				mw.notify( 'Save failed: validation error. Check browser console (F12) for details.', { type: 'error' } );
 				reject( new Error( 'Validation failed' ) );
 				return;
 			}
 
-			this.editor.uiManager.showSpinner( this.getMessage( 'layers-saving' ) );
+			this.saveInProgress = true;
+			this.showSpinner( this.getMessage( 'layers-saving' ) );
 			this.disableSaveButton();
 
 			const payload = this.buildSavePayload();
@@ -607,7 +683,8 @@
 
 			if ( !this.checkSizeLimit( layersJson ) ) {
 				mw.log.error( '[APIManager] saveLayers: data too large' );
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
+				this.saveInProgress = false;
 				reject( new Error( 'Data too large' ) );
 				return;
 			}
@@ -642,6 +719,7 @@
 
 	buildSavePayload() {
 		const layers = this.editor.stateManager.get( 'layers' ) || [];
+		const isSlide = this.editor.stateManager.get( 'isSlide' );
 		
 		// Include background settings in the saved data
 		const backgroundVisible = this.editor.stateManager.get( 'backgroundVisible' );
@@ -653,6 +731,13 @@
 			backgroundVisible: backgroundVisible !== undefined ? backgroundVisible : true,
 			backgroundOpacity: backgroundOpacity !== undefined ? backgroundOpacity : 1.0
 		};
+
+		// For slides, include canvas dimensions and background color
+		if ( isSlide ) {
+			dataObject.canvasWidth = this.editor.stateManager.get( 'slideCanvasWidth' ) || 800;
+			dataObject.canvasHeight = this.editor.stateManager.get( 'slideCanvasHeight' ) || 600;
+			dataObject.backgroundColor = this.editor.stateManager.get( 'slideBackgroundColor' ) || '#ffffff';
+		}
 		
 		const layersJson = JSON.stringify( dataObject );
 		
@@ -689,7 +774,8 @@
 				mw.log( '[APIManager] Save response received:', JSON.stringify( data ) );
 			}
 			
-			this.editor.uiManager.hideSpinner();
+			this.saveInProgress = false; // Clear save-in-progress flag
+			this.hideSpinner();
 			this.enableSaveButton();
 			this.handleSaveSuccess( data );
 			resolve( data );
@@ -719,7 +805,8 @@
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log.error( `[APIManager] Save failed after ${attempt + 1} attempts` );
 				}
-				this.editor.uiManager.hideSpinner();
+				this.saveInProgress = false; // Clear save-in-progress flag on final failure
+				this.hideSpinner();
 				this.enableSaveButton();
 				this.handleSaveError( error );
 				reject( error );
@@ -753,6 +840,11 @@
 
 		if ( data.layerssave && data.layerssave.success ) {
 			this.editor.stateManager.markClean();
+
+			// CORE-2 FIX: Mark history as saved for efficient hasUnsavedChanges()
+			if ( this.editor.historyManager && typeof this.editor.historyManager.markAsSaved === 'function' ) {
+				this.editor.historyManager.markAsSaved();
+			}
 
 			// Clear the FreshnessChecker cache for this file so FR-10 will check
 			// the API for fresh data when the user views the page after saving.
@@ -835,7 +927,7 @@
 					mw.log( '[APIManager] No layerset returned from API (new set not found?)' );
 				}
 				this.editor.buildRevisionSelector();
-				if ( this.editor.uiManager.revNameInputEl ) {
+				if ( this.editor.uiManager && this.editor.uiManager.revNameInputEl ) {
 					this.editor.uiManager.revNameInputEl.value = '';
 				}
 			}
@@ -881,14 +973,14 @@
 				mw.log( '[APIManager] deleteLayerSet:', setName, 'for file:', filename );
 			}
 
-			this.editor.uiManager.showSpinner();
+			this.showSpinner();
 
 			this.api.postWithToken( 'csrf', {
 				action: 'layersdelete',
 				filename: filename,
 				setname: setName
 			} ).then( ( data ) => {
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 
 				// Check for API error in response
 				if ( data.error ) {
@@ -942,7 +1034,7 @@
 					reject( new Error( errorMsg ) );
 				}
 			} ).catch( ( code, data ) => {
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log.error( '[APIManager] deleteLayerSet error:', code, data );
@@ -1013,7 +1105,7 @@
 				mw.log( '[APIManager] renameLayerSet:', oldName, '->', newName, 'for file:', filename );
 			}
 
-			this.editor.uiManager.showSpinner();
+			this.showSpinner();
 
 			this.api.postWithToken( 'csrf', {
 				action: 'layersrename',
@@ -1021,7 +1113,7 @@
 				oldname: oldName,
 				newname: newName
 			} ).then( ( data ) => {
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 
 				// Check for API error in response
 				if ( data.error ) {
@@ -1090,7 +1182,7 @@
 					reject( new Error( errorMsg ) );
 				}
 			} ).catch( ( code, data ) => {
-				this.editor.uiManager.hideSpinner();
+				this.hideSpinner();
 
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log.error( '[APIManager] renameLayerSet error:', code, data );
@@ -1257,10 +1349,10 @@
 			downloadName = this.sanitizeFilename( `${ baseName }${ setNamePart }` ) + ext;
 		}
 
-		this.editor.uiManager.showSpinner();
+		this.showSpinner();
 
 		this.exportAsImage( options ).then( ( blob ) => {
-			this.editor.uiManager.hideSpinner();
+			this.hideSpinner();
 
 			// Create download link
 			const url = URL.createObjectURL( blob );
@@ -1275,7 +1367,7 @@
 			const msg = this.getMessage( 'layers-export-success', 'Image exported successfully' );
 			mw.notify( msg, { type: 'success' } );
 		} ).catch( ( error ) => {
-			this.editor.uiManager.hideSpinner();
+			this.hideSpinner();
 			if ( typeof mw !== 'undefined' && mw.log ) {
 				mw.log.error( '[APIManager] Export failed:', error );
 			}

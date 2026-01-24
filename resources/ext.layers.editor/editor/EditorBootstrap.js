@@ -386,9 +386,15 @@
 					filename: init.filename,
 					imageUrl: init.imageUrl,
 					initialSetName: init.initialSetName || null,
-
 					autoCreate: init.autoCreate || false,
-					container: container || document.body
+					container: container || document.body,
+					// Slide-specific properties
+					isSlide: init.isSlide || false,
+					slideName: init.slideName || null,
+					canvasWidth: init.canvasWidth || null,
+					canvasHeight: init.canvasHeight || null,
+					backgroundColor: init.backgroundColor || null,
+					lockMode: init.lockMode || 'none'
 				} );
 
 				debugLog( 'Hook fired for: ' + init.filename +
@@ -413,7 +419,14 @@
 						imageUrl: init.imageUrl,
 						initialSetName: init.initialSetName || null,
 						autoCreate: init.autoCreate || false,
-						container: container || document.body
+						container: container || document.body,
+						// Slide-specific properties
+						isSlide: init.isSlide || false,
+						slideName: init.slideName || null,
+						canvasWidth: init.canvasWidth || null,
+						canvasHeight: init.canvasHeight || null,
+						backgroundColor: init.backgroundColor || null,
+						lockMode: init.lockMode || 'none'
 					} );
 					debugLog( 'Direct editor creation successful' );
 

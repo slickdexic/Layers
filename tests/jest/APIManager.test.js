@@ -1390,6 +1390,55 @@ describe( 'APIManager', function () {
 			expect( error.code ).toBe( 'fallback-code' );
 			expect( error.info ).toBe( 'Some exception' );
 		} );
+
+		it( 'should clear saveInProgress flag on success (CORE-3)', async function () {
+			const mockResolve = jest.fn();
+			const mockReject = jest.fn();
+			const payload = { action: 'layerssave', data: '[]' };
+
+			apiManager.saveInProgress = true;
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layerssave: { success: 1 }
+			} );
+			apiManager.handleSaveSuccess = jest.fn();
+			apiManager.enableSaveButton = jest.fn();
+
+			await apiManager.performSaveWithRetry( payload, 0, mockResolve, mockReject );
+
+			expect( apiManager.saveInProgress ).toBe( false );
+		} );
+
+		it( 'should clear saveInProgress flag on final failure (CORE-3)', async function () {
+			const mockResolve = jest.fn();
+			const mockReject = jest.fn();
+			const payload = { action: 'layerssave', data: '[]' };
+
+			apiManager.saveInProgress = true;
+			// Use mockImplementation to simulate jQuery Deferred style rejection
+			// that passes (code, result) to catch handler
+			apiManager.api.postWithToken = jest.fn().mockImplementation( () => {
+				return {
+					then: function () {
+						return this;
+					},
+					catch: function ( fn ) {
+						fn( 'permissiondenied', { error: { code: 'permissiondenied' } } );
+						return this;
+					}
+				};
+			} );
+			apiManager.handleSaveError = jest.fn();
+			apiManager.enableSaveButton = jest.fn();
+
+			// Attempt at maxRetries - 1 means no more retries
+			apiManager.performSaveWithRetry( payload, 2, mockResolve, mockReject );
+
+			// Allow microtasks to complete
+			await Promise.resolve();
+
+			expect( apiManager.saveInProgress ).toBe( false );
+			expect( mockReject ).toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'handleSaveSuccess', function () {

@@ -242,17 +242,22 @@ describe( 'StateManager', () => {
 			expect( stateManager.pendingOperations.length ).toBe( 0 );
 		} );
 
-		it( 'should force unlock after timeout', () => {
+		it( 'should detect stuck lock after timeout but not force unlock (safer behavior)', () => {
 			stateManager.lockState();
 			expect( stateManager.isLocked ).toBe( true );
 
 			// Fast-forward 5 seconds
 			jest.advanceTimersByTime( 5000 );
 
-			expect( stateManager.isLocked ).toBe( false );
-			expect( mw.log.warn ).toHaveBeenCalledWith(
-				'[StateManager] Force unlocking state after timeout'
+			// State should REMAIN locked to prevent corruption
+			expect( stateManager.isLocked ).toBe( true );
+			// Should log an error (not warning) about the stuck lock
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				'[StateManager] Lock held for >5s - possible deadlock. Lock will remain until manually resolved.'
 			);
+			// Should set a flag indicating when the lock got stuck
+			expect( stateManager.lockStuckSince ).toBeDefined();
+			expect( typeof stateManager.lockStuckSince ).toBe( 'number' );
 		} );
 
 		it( 'should clear lock timeout on normal unlock', () => {
@@ -875,113 +880,26 @@ describe( 'StateManager', () => {
 		} );
 
 		describe( 'undo', () => {
-			beforeEach( () => {
-				stateManager.addLayer( { id: 'layer1', type: 'rectangle' } );
-				stateManager.addLayer( { id: 'layer2', type: 'circle' } );
-			} );
-
-			it( 'should return false (history disabled)', () => {
-				// Undo should return false because history is empty
-				const result = stateManager.undo();
-				expect( result ).toBe( false );
-			} );
-
-			it( 'should not modify layers', () => {
-				const layerCountBefore = stateManager.state.layers.length;
-				stateManager.undo();
-				// Layer count unchanged because undo is a no-op
-				expect( stateManager.state.layers.length ).toBe( layerCountBefore );
-			} );
-
-			it( 'should restore previous state when history exists', () => {
-				// Manually populate history to test the actual undo code path
-				const snapshot1 = { layers: [ { id: 'a', type: 'rectangle' } ], selectedLayerIds: [] };
-				const snapshot2 = { layers: [ { id: 'a', type: 'rectangle' }, { id: 'b', type: 'circle' } ], selectedLayerIds: [ 'b' ] };
-				stateManager.state.history = [ snapshot1, snapshot2 ];
-				stateManager.state.historyIndex = 1;
-
-				const result = stateManager.undo();
-
-				expect( result ).toBe( true );
-				expect( stateManager.state.historyIndex ).toBe( 0 );
-				expect( stateManager.state.layers.length ).toBe( 1 );
-				expect( stateManager.state.layers[ 0 ].id ).toBe( 'a' );
+			it( 'should not exist (CORE-6: removed dead code)', () => {
+				// undo() method was removed in CORE-6 fix
+				// HistoryManager handles all undo/redo functionality
+				expect( typeof stateManager.undo ).toBe( 'undefined' );
 			} );
 		} );
 
 		describe( 'redo', () => {
-			beforeEach( () => {
-				stateManager.addLayer( { id: 'layer1', type: 'rectangle' } );
-				stateManager.addLayer( { id: 'layer2', type: 'circle' } );
-			} );
-
-			it( 'should return false (history disabled)', () => {
-				const result = stateManager.redo();
-				expect( result ).toBe( false );
-			} );
-
-			it( 'should not modify layers', () => {
-				const layerCountBefore = stateManager.state.layers.length;
-				stateManager.redo();
-				// Layer count unchanged because redo is a no-op
-				expect( stateManager.state.layers.length ).toBe( layerCountBefore );
-			} );
-
-			it( 'should restore next state when history exists', () => {
-				// Manually populate history to test the actual redo code path
-				const snapshot1 = { layers: [ { id: 'a', type: 'rectangle' } ], selectedLayerIds: [] };
-				const snapshot2 = { layers: [ { id: 'a', type: 'rectangle' }, { id: 'b', type: 'circle' } ], selectedLayerIds: [ 'b' ] };
-				stateManager.state.history = [ snapshot1, snapshot2 ];
-				stateManager.state.historyIndex = 0;
-				stateManager.state.layers = snapshot1.layers.slice();
-
-				const result = stateManager.redo();
-
-				expect( result ).toBe( true );
-				expect( stateManager.state.historyIndex ).toBe( 1 );
-				expect( stateManager.state.layers.length ).toBe( 2 );
-				expect( stateManager.state.layers[ 1 ].id ).toBe( 'b' );
+			it( 'should not exist (CORE-6: removed dead code)', () => {
+				// redo() method was removed in CORE-6 fix
+				// HistoryManager handles all undo/redo functionality
+				expect( typeof stateManager.redo ).toBe( 'undefined' );
 			} );
 		} );
 
 		describe( 'restoreState', () => {
-			it( 'should restore layers and selection from snapshot', () => {
-				const snapshot = {
-					layers: [ { id: 'x', type: 'text', text: 'Hello' } ],
-					selectedLayerIds: [ 'x' ]
-				};
-
-				stateManager.restoreState( snapshot );
-
-				expect( stateManager.state.layers.length ).toBe( 1 );
-				expect( stateManager.state.layers[ 0 ].id ).toBe( 'x' );
-				expect( stateManager.state.selectedLayerIds ).toEqual( [ 'x' ] );
-			} );
-
-			it( 'should mark state as dirty after restore', () => {
-				stateManager.setDirty( false );
-				const snapshot = { layers: [], selectedLayerIds: [] };
-
-				stateManager.restoreState( snapshot );
-
-				expect( stateManager.isDirty() ).toBe( true );
-			} );
-
-			it( 'should notify listeners for layers and selection', () => {
-				const layerListener = jest.fn();
-				const selectionListener = jest.fn();
-				stateManager.subscribe( 'layers', layerListener );
-				stateManager.subscribe( 'selectedLayerIds', selectionListener );
-
-				const snapshot = {
-					layers: [ { id: 'test' } ],
-					selectedLayerIds: [ 'test' ]
-				};
-
-				stateManager.restoreState( snapshot );
-
-				expect( layerListener ).toHaveBeenCalled();
-				expect( selectionListener ).toHaveBeenCalled();
+			it( 'should not exist (CORE-6: removed dead code)', () => {
+				// restoreState() method was removed in CORE-6 fix
+				// HistoryManager handles all state restoration
+				expect( typeof stateManager.restoreState ).toBe( 'undefined' );
 			} );
 		} );
 	} );

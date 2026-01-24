@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 21, 2026  
-**Version:** 1.5.25
+**Last Updated:** January 23, 2026  
+**Version:** 1.5.26
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -75,15 +75,15 @@ All previously identified P0 and P1 issues have been resolved:
 
 ---
 
-## Test Coverage Status (January 21, 2026)
+## Test Coverage Status (January 23, 2026)
 
 | Metric | Value | Status |
-|--------|-------|--------|
-| Tests passing | **9,783** (153 suites) | ✅ |
-| Statement coverage | **93.52%** | ✅ Excellent |
-| Branch coverage | **83.89%** | ✅ Good |
-| Function coverage | **91.37%** | ✅ Excellent |
-| Line coverage | **93.68%** | ✅ Excellent |
+|--------|-------|---------|
+| Tests passing | **9,967** (156 suites) | ✅ |
+| Statement coverage | **92.59%** | ✅ Excellent |
+| Branch coverage | **83.02%** | ✅ Good |
+| Function coverage | **90.78%** | ✅ Excellent |
+| Line coverage | **92.73%** | ✅ Excellent |
 
 ---
 
@@ -124,5 +124,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 21, 2026*  
-*Status: ✅ Production-ready with excellent test coverage (93.52%, 9,783 tests).*
+*Document updated: January 23, 2026*  
+*Status: ✅ Production-ready with excellent test coverage (92.59%, 9,967 tests).*

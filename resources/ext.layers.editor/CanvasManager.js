@@ -1569,6 +1569,34 @@ class CanvasManager {
 	}
 
 	/**
+	 * Set slide mode (no background image, custom dimensions and color)
+	 * Called when editing a slide instead of a file image.
+	 *
+	 * @param {boolean} isSlide - Whether editor is in slide mode
+	 */
+	setSlideMode( isSlide ) {
+		this.isSlideMode = isSlide;
+		if ( this.renderer ) {
+			this.renderer.setSlideMode( isSlide );
+		}
+	}
+
+	/**
+	 * Set slide background color
+	 * Only used in slide mode (setSlideMode must be called first)
+	 *
+	 * @param {string} color - Background color (e.g. '#ffffff', 'transparent')
+	 */
+	setBackgroundColor( color ) {
+		this.slideBackgroundColor = color || 'transparent';
+		if ( this.renderer ) {
+			this.renderer.setSlideBackgroundColor( color );
+		}
+		// Redraw to show new background
+		this.redraw();
+	}
+
+	/**
 	 * Resize canvas to match container size while maintaining aspect ratio.
 	 * Updates viewport bounds for layer culling.
 	 */

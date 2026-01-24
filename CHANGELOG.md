@@ -2,6 +2,45 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.27] - 2026-01-24
+
+### Fixed
+- **Slide Mode: Background Opacity Not Updating After Save** — Fixed bug where changing the background opacity slider in the slide editor would save correctly but not visually update on the article page until a hard refresh. Root cause: the container's CSS `background-color` (set by PHP during initial page render) was showing through the canvas, which draws the background with `globalAlpha` for opacity. Solution: in `ViewerManager.js`, both `reinitializeSlideViewer()` and `initializeSlideViewer()` now set `container.style.backgroundColor = 'transparent'` when opacity < 1, ensuring only the canvas-drawn background (with proper opacity) is visible.
+- **parseInt Radix Parameter** — Added explicit radix (10) to all 9 parseInt calls in ValidationHelpers.js and NumericValidator.js for robustness.
+
+### Added
+- **EmojiPickerPanel E2E Tests** — Added 17 Playwright E2E tests covering emoji picker functionality: opening/closing, panel structure, category navigation, search, emoji selection, and performance testing.
+- **Error Handling Documentation** — Added comprehensive error handling guidelines to CONTRIBUTING.md with three documented patterns and clear rules.
+
+### Technical Details
+- All 9,994 tests pass (156 test suites)
+- Added 4 new tests for `drawSlideBackground()` opacity handling
+- Updated ViewerManager mock contexts to include `save`, `restore`, `globalAlpha`
+- Test coverage: 92.24% statement, 82.47% branch
+- ESLint/Stylelint/Banana all pass
+
+---
+
+## [1.5.26] - 2026-01-23
+
+### Fixed
+- **CORE-6: StateManager Dead Code** — Removed dead `undo()`, `redo()`, and `restoreState()` methods from StateManager. These methods were never called since `saveToHistory()` is disabled. HistoryManager handles all undo/redo functionality.
+- **CORE-7: StateManager Lock Timeout Recovery** — Added recovery check at start of `lockState()` that detects and logs when recovery from a stuck lock occurs. When `lockStuckSince` is set and a new lock succeeds, it logs the stuck duration and clears the flag.
+- **CORE-9: HistoryManager Bounds Check** — Added defensive bounds check in `undo()` and `redo()` methods. If the state at the computed index is undefined, the method logs an error, restores the index, and returns `false`.
+- **CORE-8: API Timeout Handling** — Verified already handled by mw.Api default 30-second timeout. Added missing i18n messages for `layers-timeout-error` and `layers-network-error`.
+
+### Changed
+- **SM-1, SM-5 Closed** — User testing confirmed these were not reproducible bugs
+
+### Technical Details
+- All 9,967 tests pass (156 test suites)
+- Added 4 new CORE-9 bounds check tests for HistoryManager
+- Updated StateManager and LayerWorkflow integration tests for removed methods
+- Test coverage: 92.59% statement, 83.02% branch
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## [1.5.25] - 2026-01-24
 
 ### Fixed

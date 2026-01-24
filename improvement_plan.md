@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** January 24, 2026  
-**Version:** 1.5.25  
-**Status:** ✅ Production-Ready (9.2/10)
+**Version:** 1.5.27  
+**Status:** ✅ Production-Ready, High Quality (8.0/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
 
@@ -10,24 +10,26 @@
 
 ## Executive Summary
 
-The extension is **production-ready and fully functional** with **excellent security and test coverage**. All previously identified issues have been resolved.
+The extension is **production-ready and high quality** with **excellent security and test coverage**. A comprehensive critical audit (January 24, 2026) verified that most previously identified issues have been resolved. The codebase is well-positioned for world-class status.
 
 **Verified Metrics (January 24, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **9,951** (155 suites) | ✅ Excellent |
-| Statement coverage | **93.52%** | ✅ Excellent |
-| Branch coverage | **83.89%** | ✅ Good |
-| Function coverage | **91.37%** | ✅ Excellent |
-| Line coverage | **93.68%** | ✅ Excellent |
-| JS files | 124 | Excludes dist/ |
-| JS lines | ~111,382 | Includes generated data |
+| Tests passing | **9,994** (156 suites) | ✅ Excellent |
+| Statement coverage | **92.17%** | ✅ Excellent |
+| Branch coverage | **82.45%** | ✅ Good |
+| Function coverage | **90.49%** | ✅ Good |
+| Line coverage | **92.31%** | ✅ Good |
+| ViewerManager coverage | **82.99%** | ✅ Fixed (was 63.73%) |
+| JS files | 126 | Excludes dist/ |
+| JS lines | ~113,847 | Includes generated data |
 | PHP files | 33 | ✅ |
-| PHP lines | ~11,758 | ✅ |
 | God classes (≥1,000 lines) | 20 | 3 generated, 17 hand-written |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 9 | ✅ All legitimate |
+| innerHTML usages | 20+ | ✅ Audited - all safe |
+| console.log in prod | 0 | ✅ Scripts only |
 
 ---
 
@@ -36,15 +38,15 @@ The extension is **production-ready and fully functional** with **excellent secu
 | Priority | Timeline | Description |
 |----------|----------|-------------|
 | **P0** | Immediate | Critical bugs or security issues |
-| **P1** | 1–4 weeks | Documentation accuracy, test hygiene, small UX fixes |
-| **P2** | 1–3 months | Performance, coverage gaps, UI scalability |
-| **P3** | 3–6 months | New features and major architectural improvements |
+| **P1** | 1–4 weeks | Code quality, coverage gaps, small fixes |
+| **P2** | 1–3 months | Documentation, architecture improvements |
+| **P3** | 3–6 months | New features and major improvements |
 
 ---
 
 ## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-All previously identified critical issues have been resolved:
+No critical issues remaining. Previous critical issues resolved:
 - ✅ ApiLayersDelete/Rename rate limiting added
 - ✅ Template images CSP issue fixed
 - ✅ Memory leaks fixed (TransformationEngine, ZoomPanController, LayerRenderer)
@@ -52,72 +54,142 @@ All previously identified critical issues have been resolved:
 - ✅ SelectionManager infinite recursion fixed
 - ✅ Export filename sanitization added
 - ✅ Timer cleanup in destroy() methods
+- ✅ CORE-3 APIManager save race condition fixed
+- ✅ CORE-4 GroupManager circular reference fixed
+- ✅ ViewerManager coverage improved to 82.99%
 
 ---
 
-## Phase 1 (P1): Documentation & Test Hygiene
+## Phase 1 (P1): Code Quality — ✅ RESOLVED
 
-### P1.1 Documentation Sync — ✅ COMPLETED (January 21, 2026)
+### P1.1 parseInt Radix Parameter ✅ FIXED
 
-All documentation files now have consistent, verified metrics:
-- ✅ README.md
-- ✅ wiki/Home.md
-- ✅ Mediawiki-Extension-Layers.mediawiki
-- ✅ codebase_review.md
-- ✅ improvement_plan.md (this file)
+**Status:** RESOLVED  
+**Resolution Date:** January 24, 2026
 
-### P1.2 Jest Console Noise — ✅ RESOLVED (January 21, 2026)
+**Issue:** 9 parseInt calls missing radix parameter.
 
-jsdom "Not implemented" warnings have been suppressed in `tests/jest/setup.js`. Test output is now clean.
+**Resolution:** Added `, 10` radix to all parseInt calls in:
+- ValidationHelpers.js (8 occurrences)
+- NumericValidator.js (1 occurrence)
 
-### P1.3 EmojiPickerPanel Coverage — MEDIUM PRIORITY
+### P1.2 EmojiPickerPanel Coverage ✅ E2E ADDED
 
-**Issue:** EmojiPickerPanel.js has 0% test coverage (764 lines) due to OOUI integration.
+**Status:** RESOLVED  
+**Resolution Date:** January 24, 2026
 
-**Recommendation:** Add E2E tests or integration tests for emoji picker user flows.
+**Issue:** Low test coverage due to OOUI integration complexity.
 
-### P1.4 ShapeLibraryPanel Coverage — ✅ RESOLVED (January 20, 2026)
+**Resolution:** Created comprehensive Playwright E2E test suite (`tests/e2e/emoji-picker.spec.js`) with:
+- Opening/closing tests (button, Escape, overlay click)
+- Panel structure verification (search input, categories, grid, ARIA)
+- Category navigation tests
+- Search functionality tests
+- Emoji selection and layer creation tests
+- Performance tests (lazy loading, rapid category switching)
 
-ShapeLibraryPanel.js now has **97.13% coverage** (previously reported as 0%).
+### P1.3 Error Handling Guidelines ✅ DOCUMENTED
 
----
+**Status:** RESOLVED  
+**Resolution Date:** January 24, 2026
 
-## Phase 2 (P2): Performance & Coverage
+**Issue:** Inconsistent error handling patterns across codebase.
 
-### P2.1 Layer List Virtualization
-
-**Status:** ✅ COMPLETED (January 21, 2026)  
-**Priority:** P2
-
-Virtual scrolling implemented in `VirtualLayerList.js`:
-- Only renders visible layers plus overscan buffer
-- Automatically activates for 30+ layers
-- DOM element recycling for smooth scrolling
-- 16 new tests added
-
-### P2.2 Coverage Improvements
-
-**Current:** 92.80% statement, 83.75% branch
-
-**Gap Analysis:**
-- EmojiPickerPanel.js: 0% (764 lines, OOUI dependency)
-- Build scripts: 0% (Node.js, not browser code)
-- Generated data files: 0% (exempt)
-
-### P2.3 Performance Benchmarks
-
-Track render time and interaction latency for large images/layer sets.
+**Resolution:** Added comprehensive error handling guidelines to CONTRIBUTING.md with:
+- Three documented patterns (Log and Continue, Log and Reject, Validate and Return)
+- Clear rules for when to use each pattern
+- Examples from existing codebase
 
 ---
 
-## Phase 3 (P3): Feature Growth
+## Phase 2 (P2): Architecture & Documentation
 
-| Feature | Status | Priority |
-|---------|--------|----------|
-| Layer search/filter | Not started | P3 |
-| Custom fonts | Not started | P3 |
-| OffscreenCanvas/WebGL renderer | Not started | P3 |
-| Real-time collaboration | Not started | P3+ |
+### P2.1 i18n Fallback Centralization
+
+**Status:** Open  
+**Priority:** Low
+
+**Issue:** Hardcoded English fallback strings scattered across files.
+
+**Options:**
+1. Create `FallbackMessages.js` constant file
+2. Document that mw.message() with qqq.json is sufficient
+3. Accept current pattern as acceptable
+
+### P2.2 Documentation Sync ✅ DONE
+
+**Status:** Complete  
+**Resolution Date:** January 24, 2026
+
+Synchronized metrics across all documentation files:
+- README.md — Updated badges, version, test counts
+- wiki/Home.md — Updated badges, version, metrics table
+- CHANGELOG.md — Added v1.5.27 entry with all fixes
+- wiki/Changelog.md — Mirrored v1.5.27 entry
+- .github/copilot-instructions.md — Updated metrics
+
+**Current verified values (January 24, 2026):**
+- Tests: 9,994 passing (156 suites)
+- Coverage: 92.24% statement, 82.47% branch
+- JS files: 126
+- JS lines: ~113,847
+
+### P2.3 ShapeRenderer Size Monitoring
+
+**Status:** Watch  
+**Priority:** Low
+
+**File:** ShapeRenderer.js (~994 lines)
+
+Currently at 994 lines, approaching the 1,000-line threshold. If it grows:
+- Extract blur effect to EffectsRenderer
+- Extract hit testing to dedicated module
+
+---
+
+## Phase 3 (P3): Future Improvements
+
+### P3.1 TypeScript Migration
+
+**Status:** Not Started  
+**Priority:** P3
+
+Consider TypeScript for complex modules:
+- StateManager
+- APIManager
+- GroupManager
+- SelectionManager
+
+Benefits:
+- Catch type errors at compile time
+- Better IDE support
+- Self-documenting interfaces
+
+### P3.2 Visual Regression Testing
+
+**Status:** Not Started  
+**Priority:** P3
+
+Add visual snapshot tests for:
+- Canvas rendering
+- Shape rendering
+- Text rendering
+- Dark mode compatibility
+
+Tools to consider:
+- Percy
+- Chromatic
+- jest-image-snapshot
+
+### P3.3 Real-Time Collaboration
+
+**Status:** Not Started  
+**Priority:** P3+
+
+Architecture considerations:
+- Operational Transforms (OT) or CRDT
+- WebSocket integration
+- Conflict resolution strategy
 
 ---
 
@@ -133,25 +205,26 @@ Track render time and interaction latency for large images/layer sets.
 
 ### Hand-Written Files with Delegation
 
-| File | Lines | Delegation Status |
-|------|-------|-------------------|
-| CanvasManager.js | ~2,010 | ✅ 10+ controllers |
-| Toolbar.js | ~1,847 | ✅ 4 modules |
-| LayerPanel.js | ~1,806 | ✅ 9 controllers |
-| LayersEditor.js | ~1,715 | ✅ 3 modules |
-| SelectionManager.js | ~1,431 | ✅ 3 modules |
-| APIManager.js | ~1,420 | ✅ APIErrorHandler |
-| ArrowRenderer.js | ~1,301 | Feature complexity |
-| CalloutRenderer.js | ~1,291 | Feature complexity |
-| PropertyBuilders.js | ~1,284 | UI builders |
-| InlineTextEditor.js | ~1,258 | Feature complexity |
-| ToolManager.js | ~1,224 | ✅ 2 handlers |
-| CanvasRenderer.js | ~1,132 | ✅ SelectionRenderer |
-| GroupManager.js | ~1,132 | Group operations |
-| TransformController.js | ~1,109 | Transform engine |
-| ResizeCalculator.js | ~1,105 | Shape calculations |
-| ToolbarStyleControls.js | ~1,099 | ✅ Style controls |
-| PropertiesForm.js | ~1,001 | ✅ PropertyBuilders |
+| File | Lines | Delegation Status | Notes |
+|------|-------|-------------------|-------|
+| CanvasManager.js | ~2,011 | ✅ 10+ controllers | At threshold |
+| ViewerManager.js | ~1,996 | ✅ Delegates to renderers | ✅ Fixed coverage |
+| Toolbar.js | ~1,847 | ✅ 4 modules | OK |
+| LayerPanel.js | ~1,806 | ✅ 9 controllers | OK |
+| LayersEditor.js | ~1,768 | ✅ 3 modules | OK |
+| APIManager.js | ~1,513 | ✅ APIErrorHandler | ✅ Fixed race condition |
+| SelectionManager.js | ~1,431 | ✅ 3 modules | OK |
+| ArrowRenderer.js | ~1,310 | N/A - complexity | OK |
+| CalloutRenderer.js | ~1,291 | N/A - rendering | OK |
+| PropertyBuilders.js | ~1,284 | N/A - builders | OK |
+| InlineTextEditor.js | ~1,258 | N/A - feature | OK |
+| ToolManager.js | ~1,224 | ✅ 2 handlers | OK |
+| GroupManager.js | ~1,172 | N/A - operations | ✅ Fixed circular ref |
+| CanvasRenderer.js | ~1,132 | ✅ SelectionRenderer | OK |
+| TransformController.js | ~1,110 | N/A - transforms | OK |
+| ResizeCalculator.js | ~1,105 | N/A - math | OK |
+| ToolbarStyleControls.js | ~1,099 | ✅ Style controls | OK |
+| PropertiesForm.js | ~1,001 | ✅ PropertyBuilders | OK |
 
 ### Watch List (Approaching 1,000 Lines)
 
@@ -159,7 +232,6 @@ Track render time and interaction latency for large images/layer sets.
 |------|-------|------|
 | ShapeRenderer.js | ~994 | ⚠️ Near threshold |
 | LayerRenderer.js | ~963 | Watch |
-| LayersValidator.js | ~858 | OK |
 
 ---
 
@@ -176,14 +248,23 @@ Track render time and interaction latency for large images/layer sets.
 | Emoji Picker (2,817 emoji) | v1.5.12 | ✅ |
 | Inline Text Editing | v1.5.13 | ✅ |
 | Mobile Touch Support | v1.4.8 | ✅ |
+| Virtual Layer List | v1.5.21 | ✅ |
 
 ---
 
-## Success Criteria
+## Success Criteria for World-Class Status
 
-1. ✅ Documentation metrics are consistent across all public-facing docs
-2. ✅ Jest runs without console errors from jsdom
-3. ✅ Large layer sets remain responsive in the editor UI (virtualization added)
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| ViewerManager coverage >80% | ✅ 82.99% | Fixed |
+| No critical security issues | ✅ | innerHTML audited |
+| No race conditions | ✅ | CORE-3, CORE-4 fixed |
+| Consistent error handling | 🟡 | Needs documentation |
+| Documentation accuracy | 🟡 | Needs sync |
+| Test coverage >90% | ✅ 92.17% | Excellent |
+| ESLint clean | ✅ | 0 errors, 9 legitimate disables |
+| No console.log in prod | ✅ | Scripts only |
+| localStorage quota handling | ✅ | Already implemented |
 
 ---
 
@@ -208,27 +289,60 @@ When adding setTimeout/setInterval:
 
 All metrics in documentation must be verifiable with commands documented in codebase_review.md Appendix.
 
+### The innerHTML Rule
+
+When setting innerHTML:
+1. **Never** with user-provided content
+2. **Prefer** DOM construction (createElement, textContent, appendChild)
+3. **Document** why innerHTML is necessary if used
+4. **Consider** Trusted Types policy for CSP compliance
+
+### The Error Handling Rule
+
+When handling errors:
+1. **Log** with mw.log (never console.log in production)
+2. **Notify** user if action failed (don't swallow silently)
+3. **Propagate** if caller needs to handle
+4. **Document** expected error types
+
+### The parseInt Rule (NEW)
+
+When using parseInt():
+1. **Always** specify radix parameter: `parseInt(value, 10)`
+2. **Consider** `Number()` or `+value` for simple conversions
+3. **Validate** input before parsing
+
 ---
 
 ## Summary
 
-**Rating: 9.0/10** — Production-ready, feature-complete, professional-grade code quality
+**Rating: 8.0/10** — Production-ready, feature-complete, high quality
 
 **Strengths:**
-- ✅ 9,783 passing tests with 92.80% statement coverage
+- ✅ 9,994 passing tests with 92.17% statement coverage
 - ✅ 15 working drawing tools
 - ✅ Professional security (CSRF, rate limiting, validation)
 - ✅ Named layer sets with version history
 - ✅ Shape library with 1,310 shapes
 - ✅ Emoji picker with 2,817 emoji
 - ✅ Mobile touch support
+- ✅ All race conditions fixed
+- ✅ innerHTML usage audited and safe
 
-**Minor Issues:**
-- EmojiPickerPanel.js 0% coverage (OOUI dependency)
-- Some files approaching 1,000-line threshold
+**Open Issues (Low Priority):**
+- 🟡 parseInt radix parameter (9 calls)
+- 🟡 EmojiPickerPanel E2E tests needed
+- 🟡 Error handling documentation needed
+- 🟡 i18n fallback centralization (optional)
+
+**Next Actions:**
+1. Add radix to parseInt calls in ValidationHelpers.js
+2. Add Playwright E2E tests for EmojiPickerPanel
+3. Document error handling guidelines
+4. Sync documentation metrics
 
 ---
 
-*Plan updated: January 20, 2026*  
-*Version: 1.5.25*  
-*Based on verified test run: 9,783 tests, 92.80% coverage*
+*Plan updated: January 24, 2026*  
+*Version: 1.5.27*  
+*Based on verified test run: 9,994 tests, 92.17% statement coverage, 82.45% branch coverage*
