@@ -1849,3 +1849,473 @@ describe('LayersEditor normalizeLayers edge cases', () => {
         expect(result).toBe('not an array');
     });
 });
+
+describe('LayersEditor createCustomShapeLayer', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    test('should handle SVG format shapes with defaultStroke', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue([]),
+            set: jest.fn()
+        };
+        editorInstance.validationManager = {
+            sanitizeLayerData: jest.fn(data => data)
+        };
+        editorInstance.apiManager = {
+            generateLayerId: jest.fn().mockReturnValue('layer-123')
+        };
+        editorInstance.canvasManager = {
+            renderLayers: jest.fn(),
+            getVisibleCanvasRect: jest.fn().mockReturnValue({ x: 0, y: 0, width: 800, height: 600 }),
+            setTool: jest.fn()
+        };
+        editorInstance.layerPanel = {
+            updateLayerList: jest.fn()
+        };
+        editorInstance.saveState = jest.fn();
+        editorInstance.markDirty = jest.fn();
+        editorInstance.toolbar = null; // No toolbar
+
+        const shapeData = {
+            id: 'test-shape',
+            svg: '<svg><path/></svg>',
+            viewBox: [0, 0, 100, 100],
+            defaultStroke: '#ff0000',
+            defaultFill: '#0000ff'
+        };
+
+        editorInstance.createCustomShapeLayer(shapeData);
+
+        expect(editorInstance.stateManager.set).toHaveBeenCalled();
+        const setCall = editorInstance.stateManager.set.mock.calls[0];
+        expect(setCall[0]).toBe('layers');
+        expect(setCall[1][0].stroke).toBe('#ff0000');
+        expect(setCall[1][0].fill).toBe('#0000ff');
+    });
+
+    test('should handle multi-path shapes', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue([]),
+            set: jest.fn()
+        };
+        editorInstance.validationManager = {
+            sanitizeLayerData: jest.fn(data => data)
+        };
+        editorInstance.apiManager = {
+            generateLayerId: jest.fn().mockReturnValue('layer-123')
+        };
+        editorInstance.canvasManager = {
+            renderLayers: jest.fn(),
+            getVisibleCanvasRect: jest.fn().mockReturnValue({ x: 0, y: 0, width: 800, height: 600 }),
+            setTool: jest.fn()
+        };
+        editorInstance.layerPanel = {
+            updateLayerList: jest.fn()
+        };
+        editorInstance.saveState = jest.fn();
+        editorInstance.markDirty = jest.fn();
+        editorInstance.toolbar = null;
+
+        const shapeData = {
+            id: 'multi-path-shape',
+            paths: [
+                { path: 'M0,0 L100,100', fill: '#ff0000' },
+                { path: 'M100,0 L0,100', fill: '#00ff00' }
+            ],
+            viewBox: [0, 0, 100, 100]
+        };
+
+        editorInstance.createCustomShapeLayer(shapeData);
+
+        const setCall = editorInstance.stateManager.set.mock.calls[0];
+        expect(setCall[1][0].isMultiPath).toBe(true);
+        expect(setCall[1][0].paths).toEqual(shapeData.paths);
+    });
+
+    test('should handle single-path strokeOnly shapes', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue([]),
+            set: jest.fn()
+        };
+        editorInstance.validationManager = {
+            sanitizeLayerData: jest.fn(data => data)
+        };
+        editorInstance.apiManager = {
+            generateLayerId: jest.fn().mockReturnValue('layer-123')
+        };
+        editorInstance.canvasManager = {
+            renderLayers: jest.fn(),
+            getVisibleCanvasRect: jest.fn().mockReturnValue({ x: 0, y: 0, width: 800, height: 600 }),
+            setTool: jest.fn()
+        };
+        editorInstance.layerPanel = {
+            updateLayerList: jest.fn()
+        };
+        editorInstance.saveState = jest.fn();
+        editorInstance.markDirty = jest.fn();
+        editorInstance.toolbar = {
+            styleControls: {
+                getStyleOptions: jest.fn().mockReturnValue({
+                    stroke: '#333333',
+                    fill: '#cccccc',
+                    strokeWidth: 3
+                })
+            },
+            setActiveTool: jest.fn()
+        };
+
+        const shapeData = {
+            id: 'stroke-shape',
+            path: 'M0,0 L100,100',
+            strokeOnly: true,
+            viewBox: [0, 0, 100, 100],
+            defaultStroke: '#0000ff',
+            strokeWidth: 5
+        };
+
+        editorInstance.createCustomShapeLayer(shapeData);
+
+        const setCall = editorInstance.stateManager.set.mock.calls[0];
+        expect(setCall[1][0].fill).toBe('transparent');
+        expect(setCall[1][0].stroke).toBe('#0000ff');
+        expect(setCall[1][0].strokeWidth).toBe(5);
+    });
+
+    test('should return early for invalid shape data', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn(),
+            set: jest.fn()
+        };
+        editorInstance.debugLog = jest.fn();
+        editorInstance.debug = false;
+
+        // No svg, path, or paths
+        editorInstance.createCustomShapeLayer({ id: 'empty' });
+
+        expect(editorInstance.stateManager.set).not.toHaveBeenCalled();
+    });
+});
+
+describe('LayersEditor manager delegation methods', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    test('createNewLayerSet should delegate to revisionManager', async () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.revisionManager = {
+            createNewLayerSet: jest.fn().mockResolvedValue(true)
+        };
+
+        const result = await editorInstance.createNewLayerSet('test-set');
+
+        expect(editorInstance.revisionManager.createNewLayerSet).toHaveBeenCalledWith('test-set');
+        expect(result).toBe(true);
+    });
+
+    test('createNewLayerSet should return false when revisionManager unavailable', async () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.revisionManager = null;
+
+        const result = await editorInstance.createNewLayerSet('test-set');
+
+        expect(result).toBe(false);
+    });
+
+    test('loadRevisionById should delegate to revisionManager', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.revisionManager = {
+            loadRevisionById: jest.fn()
+        };
+
+        editorInstance.loadRevisionById(42);
+
+        expect(editorInstance.revisionManager.loadRevisionById).toHaveBeenCalledWith(42);
+    });
+
+    test('loadRevisionById should do nothing when revisionManager unavailable', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.revisionManager = null;
+
+        expect(() => editorInstance.loadRevisionById(42)).not.toThrow();
+    });
+
+    test('showKeyboardShortcutsDialog should delegate to dialogManager', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.dialogManager = {
+            showKeyboardShortcutsDialog: jest.fn()
+        };
+
+        editorInstance.showKeyboardShortcutsDialog();
+
+        expect(editorInstance.dialogManager.showKeyboardShortcutsDialog).toHaveBeenCalled();
+    });
+
+    test('showKeyboardShortcutsDialog should do nothing when dialogManager unavailable', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.dialogManager = null;
+
+        expect(() => editorInstance.showKeyboardShortcutsDialog()).not.toThrow();
+    });
+});
+
+describe('LayersEditor navigateBackToFileWithName', () => {
+    let LayersEditor;
+    let originalLocation;
+    let originalHistory;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+
+        // Save originals
+        originalLocation = window.location;
+        originalHistory = window.history;
+    });
+
+    afterEach(() => {
+        // Restore originals
+        delete window.location;
+        window.location = originalLocation;
+        window.history = originalHistory;
+    });
+
+    test('should use history.back for slides when history available', () => {
+        const mockBack = jest.fn();
+        Object.defineProperty(window, 'history', {
+            value: { back: mockBack, length: 2 },
+            writable: true,
+            configurable: true
+        });
+        delete window.location;
+        window.location = { href: '', reload: jest.fn() };
+
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue(true) // isSlide = true
+        };
+
+        editorInstance.navigateBackToFileWithName('Test.png');
+
+        expect(mockBack).toHaveBeenCalled();
+    });
+
+    test('should fallback to Special:Slides when no history for slides', () => {
+        Object.defineProperty(window, 'history', {
+            value: { length: 1 },
+            writable: true,
+            configurable: true
+        });
+        
+        global.mw = {
+            config: {
+                get: jest.fn().mockReturnValue(null) // Not modal mode, no return URL
+            },
+            util: {
+                getUrl: jest.fn().mockReturnValue('/wiki/Special:Slides')
+            }
+        };
+
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue(true) // isSlide = true
+        };
+
+        editorInstance.navigateBackToFileWithName('Test.png');
+
+        // Verify mw.util.getUrl was called with Special:Slides
+        expect(global.mw.util.getUrl).toHaveBeenCalledWith('Special:Slides');
+    });
+
+    test('should navigate to File: page for non-slides', () => {
+        global.mw = {
+            config: {
+                get: jest.fn().mockReturnValue(null) // Not modal mode, no return URL
+            },
+            util: {
+                getUrl: jest.fn().mockReturnValue('/wiki/File:Test.png')
+            }
+        };
+
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue(false) // isSlide = false
+        };
+
+        editorInstance.navigateBackToFileWithName('Test.png');
+
+        // Verify mw.util.getUrl was called with correct params
+        expect(global.mw.util.getUrl).toHaveBeenCalledWith('File:Test.png', { layers: 'on' });
+    });
+
+    test('should use history.back as fallback when no filename', () => {
+        const mockBack = jest.fn();
+        Object.defineProperty(window, 'history', {
+            value: { back: mockBack, length: 2 },
+            writable: true,
+            configurable: true
+        });
+        delete window.location;
+        window.location = { href: '', reload: jest.fn() };
+        
+        global.mw = {
+            config: {
+                get: jest.fn().mockReturnValue(null)
+            }
+        };
+
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue(false) // isSlide = false
+        };
+
+        editorInstance.navigateBackToFileWithName(null);
+
+        expect(mockBack).toHaveBeenCalled();
+    });
+
+    test('should reload as last fallback', () => {
+        // Set up window.history with length 1 (no back history)
+        Object.defineProperty(window, 'history', {
+            value: { length: 1, back: jest.fn() },
+            writable: true,
+            configurable: true
+        });
+        
+        // Remove mw to ensure we hit the reload fallback
+        global.mw = undefined;
+
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue(false) // isSlide = false
+        };
+
+        // The method should hit the catch block or the reload() call
+        // Since window.location.reload in JSDOM doesn't do anything, 
+        // we just verify the method completes without error
+        expect(() => editorInstance.navigateBackToFileWithName(null)).not.toThrow();
+    });
+});
+
+describe('LayersEditor slide mode configuration', () => {
+    let LayersEditor;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.StateManager = StateManager;
+        window.HistoryManager = HistoryManager;
+        require('../../resources/ext.layers.editor/LayersEditor.js');
+        LayersEditor = window.Layers.Core.Editor;
+    });
+
+    test('initializeUIComponents should configure slide mode when isSlide is true', () => {
+        const mockSetBaseDimensions = jest.fn();
+        const mockSetSlideMode = jest.fn();
+        const mockSetBackgroundColor = jest.fn();
+
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.debug = false;
+        editorInstance.debugLog = jest.fn();
+        editorInstance.registry = {
+            register: jest.fn(),
+            get: jest.fn((key) => {
+                if (key === 'CanvasManager') {
+                    return {
+                        setBaseDimensions: mockSetBaseDimensions,
+                        setSlideMode: mockSetSlideMode,
+                        setBackgroundColor: mockSetBackgroundColor
+                    };
+                }
+                return null;
+            })
+        };
+        editorInstance.stateManager = {
+            get: jest.fn((key) => {
+                const state = {
+                    isSlide: true,
+                    slideCanvasWidth: 1920,
+                    slideCanvasHeight: 1080,
+                    slideBackgroundColor: '#ffffff'
+                };
+                return state[key];
+            })
+        };
+        editorInstance.uiManager = {
+            canvasContainer: document.createElement('div'),
+            layerPanelContainer: document.createElement('div')
+        };
+        editorInstance.toolbar = null;
+        editorInstance.layerPanel = null;
+
+        // Subscribe handler
+        editorInstance.subscribeToSelectionChanges = jest.fn();
+
+        editorInstance.initializeUIComponents();
+
+        expect(mockSetBaseDimensions).toHaveBeenCalledWith(1920, 1080);
+        expect(mockSetSlideMode).toHaveBeenCalledWith(true);
+        expect(mockSetBackgroundColor).toHaveBeenCalledWith('#ffffff');
+    });
+
+    test('initializeUIComponents should use defaults for slide mode when values missing', () => {
+        const mockSetBaseDimensions = jest.fn();
+        const mockSetSlideMode = jest.fn();
+        const mockSetBackgroundColor = jest.fn();
+
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.debug = false;
+        editorInstance.debugLog = jest.fn();
+        editorInstance.registry = {
+            register: jest.fn(),
+            get: jest.fn((key) => {
+                if (key === 'CanvasManager') {
+                    return {
+                        setBaseDimensions: mockSetBaseDimensions,
+                        setSlideMode: mockSetSlideMode,
+                        setBackgroundColor: mockSetBackgroundColor
+                    };
+                }
+                return null;
+            })
+        };
+        editorInstance.stateManager = {
+            get: jest.fn((key) => {
+                if (key === 'isSlide') return true;
+                return null; // Other values not set
+            })
+        };
+        editorInstance.uiManager = {
+            canvasContainer: document.createElement('div'),
+            layerPanelContainer: document.createElement('div')
+        };
+        editorInstance.toolbar = null;
+        editorInstance.layerPanel = null;
+        editorInstance.subscribeToSelectionChanges = jest.fn();
+
+        editorInstance.initializeUIComponents();
+
+        expect(mockSetBaseDimensions).toHaveBeenCalledWith(800, 600); // defaults
+        expect(mockSetBackgroundColor).toHaveBeenCalledWith('transparent'); // default
+    });
+});
