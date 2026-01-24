@@ -3802,4 +3802,99 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 	} );
+
+	describe( 'reinitializeViewer error handling', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should return false when viewer reinitialization throws', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { 
+				destroy: jest.fn( () => {
+					throw new Error( 'Destroy failed' );
+				} )
+			};
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			// Should catch the error and return false
+			const result = manager.reinitializeViewer( img, { layers: [] } );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle null layerData gracefully', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			// Should handle null and return false
+			const result = manager.reinitializeViewer( img, null );
+			expect( result ).toBe( false );
+		} );
+	} );
+
+	describe( 'refreshAllViewers edge cases', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should handle when mw.Api is not available', () => {
+			const originalMw = global.mw;
+			global.mw = { ...mockMw, Api: undefined };
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				expect( result.failed ).toBeGreaterThan( 0 );
+				expect( result.errors[ 0 ].error ).toContain( 'mw.Api not available' );
+				global.mw = originalMw;
+			} );
+		} );
+
+		it( 'should handle viewer processing error during refresh', () => {
+			mockApi.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [] }
+					}
+				}
+			} );
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			// Mock reinitializeViewer to throw
+			manager.reinitializeViewer = jest.fn( () => {
+				throw new Error( 'Reinit failed' );
+			} );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				expect( result.errors.length ).toBeGreaterThan( 0 );
+			} );
+		} );
+	} );
 } );

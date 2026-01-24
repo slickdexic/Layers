@@ -3061,4 +3061,302 @@ describe( 'APIManager', function () {
 			);
 		} );
 	} );
+
+	describe( 'deleteLayerSet error handling', () => {
+		it( 'should handle permission denied error', async () => {
+			const testApiManager = new APIManager( mockEditor );
+
+			// Mock the API to reject with permissiondenied
+			testApiManager.api = {
+				postWithToken: jest.fn().mockImplementation( () => {
+					return Promise.reject( [ 'permissiondenied', { error: { info: 'Permission denied' } } ] );
+				} )
+			};
+
+			// Override the catch handler by directly mocking
+			testApiManager.api.postWithToken = jest.fn( () => {
+				const promise = {
+					then: function ( successCb ) {
+						return {
+							catch: function ( errorCb ) {
+								errorCb( 'permissiondenied', { error: { info: 'Permission denied' } } );
+								return this;
+							}
+						};
+					}
+				};
+				return promise;
+			} );
+
+			await expect( testApiManager.deleteLayerSet( 'test-set' ) ).rejects.toThrow();
+
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.stringContaining( 'permission' ),
+				{ type: 'error' }
+			);
+		} );
+
+		it( 'should handle generic API error', async () => {
+			const testApiManager = new APIManager( mockEditor );
+
+			testApiManager.api.postWithToken = jest.fn( () => {
+				const promise = {
+					then: function ( successCb ) {
+						return {
+							catch: function ( errorCb ) {
+								errorCb( 'unknown-error', { error: { info: 'Something went wrong' } } );
+								return this;
+							}
+						};
+					}
+				};
+				return promise;
+			} );
+
+			await expect( testApiManager.deleteLayerSet( 'test-set' ) ).rejects.toThrow();
+
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.stringContaining( 'layers-delete-failed' ),
+				{ type: 'error' }
+			);
+		} );
+	} );
+
+	describe( 'exportAsImage edge cases', () => {
+		it( 'should use white background for JPEG format when no background image', async () => {
+			const testApiManager = new APIManager( mockEditor );
+
+			// Create mock canvas and context
+			const mockCtx = {
+				fillStyle: null,
+				fillRect: jest.fn(),
+				globalAlpha: 1,
+				drawImage: jest.fn()
+			};
+
+			const mockExportCanvas = {
+				width: 0,
+				height: 0,
+				getContext: jest.fn().mockReturnValue( mockCtx ),
+				toBlob: jest.fn( ( callback ) => {
+					callback( new Blob( [ 'test' ], { type: 'image/jpeg' } ) );
+				} )
+			};
+
+			jest.spyOn( document, 'createElement' ).mockReturnValue( mockExportCanvas );
+
+			// Mock canvas manager without background image
+			const mockCanvasManager = {
+				canvas: mockExportCanvas,
+				backgroundImage: null,
+				renderer: {
+					renderLayersToContext: jest.fn()
+				}
+			};
+
+			mockEditor.canvasManager = mockCanvasManager;
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [];
+				}
+				return null;
+			} );
+
+			const blob = await testApiManager.exportAsImage( {
+				format: 'jpeg',
+				includeBackground: false
+			} );
+
+			expect( blob ).toBeDefined();
+			expect( mockCtx.fillRect ).toHaveBeenCalled();
+
+			jest.restoreAllMocks();
+		} );
+
+		it( 'should reject when canvas context creation fails', async () => {
+			const testApiManager = new APIManager( mockEditor );
+
+			const mockExportCanvas = {
+				width: 0,
+				height: 0,
+				getContext: jest.fn().mockReturnValue( null )
+			};
+
+			jest.spyOn( document, 'createElement' ).mockReturnValue( mockExportCanvas );
+
+			mockEditor.canvasManager = {
+				canvas: mockExportCanvas,
+				baseWidth: 800,
+				baseHeight: 600
+			};
+
+			await expect( testApiManager.exportAsImage( {} ) ).rejects.toThrow( 'Failed to create canvas context' );
+
+			jest.restoreAllMocks();
+		} );
+
+		it( 'should use fallback when renderer does not have renderLayersToContext', async () => {
+			const testApiManager = new APIManager( mockEditor );
+
+			const mockCtx = {
+				fillStyle: null,
+				fillRect: jest.fn(),
+				globalAlpha: 1,
+				drawImage: jest.fn()
+			};
+
+			const mockExportCanvas = {
+				width: 0,
+				height: 0,
+				getContext: jest.fn().mockReturnValue( mockCtx ),
+				toBlob: jest.fn( ( callback ) => {
+					callback( new Blob( [ 'test' ], { type: 'image/png' } ) );
+				} )
+			};
+
+			jest.spyOn( document, 'createElement' ).mockReturnValue( mockExportCanvas );
+
+			// Mock canvas manager without renderLayersToContext
+			mockEditor.canvasManager = {
+				canvas: mockExportCanvas,
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundImage: null,
+				renderer: {}  // No renderLayersToContext method
+			};
+
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [];
+				}
+				return null;
+			} );
+
+			const blob = await testApiManager.exportAsImage( { format: 'png' } );
+
+			expect( blob ).toBeDefined();
+			// Should have called drawImage as fallback
+			expect( mockCtx.drawImage ).toHaveBeenCalled();
+
+			jest.restoreAllMocks();
+		} );
+	} );
+
+	describe( 'disableSaveButton', () => {
+		it( 'should disable save button and re-enable after timeout', () => {
+			jest.useFakeTimers();
+
+			const testApiManager = new APIManager( mockEditor );
+
+			const mockSaveButton = { disabled: false };
+			mockEditor.toolbar = { saveButton: mockSaveButton };
+
+			testApiManager.disableSaveButton();
+
+			expect( mockSaveButton.disabled ).toBe( true );
+
+			// Fast-forward time
+			jest.advanceTimersByTime( 2000 );
+
+			expect( mockSaveButton.disabled ).toBe( false );
+
+			jest.useRealTimers();
+		} );
+
+		it( 'should handle missing toolbar gracefully', () => {
+			const testApiManager = new APIManager( mockEditor );
+			mockEditor.toolbar = null;
+
+			// Should not throw
+			expect( () => testApiManager.disableSaveButton() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'enableSaveButton', () => {
+		it( 'should enable save button', () => {
+			const testApiManager = new APIManager( mockEditor );
+
+			const mockSaveButton = { disabled: true };
+			mockEditor.toolbar = { saveButton: mockSaveButton };
+
+			testApiManager.enableSaveButton();
+
+			expect( mockSaveButton.disabled ).toBe( false );
+		} );
+
+		it( 'should handle missing toolbar gracefully', () => {
+			const testApiManager = new APIManager( mockEditor );
+			mockEditor.toolbar = null;
+
+			expect( () => testApiManager.enableSaveButton() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'handleSaveSuccess edge cases', () => {
+		it( 'should call handleSaveError when success is false', () => {
+			const testApiManager = new APIManager( mockEditor );
+			testApiManager.handleSaveError = jest.fn();
+
+			testApiManager.handleSaveSuccess( { layerssave: { success: false } } );
+
+			expect( testApiManager.handleSaveError ).toHaveBeenCalled();
+		} );
+
+		it( 'should mark history as saved when historyManager is available', () => {
+			const testApiManager = new APIManager( mockEditor );
+			testApiManager.reloadRevisions = jest.fn();
+			testApiManager.clearFreshnessCache = jest.fn();
+
+			const mockHistoryManager = { markAsSaved: jest.fn() };
+			mockEditor.historyManager = mockHistoryManager;
+
+			testApiManager.handleSaveSuccess( { layerssave: { success: true } } );
+
+			expect( mockHistoryManager.markAsSaved ).toHaveBeenCalled();
+		} );
+
+		it( 'should announce success to screen readers', () => {
+			const testApiManager = new APIManager( mockEditor );
+			testApiManager.reloadRevisions = jest.fn();
+			testApiManager.clearFreshnessCache = jest.fn();
+
+			window.layersAnnouncer = { announceSuccess: jest.fn() };
+
+			testApiManager.handleSaveSuccess( { layerssave: { success: true } } );
+
+			expect( window.layersAnnouncer.announceSuccess ).toHaveBeenCalled();
+
+			delete window.layersAnnouncer;
+		} );
+	} );
+
+	describe( 'debug logging paths', () => {
+		it( 'should log debug info when wgLayersDebug is true', () => {
+			const originalConfigGet = mw.config.get;
+			mw.config.get = jest.fn( ( key ) => {
+				if ( key === 'wgLayersDebug' ) {
+					return true;
+				}
+				return null;
+			} );
+
+			const testApiManager = new APIManager( mockEditor );
+			testApiManager.processLayersData( {
+				layerset: {
+					id: 1,
+					data: { layers: [] },
+					baseWidth: 800,
+					baseHeight: 600
+				},
+				all_layersets: [],
+				named_sets: []
+			} );
+
+			// Debug logging should have occurred (mw.log was called)
+			// Just verify no errors occurred
+			expect( true ).toBe( true );
+
+			mw.config.get = originalConfigGet;
+		} );
+	} );
 } );

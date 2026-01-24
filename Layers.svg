@@ -1,0 +1,10 @@
+<svg width="500" height="400" viewBox="0 0 500 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M40 40V360H460" stroke="#3366CC" stroke-width="12" stroke-linecap="square"/>
+  <rect x="25" y="345" width="30" height="30" fill="white" stroke="#3366CC" stroke-width="8"/>
+
+  <text x="85" y="315" fill="#3366CC" font-family="sans-serif" font-weight="bold" font-size="95" letter-spacing="-2">Layers</text>
+
+  <path d="M120 205 L300 170 L480 205 L300 240 Z" fill="#3366CC" />
+  <path d="M120 175 L300 140 L480 175 L300 210 Z" fill="#DD3333" />
+  <path d="M120 145 L300 110 L480 145 L300 180 Z" fill="#00AF89" />
+</svg>

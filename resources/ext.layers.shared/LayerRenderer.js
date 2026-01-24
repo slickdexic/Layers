@@ -924,6 +924,7 @@ class LayerRenderer {
 			'imageLayerRenderer',
 			'markerRenderer',
 			'dimensionRenderer',
+			'gradientRenderer',
 			'_customShapeRenderer'
 		];
 
