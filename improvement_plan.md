@@ -73,16 +73,20 @@ No critical issues remaining. Previous critical issues resolved:
 - ValidationHelpers.js (8 occurrences)
 - NumericValidator.js (1 occurrence)
 
-### P1.2 EmojiPickerPanel Coverage 🟡 E2E NEEDED
+### P1.2 EmojiPickerPanel Coverage ✅ E2E ADDED
 
-**Severity:** Medium  
-**File:** [resources/ext.layers.editor/shapeLibrary/EmojiPickerPanel.js](resources/ext.layers.editor/shapeLibrary/EmojiPickerPanel.js)
+**Status:** RESOLVED  
+**Resolution Date:** January 24, 2026
 
 **Issue:** Low test coverage due to OOUI integration complexity.
 
-**Action:**
-1. Add Playwright E2E tests for emoji picker user flows
-2. Consider mocking OOUI for unit testing
+**Resolution:** Created comprehensive Playwright E2E test suite (`tests/e2e/emoji-picker.spec.js`) with:
+- Opening/closing tests (button, Escape, overlay click)
+- Panel structure verification (search input, categories, grid, ARIA)
+- Category navigation tests
+- Search functionality tests
+- Emoji selection and layer creation tests
+- Performance tests (lazy loading, rapid category switching)
 
 ### P1.3 Error Handling Guidelines ✅ DOCUMENTED
 

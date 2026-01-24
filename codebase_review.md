@@ -46,7 +46,7 @@ The Layers extension is a mature, feature-rich MediaWiki extension with **strong
 | NEW-3 | console.log in production | Low | 🟢 Scripts Only | Code Quality |
 | NEW-4 | localStorage quota handling | Low | ✅ **VERIFIED** | Robustness |
 | NEW-5 | parseInt radix missing | Low | ✅ **FIXED** | Code Quality |
-| NEW-6 | EmojiPickerPanel test coverage | Medium | 🟡 E2E Needed | Testing |
+| NEW-6 | EmojiPickerPanel test coverage | Medium | ✅ **E2E ADDED** | Testing |
 | NEW-7 | Error handling inconsistency | Medium | ✅ **DOCUMENTED** | Architecture |
 | NEW-8 | Hardcoded i18n fallbacks | Low | 🔴 Open | i18n |
 | NEW-9 | ShapeRenderer approaching limit | Low | 🟡 Watch | God Class |
@@ -56,27 +56,11 @@ The Layers extension is a mature, feature-rich MediaWiki extension with **strong
 - ✅ **92.17% statement coverage** (improved from 91.60%)
 - ✅ **82.45% branch coverage** (improved from 82.09%)
 - ✅ **ViewerManager has 82.99% coverage** (fixed from 63.73%)
-- ⚠️ **EmojiPickerPanel has 0% coverage** (OOUI integration makes testing difficult)
+- ✅ **EmojiPickerPanel has E2E tests** (Playwright integration tests added)
 
 ---
 
 ## 🔴 OPEN ISSUES
-
-### NEW-6: EmojiPickerPanel Test Coverage Gap
-
-**Severity:** Medium  
-**Category:** Test Coverage  
-**File:** [resources/ext.layers.editor/shapeLibrary/EmojiPickerPanel.js](resources/ext.layers.editor/shapeLibrary/EmojiPickerPanel.js)
-
-**Description:** EmojiPickerPanel.js (781 lines) has low test coverage. The file has a `destroy()` method properly implemented but testing is difficult due to OOUI integration.
-
-**Impact:** Reduced automated regression protection for a user-facing feature.
-
-**Recommendation:** 
-1. Add E2E/integration tests using Playwright
-2. Consider refactoring to make unit testing feasible by separating OOUI concerns
-
----
 
 ### NEW-8: Hardcoded i18n Fallbacks
 
@@ -105,6 +89,24 @@ The Layers extension is a mature, feature-rich MediaWiki extension with **strong
 **Resolution:** Added `, 10` radix parameter to all parseInt calls:
 - ValidationHelpers.js: 8 occurrences fixed (RGB and HSL validation)
 - NumericValidator.js: 1 occurrence fixed (polygon sides validation)
+
+---
+
+### NEW-6: EmojiPickerPanel Test Coverage Gap ✅ E2E ADDED
+
+**Resolution Date:** January 24, 2026  
+**Category:** Test Coverage  
+**File:** [tests/e2e/emoji-picker.spec.js](tests/e2e/emoji-picker.spec.js)
+
+**Description:** EmojiPickerPanel.js had low Jest coverage due to OOUI integration complexity.
+
+**Resolution:** Created comprehensive Playwright E2E test suite with 17 tests covering:
+- Opening/closing (button, Escape key, overlay click, close button)
+- Panel structure (search input, categories, grid, ARIA dialog role)
+- Category navigation
+- Search functionality (including empty results)
+- Emoji selection and layer creation
+- Performance (lazy loading, rapid category switching)
 
 ---
 
