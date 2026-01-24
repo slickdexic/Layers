@@ -471,6 +471,216 @@ describe( 'LayersEditorModal', () => {
 		} );
 	} );
 
+	describe( 'onSave notification', () => {
+		it( 'should show mw.notify on save message', async () => {
+			const modal = new LayersEditorModal();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			modal.iframe.dispatchEvent( new Event( 'load' ) );
+
+			// Simulate save message
+			const messageEvent = new MessageEvent( 'message', {
+				origin: window.location.origin,
+				data: { type: 'layers-editor-save', filename: 'Test.jpg' }
+			} );
+			window.dispatchEvent( messageEvent );
+
+			expect( mockMw.notify ).toHaveBeenCalledWith(
+				'layers-editor-modal-saved',
+				{ type: 'success' }
+			);
+
+			modal.close( false );
+			await openPromise;
+		} );
+
+		it( 'should not throw when mw.notify is not available', async () => {
+			const modal = new LayersEditorModal();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			// Remove mw.notify
+			delete window.mw.notify;
+
+			modal.iframe.dispatchEvent( new Event( 'load' ) );
+
+			// Simulate save message - should not throw
+			const messageEvent = new MessageEvent( 'message', {
+				origin: window.location.origin,
+				data: { type: 'layers-editor-save', filename: 'Test.jpg' }
+			} );
+			expect( () => window.dispatchEvent( messageEvent ) ).not.toThrow();
+
+			// Restore
+			window.mw.notify = mockMw.notify;
+
+			modal.close( false );
+			await openPromise;
+		} );
+	} );
+
+	describe( 'iframe load handler', () => {
+		it( 'should hide modal header after iframe loads', async () => {
+			const modal = new LayersEditorModal();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			const header = modal.overlay.querySelector( '.layers-editor-modal-header' );
+			expect( header ).not.toBeNull();
+
+			// Simulate iframe load
+			modal.iframe.dispatchEvent( new Event( 'load' ) );
+
+			// Header should be hidden after load
+			expect( header.style.display ).toBe( 'none' );
+
+			modal.close( false );
+			await openPromise;
+		} );
+
+		it( 'should focus iframe after load', async () => {
+			const modal = new LayersEditorModal();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			const focusSpy = jest.spyOn( modal.iframe, 'focus' );
+
+			// Simulate iframe load
+			modal.iframe.dispatchEvent( new Event( 'load' ) );
+
+			expect( focusSpy ).toHaveBeenCalled();
+
+			modal.close( false );
+			await openPromise;
+		} );
+	} );
+
+	describe( 'initModalTriggers jQuery handling', () => {
+		it( 'should handle jQuery object as container', () => {
+			const initModalTriggers = window.Layers.Modal.initModalTriggers;
+
+			// Create a trigger element
+			const trigger = document.createElement( 'a' );
+			trigger.className = 'layers-editor-modal-trigger';
+			trigger.dataset.layersFilename = 'JQueryTest.jpg';
+			document.body.appendChild( trigger );
+
+			// Create a proper jQuery-like object that passes instanceof check
+			// We need to create an instance of jQuery function
+			const jQueryLikeObject = Object.create( window.jQuery.prototype || {} );
+			jQueryLikeObject[ 0 ] = document.body;
+
+			initModalTriggers( jQueryLikeObject );
+
+			expect( trigger.dataset.layersModalInit ).toBe( '1' );
+		} );
+
+		it( 'should handle data-layers-modal attribute selector', () => {
+			const initModalTriggers = window.Layers.Modal.initModalTriggers;
+
+			// Create a trigger with data-layers-modal attribute instead of class
+			const trigger = document.createElement( 'a' );
+			trigger.setAttribute( 'data-layers-modal', 'true' );
+			trigger.dataset.layersFilename = 'DataAttrTest.jpg';
+			document.body.appendChild( trigger );
+
+			initModalTriggers( document.body );
+
+			expect( trigger.dataset.layersModalInit ).toBe( '1' );
+		} );
+	} );
+
+	describe( 'screen reader announcements', () => {
+		it( 'should not throw when layersAnnouncer is not available on open', async () => {
+			delete window.layersAnnouncer;
+
+			const modal = new LayersEditorModal();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			// Should not throw
+			expect( modal.overlay ).not.toBeNull();
+
+			modal.close( false );
+			await openPromise;
+
+			// Restore
+			window.layersAnnouncer = { announce: jest.fn() };
+		} );
+
+		it( 'should not throw when layersAnnouncer is not available on close', async () => {
+			const modal = new LayersEditorModal();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			delete window.layersAnnouncer;
+
+			// Should not throw
+			expect( () => modal.close( false ) ).not.toThrow();
+
+			await openPromise;
+
+			// Restore
+			window.layersAnnouncer = { announce: jest.fn() };
+		} );
+	} );
+
+	describe( 'mw.log.warn fallback', () => {
+		it( 'should not throw when mw.log.warn is not available', () => {
+			const initModalTriggers = window.Layers.Modal.initModalTriggers;
+
+			// Create trigger without filename and no mw.log.warn
+			delete window.mw.log.warn;
+
+			const trigger = document.createElement( 'a' );
+			trigger.className = 'layers-editor-modal-trigger';
+			// No filename - should trigger warning path
+			document.body.appendChild( trigger );
+
+			initModalTriggers( document.body );
+
+			// Should not throw when clicking
+			expect( () => trigger.click() ).not.toThrow();
+
+			// Restore
+			window.mw.log.warn = jest.fn();
+		} );
+
+		it( 'should not throw when mw.log is not available', () => {
+			const initModalTriggers = window.Layers.Modal.initModalTriggers;
+
+			// Create trigger without filename
+			delete window.mw.log;
+
+			const trigger = document.createElement( 'a' );
+			trigger.className = 'layers-editor-modal-trigger';
+			document.body.appendChild( trigger );
+
+			initModalTriggers( document.body );
+
+			// Should not throw when clicking
+			expect( () => trigger.click() ).not.toThrow();
+
+			// Restore
+			window.mw.log = Object.assign( jest.fn(), { warn: jest.fn(), error: jest.fn() } );
+		} );
+
+		it( 'should not throw when mw is not available', () => {
+			const initModalTriggers = window.Layers.Modal.initModalTriggers;
+
+			// Create trigger without filename
+			const savedMw = window.mw;
+			delete window.mw;
+
+			const trigger = document.createElement( 'a' );
+			trigger.className = 'layers-editor-modal-trigger';
+			document.body.appendChild( trigger );
+
+			initModalTriggers( document.body );
+
+			// Should not throw when clicking
+			expect( () => trigger.click() ).not.toThrow();
+
+			// Restore
+			window.mw = savedMw;
+		} );
+	} );
+
 	describe( 'getMessage fallback', () => {
 		it( 'should return fallback when mw.message is not available', async () => {
 			// Temporarily remove mw.message but keep mw.util
