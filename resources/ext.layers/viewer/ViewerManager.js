@@ -1713,8 +1713,16 @@ class ViewerManager {
 		// Draw empty state content
 		this.drawEmptyStateContent( ctx, width, height, container );
 
-		// Set up edit button even for empty slides
-		this.setupSlideEditButton( container );
+		// Set up overlay with edit/view buttons even for empty slides
+		// Build a minimal payload for the overlay
+		const payload = {
+			layers: [],
+			baseWidth: width,
+			baseHeight: height,
+			isSlide: true,
+			backgroundColor: container.getAttribute( 'data-background' ) || '#ffffff'
+		};
+		this.setupSlideOverlay( container, payload );
 
 		this.debugLog( 'Rendered empty slide:', container.getAttribute( 'data-slide-name' ) );
 	}

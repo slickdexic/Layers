@@ -618,6 +618,8 @@
 	"layers-filepage-view": "Link text for viewing/previewing a layer set from the File page list",
 	"layers-filepage-usage-hint": "Hint text shown below the layer sets table explaining wikitext syntax to display layers",
 
+	"layers-slide-empty": "Message displayed when a slide has no content (e.g., 'This slide is empty')",
+	"layers-slide-empty-hint": "Hint shown below the empty message to guide users on how to add content",
 	"layers-slide-properties": "Title for the slide properties panel in the editor sidebar",
 	"layers-slide-prop-name": "Label for the slide name field in the properties panel",
 	"layers-slide-prop-size": "Label for the slide size (width/height) section in the properties panel",
