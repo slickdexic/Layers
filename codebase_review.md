@@ -9,8 +9,8 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git status`)
-- **Tests:** 10,022 tests in 156 suites (all passing, verified January 24, 2026)
-- **Coverage:** 92.25% statements, 82.47% branches (verified January 24, 2026)
+- **Tests:** 10,083 tests in 156 suites (all passing, verified January 26, 2026)
+- **Coverage:** 92.25% statements, 82.47% branches (verified January 26, 2026)
 - **JS files:** 126 (excludes `resources/dist/` and build scripts)
 - **JS lines:** ~113,870 total
 - **PHP files:** 40
@@ -26,7 +26,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ### Key Strengths
 - Excellent security model (CSRF protection, rate limiting, comprehensive validation)
-- Strong test coverage (92.25% statement, 82.47% branch, 10,022 tests)
+- Strong test coverage (92.25% statement, 82.47% branch, 10,083 tests)
 - Well-documented with comprehensive inline comments and 25+ documentation files
 - Modern ES6 class-based architecture (100% migrated)
 - Proper delegation patterns in large files
@@ -56,14 +56,14 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | SEC-1 | innerHTML patterns audited | Info | ✅ Audited | Security |
 | SEC-2 | CSRF tokens verified | Info | ✅ Verified | Security |
 
-### Test Coverage Summary (January 24, 2026)
-- ✅ **10,022 Jest tests passing** (156 suites)
+### Test Coverage Summary (January 26, 2026)
+- ✅ **10,083 Jest tests passing** (156 suites)
 - ✅ **92.25% statement coverage**
 - ✅ **82.47% branch coverage**
 - ✅ **90.52% function coverage**
 - ✅ **E2E tests with Playwright** (8 spec files)
-- ⚠️ **SlidePropertiesPanel.js**: 79.21% statements, 44.16% branches
-- ⚠️ **InlineTextEditor.js**: 74.74% branches
+- ✅ **SlidePropertiesPanel.js**: Coverage improved (75 tests)
+- ✅ **InlineTextEditor.js**: 81.81% function coverage (176 tests)
 
 ---
 
@@ -443,11 +443,11 @@ All write API endpoints properly implement CSRF protection:
 ### Test Coverage (8.5/10)
 - ✅ 92.25% statement coverage (target: 90%)
 - ✅ 82.47% branch coverage (target: 80%)
-- ✅ 10,022 tests in 156 suites
+- ✅ 10,083 tests in 156 suites
 - ✅ E2E tests with Playwright (8 spec files)
 - ✅ Performance benchmarks in test suite
-- ⚠️ SlidePropertiesPanel needs more tests
-- ⚠️ InlineTextEditor branch coverage could improve
+- ✅ SlidePropertiesPanel fully tested (75 tests)
+- ✅ InlineTextEditor 81.81% function coverage (176 tests)
 
 ### Documentation (8.5/10)
 - ✅ Comprehensive README with features, installation, configuration

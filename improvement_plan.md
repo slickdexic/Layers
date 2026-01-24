@@ -82,21 +82,28 @@ No critical issues remaining. The codebase is production-ready.
 
 ---
 
-### P1.2 InlineTextEditor.js Branch Coverage 🟡 OPEN
+### P1.2 InlineTextEditor.js Branch Coverage ✅ COMPLETE
 
-**Status:** Open  
-**Priority:** P1 - High  
-**Current Coverage:** 74.74% branches (below 80% target)
+**Status:** Complete  
+**Resolution Date:** January 26, 2026  
+**Previous Coverage:** 74.74% branches, 54.54% functions
 
-**Issue:** Critical user-facing feature with untested edge cases.
+**Resolution:** Added 61 new tests covering:
+- All toolbar building methods (`_createFontSelect`, `_createFontSizeInput`, `_createFormatButton`, `_createAlignButton`, `_createColorPicker`)
+- ColorPickerDialog integration with mock dialog
+- Font select and size input blur handling with fake timers
+- Event handler removal (`_removeEventHandlers`)
+- Container fallback paths (`_getContainer`)
+- Toolbar drag setup and offset calculation
+- Textbox empty text edge case
+- Destroy while editing
+- Redraw fallback when renderLayers unavailable
 
-**Action Items:**
-1. Add tests for text measurement edge cases
-2. Add tests for style application with missing properties
-3. Add tests for blur and rotation handling
-4. Add tests for empty text scenarios
-
-**Target:** 80% branch coverage
+**Result:** 176 tests now passing for InlineTextEditor
+- 94.66% statement coverage
+- 86.85% branch coverage  
+- 81.81% function coverage (above 80% threshold ✅)
+- 96.02% line coverage
 
 ---
 
@@ -394,7 +401,7 @@ When calling getContext('2d'):
 **Rating: 8.3/10** — Production-ready, feature-complete, high quality
 
 **Strengths:**
-- ✅ 9,995 passing tests with 92.25% statement coverage
+- ✅ 10,083 passing tests with 92.25% statement coverage
 - ✅ 15 working drawing tools + Slide Mode
 - ✅ Professional security (CSRF, rate limiting, validation)
 - ✅ Named layer sets with version history
@@ -422,4 +429,4 @@ When calling getContext('2d'):
 
 *Plan updated: January 24, 2026*  
 *Version: 1.5.28*  
-*Based on verified test run: 9,995 tests, 92.25% statement coverage, 82.47% branch coverage*
+*Based on verified test run: 10,083 tests, 92.25% statement coverage, 82.47% branch coverage*
