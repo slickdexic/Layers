@@ -122,6 +122,55 @@ Fixes:
 
 ## Code Quality Standards
 
+### Error Handling Guidelines
+
+**Principle:** Errors should be handled consistently to aid debugging and provide good UX.
+
+#### Pattern 1: Log and Continue (for non-critical operations)
+Use when the operation can fail gracefully without blocking the user:
+```javascript
+try {
+    localStorage.setItem( key, value );
+} catch ( err ) {
+    mw.log.warn( '[Module] localStorage save failed:', err.message );
+    // Continue - feature works without persistence
+}
+```
+**Used by:** PresetStorage, ColorPickerDialog, ToolDropdown
+
+#### Pattern 2: Log and Reject (for API operations)
+Use for async operations where the caller needs to handle failure:
+```javascript
+return this.api.postWithToken( 'csrf', params )
+    .then( ( data ) => data )
+    .catch( ( code, result ) => {
+        mw.log.error( '[APIManager] Save failed:', code );
+        throw this.errorHandler.handle( code, result );
+    } );
+```
+**Used by:** APIManager, RevisionManager
+
+#### Pattern 3: Validate and Return (for input validation)
+Use for validation that returns a result object:
+```javascript
+validateLayer( layer ) {
+    const result = { isValid: true, errors: [] };
+    if ( !layer.id ) {
+        result.isValid = false;
+        result.errors.push( this.getMessage( 'layers-validation-id-required' ) );
+    }
+    return result;
+}
+```
+**Used by:** LayersValidator, NumericValidator
+
+#### Rules:
+1. **Never use console.log/error** in production code — use `mw.log` instead
+2. **Never swallow errors silently** — at minimum, log them
+3. **Use i18n for user-facing messages** — error codes for logs
+4. **Propagate errors** when the caller needs to react to them
+5. **Clean up resources** in finally blocks or catch handlers
+
 ### File Size Limits
 - **Hard limit:** 1,000 lines (CI blocks PRs exceeding this)
 - **Soft limit:** 500 lines (aim for this in new modules)

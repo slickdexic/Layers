@@ -113,7 +113,7 @@
 				for ( let i = 1; i <= 3; i++ ) {
 					if (
 						matches[ i ] &&
-						( parseInt( matches[ i ] ) < 0 || parseInt( matches[ i ] ) > 255 )
+						( parseInt( matches[ i ], 10 ) < 0 || parseInt( matches[ i ], 10 ) > 255 )
 					) {
 						return false;
 					}
@@ -127,19 +127,19 @@
 				// Validate HSL values
 				if (
 					hslMatches[ 1 ] &&
-					( parseInt( hslMatches[ 1 ] ) < 0 || parseInt( hslMatches[ 1 ] ) > 360 )
+					( parseInt( hslMatches[ 1 ], 10 ) < 0 || parseInt( hslMatches[ 1 ], 10 ) > 360 )
 				) {
 					return false;
 				}
-				if (
+					if (
 					hslMatches[ 2 ] &&
-					( parseInt( hslMatches[ 2 ] ) < 0 || parseInt( hslMatches[ 2 ] ) > 100 )
+					( parseInt( hslMatches[ 2 ], 10 ) < 0 || parseInt( hslMatches[ 2 ], 10 ) > 100 )
 				) {
 					return false;
 				}
-				if (
+					if (
 					hslMatches[ 3 ] &&
-					( parseInt( hslMatches[ 3 ] ) < 0 || parseInt( hslMatches[ 3 ] ) > 100 )
+					( parseInt( hslMatches[ 3 ], 10 ) < 0 || parseInt( hslMatches[ 3 ], 10 ) > 100 )
 				) {
 					return false;
 				}
