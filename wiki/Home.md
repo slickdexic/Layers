@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C967%20passing-brightgreen" alt="9,967 Tests">
-  <img src="https://img.shields.io/badge/Coverage-92.59%25-brightgreen" alt="92.59% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C994%20passing-brightgreen" alt="9,994 Tests">
+  <img src="https://img.shields.io/badge/Coverage-92.24%25-brightgreen" alt="92.24% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,12 +20,18 @@
 
 ---
 
-## 🆕 What's New in v1.5.26
+## 🆕 What's New in v1.5.27
+
+- **parseInt Radix Fix** — Added explicit radix to all parseInt calls for robustness
+- **Error Handling Documentation** — Added comprehensive error handling guidelines to CONTRIBUTING.md
+- **EmojiPickerPanel E2E Tests** — Added 17 Playwright E2E tests for emoji picker functionality
+- **9,994 tests passing** (156 suites), 92.24% statement coverage, 82.47% branch coverage
+
+### Previous v1.5.26 Highlights
 
 - **CORE-6: Dead Code Removal** — Removed unused StateManager undo/redo methods
 - **CORE-7: Stuck Lock Recovery** — Added logging for lock timeout recovery
 - **CORE-9: History Bounds Check** — Defensive bounds checking in HistoryManager undo/redo
-- **9,967 tests passing** (156 suites), 92.59% statement coverage, 83.02% branch coverage
 
 ### 🖼️ Slide Mode (v1.5.22+)
 
@@ -217,16 +223,16 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.26 |
+| **Version (main)** | 1.5.27 |
 | **Version (REL1_43)** | 1.5.26-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 2026 |
 | **Test Suites** | 156 |
-| **Total Tests** | 9,967 |
+| **Total Tests** | 9,994 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 92.59% |
-| **Branch Coverage** | 83.02% |
-| **JavaScript Files** | 124 |
+| **Statement Coverage** | 92.24% |
+| **Branch Coverage** | 82.47% |
+| **JavaScript Files** | 126 |
 | **ES6 Classes** | 100+ |
 | **God Classes** | 20 (3 generated data, 17 hand-written) |
 

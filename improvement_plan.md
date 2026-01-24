@@ -116,20 +116,21 @@ No critical issues remaining. Previous critical issues resolved:
 2. Document that mw.message() with qqq.json is sufficient
 3. Accept current pattern as acceptable
 
-### P2.2 Documentation Sync
+### P2.2 Documentation Sync ✅ DONE
 
-**Status:** Partially Done  
-**Priority:** Medium
+**Status:** Complete  
+**Resolution Date:** January 24, 2026
 
-Keep these files synchronized with actual metrics:
-- README.md
-- wiki/Home.md
-- Mediawiki-Extension-Layers.mediawiki
-- .github/copilot-instructions.md
+Synchronized metrics across all documentation files:
+- README.md — Updated badges, version, test counts
+- wiki/Home.md — Updated badges, version, metrics table
+- CHANGELOG.md — Added v1.5.27 entry with all fixes
+- wiki/Changelog.md — Mirrored v1.5.27 entry
+- .github/copilot-instructions.md — Updated metrics
 
-**Current verified values:**
-- Tests: 9,994 passing
-- Coverage: 92.17% statement, 82.45% branch
+**Current verified values (January 24, 2026):**
+- Tests: 9,994 passing (156 suites)
+- Coverage: 92.24% statement, 82.47% branch
 - JS files: 126
 - JS lines: ~113,847
 

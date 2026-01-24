@@ -4,6 +4,22 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.27 (January 24, 2026)
+
+### Fixed
+- **Slide Mode: Background Opacity Not Updating After Save** — Fixed bug where changing the background opacity slider in the slide editor would save correctly but not visually update on the article page until a hard refresh.
+- **parseInt Radix Parameter** — Added explicit radix (10) to all 9 parseInt calls in ValidationHelpers.js and NumericValidator.js for robustness.
+
+### Added
+- **EmojiPickerPanel E2E Tests** — Added 17 Playwright E2E tests covering emoji picker functionality: opening/closing, panel structure, category navigation, search, emoji selection, and performance testing.
+- **Error Handling Documentation** — Added comprehensive error handling guidelines to CONTRIBUTING.md with three documented patterns and clear rules.
+
+### Technical Details
+- All 9,994 tests pass (156 test suites)
+- Test coverage: 92.24% statement, 82.47% branch
+
+---
+
 ## Version 1.5.26 (January 23, 2026)
 
 ### Fixed
