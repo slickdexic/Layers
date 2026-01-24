@@ -2,6 +2,21 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.28] - 2026-01-24
+
+### Fixed
+- **Inline Text Editor: Text Duplication During Formatting** — Fixed bug where using the floating toolbar (font, bold, italic, alignment, etc.) during inline text editing caused text to appear twice with slight misalignment. Root cause: `_applyFormat()` called `updateLayer()` which read the layer from StateManager (containing original text), merged only the style change, and re-rendered the layer with text while the textarea overlay also showed text. Fix: Include editing state preservation in the changes object (`text: ''` for textbox, `visible: false` for simple text) to maintain the hidden/cleared state during format changes.
+- **Empty Slide Overlay** — Fixed missing edit overlay on empty slides. Changed `renderEmptySlide()` to use `setupSlideOverlay()` instead of deprecated `setupSlideEditButton()`.
+- **Empty Slide i18n** — Added missing `layers-slide-empty` and `layers-slide-empty-hint` i18n messages that were showing raw message keys.
+
+### Technical Details
+- All 9,995 tests pass (156 test suites)
+- Added 1 new test for textbox layer format changes
+- Test coverage: 92.25% statement, 82.47% branch
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## [1.5.27] - 2026-01-24
 
 ### Fixed

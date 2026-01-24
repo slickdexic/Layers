@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-9%2C994%20passing-brightgreen" alt="9,994 Tests">
-  <img src="https://img.shields.io/badge/Coverage-92.24%25-brightgreen" alt="92.24% Coverage">
+  <img src="https://img.shields.io/badge/Tests-9%2C995%20passing-brightgreen" alt="9,995 Tests">
+  <img src="https://img.shields.io/badge/Coverage-92.25%25-brightgreen" alt="92.25% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,12 +20,17 @@
 
 ---
 
-## 🆕 What's New in v1.5.27
+## 🆕 What's New in v1.5.28
+
+- **Inline Text Editor Fix** — Fixed text duplication bug when using floating toolbar during inline text editing
+- **Empty Slide Overlay Fix** — Fixed missing edit overlay on empty slides and added i18n messages
+- **9,995 tests passing** (156 suites), 92.25% statement coverage, 82.47% branch coverage
+
+### Previous v1.5.27 Highlights
 
 - **parseInt Radix Fix** — Added explicit radix to all parseInt calls for robustness
 - **Error Handling Documentation** — Added comprehensive error handling guidelines to CONTRIBUTING.md
 - **EmojiPickerPanel E2E Tests** — Added 17 Playwright E2E tests for emoji picker functionality
-- **9,994 tests passing** (156 suites), 92.24% statement coverage, 82.47% branch coverage
 
 ### Previous v1.5.26 Highlights
 

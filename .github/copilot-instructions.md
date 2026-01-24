@@ -66,7 +66,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RenderCoordinator.js` (~398 lines) - render scheduling and dirty region tracking
     - `InteractionController.js` (~501 lines) - mouse/touch event handling coordination
     - `TextInputController.js` (~194 lines) - modal dialog for text input (fallback)
-    - `InlineTextEditor.js` (~608 lines) - Figma-style inline canvas text editing (double-click to edit)
+    - `InlineTextEditor.js` (~1,273 lines) - Figma-style inline canvas text editing with floating toolbar [GOD CLASS]
     - `SelectionRenderer.js` (~368 lines) - selection UI drawing (handles, marquee, rotation)
     - `AlignmentController.js` (~564 lines) - layer alignment and distribution
   - Editor modules (`resources/ext.layers.editor/editor/`): Extracted from LayersEditor:
@@ -378,13 +378,13 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (9,994 tests in 156 suites — verified January 24, 2026)
-- Coverage (92.24% statement, 82.47% branch — verified January 24, 2026)
+- Test count (9,995 tests in 156 suites — verified January 24, 2026)
+- Coverage (92.25% statement, 82.47% branch — verified January 24, 2026)
 - JavaScript file count (126 files total, ~113,847 lines)
 - PHP file count (33 files, ~11,758 lines)
-- God class count (20 files >1,000 lines; 3 generated data files, 17 hand-written)
+- God class count (21 files >1,000 lines; 3 generated data files, 18 hand-written)
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
 - Emoji library count (2,817 emoji in 19 categories)
-- Version number (1.5.27)
+- Version number (1.5.28)
