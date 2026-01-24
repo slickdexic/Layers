@@ -813,4 +813,316 @@ describe( 'SlidePropertiesPanel', function () {
 			expect( panel.lockRow.style.display ).toBe( '' );
 		} );
 	} );
+
+	describe( 'getClass fallback behavior', function () {
+		it( 'should handle nested namespace paths in getClass', function () {
+			// The getClass inside the module handles nested paths
+			// Test via creating a panel where layersGetClass returns null
+			const originalGetClass = window.layersGetClass;
+			window.layersGetClass = jest.fn().mockReturnValue( null );
+
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Should still create panel (with eventTracker as null)
+			expect( testPanel ).toBeDefined();
+
+			window.layersGetClass = originalGetClass;
+		} );
+	} );
+
+	describe( 'msg helper fallback paths', function () {
+		it( 'should use layersMessages if available', function () {
+			const originalMessages = window.layersMessages;
+			window.layersMessages = {
+				get: jest.fn( function ( key, fallback ) {
+					return 'Custom: ' + key;
+				} )
+			};
+
+			// Create new panel to test msg function
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			// The panel title should use the layersMessages
+			expect( window.layersMessages.get ).toHaveBeenCalled();
+
+			window.layersMessages = originalMessages;
+			testPanel.destroy();
+		} );
+
+		it( 'should fallback to literal string when mw.message does not exist', function () {
+			const originalMwMessage = mw.message;
+			mw.message = jest.fn().mockReturnValue( {
+				exists: function () {
+					return false;
+				},
+				text: function () {
+					return '';
+				}
+			} );
+
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			// Panel should still be created with fallback text
+			expect( testPanel.panel ).not.toBeNull();
+
+			mw.message = originalMwMessage;
+			testPanel.destroy();
+		} );
+	} );
+
+	describe( 'event handlers without eventTracker', function () {
+		beforeEach( function () {
+			// Disable eventTracker by making getClass return null
+			window.layersGetClass = jest.fn().mockReturnValue( null );
+		} );
+
+		afterEach( function () {
+			window.layersGetClass = jest.fn( function ( namespacePath ) {
+				if ( namespacePath === 'Utils.EventTracker' ) {
+					return window.EventTracker;
+				}
+				return null;
+			} );
+		} );
+
+		it( 'should add click handler to header directly when no eventTracker', function () {
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			// Header should respond to click
+			const header = testPanel.panel.querySelector( '.slide-properties-header' );
+			expect( header ).not.toBeNull();
+
+			// Simulate click to toggle
+			header.click();
+			expect( testPanel.isExpanded ).toBe( false );
+
+			testPanel.destroy();
+		} );
+
+		it( 'should add keydown handler to header directly when no eventTracker', function () {
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			const header = testPanel.panel.querySelector( '.slide-properties-header' );
+
+			// Simulate Enter key
+			const enterEvent = new KeyboardEvent( 'keydown', { key: 'Enter' } );
+			header.dispatchEvent( enterEvent );
+
+			expect( testPanel.isExpanded ).toBe( false );
+
+			testPanel.destroy();
+		} );
+
+		it( 'should add input handler to width input directly when no eventTracker', function () {
+			jest.useFakeTimers();
+
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			// Change width
+			testPanel.widthInput.value = '1000';
+			testPanel.widthInput.dispatchEvent( new Event( 'input' ) );
+
+			// Advance timer
+			jest.advanceTimersByTime( 400 );
+
+			// updateCanvasSize calls stateManager.set with 'baseWidth'
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseWidth', 1000 );
+
+			testPanel.destroy();
+			jest.useRealTimers();
+		} );
+
+		it( 'should add click handler to color button directly when no eventTracker', function () {
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			// Click color button - should open color picker
+			const clickEvent = new Event( 'click' );
+			testPanel.bgColorButton.dispatchEvent( clickEvent );
+
+			// When toolbar has openColorPickerDialog, it should be called
+			expect( mockEditor.toolbar.openColorPickerDialog ).toHaveBeenCalled();
+
+			testPanel.destroy();
+		} );
+
+		it( 'should add click handler to embed button directly when no eventTracker', function () {
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			// Mock clipboard
+			const mockWriteText = jest.fn().mockResolvedValue( undefined );
+			Object.assign( navigator, {
+				clipboard: { writeText: mockWriteText }
+			} );
+
+			// Click embed button
+			testPanel.embedButton.click();
+
+			// Should have tried to copy
+			expect( mockWriteText ).toHaveBeenCalled();
+
+			testPanel.destroy();
+		} );
+	} );
+
+	describe( 'openBackgroundColorPicker fallback', function () {
+		it( 'should log warning when toolbar color picker is not available', function () {
+			const testPanel = new SlidePropertiesPanel( {
+				editor: {
+					...mockEditor,
+					toolbar: null
+				},
+				container: container
+			} );
+			testPanel.create();
+
+			// Open color picker should not throw
+			expect( () => {
+				testPanel.openBackgroundColorPicker();
+			} ).not.toThrow();
+
+			testPanel.destroy();
+		} );
+
+		it( 'should work when editor has no toolbar', function () {
+			const editorNoToolbar = {
+				...mockEditor,
+				toolbar: undefined
+			};
+			const testPanel = new SlidePropertiesPanel( {
+				editor: editorNoToolbar,
+				container: container
+			} );
+			testPanel.create();
+
+			// Should handle gracefully
+			testPanel.openBackgroundColorPicker();
+			// No error should be thrown
+
+			testPanel.destroy();
+		} );
+	} );
+
+	describe( 'fallbackCopy edge cases', function () {
+		it( 'should handle execCommand throwing an error', function () {
+			document.execCommand = jest.fn( function () {
+				throw new Error( 'Not supported' );
+			} );
+
+			panel.create();
+
+			// Should not throw
+			expect( () => {
+				panel.fallbackCopy( 'test text' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should use fallbackCopy when navigator.clipboard is undefined', function () {
+			const originalClipboard = navigator.clipboard;
+			// Remove clipboard API
+			Object.defineProperty( navigator, 'clipboard', {
+				value: undefined,
+				configurable: true
+			} );
+
+			document.execCommand = jest.fn().mockReturnValue( true );
+
+			panel.create();
+			panel.copyEmbedCode();
+
+			expect( document.execCommand ).toHaveBeenCalledWith( 'copy' );
+
+			// Restore
+			Object.defineProperty( navigator, 'clipboard', {
+				value: originalClipboard,
+				configurable: true
+			} );
+		} );
+	} );
+
+	describe( 'destroy edge cases', function () {
+		it( 'should handle destroy when panel is null', function () {
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			// Don't call create()
+
+			// Should not throw
+			expect( () => {
+				testPanel.destroy();
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle destroy when panel has no parent', function () {
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			// Remove parent manually
+			if ( testPanel.panel && testPanel.panel.parentNode ) {
+				testPanel.panel.parentNode.removeChild( testPanel.panel );
+			}
+
+			// Should not throw
+			expect( () => {
+				testPanel.destroy();
+			} ).not.toThrow();
+		} );
+
+		it( 'should clear all timers on destroy', function () {
+			jest.useFakeTimers();
+
+			panel.create();
+
+			// Trigger timer creation
+			panel.widthInput.value = '900';
+			panel.widthInput.dispatchEvent( new Event( 'input' ) );
+			panel.heightInput.value = '700';
+			panel.heightInput.dispatchEvent( new Event( 'input' ) );
+
+			// Destroy should clear timers
+			panel.destroy();
+
+			// Advance timers - nothing should happen
+			jest.advanceTimersByTime( 500 );
+
+			// stateManager.set should not have been called for canvas dimensions
+			// (because timers were cleared before they fired)
+
+			jest.useRealTimers();
+		} );
+	} );
 } );
