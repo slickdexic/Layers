@@ -3143,4 +3143,184 @@ describe( 'Toolbar', function () {
 			}
 		} );
 	} );
+
+	describe( 'updateColorButtonDisplay fallback', () => {
+		let toolbar;
+		let container;
+		let originalGetClass;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+			// Temporarily make ColorPickerDialog unavailable to trigger fallback
+			originalGetClass = window.getClass;
+			window.getClass = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'UI.ColorPickerDialog' ) {
+					return null; // Force fallback
+				}
+				if ( key === 'UI.ToolDropdown' ) {
+					return null; // Force fallback for dropdowns too
+				}
+				if ( key === 'UI.ToolbarStyleControls' ) {
+					return null; // Force fallback
+				}
+				if ( originalGetClass ) {
+					return originalGetClass( key );
+				}
+				return null;
+			} );
+			toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+		} );
+
+		afterEach( () => {
+			if ( originalGetClass ) {
+				window.getClass = originalGetClass;
+			}
+		} );
+
+		it( 'should handle transparent color in fallback', () => {
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, 'transparent', 'No Fill' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'No Fill' );
+			expect( btn.getAttribute( 'aria-label' ) ).toBe( 'No Fill' );
+		} );
+
+		it( 'should handle none color in fallback', () => {
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, 'none', 'Transparent' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'Transparent' );
+		} );
+
+		it( 'should handle null color in fallback', () => {
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, null );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'Transparent' );
+		} );
+
+		it( 'should handle solid color in fallback', () => {
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, '#ff0000' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( false );
+			expect( btn.style.background ).toBe( 'rgb(255, 0, 0)' );
+			expect( btn.title ).toBe( '#ff0000' );
+		} );
+
+		it( 'should use previewTemplate with $1 placeholder in fallback', () => {
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, '#00ff00', null, 'Color: $1' );
+
+			expect( btn.getAttribute( 'aria-label' ) ).toBe( 'Color: #00ff00' );
+		} );
+
+		it( 'should append color to previewTemplate without $1 placeholder', () => {
+			const btn = document.createElement( 'button' );
+			toolbar.updateColorButtonDisplay( btn, '#0000ff', null, 'Selected:' );
+
+			expect( btn.getAttribute( 'aria-label' ) ).toBe( 'Selected: #0000ff' );
+		} );
+	} );
+
+	describe( 'ToolDropdown fallback branches', () => {
+		let container;
+		let originalGetClass;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+			originalGetClass = window.getClass;
+			// Make ToolDropdown unavailable to trigger fallback rendering
+			window.getClass = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'UI.ToolDropdown' ) {
+					return null; // Force fallback
+				}
+				if ( originalGetClass ) {
+					return originalGetClass( key );
+				}
+				return null;
+			} );
+		} );
+
+		afterEach( () => {
+			if ( originalGetClass ) {
+				window.getClass = originalGetClass;
+			}
+		} );
+
+		it( 'should render text tools as individual buttons when ToolDropdown unavailable', () => {
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Check that text tool buttons were created (not in dropdown)
+			const textButton = container.querySelector( '[data-tool="text"]' );
+			expect( textButton ).toBeTruthy();
+		} );
+
+		it( 'should render shape tools as individual buttons when ToolDropdown unavailable', () => {
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Check that shape tool buttons were created
+			const rectangleButton = container.querySelector( '[data-tool="rectangle"]' );
+			expect( rectangleButton ).toBeTruthy();
+		} );
+
+		it( 'should render line tools as individual buttons when ToolDropdown unavailable', () => {
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			// Check that line tool buttons were created
+			const arrowButton = container.querySelector( '[data-tool="arrow"]' );
+			expect( arrowButton ).toBeTruthy();
+		} );
+	} );
+
+	describe( 'createStyleGroup fallback', () => {
+		let container;
+		let originalGetClass;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+			originalGetClass = window.getClass;
+			// Make ToolbarStyleControls unavailable
+			window.getClass = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'UI.ToolbarStyleControls' ) {
+					return null;
+				}
+				if ( originalGetClass ) {
+					return originalGetClass( key );
+				}
+				return null;
+			} );
+		} );
+
+		afterEach( () => {
+			if ( originalGetClass ) {
+				window.getClass = originalGetClass;
+			}
+		} );
+
+		it( 'should create minimal style group when ToolbarStyleControls unavailable', () => {
+			const toolbar = new Toolbar( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			const styleGroup = container.querySelector( '.style-group' );
+			expect( styleGroup ).toBeTruthy();
+		} );
+	} );
 } );
