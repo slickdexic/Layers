@@ -173,6 +173,109 @@ describe( 'SmartGuidesController', () => {
 		} );
 	} );
 
+	describe( 'getVisualBounds', () => {
+		it( 'should return null for null layer', () => {
+			expect( controller.getVisualBounds( null ) ).toBeNull();
+		} );
+
+		it( 'should return geometric bounds when no stroke', () => {
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
+			const bounds = controller.getVisualBounds( layer );
+
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+		} );
+
+		it( 'should expand bounds by half stroke width on each side', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				strokeWidth: 10,
+				stroke: '#ff0000'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Stroke width 10 means 5px expansion on each side
+			expect( bounds.x ).toBe( 5 ); // 10 - 5
+			expect( bounds.y ).toBe( 15 ); // 20 - 5
+			expect( bounds.width ).toBe( 110 ); // 100 + 10
+			expect( bounds.height ).toBe( 60 ); // 50 + 10
+		} );
+
+		it( 'should not expand bounds when stroke is transparent', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				strokeWidth: 10,
+				stroke: 'transparent'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+		} );
+
+		it( 'should not expand bounds when stroke is none', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				strokeWidth: 10,
+				stroke: 'none'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+		} );
+
+		it( 'should use lineWidth when strokeWidth not set', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				lineWidth: 8,
+				stroke: '#000000'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// lineWidth 8 means 4px expansion on each side
+			expect( bounds.x ).toBe( 6 ); // 10 - 4
+			expect( bounds.y ).toBe( 16 ); // 20 - 4
+			expect( bounds.width ).toBe( 108 ); // 100 + 8
+			expect( bounds.height ).toBe( 58 ); // 50 + 8
+		} );
+
+		it( 'should handle textbox with thick stroke', () => {
+			// Ensure we use calculateBounds directly, not the mock
+			delete mockCanvasManager.getLayerBounds;
+
+			const layer = {
+				type: 'textbox',
+				x: 0,
+				y: 0,
+				width: 200,
+				height: 100,
+				strokeWidth: 6,
+				stroke: '#0066cc'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Stroke width 6 means 3px expansion on each side
+			expect( bounds.x ).toBe( -3 );
+			expect( bounds.y ).toBe( -3 );
+			expect( bounds.width ).toBe( 206 );
+			expect( bounds.height ).toBe( 106 );
+		} );
+	} );
+
 	describe( 'calculateBounds', () => {
 		it( 'should calculate bounds for rectangle', () => {
 			const layer = { type: 'rectangle', x: 50, y: 50, width: 100, height: 80 };

@@ -108,6 +108,36 @@
 		}
 
 		/**
+		 * Get visual bounds for a layer, including stroke width
+		 * Canvas strokes are center-aligned, so stroke extends strokeWidth/2 beyond geometric bounds
+		 *
+		 * @param {Object} layer - Layer object
+		 * @return {Object|null} Visual bounds object {x, y, width, height} or null
+		 */
+		getVisualBounds( layer ) {
+			const bounds = this.getLayerBounds( layer );
+			if ( !bounds ) {
+				return null;
+			}
+
+			// Calculate stroke expansion (center-aligned strokes extend half on each side)
+			const strokeWidth = layer.strokeWidth || layer.lineWidth || 0;
+			const expansion = strokeWidth / 2;
+
+			// Only expand if there's a visible stroke
+			if ( expansion > 0 && layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
+				return {
+					x: bounds.x - expansion,
+					y: bounds.y - expansion,
+					width: bounds.width + strokeWidth,
+					height: bounds.height + strokeWidth
+				};
+			}
+
+			return bounds;
+		}
+
+		/**
 		 * Get bounds for a layer (delegates to manager or calculates)
 		 *
 		 * @param {Object} layer - Layer object
@@ -310,7 +340,8 @@
 					continue;
 				}
 
-				const bounds = this.getLayerBounds( layer );
+				// Use visual bounds (includes stroke width) for accurate snapping
+				const bounds = this.getVisualBounds( layer );
 				if ( !bounds ) {
 					continue;
 				}
@@ -409,8 +440,8 @@
 				return { x: proposedX, y: proposedY, snappedX: false, snappedY: false, guides: [] };
 			}
 
-			// Get the layer's current bounds at proposed position
-			const bounds = this.getLayerBounds( layer );
+			// Get the layer's visual bounds (includes stroke width for accurate edge snapping)
+			const bounds = this.getVisualBounds( layer );
 			if ( !bounds ) {
 				return { x: proposedX, y: proposedY, snappedX: false, snappedY: false, guides: [] };
 			}

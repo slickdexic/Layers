@@ -620,6 +620,7 @@
 	"layers-filepage-view": "Link text for viewing/previewing a layer set from the File page list",
 	"layers-filepage-usage-hint": "Hint text shown below the layer sets table explaining wikitext syntax to display layers",
 
+	"special-editslide-title": "Page title for the Special:EditSlide page. $1 is the slide name.",
 	"layers-slide-empty": "Message displayed when a slide has no content (e.g., 'This slide is empty')",
 	"layers-slide-empty-hint": "Hint shown below the empty message to guide users on how to add content",
 	"layers-slide-properties": "Title for the slide properties panel in the editor sidebar",
