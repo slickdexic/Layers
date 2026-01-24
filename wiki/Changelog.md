@@ -12,7 +12,7 @@ Version history for the Layers extension.
 - **Empty Slide i18n** — Added missing `layers-slide-empty` and `layers-slide-empty-hint` i18n messages.
 
 ### Technical Details
-- All 10,135 tests pass (156 test suites)
+- All 10,150 tests pass (156 test suites)
 - Test coverage: 92.25% statement, 82.47% branch
 
 ---
