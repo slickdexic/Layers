@@ -2,6 +2,12 @@
  * State Manager for Layers Editor
  * Centralized state management with race condition prevention
  */
+
+// Configuration constants
+const MAX_PENDING_OPERATIONS = 100;
+const LOCK_DETECTION_TIMEOUT_MS = 5000;
+const LOCK_AUTO_RECOVERY_TIMEOUT_MS = 30000;
+
 class StateManager {
 	constructor( editor ) {
 		this.editor = editor;
@@ -49,6 +55,8 @@ class StateManager {
 		this.pendingOperations = [];
 		this.lockingQueue = [];
 		this.lockTimeout = null;
+		this.lockAutoRecoveryTimeout = null;
+		this.lockStuckSince = null;
 		
 		this.initializeState();
 	}
@@ -83,7 +91,13 @@ class StateManager {
 	 */
 	set( key, value ) {
 		if ( this.isLocked ) {
-			// Queue the operation if state is locked
+			// Queue the operation if state is locked (with queue limit)
+			if ( this.pendingOperations.length >= MAX_PENDING_OPERATIONS ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[StateManager] Pending operations queue full (' + MAX_PENDING_OPERATIONS + '), dropping oldest operation' );
+				}
+				this.pendingOperations.shift(); // Drop oldest operation
+			}
 			this.pendingOperations.push( { type: 'set', key: key, value: value } );
 			return;
 		}
@@ -100,7 +114,13 @@ class StateManager {
 	 */
 	update( updates ) {
 		if ( this.isLocked ) {
-			// Queue the operation if state is locked
+			// Queue the operation if state is locked (with queue limit)
+			if ( this.pendingOperations.length >= MAX_PENDING_OPERATIONS ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[StateManager] Pending operations queue full (' + MAX_PENDING_OPERATIONS + '), dropping oldest operation' );
+				}
+				this.pendingOperations.shift(); // Drop oldest operation
+			}
 			this.pendingOperations.push( { type: 'update', updates: updates } );
 			return;
 		}
@@ -183,13 +203,25 @@ class StateManager {
 			clearTimeout( this.lockTimeout );
 		}
 		this.lockTimeout = setTimeout( () => {
-			// Log error but DON'T force unlock - force unlocking during an active operation
-			// could corrupt state. Instead, set a flag so the next operation knows there was an issue.
+			// Log error but DON'T force unlock immediately - give more time for slow operations
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.error( '[StateManager] Lock held for >5s - possible deadlock. Lock will remain until manually resolved.' );
+				mw.log.warn( '[StateManager] Lock held for >5s - monitoring for deadlock.' );
 			}
 			this.lockStuckSince = Date.now();
-		}, 5000 ); // 5 second detection timeout
+		}, LOCK_DETECTION_TIMEOUT_MS );
+
+		// Auto-recovery after extended lock - last resort to prevent permanent deadlock
+		if ( this.lockAutoRecoveryTimeout ) {
+			clearTimeout( this.lockAutoRecoveryTimeout );
+		}
+		this.lockAutoRecoveryTimeout = setTimeout( () => {
+			if ( this.isLocked ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[StateManager] Lock held for >30s - forcing unlock to recover. Some state may be inconsistent.' );
+				}
+				this.forceUnlock( 'auto-recovery' );
+			}
+		}, LOCK_AUTO_RECOVERY_TIMEOUT_MS );
 	}
 
 	/**
@@ -197,10 +229,15 @@ class StateManager {
 	 */
 	unlockState() {
 		this.isLocked = false;
+		this.lockStuckSince = null;
 		
 		if ( this.lockTimeout ) {
 			clearTimeout( this.lockTimeout );
 			this.lockTimeout = null;
+		}
+		if ( this.lockAutoRecoveryTimeout ) {
+			clearTimeout( this.lockAutoRecoveryTimeout );
+			this.lockAutoRecoveryTimeout = null;
 		}
 
 		// Process any pending operations in order
@@ -221,6 +258,75 @@ class StateManager {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Force unlock the state - use only for emergency recovery.
+	 * This may leave state in an inconsistent condition if an operation was in progress.
+	 *
+	 * @param {string} [reason='manual'] - Reason for force unlock (for logging)
+	 * @return {boolean} True if state was locked and is now unlocked
+	 */
+	forceUnlock( reason ) {
+		const wasLocked = this.isLocked;
+		const pendingCount = this.pendingOperations.length;
+
+		if ( wasLocked ) {
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[StateManager] Force unlock triggered (' + ( reason || 'manual' ) + '), ' + pendingCount + ' pending operations' );
+			}
+		}
+
+		// Clear lock state
+		this.isLocked = false;
+		this.lockStuckSince = null;
+
+		// Clear timeouts
+		if ( this.lockTimeout ) {
+			clearTimeout( this.lockTimeout );
+			this.lockTimeout = null;
+		}
+		if ( this.lockAutoRecoveryTimeout ) {
+			clearTimeout( this.lockAutoRecoveryTimeout );
+			this.lockAutoRecoveryTimeout = null;
+		}
+
+		// Process pending operations (they may fail if state is inconsistent)
+		while ( this.pendingOperations.length > 0 ) {
+			const operation = this.pendingOperations.shift();
+
+			try {
+				if ( operation.type === 'set' ) {
+					this.set( operation.key, operation.value );
+				} else if ( operation.type === 'update' ) {
+					this.update( operation.updates );
+				}
+			} catch ( error ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[StateManager] Error in forceUnlock pending operation:', error.message || error );
+				}
+			}
+		}
+
+		return wasLocked;
+	}
+
+	/**
+	 * Check if state is currently locked
+	 *
+	 * @return {boolean} True if state is locked
+	 */
+	isStateLocked() {
+		return this.isLocked;
+	}
+
+	/**
+	 * Get count of pending operations (for debugging/monitoring)
+	 *
+	 * @return {number} Number of pending operations in queue
+	 */
+	getPendingOperationCount() {
+		return this.pendingOperations.length;
 	}
 
 	/**
@@ -680,15 +786,20 @@ class StateManager {
 	 * Destroy state manager and clean up resources
 	 */
 	destroy() {
-		// Cancel any pending lock timeout
+		// Cancel any pending lock timeouts
 		if ( this.lockTimeout ) {
 			clearTimeout( this.lockTimeout );
 			this.lockTimeout = null;
+		}
+		if ( this.lockAutoRecoveryTimeout ) {
+			clearTimeout( this.lockAutoRecoveryTimeout );
+			this.lockAutoRecoveryTimeout = null;
 		}
 
 		// Force unlock if locked
 		if ( this.isLocked ) {
 			this.isLocked = false;
+			this.lockStuckSince = null;
 		}
 
 		// Clear pending operations

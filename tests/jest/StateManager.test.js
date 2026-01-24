@@ -242,22 +242,49 @@ describe( 'StateManager', () => {
 			expect( stateManager.pendingOperations.length ).toBe( 0 );
 		} );
 
-		it( 'should detect stuck lock after timeout but not force unlock (safer behavior)', () => {
+		it( 'should detect stuck lock after 5s and log warning', () => {
 			stateManager.lockState();
 			expect( stateManager.isLocked ).toBe( true );
 
-			// Fast-forward 5 seconds
+			// Fast-forward 5 seconds - detection timeout
 			jest.advanceTimersByTime( 5000 );
 
-			// State should REMAIN locked to prevent corruption
+			// State should REMAIN locked (not auto-recovered yet)
 			expect( stateManager.isLocked ).toBe( true );
-			// Should log an error (not warning) about the stuck lock
-			expect( mw.log.error ).toHaveBeenCalledWith(
-				'[StateManager] Lock held for >5s - possible deadlock. Lock will remain until manually resolved.'
+			// Should log a warning about the stuck lock
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				'[StateManager] Lock held for >5s - monitoring for deadlock.'
 			);
 			// Should set a flag indicating when the lock got stuck
 			expect( stateManager.lockStuckSince ).toBeDefined();
 			expect( typeof stateManager.lockStuckSince ).toBe( 'number' );
+		} );
+
+		it( 'should auto-recover stuck lock after 30s', () => {
+			stateManager.lockState();
+			expect( stateManager.isLocked ).toBe( true );
+
+			// Fast-forward 30 seconds - auto-recovery timeout
+			jest.advanceTimersByTime( 30000 );
+
+			// State should be auto-unlocked
+			expect( stateManager.isLocked ).toBe( false );
+			// Should log error about forced recovery
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				'[StateManager] Lock held for >30s - forcing unlock to recover. Some state may be inconsistent.'
+			);
+		} );
+
+		it( 'should expose forceUnlock for manual recovery', () => {
+			stateManager.lockState();
+			expect( stateManager.isLocked ).toBe( true );
+
+			stateManager.forceUnlock();
+
+			expect( stateManager.isLocked ).toBe( false );
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				'[StateManager] Force unlock triggered (manual), 0 pending operations'
+			);
 		} );
 
 		it( 'should clear lock timeout on normal unlock', () => {

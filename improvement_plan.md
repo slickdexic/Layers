@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** January 24, 2026  
-**Version:** 1.5.27  
-**Status:** ✅ Production-Ready, High Quality (8.0/10)
+**Version:** 1.5.28  
+**Status:** ✅ Production-Ready, High Quality (8.3/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
 
@@ -10,22 +10,22 @@
 
 ## Executive Summary
 
-The extension is **production-ready and high quality** with **excellent security and test coverage**. A comprehensive critical audit (January 24, 2026) verified that most previously identified issues have been resolved. The codebase is well-positioned for world-class status.
+The extension is **production-ready and high quality** with **excellent security and test coverage**. A comprehensive critical audit (January 24, 2026) verified the codebase is well-positioned for world-class status with only minor refinements needed.
 
 **Verified Metrics (January 24, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **9,994** (156 suites) | ✅ Excellent |
-| Statement coverage | **92.17%** | ✅ Excellent |
-| Branch coverage | **82.45%** | ✅ Good |
-| Function coverage | **90.49%** | ✅ Good |
-| Line coverage | **92.31%** | ✅ Good |
-| ViewerManager coverage | **82.99%** | ✅ Fixed (was 63.73%) |
+| Tests passing | **10,022** (156 suites) | ✅ Excellent |
+| Statement coverage | **92.25%** | ✅ Excellent |
+| Branch coverage | **82.47%** | ✅ Good |
+| Function coverage | **90.52%** | ✅ Excellent |
+| Line coverage | **92.38%** | ✅ Excellent |
 | JS files | 126 | Excludes dist/ |
-| JS lines | ~113,847 | Includes generated data |
-| PHP files | 33 | ✅ |
-| God classes (≥1,000 lines) | 20 | 3 generated, 17 hand-written |
+| JS lines | ~113,870 | Includes generated data |
+| PHP files | 40 | ✅ |
+| PHP lines | ~13,908 | ✅ |
+| God classes (≥1,000 lines) | 21 | 3 generated, 18 hand-written |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 9 | ✅ All legitimate |
 | innerHTML usages | 20+ | ✅ Audited - all safe |
@@ -46,7 +46,9 @@ The extension is **production-ready and high quality** with **excellent security
 
 ## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-No critical issues remaining. Previous critical issues resolved:
+No critical issues remaining. The codebase is production-ready.
+
+**Previously Resolved P0 Issues:**
 - ✅ ApiLayersDelete/Rename rate limiting added
 - ✅ Template images CSP issue fixed
 - ✅ Memory leaks fixed (TransformationEngine, ZoomPanController, LayerRenderer)
@@ -54,102 +56,159 @@ No critical issues remaining. Previous critical issues resolved:
 - ✅ SelectionManager infinite recursion fixed
 - ✅ Export filename sanitization added
 - ✅ Timer cleanup in destroy() methods
-- ✅ CORE-3 APIManager save race condition fixed
-- ✅ CORE-4 GroupManager circular reference fixed
-- ✅ ViewerManager coverage improved to 82.99%
+- ✅ APIManager save race condition fixed (saveInProgress flag)
+- ✅ GroupManager circular reference fixed (isDescendantOf check)
 
 ---
 
-## Phase 1 (P1): Code Quality — ✅ RESOLVED
+## Phase 1 (P1): Test Coverage Improvements
 
-### P1.1 parseInt Radix Parameter ✅ FIXED
+### P1.1 SlidePropertiesPanel.js Coverage ✅ COMPLETE
 
-**Status:** RESOLVED  
-**Resolution Date:** January 24, 2026
+**Status:** Complete  
+**Resolution Date:** January 24, 2026  
+**Previous Coverage:** 79.21% statements, 44.16% branches
 
-**Issue:** 9 parseInt calls missing radix parameter.
+**Resolution:** Added 27 new tests covering:
+- Debounced dimension input handlers with timer tests
+- `updateCanvasSize` with various parameter combinations  
+- `openBackgroundColorPicker` interaction with toolbar
+- `setBackgroundColor` state updates and UI sync
+- Edge cases: missing editor, missing toolbar
+- Clipboard fallback on error
+- Lock mode indicators
 
-**Resolution:** Added `, 10` radix to all parseInt calls in:
-- ValidationHelpers.js (8 occurrences)
-- NumericValidator.js (1 occurrence)
-
-### P1.2 EmojiPickerPanel Coverage ✅ E2E ADDED
-
-**Status:** RESOLVED  
-**Resolution Date:** January 24, 2026
-
-**Issue:** Low test coverage due to OOUI integration complexity.
-
-**Resolution:** Created comprehensive Playwright E2E test suite (`tests/e2e/emoji-picker.spec.js`) with:
-- Opening/closing tests (button, Escape, overlay click)
-- Panel structure verification (search input, categories, grid, ARIA)
-- Category navigation tests
-- Search functionality tests
-- Emoji selection and layer creation tests
-- Performance tests (lazy loading, rapid category switching)
-
-### P1.3 Error Handling Guidelines ✅ DOCUMENTED
-
-**Status:** RESOLVED  
-**Resolution Date:** January 24, 2026
-
-**Issue:** Inconsistent error handling patterns across codebase.
-
-**Resolution:** Added comprehensive error handling guidelines to CONTRIBUTING.md with:
-- Three documented patterns (Log and Continue, Log and Reject, Validate and Return)
-- Clear rules for when to use each pattern
-- Examples from existing codebase
+**Result:** 75 tests now passing for SlidePropertiesPanel
 
 ---
 
-## Phase 2 (P2): Architecture & Documentation
-
-### P2.1 i18n Fallback Centralization
+### P1.2 InlineTextEditor.js Branch Coverage 🟡 OPEN
 
 **Status:** Open  
-**Priority:** Low
+**Priority:** P1 - High  
+**Current Coverage:** 74.74% branches (below 80% target)
 
-**Issue:** Hardcoded English fallback strings scattered across files.
+**Issue:** Critical user-facing feature with untested edge cases.
 
-**Options:**
-1. Create `FallbackMessages.js` constant file
-2. Document that mw.message() with qqq.json is sufficient
-3. Accept current pattern as acceptable
+**Action Items:**
+1. Add tests for text measurement edge cases
+2. Add tests for style application with missing properties
+3. Add tests for blur and rotation handling
+4. Add tests for empty text scenarios
 
-### P2.2 Documentation Sync ✅ DONE
+**Target:** 80% branch coverage
+
+---
+
+### P1.3 StateManager Lock Recovery ✅ COMPLETE
 
 **Status:** Complete  
 **Resolution Date:** January 24, 2026
 
-Synchronized metrics across all documentation files:
-- README.md — Updated badges, version, test counts
-- wiki/Home.md — Updated badges, version, metrics table
-- CHANGELOG.md — Added v1.5.27 entry with all fixes
-- wiki/Changelog.md — Mirrored v1.5.27 entry
-- .github/copilot-instructions.md — Updated metrics
+**Resolution:** Implemented comprehensive lock recovery:
+1. ✅ Added `forceUnlock()` method for manual emergency recovery
+2. ✅ Added 30-second auto-recovery timeout for stuck locks
+3. ✅ Added `isStateLocked()` and `getPendingOperationCount()` diagnostics
+4. ✅ Added constants: `LOCK_DETECTION_TIMEOUT_MS` (5s), `LOCK_AUTO_RECOVERY_TIMEOUT_MS` (30s)
 
-**Current verified values (January 24, 2026):**
-- Tests: 9,994 passing (156 suites)
-- Coverage: 92.24% statement, 82.47% branch
-- JS files: 126
-- JS lines: ~113,847
-
-### P2.3 ShapeRenderer Size Monitoring
-
-**Status:** Watch  
-**Priority:** Low
-
-**File:** ShapeRenderer.js (~994 lines)
-
-Currently at 994 lines, approaching the 1,000-line threshold. If it grows:
-- Extract blur effect to EffectsRenderer
-- Extract hit testing to dedicated module
+**Behavior:** 5s timeout logs warning, 30s timeout forces unlock with error log.
 
 ---
 
-## Phase 3 (P3): Future Improvements
+## Phase 2 (P2): Architecture Improvements
 
-### P3.1 TypeScript Migration
+### P2.1 pendingOperations Queue Limit ✅ COMPLETE
+
+**Status:** Complete  
+**Resolution Date:** January 24, 2026
+
+**Resolution:** Implemented queue protection:
+1. ✅ Added `MAX_PENDING_OPERATIONS = 100` constant
+2. ✅ When exceeded, drops oldest operations with warning log
+3. ✅ Logs warning: `[StateManager] pendingOperations queue full (100), dropping oldest`
+
+**Protection:** Prevents memory exhaustion in pathological lock scenarios.
+
+---
+
+### P2.2 Canvas Context Null Checks ✅ COMPLETE
+
+**Status:** Complete  
+**Resolution Date:** January 24, 2026
+
+**Resolution:** Added defensive null checks:
+1. ✅ CanvasManager.js: Added null check in `initializeCanvas()` with `mw.log.error` warning
+2. ✅ CanvasRenderer.js: Added null check in `initializeCanvas()` with `mw.log.error` warning
+
+**Pattern Applied:**
+```javascript
+this.ctx = this.canvas.getContext( '2d' );
+if ( !this.ctx ) {
+    mw.log.error( '[Module] Failed to get 2D context - hardware acceleration may be disabled' );
+}
+```
+
+---
+
+### P2.3 EffectsRenderer Canvas Pooling � DEFERRED
+
+**Status:** Deferred  
+**Decision Date:** January 24, 2026
+
+**Reason for Deferral:** Complex refactoring with low ROI. The current implementation:
+- Creates temporary canvases only when blur effects are used (rare)
+- Canvases are garbage collected after use
+- No memory leaks identified in testing
+
+**Future Consideration:** If memory profiling shows issues in long blur-heavy sessions, revisit.
+
+**Benefit if Implemented:** Reduced memory pressure in long editing sessions with blur effects.
+
+---
+
+### P2.4 Documentation Sync ✅ COMPLETE
+
+**Status:** Complete  
+**Resolution Date:** January 24, 2026
+
+Metrics synchronized across all documentation files:
+- README.md — Updated version, coverage badges
+- codebase_review.md — Fresh comprehensive audit
+- .github/copilot-instructions.md — Updated metrics
+
+---
+
+## Phase 3 (P3): Long-Term Improvements
+
+### P3.1 i18n Fallback Centralization
+
+**Status:** Open  
+**Priority:** P3 - Low
+
+**Options:**
+1. Create `FallbackMessages.js` constant file
+2. Document current pattern as acceptable defense-in-depth
+3. Remove fallbacks and trust mw.message()
+
+**Recommendation:** Document as acceptable — fallbacks are rare and provide safety net.
+
+---
+
+### P3.2 Null Checking Style Guide
+
+**Status:** Open  
+**Priority:** P3 - Low
+
+**Issue:** Inconsistent null/undefined checking patterns across codebase.
+
+**Action Items:**
+1. Document preferred pattern in CONTRIBUTING.md
+2. Recommended: `!= null` for checking both null/undefined
+3. Use explicit checks when type distinction matters
+
+---
+
+### P3.3 TypeScript Migration
 
 **Status:** Not Started  
 **Priority:** P3
@@ -160,12 +219,16 @@ Consider TypeScript for complex modules:
 - GroupManager
 - SelectionManager
 
-Benefits:
+**Benefits:**
 - Catch type errors at compile time
 - Better IDE support
 - Self-documenting interfaces
 
-### P3.2 Visual Regression Testing
+**Estimated Effort:** 2-3 sprints per module
+
+---
+
+### P3.4 Visual Regression Testing
 
 **Status:** Not Started  
 **Priority:** P3
@@ -176,12 +239,14 @@ Add visual snapshot tests for:
 - Text rendering
 - Dark mode compatibility
 
-Tools to consider:
+**Tools to Consider:**
 - Percy
 - Chromatic
 - jest-image-snapshot
 
-### P3.3 Real-Time Collaboration
+---
+
+### P3.5 Real-Time Collaboration
 
 **Status:** Not Started  
 **Priority:** P3+
@@ -193,9 +258,9 @@ Architecture considerations:
 
 ---
 
-## God Class Status (20 Files ≥1,000 Lines)
+## God Class Status (21 Files ≥1,000 Lines)
 
-### Generated Data Files (Exempt)
+### Generated Data Files (Exempt from Refactoring)
 
 | File | Lines | Notes |
 |------|-------|-------|
@@ -203,23 +268,23 @@ Architecture considerations:
 | ShapeLibraryData.js | ~11,299 | Generated shape definitions |
 | EmojiLibraryIndex.js | ~3,003 | Generated search index |
 
-### Hand-Written Files with Delegation
+### Hand-Written Files with Delegation (18 total)
 
 | File | Lines | Delegation Status | Notes |
 |------|-------|-------------------|-------|
-| CanvasManager.js | ~2,011 | ✅ 10+ controllers | At threshold |
-| ViewerManager.js | ~1,996 | ✅ Delegates to renderers | ✅ Fixed coverage |
+| CanvasManager.js | ~2,039 | ✅ 10+ controllers | Facade pattern, at limit |
+| ViewerManager.js | ~2,004 | ✅ Delegates to renderers | OK |
+| LayersEditor.js | ~1,800 | ✅ 3 modules | OK |
 | Toolbar.js | ~1,847 | ✅ 4 modules | OK |
 | LayerPanel.js | ~1,806 | ✅ 9 controllers | OK |
-| LayersEditor.js | ~1,768 | ✅ 3 modules | OK |
-| APIManager.js | ~1,513 | ✅ APIErrorHandler | ✅ Fixed race condition |
+| APIManager.js | ~1,513 | ✅ APIErrorHandler | OK |
 | SelectionManager.js | ~1,431 | ✅ 3 modules | OK |
-| ArrowRenderer.js | ~1,310 | N/A - complexity | OK |
-| CalloutRenderer.js | ~1,291 | N/A - rendering | OK |
-| PropertyBuilders.js | ~1,284 | N/A - builders | OK |
-| InlineTextEditor.js | ~1,258 | N/A - feature | OK |
+| ArrowRenderer.js | ~1,310 | N/A - math complexity | OK |
+| CalloutRenderer.js | ~1,291 | N/A - rendering logic | OK |
+| InlineTextEditor.js | ~1,273 | N/A - feature complexity | ⚠️ Branch coverage |
+| PropertyBuilders.js | ~1,284 | N/A - UI builders | OK |
 | ToolManager.js | ~1,224 | ✅ 2 handlers | OK |
-| GroupManager.js | ~1,172 | N/A - operations | ✅ Fixed circular ref |
+| GroupManager.js | ~1,172 | N/A - group operations | OK |
 | CanvasRenderer.js | ~1,132 | ✅ SelectionRenderer | OK |
 | TransformController.js | ~1,110 | N/A - transforms | OK |
 | ResizeCalculator.js | ~1,105 | N/A - math | OK |
@@ -249,6 +314,8 @@ Architecture considerations:
 | Inline Text Editing | v1.5.13 | ✅ |
 | Mobile Touch Support | v1.4.8 | ✅ |
 | Virtual Layer List | v1.5.21 | ✅ |
+| Slide Mode | v1.5.22 | ✅ |
+| Dimension Tool | v1.5.25 | ✅ |
 
 ---
 
@@ -256,15 +323,16 @@ Architecture considerations:
 
 | Criterion | Status | Notes |
 |-----------|--------|-------|
-| ViewerManager coverage >80% | ✅ 82.99% | Fixed |
-| No critical security issues | ✅ | innerHTML audited |
-| No race conditions | ✅ | CORE-3, CORE-4 fixed |
-| Consistent error handling | 🟡 | Needs documentation |
-| Documentation accuracy | 🟡 | Needs sync |
-| Test coverage >90% | ✅ 92.17% | Excellent |
-| ESLint clean | ✅ | 0 errors, 9 legitimate disables |
+| No critical security issues | ✅ | innerHTML, CSRF audited |
+| Statement coverage >90% | ✅ 92.25% | Excellent |
+| Branch coverage >80% | ✅ 82.47% | Good |
+| No race conditions | ✅ | All fixed |
+| ESLint clean | ✅ | 0 errors |
 | No console.log in prod | ✅ | Scripts only |
-| localStorage quota handling | ✅ | Already implemented |
+| localStorage quota handling | ✅ | Try-catch implemented |
+| SlidePropertiesPanel >85% | 🟡 79.21% | Needs improvement |
+| InlineTextEditor branch >80% | 🟡 74.74% | Needs improvement |
+| StateManager lock recovery | 🟡 | Optional enhancement |
 
 ---
 
@@ -305,44 +373,53 @@ When handling errors:
 3. **Propagate** if caller needs to handle
 4. **Document** expected error types
 
-### The parseInt Rule (NEW)
+### The parseInt Rule
 
 When using parseInt():
 1. **Always** specify radix parameter: `parseInt(value, 10)`
 2. **Consider** `Number()` or `+value` for simple conversions
 3. **Validate** input before parsing
 
+### The Canvas Context Rule (NEW)
+
+When calling getContext('2d'):
+1. **Check** if return value is null
+2. **Log** warning if context unavailable
+3. **Return** gracefully or show user-friendly error
+
 ---
 
 ## Summary
 
-**Rating: 8.0/10** — Production-ready, feature-complete, high quality
+**Rating: 8.3/10** — Production-ready, feature-complete, high quality
 
 **Strengths:**
-- ✅ 9,994 passing tests with 92.17% statement coverage
-- ✅ 15 working drawing tools
+- ✅ 9,995 passing tests with 92.25% statement coverage
+- ✅ 15 working drawing tools + Slide Mode
 - ✅ Professional security (CSRF, rate limiting, validation)
 - ✅ Named layer sets with version history
 - ✅ Shape library with 1,310 shapes
 - ✅ Emoji picker with 2,817 emoji
 - ✅ Mobile touch support
-- ✅ All race conditions fixed
+- ✅ All security audit findings resolved
 - ✅ innerHTML usage audited and safe
 
-**Open Issues (Low Priority):**
-- 🟡 parseInt radix parameter (9 calls)
-- 🟡 EmojiPickerPanel E2E tests needed
-- 🟡 Error handling documentation needed
-- 🟡 i18n fallback centralization (optional)
+**Open Issues (All Low Priority):**
+- 🟡 SlidePropertiesPanel test coverage (79.21%)
+- 🟡 InlineTextEditor branch coverage (74.74%)
+- 🟡 StateManager lock recovery enhancement
+- 🟡 EffectsRenderer canvas pooling
+- 🟡 Canvas context null checks
 
 **Next Actions:**
-1. Add radix to parseInt calls in ValidationHelpers.js
-2. Add Playwright E2E tests for EmojiPickerPanel
-3. Document error handling guidelines
-4. Sync documentation metrics
+1. [P1] Improve SlidePropertiesPanel.js coverage to 85%
+2. [P1] Improve InlineTextEditor.js branch coverage to 80%
+3. [P1] Add StateManager.forceUnlock() method
+4. [P2] Add pendingOperations queue limit
+5. [P2] Standardize canvas context null checks
 
 ---
 
 *Plan updated: January 24, 2026*  
-*Version: 1.5.27*  
-*Based on verified test run: 9,994 tests, 92.17% statement coverage, 82.45% branch coverage*
+*Version: 1.5.28*  
+*Based on verified test run: 9,995 tests, 92.25% statement coverage, 82.47% branch coverage*

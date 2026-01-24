@@ -55,6 +55,11 @@
 		constructor( canvas, config ) {
 			this.canvas = canvas;
 			this.ctx = canvas.getContext( '2d' );
+			if ( !this.ctx ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( 'CanvasRenderer: Could not get 2D canvas context. Rendering will not function.' );
+				}
+			}
 			this.config = config || {};
 			this.editor = this.config.editor || null;
 
