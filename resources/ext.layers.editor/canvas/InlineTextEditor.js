@@ -12,6 +12,7 @@
  *
  * @module ext.layers.editor.canvas.InlineTextEditor
  * @since 1.5.13
+ * @version 1.5.27-fix1 - Fix text duplication during toolbar formatting
  */
 ( function () {
 	'use strict';
