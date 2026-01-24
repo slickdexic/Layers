@@ -10,7 +10,7 @@
 
 - **Branch:** main (verified via `git status`)
 - **Tests:** 10,150 tests in 156 suites (all passing, verified January 26, 2026)
-- **Coverage:** 92.25% statements, 82.47% branches (verified January 26, 2026)
+- **Coverage:** 92.96% statements, 83.27% branches (verified January 26, 2026)
 - **JS files:** 126 (excludes `resources/dist/` and build scripts)
 - **JS lines:** ~113,870 total
 - **PHP files:** 40
@@ -26,7 +26,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ### Key Strengths
 - Excellent security model (CSRF protection, rate limiting, comprehensive validation)
-- Strong test coverage (92.25% statement, 82.47% branch, 10,150 tests)
+- Strong test coverage (92.96% statement, 83.27% branch, 10,150 tests)
 - Well-documented with comprehensive inline comments and 25+ documentation files
 - Modern ES6 class-based architecture (100% migrated)
 - Proper delegation patterns in large files
@@ -58,9 +58,9 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ### Test Coverage Summary (January 26, 2026)
 - ✅ **10,150 Jest tests passing** (156 suites)
-- ✅ **92.25% statement coverage**
-- ✅ **82.47% branch coverage**
-- ✅ **90.52% function coverage**
+- ✅ **92.96% statement coverage**
+- ✅ **83.27% branch coverage**
+- ✅ **91.48% function coverage**
 - ✅ **E2E tests with Playwright** (8 spec files)
 - ✅ **SlidePropertiesPanel.js**: Coverage improved (75 tests)
 - ✅ **InlineTextEditor.js**: 81.81% function coverage (176 tests)
@@ -441,8 +441,8 @@ All write API endpoints properly implement CSRF protection:
 - ⚠️ Lock recovery could be more robust
 
 ### Test Coverage (8.5/10)
-- ✅ 92.25% statement coverage (target: 90%)
-- ✅ 82.47% branch coverage (target: 80%)
+- ✅ 92.96% statement coverage (target: 90%)
+- ✅ 83.27% branch coverage (target: 80%)
 - ✅ 10,150 tests in 156 suites
 - ✅ E2E tests with Playwright (8 spec files)
 - ✅ Performance benchmarks in test suite
@@ -500,7 +500,7 @@ No critical issues. Codebase is production-ready.
 | Category | Score | Weight | Notes |
 |----------|-------|--------|-------|
 | Security | 9.5/10 | 25% | Excellent — CSRF, rate limiting, validation |
-| Test Coverage | 8.5/10 | 20% | 92.25% statement, minor gaps |
+| Test Coverage | 8.5/10 | 20% | 92.96% statement, minor gaps |
 | Functionality | 9.0/10 | 20% | Feature-complete, 15 tools, slides |
 | Architecture | 8.5/10 | 15% | Good patterns, minor edge cases |
 | Documentation | 8.5/10 | 10% | Comprehensive, well-maintained |

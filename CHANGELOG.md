@@ -12,7 +12,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Technical Details
 - All 9,995 tests pass (156 test suites)
 - Added 1 new test for textbox layer format changes
-- Test coverage: 92.25% statement, 82.47% branch
+- Test coverage: 92.96% statement, 83.27% branch
 - ESLint/Stylelint/Banana all pass
 
 ---
@@ -31,7 +31,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - All 9,994 tests pass (156 test suites)
 - Added 4 new tests for `drawSlideBackground()` opacity handling
 - Updated ViewerManager mock contexts to include `save`, `restore`, `globalAlpha`
-- Test coverage: 92.24% statement, 82.47% branch
+- Test coverage: 92.96% statement, 83.27% branch
 - ESLint/Stylelint/Banana all pass
 
 ---

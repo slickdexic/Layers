@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-92.25%25-brightgreen)](coverage/lcov-report/index.html)
+[![Coverage](https://img.shields.io/badge/coverage-92.96%25-brightgreen)](coverage/lcov-report/index.html)
 [![Tests](https://img.shields.io/badge/tests-10%2C083%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
@@ -321,10 +321,10 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 |--------|-------|
 | Jest tests | 10,150 passing (156 suites) |
 | PHPUnit tests | 24 test files |
-| Statement coverage | 92.24% |
-| Branch coverage | 82.47% |
-| Function coverage | 90.52% |
-| Line coverage | 92.38% |
+| Statement coverage | 92.96% |
+| Branch coverage | 83.27% |
+| Function coverage | 91.48% |
+| Line coverage | 93.09% |
 
 **Security:**
 
@@ -381,8 +381,8 @@ npm run test:js -- --coverage
 | God classes (>1000 lines) | 20 | ⚠️ 3 generated, 17 with delegation |
 | Tests passing | 10,150 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 92.24% | ✅ Excellent |
-| Branch coverage | 82.47% | ✅ Target met |
+| Statement coverage | 92.96% | ✅ Excellent |
+| Branch coverage | 83.27% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

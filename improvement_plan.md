@@ -17,10 +17,10 @@ The extension is **production-ready and high quality** with **excellent security
 | Metric | Value | Status |
 |--------|-------|--------|
 | Tests passing | **10,150** (156 suites) | ✅ Excellent |
-| Statement coverage | **92.25%** | ✅ Excellent |
-| Branch coverage | **82.47%** | ✅ Good |
-| Function coverage | **90.52%** | ✅ Excellent |
-| Line coverage | **92.38%** | ✅ Excellent |
+| Statement coverage | **92.96%** | ✅ Excellent |
+| Branch coverage | **83.27%** | ✅ Excellent |
+| Function coverage | **91.48%** | ✅ Excellent |
+| Line coverage | **93.09%** | ✅ Excellent |
 | JS files | 126 | Excludes dist/ |
 | JS lines | ~113,870 | Includes generated data |
 | PHP files | 40 | ✅ |
@@ -331,8 +331,8 @@ Architecture considerations:
 | Criterion | Status | Notes |
 |-----------|--------|-------|
 | No critical security issues | ✅ | innerHTML, CSRF audited |
-| Statement coverage >90% | ✅ 92.25% | Excellent |
-| Branch coverage >80% | ✅ 82.47% | Good |
+| Statement coverage >90% | ✅ 92.96% | Excellent |
+| Branch coverage >80% | ✅ 83.27% | Excellent |
 | No race conditions | ✅ | All fixed |
 | ESLint clean | ✅ | 0 errors |
 | No console.log in prod | ✅ | Scripts only |
@@ -402,7 +402,7 @@ When calling getContext('2d'):
 **Rating: 8.5/10** — Production-ready, feature-complete, high quality
 
 **Strengths:**
-- ✅ 10,150 passing tests with 92.25% statement coverage
+- ✅ 10,150 passing tests with 92.96% statement coverage
 - ✅ 15 working drawing tools + Slide Mode
 - ✅ Professional security (CSRF, rate limiting, validation)
 - ✅ Named layer sets with version history
@@ -429,4 +429,4 @@ When calling getContext('2d'):
 
 *Plan updated: January 26, 2026*  
 *Version: 1.5.28*  
-*Based on verified test run: 10,150 tests, 92.25% statement coverage, 82.47% branch coverage*
+*Based on verified test run: 10,150 tests, 92.96% statement coverage, 83.27% branch coverage*

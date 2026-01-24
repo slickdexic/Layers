@@ -13,7 +13,7 @@ Version history for the Layers extension.
 
 ### Technical Details
 - All 10,150 tests pass (156 test suites)
-- Test coverage: 92.25% statement, 82.47% branch
+- Test coverage: 92.96% statement, 83.27% branch
 
 ---
 
@@ -29,7 +29,7 @@ Version history for the Layers extension.
 
 ### Technical Details
 - All 9,994 tests pass (156 test suites)
-- Test coverage: 92.24% statement, 82.47% branch
+- Test coverage: 92.96% statement, 83.27% branch
 
 ---
 
