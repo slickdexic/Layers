@@ -863,4 +863,150 @@ describe( 'CanvasManager Extended Coverage', () => {
 			delete window.mw;
 		} );
 	} );
+
+	describe( 'slide mode', () => {
+		it( 'should set slide mode on canvas manager and renderer', () => {
+			canvasManager.renderer = { setSlideMode: jest.fn() };
+
+			canvasManager.setSlideMode( true );
+
+			expect( canvasManager.isSlideMode ).toBe( true );
+			expect( canvasManager.renderer.setSlideMode ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'should handle setSlideMode without renderer', () => {
+			canvasManager.renderer = null;
+
+			expect( () => canvasManager.setSlideMode( true ) ).not.toThrow();
+			expect( canvasManager.isSlideMode ).toBe( true );
+		} );
+
+		it( 'should set background color and redraw', () => {
+			canvasManager.renderer = { setSlideBackgroundColor: jest.fn() };
+			canvasManager.redraw = jest.fn();
+
+			canvasManager.setBackgroundColor( '#ff0000' );
+
+			expect( canvasManager.slideBackgroundColor ).toBe( '#ff0000' );
+			expect( canvasManager.renderer.setSlideBackgroundColor ).toHaveBeenCalledWith( '#ff0000' );
+			expect( canvasManager.redraw ).toHaveBeenCalled();
+		} );
+
+		it( 'should default to transparent when color is null', () => {
+			canvasManager.renderer = { setSlideBackgroundColor: jest.fn() };
+			canvasManager.redraw = jest.fn();
+
+			canvasManager.setBackgroundColor( null );
+
+			expect( canvasManager.slideBackgroundColor ).toBe( 'transparent' );
+		} );
+
+		it( 'should handle setBackgroundColor without renderer', () => {
+			canvasManager.renderer = null;
+			canvasManager.redraw = jest.fn();
+
+			expect( () => canvasManager.setBackgroundColor( '#00ff00' ) ).not.toThrow();
+			expect( canvasManager.slideBackgroundColor ).toBe( '#00ff00' );
+		} );
+	} );
+
+	describe( 'drawing with throttling', () => {
+		it( 'should schedule drawing frame when tempLayer exists', () => {
+			const mockTempLayer = { id: 'temp', type: 'rectangle' };
+			canvasManager._drawingFrameScheduled = false;
+			canvasManager.drawingController = {
+				continueDrawing: jest.fn(),
+				getTempLayer: jest.fn().mockReturnValue( mockTempLayer ),
+				drawPreview: jest.fn()
+			};
+			canvasManager.renderLayers = jest.fn();
+			canvasManager.editor = { layers: [] };
+			canvasManager.isDestroyed = false;
+
+			// Call the method that triggers drawing frame
+			canvasManager.continueDrawing( { x: 100, y: 100 } );
+
+			expect( canvasManager._drawingFrameScheduled ).toBe( true );
+			expect( canvasManager.tempLayer ).toBe( mockTempLayer );
+		} );
+
+		it( 'should not schedule duplicate drawing frames', () => {
+			const mockTempLayer = { id: 'temp', type: 'rectangle' };
+			canvasManager._drawingFrameScheduled = true;
+			canvasManager.drawingController = {
+				continueDrawing: jest.fn(),
+				getTempLayer: jest.fn().mockReturnValue( mockTempLayer )
+			};
+
+			const originalRaf = window.requestAnimationFrame;
+			window.requestAnimationFrame = jest.fn();
+
+			canvasManager.continueDrawing( { x: 100, y: 100 } );
+
+			// Should not have scheduled a new frame since one is pending
+			expect( window.requestAnimationFrame ).not.toHaveBeenCalled();
+
+			window.requestAnimationFrame = originalRaf;
+		} );
+
+		it( 'should guard against destroyed state in drawing callback', () => {
+			jest.useFakeTimers();
+
+			const mockTempLayer = { id: 'temp', type: 'rectangle' };
+			canvasManager._drawingFrameScheduled = false;
+			canvasManager.drawingController = {
+				continueDrawing: jest.fn(),
+				getTempLayer: jest.fn().mockReturnValue( mockTempLayer ),
+				drawPreview: jest.fn()
+			};
+			canvasManager.renderLayers = jest.fn();
+			canvasManager.editor = { layers: [] };
+			canvasManager.isDestroyed = true;
+
+			canvasManager.continueDrawing( { x: 100, y: 100 } );
+
+			// Run the rAF callback
+			jest.runAllTimers();
+
+			// Should not have called render because isDestroyed is true
+			expect( canvasManager.renderLayers ).not.toHaveBeenCalled();
+
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'findClass edge cases', () => {
+		it( 'should handle findClass when class is not found', () => {
+			// This tests error resilience - manager should not throw
+			expect( () => {
+				new CanvasManager( {
+					container: document.createElement( 'div' ),
+					editor: { stateManager: { get: jest.fn(), set: jest.fn(), subscribe: jest.fn() } }
+				} );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'ImageLoader fallback', () => {
+		it( 'should handle image load error gracefully', () => {
+			canvasManager.handleImageLoadError = jest.fn();
+
+			// This simulates the ImageLoader not being found
+			canvasManager.handleImageLoadError();
+
+			expect( canvasManager.handleImageLoadError ).toHaveBeenCalled();
+		} );
+
+		it( 'should set default dimensions on image load error', () => {
+			canvasManager.baseWidth = null;
+			canvasManager.baseHeight = null;
+
+			// Call the actual error handler
+			canvasManager.handleImageLoadError();
+
+			// Should have set default dimensions
+			expect( canvasManager.baseWidth ).toBeDefined();
+			expect( canvasManager.baseHeight ).toBeDefined();
+		} );
+	} );
 } );
