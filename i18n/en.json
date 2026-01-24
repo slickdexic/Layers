@@ -263,6 +263,8 @@
 	"layers-snap-options": "Snap Options",
 	"layers-smart-guides": "Smart Guides",
 	"layers-smart-guides-desc": "Snap to other objects",
+	"layers-canvas-snap": "Canvas Snap",
+	"layers-canvas-snap-desc": "Snap to canvas edges and center",
 	"layers-align-section": "Align (2+ layers)",
 	"layers-distribute-section": "Distribute (3+ layers)",
 

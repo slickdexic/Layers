@@ -698,4 +698,107 @@ describe( 'ToolbarKeyboard', function () {
 			expect( layerShortcuts.some( s => s.key === 'Ctrl+Shift+G' ) ).toBe( true );
 		} );
 	} );
+
+	describe( 'toggleCanvasSnap', function () {
+		it( 'should toggle canvas snap off when currently on', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					canvasSnapEnabled: true,
+					setCanvasSnapEnabled: jest.fn()
+				}
+			};
+			mockToolbar.updateCanvasSnapButton = jest.fn();
+
+			keyboardHandler.toggleCanvasSnap();
+
+			expect( mockEditor.canvasManager.smartGuidesController.setCanvasSnapEnabled ).toHaveBeenCalledWith( false );
+			expect( mockToolbar.updateCanvasSnapButton ).toHaveBeenCalledWith( false );
+		} );
+
+		it( 'should toggle canvas snap on when currently off', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					canvasSnapEnabled: false,
+					setCanvasSnapEnabled: jest.fn()
+				}
+			};
+			mockToolbar.updateCanvasSnapButton = jest.fn();
+
+			keyboardHandler.toggleCanvasSnap();
+
+			expect( mockEditor.canvasManager.smartGuidesController.setCanvasSnapEnabled ).toHaveBeenCalledWith( true );
+			expect( mockToolbar.updateCanvasSnapButton ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'should handle missing canvasManager gracefully', function () {
+			mockEditor.canvasManager = null;
+
+			expect( () => keyboardHandler.toggleCanvasSnap() ).not.toThrow();
+		} );
+
+		it( 'should handle missing smartGuidesController gracefully', function () {
+			mockEditor.canvasManager = {};
+
+			expect( () => keyboardHandler.toggleCanvasSnap() ).not.toThrow();
+		} );
+
+		it( 'should show status message when showStatus is available', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					canvasSnapEnabled: false,
+					setCanvasSnapEnabled: jest.fn()
+				}
+			};
+			mockEditor.showStatus = jest.fn();
+
+			keyboardHandler.toggleCanvasSnap();
+
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Canvas Snap: On', 1500 );
+		} );
+
+		it( 'should be triggered by apostrophe key', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					canvasSnapEnabled: false,
+					setCanvasSnapEnabled: jest.fn()
+				}
+			};
+
+			const event = {
+				target: { tagName: 'BODY' },
+				key: "'",
+				ctrlKey: false,
+				metaKey: false,
+				shiftKey: false,
+				preventDefault: jest.fn()
+			};
+
+			keyboardHandler.handleKeyboardShortcuts( event );
+
+			expect( mockEditor.canvasManager.smartGuidesController.setCanvasSnapEnabled ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'should show off message when disabling', function () {
+			mockEditor.canvasManager = {
+				smartGuidesController: {
+					canvasSnapEnabled: true,
+					setCanvasSnapEnabled: jest.fn()
+				}
+			};
+			mockEditor.showStatus = jest.fn();
+
+			keyboardHandler.toggleCanvasSnap();
+
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Canvas Snap: Off', 1500 );
+		} );
+	} );
+
+	describe( 'getShortcutsConfig - canvas snap shortcut', function () {
+		it( 'should include canvas snap shortcut in view category', function () {
+			const shortcuts = keyboardHandler.getShortcutsConfig();
+			const viewShortcuts = shortcuts.filter( s => s.category === 'view' );
+
+			expect( viewShortcuts.some( s => s.key === "'" ) ).toBe( true );
+		} );
+	} );
 } );

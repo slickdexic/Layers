@@ -782,6 +782,8 @@
 				"layers-snap-options",
 				"layers-smart-guides",
 				"layers-smart-guides-desc",
+				"layers-canvas-snap",
+				"layers-canvas-snap-desc",
 				"layers-align-section",
 				"layers-distribute-section",
 				"layers-type-group",

@@ -144,6 +144,10 @@
 				e.preventDefault();
 				this.toggleSmartGuides();
 				break;
+			case '\'':
+				e.preventDefault();
+				this.toggleCanvasSnap();
+				break;
 			case 'v':
 				this.toolbar.selectTool( 'pointer' );
 				break;
@@ -223,6 +227,31 @@
 
 		// Show brief status message
 		const msg = newState ? 'Smart Guides: On' : 'Smart Guides: Off';
+		if ( this.editor.showStatus ) {
+			this.editor.showStatus( msg, 1500 );
+		}
+	}
+
+	/**
+	 * Toggle canvas snap on/off
+	 * Uses CanvasManager's SmartGuidesController
+	 */
+	toggleCanvasSnap() {
+		if ( !this.editor.canvasManager || !this.editor.canvasManager.smartGuidesController ) {
+			return;
+		}
+
+		const controller = this.editor.canvasManager.smartGuidesController;
+		const newState = !controller.canvasSnapEnabled;
+		controller.setCanvasSnapEnabled( newState );
+
+		// Update toolbar button state if it exists
+		if ( this.toolbar.updateCanvasSnapButton ) {
+			this.toolbar.updateCanvasSnapButton( newState );
+		}
+
+		// Show brief status message
+		const msg = newState ? 'Canvas Snap: On' : 'Canvas Snap: Off';
 		if ( this.editor.showStatus ) {
 			this.editor.showStatus( msg, 1500 );
 		}
@@ -312,6 +341,7 @@
 			{ key: '-', description: 'Zoom Out', category: 'view' },
 			{ key: '0', description: 'Fit to Window', category: 'view' },
 			{ key: ';', description: 'Toggle Smart Guides', category: 'view' },
+			{ key: "'", description: 'Toggle Canvas Snap', category: 'view' },
 			{ key: 'Shift+B', description: 'Toggle Background', category: 'view' },
 			// Ctrl shortcuts
 			{ key: 'Ctrl+Z', description: 'Undo', category: 'edit' },

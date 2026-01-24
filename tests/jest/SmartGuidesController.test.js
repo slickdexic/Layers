@@ -929,4 +929,271 @@ describe( 'SmartGuidesController', () => {
 			expect( mockCtx.save ).not.toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'Canvas Snap', () => {
+		beforeEach( () => {
+			// Set canvas dimensions for canvas snap tests
+			mockCanvasManager.canvasWidth = 800;
+			mockCanvasManager.canvasHeight = 600;
+		} );
+
+		describe( 'setCanvasSnapEnabled', () => {
+			it( 'should enable canvas snap', () => {
+				controller.setCanvasSnapEnabled( true );
+				expect( controller.canvasSnapEnabled ).toBe( true );
+			} );
+
+			it( 'should disable canvas snap', () => {
+				controller.canvasSnapEnabled = true;
+				controller.setCanvasSnapEnabled( false );
+				expect( controller.canvasSnapEnabled ).toBe( false );
+			} );
+
+			it( 'should clear guides when disabled', () => {
+				controller.activeGuides = [ { type: 'vertical', x: 100, isCanvas: true } ];
+				controller.setCanvasSnapEnabled( false );
+				expect( controller.activeGuides ).toEqual( [] );
+			} );
+		} );
+
+		describe( 'buildCanvasSnapPoints', () => {
+			it( 'should return empty arrays when canvas dimensions not set', () => {
+				mockCanvasManager.canvasWidth = undefined;
+				mockCanvasManager.canvasHeight = undefined;
+				mockCanvasManager.baseWidth = 0;
+				mockCanvasManager.baseHeight = 0;
+
+				const result = controller.buildCanvasSnapPoints();
+
+				expect( result.vertical ).toEqual( [] );
+				expect( result.horizontal ).toEqual( [] );
+			} );
+
+			it( 'should return canvas edge and center points', () => {
+				mockCanvasManager.baseWidth = 800;
+				mockCanvasManager.baseHeight = 600;
+
+				const result = controller.buildCanvasSnapPoints();
+
+				// Vertical (X) points: left (0), center (400), right (800)
+				expect( result.vertical ).toHaveLength( 3 );
+				expect( result.vertical[ 0 ].value ).toBe( 0 );
+				expect( result.vertical[ 1 ].value ).toBe( 400 );
+				expect( result.vertical[ 2 ].value ).toBe( 800 );
+
+				// Horizontal (Y) points: top (0), center (300), bottom (600)
+				expect( result.horizontal ).toHaveLength( 3 );
+				expect( result.horizontal[ 0 ].value ).toBe( 0 );
+				expect( result.horizontal[ 1 ].value ).toBe( 300 );
+				expect( result.horizontal[ 2 ].value ).toBe( 600 );
+			} );
+
+			it( 'should mark points as canvas type', () => {
+				mockCanvasManager.baseWidth = 800;
+				mockCanvasManager.baseHeight = 600;
+
+				const result = controller.buildCanvasSnapPoints();
+
+				result.vertical.forEach( ( point ) => {
+					expect( point.isCanvas ).toBe( true );
+				} );
+				result.horizontal.forEach( ( point ) => {
+					expect( point.isCanvas ).toBe( true );
+				} );
+			} );
+
+			it( 'should have correct edge types', () => {
+				mockCanvasManager.baseWidth = 800;
+				mockCanvasManager.baseHeight = 600;
+
+				const result = controller.buildCanvasSnapPoints();
+
+				// Check vertical edge types
+				expect( result.vertical.find( ( p ) => p.edge === 'left' ) ).toBeDefined();
+				expect( result.vertical.find( ( p ) => p.type === 'center' ) ).toBeDefined();
+				expect( result.vertical.find( ( p ) => p.edge === 'right' ) ).toBeDefined();
+
+				// Check horizontal edge types
+				expect( result.horizontal.find( ( p ) => p.edge === 'top' ) ).toBeDefined();
+				expect( result.horizontal.find( ( p ) => p.type === 'center' ) ).toBeDefined();
+				expect( result.horizontal.find( ( p ) => p.edge === 'bottom' ) ).toBeDefined();
+			} );
+		} );
+
+		describe( 'calculateSnappedPosition with canvas snap', () => {
+			beforeEach( () => {
+				// Set canvas dimensions using baseWidth/baseHeight (what the code uses)
+				mockCanvasManager.baseWidth = 800;
+				mockCanvasManager.baseHeight = 600;
+			} );
+
+			it( 'should snap to canvas left edge', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				const layer = { id: 'drag', type: 'rectangle', x: 5, y: 100, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 5, 100, [ layer ] );
+
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 0 ); // Snapped to left edge
+			} );
+
+			it( 'should snap to canvas center horizontally', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Layer center at 400 when x = 375 (375 + 50/2 = 400)
+				const layer = { id: 'drag', type: 'rectangle', x: 375, y: 100, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 378, 100, [ layer ] );
+
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 375 ); // Snapped so center is at 400
+			} );
+
+			it( 'should snap to canvas right edge', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Layer right edge at 800 when x = 750 (750 + 50 = 800)
+				const layer = { id: 'drag', type: 'rectangle', x: 745, y: 100, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 745, 100, [ layer ] );
+
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 750 ); // Snapped so right edge is at 800
+			} );
+
+			it( 'should snap to canvas top edge', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				const layer = { id: 'drag', type: 'rectangle', x: 100, y: 5, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 100, 5, [ layer ] );
+
+				expect( result.snappedY ).toBe( true );
+				expect( result.y ).toBe( 0 ); // Snapped to top edge
+			} );
+
+			it( 'should snap to canvas center vertically', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Layer center at 300 when y = 275 (275 + 50/2 = 300)
+				const layer = { id: 'drag', type: 'rectangle', x: 100, y: 275, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 100, 278, [ layer ] );
+
+				expect( result.snappedY ).toBe( true );
+				expect( result.y ).toBe( 275 ); // Snapped so center is at 300
+			} );
+
+			it( 'should snap to canvas bottom edge', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Layer bottom edge at 600 when y = 550 (550 + 50 = 600)
+				const layer = { id: 'drag', type: 'rectangle', x: 100, y: 545, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 100, 545, [ layer ] );
+
+				expect( result.snappedY ).toBe( true );
+				expect( result.y ).toBe( 550 ); // Snapped so bottom edge is at 600
+			} );
+
+			it( 'should not snap to canvas when canvasSnapEnabled is false', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( false );
+
+				const layer = { id: 'drag', type: 'rectangle', x: 5, y: 5, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 5, 5, [ layer ] );
+
+				// Should not snap to canvas edges
+				expect( result.x ).toBe( 5 );
+				expect( result.y ).toBe( 5 );
+			} );
+
+			it( 'should snap to canvas even when smart guides (object snap) is disabled', () => {
+				controller.setEnabled( false ); // Object snap disabled
+				controller.setCanvasSnapEnabled( true ); // Canvas snap enabled
+
+				const layer = { id: 'drag', type: 'rectangle', x: 5, y: 100, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 5, 100, [ layer ] );
+
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 0 ); // Snapped to left canvas edge
+			} );
+
+			it( 'should prefer closer snap point when both object and canvas are nearby', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Other layer at x=10
+				const otherLayer = { id: 'other', type: 'rectangle', x: 10, y: 100, width: 50, height: 50, visible: true };
+				const dragLayer = { id: 'drag', type: 'rectangle', x: 3, y: 200, width: 50, height: 50, visible: true };
+
+				const result = controller.calculateSnappedPosition(
+					dragLayer, 3, 200, [ otherLayer, dragLayer ]
+				);
+
+				// Should snap to canvas left (0) since it's closer than object at 10
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 0 );
+			} );
+		} );
+
+		describe( 'renderGuides with canvas guides', () => {
+			it( 'should use canvas guide color for canvas guides', () => {
+				controller.activeGuides = [
+					{ type: 'vertical', x: 400, isCanvas: true }
+				];
+
+				const mockCtx = {
+					canvas: { width: 800, height: 600 },
+					save: jest.fn(),
+					restore: jest.fn(),
+					beginPath: jest.fn(),
+					moveTo: jest.fn(),
+					lineTo: jest.fn(),
+					stroke: jest.fn(),
+					setLineDash: jest.fn(),
+					strokeStyle: '',
+					lineWidth: 0
+				};
+
+				controller.renderGuides( mockCtx );
+
+				// Should have used the canvas guide color (green)
+				expect( mockCtx.strokeStyle ).toBe( controller.canvasGuideColor );
+			} );
+
+			it( 'should use regular guide color for object guides', () => {
+				controller.activeGuides = [
+					{ type: 'vertical', x: 200, isCanvas: false }
+				];
+
+				const mockCtx = {
+					canvas: { width: 800, height: 600 },
+					save: jest.fn(),
+					restore: jest.fn(),
+					beginPath: jest.fn(),
+					moveTo: jest.fn(),
+					lineTo: jest.fn(),
+					stroke: jest.fn(),
+					setLineDash: jest.fn(),
+					strokeStyle: '',
+					lineWidth: 0
+				};
+
+				controller.renderGuides( mockCtx );
+
+				// Should have used the regular guide color (magenta)
+				expect( mockCtx.strokeStyle ).toBe( controller.guideColor );
+			} );
+		} );
+
+		describe( 'canvasSnapEnabled default value', () => {
+			it( 'should be disabled by default', () => {
+				const newController = new SmartGuidesController( mockCanvasManager );
+				expect( newController.canvasSnapEnabled ).toBe( false );
+				newController.destroy();
+			} );
+		} );
+	} );
 } );

@@ -270,6 +270,8 @@
 	"layers-snap-options": "Section header in the Arrange dropdown for snap-related toggles",
 	"layers-smart-guides": "Label for the Smart Guides toggle - snaps objects to other objects during drag",
 	"layers-smart-guides-desc": "Description text for the Smart Guides toggle",
+	"layers-canvas-snap": "Label for the Canvas Snap toggle - snaps objects to canvas edges and center during drag",
+	"layers-canvas-snap-desc": "Description text for the Canvas Snap toggle",
 	"layers-align-section": "Section header in the Arrange dropdown for alignment options, indicates 2+ layers required",
 	"layers-distribute-section": "Section header in the Arrange dropdown for distribute options, indicates 3+ layers required",
 

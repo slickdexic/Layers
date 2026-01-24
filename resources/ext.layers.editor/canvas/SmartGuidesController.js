@@ -32,6 +32,7 @@
 
 			// Configuration
 			this.enabled = false; // Off by default - toggle with ';' key
+			this.canvasSnapEnabled = false; // Canvas snap off by default - toggle with "'" key
 			this.snapThreshold = 8; // Pixels to snap within
 			this.showGuides = true;
 
@@ -43,6 +44,10 @@
 			// Center guide style (different from edge guides)
 			this.centerGuideColor = '#00ffff'; // Cyan for centers
 			this.centerGuideDashPattern = [ 2, 2 ];
+
+			// Canvas snap guide style (green for canvas boundaries)
+			this.canvasGuideColor = '#00ff00'; // Green for canvas
+			this.canvasGuideDashPattern = [ 6, 3 ];
 
 			// Active guides to render
 			this.activeGuides = [];
@@ -60,6 +65,18 @@
 		setEnabled( enabled ) {
 			this.enabled = Boolean( enabled );
 			if ( !this.enabled ) {
+				this.clearGuides();
+			}
+		}
+
+		/**
+		 * Enable or disable canvas snap
+		 *
+		 * @param {boolean} enabled - Whether canvas snap is enabled
+		 */
+		setCanvasSnapEnabled( enabled ) {
+			this.canvasSnapEnabled = Boolean( enabled );
+			if ( !this.canvasSnapEnabled && !this.enabled ) {
 				this.clearGuides();
 			}
 		}
@@ -322,6 +339,40 @@
 		}
 
 		/**
+		 * Build snap points for canvas edges and center
+		 * These allow snapping objects to the canvas boundaries
+		 *
+		 * @return {Object} Snap points { horizontal: [], vertical: [] }
+		 */
+		buildCanvasSnapPoints() {
+			const horizontal = []; // Y coordinates (top, center, bottom of canvas)
+			const vertical = []; // X coordinates (left, center, right of canvas)
+
+			// Get canvas dimensions from manager
+			const canvasWidth = this.manager?.baseWidth || this.manager?.canvas?.width || 0;
+			const canvasHeight = this.manager?.baseHeight || this.manager?.canvas?.height || 0;
+
+			if ( canvasWidth <= 0 || canvasHeight <= 0 ) {
+				return { horizontal, vertical };
+			}
+
+			const centerX = canvasWidth / 2;
+			const centerY = canvasHeight / 2;
+
+			// Vertical snap points (X coordinates) - left edge, center, right edge
+			vertical.push( { value: 0, type: 'edge', edge: 'left', isCanvas: true } );
+			vertical.push( { value: centerX, type: 'center', isCanvas: true } );
+			vertical.push( { value: canvasWidth, type: 'edge', edge: 'right', isCanvas: true } );
+
+			// Horizontal snap points (Y coordinates) - top edge, center, bottom edge
+			horizontal.push( { value: 0, type: 'edge', edge: 'top', isCanvas: true } );
+			horizontal.push( { value: centerY, type: 'center', isCanvas: true } );
+			horizontal.push( { value: canvasHeight, type: 'edge', edge: 'bottom', isCanvas: true } );
+
+			return { horizontal, vertical };
+		}
+
+		/**
 		 * Find the nearest snap point within threshold
 		 *
 		 * @param {number} value - Current value to snap
@@ -353,7 +404,8 @@
 		 * @return {Object} Snapped position { x, y, snappedX, snappedY, guides }
 		 */
 		calculateSnappedPosition( layer, proposedX, proposedY, allLayers ) {
-			if ( !this.enabled || !layer ) {
+			// Check if any snapping is enabled
+			if ( ( !this.enabled && !this.canvasSnapEnabled ) || !layer ) {
 				return { x: proposedX, y: proposedY, snappedX: false, snappedY: false, guides: [] };
 			}
 
@@ -395,6 +447,13 @@
 
 			const snapPoints = this.buildSnapPoints( allLayers, excludeIds );
 
+			// Add canvas snap points if enabled
+			const canvasSnapPoints = this.canvasSnapEnabled ? this.buildCanvasSnapPoints() : { horizontal: [], vertical: [] };
+
+			// Merge canvas snap points with object snap points
+			const allVerticalSnaps = this.enabled ? [ ...snapPoints.vertical, ...canvasSnapPoints.vertical ] : canvasSnapPoints.vertical;
+			const allHorizontalSnaps = this.enabled ? [ ...snapPoints.horizontal, ...canvasSnapPoints.horizontal ] : canvasSnapPoints.horizontal;
+
 			// Calculate snap targets for the dragged layer
 			const left = proposedBounds.x;
 			const right = proposedBounds.x + proposedBounds.width;
@@ -409,10 +468,10 @@
 			let didSnapY = false;
 			const guides = [];
 
-			// Check vertical snapping (X axis)
-			const leftSnap = this.findNearestSnap( left, snapPoints.vertical );
-			const rightSnap = this.findNearestSnap( right, snapPoints.vertical );
-			const centerXSnap = this.findNearestSnap( centerX, snapPoints.vertical );
+			// Check vertical snapping (X axis) - use merged snap points
+			const leftSnap = this.findNearestSnap( left, allVerticalSnaps );
+			const rightSnap = this.findNearestSnap( right, allVerticalSnaps );
+			const centerXSnap = this.findNearestSnap( centerX, allVerticalSnaps );
 
 			// Prefer edge snaps over center snaps
 			let bestVerticalSnap = null;
@@ -448,14 +507,15 @@
 					type: 'vertical',
 					x: bestVerticalSnap.value,
 					isCenter: verticalSnapType === 'center',
+					isCanvas: bestVerticalSnap.isCanvas || false,
 					layerId: bestVerticalSnap.layerId
 				} );
 			}
 
-			// Check horizontal snapping (Y axis)
-			const topSnap = this.findNearestSnap( top, snapPoints.horizontal );
-			const bottomSnap = this.findNearestSnap( bottom, snapPoints.horizontal );
-			const centerYSnap = this.findNearestSnap( centerY, snapPoints.horizontal );
+			// Check horizontal snapping (Y axis) - use merged snap points
+			const topSnap = this.findNearestSnap( top, allHorizontalSnaps );
+			const bottomSnap = this.findNearestSnap( bottom, allHorizontalSnaps );
+			const centerYSnap = this.findNearestSnap( centerY, allHorizontalSnaps );
 
 			let bestHorizontalSnap = null;
 			let horizontalOffset = 0;
@@ -490,6 +550,7 @@
 					type: 'horizontal',
 					y: bestHorizontalSnap.value,
 					isCenter: horizontalSnapType === 'center',
+					isCanvas: bestHorizontalSnap.isCanvas || false,
 					layerId: bestHorizontalSnap.layerId
 				} );
 			}
@@ -526,10 +587,16 @@
 
 			for ( const guide of this.activeGuides ) {
 				// Choose color based on guide type
-				if ( guide.isCenter ) {
+				if ( guide.isCanvas ) {
+					// Canvas snap guides - green
+					ctx.strokeStyle = this.canvasGuideColor;
+					ctx.setLineDash( this.canvasGuideDashPattern );
+				} else if ( guide.isCenter ) {
+					// Object center guides - cyan
 					ctx.strokeStyle = this.centerGuideColor;
 					ctx.setLineDash( this.centerGuideDashPattern );
 				} else {
+					// Object edge guides - magenta
 					ctx.strokeStyle = this.guideColor;
 					ctx.setLineDash( this.guideDashPattern );
 				}
