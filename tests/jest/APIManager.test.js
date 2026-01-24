@@ -2611,4 +2611,324 @@ describe( 'APIManager', function () {
 			createElementSpy.mockRestore();
 		} );
 	} );
+
+	describe( '_scheduleTimeout error handling', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should catch and log callback errors', function () {
+			const errorCallback = jest.fn( () => {
+				throw new Error( 'Callback error' );
+			} );
+
+			apiManager._scheduleTimeout( errorCallback, 100 );
+			jest.advanceTimersByTime( 100 );
+
+			// Callback was called
+			expect( errorCallback ).toHaveBeenCalled();
+			// Error was logged
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				'Layers APIManager: Scheduled callback error:',
+				expect.any( Error )
+			);
+		} );
+
+		it( 'should remove timeout from activeTimeouts after execution', function () {
+			const callback = jest.fn();
+
+			apiManager._scheduleTimeout( callback, 100 );
+			expect( apiManager.activeTimeouts.size ).toBe( 1 );
+
+			jest.advanceTimersByTime( 100 );
+			expect( apiManager.activeTimeouts.size ).toBe( 0 );
+		} );
+	} );
+
+	describe( '_clearAllTimeouts', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should clear all active timeouts', function () {
+			const callback1 = jest.fn();
+			const callback2 = jest.fn();
+
+			apiManager._scheduleTimeout( callback1, 100 );
+			apiManager._scheduleTimeout( callback2, 200 );
+			expect( apiManager.activeTimeouts.size ).toBe( 2 );
+
+			apiManager._clearAllTimeouts();
+			expect( apiManager.activeTimeouts.size ).toBe( 0 );
+
+			// Callbacks should not be called after clearing
+			jest.advanceTimersByTime( 300 );
+			expect( callback1 ).not.toHaveBeenCalled();
+			expect( callback2 ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'extractLayerSetData with slide mode', function () {
+		beforeEach( function () {
+			mockEditor.stateManager = {
+				get: jest.fn( ( key ) => {
+					if ( key === 'isSlide' ) {
+						return true;
+					}
+					return null;
+				} ),
+				set: jest.fn()
+			};
+			mockEditor.canvasManager = {
+				setBaseDimensions: jest.fn(),
+				setBackgroundColor: jest.fn()
+			};
+		} );
+
+		it( 'should set slide canvas dimensions from layer set data', function () {
+			const layerSet = {
+				baseWidth: 800,
+				baseHeight: 600,
+				data: {
+					layers: [],
+					canvasWidth: 1920,
+					canvasHeight: 1080,
+					backgroundColor: '#ff0000'
+				}
+			};
+
+			apiManager.extractLayerSetData( layerSet );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'slideCanvasWidth', 1920 );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'slideCanvasHeight', 1080 );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'slideBackgroundColor', '#ff0000' );
+		} );
+
+		it( 'should update canvas manager with slide background color', function () {
+			const layerSet = {
+				baseWidth: 800,
+				baseHeight: 600,
+				data: {
+					layers: [],
+					backgroundColor: '#00ff00'
+				}
+			};
+
+			apiManager.extractLayerSetData( layerSet );
+
+			expect( mockEditor.canvasManager.setBackgroundColor ).toHaveBeenCalledWith( '#00ff00' );
+		} );
+
+		it( 'should resize canvas when slide dimensions are provided', function () {
+			const layerSet = {
+				baseWidth: 800,
+				baseHeight: 600,
+				data: {
+					layers: [],
+					canvasWidth: 1280
+				}
+			};
+
+			// Mock getting slideCanvasHeight for fallback
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				if ( key === 'slideCanvasHeight' ) {
+					return 720;
+				}
+				return null;
+			} );
+
+			apiManager.extractLayerSetData( layerSet );
+
+			expect( mockEditor.canvasManager.setBaseDimensions ).toHaveBeenCalledWith( 1280, 720 );
+		} );
+	} );
+
+	describe( 'loadRevision abort handling', function () {
+		it( 'should ignore aborted requests without showing error', async function () {
+			const abortError = {
+				textStatus: 'abort'
+			};
+
+			mockEditor.api = {
+				get: jest.fn().mockImplementation( () => {
+					const p = Promise.reject( [ 'http', abortError ] );
+					// Simulate jQuery-style catch
+					p.catch = ( handler ) => {
+						handler( 'http', abortError );
+						return p;
+					};
+					return p;
+				} )
+			};
+			apiManager.api = mockEditor.api;
+
+			try {
+				await apiManager.loadRevision( 123 );
+			} catch ( e ) {
+				// Expected to not show error notification for abort
+			}
+
+			// Should not show error for aborted request
+			expect( mw.notify ).not.toHaveBeenCalledWith(
+				expect.anything(),
+				{ type: 'error' }
+			);
+		} );
+	} );
+
+	describe( 'reloadRevisions edge cases', function () {
+		it( 'should handle no layerset returned from API', async function () {
+			// Enable debug logging for this test
+			mw.config.get = jest.fn( ( key ) => {
+				if ( key === 'wgLayersDebug' ) {
+					return true;
+				}
+				return null;
+			} );
+			mw.log = jest.fn();
+			mw.log.warn = jest.fn();
+			mw.log.error = jest.fn();
+
+			const mockResponse = {
+				layersinfo: {
+					all_layersets: [],
+					named_sets: []
+					// No layerset property
+				}
+			};
+
+			apiManager.api.get = jest.fn().mockResolvedValue( mockResponse );
+			mockEditor.buildRevisionSelector = jest.fn();
+			mockEditor.buildSetSelector = jest.fn();
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return null;
+			} );
+
+			await apiManager.reloadRevisions();
+
+			// Should log the warning about no layerset
+			expect( mw.log ).toHaveBeenCalledWith(
+				'[APIManager] No layerset returned from API (new set not found?)'
+			);
+		} );
+
+		it( 'should call buildSetSelector when named_sets are returned', async function () {
+			const mockResponse = {
+				layersinfo: {
+					all_layersets: [],
+					named_sets: [ { name: 'set1' }, { name: 'set2' } ]
+				}
+			};
+
+			apiManager.api.get = jest.fn().mockResolvedValue( mockResponse );
+			mockEditor.buildSetSelector = jest.fn();
+			mockEditor.buildRevisionSelector = jest.fn();
+
+			await apiManager.reloadRevisions();
+
+			expect( mockEditor.buildSetSelector ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'deleteLayerSet unexpected response', function () {
+		it( 'should reject when response has no success flag', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersdelete: {}
+				// No success: 1
+			} );
+
+			mw.config.get = jest.fn( ( key ) => {
+				if ( key === 'wgLayersDebug' ) {
+					return true;
+				}
+				return null;
+			} );
+			mw.log = jest.fn();
+			mw.log.error = jest.fn();
+
+			await expect( apiManager.deleteLayerSet( 'test-set' ) )
+				.rejects.toThrow();
+
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				'[APIManager] deleteLayerSet unexpected response:',
+				expect.anything()
+			);
+		} );
+	} );
+
+	describe( 'loadLayersBySetName error handling', function () {
+		it( 'should set loading state at start', function () {
+			// Test that loading state is set - simpler test
+			mockEditor.stateManager.set = jest.fn();
+			mockEditor.stateManager.get = jest.fn( () => null );
+
+			// Call the method - it will set isLoading: true at the start
+			apiManager.loadLayersBySetName( 'test-set' ).catch( () => {} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'isLoading', true );
+		} );
+	} );
+
+	describe( 'saveLayers debug logging', function () {
+		it( 'should log debug info when save response received', async function () {
+			const originalMwLog = mw.log;
+			mw.config.get = jest.fn( ( key ) => {
+				if ( key === 'wgLayersDebug' ) {
+					return true;
+				}
+				return null;
+			} );
+			const mockLog = jest.fn();
+			mockLog.warn = jest.fn();
+			mockLog.error = jest.fn();
+			mw.log = mockLog;
+
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layerssave: { success: 1, layersetid: 123 }
+			} );
+
+			apiManager.saveInProgress = false;
+			apiManager.validateBeforeSave = jest.fn().mockReturnValue( true );
+			apiManager.checkSizeLimit = jest.fn().mockReturnValue( true );
+			apiManager.handleSaveSuccess = jest.fn();
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [];
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				if ( key === 'backgroundVisible' ) {
+					return true;
+				}
+				if ( key === 'backgroundOpacity' ) {
+					return 1;
+				}
+				return null;
+			} );
+
+			await apiManager.saveLayers();
+
+			expect( mw.log ).toHaveBeenCalledWith(
+				'[APIManager] Save response received:',
+				expect.any( String )
+			);
+
+			mw.log = originalMwLog;
+		} );
+	} );
 } );
