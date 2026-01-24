@@ -3675,4 +3675,244 @@ describe( 'LayerRenderer', () => {
 			expect( mockCtx.ellipse ).toHaveBeenCalledWith( 100, 100, 60, 40, 0, 0, Math.PI * 2 );
 		} );
 	} );
+
+	// ========================================================================
+	// Coverage Tests - Constructor fallback branches
+	// ========================================================================
+
+	describe( 'constructor renderer fallbacks', () => {
+		let originalRenderers;
+
+		beforeAll( () => {
+			// Store original renderer references for restoration
+			originalRenderers = {};
+		} );
+
+		test( 'should handle null shadowRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force shadowRenderer to null
+			testRenderer.shadowRenderer = null;
+
+			// Should still be able to draw layers without crashing
+			const layer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null arrowRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force arrowRenderer to null
+			testRenderer.arrowRenderer = null;
+
+			// Arrow type should still be handled (fallback to line)
+			const layer = { type: 'arrow', x1: 10, y1: 10, x2: 100, y2: 100 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null textRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force textRenderer to null
+			testRenderer.textRenderer = null;
+
+			// Text type should not crash
+			const layer = { type: 'text', x: 10, y: 10, text: 'Test' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null polygonStarRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force polygonStarRenderer to null
+			testRenderer.polygonStarRenderer = null;
+
+			// Polygon type should not crash
+			const layer = { type: 'polygon', points: [ { x: 0, y: 0 }, { x: 50, y: 0 }, { x: 25, y: 50 } ] };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null shapeRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force shapeRenderer to null
+			testRenderer.shapeRenderer = null;
+
+			// Rectangle type should not crash
+			const layer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null textBoxRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force textBoxRenderer to null
+			testRenderer.textBoxRenderer = null;
+
+			// TextBox type should not crash
+			const layer = { type: 'textbox', x: 10, y: 10, width: 100, height: 50, text: 'Test' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null calloutRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force calloutRenderer to null
+			testRenderer.calloutRenderer = null;
+
+			// Callout type should not crash
+			const layer = { type: 'callout', x: 10, y: 10, width: 100, height: 50, text: 'Test' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null effectsRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force effectsRenderer to null
+			testRenderer.effectsRenderer = null;
+
+			// Blur fill should not crash (will skip blur effect)
+			const layer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50, fill: 'blur' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null imageLayerRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force imageLayerRenderer to null
+			testRenderer.imageLayerRenderer = null;
+
+			// Image type should not crash
+			const layer = { type: 'image', x: 10, y: 10, width: 50, height: 50, src: 'data:image/png;base64,ABC' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null markerRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force markerRenderer to null
+			testRenderer.markerRenderer = null;
+
+			// Marker type should not crash
+			const layer = { type: 'marker', x: 50, y: 50, markerNumber: 1 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null dimensionRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force dimensionRenderer to null
+			testRenderer.dimensionRenderer = null;
+
+			// Dimension type should not crash
+			const layer = { type: 'dimension', x1: 10, y1: 10, x2: 100, y2: 10 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - drawLayerWithBlurBlend fallback
+	// ========================================================================
+
+	describe( 'drawLayerWithBlurBlend without effectsRenderer', () => {
+		test( 'should fallback to normal drawing when effectsRenderer is null', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force effectsRenderer to null
+			testRenderer.effectsRenderer = null;
+
+			const layer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50, fill: 'blur' };
+
+			// Should not throw and should fallback to normal rendering
+			expect( () => testRenderer.drawLayerWithBlurBlend( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - shape path with hasPaths
+	// ========================================================================
+
+	describe( '_drawShapePath with paths array', () => {
+		test( 'should use paths array when provided', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Create a custom shape with paths array (multi-path shape)
+			const layer = {
+				type: 'custom',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 100,
+				paths: [ 'M 0 0 L 50 0 L 50 50 Z', 'M 10 10 L 40 10 L 40 40 Z' ],
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			const opts = { scale: { sx: 1, sy: 1 } };
+
+			// Should handle multiple paths without crashing
+			expect( () => testRenderer._drawShapePath( layer, opts, mockCtx ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should use single path when paths array not provided', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Create a custom shape with single path
+			const layer = {
+				type: 'custom',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 100,
+				path: 'M 0 0 L 50 0 L 50 50 Z',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			const opts = { scale: { sx: 1, sy: 1 } };
+
+			// Should handle single path without crashing
+			expect( () => testRenderer._drawShapePath( layer, opts, mockCtx ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+	} );
 } );

@@ -952,4 +952,105 @@ describe( 'LayerSetManager', () => {
 			await expect( layerSetManager.reloadRevisions() ).resolves.not.toThrow();
 		} );
 	} );
+
+	describe( 'buildRevisionSelector error handling', () => {
+		it( 'should handle errors in revision selector building', () => {
+			// Force an error by setting stateManager.get to throw
+			layerSetManager.stateManager = {
+				get: jest.fn().mockImplementation( () => {
+					throw new Error( 'State error' );
+				} )
+			};
+
+			// Should not throw
+			expect( () => layerSetManager.buildRevisionSelector() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateRevisionLoadButton edge cases', () => {
+		it( 'should return early when revLoadBtnEl is missing', () => {
+			layerSetManager.uiManager = { revLoadBtnEl: null, revSelectEl: {} };
+
+			expect( () => layerSetManager.updateRevisionLoadButton() ).not.toThrow();
+		} );
+
+		it( 'should return early when revSelectEl is missing', () => {
+			layerSetManager.uiManager = { revLoadBtnEl: {}, revSelectEl: null };
+
+			expect( () => layerSetManager.updateRevisionLoadButton() ).not.toThrow();
+		} );
+
+		it( 'should handle errors in updateRevisionLoadButton', () => {
+			layerSetManager.uiManager = {
+				get revLoadBtnEl() {
+					throw new Error( 'Access error' );
+				}
+			};
+
+			// Should not throw
+			expect( () => layerSetManager.updateRevisionLoadButton() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'buildSetSelector edge cases', () => {
+		it( 'should return early when setSelectEl is null', () => {
+			layerSetManager.uiManager = { setSelectEl: null };
+			layerSetManager.stateManager = {
+				get: jest.fn( ( key ) => {
+					if ( key === 'namedSets' ) {
+						return [ { name: 'test' } ];
+					}
+					return null;
+				} )
+			};
+
+			// Should not throw and return early
+			expect( () => layerSetManager.buildSetSelector() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'loadLayerSetByName error handling', () => {
+		it( 'should handle errors during layer set loading', async () => {
+			const mockApiManager = {
+				loadLayersBySetName: jest.fn().mockRejectedValue( new Error( 'API error' ) )
+			};
+			layerSetManager.apiManager = mockApiManager;
+			layerSetManager.stateManager = {
+				get: jest.fn( () => false ), // No unsaved changes
+				set: jest.fn()
+			};
+
+			// Should not throw
+			await expect( layerSetManager.loadLayerSetByName( 'test-set' ) ).resolves.not.toThrow();
+
+			// Should show error notification
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { type: 'error' } )
+			);
+		} );
+	} );
+
+	describe( 'createNewLayerSet error handling', () => {
+		it( 'should handle errors during layer set creation', async () => {
+			// Force an error in the creation process
+			layerSetManager.stateManager = {
+				get: jest.fn( () => [] ) // empty namedSets
+			};
+			layerSetManager.apiManager = {
+				saveCurrentLayers: jest.fn().mockRejectedValue( new Error( 'Save error' ) )
+			};
+
+			const result = await layerSetManager.createNewLayerSet( 'new-set' );
+
+			// Should return false on error
+			expect( result ).toBe( false );
+
+			// Should show error notification
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { type: 'error' } )
+			);
+		} );
+	} );
 } );
