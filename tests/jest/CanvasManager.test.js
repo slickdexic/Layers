@@ -2326,4 +2326,304 @@ describe( 'CanvasManager', () => {
 			expect( true ).toBe( true ); // Basic smoke test
 		} );
 	} );
+
+	describe( 'redrawOptimized fallback branches', () => {
+		it( 'should return early when redrawScheduled is true', () => {
+			canvasManager.renderCoordinator = null;
+			canvasManager.redrawScheduled = true;
+
+			// Should return immediately without scheduling
+			canvasManager.redrawOptimized();
+
+			// Since already scheduled, animationFrameId should not be set
+			expect( canvasManager.redrawScheduled ).toBe( true );
+		} );
+
+		it( 'should use requestAnimationFrame when available', () => {
+			canvasManager.renderCoordinator = null;
+			canvasManager.redrawScheduled = false;
+			const mockRafId = 123;
+			const originalRaf = window.requestAnimationFrame;
+			window.requestAnimationFrame = jest.fn( () => mockRafId );
+
+			canvasManager.redrawOptimized();
+
+			expect( window.requestAnimationFrame ).toHaveBeenCalled();
+			expect( canvasManager.animationFrameId ).toBe( mockRafId );
+			expect( canvasManager.redrawScheduled ).toBe( true );
+
+			window.requestAnimationFrame = originalRaf;
+		} );
+	} );
+
+	describe( 'updateViewportBounds', () => {
+		it( 'should update viewport bounds from canvas dimensions', () => {
+			canvasManager.canvas = { width: 1200, height: 900 };
+			canvasManager.viewportBounds = { x: 0, y: 0, width: 0, height: 0 };
+
+			canvasManager.updateViewportBounds();
+
+			expect( canvasManager.viewportBounds.x ).toBe( 0 );
+			expect( canvasManager.viewportBounds.y ).toBe( 0 );
+			expect( canvasManager.viewportBounds.width ).toBe( 1200 );
+			expect( canvasManager.viewportBounds.height ).toBe( 900 );
+		} );
+	} );
+
+	describe( 'isLayerInViewport edge cases', () => {
+		it( 'should return true when viewportBounds has zero width', () => {
+			canvasManager.viewportBounds = { x: 0, y: 0, width: 0, height: 600 };
+			const layer = { type: 'rectangle', x: 100, y: 100, width: 50, height: 50 };
+
+			expect( canvasManager.isLayerInViewport( layer ) ).toBe( true );
+		} );
+
+		it( 'should return true when viewportBounds has zero height', () => {
+			canvasManager.viewportBounds = { x: 0, y: 0, width: 800, height: 0 };
+			const layer = { type: 'rectangle', x: 100, y: 100, width: 50, height: 50 };
+
+			expect( canvasManager.isLayerInViewport( layer ) ).toBe( true );
+		} );
+
+		it( 'should return false when layer is completely outside viewport on the right', () => {
+			canvasManager.viewportBounds = { x: 0, y: 0, width: 800, height: 600 };
+			const layer = { type: 'rectangle', x: 1000, y: 100, width: 100, height: 100 };
+
+			// getLayerBounds will return bounds, then the check happens
+			expect( canvasManager.isLayerInViewport( layer ) ).toBe( false );
+		} );
+
+		it( 'should return false when layer is completely outside viewport on the left', () => {
+			canvasManager.viewportBounds = { x: 100, y: 0, width: 800, height: 600 };
+			const layer = { type: 'rectangle', x: -200, y: 100, width: 50, height: 50 };
+
+			expect( canvasManager.isLayerInViewport( layer ) ).toBe( false );
+		} );
+
+		it( 'should return true when getLayerBounds returns null', () => {
+			canvasManager.viewportBounds = { x: 0, y: 0, width: 800, height: 600 };
+			// Mock getLayerBounds to return null
+			canvasManager.getLayerBounds = jest.fn( () => null );
+			const layer = { type: 'unknown' };
+
+			expect( canvasManager.isLayerInViewport( layer ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'drawLayer error handling', () => {
+		it( 'should log error and draw placeholder when layer drawing fails', () => {
+			const mockErrorLog = jest.fn();
+			canvasManager.editor = { errorLog: mockErrorLog };
+			canvasManager.renderer = {
+				drawLayer: jest.fn( () => {
+					throw new Error( 'Render failed' );
+				} ),
+				drawErrorPlaceholder: jest.fn()
+			};
+			const layer = { id: 'test', type: 'rectangle', visible: true };
+
+			canvasManager.drawLayer( layer );
+
+			expect( mockErrorLog ).toHaveBeenCalled();
+			expect( canvasManager.renderer.drawErrorPlaceholder ).toHaveBeenCalledWith( layer );
+		} );
+
+		it( 'should log recovery error when placeholder fails', () => {
+			const mockLog = { error: jest.fn() };
+			global.mw = { log: mockLog };
+			window.mw = { log: mockLog };
+			const mockErrorLog = jest.fn();
+			canvasManager.editor = { errorLog: mockErrorLog };
+			canvasManager.renderer = {
+				drawLayer: jest.fn( () => {
+					throw new Error( 'Render failed' );
+				} ),
+				drawErrorPlaceholder: jest.fn( () => {
+					throw new Error( 'Recovery failed' );
+				} )
+			};
+			const layer = { id: 'test', type: 'rectangle', visible: true };
+
+			canvasManager.drawLayer( layer );
+
+			// Both errors should be logged
+			expect( mockErrorLog ).toHaveBeenCalled();
+			expect( mockLog.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should use editor.errorLog for recovery error when mw.log unavailable', () => {
+			global.mw = undefined;
+			window.mw = undefined;
+			const mockErrorLog = jest.fn();
+			canvasManager.editor = { errorLog: mockErrorLog };
+			canvasManager.renderer = {
+				drawLayer: jest.fn( () => {
+					throw new Error( 'Render failed' );
+				} ),
+				drawErrorPlaceholder: jest.fn( () => {
+					throw new Error( 'Recovery failed' );
+				} )
+			};
+			const layer = { id: 'test', type: 'rectangle', visible: true };
+
+			canvasManager.drawLayer( layer );
+
+			// Should have called errorLog twice (once for each error)
+			expect( mockErrorLog ).toHaveBeenCalledTimes( 2 );
+		} );
+	} );
+
+	describe( 'destroy edge cases', () => {
+		it( 'should handle controller destroy errors gracefully', () => {
+			const mockWarn = jest.fn();
+			global.mw = { log: { warn: mockWarn } };
+
+			canvasManager.renderCoordinator = {
+				destroy: jest.fn( () => {
+					throw new Error( 'Destroy error' );
+				} )
+			};
+
+			expect( () => canvasManager.destroy() ).not.toThrow();
+			expect( mockWarn ).toHaveBeenCalled();
+		} );
+
+		it( 'should unsubscribe from state manager', () => {
+			const mockUnsub1 = jest.fn();
+			const mockUnsub2 = jest.fn();
+			canvasManager.stateUnsubscribers = [ mockUnsub1, mockUnsub2 ];
+
+			canvasManager.destroy();
+
+			expect( mockUnsub1 ).toHaveBeenCalled();
+			expect( mockUnsub2 ).toHaveBeenCalled();
+			expect( canvasManager.stateUnsubscribers ).toEqual( [] );
+		} );
+
+		it( 'should handle unsubscriber errors gracefully', () => {
+			const mockWarn = jest.fn();
+			global.mw = { log: { warn: mockWarn } };
+
+			const mockBadUnsub = jest.fn( () => {
+				throw new Error( 'Unsub error' );
+			} );
+			canvasManager.stateUnsubscribers = [ mockBadUnsub ];
+
+			expect( () => canvasManager.destroy() ).not.toThrow();
+			expect( mockWarn ).toHaveBeenCalled();
+		} );
+
+		it( 'should clear canvas pool', () => {
+			const mockCanvas1 = { width: 100, height: 100 };
+			const mockCanvas2 = { width: 200, height: 200 };
+			canvasManager.canvasPool = [ mockCanvas1, mockCanvas2 ];
+
+			canvasManager.destroy();
+
+			expect( mockCanvas1.width ).toBe( 0 );
+			expect( mockCanvas1.height ).toBe( 0 );
+			expect( mockCanvas2.width ).toBe( 0 );
+			expect( mockCanvas2.height ).toBe( 0 );
+			expect( canvasManager.canvasPool ).toEqual( [] );
+		} );
+
+		it( 'should reset zoom animation state', () => {
+			canvasManager.zoomAnimationStartTime = 12345;
+			canvasManager.zoomAnimationStartZoom = 2.0;
+			canvasManager.zoomAnimationTargetZoom = 3.0;
+
+			canvasManager.destroy();
+
+			expect( canvasManager.zoomAnimationStartTime ).toBe( 0 );
+			expect( canvasManager.zoomAnimationStartZoom ).toBe( 1.0 );
+			expect( canvasManager.zoomAnimationTargetZoom ).toBe( 1.0 );
+		} );
+
+		it( 'should clear all references', () => {
+			canvasManager.destroy();
+
+			expect( canvasManager.canvas ).toBeNull();
+			expect( canvasManager.ctx ).toBeNull();
+			expect( canvasManager.container ).toBeNull();
+			expect( canvasManager.backgroundImage ).toBeNull();
+			expect( canvasManager.editor ).toBeNull();
+			expect( canvasManager.config ).toBeNull();
+		} );
+	} );
+
+	describe( 'setTextEditingMode', () => {
+		it( 'should set text cursor when editing', () => {
+			canvasManager.setTextEditingMode( true );
+
+			expect( canvasManager.isTextEditing ).toBe( true );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'text' );
+		} );
+
+		it( 'should restore tool cursor and redraw when not editing', () => {
+			canvasManager.drawingController = {
+				getToolCursor: jest.fn( () => 'crosshair' )
+			};
+			canvasManager.currentTool = 'rectangle';
+			canvasManager.renderer = { render: jest.fn() };
+
+			canvasManager.setTextEditingMode( false );
+
+			expect( canvasManager.isTextEditing ).toBe( false );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'crosshair' );
+		} );
+	} );
+
+	describe( 'continueDrawing rAF scheduling', () => {
+		it( 'should not schedule multiple frames', () => {
+			const mockTempLayer = { id: 'temp', type: 'rectangle' };
+			canvasManager.drawingController = {
+				continueDrawing: jest.fn(),
+				getTempLayer: jest.fn( () => mockTempLayer ),
+				drawPreview: jest.fn()
+			};
+			canvasManager.renderer = { render: jest.fn() };
+			canvasManager._drawingFrameScheduled = true;
+
+			const originalRaf = window.requestAnimationFrame;
+			window.requestAnimationFrame = jest.fn();
+
+			canvasManager.continueDrawing( { x: 100, y: 100 } );
+
+			// Should not schedule another frame since one is already scheduled
+			expect( window.requestAnimationFrame ).not.toHaveBeenCalled();
+
+			window.requestAnimationFrame = originalRaf;
+		} );
+
+		it( 'should not render if destroyed during rAF callback', () => {
+			const mockTempLayer = { id: 'temp', type: 'rectangle' };
+			let rafCallback;
+			canvasManager.drawingController = {
+				continueDrawing: jest.fn(),
+				getTempLayer: jest.fn( () => mockTempLayer ),
+				drawPreview: jest.fn()
+			};
+			canvasManager.renderer = { render: jest.fn() };
+			canvasManager._drawingFrameScheduled = false;
+
+			const originalRaf = window.requestAnimationFrame;
+			window.requestAnimationFrame = jest.fn( ( cb ) => {
+				rafCallback = cb;
+				return 1;
+			} );
+
+			canvasManager.continueDrawing( { x: 100, y: 100 } );
+
+			// Mark as destroyed before callback runs
+			canvasManager.isDestroyed = true;
+
+			// Execute the callback
+			rafCallback();
+
+			// Should not have called drawPreview
+			expect( canvasManager.drawingController.drawPreview ).not.toHaveBeenCalled();
+
+			window.requestAnimationFrame = originalRaf;
+		} );
+	} );
 } );
