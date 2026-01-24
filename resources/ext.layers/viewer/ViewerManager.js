@@ -348,6 +348,8 @@ class ViewerManager {
 			const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'none';
 			// Check background visibility - handle both boolean and integer from API
 			const bgVisible = payload.backgroundVisible !== false && payload.backgroundVisible !== 0;
+			// Get background opacity - default to 1.0 (fully opaque)
+			const bgOpacity = typeof payload.backgroundOpacity === 'number' ? payload.backgroundOpacity : 1.0;
 
 			// Update container background style and data attribute
 			if ( payload.backgroundColor ) {
@@ -360,7 +362,10 @@ class ViewerManager {
 						'PHJlY3Qgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0iI2NjYyIvPjxyZWN0IHg9IjgiIHk9IjgiIHdpZHRoPSI4' +
 						'IiBoZWlnaHQ9IjgiIGZpbGw9IiNjY2MiLz48L3N2Zz4=)';
 				} else {
-					container.style.backgroundColor = bgColor;
+					// Clear container background - canvas handles the background with opacity
+					// If we set container.style.backgroundColor, it shows through the semi-transparent
+					// canvas background, making opacity appear as 100%
+					container.style.backgroundColor = 'transparent';
 					container.style.backgroundImage = '';
 				}
 			}
@@ -379,8 +384,12 @@ class ViewerManager {
 			const renderAllLayers = () => {
 				ctx.clearRect( 0, 0, canvas.width, canvas.height );
 				if ( !isTransparent && bgVisible ) {
+					// Draw background color with opacity (no checkerboard in viewer - that's editor-only)
+					ctx.save();
+					ctx.globalAlpha = bgOpacity;
 					ctx.fillStyle = bgColor;
 					ctx.fillRect( 0, 0, canvas.width, canvas.height );
+					ctx.restore();
 				}
 				if ( payload.layers && Array.isArray( payload.layers ) ) {
 					payload.layers.forEach( ( layer ) => {
@@ -566,7 +575,9 @@ class ViewerManager {
 			const params = {
 				action: 'layersinfo',
 				format: 'json',
-				filename: filename
+				filename: filename,
+				// Cache buster to ensure fresh data after save
+				_: Date.now()
 			};
 			if ( setName && setName !== 'on' && setName !== 'default' ) {
 				params.setname = setName;
@@ -705,7 +716,9 @@ class ViewerManager {
 				slidename: slideName,
 				setname: setName,
 				format: 'json',
-				formatversion: 2
+				formatversion: 2,
+				// Cache buster to ensure fresh data after save
+				_: Date.now()
 			} ).then( ( data ) => {
 				try {
 					if ( !data || !data.layersinfo ) {
@@ -725,8 +738,14 @@ class ViewerManager {
 						layers: layersArr,
 						baseWidth: ( layerset && layerset.baseWidth ) || ( layerset && layerset.data && layerset.data.canvasWidth ) || canvasWidth,
 						baseHeight: ( layerset && layerset.baseHeight ) || ( layerset && layerset.data && layerset.data.canvasHeight ) || canvasHeight,
-						backgroundVisible: true,
-						backgroundOpacity: 1.0,
+						backgroundVisible: layerset && layerset.data && layerset.data.backgroundVisible !== undefined
+							? ( layerset.data.backgroundVisible !== false && layerset.data.backgroundVisible !== 0 )
+							: true,
+						backgroundOpacity: layerset && layerset.data && typeof layerset.data.backgroundOpacity === 'number'
+							? layerset.data.backgroundOpacity
+							: ( layerset && layerset.data && layerset.data.backgroundOpacity !== undefined
+								? parseFloat( layerset.data.backgroundOpacity )
+								: 1.0 ),
 						isSlide: true,
 						backgroundColor: ( layerset && layerset.data && layerset.data.backgroundColor ) ||
 							container.getAttribute( 'data-background' ) || '#ffffff'
@@ -1154,6 +1173,15 @@ class ViewerManager {
 		const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'none';
 		// Check background visibility - handle both boolean and integer from API
 		const bgVisible = payload.backgroundVisible !== false && payload.backgroundVisible !== 0;
+		// Get background opacity - default to 1 if not specified
+		const bgOpacity = typeof payload.backgroundOpacity === 'number' ? payload.backgroundOpacity : 1.0;
+
+		// Clear container background since canvas handles it with opacity
+		// The PHP-rendered HTML sets container background, but we need to clear it
+		// so the canvas-drawn background (with opacity) is the only source
+		if ( !isTransparent && bgOpacity < 1.0 ) {
+			container.style.backgroundColor = 'transparent';
+		}
 
 		/**
 		 * Helper function to render all layers.
@@ -1162,8 +1190,12 @@ class ViewerManager {
 		const renderAllLayers = () => {
 			ctx.clearRect( 0, 0, canvas.width, canvas.height );
 			if ( !isTransparent && bgVisible ) {
+				// Draw background color with opacity (no checkerboard in viewer - that's editor-only)
+				ctx.save();
+				ctx.globalAlpha = bgOpacity;
 				ctx.fillStyle = bgColor;
 				ctx.fillRect( 0, 0, canvas.width, canvas.height );
+				ctx.restore();
 			}
 			payload.layers.forEach( ( layer ) => {
 				if ( layer.visible !== false && layer.visible !== 0 ) {

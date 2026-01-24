@@ -3040,7 +3040,10 @@ describe( 'ViewerManager', () => {
 			const mockCtx = {
 				clearRect: jest.fn(),
 				fillRect: jest.fn(),
-				fillStyle: ''
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
 			};
 			canvas.getContext = jest.fn( () => mockCtx );
 			container.appendChild( canvas );
@@ -3084,7 +3087,10 @@ describe( 'ViewerManager', () => {
 			canvas.getContext = jest.fn( () => ( {
 				clearRect: jest.fn(),
 				fillRect: jest.fn(),
-				fillStyle: ''
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
 			} ) );
 			container.appendChild( canvas );
 
@@ -3170,7 +3176,10 @@ describe( 'ViewerManager', () => {
 			canvas.getContext = jest.fn( () => ( {
 				clearRect: jest.fn(),
 				fillRect: jest.fn(),
-				fillStyle: ''
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
 			} ) );
 			container.appendChild( canvas );
 
@@ -3200,7 +3209,10 @@ describe( 'ViewerManager', () => {
 			canvas.getContext = jest.fn( () => ( {
 				clearRect: jest.fn(),
 				fillRect: jest.fn(),
-				fillStyle: ''
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
 			} ) );
 			container.appendChild( canvas );
 

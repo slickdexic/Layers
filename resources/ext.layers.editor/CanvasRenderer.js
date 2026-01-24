@@ -325,12 +325,14 @@
 		 */
 		drawSlideBackground() {
 			const color = this.slideBackgroundColor || 'transparent';
+			const opacity = this.getBackgroundOpacity();
 			// Use logical canvas dimensions (pre-zoom) since transform is applied
 			const canvasW = this.canvas.width / this.zoom;
 			const canvasH = this.canvas.height / this.zoom;
 			const isTransparent = !color || color === 'transparent' || color === 'none';
 
 			this.ctx.save();
+
 			if ( isTransparent ) {
 				// Draw checkerboard pattern for transparent background
 				// First fill with white
@@ -346,7 +348,22 @@
 					}
 				}
 			} else {
-				// Draw solid color background
+				// When opacity is reduced, first draw checker pattern for visualization
+				if ( opacity < 1 ) {
+					this.ctx.fillStyle = '#ffffff';
+					this.ctx.fillRect( 0, 0, canvasW, canvasH );
+					this.ctx.fillStyle = '#e8e8e8';
+					const checkerSize = 20;
+					for ( let x = 0; x < canvasW; x += checkerSize * 2 ) {
+						for ( let y = 0; y < canvasH; y += checkerSize * 2 ) {
+							this.ctx.fillRect( x, y, checkerSize, checkerSize );
+							this.ctx.fillRect( x + checkerSize, y + checkerSize, checkerSize, checkerSize );
+						}
+					}
+				}
+
+				// Draw solid color background with opacity
+				this.ctx.globalAlpha = opacity;
 				this.ctx.fillStyle = color;
 				this.ctx.fillRect( 0, 0, canvasW, canvasH );
 			}

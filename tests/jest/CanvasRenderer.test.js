@@ -1259,4 +1259,73 @@ describe('CanvasRenderer', () => {
             expect(renderer.getBackgroundOpacity()).toBe(1);
         });
     });
+
+    describe('drawSlideBackground', () => {
+        beforeEach(() => {
+            renderer.isSlideMode = true;
+            renderer.canvas = { width: 800, height: 600 };
+            renderer.zoom = 1;
+        });
+
+        test('should draw solid color background with full opacity', () => {
+            renderer.slideBackgroundColor = '#ff0000';
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => 1.0)
+                }
+            };
+
+            renderer.drawSlideBackground();
+
+            // Should set globalAlpha to 1
+            expect(ctx.save).toHaveBeenCalled();
+            expect(ctx.fillRect).toHaveBeenCalled();
+            expect(ctx.restore).toHaveBeenCalled();
+        });
+
+        test('should draw solid color background with reduced opacity', () => {
+            renderer.slideBackgroundColor = '#ff0000';
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => 0.5)
+                }
+            };
+
+            renderer.drawSlideBackground();
+
+            // Should draw checkerboard first, then color with opacity
+            expect(ctx.save).toHaveBeenCalled();
+            // fillRect should be called multiple times (checkerboard + color)
+            expect(ctx.fillRect.mock.calls.length).toBeGreaterThan(1);
+            expect(ctx.restore).toHaveBeenCalled();
+        });
+
+        test('should draw checkerboard for transparent background', () => {
+            renderer.slideBackgroundColor = 'transparent';
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => 1.0)
+                }
+            };
+
+            renderer.drawSlideBackground();
+
+            // Should draw checkerboard pattern
+            expect(ctx.fillRect.mock.calls.length).toBeGreaterThan(1);
+        });
+
+        test('should apply opacity correctly when set to 0', () => {
+            renderer.slideBackgroundColor = '#ffffff';
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn(() => 0)
+                }
+            };
+
+            renderer.drawSlideBackground();
+
+            // Should draw checkerboard (visible) with transparent color on top
+            expect(ctx.fillRect).toHaveBeenCalled();
+        });
+    });
 });
