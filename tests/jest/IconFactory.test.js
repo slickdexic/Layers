@@ -331,6 +331,84 @@ describe( 'IconFactory', () => {
 		} );
 	} );
 
+	describe( 'createPencilIcon', () => {
+		it( 'should create SVG element with default size', () => {
+			const icon = IconFactory.createPencilIcon();
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'width' ) ).toBe( '18' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '18' );
+		} );
+
+		it( 'should create pencil icon with custom size', () => {
+			const icon = IconFactory.createPencilIcon( { size: 24 } );
+			expect( icon.getAttribute( 'width' ) ).toBe( '24' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '24' );
+		} );
+
+		it( 'should create pencil icon with custom color', () => {
+			const icon = IconFactory.createPencilIcon( { color: '#ff0000' } );
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBe( 2 );
+			paths.forEach( ( path ) => {
+				expect( path.getAttribute( 'stroke' ) ).toBe( '#ff0000' );
+			} );
+		} );
+
+		it( 'should have proper stroke properties on paths', () => {
+			const icon = IconFactory.createPencilIcon();
+			const paths = icon.querySelectorAll( 'path' );
+			paths.forEach( ( path ) => {
+				expect( path.getAttribute( 'stroke-width' ) ).toBe( '2' );
+				expect( path.getAttribute( 'stroke-linecap' ) ).toBe( 'round' );
+				expect( path.getAttribute( 'stroke-linejoin' ) ).toBe( 'round' );
+			} );
+		} );
+	} );
+
+	describe( 'createFullscreenIcon', () => {
+		it( 'should create SVG element with default size', () => {
+			const icon = IconFactory.createFullscreenIcon();
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'width' ) ).toBe( '18' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '18' );
+		} );
+
+		it( 'should create fullscreen icon with custom size', () => {
+			const icon = IconFactory.createFullscreenIcon( { size: 32 } );
+			expect( icon.getAttribute( 'width' ) ).toBe( '32' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '32' );
+		} );
+
+		it( 'should create fullscreen icon with custom color', () => {
+			const icon = IconFactory.createFullscreenIcon( { color: '#00ff00' } );
+			const paths = icon.querySelectorAll( 'path' );
+			const lines = icon.querySelectorAll( 'line' );
+			paths.forEach( ( path ) => {
+				expect( path.getAttribute( 'stroke' ) ).toBe( '#00ff00' );
+			} );
+			lines.forEach( ( line ) => {
+				expect( line.getAttribute( 'stroke' ) ).toBe( '#00ff00' );
+			} );
+		} );
+
+		it( 'should have corner paths and diagonal lines', () => {
+			const icon = IconFactory.createFullscreenIcon();
+			const paths = icon.querySelectorAll( 'path' );
+			const lines = icon.querySelectorAll( 'line' );
+			expect( paths.length ).toBe( 2 ); // Top-right and bottom-left corners
+			expect( lines.length ).toBe( 2 ); // Two diagonal lines
+		} );
+
+		it( 'should have proper stroke properties', () => {
+			const icon = IconFactory.createFullscreenIcon();
+			const lines = icon.querySelectorAll( 'line' );
+			lines.forEach( ( line ) => {
+				expect( line.getAttribute( 'stroke-width' ) ).toBe( '2' );
+				expect( line.getAttribute( 'stroke-linecap' ) ).toBe( 'round' );
+			} );
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export IconFactory for Node.js', () => {
 			const exported = require( '../../resources/ext.layers.editor/ui/IconFactory.js' );
