@@ -1031,12 +1031,26 @@
 			}
 
 			const layerId = this.editingLayer.id;
+			const isTextbox = this.editingLayer.type === 'textbox';
+
+			// Build changes object including the format change
+			// Also preserve the editing state (hidden text for textbox, hidden layer for text)
+			// to prevent the layer from rendering with original text while editing
+			const changes = { [ property ]: value };
+
+			if ( isTextbox ) {
+				// Keep text cleared during inline editing
+				changes.text = '';
+			} else {
+				// Keep simple text layers hidden during inline editing
+				changes.visible = false;
+			}
 
 			// Use editor.updateLayer() to properly persist the change through StateManager
 			// This ensures the change is saved when the document is saved
 			const editor = this.canvasManager && this.canvasManager.editor;
 			if ( editor && typeof editor.updateLayer === 'function' ) {
-				editor.updateLayer( layerId, { [ property ]: value } );
+				editor.updateLayer( layerId, changes );
 
 				// Refresh our reference to the layer since updateLayer creates a new object
 				const updatedLayer = editor.getLayerById ? editor.getLayerById( layerId ) : null;

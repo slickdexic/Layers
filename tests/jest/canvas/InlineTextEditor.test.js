@@ -515,8 +515,8 @@ describe( 'InlineTextEditor', () => {
 			editor._applyFormat( 'fontSize', 24 );
 
 			expect( mockUpdatePropertiesPanel ).toHaveBeenCalledWith( 'layer-1' );
-			// updateLayer should have been called
-			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', { fontSize: 24 } );
+			// updateLayer should have been called with visible: false to keep layer hidden during editing
+			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', { fontSize: 24, visible: false } );
 			expect( layer.fontSize ).toBe( 24 );
 		} );
 
@@ -571,8 +571,8 @@ describe( 'InlineTextEditor', () => {
 			// Change font family via _applyFormat
 			editor._applyFormat( 'fontFamily', 'Times New Roman' );
 
-			// Verify updateLayer was called with the font change
-			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', { fontFamily: 'Times New Roman' } );
+			// Verify updateLayer was called with the font change and visible: false to keep layer hidden
+			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', { fontFamily: 'Times New Roman', visible: false } );
 			// Layer should be updated
 			expect( layer.fontFamily ).toBe( 'Times New Roman' );
 		} );
@@ -587,6 +587,25 @@ describe( 'InlineTextEditor', () => {
 			// Should not throw and should still update the layer directly
 			expect( () => editor._applyFormat( 'fontFamily', 'Georgia' ) ).not.toThrow();
 			expect( layer.fontFamily ).toBe( 'Georgia' );
+		} );
+
+		test( 'should use text: empty string for textbox layers when applying format', () => {
+			const layer = {
+				id: 'layer-1',
+				type: 'textbox',
+				text: 'Test content',
+				x: 0, y: 0,
+				width: 200, height: 100,
+				fontFamily: 'Arial'
+			};
+			mockCanvasManager.editor.layers = [ layer ];
+			editor.startEditing( layer );
+
+			// Change font family via _applyFormat
+			editor._applyFormat( 'fontFamily', 'Times New Roman' );
+
+			// Verify updateLayer was called with text: '' to keep text cleared during editing
+			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', { fontFamily: 'Times New Roman', text: '' } );
 		} );
 	} );
 
