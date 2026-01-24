@@ -2138,22 +2138,26 @@ describe( 'ViewerManager', () => {
 				expect( () => manager.renderEmptySlide( container, 800, 600 ) ).not.toThrow();
 			} );
 
-			it( 'should set up edit button after rendering', () => {
+			it( 'should set up slide overlay after rendering', () => {
 				document.body.innerHTML = `
 					<div class="layers-slide-container"
-						data-slide-name="WithButton"
+						data-slide-name="WithOverlay"
 						data-background="#ffffff">
 						<canvas></canvas>
-						<button class="layers-slide-edit-button">Edit</button>
 					</div>
 				`;
 
 				const container = document.querySelector( '.layers-slide-container' );
-				const button = container.querySelector( '.layers-slide-edit-button' );
+				// Mock canUserEdit to return true
+				manager.canUserEdit = jest.fn().mockReturnValue( true );
 
 				manager.renderEmptySlide( container, 800, 600 );
 
-				expect( button.layersClickBound ).toBe( true );
+				// Should create overlay instead of binding to old edit button
+				const overlay = container.querySelector( '.layers-slide-overlay' );
+				expect( overlay ).not.toBeNull();
+				expect( overlay.querySelector( '.layers-slide-overlay-btn--edit' ) ).not.toBeNull();
+				expect( overlay.querySelector( '.layers-slide-overlay-btn--view' ) ).not.toBeNull();
 			} );
 		} );
 
