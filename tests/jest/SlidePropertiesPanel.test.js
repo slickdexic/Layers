@@ -1125,4 +1125,395 @@ describe( 'SlidePropertiesPanel', function () {
 			jest.useRealTimers();
 		} );
 	} );
+
+	describe( 'getClass fallback', function () {
+		it( 'should use window.layersGetClass when available', function () {
+			const mockGetClass = jest.fn().mockReturnValue( window.EventTracker );
+			window.layersGetClass = mockGetClass;
+
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			expect( testPanel.eventTracker ).not.toBeNull();
+		} );
+
+		it( 'should traverse Layers namespace when getClass not available', function () {
+			const originalGetClass = window.layersGetClass;
+			delete window.layersGetClass;
+
+			// Re-require to get the built-in getClass
+			jest.resetModules();
+			window.Layers = { Utils: { EventTracker: window.EventTracker } };
+			require( '../../resources/ext.layers.editor/ui/SlidePropertiesPanel.js' );
+
+			const ReloadedPanel = window.Layers.UI.SlidePropertiesPanel;
+			const testPanel = new ReloadedPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+
+			expect( testPanel.eventTracker ).not.toBeNull();
+			testPanel.destroy();
+
+			// Restore
+			window.layersGetClass = originalGetClass;
+		} );
+	} );
+
+	describe( 'msg helper', function () {
+		it( 'should use layersMessages when available', function () {
+			window.layersMessages = {
+				get: jest.fn().mockReturnValue( 'custom message' )
+			};
+
+			panel.create();
+
+			expect( window.layersMessages.get ).toHaveBeenCalled();
+
+			delete window.layersMessages;
+		} );
+
+		it( 'should return fallback when message does not exist', function () {
+			const originalMessage = mw.message;
+			mw.message = jest.fn().mockReturnValue( {
+				exists: () => false,
+				text: () => 'non-existent'
+			} );
+
+			// Re-require to test msg function
+			jest.resetModules();
+			window.Layers = { Utils: { EventTracker: window.EventTracker } };
+			require( '../../resources/ext.layers.editor/ui/SlidePropertiesPanel.js' );
+
+			const ReloadedPanel = window.Layers.UI.SlidePropertiesPanel;
+			const testPanel = new ReloadedPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+			testPanel.destroy();
+
+			mw.message = originalMessage;
+		} );
+	} );
+
+	describe( 'updateCanvasSize edge cases', function () {
+		it( 'should not update when editor is null', function () {
+			panel.editor = null;
+			panel.create();
+
+			// Should not throw
+			expect( () => {
+				panel.updateCanvasSize( 1000, 800 );
+			} ).not.toThrow();
+		} );
+
+		it( 'should not update when stateManager is null', function () {
+			mockEditor.stateManager = null;
+			panel.create();
+
+			// Should not throw
+			expect( () => {
+				panel.updateCanvasSize( 1000, 800 );
+			} ).not.toThrow();
+		} );
+
+		it( 'should sync toolbar width when toolbar available', function () {
+			mockEditor.toolbar = {
+				slideWidthInput: document.createElement( 'input' ),
+				slideHeightInput: document.createElement( 'input' ),
+				openColorPickerDialog: jest.fn()
+			};
+
+			panel.create();
+			panel.updateCanvasSize( 1200, null );
+
+			expect( mockEditor.toolbar.slideWidthInput.value ).toBe( '1200' );
+		} );
+
+		it( 'should sync toolbar height when toolbar available', function () {
+			mockEditor.toolbar = {
+				slideWidthInput: document.createElement( 'input' ),
+				slideHeightInput: document.createElement( 'input' ),
+				openColorPickerDialog: jest.fn()
+			};
+
+			panel.create();
+			panel.updateCanvasSize( null, 900 );
+
+			expect( mockEditor.toolbar.slideHeightInput.value ).toBe( '900' );
+		} );
+
+		it( 'should not sync when toolbar inputs missing', function () {
+			mockEditor.toolbar = {
+				openColorPickerDialog: jest.fn()
+			};
+
+			panel.create();
+
+			// Should not throw
+			expect( () => {
+				panel.updateCanvasSize( 1200, 900 );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'openBackgroundColorPicker edge cases', function () {
+		it( 'should do nothing when toolbar not available', function () {
+			mockEditor.toolbar = null;
+			panel.create();
+
+			// Should not throw
+			expect( () => {
+				panel.openBackgroundColorPicker();
+			} ).not.toThrow();
+		} );
+
+		it( 'should do nothing when openColorPickerDialog not a function', function () {
+			mockEditor.toolbar = { openColorPickerDialog: 'not a function' };
+			panel.create();
+
+			// Should not throw
+			expect( () => {
+				panel.openBackgroundColorPicker();
+			} ).not.toThrow();
+		} );
+
+		it( 'should use transparent as default when stateManager not available', function () {
+			mockEditor.stateManager = null;
+			mockEditor.toolbar = { openColorPickerDialog: jest.fn() };
+			panel.create();
+			panel.openBackgroundColorPicker();
+
+			expect( mockEditor.toolbar.openColorPickerDialog ).toHaveBeenCalledWith(
+				panel.bgColorButton,
+				'transparent',
+				expect.any( Object )
+			);
+		} );
+	} );
+
+	describe( 'setBackgroundColor edge cases', function () {
+		it( 'should sync toolbar when setSlideBackgroundColor available', function () {
+			mockEditor.toolbar = {
+				openColorPickerDialog: jest.fn(),
+				setSlideBackgroundColor: jest.fn()
+			};
+
+			panel.create();
+			panel.setBackgroundColor( '#ff0000' );
+
+			expect( mockEditor.toolbar.setSlideBackgroundColor ).toHaveBeenCalledWith( '#ff0000' );
+		} );
+
+		it( 'should update canvas when canvasManager.setBackgroundColor available', function () {
+			mockEditor.canvasManager = {
+				setBaseDimensions: jest.fn(),
+				setBackgroundColor: jest.fn()
+			};
+
+			panel.create();
+			panel.setBackgroundColor( '#00ff00' );
+
+			expect( mockEditor.canvasManager.setBackgroundColor ).toHaveBeenCalledWith( '#00ff00' );
+		} );
+
+		it( 'should mark state as dirty', function () {
+			panel.create();
+			panel.setBackgroundColor( '#0000ff' );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'isDirty', true );
+		} );
+	} );
+
+	describe( 'updateBackgroundSwatch edge cases', function () {
+		it( 'should do nothing when bgColorSwatch is null', function () {
+			panel.create();
+			panel.bgColorSwatch = null;
+
+			// Should not throw
+			expect( () => {
+				panel.updateBackgroundSwatch( '#ff0000' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should apply checkerboard pattern for transparent', function () {
+			panel.create();
+			panel.updateBackgroundSwatch( 'transparent' );
+
+			expect( panel.bgColorSwatch.style.backgroundImage ).toContain( 'linear-gradient' );
+		} );
+
+		it( 'should clear background image for solid colors', function () {
+			panel.create();
+			panel.bgColorSwatch.style.backgroundImage = 'some-pattern';
+			panel.updateBackgroundSwatch( '#ff0000' );
+
+			expect( panel.bgColorSwatch.style.backgroundImage ).toBe( 'none' );
+		} );
+	} );
+
+	describe( 'copyEmbedCode edge cases', function () {
+		it( 'should include layerset when not default', function () {
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				const state = {
+					slideName: 'MySlide',
+					currentSetName: 'custom-set'
+				};
+				return state[ key ];
+			} );
+
+			const writeTextMock = jest.fn().mockResolvedValue( undefined );
+			Object.defineProperty( navigator, 'clipboard', {
+				value: { writeText: writeTextMock },
+				configurable: true
+			} );
+
+			panel.create();
+			panel.copyEmbedCode();
+
+			expect( writeTextMock ).toHaveBeenCalledWith( expect.stringContaining( 'layerset=custom-set' ) );
+		} );
+
+		it( 'should not include layerset when default', function () {
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				const state = {
+					slideName: 'MySlide',
+					currentSetName: 'default'
+				};
+				return state[ key ];
+			} );
+
+			const writeTextMock = jest.fn().mockResolvedValue( undefined );
+			Object.defineProperty( navigator, 'clipboard', {
+				value: { writeText: writeTextMock },
+				configurable: true
+			} );
+
+			panel.create();
+			panel.copyEmbedCode();
+
+			expect( writeTextMock ).toHaveBeenCalledWith( expect.not.stringContaining( 'layerset=' ) );
+		} );
+
+		it( 'should call fallbackCopy when clipboard writeText rejects', async function () {
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				const state = {
+					slideName: 'TestSlide',
+					currentSetName: 'default'
+				};
+				return state[ key ];
+			} );
+
+			const writeTextMock = jest.fn().mockRejectedValue( new Error( 'Clipboard error' ) );
+			Object.defineProperty( navigator, 'clipboard', {
+				value: { writeText: writeTextMock },
+				configurable: true
+			} );
+
+			document.execCommand = jest.fn().mockReturnValue( true );
+
+			panel.create();
+			panel.copyEmbedCode();
+
+			// Wait for promise rejection to be handled
+			await new Promise( resolve => setTimeout( resolve, 0 ) );
+
+			expect( document.execCommand ).toHaveBeenCalledWith( 'copy' );
+		} );
+	} );
+
+	describe( 'input debounce behavior', function () {
+		it( 'should debounce width input', function () {
+			jest.useFakeTimers();
+
+			panel.create();
+
+			// Type multiple values quickly
+			panel.widthInput.value = '900';
+			panel.widthInput.dispatchEvent( new Event( 'input' ) );
+			panel.widthInput.value = '1000';
+			panel.widthInput.dispatchEvent( new Event( 'input' ) );
+			panel.widthInput.value = '1100';
+			panel.widthInput.dispatchEvent( new Event( 'input' ) );
+
+			// Not yet fired
+			expect( mockEditor.stateManager.set ).not.toHaveBeenCalledWith( 'baseWidth', expect.anything() );
+
+			// Advance time
+			jest.advanceTimersByTime( 350 );
+
+			// Only final value should be set
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseWidth', 1100 );
+
+			jest.useRealTimers();
+		} );
+
+		it( 'should ignore invalid width values', function () {
+			jest.useFakeTimers();
+
+			panel.create();
+
+			// Set invalid value (below min)
+			panel.widthInput.value = '10';
+			panel.widthInput.dispatchEvent( new Event( 'input' ) );
+
+			jest.advanceTimersByTime( 350 );
+
+			// Should not update with invalid value
+			expect( mockEditor.stateManager.set ).not.toHaveBeenCalledWith( 'baseWidth', 10 );
+
+			jest.useRealTimers();
+		} );
+
+		it( 'should ignore width values above max', function () {
+			jest.useFakeTimers();
+
+			panel.create();
+
+			// Set invalid value (above max)
+			panel.widthInput.value = '5000';
+			panel.widthInput.dispatchEvent( new Event( 'input' ) );
+
+			jest.advanceTimersByTime( 350 );
+
+			// Should not update with invalid value
+			expect( mockEditor.stateManager.set ).not.toHaveBeenCalledWith( 'baseWidth', 5000 );
+
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'event handler fallback when eventTracker unavailable', function () {
+		beforeEach( function () {
+			// Disable EventTracker
+			window.layersGetClass = jest.fn().mockReturnValue( null );
+		} );
+
+		afterEach( function () {
+			window.layersGetClass = jest.fn( ( path ) => {
+				if ( path === 'Utils.EventTracker' ) {
+					return window.EventTracker;
+				}
+				return null;
+			} );
+		} );
+
+		it( 'should add event listeners directly without EventTracker', function () {
+			const testPanel = new SlidePropertiesPanel( {
+				editor: mockEditor,
+				container: container
+			} );
+			testPanel.create();
+
+			// Verify panel was created (listeners added directly)
+			expect( testPanel.panel ).not.toBeNull();
+			expect( testPanel.widthInput ).not.toBeNull();
+
+			testPanel.destroy();
+		} );
+	} );
 } );
+
