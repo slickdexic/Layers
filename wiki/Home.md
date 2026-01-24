@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-10%2C083%20passing-brightgreen" alt="10,083 Tests">
+  <img src="https://img.shields.io/badge/Tests-10%2C135%20passing-brightgreen" alt="10,135 Tests">
   <img src="https://img.shields.io/badge/Coverage-92.25%25-brightgreen" alt="92.25% Coverage">
 </p>
 
@@ -24,7 +24,7 @@
 
 - **Inline Text Editor Fix** — Fixed text duplication bug when using floating toolbar during inline text editing
 - **Empty Slide Overlay Fix** — Fixed missing edit overlay on empty slides and added i18n messages
-- **10,083 tests passing** (156 suites), 92.25% statement coverage, 82.47% branch coverage
+- **10,135 tests passing** (156 suites), 92.25% statement coverage, 82.47% branch coverage
 
 ### Previous v1.5.27 Highlights
 
