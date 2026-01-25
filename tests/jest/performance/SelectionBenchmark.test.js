@@ -8,6 +8,14 @@
 
 /* eslint-env jest */
 
+/**
+ * LOW-6 FIX: Control benchmark output verbosity
+ * Set VERBOSE=true when running benchmarks manually for detailed output
+ * e.g., VERBOSE=true npm run test:js -- --testPathPattern=performance
+ */
+const VERBOSE = process.env.VERBOSE === 'true';
+const log = ( ...args ) => VERBOSE && log( ...args );
+
 // Mock MediaWiki environment
 global.mw = {
 	config: {
@@ -151,7 +159,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				hitTestLayers( testPoint, layers );
 			}, 1000 );
 
-			console.log( `Hit test 20 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Hit test 20 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			// Should complete in < 1ms per operation
 			expect( result.avg ).toBeLessThan( 1 );
@@ -165,7 +173,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				hitTestLayers( testPoint, layers );
 			}, 1000 );
 
-			console.log( `Hit test 50 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Hit test 50 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			expect( result.avg ).toBeLessThan( 2 );
 		} );
@@ -178,7 +186,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				hitTestLayers( testPoint, layers );
 			}, 1000 );
 
-			console.log( `Hit test 100 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Hit test 100 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			expect( result.avg ).toBeLessThan( 5 );
 		} );
@@ -191,7 +199,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				hitTestLayers( testPoint, layers );
 			}, 1000 );
 
-			console.log( `Hit test 50 overlapping: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Hit test 50 overlapping: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			// Even worst case should be fast
 			expect( result.avg ).toBeLessThan( 2 );
@@ -208,7 +216,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				return selectedLayers;
 			}, 500 );
 
-			console.log( `Select all 50: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Select all 50: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			expect( result.avg ).toBeLessThan( 1 );
 		} );
@@ -222,7 +230,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				return selectedLayers;
 			}, 500 );
 
-			console.log( `Select all 100: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Select all 100: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			expect( result.avg ).toBeLessThan( 2 );
 		} );
@@ -234,7 +242,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				calculateSelectionBounds( layers );
 			}, 1000 );
 
-			console.log( `Bounds calc 50 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Bounds calc 50 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			expect( result.avg ).toBeLessThan( 1 );
 		} );
@@ -246,7 +254,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				calculateSelectionBounds( layers );
 			}, 1000 );
 
-			console.log( `Bounds calc 100 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Bounds calc 100 layers: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			expect( result.avg ).toBeLessThan( 2 );
 		} );
@@ -268,7 +276,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				return selected;
 			}, 1000 );
 
-			console.log( `Marquee select from 50: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Marquee select from 50: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			expect( result.avg ).toBeLessThan( 1 );
 		} );
@@ -287,7 +295,7 @@ describe( 'Selection Performance Benchmarks', () => {
 				return selected;
 			}, 1000 );
 
-			console.log( `Marquee select from 100: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Marquee select from 100: avg=${ ( result.avg * 1000 ).toFixed( 2 ) }μs` );
 
 			expect( result.avg ).toBeLessThan( 2 );
 		} );
@@ -307,9 +315,9 @@ describe( 'Selection Performance Benchmarks', () => {
 			const minThreshold = 0.001; // 1μs minimum
 			const ratio = result20.avg > minThreshold ? result100.avg / result20.avg : 1;
 
-			console.log( `Hit test 20 layers: ${ ( result20.avg * 1000 ).toFixed( 2 ) }μs` );
-			console.log( `Hit test 100 layers: ${ ( result100.avg * 1000 ).toFixed( 2 ) }μs` );
-			console.log( `Ratio: ${ ratio.toFixed( 2 ) }x (expected ~5x for linear)` );
+			log( `Hit test 20 layers: ${ ( result20.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Hit test 100 layers: ${ ( result100.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Ratio: ${ ratio.toFixed( 2 ) }x (expected ~5x for linear)` );
 
 			// Allow up to 10x for test environment variability
 			// This catches O(n²) algorithms
@@ -327,9 +335,9 @@ describe( 'Selection Performance Benchmarks', () => {
 			const minThreshold = 0.001; // 1μs minimum
 			const ratio = result20.avg > minThreshold ? result100.avg / result20.avg : 1;
 
-			console.log( `Bounds 20 layers: ${ ( result20.avg * 1000 ).toFixed( 2 ) }μs` );
-			console.log( `Bounds 100 layers: ${ ( result100.avg * 1000 ).toFixed( 2 ) }μs` );
-			console.log( `Ratio: ${ ratio.toFixed( 2 ) }x (expected ~5x for linear)` );
+			log( `Bounds 20 layers: ${ ( result20.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Bounds 100 layers: ${ ( result100.avg * 1000 ).toFixed( 2 ) }μs` );
+			log( `Ratio: ${ ratio.toFixed( 2 ) }x (expected ~5x for linear)` );
 
 			expect( ratio ).toBeLessThan( 10 );
 		} );

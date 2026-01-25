@@ -9,6 +9,14 @@
 
 /* eslint-env jest */
 
+/**
+ * LOW-6 FIX: Control benchmark output verbosity
+ * Set VERBOSE=true when running benchmarks manually for detailed output
+ * e.g., VERBOSE=true npm run test:js -- --testPathPattern=performance
+ */
+const VERBOSE = process.env.VERBOSE === 'true';
+const log = ( ...args ) => VERBOSE && log( ...args );
+
 // Mock MediaWiki environment
 global.mw = {
 	config: {
@@ -171,7 +179,7 @@ describe( 'Render Performance Benchmarks', () => {
 			const result = measureRenderTime( layers );
 			
 			// Log results for CI visibility
-			console.log( `10 rectangles: avg=${ result.avg.toFixed( 2 ) }ms, min=${ result.min.toFixed( 2 ) }ms, max=${ result.max.toFixed( 2 ) }ms` );
+			log( `10 rectangles: avg=${ result.avg.toFixed( 2 ) }ms, min=${ result.min.toFixed( 2 ) }ms, max=${ result.max.toFixed( 2 ) }ms` );
 			
 			// Performance assertion: should complete in reasonable time
 			expect( result.avg ).toBeLessThan( 50 ); // 50ms threshold
@@ -181,7 +189,7 @@ describe( 'Render Performance Benchmarks', () => {
 			const layers = generateLayers( 50, 'rectangle' );
 			const result = measureRenderTime( layers );
 			
-			console.log( `50 rectangles: avg=${ result.avg.toFixed( 2 ) }ms, min=${ result.min.toFixed( 2 ) }ms, max=${ result.max.toFixed( 2 ) }ms` );
+			log( `50 rectangles: avg=${ result.avg.toFixed( 2 ) }ms, min=${ result.min.toFixed( 2 ) }ms, max=${ result.max.toFixed( 2 ) }ms` );
 			
 			expect( result.avg ).toBeLessThan( 150 ); // 150ms threshold
 		} );
@@ -190,7 +198,7 @@ describe( 'Render Performance Benchmarks', () => {
 			const layers = generateLayers( 100, 'rectangle' );
 			const result = measureRenderTime( layers );
 			
-			console.log( `100 rectangles: avg=${ result.avg.toFixed( 2 ) }ms, min=${ result.min.toFixed( 2 ) }ms, max=${ result.max.toFixed( 2 ) }ms` );
+			log( `100 rectangles: avg=${ result.avg.toFixed( 2 ) }ms, min=${ result.min.toFixed( 2 ) }ms, max=${ result.max.toFixed( 2 ) }ms` );
 			
 			expect( result.avg ).toBeLessThan( 300 ); // 300ms threshold
 		} );
@@ -206,7 +214,7 @@ describe( 'Render Performance Benchmarks', () => {
 			}
 			
 			const result = measureRenderTime( layers );
-			console.log( `10 mixed: avg=${ result.avg.toFixed( 2 ) }ms` );
+			log( `10 mixed: avg=${ result.avg.toFixed( 2 ) }ms` );
 			
 			expect( result.avg ).toBeLessThan( 50 );
 		} );
@@ -220,7 +228,7 @@ describe( 'Render Performance Benchmarks', () => {
 			}
 			
 			const result = measureRenderTime( layers );
-			console.log( `50 mixed: avg=${ result.avg.toFixed( 2 ) }ms` );
+			log( `50 mixed: avg=${ result.avg.toFixed( 2 ) }ms` );
 			
 			expect( result.avg ).toBeLessThan( 200 );
 		} );
@@ -234,7 +242,7 @@ describe( 'Render Performance Benchmarks', () => {
 			}
 			
 			const result = measureRenderTime( layers );
-			console.log( `100 mixed: avg=${ result.avg.toFixed( 2 ) }ms` );
+			log( `100 mixed: avg=${ result.avg.toFixed( 2 ) }ms` );
 			
 			expect( result.avg ).toBeLessThan( 400 );
 		} );
@@ -245,7 +253,7 @@ describe( 'Render Performance Benchmarks', () => {
 			const layers = generateLayers( 20, 'text' );
 			const result = measureRenderTime( layers );
 			
-			console.log( `20 text layers: avg=${ result.avg.toFixed( 2 ) }ms` );
+			log( `20 text layers: avg=${ result.avg.toFixed( 2 ) }ms` );
 			
 			// Text rendering can be slower due to font metrics
 			expect( result.avg ).toBeLessThan( 100 );
@@ -263,9 +271,9 @@ describe( 'Render Performance Benchmarks', () => {
 			// Avoid division by zero or near-zero
 			const ratio = result20.avg > 0.01 ? result100.avg / result20.avg : 1;
 			
-			console.log( `20 layers: ${ result20.avg.toFixed( 2 ) }ms` );
-			console.log( `100 layers: ${ result100.avg.toFixed( 2 ) }ms` );
-			console.log( `Ratio (should be ~5x for linear): ${ ratio.toFixed( 2 ) }x` );
+			log( `20 layers: ${ result20.avg.toFixed( 2 ) }ms` );
+			log( `100 layers: ${ result100.avg.toFixed( 2 ) }ms` );
+			log( `Ratio (should be ~5x for linear): ${ ratio.toFixed( 2 ) }x` );
 			
 			// Allow for overhead and test environment variability
 			// 100/20 = 5x, allow up to 30x for CI/slow environments (was 20x but too flaky)
@@ -315,7 +323,7 @@ describe( 'Memory Benchmarks', () => {
 		// The render performance tests above provide reliable performance validation.
 		const memoryMB = memoryDiff / ( 1024 * 1024 );
 		
-		console.log( `Memory for 100 layers: ~${ memoryMB.toFixed( 2 ) } MB (informational only)` );
+		log( `Memory for 100 layers: ~${ memoryMB.toFixed( 2 ) } MB (informational only)` );
 		
 		// We only verify that the layers were created successfully
 		// Memory assertions are too unreliable for CI

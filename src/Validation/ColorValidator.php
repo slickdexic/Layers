@@ -109,11 +109,17 @@ class ColorValidator {
 	/**
 	 * Check if a color is a valid hex color
 	 *
+	 * Supports CSS4 hex formats:
+	 * - 3-digit: #RGB
+	 * - 4-digit: #RGBA (with alpha)
+	 * - 6-digit: #RRGGBB
+	 * - 8-digit: #RRGGBBAA (with alpha)
+	 *
 	 * @param string $color Color value
 	 * @return bool True if valid hex color
 	 */
 	public function isValidHexColor( string $color ): bool {
-		return preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $color ) === 1;
+		return preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i', $color ) === 1;
 	}
 
 	/**
@@ -178,15 +184,26 @@ class ColorValidator {
 	/**
 	 * Normalize hex color to standard format
 	 *
+	 * Handles all CSS4 hex formats:
+	 * - 3-digit (#RGB) → 6-digit (#RRGGBB)
+	 * - 4-digit (#RGBA) → 8-digit (#RRGGBBAA)
+	 * - 6-digit and 8-digit pass through unchanged
+	 *
 	 * @param string $color Hex color
 	 * @return string Normalized hex color
 	 */
 	private function normalizeHexColor( string $color ): string {
 		$color = strtolower( $color );
 
-		// Expand 3-digit hex to 6-digit
+		// Expand 3-digit hex to 6-digit (#RGB → #RRGGBB)
 		if ( strlen( $color ) === 4 ) {
 			$color = '#' . $color[1] . $color[1] . $color[2] . $color[2] . $color[3] . $color[3];
+		}
+
+		// Expand 4-digit hex to 8-digit (#RGBA → #RRGGBBAA)
+		if ( strlen( $color ) === 5 ) {
+			$color = '#' . $color[1] . $color[1] . $color[2] . $color[2] .
+				$color[3] . $color[3] . $color[4] . $color[4];
 		}
 
 		return $color;

@@ -371,9 +371,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			}
 		}
 
-		// Handle blend mode alias
+		// Handle blend mode alias (LOW-4: deprecated in favor of blendMode)
 		if ( isset( $cleanLayer['blend'] ) && !isset( $cleanLayer['blendMode'] ) ) {
 			$cleanLayer['blendMode'] = $cleanLayer['blend'];
+			// Add deprecation warning - this will be tracked in result metadata
+			$result->addWarning( "Property 'blend' is deprecated. Use 'blendMode' instead. Will be removed in v2.0." );
 		}
 		unset( $cleanLayer['blend'] );
 
@@ -944,6 +946,27 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 					$svgValidation = $this->validateSvgString( $layer['svg'] );
 					if ( !$svgValidation['valid'] ) {
 						return $svgValidation;
+					}
+				}
+				// Validate paths array if present (multi-path shapes)
+				// SEC-1 FIX: Each path string must be validated to prevent malicious SVG data
+				if ( $hasPaths ) {
+					$pathIndex = 0;
+					foreach ( $layer['paths'] as $pathData ) {
+						if ( !is_string( $pathData ) ) {
+							return [
+								'valid' => false,
+								'error' => "paths[$pathIndex] must be a string"
+							];
+						}
+						$pathValidation = $this->validateSvgPath( $pathData );
+						if ( !$pathValidation['valid'] ) {
+							return [
+								'valid' => false,
+								'error' => "paths[$pathIndex]: " . $pathValidation['error']
+							];
+						}
+						$pathIndex++;
 					}
 				}
 				break;

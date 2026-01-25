@@ -62,6 +62,12 @@
 		 * Initialize the draft manager
 		 */
 		initialize() {
+			// Clean up existing subscription before creating new one (MEM-2 leak prevention)
+			if ( this.stateSubscription && typeof this.stateSubscription === 'function' ) {
+				this.stateSubscription();
+				this.stateSubscription = null;
+			}
+
 			// Subscribe to layer changes to trigger auto-save
 			if ( this.editor.stateManager ) {
 				this.stateSubscription = this.editor.stateManager.subscribe( 'layers', () => {
