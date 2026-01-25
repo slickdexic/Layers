@@ -216,7 +216,8 @@
 		const self = this;
 		const categories = window.Layers.ShapeLibrary.getCategories();
 
-		this.categoryList.innerHTML = '';
+		// Use DocumentFragment to batch DOM operations for performance
+		const fragment = document.createDocumentFragment();
 
 		// Track expanded parent categories
 		if ( !this.expandedParents ) {
@@ -325,7 +326,7 @@
 				self.buildCategories();
 			} );
 
-			self.categoryList.appendChild( parentItem );
+			fragment.appendChild( parentItem );
 
 			// Child container
 			const childContainer = document.createElement( 'div' );
@@ -404,7 +405,7 @@
 				childContainer.appendChild( item );
 			} );
 
-			self.categoryList.appendChild( childContainer );
+			fragment.appendChild( childContainer );
 		} );
 
 		// Render standalone categories (not part of any parent)
@@ -472,8 +473,12 @@
 				self.selectCategory( cat.id );
 			} );
 
-			self.categoryList.appendChild( item );
+			fragment.appendChild( item );
 		} );
+
+		// Single DOM update: clear and append all at once
+		this.categoryList.innerHTML = '';
+		this.categoryList.appendChild( fragment );
 	};
 
 	/**

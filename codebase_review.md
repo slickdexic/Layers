@@ -49,7 +49,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | CODE-4 | Magic z-index values (7+ locations) | Low | 🟡 Open | Code Quality |
 | CODE-5 | Duplicated clampOpacity() function (8 files) | Low | 🟡 Documented | Code Quality |
 | CODE-6 | Deprecated methods still present (4 locations) | Low | 🟡 Open | Maintenance |
-| PERF-1 | ShapeLibraryPanel DOM not using DocumentFragment | Low | 🟡 Open | Performance |
+| PERF-1 | ShapeLibraryPanel DOM not using DocumentFragment | Low | ✅ Fixed | Performance |
 | PERF-2 | InlineTextEditor resize handler not debounced | Low | ✅ Fixed | Performance |
 | PERF-3 | LayerPanel caches layout reads during drag | Info | ✅ Verified | Performance |
 | PERF-4 | EffectsRenderer not using canvas pool | Low | 🟡 Deferred | Performance |
