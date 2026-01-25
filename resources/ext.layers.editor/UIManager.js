@@ -408,6 +408,13 @@
 		}
 	}
 
+	/**
+	 * Get an i18n message by key
+	 *
+	 * @param {string} key - Message key
+	 * @param {string} [fallback=''] - Fallback if message not found
+	 * @return {string} Localized message or fallback
+	 */
 	getMessage( key, fallback = '' ) {
 		const messages = getClass( 'Core.Messages', 'layersMessages' );
 		return messages ? messages.get( key, fallback ) : fallback;

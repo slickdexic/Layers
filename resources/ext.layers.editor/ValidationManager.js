@@ -1,14 +1,25 @@
 /**
  * Validation Manager for Layers Editor
  * Handles data validation and sanitization
+ *
+ * @class ValidationManager
  */
 class ValidationManager {
+	/**
+	 * Creates a new ValidationManager instance
+	 *
+	 * @param {Object} editor - Reference to the LayersEditor instance
+	 */
 	constructor( editor ) {
 		this.editor = editor;
 	}
 
 	/**
 	 * Sanitize layer data before processing
+	 * Recursively sanitizes all string properties to remove dangerous content
+	 *
+	 * @param {Object|Array|*} layerData - Layer data to sanitize
+	 * @return {Object|Array|*} Sanitized layer data
 	 */
 	sanitizeLayerData( layerData ) {
 		if ( !layerData || typeof layerData !== 'object' ) {
@@ -47,6 +58,9 @@ class ValidationManager {
 	/**
 	 * Sanitize SVG string input
 	 * Preserves < and > for valid SVG markup but removes dangerous content
+	 *
+	 * @param {string} input - SVG string to sanitize
+	 * @return {string} Sanitized SVG string
 	 */
 	sanitizeSvgString( input ) {
 		if ( typeof input !== 'string' ) {
@@ -62,6 +76,10 @@ class ValidationManager {
 
 	/**
 	 * Sanitize string input
+	 * Removes HTML tags and dangerous content
+	 *
+	 * @param {string} input - String to sanitize
+	 * @return {string} Sanitized string
 	 */
 	sanitizeString( input ) {
 		if ( typeof input !== 'string' ) {
@@ -76,6 +94,10 @@ class ValidationManager {
 
 	/**
 	 * Sanitize input for general use
+	 * Alias for sanitizeString for compatibility
+	 *
+	 * @param {string} input - Input string to sanitize
+	 * @return {string} Sanitized string
 	 */
 	sanitizeInput( input ) {
 		return this.sanitizeString( input );
@@ -83,6 +105,10 @@ class ValidationManager {
 
 	/**
 	 * Validate layer data structure
+	 * Checks required fields, types, and value ranges
+	 *
+	 * @param {Object} layer - Layer object to validate
+	 * @return {{isValid: boolean, errors: string[]}} Validation result
 	 */
 	validateLayer( layer ) {
 		const errors = [];
@@ -158,6 +184,11 @@ class ValidationManager {
 
 	/**
 	 * Validate all layers
+	 * Checks layer count limits, individual layer validity, and duplicate IDs
+	 *
+	 * @param {Array} layers - Array of layer objects to validate
+	 * @param {number} [maxCount=100] - Maximum allowed number of layers
+	 * @return {{isValid: boolean, errors: string[], warnings: string[]}} Validation result
 	 */
 	validateLayers( layers, maxCount = 100 ) {
 		const errors = [];
@@ -198,6 +229,9 @@ class ValidationManager {
 
 	/**
 	 * Check browser compatibility
+	 * Verifies required browser APIs are available
+	 *
+	 * @return {boolean} True if browser meets requirements
 	 */
 	checkBrowserCompatibility() {
 		const requiredFeatures = [
@@ -224,6 +258,10 @@ class ValidationManager {
 
 	/**
 	 * Sanitize log messages for security
+	 * Removes sensitive data like tokens, URLs, IPs, and emails before logging
+	 *
+	 * @param {string|Object|*} message - Message to sanitize
+	 * @return {string|Object|*} Sanitized message safe for logging
 	 */
 	sanitizeLogMessage( message ) {
 		if ( typeof message !== 'string' ) {
@@ -262,12 +300,20 @@ class ValidationManager {
 		return result;
 	}
 
+	/**
+	 * Get an i18n message by key
+	 *
+	 * @param {string} key - Message key
+	 * @param {string} [fallback=''] - Fallback if message not found
+	 * @return {string} Localized message or fallback
+	 */
 	getMessage( key, fallback = '' ) {
 		return window.layersMessages.get( key, fallback );
 	}
 
 	/**
 	 * Clean up resources
+	 * Should be called when the editor is destroyed
 	 */
 	destroy() {
 		this.editor = null;

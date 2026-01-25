@@ -451,11 +451,10 @@ class ToolbarStyleControls {
 		} else {
 			input.classList.add( 'validation-error' );
 			if ( isNaN( val ) ) {
-				input.title = 'Please enter a valid number between 0 and 100';
-			} else if ( val < 0 ) {
-				input.title = 'Minimum stroke width: 0px';
-			} else if ( val > 100 ) {
-				input.title = 'Maximum stroke width: 100px';
+				input.title = this.msg( 'layers-validation-strokewidth-invalid', 'Invalid stroke width' );
+			} else {
+				input.title = this.msg( 'layers-validation-strokewidth-range', 'Stroke width must be between $1 and $2' )
+					.replace( '$1', '0' ).replace( '$2', '100' );
 			}
 		}
 	}

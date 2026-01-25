@@ -802,7 +802,11 @@
 		}
 
 		/**
-		 * No-op kept for backward compatibility
+		 * No-op kept for backward compatibility.
+		 * Code panel functionality was removed; this stub prevents errors from old callers.
+		 *
+		 * @deprecated since 1.5.0 - Code panel moved to UIManager
+		 * @return {void}
 		 */
 		updateCodePanel() {}
 
