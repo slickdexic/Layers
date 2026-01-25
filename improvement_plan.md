@@ -2,7 +2,7 @@
 
 **Last Updated:** January 24, 2026  
 **Version:** 1.5.29  
-**Status:** ✅ Production-Ready, High Quality (8.6/10)
+**Status:** Production-Ready, High Quality (8.9/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
 
@@ -10,28 +10,33 @@
 
 ## Executive Summary
 
-The extension is **production-ready and high quality** with **excellent security and test coverage**. All P0 and P1 items have been completed. Only P2 (medium-priority coverage gaps) and P3 (low-priority) items remain.
+The extension is **production-ready and high quality** with **excellent test coverage**. All P0 critical items have been resolved as of January 24, 2026.
+
+**Current Status:**
+- ✅ All P0 items complete (SEC-1, CODE-1 fixed)
+- ✅ All P1 items complete (CODE-2 verified already i18n'd)
+- 🟡 P2/P3 items for long-term improvement
 
 **Verified Metrics (January 24, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | Tests passing | **10,574** (156 suites) | ✅ Excellent |
-| Statement coverage | **93%+** | ✅ Excellent |
-| Branch coverage | **84%+** | ✅ Excellent |
-| Function coverage | **92%+** | ✅ Excellent |
-| Line coverage | **93%+** | ✅ Excellent |
+| Statement coverage | **94.45%** | ✅ Excellent |
+| Branch coverage | **84.87%** | ✅ Excellent |
+| Function coverage | **92.55%** | ✅ Excellent |
+| Line coverage | **94.59%** | ✅ Excellent |
 | JS files | 130 | Excludes dist/ |
-| JS lines | ~116,021 | Includes generated data |
+| JS lines | ~116,191 | Includes generated data |
 | PHP files | 40 | ✅ |
-| PHP lines | ~13,908 | ✅ |
+| PHP lines | ~9,461 | ✅ Corrected from 13,908 |
 | ES6 classes | 111 files | 100% migrated |
 | God classes (≥1,000 lines) | 21 | 3 generated, 18 hand-written |
 | ESLint errors | 0 | ✅ |
 | ESLint warnings | 7 | Ignored files only |
 | ESLint disables | 9 | ✅ All legitimate |
 | innerHTML usages | 20+ | ✅ Audited - all safe |
-| console.log in prod | 0 | ✅ Scripts only |
+| console.log in prod | 0 | ✅ Fixed |
 | Skipped tests | 0 | ✅ All tests run |
 
 ---
@@ -49,99 +54,145 @@ The extension is **production-ready and high quality** with **excellent security
 
 ## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-No critical issues remaining. The codebase is production-ready.
+### P0.1 Missing `mustBePosted()` on Write API Modules ✅ FIXED
 
-**Previously Resolved P0 Issues:**
-- ✅ ApiLayersDelete/Rename rate limiting added
-- ✅ Template images CSP issue fixed
-- ✅ Memory leaks fixed (TransformationEngine, ZoomPanController, LayerRenderer)
-- ✅ CanvasManager async race condition fixed
-- ✅ SelectionManager infinite recursion fixed
-- ✅ Export filename sanitization added
-- ✅ Timer cleanup in destroy() methods
-- ✅ APIManager save race condition fixed (saveInProgress flag)
-- ✅ GroupManager circular reference fixed (isDescendantOf check)
+**Status:** Fixed (January 24, 2026)  
+**Priority:** P0 - Critical  
+**Severity:** Medium Security  
+**Files:**
+- `src/Api/ApiLayersSave.php`
+- `src/Api/ApiLayersDelete.php`
+- `src/Api/ApiLayersRename.php`
+
+**Resolution:** Added `mustBePosted()` method returning `true` to all three write API modules for defense-in-depth security.
+
+---
+
+### P0.2 console.log in Production Code ✅ FIXED
+
+**Status:** Fixed (January 24, 2026)  
+**Priority:** P0 - Critical  
+**Severity:** High Code Quality  
+**File:** `resources/ext.layers/viewer/ViewerManager.js`
+
+**Resolution:** Replaced 3 `console.log` calls with `this.debugLog()` method that properly respects debug mode and uses mw.log.
 
 ---
 
 ## Phase 1 (P1): High Priority — ✅ ALL RESOLVED
 
-All P1 items are now complete.
+### P1.1 Hardcoded User-Facing Strings ✅ VERIFIED
 
-### P1.1 SlidePropertiesPanel.js Coverage ✅ COMPLETE
+**Status:** Verified as already fixed  
+**Priority:** P1 - High  
+**Category:** i18n  
 
-**Status:** Complete  
-**Resolution:** 75 tests now passing, 91.26% statement coverage
-
----
-
-### P1.2 InlineTextEditor.js Branch Coverage ✅ COMPLETE
-
-**Status:** Complete  
-**Resolution:** 176 tests, 86.85% branch coverage, 81.81% function coverage
+**Resolution:** Upon code verification, the reported hardcoded strings were either already using i18n or have been removed from the codebase.
 
 ---
 
-### P1.3 StateManager Lock Recovery ✅ COMPLETE
+### P1.2 Documentation Metric Corrections ✅ FIXED
 
-**Status:** Complete  
-**Resolution:** Implemented comprehensive lock recovery:
-1. ✅ `forceUnlock()` method for emergency recovery
-2. ✅ 30-second auto-recovery timeout
-3. ✅ `MAX_PENDING_OPERATIONS = 100` queue limit
-4. ✅ Constants: `LOCK_DETECTION_TIMEOUT_MS` (5s), `LOCK_AUTO_RECOVERY_TIMEOUT_MS` (30s)
+**Status:** Fixed in this review  
+**Priority:** P1 - High  
+**Category:** Documentation  
+
+**Corrections Made:**
+- PHP lines: Was documented as 13,908, actual is 9,461
+- This file and codebase_review.md now have correct values
 
 ---
 
-## Phase 2 (P2): Medium Priority — ✅ ALL RESOLVED
+## Phase 2 (P2): Medium Priority — 🟡 OPEN
 
-### P2.1 LayerPanel.js Branch Coverage ✅ COMPLETE
+### P2.1 DEBUG Comments in Production Code
 
-**Status:** Complete  
+**Status:** Open  
 **Priority:** P2 - Medium  
-**Final Coverage:** 80.27% branches (target: 80%)
+**Category:** Code Quality  
 
-**Resolution:** Additional tests added for context menu, folder operations, and event handling edge cases.
+**11 DEBUG comments to review:**
+
+| File | Line | Action |
+|------|------|--------|
+| ShadowRenderer.js | 239 | Convert to mw.log with debug check |
+| EffectsRenderer.js | 210 | Convert to mw.log with debug check |
+| EffectsRenderer.js | 382 | Convert to mw.log with debug check |
+| EffectsRenderer.js | 396 | Convert to mw.log with debug check |
+| LayersViewer.js | 315 | Review and remove if stale |
+| LayersLightbox.js | 45 | Review and remove if stale |
+| ApiLayersInfo.php | 245 | Convert to $this->getLogger() |
+| ParserHooks.php | 144 | Convert to $this->getLogger() |
+| LayersFileTransform.php | 122 | Convert to $this->getLogger() |
+| LayersFileTransform.php | 139 | Convert to $this->getLogger() |
+| ThumbnailRenderer.php | 269 | Convert to $this->getLogger() |
+
+**Estimated Effort:** 2 hours
 
 ---
 
-### P2.2 APIManager.js Branch Coverage ✅ COMPLETE
+### P2.2 Tautological Test Assertions
 
-**Status:** Complete  
+**Status:** Open  
 **Priority:** P2 - Medium  
-**Final Coverage:** 80.18% branches (target: 80%)
+**Category:** Testing  
 
-**Resolution:** Added tests for:
-- `deleteLayerSet` permission denied and generic error paths
-- Export with JPEG format when no background image
-- Canvas context creation failure handling
-- Fallback when renderer lacks `renderLayersToContext`
-- `disableSaveButton` / `enableSaveButton` edge cases
-- `handleSaveSuccess` edge cases including history manager and screen reader announcements
+**9 instances of `expect(true).toBe(true)`:**
+
+| File | Purpose | Recommended Fix |
+|------|---------|-----------------|
+| LayersViewer.test.js | "documentation test" | Add real assertion or document why |
+| SmartGuidesController.test.js | Fallback when DOM missing | Check for error not thrown |
+| TransformController.test.js | Same pattern | Check for error not thrown |
+| PropertyBuilders.test.js | "Basic smoke test" | Check return value |
+| GroupManager.test.js | "ensure no throw" | Use `expect(() => fn()).not.toThrow()` |
+
+**Pattern to use instead:**
+```javascript
+// Instead of: expect(true).toBe(true);
+expect(() => someOperation()).not.toThrow();
+// or
+expect(result).toBeDefined();
+```
+
+**Estimated Effort:** 2 hours
 
 ---
 
-### P2.3 ViewerManager.js Branch Coverage ✅ COMPLETE
+### P2.3 ShapeLibraryPanel DOM Performance
 
-**Status:** Complete  
+**Status:** Open  
 **Priority:** P2 - Medium  
-**Final Coverage:** 80.14% branches (target: 80%)
+**Category:** Performance  
+**File:** `resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js`
 
-**Resolution:** Added tests for:
-- `reinitializeViewer` error handling when destroy throws
-- `refreshAllViewers` when mw.Api is not available
-- Viewer processing errors during refresh
+**Issue:** Creates DOM elements in loops without using DocumentFragment.
+
+**Current Pattern:**
+```javascript
+container.innerHTML = '';
+for (const shape of shapes) {
+    container.appendChild(createElement());  // Triggers reflow each time
+}
+```
+
+**Recommended Pattern:**
+```javascript
+const fragment = document.createDocumentFragment();
+for (const shape of shapes) {
+    fragment.appendChild(createElement());
+}
+container.innerHTML = '';
+container.appendChild(fragment);  // Single reflow
+```
+
+**Impact:** Low — only affects initial load of 1,310 shapes. Modern browsers handle this well.
+
+**Estimated Effort:** 30 minutes
 
 ---
 
-### P2.4 Canvas Context Null Checks ✅ COMPLETE
-
-**Status:** Complete  
-**Resolution:** Defensive null checks added to CanvasManager.js and CanvasRenderer.js
-
----
-
-### P2.5 EffectsRenderer Canvas Pooling ⏸️ DEFERRED
+### P2.4 EffectsRenderer Canvas Pooling ⏸️ DEFERRED
 
 **Status:** Deferred  
 **Decision Date:** January 24, 2026
@@ -150,61 +201,83 @@ All P1 items are now complete.
 
 ---
 
-### P2.6 Documentation Sync ✅ COMPLETE
-
-**Status:** Complete  
-**Resolution:** Metrics synchronized across all documentation files.
-
----
-
 ## Phase 3 (P3): Long-Term Improvements
 
-### P3.1 i18n Fallback Centralization
-
-**Status:** Documented  
-**Priority:** P3 - Low
-
-**Current Pattern:**
-```javascript
-mw.message( 'key' ).text() || 'English fallback'
-```
-
-**Status:** Documented as acceptable defense-in-depth pattern.
-
----
-
-### P3.2 Null Checking Style Guide
+### P3.1 Magic z-index Constants
 
 **Status:** Open  
-**Priority:** P3 - Low
+**Priority:** P3 - Low  
+**Category:** Code Quality  
 
-**Issue:** Inconsistent null/undefined checking patterns across codebase.
+**Current State:** 7+ different z-index values scattered across files.
 
-**Action Items:**
-1. Document preferred pattern in CONTRIBUTING.md
-2. Recommended: `!= null` for checking both null/undefined
-3. Use explicit checks when type distinction matters
+**Recommended Solution:** Create a z-index scale file:
+```css
+/* resources/ext.layers.editor/z-index.css */
+:root {
+    --layers-z-editor-base: 10000;
+    --layers-z-modal: 100000;
+    --layers-z-overlay: 999999;
+    --layers-z-color-picker: 1000000;
+    --layers-z-shape-library: 1000010;
+}
+```
+
+**Estimated Effort:** 2 hours
 
 ---
 
-### P3.3 TransformController Animation Frame Optimization ✅ ALREADY CORRECT
+### P3.2 Jest Fake Timers
 
-**Status:** Complete  
-**Priority:** P3 - Low
+**Status:** Open  
+**Priority:** P3 - Low  
+**Category:** Testing  
 
-**Resolution:** Upon review, TransformController already implements the pending flag pattern correctly:
-- `_resizeRenderScheduled` for resize operations
-- `_rotationRenderScheduled` for rotation operations
-- `_dragRenderScheduled` for drag operations
+**Issue:** 30+ instances of real `setTimeout` in tests causing potential flakiness.
 
-Each rAF callback checks the flag before scheduling, preventing duplicate frames.
+**Recommended Pattern:**
+```javascript
+beforeEach(() => {
+    jest.useFakeTimers();
+});
+
+afterEach(() => {
+    jest.useRealTimers();
+});
+
+it('should handle delayed operation', () => {
+    triggerAsyncOperation();
+    jest.runAllTimers();
+    expect(result).toBe(expected);
+});
+```
+
+**Estimated Effort:** 4 hours
+
+---
+
+### P3.3 Deprecated Method Removal
+
+**Status:** Open  
+**Priority:** P3 - Low  
+**Category:** Maintenance  
+
+**Methods to remove in v2.0:**
+
+| File | Method | Replacement |
+|------|--------|-------------|
+| ToolManager.js | `getDrawingLayer()` | `createLayer()` |
+| LayerPanel.js | `hideControlsForSelectedLayers` | Remove entirely |
+| UIManager.js | Legacy folder method | `createFolder()` |
+
+**Action:** Add `@deprecated` JSDoc tags with version and alternative method.
 
 ---
 
 ### P3.4 TypeScript Migration
 
 **Status:** Not Started  
-**Priority:** P3
+**Priority:** P3  
 
 Consider TypeScript for complex modules:
 - StateManager
@@ -224,7 +297,7 @@ Consider TypeScript for complex modules:
 ### P3.5 Visual Regression Testing
 
 **Status:** Not Started  
-**Priority:** P3
+**Priority:** P3  
 
 Add visual snapshot tests for:
 - Canvas rendering
@@ -236,18 +309,6 @@ Add visual snapshot tests for:
 - Percy
 - Chromatic
 - jest-image-snapshot
-
----
-
-### P3.6 Real-Time Collaboration
-
-**Status:** Not Started  
-**Priority:** P3+
-
-Architecture considerations:
-- Operational Transforms (OT) or CRDT
-- WebSocket integration
-- Conflict resolution strategy
 
 ---
 
@@ -293,24 +354,28 @@ Architecture considerations:
 
 ---
 
-## Completed Features
+## Completed Items (Historical)
 
-| Feature | Version | Status |
-|---------|---------|--------|
-| Canvas Snap | v1.5.29 | ✅ |
-| Gradient Fills | v1.5.8 | ✅ |
-| SVG Export | v1.5.7 | ✅ |
-| Curved Arrows | v1.3.3 | ✅ |
-| Callout/Speech Bubble | v1.4.2 | ✅ |
-| Named Layer Sets | v1.5.0 | ✅ |
-| Shape Library (1,310 shapes) | v1.5.11 | ✅ |
-| Emoji Picker (2,817 emoji) | v1.5.12 | ✅ |
-| Inline Text Editing | v1.5.13 | ✅ |
-| Mobile Touch Support | v1.4.8 | ✅ |
-| Virtual Layer List | v1.5.21 | ✅ |
-| Slide Mode | v1.5.22 | ✅ |
-| Dimension Tool | v1.5.25 | ✅ |
-| Marker Tool | v1.5.26 | ✅ |
+### Previously Resolved P0 Issues
+- ✅ ApiLayersDelete/Rename rate limiting added
+- ✅ Template images CSP issue fixed
+- ✅ Memory leaks fixed (TransformationEngine, ZoomPanController, LayerRenderer)
+- ✅ CanvasManager async race condition fixed
+- ✅ SelectionManager infinite recursion fixed
+- ✅ Export filename sanitization added
+- ✅ Timer cleanup in destroy() methods
+- ✅ APIManager save race condition fixed (saveInProgress flag)
+- ✅ GroupManager circular reference fixed (isDescendantOf check)
+
+### Previously Resolved P1/P2 Issues
+- ✅ SlidePropertiesPanel.js coverage improved
+- ✅ InlineTextEditor.js branch coverage above 80%
+- ✅ ViewerManager.js branch coverage 80.14%
+- ✅ LayerPanel.js branch coverage 80.27%
+- ✅ APIManager.js branch coverage 80.95%
+- ✅ StateManager lock recovery implemented
+- ✅ pendingOperations queue protection added
+- ✅ Canvas context null checks added
 
 ---
 
@@ -318,25 +383,25 @@ Architecture considerations:
 
 | Criterion | Status | Notes |
 |-----------|--------|-------|
-| No critical security issues | ✅ | innerHTML, CSRF audited |
-| Statement coverage >90% | ✅ 93%+ | Excellent |
-| Branch coverage >80% | ✅ 84%+ | Excellent |
+| No critical security issues | ✅ | mustBePosted() added |
+| Statement coverage >90% | ✅ 94.45% | Excellent |
+| Branch coverage >80% | ✅ 84.87% | Excellent |
 | No race conditions | ✅ | All fixed |
 | ESLint clean | ✅ | 0 errors |
-| No console.log in prod | ✅ | Scripts only |
+| No console.log in prod | ✅ | Fixed January 24, 2026 |
 | localStorage quota handling | ✅ | Try-catch implemented |
 | Memory leak prevention | ✅ | EventTracker, TimeoutTracker |
 | Destroy methods complete | ✅ | All components have cleanup |
 | Animation frame cleanup | ✅ | cancelAnimationFrame in destroy |
 | Zero skipped tests | ✅ | All tests run |
 | All priority files at 80%+ branch | ✅ | Complete |
+| i18n complete | ✅ | Verified |
 
-### Remaining Gaps
+### Remaining Gaps for World-Class
 | Gap | Priority | Status |
 |-----|----------|--------|
-| LayerPanel 80.27% branch | P2 | ✅ Complete |
-| APIManager 80.95% branch | P2 | ✅ Complete |
-| ViewerManager 80.14% branch | P2 | ✅ Complete |
+| DEBUG comments cleanup | P2 | 🟡 Open |
+| Tautological test assertions | P2 | 🟡 Open |
 | TypeScript migration | P3 | Not started |
 | Visual regression tests | P3 | Not started |
 
@@ -388,6 +453,14 @@ When setting innerHTML:
 3. **Document** why innerHTML is necessary if used
 4. **Consider** Trusted Types policy for CSP compliance
 
+### The Console Rule
+
+When adding debug logging:
+1. **Never** use console.log in production code
+2. **Use** mw.log() for MediaWiki integration
+3. **Wrap** in debug check: `if (this.debug && mw.log)`
+4. **Consider** conditional compilation for verbose logging
+
 ### The Error Handling Rule
 
 When handling errors:
@@ -396,53 +469,53 @@ When handling errors:
 3. **Propagate** if caller needs to handle
 4. **Document** expected error types
 
-### The parseInt Rule
+### The i18n Rule
 
-When using parseInt():
-1. **Always** specify radix parameter: `parseInt(value, 10)`
-2. **Consider** `Number()` or `+value` for simple conversions
-3. **Validate** input before parsing
+When adding user-facing strings:
+1. **Always** use mw.message() for user-visible text
+2. **Add** key to i18n/en.json
+3. **Document** in i18n/qqq.json
+4. **Register** in extension.json ResourceModules messages
 
-### The Canvas Context Rule
+### The API Security Rule
 
-When calling getContext('2d'):
-1. **Check** if return value is null
-2. **Log** warning if context unavailable
-3. **Return** gracefully or show user-friendly error
+When creating write API modules:
+1. **Require** CSRF token: `needsToken() { return 'csrf'; }`
+2. **Declare** write mode: `isWriteMode() { return true; }`
+3. **Enforce** POST: `mustBePosted() { return true; }`
+4. **Check** permissions before any action
 
 ---
 
 ## Summary
 
-**Rating: 8.8/10** — Production-ready, feature-complete, high quality
+**Rating: 8.9/10** — Production-ready, high quality, all critical issues resolved
 
 **Strengths:**
-- ✅ 10,574 passing tests with 93%+ statement coverage
-- ✅ 84%+ branch coverage (all priority files at 80%+)
+- ✅ 10,574 passing tests with 94.45% statement coverage
+- ✅ 84.87% branch coverage (all priority files at 80%+)
 - ✅ 15 working drawing tools + Slide Mode
-- ✅ Canvas Snap for snapping to canvas edges/center
-- ✅ Professional security (CSRF, rate limiting, validation)
+- ✅ Professional architecture (facades, delegation, controllers)
 - ✅ Named layer sets with version history
 - ✅ Shape library with 1,310 shapes
 - ✅ Emoji picker with 2,817 emoji
 - ✅ Mobile touch support
-- ✅ All security audit findings resolved
 - ✅ innerHTML usage audited and safe
 - ✅ 100% ES6 class migration (111 files)
 - ✅ Proper memory management (EventTracker, TimeoutTracker, cancelAnimationFrame)
 - ✅ Zero skipped tests
-- ✅ All P0, P1, and P2 items complete
+- ✅ All P0 security/code quality issues fixed
+- ✅ mustBePosted() on all write API modules
+- ✅ No console.log in production code
 
-**Remaining P3 (Low Priority):**
-- 🟡 Null checking style guide
-- 🟡 TypeScript migration (long-term)
-- 🟡 Visual regression testing (nice-to-have)
-- 🟡 EffectsRenderer canvas pooling (deferred)
-
-**All P0, P1, and P2 items are now COMPLETE.**
+**P2/P3 for Long-Term:**
+- 🟡 DEBUG comments cleanup
+- 🟡 Tautological test assertions
+- 🟡 z-index constants
+- 🟡 Jest fake timers migration
 
 ---
 
 *Plan updated: January 24, 2026*  
 *Version: 1.5.29*  
-*Based on verified test run: 10,574 tests, 93%+ statement coverage, 84%+ branch coverage*
+*Based on verified test run: 10,574 tests, 94.45% statement coverage, 84.87% branch coverage*

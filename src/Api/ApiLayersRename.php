@@ -228,6 +228,19 @@ class ApiLayersRename extends ApiBase {
 	}
 
 	/**
+	 * This module must be called via HTTP POST.
+	 *
+	 * Defense-in-depth: While needsToken() already requires CSRF validation,
+	 * explicitly requiring POST prevents potential edge cases where GET requests
+	 * might bypass token validation.
+	 *
+	 * @return bool True to require POST method
+	 */
+	public function mustBePosted() {
+		return true;
+	}
+
+	/**
 	 * Provide example API calls.
 	 *
 	 * @return array Example messages
