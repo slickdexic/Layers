@@ -53,7 +53,14 @@ Virtual scrolling implemented for layer lists with 30+ items. The layer panel no
 
 ### F2. Layer Search/Filter
 
-No built-in search/filter for large layer sets.
+**Status:** ✅ COMPLETED (January 25, 2026)
+
+Layer search/filter functionality implemented with:
+- Search input at top of layer panel
+- Real-time filtering by layer name or text content
+- "Showing N of M layers" count display
+- Clear button to reset filter
+- Full dark mode support
 
 ### F3. Custom Fonts
 

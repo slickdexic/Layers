@@ -3666,3 +3666,271 @@ describe('LayerPanel updateLayers', () => {
         expect(() => panel.updateLayers([{ id: 'layer1' }])).not.toThrow();
     });
 });
+
+describe('LayerPanel search filter', () => {
+    let LayerPanel;
+    let mockEditor;
+    let mockStateManager;
+
+    beforeEach(() => {
+        jest.resetModules();
+        window.Layers = window.Layers || {};
+        window.Layers.UI = window.Layers.UI || {};
+        window.Layers.UI.IconFactory = {
+            createEyeIcon: jest.fn(() => document.createElement('span')),
+            createLockIcon: jest.fn(() => document.createElement('span')),
+            createDeleteIcon: jest.fn(() => document.createElement('span')),
+            createGrabIcon: jest.fn(() => document.createElement('span')),
+            createAddFolderIcon: jest.fn(() => document.createElement('span'))
+        };
+        window.EventTracker = jest.fn(function () {
+            this.listeners = [];
+            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
+            this.remove = jest.fn();
+            this.removeAllForElement = jest.fn();
+            this.count = jest.fn(() => this.listeners.length);
+            this.destroy = jest.fn(() => { this.listeners = []; });
+        });
+        window.Layers.Utils = { EventTracker: window.EventTracker };
+
+        document.body.innerHTML = '<div id="test-container"></div>';
+
+        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
+        mockStateManager = new StateManager();
+        
+        mockEditor = {
+            stateManager: mockStateManager,
+            container: document.body,
+            saveState: jest.fn()
+        };
+
+        require('../../resources/ext.layers.editor/LayerPanel.js');
+        LayerPanel = window.Layers.UI.LayerPanel;
+    });
+
+    test('should initialize with empty search filter', () => {
+        mockStateManager.set('layers', []);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        expect(panel.searchFilter).toBe('');
+    });
+
+    test('should create search input in interface', () => {
+        mockStateManager.set('layers', []);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        expect(panel.searchInput).toBeTruthy();
+        expect(panel.searchInput.tagName.toLowerCase()).toBe('input');
+        expect(panel.searchInput.type).toBe('text');
+    });
+
+    test('should filter layers by name', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'Header Text', type: 'text' },
+            { id: 'layer2', name: 'Footer Text', type: 'text' },
+            { id: 'layer3', name: 'Logo', type: 'image' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // Set search filter
+        panel.searchFilter = 'header';
+        const visible = panel.getVisibleLayers();
+
+        expect(visible.length).toBe(1);
+        expect(visible[0].id).toBe('layer1');
+    });
+
+    test('should filter layers by text content', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'Text 1', type: 'text', text: 'Hello World' },
+            { id: 'layer2', name: 'Text 2', type: 'text', text: 'Goodbye World' },
+            { id: 'layer3', name: 'Text 3', type: 'text', text: 'Welcome' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.searchFilter = 'world';
+        const visible = panel.getVisibleLayers();
+
+        expect(visible.length).toBe(2);
+        expect(visible.map(l => l.id)).toContain('layer1');
+        expect(visible.map(l => l.id)).toContain('layer2');
+    });
+
+    test('should filter case-insensitively', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'UPPERCASE', type: 'rectangle' },
+            { id: 'layer2', name: 'lowercase', type: 'circle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // searchFilter is stored lowercase (as set by the input handler)
+        panel.searchFilter = 'lowercase';
+        const visible = panel.getVisibleLayers();
+
+        expect(visible.length).toBe(1);
+        expect(visible[0].id).toBe('layer2');
+    });
+
+    test('should match uppercase layer name with lowercase search', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'HEADER SECTION', type: 'rectangle' },
+            { id: 'layer2', name: 'footer section', type: 'circle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // Search for 'header' (lowercase) should match 'HEADER SECTION' (uppercase)
+        panel.searchFilter = 'header';
+        const visible = panel.getVisibleLayers();
+
+        expect(visible.length).toBe(1);
+        expect(visible[0].id).toBe('layer1');
+    });
+
+    test('should show all layers when search filter is empty', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'Layer 1', type: 'rectangle' },
+            { id: 'layer2', name: 'Layer 2', type: 'circle' },
+            { id: 'layer3', name: 'Layer 3', type: 'text' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.searchFilter = '';
+        const visible = panel.getVisibleLayers();
+
+        expect(visible.length).toBe(3);
+    });
+
+    test('should ignore collapsed groups when searching', () => {
+        mockStateManager.set('layers', [
+            { id: 'group1', type: 'group', name: 'My Group', expanded: false },
+            { id: 'child1', type: 'text', name: 'Hidden Child', parentGroup: 'group1', text: 'Find me' },
+            { id: 'top-level', type: 'rectangle', name: 'Top Level' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // Without search, child should be hidden (group collapsed)
+        panel.searchFilter = '';
+        let visible = panel.getVisibleLayers();
+        expect(visible.map(l => l.id)).not.toContain('child1');
+
+        // With search, child should be visible if it matches
+        panel.searchFilter = 'find me';
+        visible = panel.getVisibleLayers();
+        expect(visible.map(l => l.id)).toContain('child1');
+    });
+
+    test('should match by layer type when name is not set', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', type: 'rectangle' },
+            { id: 'layer2', type: 'circle' },
+            { id: 'layer3', type: 'arrow' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.searchFilter = 'rect';
+        const visible = panel.getVisibleLayers();
+
+        expect(visible.length).toBe(1);
+        expect(visible[0].id).toBe('layer1');
+    });
+
+    test('should update search result count', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'Apple', type: 'rectangle' },
+            { id: 'layer2', name: 'Banana', type: 'circle' },
+            { id: 'layer3', name: 'Apple Pie', type: 'text' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.searchFilter = 'apple';
+        panel.updateSearchResultCount();
+
+        expect(panel.searchResultCount.style.display).toBe('block');
+        expect(panel.searchResultCount.textContent).toContain('2');
+        expect(panel.searchResultCount.textContent).toContain('3');
+    });
+
+    test('should hide search result count when filter is empty', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'Layer 1', type: 'rectangle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.searchFilter = '';
+        panel.updateSearchResultCount();
+
+        expect(panel.searchResultCount.style.display).toBe('none');
+    });
+
+    test('should clear search on clear button click', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'Test', type: 'rectangle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        // Set a search value
+        panel.searchInput.value = 'test';
+        panel.searchFilter = 'test';
+
+        // Find and click the clear button
+        const clearBtn = container.querySelector('.layers-search-clear');
+        expect(clearBtn).toBeTruthy();
+
+        clearBtn.click();
+
+        expect(panel.searchInput.value).toBe('');
+        expect(panel.searchFilter).toBe('');
+    });
+
+    test('should return empty array when no layers match search', () => {
+        mockStateManager.set('layers', [
+            { id: 'layer1', name: 'Apple', type: 'rectangle' },
+            { id: 'layer2', name: 'Banana', type: 'circle' }
+        ]);
+        mockStateManager.set('selectedLayerIds', []);
+
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        panel.searchFilter = 'xyz123notfound';
+        const visible = panel.getVisibleLayers();
+
+        expect(visible.length).toBe(0);
+    });
+});

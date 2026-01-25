@@ -2,6 +2,30 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.30] - 2026-01-25
+
+### Added
+- **Layer Search Filter** — Search/filter layers in the layer panel
+  - Real-time search input filters layers by name or text content
+  - Shows "Showing N of M layers" count during filtering
+  - Clear button to reset filter
+  - Full dark mode support (night and OS themes)
+  - 3 new i18n messages
+
+### Improved
+- **Jest Coverage Thresholds** — Raised thresholds to protect against regression
+  - Branches: 65% → 80%
+  - Functions: 80% → 90%
+  - Lines: 80% → 92%
+  - Statements: 80% → 92%
+
+### Technical Details
+- All 10,626 tests pass (157 test suites) — 13 new tests for layer search
+- Test coverage: 94.19% statement, 84.43% branch, 92.19% function, 94.32% line
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## [1.5.29] - 2026-01-25
 
 ### Added

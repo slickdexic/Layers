@@ -392,6 +392,10 @@
 	"layers-panel-subtitle-updated": "Drag to reorder • Double-click name to rename",
 	"layers-panel-expand": "Expand panel",
 	"layers-panel-collapse": "Collapse panel",
+	"layers-aria-layer-added": "Layer added.",
+	"layers-aria-layer-removed": "Layer removed.",
+	"layers-aria-layer-count": "$1 layers total.",
+	"layers-aria-layer-reordered": "Layer reordered.",
 	"layers-prop-text-align": "Text Align",
 	"layers-prop-vertical-align": "Vertical Align",
 	"layers-prop-padding": "Padding",
@@ -668,5 +672,8 @@
 	"layers-draft-recovery-message": "Found unsaved changes from $1 with $2 layer(s). Would you like to recover them?",
 	"layers-draft-recover": "Recover",
 	"layers-draft-discard": "Discard",
-	"layers-draft-recovered": "Draft recovered successfully"
+	"layers-draft-recovered": "Draft recovered successfully",
+	"layers-search-placeholder": "Search layers...",
+	"layers-search-clear": "Clear search",
+	"layers-search-results": "Showing $1 of $2 layers"
 }

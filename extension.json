@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.29",
+	"version": "1.5.30",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -653,6 +653,9 @@
 				"layers-draft-recover",
 				"layers-draft-discard",
 				"layers-draft-recovered",
+				"layers-search-placeholder",
+				"layers-search-clear",
+				"layers-search-results",
 				"layers-blend-normal",
 				"layers-blend-multiply",
 				"layers-blend-screen",
