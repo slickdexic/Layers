@@ -4,6 +4,48 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.31 (January 25, 2026)
+
+### Improved
+- **REL1_43 Branch Sync** — Updated REL1_43 branch to include all changes from v1.5.30
+
+### Fixed
+- **Draft Recovery False Prompts** — Fixed issue where draft recovery prompts appeared when no actual draft existed
+- **Layer Panel Header** — Redesigned with full Layers logo branding
+- **Canvas Accessibility** — Completed P3.5 accessibility improvements for canvas interactions
+
+### Technical Details
+- All 10,643 tests pass (157 test suites)
+- Test coverage: 94.17% statement, 84.43% branch, 92.18% function, 94.31% line
+- ESLint/Stylelint/Banana all pass
+- REL1_43 branch fully synced with main
+
+---
+
+## Version 1.5.30 (January 25, 2026)
+
+### Added
+- **Layer Search Filter** — Search/filter layers in the layer panel
+  - Real-time search input filters layers by name or text content
+  - Shows "Showing N of M layers" count during filtering
+  - Clear button to reset filter
+  - Full dark mode support (night and OS themes)
+  - 3 new i18n messages
+
+### Improved
+- **Jest Coverage Thresholds** — Raised thresholds to protect against regression
+  - Branches: 65% → 80%
+  - Functions: 80% → 90%
+  - Lines: 80% → 92%
+  - Statements: 80% → 92%
+
+### Technical Details
+- All 10,626 tests pass (157 test suites)
+- Test coverage: 94.19% statement, 84.43% branch, 92.19% function, 94.32% line
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## Version 1.5.29 (January 25, 2026)
 
 ### Added

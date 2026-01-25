@@ -49,16 +49,14 @@
      stroke-width="8"
      id="rect1" />
   <text
-     x="30.549654"
-     y="210.75841"
+     x="34"
+     y="196"
      fill="#3366cc"
      font-family="sans-serif"
      font-weight="bold"
      font-size="95px"
      letter-spacing="-2"
-     id="text1"
-     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:103.229px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;letter-spacing:-2.1506;fill:#3366cc;stroke-width:1.0753"
-     transform="scale(1.075298,0.92997478)">Layers</text>
+     id="text1">Layers</text>
   <path
      d="M 44,96 204,61 364,96 204,131 Z"
      fill="#3366cc"
