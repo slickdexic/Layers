@@ -2,7 +2,7 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.29] - 2026-01-24
+## [1.5.29] - 2026-01-25
 
 ### Added
 - **Canvas Snap** — Snap layer edges and center to canvas edges and center with visual green guides
@@ -14,6 +14,10 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Follows industry standard (Figma, Sketch, Illustrator)
 
 ### Fixed
+- **PHP 8.4 strict_types Compatibility** — Fixed save failures caused by TypeError when `declare(strict_types=1)` enabled
+  - `ColorValidator::isValidHexColor()` was returning `int` (from `preg_match`) instead of `bool`
+  - Added `(int)` casts to `config->get()` calls for `LayersMaxBytes`, `LayersMaxImageBytes`, and slide dimension configs
+- **Canvas Snap Shadow/Stroke** — Fixed canvas snap not accounting for shadow and stroke expansion when snapping to edges
 - **Canvas Snap Trigger** — Fixed canvas snap not working during drag operations (TransformController now checks `canvasSnapEnabled` flag)
 - **Slide Editor i18n** — Added missing `special-editslide-title` message for slide editor page title
 

@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** January 24, 2026  
+**Last Updated:** January 25, 2026  
 **Version:** 1.5.29
 
 This document lists known issues and current gaps for the Layers extension.
@@ -65,6 +65,10 @@ Not yet available beyond the default font allowlist.
 
 All previously identified P0 and P1 issues have been resolved:
 
+- ✅ **PHP 8.4 strict_types compatibility** (January 25, 2026)
+  - Fixed `ColorValidator::isValidHexColor()` returning int instead of bool
+  - Added `(int)` casts to config->get() calls for integer values
+  - Fixed canvas snap not accounting for shadow/stroke expansion
 - ✅ Rate limiting on delete/rename APIs
 - ✅ CSP blocking on File pages
 - ✅ Background visibility serialization (PHP→JS boolean handling)
