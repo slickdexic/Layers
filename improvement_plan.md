@@ -16,7 +16,7 @@ The extension is **production-ready and high quality** with **comprehensive test
 - ✅ All P0 items complete (no critical issues)
 - ✅ All P1 items complete (January 25, 2026)
 - 🟡 P2 items: 2 open (5 completed)
-- 🟡 P3 items: 7 open (2 completed)
+- 🟡 P3 items: 6 open (3 completed)
 
 **Verified Metrics (January 25, 2026):**
 
@@ -395,7 +395,7 @@ Auto-recovery fully implemented with:
 
 ### P3.5 Canvas Accessibility Improvements
 
-**Status:** Partially Complete  
+**Status:** ✅ COMPLETED (January 25, 2026)  
 **Priority:** P3 - Low  
 **Category:** Accessibility  
 
@@ -403,14 +403,13 @@ Auto-recovery fully implemented with:
 - ✅ LayerPanel has `announceToScreenReader()` method
 - ✅ ARIA roles on toolbar buttons
 - ✅ Keyboard navigation for layer panel
+- ✅ Tool changes announced via `announceTop()` method (already implemented)
+- ✅ Zoom display has `aria-live="polite"` and updates `aria-label` on change
+- ✅ Added `announceZoom()` method for explicit zoom announcements
+- ✅ Added `announceLayerSummary()` for layer count + selection announcements
+- ✅ ARIA labels on all major UI regions (canvas, toolbar, panel)
 
-**Still Needed:**
-- Announce zoom level changes
-- Announce tool changes
-- Add layer descriptions for screen readers
-- Consider aria-describedby for canvas
-
-**Estimated Effort:** 2-3 days
+**Note:** The `aria-describedby` for canvas is not needed since the canvas has `aria-label="Drawing canvas"` and the editor already has comprehensive ARIA region labels.
 
 ---
 
