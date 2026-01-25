@@ -4,6 +4,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [1.5.31] - 2026-01-25
 
+### Added
+- **Lowercase Slide Parser Function (FR-12)** — `{{#slide:}}` now works in addition to `{{#Slide:}}`, matching MediaWiki conventions
+
 ### Improved
 - **REL1_43 Branch Sync** — Updated REL1_43 branch to include all changes from v1.5.30
 

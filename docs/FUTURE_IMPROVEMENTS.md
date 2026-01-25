@@ -8,25 +8,22 @@ This document tracks **active** feature ideas for the Layers extension. For comp
 
 ## Active Proposals
 
-### 1. Lowercase Slide Parser Function Syntax (FR-12)
+### 1. ~~Lowercase Slide Parser Function Syntax (FR-12)~~ ✅ COMPLETED
 
 **Priority:** MEDIUM  
 **Complexity:** Low  
-**Status:** ⏳ Proposed (January 25, 2026)
+**Status:** ✅ Completed (January 25, 2026)
 
-Add backwards compatibility with lowercase 's' in `{{#slide: ...}}` parser function.
+Added backwards compatibility with lowercase 's' in `{{#slide: ...}}` parser function.
 
 **Rationale:**
 - MediaWiki convention typically uses lowercase for parser functions (e.g., `{{#if:}}`, `{{#switch:}}`)
 - Current `{{#Slide:}}` syntax may feel inconsistent with MediaWiki standards
-- Should support both variants: `{{#Slide:}}` and `{{#slide:}}`
+- Now supports both variants: `{{#Slide:}}` and `{{#slide:}}`
 
 **Implementation:**
-- Register magic word with case-insensitive matching
-- Update `Layers.i18n.magic.php` to add lowercase 'slide' alias
-- Add tests for lowercase variant
-
-**Effort:** ~1-2 hours
+- Updated `Layers.i18n.magic.php` to add lowercase 'slide' as primary alias
+- Backwards compatible: existing `{{#Slide:}}` usage continues to work
 
 ---
 
