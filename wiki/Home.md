@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-10%2C207%20passing-brightgreen" alt="10,207 Tests">
-  <img src="https://img.shields.io/badge/Coverage-92.96%25-brightgreen" alt="92.96% Coverage">
+  <img src="https://img.shields.io/badge/Tests-10%2C613%20passing-brightgreen" alt="10,613 Tests">
+  <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,23 +20,24 @@
 
 ---
 
-## 🆕 What's New in v1.5.28
+## 🆕 What's New in v1.5.29
+
+- **DraftManager Auto-Save** — Automatic draft recovery system with localStorage auto-save every 30 seconds
+- **Canvas Snap** — Snap layers to canvas edges and center with visual green guides
+- **Visual Bounds Snapping** — Snapping now respects stroke width and shadows
+- **Set Selector Race Condition Fix** — Prevent concurrent delete/rename/clear operations
+- **10,613 tests passing** (157 suites), 94%+ statement coverage, 84%+ branch coverage
+
+### Previous v1.5.28 Highlights
 
 - **Inline Text Editor Fix** — Fixed text duplication bug when using floating toolbar during inline text editing
 - **Empty Slide Overlay Fix** — Fixed missing edit overlay on empty slides and added i18n messages
-- **10,207 tests passing** (156 suites), 93.27% statement coverage, 83.59% branch coverage
 
 ### Previous v1.5.27 Highlights
 
 - **parseInt Radix Fix** — Added explicit radix to all parseInt calls for robustness
 - **Error Handling Documentation** — Added comprehensive error handling guidelines to CONTRIBUTING.md
 - **EmojiPickerPanel E2E Tests** — Added 17 Playwright E2E tests for emoji picker functionality
-
-### Previous v1.5.26 Highlights
-
-- **CORE-6: Dead Code Removal** — Removed unused StateManager undo/redo methods
-- **CORE-7: Stuck Lock Recovery** — Added logging for lock timeout recovery
-- **CORE-9: History Bounds Check** — Defensive bounds checking in HistoryManager undo/redo
 
 ### 🖼️ Slide Mode (v1.5.22+)
 

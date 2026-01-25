@@ -5,6 +5,11 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ## [1.5.29] - 2026-01-25
 
 ### Added
+- **DraftManager Auto-Save** — Automatic draft recovery system
+  - Auto-saves to localStorage every 30 seconds with debounce
+  - Shows recovery dialog when reopening editor with unsaved drafts
+  - Clears draft on successful save, 24-hour expiry for stale drafts
+  - 25 new unit tests
 - **Canvas Snap** — Snap layer edges and center to canvas edges and center with visual green guides
   - Toggle via Arrange & Snap dropdown or `'` (apostrophe) keyboard shortcut
   - Independent from Smart Guides (both can be enabled simultaneously)
@@ -14,17 +19,26 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Follows industry standard (Figma, Sketch, Illustrator)
 
 ### Fixed
+- **Set Selector Race Condition** — Prevent concurrent delete/rename/clear operations
+  - Added pending operation state that disables controls during API calls
+  - 7 new unit tests
 - **PHP 8.4 strict_types Compatibility** — Fixed save failures caused by TypeError when `declare(strict_types=1)` enabled
   - `ColorValidator::isValidHexColor()` was returning `int` (from `preg_match`) instead of `bool`
   - Added `(int)` casts to `config->get()` calls for `LayersMaxBytes`, `LayersMaxImageBytes`, and slide dimension configs
 - **Canvas Snap Shadow/Stroke** — Fixed canvas snap not accounting for shadow and stroke expansion when snapping to edges
 - **Canvas Snap Trigger** — Fixed canvas snap not working during drag operations (TransformController now checks `canvasSnapEnabled` flag)
 - **Slide Editor i18n** — Added missing `special-editslide-title` message for slide editor page title
+- **PHP Error Return Types** — `countNamedSets()` and `countSetRevisions()` now return -1 on DB error
+
+### Improved
+- **StateManager Batching** — Replaced 8 sequential `set()` calls with 2 batched `update()` calls in APIManager
+- **Clipboard Error Logging** — Added `mw.log.warn()` for clipboard API failures
+- **PHP Code Quality** — Added `JSON_DECODE_MAX_DEPTH` constant to all PHP files using json_decode
 
 ### Technical Details
-- All 10,574 tests pass (156 test suites)
-- Added 34+ new tests for Canvas Snap and visual bounds functionality
-- Test coverage: 93%+ statement, 84%+ branch
+- All 10,613 tests pass (157 test suites)
+- Added 32+ new tests for DraftManager and SetSelectorController
+- Test coverage: 94%+ statement, 84%+ branch
 - ESLint/Stylelint/Banana all pass
 
 ---

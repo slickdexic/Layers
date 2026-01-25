@@ -4,6 +4,46 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.29 (January 25, 2026)
+
+### Added
+- **DraftManager Auto-Save** — Automatic draft recovery system
+  - Auto-saves to localStorage every 30 seconds with debounce
+  - Shows recovery dialog when reopening editor with unsaved drafts
+  - Clears draft on successful save, 24-hour expiry for stale drafts
+  - 25 new unit tests
+- **Canvas Snap** — Snap layer edges and center to canvas edges and center with visual green guides
+  - Toggle via Arrange & Snap dropdown or `'` (apostrophe) keyboard shortcut
+  - Independent from Smart Guides (both can be enabled simultaneously)
+  - Green guides distinguish canvas snapping from magenta object snapping
+- **Visual Bounds Snapping** — Snapping now respects visual bounds including stroke width
+  - Thick strokes no longer get cut off when snapped to canvas edges
+  - Follows industry standard (Figma, Sketch, Illustrator)
+
+### Fixed
+- **Set Selector Race Condition** — Prevent concurrent delete/rename/clear operations
+  - Added pending operation state that disables controls during API calls
+  - 7 new unit tests
+- **PHP 8.4 strict_types Compatibility** — Fixed save failures caused by TypeError when `declare(strict_types=1)` enabled
+  - `ColorValidator::isValidHexColor()` was returning `int` (from `preg_match`) instead of `bool`
+  - Added `(int)` casts to `config->get()` calls for `LayersMaxBytes`, `LayersMaxImageBytes`, and slide dimension configs
+- **Canvas Snap Shadow/Stroke** — Fixed canvas snap not accounting for shadow and stroke expansion when snapping to edges
+- **Canvas Snap Trigger** — Fixed canvas snap not working during drag operations
+- **Slide Editor i18n** — Added missing `special-editslide-title` message
+- **PHP Error Return Types** — `countNamedSets()` and `countSetRevisions()` now return -1 on DB error
+
+### Improved
+- **StateManager Batching** — Replaced 8 sequential `set()` calls with 2 batched `update()` calls in APIManager
+- **Clipboard Error Logging** — Added `mw.log.warn()` for clipboard API failures
+- **PHP Code Quality** — Added `JSON_DECODE_MAX_DEPTH` constant to all PHP files using json_decode
+
+### Technical Details
+- All 10,613 tests pass (157 test suites)
+- Test coverage: 94%+ statement, 84%+ branch
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## Version 1.5.28 (January 24, 2026)
 
 ### Fixed

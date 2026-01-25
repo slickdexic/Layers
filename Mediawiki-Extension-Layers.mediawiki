@@ -7,8 +7,8 @@
 |type3           = page action
 |type4           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.26
-|update          = 2026-01-23
+|version         = 1.5.29
+|update          = 2026-01-25
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
