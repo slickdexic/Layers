@@ -132,6 +132,9 @@
 					this.ctx.filter = 'none';
 				} catch ( e ) {
 					// CORS or other error - fall back to tinted overlay
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[EffectsRenderer] drawBlurFillSimple failed, using fallback:', e.message );
+					}
 					this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
 					this.ctx.beginPath();
 					drawPathFn( this.ctx );
@@ -318,6 +321,9 @@
 					hasContent = true;
 				} catch ( e ) {
 					// Image draw failed (CORS) - will try canvas capture below
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[EffectsRenderer] Image draw failed (CORS):', e.message );
+					}
 					hasContent = false;
 				}
 
@@ -332,6 +338,9 @@
 						);
 					} catch ( e ) {
 						// Canvas overlay failed - continue with just the image
+						if ( typeof mw !== 'undefined' && mw.log ) {
+							mw.log.warn( '[EffectsRenderer] Canvas overlay failed:', e.message );
+						}
 					}
 				}
 			}
@@ -348,6 +357,9 @@
 					hasContent = true;
 				} catch ( e ) {
 					// Canvas capture failed (e.g., tainted canvas)
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[EffectsRenderer] Canvas capture failed:', e.message );
+					}
 					hasContent = false;
 				}
 			}
@@ -373,6 +385,9 @@
 					);
 					hasContent = true;
 				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[EffectsRenderer] Background image draw failed:', e.message );
+					}
 					hasContent = false;
 				}
 			}
