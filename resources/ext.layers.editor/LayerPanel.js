@@ -903,20 +903,25 @@
 			const header = document.createElement( 'div' );
 			header.className = 'layers-panel-header';
 
-			// Title row with actions
-			const titleRow = document.createElement( 'div' );
-			titleRow.className = 'layers-panel-title-row';
-			titleRow.style.display = 'flex';
-			titleRow.style.alignItems = 'center';
-			titleRow.style.justifyContent = 'space-between';
+			// Main header row: logo+folder on left, search on right
+			const headerRow = document.createElement( 'div' );
+			headerRow.className = 'layers-panel-header-row';
 
-			// Left side: folder button + title
-			const titleLeft = document.createElement( 'div' );
-			titleLeft.style.display = 'flex';
-			titleLeft.style.alignItems = 'center';
-			titleLeft.style.gap = '6px';
+			// Left side: logo with add folder button beside it
+			const leftGroup = document.createElement( 'div' );
+			leftGroup.className = 'layers-panel-header-left';
 
-			// Create Folder button (placed before title)
+			// Full Layers logo (external SVG file for exact rendering)
+			const logoImg = document.createElement( 'img' );
+			const assetsPath = ( typeof mw !== 'undefined' && mw.config && mw.config.get ) ?
+				mw.config.get( 'wgExtensionAssetsPath' ) : '/extensions';
+			logoImg.src = assetsPath + '/Layers/resources/ext.layers.editor/images/Layers_Logo.svg';
+			logoImg.alt = this.msg( 'layers-panel-title', 'Layers' );
+			logoImg.className = 'layers-panel-logo';
+			leftGroup.appendChild( logoImg );
+
+			// Create Folder button (beside logo)
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			const createGroupBtn = document.createElement( 'button' );
 			createGroupBtn.className = 'layers-btn layers-btn-icon layers-create-group-btn';
 			createGroupBtn.type = 'button';
@@ -924,7 +929,6 @@
 			createGroupBtn.setAttribute( 'aria-label', this.msg( 'layers-add-folder', 'Add folder' ) );
 
 			// Folder icon with plus badge for create folder
-			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			if ( IconFactory && IconFactory.createAddFolderIcon ) {
 				createGroupBtn.appendChild( IconFactory.createAddFolderIcon() );
 			} else if ( IconFactory && IconFactory.createFolderIcon ) {
@@ -936,39 +940,11 @@
 			this.addTargetListener( createGroupBtn, 'click', () => {
 				this.createFolder();
 			} );
-			titleLeft.appendChild( createGroupBtn );
+			leftGroup.appendChild( createGroupBtn );
 
-			const title = document.createElement( 'h3' );
-			title.className = 'layers-panel-title';
-			title.textContent = this.msg( 'layers-panel-title', 'Layers' );
-			titleLeft.appendChild( title );
+			headerRow.appendChild( leftGroup );
 
-			titleRow.appendChild( titleLeft );
-
-			// Mobile collapse toggle button (only visible on mobile)
-			const collapseBtn = document.createElement( 'button' );
-			collapseBtn.className = 'layers-panel-collapse-btn';
-			collapseBtn.type = 'button';
-			collapseBtn.setAttribute( 'aria-label', this.msg( 'layers-panel-expand', 'Expand panel' ) );
-			collapseBtn.setAttribute( 'aria-expanded', 'true' );
-			const collapseIcon = document.createElement( 'span' );
-			collapseIcon.className = 'collapse-icon';
-			collapseIcon.textContent = '▼';
-			collapseBtn.appendChild( collapseIcon );
-			this.addTargetListener( collapseBtn, 'click', () => {
-				this.toggleMobileCollapse();
-			} );
-			this.collapseBtn = collapseBtn;
-			titleRow.appendChild( collapseBtn );
-
-			header.appendChild( titleRow );
-
-			const subtitle = document.createElement( 'div' );
-			subtitle.className = 'layers-panel-subtitle';
-			subtitle.textContent = this.msg( 'layers-panel-subtitle', 'Drag to reorder • Click name to rename' );
-			header.appendChild( subtitle );
-
-			// Layer search bar
+			// Right side: search bar
 			const searchContainer = document.createElement( 'div' );
 			searchContainer.className = 'layers-search-container';
 
@@ -985,10 +961,6 @@
 			clearBtn.title = this.msg( 'layers-search-clear', 'Clear search' );
 			clearBtn.setAttribute( 'aria-label', this.msg( 'layers-search-clear', 'Clear search' ) );
 			clearBtn.style.display = 'none';
-
-			this.searchResultCount = document.createElement( 'div' );
-			this.searchResultCount.className = 'layers-search-count';
-			this.searchResultCount.style.display = 'none';
 
 			this.addTargetListener( this.searchInput, 'input', () => {
 				this.searchFilter = this.searchInput.value.toLowerCase().trim();
@@ -1008,8 +980,32 @@
 
 			searchContainer.appendChild( this.searchInput );
 			searchContainer.appendChild( clearBtn );
-			header.appendChild( searchContainer );
+			headerRow.appendChild( searchContainer );
+
+			// Mobile collapse toggle button (only visible on mobile)
+			const collapseBtn = document.createElement( 'button' );
+			collapseBtn.className = 'layers-panel-collapse-btn';
+			collapseBtn.type = 'button';
+			collapseBtn.setAttribute( 'aria-label', this.msg( 'layers-panel-expand', 'Expand panel' ) );
+			collapseBtn.setAttribute( 'aria-expanded', 'true' );
+			const collapseIcon = document.createElement( 'span' );
+			collapseIcon.className = 'collapse-icon';
+			collapseIcon.textContent = '▼';
+			collapseBtn.appendChild( collapseIcon );
+			this.addTargetListener( collapseBtn, 'click', () => {
+				this.toggleMobileCollapse();
+			} );
+			this.collapseBtn = collapseBtn;
+			headerRow.appendChild( collapseBtn );
+
+			header.appendChild( headerRow );
+
+			// Search result count (below header row)
+			this.searchResultCount = document.createElement( 'div' );
+			this.searchResultCount.className = 'layers-search-count';
+			this.searchResultCount.style.display = 'none';
 			header.appendChild( this.searchResultCount );
+
 			this.container.appendChild( header );
 
 			// Inner flex container to prevent underlap and allow resizing

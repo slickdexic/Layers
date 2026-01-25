@@ -996,13 +996,36 @@ body.layers-editor-open .mw-body-content {
 }
 
 .layers-panel-header {
-	padding: 4px 10px;
+	padding: 8px 10px;
 	border-bottom: 1px solid #eee;
 	background: #fafafa;
 	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+/* Main header row: logo+folder on left, search on right */
+.layers-panel-header-row {
+	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	min-height: 28px;
+	gap: 10px;
+	min-height: 36px;
+}
+
+/* Left group: logo and add folder button in a row */
+.layers-panel-header-left {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+/* Full Layers logo image */
+.layers-panel-logo {
+	width: 75px;
+	height: auto;
+	flex-shrink: 0;
 }
 
 /* Hide mobile collapse button on desktop */
@@ -1048,13 +1071,13 @@ body.layers-editor-open .mw-body-content {
 	line-height: 1.2;
 }
 
-/* Layer search bar */
+/* Layer search bar - now inline in header row */
 .layers-search-container {
 	display: flex;
 	align-items: center;
 	position: relative;
-	margin-top: 6px;
-	width: 100%;
+	flex: 1;
+	min-width: 0;
 }
 
 .layers-search-input {
