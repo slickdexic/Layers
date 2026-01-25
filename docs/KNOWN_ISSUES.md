@@ -66,11 +66,11 @@ Layer search/filter functionality implemented with:
 
 Not yet available beyond the default font allowlist.
 
-### F4. Lowercase Parser Function (FR-12)
+### F4. Lowercase Slide Parser Function (FR-12)
 
 **Status:** ⏳ PROPOSED (January 25, 2026)
 
-Add backwards compatibility with lowercase `{{#layers: ...}}` syntax to match MediaWiki conventions. Currently only `{{#Layers:}}` (capitalized) is supported.
+Add backwards compatibility with lowercase `{{#slide: ...}}` syntax to match MediaWiki conventions. Currently only `{{#Slide:}}` (capitalized) is supported.
 
 ### F5. Zoom to Mouse Pointer (FR-13)
 
