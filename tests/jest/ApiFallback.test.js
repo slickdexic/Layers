@@ -95,7 +95,7 @@ describe( 'ApiFallback', () => {
 	describe( 'constructor', () => {
 		it( 'should create instance with default options', () => {
 			const fallback = new ApiFallback();
-			expect( fallback.debug ).toBeFalsy();
+			expect( fallback.debug ).toBeUndefined();
 		} );
 
 		it( 'should enable debug mode when specified', () => {
@@ -474,11 +474,16 @@ describe( 'ApiFallback', () => {
 		let fallback;
 
 		beforeEach( () => {
+			jest.useFakeTimers();
 			fallback = new ApiFallback( {
 				urlParser: mockUrlParser,
 				viewerManager: mockViewerManager,
 				debug: true
 			} );
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
 		} );
 
 		it( 'should skip images that already have layersViewer', () => {
@@ -550,7 +555,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
 				img,
@@ -570,7 +575,7 @@ describe( 'ApiFallback', () => {
 			// No data-layers-intent attribute set
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
 			expect( mockViewerManager.initializeOverlayOnly ).not.toHaveBeenCalled();
@@ -584,7 +589,7 @@ describe( 'ApiFallback', () => {
 			img.setAttribute( 'data-layers-intent', 'my-custom-set' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
 			expect( mockViewerManager.initializeOverlayOnly ).toHaveBeenCalledWith(
@@ -601,7 +606,7 @@ describe( 'ApiFallback', () => {
 			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
 			expect( mockViewerManager.initializeOverlayOnly ).toHaveBeenCalledWith(
@@ -623,7 +628,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
 		} );
@@ -643,7 +648,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).toHaveBeenCalled();
 		} );
@@ -666,7 +671,7 @@ describe( 'ApiFallback', () => {
 
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
 				img,
@@ -693,7 +698,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
 				img,
@@ -719,7 +724,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
 				img,
@@ -745,7 +750,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
 				img,
@@ -771,7 +776,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
 				img,
@@ -797,7 +802,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockViewerManager.initializeViewer ).toHaveBeenCalledWith(
 				img,
@@ -826,7 +831,7 @@ describe( 'ApiFallback', () => {
 			const img = document.createElement( 'img' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			// Should log the processing error
 			expect( mockMw.log.warn ).toHaveBeenCalledWith(
@@ -867,7 +872,7 @@ describe( 'ApiFallback', () => {
 
 			fallback.initialize();
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.Api ).toHaveBeenCalled();
 		} );
@@ -877,7 +882,7 @@ describe( 'ApiFallback', () => {
 
 			fallback.initialize();
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.Api ).not.toHaveBeenCalled();
 		} );
@@ -888,7 +893,7 @@ describe( 'ApiFallback', () => {
 
 			fallback.initialize();
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.log ).toHaveBeenCalledWith(
 				'[Layers:ApiFallback]',

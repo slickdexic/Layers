@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Context\RequestContext;
@@ -312,7 +314,7 @@ class WikitextHooks {
 		// Get both set name and link type from queue
 		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
 
-		// DEBUG: Log queue state for debugging foreign file issues
+		// Log queue state for troubleshooting foreign file issues
 		self::log(
 			"onThumbnailBeforeProduceHTML: filename=$filename, linkType=" .
 			( $fileParams['linkType'] ?? 'null' )

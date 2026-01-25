@@ -2,6 +2,71 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.30] - 2026-01-25
+
+### Added
+- **Layer Search Filter** — Search/filter layers in the layer panel
+  - Real-time search input filters layers by name or text content
+  - Shows "Showing N of M layers" count during filtering
+  - Clear button to reset filter
+  - Full dark mode support (night and OS themes)
+  - 3 new i18n messages
+
+### Improved
+- **Jest Coverage Thresholds** — Raised thresholds to protect against regression
+  - Branches: 65% → 80%
+  - Functions: 80% → 90%
+  - Lines: 80% → 92%
+  - Statements: 80% → 92%
+
+### Technical Details
+- All 10,626 tests pass (157 test suites) — 13 new tests for layer search
+- Test coverage: 94.19% statement, 84.43% branch, 92.19% function, 94.32% line
+- ESLint/Stylelint/Banana all pass
+
+---
+
+## [1.5.29] - 2026-01-25
+
+### Added
+- **DraftManager Auto-Save** — Automatic draft recovery system
+  - Auto-saves to localStorage every 30 seconds with debounce
+  - Shows recovery dialog when reopening editor with unsaved drafts
+  - Clears draft on successful save, 24-hour expiry for stale drafts
+  - 25 new unit tests
+- **Canvas Snap** — Snap layer edges and center to canvas edges and center with visual green guides
+  - Toggle via Arrange & Snap dropdown or `'` (apostrophe) keyboard shortcut
+  - Independent from Smart Guides (both can be enabled simultaneously)
+  - Green guides distinguish canvas snapping from magenta object snapping
+- **Visual Bounds Snapping** — Snapping now respects visual bounds including stroke width
+  - Thick strokes no longer get cut off when snapped to canvas edges
+  - Follows industry standard (Figma, Sketch, Illustrator)
+
+### Fixed
+- **Set Selector Race Condition** — Prevent concurrent delete/rename/clear operations
+  - Added pending operation state that disables controls during API calls
+  - 7 new unit tests
+- **PHP 8.4 strict_types Compatibility** — Fixed save failures caused by TypeError when `declare(strict_types=1)` enabled
+  - `ColorValidator::isValidHexColor()` was returning `int` (from `preg_match`) instead of `bool`
+  - Added `(int)` casts to `config->get()` calls for `LayersMaxBytes`, `LayersMaxImageBytes`, and slide dimension configs
+- **Canvas Snap Shadow/Stroke** — Fixed canvas snap not accounting for shadow and stroke expansion when snapping to edges
+- **Canvas Snap Trigger** — Fixed canvas snap not working during drag operations (TransformController now checks `canvasSnapEnabled` flag)
+- **Slide Editor i18n** — Added missing `special-editslide-title` message for slide editor page title
+- **PHP Error Return Types** — `countNamedSets()` and `countSetRevisions()` now return -1 on DB error
+
+### Improved
+- **StateManager Batching** — Replaced 8 sequential `set()` calls with 2 batched `update()` calls in APIManager
+- **Clipboard Error Logging** — Added `mw.log.warn()` for clipboard API failures
+- **PHP Code Quality** — Added `JSON_DECODE_MAX_DEPTH` constant to all PHP files using json_decode
+
+### Technical Details
+- All 10,613 tests pass (157 test suites)
+- Added 32+ new tests for DraftManager and SetSelectorController
+- Test coverage: 94%+ statement, 84%+ branch
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## [1.5.28] - 2026-01-24
 
 ### Fixed
@@ -12,7 +77,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Technical Details
 - All 9,995 tests pass (156 test suites)
 - Added 1 new test for textbox layer format changes
-- Test coverage: 92.25% statement, 82.47% branch
+- Test coverage: 92.96% statement, 83.27% branch
 - ESLint/Stylelint/Banana all pass
 
 ---
@@ -31,7 +96,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - All 9,994 tests pass (156 test suites)
 - Added 4 new tests for `drawSlideBackground()` opacity handling
 - Updated ViewerManager mock contexts to include `save`, `restore`, `globalAlpha`
-- Test coverage: 92.24% statement, 82.47% branch
+- Test coverage: 92.96% statement, 83.27% branch
 - ESLint/Stylelint/Banana all pass
 
 ---

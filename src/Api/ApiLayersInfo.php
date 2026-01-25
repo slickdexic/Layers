@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * API module for retrieving layer information
  *
@@ -59,7 +61,8 @@ class ApiLayersInfo extends ApiBase {
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
 		if ( $filename !== null && strpos( $filename, 'Slide:' ) === 0 ) {
-			$slidename = substr( $filename, 6 ); // Remove 'Slide:' prefix
+			// Remove 'Slide:' prefix
+			$slidename = substr( $filename, 6 );
 			$this->executeSlideRequest( $slidename, $setName, $limit );
 			return;
 		}

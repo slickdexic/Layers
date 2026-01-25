@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-92.25%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-9%2C995%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-94.2%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-10%2C613%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.28 (January 24, 2026)  
+> **Version:** 1.5.29 (January 25, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -315,16 +315,16 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
   - ShapeLibraryData.js (11,299 lines) - generated shape definitions
     - 17 hand-written files with proper delegation patterns
 
-**Test Coverage (Last recorded — January 24, 2026):**
+**Test Coverage (Last recorded — January 25, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 9,994 passing (156 suites) |
+| Jest tests | 10,613 passing (157 suites) |
 | PHPUnit tests | 24 test files |
-| Statement coverage | 92.24% |
-| Branch coverage | 82.47% |
-| Function coverage | 90.52% |
-| Line coverage | 92.38% |
+| Statement coverage | 94.20% |
+| Branch coverage | 84.46% |
+| Function coverage | 92.21% |
+| Line coverage | 94.34% |
 
 **Security:**
 
@@ -375,14 +375,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 126 | ✅ |
-| Total JS lines | 113,847 | ✅ Includes generated data |
-| ES6 classes | 100+ | ✅ |
-| God classes (>1000 lines) | 20 | ⚠️ 3 generated, 17 with delegation |
-| Tests passing | 9,994 | ✅ |
+| Total JS files | 127 | ✅ |
+| Total JS lines | ~114,832 | ✅ Includes generated data |
+| ES6 classes | 127 | ✅ 100% migrated |
+| God classes (>1000 lines) | 21 | ⚠️ 3 generated, 18 with delegation |
+| Tests passing | 10,613 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 92.24% | ✅ Excellent |
-| Branch coverage | 82.47% | ✅ Target met |
+| Statement coverage | 94.20% | ✅ Excellent |
+| Branch coverage | 84.46% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

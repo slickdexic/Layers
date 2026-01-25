@@ -74,6 +74,25 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * Create a LayersDatabase instance with a LoadBalancer that returns null connections
+	 * Used for testing error paths when database is unavailable
+	 *
+	 * @return LayersDatabase
+	 */
+	private function createLayersDatabaseWithNoDb(): LayersDatabase {
+		$nullLoadBalancer = $this->createMock( ILoadBalancer::class );
+		$nullLoadBalancer->method( 'getConnection' )->willReturn( null );
+		$nullLoadBalancer->method( 'getConnectionRef' )->willReturn( null );
+
+		return new LayersDatabase(
+			$nullLoadBalancer,
+			$this->config,
+			$this->logger,
+			$this->schemaManager
+		);
+	}
+
+	/**
 	 * Helper to create mock result wrapper
 	 *
 	 * @param array $rows Array of stdClass objects
@@ -396,6 +415,16 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$this->assertSame( 0, $count );
 	}
 
+	/**
+	 * @covers ::countNamedSets
+	 */
+	public function testCountNamedSetsReturnsNegativeOnDbError(): void {
+		$db = $this->createLayersDatabaseWithNoDb();
+		$count = $db->countNamedSets( 'Test.jpg', 'sha1' );
+
+		$this->assertSame( -1, $count );
+	}
+
 	// =========================================================================
 	// countSetRevisions Tests
 	// =========================================================================
@@ -410,6 +439,16 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$count = $db->countSetRevisions( 'Test.jpg', 'sha1', 'default' );
 
 		$this->assertEquals( 12, $count );
+	}
+
+	/**
+	 * @covers ::countSetRevisions
+	 */
+	public function testCountSetRevisionsReturnsNegativeOnDbError(): void {
+		$db = $this->createLayersDatabaseWithNoDb();
+		$count = $db->countSetRevisions( 'Test.jpg', 'sha1', 'default' );
+
+		$this->assertSame( -1, $count );
 	}
 
 	// =========================================================================
@@ -669,34 +708,40 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	 * @covers ::getNamedSetsForImage
 	 */
 	public function testGetNamedSetsForImageSuccess(): void {
-		$rows = [
+		// Aggregates from first query
+		$aggregateRows = [
 			(object)[
 				'ls_name' => 'default',
 				'revision_count' => 5,
 				'latest_revision' => 5,
 				'latest_timestamp' => '20231209120000',
-				'latest_user_id' => 1
 			],
 			(object)[
 				'ls_name' => 'annotations',
 				'revision_count' => 3,
 				'latest_revision' => 3,
 				'latest_timestamp' => '20231208100000',
-				'latest_user_id' => 2
 			]
 		];
 
-		$result = $this->createResultWrapper( $rows );
-		$this->dbr->method( 'select' )->willReturn( $result );
-		$this->dbr->method( 'tableName' )->willReturn( 'layer_sets' );
+		// User rows from selectRow calls
+		$userRow1 = (object)[ 'ls_user_id' => 1 ];
+		$userRow2 = (object)[ 'ls_user_id' => 2 ];
+
+		$aggregateResult = $this->createResultWrapper( $aggregateRows );
+		$this->dbr->method( 'select' )->willReturn( $aggregateResult );
+		$this->dbr->method( 'selectRow' )
+			->willReturnOnConsecutiveCalls( $userRow1, $userRow2 );
 
 		$db = $this->createLayersDatabase();
 		$namedSets = $db->getNamedSetsForImage( 'Test.jpg', 'sha1' );
 
 		$this->assertCount( 2, $namedSets );
 		$this->assertEquals( 'default', $namedSets[0]['name'] );
-		$this->assertEquals( 5, $namedSets[0]['revision_count'] );
+		$this->assertSame( 5, $namedSets[0]['revision_count'] );
+		$this->assertSame( 1, $namedSets[0]['latest_user_id'] );
 		$this->assertEquals( 'annotations', $namedSets[1]['name'] );
+		$this->assertSame( 2, $namedSets[1]['latest_user_id'] );
 	}
 
 	/**
@@ -705,7 +750,6 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	public function testGetNamedSetsForImageEmpty(): void {
 		$result = $this->createResultWrapper( [] );
 		$this->dbr->method( 'select' )->willReturn( $result );
-		$this->dbr->method( 'tableName' )->willReturn( 'layer_sets' );
 
 		$db = $this->createLayersDatabase();
 		$namedSets = $db->getNamedSetsForImage( 'NoSets.jpg', 'sha1' );

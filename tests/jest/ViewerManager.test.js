@@ -92,7 +92,7 @@ describe( 'ViewerManager', () => {
 	describe( 'constructor', () => {
 		it( 'should create instance with default options', () => {
 			const manager = new ViewerManager();
-			expect( manager.debug ).toBeFalsy();
+			expect( manager.debug ).toBeUndefined();
 		} );
 
 		it( 'should enable debug mode when specified', () => {
@@ -776,10 +776,15 @@ describe( 'ViewerManager', () => {
 		let manager;
 
 		beforeEach( () => {
+			jest.useFakeTimers();
 			manager = new ViewerManager( {
 				urlParser: mockUrlParser,
 				debug: true
 			} );
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
 		} );
 
 		it( 'should return early when images array is empty', () => {
@@ -901,7 +906,7 @@ describe( 'ViewerManager', () => {
 			manager.initializeLargeImages( images );
 
 			// Wait for promises
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockLayersViewer ).toHaveBeenCalled();
 		} );
@@ -918,7 +923,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.log ).toHaveBeenCalledWith(
 				'[Layers:ViewerManager]',
@@ -944,7 +949,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.log ).toHaveBeenCalledWith(
 				'[Layers:ViewerManager]',
@@ -972,7 +977,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockLayersViewer ).toHaveBeenCalled();
 		} );
@@ -995,7 +1000,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			// Should log that no layers were found (not an error, just no data)
 			expect( mockMw.log ).toHaveBeenCalledWith(
@@ -1017,7 +1022,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.log.warn ).toHaveBeenCalledWith(
 				'[Layers:ViewerManager]',
@@ -1052,7 +1057,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockLayersViewer ).toHaveBeenCalledWith(
 				expect.objectContaining( {
@@ -1376,6 +1381,12 @@ describe( 'ViewerManager', () => {
 				freshnessChecker: mockFreshnessChecker,
 				debug: true
 			} );
+
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
 		} );
 
 		describe( 'reinitializeViewer', () => {
@@ -1559,7 +1570,7 @@ describe( 'ViewerManager', () => {
 				manager.checkAndRefreshStaleViewers( [ img ] );
 
 				// Wait for async completion
-				await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+				await jest.runAllTimersAsync();
 
 				// Should have reinitialized the viewer
 				expect( mockLayersViewer ).toHaveBeenCalled();
@@ -1585,7 +1596,7 @@ describe( 'ViewerManager', () => {
 
 				manager.checkAndRefreshStaleViewers( [ img ] );
 
-				await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+				await jest.runAllTimersAsync();
 
 				// Should not have created a new viewer
 				expect( mockLayersViewer.mock.calls.length ).toBe( viewerCallsBefore );
@@ -2770,13 +2781,13 @@ describe( 'ViewerManager', () => {
 				manager.setupSlideOverlay( container, payload );
 
 				const overlay = container.querySelector( '.layers-slide-overlay' );
-				expect( overlay ).toBeTruthy();
+				expect( overlay ).not.toBeNull();
 
 				const editBtn = overlay.querySelector( '.layers-slide-overlay-btn--edit' );
 				const viewBtn = overlay.querySelector( '.layers-slide-overlay-btn--view' );
 
-				expect( editBtn ).toBeTruthy();
-				expect( viewBtn ).toBeTruthy();
+				expect( editBtn ).not.toBeNull();
+				expect( viewBtn ).not.toBeNull();
 			} );
 
 			it( 'should create overlay with only view button when user cannot edit', () => {
@@ -2794,13 +2805,13 @@ describe( 'ViewerManager', () => {
 				manager.setupSlideOverlay( container, payload );
 
 				const overlay = container.querySelector( '.layers-slide-overlay' );
-				expect( overlay ).toBeTruthy();
+				expect( overlay ).not.toBeNull();
 
 				const editBtn = overlay.querySelector( '.layers-slide-overlay-btn--edit' );
 				const viewBtn = overlay.querySelector( '.layers-slide-overlay-btn--view' );
 
 				expect( editBtn ).toBeNull();
-				expect( viewBtn ).toBeTruthy();
+				expect( viewBtn ).not.toBeNull();
 			} );
 
 			it( 'should remove old edit button if present', () => {
@@ -3233,6 +3244,668 @@ describe( 'ViewerManager', () => {
 			// Canvas should be scaled via CSS
 			expect( canvas.style.width ).toBe( '400px' );
 			expect( canvas.style.height ).toBe( '300px' );
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - reinitializeSlideViewer
+	// ========================================================================
+
+	describe( 'reinitializeSlideViewer', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should return false when no canvas found', () => {
+			const container = document.createElement( 'div' );
+			const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+			const result = manager.reinitializeSlideViewer( container, payload );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false when canvas has no 2d context', () => {
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => null );
+			container.appendChild( canvas );
+
+			const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+			const result = manager.reinitializeSlideViewer( container, payload );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle resize with same dimensions (unconstrained)', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			container.setAttribute( 'data-canvas-width', '800' );
+			container.setAttribute( 'data-canvas-height', '600' );
+			container.setAttribute( 'data-display-width', '800' );
+			container.setAttribute( 'data-display-height', '600' );
+
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 800;
+			canvas.height = 600;
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
+			} ) );
+			container.appendChild( canvas );
+
+			// Same dimensions as original - no resize needed
+			const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+
+			const result = manager.reinitializeSlideViewer( container, payload );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should handle resize with new dimensions (unconstrained mode)', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			// Unconstrained: display size equals original canvas size
+			container.setAttribute( 'data-canvas-width', '800' );
+			container.setAttribute( 'data-canvas-height', '600' );
+			container.setAttribute( 'data-display-width', '800' );
+			container.setAttribute( 'data-display-height', '600' );
+
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 800;
+			canvas.height = 600;
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
+			} ) );
+			container.appendChild( canvas );
+
+			// New dimensions - different from original
+			const payload = { layers: [], baseWidth: 1024, baseHeight: 768 };
+
+			const result = manager.reinitializeSlideViewer( container, payload );
+			expect( result ).toBe( true );
+			// Should update to new dimensions
+			expect( canvas.width ).toBe( 1024 );
+			expect( canvas.height ).toBe( 768 );
+		} );
+
+		it( 'should handle resize with constrained mode (wider aspect ratio)', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			// Constrained: display size is smaller than canvas
+			container.setAttribute( 'data-canvas-width', '800' );
+			container.setAttribute( 'data-canvas-height', '600' );
+			container.setAttribute( 'data-display-width', '400' );
+			container.setAttribute( 'data-display-height', '300' );
+			container.setAttribute( 'data-display-scale', '0.5' );
+
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 800;
+			canvas.height = 600;
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
+			} ) );
+			container.appendChild( canvas );
+
+			// New wider aspect ratio
+			const payload = { layers: [], baseWidth: 1200, baseHeight: 600 };
+
+			const result = manager.reinitializeSlideViewer( container, payload );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should handle resize with constrained mode (taller aspect ratio)', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			// Constrained mode
+			container.setAttribute( 'data-canvas-width', '800' );
+			container.setAttribute( 'data-canvas-height', '600' );
+			container.setAttribute( 'data-display-width', '400' );
+			container.setAttribute( 'data-display-height', '300' );
+			container.setAttribute( 'data-display-scale', '0.5' );
+
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 800;
+			canvas.height = 600;
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
+			} ) );
+			container.appendChild( canvas );
+
+			// New taller aspect ratio
+			const payload = { layers: [], baseWidth: 600, baseHeight: 800 };
+
+			const result = manager.reinitializeSlideViewer( container, payload );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should update background color when provided', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			container.setAttribute( 'data-canvas-width', '800' );
+			container.setAttribute( 'data-canvas-height', '600' );
+
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 800;
+			canvas.height = 600;
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
+			} ) );
+			container.appendChild( canvas );
+
+			const payload = {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#ff0000'
+			};
+
+			const result = manager.reinitializeSlideViewer( container, payload );
+			expect( result ).toBe( true );
+			expect( container.getAttribute( 'data-background' ) ).toBe( '#ff0000' );
+		} );
+
+		it( 'should handle transparent background', () => {
+			window.Layers = {
+				LayerRenderer: jest.fn( () => ( { drawLayer: jest.fn() } ) )
+			};
+
+			const container = document.createElement( 'div' );
+			container.setAttribute( 'data-canvas-width', '800' );
+			container.setAttribute( 'data-canvas-height', '600' );
+
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 800;
+			canvas.height = 600;
+			canvas.getContext = jest.fn( () => ( {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				save: jest.fn(),
+				restore: jest.fn(),
+				globalAlpha: 1
+			} ) );
+			container.appendChild( canvas );
+
+			const payload = {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: 'transparent'
+			};
+
+			const result = manager.reinitializeSlideViewer( container, payload );
+			expect( result ).toBe( true );
+			expect( container.style.backgroundColor ).toBe( 'transparent' );
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - destroyViewer
+	// ========================================================================
+
+	describe( 'destroyViewer', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should return early for null img', () => {
+			expect( () => manager.destroyViewer( null ) ).not.toThrow();
+		} );
+
+		it( 'should destroy viewer instance with destroy method', () => {
+			const img = document.createElement( 'img' );
+			const mockViewer = { destroy: jest.fn() };
+			img.layersViewer = mockViewer;
+
+			manager.destroyViewer( img );
+
+			expect( mockViewer.destroy ).toHaveBeenCalled();
+			expect( img.layersViewer ).toBeNull();
+		} );
+
+		it( 'should destroy overlay instance with destroy method', () => {
+			const img = document.createElement( 'img' );
+			const mockOverlay = { destroy: jest.fn() };
+			img.layersOverlay = mockOverlay;
+
+			manager.destroyViewer( img );
+
+			expect( mockOverlay.destroy ).toHaveBeenCalled();
+			expect( img.layersOverlay ).toBeNull();
+		} );
+
+		it( 'should handle viewer without destroy method', () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = { someProperty: 'value' };
+
+			expect( () => manager.destroyViewer( img ) ).not.toThrow();
+			expect( img.layersViewer ).toBeNull();
+		} );
+
+		it( 'should clean up created wrappers', () => {
+			const img = document.createElement( 'img' );
+			const wrapper = document.createElement( 'div' );
+			const parent = document.createElement( 'div' );
+
+			parent.appendChild( wrapper );
+			wrapper.appendChild( img );
+
+			manager._createdWrappers = new Map();
+			manager._createdWrappers.set( img, wrapper );
+
+			manager.destroyViewer( img );
+
+			// Image should be moved out of wrapper
+			expect( parent.contains( img ) ).toBe( true );
+			expect( parent.contains( wrapper ) ).toBe( false );
+			expect( manager._createdWrappers.has( img ) ).toBe( false );
+		} );
+
+		it( 'should clear pending flag', () => {
+			const img = document.createElement( 'img' );
+			img.layersPending = true;
+
+			manager.destroyViewer( img );
+
+			expect( img.layersPending ).toBe( false );
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - _initializeOverlay setname logic
+	// ========================================================================
+
+	describe( '_initializeOverlay edge cases', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should skip if overlay already exists', () => {
+			const img = document.createElement( 'img' );
+			img.layersOverlay = { existing: true };
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+
+			const container = document.createElement( 'div' );
+
+			// Store original extractFilenameFromImg
+			const origExtract = manager.extractFilenameFromImg;
+			manager.extractFilenameFromImg = jest.fn( () => 'Test.jpg' );
+
+			manager._initializeOverlay( img, container );
+
+			// extractFilenameFromImg should not even be called
+			expect( manager.extractFilenameFromImg ).not.toHaveBeenCalled();
+
+			manager.extractFilenameFromImg = origExtract;
+		} );
+
+		it( 'should skip if no filename extracted', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/invalid-url';
+
+			const container = document.createElement( 'div' );
+
+			// Mock extractFilenameFromImg to return null
+			manager.extractFilenameFromImg = jest.fn( () => null );
+
+			// Should not throw
+			expect( () => manager._initializeOverlay( img, container ) ).not.toThrow();
+		} );
+
+		it( 'should compute setname from data-layer-setname attribute', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.setAttribute( 'data-layer-setname', 'myCustomSet' );
+
+			const container = document.createElement( 'div' );
+			container.style.position = 'relative';
+
+			// We can't fully test overlay creation due to module-level getClass,
+			// but we can verify the method doesn't throw
+			manager.extractFilenameFromImg = jest.fn( () => 'Test.jpg' );
+
+			expect( () => manager._initializeOverlay( img, container ) ).not.toThrow();
+		} );
+
+		it( 'should compute setname from data-layers-intent "on"', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.setAttribute( 'data-layers-intent', 'on' );
+
+			const container = document.createElement( 'div' );
+
+			manager.extractFilenameFromImg = jest.fn( () => 'Test.jpg' );
+
+			expect( () => manager._initializeOverlay( img, container ) ).not.toThrow();
+		} );
+
+		it( 'should compute setname from specific data-layers-intent value', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.setAttribute( 'data-layers-intent', 'anatomy-labels' );
+
+			const container = document.createElement( 'div' );
+
+			manager.extractFilenameFromImg = jest.fn( () => 'Test.jpg' );
+
+			expect( () => manager._initializeOverlay( img, container ) ).not.toThrow();
+		} );
+
+		it( 'should handle overlay creation with "all" intent', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.setAttribute( 'data-layers-intent', 'all' );
+
+			const container = document.createElement( 'div' );
+
+			manager.extractFilenameFromImg = jest.fn( () => 'Test.jpg' );
+
+			expect( () => manager._initializeOverlay( img, container ) ).not.toThrow();
+		} );
+
+		it( 'should handle overlay creation with "1" intent', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.setAttribute( 'data-layers-intent', '1' );
+
+			const container = document.createElement( 'div' );
+
+			manager.extractFilenameFromImg = jest.fn( () => 'Test.jpg' );
+
+			expect( () => manager._initializeOverlay( img, container ) ).not.toThrow();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - refreshAllViewers error handling
+	// ========================================================================
+
+	describe( 'refreshAllViewers edge cases', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should handle layerset with non-array data.layers', () => {
+			// Setup mock API that returns object instead of array for layers
+			const mockGetResult = {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: { not: 'array' } // Object instead of array
+						},
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			};
+
+			mockApi.get = jest.fn().mockResolvedValue( mockGetResult );
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			manager.reinitializeViewer = jest.fn().mockReturnValue( false );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				// Should handle gracefully
+				expect( result ).toBeDefined();
+			} );
+		} );
+
+		it( 'should normalize backgroundVisible from API (integer 0)', () => {
+			const mockGetResult = {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [],
+							backgroundVisible: 0 // Integer from PHP
+						},
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			};
+
+			mockApi.get = jest.fn().mockResolvedValue( mockGetResult );
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			manager.reinitializeViewer = jest.fn( ( img, payload ) => {
+				// Verify backgroundVisible was normalized to false
+				expect( payload.backgroundVisible ).toBe( false );
+				return true;
+			} );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				expect( manager.reinitializeViewer ).toHaveBeenCalled();
+			} );
+		} );
+
+		it( 'should normalize backgroundVisible from API (integer 1)', () => {
+			const mockGetResult = {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [],
+							backgroundVisible: 1 // Integer from PHP
+						},
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			};
+
+			mockApi.get = jest.fn().mockResolvedValue( mockGetResult );
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			manager.reinitializeViewer = jest.fn( ( img, payload ) => {
+				// Verify backgroundVisible was normalized to true
+				expect( payload.backgroundVisible ).toBe( true );
+				return true;
+			} );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				expect( manager.reinitializeViewer ).toHaveBeenCalled();
+			} );
+		} );
+
+		it( 'should handle API error during refresh', () => {
+			mockApi.get = jest.fn().mockRejectedValue( new Error( 'API error' ) );
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				expect( result.failed ).toBeGreaterThan( 0 );
+			} );
+		} );
+
+		it( 'should handle API error with structured error info', () => {
+			const structuredError = {
+				error: { info: 'Permission denied' }
+			};
+			mockApi.get = jest.fn().mockRejectedValue( structuredError );
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				expect( result.failed ).toBeGreaterThan( 0 );
+			} );
+		} );
+	} );
+
+	describe( 'reinitializeViewer error handling', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should return false when viewer reinitialization throws', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { 
+				destroy: jest.fn( () => {
+					throw new Error( 'Destroy failed' );
+				} )
+			};
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			// Should catch the error and return false
+			const result = manager.reinitializeViewer( img, { layers: [] } );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle null layerData gracefully', () => {
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			// Should handle null and return false
+			const result = manager.reinitializeViewer( img, null );
+			expect( result ).toBe( false );
+		} );
+	} );
+
+	describe( 'refreshAllViewers edge cases', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should handle when mw.Api is not available', () => {
+			const originalMw = global.mw;
+			global.mw = { ...mockMw, Api: undefined };
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				expect( result.failed ).toBeGreaterThan( 0 );
+				expect( result.errors[ 0 ].error ).toContain( 'mw.Api not available' );
+				global.mw = originalMw;
+			} );
+		} );
+
+		it( 'should handle viewer processing error during refresh', () => {
+			mockApi.get = jest.fn().mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [] }
+					}
+				}
+			} );
+
+			const img = document.createElement( 'img' );
+			img.src = 'http://example.com/wiki/File:Test.jpg';
+			img.layersViewer = { destroy: jest.fn() };
+			img.setAttribute( 'data-layer-setname', 'default' );
+
+			const container = document.createElement( 'div' );
+			container.appendChild( img );
+			document.body.appendChild( container );
+
+			// Mock reinitializeViewer to throw
+			manager.reinitializeViewer = jest.fn( () => {
+				throw new Error( 'Reinit failed' );
+			} );
+
+			return manager.refreshAllViewers().then( ( result ) => {
+				expect( result.errors.length ).toBeGreaterThan( 0 );
+			} );
 		} );
 	} );
 } );

@@ -687,6 +687,128 @@
 		return svg;
 	};
 
+	/**
+	 * Create the Layers logo icon (3 stacked diamond shapes)
+	 * Based on the diamond layers from Layers_Logo.svg
+	 * @param {number} [size=24] - Icon size in pixels
+	 * @return {SVGSVGElement} Layers logo icon SVG
+	 */
+	IconFactory.createLayersLogoIcon = function ( size ) {
+		size = size || 24;
+		const svg = IconFactory.createSVGElement( 'svg', {
+			width: String( size ),
+			height: String( size ),
+			viewBox: '0 0 24 24',
+			fill: 'none',
+			'aria-hidden': 'true',
+			class: 'layers-logo-icon'
+		} );
+
+		// Three stacked diamond shapes (from logo)
+		// Top layer (teal/green #00af89)
+		const topLayer = IconFactory.createSVGElement( 'path', {
+			d: 'M4 6 L12 3 L20 6 L12 9 Z',
+			fill: '#00af89'
+		} );
+		svg.appendChild( topLayer );
+
+		// Middle layer (red #dd3333)
+		const middleLayer = IconFactory.createSVGElement( 'path', {
+			d: 'M4 10 L12 7 L20 10 L12 13 Z',
+			fill: '#dd3333'
+		} );
+		svg.appendChild( middleLayer );
+
+		// Bottom layer (blue #3366cc)
+		const bottomLayer = IconFactory.createSVGElement( 'path', {
+			d: 'M4 14 L12 11 L20 14 L12 17 Z',
+			fill: '#3366cc'
+		} );
+		svg.appendChild( bottomLayer );
+
+		return svg;
+	};
+
+	/**
+	 * Create the full Layers brand logo with text
+	 * Includes the L-bracket, "Layers" text, and 3 diamond shapes
+	 * @param {number} [width=100] - Logo width in pixels (height auto-scales)
+	 * @return {SVGSVGElement} Full Layers logo SVG
+	 */
+	IconFactory.createFullLayersLogo = function ( width ) {
+		width = width || 100;
+		// Original viewBox is 385x245, maintain aspect ratio
+		const height = Math.round( width * ( 245 / 385 ) );
+
+		const svg = IconFactory.createSVGElement( 'svg', {
+			width: String( width ),
+			height: String( height ),
+			viewBox: '0 0 385 245',
+			fill: 'none',
+			'aria-hidden': 'true',
+			class: 'layers-full-logo'
+		} );
+
+		// L-bracket path
+		const bracket = IconFactory.createSVGElement( 'path', {
+			d: 'M 19,6 V 226 H 379',
+			stroke: '#3366cc',
+			'stroke-width': '12',
+			'stroke-linecap': 'square',
+			fill: 'none'
+		} );
+		svg.appendChild( bracket );
+
+		// Corner rectangle
+		const corner = IconFactory.createSVGElement( 'rect', {
+			x: '4',
+			y: '211',
+			width: '30',
+			height: '30',
+			fill: '#ffffff',
+			stroke: '#3366cc',
+			'stroke-width': '8'
+		} );
+		svg.appendChild( corner );
+
+		// "Layers" text
+		const text = IconFactory.createSVGElement( 'text', {
+			x: '34',
+			y: '196',
+			fill: '#3366cc',
+			'font-family': 'sans-serif',
+			'font-weight': 'bold',
+			'font-size': '95px',
+			'letter-spacing': '-2'
+		} );
+		text.textContent = 'Layers';
+		svg.appendChild( text );
+
+		// Three diamond shapes (bottom to top stacking)
+		// Bottom layer (blue)
+		const blueLayer = IconFactory.createSVGElement( 'path', {
+			d: 'M 44,96 204,61 364,96 204,131 Z',
+			fill: '#3366cc'
+		} );
+		svg.appendChild( blueLayer );
+
+		// Middle layer (red)
+		const redLayer = IconFactory.createSVGElement( 'path', {
+			d: 'M 44,66 204,31 364,66 204,101 Z',
+			fill: '#dd3333'
+		} );
+		svg.appendChild( redLayer );
+
+		// Top layer (teal/green)
+		const tealLayer = IconFactory.createSVGElement( 'path', {
+			d: 'M 44,36 204,1 364,36 204,71 Z',
+			fill: '#00af89'
+		} );
+		svg.appendChild( tealLayer );
+
+		return svg;
+	};
+
 	// Export to window.Layers namespace (preferred)
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};

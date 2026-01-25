@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 23, 2026  
-**Version:** 1.5.26
+**Last Updated:** January 25, 2026  
+**Version:** 1.5.29
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ None known |
 | P1 (Stability) | 0 | ✅ No known crashes/memory leaks |
 | P2 (Code Quality) | 1 | ⚠️ ShapeLibraryPanel coverage |
-| Feature Gaps | 3 | ⏳ Planned |
+| Feature Gaps | 2 | ⏳ Planned |
 
 ---
 
@@ -53,7 +53,14 @@ Virtual scrolling implemented for layer lists with 30+ items. The layer panel no
 
 ### F2. Layer Search/Filter
 
-No built-in search/filter for large layer sets.
+**Status:** ✅ COMPLETED (January 25, 2026)
+
+Layer search/filter functionality implemented with:
+- Search input at top of layer panel
+- Real-time filtering by layer name or text content
+- "Showing N of M layers" count display
+- Clear button to reset filter
+- Full dark mode support
 
 ### F3. Custom Fonts
 
@@ -65,6 +72,16 @@ Not yet available beyond the default font allowlist.
 
 All previously identified P0 and P1 issues have been resolved:
 
+- ✅ **PHP 8.4 strict_types compatibility** (January 25, 2026)
+  - Fixed `ColorValidator::isValidHexColor()` returning int instead of bool
+  - Added `(int)` casts to config->get() calls for integer values
+  - Fixed canvas snap not accounting for shadow/stroke expansion
+- ✅ **DraftManager auto-save** (January 25, 2026)
+  - Added auto-save to localStorage every 30 seconds
+  - Shows recovery dialog on editor open with unsaved drafts
+  - Clears draft on successful save
+- ✅ **Set selector race condition** (January 25, 2026)
+  - Added pending operation state to prevent concurrent operations
 - ✅ Rate limiting on delete/rename APIs
 - ✅ CSP blocking on File pages
 - ✅ Background visibility serialization (PHP→JS boolean handling)
@@ -75,15 +92,15 @@ All previously identified P0 and P1 issues have been resolved:
 
 ---
 
-## Test Coverage Status (January 23, 2026)
+## Test Coverage Status (January 25, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests passing | **9,967** (156 suites) | ✅ |
-| Statement coverage | **92.59%** | ✅ Excellent |
-| Branch coverage | **83.02%** | ✅ Good |
-| Function coverage | **90.78%** | ✅ Excellent |
-| Line coverage | **92.73%** | ✅ Excellent |
+| Tests passing | **10,613** (157 suites) | ✅ |
+| Statement coverage | **94.45%** | ✅ Excellent |
+| Branch coverage | **84.87%** | ✅ Good |
+| Function coverage | **92.55%** | ✅ Excellent |
+| Line coverage | **94.59%** | ✅ Excellent |
 
 ---
 
@@ -124,5 +141,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 23, 2026*  
-*Status: ✅ Production-ready with excellent test coverage (92.59%, 9,967 tests).*
+*Document updated: January 25, 2026*  
+*Status: ✅ Production-ready with excellent test coverage (94.45%, 10,613 tests).*

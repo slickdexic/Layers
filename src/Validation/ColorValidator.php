@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Validation;
 
 /**
@@ -9,6 +11,13 @@ namespace MediaWiki\Extension\Layers\Validation;
  * to ensure they are safe and properly formatted.
  */
 class ColorValidator {
+
+	/**
+	 * Maximum length for color strings to prevent ReDoS attacks.
+	 * Longest valid color would be something like "rgba(255, 255, 255, 0.999)"
+	 * which is ~30 chars. 50 chars provides margin for whitespace.
+	 */
+	private const MAX_COLOR_LENGTH = 50;
 
 	/**
 	 * Valid CSS named colors
@@ -56,6 +65,11 @@ class ColorValidator {
 			return self::DEFAULT_COLOR;
 		}
 
+		// ReDoS protection: reject excessively long inputs before regex processing
+		if ( strlen( $color ) > self::MAX_COLOR_LENGTH ) {
+			return self::DEFAULT_COLOR;
+		}
+
 		$color = trim( strtolower( $color ) );
 
 		// Check for named colors
@@ -95,11 +109,17 @@ class ColorValidator {
 	/**
 	 * Check if a color is a valid hex color
 	 *
+	 * Supports CSS4 hex formats:
+	 * - 3-digit: #RGB
+	 * - 4-digit: #RGBA (with alpha)
+	 * - 6-digit: #RRGGBB
+	 * - 8-digit: #RRGGBBAA (with alpha)
+	 *
 	 * @param string $color Color value
 	 * @return bool True if valid hex color
 	 */
 	public function isValidHexColor( string $color ): bool {
-		return preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{6})$/i', $color );
+		return preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i', $color ) === 1;
 	}
 
 	/**
@@ -109,6 +129,11 @@ class ColorValidator {
 	 * @return bool True if valid RGB color
 	 */
 	public function isValidRgbColor( string $color ): bool {
+		// ReDoS protection: reject excessively long inputs before regex processing
+		if ( strlen( $color ) > self::MAX_COLOR_LENGTH ) {
+			return false;
+		}
+
 		// RGB format: rgb(255, 255, 255)
 		if ( preg_match( '/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i', $color, $matches ) ) {
 			return $this->areRgbValuesValid( (int)$matches[1], (int)$matches[2], (int)$matches[3] );
@@ -131,6 +156,11 @@ class ColorValidator {
 	 * @return bool True if valid HSL color
 	 */
 	public function isValidHslColor( string $color ): bool {
+		// ReDoS protection: reject excessively long inputs before regex processing
+		if ( strlen( $color ) > self::MAX_COLOR_LENGTH ) {
+			return false;
+		}
+
 		// HSL format: hsl(360, 100%, 50%)
 		if ( preg_match( '/^hsl\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)$/i', $color, $matches ) ) {
 			$h = (int)$matches[1];
@@ -154,15 +184,26 @@ class ColorValidator {
 	/**
 	 * Normalize hex color to standard format
 	 *
+	 * Handles all CSS4 hex formats:
+	 * - 3-digit (#RGB) → 6-digit (#RRGGBB)
+	 * - 4-digit (#RGBA) → 8-digit (#RRGGBBAA)
+	 * - 6-digit and 8-digit pass through unchanged
+	 *
 	 * @param string $color Hex color
 	 * @return string Normalized hex color
 	 */
 	private function normalizeHexColor( string $color ): string {
 		$color = strtolower( $color );
 
-		// Expand 3-digit hex to 6-digit
+		// Expand 3-digit hex to 6-digit (#RGB → #RRGGBB)
 		if ( strlen( $color ) === 4 ) {
 			$color = '#' . $color[1] . $color[1] . $color[2] . $color[2] . $color[3] . $color[3];
+		}
+
+		// Expand 4-digit hex to 8-digit (#RGBA → #RRGGBBAA)
+		if ( strlen( $color ) === 5 ) {
+			$color = '#' . $color[1] . $color[1] . $color[2] . $color[2] .
+				$color[3] . $color[3] . $color[4] . $color[4];
 		}
 
 		return $color;

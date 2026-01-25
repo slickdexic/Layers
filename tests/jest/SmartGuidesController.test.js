@@ -173,6 +173,283 @@ describe( 'SmartGuidesController', () => {
 		} );
 	} );
 
+	describe( 'getVisualBounds', () => {
+		it( 'should return null for null layer', () => {
+			expect( controller.getVisualBounds( null ) ).toBeNull();
+		} );
+
+		it( 'should return geometric bounds when no stroke', () => {
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
+			const bounds = controller.getVisualBounds( layer );
+
+			expect( bounds ).toEqual( {
+				x: 10, y: 20, width: 100, height: 50,
+				expandLeft: 0, expandTop: 0, expandRight: 0, expandBottom: 0
+			} );
+		} );
+
+		it( 'should expand bounds by half stroke width on each side', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				strokeWidth: 10,
+				stroke: '#ff0000'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Stroke width 10 means 5px expansion on each side
+			expect( bounds.x ).toBe( 5 ); // 10 - 5
+			expect( bounds.y ).toBe( 15 ); // 20 - 5
+			expect( bounds.width ).toBe( 110 ); // 100 + 10
+			expect( bounds.height ).toBe( 60 ); // 50 + 10
+		} );
+
+		it( 'should not expand bounds when stroke is transparent', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				strokeWidth: 10,
+				stroke: 'transparent'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			expect( bounds ).toEqual( {
+				x: 10, y: 20, width: 100, height: 50,
+				expandLeft: 0, expandTop: 0, expandRight: 0, expandBottom: 0
+			} );
+		} );
+
+		it( 'should not expand bounds when stroke is none', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				strokeWidth: 10,
+				stroke: 'none'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			expect( bounds ).toEqual( {
+				x: 10, y: 20, width: 100, height: 50,
+				expandLeft: 0, expandTop: 0, expandRight: 0, expandBottom: 0
+			} );
+		} );
+
+		it( 'should use lineWidth when strokeWidth not set', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 50,
+				lineWidth: 8,
+				stroke: '#000000'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// lineWidth 8 means 4px expansion on each side
+			expect( bounds.x ).toBe( 6 ); // 10 - 4
+			expect( bounds.y ).toBe( 16 ); // 20 - 4
+			expect( bounds.width ).toBe( 108 ); // 100 + 8
+			expect( bounds.height ).toBe( 58 ); // 50 + 8
+		} );
+
+		it( 'should handle textbox with thick stroke', () => {
+			// Ensure we use calculateBounds directly, not the mock
+			delete mockCanvasManager.getLayerBounds;
+
+			const layer = {
+				type: 'textbox',
+				x: 0,
+				y: 0,
+				width: 200,
+				height: 100,
+				strokeWidth: 6,
+				stroke: '#0066cc'
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Stroke width 6 means 3px expansion on each side
+			expect( bounds.x ).toBe( -3 );
+			expect( bounds.y ).toBe( -3 );
+			expect( bounds.width ).toBe( 206 );
+			expect( bounds.height ).toBe( 106 );
+		} );
+
+		it( 'should expand bounds for shadow', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowBlur: 10,
+				shadowOffsetX: 5,
+				shadowOffsetY: 5
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Shadow blur of 10 extends in all directions
+			// offsetX=5, offsetY=5 means more expansion right/bottom
+			// Left: max(0, 10 - 5) = 5
+			// Right: max(0, 10 + 5) = 15
+			// Top: max(0, 10 - 5) = 5
+			// Bottom: max(0, 10 + 5) = 15
+			expect( bounds.x ).toBe( 95 ); // 100 - 5
+			expect( bounds.y ).toBe( 95 ); // 100 - 5
+			expect( bounds.width ).toBe( 220 ); // 200 + 5 + 15
+			expect( bounds.height ).toBe( 170 ); // 150 + 5 + 15
+		} );
+
+		it( 'should expand bounds for shadow with negative offset', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowBlur: 8,
+				shadowOffsetX: -4,
+				shadowOffsetY: -4
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Shadow blur of 8 with negative offset expands more left/top
+			// Left: max(0, 8 - (-4)) = 12
+			// Right: max(0, 8 + (-4)) = 4
+			// Top: max(0, 8 - (-4)) = 12
+			// Bottom: max(0, 8 + (-4)) = 4
+			expect( bounds.x ).toBe( 88 ); // 100 - 12
+			expect( bounds.y ).toBe( 88 ); // 100 - 12
+			expect( bounds.width ).toBe( 216 ); // 200 + 12 + 4
+			expect( bounds.height ).toBe( 166 ); // 150 + 12 + 4
+		} );
+
+		it( 'should expand bounds for shadow with spread', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowBlur: 6,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2,
+				shadowSpread: 4
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// blur 6 + spread 4 = 10 base expansion
+			// Left: max(0, 10 - 2) = 8
+			// Right: max(0, 10 + 2) = 12
+			// Top: max(0, 10 - 2) = 8
+			// Bottom: max(0, 10 + 2) = 12
+			expect( bounds.x ).toBe( 92 ); // 100 - 8
+			expect( bounds.y ).toBe( 92 ); // 100 - 8
+			expect( bounds.width ).toBe( 220 ); // 200 + 8 + 12
+			expect( bounds.height ).toBe( 170 ); // 150 + 8 + 12
+		} );
+
+		it( 'should use max of stroke and shadow expansion', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				strokeWidth: 20,
+				stroke: '#000000',
+				shadow: true,
+				shadowBlur: 8,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Stroke expansion: 10 each side
+			// Shadow: Left=6, Right=10, Top=6, Bottom=10
+			// Use max: Left=10, Right=10, Top=10, Bottom=10
+			expect( bounds.x ).toBe( 90 ); // 100 - 10
+			expect( bounds.y ).toBe( 90 ); // 100 - 10
+			expect( bounds.width ).toBe( 220 ); // 200 + 10 + 10
+			expect( bounds.height ).toBe( 170 ); // 150 + 10 + 10
+		} );
+
+		it( 'should not expand for disabled shadow', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: false,
+				shadowBlur: 10
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			expect( bounds ).toEqual( {
+				x: 100, y: 100, width: 200, height: 150,
+				expandLeft: 0, expandTop: 0, expandRight: 0, expandBottom: 0
+			} );
+		} );
+
+		it( 'should handle object shadow format', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: { enabled: true },
+				shadowBlur: 10,
+				shadowOffsetX: 0,
+				shadowOffsetY: 0
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// All directions expand by blur (10) since offsets are 0
+			expect( bounds.x ).toBe( 90 );
+			expect( bounds.y ).toBe( 90 );
+			expect( bounds.width ).toBe( 220 ); // 200 + 10 + 10
+			expect( bounds.height ).toBe( 170 ); // 150 + 10 + 10
+		} );
+
+		it( 'should use default offset values when not specified', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowBlur: 10
+				// No offset specified - defaults to 2
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Default offsets are 2, so:
+			// Left: max(0, 10 - 2) = 8
+			// Right: max(0, 10 + 2) = 12
+			// Top: max(0, 10 - 2) = 8
+			// Bottom: max(0, 10 + 2) = 12
+			expect( bounds.x ).toBe( 92 ); // 100 - 8
+			expect( bounds.y ).toBe( 92 ); // 100 - 8
+			expect( bounds.width ).toBe( 220 ); // 200 + 8 + 12
+			expect( bounds.height ).toBe( 170 ); // 150 + 8 + 12
+		} );
+	} );
+
 	describe( 'calculateBounds', () => {
 		it( 'should calculate bounds for rectangle', () => {
 			const layer = { type: 'rectangle', x: 50, y: 50, width: 100, height: 80 };
@@ -927,6 +1204,273 @@ describe( 'SmartGuidesController', () => {
 			expect( () => controller.render( mockCtx ) ).not.toThrow();
 			// save should not be called since we returned early
 			expect( mockCtx.save ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'Canvas Snap', () => {
+		beforeEach( () => {
+			// Set canvas dimensions for canvas snap tests
+			mockCanvasManager.canvasWidth = 800;
+			mockCanvasManager.canvasHeight = 600;
+		} );
+
+		describe( 'setCanvasSnapEnabled', () => {
+			it( 'should enable canvas snap', () => {
+				controller.setCanvasSnapEnabled( true );
+				expect( controller.canvasSnapEnabled ).toBe( true );
+			} );
+
+			it( 'should disable canvas snap', () => {
+				controller.canvasSnapEnabled = true;
+				controller.setCanvasSnapEnabled( false );
+				expect( controller.canvasSnapEnabled ).toBe( false );
+			} );
+
+			it( 'should clear guides when disabled', () => {
+				controller.activeGuides = [ { type: 'vertical', x: 100, isCanvas: true } ];
+				controller.setCanvasSnapEnabled( false );
+				expect( controller.activeGuides ).toEqual( [] );
+			} );
+		} );
+
+		describe( 'buildCanvasSnapPoints', () => {
+			it( 'should return empty arrays when canvas dimensions not set', () => {
+				mockCanvasManager.canvasWidth = undefined;
+				mockCanvasManager.canvasHeight = undefined;
+				mockCanvasManager.baseWidth = 0;
+				mockCanvasManager.baseHeight = 0;
+
+				const result = controller.buildCanvasSnapPoints();
+
+				expect( result.vertical ).toEqual( [] );
+				expect( result.horizontal ).toEqual( [] );
+			} );
+
+			it( 'should return canvas edge and center points', () => {
+				mockCanvasManager.baseWidth = 800;
+				mockCanvasManager.baseHeight = 600;
+
+				const result = controller.buildCanvasSnapPoints();
+
+				// Vertical (X) points: left (0), center (400), right (800)
+				expect( result.vertical ).toHaveLength( 3 );
+				expect( result.vertical[ 0 ].value ).toBe( 0 );
+				expect( result.vertical[ 1 ].value ).toBe( 400 );
+				expect( result.vertical[ 2 ].value ).toBe( 800 );
+
+				// Horizontal (Y) points: top (0), center (300), bottom (600)
+				expect( result.horizontal ).toHaveLength( 3 );
+				expect( result.horizontal[ 0 ].value ).toBe( 0 );
+				expect( result.horizontal[ 1 ].value ).toBe( 300 );
+				expect( result.horizontal[ 2 ].value ).toBe( 600 );
+			} );
+
+			it( 'should mark points as canvas type', () => {
+				mockCanvasManager.baseWidth = 800;
+				mockCanvasManager.baseHeight = 600;
+
+				const result = controller.buildCanvasSnapPoints();
+
+				result.vertical.forEach( ( point ) => {
+					expect( point.isCanvas ).toBe( true );
+				} );
+				result.horizontal.forEach( ( point ) => {
+					expect( point.isCanvas ).toBe( true );
+				} );
+			} );
+
+			it( 'should have correct edge types', () => {
+				mockCanvasManager.baseWidth = 800;
+				mockCanvasManager.baseHeight = 600;
+
+				const result = controller.buildCanvasSnapPoints();
+
+				// Check vertical edge types
+				expect( result.vertical.find( ( p ) => p.edge === 'left' ) ).toBeDefined();
+				expect( result.vertical.find( ( p ) => p.type === 'center' ) ).toBeDefined();
+				expect( result.vertical.find( ( p ) => p.edge === 'right' ) ).toBeDefined();
+
+				// Check horizontal edge types
+				expect( result.horizontal.find( ( p ) => p.edge === 'top' ) ).toBeDefined();
+				expect( result.horizontal.find( ( p ) => p.type === 'center' ) ).toBeDefined();
+				expect( result.horizontal.find( ( p ) => p.edge === 'bottom' ) ).toBeDefined();
+			} );
+		} );
+
+		describe( 'calculateSnappedPosition with canvas snap', () => {
+			beforeEach( () => {
+				// Set canvas dimensions using baseWidth/baseHeight (what the code uses)
+				mockCanvasManager.baseWidth = 800;
+				mockCanvasManager.baseHeight = 600;
+			} );
+
+			it( 'should snap to canvas left edge', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				const layer = { id: 'drag', type: 'rectangle', x: 5, y: 100, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 5, 100, [ layer ] );
+
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 0 ); // Snapped to left edge
+			} );
+
+			it( 'should snap to canvas center horizontally', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Layer center at 400 when x = 375 (375 + 50/2 = 400)
+				const layer = { id: 'drag', type: 'rectangle', x: 375, y: 100, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 378, 100, [ layer ] );
+
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 375 ); // Snapped so center is at 400
+			} );
+
+			it( 'should snap to canvas right edge', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Layer right edge at 800 when x = 750 (750 + 50 = 800)
+				const layer = { id: 'drag', type: 'rectangle', x: 745, y: 100, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 745, 100, [ layer ] );
+
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 750 ); // Snapped so right edge is at 800
+			} );
+
+			it( 'should snap to canvas top edge', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				const layer = { id: 'drag', type: 'rectangle', x: 100, y: 5, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 100, 5, [ layer ] );
+
+				expect( result.snappedY ).toBe( true );
+				expect( result.y ).toBe( 0 ); // Snapped to top edge
+			} );
+
+			it( 'should snap to canvas center vertically', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Layer center at 300 when y = 275 (275 + 50/2 = 300)
+				const layer = { id: 'drag', type: 'rectangle', x: 100, y: 275, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 100, 278, [ layer ] );
+
+				expect( result.snappedY ).toBe( true );
+				expect( result.y ).toBe( 275 ); // Snapped so center is at 300
+			} );
+
+			it( 'should snap to canvas bottom edge', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Layer bottom edge at 600 when y = 550 (550 + 50 = 600)
+				const layer = { id: 'drag', type: 'rectangle', x: 100, y: 545, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 100, 545, [ layer ] );
+
+				expect( result.snappedY ).toBe( true );
+				expect( result.y ).toBe( 550 ); // Snapped so bottom edge is at 600
+			} );
+
+			it( 'should not snap to canvas when canvasSnapEnabled is false', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( false );
+
+				const layer = { id: 'drag', type: 'rectangle', x: 5, y: 5, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 5, 5, [ layer ] );
+
+				// Should not snap to canvas edges
+				expect( result.x ).toBe( 5 );
+				expect( result.y ).toBe( 5 );
+			} );
+
+			it( 'should snap to canvas even when smart guides (object snap) is disabled', () => {
+				controller.setEnabled( false ); // Object snap disabled
+				controller.setCanvasSnapEnabled( true ); // Canvas snap enabled
+
+				const layer = { id: 'drag', type: 'rectangle', x: 5, y: 100, width: 50, height: 50, visible: true };
+				const result = controller.calculateSnappedPosition( layer, 5, 100, [ layer ] );
+
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 0 ); // Snapped to left canvas edge
+			} );
+
+			it( 'should prefer closer snap point when both object and canvas are nearby', () => {
+				controller.setEnabled( true );
+				controller.setCanvasSnapEnabled( true );
+
+				// Other layer at x=10
+				const otherLayer = { id: 'other', type: 'rectangle', x: 10, y: 100, width: 50, height: 50, visible: true };
+				const dragLayer = { id: 'drag', type: 'rectangle', x: 3, y: 200, width: 50, height: 50, visible: true };
+
+				const result = controller.calculateSnappedPosition(
+					dragLayer, 3, 200, [ otherLayer, dragLayer ]
+				);
+
+				// Should snap to canvas left (0) since it's closer than object at 10
+				expect( result.snappedX ).toBe( true );
+				expect( result.x ).toBe( 0 );
+			} );
+		} );
+
+		describe( 'renderGuides with canvas guides', () => {
+			it( 'should use canvas guide color for canvas guides', () => {
+				controller.activeGuides = [
+					{ type: 'vertical', x: 400, isCanvas: true }
+				];
+
+				const mockCtx = {
+					canvas: { width: 800, height: 600 },
+					save: jest.fn(),
+					restore: jest.fn(),
+					beginPath: jest.fn(),
+					moveTo: jest.fn(),
+					lineTo: jest.fn(),
+					stroke: jest.fn(),
+					setLineDash: jest.fn(),
+					strokeStyle: '',
+					lineWidth: 0
+				};
+
+				controller.renderGuides( mockCtx );
+
+				// Should have used the canvas guide color (green)
+				expect( mockCtx.strokeStyle ).toBe( controller.canvasGuideColor );
+			} );
+
+			it( 'should use regular guide color for object guides', () => {
+				controller.activeGuides = [
+					{ type: 'vertical', x: 200, isCanvas: false }
+				];
+
+				const mockCtx = {
+					canvas: { width: 800, height: 600 },
+					save: jest.fn(),
+					restore: jest.fn(),
+					beginPath: jest.fn(),
+					moveTo: jest.fn(),
+					lineTo: jest.fn(),
+					stroke: jest.fn(),
+					setLineDash: jest.fn(),
+					strokeStyle: '',
+					lineWidth: 0
+				};
+
+				controller.renderGuides( mockCtx );
+
+				// Should have used the regular guide color (magenta)
+				expect( mockCtx.strokeStyle ).toBe( controller.guideColor );
+			} );
+		} );
+
+		describe( 'canvasSnapEnabled default value', () => {
+			it( 'should be disabled by default', () => {
+				const newController = new SmartGuidesController( mockCanvasManager );
+				expect( newController.canvasSnapEnabled ).toBe( false );
+				newController.destroy();
+			} );
 		} );
 	} );
 } );

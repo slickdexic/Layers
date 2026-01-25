@@ -265,6 +265,12 @@ class CanvasManager {
 		}
 
 		this.ctx = this.canvas.getContext( '2d' );
+		if ( !this.ctx ) {
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.error( 'Layers: Could not get 2D canvas context. The editor may not function correctly.' );
+			}
+			// Continue anyway - some features may still work, but rendering will fail
+		}
 
 		// Helper to initialize a controller
 		const initController = ( name, propName, createFn, logLevel ) => {

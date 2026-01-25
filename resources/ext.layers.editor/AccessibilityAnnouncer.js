@@ -164,6 +164,16 @@
 		}
 
 		/**
+		 * Announce zoom level change
+		 * @param {number} zoomPercent The current zoom percentage
+		 */
+		announceZoom( zoomPercent ) {
+			if ( typeof zoomPercent === 'number' ) {
+				this.announce( 'Zoom ' + Math.round( zoomPercent ) + ' percent', 'polite' );
+			}
+		}
+
+		/**
 		 * Announce layer selection
 		 * @param {string} layerName The name of the selected layer
 		 */
@@ -171,6 +181,19 @@
 			if ( layerName ) {
 				this.announce( layerName + ' selected', 'polite' );
 			}
+		}
+
+		/**
+		 * Announce layer count and selection summary
+		 * @param {number} layerCount Total number of layers
+		 * @param {number} selectedCount Number of selected layers
+		 */
+		announceLayerSummary( layerCount, selectedCount ) {
+			let message = layerCount + ' layer' + ( layerCount !== 1 ? 's' : '' );
+			if ( selectedCount > 0 ) {
+				message += ', ' + selectedCount + ' selected';
+			}
+			this.announce( message, 'polite' );
 		}
 
 		/**

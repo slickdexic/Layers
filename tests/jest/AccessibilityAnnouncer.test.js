@@ -275,6 +275,54 @@ describe( 'AccessibilityAnnouncer', () => {
 		} );
 	} );
 
+	describe( 'announceZoom', () => {
+		beforeEach( () => {
+			announcer.init();
+		} );
+
+		it( 'should announce zoom percentage', () => {
+			announcer.announceZoom( 150 );
+			jest.runAllTimers();
+			expect( announcer.politeRegion.textContent ).toBe( 'Zoom 150 percent' );
+		} );
+
+		it( 'should round fractional zoom values', () => {
+			announcer.announceZoom( 75.7 );
+			jest.runAllTimers();
+			expect( announcer.politeRegion.textContent ).toBe( 'Zoom 76 percent' );
+		} );
+
+		it( 'should not announce non-numeric values', () => {
+			announcer.announceZoom( null );
+			jest.runAllTimers();
+			expect( announcer.politeRegion.textContent ).toBe( '' );
+		} );
+	} );
+
+	describe( 'announceLayerSummary', () => {
+		beforeEach( () => {
+			announcer.init();
+		} );
+
+		it( 'should announce layer count', () => {
+			announcer.announceLayerSummary( 5, 0 );
+			jest.runAllTimers();
+			expect( announcer.politeRegion.textContent ).toBe( '5 layers' );
+		} );
+
+		it( 'should use singular for one layer', () => {
+			announcer.announceLayerSummary( 1, 0 );
+			jest.runAllTimers();
+			expect( announcer.politeRegion.textContent ).toBe( '1 layer' );
+		} );
+
+		it( 'should include selection count', () => {
+			announcer.announceLayerSummary( 10, 3 );
+			jest.runAllTimers();
+			expect( announcer.politeRegion.textContent ).toBe( '10 layers, 3 selected' );
+		} );
+	} );
+
 	describe( 'clear', () => {
 		beforeEach( () => {
 			announcer.init();

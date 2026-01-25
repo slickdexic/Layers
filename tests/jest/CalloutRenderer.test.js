@@ -1324,7 +1324,7 @@ describe( 'CalloutRenderer', () => {
 			const renderer = new window.Layers.CalloutRenderer( ctx );
 
 			// Returns the shadow object which is truthy
-			expect( renderer.hasShadowEnabled( { shadow: { color: '#000' } } ) ).toBeTruthy();
+			expect( Boolean( renderer.hasShadowEnabled( { shadow: { color: '#000' } } ) ) ).toBe( true );
 		} );
 
 		test( 'should detect shadow as empty object', () => {
@@ -1332,7 +1332,7 @@ describe( 'CalloutRenderer', () => {
 			const renderer = new window.Layers.CalloutRenderer( ctx );
 
 			// Empty object is truthy
-			expect( renderer.hasShadowEnabled( { shadow: {} } ) ).toBeTruthy();
+			expect( Boolean( renderer.hasShadowEnabled( { shadow: {} } ) ) ).toBe( true );
 		} );
 	} );
 

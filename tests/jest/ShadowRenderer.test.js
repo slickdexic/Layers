@@ -308,23 +308,23 @@ describe( 'ShadowRenderer', () => {
 		} );
 
 		test( 'should return true for shadow object', () => {
-			expect( renderer.hasShadowEnabled( { shadow: { blur: 5 } } ) ).toBeTruthy();
+			expect( renderer.hasShadowEnabled( { shadow: { blur: 5 } } ) ).toBe( true );
 		} );
 
 		test( 'should return false for boolean false', () => {
-			expect( renderer.hasShadowEnabled( { shadow: false } ) ).toBeFalsy();
+			expect( renderer.hasShadowEnabled( { shadow: false } ) ).toBe( false );
 		} );
 
 		test( 'should return false for undefined', () => {
-			expect( renderer.hasShadowEnabled( {} ) ).toBeFalsy();
+			expect( renderer.hasShadowEnabled( {} ) ).toBe( false );
 		} );
 
 		test( 'should return false for null shadow', () => {
-			expect( renderer.hasShadowEnabled( { shadow: null } ) ).toBeFalsy();
+			expect( renderer.hasShadowEnabled( { shadow: null } ) ).toBe( false );
 		} );
 
 		test( 'should return false for number 0', () => {
-			expect( renderer.hasShadowEnabled( { shadow: 0 } ) ).toBeFalsy();
+			expect( renderer.hasShadowEnabled( { shadow: 0 } ) ).toBe( false );
 		} );
 	} );
 

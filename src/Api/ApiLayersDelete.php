@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
@@ -57,7 +59,8 @@ class ApiLayersDelete extends ApiBase {
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
 		if ( $requestedFilename !== null && strpos( $requestedFilename, 'Slide:' ) === 0 ) {
-			$slidename = substr( $requestedFilename, 6 ); // Remove 'Slide:' prefix
+			// Remove 'Slide:' prefix
+			$slidename = substr( $requestedFilename, 6 );
 			$this->executeSlideDelete( $user, $slidename, $setName );
 			return;
 		}
@@ -314,6 +317,19 @@ class ApiLayersDelete extends ApiBase {
 	 * @return bool True indicating this is a write operation
 	 */
 	public function isWriteMode() {
+		return true;
+	}
+
+	/**
+	 * This module must be called via HTTP POST.
+	 *
+	 * Defense-in-depth: While needsToken() already requires CSRF validation,
+	 * explicitly requiring POST prevents potential edge cases where GET requests
+	 * might bypass token validation.
+	 *
+	 * @return bool True to require POST method
+	 */
+	public function mustBePosted() {
 		return true;
 	}
 

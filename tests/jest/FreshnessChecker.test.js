@@ -66,7 +66,7 @@ describe( 'FreshnessChecker', () => {
 
 		it( 'should create instance with debug disabled by default', () => {
 			const checker = new FreshnessChecker();
-			expect( checker.debug ).toBeFalsy();
+			expect( checker.debug ).toBeUndefined();
 		} );
 
 		it( 'should create instance with empty options', () => {

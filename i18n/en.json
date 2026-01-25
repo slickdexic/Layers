@@ -263,6 +263,8 @@
 	"layers-snap-options": "Snap Options",
 	"layers-smart-guides": "Smart Guides",
 	"layers-smart-guides-desc": "Snap to other objects",
+	"layers-canvas-snap": "Canvas Snap",
+	"layers-canvas-snap-desc": "Snap to canvas edges and center",
 	"layers-align-section": "Align (2+ layers)",
 	"layers-distribute-section": "Distribute (3+ layers)",
 
@@ -390,6 +392,10 @@
 	"layers-panel-subtitle-updated": "Drag to reorder • Double-click name to rename",
 	"layers-panel-expand": "Expand panel",
 	"layers-panel-collapse": "Collapse panel",
+	"layers-aria-layer-added": "Layer added.",
+	"layers-aria-layer-removed": "Layer removed.",
+	"layers-aria-layer-count": "$1 layers total.",
+	"layers-aria-layer-reordered": "Layer reordered.",
 	"layers-prop-text-align": "Text Align",
 	"layers-prop-vertical-align": "Vertical Align",
 	"layers-prop-padding": "Padding",
@@ -622,6 +628,7 @@
 	"layers-filepage-view": "View",
 	"layers-filepage-usage-hint": "To display layers on a page, use: [[File:Example.jpg|layerset=setname]]",
 
+	"special-editslide-title": "Edit Slide: $1",
 	"layers-slide-empty": "This slide is empty",
 	"layers-slide-empty-hint": "Click the edit button to add content",
 	"layers-slide-properties": "Slide Properties",
@@ -658,5 +665,15 @@
 	"layers-text-toolbar-align-left": "Align left",
 	"layers-text-toolbar-align-center": "Align center",
 	"layers-text-toolbar-align-right": "Align right",
-	"layers-text-toolbar-color": "Text color"
+	"layers-text-toolbar-color": "Text color",
+	"layers-text-input-placeholder": "Type your text here...",
+	"layers-btn-ok": "OK",
+	"layers-draft-recovery-title": "Recover Unsaved Changes?",
+	"layers-draft-recovery-message": "Found unsaved changes from $1 with $2 layer(s). Would you like to recover them?",
+	"layers-draft-recover": "Recover",
+	"layers-draft-discard": "Discard",
+	"layers-draft-recovered": "Draft recovered successfully",
+	"layers-search-placeholder": "Search layers...",
+	"layers-search-clear": "Clear search",
+	"layers-search-results": "Showing $1 of $2 layers"
 }

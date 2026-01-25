@@ -56,7 +56,7 @@ describe( 'UrlParser', () => {
 	describe( 'constructor', () => {
 		it( 'should create instance with default debug off', () => {
 			const parser = new UrlParser();
-			expect( parser.debug ).toBeFalsy();
+			expect( parser.debug ).toBeUndefined();
 		} );
 
 		it( 'should create instance with debug enabled', () => {

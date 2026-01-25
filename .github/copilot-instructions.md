@@ -42,8 +42,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `LayersViewer.js` (~600 lines) - canvas-based layer rendering for thumbnails
     - `LayersLightbox.js` (~560 lines) - full-screen lightbox viewer
     - `ViewerOverlay.js` (~490 lines) - hover action buttons (edit/view) with permission checking
-  - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager)
-  - Core editor modules: `CanvasManager.js` (~1,981 lines - facade coordinating controllers), `ToolManager.js` (~1,219 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,132 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,426 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,132 lines)
+  - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager, DraftManager)
+  - Core editor modules: `CanvasManager.js` (~1,981 lines - facade coordinating controllers), `ToolManager.js` (~1,219 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,132 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,426 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,132 lines), `DraftManager.js` (~466 lines - auto-save/draft recovery)
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
     - `TextToolHandler.js` (~207 lines) - inline text input UI for creating text layers
     - `PathToolHandler.js` (~229 lines) - freeform path drawing with click-to-add points
@@ -378,13 +378,13 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (9,995 tests in 156 suites — verified January 24, 2026)
-- Coverage (92.25% statement, 82.47% branch — verified January 24, 2026)
-- JavaScript file count (126 files total, ~113,847 lines)
-- PHP file count (33 files, ~11,758 lines)
+- Test count (10,613 tests in 157 suites — verified January 25, 2026)
+- Coverage (94%+ statement, 84%+ branch — verified January 25, 2026)
+- JavaScript file count (127 files total, ~114,832 lines)
+- PHP file count (40 files, ~14,051 lines)
 - God class count (21 files >1,000 lines; 3 generated data files, 18 hand-written)
 - ESLint disable count (9 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
 - Emoji library count (2,817 emoji in 19 categories)
-- Version number (1.5.28)
+- Version number (1.5.29)

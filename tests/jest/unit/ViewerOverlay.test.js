@@ -555,6 +555,14 @@ describe( 'ViewerOverlay', () => {
 	} );
 
 	describe( 'edit button click handling', () => {
+		beforeEach( () => {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
 		it( 'should navigate to edit page when modal not available', () => {
 			const overlay = new ViewerOverlay( {
 				container: container,
@@ -724,7 +732,7 @@ describe( 'ViewerOverlay', () => {
 			editBtn.click();
 
 			// Wait for promise to resolve
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockRefresh ).toHaveBeenCalled();
 
@@ -847,7 +855,7 @@ describe( 'ViewerOverlay', () => {
 			// Should use fallback strings
 			const editBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
 			// The title should be something (either message or fallback)
-			expect( editBtn.getAttribute( 'title' ) ).toBeTruthy();
+			expect( typeof editBtn.getAttribute( 'title' ) ).toBe( 'string' );
 		} );
 
 		it( 'should use fallback when mw.message not available', () => {
@@ -860,7 +868,7 @@ describe( 'ViewerOverlay', () => {
 			} );
 
 			const editBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
-			expect( editBtn.getAttribute( 'title' ) ).toBeTruthy();
+			expect( typeof editBtn.getAttribute( 'title' ) ).toBe( 'string' );
 		} );
 	} );
 

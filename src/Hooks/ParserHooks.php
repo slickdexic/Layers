@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * Wikitext parser hooks for image parameter handling
  *

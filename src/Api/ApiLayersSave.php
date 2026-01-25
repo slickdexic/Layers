@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
@@ -61,6 +63,11 @@ class ApiLayersSave extends ApiBase {
 	use ForeignFileHelperTrait;
 	use LayerSaveGuardsTrait;
 
+	/**
+	 * Maximum recursion depth for JSON decoding to prevent stack overflow
+	 */
+	private const JSON_DECODE_MAX_DEPTH = 512;
+
 	/** @var LoggerInterface|null */
 	private ?LoggerInterface $logger = null;
 
@@ -104,7 +111,8 @@ class ApiLayersSave extends ApiBase {
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
 		if ( $requestedFilename !== null && strpos( $requestedFilename, 'Slide:' ) === 0 ) {
-			$slidename = substr( $requestedFilename, 6 ); // Remove 'Slide:' prefix
+			// Remove 'Slide:' prefix
+			$slidename = substr( $requestedFilename, 6 );
 			$this->executeSlideSave( $user, $params, $slidename );
 			return;
 		}
@@ -170,7 +178,7 @@ class ApiLayersSave extends ApiBase {
 			// - Fill database with excessive data
 			// - Slow down validation of malicious large structures
 			// Default: 2MB (configurable via $wgLayersMaxBytes)
-			$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
+			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
 				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
 			}
@@ -180,7 +188,7 @@ class ApiLayersSave extends ApiBase {
 			// json_decode with associative=true converts to PHP array
 			// Using JSON_THROW_ON_ERROR for explicit error handling
 			try {
-				$rawData = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
 				// JSON parsing failed - invalid syntax, encoding issues, or malformed data
 				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
@@ -407,14 +415,14 @@ class ApiLayersSave extends ApiBase {
 			$setName = SetNameSanitizer::sanitize( $rawSetName );
 
 			// Size limit check
-			$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
+			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
 				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
 			}
 
 			// Parse JSON
 			try {
-				$rawData = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
 				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
 			}
@@ -615,6 +623,19 @@ class ApiLayersSave extends ApiBase {
 	}
 
 	/**
+	 * This module must be called via HTTP POST.
+	 *
+	 * Defense-in-depth: While needsToken() already requires CSRF validation,
+	 * explicitly requiring POST prevents potential edge cases where GET requests
+	 * might bypass token validation.
+	 *
+	 * @return bool True to require POST method
+	 */
+	public function mustBePosted() {
+		return true;
+	}
+
+	/**
 	 * Provide example API calls for documentation and testing.
 	 *
 	 * These examples appear on Special:ApiHelp/layerssave and in API docs.
@@ -662,8 +683,9 @@ class ApiLayersSave extends ApiBase {
 	 * 2. All pages embedding this file via [[File:X.jpg|layers=on]] are purged
 	 *    so they re-render with the new layer data instead of stale cached content
 	 *
-	 * This performs cache invalidation synchronously to ensure it completes
-	 * before the user navigates away from the editor.
+	 * Uses a hybrid approach for reliability:
+	 * - File page is purged synchronously (fast, needed immediately)
+	 * - Backlink pages are purged via job queue (prevents race conditions, handles many pages)
 	 *
 	 * @param Title $fileTitle The title of the file whose layers were saved
 	 */
@@ -671,36 +693,37 @@ class ApiLayersSave extends ApiBase {
 		try {
 			$services = MediaWikiServices::getInstance();
 
-			// 1. Purge the File: page itself (synchronous)
+			// 1. Purge the File: page itself synchronously (fast, always needed)
 			$wikiPage = $services->getWikiPageFactory()->newFromTitle( $fileTitle );
 			if ( $wikiPage->exists() ) {
 				$wikiPage->doPurge();
 			}
 
-			// 2. Purge all pages that embed this file using BacklinkCache
-			// This handles pages using [[File:X.jpg|layers=on]]
+			// 2. Queue job to purge all pages embedding this file
+			// Using HTMLCacheUpdateJob ensures:
+			// - No race condition with client navigation
+			// - Handles images embedded in many pages (no artificial limit)
+			// - MediaWiki handles batching and retries automatically
 			try {
-				$backlinkCache = $services->getBacklinkCacheFactory()->getBacklinkCache( $fileTitle );
-				$backlinkTitles = $backlinkCache->getLinkPages( 'imagelinks', null, 100 );
+				$job = \HTMLCacheUpdateJob::newForBacklinks(
+					$fileTitle,
+					'imagelinks',
+					[ 'causeAction' => 'layers-save', 'causeAgent' => $this->getUser()->getName() ]
+				);
+				$services->getJobQueueGroup()->lazyPush( $job );
 
-				foreach ( $backlinkTitles as $backlinkTitle ) {
-					$backlinkPage = $services->getWikiPageFactory()->newFromTitle( $backlinkTitle );
-					if ( $backlinkPage->exists() ) {
-						$backlinkPage->doPurge();
-					}
-				}
-			} catch ( \Throwable $e ) {
-				// Fallback: try to at least purge parser cache
 				$this->getLogger()->debug(
-					'Backlink purge failed, using fallback: {error}',
+					'Queued cache invalidation job for file: {filename}',
+					[ 'filename' => $fileTitle->getText() ]
+				);
+			} catch ( \Throwable $e ) {
+				// Fallback to synchronous purge of limited backlinks if job queue fails
+				$this->getLogger()->debug(
+					'Job queue unavailable, falling back to synchronous purge: {error}',
 					[ 'error' => $e->getMessage() ]
 				);
+				$this->purgeBacklinksSynchronously( $fileTitle, $services );
 			}
-
-			$this->getLogger()->debug(
-				'Cache invalidation completed for file: {filename}',
-				[ 'filename' => $fileTitle->getText() ]
-			);
 		} catch ( \Throwable $e ) {
 			// Log but don't fail the save operation
 			$this->getLogger()->warning(
@@ -711,5 +734,40 @@ class ApiLayersSave extends ApiBase {
 				]
 			);
 		}
+	}
+
+	/**
+	 * Maximum number of backlinks to purge synchronously
+	 * This is a fallback limit when job queue is unavailable
+	 */
+	private const SYNC_BACKLINK_PURGE_LIMIT = 100;
+
+	/**
+	 * Fallback: Purge backlinks synchronously when job queue is unavailable
+	 *
+	 * @param Title $fileTitle The file title
+	 * @param MediaWikiServices $services Service container
+	 */
+	private function purgeBacklinksSynchronously( Title $fileTitle, MediaWikiServices $services ): void {
+		$backlinkCache = $services->getBacklinkCacheFactory()->getBacklinkCache( $fileTitle );
+		$backlinkTitles = $backlinkCache->getLinkPages(
+			'imagelinks',
+			null,
+			self::SYNC_BACKLINK_PURGE_LIMIT
+		);
+
+		$purgedCount = 0;
+		foreach ( $backlinkTitles as $backlinkTitle ) {
+			$backlinkPage = $services->getWikiPageFactory()->newFromTitle( $backlinkTitle );
+			if ( $backlinkPage->exists() ) {
+				$backlinkPage->doPurge();
+				$purgedCount++;
+			}
+		}
+
+		$this->getLogger()->debug(
+			'Synchronously purged {count} backlinks for file: {filename}',
+			[ 'count' => $purgedCount, 'filename' => $fileTitle->getText() ]
+		);
 	}
 }

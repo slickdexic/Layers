@@ -57,6 +57,10 @@
 			this.stateSubscriptions = []; // Track subscriptions for cleanup
 			this.dialogCleanups = [];
 
+			// Layer search/filter state
+			this.searchFilter = '';
+			this.searchInput = null;
+
 			// Initialize EventTracker for memory-safe event listener management
 			const EventTracker = getClass( 'Utils.EventTracker', 'EventTracker' );
 			this.eventTracker = EventTracker ? new EventTracker() : null;
@@ -431,25 +435,59 @@
 				}
 			}
 
-			// If no collapsed groups, return all layers
-			if ( collapsedGroupIds.size === 0 ) {
-				return allLayers;
+			// Apply search filter if active
+			const searchTerm = this.searchFilter || '';
+			const hasSearch = searchTerm.length > 0;
+
+			// Filter layers
+			return allLayers.filter( ( layer ) => {
+				// Check search filter first (if active)
+				if ( hasSearch ) {
+					const layerName = ( layer.name || layer.type || '' ).toLowerCase();
+					const layerText = ( layer.text || '' ).toLowerCase();
+					const matchesSearch = layerName.indexOf( searchTerm ) !== -1 ||
+						layerText.indexOf( searchTerm ) !== -1;
+					if ( !matchesSearch ) {
+						return false;
+					}
+				}
+
+				// Check if any ancestor group is collapsed (skip if searching)
+				if ( !hasSearch && collapsedGroupIds.size > 0 ) {
+					let parentId = layer.parentGroup;
+					while ( parentId ) {
+						if ( collapsedGroupIds.has( parentId ) ) {
+							return false; // Hide this layer - its parent is collapsed
+						}
+						// Find the parent layer to check its parent
+						const parent = allLayers.find( ( l ) => l.id === parentId );
+						parentId = parent ? parent.parentGroup : null;
+					}
+				}
+				return true;
+			} );
+		}
+
+		/**
+		 * Update the search result count display
+		 */
+		updateSearchResultCount() {
+			if ( !this.searchResultCount ) {
+				return;
 			}
 
-			// Filter out layers whose parent (or any ancestor) is collapsed
-			return allLayers.filter( ( layer ) => {
-				// Check if any ancestor group is collapsed
-				let parentId = layer.parentGroup;
-				while ( parentId ) {
-					if ( collapsedGroupIds.has( parentId ) ) {
-						return false; // Hide this layer - its parent is collapsed
-					}
-					// Find the parent layer to check its parent
-					const parent = allLayers.find( ( l ) => l.id === parentId );
-					parentId = parent ? parent.parentGroup : null;
-				}
-				return true; // No collapsed ancestor, show this layer
-			} );
+			const allLayers = this.getLayers();
+			const visibleLayers = this.getVisibleLayers();
+
+			if ( this.searchFilter ) {
+				this.searchResultCount.textContent = this.msg(
+					'layers-search-results',
+					'Showing $1 of $2 layers'
+				).replace( '$1', visibleLayers.length ).replace( '$2', allLayers.length );
+				this.searchResultCount.style.display = 'block';
+			} else {
+				this.searchResultCount.style.display = 'none';
+			}
 		}
 
 		/**
@@ -503,8 +541,29 @@
 				return;
 			}
 
+			// Track previous layer count for accessibility announcements
+			let previousLayerCount = ( this.editor.stateManager.get( 'layers' ) || [] ).length;
+
 			// Subscribe to layers changes
-			const unsubLayers = this.editor.stateManager.subscribe( 'layers', () => {
+			const unsubLayers = this.editor.stateManager.subscribe( 'layers', ( newLayers ) => {
+				const currentCount = ( newLayers || [] ).length;
+
+				// LOW-8 FIX: Announce layer count changes to screen readers
+				if ( currentCount !== previousLayerCount ) {
+					if ( currentCount > previousLayerCount ) {
+						this.announceToScreenReader(
+							this.msg( 'layers-aria-layer-added', 'Layer added. ' ) +
+							this.msg( 'layers-aria-layer-count', '$1 layers total', currentCount )
+						);
+					} else if ( currentCount < previousLayerCount ) {
+						this.announceToScreenReader(
+							this.msg( 'layers-aria-layer-removed', 'Layer removed. ' ) +
+							this.msg( 'layers-aria-layer-count', '$1 layers total', currentCount )
+						);
+					}
+					previousLayerCount = currentCount;
+				}
+
 				this.renderLayerList();
 				this.updateCodePanel();
 			} );
@@ -530,6 +589,25 @@
 				}
 			} );
 			this.stateSubscriptions.push( unsubSelection );
+		}
+
+		/**
+		 * Announce a message to screen readers via aria-live region
+		 * LOW-8 FIX: Accessibility improvement for layer list updates
+		 *
+		 * @param {string} message The message to announce
+		 */
+		announceToScreenReader( message ) {
+			if ( this.ariaLiveRegion && message ) {
+				// Clear first to ensure re-announcement of same message
+				this.ariaLiveRegion.textContent = '';
+				// Use setTimeout to ensure the clear is processed first
+				setTimeout( () => {
+					if ( this.ariaLiveRegion ) {
+						this.ariaLiveRegion.textContent = message;
+					}
+				}, 50 );
+			}
 		}
 
 		/**
@@ -802,7 +880,11 @@
 		}
 
 		/**
-		 * No-op kept for backward compatibility
+		 * No-op kept for backward compatibility.
+		 * Code panel functionality was removed; this stub prevents errors from old callers.
+		 *
+		 * @deprecated since 1.5.0 - Code panel moved to UIManager
+		 * @return {void}
 		 */
 		updateCodePanel() {}
 
@@ -821,20 +903,25 @@
 			const header = document.createElement( 'div' );
 			header.className = 'layers-panel-header';
 
-			// Title row with actions
-			const titleRow = document.createElement( 'div' );
-			titleRow.className = 'layers-panel-title-row';
-			titleRow.style.display = 'flex';
-			titleRow.style.alignItems = 'center';
-			titleRow.style.justifyContent = 'space-between';
+			// Main header row: logo+folder on left, search on right
+			const headerRow = document.createElement( 'div' );
+			headerRow.className = 'layers-panel-header-row';
 
-			// Left side: folder button + title
-			const titleLeft = document.createElement( 'div' );
-			titleLeft.style.display = 'flex';
-			titleLeft.style.alignItems = 'center';
-			titleLeft.style.gap = '6px';
+			// Left side: logo with add folder button beside it
+			const leftGroup = document.createElement( 'div' );
+			leftGroup.className = 'layers-panel-header-left';
 
-			// Create Folder button (placed before title)
+			// Full Layers logo (external SVG file for exact rendering)
+			const logoImg = document.createElement( 'img' );
+			const assetsPath = ( typeof mw !== 'undefined' && mw.config && mw.config.get ) ?
+				mw.config.get( 'wgExtensionAssetsPath' ) : '/extensions';
+			logoImg.src = assetsPath + '/Layers/resources/ext.layers.editor/images/Layers_Logo.svg';
+			logoImg.alt = this.msg( 'layers-panel-title', 'Layers' );
+			logoImg.className = 'layers-panel-logo';
+			leftGroup.appendChild( logoImg );
+
+			// Create Folder button (beside logo)
+			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			const createGroupBtn = document.createElement( 'button' );
 			createGroupBtn.className = 'layers-btn layers-btn-icon layers-create-group-btn';
 			createGroupBtn.type = 'button';
@@ -842,7 +929,6 @@
 			createGroupBtn.setAttribute( 'aria-label', this.msg( 'layers-add-folder', 'Add folder' ) );
 
 			// Folder icon with plus badge for create folder
-			const IconFactory = getClass( 'UI.IconFactory', 'IconFactory' );
 			if ( IconFactory && IconFactory.createAddFolderIcon ) {
 				createGroupBtn.appendChild( IconFactory.createAddFolderIcon() );
 			} else if ( IconFactory && IconFactory.createFolderIcon ) {
@@ -854,14 +940,47 @@
 			this.addTargetListener( createGroupBtn, 'click', () => {
 				this.createFolder();
 			} );
-			titleLeft.appendChild( createGroupBtn );
+			leftGroup.appendChild( createGroupBtn );
 
-			const title = document.createElement( 'h3' );
-			title.className = 'layers-panel-title';
-			title.textContent = this.msg( 'layers-panel-title', 'Layers' );
-			titleLeft.appendChild( title );
+			headerRow.appendChild( leftGroup );
 
-			titleRow.appendChild( titleLeft );
+			// Right side: search bar
+			const searchContainer = document.createElement( 'div' );
+			searchContainer.className = 'layers-search-container';
+
+			this.searchInput = document.createElement( 'input' );
+			this.searchInput.type = 'text';
+			this.searchInput.className = 'layers-search-input';
+			this.searchInput.placeholder = this.msg( 'layers-search-placeholder', 'Search layers...' );
+			this.searchInput.setAttribute( 'aria-label', this.msg( 'layers-search-placeholder', 'Search layers...' ) );
+
+			const clearBtn = document.createElement( 'button' );
+			clearBtn.type = 'button';
+			clearBtn.className = 'layers-search-clear';
+			clearBtn.textContent = '×';
+			clearBtn.title = this.msg( 'layers-search-clear', 'Clear search' );
+			clearBtn.setAttribute( 'aria-label', this.msg( 'layers-search-clear', 'Clear search' ) );
+			clearBtn.style.display = 'none';
+
+			this.addTargetListener( this.searchInput, 'input', () => {
+				this.searchFilter = this.searchInput.value.toLowerCase().trim();
+				clearBtn.style.display = this.searchFilter ? 'block' : 'none';
+				this.updateSearchResultCount();
+				this.renderLayerList();
+			} );
+
+			this.addTargetListener( clearBtn, 'click', () => {
+				this.searchInput.value = '';
+				this.searchFilter = '';
+				clearBtn.style.display = 'none';
+				this.searchResultCount.style.display = 'none';
+				this.renderLayerList();
+				this.searchInput.focus();
+			} );
+
+			searchContainer.appendChild( this.searchInput );
+			searchContainer.appendChild( clearBtn );
+			headerRow.appendChild( searchContainer );
 
 			// Mobile collapse toggle button (only visible on mobile)
 			const collapseBtn = document.createElement( 'button' );
@@ -877,14 +996,16 @@
 				this.toggleMobileCollapse();
 			} );
 			this.collapseBtn = collapseBtn;
-			titleRow.appendChild( collapseBtn );
+			headerRow.appendChild( collapseBtn );
 
-			header.appendChild( titleRow );
+			header.appendChild( headerRow );
 
-			const subtitle = document.createElement( 'div' );
-			subtitle.className = 'layers-panel-subtitle';
-			subtitle.textContent = this.msg( 'layers-panel-subtitle', 'Drag to reorder • Click name to rename' );
-			header.appendChild( subtitle );
+			// Search result count (below header row)
+			this.searchResultCount = document.createElement( 'div' );
+			this.searchResultCount.className = 'layers-search-count';
+			this.searchResultCount.style.display = 'none';
+			header.appendChild( this.searchResultCount );
+
 			this.container.appendChild( header );
 
 			// Inner flex container to prevent underlap and allow resizing
@@ -896,6 +1017,16 @@
 			this.layerList.className = 'layers-list';
 			this.layerList.setAttribute( 'role', 'listbox' );
 			this.layerList.setAttribute( 'aria-label', this.msg( 'layers-panel-title', 'Layers' ) );
+
+			// LOW-8 FIX: Add aria-live region for screen reader announcements
+			this.ariaLiveRegion = document.createElement( 'div' );
+			this.ariaLiveRegion.setAttribute( 'aria-live', 'polite' );
+			this.ariaLiveRegion.setAttribute( 'aria-atomic', 'true' );
+			this.ariaLiveRegion.className = 'layers-sr-only';
+			// Visually hidden but accessible to screen readers
+			this.ariaLiveRegion.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+			this.layerList.appendChild( this.ariaLiveRegion );
+
 			const emptyState = document.createElement( 'div' );
 			emptyState.className = 'layers-empty';
 			emptyState.textContent = this.msg( 'layers-empty', 'No layers yet. Choose a tool to begin.' );

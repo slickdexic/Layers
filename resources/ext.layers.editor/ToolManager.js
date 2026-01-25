@@ -1001,7 +1001,7 @@ class ToolManager {
 		input.style.color = this.currentStyle.color;
 		input.style.border = '1px solid #ccc';
 		input.style.background = 'white';
-		input.style.zIndex = '1001'; // Higher z-index
+		input.style.zIndex = String( window.Layers.Constants.Z_INDEX.TEXT_INPUT );
 
 		input.addEventListener( 'keydown', ( e ) => {
 			if( e.key === 'Enter' ) {

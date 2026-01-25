@@ -81,7 +81,13 @@
 				STAR_POINTS: 5,
 				SELECTION_HANDLE_SIZE: 8,
 				SELECTION_HANDLE_SIZE_TOUCH: 14,
-				ROTATION_HANDLE_DISTANCE: 25
+				ROTATION_HANDLE_DISTANCE: 25,
+				MARKER_SIZE: 24
+			},
+			EFFECTS: {
+				BLUR_RADIUS: 12,
+				BLUR_MIN: 1,
+				BLUR_MAX: 64
 			}
 		},
 
@@ -119,12 +125,42 @@
 			DEFAULT_CANVAS_HEIGHT: 600
 		},
 
-		// Z-index layering for UI elements
+		/**
+		 * Z-index layering for UI elements.
+		 * Organized into tiers to ensure proper stacking:
+		 * - Tier 1 (1-100): Canvas-internal elements
+		 * - Tier 2 (1000-1999): Canvas overlays, tooltips
+		 * - Tier 3 (10000-10999): Editor chrome, panels
+		 * - Tier 4 (100000-999999): Modal dialogs
+		 * - Tier 5 (1000000+): Popups above modals (color picker, library panels)
+		 */
 		Z_INDEX: {
+			// Tier 1: Canvas-internal stacking
+			CANVAS_BACKGROUND: 1,
+			CANVAS_FOREGROUND: 2,
+			SLIDE_CONTROLS: 10,
+
+			// Tier 2: Canvas overlays
 			CANVAS_OVERLAY: 1000,
 			TEXT_INPUT: 1001,
-			MODAL: 1010,
-			TOOLTIP: 1020
+			LIGHTBOX_CONTROLS: 1001,
+
+			// Tier 3: Editor chrome
+			EDITOR_BASE: 10000,
+			CONTEXT_MENU: 10000,
+			LAYER_PANEL: 10001,
+			INLINE_TEXT_EDITOR: 10002,
+
+			// Tier 4: Modal layer
+			MODAL_OVERLAY: 100000,
+			EDITOR_FULLSCREEN: 999999,
+
+			// Tier 5: Above-modal popups (must be above fullscreen editor)
+			COLOR_PICKER: 1000000,
+			COLOR_PICKER_CONTENT: 1000001,
+			TEXT_INPUT_MODAL: 1000002,
+			LIBRARY_PANEL: 1000010,
+			LIBRARY_OVERLAY: 1000011
 		},
 
 		// Colors for UI elements

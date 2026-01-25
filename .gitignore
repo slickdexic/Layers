@@ -65,3 +65,6 @@ temp/
 LocalSettings.php
 cache/
 images/
+
+# But allow extension images
+!resources/**/images/

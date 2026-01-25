@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * Layer set name sanitization utilities.
  *

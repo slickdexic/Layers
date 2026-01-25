@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * Database operations for the Layers extension
  *
@@ -15,6 +17,12 @@ use Wikimedia\Rdbms\LoadBalancer;
 
 class LayersDatabase {
 	private const MAX_CACHE_SIZE = 100;
+
+	/**
+	 * Maximum recursion depth for json_decode operations.
+	 * Prevents stack overflow on deeply nested JSON structures.
+	 */
+	private const JSON_DECODE_MAX_DEPTH = 512;
 
 	/** @var LoadBalancer */
 	private $loadBalancer;
@@ -110,8 +118,13 @@ class LayersDatabase {
 			return null;
 		}
 		if ( $setExists === false ) {
-			$maxSets = $this->config->get( 'LayersMaxNamedSets' );
+			$maxSets = (int)$this->config->get( 'LayersMaxNamedSets' );
 			$setCount = $this->countNamedSets( $normalizedImgName, $sha1 );
+			if ( $setCount < 0 ) {
+				// Database error - don't proceed with save
+				$this->logError( 'Cannot count named sets, database unavailable' );
+				return null;
+			}
 			if ( $setCount >= $maxSets ) {
 				$this->logError( 'Named set limit reached', [
 					'imgName' => $imgName, 'count' => $setCount, 'max' => $maxSets
@@ -162,7 +175,7 @@ class LayersDatabase {
 
 				$jsonBlob = json_encode( $dataStructure, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
 
-				$maxAllowedSize = $this->config->get( 'LayersMaxBytes' );
+				$maxAllowedSize = (int)$this->config->get( 'LayersMaxBytes' );
 				if ( strlen( $jsonBlob ) > $maxAllowedSize ) {
 					$this->logError( "JSON blob size exceeds maximum allowed size" );
 					$dbw->endAtomic( __METHOD__ );
@@ -192,7 +205,7 @@ class LayersDatabase {
 				$this->clearCache( $normalizedImgName );
 
 				// Prune old revisions for this named set
-				$maxRevisions = $this->config->get( 'LayersMaxRevisionsPerSet' );
+				$maxRevisions = (int)$this->config->get( 'LayersMaxRevisionsPerSet' );
 				$this->pruneOldRevisions( $normalizedImgName, $sha1, $setName, $maxRevisions );
 
 				return $layerSetId;
@@ -244,14 +257,14 @@ class LayersDatabase {
 			return false;
 		}
 
-		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
+		$maxJsonSize = (int)$this->config->get( 'LayersMaxBytes' );
 		if ( strlen( $row->ls_json_blob ) > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for layer set ID: {$layerSetId}" );
 			return false;
 		}
 
 		try {
-			$jsonData = json_decode( $row->ls_json_blob, true, 512, JSON_THROW_ON_ERROR );
+			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
 			$this->logError( 'Invalid JSON in layer set ID: ' . $layerSetId );
 			return false;
@@ -313,14 +326,14 @@ class LayersDatabase {
 		$blobSize = strlen( $row->ls_json_blob );
 		$this->logDebug( "getLatestLayerSet: found ls_id=" . $row->ls_id . ", blob size=$blobSize bytes" );
 
-		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
+		$maxJsonSize = (int)$this->config->get( 'LayersMaxBytes' );
 		if ( $blobSize > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for latest layer set: $blobSize > $maxJsonSize" );
 			return false;
 		}
 
 		try {
-			$jsonData = json_decode( $row->ls_json_blob, true, 512, JSON_THROW_ON_ERROR );
+			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
 			$this->logError( 'Invalid JSON in latest layer set' );
 			return false;
@@ -395,12 +408,12 @@ class LayersDatabase {
 	 *
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
-	 * @return int Number of distinct named sets
+	 * @return int Number of distinct named sets, or -1 on database error
 	 */
 	public function countNamedSets( string $imgName, string $sha1 ): int {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
-			return 0;
+			return -1;
 		}
 
 		$count = $dbr->selectField(
@@ -422,12 +435,12 @@ class LayersDatabase {
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string $setName Named set name
-	 * @return int Number of revisions
+	 * @return int Number of revisions, or -1 on database error
 	 */
 	public function countSetRevisions( string $imgName, string $sha1, string $setName ): int {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
-			return 0;
+			return -1;
 		}
 
 		$count = $dbr->selectField(
@@ -447,6 +460,13 @@ class LayersDatabase {
 	/**
 	 * Get all named sets for an image with summary information
 	 *
+	 * Uses a two-query approach for clarity and maintainability:
+	 * 1. Get aggregates per named set (count, max revision, max timestamp)
+	 * 2. Fetch the latest revision row to get the user_id
+	 *
+	 * This approach is clearer than a self-join with correlated subquery,
+	 * and performs well since each image typically has ≤15 named sets.
+	 *
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @return array Array of named set summaries
@@ -459,53 +479,51 @@ class LayersDatabase {
 
 		$imgNameLookup = $this->buildImageNameLookup( $imgName );
 
-		// Single query approach: get aggregates and latest user in one query
-		// using a self-join on the maximum revision per set name
-		// This eliminates the N+1 query pattern
-		$result = $dbr->select(
-			[ 'ls' => 'layer_sets', 'ls_latest' => 'layer_sets' ],
+		// Query 1: Get aggregates per named set
+		$aggregates = $dbr->select(
+			'layer_sets',
 			[
-				'ls_name' => 'ls.ls_name',
-				'revision_count' => 'COUNT(DISTINCT ls.ls_revision)',
-				'latest_revision' => 'MAX(ls.ls_revision)',
-				'latest_timestamp' => 'MAX(ls.ls_timestamp)',
-				'latest_user_id' => 'ls_latest.ls_user_id',
+				'ls_name',
+				'revision_count' => 'COUNT(*)',
+				'latest_revision' => 'MAX(ls_revision)',
+				'latest_timestamp' => 'MAX(ls_timestamp)',
 			],
 			[
-				'ls.ls_img_name' => $imgNameLookup,
-				'ls.ls_img_sha1' => $sha1
+				'ls_img_name' => $imgNameLookup,
+				'ls_img_sha1' => $sha1
 			],
 			__METHOD__,
 			[
-				'GROUP BY' => [ 'ls.ls_name', 'ls_latest.ls_user_id' ],
-				'ORDER BY' => 'MAX(ls.ls_timestamp) DESC'
-			],
-			[
-				// Join to get user from the row with max revision
-				'ls_latest' => [
-					'INNER JOIN',
-					[
-						'ls_latest.ls_img_name = ls.ls_img_name',
-						'ls_latest.ls_img_sha1 = ls.ls_img_sha1',
-						'ls_latest.ls_name = ls.ls_name',
-						'ls_latest.ls_revision = (SELECT MAX(ls2.ls_revision) FROM ' .
-							$dbr->tableName( 'layer_sets' ) . ' ls2 WHERE ' .
-							'ls2.ls_img_name = ls.ls_img_name AND ' .
-							'ls2.ls_img_sha1 = ls.ls_img_sha1 AND ' .
-							'ls2.ls_name = ls.ls_name)'
-					]
-				]
+				'GROUP BY' => 'ls_name',
+				'ORDER BY' => 'MAX(ls_timestamp) DESC'
 			]
 		);
 
 		$namedSets = [];
-		foreach ( $result as $row ) {
+		foreach ( $aggregates as $row ) {
+			$setName = $row->ls_name ?? 'default';
+			$latestRevision = (int)$row->latest_revision;
+
+			// Query 2: Get user_id from the latest revision row
+			// This is a simple primary key lookup, very fast
+			$latestRow = $dbr->selectRow(
+				'layer_sets',
+				[ 'ls_user_id' ],
+				[
+					'ls_img_name' => $imgNameLookup,
+					'ls_img_sha1' => $sha1,
+					'ls_name' => $setName,
+					'ls_revision' => $latestRevision
+				],
+				__METHOD__
+			);
+
 			$namedSets[] = [
-				'name' => $row->ls_name ?? 'default',
+				'name' => $setName,
 				'revision_count' => (int)$row->revision_count,
-				'latest_revision' => (int)$row->latest_revision,
+				'latest_revision' => $latestRevision,
 				'latest_timestamp' => $row->latest_timestamp,
-				'latest_user_id' => (int)$row->latest_user_id
+				'latest_user_id' => $latestRow ? (int)$latestRow->ls_user_id : 0
 			];
 		}
 
@@ -892,14 +910,14 @@ class LayersDatabase {
 		$blobSize = strlen( $row->ls_json_blob );
 		$this->logDebug( "getLayerSetByName: found row with ls_id={$row->ls_id}, blob size=$blobSize" );
 
-		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
+		$maxJsonSize = (int)$this->config->get( 'LayersMaxBytes' );
 		if ( $blobSize > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for layer set by name: $blobSize > $maxJsonSize" );
 			return null;
 		}
 
 		try {
-			$jsonData = json_decode( $row->ls_json_blob, true, 512, JSON_THROW_ON_ERROR );
+			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
 			$this->logError( "Invalid JSON data for layer set by name" );
 			return null;

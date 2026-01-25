@@ -354,7 +354,7 @@ describe('LayerPanel Multi-Select', () => {
             panel.handleLayerContextMenu(event);
             
             expect(event.preventDefault).toHaveBeenCalled();
-            expect(document.querySelector('.layers-context-menu')).toBeTruthy();
+            expect(document.querySelector('.layers-context-menu')).not.toBeNull();
         });
 
         test('should close context menu when calling closeLayerContextMenu', () => {
@@ -371,10 +371,10 @@ describe('LayerPanel Multi-Select', () => {
             event.preventDefault = jest.fn();
             
             panel.handleLayerContextMenu(event);
-            expect(document.querySelector('.layers-context-menu')).toBeTruthy();
+            expect(document.querySelector('.layers-context-menu')).not.toBeNull();
             
             panel.closeLayerContextMenu();
-            expect(document.querySelector('.layers-context-menu')).toBeFalsy();
+            expect(document.querySelector('.layers-context-menu')).toBeNull();
         });
 
         test('should disable Group option when less than 2 layers selected', () => {

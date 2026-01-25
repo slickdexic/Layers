@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
@@ -80,11 +82,11 @@ class SpecialSlides extends SpecialPage {
 		$jsConfig = [
 			'canCreate' => $canCreate,
 			'canDelete' => $canDelete,
-			'defaultWidth' => $this->getConfig()->get( 'LayersSlideDefaultWidth' ),
-			'defaultHeight' => $this->getConfig()->get( 'LayersSlideDefaultHeight' ),
+			'defaultWidth' => (int)$this->getConfig()->get( 'LayersSlideDefaultWidth' ),
+			'defaultHeight' => (int)$this->getConfig()->get( 'LayersSlideDefaultHeight' ),
 			'defaultBackground' => $this->getConfig()->get( 'LayersSlideDefaultBackground' ),
-			'maxWidth' => $this->getConfig()->get( 'LayersSlideMaxWidth' ),
-			'maxHeight' => $this->getConfig()->get( 'LayersSlideMaxHeight' ),
+			'maxWidth' => (int)$this->getConfig()->get( 'LayersSlideMaxWidth' ),
+			'maxHeight' => (int)$this->getConfig()->get( 'LayersSlideMaxHeight' ),
 		];
 
 		$out->addJsConfigVars( 'wgLayersSlidesConfig', $jsConfig );
@@ -106,7 +108,8 @@ class SpecialSlides extends SpecialPage {
 		// Header with create button
 		$html .= '<div class="layers-slides-header">';
 		if ( $canCreate ) {
-			$html .= '<button class="layers-slides-create-btn cdx-button cdx-button--action-progressive cdx-button--weight-primary">';
+			$html .= '<button class="layers-slides-create-btn cdx-button ' .
+				'cdx-button--action-progressive cdx-button--weight-primary">';
 			$html .= '<span class="cdx-button__icon" aria-hidden="true"></span>';
 			$html .= $this->msg( 'special-slides-create' )->escaped();
 			$html .= '</button>';
@@ -228,8 +231,10 @@ class SpecialSlides extends SpecialPage {
 		foreach ( $presets as $i => $preset ) {
 			$checked = $i === 0 ? 'checked' : '';
 			$html .= '<label class="layers-size-preset">';
-			$html .= '<input type="radio" name="canvas-size" value="' . $preset[0] . 'x' . $preset[1] . '" ' . $checked . ' />';
-			$html .= $this->msg( $preset[2] )->escaped() . ' (' . $preset[0] . '×' . $preset[1] . ')';
+			$html .= '<input type="radio" name="canvas-size" value="' .
+				$preset[0] . 'x' . $preset[1] . '" ' . $checked . ' />';
+			$html .= $this->msg( $preset[2] )->escaped() .
+				' (' . $preset[0] . '×' . $preset[1] . ')';
 			$html .= '</label>';
 		}
 		$html .= '<label class="layers-size-preset">';
@@ -237,16 +242,19 @@ class SpecialSlides extends SpecialPage {
 		$html .= $this->msg( 'layers-slide-size-custom' )->escaped();
 		$html .= '</label>';
 		$html .= '<div class="layers-size-custom-fields">';
-		$html .= '<input type="number" id="custom-width" min="100" max="4096" value="800" class="cdx-text-input__input" />';
+		$html .= '<input type="number" id="custom-width" min="100" max="4096" ' .
+			'value="800" class="cdx-text-input__input" />';
 		$html .= '<span>×</span>';
-		$html .= '<input type="number" id="custom-height" min="100" max="4096" value="600" class="cdx-text-input__input" />';
+		$html .= '<input type="number" id="custom-height" min="100" max="4096" ' .
+			'value="600" class="cdx-text-input__input" />';
 		$html .= '</div>';
 		$html .= '</div>';
 		$html .= '</fieldset>';
 
 		// Background color
 		$html .= '<div class="layers-form-field">';
-		$html .= '<label for="slide-background">' . $this->msg( 'layers-slide-background' )->escaped() . '</label>';
+		$html .= '<label for="slide-background">' .
+			$this->msg( 'layers-slide-background' )->escaped() . '</label>';
 		$html .= '<div class="layers-color-input">';
 		$html .= '<input type="color" id="slide-background" value="#ffffff" />';
 		$html .= '<input type="text" id="slide-background-text" value="#ffffff" class="cdx-text-input__input" />';

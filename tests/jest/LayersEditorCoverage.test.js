@@ -413,6 +413,14 @@ describe( 'LayersEditor Coverage Extension', () => {
 	} );
 
 	describe( 'API loadLayers paths', () => {
+		beforeEach( () => {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
 		it( 'should handle successful layer load with all data', async () => {
 			mockAPIManager.loadLayers.mockResolvedValue( {
 				layers: [ { id: '1', type: 'rectangle', x: 10, y: 10, width: 100, height: 50 } ],
@@ -428,7 +436,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 			} );
 
 			// Wait for async init
-			await new Promise( ( resolve ) => setTimeout( resolve, 50 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'baseWidth', 1024 );
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'baseHeight', 768 );
@@ -443,7 +451,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 			} );
 
 			// Wait for async error handling
-			await new Promise( ( resolve ) => setTimeout( resolve, 50 ) );
+			await jest.runAllTimersAsync();
 
 			// Should set empty layers on failure
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
@@ -457,7 +465,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 				imageUrl: '/test.jpg'
 			} );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 50 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
 		} );
@@ -470,7 +478,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 				imageUrl: '/test.jpg'
 			} );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 50 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
 		} );
@@ -998,8 +1006,9 @@ describe( 'LayersEditor Coverage Extension', () => {
 			const event = new Event( 'beforeunload' );
 			window.dispatchEvent( event );
 
-			// The handler should have been called or will be called
-			expect( true ).toBe( true );
+			// Verify the mock editor instance was set up correctly
+			expect( window.layersEditorInstance ).toBeDefined();
+			expect( typeof window.layersEditorInstance.destroy ).toBe( 'function' );
 		} );
 	} );
 

@@ -135,7 +135,7 @@ describe( 'UIManager', () => {
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
 
-			expect( uiManager.container ).toBeTruthy();
+			expect( uiManager.container ).toBeInstanceOf( HTMLElement );
 			expect( uiManager.container.className ).toBe( 'layers-editor' );
 		} );
 
@@ -166,7 +166,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const header = uiManager.container.querySelector( '.layers-header' );
-			expect( header ).toBeTruthy();
+			expect( header ).not.toBeNull();
 		} );
 
 		it( 'should create main content area', () => {
@@ -174,7 +174,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const main = uiManager.container.querySelector( '.layers-main' );
-			expect( main ).toBeTruthy();
+			expect( main ).not.toBeNull();
 		} );
 
 		it( 'should create toolbar', () => {
@@ -182,7 +182,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const toolbar = uiManager.container.querySelector( '.layers-toolbar' );
-			expect( toolbar ).toBeTruthy();
+			expect( toolbar ).not.toBeNull();
 		} );
 
 		it( 'should create canvas container', () => {
@@ -190,7 +190,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const canvasContainer = uiManager.container.querySelector( '.layers-canvas-container' );
-			expect( canvasContainer ).toBeTruthy();
+			expect( canvasContainer ).not.toBeNull();
 		} );
 
 		it( 'should create layer panel container', () => {
@@ -198,7 +198,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const layerPanel = uiManager.container.querySelector( '.layers-panel' );
-			expect( layerPanel ).toBeTruthy();
+			expect( layerPanel ).not.toBeNull();
 		} );
 	} );
 
@@ -208,7 +208,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const title = uiManager.container.querySelector( '.layers-header-title' );
-			expect( title ).toBeTruthy();
+			expect( title ).not.toBeNull();
 			expect( title.getAttribute( 'role' ) ).toBe( 'heading' );
 		} );
 
@@ -226,7 +226,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const headerRight = uiManager.container.querySelector( '.layers-header-right' );
-			expect( headerRight ).toBeTruthy();
+			expect( headerRight ).not.toBeNull();
 		} );
 	} );
 
@@ -235,7 +235,7 @@ describe( 'UIManager', () => {
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
 
-			expect( uiManager.zoomReadoutEl ).toBeTruthy();
+			expect( uiManager.zoomReadoutEl ).toBeInstanceOf( HTMLElement );
 			expect( uiManager.zoomReadoutEl.className ).toBe( 'layers-zoom-readout' );
 		} );
 
@@ -252,14 +252,14 @@ describe( 'UIManager', () => {
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
 
-			expect( uiManager.setSelectEl ).toBeTruthy();
+			expect( uiManager.setSelectEl ).toBeInstanceOf( HTMLElement );
 		} );
 
 		it( 'should create new set input (hidden by default)', () => {
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
 
-			expect( uiManager.newSetInputEl ).toBeTruthy();
+			expect( uiManager.newSetInputEl ).toBeInstanceOf( HTMLElement );
 			expect( uiManager.newSetInputEl.style.display ).toBe( 'none' );
 		} );
 
@@ -267,7 +267,7 @@ describe( 'UIManager', () => {
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
 
-			expect( uiManager.newSetBtnEl ).toBeTruthy();
+			expect( uiManager.newSetBtnEl ).toBeInstanceOf( HTMLElement );
 			expect( uiManager.newSetBtnEl.style.display ).toBe( 'none' );
 		} );
 	} );
@@ -277,14 +277,14 @@ describe( 'UIManager', () => {
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
 
-			expect( uiManager.revSelectEl ).toBeTruthy();
+			expect( uiManager.revSelectEl ).toBeInstanceOf( HTMLElement );
 		} );
 
 		it( 'should create load revision button', () => {
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
 
-			expect( uiManager.revLoadBtnEl ).toBeTruthy();
+			expect( uiManager.revLoadBtnEl ).toBeInstanceOf( HTMLElement );
 		} );
 	} );
 
@@ -294,7 +294,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const closeBtn = uiManager.container.querySelector( '.layers-header-close' );
-			expect( closeBtn ).toBeTruthy();
+			expect( closeBtn ).not.toBeNull();
 		} );
 
 		it( 'should set ARIA label on close button', () => {
@@ -302,7 +302,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const closeBtn = uiManager.container.querySelector( '.layers-header-close' );
-			expect( closeBtn.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( typeof closeBtn.getAttribute( 'aria-label' ) ).toBe( 'string' );
 		} );
 
 		it( 'should have close button with SVG icon', () => {
@@ -311,7 +311,7 @@ describe( 'UIManager', () => {
 
 			const closeBtn = uiManager.container.querySelector( '.layers-header-close' );
 			const svg = closeBtn.querySelector( 'svg' );
-			expect( svg ).toBeTruthy();
+			expect( svg ).not.toBeNull();
 			expect( svg.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 		} );
 	} );
@@ -624,7 +624,7 @@ describe( 'UIManager', () => {
 
 			uiManager.showSpinner( 'Loading...' );
 
-			expect( uiManager.spinnerEl ).toBeTruthy();
+			expect( uiManager.spinnerEl ).toBeInstanceOf( HTMLElement );
 			expect( uiManager.spinnerEl.className ).toBe( 'layers-spinner' );
 		} );
 
@@ -698,7 +698,7 @@ describe( 'UIManager', () => {
 			uiManager.showError( 'Something went wrong' );
 
 			const errorEl = uiManager.container.querySelector( '.layers-error' );
-			expect( errorEl ).toBeTruthy();
+			expect( errorEl ).not.toBeNull();
 		} );
 
 		it( 'should display error message', () => {
@@ -720,7 +720,7 @@ describe( 'UIManager', () => {
 			uiManager.showError( 'Temporary error' );
 
 			const errorEl = uiManager.container.querySelector( '.layers-error' );
-			expect( errorEl ).toBeTruthy();
+			expect( errorEl ).not.toBeNull();
 
 			// Fast-forward past the dismiss timeout (10s + 500ms)
 			jest.advanceTimersByTime( 10500 );
@@ -877,7 +877,7 @@ describe( 'UIManager', () => {
 
 			uiManager.showSpinner();
 
-			expect( uiManager.spinnerEl ).toBeTruthy();
+			expect( uiManager.spinnerEl ).toBeInstanceOf( HTMLElement );
 		} );
 
 		it( 'should handle null error message', () => {
@@ -1498,7 +1498,7 @@ describe( 'UIManager', () => {
 			uiManager.createInterface();
 
 			const skipLinks = uiManager.container.querySelector( '.layers-skip-links' );
-			expect( skipLinks ).toBeTruthy();
+			expect( skipLinks ).not.toBeNull();
 		} );
 
 		it( 'should create three skip links', () => {
@@ -1515,7 +1515,7 @@ describe( 'UIManager', () => {
 
 			// Get skip link for canvas
 			const canvasLink = uiManager.container.querySelector( 'a[href="#layers-canvas-section"]' );
-			expect( canvasLink ).toBeTruthy();
+			expect( canvasLink ).not.toBeNull();
 
 			// Create mock for focus and scrollIntoView
 			const canvasSection = document.getElementById( 'layers-canvas-section' );
@@ -1626,7 +1626,7 @@ describe( 'UIManager', () => {
 
 			const wrapper = uiManager.createSetSelector();
 
-			expect( wrapper ).toBeTruthy();
+			expect( wrapper ).not.toBeNull();
 			expect( wrapper.className ).toBe( 'layers-set-wrap' );
 		} );
 	} );

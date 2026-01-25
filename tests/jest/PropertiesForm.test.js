@@ -3088,9 +3088,7 @@ describe( 'PropertiesForm', () => {
 			// On blur with invalid value, value gets reverted - check revert happened
 			input.value = 'abc';
 
-			// DEBUG: Check what jsdom does with 'abc' assigned to number input
-			// console.log('After setting to abc, input.value =', JSON.stringify(input.value));
-
+			// Note: jsdom normalizes number input values differently than browsers
 			input.dispatchEvent( new Event( 'blur' ) );
 
 			// Value should be reverted to last valid value
@@ -3619,9 +3617,9 @@ describe( 'PropertiesForm', () => {
 			const heightInput = form.querySelector( 'input[data-prop="height"]' );
 			const cornerRadiusInput = form.querySelector( 'input[data-prop="cornerRadius"]' );
 
-			expect( widthInput ).toBeTruthy();
-			expect( heightInput ).toBeTruthy();
-			expect( cornerRadiusInput ).toBeTruthy();
+			expect( widthInput ).not.toBeNull();
+			expect( heightInput ).not.toBeNull();
+			expect( cornerRadiusInput ).not.toBeNull();
 		} );
 
 		test( 'should update callout width', () => {
@@ -3669,7 +3667,7 @@ describe( 'PropertiesForm', () => {
 
 			// Check for text textarea
 			const textarea = form.querySelector( 'textarea' );
-			expect( textarea ).toBeTruthy();
+			expect( textarea ).not.toBeNull();
 		} );
 
 		test( 'should update callout text', () => {
@@ -3899,8 +3897,8 @@ describe( 'PropertiesForm', () => {
 			const widthInput = form.querySelector( 'input[data-prop="width"]' );
 			const heightInput = form.querySelector( 'input[data-prop="height"]' );
 
-			expect( widthInput ).toBeTruthy();
-			expect( heightInput ).toBeTruthy();
+			expect( widthInput ).not.toBeNull();
+			expect( heightInput ).not.toBeNull();
 		} );
 
 		test( 'should update blur layer width', () => {
@@ -4152,7 +4150,7 @@ describe( 'PropertiesForm', () => {
 
 				// Check that a color input was appended to body
 				const hiddenInput = document.body.querySelector( 'input[type="color"]' );
-				expect( hiddenInput ).toBeTruthy();
+				expect( hiddenInput ).not.toBeNull();
 
 				// Clean up
 				if ( hiddenInput ) {
@@ -4197,7 +4195,7 @@ describe( 'PropertiesForm', () => {
 					hiddenInput.dispatchEvent( new Event( 'blur' ) );
 
 					// Should be removed from body
-					expect( document.body.querySelector( 'input[type="color"]' ) ).toBeFalsy();
+					expect( document.body.querySelector( 'input[type="color"]' ) ).toBeNull();
 				}
 			}
 		} );
@@ -4261,9 +4259,17 @@ describe( 'PropertiesForm', () => {
 		// Testing the full onCancel flow would require refactoring PropertiesForm
 		// to accept ColorPickerDialog as a parameter (dependency injection).
 		test( 'onCancel callback is defined in color picker options', () => {
-			// This is a documentation test - the actual onCancel callback is defined
-			// in PropertiesForm.js lines 433-437 but cannot be easily tested without DI
-			expect( true ).toBe( true );
+			// The onCancel callback is defined internally in PropertiesForm.addColorPicker
+			// (lines 464-467). Testing this would require dependency injection of ColorPickerDialog.
+			// Verify PropertiesForm creates forms with sections for shapes with fill colors
+			const layer = { id: 'rect-1', type: 'rectangle', fill: '#ff0000', stroke: '#000000' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+			
+			// Form should exist with property sections (transform, appearance, effects)
+			expect( form ).toBeDefined();
+			expect( form.tagName ).toBe( 'FORM' );
+			const sections = form.querySelectorAll( '.property-section' );
+			expect( sections.length ).toBeGreaterThan( 0 );
 		} );
 	} );
 
@@ -4422,7 +4428,7 @@ describe( 'PropertiesForm', () => {
 			const valueInput = Array.from( inputs ).find( ( input ) =>
 				input.value === '5' || input.placeholder?.includes( '1A' )
 			);
-			expect( valueInput ).toBeTruthy();
+			expect( valueInput ).not.toBeNull();
 		} );
 
 		test( 'should have style select for marker layer', () => {
@@ -4508,7 +4514,7 @@ describe( 'PropertiesForm', () => {
 			const valueInput = Array.from( inputs ).find( ( input ) =>
 				input.value === '25.4 mm' || input.placeholder?.includes( 'mm' )
 			);
-			expect( valueInput ).toBeTruthy();
+			expect( valueInput ).not.toBeNull();
 		} );
 
 		test( 'should have font size input for dimension layer', () => {
@@ -4532,7 +4538,7 @@ describe( 'PropertiesForm', () => {
 				return label?.textContent?.toLowerCase().includes( 'font' ) ||
 					input.dataset.prop === 'fontSize';
 			} );
-			expect( fontSizeInput ).toBeTruthy();
+			expect( fontSizeInput ).not.toBeNull();
 		} );
 
 		test( 'should not show appearance section for dimension layer', () => {

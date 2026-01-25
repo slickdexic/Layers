@@ -495,4 +495,502 @@ describe( 'EmojiPickerPanel', function () {
 			expect( panel.isOpen ).toBe( false );
 		} );
 	} );
+
+	describe( 'category hover effects', function () {
+		it( 'should highlight category on mouseenter when not selected', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			// Find a category that is NOT the currently selected one
+			const categoryButtons = panel.categoryList.querySelectorAll( '.layers-emoji-picker-category' );
+			// First category is 'smileys' (selected by default), use second
+			const unselectedCategory = categoryButtons[ 1 ];
+			expect( unselectedCategory.dataset.category ).toBe( 'animals' );
+
+			// Trigger mouseenter
+			unselectedCategory.dispatchEvent( new MouseEvent( 'mouseenter' ) );
+
+			// Should have highlight background
+			expect( unselectedCategory.style.background ).toContain( 'eaecf0' );
+		} );
+
+		it( 'should remove highlight on mouseleave when not selected', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const categoryButtons = panel.categoryList.querySelectorAll( '.layers-emoji-picker-category' );
+			const unselectedCategory = categoryButtons[ 1 ];
+
+			// Trigger mouseenter then mouseleave
+			unselectedCategory.dispatchEvent( new MouseEvent( 'mouseenter' ) );
+			unselectedCategory.dispatchEvent( new MouseEvent( 'mouseleave' ) );
+
+			expect( unselectedCategory.style.background ).toBe( 'transparent' );
+		} );
+
+		it( 'should not change background on hover when category is selected', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			// Get the selected category (smileys)
+			const selectedCategory = panel.categoryList.querySelector( '[data-category="smileys"]' );
+			const originalBackground = selectedCategory.style.background;
+
+			// Trigger mouseenter on selected category
+			selectedCategory.dispatchEvent( new MouseEvent( 'mouseenter' ) );
+
+			// Background should not change to transparent hover state
+			// It should keep its selected styling
+			expect( selectedCategory.style.background ).toBe( originalBackground );
+		} );
+
+		it( 'should not reset background on mouseleave when category is selected', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const selectedCategory = panel.categoryList.querySelector( '[data-category="smileys"]' );
+			const originalBackground = selectedCategory.style.background;
+
+			selectedCategory.dispatchEvent( new MouseEvent( 'mouseleave' ) );
+
+			// Should keep selected background, not reset to transparent
+			expect( selectedCategory.style.background ).toBe( originalBackground );
+		} );
+	} );
+
+	describe( 'emoji item hover effects', function () {
+		it( 'should scale up emoji on mouseenter', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const emojiItem = panel.emojiGrid.querySelector( '.layers-emoji-picker-item' );
+			expect( emojiItem ).not.toBeNull();
+
+			emojiItem.dispatchEvent( new MouseEvent( 'mouseenter' ) );
+
+			expect( emojiItem.style.transform ).toBe( 'scale(1.1)' );
+			expect( emojiItem.style.background ).toContain( 'f0f0f0' );
+		} );
+
+		it( 'should reset emoji on mouseleave', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const emojiItem = panel.emojiGrid.querySelector( '.layers-emoji-picker-item' );
+
+			emojiItem.dispatchEvent( new MouseEvent( 'mouseenter' ) );
+			emojiItem.dispatchEvent( new MouseEvent( 'mouseleave' ) );
+
+			expect( emojiItem.style.transform ).toBe( 'scale(1)' );
+			expect( emojiItem.style.background ).toBe( 'transparent' );
+		} );
+	} );
+
+	describe( 'loadThumbnail error handling', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should show fallback when SVG load fails', async function () {
+			// Make loadSVG reject
+			mockEmojiLibrary.loadSVG.mockRejectedValueOnce( new Error( 'Network error' ) );
+
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const emojiItem = panel.emojiGrid.querySelector( '.layers-emoji-picker-item' );
+
+			// Call loadThumbnail directly
+			panel.loadThumbnail( emojiItem );
+
+			// Wait for the promise to reject
+			await jest.runAllTimersAsync();
+
+			// Should show fallback '?'
+			const fallback = emojiItem.querySelector( 'span' );
+			expect( fallback ).not.toBeNull();
+			expect( fallback.textContent ).toBe( '?' );
+		} );
+	} );
+
+	describe( 'prepareSvgThumbnail', function () {
+		it( 'should return fallback when SVG element not found', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const result = panel.prepareSvgThumbnail( '<div>Not an SVG</div>' );
+
+			expect( result ).toContain( '?' );
+		} );
+
+		it( 'should set dimensions on SVG element', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const result = panel.prepareSvgThumbnail( '<svg viewBox="0 0 128 128"></svg>' );
+
+			expect( result ).toContain( 'width="36"' );
+			expect( result ).toContain( 'height="36"' );
+		} );
+
+		it( 'should make IDs unique to prevent conflicts', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const svgWithIds = `<svg viewBox="0 0 128 128">
+				<defs>
+					<linearGradient id="grad1"><stop offset="0%" stop-color="red"/></linearGradient>
+				</defs>
+				<rect fill="url(#grad1)"/>
+			</svg>`;
+
+			const result = panel.prepareSvgThumbnail( svgWithIds );
+
+			// Original ID should be replaced with unique ID
+			expect( result ).not.toContain( 'id="grad1"' );
+			// Should contain a unique ID pattern
+			expect( result ).toMatch( /id="et[a-z0-9]+_grad1"/ );
+		} );
+
+		it( 'should update url() references to use new IDs', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const svgWithRefs = `<svg viewBox="0 0 128 128">
+				<defs>
+					<linearGradient id="myGrad"><stop offset="0%"/></linearGradient>
+				</defs>
+				<rect fill="url(#myGrad)"/>
+			</svg>`;
+
+			const result = panel.prepareSvgThumbnail( svgWithRefs );
+
+			// Should have updated the url() reference
+			expect( result ).toMatch( /fill="url\(#et[a-z0-9]+_myGrad\)"/ );
+		} );
+
+		it( 'should update style attribute url() references', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const svgWithStyleRefs = `<svg viewBox="0 0 128 128">
+				<defs>
+					<linearGradient id="styleGrad"><stop offset="0%"/></linearGradient>
+				</defs>
+				<rect style="fill: url(#styleGrad);"/>
+			</svg>`;
+
+			const result = panel.prepareSvgThumbnail( svgWithStyleRefs );
+
+			// Should have updated the style url() reference
+			expect( result ).toMatch( /url\(#et[a-z0-9]+_styleGrad\)/ );
+		} );
+
+		it( 'should update xlink:href references', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const svgWithXlink = `<svg viewBox="0 0 128 128" xmlns:xlink="http://www.w3.org/1999/xlink">
+				<defs>
+					<linearGradient id="baseGrad"><stop offset="0%"/></linearGradient>
+					<linearGradient id="derivedGrad" xlink:href="#baseGrad"/>
+				</defs>
+				<rect fill="url(#derivedGrad)"/>
+			</svg>`;
+
+			const result = panel.prepareSvgThumbnail( svgWithXlink );
+
+			// Should have updated the xlink:href reference
+			expect( result ).toMatch( /xlink:href="#et[a-z0-9]+_baseGrad"/ );
+		} );
+
+		it( 'should update clip-path, mask, and filter attributes', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const svgWithAttrs = `<svg viewBox="0 0 128 128">
+				<defs>
+					<clipPath id="myClip"><circle cx="50" cy="50" r="40"/></clipPath>
+				</defs>
+				<rect clip-path="url(#myClip)"/>
+			</svg>`;
+
+			const result = panel.prepareSvgThumbnail( svgWithAttrs );
+
+			expect( result ).toMatch( /clip-path="url\(#et[a-z0-9]+_myClip\)"/ );
+		} );
+	} );
+
+	describe( 'insertEmoji error handling', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should show error notification when emoji load fails', async function () {
+			panel = new EmojiPickerPanel( { onSelect: mockOnSelect } );
+			panel.open();
+
+			// Make loadSVG reject
+			mockEmojiLibrary.loadSVG.mockRejectedValueOnce( new Error( 'Load failed' ) );
+
+			panel.insertEmoji( 'emoji_u1f600.svg' );
+
+			// Wait for promise rejection
+			await jest.runAllTimersAsync();
+
+			expect( mw.notify ).toHaveBeenCalled();
+			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+
+		it( 'should restore item opacity and pointer events after error', async function () {
+			panel = new EmojiPickerPanel( { onSelect: mockOnSelect } );
+			panel.open();
+
+			// Make loadSVG reject
+			mockEmojiLibrary.loadSVG.mockRejectedValueOnce( new Error( 'Load failed' ) );
+
+			const emojiItem = panel.panel.querySelector( '[data-filename="emoji_u1f600.svg"]' );
+
+			panel.insertEmoji( 'emoji_u1f600.svg' );
+
+			// Wait for promise rejection and finally block
+			await jest.runAllTimersAsync();
+
+			// Item should be restored
+			expect( emojiItem.style.opacity ).toBe( '1' );
+			expect( emojiItem.style.pointerEvents ).toBe( 'auto' );
+		} );
+
+		it( 'should set loading state on item during emoji insert', function () {
+			panel = new EmojiPickerPanel( { onSelect: mockOnSelect } );
+			panel.open();
+
+			// Don't resolve the promise immediately
+			let resolvePromise;
+			mockEmojiLibrary.loadSVG.mockReturnValueOnce( new Promise( ( resolve ) => {
+				resolvePromise = resolve;
+			} ) );
+
+			const emojiItem = panel.panel.querySelector( '[data-filename="emoji_u1f600.svg"]' );
+
+			panel.insertEmoji( 'emoji_u1f600.svg' );
+
+			// Check loading state
+			expect( emojiItem.style.opacity ).toBe( '0.5' );
+			expect( emojiItem.style.pointerEvents ).toBe( 'none' );
+
+			// Clean up
+			resolvePromise( '<svg viewBox="0 0 128 128"></svg>' );
+		} );
+	} );
+
+	describe( 'destroy', function () {
+		it( 'should close panel and clear all references', function () {
+			panel = new EmojiPickerPanel( { onSelect: mockOnSelect } );
+			panel.open();
+
+			panel.destroy();
+
+			expect( panel.isOpen ).toBe( false );
+			expect( panel.options ).toBeNull();
+			expect( panel.onSelect ).toBeNull();
+			expect( panel.categoryList ).toBeNull();
+			expect( panel.emojiGrid ).toBeNull();
+			expect( panel.searchInput ).toBeNull();
+			expect( panel.currentCategory ).toBeNull();
+		} );
+
+		it( 'should work even if panel was never opened', function () {
+			panel = new EmojiPickerPanel();
+
+			expect( () => panel.destroy() ).not.toThrow();
+
+			expect( panel.options ).toBeNull();
+		} );
+	} );
+
+	describe( 'search edge cases', function () {
+		it( 'should ignore very short queries (less than 2 chars)', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const selectCategorySpy = jest.spyOn( panel, 'selectCategory' );
+			const initialCategory = panel.currentCategory;
+
+			// Single character should reset to category
+			panel.search( 'a' );
+
+			// Should have called selectCategory to reset
+			expect( selectCategorySpy ).toHaveBeenCalledWith( initialCategory );
+		} );
+
+		it( 'should search by emoji character', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			// Search by the actual emoji character
+			panel.search( '😀' );
+
+			// Grid should have results (since mock emoji includes 😀)
+			const items = panel.emojiGrid.querySelectorAll( '.layers-emoji-picker-item' );
+			expect( items.length ).toBeGreaterThan( 0 );
+		} );
+
+		it( 'should search by filename pattern', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			// Search by filename fragment
+			panel.search( '1f600' );
+
+			// Should find results
+			const noResults = panel.emojiGrid.querySelector( '.layers-emoji-picker-no-results' );
+			expect( noResults ).toBeNull();
+		} );
+
+		it( 'should clear category selection styling during search', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			panel.search( 'smile' );
+
+			// All category buttons should have transparent background
+			const categoryButtons = panel.categoryList.querySelectorAll( '.layers-emoji-picker-category' );
+			categoryButtons.forEach( ( btn ) => {
+				expect( btn.style.background ).toBe( 'transparent' );
+				expect( btn.style.borderLeft ).toBe( '3px solid transparent' );
+			} );
+		} );
+
+		it( 'should show result count when search has results', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			panel.search( 'smile' );
+
+			// First child should be the result info
+			const resultInfo = panel.emojiGrid.firstElementChild;
+			expect( resultInfo.textContent ).toContain( 'Found' );
+			expect( resultInfo.textContent ).toContain( 'emoji' );
+		} );
+	} );
+
+	describe( 'viewBox parsing', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should parse viewBox correctly from SVG', async function () {
+			panel = new EmojiPickerPanel( { onSelect: mockOnSelect } );
+			panel.open();
+
+			// Set up the mock AFTER open but BEFORE insertEmoji
+			mockEmojiLibrary.loadSVG.mockResolvedValueOnce( '<svg viewBox="10 20 200 300"></svg>' );
+
+			panel.insertEmoji( 'emoji_test.svg' );
+
+			// Wait for async operations
+			await jest.runAllTimersAsync();
+
+			expect( mockOnSelect ).toHaveBeenCalledWith( expect.objectContaining( {
+				viewBox: [ 10, 20, 200, 300 ]
+			} ) );
+		} );
+
+		it( 'should use default viewBox when not present in SVG', async function () {
+			panel = new EmojiPickerPanel( { onSelect: mockOnSelect } );
+			panel.open();
+
+			// Set up the mock AFTER open but BEFORE insertEmoji
+			mockEmojiLibrary.loadSVG.mockResolvedValueOnce( '<svg></svg>' );
+
+			panel.insertEmoji( 'emoji_test.svg' );
+
+			// Wait for async operations
+			await jest.runAllTimersAsync();
+
+			expect( mockOnSelect ).toHaveBeenCalledWith( expect.objectContaining( {
+				viewBox: [ 0, 0, 128, 128 ]
+			} ) );
+		} );
+	} );
+
+	describe( 'close with search timeout', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should clear pending search timeout on close', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			// Start a search that will be debounced
+			panel.searchInput.value = 'test';
+			panel.searchInput.dispatchEvent( new Event( 'input' ) );
+
+			// Close before debounce timer fires
+			panel.close();
+
+			// Advance timer - should not throw or cause issues
+			expect( () => jest.advanceTimersByTime( 300 ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'category click', function () {
+		it( 'should select category when clicked', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const animalsButton = panel.categoryList.querySelector( '[data-category="animals"]' );
+			animalsButton.click();
+
+			expect( panel.currentCategory ).toBe( 'animals' );
+			expect( mockEmojiLibrary.getByCategory ).toHaveBeenCalledWith( 'animals' );
+		} );
+	} );
+
+	describe( 'emoji item title', function () {
+		it( 'should use descriptive name for title when available', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			const emojiItem = panel.emojiGrid.querySelector( '.layers-emoji-picker-item' );
+			// First emoji has name 'Grinning Face'
+			expect( emojiItem.title ).toBe( 'Grinning Face' );
+		} );
+
+		it( 'should fallback to filename-based title when name not available', function () {
+			panel = new EmojiPickerPanel();
+			panel.open();
+
+			// Mock emoji without name for the next call
+			mockEmojiLibrary.getByCategory.mockReturnValueOnce( [
+				{ f: 'emoji_u1f999.svg', c: '🦙', k: 'llama' }
+			] );
+
+			// Clear and re-render grid with new mock data
+			panel.emojiGrid.innerHTML = '';
+			panel.renderEmojiGrid( [ { f: 'emoji_u1f999.svg', c: '🦙', k: 'llama' } ] );
+
+			const emojiItem = panel.emojiGrid.querySelector( '.layers-emoji-picker-item' );
+			// Should have cleaned up filename as title
+			expect( emojiItem.title ).toContain( '1f999' );
+		} );
+	} );
 } );

@@ -424,7 +424,7 @@ describe( 'ColorPickerDialog', () => {
 
 			const dialogEl = document.querySelector( '.color-picker-dialog' );
 			const titleId = dialogEl.getAttribute( 'aria-labelledby' );
-			expect( titleId ).toBeTruthy();
+			expect( typeof titleId ).toBe( 'string' );
 			expect( document.getElementById( titleId ) ).not.toBeNull();
 		} );
 
@@ -1066,9 +1066,9 @@ describe( 'ColorPickerDialog', () => {
 			dialog.open();
 
 			const hexInput = document.querySelector( '.color-picker-hex-input' );
-			expect( hexInput.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( typeof hexInput.getAttribute( 'aria-label' ) ).toBe( 'string' );
 			expect( hexInput.getAttribute( 'maxlength' ) ).toBe( '7' );
-			expect( hexInput.getAttribute( 'placeholder' ) ).toBeTruthy();
+			expect( hexInput.getAttribute( 'placeholder' ) ).not.toBeNull();
 
 			dialog.close();
 		} );

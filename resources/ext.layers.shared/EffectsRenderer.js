@@ -132,6 +132,9 @@
 					this.ctx.filter = 'none';
 				} catch ( e ) {
 					// CORS or other error - fall back to tinted overlay
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[EffectsRenderer] drawBlurFillSimple failed, using fallback:', e.message );
+					}
 					this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
 					this.ctx.beginPath();
 					drawPathFn( this.ctx );
@@ -207,7 +210,7 @@
 			const w = bounds.width || 0;
 			const h = bounds.height || 0;
 
-			// DEBUG: Log blur fill call
+			// Log blur fill parameters for troubleshooting
 			if ( typeof mw !== 'undefined' && mw.log ) {
 				mw.log( '[EffectsRenderer] drawBlurFill called',
 					'type:', layer.type,
@@ -318,6 +321,9 @@
 					hasContent = true;
 				} catch ( e ) {
 					// Image draw failed (CORS) - will try canvas capture below
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[EffectsRenderer] Image draw failed (CORS):', e.message );
+					}
 					hasContent = false;
 				}
 
@@ -332,6 +338,9 @@
 						);
 					} catch ( e ) {
 						// Canvas overlay failed - continue with just the image
+						if ( typeof mw !== 'undefined' && mw.log ) {
+							mw.log.warn( '[EffectsRenderer] Canvas overlay failed:', e.message );
+						}
 					}
 				}
 			}
@@ -348,6 +357,9 @@
 					hasContent = true;
 				} catch ( e ) {
 					// Canvas capture failed (e.g., tainted canvas)
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[EffectsRenderer] Canvas capture failed:', e.message );
+					}
 					hasContent = false;
 				}
 			}
@@ -373,13 +385,16 @@
 					);
 					hasContent = true;
 				} catch ( e ) {
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[EffectsRenderer] Background image draw failed:', e.message );
+					}
 					hasContent = false;
 				}
 			}
 
 			// Step 5: No content available - show placeholder
 			if ( !hasContent ) {
-				// DEBUG: Log placeholder path
+				// Log when falling back to placeholder
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log( '[EffectsRenderer] drawBlurFill - using gray placeholder (no content)' );
 				}
@@ -393,7 +408,7 @@
 				return;
 			}
 
-			// DEBUG: Log successful blur path
+			// Log successful blur rendering
 			if ( typeof mw !== 'undefined' && mw.log ) {
 				mw.log( '[EffectsRenderer] drawBlurFill - drawing blurred content' );
 			}

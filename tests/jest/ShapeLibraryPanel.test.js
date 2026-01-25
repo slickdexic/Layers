@@ -82,11 +82,11 @@ describe( 'ShapeLibraryPanel', () => {
 		it( 'should create panel with default options', () => {
 			panel = new ShapeLibraryPanel( {} );
 
-			expect( panel.panel ).toBeTruthy();
-			expect( panel.overlay ).toBeTruthy();
-			expect( panel.searchInput ).toBeTruthy();
-			expect( panel.categoryList ).toBeTruthy();
-			expect( panel.shapeGrid ).toBeTruthy();
+			expect( panel.panel ).toBeInstanceOf( HTMLElement );
+			expect( panel.overlay ).toBeInstanceOf( HTMLElement );
+			expect( panel.searchInput ).toBeInstanceOf( HTMLElement );
+			expect( panel.categoryList ).toBeInstanceOf( HTMLElement );
+			expect( panel.shapeGrid ).toBeInstanceOf( HTMLElement );
 		} );
 
 		it( 'should use custom container', () => {
@@ -150,7 +150,7 @@ describe( 'ShapeLibraryPanel', () => {
 			panel = new ShapeLibraryPanel( {} );
 
 			const closeBtn = panel.panel.querySelector( '.layers-shape-library-close' );
-			expect( closeBtn ).toBeTruthy();
+			expect( closeBtn ).not.toBeNull();
 			expect( closeBtn.getAttribute( 'aria-label' ) ).toBe( 'layers-close' );
 		} );
 
@@ -586,10 +586,10 @@ describe( 'ShapeLibraryPanel', () => {
 		it( 'should properly cleanup bound handlers', () => {
 			panel = new ShapeLibraryPanel( { container: mockContainer } );
 
-			expect( panel._boundEscapeHandler ).toBeTruthy();
-			expect( panel._boundOverlayClickHandler ).toBeTruthy();
-			expect( panel._boundCloseClickHandler ).toBeTruthy();
-			expect( panel._boundSearchInputHandler ).toBeTruthy();
+			expect( typeof panel._boundEscapeHandler ).toBe( 'function' );
+			expect( typeof panel._boundOverlayClickHandler ).toBe( 'function' );
+			expect( typeof panel._boundCloseClickHandler ).toBe( 'function' );
+			expect( typeof panel._boundSearchInputHandler ).toBe( 'function' );
 
 			panel.destroy();
 

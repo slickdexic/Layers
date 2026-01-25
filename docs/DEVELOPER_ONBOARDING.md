@@ -69,9 +69,53 @@ The editor supports keyboard navigation and screen readers:
 See [ACCESSIBILITY.md](./ACCESSIBILITY.md) for full accessibility documentation.
 
 
+## Slide Mode Development
+
+Slide Mode (v1.5.22+) allows creating standalone graphics without a parent image.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/Api/ApiSlideInfo.php` | GET slide data by name |
+| `src/Api/ApiSlidesSave.php` | POST save slide with canvas settings |
+| `src/SpecialPages/SpecialSlides.php` | Management dashboard |
+| `src/SpecialPages/SpecialEditSlide.php` | Direct editor access |
+| `resources/ext.layers.slides/SlideManager.js` | Slide loading/caching |
+| `resources/ext.layers.editor/ui/SlidePropertiesPanel.js` | Canvas size/background UI |
+
+### Creating a Test Slide
+
+```wikitext
+{{#Slide: TestDiagram
+ | canvas = 800x600
+ | background = #f0f0f0
+}}
+```
+
+### API Testing
+
+```bash
+# Get slide info
+curl "http://localhost/api.php?action=slideinfo&slidename=TestDiagram&format=json"
+
+# Save slide (requires CSRF token)
+curl -X POST "http://localhost/api.php" \
+  -d "action=slidessave" \
+  -d "slidename=TestDiagram" \
+  -d "canvaswidth=800" \
+  -d "canvasheight=600" \
+  -d "data=[]" \
+  -d "token=YOUR_CSRF_TOKEN"
+```
+
+See [SLIDE_MODE.md](./SLIDE_MODE.md) for complete specification and [ARCHITECTURE.md](./ARCHITECTURE.md#slide-mode-architecture) for architecture details.
+
+
 ## Useful Links
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Technical architecture details
+- [SLIDE_MODE.md](./SLIDE_MODE.md) - Slide Mode specification
 - [ACCESSIBILITY.md](./ACCESSIBILITY.md) - Accessibility guide
 - [NAMED_LAYER_SETS.md](./NAMED_LAYER_SETS.md) - Named sets feature
 - [MediaWiki Extension Manual](https://www.mediawiki.org/wiki/Manual:Developing_extensions)

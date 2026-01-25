@@ -242,22 +242,49 @@ describe( 'StateManager', () => {
 			expect( stateManager.pendingOperations.length ).toBe( 0 );
 		} );
 
-		it( 'should detect stuck lock after timeout but not force unlock (safer behavior)', () => {
+		it( 'should detect stuck lock after 5s and log warning', () => {
 			stateManager.lockState();
 			expect( stateManager.isLocked ).toBe( true );
 
-			// Fast-forward 5 seconds
+			// Fast-forward 5 seconds - detection timeout
 			jest.advanceTimersByTime( 5000 );
 
-			// State should REMAIN locked to prevent corruption
+			// State should REMAIN locked (not auto-recovered yet)
 			expect( stateManager.isLocked ).toBe( true );
-			// Should log an error (not warning) about the stuck lock
-			expect( mw.log.error ).toHaveBeenCalledWith(
-				'[StateManager] Lock held for >5s - possible deadlock. Lock will remain until manually resolved.'
+			// Should log a warning about the stuck lock
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				'[StateManager] Lock held for >5s - monitoring for deadlock.'
 			);
 			// Should set a flag indicating when the lock got stuck
 			expect( stateManager.lockStuckSince ).toBeDefined();
 			expect( typeof stateManager.lockStuckSince ).toBe( 'number' );
+		} );
+
+		it( 'should auto-recover stuck lock after 30s', () => {
+			stateManager.lockState();
+			expect( stateManager.isLocked ).toBe( true );
+
+			// Fast-forward 30 seconds - auto-recovery timeout
+			jest.advanceTimersByTime( 30000 );
+
+			// State should be auto-unlocked
+			expect( stateManager.isLocked ).toBe( false );
+			// Should log error about forced recovery
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				'[StateManager] Lock held for >30s - forcing unlock to recover. Some state may be inconsistent.'
+			);
+		} );
+
+		it( 'should expose forceUnlock for manual recovery', () => {
+			stateManager.lockState();
+			expect( stateManager.isLocked ).toBe( true );
+
+			stateManager.forceUnlock();
+
+			expect( stateManager.isLocked ).toBe( false );
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				'[StateManager] Force unlock triggered (manual), 0 pending operations'
+			);
 		} );
 
 		it( 'should clear lock timeout on normal unlock', () => {
@@ -1095,6 +1122,261 @@ describe( 'StateManager', () => {
 			stateManager.destroy();
 
 			expect( stateManager.pendingOperations ).toEqual( [] );
+		} );
+	} );
+
+	// ============================================================
+	// Additional coverage tests for uncovered branches
+	// ============================================================
+
+	describe( 'pendingOperations queue limit', () => {
+		it( 'should drop oldest operation when queue is full for set()', () => {
+			stateManager.lockState();
+
+			// Fill up the queue to the limit (100)
+			for ( let i = 0; i < 100; i++ ) {
+				stateManager.set( 'key' + i, i );
+			}
+
+			expect( stateManager.pendingOperations.length ).toBe( 100 );
+			expect( stateManager.pendingOperations[ 0 ].key ).toBe( 'key0' );
+
+			// Add one more - should drop oldest
+			stateManager.set( 'key100', 100 );
+
+			expect( stateManager.pendingOperations.length ).toBe( 100 );
+			expect( stateManager.pendingOperations[ 0 ].key ).toBe( 'key1' ); // key0 was dropped
+			expect( stateManager.pendingOperations[ 99 ].key ).toBe( 'key100' );
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				expect.stringContaining( 'Pending operations queue full' )
+			);
+		} );
+
+		it( 'should drop oldest operation when queue is full for update()', () => {
+			stateManager.lockState();
+
+			// Fill up the queue to the limit (100)
+			for ( let i = 0; i < 100; i++ ) {
+				stateManager.update( { [ 'key' + i ]: i } );
+			}
+
+			expect( stateManager.pendingOperations.length ).toBe( 100 );
+
+			// Add one more - should drop oldest
+			stateManager.update( { key100: 100 } );
+
+			expect( stateManager.pendingOperations.length ).toBe( 100 );
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				expect.stringContaining( 'Pending operations queue full' )
+			);
+		} );
+	} );
+
+	describe( 'lock recovery from stuck lock', () => {
+		it( 'should log recovery when re-locking while previous lock was stuck', () => {
+			// Lock and trigger stuck detection
+			stateManager.lockState();
+			jest.advanceTimersByTime( 5000 );
+			expect( stateManager.lockStuckSince ).toBeDefined();
+
+			// Don't unlock - call lockState again while stuck (simulating reentrant lock attempt)
+			// This triggers the recovery path
+			stateManager.lockState();
+
+			expect( mw.log.warn ).toHaveBeenCalledWith(
+				expect.stringContaining( 'Recovered from stuck lock after' )
+			);
+		} );
+
+		it( 'should clear lockStuckSince after recovery', () => {
+			stateManager.lockState();
+			jest.advanceTimersByTime( 5000 );
+			expect( stateManager.lockStuckSince ).toBeDefined();
+
+			stateManager.lockState();
+			expect( stateManager.lockStuckSince ).toBe( null );
+		} );
+	} );
+
+	describe( 'error handling in unlockState', () => {
+		it( 'should continue processing operations if one throws an error', () => {
+			stateManager.lockState();
+
+			// Add operations including one that will fail
+			stateManager.pendingOperations.push( { type: 'set', key: 'zoom', value: 2.0 } );
+			stateManager.pendingOperations.push( { type: 'invalid', invalid: true } ); // Will be ignored
+			stateManager.pendingOperations.push( { type: 'set', key: 'panX', value: 50 } );
+
+			stateManager.unlockState();
+
+			// First and last operations should have been applied
+			expect( stateManager.state.zoom ).toBe( 2.0 );
+			expect( stateManager.state.panX ).toBe( 50 );
+		} );
+
+		it( 'should log error when pending operation throws', () => {
+			// Create a scenario where processing an operation causes an error
+			stateManager.lockState();
+
+			// Manually add an operation with a getter that throws
+			const badOperation = {
+				type: 'set',
+				get key() {
+					throw new Error( 'Test error' );
+				},
+				value: 'test'
+			};
+			stateManager.pendingOperations.push( badOperation );
+
+			stateManager.unlockState();
+
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				'[StateManager] Error processing pending operation:',
+				expect.anything()
+			);
+		} );
+	} );
+
+	describe( 'error handling in forceUnlock', () => {
+		it( 'should log error when forceUnlock pending operation throws', () => {
+			stateManager.lockState();
+
+			// Manually add an operation with a getter that throws
+			const badOperation = {
+				type: 'set',
+				get key() {
+					throw new Error( 'ForceUnlock test error' );
+				},
+				value: 'test'
+			};
+			stateManager.pendingOperations.push( badOperation );
+
+			stateManager.forceUnlock( 'test' );
+
+			expect( mw.log.error ).toHaveBeenCalledWith(
+				'[StateManager] Error in forceUnlock pending operation:',
+				expect.anything()
+			);
+		} );
+
+		it( 'should continue processing after error in forceUnlock', () => {
+			stateManager.lockState();
+
+			// Add operations where second one throws
+			stateManager.pendingOperations.push( { type: 'set', key: 'zoom', value: 3.0 } );
+			stateManager.pendingOperations.push( {
+				type: 'set',
+				get key() {
+					throw new Error( 'Test error' );
+				},
+				value: 'test'
+			} );
+			stateManager.pendingOperations.push( { type: 'set', key: 'panY', value: 100 } );
+
+			stateManager.forceUnlock();
+
+			expect( stateManager.state.zoom ).toBe( 3.0 );
+			expect( stateManager.state.panY ).toBe( 100 );
+		} );
+	} );
+
+	describe( 'subscribe unsubscribe guard', () => {
+		it( 'should handle unsubscribe after destroy', () => {
+			const listener = jest.fn();
+			const unsubscribe = stateManager.subscribe( 'zoom', listener );
+
+			stateManager.destroy();
+
+			// Should not throw when unsubscribing after destroy
+			expect( () => unsubscribe() ).not.toThrow();
+		} );
+
+		it( 'should handle unsubscribe when key no longer exists', () => {
+			const listener = jest.fn();
+			const unsubscribe = stateManager.subscribe( 'zoom', listener );
+
+			// Manually remove the key
+			delete stateManager.listeners.zoom;
+
+			// Should not throw
+			expect( () => unsubscribe() ).not.toThrow();
+		} );
+
+		it( 'should handle double unsubscribe', () => {
+			const listener = jest.fn();
+			const unsubscribe = stateManager.subscribe( 'zoom', listener );
+
+			unsubscribe();
+			// Second call should not throw
+			expect( () => unsubscribe() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateLayer race condition guard', () => {
+		it( 'should handle layer removed between check and update', () => {
+			stateManager.addLayer( { id: 'layer1', type: 'rectangle' } );
+
+			// Mock atomic to simulate the race condition
+			const originalAtomic = stateManager.atomic.bind( stateManager );
+			stateManager.atomic = jest.fn( ( updater ) => {
+				// Remove the layer after the initial check but before atomic executes
+				stateManager.state.layers = [];
+				// Now call the original which should detect layerIndex === -1
+				return originalAtomic( updater );
+			} );
+
+			// This should not throw
+			expect( () => stateManager.updateLayer( 'layer1', { x: 100 } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'reorderLayer target removed guard', () => {
+		it( 'should handle target removed during reorder', () => {
+			stateManager.addLayer( { id: 'layer1', type: 'rectangle' } );
+			stateManager.addLayer( { id: 'layer2', type: 'circle' } );
+
+			// Mock atomic to simulate the target being removed
+			const originalAtomic = stateManager.atomic.bind( stateManager );
+			stateManager.atomic = jest.fn( ( updater ) => {
+				return originalAtomic( ( state ) => {
+					// Temporarily modify the layer ids to make target not found
+					const modifiedState = { ...state };
+					modifiedState.layers = state.layers.map( l =>
+						l.id === 'layer1' ? { ...l, id: 'changed' } : l
+					);
+					const result = updater( modifiedState );
+					return result;
+				} );
+			} );
+
+			// This should not throw - layers should still be added at the end
+			expect( () => stateManager.reorderLayer( 'layer2', 'layer1', false ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'generateLayerId fallback', () => {
+		it( 'should use shared IdGenerator when available', () => {
+			const mockGenerateLayerId = jest.fn().mockReturnValue( 'generated_123' );
+			window.Layers = {
+				Utils: {
+					generateLayerId: mockGenerateLayerId
+				}
+			};
+
+			const result = stateManager.generateLayerId();
+
+			expect( mockGenerateLayerId ).toHaveBeenCalled();
+			expect( result ).toBe( 'generated_123' );
+
+			delete window.Layers;
+		} );
+
+		it( 'should use fallback when IdGenerator not available', () => {
+			delete window.Layers;
+
+			const result = stateManager.generateLayerId();
+
+			expect( result ).toMatch( /^layer_\d+_\w+$/ );
 		} );
 	} );
 } );

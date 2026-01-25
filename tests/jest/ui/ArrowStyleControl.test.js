@@ -109,14 +109,14 @@ describe( 'ArrowStyleControl', () => {
 		it( 'should create label element', () => {
 			const container = control.create();
 			const label = container.querySelector( 'label' );
-			expect( label ).toBeTruthy();
+			expect( label ).toBeInstanceOf( HTMLLabelElement );
 			expect( label.className ).toBe( 'arrow-label' );
 		} );
 
 		it( 'should create select element with options', () => {
 			const container = control.create();
 			const select = container.querySelector( 'select' );
-			expect( select ).toBeTruthy();
+			expect( select ).toBeInstanceOf( HTMLSelectElement );
 			expect( select.className ).toBe( 'arrow-style-select' );
 			expect( select.options.length ).toBe( 3 );
 		} );
@@ -131,7 +131,7 @@ describe( 'ArrowStyleControl', () => {
 		it( 'should have ARIA label on select', () => {
 			control.create();
 			const select = control.getSelectElement();
-			expect( select.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( typeof select.getAttribute( 'aria-label' ) ).toBe( 'string' );
 		} );
 
 		it( 'should call notifyStyleChange on select change', () => {

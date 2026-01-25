@@ -757,6 +757,9 @@
 		// Size/geometry by type - uses PropertyBuilders
 		const LayersConstants = ( window.Layers && window.Layers.Constants ) || {};
 		const LAYER_TYPES = LayersConstants.LAYER_TYPES || {};
+		const BLUR_DEFAULTS = ( LayersConstants.DEFAULTS && LayersConstants.DEFAULTS.EFFECTS ) || {
+			BLUR_RADIUS: 12, BLUR_MIN: 1, BLUR_MAX: 64
+		};
 		switch ( layer.type ) {
 			case ( LAYER_TYPES.RECTANGLE || 'rectangle' ):
 				Builders.addDimensions( ctx, { cornerRadius: true } );
@@ -856,7 +859,7 @@
 							updates._previousFill = 'transparent';
 						}
 						if ( typeof layer.blurRadius === 'undefined' ) {
-							updates.blurRadius = 12;
+							updates.blurRadius = BLUR_DEFAULTS.BLUR_RADIUS;
 						}
 						editor.updateLayer( layer.id, updates );
 					} else {
@@ -874,7 +877,7 @@
 				} } );
 				// Blur radius (only shown when blur fill is enabled)
 				if ( isBlurFill ) {
-					addInput( { label: t( 'layers-prop-blur-radius', 'Blur Radius' ), type: 'number', value: layer.blurRadius || 12, min: 1, max: 64, step: 1, onChange: function ( v ) { const br = Math.max( 1, Math.min( 64, parseInt( v, 10 ) || 12 ) ); editor.updateLayer( layer.id, { blurRadius: br } ); } } );
+					addInput( { label: t( 'layers-prop-blur-radius', 'Blur Radius' ), type: 'number', value: layer.blurRadius || BLUR_DEFAULTS.BLUR_RADIUS, min: BLUR_DEFAULTS.BLUR_MIN, max: BLUR_DEFAULTS.BLUR_MAX, step: 1, onChange: function ( v ) { const br = Math.max( BLUR_DEFAULTS.BLUR_MIN, Math.min( BLUR_DEFAULTS.BLUR_MAX, parseInt( v, 10 ) || BLUR_DEFAULTS.BLUR_RADIUS ) ); editor.updateLayer( layer.id, { blurRadius: br } ); } } );
 				}
 				// Gradient/Color fill (only shown when blur fill is disabled)
 				if ( !isBlurFill ) {

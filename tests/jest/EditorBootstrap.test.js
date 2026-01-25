@@ -125,7 +125,7 @@ describe( 'EditorBootstrap', () => {
 
 			const result = EditorBootstrap.areEditorDependenciesReady();
 
-			expect( result ).toBeFalsy();
+			expect( result ).toBeUndefined();
 		} );
 
 		it( 'should return false when Constants is missing', () => {
@@ -133,7 +133,7 @@ describe( 'EditorBootstrap', () => {
 
 			const result = EditorBootstrap.areEditorDependenciesReady();
 
-			expect( result ).toBeFalsy();
+			expect( result ).toBeUndefined();
 		} );
 
 		it( 'should return false when Canvas.Manager is not a function', () => {
@@ -144,7 +144,7 @@ describe( 'EditorBootstrap', () => {
 
 			const result = EditorBootstrap.areEditorDependenciesReady();
 
-			expect( result ).toBeFalsy();
+			expect( result ).toBe( false );
 		} );
 
 		it( 'should return true when all dependencies are available', () => {

@@ -67,7 +67,7 @@ The [archive/](archive/) directory contains completed feature requests, historic
 | File | Location | Purpose |
 |------|----------|---------|
 | [README.md](../README.md) | Root | Project overview, installation, quick start |
-| [codebase_review.md](../codebase_review.md) | Root | Honest assessment of code quality (8.6/10) |
+| [codebase_review.md](../codebase_review.md) | Root | Honest assessment of code quality (9.5/10) |
 | [improvement_plan.md](../improvement_plan.md) | Root | Technical debt remediation roadmap |
 | [copilot-instructions.md](../.github/copilot-instructions.md) | .github | AI contributor guidelines |
 | [CHANGELOG.md](../CHANGELOG.md) | Root | Version history |

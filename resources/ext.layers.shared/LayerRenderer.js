@@ -594,6 +594,9 @@ class LayerRenderer {
 			}
 		} catch ( e ) {
 			// Invalid path - draw error placeholder
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[LayerRenderer] Invalid SVG path:', e.message );
+			}
 			this.ctx.strokeStyle = '#f00';
 			this.ctx.lineWidth = 2;
 			this.ctx.strokeRect( 0, 0, viewBoxWidth, viewBoxHeight );
@@ -924,6 +927,7 @@ class LayerRenderer {
 			'imageLayerRenderer',
 			'markerRenderer',
 			'dimensionRenderer',
+			'gradientRenderer',
 			'_customShapeRenderer'
 		];
 

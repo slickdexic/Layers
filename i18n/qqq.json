@@ -270,6 +270,8 @@
 	"layers-snap-options": "Section header in the Arrange dropdown for snap-related toggles",
 	"layers-smart-guides": "Label for the Smart Guides toggle - snaps objects to other objects during drag",
 	"layers-smart-guides-desc": "Description text for the Smart Guides toggle",
+	"layers-canvas-snap": "Label for the Canvas Snap toggle - snaps objects to canvas edges and center during drag",
+	"layers-canvas-snap-desc": "Description text for the Canvas Snap toggle",
 	"layers-align-section": "Section header in the Arrange dropdown for alignment options, indicates 2+ layers required",
 	"layers-distribute-section": "Section header in the Arrange dropdown for distribute options, indicates 3+ layers required",
 
@@ -376,6 +378,10 @@
 	"layers-panel-subtitle-updated": "Updated subtitle text for the layers panel explaining double-click to rename",
 	"layers-panel-expand": "Accessibility label for button to expand the collapsed layer panel on mobile",
 	"layers-panel-collapse": "Accessibility label for button to collapse the layer panel on mobile",
+	"layers-aria-layer-added": "Screen reader announcement when a layer is added to the layer list",
+	"layers-aria-layer-removed": "Screen reader announcement when a layer is removed from the layer list",
+	"layers-aria-layer-count": "Screen reader announcement for total layer count. $1 is the number of layers.",
+	"layers-aria-layer-reordered": "Screen reader announcement when a layer is reordered in the list",
 	"layers-data-too-large": "Error shown when the layer JSON payload exceeds a configured byte size limit. $1 is the byte limit.",
 	"layers-invalid-data": "Error shown when the posted layer JSON fails validation",
 	"layers-load-error": "Error shown when loading existing layer data fails",
@@ -618,6 +624,7 @@
 	"layers-filepage-view": "Link text for viewing/previewing a layer set from the File page list",
 	"layers-filepage-usage-hint": "Hint text shown below the layer sets table explaining wikitext syntax to display layers",
 
+	"special-editslide-title": "Page title for the Special:EditSlide page. $1 is the slide name.",
 	"layers-slide-empty": "Message displayed when a slide has no content (e.g., 'This slide is empty')",
 	"layers-slide-empty-hint": "Hint shown below the empty message to guide users on how to add content",
 	"layers-slide-properties": "Title for the slide properties panel in the editor sidebar",
@@ -654,5 +661,15 @@
 	"layers-text-toolbar-align-left": "Tooltip for the left alignment button in the text toolbar",
 	"layers-text-toolbar-align-center": "Tooltip for the center alignment button in the text toolbar",
 	"layers-text-toolbar-align-right": "Tooltip for the right alignment button in the text toolbar",
-	"layers-text-toolbar-color": "Tooltip for the text color picker in the text toolbar"
+	"layers-text-toolbar-color": "Tooltip for the text color picker in the text toolbar",
+	"layers-text-input-placeholder": "Placeholder text for the text input modal dialog",
+	"layers-btn-ok": "Generic OK button text used in modal dialogs",
+	"layers-draft-recovery-title": "Title for the draft recovery confirmation dialog",
+	"layers-draft-recovery-message": "Message asking user whether to recover unsaved changes. $1 is the timestamp, $2 is the number of layers",
+	"layers-draft-recover": "Button label to recover the draft",
+	"layers-draft-discard": "Button label to discard the draft",
+	"layers-draft-recovered": "Notification message shown after successfully recovering a draft",
+	"layers-search-placeholder": "Placeholder text for the layer search input",
+	"layers-search-clear": "Tooltip for the button that clears the search filter",
+	"layers-search-results": "Status text showing filtered layer count. $1 is visible count, $2 is total count"
 }

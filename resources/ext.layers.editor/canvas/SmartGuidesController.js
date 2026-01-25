@@ -32,6 +32,7 @@
 
 			// Configuration
 			this.enabled = false; // Off by default - toggle with ';' key
+			this.canvasSnapEnabled = false; // Canvas snap off by default - toggle with "'" key
 			this.snapThreshold = 8; // Pixels to snap within
 			this.showGuides = true;
 
@@ -43,6 +44,10 @@
 			// Center guide style (different from edge guides)
 			this.centerGuideColor = '#00ffff'; // Cyan for centers
 			this.centerGuideDashPattern = [ 2, 2 ];
+
+			// Canvas snap guide style (green for canvas boundaries)
+			this.canvasGuideColor = '#00ff00'; // Green for canvas
+			this.canvasGuideDashPattern = [ 6, 3 ];
 
 			// Active guides to render
 			this.activeGuides = [];
@@ -60,6 +65,18 @@
 		setEnabled( enabled ) {
 			this.enabled = Boolean( enabled );
 			if ( !this.enabled ) {
+				this.clearGuides();
+			}
+		}
+
+		/**
+		 * Enable or disable canvas snap
+		 *
+		 * @param {boolean} enabled - Whether canvas snap is enabled
+		 */
+		setCanvasSnapEnabled( enabled ) {
+			this.canvasSnapEnabled = Boolean( enabled );
+			if ( !this.canvasSnapEnabled && !this.enabled ) {
 				this.clearGuides();
 			}
 		}
@@ -88,6 +105,73 @@
 		 */
 		clearGuides() {
 			this.activeGuides = [];
+		}
+
+		/**
+		 * Get visual bounds for a layer, including stroke width and shadow
+		 * Canvas strokes are center-aligned, so stroke extends strokeWidth/2 beyond geometric bounds
+		 * Shadows extend based on blur, offset, and spread values
+		 *
+		 * @param {Object} layer - Layer object
+		 * @return {Object|null} Visual bounds object {x, y, width, height, expandLeft, expandTop, expandRight, expandBottom} or null
+		 */
+		getVisualBounds( layer ) {
+			const bounds = this.getLayerBounds( layer );
+			if ( !bounds ) {
+				return null;
+			}
+
+			// Calculate stroke expansion (center-aligned strokes extend half on each side)
+			const strokeWidth = layer.strokeWidth || layer.lineWidth || 0;
+			let strokeExpansion = 0;
+			if ( strokeWidth > 0 && layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
+				strokeExpansion = strokeWidth / 2;
+			}
+
+			// Calculate shadow expansion
+			let shadowLeft = 0, shadowRight = 0, shadowTop = 0, shadowBottom = 0;
+			const hasShadow = layer.shadow === true ||
+				( typeof layer.shadow === 'object' && layer.shadow && layer.shadow.enabled !== false );
+
+			if ( hasShadow ) {
+				// Use explicit 0 check to allow zero values (0 is valid, undefined/null uses default)
+				const blur = ( layer.shadowBlur !== undefined && layer.shadowBlur !== null )
+					? Number( layer.shadowBlur ) : 8;
+				const offsetX = ( layer.shadowOffsetX !== undefined && layer.shadowOffsetX !== null )
+					? Number( layer.shadowOffsetX ) : 2;
+				const offsetY = ( layer.shadowOffsetY !== undefined && layer.shadowOffsetY !== null )
+					? Number( layer.shadowOffsetY ) : 2;
+				const spread = Number( layer.shadowSpread ) || 0;
+
+				// Shadow extends in all directions by blur + spread
+				// Plus additional extension in the offset direction
+				const baseExpansion = blur + spread;
+
+				// Calculate expansion for each edge
+				shadowLeft = Math.max( 0, baseExpansion - offsetX );
+				shadowRight = Math.max( 0, baseExpansion + offsetX );
+				shadowTop = Math.max( 0, baseExpansion - offsetY );
+				shadowBottom = Math.max( 0, baseExpansion + offsetY );
+			}
+
+			// Combine stroke and shadow expansions (use the larger of the two for each edge)
+			const expandLeft = Math.max( strokeExpansion, shadowLeft );
+			const expandRight = Math.max( strokeExpansion, shadowRight );
+			const expandTop = Math.max( strokeExpansion, shadowTop );
+			const expandBottom = Math.max( strokeExpansion, shadowBottom );
+
+			// Always return the expansion values so calculateSnappedPosition can use them
+			return {
+				x: bounds.x - expandLeft,
+				y: bounds.y - expandTop,
+				width: bounds.width + expandLeft + expandRight,
+				height: bounds.height + expandTop + expandBottom,
+				// Include expansion values for snap calculation
+				expandLeft: expandLeft,
+				expandTop: expandTop,
+				expandRight: expandRight,
+				expandBottom: expandBottom
+			};
 		}
 
 		/**
@@ -293,7 +377,8 @@
 					continue;
 				}
 
-				const bounds = this.getLayerBounds( layer );
+				// Use visual bounds (includes stroke width) for accurate snapping
+				const bounds = this.getVisualBounds( layer );
 				if ( !bounds ) {
 					continue;
 				}
@@ -319,6 +404,40 @@
 			this.snapPointsCache = { horizontal, vertical };
 			this.cacheExcludedIds = cacheKey;
 			return this.snapPointsCache;
+		}
+
+		/**
+		 * Build snap points for canvas edges and center
+		 * These allow snapping objects to the canvas boundaries
+		 *
+		 * @return {Object} Snap points { horizontal: [], vertical: [] }
+		 */
+		buildCanvasSnapPoints() {
+			const horizontal = []; // Y coordinates (top, center, bottom of canvas)
+			const vertical = []; // X coordinates (left, center, right of canvas)
+
+			// Get canvas dimensions from manager
+			const canvasWidth = this.manager?.baseWidth || this.manager?.canvas?.width || 0;
+			const canvasHeight = this.manager?.baseHeight || this.manager?.canvas?.height || 0;
+
+			if ( canvasWidth <= 0 || canvasHeight <= 0 ) {
+				return { horizontal, vertical };
+			}
+
+			const centerX = canvasWidth / 2;
+			const centerY = canvasHeight / 2;
+
+			// Vertical snap points (X coordinates) - left edge, center, right edge
+			vertical.push( { value: 0, type: 'edge', edge: 'left', isCanvas: true } );
+			vertical.push( { value: centerX, type: 'center', isCanvas: true } );
+			vertical.push( { value: canvasWidth, type: 'edge', edge: 'right', isCanvas: true } );
+
+			// Horizontal snap points (Y coordinates) - top edge, center, bottom edge
+			horizontal.push( { value: 0, type: 'edge', edge: 'top', isCanvas: true } );
+			horizontal.push( { value: centerY, type: 'center', isCanvas: true } );
+			horizontal.push( { value: canvasHeight, type: 'edge', edge: 'bottom', isCanvas: true } );
+
+			return { horizontal, vertical };
 		}
 
 		/**
@@ -353,33 +472,15 @@
 		 * @return {Object} Snapped position { x, y, snappedX, snappedY, guides }
 		 */
 		calculateSnappedPosition( layer, proposedX, proposedY, allLayers ) {
-			if ( !this.enabled || !layer ) {
+			// Check if any snapping is enabled
+			if ( ( !this.enabled && !this.canvasSnapEnabled ) || !layer ) {
 				return { x: proposedX, y: proposedY, snappedX: false, snappedY: false, guides: [] };
 			}
 
-			// Get the layer's current bounds at proposed position
-			const bounds = this.getLayerBounds( layer );
+			// Get the layer's visual bounds (includes stroke width for accurate edge snapping)
+			const bounds = this.getVisualBounds( layer );
 			if ( !bounds ) {
 				return { x: proposedX, y: proposedY, snappedX: false, snappedY: false, guides: [] };
-			}
-
-			// Calculate proposed bounds based on layer type
-			let proposedBounds;
-			if ( layer.type === 'line' || layer.type === 'arrow' ) {
-				// For lines, proposedX/Y represent offset from original
-				proposedBounds = {
-					x: proposedX,
-					y: proposedY,
-					width: bounds.width,
-					height: bounds.height
-				};
-			} else {
-				proposedBounds = {
-					x: proposedX,
-					y: proposedY,
-					width: bounds.width,
-					height: bounds.height
-				};
 			}
 
 			// Build snap points excluding the layer being dragged
@@ -395,13 +496,32 @@
 
 			const snapPoints = this.buildSnapPoints( allLayers, excludeIds );
 
-			// Calculate snap targets for the dragged layer
-			const left = proposedBounds.x;
-			const right = proposedBounds.x + proposedBounds.width;
-			const top = proposedBounds.y;
-			const bottom = proposedBounds.y + proposedBounds.height;
-			const centerX = proposedBounds.x + proposedBounds.width / 2;
-			const centerY = proposedBounds.y + proposedBounds.height / 2;
+			// Add canvas snap points if enabled
+			const canvasSnapPoints = this.canvasSnapEnabled ? this.buildCanvasSnapPoints() : { horizontal: [], vertical: [] };
+
+			// Merge canvas snap points with object snap points
+			const allVerticalSnaps = this.enabled ? [ ...snapPoints.vertical, ...canvasSnapPoints.vertical ] : canvasSnapPoints.vertical;
+			const allHorizontalSnaps = this.enabled ? [ ...snapPoints.horizontal, ...canvasSnapPoints.horizontal ] : canvasSnapPoints.horizontal;
+
+			// Get expansion values for calculating visual edges from proposed geometric position
+			// expandLeft/Top/Right/Bottom tell us how far the visual bounds extend beyond the geometric bounds
+			const expandLeft = bounds.expandLeft || 0;
+			const expandTop = bounds.expandTop || 0;
+			const expandRight = bounds.expandRight || 0;
+			const expandBottom = bounds.expandBottom || 0;
+
+			// Get geometric bounds (without expansion) for width/height calculation
+			const geomWidth = bounds.width - expandLeft - expandRight;
+			const geomHeight = bounds.height - expandTop - expandBottom;
+
+			// Calculate visual snap targets for the dragged layer
+			// The visual left edge is at (proposedX - expandLeft), not proposedX
+			const left = proposedX - expandLeft;
+			const right = proposedX + geomWidth + expandRight;
+			const top = proposedY - expandTop;
+			const bottom = proposedY + geomHeight + expandBottom;
+			const centerX = proposedX + geomWidth / 2;
+			const centerY = proposedY + geomHeight / 2;
 
 			let snappedX = proposedX;
 			let snappedY = proposedY;
@@ -409,10 +529,10 @@
 			let didSnapY = false;
 			const guides = [];
 
-			// Check vertical snapping (X axis)
-			const leftSnap = this.findNearestSnap( left, snapPoints.vertical );
-			const rightSnap = this.findNearestSnap( right, snapPoints.vertical );
-			const centerXSnap = this.findNearestSnap( centerX, snapPoints.vertical );
+			// Check vertical snapping (X axis) - use merged snap points
+			const leftSnap = this.findNearestSnap( left, allVerticalSnaps );
+			const rightSnap = this.findNearestSnap( right, allVerticalSnaps );
+			const centerXSnap = this.findNearestSnap( centerX, allVerticalSnaps );
 
 			// Prefer edge snaps over center snaps
 			let bestVerticalSnap = null;
@@ -448,14 +568,15 @@
 					type: 'vertical',
 					x: bestVerticalSnap.value,
 					isCenter: verticalSnapType === 'center',
+					isCanvas: bestVerticalSnap.isCanvas || false,
 					layerId: bestVerticalSnap.layerId
 				} );
 			}
 
-			// Check horizontal snapping (Y axis)
-			const topSnap = this.findNearestSnap( top, snapPoints.horizontal );
-			const bottomSnap = this.findNearestSnap( bottom, snapPoints.horizontal );
-			const centerYSnap = this.findNearestSnap( centerY, snapPoints.horizontal );
+			// Check horizontal snapping (Y axis) - use merged snap points
+			const topSnap = this.findNearestSnap( top, allHorizontalSnaps );
+			const bottomSnap = this.findNearestSnap( bottom, allHorizontalSnaps );
+			const centerYSnap = this.findNearestSnap( centerY, allHorizontalSnaps );
 
 			let bestHorizontalSnap = null;
 			let horizontalOffset = 0;
@@ -490,6 +611,7 @@
 					type: 'horizontal',
 					y: bestHorizontalSnap.value,
 					isCenter: horizontalSnapType === 'center',
+					isCanvas: bestHorizontalSnap.isCanvas || false,
 					layerId: bestHorizontalSnap.layerId
 				} );
 			}
@@ -526,10 +648,16 @@
 
 			for ( const guide of this.activeGuides ) {
 				// Choose color based on guide type
-				if ( guide.isCenter ) {
+				if ( guide.isCanvas ) {
+					// Canvas snap guides - green
+					ctx.strokeStyle = this.canvasGuideColor;
+					ctx.setLineDash( this.canvasGuideDashPattern );
+				} else if ( guide.isCenter ) {
+					// Object center guides - cyan
 					ctx.strokeStyle = this.centerGuideColor;
 					ctx.setLineDash( this.centerGuideDashPattern );
 				} else {
+					// Object edge guides - magenta
 					ctx.strokeStyle = this.guideColor;
 					ctx.setLineDash( this.guideDashPattern );
 				}

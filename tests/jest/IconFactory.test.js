@@ -245,7 +245,7 @@ describe( 'IconFactory', () => {
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
 			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 			const path = icon.querySelector( 'path' );
-			expect( path ).toBeTruthy();
+			expect( path ).not.toBeNull();
 		} );
 
 		it( 'should create down-pointing triangle when expanded', () => {
@@ -328,6 +328,171 @@ describe( 'IconFactory', () => {
 			const circle = icon.querySelector( 'circle' );
 			expect( circle.getAttribute( 'stroke' ) ).toBe( '#fff' );
 			expect( circle.getAttribute( 'stroke-width' ) ).toBe( '1.5' );
+		} );
+	} );
+
+	describe( 'createPencilIcon', () => {
+		it( 'should create SVG element with default size', () => {
+			const icon = IconFactory.createPencilIcon();
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'width' ) ).toBe( '18' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '18' );
+		} );
+
+		it( 'should create pencil icon with custom size', () => {
+			const icon = IconFactory.createPencilIcon( { size: 24 } );
+			expect( icon.getAttribute( 'width' ) ).toBe( '24' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '24' );
+		} );
+
+		it( 'should create pencil icon with custom color', () => {
+			const icon = IconFactory.createPencilIcon( { color: '#ff0000' } );
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBe( 2 );
+			paths.forEach( ( path ) => {
+				expect( path.getAttribute( 'stroke' ) ).toBe( '#ff0000' );
+			} );
+		} );
+
+		it( 'should have proper stroke properties on paths', () => {
+			const icon = IconFactory.createPencilIcon();
+			const paths = icon.querySelectorAll( 'path' );
+			paths.forEach( ( path ) => {
+				expect( path.getAttribute( 'stroke-width' ) ).toBe( '2' );
+				expect( path.getAttribute( 'stroke-linecap' ) ).toBe( 'round' );
+				expect( path.getAttribute( 'stroke-linejoin' ) ).toBe( 'round' );
+			} );
+		} );
+	} );
+
+	describe( 'createFullscreenIcon', () => {
+		it( 'should create SVG element with default size', () => {
+			const icon = IconFactory.createFullscreenIcon();
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'width' ) ).toBe( '18' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '18' );
+		} );
+
+		it( 'should create fullscreen icon with custom size', () => {
+			const icon = IconFactory.createFullscreenIcon( { size: 32 } );
+			expect( icon.getAttribute( 'width' ) ).toBe( '32' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '32' );
+		} );
+
+		it( 'should create fullscreen icon with custom color', () => {
+			const icon = IconFactory.createFullscreenIcon( { color: '#00ff00' } );
+			const paths = icon.querySelectorAll( 'path' );
+			const lines = icon.querySelectorAll( 'line' );
+			paths.forEach( ( path ) => {
+				expect( path.getAttribute( 'stroke' ) ).toBe( '#00ff00' );
+			} );
+			lines.forEach( ( line ) => {
+				expect( line.getAttribute( 'stroke' ) ).toBe( '#00ff00' );
+			} );
+		} );
+
+		it( 'should have corner paths and diagonal lines', () => {
+			const icon = IconFactory.createFullscreenIcon();
+			const paths = icon.querySelectorAll( 'path' );
+			const lines = icon.querySelectorAll( 'line' );
+			expect( paths.length ).toBe( 2 ); // Top-right and bottom-left corners
+			expect( lines.length ).toBe( 2 ); // Two diagonal lines
+		} );
+
+		it( 'should have proper stroke properties', () => {
+			const icon = IconFactory.createFullscreenIcon();
+			const lines = icon.querySelectorAll( 'line' );
+			lines.forEach( ( line ) => {
+				expect( line.getAttribute( 'stroke-width' ) ).toBe( '2' );
+				expect( line.getAttribute( 'stroke-linecap' ) ).toBe( 'round' );
+			} );
+		} );
+	} );
+
+	describe( 'createLayersLogoIcon', () => {
+		it( 'should create a layers logo icon with 3 diamond paths', () => {
+			const icon = IconFactory.createLayersLogoIcon();
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBe( 3 );
+		} );
+
+		it( 'should use default size of 24', () => {
+			const icon = IconFactory.createLayersLogoIcon();
+			expect( icon.getAttribute( 'width' ) ).toBe( '24' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '24' );
+		} );
+
+		it( 'should accept custom size', () => {
+			const icon = IconFactory.createLayersLogoIcon( 32 );
+			expect( icon.getAttribute( 'width' ) ).toBe( '32' );
+			expect( icon.getAttribute( 'height' ) ).toBe( '32' );
+		} );
+
+		it( 'should have correct brand colors', () => {
+			const icon = IconFactory.createLayersLogoIcon();
+			const paths = icon.querySelectorAll( 'path' );
+			// Top layer (teal/green)
+			expect( paths[ 0 ].getAttribute( 'fill' ) ).toBe( '#00af89' );
+			// Middle layer (red)
+			expect( paths[ 1 ].getAttribute( 'fill' ) ).toBe( '#dd3333' );
+			// Bottom layer (blue)
+			expect( paths[ 2 ].getAttribute( 'fill' ) ).toBe( '#3366cc' );
+		} );
+
+		it( 'should have layers-logo-icon class', () => {
+			const icon = IconFactory.createLayersLogoIcon();
+			expect( icon.classList.contains( 'layers-logo-icon' ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'createFullLayersLogo', () => {
+		it( 'should create a full logo with all elements', () => {
+			const logo = IconFactory.createFullLayersLogo();
+			expect( logo.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( logo.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			// Should have: bracket path, corner rect, text, and 3 diamond paths
+			const paths = logo.querySelectorAll( 'path' );
+			expect( paths.length ).toBe( 4 ); // bracket + 3 diamonds
+			const rects = logo.querySelectorAll( 'rect' );
+			expect( rects.length ).toBe( 1 );
+			const texts = logo.querySelectorAll( 'text' );
+			expect( texts.length ).toBe( 1 );
+		} );
+
+		it( 'should use default width of 100', () => {
+			const logo = IconFactory.createFullLayersLogo();
+			expect( logo.getAttribute( 'width' ) ).toBe( '100' );
+			// Height should maintain aspect ratio (245/385 ≈ 0.636)
+			expect( logo.getAttribute( 'height' ) ).toBe( '64' );
+		} );
+
+		it( 'should accept custom width and scale height', () => {
+			const logo = IconFactory.createFullLayersLogo( 200 );
+			expect( logo.getAttribute( 'width' ) ).toBe( '200' );
+			expect( logo.getAttribute( 'height' ) ).toBe( '127' );
+		} );
+
+		it( 'should have "Layers" text', () => {
+			const logo = IconFactory.createFullLayersLogo();
+			const text = logo.querySelector( 'text' );
+			expect( text.textContent ).toBe( 'Layers' );
+			expect( text.getAttribute( 'fill' ) ).toBe( '#3366cc' );
+		} );
+
+		it( 'should have layers-full-logo class', () => {
+			const logo = IconFactory.createFullLayersLogo();
+			expect( logo.classList.contains( 'layers-full-logo' ) ).toBe( true );
+		} );
+
+		it( 'should have correct diamond layer colors', () => {
+			const logo = IconFactory.createFullLayersLogo();
+			const paths = logo.querySelectorAll( 'path' );
+			// paths[0] is bracket, paths[1-3] are diamonds
+			expect( paths[ 1 ].getAttribute( 'fill' ) ).toBe( '#3366cc' ); // blue
+			expect( paths[ 2 ].getAttribute( 'fill' ) ).toBe( '#dd3333' ); // red
+			expect( paths[ 3 ].getAttribute( 'fill' ) ).toBe( '#00af89' ); // teal
 		} );
 	} );
 

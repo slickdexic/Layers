@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Validation;
 
 use MediaWiki\MediaWikiServices;
@@ -250,7 +252,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			if ( class_exists( MediaWikiServices::class ) ) {
 				$config = MediaWikiServices::getInstance()->getMainConfig();
 				$this->config = [
-					'maxLayers' => $config->get( 'LayersMaxLayerCount' ) ?? 100,
+					// Explicit (int) cast required for strict_types compatibility
+					// Config values may be strings in some MediaWiki configurations
+					'maxLayers' => (int)( $config->get( 'LayersMaxLayerCount' ) ?? 100 ),
 					'defaultFonts' => $config->get( 'LayersDefaultFonts' ) ?? [ 'Arial', 'sans-serif' ]
 				];
 			} else {
@@ -367,9 +371,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			}
 		}
 
-		// Handle blend mode alias
+		// Handle blend mode alias (LOW-4: deprecated in favor of blendMode)
 		if ( isset( $cleanLayer['blend'] ) && !isset( $cleanLayer['blendMode'] ) ) {
 			$cleanLayer['blendMode'] = $cleanLayer['blend'];
+			// Add deprecation warning - this will be tracked in result metadata
+			$result->addWarning( "Property 'blend' is deprecated. Use 'blendMode' instead. Will be removed in v2.0." );
 		}
 		unset( $cleanLayer['blend'] );
 
@@ -522,7 +528,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	private function validateImageSrc( string $value ): array {
 		// Max size configurable via $wgLayersMaxImageBytes (default 1MB)
 		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
-		$maxSize = $config->get( 'LayersMaxImageBytes' );
+		$maxSize = (int)$config->get( 'LayersMaxImageBytes' );
 		if ( strlen( $value ) > $maxSize ) {
 			$maxSizeKB = round( $maxSize / 1024 );
 			return [ 'valid' => false, 'error' => "Image data too large (max {$maxSizeKB}KB)" ];
@@ -940,6 +946,27 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 					$svgValidation = $this->validateSvgString( $layer['svg'] );
 					if ( !$svgValidation['valid'] ) {
 						return $svgValidation;
+					}
+				}
+				// Validate paths array if present (multi-path shapes)
+				// SEC-1 FIX: Each path string must be validated to prevent malicious SVG data
+				if ( $hasPaths ) {
+					$pathIndex = 0;
+					foreach ( $layer['paths'] as $pathData ) {
+						if ( !is_string( $pathData ) ) {
+							return [
+								'valid' => false,
+								'error' => "paths[$pathIndex] must be a string"
+							];
+						}
+						$pathValidation = $this->validateSvgPath( $pathData );
+						if ( !$pathValidation['valid'] ) {
+							return [
+								'valid' => false,
+								'error' => "paths[$pathIndex]: " . $pathValidation['error']
+							];
+						}
+						$pathIndex++;
 					}
 				}
 				break;

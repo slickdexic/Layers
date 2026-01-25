@@ -445,13 +445,13 @@ describe( 'ModuleRegistry', () => {
 
 		it( 'should export registry instance on window', () => {
 			const exported = require( '../../resources/ext.layers.editor/ModuleRegistry.js' );
-			expect( exported.registry ).toBeTruthy();
+			expect( exported.registry ).not.toBeNull();
 			expect( exported.registry ).toBeInstanceOf( ModuleRegistry );
 		} );
 
 		it( 'should export legacyRegistry interface', () => {
 			const exported = require( '../../resources/ext.layers.editor/ModuleRegistry.js' );
-			expect( exported.legacyRegistry ).toBeTruthy();
+			expect( exported.legacyRegistry ).not.toBeNull();
 			expect( typeof exported.legacyRegistry.register ).toBe( 'function' );
 			expect( typeof exported.legacyRegistry.get ).toBe( 'function' );
 			expect( typeof exported.legacyRegistry.has ).toBe( 'function' );

@@ -183,7 +183,7 @@ describe( 'SelectionManager Extended', () => {
 			expect( selectionManager.isResizing ).toBe( true );
 			expect( selectionManager.resizeHandle ).toBe( handle );
 			expect( selectionManager.dragStartPoint ).toEqual( point );
-			expect( selectionManager.originalLayerState ).toBeTruthy();
+			expect( selectionManager.originalLayerState ).toBeDefined();
 		} );
 
 		it( 'should not update resize when not resizing', () => {
@@ -217,7 +217,7 @@ describe( 'SelectionManager Extended', () => {
 
 			expect( selectionManager.isRotating ).toBe( true );
 			expect( selectionManager.dragStartPoint ).toEqual( point );
-			expect( selectionManager.originalLayerState ).toBeTruthy();
+			expect( selectionManager.originalLayerState ).toBeDefined();
 		} );
 
 		it( 'should not update rotation when not rotating', () => {
@@ -497,8 +497,8 @@ describe( 'SelectionManager Extended', () => {
 
 			const state = selectionManager.saveSelectedLayersState();
 
-			expect( state.layer1 ).toBeTruthy();
-			expect( state.layer2 ).toBeTruthy();
+			expect( state.layer1 ).toBeDefined();
+			expect( state.layer2 ).toBeDefined();
 			expect( state.layer1.x ).toBe( 10 );
 			expect( state.layer2.x ).toBe( 150 );
 		} );

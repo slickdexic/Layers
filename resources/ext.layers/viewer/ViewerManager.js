@@ -1596,7 +1596,7 @@ class ViewerManager {
 		// Check if modal editor should be used (same pattern as ViewerOverlay for images)
 		const useModal = this._shouldUseModalForSlide();
 
-		console.log( '[Layers:ViewerManager] openSlideEditor: useModal=', useModal );
+		this.debugLog( 'openSlideEditor: useModal=', useModal );
 
 		if ( useModal && typeof window !== 'undefined' && window.Layers &&
 			window.Layers.Modal && window.Layers.Modal.LayersEditorModal ) {
@@ -1631,7 +1631,7 @@ class ViewerManager {
 	_shouldUseModalForSlide() {
 		// Use modal if modal module is available
 		if ( typeof mw === 'undefined' || !mw.config ) {
-			console.log( '[Layers:ViewerManager] _shouldUseModalForSlide: mw or mw.config undefined' );
+			this.debugLog( '_shouldUseModalForSlide: mw or mw.config undefined' );
 			return false;
 		}
 
@@ -1640,7 +1640,7 @@ class ViewerManager {
 		const hasModal = !!( window.Layers && window.Layers.Modal );
 		const hasClass = !!( window.Layers && window.Layers.Modal && window.Layers.Modal.LayersEditorModal );
 
-		console.log( '[Layers:ViewerManager] _shouldUseModalForSlide:',
+		this.debugLog( '_shouldUseModalForSlide:',
 			'window.Layers:', hasLayers,
 			'window.Layers.Modal:', hasModal,
 			'LayersEditorModal:', hasClass );

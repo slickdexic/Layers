@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Context\RequestContext;
@@ -16,6 +18,11 @@ use MediaWiki\Title\Title;
  */
 class ThumbnailProcessor {
 	use LoggerAwareTrait;
+
+	/**
+	 * Maximum recursion depth for JSON decoding to prevent stack overflow
+	 */
+	private const JSON_DECODE_MAX_DEPTH = 512;
 
 	/**
 	 * @var LayersParamExtractor
@@ -142,7 +149,7 @@ class ThumbnailProcessor {
 		// Check layersjson param (JSON string)
 		if ( isset( $params['layersjson'] ) && is_string( $params['layersjson'] ) ) {
 			try {
-				$decoded = json_decode( $params['layersjson'], true, 512, JSON_THROW_ON_ERROR );
+				$decoded = json_decode( $params['layersjson'], true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 				if ( is_array( $decoded ) ) {
 					// Preserve full structure with background settings if available
 					if ( isset( $decoded['layers'] ) && is_array( $decoded['layers'] ) ) {

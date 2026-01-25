@@ -19,6 +19,7 @@ describe( 'SetSelectorController', () => {
 	let mockApiManager;
 
 	beforeEach( () => {
+		jest.useFakeTimers();
 		// Reset modules
 		jest.resetModules();
 
@@ -103,6 +104,7 @@ describe( 'SetSelectorController', () => {
 	} );
 
 	afterEach( () => {
+		jest.useRealTimers();
 		jest.restoreAllMocks();
 		delete global.mw;
 	} );
@@ -419,7 +421,7 @@ describe( 'SetSelectorController', () => {
 			await controller.deleteCurrentSet();
 
 			// Wait for promise
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 			expect( mockEditor.revisionManager.buildSetSelector ).toHaveBeenCalled();
 		} );
 
@@ -435,7 +437,7 @@ describe( 'SetSelectorController', () => {
 			await controller.deleteCurrentSet();
 
 			// Wait for promise rejection
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 			expect( mw.log.error ).toHaveBeenCalled();
 		} );
 
@@ -518,7 +520,7 @@ describe( 'SetSelectorController', () => {
 			await controller.clearDefaultSet();
 
 			// Wait for promise rejection
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 			expect( mw.log.error ).toHaveBeenCalled();
 			expect( mw.notify ).toHaveBeenCalledWith(
 				expect.any( String ),
@@ -607,7 +609,7 @@ describe( 'SetSelectorController', () => {
 			await controller.renameCurrentSet();
 
 			// Wait for promise rejection
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 			expect( mw.log.error ).toHaveBeenCalled();
 		} );
 
@@ -661,6 +663,88 @@ describe( 'SetSelectorController', () => {
 			const newIndex = options.findIndex( o => o.value === '__new__' );
 			const addedIndex = options.findIndex( o => o.value === 'before-new' );
 			expect( addedIndex ).toBeLessThan( newIndex );
+		} );
+	} );
+
+	describe( 'pending operation state', () => {
+		beforeEach( () => {
+			controller.createSetSelector();
+			controller.setupControls();
+		} );
+
+		it( 'should initialize with isPendingOperation as false', () => {
+			expect( controller.isOperationPending() ).toBe( false );
+		} );
+
+		it( 'should disable controls when pending state is set', () => {
+			controller.setPendingState( true );
+
+			expect( controller.setSelectEl.disabled ).toBe( true );
+			expect( controller.newSetInputEl.disabled ).toBe( true );
+			expect( controller.newSetBtnEl.disabled ).toBe( true );
+			expect( controller.setRenameBtnEl.disabled ).toBe( true );
+			expect( controller.setDeleteBtnEl.disabled ).toBe( true );
+		} );
+
+		it( 'should re-enable controls when pending state is cleared', () => {
+			controller.setPendingState( true );
+			controller.setPendingState( false );
+
+			expect( controller.setSelectEl.disabled ).toBe( false );
+			expect( controller.newSetInputEl.disabled ).toBe( false );
+			expect( controller.newSetBtnEl.disabled ).toBe( false );
+			expect( controller.setRenameBtnEl.disabled ).toBe( false );
+			expect( controller.setDeleteBtnEl.disabled ).toBe( false );
+		} );
+
+		it( 'should prevent deleteCurrentSet when operation is pending', async () => {
+			controller.setPendingState( true );
+			await controller.deleteCurrentSet();
+
+			expect( mockUiManager.showConfirmDialog ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should prevent renameCurrentSet when operation is pending', async () => {
+			controller.setPendingState( true );
+			await controller.renameCurrentSet();
+
+			expect( mockUiManager.showPromptDialog ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should prevent clearDefaultSet when operation is pending', async () => {
+			mockStateManager.get = jest.fn( ( key ) => {
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				if ( key === 'layers' ) {
+					return [ { id: 'layer1' } ];
+				}
+				return null;
+			} );
+			controller.setPendingState( true );
+			await controller.clearDefaultSet();
+
+			expect( mockUiManager.showConfirmDialog ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should set pending state during delete operation', async () => {
+			// Track pending state changes
+			const pendingStates = [];
+			const originalSetPending = controller.setPendingState.bind( controller );
+			controller.setPendingState = jest.fn( ( isPending ) => {
+				pendingStates.push( isPending );
+				originalSetPending( isPending );
+			} );
+
+			await controller.deleteCurrentSet();
+
+			// Wait for any remaining microtasks
+			await Promise.resolve();
+			await Promise.resolve();
+
+			// Should have been set to true then false
+			expect( pendingStates ).toContain( true );
+			expect( pendingStates[ pendingStates.length - 1 ] ).toBe( false );
 		} );
 	} );
 
@@ -744,7 +828,7 @@ describe( 'SetSelectorController', () => {
 			controller.setSelectEl.dispatchEvent( event );
 
 			// Wait for async handler
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockUiManager.showConfirmDialog ).toHaveBeenCalled();
 		} );
@@ -775,7 +859,7 @@ describe( 'SetSelectorController', () => {
 			controller.setSelectEl.dispatchEvent( event );
 
 			// Wait for async handler
-			await new Promise( resolve => setTimeout( resolve, 50 ) );
+			await jest.runAllTimersAsync();
 
 			expect( controller.setSelectEl.value ).toBe( 'original-set' );
 		} );

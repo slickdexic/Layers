@@ -1,4 +1,6 @@
 <?php
+
+declare( strict_types=1 );
 /**
  * Trait for classes that need access to the Layers logger
  *

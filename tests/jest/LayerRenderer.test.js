@@ -3299,4 +3299,620 @@ describe( 'LayerRenderer', () => {
 			expect( renderer.effectsRenderer.drawBlurWithShape ).toHaveBeenCalled();
 		} );
 	} );
+
+	// ========================================================================
+	// Coverage Tests - Null renderer constructor branches
+	// ========================================================================
+
+	describe( 'null renderer initialization branches', () => {
+		test( 'should handle null shadowRenderer during rendering', () => {
+			// When shadowRenderer is null, other renderers still work
+			renderer.shadowRenderer = null;
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
+			expect( () => renderer.drawRectangle( layer ) ).not.toThrow();
+		} );
+
+		test( 'should handle null arrowRenderer during drawArrow', () => {
+			renderer.arrowRenderer = null;
+			const layer = { type: 'arrow', x1: 10, y1: 20, x2: 100, y2: 80 };
+			expect( () => renderer.drawArrow( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle null textRenderer during drawText', () => {
+			renderer.textRenderer = null;
+			const layer = { type: 'text', x: 10, y: 20, text: 'Hello' };
+			expect( () => renderer.drawText( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle null polygonStarRenderer in shapeRenderer', () => {
+			// ShapeRenderer can exist without PolygonStarRenderer
+			if ( renderer.shapeRenderer ) {
+				const originalPolygonStarRenderer = renderer.shapeRenderer.polygonStarRenderer;
+				renderer.shapeRenderer.polygonStarRenderer = null;
+				const layer = { type: 'rectangle', x: 10, y: 20, width: 50, height: 50 };
+				expect( () => renderer.drawRectangle( layer, {} ) ).not.toThrow();
+				renderer.shapeRenderer.polygonStarRenderer = originalPolygonStarRenderer;
+			}
+		} );
+
+		test( 'should handle null gradientRenderer in shapeRenderer', () => {
+			// ShapeRenderer can exist without GradientRenderer
+			renderer.gradientRenderer = null;
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 50, height: 50, fill: '#ff0000' };
+			expect( () => renderer.drawRectangle( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle null shapeRenderer completely', () => {
+			renderer.shapeRenderer = null;
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 50, height: 50 };
+			expect( () => renderer.drawRectangle( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle null textBoxRenderer during drawTextBox', () => {
+			renderer.textBoxRenderer = null;
+			const layer = { type: 'textbox', x: 10, y: 20, width: 100, height: 50, text: 'Test' };
+			expect( () => renderer.drawTextBox( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle null calloutRenderer during drawCallout', () => {
+			renderer.calloutRenderer = null;
+			const layer = { type: 'callout', x: 10, y: 20, width: 100, height: 50 };
+			expect( () => renderer.drawCallout( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle null effectsRenderer during blur effects via drawLayerWithBlurBlend', () => {
+			renderer.effectsRenderer = null;
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blendMode: 'blur' };
+			// drawLayerWithBlurBlend should fall back to _drawLayerByType
+			expect( () => renderer.drawLayerWithBlurBlend( layer ) ).not.toThrow();
+		} );
+
+		test( 'should handle null imageLayerRenderer during drawImage', () => {
+			renderer.imageLayerRenderer = null;
+			const layer = { type: 'image', x: 10, y: 20, width: 100, height: 50, src: 'data:image/png;base64,abc' };
+			expect( () => renderer.drawImage( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle null markerRenderer during drawMarker', () => {
+			renderer.markerRenderer = null;
+			const layer = { type: 'marker', x: 100, y: 100, value: 1 };
+			expect( () => renderer.drawMarker( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle null dimensionRenderer during drawDimension', () => {
+			renderer.dimensionRenderer = null;
+			const layer = { type: 'dimension', x1: 50, y1: 100, x2: 150, y2: 100 };
+			expect( () => renderer.drawDimension( layer, {} ) ).not.toThrow();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - SVG shape path fallback rendering
+	// ========================================================================
+
+	describe( 'SVG shape path fallback rendering', () => {
+		test( 'should use fallback Path2D rendering when _customShapeRenderer is null', () => {
+			// Remove the custom shape renderer to trigger fallback
+			renderer._customShapeRenderer = null;
+
+			const layer = {
+				type: 'shape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 80,
+				path: 'M 0 0 L 100 0 L 100 80 L 0 80 Z',
+				viewBox: [ 0, 0, 100, 80 ],
+				fill: '#ff0000',
+				stroke: '#000000',
+				strokeWidth: 2
+			};
+
+			expect( () => renderer.drawCustomShape( layer, {} ) ).not.toThrow();
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle rotation in fallback Path2D rendering', () => {
+			renderer._customShapeRenderer = null;
+
+			const layer = {
+				type: 'shape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 80,
+				path: 'M 0 0 L 100 0 L 100 80 Z',
+				viewBox: [ 0, 0, 100, 80 ],
+				rotation: 45,
+				fill: '#00ff00'
+			};
+
+			expect( () => renderer.drawCustomShape( layer, {} ) ).not.toThrow();
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		test( 'should apply opacity in fallback rendering', () => {
+			renderer._customShapeRenderer = null;
+
+			const layer = {
+				type: 'shape',
+				x: 0,
+				y: 0,
+				width: 50,
+				height: 50,
+				path: 'M 0 0 L 50 50',
+				viewBox: [ 0, 0, 50, 50 ],
+				opacity: 0.5,
+				fill: '#0000ff'
+			};
+
+			expect( () => renderer.drawCustomShape( layer, {} ) ).not.toThrow();
+		} );
+
+		test( 'should handle invalid path gracefully in fallback rendering', () => {
+			renderer._customShapeRenderer = null;
+
+			// Mock Path2D to throw error
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => {
+				throw new Error( 'Invalid path' );
+			} );
+
+			const layer = {
+				type: 'shape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 80,
+				path: 'invalid_path_data',
+				viewBox: [ 0, 0, 100, 80 ],
+				fill: '#ff0000'
+			};
+
+			expect( () => renderer.drawCustomShape( layer, {} ) ).not.toThrow();
+			// Should draw error placeholder
+			expect( ctx.strokeRect ).toHaveBeenCalled();
+
+			global.Path2D = originalPath2D;
+		} );
+
+		test( 'should clear shadow in fallback rendering when shadowRenderer available', () => {
+			renderer._customShapeRenderer = null;
+			const mockShadowRenderer = {
+				hasShadowEnabled: jest.fn().mockReturnValue( false ),
+				applyShadow: jest.fn(),
+				clearShadow: jest.fn()
+			};
+			renderer.shadowRenderer = mockShadowRenderer;
+
+			// Ensure Path2D is available and works
+			const originalPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			const layer = {
+				type: 'shape',
+				x: 10,
+				y: 20,
+				width: 100,
+				height: 80,
+				path: 'M 0 0 L 100 0 L 100 80 Z',
+				viewBox: [ 0, 0, 100, 80 ],
+				fill: '#ff0000'
+			};
+
+			expect( () => renderer.drawCustomShape( layer, {} ) ).not.toThrow();
+			// clearShadow is called at end of path drawing when path is valid
+			expect( mockShadowRenderer.clearShadow ).toHaveBeenCalled();
+
+			global.Path2D = originalPath2D;
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - _drawShapePath cases
+	// ========================================================================
+
+	describe( '_drawShapePath method', () => {
+		test( 'should draw rectangle path', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			expect( mockCtx.rect ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw circle path', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'circle', x: 100, y: 100, radius: 50 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			expect( mockCtx.arc ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw ellipse path', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'ellipse', x: 100, y: 100, radiusX: 60, radiusY: 40 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			expect( mockCtx.ellipse ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw polygon path', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'polygon', x: 100, y: 100, radius: 50, sides: 6 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw star path', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'star', x: 100, y: 100, radius: 50, innerRadius: 25, points: 5 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+		} );
+
+		test( 'should fallback to rectangle for unknown type', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'unknown_shape', x: 10, y: 20, width: 100, height: 50 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			// Default case falls back to rectangle
+			expect( mockCtx.rect ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle rotation for circle in _drawShapePath', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'circle', x: 100, y: 100, radius: 50, rotation: 45 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			expect( mockCtx.translate ).toHaveBeenCalled();
+			expect( mockCtx.rotate ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle rotation for ellipse in _drawShapePath', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'ellipse', x: 100, y: 100, radiusX: 60, radiusY: 40, rotation: 30 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			expect( mockCtx.translate ).toHaveBeenCalled();
+			expect( mockCtx.rotate ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle rotation for rectangle in _drawShapePath', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, rotation: 90 };
+			const opts = { scale: { sx: 1, sy: 1, avg: 1 } };
+
+			renderer._drawShapePath( layer, opts, mockCtx );
+			expect( mockCtx.translate ).toHaveBeenCalled();
+			expect( mockCtx.rotate ).toHaveBeenCalled();
+		} );
+
+		test( 'should use default scale when not provided', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
+			const opts = {}; // No scale provided
+
+			expect( () => renderer._drawShapePath( layer, opts, mockCtx ) ).not.toThrow();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - Rectangle path with corner radius
+	// ========================================================================
+
+	describe( '_drawRectPath corner radius handling', () => {
+		test( 'should use roundRect when cornerRadius > 0 and ctx supports it', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, cornerRadius: 10 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawRectPath( layer, scale, mockCtx );
+			expect( mockCtx.roundRect ).toHaveBeenCalled();
+		} );
+
+		test( 'should use rect when cornerRadius is 0', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, cornerRadius: 0 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawRectPath( layer, scale, mockCtx );
+			expect( mockCtx.rect ).toHaveBeenCalled();
+		} );
+
+		test( 'should fallback to rect when ctx.roundRect is not available', () => {
+			const mockCtx = createMockContext();
+			delete mockCtx.roundRect; // Remove roundRect support
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, cornerRadius: 10 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawRectPath( layer, scale, mockCtx );
+			expect( mockCtx.rect ).toHaveBeenCalled();
+		} );
+
+		test( 'should limit cornerRadius to half the smallest dimension', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 50, height: 30, cornerRadius: 50 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawRectPath( layer, scale, mockCtx );
+			// cornerRadius should be clamped to 15 (half of 30)
+			expect( mockCtx.roundRect ).toHaveBeenCalledWith( 10, 20, 50, 30, 15 );
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - Ellipse with width/height fallback
+	// ========================================================================
+
+	describe( '_drawEllipsePath fallback calculations', () => {
+		test( 'should use radiusX and radiusY when provided', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'ellipse', x: 100, y: 100, radiusX: 60, radiusY: 40 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawEllipsePath( layer, scale, mockCtx );
+			expect( mockCtx.ellipse ).toHaveBeenCalledWith( 100, 100, 60, 40, 0, 0, Math.PI * 2 );
+		} );
+
+		test( 'should fallback to width/2 and height/2 when radiusX/Y not provided', () => {
+			const mockCtx = createMockContext();
+			const layer = { type: 'ellipse', x: 100, y: 100, width: 120, height: 80 };
+			const scale = { sx: 1, sy: 1, avg: 1 };
+
+			renderer._drawEllipsePath( layer, scale, mockCtx );
+			expect( mockCtx.ellipse ).toHaveBeenCalledWith( 100, 100, 60, 40, 0, 0, Math.PI * 2 );
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - Constructor fallback branches
+	// ========================================================================
+
+	describe( 'constructor renderer fallbacks', () => {
+		let originalRenderers;
+
+		beforeAll( () => {
+			// Store original renderer references for restoration
+			originalRenderers = {};
+		} );
+
+		test( 'should handle null shadowRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force shadowRenderer to null
+			testRenderer.shadowRenderer = null;
+
+			// Should still be able to draw layers without crashing
+			const layer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null arrowRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force arrowRenderer to null
+			testRenderer.arrowRenderer = null;
+
+			// Arrow type should still be handled (fallback to line)
+			const layer = { type: 'arrow', x1: 10, y1: 10, x2: 100, y2: 100 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null textRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force textRenderer to null
+			testRenderer.textRenderer = null;
+
+			// Text type should not crash
+			const layer = { type: 'text', x: 10, y: 10, text: 'Test' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null polygonStarRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force polygonStarRenderer to null
+			testRenderer.polygonStarRenderer = null;
+
+			// Polygon type should not crash
+			const layer = { type: 'polygon', points: [ { x: 0, y: 0 }, { x: 50, y: 0 }, { x: 25, y: 50 } ] };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null shapeRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force shapeRenderer to null
+			testRenderer.shapeRenderer = null;
+
+			// Rectangle type should not crash
+			const layer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null textBoxRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force textBoxRenderer to null
+			testRenderer.textBoxRenderer = null;
+
+			// TextBox type should not crash
+			const layer = { type: 'textbox', x: 10, y: 10, width: 100, height: 50, text: 'Test' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null calloutRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force calloutRenderer to null
+			testRenderer.calloutRenderer = null;
+
+			// Callout type should not crash
+			const layer = { type: 'callout', x: 10, y: 10, width: 100, height: 50, text: 'Test' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null effectsRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force effectsRenderer to null
+			testRenderer.effectsRenderer = null;
+
+			// Blur fill should not crash (will skip blur effect)
+			const layer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50, fill: 'blur' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null imageLayerRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force imageLayerRenderer to null
+			testRenderer.imageLayerRenderer = null;
+
+			// Image type should not crash
+			const layer = { type: 'image', x: 10, y: 10, width: 50, height: 50, src: 'data:image/png;base64,ABC' };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null markerRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force markerRenderer to null
+			testRenderer.markerRenderer = null;
+
+			// Marker type should not crash
+			const layer = { type: 'marker', x: 50, y: 50, markerNumber: 1 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should handle null dimensionRenderer gracefully', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force dimensionRenderer to null
+			testRenderer.dimensionRenderer = null;
+
+			// Dimension type should not crash
+			const layer = { type: 'dimension', x1: 10, y1: 10, x2: 100, y2: 10 };
+			expect( () => testRenderer.drawLayer( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - drawLayerWithBlurBlend fallback
+	// ========================================================================
+
+	describe( 'drawLayerWithBlurBlend without effectsRenderer', () => {
+		test( 'should fallback to normal drawing when effectsRenderer is null', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Force effectsRenderer to null
+			testRenderer.effectsRenderer = null;
+
+			const layer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50, fill: 'blur' };
+
+			// Should not throw and should fallback to normal rendering
+			expect( () => testRenderer.drawLayerWithBlurBlend( layer ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+	} );
+
+	// ========================================================================
+	// Coverage Tests - shape path with hasPaths
+	// ========================================================================
+
+	describe( '_drawShapePath with paths array', () => {
+		test( 'should use paths array when provided', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Create a custom shape with paths array (multi-path shape)
+			const layer = {
+				type: 'custom',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 100,
+				paths: [ 'M 0 0 L 50 0 L 50 50 Z', 'M 10 10 L 40 10 L 40 40 Z' ],
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			const opts = { scale: { sx: 1, sy: 1 } };
+
+			// Should handle multiple paths without crashing
+			expect( () => testRenderer._drawShapePath( layer, opts, mockCtx ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+
+		test( 'should use single path when paths array not provided', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Create a custom shape with single path
+			const layer = {
+				type: 'custom',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 100,
+				path: 'M 0 0 L 50 0 L 50 50 Z',
+				viewBox: [ 0, 0, 100, 100 ]
+			};
+
+			const opts = { scale: { sx: 1, sy: 1 } };
+
+			// Should handle single path without crashing
+			expect( () => testRenderer._drawShapePath( layer, opts, mockCtx ) ).not.toThrow();
+
+			testRenderer.destroy();
+		} );
+	} );
 } );

@@ -790,6 +790,8 @@
 				}
 
 				this.shapeLibraryPanel.open();
+			} ).catch( ( error ) => {
+				mw.log.error( 'Failed to load shape library module:', error );
 			} );
 		}
 
@@ -859,6 +861,8 @@
 				}
 
 				this.emojiPickerPanel.open();
+			} ).catch( ( error ) => {
+				mw.log.error( 'Failed to load emoji picker module:', error );
 			} );
 		}
 
@@ -1049,10 +1053,19 @@
 				'smart-guides',
 				t( 'layers-smart-guides', 'Smart Guides' ),
 				t( 'layers-smart-guides-desc', 'Snap to other objects' ),
-				'',
+				';',
 				false // Default off
 			);
 			snapSection.appendChild( smartGuidesItem );
+
+			const canvasSnapItem = this.createDropdownToggleItem(
+				'canvas-snap',
+				t( 'layers-canvas-snap', 'Canvas Snap' ),
+				t( 'layers-canvas-snap-desc', 'Snap to canvas edges and center' ),
+				'\'',
+				false // Default off
+			);
+			snapSection.appendChild( canvasSnapItem );
 			dropdownMenu.appendChild( snapSection );
 
 			// Separator
@@ -1105,6 +1118,7 @@
 			this.arrangeDropdownTrigger = triggerButton;
 			this.arrangeDropdownMenu = dropdownMenu;
 			this.smartGuidesToggle = smartGuidesItem.querySelector( 'input' );
+			this.canvasSnapToggle = canvasSnapItem.querySelector( 'input' );
 
 			// Set up dropdown event handlers
 			this.setupArrangeDropdownEvents( triggerButton, dropdownMenu );
@@ -1257,6 +1271,9 @@
 				if ( e.target.dataset.toggle === 'smart-guides' ) {
 					this.setSmartGuidesEnabled( e.target.checked );
 					e.target.closest( '.dropdown-toggle-item' ).setAttribute( 'aria-checked', String( e.target.checked ) );
+				} else if ( e.target.dataset.toggle === 'canvas-snap' ) {
+					this.setCanvasSnapEnabled( e.target.checked );
+					e.target.closest( '.dropdown-toggle-item' ).setAttribute( 'aria-checked', String( e.target.checked ) );
 				}
 			} );
 
@@ -1316,6 +1333,18 @@
 		}
 
 		/**
+		 * Enable or disable canvas snap
+		 *
+		 * @param {boolean} enabled Whether canvas snap should be enabled
+		 */
+		setCanvasSnapEnabled( enabled ) {
+			if ( !this.editor.canvasManager || !this.editor.canvasManager.smartGuidesController ) {
+				return;
+			}
+			this.editor.canvasManager.smartGuidesController.setCanvasSnapEnabled( enabled );
+		}
+
+		/**
 		 * Update smart guides button/toggle state (called from keyboard handler)
 		 *
 		 * @param {boolean} enabled Current enabled state
@@ -1324,6 +1353,21 @@
 			if ( this.smartGuidesToggle ) {
 				this.smartGuidesToggle.checked = enabled;
 				const item = this.smartGuidesToggle.closest( '.dropdown-toggle-item' );
+				if ( item ) {
+					item.setAttribute( 'aria-checked', String( enabled ) );
+				}
+			}
+		}
+
+		/**
+		 * Update canvas snap button/toggle state (called from keyboard handler)
+		 *
+		 * @param {boolean} enabled Current enabled state
+		 */
+		updateCanvasSnapButton( enabled ) {
+			if ( this.canvasSnapToggle ) {
+				this.canvasSnapToggle.checked = enabled;
+				const item = this.canvasSnapToggle.closest( '.dropdown-toggle-item' );
 				if ( item ) {
 					item.setAttribute( 'aria-checked', String( enabled ) );
 				}

@@ -131,7 +131,7 @@ describe('Resize Handles', () => {
             // Handle should be at (100, 100) in world coordinates
             const handleHit = canvasManager.hitTestSelectionHandles({ x: 100, y: 100 });
 
-            expect(handleHit).toBeTruthy();
+            expect(handleHit).toBeDefined();
             expect(handleHit.type).toBe('nw');
         });
 
@@ -196,7 +196,7 @@ describe('Resize Handles', () => {
                 y: Math.round(rotatedY)
             });
 
-            expect(handleHit).toBeTruthy();
+            expect(handleHit).toBeDefined();
             expect(handleHit.type).toBe('nw');
         });
 
@@ -289,7 +289,7 @@ describe('Resize Handles', () => {
 
             // Should have started resize (state is now on transformController)
             expect(canvasManager.transformController.isResizing).toBe(true);
-            expect(canvasManager.transformController.resizeHandle).toBeTruthy();
+            expect(canvasManager.transformController.resizeHandle).toBeDefined();
             expect(canvasManager.transformController.resizeHandle.type).toBe('nw');
         });
     });

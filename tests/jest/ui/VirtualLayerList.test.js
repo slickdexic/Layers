@@ -239,8 +239,8 @@ describe( 'VirtualLayerList', () => {
 			const topSpacer = listElement.querySelector( '.layers-virtual-spacer-top' );
 			const bottomSpacer = listElement.querySelector( '.layers-virtual-spacer-bottom' );
 
-			expect( topSpacer ).toBeTruthy();
-			expect( bottomSpacer ).toBeTruthy();
+			expect( topSpacer ).toBeInstanceOf( HTMLElement );
+			expect( bottomSpacer ).toBeInstanceOf( HTMLElement );
 		} );
 	} );
 
@@ -555,8 +555,8 @@ describe( 'VirtualLayerList', () => {
 			virtualList.disable();
 
 			// Spacers should be removed
-			expect( listElement.querySelector( '.layers-virtual-spacer-top' ) ).toBeFalsy();
-			expect( listElement.querySelector( '.layers-virtual-spacer-bottom' ) ).toBeFalsy();
+			expect( listElement.querySelector( '.layers-virtual-spacer-top' ) ).toBeNull();
+			expect( listElement.querySelector( '.layers-virtual-spacer-bottom' ) ).toBeNull();
 		} );
 	} );
 

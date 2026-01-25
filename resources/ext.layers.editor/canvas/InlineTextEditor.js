@@ -44,6 +44,7 @@
 			this._boundBlurHandler = null;
 			this._boundInputHandler = null;
 			this._boundResizeHandler = null;
+			this._resizeDebounceTimer = null;
 
 			// Toolbar elements
 			this.toolbarElement = null;
@@ -498,8 +499,16 @@
 			this._boundInputHandler = () => this._handleInput();
 			this.editorElement.addEventListener( 'input', this._boundInputHandler );
 
-			// Resize handler to reposition on window resize
-			this._boundResizeHandler = () => this._positionEditor();
+			// Resize handler to reposition on window resize (debounced to avoid thrashing)
+			this._boundResizeHandler = () => {
+				if ( this._resizeDebounceTimer ) {
+					clearTimeout( this._resizeDebounceTimer );
+				}
+				this._resizeDebounceTimer = setTimeout( () => {
+					this._positionEditor();
+					this._resizeDebounceTimer = null;
+				}, 100 );
+			};
 			window.addEventListener( 'resize', this._boundResizeHandler );
 		}
 
@@ -590,6 +599,12 @@
 
 			if ( this._boundResizeHandler ) {
 				window.removeEventListener( 'resize', this._boundResizeHandler );
+			}
+
+			// Clear debounce timer
+			if ( this._resizeDebounceTimer ) {
+				clearTimeout( this._resizeDebounceTimer );
+				this._resizeDebounceTimer = null;
 			}
 
 			this._boundKeyHandler = null;

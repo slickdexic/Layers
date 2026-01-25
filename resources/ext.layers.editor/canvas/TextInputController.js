@@ -8,6 +8,23 @@
 	'use strict';
 
 	/**
+	 * Get a translated message with fallback
+	 *
+	 * @param {string} key - Message key (without layers- prefix)
+	 * @param {string} fallback - Fallback text if i18n unavailable
+	 * @return {string} Translated message or fallback
+	 */
+	function msg( key, fallback ) {
+		if ( typeof mw !== 'undefined' && mw.message ) {
+			const message = mw.message( 'layers-' + key );
+			if ( message.exists() ) {
+				return message.text();
+			}
+		}
+		return fallback;
+	}
+
+	/**
 	 * TextInputController class
 	 * Manages modal text input UI for creating text layers
 	 */
@@ -39,8 +56,9 @@ class TextInputController {
 		// Create modal container
 		const modal = document.createElement( 'div' );
 		modal.className = 'layers-text-modal';
+		const zIndex = window.Layers.Constants.Z_INDEX.TEXT_INPUT_MODAL;
 		modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;' +
-			'background:rgba(0,0,0,0.3);z-index:1000002;display:flex;' +
+			'background:rgba(0,0,0,0.3);z-index:' + zIndex + ';display:flex;' +
 			'align-items:center;justify-content:center;';
 
 		// Create input container
@@ -61,7 +79,7 @@ class TextInputController {
 			( style.fontSize || 16 ) + 'px;font-family:' +
 			( style.fontFamily || 'Arial' ) + ';border:1px solid #ccc;' +
 			'border-radius:4px;box-sizing:border-box;';
-		input.placeholder = 'Type your text here...';
+		input.placeholder = msg( 'text-input-placeholder', 'Type your text here...' );
 
 		// Create button container
 		const buttons = document.createElement( 'div' );
@@ -69,7 +87,7 @@ class TextInputController {
 
 		// Cancel button
 		const cancelBtn = document.createElement( 'button' );
-		cancelBtn.textContent = 'Cancel';
+		cancelBtn.textContent = msg( 'editor-cancel', 'Cancel' );
 		cancelBtn.style.cssText = 'padding:8px 16px;margin-right:8px;cursor:pointer;';
 		cancelBtn.addEventListener( 'click', () => {
 			this.hideTextInputModal();
@@ -77,7 +95,7 @@ class TextInputController {
 
 		// OK button
 		const okBtn = document.createElement( 'button' );
-		okBtn.textContent = 'OK';
+		okBtn.textContent = msg( 'btn-ok', 'OK' );
 		okBtn.style.cssText = 'padding:8px 16px;cursor:pointer;background:#4CAF50;' +
 			'color:white;border:none;border-radius:4px;';
 		okBtn.addEventListener( 'click', () => {

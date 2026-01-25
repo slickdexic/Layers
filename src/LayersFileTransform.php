@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * Custom file transformation for layered images
  * Integrates with MediaWiki's transform pipeline

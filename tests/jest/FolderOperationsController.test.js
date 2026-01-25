@@ -357,7 +357,7 @@ describe( 'FolderOperationsController', () => {
 			controller.deleteLayer( 'folder1', mockConfirmDialog );
 
 			// Should create a special folder delete dialog (added to body)
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeTruthy();
+			expect( document.querySelector( '.layers-modal-dialog' ) ).not.toBeNull();
 		} );
 
 		it( 'should not call confirm dialog for empty groups', () => {
@@ -646,7 +646,7 @@ describe( 'FolderOperationsController', () => {
 			const cancelBtn = document.querySelector( '.layers-btn:not(.layers-btn-secondary):not(.layers-btn-danger)' );
 			cancelBtn.click();
 
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeFalsy();
+			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeNull();
 		} );
 
 		it( 'should have accessible attributes', () => {
@@ -700,7 +700,7 @@ describe( 'FolderOperationsController', () => {
 			const overlay = document.querySelector( '.layers-modal-overlay' );
 			overlay.click();
 
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeFalsy();
+			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeNull();
 		} );
 	} );
 

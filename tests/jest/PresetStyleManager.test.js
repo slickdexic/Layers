@@ -92,8 +92,8 @@ describe( 'PresetStyleManager', () => {
 		it( 'should create dropdown when dependencies available', () => {
 			const dropdown = manager.createPresetDropdown();
 
-			expect( dropdown ).toBeTruthy();
-			expect( manager.presetManager ).toBeTruthy();
+			expect( dropdown ).not.toBeNull();
+			expect( manager.presetManager ).not.toBeNull();
 		} );
 
 		it( 'should return null when dependencies not available', () => {

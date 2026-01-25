@@ -232,7 +232,7 @@ describe('Layers Editor Regression Tests', () => {
             // because hasShadowData is true, even though shadow: false
             expect(shadowExplicitlyDisabled).toBe(true);
             expect(shadowExplicitlyEnabled).toBe(false);
-            expect(hasShadowData).toBeTruthy(); // Shadow properties exist
+            expect(Boolean(hasShadowData)).toBe(true); // Shadow properties exist
 
             // Correct behavior: shadow should NOT be applied because it's explicitly disabled
             // The fix checks shadowExplicitlyDisabled FIRST and clears shadow

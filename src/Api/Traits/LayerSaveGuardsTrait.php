@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Api\Traits;
 
 use MediaWiki\Extension\Layers\Security\RateLimiter;

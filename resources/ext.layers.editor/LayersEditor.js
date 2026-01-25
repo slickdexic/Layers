@@ -218,6 +218,13 @@ class LayersEditor {
 		if ( !this.stateManager || typeof this.stateManager.set !== 'function' ) {
 			this.stateManager = this.createStubStateManager();
 		}
+
+		// Initialize draft manager for auto-save and recovery
+		const DraftManager = ( window.Layers && window.Layers.Editor &&
+			window.Layers.Editor.DraftManager ) || window.DraftManager;
+		if ( DraftManager ) {
+			this.draftManager = new DraftManager( this );
+		}
 	}
 
 	/**
@@ -594,6 +601,15 @@ class LayersEditor {
 			const layers = this.stateManager.get( 'layers' ) || [];
 			if ( this.canvasManager ) {
 				this.canvasManager.renderLayers( layers );
+			}
+
+			// Check for unsaved draft recovery (async, doesn't block UI)
+			if ( this.draftManager && typeof this.draftManager.checkAndRecoverDraft === 'function' ) {
+				this.draftManager.checkAndRecoverDraft().catch( ( err ) => {
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.warn( '[LayersEditor] Draft recovery check failed:', err );
+					}
+				} );
 			}
 
 			// Use saveInitialState to clear any premature history entries
@@ -1490,6 +1506,10 @@ class LayersEditor {
 					if ( this.stateManager ) {
 						this.stateManager.set( 'isDirty', false );
 					}
+					// Clear draft when user confirms discarding changes
+					if ( this.draftManager ) {
+						this.draftManager.clearDraft();
+					}
 					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
 						this.eventManager.destroy();
 					}
@@ -1504,6 +1524,10 @@ class LayersEditor {
 					if ( this.stateManager ) {
 						this.stateManager.set( 'isDirty', false );
 					}
+					// Clear draft when user confirms discarding changes
+					if ( this.draftManager ) {
+						this.draftManager.clearDraft();
+					}
 					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
 						this.eventManager.destroy();
 					}
@@ -1514,6 +1538,10 @@ class LayersEditor {
 				} );
 			}
 		} else {
+			// No unsaved changes - clear any stale draft and close
+			if ( this.draftManager ) {
+				this.draftManager.clearDraft();
+			}
 			this.uiManager.destroy();
 			if ( navigateBack ) {
 				this.navigateBackToFileWithName( savedFilename );
@@ -1636,7 +1664,7 @@ class LayersEditor {
 		const managers = [
 			'uiManager', 'eventManager', 'apiManager', 'validationManager',
 			'stateManager', 'historyManager', 'layerSetManager',
-			'revisionManager', 'dialogManager'
+			'revisionManager', 'dialogManager', 'draftManager'
 		];
 
 		managers.forEach( ( name ) => {

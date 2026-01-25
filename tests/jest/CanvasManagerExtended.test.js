@@ -286,7 +286,7 @@ describe( 'CanvasManager Extended Coverage', () => {
 		} );
 
 		it( 'should set isDestroyed to true on destroy', () => {
-			expect( canvasManager.isDestroyed ).toBeFalsy();
+			expect( canvasManager.isDestroyed ).toBe( false );
 			canvasManager.destroy();
 			expect( canvasManager.isDestroyed ).toBe( true );
 		} );
@@ -861,6 +861,441 @@ describe( 'CanvasManager Extended Coverage', () => {
 
 			expect( window.mw.log.error ).toHaveBeenCalled();
 			delete window.mw;
+		} );
+	} );
+
+	describe( 'slide mode', () => {
+		it( 'should set slide mode on canvas manager and renderer', () => {
+			canvasManager.renderer = { setSlideMode: jest.fn() };
+
+			canvasManager.setSlideMode( true );
+
+			expect( canvasManager.isSlideMode ).toBe( true );
+			expect( canvasManager.renderer.setSlideMode ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'should handle setSlideMode without renderer', () => {
+			canvasManager.renderer = null;
+
+			expect( () => canvasManager.setSlideMode( true ) ).not.toThrow();
+			expect( canvasManager.isSlideMode ).toBe( true );
+		} );
+
+		it( 'should set background color and redraw', () => {
+			canvasManager.renderer = { setSlideBackgroundColor: jest.fn() };
+			canvasManager.redraw = jest.fn();
+
+			canvasManager.setBackgroundColor( '#ff0000' );
+
+			expect( canvasManager.slideBackgroundColor ).toBe( '#ff0000' );
+			expect( canvasManager.renderer.setSlideBackgroundColor ).toHaveBeenCalledWith( '#ff0000' );
+			expect( canvasManager.redraw ).toHaveBeenCalled();
+		} );
+
+		it( 'should default to transparent when color is null', () => {
+			canvasManager.renderer = { setSlideBackgroundColor: jest.fn() };
+			canvasManager.redraw = jest.fn();
+
+			canvasManager.setBackgroundColor( null );
+
+			expect( canvasManager.slideBackgroundColor ).toBe( 'transparent' );
+		} );
+
+		it( 'should handle setBackgroundColor without renderer', () => {
+			canvasManager.renderer = null;
+			canvasManager.redraw = jest.fn();
+
+			expect( () => canvasManager.setBackgroundColor( '#00ff00' ) ).not.toThrow();
+			expect( canvasManager.slideBackgroundColor ).toBe( '#00ff00' );
+		} );
+	} );
+
+	describe( 'drawing with throttling', () => {
+		it( 'should schedule drawing frame when tempLayer exists', () => {
+			const mockTempLayer = { id: 'temp', type: 'rectangle' };
+			canvasManager._drawingFrameScheduled = false;
+			canvasManager.drawingController = {
+				continueDrawing: jest.fn(),
+				getTempLayer: jest.fn().mockReturnValue( mockTempLayer ),
+				drawPreview: jest.fn()
+			};
+			canvasManager.renderLayers = jest.fn();
+			canvasManager.editor = { layers: [] };
+			canvasManager.isDestroyed = false;
+
+			// Call the method that triggers drawing frame
+			canvasManager.continueDrawing( { x: 100, y: 100 } );
+
+			expect( canvasManager._drawingFrameScheduled ).toBe( true );
+			expect( canvasManager.tempLayer ).toBe( mockTempLayer );
+		} );
+
+		it( 'should not schedule duplicate drawing frames', () => {
+			const mockTempLayer = { id: 'temp', type: 'rectangle' };
+			canvasManager._drawingFrameScheduled = true;
+			canvasManager.drawingController = {
+				continueDrawing: jest.fn(),
+				getTempLayer: jest.fn().mockReturnValue( mockTempLayer )
+			};
+
+			const originalRaf = window.requestAnimationFrame;
+			window.requestAnimationFrame = jest.fn();
+
+			canvasManager.continueDrawing( { x: 100, y: 100 } );
+
+			// Should not have scheduled a new frame since one is pending
+			expect( window.requestAnimationFrame ).not.toHaveBeenCalled();
+
+			window.requestAnimationFrame = originalRaf;
+		} );
+
+		it( 'should guard against destroyed state in drawing callback', () => {
+			jest.useFakeTimers();
+
+			const mockTempLayer = { id: 'temp', type: 'rectangle' };
+			canvasManager._drawingFrameScheduled = false;
+			canvasManager.drawingController = {
+				continueDrawing: jest.fn(),
+				getTempLayer: jest.fn().mockReturnValue( mockTempLayer ),
+				drawPreview: jest.fn()
+			};
+			canvasManager.renderLayers = jest.fn();
+			canvasManager.editor = { layers: [] };
+			canvasManager.isDestroyed = true;
+
+			canvasManager.continueDrawing( { x: 100, y: 100 } );
+
+			// Run the rAF callback
+			jest.runAllTimers();
+
+			// Should not have called render because isDestroyed is true
+			expect( canvasManager.renderLayers ).not.toHaveBeenCalled();
+
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'findClass edge cases', () => {
+		it( 'should handle findClass when class is not found', () => {
+			// This tests error resilience - manager should not throw
+			expect( () => {
+				new CanvasManager( {
+					container: document.createElement( 'div' ),
+					editor: { stateManager: { get: jest.fn(), set: jest.fn(), subscribe: jest.fn() } }
+				} );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'ImageLoader fallback', () => {
+		it( 'should handle image load error gracefully', () => {
+			canvasManager.handleImageLoadError = jest.fn();
+
+			// This simulates the ImageLoader not being found
+			canvasManager.handleImageLoadError();
+
+			expect( canvasManager.handleImageLoadError ).toHaveBeenCalled();
+		} );
+
+		it( 'should set default dimensions on image load error', () => {
+			canvasManager.baseWidth = null;
+			canvasManager.baseHeight = null;
+
+			// Call the actual error handler
+			canvasManager.handleImageLoadError();
+
+			// Should have set default dimensions
+			expect( canvasManager.baseWidth ).toBeDefined();
+			expect( canvasManager.baseHeight ).toBeDefined();
+		} );
+	} );
+
+	describe( 'findClass fallback paths', () => {
+		it( 'should find class from mw global', () => {
+			// Test the mw namespace fallback - use CanvasManager's internal findClass via getClass
+			// Since findClass is local to the module, we test indirectly via behavior
+			const manager = canvasManager;
+			// If a controller wasn't found, it should be undefined - this tests the fallback chain
+			expect( manager.zoomPanController ).toBeDefined();
+		} );
+	} );
+
+	describe( 'events.destroy error handling', () => {
+		it( 'should handle removeEventListener errors gracefully', () => {
+			const mockCanvas = {
+				addEventListener: jest.fn(),
+				removeEventListener: jest.fn( () => {
+					throw new Error( 'Test error' );
+				} ),
+				getContext: jest.fn( () => mockContext ),
+				width: 800,
+				height: 600
+			};
+
+			const manager = new CanvasManager( {
+				container: document.createElement( 'div' ),
+				editor: mockEditor,
+				canvas: mockCanvas
+			} );
+
+			// Set handlers
+			manager.__mousedownHandler = jest.fn();
+			manager.__mousemoveHandler = jest.fn();
+			manager.__mouseupHandler = jest.fn();
+
+			// This should not throw even with removeEventListener errors
+			expect( () => {
+				manager.events.destroy();
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'calculateResize fallback', () => {
+		it( 'should return null when transformController is unavailable', () => {
+			canvasManager.transformController = null;
+
+			const result = canvasManager.calculateResize(
+				{ id: 'layer-1', type: 'rectangle', x: 0, y: 0, width: 100, height: 100 },
+				'se',
+				10,
+				10,
+				{}
+			);
+
+			expect( result ).toBeNull();
+		} );
+	} );
+
+	describe( 'handleImageLoaded with base dimensions', () => {
+		it( 'should use base dimensions when available', () => {
+			canvasManager.baseWidth = 1000;
+			canvasManager.baseHeight = 800;
+
+			canvasManager.handleImageLoaded(
+				{ width: 400, height: 300 },
+				{ width: 400, height: 300 }
+			);
+
+			expect( canvasManager.canvas.width ).toBe( 1000 );
+			expect( canvasManager.canvas.height ).toBe( 800 );
+		} );
+
+		it( 'should fall back to image dimensions when base dimensions are zero', () => {
+			canvasManager.baseWidth = 0;
+			canvasManager.baseHeight = 0;
+
+			canvasManager.handleImageLoaded(
+				{ width: 500, height: 400 },
+				{ width: 500, height: 400 }
+			);
+
+			expect( canvasManager.canvas.width ).toBe( 500 );
+			expect( canvasManager.canvas.height ).toBe( 400 );
+		} );
+
+		it( 'should use default dimensions when image dimensions unavailable', () => {
+			canvasManager.baseWidth = null;
+			canvasManager.baseHeight = null;
+			canvasManager.defaultCanvasWidth = 640;
+			canvasManager.defaultCanvasHeight = 480;
+
+			canvasManager.handleImageLoaded(
+				{},
+				{}
+			);
+
+			expect( canvasManager.canvas.width ).toBe( 640 );
+			expect( canvasManager.canvas.height ).toBe( 480 );
+		} );
+	} );
+
+	describe( 'handleImageLoadError edge cases', () => {
+		it( 'should return early if destroyed', () => {
+			canvasManager.isDestroyed = true;
+
+			// Call the handler
+			canvasManager.handleImageLoadError();
+
+			// Should not have set backgroundImage since it returns early
+			// (The background would be set to null normally)
+		} );
+
+		it( 'should use layersMessages for error message when available', () => {
+			canvasManager.isDestroyed = false;
+			window.layersMessages = {
+				get: jest.fn( () => 'Custom error message' )
+			};
+			// mw.notify must be defined for the message to be fetched
+			if ( !global.mw ) {
+				global.mw = {};
+			}
+			global.mw.notify = jest.fn();
+
+			canvasManager.handleImageLoadError();
+
+			expect( window.layersMessages.get ).toHaveBeenCalledWith(
+				'layers-background-load-error',
+				expect.any( String )
+			);
+			expect( global.mw.notify ).toHaveBeenCalledWith( 'Custom error message', { type: 'warn' } );
+		} );
+	} );
+
+	describe( 'updateLayerPosition for paths with control points', () => {
+		it( 'should move control points for curved arrows', () => {
+			const layer = {
+				id: 'arrow-1',
+				type: 'arrow',
+				x1: 0, y1: 0,
+				x2: 100, y2: 100,
+				controlX: 50,
+				controlY: 50
+			};
+			const originalState = { ...layer };
+
+			canvasManager.updateLayerPosition( layer, originalState, 20, 30 );
+
+			expect( layer.controlX ).toBe( 70 ); // 50 + 20
+			expect( layer.controlY ).toBe( 80 ); // 50 + 30
+		} );
+
+		it( 'should handle arrows without control points', () => {
+			const layer = {
+				id: 'arrow-1',
+				type: 'arrow',
+				x1: 0, y1: 0,
+				x2: 100, y2: 100
+			};
+			const originalState = { ...layer };
+
+			canvasManager.updateLayerPosition( layer, originalState, 20, 30 );
+
+			expect( layer.controlX ).toBeUndefined();
+			expect( layer.controlY ).toBeUndefined();
+		} );
+	} );
+
+	describe( 'emitTransforming error handling', () => {
+		it( 'should not throw when emitting transform event', () => {
+			const mockLayer = {
+				id: 'layer-1',
+				type: 'rectangle',
+				x: 0, y: 0,
+				width: 100, height: 100
+			};
+
+			// Should not throw
+			expect( () => {
+				canvasManager.emitTransforming( mockLayer );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'subscribeToState unsubscribe handling', () => {
+		it( 'should track unsubscriber when returned by subscribe', () => {
+			const unsubscribeFn = jest.fn();
+			canvasManager.editor.stateManager.subscribe = jest.fn( () => unsubscribeFn );
+			canvasManager.stateUnsubscribers = [];
+
+			canvasManager.subscribeToState();
+
+			expect( canvasManager.stateUnsubscribers ).toContain( unsubscribeFn );
+		} );
+
+		it( 'should not add to unsubscribers when subscribe returns non-function', () => {
+			canvasManager.editor.stateManager.subscribe = jest.fn( () => null );
+			canvasManager.stateUnsubscribers = [];
+
+			canvasManager.subscribeToState();
+
+			expect( canvasManager.stateUnsubscribers.length ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'notifyToolbarOfSelection edge cases', () => {
+		it( 'should handle missing styleControls.updateForSelection', () => {
+			canvasManager.editor.toolbar = {
+				styleControls: {}
+			};
+
+			// Should not throw
+			expect( () => {
+				canvasManager.notifyToolbarOfSelection( [ 'layer-1' ] );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'clipboard operations fallbacks', () => {
+		it( 'should log error when clipboardController unavailable for copySelected', () => {
+			canvasManager.clipboardController = null;
+			global.mw = global.mw || {};
+			global.mw.log = global.mw.log || {};
+			global.mw.log.error = jest.fn();
+
+			canvasManager.copySelected();
+
+			expect( global.mw.log.error ).toHaveBeenCalledWith(
+				expect.stringContaining( 'ClipboardController not available' )
+			);
+		} );
+
+		it( 'should log error when clipboardController unavailable for pasteFromClipboard', () => {
+			canvasManager.clipboardController = null;
+			global.mw = global.mw || {};
+			global.mw.log = global.mw.log || {};
+			global.mw.log.error = jest.fn();
+
+			canvasManager.pasteFromClipboard();
+
+			expect( global.mw.log.error ).toHaveBeenCalledWith(
+				expect.stringContaining( 'ClipboardController not available' )
+			);
+		} );
+	} );
+
+	describe( 'setBaseDimensions edge cases', () => {
+		it( 'should resize canvas when dimensions differ', () => {
+			// Ensure mw.log is a function for this test
+			global.mw = global.mw || {};
+			global.mw.log = jest.fn();
+			canvasManager.canvas.width = 100;
+			canvasManager.canvas.height = 100;
+
+			canvasManager.setBaseDimensions( 200, 200 );
+
+			expect( canvasManager.canvas.width ).toBe( 200 );
+			expect( canvasManager.canvas.height ).toBe( 200 );
+		} );
+
+		it( 'should not resize canvas when dimensions match', () => {
+			canvasManager.canvas.width = 800;
+			canvasManager.canvas.height = 600;
+			const originalWidth = canvasManager.canvas.width;
+
+			canvasManager.setBaseDimensions( 800, 600 );
+
+			expect( canvasManager.canvas.width ).toBe( originalWidth );
+		} );
+	} );
+
+	describe( 'drawMultiSelectionIndicators edge cases', () => {
+		it( 'should return early when single layer selected', () => {
+			canvasManager.editor.stateManager.get = jest.fn().mockReturnValue( [ 'layer-1' ] );
+			canvasManager.drawSelectionIndicators = jest.fn();
+
+			canvasManager.drawMultiSelectionIndicators();
+
+			expect( canvasManager.drawSelectionIndicators ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should draw indicators for multiple selected layers', () => {
+			canvasManager.editor.stateManager.get = jest.fn().mockReturnValue( [ 'layer-1', 'layer-2' ] );
+			canvasManager.selectionManager = { lastSelectedId: 'layer-2' };
+			canvasManager.drawSelectionIndicators = jest.fn();
+
+			canvasManager.drawMultiSelectionIndicators();
+
+			expect( canvasManager.drawSelectionIndicators ).toHaveBeenCalledTimes( 2 );
 		} );
 	} );
 } );

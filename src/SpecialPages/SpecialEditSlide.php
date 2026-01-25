@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
@@ -119,7 +121,8 @@ class SpecialEditSlide extends SpecialPage {
 		$out->addJsConfigVars( [
 			'wgLayersEditorInit' => [
 				'filename' => $normalizedFilename,
-				'imageUrl' => null,  // Slides don't have a base image
+				// Slides don't have a base image
+				'imageUrl' => null,
 				'isSlide' => true,
 				'slideName' => $slideName,
 				'setName' => $setName,

@@ -825,7 +825,7 @@ describe( 'ToolManager', () => {
 			expect( toolManager.hasValidSize( { type: 'path', points: [ {}, {} ] } ) ).toBe( true );
 			expect( toolManager.hasValidSize( { type: 'path', points: [ {} ] } ) ).toBe( false );
 			// When points is null, the expression "layer.points && layer.points.length > 1" returns null (falsy)
-			expect( toolManager.hasValidSize( { type: 'path', points: null } ) ).toBeFalsy();
+			expect( toolManager.hasValidSize( { type: 'path', points: null } ) ).toBeNull();
 		} );
 
 		it( 'should return true for unknown types', () => {

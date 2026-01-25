@@ -156,7 +156,7 @@ describe( 'ContextMenuController', () => {
 
 			controller.handleLayerContextMenu( mockEvent );
 
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+			expect( document.querySelector( '.layers-context-menu' ) ).not.toBeNull();
 		} );
 
 		it( 'should position menu at click coordinates', () => {
@@ -254,11 +254,11 @@ describe( 'ContextMenuController', () => {
 		it( 'should remove context menu from DOM', () => {
 			const mockEvent = createMockEvent( 'layer1' );
 			controller.handleLayerContextMenu( mockEvent );
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+			expect( document.querySelector( '.layers-context-menu' ) ).not.toBeNull();
 
 			controller.closeLayerContextMenu();
 
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeFalsy();
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeNull();
 		} );
 
 		it( 'should set activeContextMenu to null', () => {
@@ -321,7 +321,7 @@ describe( 'ContextMenuController', () => {
 			const deleteItem = Array.from( menuItems ).find( ( el ) => el.textContent.includes( 'Delete' ) );
 			deleteItem.click();
 
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeFalsy();
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeNull();
 		} );
 	} );
 
@@ -341,14 +341,14 @@ describe( 'ContextMenuController', () => {
 		it( 'should close menu when clicking outside after timeout', ( done ) => {
 			const mockEvent = createMockEvent( 'layer1' );
 			controller.handleLayerContextMenu( mockEvent );
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+			expect( document.querySelector( '.layers-context-menu' ) ).not.toBeNull();
 
 			// Need to wait for the setTimeout(0) in the controller
 			setTimeout( () => {
 				// Simulate click outside
 				document.body.click();
 
-				expect( document.querySelector( '.layers-context-menu' ) ).toBeFalsy();
+				expect( document.querySelector( '.layers-context-menu' ) ).toBeNull();
 				done();
 			}, 10 );
 		} );
@@ -357,13 +357,13 @@ describe( 'ContextMenuController', () => {
 			const mockEvent = createMockEvent( 'layer1' );
 			controller.handleLayerContextMenu( mockEvent );
 			const menu = document.querySelector( '.layers-context-menu' );
-			expect( menu ).toBeTruthy();
+			expect( menu ).not.toBeNull();
 
 			// Need to wait for the setTimeout(0) in the controller
 			setTimeout( () => {
 				// Click inside menu should not close it
 				menu.click();
-				expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+				expect( document.querySelector( '.layers-context-menu' ) ).not.toBeNull();
 				done();
 			}, 10 );
 		} );
@@ -373,25 +373,25 @@ describe( 'ContextMenuController', () => {
 		it( 'should close menu when Escape key is pressed', () => {
 			const mockEvent = createMockEvent( 'layer1' );
 			controller.handleLayerContextMenu( mockEvent );
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+			expect( document.querySelector( '.layers-context-menu' ) ).not.toBeNull();
 
 			// Simulate Escape key press
 			const escapeEvent = new KeyboardEvent( 'keydown', { key: 'Escape' } );
 			document.dispatchEvent( escapeEvent );
 
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeFalsy();
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeNull();
 		} );
 
 		it( 'should not close menu on other key presses', () => {
 			const mockEvent = createMockEvent( 'layer1' );
 			controller.handleLayerContextMenu( mockEvent );
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+			expect( document.querySelector( '.layers-context-menu' ) ).not.toBeNull();
 
 			// Simulate Enter key press
 			const enterEvent = new KeyboardEvent( 'keydown', { key: 'Enter' } );
 			document.dispatchEvent( enterEvent );
 
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
+			expect( document.querySelector( '.layers-context-menu' ) ).not.toBeNull();
 		} );
 	} );
 
@@ -401,7 +401,7 @@ describe( 'ContextMenuController', () => {
 			controller.handleLayerContextMenu( mockEvent );
 
 			// Verify handlers are stored
-			expect( controller._boundEscHandler ).toBeTruthy();
+			expect( controller._boundEscHandler ).not.toBeNull();
 
 			// Close the menu
 			controller.closeLayerContextMenu();
@@ -422,8 +422,8 @@ describe( 'ContextMenuController', () => {
 			controller.handleLayerContextMenu( mockEvent );
 
 			// Verify menu is open
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeTruthy();
-			expect( controller._boundEscHandler ).toBeTruthy();
+			expect( document.querySelector( '.layers-context-menu' ) ).not.toBeNull();
+			expect( controller._boundEscHandler ).not.toBeNull();
 
 			// Destroy controller while menu is open
 			controller.destroy();
@@ -431,7 +431,7 @@ describe( 'ContextMenuController', () => {
 			// Verify cleanup happened
 			expect( controller._boundCloseHandler ).toBeNull();
 			expect( controller._boundEscHandler ).toBeNull();
-			expect( document.querySelector( '.layers-context-menu' ) ).toBeFalsy();
+			expect( document.querySelector( '.layers-context-menu' ) ).toBeNull();
 
 			// Wait and verify no orphaned listeners cause errors
 			setTimeout( () => {
@@ -455,7 +455,7 @@ describe( 'ContextMenuController', () => {
 
 			// Should have new handlers, not accumulating old ones
 			expect( controller._boundEscHandler ).not.toBe( firstEscHandler );
-			expect( controller._boundEscHandler ).toBeTruthy();
+			expect( controller._boundEscHandler ).not.toBeNull();
 
 			// Only one menu should exist
 			expect( document.querySelectorAll( '.layers-context-menu' ).length ).toBe( 1 );

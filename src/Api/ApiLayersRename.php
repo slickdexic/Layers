@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
@@ -224,6 +226,19 @@ class ApiLayersRename extends ApiBase {
 	 * @return bool True indicating this is a write operation
 	 */
 	public function isWriteMode() {
+		return true;
+	}
+
+	/**
+	 * This module must be called via HTTP POST.
+	 *
+	 * Defense-in-depth: While needsToken() already requires CSRF validation,
+	 * explicitly requiring POST prevents potential edge cases where GET requests
+	 * might bypass token validation.
+	 *
+	 * @return bool True to require POST method
+	 */
+	public function mustBePosted() {
 		return true;
 	}
 

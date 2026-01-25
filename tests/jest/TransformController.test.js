@@ -1402,15 +1402,28 @@ describe( 'TransformController', () => {
 			expect( smartGuidesController.calculateSnappedPosition ).toHaveBeenCalled();
 		} );
 
-		it( 'should not use smart guides when disabled', () => {
+		it( 'should not use smart guides when both disabled', () => {
 			smartGuidesController.enabled = false;
+			smartGuidesController.canvasSnapEnabled = false;
 			mockManager.selectedLayerIds = [ 'layer1' ];
 
 			controller.startDrag( { x: 100, y: 100 } );
 			controller.handleDrag( { x: 110, y: 110 } );
 
-			// Smart guides should NOT be consulted since disabled
+			// Smart guides should NOT be consulted since both disabled
 			expect( smartGuidesController.calculateSnappedPosition ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should use snapping when only canvas snap is enabled', () => {
+			smartGuidesController.enabled = false;
+			smartGuidesController.canvasSnapEnabled = true;
+			mockManager.selectedLayerIds = [ 'layer1' ];
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 110, y: 110 } );
+
+			// Should use snapping since canvasSnapEnabled is true
+			expect( smartGuidesController.calculateSnappedPosition ).toHaveBeenCalled();
 		} );
 
 		it( 'should prefer grid snap over smart guides when grid snap is enabled', () => {

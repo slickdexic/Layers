@@ -745,7 +745,8 @@ class TransformController {
 				const snappedPoint = this.manager.snapPointToGrid( { x: newX, y: newY } );
 				adjustedDeltaX = snappedPoint.x - ( originalState.x || 0 );
 				adjustedDeltaY = snappedPoint.y - ( originalState.y || 0 );
-			} else if ( this.manager.smartGuidesController && this.manager.smartGuidesController.enabled ) {
+			} else if ( this.manager.smartGuidesController &&
+				( this.manager.smartGuidesController.enabled || this.manager.smartGuidesController.canvasSnapEnabled ) ) {
 				// Apply smart guides snapping when grid snap is disabled
 				const proposedX = ( originalState.x || 0 ) + deltaX;
 				const proposedY = ( originalState.y || 0 ) + deltaY;

@@ -23,6 +23,50 @@
 			this.newSetBtnEl = null;
 			this.setRenameBtnEl = null;
 			this.setDeleteBtnEl = null;
+
+			// Pending operation state to prevent race conditions
+			this.isPendingOperation = false;
+		}
+
+		/**
+		 * Check if an operation is currently pending
+		 * @return {boolean}
+		 */
+		isOperationPending() {
+			return this.isPendingOperation;
+		}
+
+		/**
+		 * Set the pending operation state and update UI accordingly
+		 * @param {boolean} isPending - Whether an operation is pending
+		 * @private
+		 */
+		setPendingState( isPending ) {
+			this.isPendingOperation = isPending;
+			this.updateControlsDisabledState( isPending );
+		}
+
+		/**
+		 * Update the disabled state of all set controls
+		 * @param {boolean} disabled - Whether controls should be disabled
+		 * @private
+		 */
+		updateControlsDisabledState( disabled ) {
+			if ( this.setSelectEl ) {
+				this.setSelectEl.disabled = disabled;
+			}
+			if ( this.newSetInputEl ) {
+				this.newSetInputEl.disabled = disabled;
+			}
+			if ( this.newSetBtnEl ) {
+				this.newSetBtnEl.disabled = disabled;
+			}
+			if ( this.setRenameBtnEl ) {
+				this.setRenameBtnEl.disabled = disabled;
+			}
+			if ( this.setDeleteBtnEl ) {
+				this.setDeleteBtnEl.disabled = disabled;
+			}
 		}
 
 		/**
@@ -147,6 +191,15 @@
 
 			// Handle set selection change
 			this.addListener( this.setSelectEl, 'change', async () => {
+				// Prevent action during pending operations
+				if ( this.isPendingOperation ) {
+					// Restore previous selection
+					const currentSet = this.editor.stateManager ?
+						this.editor.stateManager.get( 'currentSetName' ) : 'default';
+					this.setSelectEl.value = currentSet;
+					return;
+				}
+
 				const selectedValue = this.setSelectEl.value;
 
 				if ( selectedValue === '__new__' ) {
@@ -321,6 +374,11 @@
 		 * Only the original creator or an admin can delete a set
 		 */
 		async deleteCurrentSet() {
+			// Prevent concurrent operations
+			if ( this.isPendingOperation ) {
+				return;
+			}
+
 			const currentSet = this.editor.stateManager ?
 				this.editor.stateManager.get( 'currentSetName' ) : 'default';
 
@@ -358,6 +416,7 @@
 
 			// Call API to delete the set
 			if ( this.editor.apiManager && typeof this.editor.apiManager.deleteLayerSet === 'function' ) {
+				this.setPendingState( true );
 				this.editor.apiManager.deleteLayerSet( currentSet ).then( () => {
 					// The APIManager reloads layers after delete, so we just update the selector
 					if ( this.editor.buildSetSelector ) {
@@ -370,6 +429,8 @@
 					if ( mw.log && mw.log.error ) {
 						mw.log.error( '[SetSelectorController] deleteCurrentSet error:', error );
 					}
+				} ).finally( () => {
+					this.setPendingState( false );
 				} );
 			} else {
 				mw.notify( this.getMessage( 'layers-delete-failed' ), { type: 'error' } );
@@ -381,6 +442,11 @@
 		 * @private
 		 */
 		async clearDefaultSet() {
+			// Prevent concurrent operations
+			if ( this.isPendingOperation ) {
+				return;
+			}
+
 			const layers = this.editor.stateManager ?
 				this.editor.stateManager.get( 'layers' ) : [];
 			if ( !layers || layers.length === 0 ) {
@@ -421,6 +487,7 @@
 
 			// Save the empty layer set immediately via API
 			if ( this.editor.apiManager && typeof this.editor.apiManager.saveLayers === 'function' ) {
+				this.setPendingState( true );
 				this.editor.apiManager.saveLayers( [], 'default' ).then( () => {
 					if ( this.editor.stateManager ) {
 						this.editor.stateManager.set( 'isDirty', false );
@@ -434,6 +501,8 @@
 						mw.log.error( '[SetSelectorController] Failed to save cleared layers:', error );
 					}
 					mw.notify( this.getMessage( 'layers-save-failed', 'Failed to save changes' ), { type: 'error' } );
+				} ).finally( () => {
+					this.setPendingState( false );
 				} );
 			} else {
 				mw.notify(
@@ -448,6 +517,11 @@
 		 * Uses a prompt dialog to get the new name, then calls API to rename
 		 */
 		async renameCurrentSet() {
+			// Prevent concurrent operations
+			if ( this.isPendingOperation ) {
+				return;
+			}
+
 			const currentSet = this.editor.stateManager ?
 				this.editor.stateManager.get( 'currentSetName' ) : 'default';
 
@@ -498,6 +572,7 @@
 
 			// Call API to rename the set
 			if ( this.editor.apiManager && typeof this.editor.apiManager.renameLayerSet === 'function' ) {
+				this.setPendingState( true );
 				this.editor.apiManager.renameLayerSet( currentSet, trimmedName ).then( () => {
 					// The APIManager reloads layers after rename, so we just update the selector
 					if ( this.editor.buildSetSelector ) {
@@ -510,6 +585,8 @@
 					if ( mw.log && mw.log.error ) {
 						mw.log.error( '[SetSelectorController] renameCurrentSet error:', error );
 					}
+				} ).finally( () => {
+					this.setPendingState( false );
 				} );
 			} else {
 				mw.notify( this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' ), { type: 'error' } );

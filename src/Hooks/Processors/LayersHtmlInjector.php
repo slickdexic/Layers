@@ -1,4 +1,6 @@
 <?php
+
+declare( strict_types=1 );
 /**
  * Layers HTML Injector
  *
@@ -42,7 +44,7 @@ class LayersHtmlInjector {
 		bool $backgroundVisible = true,
 		float $backgroundOpacity = 1.0
 	): array {
-		// DEBUG: Log the values being put into the payload
+		// Log payload values for troubleshooting visibility issues
 		$this->logDebug( 'buildPayload: backgroundVisible=' . ( $backgroundVisible ? 'true' : 'false' )
 			. ', backgroundOpacity=' . $backgroundOpacity
 			. ', layerCount=' . count( $layers ) );
