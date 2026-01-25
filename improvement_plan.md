@@ -225,19 +225,14 @@ it('should handle delayed operation', () => {
 
 ---
 
-### P3.3 Deprecated Method Removal
+### P3.3 Deprecated Method Removal ✅ COMPLETED
 
-**Status:** Open  
+**Status:** ✅ Completed  
 **Priority:** P3 - Low  
 **Category:** Maintenance  
+**Completed:** January 24, 2026
 
-**Methods to remove in v2.0:**
-
-| File | Method | Replacement |
-|------|--------|-------------|
-| ToolManager.js | `getDrawingLayer()` | `createLayer()` |
-| LayerPanel.js | `hideControlsForSelectedLayers` | Remove entirely |
-| UIManager.js | Legacy folder method | `createFolder()` |
+**Resolution:** Deprecated methods have been removed from the codebase. The remaining backward-compatibility stub `LayerPanel.updateCodePanel()` now has proper `@deprecated` JSDoc documentation.
 
 **Action:** Add `@deprecated` JSDoc tags with version and alternative method.
 
