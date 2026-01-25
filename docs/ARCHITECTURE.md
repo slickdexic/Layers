@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 23, 2026
-**Version:** 1.5.26
+**Last Updated:** January 25, 2026
+**Version:** 1.5.30
 
 ---
 
@@ -11,27 +11,28 @@ The Layers extension enables non-destructive image annotation in MediaWiki. It c
 
 1. **PHP Backend** - MediaWiki integration, API endpoints, data persistence
 2. **JavaScript Frontend** - Canvas-based editor UI, viewer rendering
+3. **Slide Mode** - Standalone graphics without parent images (see [Slide Mode Architecture](#slide-mode-architecture))
 
 The architecture follows strict separation of concerns: PHP handles storage and MW integration; JavaScript handles all UI/state.
 
 ---
 
-## Codebase Statistics (January 21, 2026)
+## Codebase Statistics (January 25, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **124** |
-| Total JS lines | **~111,382** |
+| Total JS files | **127** |
+| Total JS lines | **~115,002** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
-| Editor module | ~60,000 lines |
+| Editor module | ~64,000 lines |
 | Shape/Emoji data | ~40,000 lines (generated) |
-| ES6 classes | **100+** |
+| ES6 classes | **127** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **92.59% stmt, 83.02% branch** |
-| Jest tests | **9,967** (156 suites) |
+| Test coverage | **94.18% stmt, 84.44% branch** |
+| Jest tests | **10,626** (157 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **20** (3 generated, 17 hand-written) |
+| God classes (>1000 lines) | **21** (3 generated, 18 hand-written) |
 | Drawing tools | **15** |
 | Shape library | **1,310 shapes** |
 | Emoji library | **2,817 emoji** |
@@ -40,6 +41,19 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 ---
 
 ## Recent Architecture Changes
+
+### January 2026: v1.5.26-v1.5.30
+
+**v1.5.30 - Code Quality:**
+- Layer search/filter feature in LayerPanel
+- Raised Jest coverage thresholds (80% branches, 92% statements)
+- Query simplification for `getNamedSetsForImage()`
+- P1 security fixes (paths validation, cache invalidation)
+
+**v1.5.27-v1.5.29 - Stability:**
+- DraftManager subscription leak fix
+- HistoryManager memory growth warning
+- RGBA hex color support (8-digit)
 
 ### January 2026: v1.5.22-v1.5.25
 
@@ -1198,10 +1212,202 @@ const canvas = new window.Layers.Canvas.Manager(options);
 
 ---
 
+## Slide Mode Architecture
+
+Slide Mode (v1.5.22+) enables creating standalone graphics without a parent image. This is useful for diagrams, infographics, and presentations.
+
+### High-Level Flow
+
+```mermaid
+graph TB
+    subgraph Entry["Entry Points"]
+        parser["{{#Slide: Name}}"]
+        special["Special:Slides"]
+        direct["Special:EditSlide/Name"]
+    end
+    
+    subgraph PHP["PHP Backend"]
+        hook["SlideParserHook"]
+        specialSlides["SpecialSlides.php"]
+        specialEdit["SpecialEditSlide.php"]
+        apiInfo["ApiSlideInfo"]
+        apiSave["ApiSlidesSave"]
+    end
+    
+    subgraph JS["JavaScript Frontend"]
+        slideManager["SlideManager.js"]
+        viewer["LayersViewer.js"]
+        editor["LayersEditor.js"]
+    end
+    
+    subgraph Storage["Database"]
+        layerSets["layer_sets table"]
+    end
+    
+    parser --> hook
+    hook --> slideManager
+    special --> specialSlides
+    direct --> specialEdit
+    
+    slideManager --> viewer
+    slideManager --> apiInfo
+    editor --> apiSave
+    
+    apiInfo --> layerSets
+    apiSave --> layerSets
+```
+
+### Key Differences from Image Layers
+
+| Aspect | Image Layers | Slides |
+|--------|--------------|--------|
+| Parent | File page (image) | None (standalone) |
+| Canvas Size | From image dimensions | User-defined (100-4096px) |
+| Background | Base image | Configurable color |
+| ls_img_name | `File:Name.jpg` | `Slide:SlideName` |
+| ls_img_sha1 | SHA1 of file | `slide` marker |
+| Entry Point | File: page overlay | Parser function / Special page |
+
+### File Organization
+
+```
+src/
+├── Api/
+│   ├── ApiSlideInfo.php      # GET slide data by name
+│   └── ApiSlidesSave.php     # POST save slide (CSRF protected)
+├── SpecialPages/
+│   ├── SpecialSlides.php     # Management dashboard
+│   └── SpecialEditSlide.php  # Direct editor access
+└── Hooks/
+    └── SlideParserHook.php   # {{#Slide: }} parser function
+
+resources/ext.layers.slides/
+├── init.js                   # Slide viewer bootstrap
+├── SlideManager.js           # Slide loading and caching
+├── SpecialSlides.js          # Management page UI
+├── slides.css                # Slide container styles
+└── special-slides.css        # Special page styles
+
+resources/ext.layers.editor/ui/
+└── SlidePropertiesPanel.js   # Canvas size/background controls
+```
+
+### API Endpoints
+
+#### `action=slideinfo` (Read)
+
+```
+GET /api.php?action=slideinfo&slidename=DiagramName
+```
+
+**Parameters:**
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| slidename | string | Yes | Slide name (alphanumeric, hyphens, underscores) |
+| setname | string | No | Layer set name (default: "default") |
+
+**Response:**
+```json
+{
+  "slideinfo": {
+    "slide": {
+      "id": 123,
+      "slidename": "DiagramName",
+      "canvasWidth": 800,
+      "canvasHeight": 600,
+      "backgroundColor": "#ffffff",
+      "data": { "layers": [...] }
+    },
+    "exists": true
+  }
+}
+```
+
+#### `action=slidessave` (Write)
+
+```
+POST /api.php
+action=slidessave
+slidename=DiagramName
+canvaswidth=800
+canvasheight=600
+backgroundcolor=#ffffff
+data=[{...layer JSON...}]
+token=CSRF_TOKEN
+```
+
+**Parameters:**
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| slidename | string | Yes | - | Slide name |
+| data | string | Yes | - | JSON array of layers |
+| canvaswidth | integer | No | 800 | 100-4096 |
+| canvasheight | integer | No | 600 | 100-4096 |
+| backgroundcolor | string | No | "" | Hex, rgb(), or named color |
+| backgroundvisible | boolean | No | true | Show background |
+| backgroundopacity | float | No | 1.0 | Background opacity |
+
+**Response:**
+```json
+{
+  "slidessave": {
+    "success": 1,
+    "slideid": 456,
+    "slidename": "DiagramName"
+  }
+}
+```
+
+### Database Schema
+
+Slides reuse the existing `layer_sets` table with special conventions:
+
+| Column | Slide Value | Purpose |
+|--------|-------------|---------|
+| ls_img_name | `Slide:SlideName` | Identifies as slide |
+| ls_img_sha1 | `slide` | Marker (not a real hash) |
+| ls_json_blob | JSON with slide metadata | Contains layers + canvas info |
+
+**JSON Schema v2 fields for slides:**
+- `isSlide: true` - Distinguishes from image layer sets
+- `canvasWidth: 800` - Canvas width in pixels
+- `canvasHeight: 600` - Canvas height in pixels
+- `backgroundColor: "#ffffff"` - Canvas background
+
+### Configuration
+
+```php
+// Enable/disable slides feature
+$wgLayersSlidesEnable = true;
+
+// Maximum canvas dimensions
+$wgLayersSlideMaxWidth = 4096;
+$wgLayersSlideMaxHeight = 4096;
+
+// Default canvas size
+$wgLayersSlideDefaultWidth = 800;
+$wgLayersSlideDefaultHeight = 600;
+```
+
+### Lock Behavior
+
+Templates can control editing via the `lock` parameter:
+
+| Lock Mode | Canvas Size | Layer Editing | Background |
+|-----------|-------------|---------------|------------|
+| `none` | User-controlled | Full editing | Editable |
+| `size` | Template-locked | Full editing | Editable |
+| `all` | Template-locked | View only | Locked |
+
+See [SLIDE_MODE.md](./SLIDE_MODE.md) for complete implementation details.
+
+---
+
 ## Related Documentation
 
 - [ACCESSIBILITY.md](./ACCESSIBILITY.md) - Full accessibility documentation
 - [NAMED_LAYER_SETS.md](./NAMED_LAYER_SETS.md) - Named sets architecture
+- [SLIDE_MODE.md](./SLIDE_MODE.md) - Complete Slide Mode specification
 - [DEVELOPER_ONBOARDING.md](./DEVELOPER_ONBOARDING.md) - Getting started
 - [CSP_GUIDE.md](./CSP_GUIDE.md) - Content Security Policy
 - [canvas/README.md](../resources/ext.layers.editor/canvas/README.md) - Controller details
