@@ -69,6 +69,12 @@ All previously identified P0 and P1 issues have been resolved:
   - Fixed `ColorValidator::isValidHexColor()` returning int instead of bool
   - Added `(int)` casts to config->get() calls for integer values
   - Fixed canvas snap not accounting for shadow/stroke expansion
+- ✅ **DraftManager auto-save** (January 25, 2026)
+  - Added auto-save to localStorage every 30 seconds
+  - Shows recovery dialog on editor open with unsaved drafts
+  - Clears draft on successful save
+- ✅ **Set selector race condition** (January 25, 2026)
+  - Added pending operation state to prevent concurrent operations
 - ✅ Rate limiting on delete/rename APIs
 - ✅ CSP blocking on File pages
 - ✅ Background visibility serialization (PHP→JS boolean handling)
@@ -79,15 +85,15 @@ All previously identified P0 and P1 issues have been resolved:
 
 ---
 
-## Test Coverage Status (January 24, 2026)
+## Test Coverage Status (January 25, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests passing | **10,574** (156 suites) | ✅ |
-| Statement coverage | **94.40%** | ✅ Excellent |
-| Branch coverage | **84.80%** | ✅ Good |
-| Function coverage | **92.52%** | ✅ Excellent |
-| Line coverage | **94.54%** | ✅ Excellent |
+| Tests passing | **10,613** (157 suites) | ✅ |
+| Statement coverage | **94.45%** | ✅ Excellent |
+| Branch coverage | **84.87%** | ✅ Good |
+| Function coverage | **92.55%** | ✅ Excellent |
+| Line coverage | **94.59%** | ✅ Excellent |
 
 ---
 
@@ -128,5 +134,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 24, 2026*  
-*Status: ✅ Production-ready with excellent test coverage (94.40%, 10,574 tests).*
+*Document updated: January 25, 2026*  
+*Status: ✅ Production-ready with excellent test coverage (94.45%, 10,613 tests).*
