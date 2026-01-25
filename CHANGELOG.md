@@ -2,6 +2,24 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.31] - 2026-01-25
+
+### Improved
+- **REL1_43 Branch Sync** — Updated REL1_43 branch to include all changes from v1.5.30
+
+### Fixed
+- **Draft Recovery False Prompts** — Fixed issue where draft recovery prompts appeared when no actual draft existed
+- **Layer Panel Header** — Redesigned with full Layers logo branding
+- **Canvas Accessibility** — Completed P3.5 accessibility improvements for canvas interactions
+
+### Technical Details
+- All 10,643 tests pass (157 test suites)
+- Test coverage: 94.17% statement, 84.43% branch, 92.18% function, 94.31% line
+- ESLint/Stylelint/Banana all pass
+- REL1_43 branch fully synced with main
+
+---
+
 ## [1.5.30] - 2026-01-25
 
 ### Added

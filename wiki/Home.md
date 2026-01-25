@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-10%2C613%20passing-brightgreen" alt="10,613 Tests">
+  <img src="https://img.shields.io/badge/Tests-10%2C643%20passing-brightgreen" alt="10,643 Tests">
   <img src="https://img.shields.io/badge/Coverage-94%25-brightgreen" alt="94% Coverage">
 </p>
 
@@ -20,24 +20,24 @@
 
 ---
 
-## 🆕 What's New in v1.5.29
+## 🆕 What's New in v1.5.31
+
+- **REL1_43 Branch Sync** — Updated REL1_43 branch to include all changes from v1.5.30
+- **Draft Recovery Fix** — Fixed false draft recovery prompts
+- **Layer Panel Header** — Redesigned with full Layers logo branding
+- **Canvas Accessibility** — Completed P3.5 accessibility improvements
+- **10,643 tests passing** (157 suites), 94%+ statement coverage, 84%+ branch coverage
+
+### Previous v1.5.30 Highlights
+
+- **Layer Search Filter** — Search/filter layers in the layer panel with real-time filtering
+- **Jest Coverage Thresholds** — Raised coverage thresholds to protect against regression
+
+### Previous v1.5.29 Highlights
 
 - **DraftManager Auto-Save** — Automatic draft recovery system with localStorage auto-save every 30 seconds
 - **Canvas Snap** — Snap layers to canvas edges and center with visual green guides
 - **Visual Bounds Snapping** — Snapping now respects stroke width and shadows
-- **Set Selector Race Condition Fix** — Prevent concurrent delete/rename/clear operations
-- **10,613 tests passing** (157 suites), 94%+ statement coverage, 84%+ branch coverage
-
-### Previous v1.5.28 Highlights
-
-- **Inline Text Editor Fix** — Fixed text duplication bug when using floating toolbar during inline text editing
-- **Empty Slide Overlay Fix** — Fixed missing edit overlay on empty slides and added i18n messages
-
-### Previous v1.5.27 Highlights
-
-- **parseInt Radix Fix** — Added explicit radix to all parseInt calls for robustness
-- **Error Handling Documentation** — Added comprehensive error handling guidelines to CONTRIBUTING.md
-- **EmojiPickerPanel E2E Tests** — Added 17 Playwright E2E tests for emoji picker functionality
 
 ### 🖼️ Slide Mode (v1.5.22+)
 
