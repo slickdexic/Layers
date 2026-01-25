@@ -36,7 +36,14 @@
 		return {
 			LAYER_TYPES: LayersConstants.LAYER_TYPES || {},
 			DEFAULTS: LayersConstants.DEFAULTS || {},
-			LIMITS: LayersConstants.LIMITS || {}
+			LIMITS: LayersConstants.LIMITS || {},
+			// Default effect values
+			BLUR_RADIUS: ( LayersConstants.DEFAULTS && LayersConstants.DEFAULTS.EFFECTS &&
+				LayersConstants.DEFAULTS.EFFECTS.BLUR_RADIUS ) || 12,
+			BLUR_MIN: ( LayersConstants.DEFAULTS && LayersConstants.DEFAULTS.EFFECTS &&
+				LayersConstants.DEFAULTS.EFFECTS.BLUR_MIN ) || 1,
+			BLUR_MAX: ( LayersConstants.DEFAULTS && LayersConstants.DEFAULTS.EFFECTS &&
+				LayersConstants.DEFAULTS.EFFECTS.BLUR_MAX ) || 64
 		};
 	}
 
@@ -756,18 +763,20 @@
 		const layer = ctx.layer;
 		const editor = ctx.editor;
 		const t = msg;
+		const constants = getConstants();
 
 		PropertyBuilders.addDimensions( ctx );
 
 		ctx.addInput( {
 			label: t( 'layers-prop-blur-radius', 'Blur Radius' ),
 			type: 'number',
-			value: layer.blurRadius || 12,
-			min: 1,
-			max: 64,
+			value: layer.blurRadius || constants.BLUR_RADIUS,
+			min: constants.BLUR_MIN,
+			max: constants.BLUR_MAX,
 			step: 1,
 			onChange: function ( v ) {
-				const br = Math.max( 1, Math.min( 64, parseInt( v, 10 ) || 12 ) );
+				const br = Math.max( constants.BLUR_MIN, Math.min( constants.BLUR_MAX,
+					parseInt( v, 10 ) || constants.BLUR_RADIUS ) );
 				editor.updateLayer( layer.id, { blurRadius: br } );
 			}
 		} );
