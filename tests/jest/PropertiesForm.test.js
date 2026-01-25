@@ -3088,9 +3088,7 @@ describe( 'PropertiesForm', () => {
 			// On blur with invalid value, value gets reverted - check revert happened
 			input.value = 'abc';
 
-			// DEBUG: Check what jsdom does with 'abc' assigned to number input
-			// console.log('After setting to abc, input.value =', JSON.stringify(input.value));
-
+			// Note: jsdom normalizes number input values differently than browsers
 			input.dispatchEvent( new Event( 'blur' ) );
 
 			// Value should be reverted to last valid value

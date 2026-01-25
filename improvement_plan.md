@@ -103,31 +103,27 @@ The extension is **production-ready and high quality** with **excellent test cov
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 OPEN
+## Phase 2 (P2): Medium Priority — 🟡 MOSTLY COMPLETE
 
-### P2.1 DEBUG Comments in Production Code
+### P2.1 DEBUG Comments in Production Code ✅ COMPLETED
 
-**Status:** Open  
+**Status:** ✅ Completed  
 **Priority:** P2 - Medium  
 **Category:** Code Quality  
+**Completed:** January 24, 2026
 
-**11 DEBUG comments to review:**
+All DEBUG: comments were converted to proper documentation comments. The actual debug logging
+(using mw.log or LoggerFactory) was preserved as it's correct conditional debug logging.
 
-| File | Line | Action |
-|------|------|--------|
-| ShadowRenderer.js | 239 | Convert to mw.log with debug check |
-| EffectsRenderer.js | 210 | Convert to mw.log with debug check |
-| EffectsRenderer.js | 382 | Convert to mw.log with debug check |
-| EffectsRenderer.js | 396 | Convert to mw.log with debug check |
-| LayersViewer.js | 315 | Review and remove if stale |
-| LayersLightbox.js | 45 | Review and remove if stale |
-| ApiLayersInfo.php | 245 | Convert to $this->getLogger() |
-| ParserHooks.php | 144 | Convert to $this->getLogger() |
-| LayersFileTransform.php | 122 | Convert to $this->getLogger() |
-| LayersFileTransform.php | 139 | Convert to $this->getLogger() |
-| ThumbnailRenderer.php | 269 | Convert to $this->getLogger() |
-
-**Estimated Effort:** 2 hours
+**Changes made:**
+- ShadowRenderer.js: Comment clarified
+- EffectsRenderer.js (3 locations): Comments clarified
+- EditLayersAction.php (3 locations): Comments clarified
+- WikitextHooks.php: Comment clarified
+- LayerInjector.php: Comment clarified
+- LayersHtmlInjector.php: Comment clarified
+- ImageLinkProcessor.php: Comment clarified
+- PropertiesForm.test.js: Test comment clarified
 
 ---
 

@@ -45,7 +45,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | SEC-2 | innerHTML used with template strings | Low | 🟡 Documented | Security |
 | CODE-1 | console.log in production code (ViewerManager.js) | High | ✅ Fixed | Code Quality |
 | CODE-2 | Hardcoded user-facing strings (6 locations) | Medium | ✅ Already i18n'd | i18n |
-| CODE-3 | DEBUG comments left in code (11 locations) | Low | 🟡 Open | Code Quality |
+| CODE-3 | DEBUG comments left in code (11 locations) | Low | ✅ Fixed | Code Quality |
 | CODE-4 | Magic z-index values (7+ locations) | Low | 🟡 Open | Code Quality |
 | CODE-5 | Duplicated clampOpacity() function (8 files) | Low | 🟡 Documented | Code Quality |
 | CODE-6 | Deprecated methods still present (4 locations) | Low | 🟡 Open | Maintenance |

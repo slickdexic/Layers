@@ -242,7 +242,7 @@ class LayerInjector {
 		$backgroundVisible = $data['backgroundVisible'] ?? true;
 		$backgroundOpacity = $data['backgroundOpacity'] ?? 1.0;
 
-		// DEBUG: Log what we got from the database
+		// Log background settings from database for troubleshooting
 		if ( $this->logger ) {
 			$bgVisStr = $backgroundVisible ? 'true' : 'false';
 			$rawBg = var_export( $data['backgroundVisible'] ?? null, true );

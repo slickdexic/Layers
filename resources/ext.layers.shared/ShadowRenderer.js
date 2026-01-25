@@ -236,7 +236,7 @@ class ShadowRenderer {
 			return Number.isNaN( num ) ? defaultVal : num;
 		};
 
-		// DEBUG: Log shadow params to verify code is executing
+		// Calculate scaled shadow parameters
 		const result = {
 			offsetX: parseNum( layer.shadowOffsetX, 2 ) * scaleX,
 			offsetY: parseNum( layer.shadowOffsetY, 2 ) * scaleY,

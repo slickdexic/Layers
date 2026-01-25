@@ -119,7 +119,7 @@ class EditLayersAction extends \Action {
 		$fileUrl = $this->getPublicImageUrl( $file );
 		$isForeign = $this->isForeignFile( $file );
 
-		// DEBUG: Log what URL we're generating for debugging
+		// Log URL generation for troubleshooting foreign file issues
 		if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 			$logger->debug( sprintf(
@@ -136,7 +136,7 @@ class EditLayersAction extends \Action {
 			'wgLayersEditorInit' => [
 				'filename' => $file->getName(),
 				'imageUrl' => $fileUrl,
-			// DEBUG: Include in JS config for inspection
+			// Foreign file flag for client-side handling
 			'debug_isForeign' => $isForeign,
 				'initialSetName' => $initialSetName !== '' ? $initialSetName : null,
 				'autoCreate' => $autoCreate,
@@ -266,7 +266,7 @@ class EditLayersAction extends \Action {
 					} else {
 						$url = $spTitle->getLocalURL();
 					}
-					// DEBUG: Log the redirect URL
+					// Log redirect URL for troubleshooting
 					if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 						$logger->debug( sprintf(

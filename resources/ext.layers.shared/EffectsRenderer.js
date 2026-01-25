@@ -207,7 +207,7 @@
 			const w = bounds.width || 0;
 			const h = bounds.height || 0;
 
-			// DEBUG: Log blur fill call
+			// Log blur fill parameters for troubleshooting
 			if ( typeof mw !== 'undefined' && mw.log ) {
 				mw.log( '[EffectsRenderer] drawBlurFill called',
 					'type:', layer.type,
@@ -379,7 +379,7 @@
 
 			// Step 5: No content available - show placeholder
 			if ( !hasContent ) {
-				// DEBUG: Log placeholder path
+				// Log when falling back to placeholder
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log( '[EffectsRenderer] drawBlurFill - using gray placeholder (no content)' );
 				}
@@ -393,7 +393,7 @@
 				return;
 			}
 
-			// DEBUG: Log successful blur path
+			// Log successful blur rendering
 			if ( typeof mw !== 'undefined' && mw.log ) {
 				mw.log( '[EffectsRenderer] drawBlurFill - drawing blurred content' );
 			}

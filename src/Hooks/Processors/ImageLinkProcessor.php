@@ -141,7 +141,7 @@ class ImageLinkProcessor {
 			// - $layersArray: direct JSON layer data in params
 			$layersEnabled = ( $layersFlag !== null || $setNameFromQueue !== null || $layersArray !== null );
 
-			// DEBUG: Log state
+			// Log layer processing state for troubleshooting
 			$this->logDebug( sprintf(
 				'processImageLink: layersFlag=%s, setNameFromQueue=%s, linkTypeFromQueue=%s, layersEnabled=%s',
 				$layersFlag ?? 'null',
