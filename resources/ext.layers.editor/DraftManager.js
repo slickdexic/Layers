@@ -168,6 +168,11 @@
 				return false;
 			}
 
+			// Only save drafts when there are unsaved changes
+			if ( this.editor.isDirty && !this.editor.isDirty() ) {
+				return false;
+			}
+
 			try {
 				const layers = this.editor.stateManager ?
 					this.editor.stateManager.get( 'layers' ) || [] :

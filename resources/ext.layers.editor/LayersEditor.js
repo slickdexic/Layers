@@ -1506,6 +1506,10 @@ class LayersEditor {
 					if ( this.stateManager ) {
 						this.stateManager.set( 'isDirty', false );
 					}
+					// Clear draft when user confirms discarding changes
+					if ( this.draftManager ) {
+						this.draftManager.clearDraft();
+					}
 					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
 						this.eventManager.destroy();
 					}
@@ -1520,6 +1524,10 @@ class LayersEditor {
 					if ( this.stateManager ) {
 						this.stateManager.set( 'isDirty', false );
 					}
+					// Clear draft when user confirms discarding changes
+					if ( this.draftManager ) {
+						this.draftManager.clearDraft();
+					}
 					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
 						this.eventManager.destroy();
 					}
@@ -1530,6 +1538,10 @@ class LayersEditor {
 				} );
 			}
 		} else {
+			// No unsaved changes - clear any stale draft and close
+			if ( this.draftManager ) {
+				this.draftManager.clearDraft();
+			}
 			this.uiManager.destroy();
 			if ( navigateBack ) {
 				this.navigateBackToFileWithName( savedFilename );
