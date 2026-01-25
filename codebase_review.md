@@ -52,7 +52,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | COV-2 | InlineTextEditor.js branch coverage | Medium | ✅ Above 80% | Testing |
 | COV-3 | ViewerManager.js branch coverage | Low | ✅ 80.14% | Testing |
 | COV-4 | LayerPanel.js branch coverage | Medium | ✅ 80.27% | Testing |
-| COV-5 | APIManager.js branch coverage | Medium | ✅ 80.18% | Testing |
+| COV-5 | APIManager.js branch coverage | Medium | ✅ 80.95% | Testing |
 | COV-6 | Generated data files 0% coverage | Info | ✅ Acceptable | Testing |
 | DOC-1 | i18n hardcoded fallback strings | Low | 🟡 Documented | i18n |
 | PERF-1 | EffectsRenderer not using canvas pool | Low | 🟡 Deferred | Performance |
@@ -60,7 +60,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | STYLE-2 | Magic numbers in validation | Low | ✅ Documented | Code Quality |
 | SEC-1 | innerHTML patterns audited | Info | ✅ Safe | Security |
 | SEC-2 | CSRF tokens verified | Info | ✅ Verified | Security |
-| CORE-1 | TransformController rAF not cancelled before re-schedule | Low | 🟡 Open | Performance |
+| CORE-1 | TransformController rAF scheduling | Low | ✅ Already Correct | Performance |
 | CORE-2 | HistoryManager efficient cloning | Info | ✅ Implemented | Memory |
 | TEST-1 | ESLint 7 warnings (ignored files) | Info | ✅ Acceptable | Linting |
 
@@ -107,41 +107,22 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ---
 
-## 🟡 OPEN ISSUES
+### CORE-1: TransformController rAF Scheduling ✅ RESOLVED
 
-### CORE-1: TransformController rAF Scheduling
-
-**Severity:** Low  
+**Status:** Complete  
 **Category:** Performance  
 **File:** [resources/ext.layers.editor/canvas/TransformController.js](resources/ext.layers.editor/canvas/TransformController.js)
 
-**Description:** The TransformController schedules requestAnimationFrame multiple times without cancelling the previous frame. This can lead to multiple render calls per frame during rapid drag operations.
+**Resolution:** Already implements pending flag pattern correctly:
+- `_resizeRenderScheduled` for resize operations
+- `_rotationRenderScheduled` for rotation operations
+- `_dragRenderScheduled` for drag operations
 
-**Code Pattern:**
-```javascript
-// Line ~258 - schedules without checking if one is pending
-window.requestAnimationFrame( () => {
-    this.renderPending = false;
-    // ...
-} );
-```
-
-**Impact:** Minor performance impact during rapid drag operations. Not a bug, but suboptimal.
-
-**Recommendation:** Cancel previous animation frame before scheduling new one, or use a pending flag pattern:
-```javascript
-if ( !this.renderPending ) {
-    this.renderPending = true;
-    this.animationFrameId = window.requestAnimationFrame( () => {
-        this.renderPending = false;
-        // ...
-    } );
-}
-```
-
-Note: CanvasManager.js correctly cancels in destroy() at line 1944.
+Each rAF callback checks the pending flag before scheduling, preventing multiple frames.
 
 ---
+
+## 🟡 OPEN ISSUES (Low Priority)
 
 ### DOC-1: Hardcoded i18n Fallback Strings
 
