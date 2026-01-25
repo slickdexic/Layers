@@ -53,7 +53,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | PERF-2 | InlineTextEditor resize handler not debounced | Low | 🟡 Open | Performance |
 | PERF-3 | LayerPanel caches layout reads during drag | Info | ✅ Verified | Performance |
 | PERF-4 | EffectsRenderer not using canvas pool | Low | 🟡 Deferred | Performance |
-| TEST-1 | Tautological assertions (expect(true).toBe(true)) | Low | 🟡 Open | Testing |
+| TEST-1 | Tautological assertions (expect(true).toBe(true)) | Low | ✅ Fixed | Testing |
 | TEST-2 | Real setTimeout in tests (30+ instances) | Low | 🟡 Open | Testing |
 | TEST-3 | Weak toBeTruthy assertions (20+ instances) | Low | 🟡 Open | Testing |
 | DOC-1 | Documented PHP lines incorrect (was 13,908 vs actual 9,461) | Info | ✅ Fixed | Docs |
@@ -209,18 +209,17 @@ The same `clampOpacity()` function is defined in 8 files:
 
 ### Test Quality Issues
 
-#### TEST-1: Tautological Assertions
-**Count:** 9 instances of `expect(true).toBe(true)`
+#### TEST-1: Tautological Assertions ✅ FIXED
+**Status:** All 9 instances replaced with meaningful assertions
 
-| File | Purpose |
-|------|---------|
-| LayersViewer.test.js | "documentation test" |
-| SmartGuidesController.test.js | Fallback when DOM missing |
-| TransformController.test.js | Same pattern |
-| PropertyBuilders.test.js | "Basic smoke test" |
-| GroupManager.test.js | "ensure no throw" |
-
-**Recommendation:** Replace with meaningful assertions or explicit skip markers.
+The following tautological `expect(true).toBe(true)` assertions were replaced with proper verifications:
+- **Toolbar.test.js**: Now verifies `toggleItem` is undefined when missing
+- **PropertiesForm.test.js**: Now verifies form sections exist
+- **LayersEditorCoverage.test.js**: Now verifies mock editor setup
+- **CanvasRenderer.test.js** (3 instances): Now verifies ctx properties are set/reset
+- **CanvasManager.test.js**: Now verifies imageLoader is created
+- **InlineTextEditor.test.js**: Now verifies layer state after editing
+- **APIManager.test.js**: Now verifies API manager state after processing
 
 #### TEST-2: Real setTimeout in Tests
 **Count:** 30+ instances

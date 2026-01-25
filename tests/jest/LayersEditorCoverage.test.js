@@ -998,8 +998,9 @@ describe( 'LayersEditor Coverage Extension', () => {
 			const event = new Event( 'beforeunload' );
 			window.dispatchEvent( event );
 
-			// The handler should have been called or will be called
-			expect( true ).toBe( true );
+			// Verify the mock editor instance was set up correctly
+			expect( window.layersEditorInstance ).toBeDefined();
+			expect( typeof window.layersEditorInstance.destroy ).toBe( 'function' );
 		} );
 	} );
 

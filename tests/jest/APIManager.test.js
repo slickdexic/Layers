@@ -3352,9 +3352,10 @@ describe( 'APIManager', function () {
 				named_sets: []
 			} );
 
-			// Debug logging should have occurred (mw.log was called)
-			// Just verify no errors occurred
-			expect( true ).toBe( true );
+			// Debug logging may occur via mw.log if available
+			// Verify the API manager processed data successfully without errors
+			expect( testApiManager ).toBeDefined();
+			expect( testApiManager.editor ).toBe( mockEditor );
 
 			mw.config.get = originalConfigGet;
 		} );

@@ -1980,8 +1980,8 @@ describe( 'Toolbar', function () {
 					expect( checkbox.checked ).toBe( !initialState );
 				}
 			} else {
-				// If no toggle item exists in test DOM, skip assertion
-				expect( true ).toBe( true );
+				// If no toggle item exists in test DOM, verify that fact
+				expect( toggleItem ).toBeUndefined();
 			}
 		} );
 

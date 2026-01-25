@@ -4261,9 +4261,17 @@ describe( 'PropertiesForm', () => {
 		// Testing the full onCancel flow would require refactoring PropertiesForm
 		// to accept ColorPickerDialog as a parameter (dependency injection).
 		test( 'onCancel callback is defined in color picker options', () => {
-			// This is a documentation test - the actual onCancel callback is defined
-			// in PropertiesForm.js lines 433-437 but cannot be easily tested without DI
-			expect( true ).toBe( true );
+			// The onCancel callback is defined internally in PropertiesForm.addColorPicker
+			// (lines 464-467). Testing this would require dependency injection of ColorPickerDialog.
+			// Verify PropertiesForm creates forms with sections for shapes with fill colors
+			const layer = { id: 'rect-1', type: 'rectangle', fill: '#ff0000', stroke: '#000000' };
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+			
+			// Form should exist with property sections (transform, appearance, effects)
+			expect( form ).toBeDefined();
+			expect( form.tagName ).toBe( 'FORM' );
+			const sections = form.querySelectorAll( '.property-section' );
+			expect( sections.length ).toBeGreaterThan( 0 );
 		} );
 	} );
 

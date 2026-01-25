@@ -551,10 +551,19 @@ describe('CanvasRenderer', () => {
 
     describe('clearShadow', () => {
         test('should reset shadow properties', () => {
+            // Set initial shadow state
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetX = 5;
+            ctx.shadowOffsetY = 5;
+
             renderer.clearShadow();
 
-            // We can't easily verify ctx properties in mocks, but ensure no throw
-            expect(true).toBe(true);
+            // Verify shadow properties are reset to defaults
+            expect( ctx.shadowColor ).toBe( 'transparent' );
+            expect( ctx.shadowBlur ).toBe( 0 );
+            expect( ctx.shadowOffsetX ).toBe( 0 );
+            expect( ctx.shadowOffsetY ).toBe( 0 );
         });
     });
 
@@ -654,8 +663,8 @@ describe('CanvasRenderer', () => {
 
             renderer.applyLayerStyle(layer);
 
-            // ctx.fillStyle is set but we're using mocks, just ensure no throw
-            expect(true).toBe(true);
+            // Verify fillStyle was set to the layer's fill color
+            expect( ctx.fillStyle ).toBe( '#ff0000' );
         });
 
         test('should apply stroke color and width', () => {
@@ -663,7 +672,9 @@ describe('CanvasRenderer', () => {
 
             renderer.applyLayerStyle(layer);
 
-            expect(true).toBe(true);
+            // Verify stroke style and width were set
+            expect( ctx.strokeStyle ).toBe( '#0000ff' );
+            expect( ctx.lineWidth ).toBe( 3 );
         });
 
         test('should apply rotation', () => {

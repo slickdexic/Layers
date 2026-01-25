@@ -2322,8 +2322,8 @@ describe( 'CanvasManager', () => {
 			canvasManager.loadBackgroundImage();
 
 			// The loadBackgroundImage should have been called and created an imageLoader
-			// (or called handleImageLoadError if ImageLoader unavailable)
-			expect( true ).toBe( true ); // Basic smoke test
+			// Verify imageLoader was created (not still null)
+			expect( canvasManager.imageLoader ).not.toBeNull();
 		} );
 	} );
 

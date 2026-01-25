@@ -1656,8 +1656,10 @@ describe( 'InlineTextEditor - Visibility handling for text layers', () => {
 		editor.startEditing( layer );
 		editor.finishEditing( true );
 
-		// Should not throw
-		expect( true ).toBe( true );
+		// Verify layer still exists in editor
+		expect( mockCanvasManager.editor.layers ).toContain( layer );
+		// When visible is undefined, the editor normalizes it to true (default visibility)
+		expect( layer.visible ).toBe( true );
 	} );
 } );
 
