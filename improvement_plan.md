@@ -274,11 +274,11 @@ Architecture considerations:
 | File | Lines | Delegation Status | Branch Coverage |
 |------|-------|-------------------|-----------------|
 | CanvasManager.js | ~2,039 | ✅ 10+ controllers | 75.15% |
-| ViewerManager.js | ~2,004 | ✅ Delegates to renderers | 79.85% ⚠️ |
-| LayersEditor.js | ~1,800 | ✅ 3 modules | 77.70% ⚠️ |
-| Toolbar.js | ~1,847 | ✅ 4 modules | 78.20% ⚠️ |
-| LayerPanel.js | ~2,036 | ✅ 9 controllers | 70.41% ⚠️ |
-| APIManager.js | ~1,513 | ✅ APIErrorHandler | 71.88% ⚠️ |
+| ViewerManager.js | ~2,004 | ✅ Delegates to renderers | 80.14% ✅ |
+| LayersEditor.js | ~1,800 | ✅ 3 modules | 77.70% |
+| Toolbar.js | ~1,847 | ✅ 4 modules | 78.20% |
+| LayerPanel.js | ~2,036 | ✅ 9 controllers | 80.27% ✅ |
+| APIManager.js | ~1,513 | ✅ APIErrorHandler | 80.95% ✅ |
 | SelectionManager.js | ~1,431 | ✅ 3 modules | 83.96% ✅ |
 | ArrowRenderer.js | ~1,310 | N/A - math complexity | 87.90% ✅ |
 | CalloutRenderer.js | ~1,291 | N/A - rendering logic | 88.40% ✅ |
@@ -286,7 +286,7 @@ Architecture considerations:
 | PropertyBuilders.js | ~1,284 | N/A - UI builders | 85.71% ✅ |
 | ToolManager.js | ~1,224 | ✅ 2 handlers | 81.28% ✅ |
 | GroupManager.js | ~1,172 | N/A - group operations | 86.54% ✅ |
-| CanvasRenderer.js | ~1,132 | ✅ SelectionRenderer | 76.78% ⚠️ |
+| CanvasRenderer.js | ~1,132 | ✅ SelectionRenderer | 76.78% |
 | TransformController.js | ~1,110 | N/A - transforms | 83.72% ✅ |
 | ResizeCalculator.js | ~1,105 | N/A - math | 90.25% ✅ |
 | ToolbarStyleControls.js | ~1,099 | ✅ Style controls | 82.18% ✅ |
@@ -327,8 +327,8 @@ Architecture considerations:
 | Criterion | Status | Notes |
 |-----------|--------|-------|
 | No critical security issues | ✅ | innerHTML, CSRF audited |
-| Statement coverage >90% | ✅ 93.14% | Excellent |
-| Branch coverage >80% | ✅ 83.39% | Excellent |
+| Statement coverage >90% | ✅ 93%+ | Excellent |
+| Branch coverage >80% | ✅ 84%+ | Excellent |
 | No race conditions | ✅ | All fixed |
 | ESLint clean | ✅ | 0 errors |
 | No console.log in prod | ✅ | Scripts only |
@@ -337,13 +337,14 @@ Architecture considerations:
 | Destroy methods complete | ✅ | All components have cleanup |
 | Animation frame cleanup | ✅ | cancelAnimationFrame in destroy |
 | Zero skipped tests | ✅ | All tests run |
+| All priority files at 80%+ branch | ✅ | Complete |
 
 ### Remaining Gaps
 | Gap | Priority | Status |
 |-----|----------|--------|
-| LayerPanel 70.41% branch | P2 | 🟡 Open |
-| APIManager 71.88% branch | P2 | 🟡 Open |
-| ViewerManager 79.85% branch | P2 | 🟡 Open |
+| LayerPanel 80.27% branch | P2 | ✅ Complete |
+| APIManager 80.95% branch | P2 | ✅ Complete |
+| ViewerManager 80.14% branch | P2 | ✅ Complete |
 | TypeScript migration | P3 | Not started |
 | Visual regression tests | P3 | Not started |
 

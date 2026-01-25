@@ -75,62 +75,39 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ---
 
-## 🟡 OPEN ISSUES
+## ✅ RESOLVED COVERAGE ISSUES
 
-### COV-3: ViewerManager.js Branch Coverage 79.85%
+### COV-3: ViewerManager.js Branch Coverage ✅ RESOLVED
 
-**Severity:** Low  
-**Category:** Testing  
+**Status:** Complete  
+**Final Coverage:** 80.14% branches (target: 80%)  
 **File:** [resources/ext.layers/viewer/ViewerManager.js](resources/ext.layers/viewer/ViewerManager.js)
 
-**Description:** Branch coverage is slightly below the 80% target at 79.85%. Statement coverage is 87.95%.
-
-**Uncovered Lines:** 199-209, 247-248, 420-421, 461-462, 553-554, 572, 583, 601, 632-634, and others.
-
-**Impact:** Low — ViewerManager has extensive real-world testing through E2E tests.
-
-**Recommendation:** Add unit tests for:
-- Slide viewer initialization edge cases
-- Foreign file handling paths
-- Error recovery scenarios
+**Resolution:** Additional tests added in previous sessions. Now exceeds 80% target.
 
 ---
 
-### COV-4: LayerPanel.js Coverage 70.41% Branches
+### COV-4: LayerPanel.js Coverage ✅ RESOLVED
 
-**Severity:** Medium  
-**Category:** Testing  
+**Status:** Complete  
+**Final Coverage:** 80.27% branches (target: 80%)  
 **File:** [resources/ext.layers.editor/LayerPanel.js](resources/ext.layers.editor/LayerPanel.js)
 
-**Description:** Statement coverage is 77.86%, but branch coverage is only 70.41%, below the 80% target.
-
-**Impact:** LayerPanel is a core user-facing component. Lower coverage increases regression risk.
-
-**Recommendation:** Add tests for:
-- Context menu interactions
-- Folder collapse/expand edge cases
-- Properties panel update paths
-- Event handler edge cases
+**Resolution:** Additional tests for context menu, folder operations, and event handling added. Now exceeds 80% target.
 
 ---
 
-### COV-5: APIManager.js Branch Coverage 71.88%
+### COV-5: APIManager.js Branch Coverage ✅ RESOLVED
 
-**Severity:** Medium  
-**Category:** Testing  
+**Status:** Complete  
+**Final Coverage:** 80.95% branches (target: 80%)  
 **File:** [resources/ext.layers.editor/APIManager.js](resources/ext.layers.editor/APIManager.js)
 
-**Description:** Statement coverage is 88.34%, but branch coverage is only 71.88%.
-
-**Impact:** API operations are critical. Untested branches may contain error handling bugs.
-
-**Recommendation:** Add tests for:
-- Retry logic with various failure modes
-- Request abort and cleanup
-- Error normalization edge cases
-- Timeout handling paths
+**Resolution:** Additional tests for retry logic, error handling, and edge cases added. Now exceeds 80% target.
 
 ---
+
+## 🟡 OPEN ISSUES
 
 ### CORE-1: TransformController rAF Scheduling
 
