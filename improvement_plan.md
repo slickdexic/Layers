@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** January 24, 2026  
-**Version:** 1.5.28  
+**Version:** 1.5.29  
 **Status:** ✅ Production-Ready, High Quality (8.6/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
@@ -16,11 +16,11 @@ The extension is **production-ready and high quality** with **excellent security
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **10,437** (156 suites) | ✅ Excellent |
-| Statement coverage | **94.17%** | ✅ Excellent |
-| Branch coverage | **84.46%** | ✅ Excellent |
-| Function coverage | **92.45%** | ✅ Excellent |
-| Line coverage | **94.31%** | ✅ Excellent |
+| Tests passing | **10,574** (156 suites) | ✅ Excellent |
+| Statement coverage | **93%+** | ✅ Excellent |
+| Branch coverage | **84%+** | ✅ Excellent |
+| Function coverage | **92%+** | ✅ Excellent |
+| Line coverage | **93%+** | ✅ Excellent |
 | JS files | 130 | Excludes dist/ |
 | JS lines | ~116,021 | Includes generated data |
 | PHP files | 40 | ✅ |

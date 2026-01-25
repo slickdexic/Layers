@@ -2,6 +2,29 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.29] - 2026-01-24
+
+### Added
+- **Canvas Snap** — Snap layer edges and center to canvas edges and center with visual green guides
+  - Toggle via Arrange & Snap dropdown or `'` (apostrophe) keyboard shortcut
+  - Independent from Smart Guides (both can be enabled simultaneously)
+  - Green guides distinguish canvas snapping from magenta object snapping
+- **Visual Bounds Snapping** — Snapping now respects visual bounds including stroke width
+  - Thick strokes no longer get cut off when snapped to canvas edges
+  - Follows industry standard (Figma, Sketch, Illustrator)
+
+### Fixed
+- **Canvas Snap Trigger** — Fixed canvas snap not working during drag operations (TransformController now checks `canvasSnapEnabled` flag)
+- **Slide Editor i18n** — Added missing `special-editslide-title` message for slide editor page title
+
+### Technical Details
+- All 10,574 tests pass (156 test suites)
+- Added 34+ new tests for Canvas Snap and visual bounds functionality
+- Test coverage: 93%+ statement, 84%+ branch
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## [1.5.28] - 2026-01-24
 
 ### Fixed
