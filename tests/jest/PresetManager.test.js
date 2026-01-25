@@ -48,7 +48,7 @@ describe( 'PresetManager', () => {
 		} );
 
 		it( 'should initialize empty cache', () => {
-			expect( manager.cache ).toBeTruthy();
+			expect( manager.cache ).toBeDefined();
 			expect( manager.cache.version ).toBe( PresetManager.SCHEMA_VERSION );
 		} );
 	} );
@@ -74,7 +74,7 @@ describe( 'PresetManager', () => {
 			manager.load();
 
 			expect( manager.cache.version ).toBe( PresetManager.SCHEMA_VERSION );
-			expect( manager.cache.toolPresets ).toBeTruthy();
+			expect( manager.cache.toolPresets ).toBeDefined();
 		} );
 
 		it( 'should handle invalid JSON gracefully', () => {
@@ -137,7 +137,7 @@ describe( 'PresetManager', () => {
 				strokeWidth: 3
 			} );
 
-			expect( preset ).toBeTruthy();
+			expect( preset ).toBeDefined();
 			expect( preset.id ).toContain( 'arrow-test-arrow' );
 			expect( preset.name ).toBe( 'Test Arrow' );
 			expect( preset.builtIn ).toBe( false );
@@ -205,7 +205,7 @@ describe( 'PresetManager', () => {
 			const builtInId = PresetManager.BUILT_IN_PRESETS.arrow[ 0 ].id;
 			const found = manager.getPreset( 'arrow', builtInId );
 
-			expect( found ).toBeTruthy();
+			expect( found ).toBeDefined();
 			expect( found.builtIn ).toBe( true );
 		} );
 
@@ -267,7 +267,7 @@ describe( 'PresetManager', () => {
 			const success = manager.deletePreset( 'arrow', builtInId );
 
 			expect( success ).toBe( false );
-			expect( manager.getPreset( 'arrow', builtInId ) ).toBeTruthy();
+			expect( manager.getPreset( 'arrow', builtInId ) ).not.toBeNull();
 		} );
 
 		it( 'should clear default if deleted preset was default', () => {
@@ -307,7 +307,7 @@ describe( 'PresetManager', () => {
 		it( 'should return first built-in if no user default', () => {
 			const defaultPreset = manager.getDefaultPreset( 'arrow' );
 
-			expect( defaultPreset ).toBeTruthy();
+			expect( defaultPreset ).toBeDefined();
 			expect( defaultPreset.builtIn ).toBe( true );
 		} );
 
@@ -354,7 +354,7 @@ describe( 'PresetManager', () => {
 
 			const preset = manager.createFromLayer( layer, 'From Layer' );
 
-			expect( preset ).toBeTruthy();
+			expect( preset ).toBeDefined();
 			expect( preset.style.stroke ).toBe( '#ff0000' );
 			expect( preset.style.strokeWidth ).toBe( 3 );
 			expect( preset.style.arrowStyle ).toBe( 'double' );
@@ -370,7 +370,7 @@ describe( 'PresetManager', () => {
 
 			const preset = manager.createFromLayer( layer, 'Text Style' );
 
-			expect( preset ).toBeTruthy();
+			expect( preset ).toBeDefined();
 			expect( preset.style.color ).toBe( '#0000ff' );
 			expect( preset.style.fontSize ).toBe( 24 );
 		} );
@@ -444,7 +444,7 @@ describe( 'PresetManager', () => {
 			expect( result.imported ).toBe( 1 );
 
 			const preset = manager.getPreset( 'arrow', 'imported-1' );
-			expect( preset ).toBeTruthy();
+			expect( preset ).toBeDefined();
 			expect( preset.name ).toBe( 'Imported Arrow' );
 		} );
 
@@ -639,7 +639,7 @@ describe( 'PresetManager', () => {
 		} );
 
 		it( 'should expose BUILT_IN_PRESETS', () => {
-			expect( PresetManager.BUILT_IN_PRESETS.arrow ).toBeTruthy();
+			expect( PresetManager.BUILT_IN_PRESETS.arrow ).toBeDefined();
 			expect( PresetManager.BUILT_IN_PRESETS.arrow.length ).toBeGreaterThan( 0 );
 		} );
 	} );
@@ -652,8 +652,8 @@ describe( 'PresetManager', () => {
 			// createEmptyData fallback
 			const emptyData = mgr.createEmptyData();
 			expect( emptyData.version ).toBe( 1 );
-			expect( emptyData.toolPresets ).toBeTruthy();
-			expect( emptyData.defaultPresets ).toBeTruthy();
+			expect( emptyData.toolPresets ).toBeDefined();
+			expect( emptyData.defaultPresets ).toBeDefined();
 
 			mgr.destroy();
 		} );
@@ -837,7 +837,7 @@ describe( 'PresetManager', () => {
 
 			const preset = manager.addPreset( 'arrow', 'Test', { stroke: '#000' } );
 
-			expect( preset ).toBeTruthy();
+			expect( preset ).toBeDefined();
 			expect( manager.cache.toolPresets.arrow ).toHaveLength( 1 );
 		} );
 	} );

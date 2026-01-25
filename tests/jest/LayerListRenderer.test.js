@@ -310,7 +310,7 @@ describe( 'LayerListRenderer', () => {
 			const item = renderer.createLayerItem( layer, 0 );
 			const grabArea = item.querySelector( '.layer-grab-area' );
 
-			expect( grabArea ).toBeTruthy();
+			expect( grabArea ).not.toBeNull();
 			expect( grabArea.className ).toBe( 'layer-grab-area' );
 			expect( grabArea.getAttribute( 'tabindex' ) ).toBe( '0' );
 		} );

@@ -112,6 +112,8 @@
 				document.head.appendChild( style );
 			}
 
+			const Z_INDEX = window.Layers.Constants.Z_INDEX;
+
 			// Create overlay
 			this.overlay = document.createElement( 'div' );
 			this.overlay.className = 'layers-emoji-picker-overlay';
@@ -122,7 +124,7 @@
 				width: 100%;
 				height: 100%;
 				background: rgba(0, 0, 0, 0.5);
-				z-index: 1000010;
+				z-index: ${ Z_INDEX.LIBRARY_PANEL };
 			`;
 
 			// Create panel
@@ -142,7 +144,7 @@
 				background: var(--background-color-base, #fff);
 				border-radius: 8px;
 				box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-				z-index: 1000011;
+				z-index: ${ Z_INDEX.LIBRARY_OVERLAY };
 				display: flex;
 				flex-direction: column;
 				overflow: hidden;

@@ -92,7 +92,7 @@ describe( 'ViewerManager', () => {
 	describe( 'constructor', () => {
 		it( 'should create instance with default options', () => {
 			const manager = new ViewerManager();
-			expect( manager.debug ).toBeFalsy();
+			expect( manager.debug ).toBeUndefined();
 		} );
 
 		it( 'should enable debug mode when specified', () => {
@@ -776,10 +776,15 @@ describe( 'ViewerManager', () => {
 		let manager;
 
 		beforeEach( () => {
+			jest.useFakeTimers();
 			manager = new ViewerManager( {
 				urlParser: mockUrlParser,
 				debug: true
 			} );
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
 		} );
 
 		it( 'should return early when images array is empty', () => {
@@ -901,7 +906,7 @@ describe( 'ViewerManager', () => {
 			manager.initializeLargeImages( images );
 
 			// Wait for promises
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockLayersViewer ).toHaveBeenCalled();
 		} );
@@ -918,7 +923,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.log ).toHaveBeenCalledWith(
 				'[Layers:ViewerManager]',
@@ -944,7 +949,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.log ).toHaveBeenCalledWith(
 				'[Layers:ViewerManager]',
@@ -972,7 +977,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockLayersViewer ).toHaveBeenCalled();
 		} );
@@ -995,7 +1000,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			// Should log that no layers were found (not an error, just no data)
 			expect( mockMw.log ).toHaveBeenCalledWith(
@@ -1017,7 +1022,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockMw.log.warn ).toHaveBeenCalledWith(
 				'[Layers:ViewerManager]',
@@ -1052,7 +1057,7 @@ describe( 'ViewerManager', () => {
 
 			manager.initializeLargeImages( images );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockLayersViewer ).toHaveBeenCalledWith(
 				expect.objectContaining( {
@@ -1376,6 +1381,12 @@ describe( 'ViewerManager', () => {
 				freshnessChecker: mockFreshnessChecker,
 				debug: true
 			} );
+
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
 		} );
 
 		describe( 'reinitializeViewer', () => {
@@ -1559,7 +1570,7 @@ describe( 'ViewerManager', () => {
 				manager.checkAndRefreshStaleViewers( [ img ] );
 
 				// Wait for async completion
-				await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+				await jest.runAllTimersAsync();
 
 				// Should have reinitialized the viewer
 				expect( mockLayersViewer ).toHaveBeenCalled();
@@ -1585,7 +1596,7 @@ describe( 'ViewerManager', () => {
 
 				manager.checkAndRefreshStaleViewers( [ img ] );
 
-				await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+				await jest.runAllTimersAsync();
 
 				// Should not have created a new viewer
 				expect( mockLayersViewer.mock.calls.length ).toBe( viewerCallsBefore );
@@ -2770,13 +2781,13 @@ describe( 'ViewerManager', () => {
 				manager.setupSlideOverlay( container, payload );
 
 				const overlay = container.querySelector( '.layers-slide-overlay' );
-				expect( overlay ).toBeTruthy();
+				expect( overlay ).not.toBeNull();
 
 				const editBtn = overlay.querySelector( '.layers-slide-overlay-btn--edit' );
 				const viewBtn = overlay.querySelector( '.layers-slide-overlay-btn--view' );
 
-				expect( editBtn ).toBeTruthy();
-				expect( viewBtn ).toBeTruthy();
+				expect( editBtn ).not.toBeNull();
+				expect( viewBtn ).not.toBeNull();
 			} );
 
 			it( 'should create overlay with only view button when user cannot edit', () => {
@@ -2794,13 +2805,13 @@ describe( 'ViewerManager', () => {
 				manager.setupSlideOverlay( container, payload );
 
 				const overlay = container.querySelector( '.layers-slide-overlay' );
-				expect( overlay ).toBeTruthy();
+				expect( overlay ).not.toBeNull();
 
 				const editBtn = overlay.querySelector( '.layers-slide-overlay-btn--edit' );
 				const viewBtn = overlay.querySelector( '.layers-slide-overlay-btn--view' );
 
 				expect( editBtn ).toBeNull();
-				expect( viewBtn ).toBeTruthy();
+				expect( viewBtn ).not.toBeNull();
 			} );
 
 			it( 'should remove old edit button if present', () => {

@@ -286,7 +286,7 @@ describe( 'CanvasManager Extended Coverage', () => {
 		} );
 
 		it( 'should set isDestroyed to true on destroy', () => {
-			expect( canvasManager.isDestroyed ).toBeFalsy();
+			expect( canvasManager.isDestroyed ).toBe( false );
 			canvasManager.destroy();
 			expect( canvasManager.isDestroyed ).toBe( true );
 		} );

@@ -643,7 +643,7 @@ describe('LayerPanel', () => {
             });
 
             expect(container.getAttribute('role')).toBe('region');
-            expect(container.getAttribute('aria-label')).toBeTruthy();
+            expect(typeof container.getAttribute('aria-label')).toBe('string');
         });
 
         test('should set ARIA attributes on layer list', () => {
@@ -1262,8 +1262,8 @@ describe('LayerPanel module exports', () => {
         });
 
         // Panel should have created the interface
-        expect(container.querySelector('.layers-list')).toBeTruthy();
-        expect(container.querySelector('.layers-properties')).toBeTruthy();
+        expect(container.querySelector('.layers-list')).not.toBeNull();
+        expect(container.querySelector('.layers-properties')).not.toBeNull();
     });
 });
 

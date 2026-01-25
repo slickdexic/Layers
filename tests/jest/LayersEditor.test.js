@@ -640,8 +640,8 @@ describe('LayersEditor showCancelConfirmDialog', () => {
         
         editorInstance.showCancelConfirmDialog(jest.fn());
         
-        expect(document.querySelector('.layers-modal-overlay')).toBeTruthy();
-        expect(document.querySelector('.layers-modal-dialog')).toBeTruthy();
+        expect(document.querySelector('.layers-modal-overlay')).not.toBeNull();
+        expect(document.querySelector('.layers-modal-dialog')).not.toBeNull();
     });
 
     test('should set ARIA attributes on dialog', () => {
@@ -685,8 +685,8 @@ describe('LayersEditor showCancelConfirmDialog', () => {
         const cancelBtn = document.querySelectorAll('.layers-modal-buttons button')[0];
         cancelBtn.click();
         
-        expect(document.querySelector('.layers-modal-overlay')).toBeFalsy();
-        expect(document.querySelector('.layers-modal-dialog')).toBeFalsy();
+        expect(document.querySelector('.layers-modal-overlay')).toBeNull();
+        expect(document.querySelector('.layers-modal-dialog')).toBeNull();
     });
 
     test('should use layersMessages if available', () => {
@@ -708,13 +708,13 @@ describe('LayersEditor showCancelConfirmDialog', () => {
         
         editorInstance.showCancelConfirmDialog(jest.fn());
         
-        expect(document.querySelector('.layers-modal-dialog')).toBeTruthy();
+        expect(document.querySelector('.layers-modal-dialog')).not.toBeNull();
         
         // Simulate escape key
         const event = new KeyboardEvent('keydown', { key: 'Escape' });
         document.dispatchEvent(event);
         
-        expect(document.querySelector('.layers-modal-dialog')).toBeFalsy();
+        expect(document.querySelector('.layers-modal-dialog')).toBeNull();
     });
 });
 
@@ -767,6 +767,14 @@ describe('Auto-create layer set functionality', () => {
     });
 
     describe('autoCreateLayerSet', () => {
+        beforeEach(() => {
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
         test('should use layerSetManager when available', async () => {
             const mockCreateNewLayerSet = jest.fn().mockResolvedValue(true);
             const mockSaveInitialState = jest.fn();
@@ -786,7 +794,7 @@ describe('Auto-create layer set functionality', () => {
             editorInstance.autoCreateLayerSet('anatomy-labels');
 
             // Wait for promise
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await jest.runAllTimersAsync();
 
             expect(mockCreateNewLayerSet).toHaveBeenCalledWith('anatomy-labels');
         });
@@ -806,7 +814,7 @@ describe('Auto-create layer set functionality', () => {
 
             editorInstance.autoCreateLayerSet('new-set');
 
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await jest.runAllTimersAsync();
 
             expect(mockShowNotification).toHaveBeenCalledWith('new-set');
         });
@@ -956,11 +964,16 @@ describe('LayersEditor loadInitialLayers with deep links', () => {
     let LayersEditor;
 
     beforeEach(() => {
+        jest.useFakeTimers();
         jest.resetModules();
         window.StateManager = StateManager;
         window.HistoryManager = HistoryManager;
         require('../../resources/ext.layers.editor/LayersEditor.js');
         LayersEditor = window.Layers.Core.Editor;
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
     });
 
     test('should load specific set when initialSetName is provided', async () => {
@@ -997,7 +1010,7 @@ describe('LayersEditor loadInitialLayers with deep links', () => {
         expect(mockLoadBySetName).toHaveBeenCalledWith('anatomy-labels');
         
         // Wait for promise
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await jest.runAllTimersAsync();
         
         expect(editorInstance.stateManager.set).toHaveBeenCalledWith('layers', expect.any(Array));
     });
@@ -1030,7 +1043,7 @@ describe('LayersEditor loadInitialLayers with deep links', () => {
         editorInstance.loadInitialLayers();
         
         // Wait for promise
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await jest.runAllTimersAsync();
         
         expect(mockAutoCreate).toHaveBeenCalledWith('new-set');
     });
@@ -1071,7 +1084,7 @@ describe('LayersEditor loadInitialLayers with deep links', () => {
         editorInstance.loadInitialLayers();
         
         // Wait for promise
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await jest.runAllTimersAsync();
         
         expect(mockAutoCreate).not.toHaveBeenCalled();
     });
@@ -1096,7 +1109,7 @@ describe('LayersEditor loadInitialLayers with deep links', () => {
         editorInstance.loadInitialLayers();
         
         // Wait for promise
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await jest.runAllTimersAsync();
         
         // stateManager.set should NOT have been called because isDestroyed is true
         expect(editorInstance.stateManager.set).not.toHaveBeenCalled();

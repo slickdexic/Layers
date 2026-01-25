@@ -647,7 +647,7 @@ describe( 'DrawingController', () => {
 			// Path without points returns falsy (undefined)
 			expect( controller.isValidShape( {
 				type: 'path'
-			} ) ).toBeFalsy();
+			} ) ).toBeUndefined();
 		} );
 
 		it( 'should return true for unknown types', () => {

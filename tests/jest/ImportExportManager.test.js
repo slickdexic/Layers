@@ -568,6 +568,14 @@ describe( 'ImportExportManager', () => {
 	} );
 
 	describe( 'createImportButton callbacks', () => {
+		beforeEach( () => {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
 		it( 'should call onSuccess callback after successful import', async () => {
 			const importManager = new ImportExportManager( { editor: mockEditor } );
 			const onSuccess = jest.fn();
@@ -590,7 +598,7 @@ describe( 'ImportExportManager', () => {
 			input.dispatchEvent( new Event( 'change' ) );
 
 			// Wait for promise to resolve
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( onSuccess ).toHaveBeenCalledWith( [ { id: 'layer1', type: 'rectangle' } ] );
 			expect( onError ).not.toHaveBeenCalled();
@@ -618,7 +626,7 @@ describe( 'ImportExportManager', () => {
 			input.dispatchEvent( new Event( 'change' ) );
 
 			// Wait for promise to reject
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( onError ).toHaveBeenCalledWith( testError );
 			expect( onSuccess ).not.toHaveBeenCalled();

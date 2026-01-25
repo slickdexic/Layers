@@ -258,7 +258,7 @@ describe( 'ErrorHandler', function () {
 			const result = errorHandler.getUserFriendlyMessage( errorInfo );
 
 			// Should return i18n key or fallback message
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
 		} );
 
 		it( 'should return message for canvas type', function () {
@@ -266,7 +266,7 @@ describe( 'ErrorHandler', function () {
 
 			const result = errorHandler.getUserFriendlyMessage( errorInfo );
 
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
 		} );
 
 		it( 'should return message for validation type', function () {
@@ -274,7 +274,7 @@ describe( 'ErrorHandler', function () {
 
 			const result = errorHandler.getUserFriendlyMessage( errorInfo );
 
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
 		} );
 
 		it( 'should return message for load type', function () {
@@ -282,7 +282,7 @@ describe( 'ErrorHandler', function () {
 
 			const result = errorHandler.getUserFriendlyMessage( errorInfo );
 
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
 		} );
 
 		it( 'should return message for unknown type', function () {
@@ -290,7 +290,7 @@ describe( 'ErrorHandler', function () {
 
 			const result = errorHandler.getUserFriendlyMessage( errorInfo );
 
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
 		} );
 
 		it( 'should use fallback when mw.message not available', function () {
@@ -590,9 +590,9 @@ describe( 'ErrorHandler', function () {
 		it( 'should include timestamp, userAgent, and url', function () {
 			const result = errorHandler.processError( 'Error', 'Context', 'test' );
 
-			expect( result.timestamp ).toBeTruthy();
-			expect( result.userAgent ).toBeTruthy();
-			expect( result.url ).toBeTruthy();
+			expect( typeof result.timestamp ).toBe( 'string' );
+			expect( typeof result.userAgent ).toBe( 'string' );
+			expect( typeof result.url ).toBe( 'string' );
 			expect( result.id ).toMatch( /^err_/ );
 		} );
 	} );
@@ -751,7 +751,7 @@ describe( 'ErrorHandler', function () {
 
 			const message = errorHandler.notificationContainer.querySelector( '.error-message' );
 			expect( message ).not.toBeNull();
-			expect( message.textContent ).toBeTruthy();
+			expect( message.textContent.length ).toBeGreaterThan( 0 );
 		} );
 
 		it( 'should include close button', function () {
@@ -873,7 +873,7 @@ describe( 'ErrorHandler', function () {
 
 			const timeEl = errorHandler.notificationContainer.querySelector( '.error-time' );
 			expect( timeEl ).not.toBeNull();
-			expect( timeEl.textContent ).toBeTruthy();
+			expect( typeof timeEl.textContent ).toBe( 'string' );
 		} );
 
 		it( 'should include error icon', function () {

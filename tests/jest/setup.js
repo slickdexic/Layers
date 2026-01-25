@@ -286,6 +286,35 @@ global.createMockEditor = function () {
         window.Layers = window.Layers || {};
         window.Layers.UI = window.Layers.UI || {};
 
+        // Load LayersConstants module for z-index values
+        try {
+            const LayersConstants = require( '../../resources/ext.layers.editor/LayersConstants.js' );
+            window.Layers.Constants = LayersConstants;
+        } catch ( e ) {
+            // LayersConstants not found, provide default z-index values
+            window.Layers.Constants = {
+                Z_INDEX: {
+                    CANVAS_BACKGROUND: 1,
+                    CANVAS_FOREGROUND: 2,
+                    SLIDE_CONTROLS: 10,
+                    CANVAS_OVERLAY: 1000,
+                    TEXT_INPUT: 1001,
+                    LIGHTBOX_CONTROLS: 1001,
+                    EDITOR_BASE: 10000,
+                    CONTEXT_MENU: 10000,
+                    LAYER_PANEL: 10001,
+                    INLINE_TEXT_EDITOR: 10002,
+                    MODAL_OVERLAY: 100000,
+                    EDITOR_FULLSCREEN: 999999,
+                    COLOR_PICKER: 1000000,
+                    COLOR_PICKER_CONTENT: 1000001,
+                    TEXT_INPUT_MODAL: 1000002,
+                    LIBRARY_PANEL: 1000010,
+                    LIBRARY_OVERLAY: 1000011
+                }
+            };
+        }
+
         // Load PropertyBuilders module
         try {
             const PropertyBuilders = require( '../../resources/ext.layers.editor/ui/PropertyBuilders.js' );

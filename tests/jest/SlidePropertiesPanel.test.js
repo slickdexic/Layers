@@ -777,7 +777,15 @@ describe( 'SlidePropertiesPanel', function () {
 	} );
 
 	describe( 'clipboard fallback on error', function () {
-		it( 'should use fallback when clipboard.writeText fails', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should use fallback when clipboard.writeText fails', async function () {
 			const mockWriteText = jest.fn().mockRejectedValue( new Error( 'Failed' ) );
 			Object.assign( navigator, {
 				clipboard: { writeText: mockWriteText }
@@ -790,9 +798,8 @@ describe( 'SlidePropertiesPanel', function () {
 			panel.create();
 			panel.copyEmbedCode();
 
-			return new Promise( resolve => setTimeout( resolve, 10 ) ).then( function () {
-				expect( document.execCommand ).toHaveBeenCalledWith( 'copy' );
-			} );
+			await jest.runAllTimersAsync();
+			expect( document.execCommand ).toHaveBeenCalledWith( 'copy' );
 		} );
 	} );
 
@@ -1356,6 +1363,14 @@ describe( 'SlidePropertiesPanel', function () {
 	} );
 
 	describe( 'copyEmbedCode edge cases', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
 		it( 'should include layerset when not default', function () {
 			mockEditor.stateManager.get = jest.fn( function ( key ) {
 				const state = {
@@ -1419,7 +1434,7 @@ describe( 'SlidePropertiesPanel', function () {
 			panel.copyEmbedCode();
 
 			// Wait for promise rejection to be handled
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( document.execCommand ).toHaveBeenCalledWith( 'copy' );
 		} );

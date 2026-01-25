@@ -71,7 +71,7 @@
 			menu.style.position = 'fixed';
 			menu.style.left = e.clientX + 'px';
 			menu.style.top = e.clientY + 'px';
-			menu.style.zIndex = '10000';
+			menu.style.zIndex = String( window.Layers.Constants.Z_INDEX.CONTEXT_MENU );
 			menu.style.backgroundColor = '#fff';
 			menu.style.border = '1px solid #ccc';
 			menu.style.borderRadius = '4px';

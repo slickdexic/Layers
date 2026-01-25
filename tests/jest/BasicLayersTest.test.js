@@ -91,7 +91,7 @@ describe('MediaWiki Layers Extension - Basic Tests', () => {
         test('should create canvas element', () => {
             expect(canvas.width).toBe(800);
             expect(canvas.height).toBe(600);
-            expect(context).toBeTruthy();
+            expect(context).not.toBeNull();
         });
 
         test('should support basic drawing operations', () => {

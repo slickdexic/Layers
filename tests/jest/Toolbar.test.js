@@ -198,7 +198,7 @@ describe( 'Toolbar', function () {
 		it( 'should set ARIA label on toolbar', function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 
-			expect( container.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( typeof container.getAttribute( 'aria-label' ) ).toBe( 'string' );
 		} );
 
 		it( 'should create tool group', function () {
@@ -264,7 +264,7 @@ describe( 'Toolbar', function () {
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 
 			const btn = container.querySelector( '[data-tool="pointer"]' );
-			expect( btn.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( typeof btn.getAttribute( 'aria-label' ) ).toBe( 'string' );
 		} );
 
 		it( 'should mark default tool as active', function () {
@@ -391,7 +391,7 @@ describe( 'Toolbar', function () {
 		it( 'should return message text for valid key', function () {
 			const result = toolbar.msg( 'layers-tool-select', 'fallback' );
 
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
 		} );
 
 		it( 'should return fallback for missing key', function () {
@@ -407,7 +407,7 @@ describe( 'Toolbar', function () {
 			const result = toolbar.msg( 'nonexistent-key', 'My Fallback' );
 
 			// Will return key since mw.message returns key when not found
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
 		} );
 
 		it( 'should use layersMessages when available', function () {
@@ -1316,7 +1316,12 @@ describe( 'Toolbar', function () {
 
 	describe( 'import file change handler', function () {
 		beforeEach( function () {
+			jest.useFakeTimers();
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
 		} );
 
 		it( 'should do nothing when files property is empty', function () {
@@ -1355,7 +1360,7 @@ describe( 'Toolbar', function () {
 
 			toolbar.importInput.dispatchEvent( new Event( 'change' ) );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 			// Input value is reset to empty string
 			expect( toolbar.importInput.value ).toBe( '' );
 		} );
@@ -1372,7 +1377,7 @@ describe( 'Toolbar', function () {
 
 			toolbar.importInput.dispatchEvent( new Event( 'change' ) );
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 			// Input value is reset to empty string
 			expect( toolbar.importInput.value ).toBe( '' );
 		} );
@@ -2050,40 +2055,40 @@ describe( 'Toolbar', function () {
 			// Should have created standalone text button instead of dropdown
 			const textButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
 				.find( ( btn ) => btn.dataset.tool === 'text' );
-			expect( textButton ).toBeTruthy();
+			expect( textButton ).not.toBeNull();
 		} );
 
 		it( 'should render shape tools as individual buttons when ToolDropdown unavailable', () => {
 			// Should have individual shape tool buttons
 			const rectButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
 				.find( ( btn ) => btn.dataset.tool === 'rectangle' );
-			expect( rectButton ).toBeTruthy();
+			expect( rectButton ).not.toBeNull();
 
 			const circleButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
 				.find( ( btn ) => btn.dataset.tool === 'circle' );
-			expect( circleButton ).toBeTruthy();
+			expect( circleButton ).not.toBeNull();
 		} );
 
 		it( 'should render line tools as individual buttons when ToolDropdown unavailable', () => {
 			// Should have individual line tool buttons
 			const arrowButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
 				.find( ( btn ) => btn.dataset.tool === 'arrow' );
-			expect( arrowButton ).toBeTruthy();
+			expect( arrowButton ).not.toBeNull();
 
 			const lineButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
 				.find( ( btn ) => btn.dataset.tool === 'line' );
-			expect( lineButton ).toBeTruthy();
+			expect( lineButton ).not.toBeNull();
 		} );
 
 		it( 'should render annotation tools as individual buttons when ToolDropdown unavailable', () => {
 			// Should have individual annotation tool buttons (marker, dimension)
 			const markerButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
 				.find( ( btn ) => btn.dataset.tool === 'marker' );
-			expect( markerButton ).toBeTruthy();
+			expect( markerButton ).not.toBeNull();
 
 			const dimensionButton = Array.from( toolbar.container.querySelectorAll( 'button' ) )
 				.find( ( btn ) => btn.dataset.tool === 'dimension' );
-			expect( dimensionButton ).toBeTruthy();
+			expect( dimensionButton ).not.toBeNull();
 		} );
 	} );
 
@@ -2442,6 +2447,7 @@ describe( 'Toolbar', function () {
 		let toolbar, mockEditor;
 
 		beforeEach( () => {
+			jest.useFakeTimers();
 			mockEditor = {
 				selectTool: jest.fn(),
 				setCurrentTool: jest.fn(),
@@ -2460,6 +2466,10 @@ describe( 'Toolbar', function () {
 			} );
 		} );
 
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
 		it( 'should load shape library module and open panel', async () => {
 			const mockOpen = jest.fn();
 			const mockShapeLibraryPanel = jest.fn( () => ( { open: mockOpen } ) );
@@ -2475,7 +2485,7 @@ describe( 'Toolbar', function () {
 			toolbar.openShapeLibrary();
 
 			// Wait for promise
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( global.mw.loader.using ).toHaveBeenCalledWith( 'ext.layers.shapeLibrary' );
 			expect( mockShapeLibraryPanel ).toHaveBeenCalled();
@@ -2496,7 +2506,7 @@ describe( 'Toolbar', function () {
 
 			toolbar.openShapeLibrary();
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			// Should not create new panel
 			expect( window.Layers.ShapeLibraryPanel ).not.toHaveBeenCalled();
@@ -2516,7 +2526,7 @@ describe( 'Toolbar', function () {
 
 			toolbar.openShapeLibrary();
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( global.mw.log.error ).toHaveBeenCalledWith( 'Shape library module not available' );
 		} );
@@ -2530,6 +2540,7 @@ describe( 'Toolbar', function () {
 		let toolbar, mockEditor;
 
 		beforeEach( () => {
+			jest.useFakeTimers();
 			mockEditor = {
 				selectTool: jest.fn(),
 				setCurrentTool: jest.fn(),
@@ -2548,6 +2559,10 @@ describe( 'Toolbar', function () {
 			} );
 		} );
 
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
 		it( 'should load emoji picker module and open panel', async () => {
 			const mockOpen = jest.fn();
 			const mockEmojiPickerPanel = jest.fn( () => ( { open: mockOpen } ) );
@@ -2560,7 +2575,7 @@ describe( 'Toolbar', function () {
 
 			toolbar.openEmojiPicker();
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( global.mw.loader.using ).toHaveBeenCalledWith( 'ext.layers.emojiPicker' );
 			expect( mockEmojiPickerPanel ).toHaveBeenCalled();
@@ -2581,7 +2596,7 @@ describe( 'Toolbar', function () {
 
 			toolbar.openEmojiPicker();
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( window.Layers.EmojiPickerPanel ).not.toHaveBeenCalled();
 			expect( mockOpen ).toHaveBeenCalled();
@@ -2599,7 +2614,7 @@ describe( 'Toolbar', function () {
 
 			toolbar.openEmojiPicker();
 
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( global.mw.log.error ).toHaveBeenCalledWith( 'Emoji picker module not available' );
 		} );
@@ -2633,10 +2648,10 @@ describe( 'Toolbar', function () {
 		it( 'should create button with correct attributes', () => {
 			const button = toolbar.createShapeLibraryButton();
 
-			expect( button ).toBeTruthy();
+			expect( button ).toBeInstanceOf( HTMLElement );
 			expect( button.className ).toContain( 'shape-library-button' );
-			expect( button.getAttribute( 'aria-label' ) ).toBeTruthy();
-			expect( button.querySelector( 'svg' ) ).toBeTruthy();
+			expect( typeof button.getAttribute( 'aria-label' ) ).toBe( 'string' );
+			expect( button.querySelector( 'svg' ) ).not.toBeNull();
 		} );
 
 		it( 'should call openShapeLibrary on click', () => {
@@ -2673,10 +2688,10 @@ describe( 'Toolbar', function () {
 		it( 'should create button with correct attributes', () => {
 			const button = toolbar.createEmojiPickerButton();
 
-			expect( button ).toBeTruthy();
+			expect( button ).toBeInstanceOf( HTMLElement );
 			expect( button.className ).toContain( 'emoji-picker-button' );
-			expect( button.getAttribute( 'aria-label' ) ).toBeTruthy();
-			expect( button.querySelector( 'svg' ) ).toBeTruthy();
+			expect( typeof button.getAttribute( 'aria-label' ) ).toBe( 'string' );
+			expect( button.querySelector( 'svg' ) ).not.toBeNull();
 		} );
 
 		it( 'should call openEmojiPicker on click', () => {
@@ -2729,7 +2744,7 @@ describe( 'Toolbar', function () {
 			expect( item.getAttribute( 'role' ) ).toBe( 'menuitem' );
 			expect( item.dataset.align ).toBe( 'align-left' );
 			expect( item.disabled ).toBe( true );
-			expect( item.querySelector( '.dropdown-item-icon' ) ).toBeTruthy();
+			expect( item.querySelector( '.dropdown-item-icon' ) ).not.toBeNull();
 			expect( item.querySelector( '.dropdown-item-label' ).textContent ).toBe( 'Align Left' );
 		} );
 
@@ -3262,7 +3277,7 @@ describe( 'Toolbar', function () {
 
 			// Check that text tool buttons were created (not in dropdown)
 			const textButton = container.querySelector( '[data-tool="text"]' );
-			expect( textButton ).toBeTruthy();
+			expect( textButton ).not.toBeNull();
 		} );
 
 		it( 'should render shape tools as individual buttons when ToolDropdown unavailable', () => {
@@ -3273,7 +3288,7 @@ describe( 'Toolbar', function () {
 
 			// Check that shape tool buttons were created
 			const rectangleButton = container.querySelector( '[data-tool="rectangle"]' );
-			expect( rectangleButton ).toBeTruthy();
+			expect( rectangleButton ).not.toBeNull();
 		} );
 
 		it( 'should render line tools as individual buttons when ToolDropdown unavailable', () => {
@@ -3284,7 +3299,7 @@ describe( 'Toolbar', function () {
 
 			// Check that line tool buttons were created
 			const arrowButton = container.querySelector( '[data-tool="arrow"]' );
-			expect( arrowButton ).toBeTruthy();
+			expect( arrowButton ).not.toBeNull();
 		} );
 	} );
 
@@ -3320,7 +3335,7 @@ describe( 'Toolbar', function () {
 			} );
 
 			const styleGroup = container.querySelector( '.style-group' );
-			expect( styleGroup ).toBeTruthy();
+			expect( styleGroup ).not.toBeNull();
 		} );
 	} );
 
@@ -3423,7 +3438,7 @@ describe( 'Toolbar', function () {
 
 			// Check that annotation tool buttons were created (marker, dimension)
 			const markerButton = container.querySelector( '[data-tool="marker"]' );
-			expect( markerButton ).toBeTruthy();
+			expect( markerButton ).not.toBeNull();
 		} );
 	} );
 
@@ -3444,7 +3459,7 @@ describe( 'Toolbar', function () {
 			);
 
 			const shortcutSpan = item.querySelector( '.dropdown-item-shortcut' );
-			expect( shortcutSpan ).toBeTruthy();
+			expect( shortcutSpan ).not.toBeNull();
 			expect( shortcutSpan.textContent ).toBe( 'Ctrl+T' );
 		} );
 

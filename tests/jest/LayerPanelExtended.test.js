@@ -168,7 +168,7 @@ describe( 'LayerPanel Extended', () => {
 			panel.renderLayerList();
 
 			// The empty message class is 'layers-empty' not 'layers-empty-message'
-			expect( panel.layerList.querySelector( '.layers-empty' ) ).toBeTruthy();
+			expect( panel.layerList.querySelector( '.layers-empty' ) ).not.toBeNull();
 		} );
 
 		it( 'should render layer items for each layer', () => {
@@ -207,7 +207,7 @@ describe( 'LayerPanel Extended', () => {
 
 			// The code uses .selected class, not aria-selected
 			const selectedItem = panel.layerList.querySelector( '.layer-item.selected' );
-			expect( selectedItem ).toBeTruthy();
+			expect( selectedItem ).not.toBeNull();
 			expect( selectedItem.dataset.layerId ).toBe( 'layer1' );
 		} );
 
@@ -226,7 +226,7 @@ describe( 'LayerPanel Extended', () => {
 
 			// The visibility button class is 'layer-visibility' not 'layer-visibility-btn'
 			const visibilityBtn = panel.layerList.querySelector( '.layer-visibility' );
-			expect( visibilityBtn ).toBeTruthy();
+			expect( visibilityBtn ).not.toBeNull();
 		} );
 	} );
 
@@ -247,7 +247,7 @@ describe( 'LayerPanel Extended', () => {
 
 			// Create mock click event on layer item
 			const layerItem = panel.layerList.querySelector( '[data-layer-id="layer1"]' );
-			expect( layerItem ).toBeTruthy();
+			expect( layerItem ).not.toBeNull();
 
 			const event = new MouseEvent( 'click', { bubbles: true } );
 			layerItem.dispatchEvent( event );
@@ -488,7 +488,7 @@ describe( 'LayerPanel Extended', () => {
 
 			// Divider should exist
 			const divider = container.querySelector( '.layers-panel-divider' );
-			expect( divider ).toBeTruthy();
+			expect( divider ).not.toBeNull();
 		} );
 
 		it( 'should add resize cursor class on mousedown', () => {

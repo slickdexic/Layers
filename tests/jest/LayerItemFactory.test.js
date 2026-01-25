@@ -308,7 +308,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const grabArea = item.querySelector('.layer-grab-area');
 
-            expect(grabArea).toBeTruthy();
+            expect(grabArea).not.toBeNull();
             expect(grabArea.getAttribute('tabindex')).toBe('0');
             expect(grabArea.getAttribute('role')).toBe('button');
         });
@@ -327,7 +327,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const visibilityBtn = item.querySelector('.layer-visibility');
 
-            expect(visibilityBtn).toBeTruthy();
+            expect(visibilityBtn).not.toBeNull();
             expect(visibilityBtn.type).toBe('button');
             expect(visibilityBtn.getAttribute('aria-label')).toBe('Toggle visibility');
         });
@@ -337,7 +337,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const nameEl = item.querySelector('.layer-name');
 
-            expect(nameEl).toBeTruthy();
+            expect(nameEl).not.toBeNull();
             // contentEditable should be 'false' by default (only enabled on edit)
             expect(nameEl.contentEditable === false || nameEl.contentEditable === 'false').toBe(true);
             expect(nameEl.textContent).toBe('Test Layer');
@@ -348,7 +348,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const lockBtn = item.querySelector('.layer-lock');
 
-            expect(lockBtn).toBeTruthy();
+            expect(lockBtn).not.toBeNull();
             expect(lockBtn.type).toBe('button');
             expect(lockBtn.getAttribute('aria-label')).toBe('Toggle lock');
         });
@@ -358,7 +358,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const deleteBtn = item.querySelector('.layer-delete');
 
-            expect(deleteBtn).toBeTruthy();
+            expect(deleteBtn).not.toBeNull();
             expect(deleteBtn.type).toBe('button');
             expect(deleteBtn.getAttribute('aria-label')).toBe('Delete layer');
         });
@@ -368,7 +368,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const svg = item.querySelector('svg');
 
-            expect(svg).toBeTruthy();
+            expect(svg).not.toBeNull();
             expect(svg.getAttribute('aria-hidden')).toBe('true');
             const circles = svg.querySelectorAll('circle');
             expect(circles.length).toBe(4);
@@ -429,7 +429,7 @@ describe('LayerItemFactory', () => {
             factory.updateLayerItem(item, updatedLayer, 0);
 
             const visibilityBtn = item.querySelector('.layer-visibility');
-            expect(visibilityBtn.querySelector('#new-eye-icon')).toBeTruthy();
+            expect(visibilityBtn.querySelector('#new-eye-icon')).not.toBeNull();
         });
 
         test('should update name when not being edited', () => {
@@ -463,7 +463,7 @@ describe('LayerItemFactory', () => {
             factory.updateLayerItem(item, updatedLayer, 0);
 
             const lockBtn = item.querySelector('.layer-lock');
-            expect(lockBtn.querySelector('#new-lock-icon')).toBeTruthy();
+            expect(lockBtn.querySelector('#new-lock-icon')).not.toBeNull();
         });
 
         test('should handle missing grab area gracefully', () => {
@@ -565,7 +565,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const toggle = item.querySelector('.layer-expand-toggle');
 
-            expect(toggle).toBeTruthy();
+            expect(toggle).not.toBeNull();
             expect(toggle.type).toBe('button');
             expect(toggle.getAttribute('aria-expanded')).toBe('true');
         });
@@ -619,7 +619,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const grabArea = item.querySelector('.layer-grab-area');
 
-            expect(grabArea.querySelector('#folder-icon')).toBeTruthy();
+            expect(grabArea.querySelector('#folder-icon')).not.toBeNull();
             expect(window.Layers.UI.IconFactory.createFolderIcon).toHaveBeenCalledWith(true);
         });
 
@@ -638,7 +638,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
             const toggle = item.querySelector('.layer-expand-toggle');
 
-            expect(toggle.querySelector('#expand-icon')).toBeTruthy();
+            expect(toggle.querySelector('#expand-icon')).not.toBeNull();
             expect(window.Layers.UI.IconFactory.createExpandIcon).toHaveBeenCalledWith(true);
         });
 
@@ -650,7 +650,7 @@ describe('LayerItemFactory', () => {
             const toggleCall = mockConfig.addTargetListener.mock.calls.find(
                 call => call[1] === 'click'
             );
-            expect(toggleCall).toBeTruthy();
+            expect(toggleCall).toBeDefined();
 
             // Simulate click
             const event = { stopPropagation: jest.fn() };
@@ -719,7 +719,7 @@ describe('LayerItemFactory', () => {
             const updatedLayer = { id: 'layer1', type: 'group', children: [], expanded: true };
             factory.updateLayerItem(item, updatedLayer, 0);
 
-            expect(item.querySelector('.layer-expand-toggle')).toBeTruthy();
+            expect(item.querySelector('.layer-expand-toggle')).not.toBeNull();
             expect(item.classList.contains('layer-item-group')).toBe(true);
         });
 
@@ -729,7 +729,7 @@ describe('LayerItemFactory', () => {
             const item = factory.createLayerItem(layer, 0);
 
             // Verify toggle exists
-            expect(item.querySelector('.layer-expand-toggle')).toBeTruthy();
+            expect(item.querySelector('.layer-expand-toggle')).not.toBeNull();
 
             // Update to rectangle type
             const updatedLayer = { id: 'group1', type: 'rectangle' };

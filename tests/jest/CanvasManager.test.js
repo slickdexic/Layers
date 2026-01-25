@@ -1498,7 +1498,7 @@ describe( 'CanvasManager', () => {
 			} );
 
 			// Should have created fallback event object
-			expect( manager.events ).toBeTruthy();
+			expect( manager.events ).not.toBeNull();
 			expect( typeof manager.events.destroy ).toBe( 'function' );
 
 			// Should have attached event listeners
@@ -1637,7 +1637,7 @@ describe( 'CanvasManager', () => {
 			} );
 
 			// Should have event object but no handlers attached
-			expect( manager.events ).toBeTruthy();
+			expect( manager.events ).not.toBeNull();
 			expect( manager.__mousedownHandler ).toBeUndefined();
 
 			// Restore

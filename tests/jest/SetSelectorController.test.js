@@ -19,6 +19,7 @@ describe( 'SetSelectorController', () => {
 	let mockApiManager;
 
 	beforeEach( () => {
+		jest.useFakeTimers();
 		// Reset modules
 		jest.resetModules();
 
@@ -103,6 +104,7 @@ describe( 'SetSelectorController', () => {
 	} );
 
 	afterEach( () => {
+		jest.useRealTimers();
 		jest.restoreAllMocks();
 		delete global.mw;
 	} );
@@ -419,7 +421,7 @@ describe( 'SetSelectorController', () => {
 			await controller.deleteCurrentSet();
 
 			// Wait for promise
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 			expect( mockEditor.revisionManager.buildSetSelector ).toHaveBeenCalled();
 		} );
 
@@ -435,7 +437,7 @@ describe( 'SetSelectorController', () => {
 			await controller.deleteCurrentSet();
 
 			// Wait for promise rejection
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 			expect( mw.log.error ).toHaveBeenCalled();
 		} );
 
@@ -518,7 +520,7 @@ describe( 'SetSelectorController', () => {
 			await controller.clearDefaultSet();
 
 			// Wait for promise rejection
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 			expect( mw.log.error ).toHaveBeenCalled();
 			expect( mw.notify ).toHaveBeenCalledWith(
 				expect.any( String ),
@@ -607,7 +609,7 @@ describe( 'SetSelectorController', () => {
 			await controller.renameCurrentSet();
 
 			// Wait for promise rejection
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 			expect( mw.log.error ).toHaveBeenCalled();
 		} );
 
@@ -744,7 +746,7 @@ describe( 'SetSelectorController', () => {
 			controller.setSelectEl.dispatchEvent( event );
 
 			// Wait for async handler
-			await new Promise( resolve => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockUiManager.showConfirmDialog ).toHaveBeenCalled();
 		} );
@@ -775,7 +777,7 @@ describe( 'SetSelectorController', () => {
 			controller.setSelectEl.dispatchEvent( event );
 
 			// Wait for async handler
-			await new Promise( resolve => setTimeout( resolve, 50 ) );
+			await jest.runAllTimersAsync();
 
 			expect( controller.setSelectEl.value ).toBe( 'original-set' );
 		} );

@@ -1122,10 +1122,10 @@ describe( 'ToolbarStyleControls', () => {
 			const container = controls.create();
 
 			// Should still have stroke and fill color buttons
-			expect( controls.strokeColorButton ).toBeTruthy();
-			expect( controls.fillColorButton ).toBeTruthy();
-			expect( container.querySelector( '.stroke-color' ) ).toBeTruthy();
-			expect( container.querySelector( '.fill-color' ) ).toBeTruthy();
+			expect( controls.strokeColorButton ).not.toBeNull();
+			expect( controls.fillColorButton ).not.toBeNull();
+			expect( container.querySelector( '.stroke-color' ) ).not.toBeNull();
+			expect( container.querySelector( '.fill-color' ) ).not.toBeNull();
 		} );
 
 		it( 'should create functional fallback stroke color control', () => {
@@ -1188,7 +1188,7 @@ describe( 'ToolbarStyleControls', () => {
 			window.Layers.UI.ColorControlFactory = undefined;
 
 			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
-			expect( controls.colorFactory ).toBeFalsy();
+			expect( controls.colorFactory ).toBeNull();
 			controls.destroy();
 
 			// Restore

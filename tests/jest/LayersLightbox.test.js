@@ -216,7 +216,7 @@ describe( 'LayersLightbox', () => {
 
 			expect( lightbox.overlay.getAttribute( 'role' ) ).toBe( 'dialog' );
 			expect( lightbox.overlay.getAttribute( 'aria-modal' ) ).toBe( 'true' );
-			expect( lightbox.overlay.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( typeof lightbox.overlay.getAttribute( 'aria-label' ) ).toBe( 'string' );
 		} );
 
 		it( 'should close existing lightbox before opening new one', () => {
@@ -304,7 +304,7 @@ describe( 'LayersLightbox', () => {
 			const closeBtn = lightbox.container.querySelector( '.layers-lightbox-close' );
 			expect( closeBtn ).not.toBeNull();
 			expect( closeBtn.getAttribute( 'type' ) ).toBe( 'button' );
-			expect( closeBtn.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( typeof closeBtn.getAttribute( 'aria-label' ) ).toBe( 'string' );
 		} );
 
 		it( 'should add event listeners', () => {
@@ -332,6 +332,14 @@ describe( 'LayersLightbox', () => {
 	} );
 
 	describe( 'fetchAndRender', () => {
+		beforeEach( () => {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
 		it( 'should call API with correct parameters', async () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
@@ -435,7 +443,7 @@ describe( 'LayersLightbox', () => {
 			await lightbox.fetchAndRender( 'Test.jpg', null );
 
 			// Wait for promise rejection to be handled
-			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			await jest.runAllTimersAsync();
 
 			expect( errorSpy ).toHaveBeenCalledWith( 'Failed to load layer data' );
 		} );
@@ -678,7 +686,7 @@ describe( 'LayersLightbox', () => {
 			} ).not.toThrow();
 
 			// imageWrapper should still be falsy (null or undefined)
-			expect( lightbox.imageWrapper ).toBeFalsy();
+			expect( lightbox.imageWrapper ).toBeUndefined();
 		} );
 	} );
 

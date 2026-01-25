@@ -56,8 +56,9 @@ class TextInputController {
 		// Create modal container
 		const modal = document.createElement( 'div' );
 		modal.className = 'layers-text-modal';
+		const zIndex = window.Layers.Constants.Z_INDEX.TEXT_INPUT_MODAL;
 		modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;' +
-			'background:rgba(0,0,0,0.3);z-index:1000002;display:flex;' +
+			'background:rgba(0,0,0,0.3);z-index:' + zIndex + ';display:flex;' +
 			'align-items:center;justify-content:center;';
 
 		// Create input container

@@ -587,6 +587,14 @@ describe( 'EmojiPickerPanel', function () {
 	} );
 
 	describe( 'loadThumbnail error handling', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
 		it( 'should show fallback when SVG load fails', async function () {
 			// Make loadSVG reject
 			mockEmojiLibrary.loadSVG.mockRejectedValueOnce( new Error( 'Network error' ) );
@@ -600,7 +608,7 @@ describe( 'EmojiPickerPanel', function () {
 			panel.loadThumbnail( emojiItem );
 
 			// Wait for the promise to reject
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			// Should show fallback '?'
 			const fallback = emojiItem.querySelector( 'span' );
@@ -718,6 +726,14 @@ describe( 'EmojiPickerPanel', function () {
 	} );
 
 	describe( 'insertEmoji error handling', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
 		it( 'should show error notification when emoji load fails', async function () {
 			panel = new EmojiPickerPanel( { onSelect: mockOnSelect } );
 			panel.open();
@@ -728,7 +744,7 @@ describe( 'EmojiPickerPanel', function () {
 			panel.insertEmoji( 'emoji_u1f600.svg' );
 
 			// Wait for promise rejection
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mw.notify ).toHaveBeenCalled();
 			expect( mw.log.error ).toHaveBeenCalled();
@@ -746,7 +762,7 @@ describe( 'EmojiPickerPanel', function () {
 			panel.insertEmoji( 'emoji_u1f600.svg' );
 
 			// Wait for promise rejection and finally block
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			// Item should be restored
 			expect( emojiItem.style.opacity ).toBe( '1' );
@@ -868,6 +884,14 @@ describe( 'EmojiPickerPanel', function () {
 	} );
 
 	describe( 'viewBox parsing', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
 		it( 'should parse viewBox correctly from SVG', async function () {
 			panel = new EmojiPickerPanel( { onSelect: mockOnSelect } );
 			panel.open();
@@ -878,7 +902,7 @@ describe( 'EmojiPickerPanel', function () {
 			panel.insertEmoji( 'emoji_test.svg' );
 
 			// Wait for async operations
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockOnSelect ).toHaveBeenCalledWith( expect.objectContaining( {
 				viewBox: [ 10, 20, 200, 300 ]
@@ -895,7 +919,7 @@ describe( 'EmojiPickerPanel', function () {
 			panel.insertEmoji( 'emoji_test.svg' );
 
 			// Wait for async operations
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockOnSelect ).toHaveBeenCalledWith( expect.objectContaining( {
 				viewBox: [ 0, 0, 128, 128 ]

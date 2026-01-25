@@ -352,6 +352,8 @@ class ApiFallback {
 			} catch ( e2 ) {
 				this.debugWarn( 'API fallback processing error:', e2 );
 			}
+		} ).catch( ( error ) => {
+			this.debugWarn( 'API fallback request failed for', filename, error );
 		} );
 	}
 
@@ -397,6 +399,8 @@ class ApiFallback {
 				candidates.forEach( ( img ) => {
 					this.processCandidate( img, api, pageAllow, pageNsNum, fileNs );
 				} );
+			} ).catch( ( error ) => {
+				this.debugWarn( 'Failed to load mediawiki.api module:', error );
 			} );
 		} catch ( e ) {
 			this.debugWarn( 'API fallback initialization failed:', e.message );

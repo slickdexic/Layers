@@ -87,7 +87,7 @@
 			input.style.color = style.color || '#000000';
 			input.style.border = '1px solid #ccc';
 			input.style.background = 'white';
-			input.style.zIndex = '1001';
+			input.style.zIndex = String( window.Layers.Constants.Z_INDEX.TEXT_INPUT );
 
 			// Mobile keyboard optimization
 			input.setAttribute( 'inputmode', 'text' );

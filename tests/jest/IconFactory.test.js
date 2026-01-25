@@ -245,7 +245,7 @@ describe( 'IconFactory', () => {
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
 			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 			const path = icon.querySelector( 'path' );
-			expect( path ).toBeTruthy();
+			expect( path ).not.toBeNull();
 		} );
 
 		it( 'should create down-pointing triangle when expanded', () => {

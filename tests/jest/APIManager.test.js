@@ -195,7 +195,8 @@ describe( 'APIManager', function () {
 
 			const result = apiManager.getUserMessage( normalizedError, 'save' );
 
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
+			expect( result.length ).toBeGreaterThan( 0 );
 		} );
 
 		it( 'should return default message for unknown error code', function () {
@@ -203,7 +204,8 @@ describe( 'APIManager', function () {
 
 			const result = apiManager.getUserMessage( normalizedError, 'save' );
 
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
+			expect( result.length ).toBeGreaterThan( 0 );
 		} );
 
 		it( 'should return operation-specific fallback', function () {
@@ -212,8 +214,10 @@ describe( 'APIManager', function () {
 			const loadResult = apiManager.getUserMessage( normalizedError, 'load' );
 			const saveResult = apiManager.getUserMessage( normalizedError, 'save' );
 
-			expect( loadResult ).toBeTruthy();
-			expect( saveResult ).toBeTruthy();
+			expect( typeof loadResult ).toBe( 'string' );
+			expect( typeof saveResult ).toBe( 'string' );
+			expect( loadResult.length ).toBeGreaterThan( 0 );
+			expect( saveResult.length ).toBeGreaterThan( 0 );
 		} );
 	} );
 
@@ -261,7 +265,8 @@ describe( 'APIManager', function () {
 		it( 'should return message from mw.message', function () {
 			const result = apiManager.getMessage( 'layers-saving', 'fallback' );
 
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
+			expect( result.length ).toBeGreaterThan( 0 );
 		} );
 
 		it( 'should use fallback when mw.message unavailable', function () {
@@ -271,7 +276,8 @@ describe( 'APIManager', function () {
 			const result = apiManager.getMessage( 'layers-saving', 'My Fallback' );
 
 			mw.message = originalMessage;
-			expect( result ).toBeTruthy();
+			expect( typeof result ).toBe( 'string' );
+			expect( result.length ).toBeGreaterThan( 0 );
 		} );
 	} );
 
@@ -791,8 +797,10 @@ describe( 'APIManager', function () {
 				{ type: 'circle' }
 			] );
 
-			expect( result[ 0 ].id ).toBeTruthy();
-			expect( result[ 1 ].id ).toBeTruthy();
+			expect( typeof result[ 0 ].id ).toBe( 'string' );
+			expect( typeof result[ 1 ].id ).toBe( 'string' );
+			expect( result[ 0 ].id ).toMatch( /^layer_/ );
+			expect( result[ 1 ].id ).toMatch( /^layer_/ );
 		} );
 
 		it( 'should preserve existing ids', function () {
@@ -866,6 +874,14 @@ describe( 'APIManager', function () {
 	} );
 
 	describe( 'reloadRevisions', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
 		it( 'should call API with current set name', function () {
 			apiManager.api.get = jest.fn().mockResolvedValue( {
 				layersinfo: {
@@ -892,7 +908,7 @@ describe( 'APIManager', function () {
 			apiManager.reloadRevisions();
 
 			// Wait for promise to resolve
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'allLayerSets', mockRevisions );
 		} );
@@ -913,7 +929,7 @@ describe( 'APIManager', function () {
 			} );
 
 			apiManager.reloadRevisions();
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'setRevisions', mockRevisions );
 		} );
@@ -928,7 +944,7 @@ describe( 'APIManager', function () {
 			} );
 
 			apiManager.reloadRevisions();
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'namedSets', mockNamedSets );
 			expect( mockEditor.buildSetSelector ).toHaveBeenCalled();
@@ -943,7 +959,7 @@ describe( 'APIManager', function () {
 			} );
 
 			apiManager.reloadRevisions();
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentLayerSetId', 42 );
 		} );
@@ -956,7 +972,7 @@ describe( 'APIManager', function () {
 			} );
 
 			apiManager.reloadRevisions();
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockEditor.buildRevisionSelector ).toHaveBeenCalled();
 		} );
@@ -970,7 +986,7 @@ describe( 'APIManager', function () {
 			} );
 
 			apiManager.reloadRevisions();
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockEditor.uiManager.revNameInputEl.value ).toBe( '' );
 		} );
@@ -979,7 +995,7 @@ describe( 'APIManager', function () {
 			apiManager.api.get = jest.fn().mockRejectedValue( new Error( 'Network error' ) );
 
 			apiManager.reloadRevisions();
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mw.notify ).toHaveBeenCalledWith(
 				expect.any( String ),
@@ -2147,7 +2163,7 @@ describe( 'APIManager', function () {
 			apiManager.loadLayersBySetName( 'test-set' );
 			
 			// Give time for the catch handler to run
-			await new Promise( resolve => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 			
 			// Spinner was shown before abort
 			expect( mockEditor.uiManager.showSpinner ).toHaveBeenCalled();

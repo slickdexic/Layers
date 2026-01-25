@@ -3617,9 +3617,9 @@ describe( 'PropertiesForm', () => {
 			const heightInput = form.querySelector( 'input[data-prop="height"]' );
 			const cornerRadiusInput = form.querySelector( 'input[data-prop="cornerRadius"]' );
 
-			expect( widthInput ).toBeTruthy();
-			expect( heightInput ).toBeTruthy();
-			expect( cornerRadiusInput ).toBeTruthy();
+			expect( widthInput ).not.toBeNull();
+			expect( heightInput ).not.toBeNull();
+			expect( cornerRadiusInput ).not.toBeNull();
 		} );
 
 		test( 'should update callout width', () => {
@@ -3667,7 +3667,7 @@ describe( 'PropertiesForm', () => {
 
 			// Check for text textarea
 			const textarea = form.querySelector( 'textarea' );
-			expect( textarea ).toBeTruthy();
+			expect( textarea ).not.toBeNull();
 		} );
 
 		test( 'should update callout text', () => {
@@ -3897,8 +3897,8 @@ describe( 'PropertiesForm', () => {
 			const widthInput = form.querySelector( 'input[data-prop="width"]' );
 			const heightInput = form.querySelector( 'input[data-prop="height"]' );
 
-			expect( widthInput ).toBeTruthy();
-			expect( heightInput ).toBeTruthy();
+			expect( widthInput ).not.toBeNull();
+			expect( heightInput ).not.toBeNull();
 		} );
 
 		test( 'should update blur layer width', () => {
@@ -4150,7 +4150,7 @@ describe( 'PropertiesForm', () => {
 
 				// Check that a color input was appended to body
 				const hiddenInput = document.body.querySelector( 'input[type="color"]' );
-				expect( hiddenInput ).toBeTruthy();
+				expect( hiddenInput ).not.toBeNull();
 
 				// Clean up
 				if ( hiddenInput ) {
@@ -4195,7 +4195,7 @@ describe( 'PropertiesForm', () => {
 					hiddenInput.dispatchEvent( new Event( 'blur' ) );
 
 					// Should be removed from body
-					expect( document.body.querySelector( 'input[type="color"]' ) ).toBeFalsy();
+					expect( document.body.querySelector( 'input[type="color"]' ) ).toBeNull();
 				}
 			}
 		} );
@@ -4428,7 +4428,7 @@ describe( 'PropertiesForm', () => {
 			const valueInput = Array.from( inputs ).find( ( input ) =>
 				input.value === '5' || input.placeholder?.includes( '1A' )
 			);
-			expect( valueInput ).toBeTruthy();
+			expect( valueInput ).not.toBeNull();
 		} );
 
 		test( 'should have style select for marker layer', () => {
@@ -4514,7 +4514,7 @@ describe( 'PropertiesForm', () => {
 			const valueInput = Array.from( inputs ).find( ( input ) =>
 				input.value === '25.4 mm' || input.placeholder?.includes( 'mm' )
 			);
-			expect( valueInput ).toBeTruthy();
+			expect( valueInput ).not.toBeNull();
 		} );
 
 		test( 'should have font size input for dimension layer', () => {
@@ -4538,7 +4538,7 @@ describe( 'PropertiesForm', () => {
 				return label?.textContent?.toLowerCase().includes( 'font' ) ||
 					input.dataset.prop === 'fontSize';
 			} );
-			expect( fontSizeInput ).toBeTruthy();
+			expect( fontSizeInput ).not.toBeNull();
 		} );
 
 		test( 'should not show appearance section for dimension layer', () => {

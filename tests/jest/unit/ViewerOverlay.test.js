@@ -555,6 +555,14 @@ describe( 'ViewerOverlay', () => {
 	} );
 
 	describe( 'edit button click handling', () => {
+		beforeEach( () => {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
 		it( 'should navigate to edit page when modal not available', () => {
 			const overlay = new ViewerOverlay( {
 				container: container,
@@ -724,7 +732,7 @@ describe( 'ViewerOverlay', () => {
 			editBtn.click();
 
 			// Wait for promise to resolve
-			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+			await jest.runAllTimersAsync();
 
 			expect( mockRefresh ).toHaveBeenCalled();
 

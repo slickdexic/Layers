@@ -119,8 +119,8 @@ describe( 'ToolDropdown', () => {
 
 			expect( container.className ).toBe( 'tool-dropdown' );
 			expect( container.dataset.groupId ).toBe( 'shapes' );
-			expect( container.querySelector( '.tool-dropdown-trigger' ) ).toBeTruthy();
-			expect( container.querySelector( '.tool-dropdown-menu' ) ).toBeTruthy();
+			expect( container.querySelector( '.tool-dropdown-trigger' ) ).not.toBeNull();
+			expect( container.querySelector( '.tool-dropdown-menu' ) ).not.toBeNull();
 		} );
 
 		test( 'should create menu items for all tools', () => {
@@ -179,8 +179,8 @@ describe( 'ToolDropdown', () => {
 			const container = dropdown.create();
 			const arrow = container.querySelector( '.tool-dropdown-arrow' );
 
-			expect( arrow ).toBeTruthy();
-			expect( arrow.querySelector( 'svg' ) ).toBeTruthy();
+			expect( arrow ).not.toBeNull();
+			expect( arrow.querySelector( 'svg' ) ).not.toBeNull();
 		} );
 	} );
 
@@ -199,7 +199,7 @@ describe( 'ToolDropdown', () => {
 			trigger.click();
 
 			expect( dropdown.isOpen ).toBe( true );
-			expect( container.querySelector( '.tool-dropdown-menu.open' ) ).toBeTruthy();
+			expect( container.querySelector( '.tool-dropdown-menu.open' ) ).not.toBeNull();
 			expect( trigger.getAttribute( 'aria-expanded' ) ).toBe( 'true' );
 		} );
 
@@ -218,7 +218,7 @@ describe( 'ToolDropdown', () => {
 			trigger.click(); // close
 
 			expect( dropdown.isOpen ).toBe( false );
-			expect( container.querySelector( '.tool-dropdown-menu.open' ) ).toBeFalsy();
+			expect( container.querySelector( '.tool-dropdown-menu.open' ) ).toBeNull();
 			expect( trigger.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
 		} );
 

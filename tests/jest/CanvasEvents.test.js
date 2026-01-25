@@ -1085,7 +1085,7 @@ describe( 'CanvasEvents', () => {
 			};
 			canvasEvents.handlePinchStart( event );
 
-			expect( mockCanvasManager.isPinching ).toBeFalsy();
+			expect( mockCanvasManager.isPinching ).toBe( false );
 		} );
 	} );
 
