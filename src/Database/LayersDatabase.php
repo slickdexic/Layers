@@ -460,6 +460,13 @@ class LayersDatabase {
 	/**
 	 * Get all named sets for an image with summary information
 	 *
+	 * Uses a two-query approach for clarity and maintainability:
+	 * 1. Get aggregates per named set (count, max revision, max timestamp)
+	 * 2. Fetch the latest revision row to get the user_id
+	 *
+	 * This approach is clearer than a self-join with correlated subquery,
+	 * and performs well since each image typically has ≤15 named sets.
+	 *
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @return array Array of named set summaries
@@ -472,53 +479,51 @@ class LayersDatabase {
 
 		$imgNameLookup = $this->buildImageNameLookup( $imgName );
 
-		// Single query approach: get aggregates and latest user in one query
-		// using a self-join on the maximum revision per set name
-		// This eliminates the N+1 query pattern
-		$result = $dbr->select(
-			[ 'ls' => 'layer_sets', 'ls_latest' => 'layer_sets' ],
+		// Query 1: Get aggregates per named set
+		$aggregates = $dbr->select(
+			'layer_sets',
 			[
-				'ls_name' => 'ls.ls_name',
-				'revision_count' => 'COUNT(DISTINCT ls.ls_revision)',
-				'latest_revision' => 'MAX(ls.ls_revision)',
-				'latest_timestamp' => 'MAX(ls.ls_timestamp)',
-				'latest_user_id' => 'ls_latest.ls_user_id',
+				'ls_name',
+				'revision_count' => 'COUNT(*)',
+				'latest_revision' => 'MAX(ls_revision)',
+				'latest_timestamp' => 'MAX(ls_timestamp)',
 			],
 			[
-				'ls.ls_img_name' => $imgNameLookup,
-				'ls.ls_img_sha1' => $sha1
+				'ls_img_name' => $imgNameLookup,
+				'ls_img_sha1' => $sha1
 			],
 			__METHOD__,
 			[
-				'GROUP BY' => [ 'ls.ls_name', 'ls_latest.ls_user_id' ],
-				'ORDER BY' => 'MAX(ls.ls_timestamp) DESC'
-			],
-			[
-				// Join to get user from the row with max revision
-				'ls_latest' => [
-					'INNER JOIN',
-					[
-						'ls_latest.ls_img_name = ls.ls_img_name',
-						'ls_latest.ls_img_sha1 = ls.ls_img_sha1',
-						'ls_latest.ls_name = ls.ls_name',
-						'ls_latest.ls_revision = (SELECT MAX(ls2.ls_revision) FROM ' .
-							$dbr->tableName( 'layer_sets' ) . ' ls2 WHERE ' .
-							'ls2.ls_img_name = ls.ls_img_name AND ' .
-							'ls2.ls_img_sha1 = ls.ls_img_sha1 AND ' .
-							'ls2.ls_name = ls.ls_name)'
-					]
-				]
+				'GROUP BY' => 'ls_name',
+				'ORDER BY' => 'MAX(ls_timestamp) DESC'
 			]
 		);
 
 		$namedSets = [];
-		foreach ( $result as $row ) {
+		foreach ( $aggregates as $row ) {
+			$setName = $row->ls_name ?? 'default';
+			$latestRevision = (int)$row->latest_revision;
+
+			// Query 2: Get user_id from the latest revision row
+			// This is a simple primary key lookup, very fast
+			$latestRow = $dbr->selectRow(
+				'layer_sets',
+				[ 'ls_user_id' ],
+				[
+					'ls_img_name' => $imgNameLookup,
+					'ls_img_sha1' => $sha1,
+					'ls_name' => $setName,
+					'ls_revision' => $latestRevision
+				],
+				__METHOD__
+			);
+
 			$namedSets[] = [
-				'name' => $row->ls_name ?? 'default',
+				'name' => $setName,
 				'revision_count' => (int)$row->revision_count,
-				'latest_revision' => (int)$row->latest_revision,
+				'latest_revision' => $latestRevision,
 				'latest_timestamp' => $row->latest_timestamp,
-				'latest_user_id' => (int)$row->latest_user_id
+				'latest_user_id' => $latestRow ? (int)$latestRow->ls_user_id : 0
 			];
 		}
 
