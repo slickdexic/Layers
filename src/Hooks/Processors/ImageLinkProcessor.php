@@ -31,6 +31,11 @@ use MediaWiki\MediaWikiServices;
 class ImageLinkProcessor {
 	use LoggerAwareTrait;
 
+	/**
+	 * Maximum recursion depth for JSON decoding to prevent stack overflow
+	 */
+	private const JSON_DECODE_MAX_DEPTH = 512;
+
 	/** @var LayersHtmlInjector */
 	private LayersHtmlInjector $htmlInjector;
 
@@ -500,7 +505,7 @@ class ImageLinkProcessor {
 		// Parse JSON if string
 		if ( is_string( $data ) ) {
 			try {
-				$data = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+				$data = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
 				return null;
 			}

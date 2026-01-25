@@ -653,8 +653,11 @@
 							tag: 'layers-embed'
 						} );
 					}
-				} ).catch( function () {
-					// Fallback: select text approach
+				} ).catch( function ( err ) {
+					// Clipboard API failed, log and use fallback
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+						mw.log.warn( '[SlidePropertiesPanel] Clipboard API failed:', err );
+					}
 					this.fallbackCopy( embedCode );
 				}.bind( this ) );
 			} else {

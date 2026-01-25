@@ -74,6 +74,25 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * Create a LayersDatabase instance with a LoadBalancer that returns null connections
+	 * Used for testing error paths when database is unavailable
+	 *
+	 * @return LayersDatabase
+	 */
+	private function createLayersDatabaseWithNoDb(): LayersDatabase {
+		$nullLoadBalancer = $this->createMock( ILoadBalancer::class );
+		$nullLoadBalancer->method( 'getConnection' )->willReturn( null );
+		$nullLoadBalancer->method( 'getConnectionRef' )->willReturn( null );
+
+		return new LayersDatabase(
+			$nullLoadBalancer,
+			$this->config,
+			$this->logger,
+			$this->schemaManager
+		);
+	}
+
+	/**
 	 * Helper to create mock result wrapper
 	 *
 	 * @param array $rows Array of stdClass objects
@@ -396,6 +415,16 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$this->assertSame( 0, $count );
 	}
 
+	/**
+	 * @covers ::countNamedSets
+	 */
+	public function testCountNamedSetsReturnsNegativeOnDbError(): void {
+		$db = $this->createLayersDatabaseWithNoDb();
+		$count = $db->countNamedSets( 'Test.jpg', 'sha1' );
+
+		$this->assertSame( -1, $count );
+	}
+
 	// =========================================================================
 	// countSetRevisions Tests
 	// =========================================================================
@@ -410,6 +439,16 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$count = $db->countSetRevisions( 'Test.jpg', 'sha1', 'default' );
 
 		$this->assertEquals( 12, $count );
+	}
+
+	/**
+	 * @covers ::countSetRevisions
+	 */
+	public function testCountSetRevisionsReturnsNegativeOnDbError(): void {
+		$db = $this->createLayersDatabaseWithNoDb();
+		$count = $db->countSetRevisions( 'Test.jpg', 'sha1', 'default' );
+
+		$this->assertSame( -1, $count );
 	}
 
 	// =========================================================================

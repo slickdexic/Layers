@@ -94,6 +94,7 @@ describe( 'APIManager', function () {
 					return null;
 				} ),
 				set: jest.fn(),
+				update: jest.fn(),
 				markClean: jest.fn(),
 				subscribe: jest.fn( function () {
 					return jest.fn();
@@ -560,7 +561,13 @@ describe( 'APIManager', function () {
 				}
 			} );
 
-			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', [] );
+			// Now uses batched update() instead of individual set() calls
+			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith( {
+				layers: [],
+				currentLayerSetId: null,
+				baseWidth: null,
+				baseHeight: null
+			} );
 		} );
 
 		it( 'should process layerset with data', function () {
@@ -582,7 +589,11 @@ describe( 'APIManager', function () {
 			} );
 
 			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'default' );
-			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'allLayerSets', expect.any( Array ) );
+			// allLayerSets now uses batched update() instead of set()
+			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith( {
+				allLayerSets: expect.any( Array ),
+				setRevisions: expect.any( Array )
+			} );
 			expect( mockEditor.buildRevisionSelector ).toHaveBeenCalled();
 		} );
 

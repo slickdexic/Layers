@@ -253,20 +253,26 @@
 					this.editor.stateManager.set( 'currentSetName', layersInfo.layerset.name );
 				}
 			} else {
-				// No layerset, set empty state
-				this.editor.stateManager.set( 'layers', [] );
-				this.editor.stateManager.set( 'currentLayerSetId', null );
-				this.editor.stateManager.set( 'baseWidth', null );
-				this.editor.stateManager.set( 'baseHeight', null );
+				// No layerset, set empty state (batch update for performance)
+				this.editor.stateManager.update( {
+					layers: [],
+					currentLayerSetId: null,
+					baseWidth: null,
+					baseHeight: null
+				} );
 			}
 
-			// Process all layer sets for the revision selector
+			// Process all layer sets for the revision selector (batch update for performance)
 			if ( Array.isArray( layersInfo.all_layersets ) ) {
-				this.editor.stateManager.set( 'allLayerSets', layersInfo.all_layersets );
-				this.editor.stateManager.set( 'setRevisions', layersInfo.all_layersets );
+				this.editor.stateManager.update( {
+					allLayerSets: layersInfo.all_layersets,
+					setRevisions: layersInfo.all_layersets
+				} );
 			} else {
-				this.editor.stateManager.set( 'allLayerSets', [] );
-				this.editor.stateManager.set( 'setRevisions', [] );
+				this.editor.stateManager.update( {
+					allLayerSets: [],
+					setRevisions: []
+				} );
 			}
 
 			// Process named sets for the set selector
@@ -844,6 +850,11 @@
 			// CORE-2 FIX: Mark history as saved for efficient hasUnsavedChanges()
 			if ( this.editor.historyManager && typeof this.editor.historyManager.markAsSaved === 'function' ) {
 				this.editor.historyManager.markAsSaved();
+			}
+
+			// Clear draft on successful save
+			if ( this.editor.draftManager && typeof this.editor.draftManager.onSaveSuccess === 'function' ) {
+				this.editor.draftManager.onSaveSuccess();
 			}
 
 			// Clear the FreshnessChecker cache for this file so FR-10 will check

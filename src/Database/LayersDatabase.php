@@ -18,6 +18,12 @@ use Wikimedia\Rdbms\LoadBalancer;
 class LayersDatabase {
 	private const MAX_CACHE_SIZE = 100;
 
+	/**
+	 * Maximum recursion depth for json_decode operations.
+	 * Prevents stack overflow on deeply nested JSON structures.
+	 */
+	private const JSON_DECODE_MAX_DEPTH = 512;
+
 	/** @var LoadBalancer */
 	private $loadBalancer;
 	/** @var \Wikimedia\Rdbms\IDatabase */
@@ -114,6 +120,11 @@ class LayersDatabase {
 		if ( $setExists === false ) {
 			$maxSets = (int)$this->config->get( 'LayersMaxNamedSets' );
 			$setCount = $this->countNamedSets( $normalizedImgName, $sha1 );
+			if ( $setCount < 0 ) {
+				// Database error - don't proceed with save
+				$this->logError( 'Cannot count named sets, database unavailable' );
+				return null;
+			}
 			if ( $setCount >= $maxSets ) {
 				$this->logError( 'Named set limit reached', [
 					'imgName' => $imgName, 'count' => $setCount, 'max' => $maxSets
@@ -253,7 +264,7 @@ class LayersDatabase {
 		}
 
 		try {
-			$jsonData = json_decode( $row->ls_json_blob, true, 512, JSON_THROW_ON_ERROR );
+			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
 			$this->logError( 'Invalid JSON in layer set ID: ' . $layerSetId );
 			return false;
@@ -322,7 +333,7 @@ class LayersDatabase {
 		}
 
 		try {
-			$jsonData = json_decode( $row->ls_json_blob, true, 512, JSON_THROW_ON_ERROR );
+			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
 			$this->logError( 'Invalid JSON in latest layer set' );
 			return false;
@@ -397,12 +408,12 @@ class LayersDatabase {
 	 *
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
-	 * @return int Number of distinct named sets
+	 * @return int Number of distinct named sets, or -1 on database error
 	 */
 	public function countNamedSets( string $imgName, string $sha1 ): int {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
-			return 0;
+			return -1;
 		}
 
 		$count = $dbr->selectField(
@@ -424,12 +435,12 @@ class LayersDatabase {
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string $setName Named set name
-	 * @return int Number of revisions
+	 * @return int Number of revisions, or -1 on database error
 	 */
 	public function countSetRevisions( string $imgName, string $sha1, string $setName ): int {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
-			return 0;
+			return -1;
 		}
 
 		$count = $dbr->selectField(
@@ -901,7 +912,7 @@ class LayersDatabase {
 		}
 
 		try {
-			$jsonData = json_decode( $row->ls_json_blob, true, 512, JSON_THROW_ON_ERROR );
+			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
 			$this->logError( "Invalid JSON data for layer set by name" );
 			return null;

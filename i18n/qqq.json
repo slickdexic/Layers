@@ -659,5 +659,10 @@
 	"layers-text-toolbar-align-right": "Tooltip for the right alignment button in the text toolbar",
 	"layers-text-toolbar-color": "Tooltip for the text color picker in the text toolbar",
 	"layers-text-input-placeholder": "Placeholder text for the text input modal dialog",
-	"layers-btn-ok": "Generic OK button text used in modal dialogs"
+	"layers-btn-ok": "Generic OK button text used in modal dialogs",
+	"layers-draft-recovery-title": "Title for the draft recovery confirmation dialog",
+	"layers-draft-recovery-message": "Message asking user whether to recover unsaved changes. $1 is the timestamp, $2 is the number of layers",
+	"layers-draft-recover": "Button label to recover the draft",
+	"layers-draft-discard": "Button label to discard the draft",
+	"layers-draft-recovered": "Notification message shown after successfully recovering a draft"
 }

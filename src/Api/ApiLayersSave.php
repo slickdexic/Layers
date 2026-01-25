@@ -63,6 +63,11 @@ class ApiLayersSave extends ApiBase {
 	use ForeignFileHelperTrait;
 	use LayerSaveGuardsTrait;
 
+	/**
+	 * Maximum recursion depth for JSON decoding to prevent stack overflow
+	 */
+	private const JSON_DECODE_MAX_DEPTH = 512;
+
 	/** @var LoggerInterface|null */
 	private ?LoggerInterface $logger = null;
 
@@ -106,7 +111,8 @@ class ApiLayersSave extends ApiBase {
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
 		if ( $requestedFilename !== null && strpos( $requestedFilename, 'Slide:' ) === 0 ) {
-			$slidename = substr( $requestedFilename, 6 ); // Remove 'Slide:' prefix
+			// Remove 'Slide:' prefix
+			$slidename = substr( $requestedFilename, 6 );
 			$this->executeSlideSave( $user, $params, $slidename );
 			return;
 		}
@@ -182,7 +188,7 @@ class ApiLayersSave extends ApiBase {
 			// json_decode with associative=true converts to PHP array
 			// Using JSON_THROW_ON_ERROR for explicit error handling
 			try {
-				$rawData = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
 				// JSON parsing failed - invalid syntax, encoding issues, or malformed data
 				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
@@ -416,7 +422,7 @@ class ApiLayersSave extends ApiBase {
 
 			// Parse JSON
 			try {
-				$rawData = json_decode( $data, true, 512, JSON_THROW_ON_ERROR );
+				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
 				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
 			}

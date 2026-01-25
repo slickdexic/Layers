@@ -26,6 +26,11 @@ namespace MediaWiki\Extension\Layers\Hooks\Processors;
 class LayersParamExtractor {
 
 	/**
+	 * Maximum recursion depth for JSON decoding to prevent stack overflow
+	 */
+	private const JSON_DECODE_MAX_DEPTH = 512;
+
+	/**
 	 * Values that indicate layers should be disabled
 	 */
 	private const DISABLED_VALUES = [ 'off', 'none', 'false', '0' ];
@@ -108,7 +113,7 @@ class LayersParamExtractor {
 		$raw = html_entity_decode( $matches[2], ENT_QUOTES, 'UTF-8' );
 
 		try {
-			$dmw = json_decode( $raw, true, 512, JSON_THROW_ON_ERROR );
+			$dmw = json_decode( $raw, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			if ( !is_array( $dmw ) ) {
 				return null;
 			}
@@ -197,7 +202,7 @@ class LayersParamExtractor {
 	public function extractLayersJson( array $handlerParams ): ?array {
 		if ( isset( $handlerParams['layersjson'] ) && is_string( $handlerParams['layersjson'] ) ) {
 			try {
-				$decoded = json_decode( $handlerParams['layersjson'], true, 512, JSON_THROW_ON_ERROR );
+				$decoded = json_decode( $handlerParams['layersjson'], true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 				if ( is_array( $decoded ) ) {
 					// Handle both direct arrays and wrapped format:
 					// {layers: [...], backgroundVisible, backgroundOpacity}

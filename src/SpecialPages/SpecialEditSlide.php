@@ -121,7 +121,8 @@ class SpecialEditSlide extends SpecialPage {
 		$out->addJsConfigVars( [
 			'wgLayersEditorInit' => [
 				'filename' => $normalizedFilename,
-				'imageUrl' => null,  // Slides don't have a base image
+				// Slides don't have a base image
+				'imageUrl' => null,
 				'isSlide' => true,
 				'slideName' => $slideName,
 				'setName' => $setName,

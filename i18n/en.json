@@ -663,5 +663,10 @@
 	"layers-text-toolbar-align-right": "Align right",
 	"layers-text-toolbar-color": "Text color",
 	"layers-text-input-placeholder": "Type your text here...",
-	"layers-btn-ok": "OK"
+	"layers-btn-ok": "OK",
+	"layers-draft-recovery-title": "Recover Unsaved Changes?",
+	"layers-draft-recovery-message": "Found unsaved changes from $1 with $2 layer(s). Would you like to recover them?",
+	"layers-draft-recover": "Recover",
+	"layers-draft-discard": "Discard",
+	"layers-draft-recovered": "Draft recovered successfully"
 }
