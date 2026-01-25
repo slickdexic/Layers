@@ -162,7 +162,7 @@ describe( 'ColorControlFactory', () => {
 		it( 'should set ARIA attributes on button', () => {
 			// aria-label gets overwritten by updateColorButtonDisplay after creation
 			// so we just check it exists and has relevant content
-			expect( result.button.getAttribute( 'aria-label' ) ).toBeTruthy();
+			expect( typeof result.button.getAttribute( 'aria-label' ) ).toBe( 'string' );
 			expect( result.button.getAttribute( 'aria-haspopup' ) ).toBe( 'dialog' );
 			expect( result.button.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
 		} );

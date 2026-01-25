@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * UI Integration hooks for the Layers extension
  * Handles file page tabs and UI enhancements

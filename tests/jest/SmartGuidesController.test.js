@@ -182,7 +182,10 @@ describe( 'SmartGuidesController', () => {
 			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50 };
 			const bounds = controller.getVisualBounds( layer );
 
-			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+			expect( bounds ).toEqual( {
+				x: 10, y: 20, width: 100, height: 50,
+				expandLeft: 0, expandTop: 0, expandRight: 0, expandBottom: 0
+			} );
 		} );
 
 		it( 'should expand bounds by half stroke width on each side', () => {
@@ -216,7 +219,10 @@ describe( 'SmartGuidesController', () => {
 			};
 			const bounds = controller.getVisualBounds( layer );
 
-			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+			expect( bounds ).toEqual( {
+				x: 10, y: 20, width: 100, height: 50,
+				expandLeft: 0, expandTop: 0, expandRight: 0, expandBottom: 0
+			} );
 		} );
 
 		it( 'should not expand bounds when stroke is none', () => {
@@ -231,7 +237,10 @@ describe( 'SmartGuidesController', () => {
 			};
 			const bounds = controller.getVisualBounds( layer );
 
-			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+			expect( bounds ).toEqual( {
+				x: 10, y: 20, width: 100, height: 50,
+				expandLeft: 0, expandTop: 0, expandRight: 0, expandBottom: 0
+			} );
 		} );
 
 		it( 'should use lineWidth when strokeWidth not set', () => {
@@ -273,6 +282,171 @@ describe( 'SmartGuidesController', () => {
 			expect( bounds.y ).toBe( -3 );
 			expect( bounds.width ).toBe( 206 );
 			expect( bounds.height ).toBe( 106 );
+		} );
+
+		it( 'should expand bounds for shadow', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowBlur: 10,
+				shadowOffsetX: 5,
+				shadowOffsetY: 5
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Shadow blur of 10 extends in all directions
+			// offsetX=5, offsetY=5 means more expansion right/bottom
+			// Left: max(0, 10 - 5) = 5
+			// Right: max(0, 10 + 5) = 15
+			// Top: max(0, 10 - 5) = 5
+			// Bottom: max(0, 10 + 5) = 15
+			expect( bounds.x ).toBe( 95 ); // 100 - 5
+			expect( bounds.y ).toBe( 95 ); // 100 - 5
+			expect( bounds.width ).toBe( 220 ); // 200 + 5 + 15
+			expect( bounds.height ).toBe( 170 ); // 150 + 5 + 15
+		} );
+
+		it( 'should expand bounds for shadow with negative offset', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowBlur: 8,
+				shadowOffsetX: -4,
+				shadowOffsetY: -4
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Shadow blur of 8 with negative offset expands more left/top
+			// Left: max(0, 8 - (-4)) = 12
+			// Right: max(0, 8 + (-4)) = 4
+			// Top: max(0, 8 - (-4)) = 12
+			// Bottom: max(0, 8 + (-4)) = 4
+			expect( bounds.x ).toBe( 88 ); // 100 - 12
+			expect( bounds.y ).toBe( 88 ); // 100 - 12
+			expect( bounds.width ).toBe( 216 ); // 200 + 12 + 4
+			expect( bounds.height ).toBe( 166 ); // 150 + 12 + 4
+		} );
+
+		it( 'should expand bounds for shadow with spread', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowBlur: 6,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2,
+				shadowSpread: 4
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// blur 6 + spread 4 = 10 base expansion
+			// Left: max(0, 10 - 2) = 8
+			// Right: max(0, 10 + 2) = 12
+			// Top: max(0, 10 - 2) = 8
+			// Bottom: max(0, 10 + 2) = 12
+			expect( bounds.x ).toBe( 92 ); // 100 - 8
+			expect( bounds.y ).toBe( 92 ); // 100 - 8
+			expect( bounds.width ).toBe( 220 ); // 200 + 8 + 12
+			expect( bounds.height ).toBe( 170 ); // 150 + 8 + 12
+		} );
+
+		it( 'should use max of stroke and shadow expansion', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				strokeWidth: 20,
+				stroke: '#000000',
+				shadow: true,
+				shadowBlur: 8,
+				shadowOffsetX: 2,
+				shadowOffsetY: 2
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Stroke expansion: 10 each side
+			// Shadow: Left=6, Right=10, Top=6, Bottom=10
+			// Use max: Left=10, Right=10, Top=10, Bottom=10
+			expect( bounds.x ).toBe( 90 ); // 100 - 10
+			expect( bounds.y ).toBe( 90 ); // 100 - 10
+			expect( bounds.width ).toBe( 220 ); // 200 + 10 + 10
+			expect( bounds.height ).toBe( 170 ); // 150 + 10 + 10
+		} );
+
+		it( 'should not expand for disabled shadow', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: false,
+				shadowBlur: 10
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			expect( bounds ).toEqual( {
+				x: 100, y: 100, width: 200, height: 150,
+				expandLeft: 0, expandTop: 0, expandRight: 0, expandBottom: 0
+			} );
+		} );
+
+		it( 'should handle object shadow format', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: { enabled: true },
+				shadowBlur: 10,
+				shadowOffsetX: 0,
+				shadowOffsetY: 0
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// All directions expand by blur (10) since offsets are 0
+			expect( bounds.x ).toBe( 90 );
+			expect( bounds.y ).toBe( 90 );
+			expect( bounds.width ).toBe( 220 ); // 200 + 10 + 10
+			expect( bounds.height ).toBe( 170 ); // 150 + 10 + 10
+		} );
+
+		it( 'should use default offset values when not specified', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 150,
+				shadow: true,
+				shadowBlur: 10
+				// No offset specified - defaults to 2
+			};
+			const bounds = controller.getVisualBounds( layer );
+
+			// Default offsets are 2, so:
+			// Left: max(0, 10 - 2) = 8
+			// Right: max(0, 10 + 2) = 12
+			// Top: max(0, 10 - 2) = 8
+			// Bottom: max(0, 10 + 2) = 12
+			expect( bounds.x ).toBe( 92 ); // 100 - 8
+			expect( bounds.y ).toBe( 92 ); // 100 - 8
+			expect( bounds.width ).toBe( 220 ); // 200 + 8 + 12
+			expect( bounds.height ).toBe( 170 ); // 150 + 8 + 12
 		} );
 	} );
 

@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
@@ -80,11 +82,11 @@ class SpecialSlides extends SpecialPage {
 		$jsConfig = [
 			'canCreate' => $canCreate,
 			'canDelete' => $canDelete,
-			'defaultWidth' => $this->getConfig()->get( 'LayersSlideDefaultWidth' ),
-			'defaultHeight' => $this->getConfig()->get( 'LayersSlideDefaultHeight' ),
+			'defaultWidth' => (int)$this->getConfig()->get( 'LayersSlideDefaultWidth' ),
+			'defaultHeight' => (int)$this->getConfig()->get( 'LayersSlideDefaultHeight' ),
 			'defaultBackground' => $this->getConfig()->get( 'LayersSlideDefaultBackground' ),
-			'maxWidth' => $this->getConfig()->get( 'LayersSlideMaxWidth' ),
-			'maxHeight' => $this->getConfig()->get( 'LayersSlideMaxHeight' ),
+			'maxWidth' => (int)$this->getConfig()->get( 'LayersSlideMaxWidth' ),
+			'maxHeight' => (int)$this->getConfig()->get( 'LayersSlideMaxHeight' ),
 		];
 
 		$out->addJsConfigVars( 'wgLayersSlidesConfig', $jsConfig );

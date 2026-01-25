@@ -845,7 +845,7 @@ describe( 'InlineTextEditor - Toolbar functionality', () => {
 			// Toolbar should be draggable
 			expect( editor.toolbarElement ).toBeDefined();
 			// _isDraggingToolbar should initially be false
-			expect( editor._isDraggingToolbar ).toBeFalsy();
+			expect( editor._isDraggingToolbar ).toBe( false );
 		} );
 
 		test( 'should track dragging state', () => {

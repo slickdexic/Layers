@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
@@ -170,7 +172,7 @@ class ApiLayersSave extends ApiBase {
 			// - Fill database with excessive data
 			// - Slow down validation of malicious large structures
 			// Default: 2MB (configurable via $wgLayersMaxBytes)
-			$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
+			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
 				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
 			}
@@ -407,7 +409,7 @@ class ApiLayersSave extends ApiBase {
 			$setName = SetNameSanitizer::sanitize( $rawSetName );
 
 			// Size limit check
-			$maxBytes = $this->getConfig()->get( 'LayersMaxBytes' );
+			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
 				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
 			}

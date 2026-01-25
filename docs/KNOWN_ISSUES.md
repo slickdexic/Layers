@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 23, 2026  
-**Version:** 1.5.26
+**Last Updated:** January 24, 2026  
+**Version:** 1.5.29
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ None known |
 | P1 (Stability) | 0 | ✅ No known crashes/memory leaks |
 | P2 (Code Quality) | 1 | ⚠️ ShapeLibraryPanel coverage |
-| Feature Gaps | 3 | ⏳ Planned |
+| Feature Gaps | 2 | ⏳ Planned |
 
 ---
 
@@ -75,15 +75,15 @@ All previously identified P0 and P1 issues have been resolved:
 
 ---
 
-## Test Coverage Status (January 23, 2026)
+## Test Coverage Status (January 24, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests passing | **9,967** (156 suites) | ✅ |
-| Statement coverage | **92.59%** | ✅ Excellent |
-| Branch coverage | **83.02%** | ✅ Good |
-| Function coverage | **90.78%** | ✅ Excellent |
-| Line coverage | **92.73%** | ✅ Excellent |
+| Tests passing | **10,574** (156 suites) | ✅ |
+| Statement coverage | **94.40%** | ✅ Excellent |
+| Branch coverage | **84.80%** | ✅ Good |
+| Function coverage | **92.52%** | ✅ Excellent |
+| Line coverage | **94.54%** | ✅ Excellent |
 
 ---
 
@@ -124,5 +124,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 23, 2026*  
-*Status: ✅ Production-ready with excellent test coverage (92.59%, 9,967 tests).*
+*Document updated: January 24, 2026*  
+*Status: ✅ Production-ready with excellent test coverage (94.40%, 10,574 tests).*

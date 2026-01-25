@@ -83,12 +83,12 @@ describe( 'GradientRenderer', () => {
 			expect( GradientRenderer.hasGradient( layer ) ).toBe( true );
 		} );
 
-		it( 'should return falsy for null layer', () => {
-			expect( GradientRenderer.hasGradient( null ) ).toBeFalsy();
+		it( 'should return false for null layer', () => {
+			expect( GradientRenderer.hasGradient( null ) ).toBe( false );
 		} );
 
-		it( 'should return falsy for layer without gradient', () => {
-			expect( GradientRenderer.hasGradient( { fill: '#ff0000' } ) ).toBeFalsy();
+		it( 'should return false for layer without gradient', () => {
+			expect( GradientRenderer.hasGradient( { fill: '#ff0000' } ) ).toBe( false );
 		} );
 
 		it( 'should return false for invalid gradient type', () => {

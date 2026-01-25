@@ -108,11 +108,12 @@
 		}
 
 		/**
-		 * Get visual bounds for a layer, including stroke width
+		 * Get visual bounds for a layer, including stroke width and shadow
 		 * Canvas strokes are center-aligned, so stroke extends strokeWidth/2 beyond geometric bounds
+		 * Shadows extend based on blur, offset, and spread values
 		 *
 		 * @param {Object} layer - Layer object
-		 * @return {Object|null} Visual bounds object {x, y, width, height} or null
+		 * @return {Object|null} Visual bounds object {x, y, width, height, expandLeft, expandTop, expandRight, expandBottom} or null
 		 */
 		getVisualBounds( layer ) {
 			const bounds = this.getLayerBounds( layer );
@@ -122,19 +123,55 @@
 
 			// Calculate stroke expansion (center-aligned strokes extend half on each side)
 			const strokeWidth = layer.strokeWidth || layer.lineWidth || 0;
-			const expansion = strokeWidth / 2;
-
-			// Only expand if there's a visible stroke
-			if ( expansion > 0 && layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
-				return {
-					x: bounds.x - expansion,
-					y: bounds.y - expansion,
-					width: bounds.width + strokeWidth,
-					height: bounds.height + strokeWidth
-				};
+			let strokeExpansion = 0;
+			if ( strokeWidth > 0 && layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' ) {
+				strokeExpansion = strokeWidth / 2;
 			}
 
-			return bounds;
+			// Calculate shadow expansion
+			let shadowLeft = 0, shadowRight = 0, shadowTop = 0, shadowBottom = 0;
+			const hasShadow = layer.shadow === true ||
+				( typeof layer.shadow === 'object' && layer.shadow && layer.shadow.enabled !== false );
+
+			if ( hasShadow ) {
+				// Use explicit 0 check to allow zero values (0 is valid, undefined/null uses default)
+				const blur = ( layer.shadowBlur !== undefined && layer.shadowBlur !== null )
+					? Number( layer.shadowBlur ) : 8;
+				const offsetX = ( layer.shadowOffsetX !== undefined && layer.shadowOffsetX !== null )
+					? Number( layer.shadowOffsetX ) : 2;
+				const offsetY = ( layer.shadowOffsetY !== undefined && layer.shadowOffsetY !== null )
+					? Number( layer.shadowOffsetY ) : 2;
+				const spread = Number( layer.shadowSpread ) || 0;
+
+				// Shadow extends in all directions by blur + spread
+				// Plus additional extension in the offset direction
+				const baseExpansion = blur + spread;
+
+				// Calculate expansion for each edge
+				shadowLeft = Math.max( 0, baseExpansion - offsetX );
+				shadowRight = Math.max( 0, baseExpansion + offsetX );
+				shadowTop = Math.max( 0, baseExpansion - offsetY );
+				shadowBottom = Math.max( 0, baseExpansion + offsetY );
+			}
+
+			// Combine stroke and shadow expansions (use the larger of the two for each edge)
+			const expandLeft = Math.max( strokeExpansion, shadowLeft );
+			const expandRight = Math.max( strokeExpansion, shadowRight );
+			const expandTop = Math.max( strokeExpansion, shadowTop );
+			const expandBottom = Math.max( strokeExpansion, shadowBottom );
+
+			// Always return the expansion values so calculateSnappedPosition can use them
+			return {
+				x: bounds.x - expandLeft,
+				y: bounds.y - expandTop,
+				width: bounds.width + expandLeft + expandRight,
+				height: bounds.height + expandTop + expandBottom,
+				// Include expansion values for snap calculation
+				expandLeft: expandLeft,
+				expandTop: expandTop,
+				expandRight: expandRight,
+				expandBottom: expandBottom
+			};
 		}
 
 		/**
@@ -446,25 +483,6 @@
 				return { x: proposedX, y: proposedY, snappedX: false, snappedY: false, guides: [] };
 			}
 
-			// Calculate proposed bounds based on layer type
-			let proposedBounds;
-			if ( layer.type === 'line' || layer.type === 'arrow' ) {
-				// For lines, proposedX/Y represent offset from original
-				proposedBounds = {
-					x: proposedX,
-					y: proposedY,
-					width: bounds.width,
-					height: bounds.height
-				};
-			} else {
-				proposedBounds = {
-					x: proposedX,
-					y: proposedY,
-					width: bounds.width,
-					height: bounds.height
-				};
-			}
-
 			// Build snap points excluding the layer being dragged
 			const excludeIds = [ layer.id ];
 
@@ -485,13 +503,25 @@
 			const allVerticalSnaps = this.enabled ? [ ...snapPoints.vertical, ...canvasSnapPoints.vertical ] : canvasSnapPoints.vertical;
 			const allHorizontalSnaps = this.enabled ? [ ...snapPoints.horizontal, ...canvasSnapPoints.horizontal ] : canvasSnapPoints.horizontal;
 
-			// Calculate snap targets for the dragged layer
-			const left = proposedBounds.x;
-			const right = proposedBounds.x + proposedBounds.width;
-			const top = proposedBounds.y;
-			const bottom = proposedBounds.y + proposedBounds.height;
-			const centerX = proposedBounds.x + proposedBounds.width / 2;
-			const centerY = proposedBounds.y + proposedBounds.height / 2;
+			// Get expansion values for calculating visual edges from proposed geometric position
+			// expandLeft/Top/Right/Bottom tell us how far the visual bounds extend beyond the geometric bounds
+			const expandLeft = bounds.expandLeft || 0;
+			const expandTop = bounds.expandTop || 0;
+			const expandRight = bounds.expandRight || 0;
+			const expandBottom = bounds.expandBottom || 0;
+
+			// Get geometric bounds (without expansion) for width/height calculation
+			const geomWidth = bounds.width - expandLeft - expandRight;
+			const geomHeight = bounds.height - expandTop - expandBottom;
+
+			// Calculate visual snap targets for the dragged layer
+			// The visual left edge is at (proposedX - expandLeft), not proposedX
+			const left = proposedX - expandLeft;
+			const right = proposedX + geomWidth + expandRight;
+			const top = proposedY - expandTop;
+			const bottom = proposedY + geomHeight + expandBottom;
+			const centerX = proposedX + geomWidth / 2;
+			const centerY = proposedY + geomHeight / 2;
 
 			let snappedX = proposedX;
 			let snappedY = proposedY;

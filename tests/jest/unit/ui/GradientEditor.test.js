@@ -61,7 +61,7 @@ describe( 'GradientEditor', () => {
 		it( 'should initialize with solid fill type when no gradient', () => {
 			const editor = new GradientEditor( { layer, container, onChange } );
 			expect( editor.fillType ).toBe( 'solid' );
-			expect( container.querySelector( '.gradient-type-select' ) ).toBeTruthy();
+			expect( container.querySelector( '.gradient-type-select' ) ).toBeInstanceOf( HTMLSelectElement );
 			editor.destroy();
 		} );
 
@@ -94,7 +94,7 @@ describe( 'GradientEditor', () => {
 		it( 'should create fill type dropdown', () => {
 			const editor = new GradientEditor( { layer, container, onChange } );
 			const select = container.querySelector( '.gradient-type-select' );
-			expect( select ).toBeTruthy();
+			expect( select ).toBeInstanceOf( HTMLSelectElement );
 			expect( select.options.length ).toBe( 3 );
 			editor.destroy();
 		} );
@@ -117,7 +117,7 @@ describe( 'GradientEditor', () => {
 			select.dispatchEvent( new Event( 'change' ) );
 
 			expect( editor.fillType ).toBe( 'linear' );
-			expect( editor.currentGradient ).toBeTruthy();
+			expect( editor.currentGradient ).not.toBeNull();
 			expect( editor.currentGradient.type ).toBe( 'linear' );
 			expect( onChange ).toHaveBeenCalled();
 			editor.destroy();
@@ -197,7 +197,7 @@ describe( 'GradientEditor', () => {
 			const editor = new GradientEditor( { layer, container, onChange } );
 
 			const angleSlider = container.querySelector( '.gradient-angle-slider' );
-			expect( angleSlider ).toBeTruthy();
+			expect( angleSlider ).toBeInstanceOf( HTMLInputElement );
 			expect( angleSlider.value ).toBe( '90' );
 			editor.destroy();
 		} );
@@ -228,7 +228,7 @@ describe( 'GradientEditor', () => {
 			const editor = new GradientEditor( { layer, container, onChange } );
 
 			const radiusSlider = container.querySelector( '.gradient-radius-slider' );
-			expect( radiusSlider ).toBeTruthy();
+			expect( radiusSlider ).toBeInstanceOf( HTMLInputElement );
 			editor.destroy();
 		} );
 
@@ -262,7 +262,7 @@ describe( 'GradientEditor', () => {
 		it( 'should show color stops editor for gradient', () => {
 			const editor = new GradientEditor( { layer, container, onChange } );
 			const stopsEditor = container.querySelector( '.gradient-stops-editor' );
-			expect( stopsEditor ).toBeTruthy();
+			expect( stopsEditor ).toBeInstanceOf( HTMLElement );
 			editor.destroy();
 		} );
 
@@ -488,7 +488,7 @@ describe( 'GradientEditor', () => {
 
 			editor._addColorStop();
 
-			expect( editor.currentGradient.colors ).toBeTruthy();
+			expect( Array.isArray( editor.currentGradient.colors ) ).toBe( true );
 			expect( editor.currentGradient.colors.length ).toBe( 1 );
 			editor.destroy();
 		} );

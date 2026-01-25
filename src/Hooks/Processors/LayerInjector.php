@@ -1,4 +1,6 @@
 <?php
+
+declare( strict_types=1 );
 /**
  * LayerInjector - Processor for injecting layer data into image attributes
  *

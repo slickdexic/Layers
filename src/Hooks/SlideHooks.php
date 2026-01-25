@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
@@ -101,8 +103,8 @@ class SlideHooks {
 
 		// Parse canvas dimensions
 		// Priority: explicit canvas= param > saved dimensions from DB > config defaults
-		$canvasWidth = $config->get( 'LayersSlideDefaultWidth' );
-		$canvasHeight = $config->get( 'LayersSlideDefaultHeight' );
+		$canvasWidth = (int)$config->get( 'LayersSlideDefaultWidth' );
+		$canvasHeight = (int)$config->get( 'LayersSlideDefaultHeight' );
 
 		if ( !empty( $params['canvas'] ) ) {
 			// Explicit canvas= param takes priority
@@ -265,8 +267,8 @@ class SlideHooks {
 		$height = (int)$matches[2];
 
 		// Enforce size limits
-		$maxWidth = $config->get( 'LayersSlideMaxWidth' );
-		$maxHeight = $config->get( 'LayersSlideMaxHeight' );
+		$maxWidth = (int)$config->get( 'LayersSlideMaxWidth' );
+		$maxHeight = (int)$config->get( 'LayersSlideMaxHeight' );
 
 		// Minimum 50px is a reasonable minimum size
 		$minSize = 50;

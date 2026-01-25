@@ -292,12 +292,13 @@ describe( 'LayerListRenderer', () => {
 			expect( item.querySelector( '.layer-visibility' ) ).not.toBeNull();
 		} );
 
-		it( 'should create editable name element', () => {
-			const layer = { id: '1', type: 'rectangle' };
-			const item = renderer.createLayerItem( layer, 0 );
-			const nameEl = item.querySelector( '.layer-name' );
-			expect( nameEl ).not.toBeNull();
-			expect( nameEl.contentEditable ).toBeTruthy();
+it( 'should create name element that is not editable by default', () => {
+		const layer = { id: '1', type: 'rectangle' };
+		const item = renderer.createLayerItem( layer, 0 );
+		const nameEl = item.querySelector( '.layer-name' );
+		expect( nameEl ).not.toBeNull();
+		// Name is NOT editable by default - only becomes editable when clicking already-selected layer
+		expect( nameEl.contentEditable ).toBe( 'false' );
 		} );
 
 		it( 'should create lock button', () => {

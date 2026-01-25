@@ -24,7 +24,7 @@ class SlideHooksTest extends \MediaWikiUnitTestCase {
 	private function createMockConfig( int $maxWidth = 4096, int $maxHeight = 4096 ) {
 		$config = $this->createMock( \Config::class );
 		$config->method( 'get' )
-			->willReturnCallback( function ( $key ) use ( $maxWidth, $maxHeight ) {
+			->willReturnCallback( static function ( $key ) use ( $maxWidth, $maxHeight ) {
 				switch ( $key ) {
 					case 'LayersSlideMaxWidth':
 						return $maxWidth;
@@ -47,7 +47,7 @@ class SlideHooksTest extends \MediaWikiUnitTestCase {
 	private function createMockFrame() {
 		$frame = $this->createMock( \PPFrame::class );
 		$frame->method( 'expand' )
-			->willReturnCallback( function ( $arg ) {
+			->willReturnCallback( static function ( $arg ) {
 				// In real usage, $arg is a PPNode; for tests we pass strings
 				return is_string( $arg ) ? $arg : (string)$arg;
 			} );

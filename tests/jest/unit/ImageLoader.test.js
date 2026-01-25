@@ -228,7 +228,7 @@ describe( 'ImageLoader', () => {
 
 			expect( loader.image ).toBeInstanceOf( Image );
 			// crossOrigin should be null/undefined for first attempt
-			expect( loader.image.crossOrigin ).toBeFalsy();
+			expect( loader.image.crossOrigin ).toBe( null );
 		} );
 
 		it( 'should set crossOrigin for cross-origin retry', () => {

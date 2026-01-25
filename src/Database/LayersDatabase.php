@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * Database operations for the Layers extension
  *
@@ -110,7 +112,7 @@ class LayersDatabase {
 			return null;
 		}
 		if ( $setExists === false ) {
-			$maxSets = $this->config->get( 'LayersMaxNamedSets' );
+			$maxSets = (int)$this->config->get( 'LayersMaxNamedSets' );
 			$setCount = $this->countNamedSets( $normalizedImgName, $sha1 );
 			if ( $setCount >= $maxSets ) {
 				$this->logError( 'Named set limit reached', [
@@ -162,7 +164,7 @@ class LayersDatabase {
 
 				$jsonBlob = json_encode( $dataStructure, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
 
-				$maxAllowedSize = $this->config->get( 'LayersMaxBytes' );
+				$maxAllowedSize = (int)$this->config->get( 'LayersMaxBytes' );
 				if ( strlen( $jsonBlob ) > $maxAllowedSize ) {
 					$this->logError( "JSON blob size exceeds maximum allowed size" );
 					$dbw->endAtomic( __METHOD__ );
@@ -192,7 +194,7 @@ class LayersDatabase {
 				$this->clearCache( $normalizedImgName );
 
 				// Prune old revisions for this named set
-				$maxRevisions = $this->config->get( 'LayersMaxRevisionsPerSet' );
+				$maxRevisions = (int)$this->config->get( 'LayersMaxRevisionsPerSet' );
 				$this->pruneOldRevisions( $normalizedImgName, $sha1, $setName, $maxRevisions );
 
 				return $layerSetId;
@@ -244,7 +246,7 @@ class LayersDatabase {
 			return false;
 		}
 
-		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
+		$maxJsonSize = (int)$this->config->get( 'LayersMaxBytes' );
 		if ( strlen( $row->ls_json_blob ) > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for layer set ID: {$layerSetId}" );
 			return false;
@@ -313,7 +315,7 @@ class LayersDatabase {
 		$blobSize = strlen( $row->ls_json_blob );
 		$this->logDebug( "getLatestLayerSet: found ls_id=" . $row->ls_id . ", blob size=$blobSize bytes" );
 
-		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
+		$maxJsonSize = (int)$this->config->get( 'LayersMaxBytes' );
 		if ( $blobSize > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for latest layer set: $blobSize > $maxJsonSize" );
 			return false;
@@ -892,7 +894,7 @@ class LayersDatabase {
 		$blobSize = strlen( $row->ls_json_blob );
 		$this->logDebug( "getLayerSetByName: found row with ls_id={$row->ls_id}, blob size=$blobSize" );
 
-		$maxJsonSize = $this->config->get( 'LayersMaxBytes' );
+		$maxJsonSize = (int)$this->config->get( 'LayersMaxBytes' );
 		if ( $blobSize > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for layer set by name: $blobSize > $maxJsonSize" );
 			return null;

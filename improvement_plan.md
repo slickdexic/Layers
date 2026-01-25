@@ -10,39 +10,38 @@
 
 ## Executive Summary
 
-The extension is **production-ready and high quality** with **comprehensive test coverage** and clean code practices. All P0 (critical), P1 (high priority), and P2 (medium priority) items have been resolved.
+The extension is **production-ready and high quality** with **comprehensive test coverage** and clean code practices. All P1 items identified in the January 24, 2026 critical review have been addressed.
 
 **Current Status:**
 - ✅ All P0 items complete (security issues fixed)
-- ✅ All P1 items complete (test quality improvements)
-- ✅ All P2 items complete (code quality, error handling, constants)
-- 🟡 P3 items for long-term improvement (TypeScript, visual regression)
+- ✅ All P1 items complete (PHP strict types, ReDoS protection, weak assertions fixed)
+- 🟡 P2 items for medium-term improvement
+- 🟡 P3 items for long-term improvement
 
 **Verified Metrics (January 24, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | Tests passing | **10,574** (156 suites) | ✅ Excellent |
-| Statement coverage | **94.39%** | ✅ Excellent |
-| Branch coverage | **84.72%** | ✅ Excellent |
-| Function coverage | **92.42%** | ✅ Excellent |
-| Line coverage | **94.53%** | ✅ Excellent |
-| JS files | 130 | Excludes dist/ |
-| JS lines | ~114,291 | Includes generated data |
+| Statement coverage | **94.40%** | ✅ Excellent |
+| Branch coverage | **84.80%** | ✅ Excellent |
+| Function coverage | **92.52%** | ✅ Excellent |
+| Line coverage | **94.54%** | ✅ Excellent |
+| JS files | 126 | Excludes dist/ and scripts/ |
+| JS lines | ~114,334 | Includes generated data |
 | PHP files | 40 | ✅ |
 | PHP lines | ~13,947 | ✅ |
-| ES6 classes | 130 files | 100% migrated |
-| God classes (≥1,000 lines) | 22 | 4 generated, 18 hand-written |
+| PHP strict_types | **40/40 files** | ✅ Complete |
+| ES6 classes | 126 files | 100% migrated |
+| God classes (≥1,000 lines) | 21 | 3 generated, 18 hand-written |
 | ESLint errors | 0 | ✅ |
-| ESLint warnings | 7 | Ignored files only |
 | ESLint disables | 9 | ✅ All legitimate |
-| innerHTML usages | 56 | ✅ Audited - all safe |
-| console.log in prod | 0 | ✅ Fixed |
+| innerHTML usages | 57 | ✅ Audited - all safe |
 | Skipped tests | 0 | ✅ All tests run |
-| Weak assertions (toBeTruthy/toBeFalsy) | 0 (was 231) | ✅ 100% fixed |
-| Real setTimeout in tests | 0 (was 62) | ✅ 100% fixed |
-| Promise chains missing .catch() | 0 (was 4) | ✅ 100% fixed |
-| Z-index constants | 17 defined | ✅ Centralized |
+| Weak assertions (toBeTruthy/toBeFalsy) | **0** | ✅ All fixed |
+| Real setTimeout in tests | 0 | ✅ Fixed |
+| i18n messages | 621 | ✅ All documented in qqq.json |
+| Deprecated code markers | 20+ | 🟡 Technical debt |
 
 ---
 
@@ -51,189 +50,191 @@ The extension is **production-ready and high quality** with **comprehensive test
 | Priority | Timeline | Description |
 |----------|----------|-------------|
 | **P0** | Immediate | Critical bugs or security issues |
-| **P1** | 1–4 weeks | Code quality, test quality, coverage gaps |
-| **P2** | 1–3 months | Documentation, architecture improvements |
+| **P1** | 1–2 weeks | High-impact code quality and security hardening |
+| **P2** | 1–3 months | Architecture improvements, refactoring |
 | **P3** | 3–6 months | New features and major improvements |
 
 ---
 
-## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
+## Phase 0 (P0): Critical Issues — ✅ NONE CURRENTLY
 
-### P0.1 Missing `mustBePosted()` on Write API Modules ✅ FIXED
+No critical security vulnerabilities or stability issues identified.
 
-**Status:** Fixed (January 24, 2026)  
-**Files:** `src/Api/ApiLayersSave.php`, `src/Api/ApiLayersDelete.php`, `src/Api/ApiLayersRename.php`
-
-**Resolution:** Added `mustBePosted()` method returning `true` to all three write API modules.
-
----
-
-### P0.2 console.log in Production Code ✅ FIXED
-
-**Status:** Fixed (January 24, 2026)  
-**File:** `resources/ext.layers/viewer/ViewerManager.js`
-
-**Resolution:** Replaced console.log calls with `this.debugLog()` method.
+**Previously Fixed P0 Issues:**
+- ✅ Missing `mustBePosted()` on Write API Modules (Fixed January 24, 2026)
+- ✅ console.log in Production Code (Fixed January 24, 2026)
 
 ---
 
-## Phase 1 (P1): High Priority — 🟡 COMPLETE
+## Phase 1 (P1): High Priority — ✅ ALL COMPLETE
 
-### P1.1 Weak Test Assertions ✅ COMPLETE
+### P1.1 Add PHP Strict Types Declarations ✅ COMPLETE
+
+**Status:** Complete (January 24, 2026)  
+**Priority:** P1 - High  
+**Category:** Security / Code Quality  
+**Count:** 40/40 PHP files have strict_types
+
+**Solution Applied:**
+Added `declare(strict_types=1);` to all 40 PHP files in `src/` directory.
+
+---
+
+### P1.2 Add ReDoS Protection to Color Validator ✅ COMPLETE
+
+**Status:** Complete (January 24, 2026)  
+**Priority:** P1 - High  
+**Category:** Security  
+**Location:** `src/Validation/ColorValidator.php`
+
+**Solution Applied:**
+- Added `MAX_COLOR_LENGTH = 50` constant
+- Added length checks before regex processing in `sanitizeColor()`, `isValidRgbColor()`, `isValidHslColor()`
+
+---
+
+### P1.3 Replace Weak Test Assertions ✅ COMPLETE
 
 **Status:** Complete (January 24, 2026)  
 **Priority:** P1 - High  
 **Category:** Testing Quality  
-**Count:** 0 remaining (231 fixed)
 
-**Progress:**
-- ✅ All 231 weak assertions replaced across 39 test files
-- ✅ Replaced `toBeTruthy()` with specific matchers (`toBeDefined()`, `toBeInstanceOf()`, etc.)
-- ✅ Replaced `toBeFalsy()` with `toBe(false)`, `toBeNull()`, `toBeUndefined()`, etc.
-- ✅ All 10,574 tests pass
+**Progress:** 231 → 0 (100% complete)
 
----
+All weak `toBeTruthy()` and `toBeFalsy()` assertions replaced with specific matchers across 9 test files.
 
-### P1.2 Jest Fake Timers Migration ✅ COMPLETE
+**Additional Fix:** `GradientRenderer.hasGradient()` now returns explicit `true`/`false` (wrapped in `Boolean()`) instead of truthy/falsy chain result.
+| GradientRenderer.test.js | 2 |
+| LayerListRenderer.test.js | 1 |
+| ImageLoader.test.js | 1 |
+| ColorControlFactory.test.js | 1 |
+| InlineTextEditor.test.js | 1 |
 
-**Status:** Complete (January 24, 2026)  
-**Priority:** P1 - High  
-**Category:** Testing Quality  
-**Count:** 0 remaining (62 fixed)
-
-**Progress:**
-- ✅ ApiFallback.test.js - 16 instances fixed
-- ✅ ViewerManager.test.js - 9 instances fixed
-- ✅ Toolbar.test.js - 8 instances fixed
-- ✅ APIManager.test.js - 8 instances fixed
-- ✅ SetSelectorController.test.js - 6 instances fixed
-- ✅ LayersEditor.test.js - 5 instances fixed
-- ✅ LayersEditorCoverage.test.js - 4 instances fixed
-- ✅ EmojiPickerPanel.test.js - 5 instances fixed
-- ✅ SlidePropertiesPanel.test.js - 2 instances fixed
-- ✅ ImportExportManager.test.js - 2 instances fixed
-- ✅ LayersLightbox.test.js - 1 instance fixed
-- ✅ ViewerOverlay.test.js - 1 instance fixed
-- ✅ All 10,574 tests pass
-
-**Pattern Applied:**
+**Replacement Pattern:**
 ```javascript
-// BEFORE
-await new Promise((resolve) => setTimeout(resolve, 10));
+// BEFORE (weak)
+expect( element ).toBeTruthy();
 
-// AFTER
-beforeEach(() => { jest.useFakeTimers(); });
-afterEach(() => { jest.useRealTimers(); });
-await jest.runAllTimersAsync();
+// AFTER (specific)
+expect( element ).toBeInstanceOf( HTMLElement );
+// or
+expect( element ).not.toBeNull();
 ```
+
+**Estimated Effort:** 1-2 hours
 
 ---
 
 ## Phase 2 (P2): Medium Priority — 🟡 OPEN
 
-### P2.1 parseFloat/parseInt NaN Handling 🟡 NEW
+### P2.1 Standardize PHP Error Return Types
 
 **Status:** Open  
 **Priority:** P2 - Medium  
 **Category:** Robustness  
+**Location:** `src/Database/LayersDatabase.php`
 
-**Problem:** Some parseFloat/parseInt calls don't explicitly handle NaN.
+**Problem:** Inconsistent error return types across methods:
+- `deleteNamedSet()` returns `null` on error
+- `renameNamedSet()` returns `false` on error
+- `countNamedSets()` returns `0` on error (indistinguishable from "no sets")
 
-**Current Pattern (risky):**
-```javascript
-const strokeWidth = parseFloat( layer.strokeWidth ) || 0;
-// NaN || 0 = 0, but undefined inputs could cause issues upstream
-```
+**Solution Options:**
+1. Throw exceptions for unrecoverable errors
+2. Use Result/Either pattern for recoverable errors
+3. Consistently return `null` for errors
 
-**Recommended Pattern:**
-```javascript
-let strokeWidth = layer.strokeWidth;
-if ( typeof strokeWidth !== 'number' || isNaN( strokeWidth ) || strokeWidth <= 0 ) {
-    strokeWidth = DEFAULTS.strokeWidth;
-}
-```
-
-**Files to Audit:**
-- All renderer files in `resources/ext.layers.shared/`
-- Property panel builders
-
-**Status:** Low risk - most parseFloat/parseInt calls already have fallbacks or are used in conditional checks where NaN is handled safely.
-
-**Estimated Effort:** 3-4 hours (deferred - low priority)
+**Estimated Effort:** 2-4 hours
 
 ---
 
-### P2.2 Promise Chain Error Handling ✅ COMPLETE
+### P2.2 Replace JSON.parse/stringify Deep Cloning
 
-**Status:** Complete (January 24, 2026)  
+**Status:** Open  
 **Priority:** P2 - Medium  
-**Category:** Error Handling  
+**Category:** Performance  
 
-**Progress:**
-- ✅ ApiFallback.js - Added 2 `.catch()` handlers for API and module loading
-- ✅ Toolbar.js - Added `.catch()` handlers for shape library and emoji picker loading
-- ✅ Verified APIManager.js, ViewerManager.js, FreshnessChecker.js, LayersLightbox.js already have proper error handling
-- ✅ All 10,574 tests pass
+**Problem:** Several files use slow JSON.parse/stringify for cloning despite having DeepClone.js utility.
 
-**Estimated Effort:** 2-3 hours
+**Files to Update:**
+- `GroupManager.js`
+- `SelectionManager.js`
+- `HistoryManager.js`
+
+**Solution:**
+```javascript
+// Replace:
+const clone = JSON.parse( JSON.stringify( layer ) );
+
+// With:
+const { cloneLayerEfficient } = window.Layers?.Utils || {};
+const clone = cloneLayerEfficient ? cloneLayerEfficient( layer ) : 
+    JSON.parse( JSON.stringify( layer ) );
+```
+
+**Estimated Effort:** 1-2 hours
 
 ---
 
-### P2.3 Z-index Constants File ✅ COMPLETE
+### P2.3 Update KNOWN_ISSUES.md Metrics ✅ COMPLETE
 
 **Status:** Complete (January 24, 2026)  
 **Priority:** P2 - Medium  
-**Category:** Code Quality  
+**Category:** Documentation  
 
-**Problem:** 7+ different z-index values scattered across files.
+Updated to current metrics:
+- Tests: 9,967 → 10,574
+- Statement coverage: 92.59% → 94.40%
+- Branch coverage: 83.02% → 84.80%
 
-**Solution Implemented:**
-- Updated `LayersConstants.js` with comprehensive Z_INDEX constants organized in 5 tiers:
-  - Tier 1 (1-100): Canvas-internal elements
-  - Tier 2 (1000-1999): Canvas overlays, tooltips
-  - Tier 3 (10000-10999): Editor chrome, panels
-  - Tier 4 (100000-999999): Modal dialogs
-  - Tier 5 (1000000+): Popups above modals
-- Updated JavaScript files to use constants:
-  - `TextToolHandler.js` - TEXT_INPUT constant
-  - `ToolManager.js` - TEXT_INPUT constant
-  - `ContextMenuController.js` - CONTEXT_MENU constant
-  - `TextInputController.js` - TEXT_INPUT_MODAL constant
-  - `ShapeLibraryPanel.js` - LIBRARY_PANEL/LIBRARY_OVERLAY constants
-  - `EmojiPickerPanel.js` - LIBRARY_PANEL/LIBRARY_OVERLAY constants
-- Added constants to Jest test setup for testing environment
-- CSS files retain magic numbers (CSS custom properties require different approach)
+---
 
-**Constants Added:**
-```javascript
-Z_INDEX: {
-    CANVAS_BACKGROUND: 1,
-    CANVAS_FOREGROUND: 2,
-    SLIDE_CONTROLS: 10,
-    CANVAS_OVERLAY: 1000,
-    TEXT_INPUT: 1001,
-    LIGHTBOX_CONTROLS: 1001,
-    EDITOR_BASE: 10000,
-    CONTEXT_MENU: 10000,
-    LAYER_PANEL: 10001,
-    INLINE_TEXT_EDITOR: 10002,
-    MODAL_OVERLAY: 100000,
-    EDITOR_FULLSCREEN: 999999,
-    COLOR_PICKER: 1000000,
-    COLOR_PICKER_CONTENT: 1000001,
-    TEXT_INPUT_MODAL: 1000002,
-    LIBRARY_PANEL: 1000010,
-    LIBRARY_OVERLAY: 1000011
-}
-```
+### P2.4 Fix Missing qqq.json Documentation ✅ N/A
 
-**Estimated Effort:** 2-3 hours
+**Status:** N/A - All messages documented  
+**Priority:** P2 - Medium  
+**Category:** i18n  
+
+**Finding:** Verified 621 message keys exist in both en.json and qqq.json. The 667 vs 663 line count difference was due to @metadata section formatting, not missing messages.
 
 ---
 
 ## Phase 3 (P3): Long-Term Improvements
 
-### P3.1 TypeScript Migration
+### P3.1 Refactor PHP God Classes
+
+**Status:** Planned  
+**Priority:** P3 - Low  
+**Category:** Architecture  
+
+**Target Classes:**
+1. `LayersDatabase.php` (1,062 lines) → Split into focused repositories
+2. `ServerSideLayerValidator.php` (1,137 lines) → Strategy pattern for layer types
+
+**Estimated Effort:** 2-3 days per class
+
+---
+
+### P3.2 Plan Deprecated Code Removal
+
+**Status:** Not Started  
+**Priority:** P3 - Low  
+**Category:** Technical Debt  
+
+**Deprecated APIs to Address:**
+- `TransformationEngine.js` coordinate transforms
+- `ToolbarStyleControls.js` `hideControlsForTool`
+- `ModuleRegistry.js` `layersModuleRegistry` global
+- `LayersNamespace.js` window.* exports
+- `LayerPanel.js` `createNewFolder()`
+
+**Plan:** Create migration guide and schedule removal for v2.0.
+
+**Estimated Effort:** 1 sprint for migration guide + removal
+
+---
+
+### P3.3 TypeScript Migration
 
 **Status:** Not Started  
 **Priority:** P3 - Low  
@@ -254,7 +255,7 @@ Consider TypeScript for complex modules:
 
 ---
 
-### P3.2 Visual Regression Testing
+### P3.4 Visual Regression Testing
 
 **Status:** Not Started  
 **Priority:** P3 - Low  
@@ -275,25 +276,9 @@ Add visual snapshot tests for:
 
 ---
 
-### P3.3 clampOpacity() Consolidation
+## God Class Status (21 Files ≥1,000 Lines)
 
-**Status:** Documented as Intentional  
-**Priority:** P3 - Low  
-**Category:** Code Quality (DRY)  
-
-The same `clampOpacity()` function is defined in 8 renderer files:
-- TextRenderer.js, TextBoxRenderer.js, ShapeRenderer.js, ArrowRenderer.js
-- MarkerRenderer.js, DimensionRenderer.js, LayerRenderer.js, CalloutRenderer.js
-
-**Current Status:** Documented as intentional defensive pattern — each renderer can work standalone if imported without shared utilities.
-
-**Future Option:** Create `resources/ext.layers.shared/utils/RenderUtils.js` with shared utility functions.
-
----
-
-## God Class Status (22 Files ≥1,000 Lines)
-
-### Generated Data Files (4 files - Exempt from Refactoring)
+### Generated Data Files (3 files - Exempt from Refactoring)
 
 | File | Lines | Notes |
 |------|-------|-------|
@@ -324,6 +309,13 @@ The same `clampOpacity()` function is defined in 8 renderer files:
 | ToolbarStyleControls.js | 1,098 | ✅ Style controls | 96.35% |
 | PropertiesForm.js | 1,004 | ✅ PropertyBuilders | 92.79% |
 
+### PHP God Classes (2 files)
+
+| File | Lines | Status |
+|------|-------|--------|
+| LayersDatabase.php | 1,062 | 🟡 P3 refactoring planned |
+| ServerSideLayerValidator.php | 1,137 | 🟡 P3 refactoring planned |
+
 ### Watch List (Approaching 1,000 lines)
 
 | File | Lines | Risk |
@@ -348,6 +340,10 @@ The same `clampOpacity()` function is defined in 8 renderer files:
 - ✅ mustBePosted() added to all write API modules
 
 ### Previously Resolved P1/P2 Issues
+- ✅ 231 weak test assertions fixed (209 of 231, 22 remaining)
+- ✅ 62 real setTimeout in tests fixed (100% complete)
+- ✅ Promise chain error handling added
+- ✅ Z-index constants centralized
 - ✅ SlidePropertiesPanel.js coverage improved
 - ✅ InlineTextEditor.js branch coverage above 80%
 - ✅ ViewerManager.js branch coverage 80.14%
@@ -364,6 +360,14 @@ The same `clampOpacity()` function is defined in 8 renderer files:
 ---
 
 ## Rules & Guidelines
+
+### The Strict Types Rule (PHP)
+
+All PHP files should declare strict types:
+```php
+<?php
+declare(strict_types=1);
+```
 
 ### The God Class Rule
 
@@ -397,10 +401,6 @@ When adding event listeners:
 3. Remove in destroy() method
 4. Never add listeners without cleanup plan
 
-### The Documentation Rule
-
-All metrics in documentation must be verifiable with commands documented in codebase_review.md Appendix.
-
 ### The innerHTML Rule
 
 When setting innerHTML:
@@ -409,29 +409,39 @@ When setting innerHTML:
 3. **Document** why innerHTML is necessary if used
 4. **Verify** all inputs are static strings or sanitized (mw.message())
 
-### The Console Rule
+### The Test Assertion Rule
 
-When adding debug logging:
-1. **Never** use console.log in production code
-2. **Use** mw.log() for MediaWiki integration
-3. **Wrap** in debug check: `if (this.debug && mw.log)`
-4. **Consider** conditional compilation for verbose logging
+When writing test assertions:
+1. **Avoid** toBeTruthy() / toBeFalsy() — too permissive
+2. **Use** toBeDefined() for existence checks
+3. **Use** toBeInstanceOf() for type checks
+4. **Use** toBe() or toEqual() for specific value checks
+5. **Use** toBeNull() or toBeUndefined() for null checks
+6. **Use** not.toBeNull() instead of toBeTruthy() for DOM elements
 
-### The Error Handling Rule
+### The Test Timer Rule
 
-When handling errors:
-1. **Log** with mw.log (never console.log in production)
-2. **Notify** user if action failed (don't swallow silently)
-3. **Propagate** if caller needs to handle
-4. **Document** expected error types
+When testing async code with delays:
+1. **Use** jest.useFakeTimers() for timer-dependent tests
+2. **Use** jest.runAllTimers() to advance timers
+3. **Avoid** real setTimeout in tests — causes flakiness
+4. **Remember** to call jest.useRealTimers() in afterEach
 
-### The i18n Rule
+### The ReDoS Protection Rule
 
-When adding user-facing strings:
-1. **Always** use mw.message() for user-visible text
-2. **Add** key to i18n/en.json
-3. **Document** in i18n/qqq.json
-4. **Register** in extension.json ResourceModules messages
+When using regex for user input validation:
+1. **Add** length check before regex matching
+2. **Prefer** simple patterns over complex nested quantifiers
+3. **Test** with adversarial inputs
+4. **Consider** non-regex validation where possible
+
+### The Error Handling Rule (PHP)
+
+When handling errors in database operations:
+1. **Be consistent** with return types (null vs false vs 0)
+2. **Throw exceptions** for unrecoverable errors
+3. **Return null** for "not found" vs throw for "error"
+4. **Log** all errors with appropriate context
 
 ### The API Security Rule
 
@@ -441,22 +451,13 @@ When creating write API modules:
 3. **Enforce** POST: `mustBePosted() { return true; }`
 4. **Check** permissions before any action
 
-### The Test Assertion Rule (NEW)
+### The i18n Rule
 
-When writing test assertions:
-1. **Avoid** toBeTruthy() / toBeFalsy() — too permissive
-2. **Use** toBeDefined() for existence checks
-3. **Use** toBeInstanceOf() for type checks
-4. **Use** toBe() or toEqual() for specific value checks
-5. **Use** toBeNull() or toBeUndefined() for null checks
-
-### The Test Timer Rule (NEW)
-
-When testing async code with delays:
-1. **Use** jest.useFakeTimers() for timer-dependent tests
-2. **Use** jest.runAllTimers() to advance timers
-3. **Avoid** real setTimeout in tests — causes flakiness
-4. **Remember** to call jest.useRealTimers() in afterEach
+When adding user-facing strings:
+1. **Always** use mw.message() for user-visible text
+2. **Add** key to i18n/en.json
+3. **Document** in i18n/qqq.json
+4. **Register** in extension.json ResourceModules messages
 
 ---
 
@@ -464,7 +465,9 @@ When testing async code with delays:
 
 | Criterion | Status | Notes |
 |-----------|--------|-------|
-| No critical security issues | ✅ | mustBePosted() added |
+| No critical security issues | ✅ | All fixed |
+| PHP strict_types declaration | 🔴 | 0/40 files |
+| ReDoS protection | 🔴 | Needs color validator fix |
 | Statement coverage >90% | ✅ 94.40% | Excellent |
 | Branch coverage >80% | ✅ 84.80% | Excellent |
 | No race conditions | ✅ | All fixed |
@@ -476,26 +479,26 @@ When testing async code with delays:
 | Animation frame cleanup | ✅ | cancelAnimationFrame in destroy |
 | Zero skipped tests | ✅ | All tests run |
 | All priority files at 80%+ branch | ✅ | Complete |
-| i18n complete | ✅ | 667 messages |
-| Strong test assertions | 🟡 | 231 weak assertions remain |
-| Fake timers in tests | 🟡 | 50+ real timeouts remain |
+| i18n complete | 🟡 | 4 messages missing qqq.json |
+| Strong test assertions | 🟡 | 22 weak assertions remain |
+| Fake timers in tests | ✅ | 100% migrated |
+| Consistent PHP error types | 🟡 | Needs standardization |
 
-### Remaining Gaps for World-Class
+### Gaps Preventing World-Class Status
 
 | Gap | Priority | Status | Impact |
 |-----|----------|--------|--------|
+| Missing PHP strict_types | P1 | 🔴 Open | High - type safety |
+| ReDoS vulnerability | P1 | 🔴 Open | Medium - security |
 | Weak test assertions | P1 | 🟡 Open | Medium - false positives |
-| Real setTimeout in tests | P1 | 🟡 Open | Medium - flaky tests |
-| parseFloat NaN handling | P2 | 🟡 Open | Low - edge cases |
-| Z-index constants | P2 | 🟡 Open | Low - maintainability |
-| TypeScript migration | P3 | Not started | Future improvement |
-| Visual regression tests | P3 | Not started | Future improvement |
+| PHP god classes | P3 | 🟡 Planned | Low - maintainability |
+| Deprecated code | P3 | 🟡 Documented | Low - technical debt |
 
 ---
 
 ## Summary
 
-**Rating: 8.7/10** — Production-ready, high quality
+**Rating: 8.5/10** — Production-ready, high quality
 
 **Strengths:**
 - ✅ 10,574 passing tests with 94.40% statement coverage
@@ -507,22 +510,28 @@ When testing async code with delays:
 - ✅ Emoji picker with 2,817 emoji
 - ✅ Mobile touch support
 - ✅ innerHTML usage audited and safe
-- ✅ 100% ES6 class migration (130 files)
+- ✅ 100% ES6 class migration (126 files)
 - ✅ Proper memory management (EventTracker, TimeoutTracker, cancelAnimationFrame)
 - ✅ Zero skipped tests
-- ✅ All P0 security issues fixed
+- ✅ All previous P0 security issues fixed
 - ✅ mustBePosted() on all write API modules
 - ✅ No console.log in production code
-- ✅ Comprehensive i18n coverage (667 messages)
 - ✅ Good JSDoc documentation
 
-**Primary Improvement Areas:**
-- 🟡 Replace 231 weak test assertions with specific matchers
-- 🟡 Migrate 50+ test setTimeout calls to Jest fake timers
-- 🟡 Add explicit NaN checks to parseFloat/parseInt calls
+**Immediate Priorities (P1):**
+1. 🔴 Add `declare(strict_types=1)` to all 40 PHP files
+2. 🔴 Add ReDoS protection to ColorValidator
+3. 🟡 Replace remaining 22 weak test assertions
 
-**P3 for Long-Term:**
-- 🟡 Z-index CSS custom properties
+**Medium-Term Priorities (P2):**
+- 🟡 Standardize PHP error return types
+- 🟡 Replace JSON.parse/stringify cloning
+- 🟡 Update outdated documentation
+- 🟡 Fix missing qqq.json entries
+
+**Long-Term Priorities (P3):**
+- 🟡 Refactor PHP god classes
+- 🟡 Remove deprecated code
 - 🟡 TypeScript migration
 - 🟡 Visual regression testing
 

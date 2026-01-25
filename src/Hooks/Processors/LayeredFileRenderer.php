@@ -1,4 +1,6 @@
 <?php
+
+declare( strict_types=1 );
 /**
  * Processor for rendering layered files from parser functions
  *

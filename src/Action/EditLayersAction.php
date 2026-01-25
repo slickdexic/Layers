@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * EditLayersAction - dedicated Action to render the Layers editor
  */

@@ -855,7 +855,7 @@ describe( 'ViewerOverlay', () => {
 			// Should use fallback strings
 			const editBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
 			// The title should be something (either message or fallback)
-			expect( editBtn.getAttribute( 'title' ) ).toBeTruthy();
+			expect( typeof editBtn.getAttribute( 'title' ) ).toBe( 'string' );
 		} );
 
 		it( 'should use fallback when mw.message not available', () => {
@@ -868,7 +868,7 @@ describe( 'ViewerOverlay', () => {
 			} );
 
 			const editBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
-			expect( editBtn.getAttribute( 'title' ) ).toBeTruthy();
+			expect( typeof editBtn.getAttribute( 'title' ) ).toBe( 'string' );
 		} );
 	} );
 

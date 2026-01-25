@@ -42,21 +42,23 @@
 
 		/**
 		 * Check if a layer has a gradient fill
-		 * @param {Object} layer - Layer object
-		 * @return {boolean} True if layer has gradient
-		 */
-		static hasGradient( layer ) {
-			return layer && layer.gradient &&
-				typeof layer.gradient === 'object' &&
-				( layer.gradient.type === 'linear' || layer.gradient.type === 'radial' ) &&
-				Array.isArray( layer.gradient.colors ) &&
-				layer.gradient.colors.length >= 2;
-		}
+	 * @param {Object} layer - Layer object
+	 * @return {boolean} True if layer has gradient
+	 */
+	static hasGradient( layer ) {
+		return Boolean(
+			layer && layer.gradient &&
+			typeof layer.gradient === 'object' &&
+			( layer.gradient.type === 'linear' || layer.gradient.type === 'radial' ) &&
+			Array.isArray( layer.gradient.colors ) &&
+			layer.gradient.colors.length >= 2
+		);
+	}
 
-		/**
-		 * Create a canvas gradient from a layer's gradient definition
-		 * @param {Object} layer - Layer with gradient property
-		 * @param {Object} bounds - Bounding box { x, y, width, height }
+	/**
+	 * Create a canvas gradient from a layer's gradient definition
+	 * @param {Object} layer - Layer with gradient property
+	 * @param {Object} bounds - Bounding box { x, y, width, height }
 		 * @param {Object} [options] - Additional options
 		 * @param {number} [options.scale=1] - Scale factor
 		 * @return {CanvasGradient|null} Canvas gradient or null if invalid

@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 namespace MediaWiki\Extension\Layers\Validation;
 
 use MediaWiki\MediaWikiServices;
@@ -250,7 +252,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			if ( class_exists( MediaWikiServices::class ) ) {
 				$config = MediaWikiServices::getInstance()->getMainConfig();
 				$this->config = [
-					'maxLayers' => $config->get( 'LayersMaxLayerCount' ) ?? 100,
+					// Explicit (int) cast required for strict_types compatibility
+					// Config values may be strings in some MediaWiki configurations
+					'maxLayers' => (int)( $config->get( 'LayersMaxLayerCount' ) ?? 100 ),
 					'defaultFonts' => $config->get( 'LayersDefaultFonts' ) ?? [ 'Arial', 'sans-serif' ]
 				];
 			} else {
@@ -522,7 +526,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	private function validateImageSrc( string $value ): array {
 		// Max size configurable via $wgLayersMaxImageBytes (default 1MB)
 		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
-		$maxSize = $config->get( 'LayersMaxImageBytes' );
+		$maxSize = (int)$config->get( 'LayersMaxImageBytes' );
 		if ( strlen( $value ) > $maxSize ) {
 			$maxSizeKB = round( $maxSize / 1024 );
 			return [ 'valid' => false, 'error' => "Image data too large (max {$maxSizeKB}KB)" ];

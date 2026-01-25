@@ -1,5 +1,7 @@
 <?php
 
+declare( strict_types=1 );
+
 /**
  * Hooks for the Layers extension
  * Simplified version for compatibility with various MediaWiki versions
