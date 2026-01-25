@@ -305,6 +305,7 @@ Architecture considerations:
 
 | Feature | Version | Status |
 |---------|---------|--------|
+| Canvas Snap | v1.5.29 | ✅ |
 | Gradient Fills | v1.5.8 | ✅ |
 | SVG Export | v1.5.7 | ✅ |
 | Curved Arrows | v1.3.3 | ✅ |
@@ -423,9 +424,10 @@ When calling getContext('2d'):
 **Rating: 8.8/10** — Production-ready, feature-complete, high quality
 
 **Strengths:**
-- ✅ 10,437 passing tests with 94.17% statement coverage
-- ✅ 84.46% branch coverage (all priority files at 80%+)
+- ✅ 10,574 passing tests with 93%+ statement coverage
+- ✅ 84%+ branch coverage (all priority files at 80%+)
 - ✅ 15 working drawing tools + Slide Mode
+- ✅ Canvas Snap for snapping to canvas edges/center
 - ✅ Professional security (CSRF, rate limiting, validation)
 - ✅ Named layer sets with version history
 - ✅ Shape library with 1,310 shapes
@@ -449,5 +451,5 @@ When calling getContext('2d'):
 ---
 
 *Plan updated: January 24, 2026*  
-*Version: 1.5.28*  
-*Based on verified test run: 10,437 tests, 94.17% statement coverage, 84.46% branch coverage*
+*Version: 1.5.29*  
+*Based on verified test run: 10,574 tests, 93%+ statement coverage, 84%+ branch coverage*
