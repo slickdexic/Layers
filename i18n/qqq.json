@@ -639,6 +639,7 @@
 	"layers-slide-copy-embed": "Button text for copying the slide embed wikitext code",
 	"layers-slide-canvas-layer": "Name shown for the canvas/background layer in the layer panel for slides",
 	"layers-slide-canvas-size": "Tooltip for canvas size controls",
+	"layers-slide-background": "Label for the background color input in the create slide form",
 	"layers-slide-background-color": "Tooltip for background color control",
 	"layers-slide-change-color": "Tooltip for clicking to change background color",
 
