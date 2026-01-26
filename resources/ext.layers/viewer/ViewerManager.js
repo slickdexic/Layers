@@ -1384,7 +1384,10 @@ class ViewerManager {
 		const backgroundColor = container.getAttribute( 'data-background' ) || '#ffffff';
 		const layerSetName = container.getAttribute( 'data-layerset' ) || 'default';
 
-		this.debugLog( 'Slide edit clicked:', slideName );
+		// DEBUG: Log all data attributes to trace layerset parameter
+		const rawLayerset = container.getAttribute( 'data-layerset' );
+		console.log( '[Layers DEBUG] handleSlideEditClick - data-layerset raw:', rawLayerset, 'resolved:', layerSetName );
+		this.debugLog( 'Slide edit clicked:', slideName, 'layerset:', layerSetName );
 
 		this.openSlideEditor( {
 			slideName: slideName,
@@ -1656,6 +1659,9 @@ class ViewerManager {
 	 * @return {string} Editor URL
 	 */
 	buildSlideEditorUrl( slideData ) {
+		// DEBUG: Log incoming slideData
+		console.log( '[Layers DEBUG] buildSlideEditorUrl - slideData.layerSetName:', slideData.layerSetName );
+
 		if ( typeof mw === 'undefined' || !mw.util ) {
 			// Fallback URL construction
 			let url = '/wiki/Special:EditSlide/' + encodeURIComponent( slideData.slideName );
@@ -1692,7 +1698,9 @@ class ViewerManager {
 
 		// Use Special:Slides page for editing (will be created in Phase 3)
 		// For now, use a slide-specific URL pattern
-		return mw.util.getUrl( 'Special:EditSlide/' + slideData.slideName ) + '?' + params.toString();
+		const finalUrl = mw.util.getUrl( 'Special:EditSlide/' + slideData.slideName ) + '?' + params.toString();
+		console.log( '[Layers DEBUG] buildSlideEditorUrl - final URL:', finalUrl );
+		return finalUrl;
 	}
 
 	/**

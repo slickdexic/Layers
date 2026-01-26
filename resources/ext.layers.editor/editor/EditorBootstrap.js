@@ -362,6 +362,12 @@
 				const init = mw.config.get( 'wgLayersEditorInit' );
 				debugLog( 'wgLayersEditorInit config: ' + ( init ? 'present' : 'not found' ) );
 
+				// DEBUG: Log full config to trace initialSetName
+				if ( init ) {
+					console.log( '[Layers DEBUG] EditorBootstrap - wgLayersEditorInit:', JSON.stringify( init ) );
+					console.log( '[Layers DEBUG] EditorBootstrap - init.initialSetName:', init.initialSetName );
+				}
+
 				if ( !init ) {
 					return;
 				}
