@@ -2,6 +2,16 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.35] - 2026-01-26
+
+### Fixed
+- **Slide Editor New Layer Set Selector** — Fixed issue where specifying a new (unsaved) layer set name via `layerset=X` would show 'default' in the dropdown instead of 'X'
+  - Root cause: `buildSetSelector()` hardcoded 'default' when `namedSets` was empty or when `currentSetName` wasn't in the list
+  - Fix: Dropdown now shows the specified set name with a "(new)" suffix for unsaved sets
+  - Added i18n message `layers-set-new-unsaved` for translatable "(new)" label
+
+---
+
 ## [1.5.34] - 2026-01-26
 
 ### Fixed

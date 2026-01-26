@@ -4,6 +4,21 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.35 (January 26, 2026)
+
+### Fixed
+- **Slide Editor New Layer Set Selector** — Fixed issue where specifying a new (unsaved) layer set name via `layerset=X` would show 'default' in the dropdown instead of 'X'
+  - Dropdown now shows the specified set name with a "(new)" suffix for unsaved sets
+  - Added i18n message `layers-set-new-unsaved` for translatable "(new)" label
+
+### Also Includes (v1.5.32-1.5.34)
+- **Critical: Slide `layerset=` Parameter Bug** — Fixed global regex stripping `|layerset=...` from `{{#slide:}}` parser functions
+- **Slide Editor Parameter Handling** — Fixed PHP/JS property name mismatch (`setName` → `initialSetName`)
+- **State Initialization** — Fixed hardcoded 'default' in `LayersEditor.initializeState()`
+- **Safari Compatibility** — Added `-webkit-user-select: none` prefix
+
+---
+
 ## Version 1.5.31 (January 25, 2026)
 
 ### Improved
