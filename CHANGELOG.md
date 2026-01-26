@@ -2,6 +2,15 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.34] - 2026-01-26
+
+### Fixed
+- **Slide Editor `layerset=` Still Not Applied** — Fixed additional issue where `currentSetName` was being initialized to 'default' before the config's `initialSetName` was used
+  - Root cause: `LayersEditor.initializeState()` hardcoded `currentSetName` to 'default' regardless of config
+  - Fix: Now uses `this.config.initialSetName || 'default'` during state initialization
+
+---
+
 ## [1.5.33] - 2026-01-25
 
 ### Fixed

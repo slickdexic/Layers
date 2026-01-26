@@ -241,9 +241,9 @@ class LayersEditor {
 			this.stateManager.set( 'baseHeight', null );
 			this.stateManager.set( 'allLayerSets', [] );
 			this.stateManager.set( 'currentLayerSetId', null );
-			// Named Layer Sets state
+			// Named Layer Sets state - use initialSetName from config if provided
 			this.stateManager.set( 'namedSets', [] );
-			this.stateManager.set( 'currentSetName', 'default' );
+			this.stateManager.set( 'currentSetName', this.config.initialSetName || 'default' );
 
 			// Slide mode state - initialized from config
 			this.stateManager.set( 'isSlide', this.config.isSlide || false );
