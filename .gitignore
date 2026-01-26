@@ -8,9 +8,6 @@
 /build/
 resources/dist/
 
-# Generated emoji bundle (regenerate with: npm run generate:emoji-bundle)
-resources/ext.layers.editor/shapeLibrary/emoji-bundle.json
-
 # IDE files
 .vscode/
 .idea/
