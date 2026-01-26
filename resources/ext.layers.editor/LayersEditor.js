@@ -243,10 +243,7 @@ class LayersEditor {
 			this.stateManager.set( 'currentLayerSetId', null );
 			// Named Layer Sets state - use initialSetName from config if provided
 			this.stateManager.set( 'namedSets', [] );
-			// DEBUG: Log config.initialSetName
-			console.log( '[Layers DEBUG] LayersEditor.initializeState - config.initialSetName:', this.config.initialSetName );
 			this.stateManager.set( 'currentSetName', this.config.initialSetName || 'default' );
-			console.log( '[Layers DEBUG] LayersEditor.initializeState - currentSetName set to:', this.stateManager.get( 'currentSetName' ) );
 
 			// Slide mode state - initialized from config
 			this.stateManager.set( 'isSlide', this.config.isSlide || false );
