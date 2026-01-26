@@ -169,7 +169,7 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 		$slides = $db->listSlides();
 
 		$this->assertIsArray( $slides );
-		$this->assertEmpty( $slides );
+		$this->assertSame( [], $slides );
 	}
 
 	/**

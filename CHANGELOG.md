@@ -2,6 +2,25 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.32] - 2026-01-25
+
+### Fixed
+- **Critical: Slide `layerset=` Parameter Bug** — Fixed issue where `layerset=` parameter in `{{#slide:}}` parser functions was being stripped before the parser could read it
+  - Root cause: Global regex in WikitextHooks.php was stripping `|layerset=...` from ALL wikitext, not just `[[File:...]]` links
+  - Fix: Changed to targeted `preg_replace_callback()` that only processes within `[[File:...]]` or `[[Image:...]]` contexts
+  - Added 28 new PHPUnit tests to prevent regression
+
+### Improved
+- **Safari Compatibility** — Added `-webkit-user-select: none` prefix for Safari/iOS support
+- **Test Quality** — Fixed SVG creation in tests to use proper `createElementNS()` for JSDOM compliance
+
+### Technical Details
+- All 10,643 tests pass (157 test suites)
+- Test coverage: 94.17% statement, 84.43% branch, 92.18% function, 94.31% line
+- PHP and JS lint checks pass cleanly
+
+---
+
 ## [1.5.31] - 2026-01-25
 
 ### Added

@@ -728,14 +728,23 @@ class WikitextHooks {
 				}
 			}
 
-			// Strip layerset=, layers=, and layer= from wikitext to prevent caption leakage
-			// Pattern matches: |layerset=value, |layers=value, or |layer=value (with optional whitespace)
-			$text = preg_replace(
-				'/\|(?:layerset|layers?)\s*=\s*[^|\]]+/i',
-				'',
+			// Strip layerset=, layers=, and layer= ONLY from within [[File:...]] or [[Image:...]] links
+			// to prevent caption leakage. We must NOT strip these from {{#slide:...}} parser functions!
+			// Use a callback to selectively strip only within file link contexts.
+			$text = preg_replace_callback(
+				'/\[\[(File|Image):([^\]]+)\]\]/i',
+				static function ( $match ) {
+					// Strip layerset=, layers=, layer= parameters from within the file link
+					$inner = preg_replace(
+						'/\|(?:layerset|layers?)\s*=\s*[^|\]]+/i',
+						'',
+						$match[0]
+					);
+					return $inner;
+				},
 				$text
 			);
-			self::log( 'Stripped layerset/layers/layer parameters from wikitext' );
+			self::log( 'Stripped layerset/layers/layer parameters from file links' );
 		} catch ( \Throwable $e ) {
 			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
 		}

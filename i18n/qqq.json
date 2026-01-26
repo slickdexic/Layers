@@ -625,6 +625,10 @@
 	"layers-filepage-usage-hint": "Hint text shown below the layer sets table explaining wikitext syntax to display layers",
 
 	"special-editslide-title": "Page title for the Special:EditSlide page. $1 is the slide name.",
+	"layers-slide-disabled": "Error message when slides feature is disabled in configuration",
+	"layers-slide-name-required": "Error message when slide name is not provided in parser function",
+	"layers-slide-invalid-name": "Error message when slide name contains invalid characters",
+	"layers-slide-error-generic": "Generic error message when slide rendering fails due to an unexpected error",
 	"layers-slide-empty": "Message displayed when a slide has no content (e.g., 'This slide is empty')",
 	"layers-slide-empty-hint": "Hint shown below the empty message to guide users on how to add content",
 	"layers-slide-properties": "Title for the slide properties panel in the editor sidebar",
