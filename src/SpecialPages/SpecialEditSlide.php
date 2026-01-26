@@ -70,10 +70,6 @@ class SpecialEditSlide extends SpecialPage {
 		// Get optional parameters - must get setname BEFORE database query
 		$setName = $request->getText( 'setname', 'default' );
 
-		// DEBUG: Log what we received
-		wfDebugLog( 'Layers', "SpecialEditSlide: setname from request = '$setName', full query = " .
-			$request->getQueryString() );
-
 		// Get slide info to determine lock mode
 		$db = $services->get( 'LayersDatabase' );
 		$normalizedName = 'Slide:' . $slideName;
