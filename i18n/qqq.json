@@ -453,6 +453,7 @@
 	"layers-set-load-error": "Error shown when loading a set fails",
 	"layers-set-revision-single": "Text shown in set dropdown when a set has exactly one revision",
 	"layers-set-revision-plural": "Text shown in set dropdown when a set has multiple revisions. $1 is the count.",
+	"layers-set-new-unsaved": "Text shown in set dropdown for a new layer set that hasn't been saved yet",
 	"layers-unsaved-changes-warning": "Confirmation dialog shown when switching sets with unsaved changes",
 	"layers-unsaved-changes-title": "Dialog title for unsaved changes confirmation",
 	"layers-switch-anyway": "Button text to confirm switching sets despite unsaved changes",

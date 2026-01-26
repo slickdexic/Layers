@@ -476,6 +476,7 @@
 	"layers-set-load-error": "Failed to load layer set",
 	"layers-set-revision-single": "1 revision",
 	"layers-set-revision-plural": "$1 revisions",
+	"layers-set-new-unsaved": "new",
 	"layers-unsaved-changes-warning": "You have unsaved changes. Switch sets without saving?",
 	"layers-unsaved-changes-title": "Unsaved Changes",
 	"layers-switch-anyway": "Switch Anyway",
