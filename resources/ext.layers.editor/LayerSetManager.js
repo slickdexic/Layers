@@ -250,14 +250,33 @@
 				// Clear existing options
 				selectEl.innerHTML = '';
 
+				// Check if currentSetName exists in namedSets
+				const currentSetExists = namedSets.some( ( s ) => s.name === currentSetName );
+
 				if ( namedSets.length === 0 ) {
-					// No sets exist yet - show default placeholder
+					// No sets exist yet - show current set name (may be 'default' or a new set name)
 					const option = document.createElement( 'option' );
-					option.value = 'default';
-					option.textContent = this.getMessage( 'layers-set-default', 'Default' );
+					option.value = currentSetName;
+					if ( currentSetName === 'default' ) {
+						option.textContent = this.getMessage( 'layers-set-default', 'Default' );
+					} else {
+						// New set that doesn't exist yet - show as "(new)"
+						option.textContent = currentSetName + ' (' +
+							this.getMessage( 'layers-set-new-unsaved', 'new' ) + ')';
+					}
 					option.selected = true;
 					selectEl.appendChild( option );
 				} else {
+					// If currentSetName is not in the named sets list (new unsaved set), add it first
+					if ( !currentSetExists && currentSetName !== 'default' ) {
+						const newSetOption = document.createElement( 'option' );
+						newSetOption.value = currentSetName;
+						newSetOption.textContent = currentSetName + ' (' +
+							this.getMessage( 'layers-set-new-unsaved', 'new' ) + ')';
+						newSetOption.selected = true;
+						selectEl.appendChild( newSetOption );
+					}
+
 					// Build options from named sets
 					namedSets.forEach( ( setInfo ) => {
 						const option = document.createElement( 'option' );

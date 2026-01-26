@@ -556,6 +556,7 @@
 				"layers-set-load-error",
 				"layers-set-revision-single",
 				"layers-set-revision-plural",
+				"layers-set-new-unsaved",
 				"layers-unsaved-changes-warning",
 				"layers-set-selector-group",
 				"layers-set-select-aria",
