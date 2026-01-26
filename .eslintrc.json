@@ -21,6 +21,7 @@
 		"test_load.js",
 		"resources/dist/",
 		"resources/ext.layers.editor/shapeLibrary/scripts/",
+		"scripts/",
 		"node_modules/",
 		"vendor/",
 		"docs/api/",

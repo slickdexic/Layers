@@ -20,7 +20,13 @@
 
 ---
 
-## 🆕 What's New in v1.5.31
+## 🆕 What's New in v1.5.35
+
+- **Version Consistency** — Fixed version number inconsistencies across all project files
+- **Documentation Audit** — Updated all stale metrics in documentation
+- **Critical Review v38** — Comprehensive codebase audit with all issues documented
+
+### Previous v1.5.31 Highlights
 
 - **REL1_43 Branch Sync** — Updated REL1_43 branch to include all changes from v1.5.30
 - **Draft Recovery Fix** — Fixed false draft recovery prompts
@@ -229,18 +235,18 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.27 |
+| **Version (main)** | 1.5.35 |
 | **Version (REL1_43)** | 1.5.26-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 2026 |
-| **Test Suites** | 156 |
-| **Total Tests** | 9,994 |
+| **Release Date** | January 26, 2026 |
+| **Test Suites** | 157 |
+| **Total Tests** | 10,643 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 92.96% |
-| **Branch Coverage** | 83.27% |
-| **JavaScript Files** | 126 |
-| **ES6 Classes** | 100+ |
-| **God Classes** | 20 (3 generated data, 17 hand-written) |
+| **Statement Coverage** | 94.15% |
+| **Branch Coverage** | 84.43% |
+| **JavaScript Files** | 127 |
+| **ES6 Classes** | 127 |
+| **God Classes** | 21 (3 generated data, 18 hand-written) |
 
 ---
 

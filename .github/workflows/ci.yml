@@ -41,6 +41,9 @@ jobs:
       - name: Install dependencies (npm)
         run: npm ci
 
+      - name: Version consistency check
+        run: node scripts/update-version.js --check
+
       - name: Lint/i18n (grunt)
         run: npm test
 

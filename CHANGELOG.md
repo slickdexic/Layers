@@ -9,6 +9,24 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Root cause: `buildSetSelector()` hardcoded 'default' when `namedSets` was empty or when `currentSetName` wasn't in the list
   - Fix: Dropdown now shows the specified set name with a "(new)" suffix for unsaved sets
   - Added i18n message `layers-set-new-unsaved` for translatable "(new)" label
+- **Version Inconsistencies (P0)** — Fixed version number mismatches across 6 project files (ranging from 1.5.26 to 1.5.31)
+  - Updated all files to match extension.json source of truth (1.5.35)
+  - Added `scripts/update-version.js` to automate version synchronization
+  - Added `npm run check:version` and `npm run update:version` commands
+  - Added version consistency check to CI workflow
+
+### Improved
+- **Documentation Metrics** — Updated all stale metrics in documentation files
+  - Test count: 10,643 tests in 157 suites
+  - Coverage: 94.15% statement, 84.43% branch, 92.18% function, 94.28% line
+  - JS files: 127, ~115,271 lines
+  - PHP files: 40, ~14,225 lines
+  - ESLint disables: 11 (all legitimate)
+  - i18n messages: 684
+- **Codebase Review** — Comprehensive critical review (v38) with all issues documented
+  - Overall score: 8.3/10
+  - Identified 1 critical issue (version inconsistencies), 1 high issue (stale docs)
+  - Updated improvement_plan.md with new P0/P1 items
 
 ---
 

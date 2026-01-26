@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 25, 2026  
-**Version:** 1.5.32  
-**Status:** Production-Ready, High Quality (8.5/10)
+**Last Updated:** January 26, 2026  
+**Version:** 1.5.35  
+**Status:** Production-Ready, Good Quality with Quality Gaps (8.3/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
 
@@ -10,36 +10,36 @@
 
 ## Executive Summary
 
-The extension is **production-ready and high quality** with **comprehensive test coverage** and clean code practices. This improvement plan addresses the issues identified in the comprehensive critical audit v37.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A critical review (v38) discovered version inconsistencies and stale documentation, which have now been **fully resolved**.
 
 **Current Status:**
-- ✅ All P0 items complete (no critical issues)
-- ✅ All P1 items complete (January 25, 2026)
+- ✅ All P0 items complete (version consistency fixed with automation)
+- ✅ All P1 items complete (documentation metrics updated)
 - 🟡 P2 items: 5 open (6 completed)
 - 🟡 P3 items: 8 open (3 completed)
 
-**Verified Metrics (January 25, 2026):**
+**Verified Metrics (January 26, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | Tests passing | **10,643** (157 suites) | ✅ Excellent |
-| Statement coverage | **94.17%** | ✅ Excellent |
+| Statement coverage | **94.15%** | ✅ Excellent |
 | Branch coverage | **84.43%** | ✅ Excellent |
 | Function coverage | **92.18%** | ✅ Excellent |
-| Line coverage | **94.31%** | ✅ Excellent |
+| Line coverage | **94.28%** | ✅ Excellent |
 | JS files | 127 | Excludes dist/ and scripts/ |
-| JS lines | ~115,002 | Includes generated data |
+| JS lines | ~115,271 | Includes generated data |
 | PHP files | 40 | ✅ |
-| PHP lines | ~14,169 | ✅ |
+| PHP lines | ~14,225 | ✅ |
 | PHP strict_types | **40/40 files** | ✅ Complete |
 | ES6 classes | 127 files | 100% migrated |
 | God classes (≥1,000 lines) | 21 | 3 generated, 18 hand-written |
 | ESLint errors | 0 | ✅ |
-| ESLint disables | 17 | ✅ All legitimate |
-| innerHTML usages | 63 | ✅ Audited - all safe |
+| ESLint disables | 11 | ✅ All legitimate |
+| innerHTML usages | 57 | ✅ Audited - all safe |
 | Skipped tests | 0 | ✅ All tests run |
 | Weak assertions | **0** | ✅ All fixed |
-| i18n messages | 679 | All documented in qqq.json |
+| i18n messages | 684 | All documented in qqq.json |
 | Deprecated code markers | 5 | 🟡 Technical debt |
 
 ---
@@ -55,9 +55,32 @@ The extension is **production-ready and high quality** with **comprehensive test
 
 ---
 
-## Phase 0 (P0): Critical Issues — ✅ NONE
+## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-No critical security vulnerabilities or stability issues identified.
+### P0.1 Fix Version Number Inconsistencies
+
+**Status:** ✅ COMPLETED (January 26, 2026)  
+**Priority:** P0 - Critical (Immediate)  
+**Category:** Release Management / Professionalism  
+**Discovered:** January 26, 2026 (Audit v38)
+
+**Problem:** Version numbers were inconsistent across 6+ files, ranging from v1.5.26 to v1.5.35.
+
+**Fix Applied:**
+- Updated all files to match extension.json source of truth (1.5.35)
+- Created `scripts/update-version.js` to automate version synchronization
+- Added `npm run check:version` and `npm run update:version` commands
+- Added version consistency check to CI workflow (`.github/workflows/ci.yml`)
+
+**Files Updated:**
+- `resources/ext.layers.editor/LayersNamespace.js`
+- `README.md`
+- `Mediawiki-Extension-Layers.mediawiki`
+- `wiki/Home.md`
+- `wiki/Installation.md`
+- `improvement_plan.md`
+
+---
 
 **Previously Fixed P0 Issues:**
 - ✅ Missing `mustBePosted()` on Write API Modules (Fixed January 24, 2026)
@@ -68,6 +91,31 @@ No critical security vulnerabilities or stability issues identified.
 ---
 
 ## Phase 1 (P1): High Priority — ✅ ALL COMPLETED
+
+### P1.0 Audit and Update Stale Documentation Metrics
+
+**Status:** ✅ COMPLETED (January 26, 2026)  
+**Priority:** P1 - High  
+**Category:** Documentation / Quality Assurance  
+**Discovered:** January 26, 2026 (Audit v38)
+
+**Problem:** Documentation files contained outdated metrics that didn't match actual values.
+
+**Fix Applied:**
+- Updated all metrics in wiki/Home.md (test count, coverage, JS files, etc.)
+- Updated copilot-instructions.md with correct values
+- Updated codebase_review.md to v38 with accurate metrics
+- Updated improvement_plan.md header and status table
+
+**Verified Metrics (January 26, 2026):**
+- Test count: 10,643 tests in 157 suites
+- Coverage: 94.15% statement, 84.43% branch, 92.18% function, 94.28% line
+- JS files: 127, ~115,271 lines
+- PHP files: 40, ~14,225 lines
+- ESLint disables: 11 (all legitimate)
+- i18n messages: 684
+
+---
 
 ### P1.1 Validate `paths` Array Contents in customShape Layers
 
