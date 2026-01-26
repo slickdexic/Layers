@@ -1076,4 +1076,167 @@ class LayersDatabase {
 
 		return $row ? $row->ls_img_sha1 : null;
 	}
+
+	/**
+	 * Count the number of unique slides (layer sets with ls_img_sha1 = 'slide').
+	 *
+	 * Slides are identified by a special SHA1 value of 'slide' to distinguish
+	 * them from regular image layer sets.
+	 *
+	 * @param string $prefix Optional prefix filter for slide names
+	 * @return int Number of unique slides
+	 */
+	public function countSlides( string $prefix = '' ): int {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return 0;
+		}
+
+		$conditions = [
+			'ls_img_sha1' => 'slide'
+		];
+
+		// Add prefix filter if provided
+		if ( $prefix !== '' ) {
+			$escapedPrefix = $dbr->addQuotes( 'Slide:' . $prefix . '%' );
+			$conditions[] = 'ls_img_name LIKE ' . $escapedPrefix;
+		}
+
+		$count = $dbr->selectField(
+			'layer_sets',
+			'COUNT(DISTINCT ls_img_name)',
+			$conditions,
+			__METHOD__
+		);
+
+		return (int)$count;
+	}
+
+	/**
+	 * List slides with metadata for the Special:Slides page.
+	 *
+	 * Returns an array of slide data including canvas dimensions, layer count,
+	 * revision history, and creator/modifier information.
+	 *
+	 * @param string $prefix Optional prefix filter for slide names
+	 * @param int $limit Maximum number of slides to return (default 50)
+	 * @param int $offset Pagination offset (default 0)
+	 * @param string $sort Sort order: 'name', 'created', or 'modified' (default 'name')
+	 * @return array Array of slide data
+	 */
+	public function listSlides(
+		string $prefix = '',
+		int $limit = 50,
+		int $offset = 0,
+		string $sort = 'name'
+	): array {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return [];
+		}
+
+		// Build conditions
+		$conditions = [
+			'ls_img_sha1' => 'slide'
+		];
+
+		if ( $prefix !== '' ) {
+			$escapedPrefix = $dbr->addQuotes( 'Slide:' . $prefix . '%' );
+			$conditions[] = 'ls_img_name LIKE ' . $escapedPrefix;
+		}
+
+		// Determine sort order
+		$orderBy = 'slide_name ASC';
+		if ( $sort === 'created' ) {
+			$orderBy = 'first_timestamp DESC';
+		} elseif ( $sort === 'modified' ) {
+			$orderBy = 'latest_timestamp DESC';
+		}
+
+		// Build subquery to get latest revision for each slide
+		$latestRevisionSubquery = $dbr->buildSelectSubquery(
+			'layer_sets',
+			[ 'ls_img_name', 'max_rev' => 'MAX(ls_revision)' ],
+			$conditions,
+			__METHOD__,
+			[ 'GROUP BY' => 'ls_img_name' ]
+		);
+
+		// Main query with join to get slide data
+		$result = $dbr->select(
+			[
+				'ls' => 'layer_sets',
+				'latest' => $latestRevisionSubquery
+			],
+			[
+				'slide_name' => 'ls.ls_img_name',
+				'revision_count' => '(SELECT COUNT(*) FROM ' .
+					$dbr->tableName( 'layer_sets' ) .
+					' WHERE ls_img_name = ls.ls_img_name AND ls_img_sha1 = ' .
+					$dbr->addQuotes( 'slide' ) . ')',
+				'first_timestamp' => '(SELECT MIN(ls_timestamp) FROM ' .
+					$dbr->tableName( 'layer_sets' ) .
+					' WHERE ls_img_name = ls.ls_img_name AND ls_img_sha1 = ' .
+					$dbr->addQuotes( 'slide' ) . ')',
+				'latest_timestamp' => 'ls.ls_timestamp',
+				'ls_json_blob' => 'ls.ls_json_blob',
+				'ls_user_id' => 'ls.ls_user_id',
+				'ls_layer_count' => 'ls.ls_layer_count',
+				'ls_revision' => 'ls.ls_revision'
+			],
+			[
+				'ls.ls_img_sha1' => 'slide',
+				'ls.ls_revision = latest.max_rev'
+			],
+			__METHOD__,
+			[
+				'ORDER BY' => $orderBy,
+				'LIMIT' => $limit,
+				'OFFSET' => $offset
+			],
+			[
+				'latest' => [ 'JOIN', 'ls.ls_img_name = latest.ls_img_name' ]
+			]
+		);
+
+		$slides = [];
+		foreach ( $result as $row ) {
+			// Parse JSON data to extract canvas settings
+			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH );
+
+			// Get first revision creator
+			$firstRevisionRow = $dbr->selectRow(
+				'layer_sets',
+				[ 'ls_user_id' ],
+				[
+					'ls_img_name' => $row->slide_name,
+					'ls_img_sha1' => 'slide',
+					'ls_revision' => 1
+				],
+				__METHOD__
+			);
+			$createdById = $firstRevisionRow ? (int)$firstRevisionRow->ls_user_id : (int)$row->ls_user_id;
+
+			// Extract slide name from full name (remove 'Slide:' prefix)
+			$slideName = $row->slide_name;
+			if ( str_starts_with( $slideName, 'Slide:' ) ) {
+				$slideName = substr( $slideName, 6 );
+			}
+
+			$slides[] = [
+				'name' => $slideName,
+				'canvasWidth' => $jsonData['canvasWidth'] ?? 800,
+				'canvasHeight' => $jsonData['canvasHeight'] ?? 600,
+				'backgroundColor' => $jsonData['backgroundColor'] ?? '#ffffff',
+				'layerCount' => (int)$row->ls_layer_count,
+				'revisionCount' => (int)$row->revision_count,
+				'created' => wfTimestamp( TS_ISO_8601, $row->first_timestamp ),
+				'modified' => wfTimestamp( TS_ISO_8601, $row->latest_timestamp ),
+				'createdById' => $createdById,
+				'modifiedById' => (int)$row->ls_user_id
+			];
+		}
+
+		return $slides;
+	}
 }
