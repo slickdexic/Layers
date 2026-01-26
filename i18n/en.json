@@ -684,7 +684,7 @@
 	"layers-search-results": "Showing $1 of $2 layers",
 
 	"special-slides": "Slides",
-	"special-slides-desc": "View and manage presentation slides",
+	"special-slides-desc": "View and manage slides",
 	"special-slides-create": "Create Slide",
 	"special-slides-create-and-edit": "Create and Edit",
 	"special-slides-create-title": "Create Slide: $1",
@@ -714,5 +714,7 @@
 	"special-slides-days-ago": "$1 {{PLURAL:$1|day|days}} ago",
 
 	"layers-slide-name": "Slide Name",
-	"layers-slide-name-hint": "Use letters, numbers, hyphens, and underscores only"
+	"layers-slide-name-hint": "Use letters, numbers, hyphens, and underscores only",
+
+	"specialpages-group-layers": "Layers"
 }

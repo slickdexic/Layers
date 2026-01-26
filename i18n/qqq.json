@@ -680,7 +680,7 @@
 	"layers-search-results": "Status text showing filtered layer count. $1 is visible count, $2 is total count",
 
 	"special-slides": "Name of the Special:Slides page shown in the page title",
-	"special-slides-desc": "Description of the Special:Slides page for search and help text",
+	"special-slides-desc": "Description of the Special:Slides page shown on Special:SpecialPages",
 	"special-slides-create": "Button label to create a new slide",
 	"special-slides-create-and-edit": "Button label to create a slide and immediately open it for editing",
 	"special-slides-create-title": "Title shown when creating a new slide. $1 is the slide name",
@@ -710,5 +710,7 @@
 	"special-slides-days-ago": "Relative time text for days ago. $1 is the number of days. Uses PLURAL",
 
 	"layers-slide-name": "Label for the slide name input field",
-	"layers-slide-name-hint": "Helper text explaining valid characters for slide names"
+	"layers-slide-name-hint": "Helper text explaining valid characters for slide names",
+
+	"specialpages-group-layers": "Name of the special pages group for Layers extension pages on Special:SpecialPages"
 }
