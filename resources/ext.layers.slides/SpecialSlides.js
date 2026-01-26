@@ -163,7 +163,13 @@
 			const modifiedDate = this.formatRelativeTime( slide.modified );
 
 			let html = `<div class="layers-slide-item" data-name="${ name }" role="listitem">`;
-			html += '<div class="layers-slide-icon" aria-hidden="true">📊</div>';
+			// Layers-style stacked diamond icon (matches Layers branding)
+			html += '<div class="layers-slide-icon" aria-hidden="true">' +
+				'<svg viewBox="0 0 32 32" width="32" height="32">' +
+				'<path d="M4 16 L16 12 L28 16 L16 20 Z" fill="#3366cc"/>' +
+				'<path d="M4 12 L16 8 L28 12 L16 16 Z" fill="#dd3333"/>' +
+				'<path d="M4 8 L16 4 L28 8 L16 12 Z" fill="#00af89"/>' +
+				'</svg></div>';
 			html += '<div class="layers-slide-info">';
 			html += `<div class="layers-slide-name">${ name }</div>`;
 			html += '<div class="layers-slide-meta">';

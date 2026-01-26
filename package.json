@@ -23,6 +23,9 @@
 		"check:docs": "bash scripts/verify-docs.sh",
 		"check:version": "node scripts/update-version.js --check",
 		"update:version": "node scripts/update-version.js",
+		"generate:emoji-names": "node resources/ext.layers.editor/shapeLibrary/scripts/import-cldr-emoji-names.js",
+		"generate:emoji-index": "node resources/ext.layers.editor/shapeLibrary/scripts/generate-emoji-index.js",
+		"generate:emoji-bundle": "node resources/ext.layers.editor/shapeLibrary/scripts/generate-emoji-bundle.js --minify",
 		"docs": "jsdoc -c jsdoc.config.json",
 		"docs:markdown": "jsdoc2md resources/ext.layers.editor/*.js resources/ext.layers.shared/*.js > docs/API.md"
 	},

@@ -109,7 +109,6 @@
 }
 
 .layers-slide-icon {
-	font-size: 2rem;
 	width: 3rem;
 	height: 3rem;
 	display: flex;
@@ -118,6 +117,11 @@
 	background: #eaecf0;
 	border-radius: 4px;
 	flex-shrink: 0;
+}
+
+.layers-slide-icon svg {
+	width: 2rem;
+	height: 2rem;
 }
 
 .layers-slide-info {
