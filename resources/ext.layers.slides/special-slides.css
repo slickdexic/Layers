@@ -45,6 +45,8 @@
 	padding: 0.5rem;
 	border: 1px solid #a2a9b1;
 	border-radius: 2px;
+	background: #fff;
+	color: #202122;
 }
 
 .layers-slides-search-input:focus {
@@ -63,6 +65,7 @@
 	border: 1px solid #a2a9b1;
 	border-radius: 2px;
 	background: #fff;
+	color: #202122;
 }
 
 /* Slides list */
@@ -189,6 +192,8 @@
 	padding: 0.5rem;
 	border: 1px solid #a2a9b1;
 	border-radius: 2px;
+	background: #fff;
+	color: #202122;
 }
 
 .layers-form-hint {
