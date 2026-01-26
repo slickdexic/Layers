@@ -18,15 +18,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Improved
 - **Documentation Metrics** — Updated all stale metrics in documentation files
   - Test count: 10,643 tests in 157 suites
-  - Coverage: 94.15% statement, 84.43% branch, 92.18% function, 94.28% line
-  - JS files: 127, ~115,271 lines
-  - PHP files: 40, ~14,225 lines
+  - Coverage: 94.45% statement, 84.87% branch, 92.55% function, 94.59% line
+  - JS files: 127, ~115,282 lines
+  - PHP files: 40, ~14,388 lines
   - ESLint disables: 11 (all legitimate)
-  - i18n messages: 684
-- **Codebase Review** — Comprehensive critical review (v38) with all issues documented
-  - Overall score: 8.3/10
-  - Identified 1 critical issue (version inconsistencies), 1 high issue (stale docs)
-  - Updated improvement_plan.md with new P0/P1 items
+  - i18n messages: 697
+- **Codebase Review** — Comprehensive critical review (v39) with all issues documented
+  - Overall score: 8.6/10
+  - 0 critical issues, 0 high issues, 5 medium issues, 10 low issues
+  - Updated codebase_review.md and improvement_plan.md
 
 ---
 

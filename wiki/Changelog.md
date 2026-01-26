@@ -10,6 +10,20 @@ Version history for the Layers extension.
 - **Slide Editor New Layer Set Selector** — Fixed issue where specifying a new (unsaved) layer set name via `layerset=X` would show 'default' in the dropdown instead of 'X'
   - Dropdown now shows the specified set name with a "(new)" suffix for unsaved sets
   - Added i18n message `layers-set-new-unsaved` for translatable "(new)" label
+- **Version Inconsistencies (P0)** — Fixed version number mismatches across 6 project files
+  - Added `scripts/update-version.js` to automate version synchronization
+  - Added `npm run check:version` and `npm run update:version` commands
+
+### Improved
+- **Documentation Metrics** — Updated all stale metrics in documentation files
+  - Test count: 10,643 tests in 157 suites
+  - Coverage: 94.45% statement, 84.87% branch, 92.55% function, 94.59% line
+  - JS files: 127, ~115,282 lines
+  - PHP files: 40, ~14,388 lines
+  - i18n messages: 697
+- **Codebase Review v39** — Comprehensive critical review with all issues documented
+  - Overall score: 8.6/10
+  - 0 critical issues, 0 high issues, 5 medium issues, 10 low issues
 
 ### Also Includes (v1.5.32-1.5.34)
 - **Critical: Slide `layerset=` Parameter Bug** — Fixed global regex stripping `|layerset=...` from `{{#slide:}}` parser functions

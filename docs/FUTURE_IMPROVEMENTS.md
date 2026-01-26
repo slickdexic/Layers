@@ -2,7 +2,7 @@
 
 This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
 
-**Last Updated:** January 25, 2026
+**Last Updated:** January 26, 2026
 
 ---
 
@@ -27,32 +27,21 @@ Added backwards compatibility with lowercase 's' in `{{#slide: ...}}` parser fun
 
 ---
 
-### 2. Zoom to Mouse Pointer (FR-13)
+### ~~2. Zoom to Mouse Pointer (FR-13)~~ ✅ COMPLETED
 
 **Priority:** HIGH  
 **Complexity:** Medium  
-**Status:** ⏳ Proposed (January 25, 2026)
+**Status:** ✅ Completed (January 26, 2026)
 
-Zoom should anchor at the mouse pointer position (or pinch point on mobile).
-
-**Current Behavior:**
-- Mouse wheel zoom is anchored at the top-left corner of the canvas
-- Pinch-to-zoom on mobile may have similar anchor issues
-
-**Desired Behavior:**
-- Zoom in: canvas zooms toward mouse cursor position (cursor stays over same content)
-- Zoom out: canvas zooms away from mouse cursor position
-- Pinch-to-zoom: zoom anchored at the midpoint between the two touch points
+Zoom now anchors at the mouse pointer position.
 
 **Implementation:**
-- Modify `ZoomPanController.js` to calculate zoom anchor point
-- Get mouse position in canvas coordinates before zoom
-- Apply zoom transformation
-- Adjust pan offset so mouse position maps to same canvas coordinates after zoom
+- `CanvasEvents.handleWheel()` captures mouse position via `cm.getMousePoint(e)`
+- `ZoomPanController.zoomBy(delta, point)` calculates screen position before zoom
+- Pan offset adjusted after zoom to keep point under cursor stable
+- Full test coverage in `ZoomAndCoords.test.js` and `ZoomPanController.test.js`
 
-**Reference:** This is standard behavior in Figma, Illustrator, Photoshop, and most design tools.
-
-**Effort:** ~1-2 days
+**Location:** `resources/ext.layers.editor/canvas/ZoomPanController.js`
 
 ---
 

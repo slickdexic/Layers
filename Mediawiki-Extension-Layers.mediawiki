@@ -65,16 +65,34 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 |}
 
 == Slide Mode (v1.5.22+) ==
-'''Create standalone canvas graphics without requiring a base image.''' Slides are perfect for diagrams, infographics, flowcharts, and presentations.
+'''Create standalone canvas graphics without requiring a base image.''' Slides are perfect for diagrams, infographics, flowcharts, and presentations. Like images, slides support '''multiple named layer sets''' for different annotation variations.
 
 === Slide Syntax ===
 <syntaxhighlight lang="wikitext">
-{{#Slide: MySlide}}                              <!-- Render slide "MySlide" -->
+{{#Slide: MySlide}}                              <!-- Render slide "MySlide" (default layer set) -->
+{{#Slide: MySlide | layerset=annotations}}       <!-- Render specific named layer set -->
 {{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
 {{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
 {{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
 {{#Slide: MySlide | size=800x600 | lock=view}}   <!-- View-only (no edit overlay) -->
 </syntaxhighlight>
+
+=== Slide Parameters ===
+{| class="wikitable"
+! Parameter !! Description !! Example
+|-
+| <code>layerset</code> || Named layer set to display (default: "default") || <code>layerset=anatomy</code>
+|-
+| <code>canvas</code> || Canvas size in pixels || <code>canvas=1920x1080</code>
+|-
+| <code>size</code> || Display size on page || <code>size=800x600</code>
+|-
+| <code>bgcolor</code> || Background color || <code>bgcolor=#f0f0f0</code>
+|-
+| <code>lock</code> || Lock mode (view or all) || <code>lock=view</code>
+|-
+| <code>class</code> || CSS classes for the container || <code>class=my-diagram</code>
+|}
 
 === Slide Management ===
 {| class="wikitable"

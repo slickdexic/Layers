@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.2%25-brightgreen)](coverage/lcov-report/index.html)
+[![Coverage](https://img.shields.io/badge/coverage-94.5%25-brightgreen)](coverage/lcov-report/index.html)
 [![Tests](https://img.shields.io/badge/tests-10%2C643%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
@@ -46,7 +46,8 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 ### Slide Wikitext Syntax
 
 ```wikitext
-{{#Slide: MySlide}}                              <!-- Render slide "MySlide" -->
+{{#Slide: MySlide}}                              <!-- Render slide "MySlide" (default layer set) -->
+{{#Slide: MySlide | layerset=annotations}}       <!-- Render specific named layer set -->
 {{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
 {{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
 {{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
@@ -57,8 +58,9 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - **`Special:Slides`** — Browse, search, and manage all slides
 - **`Special:EditSlide/SlideName`** — Direct link to edit a specific slide
-- Slides are stored separately from image layer sets
-- Each slide has its own version history
+- **`Special:EditSlide/SlideName?layerset=setname`** — Edit a specific layer set
+- Slides support multiple named layer sets (just like images)
+- Each slide has its own version history per layer set
 
 ### Key Features
 

@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 25, 2026
-**Version:** 1.5.30
+**Last Updated:** January 26, 2026
+**Version:** 1.5.35
 
 ---
 
@@ -17,26 +17,27 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (January 25, 2026)
+## Codebase Statistics (January 26, 2026)
 
 | Metric | Value |
 |--------|-------|
 | Total JS files | **127** |
-| Total JS lines | **~115,002** |
+| Total JS lines | **~115,282** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~40,000 lines (generated) |
 | ES6 classes | **127** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **94.18% stmt, 84.44% branch** |
-| Jest tests | **10,626** (157 suites) |
+| Test coverage | **94.45% stmt, 84.87% branch** |
+| Jest tests | **10,643** (157 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **21** (3 generated, 18 hand-written) |
+| God classes (>1000 lines) | **23** (3 generated, 18 JS, 2 PHP) |
 | Drawing tools | **15** |
 | Shape library | **1,310 shapes** |
 | Emoji library | **2,817 emoji** |
-| eslint-disable comments | **9** ✅ |
+| i18n messages | **697** |
+| eslint-disable comments | **11** ✅ |
 
 ---
 

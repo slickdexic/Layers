@@ -10,6 +10,8 @@ Create standalone canvas graphics without requiring a base image. Perfect for di
 
 Slide Mode allows you to create graphics from scratch using all 15 drawing tools, without needing an existing image file. Slides are stored separately from image layer sets and have their own version history.
 
+**Like images, slides support multiple named layer sets** — you can create different annotation variations (e.g., "english", "spanish", "detailed", "simplified") for the same slide.
+
 ---
 
 ## Wikitext Syntax
@@ -24,6 +26,7 @@ Use the `{{#Slide:}}` parser function to embed slides:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
+| `layerset` | Named layer set to display (default: "default") | `layerset=anatomy` |
 | `canvas` | Canvas size (width×height) | `canvas=1920x1080` |
 | `size` | Display size on page | `size=800x600` |
 | `bgcolor` | Background color | `bgcolor=#f0f0f0` |
@@ -33,8 +36,12 @@ Use the `{{#Slide:}}` parser function to embed slides:
 ### Examples
 
 ```wikitext
-<!-- Basic slide -->
+<!-- Basic slide (default layer set) -->
 {{#Slide: MyDiagram}}
+
+<!-- Specific named layer set -->
+{{#Slide: MyDiagram | layerset=english}}
+{{#Slide: MyDiagram | layerset=spanish}}
 
 <!-- Custom canvas size -->
 {{#Slide: Presentation | canvas=1920x1080}}
@@ -50,10 +57,41 @@ Use the `{{#Slide:}}` parser function to embed slides:
 
 <!-- Combined parameters -->
 {{#Slide: Technical-Drawing 
+| layerset=detailed
 | canvas=1200x900 
 | size=600x450 
 | bgcolor=#ffffff
 }}
+```
+
+---
+
+## Named Layer Sets for Slides
+
+Just like images, slides support multiple named layer sets:
+
+### Use Cases
+
+| Use Case | Example Sets |
+|----------|--------------|
+| **Multilingual** | `english`, `spanish`, `french` |
+| **Detail Levels** | `overview`, `detailed`, `expert` |
+| **Versions** | `draft`, `reviewed`, `approved` |
+| **Audiences** | `student`, `instructor`, `admin` |
+
+### Creating Named Sets
+
+1. Open the slide in the editor (`Special:EditSlide/SlideName`)
+2. Click the layer set dropdown (shows current set name)
+3. Click **"Create New Set..."**
+4. Enter a name and click **Create**
+
+### Direct Editing
+
+You can open a specific layer set directly:
+
+```
+Special:EditSlide/MySlideName?layerset=annotations
 ```
 
 ---

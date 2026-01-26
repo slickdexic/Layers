@@ -1,9 +1,9 @@
 # God Class Refactoring Plan
 
 **Created:** January 11, 2026  
-**Updated:** January 24, 2026  
+**Updated:** January 26, 2026  
 **Author:** GitHub Copilot (Claude Opus 4.5)  
-**Status:** ✅ Branch Coverage Target Achieved (84.48%)  
+**Status:** ✅ Branch Coverage Target Achieved (84.87%)  
 **Target:** Reduce god classes, maintain branch coverage at 80%+
 
 ---
@@ -12,23 +12,22 @@
 
 This document outlines a comprehensive, phased plan to address the god class files (files >1,000 lines) in the Layers extension.
 
-### Current State (January 24, 2026) - v1.5.28
+### Current State (January 26, 2026) - v1.5.35
 
 | Metric | Previous | Current | Target | Status |
 |--------|----------|---------|--------|--------|
-| God classes | 20 files* | 21 files* | <12 files | 📊 Tracked |
-| Branch coverage | 83.02% | **84.48%** | 80%+ | ✅ Exceeded |
-| Tests | 9,967 | **10,448** | Maintain 100% pass | ✅ Passing |
-| Statement coverage | 92.59% | **94.19%** | Maintain 90%+ | ✅ Excellent |
+| God classes | 21 files* | 23 files* | <12 files | 📊 Tracked |
+| Branch coverage | 84.48% | **84.87%** | 80%+ | ✅ Exceeded |
+| Tests | 10,448 | **10,643** | Maintain 100% pass | ✅ Passing |
+| Statement coverage | 94.19% | **94.45%** | Maintain 90%+ | ✅ Excellent |
 
-*21 god classes includes 3 generated data files (EmojiLibraryData.js, ShapeLibraryData.js, EmojiLibraryIndex.js) that are exempt from refactoring.
+*23 god classes includes 3 generated data files (EmojiLibraryData.js, ShapeLibraryData.js, EmojiLibraryIndex.js) that are exempt from refactoring, plus 2 PHP god classes (LayersDatabase.php, ServerSideLayerValidator.php).
 
-**Key Changes since v1.5.26:**
-- Improved APIManager.js branch coverage: 71.88% → 80.18%
-- Improved ViewerManager.js branch coverage: 79.85% → 80.14%
-- Improved LayerPanel.js branch coverage: 70.41% → 80.27%
-- Added CanvasManager slide mode and drawing tests
-- Expanded test coverage from 9,967 to 10,448 tests
+**Key Changes since v1.5.28:**
+- Improved overall branch coverage: 84.48% → 84.87%
+- Improved overall statement coverage: 94.19% → 94.45%
+- Expanded test coverage from 10,448 to 10,643 tests
+- Added 2 PHP god classes to tracking (previously JS-only)
 
 ### God Classes by Branch Coverage (Updated)
 

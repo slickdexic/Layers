@@ -24,9 +24,9 @@ Technical architecture of the Layers extension for developers.
 │  ┌──────────────────┐    ┌──────────────────────────────────┐   │
 │  │   Layers PHP     │    │      Layers JavaScript           │   │
 │  │                  │    │                                   │   │
-│  │  • API Modules   │◄───┤  • Editor (~56K lines)            │   │
-│  │  • Hooks         │    │  • Viewer (~610 lines)            │   │
-│  │  • Database      │    │  • Shared (~5K lines)             │   │
+│  │  • API Modules   │◄───┤  • Editor (~64K lines)            │   │
+│  │  • Hooks         │    │  • Viewer (~2.5K lines)           │   │
+│  │  • Database      │    │  • Shared (~8K lines)             │   │
 │  │  • Validation    │    │                                   │   │
 │  │  • Security      │    │                                   │   │
 │  └────────┬─────────┘    └──────────────────────────────────┘   │
@@ -172,7 +172,7 @@ Validated Output
 ├───────────────────────┬────────────────────┬───────────────────┤
 │   ext.layers          │  ext.layers.shared │  ext.layers.editor│
 │   (Viewer Entry)      │  (Shared Code)     │  (Full Editor)    │
-│   ~610 lines          │  ~5K lines         │  ~56K lines       │
+│   ~2.5K lines         │  ~8K lines         │  ~64K lines       │
 ├───────────────────────┴────────────────────┴───────────────────┤
 │                                                                 │
 │  Viewer loads: ext.layers + ext.layers.shared                  │
@@ -361,8 +361,9 @@ Style changes notify subscribers via `ToolStyles.subscribe()`.
 
 ### Code Splitting
 
-- Viewer (~610 lines) loads separately from Editor (~38K lines)
-- Shared module (~5K lines) loaded by both
+- Viewer (~2.5K lines) loads separately from Editor (~64K lines)
+- Shared module (~8K lines) loaded by both
+- Shape/Emoji data (~40K lines, generated) loaded on demand
 - ResourceLoader handles dependency management
 
 ### Rendering Optimization

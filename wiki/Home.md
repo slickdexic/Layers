@@ -24,7 +24,7 @@
 
 - **Version Consistency** — Fixed version number inconsistencies across all project files
 - **Documentation Audit** — Updated all stale metrics in documentation
-- **Critical Review v38** — Comprehensive codebase audit with all issues documented
+- **Critical Review v39** — Comprehensive codebase audit with all issues documented
 
 ### Previous v1.5.31 Highlights
 
@@ -242,11 +242,14 @@ See [[Changelog]] for full details.
 | **Test Suites** | 157 |
 | **Total Tests** | 10,643 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 94.15% |
-| **Branch Coverage** | 84.43% |
+| **Statement Coverage** | 94.45% |
+| **Branch Coverage** | 84.87% |
+| **Function Coverage** | 92.55% |
+| **Line Coverage** | 94.59% |
 | **JavaScript Files** | 127 |
 | **ES6 Classes** | 127 |
-| **God Classes** | 21 (3 generated data, 18 hand-written) |
+| **God Classes** | 23 (3 generated, 18 JS, 2 PHP) |
+| **i18n Messages** | 697 |
 
 ---
 

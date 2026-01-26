@@ -408,12 +408,13 @@ global.mw = {
 
 | Metric | Value |
 |--------|-------|
-| Total JS Files | 85+ |
-| Total Lines | ~44K |
-| ES6 Classes | 76+ |
-| Test Files | 109 |
-| Test Cases | 5,505 |
-| Coverage | ~94% |
+| Total JS Files | 127 |
+| Total Lines | ~115,282 |
+| ES6 Classes | 127 |
+| Test Files | 157 suites |
+| Test Cases | 10,643 |
+| Statement Coverage | 94.45% |
+| Branch Coverage | 84.87% |
 
 ### God Classes (>1,000 lines)
 
@@ -421,14 +422,18 @@ All god classes use the delegation pattern:
 
 | Class | Lines | Delegates To |
 |-------|-------|--------------|
-| CanvasManager | 1,861 | 10+ controllers |
-| LayerPanel | 1,837 | 7 controllers |
-| LayersEditor | 1,324 | 3 modules |
-| Toolbar | 1,298 | 4 modules |
-| ToolManager | 1,275 | 2 handlers |
-| ShapeRenderer | 1,191 | ShadowRenderer |
-| SelectionManager | 1,194 | 3 modules |
-| APIManager | 1,161 | APIErrorHandler |
+| LayerPanel | ~2,166 | 9 controllers |
+| CanvasManager | ~2,044 | 10+ controllers |
+| ViewerManager | ~2,014 | Sub-renderers |
+| Toolbar | ~1,891 | 4 modules |
+| LayersEditor | ~1,795 | 3 modules |
+| APIManager | ~1,523 | APIErrorHandler |
+| SelectionManager | ~1,431 | 3 modules |
+| ArrowRenderer | ~1,310 | ShadowRenderer |
+| PropertyBuilders | ~1,250 | UI builders |
+| ToolManager | ~1,219 | 2 handlers |
+| GroupManager | ~1,171 | SelectionManager |
+| TransformController | ~1,097 | CanvasManager |
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Last Updated:** January 26, 2026  
 **Version:** 1.5.35  
-**Status:** Production-Ready, Good Quality with Quality Gaps (8.3/10)
+**Status:** Production-Ready, High Quality (8.6/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
 
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A critical review (v38) discovered version inconsistencies and stale documentation, which have now been **fully resolved**.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A comprehensive critical review (v39) confirms all critical and high-priority issues have been resolved.
 
 **Current Status:**
 - ✅ All P0 items complete (version consistency fixed with automation)
@@ -23,23 +23,23 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 | Metric | Value | Status |
 |--------|-------|--------|
 | Tests passing | **10,643** (157 suites) | ✅ Excellent |
-| Statement coverage | **94.15%** | ✅ Excellent |
-| Branch coverage | **84.43%** | ✅ Excellent |
-| Function coverage | **92.18%** | ✅ Excellent |
-| Line coverage | **94.28%** | ✅ Excellent |
+| Statement coverage | **94.45%** | ✅ Excellent |
+| Branch coverage | **84.87%** | ✅ Excellent |
+| Function coverage | **92.55%** | ✅ Excellent |
+| Line coverage | **94.59%** | ✅ Excellent |
 | JS files | 127 | Excludes dist/ and scripts/ |
-| JS lines | ~115,271 | Includes generated data |
+| JS lines | ~115,282 | Includes generated data |
 | PHP files | 40 | ✅ |
-| PHP lines | ~14,225 | ✅ |
+| PHP lines | ~14,388 | ✅ |
 | PHP strict_types | **40/40 files** | ✅ Complete |
 | ES6 classes | 127 files | 100% migrated |
-| God classes (≥1,000 lines) | 21 | 3 generated, 18 hand-written |
+| God classes (≥1,000 lines) | 23 | 3 generated, 18 JS, 2 PHP |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 11 | ✅ All legitimate |
 | innerHTML usages | 57 | ✅ Audited - all safe |
 | Skipped tests | 0 | ✅ All tests run |
 | Weak assertions | **0** | ✅ All fixed |
-| i18n messages | 684 | All documented in qqq.json |
+| i18n messages | 697 | All documented in qqq.json |
 | Deprecated code markers | 5 | 🟡 Technical debt |
 
 ---
@@ -62,7 +62,6 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 **Status:** ✅ COMPLETED (January 26, 2026)  
 **Priority:** P0 - Critical (Immediate)  
 **Category:** Release Management / Professionalism  
-**Discovered:** January 26, 2026 (Audit v38)
 
 **Problem:** Version numbers were inconsistent across 6+ files, ranging from v1.5.26 to v1.5.35.
 
@@ -97,23 +96,22 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 **Status:** ✅ COMPLETED (January 26, 2026)  
 **Priority:** P1 - High  
 **Category:** Documentation / Quality Assurance  
-**Discovered:** January 26, 2026 (Audit v38)
 
 **Problem:** Documentation files contained outdated metrics that didn't match actual values.
 
 **Fix Applied:**
 - Updated all metrics in wiki/Home.md (test count, coverage, JS files, etc.)
 - Updated copilot-instructions.md with correct values
-- Updated codebase_review.md to v38 with accurate metrics
+- Updated codebase_review.md to v39 with accurate metrics
 - Updated improvement_plan.md header and status table
 
 **Verified Metrics (January 26, 2026):**
 - Test count: 10,643 tests in 157 suites
-- Coverage: 94.15% statement, 84.43% branch, 92.18% function, 94.28% line
-- JS files: 127, ~115,271 lines
-- PHP files: 40, ~14,225 lines
+- Coverage: 94.45% statement, 84.87% branch, 92.55% function, 94.59% line
+- JS files: 127, ~115,282 lines
+- PHP files: 40, ~14,388 lines
 - ESLint disables: 11 (all legitimate)
-- i18n messages: 684
+- i18n messages: 697
 
 ---
 
@@ -180,13 +178,13 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 **Target Classes:**
 
-1. **LayersDatabase.php** (1,080 lines) → Split into:
+1. **LayersDatabase.php** (1,242 lines) → Split into:
    - `LayerSetRepository` — CRUD operations for layer sets
    - `NamedSetRepository` — Named set operations
    - `RevisionRepository` — Revision management
    - `LayerQueryService` — Query building and execution
 
-2. **ServerSideLayerValidator.php** (1,164 lines) → Use strategy pattern:
+2. **ServerSideLayerValidator.php** (1,163 lines) → Use strategy pattern:
    - `LayerTypeValidatorInterface` — Common validation interface
    - `TextLayerValidator`, `ArrowLayerValidator`, `ShapeLayerValidator`, etc.
    - `PropertyValidator` — Shared property validation (colors, dimensions)
@@ -196,30 +194,27 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ---
 
-### P2.3 Add E2E Tests for ShapeLibraryPanel — ✅ COMPLETED
+### P2.3 Add Additional E2E Tests for ShapeLibraryPanel
 
-**Status:** ✅ COMPLETED (January 26, 2026)  
+**Status:** Partially Complete  
 **Priority:** P2 - Medium  
 **Category:** Testing  
-**Location:** `resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js`
+**Location:** `resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js` (812 lines)
 
-**Problem:** ShapeLibraryPanel has 0% unit test coverage due to tight OOUI integration making unit testing impractical.
+**Problem:** ShapeLibraryPanel has limited unit test coverage due to tight OOUI integration making unit testing impractical.
 
-**Solution (Implemented):**
-1. Created comprehensive Playwright E2E tests in `tests/e2e/shape-library.spec.js`
-2. Test scenarios covered:
-   - ✅ Open shape library panel via toolbar button
-   - ✅ Close panel via close button, Escape key, and overlay click
-   - ✅ Navigate between categories (10 categories)
-   - ✅ Search shapes (1,310 total) with debounced filtering
-   - ✅ Insert shape onto canvas
-   - ✅ Accessibility (ARIA attributes, keyboard navigation)
-   - ✅ Visual regression checks (panel dimensions, SVG loading)
-3. Added shape library selectors to `tests/e2e/fixtures.js`
+**Current Status:**
+- ✅ Created comprehensive Playwright E2E tests in `tests/e2e/shape-library.spec.js`
+- Test scenarios covered include open/close, category navigation, search, insertion
+- Additional tests would increase confidence
 
-**Files Added/Modified:**
-- `tests/e2e/shape-library.spec.js` (new, ~400 lines)
-- `tests/e2e/fixtures.js` (added 11 shape library selectors)
+**Recommended Additional Tests:**
+- Keyboard navigation through shape grid
+- Multiple shape insertions in sequence
+- Shape library state persistence
+- Error handling for failed SVG loads
+
+**Estimated Effort:** 1-2 days for additional tests
 
 ---
 
@@ -256,8 +251,8 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 | File | Lines | Strategy | Impact |
 |------|-------|----------|--------|
-| ViewerManager.js | 2,003 | Extract SlideRenderer, ImageRenderer | High |
-| APIManager.js | 1,524 | Extract RetryManager, RequestTracker | High |
+| ViewerManager.js | 2,014 | Extract SlideRenderer, ImageRenderer | High |
+| APIManager.js | 1,523 | Extract RetryManager, RequestTracker | High |
 | Toolbar.js | 1,891 | Extract ToolbarSections by category | Medium |
 | ToolbarStyleControls.js | 1,098 | Extract style category controllers | Medium |
 
@@ -299,7 +294,7 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 **Status:** ✅ VERIFIED (January 25, 2026)  
 **Location:** `i18n/qqq.json`
 
-All 679 message keys are documented. Banana i18n checker passes.
+All 697 message keys are documented. Banana i18n checker passes.
 
 ---
 
@@ -376,11 +371,11 @@ Added cleanup of existing subscription at start of `initialize()`.
 **Category:** Code Quality  
 
 **Candidate Modules (by complexity):**
-1. **StateManager.js** (830 lines) — Central state with subscription system
-2. **APIManager.js** (1,524 lines) — API communication layer
-3. **GroupManager.js** (1,172 lines) — Layer grouping logic
+1. **StateManager.js** (829 lines) — Central state with subscription system
+2. **APIManager.js** (1,523 lines) — API communication layer
+3. **GroupManager.js** (1,171 lines) — Layer grouping logic
 4. **SelectionManager.js** (1,431 lines) — Multi-selection handling
-5. **HistoryManager.js** (825 lines) — Undo/redo with complex state
+5. **HistoryManager.js** (824 lines) — Undo/redo with complex state
 
 **Benefits:**
 - Catch type errors at compile time
@@ -454,7 +449,6 @@ Added cleanup of existing subscription at start of `initialize()`.
 **Status:** ✅ COMPLETED (January 26, 2026)  
 **Priority:** P3 - Low  
 **Category:** UX Enhancement  
-**Evidence:** Documented as F5 in KNOWN_ISSUES.md
 
 **Problem:** Zoom anchors at top-left corner, not mouse pointer position.
 
@@ -539,9 +533,33 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 
 ---
 
+### P3.10 Enhanced Dimension Tool (FR-14)
+
+**Status:** Proposed  
+**Priority:** P3 - Low  
+**Category:** Feature Enhancement  
+
+**Request:** Make the dimension line draggable independently from the anchor points. Add leader length property to control extension beyond the dimension line.
+
+**Estimated Effort:** 1 week
+
+---
+
+### P3.11 Angle Dimension Tool (FR-15)
+
+**Status:** Proposed  
+**Priority:** P3 - Low  
+**Category:** New Feature  
+
+**Request:** New tool for measuring and annotating angles with three anchor points (endpoint1, vertex, endpoint2), arc dimension line, and extension lines.
+
+**Estimated Effort:** 2 weeks
+
+---
+
 ## God Class Status Summary
 
-### 21 Files ≥1,000 Lines
+### 23 Files ≥1,000 Lines
 
 | Category | Count | Files |
 |----------|-------|-------|
@@ -561,10 +579,12 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 |------|------|-------|
 | P0: CSRF tokens | Jan 24, 2026 | All write APIs protected |
 | P0: console.log removal | Jan 24, 2026 | Production code clean |
+| P0: Version consistency | Jan 26, 2026 | Automation script added |
+| P1.0: Documentation metrics | Jan 26, 2026 | All metrics updated |
 | P1.1: paths validation | Jan 25, 2026 | customShape layers validated |
 | P1.2: cache invalidation | Jan 25, 2026 | Job queue async purge |
 | P2.A: Layer search | Jan 25, 2026 | Full search/filter UI |
-| P2.B: i18n docs | Jan 25, 2026 | All 679 keys documented |
+| P2.B: i18n docs | Jan 25, 2026 | All 697 keys documented |
 | P2.C: Query simplification | Jan 25, 2026 | Two-query approach |
 | P2.D: Coverage thresholds | Jan 25, 2026 | Raised to 80-92% |
 | P2.E: RGBA hex colors | Jan 25, 2026 | 3/4/6/8-digit support |
@@ -595,8 +615,8 @@ None currently blocked.
 1. **P2.1:** Standardize DB return types — High impact, moderate effort
 
 ### This Sprint
-2. ~~**P2.3:** Add Playwright E2E tests for ShapeLibraryPanel~~ — ✅ COMPLETED
-3. ~~**P3.5:** Implement zoom-to-cursor~~ — ✅ Already implemented
+2. **P2.4:** Address HistoryManager memory for large images
+3. **P2.3:** Add additional E2E tests for ShapeLibraryPanel
 
 ### Next Milestone
 4. **P2.2:** PHP god class refactoring
@@ -617,7 +637,8 @@ None currently blocked.
 | Test count | 10,643 | Maintain | No regression |
 | Statement coverage | 94.45% | ≥92% | Threshold in jest.config |
 | Branch coverage | 84.87% | ≥80% | Threshold in jest.config |
-| Hand-written god classes | 18 | ≤12 | Reduce by 6 |
+| Hand-written god classes (JS) | 18 | ≤12 | Reduce by 6 |
+| PHP god classes | 2 | 0 | Refactor both |
 | Deprecated markers | 5 | 0 | Remove in v2.0 |
 | ESLint disables | 11 | ≤15 | Minimized |
 | Overall score | 8.6 | 9.0 | Path to world-class |

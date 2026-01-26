@@ -313,20 +313,28 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 {{#Slide: MySlideName}}
 ```
 
+**Like images, slides support multiple named layer sets** for different annotation variations.
+
 ### Slide Parameters
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
+| `layerset` | Named layer set to display | `layerset=english` |
 | `canvas` | Canvas size (WxH) | `canvas=1920x1080` |
 | `size` | Display size | `size=800x600` |
 | `bgcolor` | Background color | `bgcolor=#f0f0f0` |
 | `lock` | Lock mode | `lock=view` |
+| `class` | CSS classes | `class=my-diagram` |
 
 ### Examples
 
 ```wikitext
-<!-- Basic slide -->
+<!-- Basic slide (default layer set) -->
 {{#Slide: MyDiagram}}
+
+<!-- Specific named layer set -->
+{{#Slide: MyDiagram | layerset=english}}
+{{#Slide: MyDiagram | layerset=spanish}}
 
 <!-- Custom canvas and display size -->
 {{#Slide: Infographic | canvas=1200x800 | size=600x400}}
@@ -336,6 +344,9 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 
 <!-- View-only mode -->
 {{#Slide: Published | lock=view}}
+
+<!-- Combined: specific layer set with styling -->
+{{#Slide: Technical | layerset=detailed | size=800x600 | bgcolor=#fff}}
 ```
 
 See [[Slide Mode]] for complete documentation.
