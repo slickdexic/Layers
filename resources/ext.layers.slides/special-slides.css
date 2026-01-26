@@ -45,6 +45,8 @@
 	padding: 0.5rem;
 	border: 1px solid #a2a9b1;
 	border-radius: 2px;
+	background: #fff;
+	color: #202122;
 }
 
 .layers-slides-search-input:focus {
@@ -63,6 +65,7 @@
 	border: 1px solid #a2a9b1;
 	border-radius: 2px;
 	background: #fff;
+	color: #202122;
 }
 
 /* Slides list */
@@ -189,6 +192,8 @@
 	padding: 0.5rem;
 	border: 1px solid #a2a9b1;
 	border-radius: 2px;
+	background: #fff;
+	color: #202122;
 }
 
 .layers-form-hint {
@@ -275,67 +280,6 @@
 .layers-slide-editor-header .layers-slide-name {
 	font-weight: 600;
 	color: #202122;
-}
-
-/* Dark mode support */
-@media ( prefers-color-scheme: dark ) {
-	.layers-slides-search-input,
-	.layers-slides-sort-select {
-		background: #27292d;
-		color: #eaecf0;
-		border-color: #54595d;
-	}
-
-	.layers-slide-item {
-		background: #27292d;
-		border-color: #54595d;
-	}
-
-	.layers-slide-icon {
-		background: #3b3d41;
-	}
-
-	.layers-slide-name {
-		color: #eaecf0;
-	}
-
-	.layers-slide-meta,
-	.layers-pagination-count,
-	.layers-slides-loading,
-	.layers-slides-empty {
-		color: #a2a9b1;
-	}
-
-	.layers-slide-create-form {
-		background: #27292d;
-		border-color: #54595d;
-	}
-
-	.layers-form-field input[ type='text' ],
-	.layers-form-field input[ type='number' ] {
-		background: #1a1a1a;
-		color: #eaecf0;
-		border-color: #54595d;
-	}
-
-	.layers-form-hint {
-		color: #a2a9b1;
-	}
-
-	.layers-slide-editor-header {
-		background: #27292d;
-		border-color: #54595d;
-	}
-}
-
-@media ( prefers-color-scheme: dark ) {
-	.layers-slide-item:hover {
-		border-color: #72777d;
-	}
-
-	.layers-slide-editor-header .layers-slide-name {
-		color: #eaecf0;
-	}
 }
 
 /* Vector 2022 dark mode (class-based) */

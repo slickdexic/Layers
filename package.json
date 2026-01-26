@@ -21,6 +21,8 @@
 		"watch": "webpack --mode=development --watch",
 		"check:godclass": "bash scripts/pre-commit-god-class-check.sh",
 		"check:docs": "bash scripts/verify-docs.sh",
+		"check:version": "node scripts/update-version.js --check",
+		"update:version": "node scripts/update-version.js",
 		"docs": "jsdoc -c jsdoc.config.json",
 		"docs:markdown": "jsdoc2md resources/ext.layers.editor/*.js resources/ext.layers.shared/*.js > docs/API.md"
 	},

@@ -290,7 +290,7 @@ class SpecialSlides extends SpecialPage {
 	 * @inheritDoc
 	 */
 	protected function getGroupName() {
-		return 'media';
+		return 'layers';
 	}
 
 	/**
