@@ -99,6 +99,11 @@
 				return;
 			}
 
+			// Start loading the emoji bundle in background for faster emoji loading
+			if ( library.loadBundle ) {
+				library.loadBundle();
+			}
+
 			// Inject CSS keyframes for loading animation if not already present
 			if ( !document.getElementById( 'layers-emoji-picker-styles' ) ) {
 				const style = document.createElement( 'style' );
