@@ -8,6 +8,16 @@
 
 const LayerItemFactory = require('../../resources/ext.layers.editor/ui/LayerItemFactory.js');
 
+/**
+ * Helper to create SVG elements properly for JSDOM tests.
+ * Uses createElementNS to avoid linter warnings about createElement('svg').
+ *
+ * @return {SVGSVGElement}
+ */
+function createMockSvg() {
+    return document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+}
+
 describe('LayerItemFactory', () => {
     let factory;
     let mockConfig;
@@ -84,7 +94,7 @@ describe('LayerItemFactory', () => {
 
     describe('createEyeIcon', () => {
         test('should delegate to IconFactory when available', () => {
-            const mockIcon = document.createElement('svg');
+            const mockIcon = createMockSvg();
             window.Layers.UI.IconFactory = {
                 createEyeIcon: jest.fn().mockReturnValue(mockIcon)
             };
@@ -101,7 +111,7 @@ describe('LayerItemFactory', () => {
         });
 
         test('should pass visible=false to IconFactory', () => {
-            const mockIcon = document.createElement('svg');
+            const mockIcon = createMockSvg();
             window.Layers.UI.IconFactory = {
                 createEyeIcon: jest.fn().mockReturnValue(mockIcon)
             };
@@ -114,7 +124,7 @@ describe('LayerItemFactory', () => {
 
     describe('createLockIcon', () => {
         test('should delegate to IconFactory when available', () => {
-            const mockIcon = document.createElement('svg');
+            const mockIcon = createMockSvg();
             window.Layers.UI.IconFactory = {
                 createLockIcon: jest.fn().mockReturnValue(mockIcon)
             };
@@ -133,7 +143,7 @@ describe('LayerItemFactory', () => {
 
     describe('createDeleteIcon', () => {
         test('should delegate to IconFactory when available', () => {
-            const mockIcon = document.createElement('svg');
+            const mockIcon = createMockSvg();
             window.Layers.UI.IconFactory = {
                 createDeleteIcon: jest.fn().mockReturnValue(mockIcon)
             };
@@ -418,11 +428,11 @@ describe('LayerItemFactory', () => {
         });
 
         test('should update visibility icon', () => {
-            const mockIcon = document.createElement('svg');
+            const mockIcon = createMockSvg();
             mockIcon.id = 'new-eye-icon';
             window.Layers.UI.IconFactory = {
                 createEyeIcon: jest.fn().mockReturnValue(mockIcon),
-                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+                createLockIcon: jest.fn().mockReturnValue(createMockSvg())
             };
 
             const updatedLayer = { id: 'layer1', type: 'rectangle', visible: false };
@@ -452,10 +462,10 @@ describe('LayerItemFactory', () => {
         });
 
         test('should update lock icon', () => {
-            const mockIcon = document.createElement('svg');
+            const mockIcon = createMockSvg();
             mockIcon.id = 'new-lock-icon';
             window.Layers.UI.IconFactory = {
-                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
+                createEyeIcon: jest.fn().mockReturnValue(createMockSvg()),
                 createLockIcon: jest.fn().mockReturnValue(mockIcon)
             };
 
@@ -605,14 +615,14 @@ describe('LayerItemFactory', () => {
         });
 
         test('should use folder icon for group layers', () => {
-            const mockFolderIcon = document.createElement('svg');
+            const mockFolderIcon = createMockSvg();
             mockFolderIcon.id = 'folder-icon';
             window.Layers.UI.IconFactory = {
                 createFolderIcon: jest.fn().mockReturnValue(mockFolderIcon),
-                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createDeleteIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createExpandIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+                createEyeIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createLockIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createDeleteIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createExpandIcon: jest.fn().mockReturnValue(createMockSvg())
             };
 
             const layer = { id: 'group1', type: 'group', children: [], expanded: true };
@@ -624,14 +634,14 @@ describe('LayerItemFactory', () => {
         });
 
         test('should use expand icon in toggle', () => {
-            const mockExpandIcon = document.createElement('svg');
+            const mockExpandIcon = createMockSvg();
             mockExpandIcon.id = 'expand-icon';
             window.Layers.UI.IconFactory = {
                 createExpandIcon: jest.fn().mockReturnValue(mockExpandIcon),
-                createFolderIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createDeleteIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+                createFolderIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createEyeIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createLockIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createDeleteIcon: jest.fn().mockReturnValue(createMockSvg())
             };
 
             const layer = { id: 'group1', type: 'group', children: [], expanded: true };
@@ -680,13 +690,13 @@ describe('LayerItemFactory', () => {
 
     describe('updateLayerItem with groups', () => {
         test('should update expand toggle state', () => {
-            const mockExpandIcon = document.createElement('svg');
+            const mockExpandIcon = createMockSvg();
             window.Layers.UI.IconFactory = {
                 createExpandIcon: jest.fn().mockReturnValue(mockExpandIcon),
-                createFolderIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createDeleteIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+                createFolderIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createEyeIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createLockIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createDeleteIcon: jest.fn().mockReturnValue(createMockSvg())
             };
 
             const layer = { id: 'group1', type: 'group', children: [], expanded: true };
@@ -710,10 +720,10 @@ describe('LayerItemFactory', () => {
 
             // Update to group type
             window.Layers.UI.IconFactory = {
-                createExpandIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createFolderIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createEyeIcon: jest.fn().mockReturnValue(document.createElement('svg')),
-                createLockIcon: jest.fn().mockReturnValue(document.createElement('svg'))
+                createExpandIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createFolderIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createEyeIcon: jest.fn().mockReturnValue(createMockSvg()),
+                createLockIcon: jest.fn().mockReturnValue(createMockSvg())
             };
 
             const updatedLayer = { id: 'layer1', type: 'group', children: [], expanded: true };

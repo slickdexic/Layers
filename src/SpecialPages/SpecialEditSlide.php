@@ -67,13 +67,13 @@ class SpecialEditSlide extends SpecialPage {
 			throw new \PermissionsError( 'editlayers' );
 		}
 
+		// Get optional parameters - must get setname BEFORE database query
+		$setName = $request->getText( 'setname', 'default' );
+
 		// Get slide info to determine lock mode
 		$db = $services->get( 'LayersDatabase' );
 		$normalizedName = 'Slide:' . $slideName;
-		$layerSet = $db->getLayerSetByName( $normalizedName, 'slide', 'default' );
-
-		// Get optional parameters
-		$setName = $request->getText( 'setname', 'default' );
+		$layerSet = $db->getLayerSetByName( $normalizedName, 'slide', $setName );
 		$lockMode = $request->getText( 'lockmode', 'none' );
 		// Support both 'canvaswidth'/'canvasheight' (from JS) and 'width'/'height' (legacy)
 		$canvasWidth = $request->getInt( 'canvaswidth', 0 ) ?: $request->getInt( 'width', 0 );

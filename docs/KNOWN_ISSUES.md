@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** January 25, 2026  
-**Version:** 1.5.29
+**Version:** 1.5.31
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ None known |
 | P1 (Stability) | 0 | ✅ No known crashes/memory leaks |
 | P2 (Code Quality) | 1 | ⚠️ ShapeLibraryPanel coverage |
-| Feature Gaps | 2 | ⏳ Planned |
+| Feature Gaps | 5 | ⏳ Planned |
 
 ---
 
@@ -66,6 +66,30 @@ Layer search/filter functionality implemented with:
 
 Not yet available beyond the default font allowlist.
 
+### ~~F4. Lowercase Slide Parser Function (FR-12)~~ ✅
+
+**Status:** ✅ COMPLETED (January 25, 2026)
+
+Both `{{#slide: ...}}` and `{{#Slide: ...}}` are now supported, matching MediaWiki conventions.
+
+### F5. Zoom to Mouse Pointer (FR-13)
+
+**Status:** ⏳ PROPOSED (January 25, 2026)
+
+Zoom should anchor at the mouse pointer position (or pinch point on mobile), not the top-left corner. This is standard behavior in Figma, Illustrator, and most design tools.
+
+### F6. Enhanced Dimension Tool (FR-14)
+
+**Status:** ⏳ PROPOSED (January 25, 2026)
+
+Make the dimension line draggable independently from the anchor points. Add leader length property to control extension beyond the dimension line.
+
+### F7. Angle Dimension Tool (FR-15)
+
+**Status:** ⏳ PROPOSED (January 25, 2026)
+
+New tool for measuring and annotating angles with three anchor points (endpoint1, vertex, endpoint2), arc dimension line, and extension lines.
+
 ---
 
 ## ✅ Recently Resolved Issues
@@ -96,11 +120,11 @@ All previously identified P0 and P1 issues have been resolved:
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests passing | **10,613** (157 suites) | ✅ |
-| Statement coverage | **94.45%** | ✅ Excellent |
-| Branch coverage | **84.87%** | ✅ Good |
-| Function coverage | **92.55%** | ✅ Excellent |
-| Line coverage | **94.59%** | ✅ Excellent |
+| Tests passing | **10,643** (157 suites) | ✅ |
+| Statement coverage | **94.17%** | ✅ Excellent |
+| Branch coverage | **84.43%** | ✅ Good |
+| Function coverage | **92.18%** | ✅ Excellent |
+| Line coverage | **94.31%** | ✅ Excellent |
 
 ---
 
@@ -142,4 +166,4 @@ If you encounter issues:
 ---
 
 *Document updated: January 25, 2026*  
-*Status: ✅ Production-ready with excellent test coverage (94.45%, 10,613 tests).*
+*Status: ✅ Production-ready with excellent test coverage (94.17%, 10,643 tests).*

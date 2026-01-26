@@ -73,6 +73,29 @@ class SlideHooks {
 	 * @return array|string HTML output
 	 */
 	public static function renderSlide( Parser $parser, PPFrame $frame, array $args ) {
+		try {
+			return self::doRenderSlide( $parser, $frame, $args );
+		} catch ( \Throwable $e ) {
+			// Catch all exceptions/errors to prevent breaking page parsing
+			self::logError( 'renderSlide fatal error: ' . $e->getMessage() );
+			$message = wfMessage( 'layers-slide-error-generic' )->text();
+			$html = sprintf(
+				'<div class="layers-slide-error">%s</div>',
+				htmlspecialchars( $message, ENT_QUOTES, 'UTF-8' )
+			);
+			return [ $html, 'noparse' => true, 'isHTML' => true ];
+		}
+	}
+
+	/**
+	 * Internal implementation of slide rendering.
+	 *
+	 * @param Parser $parser The parser instance
+	 * @param PPFrame $frame The parser frame
+	 * @param array $args The function arguments
+	 * @return array|string HTML output
+	 */
+	private static function doRenderSlide( Parser $parser, PPFrame $frame, array $args ) {
 		self::log( 'renderSlide called with ' . count( $args ) . ' args' );
 
 		$config = MediaWikiServices::getInstance()->getMainConfig();
@@ -105,6 +128,14 @@ class SlideHooks {
 		// Priority: explicit canvas= param > saved dimensions from DB > config defaults
 		$canvasWidth = (int)$config->get( 'LayersSlideDefaultWidth' );
 		$canvasHeight = (int)$config->get( 'LayersSlideDefaultHeight' );
+
+		// Ensure minimum dimensions (fallback if config is missing/invalid)
+		if ( $canvasWidth <= 0 ) {
+			$canvasWidth = 800;
+		}
+		if ( $canvasHeight <= 0 ) {
+			$canvasHeight = 600;
+		}
 
 		if ( !empty( $params['canvas'] ) ) {
 			// Explicit canvas= param takes priority
@@ -338,14 +369,18 @@ class SlideHooks {
 			if ( $layerSet && isset( $layerSet['data'] ) ) {
 				$data = $layerSet['data'];
 				// Canvas dimensions are stored inside the data object
-				if ( !empty( $data['canvasWidth'] ) && !empty( $data['canvasHeight'] ) ) {
+				// Check for valid positive dimensions (must be > 0 to prevent division by zero)
+				$width = isset( $data['canvasWidth'] ) ? (int)$data['canvasWidth'] : 0;
+				$height = isset( $data['canvasHeight'] ) ? (int)$data['canvasHeight'] : 0;
+				if ( $width > 0 && $height > 0 ) {
 					return [
-						'width' => (int)$data['canvasWidth'],
-						'height' => (int)$data['canvasHeight']
+						'width' => $width,
+						'height' => $height
 					];
 				}
 			}
-		} catch ( \Exception $e ) {
+		} catch ( \Throwable $e ) {
+			// Catch all throwables (Error and Exception) to prevent parser breakage
 			self::log( 'Error fetching slide dimensions: ' . $e->getMessage() );
 		}
 
@@ -432,7 +467,8 @@ class SlideHooks {
 		// Build data attributes
 		// Calculate the scale factor for the renderer
 		// This is the ratio between display size and canvas size
-		$scale = $displayWidth / $canvasWidth;
+		// Guard against division by zero (defensive - should not happen with valid data)
+		$scale = ( $canvasWidth > 0 ) ? ( $displayWidth / $canvasWidth ) : 1.0;
 
 		$dataAttrs = sprintf(
 			'data-slide-name="%s" data-canvas-width="%d" data-canvas-height="%d" ' .

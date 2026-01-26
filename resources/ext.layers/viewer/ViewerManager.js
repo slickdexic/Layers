@@ -1663,6 +1663,12 @@ class ViewerManager {
 			if ( slideData.lockMode && slideData.lockMode !== 'none' ) {
 				url += '&lockmode=' + encodeURIComponent( slideData.lockMode );
 			}
+			// Pass canvas dimensions if non-default (for new slides with explicit canvas= param)
+			if ( slideData.canvasWidth && slideData.canvasHeight &&
+				( slideData.canvasWidth !== 800 || slideData.canvasHeight !== 600 ) ) {
+				url += '&canvaswidth=' + slideData.canvasWidth;
+				url += '&canvasheight=' + slideData.canvasHeight;
+			}
 			return url;
 		}
 
@@ -1675,9 +1681,14 @@ class ViewerManager {
 		if ( slideData.lockMode && slideData.lockMode !== 'none' ) {
 			params.set( 'lockmode', slideData.lockMode );
 		}
-		// Note: Do NOT pass canvaswidth/canvasheight here!
-		// Saved dimensions take precedence; server will load from database.
-		// Only pass lock mode and set name to let the API determine actual dimensions.
+		// Pass canvas dimensions if they differ from defaults.
+		// For NEW slides (no saved data), this preserves the canvas= parameter from wikitext.
+		// For EXISTING slides, the server gives priority to saved dimensions anyway.
+		if ( slideData.canvasWidth && slideData.canvasHeight &&
+			( slideData.canvasWidth !== 800 || slideData.canvasHeight !== 600 ) ) {
+			params.set( 'canvaswidth', slideData.canvasWidth );
+			params.set( 'canvasheight', slideData.canvasHeight );
+		}
 
 		// Use Special:Slides page for editing (will be created in Phase 3)
 		// For now, use a slide-specific URL pattern
