@@ -445,24 +445,22 @@ Added cleanup of existing subscription at start of `initialize()`.
 
 ---
 
-### P3.5 Zoom-to-Cursor Feature (F5)
+### P3.5 Zoom-to-Cursor Feature (F5) — ✅ COMPLETED
 
-**Status:** Not Started  
+**Status:** ✅ COMPLETED (January 26, 2026)  
 **Priority:** P3 - Low  
 **Category:** UX Enhancement  
 **Evidence:** Documented as F5 in KNOWN_ISSUES.md
 
 **Problem:** Zoom anchors at top-left corner, not mouse pointer position.
 
-**Solution:**
-1. Capture mouse position on zoom event
-2. Calculate offset needed to keep mouse position stable
-3. Apply pan adjustment after zoom
-4. Handle pinch zoom on touch devices
+**Solution (Implemented):**
+- `CanvasEvents.handleWheel()` captures mouse position via `cm.getMousePoint(e)`
+- `ZoomPanController.zoomBy(delta, point)` calculates screen position before zoom
+- Pan offset adjusted after zoom to keep point under cursor stable
+- Full test coverage in `ZoomAndCoords.test.js` and `ZoomPanController.test.js`
 
 **Implementation Location:** `resources/ext.layers.editor/canvas/ZoomPanController.js`
-
-**Estimated Effort:** 4-8 hours
 
 ---
 
@@ -593,7 +591,7 @@ None currently blocked.
 
 ### This Sprint
 2. **P2.3:** Add Playwright E2E tests for ShapeLibraryPanel
-3. **P3.5:** Implement zoom-to-cursor — Quick win
+3. ~~**P3.5:** Implement zoom-to-cursor~~ — ✅ Already implemented
 
 ### Next Milestone
 4. **P2.2:** PHP god class refactoring
@@ -612,14 +610,14 @@ None currently blocked.
 | Metric | Current | Target | Notes |
 |--------|---------|--------|-------|
 | Test count | 10,643 | Maintain | No regression |
-| Statement coverage | 94.17% | ≥92% | Threshold in jest.config |
-| Branch coverage | 84.43% | ≥80% | Threshold in jest.config |
+| Statement coverage | 94.45% | ≥92% | Threshold in jest.config |
+| Branch coverage | 84.87% | ≥80% | Threshold in jest.config |
 | Hand-written god classes | 18 | ≤12 | Reduce by 6 |
 | Deprecated markers | 5 | 0 | Remove in v2.0 |
-| ESLint disables | 17 | ≤15 | Minimize |
-| Overall score | 8.5 | 9.0 | Path to world-class |
+| ESLint disables | 11 | ≤15 | Minimized |
+| Overall score | 8.6 | 9.0 | Path to world-class |
 
 ---
 
-*Last updated: January 25, 2026*  
-*Overall score: 8.5/10 — Production-ready, high quality with areas for improvement*
+*Last updated: January 26, 2026*  
+*Overall score: 8.6/10 — Production-ready, high quality with areas for improvement*

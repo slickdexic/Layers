@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 25, 2026  
-**Version:** 1.5.31
+**Last Updated:** January 26, 2026  
+**Version:** 1.5.35
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ None known |
 | P1 (Stability) | 0 | ✅ No known crashes/memory leaks |
 | P2 (Code Quality) | 1 | ⚠️ ShapeLibraryPanel coverage |
-| Feature Gaps | 5 | ⏳ Planned |
+| Feature Gaps | 3 | ⏳ Planned (F3, F6, F7) |
 
 ---
 
@@ -74,9 +74,9 @@ Both `{{#slide: ...}}` and `{{#Slide: ...}}` are now supported, matching MediaWi
 
 ### F5. Zoom to Mouse Pointer (FR-13)
 
-**Status:** ⏳ PROPOSED (January 25, 2026)
+**Status:** ✅ COMPLETED (January 26, 2026)
 
-Zoom should anchor at the mouse pointer position (or pinch point on mobile), not the top-left corner. This is standard behavior in Figma, Illustrator, and most design tools.
+Zoom now anchors at the mouse pointer position (or pinch point on mobile), matching standard behavior in Figma, Illustrator, and other design tools. Implemented via `zoomBy()` in ZoomPanController.js with proper anchor point calculation.
 
 ### F6. Enhanced Dimension Tool (FR-14)
 
@@ -116,15 +116,15 @@ All previously identified P0 and P1 issues have been resolved:
 
 ---
 
-## Test Coverage Status (January 25, 2026)
+## Test Coverage Status (January 26, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
 | Tests passing | **10,643** (157 suites) | ✅ |
-| Statement coverage | **94.17%** | ✅ Excellent |
-| Branch coverage | **84.43%** | ✅ Good |
-| Function coverage | **92.18%** | ✅ Excellent |
-| Line coverage | **94.31%** | ✅ Excellent |
+| Statement coverage | **94.45%** | ✅ Excellent |
+| Branch coverage | **84.87%** | ✅ Good |
+| Function coverage | **92.55%** | ✅ Excellent |
+| Line coverage | **94.59%** | ✅ Excellent |
 
 ---
 
@@ -165,5 +165,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 25, 2026*  
-*Status: ✅ Production-ready with excellent test coverage (94.17%, 10,643 tests).*
+*Document updated: January 26, 2026*  
+*Status: ✅ Production-ready with excellent test coverage (94.45%, 10,643 tests).*
