@@ -196,26 +196,30 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ---
 
-### P2.3 Add E2E Tests for ShapeLibraryPanel
+### P2.3 Add E2E Tests for ShapeLibraryPanel — ✅ COMPLETED
 
-**Status:** Open  
+**Status:** ✅ COMPLETED (January 26, 2026)  
 **Priority:** P2 - Medium  
 **Category:** Testing  
 **Location:** `resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js`
 
-**Problem:** ShapeLibraryPanel has 0% test coverage due to tight OOUI integration making unit testing impractical.
+**Problem:** ShapeLibraryPanel has 0% unit test coverage due to tight OOUI integration making unit testing impractical.
 
-**Solution:**
-1. Add Playwright E2E tests for shape library UI
-2. Test scenarios:
-   - Open shape library panel
-   - Navigate categories (10 categories)
-   - Search shapes (1,310 total)
-   - Insert shape onto canvas
-   - Verify shape renders correctly
-3. Consider adding visual regression tests for shape rendering
+**Solution (Implemented):**
+1. Created comprehensive Playwright E2E tests in `tests/e2e/shape-library.spec.js`
+2. Test scenarios covered:
+   - ✅ Open shape library panel via toolbar button
+   - ✅ Close panel via close button, Escape key, and overlay click
+   - ✅ Navigate between categories (10 categories)
+   - ✅ Search shapes (1,310 total) with debounced filtering
+   - ✅ Insert shape onto canvas
+   - ✅ Accessibility (ARIA attributes, keyboard navigation)
+   - ✅ Visual regression checks (panel dimensions, SVG loading)
+3. Added shape library selectors to `tests/e2e/fixtures.js`
 
-**Estimated Effort:** 2-3 days
+**Files Added/Modified:**
+- `tests/e2e/shape-library.spec.js` (new, ~400 lines)
+- `tests/e2e/fixtures.js` (added 11 shape library selectors)
 
 ---
 
@@ -565,6 +569,8 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 | P2.D: Coverage thresholds | Jan 25, 2026 | Raised to 80-92% |
 | P2.E: RGBA hex colors | Jan 25, 2026 | 3/4/6/8-digit support |
 | P2.F: DraftManager leak | Jan 25, 2026 | Subscription cleanup |
+| P3.5: Zoom-to-cursor | Jan 26, 2026 | Already implemented |
+| P2.3: ShapeLibrary E2E | Jan 26, 2026 | 400+ lines of tests |
 | P3.6: Accessibility | Jan 25, 2026 | ARIA regions complete |
 | P3.7: Slide docs | Jan 25, 2026 | Architecture documented |
 | P3.8: Timeout audit | Jan 25, 2026 | Adequate handling |
@@ -575,7 +581,6 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 |------|--------|----------|
 | P2.1: DB return types | Planned | TBD |
 | P2.2: PHP god classes | Planned | TBD |
-| P2.3: ShapeLibrary E2E | Planned | TBD |
 | P2.5: JS god classes | Ongoing | TBD |
 
 ### Blocked (🔴)
@@ -590,7 +595,7 @@ None currently blocked.
 1. **P2.1:** Standardize DB return types — High impact, moderate effort
 
 ### This Sprint
-2. **P2.3:** Add Playwright E2E tests for ShapeLibraryPanel
+2. ~~**P2.3:** Add Playwright E2E tests for ShapeLibraryPanel~~ — ✅ COMPLETED
 3. ~~**P3.5:** Implement zoom-to-cursor~~ — ✅ Already implemented
 
 ### Next Milestone

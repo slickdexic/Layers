@@ -79,6 +79,19 @@ class LayersEditorPage {
 			pathTool: '[data-tool="path"], .tool-path, [data-tool="pen"], .tool-pen',
 			penTool: '[data-tool="pen"], .tool-pen',
 			
+			// Shape Library (1,310 shapes in 10 categories)
+			shapeLibraryButton: '.shape-library-button',
+			shapeLibraryPanel: '.layers-shape-library-panel',
+			shapeLibraryOverlay: '.layers-shape-library-overlay',
+			shapeLibraryClose: '.layers-shape-library-close',
+			shapeLibrarySearch: '.layers-shape-library-search-input',
+			shapeLibraryCategories: '.layers-shape-library-categories',
+			shapeLibraryCategory: '.layers-shape-library-category',
+			shapeLibraryGrid: '.layers-shape-library-grid',
+			shapeLibraryItem: '.layers-shape-library-item',
+			shapeLibraryPreview: '.layers-shape-library-preview',
+			shapeLibraryLabel: '.layers-shape-library-label',
+			
 			// Layer panel items - exclude background layer from count
 			layerItem: '.layer-item:not(.background-layer-item)',
 			layerName: '.layer-name',
