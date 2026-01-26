@@ -2,6 +2,15 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.33] - 2026-01-25
+
+### Fixed
+- **Slide Editor `layerset=` Parameter Not Applied** — Fixed issue where the slide editor opened to the default layer set instead of the specified one (e.g., `layerset=001`)
+  - Root cause: `SpecialEditSlide.php` used `setName` but `EditorBootstrap.js` expected `initialSetName`
+  - Fix: Changed PHP to use `initialSetName` to match `EditLayersAction.php` pattern
+
+---
+
 ## [1.5.32] - 2026-01-25
 
 ### Fixed

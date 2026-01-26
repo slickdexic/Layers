@@ -125,7 +125,8 @@ class SpecialEditSlide extends SpecialPage {
 				'imageUrl' => null,
 				'isSlide' => true,
 				'slideName' => $slideName,
-				'setName' => $setName,
+				// Use 'initialSetName' to match EditLayersAction and EditorBootstrap.js
+				'initialSetName' => $setName,
 				'lockMode' => $lockMode,
 				'canvasWidth' => $canvasWidth,
 				'canvasHeight' => $canvasHeight,
