@@ -84,23 +84,18 @@ All high-priority issues have been resolved:
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 7 OPEN ITEMS
+## Phase 2 (P2): Medium Priority — 🟡 4 OPEN ITEMS
 
 ### P2.1 Add .catch() Handlers to Missing Promise Chains
 
-**Status:** Open  
+**Status:** ✅ COMPLETED (January 27, 2026)  
 **Priority:** P2 - Medium  
 **Category:** Error Handling / Reliability  
 **Discovered:** v41 Review (January 27, 2026)
 
-**Files requiring fixes:**
-
-| File | Line | Code Pattern | Fix |
-|------|------|--------------|-----|
-| SlideManager.js | 364 | `mw.loader.using('ext.layers.shared').then(...)` | Add `.catch()` |
-| SpecialSlides.js | 310 | `windowManager.openWindow(dialog).closed.then(...)` | Add `.catch()` |
-
-**Estimated Effort:** 30 minutes
+**Files fixed:**
+- SlideManager.js line 364: Added `.catch()` to `mw.loader.using()` 
+- SpecialSlides.js line 310: Added `.catch()` to `windowManager.openWindow().closed.then()`
 
 ---
 
@@ -232,22 +227,15 @@ All high-priority issues have been resolved:
 
 ### P2.7 Add Removal Dates to All Deprecated Code
 
-**Status:** Open  
+**Status:** ✅ COMPLETED (January 27, 2026)  
 **Priority:** P2 - Medium  
 **Category:** Technical Debt  
 **Discovered:** v41 Review (January 27, 2026)
 
-**Problem:** 6 deprecated markers found, but 3 lack removal dates:
-
-| File | Line | Issue |
-|------|------|-------|
-| ModuleRegistry.js | 311 | Says "Will be removed in v1.0" (confusing - we're at 1.5) |
-| ModuleRegistry.js | 338 | No removal date |
-| LayerPanel.js | 886 | No removal date |
-
-**Fix:** Update all to "Will be removed in v2.0."
-
-**Estimated Effort:** 30 minutes
+**Fixes applied:**
+- ModuleRegistry.js line 311: Changed "v1.0" to "v2.0"
+- ModuleRegistry.js line 338: Added "@deprecated since 1.3.0...Will be removed in v2.0."
+- LayerPanel.js line 886: Added "Will be removed in v2.0."
 
 ---
 
@@ -427,12 +415,18 @@ All high-priority issues have been resolved:
 
 ### P3.12 Exclude Generated Files from Coverage Reports
 
-**Status:** Not Started  
+**Status:** ✅ COMPLETED (January 27, 2026)  
 **Priority:** P3 - Low  
 **Category:** Code Quality / Reporting  
 **Discovered:** v41 Review (January 27, 2026)
 
-**Problem:** Generated data files show 0% coverage in reports:
+**Fix applied:** Added exclusions to `jest.config.js` for:
+- `**/shapeLibrary/EmojiLibraryData.js`
+- `**/shapeLibrary/ShapeLibraryData.js`
+- `**/shapeLibrary/EmojiLibraryIndex.js`
+- `**/shapeLibrary/scripts/**`
+
+**Original problem:** Generated data files showed 0% coverage in reports:
 - EmojiLibraryData.js
 - ShapeLibraryData.js  
 - EmojiLibraryIndex.js

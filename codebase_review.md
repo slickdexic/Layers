@@ -47,24 +47,24 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ### Key Weaknesses
 1. **21 god classes** (19 JS + 2 PHP files >1,000 lines) indicate architectural complexity
-2. **Inconsistent database method return types** (null vs false vs -1 for errors)
-3. **2 unhandled Promise rejections** in `.then()` chains without `.catch()`
+2. **Inconsistent database method return types** (null vs false vs -1 for errors) — low practical impact
+3. ~~**2 unhandled Promise rejections** in `.then()` chains without `.catch()`~~ ✅ Fixed January 27, 2026
 4. **Limited TypeScript adoption** — complex modules would benefit from types
 5. **Missing visual regression testing** for canvas rendering
-6. **6 deprecated code markers** — need scheduled removal dates
-7. **Missing .catch() on some mw.loader.using() and windowManager.openWindow() chains**
+6. ~~**6 deprecated code markers** — need scheduled removal dates~~ ✅ Fixed January 27, 2026 — all now have v2.0 dates
+7. ~~**Missing .catch() on some mw.loader.using() and windowManager.openWindow() chains**~~ ✅ Fixed
 
 ### Issue Summary
 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
-| Async/Error Handling | 0 | 0 | 2 | 1 |
+| Async/Error Handling | 0 | 0 | 0 | 1 |
 | Performance/Memory | 0 | 0 | 1 | 1 |
 | Architecture | 0 | 0 | 2 | 2 |
-| Code Quality | 0 | 0 | 1 | 3 |
+| Code Quality | 0 | 0 | 0 | 2 |
 | Testing | 0 | 0 | 1 | 1 |
 | Documentation | 0 | 0 | 0 | 1 |
-| **Total** | **0** ✅ | **0** ✅ | **7** | **9** |
+| **Total** | **0** ✅ | **0** ✅ | **4** | **8** |
 
 ---
 
