@@ -10,7 +10,7 @@
 
 - **Branch:** main (verified via `git status`)
 - **Tests:** 10,643 tests in 157 suites (all passing, verified January 26, 2026)
-- **Coverage:** 93.34% statements, 84.06% branches (verified January 26, 2026)
+- **Coverage:** 93.52% statements, 84.24% branches (verified January 26, 2026)
 - **JS files:** 127 (excludes `resources/dist/` and `resources/*/scripts/`)
 - **JS lines:** ~115,282 total (~40,579 generated, ~74,703 hand-written)
 - **PHP files:** 40 (all with `declare(strict_types=1)`)
@@ -26,7 +26,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 **Overall Assessment:** **8.5/10** — Production-ready, high quality. Critical and high issues resolved.
 
 ### Key Strengths
-1. **Excellent test coverage** (93.34% statement, 84.06% branch, 10,643 tests)
+1. **Excellent test coverage** (93.52% statement, 84.24% branch, 10,658 tests)
 2. **Comprehensive server-side validation** with strict 40+ property whitelist
 3. **Modern ES6 class-based architecture** (100% of 127 JS files)
 4. **PHP strict_types** in all 40 PHP files
@@ -73,7 +73,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Statements | 93.34% | 90% | ✅ Exceeds |
+| Statements | 93.52% | 90% | ✅ Exceeds |
 | Branches | 84.06% | 80% | ✅ Exceeds |
 | Functions | 91.58% | 85% | ✅ Exceeds |
 | Lines | 93.48% | 90% | ✅ Exceeds |
@@ -443,7 +443,7 @@ All write operations are rate-limited via MediaWiki's pingLimiter.
 | Category | Score | Weight | Notes |
 |----------|-------|--------|-------|
 | Security | 9.5/10 | 25% | Excellent CSRF, validation, sanitization |
-| Test Coverage | 9.3/10 | 20% | 93.34% statements, 10,643 tests |
+| Test Coverage | 9.4/10 | 20% | 93.52% statements, 10,658 tests |
 | Functionality | 9.2/10 | 20% | 15 tools, Slide Mode, Shape Library, Emoji Picker |
 | Architecture | 7.3/10 | 15% | 21 god classes, unhandled promises |
 | Code Quality | 8.2/10 | 10% | Good patterns, some error handling gaps |
@@ -566,7 +566,7 @@ wc -l src/*.php src/*/*.php | awk '$1 >= 1000 {count++} END {print count}'
 
 ## Conclusion
 
-The Layers extension is a **well-engineered, production-ready MediaWiki extension** with excellent test coverage (93.34%) and security practices.
+The Layers extension is a **well-engineered, production-ready MediaWiki extension** with excellent test coverage (93.52%) and security practices.
 
 The codebase demonstrates professional software development practices including:
 
