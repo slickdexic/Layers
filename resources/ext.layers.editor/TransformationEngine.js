@@ -329,7 +329,7 @@
 
 	/**
 	 * Update the canvas CSS transform from current pan/zoom state
-	 * DEPRECATED: Using canvas context transforms only to avoid coordinate confusion
+	 * @deprecated since 1.3.0 - Using canvas context transforms only. Will be removed in v2.0.
 	 */
 	updateCanvasTransform() {
 		// Removed CSS transform setting to use canvas context transforms only

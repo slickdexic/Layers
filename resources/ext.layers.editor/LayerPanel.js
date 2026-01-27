@@ -526,7 +526,7 @@
 		}
 
 		/**
-		 * @deprecated Use createFolder() instead
+		 * @deprecated since 1.4.0 - Use createFolder() instead. Will be removed in v2.0.
 		 * Create a group from currently selected layers (legacy method)
 		 */
 		createGroupFromSelection() {

@@ -2,7 +2,7 @@
 
 **Last Updated:** January 26, 2026  
 **Version:** 1.5.35  
-**Status:** Production-Ready, High Quality (8.6/10)
+**Status:** Production-Ready, High Quality (8.5/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
 
@@ -10,12 +10,12 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A comprehensive critical review (v39) confirms all critical and high-priority issues have been resolved.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A comprehensive critical review (v40) identified some new medium-priority issues related to Promise error handling.
 
 **Current Status:**
 - ✅ All P0 items complete (version consistency fixed with automation)
 - ✅ All P1 items complete (documentation metrics updated)
-- 🟡 P2 items: 5 open (6 completed)
+- 🟡 P2 items: 7 open (6 completed)
 - 🟡 P3 items: 8 open (3 completed)
 
 **Verified Metrics (January 26, 2026):**
@@ -23,17 +23,17 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 | Metric | Value | Status |
 |--------|-------|--------|
 | Tests passing | **10,643** (157 suites) | ✅ Excellent |
-| Statement coverage | **94.45%** | ✅ Excellent |
-| Branch coverage | **84.87%** | ✅ Excellent |
-| Function coverage | **92.55%** | ✅ Excellent |
-| Line coverage | **94.59%** | ✅ Excellent |
+| Statement coverage | **93.34%** | ✅ Excellent |
+| Branch coverage | **84.06%** | ✅ Excellent |
+| Function coverage | **91.58%** | ✅ Excellent |
+| Line coverage | **93.48%** | ✅ Excellent |
 | JS files | 127 | Excludes dist/ and scripts/ |
 | JS lines | ~115,282 | Includes generated data |
 | PHP files | 40 | ✅ |
 | PHP lines | ~14,388 | ✅ |
 | PHP strict_types | **40/40 files** | ✅ Complete |
 | ES6 classes | 127 files | 100% migrated |
-| God classes (≥1,000 lines) | 23 | 3 generated, 18 JS, 2 PHP |
+| God classes (≥1,000 lines) | 21 | 3 generated, 18 JS, 2 PHP |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 11 | ✅ All legitimate |
 | innerHTML usages | 57 | ✅ Audited - all safe |
@@ -63,85 +63,62 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 **Priority:** P0 - Critical (Immediate)  
 **Category:** Release Management / Professionalism  
 
-**Problem:** Version numbers were inconsistent across 6+ files, ranging from v1.5.26 to v1.5.35.
+**Problem:** Version numbers were inconsistent across 6+ files.
 
 **Fix Applied:**
 - Updated all files to match extension.json source of truth (1.5.35)
 - Created `scripts/update-version.js` to automate version synchronization
 - Added `npm run check:version` and `npm run update:version` commands
-- Added version consistency check to CI workflow (`.github/workflows/ci.yml`)
-
-**Files Updated:**
-- `resources/ext.layers.editor/LayersNamespace.js`
-- `README.md`
-- `Mediawiki-Extension-Layers.mediawiki`
-- `wiki/Home.md`
-- `wiki/Installation.md`
-- `improvement_plan.md`
-
----
-
-**Previously Fixed P0 Issues:**
-- ✅ Missing `mustBePosted()` on Write API Modules (Fixed January 24, 2026)
-- ✅ console.log in Production Code (Fixed January 24, 2026)
-- ✅ CSRF token protection on all write APIs
-- ✅ Rate limiting on save/delete/rename operations
+- Added version consistency check to CI workflow
 
 ---
 
 ## Phase 1 (P1): High Priority — ✅ ALL COMPLETED
 
-### P1.0 Audit and Update Stale Documentation Metrics
-
-**Status:** ✅ COMPLETED (January 26, 2026)  
-**Priority:** P1 - High  
-**Category:** Documentation / Quality Assurance  
-
-**Problem:** Documentation files contained outdated metrics that didn't match actual values.
-
-**Fix Applied:**
-- Updated all metrics in wiki/Home.md (test count, coverage, JS files, etc.)
-- Updated copilot-instructions.md with correct values
-- Updated codebase_review.md to v39 with accurate metrics
-- Updated improvement_plan.md header and status table
-
-**Verified Metrics (January 26, 2026):**
-- Test count: 10,643 tests in 157 suites
-- Coverage: 94.45% statement, 84.87% branch, 92.55% function, 94.59% line
-- JS files: 127, ~115,282 lines
-- PHP files: 40, ~14,388 lines
-- ESLint disables: 11 (all legitimate)
-- i18n messages: 697
-
----
-
-### P1.1 Validate `paths` Array Contents in customShape Layers
-
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Category:** Security / Input Validation  
-**Location:** `src/Validation/ServerSideLayerValidator.php`
-
-**Fix Applied:** Added validation loop that calls `validateSvgPath()` on each string in the paths array for customShape layers.
-
----
-
-### P1.2 Fix Cache Invalidation Race Condition
-
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Category:** Performance / Data Consistency  
-**Location:** `src/Api/ApiLayersSave.php`
-
-**Fix Applied:** Implemented hybrid approach:
-- File page purged synchronously (fast, always needed)
-- Backlink pages purged via `HTMLCacheUpdateJob::newForBacklinks()` (async)
-- Added `SYNC_BACKLINK_PURGE_LIMIT` constant to eliminate magic number
-- Fallback to synchronous purge if job queue unavailable
+All high-priority issues have been resolved:
+- ✅ P1.0: Documentation metrics updated
+- ✅ P1.1: paths array validation for customShape layers
+- ✅ P1.2: Cache invalidation race condition fixed
 
 ---
 
 ## Phase 2 (P2): Medium Priority — 🟡 5 OPEN ITEMS
 
-### P2.1 Standardize Database Method Return Types
+### P2.1 ~~Add .catch() Handlers to Promise Chains~~ ✅ RESOLVED
+
+**Status:** Resolved  
+**Priority:** P2 - Medium  
+**Category:** Error Handling / Reliability  
+**Discovered:** v40 Review (January 26, 2026)  
+**Resolved:** January 26, 2026
+
+**Finding:** Upon verification, most files already had proper `.catch()` handlers:
+- SetSelectorController.js - Lines 427, 499, 583 all have `.catch()` ✓
+- Toolbar.js - Lines 793, 864 have `.catch()` ✓
+- SlidePropertiesPanel.js - Line 656 has `.catch()` ✓
+
+**One actual issue found and fixed:**
+- SpecialSlides.js - Line 274: `OO.ui.confirm().then()` - Added `.catch()` handler ✅
+
+---
+
+### P2.2 ~~Wrap Async Functions in Try-Catch~~ ✅ ALREADY HANDLED
+
+**Status:** False Positive  
+**Priority:** P2 - Medium  
+**Category:** Error Handling  
+**Discovered:** v40 Review (January 26, 2026)  
+**Verified:** January 26, 2026
+
+**Finding:** Upon verification, these functions already have proper error handling:
+- LayerSetManager.js - Both methods have try-catch ✓
+- RevisionManager.js - Both methods have try-catch ✓
+- DraftManager.js - Uses only sync operations and safe dialog wrappers ✓
+- UIManager.js - Thin wrappers with native fallbacks, no error risk ✓
+
+---
+
+### P2.3 Standardize Database Method Return Types
 
 **Status:** Open  
 **Priority:** P2 - Medium  
@@ -151,70 +128,15 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 **Problem:** Inconsistent return types across methods:
 - `getLayerSet()` returns `false` on error
 - `getLayerSetByName()` returns `null` on error
-- `getLatestLayerSet()` returns `false` on error
-- `namedSetExists()` returns `null` on DB error, `bool` on success
 - `countNamedSets()` returns `-1` on error
 
 **Solution:** Standardize to:
 - Return `null` for "not found"
 - Throw `\RuntimeException` for database errors
 
-**Breaking Change:** Yes — requires updating 15+ call sites across 5 PHP files:
-- `ApiLayersInfo.php` (2 usages)
-- `LayerInjector.php` (5 usages)
-- `LayeredFileRenderer.php` (2 usages)
-- `ImageLinkProcessor.php` (6 usages)
-- Unit tests (8+ assertions)
+**Breaking Change:** Yes — requires updating 15+ call sites across 5 PHP files.
 
 **Estimated Effort:** 1-2 days
-
----
-
-### P2.2 Refactor PHP God Classes
-
-**Status:** Planned  
-**Priority:** P2 - Medium  
-**Category:** Architecture  
-
-**Target Classes:**
-
-1. **LayersDatabase.php** (1,242 lines) → Split into:
-   - `LayerSetRepository` — CRUD operations for layer sets
-   - `NamedSetRepository` — Named set operations
-   - `RevisionRepository` — Revision management
-   - `LayerQueryService` — Query building and execution
-
-2. **ServerSideLayerValidator.php** (1,163 lines) → Use strategy pattern:
-   - `LayerTypeValidatorInterface` — Common validation interface
-   - `TextLayerValidator`, `ArrowLayerValidator`, `ShapeLayerValidator`, etc.
-   - `PropertyValidator` — Shared property validation (colors, dimensions)
-   - `ValidationContext` — Shared state during validation
-
-**Estimated Effort:** 2-3 days per class
-
----
-
-### P2.3 Add Additional E2E Tests for ShapeLibraryPanel
-
-**Status:** Partially Complete  
-**Priority:** P2 - Medium  
-**Category:** Testing  
-**Location:** `resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js` (812 lines)
-
-**Problem:** ShapeLibraryPanel has limited unit test coverage due to tight OOUI integration making unit testing impractical.
-
-**Current Status:**
-- ✅ Created comprehensive Playwright E2E tests in `tests/e2e/shape-library.spec.js`
-- Test scenarios covered include open/close, category navigation, search, insertion
-- Additional tests would increase confidence
-
-**Recommended Additional Tests:**
-- Keyboard navigation through shape grid
-- Multiple shape insertions in sequence
-- Shape library state persistence
-- Error handling for failed SVG loads
-
-**Estimated Effort:** 1-2 days for additional tests
 
 ---
 
@@ -272,65 +194,64 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ---
 
+### P2.6 Refactor PHP God Classes
+
+**Status:** Planned  
+**Priority:** P2 - Medium  
+**Category:** Architecture  
+
+**Target Classes:**
+
+1. **LayersDatabase.php** (1,242 lines) → Split into:
+   - `LayerSetRepository` — CRUD operations for layer sets
+   - `NamedSetRepository` — Named set operations
+   - `RevisionRepository` — Revision management
+   - `LayerQueryService` — Query building and execution
+
+2. **ServerSideLayerValidator.php** (1,163 lines) → Use strategy pattern:
+   - `LayerTypeValidatorInterface` — Common validation interface
+   - `TextLayerValidator`, `ArrowLayerValidator`, `ShapeLayerValidator`, etc.
+   - `PropertyValidator` — Shared property validation (colors, dimensions)
+   - `ValidationContext` — Shared state during validation
+
+**Estimated Effort:** 2-3 days per class
+
+---
+
+### P2.7 Add Additional E2E Tests for ShapeLibraryPanel
+
+**Status:** Partially Complete  
+**Priority:** P2 - Medium  
+**Category:** Testing  
+**Location:** `resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js` (812 lines)
+
+**Problem:** ShapeLibraryPanel has limited unit test coverage due to tight OOUI integration.
+
+**Current Status:**
+- ✅ Created comprehensive Playwright E2E tests in `tests/e2e/shape-library.spec.js`
+- Test scenarios covered include open/close, category navigation, search, insertion
+- Additional tests would increase confidence
+
+**Recommended Additional Tests:**
+- Keyboard navigation through shape grid
+- Multiple shape insertions in sequence
+- Shape library state persistence
+- Error handling for failed SVG loads
+
+**Estimated Effort:** 1-2 days for additional tests
+
+---
+
 ## Completed P2 Items (for reference)
 
-### P2.A Layer Search/Filter Feature — ✅ COMPLETED
-
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Location:** `resources/ext.layers.editor/LayerPanel.js`
-
-**Implemented:**
-- Search input at top of LayerPanel
-- Real-time filtering by layer name, type, or text content
-- "Showing N of M layers" count display
-- Clear button to reset filter
-- Full dark mode support (night and OS themes)
-- 13 new tests added
-
----
-
-### P2.B i18n Documentation — ✅ VERIFIED COMPLETE
-
-**Status:** ✅ VERIFIED (January 25, 2026)  
-**Location:** `i18n/qqq.json`
-
-All 697 message keys are documented. Banana i18n checker passes.
-
----
-
-### P2.C Simplify getNamedSetsForImage Query — ✅ COMPLETED
-
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Location:** `src/Database/LayersDatabase.php`
-
-Replaced complex self-join with cleaner two-query approach.
-
----
-
-### P2.D Raise Jest Coverage Thresholds — ✅ COMPLETED
-
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Location:** `jest.config.js`
-
-Updated thresholds: 80% branches, 90% functions, 92% lines/statements.
-
----
-
-### P2.E Add 8-Digit Hex Color (RGBA) Support — ✅ COMPLETED
-
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Location:** `src/Validation/ColorValidator.php`
-
-Updated regex to accept 3/4/6/8-digit hex colors.
-
----
-
-### P2.F Fix DraftManager Subscription Leak — ✅ COMPLETED
-
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Location:** `resources/ext.layers.editor/DraftManager.js`
-
-Added cleanup of existing subscription at start of `initialize()`.
+| Item | Date | Notes |
+|------|------|-------|
+| P2.A: Layer search/filter | Jan 25, 2026 | Full search/filter UI |
+| P2.B: i18n docs | Jan 25, 2026 | All 697 keys documented |
+| P2.C: Query simplification | Jan 25, 2026 | Two-query approach |
+| P2.D: Coverage thresholds | Jan 25, 2026 | Raised to 80-92% |
+| P2.E: RGBA hex colors | Jan 25, 2026 | 3/4/6/8-digit support |
+| P2.F: DraftManager leak | Jan 25, 2026 | Subscription cleanup |
 
 ---
 
@@ -342,17 +263,11 @@ Added cleanup of existing subscription at start of `initialize()`.
 **Priority:** P3 - Low  
 **Category:** Testing  
 
-**Problem:** No visual snapshot tests for canvas rendering. Rendering bugs could slip through.
+**Problem:** No visual snapshot tests for canvas rendering.
 
 **Solution:**
 1. Add jest-image-snapshot for canvas output testing
-2. Create baseline snapshots for key rendering scenarios:
-   - Basic shapes (rectangle, circle, ellipse)
-   - Text rendering (different fonts, sizes)
-   - Arrows (straight, curved, heads)
-   - Blur fill effects
-   - Gradient fills
-   - Multi-layer compositions
+2. Create baseline snapshots for key rendering scenarios
 3. Run visual tests on CI
 
 **Tools to Consider:**
@@ -370,18 +285,11 @@ Added cleanup of existing subscription at start of `initialize()`.
 **Priority:** P3 - Low  
 **Category:** Code Quality  
 
-**Candidate Modules (by complexity):**
+**Candidate Modules:**
 1. **StateManager.js** (829 lines) — Central state with subscription system
 2. **APIManager.js** (1,523 lines) — API communication layer
 3. **GroupManager.js** (1,171 lines) — Layer grouping logic
 4. **SelectionManager.js** (1,431 lines) — Multi-selection handling
-5. **HistoryManager.js** (824 lines) — Undo/redo with complex state
-
-**Benefits:**
-- Catch type errors at compile time
-- Better IDE autocomplete and refactoring
-- Self-documenting interfaces
-- Easier onboarding for new contributors
 
 **Migration Strategy:**
 1. Add TypeScript build pipeline
@@ -424,7 +332,6 @@ Added cleanup of existing subscription at start of `initialize()`.
 **Status:** Not Started  
 **Priority:** P3 - Low  
 **Category:** Feature  
-**Evidence:** Documented as F3 in KNOWN_ISSUES.md
 
 **Problem:** Limited to default font allowlist in `$wgLayersDefaultFonts`.
 
@@ -435,80 +342,31 @@ Added cleanup of existing subscription at start of `initialize()`.
 4. Cache loaded fonts for performance
 5. Fallback gracefully if font fails to load
 
-**Security Considerations:**
-- Validate font URLs against allowlist
-- Sanitize font family names
-- Consider CSP implications
-
 **Estimated Effort:** 1 week
 
 ---
 
-### P3.5 Zoom-to-Cursor Feature (F5) — ✅ COMPLETED
+### P3.5 Zoom-to-Cursor Feature — ✅ COMPLETED
 
-**Status:** ✅ COMPLETED (January 26, 2026)  
-**Priority:** P3 - Low  
-**Category:** UX Enhancement  
-
-**Problem:** Zoom anchors at top-left corner, not mouse pointer position.
-
-**Solution (Implemented):**
-- `CanvasEvents.handleWheel()` captures mouse position via `cm.getMousePoint(e)`
-- `ZoomPanController.zoomBy(delta, point)` calculates screen position before zoom
-- Pan offset adjusted after zoom to keep point under cursor stable
-- Full test coverage in `ZoomAndCoords.test.js` and `ZoomPanController.test.js`
-
-**Implementation Location:** `resources/ext.layers.editor/canvas/ZoomPanController.js`
+**Status:** ✅ COMPLETED (January 26, 2026)
 
 ---
 
 ### P3.6 Canvas Accessibility Improvements — ✅ COMPLETED
 
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Priority:** P3 - Low  
-**Category:** Accessibility  
-
-**Completed:**
-- ✅ LayerPanel has `announceToScreenReader()` method
-- ✅ ARIA roles on toolbar buttons
-- ✅ Keyboard navigation for layer panel
-- ✅ Tool changes announced via `announceTop()` method
-- ✅ Zoom display has `aria-live="polite"` and updates `aria-label` on change
-- ✅ ARIA labels on all major UI regions (canvas, toolbar, panel)
+**Status:** ✅ COMPLETED (January 25, 2026)
 
 ---
 
 ### P3.7 Complete Slide Mode Documentation — ✅ COMPLETED
 
-**Status:** ✅ COMPLETED (January 25, 2026)  
-**Priority:** P3 - Low  
-**Category:** Documentation  
-
-**Implemented:**
-- ✅ Added comprehensive "Slide Mode Architecture" section to ARCHITECTURE.md
-- ✅ Documented API endpoints with parameters and responses
-- ✅ Added "Slide Mode Development" section to DEVELOPER_ONBOARDING.md
+**Status:** ✅ COMPLETED (January 25, 2026)
 
 ---
 
 ### P3.8 Standardize Timeout Tracking — ✅ AUDITED
 
-**Status:** ✅ AUDITED - Low Priority (January 25, 2026)  
-**Priority:** P3 - Low  
-**Category:** Code Quality / Memory Safety  
-
-**Audit Results:**
-Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled:
-
-| Category | Count | Status |
-|----------|-------|--------|
-| Tracked via instance properties | 15 | ✅ Proper cleanup |
-| Short-lived `setTimeout(..., 0)` | 20 | ✅ Safe (UI sync) |
-| Self-limiting retry chains | 8 | ✅ Safe (bounded) |
-| Module-level (tracked) | 10 | ✅ Proper cleanup |
-| Fire-and-forget (safe) | 5 | ✅ Short operations |
-
-**Conclusion:** Current timeout handling is adequate. TimeoutTracker utility available for new code.
+**Status:** ✅ AUDITED - Low Priority (January 25, 2026)
 
 ---
 
@@ -539,7 +397,7 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 **Priority:** P3 - Low  
 **Category:** Feature Enhancement  
 
-**Request:** Make the dimension line draggable independently from the anchor points. Add leader length property to control extension beyond the dimension line.
+**Request:** Make the dimension line draggable independently from anchor points.
 
 **Estimated Effort:** 1 week
 
@@ -551,7 +409,7 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 **Priority:** P3 - Low  
 **Category:** New Feature  
 
-**Request:** New tool for measuring and annotating angles with three anchor points (endpoint1, vertex, endpoint2), arc dimension line, and extension lines.
+**Request:** New tool for measuring and annotating angles.
 
 **Estimated Effort:** 2 weeks
 
@@ -559,7 +417,7 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 
 ## God Class Status Summary
 
-### 23 Files ≥1,000 Lines
+### 21 Files ≥1,000 Lines
 
 | Category | Count | Files |
 |----------|-------|-------|
@@ -590,7 +448,6 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 | P2.E: RGBA hex colors | Jan 25, 2026 | 3/4/6/8-digit support |
 | P2.F: DraftManager leak | Jan 25, 2026 | Subscription cleanup |
 | P3.5: Zoom-to-cursor | Jan 26, 2026 | Already implemented |
-| P2.3: ShapeLibrary E2E | Jan 26, 2026 | 400+ lines of tests |
 | P3.6: Accessibility | Jan 25, 2026 | ARIA regions complete |
 | P3.7: Slide docs | Jan 25, 2026 | Architecture documented |
 | P3.8: Timeout audit | Jan 25, 2026 | Adequate handling |
@@ -599,9 +456,13 @@ Found 58 setTimeout/setInterval usages. Analysis shows most are properly handled
 
 | Item | Status | Assigned |
 |------|--------|----------|
-| P2.1: DB return types | Planned | TBD |
-| P2.2: PHP god classes | Planned | TBD |
+| P2.1: Promise .catch() | **NEW** Open | TBD |
+| P2.2: Async try-catch | **NEW** Open | TBD |
+| P2.3: DB return types | Open | TBD |
+| P2.4: HistoryManager memory | Mitigated | TBD |
 | P2.5: JS god classes | Ongoing | TBD |
+| P2.6: PHP god classes | Planned | TBD |
+| P2.7: ShapeLibrary E2E | Partial | TBD |
 
 ### Blocked (🔴)
 
@@ -612,21 +473,23 @@ None currently blocked.
 ## Next Steps
 
 ### Immediate (This Week)
-1. **P2.1:** Standardize DB return types — High impact, moderate effort
+1. **P2.1:** Add .catch() to all Promise chains — High impact, quick fix
+2. **P2.2:** Wrap async functions in try-catch — Quick win
 
 ### This Sprint
-2. **P2.4:** Address HistoryManager memory for large images
-3. **P2.3:** Add additional E2E tests for ShapeLibraryPanel
+3. **P2.3:** Standardize DB return types
+4. **P2.4:** Make DeepClone a hard dependency
 
 ### Next Milestone
-4. **P2.2:** PHP god class refactoring
 5. **P2.5:** Continue JS god class reduction
+6. **P2.6:** PHP god class refactoring
+7. **P2.7:** Additional ShapeLibrary E2E tests
 
 ### Long-Term (v2.0)
-6. **P3.1:** Visual regression testing
-7. **P3.2:** TypeScript migration
-8. **P3.3:** Deprecated code removal
-9. **P3.4:** Custom fonts support
+8. **P3.1:** Visual regression testing
+9. **P3.2:** TypeScript migration
+10. **P3.3:** Deprecated code removal
+11. **P3.4:** Custom fonts support
 
 ---
 
@@ -635,15 +498,16 @@ None currently blocked.
 | Metric | Current | Target | Notes |
 |--------|---------|--------|-------|
 | Test count | 10,643 | Maintain | No regression |
-| Statement coverage | 94.45% | ≥92% | Threshold in jest.config |
-| Branch coverage | 84.87% | ≥80% | Threshold in jest.config |
+| Statement coverage | 93.34% | ≥92% | Threshold in jest.config |
+| Branch coverage | 84.06% | ≥80% | Threshold in jest.config |
 | Hand-written god classes (JS) | 18 | ≤12 | Reduce by 6 |
 | PHP god classes | 2 | 0 | Refactor both |
 | Deprecated markers | 5 | 0 | Remove in v2.0 |
 | ESLint disables | 11 | ≤15 | Minimized |
-| Overall score | 8.6 | 9.0 | Path to world-class |
+| Unhandled promise chains | ~10 | 0 | **NEW** Priority |
+| Overall score | 8.5 | 9.0 | Path to world-class |
 
 ---
 
 *Last updated: January 26, 2026*  
-*Overall score: 8.6/10 — Production-ready, high quality with areas for improvement*
+*Overall score: 8.5/10 — Production-ready, high quality with areas for improvement*

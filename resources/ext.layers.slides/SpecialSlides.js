@@ -275,6 +275,8 @@
 				if ( confirmed ) {
 					this.deleteSlide( name );
 				}
+			} ).catch( ( error ) => {
+				mw.log.error( 'Failed to show delete confirmation dialog:', error );
 			} );
 		}
 

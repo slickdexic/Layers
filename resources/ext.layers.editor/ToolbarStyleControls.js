@@ -1034,7 +1034,7 @@ class ToolbarStyleControls {
 
 	/**
 	 * Legacy method name for backward compatibility
-	 * @deprecated Use hideControlsForSelectedLayers instead
+	 * @deprecated since 1.5.0 - Use hideControlsForSelectedLayers instead. Will be removed in v2.0.
 	 * @param {Array} selectedLayers Array of selected layer objects
 	 */
 	updateContextForSelectedLayers( selectedLayers ) {
