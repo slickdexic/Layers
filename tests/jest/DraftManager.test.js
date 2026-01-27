@@ -394,4 +394,269 @@ describe( 'DraftManager', function () {
 			expect( unsubscribe ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'initialize', function () {
+		it( 'should clean up existing subscription before creating new one', function () {
+			const unsubscribe1 = jest.fn();
+			const unsubscribe2 = jest.fn();
+			
+			mockEditor.stateManager.subscribe = jest.fn()
+				.mockReturnValueOnce( unsubscribe1 )
+				.mockReturnValueOnce( unsubscribe2 );
+
+			const manager = new DraftManager( mockEditor );
+			
+			// Reinitialize should clean up the first subscription
+			manager.initialize();
+			
+			expect( unsubscribe1 ).toHaveBeenCalled();
+			
+			manager.destroy();
+		} );
+	} );
+
+	describe( 'scheduleAutoSave', function () {
+		it( 'should not save during recovery mode', function () {
+			jest.useFakeTimers();
+			
+			draftManager.isRecoveryMode = true;
+			draftManager.scheduleAutoSave();
+			
+			jest.advanceTimersByTime( 5000 );
+			
+			// saveDraft should not be called during recovery
+			expect( global.localStorage.setItem ).not.toHaveBeenCalled();
+			
+			jest.useRealTimers();
+		} );
+
+		it( 'should debounce multiple rapid calls', function () {
+			jest.useFakeTimers();
+			const saveSpy = jest.spyOn( draftManager, 'saveDraft' );
+			
+			// Make multiple rapid calls
+			draftManager.scheduleAutoSave();
+			draftManager.scheduleAutoSave();
+			draftManager.scheduleAutoSave();
+			
+			// Only one save should happen after debounce (5000ms)
+			jest.advanceTimersByTime( 6000 );
+			
+			expect( saveSpy ).toHaveBeenCalledTimes( 1 );
+			
+			jest.useRealTimers();
+		} );
+
+		it( 'should clear existing debounce timer', function () {
+			jest.useFakeTimers();
+			
+			draftManager.debounceTimer = setTimeout( function () {}, 10000 );
+			draftManager.scheduleAutoSave();
+			
+			// Verify new timer is set (timer should still complete after correct delay)
+			jest.advanceTimersByTime( 2000 );
+			
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'startAutoSaveTimer', function () {
+		it( 'should trigger periodic saves for dirty editor', function () {
+			jest.useFakeTimers();
+			const saveSpy = jest.spyOn( draftManager, 'saveDraft' );
+			
+			// Ensure editor reports as dirty
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+			
+			// Re-start the timer
+			draftManager.startAutoSaveTimer();
+			
+			// Advance past the auto-save interval (60s)
+			jest.advanceTimersByTime( 61000 );
+			
+			expect( saveSpy ).toHaveBeenCalled();
+			
+			jest.useRealTimers();
+		} );
+
+		it( 'should not save when editor is not dirty', function () {
+			jest.useFakeTimers();
+			global.localStorage.setItem.mockClear();
+			
+			// Editor reports not dirty
+			mockEditor.isDirty = jest.fn( function () {
+				return false;
+			} );
+			
+			draftManager.startAutoSaveTimer();
+			jest.advanceTimersByTime( 61000 );
+			
+			// setItem is only called by isStorageAvailable, not saveDraft
+			// Filter out storage test calls
+			const draftCalls = global.localStorage.setItem.mock.calls.filter(
+				function ( call ) {
+					return !call[ 0 ].includes( '__layers_storage_test__' );
+				}
+			);
+			expect( draftCalls.length ).toBe( 0 );
+			
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'checkAndRecoverDraft', function () {
+		it( 'should return false when no draft exists', async function () {
+			const result = await draftManager.checkAndRecoverDraft();
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should recover draft when user confirms', async function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1', type: 'circle' } ],
+				setName: 'default'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			global.OO.ui.confirm = jest.fn( function () {
+				return Promise.resolve( true );
+			} );
+			
+			const result = await draftManager.checkAndRecoverDraft();
+			
+			expect( result ).toBe( true );
+			expect( mockEditor.stateManager.update ).toHaveBeenCalled();
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should discard draft when user cancels', async function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ],
+				setName: 'default'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			global.OO.ui.confirm = jest.fn( function () {
+				return Promise.resolve( false );
+			} );
+			
+			const result = await draftManager.checkAndRecoverDraft();
+			
+			expect( result ).toBe( false );
+			expect( global.localStorage.removeItem ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'showRecoveryDialog', function () {
+		it( 'should return false when no draft info exists', async function () {
+			const result = await draftManager.showRecoveryDialog();
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should use OO.ui.confirm when available', async function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ],
+				setName: 'default'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			global.OO.ui.confirm = jest.fn( function () {
+				return Promise.resolve( true );
+			} );
+			
+			const result = await draftManager.showRecoveryDialog();
+			
+			expect( global.OO.ui.confirm ).toHaveBeenCalled();
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should fallback to window.confirm when OO.ui unavailable', async function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ],
+				setName: 'default'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			// Remove OO.ui
+			const originalOO = global.OO;
+			global.OO = undefined;
+			
+			global.window.confirm = jest.fn( function () {
+				return true;
+			} );
+			
+			const result = await draftManager.showRecoveryDialog();
+			
+			expect( global.window.confirm ).toHaveBeenCalled();
+			expect( result ).toBe( true );
+			
+			global.OO = originalOO;
+		} );
+	} );
+
+	describe( 'saveDraft edge cases', function () {
+		it( 'should not save when editor is not dirty', function () {
+			mockEditor.isDirty = jest.fn( function () {
+				return false;
+			} );
+			global.localStorage.setItem.mockClear();
+
+			const result = draftManager.saveDraft();
+			
+			// Only isStorageAvailable calls setItem
+			const draftCalls = global.localStorage.setItem.mock.calls.filter(
+				function ( call ) {
+					return !call[ 0 ].includes( '__layers_storage_test__' );
+				}
+			);
+			expect( draftCalls.length ).toBe( 0 );
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle missing stateManager gracefully', function () {
+			const editorWithoutState = {
+				filename: 'Test.jpg',
+				stateManager: null,
+				isDirty: jest.fn( function () {
+					return true;
+				} )
+			};
+			
+			const manager = new DraftManager( editorWithoutState );
+			const result = manager.saveDraft();
+			
+			expect( result ).toBe( false );
+			manager.destroy();
+		} );
+	} );
+
+	describe( 'recoverDraft error handling', function () {
+		it( 'should handle stateManager.update throwing error', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ],
+				setName: 'default'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			mockEditor.stateManager.update = jest.fn( function () {
+				throw new Error( 'Update failed' );
+			} );
+			
+			const result = draftManager.recoverDraft();
+			
+			expect( result ).toBe( false );
+			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+	} );
 } );
