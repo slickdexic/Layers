@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 26, 2026 (Comprehensive Critical Audit v40)  
+**Review Date:** January 27, 2026 (Comprehensive Critical Audit v41)  
 **Version:** 1.5.35  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
@@ -9,13 +9,13 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git status`)
-- **Tests:** 10,658 tests in 157 suites (all passing, verified January 26, 2026)
-- **Coverage:** 93.52% statements, 84.24% branches (verified January 26, 2026)
-- **JS files:** 127 (excludes `resources/dist/` and `resources/*/scripts/`)
-- **JS lines:** ~115,282 total (~40,579 generated, ~74,703 hand-written)
+- **Tests:** 10,658 tests in 157 suites (all passing, verified January 27, 2026)
+- **Coverage:** 93.52% statements, 84.24% branches (verified January 27, 2026)
+- **JS files:** 127 production files (excludes `resources/dist/` and `resources/*/scripts/`)
+- **JS lines:** ~115,284 total (~40,579 generated, ~74,705 hand-written)
 - **PHP files:** 40 (all with `declare(strict_types=1)`)
 - **PHP lines:** ~14,388 total
-- **i18n messages:** 697 keys in en.json (all documented in qqq.json, verified via Banana checker)
+- **i18n messages:** ~718 keys in en.json (all documented in qqq.json, verified via Banana checker)
 
 ---
 
@@ -41,17 +41,18 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 13. **Unsaved changes warning** before page close
 14. **Auto-save/draft recovery** (DraftManager)
 15. **Request abort handling** to prevent race conditions on rapid operations
-16. **Proper async/await and Promise error handling** throughout
+16. **Proper async/await and Promise error handling** throughout most of the codebase
+17. **No TODO/FIXME/HACK comments** in production code
+18. **No console.log statements** in production code (only in build scripts)
 
 ### Key Weaknesses
 1. **21 god classes** (19 JS + 2 PHP files >1,000 lines) indicate architectural complexity
 2. **Inconsistent database method return types** (null vs false vs -1 for errors)
-3. **Unhandled Promise rejections** in some `.then()` chains without `.catch()`
+3. **2 unhandled Promise rejections** in `.then()` chains without `.catch()`
 4. **Limited TypeScript adoption** — complex modules would benefit from types
 5. **Missing visual regression testing** for canvas rendering
-6. **5 deprecated code markers** without scheduled removal dates
-7. **Inconsistent event listener cleanup** in some UI components
-8. **No custom font support** beyond configured allowlist
+6. **6 deprecated code markers** — need scheduled removal dates
+7. **Missing .catch() on some mw.loader.using() and windowManager.openWindow() chains**
 
 ### Issue Summary
 
@@ -69,13 +70,13 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ## 📊 Detailed Metrics
 
-### Test Coverage (January 26, 2026)
+### Test Coverage (January 27, 2026)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | Statements | 93.52% | 90% | ✅ Exceeds |
 | Branches | 84.24% | 80% | ✅ Exceeds |
-| Functions | 91.58% | 85% | ✅ Exceeds |
+| Functions | 91.79% | 85% | ✅ Exceeds |
 | Lines | 93.66% | 90% | ✅ Exceeds |
 | Test Count | 10,658 | - | ✅ Excellent |
 | Test Suites | 157 | - | ✅ |
@@ -85,13 +86,13 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 | Category | Files | Lines | Notes |
 |----------|-------|-------|-------|
-| JavaScript (Production) | 127 | ~115,282 | Excludes dist/ and scripts/ |
+| JavaScript (Production) | 127 | ~115,284 | Excludes dist/ and scripts/ |
 | JavaScript (Generated) | 3 | ~40,579 | EmojiLibraryData, ShapeLibraryData, EmojiLibraryIndex |
-| JavaScript (Hand-written) | 124 | ~74,703 | Actual application code |
+| JavaScript (Hand-written) | 124 | ~74,705 | Actual application code |
 | PHP (Production) | 40 | ~14,388 | All source code |
 | Tests (Jest) | 157 suites | ~50,300+ | Comprehensive |
 | Documentation | 28+ files | - | Markdown docs in docs/ + wiki/ |
-| i18n Messages | 697 | - | All documented in qqq.json |
+| i18n Messages | ~718 | - | All documented in qqq.json |
 
 ---
 
@@ -107,38 +108,30 @@ No high-severity issues identified.
 
 ---
 
-## 🟡 Medium Severity Issues (6)
+## 🟡 Medium Severity Issues (7)
 
-### MED-1: ~~Unhandled Promise Rejections in .then() Chains~~ ✅ RESOLVED
+### MED-1: Unhandled Promise Rejections in Some .then() Chains
 
-**Severity:** Medium (RESOLVED)  
+**Severity:** Medium  
 **Category:** Error Handling / Reliability  
-**Resolution Date:** January 26, 2026
+**Discovered:** v41 Review (January 27, 2026)
 
-**Status:** Upon verification, most files identified in the initial review already had proper `.catch()` handlers:
-- SetSelectorController.js - Lines 427, 499, 583 all have `.catch()` handlers ✓
-- Toolbar.js - Lines 793, 864 have `.catch()` handlers ✓
-- SlidePropertiesPanel.js - Line 656 has `.catch()` handler ✓
+**Files with missing .catch() handlers:**
 
-**One actual issue found and fixed:**
-- SpecialSlides.js - Line 274: `OO.ui.confirm().then()` - Added `.catch()` handler ✅
+| File | Line | Code Pattern | Risk |
+|------|------|--------------|------|
+| SlideManager.js | 364 | `mw.loader.using('ext.layers.shared').then(...)` | Module load failure unhandled |
+| SpecialSlides.js | 310 | `windowManager.openWindow(dialog).closed.then(...)` | Dialog close failure unhandled |
 
----
+**Impact:** Module loading failures or dialog errors could silently fail, leaving users confused.
 
-### MED-2: ~~Async Functions Without Try-Catch~~ ✅ ALREADY HANDLED
+**Recommendation:** Add `.catch()` handlers to log errors or show user-friendly messages.
 
-**Severity:** Medium (FALSE POSITIVE)  
-**Category:** Error Handling
-
-**Status:** Upon verification, these async functions already have proper error handling:
-- LayerSetManager.js - `loadLayerSetByName()` and `createNewLayerSet()` have try-catch ✓
-- RevisionManager.js - `loadLayerSetByName()` and `createNewLayerSet()` have try-catch ✓
-- DraftManager.js - `checkAndRecoverDraft()` - Uses only sync operations and safe dialog wrappers ✓
-- UIManager.js dialog methods - Thin wrappers with native fallbacks, no error risk ✓
+**Estimated Effort:** 30 minutes
 
 ---
 
-### MED-3: Inconsistent Database Method Return Types
+### MED-2: Inconsistent Database Method Return Types
 
 **Severity:** Medium  
 **Category:** Error Handling / API Consistency  
@@ -168,11 +161,11 @@ No high-severity issues identified.
 
 ---
 
-### MED-4: HistoryManager JSON Cloning for Large Images
+### MED-3: HistoryManager JSON Cloning for Large Images
 
 **Severity:** Medium  
 **Category:** Performance / Memory  
-**Location:** `resources/ext.layers.editor/HistoryManager.js` lines 237-250
+**Location:** `resources/ext.layers.editor/HistoryManager.js`
 
 **Problem:** When DeepClone module fails to use structuredClone, falls back to JSON cloning which copies entire base64 image data (potentially 1MB+ per image per undo step).
 
@@ -187,36 +180,36 @@ No high-severity issues identified.
 
 ---
 
-### MED-5: JavaScript God Classes (18 hand-written)
+### MED-4: JavaScript God Classes (19 hand-written)
 
 **Severity:** Medium  
 **Category:** Architecture  
-**Files:** Multiple (see God Class Status section)
+**Files:** 19 hand-written files exceed 1,000 lines (see God Class Status section)
 
-**Problem:** 18 hand-written JavaScript files exceed 1,000 lines. While many use proper delegation patterns, this indicates accumulated complexity.
+**Accurate Line Counts (January 27, 2026):**
 
-**Accurate Line Counts (January 26, 2026):**
+| File | Lines | Delegation Status | Notes |
+|------|-------|-------------------|-------|
+| LayerPanel.js | 2,166 | ✅ 9 controllers | Well-delegated |
+| CanvasManager.js | 2,044 | ✅ 10+ controllers | Facade pattern |
+| ViewerManager.js | 2,014 | ⚠️ Could improve | Extract renderers |
+| Toolbar.js | 1,891 | ✅ 4 modules | Could split further |
+| LayersEditor.js | 1,795 | ✅ 3 modules | Main entry point |
+| APIManager.js | 1,523 | ⚠️ Could improve | Extract retry logic |
+| SelectionManager.js | 1,431 | ✅ 3 modules | Good delegation |
+| ArrowRenderer.js | 1,301 | N/A (math complexity) | Rendering logic |
+| PropertyBuilders.js | 1,293 | N/A (UI builders) | 98% coverage |
+| CalloutRenderer.js | 1,291 | N/A (rendering logic) | Complex geometry |
+| InlineTextEditor.js | 1,288 | N/A (feature complexity) | Rich text editing |
+| ToolManager.js | 1,224 | ✅ 2 handlers | Good delegation |
+| CanvasRenderer.js | 1,219 | ✅ SelectionRenderer | OK |
+| GroupManager.js | 1,171 | N/A (group operations) | Feature scope |
+| TransformController.js | 1,110 | N/A (transforms) | Math-heavy |
+| ResizeCalculator.js | 1,105 | N/A (math) | 100% coverage |
+| ToolbarStyleControls.js | 1,098 | ✅ Style controls | Could split |
+| PropertiesForm.js | 1,004 | ✅ PropertyBuilders | OK |
 
-| File | Actual Lines | Notes |
-|------|-------------|-------|
-| LayerPanel.js | 2,166 | Well-delegated to 9 controllers |
-| CanvasManager.js | 2,044 | Facade with 10+ controllers |
-| ViewerManager.js | 2,014 | Could extract SlideRenderer |
-| Toolbar.js | 1,891 | Could split by category |
-| LayersEditor.js | 1,795 | Main entry point |
-| APIManager.js | 1,523 | Could extract retry logic |
-| SelectionManager.js | 1,431 | Good delegation |
-| ArrowRenderer.js | 1,301 | Math-heavy (acceptable) |
-| PropertyBuilders.js | 1,293 | UI builders (acceptable) |
-| CalloutRenderer.js | 1,291 | Complex geometry (acceptable) |
-| InlineTextEditor.js | 1,288 | Rich text complexity |
-| ToolManager.js | 1,224 | Good delegation |
-| CanvasRenderer.js | 1,219 | Delegates to SelectionRenderer |
-| GroupManager.js | 1,171 | Feature scope |
-| TransformController.js | 1,110 | Math-heavy |
-| ResizeCalculator.js | 1,105 | 100% coverage |
-| ToolbarStyleControls.js | 1,098 | Could split |
-| PropertiesForm.js | 1,004 | Delegates to PropertyBuilders |
+**Note:** PropertiesForm.js is now also at 1,004 lines (previously just under 1,000).
 
 **Impact:** Increased cognitive load, harder to reason about behavior, longer test files.
 
@@ -226,7 +219,7 @@ No high-severity issues identified.
 
 ---
 
-### MED-6: PHP God Classes Need Refactoring
+### MED-5: PHP God Classes Need Refactoring
 
 **Severity:** Medium  
 **Category:** Architecture  
@@ -246,7 +239,7 @@ No high-severity issues identified.
 
 ---
 
-### MED-7: Missing E2E Tests for Shape Library
+### MED-6: Missing E2E Tests for Shape Library
 
 **Severity:** Medium  
 **Category:** Testing  
@@ -266,18 +259,32 @@ No high-severity issues identified.
 
 ---
 
-## 🟢 Low Severity Issues (9)
+### MED-7: Deprecated Code Without Complete Removal Schedule
 
-### LOW-1: ~~Deprecated Code Without Removal Schedule~~ ✅ RESOLVED
+**Severity:** Medium  
+**Category:** Technical Debt  
+**Count:** 6 deprecation markers
 
-**Status:** Resolved January 26, 2026  
-**Count:** 5 deprecation markers  
-**Files:** ToolbarStyleControls.js, ModuleRegistry.js (2), LayerPanel.js, TransformationEngine.js  
-**Resolution:** Added `@deprecated since X.X.X - ... Will be removed in v2.0.` to all markers.
+**Deprecated APIs:**
+
+| File | Line | Deprecated Item | Status |
+|------|------|-----------------|--------|
+| TransformationEngine.js | 332 | Canvas context transforms | Has removal date (v2.0) ✅ |
+| ToolbarStyleControls.js | 1037 | `hideControlsForTool()` | Has removal date (v2.0) ✅ |
+| ModuleRegistry.js | 311 | `window.layersModuleRegistry` | Vague removal ("v1.0"?) ⚠️ |
+| ModuleRegistry.js | 338 | Legacy export pattern | No removal date ⚠️ |
+| LayerPanel.js | 529 | `createNewFolder()` | Has removal date (v2.0) ✅ |
+| LayerPanel.js | 886 | Code panel methods | No removal date ⚠️ |
+
+**Recommendation:** Add clear removal dates (v2.0) to all deprecated markers.
+
+**Estimated Effort:** 30 minutes
 
 ---
 
-### LOW-2: Native Alerts as Fallbacks — BY DESIGN ✅
+## 🟢 Low Severity Issues (9)
+
+### LOW-1: Native Alerts as Fallbacks — BY DESIGN ✅
 
 **Status:** Verified as correct design pattern  
 **Files:** UIManager.js, PresetDropdown.js, LayerSetManager.js, ImportExportManager.js, RevisionManager.js  
@@ -285,7 +292,7 @@ No high-severity issues identified.
 
 ---
 
-### LOW-3: Event Listener Cleanup Inconsistency
+### LOW-2: Event Listener Cleanup Inconsistency
 
 **Location:** PropertiesForm.js, SlidePropertiesPanel.js  
 **Problem:** Event listeners added to dynamically created form elements aren't tracked for explicit cleanup.  
@@ -294,7 +301,7 @@ No high-severity issues identified.
 
 ---
 
-### LOW-4: Magic Numbers in Some Calculations
+### LOW-3: Magic Numbers in Some Calculations
 
 **Examples:**
 - `100` backlink limit in cache invalidation (ApiLayersSave.php)
@@ -305,7 +312,7 @@ No high-severity issues identified.
 
 ---
 
-### LOW-5: innerHTML Usage Count (57)
+### LOW-4: innerHTML Usage Count (57)
 
 **Location:** Multiple UI files  
 **Assessment:** All 57 usages reviewed and categorized as safe:
@@ -319,7 +326,7 @@ No high-severity issues identified.
 
 ---
 
-### LOW-6: setTimeout/setInterval Tracking Inconsistent
+### LOW-5: setTimeout/setInterval Tracking Inconsistent
 
 **Count:** ~58 uses of setTimeout/setInterval  
 **Assessment:** Audit shows most are properly handled:
@@ -333,7 +340,7 @@ No high-severity issues identified.
 
 ---
 
-### LOW-7: Missing aria-live for Some Dynamic Updates
+### LOW-6: Missing aria-live for Some Dynamic Updates
 
 **Location:** Various UI components  
 **Problem:** Some dynamic content updates (e.g., error messages) don't announce to screen readers.  
@@ -341,7 +348,7 @@ No high-severity issues identified.
 
 ---
 
-### LOW-8: Missing TypeScript for Complex Modules
+### LOW-7: Missing TypeScript for Complex Modules
 
 **Files:** StateManager (829 lines), APIManager (1,523 lines), GroupManager (1,171 lines)  
 **Problem:** Complex state management would benefit from TypeScript's type safety.  
@@ -349,10 +356,19 @@ No high-severity issues identified.
 
 ---
 
-### LOW-9: Visual Regression Testing Missing
+### LOW-8: Visual Regression Testing Missing
 
 **Problem:** No visual snapshot testing for canvas rendering. Rendering bugs could slip through.  
 **Recommendation:** Add jest-image-snapshot or Percy for canvas output testing.
+
+---
+
+### LOW-9: Generated Data Files Excluded from Coverage
+
+**Files:** EmojiLibraryData.js (0%), ShapeLibraryData.js (0%), EmojiLibraryIndex.js (0%)  
+**Problem:** These generated files show 0% coverage in reports.  
+**Impact:** None (expected behavior for generated data)  
+**Recommendation:** Consider adding to coverage exclude patterns in jest.config.js for cleaner reports.
 
 ---
 
@@ -362,6 +378,8 @@ No high-severity issues identified.
 ### ✅ BUG-2: Slide `layerset=` Parameter Ignored — FIXED (Jan 25, 2026)
 ### ✅ CRIT-1: Version Number Inconsistencies — FIXED (Jan 26, 2026)
 ### ✅ HIGH-1: Documentation Metrics Stale — FIXED (Jan 26, 2026)
+### ✅ MED-OLD: SpecialSlides.js confirmDeleteSlide — FIXED (has .catch() now)
+### ✅ MED-OLD: SetSelectorController Promise chains — All have .catch() handlers
 
 ---
 
@@ -390,9 +408,18 @@ All write operations are rate-limited via MediaWiki's pingLimiter.
 - ❌ No `eval()` in production code
 - ❌ No `document.write()` usage
 - ❌ No `new Function()` usage
+- ❌ No empty catch blocks
 - ✅ SQL injection protected via parameterized queries
 - ✅ postMessage origin validation (ViewerOverlay.js)
 - ✅ localStorage access wrapped in try-catch
+
+### Code Quality Verification ✅
+- ❌ No TODO/FIXME/HACK comments in production JS
+- ❌ No console.log in production code (only in build scripts)
+- ✅ 11 eslint-disable comments, all justified:
+  - 8x `no-alert` — Native alert fallbacks (correct pattern)
+  - 2x `no-undef` — DraftManager structuredClone/mw.storage detection
+  - 1x `no-control-regex` — APIManager control character validation
 
 ---
 
@@ -445,20 +472,21 @@ All write operations are rate-limited via MediaWiki's pingLimiter.
 | Security | 9.5/10 | 25% | Excellent CSRF, validation, sanitization |
 | Test Coverage | 9.4/10 | 20% | 93.52% statements, 10,658 tests |
 | Functionality | 9.2/10 | 20% | 15 tools, Slide Mode, Shape Library, Emoji Picker |
-| Architecture | 7.3/10 | 15% | 21 god classes, unhandled promises |
-| Code Quality | 8.2/10 | 10% | Good patterns, some error handling gaps |
+| Architecture | 7.3/10 | 15% | 21 god classes (3 generated, 18 hand-written + 2 PHP) |
+| Code Quality | 8.3/10 | 10% | Good patterns, minor error handling gaps |
 | Performance | 8.3/10 | 5% | Query optimization done, large images mitigated |
 | Documentation | 8.5/10 | 5% | All metrics updated, version script added |
 
-**Weighted Total: 8.69/10 → Overall: 8.5/10**
+**Weighted Total: 8.72/10 → Overall: 8.5/10**
 
 ### Score History
 
 | Date | Version | Score | Notes |
 |------|---------|-------|-------|
-| Jan 26, 2026 | v40 | **8.5/10** | Thorough v40 audit, found promise handling issues |
-| Jan 26, 2026 | v39 | 8.6/10 | Thorough v39 audit, updated metrics |
-| Jan 26, 2026 | v38.1 | 8.6/10 | Fixed version inconsistencies, updated docs |
+| Jan 27, 2026 | v41 | **8.5/10** | Thorough v41 audit, found 2 missing .catch() handlers |
+| Jan 26, 2026 | v40 | 8.5/10 | Found promise handling issues |
+| Jan 26, 2026 | v39 | 8.6/10 | Updated metrics |
+| Jan 26, 2026 | v38.1 | 8.6/10 | Fixed version inconsistencies |
 | Jan 25, 2026 | v37 | 8.5/10 | Thorough critical review |
 
 ---
@@ -472,12 +500,12 @@ All critical issues resolved.
 All high-priority issues resolved.
 
 ### P2 (Medium — Next Milestone)
-1. **MED-1:** Add .catch() to all Promise chains (4-6 hours)
-2. **MED-2:** Wrap async functions in try-catch (2-4 hours)
-3. **MED-3:** Standardize database method return types (1-2 days)
-4. **MED-4:** Make DeepClone a hard dependency (4 hours)
-5. **MED-5/6:** God class refactoring per plan (2-3 days each)
-6. **MED-7:** Add more E2E tests for ShapeLibraryPanel (2-3 days)
+1. **MED-1:** Add .catch() to SlideManager.js:364 and SpecialSlides.js:310 (30 min)
+2. **MED-2:** Standardize database method return types (1-2 days)
+3. **MED-3:** Make DeepClone a hard dependency (4 hours)
+4. **MED-4/5:** God class refactoring per plan (2-3 days each)
+5. **MED-6:** Add more E2E tests for ShapeLibraryPanel (2-3 days)
+6. **MED-7:** Add removal dates to deprecated code (30 min)
 
 ### P3 (Long-Term)
 1. Add visual regression testing with jest-image-snapshot
@@ -496,13 +524,13 @@ The extension is production-ready and professionally built. Remaining areas for 
 
 1. **Architectural Complexity:** 21 god classes (18 JS + 2 PHP) is higher than ideal. While most use delegation patterns, the sheer number indicates the codebase has grown organically.
 
-2. **Promise Error Handling:** Multiple `.then()` chains lack `.catch()` handlers, and some async functions lack try-catch wrappers. This is a reliability concern.
+2. **Minor Promise Error Handling Gaps:** Two `.then()` chains lack `.catch()` handlers. This is a minor reliability concern.
 
 3. **Inconsistent Error Handling:** The PHP database layer uses mixed return types (null, false, -1, exceptions) for errors. This is a maintenance burden and potential bug source.
 
 4. **Missing Visual Testing:** For a canvas-based drawing application, the lack of visual regression testing is a gap.
 
-5. **Technical Debt:** 5 deprecated APIs without removal schedule.
+5. **Technical Debt:** 6 deprecated APIs, not all with removal schedules.
 
 ### What Would Make It World-Class (9.0+/10)
 
@@ -533,12 +561,12 @@ find resources -name "*.js" ! -path "*/dist/*" ! -path "*/scripts/*" | wc -l
 # Result: 127
 
 # JS line count
-wc -l resources/ext.layers*/*.js resources/ext.layers*/*/*.js | tail -1
-# Result: 115282 total
+find resources -name "*.js" ! -path "*/dist/*" ! -path "*/scripts/*" | xargs wc -l | grep total
+# Result: ~115,284 total
 
 # PHP file count and line count
 find src -name "*.php" | wc -l  # Result: 40
-wc -l src/*.php src/*/*.php | tail -1  # Result: ~14,388 total
+wc -l src/*.php src/*/*.php src/*/*/*.php | grep total  # Result: 14,388 total
 
 # Verify PHP strict types (all files should have it)
 find src -name "*.php" -exec grep -L "declare( strict_types=1 )" {} \;
@@ -551,14 +579,14 @@ grep -rn "eslint-disable" resources/ext.layers* --include="*.js" | wc -l  # Resu
 grep -rn "innerHTML\s*=" resources/ext.layers* --include="*.js" | wc -l  # Result: 57
 
 # Count deprecated markers
-grep -rn "@deprecated" resources/ext.layers* --include="*.js" | wc -l  # Result: 5
+grep -rn "@deprecated" resources/ext.layers* --include="*.js" | wc -l  # Result: 6
 
 # Count god classes (>= 1000 lines)
-wc -l resources/ext.layers*/*.js resources/ext.layers*/*/*.js | awk '$1 >= 1000 {count++} END {print count}'
+find resources -name "*.js" ! -path "*/dist/*" ! -path "*/scripts/*" | xargs wc -l | awk '$1 >= 1000' | wc -l
 # Result: 21 (3 generated + 18 hand-written)
 
 # Count PHP god classes
-wc -l src/*.php src/*/*.php | awk '$1 >= 1000 {count++} END {print count}'
+wc -l src/*.php src/*/*.php src/*/*/*.php | awk '$1 >= 1000' | wc -l
 # Result: 2
 ```
 
@@ -574,19 +602,20 @@ The codebase demonstrates professional software development practices including:
 - Proper error handling and logging
 - Modern JavaScript patterns (ES6 classes, delegation)
 - Extensive test coverage (10,658 tests, 93%+ statement coverage)
-- Complete i18n with 697 message keys
+- Complete i18n with ~718 message keys
 - **Automated version consistency** with CI enforcement
 - **No dangerous code patterns** (eval, document.write, new Function)
+- **Clean production code** (no TODO/FIXME, no console.log)
 
-**New Issues Identified (v40):**
-- Unhandled Promise rejections in several `.then()` chains
-- Some async functions missing try-catch wrappers
-- These are medium-priority reliability concerns, not security issues
+**New Issues Identified (v41):**
+- 2 missing `.catch()` handlers on Promise chains
+- PropertiesForm.js now exceeds 1,000 lines (1,004)
+- 6 deprecated markers (not 5 as previously counted)
 
 All **critical and high-priority issues have been resolved**.
 
 Areas for **medium-term improvement**:
-- Promise error handling (add .catch() handlers)
+- Promise error handling (add 2 missing .catch() handlers)
 - Architectural complexity (21 god classes)
 - Testing gaps (ShapeLibraryPanel limited unit coverage, no visual regression tests)
 - Technical debt (inconsistent DB error handling, deprecated code)
@@ -595,5 +624,5 @@ Areas for **medium-term improvement**:
 
 ---
 
-*Review performed on `main` branch, January 26, 2026.*  
+*Review performed on `main` branch, January 27, 2026.*  
 *Rating: 8.5/10 — Production-ready, high quality.*

@@ -23,7 +23,13 @@ module.exports = {
 		'resources/ext.layers.modal/**/*.js',
 		'!**/*.min.js',
 		'!**/node_modules/**',
-		'!**/vendor/**'
+		'!**/vendor/**',
+		// Exclude generated data files (large, auto-generated, not hand-written code)
+		'!**/shapeLibrary/EmojiLibraryData.js',
+		'!**/shapeLibrary/ShapeLibraryData.js',
+		'!**/shapeLibrary/EmojiLibraryIndex.js',
+		// Exclude build scripts (Node.js tools, not browser code)
+		'!**/shapeLibrary/scripts/**'
 	],
 
 	// Coverage thresholds - protect against regression

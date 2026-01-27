@@ -308,7 +308,7 @@
 	const registry = new ModuleRegistry();
 
 	// Legacy compatibility - keep the old simple interface
-	// @deprecated Use window.layersRegistry instead. Will be removed in v1.0.
+	// @deprecated since 1.3.0 - Use window.layersRegistry instead. Will be removed in v2.0.
 	const legacyRegistry = {
 		register: ( name, factory, dependencies ) => registry.register( name, factory, dependencies ),
 		get: ( name ) => registry.get( name ),
@@ -335,7 +335,7 @@
 
 		// Global singleton instances (intentional - needed for cross-file coordination)
 		window.layersRegistry = registry;
-		// @deprecated - use window.layersRegistry instead
+		// @deprecated since 1.3.0 - Use window.layersRegistry instead. Will be removed in v2.0.
 		window.layersModuleRegistry = legacyRegistry;
 	}
 

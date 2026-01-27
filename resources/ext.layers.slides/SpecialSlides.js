@@ -311,6 +311,8 @@
 				if ( data && data.action === 'create' && data.slideName ) {
 					this.editSlide( data.slideName );
 				}
+			} ).catch( ( error ) => {
+				mw.log.error( '[SpecialSlides] Create dialog error:', error );
 			} );
 		}
 

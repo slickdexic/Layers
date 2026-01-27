@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 26, 2026  
+**Last Updated:** January 27, 2026  
 **Version:** 1.5.35  
 **Status:** Production-Ready, High Quality (8.5/10)
 
@@ -10,25 +10,25 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A comprehensive critical review (v40) identified some new medium-priority issues related to Promise error handling.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A comprehensive critical review (v41) identified some medium-priority issues related to Promise error handling and architectural complexity.
 
 **Current Status:**
 - ✅ All P0 items complete (version consistency fixed with automation)
 - ✅ All P1 items complete (documentation metrics updated)
 - 🟡 P2 items: 7 open (6 completed)
-- 🟡 P3 items: 8 open (3 completed)
+- 🟡 P3 items: 8 open (4 completed)
 
-**Verified Metrics (January 26, 2026):**
+**Verified Metrics (January 27, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | Tests passing | **10,658** (157 suites) | ✅ Excellent |
 | Statement coverage | **93.52%** | ✅ Excellent |
 | Branch coverage | **84.24%** | ✅ Excellent |
-| Function coverage | **91.58%** | ✅ Excellent |
+| Function coverage | **91.79%** | ✅ Excellent |
 | Line coverage | **93.66%** | ✅ Excellent |
 | JS files | 127 | Excludes dist/ and scripts/ |
-| JS lines | ~115,282 | Includes generated data |
+| JS lines | ~115,284 | Includes generated data |
 | PHP files | 40 | ✅ |
 | PHP lines | ~14,388 | ✅ |
 | PHP strict_types | **40/40 files** | ✅ Complete |
@@ -39,8 +39,10 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 | innerHTML usages | 57 | ✅ Audited - all safe |
 | Skipped tests | 0 | ✅ All tests run |
 | Weak assertions | **0** | ✅ All fixed |
-| i18n messages | 697 | All documented in qqq.json |
-| Deprecated code markers | 5 | 🟡 Technical debt |
+| i18n messages | ~718 | All documented in qqq.json |
+| Deprecated code markers | 6 | 🟡 Technical debt |
+| TODO/FIXME/HACK comments | 0 | ✅ Clean |
+| console.log in production | 0 | ✅ Clean (only in build scripts) |
 
 ---
 
@@ -82,43 +84,27 @@ All high-priority issues have been resolved:
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 5 OPEN ITEMS
+## Phase 2 (P2): Medium Priority — 🟡 7 OPEN ITEMS
 
-### P2.1 ~~Add .catch() Handlers to Promise Chains~~ ✅ RESOLVED
+### P2.1 Add .catch() Handlers to Missing Promise Chains
 
-**Status:** Resolved  
+**Status:** Open  
 **Priority:** P2 - Medium  
 **Category:** Error Handling / Reliability  
-**Discovered:** v40 Review (January 26, 2026)  
-**Resolved:** January 26, 2026
+**Discovered:** v41 Review (January 27, 2026)
 
-**Finding:** Upon verification, most files already had proper `.catch()` handlers:
-- SetSelectorController.js - Lines 427, 499, 583 all have `.catch()` ✓
-- Toolbar.js - Lines 793, 864 have `.catch()` ✓
-- SlidePropertiesPanel.js - Line 656 has `.catch()` ✓
+**Files requiring fixes:**
 
-**One actual issue found and fixed:**
-- SpecialSlides.js - Line 274: `OO.ui.confirm().then()` - Added `.catch()` handler ✅
+| File | Line | Code Pattern | Fix |
+|------|------|--------------|-----|
+| SlideManager.js | 364 | `mw.loader.using('ext.layers.shared').then(...)` | Add `.catch()` |
+| SpecialSlides.js | 310 | `windowManager.openWindow(dialog).closed.then(...)` | Add `.catch()` |
 
----
-
-### P2.2 ~~Wrap Async Functions in Try-Catch~~ ✅ ALREADY HANDLED
-
-**Status:** False Positive  
-**Priority:** P2 - Medium  
-**Category:** Error Handling  
-**Discovered:** v40 Review (January 26, 2026)  
-**Verified:** January 26, 2026
-
-**Finding:** Upon verification, these functions already have proper error handling:
-- LayerSetManager.js - Both methods have try-catch ✓
-- RevisionManager.js - Both methods have try-catch ✓
-- DraftManager.js - Uses only sync operations and safe dialog wrappers ✓
-- UIManager.js - Thin wrappers with native fallbacks, no error risk ✓
+**Estimated Effort:** 30 minutes
 
 ---
 
-### P2.3 Standardize Database Method Return Types
+### P2.2 Standardize Database Method Return Types
 
 **Status:** Open  
 **Priority:** P2 - Medium  
@@ -140,7 +126,7 @@ All high-priority issues have been resolved:
 
 ---
 
-### P2.4 Address HistoryManager Memory for Large Images
+### P2.3 Address HistoryManager Memory for Large Images
 
 **Status:** Open (Mitigation Applied)  
 **Priority:** P2 - Medium  
@@ -161,13 +147,15 @@ All high-priority issues have been resolved:
 
 ---
 
-### P2.5 Reduce JavaScript God Class Count
+### P2.4 Reduce JavaScript God Class Count
 
 **Status:** Ongoing  
 **Priority:** P2 - Medium  
 **Category:** Architecture  
 
 **Target:** Reduce hand-written god classes from 18 to ≤12
+
+**Current Count (January 27, 2026):** 18 hand-written JS files ≥1,000 lines
 
 **Priority Order (by improvement potential):**
 
@@ -194,7 +182,7 @@ All high-priority issues have been resolved:
 
 ---
 
-### P2.6 Refactor PHP God Classes
+### P2.5 Refactor PHP God Classes
 
 **Status:** Planned  
 **Priority:** P2 - Medium  
@@ -218,7 +206,7 @@ All high-priority issues have been resolved:
 
 ---
 
-### P2.7 Add Additional E2E Tests for ShapeLibraryPanel
+### P2.6 Add Additional E2E Tests for ShapeLibraryPanel
 
 **Status:** Partially Complete  
 **Priority:** P2 - Medium  
@@ -242,12 +230,33 @@ All high-priority issues have been resolved:
 
 ---
 
+### P2.7 Add Removal Dates to All Deprecated Code
+
+**Status:** Open  
+**Priority:** P2 - Medium  
+**Category:** Technical Debt  
+**Discovered:** v41 Review (January 27, 2026)
+
+**Problem:** 6 deprecated markers found, but 3 lack removal dates:
+
+| File | Line | Issue |
+|------|------|-------|
+| ModuleRegistry.js | 311 | Says "Will be removed in v1.0" (confusing - we're at 1.5) |
+| ModuleRegistry.js | 338 | No removal date |
+| LayerPanel.js | 886 | No removal date |
+
+**Fix:** Update all to "Will be removed in v2.0."
+
+**Estimated Effort:** 30 minutes
+
+---
+
 ## Completed P2 Items (for reference)
 
 | Item | Date | Notes |
 |------|------|-------|
 | P2.A: Layer search/filter | Jan 25, 2026 | Full search/filter UI |
-| P2.B: i18n docs | Jan 25, 2026 | All 697 keys documented |
+| P2.B: i18n docs | Jan 25, 2026 | All ~718 keys documented |
 | P2.C: Query simplification | Jan 25, 2026 | Two-query approach |
 | P2.D: Coverage thresholds | Jan 25, 2026 | Raised to 80-92% |
 | P2.E: RGBA hex colors | Jan 25, 2026 | 3/4/6/8-digit support |
@@ -307,7 +316,7 @@ All high-priority issues have been resolved:
 **Priority:** P3 - Low  
 **Category:** Technical Debt  
 
-**Deprecated APIs to Remove in v2.0 (5 markers):**
+**Deprecated APIs to Remove in v2.0 (6 markers):**
 
 | File | Deprecated Item | Replacement |
 |------|-----------------|-------------|
@@ -316,6 +325,7 @@ All high-priority issues have been resolved:
 | ModuleRegistry.js | Legacy export pattern | Use `window.Layers.*` namespace |
 | LayerPanel.js | `createNewFolder()` | Use `createFolder()` |
 | LayerPanel.js | Code panel methods | Moved to UIManager |
+| TransformationEngine.js | Direct transform methods | Use canvas context transforms |
 
 **Plan:**
 1. Create migration guide document for each deprecated API
@@ -415,6 +425,24 @@ All high-priority issues have been resolved:
 
 ---
 
+### P3.12 Exclude Generated Files from Coverage Reports
+
+**Status:** Not Started  
+**Priority:** P3 - Low  
+**Category:** Code Quality / Reporting  
+**Discovered:** v41 Review (January 27, 2026)
+
+**Problem:** Generated data files show 0% coverage in reports:
+- EmojiLibraryData.js
+- ShapeLibraryData.js  
+- EmojiLibraryIndex.js
+
+**Solution:** Add to `coveragePathIgnorePatterns` in jest.config.js
+
+**Estimated Effort:** 10 minutes
+
+---
+
 ## God Class Status Summary
 
 ### 21 Files ≥1,000 Lines
@@ -442,7 +470,7 @@ All high-priority issues have been resolved:
 | P1.1: paths validation | Jan 25, 2026 | customShape layers validated |
 | P1.2: cache invalidation | Jan 25, 2026 | Job queue async purge |
 | P2.A: Layer search | Jan 25, 2026 | Full search/filter UI |
-| P2.B: i18n docs | Jan 25, 2026 | All 697 keys documented |
+| P2.B: i18n docs | Jan 25, 2026 | All ~718 keys documented |
 | P2.C: Query simplification | Jan 25, 2026 | Two-query approach |
 | P2.D: Coverage thresholds | Jan 25, 2026 | Raised to 80-92% |
 | P2.E: RGBA hex colors | Jan 25, 2026 | 3/4/6/8-digit support |
@@ -454,15 +482,15 @@ All high-priority issues have been resolved:
 
 ### In Progress (🟡)
 
-| Item | Status | Assigned |
+| Item | Status | Priority |
 |------|--------|----------|
-| P2.1: Promise .catch() | **NEW** Open | TBD |
-| P2.2: Async try-catch | **NEW** Open | TBD |
-| P2.3: DB return types | Open | TBD |
-| P2.4: HistoryManager memory | Mitigated | TBD |
-| P2.5: JS god classes | Ongoing | TBD |
-| P2.6: PHP god classes | Planned | TBD |
-| P2.7: ShapeLibrary E2E | Partial | TBD |
+| P2.1: Add .catch() handlers | Open | High (quick win) |
+| P2.2: DB return types | Open | Medium |
+| P2.3: HistoryManager memory | Mitigated | Medium |
+| P2.4: JS god classes | Ongoing | Medium |
+| P2.5: PHP god classes | Planned | Medium |
+| P2.6: ShapeLibrary E2E | Partial | Medium |
+| P2.7: Deprecated code dates | Open | Low (quick win) |
 
 ### Blocked (🔴)
 
@@ -472,24 +500,25 @@ None currently blocked.
 
 ## Next Steps
 
-### Immediate (This Week)
-1. **P2.1:** Add .catch() to all Promise chains — High impact, quick fix
-2. **P2.2:** Wrap async functions in try-catch — Quick win
+### Quick Wins (This Week)
+1. **P2.1:** Add .catch() to 2 Promise chains — 30 min
+2. **P2.7:** Add removal dates to deprecated code — 30 min
+3. **P3.12:** Exclude generated files from coverage — 10 min
 
 ### This Sprint
-3. **P2.3:** Standardize DB return types
-4. **P2.4:** Make DeepClone a hard dependency
+4. **P2.2:** Standardize DB return types
+5. **P2.3:** Make DeepClone a hard dependency
 
 ### Next Milestone
-5. **P2.5:** Continue JS god class reduction
-6. **P2.6:** PHP god class refactoring
-7. **P2.7:** Additional ShapeLibrary E2E tests
+6. **P2.4:** Continue JS god class reduction
+7. **P2.5:** PHP god class refactoring
+8. **P2.6:** Additional ShapeLibrary E2E tests
 
 ### Long-Term (v2.0)
-8. **P3.1:** Visual regression testing
-9. **P3.2:** TypeScript migration
-10. **P3.3:** Deprecated code removal
-11. **P3.4:** Custom fonts support
+9. **P3.1:** Visual regression testing
+10. **P3.2:** TypeScript migration
+11. **P3.3:** Deprecated code removal
+12. **P3.4:** Custom fonts support
 
 ---
 
@@ -502,12 +531,25 @@ None currently blocked.
 | Branch coverage | 84.24% | ≥80% | Threshold in jest.config |
 | Hand-written god classes (JS) | 18 | ≤12 | Reduce by 6 |
 | PHP god classes | 2 | 0 | Refactor both |
-| Deprecated markers | 5 | 0 | Remove in v2.0 |
+| Deprecated markers | 6 | 0 | Remove in v2.0 |
 | ESLint disables | 11 | ≤15 | Minimized |
-| Unhandled promise chains | ~10 | 0 | **NEW** Priority |
+| Missing .catch() handlers | 2 | 0 | P2.1 priority |
 | Overall score | 8.5 | 9.0 | Path to world-class |
 
 ---
 
-*Last updated: January 26, 2026*  
+## Known Technical Debt
+
+| Item | Impact | Effort | Priority |
+|------|--------|--------|----------|
+| 2 missing .catch() handlers | Low - silent failures | 30 min | P2.1 |
+| 6 deprecated APIs | Medium - maintenance | 1 sprint | P3.3 |
+| 21 god classes | Medium - cognitive load | 2-3 weeks | P2.4/P2.5 |
+| Inconsistent DB return types | Medium - bug potential | 1-2 days | P2.2 |
+| No visual regression tests | Medium - rendering bugs | 1-2 sprints | P3.1 |
+| No TypeScript | Low - type safety | Long-term | P3.2 |
+
+---
+
+*Last updated: January 27, 2026*  
 *Overall score: 8.5/10 — Production-ready, high quality with areas for improvement*

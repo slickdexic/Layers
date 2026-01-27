@@ -377,6 +377,8 @@
 							}
 						}
 					}
+				} ).catch( ( error ) => {
+					mw.log.error( '[SlideManager] Failed to load shared renderer module:', error );
 				} );
 			}
 		}
