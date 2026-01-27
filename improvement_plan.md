@@ -22,11 +22,11 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **10,643** (157 suites) | ✅ Excellent |
-| Statement coverage | **93.34%** | ✅ Excellent |
-| Branch coverage | **84.06%** | ✅ Excellent |
+| Tests passing | **10,658** (157 suites) | ✅ Excellent |
+| Statement coverage | **93.52%** | ✅ Excellent |
+| Branch coverage | **84.24%** | ✅ Excellent |
 | Function coverage | **91.58%** | ✅ Excellent |
-| Line coverage | **93.48%** | ✅ Excellent |
+| Line coverage | **93.66%** | ✅ Excellent |
 | JS files | 127 | Excludes dist/ and scripts/ |
 | JS lines | ~115,282 | Includes generated data |
 | PHP files | 40 | ✅ |
@@ -497,9 +497,9 @@ None currently blocked.
 
 | Metric | Current | Target | Notes |
 |--------|---------|--------|-------|
-| Test count | 10,643 | Maintain | No regression |
-| Statement coverage | 93.34% | ≥92% | Threshold in jest.config |
-| Branch coverage | 84.06% | ≥80% | Threshold in jest.config |
+| Test count | 10,658 | Maintain | No regression |
+| Statement coverage | 93.52% | ≥92% | Threshold in jest.config |
+| Branch coverage | 84.24% | ≥80% | Threshold in jest.config |
 | Hand-written god classes (JS) | 18 | ≤12 | Reduce by 6 |
 | PHP god classes | 2 | 0 | Refactor both |
 | Deprecated markers | 5 | 0 | Remove in v2.0 |

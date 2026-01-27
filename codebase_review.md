@@ -9,7 +9,7 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git status`)
-- **Tests:** 10,643 tests in 157 suites (all passing, verified January 26, 2026)
+- **Tests:** 10,658 tests in 157 suites (all passing, verified January 26, 2026)
 - **Coverage:** 93.52% statements, 84.24% branches (verified January 26, 2026)
 - **JS files:** 127 (excludes `resources/dist/` and `resources/*/scripts/`)
 - **JS lines:** ~115,282 total (~40,579 generated, ~74,703 hand-written)
@@ -74,10 +74,10 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | Statements | 93.52% | 90% | ✅ Exceeds |
-| Branches | 84.06% | 80% | ✅ Exceeds |
+| Branches | 84.24% | 80% | ✅ Exceeds |
 | Functions | 91.58% | 85% | ✅ Exceeds |
-| Lines | 93.48% | 90% | ✅ Exceeds |
-| Test Count | 10,643 | - | ✅ Excellent |
+| Lines | 93.66% | 90% | ✅ Exceeds |
+| Test Count | 10,658 | - | ✅ Excellent |
 | Test Suites | 157 | - | ✅ |
 | Skipped Tests | 0 | 0 | ✅ |
 
@@ -573,7 +573,7 @@ The codebase demonstrates professional software development practices including:
 - Comprehensive input validation and sanitization
 - Proper error handling and logging
 - Modern JavaScript patterns (ES6 classes, delegation)
-- Extensive test coverage (10,643 tests, 93%+ statement coverage)
+- Extensive test coverage (10,658 tests, 93%+ statement coverage)
 - Complete i18n with 697 message keys
 - **Automated version consistency** with CI enforcement
 - **No dangerous code patterns** (eval, document.write, new Function)
