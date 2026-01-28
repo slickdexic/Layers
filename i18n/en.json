@@ -570,6 +570,9 @@
 	"layers-validation-too-many-layers": "Too many layers (max: $1)",
 	"layers-validation-layer-error": "Layer $1: $2",
 	"layers-validation-duplicate-id": "Duplicate layer ID: $1",
+	"layers-validation-richtext-not-array": "Rich text content must be an array of text runs",
+	"layers-validation-richtext-too-many-runs": "Too many rich text runs (max: $1)",
+	"layers-validation-richtext-too-long": "Rich text content exceeds maximum length",
 
 	"layers-presets": "Presets",
 	"layers-presets-tooltip": "Choose a style preset",

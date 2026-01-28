@@ -213,6 +213,17 @@ Layer objects are a sanitized subset of the client model. Common fields (whiteli
 - Arrow/line: arrowhead (none|arrow|circle|diamond|triangle), arrowStyle (solid|dashed|dotted), arrowSize
 - Text: text (sanitized), textStrokeColor, textStrokeWidth, textShadow (bool), textShadowColor, textShadowBlur, textShadowOffsetX, textShadowOffsetY
 - Text box: textAlign (left|center|right), verticalAlign (top|middle|bottom), padding, lineHeight, cornerRadius
+- **Rich text** (textbox/callout only): richText (array) - enables mixed formatting within a single text layer
+  - richText: Array<{text: string, style?: object}> (max 100 runs, max 50,000 total chars)
+  - style.fontWeight: 'normal' | 'bold' | 'lighter' | 'bolder'
+  - style.fontStyle: 'normal' | 'italic' | 'oblique'
+  - style.fontSize: 1-500 (overrides layer fontSize for this run)
+  - style.fontFamily: string (overrides layer fontFamily for this run)
+  - style.color: CSS color string
+  - style.textDecoration: 'none' | 'underline' | 'line-through' | 'overline'
+  - style.backgroundColor: CSS color string (highlight effect)
+  - style.textStrokeColor, style.textStrokeWidth: outline effect for individual runs
+  - When richText is present, the `text` property is ignored and formatting comes from richText runs
 - Effects: shadow (bool), shadowColor, shadowBlur, shadowOffsetX/Y, shadowSpread, glow (bool)
 - Shapes/paths: points: Array<{x,y}> (capped ~1000)
 - Image: src (base64 data URL), originalWidth, originalHeight, preserveAspectRatio (bool)
