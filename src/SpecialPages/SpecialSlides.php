@@ -290,13 +290,13 @@ class SpecialSlides extends SpecialPage {
 	 * @inheritDoc
 	 */
 	protected function getGroupName() {
-		return 'layers';
+		return 'media';
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	public function getDescription() {
-		return $this->msg( 'special-slides-desc' );
+		return $this->msg( 'special-slides-desc' )->text();
 	}
 }
