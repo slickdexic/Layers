@@ -1431,7 +1431,36 @@ class LayersEditor {
 	 * Save the current layers to the server
 	 */
 	save () {
+		// Debug logging (controlled by extension config)
+		const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
+
+		// If inline text editing is active, finish it first to capture the current content
+		// Otherwise the layer would be saved with empty text (editing state)
+		if ( this.canvasManager &&
+			this.canvasManager.inlineTextEditor &&
+			this.canvasManager.inlineTextEditor.isActive() ) {
+			if ( debug && mw.log ) {
+				mw.log( '[LayersEditor] Finishing inline editing before save' );
+			}
+			this.canvasManager.inlineTextEditor.finishEditing( true );
+		}
+
 		const layers = this.stateManager.get( 'layers' ) || [];
+
+		// Debug: log textbox layers to verify text was captured
+		if ( debug && mw.log ) {
+			const textboxLayers = layers.filter( l => l.type === 'textbox' || l.type === 'callout' );
+			mw.log( '[LayersEditor] Saving layers', {
+				totalLayers: layers.length,
+				textboxCount: textboxLayers.length,
+				textboxDetails: textboxLayers.map( l => ( {
+					id: l.id,
+					text: l.text,
+					hasRichText: !!l.richText,
+					richTextLength: l.richText ? l.richText.length : 0
+				} ) )
+			} );
+		}
 
 		const validationResult = this.validationManager.validateLayers( layers );
 		

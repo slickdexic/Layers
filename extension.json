@@ -86,17 +86,24 @@
 			"value": false
 		},
 		"LayersDefaultFonts": {
-			"description": "Available fonts in the layer editor",
+			"description": "Available fonts in the layer editor. Web fonts are loaded from Google Fonts.",
 			"value": [
 				"Arial",
+				"Verdana",
 				"Roboto",
+				"Open Sans",
+				"Lato",
+				"Montserrat",
 				"Noto Sans",
+				"Source Sans Pro",
+				"PT Sans",
+				"Ubuntu",
 				"Times New Roman",
 				"Georgia",
-				"Verdana",
+				"Merriweather",
+				"Playfair Display",
 				"Courier New",
-				"Courier",
-				"Helvetica"
+				"Source Code Pro"
 			]
 		},
 		"LayersMaxImageSize": {
@@ -196,6 +203,9 @@
 			"localBasePath": "resources/ext.layers.shared",
 			"remoteExtPath": "Layers/resources/ext.layers.shared",
 			"targets": [ "desktop", "mobile" ],
+			"styles": [
+				"fonts.css"
+			],
 			"scripts": [
 				"FontConfig.js",
 				"MathUtils.js",

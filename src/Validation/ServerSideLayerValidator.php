@@ -890,8 +890,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				return [ 'valid' => false, 'error' => 'Total rich text length exceeds limit' ];
 			}
 
-			// Sanitize the text content
-			$sanitizedText = $this->textSanitizer->sanitize( $text );
+			// Sanitize the text content (preserve whitespace for rich text runs)
+			$sanitizedText = $this->textSanitizer->sanitizeRichTextRun( $text );
 
 			$validRun = [ 'text' => $sanitizedText ];
 

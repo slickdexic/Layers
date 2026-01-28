@@ -680,6 +680,7 @@
 	"layers-text-toolbar-underline": "Underline (Ctrl+U)",
 	"layers-text-toolbar-strikethrough": "Strikethrough",
 	"layers-text-toolbar-highlight": "Highlight text",
+	"layers-text-toolbar-highlight-color": "Choose highlight color",
 	"layers-text-toolbar-align-left": "Align left",
 	"layers-text-toolbar-align-center": "Align center",
 	"layers-text-toolbar-align-right": "Align right",

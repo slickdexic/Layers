@@ -3153,6 +3153,35 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 			const result = editor._htmlToRichText( '<span style="color: red">Red</span>' );
 			expect( result.some( ( r ) => r.style && r.style.color ) ).toBe( true );
 		} );
+
+		test( 'should parse font tag with color attribute', () => {
+			const result = editor._htmlToRichText( '<font color="#ff0000">Red text</font>' );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Red text' );
+			expect( result[ 0 ].style.color ).toBe( '#ff0000' );
+		} );
+
+		test( 'should parse font tag with size attribute', () => {
+			const result = editor._htmlToRichText( '<font size="5">Large text</font>' );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Large text' );
+			expect( result[ 0 ].style.fontSize ).toBe( 24 ); // size 5 maps to 24px
+		} );
+
+		test( 'should parse font tag with face attribute', () => {
+			const result = editor._htmlToRichText( '<font face="Arial">Arial text</font>' );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Arial text' );
+			expect( result[ 0 ].style.fontFamily ).toBe( 'Arial' );
+		} );
+
+		test( 'should parse nested font tags inside bold', () => {
+			const result = editor._htmlToRichText( '<b><font color="blue">Blue bold</font></b>' );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Blue bold' );
+			expect( result[ 0 ].style.fontWeight ).toBe( 'bold' );
+			expect( result[ 0 ].style.color ).toBe( 'blue' );
+		} );
 	} );
 
 	describe( '_mergeAdjacentRuns', () => {
@@ -3212,6 +3241,94 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 			editor.editorElement.innerHTML = 'Line1<br>Line2';
 			const result = editor._getPlainTextFromEditor();
 			expect( result ).toContain( '\n' );
+		} );
+	} );
+
+	describe( 'Selection preservation', () => {
+		test( '_saveSelection should store selection range when text is selected', () => {
+			editor._isRichTextMode = true;
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			document.body.appendChild( editor.editorElement );
+
+			// Create a selection
+			const range = document.createRange();
+			range.selectNodeContents( editor.editorElement );
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			editor._saveSelection();
+
+			expect( editor._savedSelection ).not.toBeNull();
+			document.body.removeChild( editor.editorElement );
+		} );
+
+		test( '_saveSelection should not save if selection is collapsed', () => {
+			editor._isRichTextMode = true;
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			document.body.appendChild( editor.editorElement );
+
+			// Create a collapsed (cursor-only) selection
+			const range = document.createRange();
+			const textNode = editor.editorElement.firstChild;
+			range.setStart( textNode, 0 );
+			range.setEnd( textNode, 0 ); // Same position = collapsed
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			editor._saveSelection();
+
+			expect( editor._savedSelection ).toBeNull();
+			document.body.removeChild( editor.editorElement );
+		} );
+
+		test( '_restoreSelection should restore saved selection', () => {
+			editor._isRichTextMode = true;
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			document.body.appendChild( editor.editorElement );
+
+			// Create and save a selection
+			const range = document.createRange();
+			const textNode = editor.editorElement.firstChild;
+			range.setStart( textNode, 0 );
+			range.setEnd( textNode, 5 ); // Select "Hello"
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			editor._saveSelection();
+
+			// Clear the selection
+			selection.removeAllRanges();
+			expect( selection.isCollapsed ).toBe( true );
+
+			// Restore
+			const result = editor._restoreSelection();
+
+			expect( result ).toBe( true );
+			const newSelection = window.getSelection();
+			expect( newSelection.isCollapsed ).toBe( false );
+			expect( newSelection.toString() ).toBe( 'Hello' );
+
+			document.body.removeChild( editor.editorElement );
+		} );
+
+		test( '_restoreSelection should return false if no saved selection', () => {
+			editor._savedSelection = null;
+			expect( editor._restoreSelection() ).toBe( false );
+		} );
+
+		test( '_clearSavedSelection should clear the saved selection', () => {
+			editor._savedSelection = document.createRange();
+			editor._clearSavedSelection();
+			expect( editor._savedSelection ).toBeNull();
 		} );
 	} );
 } );

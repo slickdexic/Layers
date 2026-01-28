@@ -62,6 +62,13 @@
 
 			// Rich text mode flag
 			this._isRichTextMode = false;
+
+			// Saved selection for preserving across toolbar interactions
+			this._savedSelection = null;
+
+			// Display scale factor for coordinate/font conversions
+			// Updated in _positionEditor, used for font size scaling
+			this._displayScale = 1;
 		}
 
 		/**
@@ -127,6 +134,9 @@
 			this.isEditing = true;
 			this._isRichTextMode = this._isMultilineType( layer );
 
+			// Calculate display scale FIRST so richTextToHtml uses correct scaling
+			this._calculateDisplayScale();
+
 			// Create and position the editor FIRST (before modifying layer)
 			this._createEditor();
 			this._positionEditor();
@@ -136,9 +146,12 @@
 			// For simple text layers, hide the layer entirely
 			// Do this AFTER creating the editor so it gets the original text
 			if ( this._isMultilineType( layer ) ) {
-				// Clear layer text so only background renders on canvas
+				// Clear layer text AND richText so only background renders on canvas
+				// (we saved originalText and originalRichText for restoration)
+				// Use delete (not null) to avoid sending null to server if saved mid-edit
 				this._originalVisible = true;
 				layer.text = '';
+				delete layer.richText;
 			} else {
 				// Hide simple text layers entirely
 				this._originalVisible = layer.visible !== false;
@@ -194,6 +207,18 @@
 			let changesApplied = false;
 			const wasTextbox = this._isMultilineType( this.editingLayer );
 
+			// Debug logging (controlled by extension config)
+			const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
+			if ( debug && typeof mw.log !== 'undefined' ) {
+				mw.log( '[InlineTextEditor] finishEditing called', {
+					apply: apply,
+					wasTextbox: wasTextbox,
+					hasEditorElement: !!this.editorElement,
+					hasEditingLayer: !!this.editingLayer,
+					isRichTextMode: this._isRichTextMode
+				} );
+			}
+
 			if ( shouldApply && this.editorElement && this.editingLayer ) {
 				let newText, newRichText = null;
 
@@ -203,6 +228,15 @@
 					const html = this.editorElement.innerHTML;
 					newRichText = this._htmlToRichText( html );
 					newText = this._getPlainTextFromEditor();
+
+					if ( debug && typeof mw.log !== 'undefined' ) {
+						mw.log( '[InlineTextEditor] Extracted content', {
+							html: html,
+							newText: newText,
+							newRichTextLength: newRichText ? newRichText.length : 0,
+							newRichTextSample: newRichText ? JSON.stringify( newRichText ).substring( 0, 200 ) : null
+						} );
+					}
 				} else {
 					// Input/textarea mode - just get value
 					newText = this.editorElement.value;
@@ -212,6 +246,15 @@
 				const textChanged = newText !== this.originalText;
 				const richTextChanged = this._isRichTextMode &&
 					JSON.stringify( newRichText ) !== JSON.stringify( this.originalRichText );
+
+				if ( debug && typeof mw.log !== 'undefined' ) {
+					mw.log( '[InlineTextEditor] Change detection', {
+						textChanged: textChanged,
+						richTextChanged: richTextChanged,
+						originalText: this.originalText,
+						newText: newText
+					} );
+				}
 
 				if ( textChanged || richTextChanged ) {
 					// Save state for undo before making changes
@@ -233,11 +276,22 @@
 					}
 
 					changesApplied = true;
+
+					if ( debug && typeof mw.log !== 'undefined' ) {
+						mw.log( '[InlineTextEditor] Layer updated', {
+							layerId: this.editingLayer.id,
+							text: this.editingLayer.text,
+							hasRichText: !!this.editingLayer.richText,
+							richTextLength: this.editingLayer.richText ? this.editingLayer.richText.length : 0
+						} );
+					}
 				} else if ( wasTextbox ) {
-					// Restore original text for textbox (we cleared it for editing)
+					// Restore original text and richText for textbox (we cleared them for editing)
 					this.editingLayer.text = this.originalText;
 					if ( this.originalRichText ) {
 						this.editingLayer.richText = this.originalRichText;
+					} else {
+						delete this.editingLayer.richText;
 					}
 				}
 			} else if ( !shouldApply && wasTextbox && this.editingLayer ) {
@@ -422,6 +476,36 @@
 		}
 
 		/**
+		 * Calculate and store the display scale factor
+		 *
+		 * This must be called before _richTextToHtml() to ensure inline font
+		 * sizes are correctly scaled relative to the canvas display.
+		 *
+		 * @private
+		 */
+		_calculateDisplayScale() {
+			if ( !this.canvasManager ) {
+				this._displayScale = 1;
+				return;
+			}
+
+			const canvas = this.canvasManager.canvas;
+			if ( !canvas ) {
+				this._displayScale = 1;
+				return;
+			}
+
+			// Get canvas bounding rect for coordinate conversion
+			const canvasRect = canvas.getBoundingClientRect();
+
+			// Calculate scale from logical canvas to displayed size
+			const scaleX = canvasRect.width / canvas.width;
+			const scaleY = canvasRect.height / canvas.height;
+
+			this._displayScale = Math.min( scaleX, scaleY );
+		}
+
+		/**
 		 * Position the editor element to match the layer on canvas exactly
 		 *
 		 * @private
@@ -475,8 +559,10 @@
 			const screenHeight = height * scaleY;
 
 			// Scale font to match displayed size
-			const scaledFontSize = ( layer.fontSize || 16 ) * Math.min( scaleX, scaleY );
-			const scaledPadding = padding * Math.min( scaleX, scaleY );
+			const scale = Math.min( scaleX, scaleY );
+			this._displayScale = scale; // Store for use in font size conversions
+			const scaledFontSize = ( layer.fontSize || 16 ) * scale;
+			const scaledPadding = padding * scale;
 
 			// Calculate rotation - need to rotate around the center of the element
 			const rotation = layer.rotation || 0;
@@ -582,6 +668,10 @@
 			this._boundInputHandler = () => this._handleInput();
 			this.editorElement.addEventListener( 'input', this._boundInputHandler );
 
+			// Selection change handler to update toolbar button states
+			this._boundSelectionChangeHandler = () => this._updateToolbarButtonStates();
+			document.addEventListener( 'selectionchange', this._boundSelectionChangeHandler );
+
 			// Resize handler to reposition on window resize (debounced to avoid thrashing)
 			this._boundResizeHandler = () => {
 				if ( this._resizeDebounceTimer ) {
@@ -684,6 +774,10 @@
 				window.removeEventListener( 'resize', this._boundResizeHandler );
 			}
 
+			if ( this._boundSelectionChangeHandler ) {
+				document.removeEventListener( 'selectionchange', this._boundSelectionChangeHandler );
+			}
+
 			// Clear debounce timer
 			if ( this._resizeDebounceTimer ) {
 				clearTimeout( this._resizeDebounceTimer );
@@ -694,6 +788,7 @@
 			this._boundBlurHandler = null;
 			this._boundInputHandler = null;
 			this._boundResizeHandler = null;
+			this._boundSelectionChangeHandler = null;
 		}
 
 		/**
@@ -709,6 +804,58 @@
 				return mw.message( key ).text();
 			}
 			return fallback || key;
+		}
+
+		/**
+		 * Update toolbar button states based on current selection's formatting
+		 *
+		 * Uses document.queryCommandState to detect active formatting at cursor position.
+		 * This ensures buttons accurately reflect the current selection's state.
+		 *
+		 * @private
+		 */
+		_updateToolbarButtonStates() {
+			if ( !this.toolbarElement || !this.isEditing || !this._isRichTextMode ) {
+				return;
+			}
+
+			// Check if selection is within our editor
+			const selection = window.getSelection();
+			if ( !selection.rangeCount || !this.editorElement ) {
+				return;
+			}
+			const range = selection.getRangeAt( 0 );
+			if ( !this.editorElement.contains( range.commonAncestorContainer ) ) {
+				return;
+			}
+
+			// Update bold button state
+			const boldBtn = this.toolbarElement.querySelector( '[data-format="bold"]' );
+			if ( boldBtn ) {
+				const isBold = document.queryCommandState( 'bold' );
+				boldBtn.classList.toggle( 'active', isBold );
+			}
+
+			// Update italic button state
+			const italicBtn = this.toolbarElement.querySelector( '[data-format="italic"]' );
+			if ( italicBtn ) {
+				const isItalic = document.queryCommandState( 'italic' );
+				italicBtn.classList.toggle( 'active', isItalic );
+			}
+
+			// Update underline button state
+			const underlineBtn = this.toolbarElement.querySelector( '[data-format="underline"]' );
+			if ( underlineBtn ) {
+				const isUnderline = document.queryCommandState( 'underline' );
+				underlineBtn.classList.toggle( 'active', isUnderline );
+			}
+
+			// Update strikethrough button state
+			const strikeBtn = this.toolbarElement.querySelector( '[data-format="strikethrough"]' );
+			if ( strikeBtn ) {
+				const isStrike = document.queryCommandState( 'strikeThrough' );
+				strikeBtn.classList.toggle( 'active', isStrike );
+			}
 		}
 
 		/**
@@ -863,8 +1010,9 @@
 				}
 			} );
 
-			// Mark as interacting when dropdown opens
+			// Mark as interacting when dropdown opens and save selection
 			select.addEventListener( 'mousedown', () => {
+				this._saveSelection();
 				this._isToolbarInteraction = true;
 			} );
 
@@ -907,6 +1055,11 @@
 			input.min = 8;
 			input.max = 200;
 			input.title = this._msg( 'layers-text-toolbar-size', 'Font size' );
+
+			// Save selection before input gets focus
+			input.addEventListener( 'mousedown', () => {
+				this._saveSelection();
+			} );
 
 			input.addEventListener( 'change', () => {
 				const size = Math.max( 8, Math.min( 200, parseInt( input.value, 10 ) || 16 ) );
@@ -981,7 +1134,11 @@
 		}
 
 		/**
-		 * Create highlight color button with color picker popup
+		 * Create highlight button with color picker
+		 *
+		 * The button applies highlight with the current color when clicked.
+		 * Holding shift or clicking the dropdown arrow opens the color picker
+		 * to change the highlight color.
 		 *
 		 * @private
 		 * @return {HTMLElement} Button element with color picker
@@ -990,51 +1147,125 @@
 			const wrapper = document.createElement( 'div' );
 			wrapper.className = 'layers-text-toolbar-highlight-wrapper';
 			wrapper.style.position = 'relative';
-			wrapper.style.display = 'inline-block';
+			wrapper.style.display = 'inline-flex';
+			wrapper.style.alignItems = 'stretch';
 
+			// Store current highlight color
+			let currentColor = '#ffff00'; // Default yellow
+			const self = this;
+
+			// Main highlight button - applies highlight with current color
 			const btn = document.createElement( 'button' );
-			btn.className = 'layers-text-toolbar-btn';
+			btn.className = 'layers-text-toolbar-btn layers-text-toolbar-highlight-main';
 			btn.innerHTML = '<span style="background:#ffff00;padding:0 2px;">H</span>';
 			btn.title = this._msg( 'layers-text-toolbar-highlight', 'Highlight' );
 			btn.setAttribute( 'data-format', 'highlight' );
 
-			// Hidden color input for picking highlight color
-			const colorInput = document.createElement( 'input' );
-			colorInput.type = 'color';
-			colorInput.value = '#ffff00';
-			colorInput.className = 'layers-text-toolbar-highlight-color';
-			colorInput.style.position = 'absolute';
-			colorInput.style.opacity = '0';
-			colorInput.style.width = '100%';
-			colorInput.style.height = '100%';
-			colorInput.style.top = '0';
-			colorInput.style.left = '0';
-			colorInput.style.cursor = 'pointer';
-
-			colorInput.addEventListener( 'input', () => {
-				this._applyFormat( 'highlight', colorInput.value );
-				btn.querySelector( 'span' ).style.backgroundColor = colorInput.value;
+			// Click main button to apply highlight with current color
+			btn.addEventListener( 'mousedown', ( e ) => {
+				e.preventDefault();
+				this._saveSelection();
+				this._isToolbarInteraction = true;
 			} );
 
-			colorInput.addEventListener( 'change', () => {
+			btn.addEventListener( 'click', ( e ) => {
+				e.preventDefault();
+				// Apply highlight with current color
+				this._applyFormat( 'highlight', currentColor );
 				this._isToolbarInteraction = false;
 				if ( this.editorElement ) {
 					this.editorElement.focus();
 				}
 			} );
 
-			colorInput.addEventListener( 'focus', () => {
+			// Dropdown arrow to open color picker
+			const dropdownBtn = document.createElement( 'button' );
+			dropdownBtn.className = 'layers-text-toolbar-btn layers-text-toolbar-highlight-dropdown';
+			dropdownBtn.innerHTML = '▼';
+			dropdownBtn.title = this._msg( 'layers-text-toolbar-highlight-color', 'Highlight color' );
+			dropdownBtn.style.fontSize = '8px';
+			dropdownBtn.style.padding = '0 2px';
+			dropdownBtn.style.minWidth = '12px';
+
+			// Get i18n strings for color picker
+			const colorPickerStrings = {
+				title: this._msg( 'layers-color-picker-title', 'Choose color' ),
+				standard: this._msg( 'layers-color-picker-standard', 'Standard colors' ),
+				saved: this._msg( 'layers-color-picker-saved', 'Saved colors' ),
+				customSection: this._msg( 'layers-color-picker-custom-section', 'Custom color' ),
+				none: this._msg( 'layers-color-picker-none', 'No fill (transparent)' ),
+				emptySlot: this._msg( 'layers-color-picker-empty-slot', 'Empty slot' ),
+				cancel: this._msg( 'layers-color-picker-cancel', 'Cancel' ),
+				apply: this._msg( 'layers-color-picker-apply', 'Apply' ),
+				transparent: this._msg( 'layers-color-picker-transparent', 'Transparent' ),
+				swatchTemplate: this._msg( 'layers-color-picker-color-swatch', 'Set color to $1' ),
+				previewTemplate: this._msg( 'layers-color-picker-color-preview', 'Current color: $1' )
+			};
+
+			const ColorPickerDialog = window.Layers && window.Layers.UI && window.Layers.UI.ColorPickerDialog;
+
+			dropdownBtn.addEventListener( 'mousedown', ( e ) => {
+				e.preventDefault();
+				this._saveSelection();
 				this._isToolbarInteraction = true;
 			} );
 
-			// Prevent blur when clicking
-			btn.addEventListener( 'mousedown', ( e ) => {
+			dropdownBtn.addEventListener( 'click', ( e ) => {
 				e.preventDefault();
-				this._isToolbarInteraction = true;
+				e.stopPropagation();
+
+				if ( ColorPickerDialog ) {
+					const dialog = new ColorPickerDialog( {
+						currentColor: currentColor,
+						strings: colorPickerStrings,
+						anchorElement: dropdownBtn,
+						onApply: ( newColor ) => {
+							currentColor = newColor;
+							btn.querySelector( 'span' ).style.backgroundColor = newColor;
+							self._applyFormat( 'highlight', newColor );
+							self._isToolbarInteraction = false;
+							if ( self.editorElement ) {
+								self.editorElement.focus();
+							}
+						},
+						onPreview: ( previewColor ) => {
+							btn.querySelector( 'span' ).style.backgroundColor = previewColor;
+						},
+						onCancel: () => {
+							btn.querySelector( 'span' ).style.backgroundColor = currentColor;
+							self._isToolbarInteraction = false;
+							if ( self.editorElement ) {
+								self.editorElement.focus();
+							}
+						}
+					} );
+					dialog.open();
+				} else {
+					// Fallback: use native color input
+					const colorInput = document.createElement( 'input' );
+					colorInput.type = 'color';
+					colorInput.value = currentColor;
+					colorInput.style.position = 'absolute';
+					colorInput.style.visibility = 'hidden';
+					document.body.appendChild( colorInput );
+
+					colorInput.addEventListener( 'change', () => {
+						currentColor = colorInput.value;
+						btn.querySelector( 'span' ).style.backgroundColor = currentColor;
+						self._applyFormat( 'highlight', currentColor );
+						self._isToolbarInteraction = false;
+						if ( self.editorElement ) {
+							self.editorElement.focus();
+						}
+						document.body.removeChild( colorInput );
+					} );
+
+					colorInput.click();
+				}
 			} );
 
 			wrapper.appendChild( btn );
-			wrapper.appendChild( colorInput );
+			wrapper.appendChild( dropdownBtn );
 
 			return wrapper;
 		}
@@ -1119,6 +1350,9 @@
 					color: currentColor,
 					strings: colorPickerStrings,
 					onClick: () => {
+						// Save selection before dialog opens
+						self._saveSelection();
+
 						const originalColor = storedColor;
 						self._isToolbarInteraction = true;
 
@@ -1160,21 +1394,30 @@
 				input.value = currentColor;
 				input.title = this._msg( 'layers-text-toolbar-color', 'Text color' );
 
-				input.addEventListener( 'input', () => {
-					this._applyFormat( 'color', input.value );
+				// Save selection before input gets focus
+				input.addEventListener( 'mousedown', () => {
+					this._saveSelection();
 				} );
 
-				// Mark interaction and delay refocus
+				// Only update preview during input (while dialog is open)
+				// The actual format is applied on 'change' when dialog closes
+				input.addEventListener( 'input', () => {
+					// Update button preview only - don't apply format yet
+					// because the native color dialog is still open
+				} );
+
+				// Apply format on change (when dialog closes)
+				input.addEventListener( 'change', () => {
+					this._applyFormat( 'color', input.value );
+					this._isToolbarInteraction = false;
+					if ( this.editorElement ) {
+						this.editorElement.focus();
+					}
+				} );
+
+				// Mark interaction
 				input.addEventListener( 'focus', () => {
 					this._isToolbarInteraction = true;
-				} );
-				input.addEventListener( 'blur', () => {
-					setTimeout( () => {
-						this._isToolbarInteraction = false;
-						if ( this.editorElement ) {
-							this.editorElement.focus();
-						}
-					}, 100 );
 				} );
 
 				colorButton = input;
@@ -1194,6 +1437,61 @@
 			const sep = document.createElement( 'div' );
 			sep.className = 'layers-text-toolbar-separator';
 			return sep;
+		}
+
+		/**
+		 * Save the current selection in the editor
+		 *
+		 * This is called when toolbar controls receive focus, so we can
+		 * restore the selection before applying formatting to it.
+		 *
+		 * @private
+		 */
+		_saveSelection() {
+			if ( !this.editorElement || !this._isRichTextMode ) {
+				return;
+			}
+
+			const selection = window.getSelection();
+			if ( selection && selection.rangeCount > 0 &&
+				this.editorElement.contains( selection.anchorNode ) ) {
+				// Only save if there's actually a selection (not collapsed)
+				if ( !selection.isCollapsed ) {
+					this._savedSelection = selection.getRangeAt( 0 ).cloneRange();
+				}
+			}
+		}
+
+		/**
+		 * Restore the saved selection
+		 *
+		 * @private
+		 * @return {boolean} True if selection was restored
+		 */
+		_restoreSelection() {
+			if ( !this._savedSelection || !this.editorElement ) {
+				return false;
+			}
+
+			try {
+				this.editorElement.focus();
+				const selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange( this._savedSelection );
+				return true;
+			} catch {
+				// Selection restoration can fail if DOM has changed
+				return false;
+			}
+		}
+
+		/**
+		 * Clear the saved selection
+		 *
+		 * @private
+		 */
+		_clearSavedSelection() {
+			this._savedSelection = null;
 		}
 
 		/**
@@ -1218,17 +1516,31 @@
 			// In rich text mode, check for selection first
 			if ( this._isRichTextMode && this.editorElement &&
 				this.editorElement.contentEditable === 'true' ) {
-				const selection = window.getSelection();
-				const hasSelection = selection && !selection.isCollapsed &&
-					this.editorElement.contains( selection.anchorNode );
 
 				// Format properties that can be applied to selection
 				const selectionFormats = [ 'fontWeight', 'fontStyle', 'color', 'underline',
 					'strikethrough', 'highlight', 'fontSize', 'fontFamily' ];
 
-				if ( hasSelection && selectionFormats.includes( property ) ) {
-					this._applyFormatToSelection( property, value );
-					return;
+				if ( selectionFormats.includes( property ) ) {
+					// Try to restore saved selection first (for toolbar interactions)
+					let hasSelection = false;
+					if ( this._savedSelection ) {
+						hasSelection = this._restoreSelection();
+					}
+
+					// If no saved selection, check current selection
+					if ( !hasSelection ) {
+						const selection = window.getSelection();
+						hasSelection = selection && !selection.isCollapsed &&
+							this.editorElement.contains( selection.anchorNode );
+					}
+
+					if ( hasSelection ) {
+						this._applyFormatToSelection( property, value );
+						// Clear saved selection after use
+						this._clearSavedSelection();
+						return;
+					}
 				}
 			}
 
@@ -1328,12 +1640,18 @@
 					document.execCommand( 'hiliteColor', false, value );
 					break;
 				case 'fontSize': {
-					// execCommand fontSize uses 1-7 scale, wrap in span instead
+					// Apply SCALED font size for display, store UNSCALED value in data attr
 					const selection = window.getSelection();
-					if ( selection.rangeCount > 0 ) {
+					if ( selection.rangeCount > 0 && !selection.isCollapsed ) {
 						const range = selection.getRangeAt( 0 );
 						const span = document.createElement( 'span' );
-						span.style.fontSize = value + 'px';
+						// Scale the font size for display, but store original value
+						// Ensure _displayScale is valid (default to 1 if not)
+						const scale = ( this._displayScale && this._displayScale > 0 ) ? this._displayScale : 1;
+						const scaledValue = value * scale;
+						// Use setProperty with important to override inherited styles
+						span.style.setProperty( 'font-size', scaledValue + 'px', 'important' );
+						span.dataset.fontSize = value; // Store unscaled value for parsing
 						try {
 							range.surroundContents( span );
 						} catch {
@@ -1342,22 +1660,34 @@
 							span.appendChild( fragment );
 							range.insertNode( span );
 						}
+						// Update selection to be inside the new span
+						selection.removeAllRanges();
+						const newRange = document.createRange();
+						newRange.selectNodeContents( span );
+						selection.addRange( newRange );
 					}
 					break;
 				}
 				case 'fontFamily': {
 					const selection = window.getSelection();
-					if ( selection.rangeCount > 0 ) {
+					if ( selection.rangeCount > 0 && !selection.isCollapsed ) {
 						const range = selection.getRangeAt( 0 );
 						const span = document.createElement( 'span' );
-						span.style.fontFamily = value;
+						// Use setProperty with important to override inherited styles
+						span.style.setProperty( 'font-family', value, 'important' );
 						try {
 							range.surroundContents( span );
 						} catch {
+							// If selection crosses element boundaries, extract and wrap
 							const fragment = range.extractContents();
 							span.appendChild( fragment );
 							range.insertNode( span );
 						}
+						// Update selection to be inside the new span
+						selection.removeAllRanges();
+						const newRange = document.createRange();
+						newRange.selectNodeContents( span );
+						selection.addRange( newRange );
 					}
 					break;
 				}
@@ -1559,6 +1889,8 @@
 
 				// Build inline style string
 				const styleProps = [];
+				// Track data attributes for unscaled values
+				const dataAttrs = [];
 
 				if ( style.fontWeight && style.fontWeight !== 'normal' ) {
 					styleProps.push( `font-weight: ${ style.fontWeight }` );
@@ -1567,7 +1899,13 @@
 					styleProps.push( `font-style: ${ style.fontStyle }` );
 				}
 				if ( style.fontSize ) {
-					styleProps.push( `font-size: ${ style.fontSize }px` );
+					// Scale for display, store unscaled in data attribute
+					// Ensure _displayScale is valid (default to 1 if not)
+					const scale = ( this._displayScale && this._displayScale > 0 ) ? this._displayScale : 1;
+					const scaledSize = style.fontSize * scale;
+					// Use !important to override container font-size
+					styleProps.push( `font-size: ${ scaledSize }px !important` );
+					dataAttrs.push( `data-font-size="${ style.fontSize }"` );
 				}
 				if ( style.fontFamily ) {
 					styleProps.push( `font-family: ${ style.fontFamily }` );
@@ -1585,9 +1923,11 @@
 					styleProps.push( `-webkit-text-stroke: ${ style.textStrokeWidth }px ${ style.textStrokeColor }` );
 				}
 
-				// Wrap in span if has styles, otherwise just add text
-				if ( styleProps.length > 0 ) {
-					html += `<span style="${ styleProps.join( '; ' ) }">${ escapedText }</span>`;
+				// Wrap in span if has styles or data attrs, otherwise just add text
+				if ( styleProps.length > 0 || dataAttrs.length > 0 ) {
+					const styleAttr = styleProps.length > 0 ? `style="${ styleProps.join( '; ' ) }"` : '';
+					const dataAttrStr = dataAttrs.join( ' ' );
+					html += `<span ${ styleAttr } ${ dataAttrStr }>${ escapedText }</span>`;
 				} else {
 					html += escapedText;
 				}
@@ -1634,8 +1974,25 @@
 						return;
 					}
 
+					// Handle block elements (div, p) - add newline before if not first
+					const tagName = node.nodeName;
+					const isBlockElement = tagName === 'DIV' || tagName === 'P';
+					if ( isBlockElement && runs.length > 0 ) {
+						// Add newline before block element (unless it's the first)
+						const lastRun = runs[ runs.length - 1 ];
+						// Only add if the last run doesn't already end with newline
+						if ( lastRun && lastRun.text && !lastRun.text.endsWith( '\n' ) ) {
+							runs.push( { text: '\n', style: {} } );
+						}
+					}
+
 					// Build style from this element
 					const currentStyle = Object.assign( {}, inheritedStyle );
+
+					// Check for data attribute (unscaled font size)
+					if ( node.dataset && node.dataset.fontSize ) {
+						currentStyle.fontSize = parseFloat( node.dataset.fontSize );
+					}
 
 					// Check for inline style
 					const inlineStyle = node.style;
@@ -1646,11 +2003,15 @@
 						if ( inlineStyle.fontStyle ) {
 							currentStyle.fontStyle = inlineStyle.fontStyle;
 						}
-						if ( inlineStyle.fontSize ) {
-							// Parse px value
+						// Only use inline style fontSize if we don't have data attribute
+						if ( inlineStyle.fontSize && !currentStyle.fontSize ) {
+							// Parse px value and unscale it
 							const sizeMatch = inlineStyle.fontSize.match( /(\d+(?:\.\d+)?)/ );
 							if ( sizeMatch ) {
-								currentStyle.fontSize = parseFloat( sizeMatch[ 1 ] );
+								// Unscale the display value back to data model value
+								const displaySize = parseFloat( sizeMatch[ 1 ] );
+								currentStyle.fontSize = this._displayScale > 0 ?
+									Math.round( displaySize / this._displayScale ) : displaySize;
 							}
 						}
 						if ( inlineStyle.fontFamily ) {
@@ -1676,8 +2037,7 @@
 						}
 					}
 
-					// Check for semantic tags
-					const tagName = node.nodeName;
+					// Check for semantic tags (tagName already declared above)
 					if ( tagName === 'B' || tagName === 'STRONG' ) {
 						currentStyle.fontWeight = 'bold';
 					}
@@ -1692,6 +2052,27 @@
 					}
 					if ( tagName === 'MARK' ) {
 						currentStyle.backgroundColor = currentStyle.backgroundColor || '#ffff00';
+					}
+
+					// Handle legacy <font> tag (created by execCommand)
+					if ( tagName === 'FONT' ) {
+						// Get color from font tag attribute
+						const fontColor = node.getAttribute( 'color' );
+						if ( fontColor ) {
+							currentStyle.color = fontColor;
+						}
+						// Get size from font tag attribute (1-7 scale)
+						const fontSize = node.getAttribute( 'size' );
+						if ( fontSize ) {
+							// Convert 1-7 scale to px (approximate mapping)
+							const sizeMap = { 1: 10, 2: 13, 3: 16, 4: 18, 5: 24, 6: 32, 7: 48 };
+							currentStyle.fontSize = sizeMap[ fontSize ] || 16;
+						}
+						// Get face (font family) from font tag
+						const fontFace = node.getAttribute( 'face' );
+						if ( fontFace ) {
+							currentStyle.fontFamily = fontFace;
+						}
 					}
 
 					// Process child nodes

@@ -676,6 +676,7 @@
 	"layers-text-toolbar-underline": "Tooltip for the underline toggle button in the text toolbar (rich text mode only), includes keyboard shortcut",
 	"layers-text-toolbar-strikethrough": "Tooltip for the strikethrough toggle button in the text toolbar (rich text mode only)",
 	"layers-text-toolbar-highlight": "Tooltip for the text highlight/background color button in the text toolbar (rich text mode only)",
+	"layers-text-toolbar-highlight-color": "Tooltip for the dropdown arrow to open the highlight color picker in the text toolbar",
 	"layers-text-toolbar-align-left": "Tooltip for the left alignment button in the text toolbar",
 	"layers-text-toolbar-align-center": "Tooltip for the center alignment button in the text toolbar",
 	"layers-text-toolbar-align-right": "Tooltip for the right alignment button in the text toolbar",

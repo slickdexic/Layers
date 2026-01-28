@@ -733,14 +733,21 @@
 				// Set font and color
 				this.ctx.font = `${ fontStyle } ${ fontWeight } ${ fontSize }px ${ fontFamily }`;
 				this.ctx.fillStyle = color;
+				// Ensure alphabetic baseline is used
+				this.ctx.textBaseline = 'alphabetic';
 
 				// Draw background (highlight) if specified
+				// With alphabetic baseline, lineY is the baseline, so background starts above
 				if ( style.backgroundColor ) {
 					const metrics = this.ctx.measureText( textSlice );
-					const bgHeight = fontSize * 1.2;
+					// Approximate: ascent is ~80% of fontSize, descent is ~20%
+					const ascent = fontSize * 0.8;
+					const descent = fontSize * 0.2;
+					const bgTop = lineY - ascent;
+					const bgHeight = ascent + descent;
 					this.ctx.save();
 					this.ctx.fillStyle = style.backgroundColor;
-					this.ctx.fillRect( currentX, lineY, metrics.width, bgHeight );
+					this.ctx.fillRect( currentX, bgTop, metrics.width, bgHeight );
 					this.ctx.restore();
 					this.ctx.fillStyle = color;
 				}
@@ -776,6 +783,7 @@
 				}
 
 				// Handle text decoration
+				// With alphabetic baseline, lineY is at the baseline
 				if ( style.textDecoration && style.textDecoration !== 'none' ) {
 					const metrics = this.ctx.measureText( textSlice );
 					this.ctx.save();
@@ -784,21 +792,24 @@
 
 					switch ( style.textDecoration ) {
 						case 'underline':
+							// Underline goes slightly below the baseline
 							this.ctx.beginPath();
-							this.ctx.moveTo( currentX, lineY + fontSize );
-							this.ctx.lineTo( currentX + metrics.width, lineY + fontSize );
+							this.ctx.moveTo( currentX, lineY + fontSize * 0.15 );
+							this.ctx.lineTo( currentX + metrics.width, lineY + fontSize * 0.15 );
 							this.ctx.stroke();
 							break;
 						case 'line-through':
+							// Line-through goes through the middle (x-height area)
 							this.ctx.beginPath();
-							this.ctx.moveTo( currentX, lineY + fontSize * 0.5 );
-							this.ctx.lineTo( currentX + metrics.width, lineY + fontSize * 0.5 );
+							this.ctx.moveTo( currentX, lineY - fontSize * 0.3 );
+							this.ctx.lineTo( currentX + metrics.width, lineY - fontSize * 0.3 );
 							this.ctx.stroke();
 							break;
 						case 'overline':
+							// Overline goes above the text
 							this.ctx.beginPath();
-							this.ctx.moveTo( currentX, lineY );
-							this.ctx.lineTo( currentX + metrics.width, lineY );
+							this.ctx.moveTo( currentX, lineY - fontSize * 0.8 );
+							this.ctx.lineTo( currentX + metrics.width, lineY - fontSize * 0.8 );
 							this.ctx.stroke();
 							break;
 					}
@@ -847,23 +858,78 @@
 				color: layer.color || '#000000'
 			};
 
-			const fontSize = baseStyle.fontSize * scale.avg;
+			const baseFontSize = baseStyle.fontSize * scale.avg;
 			const textAlign = layer.textAlign || 'left';
 			const verticalAlign = layer.verticalAlign || 'top';
-			const lineHeight = ( layer.lineHeight || 1.2 ) * fontSize;
+			const lineHeightMultiplier = layer.lineHeight || 1.2;
 
 			// Get plain text for wrapping
 			const plainText = this.getRichTextPlainText( richText );
 
 			// Use base font for wrapping calculations
-			const fontString = `${ baseStyle.fontStyle } ${ baseStyle.fontWeight } ${ fontSize }px ${ baseStyle.fontFamily }`;
+			const fontString = `${ baseStyle.fontStyle } ${ baseStyle.fontWeight } ${ baseFontSize }px ${ baseStyle.fontFamily }`;
 			this.ctx.font = fontString;
-			this.ctx.textBaseline = 'top';
+			// Use alphabetic baseline for proper mixed-size text alignment
+			this.ctx.textBaseline = 'alphabetic';
 			this.ctx.globalAlpha = baseOpacity;
 
 			// Wrap text using base font (simplified approach)
-			const lines = this.wrapText( plainText, width - padding * 2, fontSize, baseStyle.fontFamily, baseStyle.fontWeight, baseStyle.fontStyle );
-			const totalTextHeight = lines.length * lineHeight;
+			const lines = this.wrapText( plainText, width - padding * 2, baseFontSize, baseStyle.fontFamily, baseStyle.fontWeight, baseStyle.fontStyle );
+
+			// Calculate character ranges for each line and find max font size per line
+			const lineMetrics = [];
+			let charPos = 0;
+			for ( let i = 0; i < lines.length; i++ ) {
+				const lineText = lines[ i ];
+				const lineStart = charPos;
+				const lineEnd = charPos + lineText.length;
+
+				// Find the maximum font size used in this line
+				let maxFontSize = baseFontSize;
+				let runCharPos = 0;
+				for ( const run of richText ) {
+					if ( !run || typeof run.text !== 'string' ) {
+						continue;
+					}
+					const runStart = runCharPos;
+					const runEnd = runCharPos + run.text.length;
+					runCharPos = runEnd;
+
+					// Check if this run overlaps with the current line
+					if ( runEnd <= lineStart || runStart >= lineEnd ) {
+						continue;
+					}
+
+					// This run is on this line - check its font size
+					const runFontSize = ( ( run.style && run.style.fontSize ) || baseStyle.fontSize ) * scale.avg;
+					if ( runFontSize > maxFontSize ) {
+						maxFontSize = runFontSize;
+					}
+				}
+
+				// Line height based on the tallest text in this line
+				const lineHeight = maxFontSize * lineHeightMultiplier;
+
+				lineMetrics.push( {
+					text: lineText,
+					start: lineStart,
+					end: lineEnd,
+					maxFontSize: maxFontSize,
+					lineHeight: lineHeight
+				} );
+
+				charPos = lineEnd;
+				// Account for whitespace between lines
+				if ( i < lines.length - 1 ) {
+					const nextChar = plainText[ charPos ];
+					if ( nextChar === ' ' || nextChar === '\n' ) {
+						charPos++;
+					}
+				}
+			}
+
+			// Calculate total text height (sum of line heights)
+			const totalTextHeight = lineMetrics.reduce( ( sum, lm ) => sum + lm.lineHeight, 0 );
 			const availableHeight = height - padding * 2;
 
 			// Calculate starting Y position based on vertical alignment
@@ -895,25 +961,24 @@
 				textStrokeWidth: ( layer.textStrokeWidth || 0 ) * scale.avg
 			};
 
-			// Build character position tracking
-			let charPos = 0;
-
 			// Draw each line
-			for ( let i = 0; i < lines.length; i++ ) {
-				const lineText = lines[ i ];
-				const currentY = textY + i * lineHeight;
+			let currentY = textY;
+			for ( let i = 0; i < lineMetrics.length; i++ ) {
+				const lm = lineMetrics[ i ];
+
+				// Calculate baseline position for this line
+				// Baseline is at the top of line + max font size (since we're using alphabetic baseline)
+				const baselineY = currentY + lm.maxFontSize;
 
 				// Only draw if within the box
-				if ( currentY + fontSize > y + height ) {
+				if ( baselineY > y + height ) {
 					break;
 				}
 
-				const lineStart = charPos;
-				const lineEnd = charPos + lineText.length;
-
 				// Calculate line X position based on alignment
+				// Need to measure with proper font for each run to get accurate width
 				let lineX;
-				const lineWidth = this.ctx.measureText( lineText ).width;
+				const lineWidth = this.measureRichTextLineWidth( richText, lm.start, lm.end, baseStyle, scale );
 				switch ( textAlign ) {
 					case 'center':
 						lineX = x + ( width - lineWidth ) / 2;
@@ -927,20 +992,64 @@
 						break;
 				}
 
-				// Draw the rich text for this line
-				this.drawRichTextLine( richText, lineStart, lineEnd, lineX, currentY, baseStyle, textStyle, scale );
+				// Draw the rich text for this line at the baseline
+				this.drawRichTextLine( richText, lm.start, lm.end, lineX, baselineY, baseStyle, textStyle, scale );
 
-				// Account for newline characters in position tracking
-				// wrapText splits on '\n' and ' ', update charPos accordingly
-				charPos = lineEnd;
-				// Check if original text has whitespace after this line
-				if ( i < lines.length - 1 ) {
-					const nextChar = plainText[ charPos ];
-					if ( nextChar === ' ' || nextChar === '\n' ) {
-						charPos++;
-					}
-				}
+				// Move to next line
+				currentY += lm.lineHeight;
 			}
+		}
+
+		/**
+		 * Measure the width of a rich text line
+		 *
+		 * @private
+		 * @param {Array} richText - Rich text runs array
+		 * @param {number} lineStart - Starting character index
+		 * @param {number} lineEnd - Ending character index
+		 * @param {Object} baseStyle - Base style
+		 * @param {Object} scale - Scale factors
+		 * @return {number} Width of the line in pixels
+		 */
+		measureRichTextLineWidth( richText, lineStart, lineEnd, baseStyle, scale ) {
+			let totalWidth = 0;
+			let charPos = 0;
+
+			for ( const run of richText ) {
+				if ( !run || typeof run.text !== 'string' ) {
+					continue;
+				}
+
+				const runStart = charPos;
+				const runEnd = charPos + run.text.length;
+				charPos = runEnd;
+
+				// Check if this run overlaps with the current line
+				if ( runEnd <= lineStart || runStart >= lineEnd ) {
+					continue;
+				}
+
+				// Calculate which portion of this run is on this line
+				const sliceStart = Math.max( 0, lineStart - runStart );
+				const sliceEnd = Math.min( run.text.length, lineEnd - runStart );
+				const textSlice = run.text.slice( sliceStart, sliceEnd );
+
+				if ( textSlice.length === 0 ) {
+					continue;
+				}
+
+				// Build font for this run
+				const style = run.style || {};
+				const fontSize = ( style.fontSize || baseStyle.fontSize ) * scale.avg;
+				const fontFamily = style.fontFamily || baseStyle.fontFamily;
+				const fontWeight = style.fontWeight || baseStyle.fontWeight;
+				const fontStyle = style.fontStyle || baseStyle.fontStyle;
+
+				this.ctx.font = `${ fontStyle } ${ fontWeight } ${ fontSize }px ${ fontFamily }`;
+				totalWidth += this.ctx.measureText( textSlice ).width;
+			}
+
+			return totalWidth;
 		}
 
 		/**
