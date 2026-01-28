@@ -38,7 +38,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Viewer modules (`resources/ext.layers/viewer/`): Lightweight viewer for displaying layered images
-    - `ViewerManager.js` (~750 lines) - manages viewer instances, lazy initialization
+    - `ViewerManager.js` (~2,018 lines) - manages viewer instances, lazy initialization [GOD CLASS]
     - `LayersViewer.js` (~600 lines) - canvas-based layer rendering for thumbnails
     - `LayersLightbox.js` (~560 lines) - full-screen lightbox viewer
     - `ViewerOverlay.js` (~490 lines) - hover action buttons (edit/view) with permission checking
@@ -99,9 +99,10 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 19 files exceed 1,000 lines:
+  - **God classes:** 22 files exceed 1,000 lines:
     - **Generated data files (exempt from refactoring):** ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,055 lines)
-    - **Hand-written files:** CanvasManager, LayerPanel, Toolbar, LayersEditor, SelectionManager, APIManager, ArrowRenderer, CalloutRenderer, PropertyBuilders, ToolManager, InlineTextEditor, CanvasRenderer, GroupManager, ResizeCalculator, ToolbarStyleControls, TransformController
+    - **Hand-written files:** ViewerManager, CanvasManager, LayerPanel, Toolbar, LayersEditor, APIManager, SelectionManager, ArrowRenderer, InlineTextEditor, PropertyBuilders, CalloutRenderer, ToolManager, CanvasRenderer, GroupManager, TransformController, ResizeCalculator, ToolbarStyleControls, PropertiesForm
+    - **PHP god classes:** LayersDatabase.php (1,242 lines), ServerSideLayerValidator.php (1,163 lines)
     - All hand-written files use delegation patterns, see improvement_plan.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -378,11 +379,11 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (10,667 tests in 157 suites — verified January 27, 2026)
-- Coverage (95.86% statement, 85.40% branch — verified January 27, 2026)
-- JavaScript file count (126 files total, ~88,992 lines)
+- Test count (10,667 tests in 157 suites — verified January 28, 2026)
+- Coverage (95.85% statement, 85.39% branch — verified January 28, 2026)
+- JavaScript file count (132 files total, ~91,632 lines)
 - PHP file count (40 files, ~14,378 lines)
-- God class count (19 files >1,000 lines; 2 generated data files, 17 JS, 2 PHP)
+- God class count (22 files >1,000 lines; 2 generated data files, 18 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)

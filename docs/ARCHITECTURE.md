@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 26, 2026
-**Version:** 1.5.35
+**Last Updated:** January 28, 2026
+**Version:** 1.5.36
 
 ---
 
@@ -17,26 +17,26 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (January 26, 2026)
+## Codebase Statistics (January 28, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **127** |
-| Total JS lines | **~115,282** |
+| Total JS files | **132** |
+| Total JS lines | **~88,992** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~40,000 lines (generated) |
-| ES6 classes | **127** |
+| ES6 classes | **132** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **94.45% stmt, 84.87% branch** |
-| Jest tests | **10,643** (157 suites) |
+| Test coverage | **95.85% stmt, 85.39% branch** |
+| Jest tests | **10,667** (157 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **23** (3 generated, 18 JS, 2 PHP) |
+| God classes (>1000 lines) | **22** (2 generated, 18 JS, 2 PHP) |
 | Drawing tools | **15** |
 | Shape library | **1,310 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **697** |
+| i18n messages | **720** |
 | eslint-disable comments | **11** ✅ |
 
 ---
@@ -95,37 +95,43 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - Shape Library with 1,310 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
-### God Classes (20 Files ≥1,000 Lines)
+### God Classes (22 Files ≥1,000 Lines)
 
 **Generated Data Files (exempt from refactoring):**
 | File | Lines | Notes |
 |------|-------|-------|
-| EmojiLibraryData.js | ~26,277 | Generated emoji metadata |
 | ShapeLibraryData.js | ~11,299 | Generated shape definitions |
-| EmojiLibraryIndex.js | ~3,003 | Generated search index |
+| EmojiLibraryIndex.js | ~3,055 | Generated search index |
 
-**Hand-Written Files with Delegation Patterns:**
+**Hand-Written JavaScript Files with Delegation Patterns:**
 | File | Lines | Delegation Status |
 |------|-------|-------------------|
-| CanvasManager.js | 2,010 | ✅ 10+ controllers |
-| Toolbar.js | 1,847 | ✅ 4 modules |
-| LayerPanel.js | 1,806 | ✅ 9 controllers |
-| LayersEditor.js | 1,715 | ✅ 3 modules |
+| LayerPanel.js | 2,175 | ✅ 9 controllers |
+| CanvasManager.js | 2,044 | ✅ 10+ controllers |
+| ViewerManager.js | 2,018 | Viewer orchestration |
+| Toolbar.js | 1,891 | ✅ 4 modules |
+| LayersEditor.js | 1,796 | ✅ 3 modules |
+| APIManager.js | 1,523 | ✅ APIErrorHandler |
 | SelectionManager.js | 1,431 | ✅ 3 modules |
-| APIManager.js | 1,420 | ✅ APIErrorHandler |
 | ArrowRenderer.js | 1,301 | Feature complexity |
+| InlineTextEditor.js | 1,300 | Feature complexity |
+| PropertyBuilders.js | 1,293 | UI builders |
 | CalloutRenderer.js | 1,291 | Feature complexity |
-| PropertyBuilders.js | 1,284 | UI builders |
-| InlineTextEditor.js | 1,258 | Feature complexity |
 | ToolManager.js | 1,224 | ✅ 2 handlers |
-| GroupManager.js | 1,132 | Group operations |
-| CanvasRenderer.js | 1,132 | ✅ SelectionRenderer |
-| TransformController.js | 1,109 | Transform engine |
+| CanvasRenderer.js | 1,219 | ✅ SelectionRenderer |
+| GroupManager.js | 1,171 | Group operations |
+| TransformController.js | 1,110 | Transform engine |
 | ResizeCalculator.js | 1,105 | Shape calculations |
-| ToolbarStyleControls.js | 1,099 | ✅ Style controls |
-| PropertiesForm.js | 1,001 | ✅ PropertyBuilders |
+| ToolbarStyleControls.js | 1,070 | ✅ Style controls |
+| PropertiesForm.js | 1,004 | ✅ PropertyBuilders |
 
-**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 92.59% test coverage.
+**PHP God Classes:**
+| File | Lines | Notes |
+|------|-------|-------|
+| LayersDatabase.php | 1,242 | Uses delegation pattern |
+| ServerSideLayerValidator.php | 1,163 | Validation complexity |
+
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 95.85% test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for detailed status.
 
