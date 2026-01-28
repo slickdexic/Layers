@@ -947,6 +947,31 @@ class LayersEditor {
 
 			changes = this.validationManager.sanitizeLayerData( changes );
 
+			// If inline text editing is active for this layer, preserve pending text content
+			// This prevents text loss when changing properties like verticalAlign during editing
+			if ( this.canvasManager && this.canvasManager.inlineTextEditor ) {
+				const inlineEditor = this.canvasManager.inlineTextEditor;
+				const editingLayer = inlineEditor.getEditingLayer && inlineEditor.getEditingLayer();
+
+				if ( editingLayer && editingLayer.id === layerId && inlineEditor.isActive() ) {
+					// Get pending text content
+					const pendingContent = inlineEditor.getPendingTextContent &&
+						inlineEditor.getPendingTextContent();
+
+					if ( pendingContent ) {
+						// Include pending text unless explicitly being changed
+						if ( !( 'text' in changes ) && pendingContent.text !== undefined ) {
+							changes.text = pendingContent.text;
+						}
+						if ( !( 'richText' in changes ) && pendingContent.richText ) {
+							if ( pendingContent.richText.length > 0 ) {
+								changes.richText = pendingContent.richText;
+							}
+						}
+					}
+				}
+			}
+
 			const layers = this.stateManager.get( 'layers' ) || [];
 			const layerIndex = layers.findIndex( ( l ) => l.id === layerId );
 			if ( layerIndex !== -1 ) {

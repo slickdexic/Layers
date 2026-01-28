@@ -367,6 +367,33 @@
 		}
 
 		/**
+		 * Get the current pending text content from the editor without closing it.
+		 * This allows other property changes to preserve text during inline editing.
+		 *
+		 * @return {Object|null} Object with { text, richText } or null if not editing
+		 */
+		getPendingTextContent() {
+			if ( !this.isEditing || !this.editorElement || !this.editingLayer ) {
+				return null;
+			}
+
+			let newText, newRichText = null;
+
+			if ( this._isRichTextMode && this.editorElement.contentEditable === 'true' ) {
+				const html = this.editorElement.innerHTML;
+				newRichText = this._htmlToRichText( html );
+				newText = this._getPlainTextFromEditor();
+			} else {
+				newText = this.editorElement.value || '';
+			}
+
+			return {
+				text: newText,
+				richText: newRichText
+			};
+		}
+
+		/**
 		 * Create the editor element - a transparent overlay matching the layer
 		 *
 		 * @private
@@ -567,6 +594,17 @@
 			// Calculate rotation - need to rotate around the center of the element
 			const rotation = layer.rotation || 0;
 
+			// Determine vertical alignment CSS for textbox/callout
+			let verticalAlignCSS = 'flex-start';
+			if ( this._isMultilineType( layer ) ) {
+				const vAlign = layer.verticalAlign || 'top';
+				if ( vAlign === 'middle' ) {
+					verticalAlignCSS = 'center';
+				} else if ( vAlign === 'bottom' ) {
+					verticalAlignCSS = 'flex-end';
+				}
+			}
+
 			// For rotated layers, position at the center and use transform
 			// This matches how the canvas renders rotated text boxes
 			let positionStyles;
@@ -582,7 +620,10 @@
 					fontSize: scaledFontSize + 'px',
 					padding: scaledPadding + 'px',
 					transform: `translate(-50%, -50%) rotate(${ rotation }deg)`,
-					transformOrigin: 'center center'
+					transformOrigin: 'center center',
+					display: this._isMultilineType( layer ) ? 'flex' : 'block',
+					flexDirection: 'column',
+					justifyContent: verticalAlignCSS
 				};
 			} else {
 				// No rotation - use simple positioning
@@ -594,7 +635,10 @@
 					fontSize: scaledFontSize + 'px',
 					padding: scaledPadding + 'px',
 					transform: 'none',
-					transformOrigin: 'center center'
+					transformOrigin: 'center center',
+					display: this._isMultilineType( layer ) ? 'flex' : 'block',
+					flexDirection: 'column',
+					justifyContent: verticalAlignCSS
 				};
 			}
 
