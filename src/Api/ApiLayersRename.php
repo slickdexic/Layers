@@ -9,8 +9,8 @@ use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
+use Title;
 
 /**
  * API module for renaming layer sets.

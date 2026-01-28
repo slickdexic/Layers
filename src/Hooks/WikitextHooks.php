@@ -4,7 +4,6 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
-use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\Processors\ImageLinkProcessor;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayeredFileRenderer;
@@ -14,6 +13,7 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
+use RequestContext;
 
 class WikitextHooks {
 	use StaticLoggerAwareTrait;

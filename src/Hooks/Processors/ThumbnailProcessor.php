@@ -4,11 +4,11 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
-use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
+use RequestContext;
+use Title;
 
 /**
  * Handles thumbnail-related layer injection logic.

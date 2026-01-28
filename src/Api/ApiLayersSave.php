@@ -12,8 +12,8 @@ use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
+use Title;
 
 /**
  * API module for saving layer data to a MediaWiki file.
