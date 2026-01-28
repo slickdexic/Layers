@@ -71,11 +71,10 @@ Slide Mode enables creating canvas-based visual content without requiring a pare
 |-----------|----------|---------|-------------|
 | `SlideName` | Yes | — | Unique identifier (alphanumeric, hyphens, underscores) |
 | `canvas` | No | `800x600` | Canvas dimensions in pixels (`WIDTHxHEIGHT`) |
-| `lock` | No | `none` | Lock mode: `none`, `size`, or `all` |
+| `noedit` | No | — | Hide the edit overlay button (boolean flag) |
 | `background` | No | `#ffffff` | Background color (hex, rgb, named colors, or `transparent`) |
 | `class` | No | — | Additional CSS classes for the container |
 | `placeholder` | No | i18n default | Text shown when slide is empty |
-| `editable` | No | `yes` | Whether the edit button appears |
 | `layerset` | No | `default` | Named layer set to display |
 
 ### 2.3 Naming Rules
@@ -91,16 +90,15 @@ Slide Mode enables creating canvas-based visual content without requiring a pare
 {{!-- Basic slide with default settings --}}
 {{#Slide: ProcessDiagram }}
 
-{{!-- Custom canvas size with locked dimensions --}}
-{{#Slide: OrgChart | canvas=1200x800 | lock=size }}
+{{!-- Custom canvas size --}}
+{{#Slide: OrgChart | canvas=1200x800 }}
 
-{{!-- Transparent background for overlay use --}}
-{{#Slide: Watermark | canvas=400x100 | background=transparent | lock=all }}
+{{!-- Transparent background for overlay use, no edit button --}}
+{{#Slide: Watermark | canvas=400x100 | background=transparent | noedit }}
 
 {{!-- Full-featured slide --}}
 {{#Slide: ArchitectureDiagram
  | canvas = 1600x900
- | lock = size
  | background = #f5f5f5
  | class = diagram-shadow diagram-bordered
  | placeholder = Click to add architecture diagram
@@ -110,57 +108,36 @@ Slide Mode enables creating canvas-based visual content without requiring a pare
 
 ---
 
-## 3. Lock Behavior
+## 3. Hide Edit Button
 
-### 3.1 Lock Modes
+### 3.1 The `noedit` Flag
 
-| Mode | Canvas Size | Layer Editing | Background | Use Case |
-|------|-------------|---------------|------------|----------|
-| `none` | User can resize | Full editing | User can change | Power users, custom slides |
-| `size` | Template-controlled | Full editing | User can change | Standardized templates |
-| `all` | Template-controlled | View only | Template-controlled | Published/finalized content |
+Use the `noedit` flag to hide the edit overlay button from viewers:
 
-### 3.2 Lock Mode Details
-
-#### `lock=none` (Default)
-- User has full control over all canvas properties
-- Canvas resize handles appear in editor
-- Size can be changed via toolbar or properties panel
-- Background color picker is available
-
-#### `lock=size`
-- Template defines canvas dimensions
-- Resize handles are hidden
-- Size fields in properties panel are read-only
-- Layer editing (add, move, delete, modify) is fully enabled
-- Background color can still be changed by user
-
-#### `lock=all`
-- Slide is completely read-only
-- No edit button appears (unless user has admin rights)
-- Used for published content that shouldn't be modified
-- Admins can override via Special:Slides
-
-### 3.3 Size Conflict Resolution
-
-When a template changes canvas dimensions for an existing slide:
-
-1. **Template always wins** - The new dimensions take effect immediately
-2. **Layers may overflow** - Content outside the new canvas is hidden but preserved
-3. **User notification** - Editor shows a banner: "Canvas size was changed by the template. Some layers may need repositioning."
-4. **Undo available** - User can reposition layers as needed
-5. **No automatic scaling** - Layers maintain original coordinates (prevents distortion)
-
-### 3.4 Lock Inheritance
-
+```wikitext
+{{#Slide: PublishedContent | noedit }}
 ```
-Template defines: lock=size, canvas=800x600
-├── Page A uses template → 800x600 (locked)
-├── Page B uses template → 800x600 (locked)
-└── Template updated to canvas=1000x800
-    ├── Page A now shows 1000x800 (template wins)
-    └── Page B now shows 1000x800 (template wins)
-```
+
+**Behavior:**
+- The edit overlay button is hidden from all users
+- The view/fullscreen button is still available
+- Users with `editlayers` permission can still access the editor via `Special:EditSlide/SlideName`
+- This is purely a UI convenience, not a security feature
+
+### 3.2 Use Cases for `noedit`
+
+| Use Case | Example |
+|----------|--------|
+| Published content | Finalized diagrams that shouldn't show edit affordances |
+| Embedded displays | Slides used as decorative elements |
+| Kiosk/presentation mode | Read-only display contexts |
+
+### 3.3 Comparison with Image Layers
+
+The `noedit` flag for slides is analogous to hiding the edit overlay for images. Both:
+- Hide the edit button from the UI
+- Allow direct access via special pages for authorized users
+- Are not security mechanisms (permissions still control actual editing)
 
 ---
 

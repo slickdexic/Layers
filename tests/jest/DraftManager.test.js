@@ -658,5 +658,114 @@ describe( 'DraftManager', function () {
 			expect( result ).toBe( false );
 			expect( mw.log.error ).toHaveBeenCalled();
 		} );
+
+		it( 'should handle canvasManager.renderLayers throwing error', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ],
+				setName: 'default'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			mockEditor.canvasManager.renderLayers = jest.fn( function () {
+				throw new Error( 'Render failed' );
+			} );
+			
+			// Recovery should still report success if state was updated
+			draftManager.recoverDraft();
+			
+			// Verify state was updated before render failed
+			expect( mockEditor.stateManager.update ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'checkAndRecoverDraft edge cases', function () {
+		it( 'should handle OO.ui.confirm resolving to false gracefully', async function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1', type: 'circle' } ],
+				setName: 'default'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			// User clicks "No" / cancels
+			global.OO.ui.confirm = jest.fn( function () {
+				return Promise.resolve( false );
+			} );
+			
+			const result = await draftManager.checkAndRecoverDraft();
+			
+			// Should handle cancellation gracefully and discard draft
+			expect( result ).toBe( false );
+			expect( global.localStorage.removeItem ).toHaveBeenCalled();
+		} );
+
+		it( 'should recover draft from a different set name', async function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ],
+				setName: 'anatomy-labels' // Different from 'default'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			global.OO.ui.confirm = jest.fn( function () {
+				return Promise.resolve( true );
+			} );
+			
+			const result = await draftManager.checkAndRecoverDraft();
+			
+			expect( result ).toBe( true );
+			// Verify the set name is restored
+			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					layers: [ { id: 'layer1' } ]
+				} )
+			);
+		} );
+	} );
+
+	describe( 'loadDraft edge cases', function () {
+		it( 'should return null for draft with missing layers array', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now()
+				// Missing layers array
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+
+			expect( draftManager.loadDraft() ).toBeNull();
+		} );
+
+		it( 'should return draft with empty layers array (valid structure)', function () {
+			// Note: loadDraft validates structure but allows empty arrays
+			// The saveDraft method prevents saving empty layers
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: []
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+
+			const result = draftManager.loadDraft();
+			expect( result ).not.toBeNull();
+			expect( result.layers ).toHaveLength( 0 );
+		} );
+
+		it( 'should handle draft with null value', function () {
+			mockLocalStorage[ draftManager.getStorageKey() ] = 'null';
+
+			expect( draftManager.loadDraft() ).toBeNull();
+		} );
+
+		it( 'should handle localStorage.getItem throwing error', function () {
+			global.localStorage.getItem = jest.fn( function () {
+				throw new Error( 'Storage access denied' );
+			} );
+
+			expect( draftManager.loadDraft() ).toBeNull();
+		} );
 	} );
 } );

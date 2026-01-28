@@ -92,7 +92,6 @@ describe( 'SlidePropertiesPanel', function () {
 						baseWidth: 800,
 						baseHeight: 600,
 						slideBackgroundColor: '#ffffff',
-						slideLockMode: 'none',
 						currentSetName: 'default',
 						isSlide: true
 					};
@@ -182,10 +181,6 @@ describe( 'SlidePropertiesPanel', function () {
 			expect( panel.bgColorSwatch ).toBeDefined();
 		} );
 
-		it( 'should create lock row', function () {
-			expect( panel.lockRow ).toBeDefined();
-		} );
-
 		it( 'should create embed button', function () {
 			expect( panel.embedButton ).toBeDefined();
 		} );
@@ -241,44 +236,21 @@ describe( 'SlidePropertiesPanel', function () {
 		} );
 
 		it( 'should show panel when isSlide is true', function () {
-			panel.updateVisibility( true, 'none' );
+			panel.updateVisibility( true );
 			expect( panel.panel.style.display ).toBe( '' );
 		} );
 
 		it( 'should hide panel when isSlide is false', function () {
-			panel.updateVisibility( true, 'none' );
-			panel.updateVisibility( false, 'none' );
+			panel.updateVisibility( true );
+			panel.updateVisibility( false );
 			expect( panel.panel.style.display ).toBe( 'none' );
 		} );
 
 		it( 'updateVisibility should handle missing panel gracefully', function () {
 			panel.panel = null;
 			expect( function () {
-				panel.updateVisibility( true, 'none' );
+				panel.updateVisibility( true );
 			} ).not.toThrow();
-		} );
-
-		it( 'should disable inputs when lock mode is size', function () {
-			panel.updateVisibility( true, 'size' );
-			expect( panel.widthInput.disabled ).toBe( true );
-			expect( panel.heightInput.disabled ).toBe( true );
-		} );
-
-		it( 'should disable all controls when lock mode is all', function () {
-			panel.updateVisibility( true, 'all' );
-			expect( panel.widthInput.disabled ).toBe( true );
-			expect( panel.heightInput.disabled ).toBe( true );
-			expect( panel.bgColorButton.disabled ).toBe( true );
-		} );
-
-		it( 'should show lock row when locked', function () {
-			panel.updateVisibility( true, 'size' );
-			expect( panel.lockRow.style.display ).toBe( '' );
-		} );
-
-		it( 'should hide lock row when not locked', function () {
-			panel.updateVisibility( true, 'none' );
-			expect( panel.lockRow.style.display ).toBe( 'none' );
 		} );
 	} );
 
@@ -800,24 +772,6 @@ describe( 'SlidePropertiesPanel', function () {
 
 			await jest.runAllTimersAsync();
 			expect( document.execCommand ).toHaveBeenCalledWith( 'copy' );
-		} );
-	} );
-
-	describe( 'lock mode indicators', function () {
-		beforeEach( function () {
-			panel.create();
-		} );
-
-		it( 'should enable all controls when lock mode is view', function () {
-			panel.updateVisibility( true, 'view' );
-			// view mode just shows layers but doesn't disable editing controls
-			expect( panel.widthInput.disabled ).toBe( false );
-		} );
-
-		it( 'should update lock text based on mode', function () {
-			panel.updateVisibility( true, 'size' );
-			// Lock row should be visible and contain lock info
-			expect( panel.lockRow.style.display ).toBe( '' );
 		} );
 	} );
 

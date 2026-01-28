@@ -9,7 +9,7 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git status`)
-- **Tests:** 10,658 tests in 157 suites (all passing, verified January 27, 2026)
+- **Tests:** 10,668 tests in 157 suites (all passing, verified January 27, 2026)
 - **Coverage:** 93.52% statements, 84.24% branches (verified January 27, 2026)
 - **JS files:** 127 production files (excludes `resources/dist/` and `resources/*/scripts/`)
 - **JS lines:** ~115,284 total (~40,579 generated, ~74,705 hand-written)
@@ -58,13 +58,13 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
-| Async/Error Handling | 0 | 0 | 0 | 1 |
+| Async/Error Handling | 0 | 0 | 1 | 1 |
 | Performance/Memory | 0 | 0 | 1 | 1 |
 | Architecture | 0 | 0 | 2 | 2 |
 | Code Quality | 0 | 0 | 0 | 2 |
 | Testing | 0 | 0 | 1 | 1 |
 | Documentation | 0 | 0 | 0 | 1 |
-| **Total** | **0** ✅ | **0** ✅ | **4** | **8** |
+| **Total** | **0** ✅ | **0** ✅ | **5** | **8** |
 
 ---
 
@@ -78,7 +78,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | Branches | 84.24% | 80% | ✅ Exceeds |
 | Functions | 91.79% | 85% | ✅ Exceeds |
 | Lines | 93.66% | 90% | ✅ Exceeds |
-| Test Count | 10,658 | - | ✅ Excellent |
+| Test Count | 10,668 | - | ✅ Excellent |
 | Test Suites | 157 | - | ✅ |
 | Skipped Tests | 0 | 0 | ✅ |
 
@@ -108,26 +108,17 @@ No high-severity issues identified.
 
 ---
 
-## 🟡 Medium Severity Issues (7)
+## 🟡 Medium Severity Issues (6)
 
-### MED-1: Unhandled Promise Rejections in Some .then() Chains
+### ~~MED-1: Unhandled Promise Rejections in Some .then() Chains~~ ✅ FIXED
 
+**Status:** ✅ Fixed January 27, 2026  
 **Severity:** Medium  
 **Category:** Error Handling / Reliability  
-**Discovered:** v41 Review (January 27, 2026)
 
-**Files with missing .catch() handlers:**
-
-| File | Line | Code Pattern | Risk |
-|------|------|--------------|------|
-| SlideManager.js | 364 | `mw.loader.using('ext.layers.shared').then(...)` | Module load failure unhandled |
-| SpecialSlides.js | 310 | `windowManager.openWindow(dialog).closed.then(...)` | Dialog close failure unhandled |
-
-**Impact:** Module loading failures or dialog errors could silently fail, leaving users confused.
-
-**Recommendation:** Add `.catch()` handlers to log errors or show user-friendly messages.
-
-**Estimated Effort:** 30 minutes
+**Fixed files:**
+- SlideManager.js line 380: Added `.catch()` handler for module loading
+- SpecialSlides.js line 315: Added `.catch()` handler for dialog close
 
 ---
 
@@ -259,26 +250,23 @@ No high-severity issues identified.
 
 ---
 
-### MED-7: Deprecated Code Without Complete Removal Schedule
+### ~~MED-7: Deprecated Code Without Complete Removal Schedule~~ ✅ FIXED
 
+**Status:** ✅ Fixed — All 6 deprecation markers now have removal dates (v2.0)  
 **Severity:** Medium  
 **Category:** Technical Debt  
 **Count:** 6 deprecation markers
 
-**Deprecated APIs:**
+**Deprecated APIs (all with removal dates):**
 
 | File | Line | Deprecated Item | Status |
 |------|------|-----------------|--------|
 | TransformationEngine.js | 332 | Canvas context transforms | Has removal date (v2.0) ✅ |
 | ToolbarStyleControls.js | 1037 | `hideControlsForTool()` | Has removal date (v2.0) ✅ |
-| ModuleRegistry.js | 311 | `window.layersModuleRegistry` | Vague removal ("v1.0"?) ⚠️ |
-| ModuleRegistry.js | 338 | Legacy export pattern | No removal date ⚠️ |
+| ModuleRegistry.js | 311 | `window.layersModuleRegistry` | Has removal date (v2.0) ✅ |
+| ModuleRegistry.js | 338 | Legacy export pattern | Has removal date (v2.0) ✅ |
 | LayerPanel.js | 529 | `createNewFolder()` | Has removal date (v2.0) ✅ |
-| LayerPanel.js | 886 | Code panel methods | No removal date ⚠️ |
-
-**Recommendation:** Add clear removal dates (v2.0) to all deprecated markers.
-
-**Estimated Effort:** 30 minutes
+| LayerPanel.js | 886 | Code panel methods | Has removal date (v2.0) ✅ |
 
 ---
 
@@ -363,12 +351,11 @@ No high-severity issues identified.
 
 ---
 
-### LOW-9: Generated Data Files Excluded from Coverage
+### ~~LOW-9: Generated Data Files Excluded from Coverage~~ ✅ ALREADY FIXED
 
-**Files:** EmojiLibraryData.js (0%), ShapeLibraryData.js (0%), EmojiLibraryIndex.js (0%)  
-**Problem:** These generated files show 0% coverage in reports.  
-**Impact:** None (expected behavior for generated data)  
-**Recommendation:** Consider adding to coverage exclude patterns in jest.config.js for cleaner reports.
+**Status:** ✅ Already fixed — jest.config.js has exclusions for generated files  
+**Files:** EmojiLibraryData.js, ShapeLibraryData.js, EmojiLibraryIndex.js  
+**Fix:** Lines 26-29 of jest.config.js exclude these from coverage collection.
 
 ---
 

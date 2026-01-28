@@ -125,8 +125,8 @@
 					continue;
 				}
 
-				// Only handle text and textbox layers
-				if ( layer.type !== 'text' && layer.type !== 'textbox' ) {
+				// Only handle text, textbox, and callout layers
+				if ( layer.type !== 'text' && layer.type !== 'textbox' && layer.type !== 'callout' ) {
 					continue;
 				}
 

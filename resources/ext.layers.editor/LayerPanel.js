@@ -1230,6 +1230,15 @@
 		}
 
 		/**
+		 * Alias for updateLayers for backwards compatibility
+		 *
+		 * @param {Array} layers New layers array
+		 */
+		updateLayerList( layers ) {
+			this.updateLayers( layers );
+		}
+
+		/**
 		 * Render the layer list
 		 */
 		renderLayerList() {

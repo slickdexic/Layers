@@ -4,6 +4,29 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.36 (January 27, 2026)
+
+### Added
+- **Callout Inline Text Editing** — Callout layers now support double-click inline text editing with floating toolbar, matching textbox behavior
+  - Added `_isMultilineType()` helper for consistent textbox/callout handling
+  - Added 12 new tests for callout editing support
+
+### Changed
+- **Slide Parameter Simplification** — Replaced `lock=none|size|all` parameter with simpler `noedit` flag
+  - `noedit` hides the edit overlay button for view-only slides
+  - Removed complex lock mode logic from SlideHooks, ViewerManager, SlidePropertiesPanel
+
+### Fixed
+- **Slide Revision Loading** — Fixed "Revision not found" error when loading specific slide revisions
+  - Changed API response key from `set_revisions` to `all_layersets` for JS compatibility
+  - Added `layersetid` parameter support for slides
+
+### Technical Details
+- All 10,680+ tests pass (157 test suites)
+- Test coverage: 93%+ statement coverage
+
+---
+
 ## Version 1.5.35 (January 26, 2026)
 
 ### Fixed

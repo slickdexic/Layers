@@ -323,7 +323,7 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 | `canvas` | Canvas size (WxH) | `canvas=1920x1080` |
 | `size` | Display size | `size=800x600` |
 | `bgcolor` | Background color | `bgcolor=#f0f0f0` |
-| `lock` | Lock mode | `lock=view` |
+| `noedit` | Hide edit overlay button | `noedit` |
 | `class` | CSS classes | `class=my-diagram` |
 
 ### Examples
@@ -342,8 +342,8 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 <!-- With background color -->
 {{#Slide: Blueprint | bgcolor=#e8f4fc}}
 
-<!-- View-only mode -->
-{{#Slide: Published | lock=view}}
+<!-- View-only mode (no edit button) -->
+{{#Slide: Published | noedit}}
 
 <!-- Combined: specific layer set with styling -->
 {{#Slide: Technical | layerset=detailed | size=800x600 | bgcolor=#fff}}

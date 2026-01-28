@@ -25,7 +25,6 @@ module.exports = {
 		'!**/node_modules/**',
 		'!**/vendor/**',
 		// Exclude generated data files (large, auto-generated, not hand-written code)
-		'!**/shapeLibrary/EmojiLibraryData.js',
 		'!**/shapeLibrary/ShapeLibraryData.js',
 		'!**/shapeLibrary/EmojiLibraryIndex.js',
 		// Exclude build scripts (Node.js tools, not browser code)

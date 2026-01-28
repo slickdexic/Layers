@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.35",
+	"version": "1.5.36",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -68,10 +68,6 @@
 		"LayersMaxImageBytes": {
 			"description": "Maximum size in bytes for imported image layers (base64 encoded). Default 1MB. Recommended: 512KB-2MB depending on storage capacity.",
 			"value": 1048576
-		},
-		"LayersContextAwareToolbar": {
-			"description": "Enable context-aware toolbar that shows only relevant controls for the active tool. Set to false for classic mode with all controls visible.",
-			"value": true
 		},
 		"LayersMaxNamedSets": {
 			"description": "Maximum number of named layer sets per image",
@@ -845,6 +841,7 @@
 				"layers-marker-style-plain",
 				"layers-marker-style-letter",
 				"layers-marker-style-letter-circled",
+				"layers-marker-name",
 				"layers-section-dimension",
 				"layers-prop-end-style",
 				"layers-prop-text-position",

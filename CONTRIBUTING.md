@@ -6,7 +6,7 @@ Thanks for helping improve Layers! This guide covers local setup, how to run che
 
 **Target: <110,000 lines of JavaScript**
 
-This extension is feature-rich by design—**15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (EmojiLibraryData.js, ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~40,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension.
+This extension is feature-rich by design—**15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) and bundled emoji data (emoji-bundle.json) account for ~15,000 lines of JavaScript. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension.
 
 **There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns
@@ -18,7 +18,7 @@ This extension is feature-rich by design—**15 drawing tools**, multiple render
 
 ## ⚠️ MANDATORY: God Class Rules
 
-**We have 20 "god classes" (files >1,000 lines) that represent technical debt. 3 are generated data files (exempt), 17 are hand-written. These rules are enforced by CI:**
+**We have 19 "god classes" (files >1,000 lines) that represent technical debt. 2 are generated data files (exempt), 17 are hand-written. These rules are enforced by CI:**
 
 ### Rule 1: No God Class Growth
 - **CI will BLOCK your PR** if you increase the size of any hand-written god class
@@ -38,9 +38,8 @@ This extension is feature-rich by design—**15 drawing tools**, multiple render
 ### Current God Classes (Do Not Grow These)
 
 **Generated data files (exempt from refactoring):**
-- EmojiLibraryData.js (~26,277 lines)
 - ShapeLibraryData.js (~11,299 lines)
-- EmojiLibraryIndex.js (~3,003 lines)
+- EmojiLibraryIndex.js (~3,055 lines)
 
 **Hand-written files (use delegation patterns):**
 | File | Lines | Status |

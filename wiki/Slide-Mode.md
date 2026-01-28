@@ -30,7 +30,7 @@ Use the `{{#Slide:}}` parser function to embed slides:
 | `canvas` | Canvas size (width×height) | `canvas=1920x1080` |
 | `size` | Display size on page | `size=800x600` |
 | `bgcolor` | Background color | `bgcolor=#f0f0f0` |
-| `lock` | Lock mode | `lock=view` or `lock=all` |
+| `noedit` | Hide the edit overlay button | `noedit` |
 | `class` | CSS classes | `class=my-diagram` |
 
 ### Examples
@@ -53,7 +53,7 @@ Use the `{{#Slide:}}` parser function to embed slides:
 {{#Slide: Blueprint | bgcolor=#e8f4fc}}
 
 <!-- View-only (no edit overlay) -->
-{{#Slide: Published | lock=view}}
+{{#Slide: Published | noedit}}
 
 <!-- Combined parameters -->
 {{#Slide: Technical-Drawing 
@@ -162,13 +162,15 @@ Start from a blank canvas for schematics, blueprints, and technical illustration
 
 Once a slide is saved, subsequent edits load the canvas dimensions from the database, not from the wikitext.
 
-### Lock Modes
+### Hiding the Edit Button
 
-| Mode | Effect |
-|------|--------|
-| `lock=none` | Full editing (default) |
-| `lock=view` | View-only, no edit overlay |
-| `lock=all` | No overlay at all |
+Use the `noedit` flag to hide the edit overlay button, making the slide view-only for readers:
+
+```wikitext
+{{#Slide: MyPublishedSlide | noedit}}
+```
+
+Note: Users with edit permissions can still access the slide editor via `Special:EditSlide/SlideName`.
 
 ### Permissions
 

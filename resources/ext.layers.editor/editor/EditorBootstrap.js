@@ -393,8 +393,7 @@
 					slideName: init.slideName || null,
 					canvasWidth: init.canvasWidth || null,
 					canvasHeight: init.canvasHeight || null,
-					backgroundColor: init.backgroundColor || null,
-					lockMode: init.lockMode || 'none'
+					backgroundColor: init.backgroundColor || null
 				} );
 
 				debugLog( 'Hook fired for: ' + init.filename +
@@ -425,8 +424,7 @@
 						slideName: init.slideName || null,
 						canvasWidth: init.canvasWidth || null,
 						canvasHeight: init.canvasHeight || null,
-						backgroundColor: init.backgroundColor || null,
-						lockMode: init.lockMode || 'none'
+						backgroundColor: init.backgroundColor || null
 					} );
 					debugLog( 'Direct editor creation successful' );
 

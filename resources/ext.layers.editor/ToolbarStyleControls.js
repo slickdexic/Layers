@@ -109,9 +109,8 @@ class ToolbarStyleControls {
 		this.mainStyleRow = null;
 		this.presetContainer = null;
 
-		// Context-aware toolbar state
-		this.contextAwareEnabled = ( typeof mw !== 'undefined' && mw.config ) ?
-			mw.config.get( 'wgLayersContextAwareToolbar', true ) : true;
+		// Context-aware toolbar is always enabled (legacy mode removed in v1.5.36)
+		this.contextAwareEnabled = true;
 		this.currentToolContext = 'pointer';
 
 		// Input validators
@@ -750,35 +749,8 @@ class ToolbarStyleControls {
 	}
 
 	/**
-	 * Check if context-aware toolbar is enabled
-	 *
-	 * @return {boolean} True if context-aware mode is active
-	 */
-	isContextAwareEnabled() {
-		return this.contextAwareEnabled;
-	}
-
-	/**
-	 * Enable or disable context-aware toolbar mode
-	 *
-	 * @param {boolean} enabled Whether to enable context-aware mode
-	 */
-	setContextAwareEnabled( enabled ) {
-		this.contextAwareEnabled = enabled;
-		if ( this.container ) {
-			if ( enabled ) {
-				this.container.classList.add( 'context-aware' );
-				this.updateContextVisibility( this.currentToolContext );
-			} else {
-				this.container.classList.remove( 'context-aware' );
-				// Show all controls when disabled
-				this.showAllControls();
-			}
-		}
-	}
-
-	/**
-	 * Show all controls (for legacy mode or when a layer is selected)
+	 * Show all controls
+	 * @deprecated Context-aware toolbar is always enabled as of v1.5.36
 	 */
 	showAllControls() {
 		if ( this.mainStyleRow ) {

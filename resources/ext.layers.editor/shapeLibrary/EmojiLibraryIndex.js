@@ -5,7 +5,7 @@
  * Generated: 2026-01-26T18:19:00.633Z
  *
  * Lightweight index with 2817 emoji.
- * SVG data is loaded on-demand from the server.
+ * SVG data is loaded on-demand from emoji-bundle.json (single file).
  *
  * @file
  */
@@ -2899,19 +2899,56 @@
 		],
 	};
 
-	// SVG cache
+	// SVG bundle (loaded from emoji-bundle.json)
+	let svgBundle = null;
+	let bundleLoadPromise = null;
+
+	// SVG cache for backward compatibility
 	const svgCache = {};
 
 	/**
-	 * Emoji Library API (lightweight, on-demand loading)
+	 * Load the emoji bundle JSON file
+	 *
+	 * @return {Promise<Object>} Promise resolving to the bundle object
+	 */
+	function loadBundle() {
+		if ( svgBundle ) {
+			return Promise.resolve( svgBundle );
+		}
+
+		if ( bundleLoadPromise ) {
+			return bundleLoadPromise;
+		}
+
+		const bundlePath = mw.config.get( 'wgExtensionAssetsPath' ) +
+			'/Layers/resources/ext.layers.editor/shapeLibrary/emoji-bundle.json';
+
+		bundleLoadPromise = fetch( bundlePath )
+			.then( ( response ) => {
+				if ( !response.ok ) {
+					throw new Error( 'Failed to load emoji bundle' );
+				}
+				return response.json();
+			} )
+			.then( ( data ) => {
+				// Bundle structure: { version, generated, count, emoji: { filename: svg, ... } }
+				svgBundle = data.emoji || data;
+				return svgBundle;
+			} )
+			.catch( ( error ) => {
+				// Reset promise on failure so it can be retried
+				bundleLoadPromise = null;
+				throw error;
+			} );
+
+		return bundleLoadPromise;
+	}
+
+	/**
+	 * Emoji Library API (uses bundled SVG data)
 	 */
 	window.Layers = window.Layers || {};
 	window.Layers.EmojiLibrary = {
-		/**
-		 * Base path for emoji SVG files
-		 */
-		basePath: mw.config.get( 'wgExtensionAssetsPath' ) + '/Layers/resources/ext.layers.editor/shapeLibrary/assets/noto_emoji/',
-
 		/**
 		 * Get all categories
 		 *
@@ -2934,22 +2971,30 @@
 		/**
 		 * Load SVG for an emoji (async)
 		 *
+		 * Uses the bundled emoji-bundle.json file (loaded once, cached).
+		 *
 		 * @param {string} filename - e.g., "emoji_u1f600.svg"
 		 * @return {Promise<string>} SVG content
 		 */
 		loadSVG( filename ) {
+			// Check cache first (for backward compatibility)
 			if ( svgCache[ filename ] ) {
 				return Promise.resolve( svgCache[ filename ] );
 			}
 
-			return fetch( this.basePath + filename )
-				.then( ( response ) => {
-					if ( !response.ok ) {
-						throw new Error( 'Failed to load emoji: ' + filename );
+			// Check bundle if already loaded
+			if ( svgBundle && svgBundle[ filename ] ) {
+				svgCache[ filename ] = svgBundle[ filename ];
+				return Promise.resolve( svgBundle[ filename ] );
+			}
+
+			// Load bundle and get SVG
+			return loadBundle()
+				.then( ( bundle ) => {
+					const svg = bundle[ filename ];
+					if ( !svg ) {
+						throw new Error( 'Emoji not found in bundle: ' + filename );
 					}
-					return response.text();
-				} )
-				.then( ( svg ) => {
 					svgCache[ filename ] = svg;
 					return svg;
 				} );
@@ -2962,33 +3007,31 @@
 		 * @return {string|null}
 		 */
 		getCachedSVG( filename ) {
-			return svgCache[ filename ] || null;
+			// Check cache first
+			if ( svgCache[ filename ] ) {
+				return svgCache[ filename ];
+			}
+			// Check bundle if loaded
+			if ( svgBundle && svgBundle[ filename ] ) {
+				svgCache[ filename ] = svgBundle[ filename ];
+				return svgBundle[ filename ];
+			}
+			return null;
 		},
 
 		/**
-		 * Preload SVGs for a category
+		 * Preload the emoji bundle
 		 *
-		 * @param {string} categoryId
+		 * This loads the entire bundle once. Individual category preloading
+		 * is no longer needed since all SVGs are in the bundle.
+		 *
+		 * @param {string} _categoryId - Ignored, loads entire bundle
 		 * @return {Promise}
 		 */
-		preloadCategory( categoryId ) {
-			const emoji = EMOJI_INDEX[ categoryId ] || [];
-
-			// Load in batches of 20
-			const batchSize = 20;
-			const batches = [];
-
-			for ( let i = 0; i < emoji.length; i += batchSize ) {
-				batches.push( emoji.slice( i, i + batchSize ) );
-			}
-
-			return batches.reduce( ( promise, batch ) => {
-				return promise.then( () => {
-					return Promise.all( batch.map( ( e ) => {
-						return this.loadSVG( e.f ).catch( () => null );
-					} ) );
-				} );
-			}, Promise.resolve() );
+		preloadCategory( _categoryId ) {
+			// Load the bundle (all emoji are loaded at once)
+			// _categoryId parameter kept for API compatibility
+			return loadBundle();
 		},
 
 		/**
@@ -2998,6 +3041,15 @@
 		 */
 		getTotalCount() {
 			return 2817;
+		},
+
+		/**
+		 * Check if the bundle is loaded
+		 *
+		 * @return {boolean}
+		 */
+		isBundleLoaded() {
+			return svgBundle !== null;
 		}
 	};
 }() );

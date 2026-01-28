@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** January 27, 2026  
-**Version:** 1.5.35  
+**Version:** 1.5.36  
 **Status:** Production-Ready, High Quality (8.5/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
@@ -22,7 +22,7 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **10,658** (157 suites) | ✅ Excellent |
+| Tests passing | **10,668** (157 suites) | ✅ Excellent |
 | Statement coverage | **93.52%** | ✅ Excellent |
 | Branch coverage | **84.24%** | ✅ Excellent |
 | Function coverage | **91.79%** | ✅ Excellent |
@@ -84,7 +84,7 @@ All high-priority issues have been resolved:
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 4 OPEN ITEMS
+## Phase 2 (P2): Medium Priority — 🟡 3 OPEN ITEMS
 
 ### P2.1 Add .catch() Handlers to Missing Promise Chains
 
@@ -478,13 +478,13 @@ All high-priority issues have been resolved:
 
 | Item | Status | Priority |
 |------|--------|----------|
-| P2.1: Add .catch() handlers | Open | High (quick win) |
+| P2.1: Add .catch() handlers | ✅ Complete | Done |
 | P2.2: DB return types | Open | Medium |
 | P2.3: HistoryManager memory | Mitigated | Medium |
 | P2.4: JS god classes | Ongoing | Medium |
 | P2.5: PHP god classes | Planned | Medium |
 | P2.6: ShapeLibrary E2E | Partial | Medium |
-| P2.7: Deprecated code dates | Open | Low (quick win) |
+| P2.7: Deprecated code dates | ✅ Complete | Done |
 
 ### Blocked (🔴)
 
@@ -495,9 +495,9 @@ None currently blocked.
 ## Next Steps
 
 ### Quick Wins (This Week)
-1. **P2.1:** Add .catch() to 2 Promise chains — 30 min
-2. **P2.7:** Add removal dates to deprecated code — 30 min
-3. **P3.12:** Exclude generated files from coverage — 10 min
+1. ~~**P2.1:** Add .catch() to 2 Promise chains~~ ✅ Done
+2. ~~**P2.7:** Add removal dates to deprecated code~~ ✅ Done
+3. ~~**P3.12:** Exclude generated files from coverage~~ ✅ Done
 
 ### This Sprint
 4. **P2.2:** Standardize DB return types
@@ -520,14 +520,14 @@ None currently blocked.
 
 | Metric | Current | Target | Notes |
 |--------|---------|--------|-------|
-| Test count | 10,658 | Maintain | No regression |
+| Test count | 10,668 | Maintain | No regression |
 | Statement coverage | 93.52% | ≥92% | Threshold in jest.config |
 | Branch coverage | 84.24% | ≥80% | Threshold in jest.config |
 | Hand-written god classes (JS) | 18 | ≤12 | Reduce by 6 |
 | PHP god classes | 2 | 0 | Refactor both |
 | Deprecated markers | 6 | 0 | Remove in v2.0 |
 | ESLint disables | 11 | ≤15 | Minimized |
-| Missing .catch() handlers | 2 | 0 | P2.1 priority |
+| Missing .catch() handlers | 0 | 0 | ✅ P2.1 complete |
 | Overall score | 8.5 | 9.0 | Path to world-class |
 
 ---
