@@ -810,26 +810,29 @@ describe( 'SmartGuidesController', () => {
 			controller.renderGuides( mockCtx, 1, 0, 0 );
 
 			expect( mockCtx.save ).toHaveBeenCalled();
-			expect( mockCtx.setTransform ).toHaveBeenCalledWith( 1, 0, 0, 1, 0, 0 );
+			// No setTransform call - guides are drawn at layer coordinates, CSS handles zoom/pan
+			expect( mockCtx.setTransform ).not.toHaveBeenCalled();
 			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			// Draw at layer coordinates (not screen coordinates)
 			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 100, 0 );
 			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 100, 600 );
 			expect( mockCtx.stroke ).toHaveBeenCalled();
 			expect( mockCtx.restore ).toHaveBeenCalled();
 		} );
 
-		it( 'should reset transform before drawing to prevent double transformation', () => {
-			// This test verifies the fix for the bug where guides were drawn at wrong
-			// positions because the canvas context already had zoom/pan transforms
-			// applied from redraw(), and renderGuides was applying them again.
+		it( 'should draw guides at layer coordinates since CSS handles zoom/pan', () => {
+			// CSS transform on the canvas element handles visual zoom/pan with
+			// canvas.style.transform = 'translate(panX, panY) scale(zoom)'
+			// Therefore guides should be drawn at layer coordinates (not screen
+			// coordinates) to avoid double-transformation.
 			controller.activeGuides = [ { type: 'vertical', x: 100, isCenter: false } ];
-			controller.renderGuides( mockCtx, 2, 50, 30 ); // zoom=2, panX=50, panY=30
+			controller.renderGuides( mockCtx, 2, 50, 30 ); // zoom/pan passed but not used
 
-			// setTransform(1,0,0,1,0,0) should be called to reset to identity matrix
-			expect( mockCtx.setTransform ).toHaveBeenCalledWith( 1, 0, 0, 1, 0, 0 );
+			// No setTransform call - keep existing context transform
+			expect( mockCtx.setTransform ).not.toHaveBeenCalled();
 
-			// The screen position should be calculated as: x * zoom + panX = 100 * 2 + 50 = 250
-			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 250, 0 );
+			// Draw at layer coordinates, not screen coordinates (no zoom * panX applied)
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 100, 0 );
 		} );
 
 		it( 'should render horizontal guide', () => {
@@ -840,12 +843,12 @@ describe( 'SmartGuidesController', () => {
 			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 800, 200 );
 		} );
 
-		it( 'should apply zoom and pan', () => {
+		it( 'should ignore zoom and pan parameters since CSS handles them', () => {
 			controller.activeGuides = [ { type: 'vertical', x: 100, isCenter: false } ];
-			controller.renderGuides( mockCtx, 2, 50, 0 ); // zoom=2, panX=50
+			controller.renderGuides( mockCtx, 2, 50, 0 ); // zoom=2, panX=50 - should be ignored
 
-			// screenX = 100 * 2 + 50 = 250
-			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 250, 0 );
+			// Guides drawn at layer coordinates regardless of zoom/pan params
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 100, 0 );
 		} );
 
 		it( 'should use different style for center guides', () => {
@@ -857,7 +860,7 @@ describe( 'SmartGuidesController', () => {
 	} );
 
 	describe( 'render', () => {
-		it( 'should call renderGuides with manager zoom/pan', () => {
+		it( 'should call renderGuides and draw at layer coordinates', () => {
 			const mockCtx = {
 				save: jest.fn(),
 				restore: jest.fn(),
@@ -879,9 +882,8 @@ describe( 'SmartGuidesController', () => {
 
 			controller.render( mockCtx );
 
-			// Should apply manager's zoom/pan
-			const expectedScreenX = 100 * 1.5 + 20; // 170
-			expect( mockCtx.moveTo ).toHaveBeenCalledWith( expectedScreenX, 0 );
+			// Guides are drawn at layer coordinates; CSS handles zoom/pan visually
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 100, 0 );
 		} );
 	} );
 

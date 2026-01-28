@@ -631,12 +631,29 @@
 		/**
 		 * Render active smart guides on the canvas
 		 *
+		 * CSS vs Canvas Transform Architecture:
+		 * ZoomPanController applies CSS transform on the canvas element:
+		 *   canvas.style.transform = 'translate(panX, panY) scale(zoom)'
+		 * CanvasRenderer sets context transform to identity via setTransform(1,0,0).
+		 * Layers are drawn at layer coordinates; CSS handles visual zoom/pan.
+		 *
+		 * Therefore, guides should also be drawn at layer coordinates (not screen
+		 * coordinates) - CSS will apply the same zoom/pan transformation visually.
+		 * Previously this function calculated screenX = guide.x * zoom + panX, but
+		 * since CSS applies the same transform, that resulted in double-transformation.
+		 *
 		 * @param {CanvasRenderingContext2D} ctx - Canvas context
-		 * @param {number} zoom - Current zoom level
-		 * @param {number} panX - Current pan X offset
-		 * @param {number} panY - Current pan Y offset
+		 * @param {number} zoom - Current zoom level (unused - for backwards compat)
+		 * @param {number} panX - Current pan X offset (unused - for backwards compat)
+		 * @param {number} panY - Current pan Y offset (unused - for backwards compat)
 		 */
 		renderGuides( ctx, zoom, panX, panY ) {
+			// Parameters zoom, panX, panY are kept for API compatibility but not used.
+			// CSS handles zoom/pan via canvas element transform.
+			void zoom;
+			void panX;
+			void panY;
+
 			if ( !this.showGuides || this.activeGuides.length === 0 ) {
 				return;
 			}
@@ -646,10 +663,9 @@
 
 			ctx.save();
 
-			// Reset transform to identity - we calculate screen coordinates manually
-			// This fixes the bug where guides were drawn at wrong positions because
-			// the canvas context already had zoom/pan transforms applied from redraw()
-			ctx.setTransform( 1, 0, 0, 1, 0, 0 );
+			// Do NOT reset the transform - keep the same identity transform that
+			// CanvasRenderer uses for layers. CSS applies zoom/pan to the canvas element.
+			// Guides should be drawn at layer coordinates, matching how layers are drawn.
 
 			for ( const guide of this.activeGuides ) {
 				// Choose color based on guide type
@@ -671,15 +687,15 @@
 				ctx.beginPath();
 
 				if ( guide.type === 'vertical' ) {
-					// Draw vertical line across full canvas height
-					const screenX = guide.x * zoom + panX;
-					ctx.moveTo( screenX, 0 );
-					ctx.lineTo( screenX, canvasHeight );
+					// Draw vertical line at layer X coordinate across full canvas height
+					// CSS transform handles converting to screen coordinates
+					ctx.moveTo( guide.x, 0 );
+					ctx.lineTo( guide.x, canvasHeight );
 				} else if ( guide.type === 'horizontal' ) {
-					// Draw horizontal line across full canvas width
-					const screenY = guide.y * zoom + panY;
-					ctx.moveTo( 0, screenY );
-					ctx.lineTo( canvasWidth, screenY );
+					// Draw horizontal line at layer Y coordinate across full canvas width
+					// CSS transform handles converting to screen coordinates
+					ctx.moveTo( 0, guide.y );
+					ctx.lineTo( canvasWidth, guide.y );
 				}
 
 				ctx.stroke();
