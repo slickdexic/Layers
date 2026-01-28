@@ -646,6 +646,11 @@
 
 			ctx.save();
 
+			// Reset transform to identity - we calculate screen coordinates manually
+			// This fixes the bug where guides were drawn at wrong positions because
+			// the canvas context already had zoom/pan transforms applied from redraw()
+			ctx.setTransform( 1, 0, 0, 1, 0, 0 );
+
 			for ( const guide of this.activeGuides ) {
 				// Choose color based on guide type
 				if ( guide.isCanvas ) {

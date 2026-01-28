@@ -2,6 +2,34 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.36] - 2026-01-27
+
+### Added
+- **Callout Inline Text Editing** — Callout layers now support double-click inline text editing with floating toolbar, matching textbox behavior
+  - Added `callout` to `canEdit()` method in `InlineTextEditor.js`
+  - Added `_isMultilineType()` helper method for textbox/callout type checking
+  - Updated `CanvasEvents.js` to allow double-click on callout layers
+  - Added 12 new tests for callout editing support
+
+### Changed
+- **Slide Parameter Simplification** — Replaced `lock=none|size|all` parameter with simpler `noedit` flag
+  - `noedit` hides the edit overlay button for view-only slides
+  - Removed complex lock mode logic from SlideHooks.php, ViewerManager.js, SlidePropertiesPanel.js
+  - Updated wiki documentation (Slide-Mode.md, Wikitext-Syntax.md)
+
+### Fixed
+- **Slide Revision Loading** — Fixed "Revision not found" error when loading specific slide revisions
+  - Changed API response key from `set_revisions` to `all_layersets` for JS compatibility
+  - Added `layersetid` parameter support to `executeSlideRequest()` with security check
+  - Ensures slide revision history works correctly in the editor
+
+### Technical Details
+- All 10,680+ tests pass (157 test suites)
+- Test coverage: 93%+ statement coverage
+- ESLint/Stylelint/Banana all pass
+
+---
+
 ## [1.5.35] - 2026-01-26
 
 ### Fixed
@@ -17,16 +45,16 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Improved
 - **Documentation Metrics** — Updated all stale metrics in documentation files
-  - Test count: 10,643 tests in 157 suites
-  - Coverage: 94.15% statement, 84.43% branch, 92.18% function, 94.28% line
-  - JS files: 127, ~115,271 lines
-  - PHP files: 40, ~14,225 lines
+  - Test count: 10,658 tests in 157 suites
+  - Coverage: 93.52% statement, 84.24% branch, 91.79% function, 93.66% line
+  - JS files: 127, ~115,282 lines
+  - PHP files: 40, ~14,388 lines
   - ESLint disables: 11 (all legitimate)
-  - i18n messages: 684
-- **Codebase Review** — Comprehensive critical review (v38) with all issues documented
-  - Overall score: 8.3/10
-  - Identified 1 critical issue (version inconsistencies), 1 high issue (stale docs)
-  - Updated improvement_plan.md with new P0/P1 items
+  - i18n messages: 697
+- **Codebase Review** — Comprehensive critical review (v40) with all issues documented
+  - Overall score: 8.5/10
+  - 0 critical issues, 0 high issues, 7 medium issues, 9 low issues
+  - Updated codebase_review.md and improvement_plan.md
 
 ---
 

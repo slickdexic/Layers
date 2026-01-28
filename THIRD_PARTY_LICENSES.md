@@ -21,7 +21,7 @@ The Layers extension includes the following third-party assets:
 
 ## Google Noto Color Emoji
 
-**Location:** `resources/ext.layers.editor/shapeLibrary/assets/noto_emoji/`
+**Location:** `resources/ext.layers.editor/shapeLibrary/emoji-bundle.json`
 
 **Source:** https://github.com/googlefonts/noto-emoji
 

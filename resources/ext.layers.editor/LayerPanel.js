@@ -526,7 +526,7 @@
 		}
 
 		/**
-		 * @deprecated Use createFolder() instead
+		 * @deprecated since 1.4.0 - Use createFolder() instead. Will be removed in v2.0.
 		 * Create a group from currently selected layers (legacy method)
 		 */
 		createGroupFromSelection() {
@@ -883,7 +883,7 @@
 		 * No-op kept for backward compatibility.
 		 * Code panel functionality was removed; this stub prevents errors from old callers.
 		 *
-		 * @deprecated since 1.5.0 - Code panel moved to UIManager
+		 * @deprecated since 1.5.0 - Code panel moved to UIManager. Will be removed in v2.0.
 		 * @return {void}
 		 */
 		updateCodePanel() {}
@@ -1227,6 +1227,15 @@
 				this.editor.stateManager.set( 'layers', layers );
 			}
 			// renderLayerList will be called by the state subscription
+		}
+
+		/**
+		 * Alias for updateLayers for backwards compatibility
+		 *
+		 * @param {Array} layers New layers array
+		 */
+		updateLayerList( layers ) {
+			this.updateLayers( layers );
 		}
 
 		/**

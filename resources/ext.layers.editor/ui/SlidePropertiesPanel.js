@@ -121,10 +121,6 @@
 			const bgRow = this.createBackgroundRow();
 			content.appendChild( bgRow );
 
-			// Lock indicator row
-			const lockRow = this.createLockRow();
-			content.appendChild( lockRow );
-
 			// Embed code row
 			const embedRow = this.createEmbedRow();
 			content.appendChild( embedRow );
@@ -360,37 +356,6 @@
 		}
 
 		/**
-		 * Create lock mode indicator row
-		 *
-		 * @return {HTMLElement}
-		 */
-		createLockRow() {
-			const row = document.createElement( 'div' );
-			row.className = 'slide-prop-row slide-lock-row';
-			row.style.display = 'none'; // Hidden when not locked
-
-			const indicator = document.createElement( 'div' );
-			indicator.className = 'slide-lock-indicator';
-
-			const icon = document.createElement( 'span' );
-			icon.className = 'slide-lock-icon';
-			icon.textContent = '🔒';
-
-			const text = document.createElement( 'span' );
-			text.className = 'slide-lock-text';
-			text.textContent = msg( 'layers-slide-size-locked', 'Size locked by template' );
-
-			indicator.appendChild( icon );
-			indicator.appendChild( text );
-			row.appendChild( indicator );
-
-			this.lockRow = row;
-			this.lockText = text;
-
-			return row;
-		}
-
-		/**
 		 * Create embed code row
 		 *
 		 * @return {HTMLElement}
@@ -446,45 +411,13 @@
 		 * Show or hide the panel based on slide mode
 		 *
 		 * @param {boolean} isSlide Whether in slide mode
-		 * @param {string} lockMode Lock mode ('none', 'size', 'all')
 		 */
-		updateVisibility( isSlide, lockMode ) {
+		updateVisibility( isSlide ) {
 			if ( !this.panel ) {
 				return;
 			}
 
 			this.panel.style.display = isSlide ? '' : 'none';
-
-			if ( !isSlide ) {
-				return;
-			}
-
-			// Handle lock modes
-			const isSizeLocked = lockMode === 'size' || lockMode === 'all';
-			const isFullyLocked = lockMode === 'all';
-
-			// Disable size inputs when locked
-			if ( this.widthInput ) {
-				this.widthInput.disabled = isSizeLocked;
-			}
-			if ( this.heightInput ) {
-				this.heightInput.disabled = isSizeLocked;
-			}
-
-			// Disable background when fully locked
-			if ( this.bgColorButton ) {
-				this.bgColorButton.disabled = isFullyLocked;
-			}
-
-			// Show lock indicator
-			if ( this.lockRow ) {
-				this.lockRow.style.display = isSizeLocked ? '' : 'none';
-				if ( this.lockText ) {
-					this.lockText.textContent = isFullyLocked ?
-						msg( 'layers-slide-locked', 'This slide is locked' ) :
-						msg( 'layers-slide-size-locked', 'Size locked by template' );
-				}
-			}
 		}
 
 		/**

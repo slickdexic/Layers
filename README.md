@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.2%25-brightgreen)](coverage/lcov-report/index.html)
+[![Coverage](https://img.shields.io/badge/coverage-93.5%25-brightgreen)](coverage/lcov-report/index.html)
 [![Tests](https://img.shields.io/badge/tests-10%2C643%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.35 (January 26, 2026)  
+> **Version:** 1.5.36 (January 26, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -46,7 +46,8 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 ### Slide Wikitext Syntax
 
 ```wikitext
-{{#Slide: MySlide}}                              <!-- Render slide "MySlide" -->
+{{#Slide: MySlide}}                              <!-- Render slide "MySlide" (default layer set) -->
+{{#Slide: MySlide | layerset=annotations}}       <!-- Render specific named layer set -->
 {{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
 {{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
 {{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
@@ -57,8 +58,9 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - **`Special:Slides`** — Browse, search, and manage all slides
 - **`Special:EditSlide/SlideName`** — Direct link to edit a specific slide
-- Slides are stored separately from image layer sets
-- Each slide has its own version history
+- **`Special:EditSlide/SlideName?layerset=setname`** — Edit a specific layer set
+- Slides support multiple named layer sets (just like images)
+- Each slide has its own version history per layer set
 
 ### Key Features
 
@@ -310,21 +312,21 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 - **Frontend:** HTML5 Canvas editor with **124 JS files (111,382 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **20 god classes** (files >1,000 lines), 3 are generated data files (exempt)
-  - EmojiLibraryData.js (26,277 lines) - generated emoji index data
+- **Technical Debt:** **19 god classes** (files >1,000 lines), 2 are generated data files (exempt)
   - ShapeLibraryData.js (11,299 lines) - generated shape definitions
-    - 17 hand-written files with proper delegation patterns
+  - EmojiLibraryIndex.js (3,055 lines) - generated emoji search index
+  - 17 hand-written files with proper delegation patterns
 
-**Test Coverage (Last recorded — January 25, 2026):**
+**Test Coverage (Last recorded — January 26, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 10,613 passing (157 suites) |
+| Jest tests | 10,658 passing (157 suites) |
 | PHPUnit tests | 24 test files |
-| Statement coverage | 94.20% |
-| Branch coverage | 84.46% |
-| Function coverage | 92.21% |
-| Line coverage | 94.34% |
+| Statement coverage | 93.52% |
+| Branch coverage | 84.24% |
+| Function coverage | 91.79% |
+| Line coverage | 93.66% |
 
 **Security:**
 
@@ -376,13 +378,13 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 127 | ✅ |
-| Total JS lines | ~114,832 | ✅ Includes generated data |
+| Total JS lines | ~115,282 | ✅ Includes generated data |
 | ES6 classes | 127 | ✅ 100% migrated |
 | God classes (>1000 lines) | 21 | ⚠️ 3 generated, 18 with delegation |
-| Tests passing | 10,613 | ✅ |
+| Tests passing | 10,658 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.20% | ✅ Excellent |
-| Branch coverage | 84.46% | ✅ Target met |
+| Statement coverage | 93.52% | ✅ Excellent |
+| Branch coverage | 84.24% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

@@ -99,14 +99,14 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 20 files exceed 1,000 lines:
-    - **Generated data files (exempt from refactoring):** EmojiLibraryData.js (~26,277 lines), ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,003 lines)
+  - **God classes:** 19 files exceed 1,000 lines:
+    - **Generated data files (exempt from refactoring):** ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,055 lines)
     - **Hand-written files:** CanvasManager, LayerPanel, Toolbar, LayersEditor, SelectionManager, APIManager, ArrowRenderer, CalloutRenderer, PropertyBuilders, ToolManager, InlineTextEditor, CanvasRenderer, GroupManager, ResizeCalculator, ToolbarStyleControls, TransformController
     - All hand-written files use delegation patterns, see improvement_plan.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
-    - `EmojiLibraryData.js` (~26,277 lines) - Generated data file containing all emoji metadata
-    - `EmojiLibraryIndex.js` (~3,003 lines) - Generated search index for fast emoji lookup
+    - `EmojiLibraryIndex.js` (~3,055 lines) - Generated search index for fast emoji lookup
+    - `emoji-bundle.json` - Bundled SVG data (all 2,817 emoji in single JSON file, loaded on-demand)
     - `EmojiPickerPanel.js` (~500 lines) - OOUI PopupWidget-based emoji picker UI
     - `emoji-picker.css` (~300 lines) - Styles for the emoji picker panel
     - Architecture: Lazy-loaded SVG thumbnails using IntersectionObserver; 19 categories; full-text search
@@ -378,11 +378,11 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (10,643 tests in 157 suites — verified January 26, 2026)
-- Coverage (94.15% statement, 84.43% branch — verified January 26, 2026)
+- Test count (10,668 tests in 157 suites — verified January 27, 2026)
+- Coverage (93.52% statement, 84.24% branch — verified January 26, 2026)
 - JavaScript file count (127 files total, ~115,271 lines)
 - PHP file count (40 files, ~14,225 lines)
-- God class count (21 files >1,000 lines; 3 generated data files, 18 hand-written)
+- God class count (19 files >1,000 lines; 2 generated data files, 17 hand-written)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)

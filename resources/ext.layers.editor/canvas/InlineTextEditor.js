@@ -71,7 +71,19 @@
 				return false;
 			}
 
-			return layer.type === 'text' || layer.type === 'textbox';
+			return layer.type === 'text' || layer.type === 'textbox' || layer.type === 'callout';
+		}
+
+		/**
+		 * Check if a layer is a multiline type (textbox or callout)
+		 * These layer types have a visible background and support multiline text.
+		 *
+		 * @private
+		 * @param {Object} layer - Layer to check
+		 * @return {boolean} True if layer is a multiline type
+		 */
+		_isMultilineType( layer ) {
+			return layer && ( layer.type === 'textbox' || layer.type === 'callout' );
 		}
 
 		/**
@@ -109,10 +121,10 @@
 			this._positionEditor();
 			this._setupEventHandlers();
 
-			// For textbox layers, keep the background visible by clearing the text
+			// For textbox/callout layers, keep the background visible by clearing the text
 			// For simple text layers, hide the layer entirely
 			// Do this AFTER creating the editor so it gets the original text
-			if ( layer.type === 'textbox' ) {
+			if ( this._isMultilineType( layer ) ) {
 				// Clear layer text so only background renders on canvas
 				this._originalVisible = true;
 				layer.text = '';
@@ -159,7 +171,7 @@
 
 			const shouldApply = apply !== false;
 			let changesApplied = false;
-			const wasTextbox = this.editingLayer && this.editingLayer.type === 'textbox';
+			const wasTextbox = this._isMultilineType( this.editingLayer );
 
 			if ( shouldApply && this.editorElement && this.editingLayer ) {
 				const newText = this.editorElement.value;
@@ -256,7 +268,7 @@
 			}
 
 			// Determine if we need a textarea (multiline) or input (single line)
-			const isMultiline = layer.type === 'textbox';
+			const isMultiline = this._isMultilineType( layer );
 
 			// Create the appropriate text element
 			if ( isMultiline ) {
@@ -328,8 +340,8 @@
 			style.fontStyle = layer.fontStyle || 'normal';
 			style.color = layer.color || layer.fill || '#000000';
 
-			// Text alignment for textbox
-			if ( layer.type === 'textbox' ) {
+			// Text alignment for textbox/callout
+			if ( this._isMultilineType( layer ) ) {
 				style.textAlign = layer.textAlign || 'left';
 				style.lineHeight = ( layer.lineHeight || 1.2 ).toString();
 			} else {
@@ -373,7 +385,7 @@
 			let width, height;
 			let padding = 0;
 
-			if ( layer.type === 'textbox' ) {
+			if ( this._isMultilineType( layer ) ) {
 				width = layer.width || 200;
 				height = layer.height || 100;
 				padding = layer.padding || 8;
@@ -409,7 +421,7 @@
 					left: centerX + 'px',
 					top: centerY + 'px',
 					width: Math.max( 50, screenWidth ) + 'px',
-					height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
+					height: this._isMultilineType( layer ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
 					fontSize: scaledFontSize + 'px',
 					padding: scaledPadding + 'px',
 					transform: `translate(-50%, -50%) rotate(${ rotation }deg)`,
@@ -421,7 +433,7 @@
 					left: screenX + 'px',
 					top: screenY + 'px',
 					width: Math.max( 50, screenWidth ) + 'px',
-					height: ( layer.type === 'textbox' ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
+					height: this._isMultilineType( layer ) ? Math.max( 30, screenHeight ) + 'px' : 'auto',
 					fontSize: scaledFontSize + 'px',
 					padding: scaledPadding + 'px',
 					transform: 'none',
@@ -533,8 +545,8 @@
 				return;
 			}
 
-			// Enter to finish for simple text (not textbox)
-			if ( e.key === 'Enter' && this.editingLayer && this.editingLayer.type === 'text' ) {
+			// Enter to finish for simple text (not textbox/callout which support multiline)
+			if ( e.key === 'Enter' && this.editingLayer && !this._isMultilineType( this.editingLayer ) ) {
 				e.preventDefault();
 				this.finishEditing( true );
 			}
@@ -1047,7 +1059,7 @@
 			}
 
 			const layerId = this.editingLayer.id;
-			const isTextbox = this.editingLayer.type === 'textbox';
+			const isTextbox = this._isMultilineType( this.editingLayer );
 
 			// Build changes object including the format change
 			// Also preserve the editing state (hidden text for textbox, hidden layer for text)

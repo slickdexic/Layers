@@ -164,11 +164,10 @@ class SlideHooksTest extends \MediaWikiUnitTestCase {
 		$args = [
 			'MySlideName',
 			'canvas=1024x768',
-			'lock=size',
+			'noedit',
 			'background=#ff0000',
 			'class=my-custom-class',
 			'placeholder=Click to add content',
-			'editable=yes',
 			'layerset=annotations',
 		];
 
@@ -176,11 +175,10 @@ class SlideHooksTest extends \MediaWikiUnitTestCase {
 
 		$this->assertEquals( 'MySlideName', $result['name'] );
 		$this->assertEquals( '1024x768', $result['canvas'] );
-		$this->assertEquals( 'size', $result['lock'] );
+		$this->assertArrayHasKey( 'noedit', $result );
 		$this->assertEquals( '#ff0000', $result['background'] );
 		$this->assertEquals( 'my-custom-class', $result['class'] );
 		$this->assertEquals( 'Click to add content', $result['placeholder'] );
-		$this->assertEquals( 'yes', $result['editable'] );
 		$this->assertEquals( 'annotations', $result['layerset'] );
 	}
 
@@ -196,14 +194,14 @@ class SlideHooksTest extends \MediaWikiUnitTestCase {
 		$args = [
 			'  MySlideName  ',
 			'  canvas = 800x600  ',
-			'  lock = all  ',
+			'  noedit  ',
 		];
 
 		$result = $method->invoke( null, $frame, $args );
 
 		$this->assertEquals( 'MySlideName', $result['name'] );
 		$this->assertEquals( '800x600', $result['canvas'] );
-		$this->assertEquals( 'all', $result['lock'] );
+		$this->assertArrayHasKey( 'noedit', $result );
 	}
 
 	/**
@@ -218,14 +216,14 @@ class SlideHooksTest extends \MediaWikiUnitTestCase {
 		$args = [
 			'MySlideName',
 			'Canvas=800x600',
-			'LOCK=size',
+			'NOEDIT',
 			'LayerSet=mySet',
 		];
 
 		$result = $method->invoke( null, $frame, $args );
 
 		$this->assertArrayHasKey( 'canvas', $result );
-		$this->assertArrayHasKey( 'lock', $result );
+		$this->assertArrayHasKey( 'noedit', $result );
 		$this->assertArrayHasKey( 'layerset', $result );
 	}
 

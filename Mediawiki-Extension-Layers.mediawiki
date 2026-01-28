@@ -7,7 +7,7 @@
 |type3           = page action
 |type4           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.35
+|version         = 1.5.36
 |update          = 2026-01-26
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -65,16 +65,34 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 |}
 
 == Slide Mode (v1.5.22+) ==
-'''Create standalone canvas graphics without requiring a base image.''' Slides are perfect for diagrams, infographics, flowcharts, and presentations.
+'''Create standalone canvas graphics without requiring a base image.''' Slides are perfect for diagrams, infographics, flowcharts, and presentations. Like images, slides support '''multiple named layer sets''' for different annotation variations.
 
 === Slide Syntax ===
 <syntaxhighlight lang="wikitext">
-{{#Slide: MySlide}}                              <!-- Render slide "MySlide" -->
+{{#Slide: MySlide}}                              <!-- Render slide "MySlide" (default layer set) -->
+{{#Slide: MySlide | layerset=annotations}}       <!-- Render specific named layer set -->
 {{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
 {{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
 {{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
 {{#Slide: MySlide | size=800x600 | lock=view}}   <!-- View-only (no edit overlay) -->
 </syntaxhighlight>
+
+=== Slide Parameters ===
+{| class="wikitable"
+! Parameter !! Description !! Example
+|-
+| <code>layerset</code> || Named layer set to display (default: "default") || <code>layerset=anatomy</code>
+|-
+| <code>canvas</code> || Canvas size in pixels || <code>canvas=1920x1080</code>
+|-
+| <code>size</code> || Display size on page || <code>size=800x600</code>
+|-
+| <code>bgcolor</code> || Background color || <code>bgcolor=#f0f0f0</code>
+|-
+| <code>lock</code> || Lock mode (view or all) || <code>lock=view</code>
+|-
+| <code>class</code> || CSS classes for the container || <code>class=my-diagram</code>
+|}
 
 === Slide Management ===
 {| class="wikitable"
@@ -287,7 +305,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~113k lines including generated shape/emoji data).
-* '''Stability:''' 10,207 Jest tests (156 suites) with 93.27% statement coverage and 83.59% branch coverage.
+* '''Stability:''' 10,658 Jest tests (157 suites) with 93.52% statement coverage and 84.24% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

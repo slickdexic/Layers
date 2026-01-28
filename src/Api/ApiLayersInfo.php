@@ -55,7 +55,7 @@ class ApiLayersInfo extends ApiBase {
 
 		// Handle slide requests (slidename parameter)
 		if ( $slidename !== null && $slidename !== '' ) {
-			$this->executeSlideRequest( $slidename, $setName, $limit );
+			$this->executeSlideRequest( $slidename, $setName, $limit, $layerSetId );
 			return;
 		}
 
@@ -63,7 +63,7 @@ class ApiLayersInfo extends ApiBase {
 		if ( $filename !== null && strpos( $filename, 'Slide:' ) === 0 ) {
 			// Remove 'Slide:' prefix
 			$slidename = substr( $filename, 6 );
-			$this->executeSlideRequest( $slidename, $setName, $limit );
+			$this->executeSlideRequest( $slidename, $setName, $limit, $layerSetId );
 			return;
 		}
 
@@ -264,7 +264,12 @@ class ApiLayersInfo extends ApiBase {
 	 * @param string|null $setName The named set (default: 'default')
 	 * @param int $limit Maximum revisions to return
 	 */
-	private function executeSlideRequest( string $slidename, ?string $setName, int $limit ): void {
+	private function executeSlideRequest(
+		string $slidename,
+		?string $setName,
+		int $limit,
+		?int $layerSetId = null
+	): void {
 		// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
 		$normalizedName = 'Slide:' . $slidename;
 		$fileSha1 = 'slide';
@@ -272,8 +277,22 @@ class ApiLayersInfo extends ApiBase {
 
 		$db = $this->getLayersDatabase();
 
-		// Get the slide layer set
-		$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName );
+		// Get the slide layer set - either by specific ID or by name
+		if ( $layerSetId !== null ) {
+			// Fetch specific revision by ID
+			$layerSet = $db->getLayerSet( $layerSetId );
+			// Verify it belongs to this slide (security check)
+			if ( $layerSet && $layerSet['imgName'] !== $normalizedName ) {
+				$layerSet = null;
+			}
+			// Update setName from the loaded layer set for correct revision history
+			if ( $layerSet && isset( $layerSet['setName'] ) ) {
+				$setName = $layerSet['setName'];
+			}
+		} else {
+			// Fetch by name (latest revision of the set)
+			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName );
+		}
 
 		if ( !$layerSet ) {
 			$result = [
@@ -303,10 +322,10 @@ class ApiLayersInfo extends ApiBase {
 			];
 		}
 
-		// Get revision history for this slide
-		$setRevisions = $db->getSetRevisions( $normalizedName, $fileSha1, $setName, $limit );
-		$setRevisions = $this->enrichWithUserNames( $setRevisions );
-		$result['set_revisions'] = $setRevisions;
+		// Get revision history for this slide (use 'all_layersets' for consistency with file API)
+		$allLayerSets = $db->getSetRevisions( $normalizedName, $fileSha1, $setName, $limit );
+		$allLayerSets = $this->enrichWithUserNames( $allLayerSets );
+		$result['all_layersets'] = $allLayerSets;
 
 		// Get named sets for this slide
 		$namedSets = $db->getNamedSetsForImage( $normalizedName, $fileSha1 );

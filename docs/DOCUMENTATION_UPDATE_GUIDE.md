@@ -1,6 +1,6 @@
 # Documentation Update Guide
 
-**Last Updated:** January 23, 2026
+**Last Updated:** January 26, 2026
 
 This guide ensures all documentation stays synchronized when making changes to the Layers extension. **This is a MANDATORY checklist before every release.**
 
@@ -133,6 +133,20 @@ When adding or removing drawing tools, update these 8 files:
 | `Mediawiki-Extension-Layers.mediawiki` | `|rights =` list |
 | `README.md` | Permissions section if mentioned |
 
+### Slide Mode / Named Layer Sets Changes
+
+When updating Slide Mode or Named Layer Sets features, update these 5 files:
+
+| File | What to Update |
+|------|----------------|
+| `README.md` | Slide Mode section, syntax examples |
+| `Mediawiki-Extension-Layers.mediawiki` | Slide Mode section, parameters table |
+| `wiki/Slide-Mode.md` | Complete slide mode documentation |
+| `wiki/Wikitext-Syntax.md` | Slide parameters table, examples |
+| `docs/SLIDE_MODE.md` | Technical slide mode documentation |
+
+> **Note:** Slides support the same `layerset=` parameter as images for multiple named layer sets. Ensure ALL 5 files document this consistently.
+
 ---
 
 ## ✅ Step-by-Step Release Procedure
@@ -207,6 +221,8 @@ When asked for a code review or metrics update:
 - `wiki/Changelog.md` — Version history mirror
 - `wiki/Drawing-Tools.md` — Tool documentation
 - `wiki/Configuration-Reference.md` — Config options
+- `wiki/Wikitext-Syntax.md` — Wikitext syntax reference
+- `wiki/Slide-Mode.md` — Slide mode documentation
 - Others as needed
 
 ---
@@ -215,6 +231,7 @@ When asked for a code review or metrics update:
 
 | Date | Event |
 |------|-------|
+| January 26, 2026 | Added Slide Mode / Named Layer Sets section with 5-file checklist |
 | January 7, 2026 | Guide enhanced after v1.5.1 was released with stale wiki docs |
 | January 6, 2026 | Guide created to document update procedures |
 

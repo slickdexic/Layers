@@ -1877,7 +1877,6 @@ describe( 'ViewerManager', () => {
 				document.body.innerHTML = `
 					<div class="layers-slide-container"
 						data-slide-name="TestSlide"
-						data-lock-mode="none"
 						data-canvas-width="800"
 						data-canvas-height="600"
 						data-background="#ffffff"
@@ -1937,7 +1936,6 @@ describe( 'ViewerManager', () => {
 				document.body.innerHTML = `
 					<div class="layers-slide-container"
 						data-slide-name="MySlide"
-						data-lock-mode="size"
 						data-canvas-width="1024"
 						data-canvas-height="768"
 						data-background="#f0f0f0"
@@ -1955,7 +1953,6 @@ describe( 'ViewerManager', () => {
 				expect( global.mw.hook ).toHaveBeenCalledWith( 'layers.slide.edit' );
 				expect( hookFireSpy ).toHaveBeenCalledWith( expect.objectContaining( {
 					slideName: 'MySlide',
-					lockMode: 'size',
 					canvasWidth: 1024,
 					canvasHeight: 768,
 					backgroundColor: '#f0f0f0',
@@ -1999,22 +1996,6 @@ describe( 'ViewerManager', () => {
 				expect( url ).toContain( 'setname=custom-set' );
 			} );
 
-			it( 'should include lockmode when not none', () => {
-				global.mw.util = {
-					getUrl: jest.fn( ( page ) => '/wiki/' + page )
-				};
-
-				const url = manager.buildSlideEditorUrl( {
-					slideName: 'TestSlide',
-					layerSetName: 'default',
-					lockMode: 'size',
-					canvasWidth: 800,
-					canvasHeight: 600
-				} );
-
-				expect( url ).toContain( 'lockmode=size' );
-			} );
-
 			it( 'should not include bgcolor in URL (server loads from saved data)', () => {
 				global.mw.util = {
 					getUrl: jest.fn( ( page ) => '/wiki/' + page )
@@ -2038,14 +2019,12 @@ describe( 'ViewerManager', () => {
 				const url = manager.buildSlideEditorUrl( {
 					slideName: 'TestSlide',
 					layerSetName: 'custom',
-					lockMode: 'all',
 					canvasWidth: 800,
 					canvasHeight: 600
 				} );
 
 				expect( url ).toContain( '/wiki/Special:EditSlide/TestSlide' );
 				expect( url ).toContain( 'setname=custom' );
-				expect( url ).toContain( 'lockmode=all' );
 			} );
 		} );
 
@@ -2848,7 +2827,6 @@ describe( 'ViewerManager', () => {
 			it( 'should call openSlideEditor with correct parameters', () => {
 				const container = document.createElement( 'div' );
 				container.setAttribute( 'data-slide-name', 'MySlide' );
-				container.setAttribute( 'data-lock-mode', 'size' );
 				container.setAttribute( 'data-canvas-width', '1024' );
 				container.setAttribute( 'data-canvas-height', '768' );
 				container.setAttribute( 'data-background', '#ff0000' );
@@ -2859,7 +2837,6 @@ describe( 'ViewerManager', () => {
 
 				expect( manager.openSlideEditor ).toHaveBeenCalledWith( {
 					slideName: 'MySlide',
-					lockMode: 'size',
 					canvasWidth: 1024,
 					canvasHeight: 768,
 					backgroundColor: '#ff0000',
@@ -2877,7 +2854,6 @@ describe( 'ViewerManager', () => {
 				expect( manager.openSlideEditor ).toHaveBeenCalledWith(
 					expect.objectContaining( {
 						slideName: 'MinimalSlide',
-						lockMode: 'none',
 						canvasWidth: 800,
 						canvasHeight: 600,
 						backgroundColor: '#ffffff',

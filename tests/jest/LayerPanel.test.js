@@ -688,6 +688,37 @@ describe('LayerPanel', () => {
         });
     });
 
+    describe('updateLayerList', () => {
+        test('should be an alias for updateLayers', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            const newLayers = [
+                { id: 'alias1', type: 'rectangle' },
+                { id: 'alias2', type: 'ellipse' }
+            ];
+
+            // Call updateLayerList (the alias)
+            panel.updateLayerList(newLayers);
+
+            // Should have same effect as updateLayers
+            expect(mockStateManager.get('layers')).toEqual(newLayers);
+        });
+
+        test('should exist as a function for backwards compatibility', () => {
+            const container = document.getElementById('layers-panel-container');
+            const panel = new LayerPanel({
+                container: container,
+                editor: mockEditor
+            });
+
+            expect(typeof panel.updateLayerList).toBe('function');
+        });
+    });
+
     describe('logging methods', () => {
         test('isDebugEnabled should check mw.config', () => {
             const container = document.getElementById('layers-panel-container');

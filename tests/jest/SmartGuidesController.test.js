@@ -780,6 +780,7 @@ describe( 'SmartGuidesController', () => {
 			mockCtx = {
 				save: jest.fn(),
 				restore: jest.fn(),
+				setTransform: jest.fn(),
 				beginPath: jest.fn(),
 				moveTo: jest.fn(),
 				lineTo: jest.fn(),
@@ -809,11 +810,26 @@ describe( 'SmartGuidesController', () => {
 			controller.renderGuides( mockCtx, 1, 0, 0 );
 
 			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.setTransform ).toHaveBeenCalledWith( 1, 0, 0, 1, 0, 0 );
 			expect( mockCtx.beginPath ).toHaveBeenCalled();
 			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 100, 0 );
 			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 100, 600 );
 			expect( mockCtx.stroke ).toHaveBeenCalled();
 			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should reset transform before drawing to prevent double transformation', () => {
+			// This test verifies the fix for the bug where guides were drawn at wrong
+			// positions because the canvas context already had zoom/pan transforms
+			// applied from redraw(), and renderGuides was applying them again.
+			controller.activeGuides = [ { type: 'vertical', x: 100, isCenter: false } ];
+			controller.renderGuides( mockCtx, 2, 50, 30 ); // zoom=2, panX=50, panY=30
+
+			// setTransform(1,0,0,1,0,0) should be called to reset to identity matrix
+			expect( mockCtx.setTransform ).toHaveBeenCalledWith( 1, 0, 0, 1, 0, 0 );
+
+			// The screen position should be calculated as: x * zoom + panX = 100 * 2 + 50 = 250
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 250, 0 );
 		} );
 
 		it( 'should render horizontal guide', () => {
@@ -845,6 +861,7 @@ describe( 'SmartGuidesController', () => {
 			const mockCtx = {
 				save: jest.fn(),
 				restore: jest.fn(),
+				setTransform: jest.fn(),
 				beginPath: jest.fn(),
 				moveTo: jest.fn(),
 				lineTo: jest.fn(),
@@ -1425,6 +1442,7 @@ describe( 'SmartGuidesController', () => {
 					canvas: { width: 800, height: 600 },
 					save: jest.fn(),
 					restore: jest.fn(),
+					setTransform: jest.fn(),
 					beginPath: jest.fn(),
 					moveTo: jest.fn(),
 					lineTo: jest.fn(),
@@ -1449,6 +1467,7 @@ describe( 'SmartGuidesController', () => {
 					canvas: { width: 800, height: 600 },
 					save: jest.fn(),
 					restore: jest.fn(),
+					setTransform: jest.fn(),
 					beginPath: jest.fn(),
 					moveTo: jest.fn(),
 					lineTo: jest.fn(),

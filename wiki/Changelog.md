@@ -4,12 +4,49 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.36 (January 27, 2026)
+
+### Added
+- **Callout Inline Text Editing** — Callout layers now support double-click inline text editing with floating toolbar, matching textbox behavior
+  - Added `_isMultilineType()` helper for consistent textbox/callout handling
+  - Added 12 new tests for callout editing support
+
+### Changed
+- **Slide Parameter Simplification** — Replaced `lock=none|size|all` parameter with simpler `noedit` flag
+  - `noedit` hides the edit overlay button for view-only slides
+  - Removed complex lock mode logic from SlideHooks, ViewerManager, SlidePropertiesPanel
+
+### Fixed
+- **Slide Revision Loading** — Fixed "Revision not found" error when loading specific slide revisions
+  - Changed API response key from `set_revisions` to `all_layersets` for JS compatibility
+  - Added `layersetid` parameter support for slides
+
+### Technical Details
+- All 10,680+ tests pass (157 test suites)
+- Test coverage: 93%+ statement coverage
+
+---
+
 ## Version 1.5.35 (January 26, 2026)
 
 ### Fixed
 - **Slide Editor New Layer Set Selector** — Fixed issue where specifying a new (unsaved) layer set name via `layerset=X` would show 'default' in the dropdown instead of 'X'
   - Dropdown now shows the specified set name with a "(new)" suffix for unsaved sets
   - Added i18n message `layers-set-new-unsaved` for translatable "(new)" label
+- **Version Inconsistencies (P0)** — Fixed version number mismatches across 6 project files
+  - Added `scripts/update-version.js` to automate version synchronization
+  - Added `npm run check:version` and `npm run update:version` commands
+
+### Improved
+- **Documentation Metrics** — Updated all stale metrics in documentation files
+  - Test count: 10,643 tests in 157 suites
+  - Coverage: 94.45% statement, 84.87% branch, 92.55% function, 94.59% line
+  - JS files: 127, ~115,282 lines
+  - PHP files: 40, ~14,388 lines
+  - i18n messages: 697
+- **Codebase Review v39** — Comprehensive critical review with all issues documented
+  - Overall score: 8.6/10
+  - 0 critical issues, 0 high issues, 5 medium issues, 10 low issues
 
 ### Also Includes (v1.5.32-1.5.34)
 - **Critical: Slide `layerset=` Parameter Bug** — Fixed global regex stripping `|layerset=...` from `{{#slide:}}` parser functions

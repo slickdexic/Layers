@@ -10,6 +10,8 @@ Create standalone canvas graphics without requiring a base image. Perfect for di
 
 Slide Mode allows you to create graphics from scratch using all 15 drawing tools, without needing an existing image file. Slides are stored separately from image layer sets and have their own version history.
 
+**Like images, slides support multiple named layer sets** — you can create different annotation variations (e.g., "english", "spanish", "detailed", "simplified") for the same slide.
+
 ---
 
 ## Wikitext Syntax
@@ -24,17 +26,22 @@ Use the `{{#Slide:}}` parser function to embed slides:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
+| `layerset` | Named layer set to display (default: "default") | `layerset=anatomy` |
 | `canvas` | Canvas size (width×height) | `canvas=1920x1080` |
 | `size` | Display size on page | `size=800x600` |
 | `bgcolor` | Background color | `bgcolor=#f0f0f0` |
-| `lock` | Lock mode | `lock=view` or `lock=all` |
+| `noedit` | Hide the edit overlay button | `noedit` |
 | `class` | CSS classes | `class=my-diagram` |
 
 ### Examples
 
 ```wikitext
-<!-- Basic slide -->
+<!-- Basic slide (default layer set) -->
 {{#Slide: MyDiagram}}
+
+<!-- Specific named layer set -->
+{{#Slide: MyDiagram | layerset=english}}
+{{#Slide: MyDiagram | layerset=spanish}}
 
 <!-- Custom canvas size -->
 {{#Slide: Presentation | canvas=1920x1080}}
@@ -46,14 +53,45 @@ Use the `{{#Slide:}}` parser function to embed slides:
 {{#Slide: Blueprint | bgcolor=#e8f4fc}}
 
 <!-- View-only (no edit overlay) -->
-{{#Slide: Published | lock=view}}
+{{#Slide: Published | noedit}}
 
 <!-- Combined parameters -->
 {{#Slide: Technical-Drawing 
+| layerset=detailed
 | canvas=1200x900 
 | size=600x450 
 | bgcolor=#ffffff
 }}
+```
+
+---
+
+## Named Layer Sets for Slides
+
+Just like images, slides support multiple named layer sets:
+
+### Use Cases
+
+| Use Case | Example Sets |
+|----------|--------------|
+| **Multilingual** | `english`, `spanish`, `french` |
+| **Detail Levels** | `overview`, `detailed`, `expert` |
+| **Versions** | `draft`, `reviewed`, `approved` |
+| **Audiences** | `student`, `instructor`, `admin` |
+
+### Creating Named Sets
+
+1. Open the slide in the editor (`Special:EditSlide/SlideName`)
+2. Click the layer set dropdown (shows current set name)
+3. Click **"Create New Set..."**
+4. Enter a name and click **Create**
+
+### Direct Editing
+
+You can open a specific layer set directly:
+
+```
+Special:EditSlide/MySlideName?layerset=annotations
 ```
 
 ---
@@ -124,13 +162,15 @@ Start from a blank canvas for schematics, blueprints, and technical illustration
 
 Once a slide is saved, subsequent edits load the canvas dimensions from the database, not from the wikitext.
 
-### Lock Modes
+### Hiding the Edit Button
 
-| Mode | Effect |
-|------|--------|
-| `lock=none` | Full editing (default) |
-| `lock=view` | View-only, no edit overlay |
-| `lock=all` | No overlay at all |
+Use the `noedit` flag to hide the edit overlay button, making the slide view-only for readers:
+
+```wikitext
+{{#Slide: MyPublishedSlide | noedit}}
+```
+
+Note: Users with edit permissions can still access the slide editor via `Special:EditSlide/SlideName`.
 
 ### Permissions
 

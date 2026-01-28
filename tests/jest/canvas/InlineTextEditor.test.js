@@ -110,6 +110,11 @@ describe( 'InlineTextEditor', () => {
 			expect( editor.canEdit( layer ) ).toBe( true );
 		} );
 
+		test( 'should return true for callout layer type', () => {
+			const layer = { type: 'callout', text: 'Hello' };
+			expect( editor.canEdit( layer ) ).toBe( true );
+		} );
+
 		test( 'should return false for rectangle layer type', () => {
 			const layer = { type: 'rectangle' };
 			expect( editor.canEdit( layer ) ).toBe( false );
@@ -253,6 +258,79 @@ describe( 'InlineTextEditor', () => {
 		test( 'should add textbox class to editor element', () => {
 			editor.startEditing( textboxLayer );
 			expect( editor.editorElement.classList.contains( 'textbox' ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'startEditing - callout layer', () => {
+		let calloutLayer;
+
+		beforeEach( () => {
+			calloutLayer = {
+				id: 'layer-3',
+				type: 'callout',
+				text: 'Callout\nText',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				fontSize: 14,
+				fontFamily: 'Arial',
+				fill: '#ffffff',
+				color: '#000000',
+				tailDirection: 'bottom'
+			};
+		} );
+
+		test( 'should start editing callout layer successfully', () => {
+			const result = editor.startEditing( calloutLayer );
+			expect( result ).toBe( true );
+			expect( editor.isEditing ).toBe( true );
+		} );
+
+		test( 'should preserve multiline text in callout', () => {
+			editor.startEditing( calloutLayer );
+			expect( editor.editorElement.value ).toBe( 'Callout\nText' );
+		} );
+
+		test( 'should add textbox class to editor element for callout', () => {
+			// Callouts behave like textboxes (multiline)
+			editor.startEditing( calloutLayer );
+			expect( editor.editorElement.classList.contains( 'textbox' ) ).toBe( true );
+		} );
+
+		test( 'should clear callout text while editing (keep background visible)', () => {
+			editor.startEditing( calloutLayer );
+			// Layer text should be cleared so background renders on canvas
+			expect( calloutLayer.text ).toBe( '' );
+		} );
+
+		test( 'should restore callout text on cancel', () => {
+			mockCanvasManager.editor.layers = [ calloutLayer ];
+			editor.startEditing( calloutLayer );
+			editor.cancelEditing();
+			expect( calloutLayer.text ).toBe( 'Callout\nText' );
+		} );
+	} );
+
+	describe( '_isMultilineType', () => {
+		test( 'should return true for textbox', () => {
+			expect( editor._isMultilineType( { type: 'textbox' } ) ).toBe( true );
+		} );
+
+		test( 'should return true for callout', () => {
+			expect( editor._isMultilineType( { type: 'callout' } ) ).toBe( true );
+		} );
+
+		test( 'should return false for text', () => {
+			expect( editor._isMultilineType( { type: 'text' } ) ).toBe( false );
+		} );
+
+		test( 'should return false for rectangle', () => {
+			expect( editor._isMultilineType( { type: 'rectangle' } ) ).toBe( false );
+		} );
+
+		test( 'should return false for null', () => {
+			expect( editor._isMultilineType( null ) ).toBeFalsy();
 		} );
 	} );
 
@@ -1859,6 +1937,32 @@ describe( 'CanvasEvents - Double-click handling', () => {
 
 		expect( mockCanvasManager.inlineTextEditor.startEditing ).toHaveBeenCalledWith(
 			expect.objectContaining( { type: 'textbox' } )
+		);
+	} );
+
+	test( 'should handle callout layer type', () => {
+		mockCanvasManager.editor.layers.push( {
+			id: 'layer-5',
+			type: 'callout',
+			text: 'Callout text',
+			x: 400,
+			y: 400,
+			width: 150,
+			height: 80,
+			visible: true,
+			tailDirection: 'bottom'
+		} );
+
+		const event = {
+			clientX: 450,
+			clientY: 440,
+			preventDefault: jest.fn()
+		};
+
+		events.handleDoubleClick( event );
+
+		expect( mockCanvasManager.inlineTextEditor.startEditing ).toHaveBeenCalledWith(
+			expect.objectContaining( { type: 'callout' } )
 		);
 	} );
 

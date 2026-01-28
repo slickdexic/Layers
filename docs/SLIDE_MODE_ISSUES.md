@@ -13,7 +13,7 @@ The `{{#Slide: SlideName}}` parser function allows creating canvas-based slide g
 | canvas=600x400
 | size=300x200
 | background=#ffffff
-| lock=none
+| noedit
 | class=my-custom-class
 | placeholder=Click to add content
 | layerset=default
@@ -24,7 +24,7 @@ The `{{#Slide: SlideName}}` parser function allows creating canvas-based slide g
 - `canvas=WxH` - Editor canvas dimensions (working resolution)
 - `size=WxH` - Display size on article pages (scales proportionally, preserving aspect ratio)
 - `background=<color>` - Background color (hex, rgb, or named color)
-- `lock=none|size|all` - Lock mode for editing restrictions
+- `noedit` - Hide the edit overlay button (boolean flag, no value)
 - `class=<classes>` - Additional CSS classes
 - `placeholder=<text>` - Placeholder text shown when empty
 - `layerset=<name>` - Named layer set to use (default: 'default')

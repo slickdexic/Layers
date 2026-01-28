@@ -165,7 +165,8 @@ describe( 'ToolbarStyleControls', () => {
 		it( 'should create style group container', () => {
 			const container = styleControls.create();
 			expect( container ).toBeInstanceOf( HTMLElement );
-			expect( container.className ).toBe( 'toolbar-group style-group' );
+			// Context-aware class is always added (legacy mode removed in v1.5.36)
+			expect( container.className ).toBe( 'toolbar-group style-group context-aware' );
 		} );
 
 		it( 'should store container reference', () => {
@@ -1647,43 +1648,8 @@ describe( 'ToolbarStyleControls', () => {
 			} );
 		} );
 
-		describe( 'setContextAwareEnabled', () => {
-			it( 'should add context-aware class when enabled', () => {
-				styleControls.setContextAwareEnabled( true );
-
-				expect( styleControls.container.classList.contains( 'context-aware' ) ).toBe( true );
-			} );
-
-			it( 'should remove context-aware class when disabled', () => {
-				styleControls.setContextAwareEnabled( false );
-
-				expect( styleControls.container.classList.contains( 'context-aware' ) ).toBe( false );
-			} );
-
-			it( 'should show all controls when disabled', () => {
-				// First hide some controls
-				styleControls.updateContextVisibility( 'pointer' );
-				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( true );
-
-				// Disable context-aware mode
-				styleControls.setContextAwareEnabled( false );
-
-				// Should show all controls
-				expect( styleControls.mainStyleRow.classList.contains( 'context-hidden' ) ).toBe( false );
-			} );
-		} );
-
-		describe( 'isContextAwareEnabled', () => {
-			it( 'should return true when enabled', () => {
-				styleControls.contextAwareEnabled = true;
-				expect( styleControls.isContextAwareEnabled() ).toBe( true );
-			} );
-
-			it( 'should return false when disabled', () => {
-				styleControls.contextAwareEnabled = false;
-				expect( styleControls.isContextAwareEnabled() ).toBe( false );
-			} );
-		} );
+		// Note: setContextAwareEnabled and isContextAwareEnabled methods removed in v1.5.36
+		// Context-aware toolbar is now always enabled (no legacy mode)
 
 		describe( 'updateContextForSelectedLayers (hideControlsForSelectedLayers)', () => {
 			// v1.2.12+: Controls are HIDDEN when layers are selected because

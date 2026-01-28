@@ -70,11 +70,10 @@ class SpecialEditSlide extends SpecialPage {
 		// Get optional parameters - must get setname BEFORE database query
 		$setName = $request->getText( 'setname', 'default' );
 
-		// Get slide info to determine lock mode
+		// Get slide info to determine canvas dimensions
 		$db = $services->get( 'LayersDatabase' );
 		$normalizedName = 'Slide:' . $slideName;
 		$layerSet = $db->getLayerSetByName( $normalizedName, 'slide', $setName );
-		$lockMode = $request->getText( 'lockmode', 'none' );
 		// Support both 'canvaswidth'/'canvasheight' (from JS) and 'width'/'height' (legacy)
 		$canvasWidth = $request->getInt( 'canvaswidth', 0 ) ?: $request->getInt( 'width', 0 );
 		$canvasHeight = $request->getInt( 'canvasheight', 0 ) ?: $request->getInt( 'height', 0 );
@@ -127,7 +126,6 @@ class SpecialEditSlide extends SpecialPage {
 				'slideName' => $slideName,
 				// Use 'initialSetName' to match EditLayersAction and EditorBootstrap.js
 				'initialSetName' => $setName,
-				'lockMode' => $lockMode,
 				'canvasWidth' => $canvasWidth,
 				'canvasHeight' => $canvasHeight,
 				'backgroundColor' => $backgroundColor,
@@ -137,7 +135,6 @@ class SpecialEditSlide extends SpecialPage {
 				'slideName' => $slideName,
 				'setName' => $setName,
 				'isSlide' => true,
-				'lockMode' => $lockMode,
 				'canvasWidth' => $canvasWidth,
 				'canvasHeight' => $canvasHeight,
 				'backgroundColor' => $backgroundColor,

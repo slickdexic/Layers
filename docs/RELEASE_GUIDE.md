@@ -1,6 +1,6 @@
 # Layers Extension - Release Guide
 
-**Last Updated:** December 31, 2025  
+**Last Updated:** January 26, 2026  
 **Purpose:** Comprehensive checklist for preparing and publishing releases
 
 ---
