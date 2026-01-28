@@ -10,9 +10,14 @@
  * - Move/resize the layer using selection handles (not the editor)
  * - Press Escape to cancel, Enter (or Ctrl+Enter for textbox) to save
  *
+ * Rich text support (v1.5.37+):
+ * - For textbox/callout layers, uses ContentEditable for mixed formatting
+ * - Select text and use toolbar to apply bold, italic, underline, colors
+ * - Formatting is preserved per-text-run in richText property
+ *
  * @module ext.layers.editor.canvas.InlineTextEditor
  * @since 1.5.13
- * @version 1.5.27-fix1 - Fix text duplication during toolbar formatting
+ * @version 1.5.37 - Add rich text formatting support
  */
 ( function () {
 	'use strict';
@@ -34,6 +39,7 @@
 			this.isEditing = false;
 			this.editingLayer = null;
 			this.originalText = '';
+			this.originalRichText = null;
 
 			// DOM elements
 			this.editorElement = null;
@@ -53,6 +59,9 @@
 			this._boundToolbarMouseMove = null;
 			this._boundToolbarMouseUp = null;
 			this._isToolbarInteraction = false;
+
+			// Rich text mode flag
+			this._isRichTextMode = false;
 		}
 
 		/**
@@ -114,7 +123,9 @@
 
 					this.editingLayer = layer;
 			this.originalText = layer.text || '';
+			this.originalRichText = layer.richText ? JSON.parse( JSON.stringify( layer.richText ) ) : null;
 			this.isEditing = true;
+			this._isRichTextMode = this._isMultilineType( layer );
 
 			// Create and position the editor FIRST (before modifying layer)
 			this._createEditor();
@@ -147,7 +158,17 @@
 			if ( this.editorElement ) {
 				this.editorElement.focus();
 				// Select all text for easy replacement
-				this.editorElement.select();
+				if ( typeof this.editorElement.select === 'function' ) {
+					// Input/textarea elements
+					this.editorElement.select();
+				} else if ( this.editorElement.contentEditable === 'true' ) {
+					// ContentEditable elements - select all content
+					const selection = window.getSelection();
+					const range = document.createRange();
+					range.selectNodeContents( this.editorElement );
+					selection.removeAllRanges();
+					selection.addRange( range );
+				}
 			}
 
 			// Notify canvas to hide selection handles during edit
@@ -174,10 +195,25 @@
 			const wasTextbox = this._isMultilineType( this.editingLayer );
 
 			if ( shouldApply && this.editorElement && this.editingLayer ) {
-				const newText = this.editorElement.value;
+				let newText, newRichText = null;
 
-				// Only update if text actually changed
-				if ( newText !== this.originalText ) {
+				// Extract content based on editor type
+				if ( this._isRichTextMode && this.editorElement.contentEditable === 'true' ) {
+					// ContentEditable mode - extract richText and plain text
+					const html = this.editorElement.innerHTML;
+					newRichText = this._htmlToRichText( html );
+					newText = this._getPlainTextFromEditor();
+				} else {
+					// Input/textarea mode - just get value
+					newText = this.editorElement.value;
+				}
+
+				// Check if text or richText changed
+				const textChanged = newText !== this.originalText;
+				const richTextChanged = this._isRichTextMode &&
+					JSON.stringify( newRichText ) !== JSON.stringify( this.originalRichText );
+
+				if ( textChanged || richTextChanged ) {
 					// Save state for undo before making changes
 					if ( this.canvasManager && typeof this.canvasManager.saveState === 'function' ) {
 						this.canvasManager.saveState( 'Edit text' );
@@ -186,14 +222,32 @@
 					// Update the layer
 					this.editingLayer.text = newText;
 
+					// Update richText for textbox/callout
+					if ( this._isRichTextMode ) {
+						if ( newRichText && newRichText.length > 0 ) {
+							this.editingLayer.richText = newRichText;
+						} else {
+							// No rich text - remove property
+							delete this.editingLayer.richText;
+						}
+					}
+
 					changesApplied = true;
 				} else if ( wasTextbox ) {
 					// Restore original text for textbox (we cleared it for editing)
 					this.editingLayer.text = this.originalText;
+					if ( this.originalRichText ) {
+						this.editingLayer.richText = this.originalRichText;
+					}
 				}
 			} else if ( !shouldApply && wasTextbox && this.editingLayer ) {
 				// Canceled - restore original text for textbox
 				this.editingLayer.text = this.originalText;
+				if ( this.originalRichText ) {
+					this.editingLayer.richText = this.originalRichText;
+				} else {
+					delete this.editingLayer.richText;
+				}
 			}
 
 			// Cleanup
@@ -211,6 +265,8 @@
 			this.isEditing = false;
 			this.editingLayer = null;
 			this.originalText = '';
+			this.originalRichText = null;
+			this._isRichTextMode = false;
 
 			// Notify canvas to restore normal mode
 			if ( this.canvasManager ) {
@@ -272,20 +328,35 @@
 
 			// Create the appropriate text element
 			if ( isMultiline ) {
-				this.editorElement = document.createElement( 'textarea' );
+				// Use contentEditable div for rich text support in textbox/callout
+				this.editorElement = document.createElement( 'div' );
+				this.editorElement.contentEditable = 'true';
 				this.editorElement.style.resize = 'none';
-				this.editorElement.style.overflow = 'hidden';
+				this.editorElement.style.overflow = 'auto';
+				this.editorElement.style.whiteSpace = 'pre-wrap';
+				this.editorElement.style.wordWrap = 'break-word';
+				this.editorElement.style.minHeight = '1em';
+
+				// Set content - prefer richText if available
+				if ( layer.richText && Array.isArray( layer.richText ) && layer.richText.length > 0 ) {
+					this.editorElement.innerHTML = this._richTextToHtml( layer.richText );
+				} else {
+					// Plain text - escape HTML and convert newlines
+					const escapedText = this._escapeHtml( layer.text || '' );
+					this.editorElement.innerHTML = escapedText.replace( /\n/g, '<br>' );
+				}
 			} else {
 				this.editorElement = document.createElement( 'input' );
 				this.editorElement.type = 'text';
+				this.editorElement.value = layer.text || '';
 			}
 
-			// Set common attributes
+			// Set common class name
 			this.editorElement.className = 'layers-inline-text-editor';
 			if ( isMultiline ) {
 				this.editorElement.classList.add( 'textbox' );
+				this.editorElement.classList.add( 'rich-text-enabled' );
 			}
-			this.editorElement.value = layer.text || '';
 
 			// Apply text styling to match the layer exactly
 			this._applyLayerStyle();
@@ -688,6 +759,25 @@
 			italicBtn.style.fontStyle = 'italic';
 			this.toolbarElement.appendChild( italicBtn );
 
+			// Rich text format buttons (only for textbox/callout)
+			if ( this._isRichTextMode ) {
+				// Underline button
+				const underlineBtn = this._createFormatButton( 'U', 'underline',
+					false, this._msg( 'layers-text-toolbar-underline', 'Underline' ) );
+				underlineBtn.style.textDecoration = 'underline';
+				this.toolbarElement.appendChild( underlineBtn );
+
+				// Strikethrough button
+				const strikeBtn = this._createFormatButton( 'S', 'strikethrough',
+					false, this._msg( 'layers-text-toolbar-strikethrough', 'Strikethrough' ) );
+				strikeBtn.style.textDecoration = 'line-through';
+				this.toolbarElement.appendChild( strikeBtn );
+
+				// Highlight button
+				const highlightBtn = this._createHighlightButton();
+				this.toolbarElement.appendChild( highlightBtn );
+			}
+
 			// Separator
 			this.toolbarElement.appendChild( this._createSeparator() );
 
@@ -853,7 +943,7 @@
 		 *
 		 * @private
 		 * @param {string} label - Button label
-		 * @param {string} format - Format type ('bold' or 'italic')
+		 * @param {string} format - Format type ('bold', 'italic', 'underline', 'strikethrough')
 		 * @param {boolean} active - Whether currently active
 		 * @param {string} title - Button title/tooltip
 		 * @return {HTMLElement} Button element
@@ -877,6 +967,10 @@
 					this._applyFormat( 'fontWeight', btn.classList.contains( 'active' ) ? 'bold' : 'normal' );
 				} else if ( format === 'italic' ) {
 					this._applyFormat( 'fontStyle', btn.classList.contains( 'active' ) ? 'italic' : 'normal' );
+				} else if ( format === 'underline' ) {
+					this._applyFormat( 'underline', btn.classList.contains( 'active' ) );
+				} else if ( format === 'strikethrough' ) {
+					this._applyFormat( 'strikethrough', btn.classList.contains( 'active' ) );
 				}
 			} );
 
@@ -884,6 +978,65 @@
 			btn.addEventListener( 'mousedown', ( e ) => e.preventDefault() );
 
 			return btn;
+		}
+
+		/**
+		 * Create highlight color button with color picker popup
+		 *
+		 * @private
+		 * @return {HTMLElement} Button element with color picker
+		 */
+		_createHighlightButton() {
+			const wrapper = document.createElement( 'div' );
+			wrapper.className = 'layers-text-toolbar-highlight-wrapper';
+			wrapper.style.position = 'relative';
+			wrapper.style.display = 'inline-block';
+
+			const btn = document.createElement( 'button' );
+			btn.className = 'layers-text-toolbar-btn';
+			btn.innerHTML = '<span style="background:#ffff00;padding:0 2px;">H</span>';
+			btn.title = this._msg( 'layers-text-toolbar-highlight', 'Highlight' );
+			btn.setAttribute( 'data-format', 'highlight' );
+
+			// Hidden color input for picking highlight color
+			const colorInput = document.createElement( 'input' );
+			colorInput.type = 'color';
+			colorInput.value = '#ffff00';
+			colorInput.className = 'layers-text-toolbar-highlight-color';
+			colorInput.style.position = 'absolute';
+			colorInput.style.opacity = '0';
+			colorInput.style.width = '100%';
+			colorInput.style.height = '100%';
+			colorInput.style.top = '0';
+			colorInput.style.left = '0';
+			colorInput.style.cursor = 'pointer';
+
+			colorInput.addEventListener( 'input', () => {
+				this._applyFormat( 'highlight', colorInput.value );
+				btn.querySelector( 'span' ).style.backgroundColor = colorInput.value;
+			} );
+
+			colorInput.addEventListener( 'change', () => {
+				this._isToolbarInteraction = false;
+				if ( this.editorElement ) {
+					this.editorElement.focus();
+				}
+			} );
+
+			colorInput.addEventListener( 'focus', () => {
+				this._isToolbarInteraction = true;
+			} );
+
+			// Prevent blur when clicking
+			btn.addEventListener( 'mousedown', ( e ) => {
+				e.preventDefault();
+				this._isToolbarInteraction = true;
+			} );
+
+			wrapper.appendChild( btn );
+			wrapper.appendChild( colorInput );
+
+			return wrapper;
 		}
 
 		/**
@@ -1049,6 +1202,10 @@
 		 * Uses editor.updateLayer() to ensure changes are properly persisted
 		 * through StateManager and saved when the document is saved.
 		 *
+		 * For rich text mode (textbox/callout), if there's a text selection,
+		 * the format is applied only to the selected text using execCommand.
+		 * Otherwise, the format is applied to the entire layer.
+		 *
 		 * @private
 		 * @param {string} property - Property name
 		 * @param {*} value - New value
@@ -1058,6 +1215,24 @@
 				return;
 			}
 
+			// In rich text mode, check for selection first
+			if ( this._isRichTextMode && this.editorElement &&
+				this.editorElement.contentEditable === 'true' ) {
+				const selection = window.getSelection();
+				const hasSelection = selection && !selection.isCollapsed &&
+					this.editorElement.contains( selection.anchorNode );
+
+				// Format properties that can be applied to selection
+				const selectionFormats = [ 'fontWeight', 'fontStyle', 'color', 'underline',
+					'strikethrough', 'highlight', 'fontSize', 'fontFamily' ];
+
+				if ( hasSelection && selectionFormats.includes( property ) ) {
+					this._applyFormatToSelection( property, value );
+					return;
+				}
+			}
+
+			// No selection or not rich text mode - apply to entire layer
 			const layerId = this.editingLayer.id;
 			const isTextbox = this._isMultilineType( this.editingLayer );
 
@@ -1111,6 +1286,82 @@
 
 			// Sync with properties panel so both UI elements show the same values
 			this._syncPropertiesPanel();
+		}
+
+		/**
+		 * Apply formatting to selected text in contentEditable
+		 *
+		 * Uses document.execCommand for browser-native rich text editing.
+		 * This applies formatting only to the selected text, preserving
+		 * the rest of the content unchanged.
+		 *
+		 * @private
+		 * @param {string} property - Format property name
+		 * @param {*} value - Format value
+		 */
+		_applyFormatToSelection( property, value ) {
+			if ( !this.editorElement ) {
+				return;
+			}
+
+			// Focus the editor to ensure selection is valid
+			this.editorElement.focus();
+
+			// Map properties to execCommand commands
+			switch ( property ) {
+				case 'fontWeight':
+					document.execCommand( 'bold', false, null );
+					break;
+				case 'fontStyle':
+					document.execCommand( 'italic', false, null );
+					break;
+				case 'underline':
+					document.execCommand( 'underline', false, null );
+					break;
+				case 'strikethrough':
+					document.execCommand( 'strikeThrough', false, null );
+					break;
+				case 'color':
+					document.execCommand( 'foreColor', false, value );
+					break;
+				case 'highlight':
+					document.execCommand( 'hiliteColor', false, value );
+					break;
+				case 'fontSize': {
+					// execCommand fontSize uses 1-7 scale, wrap in span instead
+					const selection = window.getSelection();
+					if ( selection.rangeCount > 0 ) {
+						const range = selection.getRangeAt( 0 );
+						const span = document.createElement( 'span' );
+						span.style.fontSize = value + 'px';
+						try {
+							range.surroundContents( span );
+						} catch {
+							// If selection crosses element boundaries, extract and wrap
+							const fragment = range.extractContents();
+							span.appendChild( fragment );
+							range.insertNode( span );
+						}
+					}
+					break;
+				}
+				case 'fontFamily': {
+					const selection = window.getSelection();
+					if ( selection.rangeCount > 0 ) {
+						const range = selection.getRangeAt( 0 );
+						const span = document.createElement( 'span' );
+						span.style.fontFamily = value;
+						try {
+							range.surroundContents( span );
+						} catch {
+							const fragment = range.extractContents();
+							span.appendChild( fragment );
+							range.insertNode( span );
+						}
+					}
+					break;
+				}
+			}
 		}
 
 		/**
@@ -1265,6 +1516,280 @@
 
 			this.editorElement = null;
 			this.containerElement = null;
+		}
+
+		// =========================================================================
+		// Rich Text HTML Conversion Methods
+		// =========================================================================
+
+		/**
+		 * Escape HTML special characters
+		 *
+		 * @private
+		 * @param {string} text - Plain text to escape
+		 * @return {string} HTML-escaped text
+		 */
+		_escapeHtml( text ) {
+			const div = document.createElement( 'div' );
+			div.textContent = text;
+			return div.innerHTML;
+		}
+
+		/**
+		 * Convert richText array to HTML string for contentEditable
+		 *
+		 * @private
+		 * @param {Array} richText - Array of {text, style} objects
+		 * @return {string} HTML string
+		 */
+		_richTextToHtml( richText ) {
+			if ( !Array.isArray( richText ) || richText.length === 0 ) {
+				return '';
+			}
+
+			let html = '';
+			for ( const run of richText ) {
+				const text = run.text || '';
+				const style = run.style || {};
+
+				// Escape the text content
+				let escapedText = this._escapeHtml( text );
+				// Convert newlines to <br>
+				escapedText = escapedText.replace( /\n/g, '<br>' );
+
+				// Build inline style string
+				const styleProps = [];
+
+				if ( style.fontWeight && style.fontWeight !== 'normal' ) {
+					styleProps.push( `font-weight: ${ style.fontWeight }` );
+				}
+				if ( style.fontStyle && style.fontStyle !== 'normal' ) {
+					styleProps.push( `font-style: ${ style.fontStyle }` );
+				}
+				if ( style.fontSize ) {
+					styleProps.push( `font-size: ${ style.fontSize }px` );
+				}
+				if ( style.fontFamily ) {
+					styleProps.push( `font-family: ${ style.fontFamily }` );
+				}
+				if ( style.color ) {
+					styleProps.push( `color: ${ style.color }` );
+				}
+				if ( style.textDecoration && style.textDecoration !== 'none' ) {
+					styleProps.push( `text-decoration: ${ style.textDecoration }` );
+				}
+				if ( style.backgroundColor ) {
+					styleProps.push( `background-color: ${ style.backgroundColor }` );
+				}
+				if ( style.textStrokeWidth && style.textStrokeColor ) {
+					styleProps.push( `-webkit-text-stroke: ${ style.textStrokeWidth }px ${ style.textStrokeColor }` );
+				}
+
+				// Wrap in span if has styles, otherwise just add text
+				if ( styleProps.length > 0 ) {
+					html += `<span style="${ styleProps.join( '; ' ) }">${ escapedText }</span>`;
+				} else {
+					html += escapedText;
+				}
+			}
+
+			return html;
+		}
+
+		/**
+		 * Convert HTML from contentEditable back to richText array
+		 *
+		 * @private
+		 * @param {string} html - HTML string from contentEditable
+		 * @return {Array} Array of {text, style} objects
+		 */
+		_htmlToRichText( html ) {
+			// Create a temporary container to parse HTML
+			const container = document.createElement( 'div' );
+			container.innerHTML = html;
+
+			const runs = [];
+
+			/**
+			 * Recursively extract text runs with computed styles
+			 *
+			 * @param {Node} node - DOM node to process
+			 * @param {Object} inheritedStyle - Style inherited from parent
+			 */
+			const extractRuns = ( node, inheritedStyle = {} ) => {
+				if ( node.nodeType === Node.TEXT_NODE ) {
+					const text = node.textContent;
+					if ( text ) {
+						// Clone inherited style and add this run
+						const runStyle = Object.assign( {}, inheritedStyle );
+						runs.push( { text: text, style: runStyle } );
+					}
+					return;
+				}
+
+				if ( node.nodeType === Node.ELEMENT_NODE ) {
+					// Handle <br> as newline
+					if ( node.nodeName === 'BR' ) {
+						runs.push( { text: '\n', style: {} } );
+						return;
+					}
+
+					// Build style from this element
+					const currentStyle = Object.assign( {}, inheritedStyle );
+
+					// Check for inline style
+					const inlineStyle = node.style;
+					if ( inlineStyle ) {
+						if ( inlineStyle.fontWeight ) {
+							currentStyle.fontWeight = inlineStyle.fontWeight;
+						}
+						if ( inlineStyle.fontStyle ) {
+							currentStyle.fontStyle = inlineStyle.fontStyle;
+						}
+						if ( inlineStyle.fontSize ) {
+							// Parse px value
+							const sizeMatch = inlineStyle.fontSize.match( /(\d+(?:\.\d+)?)/ );
+							if ( sizeMatch ) {
+								currentStyle.fontSize = parseFloat( sizeMatch[ 1 ] );
+							}
+						}
+						if ( inlineStyle.fontFamily ) {
+							currentStyle.fontFamily = inlineStyle.fontFamily.replace( /["']/g, '' );
+						}
+						if ( inlineStyle.color ) {
+							currentStyle.color = inlineStyle.color;
+						}
+						if ( inlineStyle.textDecoration ) {
+							currentStyle.textDecoration = inlineStyle.textDecoration;
+						}
+						if ( inlineStyle.backgroundColor ) {
+							currentStyle.backgroundColor = inlineStyle.backgroundColor;
+						}
+						// -webkit-text-stroke parsing
+						const webkitStroke = inlineStyle.getPropertyValue( '-webkit-text-stroke' );
+						if ( webkitStroke ) {
+							const strokeMatch = webkitStroke.match( /(\d+(?:\.\d+)?)px\s+(.+)/ );
+							if ( strokeMatch ) {
+								currentStyle.textStrokeWidth = parseFloat( strokeMatch[ 1 ] );
+								currentStyle.textStrokeColor = strokeMatch[ 2 ].trim();
+							}
+						}
+					}
+
+					// Check for semantic tags
+					const tagName = node.nodeName;
+					if ( tagName === 'B' || tagName === 'STRONG' ) {
+						currentStyle.fontWeight = 'bold';
+					}
+					if ( tagName === 'I' || tagName === 'EM' ) {
+						currentStyle.fontStyle = 'italic';
+					}
+					if ( tagName === 'U' ) {
+						currentStyle.textDecoration = 'underline';
+					}
+					if ( tagName === 'S' || tagName === 'STRIKE' || tagName === 'DEL' ) {
+						currentStyle.textDecoration = 'line-through';
+					}
+					if ( tagName === 'MARK' ) {
+						currentStyle.backgroundColor = currentStyle.backgroundColor || '#ffff00';
+					}
+
+					// Process child nodes
+					for ( const child of node.childNodes ) {
+						extractRuns( child, currentStyle );
+					}
+				}
+			};
+
+			// Extract runs from the parsed HTML
+			extractRuns( container );
+
+			// Clean up runs - remove empty style objects
+			const cleanedRuns = runs.map( ( run ) => {
+				const hasStyle = Object.keys( run.style ).length > 0;
+				return hasStyle ? run : { text: run.text };
+			} );
+
+			// Merge adjacent runs with identical styles
+			return this._mergeAdjacentRuns( cleanedRuns );
+		}
+
+		/**
+		 * Merge adjacent runs with identical styles
+		 *
+		 * @private
+		 * @param {Array} runs - Array of {text, style?} objects
+		 * @return {Array} Merged runs
+		 */
+		_mergeAdjacentRuns( runs ) {
+			if ( runs.length === 0 ) {
+				return [];
+			}
+
+			const merged = [];
+			let current = Object.assign( {}, runs[ 0 ] );
+			if ( current.style ) {
+				current.style = Object.assign( {}, current.style );
+			}
+
+			for ( let i = 1; i < runs.length; i++ ) {
+				const run = runs[ i ];
+				const currentStyleStr = JSON.stringify( current.style || {} );
+				const runStyleStr = JSON.stringify( run.style || {} );
+
+				if ( currentStyleStr === runStyleStr ) {
+					// Same style - merge text
+					current.text += run.text;
+				} else {
+					// Different style - push current and start new
+					merged.push( current );
+					current = Object.assign( {}, run );
+					if ( current.style ) {
+						current.style = Object.assign( {}, current.style );
+					}
+				}
+			}
+
+			// Push final run
+			merged.push( current );
+
+			return merged;
+		}
+
+		/**
+		 * Get plain text from contentEditable element
+		 *
+		 * @private
+		 * @return {string} Plain text content
+		 */
+		_getPlainTextFromEditor() {
+			if ( !this.editorElement ) {
+				return '';
+			}
+
+			// For input elements, just return value
+			if ( this.editorElement.tagName === 'INPUT' ) {
+				return this.editorElement.value || '';
+			}
+
+			// For contentEditable, extract text with preserved line breaks
+			const clone = this.editorElement.cloneNode( true );
+
+			// Replace <br> with newlines
+			const brs = clone.querySelectorAll( 'br' );
+			for ( const br of brs ) {
+				br.replaceWith( '\n' );
+			}
+
+			// Replace block elements with newlines
+			const blocks = clone.querySelectorAll( 'div, p' );
+			for ( const block of blocks ) {
+				if ( block.previousSibling ) {
+					block.insertAdjacentText( 'beforebegin', '\n' );
+				}
+			}
+
+			return clone.textContent || '';
 		}
 
 		/**
