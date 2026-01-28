@@ -1692,7 +1692,11 @@ class ViewerManager {
 
 		// Use Special:Slides page for editing (will be created in Phase 3)
 		// For now, use a slide-specific URL pattern
-		return mw.util.getUrl( 'Special:EditSlide/' + slideData.slideName ) + '?' + params.toString();
+		// mw.util.getUrl may return URL with query string (e.g., index.php?title=...)
+		// so we need to use & if ? already exists
+		const baseUrl = mw.util.getUrl( 'Special:EditSlide/' + slideData.slideName );
+		const separator = baseUrl.includes( '?' ) ? '&' : '?';
+		return baseUrl + separator + params.toString();
 	}
 
 	/**

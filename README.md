@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-93.5%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-10%2C643%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-95.9%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-10%2C667%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -308,25 +308,25 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), **11,758 lines across 33 files**
-- **Frontend:** HTML5 Canvas editor with **124 JS files (111,382 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), **~14,378 lines across 40 files**
+- **Frontend:** HTML5 Canvas editor with **126 JS files (~88,992 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **19 god classes** (files >1,000 lines), 2 are generated data files (exempt)
   - ShapeLibraryData.js (11,299 lines) - generated shape definitions
   - EmojiLibraryIndex.js (3,055 lines) - generated emoji search index
-  - 17 hand-written files with proper delegation patterns
+  - 17 hand-written JS files with proper delegation patterns + 2 PHP files
 
-**Test Coverage (Last recorded — January 26, 2026):**
+**Test Coverage (Last recorded — January 27, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 10,658 passing (157 suites) |
+| Jest tests | 10,667 passing (157 suites) |
 | PHPUnit tests | 24 test files |
-| Statement coverage | 93.52% |
-| Branch coverage | 84.24% |
-| Function coverage | 91.79% |
-| Line coverage | 93.66% |
+| Statement coverage | 95.86% |
+| Branch coverage | 85.40% |
+| Function coverage | 93.99% |
+| Line coverage | 95.97% |
 
 **Security:**
 
@@ -347,7 +347,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Limited mobile/touch support** - basic touch-to-mouse, pinch-to-zoom, and double-tap zoom work, but UI is not mobile-optimized
 - ⚠️ **SVG images not supported** - removed for security (XSS prevention)
 - ⚠️ **Large images** - performance may degrade with images >4096px
-- ⚠️ **20 god classes** - files exceeding 1,000 lines; all use delegation patterns (managed technical debt)
+- ⚠️ **19 god classes** - files exceeding 1,000 lines (2 generated, 17 JS, 2 PHP); all use delegation patterns (managed technical debt)
 
 **Resolved Issues:**
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
@@ -377,14 +377,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 127 | ✅ |
-| Total JS lines | ~115,282 | ✅ Includes generated data |
-| ES6 classes | 127 | ✅ 100% migrated |
-| God classes (>1000 lines) | 21 | ⚠️ 3 generated, 18 with delegation |
-| Tests passing | 10,658 | ✅ |
+| Total JS files | 126 | ✅ |
+| Total JS lines | ~88,992 | ✅ Includes generated data |
+| ES6 classes | 126 | ✅ 100% migrated |
+| God classes (>1000 lines) | 19 | ⚠️ 2 generated, 17 JS, 2 PHP |
+| Tests passing | 10,667 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 93.52% | ✅ Excellent |
-| Branch coverage | 84.24% | ✅ Target met |
+| Statement coverage | 95.86% | ✅ Excellent |
+| Branch coverage | 85.40% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
@@ -407,7 +407,7 @@ npm run docs:markdown # Markdown in docs/API.md
 | [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) | Getting started for contributors |
 | [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) | Named sets feature documentation |
 | [WIKITEXT_USAGE.md](docs/WIKITEXT_USAGE.md) | Wikitext syntax guide |
-| [codebase_review.md](codebase_review.md) | Technical assessment (January 20, 2026) |
+| [codebase_review.md](codebase_review.md) | Technical assessment (January 27, 2026) |
 | [improvement_plan.md](improvement_plan.md) | Development roadmap with priorities |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 

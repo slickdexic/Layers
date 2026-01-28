@@ -24,8 +24,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Ensures slide revision history works correctly in the editor
 
 ### Technical Details
-- All 10,680+ tests pass (157 test suites)
-- Test coverage: 93%+ statement coverage
+- All 10,667 tests pass (157 test suites)
+- Test coverage: 95.86% statement, 85.40% branch, 93.99% function, 95.97% line
+- Codebase review v42: 8.6/10 overall
 - ESLint/Stylelint/Banana all pass
 
 ---

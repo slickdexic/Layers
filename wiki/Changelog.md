@@ -22,8 +22,9 @@ Version history for the Layers extension.
   - Added `layersetid` parameter support for slides
 
 ### Technical Details
-- All 10,680+ tests pass (157 test suites)
-- Test coverage: 93%+ statement coverage
+- All 10,667 tests pass (157 test suites)
+- Test coverage: 95.86% statement, 85.40% branch, 93.99% function, 95.97% line
+- Codebase review v42: 8.6/10 overall
 
 ---
 

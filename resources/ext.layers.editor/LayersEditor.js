@@ -661,8 +661,9 @@ class LayersEditor {
 					this.showAutoCreateNotification( setName );
 				}
 				this.finalizeInitialState();
-			} ).catch( () => {
-				// Creation failed, just show empty editor
+			} ).catch( ( err ) => {
+				// Log error but continue - show empty editor
+				this.debugWarn( '[LayersEditor] Auto-create failed:', err );
 				this.finalizeInitialState();
 			} );
 			return;

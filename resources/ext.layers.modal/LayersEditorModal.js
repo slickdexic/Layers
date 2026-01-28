@@ -93,7 +93,11 @@
 						setname: setname || '',
 						modal: '1'
 					} );
-					editorUrl = mw.util.getUrl( 'File:' + filename ) + '?' + params.toString();
+					// mw.util.getUrl may return URL with query string (e.g., index.php?title=...)
+					// so we need to use & if ? already exists
+					const baseUrl = mw.util.getUrl( 'File:' + filename );
+					const separator = baseUrl.includes( '?' ) ? '&' : '?';
+					editorUrl = baseUrl + separator + params.toString();
 				}
 
 				// Create iframe
