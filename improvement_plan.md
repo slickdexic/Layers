@@ -495,6 +495,34 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ---
 
+### P3.13 Rich Text Formatting (FR-16) — HIGH VALUE
+
+**Status:** Open  
+**Priority:** P3 - Medium (High Value)  
+**Category:** Feature Enhancement  
+**Proposed:** January 28, 2026
+
+**Problem:** Text Box and Callout layers currently support only uniform formatting. All text in a layer shares identical font size, color, weight, and style. This limits expressive capability compared to tools like Figma, Canva, and PowerPoint.
+
+**Desired Behavior:**
+- Select a portion of text within a text box
+- Apply formatting (bold, italic, color, size) to selection only
+- Mixed formatting persists through save/load
+
+**Solution Summary:**
+1. Add `richText` array to layer data model (styled text runs)
+2. Update TextBoxRenderer/CalloutRenderer to render runs
+3. Replace textarea with contenteditable in InlineTextEditor
+4. Integrate toolbar formatting with text selection
+
+**Impact:** HIGH — Would significantly improve the editor's value proposition
+
+**See:** `docs/FUTURE_IMPROVEMENTS.md` → FR-16 for detailed implementation plan
+
+**Estimated Effort:** 3-4 weeks
+
+---
+
 ## God Class Status Summary
 
 ### 19 Files ≥1,000 Lines
