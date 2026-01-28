@@ -219,6 +219,7 @@
 	"layers-section-text": "Text",
 	"layers-section-text-shadow": "Text Shadow",
 	"layers-section-alignment": "Alignment",
+	"layers-section-rich-text": "Rich Text Formatting",
 	"layers-section-callout": "Callout Tail",
 	"layers-section-marker": "Marker Properties",
 
@@ -230,6 +231,11 @@
 	"layers-prop-text-shadow-blur": "Shadow Blur",
 	"layers-prop-text-shadow-offset-x": "Shadow Offset X",
 	"layers-prop-text-shadow-offset-y": "Shadow Offset Y",
+
+	"layers-prop-underline": "Underline",
+	"layers-prop-strikethrough": "Strikethrough",
+	"layers-prop-highlight": "Highlight",
+	"layers-prop-highlight-color": "Highlight Color",
 
 	"layers-arrow-single": "Single →",
 	"layers-arrow-double": "Double ↔",

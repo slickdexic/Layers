@@ -228,6 +228,7 @@
 	"layers-section-text": "Section heading label for text-related properties in text box layers",
 	"layers-section-text-shadow": "Section heading label for text shadow properties in text box layers",
 	"layers-section-alignment": "Section heading label for text alignment properties in text box layers",
+	"layers-section-rich-text": "Section heading label for rich text formatting properties (underline, strikethrough, highlight)",
 	"layers-section-callout": "Section heading label for callout tail properties in speech bubble layers",
 	"layers-section-marker": "Section heading label for marker properties in number marker layers",
 
@@ -239,6 +240,11 @@
 	"layers-prop-text-shadow-blur": "Label for text shadow blur radius input",
 	"layers-prop-text-shadow-offset-x": "Label for text shadow horizontal offset input",
 	"layers-prop-text-shadow-offset-y": "Label for text shadow vertical offset input",
+
+	"layers-prop-underline": "Checkbox label for underline text formatting in properties panel",
+	"layers-prop-strikethrough": "Checkbox label for strikethrough text formatting in properties panel",
+	"layers-prop-highlight": "Checkbox label for highlight/background color text formatting in properties panel",
+	"layers-prop-highlight-color": "Label for highlight color picker in properties panel",
 
 	"layers-arrow-single": "Dropdown option label: single-headed arrow",
 	"layers-arrow-double": "Dropdown option label: double-headed arrow",

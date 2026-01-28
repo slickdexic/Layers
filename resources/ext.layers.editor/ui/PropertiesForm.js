@@ -770,6 +770,7 @@
 				// Textbox-specific: text properties
 				addSection( t( 'layers-section-text', 'Text' ), 'text' );
 				Builders.addTextProperties( ctx );
+				Builders.addRichTextFormatting( ctx );
 				Builders.addTextShadowSection( ctx );
 				Builders.addAlignmentSection( ctx );
 				break;
@@ -780,6 +781,7 @@
 				// Text properties (same as textbox)
 				addSection( t( 'layers-section-text', 'Text' ), 'text' );
 				Builders.addTextProperties( ctx );
+				Builders.addRichTextFormatting( ctx );
 				Builders.addTextShadowSection( ctx );
 				Builders.addAlignmentSection( ctx );
 				Builders.addCalloutTailSection( ctx );
