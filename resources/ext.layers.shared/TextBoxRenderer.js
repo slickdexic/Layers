@@ -402,8 +402,9 @@
 				this.ctx.stroke();
 			}
 
-			// Draw text (clipped to the box)
-			if ( layer.text && layer.text.length > 0 ) {
+			// Draw text (clipped to the box) - supports both plain text and rich text
+			const hasTextContent = ( layer.text && layer.text.length > 0 ) || this.hasRichText( layer );
+			if ( hasTextContent ) {
 				this.drawTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity );
 			}
 
@@ -432,7 +433,14 @@
 			this.ctx.rect( x, y, width, height );
 			this.ctx.clip();
 
-			// Text rendering
+			// Check for rich text content
+			if ( this.hasRichText( layer ) ) {
+				this.drawRichTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity );
+				this.ctx.restore();
+				return;
+			}
+
+			// Text rendering (plain text path)
 			const fontSize = ( layer.fontSize || 16 ) * scale.avg;
 			const fontFamily = layer.fontFamily || 'Arial, sans-serif';
 			const fontWeight = layer.fontWeight || 'normal';
@@ -618,6 +626,323 @@
 			return lines.length > 0 ? lines : [ '' ];
 		}
 
+		// ========================================================================
+		// Rich Text Support
+		// ========================================================================
+
+		/**
+		 * Check if layer has valid rich text content
+		 *
+		 * @param {Object} layer - Layer object
+		 * @return {boolean} True if layer has rich text
+		 */
+		hasRichText( layer ) {
+			return Array.isArray( layer.richText ) &&
+				layer.richText.length > 0 &&
+				layer.richText.some( ( run ) => run && typeof run.text === 'string' );
+		}
+
+		/**
+		 * Get plain text from rich text array for wrapping calculations
+		 *
+		 * @param {Array} richText - Rich text runs array
+		 * @return {string} Combined plain text
+		 */
+		getRichTextPlainText( richText ) {
+			if ( !Array.isArray( richText ) ) {
+				return '';
+			}
+			return richText
+				.filter( ( run ) => run && typeof run.text === 'string' )
+				.map( ( run ) => run.text )
+				.join( '' );
+		}
+
+		/**
+		 * Build a map of character positions to runs for efficient lookup
+		 *
+		 * @param {Array} richText - Rich text runs array
+		 * @return {Array} Array where index is char position, value is {runIndex, localIndex}
+		 */
+		buildCharToRunMap( richText ) {
+			const map = [];
+			let charPos = 0;
+
+			for ( let runIndex = 0; runIndex < richText.length; runIndex++ ) {
+				const run = richText[ runIndex ];
+				if ( !run || typeof run.text !== 'string' ) {
+					continue;
+				}
+
+				for ( let localIndex = 0; localIndex < run.text.length; localIndex++ ) {
+					map[ charPos ] = { runIndex, localIndex };
+					charPos++;
+				}
+			}
+
+			return map;
+		}
+
+		/**
+		 * Draw a line of rich text with mixed formatting
+		 *
+		 * @param {Array} richText - Rich text runs array
+		 * @param {number} lineStart - Starting character index for this line
+		 * @param {number} lineEnd - Ending character index (exclusive)
+		 * @param {number} lineX - X position to start drawing
+		 * @param {number} lineY - Y position for the line
+		 * @param {Object} baseStyle - Base style from layer (fontSize, fontFamily, color, etc.)
+		 * @param {Object} textStyle - Text effects (shadow, stroke)
+		 * @param {Object} scale - Scale factors
+		 */
+		drawRichTextLine( richText, lineStart, lineEnd, lineX, lineY, baseStyle, textStyle, scale ) {
+			let currentX = lineX;
+			let charPos = 0;
+
+			for ( const run of richText ) {
+				if ( !run || typeof run.text !== 'string' ) {
+					continue;
+				}
+
+				const runStart = charPos;
+				const runEnd = charPos + run.text.length;
+				charPos = runEnd;
+
+				// Check if this run overlaps with the current line
+				if ( runEnd <= lineStart || runStart >= lineEnd ) {
+					continue; // Run is completely outside this line
+				}
+
+				// Calculate which portion of this run is on this line
+				const sliceStart = Math.max( 0, lineStart - runStart );
+				const sliceEnd = Math.min( run.text.length, lineEnd - runStart );
+				const textSlice = run.text.slice( sliceStart, sliceEnd );
+
+				if ( textSlice.length === 0 ) {
+					continue;
+				}
+
+				// Build style for this run
+				const style = run.style || {};
+				const fontSize = ( style.fontSize || baseStyle.fontSize ) * scale.avg;
+				const fontFamily = style.fontFamily || baseStyle.fontFamily;
+				const fontWeight = style.fontWeight || baseStyle.fontWeight;
+				const fontStyle = style.fontStyle || baseStyle.fontStyle;
+				const color = style.color || baseStyle.color;
+
+				// Set font and color
+				this.ctx.font = `${ fontStyle } ${ fontWeight } ${ fontSize }px ${ fontFamily }`;
+				this.ctx.fillStyle = color;
+
+				// Draw background (highlight) if specified
+				if ( style.backgroundColor ) {
+					const metrics = this.ctx.measureText( textSlice );
+					const bgHeight = fontSize * 1.2;
+					this.ctx.save();
+					this.ctx.fillStyle = style.backgroundColor;
+					this.ctx.fillRect( currentX, lineY, metrics.width, bgHeight );
+					this.ctx.restore();
+					this.ctx.fillStyle = color;
+				}
+
+				// Apply text shadow
+				if ( textStyle.hasTextShadow ) {
+					this.ctx.shadowColor = textStyle.textShadowColor;
+					this.ctx.shadowBlur = textStyle.textShadowBlur;
+					this.ctx.shadowOffsetX = textStyle.textShadowOffsetX;
+					this.ctx.shadowOffsetY = textStyle.textShadowOffsetY;
+				}
+
+				// Handle per-run text stroke
+				const runStrokeWidth = style.textStrokeWidth ?
+					style.textStrokeWidth * scale.avg :
+					( textStyle.hasTextStroke ? textStyle.textStrokeWidth : 0 );
+				const runStrokeColor = style.textStrokeColor || textStyle.textStrokeColor;
+
+				if ( runStrokeWidth > 0 ) {
+					// Disable shadow for stroke
+					if ( textStyle.hasTextShadow ) {
+						this.ctx.shadowColor = 'transparent';
+					}
+					this.ctx.strokeStyle = runStrokeColor;
+					this.ctx.lineWidth = runStrokeWidth;
+					this.ctx.lineJoin = 'round';
+					this.ctx.miterLimit = 2;
+					this.ctx.strokeText( textSlice, currentX, lineY );
+					// Re-enable shadow for fill
+					if ( textStyle.hasTextShadow ) {
+						this.ctx.shadowColor = textStyle.textShadowColor;
+					}
+				}
+
+				// Handle text decoration
+				if ( style.textDecoration && style.textDecoration !== 'none' ) {
+					const metrics = this.ctx.measureText( textSlice );
+					this.ctx.save();
+					this.ctx.strokeStyle = color;
+					this.ctx.lineWidth = Math.max( 1, fontSize / 15 );
+
+					switch ( style.textDecoration ) {
+						case 'underline':
+							this.ctx.beginPath();
+							this.ctx.moveTo( currentX, lineY + fontSize );
+							this.ctx.lineTo( currentX + metrics.width, lineY + fontSize );
+							this.ctx.stroke();
+							break;
+						case 'line-through':
+							this.ctx.beginPath();
+							this.ctx.moveTo( currentX, lineY + fontSize * 0.5 );
+							this.ctx.lineTo( currentX + metrics.width, lineY + fontSize * 0.5 );
+							this.ctx.stroke();
+							break;
+						case 'overline':
+							this.ctx.beginPath();
+							this.ctx.moveTo( currentX, lineY );
+							this.ctx.lineTo( currentX + metrics.width, lineY );
+							this.ctx.stroke();
+							break;
+					}
+					this.ctx.restore();
+				}
+
+				// Draw the text
+				this.ctx.fillText( textSlice, currentX, lineY );
+
+				// Measure and advance x position
+				const textWidth = this.ctx.measureText( textSlice ).width;
+				currentX += textWidth;
+
+				// Clear shadow after drawing
+				if ( textStyle.hasTextShadow ) {
+					this.ctx.shadowColor = 'transparent';
+					this.ctx.shadowBlur = 0;
+					this.ctx.shadowOffsetX = 0;
+					this.ctx.shadowOffsetY = 0;
+				}
+			}
+		}
+
+		/**
+		 * Draw rich text content with word wrapping and mixed formatting
+		 *
+		 * @param {Object} layer - Layer with richText property
+		 * @param {number} x - Box x position
+		 * @param {number} y - Box y position
+		 * @param {number} width - Box width
+		 * @param {number} height - Box height
+		 * @param {number} padding - Padding in scaled pixels
+		 * @param {Object} scale - Scale factors
+		 * @param {Object} shadowScale - Shadow scale factors
+		 * @param {number} baseOpacity - Base opacity
+		 */
+		drawRichTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity ) {
+			const richText = layer.richText;
+
+			// Base style from layer
+			const baseStyle = {
+				fontSize: layer.fontSize || 16,
+				fontFamily: layer.fontFamily || 'Arial, sans-serif',
+				fontWeight: layer.fontWeight || 'normal',
+				fontStyle: layer.fontStyle || 'normal',
+				color: layer.color || '#000000'
+			};
+
+			const fontSize = baseStyle.fontSize * scale.avg;
+			const textAlign = layer.textAlign || 'left';
+			const verticalAlign = layer.verticalAlign || 'top';
+			const lineHeight = ( layer.lineHeight || 1.2 ) * fontSize;
+
+			// Get plain text for wrapping
+			const plainText = this.getRichTextPlainText( richText );
+
+			// Use base font for wrapping calculations
+			const fontString = `${ baseStyle.fontStyle } ${ baseStyle.fontWeight } ${ fontSize }px ${ baseStyle.fontFamily }`;
+			this.ctx.font = fontString;
+			this.ctx.textBaseline = 'top';
+			this.ctx.globalAlpha = baseOpacity;
+
+			// Wrap text using base font (simplified approach)
+			const lines = this.wrapText( plainText, width - padding * 2, fontSize, baseStyle.fontFamily, baseStyle.fontWeight, baseStyle.fontStyle );
+			const totalTextHeight = lines.length * lineHeight;
+			const availableHeight = height - padding * 2;
+
+			// Calculate starting Y position based on vertical alignment
+			let textY;
+			switch ( verticalAlign ) {
+				case 'middle':
+					textY = y + padding + ( availableHeight - totalTextHeight ) / 2;
+					break;
+				case 'bottom':
+					textY = y + padding + availableHeight - totalTextHeight;
+					break;
+				case 'top':
+				default:
+					textY = y + padding;
+					break;
+			}
+
+			// Text effect properties
+			const hasTextShadow = layer.textShadow === true || layer.textShadow === 'true' ||
+				layer.textShadow === 1 || layer.textShadow === '1';
+			const textStyle = {
+				hasTextShadow,
+				textShadowColor: layer.textShadowColor || 'rgba(0,0,0,0.5)',
+				textShadowBlur: ( typeof layer.textShadowBlur === 'number' ? layer.textShadowBlur : 4 ) * shadowScale.avg,
+				textShadowOffsetX: ( typeof layer.textShadowOffsetX === 'number' ? layer.textShadowOffsetX : 2 ) * shadowScale.avg,
+				textShadowOffsetY: ( typeof layer.textShadowOffsetY === 'number' ? layer.textShadowOffsetY : 2 ) * shadowScale.avg,
+				hasTextStroke: ( layer.textStrokeWidth || 0 ) > 0,
+				textStrokeColor: layer.textStrokeColor || '#000000',
+				textStrokeWidth: ( layer.textStrokeWidth || 0 ) * scale.avg
+			};
+
+			// Build character position tracking
+			let charPos = 0;
+
+			// Draw each line
+			for ( let i = 0; i < lines.length; i++ ) {
+				const lineText = lines[ i ];
+				const currentY = textY + i * lineHeight;
+
+				// Only draw if within the box
+				if ( currentY + fontSize > y + height ) {
+					break;
+				}
+
+				const lineStart = charPos;
+				const lineEnd = charPos + lineText.length;
+
+				// Calculate line X position based on alignment
+				let lineX;
+				const lineWidth = this.ctx.measureText( lineText ).width;
+				switch ( textAlign ) {
+					case 'center':
+						lineX = x + ( width - lineWidth ) / 2;
+						break;
+					case 'right':
+						lineX = x + width - padding - lineWidth;
+						break;
+					case 'left':
+					default:
+						lineX = x + padding;
+						break;
+				}
+
+				// Draw the rich text for this line
+				this.drawRichTextLine( richText, lineStart, lineEnd, lineX, currentY, baseStyle, textStyle, scale );
+
+				// Account for newline characters in position tracking
+				// wrapText splits on '\n' and ' ', update charPos accordingly
+				charPos = lineEnd;
+				// Check if original text has whitespace after this line
+				if ( i < lines.length - 1 ) {
+					const nextChar = plainText[ charPos ];
+					if ( nextChar === ' ' || nextChar === '\n' ) {
+						charPos++;
+					}
+				}
+			}
+		}
+
 		/**
 		 * Clean up resources
 		 */
@@ -650,8 +975,9 @@
 
 			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
 
-			// Draw only the text content
-			if ( layer.text && layer.text.length > 0 ) {
+			// Draw only the text content (supports both plain text and rich text)
+			const hasText = ( layer.text && layer.text.length > 0 ) || this.hasRichText( layer );
+			if ( hasText ) {
 				this.ctx.save();
 
 				// Apply layer opacity

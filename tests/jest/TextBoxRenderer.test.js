@@ -35,6 +35,7 @@ function createMockContext() {
 		fill: jest.fn(),
 		stroke: jest.fn(),
 		clip: jest.fn(),
+		fillRect: jest.fn(),
 		font: '',
 		textAlign: 'left',
 		textBaseline: 'top',
@@ -1267,6 +1268,318 @@ describe( 'TextBoxRenderer', () => {
 			};
 
 			expect( () => renderer.draw( layer ) ).not.toThrow();
+		} );
+	} );
+
+	// ========================================================================
+	// Rich Text Support Tests
+	// ========================================================================
+
+	describe( 'rich text support', () => {
+		describe( 'hasRichText', () => {
+			it( 'should return true for valid rich text array', () => {
+				const layer = {
+					richText: [
+						{ text: 'Hello', style: { fontWeight: 'bold' } },
+						{ text: ' World', style: { color: '#ff0000' } }
+					]
+				};
+				expect( renderer.hasRichText( layer ) ).toBe( true );
+			} );
+
+			it( 'should return false for empty richText array', () => {
+				const layer = { richText: [] };
+				expect( renderer.hasRichText( layer ) ).toBe( false );
+			} );
+
+			it( 'should return false for missing richText', () => {
+				const layer = { text: 'Hello World' };
+				expect( renderer.hasRichText( layer ) ).toBe( false );
+			} );
+
+			it( 'should return false for richText with no valid runs', () => {
+				const layer = { richText: [ null, undefined, {} ] };
+				expect( renderer.hasRichText( layer ) ).toBe( false );
+			} );
+
+			it( 'should return true if at least one run has text', () => {
+				const layer = { richText: [ null, { text: 'Valid' } ] };
+				expect( renderer.hasRichText( layer ) ).toBe( true );
+			} );
+		} );
+
+		describe( 'getRichTextPlainText', () => {
+			it( 'should combine all run texts', () => {
+				const richText = [
+					{ text: 'Hello' },
+					{ text: ' ' },
+					{ text: 'World' }
+				];
+				expect( renderer.getRichTextPlainText( richText ) ).toBe( 'Hello World' );
+			} );
+
+			it( 'should ignore invalid runs', () => {
+				const richText = [
+					{ text: 'Hello' },
+					null,
+					{ text: ' World' },
+					{ noText: true }
+				];
+				expect( renderer.getRichTextPlainText( richText ) ).toBe( 'Hello World' );
+			} );
+
+			it( 'should return empty string for empty array', () => {
+				expect( renderer.getRichTextPlainText( [] ) ).toBe( '' );
+			} );
+
+			it( 'should return empty string for non-array', () => {
+				expect( renderer.getRichTextPlainText( null ) ).toBe( '' );
+				expect( renderer.getRichTextPlainText( undefined ) ).toBe( '' );
+				expect( renderer.getRichTextPlainText( 'string' ) ).toBe( '' );
+			} );
+		} );
+
+		describe( 'buildCharToRunMap', () => {
+			it( 'should build correct map for simple runs', () => {
+				const richText = [
+					{ text: 'AB' },
+					{ text: 'CD' }
+				];
+				const map = renderer.buildCharToRunMap( richText );
+
+				expect( map[ 0 ] ).toEqual( { runIndex: 0, localIndex: 0 } );
+				expect( map[ 1 ] ).toEqual( { runIndex: 0, localIndex: 1 } );
+				expect( map[ 2 ] ).toEqual( { runIndex: 1, localIndex: 0 } );
+				expect( map[ 3 ] ).toEqual( { runIndex: 1, localIndex: 1 } );
+			} );
+
+			it( 'should skip invalid runs', () => {
+				const richText = [
+					{ text: 'A' },
+					null,
+					{ text: 'B' }
+				];
+				const map = renderer.buildCharToRunMap( richText );
+
+				expect( map[ 0 ] ).toEqual( { runIndex: 0, localIndex: 0 } );
+				expect( map[ 1 ] ).toEqual( { runIndex: 2, localIndex: 0 } );
+			} );
+		} );
+
+		describe( 'drawRichTextLine', () => {
+			it( 'should draw text for runs within line range', () => {
+				const richText = [
+					{ text: 'Hello ', style: { fontWeight: 'bold' } },
+					{ text: 'World', style: { color: '#ff0000' } }
+				];
+				const baseStyle = {
+					fontSize: 16,
+					fontFamily: 'Arial',
+					fontWeight: 'normal',
+					fontStyle: 'normal',
+					color: '#000000'
+				};
+				const textStyle = {
+					hasTextShadow: false,
+					hasTextStroke: false
+				};
+				const scale = { sx: 1, sy: 1, avg: 1 };
+
+				expect( () => {
+					renderer.drawRichTextLine( richText, 0, 11, 10, 10, baseStyle, textStyle, scale );
+				} ).not.toThrow();
+
+				expect( ctx.fillText ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle partial run on line', () => {
+				const richText = [ { text: 'Hello World' } ];
+				const baseStyle = {
+					fontSize: 16,
+					fontFamily: 'Arial',
+					fontWeight: 'normal',
+					fontStyle: 'normal',
+					color: '#000000'
+				};
+				const textStyle = {
+					hasTextShadow: false,
+					hasTextStroke: false
+				};
+				const scale = { sx: 1, sy: 1, avg: 1 };
+
+				// Draw just "Hello" (chars 0-5)
+				renderer.drawRichTextLine( richText, 0, 5, 10, 10, baseStyle, textStyle, scale );
+
+				expect( ctx.fillText ).toHaveBeenCalledWith( 'Hello', 10, 10 );
+			} );
+
+			it( 'should apply text decoration', () => {
+				const richText = [
+					{ text: 'Underlined', style: { textDecoration: 'underline' } }
+				];
+				const baseStyle = {
+					fontSize: 16,
+					fontFamily: 'Arial',
+					fontWeight: 'normal',
+					fontStyle: 'normal',
+					color: '#000000'
+				};
+				const textStyle = {
+					hasTextShadow: false,
+					hasTextStroke: false
+				};
+				const scale = { sx: 1, sy: 1, avg: 1 };
+
+				renderer.drawRichTextLine( richText, 0, 10, 10, 10, baseStyle, textStyle, scale );
+
+				// Should have drawn underline
+				expect( ctx.stroke ).toHaveBeenCalled();
+			} );
+
+			it( 'should draw background highlight', () => {
+				const richText = [
+					{ text: 'Highlighted', style: { backgroundColor: '#ffff00' } }
+				];
+				const baseStyle = {
+					fontSize: 16,
+					fontFamily: 'Arial',
+					fontWeight: 'normal',
+					fontStyle: 'normal',
+					color: '#000000'
+				};
+				const textStyle = {
+					hasTextShadow: false,
+					hasTextStroke: false
+				};
+				const scale = { sx: 1, sy: 1, avg: 1 };
+
+				renderer.drawRichTextLine( richText, 0, 11, 10, 10, baseStyle, textStyle, scale );
+
+				// Should have used fillRect for background (one more save/restore pair)
+				expect( ctx.save ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'drawRichTextContent', () => {
+			it( 'should render full rich text with word wrapping', () => {
+				const layer = {
+					type: 'textbox',
+					x: 10,
+					y: 10,
+					width: 200,
+					height: 100,
+					padding: 8,
+					richText: [
+						{ text: 'Bold text ', style: { fontWeight: 'bold' } },
+						{ text: 'and normal text', style: {} }
+					]
+				};
+				const scale = { sx: 1, sy: 1, avg: 1 };
+
+				expect( () => {
+					renderer.drawRichTextContent( layer, 10, 10, 200, 100, 8, scale, scale, 1 );
+				} ).not.toThrow();
+
+				expect( ctx.fillText ).toHaveBeenCalled();
+			} );
+
+			it( 'should respect vertical alignment', () => {
+				const layer = {
+					type: 'textbox',
+					richText: [ { text: 'Centered' } ],
+					verticalAlign: 'middle'
+				};
+				const scale = { sx: 1, sy: 1, avg: 1 };
+
+				expect( () => {
+					renderer.drawRichTextContent( layer, 0, 0, 100, 100, 8, scale, scale, 1 );
+				} ).not.toThrow();
+			} );
+		} );
+
+		describe( 'integration with draw method', () => {
+			it( 'should use rich text when layer has richText property', () => {
+				const layer = {
+					type: 'textbox',
+					x: 10,
+					y: 10,
+					width: 200,
+					height: 100,
+					fill: '#ffffff',
+					richText: [
+						{ text: 'Hello ', style: { fontWeight: 'bold' } },
+						{ text: 'World', style: { color: '#ff0000', fontStyle: 'italic' } }
+					]
+				};
+
+				expect( () => renderer.draw( layer ) ).not.toThrow();
+				expect( ctx.fillText ).toHaveBeenCalled();
+			} );
+
+			it( 'should fall back to plain text when richText is empty', () => {
+				const layer = {
+					type: 'textbox',
+					x: 10,
+					y: 10,
+					width: 200,
+					height: 100,
+					text: 'Plain text',
+					richText: []
+				};
+
+				expect( () => renderer.draw( layer ) ).not.toThrow();
+				// Should use plain text path
+				expect( ctx.fillText ).toHaveBeenCalledWith( 'Plain text', expect.any( Number ), expect.any( Number ) );
+			} );
+
+			it( 'should render mixed formatting across multiple lines', () => {
+				const layer = {
+					type: 'textbox',
+					x: 0,
+					y: 0,
+					width: 80, // Force wrapping
+					height: 100,
+					fontSize: 12,
+					richText: [
+						{ text: 'This is a long text that should wrap to multiple lines', style: {} }
+					]
+				};
+
+				expect( () => renderer.draw( layer ) ).not.toThrow();
+			} );
+		} );
+
+		describe( 'drawTextOnly with rich text', () => {
+			it( 'should render rich text content', () => {
+				const layer = {
+					type: 'textbox',
+					x: 10,
+					y: 10,
+					width: 200,
+					height: 100,
+					richText: [
+						{ text: 'Rich text content', style: { color: '#0000ff' } }
+					]
+				};
+
+				expect( () => renderer.drawTextOnly( layer ) ).not.toThrow();
+				expect( ctx.fillText ).toHaveBeenCalled();
+			} );
+
+			it( 'should not render when no text content', () => {
+				const layer = {
+					type: 'textbox',
+					x: 10,
+					y: 10,
+					width: 200,
+					height: 100
+					// No text or richText
+				};
+
+				ctx.fillText.mockClear();
+				renderer.drawTextOnly( layer );
+				expect( ctx.fillText ).not.toHaveBeenCalled();
+			} );
 		} );
 	} );
 } );
