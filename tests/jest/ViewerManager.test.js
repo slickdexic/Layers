@@ -2837,6 +2837,7 @@ describe( 'ViewerManager', () => {
 
 				expect( manager.openSlideEditor ).toHaveBeenCalledWith( {
 					slideName: 'MySlide',
+					lockMode: 'none',
 					canvasWidth: 1024,
 					canvasHeight: 768,
 					backgroundColor: '#ff0000',
