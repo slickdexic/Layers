@@ -20,14 +20,19 @@
 
 ---
 
-## 🆕 What's New in v1.5.38
+## 🆕 What's New in v1.5.39
 
 - **God Class Reduction Complete** — Reduced from 20 to 12 god classes (40% reduction)
-- **Inline Text Alignment Fix** — Fixed double rendering when changing alignment during editing
-- **Text Loss Fix** — Fixed bug where changing properties during inline editing lost typed text
-- **Rich Text Inline Display** — Fixed styled text runs displaying on separate lines during editing
-- **Slide Layer Order** — Fixed layers appearing in reverse order on article pages
+- **12+ Extracted Modules** — Clean separation of concerns with focused single-responsibility modules
+- **Documentation Synchronized** — All metrics now accurate across all documentation files
 - **10,939 tests passing** (162 suites), 94.65% statement coverage, 84.49% branch coverage
+
+### Previous v1.5.38 Highlights
+
+- **Inline Text Alignment Fix** — Fixed double rendering when changing alignment during editing
+- **Text Loss Fix** — Fixed losing typed text when changing properties during inline editing
+- **Rich Text Inline Display** — Fixed styled text runs displaying on separate lines
+- **Slide Layer Order** — Fixed layers appearing in reverse order on article pages
 
 ### Previous v1.5.36 Highlights
 
@@ -258,20 +263,20 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.38 |
-| **Version (REL1_43)** | 1.5.26-REL1_43 |
-| **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 27, 2026 |
-| **Test Suites** | 157 |
-| **Total Tests** | 10,840 |
+| **Version (main)** | 1.5.39 |
+| **Version (REL1_43)** | 1.5.39-REL1_43 |
+| **Version (REL1_39)** | 1.5.39-REL1_39 |
+| **Release Date** | January 30, 2026 |
+| **Test Suites** | 162 |
+| **Total Tests** | 10,939 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 95.53% |
-| **Branch Coverage** | 85.28% |
-| **Function Coverage** | 93.97% |
-| **Line Coverage** | 95.64% |
-| **JavaScript Files** | 132 |
-| **ES6 Classes** | 132 |
-| **God Classes** | 22 (2 generated, 20 JS, 2 PHP) |
+| **Statement Coverage** | 94.65% |
+| **Branch Coverage** | 84.49% |
+| **Function Coverage** | 92.93% |
+| **Line Coverage** | 94.77% |
+| **JavaScript Files** | 139 |
+| **ES6 Classes** | 139 |
+| **God Classes** | 12 (2 generated, 10 JS, 2 PHP) |
 | **i18n Messages** | ~718 |
 
 ---
