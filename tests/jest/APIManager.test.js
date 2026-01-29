@@ -64,6 +64,10 @@ describe( 'APIManager', function () {
 		global.window.Layers.Editor = global.window.Layers.Editor || {};
 		global.window.Layers.Editor.APIErrorHandler = APIErrorHandler;
 
+		// Load ExportController (dependency for export operations)
+		const ExportController = require( '../../resources/ext.layers.editor/ExportController.js' );
+		global.window.Layers.Editor.ExportController = ExportController;
+
 		// Load APIManager code using require for proper coverage tracking
 		const { APIManager: LoadedAPIManager } = require( '../../resources/ext.layers.editor/APIManager.js' );
 		APIManager = LoadedAPIManager;
@@ -2474,168 +2478,44 @@ describe( 'APIManager', function () {
 		} );
 	} );
 
-	describe( 'downloadAsImage', function () {
-		let mockBlob;
-		let mockAnchor;
-		let mockUrl;
-
-		beforeEach( function () {
-			mockBlob = new Blob( [ 'test' ], { type: 'image/png' } );
-			mockUrl = 'blob:test-url';
-			mockAnchor = {
-				href: '',
-				download: '',
-				click: jest.fn()
+	describe( 'downloadAsImage (delegation)', function () {
+		it( 'should delegate to exportController.downloadAsImage', function () {
+			const options = { format: 'jpeg', quality: 0.9 };
+			apiManager.exportController = {
+				downloadAsImage: jest.fn()
 			};
 
-			// Mock URL APIs
-			global.URL.createObjectURL = jest.fn().mockReturnValue( mockUrl );
-			global.URL.revokeObjectURL = jest.fn();
+			apiManager.downloadAsImage( options );
 
-			// Mock document methods
-			jest.spyOn( document.body, 'appendChild' ).mockImplementation( () => {} );
-			jest.spyOn( document.body, 'removeChild' ).mockImplementation( () => {} );
+			expect( apiManager.exportController.downloadAsImage ).toHaveBeenCalledWith( options );
+		} );
+	} );
 
-			mockEditor.uiManager = {
-				showSpinner: jest.fn(),
-				hideSpinner: jest.fn()
-			};
-			mockEditor.stateManager = {
-				get: jest.fn( ( key ) => {
-					const values = {
-						filename: 'File:TestImage.jpg',
-						currentSetName: 'default',
-						layers: [],
-						backgroundVisible: true,
-						backgroundOpacity: 1,
-						baseWidth: 800,
-						baseHeight: 600
-					};
-					return values[ key ];
-				} )
+	describe( 'sanitizeFilename (delegation)', function () {
+		it( 'should delegate to exportController.sanitizeFilename', function () {
+			apiManager.exportController = {
+				sanitizeFilename: jest.fn().mockReturnValue( 'sanitized' )
 			};
 
-			// Mock exportAsImage
-			apiManager.exportAsImage = jest.fn().mockResolvedValue( mockBlob );
+			const result = apiManager.sanitizeFilename( 'test<file>.png' );
+
+			expect( apiManager.exportController.sanitizeFilename ).toHaveBeenCalledWith( 'test<file>.png' );
+			expect( result ).toBe( 'sanitized' );
 		} );
+	} );
 
-		afterEach( function () {
-			document.body.appendChild.mockRestore();
-			document.body.removeChild.mockRestore();
-		} );
+	describe( 'exportAsImage (delegation)', function () {
+		it( 'should delegate to exportController.exportAsImage', async function () {
+			const options = { scale: 2, format: 'png' };
+			const mockBlob = new Blob( [ 'test' ], { type: 'image/png' } );
+			apiManager.exportController = {
+				exportAsImage: jest.fn().mockResolvedValue( mockBlob )
+			};
 
-		it( 'should show and hide spinner', async function () {
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
+			const result = await apiManager.exportAsImage( options );
 
-			await apiManager.downloadAsImage();
-
-			expect( mockEditor.uiManager.showSpinner ).toHaveBeenCalled();
-			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
-
-			createElementSpy.mockRestore();
-		} );
-
-		it( 'should call exportAsImage with options', async function () {
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
-
-			await apiManager.downloadAsImage( { format: 'jpeg', quality: 0.8 } );
-
-			expect( apiManager.exportAsImage ).toHaveBeenCalledWith( { format: 'jpeg', quality: 0.8 } );
-
-			createElementSpy.mockRestore();
-		} );
-
-		it( 'should create download link with correct filename', async function () {
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
-
-			await apiManager.downloadAsImage();
-
-			expect( mockAnchor.download ).toBe( 'TestImage.png' );
-			expect( mockAnchor.click ).toHaveBeenCalled();
-
-			createElementSpy.mockRestore();
-		} );
-
-		it( 'should include set name in filename for non-default sets', async function () {
-			mockEditor.stateManager.get = jest.fn( ( key ) => {
-				const values = {
-					filename: 'File:TestImage.jpg',
-					currentSetName: 'anatomy',
-					layers: [],
-					backgroundVisible: true,
-					backgroundOpacity: 1
-				};
-				return values[ key ];
-			} );
-
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
-
-			await apiManager.downloadAsImage();
-
-			expect( mockAnchor.download ).toBe( 'TestImage-anatomy.png' );
-
-			createElementSpy.mockRestore();
-		} );
-
-		it( 'should use jpg extension for jpeg format', async function () {
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
-
-			await apiManager.downloadAsImage( { format: 'jpeg' } );
-
-			expect( mockAnchor.download ).toBe( 'TestImage.jpg' );
-
-			createElementSpy.mockRestore();
-		} );
-
-		it( 'should use custom filename when provided', async function () {
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
-
-			await apiManager.downloadAsImage( { filename: 'custom-export.png' } );
-
-			expect( mockAnchor.download ).toBe( 'custom-export.png' );
-
-			createElementSpy.mockRestore();
-		} );
-
-		it( 'should revoke object URL after download', async function () {
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
-
-			await apiManager.downloadAsImage();
-
-			expect( global.URL.revokeObjectURL ).toHaveBeenCalledWith( mockUrl );
-
-			createElementSpy.mockRestore();
-		} );
-
-		it( 'should show success notification', async function () {
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
-
-			await apiManager.downloadAsImage();
-
-			expect( mw.notify ).toHaveBeenCalledWith(
-				expect.any( String ),
-				{ type: 'success' }
-			);
-
-			createElementSpy.mockRestore();
-		} );
-
-		it( 'should handle export failure gracefully', async function () {
-			apiManager.exportAsImage = jest.fn().mockRejectedValue( new Error( 'Export failed' ) );
-			const createElementSpy = jest.spyOn( document, 'createElement' ).mockReturnValue( mockAnchor );
-
-			// downloadAsImage doesn't return a promise, so we use a spy to detect the error path
-			apiManager.downloadAsImage();
-
-			// Wait for the promise chain to complete using Jest's fake timers approach
-			await new Promise( process.nextTick );
-
-			expect( mw.notify ).toHaveBeenCalledWith(
-				expect.any( String ),
-				{ type: 'error' }
-			);
-
-			createElementSpy.mockRestore();
+			expect( apiManager.exportController.exportAsImage ).toHaveBeenCalledWith( options );
+			expect( result ).toBe( mockBlob );
 		} );
 	} );
 

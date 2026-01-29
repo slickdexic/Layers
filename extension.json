@@ -324,6 +324,7 @@
 				"UIManager.js",
 				"EventManager.js",
 				"APIErrorHandler.js",
+				"ExportController.js",
 				"APIManager.js",
 				"ValidationManager.js",
 				"ModuleRegistry.js",

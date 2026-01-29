@@ -27,6 +27,9 @@
 	// Get APIErrorHandler class
 	const APIErrorHandler = getClass( 'Editor.APIErrorHandler', 'APIErrorHandler' );
 
+	// Get ExportController class for export delegation
+	const ExportController = getClass( 'Editor.ExportController', 'ExportController' );
+
 	// Get shared LayerDataNormalizer for consistent data handling
 	const LayerDataNormalizer = ( window.Layers && window.Layers.LayerDataNormalizer ) || window.LayerDataNormalizer;
 
@@ -51,6 +54,9 @@
 			editor: editor
 		} );
 		this.errorHandler.setEnableSaveButtonCallback( () => this.enableSaveButton() );
+
+		// Initialize export controller (extracted for separation of concerns)
+		this.exportController = new ExportController( editor );
 	}
 
 	/**
@@ -1221,170 +1227,34 @@
 
 	/**
 	 * Export the current canvas as an image.
-	 * Composites the background image with all visible layers.
+	 * Delegates to ExportController.
 	 *
 	 * @param {Object} options - Export options
-	 * @param {boolean} options.includeBackground - Include background image (default: respects current visibility)
-	 * @param {number} options.scale - Scale factor (default: 1)
-	 * @param {string} options.format - Image format: 'png' or 'jpeg' (default: 'png')
-	 * @param {number} options.quality - JPEG quality 0-1 (default: 0.92)
 	 * @return {Promise<Blob>} Resolves with image blob
 	 */
 	exportAsImage( options = {} ) {
-		return new Promise( ( resolve, reject ) => {
-			// Respect current background visibility unless explicitly overridden
-			const backgroundVisible = this.editor.stateManager.get( 'backgroundVisible' );
-			const backgroundOpacity = this.editor.stateManager.get( 'backgroundOpacity' );
-			const includeBackground = options.includeBackground !== undefined ?
-				options.includeBackground :
-				( backgroundVisible !== false && backgroundOpacity > 0 );
-			const scale = options.scale || 1;
-			const format = options.format || 'png';
-			const quality = options.quality || 0.92;
-
-			try {
-				const canvasManager = this.editor.canvasManager;
-				if ( !canvasManager ) {
-					reject( new Error( 'Canvas manager not available' ) );
-					return;
-				}
-
-				// Create an offscreen canvas for export
-				const baseWidth = this.editor.stateManager.get( 'baseWidth' ) || canvasManager.canvas.width;
-				const baseHeight = this.editor.stateManager.get( 'baseHeight' ) || canvasManager.canvas.height;
-				const exportWidth = Math.round( baseWidth * scale );
-				const exportHeight = Math.round( baseHeight * scale );
-
-				const exportCanvas = document.createElement( 'canvas' );
-				exportCanvas.width = exportWidth;
-				exportCanvas.height = exportHeight;
-				const ctx = exportCanvas.getContext( '2d' );
-
-				// Check if canvas context creation failed (e.g., browser OOM, canvas too large)
-				if ( !ctx ) {
-					reject( new Error( 'Failed to create canvas context for export' ) );
-					return;
-				}
-
-				// Draw background if requested and available
-				// For PNG exports with hidden background, leave transparent (don't fill)
-				if ( includeBackground && canvasManager.backgroundImage ) {
-					// Apply background opacity if less than 1
-					const opacity = backgroundOpacity !== undefined ? backgroundOpacity : 1;
-					if ( opacity < 1 ) {
-						ctx.globalAlpha = opacity;
-					}
-					ctx.drawImage( canvasManager.backgroundImage, 0, 0, exportWidth, exportHeight );
-					ctx.globalAlpha = 1;
-				} else if ( format === 'jpeg' ) {
-					// JPEG doesn't support transparency, use white background
-					ctx.fillStyle = '#ffffff';
-					ctx.fillRect( 0, 0, exportWidth, exportHeight );
-				}
-				// For PNG with no background: leave transparent (no fill)
-
-				// Draw all visible layers
-				const layers = this.editor.stateManager.get( 'layers' ) || [];
-				const visibleLayers = layers.filter( ( layer ) => layer.visible !== false );
-
-				// Use the canvas renderer to draw layers
-				if ( canvasManager.renderer && typeof canvasManager.renderer.renderLayersToContext === 'function' ) {
-					canvasManager.renderer.renderLayersToContext( ctx, visibleLayers, scale );
-				} else {
-					// Fallback: draw the current canvas content
-					ctx.drawImage( canvasManager.canvas, 0, 0, exportWidth, exportHeight );
-				}
-
-				// Convert to blob
-				const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
-				exportCanvas.toBlob( ( blob ) => {
-					if ( blob ) {
-						resolve( blob );
-					} else {
-						reject( new Error( 'Failed to create image blob' ) );
-					}
-				}, mimeType, quality );
-
-			} catch ( error ) {
-				reject( error );
-			}
-		} );
+		return this.exportController.exportAsImage( options );
 	}
 
 	/**
-	 * Export and download the current canvas as an image file.
-	 *
-	 * @param {Object} options - Export options (see exportAsImage)
-	 * @param {string} options.filename - Custom filename (optional)
-	 */
-	/**
-	 * Sanitize a filename by removing/replacing characters that are problematic for filesystems
+	 * Sanitize a filename by removing/replacing problematic characters.
+	 * Delegates to ExportController.
 	 *
 	 * @param {string} name - Filename to sanitize
 	 * @return {string} Sanitized filename
 	 */
 	sanitizeFilename( name ) {
-		if ( typeof name !== 'string' ) {
-			return 'image';
-		}
-		// Replace filesystem-problematic characters with underscores
-		// Windows forbidden: < > : " / \ | ? *
-		// Also remove control characters (via code point ranges) and leading/trailing whitespace
-		return name
-			// eslint-disable-next-line no-control-regex
-			.replace( /[<>:"/\\|?*\x00-\x1f]/g, '_' )
-			.replace( /^[\s.]+|[\s.]+$/g, '' )
-			.substring( 0, 200 ) || 'image';
+		return this.exportController.sanitizeFilename( name );
 	}
 
+	/**
+	 * Export and download the current canvas as an image file.
+	 * Delegates to ExportController.
+	 *
+	 * @param {Object} options - Export options
+	 */
 	downloadAsImage( options = {} ) {
-		const filename = this.editor.stateManager.get( 'filename' ) || 'image';
-		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
-		// Remove File: prefix and extension from filename
-		const baseName = filename
-			.replace( /^File:/i, '' )
-			.replace( /\.[^/.]+$/, '' );
-		const format = options.format || 'png';
-		const ext = format === 'jpeg' ? '.jpg' : '.png';
-		// Format: ImageName-LayerSetName.ext (omit -default for default set)
-		const setNamePart = currentSetName === 'default' ? '' : `-${ currentSetName }`;
-		// Sanitize the final filename to prevent filesystem issues
-		// If user provided a filename with extension, use it as-is (after sanitizing); otherwise add extension
-		let downloadName;
-		if ( options.filename ) {
-			const sanitized = this.sanitizeFilename( options.filename );
-			// Don't add extension if user already provided one
-			const hasExt = /\.(png|jpg|jpeg)$/i.test( sanitized );
-			downloadName = hasExt ? sanitized : sanitized + ext;
-		} else {
-			downloadName = this.sanitizeFilename( `${ baseName }${ setNamePart }` ) + ext;
-		}
-
-		this.showSpinner();
-
-		this.exportAsImage( options ).then( ( blob ) => {
-			this.hideSpinner();
-
-			// Create download link
-			const url = URL.createObjectURL( blob );
-			const a = document.createElement( 'a' );
-			a.href = url;
-			a.download = downloadName;
-			document.body.appendChild( a );
-			a.click();
-			document.body.removeChild( a );
-			URL.revokeObjectURL( url );
-
-			const msg = this.getMessage( 'layers-export-success', 'Image exported successfully' );
-			mw.notify( msg, { type: 'success' } );
-		} ).catch( ( error ) => {
-			this.hideSpinner();
-			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.error( '[APIManager] Export failed:', error );
-			}
-			const msg = this.getMessage( 'layers-export-failed', 'Failed to export image' );
-			mw.notify( msg, { type: 'error' } );
-		} );
+		return this.exportController.downloadAsImage( options );
 	}
 
 	checkSizeLimit( data ) {
