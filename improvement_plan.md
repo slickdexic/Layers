@@ -22,7 +22,7 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **10,749** (157 suites) | ✅ Excellent |
+| Tests passing | **10,790** (157 suites) | ✅ Excellent |
 | Statement coverage | **95.00%** | ✅ Excellent (recovered) |
 | Branch coverage | **84.73%** | ✅ Good |
 | Function coverage | **93.58%** | ✅ Excellent |
