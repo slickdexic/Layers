@@ -933,11 +933,19 @@
 
 		/**
 		 * Create SVG pencil icon for edit button.
+		 * Uses IconFactory if available, falls back to inline creation.
 		 *
 		 * @private
 		 * @return {SVGElement} Pencil icon SVG
 		 */
 		_createPencilIcon() {
+			// Try to use IconFactory if available (consistent with ViewerOverlay)
+			if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
+				window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createPencilIcon ) {
+				return window.Layers.UI.IconFactory.createPencilIcon( { size: 20, color: 'currentColor' } );
+			}
+
+			// Fallback inline SVG
 			const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 			svg.setAttribute( 'viewBox', '0 0 20 20' );
 			svg.setAttribute( 'width', '20' );
@@ -955,11 +963,19 @@
 
 		/**
 		 * Create SVG expand icon for view button.
+		 * Uses IconFactory if available, falls back to inline creation.
 		 *
 		 * @private
 		 * @return {SVGElement} Expand icon SVG
 		 */
 		_createExpandIcon() {
+			// Try to use IconFactory if available (consistent with ViewerOverlay)
+			if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
+				window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createExpandIcon ) {
+				return window.Layers.UI.IconFactory.createExpandIcon( false, { size: 20, color: 'currentColor' } );
+			}
+
+			// Fallback inline SVG
 			const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 			svg.setAttribute( 'viewBox', '0 0 20 20' );
 			svg.setAttribute( 'width', '20' );

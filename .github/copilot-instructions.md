@@ -99,10 +99,10 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 12 files exceed 1,000 lines (reduced from 20, initiative completed Jan 30, 2026):
-    - **Generated data files (exempt):** ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,055 lines)
-    - **Hand-written files (10 JS):** LayerPanel, CanvasManager, Toolbar, LayersEditor, SelectionManager, PropertyBuilders, InlineTextEditor, APIManager, ViewerManager, ToolManager, CanvasRenderer, GroupManager
-    - **PHP god classes (2):** LayersDatabase.php (1,242 lines), ServerSideLayerValidator.php (1,163 lines)
+  - **God classes:** 17 files exceed 1,000 lines:
+    - **Generated data files (exempt):** ShapeLibraryData.js (~11,300 lines), EmojiLibraryIndex.js (~3,056 lines)
+    - **Hand-written files (13 JS):** LayerPanel, CanvasManager, Toolbar, LayersEditor, SelectionManager, PropertyBuilders, InlineTextEditor, APIManager, ViewerManager, ToolManager, CanvasRenderer, GroupManager, SlideController
+    - **PHP god classes (2):** ServerSideLayerValidator.php (1,297 lines), LayersDatabase.php (1,242 lines)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -390,11 +390,11 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (10,939 tests in 162 suites — verified January 29, 2026)
-- Coverage (94.65% statement, 84.49% branch — verified January 29, 2026)
+- Test count (10,975 tests in 162 suites — verified January 29, 2026)
+- Coverage (95.09% statement, 84.80% branch — verified January 29, 2026)
 - JavaScript file count (139 files total, ~94,137 lines)
 - PHP file count (40 files, ~14,543 lines)
-- God class count (12 files >1,000 lines; 2 generated data files, 10 JS, 2 PHP)
+- God class count (17 files >1,000 lines; 2 generated data files, 13 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)

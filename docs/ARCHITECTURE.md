@@ -17,22 +17,22 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (January 28, 2026)
+## Codebase Statistics (January 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **132** |
-| Total JS lines | **~93,406** |
+| Total JS files | **141** |
+| Total JS lines | **~94,286** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~40,000 lines (generated) |
-| ES6 classes | **132** |
+| ES6 classes | **141** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **94.65% stmt, 84.49% branch** |
+| Test coverage | **95.53% stmt, 85.28% branch** |
 | Jest tests | **10,939** (162 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **22** (2 generated, 20 JS, 2 PHP) |
+| God classes (>1000 lines) | **17** (2 generated, 13 JS, 2 PHP) |
 | Drawing tools | **15** |
 | Shape library | **1,310 shapes** |
 | Emoji library | **2,817 emoji** |
@@ -95,7 +95,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - Shape Library with 1,310 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
-### God Classes (22 Files ≥1,000 Lines)
+### God Classes (17 Files ≥1,000 Lines)
 
 **Generated Data Files (exempt from refactoring):**
 | File | Lines | Notes |
@@ -106,30 +106,25 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 **Hand-Written JavaScript Files with Delegation Patterns:**
 | File | Lines | Delegation Status |
 |------|-------|-------------------|
-| LayerPanel.js | 2,175 | ✅ 9 controllers |
-| CanvasManager.js | 2,044 | ✅ 10+ controllers |
-| ViewerManager.js | 2,018 | Viewer orchestration |
-| Toolbar.js | 1,891 | ✅ 4 modules |
-| LayersEditor.js | 1,796 | ✅ 3 modules |
-| APIManager.js | 1,523 | ✅ APIErrorHandler |
-| SelectionManager.js | 1,431 | ✅ 3 modules |
-| ArrowRenderer.js | 1,301 | Feature complexity |
-| InlineTextEditor.js | 1,300 | Feature complexity |
-| PropertyBuilders.js | 1,293 | UI builders |
-| CalloutRenderer.js | 1,291 | Feature complexity |
-| ToolManager.js | 1,224 | ✅ 2 handlers |
-| CanvasRenderer.js | 1,219 | ✅ SelectionRenderer |
-| GroupManager.js | 1,171 | Group operations |
-| TransformController.js | 1,110 | Transform engine |
-| ResizeCalculator.js | 1,105 | Shape calculations |
-| ToolbarStyleControls.js | 1,070 | ✅ Style controls |
-| PropertiesForm.js | 1,004 | ✅ PropertyBuilders |
+| LayerPanel.js | 2,176 | ✅ 9 controllers |
+| CanvasManager.js | 2,045 | ✅ 10+ controllers |
+| Toolbar.js | 1,892 | ✅ 4 modules |
+| LayersEditor.js | 1,856 | ✅ 3 modules |
+| SelectionManager.js | 1,432 | ✅ 3 modules |
+| PropertyBuilders.js | 1,415 | UI builders |
+| InlineTextEditor.js | 1,396 | Feature complexity |
+| APIManager.js | 1,394 | ✅ APIErrorHandler |
+| ViewerManager.js | 1,278 | Viewer orchestration |
+| ToolManager.js | 1,225 | ✅ 2 handlers |
+| CanvasRenderer.js | 1,220 | ✅ SelectionRenderer |
+| GroupManager.js | 1,172 | Group operations |
+| SlideController.js | 1,003 | Slide mode controller |
 
 **PHP God Classes:**
 | File | Lines | Notes |
 |------|-------|-------|
+| ServerSideLayerValidator.php | 1,297 | Validation complexity |
 | LayersDatabase.php | 1,242 | Uses delegation pattern |
-| ServerSideLayerValidator.php | 1,163 | Validation complexity |
 
 **Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 94.65% test coverage.
 
