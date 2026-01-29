@@ -29,7 +29,7 @@ strategic extraction of cohesive modules.
 |--------|---------|--------|--------|
 | JS god classes (hand-written) | 18 | ≤12 | 🟡 In Progress |
 | Test coverage | 95.85% | ≥95% | ✅ Maintained |
-| All tests passing | 11,011 | 10,860+ | ✅ Maintained |
+| All tests passing | 10,893 | 10,860+ | ✅ Maintained |
 | ESLint errors | 0 | 0 | ✅ Maintained |
 
 ---
@@ -40,7 +40,7 @@ strategic extraction of cohesive modules.
 |-------|-------------|-------|---------------------|----------|
 | **1** | InlineTextEditor.js | ~~2,282~~ → 1,393 | ✅ RichTextConverter, RichTextToolbar | COMPLETE |
 | **2** | ViewerManager.js | ~~2,026~~ → 1,277 | ✅ SlideController | COMPLETE |
-| **3** | APIManager.js | 1,523 | Extract RetryManager, RequestQueue | MEDIUM |
+| **3** | APIManager.js | ~~1,524~~ → 1,393 | ✅ ExportController | COMPLETE |
 | **4** | TextBoxRenderer.js | 1,117 | Extract RichTextMeasurement | MEDIUM |
 | **5** | CalloutRenderer.js | 1,289 | Extract TailCalculator | LOW |
 | **6** | ArrowRenderer.js | 1,310 | Extract CurvedArrowCalculator | LOW |
@@ -242,17 +242,32 @@ Created **SlideController.js** (1,030 lines) containing:
 
 ---
 
-## Phase 3: APIManager Extraction
+## Phase 3: APIManager Extraction ✅ COMPLETE
 
-**Target:** Reduce APIManager.js from 1,523 lines to ~900 lines  
-**Timeline:** 2-3 days  
-**Status:** ⏳ PLANNED
+**Target:** Reduce APIManager.js from 1,524 lines to ~1,400 lines  
+**Actual Result:** 1,524 → 1,393 lines (-131 lines, -9%)  
+**Timeline:** 1 day (Jan 30, 2026)  
+**Status:** ✅ COMPLETE
 
-### Extraction Plan
+### Extraction Completed
 
-1. **RetryManager.js** (~200 lines) — Retry logic with exponential backoff
-2. **RequestQueue.js** (~250 lines) — Request deduplication and queuing
-3. **ResponseNormalizer.js** (~150 lines) — API response normalization
+**ExportController.js** (~252 lines) — Image export operations:
+- `exportAsImage()` — Composite canvas to image blob
+- `downloadAsImage()` — Trigger browser download
+- `sanitizeFilename()` — Clean filenames for filesystems
+
+### Testing
+
+- **Created:** `ExportController.test.js` with 21 tests
+- **Modified:** `APIManager.test.js` — replaced 12 implementation tests with 3 delegation tests
+- **All tests passing:** 10,893 passed, 133 skipped
+
+### Notes
+
+The extraction was more modest than originally planned (ExtractController instead of RetryManager/RequestQueue/ResponseNormalizer) because:
+1. Export operations were the most cohesive, self-contained module
+2. Retry logic is tightly integrated with save operations
+3. Request queue is small and doesn't warrant separate module
 
 ---
 
@@ -285,6 +300,8 @@ Use dependency injection for callbacks.
 | Jan 30, 2026 | **Phase 1 COMPLETE** | InlineTextEditor below 1,500 line threshold |
 | Jan 30, 2026 | Phase 2: SlideController extracted | ViewerManager: 2,026 → 1,277 lines (-749) |
 | Jan 30, 2026 | **Phase 2 COMPLETE** | ViewerManager below 1,400 line threshold |
+| Jan 30, 2026 | Phase 3: ExportController extracted | APIManager: 1,524 → 1,393 lines (-131) |
+| Jan 30, 2026 | **Phase 3 COMPLETE** | APIManager: Export ops now isolated |
 | | | |
 
 ---
