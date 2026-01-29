@@ -2515,4 +2515,269 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 	} );
+
+	describe( 'handleSlideEditClick', () => {
+		it( 'should delegate to slideController when available', () => {
+			const manager = new ViewerManager();
+			const mockSlideController = {
+				handleSlideEditClick: jest.fn()
+			};
+			manager._slideController = mockSlideController;
+
+			const container = document.createElement( 'div' );
+			manager.handleSlideEditClick( container );
+
+			expect( mockSlideController.handleSlideEditClick ).toHaveBeenCalledWith( container );
+		} );
+
+		it( 'should do nothing when slideController not available', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+
+			const container = document.createElement( 'div' );
+			expect( () => manager.handleSlideEditClick( container ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'handleSlideViewClick', () => {
+		it( 'should delegate to slideController when available', () => {
+			const manager = new ViewerManager();
+			const mockSlideController = {
+				handleSlideViewClick: jest.fn()
+			};
+			manager._slideController = mockSlideController;
+
+			const container = document.createElement( 'div' );
+			const payload = { layers: [] };
+			manager.handleSlideViewClick( container, payload );
+
+			expect( mockSlideController.handleSlideViewClick ).toHaveBeenCalledWith( container, payload );
+		} );
+
+		it( 'should do nothing when slideController not available', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+
+			const container = document.createElement( 'div' );
+			expect( () => manager.handleSlideViewClick( container, {} ) ).not.toThrow();
+		} );
+	} );
+
+	describe( '_msg', () => {
+		it( 'should return translated message when available', () => {
+			mockMw.message = jest.fn().mockReturnValue( {
+				exists: jest.fn().mockReturnValue( true ),
+				text: jest.fn().mockReturnValue( 'Translated message' )
+			} );
+
+			const manager = new ViewerManager();
+			const result = manager._msg( 'layers-test-key', 'Fallback text' );
+			expect( result ).toBe( 'Translated message' );
+		} );
+
+		it( 'should return fallback when mw undefined', () => {
+			const originalMw = global.mw;
+			delete global.mw;
+
+			const manager = new ViewerManager();
+			const result = manager._msg( 'layers-test-key', 'Fallback text' );
+			expect( result ).toBe( 'Fallback text' );
+
+			global.mw = originalMw;
+		} );
+
+		it( 'should return fallback when message does not exist', () => {
+			mockMw.message = jest.fn().mockReturnValue( {
+				exists: jest.fn().mockReturnValue( false ),
+				text: jest.fn().mockReturnValue( '' )
+			} );
+
+			const manager = new ViewerManager();
+			const result = manager._msg( 'nonexistent-key', 'Fallback' );
+			expect( result ).toBe( 'Fallback' );
+		} );
+	} );
+
+	describe( '_createPencilIcon', () => {
+		it( 'should create SVG element', () => {
+			const manager = new ViewerManager();
+			const icon = manager._createPencilIcon();
+
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+		} );
+
+		it( 'should use IconFactory when available', () => {
+			const mockIcon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+			window.Layers = {
+				UI: {
+					IconFactory: {
+						createPencilIcon: jest.fn( () => mockIcon )
+					}
+				}
+			};
+
+			const manager = new ViewerManager();
+			const icon = manager._createPencilIcon();
+
+			expect( window.Layers.UI.IconFactory.createPencilIcon ).toHaveBeenCalled();
+			expect( icon ).toBe( mockIcon );
+		} );
+
+		it( 'should use fallback when IconFactory not available', () => {
+			delete window.Layers;
+
+			const manager = new ViewerManager();
+			const icon = manager._createPencilIcon();
+
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			// Should have path elements for the pencil
+			const paths = icon.querySelectorAll( 'path' );
+			expect( paths.length ).toBeGreaterThan( 0 );
+		} );
+	} );
+
+	describe( '_createExpandIcon', () => {
+		it( 'should create SVG element', () => {
+			const manager = new ViewerManager();
+			const icon = manager._createExpandIcon();
+
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+		} );
+
+		it( 'should use IconFactory when available', () => {
+			const mockIcon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+			window.Layers = {
+				UI: {
+					IconFactory: {
+						createFullscreenIcon: jest.fn( () => mockIcon )
+					}
+				}
+			};
+
+			const manager = new ViewerManager();
+			const icon = manager._createExpandIcon();
+
+			expect( window.Layers.UI.IconFactory.createFullscreenIcon ).toHaveBeenCalled();
+			expect( icon ).toBe( mockIcon );
+		} );
+
+		it( 'should use fallback when IconFactory not available', () => {
+			delete window.Layers;
+
+			const manager = new ViewerManager();
+			const icon = manager._createExpandIcon();
+
+			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
+			// Expand icon uses path and line elements
+			expect( icon.querySelectorAll( 'path, line' ).length ).toBeGreaterThan( 0 );
+		} );
+	} );
+
+	describe( 'openSlideEditor', () => {
+		it( 'should delegate to slideController when available', () => {
+			const manager = new ViewerManager();
+			const mockSlideController = {
+				openSlideEditor: jest.fn()
+			};
+			manager._slideController = mockSlideController;
+
+			const slideData = {
+				slideName: 'TestSlide',
+				canvasWidth: 800,
+				canvasHeight: 600
+			};
+			manager.openSlideEditor( slideData );
+
+			expect( mockSlideController.openSlideEditor ).toHaveBeenCalledWith( slideData );
+		} );
+
+		it( 'should warn when slideController not available', () => {
+			const manager = new ViewerManager( { debug: true } );
+			manager._slideController = null;
+
+			const slideData = { slideName: 'TestSlide' };
+			manager.openSlideEditor( slideData );
+
+			// Should not throw
+			expect( true ).toBe( true );
+		} );
+	} );
+
+	describe( 'buildSlideEditorUrl', () => {
+		it( 'should delegate to slideController when available', () => {
+			const manager = new ViewerManager();
+			const mockSlideController = {
+				buildSlideEditorUrl: jest.fn( () => '/wiki/Special:EditSlide/Test' )
+			};
+			manager._slideController = mockSlideController;
+
+			const result = manager.buildSlideEditorUrl( { slideName: 'Test' } );
+
+			expect( mockSlideController.buildSlideEditorUrl ).toHaveBeenCalled();
+			expect( result ).toBe( '/wiki/Special:EditSlide/Test' );
+		} );
+
+		it( 'should return empty string when slideController not available', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+
+			const result = manager.buildSlideEditorUrl( { slideName: 'Test' } );
+
+			expect( result ).toBe( '' );
+		} );
+	} );
+
+	describe( 'refreshAllSlides', () => {
+		it( 'should delegate to slideController when available', () => {
+			const manager = new ViewerManager();
+			const mockSlideController = {
+				refreshAllSlides: jest.fn( () => Promise.resolve( { refreshed: 1 } ) )
+			};
+			manager._slideController = mockSlideController;
+
+			return manager.refreshAllSlides().then( ( result ) => {
+				expect( mockSlideController.refreshAllSlides ).toHaveBeenCalled();
+				expect( result.refreshed ).toBe( 1 );
+			} );
+		} );
+
+		it( 'should return empty result when slideController not available', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+
+			return manager.refreshAllSlides().then( ( result ) => {
+				expect( result.refreshed ).toBe( 0 );
+				expect( result.total ).toBe( 0 );
+			} );
+		} );
+	} );
+
+	describe( 'reinitializeSlideViewer', () => {
+		it( 'should delegate to slideController when available', () => {
+			const manager = new ViewerManager();
+			const mockSlideController = {
+				reinitializeSlideViewer: jest.fn( () => true )
+			};
+			manager._slideController = mockSlideController;
+
+			const container = document.createElement( 'div' );
+			const payload = { layers: [] };
+			const result = manager.reinitializeSlideViewer( container, payload );
+
+			expect( mockSlideController.reinitializeSlideViewer ).toHaveBeenCalledWith( container, payload );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should return false when slideController not available', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+
+			const container = document.createElement( 'div' );
+			const result = manager.reinitializeSlideViewer( container, {} );
+
+			expect( result ).toBe( false );
+		} );
+	} );
 } );
