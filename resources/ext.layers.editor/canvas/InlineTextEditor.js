@@ -164,7 +164,7 @@
 				this.canvasManager.renderLayers( this.canvasManager.editor.layers );
 			}
 
-			// Create floating toolbar
+			// Create floating toolbar using RichTextToolbar
 			this._createToolbar();
 
 			// Focus the editor
@@ -795,7 +795,10 @@
 			// Use setTimeout to allow click events to process first
 			setTimeout( () => {
 				// Don't finish editing if we're interacting with the toolbar or a dialog
-				if ( this._isToolbarInteraction ) {
+				// Check both the local flag and the toolbar instance
+				const toolbarInteracting = this._isToolbarInteraction ||
+					( this._toolbar && this._toolbar.isInteracting() );
+				if ( toolbarInteracting ) {
 					// Don't reset the flag here - let the control that set it reset it
 					return;
 				}
@@ -934,6 +937,9 @@
 		/**
 		 * Create the floating formatting toolbar
 		 *
+		 * Delegates to RichTextToolbar for toolbar creation and management.
+		 * This method was refactored as part of the God Class Reduction Initiative.
+		 *
 		 * @private
 		 */
 		_createToolbar() {
@@ -941,576 +947,48 @@
 				return;
 			}
 
-			this.toolbarElement = document.createElement( 'div' );
-			this.toolbarElement.className = 'layers-text-toolbar';
+			const RichTextToolbar = window.Layers && window.Layers.Canvas &&
+				window.Layers.Canvas.RichTextToolbar;
 
-			// Create toolbar content
-			const layer = this.editingLayer;
-
-			// Drag handle
-			const dragHandle = document.createElement( 'div' );
-			dragHandle.className = 'layers-text-toolbar-handle';
-			dragHandle.innerHTML = '⋮⋮';
-			dragHandle.title = this._msg( 'layers-text-toolbar-drag', 'Drag to move' );
-			this.toolbarElement.appendChild( dragHandle );
-
-			// Font family select
-			const fontSelect = this._createFontSelect( layer );
-			this.toolbarElement.appendChild( fontSelect );
-
-			// Separator
-			this.toolbarElement.appendChild( this._createSeparator() );
-
-			// Font size input
-			const sizeGroup = this._createFontSizeInput( layer );
-			this.toolbarElement.appendChild( sizeGroup );
-
-			// Separator
-			this.toolbarElement.appendChild( this._createSeparator() );
-
-			// Bold button
-			const boldBtn = this._createFormatButton( 'B', 'bold',
-				layer.fontWeight === 'bold', this._msg( 'layers-text-toolbar-bold', 'Bold' ) );
-			this.toolbarElement.appendChild( boldBtn );
-
-			// Italic button
-			const italicBtn = this._createFormatButton( 'I', 'italic',
-				layer.fontStyle === 'italic', this._msg( 'layers-text-toolbar-italic', 'Italic' ) );
-			italicBtn.style.fontStyle = 'italic';
-			this.toolbarElement.appendChild( italicBtn );
-
-			// Rich text format buttons (only for textbox/callout)
-			if ( this._isRichTextMode ) {
-				// Underline button
-				const underlineBtn = this._createFormatButton( 'U', 'underline',
-					false, this._msg( 'layers-text-toolbar-underline', 'Underline' ) );
-				underlineBtn.style.textDecoration = 'underline';
-				this.toolbarElement.appendChild( underlineBtn );
-
-				// Strikethrough button
-				const strikeBtn = this._createFormatButton( 'S', 'strikethrough',
-					false, this._msg( 'layers-text-toolbar-strikethrough', 'Strikethrough' ) );
-				strikeBtn.style.textDecoration = 'line-through';
-				this.toolbarElement.appendChild( strikeBtn );
-
-				// Highlight button
-				const highlightBtn = this._createHighlightButton();
-				this.toolbarElement.appendChild( highlightBtn );
+			if ( !RichTextToolbar ) {
+				// Fallback if RichTextToolbar not loaded - create minimal toolbar
+				this.toolbarElement = null;
+				this._toolbar = null;
+				return;
 			}
 
-			// Separator
-			this.toolbarElement.appendChild( this._createSeparator() );
-
-			// Alignment buttons
-			const alignLeft = this._createAlignButton( 'left', layer.textAlign );
-			const alignCenter = this._createAlignButton( 'center', layer.textAlign );
-			const alignRight = this._createAlignButton( 'right', layer.textAlign );
-			this.toolbarElement.appendChild( alignLeft );
-			this.toolbarElement.appendChild( alignCenter );
-			this.toolbarElement.appendChild( alignRight );
-
-			// Separator
-			this.toolbarElement.appendChild( this._createSeparator() );
-
-			// Color picker
-			const colorPicker = this._createColorPicker( layer );
-			this.toolbarElement.appendChild( colorPicker );
-
-			// Setup drag handlers
-			this._setupToolbarDrag( dragHandle );
-
-			// Prevent clicks on toolbar from closing the editor
-			this.toolbarElement.addEventListener( 'mousedown', ( e ) => {
-				// Mark that we're interacting with the toolbar
-				this._isToolbarInteraction = true;
-				// Don't prevent default for inputs/selects that need focus
-				const tagName = e.target.tagName.toLowerCase();
-				if ( tagName !== 'input' && tagName !== 'select' ) {
-					e.preventDefault();
-				}
-			} );
-
-			// Position toolbar above the editor
-			this._positionToolbar();
-
-			// Append to container
-			if ( this.containerElement ) {
-				this.containerElement.appendChild( this.toolbarElement );
-			}
-		}
-
-		/**
-		 * Create font family dropdown
-		 *
-		 * @private
-		 * @param {Object} layer - Current layer
-		 * @return {HTMLElement} Select element
-		 */
-		_createFontSelect( layer ) {
-			const select = document.createElement( 'select' );
-			select.className = 'layers-text-toolbar-font';
-			select.title = this._msg( 'layers-text-toolbar-font', 'Font family' );
-
-			// Get fonts from centralized FontConfig
-			const FontConfig = window.Layers && window.Layers.FontConfig;
-			const fonts = FontConfig ? FontConfig.getFonts() : [
-				'Arial', 'Roboto', 'Noto Sans', 'Times New Roman', 'Georgia',
-				'Verdana', 'Courier New', 'Helvetica'
-			];
-
-			// Find the matching font for the current layer
-			const currentFont = FontConfig ?
-				FontConfig.findMatchingFont( layer.fontFamily || 'Arial' ) :
-				( layer.fontFamily || 'Arial' );
-
-			fonts.forEach( ( font ) => {
-				const option = document.createElement( 'option' );
-				option.value = font;
-				option.textContent = font;
-				option.style.fontFamily = font;
-				if ( font === currentFont ) {
-					option.selected = true;
-				}
-				select.appendChild( option );
-			} );
-
-			select.addEventListener( 'change', () => {
-				this._applyFormat( 'fontFamily', select.value );
-				// Reset flag and re-focus editor after selection
-				this._isToolbarInteraction = false;
-				if ( this.editorElement ) {
-					this.editorElement.focus();
-				}
-			} );
-
-			// Mark as interacting when dropdown opens and save selection
-			select.addEventListener( 'mousedown', () => {
-				this._saveSelection();
-				this._isToolbarInteraction = true;
-			} );
-
-			// Also mark on focus for keyboard navigation
-			select.addEventListener( 'focus', () => {
-				this._isToolbarInteraction = true;
-			} );
-
-			// Reset flag if user clicks away without selecting
-			select.addEventListener( 'blur', () => {
-				// Small delay to allow change event to fire first
-				setTimeout( () => {
-					if ( this._isToolbarInteraction && document.activeElement !== select ) {
-						this._isToolbarInteraction = false;
-						if ( this.editorElement ) {
-							this.editorElement.focus();
-						}
-					}
-				}, 100 );
-			} );
-
-			return select;
-		}
-
-		/**
-		 * Create font size input
-		 *
-		 * @private
-		 * @param {Object} layer - Current layer
-		 * @return {HTMLElement} Size input group
-		 */
-		_createFontSizeInput( layer ) {
-			const group = document.createElement( 'div' );
-			group.className = 'layers-text-toolbar-size-group';
-
-			const input = document.createElement( 'input' );
-			input.type = 'number';
-			input.className = 'layers-text-toolbar-size';
-			input.value = layer.fontSize || 16;
-			input.min = 8;
-			input.max = 200;
-			input.title = this._msg( 'layers-text-toolbar-size', 'Font size' );
-
-			// Save selection before input gets focus
-			input.addEventListener( 'mousedown', () => {
-				this._saveSelection();
-			} );
-
-			input.addEventListener( 'change', () => {
-				const size = Math.max( 8, Math.min( 200, parseInt( input.value, 10 ) || 16 ) );
-				input.value = size;
-				this._applyFormat( 'fontSize', size );
-				// Re-focus editor after change
-				if ( this.editorElement ) {
-					this.editorElement.focus();
-				}
-			} );
-
-			// Mark interaction and refocus on blur
-			input.addEventListener( 'focus', () => {
-				this._isToolbarInteraction = true;
-			} );
-			input.addEventListener( 'blur', () => {
-				if ( this.editorElement ) {
-					this.editorElement.focus();
-				}
-			} );
-
-			const label = document.createElement( 'span' );
-			label.className = 'layers-text-toolbar-size-label';
-			label.textContent = 'px';
-
-			group.appendChild( input );
-			group.appendChild( label );
-
-			return group;
-		}
-
-		/**
-		 * Create a format toggle button (bold/italic)
-		 *
-		 * @private
-		 * @param {string} label - Button label
-		 * @param {string} format - Format type ('bold', 'italic', 'underline', 'strikethrough')
-		 * @param {boolean} active - Whether currently active
-		 * @param {string} title - Button title/tooltip
-		 * @return {HTMLElement} Button element
-		 */
-		_createFormatButton( label, format, active, title ) {
-			const btn = document.createElement( 'button' );
-			btn.className = 'layers-text-toolbar-btn';
-			btn.textContent = label;
-			btn.title = title;
-			btn.setAttribute( 'data-format', format );
-
-			if ( active ) {
-				btn.classList.add( 'active' );
-			}
-
-			btn.addEventListener( 'click', ( e ) => {
-				e.preventDefault();
-				btn.classList.toggle( 'active' );
-
-				if ( format === 'bold' ) {
-					this._applyFormat( 'fontWeight', btn.classList.contains( 'active' ) ? 'bold' : 'normal' );
-				} else if ( format === 'italic' ) {
-					this._applyFormat( 'fontStyle', btn.classList.contains( 'active' ) ? 'italic' : 'normal' );
-				} else if ( format === 'underline' ) {
-					this._applyFormat( 'underline', btn.classList.contains( 'active' ) );
-				} else if ( format === 'strikethrough' ) {
-					this._applyFormat( 'strikethrough', btn.classList.contains( 'active' ) );
-				}
-			} );
-
-			// Prevent blur
-			btn.addEventListener( 'mousedown', ( e ) => e.preventDefault() );
-
-			return btn;
-		}
-
-		/**
-		 * Create highlight button with color picker
-		 *
-		 * The button applies highlight with the current color when clicked.
-		 * Holding shift or clicking the dropdown arrow opens the color picker
-		 * to change the highlight color.
-		 *
-		 * @private
-		 * @return {HTMLElement} Button element with color picker
-		 */
-		_createHighlightButton() {
-			const wrapper = document.createElement( 'div' );
-			wrapper.className = 'layers-text-toolbar-highlight-wrapper';
-			wrapper.style.position = 'relative';
-			wrapper.style.display = 'inline-flex';
-			wrapper.style.alignItems = 'stretch';
-
-			// Store current highlight color
-			let currentColor = '#ffff00'; // Default yellow
-			const self = this;
-
-			// Main highlight button - applies highlight with current color
-			const btn = document.createElement( 'button' );
-			btn.className = 'layers-text-toolbar-btn layers-text-toolbar-highlight-main';
-			btn.innerHTML = '<span style="background:#ffff00;padding:0 2px;">H</span>';
-			btn.title = this._msg( 'layers-text-toolbar-highlight', 'Highlight' );
-			btn.setAttribute( 'data-format', 'highlight' );
-
-			// Click main button to apply highlight with current color
-			btn.addEventListener( 'mousedown', ( e ) => {
-				e.preventDefault();
-				this._saveSelection();
-				this._isToolbarInteraction = true;
-			} );
-
-			btn.addEventListener( 'click', ( e ) => {
-				e.preventDefault();
-				// Apply highlight with current color
-				this._applyFormat( 'highlight', currentColor );
-				this._isToolbarInteraction = false;
-				if ( this.editorElement ) {
-					this.editorElement.focus();
-				}
-			} );
-
-			// Dropdown arrow to open color picker
-			const dropdownBtn = document.createElement( 'button' );
-			dropdownBtn.className = 'layers-text-toolbar-btn layers-text-toolbar-highlight-dropdown';
-			dropdownBtn.innerHTML = '▼';
-			dropdownBtn.title = this._msg( 'layers-text-toolbar-highlight-color', 'Highlight color' );
-			dropdownBtn.style.fontSize = '8px';
-			dropdownBtn.style.padding = '0 2px';
-			dropdownBtn.style.minWidth = '12px';
-
-			// Get i18n strings for color picker
-			const colorPickerStrings = {
-				title: this._msg( 'layers-color-picker-title', 'Choose color' ),
-				standard: this._msg( 'layers-color-picker-standard', 'Standard colors' ),
-				saved: this._msg( 'layers-color-picker-saved', 'Saved colors' ),
-				customSection: this._msg( 'layers-color-picker-custom-section', 'Custom color' ),
-				none: this._msg( 'layers-color-picker-none', 'No fill (transparent)' ),
-				emptySlot: this._msg( 'layers-color-picker-empty-slot', 'Empty slot' ),
-				cancel: this._msg( 'layers-color-picker-cancel', 'Cancel' ),
-				apply: this._msg( 'layers-color-picker-apply', 'Apply' ),
-				transparent: this._msg( 'layers-color-picker-transparent', 'Transparent' ),
-				swatchTemplate: this._msg( 'layers-color-picker-color-swatch', 'Set color to $1' ),
-				previewTemplate: this._msg( 'layers-color-picker-color-preview', 'Current color: $1' )
-			};
-
-			const ColorPickerDialog = window.Layers && window.Layers.UI && window.Layers.UI.ColorPickerDialog;
-
-			dropdownBtn.addEventListener( 'mousedown', ( e ) => {
-				e.preventDefault();
-				this._saveSelection();
-				this._isToolbarInteraction = true;
-			} );
-
-			dropdownBtn.addEventListener( 'click', ( e ) => {
-				e.preventDefault();
-				e.stopPropagation();
-
-				if ( ColorPickerDialog ) {
-					const dialog = new ColorPickerDialog( {
-						currentColor: currentColor,
-						strings: colorPickerStrings,
-						anchorElement: dropdownBtn,
-						onApply: ( newColor ) => {
-							currentColor = newColor;
-							btn.querySelector( 'span' ).style.backgroundColor = newColor;
-							self._applyFormat( 'highlight', newColor );
-							self._isToolbarInteraction = false;
-							if ( self.editorElement ) {
-								self.editorElement.focus();
-							}
-						},
-						onPreview: ( previewColor ) => {
-							btn.querySelector( 'span' ).style.backgroundColor = previewColor;
-						},
-						onCancel: () => {
-							btn.querySelector( 'span' ).style.backgroundColor = currentColor;
-							self._isToolbarInteraction = false;
-							if ( self.editorElement ) {
-								self.editorElement.focus();
-							}
-						}
-					} );
-					dialog.open();
-				} else {
-					// Fallback: use native color input
-					const colorInput = document.createElement( 'input' );
-					colorInput.type = 'color';
-					colorInput.value = currentColor;
-					colorInput.style.position = 'absolute';
-					colorInput.style.visibility = 'hidden';
-					document.body.appendChild( colorInput );
-
-					colorInput.addEventListener( 'change', () => {
-						currentColor = colorInput.value;
-						btn.querySelector( 'span' ).style.backgroundColor = currentColor;
-						self._applyFormat( 'highlight', currentColor );
-						self._isToolbarInteraction = false;
-						if ( self.editorElement ) {
-							self.editorElement.focus();
-						}
-						document.body.removeChild( colorInput );
-					} );
-
-					colorInput.click();
-				}
-			} );
-
-			wrapper.appendChild( btn );
-			wrapper.appendChild( dropdownBtn );
-
-			return wrapper;
-		}
-
-		/**
-		 * Create alignment button
-		 *
-		 * @private
-		 * @param {string} align - Alignment value (left/center/right)
-		 * @param {string} currentAlign - Current alignment
-		 * @return {HTMLElement} Button element
-		 */
-		_createAlignButton( align, currentAlign ) {
-			const btn = document.createElement( 'button' );
-			btn.className = 'layers-text-toolbar-btn layers-text-toolbar-align';
-			btn.setAttribute( 'data-align', align );
-			btn.title = this._msg( 'layers-text-toolbar-align-' + align, 'Align ' + align );
-
-			// SVG icons for alignment
-			const icons = {
-				left: '<svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M2 3h12v2H2zm0 4h8v2H2zm0 4h10v2H2z"/></svg>',
-				center: '<svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M2 3h12v2H2zm2 4h8v2H4zm1 4h6v2H5z"/></svg>',
-				right: '<svg width="16" height="16" viewBox="0 0 16 16"><path fill="currentColor" d="M2 3h12v2H2zm4 4h8v2H6zm2 4h6v2H8z"/></svg>'
-			};
-			btn.innerHTML = icons[ align ];
-
-			if ( ( currentAlign || 'left' ) === align ) {
-				btn.classList.add( 'active' );
-			}
-
-			btn.addEventListener( 'click', ( e ) => {
-				e.preventDefault();
-				// Deactivate siblings
-				const siblings = this.toolbarElement.querySelectorAll( '.layers-text-toolbar-align' );
-				siblings.forEach( ( s ) => s.classList.remove( 'active' ) );
-				btn.classList.add( 'active' );
-				this._applyFormat( 'textAlign', align );
-			} );
-
-			// Prevent blur
-			btn.addEventListener( 'mousedown', ( e ) => e.preventDefault() );
-
-			return btn;
-		}
-
-		/**
-		 * Create color picker
-		 *
-		 * @private
-		 * @param {Object} layer - Current layer
-		 * @return {HTMLElement} Color picker element
-		 */
-		_createColorPicker( layer ) {
-			const wrapper = document.createElement( 'div' );
-			wrapper.className = 'layers-text-toolbar-color-wrapper';
-
-			const currentColor = layer.color || layer.fill || '#000000';
-			const ColorPickerDialog = window.Layers && window.Layers.UI && window.Layers.UI.ColorPickerDialog;
-
-			// Get i18n strings for color picker
-			const colorPickerStrings = {
-				title: this._msg( 'layers-color-picker-title', 'Choose color' ),
-				standard: this._msg( 'layers-color-picker-standard', 'Standard colors' ),
-				saved: this._msg( 'layers-color-picker-saved', 'Saved colors' ),
-				customSection: this._msg( 'layers-color-picker-custom-section', 'Custom color' ),
-				none: this._msg( 'layers-color-picker-none', 'No fill (transparent)' ),
-				emptySlot: this._msg( 'layers-color-picker-empty-slot', 'Empty slot' ),
-				cancel: this._msg( 'layers-color-picker-cancel', 'Cancel' ),
-				apply: this._msg( 'layers-color-picker-apply', 'Apply' ),
-				transparent: this._msg( 'layers-color-picker-transparent', 'Transparent' ),
-				swatchTemplate: this._msg( 'layers-color-picker-color-swatch', 'Set color to $1' ),
-				previewTemplate: this._msg( 'layers-color-picker-color-preview', 'Current color: $1' )
-			};
-
-			let colorButton;
-			let storedColor = currentColor;
-			const self = this;
-
-			if ( ColorPickerDialog && typeof ColorPickerDialog.createColorButton === 'function' ) {
-				// Use full color picker dialog with swatches
-				colorButton = ColorPickerDialog.createColorButton( {
-					color: currentColor,
-					strings: colorPickerStrings,
-					onClick: () => {
-						// Save selection before dialog opens
-						self._saveSelection();
-
-						const originalColor = storedColor;
-						self._isToolbarInteraction = true;
-
-						const dialog = new ColorPickerDialog( {
-							currentColor: storedColor,
-							strings: colorPickerStrings,
-							anchorElement: colorButton,
-							onApply: ( newColor ) => {
-								storedColor = newColor;
-								self._applyFormat( 'color', newColor );
-								ColorPickerDialog.updateColorButton( colorButton, newColor, colorPickerStrings );
-								// Reset flag and refocus editor after dialog closes
-								self._isToolbarInteraction = false;
-								if ( self.editorElement ) {
-									self.editorElement.focus();
-								}
-							},
-							onPreview: ( previewColor ) => {
-								self._applyFormat( 'color', previewColor );
-							},
-							onCancel: () => {
-								self._applyFormat( 'color', originalColor );
-								// Reset flag and refocus editor after dialog closes
-								self._isToolbarInteraction = false;
-								if ( self.editorElement ) {
-									self.editorElement.focus();
-								}
-							}
-						} );
-						dialog.open();
-					}
-				} );
-				colorButton.className += ' layers-text-toolbar-color-button';
-			} else {
-				// Fallback: basic color input
-				const input = document.createElement( 'input' );
-				input.type = 'color';
-				input.className = 'layers-text-toolbar-color';
-				input.value = currentColor;
-				input.title = this._msg( 'layers-text-toolbar-color', 'Text color' );
-
-				// Save selection before input gets focus
-				input.addEventListener( 'mousedown', () => {
-					this._saveSelection();
-				} );
-
-				// Only update preview during input (while dialog is open)
-				// The actual format is applied on 'change' when dialog closes
-				input.addEventListener( 'input', () => {
-					// Update button preview only - don't apply format yet
-					// because the native color dialog is still open
-				} );
-
-				// Apply format on change (when dialog closes)
-				input.addEventListener( 'change', () => {
-					this._applyFormat( 'color', input.value );
-					this._isToolbarInteraction = false;
+			// Create toolbar instance with callbacks
+			this._toolbar = new RichTextToolbar( {
+				layer: this.editingLayer,
+				isRichTextMode: this._isRichTextMode,
+				editorElement: this.editorElement,
+				containerElement: this.containerElement,
+				onFormat: ( property, value ) => this._applyFormat( property, value ),
+				onSaveSelection: () => this._saveSelection(),
+				onFocusEditor: () => {
 					if ( this.editorElement ) {
 						this.editorElement.focus();
 					}
-				} );
+				},
+				msg: ( key, fallback ) => this._msg( key, fallback )
+			} );
 
-				// Mark interaction
-				input.addEventListener( 'focus', () => {
-					this._isToolbarInteraction = true;
-				} );
-
-				colorButton = input;
-			}
-
-			wrapper.appendChild( colorButton );
-			return wrapper;
+			// Create and store reference to the toolbar element
+			this.toolbarElement = this._toolbar.create();
 		}
 
-		/**
-		 * Create a separator element
-		 *
-		 * @private
-		 * @return {HTMLElement} Separator element
-		 */
-		_createSeparator() {
-			const sep = document.createElement( 'div' );
-			sep.className = 'layers-text-toolbar-separator';
-			return sep;
-		}
+		// =========================================================================
+		// Toolbar Creation Methods - EXTRACTED
+		// =========================================================================
+		// NOTE: The following methods have been extracted to RichTextToolbar.js:
+		//   - _createFontSelect() -> RichTextToolbar._createFontSelect()
+		//   - _createFontSizeInput() -> RichTextToolbar._createFontSizeInput()
+		//   - _createFormatButton() -> RichTextToolbar._createFormatButton()
+		//   - _createHighlightButton() -> RichTextToolbar._createHighlightButton()
+		//   - _createAlignButton() -> RichTextToolbar._createAlignButton()
+		//   - _createColorPicker() -> RichTextToolbar._createColorPicker()
+		//   - _createSeparator() -> RichTextToolbar._createSeparator()
+		// =========================================================================
 
 		/**
 		 * Save the current selection in the editor
@@ -1787,123 +1265,31 @@
 			}
 		}
 
-		/**
-		 * Setup toolbar drag functionality
-		 *
-		 * @private
-		 * @param {HTMLElement} handle - Drag handle element
-		 */
-		_setupToolbarDrag( handle ) {
-			handle.addEventListener( 'mousedown', ( e ) => {
-				e.preventDefault();
-				this._isDraggingToolbar = true;
-
-				const rect = this.toolbarElement.getBoundingClientRect();
-				this._toolbarDragOffset = {
-					x: e.clientX - rect.left,
-					y: e.clientY - rect.top
-				};
-
-				this._boundToolbarMouseMove = ( me ) => this._handleToolbarDrag( me );
-				this._boundToolbarMouseUp = () => this._stopToolbarDrag();
-
-				document.addEventListener( 'mousemove', this._boundToolbarMouseMove );
-				document.addEventListener( 'mouseup', this._boundToolbarMouseUp );
-			} );
-		}
-
-		/**
-		 * Handle toolbar drag movement
-		 *
-		 * @private
-		 * @param {MouseEvent} e - Mouse event
-		 */
-		_handleToolbarDrag( e ) {
-			if ( !this._isDraggingToolbar || !this.toolbarElement ) {
-				return;
-			}
-
-			const containerRect = this.containerElement ?
-				this.containerElement.getBoundingClientRect() :
-				{ left: 0, top: 0 };
-
-			const newX = e.clientX - this._toolbarDragOffset.x - containerRect.left;
-			const newY = e.clientY - this._toolbarDragOffset.y - containerRect.top;
-
-			this.toolbarElement.style.left = newX + 'px';
-			this.toolbarElement.style.top = newY + 'px';
-		}
-
-		/**
-		 * Stop toolbar drag
-		 *
-		 * @private
-		 */
-		_stopToolbarDrag() {
-			this._isDraggingToolbar = false;
-
-			if ( this._boundToolbarMouseMove ) {
-				document.removeEventListener( 'mousemove', this._boundToolbarMouseMove );
-			}
-			if ( this._boundToolbarMouseUp ) {
-				document.removeEventListener( 'mouseup', this._boundToolbarMouseUp );
-			}
-
-			this._boundToolbarMouseMove = null;
-			this._boundToolbarMouseUp = null;
-		}
-
-		/**
-		 * Position the toolbar above the editor
-		 *
-		 * @private
-		 */
-		_positionToolbar() {
-			if ( !this.toolbarElement || !this.editorElement ) {
-				return;
-			}
-
-			// Safety check for test environments where getBoundingClientRect may not exist
-			if ( typeof this.editorElement.getBoundingClientRect !== 'function' ) {
-				return;
-			}
-
-			const containerRect = ( this.containerElement &&
-				typeof this.containerElement.getBoundingClientRect === 'function' ) ?
-				this.containerElement.getBoundingClientRect() :
-				{ left: 0, top: 0, width: window.innerWidth };
-
-			const editorRect = this.editorElement.getBoundingClientRect();
-
-			// Position above the editor, left-aligned
-			let left = editorRect.left - containerRect.left;
-			let top = editorRect.top - containerRect.top - 44; // 36px toolbar + 8px gap
-
-			// Keep within container bounds
-			const toolbarWidth = 420; // Approximate toolbar width
-			if ( left + toolbarWidth > containerRect.width ) {
-				left = Math.max( 0, containerRect.width - toolbarWidth );
-			}
-			if ( top < 0 ) {
-				// Show below editor if not enough room above
-				top = editorRect.bottom - containerRect.top + 8;
-			}
-
-			this.toolbarElement.style.left = left + 'px';
-			this.toolbarElement.style.top = top + 'px';
-		}
+		// =========================================================================
+		// Toolbar Drag/Position Methods - EXTRACTED
+		// =========================================================================
+		// NOTE: The following methods have been extracted to RichTextToolbar.js:
+		//   - _setupToolbarDrag() -> RichTextToolbar._setupDrag()
+		//   - _handleToolbarDrag() -> RichTextToolbar._handleDrag()
+		//   - _stopToolbarDrag() -> RichTextToolbar._stopDrag()
+		//   - _positionToolbar() -> RichTextToolbar.position()
+		// =========================================================================
 
 		/**
 		 * Remove the toolbar from DOM
 		 *
+		 * Delegates to RichTextToolbar.destroy() for cleanup.
+		 *
 		 * @private
 		 */
 		_removeToolbar() {
-			this._stopToolbarDrag();
-
-			if ( this.toolbarElement && this.toolbarElement.parentNode ) {
-				this.toolbarElement.parentNode.removeChild( this.toolbarElement );
+			// Use RichTextToolbar's destroy method if available
+			if ( this._toolbar && typeof this._toolbar.destroy === 'function' ) {
+				this._toolbar.destroy();
+				this._toolbar = null;
 			}
+
+			// Also clean up the element reference
 			this.toolbarElement = null;
 		}
 
