@@ -341,6 +341,7 @@
 				"canvas/RenderCoordinator.js",
 				"canvas/InteractionController.js",
 				"canvas/TextInputController.js",
+				"canvas/RichTextConverter.js",
 				"canvas/InlineTextEditor.js",
 				"ui/IconFactory.js",
 				"ui/LayerItemFactory.js",

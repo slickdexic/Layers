@@ -225,9 +225,10 @@
 				// Extract content based on editor type
 				if ( this._isRichTextMode && this.editorElement.contentEditable === 'true' ) {
 					// ContentEditable mode - extract richText and plain text
+					const RichTextConverter = window.Layers.Canvas.RichTextConverter;
 					const contentEl = this._getContentElement();
 					const html = contentEl ? contentEl.innerHTML : '';
-					newRichText = this._htmlToRichText( html );
+					newRichText = RichTextConverter.htmlToRichText( html, this._displayScale );
 					newText = this._getPlainTextFromEditor();
 
 					if ( debug && typeof mw.log !== 'undefined' ) {
@@ -397,9 +398,10 @@
 			let newText, newRichText = null;
 
 			if ( this._isRichTextMode && this.editorElement.contentEditable === 'true' ) {
+				const RichTextConverter = window.Layers.Canvas.RichTextConverter;
 				const contentEl = this._getContentElement();
 				const html = contentEl ? contentEl.innerHTML : '';
-				newRichText = this._htmlToRichText( html );
+				newRichText = RichTextConverter.htmlToRichText( html, this._displayScale );
 				newText = this._getPlainTextFromEditor();
 			} else {
 				newText = this.editorElement.value || '';
@@ -438,16 +440,17 @@
 
 				// Create inner content wrapper - this allows flex vertical alignment
 				// on the outer element while preserving inline text flow inside
+				const RichTextConverter = window.Layers.Canvas.RichTextConverter;
 				const contentWrapper = document.createElement( 'div' );
 				contentWrapper.className = 'layers-inline-content-wrapper';
 				contentWrapper.style.width = '100%';
 
 				// Set content in wrapper - prefer richText if available
 				if ( layer.richText && Array.isArray( layer.richText ) && layer.richText.length > 0 ) {
-					contentWrapper.innerHTML = this._richTextToHtml( layer.richText );
+					contentWrapper.innerHTML = RichTextConverter.richTextToHtml( layer.richText, this._displayScale );
 				} else {
 					// Plain text - escape HTML and convert newlines
-					const escapedText = this._escapeHtml( layer.text || '' );
+					const escapedText = RichTextConverter.escapeHtml( layer.text || '' );
 					contentWrapper.innerHTML = escapedText.replace( /\n/g, '<br>' );
 				}
 
@@ -1921,291 +1924,13 @@
 		// =========================================================================
 		// Rich Text HTML Conversion Methods
 		// =========================================================================
-
-		/**
-		 * Escape HTML special characters
-		 *
-		 * @private
-		 * @param {string} text - Plain text to escape
-		 * @return {string} HTML-escaped text
-		 */
-		_escapeHtml( text ) {
-			const div = document.createElement( 'div' );
-			div.textContent = text;
-			return div.innerHTML;
-		}
-
-		/**
-		 * Convert richText array to HTML string for contentEditable
-		 *
-		 * @private
-		 * @param {Array} richText - Array of {text, style} objects
-		 * @return {string} HTML string
-		 */
-		_richTextToHtml( richText ) {
-			if ( !Array.isArray( richText ) || richText.length === 0 ) {
-				return '';
-			}
-
-			let html = '';
-			for ( const run of richText ) {
-				const text = run.text || '';
-				const style = run.style || {};
-
-				// Escape the text content
-				let escapedText = this._escapeHtml( text );
-				// Convert newlines to <br>
-				escapedText = escapedText.replace( /\n/g, '<br>' );
-
-				// Build inline style string
-				const styleProps = [];
-				// Track data attributes for unscaled values
-				const dataAttrs = [];
-
-				if ( style.fontWeight && style.fontWeight !== 'normal' ) {
-					styleProps.push( `font-weight: ${ style.fontWeight }` );
-				}
-				if ( style.fontStyle && style.fontStyle !== 'normal' ) {
-					styleProps.push( `font-style: ${ style.fontStyle }` );
-				}
-				if ( style.fontSize ) {
-					// Scale for display, store unscaled in data attribute
-					// Ensure _displayScale is valid (default to 1 if not)
-					const scale = ( this._displayScale && this._displayScale > 0 ) ? this._displayScale : 1;
-					const scaledSize = style.fontSize * scale;
-					// Use !important to override container font-size
-					styleProps.push( `font-size: ${ scaledSize }px !important` );
-					dataAttrs.push( `data-font-size="${ style.fontSize }"` );
-				}
-				if ( style.fontFamily ) {
-					styleProps.push( `font-family: ${ style.fontFamily }` );
-				}
-				if ( style.color ) {
-					styleProps.push( `color: ${ style.color }` );
-				}
-				if ( style.textDecoration && style.textDecoration !== 'none' ) {
-					styleProps.push( `text-decoration: ${ style.textDecoration }` );
-				}
-				if ( style.backgroundColor ) {
-					styleProps.push( `background-color: ${ style.backgroundColor }` );
-				}
-				if ( style.textStrokeWidth && style.textStrokeColor ) {
-					styleProps.push( `-webkit-text-stroke: ${ style.textStrokeWidth }px ${ style.textStrokeColor }` );
-				}
-
-				// Wrap in span if has styles or data attrs, otherwise just add text
-				if ( styleProps.length > 0 || dataAttrs.length > 0 ) {
-					const styleAttr = styleProps.length > 0 ? `style="${ styleProps.join( '; ' ) }"` : '';
-					const dataAttrStr = dataAttrs.join( ' ' );
-					html += `<span ${ styleAttr } ${ dataAttrStr }>${ escapedText }</span>`;
-				} else {
-					html += escapedText;
-				}
-			}
-
-			return html;
-		}
-
-		/**
-		 * Convert HTML from contentEditable back to richText array
-		 *
-		 * @private
-		 * @param {string} html - HTML string from contentEditable
-		 * @return {Array} Array of {text, style} objects
-		 */
-		_htmlToRichText( html ) {
-			// Create a temporary container to parse HTML
-			const container = document.createElement( 'div' );
-			container.innerHTML = html;
-
-			const runs = [];
-
-			/**
-			 * Recursively extract text runs with computed styles
-			 *
-			 * @param {Node} node - DOM node to process
-			 * @param {Object} inheritedStyle - Style inherited from parent
-			 */
-			const extractRuns = ( node, inheritedStyle = {} ) => {
-				if ( node.nodeType === Node.TEXT_NODE ) {
-					const text = node.textContent;
-					if ( text ) {
-						// Clone inherited style and add this run
-						const runStyle = Object.assign( {}, inheritedStyle );
-						runs.push( { text: text, style: runStyle } );
-					}
-					return;
-				}
-
-				if ( node.nodeType === Node.ELEMENT_NODE ) {
-					// Handle <br> as newline
-					if ( node.nodeName === 'BR' ) {
-						runs.push( { text: '\n', style: {} } );
-						return;
-					}
-
-					// Handle block elements (div, p) - add newline before if not first
-					const tagName = node.nodeName;
-					const isBlockElement = tagName === 'DIV' || tagName === 'P';
-					if ( isBlockElement && runs.length > 0 ) {
-						// Add newline before block element (unless it's the first)
-						const lastRun = runs[ runs.length - 1 ];
-						// Only add if the last run doesn't already end with newline
-						if ( lastRun && lastRun.text && !lastRun.text.endsWith( '\n' ) ) {
-							runs.push( { text: '\n', style: {} } );
-						}
-					}
-
-					// Build style from this element
-					const currentStyle = Object.assign( {}, inheritedStyle );
-
-					// Check for data attribute (unscaled font size)
-					if ( node.dataset && node.dataset.fontSize ) {
-						currentStyle.fontSize = parseFloat( node.dataset.fontSize );
-					}
-
-					// Check for inline style
-					const inlineStyle = node.style;
-					if ( inlineStyle ) {
-						if ( inlineStyle.fontWeight ) {
-							currentStyle.fontWeight = inlineStyle.fontWeight;
-						}
-						if ( inlineStyle.fontStyle ) {
-							currentStyle.fontStyle = inlineStyle.fontStyle;
-						}
-						// Only use inline style fontSize if we don't have data attribute
-						if ( inlineStyle.fontSize && !currentStyle.fontSize ) {
-							// Parse px value and unscale it
-							const sizeMatch = inlineStyle.fontSize.match( /(\d+(?:\.\d+)?)/ );
-							if ( sizeMatch ) {
-								// Unscale the display value back to data model value
-								const displaySize = parseFloat( sizeMatch[ 1 ] );
-								currentStyle.fontSize = this._displayScale > 0 ?
-									Math.round( displaySize / this._displayScale ) : displaySize;
-							}
-						}
-						if ( inlineStyle.fontFamily ) {
-							currentStyle.fontFamily = inlineStyle.fontFamily.replace( /["']/g, '' );
-						}
-						if ( inlineStyle.color ) {
-							currentStyle.color = inlineStyle.color;
-						}
-						if ( inlineStyle.textDecoration ) {
-							currentStyle.textDecoration = inlineStyle.textDecoration;
-						}
-						if ( inlineStyle.backgroundColor ) {
-							currentStyle.backgroundColor = inlineStyle.backgroundColor;
-						}
-						// -webkit-text-stroke parsing
-						const webkitStroke = inlineStyle.getPropertyValue( '-webkit-text-stroke' );
-						if ( webkitStroke ) {
-							const strokeMatch = webkitStroke.match( /(\d+(?:\.\d+)?)px\s+(.+)/ );
-							if ( strokeMatch ) {
-								currentStyle.textStrokeWidth = parseFloat( strokeMatch[ 1 ] );
-								currentStyle.textStrokeColor = strokeMatch[ 2 ].trim();
-							}
-						}
-					}
-
-					// Check for semantic tags (tagName already declared above)
-					if ( tagName === 'B' || tagName === 'STRONG' ) {
-						currentStyle.fontWeight = 'bold';
-					}
-					if ( tagName === 'I' || tagName === 'EM' ) {
-						currentStyle.fontStyle = 'italic';
-					}
-					if ( tagName === 'U' ) {
-						currentStyle.textDecoration = 'underline';
-					}
-					if ( tagName === 'S' || tagName === 'STRIKE' || tagName === 'DEL' ) {
-						currentStyle.textDecoration = 'line-through';
-					}
-					if ( tagName === 'MARK' ) {
-						currentStyle.backgroundColor = currentStyle.backgroundColor || '#ffff00';
-					}
-
-					// Handle legacy <font> tag (created by execCommand)
-					if ( tagName === 'FONT' ) {
-						// Get color from font tag attribute
-						const fontColor = node.getAttribute( 'color' );
-						if ( fontColor ) {
-							currentStyle.color = fontColor;
-						}
-						// Get size from font tag attribute (1-7 scale)
-						const fontSize = node.getAttribute( 'size' );
-						if ( fontSize ) {
-							// Convert 1-7 scale to px (approximate mapping)
-							const sizeMap = { 1: 10, 2: 13, 3: 16, 4: 18, 5: 24, 6: 32, 7: 48 };
-							currentStyle.fontSize = sizeMap[ fontSize ] || 16;
-						}
-						// Get face (font family) from font tag
-						const fontFace = node.getAttribute( 'face' );
-						if ( fontFace ) {
-							currentStyle.fontFamily = fontFace;
-						}
-					}
-
-					// Process child nodes
-					for ( const child of node.childNodes ) {
-						extractRuns( child, currentStyle );
-					}
-				}
-			};
-
-			// Extract runs from the parsed HTML
-			extractRuns( container );
-
-			// Clean up runs - remove empty style objects
-			const cleanedRuns = runs.map( ( run ) => {
-				const hasStyle = Object.keys( run.style ).length > 0;
-				return hasStyle ? run : { text: run.text };
-			} );
-
-			// Merge adjacent runs with identical styles
-			return this._mergeAdjacentRuns( cleanedRuns );
-		}
-
-		/**
-		 * Merge adjacent runs with identical styles
-		 *
-		 * @private
-		 * @param {Array} runs - Array of {text, style?} objects
-		 * @return {Array} Merged runs
-		 */
-		_mergeAdjacentRuns( runs ) {
-			if ( runs.length === 0 ) {
-				return [];
-			}
-
-			const merged = [];
-			let current = Object.assign( {}, runs[ 0 ] );
-			if ( current.style ) {
-				current.style = Object.assign( {}, current.style );
-			}
-
-			for ( let i = 1; i < runs.length; i++ ) {
-				const run = runs[ i ];
-				const currentStyleStr = JSON.stringify( current.style || {} );
-				const runStyleStr = JSON.stringify( run.style || {} );
-
-				if ( currentStyleStr === runStyleStr ) {
-					// Same style - merge text
-					current.text += run.text;
-				} else {
-					// Different style - push current and start new
-					merged.push( current );
-					current = Object.assign( {}, run );
-					if ( current.style ) {
-						current.style = Object.assign( {}, current.style );
-					}
-				}
-			}
-
-			// Push final run
-			merged.push( current );
-
-			return merged;
-		}
+		// NOTE: These methods have been extracted to RichTextConverter.js
+		// Use window.Layers.Canvas.RichTextConverter for:
+		//   - escapeHtml() -> RichTextConverter.escapeHtml()
+		//   - richTextToHtml() -> RichTextConverter.richTextToHtml(richText, displayScale)
+		//   - htmlToRichText() -> RichTextConverter.htmlToRichText(html, displayScale)
+		//   - mergeAdjacentRuns() -> RichTextConverter.mergeAdjacentRuns()
+		// =========================================================================
 
 		/**
 		 * Get plain text from contentEditable element
