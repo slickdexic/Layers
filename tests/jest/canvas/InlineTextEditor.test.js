@@ -3576,4 +3576,229 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 			} ).not.toThrow();
 		} );
 	} );
+
+	describe( '_updateToolbarButtonStates', () => {
+		beforeEach( () => {
+			// Setup editorElement as contentEditable div
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			document.body.appendChild( editor.editorElement );
+
+			// Setup toolbar with format buttons
+			editor.toolbarElement = document.createElement( 'div' );
+			editor.toolbarElement.innerHTML = `
+				<button data-format="bold">B</button>
+				<button data-format="italic">I</button>
+				<button data-format="underline">U</button>
+				<button data-format="strikethrough">S</button>
+			`;
+			document.body.appendChild( editor.toolbarElement );
+
+			editor.isEditing = true;
+			editor._isRichTextMode = true;
+
+			// Create a selection within the editor
+			const textNode = editor.editorElement.firstChild;
+			const range = document.createRange();
+			range.setStart( textNode, 0 );
+			range.setEnd( textNode, 5 );
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			// Mock queryCommandState
+			document.queryCommandState = jest.fn( ( command ) => {
+				if ( command === 'bold' ) {
+					return true;
+				}
+				return false;
+			} );
+		} );
+
+		afterEach( () => {
+			if ( editor.editorElement && editor.editorElement.parentNode ) {
+				document.body.removeChild( editor.editorElement );
+			}
+			if ( editor.toolbarElement && editor.toolbarElement.parentNode ) {
+				document.body.removeChild( editor.toolbarElement );
+			}
+			delete document.queryCommandState;
+		} );
+
+		test( 'should return early when toolbarElement is null', () => {
+			editor.toolbarElement = null;
+
+			expect( () => {
+				editor._updateToolbarButtonStates();
+			} ).not.toThrow();
+		} );
+
+		test( 'should return early when not editing', () => {
+			editor.isEditing = false;
+
+			expect( () => {
+				editor._updateToolbarButtonStates();
+			} ).not.toThrow();
+		} );
+
+		test( 'should return early when not in rich text mode', () => {
+			editor._isRichTextMode = false;
+
+			expect( () => {
+				editor._updateToolbarButtonStates();
+			} ).not.toThrow();
+		} );
+
+		test( 'should toggle active class on bold button when bold is active', () => {
+			document.queryCommandState = jest.fn( ( cmd ) => cmd === 'bold' );
+
+			editor._updateToolbarButtonStates();
+
+			const boldBtn = editor.toolbarElement.querySelector( '[data-format="bold"]' );
+			expect( boldBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		test( 'should toggle active class on italic button when italic is active', () => {
+			document.queryCommandState = jest.fn( ( cmd ) => cmd === 'italic' );
+
+			editor._updateToolbarButtonStates();
+
+			const italicBtn = editor.toolbarElement.querySelector( '[data-format="italic"]' );
+			expect( italicBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		test( 'should toggle active class on underline button when underline is active', () => {
+			document.queryCommandState = jest.fn( ( cmd ) => cmd === 'underline' );
+
+			editor._updateToolbarButtonStates();
+
+			const underlineBtn = editor.toolbarElement.querySelector( '[data-format="underline"]' );
+			expect( underlineBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		test( 'should toggle active class on strikethrough button when strikeThrough is active', () => {
+			document.queryCommandState = jest.fn( ( cmd ) => cmd === 'strikeThrough' );
+
+			editor._updateToolbarButtonStates();
+
+			const strikeBtn = editor.toolbarElement.querySelector( '[data-format="strikethrough"]' );
+			expect( strikeBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		test( 'should remove active class when format is not active', () => {
+			const boldBtn = editor.toolbarElement.querySelector( '[data-format="bold"]' );
+			boldBtn.classList.add( 'active' );
+
+			document.queryCommandState = jest.fn( () => false );
+
+			editor._updateToolbarButtonStates();
+
+			expect( boldBtn.classList.contains( 'active' ) ).toBe( false );
+		} );
+
+		test( 'should handle selection outside editor element', () => {
+			// Create selection outside editor
+			const outsideDiv = document.createElement( 'div' );
+			outsideDiv.textContent = 'Outside content';
+			document.body.appendChild( outsideDiv );
+
+			const range = document.createRange();
+			range.selectNodeContents( outsideDiv );
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			expect( () => {
+				editor._updateToolbarButtonStates();
+			} ).not.toThrow();
+
+			document.body.removeChild( outsideDiv );
+		} );
+	} );
+
+	describe( 'getPendingTextContent', () => {
+		test( 'should return null when not editing', () => {
+			editor.isEditing = false;
+
+			const result = editor.getPendingTextContent();
+
+			expect( result ).toBeNull();
+		} );
+
+		test( 'should return null when editorElement is null', () => {
+			editor.isEditing = true;
+			editor.editorElement = null;
+			editor.editingLayer = { id: 'layer-1' };
+
+			const result = editor.getPendingTextContent();
+
+			expect( result ).toBeNull();
+		} );
+
+		test( 'should return null when editingLayer is null', () => {
+			editor.isEditing = true;
+			editor.editorElement = document.createElement( 'input' );
+			editor.editingLayer = null;
+
+			const result = editor.getPendingTextContent();
+
+			expect( result ).toBeNull();
+		} );
+
+		test( 'should return text from input element when not in rich text mode', () => {
+			editor.isEditing = true;
+			editor.editorElement = document.createElement( 'input' );
+			editor.editorElement.value = 'Simple text';
+			editor.editingLayer = { id: 'layer-1', type: 'text' };
+			editor._isRichTextMode = false;
+
+			const result = editor.getPendingTextContent();
+
+			expect( result ).toEqual( {
+				text: 'Simple text',
+				richText: null
+			} );
+		} );
+
+		test( 'should return text and richText from contentEditable when in rich text mode', () => {
+			editor.isEditing = true;
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = '<b>Bold</b> text';
+			editor.editingLayer = { id: 'layer-1', type: 'textbox' };
+			editor._isRichTextMode = true;
+
+			// Mock the helper methods
+			editor._getContentElement = jest.fn( () => editor.editorElement );
+			editor._htmlToRichText = jest.fn( () => [
+				{ text: 'Bold', style: { fontWeight: 'bold' } },
+				{ text: ' text' }
+			] );
+			editor._getPlainTextFromEditor = jest.fn( () => 'Bold text' );
+
+			const result = editor.getPendingTextContent();
+
+			expect( result.text ).toBe( 'Bold text' );
+			expect( result.richText ).toEqual( [
+				{ text: 'Bold', style: { fontWeight: 'bold' } },
+				{ text: ' text' }
+			] );
+		} );
+
+		test( 'should handle empty input value', () => {
+			editor.isEditing = true;
+			editor.editorElement = document.createElement( 'input' );
+			editor.editorElement.value = '';
+			editor.editingLayer = { id: 'layer-1', type: 'text' };
+			editor._isRichTextMode = false;
+
+			const result = editor.getPendingTextContent();
+
+			expect( result ).toEqual( {
+				text: '',
+				richText: null
+			} );
+		} );
+	} );
 } );
