@@ -184,6 +184,18 @@ describe( 'FreshnessChecker', () => {
 
 			expect( mockSessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-image.jpg:default' );
 		} );
+
+		it( 'should handle sessionStorage errors gracefully', () => {
+			// Mock removeItem to throw an error
+			mockSessionStorage.removeItem.mockImplementationOnce( () => {
+				throw new Error( 'Storage quota exceeded' );
+			} );
+
+			// Should not throw, just log warning
+			expect( () => {
+				freshnessChecker.clearCache( 'image.jpg', 'default' );
+			} ).not.toThrow();
+		} );
 	} );
 
 	describe( 'checkFreshness', () => {
@@ -409,6 +421,30 @@ describe( 'FreshnessChecker', () => {
 			const result = await freshnessChecker.checkFreshness( mockImg );
 
 			expect( result.isFresh ).toBe( true );
+			expect( result.latestRevision ).toBeNull();
+		} );
+
+		it( 'should handle errors during response processing gracefully', async () => {
+			mockImg.setAttribute( 'data-layer-revision', '5' );
+			mockImg.setAttribute( 'data-file-name', 'test.jpg' );
+			mockImg.setAttribute( 'data-layer-setname', 'default' );
+
+			// Create a response object with a getter that throws when accessed
+			const malformedResponse = {
+				layersinfo: {
+					get layerset() {
+						throw new Error( 'Unexpected parsing error' );
+					}
+				}
+			};
+
+			mockApiGet.mockResolvedValue( malformedResponse );
+
+			const result = await freshnessChecker.checkFreshness( mockImg );
+
+			// Should return fresh on error to avoid breaking viewer
+			expect( result.isFresh ).toBe( true );
+			expect( result.inlineRevision ).toBe( 5 );
 			expect( result.latestRevision ).toBeNull();
 		} );
 	} );
