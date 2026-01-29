@@ -9,8 +9,8 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git branch --show-current`)
-- **Tests:** 10,939 tests in 162 suites (10,939 passed, **0 skipped** ✅)
-- **Coverage:** 95.53% statements, 85.28% branches, 93.97% functions, 95.64% lines
+- **Tests:** 10,996 tests in 162 suites (10,996 passed, **0 skipped** ✅)
+- **Coverage:** 95.37% statements, 84.92% branches, 93.42% functions, 95.25% lines
 - **JS files:** 139 production files (all files in resources/ext.layers* directories)
 - **JS lines:** ~91,544 total (verified via line count)
 - **PHP files:** 40 (all with `declare(strict_types=1)`)
@@ -76,11 +76,11 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Statements | 95.53% | 90% | ✅ Exceeds |
-| Branches | 85.28% | 80% | ✅ Exceeds |
-| Functions | 93.97% | 85% | ✅ Exceeds |
-| Lines | 95.64% | 90% | ✅ Exceeds |
-| Test Count | 10,939 | - | ✅ Excellent |
+| Statements | 95.37% | 90% | ✅ Exceeds |
+| Branches | 84.92% | 80% | ✅ Exceeds |
+| Functions | 93.42% | 85% | ✅ Exceeds |
+| Lines | 95.25% | 90% | ✅ Exceeds |
+| Test Count | 10,996 | - | ✅ Excellent |
 | Test Suites | 162 | - | ✅ |
 | Skipped Tests | 0 | 0 | ✅ |
 
@@ -100,11 +100,11 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 | File | Lines | Functions | Branches | Risk Level |
 |------|-------|-----------|----------|------------|
-| InlineTextEditor.js | **77.65%** | **72.34%** | **71.17%** | ��� HIGH |
-| TextBoxRenderer.js | 87.79% | 90.90% | 88.01% | ��� MEDIUM |
-| LayersEditor.js | 90.53% | 80.00% | 76.96% | ��� MEDIUM |
-| Toolbar.js | 90.41% | 84.68% | 78.57% | ��� MEDIUM |
-| LayerPanel.js | 90.53% | 79.52% | 80.32% | ��� MEDIUM |
+| SlideController.js | **74.61%** | **86.84%** | **72.77%** | 🔴 HIGH |
+| RichTextUtils.js | **0%** | **0%** | **0%** | 🔴 HIGH (new file) |
+| InlineTextEditor.js | 88.43% | 76.08% | 80.65% | 🟠 MEDIUM |
+| TextBoxRenderer.js | 88.18% | 90.90% | 87.37% | 🟠 MEDIUM |
+| LayersEditor.js | 90.41% | 80.00% | 77.41% | 🟠 MEDIUM |
 
 ---
 
@@ -123,7 +123,7 @@ No critical security or data integrity issues found. The extension is production
 - `tests/jest/ViewerManager.test.js` - 12 blocks removed (1,753 lines)
 - `tests/jest/canvas/InlineTextEditor.test.js` - 13 blocks removed (931 lines)
 
-Test run now shows: "10,939 passed, 0 skipped"
+Test run now shows: "10,996 passed, 0 skipped"
 
 ---
 
