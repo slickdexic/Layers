@@ -225,7 +225,8 @@
 				// Extract content based on editor type
 				if ( this._isRichTextMode && this.editorElement.contentEditable === 'true' ) {
 					// ContentEditable mode - extract richText and plain text
-					const html = this.editorElement.innerHTML;
+					const contentEl = this._getContentElement();
+					const html = contentEl ? contentEl.innerHTML : '';
 					newRichText = this._htmlToRichText( html );
 					newText = this._getPlainTextFromEditor();
 
@@ -367,6 +368,22 @@
 		}
 
 		/**
+		 * Get the content element - the wrapper div for multiline or the editor element itself.
+		 * This is where the actual text content lives.
+		 *
+		 * @private
+		 * @return {HTMLElement|null} The content element
+		 */
+		_getContentElement() {
+			if ( !this.editorElement ) {
+				return null;
+			}
+			// For multiline (contentEditable), content is in the wrapper div
+			const wrapper = this.editorElement.querySelector( '.layers-inline-content-wrapper' );
+			return wrapper || this.editorElement;
+		}
+
+		/**
 		 * Get the current pending text content from the editor without closing it.
 		 * This allows other property changes to preserve text during inline editing.
 		 *
@@ -380,7 +397,8 @@
 			let newText, newRichText = null;
 
 			if ( this._isRichTextMode && this.editorElement.contentEditable === 'true' ) {
-				const html = this.editorElement.innerHTML;
+				const contentEl = this._getContentElement();
+				const html = contentEl ? contentEl.innerHTML : '';
 				newRichText = this._htmlToRichText( html );
 				newText = this._getPlainTextFromEditor();
 			} else {
@@ -418,14 +436,22 @@
 				this.editorElement.style.wordWrap = 'break-word';
 				this.editorElement.style.minHeight = '1em';
 
-				// Set content - prefer richText if available
+				// Create inner content wrapper - this allows flex vertical alignment
+				// on the outer element while preserving inline text flow inside
+				const contentWrapper = document.createElement( 'div' );
+				contentWrapper.className = 'layers-inline-content-wrapper';
+				contentWrapper.style.width = '100%';
+
+				// Set content in wrapper - prefer richText if available
 				if ( layer.richText && Array.isArray( layer.richText ) && layer.richText.length > 0 ) {
-					this.editorElement.innerHTML = this._richTextToHtml( layer.richText );
+					contentWrapper.innerHTML = this._richTextToHtml( layer.richText );
 				} else {
 					// Plain text - escape HTML and convert newlines
 					const escapedText = this._escapeHtml( layer.text || '' );
-					this.editorElement.innerHTML = escapedText.replace( /\n/g, '<br>' );
+					contentWrapper.innerHTML = escapedText.replace( /\n/g, '<br>' );
 				}
+
+				this.editorElement.appendChild( contentWrapper );
 			} else {
 				this.editorElement = document.createElement( 'input' );
 				this.editorElement.type = 'text';
@@ -2197,8 +2223,14 @@
 				return this.editorElement.value || '';
 			}
 
-			// For contentEditable, extract text with preserved line breaks
-			const clone = this.editorElement.cloneNode( true );
+			// For contentEditable, get the content element (wrapper or editorElement)
+			const contentEl = this._getContentElement();
+			if ( !contentEl ) {
+				return '';
+			}
+
+			// Clone and extract text with preserved line breaks
+			const clone = contentEl.cloneNode( true );
 
 			// Replace <br> with newlines
 			const brs = clone.querySelectorAll( 'br' );
