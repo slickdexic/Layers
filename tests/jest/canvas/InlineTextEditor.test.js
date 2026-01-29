@@ -775,8 +775,13 @@ describe( 'InlineTextEditor', () => {
 			// Change font family via _applyFormat
 			editor._applyFormat( 'fontFamily', 'Times New Roman' );
 
-			// Verify updateLayer was called with text: '' to keep text cleared during editing
-			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', { fontFamily: 'Times New Roman', text: '' } );
+			// Verify updateLayer was called with text: '' and richText: null to keep text cleared during editing
+			// This prevents double rendering (canvas + HTML overlay)
+			expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith( 'layer-1', {
+				fontFamily: 'Times New Roman',
+				text: '',
+				richText: null
+			} );
 		} );
 	} );
 

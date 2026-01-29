@@ -1105,8 +1105,10 @@
 			const changes = { [ property ]: value };
 
 			if ( isTextbox ) {
-				// Keep text cleared during inline editing
+				// Keep text AND richText cleared during inline editing
+				// This prevents double rendering (canvas + HTML overlay)
 				changes.text = '';
+				changes.richText = null;
 			} else {
 				// Keep simple text layers hidden during inline editing
 				changes.visible = false;
