@@ -4,9 +4,12 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.38 (January 28, 2026)
+## Version 1.5.38 (January 30, 2026)
 
 ### Fixed
+- **Double Text Rendering During Inline Editing** — Fixed bug where changing alignment while inline editing textbox caused double rendering
+  - Root cause: `richText` wasn't cleared alongside `text` in `_applyFormat()` for textbox layers
+  - Also fixed `updateLayer()` to keep text/richText cleared during inline editing
 - **Text Loss During Inline Editing** — Fixed bug where changing properties (like vertical alignment) while inline editing a textbox would lose all typed text
   - Added `getPendingTextContent()` method to retrieve current editor content without closing
   - Modified `LayersEditor.updateLayer()` to merge pending text content when inline editing is active
@@ -18,9 +21,10 @@ Version history for the Layers extension.
   - Now layers[0] (top in panel) is correctly drawn last (appears on top), matching editor behavior
 
 ### Technical Details
-- All 10,736 tests pass (157 test suites)
+- All 10,939 tests pass (162 test suites)
+- Test coverage: 94.65% statement, 84.49% branch, 92.93% function, 94.77% line
+- God Class Reduction Initiative complete: reduced from 20 to 12 god classes
 - ESLint passes on all modified files
-- Fixes verified on REL1_39 with MediaWiki 1.39.7
 
 ---
 

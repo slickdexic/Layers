@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-10%2C860%20passing-brightgreen" alt="10,860 Tests">
-  <img src="https://img.shields.io/badge/Coverage-95.85%25-brightgreen" alt="95.85% Coverage">
+  <img src="https://img.shields.io/badge/Tests-10%2C939%20passing-brightgreen" alt="10,939 Tests">
+  <img src="https://img.shields.io/badge/Coverage-94.65%25-brightgreen" alt="94.65% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -22,11 +22,12 @@
 
 ## 🆕 What's New in v1.5.38
 
+- **God Class Reduction Complete** — Reduced from 20 to 12 god classes (40% reduction)
+- **Inline Text Alignment Fix** — Fixed double rendering when changing alignment during editing
 - **Text Loss Fix** — Fixed bug where changing properties during inline editing lost typed text
 - **Rich Text Inline Display** — Fixed styled text runs displaying on separate lines during editing
 - **Slide Layer Order** — Fixed layers appearing in reverse order on article pages
-- **Critical Review v47** — Comprehensive codebase audit scoring 8.1/10 overall
-- **10,860 tests passing** (157 suites), 95.85% statement coverage, 85.37% branch coverage
+- **10,939 tests passing** (162 suites), 94.65% statement coverage, 84.49% branch coverage
 
 ### Previous v1.5.36 Highlights
 

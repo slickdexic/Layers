@@ -1,6 +1,6 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 28, 2026 (Comprehensive Critical Audit v47)
+**Review Date:** January 30, 2026 (Post God Class Reduction Initiative)
 **Version:** 1.5.38
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
@@ -9,10 +9,10 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git branch --show-current`)
-- **Tests:** 10,860 tests in 157 suites (all passing, verified January 28, 2026)
-- **Coverage:** 95.85% statements, 85.37% branches, 94.11% functions, 95.85% lines (verified January 28, 2026)
-- **JS files:** 132 production files (all files in resources/ext.layers* directories)
-- **JS lines:** ~93,406 total
+- **Tests:** 10,939 tests in 162 suites (all passing, verified January 30, 2026)
+- **Coverage:** 94.65% statements, 84.49% branches, 92.93% functions, 94.77% lines (verified January 30, 2026)
+- **JS files:** 139 production files (all files in resources/ext.layers* directories)
+- **JS lines:** ~94,137 total
 - **PHP files:** 40 (all with `declare(strict_types=1)`)
 - **PHP lines:** ~14,543 total
 - **i18n messages:** ~653 layers-* keys in en.json (all documented in qqq.json, verified via Banana checker)
@@ -27,7 +27,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 but pervasive documentation drift, architectural complexity, and coverage gaps in critical UI modules prevent "world-class" status.
 
 ### Key Strengths
-1. **Excellent test coverage** (95.85% statement, 85.37% branch, 10,860 tests)
+1. **Excellent test coverage** (94.65% statement, 84.49% branch, 10,939 tests)
 2. **Comprehensive server-side validation** with strict 40+ property whitelist
 3. **Modern ES6 class-based architecture** (100% of JS files)
 4. **PHP strict_types** in all 40 PHP files
@@ -49,7 +49,7 @@ but pervasive documentation drift, architectural complexity, and coverage gaps i
 
 ### Key Weaknesses
 1. **Pervasive documentation drift** — README, wiki/Home.md, docs/ARCHITECTURE.md all show stale test counts and coverage
-2. **20 JS god classes** (18 hand-written + 2 generated >1,000 lines) — architectural complexity growing
+2. **12 JS god classes** (10 hand-written + 2 generated >1,000 lines) — reduced from 20 via God Class Reduction Initiative
 3. **InlineTextEditor critical coverage gap** — 77.65% lines, 71.17% branches in highest-complexity UI module
 4. **Inconsistent database method return types** (\`null\` vs \`false\` vs \`-1\` for errors) in \`LayersDatabase.php\`
 5. **Memory risk in undo/redo** — \`HistoryManager.js\` falls back to \`JSON.parse(JSON.stringify())\` for deep cloning layer arrays
@@ -71,27 +71,27 @@ but pervasive documentation drift, architectural complexity, and coverage gaps i
 
 ## ��� Detailed Metrics
 
-### Test Coverage (January 28, 2026)
+### Test Coverage (January 30, 2026)
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Statements | 95.53% | 90% | ✅ Exceeds |
-| Branches | 85.28% | 80% | ✅ Exceeds |
-| Functions | 93.97% | 85% | ✅ Exceeds |
-| Lines | 95.64% | 90% | ✅ Exceeds |
-| Test Count | 10,860 | - | ✅ Excellent |
-| Test Suites | 157 | - | ✅ |
+| Statements | 94.65% | 90% | ✅ Exceeds |
+| Branches | 84.49% | 80% | ✅ Exceeds |
+| Functions | 92.93% | 85% | ✅ Exceeds |
+| Lines | 94.77% | 90% | ✅ Exceeds |
+| Test Count | 10,939 | - | ✅ Excellent |
+| Test Suites | 162 | - | ✅ |
 | Skipped Tests | 0 | 0 | ✅ |
 
 ### Code Size Analysis
 
 | Category | Files | Lines | Notes |
 |----------|-------|-------|-------|
-| JavaScript (Production) | 132 | ~93,406 | All resources/ext.layers* |
+| JavaScript (Production) | 139 | ~94,137 | All resources/ext.layers* |
 | JavaScript (Generated) | 2 | ~14,354 | ShapeLibraryData, EmojiLibraryIndex |
-| JavaScript (Hand-written) | 130 | ~79,052 | Actual application code |
+| JavaScript (Hand-written) | 137 | ~79,783 | Actual application code |
 | PHP (Production) | 40 | ~14,543 | All source code |
-| Tests (Jest) | 157 suites | ~50,300+ | Comprehensive |
+| Tests (Jest) | 162 suites | ~51,000+ | Comprehensive |
 | Documentation | 28+ files | - | Markdown docs in docs/ + wiki/ |
 | i18n Messages | ~653 | - | All documented in qqq.json |
 

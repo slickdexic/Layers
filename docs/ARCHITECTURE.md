@@ -29,8 +29,8 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Shape/Emoji data | ~40,000 lines (generated) |
 | ES6 classes | **132** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.85% stmt, 85.37% branch** |
-| Jest tests | **10,860** (157 suites) |
+| Test coverage | **94.65% stmt, 84.49% branch** |
+| Jest tests | **10,939** (162 suites) |
 | PHPUnit test files | 24 |
 | God classes (>1000 lines) | **22** (2 generated, 20 JS, 2 PHP) |
 | Drawing tools | **15** |
@@ -131,7 +131,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | LayersDatabase.php | 1,242 | Uses delegation pattern |
 | ServerSideLayerValidator.php | 1,163 | Validation complexity |
 
-**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 95.53% test coverage.
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 94.65% test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for detailed status.
 
