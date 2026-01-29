@@ -4,7 +4,7 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.39 (January 30, 2026)
+## Version 1.5.39 (January 29, 2026)
 
 ### Changed
 - **God Class Reduction Initiative Complete** — Reduced hand-written god classes from 20 to 12 (40% reduction)
@@ -19,7 +19,7 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.38 (January 30, 2026)
+## Version 1.5.38 (January 29, 2026)
 
 ### Fixed
 - **Double Text Rendering During Inline Editing** — Fixed bug where changing alignment while inline editing textbox caused double rendering

@@ -266,7 +266,7 @@ See [[Changelog]] for full details.
 | **Version (main)** | 1.5.39 |
 | **Version (REL1_43)** | 1.5.39-REL1_43 |
 | **Version (REL1_39)** | 1.5.39-REL1_39 |
-| **Release Date** | January 30, 2026 |
+| **Release Date** | January 29, 2026 |
 | **Test Suites** | 162 |
 | **Total Tests** | 10,939 |
 | **PHPUnit Test Files** | 24 |
