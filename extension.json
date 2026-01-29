@@ -221,6 +221,7 @@
 				"ArrowRenderer.js",
 				"TextRenderer.js",
 				"TextBoxRenderer.js",
+				"TailCalculator.js",
 				"CalloutRenderer.js",
 				"MarkerRenderer.js",
 				"DimensionRenderer.js",

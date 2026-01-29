@@ -27,9 +27,9 @@ strategic extraction of cohesive modules.
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| JS god classes (hand-written) | 18 | ≤12 | 🟡 In Progress |
+| JS god classes (hand-written) | 17 | ≤12 | 🟡 In Progress |
 | Test coverage | 95.85% | ≥95% | ✅ Maintained |
-| All tests passing | 10,893 | 10,860+ | ✅ Maintained |
+| All tests passing | 10,939 | 10,860+ | ✅ Maintained |
 | ESLint errors | 0 | 0 | ✅ Maintained |
 
 ---
@@ -41,8 +41,8 @@ strategic extraction of cohesive modules.
 | **1** | InlineTextEditor.js | ~~2,282~~ → 1,393 | ✅ RichTextConverter, RichTextToolbar | COMPLETE |
 | **2** | ViewerManager.js | ~~2,026~~ → 1,277 | ✅ SlideController | COMPLETE |
 | **3** | APIManager.js | ~~1,524~~ → 1,393 | ✅ ExportController | COMPLETE |
-| **4** | TextBoxRenderer.js | 1,117 | Extract RichTextMeasurement | MEDIUM |
-| **5** | CalloutRenderer.js | 1,289 | Extract TailCalculator | LOW |
+| **4** | CalloutRenderer.js | ~~1,291~~ → 951 | ✅ TailCalculator | COMPLETE |
+| **5** | TextBoxRenderer.js | 1,117 | Extract RichTextMeasurement | MEDIUM |
 | **6** | ArrowRenderer.js | 1,310 | Extract CurvedArrowCalculator | LOW |
 
 ### Files Already Well-Delegated (No Action Needed)
@@ -302,13 +302,59 @@ Use dependency injection for callbacks.
 | Jan 30, 2026 | **Phase 2 COMPLETE** | ViewerManager below 1,400 line threshold |
 | Jan 30, 2026 | Phase 3: ExportController extracted | APIManager: 1,524 → 1,393 lines (-131) |
 | Jan 30, 2026 | **Phase 3 COMPLETE** | APIManager: Export ops now isolated |
+
+---
+
+## Phase 4: CalloutRenderer Extraction ✅ COMPLETE
+
+**Target:** Reduce CalloutRenderer.js from 1,291 lines to ~900 lines  
+**Actual Result:** 1,291 → 951 lines (-340 lines, -26%)  
+**Timeline:** 1 day (Jan 30, 2026)  
+**Status:** ✅ COMPLETE
+
+### Extraction Completed
+
+**TailCalculator.js** (~498 lines) — Geometric tail positioning calculations:
+- `getClosestPerimeterPoint()` — Find nearest point on rounded rect perimeter
+- `getTailFromTipPosition()` — Calculate tail base from draggable tip
+- `getTailCoordinates()` — Legacy direction-based tail positioning
+- `_getEdgeBeforeCorner()` / `_getEdgeAfterCorner()` — Corner transition helpers
+
+### Testing
+
+- **Created:** `TailCalculator.test.js` with 46 tests
+- **Modified:** `CalloutRenderer.test.js` — added TailCalculator loading
+- **All tests passing:** 10,939 passed, 133 skipped
+
+### Notes
+
+CalloutRenderer now delegates all geometric tail calculations to TailCalculator,
+keeping only the rendering logic. This achieves the goal of bringing CalloutRenderer
+below the 1,000 line threshold.
+
+---
+
+## Progress Tracking
+
+| Date | Action | Impact |
+|------|--------|--------|
+| Jan 29, 2026 | Project plan created | Baseline: 20 god classes |
+| Jan 29, 2026 | Phase 1 Part 1: RichTextConverter extracted | InlineTextEditor: 2,282 → 2,007 lines (-275) |
+| Jan 30, 2026 | Phase 1 Part 2: RichTextToolbar extracted | InlineTextEditor: 2,007 → 1,393 lines (-614) |
+| Jan 30, 2026 | **Phase 1 COMPLETE** | InlineTextEditor below 1,500 line threshold |
+| Jan 30, 2026 | Phase 2: SlideController extracted | ViewerManager: 2,026 → 1,277 lines (-749) |
+| Jan 30, 2026 | **Phase 2 COMPLETE** | ViewerManager below 1,400 line threshold |
+| Jan 30, 2026 | Phase 3: ExportController extracted | APIManager: 1,524 → 1,393 lines (-131) |
+| Jan 30, 2026 | **Phase 3 COMPLETE** | APIManager: Export ops now isolated |
+| Jan 30, 2026 | Phase 4: TailCalculator extracted | CalloutRenderer: 1,291 → 951 lines (-340) |
+| Jan 30, 2026 | **Phase 4 COMPLETE** | CalloutRenderer below 1,000 line threshold |
 | | | |
 
 ---
 
 ## Appendix: Current God Class Inventory
 
-*Last updated: January 29, 2026*
+*Last updated: January 30, 2026*
 
 | File | Lines | Type | Status |
 |------|-------|------|--------|
@@ -319,15 +365,15 @@ Use dependency injection for callbacks.
 | Toolbar.js | 1,652 | UI | ✅ Well-delegated |
 | LayersEditor.js | 1,847 | Main Entry | ✅ Acceptable |
 | LayerPanel.js | 1,806 | UI Controller | ✅ Well-delegated |
-| APIManager.js | 1,523 | Service | ⏳ Phase 3 |
+| APIManager.js | ~~1,524~~ 1,393 | Service | ✅ Phase 3 Complete |
+| CalloutRenderer.js | ~~1,291~~ 951 | Renderer | ✅ Phase 4 Complete |
+| TailCalculator.js | 498 | Calculator | ✅ New (from Phase 4) |
 | SelectionManager.js | 1,426 | Manager | ✅ Clean separation |
 | ArrowRenderer.js | 1,310 | Renderer | ⏳ Phase 6 |
-| CalloutRenderer.js | 1,289 | Renderer | ⏳ Phase 5 |
-| InlineTextEditor.js | 1,273 | Controller | (duplicate entry?) |
 | GroupManager.js | 1,132 | Manager | ⚖️ Borderline |
 | CanvasRenderer.js | 1,132 | Renderer | ⚖️ Borderline |
 | ToolManager.js | 1,219 | Controller | ⚖️ Borderline |
-| TextBoxRenderer.js | 1,117 | Renderer | ⏳ Phase 4 |
+| TextBoxRenderer.js | 1,117 | Renderer | ⏳ Phase 5 |
 | TransformController.js | 1,097 | Controller | ⚖️ Borderline |
 | ResizeCalculator.js | 1,090 | Calculator | ⚖️ Borderline |
 | PropertyBuilders.js | 1,250 | Builder | ✅ Intentional |

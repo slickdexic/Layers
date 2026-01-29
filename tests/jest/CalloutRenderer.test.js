@@ -68,6 +68,9 @@ beforeAll( () => {
 		}
 	};
 
+	// Load TailCalculator first (CalloutRenderer depends on it)
+	require( '../../resources/ext.layers.shared/TailCalculator.js' );
+
 	// Load the module
 	require( '../../resources/ext.layers.shared/CalloutRenderer.js' );
 } );
