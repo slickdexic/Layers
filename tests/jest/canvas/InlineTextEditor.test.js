@@ -3331,4 +3331,249 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 			expect( editor._savedSelection ).toBeNull();
 		} );
 	} );
+
+	describe( '_createSeparator', () => {
+		test( 'should create a separator div element', () => {
+			const separator = editor._createSeparator();
+
+			expect( separator ).toBeDefined();
+			expect( separator.tagName ).toBe( 'DIV' );
+			expect( separator.className ).toBe( 'layers-text-toolbar-separator' );
+		} );
+
+		test( 'should create multiple independent separators', () => {
+			const sep1 = editor._createSeparator();
+			const sep2 = editor._createSeparator();
+
+			expect( sep1 ).not.toBe( sep2 );
+			expect( sep1.className ).toBe( 'layers-text-toolbar-separator' );
+			expect( sep2.className ).toBe( 'layers-text-toolbar-separator' );
+		} );
+	} );
+
+	describe( '_createHighlightButton', () => {
+		beforeEach( () => {
+			// Mock ColorPickerDialog
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.ColorPickerDialog = jest.fn().mockImplementation( () => ( {
+				show: jest.fn(),
+				open: jest.fn()
+			} ) );
+		} );
+
+		afterEach( () => {
+			delete window.Layers.UI.ColorPickerDialog;
+		} );
+
+		test( 'should create a wrapper element with buttons', () => {
+			editor._msg = jest.fn( ( key, fallback ) => fallback );
+			const wrapper = editor._createHighlightButton();
+
+			expect( wrapper ).toBeDefined();
+			expect( wrapper.tagName ).toBe( 'DIV' );
+			expect( wrapper.className ).toContain( 'layers-text-toolbar-highlight-wrapper' );
+		} );
+
+		test( 'should contain main button and dropdown button', () => {
+			editor._msg = jest.fn( ( key, fallback ) => fallback );
+			const wrapper = editor._createHighlightButton();
+
+			const buttons = wrapper.querySelectorAll( 'button' );
+			expect( buttons.length ).toBe( 2 );
+
+			// Main highlight button
+			const mainBtn = wrapper.querySelector( '.layers-text-toolbar-highlight-main' );
+			expect( mainBtn ).not.toBeNull();
+			expect( mainBtn.getAttribute( 'data-format' ) ).toBe( 'highlight' );
+
+			// Dropdown button
+			const dropdownBtn = wrapper.querySelector( '.layers-text-toolbar-highlight-dropdown' );
+			expect( dropdownBtn ).not.toBeNull();
+		} );
+
+		test( 'main button should apply highlight on click', () => {
+			editor._msg = jest.fn( ( key, fallback ) => fallback );
+			editor._applyFormat = jest.fn();
+			editor._saveSelection = jest.fn();
+			editor.editorElement = document.createElement( 'div' );
+
+			const wrapper = editor._createHighlightButton();
+			const mainBtn = wrapper.querySelector( '.layers-text-toolbar-highlight-main' );
+
+			// Simulate mousedown then click
+			mainBtn.dispatchEvent( new Event( 'mousedown' ) );
+			mainBtn.dispatchEvent( new Event( 'click' ) );
+
+			expect( editor._saveSelection ).toHaveBeenCalled();
+			expect( editor._applyFormat ).toHaveBeenCalledWith( 'highlight', '#ffff00' );
+		} );
+
+		test( 'dropdown button should open color picker on click', () => {
+			editor._msg = jest.fn( ( key, fallback ) => fallback );
+			editor._saveSelection = jest.fn();
+			editor._isToolbarInteraction = false;
+
+			const wrapper = editor._createHighlightButton();
+			const dropdownBtn = wrapper.querySelector( '.layers-text-toolbar-highlight-dropdown' );
+
+			// Simulate mousedown then click
+			dropdownBtn.dispatchEvent( new Event( 'mousedown' ) );
+			dropdownBtn.dispatchEvent( new Event( 'click' ) );
+
+			expect( editor._saveSelection ).toHaveBeenCalled();
+			expect( window.Layers.UI.ColorPickerDialog ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( '_applyFormatToSelection', () => {
+		let execCommandMock;
+
+		beforeEach( () => {
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			document.body.appendChild( editor.editorElement );
+
+			// Select "Hello"
+			const textNode = editor.editorElement.firstChild;
+			const range = document.createRange();
+			range.setStart( textNode, 0 );
+			range.setEnd( textNode, 5 );
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			editor._isRichTextMode = true;
+			editor._displayScale = 1;
+
+			// Mock execCommand since JSDOM doesn't support it
+			execCommandMock = jest.fn( () => true );
+			document.execCommand = execCommandMock;
+		} );
+
+		afterEach( () => {
+			if ( editor.editorElement && editor.editorElement.parentNode ) {
+				document.body.removeChild( editor.editorElement );
+			}
+			delete document.execCommand;
+		} );
+
+		test( 'should apply bold formatting using execCommand', () => {
+			editor._applyFormatToSelection( 'fontWeight', 'bold' );
+
+			expect( execCommandMock ).toHaveBeenCalledWith( 'bold', false, null );
+		} );
+
+		test( 'should apply italic formatting using execCommand', () => {
+			editor._applyFormatToSelection( 'fontStyle', 'italic' );
+
+			expect( execCommandMock ).toHaveBeenCalledWith( 'italic', false, null );
+		} );
+
+		test( 'should apply underline formatting using execCommand', () => {
+			editor._applyFormatToSelection( 'underline', true );
+
+			expect( execCommandMock ).toHaveBeenCalledWith( 'underline', false, null );
+		} );
+
+		test( 'should apply strikethrough formatting using execCommand', () => {
+			editor._applyFormatToSelection( 'strikethrough', true );
+
+			expect( execCommandMock ).toHaveBeenCalledWith( 'strikeThrough', false, null );
+		} );
+
+		test( 'should apply color formatting using execCommand', () => {
+			editor._applyFormatToSelection( 'color', '#ff0000' );
+
+			expect( execCommandMock ).toHaveBeenCalledWith( 'foreColor', false, '#ff0000' );
+		} );
+
+		test( 'should apply highlight formatting using execCommand', () => {
+			editor._applyFormatToSelection( 'highlight', '#ffff00' );
+
+			expect( execCommandMock ).toHaveBeenCalledWith( 'hiliteColor', false, '#ffff00' );
+		} );
+
+		test( 'should apply fontSize by wrapping selection in span', () => {
+			editor._applyFormatToSelection( 'fontSize', 24 );
+
+			const span = editor.editorElement.querySelector( 'span[data-font-size="24"]' );
+			expect( span ).not.toBeNull();
+			expect( span.style.fontSize ).toBe( '24px' );
+		} );
+
+		test( 'should apply fontFamily by wrapping selection in span', () => {
+			editor._applyFormatToSelection( 'fontFamily', 'Arial' );
+
+			const span = editor.editorElement.querySelector( 'span' );
+			expect( span ).not.toBeNull();
+			expect( span.style.fontFamily ).toBe( 'Arial' );
+		} );
+
+		test( 'should handle fontSize with display scale', () => {
+			editor._displayScale = 2;
+
+			editor._applyFormatToSelection( 'fontSize', 24 );
+
+			const span = editor.editorElement.querySelector( 'span[data-font-size="24"]' );
+			expect( span ).not.toBeNull();
+			// Display should be scaled (24 * 2 = 48)
+			expect( span.style.fontSize ).toBe( '48px' );
+			// Data attribute should have unscaled value
+			expect( span.dataset.fontSize ).toBe( '24' );
+		} );
+
+		test( 'should default displayScale to 1 if invalid', () => {
+			editor._displayScale = 0;
+
+			editor._applyFormatToSelection( 'fontSize', 16 );
+
+			const span = editor.editorElement.querySelector( 'span[data-font-size="16"]' );
+			expect( span ).not.toBeNull();
+			expect( span.style.fontSize ).toBe( '16px' );
+		} );
+
+		test( 'should handle unknown format property gracefully', () => {
+			// Should not throw
+			expect( () => {
+				editor._applyFormatToSelection( 'unknownProperty', 'value' );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( '_syncPropertiesPanel', () => {
+		test( 'should call layerPanel.updatePropertiesPanel when available', () => {
+			const mockUpdatePropertiesPanel = jest.fn();
+			editor.editingLayer = { id: 'layer-1' };
+			editor.canvasManager = {
+				editor: {
+					layerPanel: {
+						updatePropertiesPanel: mockUpdatePropertiesPanel
+					}
+				}
+			};
+
+			editor._syncPropertiesPanel();
+
+			expect( mockUpdatePropertiesPanel ).toHaveBeenCalledWith( 'layer-1' );
+		} );
+
+		test( 'should not throw when layerPanel is not available', () => {
+			editor.editingLayer = { id: 'layer-1' };
+			editor.canvasManager = { editor: {} };
+
+			expect( () => {
+				editor._syncPropertiesPanel();
+			} ).not.toThrow();
+		} );
+
+		test( 'should not throw when editingLayer is null', () => {
+			editor.editingLayer = null;
+
+			expect( () => {
+				editor._syncPropertiesPanel();
+			} ).not.toThrow();
+		} );
+	} );
 } );
