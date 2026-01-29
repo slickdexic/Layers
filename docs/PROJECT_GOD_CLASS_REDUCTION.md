@@ -27,7 +27,7 @@ strategic extraction of cohesive modules.
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| JS god classes (hand-written) | 16 | ≤12 | 🟡 In Progress |
+| JS god classes (hand-written) | 15 | ≤12 | 🟡 In Progress |
 | Test coverage | 95.85% | ≥95% | ✅ Maintained |
 | All tests passing | 10,939 | 10,860+ | ✅ Maintained |
 | ESLint errors | 0 | 0 | ✅ Maintained |
@@ -43,7 +43,8 @@ strategic extraction of cohesive modules.
 | **3** | APIManager.js | ~~1,524~~ → 1,393 | ✅ ExportController | COMPLETE |
 | **4** | CalloutRenderer.js | ~~1,291~~ → 951 | ✅ TailCalculator | COMPLETE |
 | **5** | ArrowRenderer.js | ~~1,310~~ → 971 | ✅ ArrowGeometry | COMPLETE |
-| **6** | TextBoxRenderer.js | 1,117 | Extract RichTextMeasurement | LOW |
+| **6** | TextBoxRenderer.js | ~~1,117~~ → 993 | ✅ RichTextUtils | COMPLETE |
+| **7** | ToolbarStyleControls.js | 1,018 | Condense JSDoc, extract helpers | ACTIVE |
 
 ### Files Already Well-Delegated (No Action Needed)
 
