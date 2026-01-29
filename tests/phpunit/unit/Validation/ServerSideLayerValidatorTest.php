@@ -587,4 +587,203 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$types = $validator->getSupportedLayerTypes();
 		$this->assertContains( 'customShape', $types );
 	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateTextboxWithRichText() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'layer_rich1',
+			'type' => 'textbox',
+			'x' => 10,
+			'y' => 10,
+			'width' => 200,
+			'height' => 100,
+			'text' => 'Hello',
+			'richText' => [
+				[ 'text' => 'Hello ', 'style' => [ 'fontWeight' => 'bold' ] ],
+				[ 'text' => 'World', 'style' => [ 'fontStyle' => 'italic' ] ]
+			]
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid(), 'textbox with richText should validate: ' .
+			implode( '; ', $result->getErrors() ) );
+		$data = $result->getData();
+		$this->assertArrayHasKey( 'richText', $data );
+		$this->assertCount( 2, $data['richText'] );
+		$this->assertSame( 'Hello ', $data['richText'][0]['text'] );
+		$this->assertSame( 'bold', $data['richText'][0]['style']['fontWeight'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateRichTextWithUnderline() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'layer_rich2',
+			'type' => 'textbox',
+			'x' => 10,
+			'y' => 10,
+			'width' => 200,
+			'height' => 100,
+			'richText' => [
+				[ 'text' => 'Underlined', 'style' => [ 'textDecoration' => 'underline' ] ]
+			]
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid() );
+		$data = $result->getData();
+		$this->assertSame( 'underline', $data['richText'][0]['style']['textDecoration'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateRichTextWithStrikethrough() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'layer_rich3',
+			'type' => 'callout',
+			'x' => 10,
+			'y' => 10,
+			'width' => 200,
+			'height' => 100,
+			'richText' => [
+				[ 'text' => 'Crossed out', 'style' => [ 'textDecoration' => 'line-through' ] ]
+			]
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid() );
+		$data = $result->getData();
+		$this->assertSame( 'line-through', $data['richText'][0]['style']['textDecoration'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateRichTextWithHighlight() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'layer_rich4',
+			'type' => 'textbox',
+			'x' => 10,
+			'y' => 10,
+			'width' => 200,
+			'height' => 100,
+			'richText' => [
+				[ 'text' => 'Highlighted', 'style' => [ 'backgroundColor' => 'rgba(255, 255, 0, 0.5)' ] ]
+			]
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid() );
+		$data = $result->getData();
+		$this->assertArrayHasKey( 'backgroundColor', $data['richText'][0]['style'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateRichTextTooManyRuns() {
+		$validator = $this->createValidator();
+
+		// Create 101 runs (exceeds limit of 100)
+		$runs = [];
+		for ( $i = 0; $i < 101; $i++ ) {
+			$runs[] = [ 'text' => 'Run ' . $i ];
+		}
+
+		$layer = [
+			'id' => 'layer_rich5',
+			'type' => 'textbox',
+			'x' => 10,
+			'y' => 10,
+			'width' => 200,
+			'height' => 100,
+			'richText' => $runs
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertFalse( $result->isValid() );
+		$this->assertTrue( $result->hasErrors() );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateRichTextInvalidTextDecoration() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'layer_rich6',
+			'type' => 'textbox',
+			'x' => 10,
+			'y' => 10,
+			'width' => 200,
+			'height' => 100,
+			'richText' => [
+				[ 'text' => 'Test', 'style' => [ 'textDecoration' => 'invalid-value' ] ]
+			]
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid() );
+		$data = $result->getData();
+		// Invalid textDecoration should be stripped
+		$this->assertArrayNotHasKey( 'textDecoration', $data['richText'][0]['style'] ?? [] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testValidateRichTextPreservesMultipleStyles() {
+		$validator = $this->createValidator();
+
+		$layer = [
+			'id' => 'layer_rich7',
+			'type' => 'textbox',
+			'x' => 10,
+			'y' => 10,
+			'width' => 200,
+			'height' => 100,
+			'richText' => [
+				[
+					'text' => 'Multi-styled',
+					'style' => [
+						'fontWeight' => 'bold',
+						'fontStyle' => 'italic',
+						'textDecoration' => 'underline',
+						'backgroundColor' => '#ffff00',
+						'color' => '#ff0000'
+					]
+				]
+			]
+		];
+
+		$result = $validator->validateLayer( $layer );
+
+		$this->assertTrue( $result->isValid() );
+		$data = $result->getData();
+		$style = $data['richText'][0]['style'];
+		$this->assertSame( 'bold', $style['fontWeight'] );
+		$this->assertSame( 'italic', $style['fontStyle'] );
+		$this->assertSame( 'underline', $style['textDecoration'] );
+		$this->assertArrayHasKey( 'backgroundColor', $style );
+		$this->assertArrayHasKey( 'color', $style );
+	}
 }

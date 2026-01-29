@@ -65,6 +65,7 @@ describe( 'PropertyBuilders', () => {
 			expect( typeof Builders.addDimensions ).toBe( 'function' );
 			expect( typeof Builders.addTextProperties ).toBe( 'function' );
 			expect( typeof Builders.addTextShadowSection ).toBe( 'function' );
+			expect( typeof Builders.addRichTextFormatting ).toBe( 'function' );
 			expect( typeof Builders.addAlignmentSection ).toBe( 'function' );
 			expect( typeof Builders.addEndpoints ).toBe( 'function' );
 			expect( typeof Builders.addArrowProperties ).toBe( 'function' );
@@ -419,6 +420,168 @@ describe( 'PropertyBuilders', () => {
 			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
 				'test-layer-1',
 				{ textShadowOffsetY: -100 }
+			);
+		} );
+	} );
+
+	describe( 'addRichTextFormatting', () => {
+		test( 'should add section and three checkboxes', () => {
+			const ctx = createMockContext( { type: 'textbox', text: 'Hello world' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			expect( ctx.addSection ).toHaveBeenCalledWith( 'Rich Text Formatting', 'rich-text' );
+			expect( ctx.addCheckbox ).toHaveBeenCalledTimes( 3 );
+		} );
+
+		test( 'should add underline checkbox with correct default', () => {
+			const ctx = createMockContext( { type: 'textbox', text: 'Hello' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			expect( underlineCall ).toBeDefined();
+			expect( underlineCall[ 0 ].value ).toBe( false );
+		} );
+
+		test( 'should detect underline from richText', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				text: 'Hello',
+				richText: [ { text: 'Hello', style: { textDecoration: 'underline' } } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			expect( underlineCall[ 0 ].value ).toBe( true );
+		} );
+
+		test( 'underline onChange should create richText when none exists', () => {
+			const ctx = createMockContext( { type: 'textbox', text: 'Hello' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			underlineCall[ 0 ].onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{
+					richText: [ { text: 'Hello', style: { textDecoration: 'underline' } } ]
+				}
+			);
+		} );
+
+		test( 'strikethrough onChange should update richText', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				text: 'Hello',
+				richText: [ { text: 'Hello', style: {} } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const strikeCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Strikethrough'
+			);
+			strikeCall[ 0 ].onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{
+					richText: [ { text: 'Hello', style: { textDecoration: 'line-through' } } ]
+				}
+			);
+		} );
+
+		test( 'highlight checkbox should show color picker when enabled', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				text: 'Hello',
+				richText: [ { text: 'Hello', style: { backgroundColor: 'rgba(255, 255, 0, 0.5)' } } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// Should have 3 checkboxes plus 1 color picker
+			expect( ctx.addColorPicker ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					label: 'Highlight Color'
+				} )
+			);
+		} );
+
+		test( 'highlight onChange should apply default yellow', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				text: 'Hello'
+			} );
+			ctx.editor.layerPanel = { updatePropertiesPanel: jest.fn() };
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const highlightCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Highlight'
+			);
+			highlightCall[ 0 ].onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{
+					richText: [ { text: 'Hello', style: { backgroundColor: 'rgba(255, 255, 0, 0.5)' } } ]
+				}
+			);
+		} );
+
+		test( 'should not create richText for empty text', () => {
+			const ctx = createMockContext( { type: 'textbox', text: '' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			underlineCall[ 0 ].onChange( true );
+
+			// Should not call updateLayer since there's no text
+			expect( ctx.editor.updateLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should preserve existing styles when adding new ones', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				text: 'Hello',
+				richText: [ { text: 'Hello', style: { fontWeight: 'bold' } } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			underlineCall[ 0 ].onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{
+					richText: [ { text: 'Hello', style: { fontWeight: 'bold', textDecoration: 'underline' } } ]
+				}
 			);
 		} );
 	} );

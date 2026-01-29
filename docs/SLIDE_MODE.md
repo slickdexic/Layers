@@ -1,9 +1,24 @@
 # Slide Mode Implementation Plan
 
-> **Status:** Approved for Implementation  
+> **Status:** Partially Implemented  
 > **Version:** 1.0  
 > **Date:** January 20, 2026  
-> **Target Release:** v1.6.0
+> **Current Release:** v1.5.36
+
+## Implementation Status
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `{{#Slide:}}` parser function | ✅ Implemented | Full support |
+| `canvas`, `size`, `background` params | ✅ Implemented | |
+| `noedit` flag | ✅ Implemented | Hides edit button |
+| `class`, `placeholder`, `layerset` | ✅ Implemented | |
+| `Special:Slides` listing page | ✅ Implemented | |
+| `Special:EditSlide/Name` editor | ✅ Implemented | |
+| **`lock` parameter** | ❌ NOT IMPLEMENTED | Aspirational |
+| **Lock mode indicators** | ❌ NOT IMPLEMENTED | Aspirational |
+
+> **Note:** Sections describing the `lock` parameter document **proposed future behavior** that has not been implemented. Search for "NOT IMPLEMENTED" in this document to identify these sections.
 
 ## Executive Summary
 
@@ -13,7 +28,7 @@ Slide Mode enables creating canvas-based visual content without requiring a pare
 
 1. [Use Cases](#1-use-cases)
 2. [Wikitext Syntax](#2-wikitext-syntax)
-3. [Lock Behavior](#3-lock-behavior)
+3. [Hide Edit Button](#3-hide-edit-button)
 4. [Database Design](#4-database-design)
 5. [API Changes](#5-api-changes)
 6. [Editor Changes](#6-editor-changes)
@@ -56,14 +71,16 @@ Slide Mode enables creating canvas-based visual content without requiring a pare
 ```wikitext
 {{#Slide: SlideName
  | canvas = WIDTHxHEIGHT
- | lock = none|size|all
+ | size = WIDTHxHEIGHT
  | background = COLOR
  | class = CSS_CLASSES
  | placeholder = MESSAGE
- | editable = yes|no
  | layerset = SETNAME
+ | noedit
 }}
 ```
+
+> **Note:** The lowercase `{{#slide:}}` syntax is also supported.
 
 ### 2.2 Parameters
 
@@ -71,7 +88,8 @@ Slide Mode enables creating canvas-based visual content without requiring a pare
 |-----------|----------|---------|-------------|
 | `SlideName` | Yes | — | Unique identifier (alphanumeric, hyphens, underscores) |
 | `canvas` | No | `800x600` | Canvas dimensions in pixels (`WIDTHxHEIGHT`) |
-| `noedit` | No | — | Hide the edit overlay button (boolean flag) |
+| `size` | No | canvas size | Display size - scales the slide to fit within bounds |
+| `noedit` | No | — | Hide the edit overlay button (boolean flag, no value) |
 | `background` | No | `#ffffff` | Background color (hex, rgb, named colors, or `transparent`) |
 | `class` | No | — | Additional CSS classes for the container |
 | `placeholder` | No | i18n default | Text shown when slide is empty |

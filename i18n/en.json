@@ -219,6 +219,7 @@
 	"layers-section-text": "Text",
 	"layers-section-text-shadow": "Text Shadow",
 	"layers-section-alignment": "Alignment",
+	"layers-section-rich-text": "Rich Text Formatting",
 	"layers-section-callout": "Callout Tail",
 	"layers-section-marker": "Marker Properties",
 
@@ -230,6 +231,11 @@
 	"layers-prop-text-shadow-blur": "Shadow Blur",
 	"layers-prop-text-shadow-offset-x": "Shadow Offset X",
 	"layers-prop-text-shadow-offset-y": "Shadow Offset Y",
+
+	"layers-prop-underline": "Underline",
+	"layers-prop-strikethrough": "Strikethrough",
+	"layers-prop-highlight": "Highlight",
+	"layers-prop-highlight-color": "Highlight Color",
 
 	"layers-arrow-single": "Single →",
 	"layers-arrow-double": "Double ↔",
@@ -570,6 +576,9 @@
 	"layers-validation-too-many-layers": "Too many layers (max: $1)",
 	"layers-validation-layer-error": "Layer $1: $2",
 	"layers-validation-duplicate-id": "Duplicate layer ID: $1",
+	"layers-validation-richtext-not-array": "Rich text content must be an array of text runs",
+	"layers-validation-richtext-too-many-runs": "Too many rich text runs (max: $1)",
+	"layers-validation-richtext-too-long": "Rich text content exceeds maximum length",
 
 	"layers-presets": "Presets",
 	"layers-presets-tooltip": "Choose a style preset",
@@ -668,6 +677,10 @@
 	"layers-text-toolbar-size": "Font size",
 	"layers-text-toolbar-bold": "Bold (Ctrl+B)",
 	"layers-text-toolbar-italic": "Italic (Ctrl+I)",
+	"layers-text-toolbar-underline": "Underline (Ctrl+U)",
+	"layers-text-toolbar-strikethrough": "Strikethrough",
+	"layers-text-toolbar-highlight": "Highlight text",
+	"layers-text-toolbar-highlight-color": "Choose highlight color",
 	"layers-text-toolbar-align-left": "Align left",
 	"layers-text-toolbar-align-center": "Align center",
 	"layers-text-toolbar-align-right": "Align right",

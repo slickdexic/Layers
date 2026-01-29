@@ -157,7 +157,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'toleranceType' => 'string',
 		'toleranceValue' => 'string',
 		'toleranceUpper' => 'string',
-		'toleranceLower' => 'string'
+		'toleranceLower' => 'string',
+		// Rich text formatting (array of styled text runs)
+		'richText' => 'array'
 	];
 
 	/** @var array Value constraints for enum-like properties */
@@ -739,6 +741,10 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return $this->validateGradient( $value );
 		}
 
+		if ( $property === 'richText' ) {
+			return $this->validateRichText( $value );
+		}
+
 		return [ 'valid' => true, 'value' => $value ];
 	}
 
@@ -821,6 +827,133 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		}
 
 		return [ 'valid' => true, 'value' => $validGradient ];
+	}
+
+	/**
+	 * Validate rich text formatting array
+	 *
+	 * Rich text is an array of "runs" where each run contains text and optional style overrides.
+	 * This enables mixed formatting within a single text layer (e.g., bold and normal text).
+	 *
+	 * @param array $richText Rich text runs to validate
+	 * @return array Validation result with 'valid', 'value' or 'error' keys
+	 */
+	private function validateRichText( array $richText ): array {
+		// Limit number of runs to prevent abuse (100 should be plenty)
+		if ( count( $richText ) > 100 ) {
+			return [ 'valid' => false, 'error' => 'Too many rich text runs (max 100)' ];
+		}
+
+		// Empty array is valid (no rich text)
+		if ( count( $richText ) === 0 ) {
+			return [ 'valid' => true, 'value' => [] ];
+		}
+
+		$validRuns = [];
+		$totalLength = 0;
+		$maxTotalLength = 50000; // Max total text length across all runs
+
+		// Allowed style properties in a run
+		$allowedStyles = [
+			'fontWeight' => 'string',
+			'fontStyle' => 'string',
+			'fontSize' => 'numeric',
+			'fontFamily' => 'string',
+			'color' => 'color',
+			'textDecoration' => 'string',
+			'backgroundColor' => 'color',
+			'textStrokeColor' => 'color',
+			'textStrokeWidth' => 'numeric'
+		];
+
+		// Allowed values for enum-like style properties
+		$styleConstraints = [
+			'fontWeight' => [ 'normal', 'bold', 'lighter', 'bolder' ],
+			'fontStyle' => [ 'normal', 'italic', 'oblique' ],
+			'textDecoration' => [ 'none', 'underline', 'line-through', 'overline' ]
+		];
+
+		foreach ( $richText as $run ) {
+			if ( !is_array( $run ) ) {
+				continue; // Skip invalid runs
+			}
+
+			// Each run must have a 'text' property
+			if ( !isset( $run['text'] ) || !is_string( $run['text'] ) ) {
+				continue; // Skip runs without text
+			}
+
+			$text = $run['text'];
+			$totalLength += strlen( $text );
+
+			if ( $totalLength > $maxTotalLength ) {
+				return [ 'valid' => false, 'error' => 'Total rich text length exceeds limit' ];
+			}
+
+			// Sanitize the text content (preserve whitespace for rich text runs)
+			$sanitizedText = $this->textSanitizer->sanitizeRichTextRun( $text );
+
+			$validRun = [ 'text' => $sanitizedText ];
+
+			// Validate optional style overrides
+			if ( isset( $run['style'] ) && is_array( $run['style'] ) ) {
+				$validStyle = [];
+
+				foreach ( $run['style'] as $styleProp => $styleValue ) {
+					if ( !isset( $allowedStyles[$styleProp] ) ) {
+						continue; // Skip unknown style properties
+					}
+
+					$expectedType = $allowedStyles[$styleProp];
+
+					// Validate type
+					if ( $expectedType === 'string' && !is_string( $styleValue ) ) {
+						continue;
+					}
+					if ( $expectedType === 'numeric' && !is_numeric( $styleValue ) ) {
+						continue;
+					}
+					if ( $expectedType === 'color' ) {
+						if ( !is_string( $styleValue ) ) {
+							continue;
+						}
+						$styleValue = $this->colorValidator->sanitizeColor( $styleValue );
+					}
+
+					// Check enum constraints
+					if ( isset( $styleConstraints[$styleProp] ) ) {
+						if ( !in_array( $styleValue, $styleConstraints[$styleProp], true ) ) {
+							continue;
+						}
+					}
+
+					// Validate numeric ranges
+					if ( $styleProp === 'fontSize' ) {
+						$styleValue = (float)$styleValue;
+						if ( $styleValue < 1 || $styleValue > 500 ) {
+							continue;
+						}
+					}
+					if ( $styleProp === 'textStrokeWidth' ) {
+						$styleValue = (float)$styleValue;
+						if ( $styleValue < 0 || $styleValue > 20 ) {
+							continue;
+						}
+					}
+
+					$validStyle[$styleProp] = $styleValue;
+				}
+
+				// Only include style if it has valid properties
+				if ( count( $validStyle ) > 0 ) {
+					$validRun['style'] = $validStyle;
+				}
+			}
+
+			$validRuns[] = $validRun;
+		}
+
+		return [ 'valid' => true, 'value' => $validRuns ];
 	}
 
 	/**

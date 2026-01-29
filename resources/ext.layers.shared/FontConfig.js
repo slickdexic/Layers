@@ -15,21 +15,37 @@
 
 /**
  * Default fonts used when MediaWiki config is not available.
- * These are web-safe fonts that work across all platforms.
  * This list should match $wgLayersDefaultFonts in extension.json.
+ *
+ * Fonts are organized by category:
+ * - System sans-serif fonts (Arial, Helvetica, Verdana)
+ * - Google sans-serif fonts (Roboto, Open Sans, Lato, etc.)
+ * - Serif fonts (Times New Roman, Georgia, Merriweather, Playfair Display)
+ * - Monospace fonts (Courier New, Source Code Pro)
  *
  * @type {string[]}
  */
 const DEFAULT_FONTS = [
+	// System sans-serif
 	'Arial',
+	'Verdana',
+	// Google sans-serif (loaded via fonts.css)
 	'Roboto',
+	'Open Sans',
+	'Lato',
+	'Montserrat',
 	'Noto Sans',
+	'Source Sans Pro',
+	'PT Sans',
+	'Ubuntu',
+	// Serif fonts
 	'Times New Roman',
 	'Georgia',
-	'Verdana',
+	'Merriweather',
+	'Playfair Display',
+	// Monospace fonts
 	'Courier New',
-	'Courier',
-	'Helvetica'
+	'Source Code Pro'
 ];
 
 /**

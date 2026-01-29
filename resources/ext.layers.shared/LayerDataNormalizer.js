@@ -95,7 +95,53 @@
 				} );
 			}
 
+			// Normalize rich text array if present
+			if ( Array.isArray( layer.richText ) ) {
+				LayerDataNormalizer.normalizeRichText( layer.richText );
+			}
+
 			return layer;
+		}
+
+		/**
+		 * Normalize rich text runs array
+		 *
+		 * Ensures consistent data types in rich text style properties.
+		 * Handles edge cases like missing text or invalid style objects.
+		 *
+		 * @param {Array} richText - Array of text runs
+		 */
+		static normalizeRichText( richText ) {
+			if ( !Array.isArray( richText ) ) {
+				return;
+			}
+
+			richText.forEach( ( run ) => {
+				if ( !run || typeof run !== 'object' ) {
+					return;
+				}
+
+				// Ensure text is a string
+				if ( run.text === undefined || run.text === null ) {
+					run.text = '';
+				} else if ( typeof run.text !== 'string' ) {
+					run.text = String( run.text );
+				}
+
+				// Normalize style properties if present
+				if ( run.style && typeof run.style === 'object' ) {
+					// Normalize numeric style properties
+					const numericProps = [ 'fontSize', 'textStrokeWidth' ];
+					numericProps.forEach( ( prop ) => {
+						if ( typeof run.style[ prop ] === 'string' ) {
+							const parsed = parseFloat( run.style[ prop ] );
+							if ( !isNaN( parsed ) ) {
+								run.style[ prop ] = parsed;
+							}
+						}
+					} );
+				}
+			} );
 		}
 
 		/**

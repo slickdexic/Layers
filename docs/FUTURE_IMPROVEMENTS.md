@@ -2,7 +2,7 @@
 
 This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
 
-**Last Updated:** January 26, 2026
+**Last Updated:** January 28, 2026
 
 ---
 
@@ -177,22 +177,284 @@ Enable layers editing on TIFF images. Browsers don't natively support TIFF rende
 
 ---
 
-### 2. Inline Canvas Text Editing (FR-8)
+### 2. Inline Canvas Text Editing (FR-8) — ✅ COMPLETED
 
 **Priority:** HIGH  
 **Complexity:** High  
-**Status:** ⏳ Proposed
+**Status:** ✅ Completed (January 2026)
 
-Allow direct text editing on the canvas instead of only in the properties panel.
+Inline text editing is now implemented via `InlineTextEditor.js`.
+
+**What's Implemented:**
+- Double-click text layer to edit directly on canvas
+- Transparent textarea overlay matches layer position/styling
+- Real-time rendering as you type
+- Floating formatting toolbar with bold/italic/underline controls
+- Works for Text, Text Box, and Callout layers
+- Escape to cancel, Enter/Ctrl+Enter to save
+
+**Location:** `resources/ext.layers.editor/canvas/InlineTextEditor.js` (~1,300 lines)
+
+---
+
+### 6. Rich Text Formatting (FR-16) — 🔴 HIGH VALUE
+
+**Priority:** HIGH  
+**Complexity:** High  
+**Status:** ⏳ Proposed (January 28, 2026)
+
+Enable mixed text formatting within a single Text Box or Callout layer, allowing different parts of the text to have different styles (font size, color, bold, italic, etc.).
+
+**Current Limitation:**
+Currently, all text within a layer shares identical formatting. If you set a text box to "bold, red, 18px", every character is bold, red, 18px. This limits expressive capability compared to tools like Figma, Canva, Google Drawings, and PowerPoint.
+
+**Desired Behavior:**
+
+```
+┌────────────────────────────────────────┐
+│ **Important:** This is a warning       │
+│ message with _italic emphasis_ and     │
+│ some ^small^ subscript text.           │
+└────────────────────────────────────────┘
+```
 
 **Features:**
-- Click text layer to enter edit mode
-- Cursor and selection within text
-- Inline formatting toolbar
-- Real-time rendering as you type
-- Works for both Text and Text Box layers
+1. **Selection-based formatting** — Select text → apply formatting to selection only
+2. **Mixed styles** — Different fonts, sizes, colors, weights within same text box
+3. **Toolbar integration** — Bold/italic/underline/color tools apply to selection
+4. **Preserved on save** — Rich text data persists through save/load cycle
+5. **Backward compatible** — Plain text layers continue to work
 
-**Effort:** 3-4 weeks
+**Applies To:**
+- Text Box (`textbox`)
+- Callout (`callout`)
+- Optionally: Simple Text (`text`) — though single-line makes this less useful
+
+**Effort:** 3-4 weeks (see detailed implementation plan below)
+
+---
+
+### FR-16 Implementation Plan: Rich Text Formatting
+
+#### Phase 1: Data Model (1 week)
+
+**Current Data Model:**
+```javascript
+{
+  type: 'textbox',
+  text: 'Hello World',           // Plain string
+  fontFamily: 'Arial',           // Applied to ALL text
+  fontSize: 16,                  // Applied to ALL text
+  fontWeight: 'bold',            // Applied to ALL text
+  color: '#ff0000',              // Applied to ALL text
+  ...
+}
+```
+
+**Proposed Rich Text Data Model:**
+```javascript
+{
+  type: 'textbox',
+  text: 'Hello World',           // Plain fallback for compatibility
+  richText: [                    // NEW: Array of styled text runs
+    {
+      text: 'Hello ',
+      // No style overrides = use layer defaults
+    },
+    {
+      text: 'World',
+      style: {
+        fontWeight: 'bold',
+        color: '#ff0000'
+      }
+    }
+  ],
+  // Default styles (used when richText run has no override)
+  fontFamily: 'Arial',
+  fontSize: 16,
+  fontWeight: 'normal',
+  color: '#000000',
+  ...
+}
+```
+
+**Key Design Decisions:**
+- `richText` is **optional** — if absent, use `text` with uniform styling (backward compatible)
+- Each run specifies only **overrides**, inheriting defaults from layer
+- Plain `text` property is always kept in sync for search, backward compat
+- Maximum 100 runs per layer (prevent abuse)
+
+**Server-Side Validation Updates:**
+- Add `richText` to ServerSideLayerValidator whitelist
+- Validate run structure: `text` (string), `style` (object, optional)
+- Validate style properties match existing text style whitelist
+- Cap run count and total character length
+
+#### Phase 2: Rich Text Rendering (1 week)
+
+**Update TextBoxRenderer.js and CalloutRenderer.js:**
+
+```javascript
+renderText(layer) {
+  const runs = layer.richText || [{ text: layer.text }];
+  let x = startX;
+  let y = startY;
+  
+  for (const run of runs) {
+    const style = this.mergeStyles(layer, run.style);
+    this.ctx.font = this.buildFont(style);
+    this.ctx.fillStyle = style.color;
+    
+    // Handle word-wrap within run
+    const words = run.text.split(' ');
+    for (const word of words) {
+      const metrics = this.ctx.measureText(word + ' ');
+      if (x + metrics.width > maxX) {
+        x = startX;
+        y += lineHeight;
+      }
+      this.ctx.fillText(word + ' ', x, y);
+      x += metrics.width;
+    }
+  }
+}
+```
+
+**Challenges:**
+- Word wrap across run boundaries
+- Cursor positioning for editing
+- Text measurement for bounding box calculation
+- Line-height consistency with mixed font sizes
+
+#### Phase 3: Inline Editor Integration (1.5 weeks)
+
+**Option A: ContentEditable Div (Recommended)**
+
+Replace `<textarea>` with `<div contenteditable="true">`:
+
+```html
+<div contenteditable="true" class="layers-inline-editor">
+  <span>Hello </span>
+  <span style="font-weight: bold; color: red;">World</span>
+</div>
+```
+
+**Pros:**
+- Native browser selection/cursor support
+- `document.execCommand()` for formatting (or modern `Selection` API)
+- Familiar editing experience
+
+**Cons:**
+- ContentEditable is notoriously quirky
+- Need to sanitize HTML on save
+- Cross-browser differences
+
+**Option B: Custom Canvas Text Selection**
+
+Implement custom selection tracking on canvas:
+- Track cursor position by character index
+- Render selection highlight manually
+- Apply formatting to index range
+
+**Pros:**
+- Full control over behavior
+- No HTML quirks
+
+**Cons:**
+- Significantly more complex (~2 weeks extra)
+- Reinventing the wheel
+
+**Recommendation:** Start with ContentEditable (Option A), which is industry-standard for rich text editors.
+
+#### Phase 4: Toolbar Integration (0.5 weeks)
+
+**Update InlineTextEditor floating toolbar:**
+
+```javascript
+applyFormat(format) {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+  
+  // Apply formatting to selection
+  document.execCommand(format, false, null);  // 'bold', 'italic', etc.
+  
+  // Or use modern Selection API for colors:
+  const range = selection.getRangeAt(0);
+  const span = document.createElement('span');
+  span.style.color = this.currentColor;
+  range.surroundContents(span);
+  
+  this.syncRichTextToLayer();
+}
+
+syncRichTextToLayer() {
+  // Parse contenteditable HTML into richText array
+  const editor = this.editorElement;
+  const runs = [];
+  
+  for (const node of editor.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      runs.push({ text: node.textContent });
+    } else if (node.tagName === 'SPAN') {
+      runs.push({
+        text: node.textContent,
+        style: this.extractStyle(node)
+      });
+    }
+  }
+  
+  this.editingLayer.richText = runs;
+  this.editingLayer.text = runs.map(r => r.text).join('');
+}
+```
+
+#### Phase 5: Properties Panel Support (0.5 weeks)
+
+When editing a layer with richText:
+- Show "Mixed" in properties panel if selection has varied formatting
+- Changing font size when mixed → option to apply to all or just selection
+- Consider "Clear Formatting" button to reset to uniform style
+
+#### Migration & Compatibility
+
+**Backward Compatibility:**
+- Layers without `richText` render exactly as before
+- Old API responses work unchanged
+- `text` property always contains plain text for search/export
+
+**Forward Compatibility:**
+- Old viewers seeing `richText` can fall back to `text` with default styling
+- Graceful degradation on older extension versions
+
+#### Testing Strategy
+
+**Unit Tests:**
+- RichTextRenderer parsing and rendering
+- Run merging and style inheritance
+- Word wrap across run boundaries
+- Sync from contenteditable to richText array
+
+**Integration Tests:**
+- Full edit cycle: select text → format → save → reload → verify
+- Copy/paste preserves formatting
+- Undo/redo with rich text changes
+
+**E2E Tests:**
+- Format text in editor, verify saved to server
+- Open layer in different browser, verify rendering matches
+
+#### File Changes Summary
+
+| File | Change Type | Effort |
+|------|-------------|--------|
+| TextBoxRenderer.js | Major | Add rich text run rendering |
+| CalloutRenderer.js | Major | Add rich text run rendering |
+| InlineTextEditor.js | Major | Replace textarea with contenteditable |
+| ServerSideLayerValidator.php | Medium | Add richText validation |
+| LayerDataNormalizer.js | Minor | Normalize richText format |
+| PropertiesForm.js | Medium | Handle mixed formatting display |
+| LayersValidator.js | Minor | Client-side richText validation |
+| copilot-instructions.md | Minor | Document richText data model |
 
 ---
 

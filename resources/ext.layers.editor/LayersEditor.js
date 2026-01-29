@@ -947,6 +947,31 @@ class LayersEditor {
 
 			changes = this.validationManager.sanitizeLayerData( changes );
 
+			// If inline text editing is active for this layer, preserve pending text content
+			// This prevents text loss when changing properties like verticalAlign during editing
+			if ( this.canvasManager && this.canvasManager.inlineTextEditor ) {
+				const inlineEditor = this.canvasManager.inlineTextEditor;
+				const editingLayer = inlineEditor.getEditingLayer && inlineEditor.getEditingLayer();
+
+				if ( editingLayer && editingLayer.id === layerId && inlineEditor.isActive() ) {
+					// Get pending text content
+					const pendingContent = inlineEditor.getPendingTextContent &&
+						inlineEditor.getPendingTextContent();
+
+					if ( pendingContent ) {
+						// Include pending text unless explicitly being changed
+						if ( !( 'text' in changes ) && pendingContent.text !== undefined ) {
+							changes.text = pendingContent.text;
+						}
+						if ( !( 'richText' in changes ) && pendingContent.richText ) {
+							if ( pendingContent.richText.length > 0 ) {
+								changes.richText = pendingContent.richText;
+							}
+						}
+					}
+				}
+			}
+
 			const layers = this.stateManager.get( 'layers' ) || [];
 			const layerIndex = layers.findIndex( ( l ) => l.id === layerId );
 			if ( layerIndex !== -1 ) {
@@ -1431,7 +1456,36 @@ class LayersEditor {
 	 * Save the current layers to the server
 	 */
 	save () {
+		// Debug logging (controlled by extension config)
+		const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
+
+		// If inline text editing is active, finish it first to capture the current content
+		// Otherwise the layer would be saved with empty text (editing state)
+		if ( this.canvasManager &&
+			this.canvasManager.inlineTextEditor &&
+			this.canvasManager.inlineTextEditor.isActive() ) {
+			if ( debug && mw.log ) {
+				mw.log( '[LayersEditor] Finishing inline editing before save' );
+			}
+			this.canvasManager.inlineTextEditor.finishEditing( true );
+		}
+
 		const layers = this.stateManager.get( 'layers' ) || [];
+
+		// Debug: log textbox layers to verify text was captured
+		if ( debug && mw.log ) {
+			const textboxLayers = layers.filter( l => l.type === 'textbox' || l.type === 'callout' );
+			mw.log( '[LayersEditor] Saving layers', {
+				totalLayers: layers.length,
+				textboxCount: textboxLayers.length,
+				textboxDetails: textboxLayers.map( l => ( {
+					id: l.id,
+					text: l.text,
+					hasRichText: !!l.richText,
+					richTextLength: l.richText ? l.richText.length : 0
+				} ) )
+			} );
+		}
 
 		const validationResult = this.validationManager.validateLayers( layers );
 		

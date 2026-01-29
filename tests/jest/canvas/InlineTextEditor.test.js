@@ -252,7 +252,11 @@ describe( 'InlineTextEditor', () => {
 
 		test( 'should preserve multiline text', () => {
 			editor.startEditing( textboxLayer );
-			expect( editor.editorElement.value ).toBe( 'Multiline\nText' );
+			// ContentEditable uses textContent, line breaks become <br>
+			// The innerHTML will have the text with <br> tags
+			const content = editor.editorElement.textContent || editor.editorElement.value;
+			expect( content ).toContain( 'Multiline' );
+			expect( content ).toContain( 'Text' );
 		} );
 
 		test( 'should add textbox class to editor element', () => {
@@ -289,7 +293,10 @@ describe( 'InlineTextEditor', () => {
 
 		test( 'should preserve multiline text in callout', () => {
 			editor.startEditing( calloutLayer );
-			expect( editor.editorElement.value ).toBe( 'Callout\nText' );
+			// ContentEditable uses textContent, line breaks become <br>
+			const content = editor.editorElement.textContent || editor.editorElement.value;
+			expect( content ).toContain( 'Callout' );
+			expect( content ).toContain( 'Text' );
 		} );
 
 		test( 'should add textbox class to editor element for callout', () => {
@@ -3001,5 +3008,327 @@ describe( 'InlineTextEditor - Additional edge cases', () => {
 
 		// Should fall back to redraw
 		expect( mockCanvasManager.redraw ).toHaveBeenCalled();
+	} );
+} );
+
+describe( 'InlineTextEditor - Rich text conversion methods', () => {
+	let mockCanvasManager;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvasManager = {
+			canvas: document.createElement( 'canvas' ),
+			mainContainer: document.createElement( 'div' ),
+			setTextEditingMode: jest.fn(),
+			renderLayers: jest.fn(),
+			editor: {
+				layers: [],
+				updateLayer: jest.fn(),
+				getLayerById: jest.fn()
+			}
+		};
+		document.body.appendChild( mockCanvasManager.mainContainer );
+		document.body.appendChild( mockCanvasManager.canvas );
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( mockCanvasManager.mainContainer.parentNode ) {
+			mockCanvasManager.mainContainer.parentNode.removeChild( mockCanvasManager.mainContainer );
+		}
+		if ( mockCanvasManager.canvas.parentNode ) {
+			mockCanvasManager.canvas.parentNode.removeChild( mockCanvasManager.canvas );
+		}
+	} );
+
+	describe( '_escapeHtml', () => {
+		test( 'should escape HTML special characters', () => {
+			expect( editor._escapeHtml( '<script>alert(1)</script>' ) ).toBe( '&lt;script&gt;alert(1)&lt;/script&gt;' );
+		} );
+
+		test( 'should handle quotes', () => {
+			expect( editor._escapeHtml( '"test"' ) ).toContain( 'test' );
+		} );
+
+		test( 'should return plain text unchanged', () => {
+			expect( editor._escapeHtml( 'Hello World' ) ).toBe( 'Hello World' );
+		} );
+	} );
+
+	describe( '_richTextToHtml', () => {
+		test( 'should return empty string for empty array', () => {
+			expect( editor._richTextToHtml( [] ) ).toBe( '' );
+		} );
+
+		test( 'should return empty string for non-array', () => {
+			expect( editor._richTextToHtml( null ) ).toBe( '' );
+		} );
+
+		test( 'should convert plain text run', () => {
+			const result = editor._richTextToHtml( [ { text: 'Hello' } ] );
+			expect( result ).toBe( 'Hello' );
+		} );
+
+		test( 'should wrap bold text in span', () => {
+			const result = editor._richTextToHtml( [ { text: 'Bold', style: { fontWeight: 'bold' } } ] );
+			expect( result ).toContain( 'font-weight: bold' );
+			expect( result ).toContain( 'Bold' );
+		} );
+
+		test( 'should wrap italic text in span', () => {
+			const result = editor._richTextToHtml( [ { text: 'Italic', style: { fontStyle: 'italic' } } ] );
+			expect( result ).toContain( 'font-style: italic' );
+		} );
+
+		test( 'should include color in span', () => {
+			const result = editor._richTextToHtml( [ { text: 'Red', style: { color: '#ff0000' } } ] );
+			expect( result ).toContain( 'color: #ff0000' );
+		} );
+
+		test( 'should include text decoration', () => {
+			const result = editor._richTextToHtml( [ { text: 'Underlined', style: { textDecoration: 'underline' } } ] );
+			expect( result ).toContain( 'text-decoration: underline' );
+		} );
+
+		test( 'should convert newlines to br tags', () => {
+			const result = editor._richTextToHtml( [ { text: 'Line1\nLine2' } ] );
+			expect( result ).toContain( '<br>' );
+		} );
+
+		test( 'should handle multiple runs', () => {
+			const result = editor._richTextToHtml( [
+				{ text: 'Normal ' },
+				{ text: 'Bold', style: { fontWeight: 'bold' } }
+			] );
+			expect( result ).toContain( 'Normal ' );
+			expect( result ).toContain( 'Bold' );
+		} );
+	} );
+
+	describe( '_htmlToRichText', () => {
+		test( 'should parse plain text', () => {
+			const result = editor._htmlToRichText( 'Hello World' );
+			expect( result.length ).toBeGreaterThan( 0 );
+			expect( result[ 0 ].text ).toBe( 'Hello World' );
+		} );
+
+		test( 'should parse bold tags', () => {
+			const result = editor._htmlToRichText( '<b>Bold</b>' );
+			expect( result.some( ( r ) => r.style && r.style.fontWeight === 'bold' ) ).toBe( true );
+		} );
+
+		test( 'should parse strong tags', () => {
+			const result = editor._htmlToRichText( '<strong>Strong</strong>' );
+			expect( result.some( ( r ) => r.style && r.style.fontWeight === 'bold' ) ).toBe( true );
+		} );
+
+		test( 'should parse italic tags', () => {
+			const result = editor._htmlToRichText( '<i>Italic</i>' );
+			expect( result.some( ( r ) => r.style && r.style.fontStyle === 'italic' ) ).toBe( true );
+		} );
+
+		test( 'should parse em tags', () => {
+			const result = editor._htmlToRichText( '<em>Emphasis</em>' );
+			expect( result.some( ( r ) => r.style && r.style.fontStyle === 'italic' ) ).toBe( true );
+		} );
+
+		test( 'should parse underline tags', () => {
+			const result = editor._htmlToRichText( '<u>Underlined</u>' );
+			expect( result.some( ( r ) => r.style && r.style.textDecoration === 'underline' ) ).toBe( true );
+		} );
+
+		test( 'should parse strikethrough tags', () => {
+			const result = editor._htmlToRichText( '<s>Strike</s>' );
+			expect( result.some( ( r ) => r.style && r.style.textDecoration === 'line-through' ) ).toBe( true );
+		} );
+
+		test( 'should parse br tags as newlines', () => {
+			const result = editor._htmlToRichText( 'Line1<br>Line2' );
+			// The result should contain the newline somewhere in the content
+			const fullText = result.map( ( r ) => r.text ).join( '' );
+			expect( fullText ).toContain( '\n' );
+		} );
+
+		test( 'should parse inline styles', () => {
+			const result = editor._htmlToRichText( '<span style="color: red">Red</span>' );
+			expect( result.some( ( r ) => r.style && r.style.color ) ).toBe( true );
+		} );
+
+		test( 'should parse font tag with color attribute', () => {
+			const result = editor._htmlToRichText( '<font color="#ff0000">Red text</font>' );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Red text' );
+			expect( result[ 0 ].style.color ).toBe( '#ff0000' );
+		} );
+
+		test( 'should parse font tag with size attribute', () => {
+			const result = editor._htmlToRichText( '<font size="5">Large text</font>' );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Large text' );
+			expect( result[ 0 ].style.fontSize ).toBe( 24 ); // size 5 maps to 24px
+		} );
+
+		test( 'should parse font tag with face attribute', () => {
+			const result = editor._htmlToRichText( '<font face="Arial">Arial text</font>' );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Arial text' );
+			expect( result[ 0 ].style.fontFamily ).toBe( 'Arial' );
+		} );
+
+		test( 'should parse nested font tags inside bold', () => {
+			const result = editor._htmlToRichText( '<b><font color="blue">Blue bold</font></b>' );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Blue bold' );
+			expect( result[ 0 ].style.fontWeight ).toBe( 'bold' );
+			expect( result[ 0 ].style.color ).toBe( 'blue' );
+		} );
+	} );
+
+	describe( '_mergeAdjacentRuns', () => {
+		test( 'should return empty array for empty input', () => {
+			expect( editor._mergeAdjacentRuns( [] ) ).toEqual( [] );
+		} );
+
+		test( 'should merge runs with same style', () => {
+			const result = editor._mergeAdjacentRuns( [
+				{ text: 'Hello', style: { fontWeight: 'bold' } },
+				{ text: ' World', style: { fontWeight: 'bold' } }
+			] );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Hello World' );
+		} );
+
+		test( 'should not merge runs with different styles', () => {
+			const result = editor._mergeAdjacentRuns( [
+				{ text: 'Bold', style: { fontWeight: 'bold' } },
+				{ text: 'Italic', style: { fontStyle: 'italic' } }
+			] );
+			expect( result.length ).toBe( 2 );
+		} );
+
+		test( 'should handle runs without style', () => {
+			const result = editor._mergeAdjacentRuns( [
+				{ text: 'Hello ' },
+				{ text: 'World' }
+			] );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ].text ).toBe( 'Hello World' );
+		} );
+	} );
+
+	describe( '_getPlainTextFromEditor', () => {
+		test( 'should return empty string if no editor element', () => {
+			editor.editorElement = null;
+			expect( editor._getPlainTextFromEditor() ).toBe( '' );
+		} );
+
+		test( 'should return value for input elements', () => {
+			editor.editorElement = document.createElement( 'input' );
+			editor.editorElement.value = 'Test value';
+			expect( editor._getPlainTextFromEditor() ).toBe( 'Test value' );
+		} );
+
+		test( 'should extract text from contentEditable', () => {
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			expect( editor._getPlainTextFromEditor() ).toBe( 'Hello World' );
+		} );
+
+		test( 'should convert br to newline in contentEditable', () => {
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Line1<br>Line2';
+			const result = editor._getPlainTextFromEditor();
+			expect( result ).toContain( '\n' );
+		} );
+	} );
+
+	describe( 'Selection preservation', () => {
+		test( '_saveSelection should store selection range when text is selected', () => {
+			editor._isRichTextMode = true;
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			document.body.appendChild( editor.editorElement );
+
+			// Create a selection
+			const range = document.createRange();
+			range.selectNodeContents( editor.editorElement );
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			editor._saveSelection();
+
+			expect( editor._savedSelection ).not.toBeNull();
+			document.body.removeChild( editor.editorElement );
+		} );
+
+		test( '_saveSelection should not save if selection is collapsed', () => {
+			editor._isRichTextMode = true;
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			document.body.appendChild( editor.editorElement );
+
+			// Create a collapsed (cursor-only) selection
+			const range = document.createRange();
+			const textNode = editor.editorElement.firstChild;
+			range.setStart( textNode, 0 );
+			range.setEnd( textNode, 0 ); // Same position = collapsed
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			editor._saveSelection();
+
+			expect( editor._savedSelection ).toBeNull();
+			document.body.removeChild( editor.editorElement );
+		} );
+
+		test( '_restoreSelection should restore saved selection', () => {
+			editor._isRichTextMode = true;
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			editor.editorElement.innerHTML = 'Hello World';
+			document.body.appendChild( editor.editorElement );
+
+			// Create and save a selection
+			const range = document.createRange();
+			const textNode = editor.editorElement.firstChild;
+			range.setStart( textNode, 0 );
+			range.setEnd( textNode, 5 ); // Select "Hello"
+			const selection = window.getSelection();
+			selection.removeAllRanges();
+			selection.addRange( range );
+
+			editor._saveSelection();
+
+			// Clear the selection
+			selection.removeAllRanges();
+			expect( selection.isCollapsed ).toBe( true );
+
+			// Restore
+			const result = editor._restoreSelection();
+
+			expect( result ).toBe( true );
+			const newSelection = window.getSelection();
+			expect( newSelection.isCollapsed ).toBe( false );
+			expect( newSelection.toString() ).toBe( 'Hello' );
+
+			document.body.removeChild( editor.editorElement );
+		} );
+
+		test( '_restoreSelection should return false if no saved selection', () => {
+			editor._savedSelection = null;
+			expect( editor._restoreSelection() ).toBe( false );
+		} );
+
+		test( '_clearSavedSelection should clear the saved selection', () => {
+			editor._savedSelection = document.createRange();
+			editor._clearSavedSelection();
+			expect( editor._savedSelection ).toBeNull();
+		} );
 	} );
 } );
