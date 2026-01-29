@@ -617,4 +617,81 @@ describe( 'LayerDataNormalizer', () => {
 			expect( result.layers ).toBeUndefined();
 		} );
 	} );
+
+	describe( 'normalizeRichText', () => {
+		test( 'should handle non-array input gracefully', () => {
+			// Should not throw for non-array inputs
+			expect( () => LayerDataNormalizer.normalizeRichText( null ) ).not.toThrow();
+			expect( () => LayerDataNormalizer.normalizeRichText( undefined ) ).not.toThrow();
+			expect( () => LayerDataNormalizer.normalizeRichText( 'string' ) ).not.toThrow();
+		} );
+
+		test( 'should skip invalid runs (non-objects)', () => {
+			const richText = [ null, undefined, 'invalid', { text: 'valid' } ];
+			LayerDataNormalizer.normalizeRichText( richText );
+			// Should not modify primitives, only process valid objects
+			expect( richText[ 3 ].text ).toBe( 'valid' );
+		} );
+
+		test( 'should ensure text property is always a string', () => {
+			const richText = [
+				{ text: undefined },
+				{ text: null },
+				{ text: 123 },
+				{ text: '' },
+				{ text: 'hello' }
+			];
+			LayerDataNormalizer.normalizeRichText( richText );
+			expect( richText[ 0 ].text ).toBe( '' );
+			expect( richText[ 1 ].text ).toBe( '' );
+			expect( richText[ 2 ].text ).toBe( '123' );
+			expect( richText[ 3 ].text ).toBe( '' );
+			expect( richText[ 4 ].text ).toBe( 'hello' );
+		} );
+
+		test( 'should normalize numeric style properties from strings', () => {
+			const richText = [
+				{ text: 'test', style: { fontSize: '24', textStrokeWidth: '2.5' } },
+				{ text: 'test2', style: { fontSize: 18, textStrokeWidth: 1 } }
+			];
+			LayerDataNormalizer.normalizeRichText( richText );
+			expect( richText[ 0 ].style.fontSize ).toBe( 24 );
+			expect( richText[ 0 ].style.textStrokeWidth ).toBe( 2.5 );
+			expect( richText[ 1 ].style.fontSize ).toBe( 18 );
+			expect( richText[ 1 ].style.textStrokeWidth ).toBe( 1 );
+		} );
+
+		test( 'should leave invalid numeric strings unchanged', () => {
+			const richText = [
+				{ text: 'test', style: { fontSize: 'large', textStrokeWidth: 'abc' } }
+			];
+			LayerDataNormalizer.normalizeRichText( richText );
+			// NaN check - should remain as string if parse fails
+			expect( richText[ 0 ].style.fontSize ).toBe( 'large' );
+			expect( richText[ 0 ].style.textStrokeWidth ).toBe( 'abc' );
+		} );
+
+		test( 'should handle runs without style property', () => {
+			const richText = [ { text: 'no style' } ];
+			LayerDataNormalizer.normalizeRichText( richText );
+			expect( richText[ 0 ].text ).toBe( 'no style' );
+			expect( richText[ 0 ].style ).toBeUndefined();
+		} );
+	} );
+
+	describe( 'normalizeLayer with richText', () => {
+		test( 'should call normalizeRichText for layers with richText arrays', () => {
+			const layer = {
+				id: 'rt1',
+				type: 'textbox',
+				richText: [
+					{ text: 'bold', style: { fontSize: '18' } },
+					{ text: null }
+				]
+			};
+			const result = LayerDataNormalizer.normalizeLayer( layer );
+			expect( result.richText[ 0 ].style.fontSize ).toBe( 18 );
+			expect( result.richText[ 1 ].text ).toBe( '' );
+		} );
+	} );
 } );

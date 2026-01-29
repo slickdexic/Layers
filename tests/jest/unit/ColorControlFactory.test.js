@@ -461,11 +461,13 @@ describe( 'ColorControlFactory', () => {
 		it( 'should use fallback when ColorPickerDialog not available', () => {
 			const button = document.createElement( 'button' );
 
-			// Ensure no ColorPickerDialog available
-			const savedColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			// Ensure no ColorPickerDialog available - must clear both namespace and global
+			const savedNamespace = window.Layers?.UI?.ColorPickerDialog;
+			const savedGlobal = window.ColorPickerDialog;
 			if ( window.Layers?.UI ) {
 				window.Layers.UI.ColorPickerDialog = undefined;
 			}
+			window.ColorPickerDialog = undefined;
 
 			// Should not throw and should handle the fallback
 			expect( () => {
@@ -473,41 +475,86 @@ describe( 'ColorControlFactory', () => {
 			} ).not.toThrow();
 
 			// Restore
-			if ( window.Layers?.UI && savedColorPickerDialog ) {
-				window.Layers.UI.ColorPickerDialog = savedColorPickerDialog;
+			if ( window.Layers?.UI && savedNamespace ) {
+				window.Layers.UI.ColorPickerDialog = savedNamespace;
+			}
+			if ( savedGlobal ) {
+				window.ColorPickerDialog = savedGlobal;
 			}
 		} );
 
 		it( 'should add is-transparent class for none color in fallback', () => {
 			const button = document.createElement( 'button' );
 
-			// Ensure no ColorPickerDialog available
-			const savedColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			// Ensure no ColorPickerDialog available - must clear both namespace and global
+			const savedNamespace = window.Layers?.UI?.ColorPickerDialog;
+			const savedGlobal = window.ColorPickerDialog;
 			if ( window.Layers?.UI ) {
 				window.Layers.UI.ColorPickerDialog = undefined;
 			}
+			window.ColorPickerDialog = undefined;
 
 			factory.updateColorButtonDisplay( button, 'none' );
 
 			expect( button.classList.contains( 'is-transparent' ) ).toBe( true );
 
 			// Restore
-			if ( window.Layers?.UI && savedColorPickerDialog ) {
-				window.Layers.UI.ColorPickerDialog = savedColorPickerDialog;
+			if ( window.Layers?.UI && savedNamespace ) {
+				window.Layers.UI.ColorPickerDialog = savedNamespace;
+			}
+			if ( savedGlobal ) {
+				window.ColorPickerDialog = savedGlobal;
 			}
 		} );
 
 		it( 'should add is-transparent class for transparent color in fallback', () => {
 			const button = document.createElement( 'button' );
 
-			// Ensure no ColorPickerDialog available
+			// Ensure no ColorPickerDialog available - must clear both namespace and global
+			const savedNamespace = window.Layers?.UI?.ColorPickerDialog;
+			const savedGlobal = window.ColorPickerDialog;
 			if ( window.Layers?.UI ) {
 				window.Layers.UI.ColorPickerDialog = undefined;
 			}
+			window.ColorPickerDialog = undefined;
 
 			factory.updateColorButtonDisplay( button, 'transparent' );
 
 			expect( button.classList.contains( 'is-transparent' ) ).toBe( true );
+
+			// Restore
+			if ( window.Layers?.UI && savedNamespace ) {
+				window.Layers.UI.ColorPickerDialog = savedNamespace;
+			}
+			if ( savedGlobal ) {
+				window.ColorPickerDialog = savedGlobal;
+			}
+		} );
+
+		it( 'should set background color in fallback for valid color', () => {
+			const button = document.createElement( 'button' );
+
+			// Ensure no ColorPickerDialog available - must clear both namespace and global
+			const savedNamespace = window.Layers?.UI?.ColorPickerDialog;
+			const savedGlobal = window.ColorPickerDialog;
+			if ( window.Layers?.UI ) {
+				window.Layers.UI.ColorPickerDialog = undefined;
+			}
+			window.ColorPickerDialog = undefined;
+
+			factory.updateColorButtonDisplay( button, '#ff0000' );
+
+			expect( button.style.background ).toBe( 'rgb(255, 0, 0)' );
+			expect( button.title ).toBe( '#ff0000' );
+			expect( button.classList.contains( 'is-transparent' ) ).toBe( false );
+
+			// Restore
+			if ( window.Layers?.UI && savedNamespace ) {
+				window.Layers.UI.ColorPickerDialog = savedNamespace;
+			}
+			if ( savedGlobal ) {
+				window.ColorPickerDialog = savedGlobal;
+			}
 		} );
 	} );
 
@@ -768,6 +815,103 @@ describe( 'ColorControlFactory', () => {
 			expect( callArgs.onPreview ).toBeNull();
 
 			window.Layers.UI.ColorPickerDialog = saved;
+		} );
+	} );
+
+	describe( 'createColorControl onApply callback', () => {
+		it( 'should call onColorChange when color is applied', () => {
+			const onColorChange = jest.fn();
+			let capturedOnApply;
+
+			// Spy on openColorPicker to capture the onApply callback
+			jest.spyOn( factory, 'openColorPicker' ).mockImplementation( ( button, color, options ) => {
+				capturedOnApply = options.onApply;
+			} );
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				onColorChange
+			} );
+
+			// Click button to trigger openColorPicker and capture the callback
+			control.button.click();
+
+			// Now call the captured onApply callback with a new color
+			capturedOnApply( '#00ff00' );
+
+			// Should call onColorChange with the new color
+			expect( onColorChange ).toHaveBeenCalledWith( '#00ff00', false );
+		} );
+
+		it( 'should handle "none" color in onApply callback', () => {
+			const onColorChange = jest.fn();
+			let capturedOnApply;
+
+			jest.spyOn( factory, 'openColorPicker' ).mockImplementation( ( button, color, options ) => {
+				capturedOnApply = options.onApply;
+			} );
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				onColorChange
+			} );
+
+			control.button.click();
+
+			// Apply 'none' as the color
+			capturedOnApply( 'none' );
+
+			// Should call onColorChange with isNone=true
+			// Note: when 'none' is chosen, colorValue is NOT updated (stays #ff0000)
+			expect( onColorChange ).toHaveBeenCalledWith( '#ff0000', true );
+		} );
+
+		it( 'should update button display after onApply', () => {
+			const onColorChange = jest.fn();
+			let capturedOnApply;
+
+			jest.spyOn( factory, 'openColorPicker' ).mockImplementation( ( button, color, options ) => {
+				capturedOnApply = options.onApply;
+			} );
+
+			const updateDisplaySpy = jest.spyOn( factory, 'updateColorButtonDisplay' );
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				onColorChange
+			} );
+
+			control.button.click();
+			capturedOnApply( '#0000ff' );
+
+			// Should update the button display
+			expect( updateDisplaySpy ).toHaveBeenCalledWith( control.button, '#0000ff' );
+		} );
+
+		it( 'should update button display with "none" when none is selected', () => {
+			const onColorChange = jest.fn();
+			let capturedOnApply;
+
+			jest.spyOn( factory, 'openColorPicker' ).mockImplementation( ( button, color, options ) => {
+				capturedOnApply = options.onApply;
+			} );
+
+			const updateDisplaySpy = jest.spyOn( factory, 'updateColorButtonDisplay' );
+
+			const control = factory.createColorControl( {
+				className: 'test-button',
+				initialColor: '#ff0000',
+				onColorChange
+			} );
+
+			control.button.click();
+			capturedOnApply( 'none' );
+
+			// Should update the button display with 'none'
+			expect( updateDisplaySpy ).toHaveBeenCalledWith( control.button, 'none' );
 		} );
 	} );
 } );

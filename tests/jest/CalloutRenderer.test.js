@@ -35,6 +35,8 @@ function createMockContext() {
 		lineTo: jest.fn(),
 		arc: jest.fn(),
 		arcTo: jest.fn(),
+		quadraticCurveTo: jest.fn(),
+		bezierCurveTo: jest.fn(),
 		fill: jest.fn(),
 		stroke: jest.fn(),
 		fillText: jest.fn(),
@@ -65,6 +67,9 @@ beforeAll( () => {
 			return Math.max( 0, Math.min( 1, v ) );
 		}
 	};
+
+	// Load TailCalculator first (CalloutRenderer depends on it)
+	require( '../../resources/ext.layers.shared/TailCalculator.js' );
 
 	// Load the module
 	require( '../../resources/ext.layers.shared/CalloutRenderer.js' );
@@ -1811,6 +1816,220 @@ describe( 'CalloutRenderer', () => {
 				renderer.draw( layer, { scale: 1 } );
 				expect( ctx.beginPath ).toHaveBeenCalled();
 			}
+		} );
+
+		test( 'should render line tailStyle correctly', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 25,
+				tailStyle: 'line',
+				tailTipX: 100,
+				tailTipY: 200,
+				fill: '#ffffff',
+				stroke: '#000000'
+			};
+
+			// Should not throw and should call rendering methods
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		test( 'should render curved tailStyle correctly', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 25,
+				tailStyle: 'curved',
+				tailTipX: 100,
+				tailTipY: 200,
+				fill: '#ffffff'
+			};
+
+			// Should not throw and should call rendering methods
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle tail on corner arc', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			// Tip positioned to hit corner arc
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 30,
+				tailSize: 20,
+				tailStyle: 'triangle',
+				tailTipX: 20,
+				tailTipY: 20, // Near top-left corner
+				fill: '#ffffff'
+			};
+
+			// Should not throw when tail is near corner
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle very small corner radius', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 0.1, // Very small but not zero
+				tailSize: 20,
+				tailStyle: 'triangle',
+				tailTipX: 100,
+				tailTipY: 200,
+				fill: '#ffffff'
+			};
+
+			// Should not throw
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'clampOpacity fallback', () => {
+		test( 'should use fallback when MathUtils is not available', () => {
+			// Store original MathUtils
+			const originalMathUtils = window.Layers.MathUtils;
+
+			// Clear MathUtils to trigger fallback
+			delete window.Layers.MathUtils;
+
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Draw with NaN opacity (should trigger clampOpacity fallback)
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				fill: '#ff0000',
+				opacity: NaN // Should be clamped to 1 by fallback
+			};
+
+			// Should not throw even with MathUtils unavailable
+			expect( () => renderer.draw( layer ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+
+			// Restore MathUtils
+			window.Layers.MathUtils = originalMathUtils;
+		} );
+
+		test( 'should clamp invalid opacity values in fallback', () => {
+			// Store original MathUtils
+			const originalMathUtils = window.Layers.MathUtils;
+
+			// Clear MathUtils to trigger fallback
+			delete window.Layers.MathUtils;
+
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Test with undefined opacity
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 100,
+				height: 60,
+				fill: '#ff0000',
+				opacity: undefined // Should be clamped to 1
+			};
+
+			expect( () => renderer.draw( layer ) ).not.toThrow();
+
+			// Restore MathUtils
+			window.Layers.MathUtils = originalMathUtils;
+		} );
+	} );
+
+	describe( 'base point winding order', () => {
+		test( 'should swap base points when cross product is negative', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Use tailTipX/tailTipY to position tail on left side where cross product would be negative
+			const layer = {
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				cornerRadius: 0,
+				tailSize: 30,
+				tailStyle: 'triangle',
+				tailBaseWidth: 30,
+				tailTipX: 50, // Left of the callout
+				tailTipY: 150, // Middle height
+				fill: '#ffffff'
+			};
+
+			// Drawing should work correctly with swapped base points
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle tail on right side (no swap needed)', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx );
+
+			// Tail on right side should not need base point swapping
+			const layer = {
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				cornerRadius: 0,
+				tailSize: 30,
+				tailStyle: 'triangle',
+				tailBaseWidth: 30,
+				tailTipX: 350, // Right of the callout
+				tailTipY: 150, // Middle height
+				fill: '#ffffff'
+			};
+
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
 		} );
 	} );
 } );

@@ -117,14 +117,7 @@ class ToolbarStyleControls {
 		this.inputValidators = [];
 	}
 
-	/**
-	 * Add event listener to an element with automatic tracking
-	 *
-	 * @param {Element} element Target element
-	 * @param {string} event Event type
-	 * @param {Function} handler Event handler
-	 * @param {Object} [options] Event listener options
-	 */
+	/** Add event listener to an element with automatic tracking */
 	addListener( element, event, handler, options ) {
 		if ( !element || !event || typeof handler !== 'function' ) {
 			return;
@@ -132,27 +125,16 @@ class ToolbarStyleControls {
 		if ( this.eventTracker ) {
 			this.eventTracker.add( element, event, handler, options );
 		} else {
-			// Fallback if EventTracker not available
 			element.addEventListener( event, handler, options );
 		}
 	}
 
-	/**
-	 * Get localized message
-	 *
-	 * @param {string} key Message key
-	 * @param {string} fallback Fallback text
-	 * @return {string} Localized message
-	 */
+	/** Get localized message @return {string} */
 	msg( key, fallback ) {
 		return this.msgFn( key, fallback );
 	}
 
-	/**
-	 * Create the style controls group
-	 *
-	 * @return {HTMLElement} The style group container element
-	 */
+	/** Create the style controls group @return {HTMLElement} */
 	create() {
 		const styleGroup = document.createElement( 'div' );
 		styleGroup.className = 'toolbar-group style-group';
@@ -209,11 +191,7 @@ class ToolbarStyleControls {
 		return styleGroup;
 	}
 
-	/**
-	 * Create marker-specific controls (autonumber checkbox)
-	 *
-	 * @return {HTMLElement} The marker controls container
-	 */
+	/** Create marker-specific controls (autonumber checkbox) @return {HTMLElement} */
 	createMarkerControls() {
 		const container = document.createElement( 'div' );
 		container.className = 'style-control marker-control context-hidden';
@@ -254,11 +232,7 @@ class ToolbarStyleControls {
 		return container;
 	}
 
-	/**
-	 * Create the main style controls row (stroke color, fill color, stroke width)
-	 *
-	 * @return {HTMLElement} The row container
-	 */
+	/** Create the main style controls row (stroke color, fill color, stroke width) @return {HTMLElement} */
 	createMainStyleRow() {
 		const row = document.createElement( 'div' );
 		row.className = 'style-controls-row';
@@ -351,12 +325,7 @@ class ToolbarStyleControls {
 		return row;
 	}
 
-	/**
-	 * Fallback color control creation (when ColorControlFactory not available)
-	 *
-	 * @param {Object} options Control options
-	 * @return {Object} Object with container and button elements
-	 */
+	/** Fallback color control creation (when ColorControlFactory not available) @return {Object} */
 	createColorControlFallback( options ) {
 		const container = document.createElement( 'div' );
 		container.className = 'style-control-item';
@@ -395,11 +364,7 @@ class ToolbarStyleControls {
 		return { container: container, button: button };
 	}
 
-	/**
-	 * Create the stroke width control
-	 *
-	 * @return {Object} Object with container and input elements
-	 */
+	/** Create the stroke width control @return {Object} */
 	createStrokeWidthControl() {
 		const container = document.createElement( 'div' );
 		container.className = 'style-control-item';
@@ -432,11 +397,7 @@ class ToolbarStyleControls {
 		return { container: container, input: input };
 	}
 
-	/**
-	 * Handle stroke width input changes
-	 *
-	 * @param {HTMLInputElement} input The input element
-	 */
+	/** Handle stroke width input changes */
 	handleStrokeWidthInput( input ) {
 		let val = parseInt( input.value, 10 );
 		const isValid = !isNaN( val ) && val >= 0 && val <= 100;
@@ -458,11 +419,7 @@ class ToolbarStyleControls {
 		}
 	}
 
-	/**
-	 * Handle stroke width blur event (reset invalid values)
-	 *
-	 * @param {HTMLInputElement} input The input element
-	 */
+	/** Handle stroke width blur event (reset invalid values) */
 	handleStrokeWidthBlur( input ) {
 		const val = parseInt( input.value, 10 );
 		if ( isNaN( val ) || val < 0 || val > 100 ) {
@@ -472,12 +429,7 @@ class ToolbarStyleControls {
 		}
 	}
 
-	/**
-	 * Get color picker strings for i18n
-	 * Delegates to MessageHelper singleton for shared i18n strings
-	 *
-	 * @return {Object} Color picker string map
-	 */
+	/** Get color picker strings for i18n @return {Object} */
 	getColorPickerStrings() {
 		// Use shared MessageHelper singleton if available
 		if ( typeof window !== 'undefined' && window.layersMessages &&
@@ -500,13 +452,7 @@ class ToolbarStyleControls {
 		};
 	}
 
-	/**
-	 * Open the color picker dialog
-	 *
-	 * @param {HTMLElement} anchorButton The button that triggered the picker
-	 * @param {string} initialValue Current color value
-	 * @param {Object} options Options including onApply callback
-	 */
+	/** Open the color picker dialog */
 	openColorPicker( anchorButton, initialValue, options ) {
 		options = options || {};
 
@@ -532,12 +478,7 @@ class ToolbarStyleControls {
 		picker.open();
 	}
 
-	/**
-	 * Update a color button's display
-	 *
-	 * @param {HTMLElement} btn The button element
-	 * @param {string} color The color value or 'none'
-	 */
+	/** Update a color button's display */
 	updateColorButtonDisplay( btn, color ) {
 		const strings = this.getColorPickerStrings();
 		const ColorPickerDialog = getClass( 'UI.ColorPickerDialog', 'ColorPickerDialog' );
@@ -623,11 +564,7 @@ class ToolbarStyleControls {
 		}
 	}
 
-	/**
-	 * Get current style options
-	 *
-	 * @return {Object} Style options object
-	 */
+	/** Get current style options @return {Object} */
 	getStyleOptions() {
 		// Get text effects from delegate
 		const textEffects = this.textEffectsControls ?
@@ -657,11 +594,7 @@ class ToolbarStyleControls {
 		};
 	}
 
-	/**
-	 * Update visibility of tool-specific options
-	 *
-	 * @param {string} toolId The currently selected tool
-	 */
+	/** Update visibility of tool-specific options */
 	updateForTool( toolId ) {
 		// Delegate text effects visibility to TextEffectsControls
 		if ( this.textEffectsControls ) {
@@ -684,12 +617,7 @@ class ToolbarStyleControls {
 		}
 	}
 
-	/**
-	 * Update visibility of controls based on tool context
-	 * Implements context-aware toolbar feature
-	 *
-	 * @param {string} toolId The currently selected tool
-	 */
+	/** Update visibility of controls based on tool context */
 	updateContextVisibility( toolId ) {
 		this.currentToolContext = toolId;
 

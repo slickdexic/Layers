@@ -467,6 +467,121 @@ describe( 'LayerItemEvents', () => {
 			// Should not throw, focus unchanged
 			expect( document.activeElement ).toBe( initialFocus );
 		} );
+
+		it( 'should return early when layerList is null', () => {
+			// Create instance with null layerList
+			const nullListInstance = new LayerItemEvents( {
+				layerList: null,
+				getLayers: () => mockLayers,
+				callbacks: callbacks
+			} );
+
+			// Should not throw
+			expect( () => nullListInstance.focusLayerById( 'layer1' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'edge cases for coverage', () => {
+		it( 'should return early when keydown target is not inside a layer item', () => {
+			instance = new LayerItemEvents( {
+				layerList: layerList,
+				getLayers: () => mockLayers,
+				callbacks: callbacks
+			} );
+
+			// Focus the layer list itself, not a layer item
+			layerList.tabIndex = 0;
+			layerList.focus();
+
+			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp', bubbles: true } );
+			layerList.dispatchEvent( event );
+
+			// Should return early because target is not inside a layer-item
+			expect( callbacks.onSelect ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when layer item has no data-layer-id (click)', () => {
+			// Create a layer item with no data-layer-id
+			const badItem = document.createElement( 'div' );
+			badItem.className = 'layer-item';
+			const grabArea = document.createElement( 'div' );
+			grabArea.className = 'layer-grab-area';
+			badItem.appendChild( grabArea );
+			layerList.appendChild( badItem );
+
+			instance = new LayerItemEvents( {
+				layerList: layerList,
+				getLayers: () => mockLayers,
+				callbacks: callbacks
+			} );
+
+			const event = new MouseEvent( 'click', { bubbles: true } );
+			grabArea.dispatchEvent( event );
+
+			// Should not call any callbacks since layerId is missing
+			expect( callbacks.onSelect ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when layers array is empty (keydown)', () => {
+			const emptyCallbacks = {
+				onMoveLayer: jest.fn(),
+				onSelect: jest.fn()
+			};
+			instance = new LayerItemEvents( {
+				layerList: layerList,
+				getLayers: () => [], // Empty layers
+				callbacks: emptyCallbacks
+			} );
+
+			const grabArea = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-grab-area' );
+			grabArea.focus();
+
+			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp', bubbles: true } );
+			grabArea.dispatchEvent( event );
+
+			// Should return early without calling callbacks
+			expect( emptyCallbacks.onMoveLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when layer not found in getLayers (keydown)', () => {
+			const notFoundCallbacks = {
+				onMoveLayer: jest.fn(),
+				onSelect: jest.fn()
+			};
+			instance = new LayerItemEvents( {
+				layerList: layerList,
+				getLayers: () => [ { id: 'other1' }, { id: 'other2' } ], // Different IDs
+				callbacks: notFoundCallbacks
+			} );
+
+			const grabArea = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-grab-area' );
+			grabArea.focus();
+
+			const event = new KeyboardEvent( 'keydown', { key: 'ArrowUp', bubbles: true } );
+			grabArea.dispatchEvent( event );
+
+			// Should return early without calling callbacks
+			expect( notFoundCallbacks.onMoveLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not intercept Enter key on button element', () => {
+			instance = new LayerItemEvents( {
+				layerList: layerList,
+				getLayers: () => mockLayers,
+				callbacks: callbacks
+			} );
+
+			// Focus a button inside layer item
+			const visBtn = layerList.querySelector( '.layer-item[data-layer-id="layer1"] .layer-visibility' );
+			visBtn.focus();
+
+			const event = new KeyboardEvent( 'keydown', { key: 'Enter', bubbles: true } );
+			Object.defineProperty( event, 'target', { value: visBtn } );
+			layerList.dispatchEvent( event );
+
+			// Should not call onSelect because target is a button
+			expect( callbacks.onSelect ).not.toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'getFocusedLayerId', () => {

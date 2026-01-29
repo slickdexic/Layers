@@ -3,18 +3,19 @@
 |name            = Layers
 |status          = stable
 |type1           = media
-|type2           = interface
-|type3           = page action
-|type4           = api
+|type2           = parser function
+|type3           = special
+|type4           = page action
+|type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.36
+|version         = 1.5.39
 |update          = 2026-01-26
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|{{tag|annotation|o}}|{{tag|canvas|o}}|{{tag|drawing|o}}|{{tag|image editor|o}}|{{tag|image markup|o}}|{{tag|non-destructive|o}}}}
-|mediawiki       = >= 1.44
+|mediawiki       = >= 1.39
 |php             = >= 8.1
 |needs-updatephp = yes
 |table1          = layer_assets
@@ -69,12 +70,20 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 
 === Slide Syntax ===
 <syntaxhighlight lang="wikitext">
-{{#Slide: MySlide}}                              <!-- Render slide "MySlide" (default layer set) -->
-{{#Slide: MySlide | layerset=annotations}}       <!-- Render specific named layer set -->
-{{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
-{{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
-{{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
-{{#Slide: MySlide | size=800x600 | lock=view}}   <!-- View-only (no edit overlay) -->
+{{#Slide: MySlide}}
+<!-- Render slide "MySlide" (default layer set) -->
+
+{{#Slide: MySlide | layerset=annotations}}
+<!-- Render specific named layer set -->
+
+{{#Slide: MySlide | size=800x600}}
+<!-- Render at specific display size -->
+
+{{#Slide: MySlide | canvas=1920x1080}}
+<!-- Create with specific canvas size -->
+
+{{#Slide: MySlide | size=800x600 | noedit}}
+<!-- no edit button overlay -->
 </syntaxhighlight>
 
 === Slide Parameters ===
@@ -87,11 +96,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 |-
 | <code>size</code> || Display size on page || <code>size=800x600</code>
 |-
-| <code>bgcolor</code> || Background color || <code>bgcolor=#f0f0f0</code>
-|-
-| <code>lock</code> || Lock mode (view or all) || <code>lock=view</code>
-|-
-| <code>class</code> || CSS classes for the container || <code>class=my-diagram</code>
+| <code>noedit</code> || disable edit button || <code>noedit</code>
 |}
 
 === Slide Management ===
@@ -116,11 +121,11 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.36
+| 1.44+ || <code>main</code> || 1.5.38
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.26-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.38-REL1_43
 |-
-| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.1.14 (community maintained)
+| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.5.38-REL1_39
 |}
 {{ExtensionInstall
 |registration=required
@@ -305,7 +310,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~113k lines including generated shape/emoji data).
-* '''Stability:''' 10,658 Jest tests (157 suites) with 93.52% statement coverage and 84.24% branch coverage.
+* '''Stability:''' 10,939 Jest tests (162 suites) with 94.65% statement coverage and 84.49% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

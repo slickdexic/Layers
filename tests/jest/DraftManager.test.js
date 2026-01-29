@@ -768,4 +768,68 @@ describe( 'DraftManager', function () {
 			expect( draftManager.loadDraft() ).toBeNull();
 		} );
 	} );
+
+	describe( 'saveDraft error handling', function () {
+		it( 'should return false when localStorage.setItem throws quota exceeded', function () {
+			// Create a draft manager with layers to save
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				if ( key === 'layers' ) {
+					return [ { id: 'layer1', type: 'rectangle' } ];
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return null;
+			} );
+
+			const dm = new DraftManager( mockEditor );
+
+			// Make setItem throw to simulate quota exceeded
+			global.localStorage.setItem = jest.fn( function () {
+				throw new Error( 'QuotaExceededError: localStorage is full' );
+			} );
+
+			// saveDraft should catch the error and return false
+			const result = dm.saveDraft();
+			expect( result ).toBe( false );
+		} );
+	} );
+
+	describe( 'clearDraft error handling', function () {
+		it( 'should handle localStorage.removeItem throwing error gracefully', function () {
+			// Make removeItem throw an error
+			global.localStorage.removeItem = jest.fn( function () {
+				throw new Error( 'Storage operation failed' );
+			} );
+
+			// clearDraft should not throw even when removeItem fails
+			expect( () => draftManager.clearDraft() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'initialization without stateManager', function () {
+		it( 'should initialize without stateManager subscription', function () {
+			const editorWithoutStateManager = {
+				filename: 'Test_Image.jpg',
+				stateManager: null
+			};
+
+			// Should not throw
+			expect( () => new DraftManager( editorWithoutStateManager ) ).not.toThrow();
+		} );
+
+		it( 'should handle getStorageKey without stateManager', function () {
+			const editorWithoutStateManager = {
+				filename: 'Test_Image.jpg',
+				stateManager: null
+			};
+
+			const dm = new DraftManager( editorWithoutStateManager );
+			const key = dm.getStorageKey();
+
+			// Should use default set name
+			expect( key ).toContain( 'default' );
+			expect( key ).toContain( 'Test_Image.jpg' );
+		} );
+	} );
 } );
