@@ -30,7 +30,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | ES6 classes | **132** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.00% stmt, 84.73% branch** |
-| Jest tests | **10,801** (157 suites) |
+| Jest tests | **10,806** (157 suites) |
 | PHPUnit test files | 24 |
 | God classes (>1000 lines) | **22** (2 generated, 18 JS, 2 PHP) |
 | Drawing tools | **15** |
