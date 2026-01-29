@@ -220,6 +220,9 @@
 				placeholder.style.display = 'none';
 			}
 
+			// Store payload on container for later access (e.g., view full size button)
+			container._layersPayload = payload;
+
 			// Set up slide overlay with edit and view buttons
 			this.setupSlideOverlay( container, payload );
 
@@ -663,7 +666,7 @@
 		 *
 		 * @private
 		 * @param {HTMLElement} container Slide container element
-		 * @param {Object} payload Layer data payload
+		 * @param {Object} payload Layer data payload (initial, may be stale)
 		 */
 		handleSlideViewClick( container, payload ) {
 			const slideName = container.getAttribute( 'data-slide-name' );
@@ -682,18 +685,22 @@
 				return;
 			}
 
+			// Use stored/updated payload if available (set by reinitializeSlideViewer after save)
+			// Fall back to original payload from initialization
+			const currentPayload = container._layersPayload || payload;
+
 			const dataUrl = canvas.toDataURL( 'image/png' );
 			const lightbox = new LightboxClass( { debug: this.debug } );
 			lightbox.open( {
 				filename: slideName,
 				imageUrl: dataUrl,
 				layerData: {
-					layers: payload.layers || [],
-					baseWidth: payload.baseWidth,
-					baseHeight: payload.baseHeight,
+					layers: currentPayload.layers || [],
+					baseWidth: currentPayload.baseWidth,
+					baseHeight: currentPayload.baseHeight,
 					backgroundVisible: true,
 					backgroundOpacity: 1.0,
-					backgroundColor: payload.backgroundColor
+					backgroundColor: currentPayload.backgroundColor
 				}
 			} );
 		}
