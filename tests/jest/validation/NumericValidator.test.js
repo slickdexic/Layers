@@ -642,4 +642,79 @@ describe( 'NumericValidator', () => {
 			expect( typeof msg ).toBe( 'string' );
 		} );
 	} );
+
+	describe( 'fallback behavior without helpers', () => {
+		let validatorNoHelpers;
+
+		beforeEach( () => {
+			// Create a validator instance and remove helpers
+			validatorNoHelpers = new NumericValidator();
+			validatorNoHelpers.helpers = null;
+		} );
+
+		test( 'isValidNumber uses inline fallback when helpers unavailable', () => {
+			expect( validatorNoHelpers.isValidNumber( 42 ) ).toBe( true );
+			expect( validatorNoHelpers.isValidNumber( 0 ) ).toBe( true );
+			expect( validatorNoHelpers.isValidNumber( -1.5 ) ).toBe( true );
+			expect( validatorNoHelpers.isValidNumber( NaN ) ).toBe( false );
+			expect( validatorNoHelpers.isValidNumber( Infinity ) ).toBe( false );
+			expect( validatorNoHelpers.isValidNumber( 'string' ) ).toBe( false );
+		} );
+
+		test( 'getMessage returns key when helpers unavailable', () => {
+			const msg = validatorNoHelpers.getMessage( 'some-message-key' );
+			expect( msg ).toBe( 'some-message-key' );
+		} );
+	} );
+
+	describe( 'shadow spread validation', () => {
+		test( 'accepts valid shadow spread values', () => {
+			const layer = {
+				type: 'rectangle',
+				shadowSpread: 5
+			};
+			const result = createResult();
+			validator.validateShadowProperties( layer, result );
+			expect( result.isValid ).toBe( true );
+		} );
+
+		test( 'rejects shadow spread out of range', () => {
+			const layer = {
+				type: 'rectangle',
+				shadowSpread: 200
+			};
+			const result = createResult();
+			validator.validateShadowProperties( layer, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors ).toContainEqual(
+				expect.stringContaining( 'Shadow spread' )
+			);
+		} );
+
+		test( 'rejects non-numeric shadow spread', () => {
+			const layer = {
+				type: 'rectangle',
+				shadowSpread: 'invalid'
+			};
+			const result = createResult();
+			validator.validateShadowProperties( layer, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors ).toContainEqual( 'Shadow spread must be a number' );
+		} );
+	} );
+
+	describe( 'shadow offset Y range validation', () => {
+		test( 'rejects shadowOffsetY out of range', () => {
+			const layer = {
+				type: 'rectangle',
+				shadowOffsetY: 1000
+			};
+			const result = createResult();
+			validator.validateShadowProperties( layer, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors ).toContainEqual(
+				expect.stringContaining( 'Shadow offset Y must be between' )
+			);
+		} );
+	} );
 } );
