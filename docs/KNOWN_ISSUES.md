@@ -13,7 +13,7 @@ This document lists known issues and current gaps for the Layers extension.
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ None known |
 | P1 (Data Loss) | 0 | ✅ Text editing commit fixed |
-| P2 (Code Quality) | 0 | ✅ All resolved |
+| P2 (Functional) | 1 | 🔴 Slides in tables empty |
 | P3 (UX Polish) | 3 | 🟡 Overlay buttons, handles, cursors |
 | Feature Gaps | 3 | ⏳ Planned (F3, F6, F7) |
 
@@ -128,6 +128,20 @@ New tool for measuring and annotating angles with three anchor points (endpoint1
 **Expected:** Cursor direction should rotate to match the object's rotation angle, similar to Figma, Illustrator, and other design tools.
 
 **Files:** `resources/ext.layers.editor/SelectionHandles.js` (getCursor method)
+
+### P2. Slides Inside Tables Display as Empty Until Editor Opened
+
+**Status:** 🔴 OPEN (January 29, 2026)  
+**Severity:** P2 (Functional Bug)  
+**Component:** SlideController, Viewer initialization
+
+**Issue:** When slides are embedded inside wiki table cells, they display as "empty slide" and do not render their content. Hard-refreshing the page does not fix the issue. However, opening and closing the editor while on the page causes them to display correctly. Slides outside of tables on the same page render normally.
+
+**Likely Cause:** The slide initialization may run before table DOM is fully parsed, or IntersectionObserver-based lazy loading fails for elements inside tables.
+
+**Workaround:** Open and close the Layers editor on the page to trigger re-initialization.
+
+**Files:** `resources/ext.layers.slides/SlideController.js`, `resources/ext.layers/init.js`
 
 ---
 

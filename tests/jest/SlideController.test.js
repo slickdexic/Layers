@@ -764,7 +764,8 @@ describe( 'SlideController', () => {
 
 			await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-			expect( container.layersSlideInitialized ).toBe( true );
+			// On failure (empty layers), layersSlideInitialized is reset to false to allow retry
+			expect( container.layersSlideInitialized ).toBe( false );
 		} );
 
 		it( 'should handle API errors gracefully', async () => {
@@ -801,7 +802,8 @@ describe( 'SlideController', () => {
 			await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 			// Should not throw - error handled gracefully
-			expect( container.layersSlideInitialized ).toBe( true );
+			// On API error, layersSlideInitialized is reset to false to allow retry
+			expect( container.layersSlideInitialized ).toBe( false );
 		} );
 
 		it( 'should use default canvas dimensions when not specified', async () => {
@@ -839,7 +841,8 @@ describe( 'SlideController', () => {
 			await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 			// Default dimensions should be used (800x600)
-			expect( container.layersSlideInitialized ).toBe( true );
+			// On failure (null layerset), layersSlideInitialized is reset to false to allow retry
+			expect( container.layersSlideInitialized ).toBe( false );
 		} );
 
 		it( 'should handle backgroundVisible integer values correctly', async () => {
@@ -869,6 +872,96 @@ describe( 'SlideController', () => {
 			await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 			expect( container.layersSlideInitialized ).toBe( true );
+		} );
+
+		it( 'should mark successful initialization with layersSlideInitSuccess flag', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			container.innerHTML = '<canvas></canvas>';
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: '1', type: 'rectangle' } ]
+						},
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const controller = new SlideController( { debug: true } );
+			controller.initializeSlides();
+
+			await new Promise( ( r ) => setTimeout( r, 10 ) );
+
+			expect( container.layersSlideInitialized ).toBe( true );
+			expect( container.layersSlideInitSuccess ).toBe( true );
+		} );
+
+		it( 'should schedule retry for failed slides', async () => {
+			jest.useFakeTimers();
+
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+
+			const canvas = document.createElement( 'canvas' );
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				fillRect: jest.fn(),
+				fillText: jest.fn(),
+				beginPath: jest.fn(),
+				arc: jest.fn(),
+				fill: jest.fn(),
+				setTransform: jest.fn(),
+				font: '',
+				fillStyle: '',
+				textAlign: '',
+				textBaseline: '',
+				measureText: jest.fn( () => ( { width: 100 } ) )
+			};
+			canvas.getContext = jest.fn( () => mockCtx );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			// First call fails
+			mockApi.get.mockRejectedValueOnce( new Error( 'API error' ) );
+			// Second call (retry) succeeds
+			mockApi.get.mockResolvedValueOnce( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: '1', type: 'rectangle' } ]
+						},
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const controller = new SlideController( { debug: true } );
+			controller.initializeSlides();
+
+			// Process immediate promises
+			await Promise.resolve();
+			await Promise.resolve();
+
+			// Fast-forward to trigger retry timeout (500ms)
+			jest.advanceTimersByTime( 600 );
+
+			// Process retry promises
+			await Promise.resolve();
+			await Promise.resolve();
+
+			// Container should have had retry attempted
+			expect( controller._slideRetryAttempted ).toBe( true );
+
+			jest.useRealTimers();
 		} );
 	} );
 

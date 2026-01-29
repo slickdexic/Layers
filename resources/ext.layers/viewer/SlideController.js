@@ -76,8 +76,9 @@
 				// Slides use data-layerset (from SlideHooks.php)
 				const setName = container.getAttribute( 'data-layerset' ) || 'default';
 
-				// Mark as pending
+				// Mark as pending - but will be reset to false on failure so retry is possible
 				container.layersSlideInitialized = true;
+				container.layersSlideInitSuccess = false;
 
 				self.debugLog( 'Fetching slide data for:', slideName, 'set:', setName );
 
@@ -86,11 +87,14 @@
 					slidename: slideName,
 					setname: setName,
 					format: 'json',
-					formatversion: 2
+					formatversion: 2,
+					// Cache-bust to prevent stale responses (fixes slides in tables issue)
+					_: Date.now()
 				} ).then( ( data ) => {
 					try {
 						if ( !data || !data.layersinfo ) {
 							self.debugLog( 'No layersinfo returned for slide:', slideName );
+							container.layersSlideInitialized = false; // Allow retry
 							self.renderEmptySlide( container, canvasWidth, canvasHeight );
 							return;
 						}
@@ -100,6 +104,7 @@
 
 						if ( !layerset || !layerset.data || !layerset.data.layers || layerset.data.layers.length === 0 ) {
 							self.debugLog( 'No layers in fetched data for slide:', slideName );
+							container.layersSlideInitialized = false; // Allow retry
 							self.renderEmptySlide( container, canvasWidth, canvasHeight );
 							return;
 						}
@@ -119,15 +124,61 @@
 						};
 
 						self.initializeSlideViewer( container, payload );
+						container.layersSlideInitSuccess = true; // Mark as successfully initialized
 					} catch ( e ) {
 						self.debugWarn( 'Error processing slide data:', e );
+						container.layersSlideInitialized = false; // Allow retry
 						self.renderEmptySlide( container, canvasWidth, canvasHeight );
 					}
 				} ).catch( ( apiErr ) => {
 					self.debugWarn( 'API request failed for slide:', slideName, apiErr );
+					container.layersSlideInitialized = false; // Allow retry
 					self.renderEmptySlide( container, canvasWidth, canvasHeight );
 				} );
 			} );
+
+			// Schedule a delayed retry for any slides that failed initialization
+			// This helps with slides inside tables where timing may be an issue
+			// Only retry once to avoid infinite loops
+			if ( !this._slideRetryAttempted ) {
+				this._slideRetryAttempted = true;
+				setTimeout( () => {
+					self._retryFailedSlides();
+				}, 500 );
+			}
+		}
+
+		/**
+		 * Retry initialization for slides that failed on first attempt.
+		 * This handles edge cases like slides inside tables where content may load late.
+		 *
+		 * @private
+		 */
+		_retryFailedSlides() {
+			const failedContainers = Array.prototype.slice.call(
+				document.querySelectorAll( '.layers-slide-container' )
+			).filter( ( container ) => {
+				// Find slides that were attempted but not successfully initialized
+				return container.layersSlideInitialized === false ||
+					( container.layersSlideInitialized === true && container.layersSlideInitSuccess !== true );
+			} );
+
+			if ( failedContainers.length === 0 ) {
+				return;
+			}
+
+			this.debugLog( 'Retrying', failedContainers.length, 'failed slide containers' );
+
+			// Reset flag to allow retry
+			failedContainers.forEach( ( container ) => {
+				container.layersSlideInitialized = false;
+			} );
+
+			// Set retry attempted to prevent further automatic retries
+			this._slideRetryAttempted = true;
+
+			// Retry initialization (the flag will prevent another retry scheduling)
+			this.initializeSlides();
 		}
 
 		/** Initialize a slide viewer for a container element */
