@@ -14,6 +14,10 @@
 ( function () {
 	'use strict';
 
+	// Get RichTextUtils for pure utility functions
+	const RichTextUtils = ( typeof window !== 'undefined' && window.Layers &&
+		window.Layers.RichTextUtils ) || ( typeof window !== 'undefined' && window.RichTextUtils );
+
 	/**
 	 * Get clampOpacity from MathUtils namespace
 	 *
@@ -89,85 +93,49 @@
 		}
 
 		// ========================================================================
-		// Shadow Helper Methods (delegate to shadowRenderer or provide fallbacks)
+		// Shadow Helper Methods (delegate to shadowRenderer)
 		// ========================================================================
 
-		/**
-		 * Clear shadow settings from context
-		 */
+		/** Clear shadow settings from context */
 		clearShadow() {
 			if ( this.shadowRenderer ) {
 				this.shadowRenderer.clearShadow();
-			} else {
-				this.ctx.shadowColor = 'transparent';
-				this.ctx.shadowBlur = 0;
-				this.ctx.shadowOffsetX = 0;
-				this.ctx.shadowOffsetY = 0;
+				return;
 			}
+			this.ctx.shadowColor = 'transparent';
+			this.ctx.shadowBlur = 0;
+			this.ctx.shadowOffsetX = 0;
+			this.ctx.shadowOffsetY = 0;
 		}
 
-		/**
-		 * Check if shadow is enabled on a layer
-		 *
-		 * @param {Object} layer - Layer to check
-		 * @return {boolean} True if shadow is enabled
-		 */
+		/** Check if shadow is enabled @param {Object} layer @return {boolean} */
 		hasShadowEnabled( layer ) {
 			if ( this.shadowRenderer ) {
 				return !!this.shadowRenderer.hasShadowEnabled( layer );
 			}
-			return layer.shadow === true ||
-				layer.shadow === 'true' ||
-				layer.shadow === 1 ||
-				layer.shadow === '1' ||
-				( typeof layer.shadow === 'object' && layer.shadow );
+			return layer.shadow === true || layer.shadow === 'true' || layer.shadow === 1 || layer.shadow === '1' || ( typeof layer.shadow === 'object' && layer.shadow );
 		}
 
-		/**
-		 * Get shadow spread value from layer
-		 *
-		 * @param {Object} layer - Layer with shadow properties
-		 * @param {Object} scale - Scale factors
-		 * @return {number} Spread value in pixels
-		 */
+		/** Get shadow spread value @param {Object} layer @param {Object} scale @return {number} */
 		getShadowSpread( layer, scale ) {
 			if ( this.shadowRenderer ) {
 				return this.shadowRenderer.getShadowSpread( layer, scale );
 			}
 			const scaleAvg = ( scale && scale.avg ) || 1;
-			if ( !this.hasShadowEnabled( layer ) ) {
+			if ( !this.hasShadowEnabled( layer ) || typeof layer.shadowSpread !== 'number' || layer.shadowSpread <= 0 ) {
 				return 0;
 			}
-			if ( typeof layer.shadowSpread === 'number' && layer.shadowSpread > 0 ) {
-				return layer.shadowSpread * scaleAvg;
-			}
-			return 0;
+			return layer.shadowSpread * scaleAvg;
 		}
 
-		/**
-		 * Draw spread shadow for a filled shape
-		 *
-		 * @param {Object} layer - Layer with shadow properties
-		 * @param {Object} scale - Scale factors
-		 * @param {number} spread - Spread amount
-		 * @param {Function} drawPathFn - Function to draw the path
-		 * @param {number} opacity - Opacity for the shadow
-		 */
+		/** Draw spread shadow for a filled shape */
 		drawSpreadShadow( layer, scale, spread, drawPathFn, opacity ) {
 			if ( this.shadowRenderer ) {
 				this.shadowRenderer.drawSpreadShadow( layer, scale, spread, drawPathFn, opacity );
 			}
 		}
 
-		/**
-		 * Draw spread shadow for a stroked shape
-		 *
-		 * @param {Object} layer - Layer with shadow properties
-		 * @param {Object} scale - Scale factors
-		 * @param {number} strokeWidth - Stroke width
-		 * @param {Function} drawPathFn - Function to draw the path
-		 * @param {number} opacity - Opacity for the shadow
-		 */
+		/** Draw spread shadow for a stroked shape */
 		drawSpreadShadowStroke( layer, scale, strokeWidth, drawPathFn, opacity ) {
 			if ( this.shadowRenderer ) {
 				this.shadowRenderer.drawSpreadShadowStroke( layer, scale, strokeWidth, drawPathFn, opacity );
@@ -567,7 +535,7 @@
 			// Draw text fill
 			this.ctx.fillText( text, x, y );
 
-			// Clear shadow after each line to prevent accumulation
+			// Clear shadow after line
 			if ( style.hasTextShadow ) {
 				this.ctx.shadowColor = 'transparent';
 				this.ctx.shadowBlur = 0;
@@ -576,27 +544,13 @@
 			}
 		}
 
-		/**
-		 * Wrap text to fit within a given width
-		 *
-		 * @param {string} text - Text to wrap
-		 * @param {number} maxWidth - Maximum width for each line
-		 * @param {number} fontSize - Font size in pixels
-		 * @param {string} fontFamily - Font family
-		 * @param {string} [fontWeight='normal'] - Font weight (normal or bold)
-		 * @param {string} [fontStyle='normal'] - Font style (normal or italic)
-		 * @return {Array<string>} Array of wrapped lines
-		 */
+		/** Wrap text to fit within a width @return {Array<string>} */
 		wrapText( text, maxWidth, fontSize, fontFamily, fontWeight, fontStyle ) {
-			const weight = fontWeight || 'normal';
-			const style = fontStyle || 'normal';
 			this.ctx.save();
-			this.ctx.font = `${ style } ${ weight } ${ fontSize }px ${ fontFamily }`;
+			this.ctx.font = `${ fontStyle || 'normal' } ${ fontWeight || 'normal' } ${ fontSize }px ${ fontFamily }`;
 
 			const lines = [];
-			const paragraphs = text.split( '\n' );
-
-			for ( const paragraph of paragraphs ) {
+			for ( const paragraph of text.split( '\n' ) ) {
 				if ( paragraph === '' ) {
 					lines.push( '' );
 					continue;
@@ -627,59 +581,44 @@
 		}
 
 		// ========================================================================
-		// Rich Text Support
+		// Rich Text Support (delegates to RichTextUtils when available)
 		// ========================================================================
 
-		/**
-		 * Check if layer has valid rich text content
-		 *
-		 * @param {Object} layer - Layer object
-		 * @return {boolean} True if layer has rich text
-		 */
+		/** Check if layer has valid rich text content @param {Object} layer @return {boolean} */
 		hasRichText( layer ) {
-			return Array.isArray( layer.richText ) &&
-				layer.richText.length > 0 &&
-				layer.richText.some( ( run ) => run && typeof run.text === 'string' );
+			if ( RichTextUtils ) {
+				return RichTextUtils.hasRichText( layer );
+			}
+			return Array.isArray( layer.richText ) && layer.richText.length > 0 &&
+				layer.richText.some( ( r ) => r && typeof r.text === 'string' );
 		}
 
-		/**
-		 * Get plain text from rich text array for wrapping calculations
-		 *
-		 * @param {Array} richText - Rich text runs array
-		 * @return {string} Combined plain text
-		 */
+		/** Get plain text from rich text array @param {Array} richText @return {string} */
 		getRichTextPlainText( richText ) {
+			if ( RichTextUtils ) {
+				return RichTextUtils.getRichTextPlainText( richText );
+			}
 			if ( !Array.isArray( richText ) ) {
 				return '';
 			}
-			return richText
-				.filter( ( run ) => run && typeof run.text === 'string' )
-				.map( ( run ) => run.text )
-				.join( '' );
+			return richText.map( ( r ) => ( r && r.text ) || '' ).join( '' );
 		}
 
-		/**
-		 * Build a map of character positions to runs for efficient lookup
-		 *
-		 * @param {Array} richText - Rich text runs array
-		 * @return {Array} Array where index is char position, value is {runIndex, localIndex}
-		 */
+		/** Build character position to run map @param {Array} richText @return {Array} */
 		buildCharToRunMap( richText ) {
+			if ( RichTextUtils ) {
+				return RichTextUtils.buildCharToRunMap( richText );
+			}
 			const map = [];
 			let charPos = 0;
-
-			for ( let runIndex = 0; runIndex < richText.length; runIndex++ ) {
-				const run = richText[ runIndex ];
-				if ( !run || typeof run.text !== 'string' ) {
-					continue;
-				}
-
-				for ( let localIndex = 0; localIndex < run.text.length; localIndex++ ) {
-					map[ charPos ] = { runIndex, localIndex };
-					charPos++;
+			for ( let ri = 0; ri < richText.length; ri++ ) {
+				const run = richText[ ri ];
+				if ( run && run.text ) {
+					for ( let i = 0; i < run.text.length; i++ ) {
+						map[ charPos++ ] = { runIndex: ri, localIndex: i };
+					}
 				}
 			}
-
 			return map;
 		}
 
@@ -849,155 +788,92 @@
 		drawRichTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity ) {
 			const richText = layer.richText;
 
-			// Base style from layer
-			const baseStyle = {
-				fontSize: layer.fontSize || 16,
-				fontFamily: layer.fontFamily || 'Arial, sans-serif',
-				fontWeight: layer.fontWeight || 'normal',
-				fontStyle: layer.fontStyle || 'normal',
-				color: layer.color || '#000000'
-			};
+			// Build styles using RichTextUtils when available
+			const baseStyle = RichTextUtils ?
+				RichTextUtils.buildBaseStyle( layer ) :
+				{ fontSize: layer.fontSize || 16, fontFamily: layer.fontFamily || 'Arial, sans-serif', fontWeight: layer.fontWeight || 'normal', fontStyle: layer.fontStyle || 'normal', color: layer.color || '#000000' };
 
 			const baseFontSize = baseStyle.fontSize * scale.avg;
 			const textAlign = layer.textAlign || 'left';
 			const verticalAlign = layer.verticalAlign || 'top';
 			const lineHeightMultiplier = layer.lineHeight || 1.2;
-
-			// Get plain text for wrapping
 			const plainText = this.getRichTextPlainText( richText );
 
-			// Use base font for wrapping calculations
-			const fontString = `${ baseStyle.fontStyle } ${ baseStyle.fontWeight } ${ baseFontSize }px ${ baseStyle.fontFamily }`;
-			this.ctx.font = fontString;
-			// Use alphabetic baseline for proper mixed-size text alignment
+			// Set up context for text rendering
+			this.ctx.font = `${ baseStyle.fontStyle } ${ baseStyle.fontWeight } ${ baseFontSize }px ${ baseStyle.fontFamily }`;
 			this.ctx.textBaseline = 'alphabetic';
 			this.ctx.globalAlpha = baseOpacity;
 
-			// Wrap text using base font (simplified approach)
+			// Wrap text and calculate line metrics
 			const lines = this.wrapText( plainText, width - padding * 2, baseFontSize, baseStyle.fontFamily, baseStyle.fontWeight, baseStyle.fontStyle );
+			const lineMetrics = RichTextUtils ?
+				RichTextUtils.calculateLineMetrics( lines, richText, plainText, baseFontSize, lineHeightMultiplier, scale ) :
+				this._calculateLineMetricsFallback( lines, richText, plainText, baseFontSize, lineHeightMultiplier, scale );
 
-			// Calculate character ranges for each line and find max font size per line
+			// Calculate layout
+			const totalTextHeight = RichTextUtils ? RichTextUtils.calculateTotalTextHeight( lineMetrics ) : lineMetrics.reduce( ( s, m ) => s + m.lineHeight, 0 );
+			const availableHeight = height - padding * 2;
+			const textY = RichTextUtils ?
+				RichTextUtils.calculateTextStartY( verticalAlign, y, padding, availableHeight, totalTextHeight ) :
+				( verticalAlign === 'middle' ? y + padding + ( availableHeight - totalTextHeight ) / 2 : verticalAlign === 'bottom' ? y + padding + availableHeight - totalTextHeight : y + padding );
+
+			// Build text style
+			const textStyle = RichTextUtils ?
+				RichTextUtils.buildTextStyle( layer, shadowScale, scale ) :
+				{ hasTextShadow: layer.textShadow === true, textShadowColor: layer.textShadowColor || 'rgba(0,0,0,0.5)', textShadowBlur: 4 * shadowScale.avg, textShadowOffsetX: 2 * shadowScale.avg, textShadowOffsetY: 2 * shadowScale.avg, hasTextStroke: ( layer.textStrokeWidth || 0 ) > 0, textStrokeColor: layer.textStrokeColor || '#000000', textStrokeWidth: ( layer.textStrokeWidth || 0 ) * scale.avg };
+
+			// Draw each line
+			let currentY = textY;
+			for ( const lm of lineMetrics ) {
+				const baselineY = currentY + lm.maxFontSize;
+				if ( baselineY > y + height ) {
+					break;
+				}
+
+				const lineWidth = this.measureRichTextLineWidth( richText, lm.start, lm.end, baseStyle, scale );
+				const lineX = RichTextUtils ?
+					RichTextUtils.calculateLineX( textAlign, x, width, lineWidth, padding ) :
+					( textAlign === 'center' ? x + ( width - lineWidth ) / 2 : textAlign === 'right' ? x + width - padding - lineWidth : x + padding );
+
+				this.drawRichTextLine( richText, lm.start, lm.end, lineX, baselineY, baseStyle, textStyle, scale );
+				currentY += lm.lineHeight;
+			}
+		}
+
+		/**
+		 * Fallback line metrics calculation when RichTextUtils not available
+		 *
+		 * @private
+		 */
+		_calculateLineMetricsFallback( lines, richText, plainText, baseFontSize, lineHeightMultiplier, scale ) {
 			const lineMetrics = [];
 			let charPos = 0;
 			for ( let i = 0; i < lines.length; i++ ) {
 				const lineText = lines[ i ];
 				const lineStart = charPos;
 				const lineEnd = charPos + lineText.length;
-
-				// Find the maximum font size used in this line
 				let maxFontSize = baseFontSize;
-				let runCharPos = 0;
+				let runPos = 0;
 				for ( const run of richText ) {
-					if ( !run || typeof run.text !== 'string' ) {
+					if ( !run || !run.text ) {
 						continue;
 					}
-					const runStart = runCharPos;
-					const runEnd = runCharPos + run.text.length;
-					runCharPos = runEnd;
-
-					// Check if this run overlaps with the current line
-					if ( runEnd <= lineStart || runStart >= lineEnd ) {
-						continue;
+					const rEnd = runPos + run.text.length;
+					if ( rEnd > lineStart && runPos < lineEnd ) {
+						const fs = ( ( run.style && run.style.fontSize ) || ( baseFontSize / scale.avg ) ) * scale.avg;
+						if ( fs > maxFontSize ) {
+							maxFontSize = fs;
+						}
 					}
-
-					// This run is on this line - check its font size
-					const runFontSize = ( ( run.style && run.style.fontSize ) || baseStyle.fontSize ) * scale.avg;
-					if ( runFontSize > maxFontSize ) {
-						maxFontSize = runFontSize;
-					}
+					runPos = rEnd;
 				}
-
-				// Line height based on the tallest text in this line
-				const lineHeight = maxFontSize * lineHeightMultiplier;
-
-				lineMetrics.push( {
-					text: lineText,
-					start: lineStart,
-					end: lineEnd,
-					maxFontSize: maxFontSize,
-					lineHeight: lineHeight
-				} );
-
+				lineMetrics.push( { text: lineText, start: lineStart, end: lineEnd, maxFontSize, lineHeight: maxFontSize * lineHeightMultiplier } );
 				charPos = lineEnd;
-				// Account for whitespace between lines
-				if ( i < lines.length - 1 ) {
-					const nextChar = plainText[ charPos ];
-					if ( nextChar === ' ' || nextChar === '\n' ) {
-						charPos++;
-					}
+				if ( i < lines.length - 1 && ( plainText[ charPos ] === ' ' || plainText[ charPos ] === '\n' ) ) {
+					charPos++;
 				}
 			}
-
-			// Calculate total text height (sum of line heights)
-			const totalTextHeight = lineMetrics.reduce( ( sum, lm ) => sum + lm.lineHeight, 0 );
-			const availableHeight = height - padding * 2;
-
-			// Calculate starting Y position based on vertical alignment
-			let textY;
-			switch ( verticalAlign ) {
-				case 'middle':
-					textY = y + padding + ( availableHeight - totalTextHeight ) / 2;
-					break;
-				case 'bottom':
-					textY = y + padding + availableHeight - totalTextHeight;
-					break;
-				case 'top':
-				default:
-					textY = y + padding;
-					break;
-			}
-
-			// Text effect properties
-			const hasTextShadow = layer.textShadow === true || layer.textShadow === 'true' ||
-				layer.textShadow === 1 || layer.textShadow === '1';
-			const textStyle = {
-				hasTextShadow,
-				textShadowColor: layer.textShadowColor || 'rgba(0,0,0,0.5)',
-				textShadowBlur: ( typeof layer.textShadowBlur === 'number' ? layer.textShadowBlur : 4 ) * shadowScale.avg,
-				textShadowOffsetX: ( typeof layer.textShadowOffsetX === 'number' ? layer.textShadowOffsetX : 2 ) * shadowScale.avg,
-				textShadowOffsetY: ( typeof layer.textShadowOffsetY === 'number' ? layer.textShadowOffsetY : 2 ) * shadowScale.avg,
-				hasTextStroke: ( layer.textStrokeWidth || 0 ) > 0,
-				textStrokeColor: layer.textStrokeColor || '#000000',
-				textStrokeWidth: ( layer.textStrokeWidth || 0 ) * scale.avg
-			};
-
-			// Draw each line
-			let currentY = textY;
-			for ( let i = 0; i < lineMetrics.length; i++ ) {
-				const lm = lineMetrics[ i ];
-
-				// Calculate baseline position for this line
-				// Baseline is at the top of line + max font size (since we're using alphabetic baseline)
-				const baselineY = currentY + lm.maxFontSize;
-
-				// Only draw if within the box
-				if ( baselineY > y + height ) {
-					break;
-				}
-
-				// Calculate line X position based on alignment
-				// Need to measure with proper font for each run to get accurate width
-				let lineX;
-				const lineWidth = this.measureRichTextLineWidth( richText, lm.start, lm.end, baseStyle, scale );
-				switch ( textAlign ) {
-					case 'center':
-						lineX = x + ( width - lineWidth ) / 2;
-						break;
-					case 'right':
-						lineX = x + width - padding - lineWidth;
-						break;
-					case 'left':
-					default:
-						lineX = x + padding;
-						break;
-				}
-
-				// Draw the rich text for this line at the baseline
-				this.drawRichTextLine( richText, lm.start, lm.end, lineX, baselineY, baseStyle, textStyle, scale );
-
-				// Move to next line
-				currentY += lm.lineHeight;
-			}
+			return lineMetrics;
 		}
 
 		/**
