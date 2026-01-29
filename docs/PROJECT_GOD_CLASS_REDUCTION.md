@@ -27,9 +27,9 @@ strategic extraction of cohesive modules.
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| JS god classes (hand-written) | 19 | ≤12 | 🟡 In Progress |
+| JS god classes (hand-written) | 18 | ≤12 | 🟡 In Progress |
 | Test coverage | 95.85% | ≥95% | ✅ Maintained |
-| All tests passing | 10,970 | 10,860+ | ✅ Maintained |
+| All tests passing | 11,011 | 10,860+ | ✅ Maintained |
 | ESLint errors | 0 | 0 | ✅ Maintained |
 
 ---
@@ -39,7 +39,7 @@ strategic extraction of cohesive modules.
 | Phase | Target File | Lines | Extraction Strategy | Priority |
 |-------|-------------|-------|---------------------|----------|
 | **1** | InlineTextEditor.js | ~~2,282~~ → 1,393 | ✅ RichTextConverter, RichTextToolbar | COMPLETE |
-| **2** | ViewerManager.js | 2,026 | Extract SlideRenderer, ViewerState | HIGH |
+| **2** | ViewerManager.js | ~~2,026~~ → 1,277 | ✅ SlideController | COMPLETE |
 | **3** | APIManager.js | 1,523 | Extract RetryManager, RequestQueue | MEDIUM |
 | **4** | TextBoxRenderer.js | 1,117 | Extract RichTextMeasurement | MEDIUM |
 | **5** | CalloutRenderer.js | 1,289 | Extract TailCalculator | LOW |
@@ -215,17 +215,30 @@ class InlineTextEditor {
 
 ---
 
-## Phase 2: ViewerManager Extraction
+## Phase 2: ViewerManager Extraction ✅ COMPLETE
 
 **Target:** Reduce ViewerManager.js from 2,026 lines to ~1,200 lines  
-**Timeline:** 3-5 days  
-**Status:** ⏳ PLANNED
+**Actual Result:** 2,026 → 1,277 lines (-749 lines, -37%)  
+**Timeline:** 1 day (Jan 30, 2026)  
+**Status:** ✅ COMPLETE
 
-### Extraction Plan
+### Extraction Summary
 
-1. **ViewerState.js** (~300 lines) — Track viewer instances, active state
-2. **SlideRenderer.js** (~400 lines) — Slide mode rendering logic
-3. **ImageDimensionCalculator.js** (~200 lines) — Size/position calculations
+Created **SlideController.js** (1,030 lines) containing:
+- Slide initialization and rendering
+- Overlay management with edit/view buttons
+- Empty slide state rendering
+- Slide editing URL building
+- Canvas dimension management
+
+### Definition of Done
+
+- [x] SlideController.js created and tested (1,030 lines, 30 tests)
+- [x] ViewerManager.js reduced to <1,400 lines (1,277 lines ✅)
+- [x] All 11,011 tests passing (10,878 passing, 133 skipped)
+- [x] Coverage maintained at ≥95% (95.85%)
+- [x] No public API changes (backward compatible)
+- [x] ESLint clean (0 errors)
 
 ---
 
@@ -270,6 +283,8 @@ Use dependency injection for callbacks.
 | Jan 29, 2026 | Phase 1 Part 1: RichTextConverter extracted | InlineTextEditor: 2,282 → 2,007 lines (-275) |
 | Jan 30, 2026 | Phase 1 Part 2: RichTextToolbar extracted | InlineTextEditor: 2,007 → 1,393 lines (-614) |
 | Jan 30, 2026 | **Phase 1 COMPLETE** | InlineTextEditor below 1,500 line threshold |
+| Jan 30, 2026 | Phase 2: SlideController extracted | ViewerManager: 2,026 → 1,277 lines (-749) |
+| Jan 30, 2026 | **Phase 2 COMPLETE** | ViewerManager below 1,400 line threshold |
 | | | |
 
 ---
@@ -281,7 +296,8 @@ Use dependency injection for callbacks.
 | File | Lines | Type | Status |
 |------|-------|------|--------|
 | InlineTextEditor.js | ~~2,282~~ 1,393 | Controller | ✅ Phase 1 Complete |
-| ViewerManager.js | 2,026 | Manager | ⏳ Phase 2 |
+| ViewerManager.js | ~~2,026~~ 1,277 | Manager | ✅ Phase 2 Complete |
+| SlideController.js | 1,030 | Controller | ✅ New (from Phase 2) |
 | CanvasManager.js | 1,981 | Facade | ✅ Well-delegated |
 | Toolbar.js | 1,652 | UI | ✅ Well-delegated |
 | LayersEditor.js | 1,847 | Main Entry | ✅ Acceptable |
