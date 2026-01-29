@@ -54,7 +54,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `DeepClone.js` - Object cloning utilities including `omitProperty(obj, propName)` for creating copies without specific properties (avoids eslint-disable for destructuring)
     - `LayerDataNormalizer.js` (~229 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
     - `GradientRenderer.js` (~340 lines) - Gradient fill utility for creating linear/radial Canvas gradients from layer definitions. Static `hasGradient()` check, `createGradient()` method, 6 built-in presets (sunset, ocean, forest, fire, steel, rainbow), validation and cloning utilities.
-    - `LayerRenderer.js` (~867 lines), `ImageLayerRenderer.js` (~280 lines - extracted image caching/rendering), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,310 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~659 lines), `ShapeRenderer.js` (~909 lines - now with gradient fill support), `EffectsRenderer.js` (~538 lines), `MarkerRenderer.js` (~502 lines - numbered/letter markers with shadow support), `DimensionRenderer.js` (~797 lines - technical measurement annotations)
+    - `LayerRenderer.js` (~867 lines), `ImageLayerRenderer.js` (~280 lines - extracted image caching/rendering), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,310 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~1,117 lines - supports richText formatting) [GOD CLASS], `ShapeRenderer.js` (~909 lines - now with gradient fill support), `EffectsRenderer.js` (~538 lines), `MarkerRenderer.js` (~502 lines - numbered/letter markers with shadow support), `DimensionRenderer.js` (~797 lines - technical measurement annotations)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~370 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `SmartGuidesController.js` (~568 lines) - smart guides and snap alignment
@@ -390,13 +390,13 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (10,667 tests in 157 suites — verified January 28, 2026)
-- Coverage (95.85% statement, 85.39% branch — verified January 28, 2026)
-- JavaScript file count (132 files total, ~91,632 lines)
-- PHP file count (40 files, ~14,378 lines)
-- God class count (22 files >1,000 lines; 2 generated data files, 18 JS, 2 PHP)
+- Test count (10,749 tests in 157 suites — verified January 28, 2026)
+- Coverage (95.00% statement, 84.73% branch — verified January 28, 2026)
+- JavaScript file count (132 files total, ~93,406 lines)
+- PHP file count (40 files, ~14,543 lines)
+- God class count (22 files >1,000 lines; 2 generated data files, 19 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
 - Emoji library count (2,817 emoji in 19 categories)
-- Version number (1.5.36)
+- Version number (1.5.38)

@@ -3885,4 +3885,295 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 	} );
+
+	describe( 'initializeSlides', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = new ViewerManager( { debug: true } );
+		} );
+
+		it( 'should return early when no slide containers found', () => {
+			document.body.innerHTML = '<div class="not-a-slide"></div>';
+			const debugSpy = jest.spyOn( manager, 'debugLog' );
+
+			manager.initializeSlides();
+
+			// Should not log "Found X slide containers"
+			expect( debugSpy ).not.toHaveBeenCalledWith(
+				expect.stringContaining( 'Found' ),
+				expect.any( Number ),
+				expect.stringContaining( 'slide' )
+			);
+		} );
+
+		it( 'should warn when mw.Api is not available', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			document.body.appendChild( container );
+
+			// Remove mw.Api
+			const originalMw = global.mw;
+			global.mw = { config: originalMw.config, log: originalMw.log };
+
+			const warnSpy = jest.spyOn( manager, 'debugWarn' );
+			manager.initializeSlides();
+
+			expect( warnSpy ).toHaveBeenCalledWith( 'mw.Api not available for slide fetch' );
+			global.mw = originalMw;
+		} );
+
+		it( 'should skip already initialized containers', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			container.layersSlideInitialized = true;
+			document.body.appendChild( container );
+
+			manager.initializeSlides();
+
+			// API should not be called since container is already initialized
+			expect( mockApi.get ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should warn when slide container missing data-slide-name', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			// No data-slide-name attribute
+			document.body.appendChild( container );
+
+			const warnSpy = jest.spyOn( manager, 'debugWarn' );
+			manager.initializeSlides();
+
+			expect( warnSpy ).toHaveBeenCalledWith( 'Slide container missing data-slide-name attribute' );
+		} );
+
+		it( 'should fetch slide data via API', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'MySlide' );
+			container.setAttribute( 'data-canvas-width', '1024' );
+			container.setAttribute( 'data-canvas-height', '768' );
+			container.setAttribute( 'data-layerset', 'presentation' );
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: '1', type: 'rectangle' } ],
+							canvasWidth: 1024,
+							canvasHeight: 768
+						},
+						baseWidth: 1024,
+						baseHeight: 768
+					}
+				}
+			} );
+
+			manager.initializeSlides();
+
+			expect( mockApi.get ).toHaveBeenCalledWith( {
+				action: 'layersinfo',
+				slidename: 'MySlide',
+				setname: 'presentation',
+				format: 'json',
+				formatversion: 2
+			} );
+		} );
+
+		it( 'should use default dimensions when not specified', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'DefaultSlide' );
+			// No dimensions specified
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( { layersinfo: null } );
+
+			manager.initializeSlides();
+
+			expect( mockApi.get ).toHaveBeenCalledWith( expect.objectContaining( {
+				action: 'layersinfo',
+				slidename: 'DefaultSlide',
+				setname: 'default'
+			} ) );
+		} );
+
+		it( 'should render empty slide when no layersinfo returned', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'EmptySlide' );
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( {} );
+
+			const renderEmptySpy = jest.spyOn( manager, 'renderEmptySlide' ).mockImplementation( () => {} );
+			manager.initializeSlides();
+
+			// Wait for promise to resolve
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( renderEmptySpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should render empty slide when layers array is empty', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'EmptyLayersSlide' );
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [] }
+					}
+				}
+			} );
+
+			const renderEmptySpy = jest.spyOn( manager, 'renderEmptySlide' ).mockImplementation( () => {} );
+			manager.initializeSlides();
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( renderEmptySpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle backgroundVisible integer values from API', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'BgTestSlide' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: '1', type: 'rectangle' } ],
+							backgroundVisible: 0, // API returns integer, not boolean
+							backgroundOpacity: 0.5,
+							canvasWidth: 800,
+							canvasHeight: 600
+						},
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const initSlideViewerSpy = jest.spyOn( manager, 'initializeSlideViewer' ).mockImplementation( () => {} );
+			manager.initializeSlides();
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( initSlideViewerSpy ).toHaveBeenCalledWith(
+				container,
+				expect.objectContaining( {
+					backgroundVisible: false, // Should be normalized to boolean false
+					backgroundOpacity: 0.5
+				} )
+			);
+		} );
+
+		it( 'should handle API error gracefully', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'ErrorSlide' );
+			document.body.appendChild( container );
+
+			mockApi.get.mockRejectedValue( new Error( 'Network error' ) );
+
+			const renderEmptySpy = jest.spyOn( manager, 'renderEmptySlide' ).mockImplementation( () => {} );
+			const warnSpy = jest.spyOn( manager, 'debugWarn' );
+			manager.initializeSlides();
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( warnSpy ).toHaveBeenCalledWith(
+				'API request failed for slide:',
+				'ErrorSlide',
+				expect.any( Error )
+			);
+			expect( renderEmptySpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle processing error gracefully', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'ProcessErrorSlide' );
+			document.body.appendChild( container );
+
+			// Return data that will cause processing error
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: '1', type: 'rectangle' } ]
+						}
+					}
+				}
+			} );
+
+			// Make initializeSlideViewer throw
+			jest.spyOn( manager, 'initializeSlideViewer' ).mockImplementation( () => {
+				throw new Error( 'Processing failed' );
+			} );
+
+			const renderEmptySpy = jest.spyOn( manager, 'renderEmptySlide' ).mockImplementation( () => {} );
+			manager.initializeSlides();
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( renderEmptySpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should mark container as initialized before API call', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'MarkedSlide' );
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( {} );
+
+			expect( container.layersSlideInitialized ).toBeFalsy();
+			manager.initializeSlides();
+			expect( container.layersSlideInitialized ).toBe( true );
+		} );
+
+		it( 'should use backgroundColor from layerset data or container attribute', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'BgColorSlide' );
+			container.setAttribute( 'data-background-color', '#ff0000' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: '1', type: 'rectangle' } ],
+							backgroundColor: '#00ff00'
+						}
+					}
+				}
+			} );
+
+			const initSlideViewerSpy = jest.spyOn( manager, 'initializeSlideViewer' ).mockImplementation( () => {} );
+			manager.initializeSlides();
+
+			await new Promise( ( resolve ) => setTimeout( resolve, 10 ) );
+
+			expect( initSlideViewerSpy ).toHaveBeenCalledWith(
+				container,
+				expect.objectContaining( {
+					backgroundColor: '#00ff00' // From layerset data, not container attribute
+				} )
+			);
+		} );
+	} );
 } );

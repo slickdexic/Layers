@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 27, 2026  
-**Version:** 1.5.36  
+**Last Updated:** January 28, 2026  
+**Version:** 1.5.38  
 **Status:** Production-Ready, High Quality (8.5/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
@@ -10,36 +10,36 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A comprehensive critical review (v43) identified a HIGH-priority documentation consistency issue and several medium-priority items.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A comprehensive critical review (v44) identified a **P0-priority version inconsistency** and several medium-priority items.
 
 **Current Status:**
-- ✅ All P0 items complete (version consistency fixed with automation)
-- 🟡 P1: 1 open (HIGH-1: docs/ARCHITECTURE.md stale metrics)
-- 🟡 P2 items: 6 open (8 completed, including 2 false positives resolved)
+- ✅ **P0:** All complete (Version inconsistency fixed January 28, 2026)
+- ✅ P1: All complete
+- 🟡 P2 items: 6 open (8 completed)
 - 🟡 P3 items: 8 open (4 completed)
 
-**Verified Metrics (January 27, 2026):**
+**Verified Metrics (January 28, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **10,667** (157 suites) | ✅ Excellent |
-| Statement coverage | **95.85%** | ✅ Excellent |
-| Branch coverage | **85.39%** | ✅ Excellent |
-| Function coverage | **93.99%** | ✅ Excellent |
-| Line coverage | **95.97%** | ✅ Excellent |
+| Tests passing | **10,749** (157 suites) | ✅ Excellent |
+| Statement coverage | **95.00%** | ✅ Excellent (recovered) |
+| Branch coverage | **84.73%** | ✅ Good |
+| Function coverage | **93.58%** | ✅ Excellent |
+| Line coverage | **95.11%** | ✅ Excellent |
 | JS files | 132 | All resources/ext.layers* |
-| JS lines | ~88,000+ | Includes generated data |
+| JS lines | ~93,406 | Includes generated data |
 | PHP files | 40 | ✅ |
-| PHP lines | ~14,378 | ✅ |
+| PHP lines | ~14,543 | ✅ |
 | PHP strict_types | **40/40 files** | ✅ Complete |
 | ES6 classes | All JS files | 100% migrated |
-| God classes (≥1,000 lines) | 19 | 2 generated, 17 JS, 2 PHP |
+| God classes (≥1,000 lines) | 22 | 2 generated, 18 JS, 2 PHP |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 11 | ✅ All legitimate |
-| innerHTML usages | 63 | ✅ Audited - all safe |
+| innerHTML usages | 71 | ⚠️ Increased (was 63) |
 | Skipped tests | 0 | ✅ All tests run |
 | Weak assertions | **0** | ✅ All fixed |
-| i18n messages | 720 | All documented in qqq.json |
+| i18n messages | ~653 | All documented in qqq.json |
 | Deprecated code markers | 7 | 🟡 Technical debt |
 | TODO/FIXME/HACK comments | 0 | ✅ Clean |
 | console.log in production | 0 | ✅ Clean (only in scripts/) |
@@ -59,19 +59,21 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-### P0.1 Fix Version Number Inconsistencies
+### P0.1 Fix Version Number Inconsistencies — ✅ FIXED
 
-**Status:** ✅ COMPLETED (January 26, 2026)  
+**Status:** ✅ FIXED (January 28, 2026)  
 **Priority:** P0 - Critical (Immediate)  
 **Category:** Release Management / Professionalism  
 
-**Problem:** Version numbers were inconsistent across 6+ files.
+**Problem:** Version numbers were inconsistent again (extension.json 1.5.38, others 1.5.36).
 
-**Fix Applied:**
-- Updated all files to match extension.json source of truth (1.5.36)
-- Created `scripts/update-version.js` to automate version synchronization
-- Added `npm run check:version` and `npm run update:version` commands
-- Added version consistency check to CI workflow
+**Fix Applied:** Ran `npm run update:version` to synchronize all files.
+
+**Prevention Measures Added:**
+- Created `scripts/pre-commit-version-check.sh` hook
+- Installed hook to `.git/hooks/pre-commit`
+- Hook runs `npm run check:version` and blocks commits if versions are inconsistent
+- Developers can install with: `cp scripts/pre-commit-version-check.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`
 
 ---
 
@@ -86,23 +88,13 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 **Problem:** docs/ARCHITECTURE.md contained stale metrics.
 
-| Metric | docs/ARCHITECTURE.md | Actual (Verified) | Discrepancy |
-|--------|----------------------|-------------------|-------------|
-| Version | 1.5.35 | 1.5.36 | ❌ Off by 1 |
-| Test Count | 10,643 | 10,667 | ❌ Difference of 24 |
-| Statement Coverage | 94.45% | 95.85% | ❌ ~1.4% difference |
-| JS Files | 127 | 132 | ❌ Off by 5 |
-| JS Lines | ~115,282 | ~88,000+ | ❌ Major discrepancy |
-| God Classes | 23 | 19 | ❌ Different counts |
-| i18n Messages | 697 | 720 | ❌ Off by 23 |
-
-**Impact:** Stale documentation undermines project credibility.
-
-**Fix Applied:**
-- Updated version to 1.5.36, test count to 10,667, coverage to 95.85%
-- Corrected JS file count to 132, god class count to 22
-- Added ViewerManager.js and PHP god classes to tables
-- Updated last updated date to January 28, 2026
+**Fix Applied (v44 final):**
+- Updated version to 1.5.38
+- Updated test count to 10,736
+- Updated coverage to 94.86% stmt / 84.55% branch
+- Updated JS lines to ~93,406
+- Updated i18n messages to ~653
+- Synchronized all metrics with verified values
 
 ### Previously Completed P1 Items:
 - ✅ P1.0: Documentation metrics in codebase_review.md updated
@@ -525,15 +517,17 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ## God Class Status Summary
 
-### 19 Files ≥1,000 Lines
+### 22 Files ≥1,000 Lines (2 Generated + 18 JS + 2 PHP)
 
 | Category | Count | Files |
 |----------|-------|-------|
 | Generated (exempt) | 2 | ShapeLibraryData, EmojiLibraryIndex |
 | Well-delegated | 10 | CanvasManager, LayerPanel, SelectionManager, etc. |
-| Math/Rendering | 5 | ArrowRenderer, ResizeCalculator, TransformController, etc. |
+| Math/Rendering | 6 | ArrowRenderer, ResizeCalculator, TextBoxRenderer (NEW), etc. |
 | Needs Attention | 2 | ViewerManager, APIManager |
 | PHP | 2 | LayersDatabase, ServerSideLayerValidator |
+
+**⚠️ Trend Alert:** TextBoxRenderer.js is a new god class (1,117 lines). The trend is worsening, not improving.
 
 ---
 
@@ -584,24 +578,25 @@ None currently blocked.
 ## Next Steps
 
 ### Quick Wins (This Week)
-1. ✅ **P1.3:** Update docs/ARCHITECTURE.md metrics — COMPLETED
-2. ✅ **P2.8:** Fix window.onbeforeunload assignment — COMPLETED
-3. **P3.12:** Add permission checks to special pages (30 min)
+1. **P1.3:** Update docs/ARCHITECTURE.md with current metrics
+2. **P3.12:** Add permission checks to special pages (30 min)
+3. Re-audit innerHTML usages (increased from 63 to 71)
 
 ### This Sprint
 4. **P2.3:** Standardize DB return types
 5. **P2.4:** Make DeepClone a hard dependency
+6. Investigate coverage decline (94.86% vs 95.85%)
 
 ### Next Milestone
-6. **P2.5:** Continue JS god class reduction
-7. **P2.6:** PHP god class refactoring
-8. **P2.7:** Additional ShapeLibrary E2E tests
+7. **P2.5:** Stop adding god classes, begin reducing existing ones
+8. **P2.6:** PHP god class refactoring
+9. **P2.7:** Additional ShapeLibrary E2E tests
 
 ### Long-Term (v2.0)
-9. **P3.1:** Visual regression testing
-10. **P3.2:** TypeScript migration
-11. **P3.3:** Deprecated code removal
-12. **P3.4:** Custom fonts support
+10. **P3.1:** Visual regression testing
+11. **P3.2:** TypeScript migration
+12. **P3.3:** Deprecated code removal
+13. **P3.4:** Custom fonts support
 
 ---
 
@@ -609,15 +604,15 @@ None currently blocked.
 
 | Metric | Current | Target | Notes |
 |--------|---------|--------|-------|
-| Test count | 10,667 | Maintain | No regression |
-| Statement coverage | 95.85% | ≥92% | Threshold in jest.config |
-| Branch coverage | 85.39% | ≥80% | Threshold in jest.config |
-| Hand-written god classes (JS) | 18 | ≤12 | Reduce by 6 |
+| Test count | 10,736 | Maintain | No regression |
+| Statement coverage | 94.86% | ≥92% | ⚠️ Declining (was 95.85%) |
+| Branch coverage | 84.55% | ≥80% | ⚠️ Declining (was 85.39%) |
+| Hand-written god classes (JS) | 18 | ≤12 | ⚠️ Increasing (was 17) |
 | PHP god classes | 2 | 0 | Refactor both |
+| innerHTML usages | 71 | ≤65 | ⚠️ Increasing (was 63) |
 | Deprecated markers | 7 | 0 | Remove in v2.0 |
 | ESLint disables | 11 | ≤15 | Minimized |
-| Documentation stale | 0 files | 0 | ✅ Fixed |
-| onbeforeunload issue | 0 files | 0 | ✅ Fixed |
+| Version consistency | ✅ | ✅ | Fixed January 28, 2026 |
 | Overall score | 8.6 | 9.0 | Path to world-class |
 
 ---
@@ -626,15 +621,17 @@ None currently blocked.
 
 | Item | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| docs/ARCHITECTURE.md stale | ✅ Fixed | 0 | P1.3 |
-| window.onbeforeunload issue | ✅ Fixed | 0 | P2.8 |
-| 7 deprecated APIs | Medium - maintenance | 1 sprint | P3.3 |
-| 22 god classes | Medium - cognitive load | 2-3 weeks | P2.5/P2.6 |
-| Inconsistent DB return types | Medium - bug potential | 1-2 days | P2.3 |
-| No visual regression tests | Medium - rendering bugs | 1-2 sprints | P3.1 |
-| No TypeScript | Low - type safety | Long-term | P3.2 |
+| Version inconsistency | ✅ Fixed | 0 | P0.1 |
+| docs/ARCHITECTURE.md stale | High | 30 min | P1.3 |
+| 7 deprecated APIs | Medium | 1 sprint | P3.3 |
+| 22 god classes | Medium | 2-3 weeks | P2.5/P2.6 |
+| Inconsistent DB return types | Medium | 1-2 days | P2.3 |
+| No visual regression tests | Medium | 1-2 sprints | P3.1 |
+| Coverage declining | Medium | Ongoing | Monitor |
+| innerHTML increasing | Low | Ongoing | Monitor |
+| No TypeScript | Low | Long-term | P3.2 |
 
 ---
 
 *Last updated: January 28, 2026*  
-*Overall score: 8.6/10 — Production-ready, high quality (improved from 8.5 after doc fixes)*
+*Overall score: 8.6/10 — Production-ready, high quality. All critical issues resolved.*
