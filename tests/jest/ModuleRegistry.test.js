@@ -491,5 +491,100 @@ describe( 'ModuleRegistry', () => {
 
 			expect( exported.legacyRegistry.getRegistry() ).toBe( exported.registry );
 		} );
+
+		it( 'legacyRegistry.tryResolveAll should attempt to resolve all pending modules', () => {
+			// Use unique module name to avoid conflicts with cached modules
+			const uniqueName = 'pendingModule_' + Date.now();
+			const exported = require( '../../resources/ext.layers.editor/ModuleRegistry.js' );
+
+			// Register a module that can be resolved
+			exported.registry.register( uniqueName, () => ( { resolved: true } ) );
+
+			// Verify module is registered
+			expect( exported.registry.factories.has( uniqueName ) ).toBe( true );
+
+			// Try to resolve all pending modules - this exercises the tryResolveAll code
+			exported.legacyRegistry.tryResolveAll();
+
+			// After tryResolveAll, the factory should still be in factories
+			// (tryAutoResolve may or may not have succeeded, but we exercised the code path)
+			expect( exported.registry.factories.has( uniqueName ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'findLegacyModule', () => {
+		it( 'should find module in window global namespace', () => {
+			// Set up a legacy module on window
+			global.window.testLegacy = { isLegacy: true };
+
+			const result = registry.findLegacyModule( 'testLegacy' );
+
+			expect( result ).toEqual( { isLegacy: true } );
+
+			// Cleanup
+			delete global.window.testLegacy;
+		} );
+
+		it( 'should find module in mw global namespace', () => {
+			// Set up a legacy module on mw
+			global.mw.TestModule = { fromMW: true };
+
+			const result = registry.findLegacyModule( 'TestModule' );
+
+			expect( result ).toEqual( { fromMW: true } );
+
+			// Cleanup
+			delete global.mw.TestModule;
+		} );
+
+		it( 'should create module from legacy global in createModule', () => {
+			// Set up a legacy module on window
+			global.window.myLegacyModule = { legacy: true, data: 42 };
+
+			// createModule should find it via findLegacyModule
+			const result = registry.createModule( 'myLegacyModule' );
+
+			expect( result ).toEqual( { legacy: true, data: 42 } );
+			expect( registry.modules.has( 'myLegacyModule' ) ).toBe( true );
+
+			// Cleanup
+			delete global.window.myLegacyModule;
+		} );
+	} );
+
+	describe( 'emit error handling', () => {
+		it( 'should log error when event handler throws', () => {
+			const mockError = jest.fn();
+			global.mw.log = { error: mockError };
+
+			// Register an event handler that throws
+			registry.on( 'testEvent', () => {
+				throw new Error( 'Handler error' );
+			} );
+
+			// Emit should not throw, but should log the error
+			expect( () => registry.emit( 'testEvent', { data: 'test' } ) ).not.toThrow();
+			expect( mockError ).toHaveBeenCalledWith(
+				'[ModuleRegistry] Event handler error for "testEvent":',
+				'Handler error'
+			);
+		} );
+
+		it( 'should continue calling other handlers after one throws', () => {
+			global.mw.log = { error: jest.fn() };
+
+			const handler1 = jest.fn( () => {
+				throw new Error( 'First handler error' );
+			} );
+			const handler2 = jest.fn();
+
+			registry.on( 'multiEvent', handler1 );
+			registry.on( 'multiEvent', handler2 );
+
+			registry.emit( 'multiEvent', { data: 'test' } );
+
+			expect( handler1 ).toHaveBeenCalled();
+			expect( handler2 ).toHaveBeenCalled();
+		} );
 	} );
 } );

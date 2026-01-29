@@ -1942,4 +1942,85 @@ describe( 'LayersViewer', () => {
 			expect( viewer.layerData.backgroundVisible ).toBe( true );
 		} );
 	} );
+
+	describe( 'destroy and cleanup', () => {
+		const createImageWithStyle = () => {
+			return {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: {
+					visibility: '',
+					opacity: ''
+				}
+			};
+		};
+
+		it( 'should restore original image visibility on destroy', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+			imageElement.style.visibility = 'visible';
+			imageElement.style.opacity = '0.8';
+
+			const layerData = {
+				layers: [ { id: 'l1', type: 'text', text: 'Test' } ],
+				backgroundVisible: false
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Image should be hidden (backgroundVisible: false)
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+
+			// Destroy the viewer
+			viewer.destroy();
+
+			// Original visibility should be restored
+			expect( imageElement.style.visibility ).toBe( 'visible' );
+			expect( imageElement.style.opacity ).toBe( '0.8' );
+		} );
+
+		it( 'should handle applyBackgroundSettings with no layer data', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+			imageElement.style.visibility = 'hidden';
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: null
+			} );
+
+			// With no layer data, image should be visible
+			expect( imageElement.style.visibility ).toBe( 'visible' );
+			expect( imageElement.style.opacity ).toBe( '1' );
+		} );
+
+		it( 'should parse string backgroundOpacity', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				layers: [],
+				backgroundVisible: true,
+				backgroundOpacity: '0.5'
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// String opacity should be parsed
+			expect( imageElement.style.opacity ).toBe( '0.5' );
+		} );
+	} );
 } );

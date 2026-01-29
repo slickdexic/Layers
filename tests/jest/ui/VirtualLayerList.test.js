@@ -720,4 +720,211 @@ describe( 'VirtualLayerList', () => {
 			expect( virtualList._isEnabled ).toBe( false );
 		} );
 	} );
+
+	describe( 'ResizeObserver integration', () => {
+		let mockResizeObserver;
+		let observeCallback;
+
+		beforeEach( () => {
+			// Store original ResizeObserver
+			mockResizeObserver = jest.fn( ( callback ) => {
+				observeCallback = callback;
+				return {
+					observe: jest.fn(),
+					disconnect: jest.fn()
+				};
+			} );
+			global.ResizeObserver = mockResizeObserver;
+		} );
+
+		afterEach( () => {
+			delete global.ResizeObserver;
+		} );
+
+		it( 'should create ResizeObserver when available', () => {
+			virtualList = new VirtualLayerList( {
+				container,
+				listElement,
+				getLayers: () => layers,
+				createItem: jest.fn(),
+				updateItem: jest.fn()
+			} );
+
+			expect( virtualList._resizeObserver ).toBeDefined();
+			expect( mockResizeObserver ).toHaveBeenCalled();
+		} );
+
+		it( 'should observe container on enable', () => {
+			virtualList = new VirtualLayerList( {
+				container,
+				listElement,
+				getLayers: () => layers,
+				createItem: jest.fn( ( layer ) => {
+					const el = document.createElement( 'div' );
+					el.dataset.layerId = layer.id;
+					return el;
+				} ),
+				updateItem: jest.fn()
+			} );
+
+			virtualList.enable();
+
+			expect( virtualList._resizeObserver.observe ).toHaveBeenCalledWith( container );
+		} );
+
+		it( 'should disconnect ResizeObserver on disable', () => {
+			virtualList = new VirtualLayerList( {
+				container,
+				listElement,
+				getLayers: () => layers,
+				createItem: jest.fn( ( layer ) => {
+					const el = document.createElement( 'div' );
+					el.dataset.layerId = layer.id;
+					return el;
+				} ),
+				updateItem: jest.fn()
+			} );
+
+			virtualList.enable();
+			virtualList.disable();
+
+			expect( virtualList._resizeObserver.disconnect ).toHaveBeenCalled();
+		} );
+
+		it( 'should call _updateContainerHeight and _scheduleRender when ResizeObserver fires', () => {
+			virtualList = new VirtualLayerList( {
+				container,
+				listElement,
+				getLayers: () => layers,
+				createItem: jest.fn( ( layer ) => {
+					const el = document.createElement( 'div' );
+					el.dataset.layerId = layer.id;
+					return el;
+				} ),
+				updateItem: jest.fn()
+			} );
+
+			const updateSpy = jest.spyOn( virtualList, '_updateContainerHeight' );
+			const scheduleSpy = jest.spyOn( virtualList, '_scheduleRender' );
+
+			// Trigger ResizeObserver callback
+			observeCallback();
+
+			expect( updateSpy ).toHaveBeenCalled();
+			expect( scheduleSpy ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'item pool cleanup', () => {
+		it( 'should clean up pool when it exceeds 50 items', () => {
+			// Create many layers to generate a large pool
+			const manyLayers = [];
+			for ( let i = 0; i < 100; i++ ) {
+				manyLayers.push( {
+					id: `layer-${ i }`,
+					type: 'rectangle',
+					name: `Layer ${ i }`,
+					visible: true,
+					locked: false
+				} );
+			}
+
+			virtualList = new VirtualLayerList( {
+				container,
+				listElement,
+				getLayers: () => manyLayers,
+				createItem: jest.fn( ( layer ) => {
+					const el = document.createElement( 'div' );
+					el.className = 'layer-item';
+					el.dataset.layerId = layer.id;
+					return el;
+				} ),
+				updateItem: jest.fn(),
+				itemHeight: 10, // Small items to render many
+				threshold: 30
+			} );
+
+			// Render initial view
+			virtualList.render();
+
+			// Manually add extra items to pool to exceed 50
+			for ( let i = 0; i < 60; i++ ) {
+				virtualList._itemPool.set( `extra-${ i }`, document.createElement( 'div' ) );
+			}
+
+			expect( virtualList._itemPool.size ).toBeGreaterThan( 50 );
+
+			// Trigger a render which should clean up the pool
+			virtualList._performRender();
+
+			// Pool should be cleaned to 50
+			expect( virtualList._itemPool.size ).toBe( 50 );
+		} );
+	} );
+
+	describe( '_scheduleRender deduplication', () => {
+		it( 'should not schedule multiple renders', () => {
+			virtualList = new VirtualLayerList( {
+				container,
+				listElement,
+				getLayers: () => layers,
+				createItem: jest.fn( ( layer ) => {
+					const el = document.createElement( 'div' );
+					el.dataset.layerId = layer.id;
+					return el;
+				} ),
+				updateItem: jest.fn()
+			} );
+
+			virtualList.enable();
+
+			// Track requestAnimationFrame calls
+			let rafCallCount = 0;
+			const originalRaf = global.requestAnimationFrame;
+			global.requestAnimationFrame = jest.fn( ( cb ) => {
+				rafCallCount++;
+				return rafCallCount;
+			} );
+
+			// Schedule multiple renders
+			virtualList._scheduleRender();
+			virtualList._scheduleRender();
+			virtualList._scheduleRender();
+
+			// Should only have called requestAnimationFrame once
+			expect( rafCallCount ).toBe( 1 );
+
+			global.requestAnimationFrame = originalRaf;
+		} );
+
+		it( 'should clear pending flag after render completes', () => {
+			virtualList = new VirtualLayerList( {
+				container,
+				listElement,
+				getLayers: () => layers,
+				createItem: jest.fn( ( layer ) => {
+					const el = document.createElement( 'div' );
+					el.dataset.layerId = layer.id;
+					return el;
+				} ),
+				updateItem: jest.fn()
+			} );
+
+			virtualList.enable();
+
+			let rafCallback;
+			global.requestAnimationFrame = jest.fn( ( cb ) => {
+				rafCallback = cb;
+				return 1;
+			} );
+
+			virtualList._scheduleRender();
+			expect( virtualList._pendingRender ).toBe( 1 );
+
+			// Execute the callback
+			rafCallback();
+
+			expect( virtualList._pendingRender ).toBe( null );
+		} );
+	} );
 } );

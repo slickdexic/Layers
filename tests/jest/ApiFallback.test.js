@@ -124,6 +124,126 @@ describe( 'ApiFallback', () => {
 		} );
 	} );
 
+	describe( 'getClass fallback (internal helper)', () => {
+		// These tests cover lines 14-28: the internal getClass helper function
+		// used when window.layersGetClass is undefined
+
+		it( 'should use window.Layers namespace when layersGetClass is undefined', () => {
+			// Remove layersGetClass so internal fallback is used
+			delete window.layersGetClass;
+			jest.resetModules();
+
+			// Create mock classes
+			const MockUrlParser = function () {
+				return mockUrlParser;
+			};
+			const MockViewerManager = function () {
+				return mockViewerManager;
+			};
+
+			// Set up window.Layers namespace
+			window.Layers = {
+				Utils: {
+					UrlParser: MockUrlParser
+				},
+				Viewer: {
+					Manager: MockViewerManager
+				}
+			};
+
+			const ApiFallbackLocal = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
+			const fallback = new ApiFallbackLocal();
+
+			expect( fallback.urlParser ).toBe( mockUrlParser );
+			expect( fallback.viewerManager ).toBe( mockViewerManager );
+		} );
+
+		it( 'should fall back to global name when namespace traversal fails', () => {
+			delete window.layersGetClass;
+			jest.resetModules();
+
+			// Create mock classes as globals
+			window.LayersUrlParser = function () {
+				return mockUrlParser;
+			};
+			window.LayersViewerManager = function () {
+				return mockViewerManager;
+			};
+
+			// Set up incomplete Layers namespace (missing nested properties)
+			window.Layers = {
+				Utils: {} // Missing UrlParser
+			};
+
+			const ApiFallbackLocal = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
+			const fallback = new ApiFallbackLocal();
+
+			expect( fallback.urlParser ).toBe( mockUrlParser );
+			expect( fallback.viewerManager ).toBe( mockViewerManager );
+
+			// Clean up
+			delete window.LayersUrlParser;
+			delete window.LayersViewerManager;
+		} );
+
+		it( 'should use global fallback when namespace result is not a function', () => {
+			delete window.layersGetClass;
+			jest.resetModules();
+
+			// Create mock classes as globals
+			window.LayersUrlParser = function () {
+				return mockUrlParser;
+			};
+			window.LayersViewerManager = function () {
+				return mockViewerManager;
+			};
+
+			// Set up Layers namespace with non-function values
+			window.Layers = {
+				Utils: {
+					UrlParser: 'not a function' // Wrong type
+				},
+				Viewer: {
+					Manager: 12345 // Wrong type
+				}
+			};
+
+			const ApiFallbackLocal = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
+			const fallback = new ApiFallbackLocal();
+
+			expect( fallback.urlParser ).toBe( mockUrlParser );
+			expect( fallback.viewerManager ).toBe( mockViewerManager );
+
+			// Clean up
+			delete window.LayersUrlParser;
+			delete window.LayersViewerManager;
+		} );
+
+		it( 'should use global fallback when window.Layers is undefined', () => {
+			delete window.layersGetClass;
+			delete window.Layers;
+			jest.resetModules();
+
+			// Create mock classes as globals
+			window.LayersUrlParser = function () {
+				return mockUrlParser;
+			};
+			window.LayersViewerManager = function () {
+				return mockViewerManager;
+			};
+
+			const ApiFallbackLocal = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
+			const fallback = new ApiFallbackLocal();
+
+			expect( fallback.urlParser ).toBe( mockUrlParser );
+			expect( fallback.viewerManager ).toBe( mockViewerManager );
+
+			// Clean up
+			delete window.LayersUrlParser;
+			delete window.LayersViewerManager;
+		} );
+	} );
+
 	describe( 'debugLog', () => {
 		it( 'should log when debug is true', () => {
 			const fallback = new ApiFallback( { debug: true } );
@@ -936,6 +1056,86 @@ describe( 'ApiFallback', () => {
 	describe( 'module exports', () => {
 		it( 'should export to window.Layers.Viewer namespace', () => {
 			expect( window.Layers.Viewer.ApiFallback ).toBe( ApiFallback );
+		} );
+	} );
+
+	describe( 'error handling edge cases', () => {
+		it( 'should handle processing errors in API response handler', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1', type: 'text' } ]
+						}
+					}
+				}
+			} );
+
+			// Make initializeViewer throw
+			mockViewerManager.initializeViewer.mockImplementation( () => {
+				throw new Error( 'Viewer init failed' );
+			} );
+
+			const fallback = new ApiFallback( {
+				debug: true,
+				urlParser: mockUrlParser,
+				viewerManager: mockViewerManager
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await jest.runAllTimersAsync();
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ApiFallback]',
+				'API fallback processing error:',
+				expect.any( Error )
+			);
+		} );
+
+		it( 'should handle mw.loader.using rejection', async () => {
+			mockMw.loader.using.mockReturnValue( Promise.reject( new Error( 'Module load failed' ) ) );
+
+			const fallback = new ApiFallback( {
+				debug: true,
+				urlParser: mockUrlParser,
+				viewerManager: mockViewerManager
+			} );
+
+			fallback.initialize();
+
+			await jest.runAllTimersAsync();
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ApiFallback]',
+				'Failed to load mediawiki.api module:',
+				expect.any( Error )
+			);
+		} );
+
+		it( 'should handle API request failure', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockRejectedValue( new Error( 'Network error' ) );
+
+			const fallback = new ApiFallback( {
+				debug: true,
+				urlParser: mockUrlParser,
+				viewerManager: mockViewerManager
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await jest.runAllTimersAsync();
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ApiFallback]',
+				'API fallback request failed for',
+				'Test.jpg',
+				expect.any( Error )
+			);
 		} );
 	} );
 } );

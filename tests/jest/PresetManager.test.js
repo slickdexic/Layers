@@ -840,5 +840,66 @@ describe( 'PresetManager', () => {
 			expect( preset ).toBeDefined();
 			expect( manager.cache.toolPresets.arrow ).toHaveLength( 1 );
 		} );
+
+		it( 'should return error for duplicate preset name', () => {
+			// Add an initial preset
+			manager.addPreset( 'arrow', 'My Preset', { stroke: '#000' } );
+
+			// Try to add a duplicate (case insensitive)
+			const result = manager.addPreset( 'arrow', 'my preset', { stroke: '#fff' } );
+
+			expect( result ).toHaveProperty( 'error', 'duplicate' );
+			expect( result ).toHaveProperty( 'existingName' );
+		} );
+
+		it( 'should prevent updating built-in preset in cache', () => {
+			// Manually add a built-in preset to the cache (simulating loaded state)
+			manager.cache.toolPresets.arrow = [
+				{
+					id: 'builtin-1',
+					name: 'Built-in Arrow',
+					builtIn: true,
+					style: { stroke: '#000' }
+				}
+			];
+
+			// Try to update the built-in preset
+			const result = manager.updatePreset( 'arrow', 'builtin-1', { name: 'Hacked' } );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should prevent deleting built-in preset in cache', () => {
+			// Manually add a built-in preset to the cache
+			manager.cache.toolPresets.arrow = [
+				{
+					id: 'builtin-1',
+					name: 'Built-in Arrow',
+					builtIn: true,
+					style: { stroke: '#000' }
+				}
+			];
+
+			// Try to delete the built-in preset
+			const result = manager.deletePreset( 'arrow', 'builtin-1' );
+
+			expect( result ).toBe( false );
+			// Preset should still exist
+			expect( manager.cache.toolPresets.arrow ).toHaveLength( 1 );
+		} );
+
+		it( 'should clear existing default preset', () => {
+			// Directly set a default in the cache
+			manager.cache.defaultPresets.arrow = 'test-preset-id';
+
+			// Verify it's set
+			expect( manager.cache.defaultPresets.arrow ).toBe( 'test-preset-id' );
+
+			// Clear the default
+			manager.clearDefaultPreset( 'arrow' );
+
+			// Verify it's cleared
+			expect( manager.cache.defaultPresets.arrow ).toBeUndefined();
+		} );
 	} );
 } );

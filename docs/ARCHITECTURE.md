@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** January 28, 2026
-**Version:** 1.5.36
+**Version:** 1.5.38
 
 ---
 
@@ -22,21 +22,21 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Metric | Value |
 |--------|-------|
 | Total JS files | **132** |
-| Total JS lines | **~88,992** |
+| Total JS lines | **~93,406** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~40,000 lines (generated) |
 | ES6 classes | **132** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.85% stmt, 85.39% branch** |
-| Jest tests | **10,667** (157 suites) |
+| Test coverage | **94.65% stmt, 84.49% branch** |
+| Jest tests | **10,939** (162 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **22** (2 generated, 18 JS, 2 PHP) |
+| God classes (>1000 lines) | **22** (2 generated, 20 JS, 2 PHP) |
 | Drawing tools | **15** |
 | Shape library | **1,310 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **720** |
+| i18n messages | **~653** |
 | eslint-disable comments | **11** ✅ |
 
 ---
@@ -131,7 +131,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | LayersDatabase.php | 1,242 | Uses delegation pattern |
 | ServerSideLayerValidator.php | 1,163 | Validation complexity |
 
-**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 95.85% test coverage.
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 94.65% test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for detailed status.
 

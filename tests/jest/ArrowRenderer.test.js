@@ -9,6 +9,14 @@
 
 /* eslint-env jest */
 
+// Load ArrowGeometry first (ArrowRenderer depends on it)
+const ArrowGeometry = require( '../../resources/ext.layers.shared/ArrowGeometry.js' );
+
+// Make ArrowGeometry available globally for ArrowRenderer to find
+global.window = global.window || {};
+global.window.Layers = global.window.Layers || {};
+global.window.Layers.ArrowGeometry = ArrowGeometry;
+
 const ArrowRenderer = require( '../../resources/ext.layers.shared/ArrowRenderer.js' );
 
 describe( 'ArrowRenderer', () => {

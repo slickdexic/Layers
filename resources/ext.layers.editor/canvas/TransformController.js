@@ -1,14 +1,6 @@
 /**
  * TransformController - Handles resize, rotation, and drag operations for layers
- *
- * Extracted from CanvasManager.js to reduce file size and improve maintainability.
- * This module manages all layer transformation operations including:
- * - Resize (8 handles for rectangles, circles, ellipses, polygons, lines, paths, text)
- * - Rotation (rotation handle with shift-snap to 15-degree increments)
- * - Drag (single and multi-layer drag with snap-to-grid support)
- *
- * Resize calculations are delegated to ResizeCalculator for cleaner separation.
- *
+ * Extracted from CanvasManager.js. Delegates resize calculations to ResizeCalculator.
  * @module canvas/TransformController
  */
 ( function () {
@@ -19,7 +11,6 @@
 		window.Layers.Utils.getClass ) ?
 		window.Layers.Utils.getClass :
 		function ( namespacePath, legacyName ) {
-			// Check namespace path first
 			if ( typeof window !== 'undefined' && window.Layers ) {
 				const parts = namespacePath.split( '.' );
 				let obj = window.Layers;
@@ -35,22 +26,15 @@
 					return obj;
 				}
 			}
-			// Fallback to legacy window global
 			if ( typeof window !== 'undefined' && legacyName && window[ legacyName ] ) {
 				return window[ legacyName ];
 			}
 			return null;
 		};
 
-	/**
-	 * TransformController class
-	 */
+	/** TransformController class */
 class TransformController {
-	/**
-	 * Creates a new TransformController instance
-	 *
-	 * @param {Object} canvasManager Reference to parent CanvasManager
-	 */
+	/** Creates a new TransformController instance */
 	constructor( canvasManager ) {
 		this.manager = canvasManager;
 
@@ -79,15 +63,8 @@ class TransformController {
 		this._cloneLayerEfficient = null;
 	}
 
-	/**
-	 * Clone a layer efficiently (preserves src/path by reference)
-	 *
-	 * @private
-	 * @param {Object} layer - Layer to clone
-	 * @return {Object} Cloned layer
-	 */
+	/** Clone a layer efficiently (preserves src/path by reference) @private @return {Object} */
 	_cloneLayer( layer ) {
-		// Lazy-load efficient cloning function
 		if ( !this._cloneLayerEfficient ) {
 			if ( typeof window !== 'undefined' &&
 				window.Layers &&
@@ -96,22 +73,13 @@ class TransformController {
 				this._cloneLayerEfficient = window.Layers.Utils.cloneLayerEfficient;
 			}
 		}
-
-		// Use efficient cloning if available
 		if ( this._cloneLayerEfficient ) {
 			return this._cloneLayerEfficient( layer );
 		}
-
-		// Fallback to JSON cloning
 		return JSON.parse( JSON.stringify( layer ) );
 	}
 
-	/**
-	 * Check if a layer is effectively locked (directly or via parent folder)
-	 *
-	 * @param {Object} layer - Layer to check
-	 * @return {boolean} True if layer is locked or in a locked folder
-	 */
+	/** Check if a layer is effectively locked (directly or via parent folder) @return {boolean} */
 	isLayerEffectivelyLocked( layer ) {
 		if ( !layer ) {
 			return false;
@@ -144,12 +112,7 @@ class TransformController {
 
 	// ==================== Resize Operations ====================
 
-	/**
-	 * Start a resize operation on the selected layer
-	 *
-	 * @param {Object} handle The resize handle being dragged
-	 * @param {Object} startPoint The starting mouse point
-	 */
+	/** Start a resize operation on the selected layer */
 	startResize( handle, startPoint ) {
 		// Get the layer first to check lock status
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
@@ -179,12 +142,7 @@ class TransformController {
 		}
 	}
 
-	/**
-	 * Handle resize during mouse move
-	 *
-	 * @param {Object} point Current mouse point
-	 * @param {Event} event Mouse event for modifier keys
-	 */
+	/** Handle resize during mouse move */
 	handleResize ( point, event ) {
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );
 
@@ -297,17 +255,7 @@ class TransformController {
 		}
 	}
 
-	/**
-	 * Get the appropriate cursor for a resize handle
-	 *
-	 * The cursor should indicate the direction of resize movement, which is
-	 * perpendicular to the edge being dragged. For rotated shapes, we need to
-	 * rotate the cursor direction by the same amount as the shape.
-	 *
-	 * @param {string} handleType Handle type (n, s, e, w, ne, nw, se, sw)
-	 * @param {number} rotation Layer rotation in degrees
-	 * @return {string} CSS cursor value
-	 */
+	/** Get the appropriate cursor for a resize handle @return {string} CSS cursor value */
 	getResizeCursor ( handleType, rotation ) {
 		// Base angles for each handle type (direction of resize in local space)
 		// 0° = up (north), 90° = right (east), etc.
@@ -381,17 +329,7 @@ class TransformController {
 		return null;
 	}
 
-	/**
-	 * Calculate rectangle resize adjustments
-	 * Delegates to ResizeCalculator.calculateRectangleResize
-	 *
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @param {Object} modifiers Modifier keys state
-	 * @return {Object} Updates object with new dimensions
-	 */
+	/** Calculate rectangle resize adjustments - delegates to ResizeCalculator @return {Object} */
 	calculateRectangleResize( originalLayer, handleType, deltaX, deltaY, modifiers ) {
 		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
 		if ( ResizeCalculator ) {
@@ -400,14 +338,7 @@ class TransformController {
 		return {};
 	}
 
-	/**
-	 * Apply correction to keep the opposite edge fixed in world space for rotated shapes
-	 * Delegates to ResizeCalculator.applyRotatedResizeCorrection
-	 *
-	 * @param {Object} updates The updates object to modify
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 */
+	/** Apply rotated resize correction - delegates to ResizeCalculator */
 	applyRotatedResizeCorrection( updates, originalLayer, handleType ) {
 		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
 		if ( ResizeCalculator ) {
@@ -415,16 +346,7 @@ class TransformController {
 		}
 	}
 
-	/**
-	 * Calculate circle resize adjustments
-	 * Delegates to ResizeCalculator.calculateCircleResize
-	 *
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @return {Object|null} Updates object with new radius
-	 */
+	/** Calculate circle resize adjustments - delegates to ResizeCalculator @return {Object|null} */
 	calculateCircleResize( originalLayer, handleType, deltaX, deltaY ) {
 		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
 		if ( ResizeCalculator ) {
@@ -433,16 +355,7 @@ class TransformController {
 		return null;
 	}
 
-	/**
-	 * Calculate ellipse resize adjustments
-	 * Delegates to ResizeCalculator.calculateEllipseResize
-	 *
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @return {Object} Updates object with new radiusX/radiusY
-	 */
+	/** Calculate ellipse resize adjustments - delegates to ResizeCalculator @return {Object} */
 	calculateEllipseResize( originalLayer, handleType, deltaX, deltaY ) {
 		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
 		if ( ResizeCalculator ) {
@@ -451,16 +364,7 @@ class TransformController {
 		return {};
 	}
 
-	/**
-	 * Calculate polygon/star resize adjustments
-	 * Delegates to ResizeCalculator.calculatePolygonResize
-	 *
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @return {Object} Updates object with new radius
-	 */
+	/** Calculate polygon/star resize adjustments - delegates to ResizeCalculator @return {Object} */
 	calculatePolygonResize( originalLayer, handleType, deltaX, deltaY ) {
 		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
 		if ( ResizeCalculator ) {
@@ -469,16 +373,7 @@ class TransformController {
 		return {};
 	}
 
-	/**
-	 * Calculate line/arrow resize adjustments
-	 * Delegates to ResizeCalculator.calculateLineResize
-	 *
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @return {Object} Updates object with new endpoint coordinates
-	 */
+	/** Calculate line/arrow resize adjustments - delegates to ResizeCalculator @return {Object} */
 	calculateLineResize( originalLayer, handleType, deltaX, deltaY ) {
 		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
 		if ( ResizeCalculator ) {
@@ -505,16 +400,7 @@ class TransformController {
 		return null;
 	}
 
-	/**
-	 * Calculate text resize adjustments
-	 * Delegates to ResizeCalculator.calculateTextResize
-	 *
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @return {Object} Updates object with new fontSize
-	 */
+	/** Calculate text resize adjustments - delegates to ResizeCalculator @return {Object} */
 	calculateTextResize( originalLayer, handleType, deltaX, deltaY ) {
 		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
 		if ( ResizeCalculator ) {
@@ -525,11 +411,7 @@ class TransformController {
 
 	// ==================== Rotation Operations ====================
 
-	/**
-	 * Start a rotation operation on the selected layer
-	 *
-	 * @param {Object} point Starting mouse point
-	 */
+	/** Start a rotation operation on the selected layer */
 	startRotation ( point ) {
 		// Get the layer first to check lock status
 		const layer = this.manager.editor.getLayerById( this.manager.getSelectedLayerId() );

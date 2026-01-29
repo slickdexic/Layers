@@ -947,26 +947,31 @@ class LayersEditor {
 
 			changes = this.validationManager.sanitizeLayerData( changes );
 
-			// If inline text editing is active for this layer, preserve pending text content
-			// This prevents text loss when changing properties like verticalAlign during editing
+			// If inline text editing is active for this layer, keep text/richText cleared
+			// to prevent double rendering (HTML overlay + canvas). The text is stored in
+			// the HTML editor and will be written back when editing finishes.
 			if ( this.canvasManager && this.canvasManager.inlineTextEditor ) {
 				const inlineEditor = this.canvasManager.inlineTextEditor;
 				const editingLayer = inlineEditor.getEditingLayer && inlineEditor.getEditingLayer();
 
 				if ( editingLayer && editingLayer.id === layerId && inlineEditor.isActive() ) {
-					// Get pending text content
-					const pendingContent = inlineEditor.getPendingTextContent &&
-						inlineEditor.getPendingTextContent();
+					// Check if this is a textbox/callout (multiline) layer
+					const isMultiline = editingLayer.type === 'textbox' ||
+						editingLayer.type === 'callout';
 
-					if ( pendingContent ) {
-						// Include pending text unless explicitly being changed
-						if ( !( 'text' in changes ) && pendingContent.text !== undefined ) {
-							changes.text = pendingContent.text;
+					if ( isMultiline ) {
+						// Keep text and richText cleared during inline editing
+						// unless they are explicitly being set (e.g., from finishEditing)
+						if ( !( 'text' in changes ) ) {
+							changes.text = '';
 						}
-						if ( !( 'richText' in changes ) && pendingContent.richText ) {
-							if ( pendingContent.richText.length > 0 ) {
-								changes.richText = pendingContent.richText;
-							}
+						if ( !( 'richText' in changes ) ) {
+							changes.richText = null;
+						}
+					} else {
+						// For simple text layers, keep visible=false
+						if ( !( 'visible' in changes ) ) {
+							changes.visible = false;
 						}
 					}
 				}

@@ -4560,4 +4560,175 @@ describe( 'PropertiesForm', () => {
 			expect( sectionLabels.some( ( l ) => l.toLowerCase().includes( 'appearance' ) ) ).toBe( false );
 		} );
 	} );
+
+	describe( 'GradientEditor integration', () => {
+		let mockEditor;
+		let registerCleanup;
+
+		beforeEach( () => {
+			mockEditor = {
+				updateLayer: jest.fn(),
+				layers: [],
+				layerPanel: {
+					updatePropertiesPanel: jest.fn()
+				}
+			};
+			registerCleanup = jest.fn();
+		} );
+
+		afterEach( () => {
+			// Clean up GradientEditor mock
+			if ( window.Layers && window.Layers.UI ) {
+				delete window.Layers.UI.GradientEditor;
+			}
+		} );
+
+		test( 'should use GradientEditor when available for rectangle layer', () => {
+			// Mock GradientEditor
+			const mockGradientEditorInstance = {};
+			const MockGradientEditor = jest.fn( () => mockGradientEditorInstance );
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.GradientEditor = MockGradientEditor;
+
+			const layer = {
+				id: 'rect-1',
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				fill: '#ff0000'
+			};
+
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// GradientEditor should have been instantiated
+			expect( MockGradientEditor ).toHaveBeenCalled();
+			expect( form ).toBeDefined();
+		} );
+
+		test( 'GradientEditor onChange should update layer with gradient', () => {
+			let capturedOnChange;
+			const MockGradientEditor = jest.fn( ( opts ) => {
+				capturedOnChange = opts.onChange;
+				return {};
+			} );
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.GradientEditor = MockGradientEditor;
+
+			const layer = {
+				id: 'rect-1',
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				fill: '#ff0000'
+			};
+
+			PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Simulate gradient change
+			const newGradient = {
+				type: 'linear',
+				colors: [ { offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' } ]
+			};
+			capturedOnChange( { gradient: newGradient } );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'rect-1', { gradient: newGradient } );
+		} );
+
+		test( 'GradientEditor onChange should remove gradient when null', () => {
+			let capturedOnChange;
+			const MockGradientEditor = jest.fn( ( opts ) => {
+				capturedOnChange = opts.onChange;
+				return {};
+			} );
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.GradientEditor = MockGradientEditor;
+
+			const layer = {
+				id: 'rect-1',
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				gradient: { type: 'linear', colors: [] }
+			};
+
+			PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Simulate switching to solid (null gradient)
+			capturedOnChange( { gradient: null } );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'rect-1', { gradient: null } );
+		} );
+
+		test( 'GradientEditor onFillTypeChange should refresh properties panel', () => {
+			jest.useFakeTimers();
+
+			let capturedOnFillTypeChange;
+			const MockGradientEditor = jest.fn( ( opts ) => {
+				capturedOnFillTypeChange = opts.onFillTypeChange;
+				return {};
+			} );
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.GradientEditor = MockGradientEditor;
+
+			const layer = {
+				id: 'rect-1',
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				fill: '#ff0000'
+			};
+
+			PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Simulate fill type change
+			capturedOnFillTypeChange();
+			jest.runAllTimers();
+
+			expect( mockEditor.layerPanel.updatePropertiesPanel ).toHaveBeenCalledWith( 'rect-1' );
+
+			jest.useRealTimers();
+		} );
+
+		test( 'should hide fill color picker when layer has gradient', () => {
+			const MockGradientEditor = jest.fn( () => ( {} ) );
+			window.Layers = window.Layers || {};
+			window.Layers.UI = window.Layers.UI || {};
+			window.Layers.UI.GradientEditor = MockGradientEditor;
+
+			const layer = {
+				id: 'rect-1',
+				type: 'rectangle',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				gradient: {
+					type: 'linear',
+					colors: [ { offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' } ]
+				}
+			};
+
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Gradient layers should NOT have fill color picker (gradient editor handles it)
+			const colorButtons = form.querySelectorAll( '.color-picker-button, .color-button' );
+			const hasFillPicker = Array.from( colorButtons ).some( ( btn ) => {
+				const label = btn.closest( '.form-row' )?.querySelector( 'label' )?.textContent || '';
+				return label.toLowerCase().includes( 'fill' );
+			} );
+			expect( hasFillPicker ).toBe( false );
+		} );
+	} );
 } );

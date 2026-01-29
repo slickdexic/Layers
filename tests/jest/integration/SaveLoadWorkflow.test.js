@@ -114,6 +114,10 @@ describe( 'Integration: Save/Load Workflow', () => {
 		global.window.Layers.Editor = global.window.Layers.Editor || {};
 		global.window.Layers.Editor.APIErrorHandler = APIErrorHandler;
 
+		// Load ExportController (dependency for export operations)
+		const ExportController = require( '../../../resources/ext.layers.editor/ExportController.js' );
+		global.window.Layers.Editor.ExportController = ExportController;
+
 		// Load APIManager code via require for proper Jest coverage instrumentation
 		const loaded = require( '../../../resources/ext.layers.editor/APIManager.js' );
 		APIManager = loaded.APIManager;

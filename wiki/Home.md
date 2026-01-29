@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-10%2C667%20passing-brightgreen" alt="10,667 Tests">
-  <img src="https://img.shields.io/badge/Coverage-95.9%25-brightgreen" alt="95.9% Coverage">
+  <img src="https://img.shields.io/badge/Tests-10%2C939%20passing-brightgreen" alt="10,939 Tests">
+  <img src="https://img.shields.io/badge/Coverage-94.65%25-brightgreen" alt="94.65% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -19,6 +19,28 @@
 | **15 drawing tools**, style presets, alignment & distribution | Original images never modified | Create standalone graphics without a base image | WCAG 2.1 compliant, full keyboard support |
 
 ---
+
+## 🆕 What's New in v1.5.39
+
+- **God Class Reduction Complete** — Reduced from 20 to 12 god classes (40% reduction)
+- **12+ Extracted Modules** — Clean separation of concerns with focused single-responsibility modules
+- **Documentation Synchronized** — All metrics now accurate across all documentation files
+- **10,939 tests passing** (162 suites), 94.65% statement coverage, 84.49% branch coverage
+
+### Previous v1.5.38 Highlights
+
+- **Inline Text Alignment Fix** — Fixed double rendering when changing alignment during editing
+- **Text Loss Fix** — Fixed losing typed text when changing properties during inline editing
+- **Rich Text Inline Display** — Fixed styled text runs displaying on separate lines
+- **Slide Layer Order** — Fixed layers appearing in reverse order on article pages
+
+### Previous v1.5.36 Highlights
+
+- **Callout Inline Editing** — Double-click inline text editing for callout layers
+- **Documentation Accuracy Audit** — Updated all stale metrics
+- **Critical Review v42** — Comprehensive codebase audit scoring 8.6/10 overall
+
+### Previous v1.5.35 Highlights", "oldString": "---
 
 ## 🆕 What's New in v1.5.36
 
@@ -38,7 +60,7 @@
 - **Draft Recovery Fix** — Fixed false draft recovery prompts
 - **Layer Panel Header** — Redesigned with full Layers logo branding
 - **Canvas Accessibility** — Completed P3.5 accessibility improvements
-- **10,667 tests passing** (157 suites), 95.86% statement coverage, 85.40% branch coverage
+- **10,860 tests passing** (157 suites), 95.85% statement coverage, 85.37% branch coverage
 
 ### Previous v1.5.30 Highlights
 
@@ -241,20 +263,20 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.36 |
+| **Version (main)** | 1.5.39 |
 | **Version (REL1_43)** | 1.5.26-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 27, 2026 |
 | **Test Suites** | 157 |
-| **Total Tests** | 10,667 |
+| **Total Tests** | 10,840 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 95.86% |
-| **Branch Coverage** | 85.40% |
-| **Function Coverage** | 93.99% |
-| **Line Coverage** | 95.97% |
-| **JavaScript Files** | 126 |
-| **ES6 Classes** | 126 |
-| **God Classes** | 19 (2 generated, 17 JS, 2 PHP) |
+| **Statement Coverage** | 95.53% |
+| **Branch Coverage** | 85.28% |
+| **Function Coverage** | 93.97% |
+| **Line Coverage** | 95.64% |
+| **JavaScript Files** | 132 |
+| **ES6 Classes** | 132 |
+| **God Classes** | 22 (2 generated, 20 JS, 2 PHP) |
 | **i18n Messages** | ~718 |
 
 ---
