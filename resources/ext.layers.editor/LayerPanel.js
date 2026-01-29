@@ -1745,6 +1745,13 @@
 				return;
 			}
 
+			// If inline text editing is active, finish it first to capture the current content
+			// This prevents text loss when clicking on the layer panel during editing
+			const cm = this.editor && this.editor.canvasManager;
+			if ( cm && cm.isTextEditing && cm.inlineTextEditor ) {
+				cm.inlineTextEditor.finishEditing( true );
+			}
+
 			// Update selection through StateManager (single source of truth)
 			if ( this.editor && this.editor.stateManager ) {
 				if ( addToSelection && layerId ) {

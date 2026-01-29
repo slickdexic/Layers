@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 26, 2026  
-**Version:** 1.5.35
+**Last Updated:** January 29, 2026  
+**Version:** 1.5.39
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -12,8 +12,9 @@ This document lists known issues and current gaps for the Layers extension.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ None known |
-| P1 (Stability) | 0 | ✅ No known crashes/memory leaks |
+| P1 (Data Loss) | 0 | ✅ Text editing commit fixed |
 | P2 (Code Quality) | 0 | ✅ All resolved |
+| P3 (UX Polish) | 3 | 🟡 Overlay buttons, handles, cursors |
 | Feature Gaps | 3 | ⏳ Planned (F3, F6, F7) |
 
 ---
@@ -94,10 +95,50 @@ New tool for measuring and annotating angles with three anchor points (endpoint1
 
 ---
 
+## 🐛 Open Issues
+
+### P3. Overlay Buttons Too Large
+
+**Status:** 🟡 OPEN (January 29, 2026)  
+**Severity:** P3 (UX Polish)  
+**Component:** ViewerOverlay
+
+**Issue:** The hover overlay buttons (edit/view) on layered images are too large. They should be reduced to approximately 75% of their current size for better visual balance.
+
+**Files:** `resources/ext.layers/viewer/ViewerOverlay.js`, overlay CSS
+
+### P3. Drag Handle Hit Areas Too Small
+
+**Status:** 🟡 OPEN (January 29, 2026)  
+**Severity:** P3 (UX Polish)  
+**Component:** SelectionHandles, HitTestController
+
+**Issue:** The target areas for resize/rotation drag handles require too precise positioning. Users must position the cursor exactly on the small square handles rather than having a reasonable tolerance zone around them. This makes grabbing handles frustrating, especially on high-DPI displays.
+
+**Recommendation:** Increase hit test tolerance to 8-12 pixels around handles.
+
+### P3. Mouse Cursor Not Rotated for Rotated Objects
+
+**Status:** 🟡 OPEN (January 29, 2026)  
+**Severity:** P3 (UX Polish)  
+**Component:** SelectionHandles
+
+**Issue:** When selecting a rotated object, the resize cursors (nw-resize, ne-resize, etc.) do not rotate to match the object's rotation. This creates a visual disconnect where the cursor arrow direction doesn't match the actual resize direction.
+
+**Expected:** Cursor direction should rotate to match the object's rotation angle, similar to Figma, Illustrator, and other design tools.
+
+**Files:** `resources/ext.layers.editor/SelectionHandles.js` (getCursor method)
+
+---
+
 ## ✅ Recently Resolved Issues
 
 All previously identified P0 and P1 issues have been resolved:
 
+- ✅ **Text edits lost when clicking outside canvas** (January 29, 2026)
+  - Added guard in LayerPanel.selectLayer() to commit inline text editing before selection change
+  - Synchronously calls finishEditing(true) to preserve text before changing layers
+  - Added test coverage for the new behavior
 - ✅ **PHP 8.4 strict_types compatibility** (January 25, 2026)
   - Fixed `ColorValidator::isValidHexColor()` returning int instead of bool
   - Added `(int)` casts to config->get() calls for integer values
@@ -118,15 +159,15 @@ All previously identified P0 and P1 issues have been resolved:
 
 ---
 
-## Test Coverage Status (January 26, 2026)
+## Test Coverage Status (January 29, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests passing | **10,643** (157 suites) | ✅ |
-| Statement coverage | **94.45%** | ✅ Excellent |
-| Branch coverage | **84.87%** | ✅ Good |
-| Function coverage | **92.55%** | ✅ Excellent |
-| Line coverage | **94.59%** | ✅ Excellent |
+| Tests passing | **11,062** (163 suites) | ✅ |
+| Statement coverage | **95.37%** | ✅ Excellent |
+| Branch coverage | **84.92%** | ✅ Good |
+| Function coverage | **93.00%** | ✅ Excellent |
+| Line coverage | **95.50%** | ✅ Excellent |
 
 ---
 
@@ -167,5 +208,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 26, 2026*  
-*Status: ✅ Production-ready with excellent test coverage (94.45%, 10,643 tests).*
+*Document updated: January 29, 2026*  
+*Status: ✅ Production-ready with excellent test coverage (95.37%, 11,062 tests).*
