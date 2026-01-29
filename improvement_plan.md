@@ -1,8 +1,8 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 28, 2026  
-**Version:** 1.5.38  
-**Status:** Production-Ready, High Quality (8.5/10)
+**Last Updated:** January 28, 2026
+**Version:** 1.5.38
+**Status:** Production-Ready, High Quality (8.1/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
 
@@ -10,30 +10,34 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. A comprehensive critical review (v44) identified a **P0-priority version inconsistency** and several medium-priority items.
+The extension is **production-ready** with **comprehensive test coverage** and
+clean code practices. A comprehensive critical review (v47) identified
+**pervasive documentation drift** as a HIGH issue—multiple files have stale
+and conflicting metrics. The **InlineTextEditor** has critically low test
+coverage (77.65% line, 71.17% branch) despite being the most complex UI module.
 
 **Current Status:**
-- ✅ **P0:** All complete (Version inconsistency fixed January 28, 2026)
-- ✅ P1: All complete
-- 🟡 P2 items: 6 open (8 completed)
-- 🟡 P3 items: 8 open (4 completed)
+- ✅ **P0:** All complete
+- 🔴 P1: 2 HIGH items (documentation drift, InlineTextEditor coverage gap)
+- 🟡 P2 items: 9 open (added 2 new god classes, visual regression testing)
+- 🟡 P3 items: 13 open
 
 **Verified Metrics (January 28, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests passing | **10,827** (157 suites) | ✅ Excellent |
-| Statement coverage | **95.00%** | ✅ Excellent (recovered) |
-| Branch coverage | **84.73%** | ✅ Good |
-| Function coverage | **93.58%** | ✅ Excellent |
-| Line coverage | **95.11%** | ✅ Excellent |
+| Tests passing | **10,840** (157 suites) | ✅ Excellent |
+| Statement coverage | **95.53%** | ✅ Excellent |
+| Branch coverage | **85.28%** | ✅ Good |
+| Function coverage | **93.97%** | ✅ Excellent |
+| Line coverage | **95.64%** | ✅ Excellent |
 | JS files | 132 | All resources/ext.layers* |
 | JS lines | ~93,406 | Includes generated data |
 | PHP files | 40 | ✅ |
 | PHP lines | ~14,543 | ✅ |
 | PHP strict_types | **40/40 files** | ✅ Complete |
 | ES6 classes | All JS files | 100% migrated |
-| God classes (≥1,000 lines) | 22 | 2 generated, 18 JS, 2 PHP |
+| God classes (≥1,000 lines) | 22 | 2 generated, 20 JS, 2 PHP |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 11 | ✅ All legitimate |
 | innerHTML usages | 71 | ⚠️ Increased (was 63) |
@@ -61,9 +65,9 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ### P0.1 Fix Version Number Inconsistencies — ✅ FIXED
 
-**Status:** ✅ FIXED (January 28, 2026)  
-**Priority:** P0 - Critical (Immediate)  
-**Category:** Release Management / Professionalism  
+**Status:** ✅ FIXED (January 28, 2026)
+**Priority:** P0 - Critical (Immediate)
+**Category:** Release Management / Professionalism
 
 **Problem:** Version numbers were inconsistent again (extension.json 1.5.38, others 1.5.36).
 
@@ -77,24 +81,82 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ---
 
-## Phase 1 (P1): High Priority — ✅ ALL RESOLVED
+## Phase 1 (P1): High Priority — � 2 OPEN ITEMS
 
-### P1.3 Update docs/ARCHITECTURE.md Metrics — ✅ COMPLETED
+### P1.3 Fix Pervasive Documentation Drift — 🔴 OPEN (HIGH-1)
 
-**Status:** ✅ COMPLETED (January 28, 2026)  
-**Priority:** P1 - High  
-**Category:** Documentation / Professionalism  
-**Discovered:** v43 Review (January 27, 2026)
+**Status:** 🔴 OPEN (January 28, 2026)
+**Priority:** P1 - High
+**Category:** Documentation / Professionalism
+**Discovered:** v47 Review (January 28, 2026)
+**Severity:** HIGH
 
-**Problem:** docs/ARCHITECTURE.md contained stale metrics.
+**Problem:** Multiple documentation files contain **stale and conflicting metrics**:
 
-**Fix Applied (v44 final):**
-- Updated version to 1.5.38
-- Updated test count to 10,736
-- Updated coverage to 94.86% stmt / 84.55% branch
-- Updated JS lines to ~93,406
-- Updated i18n messages to ~653
-- Synchronized all metrics with verified values
+| File | Claimed Test Count | Claimed Coverage | Actual |
+|------|-------------------|------------------|--------|
+| README.md badge | 10,667 | 95.9% | **10,840 / 95.53%** |
+| README.md table | 10,667 | 95.86% | **10,840 / 95.53%** |
+| wiki/Home.md badge | 10,667 | 95.9% | **10,840 / 95.53%** |
+| wiki/Home.md table | 10,667 | 95.86% | **10,840 / 95.53%** |
+| docs/ARCHITECTURE.md | 10,827 | 95.00%/84.73% | **10,840 / 95.53%** |
+
+**Impact:**
+- Project appears unmaintained or carelessly managed
+- Undermines trust in documentation accuracy
+- New contributors receive conflicting information
+
+**Required Fix:**
+1. **Immediate:** Update all 5+ files with verified values (10,840 tests, 95.53% stmt, 85.28% branch)
+2. **Short-term:** Add CI check comparing coverage-summary.json to badge values
+3. **Long-term:** Auto-generate badges from CI artifacts
+
+**Files to Update:** README.md, wiki/Home.md, docs/ARCHITECTURE.md, CHANGELOG.md, Mediawiki-Extension-Layers.mediawiki
+
+**Estimated Effort:** 1 hour
+
+---
+
+### P1.4 Close InlineTextEditor Coverage Gap — 🔴 OPEN (HIGH-2)
+
+**Status:** 🔴 OPEN (January 28, 2026)
+**Priority:** P1 - High
+**Category:** Testing / Reliability
+**Discovered:** v47 Review (January 28, 2026)
+**Severity:** HIGH
+**Location:** `resources/ext.layers.editor/canvas/InlineTextEditor.js`
+
+**Problem:** InlineTextEditor.js has the **lowest coverage** of any production module:
+
+| Metric | Value | Suite Average | Gap |
+|--------|-------|---------------|-----|
+| Lines | **77.65%** | 95.64% | **-18%** |
+| Functions | **72.34%** | 93.97% | **-21.6%** |
+| Branches | **71.17%** | 85.28% | **-14.1%** |
+
+**Why This Matters:**
+- 2,282 lines — the largest hand-written controller
+- Rich text formatting support (v1.5.37+)
+- ContentEditable handling for textbox/callout layers
+- Floating toolbar with drag-and-drop
+- Highest user interaction complexity
+
+**Untested Scenarios (Probable):**
+- Rich text selection preservation across toolbar interactions
+- `_savedSelection` edge cases
+- Toolbar drag-and-drop mechanics
+- Keyboard shortcuts (Enter, Escape, Ctrl+Enter)
+
+**Required Fix:**
+1. Run targeted coverage: `npm run test:js -- --coverage --collectCoverageFrom="**/InlineTextEditor.js"`
+2. Analyze uncovered lines and add tests for:
+   - Start/commit/cancel flows for all layer types
+   - Rich text formatting application/removal
+   - Toolbar repositioning and drag
+   - Keyboard shortcut handling
+3. Target: **85% line coverage minimum**
+
+**Estimated Effort:** 2-3 days
 
 ### Previously Completed P1 Items:
 - ✅ P1.0: Documentation metrics in codebase_review.md updated
@@ -103,50 +165,13 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 5 OPEN ITEMS
+## Phase 2 (P2): Medium Priority — 🟡 9 OPEN ITEMS
 
-### P2.1 Silent .catch() Blocks — ✅ RESOLVED (FALSE POSITIVES)
+### P2.3 Standardize Database Method Return Types — 🟡 OPEN
 
-**Status:** ✅ Resolved  
-**Priority:** N/A (Not an issue)  
-**Reviewed:** v42 Verification (January 27, 2026)
-
-**Finding:** All 4 reported `.catch()` blocks were audited and found to be correctly handled:
-
-| File | Line | Assessment |
-|------|------|------------|
-| Toolbar.js | 1625 | ✅ OK — Comment documents error handled by ImportExportManager |
-| EmojiPickerPanel.js | 533 | ✅ OK — Shows visual "?" fallback for failed emoji load |
-| PathToolHandler.js | N/A | ❌ False positive — file is 230 lines, no .catch exists |
-| EmojiLibraryIndex.js | N/A | ❌ False positive — line 841 in build script, not production |
-
-**Conclusion:** No action needed. All production catch blocks have appropriate handling.
-
----
-
-### P2.2 Async Functions Without Try-Catch — ✅ RESOLVED (FALSE POSITIVES)
-
-**Status:** ✅ Resolved  
-**Priority:** N/A (Not an issue)  
-**Reviewed:** v42 Verification (January 27, 2026)
-
-**Finding:** All mentioned files use Promise chains with .catch() handlers, not async/await.
-The codebase uses consistent Promise-based error handling throughout the emoji modules.
-
-| File | Assessment |
-|------|------------|
-| EmojiPickerPanel.js | ✅ Uses Promise chains with .catch() |
-| EmojiLibraryIndex.js | ✅ Uses Promise chains with proper error re-throw |
-
-**Conclusion:** No action needed. Promise chains handle errors correctly.
-
----
-
-### P2.3 Standardize Database Method Return Types
-
-**Status:** Open  
-**Priority:** P2 - Medium  
-**Category:** Code Quality / API Consistency  
+**Status:** Open
+**Priority:** P2 - Medium
+**Category:** Code Quality / API Consistency
 **Location:** `src/Database/LayersDatabase.php`
 
 **Problem:** Inconsistent return types across methods:
@@ -164,11 +189,11 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ---
 
-### P2.4 Address HistoryManager Memory for Large Images
+### P2.4 Address HistoryManager Memory for Large Images — 🟡 OPEN
 
-**Status:** Open (Mitigation Applied)  
-**Priority:** P2 - Medium  
-**Category:** Performance / Memory  
+**Status:** Open (Mitigation Applied)
+**Priority:** P2 - Medium
+**Category:** Performance / Memory
 **Location:** `resources/ext.layers.editor/HistoryManager.js`
 
 **Problem:** When DeepClone fallback is used, entire base64 image data is copied per undo step.
@@ -185,24 +210,28 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ---
 
-### P2.5 Reduce JavaScript God Class Count
+### P2.5 Reduce JavaScript God Class Count — 🟡 ONGOING
 
-**Status:** Ongoing  
-**Priority:** P2 - Medium  
-**Category:** Architecture  
+**Status:** Ongoing (Trend: Growing ⚠️)
+**Priority:** P2 - Medium
+**Category:** Architecture
 
-**Target:** Reduce hand-written god classes from 17 to ≤12
+**Target:** Reduce hand-written god classes from 20 to ≤12
 
-**Current Count (January 27, 2026):** 17 hand-written JS files ≥1,000 lines
+**Current Count (January 28, 2026):** 20 hand-written JS files ≥1,000 lines
+**Alert:** Two files crossed the 1,000-line threshold this cycle:
+- `TextBoxRenderer.js` — now 1,117 lines
+- `PropertiesForm.js` — now 1,006 lines
 
 **Priority Order (by improvement potential):**
 
 | File | Lines | Strategy | Impact |
 |------|-------|----------|--------|
-| ViewerManager.js | 2,014 | Extract SlideRenderer, ImageRenderer | High |
+| InlineTextEditor.js | 2,282 | Extract RichTextToolbar, SelectionManager | High |
+| ViewerManager.js | 2,026 | Extract SlideRenderer, ImageRenderer | High |
 | APIManager.js | 1,523 | Extract RetryManager, RequestTracker | High |
-| Toolbar.js | 1,891 | Extract ToolbarSections by category | Medium |
-| ToolbarStyleControls.js | 1,070 | Extract style category controllers | Medium |
+| TextBoxRenderer.js | 1,117 | Extract RichTextRenderer | Medium |
+| PropertiesForm.js | 1,006 | Already delegates to PropertyBuilders | Low |
 
 **Files Already Well-Delegated (acceptable as-is):**
 - CanvasManager.js — Facade with 10+ controllers
@@ -210,21 +239,15 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 - SelectionManager.js — Good module separation
 - LayersEditor.js — Main entry point with clear responsibilities
 
-**Files Where Size is Justified:**
-- ArrowRenderer.js, CalloutRenderer.js — Complex math/geometry
-- ResizeCalculator.js, TransformController.js — Math-intensive
-- PropertyBuilders.js — UI builder pattern (many small methods)
-- InlineTextEditor.js — Rich text complexity
-
 **Estimated Effort:** 2-3 days per major extraction
 
 ---
 
-### P2.6 Refactor PHP God Classes
+### P2.6 Refactor PHP God Classes — 🟡 PLANNED
 
-**Status:** Planned  
-**Priority:** P2 - Medium  
-**Category:** Architecture  
+**Status:** Planned
+**Priority:** P2 - Medium
+**Category:** Architecture
 
 **Target Classes:**
 
@@ -244,12 +267,12 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ---
 
-### P2.7 Add Additional E2E Tests for ShapeLibraryPanel
+### P2.7 Add Additional E2E Tests for ShapeLibraryPanel — 🟡 PARTIAL
 
-**Status:** Partially Complete  
-**Priority:** P2 - Medium  
-**Category:** Testing  
-**Location:** `resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js` (812 lines)
+**Status:** Partially Complete
+**Priority:** P2 - Medium
+**Category:** Testing
+**Location:** `resources/ext.layers.editor/shapeLibrary/ShapeLibraryPanel.js`
 
 **Problem:** ShapeLibraryPanel has limited unit test coverage due to tight OOUI integration.
 
@@ -270,21 +293,52 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ### P2.8 Fix window.onbeforeunload Direct Assignment — ✅ COMPLETED
 
-**Status:** ✅ COMPLETED (January 28, 2026)  
-**Priority:** P2 - Medium  
-**Category:** Code Quality / Compatibility  
-**Location:** `resources/ext.layers.slides/SlideManager.js`  
-**Discovered:** v43 Review (January 27, 2026)
+**Status:** ✅ COMPLETED (January 28, 2026)
 
-**Problem:** SlideManager directly assigned to `window.onbeforeunload`.
+---
 
-**Fix Applied:**
-- Added `beforeUnloadHandler` bound function to constructor
-- Refactored `handleDirty()` to use `addEventListener`/`removeEventListener`
-- Handler now only fires when `isDirty` is true
-- Properly tracks dirty state transitions to avoid duplicate listeners
+### P2.9 Increase Coverage in High-Risk UI Modules — 🟡 OPEN
 
-**Estimated Effort:** 30 minutes
+**Status:** Open
+**Priority:** P2 - Medium
+**Category:** Testing / Reliability
+**Locations:** `resources/ext.layers.editor/canvas/InlineTextEditor.js`,
+`resources/ext.layers.editor/LayersEditor.js`, `resources/ext.layers.editor/Toolbar.js`
+
+**Problem:** Coverage is lowest in the most complex UI components, which are
+most likely to regress. InlineTextEditor is below 80% in lines/functions.
+
+**Recommended Work:**
+1. Add tests for inline text edit start/commit/cancel flows
+2. Add tests for editor teardown/navigation paths
+3. Add tests for toolbar state sync on multi-selection
+
+**Estimated Effort:** 2–3 days
+
+---
+
+### P2.10 Add Visual Regression Testing — 🟡 OPEN (Promoted from P3.1)
+
+**Status:** Not Started
+**Priority:** P2 - Medium (elevated from P3)
+**Category:** Testing
+**Discovered:** v47 Review (January 28, 2026)
+
+**Problem:** No visual snapshot tests for canvas rendering.
+
+**Impact:** A rendering bug in ShapeRenderer, TextBoxRenderer, ArrowRenderer,
+etc. could pass all unit tests while producing visibly incorrect output.
+
+**Solution:**
+1. Add jest-image-snapshot for canvas output testing
+2. Create baseline snapshots for key rendering scenarios:
+   - All 16 layer types with default styles
+   - Gradient fills on shapes
+   - Rich text formatting in textbox layers
+   - Arrow with various head styles
+3. Run visual tests on CI
+
+**Estimated Effort:** 1-2 sprints
 
 ---
 
@@ -303,41 +357,19 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ---
 
-## Phase 3 (P3): Long-Term Improvements — 🟡 8 ITEMS
-
-### P3.1 Add Visual Regression Testing
-
-**Status:** Not Started  
-**Priority:** P3 - Low  
-**Category:** Testing  
-
-**Problem:** No visual snapshot tests for canvas rendering.
-
-**Solution:**
-1. Add jest-image-snapshot for canvas output testing
-2. Create baseline snapshots for key rendering scenarios
-3. Run visual tests on CI
-
-**Tools to Consider:**
-- jest-image-snapshot (simple, Jest integration)
-- Percy (cloud-based, cross-browser)
-- Chromatic (Storybook integration)
-
-**Estimated Effort:** 1-2 sprints
-
----
+## Phase 3 (P3): Long-Term Improvements — 🟡 13 ITEMS
 
 ### P3.2 TypeScript Migration for Complex Modules
 
-**Status:** Not Started  
-**Priority:** P3 - Low  
-**Category:** Code Quality  
+**Status:** Not Started
+**Priority:** P3 - Low
+**Category:** Code Quality
 
 **Candidate Modules:**
-1. **StateManager.js** (829 lines) — Central state with subscription system
-2. **APIManager.js** (1,523 lines) — API communication layer
-3. **GroupManager.js** (1,171 lines) — Layer grouping logic
-4. **SelectionManager.js** (1,431 lines) — Multi-selection handling
+1. **StateManager.js** (829 lines)
+2. **APIManager.js** (1,523 lines)
+3. **GroupManager.js** (1,171 lines)
+4. **SelectionManager.js** (1,431 lines)
 
 **Migration Strategy:**
 1. Add TypeScript build pipeline
@@ -351,21 +383,11 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ### P3.3 Deprecated Code Removal Plan
 
-**Status:** Planned for v2.0  
-**Priority:** P3 - Low  
-**Category:** Technical Debt  
+**Status:** Planned for v2.0
+**Priority:** P3 - Low
+**Category:** Technical Debt
 
-**Deprecated APIs to Remove in v2.0 (7 markers):**
-
-| File | Deprecated Item | Replacement |
-|------|-----------------|-------------|
-| ToolbarStyleControls.js (753) | Context-aware toolbar setting | Now always enabled |
-| ToolbarStyleControls.js (1009) | `hideControlsForTool()` | Use `hideControlsForSelectedLayers()` |
-| ModuleRegistry.js (311) | `window.layersModuleRegistry` | Use `window.layersRegistry` |
-| ModuleRegistry.js (338) | Legacy export pattern | Use `window.Layers.*` namespace |
-| LayerPanel.js (529) | `createNewFolder()` | Use `createFolder()` |
-| LayerPanel.js (886) | Code panel methods | Moved to UIManager |
-| TransformationEngine.js (332) | Direct transform methods | Use canvas context transforms |
+**Deprecated APIs to Remove in v2.0 (7 markers).**
 
 **Plan:**
 1. Create migration guide document for each deprecated API
@@ -379,18 +401,11 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ### P3.4 Custom Fonts Support (F3)
 
-**Status:** Not Started  
-**Priority:** P3 - Low  
-**Category:** Feature  
+**Status:** Not Started
+**Priority:** P3 - Low
+**Category:** Feature
 
 **Problem:** Limited to default font allowlist in `$wgLayersDefaultFonts`.
-
-**Solution:**
-1. Add web font loader utility
-2. Allow users to specify fonts via config
-3. Validate font names to prevent XSS
-4. Cache loaded fonts for performance
-5. Fallback gracefully if font fails to load
 
 **Estimated Effort:** 1 week
 
@@ -422,20 +437,15 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ### P3.9 Magic Number Extraction
 
-**Status:** Not Started  
-**Priority:** P3 - Low  
-**Category:** Code Quality  
+**Status:** Not Started
+**Priority:** P3 - Low
+**Category:** Code Quality
 
-**Problem:** Various magic numbers scattered through the codebase:
-- Timeout values (100ms, 200ms, 1000ms)
-- Canvas padding (20, 50)
-- Backlink limit (100)
-- Retry counts and delays
+**Problem:** Various magic numbers scattered through the codebase.
 
 **Solution:**
 1. Create `LayersConstants.js` for JS magic numbers
 2. Add PHP config options for configurable limits
-3. Document the purpose of each constant
 
 **Estimated Effort:** 4 hours
 
@@ -443,10 +453,9 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ### P3.10 Enhanced Dimension Tool (FR-14)
 
-**Status:** Proposed  
-**Priority:** P3 - Low  
-**Category:** Feature Enhancement  
-
+**Status:** Proposed
+**Priority:** P3 - Low
+**Category:** Feature Enhancement
 **Request:** Make the dimension line draggable independently from anchor points.
 
 **Estimated Effort:** 1 week
@@ -455,10 +464,9 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ### P3.11 Angle Dimension Tool (FR-15)
 
-**Status:** Proposed  
-**Priority:** P3 - Low  
-**Category:** New Feature  
-
+**Status:** Proposed
+**Priority:** P3 - Low
+**Category:** New Feature
 **Request:** New tool for measuring and annotating angles.
 
 **Estimated Effort:** 2 weeks
@@ -467,21 +475,13 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ### P3.12 Fix Read-Only API Permission Checks
 
-**Status:** Open  
-**Priority:** P3 - Low  
-**Category:** Security Hardening  
-**Discovered:** v42 Review (January 27, 2026)
+**Status:** Open
+**Priority:** P3 - Low
+**Category:** Security Hardening
 
-**Problem:** Two read-only special pages lack explicit permission checks:
+**Problem:** Two read-only special pages lack explicit permission checks (SpecialSlides.php, SpecialEditSlide.php).
 
-| File | Issue |
-|------|-------|
-| SpecialSlides.php | `execute()` has no `checkUserRightsAny()` before listing slides |
-| SpecialEditSlide.php | `execute()` has no permission check before returning slide data |
-
-**Note:** ApiLayersInfo does check `userCan('read')` on line 86.
-
-**Solution:** Add `$this->checkUserRightsAny( 'read' )` to both special pages.
+**Solution:** Add `$this->checkUserRightsAny('read')`.
 
 **Estimated Effort:** 30 minutes
 
@@ -489,131 +489,30 @@ The codebase uses consistent Promise-based error handling throughout the emoji m
 
 ### P3.13 Rich Text Formatting (FR-16) — HIGH VALUE
 
-**Status:** Open  
-**Priority:** P3 - Medium (High Value)  
-**Category:** Feature Enhancement  
+**Status:** Open
+**Priority:** P3 - Medium (High Value)
+**Category:** Feature Enhancement
 **Proposed:** January 28, 2026
 
-**Problem:** Text Box and Callout layers currently support only uniform formatting. All text in a layer shares identical font size, color, weight, and style. This limits expressive capability compared to tools like Figma, Canva, and PowerPoint.
+**Problem:** Text Box and Callout layers currently support only uniform formatting.
 
-**Desired Behavior:**
-- Select a portion of text within a text box
-- Apply formatting (bold, italic, color, size) to selection only
-- Mixed formatting persists through save/load
-
-**Solution Summary:**
-1. Add `richText` array to layer data model (styled text runs)
-2. Update TextBoxRenderer/CalloutRenderer to render runs
-3. Replace textarea with contenteditable in InlineTextEditor
-4. Integrate toolbar formatting with text selection
-
-**Impact:** HIGH — Would significantly improve the editor's value proposition
-
-**See:** `docs/FUTURE_IMPROVEMENTS.md` → FR-16 for detailed implementation plan
+**Desired Behavior:** Mixed formatting (bold, italic, color) within a single text box.
 
 **Estimated Effort:** 3-4 weeks
 
 ---
 
-## God Class Status Summary
+### P3.14 Reduce Noisy Jest Output
 
-### 22 Files ≥1,000 Lines (2 Generated + 18 JS + 2 PHP)
+**Status:** Not Started
+**Priority:** P3 - Low
+**Category:** Testing / DX
 
-| Category | Count | Files |
-|----------|-------|-------|
-| Generated (exempt) | 2 | ShapeLibraryData, EmojiLibraryIndex |
-| Well-delegated | 10 | CanvasManager, LayerPanel, SelectionManager, etc. |
-| Math/Rendering | 6 | ArrowRenderer, ResizeCalculator, TextBoxRenderer (NEW), etc. |
-| Needs Attention | 2 | ViewerManager, APIManager |
-| PHP | 2 | LayersDatabase, ServerSideLayerValidator |
+**Problem:** JSDOM navigation errors and performance logs clog output.
 
-**⚠️ Trend Alert:** TextBoxRenderer.js is a new god class (1,117 lines). The trend is worsening, not improving.
+**Solution:** Gate logging and mock navigation.
 
----
-
-## Progress Tracking
-
-### Completed (✅)
-
-| Item | Date | Notes |
-|------|------|-------|
-| P0: CSRF tokens | Jan 24, 2026 | All write APIs protected |
-| P0: console.log removal | Jan 24, 2026 | Production code clean |
-| P0: Version consistency | Jan 26, 2026 | Automation script added |
-| P1.0: Documentation metrics | Jan 26, 2026 | All metrics updated |
-| P1.1: paths validation | Jan 25, 2026 | customShape layers validated |
-| P1.2: cache invalidation | Jan 25, 2026 | Job queue async purge |
-| P2.A: ViewerManager test fix | Jan 27, 2026 | Added missing lockMode |
-| P2.B: Layer search | Jan 25, 2026 | Full search/filter UI |
-| P2.C: i18n docs | Jan 25, 2026 | All ~718 keys documented |
-| P2.D: Query simplification | Jan 25, 2026 | Two-query approach |
-| P2.E: Coverage thresholds | Jan 25, 2026 | Raised to 80-92% |
-| P2.F: RGBA hex colors | Jan 25, 2026 | 3/4/6/8-digit support |
-| P2.G: DraftManager leak | Jan 25, 2026 | Subscription cleanup |
-| P2.H: Deprecated code dates | Jan 27, 2026 | All 7 have v2.0 dates |
-| P3.5: Zoom-to-cursor | Jan 26, 2026 | Already implemented |
-| P3.6: Accessibility | Jan 25, 2026 | ARIA regions complete |
-| P3.7: Slide docs | Jan 25, 2026 | Architecture documented |
-| P3.8: Timeout audit | Jan 25, 2026 | Adequate handling |
-
-### In Progress (🟡)
-
-| Item | Status | Priority |
-|------|--------|----------|
-| P2.1: Silent catch logging | Open | Medium |
-| P2.2: Async try-catch | Open | Medium |
-| P2.3: DB return types | Open | Medium |
-| P2.4: HistoryManager memory | Mitigated | Medium |
-| P2.5: JS god classes | Ongoing | Medium |
-| P2.6: PHP god classes | Planned | Medium |
-| P2.7: ShapeLibrary E2E | Partial | Medium |
-| P2.8: onbeforeunload fix | ✅ Completed | Medium |
-
-### Blocked (🔴)
-
-None currently blocked.
-
----
-
-## Next Steps
-
-### Quick Wins (This Week)
-1. **P1.3:** Update docs/ARCHITECTURE.md with current metrics
-2. **P3.12:** Add permission checks to special pages (30 min)
-3. Re-audit innerHTML usages (increased from 63 to 71)
-
-### This Sprint
-4. **P2.3:** Standardize DB return types
-5. **P2.4:** Make DeepClone a hard dependency
-6. Investigate coverage decline (94.86% vs 95.85%)
-
-### Next Milestone
-7. **P2.5:** Stop adding god classes, begin reducing existing ones
-8. **P2.6:** PHP god class refactoring
-9. **P2.7:** Additional ShapeLibrary E2E tests
-
-### Long-Term (v2.0)
-10. **P3.1:** Visual regression testing
-11. **P3.2:** TypeScript migration
-12. **P3.3:** Deprecated code removal
-13. **P3.4:** Custom fonts support
-
----
-
-## Metrics to Track
-
-| Metric | Current | Target | Notes |
-|--------|---------|--------|-------|
-| Test count | 10,736 | Maintain | No regression |
-| Statement coverage | 94.86% | ≥92% | ⚠️ Declining (was 95.85%) |
-| Branch coverage | 84.55% | ≥80% | ⚠️ Declining (was 85.39%) |
-| Hand-written god classes (JS) | 18 | ≤12 | ⚠️ Increasing (was 17) |
-| PHP god classes | 2 | 0 | Refactor both |
-| innerHTML usages | 71 | ≤65 | ⚠️ Increasing (was 63) |
-| Deprecated markers | 7 | 0 | Remove in v2.0 |
-| ESLint disables | 11 | ≤15 | Minimized |
-| Version consistency | ✅ | ✅ | Fixed January 28, 2026 |
-| Overall score | 8.6 | 9.0 | Path to world-class |
+**Estimated Effort:** 1-2 hours
 
 ---
 
@@ -621,11 +520,11 @@ None currently blocked.
 
 | Item | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| Version inconsistency | ✅ Fixed | 0 | P0.1 |
-| docs/ARCHITECTURE.md stale | High | 30 min | P1.3 |
+| docs/ARCHITECTURE.md stale | High | 1 hour | P1.3 |
 | 7 deprecated APIs | Medium | 1 sprint | P3.3 |
 | 22 god classes | Medium | 2-3 weeks | P2.5/P2.6 |
 | Inconsistent DB return types | Medium | 1-2 days | P2.3 |
+| HistoryManager memory risk | High | 2 days | P2.4 |
 | No visual regression tests | Medium | 1-2 sprints | P3.1 |
 | Coverage declining | Medium | Ongoing | Monitor |
 | innerHTML increasing | Low | Ongoing | Monitor |
@@ -633,5 +532,4 @@ None currently blocked.
 
 ---
 
-*Last updated: January 28, 2026*  
-*Overall score: 8.6/10 — Production-ready, high quality. All critical issues resolved.*
+*Last updated: January 28, 2026*

@@ -18,7 +18,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - Now layers[0] (top in panel) is correctly drawn last (appears on top), matching editor behavior
 
 ### Technical Details
-- All 10,736 tests pass (157 test suites)
+- All 10,840 tests pass (157 test suites)
+- Test coverage: 95.53% statement, 85.28% branch, 93.97% function, 95.64% line
 - ESLint passes on all modified files
 - Fixes verified on REL1_39 with MediaWiki 1.39.7
 
