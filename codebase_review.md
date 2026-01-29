@@ -9,7 +9,7 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git branch --show-current`)
-- **Tests:** 10,996 tests in 162 suites (10,996 passed, **0 skipped** ✅)
+- **Tests:** 11,046 tests in 163 suites (11,046 passed, **0 skipped** ✅)
 - **Coverage:** 95.37% statements, 84.92% branches, 93.42% functions, 95.25% lines
 - **JS files:** 139 production files (all files in resources/ext.layers* directories)
 - **JS lines:** ~91,544 total (verified via line count)
@@ -80,8 +80,8 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | Branches | 84.92% | 80% | ✅ Exceeds |
 | Functions | 93.42% | 85% | ✅ Exceeds |
 | Lines | 95.25% | 90% | ✅ Exceeds |
-| Test Count | 10,996 | - | ✅ Excellent |
-| Test Suites | 162 | - | ✅ |
+| Test Count | 11,046 | - | ✅ Excellent |
+| Test Suites | 163 | - | ✅ |
 | Skipped Tests | 0 | 0 | ✅ |
 
 ### Code Size Analysis
@@ -101,10 +101,10 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | File | Lines | Functions | Branches | Risk Level |
 |------|-------|-----------|----------|------------|
 | SlideController.js | **74.61%** | **86.84%** | **72.77%** | 🔴 HIGH |
-| RichTextUtils.js | **0%** | **0%** | **0%** | 🔴 HIGH (new file) |
 | InlineTextEditor.js | 88.43% | 76.08% | 80.65% | 🟠 MEDIUM |
 | TextBoxRenderer.js | 88.18% | 90.90% | 87.37% | 🟠 MEDIUM |
 | LayersEditor.js | 90.41% | 80.00% | 77.41% | 🟠 MEDIUM |
+| ArrowRenderer.js | 84.04% | 89.65% | 84.09% | 🟠 MEDIUM |
 
 ---
 
@@ -123,7 +123,7 @@ No critical security or data integrity issues found. The extension is production
 - `tests/jest/ViewerManager.test.js` - 12 blocks removed (1,753 lines)
 - `tests/jest/canvas/InlineTextEditor.test.js` - 13 blocks removed (931 lines)
 
-Test run now shows: "10,996 passed, 0 skipped"
+Test run now shows: "11,046 passed, 0 skipped"
 
 ---
 
