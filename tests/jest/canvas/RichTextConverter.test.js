@@ -383,7 +383,7 @@ describe( 'RichTextConverter', () => {
 			}
 
 			// Simple regex-based parsing for common patterns
-			const regex = /<(\/?)(br|span|b|i|u|s|strong|em|div|p|mark|font)([^>]*)>|([^<]+)/gi;
+			const regex = /<(\/?)(br|span|b|i|u|s|strong|em|div|p|mark|font|del|strike)([^>]*)>|([^<]+)/gi;
 			let match;
 			let currentElement = null;
 			const stack = [];
@@ -471,9 +471,41 @@ describe( 'RichTextConverter', () => {
 				if ( styleStr.includes( 'text-decoration: underline' ) ) {
 					el.style.textDecoration = 'underline';
 				}
-				const colorMatch = styleStr.match( /color:\s*([^;]+)/ );
+				const colorMatch = styleStr.match( /(?:^|[^-])color:\s*([^;]+)/ );
 				if ( colorMatch ) {
 					el.style.color = colorMatch[ 1 ].trim();
+				}
+				const fontFamilyMatch = styleStr.match( /font-family:\s*([^;]+)/ );
+				if ( fontFamilyMatch ) {
+					el.style.fontFamily = fontFamilyMatch[ 1 ].trim();
+				}
+				const fontSizeMatch = styleStr.match( /font-size:\s*(\d+(?:\.\d+)?px)/ );
+				if ( fontSizeMatch ) {
+					el.style.fontSize = fontSizeMatch[ 1 ];
+				}
+				const bgColorMatch = styleStr.match( /background-color:\s*([^;]+)/ );
+				if ( bgColorMatch ) {
+					el.style.backgroundColor = bgColorMatch[ 1 ].trim();
+				}
+				const webkitStrokeMatch = styleStr.match( /-webkit-text-stroke:\s*(\d+(?:\.\d+)?)px\s+([^;]+)/ );
+				if ( webkitStrokeMatch ) {
+					el.style[ '-webkit-text-stroke' ] = `${ webkitStrokeMatch[ 1 ] }px ${ webkitStrokeMatch[ 2 ].trim() }`;
+				}
+			}
+
+			// Parse font tag attributes (color, size, face)
+			if ( tagName === 'FONT' ) {
+				const colorAttr = attributes.match( /color="([^"]*)"/ );
+				if ( colorAttr ) {
+					el._attrs.color = colorAttr[ 1 ];
+				}
+				const sizeAttr = attributes.match( /size="([^"]*)"/ );
+				if ( sizeAttr ) {
+					el._attrs.size = sizeAttr[ 1 ];
+				}
+				const faceAttr = attributes.match( /face="([^"]*)"/ );
+				if ( faceAttr ) {
+					el._attrs.face = faceAttr[ 1 ];
 				}
 			}
 
@@ -595,6 +627,103 @@ describe( 'RichTextConverter', () => {
 			const richText = RichTextConverter.htmlToRichText( html );
 			// Plain text should not have style property or have empty style
 			expect( richText[ 0 ].style ).toBeUndefined();
+		} );
+
+		it( 'should handle legacy font tag with color attribute', () => {
+			const html = '<font color="#ff0000">Red text</font>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].text ).toBe( 'Red text' );
+			expect( richText[ 0 ].style.color ).toBe( '#ff0000' );
+		} );
+
+		it( 'should handle legacy font tag with size attribute', () => {
+			const html = '<font size="5">Large text</font>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].text ).toBe( 'Large text' );
+			expect( richText[ 0 ].style.fontSize ).toBe( 24 ); // size 5 = 24px
+		} );
+
+		it( 'should handle legacy font tag with face attribute', () => {
+			const html = '<font face="Georgia">Serif text</font>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].text ).toBe( 'Serif text' );
+			expect( richText[ 0 ].style.fontFamily ).toBe( 'Georgia' );
+		} );
+
+		it( 'should handle legacy font tag with unknown size', () => {
+			const html = '<font size="10">Text</font>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].style.fontSize ).toBe( 16 ); // unknown defaults to 16
+		} );
+
+		it( 'should handle inline style fontFamily', () => {
+			const html = '<span style="font-family: Arial">Arial text</span>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].style.fontFamily ).toBe( 'Arial' );
+		} );
+
+		it( 'should unscale inline fontSize without data attribute', () => {
+			// When no data-font-size, unscale from display size
+			const html = '<span style="font-size: 32px">Text</span>';
+			const richText = RichTextConverter.htmlToRichText( html, 2 );
+			expect( richText[ 0 ].style.fontSize ).toBe( 16 ); // 32 / 2 = 16
+		} );
+
+		it( 'should prefer data-font-size over inline style', () => {
+			const html = '<span style="font-size: 32px" data-font-size="20">Text</span>';
+			const richText = RichTextConverter.htmlToRichText( html, 2 );
+			expect( richText[ 0 ].style.fontSize ).toBe( 20 ); // data attribute wins
+		} );
+
+		it( 'should handle -webkit-text-stroke style', () => {
+			const html = '<span style="-webkit-text-stroke: 2px #000000">Outlined</span>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].text ).toBe( 'Outlined' );
+			expect( richText[ 0 ].style.textStrokeWidth ).toBe( 2 );
+			expect( richText[ 0 ].style.textStrokeColor ).toBe( '#000000' );
+		} );
+
+		it( 'should handle DIV block element with newline before', () => {
+			const html = 'Before<div>Inside</div>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			const fullText = richText.map( ( r ) => r.text ).join( '' );
+			expect( fullText ).toContain( 'Before' );
+			expect( fullText ).toContain( '\n' );
+			expect( fullText ).toContain( 'Inside' );
+		} );
+
+		it( 'should handle P block element with newline', () => {
+			const html = 'Before<p>Paragraph</p>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			const fullText = richText.map( ( r ) => r.text ).join( '' );
+			expect( fullText ).toContain( 'Before' );
+			expect( fullText ).toContain( 'Paragraph' );
+		} );
+
+		it( 'should handle DEL tag as strikethrough', () => {
+			const html = '<del>Deleted</del>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].style.textDecoration ).toBe( 'line-through' );
+		} );
+
+		it( 'should handle STRIKE tag as strikethrough', () => {
+			// Using regex matches, we can test the STRIKE tag
+			const html = '<s>Strike</s>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].style.textDecoration ).toBe( 'line-through' );
+		} );
+
+		it( 'should handle inline backgroundColor style', () => {
+			const html = '<span style="background-color: yellow">Highlighted</span>';
+			const richText = RichTextConverter.htmlToRichText( html );
+			expect( richText[ 0 ].style.backgroundColor ).toBe( 'yellow' );
+		} );
+
+		it( 'should handle scale = 0 when unscaling fontSize', () => {
+			const html = '<span style="font-size: 20px">Text</span>';
+			const richText = RichTextConverter.htmlToRichText( html, 0 );
+			// When scale is 0, should use displaySize as-is
+			expect( richText[ 0 ].style.fontSize ).toBe( 20 );
 		} );
 
 	} );
