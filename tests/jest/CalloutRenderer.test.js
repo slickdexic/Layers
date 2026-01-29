@@ -35,6 +35,8 @@ function createMockContext() {
 		lineTo: jest.fn(),
 		arc: jest.fn(),
 		arcTo: jest.fn(),
+		quadraticCurveTo: jest.fn(),
+		bezierCurveTo: jest.fn(),
 		fill: jest.fn(),
 		stroke: jest.fn(),
 		fillText: jest.fn(),
@@ -1811,6 +1813,111 @@ describe( 'CalloutRenderer', () => {
 				renderer.draw( layer, { scale: 1 } );
 				expect( ctx.beginPath ).toHaveBeenCalled();
 			}
+		} );
+
+		test( 'should render line tailStyle correctly', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 25,
+				tailStyle: 'line',
+				tailTipX: 100,
+				tailTipY: 200,
+				fill: '#ffffff',
+				stroke: '#000000'
+			};
+
+			// Should not throw and should call rendering methods
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		test( 'should render curved tailStyle correctly', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 25,
+				tailStyle: 'curved',
+				tailTipX: 100,
+				tailTipY: 200,
+				fill: '#ffffff'
+			};
+
+			// Should not throw and should call rendering methods
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle tail on corner arc', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			// Tip positioned to hit corner arc
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 30,
+				tailSize: 20,
+				tailStyle: 'triangle',
+				tailTipX: 20,
+				tailTipY: 20, // Near top-left corner
+				fill: '#ffffff'
+			};
+
+			// Should not throw when tail is near corner
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
+			expect( ctx.beginPath ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle very small corner radius', () => {
+			const ctx = createMockContext();
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				shadowRenderer: mockShadowRenderer,
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 50,
+				y: 50,
+				width: 200,
+				height: 100,
+				cornerRadius: 0.1, // Very small but not zero
+				tailSize: 20,
+				tailStyle: 'triangle',
+				tailTipX: 100,
+				tailTipY: 200,
+				fill: '#ffffff'
+			};
+
+			// Should not throw
+			expect( () => renderer.draw( layer, { scale: 1 } ) ).not.toThrow();
 		} );
 	} );
 } );
