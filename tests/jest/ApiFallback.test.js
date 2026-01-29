@@ -938,4 +938,84 @@ describe( 'ApiFallback', () => {
 			expect( window.Layers.Viewer.ApiFallback ).toBe( ApiFallback );
 		} );
 	} );
+
+	describe( 'error handling edge cases', () => {
+		it( 'should handle processing errors in API response handler', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: {
+							layers: [ { id: 'layer1', type: 'text' } ]
+						}
+					}
+				}
+			} );
+
+			// Make initializeViewer throw
+			mockViewerManager.initializeViewer.mockImplementation( () => {
+				throw new Error( 'Viewer init failed' );
+			} );
+
+			const fallback = new ApiFallback( {
+				debug: true,
+				urlParser: mockUrlParser,
+				viewerManager: mockViewerManager
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await jest.runAllTimersAsync();
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ApiFallback]',
+				'API fallback processing error:',
+				expect.any( Error )
+			);
+		} );
+
+		it( 'should handle mw.loader.using rejection', async () => {
+			mockMw.loader.using.mockReturnValue( Promise.reject( new Error( 'Module load failed' ) ) );
+
+			const fallback = new ApiFallback( {
+				debug: true,
+				urlParser: mockUrlParser,
+				viewerManager: mockViewerManager
+			} );
+
+			fallback.initialize();
+
+			await jest.runAllTimersAsync();
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ApiFallback]',
+				'Failed to load mediawiki.api module:',
+				expect.any( Error )
+			);
+		} );
+
+		it( 'should handle API request failure', async () => {
+			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+			mockApi.get.mockRejectedValue( new Error( 'Network error' ) );
+
+			const fallback = new ApiFallback( {
+				debug: true,
+				urlParser: mockUrlParser,
+				viewerManager: mockViewerManager
+			} );
+
+			const img = document.createElement( 'img' );
+			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+
+			await jest.runAllTimersAsync();
+
+			expect( mockMw.log.warn ).toHaveBeenCalledWith(
+				'[Layers:ApiFallback]',
+				'API fallback request failed for',
+				'Test.jpg',
+				expect.any( Error )
+			);
+		} );
+	} );
 } );
