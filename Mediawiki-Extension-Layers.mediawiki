@@ -9,7 +9,7 @@
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
 |version         = 1.5.39
-|update          = 2026-01-26
+|update          = 2026-01-29
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
