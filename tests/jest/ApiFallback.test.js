@@ -124,6 +124,126 @@ describe( 'ApiFallback', () => {
 		} );
 	} );
 
+	describe( 'getClass fallback (internal helper)', () => {
+		// These tests cover lines 14-28: the internal getClass helper function
+		// used when window.layersGetClass is undefined
+
+		it( 'should use window.Layers namespace when layersGetClass is undefined', () => {
+			// Remove layersGetClass so internal fallback is used
+			delete window.layersGetClass;
+			jest.resetModules();
+
+			// Create mock classes
+			const MockUrlParser = function () {
+				return mockUrlParser;
+			};
+			const MockViewerManager = function () {
+				return mockViewerManager;
+			};
+
+			// Set up window.Layers namespace
+			window.Layers = {
+				Utils: {
+					UrlParser: MockUrlParser
+				},
+				Viewer: {
+					Manager: MockViewerManager
+				}
+			};
+
+			const ApiFallbackLocal = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
+			const fallback = new ApiFallbackLocal();
+
+			expect( fallback.urlParser ).toBe( mockUrlParser );
+			expect( fallback.viewerManager ).toBe( mockViewerManager );
+		} );
+
+		it( 'should fall back to global name when namespace traversal fails', () => {
+			delete window.layersGetClass;
+			jest.resetModules();
+
+			// Create mock classes as globals
+			window.LayersUrlParser = function () {
+				return mockUrlParser;
+			};
+			window.LayersViewerManager = function () {
+				return mockViewerManager;
+			};
+
+			// Set up incomplete Layers namespace (missing nested properties)
+			window.Layers = {
+				Utils: {} // Missing UrlParser
+			};
+
+			const ApiFallbackLocal = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
+			const fallback = new ApiFallbackLocal();
+
+			expect( fallback.urlParser ).toBe( mockUrlParser );
+			expect( fallback.viewerManager ).toBe( mockViewerManager );
+
+			// Clean up
+			delete window.LayersUrlParser;
+			delete window.LayersViewerManager;
+		} );
+
+		it( 'should use global fallback when namespace result is not a function', () => {
+			delete window.layersGetClass;
+			jest.resetModules();
+
+			// Create mock classes as globals
+			window.LayersUrlParser = function () {
+				return mockUrlParser;
+			};
+			window.LayersViewerManager = function () {
+				return mockViewerManager;
+			};
+
+			// Set up Layers namespace with non-function values
+			window.Layers = {
+				Utils: {
+					UrlParser: 'not a function' // Wrong type
+				},
+				Viewer: {
+					Manager: 12345 // Wrong type
+				}
+			};
+
+			const ApiFallbackLocal = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
+			const fallback = new ApiFallbackLocal();
+
+			expect( fallback.urlParser ).toBe( mockUrlParser );
+			expect( fallback.viewerManager ).toBe( mockViewerManager );
+
+			// Clean up
+			delete window.LayersUrlParser;
+			delete window.LayersViewerManager;
+		} );
+
+		it( 'should use global fallback when window.Layers is undefined', () => {
+			delete window.layersGetClass;
+			delete window.Layers;
+			jest.resetModules();
+
+			// Create mock classes as globals
+			window.LayersUrlParser = function () {
+				return mockUrlParser;
+			};
+			window.LayersViewerManager = function () {
+				return mockViewerManager;
+			};
+
+			const ApiFallbackLocal = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
+			const fallback = new ApiFallbackLocal();
+
+			expect( fallback.urlParser ).toBe( mockUrlParser );
+			expect( fallback.viewerManager ).toBe( mockViewerManager );
+
+			// Clean up
+			delete window.LayersUrlParser;
+			delete window.LayersViewerManager;
+		} );
+	} );
+
 	describe( 'debugLog', () => {
 		it( 'should log when debug is true', () => {
 			const fallback = new ApiFallback( { debug: true } );
