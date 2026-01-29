@@ -117,9 +117,9 @@ coverage (77.65% line, 71.17% branch) despite being the most complex UI module.
 
 ---
 
-### P1.4 Close InlineTextEditor Coverage Gap — 🔴 OPEN (HIGH-2)
+### P1.4 Close InlineTextEditor Coverage Gap — � IN PROGRESS (HIGH-2)
 
-**Status:** 🔴 OPEN (January 28, 2026)
+**Status:** 🟡 IN PROGRESS (January 28, 2026)
 **Priority:** P1 - High
 **Category:** Testing / Reliability
 **Discovered:** v47 Review (January 28, 2026)
@@ -128,11 +128,19 @@ coverage (77.65% line, 71.17% branch) despite being the most complex UI module.
 
 **Problem:** InlineTextEditor.js has the **lowest coverage** of any production module:
 
-| Metric | Value | Suite Average | Gap |
-|--------|-------|---------------|-----|
-| Lines | **77.65%** | 95.64% | **-18%** |
-| Functions | **72.34%** | 93.97% | **-21.6%** |
-| Branches | **71.17%** | 85.28% | **-14.1%** |
+| Metric | Before | After | Target | Status |
+|--------|--------|-------|--------|--------|
+| Lines | 77.65% | **83.94%** | 85%+ | 🟡 Close |
+| Functions | 72.34% | **77.65%** | 85%+ | 🟡 Close |
+| Branches | 71.17% | **74.23%** | 80%+ | 🟡 Close |
+
+**Progress Made:**
+- ✅ Added 20 new tests for uncovered methods
+- ✅ `_createSeparator` - 2 tests (separator div creation)
+- ✅ `_createHighlightButton` - 4 tests (highlight button with color picker)
+- ✅ `_applyFormatToSelection` - 11 tests (bold, italic, underline, strikethrough, color, highlight, fontSize, fontFamily)
+- ✅ `_syncPropertiesPanel` - 3 tests (properties panel sync)
+- ✅ Fixed JSDOM mock for `document.execCommand` and `ColorPickerDialog.open()`
 
 **Why This Matters:**
 - 2,282 lines — the largest hand-written controller
@@ -141,22 +149,11 @@ coverage (77.65% line, 71.17% branch) despite being the most complex UI module.
 - Floating toolbar with drag-and-drop
 - Highest user interaction complexity
 
-**Untested Scenarios (Probable):**
-- Rich text selection preservation across toolbar interactions
-- `_savedSelection` edge cases
-- Toolbar drag-and-drop mechanics
-- Keyboard shortcuts (Enter, Escape, Ctrl+Enter)
+**Remaining Work:**
+- Add tests for remaining uncovered branches (~26 functions still uncovered)
+- Target: **85% line coverage minimum** (currently at 83.94%)
 
-**Required Fix:**
-1. Run targeted coverage: `npm run test:js -- --coverage --collectCoverageFrom="**/InlineTextEditor.js"`
-2. Analyze uncovered lines and add tests for:
-   - Start/commit/cancel flows for all layer types
-   - Rich text formatting application/removal
-   - Toolbar repositioning and drag
-   - Keyboard shortcut handling
-3. Target: **85% line coverage minimum**
-
-**Estimated Effort:** 2-3 days
+**Estimated Remaining Effort:** 1 day
 
 ### Previously Completed P1 Items:
 - ✅ P1.0: Documentation metrics in codebase_review.md updated

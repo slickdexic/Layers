@@ -9,8 +9,8 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git branch --show-current`)
-- **Tests:** 10,840 tests in 157 suites (all passing, verified January 28, 2026)
-- **Coverage:** 95.53% statements, 85.28% branches, 93.97% functions, 95.64% lines (verified January 28, 2026)
+- **Tests:** 10,860 tests in 157 suites (all passing, verified January 28, 2026)
+- **Coverage:** 95.85% statements, 85.37% branches, 94.11% functions, 95.85% lines (verified January 28, 2026)
 - **JS files:** 132 production files (all files in resources/ext.layers* directories)
 - **JS lines:** ~93,406 total
 - **PHP files:** 40 (all with `declare(strict_types=1)`)
@@ -27,7 +27,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 but pervasive documentation drift, architectural complexity, and coverage gaps in critical UI modules prevent "world-class" status.
 
 ### Key Strengths
-1. **Excellent test coverage** (95.53% statement, 85.28% branch, 10,840 tests)
+1. **Excellent test coverage** (95.85% statement, 85.37% branch, 10,860 tests)
 2. **Comprehensive server-side validation** with strict 40+ property whitelist
 3. **Modern ES6 class-based architecture** (100% of JS files)
 4. **PHP strict_types** in all 40 PHP files
@@ -69,7 +69,7 @@ but pervasive documentation drift, architectural complexity, and coverage gaps i
 
 ---
 
-## í³Š Detailed Metrics
+## ï¿½ï¿½ï¿½ Detailed Metrics
 
 ### Test Coverage (January 28, 2026)
 
@@ -79,7 +79,7 @@ but pervasive documentation drift, architectural complexity, and coverage gaps i
 | Branches | 85.28% | 80% | âœ… Exceeds |
 | Functions | 93.97% | 85% | âœ… Exceeds |
 | Lines | 95.64% | 90% | âœ… Exceeds |
-| Test Count | 10,840 | - | âœ… Excellent |
+| Test Count | 10,860 | - | âœ… Excellent |
 | Test Suites | 157 | - | âœ… |
 | Skipped Tests | 0 | 0 | âœ… |
 
@@ -99,21 +99,21 @@ but pervasive documentation drift, architectural complexity, and coverage gaps i
 
 | File | Lines | Functions | Branches | Risk Level |
 |------|-------|-----------|----------|------------|
-| InlineTextEditor.js | **77.65%** | **72.34%** | **71.17%** | í´´ HIGH |
-| TextBoxRenderer.js | 87.79% | 90.90% | 88.01% | í¿¡ MEDIUM |
-| LayersEditor.js | 90.53% | 80.00% | 76.96% | í¿¡ MEDIUM |
-| Toolbar.js | 90.41% | 84.68% | 78.57% | í¿¡ MEDIUM |
-| LayerPanel.js | 90.53% | 79.52% | 80.32% | í¿¡ MEDIUM |
+| InlineTextEditor.js | **77.65%** | **72.34%** | **71.17%** | ï¿½ï¿½ï¿½ HIGH |
+| TextBoxRenderer.js | 87.79% | 90.90% | 88.01% | ï¿½ï¿½ï¿½ MEDIUM |
+| LayersEditor.js | 90.53% | 80.00% | 76.96% | ï¿½ï¿½ï¿½ MEDIUM |
+| Toolbar.js | 90.41% | 84.68% | 78.57% | ï¿½ï¿½ï¿½ MEDIUM |
+| LayerPanel.js | 90.53% | 79.52% | 80.32% | ï¿½ï¿½ï¿½ MEDIUM |
 
 ---
 
-## í´´ Critical Issues (0) â€” âœ… NONE
+## ï¿½ï¿½ï¿½ Critical Issues (0) â€” âœ… NONE
 
 No critical issues found. The extension is production-ready.
 
 ---
 
-## í¿  High Severity Issues (2)
+## ï¿½ï¿½ï¿½ High Severity Issues (2)
 
 ### HIGH-1: Documentation Metrics Pervasively Stale
 
@@ -191,7 +191,7 @@ No critical issues found. The extension is production-ready.
 
 ---
 
-## í¿¡ Medium Severity Issues (9)
+## ï¿½ï¿½ï¿½ Medium Severity Issues (9)
 
 ### MED-1: 20 JavaScript God Classes (Trend: Growing)
 
@@ -203,7 +203,7 @@ No critical issues found. The extension is production-ready.
 
 | File | Lines | Delegation | Trend |
 |------|-------|------------|-------|
-| InlineTextEditor.js | 2,282 | âš ï¸ Minimal | í³ˆ Growing |
+| InlineTextEditor.js | 2,282 | âš ï¸ Minimal | ï¿½ï¿½ï¿½ Growing |
 | LayerPanel.js | 2,175 | âœ… 9 controllers | Stable |
 | CanvasManager.js | 2,044 | âœ… 10+ controllers | Stable |
 | ViewerManager.js | 2,026 | âš ï¸ Could improve | Stable |
@@ -217,11 +217,11 @@ No critical issues found. The extension is production-ready.
 | ToolManager.js | 1,224 | âœ… 2 handlers | Stable |
 | CanvasRenderer.js | 1,219 | âœ… SelectionRenderer | Stable |
 | GroupManager.js | 1,171 | N/A (group ops) | Stable |
-| TextBoxRenderer.js | 1,117 | N/A (rendering) | í³ˆ NEW |
+| TextBoxRenderer.js | 1,117 | N/A (rendering) | ï¿½ï¿½ï¿½ NEW |
 | TransformController.js | 1,110 | N/A (transforms) | Stable |
 | ResizeCalculator.js | 1,105 | N/A (math) | Stable |
 | ToolbarStyleControls.js | 1,070 | âœ… Style controls | Stable |
-| PropertiesForm.js | 1,006 | âœ… PropertyBuilders | í³ˆ NEW |
+| PropertiesForm.js | 1,006 | âœ… PropertyBuilders | ï¿½ï¿½ï¿½ NEW |
 
 **Alert:** Two files have recently crossed the 1,000-line threshold:
 - \`TextBoxRenderer.js\` â€” now 1,117 lines
@@ -391,7 +391,7 @@ No critical issues found. The extension is production-ready.
 
 ---
 
-## í¿¢ Low Severity Issues (9)
+## ï¿½ï¿½ï¿½ Low Severity Issues (9)
 
 ### LOW-1: Native Alerts as Fallbacks â€” BY DESIGN âœ…
 **Status:** Verified as correct design pattern
@@ -432,7 +432,7 @@ No critical issues found. The extension is production-ready.
 
 ---
 
-## í¿¢ Resolved Issues (From Previous Reviews)
+## ï¿½ï¿½ï¿½ Resolved Issues (From Previous Reviews)
 
 ### âœ… ViewerManager.test.js handleSlideEditClick test â€” FIXED (Jan 27, 2026)
 ### âœ… Slide \`canvas=WxH\` Parameter Ignored â€” FIXED (Jan 25, 2026)
@@ -442,7 +442,7 @@ No critical issues found. The extension is production-ready.
 
 ---
 
-## í¿¢ Security Verification
+## ï¿½ï¿½ï¿½ Security Verification
 
 ### CSRF Token Protection âœ…
 - Tested and verified on all write APIs: \`ApiLayersSave\`, \`ApiLayersDelete\`, \`ApiLayersRename\`, \`ApiSlidesSave\`
@@ -462,7 +462,7 @@ No critical issues found. The extension is production-ready.
 
 ---
 
-## í³Š Rating Breakdown
+## ï¿½ï¿½ï¿½ Rating Breakdown
 
 | Category | Score | Weight | Notes |
 |----------|-------|--------|-------|

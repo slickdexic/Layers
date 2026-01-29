@@ -29,8 +29,8 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Shape/Emoji data | ~40,000 lines (generated) |
 | ES6 classes | **132** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.53% stmt, 85.28% branch** |
-| Jest tests | **10,840** (157 suites) |
+| Test coverage | **95.85% stmt, 85.37% branch** |
+| Jest tests | **10,860** (157 suites) |
 | PHPUnit test files | 24 |
 | God classes (>1000 lines) | **22** (2 generated, 20 JS, 2 PHP) |
 | Drawing tools | **15** |
