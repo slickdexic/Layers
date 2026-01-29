@@ -218,6 +218,7 @@
 				"GradientRenderer.js",
 				"ShadowRenderer.js",
 				"PolygonStarRenderer.js",
+				"ArrowGeometry.js",
 				"ArrowRenderer.js",
 				"TextRenderer.js",
 				"TextBoxRenderer.js",
