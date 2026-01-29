@@ -331,6 +331,127 @@
 	};
 
 	/**
+	 * Add rich text formatting properties section
+	 * Underline, strikethrough, and highlight controls for textbox/callout layers
+	 * These controls apply to the entire richText array (all runs)
+	 * @param {Object} ctx - Context with addSection, addCheckbox, addColorPicker, layer, editor
+	 */
+	PropertyBuilders.addRichTextFormatting = function ( ctx ) {
+		const layer = ctx.layer;
+		const editor = ctx.editor;
+		const t = msg;
+
+		ctx.addSection( t( 'layers-section-rich-text', 'Rich Text Formatting' ), 'rich-text' );
+
+		/**
+		 * Check if all runs have a specific style value
+		 * @param {string} prop - Style property to check
+		 * @param {*} value - Value to check for
+		 * @return {boolean}
+		 */
+		function allRunsHaveStyle( prop, value ) {
+			if ( !layer.richText || !Array.isArray( layer.richText ) || layer.richText.length === 0 ) {
+				return false;
+			}
+			return layer.richText.every( function ( run ) {
+				return run.style && run.style[ prop ] === value;
+			} );
+		}
+
+		/**
+		 * Get the first run's style value, or null if not set/no runs
+		 * @param {string} prop - Style property to get
+		 * @return {*}
+		 */
+		function getFirstRunStyle( prop ) {
+			if ( layer.richText && layer.richText.length > 0 && layer.richText[ 0 ].style ) {
+				return layer.richText[ 0 ].style[ prop ];
+			}
+			return null;
+		}
+
+		/**
+		 * Apply a style to all runs in richText
+		 * If no richText exists, create one from the text property
+		 * @param {Object} styleUpdates - Style properties to apply
+		 */
+		function applyStyleToAllRuns( styleUpdates ) {
+			let richText = layer.richText;
+
+			// If no richText, create from text property
+			if ( !richText || !Array.isArray( richText ) || richText.length === 0 ) {
+				const text = layer.text || '';
+				if ( text.length === 0 ) {
+					return; // No text to format
+				}
+				richText = [ { text: text, style: {} } ];
+			}
+
+			// Apply style to all runs
+			const updatedRichText = richText.map( function ( run ) {
+				const newStyle = Object.assign( {}, run.style || {}, styleUpdates );
+				return { text: run.text, style: newStyle };
+			} );
+
+			editor.updateLayer( layer.id, { richText: updatedRichText } );
+		}
+
+		// Underline toggle
+		ctx.addCheckbox( {
+			label: t( 'layers-prop-underline', 'Underline' ),
+			value: allRunsHaveStyle( 'textDecoration', 'underline' ),
+			onChange: function ( checked ) {
+				applyStyleToAllRuns( { textDecoration: checked ? 'underline' : 'none' } );
+			}
+		} );
+
+		// Strikethrough toggle
+		ctx.addCheckbox( {
+			label: t( 'layers-prop-strikethrough', 'Strikethrough' ),
+			value: allRunsHaveStyle( 'textDecoration', 'line-through' ),
+			onChange: function ( checked ) {
+				applyStyleToAllRuns( { textDecoration: checked ? 'line-through' : 'none' } );
+			}
+		} );
+
+		// Highlight color picker
+		const currentHighlight = getFirstRunStyle( 'backgroundColor' ) || '';
+		const hasHighlight = Boolean( currentHighlight );
+
+		ctx.addCheckbox( {
+			label: t( 'layers-prop-highlight', 'Highlight' ),
+			value: hasHighlight,
+			onChange: function ( checked ) {
+				if ( checked ) {
+					// Enable with default yellow highlight
+					applyStyleToAllRuns( { backgroundColor: 'rgba(255, 255, 0, 0.5)' } );
+				} else {
+					// Remove highlight
+					applyStyleToAllRuns( { backgroundColor: null } );
+				}
+				// Refresh panel to show/hide color picker
+				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+					setTimeout( function () {
+						editor.layerPanel.updatePropertiesPanel( layer.id );
+					}, 0 );
+				}
+			}
+		} );
+
+		// Show highlight color picker only when highlight is enabled
+		if ( hasHighlight ) {
+			ctx.addColorPicker( {
+				label: t( 'layers-prop-highlight-color', 'Highlight Color' ),
+				value: currentHighlight,
+				property: 'highlightColor',
+				onChange: function ( newColor ) {
+					applyStyleToAllRuns( { backgroundColor: newColor } );
+				}
+			} );
+		}
+	};
+
+	/**
 	 * Add text alignment properties section
 	 * @param {Object} ctx - Context with addSection, addSelect, addInput, layer, editor
 	 */

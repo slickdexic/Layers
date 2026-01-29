@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.36-REL1_39",
+	"version": "1.5.37-REL1_39",
 	"requires": {
 		"MediaWiki": ">= 1.39.0"
 	},
@@ -86,17 +86,24 @@
 			"value": false
 		},
 		"LayersDefaultFonts": {
-			"description": "Available fonts in the layer editor",
+			"description": "Available fonts in the layer editor. Web fonts are loaded from Google Fonts.",
 			"value": [
 				"Arial",
+				"Verdana",
 				"Roboto",
+				"Open Sans",
+				"Lato",
+				"Montserrat",
 				"Noto Sans",
+				"Source Sans Pro",
+				"PT Sans",
+				"Ubuntu",
 				"Times New Roman",
 				"Georgia",
-				"Verdana",
+				"Merriweather",
+				"Playfair Display",
 				"Courier New",
-				"Courier",
-				"Helvetica"
+				"Source Code Pro"
 			]
 		},
 		"LayersMaxImageSize": {
@@ -196,6 +203,9 @@
 			"localBasePath": "resources/ext.layers.shared",
 			"remoteExtPath": "Layers/resources/ext.layers.shared",
 			"targets": [ "desktop", "mobile" ],
+			"styles": [
+				"fonts.css"
+			],
 			"scripts": [
 				"FontConfig.js",
 				"MathUtils.js",
@@ -476,6 +486,7 @@
 				"layers-section-text",
 				"layers-section-text-shadow",
 				"layers-section-alignment",
+				"layers-section-rich-text",
 				"layers-section-callout",
 				"layers-prop-tail-style",
 				"layers-tail-style-triangle",
@@ -496,6 +507,10 @@
 				"layers-prop-text-shadow-blur",
 				"layers-prop-text-shadow-offset-x",
 				"layers-prop-text-shadow-offset-y",
+				"layers-prop-underline",
+				"layers-prop-strikethrough",
+				"layers-prop-highlight",
+				"layers-prop-highlight-color",
 				"layers-prop-width",
 				"layers-prop-stroke-width",
 				"layers-prop-line-width",
@@ -953,6 +968,9 @@
 				"layers-text-toolbar-size",
 				"layers-text-toolbar-bold",
 				"layers-text-toolbar-italic",
+				"layers-text-toolbar-underline",
+				"layers-text-toolbar-strikethrough",
+				"layers-text-toolbar-highlight",
 				"layers-text-toolbar-align-left",
 				"layers-text-toolbar-align-center",
 				"layers-text-toolbar-align-right",

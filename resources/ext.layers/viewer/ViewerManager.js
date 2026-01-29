@@ -380,6 +380,7 @@ class ViewerManager {
 			/**
 			 * Helper function to render all layers.
 			 * Called initially and again when async resources (SVGs) finish loading.
+			 * Renders from bottom to top so layer[0] (topmost in panel) is drawn last.
 			 */
 			const renderAllLayers = () => {
 				ctx.clearRect( 0, 0, canvas.width, canvas.height );
@@ -392,11 +393,14 @@ class ViewerManager {
 					ctx.restore();
 				}
 				if ( payload.layers && Array.isArray( payload.layers ) ) {
-					payload.layers.forEach( ( layer ) => {
+					// Render layers from bottom to top (index 0 = top in panel, drawn last)
+					const layers = payload.layers;
+					for ( let i = layers.length - 1; i >= 0; i-- ) {
+						const layer = layers[ i ];
 						if ( layer.visible !== false && layer.visible !== 0 ) {
 							renderer.drawLayer( layer );
 						}
-					} );
+					}
 				}
 			};
 
@@ -1186,6 +1190,7 @@ class ViewerManager {
 		/**
 		 * Helper function to render all layers.
 		 * Called initially and again when async resources (SVGs) finish loading.
+		 * Renders from bottom to top so layer[0] (topmost in panel) is drawn last.
 		 */
 		const renderAllLayers = () => {
 			ctx.clearRect( 0, 0, canvas.width, canvas.height );
@@ -1197,11 +1202,14 @@ class ViewerManager {
 				ctx.fillRect( 0, 0, canvas.width, canvas.height );
 				ctx.restore();
 			}
-			payload.layers.forEach( ( layer ) => {
+			// Render layers from bottom to top (index 0 = top in panel, drawn last)
+			const layers = payload.layers;
+			for ( let i = layers.length - 1; i >= 0; i-- ) {
+				const layer = layers[ i ];
 				if ( layer.visible !== false && layer.visible !== 0 ) {
 					renderer.drawLayer( layer );
 				}
-			} );
+			}
 		};
 
 		// Render layers using single renderer instance to maintain SVG image cache

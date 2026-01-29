@@ -129,6 +129,38 @@ class TextSanitizer {
 	}
 
 	/**
+	 * Sanitize text for rich text runs (preserves whitespace)
+	 *
+	 * Unlike sanitizeText(), this method does NOT trim whitespace because
+	 * whitespace at the boundaries of rich text runs is significant.
+	 * For example, "Hello " + "World" should not become "Hello" + "World".
+	 *
+	 * @param string $text Raw text input
+	 * @return string Sanitized text with preserved whitespace
+	 */
+	public function sanitizeRichTextRun( string $text ): string {
+		// Basic length check
+		if ( strlen( $text ) > self::MAX_TEXT_LENGTH ) {
+			$text = substr( $text, 0, self::MAX_TEXT_LENGTH );
+		}
+
+		// Strip HTML tags
+		$text = strip_tags( $text );
+
+		// Decode any HTML entities that might have been passed in
+		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// Remove dangerous protocols
+		$text = $this->removeDangerousProtocols( $text );
+
+		// Remove event handlers and JavaScript
+		$text = $this->removeEventHandlers( $text );
+
+		// Do NOT trim - whitespace is significant in rich text runs
+		return $text;
+	}
+
+	/**
 	 * Validate text length
 	 *
 	 * @param string $text Text to validate

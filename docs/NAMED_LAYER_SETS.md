@@ -1,8 +1,8 @@
 # Named Layer Sets Architecture
 
 **Created:** January 2025  
-**Status:** Design Phase  
-**Version:** 1.0
+**Status:** ✅ Implemented (v1.5.0+)  
+**Version:** 1.1
 
 ---
 

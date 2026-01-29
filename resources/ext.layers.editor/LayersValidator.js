@@ -451,6 +451,117 @@
 					result.errors.push( this.getMessage( 'layers-validation-blendmode-invalid' ) );
 				}
 			}
+
+			// Rich text validation for textbox and callout layers
+			if ( ( layer.type === 'textbox' || layer.type === 'callout' ) && layer.richText ) {
+				this.validateRichText( layer.richText, result );
+			}
+		}
+
+		/**
+		 * Validate rich text formatting array
+		 *
+		 * Rich text enables mixed formatting within a single text layer.
+		 * Each "run" contains text and optional style overrides.
+		 *
+		 * @param {Array} richText Array of text runs
+		 * @param {Object} result Validation result object
+		 */
+		validateRichText( richText, result ) {
+			if ( !Array.isArray( richText ) ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-richtext-not-array' ) );
+				return;
+			}
+
+			// Limit number of runs
+			const maxRuns = 100;
+			if ( richText.length > maxRuns ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-richtext-too-many-runs', maxRuns ) );
+				return;
+			}
+
+			// Track total text length
+			let totalLength = 0;
+			const maxTotalLength = 50000;
+
+			// Allowed style properties
+			const allowedStyleProps = [
+				'fontWeight', 'fontStyle', 'fontSize', 'fontFamily',
+				'color', 'textDecoration', 'backgroundColor',
+				'textStrokeColor', 'textStrokeWidth'
+			];
+
+			const validFontWeights = [ 'normal', 'bold', 'lighter', 'bolder' ];
+			const validFontStyles = [ 'normal', 'italic', 'oblique' ];
+			const validTextDecorations = [ 'none', 'underline', 'line-through', 'overline' ];
+
+			for ( let i = 0; i < richText.length; i++ ) {
+				const run = richText[ i ];
+
+				if ( typeof run !== 'object' || run === null ) {
+					result.warnings.push( `Rich text run ${ i } is not an object` );
+					continue;
+				}
+
+				// Each run must have text
+				if ( typeof run.text !== 'string' ) {
+					result.warnings.push( `Rich text run ${ i } missing text property` );
+					continue;
+				}
+
+				totalLength += run.text.length;
+				if ( totalLength > maxTotalLength ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-richtext-too-long' ) );
+					return;
+				}
+
+				// Check for script injection in text
+				if ( this.containsScriptInjection( run.text ) ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-text-unsafe' ) );
+					return;
+				}
+
+				// Validate style object if present
+				if ( run.style && typeof run.style === 'object' ) {
+					for ( const prop of Object.keys( run.style ) ) {
+						if ( !allowedStyleProps.includes( prop ) ) {
+							result.warnings.push( `Unknown style property '${ prop }' in run ${ i }` );
+							continue;
+						}
+
+						const value = run.style[ prop ];
+
+						// Validate enum values
+						if ( prop === 'fontWeight' && !validFontWeights.includes( value ) ) {
+							result.warnings.push( `Invalid fontWeight '${ value }' in run ${ i }` );
+						}
+						if ( prop === 'fontStyle' && !validFontStyles.includes( value ) ) {
+							result.warnings.push( `Invalid fontStyle '${ value }' in run ${ i }` );
+						}
+						if ( prop === 'textDecoration' && !validTextDecorations.includes( value ) ) {
+							result.warnings.push( `Invalid textDecoration '${ value }' in run ${ i }` );
+						}
+
+						// Validate numeric ranges
+						if ( prop === 'fontSize' ) {
+							const size = Number( value );
+							if ( isNaN( size ) || size < 1 || size > 500 ) {
+								result.warnings.push( `Invalid fontSize '${ value }' in run ${ i }` );
+							}
+						}
+						if ( prop === 'textStrokeWidth' ) {
+							const width = Number( value );
+							if ( isNaN( width ) || width < 0 || width > 20 ) {
+								result.warnings.push( `Invalid textStrokeWidth '${ value }' in run ${ i }` );
+							}
+						}
+					}
+				}
+			}
 		}
 
 		/**

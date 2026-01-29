@@ -402,8 +402,9 @@
 				this.ctx.stroke();
 			}
 
-			// Draw text (clipped to the box)
-			if ( layer.text && layer.text.length > 0 ) {
+			// Draw text (clipped to the box) - supports both plain text and rich text
+			const hasTextContent = ( layer.text && layer.text.length > 0 ) || this.hasRichText( layer );
+			if ( hasTextContent ) {
 				this.drawTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity );
 			}
 
@@ -432,7 +433,14 @@
 			this.ctx.rect( x, y, width, height );
 			this.ctx.clip();
 
-			// Text rendering
+			// Check for rich text content
+			if ( this.hasRichText( layer ) ) {
+				this.drawRichTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity );
+				this.ctx.restore();
+				return;
+			}
+
+			// Text rendering (plain text path)
 			const fontSize = ( layer.fontSize || 16 ) * scale.avg;
 			const fontFamily = layer.fontFamily || 'Arial, sans-serif';
 			const fontWeight = layer.fontWeight || 'normal';
@@ -618,6 +626,432 @@
 			return lines.length > 0 ? lines : [ '' ];
 		}
 
+		// ========================================================================
+		// Rich Text Support
+		// ========================================================================
+
+		/**
+		 * Check if layer has valid rich text content
+		 *
+		 * @param {Object} layer - Layer object
+		 * @return {boolean} True if layer has rich text
+		 */
+		hasRichText( layer ) {
+			return Array.isArray( layer.richText ) &&
+				layer.richText.length > 0 &&
+				layer.richText.some( ( run ) => run && typeof run.text === 'string' );
+		}
+
+		/**
+		 * Get plain text from rich text array for wrapping calculations
+		 *
+		 * @param {Array} richText - Rich text runs array
+		 * @return {string} Combined plain text
+		 */
+		getRichTextPlainText( richText ) {
+			if ( !Array.isArray( richText ) ) {
+				return '';
+			}
+			return richText
+				.filter( ( run ) => run && typeof run.text === 'string' )
+				.map( ( run ) => run.text )
+				.join( '' );
+		}
+
+		/**
+		 * Build a map of character positions to runs for efficient lookup
+		 *
+		 * @param {Array} richText - Rich text runs array
+		 * @return {Array} Array where index is char position, value is {runIndex, localIndex}
+		 */
+		buildCharToRunMap( richText ) {
+			const map = [];
+			let charPos = 0;
+
+			for ( let runIndex = 0; runIndex < richText.length; runIndex++ ) {
+				const run = richText[ runIndex ];
+				if ( !run || typeof run.text !== 'string' ) {
+					continue;
+				}
+
+				for ( let localIndex = 0; localIndex < run.text.length; localIndex++ ) {
+					map[ charPos ] = { runIndex, localIndex };
+					charPos++;
+				}
+			}
+
+			return map;
+		}
+
+		/**
+		 * Draw a line of rich text with mixed formatting
+		 *
+		 * @param {Array} richText - Rich text runs array
+		 * @param {number} lineStart - Starting character index for this line
+		 * @param {number} lineEnd - Ending character index (exclusive)
+		 * @param {number} lineX - X position to start drawing
+		 * @param {number} lineY - Y position for the line
+		 * @param {Object} baseStyle - Base style from layer (fontSize, fontFamily, color, etc.)
+		 * @param {Object} textStyle - Text effects (shadow, stroke)
+		 * @param {Object} scale - Scale factors
+		 */
+		drawRichTextLine( richText, lineStart, lineEnd, lineX, lineY, baseStyle, textStyle, scale ) {
+			let currentX = lineX;
+			let charPos = 0;
+
+			for ( const run of richText ) {
+				if ( !run || typeof run.text !== 'string' ) {
+					continue;
+				}
+
+				const runStart = charPos;
+				const runEnd = charPos + run.text.length;
+				charPos = runEnd;
+
+				// Check if this run overlaps with the current line
+				if ( runEnd <= lineStart || runStart >= lineEnd ) {
+					continue; // Run is completely outside this line
+				}
+
+				// Calculate which portion of this run is on this line
+				const sliceStart = Math.max( 0, lineStart - runStart );
+				const sliceEnd = Math.min( run.text.length, lineEnd - runStart );
+				const textSlice = run.text.slice( sliceStart, sliceEnd );
+
+				if ( textSlice.length === 0 ) {
+					continue;
+				}
+
+				// Build style for this run
+				const style = run.style || {};
+				const fontSize = ( style.fontSize || baseStyle.fontSize ) * scale.avg;
+				const fontFamily = style.fontFamily || baseStyle.fontFamily;
+				const fontWeight = style.fontWeight || baseStyle.fontWeight;
+				const fontStyle = style.fontStyle || baseStyle.fontStyle;
+				const color = style.color || baseStyle.color;
+
+				// Set font and color
+				this.ctx.font = `${ fontStyle } ${ fontWeight } ${ fontSize }px ${ fontFamily }`;
+				this.ctx.fillStyle = color;
+				// Ensure alphabetic baseline is used
+				this.ctx.textBaseline = 'alphabetic';
+
+				// Draw background (highlight) if specified
+				// With alphabetic baseline, lineY is the baseline, so background starts above
+				if ( style.backgroundColor ) {
+					const metrics = this.ctx.measureText( textSlice );
+					// Approximate: ascent is ~80% of fontSize, descent is ~20%
+					const ascent = fontSize * 0.8;
+					const descent = fontSize * 0.2;
+					const bgTop = lineY - ascent;
+					const bgHeight = ascent + descent;
+					this.ctx.save();
+					this.ctx.fillStyle = style.backgroundColor;
+					this.ctx.fillRect( currentX, bgTop, metrics.width, bgHeight );
+					this.ctx.restore();
+					this.ctx.fillStyle = color;
+				}
+
+				// Apply text shadow
+				if ( textStyle.hasTextShadow ) {
+					this.ctx.shadowColor = textStyle.textShadowColor;
+					this.ctx.shadowBlur = textStyle.textShadowBlur;
+					this.ctx.shadowOffsetX = textStyle.textShadowOffsetX;
+					this.ctx.shadowOffsetY = textStyle.textShadowOffsetY;
+				}
+
+				// Handle per-run text stroke
+				const runStrokeWidth = style.textStrokeWidth ?
+					style.textStrokeWidth * scale.avg :
+					( textStyle.hasTextStroke ? textStyle.textStrokeWidth : 0 );
+				const runStrokeColor = style.textStrokeColor || textStyle.textStrokeColor;
+
+				if ( runStrokeWidth > 0 ) {
+					// Disable shadow for stroke
+					if ( textStyle.hasTextShadow ) {
+						this.ctx.shadowColor = 'transparent';
+					}
+					this.ctx.strokeStyle = runStrokeColor;
+					this.ctx.lineWidth = runStrokeWidth;
+					this.ctx.lineJoin = 'round';
+					this.ctx.miterLimit = 2;
+					this.ctx.strokeText( textSlice, currentX, lineY );
+					// Re-enable shadow for fill
+					if ( textStyle.hasTextShadow ) {
+						this.ctx.shadowColor = textStyle.textShadowColor;
+					}
+				}
+
+				// Handle text decoration
+				// With alphabetic baseline, lineY is at the baseline
+				if ( style.textDecoration && style.textDecoration !== 'none' ) {
+					const metrics = this.ctx.measureText( textSlice );
+					this.ctx.save();
+					this.ctx.strokeStyle = color;
+					this.ctx.lineWidth = Math.max( 1, fontSize / 15 );
+
+					switch ( style.textDecoration ) {
+						case 'underline':
+							// Underline goes slightly below the baseline
+							this.ctx.beginPath();
+							this.ctx.moveTo( currentX, lineY + fontSize * 0.15 );
+							this.ctx.lineTo( currentX + metrics.width, lineY + fontSize * 0.15 );
+							this.ctx.stroke();
+							break;
+						case 'line-through':
+							// Line-through goes through the middle (x-height area)
+							this.ctx.beginPath();
+							this.ctx.moveTo( currentX, lineY - fontSize * 0.3 );
+							this.ctx.lineTo( currentX + metrics.width, lineY - fontSize * 0.3 );
+							this.ctx.stroke();
+							break;
+						case 'overline':
+							// Overline goes above the text
+							this.ctx.beginPath();
+							this.ctx.moveTo( currentX, lineY - fontSize * 0.8 );
+							this.ctx.lineTo( currentX + metrics.width, lineY - fontSize * 0.8 );
+							this.ctx.stroke();
+							break;
+					}
+					this.ctx.restore();
+				}
+
+				// Draw the text
+				this.ctx.fillText( textSlice, currentX, lineY );
+
+				// Measure and advance x position
+				const textWidth = this.ctx.measureText( textSlice ).width;
+				currentX += textWidth;
+
+				// Clear shadow after drawing
+				if ( textStyle.hasTextShadow ) {
+					this.ctx.shadowColor = 'transparent';
+					this.ctx.shadowBlur = 0;
+					this.ctx.shadowOffsetX = 0;
+					this.ctx.shadowOffsetY = 0;
+				}
+			}
+		}
+
+		/**
+		 * Draw rich text content with word wrapping and mixed formatting
+		 *
+		 * @param {Object} layer - Layer with richText property
+		 * @param {number} x - Box x position
+		 * @param {number} y - Box y position
+		 * @param {number} width - Box width
+		 * @param {number} height - Box height
+		 * @param {number} padding - Padding in scaled pixels
+		 * @param {Object} scale - Scale factors
+		 * @param {Object} shadowScale - Shadow scale factors
+		 * @param {number} baseOpacity - Base opacity
+		 */
+		drawRichTextContent( layer, x, y, width, height, padding, scale, shadowScale, baseOpacity ) {
+			const richText = layer.richText;
+
+			// Base style from layer
+			const baseStyle = {
+				fontSize: layer.fontSize || 16,
+				fontFamily: layer.fontFamily || 'Arial, sans-serif',
+				fontWeight: layer.fontWeight || 'normal',
+				fontStyle: layer.fontStyle || 'normal',
+				color: layer.color || '#000000'
+			};
+
+			const baseFontSize = baseStyle.fontSize * scale.avg;
+			const textAlign = layer.textAlign || 'left';
+			const verticalAlign = layer.verticalAlign || 'top';
+			const lineHeightMultiplier = layer.lineHeight || 1.2;
+
+			// Get plain text for wrapping
+			const plainText = this.getRichTextPlainText( richText );
+
+			// Use base font for wrapping calculations
+			const fontString = `${ baseStyle.fontStyle } ${ baseStyle.fontWeight } ${ baseFontSize }px ${ baseStyle.fontFamily }`;
+			this.ctx.font = fontString;
+			// Use alphabetic baseline for proper mixed-size text alignment
+			this.ctx.textBaseline = 'alphabetic';
+			this.ctx.globalAlpha = baseOpacity;
+
+			// Wrap text using base font (simplified approach)
+			const lines = this.wrapText( plainText, width - padding * 2, baseFontSize, baseStyle.fontFamily, baseStyle.fontWeight, baseStyle.fontStyle );
+
+			// Calculate character ranges for each line and find max font size per line
+			const lineMetrics = [];
+			let charPos = 0;
+			for ( let i = 0; i < lines.length; i++ ) {
+				const lineText = lines[ i ];
+				const lineStart = charPos;
+				const lineEnd = charPos + lineText.length;
+
+				// Find the maximum font size used in this line
+				let maxFontSize = baseFontSize;
+				let runCharPos = 0;
+				for ( const run of richText ) {
+					if ( !run || typeof run.text !== 'string' ) {
+						continue;
+					}
+					const runStart = runCharPos;
+					const runEnd = runCharPos + run.text.length;
+					runCharPos = runEnd;
+
+					// Check if this run overlaps with the current line
+					if ( runEnd <= lineStart || runStart >= lineEnd ) {
+						continue;
+					}
+
+					// This run is on this line - check its font size
+					const runFontSize = ( ( run.style && run.style.fontSize ) || baseStyle.fontSize ) * scale.avg;
+					if ( runFontSize > maxFontSize ) {
+						maxFontSize = runFontSize;
+					}
+				}
+
+				// Line height based on the tallest text in this line
+				const lineHeight = maxFontSize * lineHeightMultiplier;
+
+				lineMetrics.push( {
+					text: lineText,
+					start: lineStart,
+					end: lineEnd,
+					maxFontSize: maxFontSize,
+					lineHeight: lineHeight
+				} );
+
+				charPos = lineEnd;
+				// Account for whitespace between lines
+				if ( i < lines.length - 1 ) {
+					const nextChar = plainText[ charPos ];
+					if ( nextChar === ' ' || nextChar === '\n' ) {
+						charPos++;
+					}
+				}
+			}
+
+			// Calculate total text height (sum of line heights)
+			const totalTextHeight = lineMetrics.reduce( ( sum, lm ) => sum + lm.lineHeight, 0 );
+			const availableHeight = height - padding * 2;
+
+			// Calculate starting Y position based on vertical alignment
+			let textY;
+			switch ( verticalAlign ) {
+				case 'middle':
+					textY = y + padding + ( availableHeight - totalTextHeight ) / 2;
+					break;
+				case 'bottom':
+					textY = y + padding + availableHeight - totalTextHeight;
+					break;
+				case 'top':
+				default:
+					textY = y + padding;
+					break;
+			}
+
+			// Text effect properties
+			const hasTextShadow = layer.textShadow === true || layer.textShadow === 'true' ||
+				layer.textShadow === 1 || layer.textShadow === '1';
+			const textStyle = {
+				hasTextShadow,
+				textShadowColor: layer.textShadowColor || 'rgba(0,0,0,0.5)',
+				textShadowBlur: ( typeof layer.textShadowBlur === 'number' ? layer.textShadowBlur : 4 ) * shadowScale.avg,
+				textShadowOffsetX: ( typeof layer.textShadowOffsetX === 'number' ? layer.textShadowOffsetX : 2 ) * shadowScale.avg,
+				textShadowOffsetY: ( typeof layer.textShadowOffsetY === 'number' ? layer.textShadowOffsetY : 2 ) * shadowScale.avg,
+				hasTextStroke: ( layer.textStrokeWidth || 0 ) > 0,
+				textStrokeColor: layer.textStrokeColor || '#000000',
+				textStrokeWidth: ( layer.textStrokeWidth || 0 ) * scale.avg
+			};
+
+			// Draw each line
+			let currentY = textY;
+			for ( let i = 0; i < lineMetrics.length; i++ ) {
+				const lm = lineMetrics[ i ];
+
+				// Calculate baseline position for this line
+				// Baseline is at the top of line + max font size (since we're using alphabetic baseline)
+				const baselineY = currentY + lm.maxFontSize;
+
+				// Only draw if within the box
+				if ( baselineY > y + height ) {
+					break;
+				}
+
+				// Calculate line X position based on alignment
+				// Need to measure with proper font for each run to get accurate width
+				let lineX;
+				const lineWidth = this.measureRichTextLineWidth( richText, lm.start, lm.end, baseStyle, scale );
+				switch ( textAlign ) {
+					case 'center':
+						lineX = x + ( width - lineWidth ) / 2;
+						break;
+					case 'right':
+						lineX = x + width - padding - lineWidth;
+						break;
+					case 'left':
+					default:
+						lineX = x + padding;
+						break;
+				}
+
+				// Draw the rich text for this line at the baseline
+				this.drawRichTextLine( richText, lm.start, lm.end, lineX, baselineY, baseStyle, textStyle, scale );
+
+				// Move to next line
+				currentY += lm.lineHeight;
+			}
+		}
+
+		/**
+		 * Measure the width of a rich text line
+		 *
+		 * @private
+		 * @param {Array} richText - Rich text runs array
+		 * @param {number} lineStart - Starting character index
+		 * @param {number} lineEnd - Ending character index
+		 * @param {Object} baseStyle - Base style
+		 * @param {Object} scale - Scale factors
+		 * @return {number} Width of the line in pixels
+		 */
+		measureRichTextLineWidth( richText, lineStart, lineEnd, baseStyle, scale ) {
+			let totalWidth = 0;
+			let charPos = 0;
+
+			for ( const run of richText ) {
+				if ( !run || typeof run.text !== 'string' ) {
+					continue;
+				}
+
+				const runStart = charPos;
+				const runEnd = charPos + run.text.length;
+				charPos = runEnd;
+
+				// Check if this run overlaps with the current line
+				if ( runEnd <= lineStart || runStart >= lineEnd ) {
+					continue;
+				}
+
+				// Calculate which portion of this run is on this line
+				const sliceStart = Math.max( 0, lineStart - runStart );
+				const sliceEnd = Math.min( run.text.length, lineEnd - runStart );
+				const textSlice = run.text.slice( sliceStart, sliceEnd );
+
+				if ( textSlice.length === 0 ) {
+					continue;
+				}
+
+				// Build font for this run
+				const style = run.style || {};
+				const fontSize = ( style.fontSize || baseStyle.fontSize ) * scale.avg;
+				const fontFamily = style.fontFamily || baseStyle.fontFamily;
+				const fontWeight = style.fontWeight || baseStyle.fontWeight;
+				const fontStyle = style.fontStyle || baseStyle.fontStyle;
+
+				this.ctx.font = `${ fontStyle } ${ fontWeight } ${ fontSize }px ${ fontFamily }`;
+				totalWidth += this.ctx.measureText( textSlice ).width;
+			}
+
+			return totalWidth;
+		}
+
 		/**
 		 * Clean up resources
 		 */
@@ -650,8 +1084,9 @@
 
 			const baseOpacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
 
-			// Draw only the text content
-			if ( layer.text && layer.text.length > 0 ) {
+			// Draw only the text content (supports both plain text and rich text)
+			const hasText = ( layer.text && layer.text.length > 0 ) || this.hasRichText( layer );
+			if ( hasText ) {
 				this.ctx.save();
 
 				// Apply layer opacity

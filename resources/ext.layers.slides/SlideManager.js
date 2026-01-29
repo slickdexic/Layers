@@ -34,6 +34,15 @@
 			this.revision = config.revision || 0;
 			this.editor = null;
 			this.isDirty = false;
+
+			// Bound handler for beforeunload (for proper add/remove)
+			this.beforeUnloadHandler = ( e ) => {
+				if ( this.isDirty ) {
+					e.preventDefault();
+					// Modern browsers ignore custom messages, but we still return one
+					return mw.message( 'layers-cancel-confirm' ).text();
+				}
+			};
 		}
 
 		/**
@@ -194,13 +203,14 @@
 		 * @param {boolean} dirty Whether the editor has unsaved changes
 		 */
 		handleDirty( dirty ) {
+			const wasDirty = this.isDirty;
 			this.isDirty = dirty;
 
-			// Update browser beforeunload warning
-			if ( dirty ) {
-				window.onbeforeunload = () => mw.message( 'layers-cancel-confirm' ).text();
-			} else {
-				window.onbeforeunload = null;
+			// Update browser beforeunload warning using proper event listener pattern
+			if ( dirty && !wasDirty ) {
+				window.addEventListener( 'beforeunload', this.beforeUnloadHandler );
+			} else if ( !dirty && wasDirty ) {
+				window.removeEventListener( 'beforeunload', this.beforeUnloadHandler );
 			}
 		}
 
