@@ -1820,4 +1820,117 @@ describe( 'LayersValidator', () => {
 			expect( mockInput.parentNode.insertBefore ).not.toHaveBeenCalled(); // No error for valid text
 		} );
 	} );
+
+	describe( 'validateRichText', () => {
+		let result;
+
+		beforeEach( () => {
+			result = { isValid: true, errors: [], warnings: [] };
+		} );
+
+		it( 'should reject non-array richText', () => {
+			validator.validateRichText( 'not an array', result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		it( 'should reject too many runs', () => {
+			const manyRuns = Array( 101 ).fill().map( () => ( { text: 'x' } ) );
+			validator.validateRichText( manyRuns, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		it( 'should warn for non-object runs', () => {
+			validator.validateRichText( [ null, 'string' ], result );
+			expect( result.isValid ).toBe( true );
+			expect( result.warnings.length ).toBe( 2 );
+		} );
+
+		it( 'should warn for runs without text property', () => {
+			validator.validateRichText( [ { style: {} } ], result );
+			expect( result.warnings.some( w => w.includes( 'missing text' ) ) ).toBe( true );
+		} );
+
+		it( 'should reject text exceeding total length limit', () => {
+			const longText = 'a'.repeat( 60000 );
+			validator.validateRichText( [ { text: longText } ], result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		it( 'should reject script injection in text', () => {
+			validator.validateRichText( [ { text: '<script>alert(1)</script>' } ], result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		it( 'should warn for unknown style properties', () => {
+			validator.validateRichText( [ { text: 'test', style: { unknownProp: 'value' } } ], result );
+			expect( result.warnings.some( w => w.includes( 'unknownProp' ) ) ).toBe( true );
+		} );
+
+		it( 'should warn for invalid fontWeight', () => {
+			validator.validateRichText( [ { text: 'test', style: { fontWeight: 'superBold' } } ], result );
+			expect( result.warnings.some( w => w.includes( 'fontWeight' ) ) ).toBe( true );
+		} );
+
+		it( 'should warn for invalid fontStyle', () => {
+			validator.validateRichText( [ { text: 'test', style: { fontStyle: 'fancy' } } ], result );
+			expect( result.warnings.some( w => w.includes( 'fontStyle' ) ) ).toBe( true );
+		} );
+
+		it( 'should warn for invalid textDecoration', () => {
+			validator.validateRichText( [ { text: 'test', style: { textDecoration: 'wavy' } } ], result );
+			expect( result.warnings.some( w => w.includes( 'textDecoration' ) ) ).toBe( true );
+		} );
+
+		it( 'should warn for invalid fontSize', () => {
+			validator.validateRichText( [ { text: 'test', style: { fontSize: 600 } } ], result );
+			expect( result.warnings.some( w => w.includes( 'fontSize' ) ) ).toBe( true );
+		} );
+
+		it( 'should warn for invalid textStrokeWidth', () => {
+			validator.validateRichText( [ { text: 'test', style: { textStrokeWidth: 25 } } ], result );
+			expect( result.warnings.some( w => w.includes( 'textStrokeWidth' ) ) ).toBe( true );
+		} );
+
+		it( 'should accept valid richText', () => {
+			const validRichText = [
+				{ text: 'Hello ', style: { fontWeight: 'bold' } },
+				{ text: 'world', style: { fontStyle: 'italic', fontSize: 16 } }
+			];
+			validator.validateRichText( validRichText, result );
+			expect( result.isValid ).toBe( true );
+			expect( result.warnings.length ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'validateLayer with richText', () => {
+		it( 'should call validateRichText for textbox layers with richText', () => {
+			const layer = {
+				id: 'rtb1',
+				type: 'textbox',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				richText: [ { text: 'test' } ]
+			};
+			const result = validator.validateLayer( layer );
+			expect( result.isValid ).toBe( true );
+		} );
+
+		it( 'should call validateRichText for callout layers with richText', () => {
+			const layer = {
+				id: 'rtc1',
+				type: 'callout',
+				x: 10,
+				y: 10,
+				width: 100,
+				height: 50,
+				richText: [ { text: '<script>bad</script>' } ]
+			};
+			const result = validator.validateLayer( layer );
+			expect( result.isValid ).toBe( false );
+		} );
+	} );
 } );
