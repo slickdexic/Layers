@@ -4,6 +4,26 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.38 (January 28, 2026)
+
+### Fixed
+- **Text Loss During Inline Editing** — Fixed bug where changing properties (like vertical alignment) while inline editing a textbox would lose all typed text
+  - Added `getPendingTextContent()` method to retrieve current editor content without closing
+  - Modified `LayersEditor.updateLayer()` to merge pending text content when inline editing is active
+- **Vertical Alignment During Editing** — Fixed visual mismatch where text appeared at top during editing even when layer had `verticalAlign: middle`
+  - Added flexbox CSS with `justify-content` to `_positionEditor()` matching the layer's `verticalAlign` property
+- **Rich Text Inline Display** — Fixed bug where styled text runs displayed on separate lines during editing instead of inline
+  - Added inner content wrapper div so flex has one block child, preserving inline text flow
+- **Slide Layer Rendering Order** — Fixed layers appearing in reverse order on article pages using `{{#slide:}}` parser function
+  - Now layers[0] (top in panel) is correctly drawn last (appears on top), matching editor behavior
+
+### Technical Details
+- All 10,736 tests pass (157 test suites)
+- ESLint passes on all modified files
+- Fixes verified on REL1_39 with MediaWiki 1.39.7
+
+---
+
 ## Version 1.5.36 (January 27, 2026)
 
 ### Added
