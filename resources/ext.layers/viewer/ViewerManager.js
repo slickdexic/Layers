@@ -52,6 +52,10 @@ class ViewerManager {
 			this.freshnessChecker = FreshnessChecker ? new FreshnessChecker( { debug: this.debug } ) : null;
 		}
 
+		// Create SlideController for slide-related operations
+		const SlideController = getClass( 'Viewer.SlideController', 'SlideController' );
+		this._slideController = SlideController ? new SlideController( { debug: this.debug } ) : null;
+
 		// Track created wrappers for cleanup
 		this._createdWrappers = new WeakMap();
 	}
@@ -251,179 +255,18 @@ class ViewerManager {
 
 	/**
 	 * Reinitialize a slide viewer with fresh layer data.
-	 *
-	 * This is called when a slide's data needs to be refreshed after editing.
-	 * It clears the canvas and re-renders all layers with the fresh data.
+	 * Delegates to SlideController.
 	 *
 	 * @param {HTMLElement} container Slide container element
 	 * @param {Object} payload Fresh layer data payload
 	 * @return {boolean} True if slide viewer was reinitialized
 	 */
 	reinitializeSlideViewer( container, payload ) {
-		try {
-			const canvas = container.querySelector( 'canvas' );
-			if ( !canvas ) {
-				this.debugWarn( 'reinitializeSlideViewer: No canvas found' );
-				return false;
-			}
-
-			const ctx = canvas.getContext( '2d' );
-			if ( !ctx ) {
-				this.debugWarn( 'reinitializeSlideViewer: Could not get 2d context' );
-				return false;
-			}
-
-			// Get the original canvas/display dimensions from data attributes
-			const origCanvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
-			const origCanvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
-			const origDisplayWidth = parseInt( container.getAttribute( 'data-display-width' ), 10 ) || origCanvasWidth;
-			const origDisplayHeight = parseInt( container.getAttribute( 'data-display-height' ), 10 ) || origCanvasHeight;
-
-			// Update canvas dimensions if payload specifies new ones
-			if ( payload.baseWidth && payload.baseHeight ) {
-				canvas.width = payload.baseWidth;
-				canvas.height = payload.baseHeight;
-
-				// Update data attributes to reflect new canvas size
-				container.setAttribute( 'data-canvas-width', payload.baseWidth );
-				container.setAttribute( 'data-canvas-height', payload.baseHeight );
-
-				// Determine if this slide was originally unconstrained (display == canvas)
-				// or constrained (display < canvas)
-				const wasUnconstrained = origDisplayWidth === origCanvasWidth &&
-					origDisplayHeight === origCanvasHeight;
-
-				if ( wasUnconstrained ) {
-					// Unconstrained slide: display at full canvas size
-					const newDisplayWidth = payload.baseWidth;
-					const newDisplayHeight = payload.baseHeight;
-
-					canvas.style.width = newDisplayWidth + 'px';
-					canvas.style.height = newDisplayHeight + 'px';
-					container.style.width = newDisplayWidth + 'px';
-					container.style.height = newDisplayHeight + 'px';
-
-					// Update data attributes
-					container.setAttribute( 'data-display-width', newDisplayWidth );
-					container.setAttribute( 'data-display-height', newDisplayHeight );
-					container.setAttribute( 'data-display-scale', '1' );
-
-					this.debugLog( 'Slide resized (unconstrained): ' + newDisplayWidth + 'x' + newDisplayHeight );
-				} else {
-					// Constrained slide: recalculate display size to fit within original constraint
-					// while maintaining new aspect ratio
-					const newAspect = payload.baseWidth / payload.baseHeight;
-					const constraintAspect = origDisplayWidth / origDisplayHeight;
-
-					let newDisplayWidth, newDisplayHeight;
-					if ( newAspect > constraintAspect ) {
-						// New aspect is wider - fit to width
-						newDisplayWidth = origDisplayWidth;
-						newDisplayHeight = Math.round( origDisplayWidth / newAspect );
-					} else {
-						// New aspect is taller - fit to height
-						newDisplayHeight = origDisplayHeight;
-						newDisplayWidth = Math.round( origDisplayHeight * newAspect );
-					}
-
-					const newScale = newDisplayWidth / payload.baseWidth;
-
-					canvas.style.width = newDisplayWidth + 'px';
-					canvas.style.height = newDisplayHeight + 'px';
-					container.style.width = newDisplayWidth + 'px';
-					container.style.height = newDisplayHeight + 'px';
-
-					// Update data attributes
-					container.setAttribute( 'data-display-width', newDisplayWidth );
-					container.setAttribute( 'data-display-height', newDisplayHeight );
-					container.setAttribute( 'data-display-scale', newScale.toFixed( 4 ) );
-
-					this.debugLog( 'Slide resized (constrained): ' + payload.baseWidth + 'x' + payload.baseHeight +
-						' -> ' + newDisplayWidth + 'x' + newDisplayHeight );
-				}
-			}
-
-			// Get background color
-			const bgColor = payload.backgroundColor || container.getAttribute( 'data-background' ) || '#ffffff';
-			const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'none';
-			// Check background visibility - handle both boolean and integer from API
-			const bgVisible = payload.backgroundVisible !== false && payload.backgroundVisible !== 0;
-			// Get background opacity - default to 1.0 (fully opaque)
-			const bgOpacity = typeof payload.backgroundOpacity === 'number' ? payload.backgroundOpacity : 1.0;
-
-			// Update container background style and data attribute
-			if ( payload.backgroundColor ) {
-				container.setAttribute( 'data-background', payload.backgroundColor );
-				if ( isTransparent ) {
-					// Transparent: show checkerboard pattern
-					container.style.backgroundColor = 'transparent';
-					container.style.backgroundImage = 'url(data:image/svg+xml,' +
-						'base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+' +
-						'PHJlY3Qgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0iI2NjYyIvPjxyZWN0IHg9IjgiIHk9IjgiIHdpZHRoPSI4' +
-						'IiBoZWlnaHQ9IjgiIGZpbGw9IiNjY2MiLz48L3N2Zz4=)';
-				} else {
-					// Clear container background - canvas handles the background with opacity
-					// If we set container.style.backgroundColor, it shows through the semi-transparent
-					// canvas background, making opacity appear as 100%
-					container.style.backgroundColor = 'transparent';
-					container.style.backgroundImage = '';
-				}
-			}
-
-			// Get LayerRenderer for rendering
-			const LayerRenderer = ( window.Layers && window.Layers.LayerRenderer ) || window.LayerRenderer;
-			if ( !LayerRenderer ) {
-				this.debugWarn( 'reinitializeSlideViewer: LayerRenderer not available' );
-				return false;
-			}
-
-			/**
-			 * Helper function to render all layers.
-			 * Called initially and again when async resources (SVGs) finish loading.
-			 * Renders from bottom to top so layer[0] (topmost in panel) is drawn last.
-			 */
-			const renderAllLayers = () => {
-				ctx.clearRect( 0, 0, canvas.width, canvas.height );
-				if ( !isTransparent && bgVisible ) {
-					// Draw background color with opacity (no checkerboard in viewer - that's editor-only)
-					ctx.save();
-					ctx.globalAlpha = bgOpacity;
-					ctx.fillStyle = bgColor;
-					ctx.fillRect( 0, 0, canvas.width, canvas.height );
-					ctx.restore();
-				}
-				if ( payload.layers && Array.isArray( payload.layers ) ) {
-					// Render layers from bottom to top (index 0 = top in panel, drawn last)
-					const layers = payload.layers;
-					for ( let i = layers.length - 1; i >= 0; i-- ) {
-						const layer = layers[ i ];
-						if ( layer.visible !== false && layer.visible !== 0 ) {
-							renderer.drawLayer( layer );
-						}
-					}
-				}
-			};
-
-			// Render layers - use single renderer instance to maintain SVG image cache
-			// onImageLoad callback triggers re-render when async SVGs finish loading
-			const renderer = new LayerRenderer( ctx, {
-				canvas: canvas,
-				zoom: 1,
-				onImageLoad: renderAllLayers
-			} );
-
-			// Initial render
-			renderAllLayers();
-
-			// Update the stored payload for the overlay (for view full size)
-			container._layersPayload = payload;
-
-			this.debugLog( 'Slide viewer reinitialized:', container.getAttribute( 'data-slide-name' ) );
-			return true;
-		} catch ( e ) {
-			this.debugWarn( 'Slide viewer reinit error:', e );
-			return false;
+		if ( this._slideController ) {
+			return this._slideController.reinitializeSlideViewer( container, payload );
 		}
+		this.debugWarn( 'reinitializeSlideViewer: SlideController not available' );
+		return false;
 	}
 
 	/**
@@ -674,120 +517,11 @@ class ViewerManager {
 	 * @return {Promise<Object>} Promise resolving to result object
 	 */
 	refreshAllSlides() {
-		this.debugLog( 'refreshAllSlides: starting' );
-
-		// Find all slide containers (don't require layersSlideInitialized flag
-		// since this may be called after bfcache restore where DOM properties may be lost)
-		const slideContainers = Array.prototype.slice.call(
-			document.querySelectorAll( '.layers-slide-container[data-slide-name]' )
-		);
-
-		if ( slideContainers.length === 0 ) {
-			this.debugLog( 'refreshAllSlides: no slides found' );
-			return Promise.resolve( { refreshed: 0, failed: 0, total: 0, errors: [] } );
+		if ( this._slideController ) {
+			return this._slideController.refreshAllSlides();
 		}
-
-		this.debugLog( 'refreshAllSlides: found', slideContainers.length, 'slides' );
-
-		// Fetch fresh data for each slide via API
-		if ( typeof mw === 'undefined' || !mw.Api ) {
-			this.debugWarn( 'refreshAllSlides: mw.Api not available' );
-			return Promise.resolve( {
-				refreshed: 0,
-				failed: slideContainers.length,
-				total: slideContainers.length,
-				errors: [ { slideName: null, error: 'mw.Api not available' } ]
-			} );
-		}
-
-		const api = new mw.Api();
-		const self = this;
-		let refreshCount = 0;
-		const errors = [];
-
-		const refreshPromises = slideContainers.map( ( container ) => {
-			const slideName = container.getAttribute( 'data-slide-name' );
-			const setName = container.getAttribute( 'data-layerset' ) || 'default';
-			const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
-			const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
-
-			if ( !slideName ) {
-				return Promise.resolve( { success: false, slideName: null } );
-			}
-
-			return api.get( {
-				action: 'layersinfo',
-				slidename: slideName,
-				setname: setName,
-				format: 'json',
-				formatversion: 2,
-				// Cache buster to ensure fresh data after save
-				_: Date.now()
-			} ).then( ( data ) => {
-				try {
-					if ( !data || !data.layersinfo ) {
-						self.debugLog( 'refreshAllSlides: no layersinfo for', slideName );
-						return { success: false, slideName: slideName };
-					}
-
-					const layerset = data.layersinfo.layerset;
-					let layersArr = [];
-
-					if ( layerset && layerset.data && layerset.data.layers ) {
-						layersArr = layerset.data.layers;
-					}
-
-					// Build payload for slide viewer
-					const payload = {
-						layers: layersArr,
-						baseWidth: ( layerset && layerset.baseWidth ) || ( layerset && layerset.data && layerset.data.canvasWidth ) || canvasWidth,
-						baseHeight: ( layerset && layerset.baseHeight ) || ( layerset && layerset.data && layerset.data.canvasHeight ) || canvasHeight,
-						backgroundVisible: layerset && layerset.data && layerset.data.backgroundVisible !== undefined
-							? ( layerset.data.backgroundVisible !== false && layerset.data.backgroundVisible !== 0 )
-							: true,
-						backgroundOpacity: layerset && layerset.data && typeof layerset.data.backgroundOpacity === 'number'
-							? layerset.data.backgroundOpacity
-							: ( layerset && layerset.data && layerset.data.backgroundOpacity !== undefined
-								? parseFloat( layerset.data.backgroundOpacity )
-								: 1.0 ),
-						isSlide: true,
-						backgroundColor: ( layerset && layerset.data && layerset.data.backgroundColor ) ||
-							container.getAttribute( 'data-background' ) || '#ffffff'
-					};
-
-					const success = self.reinitializeSlideViewer( container, payload );
-					if ( success ) {
-						refreshCount++;
-						self.debugLog( 'refreshAllSlides: refreshed slide', slideName );
-					}
-					return { success: success, slideName: slideName };
-				} catch ( e ) {
-					self.debugWarn( 'refreshAllSlides: error processing', slideName, e );
-					errors.push( { slideName: slideName, error: e.message || String( e ) } );
-					return { success: false, slideName: slideName };
-				}
-			} ).catch( ( apiErr ) => {
-				self.debugWarn( 'refreshAllSlides: API error for', slideName, apiErr );
-				const errMsg = apiErr && apiErr.message ? apiErr.message :
-					( apiErr && apiErr.error && apiErr.error.info ? apiErr.error.info : String( apiErr ) );
-				errors.push( { slideName: slideName, error: errMsg } );
-				return { success: false, slideName: slideName };
-			} );
-		} );
-
-		return Promise.all( refreshPromises ).then( ( results ) => {
-			const failed = results.filter( ( r ) => !r.success ).length;
-			self.debugLog( 'refreshAllSlides: completed, refreshed', refreshCount, 'of', slideContainers.length, 'slides' );
-			if ( errors.length > 0 ) {
-				self.debugWarn( 'refreshAllSlides:', errors.length, 'errors occurred:', errors );
-			}
-			return {
-				refreshed: refreshCount,
-				failed: failed,
-				total: slideContainers.length,
-				errors: errors
-			};
-		} );
+		this.debugWarn( 'refreshAllSlides: SlideController not available' );
+		return Promise.resolve( { refreshed: 0, failed: 0, total: 0, errors: [] } );
 	}
 
 	/**
@@ -1036,423 +770,99 @@ class ViewerManager {
 
 	/**
 	 * Initialize slides (canvas-based layers without parent images).
-	 * Finds all .layers-slide-container elements and fetches their layer data via API.
+	 * Delegates to SlideController.
 	 */
 	initializeSlides() {
-		const containers = Array.prototype.slice.call(
-			document.querySelectorAll( '.layers-slide-container' )
-		);
-
-		if ( containers.length === 0 ) {
-			return;
+		if ( this._slideController ) {
+			this._slideController.initializeSlides();
+		} else {
+			this.debugWarn( 'initializeSlides: SlideController not available' );
 		}
-
-		this.debugLog( 'Found', containers.length, 'slide containers' );
-
-		if ( typeof mw === 'undefined' || !mw.Api ) {
-			this.debugWarn( 'mw.Api not available for slide fetch' );
-			return;
-		}
-
-		const api = new mw.Api();
-		const self = this;
-
-		containers.forEach( ( container ) => {
-			// Skip if already initialized
-			if ( container.layersSlideInitialized ) {
-				return;
-			}
-
-			const slideName = container.getAttribute( 'data-slide-name' );
-			if ( !slideName ) {
-				self.debugWarn( 'Slide container missing data-slide-name attribute' );
-				return;
-			}
-
-			// Get canvas dimensions from data attributes
-			const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
-			const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
-			// Slides use data-layerset (from SlideHooks.php)
-			const setName = container.getAttribute( 'data-layerset' ) || 'default';
-
-			// Mark as pending
-			container.layersSlideInitialized = true;
-
-			self.debugLog( 'Fetching slide data for:', slideName, 'set:', setName );
-
-			api.get( {
-				action: 'layersinfo',
-				slidename: slideName,
-				setname: setName,
-				format: 'json',
-				formatversion: 2
-			} ).then( ( data ) => {
-				try {
-					if ( !data || !data.layersinfo ) {
-						self.debugLog( 'No layersinfo returned for slide:', slideName );
-						self.renderEmptySlide( container, canvasWidth, canvasHeight );
-						return;
-					}
-
-					const layersInfo = data.layersinfo;
-					const layerset = layersInfo.layerset;
-
-					if ( !layerset || !layerset.data || !layerset.data.layers || layerset.data.layers.length === 0 ) {
-						self.debugLog( 'No layers in fetched data for slide:', slideName );
-						self.renderEmptySlide( container, canvasWidth, canvasHeight );
-						return;
-					}
-
-					// Build payload for slide viewer
-					// Handle backgroundVisible - API returns 0/1 integers, need to normalize
-					const bgVal = layerset.data.backgroundVisible;
-					const bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
-					const payload = {
-						layers: layerset.data.layers,
-						baseWidth: layerset.baseWidth || layerset.data.canvasWidth || canvasWidth,
-						baseHeight: layerset.baseHeight || layerset.data.canvasHeight || canvasHeight,
-						backgroundVisible: bgVisible,
-						backgroundOpacity: typeof layerset.data.backgroundOpacity === 'number' ? layerset.data.backgroundOpacity : 1.0,
-						isSlide: true,
-						backgroundColor: layerset.data.backgroundColor || container.getAttribute( 'data-background-color' ) || '#ffffff'
-					};
-
-					self.initializeSlideViewer( container, payload );
-				} catch ( e ) {
-					self.debugWarn( 'Error processing slide data:', e );
-					self.renderEmptySlide( container, canvasWidth, canvasHeight );
-				}
-			} ).catch( ( apiErr ) => {
-				self.debugWarn( 'API request failed for slide:', slideName, apiErr );
-				self.renderEmptySlide( container, canvasWidth, canvasHeight );
-			} );
-		} );
 	}
 
 	/**
 	 * Initialize a slide viewer for a container element.
+	 * Delegates to SlideController.
 	 *
 	 * @param {HTMLElement} container Slide container element
 	 * @param {Object} payload Layer data payload
 	 */
 	initializeSlideViewer( container, payload ) {
-		const canvas = container.querySelector( 'canvas' );
-		if ( !canvas ) {
-			this.debugWarn( 'No canvas found in slide container' );
-			return;
+		if ( this._slideController ) {
+			this._slideController.initializeSlideViewer( container, payload );
+		} else {
+			this.debugWarn( 'initializeSlideViewer: SlideController not available' );
 		}
-
-		// Get display dimensions from container data attributes (how slide appears on page)
-		const displayWidth = parseInt( container.getAttribute( 'data-display-width' ), 10 );
-		const displayHeight = parseInt( container.getAttribute( 'data-display-height' ), 10 );
-		const displayScale = parseFloat( container.getAttribute( 'data-display-scale' ) ) || 1;
-
-		// Set canvas internal dimensions (source resolution for rendering)
-		canvas.width = payload.baseWidth;
-		canvas.height = payload.baseHeight;
-
-		// If display dimensions differ from canvas dimensions, scale the canvas with CSS
-		if ( displayWidth && displayHeight && displayScale !== 1 ) {
-			canvas.style.width = displayWidth + 'px';
-			canvas.style.height = displayHeight + 'px';
-			this.debugLog( 'Slide canvas scaled: ' + payload.baseWidth + 'x' + payload.baseHeight +
-				' -> ' + displayWidth + 'x' + displayHeight + ' (scale: ' + displayScale + ')' );
-		}
-
-		// Get LayerRenderer for rendering
-		const LayerRenderer = ( window.Layers && window.Layers.LayerRenderer ) || window.LayerRenderer;
-		if ( !LayerRenderer ) {
-			this.debugWarn( 'LayerRenderer not available for slide' );
-			return;
-		}
-
-		const ctx = canvas.getContext( '2d' );
-		if ( !ctx ) {
-			this.debugWarn( 'Could not get 2d context for slide canvas' );
-			return;
-		}
-
-		// Clear and fill background
-		const bgColor = payload.backgroundColor || '#ffffff';
-		const isTransparent = !bgColor || bgColor === 'transparent' || bgColor === 'none';
-		// Check background visibility - handle both boolean and integer from API
-		const bgVisible = payload.backgroundVisible !== false && payload.backgroundVisible !== 0;
-		// Get background opacity - default to 1 if not specified
-		const bgOpacity = typeof payload.backgroundOpacity === 'number' ? payload.backgroundOpacity : 1.0;
-
-		// Clear container background since canvas handles it with opacity
-		// The PHP-rendered HTML sets container background, but we need to clear it
-		// so the canvas-drawn background (with opacity) is the only source
-		if ( !isTransparent && bgOpacity < 1.0 ) {
-			container.style.backgroundColor = 'transparent';
-		}
-
-		/**
-		 * Helper function to render all layers.
-		 * Called initially and again when async resources (SVGs) finish loading.
-		 * Renders from bottom to top so layer[0] (topmost in panel) is drawn last.
-		 */
-		const renderAllLayers = () => {
-			ctx.clearRect( 0, 0, canvas.width, canvas.height );
-			if ( !isTransparent && bgVisible ) {
-				// Draw background color with opacity (no checkerboard in viewer - that's editor-only)
-				ctx.save();
-				ctx.globalAlpha = bgOpacity;
-				ctx.fillStyle = bgColor;
-				ctx.fillRect( 0, 0, canvas.width, canvas.height );
-				ctx.restore();
-			}
-			// Render layers from bottom to top (index 0 = top in panel, drawn last)
-			const layers = payload.layers;
-			for ( let i = layers.length - 1; i >= 0; i-- ) {
-				const layer = layers[ i ];
-				if ( layer.visible !== false && layer.visible !== 0 ) {
-					renderer.drawLayer( layer );
-				}
-			}
-		};
-
-		// Render layers using single renderer instance to maintain SVG image cache
-		// onImageLoad callback triggers re-render when async SVGs finish loading
-		const renderer = new LayerRenderer( ctx, {
-			canvas: canvas,
-			zoom: 1,
-			onImageLoad: renderAllLayers
-		} );
-
-		// Initial render
-		renderAllLayers();
-
-		// Remove loading placeholder
-		const placeholder = container.querySelector( '.layers-slide-placeholder' );
-		if ( placeholder ) {
-			placeholder.style.display = 'none';
-		}
-
-		// Set up slide overlay with edit and view buttons
-		this.setupSlideOverlay( container, payload );
-
-		this.debugLog( 'Slide viewer initialized:', container.getAttribute( 'data-slide-name' ) );
 	}
 
 	/**
 	 * Check if current user has edit permission for layers.
+	 * Delegates to SlideController.
 	 *
 	 * @private
 	 * @return {boolean} True if user can edit layers
 	 */
 	canUserEdit() {
-		if ( typeof mw === 'undefined' || !mw.config ) {
-			return false;
-		}
-		// Check the dedicated config var exposed by Layers extension
-		const canEdit = mw.config.get( 'wgLayersCanEdit' );
-		if ( canEdit !== null && canEdit !== undefined ) {
-			return !!canEdit;
-		}
-		// Fallback: check wgUserRights if available
-		const rights = mw.config.get( 'wgUserRights' );
-		if ( rights && Array.isArray( rights ) ) {
-			return rights.indexOf( 'editlayers' ) !== -1;
+		if ( this._slideController ) {
+			return this._slideController.canUserEdit();
 		}
 		return false;
 	}
 
 	/**
 	 * Set up click handler for slide edit button.
+	 * Delegates to SlideController.
 	 *
 	 * @param {HTMLElement} container Slide container element
 	 */
 	setupSlideEditButton( container ) {
-		const editButton = container.querySelector( '.layers-slide-edit-button' );
-		if ( !editButton ) {
-			return;
+		if ( this._slideController ) {
+			this._slideController.setupSlideEditButton( container );
 		}
-
-		// Check if user has permission to edit - hide button if not
-		if ( !this.canUserEdit() ) {
-			editButton.style.display = 'none';
-			this.debugLog( 'Edit button hidden - user lacks editlayers permission' );
-			return;
-		}
-
-		// Prevent double-binding
-		if ( editButton.layersClickBound ) {
-			return;
-		}
-		editButton.layersClickBound = true;
-
-		const self = this;
-
-		editButton.addEventListener( 'click', ( e ) => {
-			e.preventDefault();
-			e.stopPropagation();
-
-			// Get slide data from container attributes
-			const slideName = container.getAttribute( 'data-slide-name' );
-			const lockMode = container.getAttribute( 'data-lock-mode' ) || 'none';
-			const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
-			const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
-			const backgroundColor = container.getAttribute( 'data-background' ) || '#ffffff';
-			const layerSetName = container.getAttribute( 'data-layerset' ) || 'default';
-
-			self.debugLog( 'Slide edit clicked:', slideName, 'lockMode:', lockMode );
-
-			self.openSlideEditor( {
-				slideName: slideName,
-				lockMode: lockMode,
-				canvasWidth: canvasWidth,
-				canvasHeight: canvasHeight,
-				backgroundColor: backgroundColor,
-				layerSetName: layerSetName
-			} );
-		} );
 	}
 
 	/**
 	 * Set up the slide overlay with edit and view buttons.
-	 * This replaces the old single edit button with a proper overlay.
+	 * Delegates to SlideController.
 	 *
 	 * @param {HTMLElement} container Slide container element
 	 * @param {Object} payload Layer data payload
 	 */
 	setupSlideOverlay( container, payload ) {
-		// Remove old edit button if present (replaced by overlay)
-		const oldEditButton = container.querySelector( '.layers-slide-edit-button' );
-		if ( oldEditButton ) {
-			oldEditButton.remove();
+		if ( this._slideController ) {
+			this._slideController.setupSlideOverlay( container, payload );
 		}
-
-		// Check if overlay already exists (from a previous init)
-		if ( container.querySelector( '.layers-slide-overlay' ) ) {
-			return;
-		}
-
-		const canEdit = this.canUserEdit();
-		const self = this;
-
-		// Create overlay container
-		const overlay = document.createElement( 'div' );
-		overlay.className = 'layers-slide-overlay';
-		overlay.setAttribute( 'role', 'toolbar' );
-		overlay.setAttribute( 'aria-label', this._msg( 'layers-viewer-overlay-label', 'Slide actions' ) );
-
-		// Create edit button if user has permission
-		if ( canEdit ) {
-			const editBtn = document.createElement( 'button' );
-			editBtn.className = 'layers-slide-overlay-btn layers-slide-overlay-btn--edit';
-			editBtn.setAttribute( 'type', 'button' );
-			editBtn.setAttribute( 'title', this._msg( 'layers-viewer-edit', 'Edit layers' ) );
-			editBtn.setAttribute( 'aria-label', this._msg( 'layers-viewer-edit', 'Edit layers' ) );
-			editBtn.appendChild( this._createPencilIcon() );
-
-			editBtn.addEventListener( 'click', ( e ) => {
-				e.preventDefault();
-				e.stopPropagation();
-				self.handleSlideEditClick( container );
-			} );
-
-			overlay.appendChild( editBtn );
-		}
-
-		// Create view full size button (always visible)
-		const viewBtn = document.createElement( 'button' );
-		viewBtn.className = 'layers-slide-overlay-btn layers-slide-overlay-btn--view';
-		viewBtn.setAttribute( 'type', 'button' );
-		viewBtn.setAttribute( 'title', this._msg( 'layers-viewer-view', 'View full size' ) );
-		viewBtn.setAttribute( 'aria-label', this._msg( 'layers-viewer-view', 'View full size' ) );
-		viewBtn.appendChild( this._createExpandIcon() );
-
-		viewBtn.addEventListener( 'click', ( e ) => {
-			e.preventDefault();
-			e.stopPropagation();
-			self.handleSlideViewClick( container, payload );
-		} );
-
-		overlay.appendChild( viewBtn );
-
-		// Add overlay to container
-		container.appendChild( overlay );
-
-		this.debugLog( 'Slide overlay created for:', container.getAttribute( 'data-slide-name' ),
-			'canEdit:', canEdit );
 	}
 
 	/**
 	 * Handle click on slide edit button.
+	 * Delegates to SlideController.
 	 *
 	 * @private
 	 * @param {HTMLElement} container Slide container element
 	 */
 	handleSlideEditClick( container ) {
-		const slideName = container.getAttribute( 'data-slide-name' );
-		const lockMode = container.getAttribute( 'data-lock-mode' ) || 'none';
-		const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
-		const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
-		const backgroundColor = container.getAttribute( 'data-background' ) || '#ffffff';
-		const layerSetName = container.getAttribute( 'data-layerset' ) || 'default';
-
-		this.debugLog( 'Slide edit clicked:', slideName, 'layerset:', layerSetName );
-
-		this.openSlideEditor( {
-			slideName: slideName,
-			lockMode: lockMode,
-			canvasWidth: canvasWidth,
-			canvasHeight: canvasHeight,
-			backgroundColor: backgroundColor,
-			layerSetName: layerSetName
-		} );
+		if ( this._slideController ) {
+			this._slideController.handleSlideEditClick( container );
+		}
 	}
 
 	/**
 	 * Handle click on slide view (full size) button.
-	 * Opens the slide in a lightbox for full-size viewing.
+	 * Delegates to SlideController.
 	 *
 	 * @private
 	 * @param {HTMLElement} container Slide container element
 	 * @param {Object} payload Layer data payload
 	 */
 	handleSlideViewClick( container, payload ) {
-		const slideName = container.getAttribute( 'data-slide-name' );
-		this.debugLog( 'Slide view clicked:', slideName );
-
-		// Get LayersLightbox class - check multiple export locations
-		const LightboxClass = ( window.Layers && window.Layers.Viewer && window.Layers.Viewer.Lightbox ) ||
-			( window.Layers && window.Layers.LayersLightbox ) ||
-			window.LayersLightbox;
-		if ( !LightboxClass ) {
-			this.debugWarn( 'LayersLightbox not available for slide view' );
-			return;
+		if ( this._slideController ) {
+			this._slideController.handleSlideViewClick( container, payload );
 		}
-
-		// Create a synthetic image data object for the lightbox
-		const canvas = container.querySelector( 'canvas' );
-		if ( !canvas ) {
-			return;
-		}
-
-		// Create a data URL from the current canvas state
-		const dataUrl = canvas.toDataURL( 'image/png' );
-
-		// Create lightbox and open with proper config
-		// LayersLightbox.open() expects { filename, imageUrl, layerData }
-		const lightbox = new LightboxClass( { debug: this.debug } );
-		lightbox.open( {
-			filename: slideName,
-			imageUrl: dataUrl,
-			layerData: {
-				layers: payload.layers || [],
-				baseWidth: payload.baseWidth,
-				baseHeight: payload.baseHeight,
-				backgroundVisible: true,
-				backgroundOpacity: 1.0,
-				backgroundColor: payload.backgroundColor
-			}
-		} );
 	}
 
 	/**
-	 * Get localized message with fallback (for slides).
+	 * Get localized message with fallback.
 	 *
 	 * @private
 	 * @param {string} key Message key
@@ -1471,6 +881,7 @@ class ViewerManager {
 
 	/**
 	 * Create pencil icon SVG for edit button.
+	 * Kept in ViewerManager as it's also used by ViewerOverlay.
 	 *
 	 * @private
 	 * @return {SVGElement} Pencil icon
@@ -1478,13 +889,13 @@ class ViewerManager {
 	_createPencilIcon() {
 		const SVG_NS = 'http://www.w3.org/2000/svg';
 
-		// Try to use IconFactory if available (matches ViewerOverlay)
+		// Try to use IconFactory if available
 		if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
 			window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createPencilIcon ) {
 			return window.Layers.UI.IconFactory.createPencilIcon( { size: 16, color: '#fff' } );
 		}
 
-		// Fallback: same SVG as ViewerOverlay (pencil with document icon)
+		// Fallback: pencil with document icon
 		const svg = document.createElementNS( SVG_NS, 'svg' );
 		svg.setAttribute( 'width', '16' );
 		svg.setAttribute( 'height', '16' );
@@ -1513,18 +924,19 @@ class ViewerManager {
 
 	/**
 	 * Create expand icon SVG for view button.
+	 * Kept in ViewerManager as it's also used by ViewerOverlay.
 	 *
 	 * @private
 	 * @return {SVGElement} Expand icon
 	 */
 	_createExpandIcon() {
-		// Use IconFactory if available for consistency with ViewerOverlay
+		// Use IconFactory if available
 		if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
 			window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createFullscreenIcon ) {
 			return window.Layers.UI.IconFactory.createFullscreenIcon( { size: 16, color: '#fff' } );
 		}
 
-		// Fallback: same SVG as ViewerOverlay (expand arrows icon)
+		// Fallback: expand arrows icon
 		const SVG_NS = 'http://www.w3.org/2000/svg';
 		const svg = document.createElementNS( SVG_NS, 'svg' );
 		svg.setAttribute( 'width', '16' );
@@ -1577,262 +989,101 @@ class ViewerManager {
 
 	/**
 	 * Open the slide editor.
+	 * Delegates to SlideController.
 	 *
 	 * @param {Object} slideData Slide configuration data
-	 * @param {string} slideData.slideName Slide name
-	 * @param {string} slideData.lockMode Lock mode (none, size, all)
-	 * @param {number} slideData.canvasWidth Canvas width
-	 * @param {number} slideData.canvasHeight Canvas height
-	 * @param {string} slideData.backgroundColor Background color
-	 * @param {string} slideData.layerSetName Layer set name
 	 */
 	openSlideEditor( slideData ) {
-		// Fire a hook that the editor module can listen to
-		// This allows the modal or inline editor to handle slide editing
-		if ( typeof mw !== 'undefined' && mw.hook ) {
-			mw.hook( 'layers.slide.edit' ).fire( {
-				slideName: slideData.slideName,
-				lockMode: slideData.lockMode,
-				canvasWidth: slideData.canvasWidth,
-				canvasHeight: slideData.canvasHeight,
-				backgroundColor: slideData.backgroundColor,
-				layerSetName: slideData.layerSetName,
-				isSlide: true
-			} );
-		}
-
-		// Check if modal editor should be used (same pattern as ViewerOverlay for images)
-		const useModal = this._shouldUseModalForSlide();
-
-		this.debugLog( 'openSlideEditor: useModal=', useModal );
-
-		if ( useModal && typeof window !== 'undefined' && window.Layers &&
-			window.Layers.Modal && window.Layers.Modal.LayersEditorModal ) {
-			// Open in modal - build URL with modal flag
-			const modal = new window.Layers.Modal.LayersEditorModal();
-			const editorUrl = this.buildSlideEditorUrl( slideData ) + '&modal=1';
-
-			// For slides, we pass the slide name as the "filename" for the modal
-			const slideFilename = 'Slide:' + slideData.slideName;
-			const setName = slideData.layerSetName || 'default';
-
-			modal.open( slideFilename, setName, editorUrl ).then( ( result ) => {
-				if ( result && result.saved ) {
-					// Refresh all slide viewers when modal closes after save
-					this.refreshAllViewers();
-				}
-			} );
+		if ( this._slideController ) {
+			this._slideController.openSlideEditor( slideData );
 		} else {
-			// Fallback: Navigate to slide editor page (full page navigation)
-			const editUrl = this.buildSlideEditorUrl( slideData );
-			window.location.href = editUrl;
+			this.debugWarn( 'openSlideEditor: SlideController not available' );
 		}
 	}
 
 	/**
 	 * Check if modal editor should be used for slides.
-	 * Matches the logic in ViewerOverlay._shouldUseModal().
+	 * Delegates to SlideController.
 	 *
 	 * @private
 	 * @return {boolean} True if modal should be used
 	 */
 	_shouldUseModalForSlide() {
-		// Use modal if modal module is available
-		if ( typeof mw === 'undefined' || !mw.config ) {
-			this.debugLog( '_shouldUseModalForSlide: mw or mw.config undefined' );
-			return false;
+		if ( this._slideController ) {
+			return this._slideController._shouldUseModalForSlide();
 		}
-
-		// Check if modal module is available
-		const hasLayers = !!window.Layers;
-		const hasModal = !!( window.Layers && window.Layers.Modal );
-		const hasClass = !!( window.Layers && window.Layers.Modal && window.Layers.Modal.LayersEditorModal );
-
-		this.debugLog( '_shouldUseModalForSlide:',
-			'window.Layers:', hasLayers,
-			'window.Layers.Modal:', hasModal,
-			'LayersEditorModal:', hasClass );
-
-		return hasClass;
+		return false;
 	}
 
 	/**
 	 * Build the URL for the slide editor.
+	 * Delegates to SlideController.
 	 *
 	 * @private
 	 * @param {Object} slideData Slide data
 	 * @return {string} Editor URL
 	 */
 	buildSlideEditorUrl( slideData ) {
-		if ( typeof mw === 'undefined' || !mw.util ) {
-			// Fallback URL construction
-			let url = '/wiki/Special:EditSlide/' + encodeURIComponent( slideData.slideName );
-			url += '?setname=' + encodeURIComponent( slideData.layerSetName );
-			if ( slideData.lockMode && slideData.lockMode !== 'none' ) {
-				url += '&lockmode=' + encodeURIComponent( slideData.lockMode );
-			}
-			// Pass canvas dimensions if non-default (for new slides with explicit canvas= param)
-			if ( slideData.canvasWidth && slideData.canvasHeight &&
-				( slideData.canvasWidth !== 800 || slideData.canvasHeight !== 600 ) ) {
-				url += '&canvaswidth=' + slideData.canvasWidth;
-				url += '&canvasheight=' + slideData.canvasHeight;
-			}
-			return url;
+		if ( this._slideController ) {
+			return this._slideController.buildSlideEditorUrl( slideData );
 		}
-
-		const params = new URLSearchParams();
-		params.set( 'action', 'editslide' );
-		params.set( 'slidename', slideData.slideName );
-		if ( slideData.layerSetName && slideData.layerSetName !== 'default' ) {
-			params.set( 'setname', slideData.layerSetName );
-		}
-		if ( slideData.lockMode && slideData.lockMode !== 'none' ) {
-			params.set( 'lockmode', slideData.lockMode );
-		}
-		// Pass canvas dimensions if they differ from defaults.
-		// For NEW slides (no saved data), this preserves the canvas= parameter from wikitext.
-		// For EXISTING slides, the server gives priority to saved dimensions anyway.
-		if ( slideData.canvasWidth && slideData.canvasHeight &&
-			( slideData.canvasWidth !== 800 || slideData.canvasHeight !== 600 ) ) {
-			params.set( 'canvaswidth', slideData.canvasWidth );
-			params.set( 'canvasheight', slideData.canvasHeight );
-		}
-
-		// Use Special:Slides page for editing (will be created in Phase 3)
-		// For now, use a slide-specific URL pattern
-		// mw.util.getUrl may return URL with query string (e.g., index.php?title=...)
-		// so we need to use & if ? already exists
-		const baseUrl = mw.util.getUrl( 'Special:EditSlide/' + slideData.slideName );
-		const separator = baseUrl.includes( '?' ) ? '&' : '?';
-		return baseUrl + separator + params.toString();
+		return '';
 	}
 
 	/**
 	 * Render an empty slide (placeholder for slides with no content).
+	 * Delegates to SlideController.
 	 *
 	 * @param {HTMLElement} container Slide container element
 	 * @param {number} width Canvas width
 	 * @param {number} height Canvas height
 	 */
 	renderEmptySlide( container, width, height ) {
-		const canvas = container.querySelector( 'canvas' );
-		if ( !canvas ) {
-			return;
+		if ( this._slideController ) {
+			this._slideController.renderEmptySlide( container, width, height );
 		}
-
-		canvas.width = width;
-		canvas.height = height;
-
-		const ctx = canvas.getContext( '2d' );
-		if ( !ctx ) {
-			return;
-		}
-
-		// Fill with background color
-		const bgColor = container.getAttribute( 'data-background' ) || '#ffffff';
-		ctx.fillStyle = bgColor;
-		ctx.fillRect( 0, 0, width, height );
-
-		// Draw empty state content
-		this.drawEmptyStateContent( ctx, width, height, container );
-
-		// Set up overlay with edit/view buttons even for empty slides
-		// Build a minimal payload for the overlay
-		const payload = {
-			layers: [],
-			baseWidth: width,
-			baseHeight: height,
-			isSlide: true,
-			backgroundColor: container.getAttribute( 'data-background' ) || '#ffffff'
-		};
-		this.setupSlideOverlay( container, payload );
-
-		this.debugLog( 'Rendered empty slide:', container.getAttribute( 'data-slide-name' ) );
 	}
 
 	/**
-	 * Draw empty state content on canvas (icon, message, hint).
+	 * Draw empty state content on canvas.
+	 * Delegates to SlideController.
 	 *
 	 * @private
 	 * @param {CanvasRenderingContext2D} ctx Canvas context
 	 * @param {number} width Canvas width
 	 * @param {number} height Canvas height
-	 * @param {HTMLElement} container Slide container for placeholder text
+	 * @param {HTMLElement} container Slide container
 	 */
 	drawEmptyStateContent( ctx, width, height, container ) {
-		const centerX = width / 2;
-		const centerY = height / 2;
-
-		// Get placeholder text from container or use default
-		const placeholder = container.getAttribute( 'data-placeholder' ) || '';
-
-		// Calculate scale based on canvas size (minimum readable size)
-		const scale = Math.min( width, height ) / 400;
-		const iconSize = Math.max( 32, Math.min( 64, 48 * scale ) );
-		const fontSize = Math.max( 12, Math.min( 18, 14 * scale ) );
-		const smallFontSize = Math.max( 10, Math.min( 14, 12 * scale ) );
-
-		// Draw icon (📊 chart icon using simple shapes)
-		ctx.save();
-		ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
-		ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)';
-		ctx.lineWidth = 2;
-
-		// Draw a simple chart/diagram icon
-		const iconY = centerY - 40 * scale;
-		const barWidth = iconSize * 0.2;
-		const gap = iconSize * 0.15;
-		const startX = centerX - iconSize * 0.4;
-
-		// Three bars of different heights
-		ctx.fillRect( startX, iconY, barWidth, iconSize * 0.4 );
-		ctx.fillRect( startX + barWidth + gap, iconY - iconSize * 0.2, barWidth, iconSize * 0.6 );
-		ctx.fillRect( startX + 2 * ( barWidth + gap ), iconY - iconSize * 0.1, barWidth, iconSize * 0.5 );
-
-		ctx.restore();
-
-		// Draw main message
-		ctx.save();
-		ctx.fillStyle = 'rgba(80, 80, 80, 0.6)';
-		ctx.font = `${fontSize}px system-ui, -apple-system, sans-serif`;
-		ctx.textAlign = 'center';
-		ctx.textBaseline = 'middle';
-
-		const message = this.getEmptyStateMessage();
-		ctx.fillText( message, centerX, centerY + 20 * scale );
-
-		// Draw placeholder or hint below
-		ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
-		ctx.font = `${smallFontSize}px system-ui, -apple-system, sans-serif`;
-
-		const hint = placeholder || this.getEmptyStateHint();
-		ctx.fillText( hint, centerX, centerY + 45 * scale );
-
-		ctx.restore();
+		if ( this._slideController ) {
+			this._slideController.drawEmptyStateContent( ctx, width, height, container );
+		}
 	}
 
 	/**
 	 * Get the empty state main message.
+	 * Delegates to SlideController.
 	 *
 	 * @private
 	 * @return {string} Message text
 	 */
 	getEmptyStateMessage() {
-		if ( typeof mw !== 'undefined' && mw.message ) {
-			return mw.message( 'layers-slide-empty' ).text();
+		if ( this._slideController ) {
+			return this._slideController.getEmptyStateMessage();
 		}
 		return 'Empty Slide';
 	}
 
 	/**
 	 * Get the empty state hint text.
+	 * Delegates to SlideController.
 	 *
 	 * @private
 	 * @return {string} Hint text
 	 */
 	getEmptyStateHint() {
-		if ( typeof mw !== 'undefined' && mw.message ) {
-			return mw.message( 'layers-slide-empty-hint' ).text();
+		if ( this._slideController ) {
+			return this._slideController.getEmptyStateHint();
 		}
 		return 'Use the Edit button to add content';
 	}

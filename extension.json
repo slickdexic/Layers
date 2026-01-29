@@ -245,6 +245,7 @@
 				"viewer/UrlParser.js",
 				"viewer/FreshnessChecker.js",
 				"viewer/ViewerOverlay.js",
+				"viewer/SlideController.js",
 				"viewer/ViewerManager.js",
 				"viewer/ApiFallback.js",
 				"viewer/LayersLightbox.js",

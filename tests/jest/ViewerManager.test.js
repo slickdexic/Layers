@@ -21,10 +21,19 @@ describe( 'ViewerManager', () => {
 	let mockLayersViewer;
 	let mockApi;
 	let mockMw;
+	let SlideController;
 
 	beforeEach( () => {
 		jest.resetModules();
 		document.body.innerHTML = '';
+
+		// Load SlideController module and expose globally
+		SlideController = require( '../../resources/ext.layers/viewer/SlideController.js' );
+		global.SlideController = SlideController;
+		// Also set up namespace path that ViewerManager's getClass() uses
+		window.Layers = window.Layers || {};
+		window.Layers.Viewer = window.Layers.Viewer || {};
+		window.Layers.Viewer.SlideController = SlideController;
 
 		// Create mock URL parser
 		mockUrlParser = {
@@ -75,6 +84,12 @@ describe( 'ViewerManager', () => {
 			if ( namespacePath === 'Viewer.LayersViewer' ) {
 				return mockLayersViewer;
 			}
+			if ( namespacePath === 'Viewer.SlideController' ) {
+				return SlideController;
+			}
+			if ( namespacePath === 'Viewer.FreshnessChecker' ) {
+				return null; // Optional, not critical for tests
+			}
 			return null;
 		} );
 
@@ -84,6 +99,7 @@ describe( 'ViewerManager', () => {
 
 	afterEach( () => {
 		delete global.mw;
+		delete global.SlideController;
 		delete window.layersGetClass;
 		delete window.Layers;
 		jest.clearAllMocks();
@@ -1865,6 +1881,8 @@ describe( 'ViewerManager', () => {
 		} );
 	} );
 
+	// Slide Mode tests moved to SlideController.test.js
+	// These tests now verify delegation to SlideController
 	describe( 'Slide Mode', () => {
 		let manager;
 
@@ -1872,7 +1890,81 @@ describe( 'ViewerManager', () => {
 			manager = new ViewerManager();
 		} );
 
-		describe( 'setupSlideEditButton', () => {
+		describe( 'delegation to SlideController', () => {
+			it( 'should have a SlideController instance', () => {
+				expect( manager._slideController ).not.toBeNull();
+			} );
+
+			it( 'should delegate initializeSlides to SlideController', () => {
+				const spy = jest.spyOn( manager._slideController, 'initializeSlides' );
+				manager.initializeSlides();
+				expect( spy ).toHaveBeenCalled();
+			} );
+
+			it( 'should delegate reinitializeSlideViewer to SlideController', () => {
+				const container = document.createElement( 'div' );
+				const payload = { layers: [], baseWidth: 800, baseHeight: 600 };
+				const spy = jest.spyOn( manager._slideController, 'reinitializeSlideViewer' );
+				manager.reinitializeSlideViewer( container, payload );
+				expect( spy ).toHaveBeenCalledWith( container, payload );
+			} );
+
+			it( 'should delegate refreshAllSlides to SlideController', async () => {
+				const spy = jest.spyOn( manager._slideController, 'refreshAllSlides' );
+				await manager.refreshAllSlides();
+				expect( spy ).toHaveBeenCalled();
+			} );
+
+			it( 'should delegate canUserEdit to SlideController', () => {
+				const spy = jest.spyOn( manager._slideController, 'canUserEdit' );
+				manager.canUserEdit();
+				expect( spy ).toHaveBeenCalled();
+			} );
+
+			it( 'should delegate setupSlideOverlay to SlideController', () => {
+				const container = document.createElement( 'div' );
+				const payload = { layers: [], isSlide: true };
+				const spy = jest.spyOn( manager._slideController, 'setupSlideOverlay' );
+				manager.setupSlideOverlay( container, payload );
+				expect( spy ).toHaveBeenCalledWith( container, payload );
+			} );
+
+			it( 'should delegate openSlideEditor to SlideController', () => {
+				const slideData = { slideName: 'Test', canvasWidth: 800, canvasHeight: 600 };
+				const spy = jest.spyOn( manager._slideController, 'openSlideEditor' );
+				manager.openSlideEditor( slideData );
+				expect( spy ).toHaveBeenCalledWith( slideData );
+			} );
+
+			it( 'should delegate buildSlideEditorUrl to SlideController', () => {
+				const slideData = { slideName: 'Test', canvasWidth: 800, canvasHeight: 600 };
+				const spy = jest.spyOn( manager._slideController, 'buildSlideEditorUrl' );
+				manager.buildSlideEditorUrl( slideData );
+				expect( spy ).toHaveBeenCalledWith( slideData );
+			} );
+
+			it( 'should delegate renderEmptySlide to SlideController', () => {
+				const container = document.createElement( 'div' );
+				const spy = jest.spyOn( manager._slideController, 'renderEmptySlide' );
+				manager.renderEmptySlide( container, 800, 600 );
+				expect( spy ).toHaveBeenCalledWith( container, 800, 600 );
+			} );
+
+			it( 'should delegate getEmptyStateMessage to SlideController', () => {
+				const spy = jest.spyOn( manager._slideController, 'getEmptyStateMessage' );
+				manager.getEmptyStateMessage();
+				expect( spy ).toHaveBeenCalled();
+			} );
+
+			it( 'should delegate getEmptyStateHint to SlideController', () => {
+				const spy = jest.spyOn( manager._slideController, 'getEmptyStateHint' );
+				manager.getEmptyStateHint();
+				expect( spy ).toHaveBeenCalled();
+			} );
+		} );
+
+		// Legacy tests skipped - implementation moved to SlideController.test.js
+		describe.skip( 'setupSlideEditButton', () => {
 			it( 'should bind click handler to edit button', () => {
 				document.body.innerHTML = `
 					<div class="layers-slide-container"
@@ -1962,7 +2054,7 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 
-		describe( 'buildSlideEditorUrl', () => {
+		describe.skip( 'buildSlideEditorUrl', () => {
 			it( 'should build URL with slide name', () => {
 				global.mw.util = {
 					getUrl: jest.fn( ( page ) => '/wiki/' + page )
@@ -2028,7 +2120,7 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 
-		describe( 'renderEmptySlide', () => {
+		describe.skip( 'renderEmptySlide', () => {
 			it( 'should set canvas dimensions', () => {
 				document.body.innerHTML = `
 					<div class="layers-slide-container"
@@ -2151,7 +2243,7 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 
-		describe( 'getEmptyStateMessage', () => {
+		describe.skip( 'getEmptyStateMessage', () => {
 			it( 'should return i18n message when available', () => {
 				global.mw.message = jest.fn( () => ( {
 					text: () => 'Translated Empty Slide'
@@ -2172,7 +2264,7 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 
-		describe( 'getEmptyStateHint', () => {
+		describe.skip( 'getEmptyStateHint', () => {
 			it( 'should return i18n hint when available', () => {
 				global.mw.message = jest.fn( () => ( {
 					text: () => 'Translated Click to add'
@@ -2193,7 +2285,7 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 
-		describe( 'drawEmptyStateContent', () => {
+		describe.skip( 'drawEmptyStateContent', () => {
 			it( 'should draw content on canvas context', () => {
 				document.body.innerHTML = `
 					<div class="layers-slide-container"
@@ -2248,7 +2340,7 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 
-		describe( 'reinitializeSlideViewer', () => {
+		describe.skip( 'reinitializeSlideViewer', () => {
 			it( 'should re-render slide canvas with new layer data', () => {
 				document.body.innerHTML = `
 					<div class="layers-slide-container"
@@ -2448,7 +2540,7 @@ describe( 'ViewerManager', () => {
 			} );
 		} );
 
-		describe( 'refreshAllSlides', () => {
+		describe.skip( 'refreshAllSlides', () => {
 			it( 'should refresh all initialized slide containers', async () => {
 				document.body.innerHTML = `
 					<div class="layers-slide-container"
@@ -2737,7 +2829,7 @@ describe( 'ViewerManager', () => {
 		} );
 	} );
 
-	describe( 'Slide Overlay Functionality', () => {
+	describe.skip( 'Slide Overlay Functionality', () => {
 		let manager;
 
 		beforeEach( () => {
@@ -3011,7 +3103,7 @@ describe( 'ViewerManager', () => {
 		} );
 	} );
 
-	describe( 'initializeSlideViewer', () => {
+	describe.skip( 'initializeSlideViewer', () => {
 		let manager;
 
 		beforeEach( () => {
@@ -3228,7 +3320,7 @@ describe( 'ViewerManager', () => {
 	// Coverage Tests - reinitializeSlideViewer
 	// ========================================================================
 
-	describe( 'reinitializeSlideViewer', () => {
+	describe.skip( 'reinitializeSlideViewer', () => {
 		let manager;
 
 		beforeEach( () => {
@@ -3886,7 +3978,7 @@ describe( 'ViewerManager', () => {
 		} );
 	} );
 
-	describe( 'initializeSlides', () => {
+	describe.skip( 'initializeSlides', () => {
 		let manager;
 
 		beforeEach( () => {
