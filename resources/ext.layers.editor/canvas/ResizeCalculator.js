@@ -1,35 +1,16 @@
 /**
  * ResizeCalculator - Pure calculation methods for layer resize operations
- *
- * Extracted from TransformController.js to reduce file size and improve maintainability.
- * This module contains all resize calculation logic for different layer types:
- * - Rectangle/Blur (with rotation correction)
- * - Circle (radius-based)
- * - Ellipse (radiusX/radiusY)
- * - Polygon/Star (uniform radius scaling)
- * - Line/Arrow (endpoint and perpendicular movement)
- * - Path (point scaling from anchor)
- * - Text (font size adjustment)
- *
- * All methods are static since they are pure functions with no state.
- *
+ * Extracted from TransformController.js to reduce file size.
+ * Contains resize logic for all layer types with static pure functions.
  * @module canvas/ResizeCalculator
  */
 ( function () {
 	'use strict';
 
-	/**
-	 * ResizeCalculator class - static methods for resize calculations
-	 */
+	/** ResizeCalculator class - static methods for resize calculations */
 	class ResizeCalculator {
 		/**
 		 * Calculate resize updates based on layer type
-		 *
-		 * @param {Object} originalLayer Original layer properties
-		 * @param {string} handleType Handle being dragged
-		 * @param {number} deltaX Delta X movement
-		 * @param {number} deltaY Delta Y movement
-		 * @param {Object} modifiers Modifier keys state
 		 * @return {Object|null} Updates object with new dimensions
 		 */
 		static calculateResize(
@@ -93,19 +74,7 @@
 			}
 		}
 
-		/**
-		 * Calculate rectangle resize adjustments
-		 *
-		 * For rotated rectangles, this method ensures that the edge opposite to the
-		 * dragged handle stays fixed in world space, providing intuitive resize behavior.
-		 *
-		 * @param {Object} originalLayer Original layer properties
-		 * @param {string} handleType Handle being dragged
-		 * @param {number} deltaX Delta X movement (in local coords)
-		 * @param {number} deltaY Delta Y movement (in local coords)
-		 * @param {Object} modifiers Modifier keys state
-		 * @return {Object} Updates object with new dimensions
-		 */
+		/** Calculate rectangle resize adjustments (ensures opposite edge stays fixed for rotated rects) @return {Object} */
 		static calculateRectangleResize(
 			originalLayer, handleType, deltaX, deltaY, modifiers
 		) {
@@ -254,17 +223,7 @@
 			return updates;
 		}
 
-		/**
-		 * Apply correction to keep the opposite edge fixed in world space for rotated shapes.
-		 *
-		 * When resizing a rotated shape from an edge handle, the opposite edge should stay
-		 * fixed in world coordinates. Without correction, the center point moves, which
-		 * causes the opposite edge to shift because the rotation pivot changes.
-		 *
-		 * @param {Object} updates The updates object to modify
-		 * @param {Object} originalLayer Original layer properties
-		 * @param {string} handleType Handle being dragged (n, s, e, w, or corner)
-		 */
+		/** Apply correction to keep opposite edge fixed in world space for rotated shapes */
 		static applyRotatedResizeCorrection(
 			updates, originalLayer, handleType
 		) {
@@ -406,15 +365,7 @@
 			updates.y = adjustedY;
 		}
 
-		/**
-		 * Calculate circle resize adjustments
-		 *
-		 * @param {Object} originalLayer Original layer properties
-		 * @param {string} handleType Handle being dragged
-		 * @param {number} deltaX Delta X movement
-		 * @param {number} deltaY Delta Y movement
-		 * @return {Object} Updates object with new radius
-		 */
+		/** Calculate circle resize adjustments @return {Object} */
 		static calculateCircleResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
@@ -472,18 +423,7 @@
 			return updates;
 		}
 
-		/**
-		 * Calculate ellipse resize adjustments
-		 *
-		 * For ellipses, the opposite edge stays fixed (like rectangles).
-		 * This is achieved by adjusting both the center position and the radius.
-		 *
-		 * @param {Object} originalLayer Original layer properties
-		 * @param {string} handleType Handle being dragged
-		 * @param {number} deltaX Delta X movement
-		 * @param {number} deltaY Delta Y movement
-		 * @return {Object} Updates object with new x, y, radiusX, radiusY
-		 */
+		/** Calculate ellipse resize adjustments (opposite edge stays fixed) @return {Object} */
 		static calculateEllipseResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
@@ -532,15 +472,7 @@
 			return updates;
 		}
 
-		/**
-		 * Calculate polygon/star resize adjustments
-		 *
-		 * @param {Object} originalLayer Original layer properties
-		 * @param {string} handleType Handle being dragged
-		 * @param {number} deltaX Delta X movement
-		 * @param {number} deltaY Delta Y movement
-		 * @return {Object} Updates object with new radius
-		 */
+		/** Calculate polygon/star resize adjustments @return {Object} */
 		static calculatePolygonResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
@@ -602,19 +534,7 @@
 			return updates;
 		}
 
-		/**
-		 * Calculate line/arrow resize adjustments
-		 * Handles both endpoint movement (w/e handles), perpendicular offset (n/s handles),
-		 * and curve control point movement (control handle)
-		 *
-		 * @param {Object} originalLayer Original layer properties
-		 * @param {string} handleType Handle being dragged: 'w' = start point, 'e' = end point,
-		 *                           'n'/'s' = perpendicular offset (adjusts both endpoints),
-		 *                           'control' = curve control point
-		 * @param {number} deltaX Delta X movement in world coordinates
-		 * @param {number} deltaY Delta Y movement in world coordinates
-		 * @return {Object} Updates object with new endpoint coordinates
-		 */
+		/** Calculate line/arrow resize (handles endpoints, perpendicular offset, and curve control) @return {Object} */
 		static calculateLineResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
@@ -712,18 +632,7 @@
 			return updates;
 		}
 
-		/**
-		 * Calculate path resize adjustments (scales all points from anchor)
-		 *
-		 * The anchor point is on the opposite side of the dragged handle, so
-		 * that edge stays fixed while the other side moves with the mouse.
-		 *
-		 * @param {Object} originalLayer Original layer properties
-		 * @param {string} handleType Handle being dragged
-		 * @param {number} deltaX Delta X movement
-		 * @param {number} deltaY Delta Y movement
-		 * @return {Object|null} Updates object with scaled points
-		 */
+		/** Calculate path resize adjustments (scales all points from anchor) @return {Object|null} */
 		static calculatePathResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
@@ -879,15 +788,7 @@
 			return updates;
 		}
 
-		/**
-		 * Calculate marker resize (scale the size property)
-		 *
-		 * @param {Object} originalLayer Original marker layer
-		 * @param {string} handleType Handle being dragged
-		 * @param {number} deltaX Delta X movement
-		 * @param {number} deltaY Delta Y movement
-		 * @return {Object} Updates object with new size
-		 */
+		/** Calculate marker resize (scale the size property) @return {Object} */
 		static calculateMarkerResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
@@ -933,18 +834,7 @@
 			return updates;
 		}
 
-		/**
-		 * Calculate dimension resize (move endpoints)
-		 *
-		 * For dimensions, corner handles move the corresponding endpoint.
-		 * This allows repositioning the measurement points.
-		 *
-		 * @param {Object} originalLayer Original dimension layer
-		 * @param {string} handleType Handle being dragged
-		 * @param {number} deltaX Delta X movement
-		 * @param {number} deltaY Delta Y movement
-		 * @return {Object} Updates object with new x1/y1 or x2/y2
-		 */
+		/** Calculate dimension resize (move endpoints) @return {Object} */
 		static calculateDimensionResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {

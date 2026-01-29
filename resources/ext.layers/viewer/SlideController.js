@@ -1,60 +1,33 @@
 /**
  * Slide rendering and management controller.
- *
- * Extracted from ViewerManager to handle all slide-related functionality.
- * This includes slide initialization, rendering, overlay management, and editing.
- *
+ * Extracted from ViewerManager to handle slide-related functionality.
  * @module viewer/SlideController
  */
 ( function () {
 	'use strict';
 
-	/**
-	 * SlideController class - manages slide rendering and interactions
-	 */
+	/** SlideController class - manages slide rendering and interactions */
 	class SlideController {
-		/**
-		 * Creates a new SlideController instance
-		 *
-		 * @param {Object} [options] Configuration options
-		 * @param {boolean} [options.debug=false] Enable debug logging
-		 */
+		/** Creates a new SlideController instance */
 		constructor( options = {} ) {
 			this.debug = options.debug || false;
 		}
 
-		/**
-		 * Log a debug message if debug mode is enabled.
-		 *
-		 * @private
-		 * @param {...any} args Arguments to log
-		 */
+		/** Log a debug message if debug mode is enabled @private */
 		debugLog( ...args ) {
 			if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 				mw.log( '[Layers:SlideController]', ...args );
 			}
 		}
 
-		/**
-		 * Log a warning message if debug mode is enabled.
-		 *
-		 * @private
-		 * @param {...any} args Arguments to log
-		 */
+		/** Log a warning message if debug mode is enabled @private */
 		debugWarn( ...args ) {
 			if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 				mw.log.warn( '[Layers:SlideController]', ...args );
 			}
 		}
 
-		/**
-		 * Get a localized message.
-		 *
-		 * @private
-		 * @param {string} key Message key
-		 * @param {string} fallback Fallback text
-		 * @return {string} Localized message or fallback
-		 */
+		/** Get a localized message @private @return {string} */
 		_msg( key, fallback ) {
 			if ( typeof mw !== 'undefined' && mw.message ) {
 				const msg = mw.message( key );
@@ -65,10 +38,7 @@
 			return fallback;
 		}
 
-		/**
-		 * Initialize all slides on the page.
-		 * Finds slide containers and fetches layer data via API.
-		 */
+		/** Initialize all slides on the page */
 		initializeSlides() {
 			const containers = Array.prototype.slice.call(
 				document.querySelectorAll( '.layers-slide-container' )
@@ -160,12 +130,7 @@
 			} );
 		}
 
-		/**
-		 * Initialize a slide viewer for a container element.
-		 *
-		 * @param {HTMLElement} container Slide container element
-		 * @param {Object} payload Layer data payload
-		 */
+		/** Initialize a slide viewer for a container element */
 		initializeSlideViewer( container, payload ) {
 			const canvas = container.querySelector( 'canvas' );
 			if ( !canvas ) {

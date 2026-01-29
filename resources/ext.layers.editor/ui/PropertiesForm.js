@@ -52,11 +52,7 @@
 		return fallback || '';
 	}
 
-	/**
-	 * Format a number with at most 1 decimal place
-	 * @param {number} num - Number to format
-	 * @return {string}
-	 */
+	/** Format a number with at most 1 decimal place @return {string} */
 	function formatOneDecimal( num ) {
 		if ( typeof num !== 'number' || isNaN( num ) ) {
 			return '';
@@ -65,18 +61,10 @@
 		return isInt ? String( Math.round( num ) ) : num.toFixed( 1 );
 	}
 
-	/**
-	 * Debounce delay for number inputs in milliseconds
-	 * @constant {number}
-	 */
+	/** Debounce delay for number inputs in milliseconds @constant {number} */
 	const DEBOUNCE_DELAY = 100;
 
-	/**
-	 * Simple debounce utility for input handlers
-	 * @param {Function} fn - Function to debounce
-	 * @param {number} delay - Delay in milliseconds
-	 * @return {Function} Debounced function
-	 */
+	/** Simple debounce utility for input handlers @return {Function} */
 	function debounce( fn, delay ) {
 		let timer = null;
 		return function () {
