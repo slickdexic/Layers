@@ -20,14 +20,19 @@
 
 ---
 
-## 🆕 What's New in v1.5.38
+## 🆕 What's New in v1.5.39
 
 - **God Class Reduction Complete** — Reduced from 20 to 12 god classes (40% reduction)
-- **Inline Text Alignment Fix** — Fixed double rendering when changing alignment during editing
-- **Text Loss Fix** — Fixed bug where changing properties during inline editing lost typed text
-- **Rich Text Inline Display** — Fixed styled text runs displaying on separate lines during editing
-- **Slide Layer Order** — Fixed layers appearing in reverse order on article pages
+- **12+ Extracted Modules** — Clean separation of concerns with focused single-responsibility modules
+- **Documentation Synchronized** — All metrics now accurate across all documentation files
 - **10,939 tests passing** (162 suites), 94.65% statement coverage, 84.49% branch coverage
+
+### Previous v1.5.38 Highlights
+
+- **Inline Text Alignment Fix** — Fixed double rendering when changing alignment during editing
+- **Text Loss Fix** — Fixed losing typed text when changing properties during inline editing
+- **Rich Text Inline Display** — Fixed styled text runs displaying on separate lines
+- **Slide Layer Order** — Fixed layers appearing in reverse order on article pages
 
 ### Previous v1.5.36 Highlights
 
@@ -258,7 +263,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.38 |
+| **Version (main)** | 1.5.39 |
 | **Version (REL1_43)** | 1.5.26-REL1_43 |
 | **Version (REL1_39)** | 1.1.14 |
 | **Release Date** | January 27, 2026 |

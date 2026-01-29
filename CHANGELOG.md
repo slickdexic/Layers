@@ -2,6 +2,27 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.39] - 2026-01-30
+
+### Changed
+- **God Class Reduction Initiative Complete** — Reduced hand-written god classes from 20 to 12 (40% reduction)
+  - Extracted 12+ focused modules with clear single responsibilities
+  - InlineTextEditor: RichTextConverter, RichTextToolbar, FormattingEngine
+  - ViewerManager: SlideController
+  - APIManager: ExportController
+  - CalloutRenderer: TailCalculator
+  - ArrowRenderer: ArrowGeometry
+  - TextBoxRenderer: RichTextUtils
+  - All remaining large files use proper delegation patterns
+
+### Technical Details
+- All 10,939 tests pass (162 test suites)
+- Test coverage: 94.65% statement, 84.49% branch
+- 139 JavaScript files (~94,137 lines)
+- Documentation fully synchronized with current metrics
+
+---
+
 ## [1.5.38] - 2026-01-30
 
 ### Fixed
