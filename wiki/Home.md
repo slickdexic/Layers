@@ -264,19 +264,19 @@ See [[Changelog]] for full details.
 | Metric | Value |
 |--------|-------|
 | **Version (main)** | 1.5.39 |
-| **Version (REL1_43)** | 1.5.26-REL1_43 |
-| **Version (REL1_39)** | 1.1.14 |
-| **Release Date** | January 27, 2026 |
-| **Test Suites** | 157 |
-| **Total Tests** | 10,840 |
+| **Version (REL1_43)** | 1.5.39-REL1_43 |
+| **Version (REL1_39)** | 1.5.39-REL1_39 |
+| **Release Date** | January 29, 2026 |
+| **Test Suites** | 162 |
+| **Total Tests** | 10,939 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 95.53% |
-| **Branch Coverage** | 85.28% |
-| **Function Coverage** | 93.97% |
-| **Line Coverage** | 95.64% |
-| **JavaScript Files** | 132 |
-| **ES6 Classes** | 132 |
-| **God Classes** | 22 (2 generated, 20 JS, 2 PHP) |
+| **Statement Coverage** | 94.65% |
+| **Branch Coverage** | 84.49% |
+| **Function Coverage** | 92.93% |
+| **Line Coverage** | 94.77% |
+| **JavaScript Files** | 139 |
+| **ES6 Classes** | 139 |
+| **God Classes** | 12 (2 generated, 10 JS, 2 PHP) |
 | **i18n Messages** | ~718 |
 
 ---

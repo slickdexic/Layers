@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-94.65%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-10%2C860%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-10%2C939%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.39 (January 28, 2026)  
+> **Version:** 1.5.39 (January 29, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44+, PHP 8.1+
 >
@@ -314,9 +314,9 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **12 god classes** (files >1,000 lines), all use proper delegation patterns
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated (exempt from refactoring)
-  - God Class Reduction Initiative completed January 30, 2026 (reduced from 20 to 12)
+  - God Class Reduction Initiative completed January 29, 2026 (reduced from 20 to 12)
 
-**Test Coverage (Last recorded — January 30, 2026):**
+**Test Coverage (Last recorded — January 29, 2026):**
 
 | Metric | Value |
 |--------|-------|

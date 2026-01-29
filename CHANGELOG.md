@@ -2,7 +2,7 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.39] - 2026-01-30
+## [1.5.39] - 2026-01-29
 
 ### Changed
 - **God Class Reduction Initiative Complete** — Reduced hand-written god classes from 20 to 12 (40% reduction)
@@ -23,7 +23,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ---
 
-## [1.5.38] - 2026-01-30
+## [1.5.38] - 2026-01-29
 
 ### Fixed
 - **Double Text Rendering During Inline Editing** — Fixed bug where changing alignment while inline editing textbox caused double rendering
