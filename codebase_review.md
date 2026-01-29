@@ -9,7 +9,7 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git branch --show-current`)
-- **Tests:** 10,827 tests in 157 suites (all passing, verified January 28, 2026)
+- **Tests:** 10,840 tests in 157 suites (all passing, verified January 28, 2026)
 - **Coverage:** 94.86% statements, 84.55% branches, 93.50% functions, 94.97% lines (verified January 28, 2026)
 - **JS files:** 132 production files (all files in resources/ext.layers* directories)
 - **JS lines:** ~93,406 total
@@ -26,7 +26,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 **Overall Assessment:** **8.6/10** — Production-ready, high quality. All critical issues resolved.
 
 ### Key Strengths
-1. **Excellent test coverage** (95.35% statement, 85.11% branch, 10,827 tests)
+1. **Excellent test coverage** (95.35% statement, 85.11% branch, 10,840 tests)
 2. **Comprehensive server-side validation** with strict 40+ property whitelist
 3. **Modern ES6 class-based architecture** (100% of JS files)
 4. **PHP strict_types** in all 40 PHP files
@@ -546,7 +546,7 @@ All write operations are rate-limited via MediaWiki's pingLimiter.
 | Category | Score | Weight | Notes |
 |----------|-------|--------|-------|
 | Security | 9.5/10 | 25% | Excellent CSRF, validation, sanitization |
-| Test Coverage | 9.5/10 | 20% | 95.35% statements, 10,827 tests |
+| Test Coverage | 9.5/10 | 20% | 95.35% statements, 10,840 tests |
 | Functionality | 9.2/10 | 20% | 15 tools, Slide Mode, Shape Library, Emoji |
 | Architecture | 7.5/10 | 15% | 20 JS + 2 PHP god classes |
 | Code Quality | 8.4/10 | 10% | Good patterns, version now consistent |
@@ -687,7 +687,7 @@ The codebase demonstrates professional software development practices including:
 - Comprehensive input validation and sanitization
 - Proper error handling and logging
 - Modern JavaScript patterns (ES6 classes, delegation)
-- Extensive test coverage (10,827 tests, 95.35% statement coverage)
+- Extensive test coverage (10,840 tests, 95.35% statement coverage)
 - Complete i18n with ~653 message keys
 - Version consistency automation (npm run update:version)
 - **No dangerous code patterns** (eval, document.write, new Function)
