@@ -27,7 +27,7 @@ strategic extraction of cohesive modules.
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| JS god classes (hand-written) | 17 | ≤12 | 🟡 In Progress |
+| JS god classes (hand-written) | 16 | ≤12 | 🟡 In Progress |
 | Test coverage | 95.85% | ≥95% | ✅ Maintained |
 | All tests passing | 10,939 | 10,860+ | ✅ Maintained |
 | ESLint errors | 0 | 0 | ✅ Maintained |
@@ -42,8 +42,8 @@ strategic extraction of cohesive modules.
 | **2** | ViewerManager.js | ~~2,026~~ → 1,277 | ✅ SlideController | COMPLETE |
 | **3** | APIManager.js | ~~1,524~~ → 1,393 | ✅ ExportController | COMPLETE |
 | **4** | CalloutRenderer.js | ~~1,291~~ → 951 | ✅ TailCalculator | COMPLETE |
-| **5** | TextBoxRenderer.js | 1,117 | Extract RichTextMeasurement | MEDIUM |
-| **6** | ArrowRenderer.js | 1,310 | Extract CurvedArrowCalculator | LOW |
+| **5** | ArrowRenderer.js | ~~1,310~~ → 971 | ✅ ArrowGeometry | COMPLETE |
+| **6** | TextBoxRenderer.js | 1,117 | Extract RichTextMeasurement | LOW |
 
 ### Files Already Well-Delegated (No Action Needed)
 
@@ -348,7 +348,42 @@ below the 1,000 line threshold.
 | Jan 30, 2026 | **Phase 3 COMPLETE** | APIManager: Export ops now isolated |
 | Jan 30, 2026 | Phase 4: TailCalculator extracted | CalloutRenderer: 1,291 → 951 lines (-340) |
 | Jan 30, 2026 | **Phase 4 COMPLETE** | CalloutRenderer below 1,000 line threshold |
+| Jan 30, 2026 | Phase 5: ArrowGeometry extracted | ArrowRenderer: 1,301 → 971 lines (-330) |
+| Jan 30, 2026 | **Phase 5 COMPLETE** | ArrowRenderer below 1,000 line threshold |
 | | | |
+
+---
+
+## Phase 5: ArrowRenderer Extraction ✅ COMPLETE
+
+**Target:** Reduce ArrowRenderer.js from 1,301 lines to ~900 lines  
+**Actual Result:** 1,301 → 971 lines (-330 lines, -25%)  
+**Timeline:** 1 day (Jan 30, 2026)  
+**Status:** ✅ COMPLETE
+
+### Extraction Completed
+
+**ArrowGeometry.js** (~480 lines) — Pure geometry calculations for arrows:
+- `isCurved()` — Check if arrow has non-default control point
+- `getBezierTangent()` — Tangent angle on quadratic Bézier curves
+- `buildArrowVertices()` — Build vertices for arrow polygon
+- `buildHeadVertices()` — Head vertices at given position/angle
+- `_buildSingleHeadVertices()` — Single-headed arrow vertices
+- `_buildDoubleHeadVertices()` — Double-headed arrow vertices
+- `getConstants()` — Return ARROW_GEOMETRY constants
+
+### Testing
+
+- **Modified:** `ArrowRenderer.test.js` — added ArrowGeometry loading
+- **All tests passing:** 10,939 passed, 133 skipped
+
+### Notes
+
+ArrowRenderer now delegates all pure geometry calculations to ArrowGeometry,
+keeping only the rendering logic. The old `_buildSingleHeadVertices` and 
+`_buildDoubleHeadVertices` private methods were removed from ArrowRenderer
+(now dead code since `buildArrowVertices` delegates to ArrowGeometry).
+This achieves the goal of bringing ArrowRenderer below the 1,000 line threshold.
 
 ---
 
@@ -368,12 +403,13 @@ below the 1,000 line threshold.
 | APIManager.js | ~~1,524~~ 1,393 | Service | ✅ Phase 3 Complete |
 | CalloutRenderer.js | ~~1,291~~ 951 | Renderer | ✅ Phase 4 Complete |
 | TailCalculator.js | 498 | Calculator | ✅ New (from Phase 4) |
+| ArrowRenderer.js | ~~1,310~~ 971 | Renderer | ✅ Phase 5 Complete |
+| ArrowGeometry.js | 480 | Calculator | ✅ New (from Phase 5) |
 | SelectionManager.js | 1,426 | Manager | ✅ Clean separation |
-| ArrowRenderer.js | 1,310 | Renderer | ⏳ Phase 6 |
 | GroupManager.js | 1,132 | Manager | ⚖️ Borderline |
 | CanvasRenderer.js | 1,132 | Renderer | ⚖️ Borderline |
 | ToolManager.js | 1,219 | Controller | ⚖️ Borderline |
-| TextBoxRenderer.js | 1,117 | Renderer | ⏳ Phase 5 |
+| TextBoxRenderer.js | 1,117 | Renderer | ⏳ Phase 6 |
 | TransformController.js | 1,097 | Controller | ⚖️ Borderline |
 | ResizeCalculator.js | 1,090 | Calculator | ⚖️ Borderline |
 | PropertyBuilders.js | 1,250 | Builder | ✅ Intentional |
