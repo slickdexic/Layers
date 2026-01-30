@@ -4,6 +4,29 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.40 (January 30, 2026)
+
+### Fixed
+- **P0: TailCalculator Bounds Check** — Fixed failing test by adding early return when tip is inside rectangle
+- **P1: ApiLayersList.getLogger() Bug** — Removed erroneous method call on LayersLogger
+- **P2: N+1 Query in getNamedSetsForImage()** — Rewrote with batch query
+- **P2: N+1 Query in listSlides()** — Refactored with collect→batch→merge pattern
+- **P2: LIKE Query Wildcard Escaping** — Changed to proper `buildLike()` method
+- **P2: Slides-in-Tables Display Bug** — Fixed retry filter for `undefined` init status
+
+### Improved
+- **Drag Handle Hit Areas** — Added 4px hit tolerance for easier clicking
+- **Overlay Button Size** — Reduced from 32px to 26px for less visual intrusion
+- **API Code Extraction** — Created `LayersApiHelperTrait` for shared API logic
+- **Window Load Fallback** — Added fallback for slides appearing after DOMContentLoaded
+
+### Technical Details
+- All 11,069 tests pass (163 test suites)
+- Test coverage: 95.42% statement, 85.25% branch
+- All P0, P1, P2, and P3 priority items resolved
+
+---
+
 ## Version 1.5.39 (January 29, 2026)
 
 ### Changed

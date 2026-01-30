@@ -8,7 +8,7 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.39
+|version         = 1.5.40
 |update          = 2026-01-29
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]

@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
+use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
@@ -34,6 +35,7 @@ use Title;
  */
 class ApiLayersDelete extends ApiBase {
 	use ForeignFileHelperTrait;
+	use LayersApiHelperTrait;
 
 	/** @var LoggerInterface|null */
 	private ?LoggerInterface $logger = null;
@@ -76,13 +78,8 @@ class ApiLayersDelete extends ApiBase {
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
 
-			// Verify database schema exists
-			if ( !$db->isSchemaReady() ) {
-				$this->dieWithError(
-					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
-					'dbschema-missing'
-				);
-			}
+			// Verify database schema exists (via LayersApiHelperTrait)
+			$this->requireSchemaReady( $db );
 
 			// Validate filename - Title must be valid and in File namespace
 			// Note: We do NOT check $title->exists() because foreign files
@@ -146,13 +143,8 @@ class ApiLayersDelete extends ApiBase {
 				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
 			}
 
-			// PERMISSION CHECK: Only owner or admin can delete
-			$ownerId = $db->getNamedSetOwner( $imgName, $sha1, $setName );
-			$userId = $user->getId();
-			$isOwner = ( $ownerId !== null && $ownerId === $userId );
-			$isAdmin = $user->isAllowed( 'delete' );
-
-			if ( !$isOwner && !$isAdmin ) {
+			// PERMISSION CHECK: Only owner or admin can delete (via LayersApiHelperTrait)
+			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName ) ) {
 				$this->dieWithError( 'layers-delete-permission-denied', 'permissiondenied' );
 			}
 
@@ -190,13 +182,14 @@ class ApiLayersDelete extends ApiBase {
 			$this->getResult()->addValue( 'layersdelete', 'setname', $setName );
 			$this->getResult()->addValue( 'layersdelete', 'revisionsDeleted', $rowsDeleted );
 
-		} catch ( \Exception $e ) {
+		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during layer set delete: {message}', [
 				'message' => $e->getMessage(),
 				'filename' => $requestedFilename,
 				'setname' => $setName
 			] );
 			$this->dieWithError( 'layers-delete-failed', 'deletefailed' );
+			return; // @codeCoverageIgnore
 		}
 	}
 
@@ -213,12 +206,8 @@ class ApiLayersDelete extends ApiBase {
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
 
-			if ( !$db->isSchemaReady() ) {
-				$this->dieWithError(
-					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
-					'dbschema-missing'
-				);
-			}
+			// Verify database schema exists (via LayersApiHelperTrait)
+			$this->requireSchemaReady( $db );
 
 			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
 			$imgName = 'Slide:' . $slidename;
@@ -230,13 +219,8 @@ class ApiLayersDelete extends ApiBase {
 				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
 			}
 
-			// Permission check: only owner or admin can delete
-			$ownerId = $db->getNamedSetOwner( $imgName, $sha1, $setName );
-			$userId = $user->getId();
-			$isOwner = ( $ownerId !== null && $ownerId === $userId );
-			$isAdmin = $user->isAllowed( 'delete' );
-
-			if ( !$isOwner && !$isAdmin ) {
+			// Permission check: only owner or admin can delete (via LayersApiHelperTrait)
+			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName ) ) {
 				$this->dieWithError( 'layers-delete-permission-denied', 'permissiondenied' );
 			}
 
@@ -270,13 +254,14 @@ class ApiLayersDelete extends ApiBase {
 			$this->getResult()->addValue( 'layersdelete', 'setname', $setName );
 			$this->getResult()->addValue( 'layersdelete', 'revisionsDeleted', $rowsDeleted );
 
-		} catch ( \Exception $e ) {
+		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during slide delete: {message}', [
 				'message' => $e->getMessage(),
 				'slidename' => $slidename,
 				'setname' => $setName
 			] );
 			$this->dieWithError( 'layers-delete-failed', 'deletefailed' );
+			return; // @codeCoverageIgnore
 		}
 	}
 

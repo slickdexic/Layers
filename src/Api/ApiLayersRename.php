@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
+use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
@@ -35,6 +36,7 @@ use Title;
  */
 class ApiLayersRename extends ApiBase {
 	use ForeignFileHelperTrait;
+	use LayersApiHelperTrait;
 
 	/** @var LoggerInterface|null */
 	private ?LoggerInterface $logger = null;
@@ -65,13 +67,8 @@ class ApiLayersRename extends ApiBase {
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
 
-			// Verify database schema exists
-			if ( !$db->isSchemaReady() ) {
-				$this->dieWithError(
-					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
-					'dbschema-missing'
-				);
-			}
+			// Verify database schema exists (via LayersApiHelperTrait)
+			$this->requireSchemaReady( $db );
 
 			// Validate filename - Title must be valid and in File namespace
 			// Note: We do NOT check $title->exists() because foreign files
@@ -119,13 +116,8 @@ class ApiLayersRename extends ApiBase {
 				$this->dieWithError( 'layers-setname-exists', 'setnameexists' );
 			}
 
-			// PERMISSION CHECK: Only owner or admin can rename
-			$ownerId = $db->getNamedSetOwner( $imgName, $sha1, $oldName );
-			$userId = $user->getId();
-			$isOwner = ( $ownerId !== null && $ownerId === $userId );
-			$isAdmin = $user->isAllowed( 'delete' );
-
-			if ( !$isOwner && !$isAdmin ) {
+			// PERMISSION CHECK: Only owner or admin can rename (via LayersApiHelperTrait)
+			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $oldName ) ) {
 				$this->dieWithError( 'layers-rename-permission-denied', 'permissiondenied' );
 			}
 
@@ -164,7 +156,7 @@ class ApiLayersRename extends ApiBase {
 			$this->getResult()->addValue( 'layersrename', 'oldname', $oldName );
 			$this->getResult()->addValue( 'layersrename', 'newname', $newName );
 
-		} catch ( \Exception $e ) {
+		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during layer set rename: {message}', [
 				'message' => $e->getMessage(),
 				'filename' => $requestedFilename,
@@ -172,6 +164,7 @@ class ApiLayersRename extends ApiBase {
 				'newname' => $newName
 			] );
 			$this->dieWithError( 'layers-rename-failed', 'renamefailed' );
+			return; // @codeCoverageIgnore
 		}
 	}
 

@@ -32,10 +32,16 @@
 		/**
 		 * Test if a point is within any selection handle
 		 *
+		 * Uses expanded hit areas for easier clicking - the visual handle size
+		 * is 8px (14px on touch) but the clickable area is 4px larger on each side.
+		 *
 		 * @param {Object} point Point with x, y coordinates
 		 * @return {Object|null} The hit handle or null if none hit
 		 */
 		hitTestSelectionHandles( point ) {
+			// Extra padding around handles for easier clicking (4px each side = 8px total)
+			const hitTolerance = 4;
+
 			let handles = [];
 
 			// Get handles from renderer, selection manager, or canvas manager
@@ -54,7 +60,14 @@
 			for ( let i = 0; i < handles.length; i++ ) {
 				const handle = handles[ i ];
 				const rect = handle.rect || handle;
-				if ( this.isPointInRect( point, rect ) ) {
+				// Expand rect by tolerance for easier clicking
+				const expandedRect = {
+					x: rect.x - hitTolerance,
+					y: rect.y - hitTolerance,
+					width: rect.width + hitTolerance * 2,
+					height: rect.height + hitTolerance * 2
+				};
+				if ( this.isPointInRect( point, expandedRect ) ) {
 					return handle;
 				}
 			}
