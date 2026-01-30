@@ -194,7 +194,8 @@
 			let y = layer.y || 0;
 			const width = layer.width || 0;
 			const height = layer.height || 0;
-			let strokeW = layer.strokeWidth || 1;
+			// Use typeof check to allow strokeWidth: 0 (don't default 0 to 1)
+			let strokeW = typeof layer.strokeWidth === 'number' ? layer.strokeWidth : 1;
 			let cornerRadius = layer.cornerRadius || 0;
 			const padding = ( layer.padding || 8 ) * scale.avg;
 
@@ -289,7 +290,8 @@
 			// Note: Blur fill (fill='blur') should NOT trigger fill shadow rendering
 			if ( this.hasShadowEnabled( layer ) ) {
 				const hasFillForShadow = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && layer.fill !== 'blur';
-				const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
+				// Also check strokeW > 0 to avoid drawing shadow for invisible stroke
+				const hasStrokeForShadow = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeW > 0;
 
 				// Draw fill shadow
 				if ( hasFillForShadow ) {
@@ -340,7 +342,8 @@
 			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
 			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
 			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
-			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
+			// Also check strokeW > 0 to avoid drawing invisible stroke
+			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0 && strokeW > 0;
 
 			// Bounds for gradient calculation
 			const fillBounds = { x: x, y: y, width: width, height: height };

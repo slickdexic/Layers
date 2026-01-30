@@ -783,7 +783,9 @@ describe( 'DrawingController', () => {
 			expect( controller.tempLayer.fontFamily ).toBe( 'Georgia' );
 			expect( controller.tempLayer.color ).toBe( '#333333' );
 			expect( controller.tempLayer.fill ).toBe( '#ffffcc' );
-			expect( controller.tempLayer.strokeWidth ).toBe( 2 );
+			// Textbox defaults to transparent stroke (strokeWidth: 0)
+			expect( controller.tempLayer.strokeWidth ).toBe( 0 );
+			expect( controller.tempLayer.stroke ).toBe( 'transparent' );
 			expect( controller.tempLayer.textAlign ).toBe( 'left' );
 			expect( controller.tempLayer.verticalAlign ).toBe( 'top' );
 			expect( controller.tempLayer.padding ).toBe( 8 );
@@ -804,7 +806,9 @@ describe( 'DrawingController', () => {
 			expect( controller.tempLayer.fontFamily ).toBe( 'Arial, sans-serif' );
 			expect( controller.tempLayer.color ).toBe( '#000000' );
 			expect( controller.tempLayer.fill ).toBe( '#ffffff' );
-			expect( controller.tempLayer.strokeWidth ).toBe( 1 );
+			// Textbox defaults to transparent stroke
+			expect( controller.tempLayer.strokeWidth ).toBe( 0 );
+			expect( controller.tempLayer.stroke ).toBe( 'transparent' );
 		} );
 
 		it( 'should complete a full callout drawing cycle', () => {
@@ -823,6 +827,7 @@ describe( 'DrawingController', () => {
 			expect( controller.tempLayer.fontFamily ).toBe( 'Verdana' );
 			expect( controller.tempLayer.color ).toBe( '#0066cc' );
 			expect( controller.tempLayer.fill ).toBe( '#e6f2ff' );
+			// Callout has visible stroke to show bubble shape with tail
 			expect( controller.tempLayer.strokeWidth ).toBe( 1.5 );
 			expect( controller.tempLayer.textAlign ).toBe( 'center' );
 			expect( controller.tempLayer.verticalAlign ).toBe( 'middle' );
@@ -842,7 +847,9 @@ describe( 'DrawingController', () => {
 			expect( controller.tempLayer.fontSize ).toBe( 16 );
 			expect( controller.tempLayer.fontFamily ).toBe( 'Arial, sans-serif' );
 			expect( controller.tempLayer.color ).toBe( '#000000' );
+			// Callout has visible stroke to show bubble shape with tail
 			expect( controller.tempLayer.strokeWidth ).toBe( 1 );
+			expect( controller.tempLayer.stroke ).toBe( '#000000' );
 			expect( controller.tempLayer.textAlign ).toBe( 'center' );
 			expect( controller.tempLayer.verticalAlign ).toBe( 'middle' );
 		} );

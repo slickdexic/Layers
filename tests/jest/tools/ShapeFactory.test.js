@@ -301,8 +301,9 @@ describe( 'ShapeFactory', () => {
 		it( 'should have rectangle properties', () => {
 			const layer = factory.createTextBox( { x: 0, y: 0 } );
 
-			expect( layer.stroke ).toBe( '#ff0000' );
-			expect( layer.strokeWidth ).toBe( 3 );
+			// Textbox default stroke is transparent for cleaner look
+			expect( layer.stroke ).toBe( 'transparent' );
+			expect( layer.strokeWidth ).toBe( 0 );
 			expect( layer.fill ).toBe( '#00ff00' );
 			expect( layer.cornerRadius ).toBe( 0 );
 			expect( layer.padding ).toBe( 8 );

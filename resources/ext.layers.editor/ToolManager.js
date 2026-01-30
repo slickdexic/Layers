@@ -8,7 +8,8 @@
 	// Import extracted modules(available as globals from ResourceLoader)
 	const ToolRegistry = window.ToolRegistry;
 	const ToolStyles = window.ToolStyles;
-	const ShapeFactory = window.ShapeFactory;
+	// ShapeFactory exports to window.Layers.Tools.ShapeFactory namespace
+	const ShapeFactory = window.Layers && window.Layers.Tools && window.Layers.Tools.ShapeFactory;
 	const TextToolHandler = window.Layers && window.Layers.Tools && window.Layers.Tools.TextToolHandler;
 	const PathToolHandler = window.Layers && window.Layers.Tools && window.Layers.Tools.PathToolHandler;
 
@@ -467,8 +468,9 @@ class ToolManager {
 			textAlign: 'left',
 			verticalAlign: 'top',
 			lineHeight: 1.2,
-			stroke: this.currentStyle.color || '#000000',
-			strokeWidth: this.currentStyle.strokeWidth || 1,
+			// Rectangle properties - stroke is transparent by default for cleaner look
+			stroke: 'transparent',
+			strokeWidth: 0,
 			fill: this.currentStyle.fill || '#ffffff',
 			cornerRadius: 0,
 			padding: 8,

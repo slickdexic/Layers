@@ -137,15 +137,34 @@
 				} );
 			} );
 
-			// Schedule a delayed retry for any slides that failed initialization
+			// Schedule delayed retries for any slides that failed initialization
 			// This helps with slides inside tables where timing may be an issue
-			// Only retry once to avoid infinite loops
-			if ( !this._slideRetryAttempted ) {
-				this._slideRetryAttempted = true;
-				setTimeout( () => {
-					self._retryFailedSlides();
-				}, 500 );
+			// Use multiple retries with increasing delays for robustness
+			this._scheduleRetries();
+		}
+
+		/**
+		 * Schedule multiple retries with increasing delays.
+		 * This is more robust for handling slides that may not be ready initially.
+		 *
+		 * @private
+		 */
+		_scheduleRetries() {
+			// Only schedule retries once per page load
+			if ( this._retriesScheduled ) {
+				return;
 			}
+			this._retriesScheduled = true;
+
+			const self = this;
+			// Retry at 500ms, 1500ms, and 3000ms
+			const delays = [ 500, 1500, 3000 ];
+
+			delays.forEach( ( delay, index ) => {
+				setTimeout( () => {
+					self._retryFailedSlides( index + 1, delays.length );
+				}, delay );
+			} );
 		}
 
 		/**
@@ -153,8 +172,10 @@
 		 * This handles edge cases like slides inside tables where content may load late.
 		 *
 		 * @private
+		 * @param {number} attemptNum Current retry attempt number
+		 * @param {number} maxAttempts Total number of retry attempts
 		 */
-		_retryFailedSlides() {
+		_retryFailedSlides( attemptNum, maxAttempts ) {
 			const failedContainers = Array.prototype.slice.call(
 				document.querySelectorAll( '.layers-slide-container' )
 			).filter( ( container ) => {
@@ -164,21 +185,29 @@
 			} );
 
 			if ( failedContainers.length === 0 ) {
+				if ( attemptNum === 1 ) {
+					this.debugLog( 'No failed slides to retry' );
+				}
 				return;
 			}
 
-			this.debugLog( 'Retrying', failedContainers.length, 'failed slide containers' );
+			this.debugLog( 'Retry attempt', attemptNum, 'of', maxAttempts, ':', failedContainers.length, 'failed slide containers' );
 
 			// Reset flag to allow retry
 			failedContainers.forEach( ( container ) => {
 				container.layersSlideInitialized = false;
 			} );
 
-			// Set retry attempted to prevent further automatic retries
-			this._slideRetryAttempted = true;
-
-			// Retry initialization (the flag will prevent another retry scheduling)
-			this.initializeSlides();
+			// Retry initialization using refreshAllSlides which is more robust
+			// It uses reinitializeSlideViewer which doesn't check flags
+			this.refreshAllSlides().then( ( result ) => {
+				if ( result.refreshed > 0 ) {
+					this.debugLog( 'Retry', attemptNum, 'refreshed', result.refreshed, 'slides' );
+				}
+				if ( result.failed > 0 && attemptNum < maxAttempts ) {
+					this.debugLog( 'Retry', attemptNum, 'still has', result.failed, 'failed slides, will retry again' );
+				}
+			} );
 		}
 
 		/** Initialize a slide viewer for a container element */
@@ -188,6 +217,9 @@
 				this.debugWarn( 'No canvas found in slide container' );
 				return;
 			}
+
+			// Remove empty marker if previously set (has content now)
+			container.classList.remove( 'layers-slide-is-empty' );
 
 			// Get display dimensions from container data attributes (how slide appears on page)
 			const displayWidth = parseInt( container.getAttribute( 'data-display-width' ), 10 );
@@ -393,6 +425,9 @@
 					return false;
 				}
 
+				// Store reference to 'this' for use in nested function
+				const self = this;
+
 				/**
 				 * Helper function to render all layers.
 				 */
@@ -405,7 +440,7 @@
 						ctx.fillRect( 0, 0, canvas.width, canvas.height );
 						ctx.restore();
 					}
-					if ( payload.layers && Array.isArray( payload.layers ) ) {
+					if ( payload.layers && Array.isArray( payload.layers ) && payload.layers.length > 0 ) {
 						const layers = payload.layers;
 						for ( let i = layers.length - 1; i >= 0; i-- ) {
 							const layer = layers[ i ];
@@ -413,6 +448,12 @@
 								renderer.drawLayer( layer );
 							}
 						}
+						// Has content - remove empty marker
+						container.classList.remove( 'layers-slide-is-empty' );
+					} else {
+						// No layers - draw empty state placeholder and mark for print hiding
+						container.classList.add( 'layers-slide-is-empty' );
+						self.drawEmptyStateContent( ctx, canvas.width, canvas.height, container );
 					}
 				};
 
@@ -874,6 +915,9 @@
 			if ( !canvas ) {
 				return;
 			}
+
+			// Mark container as empty for print CSS
+			container.classList.add( 'layers-slide-is-empty' );
 
 			canvas.width = width;
 			canvas.height = height;

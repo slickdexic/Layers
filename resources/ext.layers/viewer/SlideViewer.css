@@ -236,3 +236,19 @@ html.skin-theme-clientpref-os.client-darkmode .layers-slide-error {
 	background: #442726;
 	border-color: #d33;
 }
+
+/* Print styles - hide empty slide placeholder text */
+@media print {
+	.layers-slide-is-empty canvas {
+		visibility: hidden;
+	}
+
+	.layers-slide-is-empty {
+		background-color: #fff;
+	}
+
+	/* Hide overlay buttons when printing */
+	.layers-slide-overlay {
+		display: none;
+	}
+}

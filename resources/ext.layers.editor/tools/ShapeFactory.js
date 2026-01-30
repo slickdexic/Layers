@@ -293,9 +293,9 @@
 				textShadowBlur: 4,
 				textShadowOffsetX: 2,
 				textShadowOffsetY: 2,
-				// Rectangle properties
-				stroke: style.color || '#000000',
-				strokeWidth: style.strokeWidth || 1,
+				// Rectangle properties - stroke is transparent by default for cleaner look
+				stroke: 'transparent',
+				strokeWidth: 0,
 				fill: style.fill || '#ffffff',
 				cornerRadius: 0,
 				padding: 8

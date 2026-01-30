@@ -483,4 +483,32 @@ describe( 'mw.layers (init.js)', () => {
 			expect( mockViewerManager.refreshAllViewers ).not.toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'layers-modal-closed event', () => {
+		test( 'should refresh viewers when modal closes', () => {
+			// Add refreshAllViewers to mock
+			mockViewerManager.refreshAllViewers = jest.fn().mockResolvedValue( { refreshed: 1 } );
+
+			// Track event listeners
+			const documentListeners = {};
+			const originalAddEventListener = document.addEventListener;
+			document.addEventListener = jest.fn( ( event, handler ) => {
+				documentListeners[ event ] = handler;
+			} );
+
+			require( '../../../resources/ext.layers/init.js' );
+
+			// Restore addEventListener
+			document.addEventListener = originalAddEventListener;
+
+			// Verify layers-modal-closed listener was registered
+			expect( documentListeners[ 'layers-modal-closed' ] ).toBeDefined();
+
+			// Simulate modal closed event
+			documentListeners[ 'layers-modal-closed' ]( { detail: { saved: false } } );
+
+			// Should have called refreshAllViewers
+			expect( mockViewerManager.refreshAllViewers ).toHaveBeenCalled();
+		} );
+	} );
 } );

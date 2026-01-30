@@ -1654,7 +1654,17 @@ describe( 'InlineTextEditor - Visibility handling for text layers', () => {
 				font: '',
 				measureText: jest.fn( () => ( { width: 100 } ) )
 			},
-			editor: { layers: [], updateLayer: jest.fn(), getLayerById: jest.fn() },
+			editor: {
+				layers: [],
+				updateLayer: jest.fn( ( layerId, changes ) => {
+					// Implementation that actually applies changes
+					const layer = mockCanvasManager.editor.layers.find( ( l ) => l.id === layerId );
+					if ( layer ) {
+						Object.assign( layer, changes );
+					}
+				} ),
+				getLayerById: jest.fn()
+			},
 			zoom: 1.0,
 			panX: 0,
 			panY: 0,

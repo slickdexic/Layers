@@ -2053,7 +2053,14 @@ describe( 'ViewerManager', () => {
 				const canvas = container.querySelector( 'canvas' );
 				canvas.getContext = jest.fn( () => ( {
 					fillStyle: '',
+					strokeStyle: '',
+					lineWidth: 1,
+					font: '',
+					textAlign: '',
+					textBaseline: '',
+					globalAlpha: 1,
 					fillRect: jest.fn(),
+					fillText: jest.fn(),
 					clearRect: jest.fn(),
 					save: jest.fn(),
 					restore: jest.fn()

@@ -132,6 +132,14 @@
 			this.toolbarElement.appendChild( this._createAlignButton( 'center' ) );
 			this.toolbarElement.appendChild( this._createAlignButton( 'right' ) );
 
+			// Vertical alignment buttons (only for textbox/callout)
+			if ( this.isRichTextMode ) {
+				this.toolbarElement.appendChild( this._createSeparator() );
+				this.toolbarElement.appendChild( this._createVerticalAlignButton( 'top' ) );
+				this.toolbarElement.appendChild( this._createVerticalAlignButton( 'middle' ) );
+				this.toolbarElement.appendChild( this._createVerticalAlignButton( 'bottom' ) );
+			}
+
 			this.toolbarElement.appendChild( this._createSeparator() );
 
 			// Color picker
@@ -496,6 +504,48 @@
 				}
 				btn.classList.add( 'active' );
 				this.onFormat( 'textAlign', align );
+			} );
+
+			btn.addEventListener( 'mousedown', ( e ) => e.preventDefault() );
+
+			return btn;
+		}
+
+		/**
+		 * Create vertical alignment button
+		 *
+		 * @private
+		 * @param {string} align - 'top', 'middle', or 'bottom'
+		 * @return {HTMLElement} Button element
+		 */
+		_createVerticalAlignButton( align ) {
+			const btn = document.createElement( 'button' );
+			btn.className = 'layers-text-toolbar-btn layers-text-toolbar-valign';
+			btn.setAttribute( 'data-valign', align );
+			btn.title = this.msg( 'layers-text-toolbar-valign-' + align, 'Align ' + align );
+
+			// Icons show vertical positioning of content in a box
+			const icons = {
+				top: '<svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"/><path fill="currentColor" d="M4 4h8v2H4z"/></svg>',
+				middle: '<svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"/><path fill="currentColor" d="M4 7h8v2H4z"/></svg>',
+				bottom: '<svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"/><path fill="currentColor" d="M4 10h8v2H4z"/></svg>'
+			};
+			btn.innerHTML = icons[ align ];
+
+			const currentAlign = this.layer.verticalAlign || 'top';
+			if ( currentAlign === align ) {
+				btn.classList.add( 'active' );
+			}
+
+			btn.addEventListener( 'click', ( e ) => {
+				e.preventDefault();
+				// Deactivate siblings
+				if ( this.toolbarElement ) {
+					const siblings = this.toolbarElement.querySelectorAll( '.layers-text-toolbar-valign' );
+					siblings.forEach( ( s ) => s.classList.remove( 'active' ) );
+				}
+				btn.classList.add( 'active' );
+				this.onFormat( 'verticalAlign', align );
 			} );
 
 			btn.addEventListener( 'mousedown', ( e ) => e.preventDefault() );

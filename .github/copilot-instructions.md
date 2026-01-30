@@ -351,6 +351,8 @@ Database
 
 ## 10) Troubleshooting tips
 
+**NEVER suggest browser cache clearing or hard refresh (Ctrl+Shift+R) as a solution.** The user always performs `?action=purge` and hard refresh before reporting any issues. Assume they have done this. If code changes don't take effect, the problem is in the code, not in caching. Suggesting cache clearing wastes time and is insulting to professionals.
+
 - Composer on Windows: ensure invoking PHP Composer (composer.phar) not a Python package named "composer" on PATH
 - Database errors on save: confirm tables exist and run `maintenance/update.php`; server returns 'dbschema-missing' if not detected
 - Missing messages: add to i18n and ResourceModules messages arrays; run `npm test` to see Banana warnings

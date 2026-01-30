@@ -461,7 +461,13 @@ describe( 'SlideController', () => {
 				restore: jest.fn(),
 				clearRect: jest.fn(),
 				fillRect: jest.fn(),
+				fillText: jest.fn(),
 				fillStyle: '',
+				strokeStyle: '',
+				lineWidth: 1,
+				font: '',
+				textAlign: '',
+				textBaseline: '',
 				globalAlpha: 1,
 				translate: jest.fn(),
 				rotate: jest.fn(),
@@ -931,8 +937,8 @@ describe( 'SlideController', () => {
 
 			// First call fails
 			mockApi.get.mockRejectedValueOnce( new Error( 'API error' ) );
-			// Second call (retry) succeeds
-			mockApi.get.mockResolvedValueOnce( {
+			// Retry calls succeed
+			mockApi.get.mockResolvedValue( {
 				layersinfo: {
 					layerset: {
 						data: {
@@ -951,15 +957,15 @@ describe( 'SlideController', () => {
 			await Promise.resolve();
 			await Promise.resolve();
 
-			// Fast-forward to trigger retry timeout (500ms)
-			jest.advanceTimersByTime( 600 );
+			// Retries should be scheduled
+			expect( controller._retriesScheduled ).toBe( true );
+
+			// Fast-forward through all retry timeouts (500ms, 1500ms, 3000ms)
+			jest.advanceTimersByTime( 3100 );
 
 			// Process retry promises
 			await Promise.resolve();
 			await Promise.resolve();
-
-			// Container should have had retry attempted
-			expect( controller._slideRetryAttempted ).toBe( true );
 
 			jest.useRealTimers();
 		} );
