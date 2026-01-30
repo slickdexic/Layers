@@ -341,13 +341,9 @@
 
 			if ( useDraggableMode ) {
 				// Draggable mode - calculate tail from tip position
-				console.log( 'CalloutRenderer.drawCalloutPath calling getTailFromTipPosition:',
-					{ x, y, width, height, tailTipX, tailTipY, r } );
 				tail = this.getTailFromTipPosition( x, y, width, height, tailTipX, tailTipY, r );
-				console.log( 'getTailFromTipPosition returned:', tail );
 				// If tail is null (tip inside callout), draw simple rounded rect
 				if ( !tail ) {
-					console.log( 'TAIL IS NULL - drawing rounded rect without tail' );
 					ctx.beginPath();
 					if ( r > 0.5 && ctx.roundRect ) {
 						ctx.roundRect( x, y, width, height, r );
