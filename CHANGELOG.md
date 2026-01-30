@@ -2,6 +2,33 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.40] - 2026-01-30
+
+### Fixed
+- **P0: TailCalculator Bounds Check** — Fixed failing test by adding early return when tip position is inside the rectangle (no tail needed)
+- **P1: ApiLayersList.getLogger() Bug** — Removed erroneous `->getLogger()` call on LayersLogger which already implements LoggerInterface
+- **P2: N+1 Query in getNamedSetsForImage()** — Rewrote with batch query using `IDatabase::LIST_AND` and `LIST_OR` for proper SQL construction
+- **P2: N+1 Query in listSlides()** — Refactored with collect→batch→merge pattern for first revision lookup
+- **P2: LIKE Query Wildcard Escaping** — Changed from `addQuotes()` to proper `buildLike()` to escape SQL wildcards
+- **P2: Slides-in-Tables Display Bug** — Fixed retry filter to catch containers with `undefined` init status (not just `false`)
+
+### Improved
+- **Drag Handle Hit Areas** — Added 4px hit tolerance padding around selection handles for easier clicking (16px total clickable area vs 8px visual)
+- **Overlay Button Size** — Reduced hover buttons from 32px to 26px (desktop) and 28px to 24px (mobile) for less visual intrusion
+- **API Code Extraction** — Created `LayersApiHelperTrait` with shared methods for permission checking, schema validation, and SHA1 fallback
+- **Window Load Fallback** — Added `window.load` event listener to catch slides that appear after DOMContentLoaded
+
+### Verified
+- **Cursor Rotation for Rotated Objects** — Confirmed existing implementation in `TransformController.getResizeCursor()` correctly rotates cursors
+
+### Technical Details
+- All 11,069 tests pass (163 test suites)
+- Test coverage: 95.42% statement, 85.25% branch
+- All P0, P1, P2, and P3 priority items resolved
+- Created new file: `src/Api/Traits/LayersApiHelperTrait.php`
+
+---
+
 ## [1.5.39] - 2026-01-29
 
 ### Changed

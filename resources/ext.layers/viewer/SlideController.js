@@ -76,8 +76,9 @@
 				// Slides use data-layerset (from SlideHooks.php)
 				const setName = container.getAttribute( 'data-layerset' ) || 'default';
 
-				// Mark as pending
+				// Mark as pending - but will be reset to false on failure so retry is possible
 				container.layersSlideInitialized = true;
+				container.layersSlideInitSuccess = false;
 
 				self.debugLog( 'Fetching slide data for:', slideName, 'set:', setName );
 
@@ -86,11 +87,14 @@
 					slidename: slideName,
 					setname: setName,
 					format: 'json',
-					formatversion: 2
+					formatversion: 2,
+					// Cache-bust to prevent stale responses (fixes slides in tables issue)
+					_: Date.now()
 				} ).then( ( data ) => {
 					try {
 						if ( !data || !data.layersinfo ) {
 							self.debugLog( 'No layersinfo returned for slide:', slideName );
+							container.layersSlideInitialized = false; // Allow retry
 							self.renderEmptySlide( container, canvasWidth, canvasHeight );
 							return;
 						}
@@ -100,6 +104,7 @@
 
 						if ( !layerset || !layerset.data || !layerset.data.layers || layerset.data.layers.length === 0 ) {
 							self.debugLog( 'No layers in fetched data for slide:', slideName );
+							container.layersSlideInitialized = false; // Allow retry
 							self.renderEmptySlide( container, canvasWidth, canvasHeight );
 							return;
 						}
@@ -119,14 +124,91 @@
 						};
 
 						self.initializeSlideViewer( container, payload );
+						container.layersSlideInitSuccess = true; // Mark as successfully initialized
+						container.setAttribute( 'data-layers-init-success', 'true' ); // For DOM queries
 					} catch ( e ) {
 						self.debugWarn( 'Error processing slide data:', e );
+						container.layersSlideInitialized = false; // Allow retry
 						self.renderEmptySlide( container, canvasWidth, canvasHeight );
 					}
 				} ).catch( ( apiErr ) => {
 					self.debugWarn( 'API request failed for slide:', slideName, apiErr );
+					container.layersSlideInitialized = false; // Allow retry
 					self.renderEmptySlide( container, canvasWidth, canvasHeight );
 				} );
+			} );
+
+			// Schedule delayed retries for any slides that failed initialization
+			// This helps with slides inside tables where timing may be an issue
+			// Use multiple retries with increasing delays for robustness
+			this._scheduleRetries();
+		}
+
+		/**
+		 * Schedule multiple retries with increasing delays.
+		 * This is more robust for handling slides that may not be ready initially.
+		 *
+		 * @private
+		 */
+		_scheduleRetries() {
+			// Only schedule retries once per page load
+			if ( this._retriesScheduled ) {
+				return;
+			}
+			this._retriesScheduled = true;
+
+			const self = this;
+			// Retry at 500ms, 1500ms, and 3000ms
+			const delays = [ 500, 1500, 3000 ];
+
+			delays.forEach( ( delay, index ) => {
+				setTimeout( () => {
+					self._retryFailedSlides( index + 1, delays.length );
+				}, delay );
+			} );
+		}
+
+		/**
+		 * Retry initialization for slides that failed on first attempt.
+		 * This handles edge cases like slides inside tables where content may load late.
+		 *
+		 * @private
+		 * @param {number} attemptNum Current retry attempt number
+		 * @param {number} maxAttempts Total number of retry attempts
+		 */
+		_retryFailedSlides( attemptNum, maxAttempts ) {
+			const failedContainers = Array.prototype.slice.call(
+				document.querySelectorAll( '.layers-slide-container' )
+			).filter( ( container ) => {
+				// Include containers that haven't been successfully initialized yet
+				// This catches: never seen (undefined), attempted but failed, or in-progress
+				// Critical for slides inside tables that may appear in DOM after initial run
+				return container.layersSlideInitSuccess !== true;
+			} );
+
+			if ( failedContainers.length === 0 ) {
+				if ( attemptNum === 1 ) {
+					this.debugLog( 'No failed slides to retry' );
+				}
+				return;
+			}
+
+			this.debugLog( 'Retry attempt', attemptNum, 'of', maxAttempts, ':', failedContainers.length, 'failed slide containers' );
+
+			// Reset flag to allow retry
+			failedContainers.forEach( ( container ) => {
+				container.layersSlideInitialized = false;
+			} );
+
+			// Retry initialization using refreshAllSlides which is more robust
+			// It uses reinitializeSlideViewer which doesn't check flags
+			this.refreshAllSlides().then( ( result ) => {
+				if ( result.refreshed > 0 ) {
+					this.debugLog( 'Retry', attemptNum, 'refreshed', result.refreshed, 'slides' );
+				}
+				if ( result.failed > 0 && attemptNum < maxAttempts ) {
+					this.debugLog( 'Retry', attemptNum, 'still has', result.failed, 'failed slides, will retry again' );
+				}
 			} );
 		}
 
@@ -137,6 +219,9 @@
 				this.debugWarn( 'No canvas found in slide container' );
 				return;
 			}
+
+			// Remove empty marker if previously set (has content now)
+			container.classList.remove( 'layers-slide-is-empty' );
 
 			// Get display dimensions from container data attributes (how slide appears on page)
 			const displayWidth = parseInt( container.getAttribute( 'data-display-width' ), 10 );
@@ -342,6 +427,9 @@
 					return false;
 				}
 
+				// Store reference to 'this' for use in nested function
+				const self = this;
+
 				/**
 				 * Helper function to render all layers.
 				 */
@@ -354,7 +442,7 @@
 						ctx.fillRect( 0, 0, canvas.width, canvas.height );
 						ctx.restore();
 					}
-					if ( payload.layers && Array.isArray( payload.layers ) ) {
+					if ( payload.layers && Array.isArray( payload.layers ) && payload.layers.length > 0 ) {
 						const layers = payload.layers;
 						for ( let i = layers.length - 1; i >= 0; i-- ) {
 							const layer = layers[ i ];
@@ -362,6 +450,12 @@
 								renderer.drawLayer( layer );
 							}
 						}
+						// Has content - remove empty marker
+						container.classList.remove( 'layers-slide-is-empty' );
+					} else {
+						// No layers - draw empty state placeholder and mark for print hiding
+						container.classList.add( 'layers-slide-is-empty' );
+						self.drawEmptyStateContent( ctx, canvas.width, canvas.height, container );
 					}
 				};
 
@@ -470,6 +564,8 @@
 						const success = self.reinitializeSlideViewer( container, payload );
 						if ( success ) {
 							refreshCount++;
+							container.layersSlideInitSuccess = true;
+							container.setAttribute( 'data-layers-init-success', 'true' );
 							self.debugLog( 'refreshAllSlides: refreshed slide', slideName );
 						}
 						return { success: success, slideName: slideName };
@@ -824,6 +920,9 @@
 				return;
 			}
 
+			// Mark container as empty for print CSS
+			container.classList.add( 'layers-slide-is-empty' );
+
 			canvas.width = width;
 			canvas.height = height;
 
@@ -933,11 +1032,19 @@
 
 		/**
 		 * Create SVG pencil icon for edit button.
+		 * Uses IconFactory if available, falls back to inline creation.
 		 *
 		 * @private
 		 * @return {SVGElement} Pencil icon SVG
 		 */
 		_createPencilIcon() {
+			// Try to use IconFactory if available (consistent with ViewerOverlay)
+			if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
+				window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createPencilIcon ) {
+				return window.Layers.UI.IconFactory.createPencilIcon( { size: 20, color: 'currentColor' } );
+			}
+
+			// Fallback inline SVG
 			const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 			svg.setAttribute( 'viewBox', '0 0 20 20' );
 			svg.setAttribute( 'width', '20' );
@@ -955,11 +1062,19 @@
 
 		/**
 		 * Create SVG expand icon for view button.
+		 * Uses IconFactory if available, falls back to inline creation.
 		 *
 		 * @private
 		 * @return {SVGElement} Expand icon SVG
 		 */
 		_createExpandIcon() {
+			// Try to use IconFactory if available (consistent with ViewerOverlay)
+			if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
+				window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createExpandIcon ) {
+				return window.Layers.UI.IconFactory.createExpandIcon( false, { size: 20, color: 'currentColor' } );
+			}
+
+			// Fallback inline SVG
 			const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 			svg.setAttribute( 'viewBox', '0 0 20 20' );
 			svg.setAttribute( 'width', '20' );

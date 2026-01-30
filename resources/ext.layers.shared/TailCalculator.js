@@ -177,9 +177,14 @@
 		 * @param {number} tipX - Tail tip X position (relative to layer origin)
 		 * @param {number} tipY - Tail tip Y position (relative to layer origin)
 		 * @param {number} cornerRadius - Corner radius to avoid
-		 * @return {Object} Object with base1, base2, tip, edge
+		 * @return {Object|null} Object with base1, base2, tip, edge, or null if tip is inside rectangle
 		 */
 		getTailFromTipPosition( x, y, width, height, tipX, tipY, cornerRadius ) {
+			// If tip is inside the rectangle, no tail should be drawn
+			if ( tipX >= x && tipX <= x + width && tipY >= y && tipY <= y + height ) {
+				return null;
+			}
+
 			// Get the closest point on the perimeter (including corners)
 			const perimeter = this.getClosestPerimeterPoint( tipX, tipY, x, y, width, height, cornerRadius );
 			const r = Math.min( cornerRadius, Math.min( width, height ) / 2 );

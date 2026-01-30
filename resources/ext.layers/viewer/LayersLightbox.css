@@ -119,13 +119,13 @@
 	visibility: visible;
 }
 
-/* Action buttons */
+/* Action buttons - compact size for less visual intrusion */
 .layers-viewer-overlay-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 32px;
-	height: 32px;
+	width: 26px;
+	height: 26px;
 	padding: 0;
 	margin: 0;
 	background: rgba( 255, 255, 255, 0.1 );
@@ -159,10 +159,10 @@
 	background: rgba( 52, 168, 83, 0.4 );
 }
 
-/* Icon styling */
+/* Icon styling - proportional to button size */
 .layers-viewer-overlay-btn svg {
-	width: 16px;
-	height: 16px;
+	width: 14px;
+	height: 14px;
 	flex-shrink: 0;
 }
 
@@ -176,13 +176,13 @@
 	}
 
 	.layers-viewer-overlay-btn {
-		width: 28px;
-		height: 28px;
+		width: 24px;
+		height: 24px;
 	}
 
 	.layers-viewer-overlay-btn svg {
-		width: 14px;
-		height: 14px;
+		width: 12px;
+		height: 12px;
 	}
 }
 

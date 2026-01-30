@@ -170,7 +170,7 @@ class ApiLayersList extends ApiBase {
 	 */
 	private function getLogger(): LoggerInterface {
 		if ( !$this->logger ) {
-			$this->logger = MediaWikiServices::getInstance()->get( 'LayersLogger' )->getLogger();
+			$this->logger = MediaWikiServices::getInstance()->get( 'LayersLogger' );
 		}
 		return $this->logger;
 	}
