@@ -254,6 +254,26 @@ describe('HitTestController', () => {
             const result = hitTestController.hitTestSelectionHandles(point);
             expect(result.type).toBe('direct');
         });
+
+        test('should find handle when point is within hit tolerance (4px outside visual rect)', () => {
+            // Handle rect is at x:95, y:95, width:10, height:10 (so right edge is at x=105)
+            // Hit tolerance is 4px, so we should still hit at x=108 (3px outside)
+            const pointJustOutside = { x: 108, y: 100 };
+            const result = hitTestController.hitTestSelectionHandles(pointJustOutside);
+            expect(result).not.toBeNull();
+            expect(result.type).toBe('nw');
+        });
+
+        test('should not find handle when point is beyond hit tolerance', () => {
+            // Handle rect is at x:95, y:95, width:10, height:10 (so right edge is at x=105)
+            // Hit tolerance is 4px, so we should NOT hit at x=111 (6px outside)
+            const pointFarOutside = { x: 111, y: 100 };
+            const result = hitTestController.hitTestSelectionHandles(pointFarOutside);
+            // Should not match the nw handle, might match something else or null
+            if (result !== null) {
+                expect(result.type).not.toBe('nw');
+            }
+        });
     });
 
     describe('getLayerAtPoint', () => {

@@ -13,6 +13,7 @@ namespace MediaWiki\Extension\Layers\Database;
 
 use Config;
 use Psr\Log\LoggerInterface;
+use Wikimedia\Rdbms\IDatabase;
 use Wikimedia\Rdbms\LoadBalancer;
 
 class LayersDatabase {
@@ -499,35 +500,52 @@ class LayersDatabase {
 			]
 		);
 
-		$namedSets = [];
+		// Collect set names and their latest revisions for batch lookup
+		$setRevisionPairs = [];
+		$aggregateData = [];
 		foreach ( $aggregates as $row ) {
 			$setName = $row->ls_name ?? 'default';
 			$latestRevision = (int)$row->latest_revision;
-
-			// Query 2: Get user_id from the latest revision row
-			// This is a simple primary key lookup, very fast
-			$latestRow = $dbr->selectRow(
-				'layer_sets',
-				[ 'ls_user_id' ],
-				[
-					'ls_img_name' => $imgNameLookup,
-					'ls_img_sha1' => $sha1,
-					'ls_name' => $setName,
-					'ls_revision' => $latestRevision
-				],
-				__METHOD__
-			);
-
-			$namedSets[] = [
+			$setRevisionPairs[] = [
+				'ls_img_name' => $imgNameLookup,
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName,
+				'ls_revision' => $latestRevision
+			];
+			$aggregateData[$setName] = [
 				'name' => $setName,
 				'revision_count' => (int)$row->revision_count,
 				'latest_revision' => $latestRevision,
 				'latest_timestamp' => $row->latest_timestamp,
-				'latest_user_id' => $latestRow ? (int)$latestRow->ls_user_id : 0
+				'latest_user_id' => 0
 			];
 		}
 
-		return $namedSets;
+		// Query 2: Batch fetch all user IDs in a single query
+		if ( count( $setRevisionPairs ) > 0 ) {
+			// Build OR conditions for batch lookup
+			$orConditions = [];
+			foreach ( $setRevisionPairs as $pair ) {
+				$orConditions[] = $dbr->makeList( $pair, IDatabase::LIST_AND );
+			}
+
+			$userRows = $dbr->select(
+				'layer_sets',
+				[ 'ls_name', 'ls_revision', 'ls_user_id' ],
+				[ $dbr->makeList( $orConditions, IDatabase::LIST_OR ) ],
+				__METHOD__
+			);
+
+			// Map user IDs back to aggregates
+			foreach ( $userRows as $userRow ) {
+				$setName = $userRow->ls_name ?? 'default';
+				if ( isset( $aggregateData[$setName] ) ) {
+					$aggregateData[$setName]['latest_user_id'] = (int)$userRow->ls_user_id;
+				}
+			}
+		}
+
+		return array_values( $aggregateData );
 	}
 
 	/**
@@ -1141,8 +1159,8 @@ class LayersDatabase {
 		];
 
 		if ( $prefix !== '' ) {
-			$escapedPrefix = $dbr->addQuotes( 'Slide:' . $prefix . '%' );
-			$conditions[] = 'ls_img_name LIKE ' . $escapedPrefix;
+			// Use buildLike() to properly escape LIKE wildcards (%, _)
+			$conditions[] = 'ls_img_name ' . $dbr->buildLike( 'Slide:' . $prefix, $dbr->anyString() );
 		}
 
 		// Determine sort order
@@ -1199,32 +1217,49 @@ class LayersDatabase {
 			]
 		);
 
-		$slides = [];
+		// First pass: collect slide data and slide names for batch user lookup
+		$slideData = [];
+		$slideNames = [];
 		foreach ( $result as $row ) {
-			// Parse JSON data to extract canvas settings
-			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH );
+			$slideNames[] = $row->slide_name;
+			$slideData[$row->slide_name] = $row;
+		}
 
-			// Get first revision creator
-			$firstRevisionRow = $dbr->selectRow(
+		// Batch query: Get first revision creators for all slides in ONE query
+		$creatorMap = [];
+		if ( count( $slideNames ) > 0 ) {
+			$firstRevisionResult = $dbr->select(
 				'layer_sets',
-				[ 'ls_user_id' ],
+				[ 'ls_img_name', 'ls_user_id' ],
 				[
-					'ls_img_name' => $row->slide_name,
+					'ls_img_name' => $slideNames,
 					'ls_img_sha1' => 'slide',
 					'ls_revision' => 1
 				],
 				__METHOD__
 			);
-			$createdById = $firstRevisionRow ? (int)$firstRevisionRow->ls_user_id : (int)$row->ls_user_id;
+			foreach ( $firstRevisionResult as $firstRow ) {
+				$creatorMap[$firstRow->ls_img_name] = (int)$firstRow->ls_user_id;
+			}
+		}
+
+		// Second pass: build slide array with creator info
+		$slides = [];
+		foreach ( $slideData as $slideName => $row ) {
+			// Parse JSON data to extract canvas settings
+			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH );
+
+			// Look up creator from batch result, fall back to latest modifier
+			$createdById = $creatorMap[$slideName] ?? (int)$row->ls_user_id;
 
 			// Extract slide name from full name (remove 'Slide:' prefix)
-			$slideName = $row->slide_name;
-			if ( str_starts_with( $slideName, 'Slide:' ) ) {
-				$slideName = substr( $slideName, 6 );
+			$displayName = $slideName;
+			if ( str_starts_with( $displayName, 'Slide:' ) ) {
+				$displayName = substr( $displayName, 6 );
 			}
 
 			$slides[] = [
-				'name' => $slideName,
+				'name' => $displayName,
 				'canvasWidth' => $jsonData['canvasWidth'] ?? 800,
 				'canvasHeight' => $jsonData['canvasHeight'] ?? 600,
 				'backgroundColor' => $jsonData['backgroundColor'] ?? '#ffffff',

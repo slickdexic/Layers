@@ -2,15 +2,15 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.65%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-10%2C939%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-95.42%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-11%2C067%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.39 (January 29, 2026)  
+> **Version:** 1.5.40 (January 30, 2026)  
 > **Status:** ✅ Production-ready  
-> **Requires:** MediaWiki 1.44+, PHP 8.1+
+> **Requires:** MediaWiki 1.43+, PHP 8.1+
 >
 > **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
 > **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).

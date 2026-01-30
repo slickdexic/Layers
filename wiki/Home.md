@@ -1,11 +1,11 @@
 # Layers — Professional Image Annotation for MediaWiki
 
 <p align="center">
-  <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
+  <img src="https://img.shields.io/badge/MediaWiki-1.43%2B-blue" alt="MediaWiki 1.43+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-10%2C939%20passing-brightgreen" alt="10,939 Tests">
-  <img src="https://img.shields.io/badge/Coverage-94.65%25-brightgreen" alt="94.65% Coverage">
+  <img src="https://img.shields.io/badge/Tests-11%2C069%20passing-brightgreen" alt="11,069 Tests">
+  <img src="https://img.shields.io/badge/Coverage-95.42%25-brightgreen" alt="95.42% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,12 +20,18 @@
 
 ---
 
-## 🆕 What's New in v1.5.39
+## 🆕 What's New in v1.5.40
 
-- **God Class Reduction Complete** — Reduced from 20 to 12 god classes (40% reduction)
-- **12+ Extracted Modules** — Clean separation of concerns with focused single-responsibility modules
-- **Documentation Synchronized** — All metrics now accurate across all documentation files
-- **10,939 tests passing** (162 suites), 94.65% statement coverage, 84.49% branch coverage
+- **All P0-P3 Issues Resolved** — TailCalculator, API bugs, N+1 queries, and UX issues all fixed
+- **UX Improvements** — Easier drag handle clicking (4px tolerance), smaller overlay buttons
+- **Code Quality** — New `LayersApiHelperTrait` extracts common API patterns
+- **11,069 tests passing** (163 suites), 95.42% statement coverage, 85.25% branch coverage
+
+### Previous v1.5.39 Highlights
+
+- **Critical Bugfixes** — TailCalculator and ApiLayersList.getLogger() bugs fixed
+- **Performance Improvements** — N+1 database queries eliminated
+- **Security Hardening** — LIKE query wildcard escaping
 
 ### Previous v1.5.38 Highlights
 
@@ -263,15 +269,15 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.39 |
-| **Version (REL1_43)** | 1.5.39-REL1_43 |
-| **Version (REL1_39)** | 1.5.39-REL1_39 |
-| **Release Date** | January 29, 2026 |
-| **Test Suites** | 162 |
-| **Total Tests** | 10,939 |
+| **Version (main)** | 1.5.40 |
+| **Version (REL1_43)** | 1.5.40-REL1_43 |
+| **Version (REL1_39)** | 1.5.40-REL1_39 |
+| **Release Date** | January 30, 2026 |
+| **Test Suites** | 163 |
+| **Total Tests** | 11,069 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 94.65% |
-| **Branch Coverage** | 84.49% |
+| **Statement Coverage** | 95.42% |
+| **Branch Coverage** | 85.25% |
 | **Function Coverage** | 92.93% |
 | **Line Coverage** | 94.77% |
 | **JavaScript Files** | 139 |

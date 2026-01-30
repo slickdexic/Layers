@@ -125,6 +125,7 @@
 
 						self.initializeSlideViewer( container, payload );
 						container.layersSlideInitSuccess = true; // Mark as successfully initialized
+						container.setAttribute( 'data-layers-init-success', 'true' ); // For DOM queries
 					} catch ( e ) {
 						self.debugWarn( 'Error processing slide data:', e );
 						container.layersSlideInitialized = false; // Allow retry
@@ -179,9 +180,10 @@
 			const failedContainers = Array.prototype.slice.call(
 				document.querySelectorAll( '.layers-slide-container' )
 			).filter( ( container ) => {
-				// Find slides that were attempted but not successfully initialized
-				return container.layersSlideInitialized === false ||
-					( container.layersSlideInitialized === true && container.layersSlideInitSuccess !== true );
+				// Include containers that haven't been successfully initialized yet
+				// This catches: never seen (undefined), attempted but failed, or in-progress
+				// Critical for slides inside tables that may appear in DOM after initial run
+				return container.layersSlideInitSuccess !== true;
 			} );
 
 			if ( failedContainers.length === 0 ) {
@@ -562,6 +564,8 @@
 						const success = self.reinitializeSlideViewer( container, payload );
 						if ( success ) {
 							refreshCount++;
+							container.layersSlideInitSuccess = true;
+							container.setAttribute( 'data-layers-init-success', 'true' );
 							self.debugLog( 'refreshAllSlides: refreshed slide', slideName );
 						}
 						return { success: success, slideName: slideName };

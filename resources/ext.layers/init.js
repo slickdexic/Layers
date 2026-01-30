@@ -252,4 +252,20 @@
 		}
 	} );
 
+	// Final fallback for slides inside tables or other deferred content
+	// window.load fires after all resources (stylesheets, images) are loaded
+	// Tables may need this for proper layout calculations
+	window.addEventListener( 'load', function () {
+		if ( mw && mw.layers && mw.layers.viewerManager ) {
+			// Check if any slides still need initialization
+			const uninitSlides = document.querySelectorAll(
+				'.layers-slide-container:not([data-layers-init-success="true"])'
+			);
+			if ( uninitSlides.length > 0 ) {
+				mw.layers.debugLog( 'window.load: found', uninitSlides.length, 'uninit slides, refreshing' );
+				mw.layers.viewerManager.refreshAllSlides();
+			}
+		}
+	} );
+
 }() );
