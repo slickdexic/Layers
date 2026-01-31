@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (High Priority) | **4** | ✅ All resolved |
 | P2 (Medium Priority) | **15** | 🟡 5 open, 10 resolved |
-| P3 (Low Priority) | **12** | 🟢 2 resolved, 10 backlog |
+| P3 (Low Priority) | **12** | 🟢 3 resolved, 9 backlog |
 | Feature Gaps | 3 | Planned |
 
 ---
@@ -224,9 +224,13 @@ Max 255; should be smallint for future-proofing.
 
 Don't match PHP config values; document dependency.
 
-### P3.5 refreshAllViewers Parallel API Calls
+### P3.5 refreshAllViewers Parallel API Calls — ✅ RESOLVED
 
-Could overwhelm server; limit concurrency to 3-5.
+**Status:** ✅ RESOLVED (January 31, 2026)
+
+**Resolution:** Added `_processWithConcurrency()` helper method and
+`MAX_CONCURRENT_REQUESTS = 5` constant. The `refreshAllViewers()` method
+now limits parallel API requests to 5 at a time to avoid server overload.
 
 ### P3.6 Inconsistent @codeCoverageIgnore Usage
 

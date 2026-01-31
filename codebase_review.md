@@ -386,8 +386,8 @@ and `API_LIST_MAX_LIMIT` (500). Updated ApiLayersList.php to use these constants
 ### LOW-9: CHECK Constraints Hardcoded in SQL
 Don't match PHP config; document dependency.
 
-### LOW-10: refreshAllViewers Parallel API Calls
-Could overwhelm server; limit concurrency to 3-5.
+### ~~LOW-10: refreshAllViewers Parallel API Calls~~ ✅ RESOLVED
+**Resolution:** Added `_processWithConcurrency()` helper with MAX_CONCURRENT_REQUESTS=5.
 
 ### LOW-11: Missing null Check in extractLayerSetData
 Add try/catch or optional chaining.

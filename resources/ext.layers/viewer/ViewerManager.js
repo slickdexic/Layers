@@ -357,6 +357,48 @@ class ViewerManager {
 	}
 
 	/**
+	 * Maximum concurrent API requests for batch operations.
+	 * Limits server load during refreshAllViewers.
+	 * @type {number}
+	 */
+	static MAX_CONCURRENT_REQUESTS = 5;
+
+	/**
+	 * Process an array of items with limited concurrency.
+	 * Prevents overwhelming the server with parallel API requests.
+	 *
+	 * @private
+	 * @param {Array} items Array of items to process
+	 * @param {Function} processor Async function to process each item
+	 * @param {number} [concurrency=5] Maximum concurrent operations
+	 * @return {Promise<Array>} Promise resolving to array of results
+	 */
+	_processWithConcurrency( items, processor, concurrency ) {
+		const limit = concurrency || ViewerManager.MAX_CONCURRENT_REQUESTS;
+		const results = [];
+		let index = 0;
+
+		const processNext = () => {
+			if ( index >= items.length ) {
+				return Promise.resolve();
+			}
+			const currentIndex = index++;
+			return processor( items[ currentIndex ], currentIndex ).then( ( result ) => {
+				results[ currentIndex ] = result;
+				return processNext();
+			} );
+		};
+
+		// Start 'limit' number of parallel chains
+		const chains = [];
+		for ( let i = 0; i < Math.min( limit, items.length ); i++ ) {
+			chains.push( processNext() );
+		}
+
+		return Promise.all( chains ).then( () => results );
+	}
+
+	/**
 	 * Refresh all viewers on the page by fetching fresh data from the API.
 	 *
 	 * This is called when the modal editor closes after saving to ensure
@@ -411,12 +453,14 @@ class ViewerManager {
 		let refreshCount = 0;
 		const errors = [];
 
-		const refreshPromises = viewerImages.map( ( img ) => {
+		// Process each image with concurrency limiting to avoid overwhelming the server
+		// P3.5 FIX: Limit to 5 concurrent requests
+		const processViewer = ( img ) => {
 			const filename = this.extractFilenameFromImg( img );
 			const setName = img.getAttribute( 'data-layer-setname' ) || img.getAttribute( 'data-layers-intent' ) || 'default';
 
 			if ( !filename ) {
-				return Promise.resolve( false );
+				return Promise.resolve( { success: false, filename: null } );
 			}
 
 			const params = {
@@ -487,9 +531,10 @@ class ViewerManager {
 				errors.push( { filename: filename, error: errMsg } );
 				return { success: false, filename: filename };
 			} );
-		} );
+		};
 
-		return Promise.all( refreshPromises ).then( ( results ) => {
+		// Use concurrency limiter to avoid overwhelming server (P3.5)
+		return this._processWithConcurrency( viewerImages, processViewer ).then( ( results ) => {
 			const failed = results.filter( ( r ) => !r.success ).length;
 			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'of', viewerImages.length, 'image viewers' );
 			if ( errors.length > 0 ) {
