@@ -73,7 +73,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `EditorBootstrap.js` (~400 lines) - initialization, hooks, cleanup
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
-  - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
+  - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility with caching via Map, clearClassCache() for tests), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
   - UI: `Toolbar.js` (~1,652 lines), `LayerPanel.js` (~1,806 lines - delegates to 9 controllers), plus editor CSS (`editor-fixed.css` with full Vector 2022 dark mode support)
   - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js and UIManager.js for separation of concerns:
     - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
