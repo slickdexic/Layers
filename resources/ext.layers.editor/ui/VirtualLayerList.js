@@ -49,6 +49,7 @@
 			this._resizeObserver = null;
 			this._isEnabled = false;
 			this._pendingRender = null;
+			this._destroyed = false;
 
 			this._init();
 		}
@@ -283,6 +284,10 @@
 			}
 			this._pendingRender = requestAnimationFrame( () => {
 				this._pendingRender = null;
+				// Guard against execution after destroy() was called
+				if ( this._destroyed ) {
+					return;
+				}
 				this._performRender();
 			} );
 		}
@@ -360,6 +365,7 @@
 		 * Clean up resources
 		 */
 		destroy() {
+			this._destroyed = true;
 			this.disable();
 			this._itemPool.clear();
 			this._spacerTop = null;

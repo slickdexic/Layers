@@ -11,6 +11,8 @@
 		/** Creates a new SlideController instance */
 		constructor( options = {} ) {
 			this.debug = options.debug || false;
+			/** @private Tracks pending retry timeouts for cleanup */
+			this._retryTimeouts = [];
 		}
 
 		/** Log a debug message if debug mode is enabled @private */
@@ -36,6 +38,20 @@
 				}
 			}
 			return fallback;
+		}
+
+		/**
+		 * Clean up resources and cancel pending timeouts.
+		 * Call this method when the controller is no longer needed.
+		 */
+		destroy() {
+			// Clear all pending retry timeouts
+			this._retryTimeouts.forEach( ( timeoutId ) => {
+				clearTimeout( timeoutId );
+			} );
+			this._retryTimeouts = [];
+			this._retriesScheduled = false;
+			this.debugLog( 'SlideController destroyed' );
 		}
 
 		/** Initialize all slides on the page */
@@ -162,9 +178,16 @@
 			const delays = [ 500, 1500, 3000 ];
 
 			delays.forEach( ( delay, index ) => {
-				setTimeout( () => {
+				const timeoutId = setTimeout( () => {
+					// Remove completed timeout from tracking array
+					const idx = self._retryTimeouts.indexOf( timeoutId );
+					if ( idx !== -1 ) {
+						self._retryTimeouts.splice( idx, 1 );
+					}
 					self._retryFailedSlides( index + 1, delays.length );
 				}, delay );
+				// Track timeout for potential cleanup
+				self._retryTimeouts.push( timeoutId );
 			} );
 		}
 

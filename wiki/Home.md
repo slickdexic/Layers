@@ -20,7 +20,13 @@
 
 ---
 
-## 🆕 What's New in v1.5.43
+## 🆕 What's New in v1.5.44
+
+- **Code Quality Fixes** — MED-2 (ToolDropdown listeners), MED-8 (Logger consistency)
+- **Documentation Audit** — All 97 files verified and updated for version/metric accuracy
+- **P2 Issue Tracker** — 16 of 18 issues now resolved (89% complete)
+
+### Previous v1.5.43 Highlights
 
 - **Documentation Audit** — Comprehensive audit and update of all 97 documentation files
 - **Issue Cleanup** — P3 issues reduced from 12 to 3 after investigation
@@ -282,10 +288,10 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.43 |
+| **Version (main)** | 1.5.44 |
 | **Version (REL1_43)** | 1.5.40-REL1_43 |
 | **Version (REL1_39)** | 1.5.40-REL1_39 |
-| **Release Date** | January 30, 2026 |
+| **Release Date** | January 31, 2026 |
 | **Test Suites** | 163 |
 | **Total Tests** | 11,112 |
 | **PHPUnit Test Files** | 24 |
@@ -293,8 +299,8 @@ See [[Changelog]] for full details.
 | **Branch Coverage** | 85.25% |
 | **Function Coverage** | 92.93% |
 | **Line Coverage** | 94.77% |
-| **JavaScript Files** | 139 |
-| **ES6 Classes** | 139 |
+| **JavaScript Files** | 141 |
+| **ES6 Classes** | 141 |
 | **God Classes** | 18 (2 generated, 14 JS, 2 PHP) |
 | **i18n Messages** | 667 |
 
