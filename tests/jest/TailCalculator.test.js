@@ -380,12 +380,11 @@ describe( 'TailCalculator', () => {
 			expect( result.edge ).toBeDefined();
 		} );
 
-		test( 'should handle tip exactly at center of rectangle', () => {
-			// Tip inside the rectangle
+		test( 'should return null when tip is inside rectangle', () => {
+			// Tip inside the rectangle - no tail should be shown
 			const result = calc.getTailFromTipPosition( 0, 0, 100, 100, 50, 50, 10 );
 
-			expect( result ).toBeDefined();
-			expect( result.tip ).toEqual( { x: 50, y: 50 } );
+			expect( result ).toBeNull();
 		} );
 	} );
 

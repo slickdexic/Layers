@@ -92,6 +92,9 @@ class ColorPickerDialog {
 		this.escapeHandler = null;
 		this.focusTrapHandler = null;
 		this.previouslyFocused = null;
+		// References to color input elements for syncing with swatch selection
+		this.customInput = null;
+		this.hexInput = null;
 	}
 
 	/**
@@ -192,8 +195,35 @@ class ColorPickerDialog {
 			button.classList.add( 'selected' );
 			this.selectedButton = button;
 		}
+		// Sync the custom color inputs with the selected color
+		this.syncCustomInputs();
 		// Trigger live preview callback
 		this.triggerPreview();
+	}
+
+	/**
+	 * Sync the custom color input elements with the currently selected color.
+	 * This ensures that clicking any swatch updates the custom color mixer.
+	 */
+	syncCustomInputs() {
+		if ( this.selectedColor && this.selectedColor !== 'none' ) {
+			// Validate it's a proper hex color
+			if ( /^#[0-9A-Fa-f]{6}$/i.test( this.selectedColor ) ) {
+				if ( this.customInput ) {
+					this.customInput.value = this.selectedColor;
+				}
+				if ( this.hexInput ) {
+					this.hexInput.value = this.selectedColor;
+					this.hexInput.classList.remove( 'color-picker-hex-input--invalid' );
+				}
+			}
+		} else if ( this.selectedColor === 'none' ) {
+			// Clear hex input for "none" selection
+			if ( this.hexInput ) {
+				this.hexInput.value = '';
+				this.hexInput.classList.remove( 'color-picker-hex-input--invalid' );
+			}
+		}
 	}
 
 	/**
@@ -374,71 +404,73 @@ class ColorPickerDialog {
 		const inputRow = document.createElement( 'div' );
 		inputRow.className = 'color-picker-input-row';
 
-		const customInput = document.createElement( 'input' );
-		customInput.type = 'color';
-		customInput.className = 'color-picker-custom-input';
-		customInput.setAttribute( 'aria-label', strings.customSection );
+		// Store reference to custom input for syncing with swatch selection
+		this.customInput = document.createElement( 'input' );
+		this.customInput.type = 'color';
+		this.customInput.className = 'color-picker-custom-input';
+		this.customInput.setAttribute( 'aria-label', strings.customSection );
 		// Set initial value
 		if ( this.selectedColor && this.selectedColor !== 'none' && /^#[0-9A-Fa-f]{6}$/.test( this.selectedColor ) ) {
-			customInput.value = this.selectedColor;
+			this.customInput.value = this.selectedColor;
 		}
 
 		// Hex text input for keyboard accessibility
-		const hexInput = document.createElement( 'input' );
-		hexInput.type = 'text';
-		hexInput.className = 'color-picker-hex-input';
-		hexInput.setAttribute( 'aria-label', strings.hexInput );
-		hexInput.setAttribute( 'placeholder', strings.hexPlaceholder );
-		hexInput.setAttribute( 'maxlength', '7' );
-		hexInput.setAttribute( 'pattern', '#[0-9A-Fa-f]{6}' );
+		// Store reference for syncing with swatch selection
+		this.hexInput = document.createElement( 'input' );
+		this.hexInput.type = 'text';
+		this.hexInput.className = 'color-picker-hex-input';
+		this.hexInput.setAttribute( 'aria-label', strings.hexInput );
+		this.hexInput.setAttribute( 'placeholder', strings.hexPlaceholder );
+		this.hexInput.setAttribute( 'maxlength', '7' );
+		this.hexInput.setAttribute( 'pattern', '#[0-9A-Fa-f]{6}' );
 		// Set initial value
 		if ( this.selectedColor && this.selectedColor !== 'none' ) {
-			hexInput.value = this.selectedColor;
+			this.hexInput.value = this.selectedColor;
 		}
 
 		// Sync color picker to hex input
-		customInput.addEventListener( 'input', () => {
-			this.selectedColor = customInput.value;
-			hexInput.value = customInput.value;
+		this.customInput.addEventListener( 'input', () => {
+			this.selectedColor = this.customInput.value;
+			this.hexInput.value = this.customInput.value;
 			this.triggerPreview();
 		} );
-		customInput.addEventListener( 'change', () => {
-			this.selectedColor = customInput.value;
-			hexInput.value = customInput.value;
+		this.customInput.addEventListener( 'change', () => {
+			this.selectedColor = this.customInput.value;
+			this.hexInput.value = this.customInput.value;
 			this.triggerPreview();
 		} );
 
 		// Sync hex input to color picker (with validation)
-		hexInput.addEventListener( 'input', () => {
-			const value = hexInput.value.trim();
+		this.hexInput.addEventListener( 'input', () => {
+			const value = this.hexInput.value.trim();
 			// Auto-add # if user types without it
 			if ( value.length > 0 && !value.startsWith( '#' ) ) {
-				hexInput.value = '#' + value;
+				this.hexInput.value = '#' + value;
 			}
 			// Validate hex format
-			if ( /^#[0-9A-Fa-f]{6}$/i.test( hexInput.value ) ) {
-				this.selectedColor = hexInput.value.toLowerCase();
-				customInput.value = this.selectedColor;
-				hexInput.classList.remove( 'color-picker-hex-input--invalid' );
+			if ( /^#[0-9A-Fa-f]{6}$/i.test( this.hexInput.value ) ) {
+				this.selectedColor = this.hexInput.value.toLowerCase();
+				this.customInput.value = this.selectedColor;
+				this.hexInput.classList.remove( 'color-picker-hex-input--invalid' );
 				this.triggerPreview();
-			} else if ( hexInput.value.length > 0 ) {
-				hexInput.classList.add( 'color-picker-hex-input--invalid' );
+			} else if ( this.hexInput.value.length > 0 ) {
+				this.hexInput.classList.add( 'color-picker-hex-input--invalid' );
 			} else {
-				hexInput.classList.remove( 'color-picker-hex-input--invalid' );
+				this.hexInput.classList.remove( 'color-picker-hex-input--invalid' );
 			}
 		} );
 
 		// Final validation on blur
-		hexInput.addEventListener( 'blur', () => {
-			if ( hexInput.value.length > 0 && !/^#[0-9A-Fa-f]{6}$/i.test( hexInput.value ) ) {
+		this.hexInput.addEventListener( 'blur', () => {
+			if ( this.hexInput.value.length > 0 && !/^#[0-9A-Fa-f]{6}$/i.test( this.hexInput.value ) ) {
 				// Reset to current valid color
-				hexInput.value = this.selectedColor !== 'none' ? this.selectedColor : '';
-				hexInput.classList.remove( 'color-picker-hex-input--invalid' );
+				this.hexInput.value = this.selectedColor !== 'none' ? this.selectedColor : '';
+				this.hexInput.classList.remove( 'color-picker-hex-input--invalid' );
 			}
 		} );
 
-		inputRow.appendChild( customInput );
-		inputRow.appendChild( hexInput );
+		inputRow.appendChild( this.customInput );
+		inputRow.appendChild( this.hexInput );
 		inputSection.appendChild( inputRow );
 		dialog.appendChild( inputSection );
 

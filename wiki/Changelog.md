@@ -4,6 +4,49 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.42 (January 31, 2026)
+
+### Security
+- **P1.1: Race Condition in saveLayerSet()** — Moved named set limit check inside transaction with FOR UPDATE lock
+- **P1.2: Missing Permission Check** — Added `checkUserRightsAny('read')` to ApiLayersList
+- **P2.8: Missing Rate Limiting** — Added `pingLimiter('editlayers-list')` to ApiLayersList
+
+### Added
+- **$wgLayersMaxComplexity** — Configurable complexity threshold (default 100) (P3.12)
+
+### Fixed
+- **P2.1: isComplexityAllowed() Incomplete** — Expanded to all 15 layer types with proper complexity scoring
+- **P2.10: paths Array Validation** — Added 100-path maximum limit to prevent DoS
+- **P2.5: Raw SQL Fragments** — Refactored listSlides() correlated subqueries to batch queries
+
+### Technical Details
+- All 11,112 tests pass (163 test suites)
+- All P1 HIGH priority security issues now resolved
+- P2 issues reduced from 9 open to 5 open
+- P3 issues: 9 resolved, 3 open
+- Rating upgraded from 8.5/10 to 8.8/10
+
+---
+
+## Version 1.5.41 (January 30, 2026)
+
+### Security
+- **SVG Entity Encoding Bypass** — Extended entity decoding to all SVG security checks
+- **vbscript: URL Blocking** — Added explicit blocking of vbscript: URLs
+
+### Added
+- **LayersConstants.php** — Central constants file for magic strings
+- **Total Points Validation** — MAX_TOTAL_POINTS (10,000) aggregate limit
+- **SVG Security Tests** — 5 new PHPUnit tests for entity-encoded bypasses
+
+### Fixed
+- **Documentation Metrics** — Corrected god class count (17→18) and test count across 10 files
+
+### Refactored
+- SetNameSanitizer and SlideHooks now use LayersConstants
+
+---
+
 ## Version 1.5.40 (January 30, 2026)
 
 ### Fixed
@@ -21,7 +64,7 @@ Version history for the Layers extension.
 - **Window Load Fallback** — Added fallback for slides appearing after DOMContentLoaded
 
 ### Technical Details
-- All 11,069 tests pass (163 test suites)
+- All 11,112 tests pass (163 test suites)
 - Test coverage: 95.42% statement, 85.25% branch
 - All P0, P1, P2, and P3 priority items resolved
 

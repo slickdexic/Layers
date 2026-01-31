@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use ApiResult;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -59,12 +60,21 @@ class ApiLayersList extends ApiBase {
 	 * Execute the API request.
 	 */
 	public function execute() {
+		// P1.2 FIX: Require read permission to prevent anonymous slide enumeration
+		$this->checkUserRightsAny( 'read' );
+
+		// P2.8 FIX: Rate limit slide listing to prevent abuse
+		$user = $this->getUser();
+		if ( $user->pingLimiter( 'editlayers-list' ) ) {
+			$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+		}
+
 		$params = $this->extractRequestParams();
 
 		// Parse parameters
 		$prefix = $params['prefix'] ?? '';
-		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : 50;
-		$limit = max( 1, min( $limit, 500 ) );
+		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : LayersConstants::API_LIST_DEFAULT_LIMIT;
+		$limit = max( LayersConstants::API_LIST_MIN_LIMIT, min( $limit, LayersConstants::API_LIST_MAX_LIMIT ) );
 		$offset = isset( $params['offset'] ) ? (int)$params['offset'] : 0;
 		$offset = max( 0, $offset );
 		$sort = $params['sort'] ?? 'name';
@@ -79,7 +89,7 @@ class ApiLayersList extends ApiBase {
 		// Verify database schema exists
 		if ( !$db->isSchemaReady() ) {
 			$this->dieWithError(
-				[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
 				'dbschema-missing'
 			);
 		}
@@ -186,10 +196,10 @@ class ApiLayersList extends ApiBase {
 			],
 			'limit' => [
 				self::PARAM_TYPE => 'limit',
-				self::PARAM_DFLT => 50,
-				self::PARAM_MIN => 1,
-				self::PARAM_MAX => 500,
-				self::PARAM_MAX2 => 500,
+				self::PARAM_DFLT => LayersConstants::API_LIST_DEFAULT_LIMIT,
+				self::PARAM_MIN => LayersConstants::API_LIST_MIN_LIMIT,
+				self::PARAM_MAX => LayersConstants::API_LIST_MAX_LIMIT,
+				self::PARAM_MAX2 => LayersConstants::API_LIST_MAX_LIMIT,
 			],
 			'offset' => [
 				self::PARAM_TYPE => 'integer',

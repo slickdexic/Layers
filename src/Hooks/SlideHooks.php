@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
@@ -55,7 +56,7 @@ class SlideHooks {
 		}
 
 		$parser->setFunctionHook(
-			'Slide',
+			LayersConstants::PARSER_FUNCTION_SLIDE,
 			[ self::class, 'renderSlide' ],
 			Parser::SFH_OBJECT_ARGS
 		);
@@ -121,7 +122,7 @@ class SlideHooks {
 		}
 
 		// Determine layer set name early (needed for fetching saved dimensions)
-		$layerSetName = $params['layerset'] ?? 'default';
+		$layerSetName = $params['layerset'] ?? LayersConstants::DEFAULT_SET_NAME;
 
 		// Parse canvas dimensions
 		// Priority: explicit canvas= param > saved dimensions from DB > config defaults
@@ -343,10 +344,10 @@ class SlideHooks {
 	private static function getSavedSlideDimensions( string $slideName, string $layerSetName ): ?array {
 		try {
 			$db = MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
-			$imgName = 'Slide:' . $slideName;
+			$imgName = LayersConstants::SLIDE_PREFIX . $slideName;
 
-			// Use 'slide' as sha1 for slides (consistent with save logic)
-			$layerSet = $db->getLayerSetByName( $imgName, 'slide', $layerSetName );
+			// Use TYPE_SLIDE as sha1 for slides (consistent with save logic)
+			$layerSet = $db->getLayerSetByName( $imgName, LayersConstants::TYPE_SLIDE, $layerSetName );
 
 			if ( $layerSet && isset( $layerSet['data'] ) ) {
 				$data = $layerSet['data'];

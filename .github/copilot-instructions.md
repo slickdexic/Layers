@@ -99,9 +99,9 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 17 files exceed 1,000 lines:
+  - **God classes:** 18 files exceed 1,000 lines:
     - **Generated data files (exempt):** ShapeLibraryData.js (~11,300 lines), EmojiLibraryIndex.js (~3,056 lines)
-    - **Hand-written files (13 JS):** LayerPanel, CanvasManager, Toolbar, LayersEditor, SelectionManager, PropertyBuilders, InlineTextEditor, APIManager, ViewerManager, ToolManager, CanvasRenderer, GroupManager, SlideController
+    - **Hand-written files (14 JS):** LayerPanel, CanvasManager, Toolbar, LayersEditor, SelectionManager, PropertyBuilders, InlineTextEditor, APIManager, ViewerManager, ToolManager, CanvasRenderer, GroupManager, SlideController, LayersValidator
     - **PHP god classes (2):** ServerSideLayerValidator.php (1,297 lines), LayersDatabase.php (1,242 lines)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
@@ -392,13 +392,13 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,069 tests in 163 suites — verified January 30, 2026)
+- Test count (11,112 tests in 163 suites — verified January 30, 2026)
 - Coverage (95.42% statement, 85.25% branch — verified January 30, 2026)
-- JavaScript file count (139 files total, ~94,546 lines)
-- PHP file count (40 files, ~14,543 lines)
-- God class count (17 files >1,000 lines; 2 generated data files, 13 JS, 2 PHP)
+- JavaScript file count (141 files total, ~92,338 lines)
+- PHP file count (41 files, ~14,738 lines)
+- God class count (18 files >1,000 lines; 2 generated data files, 14 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
 - Emoji library count (2,817 emoji in 19 categories)
-- Version number (1.5.40)
+- Version number (1.5.43)

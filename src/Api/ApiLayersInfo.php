@@ -16,6 +16,7 @@ use ApiMain;
 use ApiResult;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
@@ -60,9 +61,9 @@ class ApiLayersInfo extends ApiBase {
 		}
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
-		if ( $filename !== null && strpos( $filename, 'Slide:' ) === 0 ) {
+		if ( $filename !== null && strpos( $filename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
-			$slidename = substr( $filename, 6 );
+			$slidename = substr( $filename, strlen( LayersConstants::SLIDE_PREFIX ) );
 			$this->executeSlideRequest( $slidename, $setName, $limit, $layerSetId );
 			return;
 		}
@@ -77,7 +78,7 @@ class ApiLayersInfo extends ApiBase {
 
 		$title = $this->getTitleFromFilename( $filename );
 		if ( !$title ) {
-			$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+			$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 		}
 
 		$user = $this->getUser();
@@ -90,7 +91,7 @@ class ApiLayersInfo extends ApiBase {
 		$repoGroup = $this->getRepoGroup();
 		$file = $repoGroup->findFile( $title );
 		if ( !$file || !$file->exists() ) {
-			$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
+			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 		}
 
 		// Use DB key form for consistency with ApiLayersSave
@@ -124,11 +125,11 @@ class ApiLayersInfo extends ApiBase {
 			// Get specific layer set by ID
 			$layerSet = $db->getLayerSet( $layerSetId );
 			if ( !$layerSet ) {
-				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'layersetnotfound' );
 			}
 
 			if ( str_replace( ' ', '_', (string)( $layerSet['imgName'] ?? '' ) ) !== $normalizedName ) {
-				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'layersetnotfound' );
 			}
 
 			// Enrich with base dimensions to allow correct scaling by clients
@@ -271,9 +272,9 @@ class ApiLayersInfo extends ApiBase {
 		?int $layerSetId = null
 	): void {
 		// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
-		$normalizedName = 'Slide:' . $slidename;
-		$fileSha1 = 'slide';
-		$setName = $setName ?? 'default';
+		$normalizedName = LayersConstants::SLIDE_PREFIX . $slidename;
+		$fileSha1 = LayersConstants::TYPE_SLIDE;
+		$setName = $setName ?? LayersConstants::DEFAULT_SET_NAME;
 
 		$db = $this->getLayersDatabase();
 

@@ -15,6 +15,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Api\Traits;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
@@ -41,7 +42,7 @@ trait LayersApiHelperTrait {
 		if ( !$db->isSchemaReady() ) {
 			// @phan-suppress-next-line PhanUndeclaredMethod - dieWithError from ApiBase
 			$this->dieWithError(
-				[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
 				'dbschema-missing'
 			);
 		}
@@ -62,14 +63,14 @@ trait LayersApiHelperTrait {
 		$title = Title::newFromText( $filename, NS_FILE );
 		if ( !$title || $title->getNamespace() !== NS_FILE ) {
 			// @phan-suppress-next-line PhanUndeclaredMethod - dieWithError from ApiBase
-			$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
+			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
 		}
 
 		// Get file metadata (use getRepoGroup() to support foreign repos like Commons)
 		$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
 		if ( !$file || !$file->exists() ) {
 			// @phan-suppress-next-line PhanUndeclaredMethod - dieWithError from ApiBase
-			$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
+			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
 		}
 
 		// Use DB key form for consistency across all API modules

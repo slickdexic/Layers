@@ -1,10 +1,10 @@
 # Layers — Professional Image Annotation for MediaWiki
 
 <p align="center">
-  <img src="https://img.shields.io/badge/MediaWiki-1.43%2B-blue" alt="MediaWiki 1.43+">
+  <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C069%20passing-brightgreen" alt="11,069 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C112%20passing-brightgreen" alt="11,112 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.42%25-brightgreen" alt="95.42% Coverage">
 </p>
 
@@ -20,12 +20,33 @@
 
 ---
 
-## 🆕 What's New in v1.5.40
+## 🆕 What's New in v1.5.43
+
+- **Documentation Audit** — Comprehensive audit and update of all 97 documentation files
+- **Issue Cleanup** — P3 issues reduced from 12 to 3 after investigation
+- **Point Release** — Synchronized releases across main, REL1_43, and REL1_39 branches
+
+### Previous v1.5.42 Highlights
+
+- **P2.1 Fix** — `isComplexityAllowed()` now properly handles all 15 layer types
+- **P2.8 Fix** — Rate limiting added to `ApiLayersList`
+- **P2.10 Fix** — Paths array limit (max 100) for DoS prevention
+- **P3.5 Fix** — `refreshAllViewers()` limited to 5 concurrent requests
+- **Rating 8.8/10** — Production-ready, approaching world-class
+
+### Previous v1.5.41 Highlights
+
+- **P1.1 Fix** — Race condition in `saveLayerSet` named set limit check
+- **P1.2 Fix** — Missing permission check in `ApiLayersList`
+- **P2.5 Fix** — Raw SQL fragments in `listSlides()` refactored
+- **P3.12 Fix** — Configurable complexity threshold ($wgLayersMaxComplexity)
+
+### Previous v1.5.40 Highlights
 
 - **All P0-P3 Issues Resolved** — TailCalculator, API bugs, N+1 queries, and UX issues all fixed
 - **UX Improvements** — Easier drag handle clicking (4px tolerance), smaller overlay buttons
 - **Code Quality** — New `LayersApiHelperTrait` extracts common API patterns
-- **11,069 tests passing** (163 suites), 95.42% statement coverage, 85.25% branch coverage
+- **11,112 tests passing** (163 suites), 95.42% statement coverage, 85.25% branch coverage
 
 ### Previous v1.5.39 Highlights
 
@@ -44,14 +65,6 @@
 
 - **Callout Inline Editing** — Double-click inline text editing for callout layers
 - **Documentation Accuracy Audit** — Updated all stale metrics
-- **Critical Review v42** — Comprehensive codebase audit scoring 8.6/10 overall
-
-### Previous v1.5.35 Highlights", "oldString": "---
-
-## 🆕 What's New in v1.5.36
-
-- **Documentation Accuracy Audit** — All documentation now reflects verified January 27, 2026 metrics
-- **Code Quality Fix** — Added error logging to silent .catch() block in LayersEditor.js
 - **Critical Review v42** — Comprehensive codebase audit scoring 8.6/10 overall
 
 ### Previous v1.5.35 Highlights
@@ -269,12 +282,12 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.40 |
+| **Version (main)** | 1.5.43 |
 | **Version (REL1_43)** | 1.5.40-REL1_43 |
 | **Version (REL1_39)** | 1.5.40-REL1_39 |
 | **Release Date** | January 30, 2026 |
 | **Test Suites** | 163 |
-| **Total Tests** | 11,069 |
+| **Total Tests** | 11,112 |
 | **PHPUnit Test Files** | 24 |
 | **Statement Coverage** | 95.42% |
 | **Branch Coverage** | 85.25% |
@@ -282,8 +295,8 @@ See [[Changelog]] for full details.
 | **Line Coverage** | 94.77% |
 | **JavaScript Files** | 139 |
 | **ES6 Classes** | 139 |
-| **God Classes** | 12 (2 generated, 10 JS, 2 PHP) |
-| **i18n Messages** | ~718 |
+| **God Classes** | 18 (2 generated, 14 JS, 2 PHP) |
+| **i18n Messages** | 667 |
 
 ---
 

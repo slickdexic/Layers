@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\SpecialPage\SpecialPage;
@@ -68,12 +69,12 @@ class SpecialEditSlide extends SpecialPage {
 		}
 
 		// Get optional parameters - must get setname BEFORE database query
-		$setName = $request->getText( 'setname', 'default' );
+		$setName = $request->getText( 'setname', LayersConstants::DEFAULT_SET_NAME );
 
 		// Get slide info to determine canvas dimensions
 		$db = $services->get( 'LayersDatabase' );
-		$normalizedName = 'Slide:' . $slideName;
-		$layerSet = $db->getLayerSetByName( $normalizedName, 'slide', $setName );
+		$normalizedName = LayersConstants::SLIDE_PREFIX . $slideName;
+		$layerSet = $db->getLayerSetByName( $normalizedName, LayersConstants::TYPE_SLIDE, $setName );
 		// Support both 'canvaswidth'/'canvasheight' (from JS) and 'width'/'height' (legacy)
 		$canvasWidth = $request->getInt( 'canvaswidth', 0 ) ?: $request->getInt( 'width', 0 );
 		$canvasHeight = $request->getInt( 'canvasheight', 0 ) ?: $request->getInt( 'height', 0 );
@@ -116,7 +117,7 @@ class SpecialEditSlide extends SpecialPage {
 
 		// Provide editor init configuration (same format as EditLayersAction)
 		// The slide-specific config is passed via wgLayersEditorInit to trigger auto-bootstrap
-		$normalizedFilename = 'Slide:' . $slideName;
+		$normalizedFilename = LayersConstants::SLIDE_PREFIX . $slideName;
 		$out->addJsConfigVars( [
 			'wgLayersEditorInit' => [
 				'filename' => $normalizedFilename,

@@ -637,6 +637,20 @@ describe( 'APIManager', function () {
 	} );
 
 	describe( 'extractLayerSetData', function () {
+		it( 'should handle null layerSet gracefully', function () {
+			mockEditor.stateManager.set.mockClear();
+
+			// Should not throw when layerSet is null
+			expect( () => apiManager.extractLayerSetData( null ) ).not.toThrow();
+
+			// Should set defaults when layerSet is null
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseWidth', null );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseHeight', null );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', true );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundOpacity', 1.0 );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', [] );
+		} );
+
 		it( 'should set base dimensions', function () {
 			mockEditor.canvasManager.setBaseDimensions = jest.fn();
 

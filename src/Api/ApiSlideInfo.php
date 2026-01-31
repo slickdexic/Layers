@@ -15,6 +15,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use Wikimedia\ParamValidator\ParamValidator;
@@ -54,13 +55,13 @@ class ApiSlideInfo extends ApiBase {
 		}
 
 		if ( !$enabled ) {
-			$this->dieWithError( 'layers-slides-disabled', 'slidesdisabled' );
+			$this->dieWithError( LayersConstants::ERROR_SLIDES_DISABLED, 'slidesdisabled' );
 			return;
 		}
 
 		$params = $this->extractRequestParams();
 		$slideName = $params['slidename'];
-		$setName = $params['setname'] ?? 'default';
+		$setName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
 
 		// Validate slide name
 		$validator = new SlideNameValidator();
@@ -126,7 +127,7 @@ class ApiSlideInfo extends ApiBase {
 			'setname' => [
 				ParamValidator::PARAM_TYPE => 'string',
 				ParamValidator::PARAM_REQUIRED => false,
-				ParamValidator::PARAM_DEFAULT => 'default',
+				ParamValidator::PARAM_DEFAULT => LayersConstants::DEFAULT_SET_NAME,
 			],
 		];
 	}

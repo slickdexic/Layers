@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
@@ -60,9 +61,9 @@ class ApiLayersDelete extends ApiBase {
 		}
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
-		if ( $requestedFilename !== null && strpos( $requestedFilename, 'Slide:' ) === 0 ) {
+		if ( $requestedFilename !== null && strpos( $requestedFilename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
-			$slidename = substr( $requestedFilename, 6 );
+			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
 			$this->executeSlideDelete( $user, $slidename, $setName );
 			return;
 		}
@@ -86,13 +87,13 @@ class ApiLayersDelete extends ApiBase {
 			// (from InstantCommons) don't have local wiki pages
 			$title = Title::newFromText( $requestedFilename, NS_FILE );
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
-				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
 			}
 
 			// Get file metadata (use getRepoGroup() to support foreign repos like Commons)
 			$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
 			if ( !$file || !$file->exists() ) {
-				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
 			}
 
 			// Use DB key form for consistency with ApiLayersSave
@@ -140,12 +141,12 @@ class ApiLayersDelete extends ApiBase {
 					'isForeign' => $isForeign ? 'yes' : 'no',
 					'fileSha1' => $fileSha1 ?: '(empty)'
 				] );
-				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
 			}
 
 			// PERMISSION CHECK: Only owner or admin can delete (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName ) ) {
-				$this->dieWithError( 'layers-delete-permission-denied', 'permissiondenied' );
+				$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
 			// RATE LIMITING: Prevent abuse by limiting delete operations per user
@@ -155,7 +156,7 @@ class ApiLayersDelete extends ApiBase {
 			//   $wgRateLimits['editlayers-delete']['newbie'] = [ 3, 3600 ]; // stricter for new users
 			$rateLimiter = $this->createRateLimiter();
 			if ( !$rateLimiter->checkRateLimit( $user, 'delete' ) ) {
-				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Perform the delete
@@ -167,7 +168,7 @@ class ApiLayersDelete extends ApiBase {
 					'setname' => $setName,
 					'user' => $user->getName()
 				] );
-				$this->dieWithError( 'layers-delete-failed', 'deletefailed' );
+				$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
 			}
 
 			$this->getLogger()->info( 'Layer set deleted', [
@@ -188,7 +189,7 @@ class ApiLayersDelete extends ApiBase {
 				'filename' => $requestedFilename,
 				'setname' => $setName
 			] );
-			$this->dieWithError( 'layers-delete-failed', 'deletefailed' );
+			$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
 			return; // @codeCoverageIgnore
 		}
 	}
@@ -210,24 +211,24 @@ class ApiLayersDelete extends ApiBase {
 			$this->requireSchemaReady( $db );
 
 			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
-			$imgName = 'Slide:' . $slidename;
-			$sha1 = 'slide';
+			$imgName = LayersConstants::SLIDE_PREFIX . $slidename;
+			$sha1 = LayersConstants::TYPE_SLIDE;
 
 			// Check if the set exists
 			$exists = $db->namedSetExists( $imgName, $sha1, $setName );
 			if ( !$exists ) {
-				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
 			}
 
 			// Permission check: only owner or admin can delete (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName ) ) {
-				$this->dieWithError( 'layers-delete-permission-denied', 'permissiondenied' );
+				$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
 			// Rate limiting
 			$rateLimiter = $this->createRateLimiter();
 			if ( !$rateLimiter->checkRateLimit( $user, 'delete' ) ) {
-				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Perform the delete
@@ -239,7 +240,7 @@ class ApiLayersDelete extends ApiBase {
 					'setname' => $setName,
 					'user' => $user->getName()
 				] );
-				$this->dieWithError( 'layers-delete-failed', 'deletefailed' );
+				$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
 			}
 
 			$this->getLogger()->info( 'Slide layer set deleted', [
@@ -260,7 +261,7 @@ class ApiLayersDelete extends ApiBase {
 				'slidename' => $slidename,
 				'setname' => $setName
 			] );
-			$this->dieWithError( 'layers-delete-failed', 'deletefailed' );
+			$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
 			return; // @codeCoverageIgnore
 		}
 	}

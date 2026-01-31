@@ -667,4 +667,317 @@ describe( 'RichTextToolbar', () => {
 			expect( sizeInput.value ).toBe( '32' );
 		} );
 	} );
+
+	describe( 'underline and strikethrough buttons', () => {
+		it( 'should include underline button in rich text mode', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+
+			toolbar.create();
+
+			const underlineBtn = toolbar.toolbarElement.querySelector( '[data-format="underline"]' );
+			expect( underlineBtn ).not.toBeNull();
+		} );
+
+		it( 'should include strikethrough button in rich text mode', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+
+			toolbar.create();
+
+			const strikeBtn = toolbar.toolbarElement.querySelector( '[data-format="strikethrough"]' );
+			expect( strikeBtn ).not.toBeNull();
+		} );
+
+		it( 'should toggle underline on click', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onFocusEditor: mockOnFocusEditor
+			} );
+
+			toolbar.create();
+
+			const underlineBtn = toolbar.toolbarElement.querySelector( '[data-format="underline"]' );
+			underlineBtn.click();
+
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'underline', true );
+		} );
+
+		it( 'should toggle strikethrough on click', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onFocusEditor: mockOnFocusEditor
+			} );
+
+			toolbar.create();
+
+			const strikeBtn = toolbar.toolbarElement.querySelector( '[data-format="strikethrough"]' );
+			strikeBtn.click();
+
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'strikethrough', true );
+		} );
+
+		it( 'should turn off underline when already active', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onFocusEditor: mockOnFocusEditor
+			} );
+
+			toolbar.create();
+
+			const underlineBtn = toolbar.toolbarElement.querySelector( '[data-format="underline"]' );
+			// First click activates
+			underlineBtn.click();
+			// Second click deactivates
+			underlineBtn.click();
+
+			expect( mockOnFormat ).toHaveBeenLastCalledWith( 'underline', false );
+		} );
+	} );
+
+	describe( 'highlight dropdown button', () => {
+		it( 'should include dropdown button for highlight picker', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+
+			toolbar.create();
+
+			const dropdownBtn = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-highlight-dropdown' );
+			expect( dropdownBtn ).not.toBeNull();
+		} );
+
+		it( 'should save selection on dropdown mousedown', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onSaveSelection: mockOnSaveSelection
+			} );
+
+			toolbar.create();
+
+			const dropdownBtn = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-highlight-dropdown' );
+			dropdownBtn.dispatchEvent( new MouseEvent( 'mousedown', { bubbles: true } ) );
+
+			expect( mockOnSaveSelection ).toHaveBeenCalled();
+		} );
+
+		it( 'should set isInteracting on main highlight mousedown', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onSaveSelection: mockOnSaveSelection
+			} );
+
+			toolbar.create();
+
+			const mainBtn = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-highlight-main' );
+			mainBtn.dispatchEvent( new MouseEvent( 'mousedown', { bubbles: true } ) );
+
+			expect( toolbar._isInteracting ).toBe( true );
+		} );
+
+		it( 'should use native color input when ColorPickerDialog unavailable', () => {
+			// Keep FontConfig but remove ColorPickerDialog
+			window.Layers = {
+				FontConfig: {
+					getFonts: jest.fn( () => [ 'Arial', 'Times New Roman' ] ),
+					findMatchingFont: jest.fn( ( font ) => font )
+				}
+			};
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat
+			} );
+
+			toolbar.create();
+
+			const dropdownBtn = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-highlight-dropdown' );
+
+			// The dropdown click should work (native fallback path uses color input)
+			// Just verify the dropdown exists and can be clicked without error
+			expect( () => dropdownBtn.click() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'color picker', () => {
+		it( 'should include color picker wrapper', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+
+			toolbar.create();
+
+			const colorWrapper = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-color-wrapper' );
+			expect( colorWrapper ).not.toBeNull();
+		} );
+
+		it( 'should use fallback color input when ColorPickerDialog unavailable', () => {
+			// Keep FontConfig but remove ColorPickerDialog
+			window.Layers = {
+				FontConfig: {
+					getFonts: jest.fn( () => [ 'Arial', 'Times New Roman' ] ),
+					findMatchingFont: jest.fn( ( font ) => font )
+				}
+			};
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+
+			toolbar.create();
+
+			const colorInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-color' );
+			expect( colorInput ).not.toBeNull();
+			expect( colorInput.type ).toBe( 'color' );
+		} );
+
+		it( 'should call onFormat when fallback color changes', () => {
+			// Keep FontConfig but remove ColorPickerDialog
+			window.Layers = {
+				FontConfig: {
+					getFonts: jest.fn( () => [ 'Arial', 'Times New Roman' ] ),
+					findMatchingFont: jest.fn( ( font ) => font )
+				}
+			};
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onFocusEditor: mockOnFocusEditor
+			} );
+
+			toolbar.create();
+
+			const colorInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-color' );
+			colorInput.value = '#ff0000';
+			colorInput.dispatchEvent( new Event( 'change' ) );
+
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'color', '#ff0000' );
+		} );
+
+		it( 'should save selection on fallback color mousedown', () => {
+			// Keep FontConfig but remove ColorPickerDialog
+			window.Layers = {
+				FontConfig: {
+					getFonts: jest.fn( () => [ 'Arial', 'Times New Roman' ] ),
+					findMatchingFont: jest.fn( ( font ) => font )
+				}
+			};
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onSaveSelection: mockOnSaveSelection
+			} );
+
+			toolbar.create();
+
+			const colorInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-color' );
+			colorInput.dispatchEvent( new MouseEvent( 'mousedown' ) );
+
+			expect( mockOnSaveSelection ).toHaveBeenCalled();
+		} );
+
+		it( 'should set isInteracting on fallback color focus', () => {
+			// Keep FontConfig but remove ColorPickerDialog
+			window.Layers = {
+				FontConfig: {
+					getFonts: jest.fn( () => [ 'Arial', 'Times New Roman' ] ),
+					findMatchingFont: jest.fn( ( font ) => font )
+				}
+			};
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+
+			toolbar.create();
+
+			const colorInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-color' );
+			colorInput.dispatchEvent( new Event( 'focus' ) );
+
+			expect( toolbar._isInteracting ).toBe( true );
+		} );
+
+		it( 'should use ColorPickerDialog when available', () => {
+			const mockOpen = jest.fn();
+			window.Layers = {
+				FontConfig: {
+					getFonts: jest.fn( () => [ 'Arial', 'Times New Roman' ] ),
+					findMatchingFont: jest.fn( ( font ) => font )
+				},
+				UI: {
+					ColorPickerDialog: class MockColorPickerDialog {
+						constructor() {}
+						open() {
+							mockOpen();
+						}
+						static createColorButton( options ) {
+							const btn = document.createElement( 'button' );
+							btn.className = 'mock-color-button';
+							btn.addEventListener( 'click', options.onClick );
+							return btn;
+						}
+						static updateColorButton() {}
+					}
+				}
+			};
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onSaveSelection: mockOnSaveSelection
+			} );
+
+			toolbar.create();
+
+			const colorBtn = toolbar.toolbarElement.querySelector( '.mock-color-button' );
+			expect( colorBtn ).not.toBeNull();
+
+			colorBtn.click();
+			expect( mockOpen ).toHaveBeenCalled();
+		} );
+	} );
 } );

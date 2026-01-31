@@ -12,6 +12,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Database;
 
 use Config;
+use MediaWiki\Extension\Layers\LayersConstants;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IDatabase;
 use Wikimedia\Rdbms\LoadBalancer;
@@ -111,28 +112,9 @@ class LayersDatabase {
 			return null;
 		}
 
-		// Check named set limit for new sets
-		$setExists = $this->namedSetExists( $normalizedImgName, $sha1, $setName );
-		if ( $setExists === null ) {
-			// Database connection failed - don't proceed with save
-			$this->logError( 'Cannot verify set existence, database unavailable' );
-			return null;
-		}
-		if ( $setExists === false ) {
-			$maxSets = (int)$this->config->get( 'LayersMaxNamedSets' );
-			$setCount = $this->countNamedSets( $normalizedImgName, $sha1 );
-			if ( $setCount < 0 ) {
-				// Database error - don't proceed with save
-				$this->logError( 'Cannot count named sets, database unavailable' );
-				return null;
-			}
-			if ( $setCount >= $maxSets ) {
-				$this->logError( 'Named set limit reached', [
-					'imgName' => $imgName, 'count' => $setCount, 'max' => $maxSets
-				] );
-				throw new \OverflowException( 'layers-max-sets-reached' );
-			}
-		}
+		// P1.1 FIX: Named set limit check moved INSIDE transaction (see below)
+		// This prevents race conditions where two concurrent requests could both
+		// pass the limit check before either inserts a row.
 
 		$maxRetries = 3;
 		// 5 second total timeout
@@ -154,6 +136,46 @@ class LayersDatabase {
 			}
 			$dbw->startAtomic( __METHOD__ );
 			try {
+				// P1.1 FIX: Check named set limit INSIDE transaction with FOR UPDATE lock
+				// This prevents race conditions where concurrent requests bypass the limit
+				$maxSets = (int)$this->config->get( 'LayersMaxNamedSets' );
+				$imgNameLookup = $this->buildImageNameLookup( $normalizedImgName );
+
+				// Check if this specific set already exists (with lock)
+				$setExistsCount = $dbw->selectField(
+					'layer_sets',
+					'COUNT(*)',
+					[
+						'ls_img_name' => $imgNameLookup,
+						'ls_img_sha1' => $sha1,
+						'ls_name' => $setName
+					],
+					__METHOD__,
+					[ 'FOR UPDATE' ]
+				);
+
+				// If set doesn't exist, check if we're at the limit
+				if ( (int)$setExistsCount === 0 ) {
+					$setCount = $dbw->selectField(
+						'layer_sets',
+						'COUNT(DISTINCT ls_name)',
+						[
+							'ls_img_name' => $imgNameLookup,
+							'ls_img_sha1' => $sha1
+						],
+						__METHOD__,
+						[ 'FOR UPDATE' ]
+					);
+
+					if ( (int)$setCount >= $maxSets ) {
+						$this->logError( 'Named set limit reached', [
+							'imgName' => $normalizedImgName, 'count' => $setCount, 'max' => $maxSets
+						] );
+						$dbw->endAtomic( __METHOD__ );
+						throw new \OverflowException( 'layers-max-sets-reached' );
+					}
+				}
+
 				$revision = $this->getNextRevisionForSet( $normalizedImgName, $sha1, $setName, $dbw );
 				$timestamp = $dbw->timestamp();
 
@@ -504,7 +526,7 @@ class LayersDatabase {
 		$setRevisionPairs = [];
 		$aggregateData = [];
 		foreach ( $aggregates as $row ) {
-			$setName = $row->ls_name ?? 'default';
+			$setName = $row->ls_name ?? LayersConstants::DEFAULT_SET_NAME;
 			$latestRevision = (int)$row->latest_revision;
 			$setRevisionPairs[] = [
 				'ls_img_name' => $imgNameLookup,
@@ -538,7 +560,7 @@ class LayersDatabase {
 
 			// Map user IDs back to aggregates
 			foreach ( $userRows as $userRow ) {
-				$setName = $userRow->ls_name ?? 'default';
+				$setName = $userRow->ls_name ?? LayersConstants::DEFAULT_SET_NAME;
 				if ( isset( $aggregateData[$setName] ) ) {
 					$aggregateData[$setName]['latest_user_id'] = (int)$userRow->ls_user_id;
 				}
@@ -849,26 +871,49 @@ class LayersDatabase {
 				return false;
 			}
 
-			// Check if target name already exists
-			if ( $this->namedSetExists( $imgName, $sha1, $newName ) ) {
-				$this->logError( 'Cannot rename: target name already exists', [
-					'newName' => $newName
-				] );
-				return false;
+			// Use atomic transaction to prevent race conditions
+			// Two concurrent renames could otherwise both pass the existence check
+			$dbw->startAtomic( __METHOD__ );
+
+			try {
+				// Check if target name already exists (within transaction for consistency)
+				$existsCount = $dbw->selectField(
+					'layer_sets',
+					'COUNT(*)',
+					[
+						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+						'ls_img_sha1' => $sha1,
+						'ls_name' => $newName
+					],
+					__METHOD__,
+					[ 'FOR UPDATE' ]
+				);
+
+				if ( (int)$existsCount > 0 ) {
+					$dbw->endAtomic( __METHOD__ );
+					$this->logError( 'Cannot rename: target name already exists', [
+						'newName' => $newName
+					] );
+					return false;
+				}
+
+				$dbw->update(
+					'layer_sets',
+					[ 'ls_name' => $newName ],
+					[
+						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+						'ls_img_sha1' => $sha1,
+						'ls_name' => $oldName
+					],
+					__METHOD__
+				);
+
+				$rowsUpdated = $dbw->affectedRows();
+				$dbw->endAtomic( __METHOD__ );
+			} catch ( \Throwable $e ) {
+				$dbw->endAtomic( __METHOD__ );
+				throw $e;
 			}
-
-			$dbw->update(
-				'layer_sets',
-				[ 'ls_name' => $newName ],
-				[
-					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-					'ls_img_sha1' => $sha1,
-					'ls_name' => $oldName
-				],
-				__METHOD__
-			);
-
-			$rowsUpdated = $dbw->affectedRows();
 
 			if ( $rowsUpdated === 0 ) {
 				$this->logError( 'No rows updated during rename', [
@@ -1111,12 +1156,12 @@ class LayersDatabase {
 		}
 
 		$conditions = [
-			'ls_img_sha1' => 'slide'
+			'ls_img_sha1' => LayersConstants::TYPE_SLIDE
 		];
 
 		// Add prefix filter if provided
 		if ( $prefix !== '' ) {
-			$escapedPrefix = $dbr->addQuotes( 'Slide:' . $prefix . '%' );
+			$escapedPrefix = $dbr->addQuotes( LayersConstants::SLIDE_PREFIX . $prefix . '%' );
 			$conditions[] = 'ls_img_name LIKE ' . $escapedPrefix;
 		}
 
@@ -1155,12 +1200,15 @@ class LayersDatabase {
 
 		// Build conditions
 		$conditions = [
-			'ls_img_sha1' => 'slide'
+			'ls_img_sha1' => LayersConstants::TYPE_SLIDE
 		];
 
 		if ( $prefix !== '' ) {
 			// Use buildLike() to properly escape LIKE wildcards (%, _)
-			$conditions[] = 'ls_img_name ' . $dbr->buildLike( 'Slide:' . $prefix, $dbr->anyString() );
+			$conditions[] = 'ls_img_name ' . $dbr->buildLike(
+				LayersConstants::SLIDE_PREFIX . $prefix,
+				$dbr->anyString()
+			);
 		}
 
 		// Determine sort order
@@ -1180,7 +1228,7 @@ class LayersDatabase {
 			[ 'GROUP BY' => 'ls_img_name' ]
 		);
 
-		// Main query with join to get slide data
+		// Main query with join to get slide data (no correlated subqueries)
 		$result = $dbr->select(
 			[
 				'ls' => 'layer_sets',
@@ -1188,14 +1236,6 @@ class LayersDatabase {
 			],
 			[
 				'slide_name' => 'ls.ls_img_name',
-				'revision_count' => '(SELECT COUNT(*) FROM ' .
-					$dbr->tableName( 'layer_sets' ) .
-					' WHERE ls_img_name = ls.ls_img_name AND ls_img_sha1 = ' .
-					$dbr->addQuotes( 'slide' ) . ')',
-				'first_timestamp' => '(SELECT MIN(ls_timestamp) FROM ' .
-					$dbr->tableName( 'layer_sets' ) .
-					' WHERE ls_img_name = ls.ls_img_name AND ls_img_sha1 = ' .
-					$dbr->addQuotes( 'slide' ) . ')',
 				'latest_timestamp' => 'ls.ls_timestamp',
 				'ls_json_blob' => 'ls.ls_json_blob',
 				'ls_user_id' => 'ls.ls_user_id',
@@ -1203,7 +1243,7 @@ class LayersDatabase {
 				'ls_revision' => 'ls.ls_revision'
 			],
 			[
-				'ls.ls_img_sha1' => 'slide',
+				'ls.ls_img_sha1' => LayersConstants::TYPE_SLIDE,
 				'ls.ls_revision = latest.max_rev'
 			],
 			__METHOD__,
@@ -1217,7 +1257,7 @@ class LayersDatabase {
 			]
 		);
 
-		// First pass: collect slide data and slide names for batch user lookup
+		// First pass: collect slide data and slide names for batch lookups
 		$slideData = [];
 		$slideNames = [];
 		foreach ( $result as $row ) {
@@ -1225,37 +1265,74 @@ class LayersDatabase {
 			$slideData[$row->slide_name] = $row;
 		}
 
-		// Batch query: Get first revision creators for all slides in ONE query
-		$creatorMap = [];
-		if ( count( $slideNames ) > 0 ) {
-			$firstRevisionResult = $dbr->select(
-				'layer_sets',
-				[ 'ls_img_name', 'ls_user_id' ],
-				[
-					'ls_img_name' => $slideNames,
-					'ls_img_sha1' => 'slide',
-					'ls_revision' => 1
-				],
-				__METHOD__
-			);
-			foreach ( $firstRevisionResult as $firstRow ) {
-				$creatorMap[$firstRow->ls_img_name] = (int)$firstRow->ls_user_id;
-			}
+		// Early return if no slides found
+		if ( count( $slideNames ) === 0 ) {
+			return [];
 		}
 
-		// Second pass: build slide array with creator info
+		// Batch query 1: Get revision counts for all slides in ONE query
+		$revisionCountMap = [];
+		$revisionCountResult = $dbr->select(
+			'layer_sets',
+			[ 'ls_img_name', 'revision_count' => 'COUNT(*)' ],
+			[
+				'ls_img_name' => $slideNames,
+				'ls_img_sha1' => LayersConstants::TYPE_SLIDE
+			],
+			__METHOD__,
+			[ 'GROUP BY' => 'ls_img_name' ]
+		);
+		foreach ( $revisionCountResult as $revRow ) {
+			$revisionCountMap[$revRow->ls_img_name] = (int)$revRow->revision_count;
+		}
+
+		// Batch query 2: Get first timestamps for all slides in ONE query
+		$firstTimestampMap = [];
+		$firstTimestampResult = $dbr->select(
+			'layer_sets',
+			[ 'ls_img_name', 'first_timestamp' => 'MIN(ls_timestamp)' ],
+			[
+				'ls_img_name' => $slideNames,
+				'ls_img_sha1' => LayersConstants::TYPE_SLIDE
+			],
+			__METHOD__,
+			[ 'GROUP BY' => 'ls_img_name' ]
+		);
+		foreach ( $firstTimestampResult as $tsRow ) {
+			$firstTimestampMap[$tsRow->ls_img_name] = $tsRow->first_timestamp;
+		}
+
+		// Batch query 3: Get first revision creators for all slides in ONE query
+		$creatorMap = [];
+		$firstRevisionResult = $dbr->select(
+			'layer_sets',
+			[ 'ls_img_name', 'ls_user_id' ],
+			[
+				'ls_img_name' => $slideNames,
+				'ls_img_sha1' => LayersConstants::TYPE_SLIDE,
+				'ls_revision' => 1
+			],
+			__METHOD__
+		);
+		foreach ( $firstRevisionResult as $firstRow ) {
+			$creatorMap[$firstRow->ls_img_name] = (int)$firstRow->ls_user_id;
+		}
+
+		// Final pass: build slide array with all batch query data
 		$slides = [];
 		foreach ( $slideData as $slideName => $row ) {
 			// Parse JSON data to extract canvas settings
 			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH );
 
-			// Look up creator from batch result, fall back to latest modifier
+			// Look up values from batch results, with sensible defaults
 			$createdById = $creatorMap[$slideName] ?? (int)$row->ls_user_id;
+			$revisionCount = $revisionCountMap[$slideName] ?? 1;
+			$firstTimestamp = $firstTimestampMap[$slideName] ?? $row->latest_timestamp;
 
 			// Extract slide name from full name (remove 'Slide:' prefix)
 			$displayName = $slideName;
-			if ( str_starts_with( $displayName, 'Slide:' ) ) {
-				$displayName = substr( $displayName, 6 );
+			if ( str_starts_with( $displayName, LayersConstants::SLIDE_PREFIX ) ) {
+				$displayName = substr( $displayName, strlen( LayersConstants::SLIDE_PREFIX ) );
 			}
 
 			$slides[] = [
@@ -1264,8 +1341,8 @@ class LayersDatabase {
 				'canvasHeight' => $jsonData['canvasHeight'] ?? 600,
 				'backgroundColor' => $jsonData['backgroundColor'] ?? '#ffffff',
 				'layerCount' => (int)$row->ls_layer_count,
-				'revisionCount' => (int)$row->revision_count,
-				'created' => wfTimestamp( TS_ISO_8601, $row->first_timestamp ),
+				'revisionCount' => $revisionCount,
+				'created' => wfTimestamp( TS_ISO_8601, $firstTimestamp ),
 				'modified' => wfTimestamp( TS_ISO_8601, $row->latest_timestamp ),
 				'createdById' => $createdById,
 				'modifiedById' => (int)$row->ls_user_id

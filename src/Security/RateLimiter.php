@@ -219,22 +219,58 @@ class RateLimiter {
 		$complexity = 0;
 
 		foreach ( $layers as $layer ) {
-			switch ( $layer['type'] ) {
+			$type = $layer['type'] ?? 'unknown';
+			switch ( $type ) {
+				// Text rendering is moderately expensive
 				case 'text':
+				case 'textbox':
+				case 'callout':
 					$complexity += 2;
 					break;
+
+				// Complex types with potential for large data
+				case 'customShape':
+				case 'image':
+				case 'path':
+					$complexity += 3;
+					break;
+
+				// Arrows with curves are moderately complex
+				case 'arrow':
+					$complexity += 2;
+					break;
+
+				// Groups multiply complexity by contained layers
+				case 'group':
+					$complexity += 2;
+					break;
+
+				// Simple shapes and other known types
 				case 'rectangle':
 				case 'circle':
+				case 'ellipse':
 				case 'line':
+				case 'polygon':
+				case 'star':
+				case 'blur':
+				case 'marker':
+				case 'dimension':
 					$complexity += 1;
 					break;
-				case 'arrow':
-					// Unknown types are more expensive
-					$complexity += 2;
+
+				// Unknown types are expensive (conservative)
+				default:
+					$complexity += 3;
+					break;
 			}
 		}
 
-		// Maximum complexity threshold
-		return $complexity <= 100;
+		// Use configured limit with a safe default
+		$config = $this->getConfig();
+		$maxComplexity = (int)( $config->get( 'LayersMaxComplexity' ) ?? LayersConstants::DEFAULT_MAX_COMPLEXITY );
+		if ( $maxComplexity <= 0 ) {
+			$maxComplexity = LayersConstants::DEFAULT_MAX_COMPLEXITY;
+		}
+		return $complexity <= $maxComplexity;
 	}
 }

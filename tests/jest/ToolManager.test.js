@@ -1701,8 +1701,15 @@ describe( 'ToolManager', () => {
 				this.config = config;
 			};
 
-			const originalShapeFactory = window.ShapeFactory;
-			window.ShapeFactory = MockShapeFactory;
+			// ShapeFactory is now at window.Layers.Tools.ShapeFactory
+			const originalLayers = window.Layers;
+			window.Layers = {
+				...( window.Layers || {} ),
+				Tools: {
+					...( window.Layers && window.Layers.Tools || {} ),
+					ShapeFactory: MockShapeFactory
+				}
+			};
 
 			const FreshToolManager = require( '../../resources/ext.layers.editor/ToolManager.js' );
 			const tm = new FreshToolManager( {}, mockCanvasManager );
@@ -1710,7 +1717,7 @@ describe( 'ToolManager', () => {
 			expect( tm.shapeFactory ).not.toBeNull();
 			expect( tm.shapeFactory ).toBeInstanceOf( MockShapeFactory );
 
-			window.ShapeFactory = originalShapeFactory;
+			window.Layers = originalLayers;
 		} );
 
 		it( 'should use ToolRegistry when available', () => {

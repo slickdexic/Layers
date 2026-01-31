@@ -103,6 +103,25 @@
 		}
 
 		/**
+		 * Get the element that holds contentEditable
+		 * For multiline types, this is the inner wrapper; for single-line, it's editorElement
+		 *
+		 * @private
+		 * @return {HTMLElement|null} The editable element or null
+		 */
+		_getEditableElement() {
+			if ( !this.editorElement ) {
+				return null;
+			}
+			// For multiline, contentEditable is on the wrapper
+			if ( this._isMultilineType( this.editingLayer ) ) {
+				return this.editorElement.querySelector( '.layers-inline-content-wrapper' );
+			}
+			// For single line (input), the editorElement itself is the editable
+			return this.editorElement;
+		}
+
+		/**
 		 * Start inline editing for a text layer
 		 *
 		 * @param {Object} layer - The text layer to edit
@@ -167,18 +186,19 @@
 			// Create floating toolbar using RichTextToolbar
 			this._createToolbar();
 
-			// Focus the editor
-			if ( this.editorElement ) {
-				this.editorElement.focus();
+			// Focus the editable element (wrapper for multiline, editorElement for input)
+			const editableEl = this._getEditableElement();
+			if ( editableEl ) {
+				editableEl.focus();
 				// Select all text for easy replacement
-				if ( typeof this.editorElement.select === 'function' ) {
+				if ( typeof editableEl.select === 'function' ) {
 					// Input/textarea elements
-					this.editorElement.select();
-				} else if ( this.editorElement.contentEditable === 'true' ) {
+					editableEl.select();
+				} else if ( editableEl.contentEditable === 'true' ) {
 					// ContentEditable elements - select all content
 					const selection = window.getSelection();
 					const range = document.createRange();
-					range.selectNodeContents( this.editorElement );
+					range.selectNodeContents( editableEl );
 					selection.removeAllRanges();
 					selection.addRange( range );
 				}
@@ -223,7 +243,8 @@
 				let newText, newRichText = null;
 
 				// Extract content based on editor type
-				if ( this._isRichTextMode && this.editorElement.contentEditable === 'true' ) {
+				// For multiline types, contentEditable is on the wrapper, not editorElement
+				if ( this._isRichTextMode && this._isMultilineType( this.editingLayer ) ) {
 					// ContentEditable mode - extract richText and plain text
 					const RichTextConverter = window.Layers.Canvas.RichTextConverter;
 					const contentEl = this._getContentElement();
@@ -372,6 +393,10 @@
 		 * Get the content element - the wrapper div for multiline or the editor element itself.
 		 * This is where the actual text content lives.
 		 *
+		 * Note: When the user types in a contentEditable div, the browser may place text
+		 * either inside the wrapper div or directly in the parent editorElement.
+		 * We need to check both locations and return the one with actual content.
+		 *
 		 * @private
 		 * @return {HTMLElement|null} The content element
 		 */
@@ -379,9 +404,19 @@
 			if ( !this.editorElement ) {
 				return null;
 			}
-			// For multiline (contentEditable), content is in the wrapper div
+			// For multiline (contentEditable), check for wrapper div
 			const wrapper = this.editorElement.querySelector( '.layers-inline-content-wrapper' );
-			return wrapper || this.editorElement;
+			if ( wrapper ) {
+				// Check if wrapper has content, or if content is actually in parent
+				const wrapperText = wrapper.textContent || '';
+				const fullText = this.editorElement.textContent || '';
+				// If wrapper is empty but parent has text, browser placed content outside wrapper
+				if ( wrapperText.trim() === '' && fullText.trim() !== '' ) {
+					return this.editorElement;
+				}
+				return wrapper;
+			}
+			return this.editorElement;
 		}
 
 		/**
@@ -397,7 +432,8 @@
 
 			let newText, newRichText = null;
 
-			if ( this._isRichTextMode && this.editorElement.contentEditable === 'true' ) {
+			// For multiline types, contentEditable is on the wrapper, not editorElement
+			if ( this._isRichTextMode && this._isMultilineType( this.editingLayer ) ) {
 				const RichTextConverter = window.Layers.Canvas.RichTextConverter;
 				const contentEl = this._getContentElement();
 				const html = contentEl ? contentEl.innerHTML : '';
@@ -429,21 +465,25 @@
 
 			// Create the appropriate text element
 			if ( isMultiline ) {
-				// Use contentEditable div for rich text support in textbox/callout
+				// Create outer container div for positioning and flexbox
 				this.editorElement = document.createElement( 'div' );
-				this.editorElement.contentEditable = 'true';
 				this.editorElement.style.resize = 'none';
 				this.editorElement.style.overflow = 'auto';
-				this.editorElement.style.whiteSpace = 'pre-wrap';
-				this.editorElement.style.wordWrap = 'break-word';
-				this.editorElement.style.minHeight = '1em';
 
-				// Create inner content wrapper - this allows flex vertical alignment
-				// on the outer element while preserving inline text flow inside
+				// Create inner content wrapper - this holds contentEditable for proper cursor positioning
+				// The outer element uses flexbox for vertical alignment, wrapper handles horizontal
 				const RichTextConverter = window.Layers.Canvas.RichTextConverter;
 				const contentWrapper = document.createElement( 'div' );
 				contentWrapper.className = 'layers-inline-content-wrapper';
+				// Make wrapper contentEditable so cursor appears at correct position with textAlign
+				contentWrapper.contentEditable = 'true';
 				contentWrapper.style.width = '100%';
+				contentWrapper.style.whiteSpace = 'pre-wrap';
+				contentWrapper.style.wordWrap = 'break-word';
+				contentWrapper.style.minHeight = '1em';
+				contentWrapper.style.outline = 'none';
+				// Apply text alignment to wrapper so cursor appears at correct position
+				contentWrapper.style.textAlign = layer.textAlign || 'left';
 
 				// Set content in wrapper - prefer richText if available
 				if ( layer.richText && Array.isArray( layer.richText ) && layer.richText.length > 0 ) {
@@ -486,6 +526,19 @@
 				margin: '0'
 			};
 
+			// For multiline (textbox), use flexbox for vertical alignment
+			if ( isMultiline ) {
+				baseStyles.display = 'flex';
+				baseStyles.flexDirection = 'column';
+				// Map vertical alignment to flexbox justify-content
+				const alignMap = {
+					top: 'flex-start',
+					middle: 'center',
+					bottom: 'flex-end'
+				};
+				baseStyles.justifyContent = alignMap[ layer.verticalAlign ] || 'flex-start';
+			}
+
 			Object.assign( this.editorElement.style, baseStyles );
 
 			// Mobile keyboard optimization
@@ -523,8 +576,14 @@
 
 			// Text alignment for textbox/callout
 			if ( this._isMultilineType( layer ) ) {
-				style.textAlign = layer.textAlign || 'left';
+				const textAlign = layer.textAlign || 'left';
+				style.textAlign = textAlign;
 				style.lineHeight = ( layer.lineHeight || 1.2 ).toString();
+				// Also apply to content wrapper so cursor appears at correct position
+				const wrapper = this.editorElement.querySelector( '.layers-inline-content-wrapper' );
+				if ( wrapper ) {
+					wrapper.style.textAlign = textAlign;
+				}
 			} else {
 				style.textAlign = 'left';
 				style.lineHeight = '1.2';
@@ -966,8 +1025,9 @@
 				onFormat: ( property, value ) => this._applyFormat( property, value ),
 				onSaveSelection: () => this._saveSelection(),
 				onFocusEditor: () => {
-					if ( this.editorElement ) {
-						this.editorElement.focus();
+					const editableEl = this._getEditableElement();
+					if ( editableEl ) {
+						editableEl.focus();
 					}
 				},
 				msg: ( key, fallback ) => this._msg( key, fallback )
@@ -1003,9 +1063,10 @@
 				return;
 			}
 
+			const editableEl = this._getEditableElement();
 			const selection = window.getSelection();
-			if ( selection && selection.rangeCount > 0 &&
-				this.editorElement.contains( selection.anchorNode ) ) {
+			if ( selection && selection.rangeCount > 0 && editableEl &&
+				editableEl.contains( selection.anchorNode ) ) {
 				// Only save if there's actually a selection (not collapsed)
 				if ( !selection.isCollapsed ) {
 					this._savedSelection = selection.getRangeAt( 0 ).cloneRange();
@@ -1025,7 +1086,10 @@
 			}
 
 			try {
-				this.editorElement.focus();
+				const editableEl = this._getEditableElement();
+				if ( editableEl ) {
+					editableEl.focus();
+				}
 				const selection = window.getSelection();
 				selection.removeAllRanges();
 				selection.addRange( this._savedSelection );
@@ -1065,8 +1129,8 @@
 			}
 
 			// In rich text mode, check for selection first
-			if ( this._isRichTextMode && this.editorElement &&
-				this.editorElement.contentEditable === 'true' ) {
+			// For multiline types, contentEditable is on the wrapper, not editorElement
+			if ( this._isRichTextMode && this._isMultilineType( this.editingLayer ) ) {
 
 				// Format properties that can be applied to selection
 				const selectionFormats = [ 'fontWeight', 'fontStyle', 'color', 'underline',
@@ -1144,6 +1208,25 @@
 				if ( property === 'fontSize' ) {
 					// Recalculate scaled size
 					this._positionEditor();
+				} else if ( property === 'verticalAlign' ) {
+					// Update flexbox alignment for immediate visual feedback
+					const alignMap = {
+						top: 'flex-start',
+						middle: 'center',
+						bottom: 'flex-end'
+					};
+					this.editorElement.style.justifyContent = alignMap[ value ] || 'flex-start';
+					// Move cursor to end of content so it appears at the new position
+					this._moveCursorToEnd();
+				} else if ( property === 'textAlign' ) {
+					this.editorElement.style.textAlign = value;
+					// Also update the content wrapper so cursor appears at correct position
+					const wrapper = this.editorElement.querySelector( '.layers-inline-content-wrapper' );
+					if ( wrapper ) {
+						wrapper.style.textAlign = value;
+					}
+					// Move cursor to end of content so it appears at the new position
+					this._moveCursorToEnd();
 				} else if ( styleMap[ property ] ) {
 					this.editorElement.style[ styleMap[ property ] ] = value;
 				}
@@ -1169,8 +1252,11 @@
 				return;
 			}
 
-			// Focus the editor to ensure selection is valid
-			this.editorElement.focus();
+			// Focus the editable element to ensure selection is valid
+			const editableEl = this._getEditableElement();
+			if ( editableEl ) {
+				editableEl.focus();
+			}
 
 			// Map properties to execCommand commands
 			switch ( property ) {
@@ -1244,6 +1330,46 @@
 					}
 					break;
 				}
+			}
+		}
+
+		/**
+		 * Move the cursor to the end of the content
+		 *
+		 * Used after alignment changes to ensure the cursor appears
+		 * at the new visual position. Without this, the cursor would
+		 * appear stuck at the original position until the user types.
+		 *
+		 * @private
+		 */
+		_moveCursorToEnd() {
+			if ( !this.editorElement ) {
+				return;
+			}
+
+			// Get the editable element (wrapper for multiline, editorElement for input)
+			const editableEl = this._getEditableElement();
+			if ( !editableEl ) {
+				return;
+			}
+
+			// Focus first to ensure selection works
+			editableEl.focus();
+
+			if ( editableEl.contentEditable === 'true' ) {
+				// ContentEditable - place cursor at end
+				const selection = window.getSelection();
+				const range = document.createRange();
+
+				// Move to end of content in the editable element
+				range.selectNodeContents( editableEl );
+				range.collapse( false ); // false = collapse to end
+				selection.removeAllRanges();
+				selection.addRange( range );
+			} else if ( typeof this.editorElement.setSelectionRange === 'function' ) {
+				// Input/textarea - place cursor at end
+				const len = this.editorElement.value.length;
+				this.editorElement.setSelectionRange( len, len );
 			}
 		}
 

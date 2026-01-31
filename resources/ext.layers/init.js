@@ -117,6 +117,19 @@
 		} catch ( e ) {
 			this.debugWarn( 'Failed to register wikipage.content hook:', e.message );
 		}
+
+		// Refresh slides when modal editor closes (even without save)
+		// This fixes slides in tables that may not render on initial page load
+		try {
+			document.addEventListener( 'layers-modal-closed', () => {
+				this.debugLog( 'Modal closed, refreshing viewers' );
+				if ( this.viewerManager ) {
+					this.viewerManager.refreshAllViewers();
+				}
+			} );
+		} catch ( e ) {
+			this.debugWarn( 'Failed to register layers-modal-closed listener:', e.message );
+		}
 	},
 
 	// Delegate utility methods to urlParser for backwards compatibility

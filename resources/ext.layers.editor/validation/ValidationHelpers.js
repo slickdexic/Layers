@@ -35,6 +35,10 @@
 			'layers-validation-strokewidth-range': 'Stroke width must be between $1 and $2',
 			'layers-validation-opacity-invalid': 'Invalid opacity value',
 			'layers-validation-opacity-range': 'Opacity must be between $1 and $2',
+			'layers-validation-fillopacity-invalid': 'Invalid fill opacity value',
+			'layers-validation-fillopacity-range': 'Fill opacity must be between $1 and $2',
+			'layers-validation-strokeopacity-invalid': 'Invalid stroke opacity value',
+			'layers-validation-strokeopacity-range': 'Stroke opacity must be between $1 and $2',
 			'layers-validation-sides-invalid': 'Invalid number of sides',
 			'layers-validation-sides-range': 'Number of sides must be between $1 and $2',
 			'layers-validation-blurradius-invalid': 'Invalid blur radius',
@@ -63,14 +67,40 @@
 		};
 
 		/**
-		 * Strict whitelist of safe named CSS colors
+		 * CSS named colors - synchronized with server-side ColorValidator.php
+		 * 148 standard CSS color names including 'none' and 'transparent'
 		 *
 		 * @type {Array<string>}
 		 */
 		static SAFE_COLORS = [
-			'transparent', 'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange',
-			'purple', 'pink', 'gray', 'grey', 'brown', 'cyan', 'magenta', 'lime',
-			'navy', 'maroon', 'olive', 'teal', 'silver', 'aqua', 'fuchsia'
+			'none', 'transparent',
+			'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure',
+			'beige', 'bisque', 'black', 'blanchedalmond', 'blue', 'blueviolet',
+			'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate', 'coral',
+			'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan',
+			'darkgoldenrod', 'darkgray', 'darkgreen', 'darkgrey', 'darkkhaki',
+			'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid', 'darkred',
+			'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray',
+			'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue',
+			'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite',
+			'forestgreen', 'fuchsia', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod',
+			'gray', 'green', 'greenyellow', 'grey', 'honeydew', 'hotpink', 'indianred',
+			'indigo', 'ivory', 'khaki', 'lavender', 'lavenderblush', 'lawngreen',
+			'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan',
+			'lightgoldenrodyellow', 'lightgray', 'lightgreen', 'lightgrey', 'lightpink',
+			'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray',
+			'lightslategrey', 'lightsteelblue', 'lightyellow', 'lime', 'limegreen',
+			'linen', 'magenta', 'maroon', 'mediumaquamarine', 'mediumblue',
+			'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue',
+			'mediumspringgreen', 'mediumturquoise', 'mediumvioletred', 'midnightblue',
+			'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace',
+			'olive', 'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod',
+			'palegreen', 'paleturquoise', 'palevioletred', 'papayawhip', 'peachpuff',
+			'peru', 'pink', 'plum', 'powderblue', 'purple', 'red', 'rosybrown',
+			'royalblue', 'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell',
+			'sienna', 'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey',
+			'snow', 'springgreen', 'steelblue', 'tan', 'teal', 'thistle', 'tomato',
+			'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen'
 		];
 
 		/**
@@ -107,8 +137,9 @@
 			}
 
 			// Allow rgb/rgba with strict validation
-			if ( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/.test( color ) ) {
-				const matches = color.match( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
+			// Alpha accepts: 0, 1, 0.5, .5, 1.0, etc.
+			if ( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/.test( color ) ) {
+				const matches = color.match( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/ );
 				// Validate RGB values are in 0-255 range
 				for ( let i = 1; i <= 3; i++ ) {
 					if (
@@ -118,12 +149,20 @@
 						return false;
 					}
 				}
+				// Validate alpha is in 0-1 range
+				if ( matches[ 4 ] !== undefined ) {
+					const alpha = parseFloat( matches[ 4 ] );
+					if ( isNaN( alpha ) || alpha < 0 || alpha > 1 ) {
+						return false;
+					}
+				}
 				return true;
 			}
 
 			// Allow HSL/HSLA with strict validation
-			if ( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/.test( color ) ) {
-				const hslMatches = color.match( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
+			// Alpha accepts: 0, 1, 0.5, .5, 1.0, etc.
+			if ( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/.test( color ) ) {
+				const hslMatches = color.match( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/ );
 				// Validate HSL values
 				if (
 					hslMatches[ 1 ] &&
@@ -143,6 +182,13 @@
 				) {
 					return false;
 				}
+				// Validate alpha is in 0-1 range
+				if ( hslMatches[ 4 ] !== undefined ) {
+					const alpha = parseFloat( hslMatches[ 4 ] );
+					if ( isNaN( alpha ) || alpha < 0 || alpha > 1 ) {
+						return false;
+					}
+				}
 				return true;
 			}
 
@@ -156,7 +202,12 @@
 		 * @return {boolean} True if text contains potential script injection
 		 */
 		static containsScriptInjection( text ) {
-			return /<script|javascript:|data:|vbscript:|on\w+\s*=/i.test( text );
+			if ( typeof text !== 'string' ) {
+				return false;
+			}
+			// Detect: <script>, javascript:, data:, vbscript:, event handlers (onclick=, etc.),
+			// and expression() (IE CSS XSS vector)
+			return /<script|javascript:|data:|vbscript:|on\w+\s*=|expression\s*\(/i.test( text );
 		}
 
 		/**

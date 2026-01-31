@@ -45,9 +45,11 @@
 		 */
 		static DEFAULT_RULES = {
 			fontSize: { min: 1, max: 1000 },
-			strokeWidth: { min: 0, max: 50 },
+			strokeWidth: { min: 0, max: 100 },
 			opacity: { min: 0, max: 1 },
-			blurRadius: { min: 1, max: 100 },
+			fillOpacity: { min: 0, max: 1 },
+			strokeOpacity: { min: 0, max: 1 },
+			blurRadius: { min: 0, max: 100 },
 			shadowBlur: { min: 0, max: 100 },
 			shadowOffsetX: { min: -100, max: 100 },
 			shadowOffsetY: { min: -100, max: 100 },
@@ -104,6 +106,8 @@
 			this.validateFontSize( layer, result );
 			this.validateStrokeWidth( layer, result );
 			this.validateOpacity( layer, result );
+			this.validateFillOpacity( layer, result );
+			this.validateStrokeOpacity( layer, result );
 			this.validateBlurRadius( layer, result );
 			this.validateShadowProperties( layer, result );
 			this.validateArrowSize( layer, result );
@@ -185,6 +189,58 @@
 			if ( opacity < min || opacity > max ) {
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-opacity-range', min, max ) );
+			}
+		}
+
+		/**
+		 * Validate fill opacity
+		 *
+		 * @param {Object} layer - Layer object
+		 * @param {Object} result - Validation result
+		 */
+		validateFillOpacity( layer, result ) {
+			if ( layer.fillOpacity === undefined ) {
+				return;
+			}
+
+			if ( !this.isValidNumber( layer.fillOpacity ) ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-fillopacity-invalid' ) );
+				return;
+			}
+
+			const fillOpacity = parseFloat( layer.fillOpacity );
+			const { min, max } = this.rules.fillOpacity;
+
+			if ( fillOpacity < min || fillOpacity > max ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-fillopacity-range', min, max ) );
+			}
+		}
+
+		/**
+		 * Validate stroke opacity
+		 *
+		 * @param {Object} layer - Layer object
+		 * @param {Object} result - Validation result
+		 */
+		validateStrokeOpacity( layer, result ) {
+			if ( layer.strokeOpacity === undefined ) {
+				return;
+			}
+
+			if ( !this.isValidNumber( layer.strokeOpacity ) ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-strokeopacity-invalid' ) );
+				return;
+			}
+
+			const strokeOpacity = parseFloat( layer.strokeOpacity );
+			const { min, max } = this.rules.strokeOpacity;
+
+			if ( strokeOpacity < min || strokeOpacity > max ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-strokeopacity-range', min, max ) );
 			}
 		}
 

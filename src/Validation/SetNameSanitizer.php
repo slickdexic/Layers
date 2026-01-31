@@ -11,6 +11,8 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Validation;
 
+use MediaWiki\Extension\Layers\LayersConstants;
+
 /**
  * Provides sanitization for layer set names.
  *
@@ -32,11 +34,6 @@ class SetNameSanitizer {
 	 * Maximum length for set names (database column limit)
 	 */
 	private const MAX_LENGTH = 255;
-
-	/**
-	 * Default set name when input is empty or sanitizes to empty string
-	 */
-	private const DEFAULT_NAME = 'default';
 
 	/**
 	 * Sanitize a user-supplied layer set name.
@@ -75,7 +72,7 @@ class SetNameSanitizer {
 			$setName = substr( $setName, 0, self::MAX_LENGTH );
 		}
 
-		return $setName === '' ? self::DEFAULT_NAME : $setName;
+		return $setName === '' ? LayersConstants::DEFAULT_SET_NAME : $setName;
 	}
 
 	/**
@@ -117,6 +114,6 @@ class SetNameSanitizer {
 	 * @return string The default set name ('default')
 	 */
 	public static function getDefaultName(): string {
-		return self::DEFAULT_NAME;
+		return LayersConstants::DEFAULT_SET_NAME;
 	}
 }

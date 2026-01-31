@@ -844,6 +844,58 @@ describe( 'LayerPanel Extended', () => {
 			const selectedIds = mockStateManager.get( 'selectedLayerIds' );
 			expect( selectedIds ).toEqual( [ 'layer1' ] );
 		} );
+
+		it( 'should finish inline text editing before changing selection', () => {
+			const layers = [
+				{ id: 'layer1', type: 'textbox', text: 'Original' },
+				{ id: 'layer2', type: 'rectangle' }
+			];
+			mockStateManager.set( 'layers', layers );
+			mockStateManager.set( 'selectedLayerIds', [ 'layer1' ] );
+
+			// Setup mock inline text editor that is active
+			const mockFinishEditing = jest.fn();
+			mockEditor.canvasManager.isTextEditing = true;
+			mockEditor.canvasManager.inlineTextEditor = {
+				finishEditing: mockFinishEditing
+			};
+
+			const panel = new LayerPanel( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			// Select a different layer while text editing is active
+			panel.selectLayer( 'layer2' );
+
+			// Should commit text changes before changing selection
+			expect( mockFinishEditing ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'should not call finishEditing when not text editing', () => {
+			const layers = [
+				{ id: 'layer1', type: 'rectangle' },
+				{ id: 'layer2', type: 'circle' }
+			];
+			mockStateManager.set( 'layers', layers );
+			mockStateManager.set( 'selectedLayerIds', [ 'layer1' ] );
+
+			// Not text editing
+			mockEditor.canvasManager.isTextEditing = false;
+			mockEditor.canvasManager.inlineTextEditor = {
+				finishEditing: jest.fn()
+			};
+
+			const panel = new LayerPanel( {
+				container: container,
+				editor: mockEditor
+			} );
+
+			panel.selectLayer( 'layer2' );
+
+			// Should not call finishEditing when not editing
+			expect( mockEditor.canvasManager.inlineTextEditor.finishEditing ).not.toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'selectLayerRange', () => {

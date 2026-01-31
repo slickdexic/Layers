@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
@@ -313,14 +314,15 @@ class ThumbnailProcessor {
 			if ( $layerSet && isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] ) ) {
 				$data = $layerSet['data'];
 				$layers = $data['layers'];
-				$this->log( sprintf( 'DB fallback: %d layers (set: %s)', count( $layers ), $layersFlag ?? 'default' ) );
+				$setLabel = $layersFlag ?? LayersConstants::DEFAULT_SET_NAME;
+				$this->log( sprintf( 'DB fallback: %d layers (set: %s)', count( $layers ), $setLabel ) );
 				return [
 					'layers' => $layers,
 					'backgroundVisible' => $data['backgroundVisible'] ?? true,
 					'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0,
 					// Include revision and set name for client-side freshness checking (FR-10)
 					'revision' => $layerSet['revision'] ?? null,
-					'setName' => $layerSet['name'] ?? $layerSet['setName'] ?? 'default'
+					'setName' => $layerSet['name'] ?? $layerSet['setName'] ?? LayersConstants::DEFAULT_SET_NAME
 				];
 			} else {
 				$this->log( 'fetchLayersFromDatabase: layerSet has no valid layers array' );
@@ -367,14 +369,14 @@ class ThumbnailProcessor {
 				$backgroundOpacity = $layerData['backgroundOpacity'] ?? 1.0;
 				// Extract revision and setName for freshness checking (FR-10)
 				$revision = $layerData['revision'] ?? null;
-				$setName = $layerData['setName'] ?? 'default';
+				$setName = $layerData['setName'] ?? LayersConstants::DEFAULT_SET_NAME;
 			} else {
 				// Old format: raw layers array
 				$layers = $layerData;
 				$backgroundVisible = true;
 				$backgroundOpacity = 1.0;
 				$revision = null;
-				$setName = 'default';
+				$setName = LayersConstants::DEFAULT_SET_NAME;
 			}
 
 			$payload = [
@@ -580,7 +582,7 @@ class ThumbnailProcessor {
 			// Add autocreate flag when linking to a specific named set
 			// This allows auto-creation of the set if it doesn't exist
 			// (only for named sets, not for generic 'on' or 'default')
-			if ( $setName !== null && $setName !== '' && $setName !== 'default' ) {
+			if ( $setName !== null && $setName !== '' && $setName !== LayersConstants::DEFAULT_SET_NAME ) {
 				$urlParams['autocreate'] = '1';
 			}
 

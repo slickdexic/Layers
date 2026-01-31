@@ -12,6 +12,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -218,7 +219,11 @@ class LayerInjector {
 		// Get layer data from database
 		// Use getLatestLayerSet with optional setName filter (sha1 required for DB lookup)
 		$sha1 = $this->getFileSha1( $file );
-		if ( $setName !== null && $setName !== 'default' && $setName !== 'on' && $setName !== 'all' ) {
+		$isNamedSet = $setName !== null
+			&& $setName !== LayersConstants::DEFAULT_SET_NAME
+			&& $setName !== 'on'
+			&& $setName !== 'all';
+		if ( $isNamedSet ) {
 			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1, $setName );
 		} else {
 			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1 );

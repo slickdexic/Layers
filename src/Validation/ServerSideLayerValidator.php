@@ -236,6 +236,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	/** @var int Maximum points in a path/polygon */
 	private const MAX_POINTS = 1000;
 
+	/** @var int Maximum total points across ALL layers in a set (defense in depth) */
+	private const MAX_TOTAL_POINTS = 10000;
+
 	/** @var int Minimum/maximum star points allowed */
 	private const MIN_STAR_POINTS = 3;
 	private const MAX_STAR_POINTS = 20;
@@ -322,8 +325,24 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return $result;
 		}
 
+		// Check total points across all layers (defense in depth)
+		$totalPoints = 0;
+		foreach ( $validatedLayers as $layer ) {
+			if ( isset( $layer['points'] ) && is_array( $layer['points'] ) ) {
+				$totalPoints += count( $layer['points'] );
+			}
+		}
+		if ( $totalPoints > self::MAX_TOTAL_POINTS ) {
+			$result->addError(
+				"Too many total points across all layers: $totalPoints (max: " .
+				self::MAX_TOTAL_POINTS . ")"
+			);
+			return $result;
+		}
+
 		$result->setMetadata( 'originalLayerCount', count( $layersData ) );
 		$result->setMetadata( 'validatedLayerCount', count( $validatedLayers ) );
+		$result->setMetadata( 'totalPoints', $totalPoints );
 
 		return ValidationResult::success( $validatedLayers, $result->getWarnings(), $result->getMetadata() );
 	}
@@ -851,7 +870,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 		$validRuns = [];
 		$totalLength = 0;
-		$maxTotalLength = 50000; // Max total text length across all runs
+		// Max total text length across all runs
+		$maxTotalLength = 50000;
 
 		// Allowed style properties in a run
 		$allowedStyles = [
@@ -875,12 +895,14 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 		foreach ( $richText as $run ) {
 			if ( !is_array( $run ) ) {
-				continue; // Skip invalid runs
+				// Skip invalid runs
+				continue;
 			}
 
 			// Each run must have a 'text' property
 			if ( !isset( $run['text'] ) || !is_string( $run['text'] ) ) {
-				continue; // Skip runs without text
+				// Skip runs without text
+				continue;
 			}
 
 			$text = $run['text'];
@@ -901,7 +923,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 				foreach ( $run['style'] as $styleProp => $styleValue ) {
 					if ( !isset( $allowedStyles[$styleProp] ) ) {
-						continue; // Skip unknown style properties
+						// Skip unknown style properties
+						continue;
 					}
 
 					$expectedType = $allowedStyles[$styleProp];
@@ -1084,6 +1107,13 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				// Validate paths array if present (multi-path shapes)
 				// SEC-1 FIX: Each path string must be validated to prevent malicious SVG data
 				if ( $hasPaths ) {
+					// P2.10 FIX: Limit paths array length to prevent DoS
+					if ( count( $layer['paths'] ) > 100 ) {
+						return [
+							'valid' => false,
+							'error' => 'customShape paths array exceeds maximum of 100 paths'
+						];
+					}
 					$pathIndex = 0;
 					foreach ( $layer['paths'] as $pathData ) {
 						if ( !is_string( $pathData ) ) {
@@ -1261,33 +1291,41 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => false, 'error' => 'SVG must have closing </svg> tag' ];
 		}
 
-		// SECURITY: Block script elements
-		if ( preg_match( '/<\s*script/i', $svg ) ) {
+		// SECURITY: Decode HTML entities to catch bypass attempts like &lt;script&gt; or java&#115;cript:
+		$decodedSvg = html_entity_decode( $svg, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// SECURITY: Block script elements (check both raw and decoded)
+		if ( preg_match( '/<\s*script/i', $svg ) || preg_match( '/<\s*script/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG must not contain script elements' ];
 		}
 
-		// SECURITY: Block event handlers (on* attributes)
-		if ( preg_match( '/\s+on\w+\s*=/i', $svg ) ) {
+		// SECURITY: Block event handlers (on* attributes) - check both versions
+		if ( preg_match( '/\s+on\w+\s*=/i', $svg ) || preg_match( '/\s+on\w+\s*=/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG must not contain event handlers' ];
 		}
 
-		// SECURITY: Block javascript: and data: URLs (except safe data:image/ types)
-		if ( preg_match( '/javascript\s*:/i', $svg ) ) {
+		// SECURITY: Block javascript:, vbscript:, and data: URLs (except safe data:image/)
+		if ( preg_match( '/javascript\s*:/i', $svg ) || preg_match( '/javascript\s*:/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG must not contain javascript: URLs' ];
 		}
+		if ( preg_match( '/vbscript\s*:/i', $svg ) || preg_match( '/vbscript\s*:/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain vbscript: URLs' ];
+		}
 
-		// SECURITY: Block external references that could leak data
-		if ( preg_match( '/xlink:href\s*=\s*["\']https?:/i', $svg ) ) {
+		// SECURITY: Block external references that could leak data - check both versions
+		if ( preg_match( '/xlink:href\s*=\s*["\']https?:/i', $svg ) ||
+			 preg_match( '/xlink:href\s*=\s*["\']https?:/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG must not contain external URLs' ];
 		}
 
-		// SECURITY: Block foreignObject which can embed HTML
-		if ( preg_match( '/<\s*foreignObject/i', $svg ) ) {
+		// SECURITY: Block foreignObject which can embed HTML - check both versions
+		if ( preg_match( '/<\s*foreignObject/i', $svg ) || preg_match( '/<\s*foreignObject/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG must not contain foreignObject elements' ];
 		}
 
-		// SECURITY: Block use elements with external references
-		if ( preg_match( '/<\s*use[^>]+xlink:href\s*=\s*["\']https?:/i', $svg ) ) {
+		// SECURITY: Block use elements with external references - check both versions
+		if ( preg_match( '/<\s*use[^>]+xlink:href\s*=\s*["\']https?:/i', $svg ) ||
+			 preg_match( '/<\s*use[^>]+xlink:href\s*=\s*["\']https?:/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG use elements must not reference external URLs' ];
 		}
 
