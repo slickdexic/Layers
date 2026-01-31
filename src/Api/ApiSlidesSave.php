@@ -15,6 +15,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
@@ -68,7 +69,7 @@ class ApiSlidesSave extends ApiBase {
 		// Rate limiting
 		$rateLimiter = new RateLimiter( $user );
 		if ( $rateLimiter->isLimited( 'editlayers-save' ) ) {
-			$this->dieWithError( 'layers-rate-limited' );
+			$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED );
 		}
 
 		$params = $this->extractRequestParams();

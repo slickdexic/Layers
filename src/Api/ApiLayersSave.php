@@ -8,6 +8,7 @@ use ApiBase;
 use ApiUsageException;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
@@ -258,7 +259,7 @@ class ApiLayersSave extends ApiBase {
 			//   $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ]; // stricter for new users
 			// Rate limit is checked AFTER validation to avoid wasting limit on invalid data
 			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
-				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// FILE VERIFICATION: Ensure target file exists and is accessible
@@ -267,7 +268,7 @@ class ApiLayersSave extends ApiBase {
 			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
 			$file = $repoGroup->findFile( $title );
 			if ( !$file || !$file->exists() ) {
-				$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 			}
 
 			$imgWidth = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : 0;
@@ -469,7 +470,7 @@ class ApiLayersSave extends ApiBase {
 			$rateLimiter = $this->createRateLimiter();
 			$this->enforceLayerLimits( $rateLimiter, $sanitizedData, $layerCount );
 			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
-				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1

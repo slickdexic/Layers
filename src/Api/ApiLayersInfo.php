@@ -16,6 +16,7 @@ use ApiMain;
 use ApiResult;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
@@ -90,7 +91,7 @@ class ApiLayersInfo extends ApiBase {
 		$repoGroup = $this->getRepoGroup();
 		$file = $repoGroup->findFile( $title );
 		if ( !$file || !$file->exists() ) {
-			$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
+			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 		}
 
 		// Use DB key form for consistency with ApiLayersSave
@@ -124,11 +125,11 @@ class ApiLayersInfo extends ApiBase {
 			// Get specific layer set by ID
 			$layerSet = $db->getLayerSet( $layerSetId );
 			if ( !$layerSet ) {
-				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'layersetnotfound' );
 			}
 
 			if ( str_replace( ' ', '_', (string)( $layerSet['imgName'] ?? '' ) ) !== $normalizedName ) {
-				$this->dieWithError( 'layers-layerset-not-found', 'layersetnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'layersetnotfound' );
 			}
 
 			// Enrich with base dimensions to allow correct scaling by clients

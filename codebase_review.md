@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 30, 2026 (Comprehensive Critical Review)  
-**Version:** 1.5.40  
+**Review Date:** January 31, 2026 (Updated)  
+**Version:** 1.5.41  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -11,7 +11,7 @@
 - **Branch:** main (verified via `git branch --show-current`)
 - **Tests:** 11,112 tests in 163 suites ✅ **All passing**
 - **Coverage:** 95.42% statements, 85.25% branches, 93.72% functions, 95.55% lines
-- **JS files:** 139 production files (~92,338 lines hand-written + ~14,354 generated)
+- **JS files:** 141 production files (~92,338 lines hand-written + ~14,354 generated)
 - **PHP files:** 41 production files (~14,738 lines total)
 - **i18n messages:** 667 layers-* keys in en.json (all documented in qqq.json)
 
@@ -90,9 +90,9 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 | Category | Files | Lines | Notes |
 |----------|-------|-------|-------|
-| JavaScript (Production) | 139 | ~94,584 | All resources/ext.layers* |
+| JavaScript (Production) | 141 | ~92,338 | All resources/ext.layers* |
 | JavaScript (Generated) | 2 | ~14,354 | ShapeLibraryData (11,299), EmojiLibraryIndex (3,055) |
-| JavaScript (Hand-written) | 137 | ~80,230 | Actual application code |
+| JavaScript (Hand-written) | 139 | ~77,984 | Actual application code |
 | PHP (Production) | 41 | ~14,709 | All source code |
 | Tests (Jest) | 163 suites | ~51,000+ | Comprehensive coverage |
 | Documentation | 30+ files | - | Markdown docs in docs/ + wiki/ |
@@ -260,15 +260,13 @@ all alpha formats: 0, 1, 0.5, .5, 1.0, etc. Comment documents the accepted patte
 
 ---
 
-### MED-9: Magic Strings for Error Codes
+### ~~MED-9: Magic Strings for Error Codes~~ ✅ RESOLVED
 
 **Location:** Multiple API files
 
-**Problem:** Error codes like `'layers-file-not-found'` repeated as strings.
-
-**Fix:** Create `LayersErrors` constants class.
-
-**Estimated Effort:** 2 hours
+**Resolution (January 31, 2026):** Created `LayersConstants` class with 11 error 
+constants (ERROR_FILE_NOT_FOUND, ERROR_LAYERSET_NOT_FOUND, ERROR_RATE_LIMITED, etc.).
+All API modules now use LayersConstants::ERROR_* instead of magic strings.
 
 ---
 

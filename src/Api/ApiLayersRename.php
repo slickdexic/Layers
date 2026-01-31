@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
@@ -76,13 +77,13 @@ class ApiLayersRename extends ApiBase {
 			// (from InstantCommons) don't have local wiki pages
 			$title = Title::newFromText( $requestedFilename, NS_FILE );
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
-				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
 			}
 
 			// Get file metadata (use getRepoGroup() to support foreign repos like Commons)
 			$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
 			if ( !$file || !$file->exists() ) {
-				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
 			}
 
 			// Use DB key form for consistency with ApiLayersSave
@@ -109,7 +110,7 @@ class ApiLayersRename extends ApiBase {
 			}
 
 			if ( !$layerSet ) {
-				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
 			}
 
 			// Check if new name already exists
@@ -129,7 +130,7 @@ class ApiLayersRename extends ApiBase {
 			//   $wgRateLimits['editlayers-rename']['newbie'] = [ 3, 3600 ]; // stricter for new users
 			$rateLimiter = $this->createRateLimiter();
 			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
-				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Perform the rename
