@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** January 31, 2026
-**Version:** 1.5.41
+**Version:** 1.5.43
 
 ---
 
@@ -915,7 +915,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **9,967 tests, 92.59% statement coverage, 83.02% branch coverage**
+- **11,112 tests, 95.42% statement coverage, 85.25% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -992,7 +992,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (9,967 tests, 156 suites)
+│   ├── jest/                # Unit tests (11,112 tests, 163 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

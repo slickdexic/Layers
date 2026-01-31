@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.43 (January 31, 2026)  
+> **Version:** 1.5.44 (January 31, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+
 >
@@ -51,7 +51,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 {{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
 {{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
 {{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
-{{#Slide: MySlide | size=800x600 | lock=view}}   <!-- View-only (no edit overlay) -->
+{{#Slide: MySlide | size=800x600 | noedit}}      <!-- View-only (no edit overlay) -->
 ```
 
 ### Slide Management
@@ -348,7 +348,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Large images** - performance may degrade with images >4096px
 
 **Resolved Issues:**
-- ✅ **God class reduction** - reduced from 20 to 12 files >1,000 lines (Jan 30, 2026)
+- ✅ **God class monitoring** - 18 files >1,000 lines with proper delegation patterns (Jan 31, 2026)
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
 - ✅ **Background image load failure** - user now notified via mw.notify()
 - ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up

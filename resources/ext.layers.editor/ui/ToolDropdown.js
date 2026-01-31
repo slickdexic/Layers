@@ -68,6 +68,10 @@
 			// Bound handlers for cleanup
 			this.boundHandleDocumentClick = this.handleDocumentClick.bind( this );
 			this.boundHandleKeyDown = this.handleKeyDown.bind( this );
+			this.boundHandleTriggerClick = this.handleTriggerClick.bind( this );
+
+			// Track menu item handlers for cleanup
+			this._menuItemHandlers = new Map();
 		}
 
 		/**
@@ -129,11 +133,7 @@
 			this.updateTriggerButton();
 
 			// Click on trigger opens dropdown
-			this.triggerButton.addEventListener( 'click', ( e ) => {
-				e.preventDefault();
-				e.stopPropagation();
-				this.toggle();
-			} );
+			this.triggerButton.addEventListener( 'click', this.boundHandleTriggerClick );
 
 			// Create dropdown menu
 			this.dropdownMenu = document.createElement( 'div' );
@@ -197,11 +197,14 @@
 				item.setAttribute( 'aria-current', 'true' );
 			}
 
-			item.addEventListener( 'click', ( e ) => {
+			// Create and track click handler for cleanup
+			const handler = ( e ) => {
 				e.preventDefault();
 				e.stopPropagation();
 				this.selectTool( tool.id );
-			} );
+			};
+			item.addEventListener( 'click', handler );
+			this._menuItemHandlers.set( item, handler );
 
 			return item;
 		}
@@ -294,6 +297,17 @@
 			} else {
 				this.open();
 			}
+		}
+
+		/**
+		 * Handle click on the trigger button
+		 *
+		 * @param {Event} e Click event
+		 */
+		handleTriggerClick( e ) {
+			e.preventDefault();
+			e.stopPropagation();
+			this.toggle();
 		}
 
 		/**
@@ -438,8 +452,22 @@
 		 */
 		destroy() {
 			this.close();
+
+			// Remove document-level listeners
 			document.removeEventListener( 'click', this.boundHandleDocumentClick );
 			document.removeEventListener( 'keydown', this.boundHandleKeyDown );
+
+			// Remove trigger button listener
+			if ( this.triggerButton ) {
+				this.triggerButton.removeEventListener( 'click', this.boundHandleTriggerClick );
+			}
+
+			// Remove menu item listeners
+			this._menuItemHandlers.forEach( ( handler, item ) => {
+				item.removeEventListener( 'click', handler );
+			} );
+			this._menuItemHandlers.clear();
+
 			dropdownRegistry.delete( this );
 		}
 	}

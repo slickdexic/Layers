@@ -4,6 +4,45 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.44 (January 31, 2026)
+
+### Fixed
+- **MED-2: ToolDropdown Event Listeners** — Added proper tracking and cleanup for event listeners
+- **MED-8: Logger Consistency** — Replaced LoggerFactory calls with $this->getLogger()
+
+### Documentation
+- **Comprehensive Audit** — Verified and updated all 97 documentation files
+- **improvement_plan.md** — 16 of 18 P2 issues now resolved
+- Multiple wiki and docs files updated with correct version, date, and metric values
+
+### Verified (No Changes Needed)
+- MED-1, MED-6, MED-12, MED-14, MED-15, MED-17, MED-18 all verified as already correct
+
+### Technical Details
+- All 11,112 tests pass (163 test suites)
+- 95.42% statement coverage, 85.25% branch coverage
+- P2 issues: only MED-9 (database types) and MED-10 (god class extraction) remain
+
+---
+
+## Version 1.5.43 (January 31, 2026)
+
+### Documentation
+- **Metrics Synchronization** — Updated all documentation with correct metrics:
+  - Coverage: 95.42% statement, 85.25% branch
+  - Test count: 11,112 tests in 163 suites
+  - God classes: 18 total (2 generated, 14 JS hand-written, 2 PHP)
+  - PHP files: 42 files
+- **README.md Fix** — Replaced unimplemented `lock=view` with implemented `noedit` parameter
+- **CONTRIBUTING.md Fix** — Updated from outdated 92.59%/9,967+ to current 95.42%/11,112
+
+### Technical Details
+- All 11,112 tests pass (163 test suites)
+- 95.42% statement coverage, 85.25% branch coverage
+- No functional changes; documentation-only release
+
+---
+
 ## Version 1.5.42 (January 31, 2026)
 
 ### Security

@@ -49,14 +49,14 @@ class ApiLayersRename extends ApiBase {
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
 		$requestedFilename = $params['filename'];
-		$oldName = SetNameSanitizer::sanitize( $params['oldname'] );
-		$newName = SetNameSanitizer::sanitize( $params['newname'] );
+		$oldName = trim( $params['oldname'] );
+		$newName = trim( $params['newname'] );
 
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );
 
-		// Validate new name format
-		if ( !$this->isValidSetName( $newName ) ) {
+		// Validate new name format using central validator
+		if ( !SetNameSanitizer::isValid( $newName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
@@ -168,20 +168,6 @@ class ApiLayersRename extends ApiBase {
 			$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
 			return; // @codeCoverageIgnore
 		}
-	}
-
-	/**
-	 * Validate a set name.
-	 *
-	 * @param string $name The name to validate
-	 * @return bool True if valid
-	 */
-	private function isValidSetName( string $name ): bool {
-		// Must be 1-50 characters, alphanumeric, hyphens, underscores
-		if ( strlen( $name ) < 1 || strlen( $name ) > 50 ) {
-			return false;
-		}
-		return (bool)preg_match( '/^[a-zA-Z0-9_-]+$/', $name );
 	}
 
 	/**

@@ -2,21 +2,56 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.43] - 2026-01-31
-
-### Added
-- **Point Release** — Synchronized releases across main, REL1_43, and REL1_39 branches
+## [1.5.44] - 2026-01-31
 
 ### Fixed
-- **Documentation Audit** — Comprehensive update of all markdown and mediawiki files
-- **Issue Cleanup** — P3 issues reduced from 12 to 3 after investigation (6 marked as non-issues)
+- **MED-2: Untracked Event Listeners in ToolDropdown** — Added `boundHandleTriggerClick` and `_menuItemHandlers` Map for proper event listener tracking and cleanup in `destroy()` method
+- **MED-8: Logger Usage Inconsistency** — Replaced `LoggerFactory::getInstance()` calls with `$this->getLogger()` in ApiLayersInfo.php for consistent logging patterns
+
+### Documentation
+- **Comprehensive Documentation Audit** — Verified and updated all 97 documentation files for version, date, and metrics accuracy
+- **improvement_plan.md** — Updated P2 issue tracking: 16 of 18 issues now resolved (2 remaining: MED-9 database types, MED-10 god class extractions)
+- **docs/GOD_CLASS_REFACTORING_PLAN.md** — Updated metrics to 11,112 tests, 95.42% coverage, 18 god classes
+- **wiki/Home.md** — Fixed release date, JS file count (139→141)
+- **wiki/README.md** — Fixed tool count (11→15)
+- **wiki/Testing-Guide.md** — Fixed coverage (94.6%→95.42%)
+
+### Verified (No Changes Needed)
+- **MED-1**: SlideController timeout tracking — already implemented
+- **MED-6**: Promise anti-pattern — verified as valid pattern (request tracking, abort support)
+- **MED-12**: buildImageNameLookup redundancy — accepted as defensive pattern
+- **MED-14**: StateManager auto-recovery — verified as correct behavior
+- **MED-15**: SQL NOT IN pattern — accepted as safe (integer validation)
+- **MED-17**: Service lookup caching — singleton accessor is negligible cost
+- **MED-18**: README branch versions — no specific versions in README
 
 ### Technical Details
 - All 11,112 tests pass (163 test suites)
 - Test coverage: 95.42% statement, 85.25% branch
-- Rating: 8.8/10 — Production-ready, approaching world-class
-- P2 issues: 5 open
-- P3 issues: 3 open, 9 resolved
+- P2 issues: 2 remaining (MED-9, MED-10 are large refactoring tasks)
+
+---
+
+## [1.5.43] - 2026-01-31
+
+### Added
+- **SlideController.destroy()** — Added proper timeout cleanup method to prevent orphaned timers
+- **SlideController._retryTimeouts** — Timeout tracking array for retry scheduling
+
+### Fixed
+- **Untracked setTimeout in SlideController** — Retry timeouts are now tracked and can be cancelled during destroy()
+
+### Documentation
+- **README.md** — Fixed `lock=view` example (unimplemented) to use correct `noedit` parameter
+- **CONTRIBUTING.md** — Updated coverage from 92.59% to 95.42%, tests from 9,967+ to 11,112, god classes from 20 to 18
+- **docs/ARCHITECTURE.md** — Updated test metrics from 9,967/92.59% to 11,112/95.42%
+- **copilot-instructions.md** — Updated PHP file count from 41 to 42, date verification
+- **wiki/Changelog.md** — Added v1.5.43 release notes
+
+### Technical Details
+- All 11,112 tests pass (163 test suites)
+- Test coverage: 95.42% statement, 85.25% branch
+- Focused release: documentation accuracy + code quality fix
 
 ---
 
