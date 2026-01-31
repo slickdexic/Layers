@@ -753,20 +753,6 @@ class WikitextHooks {
 	}
 
 	/**
-	 * Resolve the LayersDatabase service while logging failures for diagnostics.
-	 *
-	 * @return LayersDatabase|null
-	 */
-	private static function getLayersDatabaseService(): ?LayersDatabase {
-		try {
-			return MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
-		} catch ( \Throwable $e ) {
-			self::logError( 'Unable to resolve LayersDatabase service', [ 'exception' => $e ] );
-			return null;
-		}
-	}
-
-	/**
 	 * Determine if the current request targets a File namespace page.
 	 *
 	 * @return bool

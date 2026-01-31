@@ -33,6 +33,11 @@
 		static clientToCanvas( canvas, clientX, clientY, options = {} ) {
 			const rect = canvas.getBoundingClientRect();
 
+			// P3.13: Defensive guard - return canvas center if rect has zero dimensions
+			if ( rect.width === 0 || rect.height === 0 ) {
+				return { x: canvas.width / 2, y: canvas.height / 2 };
+			}
+
 			// Position within the displayed (transformed) element
 			const relX = clientX - rect.left;
 			const relY = clientY - rect.top;

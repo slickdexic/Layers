@@ -366,7 +366,28 @@ No critical bugs remain. All **11,112** tests pass.
 
 ---
 
-## Phase 3 (P3): Long-Term — 🟢 14 ITEMS
+## Phase 3 (P3): Long-Term — 🟢 11 ITEMS (3 RESOLVED)
+
+### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** Removed unused constant from TextSanitizer.php
+
+---
+
+### P3.Dead Code: WikitextHooks.getLayersDatabaseService() ✅
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** Removed dead method that was defined but never called.
+
+---
+
+### P3.13 Add getBoundingClientRect Guards ✅
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** Added defensive guard in GeometryUtils.clientToCanvas() to return canvas center if rect has zero dimensions.
+
+---
 
 ### P3.1 SchemaManager Constructor Injection
 
