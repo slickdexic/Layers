@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 30, 2026
-**Version:** 1.5.40
+**Last Updated:** January 31, 2026
+**Version:** 1.5.41
 
 ---
 
@@ -17,19 +17,19 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (January 30, 2026)
+## Codebase Statistics (January 31, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **139** |
-| Total JS lines | **~94,876** |
-| Total PHP files | **41** |
+| Total JS files | **141** |
+| Total JS lines | **~92,338** |
+| Total PHP files | **42** |
 | Total PHP lines | **~14,738** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
-| Shape/Emoji data | ~40,000 lines (generated) |
-| ES6 classes | **139** |
+| Shape/Emoji data | ~14,354 lines (generated) |
+| ES6 classes | **141** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.42% stmt, 85.25% branch** |
 | Jest tests | **11,112** (163 suites) |

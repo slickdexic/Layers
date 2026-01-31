@@ -60,6 +60,15 @@ class ApiLayersList extends ApiBase {
 	 * Execute the API request.
 	 */
 	public function execute() {
+		// P1.2 FIX: Require read permission to prevent anonymous slide enumeration
+		$this->checkUserRightsAny( 'read' );
+
+		// P2.8 FIX: Rate limit slide listing to prevent abuse
+		$user = $this->getUser();
+		if ( $user->pingLimiter( 'editlayers-list' ) ) {
+			$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+		}
+
 		$params = $this->extractRequestParams();
 
 		// Parse parameters

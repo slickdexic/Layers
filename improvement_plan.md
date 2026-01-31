@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
 **Last Updated:** January 31, 2026  
-**Version:** 1.5.41  
+**Version:** 1.5.42  
 **Status:** Production-Ready (8.7/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
@@ -10,13 +10,13 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. All **11,112** tests pass. This improvement plan prioritizes remaining issues identified in the January 30, 2026 comprehensive critical review.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. All **11,112** tests pass. This improvement plan prioritizes remaining issues identified in the January 31, 2026 comprehensive critical review.
 
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
-- 🟠 **P1:** 1 open (documentation sync)
-- 🟡 **P2:** 2 open (code quality improvements)
-- 🟢 **P3:** 12 open (minor improvements)
+- ✅ **P1:** All resolved (race condition fixed, permission check added)
+- 🟡 **P2:** 7 open (code quality improvements)
+- 🟢 **P3:** 11 open (minor improvements)
 
 **Verified Metrics (January 31, 2026):**
 
@@ -29,9 +29,9 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 | Branch coverage | **85.25%** | ✅ Good |
 | Function coverage | **93.72%** | ✅ Excellent |
 | Line coverage | **95.55%** | ✅ Excellent |
-| JS files | 141 | (~92,338 hand-written + ~14,354 generated) |
-| PHP files | 41 | (~14,738 lines) |
-| PHP strict_types | **41/41 files** | ✅ Complete |
+| JS files | **141** | (~92,338 hand-written + ~14,354 generated) |
+| PHP files | **42** | (~14,738 lines) |
+| PHP strict_types | **42/42 files** | ✅ Complete |
 | ES6 classes | All JS files | 100% migrated |
 | God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
 | Near-threshold files (900-999) | **6** | ⚠️ Watch |
@@ -66,54 +66,38 @@ Previous P0 items resolved:
 
 ---
 
-## Phase 1 (P1): High Priority — 🟠 3 OPEN ITEMS
+## Phase 1 (P1): High Priority — ✅ ALL RESOLVED
 
-### P1.1 Fix Documentation Metrics Drift — OPEN
+### P1.1 Fix Race Condition in saveLayerSet Named Set Limit — ✅ RESOLVED
 
-**Status:** 🟠 OPEN  
+**Status:** ✅ RESOLVED (January 31, 2026)  
 **Priority:** P1 - High  
-**Category:** Documentation / Professionalism
+**Category:** Bug / Race Condition
 
-**Problem:** 35 documentation inaccuracies found across files:
-
-| Metric | Listed Values | Actual |
-|--------|--------------|--------|
-| Test count | 10,939 / 11,067 / 11,069 / 11,096 | **11,112** |
-| JS files | 126 / 139 / 141 | **139** |
-| Coverage | 94.65% / 95.00% | **95.42%** |
-| God classes | 12 / 14 / 17 | **18** |
-| i18n | 653 / 656 / 718 | **667** |
-
-**Files Needing Update:**
-- [ ] README.md
-- [ ] docs/ARCHITECTURE.md
-- [ ] wiki/Home.md (+ fix JSON artifact corruption)
-- [ ] CHANGELOG.md
-
-**Estimated Effort:** 3-4 hours
+**Resolution:** Moved the named set limit check INSIDE the transaction with
+`FOR UPDATE` locking. The check now uses the write DB connection within
+`startAtomic()`, preventing concurrent requests from bypassing the limit.
 
 ---
 
-### P1.2 Fix MediaWiki Version Inconsistency — ✅ RESOLVED
+### P1.2 Add Permission Check to ApiLayersList — ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P1 - High  
+**Category:** Security / Access Control
+
+**Resolution:** Added `$this->checkUserRightsAny('read')` and rate limiting
+via `pingLimiter('editlayers-list')` to `execute()` method.
+
+---
+
+### P1.3 Fix MediaWiki Version Inconsistency — ✅ RESOLVED
 
 **Status:** ✅ RESOLVED (January 30, 2026)  
 **Priority:** P1 - High  
 **Category:** Documentation
 
-**Resolution:** All files now correctly show `>= 1.44.0`:
-- extension.json: `>= 1.44.0` ✅
-- copilot-instructions.md: `>= 1.44.0` ✅
-- Mediawiki-Extension-Layers.mediawiki: `>= 1.44.0` ✅
-
----
-
-### P1.3 Fix wiki/Home.md Corruption — ✅ RESOLVED
-
-**Status:** ✅ RESOLVED (January 31, 2026)  
-**Priority:** P1 - High  
-**Category:** Documentation
-
-**Resolution:** Searched for corrupted JSON artifact - not found. Already cleaned up in previous session.
+**Resolution:** All files now correctly show `>= 1.44.0`.
 
 ---
 
@@ -123,20 +107,24 @@ Previous P0 items resolved:
 **Priority:** P1 - High  
 **Category:** Documentation
 
-**Resolution:** Verified count is 18 god classes (2 generated JS + 14 hand-written JS + 2 PHP):
-- ShapeLibraryData.js (11,299 lines) - generated
-- EmojiLibraryIndex.js (3,055 lines) - generated
-- LayerPanel.js (2,182), CanvasManager.js (2,044), Toolbar.js (1,891), LayersEditor.js (1,830)
-- InlineTextEditor.js (1,521), SelectionManager.js (1,431), PropertyBuilders.js (1,414)
-- APIManager.js (1,403), ViewerManager.js (1,277), ToolManager.js (1,226)
-- CanvasRenderer.js (1,219), GroupManager.js (1,171), SlideController.js (1,117), LayersValidator.js (1,116)
-- ServerSideLayerValidator.php (1,297), LayersDatabase.php (1,242)
+**Resolution:** Verified count is 18 god classes (2 generated JS + 14 JS + 2 PHP).
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 2 OPEN ITEMS
+## Phase 2 (P2): Medium Priority — 🟡 7 OPEN ITEMS
 
-### P2.1 Fix Race Condition in renameNamedSet() — ✅ RESOLVED
+### P2.1 Fix isComplexityAllowed() Layer Type Coverage — ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P2 - Medium  
+**Category:** Bug / Validation
+
+**Resolution:** Expanded `isComplexityAllowed()` to handle all 15 layer types
+with proper complexity scores. Added default case for unknown types.
+
+---
+
+### P2.2 Fix Race Condition in renameNamedSet() — ✅ RESOLVED
 
 **Status:** ✅ RESOLVED (Verified January 30, 2026)  
 **Priority:** P2 - Medium  
@@ -400,14 +388,13 @@ New tool for measuring and annotating angles.
 
 | Item | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| Documentation drift | High | 2 hours | P1.1 |
-| Version inconsistency | High | 30 min | P1.2 |
-| renameNamedSet() race | Medium | 2 hours | P2.1 |
-| Client/server validation | Medium | 4 hours | P2.3 |
-| 17 god classes | Medium | 2-3 weeks | P3.1 |
-| Inconsistent DB returns | Medium | 2 days | P2.5 |
+| ~~saveLayerSet race condition~~ | ~~High~~ | ~~2 hours~~ | ~~P1.1~~ ✅ |
+| ~~ApiLayersList permission check~~ | ~~High~~ | ~~15 min~~ | ~~P1.2~~ ✅ |
+| ~~isComplexityAllowed coverage~~ | ~~Medium~~ | ~~1 hour~~ | ~~P2.1~~ ✅ |
+| ~~Raw SQL in listSlides~~ | ~~Medium~~ | ~~3 hours~~ | ~~P2.5~~ ✅ |
+| Inconsistent DB returns | Medium | 2 days | P2.6 |
+| 18 god classes | Medium | 2-3 weeks | P3.1 |
 | No visual regression | Medium | 1-2 sprints | P3.8 |
-| 7 deprecated APIs | Low | 1 sprint | P3.4 |
 | No TypeScript | Low | Long-term | P3.2 |
 
 ---
@@ -415,17 +402,19 @@ New tool for measuring and annotating angles.
 ## Immediate Action Items
 
 ### This Week
-1. **🟠 Sync documentation metrics** (P1.1) — 2 hours
-2. **🟠 Fix MW version strings** (P1.2) — 30 minutes
+1. ✅ **Fixed saveLayerSet race condition** (P1.1) — Completed Jan 31
+2. ✅ **Added permission check to ApiLayersList** (P1.2) — Completed Jan 31
+3. ✅ **Fixed isComplexityAllowed coverage** (P2.1) — Completed Jan 31
+4. ✅ **Added rate limiting to ApiLayersList** (P2.8) — Completed Jan 31
+5. ✅ **Added paths array limit validation** (P2.10) — Completed Jan 31
+6. ✅ **Refactored listSlides() SQL** (P2.5) — Completed Jan 31
 
 ### This Month
-3. **🟡 Fix renameNamedSet() race** (P2.1) — 2 hours
-4. **🟡 Sync client/server validation** (P2.3) — 4 hours
-5. **🟡 Fix SVG script detection** (P2.6) — 1 hour
+1. **🟡 Standardize DB return types** (P2.6) — 2 days
 
 ### This Quarter
-6. **🟢 Extract 2 god class modules** (P3.1) — 1 week
-7. **🟢 Standardize DB return types** (P2.5) — 2 days
+1. **🟢 Extract 2 god class modules** (P3.1) — 1 week
+2. **🟢 Add visual regression tests** (P3.8) — 1-2 sprints
 
 ---
 
@@ -442,4 +431,4 @@ New tool for measuring and annotating angles.
 
 ---
 
-*Last updated: January 30, 2026 (Comprehensive Review)*
+*Last updated: January 31, 2026 (Comprehensive Critical Review)*

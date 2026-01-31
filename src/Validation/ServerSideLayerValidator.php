@@ -1107,6 +1107,13 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				// Validate paths array if present (multi-path shapes)
 				// SEC-1 FIX: Each path string must be validated to prevent malicious SVG data
 				if ( $hasPaths ) {
+					// P2.10 FIX: Limit paths array length to prevent DoS
+					if ( count( $layer['paths'] ) > 100 ) {
+						return [
+							'valid' => false,
+							'error' => 'customShape paths array exceeds maximum of 100 paths'
+						];
+					}
 					$pathIndex = 0;
 					foreach ( $layer['paths'] as $pathData ) {
 						if ( !is_string( $pathData ) ) {

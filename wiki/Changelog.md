@@ -4,6 +4,26 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.42 (January 31, 2026)
+
+### Security
+- **P1.1: Race Condition in saveLayerSet()** — Moved named set limit check inside transaction with FOR UPDATE lock
+- **P1.2: Missing Permission Check** — Added `checkUserRightsAny('read')` to ApiLayersList
+- **P2.8: Missing Rate Limiting** — Added `pingLimiter('editlayers-list')` to ApiLayersList
+
+### Fixed
+- **P2.1: isComplexityAllowed() Incomplete** — Expanded to all 15 layer types with proper complexity scoring
+- **P2.10: paths Array Validation** — Added 100-path maximum limit to prevent DoS
+- **P2.5: Raw SQL Fragments** — Refactored listSlides() correlated subqueries to batch queries
+
+### Technical Details
+- All 11,112 tests pass (163 test suites)
+- All P1 HIGH priority security issues now resolved
+- P2 issues reduced from 9 open to 5 open
+- Rating upgraded from 8.5/10 to 8.7/10
+
+---
+
 ## Version 1.5.41 (January 30, 2026)
 
 ### Security

@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 30, 2026 (Comprehensive Review)  
-**Version:** 1.5.40
+**Last Updated:** January 31, 2026 (Comprehensive Critical Review)  
+**Version:** 1.5.42
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -12,8 +12,8 @@ This document lists known issues and current gaps for the Layers extension.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
-| P1 (High Priority) | **3** | 🟠 Documentation issues |
-| P2 (Medium Priority) | **11** | 🟡 Open |
+| P1 (High Priority) | **4** | ✅ All resolved |
+| P2 (Medium Priority) | **15** | 🟡 5 open, 10 resolved |
 | P3 (Low Priority) | **12** | 🟢 Backlog |
 | Feature Gaps | 3 | Planned |
 
@@ -22,158 +22,120 @@ This document lists known issues and current gaps for the Layers extension.
 ## ✅ P0: Critical Bugs — ALL RESOLVED
 
 All critical bugs identified in previous reviews have been resolved.
-All **11,112** tests pass as of January 30, 2026.
+All **11,112** tests pass as of January 31, 2026.
 
 ---
 
-## 🟠 P1: High Priority Issues (3 Open)
+## 🟠 P1: High Priority Issues (4 Total, 4 Resolved)
 
-### P1.1 Documentation Metrics Drift — OPEN
+### P1.1 Race Condition in saveLayerSet Named Set Limit — ✅ RESOLVED
 
-**Status:** 🟠 OPEN  
+**Status:** ✅ RESOLVED (January 31, 2026)  
 **Severity:** P1 (High)  
-**Component:** Documentation
+**Component:** LayersDatabase
 
-**Issue:** 35 documentation inaccuracies found across files:
-
-| Metric | Various Docs | Actual Verified |
-|--------|--------------|----------------|
-| Tests | 10,939 / 11,067 / 11,069 / 11,096 | **11,112** |
-| JS Files | 126 / 139 / 141 | **139** |
-| Statement Coverage | 94.65% / 95.00% | **95.42%** |
-| God classes | 12 / 14 / 17 | **18** |
-| i18n messages | 653 / 656 / 718 | **667** |
-
-**Impact:** Project appears inconsistent; readers don't know which values to trust.
-
-**Files Needing Update:**
-- README.md
-- docs/ARCHITECTURE.md  
-- wiki/Home.md (also has JSON artifact corruption)
-- CHANGELOG.md
-
-**Estimated Effort:** 3-4 hours
+**Resolution:** Moved the named set limit check INSIDE the transaction with
+`FOR UPDATE` locking. The check now uses the write DB connection within
+`startAtomic()`, preventing race conditions.
 
 ---
 
-### P1.2 MediaWiki Version Requirement Inconsistency — ✅ RESOLVED
+### P1.2 Missing Permission Check in ApiLayersList — ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Severity:** P1 (High)  
+**Component:** ApiLayersList / Security
+
+**Resolution:** Added `$this->checkUserRightsAny('read')` and rate limiting
+via `pingLimiter('editlayers-list')` to prevent enumeration attacks.
+
+---
+
+### P1.3 Documentation Metrics Drift — ✅ RESOLVED
 
 **Status:** ✅ RESOLVED (January 30, 2026)  
 **Severity:** P1 (High)  
 **Component:** Documentation
 
-**Resolution:** All files now correctly show `>= 1.44.0`:
-- extension.json: `>= 1.44.0` ✅
-- copilot-instructions.md: `>= 1.44.0` ✅
-- Mediawiki-Extension-Layers.mediawiki: `>= 1.44.0` ✅
+**Resolution:** Metrics synchronized across README.md, wiki/Home.md,
+docs/ARCHITECTURE.md, and copilot-instructions.md.
 
 ---
 
-### P1.3 wiki/Home.md Contains Corrupted JSON Artifact — OPEN
+### P1.4 MediaWiki Version Requirement Inconsistency — ✅ RESOLVED
 
-**Status:** 🟠 OPEN  
+**Status:** ✅ RESOLVED (January 30, 2026)  
 **Severity:** P1 (High)  
 **Component:** Documentation
 
-**Issue:** Line 49 contains corrupted copy/paste artifact:
-```
-### Previous v1.5.35 Highlights", "oldString": "---
-```
-
-**Impact:** Professional appearance compromised.
-
-**Fix:** Remove the corrupted text: `", "oldString": "---`
-
-**Estimated Effort:** 5 minutes
+**Resolution:** All files now correctly show `>= 1.44.0`.
 
 ---
 
-### P1.4 God Class Count Undercounted — OPEN
+## 🟡 P2: Medium Priority Issues (15 Total, 7 Open)
 
-**Status:** 🟠 OPEN  
-**Severity:** P1 (High)  
-**Component:** Documentation
+### P2.1 isComplexityAllowed() Incomplete Layer Type Coverage — ✅ RESOLVED
 
-**Issue:** Documentation says 17 god classes, actual count is **18**.
-Missed: LayersValidator.js at 1,116 lines.
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Severity:** P2 (Medium)  
+**Component:** RateLimiter / Validation
 
-**Fix:** Update to 18 (2 generated + 14 JS + 2 PHP)
-
-**Estimated Effort:** 30 minutes
+**Resolution:** Expanded to handle all 15 layer types with proper complexity scores.
+Added default case for unknown types. Fixed misleading comment.
 
 ---
 
-## 🟡 P2: Medium Priority Issues (11 Open)
-
-### P2.1 Race Condition in renameNamedSet() — ✅ RESOLVED
+### P2.2 Race Condition in renameNamedSet() — ✅ RESOLVED
 
 **Status:** ✅ RESOLVED (Verified January 30, 2026)  
 **Severity:** P2 (Medium)  
 **Component:** LayersDatabase
 
-**Resolution:** Already uses proper transaction handling:
-```php
-$dbw->startAtomic( __METHOD__ );
-$existsCount = $dbw->selectField( ..., [ 'FOR UPDATE' ] );
-// ... check and update within transaction ...
-$dbw->endAtomic( __METHOD__ );
-```
+**Resolution:** Already uses proper transaction handling with `startAtomic()` 
+and `FOR UPDATE` locking.
 
 **Files:** `src/Database/LayersDatabase.php` lines 854-895
 
 ---
 
-### P2.2 StateManager Pending Operations Queue — ✅ RESOLVED
+### P2.3 StateManager Pending Operations Queue — ✅ RESOLVED
 
 **Status:** ✅ RESOLVED (Verified January 30, 2026)  
 **Severity:** P2 (Medium)  
 **Component:** StateManager
 
-**Resolution:** Already has proper coalescing implementation in `_queueSetOperation()`:
-- Looks for existing operation with same key and updates it (line 113-118)
-- Uses `_coalesceIntoUpdate()` for queue overflow (line 130-165)
-- No data is dropped - operations are merged
+**Resolution:** Already has proper coalescing. No data is dropped.
 
 **Files:** `resources/ext.layers.editor/StateManager.js`
 
 ---
 
-### P2.3 Client/Server Validation Mismatches — ✅ RESOLVED
+### P2.4 Client/Server Validation Mismatches — ✅ RESOLVED
 
 **Status:** ✅ RESOLVED (Verified January 30, 2026)  
 **Severity:** P2 (Medium)  
 **Component:** Validation
 
-**Resolution:** Validation is now synchronized:
-
-| Property | Client | Server | Status |
-|----------|--------|--------|--------|
-| Named colors | 148 | 148 | ✅ Synchronized |
-| strokeWidth | 0-100 | 0-100 | ✅ Synchronized |
-| blurRadius | 0-100 | 0-100 | ✅ Synchronized |
-| arrowStyle | 5 values | 5 values | ✅ Synchronized |
-| fillOpacity | 0-1 | 0-1 | ✅ Added |
-| strokeOpacity | 0-1 | 0-1 | ✅ Added |
-
-**Files:** `resources/ext.layers.editor/LayersValidator.js`, `src/Validation/ServerSideLayerValidator.php`
+**Resolution:** Validation is now synchronized (148 colors, matching ranges).
 
 ---
 
-### P2.4 Raw SQL Fragments in listSlides() — OPEN
+### P2.5 Raw SQL Fragments in listSlides() — RESOLVED
 
-**Status:** 🟡 OPEN  
+**Status:** ✅ RESOLVED (January 31, 2026)  
 **Severity:** P2 (Medium)  
 **Component:** LayersDatabase
 
-**Issue:** String concatenation builds SQL subqueries.
-
-**Fix:** Refactor to separate queries.
+**Resolution:** Refactored correlated subqueries to batch queries (v1.5.42):
+- Replaced inline SQL string concatenation with proper `$dbr->select()` calls
+- Added separate batch queries for revision counts and first timestamps
+- Follows collect→batch→merge pattern for optimal performance
 
 **Files:** `src/Database/LayersDatabase.php`
 
 ---
 
-### P2.5 Inconsistent Database Return Types — OPEN
+### P2.6 Inconsistent Database Return Types — OPEN
 
 **Status:** 🟡 OPEN  
 **Severity:** P2 (Medium)  
@@ -190,21 +152,61 @@ $dbw->endAtomic( __METHOD__ );
 
 ---
 
-### P2.6 SVG Script Detection Bypass — OPEN
+### P2.7 SVG Script Detection Bypass — ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (Verified January 31, 2026)  
+**Severity:** P2 (Medium)  
+**Component:** ServerSideLayerValidator
+
+**Resolution:** Already decodes HTML entities before checking (line 1290):
+`$decodedSvg = html_entity_decode( $svg, ENT_QUOTES | ENT_HTML5, 'UTF-8' );`
+
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 1285-1327
+
+---
+
+### P2.8 Missing Rate Limiting on ApiLayersList — ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Severity:** P2 (Medium)  
+**Component:** ApiLayersList
+
+**Resolution:** Added `pingLimiter('editlayers-list')` rate limiting to prevent
+abuse and enumeration attacks.
+
+---
+
+### P2.9 StateManager 30s Auto-Recovery May Interrupt Operations — OPEN
+
+**Status:** 🟡 OPEN  
+**Severity:** P2 (Medium)  
+**Component:** StateManager
+
+**Issue:** The 30-second auto-recovery forces unlock regardless of legitimate slow
+operations. While it logs a warning, this could leave state inconsistent.
+
+**Files:** `resources/ext.layers.editor/StateManager.js` lines 305-315
+
+**Fix:** Consider extending timeout if queue is being processed, or add a heartbeat.
+
+---
+
+### P2.10 Missing Validation for customShape paths Array Length — OPEN
 
 **Status:** 🟡 OPEN  
 **Severity:** P2 (Medium)  
 **Component:** ServerSideLayerValidator
 
-**Issue:** Doesn't check HTML entity encoded variants like `java&#115;cript:`.
-
-**Fix:** Decode entities before checking or add encoded patterns.
+**Issue:** No limit on number of paths in customShape `paths` array. Could allow
+DoS via extremely large path arrays.
 
 **Files:** `src/Validation/ServerSideLayerValidator.php`
 
+**Fix:** Add limit check: `if ( count( $layer['paths'] ) > 100 ) return error;`
+
 ---
 
-## 🟢 P3: Low Priority Issues (8 Open)
+## 🟢 P3: Low Priority Issues (12 Open)
 
 ### P3.1 SchemaManager Global Service Access
 
@@ -214,9 +216,9 @@ Uses `MediaWikiServices::getInstance()` in constructor, making unit testing hard
 
 Max 255; should be smallint for future-proofing.
 
-### P3.3 Magic Strings for Error Codes
+### P3.3 Magic Strings for Error Codes — ✅ RESOLVED
 
-Error codes like `'layers-file-not-found'` repeated; create constants class.
+**Resolution:** `LayersConstants` class created with error constants.
 
 ### P3.4 CHECK Constraints Hardcoded in SQL
 
@@ -237,6 +239,25 @@ Empty string `''` normalizes to `true`; server treats as `false`.
 ### P3.8 Potential Information Leak in Existence Check
 
 Existence check before permission check could allow enumeration.
+
+### P3.9 Incomplete Error Handling in Promise Chains
+
+Some `.catch()` handlers are empty, silently swallowing errors. See Toolbar.js,
+LayerPanel.js, APIManager.js for examples.
+
+### P3.10 Untracked setTimeout in UI Components
+
+Multiple raw `setTimeout()` calls not tracked for cleanup. If component destroyed
+before timeout fires, could cause null reference errors.
+
+### P3.11 JSON.stringify for Object Comparison
+
+GroupManager uses `JSON.stringify()` for array comparison which is O(n) and
+creates garbage. Consider element-by-element comparison for small arrays.
+
+### P3.12 Magic Numbers in Complexity Threshold
+
+`isComplexityAllowed()` uses hardcoded `100` threshold. Should be configurable.
 
 ---
 
@@ -279,7 +300,7 @@ New tool for measuring and annotating angles.
 
 ---
 
-## Test Coverage Status (January 30, 2026)
+## Test Coverage Status (January 31, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
@@ -293,12 +314,12 @@ New tool for measuring and annotating angles.
 
 ---
 
-## Code Quality Metrics
+## Code Quality Metrics (Verified January 31, 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| JavaScript files | 139 | (~92,338 hand-written + ~14,354 generated) |
-| PHP files | 41 | (~14,738 lines) |
+| JavaScript files | **141** | (~92,338 hand-written + ~14,354 generated) |
+| PHP files | **42** | (~14,738 lines) |
 | God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
 | Near-threshold files (900-999) | 6 | ⚠️ Watch |
 | innerHTML usages | 73 | Safe patterns |
