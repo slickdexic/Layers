@@ -15,6 +15,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use Wikimedia\ParamValidator\ParamValidator;
@@ -60,7 +61,7 @@ class ApiSlideInfo extends ApiBase {
 
 		$params = $this->extractRequestParams();
 		$slideName = $params['slidename'];
-		$setName = $params['setname'] ?? 'default';
+		$setName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
 
 		// Validate slide name
 		$validator = new SlideNameValidator();

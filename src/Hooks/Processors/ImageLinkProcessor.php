@@ -14,6 +14,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
 
@@ -295,7 +296,7 @@ class ImageLinkProcessor {
 		// Get the layer set from database
 		// Use getLatestLayerSet with optional setName filter
 		$layerSet = null;
-		if ( $setName !== null && $setName !== '' && $setName !== 'default' ) {
+		if ( $setName !== null && $setName !== '' && $setName !== LayersConstants::DEFAULT_SET_NAME ) {
 			$layerSet = $db->getLatestLayerSet( $filename, $sha1, $setName );
 		} else {
 			$layerSet = $db->getLatestLayerSet( $filename, $sha1 );
@@ -573,7 +574,7 @@ class ImageLinkProcessor {
 			// Add autocreate flag when linking to a specific named set
 			// This allows auto-creation of the set if it doesn't exist
 			// (only for named sets, not for generic 'on' or 'default')
-			if ( $setName !== null && $setName !== '' && $setName !== 'default' ) {
+			if ( $setName !== null && $setName !== '' && $setName !== LayersConstants::DEFAULT_SET_NAME ) {
 				$urlParams['autocreate'] = '1';
 			}
 

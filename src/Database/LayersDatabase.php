@@ -505,7 +505,7 @@ class LayersDatabase {
 		$setRevisionPairs = [];
 		$aggregateData = [];
 		foreach ( $aggregates as $row ) {
-			$setName = $row->ls_name ?? 'default';
+			$setName = $row->ls_name ?? LayersConstants::DEFAULT_SET_NAME;
 			$latestRevision = (int)$row->latest_revision;
 			$setRevisionPairs[] = [
 				'ls_img_name' => $imgNameLookup,
@@ -539,7 +539,7 @@ class LayersDatabase {
 
 			// Map user IDs back to aggregates
 			foreach ( $userRows as $userRow ) {
-				$setName = $userRow->ls_name ?? 'default';
+				$setName = $userRow->ls_name ?? LayersConstants::DEFAULT_SET_NAME;
 				if ( isset( $aggregateData[$setName] ) ) {
 					$aggregateData[$setName]['latest_user_id'] = (int)$userRow->ls_user_id;
 				}
