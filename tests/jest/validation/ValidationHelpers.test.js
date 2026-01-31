@@ -190,6 +190,13 @@ describe( 'ValidationHelpers', () => {
 			expect( ValidationHelpers.containsScriptInjection( 'onload=hack()' ) ).toBe( true );
 		} );
 
+		test( 'returns true for CSS expression() XSS vector', () => {
+			expect( ValidationHelpers.containsScriptInjection( 'expression(alert(1))' ) ).toBe( true );
+			expect( ValidationHelpers.containsScriptInjection( 'EXPRESSION(alert("XSS"))' ) ).toBe( true );
+			expect( ValidationHelpers.containsScriptInjection( 'expression (alert(1))' ) ).toBe( true );
+			expect( ValidationHelpers.containsScriptInjection( 'width: expression(alert(1))' ) ).toBe( true );
+		} );
+
 		test( 'returns false for safe text', () => {
 			expect( ValidationHelpers.containsScriptInjection( 'Hello World' ) ).toBe( false );
 			expect( ValidationHelpers.containsScriptInjection( 'Normal annotation text' ) ).toBe( false );

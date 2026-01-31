@@ -342,6 +342,16 @@
 			if ( useDraggableMode ) {
 				// Draggable mode - calculate tail from tip position
 				tail = this.getTailFromTipPosition( x, y, width, height, tailTipX, tailTipY, r );
+				// If tail is null (tip inside callout), draw simple rounded rect
+				if ( !tail ) {
+					ctx.beginPath();
+					if ( r > 0.5 && ctx.roundRect ) {
+						ctx.roundRect( x, y, width, height, r );
+					} else {
+						ctx.rect( x, y, width, height );
+					}
+					return;
+				}
 				edge = tail.edge;
 			} else {
 				// Legacy mode - use direction/position/size

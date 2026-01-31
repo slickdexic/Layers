@@ -18,7 +18,7 @@ This extension is feature-rich by design—**15 drawing tools**, multiple render
 
 ## ⚠️ MANDATORY: God Class Rules
 
-**We have 19 "god classes" (files >1,000 lines) that represent technical debt. 2 are generated data files (exempt), 17 are hand-written. These rules are enforced by CI:**
+**We have 20 "god classes" (files >1,000 lines) that represent technical debt. 2 are generated data files (exempt), 18 are hand-written. These rules are enforced by CI:**
 
 ### Rule 1: No God Class Growth
 - **CI will BLOCK your PR** if you increase the size of any hand-written god class

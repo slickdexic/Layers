@@ -91,14 +91,8 @@ class StateManager {
 	 */
 	set( key, value ) {
 		if ( this.isLocked ) {
-			// Queue the operation if state is locked (with queue limit)
-			if ( this.pendingOperations.length >= MAX_PENDING_OPERATIONS ) {
-				if ( typeof mw !== 'undefined' && mw.log ) {
-					mw.log.warn( '[StateManager] Pending operations queue full (' + MAX_PENDING_OPERATIONS + '), dropping oldest operation' );
-				}
-				this.pendingOperations.shift(); // Drop oldest operation
-			}
-			this.pendingOperations.push( { type: 'set', key: key, value: value } );
+			// Queue the operation if state is locked (with coalescing to prevent data loss)
+			this._queueSetOperation( key, value );
 			return;
 		}
 
@@ -110,18 +104,73 @@ class StateManager {
 	}
 
 	/**
+	 * Queue a set operation with coalescing
+	 * If an operation for the same key exists, update it instead of adding a new one
+	 * @private
+	 */
+	_queueSetOperation( key, value ) {
+		// Look for existing 'set' operation with same key
+		for ( let i = 0; i < this.pendingOperations.length; i++ ) {
+			const op = this.pendingOperations[ i ];
+			if ( op.type === 'set' && op.key === key ) {
+				// Coalesce: update existing operation with new value
+				op.value = value;
+				return;
+			}
+		}
+
+		// No existing operation for this key, add new one
+		if ( this.pendingOperations.length >= MAX_PENDING_OPERATIONS ) {
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[StateManager] Pending operations queue full (' + MAX_PENDING_OPERATIONS + '), coalescing operations' );
+			}
+			// Try to coalesce with update operations instead of dropping
+			this._coalesceIntoUpdate( key, value );
+			return;
+		}
+		this.pendingOperations.push( { type: 'set', key: key, value: value } );
+	}
+
+	/**
+	 * Coalesce a set operation into the most recent update operation
+	 * @private
+	 */
+	_coalesceIntoUpdate( key, value ) {
+		// Look for an existing update operation to merge into
+		for ( let i = this.pendingOperations.length - 1; i >= 0; i-- ) {
+			const op = this.pendingOperations[ i ];
+			if ( op.type === 'update' ) {
+				// Merge this key into the update
+				op.updates[ key ] = value;
+				return;
+			}
+		}
+		// No update operation found, convert the oldest set to an update and add this key
+		for ( let i = 0; i < this.pendingOperations.length; i++ ) {
+			const op = this.pendingOperations[ i ];
+			if ( op.type === 'set' ) {
+				// Convert to update and add new key
+				this.pendingOperations[ i ] = {
+					type: 'update',
+					updates: { [ op.key ]: op.value, [ key ]: value }
+				};
+				return;
+			}
+		}
+		// Fallback: replace oldest operation (should rarely happen)
+		if ( typeof mw !== 'undefined' && mw.log ) {
+			mw.log.error( '[StateManager] Queue full with no coalesceable operations, replacing oldest' );
+		}
+		this.pendingOperations[ 0 ] = { type: 'set', key: key, value: value };
+	}
+
+	/**
 	 * Update multiple state properties at once (with race condition protection)
 	 */
 	update( updates ) {
 		if ( this.isLocked ) {
-			// Queue the operation if state is locked (with queue limit)
-			if ( this.pendingOperations.length >= MAX_PENDING_OPERATIONS ) {
-				if ( typeof mw !== 'undefined' && mw.log ) {
-					mw.log.warn( '[StateManager] Pending operations queue full (' + MAX_PENDING_OPERATIONS + '), dropping oldest operation' );
-				}
-				this.pendingOperations.shift(); // Drop oldest operation
-			}
-			this.pendingOperations.push( { type: 'update', updates: updates } );
+			// Queue the operation if state is locked (with coalescing to prevent data loss)
+			this._queueUpdateOperation( updates );
 			return;
 		}
 
@@ -145,6 +194,47 @@ class StateManager {
 		} finally {
 			this.unlockState();
 		}
+	}
+
+	/**
+	 * Queue an update operation with coalescing
+	 * Merge with existing update operations to prevent queue overflow
+	 * @private
+	 */
+	_queueUpdateOperation( updates ) {
+		// Look for existing 'update' operation to merge with
+		for ( let i = this.pendingOperations.length - 1; i >= 0; i-- ) {
+			const op = this.pendingOperations[ i ];
+			if ( op.type === 'update' ) {
+				// Coalesce: merge updates (new values override old)
+				Object.assign( op.updates, updates );
+				return;
+			}
+		}
+
+		// No existing update operation, add new one or coalesce with sets
+		if ( this.pendingOperations.length >= MAX_PENDING_OPERATIONS ) {
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log.warn( '[StateManager] Pending operations queue full (' + MAX_PENDING_OPERATIONS + '), coalescing update operations' );
+			}
+			// Convert pending set operations into a single update
+			const coalescedUpdates = Object.assign( {}, updates );
+			let foundSets = false;
+			for ( let i = 0; i < this.pendingOperations.length; i++ ) {
+				const op = this.pendingOperations[ i ];
+				if ( op.type === 'set' ) {
+					coalescedUpdates[ op.key ] = op.value;
+					foundSets = true;
+				}
+			}
+			if ( foundSets ) {
+				// Remove all set operations and add a single update
+				this.pendingOperations = this.pendingOperations.filter( op => op.type !== 'set' );
+				this.pendingOperations.push( { type: 'update', updates: coalescedUpdates } );
+				return;
+			}
+		}
+		this.pendingOperations.push( { type: 'update', updates: updates } );
 	}
 
 	/**

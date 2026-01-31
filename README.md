@@ -3,14 +3,14 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95.42%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C067%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-11%2C112%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.40 (January 30, 2026)  
+> **Version:** 1.5.43 (January 31, 2026)  
 > **Status:** ✅ Production-ready  
-> **Requires:** MediaWiki 1.43+, PHP 8.1+
+> **Requires:** MediaWiki 1.44.0+, PHP 8.1+
 >
 > **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
 > **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).
@@ -308,24 +308,24 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), **~14,378 lines across 40 files**
-- **Frontend:** HTML5 Canvas editor with **126 JS files (~88,992 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), **~14,738 lines across 42 files**
+- **Frontend:** HTML5 Canvas editor with **141 JS files (~92,338 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **12 god classes** (files >1,000 lines), all use proper delegation patterns
-  - ShapeLibraryData.js and EmojiLibraryIndex.js are generated (exempt from refactoring)
-  - God Class Reduction Initiative completed January 29, 2026 (reduced from 20 to 12)
+- **Technical Debt:** **18 god classes** (files >1,000 lines), all use proper delegation patterns
+  - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
+  - All other god classes have proper facade/delegation patterns
 
-**Test Coverage (Last recorded — January 29, 2026):**
+**Test Coverage (Verified January 31, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 10,939 passing (162 suites) |
+| Jest tests | 11,112 passing (163 suites) |
 | PHPUnit tests | 24 test files |
-| Statement coverage | 94.65% |
-| Branch coverage | 84.49% |
-| Function coverage | 92.93% |
-| Line coverage | 94.77% |
+| Statement coverage | 95.42% |
+| Branch coverage | 85.25% |
+| Function coverage | 93.72% |
+| Line coverage | 95.55% |
 
 **Security:**
 
@@ -376,14 +376,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 139 | ✅ |
-| Total JS lines | ~94,137 | ✅ Includes generated data |
-| ES6 classes | 139 | ✅ 100% migrated |
-| God classes (>1000 lines) | 12 | ✅ Well-delegated facades |
-| Tests passing | 10,939 | ✅ |
+| Total JS files | 141 | ✅ |
+| Total JS lines | ~92,338 | ✅ Hand-written (+ ~14,354 generated) |
+| ES6 classes | 141 | ✅ 100% migrated |
+| God classes (>1000 lines) | 18 | ✅ Well-delegated facades |
+| Tests passing | 11,112 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.65% | ✅ Excellent |
-| Branch coverage | 84.49% | ✅ Target met |
+| Statement coverage | 95.42% | ✅ Excellent |
+| Branch coverage | 85.25% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
@@ -406,7 +406,7 @@ npm run docs:markdown # Markdown in docs/API.md
 | [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) | Getting started for contributors |
 | [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) | Named sets feature documentation |
 | [WIKITEXT_USAGE.md](docs/WIKITEXT_USAGE.md) | Wikitext syntax guide |
-| [codebase_review.md](codebase_review.md) | Technical assessment (January 27, 2026) |
+| [codebase_review.md](codebase_review.md) | Technical assessment (January 31, 2026) |
 | [improvement_plan.md](improvement_plan.md) | Development roadmap with priorities |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 

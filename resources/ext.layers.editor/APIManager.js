@@ -323,6 +323,16 @@
 			this.handleLoadError( 'process-error', { error: standardizedError } );
 		}
 	}	extractLayerSetData( layerSet ) {
+		// Defensive null check - layerSet can be null when no layers exist for the file
+		if ( !layerSet ) {
+			this.editor.stateManager.set( 'baseWidth', null );
+			this.editor.stateManager.set( 'baseHeight', null );
+			this.editor.stateManager.set( 'backgroundVisible', true );
+			this.editor.stateManager.set( 'backgroundOpacity', 1.0 );
+			this.editor.stateManager.set( 'layers', [] );
+			return;
+		}
+
 		const baseWidth = layerSet.baseWidth || null;
 		const baseHeight = layerSet.baseHeight || null;
 

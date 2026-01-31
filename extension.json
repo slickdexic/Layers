@@ -8,9 +8,9 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.40-REL1_39",
+	"version": "1.5.43",
 	"requires": {
-		"MediaWiki": ">= 1.39.0"
+		"MediaWiki": ">= 1.44.0"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
@@ -63,6 +63,10 @@
 		},
 		"LayersMaxLayerCount": {
 			"description": "Maximum number of layers per layer set",
+			"value": 100
+		},
+		"LayersMaxComplexity": {
+			"description": "Maximum complexity score for a layer set. Each layer type has a cost (text: 2, image: 3, shapes: 1, etc). Total must not exceed this value.",
 			"value": 100
 		},
 		"LayersMaxImageBytes": {
@@ -795,6 +799,21 @@
 				"layers-validation-fontfamily-invalid",
 				"layers-validation-textalign-invalid",
 				"layers-validation-color-invalid",
+				"layers-validation-fillopacity-invalid",
+				"layers-validation-fillopacity-range",
+				"layers-validation-strokeopacity-invalid",
+				"layers-validation-strokeopacity-range",
+				"layers-validation-gradient-invalid",
+				"layers-validation-gradient-type-invalid",
+				"layers-validation-gradient-colors-required",
+				"layers-validation-gradient-colors-max",
+				"layers-validation-gradient-stop-invalid",
+				"layers-validation-gradient-offset-invalid",
+				"layers-validation-gradient-color-invalid",
+				"layers-validation-gradient-angle-invalid",
+				"layers-validation-gradient-centerx-invalid",
+				"layers-validation-gradient-centery-invalid",
+				"layers-validation-gradient-radius-invalid",
 				"layers-validation-points-array",
 				"layers-validation-points-too-many",
 				"layers-validation-point-invalid",

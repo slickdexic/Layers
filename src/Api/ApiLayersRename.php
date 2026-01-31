@@ -7,11 +7,12 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
-use Title;
 
 /**
  * API module for renaming layer sets.
@@ -56,12 +57,13 @@ class ApiLayersRename extends ApiBase {
 
 		// Validate new name format
 		if ( !$this->isValidSetName( $newName ) ) {
-			$this->dieWithError( 'layers-invalid-setname', 'invalidsetname' );
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
 		// Prevent renaming to 'default'
-		if ( strtolower( $newName ) === 'default' && strtolower( $oldName ) !== 'default' ) {
-			$this->dieWithError( 'layers-cannot-rename-to-default', 'invalidsetname' );
+		$defaultName = strtolower( LayersConstants::DEFAULT_SET_NAME );
+		if ( strtolower( $newName ) === $defaultName && strtolower( $oldName ) !== $defaultName ) {
+			$this->dieWithError( LayersConstants::ERROR_CANNOT_RENAME_DEFAULT, 'invalidsetname' );
 		}
 
 		try {
@@ -75,13 +77,13 @@ class ApiLayersRename extends ApiBase {
 			// (from InstantCommons) don't have local wiki pages
 			$title = Title::newFromText( $requestedFilename, NS_FILE );
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
-				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
 			}
 
 			// Get file metadata (use getRepoGroup() to support foreign repos like Commons)
 			$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
 			if ( !$file || !$file->exists() ) {
-				$this->dieWithError( 'layers-file-not-found', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
 			}
 
 			// Use DB key form for consistency with ApiLayersSave
@@ -108,17 +110,17 @@ class ApiLayersRename extends ApiBase {
 			}
 
 			if ( !$layerSet ) {
-				$this->dieWithError( 'layers-layerset-not-found', 'setnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
 			}
 
 			// Check if new name already exists
 			if ( $db->namedSetExists( $imgName, $sha1, $newName ) ) {
-				$this->dieWithError( 'layers-setname-exists', 'setnameexists' );
+				$this->dieWithError( LayersConstants::ERROR_SETNAME_EXISTS, 'setnameexists' );
 			}
 
 			// PERMISSION CHECK: Only owner or admin can rename (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $oldName ) ) {
-				$this->dieWithError( 'layers-rename-permission-denied', 'permissiondenied' );
+				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
 			// RATE LIMITING: Prevent abuse by limiting rename operations per user
@@ -128,7 +130,7 @@ class ApiLayersRename extends ApiBase {
 			//   $wgRateLimits['editlayers-rename']['newbie'] = [ 3, 3600 ]; // stricter for new users
 			$rateLimiter = $this->createRateLimiter();
 			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
-				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Perform the rename
@@ -141,7 +143,7 @@ class ApiLayersRename extends ApiBase {
 					'newname' => $newName,
 					'user' => $user->getName()
 				] );
-				$this->dieWithError( 'layers-rename-failed', 'renamefailed' );
+				$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
 			}
 
 			$this->getLogger()->info( 'Layer set renamed', [
@@ -163,7 +165,7 @@ class ApiLayersRename extends ApiBase {
 				'oldname' => $oldName,
 				'newname' => $newName
 			] );
-			$this->dieWithError( 'layers-rename-failed', 'renamefailed' );
+			$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
 			return; // @codeCoverageIgnore
 		}
 	}

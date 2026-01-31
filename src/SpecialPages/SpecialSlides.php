@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use SpecialPage;
@@ -167,8 +168,12 @@ class SpecialSlides extends SpecialPage {
 
 		// Check if slide exists
 		$db = $services->get( 'LayersDatabase' );
-		$normalizedName = 'Slide:' . $slideName;
-		$layerSet = $db->getLayerSetByName( $normalizedName, 'slide', 'default' );
+		$normalizedName = LayersConstants::SLIDE_PREFIX . $slideName;
+		$layerSet = $db->getLayerSetByName(
+			$normalizedName,
+			LayersConstants::TYPE_SLIDE,
+			LayersConstants::DEFAULT_SET_NAME
+		);
 
 		// Check permissions
 		$permissionManager = $services->getPermissionManager();

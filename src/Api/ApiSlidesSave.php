@@ -15,6 +15,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
@@ -62,13 +63,13 @@ class ApiSlidesSave extends ApiBase {
 		}
 
 		if ( !$enabled ) {
-			$this->dieWithError( 'layers-slides-disabled' );
+			$this->dieWithError( LayersConstants::ERROR_SLIDES_DISABLED );
 		}
 
 		// Rate limiting
 		$rateLimiter = new RateLimiter( $user );
 		if ( $rateLimiter->isLimited( 'editlayers-save' ) ) {
-			$this->dieWithError( 'layers-rate-limited' );
+			$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED );
 		}
 
 		$params = $this->extractRequestParams();
@@ -86,7 +87,7 @@ class ApiSlidesSave extends ApiBase {
 		$layerData = json_decode( $dataJson, true );
 
 		if ( $layerData === null && json_last_error() !== JSON_ERROR_NONE ) {
-			$this->dieWithError( 'layers-json-parse-error' );
+			$this->dieWithError( LayersConstants::ERROR_JSON_PARSE );
 		}
 
 		// Validate layers
@@ -96,7 +97,7 @@ class ApiSlidesSave extends ApiBase {
 			$layerValidationResult = $layerValidator->validateLayers( $layers );
 			if ( !$layerValidationResult->isValid() ) {
 				$this->dieWithError( [
-					'layers-invalid-data',
+					LayersConstants::ERROR_INVALID_DATA,
 					implode( ', ', $layerValidationResult->getErrors() )
 				] );
 			}
@@ -145,7 +146,7 @@ class ApiSlidesSave extends ApiBase {
 		);
 
 		if ( $slideId === null ) {
-			$this->dieWithError( 'layers-slide-save-error' );
+			$this->dieWithError( LayersConstants::ERROR_SLIDE_SAVE );
 		}
 
 		// Return success

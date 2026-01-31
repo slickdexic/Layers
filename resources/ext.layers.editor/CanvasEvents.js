@@ -29,6 +29,7 @@
 			this.onKeyUp = this.handleKeyUp.bind( this );
 			this.onContextMenu = this.handleContextMenu.bind( this );
 			this.onDoubleClick = this.handleDoubleClick.bind( this );
+			this.onContainerMouseDown = this.handleContainerMouseDown.bind( this );
 
 			// Attach to canvas
 			this.canvas.addEventListener( 'mousedown', this.onMouseDown );
@@ -37,6 +38,11 @@
 			this.canvas.addEventListener( 'wheel', this.onWheel, { passive: false } );
 			this.canvas.addEventListener( 'contextmenu', this.onContextMenu );
 			this.canvas.addEventListener( 'dblclick', this.onDoubleClick );
+
+			// Attach click handler to container for clicks outside canvas (deselect behavior)
+			if ( this.cm.container ) {
+				this.cm.container.addEventListener( 'mousedown', this.onContainerMouseDown );
+			}
 
 			// Attach to document
 			document.addEventListener( 'keydown', this.onKeyDown );
@@ -65,12 +71,42 @@
 			this.canvas.removeEventListener( 'touchend', this.onTouchEnd );
 			this.canvas.removeEventListener( 'touchcancel', this.onTouchEnd );
 
+			if ( this.cm.container ) {
+				this.cm.container.removeEventListener( 'mousedown', this.onContainerMouseDown );
+			}
+
 			document.removeEventListener( 'keydown', this.onKeyDown );
 			document.removeEventListener( 'keyup', this.onKeyUp );
 		}
 
 		handleContextMenu( e ) {
 			e.preventDefault();
+		}
+
+		/**
+		 * Handle clicks on the container (outside the canvas) to deselect layers
+		 * This enables the expected UX behavior where clicking outside the canvas
+		 * clears the current selection.
+		 *
+		 * @param {MouseEvent} e
+		 */
+		handleContainerMouseDown( e ) {
+			const cm = this.cm;
+
+			// Only handle clicks directly on the container itself, not on child elements (like canvas)
+			if ( e.target !== cm.container ) {
+				return;
+			}
+
+			// Finish inline text editing if active
+			if ( cm.isTextEditing && cm.inlineTextEditor ) {
+				cm.inlineTextEditor.finishEditing( true );
+			}
+
+			// Deselect all layers using pointer tool behavior
+			if ( cm.currentTool === 'pointer' || cm.currentTool === 'marquee' ) {
+				cm.deselectAll();
+			}
 		}
 
 		/**

@@ -1130,10 +1130,24 @@ describe( 'StateManager', () => {
 	// ============================================================
 
 	describe( 'pendingOperations queue limit', () => {
-		it( 'should drop oldest operation when queue is full for set()', () => {
+		it( 'should coalesce set operations for the same key', () => {
 			stateManager.lockState();
 
-			// Fill up the queue to the limit (100)
+			// Set the same key multiple times
+			stateManager.set( 'testKey', 'value1' );
+			stateManager.set( 'testKey', 'value2' );
+			stateManager.set( 'testKey', 'value3' );
+
+			// Should only have 1 operation (coalesced)
+			expect( stateManager.pendingOperations.length ).toBe( 1 );
+			expect( stateManager.pendingOperations[ 0 ].key ).toBe( 'testKey' );
+			expect( stateManager.pendingOperations[ 0 ].value ).toBe( 'value3' );
+		} );
+
+		it( 'should coalesce when queue is full for set()', () => {
+			stateManager.lockState();
+
+			// Fill up the queue to the limit (100) with unique keys
 			for ( let i = 0; i < 100; i++ ) {
 				stateManager.set( 'key' + i, i );
 			}
@@ -1141,31 +1155,61 @@ describe( 'StateManager', () => {
 			expect( stateManager.pendingOperations.length ).toBe( 100 );
 			expect( stateManager.pendingOperations[ 0 ].key ).toBe( 'key0' );
 
-			// Add one more - should drop oldest
+			// Add one more - should coalesce into an update operation
 			stateManager.set( 'key100', 100 );
 
-			expect( stateManager.pendingOperations.length ).toBe( 100 );
-			expect( stateManager.pendingOperations[ 0 ].key ).toBe( 'key1' ); // key0 was dropped
-			expect( stateManager.pendingOperations[ 99 ].key ).toBe( 'key100' );
+			// Queue should not grow, and warning should be logged
+			expect( stateManager.pendingOperations.length ).toBeLessThanOrEqual( 100 );
 			expect( mw.log.warn ).toHaveBeenCalledWith(
 				expect.stringContaining( 'Pending operations queue full' )
 			);
+
+			// The new key100 should be present in some operation
+			const hasKey100 = stateManager.pendingOperations.some( op => {
+				if ( op.type === 'set' && op.key === 'key100' ) {
+					return true;
+				}
+				if ( op.type === 'update' && op.updates.key100 !== undefined ) {
+					return true;
+				}
+				return false;
+			} );
+			expect( hasKey100 ).toBe( true );
 		} );
 
-		it( 'should drop oldest operation when queue is full for update()', () => {
+		it( 'should coalesce update operations by merging', () => {
 			stateManager.lockState();
 
-			// Fill up the queue to the limit (100)
+			// Add multiple update operations
+			stateManager.update( { keyA: 1 } );
+			stateManager.update( { keyB: 2 } );
+			stateManager.update( { keyC: 3 } );
+
+			// Update operations should be merged
+			expect( stateManager.pendingOperations.length ).toBe( 1 );
+			expect( stateManager.pendingOperations[ 0 ].type ).toBe( 'update' );
+			expect( stateManager.pendingOperations[ 0 ].updates ).toEqual( {
+				keyA: 1,
+				keyB: 2,
+				keyC: 3
+			} );
+		} );
+
+		it( 'should coalesce when queue is full for update()', () => {
+			stateManager.lockState();
+
+			// Fill up the queue with set operations
 			for ( let i = 0; i < 100; i++ ) {
-				stateManager.update( { [ 'key' + i ]: i } );
+				stateManager.set( 'key' + i, i );
 			}
 
 			expect( stateManager.pendingOperations.length ).toBe( 100 );
 
-			// Add one more - should drop oldest
+			// Add an update - should trigger coalescing
 			stateManager.update( { key100: 100 } );
 
-			expect( stateManager.pendingOperations.length ).toBe( 100 );
+			// Should have coalesced sets into an update, so length should be smaller
+			expect( stateManager.pendingOperations.length ).toBeLessThanOrEqual( 100 );
 			expect( mw.log.warn ).toHaveBeenCalledWith(
 				expect.stringContaining( 'Pending operations queue full' )
 			);

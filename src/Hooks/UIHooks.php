@@ -13,6 +13,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\MediaWikiServices;
 
 // Define constants if not already defined (for static analysis/local tools)
@@ -426,7 +427,7 @@ class UIHooks {
 		$html .= '<tbody>';
 
 		foreach ( $namedSets as $set ) {
-			$setName = $set['ls_name'] ?? $set['name'] ?? 'default';
+			$setName = $set['ls_name'] ?? $set['name'] ?? LayersConstants::DEFAULT_SET_NAME;
 			$author = $set['latest_user_name'] ?? 'Unknown';
 			$revisions = (int)( $set['revision_count'] ?? 1 );
 			$timestamp = $set['latest_timestamp'] ?? '';

@@ -235,8 +235,9 @@ class DrawingController {
 			textAlign: 'left',
 			verticalAlign: 'top',
 			lineHeight: 1.2,
-			stroke: style.color || '#000000',
-			strokeWidth: style.strokeWidth || 1,
+			// Rectangle properties - stroke is transparent by default for cleaner look
+			stroke: 'transparent',
+			strokeWidth: 0,
 			fill: style.fill || '#ffffff',
 			cornerRadius: 0,
 			padding: 8
@@ -263,7 +264,8 @@ class DrawingController {
 			textAlign: 'center',
 			verticalAlign: 'middle',
 			lineHeight: 1.2,
-			stroke: style.color || '#000000',
+			// Callout has visible stroke to show the bubble shape and tail
+			stroke: style.stroke || '#000000',
 			strokeWidth: style.strokeWidth || 1,
 			fill: style.fill || '#ffffff',
 			cornerRadius: 8,
@@ -576,7 +578,42 @@ class DrawingController {
 		// Delegate rendering to the canvas manager's renderer
 		if ( this.canvasManager && this.canvasManager.renderer ) {
 			this.canvasManager.renderer.drawLayer( this.tempLayer );
+
+			// For textbox with transparent stroke, draw a visible bounding box
+			// so users can see what they're creating during the drag operation
+			// (Callout has visible stroke so doesn't need this)
+			if ( this.tempLayer.type === 'textbox' &&
+				( !this.tempLayer.stroke || this.tempLayer.stroke === 'transparent' ||
+				this.tempLayer.strokeWidth === 0 ) ) {
+				this._drawPreviewBoundingBox( this.tempLayer );
+			}
 		}
+	}
+
+	/**
+	 * Draw a dashed bounding box around a layer during drawing preview
+	 *
+	 * @private
+	 * @param {Object} layer - The layer to draw bounds for
+	 */
+	_drawPreviewBoundingBox ( layer ) {
+		const ctx = this.canvasManager.ctx;
+		if ( !ctx ) {
+			return;
+		}
+
+		const x = layer.x;
+		const y = layer.y;
+		const width = layer.width || 0;
+		const height = layer.height || 0;
+
+		ctx.save();
+		ctx.strokeStyle = '#2196F3';
+		ctx.lineWidth = 1;
+		ctx.setLineDash( [ 4, 4 ] );
+		ctx.strokeRect( x, y, width, height );
+		ctx.setLineDash( [] );
+		ctx.restore();
 	}
 
 	/**

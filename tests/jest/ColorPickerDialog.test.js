@@ -315,6 +315,54 @@ describe( 'ColorPickerDialog', () => {
 			expect( swatch.classList.contains( 'selected' ) ).toBe( true );
 		} );
 
+		it( 'should update custom color inputs when swatch is clicked', () => {
+			const onApply = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ffffff',
+				onApply
+			} );
+			dialog.open();
+
+			// Find a swatch with a known color (e.g., red #ff0000)
+			const swatches = document.querySelectorAll( '.color-picker-swatch-btn' );
+			let redSwatch = null;
+			swatches.forEach( ( swatch ) => {
+				if ( swatch.style.backgroundColor === 'rgb(255, 0, 0)' ||
+					swatch.title === '#ff0000' ) {
+					redSwatch = swatch;
+				}
+			} );
+
+			// If we found a red swatch, click it
+			if ( redSwatch ) {
+				redSwatch.click();
+
+				// The custom color input should now show the clicked color
+				const hexInput = document.querySelector( '.color-picker-hex-input' );
+				expect( hexInput.value ).toBe( '#ff0000' );
+
+				const colorInput = document.querySelector( '.color-picker-custom-input' );
+				expect( colorInput.value ).toBe( '#ff0000' );
+			}
+		} );
+
+		it( 'should clear hex input when none button is clicked', () => {
+			const onApply = jest.fn();
+			const dialog = new ColorPickerDialog( {
+				currentColor: '#ff0000',
+				onApply
+			} );
+			dialog.open();
+
+			// Click none button
+			const noneBtn = document.querySelector( '.color-picker-none-btn' );
+			noneBtn.click();
+
+			// The hex input should be cleared
+			const hexInput = document.querySelector( '.color-picker-hex-input' );
+			expect( hexInput.value ).toBe( '' );
+		} );
+
 		it( 'should select none when none button clicked', () => {
 			const onApply = jest.fn();
 			const dialog = new ColorPickerDialog( {

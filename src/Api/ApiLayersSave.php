@@ -8,6 +8,7 @@ use ApiBase;
 use ApiUsageException;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
@@ -110,9 +111,9 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
-		if ( $requestedFilename !== null && strpos( $requestedFilename, 'Slide:' ) === 0 ) {
+		if ( $requestedFilename !== null && strpos( $requestedFilename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
-			$slidename = substr( $requestedFilename, 6 );
+			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
 			$this->executeSlideSave( $user, $params, $slidename );
 			return;
 		}
@@ -135,7 +136,7 @@ class ApiLayersSave extends ApiBase {
 			// Schema is created/updated via LayersSchemaManager on LoadExtensionSchemaUpdates hook
 			if ( !$db->isSchemaReady() ) {
 				$this->dieWithError(
-					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+					[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
 					'dbschema-missing'
 				);
 			}
@@ -143,7 +144,7 @@ class ApiLayersSave extends ApiBase {
 			// Extract parameters from the API request
 			$fileName = $requestedFilename;
 			$data = $params['data'];
-			$rawSetName = $params['setname'] ?? 'default';
+			$rawSetName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
 			$setName = SetNameSanitizer::sanitize( $rawSetName );
 
 			// Log set name processing via MediaWiki's debug log
@@ -162,14 +163,14 @@ class ApiLayersSave extends ApiBase {
 			// from shared repositories (e.g., Wikimedia Commons remotes).
 			$title = Title::newFromText( $fileName, NS_FILE );
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
-				$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 			}
 
 			// Use DB key form for database operations
 			// This ensures consistency (spaces -> underscores) across save/load paths
 			$fileDbKey = $title->getDBkey();
 			if ( $fileDbKey === '' ) {
-				$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 			}
 
 			// SIZE LIMIT: Check payload size before expensive JSON parsing
@@ -180,7 +181,7 @@ class ApiLayersSave extends ApiBase {
 			// Default: 2MB (configurable via $wgLayersMaxBytes)
 			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
-				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
+				$this->dieWithError( LayersConstants::ERROR_DATA_TOO_LARGE, 'datatoolarge' );
 			}
 
 			// PARSE: Decode JSON structure from client
@@ -191,7 +192,7 @@ class ApiLayersSave extends ApiBase {
 				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
 				// JSON parsing failed - invalid syntax, encoding issues, or malformed data
-				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
+				$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
 			}
 
 			// HANDLE BOTH OLD AND NEW DATA FORMATS
@@ -230,7 +231,7 @@ class ApiLayersSave extends ApiBase {
 			if ( !$validationResult->isValid() ) {
 				// Combine all error messages with i18n keys for client display
 				$errors = implode( '; ', $validationResult->getErrors() );
-				$this->dieWithError( [ 'layers-validation-failed', $errors ], 'validationfailed' );
+				$this->dieWithError( [ LayersConstants::ERROR_VALIDATION_FAILED, $errors ], 'validationfailed' );
 			}
 
 			// Extract sanitized data (validator has cleaned/normalized all fields)
@@ -258,7 +259,7 @@ class ApiLayersSave extends ApiBase {
 			//   $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ]; // stricter for new users
 			// Rate limit is checked AFTER validation to avoid wasting limit on invalid data
 			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
-				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// FILE VERIFICATION: Ensure target file exists and is accessible
@@ -267,7 +268,7 @@ class ApiLayersSave extends ApiBase {
 			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
 			$file = $repoGroup->findFile( $title );
 			if ( !$file || !$file->exists() ) {
-				$this->dieWithError( 'layers-file-not-found', 'filenotfound' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 			}
 
 			$imgWidth = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : 0;
@@ -346,7 +347,7 @@ class ApiLayersSave extends ApiBase {
 			} else {
 				// Database operation failed (unlikely after all validation)
 				// Possible causes: disk full, connection loss, constraint violation
-				$this->dieWithError( 'layers-save-failed', 'savefailed' );
+				$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 			}
 		} catch ( ApiUsageException $e ) {
 			throw $e;
@@ -386,7 +387,7 @@ class ApiLayersSave extends ApiBase {
 			// - Stack traces (reveals code structure, library versions)
 			// - Configuration values
 			// Generic message prevents attackers from learning about system internals
-			$this->dieWithError( 'layers-save-failed', 'savefailed' );
+			$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 		}
 	}
 
@@ -405,26 +406,26 @@ class ApiLayersSave extends ApiBase {
 
 			if ( !$db->isSchemaReady() ) {
 				$this->dieWithError(
-					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+					[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
 					'dbschema-missing'
 				);
 			}
 
 			$data = $params['data'];
-			$rawSetName = $params['setname'] ?? 'default';
+			$rawSetName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
 			$setName = SetNameSanitizer::sanitize( $rawSetName );
 
 			// Size limit check
 			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
-				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
+				$this->dieWithError( LayersConstants::ERROR_DATA_TOO_LARGE, 'datatoolarge' );
 			}
 
 			// Parse JSON
 			try {
 				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
-				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
+				$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
 			}
 
 			// Handle both old and new data formats
@@ -459,7 +460,7 @@ class ApiLayersSave extends ApiBase {
 
 			if ( !$validationResult->isValid() ) {
 				$errors = implode( '; ', $validationResult->getErrors() );
-				$this->dieWithError( [ 'layers-validation-failed', $errors ], 'validationfailed' );
+				$this->dieWithError( [ LayersConstants::ERROR_VALIDATION_FAILED, $errors ], 'validationfailed' );
 			}
 
 			$sanitizedData = $validationResult->getData();
@@ -469,14 +470,14 @@ class ApiLayersSave extends ApiBase {
 			$rateLimiter = $this->createRateLimiter();
 			$this->enforceLayerLimits( $rateLimiter, $sanitizedData, $layerCount );
 			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
-				$this->dieWithError( 'layers-rate-limited', 'ratelimited' );
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
-			$normalizedName = 'Slide:' . $slidename;
+			$normalizedName = LayersConstants::SLIDE_PREFIX . $slidename;
 			$imgMetadata = [
 				'mime' => 'application/x-layers-slide',
-				'sha1' => 'slide',
+				'sha1' => LayersConstants::TYPE_SLIDE,
 			];
 
 			// Merge slide settings into background settings for storage
@@ -500,7 +501,7 @@ class ApiLayersSave extends ApiBase {
 				];
 				$this->getResult()->addValue( null, $this->getModuleName(), $resultData );
 			} else {
-				$this->dieWithError( 'layers-save-failed', 'savefailed' );
+				$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 			}
 		} catch ( ApiUsageException $e ) {
 			throw $e;
@@ -513,7 +514,7 @@ class ApiLayersSave extends ApiBase {
 				'user_id' => $user->getId(),
 				'slidename' => $slidename
 			] );
-			$this->dieWithError( 'layers-save-failed', 'savefailed' );
+			$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 		}
 	}
 
