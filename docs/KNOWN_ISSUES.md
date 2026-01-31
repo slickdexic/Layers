@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** January 31, 2026 (Comprehensive Critical Review)  
-**Version:** 1.5.42
+**Version:** 1.5.43
 
 This document lists known issues and current gaps for the Layers extension.
 

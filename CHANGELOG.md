@@ -2,6 +2,24 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.43] - 2026-01-31
+
+### Added
+- **Point Release** — Synchronized releases across main, REL1_43, and REL1_39 branches
+
+### Fixed
+- **Documentation Audit** — Comprehensive update of all markdown and mediawiki files
+- **Issue Cleanup** — P3 issues reduced from 12 to 3 after investigation (6 marked as non-issues)
+
+### Technical Details
+- All 11,112 tests pass (163 test suites)
+- Test coverage: 95.42% statement, 85.25% branch
+- Rating: 8.8/10 — Production-ready, approaching world-class
+- P2 issues: 5 open
+- P3 issues: 3 open, 9 resolved
+
+---
+
 ## [1.5.42] - 2026-01-31
 
 ### Security

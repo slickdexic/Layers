@@ -282,7 +282,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.42 |
+| **Version (main)** | 1.5.43 |
 | **Version (REL1_43)** | 1.5.40-REL1_43 |
 | **Version (REL1_39)** | 1.5.40-REL1_39 |
 | **Release Date** | January 30, 2026 |
