@@ -190,6 +190,25 @@ class LayersConstants {
 	public const RATE_LIMIT_CREATE = 'editlayers-create';
 
 	// ========================================================================
+	// API List Limits
+	// ========================================================================
+
+	/**
+	 * Default limit for API list results
+	 */
+	public const API_LIST_DEFAULT_LIMIT = 50;
+
+	/**
+	 * Minimum limit for API list results
+	 */
+	public const API_LIST_MIN_LIMIT = 1;
+
+	/**
+	 * Maximum limit for API list results
+	 */
+	public const API_LIST_MAX_LIMIT = 500;
+
+	// ========================================================================
 	// Database table names (without prefix)
 	// ========================================================================
 

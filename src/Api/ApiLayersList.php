@@ -64,8 +64,8 @@ class ApiLayersList extends ApiBase {
 
 		// Parse parameters
 		$prefix = $params['prefix'] ?? '';
-		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : 50;
-		$limit = max( 1, min( $limit, 500 ) );
+		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : LayersConstants::API_LIST_DEFAULT_LIMIT;
+		$limit = max( LayersConstants::API_LIST_MIN_LIMIT, min( $limit, LayersConstants::API_LIST_MAX_LIMIT ) );
 		$offset = isset( $params['offset'] ) ? (int)$params['offset'] : 0;
 		$offset = max( 0, $offset );
 		$sort = $params['sort'] ?? 'name';
@@ -187,10 +187,10 @@ class ApiLayersList extends ApiBase {
 			],
 			'limit' => [
 				self::PARAM_TYPE => 'limit',
-				self::PARAM_DFLT => 50,
-				self::PARAM_MIN => 1,
-				self::PARAM_MAX => 500,
-				self::PARAM_MAX2 => 500,
+				self::PARAM_DFLT => LayersConstants::API_LIST_DEFAULT_LIMIT,
+				self::PARAM_MIN => LayersConstants::API_LIST_MIN_LIMIT,
+				self::PARAM_MAX => LayersConstants::API_LIST_MAX_LIMIT,
+				self::PARAM_MAX2 => LayersConstants::API_LIST_MAX_LIMIT,
 			],
 			'offset' => [
 				self::PARAM_TYPE => 'integer',

@@ -304,15 +304,14 @@ All API modules now use LayersConstants::ERROR_* instead of magic strings.
 
 ---
 
-### MED-13: SVG Script Detection Could Be Bypassed
+### ~~MED-13: SVG Script Detection Could Be Bypassed~~ ✅ RESOLVED
 
 **Location:** `src/Validation/ServerSideLayerValidator.php`
 
-**Problem:** Doesn't check HTML entity encoded variants like `java&#115;cript:`.
-
-**Fix:** Decode entities before checking.
-
-**Estimated Effort:** 1 hour
+**Resolution (January 31, 2026):** Already implemented. The `validateSvgString()` method
+decodes HTML entities before checking for dangerous patterns (line 1290):
+`$decodedSvg = html_entity_decode( $svg, ENT_QUOTES | ENT_HTML5, 'UTF-8' );`
+All security checks run against both raw and decoded versions.
 
 ---
 
@@ -336,11 +335,12 @@ Some unreachable returns annotated, others not.
 ### LOW-6: Empty String Boolean Normalization
 Empty string `''` normalizes to `true` (legacy behavior).
 
-### LOW-7: Script Injection Pattern Enhancement
-Add `expression(...)` pattern for defense-in-depth.
+### ~~LOW-7: Script Injection Pattern Enhancement~~ ✅ RESOLVED
+Already implemented in `ColorValidator.php` line 284: `/expression\s*\(/i` pattern.
 
-### LOW-8: Hardcoded Magic Values in ApiLayersList
-Limit bounds (1, 500) should be constants.
+### ~~LOW-8: Hardcoded Magic Values in ApiLayersList~~ ✅ RESOLVED
+Added `LayersConstants::API_LIST_DEFAULT_LIMIT` (50), `API_LIST_MIN_LIMIT` (1), 
+and `API_LIST_MAX_LIMIT` (500). Updated ApiLayersList.php to use these constants.
 
 ### LOW-9: CHECK Constraints Hardcoded in SQL
 Don't match PHP config; document dependency.
