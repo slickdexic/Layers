@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** January 31, 2026 (Comprehensive Critical Review)  
-**Version:** 1.5.41  
+**Version:** 1.5.42  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -21,7 +21,7 @@
 
 The Layers extension is a **mature, feature-rich MediaWiki extension** with **excellent security practices** and **outstanding test coverage**. All 11,112 tests pass. This comprehensive critical review identifies remaining issues to address for world-class status.
 
-**Overall Assessment:** **8.7/10** — Production-ready, approaching world-class.
+**Overall Assessment:** **8.8/10** — Production-ready, approaching world-class.
 
 ### Key Strengths
 1. **Excellent test coverage** (95.42% statement, 85.25% branch, 11,112 tests, all passing)
@@ -42,6 +42,8 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 16. **No TODO/FIXME/HACK comments** in production code
 17. **No console.log statements** in production code (only in scripts/)
 18. **SQL injection protected** via parameterized queries
+19. **Concurrency-limited API calls** in refreshAllViewers (max 5)
+20. **Configurable complexity threshold** ($wgLayersMaxComplexity)
 
 ### Issues Resolved (January 30-31, 2026)
 1. ✅ **TailCalculator bug** — All 11,112 tests passing
@@ -50,13 +52,19 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 4. ✅ **Exception handling** — `\Throwable` standardized
 5. ✅ **API code duplication** — LayersApiHelperTrait created
 6. ✅ **SVG script detection bypass** — HTML entity decoding implemented
+7. ✅ **Race condition in saveLayerSet** — FOR UPDATE lock inside transaction (P1.1)
+8. ✅ **Missing permission check in ApiLayersList** — checkUserRightsAny('read') added (P1.2)
+9. ✅ **isComplexityAllowed() incomplete** — All 15 layer types now covered (P2.1)
+10. ✅ **Raw SQL fragments in listSlides()** — Refactored to batch queries (P2.5)
+11. ✅ **Missing rate limiting on ApiLayersList** — pingLimiter added (P2.8)
+12. ✅ **paths array limit** — Max 100 paths for DoS prevention (P2.10)
+13. ✅ **Magic complexity threshold** — Configurable via $wgLayersMaxComplexity (P3.12)
+14. ✅ **refreshAllViewers parallelism** — Limited to 5 concurrent requests (P3.5)
 
-### Remaining Issues (Newly Identified)
-1. **Race condition in saveLayerSet named set limit check** — Limit check outside transaction (HIGH)
-2. **isComplexityAllowed() incomplete coverage** — Many layer types add 0 complexity (MEDIUM)
-3. **Missing permission check in ApiLayersList** — Anyone can enumerate slides (MEDIUM)
-4. **StateManager 30s auto-recovery** — Could corrupt state if legitimate slow operation (LOW)
-5. **Documentation metrics drift** — Several files have outdated values (HIGH)
+### Remaining Issues
+1. **P2.6:** Inconsistent DB return types (false/null/-1) — 2 days to fix
+2. **P2.9:** StateManager 30s auto-recovery — Could corrupt state if legitimate slow op
+3. **P3:** 9 low-priority backlog items
 
 ### Issue Summary (Updated January 31, 2026)
 

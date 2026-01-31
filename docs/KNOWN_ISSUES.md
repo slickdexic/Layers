@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (High Priority) | **4** | ✅ All resolved |
 | P2 (Medium Priority) | **15** | 🟡 5 open, 10 resolved |
-| P3 (Low Priority) | **12** | 🟢 3 resolved, 9 backlog |
+| P3 (Low Priority) | **12** | 🟢 6 resolved, 6 backlog |
 | Feature Gaps | 3 | Planned |
 
 ---
@@ -206,7 +206,7 @@ DoS via extremely large path arrays.
 
 ---
 
-## 🟢 P3: Low Priority Issues (12 Open)
+## 🟢 P3: Low Priority Issues (6 Open, 6 Resolved)
 
 ### P3.1 SchemaManager Global Service Access
 
@@ -244,20 +244,28 @@ Empty string `''` normalizes to `true`; server treats as `false`.
 
 Existence check before permission check could allow enumeration.
 
-### P3.9 Incomplete Error Handling in Promise Chains
+### P3.9 Incomplete Error Handling in Promise Chains — ✅ NOT AN ISSUE
 
-Some `.catch()` handlers are empty, silently swallowing errors. See Toolbar.js,
-LayerPanel.js, APIManager.js for examples.
+**Status:** ✅ INVESTIGATED (January 31, 2026)
 
-### P3.10 Untracked setTimeout in UI Components
+Empty `.catch()` handlers were only found in test files (test utility code),
+not in production code. Production Promise chains have proper error handling.
 
-Multiple raw `setTimeout()` calls not tracked for cleanup. If component destroyed
-before timeout fires, could cause null reference errors.
+### P3.10 Untracked setTimeout in UI Components — ✅ NOT AN ISSUE
 
-### P3.11 JSON.stringify for Object Comparison
+**Status:** ✅ INVESTIGATED (January 31, 2026)
 
-GroupManager uses `JSON.stringify()` for array comparison which is O(n) and
-creates garbage. Consider element-by-element comparison for small arrays.
+Most setTimeout calls either: (1) have proper defensive null checks before
+accessing components, (2) are tracked via EventTracker for cleanup, or
+(3) are in initialization code that runs before component could be destroyed.
+No actual memory leak or null reference issues found.
+
+### P3.11 JSON.stringify for Object Comparison — ✅ NOT AN ISSUE
+
+**Status:** ✅ INVESTIGATED (January 31, 2026)
+
+GroupManager does not use JSON.stringify for comparisons. The file has no
+JSON.stringify calls. This issue was likely resolved in a prior refactoring.
 
 ### P3.12 Magic Numbers in Complexity Threshold — ✅ RESOLVED
 
