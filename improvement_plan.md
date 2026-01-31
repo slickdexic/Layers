@@ -15,7 +15,7 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
 - 🟠 **P1:** 1 open (documentation sync)
-- 🟡 **P2:** 8 open (code quality improvements)
+- 🟡 **P2:** 2 open (code quality improvements)
 - 🟢 **P3:** 12 open (minor improvements)
 
 **Verified Metrics (January 31, 2026):**
@@ -134,7 +134,7 @@ Previous P0 items resolved:
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 8 OPEN ITEMS
+## Phase 2 (P2): Medium Priority — 🟡 2 OPEN ITEMS
 
 ### P2.1 Fix Race Condition in renameNamedSet() — ✅ RESOLVED
 
@@ -227,25 +227,18 @@ $existsCount = $dbw->selectField( ..., [ 'FOR UPDATE' ] );
 
 ---
 
-### P2.6 Fix SVG Script Detection Bypass — OPEN
+### P2.6 Fix SVG Script Detection Bypass — ✅ RESOLVED
 
-**Status:** 🟡 OPEN  
+**Status:** ✅ RESOLVED (Verified January 31, 2026)  
 **Priority:** P2 - Medium  
 **Category:** Security Enhancement
 
-**Problem:** Doesn't check HTML entity encoded variants.
+**Resolution:** Already properly implemented in `validateSvgShape()`:
+- Line 1289: `$decodedSvg = html_entity_decode( $svg, ENT_QUOTES | ENT_HTML5, 'UTF-8' );`
+- All security checks now validate both raw and decoded SVG
+- Catches bypass attempts like `java&#115;cript:` and `&lt;script&gt;`
 
-**Solution:** Decode entities before checking:
-```php
-$decoded = html_entity_decode( $svg, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-if ( preg_match( '/javascript\s*:/i', $decoded ) ) {
-    // block
-}
-```
-
-**Files:** `src/Validation/ServerSideLayerValidator.php`
-
-**Estimated Effort:** 1 hour
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 1285-1327
 
 ---
 
