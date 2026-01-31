@@ -88,14 +88,14 @@
 				// FIX 2025-11-14: Increased from 200 to 1000 to match server validation
 				maxFontSize: 1000,
 				minFontSize: 1,
-				maxStrokeWidth: 50,
+				maxStrokeWidth: 100,
 				minStrokeWidth: 0,
 				maxOpacity: 1,
 				minOpacity: 0,
 				maxSides: limits.MAX_POLYGON_SIDES || 20,
 				minSides: limits.MIN_POLYGON_SIDES || 3,
 				maxBlurRadius: 100,
-				minBlurRadius: 1,
+				minBlurRadius: 0,
 
 				// Star point limits
 				minStarPoints: limits.MIN_STAR_POINTS || 3,
@@ -123,8 +123,8 @@
 				// Valid text alignments
 				validTextAlignments: [ 'left', 'center', 'right', 'start', 'end' ],
 
-				// Valid arrow styles
-				validArrowStyles: [ 'single', 'double', 'none' ]
+				// Valid arrow styles (sync with server: single, double, none, arrow, dot)
+				validArrowStyles: [ 'single', 'double', 'none', 'arrow', 'dot' ]
 			};
 		}
 
@@ -167,6 +167,9 @@
 
 			// Validate colors
 			this.validateColors( layer, result );
+
+			// Validate gradient fill
+			this.validateGradient( layer, result );
 
 			// Validate points array
 			this.validatePoints( layer, result );
@@ -348,6 +351,98 @@
 					}
 				}
 			} );
+		}
+
+		/**
+		 * Validate gradient fill object
+		 * Synced with server-side validation in ServerSideLayerValidator.php
+		 *
+		 * @param {Object} layer
+		 * @param {Object} result
+		 */
+		validateGradient( layer, result ) {
+			if ( layer.gradient === undefined ) {
+				return;
+			}
+
+			const gradient = layer.gradient;
+
+			// Gradient must be an object
+			if ( typeof gradient !== 'object' || gradient === null || Array.isArray( gradient ) ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-gradient-invalid' ) );
+				return;
+			}
+
+			// Validate required type
+			if ( !gradient.type || ![ 'linear', 'radial' ].includes( gradient.type ) ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-gradient-type-invalid' ) );
+				return;
+			}
+
+			// Validate colors array
+			if ( !Array.isArray( gradient.colors ) || gradient.colors.length < 2 ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-gradient-colors-required' ) );
+				return;
+			}
+
+			// Server allows max 10 color stops
+			if ( gradient.colors.length > 10 ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-gradient-colors-max' ) );
+				return;
+			}
+
+			// Validate each color stop
+			for ( let i = 0; i < gradient.colors.length; i++ ) {
+				const stop = gradient.colors[ i ];
+				if ( typeof stop !== 'object' || stop === null ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-gradient-stop-invalid', i ) );
+					continue;
+				}
+
+				// Validate offset (0-1)
+				if ( typeof stop.offset !== 'number' || stop.offset < 0 || stop.offset > 1 ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-gradient-offset-invalid', i ) );
+				}
+
+				// Validate color
+				if ( !stop.color || !this.isValidColor( stop.color ) ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-gradient-color-invalid', i ) );
+				}
+			}
+
+			// Validate angle for linear gradients (0-360)
+			if ( gradient.type === 'linear' && gradient.angle !== undefined ) {
+				if ( typeof gradient.angle !== 'number' || gradient.angle < 0 || gradient.angle > 360 ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-gradient-angle-invalid' ) );
+				}
+			}
+
+			// Validate center/radius for radial gradients
+			if ( gradient.type === 'radial' ) {
+				if ( gradient.centerX !== undefined &&
+					( typeof gradient.centerX !== 'number' || gradient.centerX < 0 || gradient.centerX > 1 ) ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-gradient-centerx-invalid' ) );
+				}
+				if ( gradient.centerY !== undefined &&
+					( typeof gradient.centerY !== 'number' || gradient.centerY < 0 || gradient.centerY > 1 ) ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-gradient-centery-invalid' ) );
+				}
+				if ( gradient.radius !== undefined &&
+					( typeof gradient.radius !== 'number' || gradient.radius < 0 || gradient.radius > 2 ) ) {
+					result.isValid = false;
+					result.errors.push( this.getMessage( 'layers-validation-gradient-radius-invalid' ) );
+				}
+			}
 		}
 
 		/**
@@ -662,8 +757,9 @@
 			}
 
 			// Allow rgb/rgba with strict validation
-			if ( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/.test( color ) ) {
-				const matches = color.match( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
+			// Alpha accepts: 0, 1, 0.5, .5, 1.0, etc.
+			if ( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/.test( color ) ) {
+				const matches = color.match( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/ );
 				// Validate RGB values are in 0-255 range
 				for ( let i = 1; i <= 3; i++ ) {
 					if (
@@ -673,12 +769,20 @@
 						return false;
 					}
 				}
+				// Validate alpha is in 0-1 range
+				if ( matches[ 4 ] !== undefined ) {
+					const alpha = parseFloat( matches[ 4 ] );
+					if ( isNaN( alpha ) || alpha < 0 || alpha > 1 ) {
+						return false;
+					}
+				}
 				return true;
 			}
 
 			// Allow HSL/HSLA with strict validation
-			if ( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/.test( color ) ) {
-				const hslMatches = color.match( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?))?\s*\)$/ );
+			// Alpha accepts: 0, 1, 0.5, .5, 1.0, etc.
+			if ( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/.test( color ) ) {
+				const hslMatches = color.match( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/ );
 				// Validate HSL values
 				if (
 					hslMatches[ 1 ] &&
@@ -698,14 +802,47 @@
 				) {
 					return false;
 				}
+				// Validate alpha is in 0-1 range
+				if ( hslMatches[ 4 ] !== undefined ) {
+					const alpha = parseFloat( hslMatches[ 4 ] );
+					if ( isNaN( alpha ) || alpha < 0 || alpha > 1 ) {
+						return false;
+					}
+				}
 				return true;
 			}
 
-			// Strict whitelist of named colors
+			// CSS named colors - synchronized with server-side ColorValidator.php
+			// 148 standard CSS color names including 'none' and 'transparent'
 			const safeColors = [
-				'transparent', 'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange',
-				'purple', 'pink', 'gray', 'grey', 'brown', 'cyan', 'magenta', 'lime',
-				'navy', 'maroon', 'olive', 'teal', 'silver', 'aqua', 'fuchsia'
+				'none', 'transparent',
+				'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure',
+				'beige', 'bisque', 'black', 'blanchedalmond', 'blue', 'blueviolet',
+				'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate', 'coral',
+				'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan',
+				'darkgoldenrod', 'darkgray', 'darkgreen', 'darkgrey', 'darkkhaki',
+				'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid', 'darkred',
+				'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray',
+				'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue',
+				'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite',
+				'forestgreen', 'fuchsia', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod',
+				'gray', 'green', 'greenyellow', 'grey', 'honeydew', 'hotpink', 'indianred',
+				'indigo', 'ivory', 'khaki', 'lavender', 'lavenderblush', 'lawngreen',
+				'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan',
+				'lightgoldenrodyellow', 'lightgray', 'lightgreen', 'lightgrey', 'lightpink',
+				'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray',
+				'lightslategrey', 'lightsteelblue', 'lightyellow', 'lime', 'limegreen',
+				'linen', 'magenta', 'maroon', 'mediumaquamarine', 'mediumblue',
+				'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue',
+				'mediumspringgreen', 'mediumturquoise', 'mediumvioletred', 'midnightblue',
+				'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace',
+				'olive', 'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod',
+				'palegreen', 'paleturquoise', 'palevioletred', 'papayawhip', 'peachpuff',
+				'peru', 'pink', 'plum', 'powderblue', 'purple', 'red', 'rosybrown',
+				'royalblue', 'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell',
+				'sienna', 'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey',
+				'snow', 'springgreen', 'steelblue', 'tan', 'teal', 'thistle', 'tomato',
+				'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen'
 			];
 
 			return safeColors.includes( color.toLowerCase() );
@@ -722,7 +859,13 @@
 			if ( this.ValidationHelpers && this.ValidationHelpers.containsScriptInjection ) {
 				return this.ValidationHelpers.containsScriptInjection( text );
 			}
-			return /<script|javascript:|data:|vbscript:|on\w+\s*=/i.test( text );
+			// Fallback when ValidationHelpers not available
+			// Detect: <script>, javascript:, data:, vbscript:, event handlers (onclick=, etc.),
+			// and expression() (IE CSS XSS vector)
+			if ( typeof text !== 'string' ) {
+				return false;
+			}
+			return /<script|javascript:|data:|vbscript:|on\w+\s*=|expression\s*\(/i.test( text );
 		}
 
 		/**
@@ -758,6 +901,10 @@
 				'layers-validation-strokewidth-range': 'Stroke width must be between $1 and $2',
 				'layers-validation-opacity-invalid': 'Invalid opacity value',
 				'layers-validation-opacity-range': 'Opacity must be between $1 and $2',
+				'layers-validation-fillopacity-invalid': 'Invalid fill opacity value',
+				'layers-validation-fillopacity-range': 'Fill opacity must be between $1 and $2',
+				'layers-validation-strokeopacity-invalid': 'Invalid stroke opacity value',
+				'layers-validation-strokeopacity-range': 'Stroke opacity must be between $1 and $2',
 				'layers-validation-sides-invalid': 'Invalid number of sides',
 				'layers-validation-sides-range': 'Number of sides must be between $1 and $2',
 				'layers-validation-blurradius-invalid': 'Invalid blur radius',

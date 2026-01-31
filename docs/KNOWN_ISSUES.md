@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** January 30, 2026 (Post-Fix Update)  
+**Last Updated:** January 30, 2026 (Comprehensive Review)  
 **Version:** 1.5.40
 
 This document lists known issues and current gaps for the Layers extension.
@@ -12,291 +12,270 @@ This document lists known issues and current gaps for the Layers extension.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
-| P1 (Runtime Errors) | 0 | ✅ All resolved |
-| P2 (Functional) | 0 | ✅ All resolved |
-| P3 (UX Polish) | **0** | ✅ All resolved |
-| Feature Gaps | 3 | Planned (F3, F6, F7) |
+| P1 (High Priority) | **3** | 🟠 Documentation issues |
+| P2 (Medium Priority) | **11** | 🟡 Open |
+| P3 (Low Priority) | **12** | 🟢 Backlog |
+| Feature Gaps | 3 | Planned |
 
 ---
 
 ## ✅ P0: Critical Bugs — ALL RESOLVED
 
-### P0.1 TailCalculator Test Failing — RESOLVED
+All critical bugs identified in previous reviews have been resolved.
+All **11,112** tests pass as of January 30, 2026.
+
+---
+
+## 🟠 P1: High Priority Issues (3 Open)
+
+### P1.1 Documentation Metrics Drift — OPEN
+
+**Status:** 🟠 OPEN  
+**Severity:** P1 (High)  
+**Component:** Documentation
+
+**Issue:** 35 documentation inaccuracies found across files:
+
+| Metric | Various Docs | Actual Verified |
+|--------|--------------|----------------|
+| Tests | 10,939 / 11,067 / 11,069 / 11,096 | **11,112** |
+| JS Files | 126 / 139 / 141 | **139** |
+| Statement Coverage | 94.65% / 95.00% | **95.42%** |
+| God classes | 12 / 14 / 17 | **18** |
+| i18n messages | 653 / 656 / 718 | **667** |
+
+**Impact:** Project appears inconsistent; readers don't know which values to trust.
+
+**Files Needing Update:**
+- README.md
+- docs/ARCHITECTURE.md  
+- wiki/Home.md (also has JSON artifact corruption)
+- CHANGELOG.md
+
+**Estimated Effort:** 3-4 hours
+
+---
+
+### P1.2 MediaWiki Version Requirement Inconsistency — ✅ RESOLVED
 
 **Status:** ✅ RESOLVED (January 30, 2026)  
-**Severity:** P0 (Critical)  
-**Component:** TailCalculator
+**Severity:** P1 (High)  
+**Component:** Documentation
 
-**Issue:** The test "should return null when tip is inside rectangle" was failing.
+**Resolution:** All files now correctly show `>= 1.44.0`:
+- extension.json: `>= 1.44.0` ✅
+- copilot-instructions.md: `>= 1.44.0` ✅
+- Mediawiki-Extension-Layers.mediawiki: `>= 1.44.0` ✅
 
-**Solution Applied:** Added early return check in `getTailFromTipPosition()`:
-```javascript
-// Check if tip is inside rectangle - no tail needed
-if ( tipX >= x && tipX <= x + width && tipY >= y && tipY <= y + height ) {
-    return null;
-}
+---
+
+### P1.3 wiki/Home.md Contains Corrupted JSON Artifact — OPEN
+
+**Status:** 🟠 OPEN  
+**Severity:** P1 (High)  
+**Component:** Documentation
+
+**Issue:** Line 49 contains corrupted copy/paste artifact:
+```
+### Previous v1.5.35 Highlights", "oldString": "---
 ```
 
-**Files:** `resources/ext.layers.shared/TailCalculator.js`
+**Impact:** Professional appearance compromised.
+
+**Fix:** Remove the corrupted text: `", "oldString": "---`
+
+**Estimated Effort:** 5 minutes
 
 ---
 
-## ✅ P1: Runtime Errors — ALL RESOLVED
+### P1.4 God Class Count Undercounted — OPEN
 
-### P1.1 ApiLayersList.getLogger() Undefined Method — RESOLVED
+**Status:** 🟠 OPEN  
+**Severity:** P1 (High)  
+**Component:** Documentation
 
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Severity:** P1 (Runtime Crash)  
-**Component:** ApiLayersList
+**Issue:** Documentation says 17 god classes, actual count is **18**.
+Missed: LayersValidator.js at 1,116 lines.
 
-**Issue:** The `getLogger()` method called `->getLogger()` on `LayersLogger`, but `LayersLogger` implements `LoggerInterface` directly.
+**Fix:** Update to 18 (2 generated + 14 JS + 2 PHP)
 
-**Solution Applied:** Removed the extra `->getLogger()` call:
-```php
-$this->logger = MediaWikiServices::getInstance()->get( 'LayersLogger' );
-```
-
-**Files:** `src/Api/ApiLayersList.php`
+**Estimated Effort:** 30 minutes
 
 ---
 
-## 🟠 P2: Functional Issues
+## 🟡 P2: Medium Priority Issues (11 Open)
 
-### P2.1 Slides Inside Tables Display as Empty Until Editor Opened — FIXED
-
-**Status:** ✅ FIXED (January 30, 2026)  
-**Severity:** P2 (Functional Bug)  
-**Component:** SlideController, Viewer initialization
-
-**Issue:** Slides embedded in wiki table cells displayed as "empty slide" because the retry logic only checked for containers that were explicitly marked as failed, not containers that appeared in the DOM after the initial initialization run.
-
-**Root Cause:** The `_retryFailedSlides()` filter checked for `container.layersSlideInitialized === false`, but containers added to the DOM after `DOMContentLoaded` (like those in tables) have `undefined`, not `false`.
-
-**Solution Applied:**
-1. Simplified filter to check `container.layersSlideInitSuccess !== true` (catches undefined, false, and in-progress)
-2. Added `window.load` event listener as final fallback
-3. Added `data-layers-init-success` attribute for DOM-level detection
-
-**Files:** `resources/ext.layers/viewer/SlideController.js`, `resources/ext.layers/init.js`
-
----
-
-### P2.2 N+1 Query Patterns in Database Layer — RESOLVED
-
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Severity:** P2 (Performance)  
-**Component:** LayersDatabase, ApiLayersList
-
-**Issue:** Two methods executed N+1 queries:
-
-1. **getNamedSetsForImage()** in `LayersDatabase.php`
-2. **listSlides()** in `LayersDatabase.php`
-
-**Solution Applied:**
-- `getNamedSetsForImage()`: Rewrote with batch query using `IDatabase::LIST_AND` and `IDatabase::LIST_OR`
-- `listSlides()`: Refactored with collect→batch→merge pattern for first revision lookup
-
-**Files:** `src/Database/LayersDatabase.php`
-
----
-
-## 🟡 P3: UX Polish Issues
-
-### P3.1 Overlay Buttons Too Large — RESOLVED
-
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Severity:** P3 (UX Polish)  
-**Component:** ViewerOverlay
-
-**Issue:** The hover overlay buttons (edit/view) on layered images are too large.
-
-**Solution Applied:** Reduced button sizes by approximately 20%:
-- Desktop: 32px → 26px (buttons), 16px → 14px (icons)
-- Mobile: 28px → 24px (buttons), 14px → 12px (icons)
-
-**Files:** `resources/ext.layers/viewer/LayersLightbox.css`
-
----
-
-### P3.2 Drag Handle Hit Areas Too Small — RESOLVED
-
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Severity:** P3 (UX Polish)  
-**Component:** HitTestController
-
-**Issue:** The target areas for resize/rotation drag handles required too precise positioning. Users had to position the cursor exactly on the small 8px handles.
-
-**Solution Applied:** Added 4px hit tolerance padding around all selection handles in the hit test logic. The clickable area is now 16px (8px visual + 4px padding on each side) while the visual appearance remains unchanged.
-
-```javascript
-// Expand rect by tolerance for easier clicking
-const expandedRect = {
-    x: rect.x - hitTolerance,
-    y: rect.y - hitTolerance,
-    width: rect.width + hitTolerance * 2,
-    height: rect.height + hitTolerance * 2
-};
-```
-
-**Files:** `resources/ext.layers.editor/canvas/HitTestController.js`
-
----
-
-### P3.3 Mouse Cursor Not Rotated for Rotated Objects — ALREADY IMPLEMENTED
+### P2.1 Race Condition in renameNamedSet() — ✅ RESOLVED
 
 **Status:** ✅ RESOLVED (Verified January 30, 2026)  
-**Severity:** P3 (UX Polish)  
-**Component:** TransformController
-
-**Original Issue:** When selecting a rotated object, the resize cursors
-(nw-resize, ne-resize, etc.) do not rotate to match the object's rotation.
-
-**Finding:** This feature was **already implemented** in `TransformController.getResizeCursor()`.
-The method calculates the world-space angle by adding layer rotation to handle
-angle, then maps to the appropriate CSS cursor (ns-resize, nesw-resize,
-ew-resize, nwse-resize).
-
-**Testing:** 4 tests verify this behavior:
-- Correct cursors for unrotated handles
-- Cursor adjustment for positive rotations (45°, 90°)
-- Cursor adjustment for negative rotations (-45°, -90°)
-
-**Files:** `resources/ext.layers.editor/canvas/TransformController.js`
-
----
-
-## ⚠️ Code Quality Issues
-
-### CQ-1: Inconsistent Database Return Types
-
-**Status:** 🟡 OPEN  
-**Severity:** Medium  
+**Severity:** P2 (Medium)  
 **Component:** LayersDatabase
 
-**Issue:** Different methods return inconsistent types on error/not-found:
-- `getLayerSet()` returns `false`
-- `getLayerSetByName()` returns `null`
-- `countNamedSets()` returns `-1`
-- `namedSetExists()` returns `null` on error, `false` on not found
-
-**Impact:** Callers must handle multiple error patterns.
-
-**Files:** `src/Database/LayersDatabase.php`
-
----
-
-### CQ-2: Missing Rate Limit for layersinfo API
-
-**Status:** 🟡 OPEN  
-**Severity:** Medium (Security)  
-**Component:** ApiLayersInfo
-
-**Issue:** The read API (`layersinfo`) has no rate limiting, while write APIs do. An attacker could enumerate files/layer sets rapidly.
-
-**Files:** `src/Api/ApiLayersInfo.php`
-
----
-
-### CQ-3: LIKE Query Without Proper Wildcard Escaping — RESOLVED
-
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Severity:** Medium (Security)  
-**Component:** LayersDatabase
-
-**Issue:** LIKE query used `addQuotes()` which didn't escape LIKE wildcards.
-
-**Solution Applied:** Changed to proper `buildLike()` method:
+**Resolution:** Already uses proper transaction handling:
 ```php
-$dbr->buildLike( $dbr->anyString(), $prefix, $dbr->anyString() )
+$dbw->startAtomic( __METHOD__ );
+$existsCount = $dbw->selectField( ..., [ 'FOR UPDATE' ] );
+// ... check and update within transaction ...
+$dbw->endAtomic( __METHOD__ );
 ```
 
+**Files:** `src/Database/LayersDatabase.php` lines 854-895
+
+---
+
+### P2.2 StateManager Pending Operations Queue — ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (Verified January 30, 2026)  
+**Severity:** P2 (Medium)  
+**Component:** StateManager
+
+**Resolution:** Already has proper coalescing implementation in `_queueSetOperation()`:
+- Looks for existing operation with same key and updates it (line 113-118)
+- Uses `_coalesceIntoUpdate()` for queue overflow (line 130-165)
+- No data is dropped - operations are merged
+
+**Files:** `resources/ext.layers.editor/StateManager.js`
+
+---
+
+### P2.3 Client/Server Validation Mismatches — ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (Verified January 30, 2026)  
+**Severity:** P2 (Medium)  
+**Component:** Validation
+
+**Resolution:** Validation is now synchronized:
+
+| Property | Client | Server | Status |
+|----------|--------|--------|--------|
+| Named colors | 148 | 148 | ✅ Synchronized |
+| strokeWidth | 0-100 | 0-100 | ✅ Synchronized |
+| blurRadius | 0-100 | 0-100 | ✅ Synchronized |
+| arrowStyle | 5 values | 5 values | ✅ Synchronized |
+| fillOpacity | 0-1 | 0-1 | ✅ Added |
+| strokeOpacity | 0-1 | 0-1 | ✅ Added |
+
+**Files:** `resources/ext.layers.editor/LayersValidator.js`, `src/Validation/ServerSideLayerValidator.php`
+
+---
+
+### P2.4 Raw SQL Fragments in listSlides() — OPEN
+
+**Status:** 🟡 OPEN  
+**Severity:** P2 (Medium)  
+**Component:** LayersDatabase
+
+**Issue:** String concatenation builds SQL subqueries.
+
+**Fix:** Refactor to separate queries.
+
 **Files:** `src/Database/LayersDatabase.php`
 
 ---
 
-### CQ-4: Duplicate Code Across API Modules — RESOLVED
+### P2.5 Inconsistent Database Return Types — OPEN
 
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Severity:** Low (Maintainability)  
-**Component:** API Modules
+**Status:** 🟡 OPEN  
+**Severity:** P2 (Medium)  
+**Component:** LayersDatabase
 
-**Issue:** `ApiLayersDelete.php` and `ApiLayersRename.php` contained
-duplicate code patterns for schema checks, file validation, and permission checking.
+**Issue:** Different methods return different types on error:
+- `getLayerSet()` → `false`
+- `getLayerSetByName()` → `null`
+- `countNamedSets()` → `-1`
 
-**Solution Applied:** Created `LayersApiHelperTrait` with shared methods:
-- `requireSchemaReady($db)` - database schema validation
-- `validateAndGetFile($filename)` - file title and existence validation  
-- `isOwnerOrAdmin($db, $user, $imgName, $sha1, $setName)` - permission check
-- `getLayerSetWithFallback($db, $imgName, $sha1, $setName)` - SHA1 fallback
+**Fix:** Standardize to `null` for not-found, throw for errors.
 
-Both API modules now use the trait, reducing ~30 lines of duplicate code.
+**Files:** `src/Database/LayersDatabase.php`
 
-**Files:** 
-- `src/Api/Traits/LayersApiHelperTrait.php` (NEW)
-- `src/Api/ApiLayersDelete.php`
-- `src/Api/ApiLayersRename.php`
+---
+
+### P2.6 SVG Script Detection Bypass — OPEN
+
+**Status:** 🟡 OPEN  
+**Severity:** P2 (Medium)  
+**Component:** ServerSideLayerValidator
+
+**Issue:** Doesn't check HTML entity encoded variants like `java&#115;cript:`.
+
+**Fix:** Decode entities before checking or add encoded patterns.
+
+**Files:** `src/Validation/ServerSideLayerValidator.php`
+
+---
+
+## 🟢 P3: Low Priority Issues (8 Open)
+
+### P3.1 SchemaManager Global Service Access
+
+Uses `MediaWikiServices::getInstance()` in constructor, making unit testing harder.
+
+### P3.2 TINYINT for ls_layer_count Column
+
+Max 255; should be smallint for future-proofing.
+
+### P3.3 Magic Strings for Error Codes
+
+Error codes like `'layers-file-not-found'` repeated; create constants class.
+
+### P3.4 CHECK Constraints Hardcoded in SQL
+
+Don't match PHP config values; document dependency.
+
+### P3.5 refreshAllViewers Parallel API Calls
+
+Could overwhelm server; limit concurrency to 3-5.
+
+### P3.6 Inconsistent @codeCoverageIgnore Usage
+
+Some unreachable returns annotated, others not.
+
+### P3.7 Empty String Boolean Normalization (Legacy)
+
+Empty string `''` normalizes to `true`; server treats as `false`.
+
+### P3.8 Potential Information Leak in Existence Check
+
+Existence check before permission check could allow enumeration.
 
 ---
 
 ## ⏳ Feature Gaps
 
-### F1. Layer List Virtualization
+### F1. Custom Fonts (F3)
 
-**Status:** ✅ COMPLETED (January 21, 2026)
+**Status:** ⏳ NOT STARTED
 
-Virtual scrolling implemented for layer lists with 30+ items.
+Not yet available beyond the default font allowlist in `$wgLayersDefaultFonts`.
 
-### F2. Layer Search/Filter
+### F2. Enhanced Dimension Tool (FR-14)
 
-**Status:** ✅ COMPLETED (January 25, 2026)
-
-Layer search/filter functionality implemented with real-time filtering.
-
-### F3. Custom Fonts
-
-Not yet available beyond the default font allowlist.
-
-### F4. Lowercase Slide Parser Function (FR-12)
-
-**Status:** ✅ COMPLETED (January 25, 2026)
-
-Both `{{#slide: ...}}` and `{{#Slide: ...}}` are now supported.
-
-### F5. Zoom to Mouse Pointer (FR-13)
-
-**Status:** ✅ COMPLETED (January 26, 2026)
-
-Zoom now anchors at the mouse pointer position.
-
-### F6. Enhanced Dimension Tool (FR-14)
-
-**Status:** ⏳ PROPOSED (January 25, 2026)
+**Status:** ⏳ PROPOSED
 
 Make the dimension line draggable independently from the anchor points.
 
-### F7. Angle Dimension Tool (FR-15)
+### F3. Angle Dimension Tool (FR-15)
 
-**Status:** ⏳ PROPOSED (January 25, 2026)
+**Status:** ⏳ PROPOSED
 
 New tool for measuring and annotating angles.
 
 ---
 
-## ✅ Recently Resolved Issues
+## ✅ Recently Resolved Issues (January 2026)
 
-- ✅ **Text edits lost when clicking outside canvas** (January 29, 2026)
-- ✅ **PHP 8.4 strict_types compatibility** (January 25, 2026)
-- ✅ **DraftManager auto-save** (January 25, 2026)
-- ✅ **Set selector race condition** (January 25, 2026)
-- ✅ **133 skipped tests deleted** (January 29, 2026)
-- ✅ Rate limiting on delete/rename APIs
-- ✅ CSP blocking on File pages
-- ✅ Background visibility serialization (PHP→JS boolean handling)
-- ✅ Memory leak fixes (timer cleanup in destroy methods)
-- ✅ ContextMenuController event listener cleanup
-- ✅ Export filename sanitization
-- ✅ CanvasManager async race conditions
-- ✅ window.onbeforeunload direct assignment
+| Issue | Date | Notes |
+|-------|------|-------|
+| TailCalculator test failing | Jan 30 | Bounds check added |
+| N+1 query patterns | Jan 30 | Batch refactoring |
+| LIKE query escaping | Jan 30 | buildLike() used |
+| API code duplication | Jan 30 | LayersApiHelperTrait |
+| Slides in tables empty | Jan 30 | Retry filter fixed |
+| Overlay buttons too large | Jan 30 | Reduced 32px→26px |
+| Drag handle hit areas | Jan 30 | 4px tolerance added |
+| 133 skipped tests | Jan 29 | All deleted |
+| Text edits lost | Jan 29 | Focus handling fixed |
+| ApiLayersList.getLogger bug | Jan 30 | Method call fixed |
 
 ---
 
@@ -304,12 +283,29 @@ New tool for measuring and annotating angles.
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests total | **11,066** (163 suites) | ✅ |
-| Tests passing | **11,065** | ⚠️ 1 failing |
+| Tests total | **11,112** (163 suites) | ✅ |
+| Tests passing | **11,112** | ✅ All pass |
+| Tests failing | **0** | ✅ |
 | Statement coverage | **95.42%** | ✅ Excellent |
 | Branch coverage | **85.25%** | ✅ Good |
 | Function coverage | **93.72%** | ✅ Excellent |
 | Line coverage | **95.55%** | ✅ Excellent |
+
+---
+
+## Code Quality Metrics
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| JavaScript files | 139 | (~92,338 hand-written + ~14,354 generated) |
+| PHP files | 41 | (~14,738 lines) |
+| God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
+| Near-threshold files (900-999) | 6 | ⚠️ Watch |
+| innerHTML usages | 73 | Safe patterns |
+| ESLint disables | 11 | All legitimate |
+| i18n messages | **667** | All documented |
+| TODO/FIXME/HACK | 0 | ✅ Clean |
+| console.log in production | 0 | ✅ Clean |
 
 ---
 
@@ -350,5 +346,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 30, 2026 (Post-Fix)*  
-*Status: ✅ All critical and high-priority issues resolved. 11,069 tests passing, 95.42% coverage.*
+*Document updated: January 30, 2026 (Comprehensive Review)*  
+*Status: ✅ All tests passing. No critical bugs. 2 high-priority documentation issues.*

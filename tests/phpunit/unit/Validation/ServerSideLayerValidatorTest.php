@@ -786,4 +786,86 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertArrayHasKey( 'backgroundColor', $style );
 		$this->assertArrayHasKey( 'color', $style );
 	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * Tests that entity-encoded script bypass is blocked.
+	 */
+	public function testValidateSvgBlocksEntityEncodedScript() {
+		$validator = $this->createValidator();
+		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method->setAccessible( true );
+
+		// Entity-encoded <script> tag: &lt;script&gt;
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg">&lt;script&gt;alert(1)&lt;/script&gt;</svg>';
+		$result = $method->invoke( $validator, $svg );
+
+		$this->assertFalse( $result['valid'], 'Entity-encoded script should be blocked' );
+		$this->assertStringContainsString( 'script', $result['error'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * Tests that entity-encoded javascript: URL bypass is blocked.
+	 */
+	public function testValidateSvgBlocksEntityEncodedJavascriptUrl() {
+		$validator = $this->createValidator();
+		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method->setAccessible( true );
+
+		// Entity-encoded javascript: (java&#115;cript:)
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg"><a href="java&#115;cript:alert(1)">click</a></svg>';
+		$result = $method->invoke( $validator, $svg );
+
+		$this->assertFalse( $result['valid'], 'Entity-encoded javascript: URL should be blocked' );
+		$this->assertStringContainsString( 'javascript', $result['error'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * Tests that entity-encoded event handler bypass is blocked.
+	 */
+	public function testValidateSvgBlocksEntityEncodedEventHandler() {
+		$validator = $this->createValidator();
+		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method->setAccessible( true );
+
+		// Entity-encoded onload (&#111;nload)
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" &#111;nload="alert(1)"></svg>';
+		$result = $method->invoke( $validator, $svg );
+
+		$this->assertFalse( $result['valid'], 'Entity-encoded event handler should be blocked' );
+		$this->assertStringContainsString( 'event handler', $result['error'] );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * Tests that valid SVG still passes validation.
+	 */
+	public function testValidateSvgAcceptsValidSvg() {
+		$validator = $this->createValidator();
+		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method->setAccessible( true );
+
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
+		$result = $method->invoke( $validator, $svg );
+
+		$this->assertTrue( $result['valid'], 'Valid SVG should pass validation' );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * Tests that vbscript: URLs are blocked.
+	 */
+	public function testValidateSvgBlocksVbscriptUrl() {
+		$validator = $this->createValidator();
+		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method->setAccessible( true );
+
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg"><a href="vbscript:msgbox(1)">click</a></svg>';
+		$result = $method->invoke( $validator, $svg );
+
+		$this->assertFalse( $result['valid'], 'vbscript: URLs should be blocked' );
+		$this->assertStringContainsString( 'vbscript', $result['error'] );
+	}
 }

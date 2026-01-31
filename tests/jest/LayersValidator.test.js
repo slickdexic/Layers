@@ -379,14 +379,14 @@ describe( 'LayersValidator', () => {
 			} );
 
 			it( 'should accept maximum stroke width', () => {
-				const layer = { id: 'test', type: 'rectangle', strokeWidth: 50 };
+				const layer = { id: 'test', type: 'rectangle', strokeWidth: 100 };
 				const result = validator.validateLayer( layer );
 
 				expect( result.isValid ).toBe( true );
 			} );
 
 			it( 'should reject stroke width above maximum', () => {
-				const layer = { id: 'test', type: 'rectangle', strokeWidth: 51 };
+				const layer = { id: 'test', type: 'rectangle', strokeWidth: 101 };
 				const result = validator.validateLayer( layer );
 
 				expect( result.isValid ).toBe( false );
@@ -489,8 +489,15 @@ describe( 'LayersValidator', () => {
 				expect( result.isValid ).toBe( true );
 			} );
 
-			it( 'should reject blur radius below minimum', () => {
+			it( 'should accept blur radius of 0 (minimum)', () => {
 				const layer = { id: 'test', type: 'rectangle', fill: 'blur', blurRadius: 0 };
+				const result = validator.validateLayer( layer );
+
+				expect( result.isValid ).toBe( true );
+			} );
+
+			it( 'should reject blur radius below minimum (negative)', () => {
+				const layer = { id: 'test', type: 'rectangle', fill: 'blur', blurRadius: -1 };
 				const result = validator.validateLayer( layer );
 
 				expect( result.isValid ).toBe( false );
@@ -818,9 +825,14 @@ describe( 'LayersValidator', () => {
 		} );
 
 		describe( 'named colors', () => {
+			// Sample of CSS named colors (full list has 148 colors)
 			const safeColors = [
 				'transparent', 'black', 'white', 'red', 'green', 'blue', 'yellow',
-				'orange', 'purple', 'pink', 'gray', 'grey', 'brown', 'cyan'
+				'orange', 'purple', 'pink', 'gray', 'grey', 'brown', 'cyan',
+				// Extended colors synchronized with server-side ColorValidator.php
+				'aliceblue', 'coral', 'crimson', 'darkblue', 'forestgreen', 'gold',
+				'hotpink', 'indigo', 'lavender', 'lightcyan', 'mediumblue', 'navy',
+				'olive', 'plum', 'royalblue', 'salmon', 'teal', 'violet', 'wheat'
 			];
 
 			safeColors.forEach( color => {
@@ -833,6 +845,7 @@ describe( 'LayersValidator', () => {
 			} );
 
 			it( 'should reject unsafe named color', () => {
+				// 'rebeccapurple' is not in our whitelist (late CSS3 addition)
 				const layer = { id: 'test', type: 'rectangle', fill: 'rebeccapurple' };
 				const result = validator.validateLayer( layer );
 
@@ -1212,6 +1225,32 @@ describe( 'LayersValidator', () => {
 				expect( validator.isValidColor( 'rgba(0, 0, 0, 0)' ) ).toBe( true );
 				expect( validator.isValidColor( 'rgba(255, 255, 255, 1)' ) ).toBe( true );
 				expect( validator.isValidColor( 'rgba(0, 0, 0, 0.5)' ) ).toBe( true );
+				// Alpha without leading zero should be valid CSS
+				expect( validator.isValidColor( 'rgba(0, 0, 0, .5)' ) ).toBe( true );
+				expect( validator.isValidColor( 'rgba(128, 128, 128, .75)' ) ).toBe( true );
+				// Edge cases for alpha values
+				expect( validator.isValidColor( 'rgba(0, 0, 0, 0.0)' ) ).toBe( true );
+				expect( validator.isValidColor( 'rgba(0, 0, 0, 1.0)' ) ).toBe( true );
+			} );
+
+			it( 'should reject rgba with invalid alpha values', () => {
+				expect( validator.isValidColor( 'rgba(0, 0, 0, 1.5)' ) ).toBe( false );
+				expect( validator.isValidColor( 'rgba(0, 0, 0, -0.5)' ) ).toBe( false );
+				expect( validator.isValidColor( 'rgba(0, 0, 0, 2)' ) ).toBe( false );
+			} );
+
+			it( 'should validate hsla colors with all alpha formats', () => {
+				expect( validator.isValidColor( 'hsla(0, 100%, 50%, 0.5)' ) ).toBe( true );
+				expect( validator.isValidColor( 'hsla(180, 50%, 50%, .5)' ) ).toBe( true );
+				expect( validator.isValidColor( 'hsla(0, 0%, 0%, 0)' ) ).toBe( true );
+				expect( validator.isValidColor( 'hsla(0, 0%, 0%, 1)' ) ).toBe( true );
+				expect( validator.isValidColor( 'hsla(0, 0%, 0%, 1.0)' ) ).toBe( true );
+			} );
+
+			it( 'should reject hsla with invalid alpha values', () => {
+				expect( validator.isValidColor( 'hsla(0, 100%, 50%, 1.5)' ) ).toBe( false );
+				expect( validator.isValidColor( 'hsla(0, 100%, 50%, -0.5)' ) ).toBe( false );
+				expect( validator.isValidColor( 'hsla(0, 100%, 50%, 2)' ) ).toBe( false );
 			} );
 
 			it( 'should validate named colors', () => {
@@ -1253,6 +1292,12 @@ describe( 'LayersValidator', () => {
 				expect( validator.containsScriptInjection( 'onload=alert(1)' ) ).toBe( true );
 				expect( validator.containsScriptInjection( 'onclick =alert(1)' ) ).toBe( true );
 				expect( validator.containsScriptInjection( 'ONERROR=alert(1)' ) ).toBe( true );
+			} );
+
+			it( 'should detect CSS expression() XSS vector', () => {
+				expect( validator.containsScriptInjection( 'expression(alert(1))' ) ).toBe( true );
+				expect( validator.containsScriptInjection( 'EXPRESSION(evil())' ) ).toBe( true );
+				expect( validator.containsScriptInjection( 'expression (alert(1))' ) ).toBe( true );
 			} );
 
 			it( 'should allow safe text', () => {

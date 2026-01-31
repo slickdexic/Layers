@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 28, 2026
-**Version:** 1.5.38
+**Last Updated:** January 30, 2026
+**Version:** 1.5.40
 
 ---
 
@@ -17,26 +17,28 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (January 2026)
+## Codebase Statistics (January 30, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **141** |
-| Total JS lines | **~94,286** |
+| Total JS files | **139** |
+| Total JS lines | **~94,876** |
+| Total PHP files | **41** |
+| Total PHP lines | **~14,738** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~40,000 lines (generated) |
-| ES6 classes | **141** |
+| ES6 classes | **139** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.53% stmt, 85.28% branch** |
-| Jest tests | **10,939** (162 suites) |
+| Test coverage | **95.42% stmt, 85.25% branch** |
+| Jest tests | **11,112** (163 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **17** (2 generated, 13 JS, 2 PHP) |
+| God classes (>1000 lines) | **18** (2 generated, 14 JS, 2 PHP) |
 | Drawing tools | **15** |
 | Shape library | **1,310 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **~653** |
+| i18n messages | **667** |
 | eslint-disable comments | **11** ✅ |
 
 ---
@@ -95,7 +97,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - Shape Library with 1,310 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
-### God Classes (17 Files ≥1,000 Lines)
+### God Classes (18 Files ≥1,000 Lines)
 
 **Generated Data Files (exempt from refactoring):**
 | File | Lines | Notes |

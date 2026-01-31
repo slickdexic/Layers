@@ -2,6 +2,35 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.41] - 2026-01-30
+
+### Security
+- **SVG Entity Encoding Bypass** — Extended entity decoding to ALL SVG security checks (script tags, event handlers, foreignObject, use elements), not just javascript: URLs
+- **vbscript: URL Blocking** — Added explicit blocking of vbscript: URLs in SVG content
+
+### Added
+- **LayersConstants.php** — New central constants file consolidating magic strings (TYPE_SLIDE, SLIDE_PREFIX, DEFAULT_SET_NAME, error codes, rate limit keys, config keys)
+- **Total Points Validation** — Added MAX_TOTAL_POINTS (10,000) aggregate limit across all layers to prevent resource exhaustion
+- **SVG Security Tests** — Added 5 PHPUnit tests for entity-encoded bypass scenarios
+
+### Fixed
+- **Documentation Metrics Sync** — Corrected god class count (17 → 18) and test count (11,069 → 11,112) across 10 files:
+  - README.md, CHANGELOG.md, wiki/Changelog.md, wiki/Home.md
+  - docs/ARCHITECTURE.md, CONTRIBUTING.md, codebase_review.md
+  - improvement_plan.md, copilot-instructions.md
+
+### Refactored
+- **SetNameSanitizer** — Now uses LayersConstants::DEFAULT_SET_NAME instead of private constant
+- **SlideHooks** — Uses LayersConstants::SLIDE_PREFIX and LayersConstants::TYPE_SLIDE
+
+### Technical Details
+- All tests pass (163 test suites)
+- Test coverage: 95.42% statement, 85.25% branch
+- New file: `src/LayersConstants.php`
+- God class count corrected to 18 (2 generated + 14 JS + 2 PHP)
+
+---
+
 ## [1.5.40] - 2026-01-30
 
 ### Fixed
@@ -22,7 +51,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Cursor Rotation for Rotated Objects** — Confirmed existing implementation in `TransformController.getResizeCursor()` correctly rotates cursors
 
 ### Technical Details
-- All 11,069 tests pass (163 test suites)
+- All 11,112 tests pass (163 test suites)
 - Test coverage: 95.42% statement, 85.25% branch
 - All P0, P1, P2, and P3 priority items resolved
 - Created new file: `src/Api/Traits/LayersApiHelperTrait.php`

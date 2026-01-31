@@ -218,7 +218,7 @@ describe( 'NumericValidator', () => {
 
 		test( 'returns invalid for excessive values', () => {
 			const result = createResult();
-			validator.validateStrokeWidth( { strokeWidth: 51 }, result );
+			validator.validateStrokeWidth( { strokeWidth: 101 }, result );
 			expect( result.isValid ).toBe( false );
 		} );
 
@@ -291,6 +291,104 @@ describe( 'NumericValidator', () => {
 		} );
 	} );
 
+	describe( 'validateFillOpacity', () => {
+		test( 'returns valid for normal fillOpacity values', () => {
+			const result = createResult();
+			validator.validateFillOpacity( { fillOpacity: 0.5 }, result );
+			expect( result.isValid ).toBe( true );
+		} );
+
+		test( 'returns valid for boundary values', () => {
+			const result1 = createResult();
+			validator.validateFillOpacity( { fillOpacity: 0 }, result1 );
+			expect( result1.isValid ).toBe( true );
+
+			const result2 = createResult();
+			validator.validateFillOpacity( { fillOpacity: 1 }, result2 );
+			expect( result2.isValid ).toBe( true );
+		} );
+
+		test( 'returns invalid for values below 0', () => {
+			const result = createResult();
+			validator.validateFillOpacity( { fillOpacity: -0.1 }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for values above 1', () => {
+			const result = createResult();
+			validator.validateFillOpacity( { fillOpacity: 1.1 }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for non-numeric values', () => {
+			const result = createResult();
+			validator.validateFillOpacity( { fillOpacity: 'half' }, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'returns invalid for NaN', () => {
+			const result = createResult();
+			validator.validateFillOpacity( { fillOpacity: NaN }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'skips validation when fillOpacity is undefined', () => {
+			const result = createResult();
+			validator.validateFillOpacity( {}, result );
+			expect( result.isValid ).toBe( true );
+		} );
+	} );
+
+	describe( 'validateStrokeOpacity', () => {
+		test( 'returns valid for normal strokeOpacity values', () => {
+			const result = createResult();
+			validator.validateStrokeOpacity( { strokeOpacity: 0.5 }, result );
+			expect( result.isValid ).toBe( true );
+		} );
+
+		test( 'returns valid for boundary values', () => {
+			const result1 = createResult();
+			validator.validateStrokeOpacity( { strokeOpacity: 0 }, result1 );
+			expect( result1.isValid ).toBe( true );
+
+			const result2 = createResult();
+			validator.validateStrokeOpacity( { strokeOpacity: 1 }, result2 );
+			expect( result2.isValid ).toBe( true );
+		} );
+
+		test( 'returns invalid for values below 0', () => {
+			const result = createResult();
+			validator.validateStrokeOpacity( { strokeOpacity: -0.1 }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for values above 1', () => {
+			const result = createResult();
+			validator.validateStrokeOpacity( { strokeOpacity: 1.1 }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'returns invalid for non-numeric values', () => {
+			const result = createResult();
+			validator.validateStrokeOpacity( { strokeOpacity: 'half' }, result );
+			expect( result.isValid ).toBe( false );
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		test( 'returns invalid for NaN', () => {
+			const result = createResult();
+			validator.validateStrokeOpacity( { strokeOpacity: NaN }, result );
+			expect( result.isValid ).toBe( false );
+		} );
+
+		test( 'skips validation when strokeOpacity is undefined', () => {
+			const result = createResult();
+			validator.validateStrokeOpacity( {}, result );
+			expect( result.isValid ).toBe( true );
+		} );
+	} );
+
 	describe( 'validateBlurRadius', () => {
 		test( 'returns valid for normal blur values', () => {
 			const result = createResult();
@@ -298,7 +396,13 @@ describe( 'NumericValidator', () => {
 			expect( result.isValid ).toBe( true );
 		} );
 
-		test( 'returns valid for minimum value', () => {
+		test( 'returns valid for minimum value (0)', () => {
+			const result = createResult();
+			validator.validateBlurRadius( { blurRadius: 0 }, result );
+			expect( result.isValid ).toBe( true );
+		} );
+
+		test( 'returns valid for blurRadius of 1', () => {
 			const result = createResult();
 			validator.validateBlurRadius( { blurRadius: 1 }, result );
 			expect( result.isValid ).toBe( true );
@@ -310,9 +414,9 @@ describe( 'NumericValidator', () => {
 			expect( result.isValid ).toBe( true );
 		} );
 
-		test( 'returns invalid for zero', () => {
+		test( 'returns invalid for negative values', () => {
 			const result = createResult();
-			validator.validateBlurRadius( { blurRadius: 0 }, result );
+			validator.validateBlurRadius( { blurRadius: -1 }, result );
 			expect( result.isValid ).toBe( false );
 		} );
 

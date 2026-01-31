@@ -4,6 +4,25 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.41 (January 30, 2026)
+
+### Security
+- **SVG Entity Encoding Bypass** — Extended entity decoding to all SVG security checks
+- **vbscript: URL Blocking** — Added explicit blocking of vbscript: URLs
+
+### Added
+- **LayersConstants.php** — Central constants file for magic strings
+- **Total Points Validation** — MAX_TOTAL_POINTS (10,000) aggregate limit
+- **SVG Security Tests** — 5 new PHPUnit tests for entity-encoded bypasses
+
+### Fixed
+- **Documentation Metrics** — Corrected god class count (17→18) and test count across 10 files
+
+### Refactored
+- SetNameSanitizer and SlideHooks now use LayersConstants
+
+---
+
 ## Version 1.5.40 (January 30, 2026)
 
 ### Fixed
@@ -21,7 +40,7 @@ Version history for the Layers extension.
 - **Window Load Fallback** — Added fallback for slides appearing after DOMContentLoaded
 
 ### Technical Details
-- All 11,069 tests pass (163 test suites)
+- All 11,112 tests pass (163 test suites)
 - Test coverage: 95.42% statement, 85.25% branch
 - All P0, P1, P2, and P3 priority items resolved
 

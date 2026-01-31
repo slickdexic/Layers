@@ -849,26 +849,49 @@ class LayersDatabase {
 				return false;
 			}
 
-			// Check if target name already exists
-			if ( $this->namedSetExists( $imgName, $sha1, $newName ) ) {
-				$this->logError( 'Cannot rename: target name already exists', [
-					'newName' => $newName
-				] );
-				return false;
+			// Use atomic transaction to prevent race conditions
+			// Two concurrent renames could otherwise both pass the existence check
+			$dbw->startAtomic( __METHOD__ );
+
+			try {
+				// Check if target name already exists (within transaction for consistency)
+				$existsCount = $dbw->selectField(
+					'layer_sets',
+					'COUNT(*)',
+					[
+						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+						'ls_img_sha1' => $sha1,
+						'ls_name' => $newName
+					],
+					__METHOD__,
+					[ 'FOR UPDATE' ]
+				);
+
+				if ( (int)$existsCount > 0 ) {
+					$dbw->endAtomic( __METHOD__ );
+					$this->logError( 'Cannot rename: target name already exists', [
+						'newName' => $newName
+					] );
+					return false;
+				}
+
+				$dbw->update(
+					'layer_sets',
+					[ 'ls_name' => $newName ],
+					[
+						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+						'ls_img_sha1' => $sha1,
+						'ls_name' => $oldName
+					],
+					__METHOD__
+				);
+
+				$rowsUpdated = $dbw->affectedRows();
+				$dbw->endAtomic( __METHOD__ );
+			} catch ( \Throwable $e ) {
+				$dbw->endAtomic( __METHOD__ );
+				throw $e;
 			}
-
-			$dbw->update(
-				'layer_sets',
-				[ 'ls_name' => $newName ],
-				[
-					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-					'ls_img_sha1' => $sha1,
-					'ls_name' => $oldName
-				],
-				__METHOD__
-			);
-
-			$rowsUpdated = $dbw->affectedRows();
 
 			if ( $rowsUpdated === 0 ) {
 				$this->logError( 'No rows updated during rename', [
