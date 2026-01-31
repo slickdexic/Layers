@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 30, 2026  
+**Last Updated:** January 31, 2026  
 **Version:** 1.5.41  
 **Status:** Production-Ready (8.7/10)
 
@@ -14,11 +14,11 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
-- 🟠 **P1:** 3 open (documentation sync, wiki corruption, god class count)
+- 🟠 **P1:** 1 open (documentation sync)
 - 🟡 **P2:** 8 open (code quality improvements)
 - 🟢 **P3:** 12 open (minor improvements)
 
-**Verified Metrics (January 30, 2026):**
+**Verified Metrics (January 31, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
@@ -29,7 +29,7 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 | Branch coverage | **85.25%** | ✅ Good |
 | Function coverage | **93.72%** | ✅ Excellent |
 | Line coverage | **95.55%** | ✅ Excellent |
-| JS files | 139 | (~92,338 hand-written + ~14,354 generated) |
+| JS files | 141 | (~92,338 hand-written + ~14,354 generated) |
 | PHP files | 41 | (~14,738 lines) |
 | PHP strict_types | **41/41 files** | ✅ Complete |
 | ES6 classes | All JS files | 100% migrated |
@@ -107,31 +107,30 @@ Previous P0 items resolved:
 
 ---
 
-### P1.3 Fix wiki/Home.md Corruption — OPEN
+### P1.3 Fix wiki/Home.md Corruption — ✅ RESOLVED
 
-**Status:** 🟠 OPEN  
+**Status:** ✅ RESOLVED (January 31, 2026)  
 **Priority:** P1 - High  
 **Category:** Documentation
 
-**Problem:** Line 49 contains corrupted JSON artifact from a previous edit.
-
-**Fix:** Remove the text: `", "oldString": "---`
-
-**Estimated Effort:** 5 minutes
+**Resolution:** Searched for corrupted JSON artifact - not found. Already cleaned up in previous session.
 
 ---
 
-### P1.4 Update God Class Count — OPEN
+### P1.4 Update God Class Count — ✅ RESOLVED
 
-**Status:** 🟠 OPEN  
+**Status:** ✅ RESOLVED (January 31, 2026)  
 **Priority:** P1 - High  
 **Category:** Documentation
 
-**Problem:** Documentation says 17 god classes, actual is **18** (missed LayersValidator.js).
-
-**Fix:** Update all references to 18 (2 generated + 14 JS + 2 PHP).
-
-**Estimated Effort:** 30 minutes
+**Resolution:** Verified count is 18 god classes (2 generated JS + 14 hand-written JS + 2 PHP):
+- ShapeLibraryData.js (11,299 lines) - generated
+- EmojiLibraryIndex.js (3,055 lines) - generated
+- LayerPanel.js (2,182), CanvasManager.js (2,044), Toolbar.js (1,891), LayersEditor.js (1,830)
+- InlineTextEditor.js (1,521), SelectionManager.js (1,431), PropertyBuilders.js (1,414)
+- APIManager.js (1,403), ViewerManager.js (1,277), ToolManager.js (1,226)
+- CanvasRenderer.js (1,219), GroupManager.js (1,171), SlideController.js (1,117), LayersValidator.js (1,116)
+- ServerSideLayerValidator.php (1,297), LayersDatabase.php (1,242)
 
 ---
 
