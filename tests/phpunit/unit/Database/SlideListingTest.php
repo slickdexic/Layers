@@ -4,6 +4,7 @@ namespace MediaWiki\Extension\Layers\Tests\Unit\Database;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Database\LayersSchemaManager;
+use MediaWiki\Extension\Layers\LayersConstants;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IDatabase;
@@ -383,5 +384,51 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 		$this->assertSame( 800, $slides[0]['canvasWidth'] );
 		$this->assertSame( 600, $slides[0]['canvasHeight'] );
 		$this->assertSame( '#ffffff', $slides[0]['backgroundColor'] );
+	}
+
+	/**
+	 * @covers ::listSlides
+	 */
+	public function testListSlidesTruncatesVeryLongPrefix(): void {
+		$emptyResult = $this->createMock( IResultWrapper::class );
+		$emptyResult->method( 'current' )->willReturn( false );
+		$emptyResult->method( 'valid' )->willReturn( false );
+
+		$this->dbr->method( 'addQuotes' )
+			->willReturnCallback( static function ( $value ) {
+				return "'" . addslashes( $value ) . "'";
+			} );
+
+		// Create a very long prefix (300 characters)
+		$longPrefix = str_repeat( 'a', 300 );
+		$expectedTruncatedPrefix = str_repeat( 'a', 200 );
+
+		// Capture the LIKE condition to verify prefix was truncated
+		$capturedLikePrefix = null;
+		$this->dbr->method( 'buildLike' )
+			->willReturnCallback( function ( ...$args ) use ( &$capturedLikePrefix ) {
+				// The first arg should be SLIDE_PREFIX + truncated prefix
+				if ( count( $args ) > 0 ) {
+					$capturedLikePrefix = $args[0];
+				}
+				return "LIKE 'slide:%'";
+			} );
+
+		$this->dbr->method( 'anyString' )->willReturn( '%' );
+
+		$subqueryMock = $this->createMock( Subquery::class );
+		$subqueryMock->method( '__toString' )->willReturn( '(subquery)' );
+		$this->dbr->method( 'buildSelectSubquery' )
+			->willReturn( $subqueryMock );
+
+		$this->dbr->method( 'select' )->willReturn( $emptyResult );
+
+		$db = $this->createLayersDatabase();
+		$db->listSlides( $longPrefix );
+
+		// Verify the prefix was truncated to 200 characters
+		$this->assertNotNull( $capturedLikePrefix, 'buildLike should have been called with a prefix' );
+		$expectedFullPrefix = LayersConstants::SLIDE_PREFIX . $expectedTruncatedPrefix;
+		$this->assertSame( $expectedFullPrefix, $capturedLikePrefix );
 	}
 }

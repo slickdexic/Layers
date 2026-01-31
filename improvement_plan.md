@@ -16,7 +16,7 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 - ✅ **P0:** All resolved (no critical bugs)
 - ✅ **P1:** All resolved (enum validation fixed)
 - ✅ **P2:** All resolved (20 items completed)
-- 🟢 **P3:** 13 open (low-priority backlog) - P3.11 completed
+- 🟢 **P3:** 11 open (low-priority backlog) - P3.7, P3.8, P3.11 completed
 
 **Verified Metrics (January 31, 2026):**
 
@@ -405,21 +405,22 @@ Change from TINYINT (max 255) to SMALLINT for future-proofing.
 
 Apply consistently across all API modules.
 
-### P3.5 Remove Dead Boolean Normalization Path
+### P3.5 Remove Dead Boolean Normalization Path ⏭️ WON'T FIX
 
-Remove legacy empty string → true normalization (dead code).
+**Analysis:** Not actually dead code - it's backwards compatibility for legacy data. The empty string → true normalization is explicitly tested ("should convert empty string to boolean true (legacy data)") and documented in code. Removing it would break existing layer data that might contain empty strings for boolean fields. Keeping for stability.
 
 ### P3.6 Document CHECK Constraint Dependencies
 
 Document that SQL constraints must be updated with PHP config.
 
-### P3.7 Add Null Check in extractLayerSetData
+### P3.7 Add Null Check in extractLayerSetData ✅ RESOLVED
 
-Add try/catch or optional chaining for edge cases.
+Already implemented: Defensive null check exists at line 327 of APIManager.js.
 
-### P3.8 Add Prefix Length Limit in listSlides()
+### P3.8 Add Prefix Length Limit in listSlides() ✅ RESOLVED
 
-Prevent performance issues with very long prefixes.
+**Status:** Resolved (January 31, 2026)  
+**Implementation:** Added 200-character prefix length limit in `LayersDatabase::listSlides()` to prevent performance issues with very long prefixes. Added PHPUnit test for truncation behavior.
 
 ### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅ RESOLVED
 
