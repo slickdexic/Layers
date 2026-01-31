@@ -56,7 +56,7 @@ class SlideHooks {
 		}
 
 		$parser->setFunctionHook(
-			'Slide',
+			LayersConstants::PARSER_FUNCTION_SLIDE,
 			[ self::class, 'renderSlide' ],
 			Parser::SFH_OBJECT_ARGS
 		);
@@ -122,7 +122,7 @@ class SlideHooks {
 		}
 
 		// Determine layer set name early (needed for fetching saved dimensions)
-		$layerSetName = $params['layerset'] ?? 'default';
+		$layerSetName = $params['layerset'] ?? LayersConstants::DEFAULT_SET_NAME;
 
 		// Parse canvas dimensions
 		// Priority: explicit canvas= param > saved dimensions from DB > config defaults

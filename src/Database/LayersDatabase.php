@@ -12,6 +12,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Database;
 
 use Config;
+use MediaWiki\Extension\Layers\LayersConstants;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IDatabase;
 use Wikimedia\Rdbms\LoadBalancer;
@@ -1134,12 +1135,12 @@ class LayersDatabase {
 		}
 
 		$conditions = [
-			'ls_img_sha1' => 'slide'
+			'ls_img_sha1' => LayersConstants::TYPE_SLIDE
 		];
 
 		// Add prefix filter if provided
 		if ( $prefix !== '' ) {
-			$escapedPrefix = $dbr->addQuotes( 'Slide:' . $prefix . '%' );
+			$escapedPrefix = $dbr->addQuotes( LayersConstants::SLIDE_PREFIX . $prefix . '%' );
 			$conditions[] = 'ls_img_name LIKE ' . $escapedPrefix;
 		}
 
@@ -1178,12 +1179,15 @@ class LayersDatabase {
 
 		// Build conditions
 		$conditions = [
-			'ls_img_sha1' => 'slide'
+			'ls_img_sha1' => LayersConstants::TYPE_SLIDE
 		];
 
 		if ( $prefix !== '' ) {
 			// Use buildLike() to properly escape LIKE wildcards (%, _)
-			$conditions[] = 'ls_img_name ' . $dbr->buildLike( 'Slide:' . $prefix, $dbr->anyString() );
+			$conditions[] = 'ls_img_name ' . $dbr->buildLike(
+				LayersConstants::SLIDE_PREFIX . $prefix,
+				$dbr->anyString()
+			);
 		}
 
 		// Determine sort order
@@ -1214,11 +1218,11 @@ class LayersDatabase {
 				'revision_count' => '(SELECT COUNT(*) FROM ' .
 					$dbr->tableName( 'layer_sets' ) .
 					' WHERE ls_img_name = ls.ls_img_name AND ls_img_sha1 = ' .
-					$dbr->addQuotes( 'slide' ) . ')',
+					$dbr->addQuotes( LayersConstants::TYPE_SLIDE ) . ')',
 				'first_timestamp' => '(SELECT MIN(ls_timestamp) FROM ' .
 					$dbr->tableName( 'layer_sets' ) .
 					' WHERE ls_img_name = ls.ls_img_name AND ls_img_sha1 = ' .
-					$dbr->addQuotes( 'slide' ) . ')',
+					$dbr->addQuotes( LayersConstants::TYPE_SLIDE ) . ')',
 				'latest_timestamp' => 'ls.ls_timestamp',
 				'ls_json_blob' => 'ls.ls_json_blob',
 				'ls_user_id' => 'ls.ls_user_id',
@@ -1226,7 +1230,7 @@ class LayersDatabase {
 				'ls_revision' => 'ls.ls_revision'
 			],
 			[
-				'ls.ls_img_sha1' => 'slide',
+				'ls.ls_img_sha1' => LayersConstants::TYPE_SLIDE,
 				'ls.ls_revision = latest.max_rev'
 			],
 			__METHOD__,
@@ -1256,7 +1260,7 @@ class LayersDatabase {
 				[ 'ls_img_name', 'ls_user_id' ],
 				[
 					'ls_img_name' => $slideNames,
-					'ls_img_sha1' => 'slide',
+					'ls_img_sha1' => LayersConstants::TYPE_SLIDE,
 					'ls_revision' => 1
 				],
 				__METHOD__
@@ -1277,8 +1281,8 @@ class LayersDatabase {
 
 			// Extract slide name from full name (remove 'Slide:' prefix)
 			$displayName = $slideName;
-			if ( str_starts_with( $displayName, 'Slide:' ) ) {
-				$displayName = substr( $displayName, 6 );
+			if ( str_starts_with( $displayName, LayersConstants::SLIDE_PREFIX ) ) {
+				$displayName = substr( $displayName, strlen( LayersConstants::SLIDE_PREFIX ) );
 			}
 
 			$slides[] = [
