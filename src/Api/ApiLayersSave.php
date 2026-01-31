@@ -110,9 +110,9 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
-		if ( $requestedFilename !== null && strpos( $requestedFilename, 'Slide:' ) === 0 ) {
+		if ( $requestedFilename !== null && strpos( $requestedFilename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
-			$slidename = substr( $requestedFilename, 6 );
+			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
 			$this->executeSlideSave( $user, $params, $slidename );
 			return;
 		}
@@ -473,10 +473,10 @@ class ApiLayersSave extends ApiBase {
 			}
 
 			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
-			$normalizedName = 'Slide:' . $slidename;
+			$normalizedName = LayersConstants::SLIDE_PREFIX . $slidename;
 			$imgMetadata = [
 				'mime' => 'application/x-layers-slide',
-				'sha1' => 'slide',
+				'sha1' => LayersConstants::TYPE_SLIDE,
 			];
 
 			// Merge slide settings into background settings for storage

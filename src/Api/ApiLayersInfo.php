@@ -60,9 +60,9 @@ class ApiLayersInfo extends ApiBase {
 		}
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
-		if ( $filename !== null && strpos( $filename, 'Slide:' ) === 0 ) {
+		if ( $filename !== null && strpos( $filename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
-			$slidename = substr( $filename, 6 );
+			$slidename = substr( $filename, strlen( LayersConstants::SLIDE_PREFIX ) );
 			$this->executeSlideRequest( $slidename, $setName, $limit, $layerSetId );
 			return;
 		}
@@ -271,8 +271,8 @@ class ApiLayersInfo extends ApiBase {
 		?int $layerSetId = null
 	): void {
 		// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
-		$normalizedName = 'Slide:' . $slidename;
-		$fileSha1 = 'slide';
+		$normalizedName = LayersConstants::SLIDE_PREFIX . $slidename;
+		$fileSha1 = LayersConstants::TYPE_SLIDE;
 		$setName = $setName ?? LayersConstants::DEFAULT_SET_NAME;
 
 		$db = $this->getLayersDatabase();

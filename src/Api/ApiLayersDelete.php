@@ -60,9 +60,9 @@ class ApiLayersDelete extends ApiBase {
 		}
 
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
-		if ( $requestedFilename !== null && strpos( $requestedFilename, 'Slide:' ) === 0 ) {
+		if ( $requestedFilename !== null && strpos( $requestedFilename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
-			$slidename = substr( $requestedFilename, 6 );
+			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
 			$this->executeSlideDelete( $user, $slidename, $setName );
 			return;
 		}
@@ -210,8 +210,8 @@ class ApiLayersDelete extends ApiBase {
 			$this->requireSchemaReady( $db );
 
 			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
-			$imgName = 'Slide:' . $slidename;
-			$sha1 = 'slide';
+			$imgName = LayersConstants::SLIDE_PREFIX . $slidename;
+			$sha1 = LayersConstants::TYPE_SLIDE;
 
 			// Check if the set exists
 			$exists = $db->namedSetExists( $imgName, $sha1, $setName );
