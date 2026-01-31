@@ -60,19 +60,20 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 12. ✅ **paths array limit** — Max 100 paths for DoS prevention (P2.10)
 13. ✅ **Magic complexity threshold** — Configurable via $wgLayersMaxComplexity (P3.12)
 14. ✅ **refreshAllViewers parallelism** — Limited to 5 concurrent requests (P3.5)
+15. ✅ **P3.6-P3.11** — Investigated and marked as not actual issues
 
 ### Remaining Issues
 1. **P2.6:** Inconsistent DB return types (false/null/-1) — 2 days to fix
 2. **P2.9:** StateManager 30s auto-recovery — Could corrupt state if legitimate slow op
-3. **P3:** 9 low-priority backlog items
+3. **P3:** 3 low-priority backlog items (P3.1, P3.2, P3.4 - all architectural)
 
 ### Issue Summary (Updated January 31, 2026)
 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
-| Bugs | 0 | 0 | 1 | 1 |
-| Security | 0 | 0 | 1 | 2 |
-| Performance | 0 | 0 | 2 | 1 |
+| Bugs | 0 | 0 | 1 | 0 |
+| Security | 0 | 0 | 1 | 0 |
+| Performance | 0 | 0 | 1 | 1 |
 | Documentation | 0 | 0 | 4 | 3 |
 | Architecture | 0 | 0 | 2 | 2 |
 | Code Quality | 0 | 0 | 3 | 4 |
