@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (High Priority) | **4** | ✅ All resolved |
 | P2 (Medium Priority) | **15** | 🟡 5 open, 10 resolved |
-| P3 (Low Priority) | **12** | 🟢 6 resolved, 6 backlog |
+| P3 (Low Priority) | **12** | 🟢 9 resolved, 3 backlog |
 | Feature Gaps | 3 | Planned |
 
 ---
@@ -206,7 +206,7 @@ DoS via extremely large path arrays.
 
 ---
 
-## 🟢 P3: Low Priority Issues (6 Open, 6 Resolved)
+## 🟢 P3: Low Priority Issues (3 Open, 9 Resolved)
 
 ### P3.1 SchemaManager Global Service Access
 
@@ -232,17 +232,40 @@ Don't match PHP config values; document dependency.
 `MAX_CONCURRENT_REQUESTS = 5` constant. The `refreshAllViewers()` method
 now limits parallel API requests to 5 at a time to avoid server overload.
 
-### P3.6 Inconsistent @codeCoverageIgnore Usage
+### P3.6 Inconsistent @codeCoverageIgnore Usage — ✅ NOT AN ISSUE
 
-Some unreachable returns annotated, others not.
+**Status:** ✅ INVESTIGATED (January 31, 2026)
 
-### P3.7 Empty String Boolean Normalization (Legacy)
+Only 3 `@codeCoverageIgnore` annotations exist, all on unreachable returns
+after `dieWithError()` calls. This is consistent and appropriate usage:
+- `ApiLayersRename.php:169` - unreachable return after dieWithError
+- `ApiLayersDelete.php:193` - unreachable return after dieWithError
+- `ApiLayersDelete.php:265` - unreachable return after dieWithError
 
-Empty string `''` normalizes to `true`; server treats as `false`.
+### P3.7 Empty String Boolean Normalization — ✅ NOT AN ISSUE
 
-### P3.8 Potential Information Leak in Existence Check
+**Status:** ✅ INVESTIGATED (January 31, 2026)
 
-Existence check before permission check could allow enumeration.
+The client normalizes `'' → true` (labeled "legacy") while the server normalizes
+`'' → false`. This appears inconsistent but cannot cause bugs because:
+
+1. Server converts `'' → false` BEFORE storing data in the database
+2. Any legacy data would have been converted by PHP filter_var or similar
+3. The client only normalizes data received FROM the server (already converted)
+
+The "legacy" path in client code is dead code that could be removed, but it's
+harmless and maintains backward compatibility with any hypothetical edge cases.
+
+### P3.8 Potential Information Leak in Existence Check — ✅ NOT AN ISSUE
+
+**Status:** ✅ INVESTIGATED (January 31, 2026)
+
+ApiLayersInfo.php correctly checks permissions BEFORE file existence:
+1. Line 84-86: `userCan('read')` permission check
+2. Line 91-93: File existence check
+
+Unauthorized users always get "permissiondenied" regardless of whether the file
+exists, preventing enumeration attacks.
 
 ### P3.9 Incomplete Error Handling in Promise Chains — ✅ NOT AN ISSUE
 
