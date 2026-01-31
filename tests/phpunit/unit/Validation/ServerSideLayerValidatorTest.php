@@ -868,4 +868,43 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $result['valid'], 'vbscript: URLs should be blocked' );
 		$this->assertStringContainsString( 'vbscript', $result['error'] );
 	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 * Tests that paths array is limited to prevent DoS.
+	 */
+	public function testValidateCustomShapePathsLimit() {
+		$validator = $this->createValidator();
+
+		// Create a layer with exactly 100 paths (at the limit)
+		$paths = [];
+		for ( $i = 0; $i < 100; $i++ ) {
+			$paths[] = [ 'path' => 'M0,0 L10,10 Z', 'fill' => '#ff0000' ];
+		}
+
+		$layer = [
+			'id' => 'layer_limit',
+			'type' => 'customShape',
+			'shapeId' => 'test/many-paths',
+			'viewBox' => [ 0, 0, 100, 100 ],
+			'x' => 0,
+			'y' => 0,
+			'width' => 100,
+			'height' => 100,
+			'paths' => $paths,
+			'isMultiPath' => true
+		];
+
+		$result = $validator->validateLayer( $layer );
+		$this->assertTrue( $result->isValid(), '100 paths should be at the limit: ' .
+			implode( '; ', $result->getErrors() ) );
+
+		// Now add one more path (101 total) - should fail
+		$paths[] = [ 'path' => 'M0,0 L10,10 Z', 'fill' => '#ff0000' ];
+		$layer['paths'] = $paths;
+
+		$result = $validator->validateLayer( $layer );
+		$this->assertFalse( $result->isValid(), '101 paths should exceed limit' );
+		$this->assertNotEmpty( $result->getErrors() );
+	}
 }

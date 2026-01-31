@@ -14,6 +14,7 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 			'LayersMaxImageDimensions' => 8192,
 			'LayersMaxImageSize' => 8192,
 			'LayersMaxLayerCount' => 100,
+			'LayersMaxComplexity' => 100,
 			'RateLimits' => []
 		] );
 		return new RateLimiter( $config );
@@ -114,6 +115,93 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse(
 			$limiter->isComplexityAllowed( $tooManyComplexLayers ),
 			'Too many complex layers should be rejected'
+		);
+	}
+
+	/**
+	 * @covers ::isComplexityAllowed
+	 * @dataProvider provideLayerTypeComplexity
+	 */
+	public function testComplexityAllowedForAllLayerTypes( string $type, int $expectedScore ) {
+		$limiter = $this->createRateLimiter();
+
+		// Create a single layer of this type
+		$layers = [ [ 'type' => $type ] ];
+		$this->assertTrue(
+			$limiter->isComplexityAllowed( $layers ),
+			"Single layer of type '$type' should be allowed"
+		);
+
+		// Verify that (100 / expectedScore) layers are allowed
+		// but (100 / expectedScore + 1) are rejected (at the boundary)
+		$maxAllowed = (int) floor( 100 / $expectedScore );
+		$layers = array_fill( 0, $maxAllowed, [ 'type' => $type ] );
+		$this->assertTrue(
+			$limiter->isComplexityAllowed( $layers ),
+			"$maxAllowed layers of type '$type' (score=$expectedScore) should be at limit"
+		);
+
+		// One more should push over the limit
+		if ( $expectedScore > 1 ) {
+			$layers = array_fill( 0, $maxAllowed + 1, [ 'type' => $type ] );
+			$this->assertFalse(
+				$limiter->isComplexityAllowed( $layers ),
+				( $maxAllowed + 1 ) . " layers of type '$type' should exceed limit"
+			);
+		}
+	}
+
+	/**
+	 * Data provider for all 15 layer types with their complexity scores.
+	 *
+	 * @return array<string, array{0: string, 1: int}>
+	 */
+	public static function provideLayerTypeComplexity(): array {
+		return [
+			// Text rendering is moderately expensive (+2)
+			'text' => [ 'text', 2 ],
+			'textbox' => [ 'textbox', 2 ],
+			'callout' => [ 'callout', 2 ],
+
+			// Complex types with potential for large data (+3)
+			'customShape' => [ 'customShape', 3 ],
+			'image' => [ 'image', 3 ],
+			'path' => [ 'path', 3 ],
+
+			// Arrows and groups are moderately complex (+2)
+			'arrow' => [ 'arrow', 2 ],
+			'group' => [ 'group', 2 ],
+
+			// Simple shapes (+1)
+			'rectangle' => [ 'rectangle', 1 ],
+			'circle' => [ 'circle', 1 ],
+			'ellipse' => [ 'ellipse', 1 ],
+			'line' => [ 'line', 1 ],
+			'polygon' => [ 'polygon', 1 ],
+			'star' => [ 'star', 1 ],
+			'blur' => [ 'blur', 1 ],
+			'marker' => [ 'marker', 1 ],
+			'dimension' => [ 'dimension', 1 ],
+		];
+	}
+
+	/**
+	 * @covers ::isComplexityAllowed
+	 */
+	public function testComplexityWithUnknownLayerType() {
+		$limiter = $this->createRateLimiter();
+
+		// Unknown types should be treated as expensive (+3 each)
+		$unknownLayers = array_fill( 0, 33, [ 'type' => 'future_type' ] );
+		$this->assertTrue(
+			$limiter->isComplexityAllowed( $unknownLayers ),
+			'33 unknown layers (33*3=99) should be within limit'
+		);
+
+		$unknownLayers = array_fill( 0, 34, [ 'type' => 'future_type' ] );
+		$this->assertFalse(
+			$limiter->isComplexityAllowed( $unknownLayers ),
+			'34 unknown layers (34*3=102) should exceed limit'
 		);
 	}
 
