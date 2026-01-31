@@ -127,7 +127,7 @@ class ApiSlideInfo extends ApiBase {
 			'setname' => [
 				ParamValidator::PARAM_TYPE => 'string',
 				ParamValidator::PARAM_REQUIRED => false,
-				ParamValidator::PARAM_DEFAULT => 'default',
+				ParamValidator::PARAM_DEFAULT => LayersConstants::DEFAULT_SET_NAME,
 			],
 		];
 	}

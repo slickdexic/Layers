@@ -60,7 +60,8 @@ class ApiLayersRename extends ApiBase {
 		}
 
 		// Prevent renaming to 'default'
-		if ( strtolower( $newName ) === 'default' && strtolower( $oldName ) !== 'default' ) {
+		$defaultName = strtolower( LayersConstants::DEFAULT_SET_NAME );
+		if ( strtolower( $newName ) === $defaultName && strtolower( $oldName ) !== $defaultName ) {
 			$this->dieWithError( 'layers-cannot-rename-to-default', 'invalidsetname' );
 		}
 

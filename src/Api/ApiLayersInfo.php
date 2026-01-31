@@ -273,7 +273,7 @@ class ApiLayersInfo extends ApiBase {
 		// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
 		$normalizedName = 'Slide:' . $slidename;
 		$fileSha1 = 'slide';
-		$setName = $setName ?? 'default';
+		$setName = $setName ?? LayersConstants::DEFAULT_SET_NAME;
 
 		$db = $this->getLayersDatabase();
 

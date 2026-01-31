@@ -143,7 +143,7 @@ class ApiLayersSave extends ApiBase {
 			// Extract parameters from the API request
 			$fileName = $requestedFilename;
 			$data = $params['data'];
-			$rawSetName = $params['setname'] ?? 'default';
+			$rawSetName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
 			$setName = SetNameSanitizer::sanitize( $rawSetName );
 
 			// Log set name processing via MediaWiki's debug log
@@ -411,7 +411,7 @@ class ApiLayersSave extends ApiBase {
 			}
 
 			$data = $params['data'];
-			$rawSetName = $params['setname'] ?? 'default';
+			$rawSetName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
 			$setName = SetNameSanitizer::sanitize( $rawSetName );
 
 			// Size limit check
