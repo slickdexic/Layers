@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** January 31, 2026 (Comprehensive Critical Review v2)  
-**Version:** 1.5.43  
+**Review Date:** January 31, 2026 (Comprehensive Critical Review v3)  
+**Version:** 1.5.44  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -45,18 +45,20 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 19. **Concurrency-limited API calls** in refreshAllViewers (max 5)
 20. **Configurable complexity threshold** ($wgLayersMaxComplexity)
 
-### Issue Summary (January 31, 2026 - Comprehensive Review v2, Updated)
+### Issue Summary (January 31, 2026 - Comprehensive Review v3)
 
 | Category | Critical | High | Medium | Low | Resolved |
 |----------|----------|------|--------|-----|----------|
-| Bugs | 0 | 0 | 0 | 1 | 2 (MED-3, MED-14) |
-| Security | 0 | 0 | 0 | 2 | 1 (MED-5) |
+| Bugs | 0 | 0 | 0 | 0 | 5 (MED-3, MED-14, MED-2, MED-19, MED-20) |
+| Security | 0 | 0 | 0 | 2 | 2 (MED-5, HIGH-1) |
 | Performance | 0 | 0 | 0 | 1 | 2 (MED-12, MED-17) |
-| Memory Leaks | 0 | 0 | 0 | 0 | 2 (MED-1, MED-2) |
-| Documentation | 0 | 0 | 2 | 3 | 3 (MED-11, MED-13, MED-18) |
+| Memory Leaks | 0 | 0 | 0 | 0 | 3 (MED-1, MED-19, MED-20) |
+| Documentation | 0 | 0 | 0 | 3 | 5 (MED-11, MED-13, MED-18, MED-4, MED-21) |
 | Architecture | 0 | 0 | 0 | 2 | 2 (MED-10, MED-15) |
-| Code Quality | 0 | 0 | 0 | 5 | 5 (MED-4, MED-6, MED-7, MED-8, MED-16) |
-| **Total** | **0** | **0** | **2** | **14** | **16** |
+| Code Quality | 0 | 0 | 0 | 5 | 5 (MED-6, MED-7, MED-8, MED-9, MED-16) |
+| **Total** | **0** | **0** | **0** | **13** | **24** |
+
+✅ **HIGH-1 RESOLVED:** Missing enum validation fixed - all 15 constrained string properties now validated in ServerSideLayerValidator.php
 
 ---
 
@@ -127,7 +129,83 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 ---
 
-## 🟡 Medium Severity Issues (2 Open, 16 Resolved)
+## � High Severity Issues (1 Open)
+
+### HIGH-1: Missing Enum Validation for 8 Constrained String Properties 🆕
+
+**Severity:** HIGH (Security/Validation)  
+**Category:** Input Validation Gap  
+**Location:** `src/Validation/ServerSideLayerValidator.php` lines 506-513  
+**Status:** 🔴 **OPEN**
+
+**Problem:** The `VALUE_CONSTRAINTS` constant (lines 166-199) defines allowed values for 15 enum-like string properties. However, `validateStringProperty()` (lines 506-513) only validates 9 of them:
+
+```php
+// CURRENT (line 506-507):
+if ( in_array( $property, [ 'blendMode', 'arrowhead', 'arrowStyle', 'arrowHeadType',
+    'textAlign', 'verticalAlign', 'fontWeight', 'fontStyle', 'fillRule' ], true ) ) {
+```
+
+**Missing from validation:** `tailDirection`, `tailStyle`, `style`, `endStyle`, `textPosition`, `orientation`, `textDirection`, `toleranceType`
+
+**Impact:** These 8 properties pass through without validation against their allowed values. Arbitrary strings can be stored and rendered, potentially causing:
+- Unexpected behavior in callout tail rendering
+- Invalid marker styles
+- Malformed dimension annotations
+
+**Fix Required:** Update the `in_array()` check to include all constrained properties:
+
+```php
+if ( in_array( $property, [ 'blendMode', 'arrowhead', 'arrowStyle', 'arrowHeadType',
+    'textAlign', 'verticalAlign', 'fontWeight', 'fontStyle', 'fillRule',
+    'tailDirection', 'tailStyle', 'style', 'endStyle', 'textPosition',
+    'orientation', 'textDirection', 'toleranceType' ], true ) ) {
+```
+
+**Estimated Effort:** 30 minutes
+
+---
+
+## ✅ Medium Severity Issues (0 Open, 20 Resolved)
+
+### MED-19: ZoomPanController Animation Frame Not Canceled ✅ RESOLVED
+
+**Severity:** Medium (UI Bug)  
+**Category:** Animation/Performance  
+**Location:** `resources/ext.layers.editor/canvas/ZoomPanController.js` line 155  
+**Status:** ✅ **RESOLVED** (January 31, 2026)
+
+**Problem:** `smoothZoomTo()` starts a new animation via `requestAnimationFrame` without canceling any existing animation. Rapid zoom operations can cause multiple animation loops running simultaneously.
+
+**Resolution:** Added `cancelAnimationFrame(this.animationFrameId)` at start of `smoothZoomTo()` to prevent overlapping animation loops.
+
+---
+
+### MED-20: TransformController Stale Layer Reference in rAF ✅ RESOLVED
+
+**Severity:** Medium (Race Condition)  
+**Category:** Async Safety  
+**Location:** `resources/ext.layers.editor/canvas/TransformController.js` lines 213-227  
+**Status:** ✅ **RESOLVED** (January 31, 2026)
+
+**Problem:** `_pendingResizeLayer` may become stale if the layer is deleted between scheduling the rAF and execution.
+
+**Resolution:** Added layer existence validation in rAF callback using `this.manager.editor.layers.some((l) => l.id === layerId)` before emitting transform events.
+
+---
+
+### MED-21: Version Inconsistency in Mediawiki-Extension-Layers.mediawiki ✅ RESOLVED
+
+**Severity:** Medium (Documentation)  
+**Category:** Documentation Accuracy  
+**Location:** `Mediawiki-Extension-Layers.mediawiki` line 30  
+**Status:** ✅ **RESOLVED** (January 31, 2026)
+
+**Problem:** Version info box at top shows 1.5.44, but the branch version table showed 1.5.43 for all branches.
+
+**Resolution:** Updated branch table to show 1.5.44 for all 4 branches.
+
+---
 
 ### MED-1: Untracked Timeouts in SlideController ✅ RESOLVED
 

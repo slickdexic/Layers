@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 31, 2026 (Comprehensive Critical Review v2)  
-**Version:** 1.5.43
+**Last Updated:** January 31, 2026 (Comprehensive Critical Review v3)  
+**Version:** 1.5.44
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -12,21 +12,49 @@ This document lists known issues and current gaps for the Layers extension.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
-| P1 (High Priority) | **0** | ✅ All resolved |
-| P2 (Medium Priority) | **18** | 🟡 18 open |
+| P1 (High Priority) | **1** | 🔴 1 open (validation gap) |
+| P2 (Medium Priority) | **3** | 🟡 3 open (animation, race condition, docs) |
 | P3 (Low Priority) | **14** | 🟢 14 open |
 | Feature Gaps | 3 | Planned |
 
 ---
 
-## ✅ P0: Critical Bugs — ALL RESOLVED
+## 🔴 P1: High Priority Issues (1 Open)
+
+### P1.3 Missing Enum Validation for Constrained String Properties 🆕
+
+**Status:** 🔴 OPEN  
+**Severity:** P1 (High)  
+**Component:** ServerSideLayerValidator / Security
+
+**Issue:** The `VALUE_CONSTRAINTS` constant defines allowed values for 15 enum-like string properties, but `validateStringProperty()` only validates 9 of them. These 8 properties are NOT validated:
+- `tailDirection` (callout tail direction)
+- `tailStyle` (callout tail style)
+- `style` (marker style)
+- `endStyle` (dimension end style)
+- `textPosition` (dimension text position)
+- `orientation` (dimension orientation)
+- `textDirection` (dimension text direction)
+- `toleranceType` (dimension tolerance)
+
+**Impact:** Arbitrary strings can be stored for these properties, potentially causing rendering issues or unexpected behavior.
+
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 506-513
+
+**Fix:** Add the 8 missing properties to the `in_array()` check in `validateStringProperty()`.
+
+**Estimated Effort:** 30 minutes
+
+---
+
+## ✅ P1: Previously Resolved Issues
 
 All critical bugs identified in previous reviews have been resolved.
 All **11,112** tests pass as of January 31, 2026.
 
 ---
 
-## ✅ P1: High Priority Issues — ALL RESOLVED
+## ✅ P1: Previously Resolved High Priority Issues
 
 All high priority issues from previous reviews have been resolved:
 
@@ -39,37 +67,113 @@ All high priority issues from previous reviews have been resolved:
 
 ---
 
-## 🟡 P2: Medium Priority Issues (18 Open)
+## 🟡 P2: Medium Priority Issues (3 Open, 15 Resolved)
 
-### P2.1 Untracked Timeouts in SlideController
+### P2.19 ZoomPanController Animation Frame Not Canceled 🆕
 
 **Status:** 🟡 OPEN  
 **Severity:** P2 (Medium)  
-**Component:** SlideController / Memory Management
+**Component:** ZoomPanController / Animation
 
-**Issue:** `_scheduleRetries()` creates setTimeout calls that are never 
-tracked or cleared. If the component is destroyed before timeouts fire,
-callbacks will access stale data.
+**Issue:** `smoothZoomTo()` starts a new animation via `requestAnimationFrame` without canceling any existing animation. Rapid zoom operations can cause multiple animation loops running simultaneously, causing jittery zoom behavior.
 
-**Files:** `resources/ext.layers/viewer/SlideController.js` lines 156-163
+**Files:** `resources/ext.layers.editor/canvas/ZoomPanController.js` line 155
 
-**Fix:** Track timeout IDs using TimeoutTracker and clear in destroy().
+**Fix:** Add `cancelAnimationFrame(this.animationFrameId)` before starting new animation.
 
-**Estimated Effort:** 1 hour
+**Estimated Effort:** 15 minutes
 
 ---
 
-### P2.2 Untracked Event Listeners in ToolDropdown
+### P2.20 TransformController Stale Layer Reference in rAF 🆕
 
 **Status:** 🟡 OPEN  
 **Severity:** P2 (Medium)  
-**Component:** ToolDropdown / Memory Management
+**Component:** TransformController / Race Condition
 
-**Issue:** Event listeners on triggerButton and menu items are added with 
-inline arrow functions and not tracked. The destroy() method only removes
-document-level listeners, leaving component listeners attached.
+**Issue:** `_pendingResizeLayer` may become stale if the layer is deleted between scheduling the rAF and execution. The callback emits events with potentially invalid layer references.
 
-**Files:** `resources/ext.layers.editor/ui/ToolDropdown.js` lines 132-200
+**Files:** `resources/ext.layers.editor/canvas/TransformController.js`
+
+**Fix:** Validate layer still exists in layers array before emitting in the rAF callback.
+
+**Estimated Effort:** 30 minutes
+
+---
+
+### P2.21 Version Inconsistency in Mediawiki-Extension-Layers.mediawiki 🆕
+
+**Status:** 🟡 OPEN  
+**Severity:** P2 (Medium)  
+**Component:** Documentation
+
+**Issue:** Version info box at top shows 1.5.44, but the branch version table shows 1.5.43.
+
+**Files:** `Mediawiki-Extension-Layers.mediawiki` line 122
+
+**Fix:** Update branch table to show 1.5.44 versions.
+
+**Estimated Effort:** 5 minutes
+
+---
+
+### P2.1 Untracked Timeouts in SlideController ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** Already implemented - `_retryTimeouts` array tracks IDs, `destroy()` clears all.
+
+---
+
+### P2.2 Untracked Event Listeners in ToolDropdown ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (v1.5.44)  
+**Resolution:** Added `boundHandleTriggerClick` and `_menuItemHandlers` Map.
+
+---
+
+### P2.3 VirtualLayerList rAF Callback Missing Destroyed Check ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** `if (this.destroyed) return;` check added at line 239.
+
+---
+
+### P2.4 Inconsistent Set Name Validation Standards ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** ApiLayersRename now uses SetNameSanitizer consistently.
+
+---
+
+### P2.5 Slide Name Not Validated in ApiLayersSave ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** SlideNameValidator now validates slidename before processing.
+
+---
+
+### P2.6 Promise Constructor Anti-Pattern in APIManager ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (Verified as valid pattern)  
+**Resolution:** Pattern is legitimate - enables request tracking, abort support.
+
+---
+
+### P2.7 Aborted Request Handling Shows Spurious Errors ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (Already implemented)  
+**Resolution:** Both `loadRevision()` and `loadSetByName()` include abort detection.
+
+---
+
+### P2.8 Inconsistent Logger Usage in API Modules ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (v1.5.44)  
+**Resolution:** Replaced `LoggerFactory::getInstance()` with `$this->getLogger()`.
+
+---
+
+### P2.9 Inconsistent Database Method Return Types
 
 **Fix:** Store handler references and remove them in destroy(), or use EventTracker.
 
@@ -609,5 +713,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 31, 2026 (Comprehensive Critical Review v2)*  
-*Status: ✅ All tests passing. No critical bugs. No HIGH priority issues.*
+*Document updated: January 31, 2026 (Comprehensive Critical Review v3)*  
+*Status: ✅ All tests passing. No P0 bugs. 1 HIGH priority issue (validation gap).*

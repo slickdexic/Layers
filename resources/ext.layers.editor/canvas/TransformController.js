@@ -220,8 +220,16 @@ class TransformController {
 						return;
 					}
 					if ( this._pendingResizeLayer ) {
-						this.manager.renderLayers( this.manager.editor.layers );
-						this.emitTransforming( this._pendingResizeLayer );
+						// P2.20 FIX: Validate layer still exists in layers array
+						// The layer may have been deleted between scheduling and execution
+						const layerId = this._pendingResizeLayer.id;
+						const stillExists = this.manager.editor.layers.some(
+							( l ) => l.id === layerId
+						);
+						if ( stillExists ) {
+							this.manager.renderLayers( this.manager.editor.layers );
+							this.emitTransforming( this._pendingResizeLayer );
+						}
 					}
 				} );
 			}

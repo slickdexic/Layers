@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 31, 2026 (Comprehensive Critical Review v2)  
+**Last Updated:** January 31, 2026 (Comprehensive Critical Review v3)  
 **Version:** 1.5.44  
 **Status:** Production-Ready (8.5/10)
 
@@ -14,8 +14,8 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
-- ✅ **P1:** All resolved (high-priority issues fixed)
-- 🟡 **P2:** 2 open (medium-priority improvements)
+- ✅ **P1:** All resolved (enum validation fixed)
+- ✅ **P2:** All resolved (20 items completed)
 - 🟢 **P3:** 14 open (low-priority backlog)
 
 **Verified Metrics (January 31, 2026):**
@@ -62,9 +62,25 @@ No critical bugs remain. All **11,112** tests pass.
 
 ---
 
-## Phase 1 (P1): High Priority — ✅ ALL RESOLVED
+## Phase 1 (P1): High Priority — 🔴 1 OPEN ITEM
 
-All high-priority issues from previous reviews have been addressed:
+### P1.3 Fix Missing Enum Validation in ServerSideLayerValidator
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P1 - High  
+**Category:** Input Validation / Security
+
+**Problem:** `VALUE_CONSTRAINTS` defines allowed values for 15 enum properties, but only 9 are validated. These 8 properties bypass validation:
+- `tailDirection`, `tailStyle`, `style`, `endStyle`
+- `textPosition`, `orientation`, `textDirection`, `toleranceType`
+
+**Resolution:** Added all 8 missing properties to the `in_array()` check in `validateStringProperty()` at line 506.
+
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 506-519
+
+---
+
+### Previously Resolved P1 Issues
 
 | Issue | Resolution Date |
 |-------|-----------------|
@@ -76,9 +92,53 @@ All high-priority issues from previous reviews have been addressed:
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 2 OPEN ITEMS (16 RESOLVED)
+## Phase 2 (P2): Medium Priority — 🟡 3 OPEN ITEMS (15 RESOLVED)
 
-### Memory Management Issues (3 items)
+### New Issues Found (3 items)
+
+#### P2.19 Fix ZoomPanController Animation Frame Overlap
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P2 - Medium  
+**Category:** Animation Bug
+
+**Problem:** `smoothZoomTo()` doesn't cancel previous animation frame before starting new one.
+
+**Resolution:** Added `cancelAnimationFrame(this.animationFrameId)` at start of `smoothZoomTo()` to prevent overlapping animation loops.
+
+**Files:** `resources/ext.layers.editor/canvas/ZoomPanController.js` line 155
+
+---
+
+#### P2.20 Fix TransformController Stale Layer Reference
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P2 - Medium  
+**Category:** Race Condition
+
+**Problem:** `_pendingResizeLayer` may be stale if layer deleted before rAF fires.
+
+**Resolution:** Added layer existence validation in rAF callback using `this.manager.editor.layers.some((l) => l.id === layerId)` before emitting transform events.
+
+**Files:** `resources/ext.layers.editor/canvas/TransformController.js` lines 213-227
+
+---
+
+#### P2.21 Fix Mediawiki-Extension-Layers.mediawiki Version Table
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P2 - Medium  
+**Category:** Documentation
+
+**Problem:** Branch version table shows 1.5.43 but extension is 1.5.44.
+
+**Resolution:** Updated branch table to show 1.5.44 for all branches.
+
+**Files:** `Mediawiki-Extension-Layers.mediawiki` line 30
+
+---
+
+### Memory Management Issues — ✅ ALL RESOLVED
 
 #### P2.1 Fix Untracked Timeouts in SlideController
 
@@ -438,29 +498,19 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 
 ## Immediate Action Items
 
-### This Week
-1. **P2.1:** Fix SlideController timeouts — 1 hour
-2. **P2.2:** Fix ToolDropdown listeners — 1 hour
-3. **P2.3:** Fix VirtualLayerList rAF — 15 min
-4. **P2.12:** Sync documentation metrics — 2 hours
-5. **P2.13:** Fix WIKITEXT_USAGE.md — 15 min
-6. **P2.14:** Fix README versions — 10 min
+### This Week (Priority)
+1. **P1.3:** Fix missing enum validation (HIGH) — 30 min ⚠️ **PRIORITY**
+2. **P2.19:** Fix ZoomPanController animation overlap — 15 min
+3. **P2.20:** Fix TransformController stale layer ref — 30 min
+4. **P2.21:** Fix mediawiki version table — 5 min
 
 ### This Month
-1. **P2.4:** Standardize set name validation — 2 hours
-2. **P2.5:** Add slidename validation — 30 min
-3. **P2.7:** Fix aborted request handling — 1 hour
-4. **P2.8:** Standardize logger usage — 1 hour
-5. **P2.9:** Standardize DB return types — 2 days
-6. **P2.15:** Fix StateManager timing — 2 hours
-7. **P2.16:** Add quota error handling — 30 min
+1. **P2.9:** Standardize DB return types — 2 days
+2. **P2.11:** Extract god class modules — 1 week
 
 ### This Quarter
-1. **P2.6:** Refactor promise patterns — 3 hours
-2. **P2.10:** Refactor SQL NOT IN — 1 hour
-3. **P2.11:** Extract 2 god class modules — 1 week
-4. **P2.17-18:** Performance optimizations — 4 hours
-5. **F4:** Add visual regression tests — 2 sprints
+1. **P3 backlog items** — as time permits
+2. **F4:** Add visual regression tests — 2 sprints
 
 ---
 
@@ -473,7 +523,8 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 | Branch coverage | 85.25% | ≥85% | Good |
 | God classes | 18 | ≤15 | Extract 3 |
 | Near-threshold | 6 | ≤4 | Monitor |
-| P2 issues | 18 | ≤10 | Focus area |
+| P1 issues | **1** | 0 | **Fix this week** |
+| P2 issues | **3** | 0 | Focus area |
 | P3 issues | 14 | Backlog | Low priority |
 
 ---
@@ -482,17 +533,15 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 
 | Item | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| Memory leak risks (P2.1-2.3) | Medium | 3h | P2 |
-| Validation inconsistency (P2.4-5) | Medium | 2.5h | P2 |
-| Promise anti-patterns (P2.6-7) | Low | 4h | P2 |
-| Code consistency (P2.8-10) | Low | 4h | P2 |
+| **Missing enum validation** | **High** | **30m** | **P1** |
+| Animation frame not canceled | Medium | 15m | P2 |
+| Stale layer reference | Medium | 30m | P2 |
+| Documentation version drift | Low | 5m | P2 |
 | 18 god classes | Medium | 2-3 weeks | P2 |
-| Documentation drift (P2.12-14) | Low | 3h | P2 |
-| Error handling (P2.15-16) | Medium | 2.5h | P2 |
-| Performance (P2.17-18) | Low | 4h | P2 |
+| Inconsistent DB return types | Low | 2 days | P2 |
 | No visual regression | Medium | 2 sprints | P3 |
 | No TypeScript | Low | Long-term | P3 |
 
 ---
 
-*Last updated: January 31, 2026 (Comprehensive Critical Review v2)*
+*Last updated: January 31, 2026 (Comprehensive Critical Review v3)*
