@@ -23,8 +23,8 @@ Version history for the Layers extension.
 - All 11,112 tests pass (163 test suites)
 - All P1 HIGH priority security issues now resolved
 - P2 issues reduced from 9 open to 5 open
-- P3 issues: 2 resolved, 10 backlog
-- Rating upgraded from 8.5/10 to 8.7/10
+- P3 issues: 9 resolved, 3 open
+- Rating upgraded from 8.5/10 to 8.8/10
 
 ---
 

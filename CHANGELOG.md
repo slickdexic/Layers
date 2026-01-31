@@ -30,7 +30,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Test coverage: 95.42% statement, 85.25% branch
 - All P1 HIGH priority security issues now resolved
 - P2 issues reduced from 9 open to 5 open
-- Rating upgraded from 8.5/10 to 8.7/10
+- P3 issues: 9 resolved, 3 open
+- Rating upgraded from 8.5/10 to 8.8/10
 
 ---
 

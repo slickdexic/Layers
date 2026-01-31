@@ -15,8 +15,8 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
 - ✅ **P1:** All resolved (race condition fixed, permission check added)
-- 🟡 **P2:** 7 open (code quality improvements)
-- 🟢 **P3:** 11 open (minor improvements)
+- 🟡 **P2:** 5 open (code quality improvements)
+- 🟢 **P3:** 3 open (minor improvements)
 
 **Verified Metrics (January 31, 2026):**
 
