@@ -10,20 +10,20 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. All **11,112** tests pass. This improvement plan prioritizes issues identified in the January 31, 2026 comprehensive critical review v2.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. All **11,118** tests pass. This improvement plan prioritizes issues identified in the January 31, 2026 comprehensive critical review v2.
 
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
 - ✅ **P1:** All resolved (enum validation fixed)
 - ✅ **P2:** All resolved (20 items completed)
-- 🟢 **P3:** 14 open (low-priority backlog)
+- 🟢 **P3:** 13 open (low-priority backlog) - P3.11 completed
 
 **Verified Metrics (January 31, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests total | **11,112** (163 suites) | ✅ Excellent |
-| Tests passing | **11,112** | ✅ All pass |
+| Tests total | **11,118** (163 suites) | ✅ Excellent |
+| Tests passing | **11,118** | ✅ All pass |
 | Tests skipped | **0** | ✅ Clean |
 | Statement coverage | **95.42%** | ✅ Excellent |
 | Branch coverage | **85.25%** | ✅ Good |
@@ -58,7 +58,7 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-No critical bugs remain. All **11,112** tests pass.
+No critical bugs remain. All **11,118** tests pass.
 
 ---
 
@@ -421,25 +421,26 @@ Add try/catch or optional chaining for edge cases.
 
 Prevent performance issues with very long prefixes.
 
-### P3.9 Remove Unused ALLOWED_ENTITIES Constant
+### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅ RESOLVED
 
-Clean up TextSanitizer unused constant.
+See P3.9 entry above (resolved January 2026).
 
 ### P3.10 Standardize Class Resolution Pattern
 
 Use single consistent pattern across all JS files.
 
-### P3.11 Add Class Resolution Caching
+### P3.11 Add Class Resolution Caching ✅ RESOLVED
 
-Cache resolved classes in LayersNamespace.findClass().
+**Status:** Resolved (January 31, 2026)  
+**Implementation:** Added Map-based caching to `NamespaceHelper.js` `getClass()` function with composite cache key (`namespacePath|globalName`). Added `clearClassCache()` for test isolation. Added 6 new tests. Commit 93279109.
 
 ### P3.12 Improve DeepClone to Avoid JSON Fallback
 
-Handle all cases without expensive JSON serialization.
+Handle all cases without expensive JSON serialization. LOW PRIORITY: `structuredClone` is already used in modern browsers.
 
-### P3.13 Add getBoundingClientRect Guards
+### P3.13 Add getBoundingClientRect Guards ✅ RESOLVED
 
-Check for zero dimensions before scale calculations.
+See P3.13 entry above (resolved January 2026).
 
 ### P3.14 Anonymize User IDs in Logs
 
