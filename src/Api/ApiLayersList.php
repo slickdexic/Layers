@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use ApiResult;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -79,7 +80,7 @@ class ApiLayersList extends ApiBase {
 		// Verify database schema exists
 		if ( !$db->isSchemaReady() ) {
 			$this->dieWithError(
-				[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
 				'dbschema-missing'
 			);
 		}

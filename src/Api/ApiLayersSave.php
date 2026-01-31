@@ -136,7 +136,7 @@ class ApiLayersSave extends ApiBase {
 			// Schema is created/updated via LayersSchemaManager on LoadExtensionSchemaUpdates hook
 			if ( !$db->isSchemaReady() ) {
 				$this->dieWithError(
-					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+					[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
 					'dbschema-missing'
 				);
 			}
@@ -163,14 +163,14 @@ class ApiLayersSave extends ApiBase {
 			// from shared repositories (e.g., Wikimedia Commons remotes).
 			$title = Title::newFromText( $fileName, NS_FILE );
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
-				$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 			}
 
 			// Use DB key form for database operations
 			// This ensures consistency (spaces -> underscores) across save/load paths
 			$fileDbKey = $title->getDBkey();
 			if ( $fileDbKey === '' ) {
-				$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 			}
 
 			// SIZE LIMIT: Check payload size before expensive JSON parsing
@@ -181,7 +181,7 @@ class ApiLayersSave extends ApiBase {
 			// Default: 2MB (configurable via $wgLayersMaxBytes)
 			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
-				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
+				$this->dieWithError( LayersConstants::ERROR_DATA_TOO_LARGE, 'datatoolarge' );
 			}
 
 			// PARSE: Decode JSON structure from client
@@ -192,7 +192,7 @@ class ApiLayersSave extends ApiBase {
 				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
 				// JSON parsing failed - invalid syntax, encoding issues, or malformed data
-				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
+				$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
 			}
 
 			// HANDLE BOTH OLD AND NEW DATA FORMATS
@@ -231,7 +231,7 @@ class ApiLayersSave extends ApiBase {
 			if ( !$validationResult->isValid() ) {
 				// Combine all error messages with i18n keys for client display
 				$errors = implode( '; ', $validationResult->getErrors() );
-				$this->dieWithError( [ 'layers-validation-failed', $errors ], 'validationfailed' );
+				$this->dieWithError( [ LayersConstants::ERROR_VALIDATION_FAILED, $errors ], 'validationfailed' );
 			}
 
 			// Extract sanitized data (validator has cleaned/normalized all fields)
@@ -347,7 +347,7 @@ class ApiLayersSave extends ApiBase {
 			} else {
 				// Database operation failed (unlikely after all validation)
 				// Possible causes: disk full, connection loss, constraint violation
-				$this->dieWithError( 'layers-save-failed', 'savefailed' );
+				$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 			}
 		} catch ( ApiUsageException $e ) {
 			throw $e;
@@ -387,7 +387,7 @@ class ApiLayersSave extends ApiBase {
 			// - Stack traces (reveals code structure, library versions)
 			// - Configuration values
 			// Generic message prevents attackers from learning about system internals
-			$this->dieWithError( 'layers-save-failed', 'savefailed' );
+			$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 		}
 	}
 
@@ -406,7 +406,7 @@ class ApiLayersSave extends ApiBase {
 
 			if ( !$db->isSchemaReady() ) {
 				$this->dieWithError(
-					[ 'layers-db-error', 'Layer tables missing. Please run maintenance/update.php' ],
+					[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
 					'dbschema-missing'
 				);
 			}
@@ -418,14 +418,14 @@ class ApiLayersSave extends ApiBase {
 			// Size limit check
 			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
 			if ( strlen( $data ) > $maxBytes ) {
-				$this->dieWithError( 'layers-data-too-large', 'datatoolarge' );
+				$this->dieWithError( LayersConstants::ERROR_DATA_TOO_LARGE, 'datatoolarge' );
 			}
 
 			// Parse JSON
 			try {
 				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 			} catch ( \JsonException $e ) {
-				$this->dieWithError( 'layers-json-parse-error', 'invalidjson' );
+				$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
 			}
 
 			// Handle both old and new data formats
@@ -460,7 +460,7 @@ class ApiLayersSave extends ApiBase {
 
 			if ( !$validationResult->isValid() ) {
 				$errors = implode( '; ', $validationResult->getErrors() );
-				$this->dieWithError( [ 'layers-validation-failed', $errors ], 'validationfailed' );
+				$this->dieWithError( [ LayersConstants::ERROR_VALIDATION_FAILED, $errors ], 'validationfailed' );
 			}
 
 			$sanitizedData = $validationResult->getData();
@@ -501,7 +501,7 @@ class ApiLayersSave extends ApiBase {
 				];
 				$this->getResult()->addValue( null, $this->getModuleName(), $resultData );
 			} else {
-				$this->dieWithError( 'layers-save-failed', 'savefailed' );
+				$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 			}
 		} catch ( ApiUsageException $e ) {
 			throw $e;
@@ -514,7 +514,7 @@ class ApiLayersSave extends ApiBase {
 				'user_id' => $user->getId(),
 				'slidename' => $slidename
 			] );
-			$this->dieWithError( 'layers-save-failed', 'savefailed' );
+			$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 		}
 	}
 

@@ -78,7 +78,7 @@ class ApiLayersInfo extends ApiBase {
 
 		$title = $this->getTitleFromFilename( $filename );
 		if ( !$title ) {
-			$this->dieWithError( 'layers-invalid-filename', 'invalidfilename' );
+			$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 		}
 
 		$user = $this->getUser();

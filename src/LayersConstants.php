@@ -101,6 +101,71 @@ class LayersConstants {
 	public const ERROR_INVALID_SETNAME = 'layers-invalid-setname';
 
 	/**
+	 * Error: Invalid filename
+	 */
+	public const ERROR_INVALID_FILENAME = 'layers-invalid-filename';
+
+	/**
+	 * Error: Validation failed
+	 */
+	public const ERROR_VALIDATION_FAILED = 'layers-validation-failed';
+
+	/**
+	 * Error: Database error
+	 */
+	public const ERROR_DB = 'layers-db-error';
+
+	/**
+	 * Error: Slides feature disabled
+	 */
+	public const ERROR_SLIDES_DISABLED = 'layers-slides-disabled';
+
+	/**
+	 * Error: Slide save failed
+	 */
+	public const ERROR_SLIDE_SAVE = 'layers-slide-save-error';
+
+	/**
+	 * Error: Too many layers
+	 */
+	public const ERROR_TOO_MANY_LAYERS = 'layers-too-many-layers';
+
+	/**
+	 * Error: Layer too complex
+	 */
+	public const ERROR_TOO_COMPLEX = 'layers-too-complex';
+
+	/**
+	 * Error: Image too large
+	 */
+	public const ERROR_IMAGE_TOO_LARGE = 'layers-image-too-large';
+
+	/**
+	 * Error: Cannot rename to 'default'
+	 */
+	public const ERROR_CANNOT_RENAME_DEFAULT = 'layers-cannot-rename-to-default';
+
+	/**
+	 * Error: Set name already exists
+	 */
+	public const ERROR_SETNAME_EXISTS = 'layers-setname-exists';
+
+	/**
+	 * Error: Rename permission denied
+	 */
+	public const ERROR_RENAME_PERMISSION_DENIED = 'layers-rename-permission-denied';
+
+	/**
+	 * Error: Rename failed
+	 */
+	public const ERROR_RENAME_FAILED = 'layers-rename-failed';
+
+	/**
+	 * Error: Delete permission denied
+	 */
+	public const ERROR_DELETE_PERMISSION_DENIED = 'layers-delete-permission-denied';
+
+	/**
 	 * Error: Database schema missing
 	 */
 	public const ERROR_SCHEMA_MISSING = 'dbschema-missing';

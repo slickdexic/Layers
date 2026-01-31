@@ -57,13 +57,13 @@ class ApiLayersRename extends ApiBase {
 
 		// Validate new name format
 		if ( !$this->isValidSetName( $newName ) ) {
-			$this->dieWithError( 'layers-invalid-setname', 'invalidsetname' );
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
 		// Prevent renaming to 'default'
 		$defaultName = strtolower( LayersConstants::DEFAULT_SET_NAME );
 		if ( strtolower( $newName ) === $defaultName && strtolower( $oldName ) !== $defaultName ) {
-			$this->dieWithError( 'layers-cannot-rename-to-default', 'invalidsetname' );
+			$this->dieWithError( LayersConstants::ERROR_CANNOT_RENAME_DEFAULT, 'invalidsetname' );
 		}
 
 		try {
@@ -115,12 +115,12 @@ class ApiLayersRename extends ApiBase {
 
 			// Check if new name already exists
 			if ( $db->namedSetExists( $imgName, $sha1, $newName ) ) {
-				$this->dieWithError( 'layers-setname-exists', 'setnameexists' );
+				$this->dieWithError( LayersConstants::ERROR_SETNAME_EXISTS, 'setnameexists' );
 			}
 
 			// PERMISSION CHECK: Only owner or admin can rename (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $oldName ) ) {
-				$this->dieWithError( 'layers-rename-permission-denied', 'permissiondenied' );
+				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
 			// RATE LIMITING: Prevent abuse by limiting rename operations per user
@@ -143,7 +143,7 @@ class ApiLayersRename extends ApiBase {
 					'newname' => $newName,
 					'user' => $user->getName()
 				] );
-				$this->dieWithError( 'layers-rename-failed', 'renamefailed' );
+				$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
 			}
 
 			$this->getLogger()->info( 'Layer set renamed', [
@@ -165,7 +165,7 @@ class ApiLayersRename extends ApiBase {
 				'oldname' => $oldName,
 				'newname' => $newName
 			] );
-			$this->dieWithError( 'layers-rename-failed', 'renamefailed' );
+			$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
 			return; // @codeCoverageIgnore
 		}
 	}

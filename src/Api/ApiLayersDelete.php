@@ -146,7 +146,7 @@ class ApiLayersDelete extends ApiBase {
 
 			// PERMISSION CHECK: Only owner or admin can delete (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName ) ) {
-				$this->dieWithError( 'layers-delete-permission-denied', 'permissiondenied' );
+				$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
 			// RATE LIMITING: Prevent abuse by limiting delete operations per user
@@ -222,7 +222,7 @@ class ApiLayersDelete extends ApiBase {
 
 			// Permission check: only owner or admin can delete (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName ) ) {
-				$this->dieWithError( 'layers-delete-permission-denied', 'permissiondenied' );
+				$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
 			// Rate limiting

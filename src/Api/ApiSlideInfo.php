@@ -55,7 +55,7 @@ class ApiSlideInfo extends ApiBase {
 		}
 
 		if ( !$enabled ) {
-			$this->dieWithError( 'layers-slides-disabled', 'slidesdisabled' );
+			$this->dieWithError( LayersConstants::ERROR_SLIDES_DISABLED, 'slidesdisabled' );
 			return;
 		}
 
