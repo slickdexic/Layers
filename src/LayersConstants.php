@@ -46,6 +46,12 @@ class LayersConstants {
 	 */
 	public const PARSER_FUNCTION_SLIDE = 'Slide';
 
+	/**
+	 * Default maximum complexity score for layer sets.
+	 * Higher values allow more/complex layers but increase processing time.
+	 */
+	public const DEFAULT_MAX_COMPLEXITY = 100;
+
 	// ========================================================================
 	// Error message keys (for i18n)
 	// ========================================================================

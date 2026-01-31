@@ -2,12 +2,15 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.42] - 2026-01-30
+## [1.5.42] - 2026-01-31
 
 ### Security
 - **P1.1: Race Condition in saveLayerSet()** — Moved named set limit check inside transaction with FOR UPDATE lock to prevent concurrent insertions exceeding the limit
 - **P1.2: Missing Permission Check in ApiLayersList** — Added `checkUserRightsAny('read')` permission verification before listing slides
 - **P2.8: Missing Rate Limiting on ApiLayersList** — Added `pingLimiter('editlayers-list')` rate limiting to prevent abuse
+
+### Added
+- **$wgLayersMaxComplexity** — New config option to set maximum complexity score for layer sets (default 100). Each layer type has a cost (text: 2, image: 3, shapes: 1, etc). (P3.12)
 
 ### Fixed
 - **P2.1: isComplexityAllowed() Incomplete Coverage** — Expanded layer type handling from 5 to all 15 types with proper complexity scoring:

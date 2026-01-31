@@ -11,6 +11,9 @@ Version history for the Layers extension.
 - **P1.2: Missing Permission Check** — Added `checkUserRightsAny('read')` to ApiLayersList
 - **P2.8: Missing Rate Limiting** — Added `pingLimiter('editlayers-list')` to ApiLayersList
 
+### Added
+- **$wgLayersMaxComplexity** — Configurable complexity threshold (default 100) (P3.12)
+
 ### Fixed
 - **P2.1: isComplexityAllowed() Incomplete** — Expanded to all 15 layer types with proper complexity scoring
 - **P2.10: paths Array Validation** — Added 100-path maximum limit to prevent DoS
@@ -20,6 +23,7 @@ Version history for the Layers extension.
 - All 11,112 tests pass (163 test suites)
 - All P1 HIGH priority security issues now resolved
 - P2 issues reduced from 9 open to 5 open
+- P3 issues: 2 resolved, 10 backlog
 - Rating upgraded from 8.5/10 to 8.7/10
 
 ---

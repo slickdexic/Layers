@@ -265,7 +265,12 @@ class RateLimiter {
 			}
 		}
 
-		// Maximum complexity threshold (configurable in future)
-		return $complexity <= 100;
+		// Use configured limit with a safe default
+		$config = $this->getConfig();
+		$maxComplexity = (int)( $config->get( 'LayersMaxComplexity' ) ?? LayersConstants::DEFAULT_MAX_COMPLEXITY );
+		if ( $maxComplexity <= 0 ) {
+			$maxComplexity = LayersConstants::DEFAULT_MAX_COMPLEXITY;
+		}
+		return $complexity <= $maxComplexity;
 	}
 }

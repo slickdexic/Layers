@@ -65,6 +65,10 @@
 			"description": "Maximum number of layers per layer set",
 			"value": 100
 		},
+		"LayersMaxComplexity": {
+			"description": "Maximum complexity score for a layer set. Each layer type has a cost (text: 2, image: 3, shapes: 1, etc). Total must not exceed this value.",
+			"value": 100
+		},
 		"LayersMaxImageBytes": {
 			"description": "Maximum size in bytes for imported image layers (base64 encoded). Default 1MB. Recommended: 512KB-2MB depending on storage capacity.",
 			"value": 1048576

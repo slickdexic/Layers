@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (High Priority) | **4** | ✅ All resolved |
 | P2 (Medium Priority) | **15** | 🟡 5 open, 10 resolved |
-| P3 (Low Priority) | **12** | 🟢 Backlog |
+| P3 (Low Priority) | **12** | 🟢 2 resolved, 10 backlog |
 | Feature Gaps | 3 | Planned |
 
 ---
@@ -255,9 +255,13 @@ before timeout fires, could cause null reference errors.
 GroupManager uses `JSON.stringify()` for array comparison which is O(n) and
 creates garbage. Consider element-by-element comparison for small arrays.
 
-### P3.12 Magic Numbers in Complexity Threshold
+### P3.12 Magic Numbers in Complexity Threshold — ✅ RESOLVED
 
-`isComplexityAllowed()` uses hardcoded `100` threshold. Should be configurable.
+**Status:** ✅ RESOLVED (January 31, 2026)
+
+**Resolution:** Added `$wgLayersMaxComplexity` config option (default 100) and
+`LayersConstants::DEFAULT_MAX_COMPLEXITY` constant. RateLimiter now uses the
+configurable value instead of hardcoded magic number.
 
 ---
 
