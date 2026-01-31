@@ -422,6 +422,7 @@
 	"layers-network-error": "A network error occurred. Please check your connection and try again.",
 	"layers-timeout-error": "The request timed out. Please try again.",
 	"layers-invalid-filename": "Invalid filename",
+	"layers-invalid-slidename": "Invalid slide name. Use only letters, numbers, hyphens, and underscores.",
 	"layers-too-many-layers": "Too many layers in one image",
 	"layers-too-complex": "Layer set is too complex to process",
 	"layers-image-too-large": "Image is too large to edit with layers",

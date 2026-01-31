@@ -421,10 +421,7 @@ class ApiLayersInfo extends ApiBase {
 			unset( $row );
 		} catch ( \Throwable $e ) {
 			// If user lookup fails, proceed without names
-			if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->warning( 'Failed to batch load user names for layer sets: ' . $e->getMessage() );
-			}
+			$this->getLogger()->warning( 'Failed to batch load user names for layer sets: ' . $e->getMessage() );
 		}
 
 		return $rows;
@@ -475,10 +472,7 @@ class ApiLayersInfo extends ApiBase {
 			unset( $set );
 		} catch ( \Throwable $e ) {
 			// If user lookup fails, proceed without names
-			if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->warning( 'Failed to batch load user names for named sets: ' . $e->getMessage() );
-			}
+			$this->getLogger()->warning( 'Failed to batch load user names for named sets: ' . $e->getMessage() );
 		}
 
 		return $namedSets;

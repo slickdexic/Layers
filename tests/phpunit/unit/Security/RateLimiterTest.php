@@ -134,7 +134,7 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 
 		// Verify that (100 / expectedScore) layers are allowed
 		// but (100 / expectedScore + 1) are rejected (at the boundary)
-		$maxAllowed = (int) floor( 100 / $expectedScore );
+		$maxAllowed = (int)floor( 100 / $expectedScore );
 		$layers = array_fill( 0, $maxAllowed, [ 'type' => $type ] );
 		$this->assertTrue(
 			$limiter->isComplexityAllowed( $layers ),

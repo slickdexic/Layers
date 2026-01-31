@@ -37,7 +37,7 @@ git push origin master
 | `_Sidebar.md` | Navigation sidebar (appears on all pages) |
 | `Installation.md` | Setup instructions |
 | `Quick-Start-Guide.md` | 5-minute tutorial |
-| `Drawing-Tools.md` | All 11 tools explained |
+| `Drawing-Tools.md` | All 15 tools explained |
 | `Keyboard-Shortcuts.md` | Shortcut reference |
 | `Style-Presets.md` | Preset system guide |
 | `Named-Layer-Sets.md` | Multiple annotation sets |
