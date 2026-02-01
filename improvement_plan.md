@@ -320,9 +320,9 @@ Make 3 retries/5000ms timeout configurable for high-load environments.
 
 Change from TINYINT (max 255) to SMALLINT for future-proofing.
 
-### P3.4 Standardize @codeCoverageIgnore Usage
+### P3.4 Standardize @codeCoverageIgnore Usage ⏭️ LOW PRIORITY
 
-Apply consistently across all API modules.
+**Analysis:** The `return; // @codeCoverageIgnore` statements after `dieWithError()` calls are unnecessary since `dieWithError()` has `@return never` (always throws). Best fix would be to remove them, but this is purely cosmetic. Deferred.
 
 ### P3.5 Remove Dead Boolean Normalization Path
 
