@@ -448,6 +448,51 @@ describe( 'APIManager', function () {
 
 			expect( result ).toBe( false );
 		} );
+
+		it( 'should display warnings when validation passes with warnings', function () {
+			const mockNotify = jest.fn();
+			mw.notify = mockNotify;
+
+			window.LayersValidator = function () {
+				return {
+					validateLayers: jest.fn( function () {
+						return { isValid: true, errors: [], warnings: [ 'Large layer count', 'Complex paths detected' ] };
+					} ),
+					showValidationErrors: jest.fn()
+				};
+			};
+
+			const result = apiManager.validateBeforeSave();
+
+			expect( result ).toBe( true );
+			expect( mockNotify ).toHaveBeenCalledWith(
+				expect.stringContaining( 'Large layer count' ),
+				expect.objectContaining( { type: 'warn' } )
+			);
+		} );
+
+		it( 'should not display warnings when warnings array is empty', function () {
+			const mockNotify = jest.fn();
+			mw.notify = mockNotify;
+
+			window.LayersValidator = function () {
+				return {
+					validateLayers: jest.fn( function () {
+						return { isValid: true, errors: [], warnings: [] };
+					} ),
+					showValidationErrors: jest.fn()
+				};
+			};
+
+			const result = apiManager.validateBeforeSave();
+
+			expect( result ).toBe( true );
+			// notify should not be called for empty warnings
+			expect( mockNotify ).not.toHaveBeenCalledWith(
+				expect.stringContaining( 'Warning' ),
+				expect.objectContaining( { type: 'warn' } )
+			);
+		} );
 	} );
 
 	describe( 'errorConfig structure (via errorHandler)', function () {
@@ -899,6 +944,34 @@ describe( 'APIManager', function () {
 			await apiManager.loadRevisionById( 1 );
 
 			expect( mw.notify ).toHaveBeenCalledWith( expect.any( String ), { type: 'success' } );
+		} );
+
+		it( 'should show error notification on non-abort failure', async function () {
+			// Simulate a real API error with proper promise rejection pattern
+			apiManager.api.get = jest.fn( () => {
+				return {
+					then: function ( successCallback ) {
+						return this;
+					},
+					catch: function ( errorCallback ) {
+						errorCallback( 'internal_error', { error: { info: 'Server error' } } );
+						return this;
+					}
+				};
+			} );
+			apiManager.hideSpinner = jest.fn();
+			const originalNotify = mw.notify;
+			mw.notify = jest.fn();
+
+			await apiManager.loadRevisionById( 456 ).catch( () => {} );
+
+			// Should show error notification for real errors
+			expect( mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { type: 'error' } )
+			);
+
+			mw.notify = originalNotify;
 		} );
 	} );
 
