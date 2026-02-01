@@ -4,7 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
-use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Hooks\Processors\ImageLinkProcessor;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayeredFileRenderer;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayerInjector;
@@ -750,20 +750,6 @@ class WikitextHooks {
 		}
 
 		return true;
-	}
-
-	/**
-	 * Resolve the LayersDatabase service while logging failures for diagnostics.
-	 *
-	 * @return LayersDatabase|null
-	 */
-	private static function getLayersDatabaseService(): ?LayersDatabase {
-		try {
-			return MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
-		} catch ( \Throwable $e ) {
-			self::logError( 'Unable to resolve LayersDatabase service', [ 'exception' => $e ] );
-			return null;
-		}
 	}
 
 	/**

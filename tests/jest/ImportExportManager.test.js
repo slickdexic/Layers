@@ -727,4 +727,59 @@ describe( 'ImportExportManager', () => {
 			expect( () => importManager.parseLayersJSON( invalidData ) ).toThrow( 'Invalid JSON format' );
 		} );
 	} );
+
+	describe( 'showConfirmDialog with dialogManager', () => {
+		it( 'should use dialogManager when available', async () => {
+			const mockDialogManager = {
+				showConfirmDialog: jest.fn().mockResolvedValue( true )
+			};
+			const editorWithDialog = {
+				stateManager: mockEditor.stateManager,
+				dialogManager: mockDialogManager
+			};
+			const importManager = new ImportExportManager( { editor: editorWithDialog } );
+
+			const result = await importManager.showConfirmDialog( {
+				message: 'Test?',
+				title: 'Confirm',
+				isDanger: true
+			} );
+
+			expect( mockDialogManager.showConfirmDialog ).toHaveBeenCalledWith( {
+				message: 'Test?',
+				title: 'Confirm',
+				isDanger: true
+			} );
+			expect( result ).toBe( true );
+		} );
+	} );
+
+	describe( 'triggerDownload cleanup', () => {
+		it( 'should handle cleanup when anchor already removed from DOM', async () => {
+			const importManager = new ImportExportManager( { editor: mockEditor } );
+			const content = JSON.stringify( [ { id: 'layer1', type: 'rectangle' } ] );
+
+			// Mock URL.createObjectURL
+			const mockUrl = 'blob:test-url';
+			global.URL.createObjectURL = jest.fn().mockReturnValue( mockUrl );
+			global.URL.revokeObjectURL = jest.fn();
+
+			// Mock document.body.appendChild to not actually append
+			const originalAppendChild = document.body.appendChild;
+			document.body.appendChild = jest.fn( ( el ) => {
+				// Don't actually add to DOM, so parentNode will be null
+				el.click = jest.fn();
+			} );
+
+			importManager.triggerDownload( content, 'test.json', 'application/json' );
+
+			// Wait for setTimeout cleanup
+			await new Promise( ( resolve ) => setTimeout( resolve, 150 ) );
+
+			// Should not throw when parentNode is null
+			expect( global.URL.revokeObjectURL ).toHaveBeenCalledWith( mockUrl );
+
+			document.body.appendChild = originalAppendChild;
+		} );
+	} );
 } );

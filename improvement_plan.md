@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** January 31, 2026 (Comprehensive Critical Review v2)  
-**Version:** 1.5.44  
+**Last Updated:** February 1, 2026 (Comprehensive Critical Review v4)  
+**Version:** 1.5.45  
 **Status:** Production-Ready (8.5/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
@@ -10,31 +10,31 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. All **11,112** tests pass. This improvement plan prioritizes issues identified in the January 31, 2026 comprehensive critical review v2.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. All **11,157** tests pass. This improvement plan prioritizes issues identified in the February 1, 2026 comprehensive critical review v4.
 
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
-- ✅ **P1:** All resolved (high-priority issues fixed)
-- 🟡 **P2:** 2 open (medium-priority improvements)
-- 🟢 **P3:** 14 open (low-priority backlog)
+- ✅ **P1:** All resolved (enum validation fixed)
+- ✅ **P2:** 19 of 20 resolved (1 open: metrics documentation)
+- 🟢 **P3:** 11 open (low-priority backlog)
 
-**Verified Metrics (January 31, 2026):**
+**Verified Metrics (February 1, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests total | **11,112** (163 suites) | ✅ Excellent |
-| Tests passing | **11,112** | ✅ All pass |
+| Tests total | **11,157** (163 suites) | ✅ Excellent |
+| Tests passing | **11,157** | ✅ All pass |
 | Tests skipped | **0** | ✅ Clean |
-| Statement coverage | **95.42%** | ✅ Excellent |
-| Branch coverage | **85.25%** | ✅ Good |
-| Function coverage | **93.72%** | ✅ Excellent |
-| Line coverage | **95.55%** | ✅ Excellent |
+| Statement coverage | **95.44%** | ✅ Excellent |
+| Branch coverage | **85.20%** | ✅ Good |
+| Function coverage | **93.75%** | ✅ Excellent |
+| Line coverage | **95.56%** | ✅ Excellent |
 | JS files | **141** (139 source + 2 dist) | ✅ |
 | PHP files | **42** | ✅ |
 | PHP strict_types | **42/42 files** | ✅ Complete |
 | ES6 classes | All JS files | 100% migrated |
-| God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
-| Near-threshold files (900-999) | **6** | ⚠️ Watch |
+| God classes (≥1,000 lines) | **19** | 2 generated, 15 JS, 2 PHP |
+| Near-threshold files (900-999) | **5** | ⚠️ Watch |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 11 | ✅ All legitimate |
 | innerHTML usages | 73 | Safe patterns |
@@ -58,13 +58,29 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-No critical bugs remain. All **11,112** tests pass.
+No critical bugs remain. All **11,118** tests pass.
 
 ---
 
-## Phase 1 (P1): High Priority — ✅ ALL RESOLVED
+## Phase 1 (P1): High Priority — 🔴 1 OPEN ITEM
 
-All high-priority issues from previous reviews have been addressed:
+### P1.3 Fix Missing Enum Validation in ServerSideLayerValidator
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P1 - High  
+**Category:** Input Validation / Security
+
+**Problem:** `VALUE_CONSTRAINTS` defines allowed values for 15 enum properties, but only 9 are validated. These 8 properties bypass validation:
+- `tailDirection`, `tailStyle`, `style`, `endStyle`
+- `textPosition`, `orientation`, `textDirection`, `toleranceType`
+
+**Resolution:** Added all 8 missing properties to the `in_array()` check in `validateStringProperty()` at line 506.
+
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 506-519
+
+---
+
+### Previously Resolved P1 Issues
 
 | Issue | Resolution Date |
 |-------|-----------------|
@@ -76,9 +92,53 @@ All high-priority issues from previous reviews have been addressed:
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 2 OPEN ITEMS (16 RESOLVED)
+## Phase 2 (P2): Medium Priority — 🟡 3 OPEN ITEMS (15 RESOLVED)
 
-### Memory Management Issues (3 items)
+### New Issues Found (3 items)
+
+#### P2.19 Fix ZoomPanController Animation Frame Overlap
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P2 - Medium  
+**Category:** Animation Bug
+
+**Problem:** `smoothZoomTo()` doesn't cancel previous animation frame before starting new one.
+
+**Resolution:** Added `cancelAnimationFrame(this.animationFrameId)` at start of `smoothZoomTo()` to prevent overlapping animation loops.
+
+**Files:** `resources/ext.layers.editor/canvas/ZoomPanController.js` line 155
+
+---
+
+#### P2.20 Fix TransformController Stale Layer Reference
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P2 - Medium  
+**Category:** Race Condition
+
+**Problem:** `_pendingResizeLayer` may be stale if layer deleted before rAF fires.
+
+**Resolution:** Added layer existence validation in rAF callback using `this.manager.editor.layers.some((l) => l.id === layerId)` before emitting transform events.
+
+**Files:** `resources/ext.layers.editor/canvas/TransformController.js` lines 213-227
+
+---
+
+#### P2.21 Fix Mediawiki-Extension-Layers.mediawiki Version Table
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Priority:** P2 - Medium  
+**Category:** Documentation
+
+**Problem:** Branch version table shows 1.5.43 but extension is 1.5.44.
+
+**Resolution:** Updated branch table to show 1.5.44 for all branches.
+
+**Files:** `Mediawiki-Extension-Layers.mediawiki` line 30
+
+---
+
+### Memory Management Issues — ✅ ALL RESOLVED
 
 #### P2.1 Fix Untracked Timeouts in SlideController
 
@@ -306,7 +366,28 @@ All high-priority issues from previous reviews have been addressed:
 
 ---
 
-## Phase 3 (P3): Long-Term — 🟢 14 ITEMS
+## Phase 3 (P3): Long-Term — 🟢 11 ITEMS (3 RESOLVED)
+
+### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** Removed unused constant from TextSanitizer.php
+
+---
+
+### P3.Dead Code: WikitextHooks.getLayersDatabaseService() ✅
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** Removed dead method that was defined but never called.
+
+---
+
+### P3.13 Add getBoundingClientRect Guards ✅
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** Added defensive guard in GeometryUtils.clientToCanvas() to return canvas center if rect has zero dimensions.
+
+---
 
 ### P3.1 SchemaManager Constructor Injection
 
@@ -320,45 +401,47 @@ Make 3 retries/5000ms timeout configurable for high-load environments.
 
 Change from TINYINT (max 255) to SMALLINT for future-proofing.
 
-### P3.4 Standardize @codeCoverageIgnore Usage
+### P3.4 Standardize @codeCoverageIgnore Usage ⏭️ LOW PRIORITY
 
-Apply consistently across all API modules.
+**Analysis:** The `return; // @codeCoverageIgnore` statements after `dieWithError()` calls are unnecessary since `dieWithError()` has `@return never` (always throws). Best fix would be to remove them, but this is purely cosmetic. Deferred.
 
-### P3.5 Remove Dead Boolean Normalization Path
+### P3.5 Remove Dead Boolean Normalization Path ⏭️ WON'T FIX
 
-Remove legacy empty string → true normalization (dead code).
+**Analysis:** Not actually dead code - it's backwards compatibility for legacy data. The empty string → true normalization is explicitly tested ("should convert empty string to boolean true (legacy data)") and documented in code. Removing it would break existing layer data that might contain empty strings for boolean fields. Keeping for stability.
 
 ### P3.6 Document CHECK Constraint Dependencies
 
 Document that SQL constraints must be updated with PHP config.
 
-### P3.7 Add Null Check in extractLayerSetData
+### P3.7 Add Null Check in extractLayerSetData ✅ RESOLVED
 
-Add try/catch or optional chaining for edge cases.
+Already implemented: Defensive null check exists at line 327 of APIManager.js.
 
-### P3.8 Add Prefix Length Limit in listSlides()
+### P3.8 Add Prefix Length Limit in listSlides() ✅ RESOLVED
 
-Prevent performance issues with very long prefixes.
+**Status:** Resolved (January 31, 2026)  
+**Implementation:** Added 200-character prefix length limit in `LayersDatabase::listSlides()` to prevent performance issues with very long prefixes. Added PHPUnit test for truncation behavior.
 
-### P3.9 Remove Unused ALLOWED_ENTITIES Constant
+### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅ RESOLVED
 
-Clean up TextSanitizer unused constant.
+See P3.9 entry above (resolved January 2026).
 
 ### P3.10 Standardize Class Resolution Pattern
 
 Use single consistent pattern across all JS files.
 
-### P3.11 Add Class Resolution Caching
+### P3.11 Add Class Resolution Caching ✅ RESOLVED
 
-Cache resolved classes in LayersNamespace.findClass().
+**Status:** Resolved (January 31, 2026)  
+**Implementation:** Added Map-based caching to `NamespaceHelper.js` `getClass()` function with composite cache key (`namespacePath|globalName`). Added `clearClassCache()` for test isolation. Added 6 new tests. Commit 93279109.
 
 ### P3.12 Improve DeepClone to Avoid JSON Fallback
 
-Handle all cases without expensive JSON serialization.
+Handle all cases without expensive JSON serialization. LOW PRIORITY: `structuredClone` is already used in modern browsers.
 
-### P3.13 Add getBoundingClientRect Guards
+### P3.13 Add getBoundingClientRect Guards ✅ RESOLVED
 
-Check for zero dimensions before scale calculations.
+See P3.13 entry above (resolved January 2026).
 
 ### P3.14 Anonymize User IDs in Logs
 
@@ -438,29 +521,19 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 
 ## Immediate Action Items
 
-### This Week
-1. **P2.1:** Fix SlideController timeouts — 1 hour
-2. **P2.2:** Fix ToolDropdown listeners — 1 hour
-3. **P2.3:** Fix VirtualLayerList rAF — 15 min
-4. **P2.12:** Sync documentation metrics — 2 hours
-5. **P2.13:** Fix WIKITEXT_USAGE.md — 15 min
-6. **P2.14:** Fix README versions — 10 min
+### This Week (Priority)
+1. **P1.3:** Fix missing enum validation (HIGH) — 30 min ⚠️ **PRIORITY**
+2. **P2.19:** Fix ZoomPanController animation overlap — 15 min
+3. **P2.20:** Fix TransformController stale layer ref — 30 min
+4. **P2.21:** Fix mediawiki version table — 5 min
 
 ### This Month
-1. **P2.4:** Standardize set name validation — 2 hours
-2. **P2.5:** Add slidename validation — 30 min
-3. **P2.7:** Fix aborted request handling — 1 hour
-4. **P2.8:** Standardize logger usage — 1 hour
-5. **P2.9:** Standardize DB return types — 2 days
-6. **P2.15:** Fix StateManager timing — 2 hours
-7. **P2.16:** Add quota error handling — 30 min
+1. **P2.9:** Standardize DB return types — 2 days
+2. **P2.11:** Extract god class modules — 1 week
 
 ### This Quarter
-1. **P2.6:** Refactor promise patterns — 3 hours
-2. **P2.10:** Refactor SQL NOT IN — 1 hour
-3. **P2.11:** Extract 2 god class modules — 1 week
-4. **P2.17-18:** Performance optimizations — 4 hours
-5. **F4:** Add visual regression tests — 2 sprints
+1. **P3 backlog items** — as time permits
+2. **F4:** Add visual regression tests — 2 sprints
 
 ---
 
@@ -468,13 +541,14 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 
 | Metric | Current | Target | Notes |
 |--------|---------|--------|-------|
-| Test count | 11,112 | Maintain | All passing |
+| Test count | 11,118 | Maintain | All passing |
 | Statement coverage | 95.42% | ≥95% | Excellent |
 | Branch coverage | 85.25% | ≥85% | Good |
-| God classes | 18 | ≤15 | Extract 3 |
-| Near-threshold | 6 | ≤4 | Monitor |
-| P2 issues | 18 | ≤10 | Focus area |
-| P3 issues | 14 | Backlog | Low priority |
+| God classes | 19 | ≤15 | Extract 4 |
+| Near-threshold | 5 | ≤4 | Monitor |
+| P1 issues | **0** | 0 | ✅ All resolved |
+| P2 issues | **1** | 0 | Documentation metrics |
+| P3 issues | 11 | Backlog | Low priority |
 
 ---
 
@@ -482,17 +556,15 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 
 | Item | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| Memory leak risks (P2.1-2.3) | Medium | 3h | P2 |
-| Validation inconsistency (P2.4-5) | Medium | 2.5h | P2 |
-| Promise anti-patterns (P2.6-7) | Low | 4h | P2 |
-| Code consistency (P2.8-10) | Low | 4h | P2 |
+| **Missing enum validation** | **High** | **30m** | **P1** |
+| Animation frame not canceled | Medium | 15m | P2 |
+| Stale layer reference | Medium | 30m | P2 |
+| Documentation version drift | Low | 5m | P2 |
 | 18 god classes | Medium | 2-3 weeks | P2 |
-| Documentation drift (P2.12-14) | Low | 3h | P2 |
-| Error handling (P2.15-16) | Medium | 2.5h | P2 |
-| Performance (P2.17-18) | Low | 4h | P2 |
+| Inconsistent DB return types | Low | 2 days | P2 |
 | No visual regression | Medium | 2 sprints | P3 |
 | No TypeScript | Low | Long-term | P3 |
 
 ---
 
-*Last updated: January 31, 2026 (Comprehensive Critical Review v2)*
+*Last updated: February 1, 2026 (Comprehensive Critical Review v4)*

@@ -1193,6 +1193,12 @@ class LayersDatabase {
 		int $offset = 0,
 		string $sort = 'name'
 	): array {
+		// P3.8: Limit prefix length to prevent performance issues with very long strings
+		// 200 characters is more than sufficient for any reasonable slide name prefix
+		if ( strlen( $prefix ) > 200 ) {
+			$prefix = substr( $prefix, 0, 200 );
+		}
+
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return [];

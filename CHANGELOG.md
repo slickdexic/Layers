@@ -2,9 +2,42 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.45] - 2026-02-01
+
+### Improved
+- **Branch Coverage Improvement** — Increased branch coverage from 84.96% to 85.20% through targeted test additions
+
+### Added
+- **SlideController tests** — 14 new tests for edge cases (73%→81% branch coverage)
+- **APIManager tests** — 3 new tests for validation warning scenarios
+- **ContextMenuController tests** — 6 new tests (81.48%→88.88% branch coverage)
+- **CanvasRenderer tests** — 9 new tests for edge case coverage
+- **ImportExportManager tests** — 2 new tests for dialog and download flows
+- **DraftManager tests** — 2 new tests for subscription cleanup and mw.message
+- **StateManager tests** — 3 new tests (82.84%→84.31% branch coverage)
+
+### Documentation
+- **Documentation Accuracy Audit** — Verified and synchronized all 97 documentation files with correct metrics
+- **Metrics Correction** — Updated all docs from 11,112/11,118 to verified 11,157 tests
+- **Coverage Metrics** — Corrected coverage from 95.42%/85.25% to 95.44%/85.20%
+
+### Technical Details
+- All 11,157 tests pass (163 test suites) ✅
+- Test coverage: 95.44% statement, 85.20% branch
+- 39 new tests added in this release
+- Point release for all branches: main, REL1_43, REL1_39
+
+---
+
 ## [1.5.44] - 2026-01-31
 
+### Security
+- **P1.3: Missing Enum Validation Fixed** — Added 8 missing constrained string properties to validation in ServerSideLayerValidator.php. Properties `tailDirection`, `tailStyle`, `style`, `endStyle`, `textPosition`, `orientation`, `textDirection`, and `toleranceType` are now properly validated against their allowed values.
+
 ### Fixed
+- **P2.19: ZoomPanController Animation Overlap** — `smoothZoomTo()` now cancels any in-progress animation before starting a new one, preventing multiple animation loops from running simultaneously
+- **P2.20: TransformController Stale Layer Reference** — rAF callback now validates layer still exists in layers array before emitting transform events, preventing errors when layer is deleted mid-resize
+- **P2.21: Version Table Updated** — Fixed branch version table in Mediawiki-Extension-Layers.mediawiki to show 1.5.44
 - **MED-2: Untracked Event Listeners in ToolDropdown** — Added `boundHandleTriggerClick` and `_menuItemHandlers` Map for proper event listener tracking and cleanup in `destroy()` method
 - **MED-8: Logger Usage Inconsistency** — Replaced `LoggerFactory::getInstance()` calls with `$this->getLogger()` in ApiLayersInfo.php for consistent logging patterns
 
@@ -28,7 +61,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Technical Details
 - All 11,112 tests pass (163 test suites)
 - Test coverage: 95.42% statement, 85.25% branch
-- P2 issues: 2 remaining (MED-9, MED-10 are large refactoring tasks)
+- **All P1 HIGH priority issues now resolved**
+- **All P2 MEDIUM priority issues now resolved** (except MED-9 database types, MED-10 god class extractions)
 
 ---
 

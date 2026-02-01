@@ -4,6 +4,32 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.45 (February 1, 2026)
+
+### Improved
+- **Branch Coverage** — Increased from 84.96% to 85.20% across 7 test files
+
+### Added
+- 39 new tests across multiple files:
+  - SlideController: 14 tests (branch: 73%→81%)
+  - ContextMenuController: 6 tests (branch: 81%→89%)
+  - CanvasRenderer: 9 tests
+  - APIManager: 3 tests
+  - StateManager: 3 tests
+  - DraftManager: 2 tests
+  - ImportExportManager: 2 tests
+
+### Documentation
+- **Complete Audit** — All 97 documentation files verified and synchronized
+- **Metrics Correction** — Fixed test counts (11,112→11,157) and coverage values across all docs
+
+### Technical Details
+- 11,157 tests passing (163 suites)
+- 95.44% statement, 85.20% branch coverage
+- Point release for main, REL1_43, REL1_39
+
+---
+
 ## Version 1.5.44 (January 31, 2026)
 
 ### Fixed

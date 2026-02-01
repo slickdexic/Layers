@@ -956,6 +956,10 @@ describe( 'Toolbar', function () {
 			// Ensure namespace structure exists
 			window.Layers = window.Layers || {};
 			window.Layers.UI = window.Layers.UI || {};
+			// Clear class resolution cache to ensure fresh lookups for mocked classes
+			if ( window.layersClearClassCache ) {
+				window.layersClearClassCache();
+			}
 			toolbar = new Toolbar( { container: container, editor: mockEditor } );
 		} );
 

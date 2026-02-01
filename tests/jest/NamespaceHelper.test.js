@@ -285,4 +285,89 @@ describe( 'NamespaceHelper', () => {
 			expect( window.Layers.Utils.getClass ).toBeDefined();
 		} );
 	} );
+
+	describe( 'class resolution caching', () => {
+		it( 'should export clearClassCache to window.Layers.Utils', () => {
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
+			expect( window.Layers.Utils.clearClassCache ).toBeDefined();
+			expect( typeof window.Layers.Utils.clearClassCache ).toBe( 'function' );
+		} );
+
+		it( 'should export clearClassCache to window.layersClearClassCache', () => {
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
+			expect( window.layersClearClassCache ).toBeDefined();
+			expect( typeof window.layersClearClassCache ).toBe( 'function' );
+		} );
+
+		it( 'should cache resolved classes for faster repeated lookups', () => {
+			window.Layers = {
+				Utils: {
+					CachableClass: function CachableClass() {}
+				}
+			};
+
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
+			const result1 = window.Layers.Utils.getClass( 'Utils.CachableClass', 'CachableClass' );
+			const result2 = window.Layers.Utils.getClass( 'Utils.CachableClass', 'CachableClass' );
+
+			// Both should return the same class reference
+			expect( result1 ).toBe( result2 );
+			expect( result1 ).toBe( window.Layers.Utils.CachableClass );
+		} );
+
+		it( 'should cache null results for missing classes', () => {
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
+			const result1 = window.Layers.Utils.getClass( 'Missing.Class', 'MissingClass' );
+			const result2 = window.Layers.Utils.getClass( 'Missing.Class', 'MissingClass' );
+
+			expect( result1 ).toBeNull();
+			expect( result2 ).toBeNull();
+		} );
+
+		it( 'should clear cache when clearClassCache is called', () => {
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
+			// First lookup returns null (class doesn't exist)
+			const result1 = window.Layers.Utils.getClass( 'Utils.DynamicClass', 'DynamicClass' );
+			expect( result1 ).toBeNull();
+
+			// Add the class dynamically
+			window.Layers.Utils.DynamicClass = function DynamicClass() {};
+
+			// Still returns null because cached
+			const result2 = window.Layers.Utils.getClass( 'Utils.DynamicClass', 'DynamicClass' );
+			expect( result2 ).toBeNull();
+
+			// Clear cache
+			window.Layers.Utils.clearClassCache();
+
+			// Now finds the class
+			const result3 = window.Layers.Utils.getClass( 'Utils.DynamicClass', 'DynamicClass' );
+			expect( result3 ).toBe( window.Layers.Utils.DynamicClass );
+		} );
+
+		it( 'should use separate cache keys for different paths', () => {
+			window.Layers = {
+				Utils: {
+					ClassA: function ClassA() {}
+				},
+				Canvas: {
+					ClassB: function ClassB() {}
+				}
+			};
+
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+
+			const resultA = window.Layers.Utils.getClass( 'Utils.ClassA', 'ClassA' );
+			const resultB = window.Layers.Utils.getClass( 'Canvas.ClassB', 'ClassB' );
+
+			expect( resultA ).toBe( window.Layers.Utils.ClassA );
+			expect( resultB ).toBe( window.Layers.Canvas.ClassB );
+			expect( resultA ).not.toBe( resultB );
+		} );
+	} );
 } );

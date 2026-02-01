@@ -54,12 +54,12 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `DeepClone.js` - Object cloning utilities including `omitProperty(obj, propName)` for creating copies without specific properties (avoids eslint-disable for destructuring)
     - `LayerDataNormalizer.js` (~229 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
     - `GradientRenderer.js` (~340 lines) - Gradient fill utility for creating linear/radial Canvas gradients from layer definitions. Static `hasGradient()` check, `createGradient()` method, 6 built-in presets (sunset, ocean, forest, fire, steel, rainbow), validation and cloning utilities.
-    - `LayerRenderer.js` (~867 lines), `ImageLayerRenderer.js` (~280 lines - extracted image caching/rendering), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~1,310 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~1,117 lines - supports richText formatting) [GOD CLASS], `ShapeRenderer.js` (~909 lines - now with gradient fill support), `EffectsRenderer.js` (~538 lines), `MarkerRenderer.js` (~502 lines - numbered/letter markers with shadow support), `DimensionRenderer.js` (~797 lines - technical measurement annotations)
+    - `LayerRenderer.js` (~867 lines), `ImageLayerRenderer.js` (~280 lines - extracted image caching/rendering), `ShadowRenderer.js` (~556 lines), `ArrowRenderer.js` (~971 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~996 lines - supports richText formatting), `ShapeRenderer.js` (~909 lines - now with gradient fill support), `EffectsRenderer.js` (~538 lines), `MarkerRenderer.js` (~502 lines - numbered/letter markers with shadow support), `DimensionRenderer.js` (~797 lines - technical measurement annotations)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~370 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `SmartGuidesController.js` (~568 lines) - smart guides and snap alignment
-    - `TransformController.js` (~1,097 lines) - resize, rotation, multi-layer transforms [GOD CLASS]
-    - `ResizeCalculator.js` (~1,090 lines) - shape-specific resize calculations [GOD CLASS]
+    - `TransformController.js` (~961 lines) - resize, rotation, multi-layer transforms
+    - `ResizeCalculator.js` (~995 lines) - shape-specific resize calculations
     - `HitTestController.js` (~382 lines) - selection handle and layer hit testing
     - `DrawingController.js` (~630 lines) - shape/tool creation and drawing preview
     - `ClipboardController.js` (~248 lines) - copy/cut/paste operations
@@ -73,7 +73,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `EditorBootstrap.js` (~400 lines) - initialization, hooks, cleanup
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
-  - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
+  - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility with caching via Map, clearClassCache() for tests), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
   - UI: `Toolbar.js` (~1,652 lines), `LayerPanel.js` (~1,806 lines - delegates to 9 controllers), plus editor CSS (`editor-fixed.css` with full Vector 2022 dark mode support)
   - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js and UIManager.js for separation of concerns:
     - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
@@ -100,9 +100,10 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
   - **God classes:** 18 files exceed 1,000 lines:
-    - **Generated data files (exempt):** ShapeLibraryData.js (~11,300 lines), EmojiLibraryIndex.js (~3,056 lines)
-    - **Hand-written files (14 JS):** LayerPanel, CanvasManager, Toolbar, LayersEditor, SelectionManager, PropertyBuilders, InlineTextEditor, APIManager, ViewerManager, ToolManager, CanvasRenderer, GroupManager, SlideController, LayersValidator
-    - **PHP god classes (2):** ServerSideLayerValidator.php (1,297 lines), LayersDatabase.php (1,242 lines)
+    - **Generated data files (exempt):** ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,055 lines)
+    - **Hand-written JS files (14):** LayerPanel (~2,182), CanvasManager (~2,044), Toolbar (~1,891), LayersEditor (~1,830), InlineTextEditor (~1,521), SelectionManager (~1,431), PropertyBuilders (~1,414), APIManager (~1,403), ViewerManager (~1,322), ToolManager (~1,226), CanvasRenderer (~1,219), GroupManager (~1,171), SlideController (~1,140), LayersValidator (~1,116)
+    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,341 lines), LayersDatabase.php (~1,360 lines)
+    - **Near-threshold files (5):** ToolbarStyleControls (~998), TextBoxRenderer (~996), ResizeCalculator (~995), ArrowRenderer (~971), TransformController (~961)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -392,8 +393,8 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,112 tests in 163 suites — verified January 31, 2026)
-- Coverage (95.42% statement, 85.25% branch — verified January 31, 2026)
+- Test count (11,157 tests in 163 suites — verified February 1, 2026)
+- Coverage (95.44% statement, 85.20% branch — verified February 1, 2026)
 - JavaScript file count (141 files total, ~92,338 lines)
 - PHP file count (42 files, ~14,800 lines)
 - God class count (18 files >1,000 lines; 2 generated data files, 14 JS, 2 PHP)

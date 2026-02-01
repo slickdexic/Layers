@@ -1423,5 +1423,57 @@ describe( 'StateManager', () => {
 			expect( result ).toMatch( /^layer_\d+_\w+$/ );
 		} );
 	} );
+
+	describe( '_coalesceIntoUpdate edge cases', () => {
+		it( 'should convert oldest set to update when no update operation exists', () => {
+			// Lock state to queue operations
+			stateManager.lockState();
+
+			// Queue multiple set operations
+			stateManager.set( 'key1', 'value1' );
+			stateManager.set( 'key2', 'value2' );
+			stateManager.set( 'key3', 'value3' );
+			stateManager.set( 'key4', 'value4' );
+			stateManager.set( 'key5', 'value5' );
+			stateManager.set( 'key6', 'value6' );
+
+			// The sixth operation should trigger coalescing into set operations
+			expect( stateManager.getPendingOperationCount() ).toBeGreaterThan( 0 );
+
+			stateManager.forceUnlock();
+		} );
+	} );
+
+	describe( 'forceUnlock with update operations', () => {
+		it( 'should process queued update operations on unlock', () => {
+			stateManager.lockState();
+
+			// Queue an update operation
+			stateManager.update( { key1: 'value1', key2: 'value2' } );
+
+			expect( stateManager.getPendingOperationCount() ).toBe( 1 );
+
+			const wasLocked = stateManager.forceUnlock();
+
+			expect( wasLocked ).toBe( true );
+			expect( stateManager.get( 'key1' ) ).toBe( 'value1' );
+			expect( stateManager.get( 'key2' ) ).toBe( 'value2' );
+		} );
+
+		it( 'should handle errors in pending operations gracefully', () => {
+			stateManager.lockState();
+			stateManager.set( 'testKey', 'testValue' );
+
+			// Force an error by corrupting the operation
+			stateManager.pendingOperations[ 0 ] = {
+				type: 'unknown_type',
+				key: 'testKey',
+				value: 'testValue'
+			};
+
+			// Should not throw even with invalid operation type
+			expect( () => stateManager.forceUnlock() ).not.toThrow();
+		} );
+	} );
 } );
 

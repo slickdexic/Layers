@@ -162,6 +162,13 @@
 				return;
 			}
 
+			// P2.19 FIX: Cancel any in-progress animation before starting a new one
+			// This prevents multiple animation loops running simultaneously
+			if ( this.animationFrameId ) {
+				cancelAnimationFrame( this.animationFrameId );
+				this.animationFrameId = null;
+			}
+
 			this.isAnimatingZoom = true;
 			this.zoomAnimationStartTime = performance.now();
 			this.zoomAnimationStartZoom = this.manager.zoom;

@@ -15,11 +15,6 @@ class TextSanitizer {
 	/** @var int Maximum text length */
 	private const MAX_TEXT_LENGTH = 1000;
 
-	/** @var array Allowed HTML entities */
-	private const ALLOWED_ENTITIES = [
-		'&amp;', '&lt;', '&gt;', '&quot;', '&#039;'
-	];
-
 	/**
 	 * Sanitize user text input
 	 *
