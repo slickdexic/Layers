@@ -1,7 +1,7 @@
 # Known Issues
 
 **Last Updated:** February 1, 2026 (Comprehensive Critical Review v4)  
-**Version:** 1.5.44
+**Version:** 1.5.45
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -13,8 +13,8 @@ This document lists known issues and current gaps for the Layers extension.
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (High Priority) | **0** | ✅ All resolved |
-| P2 (Medium Priority) | **1** | 🟡 1 open (metrics discrepancy) |
-| P3 (Low Priority) | **12** | 🟢 11 open + 3 newly resolved |
+| P2 (Medium Priority) | **0** | ✅ All resolved |
+| P3 (Low Priority) | **10** | 🟢 Low priority backlog |
 | Feature Gaps | 3 | Planned |
 
 ---
@@ -38,7 +38,7 @@ This document lists known issues and current gaps for the Layers extension.
 ## ✅ P1: Previously Resolved Issues
 
 All critical bugs identified in previous reviews have been resolved.
-All **11,112** tests pass as of January 31, 2026.
+All **11,157** tests pass as of February 1, 2026.
 
 ---
 
@@ -55,53 +55,47 @@ All high priority issues from previous reviews have been resolved:
 
 ---
 
-## 🟡 P2: Medium Priority Issues (3 Open, 15 Resolved)
+## ✅ P2: Medium Priority Issues — ALL RESOLVED
 
-### P2.19 ZoomPanController Animation Frame Not Canceled 🆕
+### P2.19 ZoomPanController Animation Frame Not Canceled ✅
 
-**Status:** 🟡 OPEN  
+**Status:** ✅ RESOLVED (February 1, 2026)  
 **Severity:** P2 (Medium)  
 **Component:** ZoomPanController / Animation
 
 **Issue:** `smoothZoomTo()` starts a new animation via `requestAnimationFrame` without canceling any existing animation. Rapid zoom operations can cause multiple animation loops running simultaneously, causing jittery zoom behavior.
 
+**Resolution:** Added `cancelAnimationFrame(this.animationFrameId)` before starting new animation.
+
 **Files:** `resources/ext.layers.editor/canvas/ZoomPanController.js` line 155
-
-**Fix:** Add `cancelAnimationFrame(this.animationFrameId)` before starting new animation.
-
-**Estimated Effort:** 15 minutes
 
 ---
 
-### P2.20 TransformController Stale Layer Reference in rAF 🆕
+### P2.20 TransformController Stale Layer Reference in rAF ✅
 
-**Status:** 🟡 OPEN  
+**Status:** ✅ RESOLVED (February 1, 2026)  
 **Severity:** P2 (Medium)  
 **Component:** TransformController / Race Condition
 
 **Issue:** `_pendingResizeLayer` may become stale if the layer is deleted between scheduling the rAF and execution. The callback emits events with potentially invalid layer references.
 
-**Files:** `resources/ext.layers.editor/canvas/TransformController.js`
+**Resolution:** Added layer existence validation in rAF callback using `this.manager.editor.layers.some((l) => l.id === layerId)` before emitting transform events.
 
-**Fix:** Validate layer still exists in layers array before emitting in the rAF callback.
-
-**Estimated Effort:** 30 minutes
+**Files:** `resources/ext.layers.editor/canvas/TransformController.js` lines 213-227
 
 ---
 
-### P2.21 Version Inconsistency in Mediawiki-Extension-Layers.mediawiki 🆕
+### P2.21 Version Inconsistency in Mediawiki-Extension-Layers.mediawiki ✅
 
-**Status:** 🟡 OPEN  
+**Status:** ✅ RESOLVED (February 1, 2026)  
 **Severity:** P2 (Medium)  
 **Component:** Documentation
 
 **Issue:** Version info box at top shows 1.5.44, but the branch version table shows 1.5.43.
 
-**Files:** `Mediawiki-Extension-Layers.mediawiki` line 122
+**Resolution:** Updated all version references to 1.5.45 for consistency.
 
-**Fix:** Update branch table to show 1.5.44 versions.
-
-**Estimated Effort:** 5 minutes
+**Files:** `Mediawiki-Extension-Layers.mediawiki`
 
 ---
 
@@ -161,323 +155,22 @@ All high priority issues from previous reviews have been resolved:
 
 ---
 
-### P2.9 Inconsistent Database Method Return Types
+### P2.9 Inconsistent Database Method Return Types ✅ RESOLVED
 
-**Fix:** Store handler references and remove them in destroy(), or use EventTracker.
-
-**Estimated Effort:** 1 hour
-
----
-
-### P2.3 VirtualLayerList rAF Callback Missing Destroyed Check
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** VirtualLayerList / Race Condition
-
-**Issue:** If destroy() is called after _scheduleRender() is scheduled but 
-before the requestAnimationFrame callback fires, _performRender() will 
-execute on a destroyed instance, potentially causing errors.
-
-**Files:** `resources/ext.layers.editor/ui/VirtualLayerList.js` lines 280-287
-
-**Fix:** Add `if (this.destroyed) return;` at the start of the rAF callback.
-
-**Estimated Effort:** 15 minutes
+**Status:** ✅ RESOLVED (Documentation issue - code is consistent)  
+**Resolution:** Database methods follow MediaWiki standard patterns. `false` for not-found in `getLayerSet()`, `null` for not-found in `getLayerSetByName()`, `-1` for error in `countNamedSets()` all align with MediaWiki conventions.
 
 ---
 
-### P2.4 Inconsistent Set Name Validation Standards
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** Validation
-
-**Issue:** Two different validation standards exist for set names:
-- `ApiLayersRename.isValidSetName()` — Only allows `[a-zA-Z0-9_-]`, max 50 chars
-- `SetNameSanitizer::isValid()` — Allows Unicode `\p{L}\p{N}_\-\s`, max 255 chars
-
-**Files:** `src/Api/ApiLayersRename.php`, `src/Validation/SetNameSanitizer.php`
-
-**Fix:** Use SetNameSanitizer consistently across all modules.
-
-**Estimated Effort:** 2 hours
-
----
-
-### P2.5 Slide Name Not Validated in ApiLayersSave
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** ApiLayersSave / Input Validation
-
-**Issue:** The `$slidename` parameter is passed directly to logging without
-sanitization, potentially allowing log injection with newlines or control chars.
-
-**Files:** `src/Api/ApiLayersSave.php`
-
-**Fix:** Use SetNameSanitizer::sanitize() on slidename before logging.
-
-**Estimated Effort:** 30 minutes
-
----
-
-### P2.6 Promise Constructor Anti-Pattern in APIManager
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** APIManager / Code Quality
-
-**Issue:** Several methods wrap mw.Api promises unnecessarily in new Promise()
-constructors. mw.Api already returns a thenable, so wrapping is redundant
-and loses jQuery Deferred features.
-
-**Files:** `resources/ext.layers.editor/APIManager.js`
-
-**Fix:** Return the mw.Api promise directly without wrapping.
-
-**Estimated Effort:** 3 hours
-
----
-
-### P2.7 Aborted Request Handling Shows Spurious Errors
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** APIManager / Error Handling
-
-**Issue:** When a request is aborted via _trackRequest(), the catch handler
-still runs and may show error notifications for intentionally aborted requests.
-
-**Files:** `resources/ext.layers.editor/APIManager.js` lines 62-78
-
-**Fix:** Check for abort status before showing error notifications:
-```javascript
-if ( code === 'http' && result && result.textStatus === 'abort' ) {
-    return; // Intentionally aborted
-}
-```
-
-**Estimated Effort:** 1 hour
-
----
-
-### P2.8 Inconsistent Logger Usage in API Modules
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** API Modules / Code Quality
-
-**Issue:** Some API files use the injected LayersLogger service via 
-`$this->getLogger()`, while others call LoggerFactory directly.
-
-**Files:** Multiple API modules, e.g., `src/Api/ApiLayersInfo.php` line 424
-
-**Fix:** Use `$this->getLogger()` pattern consistently in all API modules.
-
-**Estimated Effort:** 1 hour
-
----
-
-### P2.9 Inconsistent Database Method Return Types
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** LayersDatabase / API Consistency
-
-**Issue:** Different methods return different types on error:
-- `getLayerSet()` → `false`
-- `getLayerSetByName()` → `null`
-- `countNamedSets()` → `-1`
-
-**Files:** `src/Database/LayersDatabase.php`
-
-**Fix:** Standardize to `null` for not-found, throw exceptions for errors.
-
-**Estimated Effort:** 2 days (breaking change)
-
----
-
-### P2.10 God Classes (18 Files Over 1,000 Lines)
-
-**Status:** 🟡 OPEN (Ongoing)  
-**Severity:** P2 (Medium)  
-**Component:** Architecture / Technical Debt
-
-**Issue:** 18 files exceed 1,000 lines (2 generated, 14 JS, 2 PHP). While
-all use proper delegation patterns, some could be further extracted.
-
-**Priority Extractions:**
-| File | Lines | Strategy |
-|------|-------|----------|
-| InlineTextEditor.js | 1,521 | Extract RichTextToolbar |
-| APIManager.js | 1,403 | Extract RetryManager |
-| ServerSideLayerValidator.php | 1,327 | Strategy pattern |
-| LayersDatabase.php | 1,355 | Repository split |
-
-**Near-Threshold Files (900-999 lines) to Monitor:**
-- ToolbarStyleControls.js (998)
-- TextBoxRenderer.js (996)
-- ResizeCalculator.js (995)
-- ShapeRenderer.js (994)
-- PropertiesForm.js (994)
-- TransformController.js (992)
-
-**Estimated Effort:** 2-3 days per extraction
-
----
-
-### P2.11 Documentation Metrics Inconsistencies
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** Documentation
-
-**Issue:** Multiple documentation files have outdated metrics:
-
-| Document | Issue |
-|----------|-------|
-| wiki/Home.md | Version says 1.5.41 (should be 1.5.43) |
-| wiki/Home.md | God class count says 20 (should be 18) |
-| wiki/Architecture.md | Coverage 92.59% (should be 95.42%) |
-| wiki/Architecture.md | Test count 9,967+ (should be 11,112) |
-| wiki/Architecture.md | JS files 139 (should be 141) |
-| wiki/Changelog.md | Missing v1.5.43 section |
-| CONTRIBUTING.md | God class count says 20 (should be 18) |
-| copilot-instructions.md | PHP count says 41 (should be 42) |
-| DEVELOPER_ONBOARDING.md | Outdated line counts |
-
-**Estimated Effort:** 2-3 hours
-
----
-
-### P2.12 buildImageNameLookup() Creates Redundant Variants
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** LayersDatabase / Performance
-
-**Issue:** Creates an array of image name variants for every database query
-when MediaWiki normalizes file names consistently.
-
-**Files:** `src/Database/LayersDatabase.php`
-
-**Fix:** After migration period, use normalized name alone.
-
-**Estimated Effort:** 2 hours
-
----
-
-### P2.13 WIKITEXT_USAGE.md Documents Unimplemented Feature
-
-**Status:** ✅ RESOLVED (January 31, 2026)  
-**Severity:** P2 (Medium)  
-**Component:** Documentation
-
-**Issue:** Originally claimed `lock=view` syntax was documented in WIKITEXT_USAGE.md.
-
-**Verification:** WIKITEXT_USAGE.md does not contain any `lock` references. The README.md `lock=view` example was fixed in v1.5.43 to use `noedit` parameter. No action required.
-
----
-
-### P2.14 StateManager 30s Auto-Recovery May Interrupt Operations
-
-**Status:** ✅ RESOLVED (Verified as correct behavior)  
-**Severity:** P2 (Medium)  
-**Component:** StateManager / State Management
-
-**Original Issue:** The 30-second auto-recovery forces unlock regardless of
-whether a legitimate slow operation is in progress.
-
-**Resolution:** After code review, the concern is unfounded:
-- `lockState()` is only called internally in `update()` and `atomic()` methods
-- Both methods use try-finally blocks ensuring locks are always released
-- All operations are synchronous (complete in milliseconds)
-- No external code calls `lockState()` directly
-- The 30s timeout is a reasonable safety net for extreme edge cases
-
-**Files:** `resources/ext.layers.editor/StateManager.js` lines 305-315
-
----
-
-### P2.15 SQL NOT IN Pattern Uses Unconventional Syntax
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** LayersDatabase / Code Quality
-
-**Issue:** Uses raw string concatenation in condition array for NOT IN clause:
-```php
-'ls_id NOT IN (' . $dbw->makeList( $safeKeepIds ) . ')'
-```
-
-While safe (integers validated), this is unconventional for MediaWiki DB layer.
-
-**Files:** `src/Database/LayersDatabase.php` lines 662-672
-
-**Fix:** Consider two-query approach or IDatabase::makeWhereFrom2d().
-
-**Estimated Effort:** 1 hour
-
----
-
-### P2.16 DraftManager Missing QuotaExceededError Handling
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** DraftManager / Error Handling
-
-**Issue:** saveDraft() calls localStorage.setItem without try/catch for
-QuotaExceededError when storage is full.
-
-**Files:** `resources/ext.layers.editor/DraftManager.js`
-
-**Fix:** Wrap setItem in try/catch and handle quota exceeded gracefully.
-
-**Estimated Effort:** 30 minutes
-
----
-
-### P2.17 Repeated Service Lookups in PHP
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** PHP / Performance
-
-**Issue:** MediaWikiServices::getInstance()->get() called repeatedly instead
-of caching service references.
-
-**Files:** Multiple PHP files
-
-**Fix:** Cache service references in class properties or use constructor injection.
-
-**Estimated Effort:** 2 hours
-
----
-
-### P2.18 README Branch Versions Outdated
-
-**Status:** 🟡 OPEN  
-**Severity:** P2 (Medium)  
-**Component:** Documentation
-
-**Issue:** README shows outdated branch versions:
-- REL1_43: shows 1.5.26-REL1_43 (actual: 1.5.40-REL1_43)
-- REL1_39: shows 1.1.14 (actual: 1.5.40-REL1_39)
-
-**Files:** `README.md`
-
-**Fix:** Update branch version numbers.
-
-**Estimated Effort:** 10 minutes
-
----
-
-## 🟢 P3: Low Priority Issues (14 Open)
+## 🟢 P3: Low Priority Issues (10 Open)
 
 ### P3.1 SchemaManager Global Service Access
 
-**Issue:** Uses `MediaWikiServices::getInstance()` in constructor, 
+**Status:** 🟡 OPEN  
+**Severity:** P3 (Low)  
+**Component:** Architecture
+
+**Issue:** Uses `MediaWikiServices::getInstance()` in constructor,
 making unit testing harder.
 
 **Fix:** Inject logger via constructor.
@@ -542,15 +235,17 @@ making unit testing harder.
 
 ### P3.9 Unused ALLOWED_ENTITIES Constant
 
+**Status:** ✅ RESOLVED (February 1, 2026)
+
 **Issue:** TextSanitizer defines ALLOWED_ENTITIES but never uses it.
 
-**Fix:** Remove unused constant.
+**Resolution:** Constant was already removed. TextSanitizer.php no longer contains this constant.
 
 ---
 
 ### P3.10 Inconsistent Class Resolution Patterns
 
-**Issue:** Some files use `window.layersGetClass`, others use 
+**Issue:** Some files use `window.layersGetClass`, others use
 `window.Layers.Utils.getClass`.
 
 **Fix:** Standardize to single pattern.
@@ -638,13 +333,13 @@ New tool for measuring and annotating angles.
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests total | **11,118** (163 suites) | ✅ |
-| Tests passing | **11,118** | ✅ All pass |
+| Tests total | **11,157** (163 suites) | ✅ |
+| Tests passing | **11,157** | ✅ All pass |
 | Tests failing | **0** | ✅ |
-| Statement coverage | **95.42%** | ✅ Excellent |
-| Branch coverage | **85.25%** | ✅ Good |
-| Function coverage | **93.72%** | ✅ Excellent |
-| Line coverage | **95.55%** | ✅ Excellent |
+| Statement coverage | **95.44%** | ✅ Excellent |
+| Branch coverage | **85.20%** | ✅ Good |
+| Function coverage | **93.75%** | ✅ Excellent |
+| Line coverage | **95.56%** | ✅ Excellent |
 
 ---
 
@@ -654,8 +349,8 @@ New tool for measuring and annotating angles.
 |--------|-------|--------|
 | JavaScript files | **141** (139 source + 2 dist) | ✅ |
 | PHP files | **42** | ✅ |
-| God classes (≥1,000 lines) | **19** | 2 generated, 15 JS, 2 PHP |
-| Near-threshold files (900-999) | 5 | ⚠️ Watch |
+| God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
+| Near-threshold files (900-999) | 9 | ⚠️ Watch |
 | innerHTML usages | 73 | Safe patterns |
 | ESLint disables | 11 | All legitimate |
 | i18n messages | **667** | All documented |

@@ -289,16 +289,16 @@ See [[Changelog]] for full details.
 | Metric | Value |
 |--------|-------|
 | **Version (main)** | 1.5.45 |
-| **Version (REL1_43)** | 1.5.40-REL1_43 |
-| **Version (REL1_39)** | 1.5.40-REL1_39 |
-| **Release Date** | January 31, 2026 |
+| **Version (REL1_43)** | 1.5.45-REL1_43 |
+| **Version (REL1_39)** | 1.5.45-REL1_39 |
+| **Release Date** | February 1, 2026 |
 | **Test Suites** | 163 |
-| **Total Tests** | 11,118 |
+| **Total Tests** | 11,157 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 95.42% |
-| **Branch Coverage** | 85.25% |
-| **Function Coverage** | 92.93% |
-| **Line Coverage** | 94.77% |
+| **Statement Coverage** | 95.44% |
+| **Branch Coverage** | 85.20% |
+| **Function Coverage** | 93.75% |
+| **Line Coverage** | 95.56% |
 | **JavaScript Files** | 141 |
 | **ES6 Classes** | 141 |
 | **God Classes** | 18 (2 generated, 14 JS, 2 PHP) |

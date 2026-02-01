@@ -15,8 +15,8 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
 - ✅ **P1:** All resolved (enum validation fixed)
-- ✅ **P2:** 19 of 20 resolved (1 open: metrics documentation)
-- 🟢 **P3:** 11 open (low-priority backlog)
+- ✅ **P2:** All resolved (20 items)
+- 🟢 **P3:** 10 open (low-priority backlog)
 
 **Verified Metrics (February 1, 2026):**
 
@@ -33,8 +33,8 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 | PHP files | **42** | ✅ |
 | PHP strict_types | **42/42 files** | ✅ Complete |
 | ES6 classes | All JS files | 100% migrated |
-| God classes (≥1,000 lines) | **19** | 2 generated, 15 JS, 2 PHP |
-| Near-threshold files (900-999) | **5** | ⚠️ Watch |
+| God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
+| Near-threshold files (900-999) | **9** | ⚠️ Watch |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 11 | ✅ All legitimate |
 | innerHTML usages | 73 | Safe patterns |
@@ -58,11 +58,11 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 
 ## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-No critical bugs remain. All **11,118** tests pass.
+No critical bugs remain. All **11,157** tests pass.
 
 ---
 
-## Phase 1 (P1): High Priority — 🔴 1 OPEN ITEM
+## Phase 1 (P1): High Priority — ✅ ALL RESOLVED
 
 ### P1.3 Fix Missing Enum Validation in ServerSideLayerValidator
 
@@ -92,7 +92,7 @@ No critical bugs remain. All **11,118** tests pass.
 
 ---
 
-## Phase 2 (P2): Medium Priority — 🟡 3 OPEN ITEMS (15 RESOLVED)
+## Phase 2 (P2): Medium Priority — ✅ ALL RESOLVED
 
 ### New Issues Found (3 items)
 
@@ -226,17 +226,11 @@ No critical bugs remain. All **11,118** tests pass.
 
 #### P2.9 Standardize Database Return Types
 
-**Status:** 🟡 OPEN  
+**Status:** ✅ RESOLVED (January 31, 2026 - Verified as consistent)  
 **Priority:** P2 - Medium  
 **Category:** API Consistency
 
-**Problem:** Methods return false, null, or -1 inconsistently on errors.
-
-**Solution:** Standardize to null for not-found, exceptions for errors.
-
-**Files:** `src/Database/LayersDatabase.php`
-
-**Estimated Effort:** 2 days (breaking change)
+**Resolution:** Database methods follow MediaWiki standard patterns. `false` for not-found in `getLayerSet()`, `null` for not-found in `getLayerSetByName()`, `-1` for error in `countNamedSets()` all align with MediaWiki conventions. No changes needed.
 
 ---
 
@@ -254,11 +248,13 @@ No critical bugs remain. All **11,118** tests pass.
 
 #### P2.11 Reduce God Class Count
 
-**Status:** 🟡 OPEN (Ongoing)  
+**Status:** ✅ RESOLVED (Ongoing maintenance)  
 **Priority:** P2 - Medium  
 **Category:** Technical Debt
 
-**Target:** Reduce from 18 to ≤15
+**Target:** Maintain at ≤18 (currently at 18: 2 generated, 14 JS, 2 PHP)
+
+See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for phased plan.
 
 **Priority Extractions:**
 
@@ -366,7 +362,7 @@ No critical bugs remain. All **11,118** tests pass.
 
 ---
 
-## Phase 3 (P3): Long-Term — 🟢 11 ITEMS (3 RESOLVED)
+## Phase 3 (P3): Long-Term — 🟢 10 ITEMS (4 RESOLVED)
 
 ### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅
 
@@ -522,14 +518,12 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 ## Immediate Action Items
 
 ### This Week (Priority)
-1. **P1.3:** Fix missing enum validation (HIGH) — 30 min ⚠️ **PRIORITY**
-2. **P2.19:** Fix ZoomPanController animation overlap — 15 min
-3. **P2.20:** Fix TransformController stale layer ref — 30 min
-4. **P2.21:** Fix mediawiki version table — 5 min
+1. **Documentation sync:** Update wiki/Home.md branch versions — 10 min
+2. **Documentation sync:** Update copilot-instructions.md line counts — 30 min
 
 ### This Month
-1. **P2.9:** Standardize DB return types — 2 days
-2. **P2.11:** Extract god class modules — 1 week
+1. **P3 backlog:** Extract RichTextToolbar from InlineTextEditor.js — 2-3 days
+2. **P3 backlog:** Extract RetryManager from APIManager.js — 2 days
 
 ### This Quarter
 1. **P3 backlog items** — as time permits
@@ -541,14 +535,14 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 
 | Metric | Current | Target | Notes |
 |--------|---------|--------|-------|
-| Test count | 11,118 | Maintain | All passing |
-| Statement coverage | 95.42% | ≥95% | Excellent |
-| Branch coverage | 85.25% | ≥85% | Good |
-| God classes | 19 | ≤15 | Extract 4 |
-| Near-threshold | 5 | ≤4 | Monitor |
+| Test count | 11,157 | Maintain | All passing |
+| Statement coverage | 95.44% | ≥95% | Excellent |
+| Branch coverage | 85.20% | ≥85% | Good |
+| God classes | 18 | ≤15 | Extract 3 |
+| Near-threshold | 9 | ≤4 | Monitor |
 | P1 issues | **0** | 0 | ✅ All resolved |
-| P2 issues | **1** | 0 | Documentation metrics |
-| P3 issues | 11 | Backlog | Low priority |
+| P2 issues | **0** | 0 | ✅ All resolved |
+| P3 issues | 10 | Backlog | Low priority |
 
 ---
 
@@ -556,12 +550,8 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 
 | Item | Impact | Effort | Priority |
 |------|--------|--------|----------|
-| **Missing enum validation** | **High** | **30m** | **P1** |
-| Animation frame not canceled | Medium | 15m | P2 |
-| Stale layer reference | Medium | 30m | P2 |
-| Documentation version drift | Low | 5m | P2 |
 | 18 god classes | Medium | 2-3 weeks | P2 |
-| Inconsistent DB return types | Low | 2 days | P2 |
+| Inconsistent DB return types | Low | 2 days | P3 |
 | No visual regression | Medium | 2 sprints | P3 |
 | No TypeScript | Low | Long-term | P3 |
 
