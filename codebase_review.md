@@ -10,7 +10,7 @@
 
 - **Branch:** main (verified via `git branch --show-current`)
 - **Tests:** 11,132 tests in 163 suites ✅ **All passing**
-- **Coverage:** 95.42% statements, 85.18% branches, 93.72% functions, 95.54% lines
+- **Coverage:** 95.44% statements, 85.20% branches, 93.75% functions, 95.56% lines
 - **JS files:** 141 total (139 in ext.layers*, 2 in dist/) (~92,338 lines)
 - **PHP files:** 42 production files (~14,738 lines total)
 - **i18n messages:** 667 layers-* keys in en.json (all documented in qqq.json)
@@ -24,7 +24,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 **Overall Assessment:** **9/10** — Production-ready, world-class extension.
 
 ### Key Strengths
-1. **Excellent test coverage** (95.42% statement, 85.18% branch, 11,141 tests, all passing)
+1. **Excellent test coverage** (95.44% statement, 85.20% branch, 11,157 tests, all passing)
 2. **Comprehensive server-side validation** with strict 40+ property whitelist
 3. **Modern ES6 class-based architecture** (100% of JS files)
 4. **PHP strict_types** in all 42 PHP files
@@ -71,7 +71,7 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
 | Statements | 95.40% | 90% | ✅ Exceeds |
-| Branches | 85.18% | 80% | ✅ Exceeds |
+| Branches | 85.20% | 80% | ✅ Exceeds |
 | Functions | 93.69% | 85% | ✅ Exceeds |
 | Lines | 95.51% | 90% | ✅ Exceeds |
 | Test Count | **11,132** | - | ✅ Excellent |
