@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** January 31, 2026
-**Version:** 1.5.43
+**Last Updated:** February 1, 2026
+**Version:** 1.5.44
 
 ---
 
@@ -31,8 +31,8 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Shape/Emoji data | ~14,354 lines (generated) |
 | ES6 classes | **141** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.42% stmt, 85.25% branch** |
-| Jest tests | **11,112** (163 suites) |
+| Test coverage | **95.44% stmt, 85.20% branch** |
+| Jest tests | **11,157** (163 suites) |
 | PHPUnit test files | 24 |
 | God classes (>1000 lines) | **18** (2 generated, 14 JS, 2 PHP) |
 | Drawing tools | **15** |

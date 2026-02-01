@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** February 1, 2026 (Comprehensive Critical Review v4)  
-**Version:** 1.5.44  
+**Version:** 1.5.45  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -9,7 +9,7 @@
 ## Scope & Verification
 
 - **Branch:** main (verified via `git branch --show-current`)
-- **Tests:** 11,132 tests in 163 suites ✅ **All passing**
+- **Tests:** 11,157 tests in 163 suites ✅ **All passing**
 - **Coverage:** 95.44% statements, 85.20% branches, 93.75% functions, 95.56% lines
 - **JS files:** 141 total (139 in ext.layers*, 2 in dist/) (~92,338 lines)
 - **PHP files:** 42 production files (~14,738 lines total)
@@ -19,7 +19,7 @@
 
 ## Executive Summary
 
-The Layers extension is a **mature, feature-rich MediaWiki extension** with **excellent security practices** and **outstanding test coverage**. All 11,118 tests pass. This comprehensive critical review found no open critical issues.
+The Layers extension is a **mature, feature-rich MediaWiki extension** with **excellent security practices** and **outstanding test coverage**. All 11,157 tests pass. This comprehensive critical review found no open critical issues.
 
 **Overall Assessment:** **9/10** — Production-ready, world-class extension.
 

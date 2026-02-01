@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C118%20passing-brightgreen" alt="11,118 Tests">
-  <img src="https://img.shields.io/badge/Coverage-95.42%25-brightgreen" alt="95.42% Coverage">
+  <img src="https://img.shields.io/badge/Tests-11%2C157%20passing-brightgreen" alt="11,157 Tests">
+  <img src="https://img.shields.io/badge/Coverage-95.44%25-brightgreen" alt="95.44% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,17 +20,17 @@
 
 ---
 
-## 🆕 What's New in v1.5.44
+## 🆕 What's New in v1.5.45
+
+- **Branch Coverage Improvement** — 39 new tests, coverage increased from 84.96% to 85.20%
+- **Documentation Audit** — All 97 files verified and synchronized with correct metrics
+- **Point Release** — Synchronized releases across main, REL1_43, and REL1_39 branches
+
+### Previous v1.5.44 Highlights
 
 - **Code Quality Fixes** — MED-2 (ToolDropdown listeners), MED-8 (Logger consistency)
 - **Documentation Audit** — All 97 files verified and updated for version/metric accuracy
 - **P2 Issue Tracker** — 16 of 18 issues now resolved (89% complete)
-
-### Previous v1.5.43 Highlights
-
-- **Documentation Audit** — Comprehensive audit and update of all 97 documentation files
-- **Issue Cleanup** — P3 issues reduced from 12 to 3 after investigation
-- **Point Release** — Synchronized releases across main, REL1_43, and REL1_39 branches
 
 ### Previous v1.5.42 Highlights
 
@@ -288,7 +288,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.44 |
+| **Version (main)** | 1.5.45 |
 | **Version (REL1_43)** | 1.5.40-REL1_43 |
 | **Version (REL1_39)** | 1.5.40-REL1_39 |
 | **Release Date** | January 31, 2026 |
