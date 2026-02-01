@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** January 31, 2026 (Comprehensive Critical Review v3)  
+**Last Updated:** February 1, 2026 (Comprehensive Critical Review v4)  
 **Version:** 1.5.44
 
 This document lists known issues and current gaps for the Layers extension.
@@ -12,38 +12,26 @@ This document lists known issues and current gaps for the Layers extension.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
-| P1 (High Priority) | **1** | 🔴 1 open (validation gap) |
-| P2 (Medium Priority) | **3** | 🟡 3 open (animation, race condition, docs) |
-| P3 (Low Priority) | **14** | 🟢 14 open |
+| P1 (High Priority) | **0** | ✅ All resolved |
+| P2 (Medium Priority) | **1** | 🟡 1 open (metrics discrepancy) |
+| P3 (Low Priority) | **12** | 🟢 11 open + 3 newly resolved |
 | Feature Gaps | 3 | Planned |
 
 ---
 
-## 🔴 P1: High Priority Issues (1 Open)
+## ✅ P1: High Priority Issues — ALL RESOLVED
 
-### P1.3 Missing Enum Validation for Constrained String Properties 🆕
+### P1.3 Missing Enum Validation for Constrained String Properties
 
-**Status:** 🔴 OPEN  
+**Status:** ✅ RESOLVED (January 31, 2026)  
 **Severity:** P1 (High)  
 **Component:** ServerSideLayerValidator / Security
 
-**Issue:** The `VALUE_CONSTRAINTS` constant defines allowed values for 15 enum-like string properties, but `validateStringProperty()` only validates 9 of them. These 8 properties are NOT validated:
-- `tailDirection` (callout tail direction)
-- `tailStyle` (callout tail style)
-- `style` (marker style)
-- `endStyle` (dimension end style)
-- `textPosition` (dimension text position)
-- `orientation` (dimension orientation)
-- `textDirection` (dimension text direction)
-- `toleranceType` (dimension tolerance)
+**Issue:** The `VALUE_CONSTRAINTS` constant defined allowed values for 15 enum-like properties, but only 9 were validated. Fixed in v1.5.44.
 
-**Impact:** Arbitrary strings can be stored for these properties, potentially causing rendering issues or unexpected behavior.
+**Resolution:** Added all 8 missing properties (`tailDirection`, `tailStyle`, `style`, `endStyle`, `textPosition`, `orientation`, `textDirection`, `toleranceType`) to the validation check in `validateStringProperty()`.
 
-**Files:** `src/Validation/ServerSideLayerValidator.php` lines 506-513
-
-**Fix:** Add the 8 missing properties to the `in_array()` check in `validateStringProperty()`.
-
-**Estimated Effort:** 30 minutes
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 510-519
 
 ---
 
@@ -646,12 +634,12 @@ New tool for measuring and annotating angles.
 
 ---
 
-## Test Coverage Status (January 31, 2026)
+## Test Coverage Status (February 1, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests total | **11,112** (163 suites) | ✅ |
-| Tests passing | **11,112** | ✅ All pass |
+| Tests total | **11,118** (163 suites) | ✅ |
+| Tests passing | **11,118** | ✅ All pass |
 | Tests failing | **0** | ✅ |
 | Statement coverage | **95.42%** | ✅ Excellent |
 | Branch coverage | **85.25%** | ✅ Good |
@@ -660,14 +648,14 @@ New tool for measuring and annotating angles.
 
 ---
 
-## Code Quality Metrics (Verified January 31, 2026)
+## Code Quality Metrics (Verified February 1, 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | JavaScript files | **141** (139 source + 2 dist) | ✅ |
 | PHP files | **42** | ✅ |
-| God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
-| Near-threshold files (900-999) | 6 | ⚠️ Watch |
+| God classes (≥1,000 lines) | **19** | 2 generated, 15 JS, 2 PHP |
+| Near-threshold files (900-999) | 5 | ⚠️ Watch |
 | innerHTML usages | 73 | Safe patterns |
 | ESLint disables | 11 | All legitimate |
 | i18n messages | **667** | All documented |
@@ -713,5 +701,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 31, 2026 (Comprehensive Critical Review v3)*  
-*Status: ✅ All tests passing. No P0 bugs. 1 HIGH priority issue (validation gap).*
+*Document updated: February 1, 2026 (Comprehensive Critical Review v4)*  
+*Status: ✅ All tests passing. No P0 or P1 bugs. All critical issues resolved.*

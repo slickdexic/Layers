@@ -316,105 +316,66 @@ class TransformController {
 	}
 
 	// ==================== Resize Calculation Wrappers ====================
-	// These methods delegate to ResizeCalculator for backwards compatibility
+	// These methods delegate to ResizeCalculator for backwards compatibility.
+	// See ResizeCalculator for full JSDoc documentation.
 
-	/**
-	 * Calculate resize updates based on layer type
-	 * Delegates to ResizeCalculator.calculateResize
-	 *
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @param {Object} modifiers Modifier keys state
-	 * @return {Object|null} Updates object with new dimensions
-	 */
+	/** @private Get ResizeCalculator class reference */
+	_getResizeCalculator() {
+		return getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
+	}
+
+	/** Delegates to ResizeCalculator.calculateResize @return {Object|null} */
 	calculateResize( originalLayer, handleType, deltaX, deltaY, modifiers ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			return ResizeCalculator.calculateResize( originalLayer, handleType, deltaX, deltaY, modifiers );
-		}
-		return null;
+		const RC = this._getResizeCalculator();
+		return RC ? RC.calculateResize( originalLayer, handleType, deltaX, deltaY, modifiers ) : null;
 	}
 
-	/** Calculate rectangle resize adjustments - delegates to ResizeCalculator @return {Object} */
+	/** Delegates to ResizeCalculator.calculateRectangleResize @return {Object} */
 	calculateRectangleResize( originalLayer, handleType, deltaX, deltaY, modifiers ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			return ResizeCalculator.calculateRectangleResize( originalLayer, handleType, deltaX, deltaY, modifiers );
-		}
-		return {};
+		const RC = this._getResizeCalculator();
+		return RC ? RC.calculateRectangleResize( originalLayer, handleType, deltaX, deltaY, modifiers ) : {};
 	}
 
-	/** Apply rotated resize correction - delegates to ResizeCalculator */
+	/** Delegates to ResizeCalculator.applyRotatedResizeCorrection */
 	applyRotatedResizeCorrection( updates, originalLayer, handleType ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			ResizeCalculator.applyRotatedResizeCorrection( updates, originalLayer, handleType );
-		}
+		const RC = this._getResizeCalculator();
+		if ( RC ) { RC.applyRotatedResizeCorrection( updates, originalLayer, handleType ); }
 	}
 
-	/** Calculate circle resize adjustments - delegates to ResizeCalculator @return {Object|null} */
+	/** Delegates to ResizeCalculator.calculateCircleResize @return {Object|null} */
 	calculateCircleResize( originalLayer, handleType, deltaX, deltaY ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			return ResizeCalculator.calculateCircleResize( originalLayer, handleType, deltaX, deltaY );
-		}
-		return null;
+		const RC = this._getResizeCalculator();
+		return RC ? RC.calculateCircleResize( originalLayer, handleType, deltaX, deltaY ) : null;
 	}
 
-	/** Calculate ellipse resize adjustments - delegates to ResizeCalculator @return {Object} */
+	/** Delegates to ResizeCalculator.calculateEllipseResize @return {Object} */
 	calculateEllipseResize( originalLayer, handleType, deltaX, deltaY ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			return ResizeCalculator.calculateEllipseResize( originalLayer, handleType, deltaX, deltaY );
-		}
-		return {};
+		const RC = this._getResizeCalculator();
+		return RC ? RC.calculateEllipseResize( originalLayer, handleType, deltaX, deltaY ) : {};
 	}
 
-	/** Calculate polygon/star resize adjustments - delegates to ResizeCalculator @return {Object} */
+	/** Delegates to ResizeCalculator.calculatePolygonResize @return {Object} */
 	calculatePolygonResize( originalLayer, handleType, deltaX, deltaY ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			return ResizeCalculator.calculatePolygonResize( originalLayer, handleType, deltaX, deltaY );
-		}
-		return {};
+		const RC = this._getResizeCalculator();
+		return RC ? RC.calculatePolygonResize( originalLayer, handleType, deltaX, deltaY ) : {};
 	}
 
-	/** Calculate line/arrow resize adjustments - delegates to ResizeCalculator @return {Object} */
+	/** Delegates to ResizeCalculator.calculateLineResize @return {Object} */
 	calculateLineResize( originalLayer, handleType, deltaX, deltaY ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			return ResizeCalculator.calculateLineResize( originalLayer, handleType, deltaX, deltaY );
-		}
-		return {};
+		const RC = this._getResizeCalculator();
+		return RC ? RC.calculateLineResize( originalLayer, handleType, deltaX, deltaY ) : {};
 	}
 
-	/**
-	 * Calculate path resize adjustments
-	 * Delegates to ResizeCalculator.calculatePathResize
-	 *
-	 * @param {Object} originalLayer Original layer properties
-	 * @param {string} handleType Handle being dragged
-	 * @param {number} deltaX Delta X movement
-	 * @param {number} deltaY Delta Y movement
-	 * @return {Object|null} Updates object with scaled points
-	 */
+	/** Delegates to ResizeCalculator.calculatePathResize @return {Object|null} */
 	calculatePathResize( originalLayer, handleType, deltaX, deltaY ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			return ResizeCalculator.calculatePathResize( originalLayer, handleType, deltaX, deltaY );
-		}
-		return null;
+		const RC = this._getResizeCalculator();
+		return RC ? RC.calculatePathResize( originalLayer, handleType, deltaX, deltaY ) : null;
 	}
 
-	/** Calculate text resize adjustments - delegates to ResizeCalculator @return {Object} */
+	/** Delegates to ResizeCalculator.calculateTextResize @return {Object} */
 	calculateTextResize( originalLayer, handleType, deltaX, deltaY ) {
-		const ResizeCalculator = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-		if ( ResizeCalculator ) {
-			return ResizeCalculator.calculateTextResize( originalLayer, handleType, deltaX, deltaY );
-		}
-		return {};
+		const RC = this._getResizeCalculator();
+		return RC ? RC.calculateTextResize( originalLayer, handleType, deltaX, deltaY ) : {};
 	}
 
 	// ==================== Rotation Operations ====================

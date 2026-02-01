@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C112%20passing-brightgreen" alt="11,112 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C118%20passing-brightgreen" alt="11,118 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.42%25-brightgreen" alt="95.42% Coverage">
 </p>
 
@@ -52,7 +52,7 @@
 - **All P0-P3 Issues Resolved** — TailCalculator, API bugs, N+1 queries, and UX issues all fixed
 - **UX Improvements** — Easier drag handle clicking (4px tolerance), smaller overlay buttons
 - **Code Quality** — New `LayersApiHelperTrait` extracts common API patterns
-- **11,112 tests passing** (163 suites), 95.42% statement coverage, 85.25% branch coverage
+- **11,118 tests passing** (163 suites), 95.42% statement coverage, 85.25% branch coverage
 
 ### Previous v1.5.39 Highlights
 
@@ -293,7 +293,7 @@ See [[Changelog]] for full details.
 | **Version (REL1_39)** | 1.5.40-REL1_39 |
 | **Release Date** | January 31, 2026 |
 | **Test Suites** | 163 |
-| **Total Tests** | 11,112 |
+| **Total Tests** | 11,118 |
 | **PHPUnit Test Files** | 24 |
 | **Statement Coverage** | 95.42% |
 | **Branch Coverage** | 85.25% |

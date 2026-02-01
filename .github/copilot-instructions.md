@@ -101,8 +101,9 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
   - **God classes:** 18 files exceed 1,000 lines:
     - **Generated data files (exempt):** ShapeLibraryData.js (~11,300 lines), EmojiLibraryIndex.js (~3,056 lines)
-    - **Hand-written files (14 JS):** LayerPanel, CanvasManager, Toolbar, LayersEditor, SelectionManager, PropertyBuilders, InlineTextEditor, APIManager, ViewerManager, ToolManager, CanvasRenderer, GroupManager, SlideController, LayersValidator
-    - **PHP god classes (2):** ServerSideLayerValidator.php (1,297 lines), LayersDatabase.php (1,242 lines)
+    - **Hand-written JS files (14):** LayerPanel (~2,182), CanvasManager (~2,044), Toolbar (~1,891), LayersEditor (~1,830), InlineTextEditor (~1,521), SelectionManager (~1,431), PropertyBuilders (~1,414), APIManager (~1,403), ViewerManager (~1,322), ToolManager (~1,226), CanvasRenderer (~1,219), GroupManager (~1,171), SlideController (~1,140), LayersValidator (~1,116)
+    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,341 lines), LayersDatabase.php (~1,360 lines)
+    - **Near-threshold files (4):** ToolbarStyleControls (~998), ResizeCalculator (~995), ArrowRenderer (~971), TransformController (~961)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -392,8 +393,8 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,112 tests in 163 suites — verified January 31, 2026)
-- Coverage (95.42% statement, 85.25% branch — verified January 31, 2026)
+- Test count (11,118 tests in 163 suites — verified February 1, 2026)
+- Coverage (95.42% statement, 85.25% branch — verified February 1, 2026)
 - JavaScript file count (141 files total, ~92,338 lines)
 - PHP file count (42 files, ~14,800 lines)
 - God class count (18 files >1,000 lines; 2 generated data files, 14 JS, 2 PHP)

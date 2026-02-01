@@ -11,7 +11,7 @@ This extension is feature-rich by design—**15 drawing tools**, multiple render
 **There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns
 - ✅ Secure with CSRF protection, rate limiting, validation
-- ✅ Thoroughly tested (95.42% coverage, 11,112 tests)
+- ✅ Thoroughly tested (95.42% coverage, 11,118 tests)
 - ✅ Properly delegated (god classes use controller patterns)
 
 ---
@@ -41,23 +41,33 @@ This extension is feature-rich by design—**15 drawing tools**, multiple render
 - ShapeLibraryData.js (~11,299 lines)
 - EmojiLibraryIndex.js (~3,055 lines)
 
-**Hand-written files (use delegation patterns):**
+**Hand-written JS files (use delegation patterns):**
 | File | Lines | Status |
 |------|-------|--------|
-| CanvasManager.js | ~1,981 | Facade - delegates to 10+ controllers |
-| LayerPanel.js | ~1,806 | Delegates to 9 controllers |
-| Toolbar.js | ~1,652 | Needs split |
-| LayersEditor.js | ~1,472 | Partial delegation |
-| SelectionManager.js | ~1,426 | Delegates to SelectionState, SelectionHandles |
-| ArrowRenderer.js | ~1,310 | Complex curved arrow math |
-| PropertyBuilders.js | ~1,250 | Reusable property builders |
-| ToolManager.js | ~1,219 | Delegates to tool handlers |
-| CanvasRenderer.js | ~1,132 | Delegates to SelectionRenderer |
-| GroupManager.js | ~1,132 | Layer grouping logic |
-| APIManager.js | ~1,116 | Delegates to APIErrorHandler |
-| TransformController.js | ~1,097 | Multi-layer transforms |
-| ResizeCalculator.js | ~1,090 | Shape-specific resize math |
-| ToolbarStyleControls.js | ~1,050 | Style control UI |
+| LayerPanel.js | ~2,182 | Delegates to 9 controllers |
+| CanvasManager.js | ~2,044 | Facade - delegates to 10+ controllers |
+| Toolbar.js | ~1,891 | Needs split |
+| LayersEditor.js | ~1,830 | Partial delegation |
+| InlineTextEditor.js | ~1,521 | Inline text editing |
+| SelectionManager.js | ~1,431 | Delegates to SelectionState, SelectionHandles |
+| PropertyBuilders.js | ~1,414 | Reusable property builders |
+| APIManager.js | ~1,403 | Delegates to APIErrorHandler |
+| ViewerManager.js | ~1,322 | Viewer instance management |
+| ToolManager.js | ~1,226 | Delegates to tool handlers |
+| CanvasRenderer.js | ~1,219 | Delegates to SelectionRenderer |
+| GroupManager.js | ~1,171 | Layer grouping logic |
+| SlideController.js | ~1,140 | Slide mode logic |
+| LayersValidator.js | ~1,116 | Validation logic |
+
+**PHP god classes:**
+- ServerSideLayerValidator.php (~1,341 lines)
+- LayersDatabase.php (~1,360 lines)
+
+**Near-threshold files (900-999 lines, watch carefully):**
+- ToolbarStyleControls.js (~998)
+- ResizeCalculator.js (~995)
+- ArrowRenderer.js (~971)
+- TransformController.js (~961)
 
 See [`improvement_plan.md`](improvement_plan.md) for refactoring guidance.
 
