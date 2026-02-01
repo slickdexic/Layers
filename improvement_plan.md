@@ -16,7 +16,7 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 - ✅ **P0:** All resolved (no critical bugs)
 - ✅ **P1:** All resolved (enum validation fixed)
 - ✅ **P2:** All resolved (20 items)
-- 🟢 **P3:** 10 open (low-priority backlog)
+- 🟢 **P3:** 7 open (low-priority backlog)
 
 **Verified Metrics (February 1, 2026):**
 
@@ -362,7 +362,7 @@ See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for phas
 
 ---
 
-## Phase 3 (P3): Long-Term — 🟢 10 ITEMS (4 RESOLVED)
+## Phase 3 (P3): Long-Term — 🟢 7 ITEMS (7 RESOLVED)
 
 ### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅
 
@@ -542,7 +542,7 @@ Candidates: StateManager.js, APIManager.js, GroupManager.js
 | Near-threshold | 9 | ≤4 | Monitor |
 | P1 issues | **0** | 0 | ✅ All resolved |
 | P2 issues | **0** | 0 | ✅ All resolved |
-| P3 issues | 10 | Backlog | Low priority |
+| P3 issues | 7 | Backlog | Low priority |
 
 ---
 

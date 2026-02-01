@@ -14,7 +14,7 @@ This document lists known issues and current gaps for the Layers extension.
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (High Priority) | **0** | ✅ All resolved |
 | P2 (Medium Priority) | **0** | ✅ All resolved |
-| P3 (Low Priority) | **10** | 🟢 Low priority backlog |
+| P3 (Low Priority) | **7** | 🟢 Low priority backlog |
 | Feature Gaps | 3 | Planned |
 
 ---
@@ -162,7 +162,7 @@ All high priority issues from previous reviews have been resolved:
 
 ---
 
-## 🟢 P3: Low Priority Issues (10 Open)
+## 🟢 P3: Low Priority Issues (7 Open)
 
 ### P3.1 SchemaManager Global Service Access
 
@@ -219,17 +219,21 @@ making unit testing harder.
 
 ### P3.7 Missing null Check in extractLayerSetData
 
+**Status:** ✅ RESOLVED (February 1, 2026)
+
 **Issue:** Potential null access in edge cases.
 
-**Fix:** Add try/catch or optional chaining.
+**Resolution:** `extractLayerSetData()` already handles null/undefined input safely with early return.
 
 ---
 
 ### P3.8 $prefix in listSlides() Not Length-Limited
 
+**Status:** ✅ RESOLVED (February 1, 2026)
+
 **Issue:** Very long prefix could cause performance issues.
 
-**Fix:** Add `substr($prefix, 0, 255)`.
+**Resolution:** Added `if (strlen($prefix) > 200) { $prefix = substr($prefix, 0, 200); }` at line 1198.
 
 ---
 
@@ -270,9 +274,11 @@ making unit testing harder.
 
 ### P3.13 getBoundingClientRect Unchecked
 
+**Status:** ✅ RESOLVED (February 1, 2026)
+
 **Issue:** Canvas getBoundingClientRect could return zero dimensions if not in DOM.
 
-**Fix:** Add guard checks before scale calculations.
+**Resolution:** Added defensive guard in `GeometryUtils.clientToCanvas()` that returns canvas center if rect has zero dimensions.
 
 ---
 
