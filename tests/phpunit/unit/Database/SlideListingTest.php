@@ -406,7 +406,7 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 		// Capture the LIKE condition to verify prefix was truncated
 		$capturedLikePrefix = null;
 		$this->dbr->method( 'buildLike' )
-			->willReturnCallback( function ( ...$args ) use ( &$capturedLikePrefix ) {
+			->willReturnCallback( static function ( ...$args ) use ( &$capturedLikePrefix ) {
 				// The first arg should be SLIDE_PREFIX + truncated prefix
 				if ( count( $args ) > 0 ) {
 					$capturedLikePrefix = $args[0];
