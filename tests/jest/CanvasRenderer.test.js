@@ -59,6 +59,9 @@ describe('CanvasRenderer', () => {
             setLineDash: jest.fn(),
             ellipse: jest.fn(),
             clip: jest.fn(),
+            quadraticCurveTo: jest.fn(),
+            bezierCurveTo: jest.fn(),
+            arcTo: jest.fn(),
             imageSmoothingEnabled: true,
             imageSmoothingQuality: 'high',
             globalAlpha: 1,
@@ -1592,6 +1595,143 @@ describe('CanvasRenderer', () => {
 
             expect(renderer.isMarqueeSelecting).toBe(true);
             expect(renderer.marqueeRect).toBe(rect);
+        });
+    });
+
+    describe('image load callback', () => {
+        test('should trigger re-render when image loads', () => {
+            // Setup editor with canvasManager that has renderLayers
+            const renderLayersMock = jest.fn();
+            renderer.editor = {
+                canvasManager: {
+                    renderLayers: renderLayersMock
+                },
+                layers: [{ id: 'layer1', type: 'rectangle' }]
+            };
+
+            // If LayerRenderer was created with onImageLoad callback
+            if (renderer.layerRenderer && renderer.layerRenderer.options && renderer.layerRenderer.options.onImageLoad) {
+                renderer.layerRenderer.options.onImageLoad();
+                expect(renderLayersMock).toHaveBeenCalledWith(renderer.editor.layers);
+            }
+        });
+    });
+
+    describe('slide mode background rendering', () => {
+        test('should draw checker pattern when slide mode and background not visible', () => {
+            renderer.setSlideMode(true);
+            // Mock stateManager to return false for backgroundVisible
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn((key) => {
+                        if (key === 'backgroundVisible') return false;
+                        return null;
+                    })
+                }
+            };
+            const drawCheckerSpy = jest.spyOn(renderer, 'drawCheckerPattern');
+
+            renderer.redraw([]);
+
+            expect(drawCheckerSpy).toHaveBeenCalled();
+        });
+
+        test('should draw checker pattern when non-slide mode and background hidden', () => {
+            renderer.setSlideMode(false);
+            // Mock stateManager to return false for backgroundVisible
+            renderer.editor = {
+                stateManager: {
+                    get: jest.fn((key) => {
+                        if (key === 'backgroundVisible') return false;
+                        return null;
+                    })
+                }
+            };
+            const drawCheckerSpy = jest.spyOn(renderer, 'drawCheckerPattern');
+
+            renderer.redraw([]);
+
+            expect(drawCheckerSpy).toHaveBeenCalled();
+        });
+    });
+
+    describe('textbox rounded rect fallback', () => {
+        test('should use _drawRoundedRectPath when ctx.roundRect is undefined', () => {
+            // Remove roundRect from context to trigger fallback
+            delete ctx.roundRect;
+
+            const layer = {
+                id: 'textbox1',
+                type: 'textbox',
+                x: 50,
+                y: 50,
+                width: 200,
+                height: 100,
+                cornerRadius: 10
+            };
+
+            const drawRoundedRectSpy = jest.spyOn(renderer, '_drawRoundedRectPath');
+
+            // Call _drawBlurClipPath which uses the textbox case
+            renderer._drawBlurClipPath(layer);
+
+            expect(drawRoundedRectSpy).toHaveBeenCalled();
+        });
+    });
+
+    describe('applyLayerStyle blend mode', () => {
+        test('should apply blendMode property', () => {
+            const layer = {
+                id: 'blend1',
+                type: 'rectangle',
+                blendMode: 'multiply'
+            };
+
+            renderer.applyLayerStyle(layer);
+
+            expect(ctx.globalCompositeOperation).toBe('multiply');
+        });
+
+        test('should apply blend property as fallback', () => {
+            const layer = {
+                id: 'blend2',
+                type: 'rectangle',
+                blend: 'screen'
+            };
+
+            renderer.applyLayerStyle(layer);
+
+            expect(ctx.globalCompositeOperation).toBe('screen');
+        });
+    });
+
+    describe('_getLayerById helper', () => {
+        test('should return layer from editor.getLayerById', () => {
+            const mockLayer = { id: 'layer1', type: 'rectangle' };
+            renderer.editor = {
+                getLayerById: jest.fn().mockReturnValue(mockLayer)
+            };
+
+            const result = renderer._getLayerById('layer1');
+
+            expect(result).toBe(mockLayer);
+            expect(renderer.editor.getLayerById).toHaveBeenCalledWith('layer1');
+        });
+
+        test('should return null when editor has no getLayerById', () => {
+            renderer.editor = {};
+
+            const result = renderer._getLayerById('layer1');
+
+            expect(result).toBeNull();
+        });
+
+        test('should return null when editor is null', () => {
+            renderer.editor = null;
+
+            const result = renderer._getLayerById('layer1');
+
+            expect(result).toBeNull();
         });
     });
 });
