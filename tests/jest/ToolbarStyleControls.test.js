@@ -108,6 +108,11 @@ describe( 'ToolbarStyleControls', () => {
 	beforeEach( () => {
 		jest.clearAllMocks();
 
+		// Clear class resolution cache to ensure fresh lookups for mocked classes
+		if ( window.layersClearClassCache ) {
+			window.layersClearClassCache();
+		}
+
 		mockMsg = jest.fn( ( key, fallback ) => fallback || key );
 		mockToolbar = {
 			registerDialogCleanup: jest.fn(),
@@ -2051,25 +2056,41 @@ describe( 'ToolbarStyleControls', () => {
 
 	describe( 'registerDialogCleanup callback', () => {
 		it( 'should call registerDialogCleanup when opening color picker', () => {
+			// Reset modules to get fresh ToolbarStyleControls with current getClass reference
+			jest.resetModules();
+
+			// Re-setup namespace and mocks
+			window.Layers = window.Layers || {};
+			window.Layers.Utils = window.Layers.Utils || {};
+			window.Layers.UI = window.Layers.UI || {};
+
+			require( '../../resources/ext.layers.editor/utils/NamespaceHelper.js' );
+			require( '../../resources/ext.layers.editor/ui/TextEffectsControls.js' );
+
+			// Set up ArrowStyleControl mock
+			window.Layers.UI.ArrowStyleControl = MockArrowStyleControl;
+
+			// Set up ColorPickerDialog mock that calls registerCleanup
+			const mockPickerOpen = jest.fn();
+			window.Layers.UI.ColorPickerDialog = jest.fn( function ( config ) {
+				if ( config.registerCleanup ) {
+					config.registerCleanup( () => {} );
+				}
+				this.open = mockPickerOpen;
+			} );
+			window.Layers.UI.ColorPickerDialog.updateColorButton = jest.fn();
+
+			// Get fresh ToolbarStyleControls
+			const FreshToolbarStyleControls = require( '../../resources/ext.layers.editor/ToolbarStyleControls.js' );
+
 			const mockRegister = jest.fn();
 			const toolbarWithRegister = {
 				...mockToolbar,
 				registerDialogCleanup: mockRegister
 			};
 
-			const controls = new ToolbarStyleControls( { toolbar: toolbarWithRegister } );
+			const controls = new FreshToolbarStyleControls( { toolbar: toolbarWithRegister } );
 			controls.create();
-
-			// Mock ColorPickerDialog
-			const mockPickerOpen = jest.fn();
-			const MockColorPicker = jest.fn().mockImplementation( ( config ) => {
-				// Call registerCleanup if provided
-				if ( config.registerCleanup ) {
-					config.registerCleanup( () => {} );
-				}
-				return { open: mockPickerOpen };
-			} );
-			window.Layers.UI.ColorPickerDialog = MockColorPicker;
 
 			// Open color picker
 			controls.openColorPicker( document.createElement( 'button' ), '#000000', {} );

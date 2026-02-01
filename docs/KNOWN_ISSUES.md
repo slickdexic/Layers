@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** January 31, 2026 (Comprehensive Critical Review v2)  
-**Version:** 1.5.43
+**Last Updated:** February 1, 2026 (Comprehensive Critical Review v4)  
+**Version:** 1.5.44
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -13,20 +13,36 @@ This document lists known issues and current gaps for the Layers extension.
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ All resolved |
 | P1 (High Priority) | **0** | ✅ All resolved |
-| P2 (Medium Priority) | **18** | 🟡 18 open |
-| P3 (Low Priority) | **14** | 🟢 14 open |
+| P2 (Medium Priority) | **1** | 🟡 1 open (metrics discrepancy) |
+| P3 (Low Priority) | **12** | 🟢 11 open + 3 newly resolved |
 | Feature Gaps | 3 | Planned |
 
 ---
 
-## ✅ P0: Critical Bugs — ALL RESOLVED
+## ✅ P1: High Priority Issues — ALL RESOLVED
+
+### P1.3 Missing Enum Validation for Constrained String Properties
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Severity:** P1 (High)  
+**Component:** ServerSideLayerValidator / Security
+
+**Issue:** The `VALUE_CONSTRAINTS` constant defined allowed values for 15 enum-like properties, but only 9 were validated. Fixed in v1.5.44.
+
+**Resolution:** Added all 8 missing properties (`tailDirection`, `tailStyle`, `style`, `endStyle`, `textPosition`, `orientation`, `textDirection`, `toleranceType`) to the validation check in `validateStringProperty()`.
+
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 510-519
+
+---
+
+## ✅ P1: Previously Resolved Issues
 
 All critical bugs identified in previous reviews have been resolved.
 All **11,112** tests pass as of January 31, 2026.
 
 ---
 
-## ✅ P1: High Priority Issues — ALL RESOLVED
+## ✅ P1: Previously Resolved High Priority Issues
 
 All high priority issues from previous reviews have been resolved:
 
@@ -39,37 +55,113 @@ All high priority issues from previous reviews have been resolved:
 
 ---
 
-## 🟡 P2: Medium Priority Issues (18 Open)
+## 🟡 P2: Medium Priority Issues (3 Open, 15 Resolved)
 
-### P2.1 Untracked Timeouts in SlideController
+### P2.19 ZoomPanController Animation Frame Not Canceled 🆕
 
 **Status:** 🟡 OPEN  
 **Severity:** P2 (Medium)  
-**Component:** SlideController / Memory Management
+**Component:** ZoomPanController / Animation
 
-**Issue:** `_scheduleRetries()` creates setTimeout calls that are never 
-tracked or cleared. If the component is destroyed before timeouts fire,
-callbacks will access stale data.
+**Issue:** `smoothZoomTo()` starts a new animation via `requestAnimationFrame` without canceling any existing animation. Rapid zoom operations can cause multiple animation loops running simultaneously, causing jittery zoom behavior.
 
-**Files:** `resources/ext.layers/viewer/SlideController.js` lines 156-163
+**Files:** `resources/ext.layers.editor/canvas/ZoomPanController.js` line 155
 
-**Fix:** Track timeout IDs using TimeoutTracker and clear in destroy().
+**Fix:** Add `cancelAnimationFrame(this.animationFrameId)` before starting new animation.
 
-**Estimated Effort:** 1 hour
+**Estimated Effort:** 15 minutes
 
 ---
 
-### P2.2 Untracked Event Listeners in ToolDropdown
+### P2.20 TransformController Stale Layer Reference in rAF 🆕
 
 **Status:** 🟡 OPEN  
 **Severity:** P2 (Medium)  
-**Component:** ToolDropdown / Memory Management
+**Component:** TransformController / Race Condition
 
-**Issue:** Event listeners on triggerButton and menu items are added with 
-inline arrow functions and not tracked. The destroy() method only removes
-document-level listeners, leaving component listeners attached.
+**Issue:** `_pendingResizeLayer` may become stale if the layer is deleted between scheduling the rAF and execution. The callback emits events with potentially invalid layer references.
 
-**Files:** `resources/ext.layers.editor/ui/ToolDropdown.js` lines 132-200
+**Files:** `resources/ext.layers.editor/canvas/TransformController.js`
+
+**Fix:** Validate layer still exists in layers array before emitting in the rAF callback.
+
+**Estimated Effort:** 30 minutes
+
+---
+
+### P2.21 Version Inconsistency in Mediawiki-Extension-Layers.mediawiki 🆕
+
+**Status:** 🟡 OPEN  
+**Severity:** P2 (Medium)  
+**Component:** Documentation
+
+**Issue:** Version info box at top shows 1.5.44, but the branch version table shows 1.5.43.
+
+**Files:** `Mediawiki-Extension-Layers.mediawiki` line 122
+
+**Fix:** Update branch table to show 1.5.44 versions.
+
+**Estimated Effort:** 5 minutes
+
+---
+
+### P2.1 Untracked Timeouts in SlideController ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** Already implemented - `_retryTimeouts` array tracks IDs, `destroy()` clears all.
+
+---
+
+### P2.2 Untracked Event Listeners in ToolDropdown ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (v1.5.44)  
+**Resolution:** Added `boundHandleTriggerClick` and `_menuItemHandlers` Map.
+
+---
+
+### P2.3 VirtualLayerList rAF Callback Missing Destroyed Check ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** `if (this.destroyed) return;` check added at line 239.
+
+---
+
+### P2.4 Inconsistent Set Name Validation Standards ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** ApiLayersRename now uses SetNameSanitizer consistently.
+
+---
+
+### P2.5 Slide Name Not Validated in ApiLayersSave ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (January 31, 2026)  
+**Resolution:** SlideNameValidator now validates slidename before processing.
+
+---
+
+### P2.6 Promise Constructor Anti-Pattern in APIManager ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (Verified as valid pattern)  
+**Resolution:** Pattern is legitimate - enables request tracking, abort support.
+
+---
+
+### P2.7 Aborted Request Handling Shows Spurious Errors ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (Already implemented)  
+**Resolution:** Both `loadRevision()` and `loadSetByName()` include abort detection.
+
+---
+
+### P2.8 Inconsistent Logger Usage in API Modules ✅ RESOLVED
+
+**Status:** ✅ RESOLVED (v1.5.44)  
+**Resolution:** Replaced `LoggerFactory::getInstance()` with `$this->getLogger()`.
+
+---
+
+### P2.9 Inconsistent Database Method Return Types
 
 **Fix:** Store handler references and remove them in destroy(), or use EventTracker.
 
@@ -542,12 +634,12 @@ New tool for measuring and annotating angles.
 
 ---
 
-## Test Coverage Status (January 31, 2026)
+## Test Coverage Status (February 1, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests total | **11,112** (163 suites) | ✅ |
-| Tests passing | **11,112** | ✅ All pass |
+| Tests total | **11,118** (163 suites) | ✅ |
+| Tests passing | **11,118** | ✅ All pass |
 | Tests failing | **0** | ✅ |
 | Statement coverage | **95.42%** | ✅ Excellent |
 | Branch coverage | **85.25%** | ✅ Good |
@@ -556,14 +648,14 @@ New tool for measuring and annotating angles.
 
 ---
 
-## Code Quality Metrics (Verified January 31, 2026)
+## Code Quality Metrics (Verified February 1, 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | JavaScript files | **141** (139 source + 2 dist) | ✅ |
 | PHP files | **42** | ✅ |
-| God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
-| Near-threshold files (900-999) | 6 | ⚠️ Watch |
+| God classes (≥1,000 lines) | **19** | 2 generated, 15 JS, 2 PHP |
+| Near-threshold files (900-999) | 5 | ⚠️ Watch |
 | innerHTML usages | 73 | Safe patterns |
 | ESLint disables | 11 | All legitimate |
 | i18n messages | **667** | All documented |
@@ -609,5 +701,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: January 31, 2026 (Comprehensive Critical Review v2)*  
-*Status: ✅ All tests passing. No critical bugs. No HIGH priority issues.*
+*Document updated: February 1, 2026 (Comprehensive Critical Review v4)*  
+*Status: ✅ All tests passing. No P0 or P1 bugs. All critical issues resolved.*

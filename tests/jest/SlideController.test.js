@@ -446,6 +446,345 @@ describe( 'SlideController', () => {
 				} );
 			} ).not.toThrow();
 		} );
+
+		it( 'should scale canvas display when display dimensions differ', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			container.setAttribute( 'data-display-width', '512' );
+			container.setAttribute( 'data-display-height', '384' );
+			container.setAttribute( 'data-display-scale', '0.5' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1,
+				translate: jest.fn(),
+				rotate: jest.fn(),
+				scale: jest.fn()
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			const controller = new SlideController();
+			controller.initializeSlideViewer( container, {
+				layers: [],
+				baseWidth: 1024,
+				baseHeight: 768,
+				backgroundColor: '#ffffff'
+			} );
+
+			// Canvas internal dimensions should match payload
+			expect( canvas.width ).toBe( 1024 );
+			expect( canvas.height ).toBe( 768 );
+			// Canvas display should be scaled via CSS
+			expect( canvas.style.width ).toBe( '512px' );
+			expect( canvas.style.height ).toBe( '384px' );
+		} );
+
+		it( 'should handle transparent background', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1,
+				translate: jest.fn(),
+				rotate: jest.fn(),
+				scale: jest.fn()
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.initializeSlideViewer( container, {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: 'transparent'
+			} );
+
+			// Should NOT fill background when transparent
+			expect( mockCtx.fillRect ).not.toHaveBeenCalled();
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should handle background with partial opacity', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1,
+				translate: jest.fn(),
+				rotate: jest.fn(),
+				scale: jest.fn()
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.initializeSlideViewer( container, {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#ff0000',
+				backgroundOpacity: 0.5
+			} );
+
+			// Container should have transparent background when canvas has opacity
+			expect( container.style.backgroundColor ).toBe( 'transparent' );
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should hide background when backgroundVisible is false', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1,
+				translate: jest.fn(),
+				rotate: jest.fn(),
+				scale: jest.fn()
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.initializeSlideViewer( container, {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#ff0000',
+				backgroundVisible: false
+			} );
+
+			// Should NOT fill background when not visible
+			expect( mockCtx.fillRect ).not.toHaveBeenCalled();
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should hide background when backgroundVisible is 0 (API integer)', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1,
+				translate: jest.fn(),
+				rotate: jest.fn(),
+				scale: jest.fn()
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.initializeSlideViewer( container, {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#ff0000',
+				backgroundVisible: 0 // Integer from PHP API
+			} );
+
+			// Should NOT fill background when visible=0
+			expect( mockCtx.fillRect ).not.toHaveBeenCalled();
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should render visible layers', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1,
+				translate: jest.fn(),
+				rotate: jest.fn(),
+				scale: jest.fn()
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = {
+				drawLayer: jest.fn()
+			};
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.initializeSlideViewer( container, {
+				layers: [
+					{ id: 'layer1', type: 'rectangle', visible: true },
+					{ id: 'layer2', type: 'circle', visible: false },
+					{ id: 'layer3', type: 'text', visible: 1 }
+				],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#ffffff'
+			} );
+
+			// Should render visible layers only (layer1 and layer3)
+			expect( mockRenderer.drawLayer ).toHaveBeenCalledTimes( 2 );
+			expect( mockRenderer.drawLayer ).toHaveBeenCalledWith( expect.objectContaining( { id: 'layer1' } ) );
+			expect( mockRenderer.drawLayer ).toHaveBeenCalledWith( expect.objectContaining( { id: 'layer3' } ) );
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should hide loading placeholder after initialization', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			const canvas = document.createElement( 'canvas' );
+			const placeholder = document.createElement( 'div' );
+			placeholder.className = 'layers-slide-placeholder';
+			container.appendChild( canvas );
+			container.appendChild( placeholder );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1,
+				translate: jest.fn(),
+				rotate: jest.fn(),
+				scale: jest.fn()
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.initializeSlideViewer( container, {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#ffffff'
+			} );
+
+			// Placeholder should be hidden
+			expect( placeholder.style.display ).toBe( 'none' );
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should store payload on container for later access', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1,
+				translate: jest.fn(),
+				rotate: jest.fn(),
+				scale: jest.fn()
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const payload = {
+				layers: [],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#ffffff'
+			};
+
+			const controller = new SlideController();
+			controller.initializeSlideViewer( container, payload );
+
+			// Payload should be stored on container
+			expect( container._layersPayload ).toBe( payload );
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should return early if context not available', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( null );
+
+			const controller = new SlideController( { debug: true } );
+			expect( () => {
+				controller.initializeSlideViewer( container, {
+					layers: [],
+					baseWidth: 800,
+					baseHeight: 600
+				} );
+			} ).not.toThrow();
+		} );
 	} );
 
 	describe( 'reinitializeSlideViewer', () => {
@@ -545,6 +884,204 @@ describe( 'SlideController', () => {
 			} );
 
 			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle constrained slide with wider aspect ratio', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-orig-display-width', '400' );
+			container.setAttribute( 'data-orig-display-height', '300' );
+			container.setAttribute( 'data-display-width', '400' );
+			container.setAttribute( 'data-display-height', '300' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 800;
+			canvas.height = 600;
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			// New payload with wider aspect ratio (1920x600 = 3.2:1 vs original 4:3)
+			controller.reinitializeSlideViewer( container, {
+				layers: [],
+				baseWidth: 1920,
+				baseHeight: 600,
+				backgroundColor: '#ffffff'
+			} );
+
+			// Canvas dimensions should match payload
+			expect( canvas.width ).toBe( 1920 );
+			expect( canvas.height ).toBe( 600 );
+			// Display size should be recalculated (width constrained)
+			expect( container.getAttribute( 'data-display-width' ) ).toBe( '400' );
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should handle constrained slide with taller aspect ratio', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-orig-display-width', '400' );
+			container.setAttribute( 'data-orig-display-height', '300' );
+			container.setAttribute( 'data-display-width', '400' );
+			container.setAttribute( 'data-display-height', '300' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 400;
+			canvas.height = 300;
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			// New payload with taller aspect ratio (600x1200 = 1:2 vs original 4:3)
+			controller.reinitializeSlideViewer( container, {
+				layers: [],
+				baseWidth: 600,
+				baseHeight: 1200,
+				backgroundColor: '#ffffff'
+			} );
+
+			// Canvas dimensions should match payload
+			expect( canvas.width ).toBe( 600 );
+			expect( canvas.height ).toBe( 1200 );
+			// Display size should be recalculated (height constrained)
+			expect( container.getAttribute( 'data-display-height' ) ).toBe( '300' );
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should handle transparent background in reinitialize', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.reinitializeSlideViewer( container, {
+				// Include a layer to prevent empty state rendering from calling fillRect
+				layers: [ { id: 'layer1', type: 'rectangle', visible: true } ],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: 'none'
+			} );
+
+			// Should not fill background when transparent (fillRect not called for background)
+			// Layer rendering calls drawLayer, not fillRect for background
+			expect( mockCtx.fillRect ).not.toHaveBeenCalled();
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should handle backgroundVisible=0 in reinitialize', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-background', '#ff0000' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.reinitializeSlideViewer( container, {
+				// Include a layer to prevent empty state rendering from calling fillRect
+				layers: [ { id: 'layer1', type: 'rectangle', visible: true } ],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundVisible: 0 // Integer from PHP API
+			} );
+
+			// Should not fill background when visible is 0
+			expect( mockCtx.fillRect ).not.toHaveBeenCalled();
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should render visible layers and skip hidden ones', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillStyle: '',
+				globalAlpha: 1
+			};
+			jest.spyOn( canvas, 'getContext' ).mockReturnValue( mockCtx );
+
+			// Mock LayerRenderer
+			const mockRenderer = { drawLayer: jest.fn() };
+			window.LayerRenderer = jest.fn( () => mockRenderer );
+
+			const controller = new SlideController();
+			controller.reinitializeSlideViewer( container, {
+				layers: [
+					{ id: 'visible1', type: 'rectangle', visible: true },
+					{ id: 'hidden1', type: 'circle', visible: 0 },
+					{ id: 'visible2', type: 'text' }
+				],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#ffffff'
+			} );
+
+			// Should render visible1 and visible2 (no visible property = visible)
+			expect( mockRenderer.drawLayer ).toHaveBeenCalledTimes( 2 );
+
+			delete window.LayerRenderer;
 		} );
 	} );
 
