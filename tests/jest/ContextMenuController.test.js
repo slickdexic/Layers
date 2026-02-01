@@ -552,5 +552,109 @@ describe( 'ContextMenuController', () => {
 				expect( mockEditor.duplicateSelected ).toHaveBeenCalled();
 			}
 		} );
+
+		it( 'should handle duplicate when editor.duplicateSelected is undefined', () => {
+			mockEditor.duplicateSelected = undefined;
+			mockCallbacks.getSelectedLayerIds = jest.fn( () => [ 'layer1' ] );
+
+			controller = new ContextMenuController( {
+				editor: mockEditor,
+				...mockCallbacks
+			} );
+
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const menu = document.querySelector( '.layers-context-menu' );
+			const duplicateBtn = Array.from( menu.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.textContent.includes( 'Duplicate' ) );
+
+			if ( duplicateBtn && !duplicateBtn.disabled ) {
+				// Should not throw when duplicateSelected is undefined
+				expect( () => duplicateBtn.click() ).not.toThrow();
+			}
+		} );
+
+		it( 'should not call deleteLayer when clickedLayerId is null', () => {
+			// Create event with no layer-item target
+			const plainDiv = document.createElement( 'div' );
+			document.body.appendChild( plainDiv );
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				stopPropagation: jest.fn(),
+				clientX: 100,
+				clientY: 200,
+				target: plainDiv
+			};
+
+			controller.handleLayerContextMenu( mockEvent );
+
+			const menu = document.querySelector( '.layers-context-menu' );
+			const deleteBtn = Array.from( menu.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.textContent.includes( 'Delete' ) );
+
+			// Delete should be disabled when no layer is clicked
+			if ( deleteBtn ) {
+				expect( deleteBtn.disabled ).toBe( true );
+			}
+		} );
+
+		it( 'should not call editLayerName when layerItem has no name element', () => {
+			// Create layer item without a name element
+			const layerItemNoName = document.createElement( 'div' );
+			layerItemNoName.className = 'layer-item';
+			layerItemNoName.dataset.layerId = 'layer1';
+			// No .layer-name child added
+			document.body.appendChild( layerItemNoName );
+
+			mockCallbacks.getSelectedLayerIds = jest.fn( () => [ 'layer1' ] );
+
+			const mockEvent = {
+				preventDefault: jest.fn(),
+				stopPropagation: jest.fn(),
+				clientX: 100,
+				clientY: 200,
+				target: layerItemNoName
+			};
+
+			controller.handleLayerContextMenu( mockEvent );
+
+			const menu = document.querySelector( '.layers-context-menu' );
+			const renameBtn = Array.from( menu.querySelectorAll( 'button' ) )
+				.find( ( btn ) => btn.textContent.includes( 'Rename' ) );
+
+			if ( renameBtn && !renameBtn.disabled ) {
+				renameBtn.click();
+				// Should not call editLayerName when nameEl is missing
+				expect( mockCallbacks.editLayerName ).not.toHaveBeenCalled();
+			}
+		} );
+	} );
+
+	describe( 'destroy with null references', () => {
+		it( 'should not throw when destroy is called multiple times', () => {
+			controller.destroy();
+			// Calling destroy again should not throw
+			expect( () => controller.destroy() ).not.toThrow();
+		} );
+
+		it( 'should handle destroy when no menu was ever opened', () => {
+			// Never opened a context menu, references are already null
+			expect( () => controller.destroy() ).not.toThrow();
+			expect( controller.editor ).toBeNull();
+		} );
+
+		it( 'should set all callback references to null on destroy', () => {
+			controller.destroy();
+
+			expect( controller.msg ).toBeNull();
+			expect( controller.getSelectedLayerIds ).toBeNull();
+			expect( controller.selectLayer ).toBeNull();
+			expect( controller.createGroupFromSelection ).toBeNull();
+			expect( controller.ungroupLayer ).toBeNull();
+			expect( controller.deleteLayer ).toBeNull();
+			expect( controller.editLayerName ).toBeNull();
+		} );
 	} );
 } );
