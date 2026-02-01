@@ -108,7 +108,8 @@ class ApiLayersSave extends ApiBase {
 		// Handle slide saves (slidename parameter)
 		if ( $slidename !== null && $slidename !== '' ) {
 			// Validate slidename for security and consistency
-			if ( !SlideNameValidator::isValid( $slidename ) ) {
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
 				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
 			}
 			$this->executeSlideSave( $user, $params, $slidename );
@@ -120,7 +121,8 @@ class ApiLayersSave extends ApiBase {
 			// Remove 'Slide:' prefix
 			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
 			// Validate extracted slidename
-			if ( !SlideNameValidator::isValid( $slidename ) ) {
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
 				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
 			}
 			$this->executeSlideSave( $user, $params, $slidename );
