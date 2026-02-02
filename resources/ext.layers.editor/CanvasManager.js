@@ -1965,6 +1965,7 @@ class CanvasManager {
 			'drawingController',
 			'clipboardController',
 			'textInputController',
+			'inlineTextEditor',
 			'alignmentController',
 			'smartGuidesController',
 			'styleController',

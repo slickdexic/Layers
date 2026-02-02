@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** February 1, 2026 (Comprehensive Critical Review v4)  
-**Version:** 1.5.45
+**Last Updated:** February 2, 2026 (Comprehensive Critical Review v6)  
+**Version:** 1.5.46
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -11,288 +11,216 @@ This document lists known issues and current gaps for the Layers extension.
 
 | Category | Count | Status |
 |----------|-------|--------|
-| P0 (Critical Bugs) | **0** | ‚úÖ All resolved |
-| P1 (High Priority) | **0** | ‚úÖ All resolved |
-| P2 (Medium Priority) | **0** | ‚úÖ All resolved |
-| P3 (Low Priority) | **7** | üü¢ Low priority backlog |
-| Feature Gaps | 3 | Planned |
+| P0 (Critical Bugs) | **0** | ‚úÖ None |
+| P1 (High Priority) | **0** | Ì¥¥ ‚úÖ All Fixed |
+| P2 (Medium Priority) | **2** | Ìø° Minor issues remaining |
+| P3 (Low Priority) | **7** | Ìø¢ Minor issues |
+| Feature Gaps | 4 | Planned |
 
 ---
 
-## ‚úÖ P1: High Priority Issues ‚Äî ALL RESOLVED
+## Ì¥¥ P1: High Priority Issues (0 Open - All Fixed)
 
-### P1.3 Missing Enum Validation for Constrained String Properties
+### P1.1 ApiSlidesSave.php - Dead Code with Fatal Bugs
 
-**Status:** ‚úÖ RESOLVED (January 31, 2026)  
+**Status:** Ì¥¥ ‚úÖ FIXED (DELETED)  
 **Severity:** P1 (High)  
-**Component:** ServerSideLayerValidator / Security
+**Component:** Dead Code / API
 
-**Issue:** The `VALUE_CONSTRAINTS` constant defined allowed values for 15 enum-like properties, but only 9 were validated. Fixed in v1.5.44.
+**Issue:** `src/Api/ApiSlidesSave.php` exists in the repository but is NOT registered in `extension.json` APIModules. It contains 6+ fatal bugs:
 
-**Resolution:** Added all 8 missing properties (`tailDirection`, `tailStyle`, `style`, `endStyle`, `textPosition`, `orientation`, `textDirection`, `toleranceType`) to the validation check in `validateStringProperty()`.
+| Line | Bug |
+|------|-----|
+| 68 | Wrong RateLimiter constructor (passes User, expects Config) |
+| 69 | Wrong method name (isLimited() doesn't exist) |
+| 75-77 | SlideNameValidator::validate() returns string, not ValidationResult |
+| 87 | Wrong ServerSideLayerValidator constructor signature |
+| 95 | getSanitizedData() doesn't exist, should be getData() |
+| 128 | sanitizeColor() method not defined |
+| 132 | saveSlide() method doesn't exist in LayersDatabase |
 
-**Files:** `src/Validation/ServerSideLayerValidator.php` lines 510-519
+**Mitigating Factor:** Cannot be invoked (not registered in APIModules).
 
----
+**Recommended Action:** Delete the file. Slide save is handled by `ApiLayersSave::executeSlideSave()`.
 
-## ‚úÖ P1: Previously Resolved Issues
-
-All critical bugs identified in previous reviews have been resolved.
-All **11,157** tests pass as of February 1, 2026.
-
----
-
-## ‚úÖ P1: Previously Resolved High Priority Issues
-
-All high priority issues from previous reviews have been resolved:
-
-| Issue | Resolution Date |
-|-------|-----------------|
-| Race condition in saveLayerSet | January 31, 2026 |
-| Missing permission check in ApiLayersList | January 31, 2026 |
-| Documentation metrics drift | January 30, 2026 |
-| MediaWiki version inconsistency | January 30, 2026 |
+**Files:** `src/Api/ApiSlidesSave.php`
 
 ---
 
-## ‚úÖ P2: Medium Priority Issues ‚Äî ALL RESOLVED
+### P1.2 ApiSlideInfo.php - Dead Code with Fatal Bugs
 
-### P2.19 ZoomPanController Animation Frame Not Canceled ‚úÖ
+**Status:** Ì¥¥ ‚úÖ FIXED (DELETED)  
+**Severity:** P1 (High)  
+**Component:** Dead Code / API
 
-**Status:** ‚úÖ RESOLVED (February 1, 2026)  
+**Issue:** `src/Api/ApiSlideInfo.php` exists in the repository but is NOT registered in `extension.json` APIModules. It contains multiple fatal bugs:
+
+| Line | Bug |
+|------|-----|
+| 66-68 | SlideNameValidator::validate() returns string, not ValidationResult |
+| 67 | getMessage() called on string (doesn't exist) |
+| 74 | getSlideByName() doesn't exist in LayersDatabase |
+
+**Mitigating Factor:** Cannot be invoked (not registered in APIModules).
+
+**Recommended Action:** Delete the file. Slide info is handled by `ApiLayersInfo::executeSlideRequest()`.
+
+**Files:** `src/Api/ApiSlideInfo.php`
+
+---
+
+## Ìø° P2: Medium Priority Issues (2 Open)
+
+### P2.1 Missing Boolean Properties in preserveLayerBooleans
+
+**Status:** Ìø° ‚úÖ FIXED  
 **Severity:** P2 (Medium)  
-**Component:** ZoomPanController / Animation
+**Component:** ApiLayersInfo / Data Integrity
 
-**Issue:** `smoothZoomTo()` starts a new animation via `requestAnimationFrame` without canceling any existing animation. Rapid zoom operations can cause multiple animation loops running simultaneously, causing jittery zoom behavior.
+**Issue:** `preserveLayerBooleans()` only converts 7 of 12 boolean properties. Missing:
+- `expanded`, `isMultiPath`, `strokeOnly`, `showUnit`, `showBackground`
 
-**Resolution:** Added `cancelAnimationFrame(this.animationFrameId)` before starting new animation.
+**Impact:** False values for these properties may be lost during API JSON serialization.
 
-**Files:** `resources/ext.layers.editor/canvas/ZoomPanController.js` line 155
+**Files:** `src/Api/ApiLayersInfo.php` lines 365-368
 
 ---
 
-### P2.20 TransformController Stale Layer Reference in rAF ‚úÖ
+### P2.2 InlineTextEditor Not in CanvasManager Destroy List
 
-**Status:** ‚úÖ RESOLVED (February 1, 2026)  
+**Status:** Ìø° ‚úÖ FIXED  
 **Severity:** P2 (Medium)  
-**Component:** TransformController / Race Condition
+**Component:** CanvasManager / Memory Leak
 
-**Issue:** `_pendingResizeLayer` may become stale if the layer is deleted between scheduling the rAF and execution. The callback emits events with potentially invalid layer references.
+**Issue:** The `inlineTextEditor` controller is initialized but NOT included in the `controllersToDestroy` array, causing a memory leak.
 
-**Resolution:** Added layer existence validation in rAF callback using `this.manager.editor.layers.some((l) => l.id === layerId)` before emitting transform events.
-
-**Files:** `resources/ext.layers.editor/canvas/TransformController.js` lines 213-227
+**Files:** `resources/ext.layers.editor/CanvasManager.js` lines 1957-1973
 
 ---
 
-### P2.21 Version Inconsistency in Mediawiki-Extension-Layers.mediawiki ‚úÖ
+### P2.3 ApiLayersRename Lacks Slide Support
 
-**Status:** ‚úÖ RESOLVED (February 1, 2026)  
+**Status:** Ìø° ‚úÖ FIXED  
+**Severity:** P2 (Medium)  
+**Component:** ApiLayersRename / Feature Gap
+
+**Issue:** Unlike other API modules (Save, Info, Delete), the Rename module does not support slides.
+
+**Impact:** Cannot rename named layer sets on slides.
+
+**Files:** `src/Api/ApiLayersRename.php`
+
+---
+
+### P2.4 Documentation Version Inconsistencies
+
+**Status:** Ìø° ‚úÖ FIXED  
 **Severity:** P2 (Medium)  
 **Component:** Documentation
 
-**Issue:** Version info box at top shows 1.5.44, but the branch version table shows 1.5.43.
-
-**Resolution:** Updated all version references to 1.5.45 for consistency.
-
-**Files:** `Mediawiki-Extension-Layers.mediawiki`
-
----
-
-### P2.1 Untracked Timeouts in SlideController ‚úÖ RESOLVED
-
-**Status:** ‚úÖ RESOLVED (January 31, 2026)  
-**Resolution:** Already implemented - `_retryTimeouts` array tracks IDs, `destroy()` clears all.
+**Issue:** Several files have outdated version numbers (1.5.45 instead of 1.5.46):
+- `Mediawiki-Extension-Layers.mediawiki`
+- `wiki/Home.md`
+- `.github/copilot-instructions.md`
 
 ---
 
-### P2.2 Untracked Event Listeners in ToolDropdown ‚úÖ RESOLVED
+### P2.5 Font Family Validation Too Restrictive
 
-**Status:** ‚úÖ RESOLVED (v1.5.44)  
-**Resolution:** Added `boundHandleTriggerClick` and `_menuItemHandlers` Map.
+**Status:** Ìø° OPEN  
+**Severity:** P2 (Medium)  
+**Component:** ServerSideLayerValidator
 
----
+**Issue:** Font validation requires fonts to be in `$wgLayersDefaultFonts` (defaults to ['Arial', 'sans-serif']). Standard fonts like Georgia, Courier New are rejected.
 
-### P2.3 VirtualLayerList rAF Callback Missing Destroyed Check ‚úÖ RESOLVED
+**Impact:** Potential data loss for layers using common fonts.
 
-**Status:** ‚úÖ RESOLVED (January 31, 2026)  
-**Resolution:** `if (this.destroyed) return;` check added at line 239.
-
----
-
-### P2.4 Inconsistent Set Name Validation Standards ‚úÖ RESOLVED
-
-**Status:** ‚úÖ RESOLVED (January 31, 2026)  
-**Resolution:** ApiLayersRename now uses SetNameSanitizer consistently.
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 500-506
 
 ---
 
-### P2.5 Slide Name Not Validated in ApiLayersSave ‚úÖ RESOLVED
+### P2.6 wiki/Changelog.md Missing v1.5.46
 
-**Status:** ‚úÖ RESOLVED (January 31, 2026)  
-**Resolution:** SlideNameValidator now validates slidename before processing.
+**Status:** Ìø° ‚úÖ FIXED (Already Synced)  
+**Severity:** P2 (Medium)  
+**Component:** Documentation
 
----
-
-### P2.6 Promise Constructor Anti-Pattern in APIManager ‚úÖ RESOLVED
-
-**Status:** ‚úÖ RESOLVED (Verified as valid pattern)  
-**Resolution:** Pattern is legitimate - enables request tracking, abort support.
+**Issue:** Main CHANGELOG.md has v1.5.46 but wiki/Changelog.md starts at v1.5.45.
 
 ---
 
-### P2.7 Aborted Request Handling Shows Spurious Errors ‚úÖ RESOLVED
+### P2.7 Branch Version Table Inconsistencies
 
-**Status:** ‚úÖ RESOLVED (Already implemented)  
-**Resolution:** Both `loadRevision()` and `loadSetByName()` include abort detection.
+**Status:** Ìø° OPEN  
+**Severity:** P2 (Medium)  
+**Component:** Documentation
 
----
-
-### P2.8 Inconsistent Logger Usage in API Modules ‚úÖ RESOLVED
-
-**Status:** ‚úÖ RESOLVED (v1.5.44)  
-**Resolution:** Replaced `LoggerFactory::getInstance()` with `$this->getLogger()`.
+**Issue:** REL1_43 and REL1_39 version references are inconsistent across documentation.
 
 ---
 
-### P2.9 Inconsistent Database Method Return Types ‚úÖ RESOLVED
+## Ìø¢ P3: Low Priority Issues (10 Open)
 
-**Status:** ‚úÖ RESOLVED (Documentation issue - code is consistent)  
-**Resolution:** Database methods follow MediaWiki standard patterns. `false` for not-found in `getLayerSet()`, `null` for not-found in `getLayerSetByName()`, `-1` for error in `countNamedSets()` all align with MediaWiki conventions.
+### P3.1 Inconsistent API Error Codes
 
----
+**Files:** Multiple API modules
 
-## üü¢ P3: Low Priority Issues (7 Open)
-
-### P3.1 SchemaManager Global Service Access
-
-**Status:** üü° OPEN  
-**Severity:** P3 (Low)  
-**Component:** Architecture
-
-**Issue:** Uses `MediaWikiServices::getInstance()` in constructor,
-making unit testing harder.
-
-**Fix:** Inject logger via constructor.
+Different modules use different error codes for `ERROR_FILE_NOT_FOUND`:
+- ApiLayersSave: `'filenotfound'`
+- ApiLayersDelete: `'invalidfilename'`
+- ApiLayersRename: `'invalidfilename'`
 
 ---
 
-### P3.2 Hardcoded Transaction Timeout Values
+### P3.2 Undocumented Rate Limit Keys
 
-**Issue:** 3 retries, 5000ms timeout hardcoded in LayersDatabase.
+**Status:** ‚úÖ FIXED - Documented in wiki/Configuration-Reference.md and wiki/API-Reference.md
 
-**Status:** Acceptable defaults but could be configurable.
+**Files:** `src/Api/ApiLayersRename.php`
 
----
+**Status:** ‚úÖ FIXED - Documented in wiki/Configuration-Reference.md and wiki/API-Reference.md
 
-### P3.3 TINYINT for ls_layer_count Column
+The `editlayers-rename` rate limit key is used but not documented.
 
-**Issue:** Max 255; should be smallint for future-proofing.
-
-**Fix:** Add schema patch to change to smallint.
+**Status:** ‚úÖ FIXED - Documented in wiki/Configuration-Reference.md and wiki/API-Reference.md
 
 ---
 
-### P3.4 Inconsistent @codeCoverageIgnore Usage
+### P3.3 Text Sanitizer May Corrupt Keywords
 
-**Issue:** Some unreachable returns annotated, others not.
+**Files:** `src/Validation/TextSanitizer.php` lines 116-124
 
-**Fix:** Standardize usage across all API modules.
-
----
-
-### P3.5 Empty String Boolean Normalization
-
-**Issue:** Client normalizes `''` ‚Üí `true` (legacy path, dead code).
-
-**Fix:** Remove dead code path (low priority).
+JS keywords are now neutralized with zero-width space instead of removed (preserves text while preventing execution).
 
 ---
 
-### P3.6 CHECK Constraints Hardcoded in SQL
+### P3.4 SchemaManager Global Service Access
 
-**Issue:** SQL CHECK constraints don't match PHP config values.
-
-**Fix:** Document dependency or remove CHECK constraints.
+Uses `MediaWikiServices::getInstance()` in constructor, making unit testing harder.
 
 ---
 
-### P3.7 Missing null Check in extractLayerSetData
+### P3.5 Hardcoded Transaction Timeout Values
 
-**Status:** ‚úÖ RESOLVED (February 1, 2026)
-
-**Issue:** Potential null access in edge cases.
-
-**Resolution:** `extractLayerSetData()` already handles null/undefined input safely with early return.
+3 retries, 5000ms timeout hardcoded in LayersDatabase. Could be configurable.
 
 ---
 
-### P3.8 $prefix in listSlides() Not Length-Limited
+### P3.6 TINYINT for ls_layer_count Column
 
-**Status:** ‚úÖ RESOLVED (February 1, 2026)
-
-**Issue:** Very long prefix could cause performance issues.
-
-**Resolution:** Added `if (strlen($prefix) > 200) { $prefix = substr($prefix, 0, 200); }` at line 1198.
+Max 255; should be smallint for future-proofing.
 
 ---
 
-### P3.9 Unused ALLOWED_ENTITIES Constant
+### P3.7-P3.10 Documentation Line Count Discrepancies
 
-**Status:** ‚úÖ RESOLVED (February 1, 2026)
-
-**Issue:** TextSanitizer defines ALLOWED_ENTITIES but never uses it.
-
-**Resolution:** Constant was already removed. TextSanitizer.php no longer contains this constant.
-
----
-
-### P3.10 Inconsistent Class Resolution Patterns
-
-**Issue:** Some files use `window.layersGetClass`, others use
-`window.Layers.Utils.getClass`.
-
-**Fix:** Standardize to single pattern.
-
----
-
-### P3.11 Inefficient Class Resolution in LayersNamespace
-
-**Issue:** `findClass()` traverses namespace path repeatedly without caching.
-
-**Fix:** Add cache for resolved classes.
-
----
-
-### P3.12 JSON Fallback for Layer Cloning
-
-**Issue:** Fallback to JSON.parse/stringify is expensive for large base64 images.
-
-**Fix:** Improve DeepClone to handle all cases without JSON fallback.
-
----
-
-### P3.13 getBoundingClientRect Unchecked
-
-**Status:** ‚úÖ RESOLVED (February 1, 2026)
-
-**Issue:** Canvas getBoundingClientRect could return zero dimensions if not in DOM.
-
-**Resolution:** Added defensive guard in `GeometryUtils.clientToCanvas()` that returns canvas center if rect has zero dimensions.
-
----
-
-### P3.14 Information Disclosure in Error Logging
-
-**Issue:** User IDs + filenames logged together could enable correlation.
-
-**Fix:** Consider hashing user identifiers in logs.
+Multiple documentation files have minor line count discrepancies (1-10 lines) for god class files. Acceptable as line counts change frequently.
 
 ---
 
 ## ‚è≥ Feature Gaps
 
-### F1. Custom Fonts (F3)
+### F1. Custom Fonts
 
 **Status:** ‚è≥ NOT STARTED
 
@@ -300,7 +228,7 @@ Not yet available beyond the default font allowlist in `$wgLayersDefaultFonts`.
 
 ---
 
-### F2. Enhanced Dimension Tool (FR-14)
+### F2. Enhanced Dimension Tool
 
 **Status:** ‚è≥ PROPOSED
 
@@ -308,7 +236,7 @@ Make the dimension line draggable independently from the anchor points.
 
 ---
 
-### F3. Angle Dimension Tool (FR-15)
+### F3. Angle Dimension Tool
 
 **Status:** ‚è≥ PROPOSED
 
@@ -316,26 +244,21 @@ New tool for measuring and annotating angles.
 
 ---
 
-## ‚úÖ Recently Resolved Issues (January 2026)
+### F4. Slide Rename Support [COMPLETED]
 
-| Issue | Date | Notes |
-|-------|------|-------|
-| Race condition in saveLayerSet | Jan 31 | FOR UPDATE inside transaction |
-| ApiLayersList permission check | Jan 31 | read + rate limiting added |
-| isComplexityAllowed() coverage | Jan 31 | All 15 layer types |
-| listSlides() SQL refactored | Jan 31 | Batch queries |
-| ApiLayersList rate limiting | Jan 31 | pingLimiter added |
-| paths array limit validation | Jan 31 | Max 100 paths |
-| TailCalculator test failing | Jan 30 | Bounds check added |
-| N+1 query patterns | Jan 30 | Batch refactoring |
-| LIKE query escaping | Jan 30 | buildLike() used |
-| API code duplication | Jan 30 | LayersApiHelperTrait |
-| refreshAllViewers parallelism | Jan 31 | Limited to 5 |
-| Magic complexity threshold | Jan 31 | Configurable |
+**Status:** ‚è≥ ‚úÖ FIXED
+
+ApiLayersRename needs slide support to match other API modules.
 
 ---
 
-## Test Coverage Status (February 1, 2026)
+## ‚úÖ Previously Resolved Issues
+
+All issues from previous reviews (v1-v5) remain resolved. See previous review versions for details.
+
+---
+
+## Test Coverage Status (February 2, 2026)
 
 | Metric | Value | Status |
 |--------|-------|---------|
@@ -349,19 +272,18 @@ New tool for measuring and annotating angles.
 
 ---
 
-## Code Quality Metrics (Verified February 1, 2026)
+## Code Quality Metrics (Verified February 2, 2026)
 
 | Metric | Value | Status |
 |--------|-------|--------|
 | JavaScript files | **141** (139 source + 2 dist) | ‚úÖ |
 | PHP files | **42** | ‚úÖ |
 | God classes (‚â•1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
-| Near-threshold files (900-999) | 9 | ‚ö†Ô∏è Watch |
-| innerHTML usages | 73 | Safe patterns |
 | ESLint disables | 11 | All legitimate |
 | i18n messages | **667** | All documented |
 | TODO/FIXME/HACK | 0 | ‚úÖ Clean |
 | console.log in production | 0 | ‚úÖ Clean |
+| Dead code files | 2 | ApiSlidesSave, ApiSlideInfo |
 
 ---
 
@@ -402,5 +324,5 @@ If you encounter issues:
 
 ---
 
-*Document updated: February 1, 2026 (Comprehensive Critical Review v4)*  
-*Status: ‚úÖ All tests passing. No P0 or P1 bugs. All critical issues resolved.*
+*Document updated: February 2, 2026 (Comprehensive Critical Review v6)*  
+*Status: 2 P1 issues, 7 P2 issues, 10 P3 issues.*

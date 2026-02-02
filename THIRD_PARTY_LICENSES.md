@@ -8,6 +8,7 @@ The Layers extension includes the following third-party assets:
 
 | Asset Category | Count | License | Source |
 |----------------|-------|---------|--------|
+| Google Fonts (WOFF2) | 106 files | SIL Open Font License 1.1 | Google Fonts |
 | Google Noto Color Emoji | 3,731 SVGs | SIL Open Font License 1.1 | GitHub |
 | IEC 60417 Symbols | ~500 SVGs | Public Domain / CC0 | Wikimedia Commons |
 | ISO 7010 Safety Signs | varies | Public Domain | Wikimedia Commons |
@@ -16,6 +17,45 @@ The Layers extension includes the following third-party assets:
 | ANSI Z535 Safety Symbols | 34 SVGs | Public Domain | Wikimedia Commons |
 | GHS Hazard Pictograms | 8 SVGs | Public Domain | Wikimedia Commons |
 | ECB Hazard Symbols | 10 SVGs | Public Domain | Wikimedia Commons |
+
+---
+
+## Google Fonts (Self-Hosted Web Fonts)
+
+**Location:** `resources/ext.layers.shared/fonts/`
+
+**Source:** https://fonts.google.com/
+
+**License:** SIL Open Font License, Version 1.1
+
+**Total Size:** ~2.5 MB (106 WOFF2 files)
+
+### Included Font Families (32 fonts)
+
+**Sans-Serif (14):**
+Roboto, Open Sans, Lato, Montserrat, Noto Sans, Source Sans 3, PT Sans, Ubuntu, Inter, Poppins, Work Sans, Nunito, Raleway, DM Sans
+
+**Serif (6):**
+Merriweather, Playfair Display, Lora, Libre Baskerville, EB Garamond, Crimson Text
+
+**Display (4):**
+Bebas Neue, Oswald, Archivo Black, Fredoka
+
+**Handwriting (4):**
+Caveat, Dancing Script, Pacifico, Indie Flower
+
+**Monospace (4):**
+Source Code Pro, Fira Code, JetBrains Mono, IBM Plex Mono
+
+Each font includes regular (400) and bold (700) weights, with italic variants where available.
+
+### Why Self-Hosted?
+
+Fonts are self-hosted rather than loaded from Google Fonts CDN for:
+- **Privacy:** No external requests to Google servers
+- **Reliability:** Fonts always available, no network dependency
+- **Performance:** Fonts cached locally with MediaWiki ResourceLoader
+- **Compliance:** Better for privacy-focused wiki installations
 
 ---
 

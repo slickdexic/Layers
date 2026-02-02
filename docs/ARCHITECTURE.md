@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** February 1, 2026
-**Version:** 1.5.45
+**Last Updated:** February 2, 2026
+**Version:** 1.5.46
 
 ---
 

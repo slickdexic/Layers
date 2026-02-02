@@ -9,6 +9,10 @@
  * sensible fallbacks. All font-related UI should use this module to
  * ensure consistency.
  *
+ * As of v1.5.47, fonts are self-hosted WOFF2 files bundled with the extension.
+ * This ensures privacy (no Google Fonts tracking), reliability (no external
+ * dependencies), and consistency (fonts always available).
+ *
  * @module FontConfig
  */
 'use strict';
@@ -17,35 +21,66 @@
  * Default fonts used when MediaWiki config is not available.
  * This list should match $wgLayersDefaultFonts in extension.json.
  *
- * Fonts are organized by category:
- * - System sans-serif fonts (Arial, Helvetica, Verdana)
- * - Google sans-serif fonts (Roboto, Open Sans, Lato, etc.)
- * - Serif fonts (Times New Roman, Georgia, Merriweather, Playfair Display)
- * - Monospace fonts (Courier New, Source Code Pro)
+ * Fonts are organized by category (32 self-hosted fonts + 4 system fonts):
+ * - System fonts (Arial, Verdana, Times New Roman, Courier New)
+ * - Sans-serif (14): Roboto, Open Sans, Lato, Montserrat, Noto Sans, etc.
+ * - Serif (6): Merriweather, Playfair Display, Lora, Libre Baskerville, etc.
+ * - Display (4): Bebas Neue, Oswald, Archivo Black, Fredoka One
+ * - Handwriting (4): Caveat, Dancing Script, Pacifico, Indie Flower
+ * - Monospace (4): Source Code Pro, Fira Code, JetBrains Mono, IBM Plex Mono
+ *
+ * All Google Fonts are self-hosted WOFF2 files under OFL license.
  *
  * @type {string[]}
  */
 const DEFAULT_FONTS = [
-	// System sans-serif
+	// === SYSTEM FONTS (always available) ===
 	'Arial',
 	'Verdana',
-	// Google sans-serif (loaded via fonts.css)
+	'Times New Roman',
+	'Courier New',
+
+	// === SANS-SERIF (14 self-hosted fonts) ===
 	'Roboto',
 	'Open Sans',
 	'Lato',
 	'Montserrat',
 	'Noto Sans',
-	'Source Sans Pro',
+	'Source Sans 3',
 	'PT Sans',
 	'Ubuntu',
-	// Serif fonts
-	'Times New Roman',
-	'Georgia',
+	'Inter',
+	'Poppins',
+	'Work Sans',
+	'Nunito',
+	'Raleway',
+	'DM Sans',
+
+	// === SERIF (6 self-hosted fonts) ===
 	'Merriweather',
 	'Playfair Display',
-	// Monospace fonts
-	'Courier New',
-	'Source Code Pro'
+	'Lora',
+	'Libre Baskerville',
+	'EB Garamond',
+	'Crimson Text',
+
+	// === DISPLAY (4 self-hosted fonts) ===
+	'Bebas Neue',
+	'Oswald',
+	'Archivo Black',
+	'Fredoka',
+
+	// === HANDWRITING (4 self-hosted fonts) ===
+	'Caveat',
+	'Dancing Script',
+	'Pacifico',
+	'Indie Flower',
+
+	// === MONOSPACE (4 self-hosted fonts) ===
+	'Source Code Pro',
+	'Fira Code',
+	'JetBrains Mono',
+	'IBM Plex Mono'
 ];
 
 /**

@@ -2,6 +2,27 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.47] - 2026-02-02
+
+### Added
+- **Self-Hosted Font Library** — 32 Google Fonts now bundled as WOFF2 files (~2.5MB, 106 files):
+  - **Sans-Serif (14)**: Roboto, Open Sans, Lato, Montserrat, Noto Sans, Source Sans 3, PT Sans, Ubuntu, Inter, Poppins, Work Sans, Nunito, Raleway, DM Sans
+  - **Serif (6)**: Merriweather, Playfair Display, Lora, Libre Baskerville, EB Garamond, Crimson Text
+  - **Display (4)**: Bebas Neue, Oswald, Archivo Black, Fredoka
+  - **Handwriting (4)**: Caveat, Dancing Script, Pacifico, Indie Flower
+  - **Monospace (4)**: Source Code Pro, Fira Code, JetBrains Mono, IBM Plex Mono
+- **Privacy-Respecting**: No external font requests to Google (previously used @import from fonts.googleapis.com)
+- **Font Download Script**: `node scripts/download-fonts.js` downloads static fonts from Google Webfonts Helper
+
+### Technical Details
+- All 11,157 tests pass (163 test suites) ✅
+- Test coverage: 95.44% statement, 85.20% branch
+- 106 WOFF2 font files (regular, bold, italic variants)
+- Uses Google Webfonts Helper API for static fonts (not variable fonts)
+- All fonts licensed under Open Font License (OFL) — see THIRD_PARTY_LICENSES.md
+
+---
+
 ## [1.5.46] - 2026-02-01
 
 ### Fixed

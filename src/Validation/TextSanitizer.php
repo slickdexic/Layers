@@ -114,10 +114,17 @@ class TextSanitizer {
 		// Remove <script> tags and their content
 		$text = preg_replace( '/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', '', $text );
 
-		// Remove expressions and JavaScript keywords
+		// Neutralize JavaScript keywords followed by '(' by inserting a zero-width space
+		// This prevents code execution while preserving legitimate text like "Use alert() carefully"
+		// The zero-width space (\u200B) makes "alert(" become "alert\u200B(" which is not callable
 		$jsKeywords = [ 'alert', 'confirm', 'prompt', 'eval', 'setTimeout', 'setInterval' ];
 		foreach ( $jsKeywords as $keyword ) {
-			$text = preg_replace( '/\b' . preg_quote( $keyword, '/' ) . '\s*\(/i', '', $text );
+			// Insert a zero-width space before the opening paren to neutralize the call
+			$text = preg_replace(
+				'/\b(' . preg_quote( $keyword, '/' ) . ')\s*\(/i',
+				'$1' . "\xE2\x80\x8B" . '(',
+				$text
+			);
 		}
 
 		return $text;

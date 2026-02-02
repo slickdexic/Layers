@@ -290,6 +290,8 @@ Configure rate limits using MediaWiki's built-in rate limiter.
 |-----|--------|
 | `editlayers-save` | Saving layer sets |
 | `editlayers-create` | Creating new layer sets |
+| `editlayers-delete` | Deleting layer sets |
+| `editlayers-rename` | Renaming layer sets |
 | `editlayers-render` | Rendering operations |
 
 ### Configuration

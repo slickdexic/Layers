@@ -361,8 +361,11 @@ class ApiLayersInfo extends ApiBase {
 			) {
 				foreach ( $result['layerset']['data']['layers'] as &$layer ) {
 					// Convert boolean properties to integers for proper serialization
+					// All boolean properties must be listed here to prevent loss during JSON serialization
+					// See docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md for why this is critical
 					$booleanProps = [
-						'visible', 'locked', 'shadow', 'glow', 'textShadow', 'preserveAspectRatio', 'hasArrow'
+						'visible', 'locked', 'shadow', 'glow', 'textShadow', 'preserveAspectRatio', 'hasArrow',
+						'expanded', 'isMultiPath', 'strokeOnly', 'showUnit', 'showBackground'
 					];
 					foreach ( $booleanProps as $prop ) {
 						if ( array_key_exists( $prop, $layer ) ) {

@@ -30,6 +30,20 @@
 	}
 
 	/**
+	 * Get EventTracker class
+	 * @private
+	 * @return {Function|null} EventTracker constructor
+	 */
+	function getEventTracker() {
+		if ( typeof window !== 'undefined' &&
+			window.Layers &&
+			window.Layers.EventTracker ) {
+			return window.Layers.EventTracker;
+		}
+		return null;
+	}
+
+	/**
 	 * GradientEditor class
 	 */
 	class GradientEditor {
@@ -47,6 +61,10 @@
 			this.container = options.container;
 			this.currentGradient = this.layer.gradient ? this._cloneGradient( this.layer.gradient ) : null;
 			this.fillType = this._determineFillType();
+
+			// Create EventTracker for listener cleanup
+			const EventTracker = getEventTracker();
+			this.eventTracker = EventTracker ? new EventTracker() : null;
 
 			this._build();
 		}
@@ -83,6 +101,21 @@
 					return { offset: c.offset, color: c.color };
 				} ) : []
 			};
+		}
+
+		/**
+		 * Add event listener with tracking for cleanup
+		 * @private
+		 * @param {EventTarget} element - Element to attach listener to
+		 * @param {string} type - Event type
+		 * @param {Function} handler - Handler function
+		 */
+		_addListener( element, type, handler ) {
+			if ( this.eventTracker ) {
+				this.eventTracker.add( element, type, handler );
+			} else {
+				element.addEventListener( type, handler );
+			}
 		}
 
 		/**
@@ -132,7 +165,7 @@
 				select.appendChild( optionEl );
 			}, this );
 
-			select.addEventListener( 'change', this._onFillTypeChange.bind( this ) );
+			this._addListener( select, 'change', this._onFillTypeChange.bind( this ) );
 
 			row.appendChild( label );
 			row.appendChild( select );
@@ -187,7 +220,7 @@
 				swatch.title = name.charAt( 0 ).toUpperCase() + name.slice( 1 );
 				swatch.style.background = this._gradientToCss( preset );
 
-				swatch.addEventListener( 'click', function () {
+				this._addListener( swatch, 'click', function () {
 					this._applyPreset( preset );
 				}.bind( this ) );
 
@@ -288,7 +321,7 @@
 			valueDisplay.className = 'gradient-angle-value';
 			valueDisplay.textContent = input.value + '°';
 
-			input.addEventListener( 'input', function ( e ) {
+			this._addListener( input, 'input', function ( e ) {
 				const angle = parseInt( e.target.value, 10 );
 				valueDisplay.textContent = angle + '°';
 				if ( this.currentGradient ) {
@@ -327,7 +360,7 @@
 			radiusValue.className = 'gradient-radius-value';
 			radiusValue.textContent = Math.round( radiusInput.value * 100 ) + '%';
 
-			radiusInput.addEventListener( 'input', function ( e ) {
+			this._addListener( radiusInput, 'input', function ( e ) {
 				const radius = parseFloat( e.target.value );
 				radiusValue.textContent = Math.round( radius * 100 ) + '%';
 				if ( this.currentGradient ) {
@@ -361,7 +394,7 @@
 			addButton.className = 'gradient-add-stop';
 			addButton.textContent = '+';
 			addButton.title = msg( 'layers-gradient-add-stop', 'Add color stop' );
-			addButton.addEventListener( 'click', this._addColorStop.bind( this ) );
+			this._addListener( addButton, 'click', this._addColorStop.bind( this ) );
 
 			header.appendChild( headerLabel );
 			header.appendChild( addButton );
@@ -404,7 +437,7 @@
 			colorInput.type = 'color';
 			colorInput.value = stop.color || '#000000';
 			colorInput.className = 'gradient-stop-color';
-			colorInput.addEventListener( 'input', function ( e ) {
+			this._addListener( colorInput, 'input', function ( e ) {
 				this._updateColorStop( index, 'color', e.target.value );
 			}.bind( this ) );
 
@@ -415,7 +448,7 @@
 			offsetInput.max = 100;
 			offsetInput.value = Math.round( ( stop.offset || 0 ) * 100 );
 			offsetInput.className = 'gradient-stop-offset';
-			offsetInput.addEventListener( 'input', function ( e ) {
+			this._addListener( offsetInput, 'input', function ( e ) {
 				const offset = parseInt( e.target.value, 10 ) / 100;
 				offsetValue.textContent = e.target.value + '%';
 				this._updateColorStop( index, 'offset', offset );
@@ -432,7 +465,7 @@
 			deleteButton.textContent = '×';
 			deleteButton.title = msg( 'layers-gradient-remove-stop', 'Remove color stop' );
 			deleteButton.disabled = totalStops <= 2;
-			deleteButton.addEventListener( 'click', function () {
+			this._addListener( deleteButton, 'click', function () {
 				this._removeColorStop( index );
 			}.bind( this ) );
 
@@ -569,6 +602,12 @@
 		 * Destroy the editor
 		 */
 		destroy() {
+			// Clean up event listeners first
+			if ( this.eventTracker ) {
+				this.eventTracker.destroy();
+				this.eventTracker = null;
+			}
+
 			if ( this.container ) {
 				this.container.innerHTML = '';
 			}
@@ -577,6 +616,7 @@
 			this.onFillTypeChange = null;
 			this.container = null;
 			this.currentGradient = null;
+			this.stopsListEl = null;
 		}
 	}
 

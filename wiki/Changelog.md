@@ -4,6 +4,21 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.47 (February 2, 2026)
+
+### Added
+- **Self-Hosted Font Library** — 32 Google Fonts bundled as WOFF2 files (~2.5MB, 106 files)
+- **Privacy-Respecting** — No external font requests to Google
+- **Font Categories** — Sans-serif (14), Serif (6), Display (4), Handwriting (4), Monospace (4)
+- **Font Download Script** — `node scripts/download-fonts.js` for static fonts
+
+### Technical Details
+- 11,157 tests passing (163 suites)
+- 95.44% statement, 85.20% branch coverage
+- Uses Google Webfonts Helper API for static fonts (not variable fonts)
+
+---
+
 ## Version 1.5.46 (February 1, 2026)
 
 ### Fixed

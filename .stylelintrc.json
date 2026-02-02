@@ -3,7 +3,8 @@
   "ignoreFiles": [
     "docs/api/**/*",
     "node_modules/**/*",
-    "vendor/**/*"
+    "vendor/**/*",
+    "resources/ext.layers.shared/fonts.css"
   ],
   "rules": {
     "@stylistic/linebreaks": null
