@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** February 1, 2026 (Comprehensive Critical Review v4)  
-**Version:** 1.5.45  
+**Version:** 1.5.46  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---

@@ -20,7 +20,13 @@
 
 ---
 
-## 🆕 What's New in v1.5.45
+## 🆕 What's New in v1.5.46
+
+- **UX Fix** — Removed redundant text textarea from textbox/callout properties (use inline canvas editing)
+- **Documentation Sync** — All 97 files verified with correct metrics (11,157 tests, 95.44%/85.20%)
+- **Point Release** — Synchronized releases across main, REL1_43, and REL1_39 branches
+
+### Previous v1.5.45 Highlights
 
 - **Branch Coverage Improvement** — 39 new tests, coverage increased from 84.96% to 85.20%
 - **Documentation Audit** — All 97 files verified and synchronized with correct metrics
@@ -288,7 +294,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.45 |
+| **Version (main)** | 1.5.46 |
 | **Version (REL1_43)** | 1.5.45-REL1_43 |
 | **Version (REL1_39)** | 1.5.45-REL1_39 |
 | **Release Date** | February 1, 2026 |
