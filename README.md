@@ -316,16 +316,16 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
   - All other god classes have proper facade/delegation patterns
 
-**Test Coverage (Verified January 31, 2026):**
+**Test Coverage (Verified February 1, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,112 passing (163 suites) |
+| Jest tests | 11,157 passing (163 suites) |
 | PHPUnit tests | 24 test files |
-| Statement coverage | 95.42% |
-| Branch coverage | 85.25% |
-| Function coverage | 93.72% |
-| Line coverage | 95.55% |
+| Statement coverage | 95.44% |
+| Branch coverage | 85.20% |
+| Function coverage | 93.75% |
+| Line coverage | 95.56% |
 
 **Security:**
 
@@ -380,10 +380,10 @@ npm run test:js -- --coverage
 | Total JS lines | ~92,338 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 141 | ✅ 100% migrated |
 | God classes (>1000 lines) | 18 | ✅ Well-delegated facades |
-| Tests passing | 11,112 | ✅ |
+| Tests passing | 11,157 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 95.42% | ✅ Excellent |
-| Branch coverage | 85.25% | ✅ Target met |
+| Statement coverage | 95.44% | ✅ Excellent |
+| Branch coverage | 85.20% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

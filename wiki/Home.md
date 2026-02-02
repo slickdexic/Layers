@@ -52,7 +52,7 @@
 - **All P0-P3 Issues Resolved** — TailCalculator, API bugs, N+1 queries, and UX issues all fixed
 - **UX Improvements** — Easier drag handle clicking (4px tolerance), smaller overlay buttons
 - **Code Quality** — New `LayersApiHelperTrait` extracts common API patterns
-- **11,118 tests passing** (163 suites), 95.42% statement coverage, 85.25% branch coverage
+- **11,157 tests passing** (163 suites), 95.44% statement coverage, 85.20% branch coverage
 
 ### Previous v1.5.39 Highlights
 
