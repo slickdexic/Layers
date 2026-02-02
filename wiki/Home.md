@@ -20,13 +20,13 @@
 
 ---
 
-## 🆕 What's New in v1.5.46
+## 🆕 What's New in v1.5.47
 
-- **UX Fix** — Removed redundant text textarea from textbox/callout properties (use inline canvas editing)
-- **Documentation Sync** — All 97 files verified with correct metrics (11,157 tests, 95.44%/85.20%)
-- **Point Release** — Synchronized releases across main, REL1_43, and REL1_39 branches
+- **Self-Hosted Font Library** — 32 Google Fonts now bundled as WOFF2 files (~2.5MB, 106 files)
+- **Privacy-Respecting** — No external font requests to Google (previously used @import from fonts.googleapis.com)
+- **Font Categories** — Sans-serif (14), Serif (6), Display (4), Handwriting (4), Monospace (4)
 
-### Previous v1.5.45 Highlights
+### Previous v1.5.46 Highlights
 
 - **Branch Coverage Improvement** — 39 new tests, coverage increased from 84.96% to 85.20%
 - **Documentation Audit** — All 97 files verified and synchronized with correct metrics
@@ -294,10 +294,10 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.46 |
-| **Version (REL1_43)** | 1.5.45-REL1_43 |
-| **Version (REL1_39)** | 1.5.45-REL1_39 |
-| **Release Date** | February 1, 2026 |
+| **Version (main)** | 1.5.47 |
+| **Version (REL1_43)** | 1.5.47-REL1_43 |
+| **Version (REL1_39)** | 1.5.47-REL1_39 |
+| **Release Date** | February 2, 2026 |
 | **Test Suites** | 163 |
 | **Total Tests** | 11,157 |
 | **PHPUnit Test Files** | 24 |

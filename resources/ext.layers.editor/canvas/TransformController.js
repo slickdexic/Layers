@@ -54,9 +54,12 @@ class TransformController {
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;
 		this._resizeRenderScheduled = false;
+		this._resizeRafId = null; // Track rAF for cancellation
 		this._pendingResizeLayer = null;
 		this._dragRenderScheduled = false;
+		this._dragRafId = null; // Track rAF for cancellation
 		this._rotationRenderScheduled = false;
+		this._rotationRafId = null; // Track rAF for cancellation
 		this._pendingRotationLayer = null;
 
 		// Cache efficient cloning function reference
@@ -213,8 +216,9 @@ class TransformController {
 			this._pendingResizeLayer = layer;
 			if ( !this._resizeRenderScheduled ) {
 				this._resizeRenderScheduled = true;
-				window.requestAnimationFrame( () => {
+				this._resizeRafId = window.requestAnimationFrame( () => {
 					this._resizeRenderScheduled = false;
+					this._resizeRafId = null;
 					// Guard against destroyed manager to prevent null reference errors
 					if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
 						return;
@@ -445,8 +449,9 @@ class TransformController {
 		this._pendingRotationLayer = layer;
 		if ( !this._rotationRenderScheduled ) {
 			this._rotationRenderScheduled = true;
-			window.requestAnimationFrame( () => {
+			this._rotationRafId = window.requestAnimationFrame( () => {
 				this._rotationRenderScheduled = false;
+				this._rotationRafId = null;
 				// Guard against destroyed manager to prevent null reference errors
 				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
 					return;
@@ -620,8 +625,9 @@ class TransformController {
 		this._pendingDragLayerId = this.manager.getSelectedLayerId();
 		if ( !this._dragRenderScheduled ) {
 			this._dragRenderScheduled = true;
-			window.requestAnimationFrame( () => {
+			this._dragRafId = window.requestAnimationFrame( () => {
 				this._dragRenderScheduled = false;
+				this._dragRafId = null;
 				// Guard against destroyed manager to prevent null reference errors
 				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
 					return;
@@ -921,8 +927,21 @@ class TransformController {
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;
 
-		// Clear RAF scheduling flags to prevent callbacks after destroy
-		// (callbacks check these flags before executing)
+		// Cancel pending requestAnimationFrame callbacks
+		if ( this._resizeRafId !== null ) {
+			window.cancelAnimationFrame( this._resizeRafId );
+			this._resizeRafId = null;
+		}
+		if ( this._rotationRafId !== null ) {
+			window.cancelAnimationFrame( this._rotationRafId );
+			this._rotationRafId = null;
+		}
+		if ( this._dragRafId !== null ) {
+			window.cancelAnimationFrame( this._dragRafId );
+			this._dragRafId = null;
+		}
+
+		// Clear RAF scheduling flags
 		this._resizeRenderScheduled = false;
 		this._rotationRenderScheduled = false;
 		this._dragRenderScheduled = false;

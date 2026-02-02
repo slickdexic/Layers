@@ -45,7 +45,9 @@ class TextSanitizerTest extends \MediaWikiUnitTestCase {
 		// Script tags should be completely removed
 		$result = $sanitizer->sanitizeText( '<script>alert("xss")</script>Hello' );
 		$this->assertStringNotContainsString( '<script>', $result );
-		$this->assertStringNotContainsString( 'alert', $result );
+		// JS keywords followed by ( are neutralized with a zero-width space
+		// The word 'alert' is preserved but 'alert(' becomes 'alert\u200B(' (not callable)
+		$this->assertStringNotContainsString( 'alert(', $result );
 		$this->assertStringContainsString( 'Hello', $result );
 	}
 

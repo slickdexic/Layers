@@ -23,6 +23,31 @@ function createMockContext( layerOverrides ) {
 		updateLayer: jest.fn()
 	};
 
+	// Create a mock select element for addSelect to return
+	// Populates options from the addSelect call
+	const createMockSelect = ( opts ) => {
+		const select = document.createElement( 'select' );
+		const wrapper = document.createElement( 'div' );
+		const container = document.createElement( 'div' );
+		wrapper.appendChild( select );
+		container.appendChild( wrapper );
+
+		// Populate options from the call
+		if ( opts && opts.options ) {
+			opts.options.forEach( ( opt ) => {
+				const option = document.createElement( 'option' );
+				option.value = opt.value;
+				option.textContent = opt.text;
+				if ( opt.value === opts.value ) {
+					option.selected = true;
+				}
+				select.appendChild( option );
+			} );
+		}
+
+		return select;
+	};
+
 	return {
 		layer,
 		editor: mockEditor,
@@ -30,7 +55,7 @@ function createMockContext( layerOverrides ) {
 		addColorPicker: jest.fn(),
 		addSection: jest.fn(),
 		addCheckbox: jest.fn(),
-		addSelect: jest.fn()
+		addSelect: jest.fn( ( opts ) => createMockSelect( opts ) )
 	};
 }
 

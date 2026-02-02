@@ -77,8 +77,8 @@ Slide Mode (v1.5.22+) allows creating standalone graphics without a parent image
 
 | File | Purpose |
 |------|---------|
-| `src/Api/ApiSlideInfo.php` | GET slide data by name |
-| `src/Api/ApiSlidesSave.php` | POST save slide with canvas settings |
+| `src/Api/ApiLayersInfo.php` | GET slide data (via `slidename` param) |
+| `src/Api/ApiLayersSave.php` | POST save slide (via `executeSlideSave()`) |
 | `src/SpecialPages/SpecialSlides.php` | Management dashboard |
 | `src/SpecialPages/SpecialEditSlide.php` | Direct editor access |
 | `resources/ext.layers.slides/SlideManager.js` | Slide loading/caching |
@@ -96,12 +96,12 @@ Slide Mode (v1.5.22+) allows creating standalone graphics without a parent image
 ### API Testing
 
 ```bash
-# Get slide info
-curl "http://localhost/api.php?action=slideinfo&slidename=TestDiagram&format=json"
+# Get slide info (uses layersinfo with slidename param)
+curl "http://localhost/api.php?action=layersinfo&slidename=TestDiagram&format=json"
 
-# Save slide (requires CSRF token)
+# Save slide (uses layerssave with slide params, requires CSRF token)
 curl -X POST "http://localhost/api.php" \
-  -d "action=slidessave" \
+  -d "action=layerssave" \
   -d "slidename=TestDiagram" \
   -d "canvaswidth=800" \
   -d "canvasheight=600" \

@@ -500,9 +500,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		if ( in_array( $property, [ 'id', 'type', 'fontFamily', 'shapeId' ], true ) ) {
 			// Identifiers - sanitize
 			$sanitized = $this->textSanitizer->sanitizeIdentifier( $value );
-			if ( $property === 'fontFamily' && !in_array( $sanitized, $this->config['defaultFonts'], true ) ) {
-				return [ 'valid' => false, 'error' => 'Font not in allowed list' ];
-			}
+			// Font names are cosmetic and not a security risk when sanitized
+			// Allow any sanitized font name rather than restricting to configured list
+			// This prevents data loss when users paste layers from other sources
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 

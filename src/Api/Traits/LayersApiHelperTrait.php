@@ -63,14 +63,14 @@ trait LayersApiHelperTrait {
 		$title = Title::newFromText( $filename, NS_FILE );
 		if ( !$title || $title->getNamespace() !== NS_FILE ) {
 			// @phan-suppress-next-line PhanUndeclaredMethod - dieWithError from ApiBase
-			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
+			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 		}
 
 		// Get file metadata (use getRepoGroup() to support foreign repos like Commons)
 		$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
 		if ( !$file || !$file->exists() ) {
 			// @phan-suppress-next-line PhanUndeclaredMethod - dieWithError from ApiBase
-			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
+			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 		}
 
 		// Use DB key form for consistency across all API modules

@@ -444,7 +444,10 @@ API endpoints respect MediaWiki's rate limiting:
 | Action | Default Limit |
 |--------|---------------|
 | `editlayers-save` | 30/hour (users), 5/hour (newbies) |
-| `editlayers-create` | 10/hour |
+| `editlayers-create` | 10/hour (users), 2/hour (newbies) |
+| `editlayers-delete` | 20/hour (users), 3/hour (newbies) |
+| `editlayers-rename` | 20/hour (users), 3/hour (newbies) |
+| `editlayers-render` | 100/hour (users), 20/hour (newbies) |
 
 Configure in `LocalSettings.php`:
 ```php
