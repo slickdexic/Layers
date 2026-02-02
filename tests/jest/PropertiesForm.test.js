@@ -284,10 +284,9 @@ describe( 'PropertiesForm', () => {
 			expect( widthInput ).not.toBeNull();
 			expect( heightInput ).not.toBeNull();
 
-			// Should have textarea for text
+			// Should NOT have textarea - textbox uses inline canvas editing with richText
 			const textarea = form.querySelector( 'textarea' );
-			expect( textarea ).not.toBeNull();
-			expect( textarea.value ).toBe( 'Hello' );
+			expect( textarea ).toBeNull();
 		} );
 
 		test( 'should create textbox font controls', () => {
@@ -2264,14 +2263,18 @@ describe( 'PropertiesForm', () => {
 
 	describe( 'textbox text content', () => {
 		test( 'should update text via textarea change', () => {
-			const layer = { id: 'test-layer', type: 'textbox', text: 'Hello' };
+			// Note: textbox layers no longer have textarea - text is edited inline on canvas
+			// This test now verifies that font styling controls still work
+			const layer = { id: 'test-layer', type: 'textbox', fontSize: 16 };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
+			// Verify no textarea exists (text edited inline on canvas)
 			const textarea = form.querySelector( 'textarea' );
-			textarea.value = 'New text content';
-			textarea.dispatchEvent( new Event( 'input' ) );
+			expect( textarea ).toBeNull();
 
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { text: 'New text content' } );
+			// Font size input should still work
+			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
+			expect( fontSizeInput ).not.toBeNull();
 		} );
 	} );
 
@@ -3665,20 +3668,31 @@ describe( 'PropertiesForm', () => {
 			};
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
-			// Check for text textarea
+			// Should NOT have textarea - callout uses inline canvas editing with richText
 			const textarea = form.querySelector( 'textarea' );
-			expect( textarea ).not.toBeNull();
+			expect( textarea ).toBeNull();
+
+			// Should have font size input
+			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
+			expect( fontSizeInput ).not.toBeNull();
 		} );
 
 		test( 'should update callout text', () => {
-			const layer = { id: 'callout-1', type: 'callout', width: 200, height: 100, text: 'Hello' };
+			// Note: callout layers no longer have textarea - text is edited inline on canvas
+			// This test now verifies that the text section header exists
+			const layer = { id: 'callout-1', type: 'callout', width: 200, height: 100, fontSize: 16 };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
+			// Verify no textarea exists
 			const textarea = form.querySelector( 'textarea' );
-			textarea.value = 'New text';
-			dispatchInputAndAdvanceTimers( textarea );
+			expect( textarea ).toBeNull();
 
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'callout-1', { text: 'New text' } );
+			// Font controls should still exist and work
+			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
+			fontSizeInput.value = '20';
+			dispatchInputAndAdvanceTimers( fontSizeInput );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'callout-1', { fontSize: 20 } );
 		} );
 
 		test( 'should update callout fontSize', () => {

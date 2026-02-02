@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** February 1, 2026
-**Version:** 1.5.44
+**Version:** 1.5.45
 
 ---
 
@@ -17,7 +17,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (January 31, 2026)
+## Codebase Statistics (February 1, 2026)
 
 | Metric | Value |
 |--------|-------|
@@ -915,7 +915,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **11,112 tests, 95.42% statement coverage, 85.25% branch coverage**
+- **11,157 tests, 95.44% statement coverage, 85.20% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -992,7 +992,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,112 tests, 163 suites)
+│   ├── jest/                # Unit tests (11,157 tests, 163 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation
