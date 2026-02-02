@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension - Codebase Review
 
 **Review Date:** February 1, 2026 (Comprehensive Critical Review v4)  
-**Version:** 1.5.45  
+**Version:** 1.5.46  
 **Reviewer:** GitHub Copilot (Claude Opus 4.5)
 
 ---
@@ -70,11 +70,11 @@ The Layers extension is a **mature, feature-rich MediaWiki extension** with **ex
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| Statements | 95.40% | 90% | ✅ Exceeds |
+| Statements | 95.44% | 90% | ✅ Exceeds |
 | Branches | 85.20% | 80% | ✅ Exceeds |
-| Functions | 93.69% | 85% | ✅ Exceeds |
-| Lines | 95.51% | 90% | ✅ Exceeds |
-| Test Count | **11,132** | - | ✅ Excellent |
+| Functions | 93.75% | 85% | ✅ Exceeds |
+| Lines | 95.56% | 90% | ✅ Exceeds |
+| Test Count | **11,157** | - | ✅ Excellent |
 | Test Suites | 163 | - | ✅ |
 | Failing Tests | **0** | 0 | ✅ All Pass |
 | Skipped Tests | 0 | 0 | ✅ |
@@ -554,7 +554,7 @@ User IDs logged with filenames could enable correlation if logs compromised.
 | Category | Score | Weight | Notes |
 |----------|-------|--------|-------|
 | Security | 9.0/10 | 25% | Comprehensive protections |
-| Test Coverage | 9.5/10 | 20% | 95.42% statements, 11,118 tests |
+| Test Coverage | 9.5/10 | 20% | 95.44% statements, 11,157 tests |
 | Functionality | 9.0/10 | 20% | 15 tools, Slide Mode, Shape Library |
 | Architecture | 8.0/10 | 15% | 18 god classes (down from 19); delegation |
 | Code Quality | 8.5/10 | 10% | All validation issues resolved |
@@ -626,5 +626,5 @@ The codebase demonstrates many excellent practices:
 ---
 
 *Review performed on `main` branch, February 1, 2026.*
-*All 11,118 tests passing. No critical bugs identified.*
+*All 11,157 tests passing. No critical bugs identified.*
 *Codebase is production-ready with medium-priority improvements recommended.*

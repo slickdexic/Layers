@@ -4,6 +4,22 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.46 (February 1, 2026)
+
+### Fixed
+- **Removed Redundant Text Textarea** — Textbox/callout layers no longer show text textarea in properties panel (use inline canvas editing instead)
+
+### Documentation
+- Documentation sync with correct metrics (11,157 tests, 95.44%/85.20% coverage)
+- Version consistency fixes in copilot-instructions.md and ARCHITECTURE.md
+
+### Technical Details
+- 11,157 tests passing (163 suites)
+- 95.44% statement, 85.20% branch coverage
+- Point release for main, REL1_43, REL1_39
+
+---
+
 ## Version 1.5.45 (February 1, 2026)
 
 ### Improved

@@ -20,7 +20,13 @@
 
 ---
 
-## 🆕 What's New in v1.5.45
+## 🆕 What's New in v1.5.46
+
+- **UX Fix** — Removed redundant text textarea from textbox/callout properties (use inline canvas editing)
+- **Documentation Sync** — All 97 files verified with correct metrics (11,157 tests, 95.44%/85.20%)
+- **Point Release** — Synchronized releases across main, REL1_43, and REL1_39 branches
+
+### Previous v1.5.45 Highlights
 
 - **Branch Coverage Improvement** — 39 new tests, coverage increased from 84.96% to 85.20%
 - **Documentation Audit** — All 97 files verified and synchronized with correct metrics
@@ -52,7 +58,7 @@
 - **All P0-P3 Issues Resolved** — TailCalculator, API bugs, N+1 queries, and UX issues all fixed
 - **UX Improvements** — Easier drag handle clicking (4px tolerance), smaller overlay buttons
 - **Code Quality** — New `LayersApiHelperTrait` extracts common API patterns
-- **11,118 tests passing** (163 suites), 95.42% statement coverage, 85.25% branch coverage
+- **11,157 tests passing** (163 suites), 95.44% statement coverage, 85.20% branch coverage
 
 ### Previous v1.5.39 Highlights
 
@@ -288,17 +294,17 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.45 |
-| **Version (REL1_43)** | 1.5.40-REL1_43 |
-| **Version (REL1_39)** | 1.5.40-REL1_39 |
-| **Release Date** | January 31, 2026 |
+| **Version (main)** | 1.5.46 |
+| **Version (REL1_43)** | 1.5.45-REL1_43 |
+| **Version (REL1_39)** | 1.5.45-REL1_39 |
+| **Release Date** | February 1, 2026 |
 | **Test Suites** | 163 |
-| **Total Tests** | 11,118 |
+| **Total Tests** | 11,157 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 95.42% |
-| **Branch Coverage** | 85.25% |
-| **Function Coverage** | 92.93% |
-| **Line Coverage** | 94.77% |
+| **Statement Coverage** | 95.44% |
+| **Branch Coverage** | 85.20% |
+| **Function Coverage** | 93.75% |
+| **Line Coverage** | 95.56% |
 | **JavaScript Files** | 141 |
 | **ES6 Classes** | 141 |
 | **God Classes** | 18 (2 generated, 14 JS, 2 PHP) |

@@ -2,6 +2,22 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.46] - 2026-02-01
+
+### Fixed
+- **UX: Removed Redundant Text Textarea** — Textbox and callout layers no longer show a text textarea in the properties panel. These layers use inline canvas editing with richText support; the textarea was misleading because edits appeared to work but had no visible effect (richText takes precedence). Font and style controls are retained.
+
+### Documentation
+- **Documentation Sync** — Updated all 97 documentation files with correct metrics (11,157 tests, 95.44%/85.20% coverage)
+- **Version Consistency** — Fixed version references in copilot-instructions.md and ARCHITECTURE.md
+
+### Technical Details
+- All 11,157 tests pass (163 test suites) ✅
+- Test coverage: 95.44% statement, 85.20% branch
+- Point release for all branches: main, REL1_43, REL1_39
+
+---
+
 ## [1.5.45] - 2026-02-01
 
 ### Improved

@@ -112,6 +112,7 @@
 	 * @param {Object} ctx - Context with addInput, addSelect, addCheckbox, addColorPicker, layer, editor
 	 * @param {Object} [options] - Options
 	 * @param {boolean} [options.useTextarea=true] - Use textarea (true) or single-line input (false)
+	 * @param {boolean} [options.skipTextarea=false] - Skip textarea entirely (for richText layers like textbox/callout)
 	 * @param {number} [options.maxLength=5000] - Max text length
 	 * @param {number} [options.rows=5] - Textarea rows
 	 * @param {number} [options.maxFontSize=200] - Max font size
@@ -122,21 +123,25 @@
 		const editor = ctx.editor;
 		const t = msg;
 		const useTextarea = opts.useTextarea !== false;
+		const skipTextarea = opts.skipTextarea === true;
 		const maxLength = opts.maxLength || ( useTextarea ? 5000 : 1000 );
 		const maxFontSize = opts.maxFontSize || 200;
 
-		// Text content
-		ctx.addInput( {
-			label: t( 'layers-prop-text', 'Text' ),
-			type: useTextarea ? 'textarea' : 'text',
-			value: layer.text || '',
-			maxLength: maxLength,
-			rows: opts.rows || 5,
-			wide: useTextarea,
-			onChange: function ( v ) {
-				editor.updateLayer( layer.id, { text: v } );
-			}
-		} );
+		// Text content - skip for layers that use richText (textbox/callout)
+		// These layers are edited inline on canvas with full formatting support
+		if ( !skipTextarea ) {
+			ctx.addInput( {
+				label: t( 'layers-prop-text', 'Text' ),
+				type: useTextarea ? 'textarea' : 'text',
+				value: layer.text || '',
+				maxLength: maxLength,
+				rows: opts.rows || 5,
+				wide: useTextarea,
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, { text: v } );
+				}
+			} );
+		}
 
 		// Font family dropdown - use centralized FontConfig
 		const FontConfig = window.Layers && window.Layers.FontConfig;
