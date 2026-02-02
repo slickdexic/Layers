@@ -48,12 +48,31 @@ class ApiLayersRename extends ApiBase {
 	public function execute() {
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
-		$requestedFilename = $params['filename'];
+		$requestedFilename = $params['filename'] ?? '';
+		$slidename = $params['slidename'] ?? null;
 		$oldName = trim( $params['oldname'] );
 		$newName = trim( $params['newname'] );
 
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );
+
+		// Handle slide renames (slidename parameter)
+		if ( $slidename !== null && $slidename !== '' ) {
+			$this->executeSlideRename( $user, $slidename, $oldName, $newName );
+			return;
+		}
+
+		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
+		if ( $requestedFilename !== null && strpos( $requestedFilename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
+			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
+			$this->executeSlideRename( $user, $slidename, $oldName, $newName );
+			return;
+		}
+
+		// For file operations, filename is required
+		if ( $requestedFilename === '' || $requestedFilename === null ) {
+			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
+		}
 
 		// Validate new name format using central validator
 		if ( !SetNameSanitizer::isValid( $newName ) ) {
@@ -77,13 +96,13 @@ class ApiLayersRename extends ApiBase {
 			// (from InstantCommons) don't have local wiki pages
 			$title = Title::newFromText( $requestedFilename, NS_FILE );
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
-				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 			}
 
 			// Get file metadata (use getRepoGroup() to support foreign repos like Commons)
 			$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
 			if ( !$file || !$file->exists() ) {
-				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'invalidfilename' );
+				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 			}
 
 			// Use DB key form for consistency with ApiLayersSave
@@ -179,7 +198,11 @@ class ApiLayersRename extends ApiBase {
 		return [
 			'filename' => [
 				ApiBase::PARAM_TYPE => 'string',
-				ApiBase::PARAM_REQUIRED => true,
+				ApiBase::PARAM_REQUIRED => false,
+			],
+			'slidename' => [
+				ApiBase::PARAM_TYPE => 'string',
+				ApiBase::PARAM_REQUIRED => false,
 			],
 			'oldname' => [
 				ApiBase::PARAM_TYPE => 'string',
@@ -233,6 +256,98 @@ class ApiLayersRename extends ApiBase {
 			'action=layersrename&filename=Example.jpg&oldname=my-annotations&newname=anatomy-labels&token=123ABC' =>
 				'apihelp-layersrename-example-1',
 		];
+	}
+
+	/**
+	 * Execute rename operation for slides.
+	 *
+	 * Slides are standalone layer sets not tied to a file. They use a synthetic
+	 * imgName of 'Slide:{name}' and a fixed sha1 of 'slide'.
+	 *
+	 * @param \User $user The current user
+	 * @param string $slidename The slide name (without 'Slide:' prefix)
+	 * @param string $oldName The old set name
+	 * @param string $newName The new set name
+	 */
+	private function executeSlideRename( $user, string $slidename, string $oldName, string $newName ): void {
+		// Validate new name format using central validator
+		if ( !SetNameSanitizer::isValid( $newName ) ) {
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
+		}
+
+		// Prevent renaming to 'default'
+		$defaultName = strtolower( LayersConstants::DEFAULT_SET_NAME );
+		if ( strtolower( $newName ) === $defaultName && strtolower( $oldName ) !== $defaultName ) {
+			$this->dieWithError( LayersConstants::ERROR_CANNOT_RENAME_DEFAULT, 'invalidsetname' );
+		}
+
+		try {
+			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+
+			// Verify database schema exists (via LayersApiHelperTrait)
+			$this->requireSchemaReady( $db );
+
+			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
+			$imgName = LayersConstants::SLIDE_PREFIX . $slidename;
+			$sha1 = LayersConstants::TYPE_SLIDE;
+
+			// Check if the source set exists
+			$exists = $db->namedSetExists( $imgName, $sha1, $oldName );
+			if ( !$exists ) {
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
+			}
+
+			// Check if new name already exists
+			if ( $db->namedSetExists( $imgName, $sha1, $newName ) ) {
+				$this->dieWithError( LayersConstants::ERROR_SETNAME_EXISTS, 'setnameexists' );
+			}
+
+			// Permission check: only owner or admin can rename (via LayersApiHelperTrait)
+			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $oldName ) ) {
+				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
+			}
+
+			// Rate limiting
+			$rateLimiter = $this->createRateLimiter();
+			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+			}
+
+			// Perform the rename
+			$success = $db->renameNamedSet( $imgName, $sha1, $oldName, $newName );
+
+			if ( !$success ) {
+				$this->getLogger()->error( 'Failed to rename slide layer set', [
+					'slidename' => $slidename,
+					'oldname' => $oldName,
+					'newname' => $newName,
+					'user' => $user->getName()
+				] );
+				$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
+			}
+
+			$this->getLogger()->info( 'Slide layer set renamed', [
+				'slidename' => $slidename,
+				'oldname' => $oldName,
+				'newname' => $newName,
+				'user' => $user->getName()
+			] );
+
+			// Return success
+			$this->getResult()->addValue( 'layersrename', 'success', 1 );
+			$this->getResult()->addValue( 'layersrename', 'oldname', $oldName );
+			$this->getResult()->addValue( 'layersrename', 'newname', $newName );
+
+		} catch ( \Throwable $e ) {
+			$this->getLogger()->error( 'Exception during slide rename: {message}', [
+				'message' => $e->getMessage(),
+				'slidename' => $slidename,
+				'oldname' => $oldName,
+				'newname' => $newName
+			] );
+			$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
+			return; // @codeCoverageIgnore
+		}
 	}
 
 	/**

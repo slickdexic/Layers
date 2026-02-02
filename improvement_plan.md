@@ -1,7 +1,7 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** February 1, 2026 (Comprehensive Critical Review v4)  
-**Version:** 1.5.46  
+**Last Updated:** February 2, 2026 (Comprehensive Critical Review v6)  
+**Version:** 1.5.47  
 **Status:** Production-Ready (8.5/10)
 
 > **📋 NOTE:** See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for the detailed phased plan to address god class issues.
@@ -10,15 +10,15 @@
 
 ## Executive Summary
 
-The extension is **production-ready** with **comprehensive test coverage** and clean code practices. All **11,157** tests pass. This improvement plan prioritizes issues identified in the February 1, 2026 comprehensive critical review v4.
+The extension is **production-ready** with **comprehensive test coverage** and clean code practices. All **11,157** tests pass. This improvement plan prioritizes issues identified in the February 2, 2026 comprehensive critical review v6.
 
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
-- ✅ **P1:** All resolved (enum validation fixed)
-- ✅ **P2:** All resolved (20 items)
-- 🟢 **P3:** 7 open (low-priority backlog)
+- ⚠️ **P1:** 2 open (dead code with fatal bugs)
+- ⚠️ **P2:** 7 open (various issues)
+- ⚠️ **P3:** 10 open (low-priority backlog)
 
-**Verified Metrics (February 1, 2026):**
+**Verified Metrics (February 2, 2026):**
 
 | Metric | Value | Status |
 |--------|-------|--------|
@@ -34,14 +34,12 @@ The extension is **production-ready** with **comprehensive test coverage** and c
 | PHP strict_types | **42/42 files** | ✅ Complete |
 | ES6 classes | All JS files | 100% migrated |
 | God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
-| Near-threshold files (900-999) | **9** | ⚠️ Watch |
 | ESLint errors | 0 | ✅ |
 | ESLint disables | 11 | ✅ All legitimate |
-| innerHTML usages | 73 | Safe patterns |
-| Weak assertions | **0** | ✅ Clean |
 | i18n messages | **667** | All documented in qqq.json |
 | TODO/FIXME/HACK | 0 | ✅ Clean |
 | console.log in production | 0 | ✅ Clean |
+| Dead code files | 2 | ApiSlidesSave, ApiSlideInfo |
 
 ---
 
@@ -62,499 +60,292 @@ No critical bugs remain. All **11,157** tests pass.
 
 ---
 
-## Phase 1 (P1): High Priority — ✅ ALL RESOLVED
+## Phase 1 (P1): High Priority — ��� 2 OPEN
 
-### P1.3 Fix Missing Enum Validation in ServerSideLayerValidator
+### P1.1 Delete ApiSlidesSave.php (Dead Code)
 
-**Status:** ✅ RESOLVED (January 31, 2026)  
+**Status:** ��� OPEN  
 **Priority:** P1 - High  
-**Category:** Input Validation / Security
+**Category:** Dead Code Cleanup
 
-**Problem:** `VALUE_CONSTRAINTS` defines allowed values for 15 enum properties, but only 9 are validated. These 8 properties bypass validation:
-- `tailDirection`, `tailStyle`, `style`, `endStyle`
-- `textPosition`, `orientation`, `textDirection`, `toleranceType`
+**Problem:** `src/Api/ApiSlidesSave.php` has 6+ fatal bugs that would crash immediately:
 
-**Resolution:** Added all 8 missing properties to the `in_array()` check in `validateStringProperty()` at line 506.
+| Bug | Issue |
+|-----|-------|
+| Line 68 | Wrong RateLimiter constructor (passes User, expects Config) |
+| Line 69 | Wrong method name (isLimited() doesn't exist, should be checkRateLimit()) |
+| Line 75-77 | SlideNameValidator::validate() returns ?string, not ValidationResult |
+| Line 87 | Wrong ServerSideLayerValidator constructor (passes arg, takes none) |
+| Line 95 | Wrong method name (getSanitizedData() vs getData()) |
+| Line 128 | Missing method (sanitizeColor() not defined) |
+| Line 132 | Missing database method (saveSlide() not in LayersDatabase) |
 
-**Files:** `src/Validation/ServerSideLayerValidator.php` lines 506-519
+**Mitigating Factor:** NOT registered in extension.json APIModules (dead code).
 
----
+**Recommended Action:** Delete file (slides work via `ApiLayersSave::executeSlideSave()`).
 
-### Previously Resolved P1 Issues
-
-| Issue | Resolution Date |
-|-------|-----------------|
-| Race condition in saveLayerSet | January 31, 2026 |
-| Missing permission check in ApiLayersList | January 31, 2026 |
-| isComplexityAllowed() layer type coverage | January 31, 2026 |
-| Rate limiting on ApiLayersList | January 31, 2026 |
-| paths array limit validation | January 31, 2026 |
+**Effort:** 5 minutes to delete.
 
 ---
 
-## Phase 2 (P2): Medium Priority — ✅ ALL RESOLVED
+### P1.2 Delete ApiSlideInfo.php (Dead Code)
 
-### New Issues Found (3 items)
+**Status:** ��� OPEN  
+**Priority:** P1 - High  
+**Category:** Dead Code Cleanup
 
-#### P2.19 Fix ZoomPanController Animation Frame Overlap
+**Problem:** `src/Api/ApiSlideInfo.php` has 3+ fatal bugs:
 
-**Status:** ✅ RESOLVED (January 31, 2026)  
+| Bug | Issue |
+|-----|-------|
+| Line 66-68 | SlideNameValidator::validate() returns ?string, not ValidationResult |
+| Line 67 | getMessage() called on string (doesn't exist) |
+| Line 74 | Missing database method (getSlideByName() not in LayersDatabase) |
+
+**Mitigating Factor:** NOT registered in extension.json APIModules (dead code).
+
+**Recommended Action:** Delete file (slides work via `ApiLayersInfo::executeSlideRequest()`).
+
+**Effort:** 5 minutes to delete.
+
+---
+
+## Phase 2 (P2): Medium Priority — ��� 7 OPEN
+
+### P2.1 Add Missing Boolean Properties to preserveLayerBooleans
+
+**Status:** ��� OPEN  
 **Priority:** P2 - Medium  
-**Category:** Animation Bug
+**Category:** Data Integrity
 
-**Problem:** `smoothZoomTo()` doesn't cancel previous animation frame before starting new one.
+**Problem:** `preserveLayerBooleans()` only converts 7 of 12 boolean properties.
 
-**Resolution:** Added `cancelAnimationFrame(this.animationFrameId)` at start of `smoothZoomTo()` to prevent overlapping animation loops.
+**Missing properties:**
+- `expanded` (group layers)
+- `isMultiPath` (custom shapes)
+- `strokeOnly` (custom shapes)
+- `showUnit` (dimension layers)
+- `showBackground` (dimension layers)
 
-**Files:** `resources/ext.layers.editor/canvas/ZoomPanController.js` line 155
+**Impact:** False values for these properties may be lost during API serialization.
+
+**Files:** `src/Api/ApiLayersInfo.php` lines 365-368
+
+**Fix:**
+```php
+$booleanProps = [
+    'visible', 'locked', 'shadow', 'glow', 'textShadow', 'preserveAspectRatio', 'hasArrow',
+    'expanded', 'isMultiPath', 'strokeOnly', 'showUnit', 'showBackground'
+];
+```
+
+**Effort:** 15 minutes
 
 ---
 
-#### P2.20 Fix TransformController Stale Layer Reference
+### P2.2 Add InlineTextEditor to CanvasManager Destroy List
 
-**Status:** ✅ RESOLVED (January 31, 2026)  
+**Status:** ��� OPEN  
 **Priority:** P2 - Medium  
-**Category:** Race Condition
+**Category:** Memory Leak Prevention
 
-**Problem:** `_pendingResizeLayer` may be stale if layer deleted before rAF fires.
+**Problem:** The `inlineTextEditor` controller is initialized at line 308 but NOT included in `controllersToDestroy`.
 
-**Resolution:** Added layer existence validation in rAF callback using `this.manager.editor.layers.some((l) => l.id === layerId)` before emitting transform events.
+**Files:** `resources/ext.layers.editor/CanvasManager.js` lines 1957-1973
 
-**Files:** `resources/ext.layers.editor/canvas/TransformController.js` lines 213-227
+**Fix:** Add `'inlineTextEditor'` to the array after `'textInputController'`.
+
+**Effort:** 5 minutes
 
 ---
 
-#### P2.21 Fix Mediawiki-Extension-Layers.mediawiki Version Table
+### P2.3 Add Slide Support to ApiLayersRename
 
-**Status:** ✅ RESOLVED (January 31, 2026)  
+**Status:** ��� OPEN  
 **Priority:** P2 - Medium  
-**Category:** Documentation
+**Category:** Feature Parity
 
-**Problem:** Branch version table shows 1.5.43 but extension is 1.5.44.
+**Problem:** Unlike ApiLayersSave, ApiLayersInfo, and ApiLayersDelete, the ApiLayersRename module does not support slides.
 
-**Resolution:** Updated branch table to show 1.5.44 for all branches.
+**Files:** `src/Api/ApiLayersRename.php`
 
-**Files:** `Mediawiki-Extension-Layers.mediawiki` line 30
+**Fix:** Add `executeSlideRename()` method following the pattern of other API modules.
 
----
-
-### Memory Management Issues — ✅ ALL RESOLVED
-
-#### P2.1 Fix Untracked Timeouts in SlideController
-
-**Status:** ✅ RESOLVED (January 31, 2026)
-**Priority:** P2 - Medium  
-**Category:** Memory Leak Risk
-
-**Resolution:** Already implemented - `_retryTimeouts` array tracks IDs, `destroy()` clears all.
+**Effort:** 2 hours
 
 ---
 
-#### P2.2 Fix Untracked Event Listeners in ToolDropdown
+### P2.4 Fix Documentation Version Inconsistencies
 
-**Status:** ✅ RESOLVED (January 31, 2026)  
-**Priority:** P2 - Medium  
-**Category:** Memory Leak Risk
-
-**Resolution:** Fixed - added `boundHandleTriggerClick` and `_menuItemHandlers` Map for tracking, enhanced `destroy()` method.
-
----
-
-#### P2.3 Fix VirtualLayerList rAF Destroyed Check
-
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Priority:** P2 - Medium  
-**Category:** Bug / Race Condition
-
-**Resolution:** Already implemented - `if (this.destroyed) return;` check added at line 239.
-
----
-
-### Validation Consistency Issues (2 items)
-
-#### P2.4 Standardize Set Name Validation
-
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Priority:** P2 - Medium  
-**Category:** Validation Inconsistency
-
-**Resolution:** ApiLayersRename now uses SetNameSanitizer consistently.
-
----
-
-#### P2.5 Add Slide Name Validation in ApiLayersSave
-
-**Status:** ✅ RESOLVED (January 30, 2026)  
-**Priority:** P2 - Medium  
-**Category:** Input Validation
-
-**Resolution:** Slidename is now sanitized via SetNameSanitizer before logging.
-
----
-
-### Code Quality Issues (5 items)
-
-#### P2.6 Refactor Promise Anti-Pattern in APIManager
-
-**Status:** ✅ RESOLVED (January 31, 2026 - Verified as valid pattern)  
-**Priority:** P2 - Medium  
-**Category:** Anti-Pattern
-
-**Resolution:** Pattern is legitimate - enables request tracking, abort support, value transformation, and pre/post-processing.
-
----
-
-#### P2.7 Fix Aborted Request Error Handling
-
-**Status:** ✅ RESOLVED (Already implemented)  
-**Priority:** P2 - Medium  
-**Category:** UX / Error Handling
-
-**Resolution:** Both `loadRevision()` and `loadSetByName()` include abort detection before showing errors.
-
----
-
-#### P2.8 Standardize Logger Usage in API Modules
-
-**Status:** ✅ RESOLVED (January 31, 2026)  
-**Priority:** P2 - Medium  
-**Category:** Code Consistency
-
-**Resolution:** Replaced LoggerFactory calls with `$this->getLogger()` in ApiLayersInfo.php.
-
----
-
-#### P2.9 Standardize Database Return Types
-
-**Status:** ✅ RESOLVED (January 31, 2026 - Verified as consistent)  
-**Priority:** P2 - Medium  
-**Category:** API Consistency
-
-**Resolution:** Database methods follow MediaWiki standard patterns. `false` for not-found in `getLayerSet()`, `null` for not-found in `getLayerSetByName()`, `-1` for error in `countNamedSets()` all align with MediaWiki conventions. No changes needed.
-
----
-
-#### P2.10 Refactor SQL NOT IN Pattern
-
-**Status:** ✅ RESOLVED (January 31, 2026 - Accepted as safe pattern)  
-**Priority:** P2 - Medium  
-**Category:** Code Quality
-
-**Resolution:** Current implementation is well-documented and safe (integer validation via `intval`, `makeList()` escaping). MediaWiki DB layer doesn't provide cleaner NOT IN method.
-
----
-
-### Architecture Issues (1 item)
-
-#### P2.11 Reduce God Class Count
-
-**Status:** ✅ RESOLVED (Ongoing maintenance)  
-**Priority:** P2 - Medium  
-**Category:** Technical Debt
-
-**Target:** Maintain at ≤18 (currently at 18: 2 generated, 14 JS, 2 PHP)
-
-See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for phased plan.
-
-**Priority Extractions:**
-
-| File | Lines | Strategy | Effort |
-|------|-------|----------|--------|
-| InlineTextEditor.js | 1,521 | Extract RichTextToolbar | 2-3 days |
-| APIManager.js | 1,403 | Extract RetryManager | 2 days |
-| ServerSideLayerValidator.php | 1,327 | Strategy pattern | 2-3 days |
-| LayersDatabase.php | 1,355 | Repository split | 3-4 days |
-
-**Near-Threshold Files to Monitor:**
-- ToolbarStyleControls.js (998)
-- TextBoxRenderer.js (996)
-- ResizeCalculator.js (995)
-- ShapeRenderer.js (994)
-- PropertiesForm.js (994)
-- TransformController.js (992)
-
----
-
-### Documentation Issues (4 items)
-
-#### P2.12 Synchronize Documentation Metrics
-
-**Status:** ✅ RESOLVED (January 31, 2026)  
+**Status:** ��� OPEN  
 **Priority:** P2 - Medium  
 **Category:** Documentation
 
-**Resolution:** wiki/Architecture-Overview.md updated with correct metrics. copilot-instructions.md verified accurate.
+**Problem:** Several files show 1.5.45 instead of 1.5.46:
+- `Mediawiki-Extension-Layers.mediawiki`
+- `wiki/Home.md`
+- `.github/copilot-instructions.md`
+
+**Effort:** 30 minutes
 
 ---
 
-#### P2.13 Fix WIKITEXT_USAGE.md Lock Parameter Docs
+### P2.5 Review Font Family Validation
 
-**Status:** ✅ RESOLVED (January 31, 2026 - Verified no issue)  
+**Status:** ��� OPEN  
 **Priority:** P2 - Medium  
-**Category:** Documentation Accuracy
+**Category:** Data Integrity
 
-**Resolution:** WIKITEXT_USAGE.md does not contain `lock=view`. README.md example was fixed in v1.5.43 to use `noedit`.
+**Problem:** Font validation rejects any font not in `$wgLayersDefaultFonts` (defaults to ['Arial', 'sans-serif']).
+
+**Files:** `src/Validation/ServerSideLayerValidator.php` lines 500-506
+
+**Options:**
+1. Make font validation a warning (keep value) rather than rejection
+2. Expand default font list to include common web fonts
+3. Add more fonts to the default configuration
+
+**Effort:** 30 minutes
 
 ---
 
-#### P2.14 Fix README Branch Versions
+### P2.6 Sync wiki/Changelog.md with CHANGELOG.md
 
-**Status:** ✅ RESOLVED (January 31, 2026 - Verified no issue)  
+**Status:** ��� OPEN  
 **Priority:** P2 - Medium  
 **Category:** Documentation
 
-**Resolution:** README.md does not contain specific branch version numbers. It links to branches with general descriptions.
+**Problem:** wiki/Changelog.md is missing v1.5.46 entry.
+
+**Effort:** 15 minutes
 
 ---
 
-### Error Handling Issues (2 items)
+### P2.7 Fix Branch Version Table Inconsistencies
 
-#### P2.15 Fix StateManager Auto-Recovery Timing
-
-**Status:** ✅ RESOLVED (Verified as correct behavior)  
+**Status:** ��� OPEN  
 **Priority:** P2 - Medium  
-**Category:** State Management
+**Category:** Documentation
 
-**Original Concern:** 30s auto-recovery may interrupt legitimate slow operations.
+**Problem:** REL1_43 and REL1_39 version references are inconsistent.
 
-**Resolution:** After code review, the concern is unfounded:
-- `lockState()` is only called internally in `update()` and `atomic()` methods
-- Both methods use try-finally blocks ensuring locks are always released
-- All operations are synchronous (complete in milliseconds)
-- No external code calls `lockState()` directly
-- The 30s timeout is a reasonable safety net for extreme edge cases
+**Files:** `wiki/Home.md`, `Mediawiki-Extension-Layers.mediawiki`
 
-**Files:** `resources/ext.layers.editor/StateManager.js`
-
-**Estimated Effort:** N/A (no fix needed)
+**Effort:** 15 minutes
 
 ---
 
-#### P2.16 Add DraftManager Quota Error Handling
+## Phase 3 (P3): Long-Term — ��� 10 OPEN
 
-**Status:** ✅ RESOLVED (Already implemented)  
-**Priority:** P2 - Medium  
-**Category:** Error Handling
+### P3.1 Standardize API Error Codes
 
-**Resolution:** DraftManager already has try/catch for localStorage operations around line 152.
+Standardize to use `'filenotfound'` consistently across all API modules.
 
 ---
 
-### Performance Issues (2 items → BOTH RESOLVED)
+### P3.2 Document All Rate Limit Keys
 
-#### P2.17 Cache Service Lookups in PHP
-
-**Status:** ✅ RESOLVED (January 31, 2026 - Verified not an issue)  
-**Priority:** P2 - Medium  
-**Category:** Performance
-
-**Resolution:** `MediaWikiServices::getInstance()` is a singleton accessor (negligible cost). Most files use lazy initialization pattern. Found dead code: `WikitextHooks::getLayersDatabaseService()` is never called (LOW).
+Document `editlayers-rename`, `editlayers-delete`, `editlayers-list` in copilot-instructions.md.
 
 ---
 
-#### P2.18 Optimize buildImageNameLookup()
+### P3.3 Review Text Sanitizer Keyword Removal
 
-**Status:** ✅ RESOLVED (January 31, 2026 - Accepted as defensive pattern)  
-**Priority:** P2 - Medium  
-**Category:** Performance
-
-**Resolution:** Pattern provides backwards compatibility for legacy data. Creates ~2 unique name variants (after deduplication). Performance cost is negligible.
+Consider whether removing JavaScript keywords is too aggressive.
 
 ---
 
-## Phase 3 (P3): Long-Term — 🟢 7 ITEMS (7 RESOLVED)
-
-### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅
-
-**Status:** ✅ RESOLVED (January 31, 2026)  
-**Resolution:** Removed unused constant from TextSanitizer.php
-
----
-
-### P3.Dead Code: WikitextHooks.getLayersDatabaseService() ✅
-
-**Status:** ✅ RESOLVED (January 31, 2026)  
-**Resolution:** Removed dead method that was defined but never called.
-
----
-
-### P3.13 Add getBoundingClientRect Guards ✅
-
-**Status:** ✅ RESOLVED (January 31, 2026)  
-**Resolution:** Added defensive guard in GeometryUtils.clientToCanvas() to return canvas center if rect has zero dimensions.
-
----
-
-### P3.1 SchemaManager Constructor Injection
+### P3.4 SchemaManager Constructor Injection
 
 Inject logger via constructor instead of global service access.
 
-### P3.2 Configurable Transaction Timeouts
+---
+
+### P3.5 Configurable Transaction Timeouts
 
 Make 3 retries/5000ms timeout configurable for high-load environments.
 
-### P3.3 Upgrade ls_layer_count to SMALLINT
+---
+
+### P3.6 Upgrade ls_layer_count to SMALLINT
 
 Change from TINYINT (max 255) to SMALLINT for future-proofing.
 
-### P3.4 Standardize @codeCoverageIgnore Usage ⏭️ LOW PRIORITY
+---
 
-**Analysis:** The `return; // @codeCoverageIgnore` statements after `dieWithError()` calls are unnecessary since `dieWithError()` has `@return never` (always throws). Best fix would be to remove them, but this is purely cosmetic. Deferred.
+### P3.7-P3.10 Documentation Line Count Discrepancies
 
-### P3.5 Remove Dead Boolean Normalization Path ⏭️ WON'T FIX
-
-**Analysis:** Not actually dead code - it's backwards compatibility for legacy data. The empty string → true normalization is explicitly tested ("should convert empty string to boolean true (legacy data)") and documented in code. Removing it would break existing layer data that might contain empty strings for boolean fields. Keeping for stability.
-
-### P3.6 Document CHECK Constraint Dependencies
-
-Document that SQL constraints must be updated with PHP config.
-
-### P3.7 Add Null Check in extractLayerSetData ✅ RESOLVED
-
-Already implemented: Defensive null check exists at line 327 of APIManager.js.
-
-### P3.8 Add Prefix Length Limit in listSlides() ✅ RESOLVED
-
-**Status:** Resolved (January 31, 2026)  
-**Implementation:** Added 200-character prefix length limit in `LayersDatabase::listSlides()` to prevent performance issues with very long prefixes. Added PHPUnit test for truncation behavior.
-
-### P3.9 Remove Unused ALLOWED_ENTITIES Constant ✅ RESOLVED
-
-See P3.9 entry above (resolved January 2026).
-
-### P3.10 Standardize Class Resolution Pattern
-
-Use single consistent pattern across all JS files.
-
-### P3.11 Add Class Resolution Caching ✅ RESOLVED
-
-**Status:** Resolved (January 31, 2026)  
-**Implementation:** Added Map-based caching to `NamespaceHelper.js` `getClass()` function with composite cache key (`namespacePath|globalName`). Added `clearClassCache()` for test isolation. Added 6 new tests. Commit 93279109.
-
-### P3.12 Improve DeepClone to Avoid JSON Fallback
-
-Handle all cases without expensive JSON serialization. LOW PRIORITY: `structuredClone` is already used in modern browsers.
-
-### P3.13 Add getBoundingClientRect Guards ✅ RESOLVED
-
-See P3.13 entry above (resolved January 2026).
-
-### P3.14 Anonymize User IDs in Logs
-
-Consider hashing user identifiers to prevent correlation.
+Accept minor discrepancies (1-10 lines) as line counts change frequently.
 
 ---
 
-## Feature Backlog
+## God Class Reduction Plan
 
-### F1. Custom Fonts Support
+Current count: **18 god classes** (2 generated + 14 JS + 2 PHP)
 
-**Status:** Not Started  
-**Priority:** P3  
+| File | Lines | Strategy | Priority |
+|------|-------|----------|----------|
+| InlineTextEditor.js | 1,521 | Extract RichTextToolbar | Medium |
+| APIManager.js | 1,403 | Extract RetryManager | Medium |
+| ServerSideLayerValidator.php | 1,341 | Strategy pattern | Low |
+| LayersDatabase.php | 1,360 | Repository split | Low |
 
-Allow fonts beyond $wgLayersDefaultFonts allowlist.
-
-### F2. Enhanced Dimension Tool
-
-**Status:** Proposed  
-**Priority:** P3  
-
-Make dimension line draggable independently from anchors.
-
-### F3. Angle Dimension Tool
-
-**Status:** Proposed  
-**Priority:** P3  
-
-New tool for measuring and annotating angles.
-
-### F4. Visual Regression Testing
-
-**Status:** Not Started  
-**Priority:** P3  
-
-Add jest-image-snapshot for canvas rendering tests.
-
-### F5. TypeScript Migration for Core Modules
-
-**Status:** Not Started  
-**Priority:** P3  
-
-Candidates: StateManager.js, APIManager.js, GroupManager.js
+See [GOD_CLASS_REFACTORING_PLAN.md](docs/GOD_CLASS_REFACTORING_PLAN.md) for detailed plan.
 
 ---
 
-## Completed Items (January 2026)
+## Action Items Summary
 
-### P0 Items Completed
-| Item | Date |
-|------|------|
-| TailCalculator bug | Jan 30 |
-| ApiLayersList.getLogger bug | Jan 30 |
+### Immediate (This Week)
 
-### P1 Items Completed
-| Item | Date |
-|------|------|
-| Race condition in saveLayerSet | Jan 31 |
-| ApiLayersList permission check | Jan 31 |
-| isComplexityAllowed() coverage | Jan 31 |
-| ApiLayersList rate limiting | Jan 31 |
-| paths array limit validation | Jan 31 |
-
-### P2 Items Completed
-| Item | Date |
-|------|------|
-| N+1 in getNamedSetsForImage() | Jan 30 |
-| N+1 in listSlides() | Jan 30 |
-| LIKE query escaping | Jan 30 |
-| Exception handling (\Throwable) | Jan 30 |
-| API code duplication (trait) | Jan 30 |
-| refreshAllViewers concurrency | Jan 31 |
-| Magic complexity threshold | Jan 31 |
-| listSlides() SQL refactored | Jan 31 |
-
----
-
-## Immediate Action Items
-
-### This Week (Priority)
-1. **Documentation sync:** Update wiki/Home.md branch versions — 10 min
-2. **Documentation sync:** Update copilot-instructions.md line counts — 30 min
+| Priority | Item | Effort | Status |
+|----------|------|--------|--------|
+| P1 | Delete ApiSlidesSave.php | 5 min | ��� |
+| P1 | Delete ApiSlideInfo.php | 5 min | ��� |
+| P2 | Add missing booleans to preserveLayerBooleans | 15 min | ��� |
+| P2 | Add inlineTextEditor to CanvasManager destroy | 5 min | ��� |
 
 ### This Month
-1. **P3 backlog:** Extract RichTextToolbar from InlineTextEditor.js — 2-3 days
-2. **P3 backlog:** Extract RetryManager from APIManager.js — 2 days
+
+| Priority | Item | Effort | Status |
+|----------|------|--------|--------|
+| P2 | Add slide support to ApiLayersRename | 2 hours | ��� |
+| P2 | Fix documentation version inconsistencies | 1 hour | ��� |
+| P2 | Review font family validation | 30 min | ��� |
 
 ### This Quarter
-1. **P3 backlog items** — as time permits
-2. **F4:** Add visual regression tests — 2 sprints
+
+| Priority | Item | Effort | Status |
+|----------|------|--------|--------|
+| P3 | Standardize API error codes | 1 hour | ��� |
+| P3 | Document all rate limit keys | 30 min | ��� |
+| P3 | Extract 2 god class modules | 1 week | ��� |
 
 ---
 
-## Metrics to Track
+## Test Coverage Goals
 
-| Metric | Current | Target | Notes |
-|--------|---------|--------|-------|
-| Test count | 11,157 | Maintain | All passing |
-| Statement coverage | 95.44% | ≥95% | Excellent |
-| Branch coverage | 85.20% | ≥85% | Good |
-| God classes | 18 | ≤15 | Extract 3 |
-| Near-threshold | 9 | ≤4 | Monitor |
-| P1 issues | **0** | 0 | ✅ All resolved |
-| P2 issues | **0** | 0 | ✅ All resolved |
-| P3 issues | 7 | Backlog | Low priority |
+| Metric | Current | Target | Status |
+|--------|---------|--------|--------|
+| Statement | 95.44% | 90% | ✅ Exceeds |
+| Branch | 85.20% | 85% | ✅ At target |
+| Function | 93.75% | 85% | ✅ Exceeds |
+| Lines | 95.56% | 90% | ✅ Exceeds |
+
+No immediate coverage improvements needed. Focus on maintaining current levels.
 
 ---
 
-## Known Technical Debt
+## Documentation Updates Needed
 
-| Item | Impact | Effort | Priority |
-|------|--------|--------|----------|
-| 18 god classes | Medium | 2-3 weeks | P2 |
-| Inconsistent DB return types | Low | 2 days | P3 |
-| No visual regression | Medium | 2 sprints | P3 |
-| No TypeScript | Low | Long-term | P3 |
+| Document | Update |
+|----------|--------|
+| Mediawiki-Extension-Layers.mediawiki | Update version to 1.5.46 |
+| wiki/Home.md | Update version references |
+| wiki/Changelog.md | Add v1.5.46 entry |
+| .github/copilot-instructions.md | Update version to 1.5.46 |
 
 ---
 
-*Last updated: February 1, 2026 (Comprehensive Critical Review v4)*
+*Document updated: February 2, 2026 (Comprehensive Critical Review v6)*  
+*Status: Production-ready. 2 P1 dead code issues. 7 P2 issues. 10 P3 issues.*

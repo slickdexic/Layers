@@ -50,6 +50,7 @@
 			this._isEnabled = false;
 			this._pendingRender = null;
 			this._destroyed = false;
+			this._throttleTimeoutId = null; // Track throttle timeout for cleanup
 
 			this._init();
 		}
@@ -349,13 +350,15 @@
 		 * @private
 		 */
 		_throttle( fn, limit ) {
+			const self = this;
 			let inThrottle = false;
 			return function ( ...args ) {
-				if ( !inThrottle ) {
+				if ( !inThrottle && !self._destroyed ) {
 					fn.apply( this, args );
 					inThrottle = true;
-					setTimeout( () => {
+					self._throttleTimeoutId = setTimeout( () => {
 						inThrottle = false;
+						self._throttleTimeoutId = null;
 					}, limit );
 				}
 			};
@@ -366,6 +369,13 @@
 		 */
 		destroy() {
 			this._destroyed = true;
+
+			// Clear any pending throttle timeout
+			if ( this._throttleTimeoutId ) {
+				clearTimeout( this._throttleTimeoutId );
+				this._throttleTimeoutId = null;
+			}
+
 			this.disable();
 			this._itemPool.clear();
 			this._spacerTop = null;
