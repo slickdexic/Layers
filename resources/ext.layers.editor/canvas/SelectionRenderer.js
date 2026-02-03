@@ -420,24 +420,50 @@
 			const perpX = -Math.sin( angle );
 			const perpY = Math.cos( angle );
 
-			// Get extension line parameters (match DimensionRenderer defaults)
-			let extensionLength = layer.extensionLength;
-			if ( typeof extensionLength !== 'number' || isNaN( extensionLength ) ) {
-				extensionLength = 10; // DEFAULTS.extensionLength from DimensionRenderer
-			}
-			let extensionGap = layer.extensionGap;
-			if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
-				extensionGap = 3; // DEFAULTS.extensionGap from DimensionRenderer
+			// Get offset distance (same logic as DimensionRenderer)
+			let offsetDistance;
+			if ( typeof layer.dimensionOffset === 'number' && !isNaN( layer.dimensionOffset ) ) {
+				offsetDistance = layer.dimensionOffset;
+			} else {
+				// Legacy/default: calculate from extensionGap and extensionLength
+				let extensionLength = layer.extensionLength;
+				if ( typeof extensionLength !== 'number' || isNaN( extensionLength ) ) {
+					extensionLength = 10; // DEFAULTS.extensionLength from DimensionRenderer
+				}
+				let extensionGap = layer.extensionGap;
+				if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
+					extensionGap = 3; // DEFAULTS.extensionGap from DimensionRenderer
+				}
+				offsetDistance = extensionGap + extensionLength / 2;
 			}
 
-			// Calculate dimension line offset (same formula as DimensionRenderer)
-			const offsetDistance = extensionGap + extensionLength / 2;
-			const dimX1 = x1 + perpX * offsetDistance;
-			const dimY1 = y1 + perpY * offsetDistance;
-			const dimX2 = x2 + perpX * offsetDistance;
-			const dimY2 = y2 + perpY * offsetDistance;
+			// Calculate dimension line position
+			// Positive offset = above the measurement line (negative perp direction)
+			const dimX1 = x1 - perpX * offsetDistance;
+			const dimY1 = y1 - perpY * offsetDistance;
+			const dimX2 = x2 - perpX * offsetDistance;
+			const dimY2 = y2 - perpY * offsetDistance;
 
-			// Key object styling
+			// Draw extension lines from anchor points to dimension line (visual guide)
+			this.ctx.strokeStyle = '#666';
+			this.ctx.lineWidth = 1;
+			this.ctx.setLineDash( [ 2, 2 ] );
+			this.ctx.beginPath();
+			this.ctx.moveTo( x1, y1 );
+			this.ctx.lineTo( dimX1, dimY1 );
+			this.ctx.moveTo( x2, y2 );
+			this.ctx.lineTo( dimX2, dimY2 );
+			this.ctx.stroke();
+			this.ctx.setLineDash( [] );
+
+			// Draw and register handles at ANCHOR points (x1,y1 and x2,y2), not dimension line endpoints
+			// These handles allow dragging the base measurement points
+			const endpoints = [
+				{ x: x1, y: y1, type: 'w' },  // Start anchor point
+				{ x: x2, y: y2, type: 'e' }   // End anchor point
+			];
+
+			// Set style for handles
 			if ( isKeyObject ) {
 				this.ctx.fillStyle = this.handleColor;
 				this.ctx.strokeStyle = '#ff9800';
@@ -447,22 +473,15 @@
 				this.ctx.strokeStyle = this.handleBorderColor;
 				this.ctx.lineWidth = 1;
 			}
-			this.ctx.setLineDash( [] );
-
-			// Draw and register endpoint handles at the actual dimension line coordinates
-			const endpoints = [
-				{ x: dimX1, y: dimY1, type: 'w' },  // Start point of dimension line
-				{ x: dimX2, y: dimY2, type: 'e' }   // End point of dimension line
-			];
 
 			for ( let i = 0; i < endpoints.length; i++ ) {
 				const ep = endpoints[ i ];
 
-				// Draw the handle
+				// Draw the handle at anchor point
 				this.ctx.fillRect( ep.x - handleSize / 2, ep.y - handleSize / 2, handleSize, handleSize );
 				this.ctx.strokeRect( ep.x - handleSize / 2, ep.y - handleSize / 2, handleSize, handleSize );
 
-				// Register handle for hit testing
+				// Register handle for hit testing - isDimension handles move the anchor points
 				this.selectionHandles.push( {
 					type: ep.type,
 					x: ep.x - handleSize / 2,
@@ -474,6 +493,9 @@
 					isDimension: true
 				} );
 			}
+
+			// Note: No center offset handle - dimension text can be dragged directly
+			// to adjust both perpendicular offset (up/down) and text offset (left/right)
 		}
 
 		/**

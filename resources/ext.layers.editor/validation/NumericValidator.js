@@ -56,7 +56,8 @@
 			shadowSpread: { min: 0, max: 50 },
 			arrowSize: { min: 1, max: 100 },
 			sides: { min: 3, max: 20 },
-			starPoints: { min: 3, max: 20 }
+			starPoints: { min: 3, max: 20 },
+			dimensionOffset: { min: -500, max: 500 }
 		};
 
 		/**
@@ -112,6 +113,7 @@
 			this.validateShadowProperties( layer, result );
 			this.validateArrowSize( layer, result );
 			this.validateSides( layer, result );
+			this.validateDimensionOffset( layer, result );
 		}
 
 		/**
@@ -389,6 +391,32 @@
 			if ( sides < min || sides > max ) {
 				result.isValid = false;
 				result.errors.push( this.getMessage( 'layers-validation-sides-range', min, max ) );
+			}
+		}
+
+		/**
+		 * Validate dimension offset
+		 *
+		 * @param {Object} layer - Layer object
+		 * @param {Object} result - Validation result
+		 */
+		validateDimensionOffset( layer, result ) {
+			if ( layer.dimensionOffset === undefined ) {
+				return;
+			}
+
+			if ( !this.isValidNumber( layer.dimensionOffset ) ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-dimension-offset-invalid' ) );
+				return;
+			}
+
+			const offset = parseFloat( layer.dimensionOffset );
+			const { min, max } = this.rules.dimensionOffset;
+
+			if ( offset < min || offset > max ) {
+				result.isValid = false;
+				result.errors.push( this.getMessage( 'layers-validation-dimension-offset-range', min, max ) );
 			}
 		}
 

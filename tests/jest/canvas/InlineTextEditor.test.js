@@ -760,7 +760,7 @@ describe( 'InlineTextEditor', () => {
 			expect( layer.fontFamily ).toBe( 'Georgia' );
 		} );
 
-		test( 'should use text: empty string for textbox layers when applying format', () => {
+		test( 'should use text: empty string for textbox layers when applying format in non-rich-text mode', () => {
 			const layer = {
 				id: 'layer-1',
 				type: 'textbox',
@@ -772,6 +772,9 @@ describe( 'InlineTextEditor', () => {
 			mockCanvasManager.editor.layers = [ layer ];
 			editor.startEditing( layer );
 
+			// Disable rich text mode to test layer-level formatting
+			editor._isRichTextMode = false;
+
 			// Change font family via _applyFormat
 			editor._applyFormat( 'fontFamily', 'Times New Roman' );
 
@@ -781,6 +784,91 @@ describe( 'InlineTextEditor', () => {
 				fontFamily: 'Times New Roman',
 				text: '',
 				richText: null
+			} );
+		} );
+
+		describe( 'cursor-only formatting (no selection)', () => {
+			let originalGetSelection;
+
+			beforeEach( () => {
+				originalGetSelection = window.getSelection;
+			} );
+
+			afterEach( () => {
+				window.getSelection = originalGetSelection;
+			} );
+
+			test( 'should apply toggle formats with cursor only (no selection) via execCommand', () => {
+				const layer = {
+					id: 'layer-1',
+					type: 'textbox',
+					text: 'Test content',
+					x: 0, y: 0,
+					width: 200, height: 100
+				};
+				mockCanvasManager.editor.layers = [ layer ];
+				editor.startEditing( layer );
+
+				// Mock document.execCommand
+				const execCommandMock = jest.fn();
+				document.execCommand = execCommandMock;
+
+				// Mock rich text mode and collapsed selection (cursor only)
+				editor._isRichTextMode = true;
+				window.getSelection = jest.fn().mockReturnValue( {
+					rangeCount: 1,
+					isCollapsed: true, // Cursor only, no selection
+					anchorNode: editor.editorElement
+				} );
+
+				// Clear any previous updateLayer calls from startEditing
+				mockCanvasManager.editor.updateLayer.mockClear();
+
+				// Apply bold with cursor only - should call execCommand, not update layer
+				editor._applyFormat( 'fontWeight', 'bold' );
+
+				// Should have called execCommand with 'bold'
+				expect( execCommandMock ).toHaveBeenCalledWith( 'bold', false, null );
+				// Should NOT call updateLayer (which would apply to entire layer)
+				expect( mockCanvasManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			test( 'should not apply fontSize with cursor only (no selection)', () => {
+				const layer = {
+					id: 'layer-1',
+					type: 'textbox',
+					text: 'Test content',
+					x: 0, y: 0,
+					width: 200, height: 100
+				};
+				mockCanvasManager.editor.layers = [ layer ];
+
+				// Set up complete selection mock before startEditing (startEditing uses getSelection)
+				const mockSelection = {
+					rangeCount: 1,
+					isCollapsed: true, // Cursor only, no selection
+					anchorNode: null, // Will be set after startEditing
+					removeAllRanges: jest.fn(),
+					addRange: jest.fn()
+				};
+				window.getSelection = jest.fn().mockReturnValue( mockSelection );
+
+				editor.startEditing( layer );
+
+				// Update anchorNode to point to editor element
+				mockSelection.anchorNode = editor.editorElement;
+
+				// Mock rich text mode
+				editor._isRichTextMode = true;
+
+				// Clear any previous updateLayer calls from startEditing
+				mockCanvasManager.editor.updateLayer.mockClear();
+
+				// Apply fontSize with cursor only - should do nothing
+				editor._applyFormat( 'fontSize', 24 );
+
+				// Should NOT call updateLayer
+				expect( mockCanvasManager.editor.updateLayer ).not.toHaveBeenCalled();
 			} );
 		} );
 	} );
@@ -2691,9 +2779,30 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 		} );
 
 		test( 'should apply highlight formatting using execCommand', () => {
+			// Mock _getSelectionFormatInfo to return no background color
+			editor._getSelectionFormatInfo = jest.fn().mockReturnValue( {
+				fontSize: 16,
+				fontFamily: 'Arial',
+				backgroundColor: null
+			} );
+
 			editor._applyFormatToSelection( 'highlight', '#ffff00' );
 
 			expect( execCommandMock ).toHaveBeenCalledWith( 'hiliteColor', false, '#ffff00' );
+		} );
+
+		test( 'should remove highlight when text already has background color (toggle off)', () => {
+			// Mock _getSelectionFormatInfo to return existing background color
+			editor._getSelectionFormatInfo = jest.fn().mockReturnValue( {
+				fontSize: 16,
+				fontFamily: 'Arial',
+				backgroundColor: 'rgb(255, 255, 0)'
+			} );
+
+			editor._applyFormatToSelection( 'highlight', '#ffff00' );
+
+			// Should call hiliteColor with transparent to remove highlight
+			expect( execCommandMock ).toHaveBeenCalledWith( 'hiliteColor', false, 'transparent' );
 		} );
 
 		test( 'should apply fontSize by wrapping selection in span', () => {
@@ -3006,6 +3115,206 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 				text: '',
 				richText: null
 			} );
+		} );
+	} );
+
+	describe( '_removeFontSizeFromFragment', () => {
+		test( 'should handle null fragment', () => {
+			expect( () => editor._removeFontSizeFromFragment( null ) ).not.toThrow();
+		} );
+
+		test( 'should handle empty fragment', () => {
+			const fragment = document.createDocumentFragment();
+			expect( () => editor._removeFontSizeFromFragment( fragment ) ).not.toThrow();
+		} );
+
+		test( 'should remove font-size style from spans', () => {
+			const fragment = document.createDocumentFragment();
+			const span = document.createElement( 'span' );
+			span.style.fontSize = '16px';
+			span.style.fontWeight = 'bold';
+			span.textContent = 'Test';
+			fragment.appendChild( span );
+
+			editor._removeFontSizeFromFragment( fragment );
+
+			const cleanedSpan = fragment.querySelector( 'span' );
+			expect( cleanedSpan.style.fontSize ).toBe( '' );
+			expect( cleanedSpan.style.fontWeight ).toBe( 'bold' );
+		} );
+
+		test( 'should remove data-font-size attribute from spans', () => {
+			const fragment = document.createDocumentFragment();
+			const span = document.createElement( 'span' );
+			span.dataset.fontSize = '32';
+			span.style.fontWeight = 'bold';
+			span.textContent = 'Test';
+			fragment.appendChild( span );
+
+			editor._removeFontSizeFromFragment( fragment );
+
+			const cleanedSpan = fragment.querySelector( 'span' );
+			expect( cleanedSpan.dataset.fontSize ).toBeUndefined();
+			expect( cleanedSpan.style.fontWeight ).toBe( 'bold' );
+		} );
+
+		test( 'should remove nested font-size styling', () => {
+			const fragment = document.createDocumentFragment();
+			const outer = document.createElement( 'span' );
+			outer.style.fontSize = '20px';
+			outer.dataset.fontSize = '40';
+			const inner = document.createElement( 'span' );
+			inner.style.fontSize = '16px';
+			inner.dataset.fontSize = '32';
+			inner.textContent = 'Nested';
+			outer.appendChild( inner );
+			fragment.appendChild( outer );
+
+			editor._removeFontSizeFromFragment( fragment );
+
+			const spans = fragment.querySelectorAll( 'span' );
+			for ( const span of spans ) {
+				expect( span.style.fontSize ).toBe( '' );
+				expect( span.dataset.fontSize ).toBeUndefined();
+			}
+		} );
+
+		test( 'should preserve non-font-size styles', () => {
+			const fragment = document.createDocumentFragment();
+			const span = document.createElement( 'span' );
+			span.style.fontSize = '16px';
+			span.style.color = 'red';
+			span.style.fontFamily = 'Arial';
+			span.dataset.fontSize = '32';
+			span.textContent = 'Styled';
+			fragment.appendChild( span );
+
+			editor._removeFontSizeFromFragment( fragment );
+
+			const cleanedSpan = fragment.querySelector( 'span' );
+			expect( cleanedSpan.style.color ).toBe( 'red' );
+			expect( cleanedSpan.style.fontFamily ).toBe( 'Arial' );
+		} );
+	} );
+
+	describe( '_getSelectionFormatInfo', () => {
+		test( 'should return layer defaults when no selection', () => {
+			editor.editingLayer = { fontSize: 24, fontFamily: 'Georgia' };
+			window.getSelection = jest.fn( () => ( { rangeCount: 0 } ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			expect( info.fontSize ).toBe( 24 );
+			expect( info.fontFamily ).toBe( 'Georgia' );
+		} );
+
+		test( 'should return defaults from 16/Arial if layer has no font info', () => {
+			editor.editingLayer = { type: 'textbox' };
+			window.getSelection = jest.fn( () => ( { rangeCount: 0 } ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			expect( info.fontSize ).toBe( 16 );
+			expect( info.fontFamily ).toBe( 'Arial' );
+		} );
+
+		test( 'should extract fontSize from data attribute', () => {
+			const container = document.createElement( 'div' );
+			const span = document.createElement( 'span' );
+			span.dataset.fontSize = '32';
+			span.textContent = 'Test';
+			container.appendChild( span );
+			editor.editorElement = container;
+			editor.editingLayer = { fontSize: 16, fontFamily: 'Arial' };
+
+			const textNode = span.firstChild;
+			window.getSelection = jest.fn( () => ( {
+				rangeCount: 1,
+				anchorNode: textNode
+			} ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			expect( info.fontSize ).toBe( 32 );
+		} );
+
+		test( 'should extract fontFamily from inline style', () => {
+			const container = document.createElement( 'div' );
+			const span = document.createElement( 'span' );
+			span.style.fontFamily = 'Georgia, serif';
+			span.textContent = 'Test';
+			container.appendChild( span );
+			editor.editorElement = container;
+			editor.editingLayer = { fontSize: 16, fontFamily: 'Arial' };
+
+			const textNode = span.firstChild;
+			window.getSelection = jest.fn( () => ( {
+				rangeCount: 1,
+				anchorNode: textNode
+			} ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			expect( info.fontFamily ).toBe( 'Georgia' );
+		} );
+
+		test( 'should extract backgroundColor from inline style', () => {
+			const container = document.createElement( 'div' );
+			const span = document.createElement( 'span' );
+			span.style.backgroundColor = 'rgb(255, 255, 0)';
+			span.textContent = 'Test';
+			container.appendChild( span );
+			editor.editorElement = container;
+			editor.editingLayer = { fontSize: 16, fontFamily: 'Arial' };
+
+			const textNode = span.firstChild;
+			window.getSelection = jest.fn( () => ( {
+				rangeCount: 1,
+				anchorNode: textNode
+			} ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			expect( info.backgroundColor ).toBe( 'rgb(255, 255, 0)' );
+		} );
+
+		test( 'should return null backgroundColor when no highlight present', () => {
+			const container = document.createElement( 'div' );
+			const span = document.createElement( 'span' );
+			span.textContent = 'Test';
+			container.appendChild( span );
+			editor.editorElement = container;
+			editor.editingLayer = { fontSize: 16, fontFamily: 'Arial' };
+
+			const textNode = span.firstChild;
+			window.getSelection = jest.fn( () => ( {
+				rangeCount: 1,
+				anchorNode: textNode
+			} ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			expect( info.backgroundColor ).toBeNull();
+		} );
+
+		test( 'should ignore transparent backgroundColor', () => {
+			const container = document.createElement( 'div' );
+			const span = document.createElement( 'span' );
+			span.style.backgroundColor = 'transparent';
+			span.textContent = 'Test';
+			container.appendChild( span );
+			editor.editorElement = container;
+			editor.editingLayer = { fontSize: 16, fontFamily: 'Arial' };
+
+			const textNode = span.firstChild;
+			window.getSelection = jest.fn( () => ( {
+				rangeCount: 1,
+				anchorNode: textNode
+			} ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			expect( info.backgroundColor ).toBeNull();
 		} );
 	} );
 } );

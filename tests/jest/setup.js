@@ -163,6 +163,37 @@ if ( typeof global.mw === 'undefined' ) {
                     return this;
                 }
             };
+        },
+        // Mock mw.ext.layers namespace for LayerDefaults
+        ext: {
+            layers: {
+                LayerDefaults: {
+                    FONT_SIZE: 16,
+                    FONT_FAMILY: 'Arial, sans-serif',
+                    STROKE_WIDTH: 2,
+                    STROKE_COLOR: '#000000',
+                    MAX_STROKE_WIDTH: 50,
+                    OPACITY: 1,
+                    FILL_OPACITY: 1,
+                    SHADOW_BLUR: 8,
+                    MAX_SHADOW_BLUR: 64,
+                    SHADOW_OFFSET_X: 2,
+                    SHADOW_OFFSET_Y: 2,
+                    SHADOW_COLOR: '#000000',
+                    MAX_SHADOW_SPREAD: 50,
+                    MAX_TEXT_SHADOW_BLUR: 50,
+                    MIN_SLIDE_DIMENSION: 50,
+                    MAX_SLIDE_DIMENSION: 4096,
+                    MAX_HISTORY_SIZE: 50,
+                    MAX_IMAGE_CACHE_SIZE: 50,
+                    MAX_TEXT_LENGTH: 1000,
+                    MAX_TEXTAREA_LENGTH: 5000,
+                    FILL_COLOR: 'transparent',
+                    TEXT_STROKE_COLOR: '#000000',
+                    FRAME_INTERVAL_60FPS: 16,
+                    AUTO_SAVE_DEBOUNCE: 2000
+                }
+            }
         }
     };
 }

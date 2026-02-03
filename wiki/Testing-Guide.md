@@ -10,7 +10,7 @@ Layers uses multiple testing frameworks:
 
 | Framework | Language | Purpose | Coverage |
 |-----------|----------|---------|----------|
-| **Jest** | JavaScript | Unit tests | 95.44% |
+| **Jest** | JavaScript | Unit tests | 95.19% |
 | **PHPUnit** | PHP | Integration tests | Backend |
 | **Playwright** | JavaScript | E2E tests | Critical paths |
 

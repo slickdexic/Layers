@@ -344,6 +344,7 @@ class DrawingController {
 			textPosition: style.textPosition || 'above',
 			extensionLength: style.extensionLength || 10,
 			extensionGap: style.extensionGap || 3,
+			dimensionOffset: style.dimensionOffset || 15,
 			arrowSize: style.arrowSize || 8,
 			tickSize: style.tickSize || 6,
 			unit: style.unit || 'px',

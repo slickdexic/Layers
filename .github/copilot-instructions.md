@@ -51,6 +51,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ToolRegistry.js` (~371 lines) - tool configuration registry
     - `ToolStyles.js` (~508 lines) - style management for tools
   - Shared modules (`resources/ext.layers.shared/`): Used by both editor and viewer for consistent behavior:
+    - `LayerDefaults.js` (~210 lines) - **NEW**: Centralized constants for layer property defaults (FONT_SIZE, STROKE_WIDTH, OPACITY, shadow limits, slide dimensions, cache sizes, text lengths). Access via `mw.ext.layers.LayerDefaults`. Object.freeze() applied to prevent modification.
     - `DeepClone.js` - Object cloning utilities including `omitProperty(obj, propName)` for creating copies without specific properties (avoids eslint-disable for destructuring)
     - `LayerDataNormalizer.js` (~325 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
     - `GradientRenderer.js` (~392 lines) - Gradient fill utility for creating linear/radial Canvas gradients from layer definitions. Static `hasGradient()` check, `createGradient()` method, 6 built-in presets (sunset, ocean, forest, fire, steel, rainbow), validation and cloning utilities.
@@ -237,7 +238,7 @@ Important: Unknown or invalid fields are dropped server-side. Keep editor state 
 
 Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersEnable (LayersEnable): master switch (default true)
-- $wgLayersDebug (LayersDebug): verbose logging to 'Layers' channel (default true)
+- $wgLayersDebug (LayersDebug): verbose logging to 'Layers' channel (default false)
 - $wgLayersMaxBytes (LayersMaxBytes): max JSON size per set (default 2MB)
 - $wgLayersMaxLayerCount (LayersMaxLayerCount): max layers per set (default 100)
 - $wgLayersMaxImageBytes (LayersMaxImageBytes): max size for imported image layers (default 1MB, see recommendations below)
@@ -393,14 +394,14 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,157 tests in 163 suites — verified February 1, 2026)
-- Coverage (95.44% statement, 85.20% branch — verified February 1, 2026)
-- JavaScript file count (141 files total, ~92,338 lines)
-- PHP file count (42 files, ~14,800 lines)
+- Test count (11,210 tests in 165 suites — verified February 3, 2026)
+- Coverage (95.19% statement, 84.96% branch — verified February 3, 2026)
+- JavaScript file count (142 files total, ~95,433 lines)
+- PHP file count (42 files, ~14,907 lines)
 - God class count (18 files >1,000 lines; 2 generated data files, 14 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.47)
+- Version number (1.5.49)

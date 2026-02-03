@@ -4,7 +4,7 @@
  * Extracted from LayerRenderer.js to prevent that file from exceeding 1,000 lines.
  * This module handles:
  * - Image layer rendering with opacity, rotation, and shadow support
- * - LRU caching of loaded images (max 50 entries)
+ * - LRU caching of loaded images (max defined by LayerDefaults)
  * - Placeholder display while images are loading
  *
  * @module ImageLayerRenderer
@@ -13,11 +13,18 @@
 ( function () {
 	'use strict';
 
-	/**
-	 * Maximum number of images to cache (LRU eviction when exceeded)
-	 * @type {number}
-	 */
-	const MAX_IMAGE_CACHE_SIZE = 50;
+	// Default values fallback (for test environments where mw.ext may not be fully mocked)
+	const DEFAULT_VALUES = {
+		MAX_IMAGE_CACHE_SIZE: 50
+	};
+
+	// Import defaults from centralized constants (lazy-loaded, with fallback for tests)
+	const getDefaults = () => {
+		if ( typeof mw !== 'undefined' && mw.ext && mw.ext.layers && mw.ext.layers.LayerDefaults ) {
+			return mw.ext.layers.LayerDefaults;
+		}
+		return DEFAULT_VALUES;
+	};
 
 	/**
 	 * ImageLayerRenderer class - Renders image layers on a canvas
@@ -134,7 +141,7 @@
 		 * @return {number} Maximum number of cached images
 		 */
 		static get MAX_CACHE_SIZE() {
-			return MAX_IMAGE_CACHE_SIZE;
+			return getDefaults().MAX_IMAGE_CACHE_SIZE;
 		}
 
 		/**
@@ -160,7 +167,7 @@
 			}
 
 			// Evict oldest entry if cache is full (LRU eviction)
-			if ( this._imageCache.size >= MAX_IMAGE_CACHE_SIZE ) {
+			if ( this._imageCache.size >= getDefaults().MAX_IMAGE_CACHE_SIZE ) {
 				const oldestKey = this._imageCache.keys().next().value;
 				this._imageCache.delete( oldestKey );
 			}
@@ -169,14 +176,11 @@
 			const img = new Image();
 			this._imageCache.set( cacheKey, img );
 
-			// Store reference to this for closure
-			const self = this;
-
 			// Request redraw when image loads
 			img.onload = () => {
 				// Use the configured callback (preferred)
-				if ( self.onImageLoad && typeof self.onImageLoad === 'function' ) {
-					self.onImageLoad();
+				if ( this.onImageLoad && typeof this.onImageLoad === 'function' ) {
+					this.onImageLoad();
 				}
 				// Fallback to global requestRedraw if available
 				else if ( typeof window !== 'undefined' && window.Layers && window.Layers.requestRedraw ) {

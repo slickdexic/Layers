@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** February 2, 2026
-**Version:** 1.5.46
+**Version:** 1.5.49
 
 ---
 
@@ -29,16 +29,16 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~14,354 lines (generated) |
-| ES6 classes | **141** |
+| ES6 classes | **142** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.44% stmt, 85.20% branch** |
-| Jest tests | **11,157** (163 suites) |
+| Test coverage | **95.19% stmt, 84.96% branch** |
+| Jest tests | **11,210** (165 suites) |
 | PHPUnit test files | 24 |
 | God classes (>1000 lines) | **18** (2 generated, 14 JS, 2 PHP) |
 | Drawing tools | **15** |
 | Shape library | **1,310 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **667** |
+| i18n messages | **749** |
 | eslint-disable comments | **11** ✅ |
 
 ---
@@ -915,7 +915,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **11,157 tests, 95.44% statement coverage, 85.20% branch coverage**
+- **11,210 tests, 95.19% statement coverage, 84.96% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -992,7 +992,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,157 tests, 163 suites)
+│   ├── jest/                # Unit tests (11,210 tests, 165 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

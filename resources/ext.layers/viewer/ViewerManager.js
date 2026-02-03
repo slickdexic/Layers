@@ -449,7 +449,6 @@ class ViewerManager {
 		}
 
 		const api = new mw.Api();
-		const self = this;
 		let refreshCount = 0;
 		const errors = [];
 
@@ -477,7 +476,7 @@ class ViewerManager {
 			return api.get( params ).then( ( data ) => {
 				try {
 					if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
-						self.debugLog( 'refreshAllViewers: no layerset for', filename );
+						this.debugLog( 'refreshAllViewers: no layerset for', filename );
 						return false;
 					}
 
@@ -513,19 +512,19 @@ class ViewerManager {
 							? parseFloat( layerset.data.backgroundOpacity ) : 1.0
 					};
 
-					const success = self.reinitializeViewer( img, payload );
+					const success = this.reinitializeViewer( img, payload );
 					if ( success ) {
 						refreshCount++;
-						self.debugLog( 'refreshAllViewers: refreshed viewer for', filename );
+						this.debugLog( 'refreshAllViewers: refreshed viewer for', filename );
 					}
 					return { success: success, filename: filename };
 				} catch ( e ) {
-					self.debugWarn( 'refreshAllViewers: error processing', filename, e );
+					this.debugWarn( 'refreshAllViewers: error processing', filename, e );
 					errors.push( { filename: filename, error: e.message || String( e ) } );
 					return { success: false, filename: filename };
 				}
 			} ).catch( ( apiErr ) => {
-				self.debugWarn( 'refreshAllViewers: API error for', filename, apiErr );
+				this.debugWarn( 'refreshAllViewers: API error for', filename, apiErr );
 				const errMsg = apiErr && apiErr.message ? apiErr.message :
 					( apiErr && apiErr.error && apiErr.error.info ? apiErr.error.info : String( apiErr ) );
 				errors.push( { filename: filename, error: errMsg } );
@@ -536,13 +535,13 @@ class ViewerManager {
 		// Use concurrency limiter to avoid overwhelming server (P3.5)
 		return this._processWithConcurrency( viewerImages, processViewer ).then( ( results ) => {
 			const failed = results.filter( ( r ) => !r.success ).length;
-			self.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'of', viewerImages.length, 'image viewers' );
+			this.debugLog( 'refreshAllViewers: completed, refreshed', refreshCount, 'of', viewerImages.length, 'image viewers' );
 			if ( errors.length > 0 ) {
-				self.debugWarn( 'refreshAllViewers:', errors.length, 'errors occurred:', errors );
+				this.debugWarn( 'refreshAllViewers:', errors.length, 'errors occurred:', errors );
 			}
 
 			// Also refresh all slide viewers
-			return self.refreshAllSlides().then( ( slideResults ) => {
+			return this.refreshAllSlides().then( ( slideResults ) => {
 				return {
 					refreshed: refreshCount + slideResults.refreshed,
 					failed: failed + slideResults.failed,
@@ -726,7 +725,6 @@ class ViewerManager {
 		}
 
 		const api = new mw.Api();
-		const self = this;
 
 		images.forEach( ( img ) => {
 			// Skip if already initialized or pending
@@ -761,7 +759,7 @@ class ViewerManager {
 			api.get( params ).then( ( data ) => {
 				try {
 					if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
-						self.debugLog( 'No layerset returned for large image' );
+						this.debugLog( 'No layerset returned for large image' );
 						return;
 					}
 
@@ -778,7 +776,7 @@ class ViewerManager {
 					}
 
 					if ( !layersArr || !layersArr.length ) {
-						self.debugLog( 'No layers in fetched data for large image' );
+						this.debugLog( 'No layers in fetched data for large image' );
 						return;
 					}
 
@@ -798,16 +796,16 @@ class ViewerManager {
 							? parseFloat( layerset.data.backgroundOpacity ) : 1.0
 					};
 
-						const success = self.initializeViewer( img, payload );
+						const success = this.initializeViewer( img, payload );
 					if ( !success ) {
 						img.layersPending = false;
 					}
 				} catch ( e2 ) {
-					self.debugWarn( 'Error processing fetched large image data:', e2 );
+					this.debugWarn( 'Error processing fetched large image data:', e2 );
 					img.layersPending = false;
 				}
 			} ).catch( ( apiErr ) => {
-				self.debugWarn( 'API request failed for large image:', apiErr );
+				this.debugWarn( 'API request failed for large image:', apiErr );
 				img.layersPending = false;
 			} );
 		} );

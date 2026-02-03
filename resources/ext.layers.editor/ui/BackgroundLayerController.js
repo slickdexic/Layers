@@ -374,15 +374,14 @@
 		 */
 		openColorPicker( anchorElement ) {
 			const currentColor = this.getSlideBackgroundColor();
-			const self = this;
 
 			// Use toolbar's color picker if available
 			if ( this.editor && this.editor.toolbar &&
 				typeof this.editor.toolbar.openColorPickerDialog === 'function' ) {
 				this.editor.toolbar.openColorPickerDialog( anchorElement, currentColor, {
 					allowTransparent: true,
-					onApply: function ( newColor ) {
-						self.setSlideBackgroundColor( newColor );
+					onApply: ( newColor ) => {
+						this.setSlideBackgroundColor( newColor );
 					}
 				} );
 			} else {
@@ -395,13 +394,13 @@
 				colorInput.style.pointerEvents = 'none';
 				document.body.appendChild( colorInput );
 
-				colorInput.addEventListener( 'change', function () {
-					self.setSlideBackgroundColor( colorInput.value );
+				colorInput.addEventListener( 'change', () => {
+					this.setSlideBackgroundColor( colorInput.value );
 					document.body.removeChild( colorInput );
 				} );
 
-				colorInput.addEventListener( 'blur', function () {
-					setTimeout( function () {
+				colorInput.addEventListener( 'blur', () => {
+					setTimeout( () => {
 						if ( colorInput.parentNode ) {
 							document.body.removeChild( colorInput );
 						}

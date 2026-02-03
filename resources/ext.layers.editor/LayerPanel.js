@@ -247,12 +247,11 @@
 			}
 
 			// Handle changes
-			const self = this;
-			const handler = function () {
+			const handler = () => {
 				const value = parseInt( input.value, 10 );
 				if ( !isNaN( value ) && value >= 100 && value <= 4000 ) {
-					if ( self.backgroundLayerController && self.backgroundLayerController.setCanvasDimension ) {
-						self.backgroundLayerController.setCanvasDimension( dimension, value );
+					if ( this.backgroundLayerController && this.backgroundLayerController.setCanvasDimension ) {
+						this.backgroundLayerController.setCanvasDimension( dimension, value );
 					}
 				}
 			};
@@ -286,10 +285,9 @@
 			// Apply initial color using shared helper
 			this.updateSwatchColor( swatch, color );
 
-			const self = this;
-			const clickHandler = function () {
-				if ( self.backgroundLayerController && self.backgroundLayerController.openColorPicker ) {
-					self.backgroundLayerController.openColorPicker( swatch );
+			const clickHandler = () => {
+				if ( this.backgroundLayerController && this.backgroundLayerController.openColorPicker ) {
+					this.backgroundLayerController.openColorPicker( swatch );
 				}
 			};
 

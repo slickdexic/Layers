@@ -1160,9 +1160,12 @@ class LayersDatabase {
 		];
 
 		// Add prefix filter if provided
+		// Use buildLike for proper LIKE wildcard escaping (consistency with listSlides)
 		if ( $prefix !== '' ) {
-			$escapedPrefix = $dbr->addQuotes( LayersConstants::SLIDE_PREFIX . $prefix . '%' );
-			$conditions[] = 'ls_img_name LIKE ' . $escapedPrefix;
+			$conditions[] = 'ls_img_name ' . $dbr->buildLike(
+				LayersConstants::SLIDE_PREFIX . $prefix,
+				$dbr->anyString()
+			);
 		}
 
 		$count = $dbr->selectField(
