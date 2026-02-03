@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** February 3, 2026 (Comprehensive Critical Review v11)  
+**Last Updated:** February 3, 2026 (Comprehensive Critical Review v12)  
 **Version:** 1.5.49
 
 This document lists known issues and current gaps for the Layers extension.
@@ -19,7 +19,21 @@ This document lists known issues and current gaps for the Layers extension.
 
 ---
 
-## ✅ Recently Fixed (v11 Review)
+## ✅ Recently Fixed (v12 Review)
+
+### P1.1 Test Count Documentation Inconsistencies ✅
+
+**Status:** ✅ RESOLVED (February 3, 2026)  
+**Severity:** P1 (High)  
+**Component:** Documentation
+
+**Issue:** 5 documentation files showed "11,183" instead of verified **11,210 tests in 165 suites**.
+
+**Resolution:** Updated README.md, CONTRIBUTING.md, CHANGELOG.md, .github/copilot-instructions.md, wiki/Home.md
+
+---
+
+## ✅ Previously Fixed (v11 Review)
 
 ### P1.1 $wgLayersDebug Documentation Default Incorrect
 

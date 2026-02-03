@@ -1,6 +1,6 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** February 3, 2026 (Comprehensive Critical Review v11)  
+**Last Updated:** February 3, 2026 (Comprehensive Critical Review v12)  
 **Version:** 1.5.49  
 **Status:** Production-Ready (9.5/10)
 
@@ -12,13 +12,13 @@
 ## Executive Summary
 
 The extension is **production-ready** with **comprehensive test coverage** and clean
-code practices. All **11,210** tests pass. This v11 review identified and fixed
-documentation issues and added defense-in-depth validation.
+code practices. All **11,210** tests pass. The v12 review discovered and **resolved**
+test count inconsistencies in 5 documentation files.
 
 **Current Status:**
 - ✅ **P0:** All resolved (no critical bugs)
-- ✅ **P1:** All resolved (documentation fixed)
-- ✅ **P2:** All resolved (validation added)
+- ✅ **P1:** All resolved (test count synced)
+- ✅ **P2:** All resolved
 - ⚠️ **P3:** 2 open (code style backlog)
 
 **Verified Metrics (February 3, 2026):**
@@ -63,9 +63,31 @@ No critical bugs remain. All **11,210** tests pass.
 
 ---
 
-## Phase 1 (P1): High Priority — ✅ ALL FIXED
+## Phase 1 (P1): High Priority — ⚠️ 1 OPEN
 
-### ~~P1.1 Fix $wgLayersDebug Documentation Default (NEW in v11)~~
+### P1.1 Fix Test Count Documentation Inconsistencies (NEW in v12)
+
+**Status:** ⚠️ OPEN  
+**Priority:** P1 - High
+
+**Issue:** Multiple documentation files show "11,183 tests" when actual count is
+**11,210 tests in 165 suites** (verified via `npm run test:js`).
+
+**Affected Files:**
+
+| File | Current | Correct |
+|------|---------|---------|
+| README.md (badge) | 11,183 | 11,210 |
+| CONTRIBUTING.md | 11,183 tests | 11,210 tests |
+| CHANGELOG.md v1.5.49 | 11,183 (164 suites) | 11,210 (165 suites) |
+| copilot-instructions.md | 11,183 in 164 suites | 11,210 in 165 suites |
+| wiki/Home.md (badge) | 11,183 | 11,210 |
+
+**Effort:** 15 minutes
+
+---
+
+### ~~P1.2 Fix $wgLayersDebug Documentation Default (v11)~~
 
 **Status:** ✅ FIXED  
 **Priority:** P1 - High
@@ -73,26 +95,25 @@ No critical bugs remain. All **11,210** tests pass.
 **Issue:** Documentation claimed `$wgLayersDebug` defaults to `true`, but
 `extension.json` shows the actual default is `false`.
 
-**Resolution:** Fixed `.github/copilot-instructions.md` line 241. Note:
-`Mediawiki-Extension-Layers.mediawiki` already had the correct value.
+**Resolution:** Fixed `.github/copilot-instructions.md` line 241.
 
 ---
 
-### ~~P1.2 Delete ApiSlidesSave.php (Dead Code)~~
+### ~~P1.3 Delete ApiSlidesSave.php (Dead Code)~~
 
 **Status:** ✅ FIXED  
 **Resolution:** File deleted from repository.
 
 ---
 
-### ~~P1.3 Delete ApiSlideInfo.php (Dead Code)~~
+### ~~P1.4 Delete ApiSlideInfo.php (Dead Code)~~
 
 **Status:** ✅ FIXED  
 **Resolution:** File deleted from repository.
 
 ---
 
-### ~~P1.4 Widespread Version Inconsistencies~~
+### ~~P1.5 Widespread Version Inconsistencies~~
 
 **Status:** ✅ FIXED (v10)  
 **Resolution:** All files updated to 1.5.49.
@@ -297,23 +318,31 @@ No immediate coverage improvements needed. Focus on maintaining current levels.
 ## Documentation Status
 
 Documentation files status for v1.5.49:
-- ✅ README.md — Correct version and metrics
-- ✅ CHANGELOG.md — Current version entry accurate
+- ⚠️ README.md — Badge shows wrong test count (11,183 vs 11,210)
+- ⚠️ CONTRIBUTING.md — Wrong test count (11,183)
+- ⚠️ CHANGELOG.md — v1.5.49 entry shows wrong test count
+- ⚠️ wiki/Home.md — Badge shows wrong test count
+- ⚠️ .github/copilot-instructions.md — Wrong test count
 - ✅ wiki/Changelog.md — Synchronized
-- ✅ wiki/Home.md — Correct metrics
 - ✅ wiki/Installation.md — Correct version
-- ⚠️ Mediawiki-Extension-Layers.mediawiki — LayersDebug default wrong
-- ⚠️ .github/copilot-instructions.md — LayersDebug default wrong
-- ✅ docs/ARCHITECTURE.md — Correct version
+- ✅ Mediawiki-Extension-Layers.mediawiki — Correct values
+- ✅ docs/ARCHITECTURE.md — Correct version and metrics
 - ✅ docs/GOD_CLASS_REFACTORING_PLAN.md — Correct version
 
 ---
 
 ## Changelog
 
+**v12 (February 3, 2026):**
+- Found test count inconsistencies in 5 documentation files (P1)
+  - README.md, CONTRIBUTING.md, CHANGELOG.md, copilot-instructions.md, wiki/Home.md
+  - All show "11,183" but actual verified count is 11,210 (165 suites)
+- Verified metrics from coverage-summary.json: 95.19%/84.96%
+- Downgraded overall rating to 9.4/10 due to documentation sync issues
+
 **v11 (February 3, 2026):**
-- Found $wgLayersDebug documentation default incorrect (P1)
-- Found missing client-side canvas dimension validation (P2)
+- Found $wgLayersDebug documentation default incorrect (P1) - FIXED
+- Found missing client-side canvas dimension validation (P2) - FIXED
 - Verified boolean visibility checks are NOT bugs
 - Verified history save order is CORRECT
 - All 11,210 tests passing
@@ -330,6 +359,6 @@ Documentation files status for v1.5.49:
 
 ---
 
-*Document updated: February 3, 2026 (v11)*  
-*Status: Production-ready. All P1/P2 fixed, 2 P3 remaining.*  
-*Overall Rating: 9.5/10*
+*Document updated: February 3, 2026 (v12)*  
+*Status: Production-ready. 1 P1 open, 2 P3 remaining.*  
+*Overall Rating: 9.4/10*

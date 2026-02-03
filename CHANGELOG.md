@@ -24,7 +24,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Technical Details
 - InlineTextEditor.js: +45 lines for toggle format handling and backgroundColor detection
 - RichTextToolbar.js: +25 lines for `updateFromSelection()` method and `_isInteracting` guard
-- All 11,183 tests pass (164 test suites) ✅
+- All 11,210 tests pass (165 test suites) ✅
 
 ---
 
