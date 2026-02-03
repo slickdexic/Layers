@@ -45,9 +45,9 @@ Zoom now anchors at the mouse pointer position.
 
 ---
 
-### 3. Draggable Dimension Tool (FR-14)
+### 3. Draggable Dimension Tool (FR-14) — 🔴 HIGH VALUE
 
-**Priority:** MEDIUM  
+**Priority:** HIGH  
 **Complexity:** Medium  
 **Status:** ⏳ Proposed (January 25, 2026)
 
@@ -89,9 +89,9 @@ Enhance the Dimension tool to support dragging the dimension line independently 
 
 ---
 
-### 4. Angle Dimension Tool (FR-15)
+### 4. Angle Dimension Tool (FR-15) — 🔴 HIGH VALUE
 
-**Priority:** MEDIUM  
+**Priority:** HIGH  
 **Complexity:** High  
 **Status:** ⏳ Proposed (January 25, 2026)
 
@@ -510,9 +510,9 @@ Pre-built annotation templates.
 
 ### Layer Linking / Hotspots
 
-**Complexity:** Medium | **Value:** High for documentation
+**Complexity:** Medium | **Value:** Low | **Priority:** Backlog
 
-Make layers clickable to navigate to wiki pages.
+Make layers clickable to navigate to wiki pages. Low priority - may revisit later.
 - Click a layer to navigate to linked page
 - Tooltip preview on hover
 - Image maps with multiple clickable regions
@@ -544,12 +544,6 @@ Self-hosted font library with 32 Google Fonts bundled as WOFF2 files.
 - ✅ No external requests to Google (privacy-focused)
 - ✅ `FontConfig.js` manages font categories and display names
 - ✅ Font selector dropdown in toolbar and properties panel
-
-### SVG Export
-
-**Complexity:** Low | **Value:** Medium
-
-Export annotations as SVG for use in vector graphics software.
 
 ---
 
