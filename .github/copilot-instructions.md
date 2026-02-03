@@ -238,7 +238,7 @@ Important: Unknown or invalid fields are dropped server-side. Keep editor state 
 
 Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersEnable (LayersEnable): master switch (default true)
-- $wgLayersDebug (LayersDebug): verbose logging to 'Layers' channel (default true)
+- $wgLayersDebug (LayersDebug): verbose logging to 'Layers' channel (default false)
 - $wgLayersMaxBytes (LayersMaxBytes): max JSON size per set (default 2MB)
 - $wgLayersMaxLayerCount (LayersMaxLayerCount): max layers per set (default 100)
 - $wgLayersMaxImageBytes (LayersMaxImageBytes): max size for imported image layers (default 1MB, see recommendations below)
