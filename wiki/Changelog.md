@@ -16,7 +16,7 @@ Version history for the Layers extension.
 - **Cursor-Only Formatting** — Toggle formats (bold, italic, etc.) now set typing state for next characters when cursor is placed but no text selected
 
 ### Technical Details
-- 11,183 tests passing (164 suites)
+- 11,210 tests passing (165 suites)
 - 95.44% statement, 85.20% branch coverage
 - InlineTextEditor.js: +45 lines for toggle format and backgroundColor detection
 - RichTextToolbar.js: +25 lines for `updateFromSelection()` method

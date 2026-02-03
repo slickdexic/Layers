@@ -178,7 +178,7 @@ The undo system works correctly.
 ### ~~P2.4 Test Count/Coverage Documentation Mismatch~~
 
 **Status:** ✅ FIXED (v10)  
-**Resolution:** Updated to 11,183 tests, 95.19%/84.96% coverage.
+**Resolution:** Updated to 11,210 tests, 95.19%/84.96% coverage.
 
 ---
 
@@ -256,8 +256,8 @@ Support for variable font axes (weight, width, slant) in text layers.
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests total | **11,183** (164 suites) | ✅ |
-| Tests passing | **11,183** | ✅ All pass |
+| Tests total | **11,210** (165 suites) | ✅ |
+| Tests passing | **11,210** | ✅ All pass |
 | Tests failing | **0** | ✅ |
 | Statement coverage | **95.19%** | ✅ Excellent |
 | Branch coverage | **84.96%** | ✅ Good |

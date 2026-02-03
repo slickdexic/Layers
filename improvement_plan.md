@@ -12,7 +12,7 @@
 ## Executive Summary
 
 The extension is **production-ready** with **comprehensive test coverage** and clean
-code practices. All **11,183** tests pass. This v11 review identified and fixed
+code practices. All **11,210** tests pass. This v11 review identified and fixed
 documentation issues and added defense-in-depth validation.
 
 **Current Status:**
@@ -25,8 +25,8 @@ documentation issues and added defense-in-depth validation.
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Tests total | **11,183** (164 suites) | ✅ Excellent |
-| Tests passing | **11,183** | ✅ All pass |
+| Tests total | **11,210** (165 suites) | ✅ Excellent |
+| Tests passing | **11,210** | ✅ All pass |
 | Tests skipped | **0** | ✅ Clean |
 | Statement coverage | **95.19%** | ✅ Excellent |
 | Branch coverage | **84.96%** | ✅ Good |
@@ -59,7 +59,7 @@ documentation issues and added defense-in-depth validation.
 
 ## Phase 0 (P0): Critical Issues — ✅ ALL RESOLVED
 
-No critical bugs remain. All **11,183** tests pass.
+No critical bugs remain. All **11,210** tests pass.
 
 ---
 
@@ -138,7 +138,7 @@ to match `LayerDefaults.js` constants. Uses validated values throughout the meth
 ### ~~P2.5 Test Count/Coverage Documentation Mismatch~~
 
 **Status:** ✅ FIXED (v10)  
-**Resolution:** Metrics updated to 11,183/164 and 95.19%/84.96%.
+**Resolution:** Metrics updated to 11,210/164 and 95.19%/84.96%.
 
 ---
 
@@ -316,7 +316,7 @@ Documentation files status for v1.5.49:
 - Found missing client-side canvas dimension validation (P2)
 - Verified boolean visibility checks are NOT bugs
 - Verified history save order is CORRECT
-- All 11,183 tests passing
+- All 11,210 tests passing
 
 **v10 (February 2, 2026):**
 - Fixed version inconsistencies across all documentation
