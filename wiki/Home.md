@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C157%20passing-brightgreen" alt="11,157 Tests">
-  <img src="https://img.shields.io/badge/Coverage-95.44%25-brightgreen" alt="95.44% Coverage">
+  <img src="https://img.shields.io/badge/Tests-11%2C210%20passing-brightgreen" alt="11,210 Tests">
+  <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,10 +20,15 @@
 
 ---
 
-## 🆕 What's New in v1.5.47
+## 🆕 What's New in v1.5.49
+
+- **Documentation Synchronization** — Comprehensive audit and sync of all version/metrics across 97+ files
+- **Self-Hosted Font Library** — 32 Google Fonts bundled as WOFF2 files (~2.5MB, 106 files)
+- **Privacy-Respecting** — No external font requests to Google
+
+### Previous v1.5.47 Highlights
 
 - **Self-Hosted Font Library** — 32 Google Fonts now bundled as WOFF2 files (~2.5MB, 106 files)
-- **Privacy-Respecting** — No external font requests to Google (previously used @import from fonts.googleapis.com)
 - **Font Categories** — Sans-serif (14), Serif (6), Display (4), Handwriting (4), Monospace (4)
 
 ### Previous v1.5.46 Highlights
@@ -58,7 +63,7 @@
 - **All P0-P3 Issues Resolved** — TailCalculator, API bugs, N+1 queries, and UX issues all fixed
 - **UX Improvements** — Easier drag handle clicking (4px tolerance), smaller overlay buttons
 - **Code Quality** — New `LayersApiHelperTrait` extracts common API patterns
-- **11,157 tests passing** (163 suites), 95.44% statement coverage, 85.20% branch coverage
+- **11,210 tests passing** (165 suites), 95.19% statement coverage, 84.96% branch coverage
 
 ### Previous v1.5.39 Highlights
 
@@ -294,21 +299,21 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.47 |
-| **Version (REL1_43)** | 1.5.47-REL1_43 |
-| **Version (REL1_39)** | 1.5.47-REL1_39 |
+| **Version (main)** | 1.5.50 |
+| **Version (REL1_43)** | 1.5.49-REL1_43 |
+| **Version (REL1_39)** | 1.5.49-REL1_39 |
 | **Release Date** | February 2, 2026 |
-| **Test Suites** | 163 |
-| **Total Tests** | 11,157 |
+| **Test Suites** | 164 |
+| **Total Tests** | 11,210 |
 | **PHPUnit Test Files** | 24 |
-| **Statement Coverage** | 95.44% |
-| **Branch Coverage** | 85.20% |
-| **Function Coverage** | 93.75% |
-| **Line Coverage** | 95.56% |
-| **JavaScript Files** | 141 |
-| **ES6 Classes** | 141 |
+| **Statement Coverage** | 95.19% |
+| **Branch Coverage** | 84.96% |
+| **Function Coverage** | 93.67% |
+| **Line Coverage** | 95.32% |
+| **JavaScript Files** | 142 |
+| **ES6 Classes** | 142 |
 | **God Classes** | 18 (2 generated, 14 JS, 2 PHP) |
-| **i18n Messages** | 667 |
+| **i18n Messages** | 749 |
 
 ---
 

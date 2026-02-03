@@ -34,6 +34,11 @@ class RenderCoordinator {
 		this.fallbackTimeoutId = null; // For environments without rAF
 		this.isDestroyed = false;
 
+		// Layer change detection for skipping redundant redraws
+		// Stores a quick hash of the last rendered state
+		this.lastLayersHash = null;
+		this.forceNextRedraw = false; // Force redraw even if hash matches
+
 		// Dirty region tracking (for future partial redraw optimization)
 		this.dirtyRegions = [];
 		this.fullRedrawRequired = true;
@@ -144,8 +149,19 @@ class RenderCoordinator {
 					? this.canvasManager.editor.layers
 					: [];
 
-				// Future optimization: use dirty regions for partial redraws
-				// For now, always do full redraw
+				// Check if we can skip redraw (layers unchanged and not forced)
+				if ( !this.forceNextRedraw && !this.fullRedrawRequired ) {
+					const currentHash = this._computeLayersHash( layers );
+					if ( currentHash === this.lastLayersHash ) {
+						// Skip redraw - nothing changed
+						return;
+					}
+					this.lastLayersHash = currentHash;
+				}
+
+				// Reset force flag after using it
+				this.forceNextRedraw = false;
+
 				this.canvasManager.renderer.redraw( layers );
 			}
 
@@ -165,6 +181,47 @@ class RenderCoordinator {
 				this._recordRenderTime( renderTime );
 			}
 		}
+	}
+
+	/**
+	 * Compute a quick hash of the layers state for change detection.
+	 * This is not cryptographic - just needs to detect changes.
+	 *
+	 * @param {Array} layers - Array of layer objects
+	 * @return {string} Hash string
+	 * @private
+	 */
+	_computeLayersHash ( layers ) {
+		if ( !layers || layers.length === 0 ) {
+			return 'empty';
+		}
+		// Include layer count and key properties that affect rendering
+		const parts = [ layers.length.toString() ];
+		for ( let i = 0; i < layers.length && i < 20; i++ ) {
+			const layer = layers[ i ];
+			// Include key properties that affect rendering
+			parts.push(
+				layer.id || '',
+				layer.x || 0,
+				layer.y || 0,
+				layer.width || 0,
+				layer.height || 0,
+				layer.rotation || 0,
+				layer.visible !== false ? '1' : '0',
+				layer.opacity || 1
+			);
+		}
+		// Also include selection state and zoom/pan
+		if ( this.canvasManager ) {
+			const renderer = this.canvasManager.renderer;
+			if ( renderer ) {
+				parts.push( renderer.zoom || 1 );
+				parts.push( renderer.panX || 0 );
+				parts.push( renderer.panY || 0 );
+				parts.push( ( renderer.selectedLayerIds || [] ).join( ',' ) );
+			}
+		}
+		return parts.join( '|' );
 	}
 
 	/**
@@ -306,6 +363,29 @@ class RenderCoordinator {
 	}
 
 	/**
+	 * Force the next redraw to happen even if layer hash matches.
+	 * Useful when UI state changes that isn't captured in the layer hash.
+	 *
+	 * @return {RenderCoordinator}
+	 */
+	forceRedraw () {
+		this.forceNextRedraw = true;
+		this.lastLayersHash = null;
+		return this.scheduleRedraw();
+	}
+
+	/**
+	 * Invalidate the cached layer hash, forcing a full redraw on next request.
+	 * Call this when the background, selection, or other non-layer state changes.
+	 *
+	 * @return {RenderCoordinator}
+	 */
+	invalidateRenderCache () {
+		this.lastLayersHash = null;
+		return this;
+	}
+
+	/**
 	 * Cancel any pending redraw
 	 * @return {RenderCoordinator}
 	 */
@@ -385,6 +465,8 @@ class RenderCoordinator {
 		this.postRenderCallbacks = [];
 		this.dirtyRegions = [];
 		this.frameTimes = [];
+		this.lastLayersHash = null;
+		this.forceNextRedraw = false;
 		this.canvasManager = null;
 	}
 }

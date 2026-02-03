@@ -1269,6 +1269,23 @@
 			} );
 		}
 
+		// Arrows inside/outside option (only show for arrow end style)
+		if ( endStyle === 'arrow' ) {
+			// Handle both boolean and integer (from PHP serialization)
+			const arrowsInside = layer.arrowsInside !== false && layer.arrowsInside !== 0;
+			ctx.addSelect( {
+				label: t( 'layers-prop-arrow-position', 'Arrow Position' ),
+				value: arrowsInside ? 'inside' : 'outside',
+				options: [
+					{ value: 'inside', text: t( 'layers-arrow-position-inside', 'Inside' ) },
+					{ value: 'outside', text: t( 'layers-arrow-position-outside', 'Outside' ) }
+				],
+				onChange: function ( v ) {
+					updateWithDefaults( { arrowsInside: v === 'inside' } );
+				}
+			} );
+		}
+
 		ctx.addSelect( {
 			label: t( 'layers-prop-text-position', 'Text Position' ),
 			value: layer.textPosition || 'above',
@@ -1307,6 +1324,34 @@
 			onChange: function ( v ) {
 				const val = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 10 ) );
 				updateWithDefaults( { extensionLength: val } );
+			}
+		} );
+
+		ctx.addInput( {
+			label: t( 'layers-prop-dimension-offset', 'Dimension Offset' ),
+			type: 'number',
+			value: layer.dimensionOffset !== undefined ? layer.dimensionOffset : 15,
+			min: -500,
+			max: 500,
+			step: 1,
+			prop: 'dimensionOffset',
+			onChange: function ( v ) {
+				const val = Math.max( -500, Math.min( 500, parseInt( v, 10 ) || 15 ) );
+				updateWithDefaults( { dimensionOffset: val } );
+			}
+		} );
+
+		ctx.addInput( {
+			label: t( 'layers-prop-text-offset', 'Text Offset' ),
+			type: 'number',
+			value: layer.textOffset !== undefined ? layer.textOffset : 0,
+			min: -2000,
+			max: 2000,
+			step: 1,
+			prop: 'textOffset',
+			onChange: function ( v ) {
+				const val = Math.max( -2000, Math.min( 2000, parseInt( v, 10 ) || 0 ) );
+				updateWithDefaults( { textOffset: val } );
 			}
 		} );
 

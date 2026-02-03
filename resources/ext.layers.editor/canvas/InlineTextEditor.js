@@ -954,6 +954,13 @@
 				return;
 			}
 
+			// Don't update toolbar while user is interacting with it
+			// This prevents the font size from jumping back while changing it
+			if ( this._toolbar && typeof this._toolbar.isInteracting === 'function' &&
+				this._toolbar.isInteracting() ) {
+				return;
+			}
+
 			// Check if selection is within our editor
 			const selection = window.getSelection();
 			if ( !selection.rangeCount || !this.editorElement ) {
@@ -991,6 +998,73 @@
 				const isStrike = document.queryCommandState( 'strikeThrough' );
 				strikeBtn.classList.toggle( 'active', isStrike );
 			}
+
+			// Update font family and size from selection
+			const selectionInfo = this._getSelectionFormatInfo();
+			if ( this._toolbar && typeof this._toolbar.updateFromSelection === 'function' ) {
+				this._toolbar.updateFromSelection( selectionInfo );
+			}
+		}
+
+		/**
+		 * Get formatting information from the current selection
+		 *
+		 * Traverses up from the selection anchor to find font size and family
+		 * from data attributes or computed styles.
+		 *
+		 * @private
+		 * @return {Object} Format info { fontSize, fontFamily }
+		 */
+		_getSelectionFormatInfo() {
+			const info = {
+				fontSize: this.editingLayer?.fontSize || 16,
+				fontFamily: this.editingLayer?.fontFamily || 'Arial',
+				backgroundColor: null
+			};
+
+			const selection = window.getSelection();
+			if ( !selection.rangeCount ) {
+				return info;
+			}
+
+			// Get the node at the selection anchor
+			let node = selection.anchorNode;
+			if ( !node ) {
+				return info;
+			}
+
+			// If text node, get parent element
+			if ( node.nodeType === Node.TEXT_NODE ) {
+				node = node.parentElement;
+			}
+
+			// Traverse up to find formatting spans
+			while ( node && node !== this.editorElement ) {
+				if ( node.nodeType === Node.ELEMENT_NODE ) {
+					// Check for data-font-size attribute (our custom unscaled value)
+					if ( node.dataset && node.dataset.fontSize ) {
+						info.fontSize = parseFloat( node.dataset.fontSize );
+					}
+
+					// Check for font-family in inline style
+					if ( node.style && node.style.fontFamily ) {
+						// Clean up quotes from font family
+						info.fontFamily = node.style.fontFamily.replace( /["']/g, '' ).split( ',' )[ 0 ].trim();
+					}
+
+					// Check for background-color (highlight)
+					if ( node.style && node.style.backgroundColor && !info.backgroundColor ) {
+						const bgColor = node.style.backgroundColor;
+						// Only set if it's a real color, not 'transparent' or empty
+						if ( bgColor && bgColor !== 'transparent' && bgColor !== 'inherit' ) {
+							info.backgroundColor = bgColor;
+						}
+					}
+				}
+				node = node.parentElement;
+			}
+
+			return info;
 		}
 
 		/**
@@ -1136,6 +1210,11 @@
 				const selectionFormats = [ 'fontWeight', 'fontStyle', 'color', 'underline',
 					'strikethrough', 'highlight', 'fontSize', 'fontFamily' ];
 
+				// Toggle formats use execCommand which works with cursor (no selection)
+				// These will set the typing state for future characters
+				const toggleFormats = [ 'fontWeight', 'fontStyle', 'underline', 'strikethrough',
+					'color', 'highlight' ];
+
 				if ( selectionFormats.includes( property ) ) {
 					// Try to restore saved selection first (for toolbar interactions)
 					let hasSelection = false;
@@ -1156,6 +1235,19 @@
 						this._clearSavedSelection();
 						return;
 					}
+
+					// No selection (cursor only) - for toggle formats, still call
+					// _applyFormatToSelection. execCommand will set the typing state
+					// for future characters. For fontSize/fontFamily, do nothing
+					// since we can't wrap non-existent text.
+					if ( toggleFormats.includes( property ) ) {
+						this._applyFormatToSelection( property, value );
+						this._clearSavedSelection();
+						return;
+					}
+
+					// fontSize/fontFamily with no selection - just return, don't apply to layer
+					return;
 				}
 			}
 
@@ -1275,9 +1367,18 @@
 				case 'color':
 					document.execCommand( 'foreColor', false, value );
 					break;
-				case 'highlight':
-					document.execCommand( 'hiliteColor', false, value );
+				case 'highlight': {
+					// Check if selection already has highlight - if so, toggle off
+					const formatInfo = this._getSelectionFormatInfo();
+					if ( formatInfo.backgroundColor ) {
+						// Remove highlight by setting to transparent
+						document.execCommand( 'hiliteColor', false, 'transparent' );
+					} else {
+						// Apply highlight
+						document.execCommand( 'hiliteColor', false, value );
+					}
 					break;
+				}
 				case 'fontSize': {
 					// Apply SCALED font size for display, store UNSCALED value in data attr
 					const selection = window.getSelection();
@@ -1291,14 +1392,17 @@
 						// Use setProperty with important to override inherited styles
 						span.style.setProperty( 'font-size', scaledValue + 'px', 'important' );
 						span.dataset.fontSize = value; // Store unscaled value for parsing
-						try {
-							range.surroundContents( span );
-						} catch {
-							// If selection crosses element boundaries, extract and wrap
-							const fragment = range.extractContents();
-							span.appendChild( fragment );
-							range.insertNode( span );
-						}
+
+						// Extract contents first so we can clean up nested font-size styling
+						const fragment = range.extractContents();
+
+						// Remove font-size styling from any spans within to prevent nesting issues
+						// This ensures the new fontSize takes precedence over old ones
+						this._removeFontSizeFromFragment( fragment );
+
+						span.appendChild( fragment );
+						range.insertNode( span );
+
 						// Update selection to be inside the new span
 						selection.removeAllRanges();
 						const newRange = document.createRange();
@@ -1329,6 +1433,46 @@
 						selection.addRange( newRange );
 					}
 					break;
+				}
+			}
+		}
+
+		/**
+		 * Remove font-size styling from all spans within a document fragment
+		 *
+		 * This prevents nested font-size issues when applying new font size
+		 * to text that already has font-size styling. Without this, the parser
+		 * would use the innermost (old) font-size value instead of the new one.
+		 *
+		 * @private
+		 * @param {DocumentFragment} fragment - Fragment containing content to clean
+		 */
+		_removeFontSizeFromFragment( fragment ) {
+			if ( !fragment ) {
+				return;
+			}
+
+			// Find all spans with font-size styling within the fragment
+			const spans = fragment.querySelectorAll( 'span' );
+			for ( const span of spans ) {
+				// Remove font-size from inline style
+				if ( span.style.fontSize ) {
+					span.style.removeProperty( 'font-size' );
+				}
+
+				// Remove data-font-size attribute
+				if ( span.dataset.fontSize ) {
+					delete span.dataset.fontSize;
+				}
+
+				// If span now has no style or data attributes, unwrap it
+				// (only if it's just a font-size wrapper with no other styles)
+				if ( span.style.length === 0 && span.attributes.length === 0 ) {
+					// Move all children out of span
+					while ( span.firstChild ) {
+						span.parentNode.insertBefore( span.firstChild, span );
+					}
+					span.remove();
 				}
 			}
 		}

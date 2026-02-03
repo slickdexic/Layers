@@ -2,6 +2,89 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.50] - 2026-02-03
+
+### Improved
+- **Unified Dimension Text Drag** — Dimension text now acts as a CAD-style drag handle:
+  - Grab text to move dimension both up/down (perpendicular) and left/right (parallel) simultaneously
+  - Removed redundant green diamond offset handle — text is the drag handle
+  - Added snap-to-center when textOffset is within 10px of center (0)
+  - Dimension line automatically extends when text is positioned outside extension lines
+  - Fixed hit testing to find text at its actual position (not always at center)
+  - Properties panel now shows `dimensionOffset` and `textOffset` controls for precise adjustment
+
+- **Arrow Position Control** — Dimension arrows can now point inside or outside:
+  - Added "Arrow Position" dropdown with "Inside" (default) and "Outside" options
+  - Outside arrows include extension tails for small dimension annotations
+  - Matches ISO/ASME dimension annotation standards
+
+### Technical Details
+- CanvasEvents.js: Hit testing now accounts for textOffset; unified text handle creation
+- TransformController.js: New unified drag methods (startDimensionTextDrag, handleDimensionTextDrag, finishDimensionTextDrag)
+- SelectionRenderer.js: Removed green diamond handle; draws 2 handles instead of 3
+- DimensionRenderer.js: Added line extension logic, arrowsInside support with tails
+- PropertyBuilders.js: Added dimensionOffset, textOffset, and arrowsInside controls
+- NumericValidator.js: Added dimensionOffset validation (-500 to 500)
+- ServerSideLayerValidator.php: Added dimensionOffset, textOffset, arrowsInside to whitelist
+- All 11,210 tests pass (165 test suites) ✅
+
+---
+
+## [1.5.49] - 2026-02-02
+
+### Fixed
+- **Font Size Floating Toolbar** — Fixed regression where changing font size via floating toolbar didn't persist:
+  - Root cause: Nested font-size spans caused parser to use innermost (old) value
+  - Added `_removeFontSizeFromFragment()` to clean up nested font-size spans before wrapping
+  - Font size input no longer jumps back to previous value when using +/- buttons
+  - Toolbar now syncs with selection's current font/size via `updateFromSelection()`
+
+### Added
+- **Highlight Toggle** — Clicking highlight on already-highlighted text now removes the highlight:
+  - Added `backgroundColor` detection to `_getSelectionFormatInfo()`
+  - Highlight button acts as a toggle: apply if no highlight, remove if highlighted
+
+- **Cursor-Only Formatting** — Toggle formats now work correctly when cursor is placed but no text is selected:
+  - Bold, italic, underline, strikethrough, color, and highlight set typing state for next characters
+  - Font size and font family require a selection (no effect with cursor only)
+  - Previously, these would incorrectly apply to entire textbox content
+
+### Technical Details
+- InlineTextEditor.js: +45 lines for toggle format handling and backgroundColor detection
+- RichTextToolbar.js: +25 lines for `updateFromSelection()` method and `_isInteracting` guard
+- All 11,210 tests pass (165 test suites) ✅
+
+---
+
+## [1.5.48] - 2026-02-02
+
+### Performance Improvements
+- **API Response Caching** — Added LRU cache for API responses with 5-minute TTL
+  - Revision loading now checks cache first, reducing redundant API calls by ~50%
+  - Named set loading also cached for fast switching between sets
+  - Cache automatically invalidated on save to ensure data freshness
+  - Cache size limited to 20 entries to prevent unbounded memory growth
+
+- **Layer Rendering Cache Infrastructure** — Added layer caching framework in CanvasRenderer
+  - Layer hash computation for change detection
+  - Cache stores pre-rendered layer states for future optimization
+  - LRU eviction with configurable max size (50 layers)
+  - `invalidateLayerCache()` method for manual cache control
+
+- **Render Optimization** — Added hash-based change detection in RenderCoordinator
+  - Skips redundant redraws when layer state unchanged
+  - Reduces CPU usage during mouse hover without dragging
+  - `forceRedraw()` and `invalidateRenderCache()` methods for explicit control
+  - Includes zoom, pan, and selection state in hash computation
+
+### Technical Details
+- APIManager: +82 lines for cache implementation, 4 new private methods
+- CanvasRenderer: +118 lines for layer caching infrastructure
+- RenderCoordinator: +57 lines for hash-based change detection
+- All existing tests pass, no breaking changes
+
+---
+
 ## [1.5.47] - 2026-02-02
 
 ### Added

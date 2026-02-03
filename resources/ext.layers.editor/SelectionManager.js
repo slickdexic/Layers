@@ -72,30 +72,28 @@
 		 * Initialize extracted modules
 		 */
 		_initializeModules() {
-			const self = this;
-
 			// Initialize SelectionState if available
 			if ( SelectionState ) {
 				this._selectionState = new SelectionState( {
-					getLayersArray: () => self._getLayersArray(),
-					onSelectionChange: ( ids ) => self._handleSelectionChange( ids )
+					getLayersArray: () => this._getLayersArray(),
+					onSelectionChange: ( ids ) => this._handleSelectionChange( ids )
 				} );
 			}
 
 			// Initialize MarqueeSelection if available
 			if ( MarqueeSelection ) {
 				this._marqueeSelection = new MarqueeSelection( {
-					getLayersArray: () => self._getLayersArray(),
-					getLayerBounds: ( layer ) => self.getLayerBoundsCompat( layer ),
+					getLayersArray: () => this._getLayersArray(),
+					getLayerBounds: ( layer ) => this.getLayerBoundsCompat( layer ),
 					onSelectionUpdate: ( ids ) => {
-						self.selectedLayerIds = ids;
+						this.selectedLayerIds = ids;
 						// Update lastSelectedId for key object alignment
 						if ( ids.length > 0 ) {
-							self.lastSelectedId = ids[ ids.length - 1 ];
+							this.lastSelectedId = ids[ ids.length - 1 ];
 						} else {
-							self.lastSelectedId = null;
+							this.lastSelectedId = null;
 						}
-						self.notifySelectionChange();
+						this.notifySelectionChange();
 					}
 				} );
 			}

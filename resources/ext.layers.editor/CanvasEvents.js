@@ -259,6 +259,11 @@
 						if ( tc ) {
 							tc.startArrowTipDrag( handleHit, cm.startPoint || point );
 						}
+					} else if ( handleHit.type === 'dimensionOffset' && handleHit.isDimensionOffset ) {
+						// Special handling for dimension offset handle - start offset drag
+						if ( tc ) {
+							tc.startDimensionOffsetDrag( handleHit, cm.startPoint || point );
+						}
 					} else {
 						if ( tc ) {
 							tc.startResize( handleHit, cm.startPoint || point );
@@ -278,7 +283,16 @@
 				if ( cm.currentTool === 'pointer' ) {
 					selectedLayer = cm.handleLayerSelection( point, isCtrlClick );
 					if ( selectedLayer && !isCtrlClick ) {
-						if ( cm.transformController ) {
+						// For dimension layers, check if click is in text area
+						// If so, start offset drag instead of layer drag
+						if ( selectedLayer.type === 'dimension' &&
+							this.isPointInDimensionTextArea( point, selectedLayer ) ) {
+							if ( cm.transformController ) {
+								// Create a handle for unified text dragging (both offsets)
+								const handle = this.createDimensionTextHandle( selectedLayer );
+								cm.transformController.startDimensionTextDrag( handle, cm.startPoint || point );
+							}
+						} else if ( cm.transformController ) {
 							cm.transformController.startDrag( cm.startPoint || point );
 						}
 					} else if ( !selectedLayer && !isCtrlClick ) {
@@ -342,6 +356,11 @@
 				return;
 			}
 
+			if ( tc && tc.isDimensionTextDragging && tc.dragStartPoint ) {
+				tc.handleDimensionTextDrag( point );
+				return;
+			}
+
 			if ( tc && tc.isResizing && tc.resizeHandle && tc.dragStartPoint ) {
 				try {
 					tc.handleResize( point, e );
@@ -364,8 +383,8 @@
 				return;
 			}
 
-			// Always update cursor when not actively resizing/rotating/dragging/arrow-tip-dragging
-			const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging || tc.isArrowTipDragging );
+			// Always update cursor when not actively transforming
+			const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging || tc.isArrowTipDragging || tc.isDimensionTextDragging );
 			if ( !isTransforming ) {
 				cm.updateCursor( point );
 			}
@@ -417,6 +436,11 @@
 			const tc = cm.transformController;
 			if ( tc && tc.isArrowTipDragging ) {
 				tc.finishArrowTipDrag();
+				return;
+			}
+
+			if ( tc && tc.isDimensionTextDragging ) {
+				tc.finishDimensionTextDrag();
 				return;
 			}
 
@@ -698,6 +722,146 @@
 			} else {
 				cm.fitToWindow();
 			}
+		}
+
+		/**
+		 * Check if a point is in the text area of a dimension layer.
+		 * The text area is a region around the current text position (accounting for textOffset).
+		 *
+		 * @param {Object} point Point with x, y
+		 * @param {Object} layer Dimension layer
+		 * @return {boolean} True if point is in text area
+		 */
+		isPointInDimensionTextArea( point, layer ) {
+			const x1 = layer.x1 || 0;
+			const y1 = layer.y1 || 0;
+			const x2 = layer.x2 || 0;
+			const y2 = layer.y2 || 0;
+
+			// Calculate dimension line position
+			const dx = x2 - x1;
+			const dy = y2 - y1;
+			const distance = Math.sqrt( dx * dx + dy * dy );
+			if ( distance < 1 ) {
+				return false;
+			}
+			const angle = Math.atan2( dy, dx );
+			const perpX = -Math.sin( angle );
+			const perpY = Math.cos( angle );
+			const unitDx = dx / distance;
+			const unitDy = dy / distance;
+
+			// Get offset distance
+			let offsetDistance;
+			if ( typeof layer.dimensionOffset === 'number' && !isNaN( layer.dimensionOffset ) ) {
+				offsetDistance = layer.dimensionOffset;
+			} else {
+				const extensionLength = typeof layer.extensionLength === 'number' ? layer.extensionLength : 10;
+				const extensionGap = typeof layer.extensionGap === 'number' ? layer.extensionGap : 3;
+				offsetDistance = extensionGap + extensionLength / 2;
+			}
+
+			// Get text offset (along the line)
+			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+
+			// Calculate dimension line center
+			const dimX1 = x1 - perpX * offsetDistance;
+			const dimY1 = y1 - perpY * offsetDistance;
+			const dimX2 = x2 - perpX * offsetDistance;
+			const dimY2 = y2 - perpY * offsetDistance;
+
+			// Calculate actual text position (accounting for textOffset)
+			const textX = ( dimX1 + dimX2 ) / 2 + unitDx * textOffset;
+			const textY = ( dimY1 + dimY2 ) / 2 + unitDy * textOffset;
+
+			// Text hit radius
+			const fontSize = layer.fontSize || 12;
+			const textHitRadius = Math.max( fontSize * 1.5, 20 );
+
+			const distToText = Math.sqrt(
+				( point.x - textX ) * ( point.x - textX ) +
+				( point.y - textY ) * ( point.y - textY )
+			);
+
+			return distToText <= textHitRadius;
+		}
+
+		/**
+		 * Create a synthetic handle object for dimension offset dragging.
+		 * This mimics the handle that would be registered by SelectionRenderer.
+		 *
+		 * @param {Object} layer Dimension layer
+		 * @return {Object} Handle object compatible with startDimensionOffsetDrag
+		 */
+		createDimensionOffsetHandle( layer ) {
+			const x1 = layer.x1 || 0;
+			const y1 = layer.y1 || 0;
+			const x2 = layer.x2 || 0;
+			const y2 = layer.y2 || 0;
+
+			// Calculate perpendicular direction
+			const dx = x2 - x1;
+			const dy = y2 - y1;
+			const angle = Math.atan2( dy, dx );
+			const perpX = -Math.sin( angle );
+			const perpY = Math.cos( angle );
+
+			// Calculate anchor midpoint
+			const anchorMidX = ( x1 + x2 ) / 2;
+			const anchorMidY = ( y1 + y2 ) / 2;
+
+			return {
+				type: 'dimensionOffset',
+				layerId: layer.id,
+				isDimensionOffset: true,
+				anchorMidX: anchorMidX,
+				anchorMidY: anchorMidY,
+				perpX: perpX,
+				perpY: perpY
+			};
+		}
+
+		/**
+		 * Create a handle for unified dimension text dragging.
+		 * Supports both perpendicular (dimensionOffset) and parallel (textOffset) movement.
+		 *
+		 * @param {Object} layer The dimension layer
+		 * @return {Object} Handle object with both direction vectors
+		 */
+		createDimensionTextHandle( layer ) {
+			const x1 = layer.x1 || 0;
+			const y1 = layer.y1 || 0;
+			const x2 = layer.x2 || 0;
+			const y2 = layer.y2 || 0;
+
+			// Calculate directions
+			const dx = x2 - x1;
+			const dy = y2 - y1;
+			const len = Math.sqrt( dx * dx + dy * dy );
+			const angle = Math.atan2( dy, dx );
+
+			// Unit vectors: parallel (along line) and perpendicular
+			const unitDx = len > 0 ? dx / len : 1;
+			const unitDy = len > 0 ? dy / len : 0;
+			const perpX = -Math.sin( angle );
+			const perpY = Math.cos( angle );
+
+			// Calculate anchor midpoint
+			const anchorMidX = ( x1 + x2 ) / 2;
+			const anchorMidY = ( y1 + y2 ) / 2;
+
+			return {
+				type: 'dimensionText',
+				layerId: layer.id,
+				isDimensionText: true,
+				anchorMidX: anchorMidX,
+				anchorMidY: anchorMidY,
+				unitDx: unitDx,
+				unitDy: unitDy,
+				perpX: perpX,
+				perpY: perpY,
+				lineLength: len
+			};
 		}
 	}
 

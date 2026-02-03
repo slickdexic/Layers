@@ -6,23 +6,44 @@
 ( function () {
 	'use strict';
 
+	// Default values fallback (for test environments where mw.ext may not be fully mocked)
+	const DEFAULT_VALUES = {
+		STROKE_WIDTH: 2,
+		FILL_OPACITY: 1,
+		OPACITY: 1,
+		SHADOW_BLUR: 8,
+		SHADOW_OFFSET_X: 2,
+		SHADOW_OFFSET_Y: 2,
+		FONT_SIZE: 16,
+		FONT_FAMILY: 'Arial, sans-serif'
+	};
+
+	// Import defaults from centralized constants (lazy-loaded, with fallback for tests)
+	const getDefaults = () => {
+		if ( typeof mw !== 'undefined' && mw.ext && mw.ext.layers && mw.ext.layers.LayerDefaults ) {
+			return mw.ext.layers.LayerDefaults;
+		}
+		return DEFAULT_VALUES;
+	};
+
 	/**
 	 * Default style configuration
+	 * Uses centralized LayerDefaults for consistency across the extension
 	 *
 	 * @type {Object}
 	 */
 	const DEFAULT_STYLE = {
 		// Stroke
 		color: '#000000',
-		strokeWidth: 2,
+		strokeWidth: getDefaults().STROKE_WIDTH,
 
 		// Fill
 		fill: 'transparent',
-		fillOpacity: 1,
+		fillOpacity: getDefaults().FILL_OPACITY,
 
 		// Text
-		fontSize: 16,
-		fontFamily: 'Arial, sans-serif',
+		fontSize: getDefaults().FONT_SIZE,
+		fontFamily: getDefaults().FONT_FAMILY,
 
 		// Arrow
 		arrowStyle: 'single',
@@ -30,12 +51,12 @@
 		// Shadow
 		shadow: false,
 		shadowColor: '#000000',
-		shadowBlur: 8,
-		shadowOffsetX: 2,
-		shadowOffsetY: 2,
+		shadowBlur: getDefaults().SHADOW_BLUR,
+		shadowOffsetX: getDefaults().SHADOW_OFFSET,
+		shadowOffsetY: getDefaults().SHADOW_OFFSET,
 
 		// Opacity
-		opacity: 1
+		opacity: getDefaults().OPACITY
 	};
 
 	/**

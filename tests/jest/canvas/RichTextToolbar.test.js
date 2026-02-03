@@ -478,6 +478,14 @@ describe( 'RichTextToolbar', () => {
 	} );
 
 	describe( 'font size interactions', () => {
+		beforeEach( () => {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
 		it( 'should call onFormat when font size changed', () => {
 			toolbar = new RichTextToolbar( {
 				layer: mockLayer,
@@ -494,6 +502,9 @@ describe( 'RichTextToolbar', () => {
 			sizeInput.dispatchEvent( new Event( 'change' ) );
 
 			expect( mockOnFormat ).toHaveBeenCalledWith( 'fontSize', 24 );
+
+			// onFocusEditor is called after a short delay
+			jest.advanceTimersByTime( 100 );
 			expect( mockOnFocusEditor ).toHaveBeenCalled();
 		} );
 
@@ -978,6 +989,79 @@ describe( 'RichTextToolbar', () => {
 
 			colorBtn.click();
 			expect( mockOpen ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'updateFromSelection', () => {
+		test( 'should update font size input', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+			toolbar.create();
+
+			toolbar.updateFromSelection( { fontSize: 32 } );
+
+			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+			expect( sizeInput.value ).toBe( '32' );
+		} );
+
+		test( 'should update font family select', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+			toolbar.create();
+
+			const fontSelect = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-font' );
+
+			// Verify Times New Roman option exists (from mock FontConfig)
+			const timesOption = Array.from( fontSelect.options ).find( ( o ) => o.value === 'Times New Roman' );
+			expect( timesOption ).toBeDefined();
+
+			toolbar.updateFromSelection( { fontFamily: 'Times New Roman' } );
+
+			expect( fontSelect.value ).toBe( 'Times New Roman' );
+		} );
+
+		test( 'should handle null selectionInfo', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+			toolbar.create();
+
+			expect( () => toolbar.updateFromSelection( null ) ).not.toThrow();
+		} );
+
+		test( 'should handle missing toolbarElement', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+			// Don't call create() so toolbarElement is null
+
+			expect( () => toolbar.updateFromSelection( { fontSize: 32 } ) ).not.toThrow();
+		} );
+
+		test( 'should update both font and size together', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+			toolbar.create();
+
+			toolbar.updateFromSelection( { fontSize: 24, fontFamily: 'Courier New' } );
+
+			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+			const fontSelect = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-font' );
+			expect( sizeInput.value ).toBe( '24' );
+			expect( fontSelect.value ).toBe( 'Courier New' );
 		} );
 	} );
 } );

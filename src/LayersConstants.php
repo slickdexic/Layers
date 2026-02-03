@@ -167,6 +167,11 @@ class LayersConstants {
 	public const ERROR_RENAME_FAILED = 'layers-rename-failed';
 
 	/**
+	 * Error: Info retrieval failed (generic error for unexpected failures)
+	 */
+	public const ERROR_INFO_FAILED = 'layers-info-failed';
+
+	/**
 	 * Error: Delete permission denied
 	 */
 	public const ERROR_DELETE_PERMISSION_DENIED = 'layers-delete-permission-denied';
@@ -194,6 +199,11 @@ class LayersConstants {
 	 * Rate limit key for create operations
 	 */
 	public const RATE_LIMIT_CREATE = 'editlayers-create';
+
+	/**
+	 * Rate limit key for info/read operations
+	 */
+	public const RATE_LIMIT_INFO = 'editlayers-info';
 
 	// ========================================================================
 	// API List Limits

@@ -243,21 +243,24 @@
 		 * @param {number} height New canvas height
 		 */
 		setCanvasDimensions( width, height ) {
-			this.canvasWidth = width;
-			this.canvasHeight = height;
+			// Validate dimensions (constants match LayerDefaults.js MIN/MAX_SLIDE_DIMENSION)
+			const MIN_DIM = 50;
+			const MAX_DIM = 4096;
+			this.canvasWidth = Math.max( MIN_DIM, Math.min( MAX_DIM, parseInt( width, 10 ) || 800 ) );
+			this.canvasHeight = Math.max( MIN_DIM, Math.min( MAX_DIM, parseInt( height, 10 ) || 600 ) );
 
 			if ( this.canvas ) {
-				this.canvas.width = width;
-				this.canvas.height = height;
+				this.canvas.width = this.canvasWidth;
+				this.canvas.height = this.canvasHeight;
 			}
 
 			if ( this.canvasContainer ) {
-				this.canvasContainer.style.width = width + 'px';
-				this.canvasContainer.style.height = height + 'px';
+				this.canvasContainer.style.width = this.canvasWidth + 'px';
+				this.canvasContainer.style.height = this.canvasHeight + 'px';
 			}
 
 			if ( this.editor && typeof this.editor.setCanvasSize === 'function' ) {
-				this.editor.setCanvasSize( width, height );
+				this.editor.setCanvasSize( this.canvasWidth, this.canvasHeight );
 			}
 
 			this.isDirty = true;

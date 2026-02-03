@@ -241,26 +241,60 @@
 			const perpX = -Math.sin( angle );
 			const perpY = Math.cos( angle );
 
-			// Get extension line parameters (match DimensionRenderer defaults)
-			let extensionLength = layer.extensionLength;
-			if ( typeof extensionLength !== 'number' || isNaN( extensionLength ) ) {
-				extensionLength = 10; // DEFAULTS.extensionLength from DimensionRenderer
-			}
-			let extensionGap = layer.extensionGap;
-			if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
-				extensionGap = 3; // DEFAULTS.extensionGap from DimensionRenderer
+			// Get offset distance (same logic as DimensionRenderer/SelectionRenderer)
+			let offsetDistance;
+			if ( typeof layer.dimensionOffset === 'number' && !isNaN( layer.dimensionOffset ) ) {
+				offsetDistance = layer.dimensionOffset;
+			} else {
+				// Legacy/default: calculate from extensionGap and extensionLength
+				let extensionLength = layer.extensionLength;
+				if ( typeof extensionLength !== 'number' || isNaN( extensionLength ) ) {
+					extensionLength = 10; // DEFAULTS.extensionLength from DimensionRenderer
+				}
+				let extensionGap = layer.extensionGap;
+				if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
+					extensionGap = 3; // DEFAULTS.extensionGap from DimensionRenderer
+				}
+				offsetDistance = extensionGap + extensionLength / 2;
 			}
 
-			// Calculate dimension line offset (same formula as DimensionRenderer)
-			const offsetDistance = extensionGap + extensionLength / 2;
-			const dimX1 = x1 + perpX * offsetDistance;
-			const dimY1 = y1 + perpY * offsetDistance;
-			const dimX2 = x2 + perpX * offsetDistance;
-			const dimY2 = y2 + perpY * offsetDistance;
+			// Calculate dimension line endpoints
+			// Positive offset = above the measurement line (negative perp direction)
+			const dimX1 = x1 - perpX * offsetDistance;
+			const dimY1 = y1 - perpY * offsetDistance;
+			const dimX2 = x2 - perpX * offsetDistance;
+			const dimY2 = y2 - perpY * offsetDistance;
 
-			// Test distance to the actual dimension line
-			const distance = this.pointToLineDistance( point.x, point.y, dimX1, dimY1, dimX2, dimY2 );
-			return distance <= 10;
+			// Test 1: Distance to the dimension line itself
+			const distanceToDimLine = this.pointToLineDistance( point.x, point.y, dimX1, dimY1, dimX2, dimY2 );
+			if ( distanceToDimLine <= 15 ) {
+				return true;
+			}
+
+			// Test 2: Distance to extension lines (from anchor to dimension line)
+			const distanceToExt1 = this.pointToLineDistance( point.x, point.y, x1, y1, dimX1, dimY1 );
+			if ( distanceToExt1 <= 8 ) {
+				return true;
+			}
+			const distanceToExt2 = this.pointToLineDistance( point.x, point.y, x2, y2, dimX2, dimY2 );
+			if ( distanceToExt2 <= 8 ) {
+				return true;
+			}
+
+			// Test 3: Text area at center of dimension line (generous hit area for text)
+			const centerX = ( dimX1 + dimX2 ) / 2;
+			const centerY = ( dimY1 + dimY2 ) / 2;
+			const fontSize = layer.fontSize || 12;
+			const textHitRadius = Math.max( fontSize * 1.5, 20 ); // At least 20px hit area
+			const distToCenter = Math.sqrt(
+				( point.x - centerX ) * ( point.x - centerX ) +
+				( point.y - centerY ) * ( point.y - centerY )
+			);
+			if ( distToCenter <= textHitRadius ) {
+				return true;
+			}
+
+			return false;
 		}
 
 		/**

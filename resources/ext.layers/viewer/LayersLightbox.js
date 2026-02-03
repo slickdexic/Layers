@@ -413,6 +413,12 @@
 				this.boundKeyHandler = null;
 			}
 
+			// Remove click handler from overlay (explicit cleanup for consistency)
+			if ( this.boundClickHandler && this.overlay ) {
+				this.overlay.removeEventListener( 'click', this.boundClickHandler );
+				this.boundClickHandler = null;
+			}
+
 			// Animate out
 			this.overlay.classList.remove( 'layers-lightbox-visible' );
 

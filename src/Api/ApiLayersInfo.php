@@ -14,9 +14,11 @@ namespace MediaWiki\Extension\Layers\Api;
 use ApiBase;
 use ApiMain;
 use ApiResult;
+use ApiUsageException;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
@@ -37,9 +39,49 @@ class ApiLayersInfo extends ApiBase {
 	/**
 	 * Execute the API request
 	 *
+	 * SECURITY ARCHITECTURE:
+	 * 1. Rate Limiting: Prevents abuse via excessive API calls
+	 * 2. Permission Checks: Requires 'read' permission on the file
+	 * 3. Input Validation: Validates filename and parameters
+	 * 4. Error Handling: Generic errors to prevent information disclosure
+	 *
 	 * @throws \ApiUsageException When file is not found or other errors occur
 	 */
 	public function execute() {
+		try {
+			$this->executeInternal();
+		} catch ( ApiUsageException $e ) {
+			// Re-throw API usage exceptions (validation errors, permission denied, etc.)
+			throw $e;
+		} catch ( \Throwable $e ) {
+			// GLOBAL EXCEPTION HANDLER: Catch any unexpected errors
+			// Log full details server-side for debugging (never exposed to clients)
+			$this->getLogger()->error(
+				'Layer info failed: {message}',
+				[
+					'message' => $e->getMessage(),
+					'exception' => $e,
+				]
+			);
+			// Return generic error message to prevent information disclosure
+			$this->dieWithError( LayersConstants::ERROR_INFO_FAILED, 'infofailed' );
+		}
+	}
+
+	/**
+	 * Internal execution logic for the API request.
+	 *
+	 * @throws \ApiUsageException When file is not found or other errors occur
+	 */
+	private function executeInternal(): void {
+		// RATE LIMITING: Prevent abuse via excessive API calls
+		// Uses 'info' action key for read-specific rate limits
+		$user = $this->getUser();
+		$rateLimiter = $this->createRateLimiter();
+		if ( !$rateLimiter->checkRateLimit( $user, 'info' ) ) {
+			$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+		}
+
 		// Get parameters
 		$params = $this->extractRequestParams();
 		$filename = $params['filename'] ?? null;
@@ -125,11 +167,11 @@ class ApiLayersInfo extends ApiBase {
 			// Get specific layer set by ID
 			$layerSet = $db->getLayerSet( $layerSetId );
 			if ( !$layerSet ) {
-				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'layersetnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
 			}
 
 			if ( str_replace( ' ', '_', (string)( $layerSet['imgName'] ?? '' ) ) !== $normalizedName ) {
-				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'layersetnotfound' );
+				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
 			}
 
 			// Enrich with base dimensions to allow correct scaling by clients
@@ -605,5 +647,16 @@ class ApiLayersInfo extends ApiBase {
 	 */
 	protected function getTitleFromFilename( string $filename ) {
 		return Title::makeTitleSafe( NS_FILE, $filename );
+	}
+
+	/**
+	 * Create a RateLimiter instance.
+	 *
+	 * Factory method extracted for easier testing/mocking.
+	 *
+	 * @return RateLimiter
+	 */
+	protected function createRateLimiter(): RateLimiter {
+		return new RateLimiter();
 	}
 }
