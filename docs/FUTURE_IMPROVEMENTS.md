@@ -2,7 +2,7 @@
 
 This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
 
-**Last Updated:** January 28, 2026
+**Last Updated:** February 3, 2026
 
 ---
 
@@ -197,16 +197,31 @@ Inline text editing is now implemented via `InlineTextEditor.js`.
 
 ---
 
-### 6. Rich Text Formatting (FR-16) — 🔴 HIGH VALUE
+### 6. Rich Text Formatting (FR-16) — ✅ COMPLETED
 
 **Priority:** HIGH  
 **Complexity:** High  
-**Status:** ⏳ Proposed (January 28, 2026)
+**Status:** ✅ Completed (February 2026)
 
-Enable mixed text formatting within a single Text Box or Callout layer, allowing different parts of the text to have different styles (font size, color, bold, italic, etc.).
+Mixed text formatting is now fully implemented! Different parts of text within Text Box or Callout layers can have different styles (font size, color, bold, italic, underline, strikethrough, highlight).
 
-**Current Limitation:**
-Currently, all text within a layer shares identical formatting. If you set a text box to "bold, red, 18px", every character is bold, red, 18px. This limits expressive capability compared to tools like Figma, Canva, Google Drawings, and PowerPoint.
+**What's Implemented:**
+- ✅ Selection-based formatting via floating RichTextToolbar
+- ✅ Mixed styles within same text box (font, size, color, weight, style)
+- ✅ Toolbar integration (bold/italic/underline/strikethrough/highlight/color)
+- ✅ Font size and font family per-selection
+- ✅ Rich text data persists through save/load cycle
+- ✅ Backward compatible — plain text layers continue to work
+- ✅ richText array in data model validated server-side
+- ✅ Highlight toggle (click again to remove)
+- ✅ Cursor-only formatting (set typing state for next characters)
+
+**Key Components:**
+- `InlineTextEditor.js` — Canvas overlay editing with rich text support
+- `RichTextToolbar.js` — Floating formatting toolbar (bold, italic, color, etc.)
+- `RichTextConverter.js` — Converts between HTML and richText array format
+- `TextBoxRenderer.js` — Renders richText runs with per-run styling
+- `ServerSideLayerValidator.php` — Validates richText structure
 
 **Desired Behavior:**
 
@@ -502,17 +517,33 @@ Make layers clickable to navigate to wiki pages.
 - Tooltip preview on hover
 - Image maps with multiple clickable regions
 
-### Gradient Fills
+### Gradient Fills ✅ COMPLETED
 
-**Complexity:** Low | **Value:** Medium
+**Complexity:** Low | **Value:** Medium | **Status:** ✅ Completed (v1.5.x)
 
 Linear and radial gradient fills for shapes.
 
-### Custom Fonts
+**What's Implemented:**
+- ✅ `GradientRenderer.js` — Shared gradient rendering utility
+- ✅ `GradientEditor.js` — UI for editing gradient color stops
+- ✅ Linear gradients with angle control
+- ✅ Radial gradients with center position and radius
+- ✅ 6 built-in presets (sunset, ocean, forest, fire, steel, rainbow)
+- ✅ Custom color stops (2-10 stops)
+- ✅ Server-side validation of gradient properties
 
-**Complexity:** Medium | **Value:** Medium
+### Custom Fonts ✅ COMPLETED
 
-Allow users to specify custom fonts beyond the default list.
+**Complexity:** Medium | **Value:** Medium | **Status:** ✅ Completed (v1.5.47)
+
+Self-hosted font library with 32 Google Fonts bundled as WOFF2 files.
+
+**What's Implemented:**
+- ✅ 32 fonts across 5 categories (Sans-serif, Serif, Display, Handwriting, Mono)
+- ✅ 106 WOFF2 font files (~2.5MB total)
+- ✅ No external requests to Google (privacy-focused)
+- ✅ `FontConfig.js` manages font categories and display names
+- ✅ Font selector dropdown in toolbar and properties panel
 
 ### SVG Export
 
@@ -528,7 +559,10 @@ The following features have been completed and archived:
 
 | Feature | Version | Notes |
 |---------|---------|-------|
-| Callout/Speech Bubble Tool | v1.4.2-1.4.3 | Draggable tail, 3 tail styles (triangle, curved, line), corner arc support |
+| Rich Text Formatting (FR-16) | v1.5.49 | Selection-based formatting, floating toolbar |
+| Self-Hosted Font Library | v1.5.47 | 32 fonts, 106 WOFF2 files, no Google requests |
+| Gradient Fills | v1.5.x | Linear/radial gradients, 6 presets |
+| Callout/Speech Bubble Tool | v1.4.2-1.4.3 | Draggable tail, 3 styles |
 | Toolbar Dropdown Grouping (FR-5) | v1.5.0 | Grouped tools with MRU, keyboard nav |
 | Curved Arrows (FR-4) | v1.3.3 | Bézier curves with control point |
 | Live Color Preview (FR-9) | v1.3.3 | Real-time canvas preview |
