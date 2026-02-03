@@ -48,6 +48,9 @@
 		textPosition: TEXT_POSITIONS.ABOVE,
 		extensionLength: 10,
 		extensionGap: 3,
+		dimensionOffset: null, // null = auto-calculate from extensionGap + extensionLength/2
+		textOffset: 0, // 0 = centered, positive = toward x2, negative = toward x1
+		arrowsInside: true, // When false, arrows face outward (for small dimensions)
 		arrowSize: 8,
 		tickSize: 6,
 		unit: 'px',
@@ -289,15 +292,52 @@
 			const perpX = -Math.sin( angle );
 			const perpY = Math.cos( angle );
 
-			// Draw extension lines
-			this._drawExtensionLines( ctx, x1, y1, x2, y2, perpX, perpY, extensionLength, extensionGap );
-
 			// Calculate dimension line offset (away from the measured points)
-			const offsetDistance = extensionGap + extensionLength / 2;
-			const dimX1 = x1 + perpX * offsetDistance;
-			const dimY1 = y1 + perpY * offsetDistance;
-			const dimX2 = x2 + perpX * offsetDistance;
-			const dimY2 = y2 + perpY * offsetDistance;
+			// Use explicit dimensionOffset if set, otherwise calculate from extensionGap + extensionLength/2
+			let offsetDistance;
+			if ( typeof layer.dimensionOffset === 'number' && !isNaN( layer.dimensionOffset ) ) {
+				// Use explicit offset (can be negative to flip to other side)
+				offsetDistance = layer.dimensionOffset;
+			} else {
+				// Legacy/default: calculate from extensionGap and extensionLength
+				offsetDistance = extensionGap + extensionLength / 2;
+			}
+
+			// Draw extension lines (auto-adjust based on offset)
+			// Note: We negate perp in _drawExtensionLines so positive offset = above the line
+			this._drawExtensionLines( ctx, x1, y1, x2, y2, -perpX, -perpY, offsetDistance, extensionGap, extensionLength );
+
+			// Calculate dimension line position (original, without text extension)
+			// Positive offset = above the measurement line (negative perp direction)
+			const origDimX1 = x1 - perpX * offsetDistance;
+			const origDimY1 = y1 - perpY * offsetDistance;
+			const origDimX2 = x2 - perpX * offsetDistance;
+			const origDimY2 = y2 - perpY * offsetDistance;
+
+			// Get text offset for potential line extension
+			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+			const unitDx = dx / distance;
+			const unitDy = dy / distance;
+
+			// Extended dimension line coordinates (may be extended if text is outside)
+			let dimX1 = origDimX1;
+			let dimY1 = origDimY1;
+			let dimX2 = origDimX2;
+			let dimY2 = origDimY2;
+
+			// Extend dimension line if text is positioned outside the normal bounds
+			// This ensures the line reaches the text when it's dragged beyond the endpoints
+			if ( textOffset > distance / 2 ) {
+				// Text is past the x2,y2 end - extend dimX2,dimY2
+				const extensionAmount = textOffset - distance / 2 + 20; // Extra padding past text
+				dimX2 = dimX2 + unitDx * extensionAmount;
+				dimY2 = dimY2 + unitDy * extensionAmount;
+			} else if ( textOffset < -distance / 2 ) {
+				// Text is past the x1,y1 end - extend dimX1,dimY1
+				const extensionAmount = -textOffset - distance / 2 + 20; // Extra padding past text
+				dimX1 = dimX1 - unitDx * extensionAmount;
+				dimY1 = dimY1 - unitDy * extensionAmount;
+			}
 
 			// Build measurement text with tolerance (need this for gap calculation)
 			const measureText = this.buildDisplayText( distance, layer );
@@ -307,29 +347,29 @@
 			const showBackground = layer.showBackground !== false && layer.showBackground !== 0;
 			const needsLineBreak = textPosition === TEXT_POSITIONS.CENTER && !showBackground;
 
+			// Calculate text center position (for gap calculations)
+			const origCenterX = ( origDimX1 + origDimX2 ) / 2;
+			const origCenterY = ( origDimY1 + origDimY2 ) / 2;
+			const textCenterX = origCenterX + unitDx * textOffset;
+			const textCenterY = origCenterY + unitDy * textOffset;
+
 			// Draw main dimension line (with optional gap for center text)
 			if ( needsLineBreak ) {
 				// Calculate text width for gap
 				ctx.font = fontSize + 'px ' + fontFamily;
 				const textMetrics = ctx.measureText( measureText );
 				const gapWidth = textMetrics.width + 10; // Add padding
-
-				// Calculate gap start and end points
-				const centerX = ( dimX1 + dimX2 ) / 2;
-				const centerY = ( dimY1 + dimY2 ) / 2;
 				const halfGap = gapWidth / 2;
-				const unitDx = dx / distance;
-				const unitDy = dy / distance;
 
-				// Draw line from start to gap start
+				// Draw line from start to gap start (gap is at text position, not center)
 				ctx.beginPath();
 				ctx.moveTo( dimX1, dimY1 );
-				ctx.lineTo( centerX - unitDx * halfGap, centerY - unitDy * halfGap );
+				ctx.lineTo( textCenterX - unitDx * halfGap, textCenterY - unitDy * halfGap );
 				ctx.stroke();
 
 				// Draw line from gap end to end
 				ctx.beginPath();
-				ctx.moveTo( centerX + unitDx * halfGap, centerY + unitDy * halfGap );
+				ctx.moveTo( textCenterX + unitDx * halfGap, textCenterY + unitDy * halfGap );
 				ctx.lineTo( dimX2, dimY2 );
 				ctx.stroke();
 			} else {
@@ -340,13 +380,40 @@
 				ctx.stroke();
 			}
 
-			// Draw end markers
-			this._drawEndMarker( ctx, dimX1, dimY1, angle, endStyle, layer );
-			this._drawEndMarker( ctx, dimX2, dimY2, angle + Math.PI, endStyle, layer );
+			// Draw end markers at ORIGINAL positions (not extended)
+			// Handle both boolean false and integer 0 (from PHP serialization)
+			const arrowsInside = layer.arrowsInside !== false && layer.arrowsInside !== 0;
+			const arrowSize = layer.arrowSize || DEFAULTS.arrowSize;
 
-			// Draw measurement text
+			if ( arrowsInside ) {
+				// Arrows point inward (toward each other)
+				this._drawEndMarker( ctx, origDimX1, origDimY1, angle, endStyle, layer );
+				this._drawEndMarker( ctx, origDimX2, origDimY2, angle + Math.PI, endStyle, layer );
+			} else {
+				// Arrows point outward (away from each other) - for small dimensions
+				// Draw arrows pointing outward
+				this._drawEndMarker( ctx, origDimX1, origDimY1, angle + Math.PI, endStyle, layer );
+				this._drawEndMarker( ctx, origDimX2, origDimY2, angle, endStyle, layer );
+
+				// Draw extension tails (lines extending outward from arrow tips)
+				// This creates the pattern: >|-------|<
+				if ( endStyle === END_STYLES.ARROW ) {
+					const tailLength = arrowSize * 1.5; // Tail extends past arrow tip
+
+					ctx.beginPath();
+					// Left tail: extends outward from origDimX1,origDimY1
+					ctx.moveTo( origDimX1, origDimY1 );
+					ctx.lineTo( origDimX1 - unitDx * tailLength, origDimY1 - unitDy * tailLength );
+					// Right tail: extends outward from origDimX2,origDimY2
+					ctx.moveTo( origDimX2, origDimY2 );
+					ctx.lineTo( origDimX2 + unitDx * tailLength, origDimY2 + unitDy * tailLength );
+					ctx.stroke();
+				}
+			}
+
+			// Draw measurement text using original coordinates (textOffset is applied inside)
 			this._drawMeasurementText(
-				ctx, dimX1, dimY1, dimX2, dimY2, angle,
+				ctx, origDimX1, origDimY1, origDimX2, origDimY2, angle,
 				measureText, fontSize, fontFamily, color, textPosition, layer
 			);
 
@@ -431,7 +498,7 @@
 		}
 
 		/**
-		 * Draw extension lines from measurement points
+		 * Draw extension lines from measurement points to dimension line
 		 *
 		 * @param {CanvasRenderingContext2D} ctx - Canvas context
 		 * @param {number} x1 - Start X
@@ -440,20 +507,29 @@
 		 * @param {number} y2 - End Y
 		 * @param {number} perpX - Perpendicular X direction
 		 * @param {number} perpY - Perpendicular Y direction
-		 * @param {number} length - Extension line length
-		 * @param {number} gap - Gap from measurement point
+		 * @param {number} offsetDistance - Distance from anchor to dimension line (can be negative)
+		 * @param {number} gap - Gap from anchor point before extension line starts
 		 * @private
 		 */
-		_drawExtensionLines( ctx, x1, y1, x2, y2, perpX, perpY, length, gap ) {
+		_drawExtensionLines( ctx, x1, y1, x2, y2, perpX, perpY, offsetDistance, gap, extensionLength ) {
 			ctx.beginPath();
 
+			// Calculate extension line length based on offset (handle negative offsets)
+			const absOffset = Math.abs( offsetDistance );
+			const sign = offsetDistance >= 0 ? 1 : -1;
+
+			// Extension starts at gap from anchor, extends past the dimension line by extensionLength
+			const extLen = typeof extensionLength === 'number' ? extensionLength : 10;
+			const extStart = gap * sign;
+			const extEnd = ( absOffset + extLen ) * sign; // Extend extensionLength past dimension line
+
 			// Extension line at start point
-			ctx.moveTo( x1 + perpX * gap, y1 + perpY * gap );
-			ctx.lineTo( x1 + perpX * ( gap + length ), y1 + perpY * ( gap + length ) );
+			ctx.moveTo( x1 + perpX * extStart, y1 + perpY * extStart );
+			ctx.lineTo( x1 + perpX * extEnd, y1 + perpY * extEnd );
 
 			// Extension line at end point
-			ctx.moveTo( x2 + perpX * gap, y2 + perpY * gap );
-			ctx.lineTo( x2 + perpX * ( gap + length ), y2 + perpY * ( gap + length ) );
+			ctx.moveTo( x2 + perpX * extStart, y2 + perpY * extStart );
+			ctx.lineTo( x2 + perpX * extEnd, y2 + perpY * extEnd );
 
 			ctx.stroke();
 		}
@@ -539,26 +615,32 @@
 		 * @private
 		 */
 		_drawMeasurementText( ctx, x1, y1, x2, y2, angle, text, fontSize, fontFamily, color, position, layer ) {
-			const centerX = ( x1 + x2 ) / 2;
-			const centerY = ( y1 + y2 ) / 2;
+			// Apply textOffset to shift text along the dimension line axis
+			// 0 = centered, positive = toward x2, negative = toward x1
+			const textOffset = typeof layer?.textOffset === 'number' ? layer.textOffset : 0;
+			const unitDx = Math.cos( angle );
+			const unitDy = Math.sin( angle );
+
+			const centerX = ( x1 + x2 ) / 2 + unitDx * textOffset;
+			const centerY = ( y1 + y2 ) / 2 + unitDy * textOffset;
 			const toleranceType = layer?.toleranceType || DEFAULTS.toleranceType;
 
 			// Calculate perpendicular offset for text
 			const perpX = -Math.sin( angle );
 			const perpY = Math.cos( angle );
-			const textOffset = fontSize * 0.8;
+			const perpTextOffset = fontSize * 0.8;
 
 			let textX = centerX;
 			let textY = centerY;
 
 			switch ( position ) {
 				case TEXT_POSITIONS.ABOVE:
-					textX -= perpX * textOffset;
-					textY -= perpY * textOffset;
+					textX -= perpX * perpTextOffset;
+					textY -= perpY * perpTextOffset;
 					break;
 				case TEXT_POSITIONS.BELOW:
-					textX += perpX * textOffset;
-					textY += perpY * textOffset;
+					textX += perpX * perpTextOffset;
+					textY += perpY * perpTextOffset;
 					break;
 				case TEXT_POSITIONS.CENTER:
 				default:

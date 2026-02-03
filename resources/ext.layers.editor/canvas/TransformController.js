@@ -832,6 +832,130 @@ class TransformController {
 		}
 	}
 
+	// ==================== Dimension Offset Drag Methods ====================
+
+	/**
+	 * Start dragging the dimension offset handle.
+	 * The handle moves the dimension line perpendicular to the measurement axis.
+	 *
+	 * @param {Object} handle The dimensionText handle with perpX, perpY, unitDx, unitDy, anchorMidX, anchorMidY
+	 * @param {Object} startPoint The starting mouse point
+	 */
+	startDimensionTextDrag( handle, startPoint ) {
+		const layer = this.manager.editor.getLayerById( handle.layerId );
+
+		// Prevent drag on locked layers
+		if ( this.isLayerEffectivelyLocked( layer ) ) {
+			return;
+		}
+
+		this.isDimensionTextDragging = true;
+		this.dragStartPoint = startPoint;
+		this.dimensionTextLayerId = handle.layerId;
+		// Store both direction vectors for unified movement
+		this.dimensionPerpX = handle.perpX || 0;
+		this.dimensionPerpY = handle.perpY || -1;
+		this.dimensionUnitDx = handle.unitDx || 1;
+		this.dimensionUnitDy = handle.unitDy || 0;
+		this.dimensionAnchorMidX = handle.anchorMidX || 0;
+		this.dimensionAnchorMidY = handle.anchorMidY || 0;
+		this.dimensionLineLength = handle.lineLength || 100;
+		this.manager.canvas.style.cursor = 'move';
+
+		// Store original layer state
+		if ( layer ) {
+			this.originalLayerState = this._cloneLayer( layer );
+		}
+	}
+
+	/**
+	 * Handle unified dimension text dragging during mouse move.
+	 * Tracks both perpendicular (dimensionOffset) and parallel (textOffset) movement.
+	 * Snaps textOffset to center when near zero.
+	 *
+	 * @param {Object} point Current mouse point
+	 */
+	handleDimensionTextDrag( point ) {
+		if ( !this.isDimensionTextDragging || !this.dimensionTextLayerId ) {
+			return;
+		}
+
+		const layer = this.manager.editor.getLayerById( this.dimensionTextLayerId );
+		if ( !layer ) {
+			return;
+		}
+
+		// Calculate displacement from anchor midpoint
+		const dx = point.x - this.dimensionAnchorMidX;
+		const dy = point.y - this.dimensionAnchorMidY;
+
+		// Calculate perpendicular offset (dimensionOffset)
+		// Negate so that dragging "away" from baseline (up for horizontal lines) gives positive values
+		const perpOffset = -( dx * this.dimensionPerpX + dy * this.dimensionPerpY );
+
+		// Calculate parallel offset (textOffset)
+		let parallelOffset = dx * this.dimensionUnitDx + dy * this.dimensionUnitDy;
+
+		// Snap to center when near zero (within 10 pixels)
+		const snapThreshold = 10;
+		if ( Math.abs( parallelOffset ) < snapThreshold ) {
+			parallelOffset = 0;
+		}
+
+		// Update both offsets
+		this.manager.editor.updateLayer( this.dimensionTextLayerId, {
+			dimensionOffset: Math.round( perpOffset ),
+			textOffset: Math.round( parallelOffset )
+		} );
+
+		this.showDragPreview = true;
+
+		// Emit transform event for live properties panel update
+		this.emitTransforming( layer );
+
+		// Render layers
+		this.manager.renderLayers( this.manager.editor.layers );
+	}
+
+	/**
+	 * Finish the unified dimension text drag operation
+	 */
+	finishDimensionTextDrag() {
+		const hadMovement = this.showDragPreview;
+
+		// Emit final transform event
+		if ( hadMovement && this.dimensionTextLayerId ) {
+			const layer = this.manager.editor.getLayerById( this.dimensionTextLayerId );
+			if ( layer ) {
+				this.emitTransforming( layer, true );
+			}
+		}
+
+		this.isDimensionTextDragging = false;
+		this.dimensionTextLayerId = null;
+		this.dimensionPerpX = 0;
+		this.dimensionPerpY = 0;
+		this.dimensionUnitDx = 0;
+		this.dimensionUnitDy = 0;
+		this.dimensionAnchorMidX = 0;
+		this.dimensionAnchorMidY = 0;
+		this.dimensionLineLength = 0;
+		this.showDragPreview = false;
+		this.originalLayerState = null;
+		this.dragStartPoint = null;
+
+		// Reset cursor
+		this.manager.canvas.style.cursor = this.manager.getToolCursor( this.manager.currentTool );
+
+		// Mark dirty and save state
+		if ( hadMovement ) {
+			this.manager.editor.markDirty();
+			if ( this.manager.editor && typeof this.manager.editor.saveState === 'function' ) {
+				this.manager.editor.saveState( 'Move dimension text' );
+			}
+		}
+	}
+
 	// ==================== Utility Methods ====================
 
 	/**

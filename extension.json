@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.49",
+	"version": "1.5.50",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -906,8 +906,13 @@
 				"layers-marker-name",
 				"layers-section-dimension",
 				"layers-prop-end-style",
+				"layers-prop-arrow-position",
+				"layers-arrow-position-inside",
+				"layers-arrow-position-outside",
 				"layers-prop-text-position",
 				"layers-prop-extension-length",
+				"layers-prop-dimension-offset",
+				"layers-prop-text-offset",
 				"layers-prop-unit",
 				"layers-prop-scale",
 				"layers-prop-precision",

@@ -141,9 +141,12 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'arrowY' => 'numeric',
 		// Dimension properties
 		'endStyle' => 'string',
+		'arrowsInside' => 'boolean',
 		'textPosition' => 'string',
 		'extensionLength' => 'numeric',
 		'extensionGap' => 'numeric',
+		'dimensionOffset' => 'numeric',
+		'textOffset' => 'numeric',
 		'tickSize' => 'numeric',
 		'unit' => 'string',
 		'scale' => 'numeric',
@@ -228,6 +231,8 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		// Dimension constraints
 		'extensionLength' => [ 'min' => 0, 'max' => 100 ],
 		'extensionGap' => [ 'min' => 0, 'max' => 50 ],
+		'dimensionOffset' => [ 'min' => -500, 'max' => 500 ],
+		'textOffset' => [ 'min' => -2000, 'max' => 2000 ],
 		'tickSize' => [ 'min' => 2, 'max' => 50 ],
 		'scale' => [ 'min' => 0.001, 'max' => 1000 ],
 		'precision' => [ 'min' => 0, 'max' => 6 ]

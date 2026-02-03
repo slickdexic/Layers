@@ -954,7 +954,7 @@ describe( 'SelectionRenderer', () => {
 			const dimensionLayer = { id: 'dim1', type: 'dimension', x1: 50, y1: 100, x2: 200, y2: 100 };
 			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
 
-			// Should have 2 endpoint handles
+			// Should have 2 handles: 2 endpoints (text is draggable directly, no separate handle)
 			expect( renderer.selectionHandles.length ).toBe( 2 );
 			const handles = renderer.selectionHandles;
 			expect( handles[ 0 ].type ).toBe( 'w' );
@@ -967,8 +967,9 @@ describe( 'SelectionRenderer', () => {
 			const dimensionLayer = { id: 'dim1', type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 0 };
 			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
 
-			// Should call fillRect and strokeRect for each endpoint (2 times each)
+			// Should call fillRect for endpoints (2) only (no separate offset handle)
 			expect( mockCtx.fillRect ).toHaveBeenCalledTimes( 2 );
+			// strokeRect for endpoints (2) only
 			expect( mockCtx.strokeRect ).toHaveBeenCalledTimes( 2 );
 		} );
 
@@ -992,10 +993,11 @@ describe( 'SelectionRenderer', () => {
 			const dimensionLayer = { id: 'dim1', type: 'dimension' };
 			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
 
-			// Should have 2 handles at (0,0) and (0,0)
+			// Should have 2 handles: 2 endpoints at (0,0) (text is draggable directly)
 			expect( renderer.selectionHandles.length ).toBe( 2 );
 			const handles = renderer.selectionHandles;
 			expect( handles[ 0 ].layerId ).toBe( 'dim1' );
+			expect( handles[ 1 ].layerId ).toBe( 'dim1' );
 		} );
 
 		test( 'should set empty line dash for dimension handles', () => {

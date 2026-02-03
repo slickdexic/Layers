@@ -2,6 +2,34 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.50] - 2026-02-03
+
+### Improved
+- **Unified Dimension Text Drag** — Dimension text now acts as a CAD-style drag handle:
+  - Grab text to move dimension both up/down (perpendicular) and left/right (parallel) simultaneously
+  - Removed redundant green diamond offset handle — text is the drag handle
+  - Added snap-to-center when textOffset is within 10px of center (0)
+  - Dimension line automatically extends when text is positioned outside extension lines
+  - Fixed hit testing to find text at its actual position (not always at center)
+  - Properties panel now shows `dimensionOffset` and `textOffset` controls for precise adjustment
+
+- **Arrow Position Control** — Dimension arrows can now point inside or outside:
+  - Added "Arrow Position" dropdown with "Inside" (default) and "Outside" options
+  - Outside arrows include extension tails for small dimension annotations
+  - Matches ISO/ASME dimension annotation standards
+
+### Technical Details
+- CanvasEvents.js: Hit testing now accounts for textOffset; unified text handle creation
+- TransformController.js: New unified drag methods (startDimensionTextDrag, handleDimensionTextDrag, finishDimensionTextDrag)
+- SelectionRenderer.js: Removed green diamond handle; draws 2 handles instead of 3
+- DimensionRenderer.js: Added line extension logic, arrowsInside support with tails
+- PropertyBuilders.js: Added dimensionOffset, textOffset, and arrowsInside controls
+- NumericValidator.js: Added dimensionOffset validation (-500 to 500)
+- ServerSideLayerValidator.php: Added dimensionOffset, textOffset, arrowsInside to whitelist
+- All 11,210 tests pass (165 test suites) ✅
+
+---
+
 ## [1.5.49] - 2026-02-02
 
 ### Fixed
