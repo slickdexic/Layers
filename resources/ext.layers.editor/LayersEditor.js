@@ -143,20 +143,19 @@ class LayersEditor {
 		const Toolbar = getClass( 'UI.Toolbar', 'Toolbar' );
 		const LayerPanel = getClass( 'UI.LayerPanel', 'LayerPanel' );
 		const CanvasManager = getClass( 'Canvas.Manager', 'CanvasManager' );
-		const self = this;
 
 		return {
 			get: ( name ) => {
 				const constructors = {
-					UIManager: () => ( typeof UIManager === 'function' ) ? new UIManager( self ) : self.createStubUIManager(),
-					EventManager: () => ( typeof EventManager === 'function' ) ? new EventManager( self ) : { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} },
-					APIManager: () => ( typeof APIManager === 'function' ) ? new APIManager( self ) : { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} },
-					ValidationManager: () => ( typeof ValidationManager === 'function' ) ? new ValidationManager( self ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
-					StateManager: () => ( typeof StateManager === 'function' ) ? new StateManager( self ) : self.createStubStateManager(),
-					HistoryManager: () => ( typeof HistoryManager === 'function' ) ? new HistoryManager( self ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
-					Toolbar: () => ( typeof Toolbar === 'function' ) ? new Toolbar( { container: ( self.uiManager && self.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {}, updateAlignmentButtons: function () {} },
-					LayerPanel: () => ( typeof LayerPanel === 'function' ) ? new LayerPanel( { container: ( self.uiManager && self.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: self } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
-					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( self.uiManager && self.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: self, backgroundImageUrl: self.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
+					UIManager: () => ( typeof UIManager === 'function' ) ? new UIManager( this ) : this.createStubUIManager(),
+					EventManager: () => ( typeof EventManager === 'function' ) ? new EventManager( this ) : { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} },
+					APIManager: () => ( typeof APIManager === 'function' ) ? new APIManager( this ) : { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} },
+					ValidationManager: () => ( typeof ValidationManager === 'function' ) ? new ValidationManager( this ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
+					StateManager: () => ( typeof StateManager === 'function' ) ? new StateManager( this ) : this.createStubStateManager(),
+					HistoryManager: () => ( typeof HistoryManager === 'function' ) ? new HistoryManager( this ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
+					Toolbar: () => ( typeof Toolbar === 'function' ) ? new Toolbar( { container: ( this.uiManager && this.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {}, updateAlignmentButtons: function () {} },
+					LayerPanel: () => ( typeof LayerPanel === 'function' ) ? new LayerPanel( { container: ( this.uiManager && this.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
+					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
 				};
 				if ( constructors[ name ] ) {
 					return constructors[ name ]();

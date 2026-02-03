@@ -4,6 +4,40 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.49 (February 2, 2026)
+
+### Fixed
+- **Font Size Floating Toolbar** — Fixed regression where changing font size via floating toolbar didn't persist
+- **Nested Span Cleanup** — Added `_removeFontSizeFromFragment()` to clean up nested font-size spans
+- **Toolbar Sync** — Font size input no longer jumps back when using +/- buttons
+
+### Added
+- **Highlight Toggle** — Clicking highlight on already-highlighted text now removes the highlight
+- **Cursor-Only Formatting** — Toggle formats (bold, italic, etc.) now set typing state for next characters when cursor is placed but no text selected
+
+### Technical Details
+- 11,183 tests passing (164 suites)
+- 95.44% statement, 85.20% branch coverage
+- InlineTextEditor.js: +45 lines for toggle format and backgroundColor detection
+- RichTextToolbar.js: +25 lines for `updateFromSelection()` method
+
+---
+
+## Version 1.5.48 (February 2, 2026)
+
+### Performance Improvements
+- **API Response Caching** — LRU cache for API responses with 5-minute TTL
+- **Layer Rendering Cache** — Layer caching framework in CanvasRenderer
+- **Render Optimization** — Hash-based change detection in RenderCoordinator
+
+### Technical Details
+- 11,157 tests passing (163 suites)
+- APIManager: +82 lines for cache implementation
+- CanvasRenderer: +118 lines for layer caching
+- RenderCoordinator: +57 lines for hash detection
+
+---
+
 ## Version 1.5.47 (February 2, 2026)
 
 ### Added

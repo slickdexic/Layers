@@ -12,6 +12,20 @@
 ( function () {
 	'use strict';
 
+	// Default values fallback (for test environments where mw.ext may not be fully mocked)
+	const DEFAULT_VALUES = {
+		MIN_SLIDE_DIMENSION: 50,
+		MAX_SLIDE_DIMENSION: 4096
+	};
+
+	// Import defaults from centralized constants (lazy-loaded, with fallback for tests)
+	const getDefaults = () => {
+		if ( typeof mw !== 'undefined' && mw.ext && mw.ext.layers && mw.ext.layers.LayerDefaults ) {
+			return mw.ext.layers.LayerDefaults;
+		}
+		return DEFAULT_VALUES;
+	};
+
 	/**
 	 * Get class from Layers namespace or fallback to global
 	 *
@@ -161,14 +175,13 @@
 			this.headerIcon = icon;
 
 			// Toggle on click
-			const self = this;
-			const toggleHandler = function () {
-				self.toggle();
+			const toggleHandler = () => {
+				this.toggle();
 			};
-			const keyHandler = function ( e ) {
+			const keyHandler = ( e ) => {
 				if ( e.key === 'Enter' || e.key === ' ' ) {
 					e.preventDefault();
-					self.toggle();
+					this.toggle();
 				}
 			};
 
@@ -227,8 +240,8 @@
 			const widthInput = document.createElement( 'input' );
 			widthInput.type = 'number';
 			widthInput.className = 'slide-prop-input slide-width-input';
-			widthInput.min = '50';
-			widthInput.max = '4096';
+			widthInput.min = String( getDefaults().MIN_SLIDE_DIMENSION );
+			widthInput.max = String( getDefaults().MAX_SLIDE_DIMENSION );
 			widthInput.value = '800';
 			widthInput.setAttribute( 'aria-label', msg( 'layers-slide-canvas-width', 'Width' ) );
 
@@ -240,8 +253,8 @@
 			const heightInput = document.createElement( 'input' );
 			heightInput.type = 'number';
 			heightInput.className = 'slide-prop-input slide-height-input';
-			heightInput.min = '50';
-			heightInput.max = '4096';
+			heightInput.min = String( getDefaults().MIN_SLIDE_DIMENSION );
+			heightInput.max = String( getDefaults().MAX_SLIDE_DIMENSION );
 			heightInput.value = '600';
 			heightInput.setAttribute( 'aria-label', msg( 'layers-slide-canvas-height', 'Height' ) );
 
@@ -270,28 +283,28 @@
 		 * Setup dimension input event handlers
 		 */
 		setupDimensionHandlers() {
-			const self = this;
-
-			const widthHandler = function () {
-				if ( self.widthTimer ) {
-					clearTimeout( self.widthTimer );
+			const widthHandler = () => {
+				if ( this.widthTimer ) {
+					clearTimeout( this.widthTimer );
 				}
-				self.widthTimer = setTimeout( function () {
-					const width = parseInt( self.widthInput.value, 10 );
-					if ( width >= 50 && width <= 4096 ) {
-						self.updateCanvasSize( width, null );
+				this.widthTimer = setTimeout( () => {
+					const width = parseInt( this.widthInput.value, 10 );
+					const defaults = getDefaults();
+					if ( width >= defaults.MIN_SLIDE_DIMENSION && width <= defaults.MAX_SLIDE_DIMENSION ) {
+						this.updateCanvasSize( width, null );
 					}
 				}, 300 );
 			};
 
-			const heightHandler = function () {
-				if ( self.heightTimer ) {
-					clearTimeout( self.heightTimer );
+			const heightHandler = () => {
+				if ( this.heightTimer ) {
+					clearTimeout( this.heightTimer );
 				}
-				self.heightTimer = setTimeout( function () {
-					const height = parseInt( self.heightInput.value, 10 );
-					if ( height >= 50 && height <= 4096 ) {
-						self.updateCanvasSize( null, height );
+				this.heightTimer = setTimeout( () => {
+					const height = parseInt( this.heightInput.value, 10 );
+					const defaults = getDefaults();
+					if ( height >= defaults.MIN_SLIDE_DIMENSION && height <= defaults.MAX_SLIDE_DIMENSION ) {
+						this.updateCanvasSize( null, height );
 					}
 				}, 300 );
 			};
@@ -341,9 +354,8 @@
 			this.bgColorSwatch = swatch;
 
 			// Setup color picker handler
-			const self = this;
-			const colorHandler = function () {
-				self.openBackgroundColorPicker();
+			const colorHandler = () => {
+				this.openBackgroundColorPicker();
 			};
 
 			if ( this.eventTracker ) {
@@ -372,9 +384,8 @@
 			row.appendChild( button );
 
 			// Setup copy handler
-			const self = this;
-			const copyHandler = function () {
-				self.copyEmbedCode();
+			const copyHandler = () => {
+				this.copyEmbedCode();
 			};
 
 			if ( this.eventTracker ) {
@@ -491,15 +502,13 @@
 				this.editor.stateManager.get( 'slideBackgroundColor' ) || 'transparent' :
 				'transparent';
 
-			const self = this;
-
 			// Use toolbar's color picker if available
 			// openColorPickerDialog( anchorButton, initialValue, options )
 			if ( this.editor && this.editor.toolbar &&
 				typeof this.editor.toolbar.openColorPickerDialog === 'function' ) {
 				this.editor.toolbar.openColorPickerDialog( this.bgColorButton, currentColor, {
-					onApply: function ( newColor ) {
-						self.setBackgroundColor( newColor );
+					onApply: ( newColor ) => {
+						this.setBackgroundColor( newColor );
 					}
 				} );
 			}

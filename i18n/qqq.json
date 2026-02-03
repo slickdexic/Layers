@@ -405,6 +405,7 @@
 	"layers-image-too-large": "Error shown when the source image exceeds configured width/height budgets for editing",
 	"layers-db-error": "Generic database error; $1 contains a brief error detail",
 	"layers-save-failed": "Generic save failure message when DB insert/update fails",
+	"layers-info-failed": "Generic info retrieval failure message shown when an unexpected error occurs in the layersinfo API",
 	"layers-layerset-not-found": "Error shown when a requested layer set id does not exist",
 	"layers-max-sets-reached": "Error shown when user tries to create a new named layer set but the maximum number of sets per image has been reached",
 	"layers-invalid-setname": "Error shown when the provided set name contains invalid characters",

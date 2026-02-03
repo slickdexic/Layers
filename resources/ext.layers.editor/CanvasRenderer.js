@@ -87,6 +87,12 @@
 			this.canvasPool = [];
 			this.maxPoolSize = 5;
 
+			// Static layer caching for performance optimization
+			// Caches pre-rendered offscreen canvases for layers that haven't changed
+			this.layerCache = new Map();
+			this.layerCacheMaxSize = 50; // Max cached layers
+			this.layerCacheEnabled = true; // Can be disabled for debugging
+
 			// Layer renderer (delegated shape drawing - uses shared LayerRenderer)
 			this.layerRenderer = null;
 
@@ -148,6 +154,118 @@
 				return this.editor.getLayerById( layerId );
 			}
 			return null;
+		}
+
+		/**
+		 * Compute a hash string for a layer to detect changes.
+		 * Used for layer caching - if hash matches, cached version can be used.
+		 *
+		 * @param {Object} layer - Layer object
+		 * @return {string} Hash string representing the layer state
+		 * @private
+		 */
+		_computeLayerHash( layer ) {
+			// Include all properties that affect rendering
+			// Exclude position (x, y) since we handle that via canvas translation
+			const hashParts = [
+				layer.id,
+				layer.type,
+				layer.width,
+				layer.height,
+				layer.rotation,
+				layer.opacity,
+				layer.fill,
+				layer.stroke,
+				layer.strokeWidth,
+				layer.text,
+				layer.fontSize,
+				layer.fontFamily,
+				layer.fontWeight,
+				layer.fontStyle,
+				layer.shadow,
+				layer.shadowBlur,
+				layer.shadowColor,
+				layer.radius,
+				layer.radiusX,
+				layer.radiusY,
+				layer.arrowhead,
+				layer.arrowStyle,
+				layer.blendMode,
+				layer.blend,
+				layer.cornerRadius,
+				layer.src ? layer.src.substring( 0, 100 ) : '', // First 100 chars of image
+				layer.richText ? JSON.stringify( layer.richText ).substring( 0, 200 ) : '',
+				layer.gradient ? JSON.stringify( layer.gradient ) : '',
+				// For arrow/line, include endpoints
+				layer.x1,
+				layer.y1,
+				layer.x2,
+				layer.y2,
+				// Points for polygon/path
+				layer.points ? layer.points.length : 0
+			];
+			return hashParts.join( '|' );
+		}
+
+		/**
+		 * Get a cached layer canvas or create a new one.
+		 *
+		 * @param {Object} layer - Layer to render
+		 * @return {Object|null} Cached data {canvas, hash} or null if not cached
+		 * @private
+		 */
+		_getCachedLayer( layer ) {
+			if ( !this.layerCacheEnabled || !layer.id ) {
+				return null;
+			}
+			const cached = this.layerCache.get( layer.id );
+			if ( !cached ) {
+				return null;
+			}
+			// Verify hash matches current layer state
+			const currentHash = this._computeLayerHash( layer );
+			if ( cached.hash !== currentHash ) {
+				// Layer changed, invalidate cache
+				this.layerCache.delete( layer.id );
+				return null;
+			}
+			return cached;
+		}
+
+		/**
+		 * Cache a rendered layer to an offscreen canvas.
+		 *
+		 * @param {Object} layer - Layer that was rendered
+		 * @param {HTMLCanvasElement} canvas - Offscreen canvas with rendered layer
+		 * @private
+		 */
+		_setCachedLayer( layer, canvas ) {
+			if ( !this.layerCacheEnabled || !layer.id ) {
+				return;
+			}
+			// Enforce max cache size (LRU eviction)
+			while ( this.layerCache.size >= this.layerCacheMaxSize ) {
+				const firstKey = this.layerCache.keys().next().value;
+				this.layerCache.delete( firstKey );
+			}
+			this.layerCache.set( layer.id, {
+				canvas: canvas,
+				hash: this._computeLayerHash( layer ),
+				timestamp: Date.now()
+			} );
+		}
+
+		/**
+		 * Invalidate cache for a specific layer or all layers.
+		 *
+		 * @param {string} [layerId] - Layer ID to invalidate, or omit to clear all
+		 */
+		invalidateLayerCache( layerId ) {
+			if ( layerId ) {
+				this.layerCache.delete( layerId );
+			} else {
+				this.layerCache.clear();
+			}
 		}
 
 		setTransform( zoom, panX, panY ) {
@@ -1168,6 +1286,11 @@
 					pooledCanvas.height = 0;
 				} );
 				this.canvasPool = [];
+			}
+
+			// Clear layer cache
+			if ( this.layerCache ) {
+				this.layerCache.clear();
 			}
 
 			// Clear canvas state stack

@@ -428,6 +428,7 @@
 	"layers-image-too-large": "Image is too large to edit with layers",
 	"layers-db-error": "Database error: $1",
 	"layers-save-failed": "Failed to save layer data",
+	"layers-info-failed": "Failed to retrieve layer information",
 	"layers-layerset-not-found": "Requested layer set was not found",
 	"layers-max-sets-reached": "Maximum number of named layer sets reached for this image. Please delete or reuse an existing set.",
 	"layers-invalid-setname": "Invalid set name. Use letters, numbers, underscores, dashes, and spaces only.",

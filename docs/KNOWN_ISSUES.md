@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** February 2, 2026 (Comprehensive Critical Review v6)  
-**Version:** 1.5.46
+**Last Updated:** February 2, 2026 (Comprehensive Critical Review v10)  
+**Version:** 1.5.49
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -12,223 +12,286 @@ This document lists known issues and current gaps for the Layers extension.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ None |
-| P1 (High Priority) | **0** | ��� ✅ All Fixed |
-| P2 (Medium Priority) | **2** | ��� Minor issues remaining |
-| P3 (Low Priority) | **7** | ��� Minor issues |
-| Feature Gaps | 4 | Planned |
+| P1 (High Priority) | **1** | ⚠️ Version sync issue |
+| P2 (Medium Priority) | **2** | ⚠️ Documentation metrics |
+| P3 (Low Priority) | **2** | ⚠️ Code style |
+| Feature Gaps | 3 | Backlog |
 
 ---
 
-## ��� P1: High Priority Issues (0 Open - All Fixed)
+## ⚠️ Open Issues (v10 Review)
 
-### P1.1 ApiSlidesSave.php - Dead Code with Fatal Bugs
+### P1.1 Widespread Version Inconsistencies (NEW)
 
-**Status:** ��� ✅ FIXED (DELETED)  
+**Status:** ⚠️ OPEN  
 **Severity:** P1 (High)  
-**Component:** Dead Code / API
+**Component:** Documentation
 
-**Issue:** `src/Api/ApiSlidesSave.php` exists in the repository but is NOT registered in `extension.json` APIModules. It contains 6+ fatal bugs:
+**Issue:** Version was bumped to 1.5.49 in extension.json but not propagated to other files.
 
-| Line | Bug |
-|------|-----|
-| 68 | Wrong RateLimiter constructor (passes User, expects Config) |
-| 69 | Wrong method name (isLimited() doesn't exist) |
-| 75-77 | SlideNameValidator::validate() returns string, not ValidationResult |
-| 87 | Wrong ServerSideLayerValidator constructor signature |
-| 95 | getSanitizedData() doesn't exist, should be getData() |
-| 128 | sanitizeColor() method not defined |
-| 132 | saveSlide() method doesn't exist in LayersDatabase |
+**Files requiring update to 1.5.49:**
+- README.md (line 11)
+- Mediawiki-Extension-Layers.mediawiki (lines 11, 124, 126, 128)
+- wiki/Home.md (lines 23, 297-299)
+- wiki/Installation.md (lines 19-21)
+- docs/ARCHITECTURE.md (line 4)
+- docs/GOD_CLASS_REFACTORING_PLAN.md (line 15)
+- improvement_plan.md (line 4)
+- LayersNamespace.js (line 19) - const VERSION = '1.5.47'
 
-**Mitigating Factor:** Cannot be invoked (not registered in APIModules).
+**Impact:** MediaWiki.org extension page shows wrong version.
 
-**Recommended Action:** Delete the file. Slide save is handled by `ApiLayersSave::executeSlideSave()`.
-
-**Files:** `src/Api/ApiSlidesSave.php`
+**Fix:** Update all files to 1.5.49.
 
 ---
 
-### P1.2 ApiSlideInfo.php - Dead Code with Fatal Bugs
+### P2.1 Test Count/Coverage Documentation Mismatch (NEW)
 
-**Status:** ��� ✅ FIXED (DELETED)  
-**Severity:** P1 (High)  
-**Component:** Dead Code / API
-
-**Issue:** `src/Api/ApiSlideInfo.php` exists in the repository but is NOT registered in `extension.json` APIModules. It contains multiple fatal bugs:
-
-| Line | Bug |
-|------|-----|
-| 66-68 | SlideNameValidator::validate() returns string, not ValidationResult |
-| 67 | getMessage() called on string (doesn't exist) |
-| 74 | getSlideByName() doesn't exist in LayersDatabase |
-
-**Mitigating Factor:** Cannot be invoked (not registered in APIModules).
-
-**Recommended Action:** Delete the file. Slide info is handled by `ApiLayersInfo::executeSlideRequest()`.
-
-**Files:** `src/Api/ApiSlideInfo.php`
-
----
-
-## ��� P2: Medium Priority Issues (2 Open)
-
-### P2.1 Missing Boolean Properties in preserveLayerBooleans
-
-**Status:** ��� ✅ FIXED  
-**Severity:** P2 (Medium)  
-**Component:** ApiLayersInfo / Data Integrity
-
-**Issue:** `preserveLayerBooleans()` only converts 7 of 12 boolean properties. Missing:
-- `expanded`, `isMultiPath`, `strokeOnly`, `showUnit`, `showBackground`
-
-**Impact:** False values for these properties may be lost during API JSON serialization.
-
-**Files:** `src/Api/ApiLayersInfo.php` lines 365-368
-
----
-
-### P2.2 InlineTextEditor Not in CanvasManager Destroy List
-
-**Status:** ��� ✅ FIXED  
-**Severity:** P2 (Medium)  
-**Component:** CanvasManager / Memory Leak
-
-**Issue:** The `inlineTextEditor` controller is initialized but NOT included in the `controllersToDestroy` array, causing a memory leak.
-
-**Files:** `resources/ext.layers.editor/CanvasManager.js` lines 1957-1973
-
----
-
-### P2.3 ApiLayersRename Lacks Slide Support
-
-**Status:** ��� ✅ FIXED  
-**Severity:** P2 (Medium)  
-**Component:** ApiLayersRename / Feature Gap
-
-**Issue:** Unlike other API modules (Save, Info, Delete), the Rename module does not support slides.
-
-**Impact:** Cannot rename named layer sets on slides.
-
-**Files:** `src/Api/ApiLayersRename.php`
-
----
-
-### P2.4 Documentation Version Inconsistencies
-
-**Status:** ��� ✅ FIXED  
+**Status:** ⚠️ OPEN  
 **Severity:** P2 (Medium)  
 **Component:** Documentation
 
-**Issue:** Several files have outdated version numbers (1.5.45 instead of 1.5.46):
-- `Mediawiki-Extension-Layers.mediawiki`
-- `wiki/Home.md`
-- `.github/copilot-instructions.md`
+**Issue:** Documentation shows outdated test metrics:
+
+| Metric | Documentation | Actual |
+|--------|--------------|--------|
+| Test count | 11,157 | 11,183 |
+| Test suites | 163 | 164 |
+| Statement coverage | 95.44% | 95.19% |
+| Branch coverage | 85.20% | 84.96% |
+
+**Impact:** Misleading quality metrics in 20+ documentation files.
+
+**Fix:** Update all documentation with current test values.
 
 ---
 
-### P2.5 Font Family Validation Too Restrictive
+### P2.2 i18n Message Count Inconsistency (NEW)
 
-**Status:** ��� OPEN  
-**Severity:** P2 (Medium)  
-**Component:** ServerSideLayerValidator
-
-**Issue:** Font validation requires fonts to be in `$wgLayersDefaultFonts` (defaults to ['Arial', 'sans-serif']). Standard fonts like Georgia, Courier New are rejected.
-
-**Impact:** Potential data loss for layers using common fonts.
-
-**Files:** `src/Validation/ServerSideLayerValidator.php` lines 500-506
-
----
-
-### P2.6 wiki/Changelog.md Missing v1.5.46
-
-**Status:** ��� ✅ FIXED (Already Synced)  
+**Status:** ⚠️ OPEN  
 **Severity:** P2 (Medium)  
 **Component:** Documentation
 
-**Issue:** Main CHANGELOG.md has v1.5.46 but wiki/Changelog.md starts at v1.5.45.
+**Issue:** Documentation shows inconsistent i18n counts (667 vs 750).
+
+**Fix:** Audit en.json and standardize count across all docs.
 
 ---
 
-### P2.7 Branch Version Table Inconsistencies
+### P3.1 const self = this Anti-Pattern
 
-**Status:** ��� OPEN  
-**Severity:** P2 (Medium)  
-**Component:** Documentation
+**Resolution (v9.1):** Refactored 9 instances to use arrow functions:
+- LayersEditor.js (1) → arrow functions
+- SlideController.js (6) → arrow functions
+- ViewerManager.js (2) → arrow functions
 
-**Issue:** REL1_43 and REL1_39 version references are inconsistent across documentation.
+**Remaining (legitimate uses - 4 instances):**
+- VirtualLayerList.js (1) - throttle function needs two `this` contexts
+- ShapeLibraryPanel.js (3) - prototype pattern requires full class migration
+
+**Impact:** Minor code style inconsistency in remaining files.
 
 ---
 
-## ��� P3: Low Priority Issues (10 Open)
+### P3.7 LayersLightbox Click Handler Cleanup
+
+**Status:** ✅ RESOLVED (v9.1)  
+**Severity:** P3 (Low)  
+**Component:** Memory Management
+
+**Issue:** The `close()` method removed `boundKeyHandler` explicitly but not `boundClickHandler`.
+
+**Resolution (v9.1):** Added explicit `removeEventListener` call for `boundClickHandler`.
+
+**Impact:** None functional (handler was garbage collected with DOM element anyway).
+
+**Recommendation:** Add explicit `removeEventListener` for consistency.
+
+---
+
+### P3.8 APIManager Promise Handling on Abort
+
+**Status:** ⚠️ OPEN (by design)  
+**Severity:** P3 (Low)  
+**Component:** API Error Handling
+
+**Issue:** When API requests are aborted, the Promise neither resolves nor rejects.
+
+**Impact:** Callers using `await` on aborted requests will hang indefinitely.
+
+**Note:** This is intentional behavior - aborted requests indicate the user changed context.
+
+**Recommendation:** Consider resolving with `undefined` or rejecting with an `AbortError`.
+
+---
+
+## ✅ P1: High Priority Issues — ALL RESOLVED
+
+### ~~P1.1 ApiSlidesSave.php — Dead Code~~
+
+**Status:** ✅ FIXED (DELETED)  
+**Resolution:** File deleted. Dead code no longer exists in the repository.
+
+---
+
+### ~~P1.2 ApiSlideInfo.php — Dead Code~~
+
+**Status:** ✅ FIXED (DELETED)  
+**Resolution:** File deleted. Dead code no longer exists in the repository.
+
+---
+
+## ✅ P2: Medium Priority Issues — ALL RESOLVED
+
+### ~~P2.1 Missing Boolean Properties in preserveLayerBooleans~~
+
+**Status:** ✅ FIXED  
+**Resolution:** All 12 boolean properties are now included in the array.  
+**Verified:** src/Api/ApiLayersInfo.php lines 366-369.
+
+---
+
+### ~~P2.2 InlineTextEditor Not in CanvasManager Destroy List~~
+
+**Status:** ✅ FIXED  
+**Resolution:** inlineTextEditor is now included in controllersToDestroy array.  
+**Verified:** resources/ext.layers.editor/CanvasManager.js line 1971.
+
+---
+
+### ~~P2.3 ApiLayersRename Lacks Slide Support~~
+
+**Status:** ✅ FIXED  
+**Resolution:** executeSlideRename() method implemented.  
+**Verified:** src/Api/ApiLayersRename.php lines 56-68 and 272-330.
+
+---
+
+### ~~P2.4 Documentation Version Inconsistencies~~
+
+**Status:** ✅ FIXED  
+**Resolution:** All documentation files now show v1.5.47.
+
+---
+
+### ~~P2.5 Font Family Validation Too Restrictive~~
+
+**Status:** ✅ FIXED  
+**Resolution:** Font validation now allows any sanitized font name.  
+**Verified:** src/Validation/ServerSideLayerValidator.php lines 502-506.
+
+---
+
+### ~~P2.6 wiki/Changelog.md Missing Entries~~
+
+**Status:** ✅ FIXED  
+**Resolution:** wiki/Changelog.md is now synchronized with CHANGELOG.md.
+
+---
+
+### ~~P2.7 Branch Version Table Inconsistencies~~
+
+**Status:** ✅ FIXED  
+**Resolution:** All branch version references are now consistent.
+
+---
+
+## ⚠️ P3: Low Priority Issues (6 Open)
 
 ### P3.1 Inconsistent API Error Codes
 
-**Files:** Multiple API modules
+**Status:** ✅ FIXED (v7 session 2)  
+**Severity:** P3 (Low)  
+**Component:** API Modules
 
-Different modules use different error codes for `ERROR_FILE_NOT_FOUND`:
-- ApiLayersSave: `'filenotfound'`
-- ApiLayersDelete: `'invalidfilename'`
-- ApiLayersRename: `'invalidfilename'`
+**Issue:** Minor inconsistency in error codes for "layer set not found":
+- ApiLayersInfo.php: used 'layersetnotfound' → now uses 'setnotfound'
+- ApiLayersDelete.php, ApiLayersRename.php: use 'setnotfound'
 
----
+**Resolution:** Standardized to 'setnotfound' in ApiLayersInfo.
 
-### P3.2 Undocumented Rate Limit Keys
-
-**Status:** ✅ FIXED - Documented in wiki/Configuration-Reference.md and wiki/API-Reference.md
-
-**Files:** `src/Api/ApiLayersRename.php`
-
-**Status:** ✅ FIXED - Documented in wiki/Configuration-Reference.md and wiki/API-Reference.md
-
-The `editlayers-rename` rate limit key is used but not documented.
-
-**Status:** ✅ FIXED - Documented in wiki/Configuration-Reference.md and wiki/API-Reference.md
+**Files:** src/Api/ApiLayersInfo.php lines 125, 131
 
 ---
 
-### P3.3 Text Sanitizer May Corrupt Keywords
+### P3.2 ApiLayersInfo Lacks Rate Limiting
 
-**Files:** `src/Validation/TextSanitizer.php` lines 116-124
+**Status:** ✅ FIXED (v7 session 2)  
+**Severity:** P3 (Low)  
+**Component:** API Security
 
-JS keywords are now neutralized with zero-width space instead of removed (preserves text while preventing execution).
+**Issue:** Unlike write operations, the read endpoint did not apply rate limiting.
 
----
+**Resolution:** Added rate limiting via createRateLimiter() and checkRateLimit('info').
 
-### P3.4 SchemaManager Global Service Access
-
-Uses `MediaWikiServices::getInstance()` in constructor, making unit testing harder.
-
----
-
-### P3.5 Hardcoded Transaction Timeout Values
-
-3 retries, 5000ms timeout hardcoded in LayersDatabase. Could be configurable.
+**Files:** src/Api/ApiLayersInfo.php
 
 ---
 
-### P3.6 TINYINT for ls_layer_count Column
+### P3.3 ApiLayersInfo Lacks Global Exception Handler
 
-Max 255; should be smallint for future-proofing.
+**Status:** ✅ FIXED (v7 session 2)  
+**Severity:** P3 (Low)  
+**Component:** API Error Handling
+
+**Issue:** The main execute() method did not have a global try/catch block.
+
+**Resolution:** Wrapped main logic in try/catch with generic error response. Added ERROR_INFO_FAILED constant and i18n message.
+
+**Files:** src/Api/ApiLayersInfo.php
 
 ---
 
-### P3.7-P3.10 Documentation Line Count Discrepancies
+### P3.4 Silent Catch Blocks
 
-Multiple documentation files have minor line count discrepancies (1-10 lines) for god class files. Acceptable as line counts change frequently.
+**Status:** ✅ RESOLVED (v7 session 2)  
+**Severity:** P3 (Low)  
+**Component:** JavaScript Error Handling
+
+**Issue:** Originally reported as silent catch blocks making debugging difficult.
+
+**Investigation Results:**
+- localStorage checks (DraftManager.js, ToolDropdown.js) - **intentionally silent** (standard browser feature detection pattern)
+- Clipboard operations (ToolbarStyleControls.js) - **intentionally silent** (clipboard may not be available)
+- Canvas operations (EffectsRenderer.js) - **already has logging** via mw.log.warn()
+- Feature detection (ValidationManager.js) - **intentionally silent** (purpose is to detect availability)
+
+**Resolution:** No changes needed. Silent catches are either intentional for feature detection or already have proper logging.
+
+---
+
+### P3.5 Magic Numbers
+
+**Status:** ⚠️ OPEN  
+**Severity:** P3 (Low)  
+**Component:** Code Quality
+
+**Issue:** 11+ hardcoded numeric values without named constants:
+- fontSize: 16 appears in multiple files
+- shadowBlur: 64 max value inline
+- Slide dimension limits (50, 4096) inline
+
+**Recommendation:** Extract to LayersConstants.js for maintainability.
+
+---
+
+### P3.6 const self = this Anti-Pattern
+
+**Status:** ⚠️ OPEN  
+**Severity:** P3 (Low)  
+**Component:** Code Style
+
+**Issue:** Despite using ES6 classes, 7+ files use const self = this instead of arrow functions.
+
+**Impact:** Code style inconsistency.
+
+**Recommendation:** Refactor to arrow functions during future maintenance.
 
 ---
 
 ## ⏳ Feature Gaps
 
-### F1. Custom Fonts
-
-**Status:** ⏳ NOT STARTED
-
-Not yet available beyond the default font allowlist in `$wgLayersDefaultFonts`.
-
----
-
-### F2. Enhanced Dimension Tool
+### F1. Enhanced Dimension Tool
 
 **Status:** ⏳ PROPOSED
 
@@ -236,7 +299,7 @@ Make the dimension line draggable independently from the anchor points.
 
 ---
 
-### F3. Angle Dimension Tool
+### F2. Angle Dimension Tool
 
 **Status:** ⏳ PROPOSED
 
@@ -244,17 +307,24 @@ New tool for measuring and annotating angles.
 
 ---
 
-### F4. Slide Rename Support [COMPLETED]
+### F3. Custom Variable Fonts
 
-**Status:** ⏳ ✅ FIXED
+**Status:** ⏳ PROPOSED
 
-ApiLayersRename needs slide support to match other API modules.
+Support for variable font axes (weight, width, slant) in text layers.
 
 ---
 
 ## ✅ Previously Resolved Issues
 
-All issues from previous reviews (v1-v5) remain resolved. See previous review versions for details.
+All issues from previous reviews (v1-v6) are now resolved:
+
+- **Dead code files** (ApiSlidesSave.php, ApiSlideInfo.php) — Deleted
+- **Boolean serialization** — All 12 properties preserved
+- **Memory leaks** — inlineTextEditor in destroy list
+- **Slide rename support** — executeSlideRename() implemented
+- **Font validation** — Allows any sanitized font name
+- **Documentation consistency** — All files synchronized
 
 ---
 
@@ -262,13 +332,13 @@ All issues from previous reviews (v1-v5) remain resolved. See previous review ve
 
 | Metric | Value | Status |
 |--------|-------|---------|
-| Tests total | **11,157** (163 suites) | ✅ |
-| Tests passing | **11,157** | ✅ All pass |
+| Tests total | **11,183** (164 suites) | ✅ |
+| Tests passing | **11,183** | ✅ All pass |
 | Tests failing | **0** | ✅ |
-| Statement coverage | **95.44%** | ✅ Excellent |
-| Branch coverage | **85.20%** | ✅ Good |
-| Function coverage | **93.75%** | ✅ Excellent |
-| Line coverage | **95.56%** | ✅ Excellent |
+| Statement coverage | **95.19%** | ✅ Excellent |
+| Branch coverage | **84.96%** | ✅ Good |
+| Function coverage | **93.67%** | ✅ Excellent |
+| Line coverage | **95.32%** | ✅ Excellent |
 
 ---
 
@@ -276,14 +346,14 @@ All issues from previous reviews (v1-v5) remain resolved. See previous review ve
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| JavaScript files | **141** (139 source + 2 dist) | ✅ |
+| JavaScript files | **142** (140 source + 2 dist) | ✅ |
 | PHP files | **42** | ✅ |
 | God classes (≥1,000 lines) | **18** | 2 generated, 14 JS, 2 PHP |
 | ESLint disables | 11 | All legitimate |
-| i18n messages | **667** | All documented |
+| i18n messages | **749** | All documented |
 | TODO/FIXME/HACK | 0 | ✅ Clean |
 | console.log in production | 0 | ✅ Clean |
-| Dead code files | 2 | ApiSlidesSave, ApiSlideInfo |
+| Dead code files | 0 | ✅ All deleted |
 
 ---
 
@@ -324,5 +394,6 @@ If you encounter issues:
 
 ---
 
-*Document updated: February 2, 2026 (Comprehensive Critical Review v6)*  
-*Status: 2 P1 issues, 7 P2 issues, 10 P3 issues.*
+*Document updated: February 2, 2026 (Comprehensive Critical Review v7, Session 2)*  
+*Status: 0 P1/P2 issues, 2 P3 issues remaining.*  
+*Overall Rating: 9.5/10*

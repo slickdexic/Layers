@@ -72,7 +72,6 @@
 			}
 
 			const api = new mw.Api();
-			const self = this;
 
 			containers.forEach( ( container ) => {
 				// Skip if already initialized
@@ -82,7 +81,7 @@
 
 				const slideName = container.getAttribute( 'data-slide-name' );
 				if ( !slideName ) {
-					self.debugWarn( 'Slide container missing data-slide-name attribute' );
+					this.debugWarn( 'Slide container missing data-slide-name attribute' );
 					return;
 				}
 
@@ -96,7 +95,7 @@
 				container.layersSlideInitialized = true;
 				container.layersSlideInitSuccess = false;
 
-				self.debugLog( 'Fetching slide data for:', slideName, 'set:', setName );
+				this.debugLog( 'Fetching slide data for:', slideName, 'set:', setName );
 
 				api.get( {
 					action: 'layersinfo',
@@ -109,9 +108,9 @@
 				} ).then( ( data ) => {
 					try {
 						if ( !data || !data.layersinfo ) {
-							self.debugLog( 'No layersinfo returned for slide:', slideName );
+							this.debugLog( 'No layersinfo returned for slide:', slideName );
 							container.layersSlideInitialized = false; // Allow retry
-							self.renderEmptySlide( container, canvasWidth, canvasHeight );
+							this.renderEmptySlide( container, canvasWidth, canvasHeight );
 							return;
 						}
 
@@ -119,9 +118,9 @@
 						const layerset = layersInfo.layerset;
 
 						if ( !layerset || !layerset.data || !layerset.data.layers || layerset.data.layers.length === 0 ) {
-							self.debugLog( 'No layers in fetched data for slide:', slideName );
+							this.debugLog( 'No layers in fetched data for slide:', slideName );
 							container.layersSlideInitialized = false; // Allow retry
-							self.renderEmptySlide( container, canvasWidth, canvasHeight );
+							this.renderEmptySlide( container, canvasWidth, canvasHeight );
 							return;
 						}
 
@@ -139,18 +138,18 @@
 							backgroundColor: layerset.data.backgroundColor || container.getAttribute( 'data-background-color' ) || '#ffffff'
 						};
 
-						self.initializeSlideViewer( container, payload );
+						this.initializeSlideViewer( container, payload );
 						container.layersSlideInitSuccess = true; // Mark as successfully initialized
 						container.setAttribute( 'data-layers-init-success', 'true' ); // For DOM queries
 					} catch ( e ) {
-						self.debugWarn( 'Error processing slide data:', e );
+						this.debugWarn( 'Error processing slide data:', e );
 						container.layersSlideInitialized = false; // Allow retry
-						self.renderEmptySlide( container, canvasWidth, canvasHeight );
+						this.renderEmptySlide( container, canvasWidth, canvasHeight );
 					}
 				} ).catch( ( apiErr ) => {
-					self.debugWarn( 'API request failed for slide:', slideName, apiErr );
+					this.debugWarn( 'API request failed for slide:', slideName, apiErr );
 					container.layersSlideInitialized = false; // Allow retry
-					self.renderEmptySlide( container, canvasWidth, canvasHeight );
+					this.renderEmptySlide( container, canvasWidth, canvasHeight );
 				} );
 			} );
 
@@ -173,21 +172,20 @@
 			}
 			this._retriesScheduled = true;
 
-			const self = this;
 			// Retry at 500ms, 1500ms, and 3000ms
 			const delays = [ 500, 1500, 3000 ];
 
 			delays.forEach( ( delay, index ) => {
 				const timeoutId = setTimeout( () => {
 					// Remove completed timeout from tracking array
-					const idx = self._retryTimeouts.indexOf( timeoutId );
+					const idx = this._retryTimeouts.indexOf( timeoutId );
 					if ( idx !== -1 ) {
-						self._retryTimeouts.splice( idx, 1 );
+						this._retryTimeouts.splice( idx, 1 );
 					}
-					self._retryFailedSlides( index + 1, delays.length );
+					this._retryFailedSlides( index + 1, delays.length );
 				}, delay );
 				// Track timeout for potential cleanup
-				self._retryTimeouts.push( timeoutId );
+				this._retryTimeouts.push( timeoutId );
 			} );
 		}
 
@@ -450,9 +448,6 @@
 					return false;
 				}
 
-				// Store reference to 'this' for use in nested function
-				const self = this;
-
 				/**
 				 * Helper function to render all layers.
 				 */
@@ -478,7 +473,7 @@
 					} else {
 						// No layers - draw empty state placeholder and mark for print hiding
 						container.classList.add( 'layers-slide-is-empty' );
-						self.drawEmptyStateContent( ctx, canvas.width, canvas.height, container );
+						this.drawEmptyStateContent( ctx, canvas.width, canvas.height, container );
 					}
 				};
 
@@ -532,7 +527,6 @@
 			}
 
 			const api = new mw.Api();
-			const self = this;
 			let refreshCount = 0;
 			const errors = [];
 
@@ -556,7 +550,7 @@
 				} ).then( ( data ) => {
 					try {
 						if ( !data || !data.layersinfo ) {
-							self.debugLog( 'refreshAllSlides: no layersinfo for', slideName );
+							this.debugLog( 'refreshAllSlides: no layersinfo for', slideName );
 							return { success: false, slideName: slideName };
 						}
 
@@ -584,21 +578,21 @@
 								container.getAttribute( 'data-background' ) || '#ffffff'
 						};
 
-						const success = self.reinitializeSlideViewer( container, payload );
+						const success = this.reinitializeSlideViewer( container, payload );
 						if ( success ) {
 							refreshCount++;
 							container.layersSlideInitSuccess = true;
 							container.setAttribute( 'data-layers-init-success', 'true' );
-							self.debugLog( 'refreshAllSlides: refreshed slide', slideName );
+							this.debugLog( 'refreshAllSlides: refreshed slide', slideName );
 						}
 						return { success: success, slideName: slideName };
 					} catch ( e ) {
-						self.debugWarn( 'refreshAllSlides: error processing', slideName, e );
+						this.debugWarn( 'refreshAllSlides: error processing', slideName, e );
 						errors.push( { slideName: slideName, error: e.message || String( e ) } );
 						return { success: false, slideName: slideName };
 					}
 				} ).catch( ( apiErr ) => {
-					self.debugWarn( 'refreshAllSlides: API error for', slideName, apiErr );
+					this.debugWarn( 'refreshAllSlides: API error for', slideName, apiErr );
 					const errMsg = apiErr && apiErr.message ? apiErr.message :
 						( apiErr && apiErr.error && apiErr.error.info ? apiErr.error.info : String( apiErr ) );
 					errors.push( { slideName: slideName, error: errMsg } );
@@ -608,9 +602,9 @@
 
 			return Promise.all( refreshPromises ).then( ( results ) => {
 				const failed = results.filter( ( r ) => !r.success ).length;
-				self.debugLog( 'refreshAllSlides: completed, refreshed', refreshCount, 'of', slideContainers.length, 'slides' );
+				this.debugLog( 'refreshAllSlides: completed, refreshed', refreshCount, 'of', slideContainers.length, 'slides' );
 				if ( errors.length > 0 ) {
-					self.debugWarn( 'refreshAllSlides:', errors.length, 'errors occurred:', errors );
+					this.debugWarn( 'refreshAllSlides:', errors.length, 'errors occurred:', errors );
 				}
 				return {
 					refreshed: refreshCount,
@@ -663,8 +657,6 @@
 			}
 			editButton.layersClickBound = true;
 
-			const self = this;
-
 			editButton.addEventListener( 'click', ( e ) => {
 				e.preventDefault();
 				e.stopPropagation();
@@ -676,9 +668,9 @@
 				const backgroundColor = container.getAttribute( 'data-background' ) || '#ffffff';
 				const layerSetName = container.getAttribute( 'data-layerset' ) || 'default';
 
-				self.debugLog( 'Slide edit clicked:', slideName, 'lockMode:', lockMode );
+				this.debugLog( 'Slide edit clicked:', slideName, 'lockMode:', lockMode );
 
-				self.openSlideEditor( {
+				this.openSlideEditor( {
 					slideName: slideName,
 					lockMode: lockMode,
 					canvasWidth: canvasWidth,
@@ -707,7 +699,6 @@
 			}
 
 			const canEdit = this.canUserEdit();
-			const self = this;
 
 			// Create overlay container
 			const overlay = document.createElement( 'div' );
@@ -727,7 +718,7 @@
 				editBtn.addEventListener( 'click', ( e ) => {
 					e.preventDefault();
 					e.stopPropagation();
-					self.handleSlideEditClick( container );
+					this.handleSlideEditClick( container );
 				} );
 
 				overlay.appendChild( editBtn );
@@ -744,7 +735,7 @@
 			viewBtn.addEventListener( 'click', ( e ) => {
 				e.preventDefault();
 				e.stopPropagation();
-				self.handleSlideViewClick( container, payload );
+				this.handleSlideViewClick( container, payload );
 			} );
 
 			overlay.appendChild( viewBtn );

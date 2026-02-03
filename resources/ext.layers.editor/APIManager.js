@@ -46,6 +46,13 @@
 		// Values: jqXHR object (has abort() method)
 		this.pendingRequests = new Map();
 		
+		// API response cache for performance optimization
+		// Caches layersinfo responses to reduce redundant API calls
+		// Key format: 'filename:setname' or 'filename:id:revisionId'
+		this.responseCache = new Map();
+		this.cacheMaxSize = 20; // Max entries to prevent unbounded growth
+		this.cacheTTL = 5 * 60 * 1000; // 5 minutes TTL
+		
 		// Prevent concurrent save operations (CORE-3 fix)
 		this.saveInProgress = false;
 		
@@ -133,6 +140,81 @@
 			clearTimeout( timeoutId );
 		}
 		this.activeTimeouts.clear();
+	}
+
+	/**
+	 * Get a cached API response if available and not expired.
+	 * @param {string} key - Cache key
+	 * @return {Object|null} Cached data or null if not found/expired
+	 * @private
+	 */
+	_getCached( key ) {
+		const entry = this.responseCache.get( key );
+		if ( !entry ) {
+			return null;
+		}
+		// Check if expired
+		if ( Date.now() - entry.timestamp > this.cacheTTL ) {
+			this.responseCache.delete( key );
+			return null;
+		}
+		// LRU behavior: move to end by re-inserting
+		this.responseCache.delete( key );
+		this.responseCache.set( key, entry );
+		return entry.data;
+	}
+
+	/**
+	 * Store data in the response cache.
+	 * @param {string} key - Cache key
+	 * @param {Object} data - Data to cache
+	 * @private
+	 */
+	_setCache( key, data ) {
+		// Enforce max size by removing oldest entries (LRU)
+		while ( this.responseCache.size >= this.cacheMaxSize ) {
+			const firstKey = this.responseCache.keys().next().value;
+			this.responseCache.delete( firstKey );
+		}
+		this.responseCache.set( key, {
+			data: data,
+			timestamp: Date.now()
+		} );
+	}
+
+	/**
+	 * Invalidate cache entries for a specific file or all entries.
+	 * @param {string} [filename] - Filename to invalidate, or omit to clear all
+	 * @private
+	 */
+	_invalidateCache( filename ) {
+		if ( !filename ) {
+			this.responseCache.clear();
+			return;
+		}
+		// Remove all entries for this filename
+		for ( const key of this.responseCache.keys() ) {
+			if ( key.startsWith( filename + ':' ) ) {
+				this.responseCache.delete( key );
+			}
+		}
+	}
+
+	/**
+	 * Build a cache key for layersinfo requests.
+	 * @param {string} filename - File name
+	 * @param {Object} [options] - Options: setname or layersetid
+	 * @return {string} Cache key
+	 * @private
+	 */
+	_buildCacheKey( filename, options = {} ) {
+		if ( options.layersetid ) {
+			return `${ filename }:id:${ options.layersetid }`;
+		}
+		if ( options.setname ) {
+			return `${ filename }:set:${ options.setname }`;
+		}
+		return `${ filename }:default`;
 	}
 
 	/**
@@ -464,10 +546,66 @@
 	}
 
 	/**
+	 * Process revision data after loading (shared by cache hit and API response).
+	 * @param {Object} data - API response data
+	 * @param {boolean} fromCache - Whether data came from cache
+	 * @return {Object} The processed data
+	 * @private
+	 */
+	_processRevisionData( data, fromCache = false ) {
+		this.extractLayerSetData( data.layersinfo.layerset );
+		// Only update allLayerSets if response contains data (preserve existing list)
+		if ( data.layersinfo.all_layersets && data.layersinfo.all_layersets.length > 0 ) {
+			this.editor.stateManager.set( 'allLayerSets', data.layersinfo.all_layersets );
+		}
+		this.editor.buildRevisionSelector();
+
+		// Clear any existing selection when loading a different revision
+		// This prevents stale selection state from persisting
+		if ( this.editor.canvasManager && this.editor.canvasManager.selectionManager ) {
+			this.editor.canvasManager.selectionManager.clearSelection();
+		}
+
+		this.editor.renderLayers();
+		this.editor.stateManager.set( 'isDirty', false );
+
+		// Update the layer panel UI after loading revision
+		const layers = this.editor.stateManager.get( 'layers' ) || [];
+		if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
+			this.editor.layerPanel.updateLayers( layers );
+		}
+
+		// CRITICAL: Reset history with the loaded revision's layers as baseline
+		// This prevents undo from restoring the previous revision's state
+		if ( this.editor.historyManager && typeof this.editor.historyManager.saveInitialState === 'function' ) {
+			this.editor.historyManager.saveInitialState();
+		}
+
+		const cacheHint = fromCache ? ' (from cache)' : '';
+		mw.notify( this.getMessage( 'layers-revision-loaded' ) + cacheHint, { type: 'success' } );
+		return data;
+	}
+
+	/**
 	 * Load a specific revision by ID
 	 */
 	loadRevisionById( revisionId ) {
 		return new Promise( ( resolve, reject ) => {
+			// Check cache first
+			const cacheKey = this._buildCacheKey( this.editor.filename, { layersetid: revisionId } );
+			const cachedData = this._getCached( cacheKey );
+			if ( cachedData && cachedData.layersinfo && cachedData.layersinfo.layerset ) {
+				// Use cached data
+				try {
+					const result = this._processRevisionData( cachedData, true );
+					resolve( result );
+				} catch ( error ) {
+					// Cache data was invalid, fall through to API fetch
+					this.responseCache.delete( cacheKey );
+				}
+				return;
+			}
+
 			this.showSpinner( this.getMessage( 'layers-loading' ) );
 
 			const jqXHR = this.api.get( {
@@ -485,36 +623,10 @@
 				this._clearRequest( 'loadRevision' );
 				this.hideSpinner();
 				if ( data.layersinfo && data.layersinfo.layerset ) {
-					this.extractLayerSetData( data.layersinfo.layerset );
-					// Only update allLayerSets if response contains data (preserve existing list)
-					if ( data.layersinfo.all_layersets && data.layersinfo.all_layersets.length > 0 ) {
-						this.editor.stateManager.set( 'allLayerSets', data.layersinfo.all_layersets );
-					}
-					this.editor.buildRevisionSelector();
-
-					// Clear any existing selection when loading a different revision
-					// This prevents stale selection state from persisting
-					if ( this.editor.canvasManager && this.editor.canvasManager.selectionManager ) {
-						this.editor.canvasManager.selectionManager.clearSelection();
-					}
-
-					this.editor.renderLayers();
-					this.editor.stateManager.set( 'isDirty', false );
-
-					// Update the layer panel UI after loading revision
-					const layers = this.editor.stateManager.get( 'layers' ) || [];
-					if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
-						this.editor.layerPanel.updateLayers( layers );
-					}
-
-					// CRITICAL: Reset history with the loaded revision's layers as baseline
-					// This prevents undo from restoring the previous revision's state
-					if ( this.editor.historyManager && typeof this.editor.historyManager.saveInitialState === 'function' ) {
-						this.editor.historyManager.saveInitialState();
-					}
-
-					mw.notify( this.getMessage( 'layers-revision-loaded' ), { type: 'success' } );
-					resolve( data );
+					// Cache the response
+					this._setCache( cacheKey, data );
+					const result = this._processRevisionData( data, false );
+					resolve( result );
 				} else {
 					reject( new Error( 'Revision not found' ) );
 				}
@@ -535,16 +647,127 @@
 	}
 
 	/**
+	 * Process layer set data loaded by name (shared by cache hit and API response).
+	 * @param {Object} data - API response data
+	 * @param {string} setName - Name of the layer set
+	 * @param {boolean} fromCache - Whether data came from cache
+	 * @return {Object} Processed result
+	 * @private
+	 */
+	_processSetNameData( data, setName, fromCache = false ) {
+		const layersInfo = data.layersinfo;
+
+		// Process the current layer set
+		if ( layersInfo.layerset ) {
+			this.extractLayerSetData( layersInfo.layerset );
+			// Use set_revisions (specific to this named set) if available,
+			// otherwise fall back to all_layersets for backwards compatibility
+			const revisions = Array.isArray( layersInfo.set_revisions )
+				? layersInfo.set_revisions
+				: ( Array.isArray( layersInfo.all_layersets ) ? layersInfo.all_layersets : [] );
+			this.editor.stateManager.set( 'setRevisions', revisions );
+			this.editor.stateManager.set( 'allLayerSets', revisions );
+		} else {
+			// Set doesn't exist yet or has no revisions - empty state
+			this.editor.stateManager.set( 'layers', [] );
+			this.editor.stateManager.set( 'currentLayerSetId', null );
+			this.editor.stateManager.set( 'setRevisions', [] );
+			// Initialize background settings for new layer sets
+			this.editor.stateManager.set( 'backgroundVisible', true );
+			this.editor.stateManager.set( 'backgroundOpacity', 1.0 );
+		}
+
+		// Update current set name in state FIRST (before building selectors)
+		this.editor.stateManager.set( 'currentSetName', setName );
+
+		// Update named sets list if provided
+		if ( Array.isArray( layersInfo.named_sets ) ) {
+			this.editor.stateManager.set( 'namedSets', layersInfo.named_sets );
+			this.editor.buildSetSelector();
+		}
+
+		// Update the revision selector UI
+		this.editor.buildRevisionSelector();
+
+		// Render layers
+		const layers = this.editor.stateManager.get( 'layers' ) || [];
+		if ( this.editor.canvasManager ) {
+			// Clear any existing selection when switching layer sets
+			// This prevents stale selection state from persisting
+			if ( this.editor.canvasManager.selectionManager ) {
+				this.editor.canvasManager.selectionManager.clearSelection();
+			}
+			this.editor.canvasManager.renderLayers( layers );
+		}
+
+		// Update layer panel
+		if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
+			this.editor.layerPanel.updateLayers( layers );
+		}
+
+		// CRITICAL: Reset history with the new layer set's layers as baseline
+		// This prevents undo from restoring the previous layer set's state
+		if ( this.editor.historyManager && typeof this.editor.historyManager.saveInitialState === 'function' ) {
+			this.editor.historyManager.saveInitialState();
+		}
+
+		// Mark as clean (no unsaved changes)
+		this.editor.stateManager.set( 'hasUnsavedChanges', false );
+		this.editor.stateManager.set( 'isDirty', false );
+
+		// Clear loading state after successful load
+		if ( this.editor.stateManager ) {
+			this.editor.stateManager.set( 'isLoading', false );
+		}
+
+		// Debug logging controlled by extension config
+		const cacheHint = fromCache ? ' (from cache)' : '';
+		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
+			mw.log( '[APIManager] Loaded layer set by name' + cacheHint + ':', {
+				setName: setName,
+				layersCount: layers.length,
+				currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
+				revisionsCount: ( layersInfo.all_layersets || [] ).length
+			} );
+		}
+
+		return {
+			layers: layers,
+			setName: setName,
+			currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
+			revisions: this.editor.stateManager.get( 'setRevisions' ) || []
+		};
+	}
+
+	/**
 	 * Load layers by set name
 	 * Fetches a specific named layer set and its revision history
 	 * @param {string} setName - The name of the set to load
+	 * @param {Object} [options] - Options
+	 * @param {boolean} [options.skipCache=false] - Skip cache and fetch fresh data
 	 * @return {Promise} Resolves with the layer data
 	 */
-	loadLayersBySetName( setName ) {
+	loadLayersBySetName( setName, options = {} ) {
 		return new Promise( ( resolve, reject ) => {
 			if ( !setName ) {
 				reject( new Error( 'No set name provided' ) );
 				return;
+			}
+
+			// Check cache first (unless skipCache is set)
+			const cacheKey = this._buildCacheKey( this.editor.filename, { setname: setName } );
+			if ( !options.skipCache ) {
+				const cachedData = this._getCached( cacheKey );
+				if ( cachedData ) {
+					try {
+						const result = this._processSetNameData( cachedData, setName, true );
+						resolve( result );
+						return;
+					} catch ( error ) {
+						// Cache data was invalid, fall through to API fetch
+						this.responseCache.delete( cacheKey );
+					}
+				}
 			}
 
 			// Set loading state to prevent user interactions during load
@@ -573,87 +796,11 @@
 					return;
 				}
 
-				const layersInfo = data.layersinfo;
+				// Cache the response
+				this._setCache( cacheKey, data );
 
-				// Process the current layer set
-				if ( layersInfo.layerset ) {
-					this.extractLayerSetData( layersInfo.layerset );
-					// Use set_revisions (specific to this named set) if available,
-					// otherwise fall back to all_layersets for backwards compatibility
-					const revisions = Array.isArray( layersInfo.set_revisions )
-						? layersInfo.set_revisions
-						: ( Array.isArray( layersInfo.all_layersets ) ? layersInfo.all_layersets : [] );
-					this.editor.stateManager.set( 'setRevisions', revisions );
-					this.editor.stateManager.set( 'allLayerSets', revisions );
-				} else {
-					// Set doesn't exist yet or has no revisions - empty state
-					this.editor.stateManager.set( 'layers', [] );
-					this.editor.stateManager.set( 'currentLayerSetId', null );
-					this.editor.stateManager.set( 'setRevisions', [] );
-					// Initialize background settings for new layer sets
-					this.editor.stateManager.set( 'backgroundVisible', true );
-					this.editor.stateManager.set( 'backgroundOpacity', 1.0 );
-				}
-
-				// Update current set name in state FIRST (before building selectors)
-				this.editor.stateManager.set( 'currentSetName', setName );
-
-				// Update named sets list if provided
-				if ( Array.isArray( layersInfo.named_sets ) ) {
-					this.editor.stateManager.set( 'namedSets', layersInfo.named_sets );
-					this.editor.buildSetSelector();
-				}
-
-				// Update the revision selector UI
-				this.editor.buildRevisionSelector();
-
-				// Render layers
-				const layers = this.editor.stateManager.get( 'layers' ) || [];
-				if ( this.editor.canvasManager ) {
-					// Clear any existing selection when switching layer sets
-					// This prevents stale selection state from persisting
-					if ( this.editor.canvasManager.selectionManager ) {
-						this.editor.canvasManager.selectionManager.clearSelection();
-					}
-					this.editor.canvasManager.renderLayers( layers );
-				}
-
-				// Update layer panel
-				if ( this.editor.layerPanel && typeof this.editor.layerPanel.updateLayers === 'function' ) {
-					this.editor.layerPanel.updateLayers( layers );
-				}
-
-				// CRITICAL: Reset history with the new layer set's layers as baseline
-				// This prevents undo from restoring the previous layer set's state
-				if ( this.editor.historyManager && typeof this.editor.historyManager.saveInitialState === 'function' ) {
-					this.editor.historyManager.saveInitialState();
-				}
-
-				// Mark as clean (no unsaved changes)
-				this.editor.stateManager.set( 'hasUnsavedChanges', false );
-				this.editor.stateManager.set( 'isDirty', false );
-
-				// Clear loading state after successful load
-				if ( this.editor.stateManager ) {
-					this.editor.stateManager.set( 'isLoading', false );
-				}
-
-				// Debug logging controlled by extension config
-				if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
-					mw.log( '[APIManager] Loaded layer set by name:', {
-						setName: setName,
-						layersCount: layers.length,
-						currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
-						revisionsCount: ( layersInfo.all_layersets || [] ).length
-					} );
-				}
-
-				resolve( {
-					layers: layers,
-					setName: setName,
-					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
-					revisions: this.editor.stateManager.get( 'setRevisions' ) || []
-				} );
+				const result = this._processSetNameData( data, setName, false );
+				resolve( result );
 
 			} ).catch( ( code, result ) => {
 				this._clearRequest( 'loadSetByName' );
@@ -872,6 +1019,10 @@
 			if ( this.editor.draftManager && typeof this.editor.draftManager.onSaveSuccess === 'function' ) {
 				this.editor.draftManager.onSaveSuccess();
 			}
+
+			// Invalidate API response cache for this file since data has changed
+			// This ensures subsequent loads fetch fresh data
+			this._invalidateCache( this.editor.filename );
 
 			// Clear the FreshnessChecker cache for this file so FR-10 will check
 			// the API for fresh data when the user views the page after saving.
@@ -1379,6 +1530,11 @@
 		
 		// Abort all tracked pending API requests
 		this._abortAllRequests();
+		
+		// Clear API response cache
+		if ( this.responseCache ) {
+			this.responseCache.clear();
+		}
 		
 		if ( this.errorHandler ) {
 			this.errorHandler.destroy();

@@ -8,6 +8,19 @@ const MAX_PENDING_OPERATIONS = 100;
 const LOCK_DETECTION_TIMEOUT_MS = 5000;
 const LOCK_AUTO_RECOVERY_TIMEOUT_MS = 30000;
 
+// Default values fallback (for test environments where mw.ext may not be fully mocked)
+const DEFAULT_VALUES = {
+	MAX_HISTORY_SIZE: 50
+};
+
+// Import defaults from centralized constants (lazy-loaded, with fallback for tests)
+const getDefaults = () => {
+	if ( typeof mw !== 'undefined' && mw.ext && mw.ext.layers && mw.ext.layers.LayerDefaults ) {
+		return mw.ext.layers.LayerDefaults;
+	}
+	return DEFAULT_VALUES;
+};
+
 class StateManager {
 	constructor( editor ) {
 		this.editor = editor;
@@ -45,7 +58,7 @@ class StateManager {
 			// History state
 			history: [],
 			historyIndex: -1,
-			maxHistorySize: 50
+			maxHistorySize: getDefaults().MAX_HISTORY_SIZE
 		};
 
 		this.listeners = {};

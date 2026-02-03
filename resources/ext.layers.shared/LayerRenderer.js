@@ -654,12 +654,11 @@ class LayerRenderer {
 			return;
 		}
 
-		const self = this;
 		const opts = this._prepareRenderOptions( options );
 
 		// Create a function that draws the shape path
 		const drawPathFn = ( ctx ) => {
-			self._drawShapePath( layer, opts, ctx );
+			this._drawShapePath( layer, opts, ctx );
 		};
 
 		// Use the effects renderer to apply blur with the shape as clip

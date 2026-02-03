@@ -30,7 +30,15 @@
 		'visible',
 		'locked',
 		'preserveAspectRatio',
-		'hasArrow'
+		'hasArrow',
+		// Group layer properties
+		'expanded',
+		// Custom shape properties
+		'isMultiPath',
+		'strokeOnly',
+		// Dimension layer properties
+		'showUnit',
+		'showBackground'
 	];
 
 	/**

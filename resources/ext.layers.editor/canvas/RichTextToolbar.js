@@ -204,6 +204,48 @@
 		}
 
 		/**
+		 * Update toolbar controls to reflect the current selection's formatting
+		 *
+		 * Called when selection changes to show the font/size of selected text.
+		 *
+		 * @param {Object} selectionInfo - Information about current selection's formatting
+		 * @param {number} [selectionInfo.fontSize] - Font size at selection (unscaled)
+		 * @param {string} [selectionInfo.fontFamily] - Font family at selection
+		 */
+		updateFromSelection( selectionInfo ) {
+			if ( !this.toolbarElement || !selectionInfo ) {
+				return;
+			}
+
+			// Update font size input
+			if ( selectionInfo.fontSize !== undefined ) {
+				const sizeInput = this.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+				if ( sizeInput ) {
+					sizeInput.value = selectionInfo.fontSize;
+				}
+			}
+
+			// Update font family select
+			if ( selectionInfo.fontFamily ) {
+				const fontSelect = this.toolbarElement.querySelector( '.layers-text-toolbar-font' );
+				if ( fontSelect ) {
+					// Find matching option (try exact match first, then case-insensitive)
+					const FontConfig = window.Layers && window.Layers.FontConfig;
+					const matchingFont = FontConfig ?
+						FontConfig.findMatchingFont( selectionInfo.fontFamily ) :
+						selectionInfo.fontFamily;
+
+					for ( const option of fontSelect.options ) {
+						if ( option.value === matchingFont ) {
+							fontSelect.value = matchingFont;
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		/**
 		 * Remove the toolbar from DOM and clean up
 		 */
 		destroy() {
@@ -293,14 +335,25 @@
 			input.title = this.msg( 'layers-text-toolbar-size', 'Font size' );
 
 			input.addEventListener( 'mousedown', () => {
+				this._isInteracting = true;
 				this.onSaveSelection();
+			} );
+
+			// Handle input event (fires when using +/- buttons or typing)
+			input.addEventListener( 'input', () => {
+				this._isInteracting = true;
 			} );
 
 			input.addEventListener( 'change', () => {
 				const size = Math.max( 8, Math.min( 200, parseInt( input.value, 10 ) || 16 ) );
 				input.value = size;
+				this._isInteracting = true; // Keep interacting during format apply
 				this.onFormat( 'fontSize', size );
-				this.onFocusEditor();
+				// Delay clearing isInteracting to allow DOM update
+				setTimeout( () => {
+					this._isInteracting = false;
+					this.onFocusEditor();
+				}, 50 );
 			} );
 
 			input.addEventListener( 'focus', () => {
@@ -308,7 +361,10 @@
 			} );
 
 			input.addEventListener( 'blur', () => {
-				this.onFocusEditor();
+				// Delay clearing isInteracting to allow change event to process
+				setTimeout( () => {
+					this._isInteracting = false;
+				}, 100 );
 			} );
 
 			const label = document.createElement( 'span' );
@@ -376,7 +432,6 @@
 			wrapper.style.alignItems = 'stretch';
 
 			let currentColor = '#ffff00';
-			const self = this;
 
 			// Main highlight button
 			const btn = document.createElement( 'button' );
@@ -428,17 +483,17 @@
 						onApply: ( newColor ) => {
 							currentColor = newColor;
 							btn.querySelector( 'span' ).style.backgroundColor = newColor;
-							self.onFormat( 'highlight', newColor );
-							self._isInteracting = false;
-							self.onFocusEditor();
+							this.onFormat( 'highlight', newColor );
+							this._isInteracting = false;
+							this.onFocusEditor();
 						},
 						onPreview: ( previewColor ) => {
 							btn.querySelector( 'span' ).style.backgroundColor = previewColor;
 						},
 						onCancel: () => {
 							btn.querySelector( 'span' ).style.backgroundColor = currentColor;
-							self._isInteracting = false;
-							self.onFocusEditor();
+							this._isInteracting = false;
+							this.onFocusEditor();
 						}
 					} );
 					dialog.open();
@@ -454,9 +509,9 @@
 					colorInput.addEventListener( 'change', () => {
 						currentColor = colorInput.value;
 						btn.querySelector( 'span' ).style.backgroundColor = currentColor;
-						self.onFormat( 'highlight', currentColor );
-						self._isInteracting = false;
-						self.onFocusEditor();
+						this.onFormat( 'highlight', currentColor );
+						this._isInteracting = false;
+						this.onFocusEditor();
 						document.body.removeChild( colorInput );
 					} );
 
@@ -569,16 +624,15 @@
 
 			let colorButton;
 			let storedColor = currentColor;
-			const self = this;
 
 			if ( ColorPickerDialog && typeof ColorPickerDialog.createColorButton === 'function' ) {
 				colorButton = ColorPickerDialog.createColorButton( {
 					color: currentColor,
 					strings: colorPickerStrings,
 					onClick: () => {
-						self.onSaveSelection();
+						this.onSaveSelection();
 						const originalColor = storedColor;
-						self._isInteracting = true;
+						this._isInteracting = true;
 
 						const dialog = new ColorPickerDialog( {
 							currentColor: storedColor,
@@ -586,18 +640,18 @@
 							anchorElement: colorButton,
 							onApply: ( newColor ) => {
 								storedColor = newColor;
-								self.onFormat( 'color', newColor );
+								this.onFormat( 'color', newColor );
 								ColorPickerDialog.updateColorButton( colorButton, newColor, colorPickerStrings );
-								self._isInteracting = false;
-								self.onFocusEditor();
+								this._isInteracting = false;
+								this.onFocusEditor();
 							},
 							onPreview: ( previewColor ) => {
-								self.onFormat( 'color', previewColor );
+								this.onFormat( 'color', previewColor );
 							},
 							onCancel: () => {
-								self.onFormat( 'color', originalColor );
-								self._isInteracting = false;
-								self.onFocusEditor();
+								this.onFormat( 'color', originalColor );
+								this._isInteracting = false;
+								this.onFocusEditor();
 							}
 						} );
 						dialog.open();
