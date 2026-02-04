@@ -255,7 +255,6 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - All P1 HIGH priority security issues now resolved
 - P2 issues reduced from 9 open to 5 open
 - P3 issues: 9 resolved, 3 open
-- Rating upgraded from 8.5/10 to 8.8/10
 
 ---
 
@@ -387,7 +386,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Technical Details
 - All 10,667 tests pass (157 test suites)
 - Test coverage: 95.86% statement, 85.40% branch, 93.99% function, 95.97% line
-- Codebase review v42: 8.6/10 overall
+- Codebase review v42 completed
 - ESLint/Stylelint/Banana all pass
 
 ---
@@ -414,7 +413,6 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   - ESLint disables: 11 (all legitimate)
   - i18n messages: 697
 - **Codebase Review** — Comprehensive critical review (v40) with all issues documented
-  - Overall score: 8.5/10
   - 0 critical issues, 0 high issues, 7 medium issues, 9 low issues
   - Updated codebase_review.md and improvement_plan.md
 
@@ -661,7 +659,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - All 116 ViewerManager tests pass
 - All 486 Toolbar tests pass
 - ESLint/Stylelint/Banana all pass
-- Codebase review: continues at 9.2/10
+- Codebase review continues to pass
 
 ---
 
@@ -692,7 +690,6 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - All 9,922 tests pass (155 test suites)
 - Test coverage: 93.52% statement, 83.89% branch
 - ESLint/Stylelint/Banana all pass
-- Codebase review rating: 9.2/10
 
 ---
 
@@ -736,7 +733,6 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Integrated with `LayerListRenderer.js` for seamless activation
 - Added 30 tests for VirtualLayerList (9,783 total tests, 153 suites)
 - Test coverage: 93.52% statement, 83.89% branch
-- Codebase review rating: 9.0/10
 
 ---
 
@@ -753,7 +749,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Updated `StateManager`, `APIManager`, `ToolManager`, `SelectionManager` to use shared generator
 - Added 13 new tests for IdGenerator
 - Added 35 new tests for EmojiPickerPanel (9,753 total tests)
-- Codebase review Audit v12: rating 9.2/10
+- Codebase review Audit v12 completed
 
 ---
 
@@ -800,7 +796,6 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Updated `CanvasManager.js`: RAF callback checks `this.isDestroyed`, `destroy()` resets flag
 - Updated `TransformController.js`: All 3 RAF callbacks check `!this.manager || this.manager.isDestroyed || !this.manager.editor`
 - All 9,693 tests passing after changes (verified via `npm run test:js`)
-- Codebase review rating increased from 8.8 to 9.0/10
 
 ---
 
@@ -945,7 +940,6 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Improved
 - **Code Review Complete** — All 28 identified issues resolved (17 fixed, 11 verified correct)
   - 3 CRITICAL, 7 HIGH, 11 MEDIUM, 7 LOW issues addressed
-  - Overall rating improved from 7.5/10 to 9.0/10
 - **Test Coverage** — Branch coverage improved from 84.92% to 84.98%
   - Added 9 new tests for GradientEditor edge cases
 
@@ -1671,7 +1665,6 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Changed
 - **Test count increased** — 7,671 → 7,688 tests (all passing)
-- **Rating improved** — 8.75/10 → 9/10 (architecture diagrams recognized as complete)
 
 ### Documentation
 - **P2.2 Architecture Diagram marked complete** — ARCHITECTURE.md already contains 9 comprehensive Mermaid diagrams with ASCII fallbacks
@@ -1697,7 +1690,6 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **eslint-disable comments reduced** — 17 → 13 (below <15 target), refactored GroupManager.js to use omitProperty utility
 - **Test count increased** — 7,663 → 7,671 tests (all passing)
 - **Documentation reorganized** — 4 completed feature docs moved to archive (Layer Groups, Auto-Create, Context-Aware Toolbar, Named Sets Implementation)
-- **Rating improved** — 8.5/10 → 8.75/10 (earned +0.1 for reaching eslint-disable target)
 
 ### Documentation
 - All documentation files updated with accurate metrics (test counts, eslint-disable counts)
@@ -2095,7 +2087,6 @@ This release focuses on improving test coverage for critical components and ensu
 #### Documentation Accuracy
 - **codebase_review.md** — Updated with accurate current metrics (was outdated)
 - **KNOWN_ISSUES.md** — Rewrote to reflect all P0 issues now resolved
-- Changed overall rating from 7.5/10 to **8.5/10** based on verified improvements
 
 ### Technical Details
 - **Modified files**:

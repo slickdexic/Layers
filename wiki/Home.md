@@ -50,7 +50,7 @@
 - **P2.8 Fix** — Rate limiting added to `ApiLayersList`
 - **P2.10 Fix** — Paths array limit (max 100) for DoS prevention
 - **P3.5 Fix** — `refreshAllViewers()` limited to 5 concurrent requests
-- **Rating 8.8/10** — Production-ready, approaching world-class
+- **Production-ready** with comprehensive test coverage
 
 ### Previous v1.5.41 Highlights
 
@@ -83,7 +83,7 @@
 
 - **Callout Inline Editing** — Double-click inline text editing for callout layers
 - **Documentation Accuracy Audit** — Updated all stale metrics
-- **Critical Review v42** — Comprehensive codebase audit scoring 8.6/10 overall
+- **Critical Review v42** — Comprehensive codebase audit completed
 
 ### Previous v1.5.35 Highlights
 
