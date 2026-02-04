@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** February 3, 2026 (Comprehensive Critical Review v12)  
-**Version:** 1.5.49
+**Last Updated:** February 3, 2026 (Comprehensive Critical Review v14)  
+**Version:** 1.5.51
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -12,10 +12,48 @@ This document lists known issues and current gaps for the Layers extension.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ None |
-| P1 (High Priority) | **0** | ✅ All resolved |
-| P2 (Medium Priority) | **0** | ✅ All resolved |
-| P3 (Low Priority) | **2** | ⚠️ Code style |
+| P1 (High Priority) | **0** | ✅ All fixed in v1.5.51 |
+| P2 (Medium Priority) | **0** | ✅ All fixed in v1.5.51 |
+| P3 (Low Priority) | **2** | ⚠️ Code style (deferred) |
 | Feature Gaps | 3 | Backlog |
+
+---
+
+## ✅ Fixed in v1.5.51 (v13→v14 Review)
+
+### ~~P1.1 Version Mismatch in Mediawiki-Extension-Layers.mediawiki~~ ✅
+
+**Status:** ✅ FIXED in v1.5.51  
+**Severity:** P1 (High)  
+**Component:** Documentation
+
+**Issue:** Branch selection table showed version 1.5.49 for main branch.
+
+**Resolution:** Updated to 1.5.51.
+
+---
+
+### ~~P2.1 Version Mismatch in docs/ARCHITECTURE.md~~ ✅
+
+**Status:** ✅ FIXED in v1.5.51  
+**Severity:** P2 (Medium)  
+**Component:** Documentation
+
+**Issue:** Header showed version 1.5.49 but extension.json showed 1.5.50.
+
+**Resolution:** Updated to 1.5.51.
+
+---
+
+### ~~P2.2 File Count Inconsistencies Across Documentation~~ ✅
+
+**Status:** ✅ FIXED in v1.5.51  
+**Severity:** P2 (Medium)  
+**Component:** Documentation
+
+**Issue:** Different documentation files showed different file counts.
+
+**Resolution:** Standardized on verified counts (142 JS, 40 PHP).
 
 ---
 
@@ -332,6 +370,6 @@ If you encounter issues:
 
 ---
 
-*Document updated: February 3, 2026 (Comprehensive Critical Review v12)*  
-*Status: 0 P0/P1/P2 issues, 2 P3 issues remaining (style issues, by design).*  
-*Overall Rating: 9.5/10*
+*Document updated: February 3, 2026 (Comprehensive Critical Review v13)*  
+*Status: 1 P1, 2 P2 (documentation), 2 P3 issues remaining.*  
+*Overall Rating: 9.4/10*
