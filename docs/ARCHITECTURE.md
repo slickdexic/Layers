@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** February 2, 2026
-**Version:** 1.5.49
+**Last Updated:** February 3, 2026
+**Version:** 1.5.51
 
 ---
 
@@ -21,10 +21,10 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **141** |
-| Total JS lines | **~92,338** |
-| Total PHP files | **42** |
-| Total PHP lines | **~14,738** |
+| Total JS files | **142** |
+| Total JS lines | **~95,433** |
+| Total PHP files | **40** |
+| Total PHP lines | **~14,907** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |

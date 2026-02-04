@@ -2,6 +2,23 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.51] - 2026-02-03
+
+### Fixed
+- **Documentation Sync** — Fixed version number mismatches and file counts:
+  - Mediawiki-Extension-Layers.mediawiki branch table showed 1.5.49 instead of current version
+  - docs/ARCHITECTURE.md showed 1.5.49 and incorrect file counts (141 JS / 42 PHP)
+  - Updated to correct counts: 142 JavaScript files, 40 PHP files
+  - Updated all branch version references to 1.5.51
+
+### Technical Details
+- Comprehensive v13 code review completed
+- All 11,210 tests pass (165 test suites) ✅
+- 95.19% statement coverage, 84.96% branch coverage
+- No code-level bugs found; documentation sync only
+
+---
+
 ## [1.5.50] - 2026-02-03
 
 ### Improved

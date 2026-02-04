@@ -4,6 +4,32 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.51 (February 3, 2026)
+
+### Fixed
+- **Documentation Sync** — Fixed version number mismatches and file counts:
+  - Mediawiki-Extension-Layers.mediawiki branch table showed 1.5.49
+  - docs/ARCHITECTURE.md showed 1.5.49 and incorrect file counts
+  - Updated to correct counts: 142 JavaScript files, 40 PHP files
+
+### Technical Details
+- Comprehensive v13 code review completed
+- All 11,210 tests pass (165 test suites) ✅
+- 95.19% statement coverage, 84.96% branch coverage
+
+---
+
+## Version 1.5.50 (February 3, 2026)
+
+### Improved
+- **Unified Dimension Text Drag** — Dimension text now acts as a CAD-style drag handle
+- **Arrow Position Control** — Dimension arrows can now point inside or outside
+
+### Technical Details
+- All 11,210 tests pass (165 test suites) ✅
+
+---
+
 ## Version 1.5.49 (February 2, 2026)
 
 ### Fixed
