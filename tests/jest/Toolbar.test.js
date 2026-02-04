@@ -2215,11 +2215,17 @@ describe( 'Toolbar', function () {
 		} );
 
 		it( 'should render individual buttons when ToolDropdown unavailable', () => {
+			// Clear class cache before removing ToolDropdown
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
+			}
+
 			// Remove ToolDropdown
 			const originalToolDropdown = window.Layers && window.Layers.UI && window.Layers.UI.ToolDropdown;
 			if ( window.Layers && window.Layers.UI ) {
 				delete window.Layers.UI.ToolDropdown;
 			}
+			window.ToolDropdown = undefined;
 
 			const container = document.createElement( 'div' );
 			toolbar = new Toolbar( {
@@ -2235,6 +2241,10 @@ describe( 'Toolbar', function () {
 			// Restore
 			if ( originalToolDropdown ) {
 				window.Layers.UI.ToolDropdown = originalToolDropdown;
+			}
+			// Clear cache after restoration
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
 			}
 		} );
 	} );
@@ -3309,26 +3319,31 @@ describe( 'Toolbar', function () {
 
 	describe( 'createStyleGroup fallback', () => {
 		let container;
-		let originalGetClass;
+		let originalToolbarStyleControls;
 
 		beforeEach( () => {
 			container = document.createElement( 'div' );
-			originalGetClass = window.getClass;
-			// Make ToolbarStyleControls unavailable
-			window.getClass = jest.fn().mockImplementation( ( key ) => {
-				if ( key === 'UI.ToolbarStyleControls' ) {
-					return null;
-				}
-				if ( originalGetClass ) {
-					return originalGetClass( key );
-				}
-				return null;
-			} );
+			// Save original ToolbarStyleControls
+			originalToolbarStyleControls = window.Layers?.UI?.ToolbarStyleControls;
+			// Clear class cache so getClass won't return cached value
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
+			}
+			// Remove ToolbarStyleControls to trigger fallback
+			if ( window.Layers?.UI ) {
+				delete window.Layers.UI.ToolbarStyleControls;
+			}
+			window.ToolbarStyleControls = undefined;
 		} );
 
 		afterEach( () => {
-			if ( originalGetClass ) {
-				window.getClass = originalGetClass;
+			// Restore ToolbarStyleControls
+			if ( window.Layers?.UI && originalToolbarStyleControls ) {
+				window.Layers.UI.ToolbarStyleControls = originalToolbarStyleControls;
+			}
+			// Clear cache again after restoration
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
 			}
 		} );
 
@@ -3345,26 +3360,31 @@ describe( 'Toolbar', function () {
 
 	describe( 'updateColorButtonDisplay fallback', () => {
 		let container;
-		let originalGetClass;
+		let originalColorPickerDialog;
 
 		beforeEach( () => {
 			container = document.createElement( 'div' );
-			originalGetClass = window.getClass;
-			// Make ColorPickerDialog unavailable to trigger fallback
-			window.getClass = jest.fn().mockImplementation( ( key ) => {
-				if ( key === 'UI.ColorPickerDialog' ) {
-					return null;
-				}
-				if ( originalGetClass ) {
-					return originalGetClass( key );
-				}
-				return null;
-			} );
+			// Save original ColorPickerDialog
+			originalColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			// Clear class cache so getClass won't return cached value
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
+			}
+			// Remove ColorPickerDialog to trigger fallback
+			if ( window.Layers?.UI ) {
+				delete window.Layers.UI.ColorPickerDialog;
+			}
+			window.ColorPickerDialog = undefined;
 		} );
 
 		afterEach( () => {
-			if ( originalGetClass ) {
-				window.getClass = originalGetClass;
+			// Restore ColorPickerDialog
+			if ( window.Layers?.UI && originalColorPickerDialog ) {
+				window.Layers.UI.ColorPickerDialog = originalColorPickerDialog;
+			}
+			// Clear cache again after restoration
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
 			}
 		} );
 
