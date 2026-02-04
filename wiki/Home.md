@@ -20,18 +20,19 @@
 
 ---
 
-## 🆕 What's New in v1.5.49
+## 🆕 What's New in v1.5.51
+
+- **Documentation Sync** — Fixed version mismatches and file counts in architecture docs
+- **Code Review** — v13 review completed, all 11,210 tests passing
+
+### Previous v1.5.50 Highlights
+
+- **Unified Dimension Text Drag** — Dimension text now acts as a CAD-style drag handle
+- **Arrow Position Control** — Dimension arrows can now point inside or outside
+
+### Previous v1.5.49 Highlights
 
 - **Documentation Synchronization** — Comprehensive audit and sync of all version/metrics across 97+ files
-- **Self-Hosted Font Library** — 32 Google Fonts bundled as WOFF2 files (~2.5MB, 106 files)
-- **Privacy-Respecting** — No external font requests to Google
-
-### Previous v1.5.47 Highlights
-
-- **Self-Hosted Font Library** — 32 Google Fonts now bundled as WOFF2 files (~2.5MB, 106 files)
-- **Font Categories** — Sans-serif (14), Serif (6), Display (4), Handwriting (4), Monospace (4)
-
-### Previous v1.5.46 Highlights
 
 - **Branch Coverage Improvement** — 39 new tests, coverage increased from 84.96% to 85.20%
 - **Documentation Audit** — All 97 files verified and synchronized with correct metrics
@@ -299,10 +300,10 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.50 |
-| **Version (REL1_43)** | 1.5.49-REL1_43 |
-| **Version (REL1_39)** | 1.5.49-REL1_39 |
-| **Release Date** | February 2, 2026 |
+| **Version (main)** | 1.5.51 |
+| **Version (REL1_43)** | 1.5.51-REL1_43 |
+| **Version (REL1_39)** | 1.5.51-REL1_39 |
+| **Release Date** | February 3, 2026 |
 | **Test Suites** | 164 |
 | **Total Tests** | 11,210 |
 | **PHPUnit Test Files** | 24 |
