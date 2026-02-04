@@ -3354,4 +3354,80 @@ describe( 'APIManager', function () {
 			mw.config.get = originalConfigGet;
 		} );
 	} );
+
+	describe( 'Response cache methods', function () {
+		it( 'should return null for non-existent cache key', function () {
+			const result = apiManager._getCached( 'non-existent-key' );
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should store and retrieve cached data', function () {
+			const testData = { layers: [ { id: 'test1' } ] };
+			apiManager._setCache( 'test-key', testData );
+			const result = apiManager._getCached( 'test-key' );
+			expect( result ).toEqual( testData );
+		} );
+
+		it( 'should expire cached data after TTL', function () {
+			const testData = { layers: [] };
+			apiManager._setCache( 'ttl-test', testData );
+
+			// Manually set timestamp to past (beyond TTL)
+			const entry = apiManager.responseCache.get( 'ttl-test' );
+			entry.timestamp = Date.now() - apiManager.cacheTTL - 1000;
+
+			const result = apiManager._getCached( 'ttl-test' );
+			expect( result ).toBeNull();
+			expect( apiManager.responseCache.has( 'ttl-test' ) ).toBe( false );
+		} );
+
+		it( 'should enforce max cache size with LRU eviction', function () {
+			// Fill cache to max size
+			for ( let i = 0; i < apiManager.cacheMaxSize; i++ ) {
+				apiManager._setCache( `key-${ i }`, { data: i } );
+			}
+			expect( apiManager.responseCache.size ).toBe( apiManager.cacheMaxSize );
+
+			// Add one more, should evict oldest
+			apiManager._setCache( 'new-key', { data: 'new' } );
+			expect( apiManager.responseCache.size ).toBe( apiManager.cacheMaxSize );
+			expect( apiManager.responseCache.has( 'key-0' ) ).toBe( false );
+			expect( apiManager.responseCache.has( 'new-key' ) ).toBe( true );
+		} );
+
+		it( 'should invalidate all cache entries when no filename provided', function () {
+			apiManager._setCache( 'file1:default', { data: 1 } );
+			apiManager._setCache( 'file2:default', { data: 2 } );
+			expect( apiManager.responseCache.size ).toBe( 2 );
+
+			apiManager._invalidateCache();
+			expect( apiManager.responseCache.size ).toBe( 0 );
+		} );
+
+		it( 'should invalidate only entries for specific filename', function () {
+			apiManager._setCache( 'file1:default', { data: 1 } );
+			apiManager._setCache( 'file1:set:custom', { data: 2 } );
+			apiManager._setCache( 'file2:default', { data: 3 } );
+			expect( apiManager.responseCache.size ).toBe( 3 );
+
+			apiManager._invalidateCache( 'file1' );
+			expect( apiManager.responseCache.size ).toBe( 1 );
+			expect( apiManager.responseCache.has( 'file2:default' ) ).toBe( true );
+		} );
+
+		it( 'should build cache key with layersetid', function () {
+			const key = apiManager._buildCacheKey( 'Test.jpg', { layersetid: 123 } );
+			expect( key ).toBe( 'Test.jpg:id:123' );
+		} );
+
+		it( 'should build cache key with setname', function () {
+			const key = apiManager._buildCacheKey( 'Test.jpg', { setname: 'custom' } );
+			expect( key ).toBe( 'Test.jpg:set:custom' );
+		} );
+
+		it( 'should build default cache key when no options', function () {
+			const key = apiManager._buildCacheKey( 'Test.jpg' );
+			expect( key ).toBe( 'Test.jpg:default' );
+		} );
+	} );
 } );
