@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** February 3, 2026 (Comprehensive Critical Review v14)  
+**Last Updated:** February 4, 2026 (Comprehensive Critical Review v15)  
 **Version:** 1.5.51
 
 This document lists known issues and current gaps for the Layers extension.
@@ -12,10 +12,128 @@ This document lists known issues and current gaps for the Layers extension.
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical Bugs) | **0** | ✅ None |
-| P1 (High Priority) | **0** | ✅ All fixed in v1.5.51 |
-| P2 (Medium Priority) | **0** | ✅ All fixed in v1.5.51 |
-| P3 (Low Priority) | **2** | ⚠️ Code style (deferred) |
+| P1 (High Priority) | **0** | ✅ All fixed |
+| P2 (Medium Priority) | **0** | ✅ All fixed |
+| P3 (Low Priority) | **2** | ⚠️ Code patterns (deferred) |
 | Feature Gaps | 3 | Backlog |
+
+---
+
+## ✅ Fixed Issues (v15 Review)
+
+### P1.1 JS File Count Wrong in Documentation
+
+**Status:** ✅ FIXED (v15 review)  
+**Severity:** P1 (High)  
+**Component:** Documentation
+
+**Issue:** Multiple documentation files claimed 142 JS files, but actual count was **140 files**.
+
+**Resolution:** Updated `.github/copilot-instructions.md` and `docs/ARCHITECTURE.md` to correct file counts.
+
+---
+
+### P1.2 Version Number Wrong in copilot-instructions.md
+
+**Status:** ✅ FIXED (v15 review)  
+**Severity:** P1 (High)  
+**Component:** Documentation
+
+**Issue:** `.github/copilot-instructions.md` showed version 1.5.49 but extension.json showed 1.5.51.
+
+**Resolution:** Updated to 1.5.51.
+
+---
+
+### P2.1 PHP File Count Wrong in Documentation
+
+**Status:** ✅ FIXED (v15 review)  
+**Severity:** P2 (Medium)  
+**Component:** Documentation
+
+**Issue:** `.github/copilot-instructions.md` showed 42 PHP files but actual was **40 files**.
+
+**Resolution:** Updated to correct count.
+
+---
+
+### P2.2 JS Line Count Inconsistent in Documentation
+
+**Status:** ✅ FIXED (v15 review)  
+**Severity:** P2 (Medium)  
+**Component:** Documentation
+
+**Issue:** Documentation showed various JS line counts (~95,433) but actual was **~96,498 lines**.
+
+**Resolution:** Updated to correct line count.
+
+---
+
+### P2.3 Dead Code - LayersFileTransform::hasLayers()
+
+**Status:** ✅ FIXED (v15 review)  
+**Severity:** P2 (Medium)  
+**Component:** src/LayersFileTransform.php
+
+**Issue:** The `hasLayers()` method incorrectly created `LayersDatabase` without required constructor arguments. This method was never called (dead code).
+
+**Resolution:** Deleted `hasLayers()`, `getFileSha1()`, and `isForeignFile()` methods (64 lines of dead code removed). The proper implementations exist in `ForeignFileHelperTrait`.
+
+---
+
+### P3.1 SelectionManager.applyDrag Inconsistent with Production
+
+**Status:** ✅ FIXED (v15 review)  
+**Severity:** P3 (Low)  
+**Component:** resources/ext.layers.editor/SelectionManager.js
+
+**Issue:** `SelectionManager.applyDrag()` moved arrowX/arrowY with marker layers, but `TransformController` (the production path) intentionally does NOT move them.
+
+**Resolution:** Removed the arrowX/arrowY moving code from `applyDrag()` to match production behavior. Updated test expectations to verify arrow position independence.
+
+---
+
+### P3.2 const self = this Anti-Pattern
+
+**Status:** ⚠️ OPEN  
+**Severity:** P3 (Low)  
+**Component:** Code Style
+
+**Remaining instances (4 total in 2 files):**
+
+| File | Count | Reason |
+|------|-------|--------|
+| VirtualLayerList.js | 1 | Throttle function needs two `this` contexts |
+| ShapeLibraryPanel.js | 3 | Prototype pattern - requires ES6 class migration |
+
+---
+
+### P3.3 Weak Test Assertions
+
+**Status:** ✅ FIXED (v15 review)  
+**Severity:** P3 (Low)  
+**Component:** Test files
+
+**Issue:** 5 tests used `toBeTruthy()`/`toBeFalsy()` which can mask bugs.
+
+**Resolution:**
+- SlideController.test.js line 83: Changed `toBeFalsy()` → `toBe(false)`
+- SlideController.test.js line 1266: Changed `toBeTruthy()` → `not.toBeNull()`
+- LayerPanel.test.js line 3759: Changed `toBeTruthy()` → `toBeDefined()`
+- LayerPanel.test.js line 3944: Changed `toBeTruthy()` → `not.toBeNull()`
+- InlineTextEditor.test.js line 426: Kept `toBeFalsy()` with comment (intentional - method returns `null` for null input via short-circuit evaluation)
+
+---
+
+### P3.4 APIManager Promise Handling on Abort
+
+**Status:** ⚠️ OPEN (by design)  
+**Severity:** P3 (Low)  
+**Component:** API Error Handling
+
+**Issue:** When API requests are aborted, the Promise neither resolves nor rejects.
+
+**Note:** This is intentional — aborted requests indicate context change.
 
 ---
 

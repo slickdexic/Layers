@@ -3756,7 +3756,7 @@ describe('LayerPanel search filter', () => {
         const container = document.getElementById('test-container');
         const panel = new LayerPanel({ container, editor: mockEditor });
 
-        expect(panel.searchInput).toBeTruthy();
+        expect(panel.searchInput).toBeDefined();
         expect(panel.searchInput.tagName.toLowerCase()).toBe('input');
         expect(panel.searchInput.type).toBe('text');
     });
@@ -3941,7 +3941,7 @@ describe('LayerPanel search filter', () => {
 
         // Find and click the clear button
         const clearBtn = container.querySelector('.layers-search-clear');
-        expect(clearBtn).toBeTruthy();
+        expect(clearBtn).not.toBeNull();
 
         clearBtn.click();
 

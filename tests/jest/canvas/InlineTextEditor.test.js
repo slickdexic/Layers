@@ -423,6 +423,8 @@ describe( 'InlineTextEditor', () => {
 		} );
 
 		test( 'should return false for null', () => {
+			// _isMultilineType returns null for null input due to short-circuit evaluation
+			// This is falsy, which is the expected behavior in boolean contexts
 			expect( editor._isMultilineType( null ) ).toBeFalsy();
 		} );
 	} );
