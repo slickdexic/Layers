@@ -19,7 +19,7 @@ inconsistencies** and **dead code** issues but **no production bugs**.
 - ✅ **P0:** All resolved (no critical bugs)
 - ✅ **P1:** All resolved
 - ✅ **P2:** All resolved
-- ⚠️ **P3:** 4 open (dead code inconsistency, style, tests)
+- ⚠️ **P3:** 3 open (dead code, const self, abort handling - all deferred)
 
 **Verified Metrics (February 4, 2026):**
 
@@ -227,24 +227,14 @@ but `TransformController` (production path) does NOT. This dead code's unit test
 
 ---
 
-### P3.4 Replace Weak Test Assertions (v15)
+### ~~P3.4 Replace Weak Test Assertions (v15)~~
 
-**Status:** ⚠️ OPEN  
+**Status:** ✅ FIXED  
 **Priority:** P3 - Low
 
-**Issue:** 5 tests use `toBeTruthy()`/`toBeFalsy()` which can mask bugs:
+**Issue:** Tests using `toBeTruthy()`/`toBeFalsy()`.
 
-| File | Line |
-|------|------|
-| SlideController.test.js | 83 |
-| SlideController.test.js | 1266 |
-| LayerPanel.test.js | 3759 |
-| LayerPanel.test.js | 3944 |
-| InlineTextEditor.test.js | 426 |
-
-**Fix:** Replace with specific matchers like `toBeNull()`, `toBe(expected)`.
-
-**Effort:** 10 minutes
+**Resolution:** All weak assertions have been replaced with specific matchers.
 
 ---
 
