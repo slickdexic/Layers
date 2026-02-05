@@ -26,6 +26,14 @@
 
 const fs = require( 'fs' );
 const path = require( 'path' );
+const { execSync } = require( 'child_process' );
+
+// MediaWiki version requirements by branch
+const MW_VERSION_REQUIREMENTS = {
+	main: '>= 1.44.0',
+	REL1_43: '>= 1.43.0',
+	REL1_39: '>= 1.39.0'
+};
 
 // Configuration: files and their version patterns
 const VERSION_FILES = [
@@ -77,12 +85,13 @@ function getProjectRoot() {
 
 /**
  * Read the source version from extension.json
- * @return {string} The version string
+ * @return {string} The version string (base version without branch suffix)
  */
 function getSourceVersion() {
 	const extensionPath = path.join( getProjectRoot(), 'extension.json' );
 	const content = fs.readFileSync( extensionPath, 'utf8' );
-	const match = content.match( /"version":\s*"(\d+\.\d+\.\d+)"/ );
+	// Match version with optional branch suffix (e.g., "1.5.51" or "1.5.51-REL1_39")
+	const match = content.match( /"version":\s*"(\d+\.\d+\.\d+)(?:-[A-Za-z0-9_]+)?"/ );
 
 	if ( !match ) {
 		console.error( 'ERROR: Could not find version in extension.json' );
@@ -90,6 +99,74 @@ function getSourceVersion() {
 	}
 
 	return match[ 1 ];
+}
+
+/**
+ * Get the current git branch name
+ * @return {string|null} Branch name or null if not in a git repo
+ */
+function getCurrentBranch() {
+	try {
+		const branch = execSync( 'git rev-parse --abbrev-ref HEAD', {
+			encoding: 'utf8',
+			cwd: getProjectRoot(),
+			stdio: [ 'pipe', 'pipe', 'pipe' ]
+		} ).trim();
+		return branch;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Get the MediaWiki version requirement from extension.json
+ * @return {string|null} The MW version requirement string
+ */
+function getMWVersionRequirement() {
+	const extensionPath = path.join( getProjectRoot(), 'extension.json' );
+	const content = fs.readFileSync( extensionPath, 'utf8' );
+	const match = content.match( /"MediaWiki":\s*"([^"]+)"/ );
+	return match ? match[ 1 ] : null;
+}
+
+/**
+ * Check that MediaWiki version requirement matches the current branch
+ * @return {Object} Result with status and details
+ */
+function checkMWVersionRequirement() {
+	const branch = getCurrentBranch();
+
+	if ( !branch ) {
+		return { status: 'skip', message: 'Not in a git repository' };
+	}
+
+	const expectedRequirement = MW_VERSION_REQUIREMENTS[ branch ];
+
+	if ( !expectedRequirement ) {
+		// Not a tracked branch (feature branch, etc.) - skip check
+		return { status: 'skip', message: `Branch '${ branch }' is not a release branch` };
+	}
+
+	const actualRequirement = getMWVersionRequirement();
+
+	if ( !actualRequirement ) {
+		return { status: 'error', message: 'Could not read MW requirement from extension.json' };
+	}
+
+	if ( actualRequirement === expectedRequirement ) {
+		return {
+			status: 'ok',
+			branch,
+			requirement: actualRequirement
+		};
+	}
+
+	return {
+		status: 'mismatch',
+		branch,
+		expected: expectedRequirement,
+		actual: actualRequirement
+	};
 }
 
 /**
@@ -158,32 +235,63 @@ function updateFileVersion( config, newVersion ) {
  */
 function checkVersions() {
 	const sourceVersion = getSourceVersion();
+	const branch = getCurrentBranch();
+	const isReleaseBranch = branch && branch.startsWith( 'REL' );
+
 	console.log( `\nSource version (extension.json): ${ sourceVersion }\n` );
-	console.log( 'Checking version consistency...\n' );
+
+	// Check MediaWiki version requirement matches branch
+	console.log( 'Checking MediaWiki version requirement...\n' );
+	const mwCheck = checkMWVersionRequirement();
 
 	let allMatch = true;
 
-	for ( const config of VERSION_FILES ) {
-		if ( config.isSource ) {
-			continue;
-		}
+	switch ( mwCheck.status ) {
+		case 'ok':
+			console.log( `  ✓  Branch '${ mwCheck.branch }' requires MW ${ mwCheck.requirement }` );
+			break;
+		case 'mismatch':
+			console.log( `  ✗  Branch '${ mwCheck.branch }' has MW "${ mwCheck.actual }" but should have "${ mwCheck.expected }"` );
+			console.log( `      Fix: Update extension.json "requires.MediaWiki" to "${ mwCheck.expected }"` );
+			allMatch = false;
+			break;
+		case 'skip':
+			console.log( `  ⚠️  ${ mwCheck.message } - skipping MW version check` );
+			break;
+		case 'error':
+			console.log( `  ⚠️  ${ mwCheck.message }` );
+			break;
+	}
 
-		const result = checkFileVersion( config, sourceVersion );
+	// Skip version consistency checks on REL branches (they have version suffixes)
+	if ( isReleaseBranch ) {
+		console.log( '\nSkipping version file consistency check on release branch.\n' );
+		console.log( '(Release branches use version suffixes like 1.5.51-REL1_39)\n' );
+	} else {
+		console.log( '\nChecking version consistency...\n' );
 
-		switch ( result.status ) {
-			case 'ok':
-				console.log( `  ✓  ${ result.file } - ${ result.found }` );
-				break;
-			case 'mismatch':
-				console.log( `  ✗  ${ result.file } - ${ result.found } (expected ${ result.expected })` );
-				allMatch = false;
-				break;
-			case 'missing':
-				console.log( `  ⚠️  ${ result.file } - FILE NOT FOUND` );
-				break;
-			case 'no-match':
-				console.log( `  ⚠️  ${ result.file } - PATTERN NOT FOUND` );
-				break;
+		for ( const config of VERSION_FILES ) {
+			if ( config.isSource ) {
+				continue;
+			}
+
+			const result = checkFileVersion( config, sourceVersion );
+
+			switch ( result.status ) {
+				case 'ok':
+					console.log( `  ✓  ${ result.file } - ${ result.found }` );
+					break;
+				case 'mismatch':
+					console.log( `  ✗  ${ result.file } - ${ result.found } (expected ${ result.expected })` );
+					allMatch = false;
+					break;
+				case 'missing':
+					console.log( `  ⚠️  ${ result.file } - FILE NOT FOUND` );
+					break;
+				case 'no-match':
+					console.log( `  ⚠️  ${ result.file } - PATTERN NOT FOUND` );
+					break;
+			}
 		}
 	}
 
@@ -194,7 +302,11 @@ function checkVersions() {
 		return true;
 	} else {
 		console.log( '❌ Version inconsistencies found!' );
-		console.log( 'Run "node scripts/update-version.js" to fix.' );
+		if ( mwCheck.status === 'mismatch' ) {
+			console.log( `Fix extension.json "requires.MediaWiki" to "${ mwCheck.expected }"` );
+		} else {
+			console.log( 'Run "node scripts/update-version.js" to fix.' );
+		}
 		return false;
 	}
 }
