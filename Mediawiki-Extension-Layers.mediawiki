@@ -22,7 +22,7 @@
 |table2          = layer_set_usage
 |table3          = layer_sets
 |rights          = {{bulleted list|editlayers|managelayerlibrary}}
-|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersContextAwareToolbar|$wgLayersUseBinaryOverlays|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersThumbnailCache|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions}}
+|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersContextAwareToolbar|$wgLayersUseBinaryOverlays|$wgLayersRejectAbortedRequests|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersThumbnailCache|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions}}
 |hook1           = BeforePageDisplay
 |hook2           = BitmapHandlerTransform
 |hook3           = FileDeleteComplete
@@ -159,6 +159,8 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 | <code>$wgLayersContextAwareToolbar</code> || boolean || <code>true</code> || Context-aware toolbar (set false for classic mode).
 |-
 | <code>$wgLayersUseBinaryOverlays</code> || boolean || <code>false</code> || Enable legacy binary overlay files.
+|-
+| <code>$wgLayersRejectAbortedRequests</code> || boolean || <code>false</code> || Surface aborted API requests as rejections (debugging aid; legacy behavior remains default).
 |-
 | <code>$wgLayersDefaultFonts</code> || array || (see extension.json) || Allowed fonts list for the editor.
 |-
@@ -310,7 +312,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~113k lines including generated shape/emoji data).
-* '''Stability:''' 11,210 Jest tests (165 suites) with 95.19% statement coverage and 84.96% branch coverage.
+* '''Stability:''' 11,231 Jest tests (165 suites) with 95.19% statement coverage and 84.96% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

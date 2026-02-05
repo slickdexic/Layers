@@ -12,7 +12,7 @@ This directory contains technical documentation for the Layers MediaWiki extensi
 |----------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | **Start here** - System architecture, module relationships, Mermaid diagrams |
 | [DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md) | Getting started guide for new contributors |
-| [API.md](API.md) | API endpoints reference (layersinfo, layerssave, layersdelete, layersrename) |
+| [API.md](API.md) | API endpoints reference (layersinfo, layerssave, layersdelete, layersrename, layerslist) |
 | [KNOWN_ISSUES.md](KNOWN_ISSUES.md) | Current bugs, limitations, and workarounds |
 
 ---
@@ -67,7 +67,7 @@ The [archive/](archive/) directory contains completed feature requests, historic
 | File | Location | Purpose |
 |------|----------|---------|
 | [README.md](../README.md) | Root | Project overview, installation, quick start |
-| [codebase_review.md](../codebase_review.md) | Root | Honest assessment of code quality (8.6/10) |
+| [codebase_review.md](../codebase_review.md) | Root | Comprehensive code quality assessment |
 | [improvement_plan.md](../improvement_plan.md) | Root | Technical debt remediation roadmap |
 | [copilot-instructions.md](../.github/copilot-instructions.md) | .github | AI contributor guidelines |
 | [CHANGELOG.md](../CHANGELOG.md) | Root | Version history |

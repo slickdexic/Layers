@@ -12,11 +12,10 @@ This directory contains refactored modules extracted from `CanvasManager.js` as 
    - Fit-to-window and reset-zoom operations
    - Coordinate conversion for pan/zoom transforms
 
-2. **GridRulersController.js** ✅ - Grid and rulers rendering/logic (385 lines)
-   - Properties: showGrid, gridSize, snapToGrid, showRulers, rulerSize
+2. **SmartGuidesController.js** ✅ - Smart alignment guides (745 lines)
    - Guide management: horizontalGuides, verticalGuides
    - Smart guides and snap-to-guides logic
-   - Grid and ruler rendering methods
+   - Alignment guide rendering methods
 
 3. **TransformController.js** ✅ - Layer transformation operations (965 lines)
    - Resize logic (all 8 handles)
@@ -111,7 +110,7 @@ CanvasManager still contains ~500 lines of fallback implementations that duplica
 
 - [x] Directory structure created
 - [x] ZoomPanController.js extracted (343 lines)
-- [x] GridRulersController.js extracted (385 lines)
+- [x] SmartGuidesController.js extracted (745 lines)
 - [x] TransformController.js extracted (1,157 lines)
 - [x] HitTestController.js extracted (376 lines)
 - [x] DrawingController.js extracted (614 lines)
@@ -120,9 +119,9 @@ CanvasManager still contains ~500 lines of fallback implementations that duplica
 - [x] InteractionController.js extracted (487 lines)
 - [x] ImageLoader.js extracted (280 lines) - in parent directory
 - [x] TextInputController.js extracted (187 lines) - modal text input handling
-- [x] Dead code removed (deepCloneLayers, undo/redo, updateUndoRedoButtons) - 80 lines
-- [ ] Remove fallback code from CanvasManager (~80 lines) - low priority, has test coverage
-- [ ] MarqueeSelectionController (~80 lines) - optional, already delegates to SelectionManager
+- [x] Dead code removed (deepCloneLayers, undo/redo, updateUndoRedoButtons)
+- [ ] Remove fallback code from CanvasManager (~80 lines) - low priority
+- [ ] MarqueeSelectionController (~80 lines) - optional
 - [ ] CanvasPool.js - future enhancement (~50 lines, too small)
 - [ ] ViewportManager.js - future enhancement
 

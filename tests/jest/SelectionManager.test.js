@@ -875,16 +875,19 @@ describe('SelectionManager', () => {
             ]);
         });
 
-        test('should apply drag to marker arrowX/arrowY coordinates', () => {
+        test('should NOT apply drag to marker arrowX/arrowY coordinates (independent positioning)', () => {
             const layer = { x: 100, y: 100, arrowX: 150, arrowY: 200 };
             const original = { x: 100, y: 100, arrowX: 150, arrowY: 200 };
             
             selectionManager.applyDrag(layer, original, 20, 30);
 
+            // Marker body moves
             expect(layer.x).toBe(120);
             expect(layer.y).toBe(130);
-            expect(layer.arrowX).toBe(170);
-            expect(layer.arrowY).toBe(230);
+            // Arrow tip does NOT move - matches TransformController behavior
+            // This allows users to reposition marker balloon and arrow independently
+            expect(layer.arrowX).toBe(150);
+            expect(layer.arrowY).toBe(200);
         });
 
         test('should apply drag to curved arrow controlX/controlY coordinates', () => {

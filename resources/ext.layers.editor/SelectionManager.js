@@ -1053,13 +1053,10 @@
 			if ( typeof layer.y2 === 'number' ) {
 				layer.y2 = originalLayer.y2 + deltaY;
 			}
-			// Move marker arrow target with the marker
-			if ( typeof originalLayer.arrowX === 'number' ) {
-				layer.arrowX = originalLayer.arrowX + deltaX;
-			}
-			if ( typeof originalLayer.arrowY === 'number' ) {
-				layer.arrowY = originalLayer.arrowY + deltaY;
-			}
+			// NOTE: arrowX/arrowY (marker arrow tip) are NOT moved with the marker body
+			// This matches TransformController behavior - arrow position is independent
+			// Users can reposition the marker balloon and arrow tip separately
+
 			// Move control point with the arrow (for curved arrows)
 			if ( typeof originalLayer.controlX === 'number' ) {
 				layer.controlX = originalLayer.controlX + deltaX;

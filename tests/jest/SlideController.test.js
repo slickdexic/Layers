@@ -80,7 +80,7 @@ describe( 'SlideController', () => {
 	describe( 'constructor', () => {
 		it( 'should create instance with default options', () => {
 			const controller = new SlideController();
-			expect( controller.debug ).toBeFalsy();
+			expect( controller.debug ).toBe( false );
 		} );
 
 		it( 'should enable debug mode when specified', () => {
@@ -1263,7 +1263,7 @@ describe( 'SlideController', () => {
 
 			await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-			expect( container.querySelector( 'canvas' ) ).toBeTruthy();
+			expect( container.querySelector( 'canvas' ) ).not.toBeNull();
 		} );
 
 		it( 'should render empty slide when layerset has no layers', async () => {

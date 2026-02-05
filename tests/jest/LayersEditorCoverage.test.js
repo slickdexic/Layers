@@ -1285,4 +1285,110 @@ describe( 'LayersEditor Coverage Extension', () => {
 			expect( editor.addLayer ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'addLayerWithoutSelection method', () => {
+		beforeEach( () => {
+			// Create fresh editor instance for each test
+			editor = new LayersEditor( {
+				filename: 'Test.jpg',
+				imageUrl: '/test.jpg'
+			} );
+
+			// Replace internal managers with mocks for control
+			editor.stateManager = mockStateManager;
+			editor.validationManager = mockValidationManager;
+			editor.apiManager = mockAPIManager;
+			editor.canvasManager = mockCanvasManager;
+			editor.layerPanel = mockLayerPanel;
+			editor.historyManager = mockHistoryManager;
+
+			// Mock layerPanel.updateLayerList
+			mockLayerPanel.updateLayerList = jest.fn();
+			// Mock saveState
+			editor.saveState = jest.fn();
+
+			// Clear mock call histories from constructor
+			mockStateManager.set.mockClear();
+			mockStateManager.get.mockClear();
+			mockValidationManager.sanitizeLayerData.mockClear();
+			mockAPIManager.generateLayerId.mockClear();
+			mockCanvasManager.renderLayers.mockClear();
+		} );
+
+		test( 'adds layer without selecting it', () => {
+			const layerData = { type: 'rectangle', x: 100, y: 100 };
+			mockStateManager.get.mockReturnValue( [] );
+
+			editor.addLayerWithoutSelection( layerData );
+
+			expect( mockValidationManager.sanitizeLayerData ).toHaveBeenCalledWith( layerData );
+			expect( mockAPIManager.generateLayerId ).toHaveBeenCalled();
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', expect.any( Array ) );
+			expect( mockCanvasManager.renderLayers ).toHaveBeenCalled();
+			expect( mockLayerPanel.updateLayerList ).toHaveBeenCalled();
+			expect( editor.saveState ).toHaveBeenCalledWith( 'Add layer' );
+		} );
+
+		test( 'sets visible to true when not explicitly false', () => {
+			const layerData = { type: 'circle' };
+			mockStateManager.get.mockReturnValue( [] );
+
+			editor.addLayerWithoutSelection( layerData );
+
+			const setCall = mockStateManager.set.mock.calls.find( ( c ) => c[ 0 ] === 'layers' );
+			expect( setCall ).toBeDefined();
+			expect( setCall[ 1 ][ 0 ].visible ).toBe( true );
+		} );
+
+		test( 'preserves visible=false when explicitly set', () => {
+			const layerData = { type: 'text', visible: false };
+			mockStateManager.get.mockReturnValue( [] );
+
+			editor.addLayerWithoutSelection( layerData );
+
+			const setCall = mockStateManager.set.mock.calls.find( ( c ) => c[ 0 ] === 'layers' );
+			expect( setCall ).toBeDefined();
+			expect( setCall[ 1 ][ 0 ].visible ).toBe( false );
+		} );
+
+		test( 'handles missing canvasManager gracefully', () => {
+			editor.canvasManager = null;
+			const layerData = { type: 'arrow' };
+			mockStateManager.get.mockReturnValue( [] );
+
+			expect( () => {
+				editor.addLayerWithoutSelection( layerData );
+			} ).not.toThrow();
+
+			expect( editor.saveState ).toHaveBeenCalledWith( 'Add layer' );
+		} );
+
+		test( 'handles missing layerPanel gracefully', () => {
+			editor.layerPanel = null;
+			const layerData = { type: 'line' };
+			mockStateManager.get.mockReturnValue( [] );
+
+			expect( () => {
+				editor.addLayerWithoutSelection( layerData );
+			} ).not.toThrow();
+
+			expect( mockCanvasManager.renderLayers ).toHaveBeenCalled();
+			expect( editor.saveState ).toHaveBeenCalledWith( 'Add layer' );
+		} );
+
+		test( 'adds layer at start of array (unshift)', () => {
+			const existingLayer = { id: 'existing', type: 'rectangle' };
+			const newLayer = { type: 'circle' };
+			mockStateManager.get.mockReturnValue( [ existingLayer ] );
+
+			editor.addLayerWithoutSelection( newLayer );
+
+			const setCall = mockStateManager.set.mock.calls.find( ( c ) => c[ 0 ] === 'layers' );
+			expect( setCall ).toBeDefined();
+			const setLayers = setCall[ 1 ];
+			expect( setLayers.length ).toBe( 2 );
+			expect( setLayers[ 0 ].type ).toBe( 'circle' );
+			expect( setLayers[ 1 ].type ).toBe( 'rectangle' );
+		} );
+	} );
 } );
