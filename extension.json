@@ -10,7 +10,7 @@
 	"type": "other",
 	"version": "1.5.51-REL1_39",
 	"requires": {
-		"MediaWiki": ">= 1.44.0"
+		"MediaWiki": ">= 1.39.0"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
