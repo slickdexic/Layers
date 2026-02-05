@@ -30,7 +30,7 @@
 		"docs:markdown": "jsdoc2md resources/ext.layers.editor/*.js resources/ext.layers.shared/*.js > docs/API.md"
 	},
 	"devDependencies": {
-		"@babel/core": "^7.26.0",
+		"@babel/core": "^7.29.0",
 		"@babel/preset-env": "^7.28.6",
 		"@playwright/test": "^1.58.1",
 		"@testing-library/jest-dom": "^6.6.0",
