@@ -16,7 +16,7 @@ This guide covers downloading, configuring, and setting up the Layers extension 
 
 | MediaWiki Version | Branch | Current Version |
 |-------------------|--------|-----------------|
-| 1.44+ | `main` | 1.5.51 |
+| 1.44+ | `main` | 1.5.52 |
 | 1.43.x | `REL1_43` | 1.5.51-REL1_43 |
 | 1.39.x - 1.42.x | `REL1_39` | 1.5.51-REL1_39 |
 

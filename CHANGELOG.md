@@ -11,6 +11,47 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Applies to APIManager abort handlers for revision and named set loads
 - All 11,231 tests pass (165 test suites) ✅
 
+## [1.5.52] - 2026-02-05
+
+### Fixed
+- **MediaWiki 1.39 Compatibility** — Fixed recurring 500 error on MW 1.39 installations:
+  - Changed `use MediaWiki\Title\Title;` to `use Title;` (global namespace in MW 1.39)
+  - Changed `use MediaWiki\Context\RequestContext;` to `use RequestContext;` (global namespace in MW 1.39)
+  - Affected files: ApiLayersDelete.php, ApiLayersRename.php, LayersApiHelperTrait.php, WikitextHooks.php
+  - The MediaWiki\Title and MediaWiki\Context namespaces were introduced in MW 1.40
+
+- **Dimension Tool Text Selection** — Fixed text selection when positioned outside extension lines:
+  - HitTestController now accounts for `textOffset` when calculating text hit area
+  - Text can be selected and dragged even when positioned far from the dimension line center
+  - Increased text hit radius from 20px to 25px for better usability
+
+- **Dimension Tool Body Dragging** — Prevented unintended layer movement:
+  - Clicking on dimension line or extension lines now only selects (no drag)
+  - Only the text area initiates text drag
+  - Anchor points are still adjustable via resize handles
+
+### Added
+- **MW Compatibility Checker** — Enhanced pre-commit checks to catch MW version incompatibilities:
+  - Added detection for `MediaWiki\Title\Title` namespace (MW 1.40+ only)
+  - Added detection for `MediaWiki\User\User` namespace (MW 1.40+ only)
+  - Added detection for `MediaWiki\Context\RequestContext` namespace (MW 1.40+ only)
+  - Added detection for `MediaWiki\Output\OutputPage` namespace (MW 1.40+ only)
+  - Pre-commit hook blocks commits with compatibility errors on REL branches
+
+- **Diagnostic Tool** — Added `diagnose.php` for troubleshooting server issues:
+  - Checks PHP version and required extensions
+  - Validates extension.json configuration
+  - Attempts MediaWiki bootstrap to catch real errors
+  - Shows compatibility status of LayersDatabase.php
+
+- **Documentation** — Added MW 1.39 troubleshooting section to wiki/Troubleshooting.md
+
+### Technical Details
+- All compatibility fixes verified via automated checker (`npm run check:mw-compat`)
+- Fixes deployed to all three branches: main, REL1_43, REL1_39
+
+---
+
 ## [1.5.51] - 2026-02-03
 
 ### Fixed
