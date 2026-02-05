@@ -64,6 +64,24 @@ const COMPATIBILITY_RULES = [
 		affectedVersions: ['1.39']
 	},
 	{
+		id: 'Context-namespace-mw140',
+		description: 'MediaWiki\\Context\\RequestContext namespace does not exist in MW 1.39',
+		severity: 'error',
+		pattern: /use MediaWiki\\Context\\RequestContext;/,
+		fix: 'use RequestContext;',
+		explanation: 'RequestContext is in global namespace in MW 1.39, moved to MediaWiki\\Context in MW 1.40+',
+		affectedVersions: ['1.39']
+	},
+	{
+		id: 'Output-namespace-mw140',
+		description: 'MediaWiki\\Output\\OutputPage namespace does not exist in MW 1.39',
+		severity: 'error',
+		pattern: /use MediaWiki\\Output\\OutputPage;/,
+		fix: 'use OutputPage;',
+		explanation: 'OutputPage is in global namespace in MW 1.39, moved to MediaWiki\\Output in MW 1.40+',
+		affectedVersions: ['1.39']
+	},
+	{
 		id: 'Revision-namespace-mw140',
 		description: 'MediaWiki\\Revision\\RevisionRecord namespace check',
 		severity: 'warning',
