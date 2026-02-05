@@ -13,6 +13,28 @@ Version history for the Layers extension.
 - Applies to APIManager abort handlers for revision and named set loading
 - All 11,231 tests pass (165 test suites) ✅
 
+## Version 1.5.52 (February 5, 2026)
+
+### Fixed
+- **MediaWiki 1.39 Compatibility** — Fixed recurring 500 error on MW 1.39 installations:
+  - Changed `use MediaWiki\Title\Title;` to `use Title;` (global namespace in MW 1.39)
+  - Changed `use MediaWiki\Context\RequestContext;` to `use RequestContext;`
+  - The MediaWiki\Title and MediaWiki\Context namespaces were introduced in MW 1.40
+
+- **Dimension Tool Text Selection** — Fixed text selection when positioned outside extension lines
+- **Dimension Tool Body Dragging** — Clicking on dimension line now only selects (no drag)
+
+### Added
+- **MW Compatibility Checker** — Enhanced pre-commit checks for MW version incompatibilities
+- **Diagnostic Tool** — Added `diagnose.php` for troubleshooting server issues
+- **Documentation** — Added MW 1.39 troubleshooting section
+
+### Technical Details
+- All compatibility fixes verified via automated checker
+- Fixes deployed to all three branches: main, REL1_43, REL1_39
+
+---
+
 ## Version 1.5.51 (February 3, 2026)
 
 ### Fixed
