@@ -22,6 +22,7 @@
 		"check:godclass": "bash scripts/pre-commit-god-class-check.sh",
 		"check:docs": "bash scripts/verify-docs.sh",
 		"check:version": "node scripts/update-version.js --check",
+		"check:mw-compat": "node scripts/check-mw-compatibility.js",
 		"update:version": "node scripts/update-version.js",
 		"generate:emoji-names": "node resources/ext.layers.editor/shapeLibrary/scripts/import-cldr-emoji-names.js",
 		"generate:emoji-index": "node resources/ext.layers.editor/shapeLibrary/scripts/generate-emoji-index.js",
