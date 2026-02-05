@@ -284,14 +284,17 @@
 					selectedLayer = cm.handleLayerSelection( point, isCtrlClick );
 					if ( selectedLayer && !isCtrlClick ) {
 						// For dimension layers, check if click is in text area
-						// If so, start offset drag instead of layer drag
-						if ( selectedLayer.type === 'dimension' &&
-							this.isPointInDimensionTextArea( point, selectedLayer ) ) {
-							if ( cm.transformController ) {
-								// Create a handle for unified text dragging (both offsets)
-								const handle = this.createDimensionTextHandle( selectedLayer );
-								cm.transformController.startDimensionTextDrag( handle, cm.startPoint || point );
+						// If so, start text drag; otherwise don't allow body dragging
+						// (dimension layers can only be moved via handles or text)
+						if ( selectedLayer.type === 'dimension' ) {
+							if ( this.isPointInDimensionTextArea( point, selectedLayer ) ) {
+								if ( cm.transformController ) {
+									// Create a handle for unified text dragging (both offsets)
+									const handle = this.createDimensionTextHandle( selectedLayer );
+									cm.transformController.startDimensionTextDrag( handle, cm.startPoint || point );
+								}
 							}
+							// If not in text area, just select (no drag) - anchors moved via handles
 						} else if ( cm.transformController ) {
 							cm.transformController.startDrag( cm.startPoint || point );
 						}
