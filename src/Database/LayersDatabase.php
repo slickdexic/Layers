@@ -15,7 +15,7 @@ use Config;
 use MediaWiki\Extension\Layers\LayersConstants;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IDatabase;
-use Wikimedia\Rdbms\LoadBalancer;
+use Wikimedia\Rdbms\ILoadBalancer;
 
 class LayersDatabase {
 	private const MAX_CACHE_SIZE = 100;
@@ -26,7 +26,7 @@ class LayersDatabase {
 	 */
 	private const JSON_DECODE_MAX_DEPTH = 512;
 
-	/** @var LoadBalancer */
+	/** @var ILoadBalancer */
 	private $loadBalancer;
 	/** @var \Wikimedia\Rdbms\IDatabase */
 	private $dbw;
@@ -42,7 +42,7 @@ class LayersDatabase {
 	private $schemaManager;
 
 	public function __construct(
-		LoadBalancer $loadBalancer,
+		ILoadBalancer $loadBalancer,
 		Config $config,
 		LoggerInterface $logger,
 		LayersSchemaManager $schemaManager
