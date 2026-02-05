@@ -1,6 +1,6 @@
 <?php
 /**
- * Layers Extension Diagnostic Tool
+ * Layers Extension Diagnostic Tool v2
  * 
  * Upload this file to extensions/Layers/ and access it directly in browser:
  * http://your-wiki/extensions/Layers/diagnose.php
@@ -11,112 +11,134 @@
 error_reporting( -1 );
 ini_set( 'display_errors', 1 );
 
-echo "<h1>Layers Extension Diagnostics</h1>\n";
+echo "<h1>Layers Extension Diagnostics v2</h1>\n";
 echo "<pre>\n";
 
-// 1. Check PHP version
+// 1. Check PHP version and extensions
+echo "=== PHP Environment ===\n";
 echo "PHP Version: " . PHP_VERSION . "\n";
-if ( version_compare( PHP_VERSION, '7.4.0', '<' ) ) {
-    echo "ERROR: PHP 7.4+ required\n";
+
+$requiredExts = [ 'json', 'mbstring', 'mysqli', 'xml' ];
+$recommendedExts = [ 'gd', 'imagick', 'intl' ];
+
+echo "\nRequired extensions:\n";
+foreach ( $requiredExts as $ext ) {
+    echo ( extension_loaded( $ext ) ? "✓" : "✗" ) . " {$ext}\n";
 }
 
-// 2. Try to load the interfaces
-echo "\nChecking class availability...\n";
+echo "\nRecommended extensions:\n";
+foreach ( $recommendedExts as $ext ) {
+    echo ( extension_loaded( $ext ) ? "✓" : "⚠" ) . " {$ext}" . 
+        ( !extension_loaded( $ext ) ? " (missing but may not be critical)" : "" ) . "\n";
+}
 
-$classes = [
-    'Wikimedia\\Rdbms\\ILoadBalancer' => 'ILoadBalancer interface',
-    'Wikimedia\\Rdbms\\IDatabase' => 'IDatabase interface',
-    'MediaWiki\\MediaWikiServices' => 'MediaWikiServices class',
-    'MediaWiki\\Config\\Config' => 'Config interface (MW 1.44+)',
-    'Config' => 'Config interface (MW 1.39-1.43)',
-];
+// 2. Check extension files
+echo "\n=== Extension Files ===\n";
 
-foreach ( $classes as $class => $desc ) {
-    if ( interface_exists( $class ) || class_exists( $class ) ) {
-        echo "✓ {$desc}: available\n";
+$extJson = __DIR__ . '/extension.json';
+if ( file_exists( $extJson ) ) {
+    $json = json_decode( file_get_contents( $extJson ), true );
+    if ( $json === null ) {
+        echo "✗ extension.json: INVALID JSON - " . json_last_error_msg() . "\n";
     } else {
-        echo "✗ {$desc}: NOT FOUND\n";
+        echo "✓ extension.json MediaWiki requirement: " . ( $json['requires']['MediaWiki'] ?? 'NOT SET' ) . "\n";
+        echo "✓ Extension version: " . ( $json['version'] ?? 'NOT SET' ) . "\n";
     }
 }
 
-// 3. Try to include MW
-echo "\nAttempting to load MediaWiki...\n";
+// Check critical PHP files for syntax errors
+$phpFiles = [
+    'services.php',
+    'src/Database/LayersDatabase.php',
+    'src/Api/ApiLayersInfo.php',
+    'src/Hooks.php'
+];
 
-$mwPath = dirname( dirname( dirname( __FILE__ ) ) ) . '/includes/Setup.php';
-if ( !file_exists( $mwPath ) ) {
-    // Try another common path
-    $mwPath = dirname( dirname( dirname( __FILE__ ) ) ) . '/includes/WebStart.php';
+echo "\nPHP syntax check:\n";
+foreach ( $phpFiles as $file ) {
+    $path = __DIR__ . '/' . $file;
+    if ( file_exists( $path ) ) {
+        $output = [];
+        $returnVar = 0;
+        exec( 'php -l ' . escapeshellarg( $path ) . ' 2>&1', $output, $returnVar );
+        $result = implode( "\n", $output );
+        if ( $returnVar === 0 && strpos( $result, 'No syntax errors' ) !== false ) {
+            echo "✓ {$file}: OK\n";
+        } else {
+            echo "✗ {$file}: SYNTAX ERROR\n";
+            echo "  " . $result . "\n";
+        }
+    } else {
+        echo "✗ {$file}: FILE NOT FOUND\n";
+    }
 }
 
-if ( file_exists( $mwPath ) ) {
-    echo "Found MediaWiki at: " . dirname( dirname( $mwPath ) ) . "\n";
+// 3. Try to actually bootstrap MediaWiki
+echo "\n=== MediaWiki Bootstrap Test ===\n";
+
+$mwRoot = dirname( dirname( dirname( __FILE__ ) ) );
+$webStart = $mwRoot . '/includes/WebStart.php';
+
+if ( !file_exists( $webStart ) ) {
+    echo "✗ Cannot find MediaWiki at: {$mwRoot}\n";
+} else {
+    echo "Found MediaWiki at: {$mwRoot}\n";
+    echo "\nAttempting to bootstrap MediaWiki (this will show the real error)...\n\n";
+    echo "---BEGIN ERROR OUTPUT---\n";
     
-    // Try loading MW core to get the real error
-    echo "\nAttempting to load extension (this may show the real error)...\n\n";
-    
-    // Set up minimal MW environment
-    define( 'MEDIAWIKI', true );
+    // Flush output so we see everything before the potential crash
+    ob_flush();
+    flush();
     
     try {
-        // Try to load services.php directly
-        $servicesPath = __DIR__ . '/services.php';
-        if ( file_exists( $servicesPath ) ) {
-            echo "Checking services.php syntax...\n";
-            $result = shell_exec( 'php -l ' . escapeshellarg( $servicesPath ) . ' 2>&1' );
-            if ( $result ) {
-                echo $result;
-            } else {
-                // shell_exec may not work, try include
-                echo "Shell access unavailable. Trying direct include...\n";
-            }
+        // This should trigger the actual error
+        chdir( $mwRoot );
+        
+        // Define MW constant first
+        if ( !defined( 'MEDIAWIKI' ) ) {
+            define( 'MEDIAWIKI', true );
+        }
+        if ( !defined( 'MW_ENTRY_POINT' ) ) {
+            define( 'MW_ENTRY_POINT', 'index' );
         }
         
-        // Check extension.json
-        $extJson = __DIR__ . '/extension.json';
-        if ( file_exists( $extJson ) ) {
-            $json = json_decode( file_get_contents( $extJson ), true );
-            if ( $json === null ) {
-                echo "ERROR: extension.json is invalid JSON: " . json_last_error_msg() . "\n";
-            } else {
-                echo "\nextension.json MediaWiki requirement: " . 
-                    ( $json['requires']['MediaWiki'] ?? 'NOT SET' ) . "\n";
-                echo "Extension version: " . ( $json['version'] ?? 'NOT SET' ) . "\n";
-            }
-        }
+        // Try to load MediaWiki - this is where the error should appear
+        require_once $webStart;
         
-        // Check LayersDatabase.php
-        $dbFile = __DIR__ . '/src/Database/LayersDatabase.php';
-        if ( file_exists( $dbFile ) ) {
-            $content = file_get_contents( $dbFile );
-            if ( strpos( $content, 'use Wikimedia\\Rdbms\\ILoadBalancer;' ) !== false ) {
-                echo "\n✓ LayersDatabase.php uses ILoadBalancer (correct)\n";
-            } else if ( strpos( $content, 'use Wikimedia\\Rdbms\\LoadBalancer;' ) !== false ) {
-                echo "\n✗ LayersDatabase.php uses LoadBalancer (WRONG - causes MW 1.39 error)\n";
-                echo "  The file needs to be updated from the REL1_39 branch!\n";
-            } else {
-                echo "\n? Could not determine LoadBalancer usage\n";
-            }
+        echo "---END ERROR OUTPUT---\n\n";
+        echo "✓ MediaWiki loaded successfully!\n";
+        
+        // If we get here, MW loaded. Check if Layers is registered.
+        if ( class_exists( 'MediaWiki\\MediaWikiServices' ) ) {
+            $services = \MediaWiki\MediaWikiServices::getInstance();
             
-            // Check constructor signature
-            if ( preg_match( '/ILoadBalancer\s+\$loadBalancer/', $content ) ) {
-                echo "✓ Constructor uses ILoadBalancer type hint\n";
-            } else if ( preg_match( '/LoadBalancer\s+\$loadBalancer/', $content ) ) {
-                echo "✗ Constructor uses LoadBalancer type hint (WRONG)\n";
+            // Check if our services are registered
+            echo "\n=== Layers Services Check ===\n";
+            
+            try {
+                $layersDb = $services->getService( 'LayersDatabase' );
+                echo "✓ LayersDatabase service: registered\n";
+            } catch ( Throwable $e ) {
+                echo "✗ LayersDatabase service: " . $e->getMessage() . "\n";
             }
-        } else {
-            echo "\nERROR: LayersDatabase.php not found at expected path\n";
         }
         
     } catch ( Throwable $e ) {
-        echo "\nERROR: " . $e->getMessage() . "\n";
-        echo "File: " . $e->getFile() . ":" . $e->getLine() . "\n";
+        echo "---END ERROR OUTPUT---\n\n";
+        echo "✗ CAUGHT ERROR:\n";
+        echo "Message: " . $e->getMessage() . "\n";
+        echo "File: " . $e->getFile() . "\n";
+        echo "Line: " . $e->getLine() . "\n";
         echo "\nStack trace:\n" . $e->getTraceAsString() . "\n";
     }
-} else {
-    echo "ERROR: Cannot find MediaWiki at expected path\n";
-    echo "Looked for: " . $mwPath . "\n";
 }
 
 echo "\n</pre>\n";
-echo "<hr><p>If you see errors above, they explain why the wiki won't load.</p>";
-echo "<p>To fix: ensure you have deployed the REL1_39 branch completely.</p>";
+echo "<hr>";
+echo "<h2>What to do next</h2>";
+echo "<ol>";
+echo "<li>If you see an error above, that's the actual problem</li>";
+echo "<li>If this page just shows a 500 error or blank, check your web server error log</li>";
+echo "<li>For IIS: Check C:\\inetpub\\logs\\LogFiles\\ or Event Viewer</li>";
+echo "<li>For Apache: Check error.log</li>";
+echo "</ol>";

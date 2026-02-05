@@ -18,7 +18,7 @@ use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Title\Title;
+use Title;
 
 /**
  * Provides common helper methods for Layers API modules.

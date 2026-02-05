@@ -46,6 +46,32 @@ const COMPATIBILITY_RULES = [
 		affectedVersions: ['1.39', '1.40', '1.41', '1.42', '1.43']
 	},
 	{
+		id: 'Title-namespace-mw140',
+		description: 'MediaWiki\\Title\\Title namespace does not exist in MW 1.39',
+		severity: 'error',
+		pattern: /use MediaWiki\\Title\\Title;/,
+		fix: 'use Title;',
+		explanation: 'Title class is in global namespace in MW 1.39, moved to MediaWiki\\Title in MW 1.40+',
+		affectedVersions: ['1.39']
+	},
+	{
+		id: 'User-namespace-mw140',
+		description: 'MediaWiki\\User\\User namespace does not exist in MW 1.39',
+		severity: 'error',
+		pattern: /use MediaWiki\\User\\User;/,
+		fix: 'use User;',
+		explanation: 'User class is in global namespace in MW 1.39, moved to MediaWiki\\User in MW 1.40+',
+		affectedVersions: ['1.39']
+	},
+	{
+		id: 'Revision-namespace-mw140',
+		description: 'MediaWiki\\Revision\\RevisionRecord namespace check',
+		severity: 'warning',
+		pattern: /use MediaWiki\\Revision\\RevisionRecord;/,
+		explanation: 'RevisionRecord exists in MW 1.39 but verify usage patterns are compatible',
+		affectedVersions: ['1.39']
+	},
+	{
 		id: 'getMainConfig-deprecated',
 		description: 'Check for deprecated Config access patterns',
 		severity: 'warning',
@@ -62,6 +88,7 @@ const COMPATIBILITY_RULES = [
 		affectedVersions: ['1.39', '1.40', '1.41', '1.42', '1.43', '1.44']
 	}
 ];
+
 
 /**
  * Get all PHP files in src/ directory

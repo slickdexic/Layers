@@ -75,6 +75,50 @@ Solutions for common issues with the Layers extension.
 3. **Check PATH order:**
    - Ensure PHP Composer comes before Python in PATH
 
+### MediaWiki 1.39 Compatibility (500 Error)
+
+**Symptoms:** 500 Internal Server Error when loading any wiki page with Layers enabled. Wiki works fine when `wfLoadExtension( 'Layers' );` is commented out.
+
+**Root Causes:** When merging from main branch, MW 1.44+ specific code can overwrite MW 1.39 compatible code:
+
+1. **Title namespace** — MW 1.40+ uses `MediaWiki\Title\Title`, MW 1.39 uses `Title` (global)
+2. **User namespace** — MW 1.40+ uses `MediaWiki\User\User`, MW 1.39 uses `User` (global)
+3. **ILoadBalancer interface** — Must use `ILoadBalancer` not `LoadBalancer` class
+
+**Solutions:**
+
+1. **Use the REL1_39 branch:**
+   - Always use `REL1_39` branch for MediaWiki 1.39-1.42
+   - Download: https://github.com/slickdexic/Layers/archive/refs/heads/REL1_39.zip
+
+2. **Run the diagnostic tool:**
+   - Access: `http://your-wiki/extensions/Layers/diagnose.php`
+   - Shows PHP errors and compatibility issues
+
+3. **Manual fix if needed:**
+   
+   In `src/Api/ApiLayersDelete.php` and `src/Api/ApiLayersRename.php`, change:
+   ```php
+   // WRONG (MW 1.40+)
+   use MediaWiki\Title\Title;
+   
+   // CORRECT (MW 1.39)
+   use Title;
+   ```
+   
+   In `src/Database/LayersDatabase.php`, ensure:
+   ```php
+   // CORRECT
+   use Wikimedia\Rdbms\ILoadBalancer;
+   
+   // NOT
+   use Wikimedia\Rdbms\LoadBalancer;
+   ```
+
+4. **Prevent future issues:**
+   - Run `npm run check:mw-compat` before deploying to MW 1.39
+   - Never merge main directly into REL1_39 — cherry-pick specific commits
+
 ---
 
 ## Editor Issues
