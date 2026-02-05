@@ -350,18 +350,19 @@
 		 * @private
 		 */
 		_throttle( fn, limit ) {
-			const self = this;
 			let inThrottle = false;
-			return function ( ...args ) {
-				if ( !inThrottle && !self._destroyed ) {
-					fn.apply( this, args );
-					inThrottle = true;
-					self._throttleTimeoutId = setTimeout( () => {
-						inThrottle = false;
-						self._throttleTimeoutId = null;
-					}, limit );
+			const throttled = ( ...args ) => {
+				if ( inThrottle || this._destroyed ) {
+					return;
 				}
+				fn.apply( this, args );
+				inThrottle = true;
+				this._throttleTimeoutId = setTimeout( () => {
+					inThrottle = false;
+					this._throttleTimeoutId = null;
+				}, limit );
 			};
+			return throttled;
 		}
 
 		/**

@@ -528,7 +528,8 @@
 
 			const cx = layer.x || 0;
 			const cy = layer.y || 0;
-			const radius = layer.radius || 0;
+			// Ensure radius is never negative (ctx.arc throws for negative radius)
+			const radius = Math.max( 0, layer.radius || 0 );
 			let strokeW = layer.strokeWidth || 1;
 
 			if ( !opts.scaled ) {

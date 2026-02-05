@@ -6,7 +6,7 @@ This guide is for contributors (human and AI) working on the Layers extension. I
 
 **Target: <110,000 lines of JavaScript** — There is NO 50K or 75K limit.
 
-This extension is feature-rich by design with **15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (EmojiLibraryData.js, ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~40,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
+This extension is feature-rich by design with **15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~14,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
 - God classes (files >1,000 lines) — minimize hand-written ones; generated data files are exempt
 - Test coverage — maintain 90%+ statement coverage
 - Security — CSRF, rate limiting, validation
@@ -25,6 +25,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ApiLayersSave`: write endpoint to save a new layer set revision (requires CSRF token + rights)
     - `ApiLayersDelete`: delete endpoint to remove an entire named layer set (requires CSRF token, owner or admin)
     - `ApiLayersRename`: rename endpoint to rename a named layer set (requires CSRF token, owner or admin)
+    - `ApiLayersList`: list slides for Special:Slides page (requires read permission, rate limited)
   - Shared traits (`src/Api/Traits/`)
     - `ForeignFileHelperTrait`: shared by all 4 API modules; provides `isForeignFile()` (detects InstantCommons/foreign files) and `getFileSha1()` (deterministic fallback hash for foreign files)
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
@@ -394,7 +395,7 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,210 tests in 165 suites — verified February 4, 2026)
+- Test count (11,231 tests in 165 suites — verified February 4, 2026)
 - Coverage (95.19% statement, 84.96% branch — verified February 4, 2026)
 - JavaScript file count (140 files total, ~96,498 lines)
 - PHP file count (40 files, ~14,915 lines)

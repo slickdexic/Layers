@@ -4,17 +4,26 @@ Version history for the Layers extension.
 
 ---
 
+## Unreleased
+
+### Added
+- **Abort Handling Toggle** — Optional `$wgLayersRejectAbortedRequests` (or `editor.config.rejectAbortedRequests`) surfaces aborted API requests as rejections for debugging. Default remains false to preserve legacy behavior.
+
+### Technical Details
+- Applies to APIManager abort handlers for revision and named set loading
+- All 11,231 tests pass (165 test suites) ✅
+
 ## Version 1.5.51 (February 3, 2026)
 
 ### Fixed
 - **Documentation Sync** — Fixed version number mismatches and file counts:
   - Mediawiki-Extension-Layers.mediawiki branch table showed 1.5.49
   - docs/ARCHITECTURE.md showed 1.5.49 and incorrect file counts
-  - Updated to correct counts: 142 JavaScript files, 40 PHP files
+  - Updated to correct counts: 140 JavaScript files, 40 PHP files
 
 ### Technical Details
 - Comprehensive v13 code review completed
-- All 11,210 tests pass (165 test suites) ✅
+- All 11,231 tests pass (165 test suites) ✅
 - 95.19% statement coverage, 84.96% branch coverage
 
 ---
@@ -26,7 +35,7 @@ Version history for the Layers extension.
 - **Arrow Position Control** — Dimension arrows can now point inside or outside
 
 ### Technical Details
-- All 11,210 tests pass (165 test suites) ✅
+- All 11,231 tests pass (165 test suites) ✅
 
 ---
 
@@ -42,7 +51,7 @@ Version history for the Layers extension.
 - **Cursor-Only Formatting** — Toggle formats (bold, italic, etc.) now set typing state for next characters when cursor is placed but no text selected
 
 ### Technical Details
-- 11,210 tests passing (165 suites)
+- 11,231 tests passing (165 suites)
 - 95.44% statement, 85.20% branch coverage
 - InlineTextEditor.js: +45 lines for toggle format and backgroundColor detection
 - RichTextToolbar.js: +25 lines for `updateFromSelection()` method

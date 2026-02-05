@@ -71,7 +71,7 @@ Each controller handles a specific responsibility:
 | `RenderCoordinator` | Render scheduling, dirty regions | ~390 |
 | `InteractionController` | Mouse/touch event handling | ~490 |
 | `AlignmentController` | Align and distribute layers | ~464 |
-| `GridRulersController` | Grid, rulers, snap-to-grid | ~385 |
+| `SmartGuidesController` | Snap alignment guides | ~745 |
 
 ### Module Registry
 

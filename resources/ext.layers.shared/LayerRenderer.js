@@ -537,6 +537,10 @@ class LayerRenderer {
 		const height = ( layer.height || 100 ) * scale.sy;
 
 		const viewBox = layer.viewBox;
+		// Validate viewBox is a valid 4-element array
+		if ( !Array.isArray( viewBox ) || viewBox.length < 4 ) {
+			return;
+		}
 		const viewBoxWidth = viewBox[ 2 ];
 		const viewBoxHeight = viewBox[ 3 ];
 

@@ -68,7 +68,6 @@
 				"CanvasRenderer": "readonly",
 				"LayersSelectionManager": "readonly",
 				"ZoomPanController": "readonly",
-				"GridRulersController": "readonly",
 				"TransformController": "readonly",
 				"HitTestController": "readonly",
 				"DrawingController": "readonly",
