@@ -237,9 +237,14 @@
 			// Calculate the angle and perpendicular direction
 			const dx = x2 - x1;
 			const dy = y2 - y1;
+			const distance = Math.sqrt( dx * dx + dy * dy );
 			const angle = Math.atan2( dy, dx );
 			const perpX = -Math.sin( angle );
 			const perpY = Math.cos( angle );
+
+			// Unit vector along the dimension line
+			const unitDx = distance > 0 ? dx / distance : 1;
+			const unitDy = distance > 0 ? dy / distance : 0;
 
 			// Get offset distance (same logic as DimensionRenderer/SelectionRenderer)
 			let offsetDistance;
@@ -281,16 +286,18 @@
 				return true;
 			}
 
-			// Test 3: Text area at center of dimension line (generous hit area for text)
-			const centerX = ( dimX1 + dimX2 ) / 2;
-			const centerY = ( dimY1 + dimY2 ) / 2;
+			// Test 3: Text area - account for textOffset (can be outside extension lines)
+			// textOffset shifts text along the dimension line from center
+			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+			const textX = ( dimX1 + dimX2 ) / 2 + unitDx * textOffset;
+			const textY = ( dimY1 + dimY2 ) / 2 + unitDy * textOffset;
 			const fontSize = layer.fontSize || 12;
-			const textHitRadius = Math.max( fontSize * 1.5, 20 ); // At least 20px hit area
-			const distToCenter = Math.sqrt(
-				( point.x - centerX ) * ( point.x - centerX ) +
-				( point.y - centerY ) * ( point.y - centerY )
+			const textHitRadius = Math.max( fontSize * 1.5, 25 ); // Generous hit area for text
+			const distToText = Math.sqrt(
+				( point.x - textX ) * ( point.x - textX ) +
+				( point.y - textY ) * ( point.y - textY )
 			);
-			if ( distToCenter <= textHitRadius ) {
+			if ( distToText <= textHitRadius ) {
 				return true;
 			}
 
