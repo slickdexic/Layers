@@ -17,22 +17,22 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (February 1, 2026)
+## Codebase Statistics (February 4, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **142** |
-| Total JS lines | **~95,433** |
+| Total JS files | **140** |
+| Total JS lines | **~96,498** |
 | Total PHP files | **40** |
-| Total PHP lines | **~14,907** |
+| Total PHP lines | **~14,915** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~14,354 lines (generated) |
-| ES6 classes | **142** |
+| ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.19% stmt, 84.96% branch** |
-| Jest tests | **11,210** (165 suites) |
+| Jest tests | **11,231** (165 suites) |
 | PHPUnit test files | 24 |
 | God classes (>1000 lines) | **18** (2 generated, 14 JS, 2 PHP) |
 | Drawing tools | **15** |
@@ -181,7 +181,6 @@ graph TB
 
     subgraph Controllers["Canvas Controllers"]
         zoom["ZoomPanController"]
-        grid["GridRulersController"]
         transform["TransformController"]
         hit["HitTestController"]
         drawing["DrawingController"]
@@ -222,10 +221,6 @@ graph LR
 
     subgraph Zoom["Zoom/Pan"]
         zpc["ZoomPanController<br/>370 lines"]
-    end
-
-    subgraph Grid["Grid/Rulers"]
-        grc["GridRulersController<br/>385 lines"]
     end
 
     subgraph Transform["Transforms"]
@@ -304,8 +299,7 @@ graph LR
 ┌───────────────┐  ┌────────────────────┐   ┌──────────────────────────────────┐
 │CanvasRenderer │  │ SelectionManager   │   │        CONTROLLERS               │
 │               │  │                    │   │  ZoomPanController               │
-└───────────────┘  └────────────────────┘   │  GridRulersController            │
-                                            │  TransformController             │
+└───────────────┘  └────────────────────┘   │  TransformController             │
                                             │  HitTestController               │
                                             │  DrawingController               │
                                             │  ClipboardController             │
@@ -522,7 +516,6 @@ ZoomPanController.prototype.zoomIn = function() {
 | Controller | Responsibility | Lines |
 |------------|----------------|-------|
 | ZoomPanController | Zoom, pan, fit-to-window | ~370 |
-| GridRulersController | Grid, rulers, snap-to-grid | ~385 |
 | TransformController | Resize, rotate, drag | ~1,109 |
 | HitTestController | Click detection, selection | ~382 |
 | DrawingController | Shape creation | ~630 |
@@ -915,7 +908,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **11,210 tests, 95.19% statement coverage, 84.96% branch coverage**
+- **11,231 tests, 95.19% statement coverage, 84.96% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -981,10 +974,10 @@ extensions/Layers/
 │   │   │   ├── VirtualLayerList.js  # NEW: Virtual scrolling
 │   │   │   ├── PropertyBuilders.js (1,284 lines)
 │   │   │   └── PropertiesForm.js (1,001 lines)
-│   │   ├── shapeLibrary/    # Shape & Emoji libraries (~40,000 lines)
+│   │   ├── shapeLibrary/    # Shape & Emoji libraries (~14,000 lines)
 │   │   │   ├── ShapeLibraryData.js (~11,299 lines, generated)
-│   │   │   ├── EmojiLibraryData.js (~26,277 lines, generated)
-│   │   │   ├── EmojiLibraryIndex.js (~3,003 lines, generated)
+│   │   │   ├── EmojiLibraryIndex.js (~3,055 lines, generated)
+│   │   │   ├── emoji-bundle.json (bundled emoji SVG data)
 │   │   │   ├── ShapeLibraryPanel.js
 │   │   │   └── EmojiPickerPanel.js
 │   │   └── *.js             # Other modules
@@ -992,7 +985,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,210 tests, 165 suites)
+│   ├── jest/                # Unit tests (11,231 tests, 165 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

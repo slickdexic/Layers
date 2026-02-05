@@ -519,7 +519,10 @@
 			const buildExpandedArrowPath = ( ctx, extraSpread ) => {
 				const expandedHalfShaft = halfShaft + extraSpread;
 				const expandedTailExtra = tailExtra + extraSpread;
-				const expandedHeadScale = ( arrowSize + extraSpread ) / arrowSize * effectiveHeadScale;
+				// Guard against division by zero when arrowSize is 0
+				const expandedHeadScale = arrowSize > 0
+					? ( arrowSize + extraSpread ) / arrowSize * effectiveHeadScale
+					: effectiveHeadScale;
 
 				const startTopX = curveStartX + Math.cos( startPerp ) * ( expandedHalfShaft + expandedTailExtra );
 				const startTopY = curveStartY + Math.sin( startPerp ) * ( expandedHalfShaft + expandedTailExtra );

@@ -215,7 +215,6 @@
 	 * @private
 	 */
 	ShapeLibraryPanel.prototype.buildCategories = function () {
-		const self = this;
 		const categories = window.Layers.ShapeLibrary.getCategories();
 
 		// Use DocumentFragment to batch DOM operations for performance
@@ -238,23 +237,16 @@
 		} );
 
 		// Helper to count shapes in a parent category (sum of all subcategories)
-		const getParentShapeCount = function ( parentId ) {
-			return subcategories
-				.filter( function ( sub ) {
-					return sub.parentId === parentId;
-				} )
-				.reduce( function ( total, sub ) {
-					return total + window.Layers.ShapeLibrary.getShapesByCategory( sub.id ).length;
-				}, 0 );
-		};
+		const getParentShapeCount = ( parentId ) => subcategories
+			.filter( ( sub ) => sub.parentId === parentId )
+			.reduce( ( total, sub ) =>
+				total + window.Layers.ShapeLibrary.getShapesByCategory( sub.id ).length, 0 );
 
 		// Render parent categories with their children
-		parentCategories.forEach( function ( parent ) {
-			const childCategories = subcategories.filter( function ( sub ) {
-				return sub.parentId === parent.id;
-			} );
+		parentCategories.forEach( ( parent ) => {
+			const childCategories = subcategories.filter( ( sub ) => sub.parentId === parent.id );
 			const totalCount = getParentShapeCount( parent.id );
-			const isExpanded = self.expandedParents[ parent.id ];
+			const isExpanded = this.expandedParents[ parent.id ];
 
 			// Parent header (collapsible)
 			const parentItem = document.createElement( 'div' );
@@ -323,9 +315,9 @@
 			parentItem.appendChild( textContainer );
 
 			// Click to toggle expand/collapse
-			parentItem.addEventListener( 'click', function () {
-				self.expandedParents[ parent.id ] = !self.expandedParents[ parent.id ];
-				self.buildCategories();
+			parentItem.addEventListener( 'click', () => {
+				this.expandedParents[ parent.id ] = !this.expandedParents[ parent.id ];
+				this.buildCategories();
 			} );
 
 			fragment.appendChild( parentItem );
@@ -339,7 +331,7 @@
 			`;
 
 			// Render child categories
-			childCategories.forEach( function ( cat ) {
+			childCategories.forEach( ( cat ) => {
 				const count = window.Layers.ShapeLibrary.getShapesByCategory( cat.id ).length;
 
 				const item = document.createElement( 'button' );
@@ -395,13 +387,13 @@
 				item.appendChild( childTextContainer );
 
 				// Active state
-				if ( cat.id === self.activeCategory ) {
+				if ( cat.id === this.activeCategory ) {
 					item.style.background = 'var(--background-color-interactive-subtle, #eaecf0)';
 				}
 
-				item.addEventListener( 'click', function ( e ) {
+				item.addEventListener( 'click', ( e ) => {
 					e.stopPropagation(); // Don't trigger parent collapse
-					self.selectCategory( cat.id );
+					this.selectCategory( cat.id );
 				} );
 
 				childContainer.appendChild( item );
@@ -411,7 +403,7 @@
 		} );
 
 		// Render standalone categories (not part of any parent)
-		standaloneCategories.forEach( function ( cat ) {
+		standaloneCategories.forEach( ( cat ) => {
 			const count = window.Layers.ShapeLibrary.getShapesByCategory( cat.id ).length;
 
 			const item = document.createElement( 'button' );
@@ -467,12 +459,12 @@
 			item.appendChild( textContainer );
 
 			// Active state
-			if ( cat.id === self.activeCategory ) {
+			if ( cat.id === this.activeCategory ) {
 				item.style.background = 'var(--background-color-interactive-subtle, #eaecf0)';
 			}
 
-			item.addEventListener( 'click', function () {
-				self.selectCategory( cat.id );
+			item.addEventListener( 'click', () => {
+				this.selectCategory( cat.id );
 			} );
 
 			fragment.appendChild( item );
@@ -512,7 +504,6 @@
 	 * @param {Object[]} shapes - Array of shape objects
 	 */
 	ShapeLibraryPanel.prototype.showShapes = function ( shapes ) {
-		const self = this;
 		this.shapeGrid.innerHTML = '';
 
 		if ( shapes.length === 0 ) {
@@ -528,7 +519,7 @@
 			return;
 		}
 
-		shapes.forEach( function ( shape ) {
+		shapes.forEach( ( shape ) => {
 			const item = document.createElement( 'button' );
 			item.className = 'layers-shape-library-item';
 			item.title = shape.name;
@@ -586,7 +577,7 @@
 			// Name label
 			const label = document.createElement( 'span' );
 			label.className = 'layers-shape-library-label';
-			label.textContent = self.truncateName( shape.name );
+			label.textContent = this.truncateName( shape.name );
 			label.style.cssText = `
 				margin-top: 4px;
 				font-size: 10px;
@@ -612,11 +603,11 @@
 			} );
 
 			// Click to select
-			item.addEventListener( 'click', function () {
-				self.selectShape( shape );
+			item.addEventListener( 'click', () => {
+				this.selectShape( shape );
 			} );
 
-			self.shapeGrid.appendChild( item );
+			this.shapeGrid.appendChild( item );
 		} );
 	};
 
@@ -656,11 +647,9 @@
 	 * @private
 	 */
 	ShapeLibraryPanel.prototype.bindEvents = function () {
-		const self = this;
-
 		// Close button - bind handler for cleanup
-		this._boundCloseClickHandler = function () {
-			self.close();
+		this._boundCloseClickHandler = () => {
+			this.close();
 		};
 		const closeBtn = this.panel.querySelector( '.layers-shape-library-close' );
 		if ( closeBtn ) {
@@ -668,36 +657,37 @@
 		}
 
 		// Overlay click - bind handler for cleanup
-		this._boundOverlayClickHandler = function () {
-			self.close();
+		this._boundOverlayClickHandler = () => {
+			this.close();
 		};
 		this.overlay.addEventListener( 'click', this._boundOverlayClickHandler );
 
 		// Escape key - bind handler for cleanup
-		this._boundEscapeHandler = function ( e ) {
-			if ( e.key === 'Escape' && self.isOpen ) {
-				self.close();
+		this._boundEscapeHandler = ( e ) => {
+			if ( e.key === 'Escape' && this.isOpen ) {
+				this.close();
 			}
 		};
 		document.addEventListener( 'keydown', this._boundEscapeHandler );
 
 		// Search input - bind handler for cleanup
-		this._boundSearchInputHandler = function () {
-			clearTimeout( self._searchTimeout );
-			const query = this.value.trim();
+		this._boundSearchInputHandler = ( event ) => {
+			clearTimeout( this._searchTimeout );
+			const query = ( event && event.target && event.target.value ) ?
+				event.target.value.trim() : ( this.searchInput ? this.searchInput.value.trim() : '' );
 
-			self._searchTimeout = setTimeout( function () {
+			this._searchTimeout = setTimeout( () => {
 				if ( query.length >= 2 ) {
 					const results = window.Layers.ShapeLibrary.search( query );
-					self.showShapes( results );
+					this.showShapes( results );
 
 					// Clear category selection
-					const buttons = self.categoryList.querySelectorAll( '.layers-shape-library-category' );
-					buttons.forEach( function ( btn ) {
+					const buttons = this.categoryList.querySelectorAll( '.layers-shape-library-category' );
+					buttons.forEach( ( btn ) => {
 						btn.style.background = 'transparent';
 					} );
 				} else if ( query.length === 0 ) {
-					self.selectCategory( self.activeCategory );
+					this.selectCategory( this.activeCategory );
 				}
 			}, 200 );
 		};

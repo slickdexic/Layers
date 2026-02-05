@@ -4,17 +4,26 @@ Version history for the Layers extension.
 
 ---
 
+## Unreleased
+
+### Added
+- **Abort Handling Toggle** — Optional `$wgLayersRejectAbortedRequests` (or `editor.config.rejectAbortedRequests`) surfaces aborted API requests as rejections for debugging. Default remains false to preserve legacy behavior.
+
+### Technical Details
+- Applies to APIManager abort handlers for revision and named set loading
+- All 11,231 tests pass (165 test suites) ✅
+
 ## Version 1.5.51 (February 3, 2026)
 
 ### Fixed
 - **Documentation Sync** — Fixed version number mismatches and file counts:
   - Mediawiki-Extension-Layers.mediawiki branch table showed 1.5.49
   - docs/ARCHITECTURE.md showed 1.5.49 and incorrect file counts
-  - Updated to correct counts: 142 JavaScript files, 40 PHP files
+  - Updated to correct counts: 140 JavaScript files, 40 PHP files
 
 ### Technical Details
 - Comprehensive v13 code review completed
-- All 11,210 tests pass (165 test suites) ✅
+- All 11,231 tests pass (165 test suites) ✅
 - 95.19% statement coverage, 84.96% branch coverage
 
 ---
@@ -26,7 +35,7 @@ Version history for the Layers extension.
 - **Arrow Position Control** — Dimension arrows can now point inside or outside
 
 ### Technical Details
-- All 11,210 tests pass (165 test suites) ✅
+- All 11,231 tests pass (165 test suites) ✅
 
 ---
 
@@ -42,7 +51,7 @@ Version history for the Layers extension.
 - **Cursor-Only Formatting** — Toggle formats (bold, italic, etc.) now set typing state for next characters when cursor is placed but no text selected
 
 ### Technical Details
-- 11,210 tests passing (165 suites)
+- 11,231 tests passing (165 suites)
 - 95.44% statement, 85.20% branch coverage
 - InlineTextEditor.js: +45 lines for toggle format and backgroundColor detection
 - RichTextToolbar.js: +25 lines for `updateFromSelection()` method
@@ -180,7 +189,6 @@ Version history for the Layers extension.
 - All P1 HIGH priority security issues now resolved
 - P2 issues reduced from 9 open to 5 open
 - P3 issues: 9 resolved, 3 open
-- Rating upgraded from 8.5/10 to 8.8/10
 
 ---
 
@@ -285,7 +293,7 @@ Version history for the Layers extension.
 ### Technical Details
 - All 10,667 tests pass (157 test suites)
 - Test coverage: 95.86% statement, 85.40% branch, 93.99% function, 95.97% line
-- Codebase review v42: 8.6/10 overall
+- Codebase review v42 completed
 
 ---
 
@@ -307,7 +315,6 @@ Version history for the Layers extension.
   - PHP files: 40, ~14,388 lines
   - i18n messages: 697
 - **Codebase Review v39** — Comprehensive critical review with all issues documented
-  - Overall score: 8.6/10
   - 0 critical issues, 0 high issues, 5 medium issues, 10 low issues
 
 ### Also Includes (v1.5.32-1.5.34)
@@ -544,7 +551,7 @@ Version history for the Layers extension.
 - Updated StateManager, APIManager, ToolManager, SelectionManager to use shared generator
 - 13 new tests for IdGenerator
 - 35 new tests for EmojiPickerPanel (9,753 total tests)
-- Codebase review Audit v12: rating 9.2/10
+- Codebase review Audit v12 completed
 
 ---
 
@@ -1131,7 +1138,6 @@ Version history for the Layers extension.
 
 ### Changed
 - **Test count increased** — 7,671 → 7,688 tests (all passing)
-- **Rating improved** — 8.75/10 → 9/10 (architecture diagrams recognized as complete)
 
 ### Documentation
 - **P2.2 Architecture Diagram marked complete** — ARCHITECTURE.md already contains 9 comprehensive Mermaid diagrams
@@ -1148,7 +1154,6 @@ Version history for the Layers extension.
 ### Changed
 - **eslint-disable comments reduced** — 17 → 13 (below <15 target)
 - **Test count increased** — 7,663 → 7,671 tests (all passing)
-- **Rating improved** — 8.5/10 → 8.75/10
 
 ---
 

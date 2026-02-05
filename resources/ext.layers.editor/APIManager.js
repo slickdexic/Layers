@@ -40,6 +40,11 @@
 		this.maxRetries = 3;
 		this.retryDelay = 1000; // Start with 1 second
 		this.activeTimeouts = new Set(); // Track active timeouts for cleanup
+		// Optional debug aid: reject promises when requests are aborted so callers
+		// can distinguish aborts from silent ignores. Defaults to current behavior
+		// (ignore aborts) unless explicitly enabled via config.
+		this.rejectAbortedRequests = Boolean( mw.config && mw.config.get && mw.config.get( 'wgLayersRejectAbortedRequests' ) ) ||
+			Boolean( editor && editor.config && editor.config.rejectAbortedRequests );
 		
 		// Track pending API requests by operation type for abort handling
 		// Keys: 'loadRevision', 'loadSetByName', etc.
@@ -634,6 +639,9 @@
 				this._clearRequest( 'loadRevision' );
 				// Ignore aborted requests (user switched before this completed)
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {
+					if ( this.rejectAbortedRequests ) {
+						reject( { aborted: true, code, result } );
+					}
 					return;
 				}
 				this.hideSpinner();
@@ -809,6 +817,9 @@
 					// Clear loading state even for aborted requests
 					if ( this.editor.stateManager ) {
 						this.editor.stateManager.set( 'isLoading', false );
+					}
+					if ( this.rejectAbortedRequests ) {
+						reject( { aborted: true, code, result } );
 					}
 					return;
 				}

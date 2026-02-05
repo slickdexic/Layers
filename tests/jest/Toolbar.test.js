@@ -2215,11 +2215,17 @@ describe( 'Toolbar', function () {
 		} );
 
 		it( 'should render individual buttons when ToolDropdown unavailable', () => {
+			// Clear class cache before removing ToolDropdown
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
+			}
+
 			// Remove ToolDropdown
 			const originalToolDropdown = window.Layers && window.Layers.UI && window.Layers.UI.ToolDropdown;
 			if ( window.Layers && window.Layers.UI ) {
 				delete window.Layers.UI.ToolDropdown;
 			}
+			window.ToolDropdown = undefined;
 
 			const container = document.createElement( 'div' );
 			toolbar = new Toolbar( {
@@ -2235,6 +2241,10 @@ describe( 'Toolbar', function () {
 			// Restore
 			if ( originalToolDropdown ) {
 				window.Layers.UI.ToolDropdown = originalToolDropdown;
+			}
+			// Clear cache after restoration
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
 			}
 		} );
 	} );
@@ -3309,26 +3319,31 @@ describe( 'Toolbar', function () {
 
 	describe( 'createStyleGroup fallback', () => {
 		let container;
-		let originalGetClass;
+		let originalToolbarStyleControls;
 
 		beforeEach( () => {
 			container = document.createElement( 'div' );
-			originalGetClass = window.getClass;
-			// Make ToolbarStyleControls unavailable
-			window.getClass = jest.fn().mockImplementation( ( key ) => {
-				if ( key === 'UI.ToolbarStyleControls' ) {
-					return null;
-				}
-				if ( originalGetClass ) {
-					return originalGetClass( key );
-				}
-				return null;
-			} );
+			// Save original ToolbarStyleControls
+			originalToolbarStyleControls = window.Layers?.UI?.ToolbarStyleControls;
+			// Clear class cache so getClass won't return cached value
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
+			}
+			// Remove ToolbarStyleControls to trigger fallback
+			if ( window.Layers?.UI ) {
+				delete window.Layers.UI.ToolbarStyleControls;
+			}
+			window.ToolbarStyleControls = undefined;
 		} );
 
 		afterEach( () => {
-			if ( originalGetClass ) {
-				window.getClass = originalGetClass;
+			// Restore ToolbarStyleControls
+			if ( window.Layers?.UI && originalToolbarStyleControls ) {
+				window.Layers.UI.ToolbarStyleControls = originalToolbarStyleControls;
+			}
+			// Clear cache again after restoration
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
 			}
 		} );
 
@@ -3345,26 +3360,31 @@ describe( 'Toolbar', function () {
 
 	describe( 'updateColorButtonDisplay fallback', () => {
 		let container;
-		let originalGetClass;
+		let originalColorPickerDialog;
 
 		beforeEach( () => {
 			container = document.createElement( 'div' );
-			originalGetClass = window.getClass;
-			// Make ColorPickerDialog unavailable to trigger fallback
-			window.getClass = jest.fn().mockImplementation( ( key ) => {
-				if ( key === 'UI.ColorPickerDialog' ) {
-					return null;
-				}
-				if ( originalGetClass ) {
-					return originalGetClass( key );
-				}
-				return null;
-			} );
+			// Save original ColorPickerDialog
+			originalColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			// Clear class cache so getClass won't return cached value
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
+			}
+			// Remove ColorPickerDialog to trigger fallback
+			if ( window.Layers?.UI ) {
+				delete window.Layers.UI.ColorPickerDialog;
+			}
+			window.ColorPickerDialog = undefined;
 		} );
 
 		afterEach( () => {
-			if ( originalGetClass ) {
-				window.getClass = originalGetClass;
+			// Restore ColorPickerDialog
+			if ( window.Layers?.UI && originalColorPickerDialog ) {
+				window.Layers.UI.ColorPickerDialog = originalColorPickerDialog;
+			}
+			// Clear cache again after restoration
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
 			}
 		} );
 
@@ -3635,6 +3655,117 @@ describe( 'Toolbar', function () {
 				// Panel should only be created once
 				expect( panelCreationCount ).toBe( 1 );
 			}
+		} );
+	} );
+
+	describe( 'updateColorButtonDisplay fallback', () => {
+		let origColorPickerDialog;
+
+		beforeEach( () => {
+			// Save original ColorPickerDialog
+			origColorPickerDialog = window.Layers?.UI?.ColorPickerDialog;
+			// Clear class cache so getClass won't return cached value
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
+			}
+			// Remove ColorPickerDialog to trigger fallback
+			if ( window.Layers?.UI ) {
+				delete window.Layers.UI.ColorPickerDialog;
+			}
+			window.ColorPickerDialog = undefined;
+		} );
+
+		afterEach( () => {
+			// Restore ColorPickerDialog
+			if ( window.Layers?.UI && origColorPickerDialog ) {
+				window.Layers.UI.ColorPickerDialog = origColorPickerDialog;
+			}
+			// Clear cache again after restoration
+			if ( window.Layers?.Utils?.clearClassCache ) {
+				window.Layers.Utils.clearClassCache();
+			}
+		} );
+
+		it( 'should use fallback when ColorPickerDialog not available', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const btn = document.createElement( 'button' );
+			testToolbar.updateColorButtonDisplay( btn, '#ff0000', 'None', 'Color: $1' );
+
+			expect( btn.style.background ).toBe( 'rgb(255, 0, 0)' );
+			expect( btn.getAttribute( 'aria-label' ) ).toBe( 'Color: #ff0000' );
+		} );
+
+		it( 'should handle transparent color in fallback', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const btn = document.createElement( 'button' );
+			testToolbar.updateColorButtonDisplay( btn, 'transparent', 'No Fill' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'No Fill' );
+		} );
+
+		it( 'should handle none color in fallback', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const btn = document.createElement( 'button' );
+			testToolbar.updateColorButtonDisplay( btn, 'none' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'Transparent' );
+		} );
+
+		it( 'should handle empty color in fallback', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const btn = document.createElement( 'button' );
+			testToolbar.updateColorButtonDisplay( btn, '', 'Empty' );
+
+			expect( btn.classList.contains( 'is-transparent' ) ).toBe( true );
+			expect( btn.title ).toBe( 'Empty' );
+		} );
+
+		it( 'should handle previewTemplate without $1 placeholder', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const btn = document.createElement( 'button' );
+			testToolbar.updateColorButtonDisplay( btn, '#00ff00', null, 'Selected color' );
+
+			expect( btn.getAttribute( 'aria-label' ) ).toBe( 'Selected color #00ff00' );
+		} );
+
+		it( 'should set aria-label from color when no previewTemplate', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const btn = document.createElement( 'button' );
+			testToolbar.updateColorButtonDisplay( btn, '#0000ff' );
+
+			expect( btn.getAttribute( 'aria-label' ) ).toBe( '#0000ff' );
 		} );
 	} );
 } );

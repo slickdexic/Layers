@@ -3,7 +3,7 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95.19%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C210%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-11%2C231%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -286,6 +286,7 @@ $wgLayersDefaultSetName = 'default';
 // Editor behavior
 $wgLayersContextAwareToolbar = true;   // Context-aware toolbar (set false for classic mode)
 $wgLayersUseBinaryOverlays = false;    // Legacy binary overlay files
+$wgLayersRejectAbortedRequests = false; // Surface aborted API calls as rejections (debugging)
 
 // Image and rendering limits
 $wgLayersMaxImageSize = 4096;          // Max image size for editing (px)
@@ -308,8 +309,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 4 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`), **~14,738 lines across 42 files**
-- **Frontend:** HTML5 Canvas editor with **141 JS files (~92,338 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~14,915 lines across 40 files**
+- **Frontend:** HTML5 Canvas editor with **140 JS files (~96,498 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **18 god classes** (files >1,000 lines), all use proper delegation patterns
@@ -320,7 +321,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,210 passing (165 suites) |
+| Jest tests | 11,231 passing (165 suites) |
 | PHPUnit tests | 24 test files |
 | Statement coverage | 95.19% |
 | Branch coverage | 84.96% |
@@ -376,11 +377,11 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 142 | ✅ |
-| Total JS lines | ~95,433 | ✅ Hand-written (+ ~14,354 generated) |
+| Total JS files | 140 | ✅ |
+| Total JS lines | ~96,498 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 142 | ✅ 100% migrated |
 | God classes (>1000 lines) | 18 | ✅ Well-delegated facades |
-| Tests passing | 11,210 | ✅ |
+| Tests passing | 11,231 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.19% | ✅ Excellent |
 | Branch coverage | 84.96% | ✅ Target met |
@@ -463,6 +464,21 @@ new mw.Api().postWithToken('csrf', {
     filename: 'Example.jpg',
     oldname: 'my-annotations',
     newname: 'anatomy-labels'
+});
+```
+
+### layerslist (GET)
+
+List slides/presentations (used by Special:Slides).
+
+```javascript
+new mw.Api().get({
+    action: 'layerslist',
+    prefix: 'Process',  // optional - filter by name prefix
+    limit: 20,          // optional - results per page
+    sort: 'modified'    // optional - sort by: name, created, modified
+}).then(function(result) {
+    console.log(result.layerslist.slides);
 });
 ```
 

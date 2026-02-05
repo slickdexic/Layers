@@ -6,7 +6,7 @@ This guide is for contributors (human and AI) working on the Layers extension. I
 
 **Target: <110,000 lines of JavaScript** — There is NO 50K or 75K limit.
 
-This extension is feature-rich by design with **15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (EmojiLibraryData.js, ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~40,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
+This extension is feature-rich by design with **15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~14,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
 - God classes (files >1,000 lines) — minimize hand-written ones; generated data files are exempt
 - Test coverage — maintain 90%+ statement coverage
 - Security — CSRF, rate limiting, validation
@@ -25,6 +25,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ApiLayersSave`: write endpoint to save a new layer set revision (requires CSRF token + rights)
     - `ApiLayersDelete`: delete endpoint to remove an entire named layer set (requires CSRF token, owner or admin)
     - `ApiLayersRename`: rename endpoint to rename a named layer set (requires CSRF token, owner or admin)
+    - `ApiLayersList`: list slides for Special:Slides page (requires read permission, rate limited)
   - Shared traits (`src/Api/Traits/`)
     - `ForeignFileHelperTrait`: shared by all 4 API modules; provides `isForeignFile()` (detects InstantCommons/foreign files) and `getFileSha1()` (deterministic fallback hash for foreign files)
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
@@ -85,7 +86,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `LayerListRenderer.js` - layer list rendering
     - `LayerDragDrop.js` - drag and drop reordering
     - `PropertiesForm.js` (~914 lines) - layer properties panel factory, delegates to PropertyBuilders
-    - `PropertyBuilders.js` (~1,250 lines) - reusable property group builders (dimensions, text, alignment, etc.) [GOD CLASS]
+    - `PropertyBuilders.js` (~1,464 lines) - reusable property group builders (dimensions, text, alignment, etc.) [GOD CLASS]
     - `GradientEditor.js` (~350 lines) - gradient fill editor UI with color stops, type selection, angle/position sliders
     - `ConfirmDialog.js` - confirmation dialogs
     - `IconFactory.js` - SVG icon generation
@@ -102,7 +103,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
   - **God classes:** 18 files exceed 1,000 lines:
     - **Generated data files (exempt):** ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,055 lines)
-    - **Hand-written JS files (14):** LayerPanel (~2,182), CanvasManager (~2,044), Toolbar (~1,891), LayersEditor (~1,830), InlineTextEditor (~1,521), SelectionManager (~1,431), PropertyBuilders (~1,414), APIManager (~1,403), ViewerManager (~1,322), ToolManager (~1,226), CanvasRenderer (~1,219), GroupManager (~1,171), SlideController (~1,140), LayersValidator (~1,116)
+    - **Hand-written JS files (14):** LayerPanel (~2,182), CanvasManager (~2,045), Toolbar (~1,891), LayersEditor (~1,829), InlineTextEditor (~1,521), SelectionManager (~1,430), PropertyBuilders (~1,464), APIManager (~1,403), ViewerManager (~1,322), ToolManager (~1,226), CanvasRenderer (~1,219), GroupManager (~1,171), SlideController (~1,140), LayersValidator (~1,116)
     - **PHP god classes (2):** ServerSideLayerValidator.php (~1,341 lines), LayersDatabase.php (~1,360 lines)
     - **Near-threshold files (9):** ToolbarStyleControls (~998), TextBoxRenderer (~996), ResizeCalculator (~995), ShapeRenderer (~994), PropertiesForm (~994), ArrowRenderer (~971), LayerRenderer (~966), CalloutRenderer (~961), TransformController (~961)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
@@ -394,14 +395,14 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,210 tests in 165 suites — verified February 3, 2026)
-- Coverage (95.19% statement, 84.96% branch — verified February 3, 2026)
-- JavaScript file count (142 files total, ~95,433 lines)
-- PHP file count (42 files, ~14,907 lines)
+- Test count (11,231 tests in 165 suites — verified February 4, 2026)
+- Coverage (95.19% statement, 84.96% branch — verified February 4, 2026)
+- JavaScript file count (140 files total, ~96,498 lines)
+- PHP file count (40 files, ~14,915 lines)
 - God class count (18 files >1,000 lines; 2 generated data files, 14 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (1,310 shapes in 10 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.49)
+- Version number (1.5.51)

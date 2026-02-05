@@ -62,6 +62,22 @@ Logs are written to MediaWiki's logging system. View with:
 tail -f /var/log/mediawiki/debug.log | grep Layers
 ```
 
+### $wgLayersRejectAbortedRequests
+
+Surface aborted API requests as rejections for debugging. When false (default), aborted requests are silently swallowed to match legacy behavior.
+
+| Property | Value |
+|----------|-------|
+| Type | `boolean` |
+| Default | `false` |
+
+```php
+// Enable rejection on aborted API calls (debugging)
+$wgLayersRejectAbortedRequests = true;
+```
+
+> **Tip:** This is useful when tracing cancellation bugs or fetch abort races. Production installs should keep the default `false` to avoid noisy logs.
+
 ---
 
 ## Size Limits

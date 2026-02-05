@@ -30,11 +30,11 @@
 		"docs:markdown": "jsdoc2md resources/ext.layers.editor/*.js resources/ext.layers.shared/*.js > docs/API.md"
 	},
 	"devDependencies": {
-		"@babel/core": "^7.26.0",
+		"@babel/core": "^7.29.0",
 		"@babel/preset-env": "^7.28.6",
-		"@playwright/test": "^1.58.0",
+		"@playwright/test": "^1.58.1",
 		"@testing-library/jest-dom": "^6.6.0",
-		"@types/node": "^25.0.10",
+		"@types/node": "^25.2.0",
 		"babel-loader": "^10.0.0",
 		"eslint-config-wikimedia": "0.31.0",
 		"grunt": "1.6.1",

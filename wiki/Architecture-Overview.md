@@ -196,7 +196,6 @@ LayersEditor (entry point)
     │
     ├── CanvasManager (facade → controllers)
     │   ├── ZoomPanController
-    │   ├── GridRulersController
     │   ├── TransformController
     │   ├── HitTestController
     │   ├── DrawingController
@@ -204,6 +203,7 @@ LayersEditor (entry point)
     │   ├── RenderCoordinator
     │   ├── InteractionController
     │   ├── AlignmentController
+    │   ├── SmartGuidesController
     │   └── TextInputController
     │
     ├── ToolManager (facade → handlers)
@@ -308,11 +308,11 @@ await api.postWithToken('csrf', {
 
 | Metric | Value |
 |--------|-------|
-| Total JavaScript Files | 142 |
+| Total JavaScript Files | 140 |
 | Total Lines of Code | ~95K |
 | ES6 Classes | 142 (100% migrated) |
 | Test Suites | 164 |
-| Test Cases | 11,210 |
+| Test Cases | 11,231 |
 | Code Coverage | 95.19% |
 
 ---

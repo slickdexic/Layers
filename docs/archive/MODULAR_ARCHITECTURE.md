@@ -84,7 +84,7 @@ These modules demonstrate the target architecture pattern:
 | InteractionController | `canvas/InteractionController.js` | 487 | 100% | Mouse/touch event coordination |
 | HitTestController | `canvas/HitTestController.js` | 376 | 99% | Click target detection |
 | ClipboardController | `canvas/ClipboardController.js` | 220 | 99% | Copy/paste operations |
-| GridRulersController | `canvas/GridRulersController.js` | 383 | 98% | Grid and ruler display |
+| SmartGuidesController | `canvas/SmartGuidesController.js` | 745 | 98% | Alignment guides |
 | RenderCoordinator | `canvas/RenderCoordinator.js` | 387 | 92% | Render scheduling |
 | TransformController | `canvas/TransformController.js` | 1,157 | 91% | Layer transformations |
 

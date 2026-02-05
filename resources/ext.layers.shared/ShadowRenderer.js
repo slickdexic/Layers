@@ -276,14 +276,17 @@ class ShadowRenderer {
 
 		// Large offset to separate shape from its shadow
 		const FAR_OFFSET = 5000;
+		// Maximum canvas dimension to prevent browser crashes
+		const MAX_CANVAS_DIM = 8192;
 
 		const canvasWidth = this.canvas ? this.canvas.width : 800;
 		const canvasHeight = this.canvas ? this.canvas.height : 600;
 
 		// Create temporary canvas - needs to be wide enough for the offset shape
+		// Cap dimensions to prevent exceeding browser limits
 		const tempCanvas = document.createElement( 'canvas' );
-		tempCanvas.width = canvasWidth + FAR_OFFSET + blur + Math.abs( sp.offsetX );
-		tempCanvas.height = canvasHeight + blur + Math.abs( sp.offsetY );
+		tempCanvas.width = Math.min( MAX_CANVAS_DIM, canvasWidth + FAR_OFFSET + blur + Math.abs( sp.offsetX ) );
+		tempCanvas.height = Math.min( MAX_CANVAS_DIM, canvasHeight + blur + Math.abs( sp.offsetY ) );
 		const tempCtx = tempCanvas.getContext( '2d' );
 
 		if ( !tempCtx ) {
