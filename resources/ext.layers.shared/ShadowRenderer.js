@@ -395,6 +395,10 @@ class ShadowRenderer {
 		this.ctx.globalAlpha = shadowOpacity;
 		this.ctx.drawImage( tempCanvas, 0, 0 );
 		this.ctx.restore();
+
+		// Release GPU memory for temp canvas
+		tempCanvas.width = 0;
+		tempCanvas.height = 0;
 	}
 
 	/**
@@ -513,6 +517,10 @@ class ShadowRenderer {
 		this.ctx.globalAlpha = shadowOpacity;
 		this.ctx.drawImage( tempCanvas, 0, 0 );
 		this.ctx.restore();
+
+		// Release GPU memory for temp canvas
+		tempCanvas.width = 0;
+		tempCanvas.height = 0;
 	}
 
 	// ========================================================================

@@ -796,8 +796,13 @@ class TransformController {
 		// Emit transform event for live properties panel update
 		this.emitTransforming( layer );
 
-		// Render layers
-		this.manager.renderLayers( this.manager.editor.layers );
+		// Throttle rendering to animation frames to avoid excessive repaints
+		if ( !this._arrowTipRafId ) {
+			this._arrowTipRafId = requestAnimationFrame( () => {
+				this._arrowTipRafId = null;
+				this.manager.renderLayers( this.manager.editor.layers );
+			} );
+		}
 	}
 
 	/**
@@ -805,6 +810,14 @@ class TransformController {
 	 */
 	finishArrowTipDrag() {
 		const hadMovement = this.showDragPreview;
+
+		// Cancel any pending rAF from arrow tip drag
+		if ( this._arrowTipRafId ) {
+			cancelAnimationFrame( this._arrowTipRafId );
+			this._arrowTipRafId = null;
+			// Ensure final state is rendered
+			this.manager.renderLayers( this.manager.editor.layers );
+		}
 
 		// Emit final transform event
 		if ( hadMovement && this.arrowTipLayerId ) {

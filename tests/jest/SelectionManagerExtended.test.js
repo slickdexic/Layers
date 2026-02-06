@@ -346,16 +346,6 @@ describe( 'SelectionManager Extended', () => {
 		} );
 	} );
 
-	describe( 'generateLayerId', () => {
-		it( 'should generate unique IDs', () => {
-			const id1 = selectionManager.generateLayerId();
-			const id2 = selectionManager.generateLayerId();
-
-			expect( id1 ).not.toBe( id2 );
-			expect( id1 ).toMatch( /^layer_/ );
-		} );
-	} );
-
 	describe( 'getLayerBoundsCompat', () => {
 		it( 'should delegate to canvasManager when available', () => {
 			const layer = mockLayers[ 0 ];

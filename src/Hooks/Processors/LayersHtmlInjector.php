@@ -256,12 +256,8 @@ class LayersHtmlInjector {
 		$height = null;
 
 		if ( $file !== null ) {
-			if ( method_exists( $file, 'getWidth' ) ) {
-				$width = (int)$file->getWidth();
-			}
-			if ( method_exists( $file, 'getHeight' ) ) {
-				$height = (int)$file->getHeight();
-			}
+			$width = (int)$file->getWidth();
+			$height = (int)$file->getHeight();
 		}
 
 		return [ 'width' => $width, 'height' => $height ];

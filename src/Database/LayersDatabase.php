@@ -251,11 +251,11 @@ class LayersDatabase {
 	 * Get a layer set by its ID
 	 *
 	 * @param int $layerSetId Layer set ID
-	 * @return array|false Layer set data or false if not found
+	 * @return ?array Layer set data or null if not found
 	 */
-	public function getLayerSet( int $layerSetId ) {
+	public function getLayerSet( int $layerSetId ): ?array {
 		if ( $layerSetId <= 0 ) {
-			return false;
+			return null;
 		}
 
 		$cacheKey = 'layerset_' . $layerSetId;
@@ -265,7 +265,7 @@ class LayersDatabase {
 
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
-			return false;
+			return null;
 		}
 
 		$row = $dbr->selectRow(
@@ -276,21 +276,21 @@ class LayersDatabase {
 		);
 
 		if ( !$row ) {
-			$this->addToCache( $cacheKey, false );
-			return false;
+			$this->addToCache( $cacheKey, null );
+			return null;
 		}
 
 		$maxJsonSize = (int)$this->config->get( 'LayersMaxBytes' );
 		if ( strlen( $row->ls_json_blob ) > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for layer set ID: {$layerSetId}" );
-			return false;
+			return null;
 		}
 
 		try {
 			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
 			$this->logError( 'Invalid JSON in layer set ID: ' . $layerSetId );
-			return false;
+			return null;
 		}
 
 		$result = [
@@ -312,14 +312,14 @@ class LayersDatabase {
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string|null $setName Optional set name to filter by (e.g., 'Paul', 'default')
-	 * @return array|false Layer set data or false if not found
+	 * @return ?array Layer set data or null if not found
 	 */
-	public function getLatestLayerSet( string $imgName, string $sha1, ?string $setName = null ) {
+	public function getLatestLayerSet( string $imgName, string $sha1, ?string $setName = null ): ?array {
 		$this->logDebug( "getLatestLayerSet called: imgName=$imgName, setName=" . ( $setName ?? 'null' ) );
 
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
-			return false;
+			return null;
 		}
 
 		$conditions = [
@@ -343,7 +343,7 @@ class LayersDatabase {
 		if ( !$row ) {
 			$setNameLog = $setName ?? 'null';
 			$this->logDebug( "getLatestLayerSet: no row found for imgName=$imgName, setName=$setNameLog" );
-			return false;
+			return null;
 		}
 
 		$blobSize = strlen( $row->ls_json_blob );
@@ -352,14 +352,14 @@ class LayersDatabase {
 		$maxJsonSize = (int)$this->config->get( 'LayersMaxBytes' );
 		if ( $blobSize > $maxJsonSize ) {
 			$this->logError( "JSON blob too large for latest layer set: $blobSize > $maxJsonSize" );
-			return false;
+			return null;
 		}
 
 		try {
 			$jsonData = json_decode( $row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
 		} catch ( \JsonException $e ) {
 			$this->logError( 'Invalid JSON in latest layer set' );
-			return false;
+			return null;
 		}
 
 		return [

@@ -472,29 +472,6 @@ describe( 'ToolManager', () => {
 		} );
 	} );
 
-	describe( 'generateLayerId', () => {
-		it( 'should generate unique IDs', () => {
-			const id1 = toolManager.generateLayerId();
-			const id2 = toolManager.generateLayerId();
-			expect( id1 ).not.toBe( id2 );
-		} );
-
-		it( 'should start with layer_ prefix', () => {
-			const id = toolManager.generateLayerId();
-			expect( id.startsWith( 'layer_' ) ).toBe( true );
-		} );
-
-		it( 'should contain timestamp', () => {
-			const before = Date.now();
-			const id = toolManager.generateLayerId();
-			const after = Date.now();
-			// Extract timestamp from ID (format: layer_<timestamp>_<random>)
-			const timestamp = parseInt( id.split( '_' )[ 1 ], 10 );
-			expect( timestamp ).toBeGreaterThanOrEqual( before );
-			expect( timestamp ).toBeLessThanOrEqual( after );
-		} );
-	} );
-
 	describe( 'polygon and star tools', () => {
 		it( 'should handle polygon tool start', () => {
 			toolManager.setTool( 'polygon' );

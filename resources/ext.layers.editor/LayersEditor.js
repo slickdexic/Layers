@@ -1330,7 +1330,10 @@ class LayersEditor {
 		if ( !ids.length ) {
 			return;
 		}
-		const layers = this.stateManager.get( 'layers' ) || [];
+		// Shallow-clone selected layers to avoid mutating state in-place
+		const layers = ( this.stateManager.get( 'layers' ) || [] ).map(
+			( l ) => ids.includes( l.id ) ? Object.assign( {}, l ) : l
+		);
 		for ( let i = 0; i < ids.length; i++ ) {
 			const layer = layers.find( ( l ) => l.id === ids[ i ] );
 			if ( layer ) {

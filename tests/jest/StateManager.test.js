@@ -954,20 +954,6 @@ describe( 'StateManager', () => {
 			} );
 		} );
 
-		describe( 'generateLayerId', () => {
-			it( 'should generate unique IDs', () => {
-				const id1 = stateManager.generateLayerId();
-				const id2 = stateManager.generateLayerId();
-
-				expect( id1 ).not.toBe( id2 );
-			} );
-
-			it( 'should start with layer_', () => {
-				const id = stateManager.generateLayerId();
-				expect( id ).toMatch( /^layer_/ );
-			} );
-		} );
-
 		describe( 'loadState', () => {
 			it( 'should load layers from external state', () => {
 				const externalState = {
@@ -1395,32 +1381,6 @@ describe( 'StateManager', () => {
 
 			// This should not throw - layers should still be added at the end
 			expect( () => stateManager.reorderLayer( 'layer2', 'layer1', false ) ).not.toThrow();
-		} );
-	} );
-
-	describe( 'generateLayerId fallback', () => {
-		it( 'should use shared IdGenerator when available', () => {
-			const mockGenerateLayerId = jest.fn().mockReturnValue( 'generated_123' );
-			window.Layers = {
-				Utils: {
-					generateLayerId: mockGenerateLayerId
-				}
-			};
-
-			const result = stateManager.generateLayerId();
-
-			expect( mockGenerateLayerId ).toHaveBeenCalled();
-			expect( result ).toBe( 'generated_123' );
-
-			delete window.Layers;
-		} );
-
-		it( 'should use fallback when IdGenerator not available', () => {
-			delete window.Layers;
-
-			const result = stateManager.generateLayerId();
-
-			expect( result ).toMatch( /^layer_\d+_\w+$/ );
 		} );
 	} );
 

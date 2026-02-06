@@ -283,8 +283,8 @@ class ApiLayersSave extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 			}
 
-			$imgWidth = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : 0;
-			$imgHeight = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : 0;
+			$imgWidth = (int)$file->getWidth();
+			$imgHeight = (int)$file->getHeight();
 			$this->enforceImageSizeLimit( $rateLimiter, $imgWidth, $imgHeight );
 
 			// Extract file metadata for database association

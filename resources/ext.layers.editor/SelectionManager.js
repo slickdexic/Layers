@@ -1230,7 +1230,9 @@
 
 			selectedLayers.forEach( ( layer ) => {
 				const clone = JSON.parse( JSON.stringify( layer ) );
-				clone.id = this.generateLayerId();
+				clone.id = ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId )
+				? window.Layers.Utils.generateLayerId()
+				: 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 
 				// Offset duplicate
 				if ( typeof clone.x === 'number' ) {
@@ -1264,6 +1266,7 @@
 
 			// Select new layers
 			this.selectedLayerIds = newSelection;
+			this.notifySelectionChange();
 			this.updateSelectionHandles();
 
 			// Save state and update
@@ -1273,20 +1276,6 @@
 			if ( this.canvasManager && this.canvasManager.editor && typeof this.canvasManager.editor.markDirty === 'function' ) {
 				this.canvasManager.editor.markDirty();
 			}
-		}
-
-		/**
-		 * Generate unique layer ID
-		 *
-		 * @return {string} Unique layer ID
-		 */
-		generateLayerId() {
-			// Use shared IdGenerator for guaranteed uniqueness with monotonic counter
-			if ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId ) {
-				return window.Layers.Utils.generateLayerId();
-			}
-			// Fallback (should not be reached in production)
-			return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 		}
 
 		/**

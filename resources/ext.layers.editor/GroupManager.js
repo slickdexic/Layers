@@ -1192,12 +1192,11 @@
 		}
 	}
 
-	// Register in namespace (multiple paths for compatibility)
+	// Register in namespace
 	window.Layers = window.Layers || {};
 	window.Layers.Core = window.Layers.Core || {};
 	window.Layers.GroupManager = GroupManager;
 	window.Layers.Core.GroupManager = GroupManager;
-	window.GroupManager = GroupManager;
 
 	// Also export for module systems
 	if ( typeof module !== 'undefined' && module.exports ) {

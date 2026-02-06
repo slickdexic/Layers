@@ -141,8 +141,8 @@ class ApiLayersInfo extends ApiBase {
 		$normalizedName = $title->getDBkey();
 
 		// Capture original image dimensions for client-side scaling
-		$origWidth = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : null;
-		$origHeight = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : null;
+		$origWidth = (int)$file->getWidth();
+		$origHeight = (int)$file->getHeight();
 
 		$db = $this->getLayersDatabase();
 
@@ -459,19 +459,16 @@ class ApiLayersInfo extends ApiBase {
 				}
 			}
 
-			// Batch load users
+			// Batch load users using UserFactory (modern MediaWiki API)
 			$users = [];
 			if ( !empty( $userIds ) ) {
 				$userIds = array_unique( $userIds );
-				$dbr = $this->getDB();
-				$userRows = $dbr->select(
-					'user',
-					[ 'user_id', 'user_name' ],
-					[ 'user_id' => $userIds ],
-					__METHOD__
-				);
-				foreach ( $userRows as $userRow ) {
-					$users[(int)$userRow->user_id] = $userRow->user_name;
+				$userFactory = MediaWikiServices::getInstance()->getUserFactory();
+				foreach ( $userIds as $userId ) {
+					$user = $userFactory->newFromId( $userId );
+					if ( $user ) {
+						$users[$userId] = $user->getName();
+					}
 				}
 			}
 
@@ -510,19 +507,16 @@ class ApiLayersInfo extends ApiBase {
 				}
 			}
 
-			// Batch load users
+			// Batch load users using UserFactory (modern MediaWiki API)
 			$users = [];
 			if ( !empty( $userIds ) ) {
 				$userIds = array_unique( $userIds );
-				$dbr = $this->getDB();
-				$userRows = $dbr->select(
-					'user',
-					[ 'user_id', 'user_name' ],
-					[ 'user_id' => $userIds ],
-					__METHOD__
-				);
-				foreach ( $userRows as $userRow ) {
-					$users[(int)$userRow->user_id] = $userRow->user_name;
+				$userFactory = MediaWikiServices::getInstance()->getUserFactory();
+				foreach ( $userIds as $userId ) {
+					$user = $userFactory->newFromId( $userId );
+					if ( $user ) {
+						$users[$userId] = $user->getName();
+					}
 				}
 			}
 
@@ -579,31 +573,6 @@ class ApiLayersInfo extends ApiBase {
 				ApiBase::PARAM_REQUIRED => false,
 			],
 		];
-	}
-
-	/**
-	 * Parse the continue parameter into an offset integer.
-	 *
-	 * @param string $continue
-	 * @return int
-	 */
-	protected function parseContinueParameter( string $continue ): int {
-		if ( strpos( $continue, 'offset|' ) === 0 ) {
-			$parts = explode( '|', $continue );
-			$offset = (int)( $parts[1] ?? 0 );
-			return max( 0, $offset );
-		}
-		return max( 0, (int)$continue );
-	}
-
-	/**
-	 * Build a continue parameter for the next offset.
-	 *
-	 * @param int $offset
-	 * @return string
-	 */
-	protected function formatContinueParameter( int $offset ): string {
-		return 'offset|' . max( 0, $offset );
 	}
 
 	/**

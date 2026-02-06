@@ -525,7 +525,9 @@
 	processRawLayers( rawLayers ) {
 		return rawLayers.map( layer => {
 			if ( !layer.id ) {
-				layer.id = this.generateLayerId();
+				layer.id = ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId )
+					? window.Layers.Utils.generateLayerId()
+					: 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 			}
 			// Use shared normalizer (guaranteed to be loaded via ext.layers.shared dependency)
 			if ( LayerDataNormalizer && typeof LayerDataNormalizer.normalizeLayer === 'function' ) {
@@ -533,15 +535,6 @@
 			}
 			return layer;
 		} );
-	}
-
-	generateLayerId() {
-		// Use shared IdGenerator for guaranteed uniqueness with monotonic counter
-		if ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId ) {
-			return window.Layers.Utils.generateLayerId();
-		}
-		// Fallback (should not be reached in production)
-		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	}
 
 	handleLoadError( code, result ) {

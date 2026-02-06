@@ -886,21 +886,6 @@ describe( 'APIManager', function () {
 		} );
 	} );
 
-	describe( 'generateLayerId', function () {
-		it( 'should generate unique ids', function () {
-			const id1 = apiManager.generateLayerId();
-			const id2 = apiManager.generateLayerId();
-
-			expect( id1 ).not.toBe( id2 );
-		} );
-
-		it( 'should start with layer_ prefix', function () {
-			const id = apiManager.generateLayerId();
-
-			expect( id ).toMatch( /^layer_/ );
-		} );
-	} );
-
 	describe( 'loadRevisionById', function () {
 		it( 'should call API with layersetid', async function () {
 			apiManager.api.get = jest.fn().mockResolvedValue( {

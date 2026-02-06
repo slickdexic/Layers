@@ -936,8 +936,10 @@ class ToolManager {
 	 * @param {Object} layer Layer to add
 	 */
 	addLayerToCanvas( layer ) {
-		// Generate unique ID
-		layer.id = this.generateLayerId();
+		// Generate unique ID using shared IdGenerator
+		layer.id = ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId )
+			? window.Layers.Utils.generateLayerId()
+			: 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 
 		// Add to layers array via StateManager
 		if( this.canvasManager.editor.stateManager &&
@@ -1151,20 +1153,6 @@ class ToolManager {
 			}
 		}
 		return copy;
-	}
-
-	/**
-	 * Generate unique layer ID
-	 *
-	 * @return {string} Unique layer ID
-	 */
-	generateLayerId() {
-		// Use shared IdGenerator for guaranteed uniqueness with monotonic counter
-		if ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId ) {
-			return window.Layers.Utils.generateLayerId();
-		}
-		// Fallback (should not be reached in production)
-		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	}
 
 	/**

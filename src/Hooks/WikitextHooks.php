@@ -552,6 +552,13 @@ class WikitextHooks {
 		self::$fileSetNames = [];
 		self::$fileRenderCount = [];
 		self::$fileLinkTypes = [];
+		// Reset processor singletons to prevent stale state in long-running processes
+		self::$imageLinkProcessor = null;
+		self::$thumbnailProcessor = null;
+		self::$htmlInjector = null;
+		self::$paramExtractor = null;
+		self::$layeredFileRenderer = null;
+		self::$layerInjector = null;
 	}
 
 	/**

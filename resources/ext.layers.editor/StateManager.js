@@ -491,7 +491,11 @@ class StateManager {
 	 */
 	addLayer( layerData ) {
 		const layer = Object.assign( {}, layerData, {
-			id: layerData.id || this.generateLayerId(),
+			id: layerData.id || (
+				( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId )
+					? window.Layers.Utils.generateLayerId()
+					: 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 )
+			),
 			visible: layerData.visible !== false,
 			locked: layerData.locked || false
 		} );
@@ -828,15 +832,6 @@ class StateManager {
 
 	markDirty() {
 		this.setDirty( true );
-	}
-
-	generateLayerId() {
-		// Use shared IdGenerator for guaranteed uniqueness with monotonic counter
-		if ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId ) {
-			return window.Layers.Utils.generateLayerId();
-		}
-		// Fallback (should not be reached in production)
-		return 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 	}
 
 	/**

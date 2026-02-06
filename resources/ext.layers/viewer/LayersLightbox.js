@@ -90,7 +90,8 @@
 		 */
 		open( config ) {
 			if ( this.isOpen ) {
-				this.close();
+				// Force synchronous close to prevent duplicate overlays during animation
+				this.close( true );
 			}
 
 			this.debugLog( 'Opening lightbox for:', config.filename );
@@ -368,8 +369,9 @@
 
 		/**
 		 * Close the lightbox
+		 * @param {boolean} [immediate=false] Skip animation and remove immediately
 		 */
-		close() {
+		close( immediate ) {
 			if ( !this.isOpen || !this.overlay ) {
 				return;
 			}
@@ -394,27 +396,37 @@
 				this.boundClickHandler = null;
 			}
 
-			// Animate out
-			this.overlay.classList.remove( 'layers-lightbox-visible' );
-
 			// Cancel any pending close timeout
 			if ( this.closeTimeoutId ) {
 				clearTimeout( this.closeTimeoutId );
+				this.closeTimeoutId = null;
 			}
 
-			// Remove after animation
-			this.closeTimeoutId = setTimeout( () => {
-				this.closeTimeoutId = null;
+			if ( immediate ) {
+				// Synchronous removal (used when re-opening to prevent duplicates)
 				if ( this.overlay && this.overlay.parentNode ) {
 					this.overlay.parentNode.removeChild( this.overlay );
 				}
 				this.overlay = null;
 				this.container = null;
 				this.imageWrapper = null;
-
-				// Restore body scroll
 				document.body.style.overflow = '';
-			}, 300 );
+			} else {
+				// Animate out
+				this.overlay.classList.remove( 'layers-lightbox-visible' );
+
+				// Remove after animation
+				this.closeTimeoutId = setTimeout( () => {
+					this.closeTimeoutId = null;
+					if ( this.overlay && this.overlay.parentNode ) {
+						this.overlay.parentNode.removeChild( this.overlay );
+					}
+					this.overlay = null;
+					this.container = null;
+					this.imageWrapper = null;
+					document.body.style.overflow = '';
+				}, 300 );
+			}
 
 			this.isOpen = false;
 		}

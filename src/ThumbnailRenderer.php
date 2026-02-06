@@ -91,8 +91,8 @@ class ThumbnailRenderer {
 			}
 
 			// Determine scale from original to target dimensions
-			$origW = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : 0;
-			$origH = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : 0;
+			$origW = (int)$file->getWidth();
+			$origH = (int)$file->getHeight();
 			$targetW = isset( $baseParams['width'] ) ? (int)$baseParams['width'] : $origW;
 			$targetH = isset( $baseParams['height'] )
 				? (int)$baseParams['height']

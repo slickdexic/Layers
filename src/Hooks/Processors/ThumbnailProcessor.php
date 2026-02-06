@@ -385,7 +385,7 @@ class ThumbnailProcessor {
 				'backgroundOpacity' => $backgroundOpacity
 			];
 
-			if ( $file && method_exists( $file, 'getWidth' ) && method_exists( $file, 'getHeight' ) ) {
+			if ( $file ) {
 				$payload['baseWidth'] = (int)$file->getWidth();
 				$payload['baseHeight'] = (int)$file->getHeight();
 			}

@@ -783,17 +783,6 @@ describe('SelectionManager', () => {
         });
     });
 
-    describe('generateLayerId', () => {
-        test('should generate unique layer IDs', () => {
-            const id1 = selectionManager.generateLayerId();
-            const id2 = selectionManager.generateLayerId();
-
-            expect(id1).toMatch(/^layer_\d+_[a-z0-9]+$/);
-            expect(id2).toMatch(/^layer_\d+_[a-z0-9]+$/);
-            expect(id1).not.toBe(id2);
-        });
-    });
-
     describe('notifySelectionChange', () => {
         test('should sync selection to StateManager', () => {
             const mockStateManager = {
