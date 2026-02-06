@@ -345,7 +345,7 @@ class EditLayersAction extends \Action {
 			$policy[] = "default-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
 			$policy[] = "img-src 'self' data: blob: $foreignOrigin" . ( $serverOrigin ? " $serverOrigin" : '' );
 			$policy[] = "style-src 'self' 'unsafe-inline'";
-			$policy[] = "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
+			$policy[] = "script-src 'self'";
 			$policy[] = "connect-src 'self'" . ( $serverOrigin ? " $serverOrigin" : '' );
 			$policy[] = "font-src 'self' data:";
 			$policy[] = "object-src 'none'";
