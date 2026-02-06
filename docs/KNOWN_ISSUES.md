@@ -13,9 +13,9 @@ Cross-reference with [codebase_review.md](../codebase_review.md) and
 
 | Category | Count | Status |
 |----------|-------|--------|
-| P0 (Critical) | **3** | ❌ MUST FIX before release |
-| P1 (High Priority) | **11** | ❌ Open |
-| P2 (Medium Priority) | **20** | ❌ Open |
+| P0 (Critical) | **3** | ✅ ALL FIXED |
+| P1 (High Priority) | **11** | ✅ ALL FIXED |
+| P2 (Medium Priority) | **20** | 8 ✅ Fixed, 12 ❌ Open |
 | P3 (Low Priority) | **14** | ⚠️ Deferred/Low |
 
 ---
@@ -62,11 +62,11 @@ See CRIT-2, P1.1, P1.6.
 
 ---
 
-## ��� P0 — Critical Issues (NEW in v22)
+## ��� P0 — Critical Issues (NEW in v22)
 
 ### P0.1 getDBLoadBalancer() Fatal on MW >= 1.42
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review CRIT-1
 **Files:** services.php:24, ApiLayersInfo.php:639, LayersSchemaManager.php:400, LayersTest.php:80
 
@@ -78,7 +78,7 @@ any supported MediaWiki version.
 
 ### P0.2 TextSanitizer Protocol Bypass via Nesting
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review CRIT-2
 **File:** src/Validation/TextSanitizer.php:82-92
 
@@ -89,7 +89,7 @@ Single-pass `str_ireplace()` allows nested protocol strings to survive:
 
 ### P0.3 Schema Mismatch — layer_sets Unique Key
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review CRIT-3
 **Files:** sql/layers_tables.sql:19 vs sql/tables/layer_sets.sql:16
 
@@ -98,11 +98,11 @@ using per-table files will have broken named layer sets.
 
 ---
 
-## ��� P1 — High Priority Issues
+## ��� P1 — High Priority Issues
 
 ### P1.1 CSP Includes unsafe-eval / unsafe-inline
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-1
 **File:** src/Action/EditLayersAction.php:348
 
@@ -113,7 +113,7 @@ in script-src, negating XSS protection.
 
 ### P1.2 Canvas Pool destroy() Doesn't Free Memory
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-2
 **File:** resources/ext.layers.editor/CanvasManager.js:2014-2017
 
@@ -124,7 +124,7 @@ memory not released on editor close.
 
 ### P1.3 InlineTextEditor _handleInput() Broken
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-3
 **File:** resources/ext.layers.editor/canvas/InlineTextEditor.js:883-887
 
@@ -135,7 +135,7 @@ erased during inline editing of textbox/callout layers.
 
 ### P1.4 Lightbox md5First2() Wrong URLs
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-4
 **File:** resources/ext.layers/viewer/LayersLightbox.js:277-282
 
@@ -146,7 +146,7 @@ Takes first 2 characters of filename instead of computing MD5 hash. Produces
 
 ### P1.5 ViewerOverlay Memory Leak (Event Listeners)
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-5
 **File:** resources/ext.layers/viewer/ViewerOverlay.js:305-321
 
@@ -157,7 +157,7 @@ uses anonymous function so can never be removed.
 
 ### P1.6 Rate Limiter Defaults Not Registered
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-6
 **File:** src/Security/RateLimiter.php:131-143
 
@@ -168,7 +168,7 @@ manual `$wgRateLimits` config, rate limiting is completely disabled.
 
 ### P1.7 blurRadius/tailWidth Missing from Normalizer
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-7
 **File:** resources/ext.layers.shared/LayerDataNormalizer.js:49-61
 
@@ -179,7 +179,7 @@ API cause NaN in calculations.
 
 ### P1.8 Hardcoded /wiki/ Path
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-8
 **File:** src/Hooks/Processors/LayeredFileRenderer.php:260
 
@@ -190,7 +190,7 @@ non-standard article path configurations.
 
 ### P1.9 DB CHECK Constraint Hardcodes 2MB
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-9
 **File:** sql/patches/patch-add-check-constraints.sql:14
 
@@ -201,7 +201,7 @@ configurable. Admins who increase the limit get DB rejections.
 
 ### P1.10 GradientRenderer radius Mismatch
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-10
 **File:** resources/ext.layers.shared/GradientRenderer.js:341-347
 
@@ -212,7 +212,7 @@ rejected by client renderer.
 
 ### P1.11 Path Tool Unlimited Points
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Ref:** codebase_review HIGH-11
 **File:** resources/ext.layers.editor/canvas/DrawingController.js:555-557
 
@@ -221,7 +221,7 @@ No client-side cap on freehand path points. Server silently truncates to
 
 ---
 
-## ��� P2 — Medium Priority Issues
+## ��� P2 — Medium Priority Issues
 
 ### P2.1 ApiLayersInfo Missing Schema Check
 **Ref:** MED-1. No `isSchemaReady()` call; generic error instead of `dbschema-missing`.

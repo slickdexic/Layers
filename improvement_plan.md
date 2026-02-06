@@ -8,19 +8,16 @@
 
 ## Executive Summary
 
-The v22 review is the most thorough to date. It identified **3 critical issues**
-that were missed by v19–v21 reviews, along with 11 high, 20 medium, and 14 low
-priority issues (48 total).
-
-**The extension cannot function on its stated minimum platform (MW >= 1.44.0)**
-due to use of `getDBLoadBalancer()` which was removed in MW 1.42. This must be
-fixed before any release.
+The v22 review identified **48 issues total** (3 critical, 11 high, 20 medium,
+14 low). As of the v22 fix pass, **all 3 critical, all 11 high, and 8 medium
+issues have been resolved** (22/48 fixed). The remaining 12 medium and 14 low
+priority issues are deferred improvements, not blocking issues.
 
 **Current Status:**
-- ❌ **P0:** 3 critical issues (NEW — blocking)
-- ❌ **P1:** 11 high priority issues
-- ❌ **P2:** 20 medium priority issues
-- ⚠️ **P3:** 14 low priority issues
+- ✅ **P0:** 3 critical issues — ALL FIXED
+- ✅ **P1:** 11 high priority issues — ALL FIXED
+- ⚠️ **P2:** 20 medium priority issues — 8 fixed, 12 remaining
+- ⚠️ **P3:** 14 low priority issues — deferred
 
 ---
 
@@ -59,11 +56,11 @@ fixed before any release.
 
 ---
 
-## ��� Phase 0: Critical — Must Fix Before Any Release
+## ��� Phase 0: Critical — Must Fix Before Any Release
 
 ### P0.1 Migrate getDBLoadBalancer() to getConnectionProvider()
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Priority:** P0 — BLOCKING
 **Impact:** Extension fatals on MW 1.44+
 **Files:** services.php:24, ApiLayersInfo.php:639, LayersSchemaManager.php:400, LayersTest.php:80
@@ -91,7 +88,7 @@ $dbr = $cp->getReplicaDatabase();
 
 ### P0.2 Fix TextSanitizer Iterative Protocol Removal
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Priority:** P0 — SECURITY
 **Impact:** XSS via nested protocol strings
 **File:** src/Validation/TextSanitizer.php:82-92
@@ -113,7 +110,7 @@ do {
 
 ### P0.3 Fix layer_sets Schema Unique Key
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Priority:** P0 — DATA INTEGRITY
 **Impact:** Named layer sets broken on fresh installs
 **Files:** sql/tables/layer_sets.sql:16
@@ -126,11 +123,11 @@ UNIQUE KEY ls_img_name_set_revision (ls_img_name, ls_img_sha1, ls_name, ls_revis
 
 ---
 
-## ��� Phase 1: High Priority — Next Release
+## ��� Phase 1: High Priority — Next Release
 
 ### P1.1 Remove CSP unsafe-eval / unsafe-inline
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** src/Action/EditLayersAction.php:348
 **Ref:** HIGH-1
 
@@ -141,7 +138,7 @@ Use nonce-based CSP or remove `unsafe-eval` entirely. The extension uses no
 
 ### P1.2 Fix Canvas Pool Memory Release
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** resources/ext.layers.editor/CanvasManager.js:2014-2017
 **Ref:** HIGH-2
 
@@ -151,7 +148,7 @@ Change `pooledCanvas.width = 0` to `pooledCanvas.canvas.width = 0`.
 
 ### P1.3 Fix InlineTextEditor _handleInput()
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** resources/ext.layers.editor/canvas/InlineTextEditor.js:883-887
 **Ref:** HIGH-3
 
@@ -170,7 +167,7 @@ _handleInput() {
 
 ### P1.4 Fix Lightbox md5First2()
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** resources/ext.layers/viewer/LayersLightbox.js:277-282
 **Ref:** HIGH-4
 
@@ -181,7 +178,7 @@ MediaWiki's file URL API.
 
 ### P1.5 Fix ViewerOverlay Listener Cleanup
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** resources/ext.layers/viewer/ViewerOverlay.js:305-321
 **Ref:** HIGH-5
 
@@ -191,7 +188,7 @@ Store bound function references for all listeners; remove all in `destroy()`.
 
 ### P1.6 Register Rate Limiter Defaults
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** src/Security/RateLimiter.php:131-143
 **Ref:** HIGH-6
 
@@ -201,7 +198,7 @@ Use `$wgRateLimits` defaults in `extension.json` or register via hook.
 
 ### P1.7 Add Missing Normalizer Properties
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** resources/ext.layers.shared/LayerDataNormalizer.js:49-61
 **Ref:** HIGH-7
 
@@ -211,7 +208,7 @@ Add `blurRadius` and `tailWidth` to `NUMERIC_PROPERTIES` array.
 
 ### P1.8 Fix Hardcoded /wiki/ Path
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** src/Hooks/Processors/LayeredFileRenderer.php:260
 **Ref:** HIGH-8
 
@@ -221,7 +218,7 @@ Replace with `Title::newFromText( $filename, NS_FILE )->getLocalURL()`.
 
 ### P1.9 Remove or Parameterize DB CHECK Constraint
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** sql/patches/patch-add-check-constraints.sql:14
 **Ref:** HIGH-9
 
@@ -232,7 +229,7 @@ Remove the hardcoded CHECK constraint or document that changing
 
 ### P1.10 Align GradientRenderer radius Validation
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** resources/ext.layers.shared/GradientRenderer.js:341-347
 **Ref:** HIGH-10
 
@@ -242,7 +239,7 @@ Change client validation from 0-1 to 0-2 to match server.
 
 ### P1.11 Add Client-Side Path Point Cap
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **File:** resources/ext.layers.editor/canvas/DrawingController.js:555-557
 **Ref:** HIGH-11
 
@@ -250,7 +247,7 @@ Add point count cap matching server limit (~1000). Show visual feedback.
 
 ---
 
-## ��� Phase 2: Medium Priority — Near Term
+## ��� Phase 2: Medium Priority — Near Term
 
 ### P2.1–P2.5 PHP API Improvements
 
@@ -315,7 +312,7 @@ Add point count cap matching server limit (~1000). Show visual feedback.
 
 ---
 
-## ��� Documentation Fixes (Parallel Track)
+## ��� Documentation Fixes (Parallel Track)
 
 | ID | Issue | Files Affected |
 |----|-------|----------------|

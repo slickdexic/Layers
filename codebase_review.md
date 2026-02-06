@@ -40,9 +40,9 @@ several genuine bugs in both frontend and backend code.
 5. **SQL Parameterization:** All database queries use parameterized queries
 
 ### Key Weaknesses Found (New in v22)
-1. **Critical MW Compatibility:** `getDBLoadBalancer()` removed in MW 1.42, but extension requires ≥1.44
-2. **Security Gaps:** TextSanitizer protocol bypass, CSP `unsafe-eval`, missing normalizer properties
-3. **Real Bugs:** Canvas pool memory leak, InlineTextEditor broken input, wrong lightbox URLs
+1. ~~**Critical MW Compatibility:** `getDBLoadBalancer()` removed in MW 1.42, but extension requires ≥1.44~~ — **FIXED**
+2. ~~**Security Gaps:** TextSanitizer protocol bypass, CSP `unsafe-eval`, missing normalizer properties~~ — **FIXED**
+3. ~~**Real Bugs:** Canvas pool memory leak, InlineTextEditor broken input, wrong lightbox URLs~~ — **FIXED**
 4. **Dead Code:** SlideManager.js tested but never loaded by ResourceLoader
 5. **Documentation Decay:** Line counts, dates, and status trackers are stale across 15+ files
 
@@ -61,11 +61,11 @@ several genuine bugs in both frontend and backend code.
 
 ---
 
-## ��� CRITICAL Issues
+## ��� CRITICAL Issues
 
 ### CRIT-1: getDBLoadBalancer() Fatal Error on MW >= 1.42
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** CRITICAL (Extension Non-Functional)
 **Files:** services.php:24, ApiLayersInfo.php:639, LayersSchemaManager.php:400, tests/LayersTest.php:80
 
@@ -89,7 +89,7 @@ on MW versions it claims not to support (1.39-1.41).
 
 ### CRIT-2: TextSanitizer Protocol Removal Can Be Bypassed via Nesting
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** CRITICAL (XSS Risk)
 **File:** src/Validation/TextSanitizer.php:82-92
 
@@ -115,7 +115,7 @@ do {
 
 ### CRIT-3: SQL Schema Mismatch Between layers_tables.sql and tables/layer_sets.sql
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** CRITICAL (Data Integrity)
 **Files:** sql/layers_tables.sql:19 vs sql/tables/layer_sets.sql:16
 
@@ -133,11 +133,11 @@ layer sets will break (revision number conflicts across different named sets).
 
 ---
 
-## ��� HIGH Priority Issues
+## ��� HIGH Priority Issues
 
 ### HIGH-1: CSP Policy Includes unsafe-eval and unsafe-inline
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Security)
 **File:** src/Action/EditLayersAction.php:348
 
@@ -151,7 +151,7 @@ XSS within those pages bypasses CSP entirely.
 
 ### HIGH-2: Canvas Pool destroy() Doesn't Free Canvas Memory
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Memory Leak)
 **File:** resources/ext.layers.editor/CanvasManager.js:2014-2017
 
@@ -171,7 +171,7 @@ this.canvasPool.forEach( function ( pooledCanvas ) {
 
 ### HIGH-3: InlineTextEditor _handleInput() Broken for Multiline Types
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Feature Bug)
 **File:** resources/ext.layers.editor/canvas/InlineTextEditor.js:883-887
 
@@ -193,7 +193,7 @@ _handleInput() {
 
 ### HIGH-4: Lightbox md5First2() Generates Wrong File URLs
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Feature Bug)
 **File:** resources/ext.layers/viewer/LayersLightbox.js:277-282
 
@@ -212,7 +212,7 @@ md5First2( filename ) {
 
 ### HIGH-5: ViewerOverlay Memory Leak — focusin/focusout Listeners Never Removed
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Memory Leak)
 **File:** resources/ext.layers/viewer/ViewerOverlay.js:305-321, 475-496
 
@@ -225,7 +225,7 @@ removed at all.
 
 ### HIGH-6: Rate Limiter Defaults Not Registered with MediaWiki
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Security Gap)
 **File:** src/Security/RateLimiter.php:131-143
 
@@ -238,7 +238,7 @@ configuration, **rate limiting is completely disabled**.
 
 ### HIGH-7: blurRadius and tailWidth Missing from LayerDataNormalizer
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Data Bug)
 **File:** resources/ext.layers.shared/LayerDataNormalizer.js:49-61
 
@@ -251,7 +251,7 @@ won't be normalized to numbers. This causes scaling calculations to produce
 
 ### HIGH-8: Hardcoded /wiki/ Path in LayeredFileRenderer
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Compatibility Bug)
 **File:** src/Hooks/Processors/LayeredFileRenderer.php:260
 
@@ -265,7 +265,7 @@ will have broken file page links.
 
 ### HIGH-9: DB CHECK Constraint Hardcodes 2MB vs Configurable Limit
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Configuration Bug)
 **File:** sql/patches/patch-add-check-constraints.sql:14, LayersSchemaManager.php:97
 
@@ -277,7 +277,7 @@ increase `LayersMaxBytes` will experience DB-level rejections.
 
 ### HIGH-10: GradientRenderer Rejects Valid radius Values
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (Data Inconsistency)
 **File:** resources/ext.layers.shared/GradientRenderer.js:341-347
 
@@ -289,7 +289,7 @@ increase `LayersMaxBytes` will experience DB-level rejections.
 
 ### HIGH-11: Path Tool Accumulates Unlimited Points During Drawing
 
-**Status:** ❌ OPEN
+**Status:** ✅ FIXED
 **Severity:** HIGH (UX Bug)
 **File:** resources/ext.layers.editor/canvas/DrawingController.js:555-557
 
@@ -300,7 +300,7 @@ from what the user drew.
 
 ---
 
-## ��� MEDIUM Priority Issues
+## ��� MEDIUM Priority Issues
 
 ### MED-1: ApiLayersInfo Missing Schema Check
 
@@ -424,7 +424,7 @@ overflow if config is ever raised.
 
 ---
 
-## ��� LOW Priority Issues
+## ��� LOW Priority Issues
 
 ### LOW-1: Redundant AutoloadClasses with PSR-4 AutoloadNamespaces
 **File:** extension.json:15-57. ~30 manual class entries duplicate PSR-4.
@@ -470,7 +470,7 @@ Missing `expanded`, `isMultiPath`, `strokeOnly`, `showUnit`, `showBackground`.
 
 ---
 
-## ��� Documentation Issues
+## ��� Documentation Issues
 
 ### DOC-1: JS File Count Inconsistent (HIGH)
 Actual: 140 files. Multiple docs say 142. KNOWN_ISSUES P2.1 incorrectly claims
