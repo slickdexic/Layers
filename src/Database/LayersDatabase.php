@@ -14,8 +14,8 @@ namespace MediaWiki\Extension\Layers\Database;
 use Config;
 use MediaWiki\Extension\Layers\LayersConstants;
 use Psr\Log\LoggerInterface;
+use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDatabase;
-use Wikimedia\Rdbms\ILoadBalancer;
 
 class LayersDatabase {
 	private const MAX_CACHE_SIZE = 100;
@@ -26,8 +26,8 @@ class LayersDatabase {
 	 */
 	private const JSON_DECODE_MAX_DEPTH = 512;
 
-	/** @var ILoadBalancer */
-	private $loadBalancer;
+	/** @var IConnectionProvider */
+	private $connectionProvider;
 	/** @var \Wikimedia\Rdbms\IDatabase */
 	private $dbw;
 	/** @var \Wikimedia\Rdbms\IDatabase */
@@ -42,12 +42,12 @@ class LayersDatabase {
 	private $schemaManager;
 
 	public function __construct(
-		ILoadBalancer $loadBalancer,
+		IConnectionProvider $connectionProvider,
 		Config $config,
 		LoggerInterface $logger,
 		LayersSchemaManager $schemaManager
 	) {
-		$this->loadBalancer = $loadBalancer;
+		$this->connectionProvider = $connectionProvider;
 		$this->config = $config;
 		$this->logger = $logger;
 		$this->schemaManager = $schemaManager;
@@ -60,7 +60,7 @@ class LayersDatabase {
 	 */
 	private function getWriteDb() {
 		if ( !$this->dbw ) {
-			$this->dbw = $this->loadBalancer->getConnection( DB_PRIMARY );
+			$this->dbw = $this->connectionProvider->getPrimaryDatabase();
 		}
 		return $this->dbw;
 	}
@@ -72,7 +72,7 @@ class LayersDatabase {
 	 */
 	private function getReadDb() {
 		if ( !$this->dbr ) {
-			$this->dbr = $this->loadBalancer->getConnection( DB_REPLICA );
+			$this->dbr = $this->connectionProvider->getReplicaDatabase();
 		}
 		return $this->dbr;
 	}

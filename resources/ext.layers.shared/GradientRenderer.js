@@ -338,7 +338,7 @@
 			}
 
 			if ( gradient.type === 'radial' ) {
-				[ 'centerX', 'centerY', 'radius' ].forEach( ( prop ) => {
+				[ 'centerX', 'centerY' ].forEach( ( prop ) => {
 					if ( gradient[ prop ] !== undefined ) {
 						const val = gradient[ prop ];
 						if ( typeof val !== 'number' || val < 0 || val > 1 ) {
@@ -346,6 +346,13 @@
 						}
 					}
 				} );
+				// Radius allows 0-2 to match server-side validation
+				if ( gradient.radius !== undefined ) {
+					const val = gradient.radius;
+					if ( typeof val !== 'number' || val < 0 || val > 2 ) {
+						errors.push( 'Radial gradient radius must be a number between 0 and 2' );
+					}
+				}
 			}
 
 			return { valid: errors.length === 0, errors: errors };

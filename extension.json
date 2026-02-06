@@ -15,6 +15,7 @@
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
 	},
+	"callback": "MediaWiki\\Extension\\Layers\\Hooks::onRegistration",
 	"ServiceWiringFiles": [
 		"services.php"
 	],

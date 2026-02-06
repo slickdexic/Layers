@@ -563,7 +563,10 @@ class DrawingController {
 				break;
 			case 'path':
 				// Add point to path for pen tool
-				this.tempLayer.points.push( point );
+				// Cap at 1000 points to match server-side limit
+				if ( this.tempLayer.points.length < 1000 ) {
+					this.tempLayer.points.push( point );
+				}
 				break;
 		}
 	}

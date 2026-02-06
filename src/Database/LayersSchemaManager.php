@@ -79,6 +79,13 @@ class LayersSchemaManager {
 				'idx_layer_sets_setname_revision',
 				"$base/patches/patch-idx-layer-sets-setname-revision.sql"
 			);
+
+			// Widen ls_layer_count from TINYINT (max 255) to SMALLINT (max 65535)
+			$updater->addExtensionUpdate( [
+				'applyPatch',
+				"$base/patches/patch-layer_sets-layer_count-type.sql",
+				true
+			] );
 		}
 	}
 
@@ -94,9 +101,11 @@ class LayersSchemaManager {
 		$constraints = [
 			'layer_sets' => [
 				'chk_ls_size_positive' => 'CHECK (ls_size >= 0)',
-				'chk_ls_size_reasonable' => 'CHECK (ls_size <= 2097152)',
+				// Hard safety ceiling (50MB) - actual limits enforced by PHP config ($wgLayersMaxBytes)
+				'chk_ls_size_reasonable' => 'CHECK (ls_size <= 52428800)',
 				'chk_ls_layer_count_positive' => 'CHECK (ls_layer_count >= 0)',
-				'chk_ls_layer_count_reasonable' => 'CHECK (ls_layer_count <= 100)',
+				// Hard safety ceiling (1000) - actual limits enforced by PHP config ($wgLayersMaxLayerCount)
+				'chk_ls_layer_count_reasonable' => 'CHECK (ls_layer_count <= 1000)',
 				'chk_ls_revision_positive' => 'CHECK (ls_revision >= 1)',
 				'chk_ls_img_name_not_empty' => "CHECK (ls_img_name != '')",
 				'chk_ls_img_sha1_format' => 'CHECK (ls_img_sha1 IS NULL OR LENGTH(ls_img_sha1) <= 40)',
@@ -397,8 +406,7 @@ class LayersSchemaManager {
 	 */
 	private function columnExists( string $table, string $column ): bool {
 		try {
-			$loadBalancer = MediaWikiServices::getInstance()->getDBLoadBalancer();
-			$dbr = $loadBalancer->getConnection( DB_REPLICA );
+			$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
 
 			// Use MediaWiki's fieldExists method which is designed for this purpose
 			return $dbr->fieldExists( $table, $column, __METHOD__ );

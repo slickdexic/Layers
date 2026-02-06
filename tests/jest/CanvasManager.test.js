@@ -2514,16 +2514,18 @@ describe( 'CanvasManager', () => {
 		} );
 
 		it( 'should clear canvas pool', () => {
-			const mockCanvas1 = { width: 100, height: 100 };
-			const mockCanvas2 = { width: 200, height: 200 };
-			canvasManager.canvasPool = [ mockCanvas1, mockCanvas2 ];
+			const mockCanvasEl1 = { width: 100, height: 100 };
+			const mockCanvasEl2 = { width: 200, height: 200 };
+			const mockPooled1 = { canvas: mockCanvasEl1, context: {} };
+			const mockPooled2 = { canvas: mockCanvasEl2, context: {} };
+			canvasManager.canvasPool = [ mockPooled1, mockPooled2 ];
 
 			canvasManager.destroy();
 
-			expect( mockCanvas1.width ).toBe( 0 );
-			expect( mockCanvas1.height ).toBe( 0 );
-			expect( mockCanvas2.width ).toBe( 0 );
-			expect( mockCanvas2.height ).toBe( 0 );
+			expect( mockCanvasEl1.width ).toBe( 0 );
+			expect( mockCanvasEl1.height ).toBe( 0 );
+			expect( mockCanvasEl2.width ).toBe( 0 );
+			expect( mockCanvasEl2.height ).toBe( 0 );
 			expect( canvasManager.canvasPool ).toEqual( [] );
 		} );
 

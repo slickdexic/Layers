@@ -536,54 +536,24 @@ describe( 'LayersLightbox', () => {
 	} );
 
 	describe( 'resolveFullImageUrl', () => {
-		it( 'should use upload path when available', () => {
+		it( 'should use Special:Redirect for all filenames', () => {
 			const lightbox = new LayersLightbox();
 
-			const url = lightbox.resolveFullImageUrl( 'TestImage.jpg' );
+			lightbox.resolveFullImageUrl( 'TestImage.jpg' );
 
-			expect( url ).toContain( '/w/images/' );
-			expect( url ).toContain( 'TestImage.jpg' );
+			expect( mw.util.getUrl ).toHaveBeenCalledWith(
+				'Special:Redirect/file/TestImage.jpg'
+			);
 		} );
 
 		it( 'should encode filename in URL', () => {
 			const lightbox = new LayersLightbox();
 
-			const url = lightbox.resolveFullImageUrl( 'Test Image.jpg' );
-
-			expect( url ).toContain( 'Test%20Image.jpg' );
-		} );
-
-		it( 'should fallback to Special:Redirect when no upload path', () => {
-			mw.config.get.mockReturnValueOnce( null );
-
-			const lightbox = new LayersLightbox();
-			const url = lightbox.resolveFullImageUrl( 'Test.jpg' );
+			lightbox.resolveFullImageUrl( 'Test Image.jpg' );
 
 			expect( mw.util.getUrl ).toHaveBeenCalledWith(
-				expect.stringContaining( 'Special:Redirect/file/' )
+				'Special:Redirect/file/Test%20Image.jpg'
 			);
-		} );
-	} );
-
-	describe( 'md5First2', () => {
-		it( 'should return first two alphanumeric characters', () => {
-			const lightbox = new LayersLightbox();
-
-			expect( lightbox.md5First2( 'TestImage.jpg' ) ).toBe( 'te' );
-			expect( lightbox.md5First2( 'UPPERCASE.PNG' ) ).toBe( 'up' );
-		} );
-
-		it( 'should strip special characters', () => {
-			const lightbox = new LayersLightbox();
-
-			expect( lightbox.md5First2( '!@#$Image.jpg' ) ).toBe( 'im' );
-		} );
-
-		it( 'should return "aa" for empty or short strings', () => {
-			const lightbox = new LayersLightbox();
-
-			expect( lightbox.md5First2( '' ) ).toBe( 'aa' );
-			expect( lightbox.md5First2( '!' ) ).toBe( 'aa' );
 		} );
 	} );
 

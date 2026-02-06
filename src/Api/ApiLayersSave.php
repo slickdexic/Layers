@@ -10,6 +10,7 @@ use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
+use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
@@ -452,15 +453,22 @@ class ApiLayersSave extends ApiBase {
 					'backgroundOpacity' => isset( $rawData['backgroundOpacity'] )
 						? max( 0.0, min( 1.0, (float)$rawData['backgroundOpacity'] ) ) : 1.0
 				];
-				// Extract slide-specific settings
+				// Extract slide-specific settings with validation
 				$slideSettings = [
 					'isSlide' => true,
 					'canvasWidth' => isset( $rawData['canvasWidth'] )
-						? (int)$rawData['canvasWidth'] : 800,
+						? max( 1, min( 7680, (int)$rawData['canvasWidth'] ) ) : 800,
 					'canvasHeight' => isset( $rawData['canvasHeight'] )
-						? (int)$rawData['canvasHeight'] : 600,
-					'backgroundColor' => $rawData['backgroundColor'] ?? '#ffffff'
+						? max( 1, min( 4320, (int)$rawData['canvasHeight'] ) ) : 600,
+					'backgroundColor' => '#ffffff'
 				];
+				// Validate and sanitize backgroundColor
+				if ( isset( $rawData['backgroundColor'] ) && is_string( $rawData['backgroundColor'] ) ) {
+					$bgColor = $rawData['backgroundColor'];
+					if ( ColorValidator::isValidColor( $bgColor ) ) {
+						$slideSettings['backgroundColor'] = $bgColor;
+					}
+				}
 			} elseif ( is_array( $rawData ) && !isset( $rawData['layers'] ) ) {
 				$layersData = $rawData;
 			}

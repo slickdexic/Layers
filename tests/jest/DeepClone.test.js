@@ -402,10 +402,11 @@ describe( 'DeepClone', () => {
 			const original = { self: null };
 			const cloned = freshModule.deepClone( original );
 
-			// Should return original object as last resort
-			expect( cloned ).toBe( original );
+			// Should return a shallow clone (not the same reference)
+			expect( cloned ).not.toBe( original );
+			expect( cloned ).toEqual( original );
 			expect( global.mw.log.warn ).toHaveBeenCalledWith(
-				'[DeepClone] Failed to clone object:',
+				'[DeepClone] Failed to deep clone, using shallow clone:',
 				'Converting circular structure'
 			);
 
@@ -441,8 +442,9 @@ describe( 'DeepClone', () => {
 			const original = { data: 'test' };
 			const cloned = freshModule.deepClone( original );
 
-			// Should return original object silently
-			expect( cloned ).toBe( original );
+			// Should return a shallow clone (not the same reference)
+			expect( cloned ).not.toBe( original );
+			expect( cloned ).toEqual( original );
 
 			// Restore
 			global.structuredClone = originalStructuredClone;

@@ -145,6 +145,15 @@ class ApiLayersInfo extends ApiBase {
 		$origHeight = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : null;
 
 		$db = $this->getLayersDatabase();
+
+		// Verify database schema exists
+		if ( !$db->isSchemaReady() ) {
+			$this->dieWithError(
+				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
+				'dbschema-missing'
+			);
+		}
+
 		$fileSha1 = $this->getFileSha1( $file, $normalizedName );
 
 		// SHA1 mismatch fallback: for foreign files, the SHA1 may have been
@@ -319,6 +328,14 @@ class ApiLayersInfo extends ApiBase {
 		$setName = $setName ?? LayersConstants::DEFAULT_SET_NAME;
 
 		$db = $this->getLayersDatabase();
+
+		// Verify database schema exists
+		if ( !$db->isSchemaReady() ) {
+			$this->dieWithError(
+				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
+				'dbschema-missing'
+			);
+		}
 
 		// Get the slide layer set - either by specific ID or by name
 		if ( $layerSetId !== null ) {
@@ -636,7 +653,7 @@ class ApiLayersInfo extends ApiBase {
 	 * @return \Wikimedia\Rdbms\IDatabase Database connection
 	 */
 	protected function getDB(): \Wikimedia\Rdbms\IDatabase {
-		return MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
+		return MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
 	}
 
 	/**

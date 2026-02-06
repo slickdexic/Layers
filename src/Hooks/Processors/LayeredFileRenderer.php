@@ -17,6 +17,7 @@ use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
+use Title;
 
 /**
  * Handles rendering of layered files from parser functions
@@ -257,7 +258,7 @@ class LayeredFileRenderer {
 	private function buildImageHtml( string $filename, string $src, int $width, string $caption ): string {
 		$alt = !empty( $caption ) ? htmlspecialchars( $caption ) : htmlspecialchars( $filename );
 		$title = !empty( $caption ) ? htmlspecialchars( $caption ) : '';
-		$href = '/wiki/File:' . rawurlencode( $filename );
+		$href = Title::makeTitle( NS_FILE, $filename )->getLocalURL();
 
 		return '<span class="mw-default-size" typeof="mw:File">' .
 			'<a href="' . htmlspecialchars( $href ) . '" class="mw-file-description"' .

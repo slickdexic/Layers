@@ -2012,8 +2012,10 @@ class CanvasManager {
 		// Clear canvas pool to prevent memory leaks
 		if ( this.canvasPool && this.canvasPool.length > 0 ) {
 			this.canvasPool.forEach( function ( pooledCanvas ) {
-				pooledCanvas.width = 0;
-				pooledCanvas.height = 0;
+				if ( pooledCanvas.canvas ) {
+					pooledCanvas.canvas.width = 0;
+					pooledCanvas.canvas.height = 0;
+				}
 			} );
 			this.canvasPool = [];
 		}

@@ -391,7 +391,18 @@ class ThumbnailProcessor {
 			}
 
 			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
-			$jsonData = json_encode( $payload );
+
+			try {
+				$jsonData = json_encode( $payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE );
+			} catch ( \JsonException $e ) {
+				$this->log( 'Failed to encode layer data as JSON: ' . $e->getMessage() );
+				// Fall back to API-based loading
+				$attribs['data-layers-intent'] = $layersFlag ?? 'on';
+				if ( $file && method_exists( $file, 'getName' ) ) {
+					$attribs['data-file-name'] = $file->getName();
+				}
+				return;
+			}
 
 			// Check if JSON is too large for inline embedding (>100KB may cause browser issues)
 			$jsonSize = strlen( $jsonData );

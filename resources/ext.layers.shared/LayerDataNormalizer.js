@@ -55,7 +55,7 @@
 		'strokeWidth', 'fontSize', 'lineHeight', 'padding', 'cornerRadius',
 		'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'shadowSpread',
 		'textShadowBlur', 'textShadowOffsetX', 'textShadowOffsetY',
-		'textStrokeWidth', 'arrowSize',
+		'textStrokeWidth', 'arrowSize', 'blurRadius', 'tailWidth',
 		// Marker properties
 		'size', 'arrowX', 'arrowY', 'fontSizeAdjust'
 	];

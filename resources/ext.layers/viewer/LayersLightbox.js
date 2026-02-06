@@ -251,34 +251,9 @@
 		 * @private
 		 */
 		resolveFullImageUrl( filename ) {
-			// Try to get from MediaWiki config
-			if ( typeof mw !== 'undefined' && mw.config ) {
-				const uploadPath = mw.config.get( 'wgUploadPath' );
-				if ( uploadPath ) {
-					// Build hash path for MediaWiki uploads
-					const hash1 = this.md5First2( filename );
-					return uploadPath + '/' + hash1.charAt( 0 ) + '/' + hash1 + '/' +
-						encodeURIComponent( filename );
-				}
-			}
-
-			// Fallback: use Special:Redirect
+			// Use MediaWiki's Special:Redirect which always resolves correctly
+			// regardless of hash path configuration or InstantCommons setup
 			return mw.util.getUrl( 'Special:Redirect/file/' + encodeURIComponent( filename ) );
-		}
-
-		/**
-		 * Simple hash function for MediaWiki's file path structure
-		 * Returns first two characters of MD5 hash
-		 *
-		 * @param {string} filename The filename
-		 * @return {string} First two hex characters
-		 * @private
-		 */
-		md5First2( filename ) {
-			// Simple approach: use first two chars of filename
-			// This is a fallback; in production MediaWiki calculates actual MD5
-			const clean = filename.replace( /[^a-zA-Z0-9]/g, '' ).toLowerCase();
-			return clean.substring( 0, 2 ) || 'aa';
 		}
 
 		/**

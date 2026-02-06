@@ -77,7 +77,7 @@ class LayersTest extends Maintenance {
 		if ( !defined( 'DB_REPLICA' ) ) {
 			define( 'DB_REPLICA', -1 );
 		}
-		$dbr = MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
+		$dbr = MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
 
 		$this->test(
 			"layer_sets table exists",

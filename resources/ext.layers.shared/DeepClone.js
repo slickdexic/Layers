@@ -46,11 +46,14 @@
 		try {
 			return JSON.parse( JSON.stringify( obj ) );
 		} catch ( e ) {
-			// Last resort: shallow clone for objects that can't be serialized
+			// Last resort: shallow clone for objects that can't be deep cloned
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-				mw.log.warn( '[DeepClone] Failed to clone object:', e.message );
+				mw.log.warn( '[DeepClone] Failed to deep clone, using shallow clone:', e.message );
 			}
-			return obj;
+			if ( Array.isArray( obj ) ) {
+				return obj.slice();
+			}
+			return Object.assign( {}, obj );
 		}
 	}
 

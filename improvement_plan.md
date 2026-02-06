@@ -1,230 +1,336 @@
 # Layers Extension - Improvement Plan
 
-**Last Updated:** February 5, 2026 (Comprehensive Critical Review v21)
+**Last Updated:** February 5, 2026 (Comprehensive Critical Review v22)
 **Version:** 1.5.52
-**Status:** Production-ready with minor documentation fixes needed
+**Status:** NOT production-ready — 3 critical issues block deployment on MW 1.44+
 
 ---
 
 ## Executive Summary
 
-The extension is **production-ready** with **excellent test coverage** (95.19%)
-and **strong security posture**. The v21 review identified primarily documentation
-accuracy issues and minor JavaScript edge cases.
+The v22 review is the most thorough to date. It identified **3 critical issues**
+that were missed by v19–v21 reviews, along with 11 high, 20 medium, and 14 low
+priority issues (48 total).
+
+**The extension cannot function on its stated minimum platform (MW >= 1.44.0)**
+due to use of `getDBLoadBalancer()` which was removed in MW 1.42. This must be
+fixed before any release.
 
 **Current Status:**
-- ✅ **P0:** 0 critical issues
-- ✅ **P1:** 3 of 4 fixed (1 deferred for documentation)
-- ✅ **P2:** 4 of 5 fixed (1 deferred design decision)
-- ⚠️ **P3:** 4 low-impact items (1 deferred by design)
+- ❌ **P0:** 3 critical issues (NEW — blocking)
+- ❌ **P1:** 11 high priority issues
+- ❌ **P2:** 20 medium priority issues
+- ⚠️ **P3:** 14 low priority issues
 
 ---
 
-## ✅ Security Status - All Controls Verified
+## Security Status (v22 — Corrected)
 
-| Control | Status |
-|---------|--------|
-| CSRF Protection | ✅ All writes require tokens |
-| SQL Injection | ✅ Parameterized queries |
-| Rate Limiting | ✅ All 5 APIs have limits |
-| XSS Prevention | ✅ Text/SVG sanitization |
-| Input Validation | ✅ All parameters validated |
-| Authorization | ✅ Owner/admin checks |
+| Control | Status | Notes |
+|---------|--------|-------|
+| CSRF Protection | ✅ PASS | All writes require tokens |
+| SQL Injection | ✅ PASS | Parameterized queries |
+| Rate Limiting | ⚠️ PARTIAL | Defaults not registered with MW core |
+| XSS Prevention | ⚠️ FLAWED | TextSanitizer bypass (P0.2) |
+| Input Validation | ✅ PASS | Strict whitelist |
+| Authorization | ✅ PASS | Owner/admin checks |
+| CSP | ⚠️ WEAKENED | unsafe-eval for foreign files (P1.1) |
 
-**No exploitable security vulnerabilities identified.**
-
----
-
-## ✅ Previously Reported Issues - Verified Fixed
-
-| Issue | Status |
-|-------|--------|
-| Shape Library Count (1,310 vs 5,116) | ✅ FIXED |
-| Rate Limits Missing for Read APIs | ✅ FIXED |
-| ApiLayersRename oldname Not Validated | ✅ FIXED |
-| ApiLayersDelete slidename Not Validated | ✅ FIXED |
-| GridRulersController Dead References | ✅ FIXED |
-| LayerRenderer viewBox Validation | ✅ FIXED |
-| ArrowRenderer Division by Zero | ✅ FIXED |
+**v21's "no exploitable vulnerabilities" was incorrect.** P0.2 is exploitable.
 
 ---
 
-## ��� Phase 1 (P1): High Priority
+## ✅ Previously Reported Issues — Verified Fixed
 
-### P1.1 Add layerslist to API-Reference.md
-
-**Status:** ✅ FIXED (v1.5.52)  
-**Priority:** P1 - High  
-**Impact:** Developer documentation completeness
-
-**Issue:** API Reference says "four" endpoints; there are five. The `layerslist`
-endpoint is completely undocumented.
-
-**Resolution:** Added complete `layerslist` documentation section with parameters,
-response format, and JavaScript example.
-
----
-
-### P1.2 Add Depth Guards to GroupManager Recursive Functions
-
-**Status:** ✅ FIXED (v1.5.52)  
-**Priority:** P1 - High  
-**Impact:** Prevent stack overflow with corrupted data
-**File:** [GroupManager.js](resources/ext.layers.editor/GroupManager.js)
-
-**Issue:** Four recursive functions lack depth guards.
-
-**Resolution:** Added depth guards to `isDescendantOf()`, `getGroupChildren()`,
-`getMaxChildDepth()`, and `collectChildren()` - all now protected with
-`maxNestingDepth + 5` limit.
+| Issue | Status | Fixed In |
+|-------|--------|----------|
+| Shape Library Count (1,310 vs 5,116) | ✅ FIXED | v20 |
+| Rate Limits Missing for Read APIs | ✅ FIXED | v21 |
+| ApiLayersRename oldname Not Validated | ✅ FIXED | v21 |
+| ApiLayersDelete slidename Not Validated | ✅ FIXED | v21 |
+| GridRulersController Dead References | ✅ FIXED | v19 |
+| LayerRenderer viewBox Validation | ✅ FIXED | v19 |
+| ArrowRenderer Division by Zero | ✅ FIXED | v19 |
+| GroupManager Recursive Depth Guards | ✅ FIXED | v21 |
+| ImageLayerRenderer Cache Key Collision | ✅ FIXED | v21 |
+| EventManager isInputElement | ✅ FIXED | v21 |
+| "4 API modules" count | ✅ FIXED | v21 |
+| Version 1.5.51 string | ✅ FIXED | v21 |
 
 ---
 
-### P1.3 Document or Fix APIManager Abort Behavior
+## ��� Phase 0: Critical — Must Fix Before Any Release
 
-**Status:** ⚠️ DEFERRED  
-**Priority:** P1 - High  
-**Impact:** Memory leaks, stuck UI states
-**File:** [APIManager.js](resources/ext.layers.editor/APIManager.js#L641)
+### P0.1 Migrate getDBLoadBalancer() to getConnectionProvider()
 
-**Issue:** Aborted request promises never settle when `rejectAbortedRequests`
-is false (default).
+**Status:** ❌ OPEN
+**Priority:** P0 — BLOCKING
+**Impact:** Extension fatals on MW 1.44+
+**Files:** services.php:24, ApiLayersInfo.php:639, LayersSchemaManager.php:400, LayersTest.php:80
+**Ref:** codebase_review CRIT-1
 
-**Decision:** This is intentional design - aborted requests should not trigger
-error handlers. Callers can use timeouts if needed. Will add JSDoc documentation
-in future release.
+**What:** Replace all `getDBLoadBalancer()` calls with `getConnectionProvider()`
+and `IConnectionProvider` interface. Both available since MW 1.39.
 
----
+**Fix:**
+```php
+// OLD (fatal on MW 1.42+):
+$lb = $services->getDBLoadBalancer();
+$dbw = $lb->getConnection( DB_PRIMARY );
+$dbr = $lb->getConnection( DB_REPLICA );
 
-### P1.4 Improve ImageLayerRenderer Cache Key
+// NEW:
+$cp = $services->getConnectionProvider();
+$dbw = $cp->getPrimaryDatabase();
+$dbr = $cp->getReplicaDatabase();
+```
 
-**Status:** ✅ FIXED (v1.5.52)  
-**Priority:** P1 - High  
-**Impact:** Potential image cache collisions
-**File:** [ImageLayerRenderer.js](resources/ext.layers.shared/ImageLayerRenderer.js)
-
-**Issue:** Fallback key uses first 50 chars of src; base64 URLs share prefix.
-
-**Resolution:** Added `_hashString()` using djb2 algorithm for collision-resistant
-cache keys. Now uses hash of full src string instead of truncated prefix.
-
----
-
-## ��� Phase 2 (P2): Medium Priority
-
-### P2.1 Update JavaScript File Count
-
-**Status:** ✅ FIXED (v1.5.52)  
-**Priority:** P2 - Medium  
-**Impact:** Documentation accuracy
-
-**Issue:** Multiple files said "140 JS files"; actual is 142.
-
-**Resolution:** Updated copilot-instructions.md and README.md to 142 files.
+**Scope:** 4 files, ~8 call sites. Also update `LayersDatabase` constructor.
 
 ---
 
-### P2.2 Update Version in copilot-instructions
+### P0.2 Fix TextSanitizer Iterative Protocol Removal
 
-**Status:** ✅ FIXED (v1.5.52)  
-**Priority:** P2 - Medium  
-**File:** [.github/copilot-instructions.md](.github/copilot-instructions.md)
+**Status:** ❌ OPEN
+**Priority:** P0 — SECURITY
+**Impact:** XSS via nested protocol strings
+**File:** src/Validation/TextSanitizer.php:82-92
+**Ref:** codebase_review CRIT-2
 
-**Issue:** Version number said "1.5.51"; should be "1.5.52".
+**Fix:**
+```php
+do {
+    $before = $text;
+    foreach ( $dangerousProtocols as $protocol ) {
+        $text = str_ireplace( $protocol, '', $text );
+    }
+} while ( $text !== $before );
+```
 
-**Resolution:** Updated to 1.5.52.
-
----
-
-### P2.3 Fix "4 API modules" Count
-
-**Status:** ✅ FIXED (v1.5.52)  
-**Priority:** P2 - Medium  
-**File:** [.github/copilot-instructions.md](.github/copilot-instructions.md)
-
-**Issue:** Said "shared by all **4** API modules" but there are 5.
-
-**Resolution:** Updated to "5 API modules".
+**Tests:** Add test cases for nested protocols.
 
 ---
 
-### P2.4 Expand EventManager isInputElement
+### P0.3 Fix layer_sets Schema Unique Key
 
-**Status:** ✅ FIXED (v1.5.52)  
-**Priority:** P2 - Medium  
-**File:** [EventManager.js](resources/ext.layers.editor/EventManager.js)
+**Status:** ❌ OPEN
+**Priority:** P0 — DATA INTEGRITY
+**Impact:** Named layer sets broken on fresh installs
+**Files:** sql/tables/layer_sets.sql:16
+**Ref:** codebase_review CRIT-3
 
-**Issue:** Function missed SELECT, ARIA roles, OOUI widgets.
-
-**Resolution:** Added support for SELECT, contentEditable='plaintext-only',
-role='textbox', and .oo-ui-textInputWidget selector.
+**Fix:** Update unique key in `sql/tables/layer_sets.sql`:
+```sql
+UNIQUE KEY ls_img_name_set_revision (ls_img_name, ls_img_sha1, ls_name, ls_revision)
+```
 
 ---
 
-### P2.5 Fix StateManager forceUnlock Re-locking
+## ��� Phase 1: High Priority — Next Release
 
-**Status:** ❌ OPEN  
-**Priority:** P2 - Medium  
-**File:** [StateManager.js](resources/ext.layers.editor/StateManager.js#L397)
+### P1.1 Remove CSP unsafe-eval / unsafe-inline
 
-**Issue:** Queued operations may call lockState() during recovery.
+**Status:** ❌ OPEN
+**File:** src/Action/EditLayersAction.php:348
+**Ref:** HIGH-1
 
-**Suggested Fix:** Set flag to skip locking during recovery:
+Use nonce-based CSP or remove `unsafe-eval` entirely. The extension uses no
+`eval()` so `unsafe-eval` is unnecessary.
+
+---
+
+### P1.2 Fix Canvas Pool Memory Release
+
+**Status:** ❌ OPEN
+**File:** resources/ext.layers.editor/CanvasManager.js:2014-2017
+**Ref:** HIGH-2
+
+Change `pooledCanvas.width = 0` to `pooledCanvas.canvas.width = 0`.
+
+---
+
+### P1.3 Fix InlineTextEditor _handleInput()
+
+**Status:** ❌ OPEN
+**File:** resources/ext.layers.editor/canvas/InlineTextEditor.js:883-887
+**Ref:** HIGH-3
+
+Use `_getPlainTextFromEditor()` for contentEditable elements:
 ```javascript
-this._isRecovering = true;
-while ( this.pendingOperations.length > 0 ) {
-    // ... process
+_handleInput() {
+    if ( this.editingLayer && this.editorElement ) {
+        this.editingLayer.text = this.isMultiline
+            ? this._getPlainTextFromEditor()
+            : this.editorElement.value;
+    }
 }
-this._isRecovering = false;
-```
-
-And in lockState():
-```javascript
-if ( this._isRecovering ) return false;
 ```
 
 ---
 
-## ⚠️ Phase 3 (P3): Low Priority / Deferred
+### P1.4 Fix Lightbox md5First2()
 
-### P3.1 Fix README Date
+**Status:** ❌ OPEN
+**File:** resources/ext.layers/viewer/LayersLightbox.js:277-282
+**Ref:** HIGH-4
 
-**Status:** ❌ OPEN  
-**Priority:** P3 - Low  
-**File:** README.md line 11
-
-**Issue:** Says "February 3" but should be "February 5".
-
----
-
-### P3.2 Update wiki/Home.md Headline
-
-**Status:** ❌ OPEN  
-**Priority:** P3 - Low  
-**File:** wiki/Home.md line 23
-
-**Issue:** Says "v1.5.51" but should be "v1.5.52".
+Implement actual MD5 hash computation or use `mw.util.wikiUrlencode()` with
+MediaWiki's file URL API.
 
 ---
 
-### P3.3 Standardize Error Codes
+### P1.5 Fix ViewerOverlay Listener Cleanup
 
-**Status:** ❌ OPEN  
-**Priority:** P3 - Low
+**Status:** ❌ OPEN
+**File:** resources/ext.layers/viewer/ViewerOverlay.js:305-321
+**Ref:** HIGH-5
 
-**Issue:** ApiLayersRename uses `filenotfound` for missing params; ApiLayersSave
-uses `missingparam`. Consider standardizing.
+Store bound function references for all listeners; remove all in `destroy()`.
 
 ---
 
-### P3.4 ShadowRenderer Temp Canvas
+### P1.6 Register Rate Limiter Defaults
 
-**Status:** ⚠️ DEFERRED  
-**Priority:** P3 - Low (Performance)
+**Status:** ❌ OPEN
+**File:** src/Security/RateLimiter.php:131-143
+**Ref:** HIGH-6
 
-**Issue:** Creates temp canvas per call. Could be optimized to reuse.
+Use `$wgRateLimits` defaults in `extension.json` or register via hook.
 
-**Note:** Deferred as performance optimization; dimension cap already added.
+---
+
+### P1.7 Add Missing Normalizer Properties
+
+**Status:** ❌ OPEN
+**File:** resources/ext.layers.shared/LayerDataNormalizer.js:49-61
+**Ref:** HIGH-7
+
+Add `blurRadius` and `tailWidth` to `NUMERIC_PROPERTIES` array.
+
+---
+
+### P1.8 Fix Hardcoded /wiki/ Path
+
+**Status:** ❌ OPEN
+**File:** src/Hooks/Processors/LayeredFileRenderer.php:260
+**Ref:** HIGH-8
+
+Replace with `Title::newFromText( $filename, NS_FILE )->getLocalURL()`.
+
+---
+
+### P1.9 Remove or Parameterize DB CHECK Constraint
+
+**Status:** ❌ OPEN
+**File:** sql/patches/patch-add-check-constraints.sql:14
+**Ref:** HIGH-9
+
+Remove the hardcoded CHECK constraint or document that changing
+`$wgLayersMaxBytes` requires a schema migration.
+
+---
+
+### P1.10 Align GradientRenderer radius Validation
+
+**Status:** ❌ OPEN
+**File:** resources/ext.layers.shared/GradientRenderer.js:341-347
+**Ref:** HIGH-10
+
+Change client validation from 0-1 to 0-2 to match server.
+
+---
+
+### P1.11 Add Client-Side Path Point Cap
+
+**Status:** ❌ OPEN
+**File:** resources/ext.layers.editor/canvas/DrawingController.js:555-557
+**Ref:** HIGH-11
+
+Add point count cap matching server limit (~1000). Show visual feedback.
+
+---
+
+## ��� Phase 2: Medium Priority — Near Term
+
+### P2.1–P2.5 PHP API Improvements
+
+| ID | Issue | File |
+|----|-------|------|
+| P2.1 | Add `isSchemaReady()` to ApiLayersInfo | ApiLayersInfo.php |
+| P2.2 | Move rate limiting before DB work | ApiLayersDelete/Rename.php |
+| P2.3 | Validate slide backgroundColor/dims | ApiLayersSave.php |
+| P2.4 | Make rename target check atomic | ApiLayersRename.php |
+| P2.5 | Consolidate isForeignFile() | ForeignFileHelperTrait.php |
+
+### P2.6–P2.8 PHP Code Quality
+
+| ID | Issue | File |
+|----|-------|------|
+| P2.6 | Use UserFactory instead of direct query | ApiLayersInfo.php |
+| P2.7 | Clear WikitextHooks static state | WikitextHooks.php |
+| P2.8 | Add JSON_THROW_ON_ERROR | ThumbnailProcessor.php |
+
+### P2.9–P2.16 JavaScript Improvements
+
+| ID | Issue | File |
+|----|-------|------|
+| P2.9 | Fix cache hash for nested objects | CanvasRenderer.js |
+| P2.10 | Pool shadow canvases | ShadowRenderer.js |
+| P2.11 | Throw on clone failure | DeepClone.js |
+| P2.12 | Add null guards to getMessage() | LayersEditor.js, APIManager.js |
+| P2.13 | Add rAF throttle to arrow drag | TransformController.js |
+| P2.14 | Clone before mutating in applyToSelection | LayersEditor.js |
+| P2.15 | Deduplicate generateLayerId() | SelectionManager.js, ToolManager.js |
+| P2.16 | Register SlideManager in RL or delete | ext.layers.slides/ |
+
+### P2.17–P2.20 Database/Schema
+
+| ID | Issue | File |
+|----|-------|------|
+| P2.17 | Standardize return types | LayersDatabase.php |
+| P2.18 | Change CASCADE to SET NULL | layers_tables.sql |
+| P2.19 | Change TINYINT to SMALLINT | layers_tables.sql |
+| P2.20 | Remove duplicate parseContinueParameter | ApiLayersInfo.php |
+
+---
+
+## ⚠️ Phase 3: Low Priority — Quality Improvements
+
+| ID | Issue | Effort |
+|----|-------|--------|
+| P3.1 | Remove redundant AutoloadClasses | Low |
+| P3.2 | Remove IE11 compat code | Low |
+| P3.3 | Remove redundant method_exists | Low |
+| P3.4 | Consolidate createRateLimiter() | Low |
+| P3.5 | Fix editLayerName listener leak | Low |
+| P3.6 | Complete Toolbar destroy() | Low |
+| P3.7 | Remove triple global registration | Low |
+| P3.8 | Plan execCommand replacement | Research |
+| P3.9 | Add lightbox animation guard | Low |
+| P3.10 | Use efficient cloner | Low |
+| P3.11 | Deep copy nested objects in scaleLayer | Low |
+| P3.12 | Extract debug logging helper | Low |
+| P3.13 | Add notifySelectionChange to duplicate | Low |
+| P3.14 | Update boolean fallback list | Low |
+
+---
+
+## ��� Documentation Fixes (Parallel Track)
+
+| ID | Issue | Files Affected |
+|----|-------|----------------|
+| DOC-1 | Fix JS file count (142→140) | copilot-instructions, README, wiki, KNOWN_ISSUES |
+| DOC-2 | Rewrite NAMED_LAYER_SETS.md | docs/NAMED_LAYER_SETS.md |
+| DOC-3 | Update god class line counts | 6+ docs files |
+| DOC-4 | Fix version dates | README, wiki/Home, Mediawiki-Extension-Layers |
+| DOC-5 | Fix RELEASE_GUIDE filename | docs/RELEASE_GUIDE.md |
+| DOC-6 | Fix ACCESSIBILITY shortcuts | docs/ACCESSIBILITY.md |
+| DOC-7 | Sync KNOWN_ISSUES ↔ improvement_plan | This file + docs/KNOWN_ISSUES.md |
+| DOC-8 | Update SLIDE_MODE version | docs/SLIDE_MODE.md |
+| DOC-9 | Fix wiki/Home suite count | wiki/Home.md |
+| DOC-10 | Fix WIKITEXT_USAGE syntax | docs/WIKITEXT_USAGE.md |
+| DOC-11 | Fix ArrowRenderer god class claim | docs/DEVELOPER_ONBOARDING.md |
+| DOC-12 | Update last-updated dates | 4+ docs files |
 
 ---
 
@@ -239,9 +345,7 @@ uses `missingparam`. Consider standardizing.
 
 ---
 
-## God Class Reduction Status
-
-**Count:** 18 files ≥1,000 lines (Stable)
+## God Class Status (18 files >= 1,000 lines)
 
 | Category | Count | Notes |
 |----------|-------|-------|
@@ -253,38 +357,53 @@ No emergency refactoring required. All god classes use proper delegation.
 
 ---
 
-## Recommended Fix Order
+## Recommended Fix Schedule
 
-### Week 1 (Documentation)
-1. P1.1 - Add layerslist to API-Reference.md
-2. P2.1-P2.3 - Fix file count, version, API module count
-3. P3.1-P3.2 - Fix date, headline version
+### Week 1 — Critical Blockers (P0)
+1. **P0.1** — Migrate getDBLoadBalancer → getConnectionProvider (4 files)
+2. **P0.2** — Fix TextSanitizer loop (1 file, add tests)
+3. **P0.3** — Fix layer_sets.sql unique key (1 file)
 
-### Week 2 (Code Quality)
-4. P1.2 - Add depth guards to GroupManager
-5. P1.4 - Improve ImageLayerRenderer cache key
-6. P2.4 - Expand EventManager isInputElement
+### Week 2 — High Priority Bugs (P1.2–P1.7)
+4. **P1.2** — Canvas pool memory fix (1 line)
+5. **P1.3** — InlineTextEditor _handleInput fix (3 lines)
+6. **P1.4** — Lightbox MD5 fix (investigate MW API approach)
+7. **P1.5** — ViewerOverlay listener cleanup (store references)
+8. **P1.7** — Add blurRadius/tailWidth to normalizer (2 lines)
 
-### Week 3 (Optional)
-7. P1.3 - Document/fix APIManager abort behavior
-8. P2.5 - Fix StateManager forceUnlock
-9. P3.3 - Consider standardizing error codes
+### Week 3 — High Priority Compatibility (P1.8–P1.11)
+9. **P1.8** — Fix hardcoded /wiki/ path (1 line)
+10. **P1.9** — Remove DB CHECK constraint or add migration
+11. **P1.10** — Align gradient radius validation (1 line)
+12. **P1.11** — Add path point cap (5 lines)
+
+### Week 4 — Security & Documentation
+13. **P1.1** — Remove CSP unsafe-eval (requires testing foreign files)
+14. **P1.6** — Register rate limiter defaults
+15. **DOC-1–7** — Fix all HIGH/MEDIUM doc issues
+
+### Ongoing — Medium & Low
+16. P2.1–P2.20 — Address as bandwidth allows
+17. P3.1–P3.14 — Address opportunistically
+18. DOC-8–12 — Fix remaining doc issues
 
 ---
 
 ## Overall Assessment
 
-The Layers extension is a **high-quality, production-ready codebase**.
+The Layers extension has a **strong foundation** — 95.19% test coverage, 11,243
+tests, clean ES6 architecture, and comprehensive server-side validation.
 
-**Strengths:**
-- 95.19% test coverage with 11,243 tests
-- No exploitable security vulnerabilities
-- Clean architecture with facade/controller patterns
-- All v20 security issues verified fixed
+However, this v22 review corrects an overly optimistic v21 assessment:
 
-**Areas for Improvement:**
-- Documentation accuracy (file counts, API docs)
-- Minor JavaScript edge case guards
-- Code comments/documentation for intentional behaviors
+- **v21 said:** "Production-ready with minor documentation fixes needed"
+- **v22 says:** "Not deployable on MW 1.44+ until P0.1 is fixed"
 
-**Next Review:** Recommend reviewing after P1 fixes are applied.
+The 3 critical issues (getDBLoadBalancer fatal, TextSanitizer bypass, schema
+mismatch) are all fixable within days. Once resolved, the extension returns to
+production-ready status with a solid quality bar.
+
+**Grade:** B+ (down from A- in v21). Strong on architecture and testing,
+weak on platform compatibility and accumulated technical debt.
+
+**Next Review:** After P0 and P1 fixes are applied.

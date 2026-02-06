@@ -883,7 +883,12 @@
 		_handleInput() {
 			// Update layer text as user types (layer is hidden, so no visual update needed)
 			if ( this.editingLayer && this.editorElement ) {
-				this.editingLayer.text = this.editorElement.value;
+				if ( this._isRichTextMode && this._isMultilineType( this.editingLayer ) ) {
+					// ContentEditable divs don't have .value - use text extraction
+					this.editingLayer.text = this._getPlainTextFromEditor();
+				} else {
+					this.editingLayer.text = this.editorElement.value;
+				}
 			}
 		}
 

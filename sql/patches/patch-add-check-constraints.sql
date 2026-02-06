@@ -11,9 +11,9 @@ UPDATE /*_*/layer_sets SET ls_revision = 1 WHERE ls_revision IS NULL OR ls_revis
 -- Add check constraints to layer_sets table (relaxed SHA1 constraint)
 ALTER TABLE /*_*/layer_sets 
 ADD CONSTRAINT chk_ls_size_positive CHECK (ls_size >= 0),
-ADD CONSTRAINT chk_ls_size_reasonable CHECK (ls_size <= 2097152), -- Max 2MB
+ADD CONSTRAINT chk_ls_size_reasonable CHECK (ls_size <= 52428800), -- 50MB hard safety ceiling; actual limit enforced by PHP ($wgLayersMaxBytes)
 ADD CONSTRAINT chk_ls_layer_count_positive CHECK (ls_layer_count >= 0),
-ADD CONSTRAINT chk_ls_layer_count_reasonable CHECK (ls_layer_count <= 100), -- Max 100 layers
+ADD CONSTRAINT chk_ls_layer_count_reasonable CHECK (ls_layer_count <= 1000), -- Hard safety ceiling; actual limit enforced by PHP ($wgLayersMaxLayerCount)
 ADD CONSTRAINT chk_ls_revision_positive CHECK (ls_revision >= 1),
 ADD CONSTRAINT chk_ls_img_name_not_empty CHECK (ls_img_name != ''),
 ADD CONSTRAINT chk_ls_img_sha1_format CHECK (ls_img_sha1 IS NULL OR LENGTH(ls_img_sha1) <= 40);

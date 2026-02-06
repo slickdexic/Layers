@@ -21,7 +21,7 @@ return [
 	},
 	'LayersDatabase' => static function ( MediaWikiServices $services ): LayersDatabase {
 		return new LayersDatabase(
-			$services->getDBLoadBalancer(),
+			$services->getConnectionProvider(),
 			$services->getMainConfig(),
 			$services->get( 'LayersLogger' ),
 			$services->get( 'LayersSchemaManager' )

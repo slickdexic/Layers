@@ -1150,7 +1150,10 @@ class LayersEditor {
 	 * @return {string} Localized message
 	 */
 	getMessage ( key, fallback = '' ) {
-		return window.layersMessages.get( key, fallback );
+		if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
+			return window.layersMessages.get( key, fallback );
+		}
+		return fallback;
 	}
 
 	/**

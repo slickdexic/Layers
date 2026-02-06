@@ -7,4 +7,4 @@ UPDATE /*_*/layer_assets SET la_size = 0 WHERE la_size IS NULL OR la_size < 0;
 -- Add check constraints for la_size column
 ALTER TABLE /*_*/layer_assets
 ADD CONSTRAINT chk_la_size_positive CHECK (la_size >= 0),
-ADD CONSTRAINT chk_la_size_reasonable CHECK (la_size <= 2097152); -- Max 2MB
+ADD CONSTRAINT chk_la_size_reasonable CHECK (la_size <= 52428800); -- 50MB hard safety ceiling; actual limit enforced by PHP ($wgLayersMaxImageBytes)

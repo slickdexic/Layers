@@ -174,6 +174,8 @@
 				layer.height,
 				layer.rotation,
 				layer.opacity,
+				layer.fillOpacity,
+				layer.strokeOpacity,
 				layer.fill,
 				layer.stroke,
 				layer.strokeWidth,
@@ -182,18 +184,37 @@
 				layer.fontFamily,
 				layer.fontWeight,
 				layer.fontStyle,
+				layer.textAlign,
+				layer.verticalAlign,
+				layer.padding,
+				layer.lineHeight,
+				layer.textStrokeColor,
+				layer.textStrokeWidth,
 				layer.shadow,
 				layer.shadowBlur,
 				layer.shadowColor,
+				layer.shadowOffsetX,
+				layer.shadowOffsetY,
+				layer.shadowSpread,
+				layer.textShadow,
+				layer.textShadowColor,
+				layer.textShadowBlur,
+				layer.textShadowOffsetX,
+				layer.textShadowOffsetY,
+				layer.glow,
 				layer.radius,
 				layer.radiusX,
 				layer.radiusY,
 				layer.arrowhead,
 				layer.arrowStyle,
+				layer.arrowSize,
+				layer.blurRadius,
 				layer.blendMode,
 				layer.blend,
 				layer.cornerRadius,
-				layer.src ? layer.src.substring( 0, 100 ) : '', // First 100 chars of image
+				layer.visible,
+				layer.preserveAspectRatio,
+				layer.src ? layer.src.substring( 0, 100 ) : '',
 				layer.richText ? JSON.stringify( layer.richText ).substring( 0, 200 ) : '',
 				layer.gradient ? JSON.stringify( layer.gradient ) : '',
 				// For arrow/line, include endpoints
@@ -201,8 +222,10 @@
 				layer.y1,
 				layer.x2,
 				layer.y2,
-				// Points for polygon/path
-				layer.points ? layer.points.length : 0
+				// Points for polygon/path - include geometry, not just count
+				layer.points ? layer.points.length + ':' +
+					( layer.points[ 0 ] ? layer.points[ 0 ].x + ',' + layer.points[ 0 ].y : '' ) + ':' +
+					( layer.points[ layer.points.length - 1 ] ? layer.points[ layer.points.length - 1 ].x + ',' + layer.points[ layer.points.length - 1 ].y : '' ) : ''
 			];
 			return hashParts.join( '|' );
 		}

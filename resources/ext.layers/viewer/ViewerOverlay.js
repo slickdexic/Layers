@@ -296,6 +296,12 @@
 			this.boundMouseEnter = () => this._showOverlay();
 			this.boundMouseLeave = () => this._hideOverlay();
 			this.boundTouchStart = ( e ) => this._handleTouchStart( e );
+			this.boundFocusOut = ( e ) => {
+				// Only hide if focus moves outside container
+				if ( !this.container.contains( e.relatedTarget ) ) {
+					this._hideOverlay();
+				}
+			};
 
 			this.container.addEventListener( 'mouseenter', this.boundMouseEnter );
 			this.container.addEventListener( 'mouseleave', this.boundMouseLeave );
@@ -303,12 +309,7 @@
 
 			// Keyboard accessibility - show on focus within
 			this.container.addEventListener( 'focusin', this.boundMouseEnter );
-			this.container.addEventListener( 'focusout', ( e ) => {
-				// Only hide if focus moves outside container
-				if ( !this.container.contains( e.relatedTarget ) ) {
-					this._hideOverlay();
-				}
-			} );
+			this.container.addEventListener( 'focusout', this.boundFocusOut );
 		}
 
 		/**
@@ -482,6 +483,8 @@
 				this.container.removeEventListener( 'mouseenter', this.boundMouseEnter );
 				this.container.removeEventListener( 'mouseleave', this.boundMouseLeave );
 				this.container.removeEventListener( 'touchstart', this.boundTouchStart );
+				this.container.removeEventListener( 'focusin', this.boundMouseEnter );
+				this.container.removeEventListener( 'focusout', this.boundFocusOut );
 			}
 
 			if ( this.overlay && this.overlay.parentNode ) {
@@ -492,6 +495,7 @@
 			this.boundMouseEnter = null;
 			this.boundMouseLeave = null;
 			this.boundTouchStart = null;
+			this.boundFocusOut = null;
 		}
 	}
 

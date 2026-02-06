@@ -96,6 +96,12 @@ class ApiLayersRename extends ApiBase {
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
 
+			// RATE LIMITING: Check early before expensive DB work
+			$rateLimiter = $this->createRateLimiter();
+			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+			}
+
 			// Validate filename - Title must be valid and in File namespace
 			// Note: We do NOT check $title->exists() because foreign files
 			// (from InstantCommons) don't have local wiki pages
@@ -145,16 +151,6 @@ class ApiLayersRename extends ApiBase {
 			// PERMISSION CHECK: Only owner or admin can rename (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $oldName ) ) {
 				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
-			}
-
-			// RATE LIMITING: Prevent abuse by limiting rename operations per user
-			// Uses MediaWiki's core rate limiter via User::pingLimiter()
-			// Configure in LocalSettings.php:
-			//   $wgRateLimits['editlayers-rename']['user'] = [ 20, 3600 ]; // 20 renames per hour
-			//   $wgRateLimits['editlayers-rename']['newbie'] = [ 3, 3600 ]; // stricter for new users
-			$rateLimiter = $this->createRateLimiter();
-			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
-				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Perform the rename

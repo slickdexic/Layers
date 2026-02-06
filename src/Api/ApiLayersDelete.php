@@ -93,6 +93,12 @@ class ApiLayersDelete extends ApiBase {
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
 
+			// RATE LIMITING: Check early before expensive DB work
+			$rateLimiter = $this->createRateLimiter();
+			if ( !$rateLimiter->checkRateLimit( $user, 'delete' ) ) {
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+			}
+
 			// Validate filename - Title must be valid and in File namespace
 			// Note: We do NOT check $title->exists() because foreign files
 			// (from InstantCommons) don't have local wiki pages
@@ -158,16 +164,6 @@ class ApiLayersDelete extends ApiBase {
 			// PERMISSION CHECK: Only owner or admin can delete (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName ) ) {
 				$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
-			}
-
-			// RATE LIMITING: Prevent abuse by limiting delete operations per user
-			// Uses MediaWiki's core rate limiter via User::pingLimiter()
-			// Configure in LocalSettings.php:
-			//   $wgRateLimits['editlayers-delete']['user'] = [ 20, 3600 ]; // 20 deletes per hour
-			//   $wgRateLimits['editlayers-delete']['newbie'] = [ 3, 3600 ]; // stricter for new users
-			$rateLimiter = $this->createRateLimiter();
-			if ( !$rateLimiter->checkRateLimit( $user, 'delete' ) ) {
-				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Perform the delete
