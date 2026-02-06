@@ -20,12 +20,14 @@
 
 ---
 
-## 🆕 What's New in v1.5.51
+## 🆕 What's New in v1.5.52
 
-- **Documentation Sync** — Fixed version mismatches and file counts in architecture docs
-- **Code Review** — v13 review completed, all 11,231 tests passing
+- **API Documentation** — Added missing `layerslist` endpoint to API Reference
+- **Depth Guards** — All GroupManager recursive functions now protected from stack overflow
+- **Cache Key Fix** — ImageLayerRenderer now uses hash for collision-resistant cache keys
+- **Documentation** — Updated JS file count (142), API module count (5), version references
 
-### Previous v1.5.50 Highlights
+### Previous v1.5.51 Highlights
 
 - **Unified Dimension Text Drag** — Dimension text now acts as a CAD-style drag handle
 - **Arrow Position Control** — Dimension arrows can now point inside or outside
@@ -171,7 +173,7 @@ Perfect for diagrams, infographics, flowcharts, and presentations!
   - ISO 7000 Symbols (198 shapes): Equipment and graphical symbols
   - GHS Hazard Pictograms (8 shapes): Chemical hazard warning pictograms
   - ECB Hazard Symbols (10 shapes): European chemical hazard symbols
-  - Total library now contains **1,310 shapes** across **10 categories**
+  - Total library now contains **5,116 shapes** across **12 categories**
 - **Shape Library Rendering Fix** — Fixed critical bug where custom shapes failed to render
 
 ### Previous v1.5.10 Highlights

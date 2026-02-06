@@ -329,8 +329,14 @@ class CanvasManager {
 
 		// Load background image if editor/filename is present; otherwise
 		// skip image detection during tests.
-		if ( this.editor && this.editor.filename ) {
+		// Skip for slides - they use a solid background color, not an image.
+		if ( this.editor && this.editor.filename && !this.config.isSlide ) {
 			this.loadBackgroundImage();
+		} else if ( this.config.isSlide ) {
+			// Slides don't have a background image - use canvas dimensions from config
+			if ( typeof mw !== 'undefined' && mw.log ) {
+				mw.log( '[CanvasManager] Slide mode: skipping background image load' );
+			}
 		}
 
 		// Subscribe to StateManager for selection changes

@@ -796,9 +796,18 @@
 		 *
 		 * @param {string} groupId ID of the group
 		 * @param {boolean} [recursive=true] Whether to include nested children
+		 * @param {number} [depth=0] Current recursion depth (for guard)
 		 * @return {Array} Array of child layer objects
 		 */
-		getGroupChildren( groupId, recursive = true ) {
+		getGroupChildren( groupId, recursive = true, depth = 0 ) {
+			// Depth guard to prevent stack overflow with corrupted data
+			if ( depth > this.maxNestingDepth + 5 ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[GroupManager] Max recursion depth exceeded in getGroupChildren' );
+				}
+				return [];
+			}
+
 			if ( !this.stateManager ) {
 				return [];
 			}
@@ -816,7 +825,7 @@
 				if ( child ) {
 					children.push( child );
 					if ( recursive && child.type === 'group' ) {
-						children.push( ...this.getGroupChildren( child.id, true ) );
+						children.push( ...this.getGroupChildren( child.id, true, depth + 1 ) );
 					}
 				}
 			}
@@ -875,9 +884,18 @@
 		 *
 		 * @param {Object} group Group layer object
 		 * @param {Array} layers All layers array
+		 * @param {number} [depth=0] Current recursion depth (for guard)
 		 * @return {number} Maximum child depth
 		 */
-		getMaxChildDepth( group, layers ) {
+		getMaxChildDepth( group, layers, depth = 0 ) {
+			// Depth guard to prevent stack overflow with corrupted data
+			if ( depth > this.maxNestingDepth + 5 ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[GroupManager] Max recursion depth exceeded in getMaxChildDepth' );
+				}
+				return 0;
+			}
+
 			if ( group.type !== 'group' || !group.children || group.children.length === 0 ) {
 				return 0;
 			}
@@ -886,7 +904,7 @@
 			for ( const childId of group.children ) {
 				const child = layers.find( ( l ) => l.id === childId );
 				if ( child && child.type === 'group' ) {
-					const childDepth = 1 + this.getMaxChildDepth( child, layers );
+					const childDepth = 1 + this.getMaxChildDepth( child, layers, depth + 1 );
 					maxDepth = Math.max( maxDepth, childDepth );
 				}
 			}
@@ -1069,17 +1087,25 @@
 			if ( deleteChildren ) {
 				// Get all descendant IDs
 				const allChildIds = new Set();
-				const collectChildren = ( gId ) => {
+				const maxDepth = this.maxNestingDepth + 5;
+				const collectChildren = ( gId, depth = 0 ) => {
+					// Depth guard to prevent stack overflow with corrupted data
+					if ( depth > maxDepth ) {
+						if ( typeof mw !== 'undefined' && mw.log ) {
+							mw.log.warn( '[GroupManager] Max recursion depth exceeded in collectChildren' );
+						}
+						return;
+					}
 					const g = layers.find( ( l ) => l.id === gId && l.type === 'group' );
 					if ( g && g.children ) {
 						for ( const childId of g.children ) {
 							allChildIds.add( childId );
-							collectChildren( childId );
+							collectChildren( childId, depth + 1 );
 						}
 					}
 				};
 				allChildIds.add( groupId );
-				collectChildren( groupId );
+				collectChildren( groupId, 0 );
 
 				newLayers = layers.filter( ( l ) => !allChildIds.has( l.id ) );
 			} else {

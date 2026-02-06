@@ -112,7 +112,8 @@ class EventManager {
 	}
 
 	/**
-	 * Check if an element is an input element (input, textarea, or contentEditable)
+	 * Check if an element is an input element (input, textarea, select,
+	 * contentEditable, or OOUI text input widget)
 	 *
 	 * @param {Element} element - The DOM element to check
 	 * @return {boolean} True if the element is an input element
@@ -121,7 +122,11 @@ class EventManager {
 		const tagName = element.tagName;
 		return tagName === 'INPUT' ||
 			tagName === 'TEXTAREA' ||
-			element.contentEditable === 'true';
+			tagName === 'SELECT' ||
+			element.contentEditable === 'true' ||
+			element.contentEditable === 'plaintext-only' ||
+			element.getAttribute( 'role' ) === 'textbox' ||
+			!!element.closest( '.oo-ui-textInputWidget' );
 	}
 
 	/**

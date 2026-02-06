@@ -10,6 +10,7 @@ use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
+use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
@@ -56,6 +57,11 @@ class ApiLayersDelete extends ApiBase {
 
 		// Handle slide deletes (slidename parameter)
 		if ( $slidename !== null && $slidename !== '' ) {
+			// Validate slidename for security and consistency
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideDelete( $user, $slidename, $setName );
 			return;
 		}
@@ -64,6 +70,11 @@ class ApiLayersDelete extends ApiBase {
 		if ( $requestedFilename !== null && strpos( $requestedFilename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
 			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
+			// Validate extracted slidename
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideDelete( $user, $slidename, $setName );
 			return;
 		}

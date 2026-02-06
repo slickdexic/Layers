@@ -132,7 +132,7 @@ This opens the full Layers editor with the slide loaded.
 | **Instant Refresh** | Changes appear immediately after saving ✨ |
 | **Lightbox View** | Full-size viewing with hover overlay |
 | **Version History** | Each slide maintains revision history |
-| **Shape Library** | 1,310 built-in shapes available |
+| **Shape Library** | 5,116 built-in shapes available |
 | **Emoji Library** | 2,817 Noto Color Emoji available |
 
 ---

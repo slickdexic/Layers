@@ -6,7 +6,7 @@ Thanks for helping improve Layers! This guide covers local setup, how to run che
 
 **Target: <110,000 lines of JavaScript**
 
-This extension is feature-rich by design—**15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,310 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) and bundled emoji data (emoji-bundle.json) account for ~15,000 lines of JavaScript. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension.
+This extension is feature-rich by design—**15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 5,116 shapes**, and an **Emoji Picker with 2,817 emoji**. The large generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) and bundled emoji data (emoji-bundle.json) account for ~15,000 lines of JavaScript. A well-structured, secure, thoroughly-tested codebase of this size is appropriate for a professional MediaWiki extension.
 
 **There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns

@@ -2,7 +2,7 @@
 /**
  * Shape Library Panel - E2E Tests
  *
- * Tests for the Shape Library Panel UI which provides access to 1,310 shapes
+ * Tests for the Shape Library Panel UI which provides access to 5,116 shapes
  * across 10 categories. This fills the testing gap for ShapeLibraryPanel.js
  * which has 0% unit test coverage due to tight OOUI integration.
  *

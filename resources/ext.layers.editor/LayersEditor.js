@@ -505,7 +505,8 @@ class LayersEditor {
 			this.registry.register( 'CanvasManager', () => new CanvasManagerClass( {
 				container: this.uiManager.canvasContainer,
 				editor: this,
-				backgroundImageUrl: this.imageUrl
+				backgroundImageUrl: this.imageUrl,
+				isSlide: this.stateManager.get( 'isSlide' ) || false
 			} ), [] );
 		}
 

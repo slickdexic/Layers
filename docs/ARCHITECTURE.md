@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** February 3, 2026
-**Version:** 1.5.51
+**Version:** 1.5.52
 
 ---
 
@@ -36,7 +36,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | PHPUnit test files | 24 |
 | God classes (>1000 lines) | **18** (2 generated, 14 JS, 2 PHP) |
 | Drawing tools | **15** |
-| Shape library | **1,310 shapes** |
+| Shape library | **5,116 shapes** |
 | Emoji library | **2,817 emoji** |
 | i18n messages | **749** |
 | eslint-disable comments | **11** ✅ |
@@ -94,7 +94,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 ### Previous Releases
 
 **v1.5.11-v1.5.12 - Libraries:**
-- Shape Library with 1,310 shapes (ISO 7010, IEC 60417, etc.)
+- Shape Library with 5,116 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
 ### God Classes (18 Files ≥1,000 Lines)

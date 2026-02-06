@@ -110,6 +110,28 @@ class RateLimiter {
 				// Separate limit for library managers
 				'managelayerlibrary' => [ 100, 3600 ],
 			],
+			'editlayers-info' => [
+				// 200 info requests per hour for users (read-only but still limited)
+				'user' => [ 200, 3600 ],
+				// 50 info requests per hour for new users
+				'newbie' => [ 50, 3600 ],
+				// 500 info requests per hour for autoconfirmed
+				'autoconfirmed' => [ 500, 3600 ],
+				// Higher limits for privileged users
+				'sysop' => [ 1000, 3600 ],
+				'managelayerlibrary' => [ 2000, 3600 ],
+			],
+			'editlayers-list' => [
+				// 100 list requests per hour for users (Special:Slides pagination)
+				'user' => [ 100, 3600 ],
+				// 30 list requests per hour for new users
+				'newbie' => [ 30, 3600 ],
+				// 200 list requests per hour for autoconfirmed
+				'autoconfirmed' => [ 200, 3600 ],
+				// Higher limits for privileged users
+				'sysop' => [ 500, 3600 ],
+				'managelayerlibrary' => [ 1000, 3600 ],
+			],
 		];
 
 		// Use configured limits or fall back to defaults
