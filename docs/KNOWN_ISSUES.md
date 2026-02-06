@@ -339,7 +339,7 @@ No client-side cap on freehand path points. Server silently truncates to
 | P1.2 GroupManager depth guards | ❌ OPEN | ✅ FIXED | improvement_plan said fixed |
 | P1.3 APIManager abort behavior | ❌ OPEN | ⚠️ DEFERRED | Intentional design |
 | P1.4 ImageLayerRenderer cache | ❌ OPEN | ✅ FIXED | improvement_plan said fixed |
-| P2.1 JS file count | ❌ OPEN (claimed 142) | ❌ OPEN (actual 140) | v21 had wrong count |
+| P2.1 JS file count | ❌ OPEN (claimed 142) | ✅ FIXED | Corrected to 140 in all docs |
 | P2.2 Version in copilot-inst | ❌ OPEN | ✅ FIXED | Now says 1.5.52 |
 | P2.3 "4 API modules" | ❌ OPEN | ✅ FIXED | Now says 5 |
 | P2.4 EventManager isInputElement | ❌ OPEN | ✅ FIXED | Missing elements added |
@@ -355,7 +355,7 @@ See codebase_review.md DOC-1 through DOC-12 for full details. Key items:
 
 | ID | Issue | Severity |
 |----|-------|----------|
-| DOC-1 | JS file count says 142, actual 140 | HIGH |
+| DOC-1 | ~~JS file count says 142, actual 140~~ FIXED | ~~HIGH~~ DONE |
 | DOC-2 | NAMED_LAYER_SETS.md uses wrong syntax | HIGH |
 | DOC-3 | God class line counts stale (6+ files) | MEDIUM |
 | DOC-4 | Version date inconsistent (Feb 3 vs Feb 5) | MEDIUM |

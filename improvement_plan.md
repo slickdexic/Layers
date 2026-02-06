@@ -316,7 +316,7 @@ Add point count cap matching server limit (~1000). Show visual feedback.
 
 | ID | Issue | Files Affected |
 |----|-------|----------------|
-| DOC-1 | Fix JS file count (142→140) | copilot-instructions, README, wiki, KNOWN_ISSUES |
+| DOC-1 | ~~Fix JS file count (142→140)~~ ✅ DONE | copilot-instructions, README, wiki, KNOWN_ISSUES |
 | DOC-2 | Rewrite NAMED_LAYER_SETS.md | docs/NAMED_LAYER_SETS.md |
 | DOC-3 | Update god class line counts | 6+ docs files |
 | DOC-4 | Fix version dates | README, wiki/Home, Mediawiki-Extension-Layers |
@@ -342,12 +342,12 @@ Add point count cap matching server limit (~1000). Show visual feedback.
 
 ---
 
-## God Class Status (18 files >= 1,000 lines)
+## God Class Status (19 files >= 1,000 lines)
 
 | Category | Count | Notes |
 |----------|-------|-------|
 | Generated data (exempt) | 2 | ShapeLibraryData, EmojiLibraryIndex |
-| Hand-written JS | 14 | All use delegation patterns |
+| Hand-written JS | 15 | All use delegation patterns |
 | PHP | 2 | ServerSideLayerValidator, LayersDatabase |
 
 No emergency refactoring required. All god classes use proper delegation.
@@ -388,7 +388,7 @@ No emergency refactoring required. All god classes use proper delegation.
 
 ## Overall Assessment
 
-The Layers extension has a **strong foundation** — 95.19% test coverage, 11,243
+The Layers extension has a **strong foundation** — 95.19% test coverage, 11,228
 tests, clean ES6 architecture, and comprehensive server-side validation.
 
 However, this v22 review corrects an overly optimistic v21 assessment:

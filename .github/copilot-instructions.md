@@ -39,12 +39,12 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
 - Frontend (JS, `resources/`)
   - Entry points: `ext.layers/init.js` (viewer bootstrap) and `ext.layers.editor/LayersEditor.js` (full editor)
   - Viewer modules (`resources/ext.layers/viewer/`): Lightweight viewer for displaying layered images
-    - `ViewerManager.js` (~1,322 lines) - manages viewer instances, lazy initialization [GOD CLASS]
+    - `ViewerManager.js` (~1,320 lines) - manages viewer instances, lazy initialization [GOD CLASS]
     - `LayersViewer.js` (~571 lines) - canvas-based layer rendering for thumbnails
     - `LayersLightbox.js` (~560 lines) - full-screen lightbox viewer
     - `ViewerOverlay.js` (~510 lines) - hover action buttons (edit/view) with permission checking
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager, DraftManager)
-  - Core editor modules: `CanvasManager.js` (~2,044 lines - facade coordinating controllers), `ToolManager.js` (~1,226 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,219 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,431 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,171 lines), `DraftManager.js` (~476 lines - auto-save/draft recovery)
+  - Core editor modules: `CanvasManager.js` (~2,053 lines - facade coordinating controllers), `ToolManager.js` (~1,214 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,365 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,415 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~1,205 lines), `DraftManager.js` (~476 lines - auto-save/draft recovery)
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
     - `TextToolHandler.js` (~207 lines) - inline text input UI for creating text layers
     - `PathToolHandler.js` (~229 lines) - freeform path drawing with click-to-add points
@@ -56,11 +56,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `DeepClone.js` - Object cloning utilities including `omitProperty(obj, propName)` for creating copies without specific properties (avoids eslint-disable for destructuring)
     - `LayerDataNormalizer.js` (~325 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
     - `GradientRenderer.js` (~392 lines) - Gradient fill utility for creating linear/radial Canvas gradients from layer definitions. Static `hasGradient()` check, `createGradient()` method, 6 built-in presets (sunset, ocean, forest, fire, steel, rainbow), validation and cloning utilities.
-    - `LayerRenderer.js` (~966 lines), `ImageLayerRenderer.js` (~278 lines - extracted image caching/rendering), `ShadowRenderer.js` (~576 lines), `ArrowRenderer.js` (~971 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~996 lines - supports richText formatting), `ShapeRenderer.js` (~994 lines - now with gradient fill support), `EffectsRenderer.js` (~459 lines), `MarkerRenderer.js` (~601 lines - numbered/letter markers with shadow support), `DimensionRenderer.js` (~797 lines - technical measurement annotations)
+    - `LayerRenderer.js` (~969 lines), `ImageLayerRenderer.js` (~278 lines - extracted image caching/rendering), `ShadowRenderer.js` (~576 lines), `ArrowRenderer.js` (~974 lines - curved arrow support), `TextRenderer.js` (~345 lines), `TextBoxRenderer.js` (~996 lines - supports richText formatting), `ShapeRenderer.js` (~995 lines - now with gradient fill support), `EffectsRenderer.js` (~459 lines), `MarkerRenderer.js` (~601 lines - numbered/letter markers with shadow support), `DimensionRenderer.js` (~879 lines - technical measurement annotations)
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~385 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `SmartGuidesController.js` (~745 lines) - smart guides and snap alignment
-    - `TransformController.js` (~961 lines) - resize, rotation, multi-layer transforms
+    - `TransformController.js` (~1,117 lines) - resize, rotation, multi-layer transforms [GOD CLASS]
     - `ResizeCalculator.js` (~995 lines) - shape-specific resize calculations
     - `HitTestController.js` (~580 lines) - selection handle and layer hit testing
     - `DrawingController.js` (~826 lines) - shape/tool creation and drawing preview
@@ -68,7 +68,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RenderCoordinator.js` (~404 lines) - render scheduling and dirty region tracking
     - `InteractionController.js` (~556 lines) - mouse/touch event handling coordination
     - `TextInputController.js` (~212 lines) - modal dialog for text input (fallback)
-    - `InlineTextEditor.js` (~1,521 lines) - Figma-style inline canvas text editing with floating toolbar [GOD CLASS]
+    - `InlineTextEditor.js` (~1,670 lines) - Figma-style inline canvas text editing with floating toolbar [GOD CLASS]
     - `SelectionRenderer.js` (~793 lines) - selection UI drawing (handles, marquee, rotation)
     - `AlignmentController.js` (~571 lines) - layer alignment and distribution
   - Editor modules (`resources/ext.layers.editor/editor/`): Extracted from LayersEditor:
@@ -76,7 +76,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `RevisionManager.js` (~470 lines) - revision and named set management
     - `DialogManager.js` (~420 lines) - modal dialogs with ARIA
   - Utilities: `utils/NamespaceHelper.js` (shared getClass() utility with caching via Map, clearClassCache() for tests), `EventTracker.js` (memory leak prevention), `ImageLoader.js` (background image loading)
-  - UI: `Toolbar.js` (~1,891 lines), `LayerPanel.js` (~2,182 lines - delegates to 9 controllers), plus editor CSS (`editor-fixed.css` with full Vector 2022 dark mode support)
+  - UI: `Toolbar.js` (~1,891 lines), `LayerPanel.js` (~2,180 lines - delegates to 9 controllers), plus editor CSS (`editor-fixed.css` with full Vector 2022 dark mode support)
   - UI controllers (`resources/ext.layers.editor/ui/`): Extracted from LayerPanel.js and UIManager.js for separation of concerns:
     - `BackgroundLayerController.js` (~380 lines) - background layer visibility and opacity controls
     - `FolderOperationsController.js` (~383 lines) - folder create/delete, layer visibility toggle, ungroup operations
@@ -101,11 +101,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 18 files exceed 1,000 lines:
+  - **God classes:** 19 files exceed 1,000 lines:
     - **Generated data files (exempt):** ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,055 lines)
-    - **Hand-written JS files (14):** LayerPanel (~2,182), CanvasManager (~2,045), Toolbar (~1,891), LayersEditor (~1,829), InlineTextEditor (~1,521), SelectionManager (~1,430), PropertyBuilders (~1,464), APIManager (~1,403), ViewerManager (~1,322), ToolManager (~1,226), CanvasRenderer (~1,219), GroupManager (~1,171), SlideController (~1,140), LayersValidator (~1,116)
-    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,341 lines), LayersDatabase.php (~1,360 lines)
-    - **Near-threshold files (9):** ToolbarStyleControls (~998), TextBoxRenderer (~996), ResizeCalculator (~995), ShapeRenderer (~994), PropertiesForm (~994), ArrowRenderer (~971), LayerRenderer (~966), CalloutRenderer (~961), TransformController (~961)
+    - **Hand-written JS files (15):** LayerPanel (~2,180), CanvasManager (~2,053), Toolbar (~1,891), LayersEditor (~1,836), InlineTextEditor (~1,670), APIManager (~1,566), PropertyBuilders (~1,464), SelectionManager (~1,415), CanvasRenderer (~1,365), ViewerManager (~1,320), ToolManager (~1,214), GroupManager (~1,205), SlideController (~1,131), TransformController (~1,117), LayersValidator (~1,116)
+    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,346 lines), LayersDatabase.php (~1,363 lines)
+    - **Near-threshold files (8):** ToolbarStyleControls (~998), TextBoxRenderer (~996), ResizeCalculator (~995), ShapeRenderer (~995), PropertiesForm (~994), ArrowRenderer (~974), LayerRenderer (~969), CalloutRenderer (~961)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -395,11 +395,11 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,243 tests in 165 suites — verified February 4, 2026)
-- Coverage (95.19% statement, 84.96% branch — verified February 4, 2026)
-- JavaScript file count (142 files total, ~96,498 lines)
-- PHP file count (40 files, ~14,915 lines)
-- God class count (18 files >1,000 lines; 2 generated data files, 14 JS, 2 PHP)
+- Test count (11,228 tests in 165 suites — verified February 6, 2026)
+- Coverage (95.19% statement, 84.96% branch — verified February 6, 2026)
+- JavaScript file count (140 files total, ~96,619 lines)
+- PHP file count (40 files, ~14,946 lines)
+- God class count (19 files >1,000 lines; 2 generated data files, 15 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)
 - Shape library count (5,116 shapes in 12 categories)

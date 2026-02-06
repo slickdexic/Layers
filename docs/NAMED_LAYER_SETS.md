@@ -21,7 +21,7 @@ This document describes the Named Layer Sets feature, which restructures the lay
 
 1. **Organized Annotations**: Multiple named annotation sets per image (e.g., "english-labels", "french-labels")
 2. **Version History**: Undo to previous saves, compare revisions
-3. **Direct Linking**: Use `{{#layers:File.jpg|layers=anatomy-labels}}` to embed specific annotation sets
+3. **Direct Linking**: Use `[[File:Example.jpg|layerset=anatomy-labels]]` to embed specific annotation sets
 4. **Collaboration**: Different users can work on different named sets
 5. **Migration Path**: Existing anonymous revisions become "default" set
 
@@ -54,7 +54,7 @@ CREATE TABLE layer_sets (
 2. `ls_name` exists but is optional and unused for organization
 3. All revisions are returned in `all_layersets` API response
 4. No revision limits - unlimited growth
-5. `layers=` parameter doesn't exist in wikitext parser
+5. `layerset=` parameter was not yet implemented in wikitext parser
 
 ### Problems with Current Approach
 
@@ -212,25 +212,25 @@ ADD FOREIGN KEY (ls_set_name_id) REFERENCES layer_set_names(lsn_id);
 
 ### Standard File Syntax
 
-Named layer sets use the standard MediaWiki file syntax with the `layers=` parameter:
+Named layer sets use the standard MediaWiki file syntax with the `layerset=` parameter:
 
 ```wikitext
-[[File:Example.jpg|layers=on]]              <!-- Show default layer set -->
-[[File:Example.jpg|layers=anatomy-labels]]  <!-- Show specific named set -->
-[[File:Example.jpg|layers=none]]            <!-- Explicitly disable layers -->
+[[File:Example.jpg|layerset=on]]              <!-- Show default layer set -->
+[[File:Example.jpg|layerset=anatomy-labels]]  <!-- Show specific named set -->
+[[File:Example.jpg|layerset=none]]            <!-- Explicitly disable layers -->
 ```
 
 **Parameters:**
-- `layers=on`: Load the default layer set
-- `layers=<setname>`: Load a specific named set (e.g., `anatomy-labels`, `french-labels`)
-- `layers=none` or `layers=off`: Explicitly hide layers
-- Omitting `layers=` means no layers are displayed (opt-in model)
+- `layerset=on`: Load the default layer set
+- `layerset=<setname>`: Load a specific named set (e.g., `anatomy-labels`, `french-labels`)
+- `layerset=none` or `layerset=off`: Explicitly hide layers
+- Omitting `layerset=` means no layers are displayed (opt-in model)
 
-**Note:** The `layers=all` syntax is deprecated. Use `layers=on` or a specific set name instead. If a set named "all" exists, `layers=all` will load that set.
+**Note:** The `layerset=all` syntax is deprecated. Use `layerset=on` or a specific set name instead. If a set named "all" exists, `layerset=all` will load that set.
 
 ### File: Page Behavior
 
-Layers are NOT automatically displayed on File: pages. Users must explicitly add `layers=on` or `layers=setname` in the wikitext to display layers.
+Layers are NOT automatically displayed on File: pages. Users must explicitly add `layerset=on` or `layerset=setname` in the wikitext to display layers.
 
 ---
 
@@ -308,7 +308,7 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 
 ### Phase 4: Parser Integration
 
-1. Add `layers=` parameter to parser function
+1. Add `layerset=` parameter to file syntax handler
 2. Update wikitext examples in documentation
 
 ---
@@ -316,43 +316,43 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 ## Implementation Checklist
 
 ### Database Layer
-- [ ] Add migration script for default name assignment
-- [ ] Add new index for named set queries
-- [ ] Add `getNamedSetsForImage()` method
-- [ ] Add `getSetRevisions()` method
-- [ ] Add `pruneOldRevisions()` method
-- [ ] Add `countNamedSetsForImage()` method
-- [ ] Update `saveLayerSet()` to handle revision pruning
+- [x] Add migration script for default name assignment
+- [x] Add new index for named set queries
+- [x] Add `getNamedSetsForImage()` method
+- [x] Add `getSetRevisions()` method
+- [x] Add `pruneOldRevisions()` method
+- [x] Add `countNamedSetsForImage()` method
+- [x] Update `saveLayerSet()` to handle revision pruning
 
 ### API Layer
-- [ ] Update `ApiLayersInfo` to return named_sets structure
-- [ ] Update `ApiLayersInfo` to support setname parameter
-- [ ] Update `ApiLayersSave` to enforce named set limits
-- [ ] Update `ApiLayersSave` to trigger revision pruning
-- [ ] Add new error messages to i18n
+- [x] Update `ApiLayersInfo` to return named_sets structure
+- [x] Update `ApiLayersInfo` to support setname parameter
+- [x] Update `ApiLayersSave` to enforce named set limits
+- [x] Update `ApiLayersSave` to trigger revision pruning
+- [x] Add new error messages to i18n
 
 ### Frontend
-- [ ] Add set selector dropdown component
-- [ ] Add version history panel
-- [ ] Update save dialog with set name option
-- [ ] Update `APIManager.js` to handle new response format
-- [ ] Add set switching logic to editor
+- [x] Add set selector dropdown component
+- [x] Add version history panel
+- [x] Update save dialog with set name option
+- [x] Update `APIManager.js` to handle new response format
+- [x] Add set switching logic to editor
 
 ### Parser/Hooks
-- [ ] Update parser function to support `layers=` parameter
-- [ ] Update hook to pass set name to renderer
+- [x] Update file syntax handler to support `layerset=` parameter
+- [x] Update hook to pass set name to renderer
 
 ### Testing
-- [ ] Add unit tests for new database methods
-- [ ] Add API tests for named set operations
-- [ ] Add Jest tests for UI components
-- [ ] Add integration test for full workflow
+- [x] Add unit tests for new database methods
+- [x] Add API tests for named set operations
+- [x] Add Jest tests for UI components
+- [x] Add integration test for full workflow
 
 ### Documentation
-- [ ] Update `copilot-instructions.md` with new API contracts
-- [ ] Update `README.md` with named sets feature
-- [ ] Update `WIKITEXT_USAGE.md` with layers= parameter
-- [ ] Add user guide for named sets
+- [x] Update `copilot-instructions.md` with new API contracts
+- [x] Update `README.md` with named sets feature
+- [x] Update `WIKITEXT_USAGE.md` with `layerset=` parameter
+- [x] Add user guide for named sets
 
 ---
 

@@ -422,18 +422,21 @@ All god classes use the delegation pattern:
 
 | Class | Lines | Delegates To |
 |-------|-------|--------------|
-| LayerPanel | ~2,166 | 9 controllers |
-| CanvasManager | ~2,044 | 10+ controllers |
-| ViewerManager | ~2,014 | Sub-renderers |
+| LayerPanel | ~2,180 | 9 controllers |
+| CanvasManager | ~2,053 | 10+ controllers |
 | Toolbar | ~1,891 | 4 modules |
-| LayersEditor | ~1,795 | 3 modules |
-| APIManager | ~1,523 | APIErrorHandler |
-| SelectionManager | ~1,431 | 3 modules |
-| ArrowRenderer | ~1,310 | ShadowRenderer |
-| PropertyBuilders | ~1,250 | UI builders |
-| ToolManager | ~1,219 | 2 handlers |
-| GroupManager | ~1,171 | SelectionManager |
-| TransformController | ~1,097 | CanvasManager |
+| LayersEditor | ~1,836 | 3 modules |
+| InlineTextEditor | ~1,670 | Rich text modules |
+| APIManager | ~1,566 | APIErrorHandler |
+| PropertyBuilders | ~1,464 | UI builders |
+| SelectionManager | ~1,415 | 3 modules |
+| CanvasRenderer | ~1,365 | SelectionRenderer |
+| ViewerManager | ~1,320 | Sub-renderers |
+| ToolManager | ~1,214 | 2 handlers |
+| GroupManager | ~1,205 | SelectionManager |
+| SlideController | ~1,131 | Slide rendering |
+| TransformController | ~1,117 | CanvasManager |
+| LayersValidator | ~1,116 | Validation rules |
 
 ---
 

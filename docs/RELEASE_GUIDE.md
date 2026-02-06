@@ -1,6 +1,6 @@
 # Layers Extension - Release Guide
 
-**Last Updated:** January 26, 2026  
+**Last Updated:** February 6, 2026  
 **Purpose:** Comprehensive checklist for preparing and publishing releases
 
 ---
@@ -41,7 +41,7 @@ npm run test:php
 | `extension.json` | `version` field | Forgetting to bump version |
 | `README.md` | Version badge, features list, installation notes | Old version number, missing new features |
 | `CHANGELOG.md` | New version section with changes | Wrong date, missing items, version mismatch |
-| `Mediawiki-Extension-Layers.txt` | Version, features, compatibility | Often completely neglected |
+| `Mediawiki-Extension-Layers.mediawiki` | Version, features, compatibility | Often completely neglected |
 
 ### Documentation Files (Update as Needed)
 
@@ -140,7 +140,7 @@ npm run test:php
 
 ---
 
-### 4. Mediawiki-Extension-Layers.txt
+### 4. Mediawiki-Extension-Layers.mediawiki
 
 **This file is the MediaWiki extension registry page content.**
 

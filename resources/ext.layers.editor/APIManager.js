@@ -522,12 +522,21 @@
 		}
 	}
 
+	/**
+	 * Generate a unique layer ID.
+	 * Delegates to the shared IdGenerator utility.
+	 * @return {string} A unique layer ID
+	 */
+	generateLayerId() {
+		return ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId )
+			? window.Layers.Utils.generateLayerId()
+			: 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
+	}
+
 	processRawLayers( rawLayers ) {
 		return rawLayers.map( layer => {
 			if ( !layer.id ) {
-				layer.id = ( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId )
-					? window.Layers.Utils.generateLayerId()
-					: 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
+				layer.id = this.generateLayerId();
 			}
 			// Use shared normalizer (guaranteed to be loaded via ext.layers.shared dependency)
 			if ( LayerDataNormalizer && typeof LayerDataNormalizer.normalizeLayer === 'function' ) {

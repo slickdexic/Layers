@@ -146,10 +146,10 @@ For additional control over editor behavior:
 
 ```text
 <!-- Opens editor in a new browser tab -->
-[[File:Diagram.png|layers=anatomy|layerslink=editor-newtab]]
+[[File:Diagram.png|layerset=anatomy|layerslink=editor-newtab]]
 
 <!-- Opens editor in a modal overlay without navigating away -->
-[[File:Diagram.png|layers=anatomy|layerslink=editor-modal]]
+[[File:Diagram.png|layerset=anatomy|layerslink=editor-modal]]
 ```
 
 | Value | Effect |
@@ -193,4 +193,4 @@ You can also link directly to the editor via URL:
 - Layered thumbnails are cached just like normal thumbnails
 - Only images with layer data are processed
 - Fallback to normal images if layer rendering fails
-- Specific layer selection is more efficient than `layers=all`
+- Specific layer selection is more efficient than `layerset=all`

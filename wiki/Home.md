@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C243%20passing-brightgreen" alt="11,243 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C228%20passing-brightgreen" alt="11,228 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
@@ -25,7 +25,7 @@
 - **API Documentation** — Added missing `layerslist` endpoint to API Reference
 - **Depth Guards** — All GroupManager recursive functions now protected from stack overflow
 - **Cache Key Fix** — ImageLayerRenderer now uses hash for collision-resistant cache keys
-- **Documentation** — Updated JS file count (142), API module count (5), version references
+- **Documentation** — Updated JS file count (140), API module count (5), version references
 
 ### Previous v1.5.51 Highlights
 
@@ -66,7 +66,7 @@
 - **All P0-P3 Issues Resolved** — TailCalculator, API bugs, N+1 queries, and UX issues all fixed
 - **UX Improvements** — Easier drag handle clicking (4px tolerance), smaller overlay buttons
 - **Code Quality** — New `LayersApiHelperTrait` extracts common API patterns
-- **11,243 tests passing** (165 suites), 95.19% statement coverage, 84.96% branch coverage
+- **11,228 tests passing** (165 suites), 95.19% statement coverage, 84.96% branch coverage
 
 ### Previous v1.5.39 Highlights
 
@@ -305,9 +305,9 @@ See [[Changelog]] for full details.
 | **Version (main)** | 1.5.52 |
 | **Version (REL1_43)** | 1.5.51-REL1_43 |
 | **Version (REL1_39)** | 1.5.51-REL1_39 |
-| **Release Date** | February 3, 2026 |
-| **Test Suites** | 164 |
-| **Total Tests** | 11,243 |
+| **Release Date** | February 5, 2026 |
+| **Test Suites** | 165 |
+| **Total Tests** | 11,228 |
 | **PHPUnit Test Files** | 24 |
 | **Statement Coverage** | 95.19% |
 | **Branch Coverage** | 84.96% |
@@ -315,7 +315,7 @@ See [[Changelog]] for full details.
 | **Line Coverage** | 95.32% |
 | **JavaScript Files** | 140 |
 | **ES6 Classes** | 140 |
-| **God Classes** | 18 (2 generated, 14 JS, 2 PHP) |
+| **God Classes** | 19 (2 generated, 15 JS, 2 PHP) |
 | **i18n Messages** | 749 |
 
 ---

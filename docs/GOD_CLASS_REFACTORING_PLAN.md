@@ -16,30 +16,30 @@ This document outlines a comprehensive, phased plan to address the god class fil
 
 | Metric | Previous | Current | Target | Status |
 |--------|----------|---------|--------|--------|
-| God classes | 21 files* | 18 files* | <12 files | 📊 Tracked |
+| God classes | 21 files* | 19 files* | <12 files | 📊 Tracked |
 | Branch coverage | 84.48% | **84.96%** | 80%+ | ✅ Exceeded |
-| Tests | 10,448 | **11,243** | Maintain 100% pass | ✅ Passing |
+| Tests | 10,448 | **11,228** | Maintain 100% pass | ✅ Passing |
 | Statement coverage | 94.19% | **95.19%** | Maintain 90%+ | ✅ Excellent |
 
-*18 god classes includes 2 generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) that are exempt from refactoring, plus 2 PHP god classes (LayersDatabase.php, ServerSideLayerValidator.php).
+*19 god classes includes 2 generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) that are exempt from refactoring, plus 2 PHP god classes (LayersDatabase.php, ServerSideLayerValidator.php).
 
 **Key Changes since v1.5.35:**
 - Improved overall branch coverage: 84.48% → 85.20%
 - Improved overall statement coverage: 94.19% → 95.44%
 - Expanded test coverage from 10,448 to 11,157 tests
-- Reduced god class count from 23 to 18 through proper delegation patterns
+- Reduced god class count from 23 to 19 through proper delegation patterns
 
 ### God Classes by Branch Coverage (Updated)
 
 | File | Lines | Branch % | Gap to 80% | Priority |
 |------|-------|----------|------------|----------|
-| **CanvasManager.js** | ~2,045 | 76.87% | -3.13% | 🟡 P2 |
+| **CanvasManager.js** | ~2,053 | 76.87% | -3.13% | 🟡 P2 |
 | **Toolbar.js** | ~1,788 | 78.52% | -1.48% | 🟡 P2 |
 | **LayersEditor.js** | ~1,800 | 77.70% | -2.30% | 🟡 P2 |
 | LayerPanel.js | ~2,036 | **80.27%** | ✅ | ✅ OK |
 | APIManager.js | ~1,513 | **80.18%** | ✅ | ✅ OK |
 | ViewerManager.js | ~2,004 | **80.14%** | ✅ | ✅ OK |
-| TransformController.js | ~1,110 | 83.72% | ✅ | ✅ OK |
+| TransformController.js | ~1,117 | 83.72% | ✅ | ✅ OK |
 | ToolbarStyleControls.js | ~1,099 | 82.18% | ✅ | ✅ OK |
 | PropertyBuilders.js | ~1,284 | 85.71% | ✅ | ✅ OK |
 | ResizeCalculator.js | ~1,105 | 90.25% | ✅ | ✅ OK |

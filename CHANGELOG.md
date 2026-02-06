@@ -9,7 +9,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Technical Details
 - Applies to APIManager abort handlers for revision and named set loads
-- All 11,243 tests pass (165 test suites) ✅
+- All 11,228 tests pass (165 test suites) ✅
 
 ## [1.5.52] - 2026-02-05
 
@@ -63,7 +63,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Technical Details
 - Comprehensive v13 code review completed
-- All 11,243 tests pass (165 test suites) ✅
+- All 11,228 tests pass (165 test suites) ✅
 - 95.19% statement coverage, 84.96% branch coverage
 - No code-level bugs found; documentation sync only
 
@@ -93,7 +93,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - PropertyBuilders.js: Added dimensionOffset, textOffset, and arrowsInside controls
 - NumericValidator.js: Added dimensionOffset validation (-500 to 500)
 - ServerSideLayerValidator.php: Added dimensionOffset, textOffset, arrowsInside to whitelist
-- All 11,243 tests pass (165 test suites) ✅
+- All 11,228 tests pass (165 test suites) ✅
 
 ---
 

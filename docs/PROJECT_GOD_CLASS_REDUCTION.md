@@ -27,7 +27,7 @@ strategic extraction of cohesive modules.
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| JS god classes (hand-written) | **12** | ≤12 | ✅ **TARGET ACHIEVED** |
+| JS god classes (hand-written) | **15** | ≤12 | ⚠️ Regressed (was 12, 3 grew back) |
 | Test coverage | 95.53% | ≥95% | ✅ Maintained |
 | All tests passing | 10,840+ | 10,860+ | ✅ Maintained |
 | ESLint errors | 0 | 0 | ✅ Maintained |
@@ -399,24 +399,27 @@ This achieves the goal of bringing ArrowRenderer below the 1,000 line threshold.
 
 *Updated: January 29, 2026 — Project Complete*
 
-### Remaining God Classes (12 files ≥1,000 lines)
+### Remaining God Classes (15 files ≥1,000 lines)
 
 | File | Lines | Type | Status |
 |------|-------|------|--------|
-| LayerPanel.js | 2,175 | UI Controller | ✅ Well-delegated (9 controllers) |
-| CanvasManager.js | 2,044 | Facade | ✅ Well-delegated (10+ controllers) |
+| LayerPanel.js | 2,180 | UI Controller | ✅ Well-delegated (9 controllers) |
+| CanvasManager.js | 2,053 | Facade | ✅ Well-delegated (10+ controllers) |
 | Toolbar.js | 1,891 | UI | ✅ Well-delegated |
-| LayersEditor.js | 1,850 | Main Entry | ✅ Acceptable |
-| SelectionManager.js | 1,431 | Manager | ✅ Clean separation |
-| PropertyBuilders.js | 1,414 | Builder | ✅ Intentional design |
-| InlineTextEditor.js | 1,393 | Controller | ✅ Phase 1 Complete |
-| APIManager.js | 1,393 | Service | ✅ Phase 3 Complete |
-| ViewerManager.js | 1,277 | Manager | ✅ Phase 2 Complete |
-| ToolManager.js | 1,224 | Controller | ✅ Acceptable |
-| CanvasRenderer.js | 1,219 | Renderer | ✅ Acceptable |
-| GroupManager.js | 1,171 | Manager | ✅ Acceptable |
+| LayersEditor.js | 1,836 | Main Entry | ✅ Acceptable |
+| InlineTextEditor.js | 1,670 | Controller | ✅ Phase 1 Complete |
+| APIManager.js | 1,566 | Service | ✅ Phase 3 Complete |
+| PropertyBuilders.js | 1,464 | Builder | ✅ Intentional design |
+| SelectionManager.js | 1,415 | Manager | ✅ Clean separation |
+| CanvasRenderer.js | 1,365 | Renderer | ✅ Acceptable |
+| ViewerManager.js | 1,320 | Manager | ✅ Phase 2 Complete |
+| ToolManager.js | 1,214 | Controller | ✅ Acceptable |
+| GroupManager.js | 1,205 | Manager | ✅ Acceptable |
+| SlideController.js | 1,131 | Controller | ⚠️ Grew back above 1K |
+| TransformController.js | 1,117 | Controller | ⚠️ Grew back above 1K |
+| LayersValidator.js | 1,116 | Validator | ✅ Acceptable |
 
-### Files Reduced Below 1,000 Lines (8 files)
+### Files Reduced Below 1,000 Lines (6 files)
 
 | File | Before | After | Reduction | Phase |
 |------|--------|-------|-----------|-------|
@@ -425,9 +428,7 @@ This achieves the goal of bringing ArrowRenderer below the 1,000 line threshold.
 | TextBoxRenderer.js | 1,117 | 993 | -11% | Phase 6 |
 | ToolbarStyleControls.js | 1,070 | 998 | -7% | Phase 7 |
 | PropertiesForm.js | 1,006 | 994 | -1% | Phase 8 |
-| SlideController.js | 1,030 | 995 | -3% | Phase 8 |
 | ResizeCalculator.js | 1,105 | 995 | -10% | Phase 8 |
-| TransformController.js | 1,110 | 992 | -11% | Phase 8 |
 
 ### New Extracted Modules (6 files)
 

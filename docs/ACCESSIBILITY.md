@@ -1,6 +1,6 @@
 # Accessibility Guide
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026
 
 This document describes the accessibility features of the Layers extension and provides guidance for contributors to maintain and improve accessibility compliance.
 
@@ -49,23 +49,41 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 
 ### Keyboard Navigation
 
-#### Global Shortcuts
+#### Tool Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
 | `V` | Select pointer/selection tool |
 | `T` | Select text tool |
+| `X` | Select text box tool |
 | `P` | Select pen/path tool |
 | `R` | Select rectangle tool |
 | `C` | Select circle tool |
-| `B` | Select blur tool |
+| `E` | Select ellipse tool |
+| `Y` | Select polygon tool |
+| `S` | Select star tool |
 | `A` | Select arrow tool |
 | `L` | Select line tool |
-| `G` | Toggle grid |
+| `B` | Select callout tool |
+
+#### View Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `+` / `=` | Zoom in |
+| `-` | Zoom out |
+| `0` | Fit to window |
 | `;` | Toggle smart guides (snap to objects) |
+| `'` | Toggle canvas snap |
+| `Shift + B` | Toggle background visibility |
+
+#### General Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
 | `Delete` / `Backspace` | Delete selected layer(s) |
 | `Escape` | Cancel current operation / deselect |
-| `Shift + ?` | Show keyboard shortcuts help dialog | |
+| `Shift + ?` | Show keyboard shortcuts help dialog |
 
 #### Layer Panel Navigation (NEW)
 

@@ -1,6 +1,6 @@
 # Layers Extension Developer Onboarding & Architecture Overview
 
-**Last Updated:** January 2026
+**Last Updated:** February 2026
 
 ## Introduction
 This document provides an overview of the Layers extension architecture and onboarding steps for new developers.
@@ -14,15 +14,15 @@ This document provides an overview of the Layers extension architecture and onbo
 
 | Module | Purpose | Lines |
 |--------|---------|-------|
-| `LayersEditor.js` | Main orchestrator | ~1,715 |
-| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,010 |
-| `LayerPanel.js` | Layer list UI component | ~1,806 |
-| `SelectionManager.js` | Selection state management | ~1,431 |
-| `ToolManager.js` | Tool state and switching | ~1,224 |
-| `ArrowRenderer.js` | Arrow rendering (curved support) | ~1,301 |
-| `ShapeRenderer.js` | Shape rendering (shared) | ~994 |
-| `LayerRenderer.js` | Shared rendering engine | ~963 |
-| `TransformController.js` | Resize, rotate, drag operations | ~1,109 |
+| `LayersEditor.js` | Main orchestrator | ~1,836 |
+| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,053 |
+| `LayerPanel.js` | Layer list UI component | ~2,180 |
+| `SelectionManager.js` | Selection state management | ~1,415 |
+| `ToolManager.js` | Tool state and switching | ~1,214 |
+| `ArrowRenderer.js` | Arrow rendering (curved support) | ~974 |
+| `ShapeRenderer.js` | Shape rendering (shared) | ~995 |
+| `LayerRenderer.js` | Shared rendering engine | ~969 |
+| `TransformController.js` | Resize, rotate, drag operations | ~1,117 |
 | `DialogManager.js` | Modal dialogs with ARIA | ~736 |
 | `ShadowRenderer.js` | Shadow effect rendering | ~576 |
 | `RevisionManager.js` | Revision and named set management | ~499 |
