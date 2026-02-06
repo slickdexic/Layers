@@ -85,9 +85,14 @@ class TextSanitizer {
 			'chrome-extension:', 'ms-its:', 'mhtml:', 'file:'
 		];
 
-		foreach ( $dangerousProtocols as $protocol ) {
-			$text = str_ireplace( $protocol, '', $text );
-		}
+		// Loop until no more replacements occur to prevent bypass via nesting
+		// e.g. "javajavaScript:script:alert(1)" → "javascript:alert(1)" on single pass
+		do {
+			$before = $text;
+			foreach ( $dangerousProtocols as $protocol ) {
+				$text = str_ireplace( $protocol, '', $text );
+			}
+		} while ( $text !== $before );
 
 		return $text;
 	}
