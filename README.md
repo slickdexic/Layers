@@ -94,7 +94,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Line          | L        | Straight lines                               |
 | Marker    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
-| Custom Shape  | —        | 1,310 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
+| Custom Shape  | —        | 5,116 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
 | Emoji         | —        | 2,817 Noto Color Emoji with search and categories |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers).
@@ -310,7 +310,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 **Architecture:**
 
 - **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~14,915 lines across 40 files**
-- **Frontend:** HTML5 Canvas editor with **140 JS files (~96,498 lines)**, 100+ ES6 classes
+- **Frontend:** HTML5 Canvas editor with **142 JS files (~96,498 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **18 god classes** (files >1,000 lines), all use proper delegation patterns

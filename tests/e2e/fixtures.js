@@ -79,7 +79,7 @@ class LayersEditorPage {
 			pathTool: '[data-tool="path"], .tool-path, [data-tool="pen"], .tool-pen',
 			penTool: '[data-tool="pen"], .tool-pen',
 			
-			// Shape Library (1,310 shapes in 10 categories)
+			// Shape Library (5,116 shapes in 12 categories)
 			shapeLibraryButton: '.shape-library-button',
 			shapeLibraryPanel: '.layers-shape-library-panel',
 			shapeLibraryOverlay: '.layers-shape-library-overlay',

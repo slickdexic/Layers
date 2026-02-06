@@ -74,6 +74,11 @@ class ApiLayersRename extends ApiBase {
 			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 		}
 
+		// Validate old name format using central validator
+		if ( !SetNameSanitizer::isValid( $oldName ) ) {
+			$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
+		}
+
 		// Validate new name format using central validator
 		if ( !SetNameSanitizer::isValid( $newName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );

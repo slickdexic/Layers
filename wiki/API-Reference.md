@@ -6,11 +6,12 @@ Complete reference for the Layers extension API endpoints.
 
 ## Overview
 
-Layers provides four API endpoints through MediaWiki's Action API:
+Layers provides five API endpoints through MediaWiki's Action API:
 
 | Action | Method | Purpose | Auth Required |
 |--------|--------|---------|---------------|
 | `layersinfo` | GET | Read layer data | Read access |
+| `layerslist` | GET | List all slides | Read access |
 | `layerssave` | POST | Save layer data | `editlayers` + CSRF |
 | `layersdelete` | POST | Delete layer set | Owner or admin + CSRF |
 | `layersrename` | POST | Rename layer set | Owner or admin + CSRF |
@@ -152,6 +153,104 @@ Each layer object contains properties based on its type. See [[Layer Data Format
 **Get specific revision:**
 ```
 /api.php?action=layersinfo&filename=File:Diagram.png&layersetid=42
+```
+
+---
+
+## layerslist
+
+List all slides on the wiki with metadata. Used by Special:Slides.
+
+### Request
+
+```
+GET /api.php?action=layerslist&prefix=Process&limit=20&sort=modified
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `prefix` | string | No | Filter slides by name prefix |
+| `limit` | integer | No | Results per page (default: 50, max: 500) |
+| `offset` | integer | No | Pagination offset |
+| `sort` | string | No | Sort by: `name`, `created`, `modified` (default: `name`) |
+| `continue` | string | No | Continuation token for pagination |
+
+### Response
+
+```json
+{
+    "layerslist": {
+        "slides": [
+            {
+                "name": "ProcessDiagram",
+                "canvasWidth": 800,
+                "canvasHeight": 600,
+                "backgroundColor": "#ffffff",
+                "layerCount": 12,
+                "revisionCount": 5,
+                "created": "2026-01-15T10:00:00Z",
+                "modified": "2026-01-20T14:30:00Z",
+                "createdBy": "AdminUser",
+                "createdById": 1,
+                "modifiedBy": "EditorUser",
+                "modifiedById": 2
+            }
+        ],
+        "total": 42,
+        "continue": 50
+    }
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `slides` | array | Array of slide objects |
+| `total` | integer | Total slides matching filter |
+| `continue` | integer | Offset for next page (omitted if no more results) |
+
+#### slides[]
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Slide name (unique identifier) |
+| `canvasWidth` | integer | Canvas width in pixels |
+| `canvasHeight` | integer | Canvas height in pixels |
+| `backgroundColor` | string | Background color |
+| `layerCount` | integer | Number of layers |
+| `revisionCount` | integer | Number of revisions |
+| `created` | string | ISO 8601 timestamp |
+| `modified` | string | ISO 8601 timestamp |
+| `createdBy` | string | Username who created slide |
+| `createdById` | integer | User ID who created slide |
+| `modifiedBy` | string | Username who last modified |
+| `modifiedById` | integer | User ID who last modified |
+
+### Errors
+
+| Code | Message | Cause |
+|------|---------|-------|
+| `ratelimited` | Rate limited | Too many requests |
+| `dbschema-missing` | Schema missing | Run maintenance/update.php |
+
+### JavaScript Example
+
+```javascript
+const api = new mw.Api();
+
+const response = await api.get({
+    action: 'layerslist',
+    prefix: 'Process',
+    limit: 20,
+    sort: 'modified'
+});
+
+for (const slide of response.layerslist.slides) {
+    console.log(slide.name, slide.layerCount, 'layers');
+}
 ```
 
 ---

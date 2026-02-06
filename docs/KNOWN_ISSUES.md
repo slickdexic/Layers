@@ -1,7 +1,7 @@
 # Known Issues
 
-**Last Updated:** February 5, 2026 (Comprehensive Critical Review v19 - UPDATED)
-**Version:** 1.5.51
+**Last Updated:** February 5, 2026 (Comprehensive Critical Review v21)
+**Version:** 1.5.52
 
 This document lists known issues and current gaps for the Layers extension.
 
@@ -11,173 +11,241 @@ This document lists known issues and current gaps for the Layers extension.
 
 | Category | Count | Status |
 |----------|-------|--------|
-| P0 (Critical Bugs) | **0** | ✅ None |
-| P1 (High Priority) | **0** | ✅ All fixed |
-| P2 (Medium Priority) | **0** | ✅ All fixed |
-| P3 (Low Priority) | **2** | ⚠️ Deferred |
+| P0 (Critical) | **0** | ✅ None |
+| P1 (High Priority) | **4** | ❌ Open |
+| P2 (Medium Priority) | **5** | ❌ Open |
+| P3 (Low Priority) | **4** | ⚠️ Deferred/Low |
 
 ---
 
-## ✅ Fixed Issues (v19 Review - February 5, 2026)
+## ✅ All Security Controls Verified (v21)
 
-### P1.1 Dead File Reference - GridRulersController.js
+| Control | Status |
+|---------|--------|
+| CSRF Protection | ✅ All writes require tokens |
+| SQL Injection | ✅ Parameterized queries |
+| Rate Limiting | ✅ All 5 APIs have limits |
+| XSS Prevention | ✅ Text/SVG sanitization |
+| Input Validation | ✅ All parameters validated |
+| Authorization | ✅ Owner/admin checks |
 
-**Status:** ✅ FIXED  
-**Severity:** P1 (High)  
-**Component:** Documentation
-
-**Issue:** `GridRulersController.js` was referenced in 11 places but didn't exist.
-
-**Resolution:** Removed all dead references from:
-- docs/ARCHITECTURE.md (4 locations)
-- wiki/Frontend-Architecture.md
-- wiki/Architecture-Overview.md
-- resources/ext.layers.editor/canvas/README.md (2 locations)
-- docs/archive/MODULAR_ARCHITECTURE.md
-- .eslintrc.json
+**No exploitable security vulnerabilities identified.**
 
 ---
 
-### P1.2 Dead File Reference - EmojiLibraryData.js
+## ✅ Previously Reported Issues - Fixed (v21 Verification)
 
-**Status:** ✅ FIXED  
-**Severity:** P1 (High)  
-**Component:** Documentation
-
-**Issue:** Documentation claimed `EmojiLibraryData.js` with ~26,277 lines existed.
-
-**Resolution:** Updated docs/ARCHITECTURE.md and .github/copilot-instructions.md
-to reflect actual file structure (~14,354 lines total).
-
----
-
-### P2.1 Missing layerslist API Documentation
-
-**Status:** ✅ FIXED  
-**Severity:** P2 (Medium)  
-**Component:** API Documentation
-
-**Issue:** `ApiLayersList.php` (5th API module) was not documented.
-
-**Resolution:** Added documentation to README.md, copilot-instructions.md, and
-docs/README.md.
+| Issue | Status | Fixed In |
+|-------|--------|----------|
+| Shape Library Count Wrong | ✅ FIXED | v20 |
+| Version Drift (1.5.51 vs 1.5.52) | ✅ FIXED | v20 |
+| Rate Limits Missing for Read APIs | ✅ FIXED | v21 verification |
+| ApiLayersRename oldname Not Validated | ✅ FIXED | v21 verification |
+| ApiLayersDelete slidename Not Validated | ✅ FIXED | v21 verification |
+| GridRulersController Dead References | ✅ FIXED | v19 |
+| EmojiLibraryData Documentation | ✅ FIXED | v19 |
+| layerslist API Missing from Docs | ✅ FIXED | v19 |
+| LayerRenderer viewBox Validation | ✅ FIXED | v19 |
+| ArrowRenderer Division by Zero | ✅ FIXED | v19 |
+| ShapeRenderer Negative Radius | ✅ FIXED | v19 |
+| ShadowRenderer Unbounded Canvas | ✅ FIXED | v19 |
 
 ---
 
-### P2.2 LayerRenderer viewBox Array Access Without Validation
+## ��� P1 - High Priority Issues (v21 Review)
 
-**Status:** ✅ FIXED  
-**Severity:** P2 (Medium)  
-**Component:** Renderer
+### P1.1 API-Reference.md Missing layerslist Endpoint
 
-**Issue:** viewBox array accessed without length validation.
+**Status:** ❌ OPEN  
+**Severity:** P1 (High - Documentation Completeness)  
+**File:** [wiki/API-Reference.md](../wiki/API-Reference.md#L9-L17)
 
-**Resolution:** Added array validation check before accessing viewBox elements.
+**Issue:** The API Reference states "Layers provides **four** API endpoints" but
+there are actually five. The `layerslist` endpoint is undocumented.
 
----
-
-### P2.3 ArrowRenderer Division by Zero
-
-**Status:** ✅ FIXED  
-**Severity:** P2 (Medium)  
-**Component:** Renderer
-
-**Issue:** Division by zero when arrowSize is 0.
-
-**Resolution:** Added guard to check arrowSize > 0 before division.
+**Fix Required:** Add `layerslist` documentation and change "four" to "five".
 
 ---
 
-### P3.1 ShapeRenderer Negative Radius Edge Case
+### P1.2 GroupManager Recursive Functions Lack Depth Guards
 
-**Status:** ✅ FIXED  
+**Status:** ❌ OPEN  
+**Severity:** P1 (High - Potential Stack Overflow)  
+**File:** [GroupManager.js](../resources/ext.layers.editor/GroupManager.js)
+
+**Issue:** The following recursive functions lack depth guards:
+- `isDescendantOf()` (lines 286-302)
+- `getGroupChildren()` (lines 878-897)
+- `getMaxChildDepth()` (lines 940-956)
+- `collectChildren()` in deleteGroup (lines 1044-1054)
+
+**Note:** `getLayerDepth()` correctly has a depth guard - same pattern should apply.
+
+**Risk:** Corrupted data with circular references would cause stack overflow.
+
+---
+
+### P1.3 APIManager Aborted Request Promises Never Settle
+
+**Status:** ❌ OPEN  
+**Severity:** P1 (High - Promise Leak)  
+**File:** [APIManager.js](../resources/ext.layers.editor/APIManager.js#L641-L646)
+
+**Issue:** When requests are aborted and `rejectAbortedRequests` is false (default),
+promises neither resolve nor reject:
+
+```javascript
+if ( code === 'http' && result && result.textStatus === 'abort' ) {
+    if ( this.rejectAbortedRequests ) {
+        reject( { aborted: true, code, result } );
+    }
+    return;  // Promise hangs forever!
+}
+```
+
+**Impact:** Memory leaks, stuck UI loading states.
+
+**Note:** This is intentional to prevent state updates on abort, but should be
+documented and callers should use timeouts.
+
+---
+
+### P1.4 ImageLayerRenderer Cache Key Collision Risk
+
+**Status:** ❌ OPEN  
+**Severity:** P1 (High - Potential Bug)  
+**File:** [ImageLayerRenderer.js](../resources/ext.layers.shared/ImageLayerRenderer.js#L159)
+
+**Issue:** Cache key uses `layer.src.substring(0, 50)` as fallback when layer.id
+is missing. Base64 data URLs share a common prefix (~23 chars), leaving only
+~27 chars for differentiation.
+
+**Impact:** Two different images could share the same cache key.
+
+**Fix Required:** Use hash of full `src` as fallback key.
+
+---
+
+## ��� P2 - Medium Priority Issues (v21 Review)
+
+### P2.1 JavaScript File Count Wrong in Documentation
+
+**Status:** ❌ OPEN  
+**Severity:** P2 (Medium - Documentation Accuracy)
+
+**Issue:** Multiple files claim **140 JS files** but actual count is **142 files**.
+
+**Affected Files:**
+- .github/copilot-instructions.md (line 400)
+- README.md (line 313)
+- wiki/Changelog.md (line 44)
+- docs/KNOWN_ISSUES.md (line 312 - now corrected)
+
+---
+
+### P2.2 Version 1.5.51 in copilot-instructions
+
+**Status:** ❌ OPEN  
+**Severity:** P2 (Medium - Documentation)  
+**File:** [.github/copilot-instructions.md](../.github/copilot-instructions.md#L408)
+
+**Issue:** Line 408 says "Version number (1.5.51)" but current is 1.5.52.
+
+---
+
+### P2.3 "4 API modules" in copilot-instructions
+
+**Status:** ❌ OPEN  
+**Severity:** P2 (Medium - Documentation)  
+**File:** [.github/copilot-instructions.md](../.github/copilot-instructions.md#L30)
+
+**Issue:** Line 30 says ForeignFileHelperTrait is "shared by all **4** API modules"
+but there are 5 modules.
+
+---
+
+### P2.4 EventManager isInputElement Incomplete
+
+**Status:** ❌ OPEN  
+**Severity:** P2 (Medium - Edge Case Bug)  
+**File:** [EventManager.js](../resources/ext.layers.editor/EventManager.js#L120)
+
+**Issue:** The `isInputElement()` function misses:
+- `<SELECT>` elements
+- `role="textbox"` ARIA attribute
+- `contenteditable="plaintext-only"`
+- OOUI text widgets
+
+**Impact:** Keyboard shortcuts may fire unexpectedly.
+
+---
+
+### P2.5 StateManager forceUnlock Re-lock Risk
+
+**Status:** ❌ OPEN  
+**Severity:** P2 (Medium - Potential Bug)  
+**File:** [StateManager.js](../resources/ext.layers.editor/StateManager.js#L397-L412)
+
+**Issue:** During `forceUnlock()`, queued `update()` operations call `lockState()`
+internally, which could re-lock during the recovery loop.
+
+---
+
+## ⚠️ P3 - Low Priority / Deferred Issues
+
+### P3.1 README Date Inconsistency
+
+**Status:** ❌ OPEN  
 **Severity:** P3 (Low)  
-**Component:** Renderer
+**File:** [README.md](../README.md#L11)
 
-**Issue:** `ctx.arc()` throws if radius is negative.
-
-**Resolution:** Added `Math.max(0, ...)` guard for radius.
+**Issue:** Says "February 3, 2026" but CHANGELOG says "February 5, 2026".
 
 ---
 
-### P3.3 ShadowRenderer Unbounded Canvas Dimensions
+### P3.2 wiki/Home.md Headline Version
 
-**Status:** ✅ FIXED  
+**Status:** ❌ OPEN  
 **Severity:** P3 (Low)  
-**Component:** Renderer
+**File:** [wiki/Home.md](../wiki/Home.md#L23)
 
-**Issue:** No cap on temp canvas dimensions.
-
-**Resolution:** Added MAX_CANVAS_DIM (8192px) cap to prevent browser crashes.
+**Issue:** Headline says "v1.5.51" but current is 1.5.52.
 
 ---
 
+### P3.3 ApiLayersRename Error Code Inconsistency
+
+**Status:** ❌ OPEN  
+**Severity:** P3 (Low - Informational)  
+**File:** [ApiLayersRename.php](../src/Api/ApiLayersRename.php#L70)
+
+**Issue:** Uses `ERROR_FILE_NOT_FOUND` for missing filename parameter; ApiLayersSave
+uses `missingparam`. User experience issue only.
+
 ---
 
-## ⚠️ Deferred Issues (Low Priority)
-
-### P3.2 ShadowRenderer Creates Temp Canvas Every Call
+### P3.4 ShadowRenderer Temp Canvas Per Call
 
 **Status:** ⚠️ DEFERRED  
-**Severity:** P3 (Low)  
-**Component:** Performance  
+**Severity:** P3 (Low - Performance)  
 **File:** [ShadowRenderer.js](../resources/ext.layers.shared/ShadowRenderer.js)
 
-**Issue:** New canvas created on every shadow draw call, causing GC pressure
-with many shadowed shapes.
+**Issue:** New canvas created per shadow draw call (GC pressure).
 
-**Recommendation:** Reuse single offscreen canvas, resize only when needed.
-
-**Deferred Reason:** Performance optimization, not a correctness issue.
+**Note:** Performance optimization deferred. Canvas dimension cap (8192px) already
+added to prevent browser crashes.
 
 ---
 
-### P3.4 APIManager Promise Handling on Abort
-
-**Status:** ⚠️ DEFERRED (by design)  
-**Severity:** P3 (Low)  
-**Component:** API Error Handling
-
-**Issue:** Aborted requests leave Promise unresolved.
-
-**Note:** Intentional behavior to prevent state updates after context switch.
-Consider explicit rejection for debugging.
-
-**Deferred Reason:** By design; changing could introduce regressions.
-
----
-
-## ✅ Fixed Issues (v18/v19 Review)
-
-### P1 README.md Metric Inconsistencies
-
-**Status:** ✅ FIXED (v18)  
-**Resolution:** Updated to reflect **140 JS files** and **40 PHP files**.
-
-### P3 const self Anti-Pattern
-
-**Status:** ✅ FIXED (v18)  
-**Resolution:** Replaced with lexical `this` and arrow functions.
-
----
-
-## ✅ Fixed Issues (v16 Review)
-
-### P1 Test Count Wrong in Documentation
-
-**Status:** ✅ FIXED  
-**Resolution:** Updated all 10+ files to show **11,231 tests**.
-
----
-
-## Security Status
+## Security Status Summary
 
 | Check | Status |
 |-------|--------|
 | CSRF Protection | ✅ Verified |
 | SQL Injection | ✅ Parameterized queries |
 | XSS Prevention | ✅ Text sanitization |
-| Rate Limiting | ✅ All actions |
+| Rate Limiting | ✅ All endpoints covered |
 | Authorization | ✅ Owner/admin checks |
+| Input Validation | ✅ All parameters validated |
 
-No security vulnerabilities identified in v19 review.
+**No exploitable security vulnerabilities identified in v21 review.**
