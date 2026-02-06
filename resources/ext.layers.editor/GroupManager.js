@@ -271,9 +271,18 @@
 		 * @param {string} potentialDescendantId ID of the layer to check
 		 * @param {string} ancestorId ID of the potential ancestor
 		 * @param {Array} layers Current layers array
+		 * @param {number} [depth=0] Current recursion depth (for guard)
 		 * @return {boolean} True if potentialDescendantId is inside ancestorId's tree
 		 */
-		isDescendantOf( potentialDescendantId, ancestorId, layers ) {
+		isDescendantOf( potentialDescendantId, ancestorId, layers, depth = 0 ) {
+			// Depth guard to prevent stack overflow with corrupted data
+			if ( depth > this.maxNestingDepth + 5 ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[GroupManager] Max recursion depth exceeded in isDescendantOf' );
+				}
+				return false;
+			}
+
 			const ancestor = layers.find( ( l ) => l.id === ancestorId );
 			if ( !ancestor || ancestor.type !== 'group' || !ancestor.children ) {
 				return false;
@@ -288,7 +297,7 @@
 			for ( const childId of ancestor.children ) {
 				const child = layers.find( ( l ) => l.id === childId );
 				if ( child && child.type === 'group' ) {
-					if ( this.isDescendantOf( potentialDescendantId, childId, layers ) ) {
+					if ( this.isDescendantOf( potentialDescendantId, childId, layers, depth + 1 ) ) {
 						return true;
 					}
 				}

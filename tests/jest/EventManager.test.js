@@ -160,10 +160,39 @@ describe( 'EventManager', () => {
 			expect( eventManager.isInputElement( textarea ) ).toBe( true );
 		} );
 
+		it( 'should return true for SELECT elements', () => {
+			const select = document.createElement( 'select' );
+			expect( eventManager.isInputElement( select ) ).toBe( true );
+		} );
+
 		it( 'should return true for contentEditable elements', () => {
 			const div = document.createElement( 'div' );
 			div.contentEditable = 'true';
 			expect( eventManager.isInputElement( div ) ).toBe( true );
+		} );
+
+		it( 'should return true for contentEditable plaintext-only elements', () => {
+			const div = document.createElement( 'div' );
+			div.contentEditable = 'plaintext-only';
+			expect( eventManager.isInputElement( div ) ).toBe( true );
+		} );
+
+		it( 'should return true for elements with role=textbox', () => {
+			const div = document.createElement( 'div' );
+			div.setAttribute( 'role', 'textbox' );
+			expect( eventManager.isInputElement( div ) ).toBe( true );
+		} );
+
+		it( 'should return true for OOUI text input widgets', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'oo-ui-textInputWidget';
+			const input = document.createElement( 'input' );
+			container.appendChild( input );
+			document.body.appendChild( container );
+
+			expect( eventManager.isInputElement( input ) ).toBe( true );
+
+			document.body.removeChild( container );
 		} );
 
 		it( 'should return false for non-input elements', () => {

@@ -478,6 +478,33 @@ describe( 'GroupManager', () => {
 			// Should include inner group + its children + layer-3
 			expect( children.length ).toBe( 4 );
 		} );
+
+		it( 'should handle depth guard for corrupted circular data', () => {
+			// Create artificially corrupted data with circular reference
+			mockStateManager.state.layers = [
+				{
+					id: 'corrupt-group-a',
+					type: 'group',
+					children: [ 'corrupt-group-b' ]
+				},
+				{
+					id: 'corrupt-group-b',
+					type: 'group',
+					children: [ 'corrupt-group-c' ]
+				},
+				{
+					id: 'corrupt-group-c',
+					type: 'group',
+					children: [ 'corrupt-group-a' ] // Circular reference
+				}
+			];
+
+			// Should not cause infinite recursion - depth guard kicks in
+			const result = groupManager.getGroupChildren( 'corrupt-group-a', true );
+
+			// Should return something without stack overflow
+			expect( Array.isArray( result ) ).toBe( true );
+		} );
 	} );
 
 	describe( 'getLayerDepth', () => {
@@ -602,6 +629,35 @@ describe( 'GroupManager', () => {
 			const result = groupManager.isDescendantOf( 'layer-2', 'layer-1', layers );
 
 			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle depth guard for corrupted circular data', () => {
+			// Create artificially corrupted data with circular reference
+			const corruptLayers = [
+				{
+					id: 'group-a',
+					type: 'group',
+					children: [ 'group-b' ]
+				},
+				{
+					id: 'group-b',
+					type: 'group',
+					children: [ 'group-c' ]
+				},
+				{
+					id: 'group-c',
+					type: 'group',
+					children: [ 'group-a' ] // Circular reference back to group-a
+				},
+				{ id: 'layer-x', type: 'rectangle' }
+			];
+
+			// Should not cause infinite recursion - depth guard kicks in
+			const result = groupManager.isDescendantOf( 'layer-x', 'group-a', corruptLayers );
+			expect( result ).toBe( false );
+
+			// Verify mw.log.warn was called for depth exceeded
+			expect( mw.log.warn ).toHaveBeenCalled();
 		} );
 	} );
 
