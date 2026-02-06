@@ -312,7 +312,7 @@ await api.postWithToken('csrf', {
 | Total Lines of Code | ~95K |
 | ES6 Classes | 142 (100% migrated) |
 | Test Suites | 164 |
-| Test Cases | 11,231 |
+| Test Cases | 11,243 |
 | Code Coverage | 95.19% |
 
 ---

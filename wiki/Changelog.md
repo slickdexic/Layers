@@ -11,7 +11,7 @@ Version history for the Layers extension.
 
 ### Technical Details
 - Applies to APIManager abort handlers for revision and named set loading
-- All 11,231 tests pass (165 test suites) ✅
+- All 11,243 tests pass (165 test suites) ✅
 
 ## Version 1.5.52 (February 5, 2026)
 
@@ -45,7 +45,7 @@ Version history for the Layers extension.
 
 ### Technical Details
 - Comprehensive v13 code review completed
-- All 11,231 tests pass (165 test suites) ✅
+- All 11,243 tests pass (165 test suites) ✅
 - 95.19% statement coverage, 84.96% branch coverage
 
 ---
@@ -57,7 +57,7 @@ Version history for the Layers extension.
 - **Arrow Position Control** — Dimension arrows can now point inside or outside
 
 ### Technical Details
-- All 11,231 tests pass (165 test suites) ✅
+- All 11,243 tests pass (165 test suites) ✅
 
 ---
 
@@ -73,7 +73,7 @@ Version history for the Layers extension.
 - **Cursor-Only Formatting** — Toggle formats (bold, italic, etc.) now set typing state for next characters when cursor is placed but no text selected
 
 ### Technical Details
-- 11,231 tests passing (165 suites)
+- 11,243 tests passing (165 suites)
 - 95.44% statement, 85.20% branch coverage
 - InlineTextEditor.js: +45 lines for toggle format and backgroundColor detection
 - RichTextToolbar.js: +25 lines for `updateFromSelection()` method
