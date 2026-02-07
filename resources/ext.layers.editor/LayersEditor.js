@@ -750,7 +750,7 @@ class LayersEditor {
 		layerData.id = this.apiManager.generateLayerId();
 		layerData.visible = layerData.visible !== false;
 
-		const layers = this.stateManager.get( 'layers' ) || [];
+		const layers = [ ...( this.stateManager.get( 'layers' ) || [] ) ];
 		layers.unshift( layerData );
 		this.stateManager.set( 'layers', layers );
 
@@ -772,7 +772,7 @@ class LayersEditor {
 		layerData.id = this.apiManager.generateLayerId();
 		layerData.visible = layerData.visible !== false;
 
-		const layers = this.stateManager.get( 'layers' ) || [];
+		const layers = [ ...( this.stateManager.get( 'layers' ) || [] ) ];
 		layers.unshift( layerData );
 		this.stateManager.set( 'layers', layers );
 
