@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\SpecialPage\SpecialPage;
@@ -79,6 +80,11 @@ class SpecialEditSlide extends SpecialPage {
 		$canvasWidth = $request->getInt( 'canvaswidth', 0 ) ?: $request->getInt( 'width', 0 );
 		$canvasHeight = $request->getInt( 'canvasheight', 0 ) ?: $request->getInt( 'height', 0 );
 		$backgroundColor = $request->getText( 'bgcolor', '' ) ?: $request->getText( 'background', '' );
+
+		// Validate backgroundColor from URL params to prevent CSS injection
+		if ( $backgroundColor !== '' && !ColorValidator::isValidColor( $backgroundColor ) ) {
+			$backgroundColor = '';
+		}
 
 		// Check if editor is in modal mode (opened as popup/iframe from article page)
 		$isModalMode = $request->getBool( 'modal' );

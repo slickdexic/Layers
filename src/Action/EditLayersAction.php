@@ -380,7 +380,6 @@ class EditLayersAction extends \Action {
 	 * @return string
 	 */
 	private function getImageBaseUrl(): string {
-		global $wgUploadPath;
-		return $wgUploadPath . '/';
+		return $this->getContext()->getConfig()->get( 'UploadPath' ) . '/';
 	}
 }
