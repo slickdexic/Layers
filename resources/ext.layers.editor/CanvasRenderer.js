@@ -736,19 +736,26 @@
 
 			try {
 				// Capture EVERYTHING currently on the canvas (all layers below)
-				const tempCanvas = document.createElement( 'canvas' );
-				tempCanvas.width = this.canvas.width;
-				tempCanvas.height = this.canvas.height;
-				const tempCtx = tempCanvas.getContext( '2d' );
+				// Reuse a cached temp canvas to avoid GC pressure from creating
+				// a full-size canvas every frame for every blur-blend layer
+				if ( !this._blurTempCanvas ||
+					this._blurTempCanvas.width !== this.canvas.width ||
+					this._blurTempCanvas.height !== this.canvas.height ) {
+					this._blurTempCanvas = document.createElement( 'canvas' );
+					this._blurTempCanvas.width = this.canvas.width;
+					this._blurTempCanvas.height = this.canvas.height;
+				}
+				const tempCtx = this._blurTempCanvas.getContext( '2d' );
 
 				if ( tempCtx ) {
-					// Copy the current canvas content (includes background + all previously drawn layers)
+					// Clear and copy the current canvas content
+					tempCtx.clearRect( 0, 0, this._blurTempCanvas.width, this._blurTempCanvas.height );
 					tempCtx.drawImage( this.canvas, 0, 0 );
 
 					// Apply blur and draw back within the clip region
 					// Note: blur radius stays in pixels, not scaled by zoom
 					this.ctx.filter = 'blur(' + radius + 'px)';
-					this.ctx.drawImage( tempCanvas, 0, 0 );
+					this.ctx.drawImage( this._blurTempCanvas, 0, 0 );
 					this.ctx.filter = 'none';
 				}
 			} catch ( e ) {

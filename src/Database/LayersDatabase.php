@@ -276,7 +276,8 @@ class LayersDatabase {
 		);
 
 		if ( !$row ) {
-			$this->addToCache( $cacheKey, null );
+			// Don't cache null results — isset() can't detect them, so they
+			// waste cache slots and evict valid entries (LOW-v24-7)
 			return null;
 		}
 

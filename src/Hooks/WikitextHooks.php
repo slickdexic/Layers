@@ -580,7 +580,7 @@ class WikitextHooks {
 		try {
 			$textLen = strlen( $text );
 			$preview = substr( $text, 0, 200 );
-			self::log( "ParserBeforeInternalParse: text length=$textLen, preview: $preview" );
+			self::logDebug( "ParserBeforeInternalParse: text length=$textLen, preview: $preview" );
 
 			// First, find ALL File: usages to establish the complete render order
 			// This captures [[File:name.ext...]] patterns (with or without layerset=)
@@ -610,7 +610,7 @@ class WikitextHooks {
 			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?(?:layerset|layers?)\s*=\s*([^|\]]+)/i';
 			// filename => [offset => value, ...]
 			$layersMap = [];
-			self::log( 'Running layerset/layers regex on text: ' . substr( $text, 0, 200 ) );
+			self::logDebug( 'Running layerset/layers regex on text: ' . substr( $text, 0, 200 ) );
 			$matchCount = preg_match_all(
 				$fileLayersPattern,
 				$text,
