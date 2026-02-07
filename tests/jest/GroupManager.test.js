@@ -1465,4 +1465,78 @@ describe( 'GroupManager', () => {
 			expect( result ).toBe( false );
 		} );
 	} );
+
+	describe( 'P1.1 regression: save-after-mutate pattern', () => {
+		test( 'createGroup saves state AFTER mutation', () => {
+			mockSelectionManager.selectedLayers = [
+				{ id: 'layer-1' },
+				{ id: 'layer-2' }
+			];
+
+			const callOrder = [];
+			mockStateManager.set = jest.fn( () => {
+				callOrder.push( 'set' );
+			} );
+			mockHistoryManager.saveState = jest.fn( () => {
+				callOrder.push( 'saveState' );
+			} );
+
+			groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
+
+			expect( callOrder ).toEqual( [ 'set', 'saveState' ] );
+		} );
+
+		test( 'createFolder saves state AFTER mutation', () => {
+			const callOrder = [];
+			mockStateManager.set = jest.fn( () => {
+				callOrder.push( 'set' );
+			} );
+			mockHistoryManager.saveState = jest.fn( () => {
+				callOrder.push( 'saveState' );
+			} );
+
+			groupManager.createFolder( null, 'Test Folder' );
+
+			expect( callOrder ).toEqual( [ 'set', 'saveState' ] );
+		} );
+
+		test( 'deleteGroup saves state AFTER mutation', () => {
+			const layers = [
+				{ id: 'group-1', type: 'group', children: [ 'child-1' ] },
+				{ id: 'child-1', type: 'rectangle', parentGroup: 'group-1' }
+			];
+			mockStateManager.state.layers = layers;
+
+			const callOrder = [];
+			mockStateManager.set = jest.fn( () => {
+				callOrder.push( 'set' );
+			} );
+			mockHistoryManager.saveState = jest.fn( () => {
+				callOrder.push( 'saveState' );
+			} );
+
+			groupManager.deleteGroup( 'group-1', true );
+
+			expect( callOrder ).toEqual( [ 'set', 'saveState' ] );
+		} );
+
+		test( 'renameGroup saves state AFTER mutation', () => {
+			const layers = [
+				{ id: 'group-1', type: 'group', name: 'Old', children: [] }
+			];
+			mockStateManager.state.layers = layers;
+
+			const callOrder = [];
+			mockStateManager.set = jest.fn( () => {
+				callOrder.push( 'set' );
+			} );
+			mockHistoryManager.saveState = jest.fn( () => {
+				callOrder.push( 'saveState' );
+			} );
+
+			groupManager.renameGroup( 'group-1', 'New' );
+
+			expect( callOrder ).toEqual( [ 'set', 'saveState' ] );
+		} );
+	} );
 } );

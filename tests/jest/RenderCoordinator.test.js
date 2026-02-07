@@ -450,6 +450,48 @@ describe( 'RenderCoordinator', () => {
 	} );
 } );
 
+describe( 'P1.9 regression: _computeLayersHash includes all layers', () => {
+	let RenderCoordinator, coordinator, mockCanvasManager;
+
+	beforeEach( () => {
+		RenderCoordinator = window.Layers.Canvas.RenderCoordinator;
+		mockCanvasManager = {
+			editor: { layers: [] },
+			renderer: null
+		};
+		coordinator = new RenderCoordinator( mockCanvasManager );
+	} );
+
+	it( 'should include layers beyond index 20 in hash', () => {
+		const layers = [];
+		for ( let i = 0; i < 25; i++ ) {
+			layers.push( { id: 'layer' + i, x: i, y: 0, width: 10, height: 10 } );
+		}
+		const hash1 = coordinator._computeLayersHash( layers );
+
+		// Change layer at index 22 (beyond old cap of 20)
+		const modifiedLayers = layers.map( ( l ) => ( { ...l } ) );
+		modifiedLayers[ 22 ].x = 999;
+		const hash2 = coordinator._computeLayersHash( modifiedLayers );
+
+		expect( hash1 ).not.toBe( hash2 );
+	} );
+
+	it( 'should produce different hashes for 25 vs 30 layers', () => {
+		const layers25 = [];
+		for ( let i = 0; i < 25; i++ ) {
+			layers25.push( { id: 'layer' + i, x: 0, y: 0, width: 10, height: 10 } );
+		}
+		const layers30 = [ ...layers25 ];
+		for ( let i = 25; i < 30; i++ ) {
+			layers30.push( { id: 'layer' + i, x: 0, y: 0, width: 10, height: 10 } );
+		}
+		const hash25 = coordinator._computeLayersHash( layers25 );
+		const hash30 = coordinator._computeLayersHash( layers30 );
+		expect( hash25 ).not.toBe( hash30 );
+	} );
+} );
+
 // Add matcher for call order
 expect.extend( {
 	toHaveBeenCalledBefore( received, other ) {

@@ -188,12 +188,12 @@
 				...nonGroupedLayers.slice( insertionPoint )
 			];
 
-			// Save state with history
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', newLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Create group' );
 			}
-
-			this.stateManager.set( 'layers', newLayers );
 
 			return group;
 		}
@@ -232,12 +232,12 @@
 			// Insert folder at the top of the layer list
 			const newLayers = [ folder, ...layers ];
 
-			// Save state with history
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', newLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Create folder' );
 			}
-
-			this.stateManager.set( 'layers', newLayers );
 
 			return folder;
 		}
@@ -390,12 +390,12 @@
 				updatedLayers.splice( insertIndex, 0, movedLayer );
 			}
 
-			// Save state with history
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', updatedLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Move to folder' );
 			}
-
-			this.stateManager.set( 'layers', updatedLayers );
 
 			return true;
 		}
@@ -515,12 +515,12 @@
 				}
 			}
 
-			// Save state with history
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', updatedLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Add to folder' );
 			}
-
-			this.stateManager.set( 'layers', updatedLayers );
 
 			return true;
 		}
@@ -561,12 +561,12 @@
 				return l;
 			} );
 
-			// Save state with history
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', updatedLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Remove from folder' );
 			}
-
-			this.stateManager.set( 'layers', updatedLayers );
 
 			return true;
 		}
@@ -603,12 +603,12 @@
 			// Remove the group layer
 			const newLayers = updatedLayers.filter( ( l ) => l.id !== groupId );
 
-			// Save state with history
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', newLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Ungroup' );
 			}
-
-			this.stateManager.set( 'layers', newLayers );
 
 			return true;
 		}
@@ -660,12 +660,12 @@
 				return l;
 			} );
 
-			// Save state with history
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', finalLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Add to group' );
 			}
-
-			this.stateManager.set( 'layers', finalLayers );
 
 			return true;
 		}
@@ -732,12 +732,12 @@
 				return l;
 			} );
 
-			// Save state with history
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', updatedLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Remove from group' );
 			}
-
-			this.stateManager.set( 'layers', updatedLayers );
 
 			return true;
 		}
@@ -1036,11 +1036,12 @@
 				return l;
 			} );
 
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', updatedLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Rename group' );
 			}
-
-			this.stateManager.set( 'layers', updatedLayers );
 
 			return true;
 		}
@@ -1088,11 +1089,12 @@
 				return true;
 			}
 
+			// Mutate state first, then save to history (save-after-mutate pattern)
+			this.stateManager.set( 'layers', newLayers );
+
 			if ( this.historyManager ) {
 				this.historyManager.saveState( 'Delete group' );
 			}
-
-			this.stateManager.set( 'layers', newLayers );
 
 			return true;
 		}
