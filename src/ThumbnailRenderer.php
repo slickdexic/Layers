@@ -245,7 +245,9 @@ class ThumbnailRenderer {
 	private function buildTextArguments( array $layer, float $scaleX, float $scaleY ): array {
 		$x = ( $layer['x'] ?? 0 ) * $scaleX;
 		$y = ( $layer['y'] ?? 0 ) * $scaleY;
-		$text = (string)( $layer['text'] ?? '' );
+		// SECURITY: Strip leading '@' to prevent ImageMagick file read injection.
+		// IM interprets '@filename' as "read contents from file" in -annotate.
+		$text = ltrim( (string)( $layer['text'] ?? '' ), '@' );
 		$fontSize = (int)round( ( $layer['fontSize'] ?? 14 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 		$fill = (string)( $layer['fill'] ?? '#000000' );
 		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
@@ -327,7 +329,8 @@ class ThumbnailRenderer {
 		] );
 
 		// Draw text if present
-		$text = (string)( $layer['text'] ?? '' );
+		// SECURITY: Strip leading '@' to prevent ImageMagick file read injection.
+		$text = ltrim( (string)( $layer['text'] ?? '' ), '@' );
 		if ( $text !== '' ) {
 			$fontSize = (int)round( ( $layer['fontSize'] ?? 16 ) * ( ( $scaleX + $scaleY ) / 2 ) );
 			$textColor = (string)( $layer['color'] ?? '#000000' );

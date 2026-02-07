@@ -44,6 +44,10 @@ class TextSanitizer {
 		// Remove event handlers and JavaScript
 		$text = $this->removeEventHandlers( $text );
 
+		// Strip leading '@' to prevent ImageMagick file read injection.
+		// IM interprets '@filename' as "read contents from file" in -annotate.
+		$text = ltrim( $text, '@' );
+
 		// Do NOT re-encode with htmlspecialchars - this is JSON storage, not HTML output
 		// HTML encoding should happen at render time only
 

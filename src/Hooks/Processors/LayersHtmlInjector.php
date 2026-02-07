@@ -184,9 +184,11 @@ class LayersHtmlInjector {
 
 			// Add class to existing
 			$newClasses = trim( $existingClasses . ' ' . $className );
-			return preg_replace(
+			return preg_replace_callback(
 				'/\bclass\s*=\s*(["\'])(.*?)\1/i',
-				'class=' . $quote . $newClasses . $quote,
+				static function () use ( $quote, $newClasses ) {
+					return 'class=' . $quote . $newClasses . $quote;
+				},
 				$attrs
 			);
 		}
@@ -207,8 +209,12 @@ class LayersHtmlInjector {
 		$pattern = '/\b' . preg_quote( $name, '/' ) . '\s*=\s*(["\'])(.*?)\1/i';
 
 		if ( preg_match( $pattern, $attrs ) ) {
-			// Update existing attribute
-			return preg_replace( $pattern, $name . '="' . $value . '"', $attrs );
+			// Update existing attribute.
+			// Use preg_replace_callback to avoid backreference expansion in $value
+			// (e.g. "$100" in layer text would otherwise corrupt via $1 expansion).
+			return preg_replace_callback( $pattern, static function () use ( $name, $value ) {
+				return $name . '="' . $value . '"';
+			}, $attrs );
 		}
 
 		// Add new attribute

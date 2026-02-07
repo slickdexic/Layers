@@ -197,7 +197,7 @@ class RenderCoordinator {
 		}
 		// Include layer count and key properties that affect rendering
 		const parts = [ layers.length.toString() ];
-		for ( let i = 0; i < layers.length && i < 20; i++ ) {
+		for ( let i = 0; i < layers.length; i++ ) {
 			const layer = layers[ i ];
 			// Include key properties that affect rendering
 			parts.push(

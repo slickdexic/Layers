@@ -117,8 +117,36 @@
 					break;
 				}
 
+				case 'ellipse': {
+					const rx = layer.radiusX || 0;
+					const ry = layer.radiusY || 0;
+					left = ( layer.x || 0 ) - rx;
+					top = ( layer.y || 0 ) - ry;
+					right = ( layer.x || 0 ) + rx;
+					bottom = ( layer.y || 0 ) + ry;
+					break;
+				}
+
+				case 'polygon': {
+					const polyRadius = layer.radius || 0;
+					left = ( layer.x || 0 ) - polyRadius;
+					top = ( layer.y || 0 ) - polyRadius;
+					right = ( layer.x || 0 ) + polyRadius;
+					bottom = ( layer.y || 0 ) + polyRadius;
+					break;
+				}
+
+				case 'star': {
+					const starRadius = layer.radius || layer.outerRadius || 0;
+					left = ( layer.x || 0 ) - starRadius;
+					top = ( layer.y || 0 ) - starRadius;
+					right = ( layer.x || 0 ) + starRadius;
+					bottom = ( layer.y || 0 ) + starRadius;
+					break;
+				}
+
 				default:
-					// Rectangle, ellipse, textbox, blur, image, polygon, star
+					// Rectangle, textbox, blur, image
 					left = layer.x || 0;
 					top = layer.y || 0;
 					right = left + ( layer.width || 0 );

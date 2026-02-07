@@ -637,4 +637,56 @@ describe( 'AlignmentController', () => {
 			expect( controller.canvasManager ).toBeNull();
 		} );
 	} );
+
+	describe( 'P1.3 regression: correct bounds for center-based shapes', () => {
+		it( 'should compute correct bounds for ellipse', () => {
+			const layer = { type: 'ellipse', x: 100, y: 80, radiusX: 50, radiusY: 30 };
+			const bounds = controller.getLayerBounds( layer );
+			expect( bounds.left ).toBe( 50 );
+			expect( bounds.top ).toBe( 50 );
+			expect( bounds.right ).toBe( 150 );
+			expect( bounds.bottom ).toBe( 110 );
+			expect( bounds.width ).toBe( 100 );
+			expect( bounds.height ).toBe( 60 );
+		} );
+
+		it( 'should compute correct bounds for polygon', () => {
+			const layer = { type: 'polygon', x: 100, y: 100, radius: 40 };
+			const bounds = controller.getLayerBounds( layer );
+			expect( bounds.left ).toBe( 60 );
+			expect( bounds.top ).toBe( 60 );
+			expect( bounds.right ).toBe( 140 );
+			expect( bounds.bottom ).toBe( 140 );
+			expect( bounds.width ).toBe( 80 );
+			expect( bounds.height ).toBe( 80 );
+		} );
+
+		it( 'should compute correct bounds for star', () => {
+			const layer = { type: 'star', x: 200, y: 200, radius: 60 };
+			const bounds = controller.getLayerBounds( layer );
+			expect( bounds.left ).toBe( 140 );
+			expect( bounds.top ).toBe( 140 );
+			expect( bounds.right ).toBe( 260 );
+			expect( bounds.bottom ).toBe( 260 );
+			expect( bounds.width ).toBe( 120 );
+			expect( bounds.height ).toBe( 120 );
+		} );
+
+		it( 'should compute correct bounds for star with outerRadius', () => {
+			const layer = { type: 'star', x: 100, y: 100, outerRadius: 50 };
+			const bounds = controller.getLayerBounds( layer );
+			expect( bounds.left ).toBe( 50 );
+			expect( bounds.top ).toBe( 50 );
+			expect( bounds.right ).toBe( 150 );
+			expect( bounds.bottom ).toBe( 150 );
+		} );
+
+		it( 'should still compute correct bounds for circle', () => {
+			const layer = { type: 'circle', x: 100, y: 100, radius: 25 };
+			const bounds = controller.getLayerBounds( layer );
+			expect( bounds.left ).toBe( 75 );
+			expect( bounds.right ).toBe( 125 );
+			expect( bounds.width ).toBe( 50 );
+		} );
+	} );
 } );

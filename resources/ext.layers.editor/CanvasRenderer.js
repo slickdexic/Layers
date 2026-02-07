@@ -214,8 +214,8 @@
 				layer.cornerRadius,
 				layer.visible,
 				layer.preserveAspectRatio,
-				layer.src ? layer.src.substring( 0, 100 ) : '',
-				layer.richText ? JSON.stringify( layer.richText ).substring( 0, 200 ) : '',
+				layer.src ? layer.src.substring( 0, 100 ) + ':' + ( layer.src.length || 0 ) : '',
+				layer.richText ? this._hashString( JSON.stringify( layer.richText ) ) : '',
 				layer.gradient ? JSON.stringify( layer.gradient ) : '',
 				// For arrow/line, include endpoints
 				layer.x1,
@@ -228,6 +228,22 @@
 					( layer.points[ layer.points.length - 1 ] ? layer.points[ layer.points.length - 1 ].x + ',' + layer.points[ layer.points.length - 1 ].y : '' ) : ''
 			];
 			return hashParts.join( '|' );
+		}
+
+		/**
+		 * Compute a simple numeric hash of a string (DJB2 algorithm).
+		 * Used for cache keys where the full string would be too large.
+		 *
+		 * @param {string} str - Input string
+		 * @return {string} Hash as 'length:hash' for uniqueness
+		 * @private
+		 */
+		_hashString( str ) {
+			let hash = 5381;
+			for ( let i = 0; i < str.length; i++ ) {
+				hash = ( ( hash << 5 ) + hash + str.charCodeAt( i ) ) | 0;
+			}
+			return str.length + ':' + hash;
 		}
 
 		/**
@@ -593,26 +609,28 @@
 				this.layerRenderer.setContext( targetCtx );
 			}
 
-			// Apply transformations to the target context
-			this.applyTransformations();
+			try {
+				// Apply transformations to the target context
+				this.applyTransformations();
 
-			// Render layers (bottom to top)
-			for ( let i = layers.length - 1; i >= 0; i-- ) {
-				const layer = layers[ i ];
-				if ( layer && layer.visible !== false ) {
-					this.drawLayerWithEffects( layer );
+				// Render layers (bottom to top)
+				for ( let i = layers.length - 1; i >= 0; i-- ) {
+					const layer = layers[ i ];
+					if ( layer && layer.visible !== false ) {
+						this.drawLayerWithEffects( layer );
+					}
 				}
-			}
+			} finally {
+				// Restore original context and state even if rendering throws
+				this.ctx = originalCtx;
+				this.zoom = originalZoom;
+				this.panX = originalPanX;
+				this.panY = originalPanY;
 
-			// Restore original context and state
-			this.ctx = originalCtx;
-			this.zoom = originalZoom;
-			this.panX = originalPanX;
-			this.panY = originalPanY;
-
-			// Restore layerRenderer to use the original context
-			if ( this.layerRenderer && typeof this.layerRenderer.setContext === 'function' ) {
-				this.layerRenderer.setContext( originalCtx );
+				// Restore layerRenderer to use the original context
+				if ( this.layerRenderer && typeof this.layerRenderer.setContext === 'function' ) {
+					this.layerRenderer.setContext( originalCtx );
+				}
 			}
 		}
 
