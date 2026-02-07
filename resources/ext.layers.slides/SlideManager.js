@@ -357,11 +357,12 @@
 		 */
 		renderLayers( layers ) {
 			// Use the shared LayerRenderer if available
-			if ( typeof window.LayerRenderer !== 'undefined' ) {
+			if ( typeof window.Layers !== 'undefined' &&
+				typeof window.Layers.LayerRenderer !== 'undefined' ) {
 				// Create renderer with onImageLoad callback to handle async SVG loading
 				// This ensures placeholder boxes are replaced when SVGs finish loading
 				if ( !this.renderer ) {
-					this.renderer = new window.LayerRenderer( this.ctx, {
+					this.renderer = new window.Layers.LayerRenderer( this.ctx, {
 						onImageLoad: () => {
 							this.render();
 						}
@@ -375,10 +376,11 @@
 			} else {
 				// Fallback: load the renderer module
 				mw.loader.using( 'ext.layers.shared' ).then( () => {
-					if ( typeof window.LayerRenderer !== 'undefined' ) {
+					if ( typeof window.Layers !== 'undefined' &&
+						typeof window.Layers.LayerRenderer !== 'undefined' ) {
 						// Create renderer with onImageLoad callback
 						if ( !this.renderer ) {
-							this.renderer = new window.LayerRenderer( this.ctx, {
+							this.renderer = new window.Layers.LayerRenderer( this.ctx, {
 								onImageLoad: () => {
 									this.render();
 								}

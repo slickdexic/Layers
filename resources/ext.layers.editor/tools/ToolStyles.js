@@ -52,8 +52,8 @@
 		shadow: false,
 		shadowColor: '#000000',
 		shadowBlur: getDefaults().SHADOW_BLUR,
-		shadowOffsetX: getDefaults().SHADOW_OFFSET,
-		shadowOffsetY: getDefaults().SHADOW_OFFSET,
+		shadowOffsetX: getDefaults().SHADOW_OFFSET_X,
+		shadowOffsetY: getDefaults().SHADOW_OFFSET_Y,
 
 		// Opacity
 		opacity: getDefaults().OPACITY
