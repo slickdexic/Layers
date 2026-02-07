@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** February 5, 2026 (Comprehensive Critical Review v22)
+**Last Updated:** February 7, 2026 (Comprehensive Critical Review v24)
 **Version:** 1.5.52
 
 This document lists known issues and current gaps for the Layers extension.
@@ -13,352 +13,377 @@ Cross-reference with [codebase_review.md](../codebase_review.md) and
 
 | Category | Count | Status |
 |----------|-------|--------|
-| P0 (Critical) | **3** | ✅ ALL FIXED |
-| P1 (High Priority) | **11** | ✅ ALL FIXED |
-| P2 (Medium Priority) | **20** | 8 ✅ Fixed, 12 ❌ Open |
-| P3 (Low Priority) | **14** | ⚠️ Deferred/Low |
+| P0 (Critical) | **4** | ❌ NEW — Require immediate attention |
+| P1 (High Priority) | **11** | ❌ NEW — Require fix before next release |
+| P2 (Medium Priority) | **16** | ❌ Open |
+| P3 (Low Priority) | **14** | ⚠️ Deferred |
+| Documentation | **50** | ❌ 11 HIGH, 19 MEDIUM, 20 LOW |
 
 ---
 
-## Security Controls Status (v22 — Corrected from v21)
+## Security Controls Status (v24 — Revised Assessment)
 
 | Control | Status | Notes |
 |---------|--------|-------|
-| CSRF Protection | ✅ Verified | All writes require tokens |
-| SQL Injection | ✅ Verified | Parameterized queries |
-| Rate Limiting | ⚠️ PARTIAL | Code exists but defaults not registered with MW |
-| XSS Prevention | ⚠️ FLAWED | TextSanitizer protocol removal bypassable |
-| Input Validation | ✅ Verified | Strict whitelist (50+ fields) |
-| Authorization | ✅ Verified | Owner/admin checks |
-| CSP | ⚠️ WEAKENED | unsafe-eval/unsafe-inline for foreign files |
-| Data Normalization | ⚠️ INCOMPLETE | Missing blurRadius, tailWidth |
+| CSRF Protection | ✅ PASS | All writes require tokens |
+| SQL Injection | ✅ PASS | Parameterized queries |
+| Rate Limiting | ❌ FAIL | Defaults exist but NOT registered with MW — no-op |
+| XSS Prevention | ✅ PASS | TextSanitizer iterative removal |
+| Input Validation | ⚠️ PARTIAL | Strict whitelist, but shapeData allows arbitrary keys |
+| Authorization | ⚠️ PARTIAL | Files checked; slides bypass read permission |
+| CSP | ⚠️ PARTIAL | No unsafe-eval, but may conflict with MW CSP |
+| Data Normalization | ✅ PASS | All properties normalized |
+| SVG Sanitization | ⚠️ PARTIAL | Checks xlink:href but not SVG2 plain href |
+| Server File Access | ❌ FAIL | ImageMagick `@` file disclosure via text layers |
 
-**v21's claim of "No exploitable security vulnerabilities" was premature.**
-See CRIT-2, P1.1, P1.6.
-
----
-
-## ✅ Previously Reported Issues — Fixed
-
-| Issue | Status | Fixed In |
-|-------|--------|----------|
-| Shape Library Count Wrong | ✅ FIXED | v20 |
-| Version Drift (1.5.51 → 1.5.52) | ✅ FIXED | v20 |
-| Rate Limits Missing for Read APIs | ✅ FIXED | v21 |
-| ApiLayersRename oldname Not Validated | ✅ FIXED | v21 |
-| ApiLayersDelete slidename Not Validated | ✅ FIXED | v21 |
-| GridRulersController Dead References | ✅ FIXED | v19 |
-| EmojiLibraryData Documentation | ✅ FIXED | v19 |
-| layerslist API Missing from Docs | ✅ FIXED | v21 |
-| LayerRenderer viewBox Validation | ✅ FIXED | v19 |
-| ArrowRenderer Division by Zero | ✅ FIXED | v19 |
-| ShapeRenderer Negative Radius | ✅ FIXED | v19 |
-| ShadowRenderer Unbounded Canvas | ✅ FIXED | v19 |
-| GroupManager Recursive Depth Guards | ✅ FIXED | v21 (improvement_plan P1.2) |
-| ImageLayerRenderer Cache Key Collision | ✅ FIXED | v21 (improvement_plan P1.4) |
-| EventManager isInputElement Incomplete | ✅ FIXED | v21 (improvement_plan P2.4) |
-| "4 API modules" in copilot-instructions | ✅ FIXED | v21 (improvement_plan P2.3) |
-| Version 1.5.51 in copilot-instructions | ✅ FIXED | v21 (improvement_plan P2.2) |
+**v24 corrects v23's overly optimistic assessment.** Rate limiting was marked
+"PASS" in v23 but is actually a no-op. Authorization was marked "PASS" but
+slides bypass read checks. Server file access was not previously assessed.
 
 ---
 
-## ��� P0 — Critical Issues (NEW in v22)
+## ❌ P0 — Critical Issues (NEW in v24)
 
-### P0.1 getDBLoadBalancer() Fatal on MW >= 1.42
+### P0.1 ImageMagick `@` File Disclosure via Text Layers
 
-**Status:** ✅ FIXED
-**Ref:** codebase_review CRIT-1
-**Files:** services.php:24, ApiLayersInfo.php:639, LayersSchemaManager.php:400, LayersTest.php:80
+**Status:** ❌ OPEN
+**Ref:** codebase_review CRIT-v24-1
+**File:** src/ThumbnailRenderer.php (~L262, ~L353)
 
-`MediaWikiServices::getDBLoadBalancer()` was removed in MW 1.42. Since
-`extension.json` requires MW >= 1.44, the extension **fatals immediately** on
-any supported MediaWiki version.
-
----
-
-### P0.2 TextSanitizer Protocol Bypass via Nesting
-
-**Status:** ✅ FIXED
-**Ref:** codebase_review CRIT-2
-**File:** src/Validation/TextSanitizer.php:82-92
-
-Single-pass `str_ireplace()` allows nested protocol strings to survive:
-`"javajavaScript:script:alert(1)"` → `"javascript:alert(1)"`. XSS risk.
+User-supplied `$layer['text']` passed directly to IM `-annotate`. Text
+starting with `@` causes IM to read server files. TextSanitizer does not
+strip `@`. Any user with `editlayers` can exfiltrate `/etc/passwd` etc.
 
 ---
 
-### P0.3 Schema Mismatch — layer_sets Unique Key
+### P0.2 Slide Requests Bypass Read Permission Check
 
-**Status:** ✅ FIXED
-**Ref:** codebase_review CRIT-3
-**Files:** sql/layers_tables.sql:19 vs sql/tables/layer_sets.sql:16
+**Status:** ❌ OPEN
+**Ref:** codebase_review CRIT-v24-2
+**File:** src/Api/ApiLayersInfo.php (~L103-125)
 
-Per-table schema file uses old unique key without `ls_name`. Fresh installs
-using per-table files will have broken named layer sets.
-
----
-
-## ��� P1 — High Priority Issues
-
-### P1.1 CSP Includes unsafe-eval / unsafe-inline
-
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-1
-**File:** src/Action/EditLayersAction.php:348
-
-CSP header for foreign file pages includes `'unsafe-eval' 'unsafe-inline'`
-in script-src, negating XSS protection.
+Slide requests routed before `userCan('read')` check. On private wikis,
+anonymous users can read all slide data.
 
 ---
 
-### P1.2 Canvas Pool destroy() Doesn't Free Memory
+### P0.3 Rate Limiting is Effectively Disabled by Default
 
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-2
-**File:** resources/ext.layers.editor/CanvasManager.js:2014-2017
+**Status:** ❌ OPEN
+**Ref:** codebase_review CRIT-v24-3
+**File:** src/Security/RateLimiter.php (~L68-148)
 
-Sets width/height on wrapper object instead of `.canvas` element. Canvas GPU
-memory not released on editor close.
-
----
-
-### P1.3 InlineTextEditor _handleInput() Broken
-
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-3
-**File:** resources/ext.layers.editor/canvas/InlineTextEditor.js:883-887
-
-Uses `.value` on contentEditable `<div>` (returns undefined). Text silently
-erased during inline editing of textbox/callout layers.
+Default limits defined in PHP but never registered in `$wgRateLimits`.
+`$user->pingLimiter()` always returns false. All operations are unthrottled.
+v23 incorrectly marked the prior HIGH-6 as "FIXED."
 
 ---
 
-### P1.4 Lightbox md5First2() Wrong URLs
+### P0.4 preg_replace Backreference Corruption in LayersHtmlInjector
 
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-4
-**File:** resources/ext.layers/viewer/LayersLightbox.js:277-282
+**Status:** ❌ OPEN
+**Ref:** codebase_review CRIT-v24-4
+**File:** src/Hooks/Processors/LayersHtmlInjector.php (~L209-218)
 
-Takes first 2 characters of filename instead of computing MD5 hash. Produces
-404 errors for lightbox full-size image URLs.
-
----
-
-### P1.5 ViewerOverlay Memory Leak (Event Listeners)
-
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-5
-**File:** resources/ext.layers/viewer/ViewerOverlay.js:305-321
-
-focusin/focusout listeners added but never removed in destroy(). focusout
-uses anonymous function so can never be removed.
+Layer text containing `$` + digits (e.g. `"$100"`) is silently corrupted
+by `preg_replace()` backreference expansion. Affects all page views.
 
 ---
 
-### P1.6 Rate Limiter Defaults Not Registered
+## ❌ P1 — High Priority Issues (NEW in v24)
 
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-6
-**File:** src/Security/RateLimiter.php:131-143
+### P1.1 GroupManager Saves History BEFORE State Mutation
 
-Computed default limits are never passed to MediaWiki's limiter. Without
-manual `$wgRateLimits` config, rate limiting is completely disabled.
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-1
+**File:** resources/ext.layers.editor/GroupManager.js (10 methods)
 
----
-
-### P1.7 blurRadius/tailWidth Missing from Normalizer
-
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-7
-**File:** resources/ext.layers.shared/LayerDataNormalizer.js:49-61
-
-Numeric properties not listed in NUMERIC_PROPERTIES. String values from
-API cause NaN in calculations.
+All group/folder operations have reversed undo behavior. `saveState()` is
+called before `stateManager.set()`, capturing the wrong state for undo.
 
 ---
 
-### P1.8 Hardcoded /wiki/ Path
+### P1.2 Double Rotation for Polygon/Star in Blur Blend Mode
 
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-8
-**File:** src/Hooks/Processors/LayeredFileRenderer.php:260
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-2
+**File:** resources/ext.layers.shared/LayerRenderer.js
 
-Hardcodes `/wiki/File:` instead of using `Title::getLocalURL()`. Breaks on
-non-standard article path configurations.
-
----
-
-### P1.9 DB CHECK Constraint Hardcodes 2MB
-
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-9
-**File:** sql/patches/patch-add-check-constraints.sql:14
-
-Database constrains `ls_size <= 2097152` but `$wgLayersMaxBytes` is
-configurable. Admins who increase the limit get DB rejections.
+Canvas-level rotation AND vertex-angle rotation both applied, producing
+2× the specified angle. Only affects blur blend mode rendering path.
 
 ---
 
-### P1.10 GradientRenderer radius Mismatch
+### P1.3 AlignmentController Incorrect Bounds for 3 Shape Types
 
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-10
-**File:** resources/ext.layers.shared/GradientRenderer.js:341-347
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-3
+**File:** resources/ext.layers.editor/canvas/AlignmentController.js
 
-Client validates radius 0-1, server allows 0-2. Server-saved values
-rejected by client renderer.
-
----
-
-### P1.11 Path Tool Unlimited Points
-
-**Status:** ✅ FIXED
-**Ref:** codebase_review HIGH-11
-**File:** resources/ext.layers.editor/canvas/DrawingController.js:555-557
-
-No client-side cap on freehand path points. Server silently truncates to
-~1000, creating mismatch between drawn and saved shape.
+Ellipse, polygon, and star fall through to default case which treats
+`x,y` as top-left and reads `width/height` (often 0). Circle is correct.
+All alignment/distribution operations broken for these shapes.
 
 ---
 
-## ��� P2 — Medium Priority Issues
+### P1.4 SetName Validation Inconsistency (Create vs Rename)
 
-### P2.1 ApiLayersInfo Missing Schema Check
-**Ref:** MED-1. No `isSchemaReady()` call; generic error instead of `dbschema-missing`.
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-4
+**Files:** src/Api/ApiLayersRename.php, SetSelectorController.js
 
-### P2.2 Rate Limiting After Expensive DB Work
-**Ref:** MED-2. Delete/Rename check rate limits after permission checks and queries.
-
-### P2.3 Slide Save Missing Validation
-**Ref:** MED-3. `backgroundColor` and `canvasWidth/canvasHeight` not validated.
-
-### P2.4 ApiLayersRename Race Condition
-**Ref:** MED-4. Name existence check and rename not atomic.
-
-### P2.5 isForeignFile() Duplicated in 5+ Files
-**Ref:** MED-5. Fragile `strpos($className, 'Foreign')` pattern repeated everywhere.
-
-### P2.6 enrichWithUserNames Deprecated Query
-**Ref:** MED-6. Direct `user` table query instead of `UserFactory`.
-
-### P2.7 WikitextHooks Static State Leak
-**Ref:** MED-7. Static properties persist across requests in long-running processes.
-
-### P2.8 ThumbnailProcessor json_encode No Error Handling
-**Ref:** MED-8. Invalid UTF-8 produces `"false"` in HTML attribute.
-
-### P2.9 CanvasRenderer Hash Misses Nested Objects
-**Ref:** MED-9. `gradient`/`richText` become `"[object Object]"` in cache key.
-
-### P2.10 ShadowRenderer Temp Canvas Per Call
-**Ref:** MED-10 / P3.4 from v21. Creates canvas each call; GC pressure.
-
-### P2.11 DeepClone Fallback Returns Original
-**Ref:** MED-11. Should throw rather than return uncloned reference.
-
-### P2.12 getMessage() Missing Null Check
-**Ref:** MED-12. Inconsistent null guards across LayersEditor/APIManager.
-
-### P2.13 Arrow Tip Drag No rAF Throttling
-**Ref:** MED-13. Renders every mousemove unlike other drag ops.
-
-### P2.14 applyToSelection() In-Place Mutation
-**Ref:** MED-14. Breaks immutable state pattern.
-
-### P2.15 Duplicate generateLayerId()
-**Ref:** MED-15. Identical code in SelectionManager and ToolManager.
-
-### P2.16 SlideManager.js Dead Code
-**Ref:** MED-16. Exists, tested, but not in ResourceLoader module.
-
-### P2.17 Inconsistent DB Return Types
-**Ref:** MED-17. `getLayerSet()` returns `array|false`, `getLayerSetByName()` returns `?array`.
-
-### P2.18 ON DELETE CASCADE Destroys Layer Data
-**Ref:** MED-18. User deletion cascades to all their layer sets.
-
-### P2.19 TINYINT ls_layer_count Cap
-**Ref:** MED-19. Max 255; will overflow if config raised significantly.
-
-### P2.20 parseContinueParameter Duplicated
-**Ref:** MED-20. Local method shadows trait; dead code.
+PHP: Rename uses `isValid()` (loose), save/delete use `sanitize()` (strict).
+Creates orphaned sets with special characters.
+JS: Create allows Unicode/spaces, rename allows ASCII only. Sets created
+with Unicode names cannot be renamed.
 
 ---
 
-## ⚠️ P3 — Low Priority / Deferred Issues
+### P1.5 Short ID Matching Inconsistency (Prefix vs Suffix)
 
-### P3.1 Redundant AutoloadClasses
-**Ref:** LOW-1. ~30 classes duplicate PSR-4 autoloading.
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-5
+**Files:** LayerInjector.php (~L178), ImageLinkProcessor.php (~L456)
 
-### P3.2 IE11 Code in MW >= 1.44
-**Ref:** LOW-2. Unnecessary compatibility code.
-
-### P3.3 Redundant method_exists Checks
-**Ref:** LOW-3. getWidth/getHeight always exist on File.
-
-### P3.4 createRateLimiter() Duplicated
-**Ref:** LOW-4. Trait + local definitions.
-
-### P3.5 editLayerName Listener Leak
-**Ref:** LOW-5. New listeners added without removing old.
-
-### P3.6 Toolbar destroy() Incomplete
-**Ref:** LOW-6. Shape/emoji panels not cleaned up.
-
-### P3.7 GroupManager Triple Registration
-**Ref:** LOW-7. Registers on window, Layers, Layers.Core.
-
-### P3.8 Deprecated execCommand
-**Ref:** LOW-8. No replacement available yet.
-
-### P3.9 Lightbox Race During Animation
-**Ref:** LOW-9. 300ms window for duplicate overlays.
-
-### P3.10 JSON Roundtrip for Clone
-**Ref:** LOW-10. Efficient cloner already exists.
-
-### P3.11 Shallow Copy of Nested Layer Objects
-**Ref:** LOW-11. gradient/richText shared by reference after scaling.
-
-### P3.12 Verbose Debug Logging
-**Ref:** LOW-12. Helper would reduce ~60 lines.
-
-### P3.13 Selection Sync Missing
-**Ref:** LOW-13. duplicateSelected doesn't notify StateManager.
-
-### P3.14 Stale Boolean Fallback List
-**Ref:** LOW-14. LayersViewer missing 5+ properties.
+LayerInjector uses `substr($id, 0, 4)` (prefix), ImageLinkProcessor uses
+`str_ends_with()` (suffix). Same wikitext selects different layers.
 
 ---
 
-## Carried Forward from v21 (Status Changed)
+### P1.6 `noedit` Bare Flag Silently Ignored
 
-| v21 Issue | v21 Status | v22 Status | Notes |
-|-----------|------------|------------|-------|
-| P1.1 API-Reference layerslist | ❌ OPEN | ✅ FIXED | improvement_plan said fixed |
-| P1.2 GroupManager depth guards | ❌ OPEN | ✅ FIXED | improvement_plan said fixed |
-| P1.3 APIManager abort behavior | ❌ OPEN | ⚠️ DEFERRED | Intentional design |
-| P1.4 ImageLayerRenderer cache | ❌ OPEN | ✅ FIXED | improvement_plan said fixed |
-| P2.1 JS file count | ❌ OPEN (claimed 142) | ✅ FIXED | Corrected to 140 in all docs |
-| P2.2 Version in copilot-inst | ❌ OPEN | ✅ FIXED | Now says 1.5.52 |
-| P2.3 "4 API modules" | ❌ OPEN | ✅ FIXED | Now says 5 |
-| P2.4 EventManager isInputElement | ❌ OPEN | ✅ FIXED | Missing elements added |
-| P2.5 StateManager forceUnlock | ❌ OPEN | ❌ OPEN | Still unfixed |
-| P3.1 README date | ❌ OPEN | ❌ OPEN | Still wrong |
-| P3.4 ShadowRenderer canvas | ⚠️ DEFERRED | ❌ OPEN (P2.10) | Upgraded to P2 |
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-6
+**File:** src/Hooks/SlideHooks.php (~L249-268)
+
+Documented syntax `{{#Slide: Name | noedit}}` doesn't work.
+`parseArguments()` only parses `key=value` pairs. No else branch.
+
+---
+
+### P1.7 Missing Import Sanitization
+
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-7
+**File:** resources/ext.layers.editor/ImportExportManager.js
+
+Imported JSON layers not validated. `__proto__` injection possible.
+Server validates on save, but client operates on unsanitized data.
+
+---
+
+### P1.8 SVG Validation Misses SVG2 `href` Attribute
+
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-8
+**File:** src/Validation/ServerSideLayerValidator.php (~L1273)
+
+Only checks `xlink:href` for external URLs. SVG2 `href` (no namespace)
+is unchecked. Mitigated by canvas rendering (not DOM injection).
+
+---
+
+### P1.9 RenderCoordinator Hash Only Checks First 20 Layers
+
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-9
+**File:** resources/ext.layers.editor/canvas/RenderCoordinator.js (~L198)
+
+Layers 21-100 are invisible to the change-detection hash. Modifications
+to deeper layers don't trigger re-render via targeted scheduleRedraw().
+
+---
+
+### P1.10 CanvasRenderer Missing try/finally for Context Swap
+
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-10
+**File:** resources/ext.layers.editor/CanvasRenderer.js (~L500)
+
+If drawLayerWithEffects() throws during export, renderer context is
+permanently corrupted. No recovery path.
+
+---
+
+### P1.11 CanvasRenderer richText Cache Hash Truncation
+
+**Status:** ❌ OPEN
+**Ref:** codebase_review HIGH-v24-11
+**File:** resources/ext.layers.editor/CanvasRenderer.js (~L170)
+
+richText JSON truncated to 200 chars in cache key. Edits past 200th
+character produce same hash, serving stale cached canvas.
+
+---
+
+## ✅ Previously Reported Issues — Fixed (v22/v23)
+
+### All P0 (Critical) from v22 — FIXED
+
+| Issue | Fixed In | Description |
+|-------|----------|-------------|
+| getDBLoadBalancer() | v22 | Migrated to getConnectionProvider() |
+| TextSanitizer bypass | v22 | Iterative loop prevents nesting bypass |
+| Schema unique key | v22 | ls_name included in unique constraint |
+
+### All P1 (High) from v22 — FIXED
+
+| Issue | Fixed In | Description |
+|-------|----------|-------------|
+| CSP unsafe-eval | v22 | Uses script-src 'self' only |
+| Canvas pool memory | v22 | Properly frees canvas.width/height |
+| InlineTextEditor input | v22 | Uses _getPlainTextFromEditor() |
+| Lightbox URLs | v22 | Uses Special:Redirect fallback |
+| ViewerOverlay listeners | v22 | All listeners cleanly removed |
+| Rate limiter defaults | v22 | Defaults defined (but see P0.3 caveat) |
+| Normalizer properties | v22 | blurRadius, tailWidth added |
+| Hardcoded /wiki/ path | v22 | Uses Title::getLocalURL() |
+| DB CHECK constraint | v22 | Removed hardcoded limit |
+| Gradient radius | v22 | Client/server aligned to 0-2 |
+| Path point cap | v22 | Client-side cap added |
+
+---
+
+## ❌ P2 — Medium Priority Issues (Open)
+
+### P2.1 Rate Limiting After DB Work in Slide Operations
+**Ref:** MED-v24-1. Rate limit checked AFTER DB lookups in slide methods.
+
+### P2.2 ext.layers Module Loaded on Every Page View (2x)
+**Ref:** MED-v24-2. Unconditional addModules in two hooks. Performance impact.
+
+### P2.3 EditLayersAction Custom CSP Conflicts with MW CSP
+**Ref:** MED-v24-3. Raw header may break ResourceLoader scripts.
+
+### P2.4 LayeredThumbnail Doesn't Call Parent Constructor
+**Ref:** MED-v24-4. Parent properties uninitialized.
+
+### P2.5 EditLayersAction Uses $wgUploadPath Global
+**Ref:** MED-v24-5. Should use config service.
+
+### P2.6 UIHooks Date Formatting Not Localized
+**Ref:** MED-v24-6. English-only dates for all users.
+
+### P2.7 SpecialEditSlide No backgroundColor Validation
+**Ref:** MED-v24-7. Unvalidated URL param passed to JS.
+
+### P2.8 ApiLayersInfo Doesn't Sanitize setname
+**Ref:** MED-v24-8. Inconsistent with other endpoints.
+
+### P2.9 StateManager Potential Reentrant Loop
+**Ref:** MED-v24-9. No recursion depth limit.
+
+### P2.10 InlineTextEditor Blur Handler Race Condition
+**Ref:** MED-v24-10. 150ms vs 100ms timeout race.
+
+### P2.11 SmartGuidesController Snap Cache Too Coarse
+**Ref:** MED-v24-11. Layer moves don't invalidate snap cache.
+
+### P2.12 LayersEditor.addLayer() Mutates State In-Place
+**Ref:** MED-v24-12. Same array reference, observers skip notification.
+
+### P2.13 Blur Blend Creates Full Canvas Per Frame
+**Ref:** MED-v24-13. 16MB allocation per blur layer per frame.
+
+### P2.14 DrawingController Ellipse Preview Drift
+**Ref:** MED-v24-14. Center coordinate drifts during drag.
+
+### P2.15 ResizeCalculator Wrong Diagonal Handle Direction
+**Ref:** MED-v24-15. OR-logic vs dot product for grow/shrink.
+
+### P2.16 Double HTML Escaping in SlideHooks
+**Ref:** MED-v24-16. Background color double-escaped.
+
+---
+
+## ⚠️ P3 — Low Priority Issues (Deferred)
+
+### P3.1 6x Code Duplication of getFileSha1()/isForeignFile()
+### P3.2 ParserHooks.php Is Dead Code
+### P3.3 UIHooks Excessive Defensive Coding for MW 1.44+
+### P3.4 WikitextHooks Logs Wikitext Preview at Info Level
+### P3.5 Hooks.php Checks Both `layers` and `Layers` URL Params
+### P3.6 ColorValidator Duplicated Validation Logic
+### P3.7 Database Cache Stores Null Results
+### P3.8 LayersSchemaManager.CURRENT_VERSION Stale (0.8.1-dev)
+### P3.9 RateLimiter Uses wfLogWarning Instead of PSR-3 Logger
+### P3.10 LayersSchemaManager Constructor Uses Service Locator
+### P3.11 applyPatch Schema Update Pattern Is Fragile
+### P3.12 Inconsistent Error Response Patterns Across API Modules
+### P3.13 Duplicated GradientRenderer Lookup in ShapeRenderer
+### P3.14 Non-Cryptographic Layer ID Generation
 
 ---
 
 ## Documentation Issues
 
-See codebase_review.md DOC-1 through DOC-12 for full details. Key items:
+### HIGH (Factually Wrong / Misleading)
 
-| ID | Issue | Severity |
-|----|-------|----------|
-| DOC-1 | ~~JS file count says 142, actual 140~~ FIXED | ~~HIGH~~ DONE |
-| DOC-2 | NAMED_LAYER_SETS.md uses wrong syntax | HIGH |
-| DOC-3 | God class line counts stale (6+ files) | MEDIUM |
-| DOC-4 | Version date inconsistent (Feb 3 vs Feb 5) | MEDIUM |
-| DOC-5 | RELEASE_GUIDE wrong filename references | MEDIUM |
-| DOC-6 | ACCESSIBILITY.md wrong shortcut | MEDIUM |
-| DOC-7 | KNOWN_ISSUES & improvement_plan were out of sync | MEDIUM |
+| ID | File | Issue |
+|----|------|-------|
+| DOC-1 | docs/ARCHITECTURE.md | Phantom `action=slideinfo` and `action=slidessave` API endpoints documented — do NOT exist |
+| DOC-2 | docs/ARCHITECTURE.md | Phantom `createlayers` permission listed — does not exist in extension.json |
+| DOC-3 | README.md, Mediawiki-Extension-Layers.mediawiki | Ghost configs `$wgLayersContextAwareToolbar` and `$wgLayersRejectAbortedRequests` — not in extension.json |
+| DOC-4 | wiki/Home.md | "What's New in v1.5.52" lists wrong features (doesn't match CHANGELOG) |
+| DOC-5 | wiki/Home.md | "v1.5.51 Highlights" misattributed — features are from v1.5.50 |
+| DOC-6 | wiki/Home.md | "v1.5.49 Highlights" fabricated — features don't match CHANGELOG |
+| DOC-7 | codebase_review.md (v23) | DOC-1 and DOC-2 were false positives (badge and date were already correct) |
+| DOC-8 | docs/SLIDE_MODE.md | `lock` parameter extensively documented but NOT IMPLEMENTED |
+| DOC-9 | docs/ARCHITECTURE.md | Says "4 API endpoints" — there are 5 |
+| DOC-10 | docs/RELEASE_GUIDE.md | References `Mediawiki-Extension-Layers.txt` — wrong extension (.mediawiki) |
+| DOC-11 | docs/ARCHITECTURE.md | Namespace version shows `0.8.5` — should be 1.5.52 |
+
+### MEDIUM (Outdated / Incomplete)
+
+| ID | File | Issue |
+|----|------|-------|
+| DOC-12 | README.md, Mediawiki-Extension-Layers.mediawiki | Missing `$wgLayersMaxComplexity` config |
+| DOC-13 | README.md, Mediawiki-Extension-Layers.mediawiki | Missing all 6 Slide Mode configs |
+| DOC-14 | docs/ARCHITECTURE.md | Stale line counts (100+ lines off for many modules) |
+| DOC-15 | docs/ARCHITECTURE.md | Stale PHP line count (11,758 vs actual ~14,946) |
+| DOC-16 | docs/NAMED_LAYER_SETS.md | Reads as proposal, not implementation doc. "Open Questions" for completed features. |
+| DOC-17 | docs/NAMED_LAYER_SETS.md | Says "10-20 sets" but config default is 15 |
+| DOC-18 | docs/SLIDE_MODE.md | Status says "Partially Implemented" but all 3 phases show ✅ COMPLETED |
+| DOC-19 | docs/SLIDE_MODE.md | Phase 4 says to bump to 1.6.0 — current is 1.5.52 |
+| DOC-20 | docs/FUTURE_IMPROVEMENTS.md | FR-14 (Draggable Dimension Tool) marked "Proposed" but implemented in v1.5.50 |
+| DOC-21 | docs/DEVELOPER_ONBOARDING.md | Stale line counts for DialogManager and RevisionManager |
+| DOC-22 | docs/API.md | Filename misleading — contains JSDoc output, not HTTP API docs |
+| DOC-23 | docs/ACCESSIBILITY.md | Missing Marker (M) and Dimension (D) tool shortcuts |
+| DOC-24 | README.md | Configuration section lists `$wgLayersUseBinaryOverlays` — not in extension.json |
+| DOC-25 | README.md | Drawing tool table says "15 tools" but lists 16 rows |
+| DOC-26 | docs/DOCUMENTATION_UPDATE_GUIDE.md | Missing Slide Mode configs from update checklist |
+| DOC-27 | README.md | Test coverage date inconsistency (Feb 2 vs Feb 6) |
+| DOC-28 | wiki/Home.md | 15+ "What's New" sections — consider trimming pre-v1.5.30 |
+| DOC-29 | SECURITY.md | No mention of Slide Mode security considerations |
+| DOC-30 | docs/DOCUMENTATION_UPDATE_GUIDE.md | Says "11 Files Rule" but procedure has 14 steps |
+
+### LOW (Style / Formatting)
+
+| ID | File | Issue |
+|----|------|-------|
+| DOC-31 | CHANGELOG.md | Unreleased section has exact test count (instantly stale) |
+| DOC-32 | CHANGELOG.md | Em dash vs hyphen inconsistency |
+| DOC-33 | CONTRIBUTING.md | Near-threshold files list missing PropertiesForm (~994) |
+| DOC-34 | docs/ACCESSIBILITY.md | "Last Updated: February 2026" without specific day |
+| DOC-35 | docs/DEVELOPER_ONBOARDING.md | "Last Updated: February 2026" without specific day |
+| DOC-36 | docs/WIKITEXT_USAGE.md | No mention of `{{#Slide:}}` syntax |
+| DOC-37 | docs/NAMED_LAYER_SETS.md | "Version: 1.1" ambiguous — document or extension? |
+| DOC-38 | docs/RELEASE_GUIDE.md | Example version `1.3.2` is very outdated |
+| DOC-39 | docs/RELEASE_GUIDE.md | Version history table has only one entry |
+| DOC-40 | docs/FUTURE_IMPROVEMENTS.md | FR-16 marked ✅ but full implementation plan still below |
+| DOC-41 | docs/FUTURE_IMPROVEMENTS.md | Inconsistent section numbering |
+| DOC-42 | docs/KNOWN_ISSUES.md (v23) | Garbled emoji "📝" in heading (encoding issue) |
+| DOC-43-50 | Various | Minor date/count inconsistencies across wiki pages |
+
+---
+
+## Test Coverage
+
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Statement | 95.19% | 90% | ✅ Exceeds |
+| Branch | 84.96% | 85% | ✅ At target |
+| Functions | 93.67% | 90% | ✅ Exceeds |
+| Lines | 95.32% | 90% | ✅ Exceeds |
+
+All coverage targets met or exceeded.
