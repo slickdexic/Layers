@@ -93,12 +93,16 @@ class LayeredFileRenderer {
 				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
 			}
 
-			// Parse size and generate thumbnail
+			// Parse size and determine the layer set name
 			$width = $this->parseSize( $size );
-			$layeredSrc = $this->generateLayeredThumbnailUrl( $file, $width, $layersParam );
+			$setName = $this->resolveSetName( $file, $layersParam );
 
-			if ( $layeredSrc ) {
-				return $this->buildImageHtml( $filename, $layeredSrc, $width, $caption );
+			// Generate a standard thumbnail and annotate it for the client-side viewer
+			$thumb = $file->transform( [ 'width' => $width ] );
+			if ( $thumb ) {
+				return $this->buildLayeredImageHtml(
+					$filename, $thumb->getUrl(), $width, $caption, $setName
+				);
 			}
 
 			// Fall back to normal image display
@@ -189,81 +193,67 @@ class LayeredFileRenderer {
 	}
 
 	/**
-	 * Generate URL for layered thumbnail
+	 * Resolve which named set to display from the layers parameter
 	 *
 	 * @param mixed $file File object
-	 * @param int $width Thumbnail width
-	 * @param string $layersParam Layers parameter
-	 * @return string|null Thumbnail URL or null
+	 * @param string $layersParam Layers parameter ('on', set name, 'id:N', 'name:NAME')
+	 * @return string Named set identifier for the client-side viewer
 	 */
-	private function generateLayeredThumbnailUrl( $file, int $width, string $layersParam ): ?string {
-		try {
-			$db = $this->getDatabase();
-			if ( !$db ) {
-				return null;
-			}
-
-			// Get layer data based on parameter
-			$layerSet = null;
-			$sha1 = $this->getFileSha1( $file );
-			if ( $layersParam === 'on' || $layersParam === 'all' ) {
-				$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1 );
-			} elseif ( strpos( $layersParam, 'id:' ) === 0 ) {
-				$layerSetId = (int)substr( $layersParam, 3 );
-				$layerSet = $db->getLayerSet( $layerSetId );
-			} elseif ( strpos( $layersParam, 'name:' ) === 0 ) {
-				$setName = substr( $layersParam, 5 );
-				$layerSet = $db->getLayerSetByName( $file->getName(), $sha1, $setName );
-			} else {
-				// Try as named set
-				$layerSet = $db->getLayerSetByName( $file->getName(), $sha1, $layersParam );
-			}
-
-			if ( !$layerSet || empty( $layerSet['data']['layers'] ) ) {
-				return null;
-			}
-
-			// Generate thumbnail with layers
-			$services = MediaWikiServices::getInstance();
-			$config = $services->getMainConfig();
-			$server = $config->get( 'Server' );
-			$scriptPath = $config->get( 'ScriptPath' );
-
-			// Build URL for layered thumbnail
-			$layerSetId = $layerSet['id'];
-			return "{$server}{$scriptPath}/api.php?" . http_build_query( [
-				'action' => 'layersthumbnail',
-				'filename' => $file->getName(),
-				'width' => $width,
-				'layersetid' => $layerSetId,
-				'format' => 'json'
-			] );
-
-		} catch ( \Throwable $e ) {
-			$this->logError( 'Error generating layered thumbnail URL', [ 'error' => $e->getMessage() ] );
-			return null;
+	private function resolveSetName( $file, string $layersParam ): string {
+		if ( $layersParam === 'on' || $layersParam === 'all' || $layersParam === '' ) {
+			return 'default';
 		}
+
+		// id:<N> syntax — look up the set name from the database
+		if ( strpos( $layersParam, 'id:' ) === 0 ) {
+			$db = $this->getDatabase();
+			if ( $db ) {
+				$id = (int)substr( $layersParam, 3 );
+				$layerSet = $db->getLayerSet( $id );
+				if ( $layerSet && isset( $layerSet['name'] ) ) {
+					return $layerSet['name'];
+				}
+			}
+			return 'default';
+		}
+
+		// name:<NAME> syntax
+		if ( strpos( $layersParam, 'name:' ) === 0 ) {
+			return substr( $layersParam, 5 );
+		}
+
+		// Treat as named set directly
+		return $layersParam;
 	}
 
 	/**
-	 * Build HTML for layered image
+	 * Build HTML for a layered image with client-side viewer attributes
+	 *
+	 * The rendered img tag includes data attributes that the ext.layers viewer
+	 * module picks up to overlay layer annotations via canvas rendering.
 	 *
 	 * @param string $filename Filename
-	 * @param string $src Image source URL
+	 * @param string $src Image source URL (base thumbnail)
 	 * @param int $width Image width
 	 * @param string $caption Image caption
+	 * @param string $setName Named layer set to display
 	 * @return string HTML
 	 */
-	private function buildImageHtml( string $filename, string $src, int $width, string $caption ): string {
+	private function buildLayeredImageHtml(
+		string $filename, string $src, int $width, string $caption, string $setName
+	): string {
 		$alt = !empty( $caption ) ? htmlspecialchars( $caption ) : htmlspecialchars( $filename );
 		$title = !empty( $caption ) ? htmlspecialchars( $caption ) : '';
-		$href = '/wiki/File:' . rawurlencode( $filename );
+		$href = Title::makeTitle( NS_FILE, $filename )->getLocalURL();
+		$intentValue = htmlspecialchars( $setName );
 
 		return '<span class="mw-default-size" typeof="mw:File">' .
 			'<a href="' . htmlspecialchars( $href ) . '" class="mw-file-description"' .
 			( $title ? ' title="' . $title . '"' : '' ) . '>' .
 			'<img alt="' . $alt . '" src="' . htmlspecialchars( $src ) . '" ' .
-			'decoding="async" width="' . $width . '" class="mw-file-element" />' .
+			'decoding="async" width="' . $width . '" class="mw-file-element" ' .
+			'data-layers-intent="' . $intentValue . '" ' .
+			'data-layer-setname="' . $intentValue . '" />' .
 			'</a></span>';
 	}
 

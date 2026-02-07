@@ -359,8 +359,35 @@
 				return false;
 			}
 			return layer.richText.every( function ( run ) {
-				return run.style && run.style[ prop ] === value;
+				if ( !run.style ) {
+					return false;
+				}
+				const current = run.style[ prop ] || '';
+				// Support space-separated combined values (e.g. 'underline line-through')
+				return current === value || current.indexOf( value ) !== -1;
 			} );
+		}
+
+		/**
+		 * Toggle a decoration keyword in the combined textDecoration value.
+		 * Reads current state from first run; preserves other decoration keywords.
+		 * @param {string} keyword - 'underline' or 'line-through'
+		 * @param {boolean} add - true to add, false to remove
+		 * @return {string} Updated textDecoration value
+		 */
+		function toggleDecoration( keyword, add ) {
+			const first = ( layer.richText && layer.richText[ 0 ] &&
+				layer.richText[ 0 ].style && layer.richText[ 0 ].style.textDecoration ) || 'none';
+			const parts = first.split( /\s+/ ).filter( function ( p ) {
+				return p && p !== 'none';
+			} );
+			const idx = parts.indexOf( keyword );
+			if ( add && idx === -1 ) {
+				parts.push( keyword );
+			} else if ( !add && idx !== -1 ) {
+				parts.splice( idx, 1 );
+			}
+			return parts.length > 0 ? parts.join( ' ' ) : 'none';
 		}
 
 		/**
@@ -406,7 +433,9 @@
 			label: t( 'layers-prop-underline', 'Underline' ),
 			value: allRunsHaveStyle( 'textDecoration', 'underline' ),
 			onChange: function ( checked ) {
-				applyStyleToAllRuns( { textDecoration: checked ? 'underline' : 'none' } );
+				applyStyleToAllRuns( {
+					textDecoration: toggleDecoration( 'underline', checked )
+				} );
 			}
 		} );
 
@@ -415,7 +444,9 @@
 			label: t( 'layers-prop-strikethrough', 'Strikethrough' ),
 			value: allRunsHaveStyle( 'textDecoration', 'line-through' ),
 			onChange: function ( checked ) {
-				applyStyleToAllRuns( { textDecoration: checked ? 'line-through' : 'none' } );
+				applyStyleToAllRuns( {
+					textDecoration: toggleDecoration( 'line-through', checked )
+				} );
 			}
 		} );
 
