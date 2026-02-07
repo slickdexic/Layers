@@ -70,6 +70,7 @@ class StateManager {
 		this.lockTimeout = null;
 		this.lockAutoRecoveryTimeout = null;
 		this.lockStuckSince = null;
+		this._isProcessingPending = false;
 		
 		this.initializeState();
 	}
@@ -343,23 +344,35 @@ class StateManager {
 			this.lockAutoRecoveryTimeout = null;
 		}
 
-		// Process any pending operations in order
-		// Wrap in try-catch to prevent deadlock if an operation throws
-		while ( this.pendingOperations.length > 0 ) {
-			const operation = this.pendingOperations.shift();
-			
-			try {
-				if ( operation.type === 'set' ) {
-					this.set( operation.key, operation.value );
-				} else if ( operation.type === 'update' ) {
-					this.update( operation.updates );
-				}
-			} catch ( error ) {
-				// Log the error but continue processing remaining operations
-				if ( typeof mw !== 'undefined' && mw.log ) {
-					mw.log.error( '[StateManager] Error processing pending operation:', error.message || error );
+		// Prevent reentrant processing: if we're already draining the queue
+		// from an outer unlockState(), let that outer call handle it
+		if ( this._isProcessingPending ) {
+			return;
+		}
+
+		this._isProcessingPending = true;
+
+		try {
+			// Process any pending operations in order
+			// Wrap in try-catch to prevent deadlock if an operation throws
+			while ( this.pendingOperations.length > 0 ) {
+				const operation = this.pendingOperations.shift();
+				
+				try {
+					if ( operation.type === 'set' ) {
+						this.set( operation.key, operation.value );
+					} else if ( operation.type === 'update' ) {
+						this.update( operation.updates );
+					}
+				} catch ( error ) {
+					// Log the error but continue processing remaining operations
+					if ( typeof mw !== 'undefined' && mw.log ) {
+						mw.log.error( '[StateManager] Error processing pending operation:', error.message || error );
+					}
 				}
 			}
+		} finally {
+			this._isProcessingPending = false;
 		}
 	}
 

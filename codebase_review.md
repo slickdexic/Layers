@@ -441,9 +441,9 @@ beyond the 200th character produce the same hash, serving stale cached canvas.
 
 ## MEDIUM Priority Issues (v24)
 
-### MED-v24-1: Rate Limiting After DB Work in Slide Operations
+### MED-v24-1: Rate Limiting After DB Work in Slide Operations ✅ RESOLVED
 
-**Status:** ❌ OPEN (carried from v23)
+**Status:** ✅ RESOLVED — Rate limiting moved before DB lookups in slide methods.
 **Files:** src/Api/ApiLayersDelete.php, src/Api/ApiLayersRename.php
 
 In `executeSlideDelete()` and `executeSlideRename()`, rate limiting is checked
@@ -473,9 +473,9 @@ MediaWiki's CSP class. `script-src 'self'` omits nonces needed by ResourceLoader
 
 ---
 
-### MED-v24-4: LayeredThumbnail Doesn't Call Parent Constructor
+### MED-v24-4: LayeredThumbnail Doesn't Call Parent Constructor ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Removed shadowed private properties from LayeredThumbnail.
 **File:** src/LayeredThumbnail.php (~L34-55)
 
 Extends `MediaTransformOutput` but never calls `parent::__construct()`.
@@ -483,36 +483,36 @@ Parent properties (`$this->file`, `$this->url`, etc.) remain uninitialized.
 
 ---
 
-### MED-v24-5: EditLayersAction Uses `$wgUploadPath` Global
+### MED-v24-5: EditLayersAction Uses `$wgUploadPath` Global ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Replaced global $wgUploadPath with config service.
 **File:** src/Action/EditLayersAction.php (~L384-387)
 
 Should use `$this->getConfig()->get('UploadPath')` instead of global variable.
 
 ---
 
-### MED-v24-6: UIHooks Date Formatting Not Localized
+### MED-v24-6: UIHooks Date Formatting Not Localized ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Used Language::date() for localized formatting.
 **File:** src/Hooks/UIHooks.php (~L407-413)
 
 Uses PHP `date()` instead of `$language->date()`. Non-English users see English dates.
 
 ---
 
-### MED-v24-7: SpecialEditSlide Doesn't Validate backgroundColor
+### MED-v24-7: SpecialEditSlide Doesn't Validate backgroundColor ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Added ColorValidator check for backgroundColor.
 **File:** src/SpecialPages/SpecialEditSlide.php (~L82)
 
 Background color from URL params accepted without validation.
 
 ---
 
-### MED-v24-8: ApiLayersInfo Doesn't Sanitize setname Parameter
+### MED-v24-8: ApiLayersInfo Doesn't Sanitize setname Parameter ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Added SetNameSanitizer for setname in ApiLayersInfo.
 **File:** src/Api/ApiLayersInfo.php (~L95)
 
 Unlike other endpoints, setname is not passed through `SetNameSanitizer::sanitize()`.
@@ -592,9 +592,9 @@ Correct approach is dot product with handle direction vector.
 
 ---
 
-### MED-v24-16: Double HTML Escaping in SlideHooks
+### MED-v24-16: Double HTML Escaping in SlideHooks ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Fixed double HTML escaping in SlideHooks.
 **File:** src/Hooks/SlideHooks.php (~L427-445)
 
 `$backgroundColor` escaped by `htmlspecialchars()` into `$bgColorAttr`, then
@@ -608,7 +608,8 @@ the combined `$style` is escaped again via `htmlspecialchars()`.
 **Files:** Hooks.php, ImageLinkProcessor.php, LayerInjector.php, LayeredFileRenderer.php, ThumbnailProcessor.php, ThumbnailRenderer.php.
 ForeignFileHelperTrait exists in Api/Traits/ but is not used by hook/processor classes.
 
-### LOW-v24-2: ParserHooks.php Is Dead Code
+### LOW-v24-2: ParserHooks.php Is Dead Code ✅ RESOLVED
+✅ RESOLVED — Deleted dead ParserHooks.php and autoload entry.
 Entire class does nothing (returns true). Should be removed.
 
 ### LOW-v24-3: UIHooks Excessive Defensive Coding for MW 1.44+
@@ -626,7 +627,8 @@ Static `isValidColor()` duplicates all instance method logic.
 ### LOW-v24-7: Database Cache Stores Null Results
 Non-existent IDs fill the 100-entry cache, pushing out valid entries.
 
-### LOW-v24-8: LayersSchemaManager.CURRENT_VERSION Stale
+### LOW-v24-8: LayersSchemaManager.CURRENT_VERSION Stale ✅ RESOLVED
+✅ RESOLVED — Updated CURRENT_VERSION to 1.5.52.
 Says `0.8.1-dev` but extension is at 1.5.52.
 
 ### LOW-v24-9: RateLimiter Uses wfLogWarning Instead of PSR-3 Logger

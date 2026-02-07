@@ -55,6 +55,7 @@
 			// Snap points cache (rebuilt when layers change)
 			this.snapPointsCache = null;
 			this.cacheExcludedIds = null;
+			this._cachedLayersRef = null;
 		}
 
 		/**
@@ -98,6 +99,7 @@
 		invalidateCache() {
 			this.snapPointsCache = null;
 			this.cacheExcludedIds = null;
+			this._cachedLayersRef = null;
 		}
 
 		/**
@@ -350,8 +352,9 @@
 		buildSnapPoints( layers, excludeIds ) {
 			const cacheKey = excludeIds ? excludeIds.sort().join( ',' ) : '';
 
-			// Return cached if valid
-			if ( this.snapPointsCache && this.cacheExcludedIds === cacheKey ) {
+			// Return cached if valid (same excluded IDs AND same layers reference)
+			if ( this.snapPointsCache && this.cacheExcludedIds === cacheKey &&
+				this._cachedLayersRef === layers ) {
 				return this.snapPointsCache;
 			}
 
@@ -361,6 +364,7 @@
 			if ( !layers || layers.length === 0 ) {
 				this.snapPointsCache = { horizontal, vertical };
 				this.cacheExcludedIds = cacheKey;
+				this._cachedLayersRef = layers;
 				return this.snapPointsCache;
 			}
 
@@ -403,6 +407,7 @@
 
 			this.snapPointsCache = { horizontal, vertical };
 			this.cacheExcludedIds = cacheKey;
+			this._cachedLayersRef = layers;
 			return this.snapPointsCache;
 		}
 
