@@ -787,10 +787,12 @@ class LayerRenderer {
 		const y = ( layer.y || 0 ) * scale.sy;
 		const radius = ( layer.radius || 50 ) * scale.avg;
 		const sides = layer.sides || 6;
-		const rotation = ( layer.rotation || 0 ) * Math.PI / 180;
+		// NOTE: Rotation is NOT applied here because _drawShapePath already
+		// applies canvas-level rotation via ctx.rotate(). Applying it again
+		// in the vertex calculation would double the rotation angle.
 
 		for ( let i = 0; i < sides; i++ ) {
-			const angle = ( i * 2 * Math.PI / sides ) - Math.PI / 2 + rotation;
+			const angle = ( i * 2 * Math.PI / sides ) - Math.PI / 2;
 			const px = x + radius * Math.cos( angle );
 			const py = y + radius * Math.sin( angle );
 			if ( i === 0 ) {
@@ -812,11 +814,13 @@ class LayerRenderer {
 		const outerRadius = ( layer.radius || layer.outerRadius || 50 ) * scale.avg;
 		const innerRadius = ( layer.innerRadius || outerRadius * 0.5 ) * scale.avg;
 		const points = layer.points || 5;
-		const rotation = ( layer.rotation || 0 ) * Math.PI / 180;
+		// NOTE: Rotation is NOT applied here because _drawShapePath already
+		// applies canvas-level rotation via ctx.rotate(). Applying it again
+		// in the vertex calculation would double the rotation angle.
 
 		for ( let i = 0; i < points * 2; i++ ) {
 			const radius = i % 2 === 0 ? outerRadius : innerRadius;
-			const angle = ( i * Math.PI / points ) - Math.PI / 2 + rotation;
+			const angle = ( i * Math.PI / points ) - Math.PI / 2;
 			const px = x + radius * Math.cos( angle );
 			const py = y + radius * Math.sin( angle );
 			if ( i === 0 ) {

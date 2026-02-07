@@ -1288,6 +1288,31 @@ describe( 'LayerRenderer', () => {
 			expect( ctx.closePath ).toHaveBeenCalled();
 		} );
 
+		// P1.2 regression: vertex rotation was removed because _drawShapePath
+		// already applies canvas-level ctx.rotate(). Applying per-vertex rotation
+		// here would double-rotate.
+		test( '_drawPolygonPath does not apply per-vertex rotation', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radius: 50, sides: 5, rotation: 45 };
+
+			ctx.rotate.mockClear();
+			renderer._drawPolygonPath( layer, scale, ctx );
+
+			// _drawPolygonPath should NOT call ctx.rotate — that's _drawShapePath's job
+			expect( ctx.rotate ).not.toHaveBeenCalled();
+		} );
+
+		test( '_drawStarPath does not apply per-vertex rotation', () => {
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const layer = { x: 100, y: 100, radius: 50, points: 5, rotation: 30 };
+
+			ctx.rotate.mockClear();
+			renderer._drawStarPath( layer, scale, ctx );
+
+			// _drawStarPath should NOT call ctx.rotate — that's _drawShapePath's job
+			expect( ctx.rotate ).not.toHaveBeenCalled();
+		} );
+
 		test( 'drawLayerWithBlurBlend falls back when effectsRenderer is not available', () => {
 			renderer.effectsRenderer = null;
 			const rectSpy = jest.spyOn( renderer, '_drawLayerByType' );

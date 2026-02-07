@@ -1734,5 +1734,68 @@ describe('CanvasRenderer', () => {
             expect(result).toBeNull();
         });
     });
+
+    describe('P1.10 regression: renderLayersToContext restores context on error', () => {
+        test('should call ctx.restore even if rendering throws', () => {
+            const exportCtx = createMockContext();
+            // Make fillRect throw to simulate an error during rendering
+            exportCtx.fillRect = jest.fn(() => { throw new Error('render failure'); });
+
+            const layers = [
+                { id: 'l1', type: 'rectangle', x: 0, y: 0, width: 50, height: 50, fill: '#f00', visible: true }
+            ];
+
+            // Should not throw (error is caught internally or we expect it to be safe)
+            try {
+                renderer.renderLayersToContext(exportCtx, layers, 800, 600);
+            } catch (e) {
+                // Some implementations may still throw, that's ok
+            }
+
+            // Context should still have been restored
+            expect(exportCtx.restore).toHaveBeenCalled();
+        });
+    });
+
+    describe('P1.11 regression: _hashString produces unique hashes', () => {
+        test('should produce different hashes for different strings', () => {
+            const hash1 = renderer._hashString('hello world');
+            const hash2 = renderer._hashString('hello World');
+            expect(hash1).not.toBe(hash2);
+        });
+
+        test('should produce same hash for identical strings', () => {
+            const hash1 = renderer._hashString('test string');
+            const hash2 = renderer._hashString('test string');
+            expect(hash1).toBe(hash2);
+        });
+
+        test('should include string length in hash output', () => {
+            const hash = renderer._hashString('abc');
+            expect(hash).toMatch(/^3:/);
+        });
+
+        test('should differentiate richText that differs only after char 200', () => {
+            // Build two richText arrays that JSON.stringify identically for first 200+ chars
+            const runs = [];
+            for (let i = 0; i < 20; i++) {
+                runs.push({ text: 'AAAAAAAAAA', style: { fontWeight: 'normal' } });
+            }
+            const str1 = JSON.stringify(runs);
+
+            const runs2 = runs.map(r => ({ ...r, style: { ...r.style } }));
+            // Change last run's style (well past char 200)
+            runs2[19].style.fontWeight = 'bold';
+            const str2 = JSON.stringify(runs2);
+
+            // Old code truncated at 200 chars — these would have been identical
+            expect(str1.substring(0, 200)).toBe(str2.substring(0, 200));
+
+            // New hash should differentiate them
+            const hash1 = renderer._hashString(str1);
+            const hash2 = renderer._hashString(str2);
+            expect(hash1).not.toBe(hash2);
+        });
+    });
 });
 
