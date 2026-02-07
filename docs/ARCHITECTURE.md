@@ -930,7 +930,7 @@ extensions/Layers/
 ├── extension.json           # MW manifest
 ├── services.php             # DI container setup
 ├── src/                     # PHP backend (~11,758 lines)
-│   ├── Api/                 # API modules (4 endpoints)
+│   ├── Api/                 # API modules (5 endpoints)
 │   ├── Database/            # Data access
 │   ├── Hooks/               # MW hook handlers
 │   ├── Logging/             # LoggerAwareTrait, etc.
@@ -1016,8 +1016,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [5, 3600];
 
 | Right | Default | Description |
 |-------|---------|-------------|
-| editlayers | users | Edit existing layers |
-| createlayers | autoconfirmed | Create new layer sets |
+| editlayers | users | Edit and create layers |
 | managelayerlibrary | sysop | Library management |
 
 ---
@@ -1229,8 +1228,8 @@ graph TB
         hook["SlideParserHook"]
         specialSlides["SpecialSlides.php"]
         specialEdit["SpecialEditSlide.php"]
-        apiInfo["ApiSlideInfo"]
-        apiSave["ApiSlidesSave"]
+        apiInfo["ApiLayersInfo"]
+        apiSave["ApiLayersSave"]
     end
     
     subgraph JS["JavaScript Frontend"]
@@ -1272,8 +1271,8 @@ graph TB
 ```
 src/
 ├── Api/
-│   ├── ApiSlideInfo.php      # GET slide data by name
-│   └── ApiSlidesSave.php     # POST save slide (CSRF protected)
+│   ├── ApiLayersInfo.php      # GET slide data by name (action=layersinfo&slidename=)
+│   └── ApiLayersSave.php     # POST save slide (action=layerssave&slidename=, CSRF protected)
 ├── SpecialPages/
 │   ├── SpecialSlides.php     # Management dashboard
 │   └── SpecialEditSlide.php  # Direct editor access
@@ -1293,10 +1292,10 @@ resources/ext.layers.editor/ui/
 
 ### API Endpoints
 
-#### `action=slideinfo` (Read)
+#### `action=layersinfo` with slidename (Read)
 
 ```
-GET /api.php?action=slideinfo&slidename=DiagramName
+GET /api.php?action=layersinfo&slidename=DiagramName
 ```
 
 **Parameters:**
@@ -1308,7 +1307,7 @@ GET /api.php?action=slideinfo&slidename=DiagramName
 **Response:**
 ```json
 {
-  "slideinfo": {
+  "layersinfo": {
     "slide": {
       "id": 123,
       "slidename": "DiagramName",
@@ -1322,11 +1321,11 @@ GET /api.php?action=slideinfo&slidename=DiagramName
 }
 ```
 
-#### `action=slidessave` (Write)
+#### `action=layerssave` with slidename (Write)
 
 ```
 POST /api.php
-action=slidessave
+action=layerssave
 slidename=DiagramName
 canvaswidth=800
 canvasheight=600
@@ -1349,7 +1348,7 @@ token=CSRF_TOKEN
 **Response:**
 ```json
 {
-  "slidessave": {
+  "layerssave": {
     "success": 1,
     "slideid": 456,
     "slidename": "DiagramName"

@@ -45,11 +45,11 @@ Zoom now anchors at the mouse pointer position.
 
 ---
 
-### 3. Draggable Dimension Tool (FR-14) — 🔴 HIGH VALUE
+### ~~3. Draggable Dimension Tool (FR-14)~~ ✅ COMPLETED
 
 **Priority:** HIGH  
 **Complexity:** Medium  
-**Status:** ⏳ Proposed (January 25, 2026)
+**Status:** ✅ Completed in v1.5.50
 
 Enhance the Dimension tool to support dragging the dimension line independently from the anchor points.
 

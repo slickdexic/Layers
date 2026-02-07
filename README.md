@@ -284,9 +284,7 @@ $wgLayersMaxImageBytes = 1048576;      // 1 MB for imported images
 $wgLayersDefaultSetName = 'default';
 
 // Editor behavior
-$wgLayersContextAwareToolbar = true;   // Context-aware toolbar (set false for classic mode)
 $wgLayersUseBinaryOverlays = false;    // Legacy binary overlay files
-$wgLayersRejectAbortedRequests = false; // Surface aborted API calls as rejections (debugging)
 
 // Image and rendering limits
 $wgLayersMaxImageSize = 4096;          // Max image size for editing (px)
