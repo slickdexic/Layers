@@ -307,7 +307,7 @@ README.md               → version, features
 CHANGELOG.md            → new version section
 improvement_plan.md     → version, rating, completed items
 codebase_review.md      → version, metrics
-Mediawiki-Extension-Layers.txt → version, features
+Mediawiki-Extension-Layers.mediawiki → version, features
 wiki/Home.md            → version, features
 wiki/Changelog.md       → sync with CHANGELOG.md
 wiki/Installation.md    → version requirements
