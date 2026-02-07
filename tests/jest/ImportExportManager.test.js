@@ -782,4 +782,65 @@ describe( 'ImportExportManager', () => {
 			document.body.appendChild = originalAppendChild;
 		} );
 	} );
+
+	describe( 'P1.7 regression: parseLayersJSON input sanitization', () => {
+		let importManager;
+
+		beforeEach( () => {
+			importManager = new ImportExportManager( mockEditor );
+		} );
+
+		it( 'should reject unknown layer types', () => {
+			const json = JSON.stringify( [
+				{ id: 'l1', type: 'evil-type', x: 0, y: 0 }
+			] );
+			const result = importManager.parseLayersJSON( json );
+			expect( result[ 0 ].type ).toBe( 'rectangle' );
+		} );
+
+		it( 'should strip HTML from text fields', () => {
+			const json = JSON.stringify( [
+				{ id: 'l1', type: 'text', text: 'Hello <script>alert(1)</script> world' }
+			] );
+			const result = importManager.parseLayersJSON( json );
+			expect( result[ 0 ].text ).toBe( 'Hello alert(1) world' );
+		} );
+
+		it( 'should strip HTML from name fields', () => {
+			const json = JSON.stringify( [
+				{ id: 'l1', type: 'text', name: '<img onerror=alert(1) src=x>' }
+			] );
+			const result = importManager.parseLayersJSON( json );
+			expect( result[ 0 ].name ).not.toContain( '<' );
+		} );
+
+		it( 'should strip HTML from richText run text', () => {
+			const json = JSON.stringify( [
+				{
+					id: 'l1', type: 'textbox',
+					richText: [
+						{ text: 'Normal' },
+						{ text: '<b>bold</b> text' }
+					]
+				}
+			] );
+			const result = importManager.parseLayersJSON( json );
+			expect( result[ 0 ].richText[ 1 ].text ).toBe( 'bold text' );
+		} );
+
+		it( 'should throw when too many layers imported', () => {
+			const layers = [];
+			for ( let i = 0; i < 101; i++ ) {
+				layers.push( { id: 'l' + i, type: 'rectangle' } );
+			}
+			const json = JSON.stringify( layers );
+			expect( () => importManager.parseLayersJSON( json ) ).toThrow( 'Too many layers' );
+		} );
+
+		it( 'should remove __proto__ from imported layers', () => {
+			const json = '[ { "id": "l1", "type": "rectangle", "__proto__": { "polluted": true } } ]';
+			const result = importManager.parseLayersJSON( json );
+			expect( result[ 0 ] ).not.toHaveProperty( '__proto__', { polluted: true } );
+		} );
+	} );
 } );

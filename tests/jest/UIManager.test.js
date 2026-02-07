@@ -1216,8 +1216,8 @@ describe( 'UIManager', () => {
 
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
-			// Mock the prompt dialog helper to return long name
-			uiManager.showPromptDialog = jest.fn().mockResolvedValue( 'a'.repeat( 51 ) );
+			// Mock the prompt dialog helper to return long name (>255 chars)
+			uiManager.showPromptDialog = jest.fn().mockResolvedValue( 'a'.repeat( 256 ) );
 
 			await uiManager.renameCurrentSet();
 

@@ -558,12 +558,12 @@
 				return;
 			}
 
-			// Validate name format
-			if ( !/^[a-zA-Z0-9_-]{1,50}$/.test( trimmedName ) ) {
+			// Validate name format (must match createNewSet and server-side SetNameSanitizer)
+			if ( !/^[\p{L}\p{N}_\-\s]+$/u.test( trimmedName ) || trimmedName.length > 255 ) {
 				mw.notify(
 					this.getMessage(
 						'layers-invalid-setname',
-						'Invalid set name. Use only letters, numbers, hyphens, and underscores (1-50 characters).'
+						'Invalid set name. Use only letters, numbers, hyphens, underscores, and spaces.'
 					),
 					{ type: 'error' }
 				);

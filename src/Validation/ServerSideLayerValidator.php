@@ -1325,8 +1325,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		}
 
 		// SECURITY: Block external references that could leak data - check both versions
-		if ( preg_match( '/xlink:href\s*=\s*["\']https?:/i', $svg ) ||
-			 preg_match( '/xlink:href\s*=\s*["\']https?:/i', $decodedSvg ) ) {
+		// SVG2 uses plain 'href' (xlink:href is deprecated), so check both forms
+		if ( preg_match( '/(?:xlink:)?href\s*=\s*["\']https?:/i', $svg ) ||
+			 preg_match( '/(?:xlink:)?href\s*=\s*["\']https?:/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG must not contain external URLs' ];
 		}
 
@@ -1336,8 +1337,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		}
 
 		// SECURITY: Block use elements with external references - check both versions
-		if ( preg_match( '/<\s*use[^>]+xlink:href\s*=\s*["\']https?:/i', $svg ) ||
-			 preg_match( '/<\s*use[^>]+xlink:href\s*=\s*["\']https?:/i', $decodedSvg ) ) {
+		// SVG2 uses plain 'href' (xlink:href is deprecated), so check both forms
+		if ( preg_match( '/<\s*use[^>]+(?:xlink:)?href\s*=\s*["\']https?:/i', $svg ) ||
+			 preg_match( '/<\s*use[^>]+(?:xlink:)?href\s*=\s*["\']https?:/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG use elements must not reference external URLs' ];
 		}
 

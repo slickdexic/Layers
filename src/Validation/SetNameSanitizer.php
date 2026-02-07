@@ -99,6 +99,12 @@ class SetNameSanitizer {
 			return false;
 		}
 
+		// Must match the same whitelist that sanitize() allows:
+		// Unicode letters, numbers, underscore, dash, spaces
+		if ( !preg_match( '/^[\p{L}\p{N}_\-\s]+$/u', $setName ) ) {
+			return false;
+		}
+
 		// Check length
 		$length = function_exists( 'mb_strlen' ) ? mb_strlen( $setName ) : strlen( $setName );
 		if ( $length > self::MAX_LENGTH ) {
