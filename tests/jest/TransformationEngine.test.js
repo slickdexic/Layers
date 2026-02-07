@@ -601,25 +601,34 @@ describe( 'TransformationEngine', () => {
 	} );
 
 	describe( 'fit operations', () => {
-		test( 'fitToWindow should fit image to container', () => {
-			const mockImage = { width: 1600, height: 1200 };
+		test( 'fitToWindow should fit based on CSS display size', () => {
+			// Simulate resizeCanvas: canvas 1600x1200 CSS-fitted into 800x600 container
+			// Aspect 1.33 < 1.33 equal, constrain by height: cssH=600, cssW=800
+			mockCanvas.width = 1600;
+			mockCanvas.height = 1200;
+			mockCanvas.style.width = '800px';
+			mockCanvas.style.height = '600px';
 
-			engine.fitToWindow( mockImage );
+			engine.fitToWindow();
 
-			// Container is 800x600 with 40px padding = 760x560 usable
-			// Image is 1600x1200, scale to fit: min(760/1600, 560/1200) = min(0.475, 0.467) = 0.467
-			expect( engine.zoomAnimationTargetZoom ).toBeCloseTo( 0.467, 2 );
+			// Container 800x600 - 40 = 760x560
+			// Zoom = min(760/800, 560/600) = min(0.95, 0.933) = 0.933
+			expect( engine.zoomAnimationTargetZoom ).toBeCloseTo( 0.933, 2 );
 			expect( engine.panX ).toBe( 0 );
 			expect( engine.panY ).toBe( 0 );
 			expect( engine.userHasSetZoom ).toBe( true );
 		} );
 
-		test( 'fitToWindow should do nothing without image', () => {
-			engine.zoom = 2.0;
-			engine.fitToWindow( null );
+		test( 'fitToWindow should fall back to canvas dimensions when no CSS size', () => {
+			// No style.width/height set — uses canvas.width/height
+			mockCanvas.style.width = '';
+			mockCanvas.style.height = '';
 
-			// Should not change zoom
-			expect( engine.zoom ).toBe( 2.0 );
+			engine.fitToWindow();
+
+			// Canvas 800x600, container 800x600 - 40 = 760x560
+			// Zoom = min(760/800, 560/600) = min(0.95, 0.933) = 0.933
+			expect( engine.zoomAnimationTargetZoom ).toBeCloseTo( 0.933, 2 );
 		} );
 
 		test( 'fitToWindow should do nothing without canvas', () => {

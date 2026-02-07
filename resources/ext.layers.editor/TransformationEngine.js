@@ -374,7 +374,16 @@
 	 * @param {Object} backgroundImage - Background image for size reference
 	 */
 	fitToWindow( backgroundImage ) {
-		if ( !backgroundImage || !this.canvas ) {
+		if ( !this.canvas ) {
+			return;
+		}
+
+		// Use CSS display size as reference since resizeCanvas() already
+		// scales the canvas to fit the container at zoom=1.0.
+		const cssWidth = parseFloat( this.canvas.style.width ) || this.canvas.width;
+		const cssHeight = parseFloat( this.canvas.style.height ) || this.canvas.height;
+
+		if ( !cssWidth || !cssHeight ) {
 			return;
 		}
 
@@ -386,8 +395,8 @@
 		const containerWidth = container.clientWidth - 40; // padding
 		const containerHeight = container.clientHeight - 40;
 
-		const scaleX = containerWidth / backgroundImage.width;
-		const scaleY = containerHeight / backgroundImage.height;
+		const scaleX = containerWidth / cssWidth;
+		const scaleY = containerHeight / cssHeight;
 		let targetZoom = Math.min( scaleX, scaleY );
 
 		// Clamp to zoom limits

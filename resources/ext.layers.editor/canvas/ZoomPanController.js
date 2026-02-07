@@ -213,16 +213,28 @@
 		 * Fit canvas to window size
 		 */
 		fitToWindow() {
-			if ( !this.manager.backgroundImage ) {
+			const canvas = this.manager.canvas;
+			if ( !canvas ) {
 				return;
 			}
 
-			const container = this.manager.canvas.parentNode;
+			// Use the CSS display size as reference since resizeCanvas() already
+			// scales the canvas to fit the container at zoom=1.0.
+			// The CSS transform scale() is applied on top of that CSS size.
+			// Final visual size = cssSize * zoom, so zoom = targetSize / cssSize.
+			const cssWidth = parseFloat( canvas.style.width ) || canvas.width;
+			const cssHeight = parseFloat( canvas.style.height ) || canvas.height;
+
+			if ( !cssWidth || !cssHeight ) {
+				return;
+			}
+
+			const container = canvas.parentNode;
 			const containerWidth = container.clientWidth - 40; // padding
 			const containerHeight = container.clientHeight - 40;
 
-			const scaleX = containerWidth / this.manager.backgroundImage.width;
-			const scaleY = containerHeight / this.manager.backgroundImage.height;
+			const scaleX = containerWidth / cssWidth;
+			const scaleY = containerHeight / cssHeight;
 			let targetZoom = Math.min( scaleX, scaleY );
 
 			// Clamp to zoom limits
