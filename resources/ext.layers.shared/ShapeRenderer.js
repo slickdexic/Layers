@@ -104,6 +104,21 @@
 		}
 
 		/**
+		 * Get the GradientRenderer class (cached lookup from global namespace).
+		 * Used for static hasGradient() checks without repeating the global chain.
+		 *
+		 * @return {Function|null} GradientRenderer class or null
+		 */
+		_getGradientRendererClass() {
+			if ( this._gradientRendererClass === undefined ) {
+				this._gradientRendererClass = ( typeof window !== 'undefined' &&
+					window.Layers && window.Layers.Renderers &&
+					window.Layers.Renderers.GradientRenderer ) || null;
+			}
+			return this._gradientRendererClass;
+		}
+
+		/**
 		 * Set the polygon/star renderer instance
 		 *
 		 * @param {Object} polygonStarRenderer - PolygonStarRenderer instance
@@ -155,8 +170,8 @@
 
 			// Check for gradient fill first
 			if ( this.gradientRenderer ) {
-				const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
-				if ( GradientRenderer && GradientRenderer.hasGradient( layer ) ) {
+				const GradientRendererClass = this._getGradientRendererClass();
+				if ( GradientRendererClass && GradientRendererClass.hasGradient( layer ) ) {
 					return this.gradientRenderer.applyFill( layer, bounds, { scale: scaleFactor } );
 				}
 			}
@@ -444,9 +459,9 @@
 			const fillOpacity = clampOpacity( layer.fillOpacity );
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
-			// Check for gradient fill using static method if available
-			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
-			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			// Check for gradient fill using cached static class reference
+			const GradientRendererClass = this._getGradientRendererClass();
+			const hasGradient = GradientRendererClass && GradientRendererClass.hasGradient( layer );
 			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
@@ -575,8 +590,8 @@
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
 			// Check for gradient fill
-			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
-			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			const GradientRendererClass = this._getGradientRendererClass();
+			const hasGradient = GradientRendererClass && GradientRendererClass.hasGradient( layer );
 			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 
@@ -714,8 +729,8 @@
 			const strokeOpacity = clampOpacity( layer.strokeOpacity );
 			const isBlurFill = layer.fill === 'blur';
 			// Check for gradient fill
-			const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer );
-			const hasGradient = GradientRenderer && GradientRenderer.hasGradient( layer );
+			const GradientRendererClass = this._getGradientRendererClass();
+			const hasGradient = GradientRendererClass && GradientRendererClass.hasGradient( layer );
 			const hasFill = ( layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0 ) || hasGradient;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
 

@@ -498,6 +498,8 @@
 			}
 
 			// Determine direction (growing or shrinking)
+			// Cardinal handles: check the relevant axis only.
+			// Diagonal handles: use dot product with handle direction vector.
 			let growing = false;
 			switch ( handleType ) {
 				case 'e':
@@ -513,16 +515,16 @@
 					growing = deltaY > 0;
 					break;
 				case 'ne':
-					growing = deltaX > 0 || deltaY < 0;
+					growing = ( deltaX - deltaY ) > 0;
 					break;
 				case 'nw':
-					growing = deltaX < 0 || deltaY < 0;
+					growing = ( -deltaX - deltaY ) > 0;
 					break;
 				case 'se':
-					growing = deltaX > 0 || deltaY > 0;
+					growing = ( deltaX + deltaY ) > 0;
 					break;
 				case 'sw':
-					growing = deltaX < 0 || deltaY > 0;
+					growing = ( -deltaX + deltaY ) > 0;
 					break;
 			}
 
@@ -754,23 +756,33 @@
 			const fontSizeChange = diagonalDelta * 0.2;
 
 			// Determine if we're growing or shrinking based on handle direction
+			// Cardinal handles: check relevant axis only.
+			// Diagonal handles: use dot product with handle direction vector.
 			let isGrowing = false;
 			switch ( handleType ) {
-				case 'se':
 				case 'e':
+					isGrowing = deltaX > 0;
+					break;
+				case 'w':
+					isGrowing = deltaX < 0;
+					break;
+				case 'n':
+					isGrowing = deltaY < 0;
+					break;
 				case 's':
-					isGrowing = ( deltaX > 0 || deltaY > 0 );
+					isGrowing = deltaY > 0;
+					break;
+				case 'se':
+					isGrowing = ( deltaX + deltaY ) > 0;
 					break;
 				case 'nw':
-				case 'w':
-				case 'n':
-					isGrowing = ( deltaX < 0 || deltaY < 0 );
+					isGrowing = ( -deltaX - deltaY ) > 0;
 					break;
 				case 'ne':
-					isGrowing = ( deltaX > 0 || deltaY < 0 );
+					isGrowing = ( deltaX - deltaY ) > 0;
 					break;
 				case 'sw':
-					isGrowing = ( deltaX < 0 || deltaY > 0 );
+					isGrowing = ( -deltaX + deltaY ) > 0;
 					break;
 			}
 
@@ -800,23 +812,33 @@
 			const sizeChange = diagonalDelta * 0.5;
 
 			// Determine if we're growing or shrinking based on handle direction
+			// Cardinal handles: check relevant axis only.
+			// Diagonal handles: use dot product with handle direction vector.
 			let isGrowing = false;
 			switch ( handleType ) {
-				case 'se':
 				case 'e':
+					isGrowing = deltaX > 0;
+					break;
+				case 'w':
+					isGrowing = deltaX < 0;
+					break;
+				case 'n':
+					isGrowing = deltaY < 0;
+					break;
 				case 's':
-					isGrowing = ( deltaX > 0 || deltaY > 0 );
+					isGrowing = deltaY > 0;
+					break;
+				case 'se':
+					isGrowing = ( deltaX + deltaY ) > 0;
 					break;
 				case 'nw':
-				case 'w':
-				case 'n':
-					isGrowing = ( deltaX < 0 || deltaY < 0 );
+					isGrowing = ( -deltaX - deltaY ) > 0;
 					break;
 				case 'ne':
-					isGrowing = ( deltaX > 0 || deltaY < 0 );
+					isGrowing = ( deltaX - deltaY ) > 0;
 					break;
 				case 'sw':
-					isGrowing = ( deltaX < 0 || deltaY > 0 );
+					isGrowing = ( -deltaX + deltaY ) > 0;
 					break;
 			}
 

@@ -1276,12 +1276,12 @@ describe( 'InlineTextEditor - Blur handling', () => {
 
 		editor._handleBlur();
 
-		// Wait for the setTimeout (150ms in implementation)
+		// Wait for the setTimeout (250ms in implementation)
 		setTimeout( () => {
 			// Should NOT finish editing when clicking toolbar
 			expect( finishSpy ).not.toHaveBeenCalled();
 			done();
-		}, 200 );
+		}, 300 );
 	} );
 
 	test( 'should not finish editing when child of toolbar has focus', ( done ) => {
@@ -1303,7 +1303,7 @@ describe( 'InlineTextEditor - Blur handling', () => {
 			// Should NOT finish editing when clicking toolbar child
 			expect( finishSpy ).not.toHaveBeenCalled();
 			done();
-		}, 200 );
+		}, 300 );
 	} );
 
 	test( 'should finish editing when focus is lost to outside element', ( done ) => {
@@ -1322,11 +1322,11 @@ describe( 'InlineTextEditor - Blur handling', () => {
 		// We need to call _handleBlur and wait for the timeout
 		editor._handleBlur();
 
-		// Wait for the setTimeout (150ms in implementation)
+		// Wait for the setTimeout (250ms in implementation)
 		setTimeout( () => {
 			expect( finishSpy ).toHaveBeenCalledWith( true );
 			done();
-		}, 200 );
+		}, 300 );
 	} );
 
 	test( 'should not finish editing when color picker dialog is open', ( done ) => {
@@ -1354,7 +1354,7 @@ describe( 'InlineTextEditor - Blur handling', () => {
 			// Cleanup
 			document.body.removeChild( mockDialog );
 			done();
-		}, 200 );
+		}, 300 );
 	} );
 
 	test( 'should handle blur without throwing', () => {
