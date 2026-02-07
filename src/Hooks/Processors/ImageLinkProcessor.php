@@ -444,20 +444,16 @@ class ImageLinkProcessor {
 			if ( $layerData === null ) {
 				return null;
 			}
-			// Filter layers by short ID while preserving background settings
+			// Filter layers by short ID (prefix match) while preserving background settings
+			$normalizedShortIds = array_map( 'strtolower', $shortIds );
 			$filteredLayers = array_values( array_filter(
 				$layerData['layers'],
-				static function ( $layer ) use ( $shortIds ) {
+				static function ( $layer ) use ( $normalizedShortIds ) {
 					if ( !isset( $layer['id'] ) ) {
 						return false;
 					}
-					$lid = (string)$layer['id'];
-					foreach ( $shortIds as $sid ) {
-						if ( str_ends_with( $lid, $sid ) ) {
-							return true;
-						}
-					}
-					return false;
+					$short = substr( strtolower( (string)$layer['id'] ), 0, 4 );
+					return in_array( $short, $normalizedShortIds, true );
 				}
 			) );
 			return [

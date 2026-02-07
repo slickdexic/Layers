@@ -171,12 +171,55 @@
 				throw new Error( 'Invalid layers data' );
 			}
 
-			// Ensure each layer has an ID
+			// Enforce max layer count
+			const maxLayers = ( typeof mw !== 'undefined' && mw.config )
+				? ( mw.config.get( 'wgLayersMaxLayerCount' ) || 100 )
+				: 100;
+			if ( layers.length > maxLayers ) {
+				throw new Error( 'Too many layers (max ' + maxLayers + ')' );
+			}
+
+			// Valid layer types (must match server-side validation whitelist)
+			const validTypes = [
+				'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
+				'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape',
+				'marker', 'dimension'
+			];
+
+			// Sanitize each imported layer
 			return layers.map( ( layer ) => {
 				const obj = layer || {};
 				if ( !obj.id ) {
 					obj.id = 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 9 );
 				}
+
+				// Validate type — reject unknown types
+				if ( obj.type && validTypes.indexOf( obj.type ) === -1 ) {
+					obj.type = 'rectangle';
+				}
+
+				// Strip HTML tags from text fields to prevent XSS in DOM contexts
+				if ( typeof obj.text === 'string' ) {
+					obj.text = obj.text.replace( /<[^>]*>/g, '' );
+				}
+				if ( typeof obj.name === 'string' ) {
+					obj.name = obj.name.replace( /<[^>]*>/g, '' );
+				}
+
+				// Sanitize richText runs if present
+				if ( Array.isArray( obj.richText ) ) {
+					for ( let i = 0; i < obj.richText.length; i++ ) {
+						const run = obj.richText[ i ];
+						if ( run && typeof run.text === 'string' ) {
+							run.text = run.text.replace( /<[^>]*>/g, '' );
+						}
+					}
+				}
+
+				// Remove __proto__ and constructor properties to prevent prototype pollution
+				delete obj.__proto__;
+				delete obj.constructor;
+
 				return obj;
 			} );
 		}

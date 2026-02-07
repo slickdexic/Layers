@@ -258,6 +258,12 @@ class SlideHooks {
 				$key = strtolower( trim( substr( $expanded, 0, $equalsPos ) ) );
 				$value = trim( substr( $expanded, $equalsPos + 1 ) );
 				$params[$key] = $value;
+			} else {
+				// Bare flag (no value) — e.g., "noedit"
+				$flag = strtolower( $expanded );
+				if ( $flag !== '' ) {
+					$params[$flag] = true;
+				}
 			}
 		}
 
