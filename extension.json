@@ -27,7 +27,6 @@
 		"MediaWiki\\Extension\\Layers\\Hooks": "src/Hooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks": "src/Hooks/WikitextHooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\UIHooks": "src/Hooks/UIHooks.php",
-		"MediaWiki\\Extension\\Layers\\Hooks\\ParserHooks": "src/Hooks/ParserHooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\Processors\\LayersHtmlInjector": "src/Hooks/Processors/LayersHtmlInjector.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\Processors\\LayersParamExtractor": "src/Hooks/Processors/LayersParamExtractor.php",
 		"MediaWiki\\Extension\\Layers\\Database\\LayersDatabase": "src/Database/LayersDatabase.php",

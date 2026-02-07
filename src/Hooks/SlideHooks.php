@@ -441,7 +441,7 @@ class SlideHooks {
 			  'base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+' .
 			  'PHJlY3Qgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0iI2NjYyIvPjxyZWN0IHg9IjgiIHk9IjgiIHdpZHRoPSI4' .
 			  'IiBoZWlnaHQ9IjgiIGZpbGw9IiNjY2MiLz48L3N2Zz4=);'
-			: "background-color: {$bgColorAttr};";
+			: "background-color: {$backgroundColor};";
 
 		// Use DISPLAY dimensions for the visible container size
 		$style = "width: {$displayWidth}px; height: {$displayHeight}px; {$bgStyle}";

@@ -12,18 +12,8 @@ namespace MediaWiki\Extension\Layers;
 
 class LayeredThumbnail extends \MediaTransformOutput {
 
-	/** @var mixed File */
-	private $file;
 	/** @var string */
 	private $layeredPath;
-	/** @var string */
-	private $url;
-	/** @var string */
-	private $path;
-	/** @var int|null */
-	private $width;
-	/** @var int|null */
-	private $height;
 
 	/**
 	 * @param mixed $file MediaWiki File object
