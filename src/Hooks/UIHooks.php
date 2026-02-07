@@ -432,12 +432,13 @@ class UIHooks {
 			$revisions = (int)( $set['revision_count'] ?? 1 );
 			$timestamp = $set['latest_timestamp'] ?? '';
 
-			// Format the timestamp
+			// Format the timestamp using wiki language for localization
 			$formattedDate = '';
 			if ( $timestamp ) {
 				try {
-					$ts = \wfTimestamp( TS_UNIX, $timestamp );
-					$formattedDate = date( 'M j, Y', $ts );
+					$lang = \RequestContext::getMain()->getLanguage();
+					$mwTs = \wfTimestamp( TS_MW, $timestamp );
+					$formattedDate = $lang->date( $mwTs, true );
 				} catch ( \Throwable $e ) {
 					$formattedDate = $timestamp;
 				}

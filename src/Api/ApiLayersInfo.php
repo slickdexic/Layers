@@ -19,6 +19,7 @@ use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
+use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
 use Title;
 
@@ -87,7 +88,7 @@ class ApiLayersInfo extends ApiBase {
 		$filename = $params['filename'] ?? null;
 		$slidename = $params['slidename'] ?? null;
 		$layerSetId = $params['layersetid'] ?? null;
-		$setName = $params['setname'] ?? null;
+		$setName = isset( $params['setname'] ) ? SetNameSanitizer::sanitize( $params['setname'] ) : null;
 		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : 50;
 		$limit = max( 1, min( $limit, 200 ) );
 		$offset = isset( $params['offset'] ) ? (int)$params['offset'] : 0;

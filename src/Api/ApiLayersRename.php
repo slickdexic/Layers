@@ -287,6 +287,12 @@ class ApiLayersRename extends ApiBase {
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
 
+			// Rate limiting (before DB lookups to prevent abuse)
+			$rateLimiter = $this->createRateLimiter();
+			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+			}
+
 			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
 			$imgName = LayersConstants::SLIDE_PREFIX . $slidename;
 			$sha1 = LayersConstants::TYPE_SLIDE;
@@ -305,12 +311,6 @@ class ApiLayersRename extends ApiBase {
 			// Permission check: only owner or admin can rename (via LayersApiHelperTrait)
 			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $oldName ) ) {
 				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
-			}
-
-			// Rate limiting
-			$rateLimiter = $this->createRateLimiter();
-			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
-				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Perform the rename
