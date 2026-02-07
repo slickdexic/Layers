@@ -275,12 +275,14 @@ describe('ZoomPanController', () => {
     });
 
     describe('fitToWindow', () => {
-        test('should calculate fit zoom based on container size', () => {
-            // Background image is 1200x900
-            // Container is 1000x700 with 40px padding = 960x660
-            // Scale X = 960/1200 = 0.8
-            // Scale Y = 660/900 = 0.733...
-            // Target zoom = min(0.8, 0.733) = 0.733
+        test('should calculate fit zoom based on CSS display size', () => {
+            // Canvas logical size is 1200x900 (from backgroundImage)
+            // resizeCanvas() would have CSS-fitted to container (1000x700):
+            //   aspect 1.33 < 1.43 → constrain by height: cssH=700, cssW=933
+            // fitToWindow uses CSS size: (1000-40)/933 ≈ 1.029, (700-40)/700 ≈ 0.943
+            // targetZoom = min(1.029, 0.943) = 0.943
+            mockCanvas.style.width = '933px';
+            mockCanvas.style.height = '700px';
 
             zoomPanController.smoothZoomTo = jest.fn();
 
@@ -289,13 +291,49 @@ describe('ZoomPanController', () => {
             expect(mockCanvasManager.panX).toBe(0);
             expect(mockCanvasManager.panY).toBe(0);
             expect(zoomPanController.smoothZoomTo).toHaveBeenCalled();
-            // Check the zoom is approximately correct
             const targetZoom = zoomPanController.smoothZoomTo.mock.calls[0][0];
-            expect(targetZoom).toBeCloseTo(0.733, 2);
+            expect(targetZoom).toBeCloseTo(0.943, 2);
         });
 
-        test('should do nothing if no background image', () => {
+        test('should use canvas logical dimensions when no CSS size set', () => {
+            // No style.width/height set — falls back to canvas.width/height
+            // Canvas is 800x600, container is 1000x700
             mockCanvasManager.backgroundImage = null;
+            mockCanvas.style.width = '';
+            mockCanvas.style.height = '';
+
+            zoomPanController.smoothZoomTo = jest.fn();
+
+            zoomPanController.fitToWindow();
+
+            expect(zoomPanController.smoothZoomTo).toHaveBeenCalled();
+            const targetZoom = zoomPanController.smoothZoomTo.mock.calls[0][0];
+            // (1000-40)/800 = 1.2, (700-40)/600 = 1.1 => min = 1.1
+            expect(targetZoom).toBeCloseTo(1.1, 2);
+        });
+
+        test('should work correctly for slides with CSS-fitted canvas', () => {
+            // Slide: canvas 600x400, container 1000x700
+            // resizeCanvas: aspect 1.5 > 1.43 → constrain by width: cssW=1000, cssH=667
+            mockCanvasManager.backgroundImage = null;
+            mockCanvas.width = 600;
+            mockCanvas.height = 400;
+            mockCanvas.style.width = '1000px';
+            mockCanvas.style.height = '667px';
+
+            zoomPanController.smoothZoomTo = jest.fn();
+
+            zoomPanController.fitToWindow();
+
+            expect(zoomPanController.smoothZoomTo).toHaveBeenCalled();
+            const targetZoom = zoomPanController.smoothZoomTo.mock.calls[0][0];
+            // (1000-40)/1000 = 0.96, (700-40)/667 = 0.989
+            // targetZoom = min(0.96, 0.989) = 0.96
+            expect(targetZoom).toBeCloseTo(0.96, 2);
+        });
+
+        test('should do nothing if no canvas', () => {
+            mockCanvasManager.canvas = null;
 
             zoomPanController.smoothZoomTo = jest.fn();
 
