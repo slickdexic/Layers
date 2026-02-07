@@ -659,6 +659,13 @@
 			if ( typeof L.arrowY === 'number' ) {
 				L.arrowY = L.arrowY * sy;
 			}
+			// Callout tail tip position - must be scaled for proper tail rendering
+			if ( typeof L.tailTipX === 'number' ) {
+				L.tailTipX = L.tailTipX * sx;
+			}
+			if ( typeof L.tailTipY === 'number' ) {
+				L.tailTipY = L.tailTipY * sy;
+			}
 			if ( typeof L.fontSizeAdjust === 'number' ) {
 				L.fontSizeAdjust = L.fontSizeAdjust * scaleAvg;
 			}

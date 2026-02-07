@@ -339,7 +339,8 @@
 		getBackgroundVisible() {
 			if ( this.editor && this.editor.stateManager ) {
 				const visible = this.editor.stateManager.get( 'backgroundVisible' );
-				return visible !== false; // Default to true
+				// Handle both boolean false and integer 0 (API serialization)
+				return visible !== false && visible !== 0;
 			}
 			return true;
 		}

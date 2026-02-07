@@ -308,6 +308,9 @@ class ValidationManager {
 	 * @return {string} Localized message or fallback
 	 */
 	getMessage( key, fallback = '' ) {
+		if ( !window.layersMessages ) {
+			return fallback || key;
+		}
 		return window.layersMessages.get( key, fallback );
 	}
 

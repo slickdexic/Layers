@@ -210,8 +210,9 @@
 			const w = bounds.width || 0;
 			const h = bounds.height || 0;
 
-			// Log blur fill parameters for troubleshooting
-			if ( typeof mw !== 'undefined' && mw.log ) {
+			// Log blur fill parameters for troubleshooting (debug only)
+			if ( typeof mw !== 'undefined' && mw.config &&
+				mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 				mw.log( '[EffectsRenderer] drawBlurFill called',
 					'type:', layer.type,
 					'bounds:', x, y, w, h,
@@ -222,7 +223,8 @@
 			}
 
 			if ( w <= 0 || h <= 0 ) {
-				if ( typeof mw !== 'undefined' && mw.log ) {
+				if ( typeof mw !== 'undefined' && mw.config &&
+					mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 					mw.log( '[EffectsRenderer] drawBlurFill - skipped due to zero dimensions' );
 				}
 				return;
@@ -394,8 +396,9 @@
 
 			// Step 5: No content available - show placeholder
 			if ( !hasContent ) {
-				// Log when falling back to placeholder
-				if ( typeof mw !== 'undefined' && mw.log ) {
+				// Log when falling back to placeholder (debug only)
+				if ( typeof mw !== 'undefined' && mw.config &&
+					mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 					mw.log( '[EffectsRenderer] drawBlurFill - using gray placeholder (no content)' );
 				}
 				this.ctx.save();
@@ -408,8 +411,9 @@
 				return;
 			}
 
-			// Log successful blur rendering
-			if ( typeof mw !== 'undefined' && mw.log ) {
+			// Log successful blur rendering (debug only)
+			if ( typeof mw !== 'undefined' && mw.config &&
+				mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 				mw.log( '[EffectsRenderer] drawBlurFill - drawing blurred content' );
 			}
 
