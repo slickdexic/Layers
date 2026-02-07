@@ -519,9 +519,9 @@ Unlike other endpoints, setname is not passed through `SetNameSanitizer::sanitiz
 
 ---
 
-### MED-v24-9: StateManager Potential Reentrant Loop
+### MED-v24-9: StateManager Potential Reentrant Loop ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Added `_isProcessingPending` reentrant guard to `unlockState()`.
 **File:** resources/ext.layers.editor/StateManager.js
 
 `unlockState()` processes pending ops which can trigger recursive lock/unlock.
@@ -529,9 +529,9 @@ No depth limit on recursion.
 
 ---
 
-### MED-v24-10: InlineTextEditor Blur Handler Race Condition
+### MED-v24-10: InlineTextEditor Blur Handler Race Condition ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Increased blur timeout from 150ms to 250ms.
 **File:** resources/ext.layers.editor/canvas/InlineTextEditor.js (~L571)
 
 150ms blur timeout vs 100ms toolbar interaction timeouts creates a window where
@@ -539,9 +539,9 @@ the editor closes during toolbar interaction (font dropdown, color picker).
 
 ---
 
-### MED-v24-11: SmartGuidesController Snap Cache Key Too Coarse
+### MED-v24-11: SmartGuidesController Snap Cache Key Too Coarse ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Cache now tracks layers array reference (`_cachedLayersRef`).
 **File:** resources/ext.layers.editor/canvas/SmartGuidesController.js (~L155)
 
 Cache key only considers layer count and first layer ID. Moving/resizing any
@@ -549,9 +549,9 @@ layer doesn't invalidate snap point cache, causing incorrect snapping.
 
 ---
 
-### MED-v24-12: LayersEditor.addLayer() Mutates State Array In-Place
+### MED-v24-12: LayersEditor.addLayer() Mutates State Array In-Place ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Uses spread copy `[...(get('layers') || [])]` before mutating.
 **File:** resources/ext.layers.editor/LayersEditor.js (~L275-280)
 
 `stateManager.get('layers')` returns live reference, then `layers.unshift()`
@@ -560,9 +560,9 @@ mutates it in-place before `stateManager.set()`. Observers comparing
 
 ---
 
-### MED-v24-13: CanvasRenderer Blur Blend Creates Full Canvas Per Frame
+### MED-v24-13: CanvasRenderer Blur Blend Creates Full Canvas Per Frame ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Introduced cached `_blurTempCanvas` reused across frames.
 **File:** resources/ext.layers.editor/CanvasRenderer.js (~L720-740)
 
 For every blur-blended layer on every render frame, a new full-size canvas is
@@ -570,9 +570,9 @@ created and discarded. At 2048×2048 (16MB per canvas), this causes GC pressure.
 
 ---
 
-### MED-v24-14: DrawingController Ellipse Preview Coordinate Drift (Potential)
+### MED-v24-14: DrawingController Ellipse Preview Coordinate Drift (Potential) — FALSE POSITIVE
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Analyzed as false positive. Math correctly computes center/radius.
 **File:** resources/ext.layers.editor/canvas/DrawingController.js (~L340)
 
 Ellipse preview mutates `layer.x` to midpoint each frame, causing center drift.
@@ -581,9 +581,9 @@ Also, `width` is never updated during preview — `createLayerFromDrawing` reads
 
 ---
 
-### MED-v24-15: ResizeCalculator Wrong Grow/Shrink for Diagonal Handles
+### MED-v24-15: ResizeCalculator Wrong Grow/Shrink for Diagonal Handles ✅ RESOLVED
 
-**Status:** ❌ OPEN
+**Status:** ✅ RESOLVED — Replaced OR-logic with dot product for diagonal handles; separated cardinal cases.
 **File:** resources/ext.layers.editor/canvas/ResizeCalculator.js
 
 calculateTextResize, calculateMarkerResize, and calculatePolygonResize use
@@ -615,8 +615,8 @@ Entire class does nothing (returns true). Should be removed.
 ### LOW-v24-3: UIHooks Excessive Defensive Coding for MW 1.44+
 ~140 lines of `method_exists`/`class_exists` checks for APIs guaranteed present in MW 1.44+.
 
-### LOW-v24-4: WikitextHooks Logs Wikitext Preview at Info Level
-First 200 chars of wikitext logged at info level. Potential information disclosure in logs.
+### LOW-v24-4: WikitextHooks Logs Wikitext Preview at Info Level ✅ RESOLVED
+First 200 chars of wikitext logged at ~~info~~ debug level. Downgraded to `logDebug()` to prevent information disclosure.
 
 ### LOW-v24-5: Hooks.php Checks Both `layers` and `Layers` URL Params
 Case-sensitive ambiguity in URL parameter naming.
@@ -624,8 +624,8 @@ Case-sensitive ambiguity in URL parameter naming.
 ### LOW-v24-6: ColorValidator Duplicated Validation Logic
 Static `isValidColor()` duplicates all instance method logic.
 
-### LOW-v24-7: Database Cache Stores Null Results
-Non-existent IDs fill the 100-entry cache, pushing out valid entries.
+### LOW-v24-7: Database Cache Stores Null Results ✅ RESOLVED
+Removed null caching — `isset()` can't detect cached nulls, so they wasted cache slots.
 
 ### LOW-v24-8: LayersSchemaManager.CURRENT_VERSION Stale ✅ RESOLVED
 ✅ RESOLVED — Updated CURRENT_VERSION to 1.5.52.
@@ -643,8 +643,8 @@ Uses `addExtensionUpdate(['applyPatch', ...])` instead of MW's recommended metho
 ### LOW-v24-12: Inconsistent Error Response Patterns Across API Modules
 Some use `addValue()` individually, others build result arrays.
 
-### LOW-v24-13: Duplicated GradientRenderer Lookup in ShapeRenderer
-Same global lookup repeated in drawRectangle, drawCircle, drawEllipse. Should use `this.gradientRenderer`.
+### LOW-v24-13: Duplicated GradientRenderer Lookup in ShapeRenderer ✅ RESOLVED
+Added cached `_getGradientRendererClass()` method, replacing 4 duplicated global chain lookups.
 
 ### LOW-v24-14: Non-Cryptographic Layer ID Generation
 Uses `Date.now()` + `Math.random()`. Could collide on rapid batch operations.

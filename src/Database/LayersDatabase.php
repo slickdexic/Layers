@@ -276,7 +276,8 @@ class LayersDatabase {
 		);
 
 		if ( !$row ) {
-			$this->addToCache( $cacheKey, false );
+			// Don't cache false/null results — they waste cache slots
+			// and evict valid entries (LOW-v24-7)
 			return false;
 		}
 

@@ -851,7 +851,9 @@
 		 * @private
 		 */
 		_handleBlur() {
-			// Use setTimeout to allow click events to process first
+			// Use setTimeout to allow click events and toolbar interactions to process first.
+			// 250ms gives dropdowns/color pickers enough time to set their interaction flags
+			// before this handler checks them (was 150ms, causing race with 100ms toolbar opens).
 			setTimeout( () => {
 				// Don't finish editing if we're interacting with the toolbar or a dialog
 				// Check both the local flag and the toolbar instance
@@ -872,7 +874,7 @@
 				if ( this.isEditing ) {
 					this.finishEditing( true );
 				}
-			}, 150 );
+			}, 250 );
 		}
 
 		/**
