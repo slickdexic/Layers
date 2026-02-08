@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** February 3, 2026
-**Version:** 1.5.51
+**Last Updated:** February 6, 2026
+**Version:** 1.5.52
 
 ---
 
@@ -17,14 +17,14 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (February 4, 2026)
+## Codebase Statistics (February 8, 2026)
 
 | Metric | Value |
 |--------|-------|
 | Total JS files | **140** |
-| Total JS lines | **~96,498** |
-| Total PHP files | **40** |
-| Total PHP lines | **~14,915** |
+| Total JS lines | **~96,886** |
+| Total PHP files | **39** |
+| Total PHP lines | **~15,034** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
@@ -32,11 +32,11 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.19% stmt, 84.96% branch** |
-| Jest tests | **11,231** (165 suites) |
+| Jest tests | **11,254** (165 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **18** (2 generated, 14 JS, 2 PHP) |
+| God classes (>1000 lines) | **21** (2 generated, 17 JS, 2 PHP) |
 | Drawing tools | **15** |
-| Shape library | **1,310 shapes** |
+| Shape library | **5,116 shapes** |
 | Emoji library | **2,817 emoji** |
 | i18n messages | **749** |
 | eslint-disable comments | **11** ✅ |
@@ -94,10 +94,10 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 ### Previous Releases
 
 **v1.5.11-v1.5.12 - Libraries:**
-- Shape Library with 1,310 shapes (ISO 7010, IEC 60417, etc.)
+- Shape Library with 5,116 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
-### God Classes (18 Files ≥1,000 Lines)
+### God Classes (21 Files ≥1,000 Lines)
 
 **Generated Data Files (exempt from refactoring):**
 | File | Lines | Notes |
@@ -108,27 +108,35 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 **Hand-Written JavaScript Files with Delegation Patterns:**
 | File | Lines | Delegation Status |
 |------|-------|-------------------|
-| LayerPanel.js | 2,176 | ✅ 9 controllers |
-| CanvasManager.js | 2,045 | ✅ 10+ controllers |
-| Toolbar.js | 1,892 | ✅ 4 modules |
-| LayersEditor.js | 1,856 | ✅ 3 modules |
-| SelectionManager.js | 1,432 | ✅ 3 modules |
-| PropertyBuilders.js | 1,415 | UI builders |
-| InlineTextEditor.js | 1,396 | Feature complexity |
-| APIManager.js | 1,394 | ✅ APIErrorHandler |
-| ViewerManager.js | 1,278 | Viewer orchestration |
-| ToolManager.js | 1,225 | ✅ 2 handlers |
-| CanvasRenderer.js | 1,220 | ✅ SelectionRenderer |
-| GroupManager.js | 1,172 | Group operations |
-| SlideController.js | 1,003 | Slide mode controller |
+| LayerPanel.js | 2,180 | ✅ 9 controllers |
+| CanvasManager.js | 2,053 | ✅ 10+ controllers |
+| Toolbar.js | 1,891 | ✅ 4 modules |
+| LayersEditor.js | 1,836 | ✅ 3 modules |
+| InlineTextEditor.js | 1,670 | Feature complexity |
+| APIManager.js | 1,566 | ✅ APIErrorHandler |
+| PropertyBuilders.js | 1,464 | UI builders |
+| SelectionManager.js | 1,415 | ✅ 3 modules |
+| CanvasRenderer.js | 1,365 | ✅ SelectionRenderer |
+| ViewerManager.js | 1,320 | Viewer orchestration |
+| ToolManager.js | 1,214 | ✅ 2 handlers |
+| GroupManager.js | 1,205 | Group operations |
+| SlideController.js | 1,131 | Slide mode controller |
+| TransformController.js | 1,117 | Resize/rotation |
+| LayersValidator.js | 1,116 | Validation rules |
 
 **PHP God Classes:**
 | File | Lines | Notes |
 |------|-------|-------|
-| ServerSideLayerValidator.php | 1,297 | Validation complexity |
-| LayersDatabase.php | 1,242 | Uses delegation pattern |
+| ServerSideLayerValidator.php | 1,346 | Validation complexity |
+| LayersDatabase.php | 1,363 | Uses delegation pattern |
 
-**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 94.65% test coverage.
+**New God Classes (crossed 1,000 lines):**
+| File | Lines | Notes |
+|------|-------|-------|
+| ResizeCalculator.js | 1,017 | Shape resize calculations |
+| ShapeRenderer.js | 1,010 | Shape rendering with gradients |
+
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 95.19% test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for detailed status.
 
@@ -908,7 +916,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **11,231 tests, 95.19% statement coverage, 84.96% branch coverage**
+- **11,254 tests, 95.19% statement coverage, 84.96% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -944,9 +952,9 @@ extensions/Layers/
 │   │   │   └── ViewerOverlay.js
 │   ├── ext.layers.shared/   # Shared modules (~8,000 lines)
 │   │   ├── LayerRenderer.js     # Facade/dispatcher
-│   │   ├── ShapeRenderer.js     # Shape rendering (~994 lines)
-│   │   ├── ArrowRenderer.js     # Arrow rendering (~1,301 lines)
-│   │   ├── CalloutRenderer.js   # Callout rendering (~1,291 lines)
+│   │   ├── ShapeRenderer.js     # Shape rendering (~1,010 lines)
+│   │   ├── ArrowRenderer.js     # Arrow rendering (~974 lines)
+│   │   ├── CalloutRenderer.js   # Callout rendering (~961 lines)
 │   │   ├── ShadowRenderer.js    # Shadow effects
 │   │   ├── TextRenderer.js      # Text rendering
 │   │   ├── TextBoxRenderer.js   # Text box rendering
@@ -985,7 +993,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,231 tests, 165 suites)
+│   ├── jest/                # Unit tests (11,254 tests, 165 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

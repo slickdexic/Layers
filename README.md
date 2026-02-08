@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95.19%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C231%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-11%2C254%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.52 (February 3, 2026)  
+> **Version:** 1.5.52 (February 5, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+
 >
@@ -94,7 +94,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Line          | L        | Straight lines                               |
 | Marker    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
-| Custom Shape  | —        | 1,310 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
+| Custom Shape  | —        | 5,116 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
 | Emoji         | —        | 2,817 Noto Color Emoji with search and categories |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers).
@@ -307,11 +307,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~14,915 lines across 40 files**
-- **Frontend:** HTML5 Canvas editor with **140 JS files (~96,498 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,034 lines across 39 files**
+- **Frontend:** HTML5 Canvas editor with **140 JS files (~96,886 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **18 god classes** (files >1,000 lines), all use proper delegation patterns
+- **Technical Debt:** **21 god classes** (files >1,000 lines), all use proper delegation patterns
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
   - All other god classes have proper facade/delegation patterns
 
@@ -319,7 +319,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,231 passing (165 suites) |
+| Jest tests | 11,254 passing (165 suites) |
 | PHPUnit tests | 24 test files |
 | Statement coverage | 95.19% |
 | Branch coverage | 84.96% |
@@ -347,7 +347,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Large images** - performance may degrade with images >4096px
 
 **Resolved Issues:**
-- ✅ **God class monitoring** - 18 files >1,000 lines with proper delegation patterns (Jan 31, 2026)
+- ✅ **God class monitoring** - 21 files >1,000 lines with proper delegation patterns (Feb 8, 2026)
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
 - ✅ **Background image load failure** - user now notified via mw.notify()
 - ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up
@@ -376,10 +376,10 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 140 | ✅ |
-| Total JS lines | ~96,498 | ✅ Hand-written (+ ~14,354 generated) |
-| ES6 classes | 142 | ✅ 100% migrated |
-| God classes (>1000 lines) | 18 | ✅ Well-delegated facades |
-| Tests passing | 11,231 | ✅ |
+| Total JS lines | ~96,886 | ✅ Hand-written (+ ~14,354 generated) |
+| ES6 classes | 140 | ✅ 100% migrated |
+| God classes (>1000 lines) | 21 | ✅ Well-delegated facades |
+| Tests passing | 11,254 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.19% | ✅ Excellent |
 | Branch coverage | 84.96% | ✅ Target met |

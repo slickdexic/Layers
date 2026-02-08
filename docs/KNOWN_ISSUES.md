@@ -381,8 +381,8 @@ Only 14 named colors, no length limit, no HSL/HSLA.
 |----|------|-------|
 | DOC-21 | README.md | Tool heading "15" but table has 16 rows |
 | DOC-22 | README.md, mediawiki | Missing Slide Mode configs |
-| DOC-23 | copilot-instructions.md | JS lines ~96,619 → actual 96,856 |
-| DOC-24 | copilot-instructions.md | PHP lines ~14,946 → actual 15,009 |
+| DOC-23 | copilot-instructions.md | ~~JS lines ~96,619 → actual 96,856~~ FIXED (updated to ~96,886) |
+| DOC-24 | copilot-instructions.md | ~~PHP lines ~14,946 → actual 15,009~~ FIXED (updated to ~15,034) |
 | DOC-25 | copilot-instructions.md | Several module line counts stale |
 | DOC-26 | docs/ARCHITECTURE.md | Facade table counts stale |
 | DOC-27 | docs/ARCHITECTURE.md | File tree counts stale |

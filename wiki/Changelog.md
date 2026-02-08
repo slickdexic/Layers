@@ -9,9 +9,20 @@ Version history for the Layers extension.
 ### Added
 - **Abort Handling Toggle** — Optional `$wgLayersRejectAbortedRequests` (or `editor.config.rejectAbortedRequests`) surfaces aborted API requests as rejections for debugging. Default remains false to preserve legacy behavior.
 
+### Fixed
+- **API Error Handling** — Fixed bare `\Throwable` catch in ApiLayersDelete.php that swallowed `ApiUsageException`
+- **Schema Cache Performance** — Added `schemaReadyResult` cache to LayersSchemaManager
+- **Text Length Validation** — Changed `maxTextLength` from 500 to 10,000 to match server-side limit
+- **Save Button Timer Leak** — Fixed `_scheduleTimeout` timer leak in APIManager.js `disableSaveButton()`
+- **Multi-Selection Deletion** — Fixed `deleteSelectedLayers()` to operate on full selection array
+
+### Removed
+- **diagnose.php** — Removed diagnostic script (security risk; functionality covered by MediaWiki core)
+
 ### Technical Details
 - Applies to APIManager abort handlers for revision and named set loading
-- All 11,231 tests pass (165 test suites) ✅
+- v27 code review: 3 CRITICAL + 6 HIGH issues fixed across 6 files
+- All 11,254 tests pass (165 test suites) ✅
 
 ## Version 1.5.52 (February 5, 2026)
 
@@ -45,7 +56,7 @@ Version history for the Layers extension.
 
 ### Technical Details
 - Comprehensive v13 code review completed
-- All 11,231 tests pass (165 test suites) ✅
+- All 11,254 tests pass (165 test suites) ✅
 - 95.19% statement coverage, 84.96% branch coverage
 
 ---
@@ -57,7 +68,7 @@ Version history for the Layers extension.
 - **Arrow Position Control** — Dimension arrows can now point inside or outside
 
 ### Technical Details
-- All 11,231 tests pass (165 test suites) ✅
+- All 11,254 tests pass (165 test suites) ✅
 
 ---
 
@@ -73,7 +84,7 @@ Version history for the Layers extension.
 - **Cursor-Only Formatting** — Toggle formats (bold, italic, etc.) now set typing state for next characters when cursor is placed but no text selected
 
 ### Technical Details
-- 11,231 tests passing (165 suites)
+- 11,254 tests passing (165 suites)
 - 95.44% statement, 85.20% branch coverage
 - InlineTextEditor.js: +45 lines for toggle format and backgroundColor detection
 - RichTextToolbar.js: +25 lines for `updateFromSelection()` method
@@ -179,7 +190,7 @@ Version history for the Layers extension.
 - **Metrics Synchronization** — Updated all documentation with correct metrics:
   - Coverage: 95.42% statement, 85.25% branch
   - Test count: 11,112 tests in 163 suites
-  - God classes: 18 total (2 generated, 14 JS hand-written, 2 PHP)
+  - God classes: 21 total (2 generated, 17 JS hand-written, 2 PHP)
   - PHP files: 42 files
 - **README.md Fix** — Replaced unimplemented `lock=view` with implemented `noedit` parameter
 - **CONTRIBUTING.md Fix** — Updated from outdated 92.59%/9,967+ to current 95.42%/11,112
