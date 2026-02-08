@@ -10,10 +10,12 @@
 
 > **Version:** 1.5.52 (February 5, 2026)  
 > **Status:** ✅ Production-ready  
-> **Requires:** MediaWiki 1.44.0+, PHP 8.1+
+> **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
+> **Primary branch:** `main` — all development and testing happens here
 >
-> **For MediaWiki 1.43.x:** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
-> **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (community maintained).
+> **For MediaWiki 1.43.x (LTS):** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
+> **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (previous LTS, still supported).  
+> Changes are developed/tested on `main` first, then cherry-picked to REL branches.
 
 ---
 

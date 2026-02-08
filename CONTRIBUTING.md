@@ -2,6 +2,16 @@
 
 Thanks for helping improve Layers! This guide covers local setup, how to run checks, and important code quality rules.
 
+## Branch Workflow
+
+**All work targets the `main` branch.** This is the primary development and testing branch. Submit PRs against `main`.
+
+- **`main`** — Primary branch. All development, testing, and code review happens here.
+- **`REL1_43`** — Current MediaWiki LTS (1.43.x). Changes cherry-picked from `main`.
+- **`REL1_39`** — Previous MediaWiki LTS (1.39.x-1.42.x). Changes cherry-picked from `main`.
+
+Never commit directly to REL branches. All changes must be tested on `main` first.
+
 ## Codebase Size Policy
 
 **Target: <110,000 lines of JavaScript**

@@ -255,19 +255,28 @@ git push origin main
 
 ### Step 6: Update LTS Branches
 
-For each LTS branch (e.g., REL1_39, REL1_43):
+**`main` is the primary branch.** All changes are developed and tested on `main` first, then cherry-picked to REL branches.
+
+For each LTS branch (REL1_43, then REL1_39):
 
 ```bash
+# Cherry-pick the release commit(s) from main
 git checkout REL1_43
-git merge main --no-commit
-# Resolve any conflicts
-# Verify MW 1.43 compatibility
-npm test
-npm run test:js
-git commit -m "Merge main into REL1_43 for vX.Y.Z"
+git cherry-pick <commit-hash>
+# Resolve any conflicts (use --theirs for docs)
+npm run test:js  # Verify tests pass
 git push origin REL1_43
 git tag vX.Y.Z-REL1_43
 git push origin vX.Y.Z-REL1_43
+
+# Repeat for REL1_39
+git checkout REL1_39
+git cherry-pick <commit-hash>
+npm run test:js
+git push origin REL1_39
+
+# Return to main
+git checkout main
 ```
 
 ### Step 7: Update GitHub Wiki
