@@ -190,6 +190,10 @@ class ApiLayersDelete extends ApiBase {
 			$this->getResult()->addValue( 'layersdelete', 'setname', $setName );
 			$this->getResult()->addValue( 'layersdelete', 'revisionsDeleted', $rowsDeleted );
 
+		} catch ( \MediaWiki\Api\ApiUsageException $e ) {
+			// Re-throw API usage exceptions (permission denied, rate limited, etc.)
+			// so MediaWiki returns the specific error code to the client
+			throw $e;
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during layer set delete: {message}', [
 				'message' => $e->getMessage(),
@@ -262,6 +266,9 @@ class ApiLayersDelete extends ApiBase {
 			$this->getResult()->addValue( 'layersdelete', 'setname', $setName );
 			$this->getResult()->addValue( 'layersdelete', 'revisionsDeleted', $rowsDeleted );
 
+		} catch ( \MediaWiki\Api\ApiUsageException $e ) {
+			// Re-throw API usage exceptions (permission denied, rate limited, etc.)
+			throw $e;
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during slide delete: {message}', [
 				'message' => $e->getMessage(),

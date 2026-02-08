@@ -240,6 +240,9 @@ class LayersSchemaManager {
 	/** @var array Cached schema validation results */
 	private $schemaCache = [];
 
+	/** @var bool|null Cached result of isSchemaReady() */
+	private $schemaReadyResult = null;
+
 	public function __construct() {
 		$this->logger = MediaWikiServices::getInstance()
 			->get( 'LayersLogger' ) ?? null;
@@ -251,12 +254,19 @@ class LayersSchemaManager {
 	 * @return bool True if schema is available and current
 	 */
 	public function isSchemaReady(): bool {
+		// Cache the result to avoid repeated DB queries within the same request
+		if ( $this->schemaReadyResult !== null ) {
+			return $this->schemaReadyResult;
+		}
+
 		try {
 			foreach ( self::SCHEMA_REQUIREMENTS as $table => $requirements ) {
 				if ( !$this->validateTableSchema( $table ) ) {
+					$this->schemaReadyResult = false;
 					return false;
 				}
 			}
+			$this->schemaReadyResult = true;
 			return true;
 		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
@@ -431,6 +441,7 @@ class LayersSchemaManager {
 	 */
 	public function clearCache(): void {
 		$this->schemaCache = [];
+		$this->schemaReadyResult = null;
 	}
 
 	/**

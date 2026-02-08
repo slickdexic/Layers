@@ -1276,20 +1276,30 @@ class LayersEditor {
 	}
 
 	/**
-	 * Duplicate the selected layer
+	 * Duplicate the selected layer(s)
 	 */
 	duplicateSelected () {
 		const selectedIds = this.getSelectedLayerIds();
 		if ( selectedIds.length > 0 ) {
-			// Duplicate the first selected layer (primary selection)
-			const layerId = selectedIds[ selectedIds.length - 1 ]; // Last = primary
-			const layer = this.getLayerById( layerId );
-			if ( layer ) {
-				const duplicate = JSON.parse( JSON.stringify( layer ) );
-				duplicate.x = ( duplicate.x || 0 ) + 20;
-				duplicate.y = ( duplicate.y || 0 ) + 20;
-				delete duplicate.id;
-				this.addLayer( duplicate );
+			const newIds = [];
+			// Duplicate all selected layers, not just the last one
+			for ( const layerId of selectedIds ) {
+				const layer = this.getLayerById( layerId );
+				if ( layer ) {
+					const duplicate = JSON.parse( JSON.stringify( layer ) );
+					duplicate.x = ( duplicate.x || 0 ) + 20;
+					duplicate.y = ( duplicate.y || 0 ) + 20;
+					delete duplicate.id;
+					this.addLayer( duplicate );
+					if ( duplicate.id ) {
+						newIds.push( duplicate.id );
+					}
+				}
+			}
+			// Select the newly duplicated layers
+			if ( newIds.length > 0 && this.canvasManager &&
+				typeof this.canvasManager.setSelectedLayerIds === 'function' ) {
+				this.canvasManager.setSelectedLayerIds( newIds );
 			}
 		}
 	}

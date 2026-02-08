@@ -999,11 +999,6 @@
 	disableSaveButton() {
 		if ( this.editor.toolbar && this.editor.toolbar.saveButton ) {
 			this.editor.toolbar.saveButton.disabled = true;
-			this._scheduleTimeout( () => {
-				if ( this.editor.toolbar.saveButton ) {
-					this.editor.toolbar.saveButton.disabled = false;
-				}
-			}, 2000 );
 		}
 	}
 

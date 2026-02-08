@@ -3222,9 +3222,7 @@ describe( 'APIManager', function () {
 	} );
 
 	describe( 'disableSaveButton', () => {
-		it( 'should disable save button and re-enable after timeout', () => {
-			jest.useFakeTimers();
-
+		it( 'should disable save button', () => {
 			const testApiManager = new APIManager( mockEditor );
 
 			const mockSaveButton = { disabled: false };
@@ -3233,13 +3231,6 @@ describe( 'APIManager', function () {
 			testApiManager.disableSaveButton();
 
 			expect( mockSaveButton.disabled ).toBe( true );
-
-			// Fast-forward time
-			jest.advanceTimersByTime( 2000 );
-
-			expect( mockSaveButton.disabled ).toBe( false );
-
-			jest.useRealTimers();
 		} );
 
 		it( 'should handle missing toolbar gracefully', () => {
