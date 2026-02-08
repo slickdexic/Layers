@@ -63,15 +63,15 @@ Each controller handles a specific responsibility:
 
 | Controller | Responsibility | Lines |
 |------------|---------------|-------|
-| `ZoomPanController` | Zoom, pan, fit-to-window | ~340 |
-| `TransformController` | Resize, rotation, multi-layer | ~761 |
-| `DrawingController` | Shape creation, drawing preview | ~635 |
-| `HitTestController` | Selection handle hit testing | ~380 |
-| `ClipboardController` | Copy, cut, paste | ~210 |
-| `RenderCoordinator` | Render scheduling, dirty regions | ~390 |
-| `InteractionController` | Mouse/touch event handling | ~490 |
-| `AlignmentController` | Align and distribute layers | ~464 |
-| `SmartGuidesController` | Snap alignment guides | ~745 |
+| `ZoomPanController` | Zoom, pan, fit-to-window | ~397 |
+| `TransformController` | Resize, rotation, multi-layer | ~1,117 |
+| `DrawingController` | Shape creation, drawing preview | ~830 |
+| `HitTestController` | Selection handle hit testing | ~621 |
+| `ClipboardController` | Copy, cut, paste | ~291 |
+| `RenderCoordinator` | Render scheduling, dirty regions | ~486 |
+| `InteractionController` | Mouse/touch event handling | ~556 |
+| `AlignmentController` | Align and distribute layers | ~599 |
+| `SmartGuidesController` | Snap alignment guides | ~750 |
 
 ### Module Registry
 
@@ -265,12 +265,12 @@ render(layer, scale) {
 
 | Renderer | Layer Types | Lines |
 |----------|-------------|-------|
-| `ShapeRenderer` | rectangle, circle, ellipse, polygon, star | ~1,049 |
-| `ArrowRenderer` | arrow, line | ~702 |
-| `TextRenderer` | text | ~343 |
-| `TextBoxRenderer` | textbox | ~430 |
-| `ShadowRenderer` | (all - shadow effects) | ~521 |
-| `EffectsRenderer` | blur | ~245 |
+| `ShapeRenderer` | rectangle, circle, ellipse, polygon, star | ~1,010 |
+| `ArrowRenderer` | arrow, line | ~974 |
+| `TextRenderer` | text | ~345 |
+| `TextBoxRenderer` | textbox | ~996 |
+| `ShadowRenderer` | (all - shadow effects) | ~587 |
+| `EffectsRenderer` | blur | ~463 |
 
 ---
 
@@ -408,13 +408,13 @@ global.mw = {
 
 | Metric | Value |
 |--------|-------|
-| Total JS Files | 127 |
-| Total Lines | ~115,282 |
-| ES6 Classes | 127 |
-| Test Files | 157 suites |
-| Test Cases | 10,643 |
-| Statement Coverage | 94.45% |
-| Branch Coverage | 84.87% |
+| Total JS Files | 140 |
+| Total Lines | ~96,886 |
+| ES6 Classes | 140 |
+| Test Files | 165 suites |
+| Test Cases | 11,254 |
+| Statement Coverage | 95.19% |
+| Branch Coverage | 84.96% |
 
 ### God Classes (>1,000 lines)
 
@@ -422,21 +422,23 @@ All god classes use the delegation pattern:
 
 | Class | Lines | Delegates To |
 |-------|-------|--------------|
-| LayerPanel | ~2,180 | 9 controllers |
+| LayerPanel | ~2,191 | 9 controllers |
 | CanvasManager | ~2,053 | 10+ controllers |
 | Toolbar | ~1,891 | 4 modules |
-| LayersEditor | ~1,836 | 3 modules |
-| InlineTextEditor | ~1,670 | Rich text modules |
-| APIManager | ~1,566 | APIErrorHandler |
-| PropertyBuilders | ~1,464 | UI builders |
+| LayersEditor | ~1,846 | 3 modules |
+| InlineTextEditor | ~1,672 | Rich text modules |
+| APIManager | ~1,570 | APIErrorHandler |
+| PropertyBuilders | ~1,495 | UI builders |
 | SelectionManager | ~1,415 | 3 modules |
-| CanvasRenderer | ~1,365 | SelectionRenderer |
+| CanvasRenderer | ~1,391 | SelectionRenderer |
 | ViewerManager | ~1,320 | Sub-renderers |
 | ToolManager | ~1,214 | 2 handlers |
-| GroupManager | ~1,205 | SelectionManager |
+| GroupManager | ~1,207 | SelectionManager |
 | SlideController | ~1,131 | Slide rendering |
 | TransformController | ~1,117 | CanvasManager |
 | LayersValidator | ~1,116 | Validation rules |
+| ResizeCalculator | ~1,017 | Shape resize calculations |
+| ShapeRenderer | ~1,010 | Shape rendering with gradients |
 
 ---
 

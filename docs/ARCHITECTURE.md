@@ -17,14 +17,14 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (February 4, 2026)
+## Codebase Statistics (February 8, 2026)
 
 | Metric | Value |
 |--------|-------|
 | Total JS files | **140** |
-| Total JS lines | **~96,619** |
-| Total PHP files | **40** |
-| Total PHP lines | **~14,946** |
+| Total JS lines | **~96,886** |
+| Total PHP files | **39** |
+| Total PHP lines | **~15,034** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
@@ -32,9 +32,9 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.19% stmt, 84.96% branch** |
-| Jest tests | **11,228** (165 suites) |
+| Jest tests | **11,254** (165 suites) |
 | PHPUnit test files | 24 |
-| God classes (>1000 lines) | **19** (2 generated, 15 JS, 2 PHP) |
+| God classes (>1000 lines) | **21** (2 generated, 17 JS, 2 PHP) |
 | Drawing tools | **15** |
 | Shape library | **5,116 shapes** |
 | Emoji library | **2,817 emoji** |
@@ -97,7 +97,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - Shape Library with 5,116 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
-### God Classes (19 Files ≥1,000 Lines)
+### God Classes (21 Files ≥1,000 Lines)
 
 **Generated Data Files (exempt from refactoring):**
 | File | Lines | Notes |
@@ -129,6 +129,12 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 |------|-------|-------|
 | ServerSideLayerValidator.php | 1,346 | Validation complexity |
 | LayersDatabase.php | 1,363 | Uses delegation pattern |
+
+**New God Classes (crossed 1,000 lines):**
+| File | Lines | Notes |
+|------|-------|-------|
+| ResizeCalculator.js | 1,017 | Shape resize calculations |
+| ShapeRenderer.js | 1,010 | Shape rendering with gradients |
 
 **Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 95.19% test coverage.
 
@@ -910,7 +916,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **11,228 tests, 95.19% statement coverage, 84.96% branch coverage**
+- **11,254 tests, 95.19% statement coverage, 84.96% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -946,7 +952,7 @@ extensions/Layers/
 │   │   │   └── ViewerOverlay.js
 │   ├── ext.layers.shared/   # Shared modules (~8,000 lines)
 │   │   ├── LayerRenderer.js     # Facade/dispatcher
-│   │   ├── ShapeRenderer.js     # Shape rendering (~995 lines)
+│   │   ├── ShapeRenderer.js     # Shape rendering (~1,010 lines)
 │   │   ├── ArrowRenderer.js     # Arrow rendering (~974 lines)
 │   │   ├── CalloutRenderer.js   # Callout rendering (~961 lines)
 │   │   ├── ShadowRenderer.js    # Shadow effects
@@ -987,7 +993,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,228 tests, 165 suites)
+│   ├── jest/                # Unit tests (11,254 tests, 165 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

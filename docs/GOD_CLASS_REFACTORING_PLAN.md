@@ -16,12 +16,12 @@ This document outlines a comprehensive, phased plan to address the god class fil
 
 | Metric | Previous | Current | Target | Status |
 |--------|----------|---------|--------|--------|
-| God classes | 21 files* | 19 files* | <12 files | 📊 Tracked |
+| God classes | 21 files* | 21 files* | <12 files | 📊 Tracked |
 | Branch coverage | 84.48% | **84.96%** | 80%+ | ✅ Exceeded |
-| Tests | 10,448 | **11,228** | Maintain 100% pass | ✅ Passing |
+| Tests | 10,448 | **11,254** | Maintain 100% pass | ✅ Passing |
 | Statement coverage | 94.19% | **95.19%** | Maintain 90%+ | ✅ Excellent |
 
-*19 god classes includes 2 generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) that are exempt from refactoring, plus 2 PHP god classes (LayersDatabase.php, ServerSideLayerValidator.php).
+*21 god classes includes 2 generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) that are exempt from refactoring, plus 2 PHP god classes (LayersDatabase.php, ServerSideLayerValidator.php).
 
 **Key Changes since v1.5.35:**
 - Improved overall branch coverage: 84.48% → 85.20%

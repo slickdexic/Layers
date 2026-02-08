@@ -311,8 +311,8 @@ await api.postWithToken('csrf', {
 | Total JavaScript Files | 140 |
 | Total Lines of Code | ~95K |
 | ES6 Classes | 140 (100% migrated) |
-| Test Suites | 164 |
-| Test Cases | 11,228 |
+| Test Suites | 165 |
+| Test Cases | 11,254 |
 | Code Coverage | 95.19% |
 
 ---

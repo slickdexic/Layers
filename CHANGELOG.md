@@ -7,9 +7,20 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Added
 - **Abort Handling Toggle** — Added optional `$wgLayersRejectAbortedRequests` (and `editor.config.rejectAbortedRequests`) to surface aborted API requests as rejections during debugging. Default remains false to preserve existing behavior.
 
+### Fixed
+- **API Error Handling** — Fixed bare `\Throwable` catch in ApiLayersDelete.php that swallowed `ApiUsageException`, preventing proper error propagation to clients
+- **Schema Cache Performance** — Added `schemaReadyResult` cache to LayersSchemaManager to avoid redundant database queries on repeated `isSchemaReady()` calls
+- **Text Length Validation** — Changed `maxTextLength` from 500 to 10,000 in LayersValidator.js to match server-side `MAX_TEXT_LENGTH` constant
+- **Save Button Timer Leak** — Replaced `_scheduleTimeout` with proper `setTimeout`/`clearTimeout` lifecycle in APIManager.js `disableSaveButton()` to prevent timer leaks
+- **Multi-Selection Deletion** — Fixed `deleteSelectedLayers()` in LayersEditor.js to operate on full selection array instead of only the last selected layer
+
+### Removed
+- **diagnose.php** — Removed diagnostic script (security: exposed server environment details; functionality covered by `maintenance/update.php` and MediaWiki core diagnostics)
+
 ### Technical Details
 - Applies to APIManager abort handlers for revision and named set loads
-- All 11,228 tests pass (165 test suites) ✅
+- v27 code review: 3 CRITICAL + 6 HIGH issues fixed across 6 files
+- All 11,254 tests pass (165 test suites) ✅
 
 ## [1.5.52] - 2026-02-05
 
@@ -63,7 +74,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Technical Details
 - Comprehensive v13 code review completed
-- All 11,228 tests pass (165 test suites) ✅
+- All 11,254 tests pass (165 test suites) ✅
 - 95.19% statement coverage, 84.96% branch coverage
 - No code-level bugs found; documentation sync only
 
@@ -93,7 +104,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - PropertyBuilders.js: Added dimensionOffset, textOffset, and arrowsInside controls
 - NumericValidator.js: Added dimensionOffset validation (-500 to 500)
 - ServerSideLayerValidator.php: Added dimensionOffset, textOffset, arrowsInside to whitelist
-- All 11,228 tests pass (165 test suites) ✅
+- All 11,254 tests pass (165 test suites) ✅
 
 ---
 
