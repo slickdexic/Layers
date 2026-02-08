@@ -2,6 +2,16 @@
 
 This guide is for contributors (human and AI) working on the Layers extension. It explains the architecture, API/data contracts, configuration, testing/build workflow, and security/i18n conventions you must follow.
 
+## Branch Strategy
+
+**`main` is the primary branch.** All development, testing, and code review happens on `main`.
+
+- **`main`** — Primary branch. Develop and test here first.
+- **`REL1_43`** — Current MediaWiki LTS (1.43.x). Receives cherry-picks from `main`.
+- **`REL1_39`** — Previous MediaWiki LTS (1.39.x-1.42.x). Receives cherry-picks from `main`.
+
+Never suggest committing directly to REL branches. Always work on `main` first, then cherry-pick.
+
 ## Codebase Size Policy
 
 **Target: <110,000 lines of JavaScript** — There is NO 50K or 75K limit.
