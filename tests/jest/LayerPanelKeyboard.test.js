@@ -86,6 +86,7 @@ describe( 'LayerPanel Keyboard Navigation', () => {
 			},
 			container: document.body,
 			getLayerById: jest.fn( ( id ) => mockLayers.find( ( l ) => l.id === id ) ),
+			getLayers: jest.fn( () => mockLayers ),
 			updateLayer: jest.fn(),
 			deleteLayer: jest.fn(),
 			removeLayer: jest.fn(),

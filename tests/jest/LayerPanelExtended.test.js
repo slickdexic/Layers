@@ -99,6 +99,9 @@ describe( 'LayerPanel Extended', () => {
 				const layers = mockStateManager.get( 'layers' ) || [];
 				return layers.find( ( l ) => l.id === id ) || null;
 			} ),
+			getLayers: jest.fn( () => {
+				return mockStateManager.get( 'layers' ) || [];
+			} ),
 			layers: []
 		};
 

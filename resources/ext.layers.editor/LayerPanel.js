@@ -1861,14 +1861,25 @@
 		/**
 		 * Toggle layer lock
 		 *
+		 * Uses immutable update pattern through StateManager to ensure
+		 * all subscribers are notified of the change.
+		 *
 		 * @param {string} layerId Layer ID to toggle
 		 */
 		toggleLayerLock( layerId ) {
 			const layer = this.editor.getLayerById( layerId );
 			if ( layer ) {
-				layer.locked = !layer.locked;
+				const newLocked = !layer.locked;
+				const layers = this.editor.getLayers().map( ( l ) => {
+					if ( l.id === layerId ) {
+						return Object.assign( {}, l, { locked: newLocked } );
+					}
+					return l;
+				} );
+				this.editor.stateManager.set( 'layers', layers );
 				this.renderLayerList();
-				this.editor.saveState( layer.locked ? 'Lock Layer' : 'Unlock Layer' );
+				this.editor.canvasManager.renderLayers( this.editor.getLayers() );
+				this.editor.saveState( newLocked ? 'Lock Layer' : 'Unlock Layer' );
 			}
 		}
 

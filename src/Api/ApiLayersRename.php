@@ -177,6 +177,10 @@ class ApiLayersRename extends ApiBase {
 			$this->getResult()->addValue( 'layersrename', 'oldname', $oldName );
 			$this->getResult()->addValue( 'layersrename', 'newname', $newName );
 
+		} catch ( \MediaWiki\Api\ApiUsageException $e ) {
+			// Re-throw API usage exceptions (permission denied, rate limited, etc.)
+			// so MediaWiki returns the specific error code to the client
+			throw $e;
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during layer set rename: {message}', [
 				'message' => $e->getMessage(),
@@ -338,6 +342,9 @@ class ApiLayersRename extends ApiBase {
 			$this->getResult()->addValue( 'layersrename', 'oldname', $oldName );
 			$this->getResult()->addValue( 'layersrename', 'newname', $newName );
 
+		} catch ( \MediaWiki\Api\ApiUsageException $e ) {
+			// Re-throw API usage exceptions (permission denied, rate limited, etc.)
+			throw $e;
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during slide rename: {message}', [
 				'message' => $e->getMessage(),
