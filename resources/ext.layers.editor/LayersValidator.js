@@ -77,8 +77,8 @@
 				maxCoordinate: 10000,
 				minCoordinate: -10000,
 
-				// Text limits
-				maxTextLength: 500,
+				// Text limits (use shared LayerDefaults constant)
+				maxTextLength: limits.MAX_TEXT_LENGTH || 1000,
 
 				// Layer ID validation
 				maxIdLength: 100,

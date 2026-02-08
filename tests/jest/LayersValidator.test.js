@@ -606,7 +606,7 @@ describe( 'LayersValidator', () => {
 		} );
 
 		it( 'should reject text exceeding max length', () => {
-			const layer = { id: 'test', type: 'text', text: 'a'.repeat( 501 ) };
+			const layer = { id: 'test', type: 'text', text: 'a'.repeat( 1001 ) };
 			const result = validator.validateLayer( layer );
 
 			expect( result.isValid ).toBe( false );
@@ -1826,7 +1826,7 @@ describe( 'LayersValidator', () => {
 		} );
 
 		it( 'should invalidate text that is too long', () => {
-			mockInput.value = 'a'.repeat( 600 ); // Exceeds maxTextLength of 500
+			mockInput.value = 'a'.repeat( 1100 ); // Exceeds maxTextLength of 1000
 			const inputValidator = validator.createInputValidator( mockInput, 'text' );
 
 			expect( inputValidator.validate() ).toBe( false );
