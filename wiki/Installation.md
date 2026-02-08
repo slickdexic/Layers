@@ -14,13 +14,15 @@ This guide covers downloading, configuring, and setting up the Layers extension 
 
 ### Branch Selection
 
-| MediaWiki Version | Branch | Current Version |
-|-------------------|--------|-----------------|
-| 1.44+ | `main` | 1.5.52 |
-| 1.43.x | `REL1_43` | 1.5.51-REL1_43 |
-| 1.39.x - 1.42.x | `REL1_39` | 1.5.51-REL1_39 |
+`main` is the **primary development and testing branch**. REL branches receive cherry-picked changes from `main`.
 
-> **Note:** MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_39 branch is now community maintained. Users on MW 1.39-1.42 should upgrade to MW 1.43+ and use the REL1_43 branch for continued support.
+| MediaWiki Version | Branch | Current Version | Notes |
+|-------------------|--------|-----------------|-------|
+| 1.44+ | **`main`** | 1.5.52 | Primary branch |
+| 1.43.x (LTS) | `REL1_43` | 1.5.52-REL1_43 | Current LTS |
+| 1.39.x - 1.42.x | `REL1_39` | 1.5.52-REL1_39 | Previous LTS |
+
+> **Note:** MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_39 branch is still supported for users on MW 1.39-1.42, but users should plan to upgrade to MW 1.43+ and switch to the REL1_43 branch.
 
 ---
 
