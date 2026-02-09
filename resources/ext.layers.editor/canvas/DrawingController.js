@@ -641,8 +641,15 @@ class DrawingController {
 			case 'rectangle':
 			case 'textbox':
 			case 'callout':
-				layer.width = point.x - layer.x;
-				layer.height = point.y - layer.y;
+				layer.width = Math.abs( point.x - layer.x );
+				layer.height = Math.abs( point.y - layer.y );
+				// Adjust origin if drawn right-to-left or bottom-to-top
+				if ( point.x < layer.x ) {
+					layer.x = point.x;
+				}
+				if ( point.y < layer.y ) {
+					layer.y = point.y;
+				}
 				break;
 			case 'circle':
 				dx = point.x - layer.x;

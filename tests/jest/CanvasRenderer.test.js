@@ -1797,5 +1797,50 @@ describe('CanvasRenderer', () => {
             expect(hash1).not.toBe(hash2);
         });
     });
+
+    describe('HIGH-v28-2 regression: _computeLayerHash detects middle-point edits', () => {
+        test('should produce different hashes when middle points change', () => {
+            const layer1 = {
+                id: 'path-1',
+                type: 'path',
+                x: 0, y: 0,
+                points: [
+                    { x: 0, y: 0 },
+                    { x: 50, y: 50 },
+                    { x: 100, y: 100 }
+                ]
+            };
+
+            const layer2 = {
+                ...layer1,
+                points: [
+                    { x: 0, y: 0 },
+                    { x: 75, y: 25 },  // Changed middle point
+                    { x: 100, y: 100 }
+                ]
+            };
+
+            // Same first, last, and length — old code would produce identical hashes
+            expect(layer1.points.length).toBe(layer2.points.length);
+            expect(layer1.points[0]).toEqual(layer2.points[0]);
+            expect(layer1.points[2]).toEqual(layer2.points[2]);
+
+            const hash1 = renderer._computeLayerHash(layer1);
+            const hash2 = renderer._computeLayerHash(layer2);
+            expect(hash1).not.toBe(hash2);
+        });
+
+        test('should produce same hash for identical points arrays', () => {
+            const points = [
+                { x: 10, y: 20 },
+                { x: 30, y: 40 },
+                { x: 50, y: 60 }
+            ];
+            const layer1 = { id: 'p1', type: 'polygon', x: 0, y: 0, points: [...points] };
+            const layer2 = { id: 'p1', type: 'polygon', x: 0, y: 0, points: [...points] };
+
+            expect(renderer._computeLayerHash(layer1)).toBe(renderer._computeLayerHash(layer2));
+        });
+    });
 });
 

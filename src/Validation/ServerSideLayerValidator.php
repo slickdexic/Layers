@@ -502,12 +502,18 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
-		if ( in_array( $property, [ 'id', 'type', 'fontFamily', 'shapeId' ], true ) ) {
+		if ( in_array( $property, [ 'id', 'type', 'fontFamily' ], true ) ) {
 			// Identifiers - sanitize
 			$sanitized = $this->textSanitizer->sanitizeIdentifier( $value );
 			// Font names are cosmetic and not a security risk when sanitized
 			// Allow any sanitized font name rather than restricting to configured list
 			// This prevents data loss when users paste layers from other sources
+			return [ 'valid' => true, 'value' => $sanitized ];
+		}
+
+		if ( $property === 'shapeId' ) {
+			// Shape IDs use category/shape format and need special handling to preserve '/'
+			$sanitized = $this->textSanitizer->sanitizeShapeId( $value );
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
@@ -1341,6 +1347,27 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		if ( preg_match( '/<\s*use[^>]+(?:xlink:)?href\s*=\s*["\']https?:/i', $svg ) ||
 			 preg_match( '/<\s*use[^>]+(?:xlink:)?href\s*=\s*["\']https?:/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG use elements must not reference external URLs' ];
+		}
+
+		// SECURITY: Block <style> elements that can contain CSS-based attack vectors
+		// CSS expressions, XBL bindings, behaviors, and @import can execute code or exfiltrate data
+		if ( preg_match( '/<\s*style/i', $svg ) || preg_match( '/<\s*style/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain style elements' ];
+		}
+
+		// SECURITY: Block CSS expression/binding vectors in inline style attributes
+		// These can appear in style="..." on any SVG element
+		if ( preg_match( '/expression\s*\(/i', $svg ) || preg_match( '/expression\s*\(/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain CSS expressions' ];
+		}
+		if ( preg_match( '/-moz-binding\s*:/i', $svg ) || preg_match( '/-moz-binding\s*:/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain XBL bindings' ];
+		}
+		if ( preg_match( '/behavior\s*:/i', $svg ) || preg_match( '/behavior\s*:/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain CSS behaviors' ];
+		}
+		if ( preg_match( '/@import\b/i', $svg ) || preg_match( '/@import\b/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain CSS @import' ];
 		}
 
 		return [ 'valid' => true, 'value' => $svg ];

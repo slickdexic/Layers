@@ -222,10 +222,8 @@
 				layer.y1,
 				layer.x2,
 				layer.y2,
-				// Points for polygon/path - include geometry, not just count
-				layer.points ? layer.points.length + ':' +
-					( layer.points[ 0 ] ? layer.points[ 0 ].x + ',' + layer.points[ 0 ].y : '' ) + ':' +
-					( layer.points[ layer.points.length - 1 ] ? layer.points[ layer.points.length - 1 ].x + ',' + layer.points[ layer.points.length - 1 ].y : '' ) : ''
+				// Points for polygon/path - hash ALL points to detect middle-point edits
+				layer.points ? this._hashString( JSON.stringify( layer.points ) ) : ''
 			];
 			return hashParts.join( '|' );
 		}

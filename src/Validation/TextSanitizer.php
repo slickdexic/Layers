@@ -78,6 +78,31 @@ class TextSanitizer {
 	}
 
 	/**
+	 * Sanitize shape ID strings - allows forward slash for category paths
+	 *
+	 * Shape IDs use category/shape format like 'iso7010-w/iso_7010_w001'
+	 *
+	 * @param string $shapeId Raw shape ID
+	 * @return string Sanitized shape ID
+	 */
+	public function sanitizeShapeId( string $shapeId ): string {
+		// Remove any non-alphanumeric characters except underscore, hyphen, dot, and forward slash
+		$shapeId = preg_replace( '/[^a-zA-Z0-9_.\\/-]/', '', $shapeId );
+
+		// Prevent path traversal attempts
+		$shapeId = preg_replace( '/\\.{2,}/', '', $shapeId );
+		$shapeId = preg_replace( '#/{2,}#', '/', $shapeId );
+		$shapeId = trim( $shapeId, '/' );
+
+		// Limit length
+		if ( strlen( $shapeId ) > 255 ) {
+			$shapeId = substr( $shapeId, 0, 255 );
+		}
+
+		return $shapeId;
+	}
+
+	/**
 	 * Remove dangerous protocols from text
 	 *
 	 * @param string $text Input text

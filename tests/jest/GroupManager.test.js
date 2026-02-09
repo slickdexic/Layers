@@ -769,7 +769,7 @@ describe( 'GroupManager', () => {
 
 			expect( group ).not.toBeNull();
 			expect( group.type ).toBe( 'group' );
-			expect( mockSelectionManager.selectLayer ).toHaveBeenCalledWith( group );
+			expect( mockSelectionManager.selectLayer ).toHaveBeenCalledWith( group.id );
 		} );
 
 		it( 'should return null if less than 2 layers selected', () => {
@@ -778,6 +778,21 @@ describe( 'GroupManager', () => {
 			const group = groupManager.groupSelected();
 
 			expect( group ).toBeNull();
+		} );
+
+		it( 'CRIT-v28-2 regression: should pass group ID string, not group object', () => {
+			mockSelectionManager.selectedLayers = [
+				testLayers[ 0 ],
+				testLayers[ 1 ]
+			];
+
+			const group = groupManager.groupSelected();
+
+			// Verify selectLayer receives a string ID, not the whole group object
+			const arg = mockSelectionManager.selectLayer.mock.calls[ 0 ][ 0 ];
+			expect( typeof arg ).toBe( 'string' );
+			expect( arg ).toBe( group.id );
+			expect( arg ).toMatch( /^group-/ );
 		} );
 	} );
 
