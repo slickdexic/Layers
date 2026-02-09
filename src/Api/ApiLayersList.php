@@ -95,8 +95,19 @@ class ApiLayersList extends ApiBase {
 		}
 
 		// Get slides from database
-		$slides = $db->listSlides( $prefix, $limit, $offset, $sort );
-		$total = $db->countSlides( $prefix );
+		try {
+			$slides = $db->listSlides( $prefix, $limit, $offset, $sort );
+			$total = $db->countSlides( $prefix );
+		} catch ( \Exception $e ) {
+			$this->getLogger()->error(
+				'Failed to list slides: {error}',
+				[ 'error' => $e->getMessage() ]
+			);
+			$this->dieWithError(
+				[ LayersConstants::ERROR_DB, $e->getMessage() ],
+				'db-error'
+			);
+		}
 
 		// Enrich with user names
 		$slides = $this->enrichWithUserNames( $slides );

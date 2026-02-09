@@ -144,8 +144,14 @@ class LayersEditor {
 		const LayerPanel = getClass( 'UI.LayerPanel', 'LayerPanel' );
 		const CanvasManager = getClass( 'Canvas.Manager', 'CanvasManager' );
 
+		// Cache instances so repeated get() calls return the same object
+		const instances = {};
+
 		return {
 			get: ( name ) => {
+				if ( instances[ name ] ) {
+					return instances[ name ];
+				}
 				const constructors = {
 					UIManager: () => ( typeof UIManager === 'function' ) ? new UIManager( this ) : this.createStubUIManager(),
 					EventManager: () => ( typeof EventManager === 'function' ) ? new EventManager( this ) : { setupGlobalHandlers: function () {}, destroy: function () {}, handleKeyDown: function () {} },
@@ -158,7 +164,8 @@ class LayersEditor {
 					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
 				};
 				if ( constructors[ name ] ) {
-					return constructors[ name ]();
+					instances[ name ] = constructors[ name ]();
+					return instances[ name ];
 				}
 				throw new Error( `Module ${name} not found` );
 			}

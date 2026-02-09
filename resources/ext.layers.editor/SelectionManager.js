@@ -338,7 +338,10 @@
 				this.lastSelectedId = this._selectionState.getLastSelectedId();
 			} else {
 				const layers = this._getLayersArray();
-				this.selectedLayerIds = layers.map( ( layer ) => layer.id );
+				this.selectedLayerIds = layers
+					.filter( ( layer ) => layer.visible !== false && layer.visible !== 0 &&
+						layer.locked !== true && layer.locked !== 1 )
+					.map( ( layer ) => layer.id );
 				this.lastSelectedId = this.selectedLayerIds[ this.selectedLayerIds.length - 1 ] || null;
 			}
 			this.updateSelectionHandles();

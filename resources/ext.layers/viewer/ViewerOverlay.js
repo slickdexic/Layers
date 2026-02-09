@@ -447,11 +447,10 @@
 		_handleViewClick() {
 			this.debugLog( 'View clicked for', this.filename );
 
-			// Try to use the lightbox if available
+			// Use the singleton lightbox instance (avoids leaking DOM/listeners)
 			if ( typeof window !== 'undefined' && window.Layers &&
-				window.Layers.Viewer && window.Layers.Viewer.Lightbox ) {
-				const lightbox = new window.Layers.Viewer.Lightbox();
-				lightbox.open( {
+				window.Layers.lightbox ) {
+				window.Layers.lightbox.open( {
 					filename: this.filename,
 					setName: this.setname,
 					imageUrl: this.imageElement.src

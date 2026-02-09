@@ -444,6 +444,10 @@
 			this.ctx.filter = 'none';
 
 			this.ctx.restore();
+
+			// Release GPU texture memory immediately (don't wait for GC)
+			tempCanvas.width = 0;
+			tempCanvas.height = 0;
 		}
 	}
 

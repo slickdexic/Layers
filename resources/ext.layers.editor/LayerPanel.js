@@ -1926,6 +1926,9 @@
 			const originalName = nameElement.textContent;
 			const maxLength = 100;
 
+			// Store original name for persistent listeners to reference
+			nameElement.dataset.originalName = originalName;
+
 			// Use EventTracker-aware addTargetListener for proper cleanup
 			this.addTargetListener( nameElement, 'input', () => {
 				const currentText = nameElement.textContent;
@@ -1940,21 +1943,22 @@
 				}
 			} );
 			this.addTargetListener( nameElement, 'blur', () => {
+				const savedOriginal = nameElement.dataset.originalName || '';
 				const newName = nameElement.textContent.trim();
-				if ( newName && newName !== originalName ) {
+				if ( newName && newName !== savedOriginal ) {
 					this.editor.updateLayer( layerId, { name: newName } );
 					this.editor.saveState( 'Rename Layer' );
 				}
 				// Disable contentEditable when done editing
 				nameElement.contentEditable = 'false';
 				nameElement.style.cursor = 'pointer';
-				nameElement._hasEditListeners = false;
+				// Do NOT reset _hasEditListeners — listeners are reusable
 			} );
 			this.addTargetListener( nameElement, 'keydown', ( e ) => {
 				if ( e.key === 'Enter' ) {
 					nameElement.blur();
 				} else if ( e.key === 'Escape' ) {
-					nameElement.textContent = originalName;
+					nameElement.textContent = nameElement.dataset.originalName || '';
 					nameElement.blur();
 				}
 			} );
