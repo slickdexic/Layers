@@ -207,9 +207,12 @@
 		 * Update toolbar controls to reflect the current selection's formatting
 		 *
 		 * Called when selection changes to show the font/size of selected text.
+		 * Only updates font size if it was explicitly found in the DOM (via data-font-size
+		 * attribute), to avoid overwriting the toolbar's initial value with a fallback.
 		 *
 		 * @param {Object} selectionInfo - Information about current selection's formatting
 		 * @param {number} [selectionInfo.fontSize] - Font size at selection (unscaled)
+		 * @param {boolean} [selectionInfo.fontSizeFromDOM] - Whether fontSize came from DOM attribute
 		 * @param {string} [selectionInfo.fontFamily] - Font family at selection
 		 */
 		updateFromSelection( selectionInfo ) {
@@ -217,8 +220,10 @@
 				return;
 			}
 
-			// Update font size input
-			if ( selectionInfo.fontSize !== undefined ) {
+			// Only update font size if it was explicitly found in the DOM
+			// This prevents the toolbar from being updated with fallback values
+			// that may differ from the layer's actual fontSize
+			if ( selectionInfo.fontSizeFromDOM && selectionInfo.fontSize !== undefined ) {
 				const sizeInput = this.toolbarElement.querySelector( '.layers-text-toolbar-size' );
 				if ( sizeInput ) {
 					sizeInput.value = selectionInfo.fontSize;

@@ -3318,6 +3318,52 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 
 			expect( info.backgroundColor ).toBeNull();
 		} );
+
+		test( 'should set fontSizeFromDOM=true when data-font-size found', () => {
+			const container = document.createElement( 'div' );
+			const span = document.createElement( 'span' );
+			span.dataset.fontSize = '72';
+			span.textContent = 'Large text';
+			container.appendChild( span );
+			editor.editorElement = container;
+			editor.editingLayer = { fontSize: 24, fontFamily: 'Arial' };
+
+			const textNode = span.firstChild;
+			window.getSelection = jest.fn( () => ( {
+				rangeCount: 1,
+				anchorNode: textNode
+			} ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			expect( info.fontSize ).toBe( 72 );
+			expect( info.fontSizeFromDOM ).toBe( true );
+		} );
+
+		test( 'should set fontSizeFromDOM=false when no data-font-size (regression for toolbar showing wrong size)', () => {
+			// This test verifies that when there's no data-font-size attribute,
+			// fontSizeFromDOM is false, which prevents the toolbar from being
+			// incorrectly updated with a fallback value
+			const container = document.createElement( 'div' );
+			const span = document.createElement( 'span' );
+			span.textContent = 'Plain text'; // No data-font-size attribute
+			container.appendChild( span );
+			editor.editorElement = container;
+			editor.editingLayer = { fontSize: 72, fontFamily: 'Arial' };
+
+			const textNode = span.firstChild;
+			window.getSelection = jest.fn( () => ( {
+				rangeCount: 1,
+				anchorNode: textNode
+			} ) );
+
+			const info = editor._getSelectionFormatInfo();
+
+			// fontSize should fall back to layer value
+			expect( info.fontSize ).toBe( 72 );
+			// But fontSizeFromDOM should be false since not found in DOM
+			expect( info.fontSizeFromDOM ).toBe( false );
+		} );
 	} );
 
 	describe( 'input debouncing (P2.25 regression)', () => {
