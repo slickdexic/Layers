@@ -77,7 +77,8 @@ class ThumbnailProcessor {
 		?string $setNameFromQueue = null,
 		?string $linkTypeFromQueue = null
 	): bool {
-		$file = ( method_exists( $thumbnail, 'getFile' ) ) ? $thumbnail->getFile() : null;
+		$file = ( $thumbnail !== null && method_exists( $thumbnail, 'getFile' ) )
+			? $thumbnail->getFile() : null;
 		$fileName = $file ? $file->getName() : 'unknown';
 		$isForeign = $file && $this->isForeignFile( $file );
 		$this->log( "ThumbnailBeforeProduceHTML for: $fileName (foreign=" . ( $isForeign ? 'yes' : 'no' ) . ")" );
@@ -109,7 +110,7 @@ class ThumbnailProcessor {
 		}
 
 		// Try to fetch from DB if no data yet
-		if ( $layerData === null && method_exists( $thumbnail, 'getFile' ) ) {
+		if ( $layerData === null && $thumbnail !== null && method_exists( $thumbnail, 'getFile' ) ) {
 			$layerData = $this->fetchLayerDataForThumbnailDirect(
 				$thumbnail,
 				$layersFlag,
@@ -121,7 +122,7 @@ class ThumbnailProcessor {
 		$this->injectThumbnailLayerData( $attribs, $layerData, $layersFlag, $thumbnail );
 
 		// Apply layerslink deep linking if specified
-		if ( $linkTypeFromQueue !== null && method_exists( $thumbnail, 'getFile' ) ) {
+		if ( $linkTypeFromQueue !== null && $thumbnail !== null && method_exists( $thumbnail, 'getFile' ) ) {
 			$file = $thumbnail->getFile();
 			if ( $file ) {
 				$this->applyLayersLink( $linkAttribs, $attribs, $file, $linkTypeFromQueue, $layersFlag );
@@ -141,7 +142,7 @@ class ThumbnailProcessor {
 		$layerData = null;
 		$layersFlag = null;
 
-		if ( !method_exists( $thumbnail, 'getParams' ) ) {
+		if ( $thumbnail === null || !method_exists( $thumbnail, 'getParams' ) ) {
 			return [ null, null ];
 		}
 
@@ -355,11 +356,12 @@ class ThumbnailProcessor {
 		$instanceId = 'layers-' . substr( md5( uniqid( (string)mt_rand(), true ) ), 0, 8 );
 		$attribs['data-layers-instance'] = $instanceId;
 
+		// Get file reference for base dimensions and filename lookup
+		$file = ( $thumbnail !== null && method_exists( $thumbnail, 'getFile' ) )
+			? $thumbnail->getFile() : null;
+
 		if ( $layerData !== null ) {
 			$this->pageHasLayers = true;
-
-			// Get base dimensions for scaling
-			$file = method_exists( $thumbnail, 'getFile' ) ? $thumbnail->getFile() : null;
 
 			// Normalize layer data format - handle both old (raw array) and new (object) formats
 			if ( isset( $layerData['layers'] ) && is_array( $layerData['layers'] ) ) {

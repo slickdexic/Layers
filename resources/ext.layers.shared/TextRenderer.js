@@ -210,8 +210,17 @@
 			const textWidth = textMetrics.width;
 			const textHeight = fontSize;
 
-			// Calculate text center for rotation
-			const centerX = x + ( textWidth / 2 );
+			// Calculate text center for rotation based on textAlign
+			const align = layer.textAlign || 'left';
+			let centerX;
+			if ( align === 'center' ) {
+				centerX = x;
+			} else if ( align === 'right' ) {
+				centerX = x - ( textWidth / 2 );
+			} else {
+				// 'left' (default)
+				centerX = x + ( textWidth / 2 );
+			}
 			const centerY = y - ( textHeight / 4 );
 
 			// Apply rotation if present
@@ -219,7 +228,14 @@
 				const rotationRadians = ( layer.rotation * Math.PI ) / 180;
 				this.ctx.translate( centerX, centerY );
 				this.ctx.rotate( rotationRadians );
-				x = -( textWidth / 2 );
+				// After translate to center, offset back by half text dimensions
+				if ( align === 'center' ) {
+					x = 0;
+				} else if ( align === 'right' ) {
+					x = textWidth / 2;
+				} else {
+					x = -( textWidth / 2 );
+				}
 				y = textHeight / 4;
 			}
 

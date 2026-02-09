@@ -883,4 +883,104 @@ describe( 'DraftManager', function () {
 			expect( global.mw ).toBeDefined();
 		} );
 	} );
+
+	describe( 'MED-v28-9 regression: base64 image src stripping', function () {
+		it( 'should strip large base64 src from image layers before saving', function () {
+			// Create a large base64 string (>1024 chars)
+			const largeSrc = 'data:image/png;base64,' + 'A'.repeat( 2000 );
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				if ( key === 'layers' ) {
+					return [
+						{ id: 'img1', type: 'image', src: largeSrc, x: 0, y: 0 },
+						{ id: 'rect1', type: 'rectangle', x: 10, y: 10 }
+					];
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return null;
+			} );
+
+			global.localStorage.setItem.mockClear();
+			draftManager.saveDraft();
+
+			const storageKey = draftManager.getStorageKey();
+			const draftCall = global.localStorage.setItem.mock.calls.find(
+				function ( call ) {
+					return call[ 0 ] === storageKey;
+				}
+			);
+			expect( draftCall ).toBeDefined();
+			const savedData = JSON.parse( draftCall[ 1 ] );
+
+			// Image layer should have src stripped and _srcStripped flag set
+			const imgLayer = savedData.layers.find( function ( l ) {
+				return l.id === 'img1';
+			} );
+			expect( imgLayer.src ).toBeUndefined();
+			expect( imgLayer._srcStripped ).toBe( true );
+
+			// Non-image layer should be unaffected
+			const rectLayer = savedData.layers.find( function ( l ) {
+				return l.id === 'rect1';
+			} );
+			expect( rectLayer.type ).toBe( 'rectangle' );
+		} );
+
+		it( 'should NOT strip small src from image layers', function () {
+			const smallSrc = 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=';
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				if ( key === 'layers' ) {
+					return [
+						{ id: 'img1', type: 'image', src: smallSrc, x: 0, y: 0 }
+					];
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return null;
+			} );
+
+			global.localStorage.setItem.mockClear();
+			draftManager.saveDraft();
+
+			const storageKey = draftManager.getStorageKey();
+			const draftCall = global.localStorage.setItem.mock.calls.find(
+				function ( call ) {
+					return call[ 0 ] === storageKey;
+				}
+			);
+			expect( draftCall ).toBeDefined();
+			const savedData = JSON.parse( draftCall[ 1 ] );
+
+			// Small src should be preserved
+			const imgLayer = savedData.layers.find( function ( l ) {
+				return l.id === 'img1';
+			} );
+			expect( imgLayer.src ).toBe( smallSrc );
+			expect( imgLayer._srcStripped ).toBeUndefined();
+		} );
+
+		it( 'should not mutate original layers when stripping src', function () {
+			const largeSrc = 'data:image/png;base64,' + 'B'.repeat( 2000 );
+			const originalLayers = [
+				{ id: 'img1', type: 'image', src: largeSrc, x: 0, y: 0 }
+			];
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				if ( key === 'layers' ) {
+					return originalLayers;
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return null;
+			} );
+
+			draftManager.saveDraft();
+
+			// Original layer should still have its src
+			expect( originalLayers[ 0 ].src ).toBe( largeSrc );
+			expect( originalLayers[ 0 ]._srcStripped ).toBeUndefined();
+		} );
+	} );
 } );

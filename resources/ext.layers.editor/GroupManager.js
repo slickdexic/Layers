@@ -1119,7 +1119,7 @@
 
 			if ( group && this.selectionManager ) {
 				// Select the new group
-				this.selectionManager.selectLayer( group );
+				this.selectionManager.selectLayer( group.id );
 			}
 
 			return group;

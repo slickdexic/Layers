@@ -371,9 +371,9 @@
 	/**
 	 * Fit canvas to window dimensions
 	 *
-	 * @param {Object} backgroundImage - Background image for size reference
+	 * @param {Object} _backgroundImage - Background image for size reference
 	 */
-	fitToWindow( backgroundImage ) {
+	fitToWindow( _backgroundImage ) {
 		if ( !this.canvas ) {
 			return;
 		}
