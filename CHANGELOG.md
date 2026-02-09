@@ -8,6 +8,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Abort Handling Toggle** — Added optional `$wgLayersRejectAbortedRequests` (and `editor.config.rejectAbortedRequests`) to surface aborted API requests as rejections during debugging. Default remains false to preserve existing behavior.
 
 ### Fixed
+- **Modal Editor X-Frame-Options** — Fixed "Edit layers" button triggering security error in Firefox when opening modal editor. Added `allowClickjacking()` call when in modal mode to disable MediaWiki's default X-Frame-Options header that blocked iframe embedding. (GitHub #53)
 - **InstantCommons Editor Load** — Fixed critical bug where the editor failed to load for foreign files (InstantCommons) by removing overly restrictive CSP header that blocked ResourceLoader scripts. The CSP was unnecessary since foreign images are already served via a local proxy URL (Special:Redirect/file). (GitHub #52)
 - **Font Size Toolbar Persistence** — Fixed bug where toolbar font size showed wrong value (e.g., 48) after setting a different size (e.g., 72), deselecting, and re-selecting a textbox layer. Now `finishEditing()` extracts the dominant fontSize from richText runs and updates `layer.fontSize` to ensure the toolbar initializes correctly on re-edit.
 - **API Error Handling** — Fixed bare `\Throwable` catch in ApiLayersDelete.php that swallowed `ApiUsageException`, preventing proper error propagation to clients
