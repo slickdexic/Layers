@@ -1025,7 +1025,13 @@
 				"layers-text-toolbar-align-left",
 				"layers-text-toolbar-align-center",
 				"layers-text-toolbar-align-right",
-				"layers-text-toolbar-color"
+				"layers-text-toolbar-color",
+				"layers-input-required",
+				"layers-input-invalid-number",
+				"layers-input-min-value",
+				"layers-input-max-value",
+				"layers-input-text-too-long",
+				"layers-input-char-limit-warning"
 			]
 		},
 		"ext.layers.shapeLibrary": {

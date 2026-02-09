@@ -818,16 +818,23 @@
 						height: aabbHeight + tailSize
 					};
 				} else {
-					// Include tail in bounds
-					let boundsY = y;
-					let boundsHeight = height;
-					if ( tailDirection === 'top' || tailDirection === 'top-left' || tailDirection === 'top-right' ) {
-						boundsY = y - tailSize;
-						boundsHeight = height + tailSize;
-					} else if ( tailDirection === 'bottom' || tailDirection === 'bottom-left' || tailDirection === 'bottom-right' ) {
-						boundsHeight = height + tailSize;
-					}
-					blurBounds = { x: originalX, y: boundsY, width: width, height: boundsHeight };
+				// Include tail in bounds - handle all 8 tail directions
+				let boundsX = originalX;
+				let boundsY = y;
+				let boundsWidth = width;
+				let boundsHeight = height;
+				if ( tailDirection === 'top' || tailDirection === 'top-left' || tailDirection === 'top-right' ) {
+					boundsY = y - tailSize;
+					boundsHeight = height + tailSize;
+				} else if ( tailDirection === 'bottom' || tailDirection === 'bottom-left' || tailDirection === 'bottom-right' ) {
+					boundsHeight = height + tailSize;
+				} else if ( tailDirection === 'left' ) {
+					boundsX = originalX - tailSize;
+					boundsWidth = width + tailSize;
+				} else if ( tailDirection === 'right' ) {
+					boundsWidth = width + tailSize;
+				}
+				blurBounds = { x: boundsX, y: boundsY, width: boundsWidth, height: boundsHeight };
 				}
 
 				this.ctx.globalAlpha = baseOpacity * fillOpacity;

@@ -772,4 +772,79 @@ describe( 'ShadowRenderer', () => {
 			expect( drawFn ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'canvas dimension capping (P2.17 regression)', () => {
+		test( 'drawSpreadShadowStroke should cap temp canvas dimensions to MAX_CANVAS_DIM', () => {
+			// Track the canvas dimensions that get set
+			let createdCanvas = null;
+			document.createElement = jest.fn( ( tag ) => {
+				if ( tag === 'canvas' ) {
+					createdCanvas = {
+						width: 0,
+						height: 0,
+						getContext: jest.fn( () => createMockContext() )
+					};
+					return createdCanvas;
+				}
+				return {};
+			} );
+
+			const largeLayer = {
+				shadow: true,
+				shadowSpread: 5,
+				shadowBlur: 100,
+				shadowOffsetX: 200,
+				shadowOffsetY: 150
+			};
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const drawFn = jest.fn();
+
+			// Large canvas that would exceed 8192 without capping
+			canvas.width = 4000;
+			canvas.height = 4000;
+			renderer = new ShadowRenderer( ctx, { canvas: canvas } );
+
+			renderer.drawSpreadShadowStroke( largeLayer, scale, 5, drawFn );
+
+			// Verify both dimensions are capped at MAX_CANVAS_DIM (8192)
+			const MAX_CANVAS_DIM = 8192;
+			expect( createdCanvas.width ).toBeLessThanOrEqual( MAX_CANVAS_DIM );
+			expect( createdCanvas.height ).toBeLessThanOrEqual( MAX_CANVAS_DIM );
+		} );
+
+		test( 'drawSpreadShadow also caps temp canvas dimensions', () => {
+			let createdCanvas = null;
+			document.createElement = jest.fn( ( tag ) => {
+				if ( tag === 'canvas' ) {
+					createdCanvas = {
+						width: 0,
+						height: 0,
+						getContext: jest.fn( () => createMockContext() )
+					};
+					return createdCanvas;
+				}
+				return {};
+			} );
+
+			const largeLayer = {
+				shadow: true,
+				shadowSpread: 5,
+				shadowBlur: 100,
+				shadowOffsetX: 200,
+				shadowOffsetY: 150
+			};
+			const scale = { sx: 1, sy: 1, avg: 1 };
+			const drawFn = jest.fn();
+
+			canvas.width = 4000;
+			canvas.height = 4000;
+			renderer = new ShadowRenderer( ctx, { canvas: canvas } );
+
+			renderer.drawSpreadShadow( largeLayer, scale, 5, drawFn );
+
+			const MAX_CANVAS_DIM = 8192;
+			expect( createdCanvas.width ).toBeLessThanOrEqual( MAX_CANVAS_DIM );
+			expect( createdCanvas.height ).toBeLessThanOrEqual( MAX_CANVAS_DIM );
+		} );
+	} );
 } );

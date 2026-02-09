@@ -2755,7 +2755,8 @@ describe( 'PropertiesForm', () => {
 			expect( errorIndicator ).not.toBeNull();
 			expect( errorIndicator.classList.contains( 'show' ) ).toBe( true );
 			expect( errorIndicator.classList.contains( 'warning' ) ).toBe( true );
-			expect( errorIndicator.textContent ).toContain( 'Approaching character limit' );
+			// Mock mw.message returns the key, actual UI shows localized text
+			expect( errorIndicator.textContent ).toContain( 'layers-input-char-limit-warning' );
 			expect( input.classList.contains( 'warning' ) ).toBe( true );
 		} );
 
@@ -2776,7 +2777,8 @@ describe( 'PropertiesForm', () => {
 			const errorIndicator = container.querySelector( '.property-field-error' );
 			expect( errorIndicator ).not.toBeNull();
 			expect( errorIndicator.classList.contains( 'warning' ) ).toBe( true );
-			expect( errorIndicator.textContent ).toContain( '192/200' );
+			// Mock mw.message returns the key, actual UI shows localized text
+			expect( errorIndicator.textContent ).toContain( 'layers-input-char-limit-warning' );
 		} );
 
 		test( 'should show error when text exceeds max length', () => {
@@ -3362,6 +3364,118 @@ describe( 'PropertiesForm', () => {
 
 			// Should revert to last valid value
 			expect( input.value ).toBe( '100' );
+		} );
+	} );
+
+	describe( 'i18n validation messages (P2.22 regression)', () => {
+		let container;
+
+		beforeEach( () => {
+			container = document.createElement( 'div' );
+			// Reset mw.message mock to track calls
+			global.mw.message.mockClear();
+		} );
+
+		test( 'should use mw.message for required field error', () => {
+			PropertiesForm.addInput( {
+				label: 'Width',
+				type: 'number',
+				value: 100,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Enter empty value to trigger required error
+			input.value = '';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Verify mw.message was called with i18n key
+			expect( global.mw.message ).toHaveBeenCalledWith( 'layers-input-required' );
+		} );
+
+		// NOTE: 'layers-input-invalid-number' cannot be directly tested in jsdom
+		// because type="number" inputs return '' for invalid values, which triggers
+		// 'layers-input-required' instead. The isNaN code path is still covered by
+		// manual testing and the parseFloat behavior is correct.
+
+		test( 'should use mw.message for min value error', () => {
+			PropertiesForm.addInput( {
+				label: 'Sides',
+				type: 'number',
+				value: 6,
+				min: 3,
+				max: 20,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Enter value below minimum
+			input.value = '1';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Verify mw.message was called with i18n key and min value
+			expect( global.mw.message ).toHaveBeenCalledWith( 'layers-input-min-value', 3 );
+		} );
+
+		test( 'should use mw.message for max value error', () => {
+			PropertiesForm.addInput( {
+				label: 'Sides',
+				type: 'number',
+				value: 6,
+				min: 3,
+				max: 20,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Enter value above maximum
+			input.value = '25';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Verify mw.message was called with i18n key and max value
+			expect( global.mw.message ).toHaveBeenCalledWith( 'layers-input-max-value', 20 );
+		} );
+
+		test( 'should use mw.message for text too long error', () => {
+			PropertiesForm.addInput( {
+				label: 'Name',
+				type: 'text',
+				value: 'test',
+				maxLength: 10,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Enter text exceeding maxLength
+			input.value = 'this is way too long for the limit';
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Verify mw.message was called with i18n key and max length
+			expect( global.mw.message ).toHaveBeenCalledWith( 'layers-input-text-too-long', 10 );
+		} );
+
+		test( 'should use mw.message for character limit warning', () => {
+			PropertiesForm.addInput( {
+				label: 'Name',
+				type: 'text',
+				value: 'test',
+				maxLength: 20,
+				onChange: jest.fn()
+			}, 'layer-1', container );
+
+			const input = container.querySelector( 'input' );
+
+			// Enter text approaching limit (>95% of maxLength, but not exceeding)
+			// warnLength = floor(20 * 0.95) = 19, so need >19 chars
+			input.value = '12345678901234567890'; // 20 chars, > warnLength 19
+			input.dispatchEvent( new Event( 'input' ) );
+
+			// Verify mw.message was called with warning key and counts
+			expect( global.mw.message ).toHaveBeenCalledWith( 'layers-input-char-limit-warning', 20, 20 );
 		} );
 	} );
 

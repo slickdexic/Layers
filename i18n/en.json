@@ -752,5 +752,12 @@
 	"layers-slide-name": "Slide Name",
 	"layers-slide-name-hint": "Use letters, numbers, hyphens, and underscores only",
 
+	"layers-input-required": "This field is required",
+	"layers-input-invalid-number": "Please enter a valid number",
+	"layers-input-min-value": "Value must be at least $1",
+	"layers-input-max-value": "Value must be at most $1",
+	"layers-input-text-too-long": "Text is too long. Maximum $1 characters allowed.",
+	"layers-input-char-limit-warning": "Approaching character limit ($1/$2)",
+
 	"specialpages-group-layers": "Layers"
 }
