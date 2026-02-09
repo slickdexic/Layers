@@ -742,11 +742,11 @@ describe( 'ViewerOverlay', () => {
 	} );
 
 	describe( 'view button with lightbox', () => {
-		it( 'should open lightbox when available', () => {
+		it( 'should use singleton lightbox instance when available', () => {
 			const mockLightboxOpen = jest.fn();
-			const mockLightbox = jest.fn( () => ( { open: mockLightboxOpen } ) );
 
-			window.Layers.Viewer.Lightbox = mockLightbox;
+			// Set up the singleton instance (not the constructor)
+			window.Layers.lightbox = { open: mockLightboxOpen };
 
 			const overlay = new ViewerOverlay( {
 				container: container,
@@ -758,18 +758,38 @@ describe( 'ViewerOverlay', () => {
 			const viewBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--view' );
 			viewBtn.click();
 
-			expect( mockLightbox ).toHaveBeenCalled();
 			expect( mockLightboxOpen ).toHaveBeenCalledWith( {
 				filename: 'Test_image.jpg',
 				setName: 'my-set',
 				imageUrl: img.src
 			} );
 
-			delete window.Layers.Viewer.Lightbox;
+			delete window.Layers.lightbox;
+		} );
+
+		it( 'should not create new Lightbox instances on each click (P2.13 regression)', () => {
+			const mockLightboxOpen = jest.fn();
+			window.Layers.lightbox = { open: mockLightboxOpen };
+
+			const overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Test_image.jpg'
+			} );
+
+			const viewBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--view' );
+			viewBtn.click();
+			viewBtn.click();
+			viewBtn.click();
+
+			// Same singleton should be reused — open called 3 times, no new instances
+			expect( mockLightboxOpen ).toHaveBeenCalledTimes( 3 );
+
+			delete window.Layers.lightbox;
 		} );
 
 		it( 'should fall back to image src when mw.util not available', () => {
-			delete window.Layers.Viewer.Lightbox;
+			delete window.Layers.lightbox;
 			delete global.mw.util;
 
 			const mockOpen = jest.fn();

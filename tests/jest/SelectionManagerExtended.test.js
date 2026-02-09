@@ -92,11 +92,12 @@ describe( 'SelectionManager Extended', () => {
 	} );
 
 	describe( 'selectAll', () => {
-		it( 'should select all layers', () => {
+		it( 'should select all unlocked visible layers', () => {
 			selectionManager.selectAll();
 
-			expect( selectionManager.selectedLayerIds ).toEqual( [ 'layer1', 'layer2', 'layer3' ] );
-			expect( selectionManager.lastSelectedId ).toBe( 'layer3' );
+			// layer3 is locked, so it should NOT be selected
+			expect( selectionManager.selectedLayerIds ).toEqual( [ 'layer1', 'layer2' ] );
+			expect( selectionManager.lastSelectedId ).toBe( 'layer2' );
 		} );
 
 		it( 'should handle empty layers array', () => {

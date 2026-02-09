@@ -458,6 +458,17 @@ describe('LayersEditor createFallbackRegistry', () => {
         expect(historyManager.canUndo()).toBe(false);
         expect(historyManager.canRedo()).toBe(false);
     });
+
+    test('should cache instances so repeated get() returns same object (P2.28 regression)', () => {
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.debug = false;
+
+        const registry = LayersEditor.prototype.createFallbackRegistry.call(editorInstance);
+        const sm1 = registry.get('StateManager');
+        const sm2 = registry.get('StateManager');
+
+        expect(sm1).toBe(sm2);
+    });
 });
 
 describe('LayersEditor navigation methods', () => {
