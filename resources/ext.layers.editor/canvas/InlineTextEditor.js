@@ -259,12 +259,20 @@
 					newRichText = RichTextConverter.htmlToRichText( html, this._displayScale );
 					newText = this._getPlainTextFromEditor();
 
+					// Extract dominant fontSize from richText to update layer.fontSize
+					// This ensures the toolbar shows the correct value when re-editing
+					const dominantFontSize = this._extractDominantFontSize( newRichText );
+					if ( dominantFontSize !== null ) {
+						this.editingLayer.fontSize = dominantFontSize;
+					}
+
 					if ( debug && typeof mw.log !== 'undefined' ) {
 						mw.log( '[InlineTextEditor] Extracted content', {
 							html: html,
 							newText: newText,
 							newRichTextLength: newRichText ? newRichText.length : 0,
-							newRichTextSample: newRichText ? JSON.stringify( newRichText ).substring( 0, 200 ) : null
+							newRichTextSample: newRichText ? JSON.stringify( newRichText ).substring( 0, 200 ) : null,
+							dominantFontSize: dominantFontSize
 						} );
 					}
 				} else {
@@ -1615,6 +1623,64 @@
 		//   - htmlToRichText() -> RichTextConverter.htmlToRichText(html, displayScale)
 		//   - mergeAdjacentRuns() -> RichTextConverter.mergeAdjacentRuns()
 		// =========================================================================
+
+		/**
+		 * Extract the dominant font size from richText runs
+		 *
+		 * When all runs have the same fontSize, or only one fontSize is used,
+		 * returns that value. This allows updating layer.fontSize so the toolbar
+		 * shows the correct value when re-editing.
+		 *
+		 * @private
+		 * @param {Array|null} richText - Array of {text, style} objects
+		 * @return {number|null} Dominant font size or null if mixed/none
+		 */
+		_extractDominantFontSize( richText ) {
+			if ( !Array.isArray( richText ) || richText.length === 0 ) {
+				return null;
+			}
+
+			// Collect all font sizes from runs (ignoring newline-only runs)
+			const fontSizes = [];
+			for ( const run of richText ) {
+				// Skip empty or newline-only runs
+				if ( !run.text || run.text.trim() === '' ) {
+					continue;
+				}
+				if ( run.style && typeof run.style.fontSize === 'number' ) {
+					fontSizes.push( run.style.fontSize );
+				}
+			}
+
+			// If no font sizes found in styles, return null
+			if ( fontSizes.length === 0 ) {
+				return null;
+			}
+
+			// Check if all font sizes are the same
+			const uniqueSizes = [ ...new Set( fontSizes ) ];
+			if ( uniqueSizes.length === 1 ) {
+				return uniqueSizes[ 0 ];
+			}
+
+			// Mixed font sizes - find the most common one (weighted by text length could
+			// be an improvement, but for simplicity we use frequency)
+			const sizeCount = {};
+			for ( const size of fontSizes ) {
+				sizeCount[ size ] = ( sizeCount[ size ] || 0 ) + 1;
+			}
+
+			let dominantSize = fontSizes[ 0 ];
+			let maxCount = 0;
+			for ( const size of Object.keys( sizeCount ) ) {
+				if ( sizeCount[ size ] > maxCount ) {
+					maxCount = sizeCount[ size ];
+					dominantSize = parseFloat( size );
+				}
+			}
+
+			return dominantSize;
+		}
 
 		/**
 		 * Get plain text from contentEditable element

@@ -2629,6 +2629,109 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 		} );
 	} );
 
+	describe( '_extractDominantFontSize', () => {
+		test( 'should return null for empty richText', () => {
+			expect( editor._extractDominantFontSize( null ) ).toBeNull();
+			expect( editor._extractDominantFontSize( [] ) ).toBeNull();
+		} );
+
+		test( 'should return null when no fontSize in any run', () => {
+			const richText = [
+				{ text: 'Hello', style: { fontWeight: 'bold' } },
+				{ text: ' World', style: {} }
+			];
+			expect( editor._extractDominantFontSize( richText ) ).toBeNull();
+		} );
+
+		test( 'should return fontSize when all runs have same size', () => {
+			const richText = [
+				{ text: 'Hello', style: { fontSize: 72 } },
+				{ text: ' World', style: { fontSize: 72 } }
+			];
+			expect( editor._extractDominantFontSize( richText ) ).toBe( 72 );
+		} );
+
+		test( 'should return single fontSize when only one run has it', () => {
+			const richText = [
+				{ text: 'Hello', style: { fontSize: 48 } },
+				{ text: ' ', style: {} }
+			];
+			expect( editor._extractDominantFontSize( richText ) ).toBe( 48 );
+		} );
+
+		test( 'should return dominant fontSize when mixed sizes', () => {
+			const richText = [
+				{ text: 'Big', style: { fontSize: 72 } },
+				{ text: 'Normal', style: { fontSize: 16 } },
+				{ text: 'Big again', style: { fontSize: 72 } }
+			];
+			// 72 appears twice, 16 appears once - 72 should be dominant
+			expect( editor._extractDominantFontSize( richText ) ).toBe( 72 );
+		} );
+
+		test( 'should ignore empty/whitespace runs when determining dominant size', () => {
+			const richText = [
+				{ text: '', style: { fontSize: 999 } },
+				{ text: '   ', style: { fontSize: 888 } },
+				{ text: 'Real text', style: { fontSize: 24 } }
+			];
+			// Only the run with actual text should count
+			expect( editor._extractDominantFontSize( richText ) ).toBe( 24 );
+		} );
+
+		test( 'should handle newline-only runs', () => {
+			const richText = [
+				{ text: '\n', style: { fontSize: 999 } },
+				{ text: 'Line 1', style: { fontSize: 36 } },
+				{ text: '\n', style: { fontSize: 888 } },
+				{ text: 'Line 2', style: { fontSize: 36 } }
+			];
+			expect( editor._extractDominantFontSize( richText ) ).toBe( 36 );
+		} );
+	} );
+
+	describe( 'finishEditing should update layer.fontSize from richText (regression test)', () => {
+		test( 'should update layer.fontSize when uniform fontSize is applied via rich text', () => {
+			const textboxLayer = {
+				id: 'textbox-1',
+				type: 'textbox',
+				text: 'Test',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				fontSize: 48, // Original size
+				richText: null
+			};
+			mockCanvasManager.editor.layers = [ textboxLayer ];
+
+			// Manually set up editor state since startEditing may return early
+			// due to incomplete canvas mock
+			editor.editingLayer = textboxLayer;
+			editor.originalText = 'Test';
+			editor.isEditing = true;
+			editor._isRichTextMode = true;
+
+			// Create editor element
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.contentEditable = 'true';
+			document.body.appendChild( editor.editorElement );
+
+			// Mock the htmlToRichText to return text with fontSize 72
+			window.Layers.Canvas.RichTextConverter.htmlToRichText.mockReturnValueOnce( [
+				{ text: 'Test', style: { fontSize: 72 } }
+			] );
+
+			// Set up content that differs from original to trigger change detection
+			editor.editorElement.innerHTML = 'Test with changed size';
+
+			editor.finishEditing( true );
+
+			// Layer's fontSize should now be 72, not 48
+			expect( textboxLayer.fontSize ).toBe( 72 );
+		} );
+	} );
+
 	describe( 'Selection preservation', () => {
 		test( '_saveSelection should store selection range when text is selected', () => {
 			editor._isRichTextMode = true;
