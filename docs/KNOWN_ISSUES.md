@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** February 8, 2026 (v29 — comprehensive fresh audit)
+**Last Updated:** February 8, 2026 (v30 — 8 P2 fixes)
 **Version:** 1.5.52
 
 Cross-reference with [codebase_review.md](../codebase_review.md) and
@@ -14,7 +14,7 @@ Cross-reference with [codebase_review.md](../codebase_review.md) and
 |----------|-------|--------|
 | P0 (Critical) | **0** | ✅ All fixed |
 | P1 (High Priority) | **6** | 4 ✅ Fixed, 6 ❌ Open |
-| P2 (Medium Priority) | **23** | 5 ✅ Fixed, 23 ❌ Open |
+| P2 (Medium Priority) | **20** | 13 ✅ Fixed, 20 ❌ Open |
 | P3 (Low Priority) | **31** | Deferred (8 new in v29) |
 | Performance | **11** | 2 HIGH, 5 MEDIUM, 4 LOW |
 | Infrastructure | **5** | 2 HIGH, 3 MEDIUM |
@@ -226,9 +226,9 @@ causing lines to overflow or underflow.
 |----|-------|------|
 | P2.11 | Client SVG regex bypassable | ValidationManager.js L68 |
 | P2.12 | sanitizeString strips `<>` | ValidationManager.js L89 |
-| P2.13 | ViewerOverlay new Lightbox per click | ViewerOverlay.js L454 |
-| P2.14 | editLayerName listener accumulation | LayerPanel.js L1921 |
-| P2.15 | EffectsRenderer GPU memory leak | EffectsRenderer.js L253 |
+| ~~P2.13~~ | ~~ViewerOverlay new Lightbox per click~~ | ✅ FIXED (v30) |
+| ~~P2.14~~ | ~~editLayerName listener accumulation~~ | ✅ FIXED (v30) |
+| ~~P2.15~~ | ~~EffectsRenderer GPU memory leak~~ | ✅ FIXED (v30) |
 | P2.16 | Callout tailSize not scaled | LayersViewer.js |
 | P2.17 | ShadowRenderer no CANVAS_DIM cap | ShadowRenderer.js L427 |
 | P2.18 | SlideManager.js dead code | ext.layers.slides/ |
@@ -236,12 +236,12 @@ causing lines to overflow or underflow.
 | P2.20 | enrichWithUserNames 3x dup | ApiLayersInfo, ApiLayersList |
 | P2.21 | ext.layers loaded every page | Hooks.php L85 |
 | P2.22 | PropertiesForm hardcoded English | PropertiesForm.js L190 |
-| P2.23 | selectAll fallback no filter | SelectionManager.js L341 |
-| P2.24 | GradientEditor stale listeners | GradientEditor.js L126 |
-| P2.25 | InlineTextEditor no debounce | InlineTextEditor.js L720 |
+| ~~P2.23~~ | ~~selectAll fallback no filter~~ | ✅ FIXED (v30) |
+| ~~P2.24~~ | ~~GradientEditor stale listeners~~ | ✅ FIXED (v30) |
+| ~~P2.25~~ | ~~InlineTextEditor no debounce~~ | ✅ FIXED (v30) |
 | P2.26 | Viewer module loaded unconditionally | Hooks.php L85 |
-| P2.27 | ApiLayersList missing try/catch | ApiLayersList.php L62 |
-| P2.28 | Fallback registry uncached | LayersEditor.js L149 |
+| ~~P2.27~~ | ~~ApiLayersList missing try/catch~~ | ✅ FIXED (v30) |
+| ~~P2.28~~ | ~~Fallback registry uncached~~ | ✅ FIXED (v30) |
 
 ---
 
@@ -310,8 +310,8 @@ causing lines to overflow or underflow.
 | PERF-2 | HIGH | ~~Canvas hash only first/last pts~~ | ✅ FIXED |
 | PERF-3 | MEDIUM | SmartGuides stale cache | SmartGuidesController.js |
 | PERF-4 | MEDIUM | 6 regex passes per parse | WikitextHooks.php L589 |
-| PERF-5 | MEDIUM | InlineTextEditor no debounce | InlineTextEditor.js |
-| PERF-6 | MEDIUM | EffectsRenderer temp canvas leak | EffectsRenderer.js |
+| PERF-5 | MEDIUM | ~~InlineTextEditor no debounce~~ | ✅ FIXED (v30) |
+| PERF-6 | MEDIUM | ~~EffectsRenderer temp canvas leak~~ | ✅ FIXED (v30) |
 | PERF-7 | MEDIUM | GradientEditor full DOM rebuild | GradientEditor.js |
 | PERF-8 | LOW | json_encode in production logs | WikitextHooks.php L316 |
 | PERF-9 | LOW | ViewerManager queries all imgs | ViewerManager.js |

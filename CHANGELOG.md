@@ -35,7 +35,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Applies to APIManager abort handlers for revision and named set loads
 - v27 code review: 3 CRITICAL + 6 HIGH issues fixed across 6 files
 - PHP test suite: 0 failures (was 11), 134 structural errors (MW core dependencies), 549 tests, 765 assertions
-- All 11,279 JS tests pass (165 test suites) ✅
+- All 11,290 JS tests pass (165 test suites) ✅
 - ESLint: 0 errors (was 1), phpcs: 0 errors (was 29 line-ending issues)
 
 ## [1.5.52] - 2026-02-05
