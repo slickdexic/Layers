@@ -1,7 +1,7 @@
 # Improvement Plan
 
 **Updated:** February 9, 2026 (v32 — 2 P2 fixes)
-**Version:** 1.5.53
+**Version:** 1.5.54
 
 Cross-reference with [codebase_review.md](codebase_review.md) and
 [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
