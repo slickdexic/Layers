@@ -677,6 +677,32 @@ describe( 'RichTextToolbar', () => {
 			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
 			expect( sizeInput.value ).toBe( '32' );
 		} );
+
+		it( 'should preserve large font size (regression test for #72 showing as 17)', () => {
+			// This test verifies that when a layer has fontSize 72,
+			// the toolbar correctly shows 72 (not some scaled value like 17)
+			mockLayer.fontSize = 72;
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+
+			toolbar.create();
+
+			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+			expect( sizeInput.value ).toBe( '72' );
+
+			// Verify that updateFromSelection without fontSizeFromDOM doesn't change value
+			toolbar.updateFromSelection( { fontSize: 17 } );
+			expect( sizeInput.value ).toBe( '72' ); // Should NOT change to 17
+
+			// Verify that updateFromSelection WITH fontSizeFromDOM does change value
+			toolbar.updateFromSelection( { fontSize: 36, fontSizeFromDOM: true } );
+			expect( sizeInput.value ).toBe( '36' ); // Should change when from DOM
+		} );
 	} );
 
 	describe( 'underline and strikethrough buttons', () => {
@@ -993,7 +1019,7 @@ describe( 'RichTextToolbar', () => {
 	} );
 
 	describe( 'updateFromSelection', () => {
-		test( 'should update font size input', () => {
+		test( 'should update font size input when fontSizeFromDOM is true', () => {
 			toolbar = new RichTextToolbar( {
 				layer: mockLayer,
 				editorElement: mockEditorElement,
@@ -1001,10 +1027,31 @@ describe( 'RichTextToolbar', () => {
 			} );
 			toolbar.create();
 
-			toolbar.updateFromSelection( { fontSize: 32 } );
+			toolbar.updateFromSelection( { fontSize: 32, fontSizeFromDOM: true } );
 
 			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
 			expect( sizeInput.value ).toBe( '32' );
+		} );
+
+		test( 'should NOT update font size input when fontSizeFromDOM is false', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement
+			} );
+			toolbar.create();
+
+			// Initial value is from layer (16)
+			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+			expect( sizeInput.value ).toBe( '16' );
+
+			// Try to update without fontSizeFromDOM flag - should NOT change
+			toolbar.updateFromSelection( { fontSize: 32 } );
+			expect( sizeInput.value ).toBe( '16' );
+
+			// Try with explicit false - should NOT change
+			toolbar.updateFromSelection( { fontSize: 48, fontSizeFromDOM: false } );
+			expect( sizeInput.value ).toBe( '16' );
 		} );
 
 		test( 'should update font family select', () => {
@@ -1045,7 +1092,7 @@ describe( 'RichTextToolbar', () => {
 			} );
 			// Don't call create() so toolbarElement is null
 
-			expect( () => toolbar.updateFromSelection( { fontSize: 32 } ) ).not.toThrow();
+			expect( () => toolbar.updateFromSelection( { fontSize: 32, fontSizeFromDOM: true } ) ).not.toThrow();
 		} );
 
 		test( 'should update both font and size together', () => {
@@ -1056,7 +1103,7 @@ describe( 'RichTextToolbar', () => {
 			} );
 			toolbar.create();
 
-			toolbar.updateFromSelection( { fontSize: 24, fontFamily: 'Courier New' } );
+			toolbar.updateFromSelection( { fontSize: 24, fontFamily: 'Courier New', fontSizeFromDOM: true } );
 
 			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
 			const fontSelect = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-font' );

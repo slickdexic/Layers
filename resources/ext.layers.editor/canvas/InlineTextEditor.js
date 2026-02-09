@@ -1036,13 +1036,15 @@
 		 * from data attributes or computed styles.
 		 *
 		 * @private
-		 * @return {Object} Format info { fontSize, fontFamily }
+		 * @return {Object} Format info { fontSize, fontFamily, fontSizeFromDOM }
+		 *   fontSizeFromDOM indicates if fontSize was found in DOM (data-font-size attribute)
 		 */
 		_getSelectionFormatInfo() {
 			const info = {
 				fontSize: this.editingLayer?.fontSize || 16,
 				fontFamily: this.editingLayer?.fontFamily || 'Arial',
-				backgroundColor: null
+				backgroundColor: null,
+				fontSizeFromDOM: false
 			};
 
 			const selection = window.getSelection();
@@ -1067,6 +1069,7 @@
 					// Check for data-font-size attribute (our custom unscaled value)
 					if ( node.dataset && node.dataset.fontSize ) {
 						info.fontSize = parseFloat( node.dataset.fontSize );
+						info.fontSizeFromDOM = true;
 					}
 
 					// Check for font-family in inline style
