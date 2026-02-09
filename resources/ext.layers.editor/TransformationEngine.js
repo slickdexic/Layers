@@ -538,12 +538,19 @@
 		}
 
 		const rect = this.canvas.getBoundingClientRect();
-		const clientX = event.clientX - rect.left;
-		const clientY = event.clientY - rect.top;
+		const relX = event.clientX - rect.left;
+		const relY = event.clientY - rect.top;
 
+		// Apply DPI scaling (CSS pixels → canvas pixels)
+		const scaleX = this.canvas.width / rect.width || 1;
+		const scaleY = this.canvas.height / rect.height || 1;
+		const canvasX = relX * scaleX;
+		const canvasY = relY * scaleY;
+
+		// Invert zoom and pan: canvasPixel = zoom * ( world + pan )
 		return {
-			canvasX: ( clientX - ( this.panX || 0 ) ) / this.zoom,
-			canvasY: ( clientY - ( this.panY || 0 ) ) / this.zoom
+			canvasX: ( canvasX / this.zoom ) - ( this.panX || 0 ),
+			canvasY: ( canvasY / this.zoom ) - ( this.panY || 0 )
 		};
 	}
 

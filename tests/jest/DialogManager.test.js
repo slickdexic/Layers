@@ -958,6 +958,30 @@ describe( 'DialogManager', () => {
 		it( 'should handle empty activeDialogs', () => {
 			expect( () => dialogManager.closeAllDialogs() ).not.toThrow();
 		} );
+
+		it( 'MED-v29-4 regression: should remove keydown listeners on closeAll', () => {
+			const removeListenerSpy = jest.spyOn( document, 'removeEventListener' );
+
+			dialogManager.showCancelConfirmDialog( jest.fn() );
+			dialogManager.showKeyboardShortcutsDialog();
+
+			expect( dialogManager.activeDialogs.length ).toBe( 2 );
+
+			// Each active dialog entry should have a handleKey reference
+			dialogManager.activeDialogs.forEach( ( entry ) => {
+				expect( typeof entry.handleKey ).toBe( 'function' );
+			} );
+
+			dialogManager.closeAllDialogs();
+
+			// Verify removeEventListener was called for keydown handlers
+			const keydownRemovals = removeListenerSpy.mock.calls.filter(
+				( call ) => call[ 0 ] === 'keydown'
+			);
+			expect( keydownRemovals.length ).toBeGreaterThanOrEqual( 2 );
+
+			removeListenerSpy.mockRestore();
+		} );
 	} );
 
 	describe( 'destroy', () => {

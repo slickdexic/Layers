@@ -109,7 +109,7 @@
 		 * @return {string} Formatted value string
 		 */
 		formatMeasurement( value, layer ) {
-			const scale = layer.scale || DEFAULTS.scale;
+			const scale = layer.scale ?? DEFAULTS.scale;
 			const unit = layer.unit || DEFAULTS.unit;
 			const precision = layer.precision !== undefined ? layer.precision : DEFAULTS.precision;
 			const showUnit = layer.showUnit !== false;
