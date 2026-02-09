@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated:** February 8, 2026 (v30 — 8 P2 fixes)
+**Last Updated:** February 9, 2026 (v32 — 2 P2 fixes)
 **Version:** 1.5.52
 
 Cross-reference with [codebase_review.md](../codebase_review.md) and
@@ -14,7 +14,7 @@ Cross-reference with [codebase_review.md](../codebase_review.md) and
 |----------|-------|--------|
 | P0 (Critical) | **0** | ✅ All fixed |
 | P1 (High Priority) | **6** | 4 ✅ Fixed, 6 ❌ Open |
-| P2 (Medium Priority) | **20** | 13 ✅ Fixed, 20 ❌ Open |
+| P2 (Medium Priority) | **28** | 20 ✅ Fixed, 8 ❌ Open |
 | P3 (Low Priority) | **31** | Deferred (8 new in v29) |
 | Performance | **11** | 2 HIGH, 5 MEDIUM, 4 LOW |
 | Infrastructure | **5** | 2 HIGH, 3 MEDIUM |
@@ -209,7 +209,7 @@ causing lines to overflow or underflow.
 
 | ID | Issue | File |
 |----|-------|------|
-| P2.1 | CalloutRenderer blur clips left/right tails | CalloutRenderer.js L824 |
+| ~~P2.1~~ | ~~CalloutRenderer blur clips left/right tails~~ | ✅ FIXED (v31) |
 | P2.2 | SmartGuides cache stale on mutations | SmartGuidesController.js L378 |
 | P2.3 | DimensionRenderer factory 0 as default | DimensionRenderer.js L729 |
 | P2.4 | closeAllDialogs leaks keydown handlers | DialogManager.js L701 |
@@ -229,13 +229,13 @@ causing lines to overflow or underflow.
 | ~~P2.13~~ | ~~ViewerOverlay new Lightbox per click~~ | ✅ FIXED (v30) |
 | ~~P2.14~~ | ~~editLayerName listener accumulation~~ | ✅ FIXED (v30) |
 | ~~P2.15~~ | ~~EffectsRenderer GPU memory leak~~ | ✅ FIXED (v30) |
-| P2.16 | Callout tailSize not scaled | LayersViewer.js |
-| P2.17 | ShadowRenderer no CANVAS_DIM cap | ShadowRenderer.js L427 |
+| ~~P2.16~~ | ~~Callout tailSize not scaled~~ | ✅ FIXED (v32) |
+| ~~P2.17~~ | ~~ShadowRenderer no CANVAS_DIM cap~~ | ✅ FIXED (v31) |
 | P2.18 | SlideManager.js dead code | ext.layers.slides/ |
-| P2.19 | isForeignFile 3x+ duplication | Multiple Processor files |
-| P2.20 | enrichWithUserNames 3x dup | ApiLayersInfo, ApiLayersList |
+| ~~P2.19~~ | ~~isForeignFile 3x+ duplication~~ | ✅ FIXED (ForeignFileHelperTrait) |
+| P2.20 | enrichWithUserNames 2x dup | ApiLayersInfo, ApiLayersList |
 | P2.21 | ext.layers loaded every page | Hooks.php L85 |
-| P2.22 | PropertiesForm hardcoded English | PropertiesForm.js L190 |
+| ~~P2.22~~ | ~~PropertiesForm hardcoded English~~ | ✅ FIXED (v31) |
 | ~~P2.23~~ | ~~selectAll fallback no filter~~ | ✅ FIXED (v30) |
 | ~~P2.24~~ | ~~GradientEditor stale listeners~~ | ✅ FIXED (v30) |
 | ~~P2.25~~ | ~~InlineTextEditor no debounce~~ | ✅ FIXED (v30) |

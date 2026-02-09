@@ -1,6 +1,6 @@
 # Improvement Plan
 
-**Updated:** February 8, 2026 (v31 — 3 P2 fixes)
+**Updated:** February 9, 2026 (v32 — 2 P2 fixes)
 **Version:** 1.5.52
 
 Cross-reference with [codebase_review.md](codebase_review.md) and
@@ -14,7 +14,7 @@ Cross-reference with [codebase_review.md](codebase_review.md) and
 |-------|-------|-------|--------|
 | Phase 0 | Prior fixes (v22-v28) | 22+ | ✅ Done |
 | Phase 1 | High-priority fixes | 10 | 8 ✅ Fixed, 2 ❌ Open |
-| Phase 2 | Medium issues | 28 | 18 ✅ Fixed, 10 ❌ Open |
+| Phase 2 | Medium issues | 28 | 20 ✅ Fixed, 8 ❌ Open |
 | Phase 3 | Low / housekeeping | 31 | Deferred (8 new) |
 | Phase 4 | Infrastructure | 5 | ❌ NEW |
 | Phase 5 | Documentation | 42 | ❌ Open |
@@ -201,10 +201,10 @@ instead of using base layer fontSize for all runs.
 | 2.13 | Cache Lightbox instance in ViewerOverlay | 30m | ✅ FIXED (v30) |
 | 2.14 | Clone/replace input on editLayerName | 30m | ✅ FIXED (v30) |
 | 2.15 | Null offscreen canvas after effects | 15m | ✅ FIXED (v30) |
-| 2.16 | Scale callout tailSize by viewer ratio | 30m | Low |
+| 2.16 | Scale callout tailSize by viewer ratio | 30m | ✅ FIXED (v32) |
 | 2.17 | Cap shadow stroke to canvas dims | 15m | ✅ FIXED (v31) |
 | 2.18 | Remove dead SlideManager code | 1h | Low |
-| 2.19 | Extract isForeignFile to shared trait | 1h | Low |
+| ~~2.19~~ | ~~Extract isForeignFile to shared trait~~ | 1h | ✅ FIXED (ForeignFileHelperTrait) |
 | 2.20 | Deduplicate enrichWithUserNames | 1h | Low |
 | 2.21 | Conditional module loading in Hooks | 1h | Med |
 | 2.22 | i18n hardcoded PropertiesForm strings | 30m | ✅ FIXED (v31) |
