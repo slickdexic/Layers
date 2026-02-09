@@ -962,6 +962,31 @@ describe( 'LayersViewer', () => {
 			expect( scaled.tickSize ).toBe( 20 ); // 8 * 2.5
 		} );
 
+		test( 'should scale callout tailSize property (P2.16 regression)', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const layerData = createSampleLayerData();
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: layerData
+			} );
+
+			const layer = {
+				type: 'callout',
+				tailSize: 20,
+				tailTipX: 100,
+				tailTipY: 50
+			};
+
+			const scaled = viewer.scaleLayerCoordinates( layer, 2, 3, 2.5 );
+
+			expect( scaled.tailSize ).toBe( 50 ); // 20 * 2.5
+			expect( scaled.tailTipX ).toBe( 200 ); // 100 * 2
+			expect( scaled.tailTipY ).toBe( 150 ); // 50 * 3
+		} );
+
 		test( 'should scale marker layer properties', () => {
 			const container = createMockContainer();
 			const imageElement = createMockImageElement();
