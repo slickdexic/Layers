@@ -302,7 +302,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.52 |
+| **Version (main)** | 1.5.53 |
 | **Version (REL1_43)** | 1.5.51-REL1_43 |
 | **Version (REL1_39)** | 1.5.51-REL1_39 |
 | **Release Date** | February 5, 2026 |
