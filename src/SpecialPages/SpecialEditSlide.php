@@ -89,6 +89,16 @@ class SpecialEditSlide extends SpecialPage {
 		// Check if editor is in modal mode (opened as popup/iframe from article page)
 		$isModalMode = $request->getBool( 'modal' );
 
+		// In modal mode, allow the page to be framed (loaded in iframe)
+		// Otherwise MediaWiki's default X-Frame-Options header blocks it
+		if ( $isModalMode ) {
+			if ( method_exists( $out, 'allowClickjacking' ) ) {
+				$out->allowClickjacking();
+			} elseif ( method_exists( $out, 'setPreventClickjacking' ) ) {
+				$out->setPreventClickjacking( false );
+			}
+		}
+
 		// Extract dimensions from existing slide or use defaults
 		if ( $layerSet && isset( $layerSet['data'] ) ) {
 			$data = $layerSet['data'];

@@ -106,6 +106,19 @@ class EditLayersAction extends \Action {
 		// Check if editor is in modal mode
 		$isModalMode = $request->getBool( 'modal' );
 
+		// In modal mode, allow the page to be framed (loaded in iframe)
+		// Otherwise MediaWiki's default X-Frame-Options header blocks it
+		if ( $isModalMode ) {
+			// Method available in MW 1.38+ to disable clickjacking protection
+			// This allows the editor to be embedded in the modal iframe
+			if ( method_exists( $out, 'allowClickjacking' ) ) {
+				$out->allowClickjacking();
+			} elseif ( method_exists( $out, 'setPreventClickjacking' ) ) {
+				// Alternative method name in some MW versions
+				$out->setPreventClickjacking( false );
+			}
+		}
+
 		// Page title
 		$out->setPageTitle(
 			( function_exists( 'wfMessage' )
