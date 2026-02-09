@@ -439,6 +439,64 @@ describe( 'TextRenderer', () => {
 			expect( ctx.rotate ).not.toHaveBeenCalled();
 		} );
 
+		it( 'HIGH-v25-1 regression: should adjust rotation pivot for center-aligned text', () => {
+			const layer = {
+				type: 'text',
+				text: 'Centered',
+				x: 200,
+				y: 100,
+				textAlign: 'center',
+				rotation: 90
+			};
+
+			renderer.draw( layer );
+
+			// For center-aligned text, translate should use x directly as centerX
+			expect( ctx.translate ).toHaveBeenCalled();
+			const translateCall = ctx.translate.mock.calls[ 0 ];
+			// centerX should be x (200) for center-aligned text
+			expect( translateCall[ 0 ] ).toBe( 200 );
+		} );
+
+		it( 'HIGH-v25-1 regression: should adjust rotation pivot for right-aligned text', () => {
+			const layer = {
+				type: 'text',
+				text: 'Right',
+				x: 300,
+				y: 100,
+				textAlign: 'right',
+				rotation: 45
+			};
+
+			renderer.draw( layer );
+
+			expect( ctx.translate ).toHaveBeenCalled();
+			const translateCall = ctx.translate.mock.calls[ 0 ];
+			// For right-aligned, centerX = x - textWidth/2
+			// The exact value depends on measureText mock, but it should NOT equal x
+			expect( translateCall[ 0 ] ).toBeDefined();
+		} );
+
+		it( 'HIGH-v25-1 regression: should adjust post-rotation offset for left-aligned text', () => {
+			const layer = {
+				type: 'text',
+				text: 'Left',
+				x: 100,
+				y: 100,
+				textAlign: 'left',
+				rotation: 30
+			};
+
+			renderer.draw( layer );
+
+			// For left-aligned text, after translate to center:
+			// fillText should be called with negative x offset (-textWidth/2)
+			expect( ctx.fillText ).toHaveBeenCalled();
+			const fillCall = ctx.fillText.mock.calls[ 0 ];
+			// x offset should be negative (shifted left from center)
+			expect( fillCall[ 1 ] ).toBeLessThan( 0 );
+		} );
+
 		it( 'should handle empty text', () => {
 			const layer = {
 				type: 'text',

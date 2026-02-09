@@ -43,9 +43,15 @@ class LayersParamExtractor {
 	/**
 	 * Valid layerslink values for deep linking
 	 * 'editor' - Open the layers editor
+	 * 'editor-newtab' - Open editor in a new tab
+	 * 'editor-return' - Open editor with return link
+	 * 'editor-modal' - Open editor in a modal
 	 * 'viewer' or 'lightbox' - Open full-size viewer with layers overlay
 	 */
-	private const VALID_LINK_VALUES = [ 'editor', 'viewer', 'lightbox' ];
+	private const VALID_LINK_VALUES = [
+		'editor', 'editor-newtab', 'editor-return', 'editor-modal',
+		'viewer', 'lightbox'
+	];
 
 	/**
 	 * Extract layers parameter from handler and frame params

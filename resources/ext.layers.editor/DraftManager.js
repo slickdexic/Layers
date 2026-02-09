@@ -190,7 +190,16 @@
 					setName: this.editor.stateManager ?
 						this.editor.stateManager.get( 'currentSetName' ) || 'default' :
 						'default',
-					layers: layers,
+					// Strip base64 image src data to avoid localStorage overflow
+					layers: layers.map( ( l ) => {
+						if ( l.type === 'image' && l.src && l.src.length > 1024 ) {
+							const copy = Object.assign( {}, l );
+							delete copy.src;
+							copy._srcStripped = true;
+							return copy;
+						}
+						return l;
+					} ),
 					backgroundVisible: this.editor.stateManager ?
 						this.editor.stateManager.get( 'backgroundVisible' ) :
 						true,

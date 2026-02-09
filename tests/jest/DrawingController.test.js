@@ -1095,4 +1095,34 @@ describe( 'DrawingController', () => {
 			} );
 		} );
 	} );
+
+	describe( 'MED-v28-8 regression: negative dimensions from reverse drawing', () => {
+		it( 'should produce positive dimensions when drawing rectangle right-to-left', () => {
+			const style = { color: '#000000', strokeWidth: 2 };
+			// Start at (200, 200), finish at (100, 100) — drawing "backwards"
+			controller.startDrawing( { x: 200, y: 200 }, 'rectangle', style );
+			controller.continueDrawing( { x: 100, y: 100 } );
+
+			const result = controller.finishDrawing( { x: 100, y: 100 }, 'rectangle' );
+
+			expect( result ).not.toBeNull();
+			expect( result.width ).toBeGreaterThan( 0 );
+			expect( result.height ).toBeGreaterThan( 0 );
+			// Origin should be adjusted to top-left corner
+			expect( result.x ).toBe( 100 );
+			expect( result.y ).toBe( 100 );
+		} );
+
+		it( 'should produce positive dimensions for textbox drawn bottom-to-top', () => {
+			const style = { color: '#000000', strokeWidth: 2 };
+			controller.startDrawing( { x: 300, y: 300 }, 'textbox', style );
+			controller.continueDrawing( { x: 100, y: 100 } );
+
+			const result = controller.finishDrawing( { x: 100, y: 100 }, 'textbox' );
+
+			expect( result ).not.toBeNull();
+			expect( result.width ).toBeGreaterThan( 0 );
+			expect( result.height ).toBeGreaterThan( 0 );
+		} );
+	} );
 } );

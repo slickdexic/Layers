@@ -118,14 +118,16 @@ class SlideNameValidator {
 	public function sanitize( string $name ): string {
 		$name = trim( $name );
 
-		// Replace spaces with hyphens
+		// Collapse multiple spaces into one, then replace with hyphens
+		$name = preg_replace( '/\s+/', ' ', $name );
 		$name = str_replace( ' ', '-', $name );
 
 		// Remove invalid characters
 		$name = preg_replace( '/[^a-zA-Z0-9_-]/', '', $name );
 
-		// Ensure it starts with alphanumeric
+		// Ensure it starts and ends with alphanumeric
 		$name = ltrim( $name, '_-' );
+		$name = rtrim( $name, '_-' );
 
 		// Truncate to max length
 		if ( strlen( $name ) > self::MAX_LENGTH ) {

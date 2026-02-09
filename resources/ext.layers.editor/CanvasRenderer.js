@@ -203,8 +203,8 @@
 				layer.y1,
 				layer.x2,
 				layer.y2,
-				// Points for polygon/path
-				layer.points ? layer.points.length : 0
+				// Points for polygon/path - hash ALL points to detect middle-point edits
+				layer.points ? this._hashString( JSON.stringify( layer.points ) ) : ''
 			];
 			return hashParts.join( '|' );
 		}
