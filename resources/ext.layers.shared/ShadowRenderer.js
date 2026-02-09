@@ -414,13 +414,15 @@ class ShadowRenderer {
 		const shadowOpacity = typeof opacity === 'number' ? Math.max( 0, Math.min( 1, opacity ) ) : 1;
 
 		const FAR_OFFSET = 5000;
+		// Maximum canvas dimension to prevent browser crashes (matches drawSpreadShadow)
+		const MAX_CANVAS_DIM = 8192;
 
 		const canvasWidth = this.canvas ? this.canvas.width : 800;
 		const canvasHeight = this.canvas ? this.canvas.height : 600;
 
 		const tempCanvas = document.createElement( 'canvas' );
-		tempCanvas.width = canvasWidth + FAR_OFFSET + sp.blur + Math.abs( sp.offsetX );
-		tempCanvas.height = canvasHeight + sp.blur + Math.abs( sp.offsetY );
+		tempCanvas.width = Math.min( MAX_CANVAS_DIM, canvasWidth + FAR_OFFSET + sp.blur + Math.abs( sp.offsetX ) );
+		tempCanvas.height = Math.min( MAX_CANVAS_DIM, canvasHeight + sp.blur + Math.abs( sp.offsetY ) );
 		const tempCtx = tempCanvas.getContext( '2d' );
 
 		if ( !tempCtx ) {

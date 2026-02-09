@@ -2032,4 +2032,142 @@ describe( 'CalloutRenderer', () => {
 			expect( ctx.beginPath ).toHaveBeenCalled();
 		} );
 	} );
+
+	describe( 'blur bounds for left/right tails (P2.1 regression)', () => {
+		test( 'should include left tail in blur bounds', () => {
+			const ctx = createMockContext();
+			const localMockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				effectsRenderer: localMockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 30,
+				tailDirection: 'left',
+				tailPosition: 50,
+				fill: 'blur',
+				fillOpacity: 1
+			};
+
+			renderer.draw( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			// Verify drawBlurFill was called with bounds that include the tail
+			expect( localMockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
+			const callArgs = localMockEffectsRenderer.drawBlurFill.mock.calls[ 0 ];
+			const blurBounds = callArgs[ 2 ];
+
+			// For left tail, x should be reduced by tailSize
+			expect( blurBounds.x ).toBeLessThan( layer.x );
+			expect( blurBounds.width ).toBeGreaterThan( layer.width );
+		} );
+
+		test( 'should include right tail in blur bounds', () => {
+			const ctx = createMockContext();
+			const localMockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				effectsRenderer: localMockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 30,
+				tailDirection: 'right',
+				tailPosition: 50,
+				fill: 'blur',
+				fillOpacity: 1
+			};
+
+			renderer.draw( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			// Verify drawBlurFill was called with wider bounds for right tail
+			expect( localMockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
+			const callArgs = localMockEffectsRenderer.drawBlurFill.mock.calls[ 0 ];
+			const blurBounds = callArgs[ 2 ];
+
+			// For right tail, width should include tailSize
+			expect( blurBounds.width ).toBeGreaterThan( layer.width );
+		} );
+
+		test( 'should include top tail in blur bounds', () => {
+			const ctx = createMockContext();
+			const localMockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				effectsRenderer: localMockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 30,
+				tailDirection: 'top',
+				tailPosition: 50,
+				fill: 'blur',
+				fillOpacity: 1
+			};
+
+			renderer.draw( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( localMockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
+			const callArgs = localMockEffectsRenderer.drawBlurFill.mock.calls[ 0 ];
+			const blurBounds = callArgs[ 2 ];
+
+			// For top tail, y should be reduced by tailSize
+			expect( blurBounds.y ).toBeLessThan( layer.y );
+			expect( blurBounds.height ).toBeGreaterThan( layer.height );
+		} );
+
+		test( 'should include bottom tail in blur bounds', () => {
+			const ctx = createMockContext();
+			const localMockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			const renderer = new window.Layers.CalloutRenderer( ctx, {
+				effectsRenderer: localMockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'callout',
+				x: 100,
+				y: 100,
+				width: 200,
+				height: 100,
+				cornerRadius: 10,
+				tailSize: 30,
+				tailDirection: 'bottom',
+				tailPosition: 50,
+				fill: 'blur',
+				fillOpacity: 1
+			};
+
+			renderer.draw( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+
+			expect( localMockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
+			const callArgs = localMockEffectsRenderer.drawBlurFill.mock.calls[ 0 ];
+			const blurBounds = callArgs[ 2 ];
+
+			// For bottom tail, height should include tailSize
+			expect( blurBounds.height ).toBeGreaterThan( layer.height );
+		} );
+	} );
 } );

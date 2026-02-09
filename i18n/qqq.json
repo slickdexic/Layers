@@ -748,5 +748,12 @@
 	"layers-slide-name": "Label for the slide name input field",
 	"layers-slide-name-hint": "Helper text explaining valid characters for slide names",
 
+	"layers-input-required": "Error message shown when a required field is empty",
+	"layers-input-invalid-number": "Error message shown when an invalid number is entered in a numeric field",
+	"layers-input-min-value": "Error message shown when a number is below the minimum. $1 is the minimum value",
+	"layers-input-max-value": "Error message shown when a number exceeds the maximum. $1 is the maximum value",
+	"layers-input-text-too-long": "Error message shown when text exceeds the character limit. $1 is the maximum character count",
+	"layers-input-char-limit-warning": "Warning message shown when approaching character limit. $1 is current count, $2 is maximum",
+
 	"specialpages-group-layers": "Name of the special pages group for Layers extension pages on Special:SpecialPages"
 }
