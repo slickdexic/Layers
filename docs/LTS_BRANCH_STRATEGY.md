@@ -6,7 +6,7 @@ This document outlines the branch strategy and support policy for the Layers ext
 
 ## Primary Branch: `main`
 
-**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (11,265+ tests, 165 suites) runs on `main` as the source of truth.
+**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (11,279+ tests, 165 suites) runs on `main` as the source of truth.
 
 Changes are **cherry-picked** from `main` to the REL branches after verification. REL branches never receive changes that haven't been tested on `main` first.
 
@@ -26,7 +26,7 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 main (primary)
   │
   ├── All development happens here
-  ├── All tests run here first (11,265+ tests)
+  ├── All tests run here first (11,279+ tests)
   ├── All code reviews done here
   │
   ├──── cherry-pick ──→ REL1_43 (current LTS)

@@ -36,7 +36,7 @@ Version history for the Layers extension.
 - Applies to APIManager abort handlers for revision and named set loading
 - v27 code review: 3 CRITICAL + 6 HIGH issues fixed across 6 files
 - PHP test suite: 0 failures (was 11), 549 tests, 765 assertions
-- All 11,265 JS tests pass (165 test suites) ✅
+- All 11,279 JS tests pass (165 test suites) ✅
 - ESLint: 0 errors, phpcs: 0 errors
 
 ## Version 1.5.52 (February 5, 2026)

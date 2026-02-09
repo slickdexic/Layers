@@ -13,8 +13,8 @@ Cross-reference with [codebase_review.md](../codebase_review.md) and
 | Category | Count | Status |
 |----------|-------|--------|
 | P0 (Critical) | **0** | ✅ All fixed |
-| P1 (High Priority) | **10** | ❌ OPEN (4 new in v29) |
-| P2 (Medium Priority) | **28** | ❌ OPEN (10 new in v29) |
+| P1 (High Priority) | **6** | 4 ✅ Fixed, 6 ❌ Open |
+| P2 (Medium Priority) | **23** | 5 ✅ Fixed, 23 ❌ Open |
 | P3 (Low Priority) | **31** | Deferred (8 new in v29) |
 | Performance | **11** | 2 HIGH, 5 MEDIUM, 4 LOW |
 | Infrastructure | **5** | 2 HIGH, 3 MEDIUM |
@@ -93,70 +93,42 @@ Regression test added to GroupManager.test.js.
 
 ### New in v29
 
-#### P1.1 Hit Testing Fails on Rotated Rectangles/Ellipses
+#### ~~P1.1 Hit Testing Fails on Rotated Rectangles/Ellipses~~
 
-**Ref:** HIGH-v29-1 | **Status:** ❌ OPEN
+**Ref:** HIGH-v29-1 | **Status:** ✅ FIXED (v29-fix)
 **File:** resources/ext.layers.editor/canvas/HitTestController.js
 
-`isPointInRectangleLayer()` (L343) tests against axis-aligned
-bounds without un-rotating the test point into the layer's
-local coordinate system. `isPointInEllipse()` (L373) has the
-same issue. `isPointInPolygonOrStar()` correctly handles
-rotation, proving the approach is known in the codebase.
-
-**Impact:** Users cannot reliably click rotated rectangles,
-textboxes, callouts, blur layers, image layers, or ellipses.
-
-**Fix:** Un-rotate test point around layer center before
-bounds testing (inverse rotation matrix).
+Added rotation-aware hit testing to `isPointInRectangleLayer()`,
+`isPointInCircle()`, and `isPointInEllipse()`. 7 regression tests.
 
 ---
 
-#### P1.2 strokeWidth:0 Treated as strokeWidth:1
+#### ~~P1.2 strokeWidth:0 Treated as strokeWidth:1~~
 
-**Ref:** HIGH-v29-2 | **Status:** ❌ OPEN
+**Ref:** HIGH-v29-2 | **Status:** ✅ FIXED (v29-fix)
 **File:** resources/ext.layers.shared/ShapeRenderer.js
 
-Five methods use `layer.strokeWidth || 1`:
-drawRectangle (L340), drawCircle (L548), drawEllipse (L660),
-drawLine (L839), drawPath (L907 uses `|| 2`).
-
-JavaScript `||` treats 0 as falsy. Users cannot create
-fill-only shapes (no stroke border). TextBoxRenderer uses
-the correct `typeof` check.
-
-**Fix:** Replace `|| 1` with `?? 1` (nullish coalescing).
+Replaced `|| 1` with `?? 1` in 5 draw methods.
+6 regression tests added.
 
 ---
 
-#### P1.3 getRawCoordinates() Incorrect Coordinate Math
+#### ~~P1.3 getRawCoordinates() Incorrect Coordinate Math~~
 
-**Ref:** HIGH-v29-3 | **Status:** ❌ OPEN
+**Ref:** HIGH-v29-3 | **Status:** ✅ FIXED (v29-fix)
 **File:** resources/ext.layers.editor/TransformationEngine.js
 
-`getRawCoordinates()` (L535) skips the `canvas.width/rect.width`
-CSS-to-logical DPI scaling that `clientToCanvas()` (L473)
-correctly applies. Also applies pan/zoom in wrong order
-(subtract then divide vs divide then subtract).
-
-**Impact:** Wrong world coordinates on HiDPI displays or when
-canvas CSS size differs from pixel dimensions.
-
-**Fix:** Unify math with `clientToCanvas()` or redirect callers.
+Fixed DPI scaling and pan/zoom order to match `clientToCanvas()`.
 
 ---
 
-#### P1.4 normalizeLayers Mutates Input Objects
+#### ~~P1.4 normalizeLayers Mutates Input Objects~~
 
-**Ref:** HIGH-v29-4 | **Status:** ❌ OPEN
-**File:** resources/ext.layers.editor/LayersEditor.js L1533
+**Ref:** HIGH-v29-4 | **Status:** ✅ FIXED (v29-fix)
+**File:** resources/ext.layers.editor/LayersEditor.js
 
-`.map()` creates new array but elements are same references.
-`layer.visible = true` mutates the original API response data.
-If history or other systems hold references to same objects,
-state is silently corrupted.
-
-**Fix:** `return { ...layer, visible: true }` (spread copy).
+Changed to `Object.assign({}, layer, { visible: true })`.
+Regression test verifies no input mutation.
 
 ---
 

@@ -13,8 +13,8 @@ Cross-reference with [codebase_review.md](codebase_review.md) and
 | Phase | Focus | Items | Status |
 |-------|-------|-------|--------|
 | Phase 0 | Prior fixes (v22-v28) | 22+ | ✅ Done |
-| Phase 1 | High-priority fixes | 10 | 4 ✅ Fixed, 6 ❌ Open (v28), 4 ❌ New (v29) |
-| Phase 2 | Medium issues | 28 | 2 ✅ Fixed, 26 ❌ Open (10 new) |
+| Phase 1 | High-priority fixes | 10 | 8 ✅ Fixed, 2 ❌ Open |
+| Phase 2 | Medium issues | 28 | 7 ✅ Fixed, 21 ❌ Open |
 | Phase 3 | Low / housekeeping | 31 | Deferred (8 new) |
 | Phase 4 | Infrastructure | 5 | ❌ NEW |
 | Phase 5 | Documentation | 42 | ❌ Open |
@@ -48,12 +48,13 @@ All items ✅ FIXED. See codebase_review.md for details.
 
 ### 1.1 Hit Testing for Rotated Rectangles/Ellipses (HIGH-v29-1)
 
-**Effort:** 2 hours | **Risk:** Low | **Status:** ❌ OPEN
+**Effort:** 2 hours | **Risk:** Low | **Status:** ✅ FIXED (v29-fix)
 **File:** resources/ext.layers.editor/canvas/HitTestController.js
 
-`isPointInRectangleLayer()` (L343) and `isPointInEllipse()` (L373)
-test against axis-aligned bounds without rotating the test point.
-`isPointInPolygonOrStar()` already does this correctly.
+Added rotation-aware hit testing to `isPointInRectangleLayer()`,
+`isPointInCircle()`, and `isPointInEllipse()`. Un-rotates test
+point around layer center using inverse rotation matrix.
+7 regression tests added to HitTestController.test.js.
 
 **Fix:** Before the bounds check, un-rotate the test point around
 the layer's center using inverse rotation matrix:
@@ -77,50 +78,35 @@ Add regression tests for rotated rectangle and ellipse hit testing.
 
 ### 1.2 ShapeRenderer strokeWidth:0 as 1 (HIGH-v29-2)
 
-**Effort:** 30 minutes | **Risk:** Low | **Status:** ❌ OPEN
+**Effort:** 30 minutes | **Risk:** Low | **Status:** ✅ FIXED (v29-fix)
 **File:** resources/ext.layers.shared/ShapeRenderer.js
 
-Replace `layer.strokeWidth || 1` with `layer.strokeWidth ?? 1`
-in 5 methods: drawRectangle, drawCircle, drawEllipse, drawLine,
-drawPath. Also conditionally skip `ctx.stroke()` when
-strokeWidth is 0.
-
-Add regression test confirming strokeWidth:0 produces no stroke.
+Replaced `|| 1` with `?? 1` in 5 methods: drawRectangle (L340),
+drawCircle (L548), drawEllipse (L660), drawLine (L839),
+drawPath (L906, `?? 2`). 6 regression tests added.
 
 ---
 
 ### 1.3 getRawCoordinates() Coordinate Math (HIGH-v29-3)
 
-**Effort:** 1 hour | **Risk:** Medium | **Status:** ❌ OPEN
+**Effort:** 1 hour | **Risk:** Medium | **Status:** ✅ FIXED (v29-fix)
 **File:** resources/ext.layers.editor/TransformationEngine.js
 
-Two options:
-1. **Preferred:** Delete `getRawCoordinates()` and redirect
-   all callers to `clientToCanvas()` which has correct math
-2. Fix the method to apply CSS-to-logical scaling and correct
-   pan/zoom order
-
-Audit all callers of `getRawCoordinates()` first to understand
-each use case. Add test for HiDPI canvas scenarios.
+Fixed `getRawCoordinates()` to apply DPI scaling
+(`canvas.width/rect.width`) and correct pan/zoom order
+matching `clientToCanvas()`. No active callers in resources/
+but fixed for correctness.
 
 ---
 
 ### 1.4 normalizeLayers Input Mutation (HIGH-v29-4)
 
-**Effort:** 15 minutes | **Risk:** Low | **Status:** ❌ OPEN
+**Effort:** 15 minutes | **Risk:** Low | **Status:** ✅ FIXED (v29-fix)
 **File:** resources/ext.layers.editor/LayersEditor.js L1533
 
-Change from mutation to spread copy:
-```js
-return layers.map(function (layer) {
-    if (layer.visible === undefined) {
-        return Object.assign({}, layer, { visible: true });
-    }
-    return layer;
-});
-```
-
-Add test verifying input array is not mutated.
+Changed to `Object.assign({}, layer, { visible: true })` to
+avoid mutating input objects. Regression test verifies original
+object is unchanged and references differ.
 
 ---
 
@@ -197,14 +183,14 @@ instead of using base layer fontSize for all runs.
 |----|-----|--------|------|
 | 2.1 | Fix callout blur bounds for left/right tails | 30m | Low |
 | 2.2 | SmartGuides cache: hash snap points or invalidate on mutation | 1h | Med |
-| 2.3 | DimensionRenderer: replace `\|\|` with `??` for zero-value options | 30m | Low |
-| 2.4 | closeAllDialogs: track and remove keydown listeners | 30m | Low |
+| 2.3 | DimensionRenderer: `\|\|` → `??` for zero-value options | 30m | ✅ FIXED |
+| 2.4 | closeAllDialogs: track and remove keydown listeners | 30m | ✅ FIXED |
 | 2.5 | Remove ToolManager dead fallback code (~400 lines) | 1h | Low |
-| 2.6 | HistoryManager: explicit type parameter instead of duck-typing | 1h | Med |
-| 2.7 | DialogManager: unify prompt dialogs into Promise-based only | 1h | Med |
-| 2.8 | LayerInjector: use setLogger() after construction | 15m | Low |
-| 2.9 | SlideHooks: delegate to ColorValidator::isValidColor() | 30m | Low |
-| 2.10 | services.php: add declare(strict_types=1) | 5m | Low |
+| 2.6 | HistoryManager: explicit type parameter | 1h | Med |
+| 2.7 | DialogManager: unify prompt dialogs | 1h | Med |
+| 2.8 | LayerInjector: use setLogger() after construction | 15m | ✅ FIXED |
+| 2.9 | SlideHooks: delegate to ColorValidator | 30m | ✅ FIXED |
+| 2.10 | services.php: add declare(strict_types=1) | 5m | ✅ FIXED |
 
 ### Carried from v25-v28 (18 items)
 
