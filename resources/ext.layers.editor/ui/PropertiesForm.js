@@ -187,16 +187,16 @@
 				const num = parseFloat( value );
 				if ( value.trim() === '' ) {
 					isValid = false;
-					errorMessage = 'This field is required';
+					errorMessage = mw.message( 'layers-input-required' ).text();
 				} else if ( isNaN( num ) ) {
 					isValid = false;
-					errorMessage = 'Please enter a valid number';
+					errorMessage = mw.message( 'layers-input-invalid-number' ).text();
 				} else if ( opts.min !== undefined && num < parseFloat( opts.min ) ) {
 					isValid = false;
-					errorMessage = 'Value must be at least ' + opts.min;
+					errorMessage = mw.message( 'layers-input-min-value', opts.min ).text();
 				} else if ( opts.max !== undefined && num > parseFloat( opts.max ) ) {
 					isValid = false;
-					errorMessage = 'Value must be at most ' + opts.max;
+					errorMessage = mw.message( 'layers-input-max-value', opts.max ).text();
 				}
 			} else if ( inputType === 'text' || isTextarea ) {
 				const textLength = value.length;
@@ -204,9 +204,9 @@
 				const warnLength = Math.floor( maxLength * 0.95 );
 				if ( textLength > maxLength ) {
 					isValid = false;
-					errorMessage = 'Text is too long. Maximum ' + maxLength + ' characters allowed.';
+					errorMessage = mw.message( 'layers-input-text-too-long', maxLength ).text();
 				} else if ( textLength > warnLength && showError ) {
-					errorIndicator.textContent = 'Approaching character limit (' + textLength + '/' + maxLength + ')';
+					errorIndicator.textContent = mw.message( 'layers-input-char-limit-warning', textLength, maxLength ).text();
 					errorIndicator.classList.add( 'show', 'warning' );
 					input.classList.add( 'warning' );
 					input.classList.remove( 'error' );
