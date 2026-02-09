@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
+use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use Parser;
@@ -313,31 +314,7 @@ class SlideHooks {
 	 * @return bool True if valid
 	 */
 	private static function isValidColor( string $color ): bool {
-		// Allow 'transparent' keyword
-		if ( strtolower( $color ) === 'transparent' ) {
-			return true;
-		}
-
-		// Allow hex colors (#RGB, #RRGGBB, #RRGGBBAA)
-		if ( preg_match( '/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/', $color ) ) {
-			return true;
-		}
-
-		// Allow rgb/rgba
-		if ( preg_match( '/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(,\s*[\d.]+\s*)?\)$/', $color ) ) {
-			return true;
-		}
-
-		// Allow common named colors
-		$namedColors = [
-			'white', 'black', 'red', 'green', 'blue', 'yellow', 'orange', 'purple',
-			'gray', 'grey', 'pink', 'brown', 'cyan', 'magenta'
-		];
-		if ( in_array( strtolower( $color ), $namedColors, true ) ) {
-			return true;
-		}
-
-		return false;
+		return ColorValidator::isValidColor( $color );
 	}
 
 	/**

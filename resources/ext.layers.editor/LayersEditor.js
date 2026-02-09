@@ -1536,7 +1536,7 @@ class LayersEditor {
 		}
 		return layers.map( function ( layer ) {
 			if ( layer.visible === undefined ) {
-				layer.visible = true;
+				return Object.assign( {}, layer, { visible: true } );
 			}
 			return layer;
 		} );

@@ -1156,4 +1156,83 @@ describe( 'ShapeRenderer', () => {
 			expect( result ).toBe( 20 );
 		} );
 	} );
+
+	describe( 'HIGH-v29-2 regression: strokeWidth:0 should not default to 1', () => {
+		it( 'should use strokeWidth 0 for rectangle (not default to 1)', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10, y: 10, width: 100, height: 50,
+				strokeWidth: 0,
+				fill: '#ff0000', stroke: '#000000',
+				opacity: 1
+			};
+			shapeRenderer.drawRectangle( layer );
+			// lineWidth should be set to 0 (scaled: 0 * 1 = 0), not 1
+			const lineWidthCalls = ctx.lineWidth;
+			// With strokeWidth 0 the stroke section may still run,
+			// but lineWidth should be 0, not 1
+			expect( lineWidthCalls ).not.toBe( 1 );
+		} );
+
+		it( 'should use strokeWidth 0 for circle (not default to 1)', () => {
+			const layer = {
+				type: 'circle',
+				x: 50, y: 50, radius: 30,
+				strokeWidth: 0,
+				fill: '#ff0000', stroke: '#000000',
+				opacity: 1
+			};
+			shapeRenderer.drawCircle( layer );
+			expect( ctx.lineWidth ).not.toBe( 1 );
+		} );
+
+		it( 'should use strokeWidth 0 for ellipse (not default to 1)', () => {
+			const layer = {
+				type: 'ellipse',
+				x: 50, y: 50, radiusX: 40, radiusY: 20,
+				strokeWidth: 0,
+				fill: '#ff0000', stroke: '#000000',
+				opacity: 1
+			};
+			shapeRenderer.drawEllipse( layer );
+			expect( ctx.lineWidth ).not.toBe( 1 );
+		} );
+
+		it( 'should use strokeWidth 0 for line (not default to 1)', () => {
+			const layer = {
+				type: 'line',
+				x1: 0, y1: 0, x2: 100, y2: 100,
+				strokeWidth: 0,
+				stroke: '#000000',
+				opacity: 1
+			};
+			shapeRenderer.drawLine( layer );
+			expect( ctx.lineWidth ).not.toBe( 1 );
+		} );
+
+		it( 'should use strokeWidth 0 for path (not default to 2)', () => {
+			const layer = {
+				type: 'path',
+				strokeWidth: 0,
+				stroke: '#000000',
+				opacity: 1,
+				points: [ { x: 0, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 0 } ]
+			};
+			shapeRenderer.drawPath( layer );
+			expect( ctx.lineWidth ).not.toBe( 2 );
+		} );
+
+		it( 'should still use default 1 when strokeWidth is undefined', () => {
+			const layer = {
+				type: 'rectangle',
+				x: 10, y: 10, width: 100, height: 50,
+				fill: '#ff0000', stroke: '#000000',
+				opacity: 1
+			};
+			// strokeWidth is undefined, so default 1 should apply
+			shapeRenderer.drawRectangle( layer );
+			// lineWidth should be 1 (the default)
+			expect( ctx.lineWidth ).toBe( 1 );
+		} );
+	} );
 } );

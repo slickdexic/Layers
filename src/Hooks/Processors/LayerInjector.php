@@ -64,7 +64,10 @@ class LayerInjector {
 	 */
 	private function getHtmlInjector(): LayersHtmlInjector {
 		if ( $this->htmlInjector === null ) {
-			$this->htmlInjector = new LayersHtmlInjector( $this->logger );
+			$this->htmlInjector = new LayersHtmlInjector();
+			if ( $this->logger ) {
+				$this->htmlInjector->setLogger( $this->logger );
+			}
 		}
 		return $this->htmlInjector;
 	}
