@@ -337,7 +337,7 @@
 			let y = layer.y || 0;
 			const width = layer.width || 0;
 			const height = layer.height || 0;
-			let strokeW = layer.strokeWidth || 1;
+			let strokeW = layer.strokeWidth ?? 1;
 			let cornerRadius = layer.cornerRadius || 0;
 
 			if ( !opts.scaled ) {
@@ -545,7 +545,7 @@
 			const cy = layer.y || 0;
 			// Ensure radius is never negative (ctx.arc throws for negative radius)
 			const radius = Math.max( 0, layer.radius || 0 );
-			let strokeW = layer.strokeWidth || 1;
+			let strokeW = layer.strokeWidth ?? 1;
 
 			if ( !opts.scaled ) {
 				strokeW = strokeW * scale.avg;
@@ -657,7 +657,7 @@
 			const y = layer.y || 0;
 			const radiusX = layer.radiusX || ( layer.width || 0 ) / 2;
 			const radiusY = layer.radiusY || ( layer.height || 0 ) / 2;
-			let strokeW = layer.strokeWidth || 1;
+			let strokeW = layer.strokeWidth ?? 1;
 
 			if ( !opts.scaled ) {
 				strokeW = strokeW * scale.avg;
@@ -836,7 +836,7 @@
 			const y1 = layer.y1 || 0;
 			const x2 = layer.x2 || 0;
 			const y2 = layer.y2 || 0;
-			let strokeW = layer.strokeWidth || 1;
+			let strokeW = layer.strokeWidth ?? 1;
 
 			if ( !opts.scaled ) {
 				strokeW = strokeW * scale.avg;
@@ -903,7 +903,7 @@
 			const scale = opts.scale || { sx: 1, sy: 1, avg: 1 };
 			const shadowScale = opts.shadowScale || scale;
 
-			let strokeW = layer.strokeWidth || 2;
+			let strokeW = layer.strokeWidth ?? 2;
 			if ( !opts.scaled ) {
 				strokeW = strokeW * scale.avg;
 			}

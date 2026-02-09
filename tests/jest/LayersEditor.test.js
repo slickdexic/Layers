@@ -265,6 +265,19 @@ describe('LayersEditor utility methods', () => {
             expect(normalized[0].stroke).toBe('#000000');
             expect(normalized[0].name).toBe('My Layer');
         });
+
+        test('HIGH-v29-4 regression: should not mutate input layer objects', () => {
+            const original = { id: 'layer1', type: 'rectangle', x: 50 };
+            const layers = [original];
+            const normalized = LayersEditor.prototype.normalizeLayers(layers);
+
+            // normalized should have visible=true
+            expect(normalized[0].visible).toBe(true);
+            // but the original object must remain unchanged
+            expect(original.visible).toBeUndefined();
+            // and they should be different references
+            expect(normalized[0]).not.toBe(original);
+        });
     });
 });
 

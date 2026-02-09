@@ -142,8 +142,9 @@
 			document.body.appendChild( overlay );
 			document.body.appendChild( dialog );
 
-			// Track active dialog
-			this.activeDialogs.push( { overlay, dialog } );
+			// Track active dialog (handleKey added after definition)
+			const dialogEntry = { overlay, dialog, handleKey: null };
+			this.activeDialogs.push( dialogEntry );
 
 			const cleanup = () => {
 				if ( overlay.parentNode ) {
@@ -161,6 +162,7 @@
 			};
 
 			const handleKey = this.setupKeyboardHandler( dialog, cleanup );
+			dialogEntry.handleKey = handleKey;
 
 			cancelBtn.addEventListener( 'click', cleanup );
 			confirmBtn.addEventListener( 'click', () => {
@@ -225,8 +227,9 @@
 				document.body.appendChild( overlay );
 				document.body.appendChild( dialog );
 
-				// Track active dialog
-				this.activeDialogs.push( { overlay, dialog } );
+				// Track active dialog (handleKey added after definition)
+				const dialogEntry = { overlay, dialog, handleKey: null };
+				this.activeDialogs.push( dialogEntry );
 
 				const cleanup = () => {
 					if ( overlay.parentNode ) {
@@ -246,6 +249,7 @@
 					cleanup();
 					resolve( false );
 				} );
+				dialogEntry.handleKey = handleKey;
 
 				cancelBtn.addEventListener( 'click', () => {
 					cleanup();
@@ -309,8 +313,9 @@
 				document.body.appendChild( overlay );
 				document.body.appendChild( dialog );
 
-				// Track active dialog
-				this.activeDialogs.push( { overlay, dialog } );
+				// Track active dialog (handleKey added after definition)
+				const dialogEntry = { overlay, dialog, handleKey: null };
+				this.activeDialogs.push( dialogEntry );
 
 				const cleanup = () => {
 					if ( overlay.parentNode ) {
@@ -330,6 +335,7 @@
 					cleanup();
 					resolve();
 				} );
+				dialogEntry.handleKey = handleKey;
 
 				okBtn.addEventListener( 'click', () => {
 					cleanup();
@@ -401,8 +407,9 @@
 				document.body.appendChild( overlay );
 				document.body.appendChild( dialog );
 
-				// Track active dialog
-				this.activeDialogs.push( { overlay, dialog } );
+				// Track active dialog (handleKey added after definition)
+				const dialogEntry = { overlay, dialog, handleKey: null };
+				this.activeDialogs.push( dialogEntry );
 
 				const cleanup = () => {
 					if ( overlay.parentNode ) {
@@ -441,6 +448,7 @@
 					}
 				};
 				document.addEventListener( 'keydown', handleKey );
+				dialogEntry.handleKey = handleKey;
 
 				cancelBtn.addEventListener( 'click', () => {
 					cleanup();
@@ -518,8 +526,9 @@
 			document.body.appendChild( overlay );
 			document.body.appendChild( dialog );
 
-			// Track active dialog
-			this.activeDialogs.push( { overlay, dialog } );
+			// Track active dialog (handleKey added after definition)
+			const dialogEntry5 = { overlay, dialog, handleKey: null };
+			this.activeDialogs.push( dialogEntry5 );
 
 			const cleanup = () => {
 				if ( overlay.parentNode ) {
@@ -562,6 +571,7 @@
 				}
 			};
 			document.addEventListener( 'keydown', handleKey );
+			dialogEntry5.handleKey = handleKey;
 
 			cancelBtn.addEventListener( 'click', () => {
 				cleanup();
@@ -668,8 +678,9 @@
 			document.body.appendChild( overlay );
 			document.body.appendChild( dialog );
 
-			// Track active dialog
-			this.activeDialogs.push( { overlay, dialog } );
+			// Track active dialog (handleKey added after definition)
+			const dialogEntry6 = { overlay, dialog, handleKey: null };
+			this.activeDialogs.push( dialogEntry6 );
 
 			const cleanup = () => {
 				if ( overlay.parentNode ) {
@@ -686,6 +697,7 @@
 			};
 
 			const handleKey = this.setupKeyboardHandler( dialog, cleanup );
+			dialogEntry6.handleKey = handleKey;
 
 			closeBtn.addEventListener( 'click', cleanup );
 			overlay.addEventListener( 'click', cleanup );
@@ -701,12 +713,16 @@
 		closeAllDialogs() {
 			// Clone array since we modify it during iteration
 			const dialogs = [ ...this.activeDialogs ];
-			dialogs.forEach( ( { overlay, dialog } ) => {
+			dialogs.forEach( ( { overlay, dialog, handleKey } ) => {
 				if ( overlay.parentNode ) {
 					overlay.parentNode.removeChild( overlay );
 				}
 				if ( dialog.parentNode ) {
 					dialog.parentNode.removeChild( dialog );
+				}
+				// Remove keydown listener to prevent memory leak
+				if ( handleKey ) {
+					document.removeEventListener( 'keydown', handleKey );
 				}
 			} );
 			this.activeDialogs = [];

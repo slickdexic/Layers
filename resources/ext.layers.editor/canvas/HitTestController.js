@@ -341,12 +341,29 @@
 		 * @return {boolean} True if hit
 		 */
 		isPointInRectangleLayer( point, layer ) {
+			let testPoint = point;
+
+			// Un-rotate test point around layer center if layer is rotated
+			if ( layer.rotation ) {
+				const cx = layer.x + layer.width / 2;
+				const cy = layer.y + layer.height / 2;
+				const rad = -( layer.rotation * Math.PI ) / 180;
+				const cos = Math.cos( rad );
+				const sin = Math.sin( rad );
+				const dx = point.x - cx;
+				const dy = point.y - cy;
+				testPoint = {
+					x: cx + dx * cos - dy * sin,
+					y: cy + dx * sin + dy * cos
+				};
+			}
+
 			const minX = Math.min( layer.x, layer.x + layer.width );
 			const minY = Math.min( layer.y, layer.y + layer.height );
 			const w = Math.abs( layer.width );
 			const h = Math.abs( layer.height );
-			return point.x >= minX && point.x <= minX + w &&
-				point.y >= minY && point.y <= minY + h;
+			return testPoint.x >= minX && testPoint.x <= minX + w &&
+				testPoint.y >= minY && testPoint.y <= minY + h;
 		}
 
 		/**
@@ -357,10 +374,27 @@
 		 * @return {boolean} True if hit
 		 */
 		isPointInCircle( point, layer ) {
-			const dx = point.x - ( layer.x || 0 );
-			const dy = point.y - ( layer.y || 0 );
+			let testPoint = point;
+
+			// Un-rotate test point if layer is rotated
+			if ( layer.rotation ) {
+				const cx = layer.x || 0;
+				const cy = layer.y || 0;
+				const rad = -( layer.rotation * Math.PI ) / 180;
+				const cos = Math.cos( rad );
+				const sin = Math.sin( rad );
+				const dx = point.x - cx;
+				const dy = point.y - cy;
+				testPoint = {
+					x: cx + dx * cos - dy * sin,
+					y: cy + dx * sin + dy * cos
+				};
+			}
+
+			const ddx = testPoint.x - ( layer.x || 0 );
+			const ddy = testPoint.y - ( layer.y || 0 );
 			const r = layer.radius || 0;
-			return ( dx * dx + dy * dy ) <= r * r;
+			return ( ddx * ddx + ddy * ddy ) <= r * r;
 		}
 
 		/**
@@ -380,8 +414,23 @@
 				return false;
 			}
 
-			const nx = ( point.x - ex ) / radX;
-			const ny = ( point.y - ey ) / radY;
+			let testPoint = point;
+
+			// Un-rotate test point if layer is rotated
+			if ( layer.rotation ) {
+				const rad = -( layer.rotation * Math.PI ) / 180;
+				const cos = Math.cos( rad );
+				const sin = Math.sin( rad );
+				const dx = point.x - ex;
+				const dy = point.y - ey;
+				testPoint = {
+					x: ex + dx * cos - dy * sin,
+					y: ey + dx * sin + dy * cos
+				};
+			}
+
+			const nx = ( testPoint.x - ex ) / radX;
+			const ny = ( testPoint.y - ey ) / radY;
 			return nx * nx + ny * ny <= 1;
 		}
 

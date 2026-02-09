@@ -1233,4 +1233,123 @@ describe('HitTestController', () => {
             expect(hitTestController.isPointInLayer({ x: 150, y: 200 }, dimensionLayer)).toBe(false);
         });
     });
+
+    describe('HIGH-v29-1 regression: rotation-aware hit testing', () => {
+        test('isPointInRectangleLayer handles 45° rotation', () => {
+            const layer = {
+                type: 'rectangle',
+                x: 100,
+                y: 100,
+                width: 100,
+                height: 50,
+                rotation: 45,
+                visible: true,
+                locked: false
+            };
+            // Center of rectangle (150, 125) should always hit
+            expect(hitTestController.isPointInRectangleLayer({ x: 150, y: 125 }, layer)).toBe(true);
+
+            // A point that would hit the unrotated rect but misses the rotated one
+            // Top-left corner of unrotated rect is (100,100); after 45° rotation around center,
+            // this corner moves. A point at (100, 100) is now outside the rotated bounds.
+            // The un-rotation maps it back and tests against axis-aligned bounds.
+            // Point at (100, 100) when un-rotated around (150,125):
+            // dx=-50, dy=-25, rad=-45°, cos=0.707, sin=-0.707
+            // unrotX = 150 + (-50*0.707 - (-25)*(-0.707)) = 150 + (-35.35 - 17.68) = 96.97
+            // unrotY = 125 + (-50*(-0.707) + (-25)*0.707) = 125 + (35.35 - 17.68) = 142.67
+            // unrotX=96.97 < 100 so it's OUTSIDE
+            expect(hitTestController.isPointInRectangleLayer({ x: 100, y: 100 }, layer)).toBe(false);
+        });
+
+        test('isPointInRectangleLayer hits rotated corner correctly', () => {
+            const layer = {
+                type: 'rectangle',
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                rotation: 45,
+                visible: true,
+                locked: false
+            };
+            // Center (50, 50) should hit
+            expect(hitTestController.isPointInRectangleLayer({ x: 50, y: 50 }, layer)).toBe(true);
+
+            // Point at top of diamond (after 45° rotation of 100x100 square centered at 50,50)
+            // Top of diamond is at (50, 50 - 50*sqrt(2)) ≈ (50, -20.7) — just inside
+            // Test a point clearly inside the rotated diamond
+            expect(hitTestController.isPointInRectangleLayer({ x: 50, y: -15 }, layer)).toBe(true);
+        });
+
+        test('isPointInRectangleLayer with rotation=0 works normally', () => {
+            const layer = {
+                type: 'rectangle',
+                x: 100,
+                y: 100,
+                width: 200,
+                height: 150,
+                rotation: 0,
+                visible: true,
+                locked: false
+            };
+            expect(hitTestController.isPointInRectangleLayer({ x: 200, y: 175 }, layer)).toBe(true);
+            expect(hitTestController.isPointInRectangleLayer({ x: 50, y: 50 }, layer)).toBe(false);
+        });
+
+        test('isPointInCircle handles 90° rotation', () => {
+            const layer = {
+                type: 'circle',
+                x: 200,
+                y: 200,
+                radius: 50,
+                rotation: 90,
+                visible: true,
+                locked: false
+            };
+            // Circle is rotationally symmetric, so center should hit regardless
+            expect(hitTestController.isPointInCircle({ x: 200, y: 200 }, layer)).toBe(true);
+            // Point on edge
+            expect(hitTestController.isPointInCircle({ x: 249, y: 200 }, layer)).toBe(true);
+            // Point outside
+            expect(hitTestController.isPointInCircle({ x: 260, y: 200 }, layer)).toBe(false);
+        });
+
+        test('isPointInEllipse handles 90° rotation', () => {
+            const layer = {
+                type: 'ellipse',
+                x: 300,
+                y: 300,
+                radiusX: 100,
+                radiusY: 30,
+                rotation: 90,
+                visible: true,
+                locked: false
+            };
+            // Center should always hit
+            expect(hitTestController.isPointInEllipse({ x: 300, y: 300 }, layer)).toBe(true);
+
+            // With 90° rotation, the ellipse major axis (100) is now vertical.
+            // So point at (300, 390) should be inside (within vertical radius 100)
+            expect(hitTestController.isPointInEllipse({ x: 300, y: 390 }, layer)).toBe(true);
+
+            // But point at (390, 300) should be outside (horizontal is now only 30)
+            expect(hitTestController.isPointInEllipse({ x: 390, y: 300 }, layer)).toBe(false);
+
+            // Point at (325, 300) should be inside (within the minor axis of 30)
+            expect(hitTestController.isPointInEllipse({ x: 325, y: 300 }, layer)).toBe(true);
+        });
+
+        test('isPointInEllipse without rotation still works', () => {
+            const layer = {
+                type: 'ellipse',
+                x: 300,
+                y: 300,
+                radiusX: 100,
+                radiusY: 30
+            };
+            // Point within horizontal extent but outside vertical
+            expect(hitTestController.isPointInEllipse({ x: 390, y: 300 }, layer)).toBe(true);
+            expect(hitTestController.isPointInEllipse({ x: 300, y: 340 }, layer)).toBe(false);
+        });
+    });
 });
