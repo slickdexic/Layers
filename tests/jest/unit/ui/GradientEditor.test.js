@@ -587,4 +587,55 @@ describe( 'GradientEditor', () => {
 			editor.destroy();
 		} );
 	} );
+
+	describe( 'EventTracker cleanup on rebuild (P2.24 regression)', () => {
+		it( 'should destroy old EventTracker before rebuilding UI', () => {
+			// Set up EventTracker mock at the path GradientEditor checks
+			const MockEventTracker = jest.fn( function () {
+				this.add = jest.fn( ( el, ev, h ) => el.addEventListener( ev, h ) );
+				this.destroy = jest.fn();
+			} );
+			global.window.Layers.EventTracker = MockEventTracker;
+
+			layer.gradient = {
+				type: 'linear',
+				colors: [ { offset: 0, color: '#fff' }, { offset: 1, color: '#000' } ]
+			};
+
+			// Re-require to pick up the EventTracker mock
+			jest.resetModules();
+			global.mw = {
+				message: jest.fn( ( key ) => ( {
+					exists: jest.fn( () => false ),
+					text: jest.fn( () => key )
+				} ) )
+			};
+			global.window.Layers.Renderers = global.window.Layers.Renderers || {};
+			global.window.Layers.Renderers.GradientRenderer = {
+				getPresets: jest.fn( () => ( {} ) )
+			};
+			// Re-set EventTracker after resetModules
+			global.window.Layers.EventTracker = MockEventTracker;
+			const FreshGradientEditor = require( '../../../../resources/ext.layers.editor/ui/GradientEditor.js' );
+			const editor = new FreshGradientEditor( { layer, container, onChange } );
+
+			// The EventTracker should exist now
+			expect( editor.eventTracker ).toBeTruthy();
+			const destroySpy = jest.spyOn( editor.eventTracker, 'destroy' );
+
+			// Trigger a rebuild
+			editor._build();
+
+			// Old EventTracker should have been destroyed
+			expect( destroySpy ).toHaveBeenCalled();
+
+			// New EventTracker should exist
+			expect( editor.eventTracker ).toBeTruthy();
+
+			editor.destroy();
+
+			// Clean up
+			delete global.window.Layers.EventTracker;
+		} );
+	} );
 } );

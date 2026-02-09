@@ -223,6 +223,13 @@
 				return false;
 			}
 
+			// Flush any pending debounced input before finishing
+			if ( this._inputDebounceTimer ) {
+				clearTimeout( this._inputDebounceTimer );
+				this._inputDebounceTimer = null;
+				this._handleInput();
+			}
+
 			const shouldApply = apply !== false;
 			let changesApplied = false;
 			const wasTextbox = this._isMultilineType( this.editingLayer );
@@ -796,8 +803,16 @@
 			this._boundBlurHandler = () => this._handleBlur();
 			this.editorElement.addEventListener( 'blur', this._boundBlurHandler );
 
-			// Input handler for real-time preview
-			this._boundInputHandler = () => this._handleInput();
+			// Input handler for real-time preview (debounced to avoid DOM thrashing)
+			this._boundInputHandler = () => {
+				if ( this._inputDebounceTimer ) {
+					clearTimeout( this._inputDebounceTimer );
+				}
+				this._inputDebounceTimer = setTimeout( () => {
+					this._handleInput();
+					this._inputDebounceTimer = null;
+				}, 16 );
+			};
 			this.editorElement.addEventListener( 'input', this._boundInputHandler );
 
 			// Selection change handler to update toolbar button states
@@ -914,6 +929,12 @@
 
 			if ( this._boundResizeHandler ) {
 				window.removeEventListener( 'resize', this._boundResizeHandler );
+			}
+
+			// Clean up debounce timer
+			if ( this._inputDebounceTimer ) {
+				clearTimeout( this._inputDebounceTimer );
+				this._inputDebounceTimer = null;
 			}
 
 			if ( this._boundSelectionChangeHandler ) {

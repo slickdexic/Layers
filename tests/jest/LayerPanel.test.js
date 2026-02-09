@@ -2988,6 +2988,49 @@ describe('LayerPanel editLayerName', () => {
         // Should set contentEditable but not add listeners again
         expect(nameEl.contentEditable).toBe('true');
     });
+
+    test('should not accumulate listeners across multiple edit sessions (P2.14 regression)', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const nameEl = document.createElement('span');
+        nameEl.textContent = 'Test Layer';
+        nameEl.focus = jest.fn();
+        document.body.appendChild(nameEl);
+
+        // Count how many listeners eventTracker adds
+        const addSpy = jest.spyOn(panel.eventTracker, 'add');
+
+        // First edit session
+        panel.editLayerName('layer1', nameEl);
+        const firstCount = addSpy.mock.calls.length;
+
+        // Simulate blur (end editing)
+        nameEl.dispatchEvent(new Event('blur'));
+
+        // Second edit session - should NOT add more listeners
+        nameEl.contentEditable = 'false';  // Reset editable state
+        panel.editLayerName('layer1', nameEl);
+        const secondCount = addSpy.mock.calls.length;
+
+        // No new listeners should have been added
+        expect(secondCount).toBe(firstCount);
+    });
+
+    test('should use dataset.originalName for Escape key restoration (P2.14 regression)', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+
+        const nameEl = document.createElement('span');
+        nameEl.textContent = 'Original Name';
+        nameEl.focus = jest.fn();
+        document.body.appendChild(nameEl);
+
+        panel.editLayerName('layer1', nameEl);
+
+        // Verify originalName stored in dataset
+        expect(nameEl.dataset.originalName).toBe('Original Name');
+    });
 });
 
 describe('LayerPanel simpleConfirm', () => {

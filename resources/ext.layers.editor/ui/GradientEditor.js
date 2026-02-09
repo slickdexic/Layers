@@ -123,6 +123,12 @@
 		 * @private
 		 */
 		_build() {
+			// Clean up tracked listeners before destroying DOM
+			if ( this.eventTracker ) {
+				this.eventTracker.destroy();
+				const EventTracker = getEventTracker();
+				this.eventTracker = EventTracker ? new EventTracker() : null;
+			}
 			this.container.innerHTML = '';
 			this.container.className = 'gradient-editor';
 

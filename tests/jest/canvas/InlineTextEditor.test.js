@@ -3319,4 +3319,68 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 			expect( info.backgroundColor ).toBeNull();
 		} );
 	} );
+
+	describe( 'input debouncing (P2.25 regression)', () => {
+		test( 'should debounce input handler calls', () => {
+			jest.useFakeTimers();
+
+			editor.editingLayer = { type: 'text', text: '' };
+			editor.editorElement = document.createElement( 'input' );
+			editor.editorElement.value = 'test';
+			editor._isRichTextMode = false;
+
+			const spy = jest.spyOn( editor, '_handleInput' );
+
+			// Setup event handlers so _boundInputHandler is registered
+			editor._setupEventHandlers();
+
+			// Fire 5 rapid input events
+			for ( let i = 0; i < 5; i++ ) {
+				editor.editorElement.dispatchEvent( new Event( 'input' ) );
+			}
+
+			// _handleInput should NOT have been called yet (debounced)
+			expect( spy ).not.toHaveBeenCalled();
+
+			// Advance timer past debounce threshold (16ms)
+			jest.advanceTimersByTime( 20 );
+
+			// Now it should have been called exactly once
+			expect( spy ).toHaveBeenCalledTimes( 1 );
+
+			editor._removeEventHandlers();
+			jest.useRealTimers();
+		} );
+
+		test( 'should flush pending input on finishEditing', () => {
+			jest.useFakeTimers();
+
+			const layer = { type: 'text', text: 'old' };
+			editor.editingLayer = layer;
+			editor.editorElement = document.createElement( 'input' );
+			editor.editorElement.value = 'new text';
+			editor.isEditing = true;
+			editor._isRichTextMode = false;
+			editor._originalText = 'old';
+
+			editor._setupEventHandlers();
+
+			// Fire input event (starts debounce timer)
+			editor.editorElement.dispatchEvent( new Event( 'input' ) );
+
+			// Spy on _handleInput to verify flush
+			const spy = jest.spyOn( editor, '_handleInput' );
+
+			// Finish editing before debounce fires — flush should happen
+			editor.finishEditing( true );
+
+			// _handleInput should have been called during flush
+			expect( spy ).toHaveBeenCalled();
+
+			// Layer text should have been updated by the flush
+			expect( layer.text ).toBe( 'new text' );
+
+			jest.useRealTimers();
+		} );
+	} );
 } );

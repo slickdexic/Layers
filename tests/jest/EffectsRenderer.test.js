@@ -903,5 +903,29 @@ describe( 'EffectsRenderer', () => {
 
 			document.createElement = origCreateElement;
 		} );
+
+		it( 'should release GPU texture by zeroing canvas dimensions after use (P2.15 regression)', () => {
+			const origCreateElement = document.createElement;
+			const localMockTempCtx = { drawImage: jest.fn(), fillRect: jest.fn(), fillStyle: '' };
+			const tempCanvasMock = {
+				width: 0,
+				height: 0,
+				getContext: jest.fn().mockReturnValue( localMockTempCtx )
+			};
+			document.createElement = jest.fn().mockReturnValue( tempCanvasMock );
+
+			renderer.canvas = { width: 800, height: 600 };
+
+			const drawPathFn = jest.fn();
+			const bounds = { x: 10, y: 10, width: 100, height: 80 };
+
+			renderer.drawBlurFill( { blurRadius: 12 }, drawPathFn, bounds );
+
+			// After drawBlurFill completes, tempCanvas dimensions should be zeroed
+			expect( tempCanvasMock.width ).toBe( 0 );
+			expect( tempCanvasMock.height ).toBe( 0 );
+
+			document.createElement = origCreateElement;
+		} );
 	} );
 } );

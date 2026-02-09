@@ -1858,4 +1858,53 @@ describe('SelectionManager', () => {
             expect(handles[0].rect.height).toBeGreaterThanOrEqual(14);
         });
     });
+
+    describe( 'selectAll fallback filtering (P2.23 regression)', () => {
+        test( 'should exclude locked layers in fallback selectAll', () => {
+            mockCanvasManager.layers = [
+                { id: 'a', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, visible: true },
+                { id: 'b', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, locked: true },
+                { id: 'c', type: 'rectangle', x: 0, y: 0, width: 10, height: 10 }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            // Ensure no SelectionState module is present (fallback path)
+            selectionManager._selectionState = null;
+
+            selectionManager.selectAll();
+
+            expect( selectionManager.selectedLayerIds ).toContain( 'a' );
+            expect( selectionManager.selectedLayerIds ).not.toContain( 'b' );
+            expect( selectionManager.selectedLayerIds ).toContain( 'c' );
+        } );
+
+        test( 'should exclude invisible layers in fallback selectAll', () => {
+            mockCanvasManager.layers = [
+                { id: 'a', type: 'rectangle', x: 0, y: 0, width: 10, height: 10 },
+                { id: 'b', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, visible: false },
+                { id: 'c', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, visible: 0 }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            selectionManager.selectAll();
+
+            expect( selectionManager.selectedLayerIds ).toContain( 'a' );
+            expect( selectionManager.selectedLayerIds ).not.toContain( 'b' );
+            expect( selectionManager.selectedLayerIds ).not.toContain( 'c' );
+        } );
+
+        test( 'should handle integer boolean values from API (locked=1, visible=0)', () => {
+            mockCanvasManager.layers = [
+                { id: 'a', type: 'rectangle', x: 0, y: 0, width: 10, height: 10 },
+                { id: 'b', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, locked: 1 },
+                { id: 'c', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, visible: 0 }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            selectionManager.selectAll();
+
+            expect( selectionManager.selectedLayerIds ).toEqual( [ 'a' ] );
+        } );
+    });
 });
