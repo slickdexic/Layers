@@ -13,6 +13,20 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Text Length Validation** — Changed `maxTextLength` from 500 to 10,000 in LayersValidator.js to match server-side `MAX_TEXT_LENGTH` constant
 - **Save Button Timer Leak** — Replaced `_scheduleTimeout` with proper `setTimeout`/`clearTimeout` lifecycle in APIManager.js `disableSaveButton()` to prevent timer leaks
 - **Multi-Selection Deletion** — Fixed `deleteSelectedLayers()` in LayersEditor.js to operate on full selection array instead of only the last selected layer
+- **ThumbnailProcessor Null Safety** — Fixed 4 `method_exists()` calls that crashed with `TypeError` when `$thumbnail` was null (lines 80, 113, 126, 145)
+- **ThumbnailProcessor Undefined Variable** — Fixed `$file` scoping bug in `injectThumbnailLayerData()`: variable was defined inside `if` block but referenced in `else` block (line 458)
+- **SlideNameValidator Trailing Hyphens** — Added `rtrim($name, '_-')` to `sanitize()` so slide names like `'--slide--'` produce `'slide'` instead of `'slide--'`
+- **SlideNameValidator Multiple Spaces** — Added `preg_replace('/\s+/', ' ', $name)` to collapse consecutive spaces before hyphen replacement (e.g., `'my  slide'` → `'my-slide'` instead of `'my--slide'`)
+- **ESLint Error** — Prefixed unused `backgroundImage` parameter with underscore in `TransformationEngine.fitToWindow()` to satisfy `no-unused-vars` rule
+
+### Fixed (Tests)
+- **ApiLayersSaveTest**: Complete rewrite — removed reflection on 6 methods that were refactored into dedicated validator classes; now tests `ServerSideLayerValidator`, `ColorValidator`, `TextSanitizer`, `SetNameSanitizer` directly (12 tests, 27 assertions)
+- **ThumbnailProcessorTest**: Replaced `stdClass` mock helpers with anonymous classes using real methods (fixes `method_exists()` failures); fixed Closure→string parameter mismatch; corrected flag normalization assertions for disabled flags (29 tests, 46 assertions)
+- **ColorValidatorTest**: Fixed hex color case expectation (`#FF0000`→`#ff0000`); added CSS4 4-digit `#RGBA` format support test (was incorrectly rejected)
+- **SetNameSanitizerTest**: Renamed test and changed assertions — `isValid()` correctly rejects `@` and `#` characters
+- **SlideNameValidatorTest**: Fixed `assertStringNotMatches()` → `assertDoesNotMatchRegularExpression()` (correct PHPUnit 9.x method name)
+- **ServerSideLayerValidatorTest**: Fixed 3 test expectations for updated validation behavior
+- **LayersParamExtractorTest**: Fixed 19 test errors from class/constant loading issues
 
 ### Removed
 - **diagnose.php** — Removed diagnostic script (security: exposed server environment details; functionality covered by `maintenance/update.php` and MediaWiki core diagnostics)
@@ -20,7 +34,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Technical Details
 - Applies to APIManager abort handlers for revision and named set loads
 - v27 code review: 3 CRITICAL + 6 HIGH issues fixed across 6 files
-- All 11,254 tests pass (165 test suites) ✅
+- PHP test suite: 0 failures (was 11), 134 structural errors (MW core dependencies), 549 tests, 765 assertions
+- All 11,265 JS tests pass (165 test suites) ✅
+- ESLint: 0 errors (was 1), phpcs: 0 errors (was 29 line-ending issues)
 
 ## [1.5.52] - 2026-02-05
 

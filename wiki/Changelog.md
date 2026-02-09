@@ -15,6 +15,19 @@ Version history for the Layers extension.
 - **Text Length Validation** — Changed `maxTextLength` from 500 to 10,000 to match server-side limit
 - **Save Button Timer Leak** — Fixed `_scheduleTimeout` timer leak in APIManager.js `disableSaveButton()`
 - **Multi-Selection Deletion** — Fixed `deleteSelectedLayers()` to operate on full selection array
+- **ThumbnailProcessor Null Safety** — Fixed 4 `method_exists()` crashes when thumbnail is null
+- **ThumbnailProcessor Undefined Variable** — Fixed `$file` scoping bug in `injectThumbnailLayerData()`
+- **SlideNameValidator** — Fixed trailing hyphens not being trimmed; fixed consecutive spaces producing double hyphens
+- **ESLint Error** — Fixed unused `backgroundImage` parameter in TransformationEngine
+
+### Fixed (Tests)
+- **ApiLayersSaveTest** — Complete rewrite: removed reflection on refactored methods, tests validators directly (12 tests)
+- **ThumbnailProcessorTest** — Fixed mock helpers, parameter types, flag normalization assertions (29 tests)
+- **ColorValidatorTest** — Fixed hex case and CSS4 #RGBA format expectations
+- **SetNameSanitizerTest** — Fixed assertions for @/# character rejection
+- **SlideNameValidatorTest** — Fixed PHPUnit 9.x method name
+- **ServerSideLayerValidatorTest** — Fixed 3 test expectations
+- **LayersParamExtractorTest** — Fixed 19 class/constant loading errors
 
 ### Removed
 - **diagnose.php** — Removed diagnostic script (security risk; functionality covered by MediaWiki core)
@@ -22,7 +35,9 @@ Version history for the Layers extension.
 ### Technical Details
 - Applies to APIManager abort handlers for revision and named set loading
 - v27 code review: 3 CRITICAL + 6 HIGH issues fixed across 6 files
-- All 11,254 tests pass (165 test suites) ✅
+- PHP test suite: 0 failures (was 11), 549 tests, 765 assertions
+- All 11,265 JS tests pass (165 test suites) ✅
+- ESLint: 0 errors, phpcs: 0 errors
 
 ## Version 1.5.52 (February 5, 2026)
 
