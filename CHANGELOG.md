@@ -9,6 +9,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Fixed
 - **InstantCommons Editor Load** — Fixed critical bug where the editor failed to load for foreign files (InstantCommons) by removing overly restrictive CSP header that blocked ResourceLoader scripts. The CSP was unnecessary since foreign images are already served via a local proxy URL (Special:Redirect/file). (GitHub #52)
+- **Font Size Toolbar Persistence** — Fixed bug where toolbar font size showed wrong value (e.g., 48) after setting a different size (e.g., 72), deselecting, and re-selecting a textbox layer. Now `finishEditing()` extracts the dominant fontSize from richText runs and updates `layer.fontSize` to ensure the toolbar initializes correctly on re-edit.
 - **API Error Handling** — Fixed bare `\Throwable` catch in ApiLayersDelete.php that swallowed `ApiUsageException`, preventing proper error propagation to clients
 - **Schema Cache Performance** — Added `schemaReadyResult` cache to LayersSchemaManager to avoid redundant database queries on repeated `isSchemaReady()` calls
 - **Text Length Validation** — Changed `maxTextLength` from 500 to 10,000 in LayersValidator.js to match server-side `MAX_TEXT_LENGTH` constant
