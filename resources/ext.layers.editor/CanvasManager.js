@@ -127,13 +127,9 @@ class CanvasManager {
 		// Selection and manipulation state
 		// NOTE: selectedLayerId and selectedLayerIds are now managed via StateManager
 		// Use getSelectedLayerId() and getSelectedLayerIds() to access them
+		// NOTE: isResizing/isRotating/isDragging live on TransformController (single authority)
 		this.selectionHandles = [];
-		this.isResizing = false;
-		this.isRotating = false;
-		this.isDragging = false;
-		this.resizeHandle = null;
 		this.dragStartPoint = null;
-		this.originalLayerState = null;
 		this.isMarqueeSelecting = false;
 		this.marqueeStart = { x: 0, y: 0 };
 		this.marqueeEnd = { x: 0, y: 0 };
@@ -703,28 +699,25 @@ class CanvasManager {
 	startResize ( handle ) {
 		if ( this.transformController ) {
 			this.transformController.startResize( handle, this.startPoint );
-			this.isResizing = this.transformController.isResizing;
-			this.resizeHandle = this.transformController.resizeHandle;
 		}
 	}
 
 	startRotation ( point ) {
 		if ( this.transformController ) {
 			this.transformController.startRotation( point );
-			this.isRotating = this.transformController.isRotating;
 		}
 	}
 
 	startDrag () {
 		if ( this.transformController ) {
 			this.transformController.startDrag( this.startPoint );
-			this.isDragging = this.transformController.isDragging;
 		}
 	}
 
 	getResizeCursor ( handleType, rotation ) {
-		if ( this.transformController ) {
-			return this.transformController.getResizeCursor( handleType, rotation );
+		const RC = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
+		if ( RC ) {
+			return RC.getResizeCursor( handleType, rotation );
 		}
 		return 'default';
 	}
@@ -751,14 +744,15 @@ class CanvasManager {
 	calculateResize (
 		originalLayer, handleType, deltaX, deltaY, modifiers
 	) {
-		if ( this.transformController ) {
-			return this.transformController.calculateResize(
+		const RC = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
+		if ( RC ) {
+			return RC.calculateResize(
 				originalLayer, handleType, deltaX, deltaY, modifiers
 			);
 		}
-		// TransformController not available - should never happen in production
+		// ResizeCalculator not available - should never happen in production
 		if ( typeof mw !== 'undefined' && mw.log ) {
-			mw.log.error( 'Layers: TransformController not available for calculateResize' );
+			mw.log.error( 'Layers: ResizeCalculator not available for calculateResize' );
 		}
 		return null;
 	}
@@ -916,8 +910,6 @@ class CanvasManager {
 	finishResize () {
 		if ( this.transformController && this.transformController.isResizing ) {
 			this.transformController.finishResize();
-			this.isResizing = false;
-			this.resizeHandle = null;
 		}
 	}
 
@@ -928,14 +920,12 @@ class CanvasManager {
 	finishRotation () {
 		if ( this.transformController && this.transformController.isRotating ) {
 			this.transformController.finishRotation();
-			this.isRotating = false;
 		}
 	}
 
 	finishDrag () {
 		if ( this.transformController && this.transformController.isDragging ) {
 			this.transformController.finishDrag();
-			this.isDragging = false;
 			this.showDragPreview = false;
 		}
 	}

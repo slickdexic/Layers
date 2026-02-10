@@ -234,13 +234,14 @@ describe( 'DimensionRenderer', () => {
 
 	describe( 'hitTest', () => {
 		test( 'returns true for point on dimension line', () => {
-			const layer = { x1: 0, y1: 50, x2: 100, y2: 50 };
+			// dimensionOffset: 0 means the dimension line is ON the baseline
+			const layer = { x1: 0, y1: 50, x2: 100, y2: 50, dimensionOffset: 0 };
 			const result = renderer.hitTest( layer, 50, 50 );
 			expect( result ).toBe( true );
 		} );
 
 		test( 'returns true for point near dimension line', () => {
-			const layer = { x1: 0, y1: 50, x2: 100, y2: 50 };
+			const layer = { x1: 0, y1: 50, x2: 100, y2: 50, dimensionOffset: 0 };
 			const result = renderer.hitTest( layer, 50, 55 );
 			expect( result ).toBe( true );
 		} );
@@ -252,7 +253,7 @@ describe( 'DimensionRenderer', () => {
 		} );
 
 		test( 'works with diagonal lines', () => {
-			const layer = { x1: 0, y1: 0, x2: 100, y2: 100 };
+			const layer = { x1: 0, y1: 0, x2: 100, y2: 100, dimensionOffset: 0 };
 			const result = renderer.hitTest( layer, 50, 50 );
 			expect( result ).toBe( true );
 		} );
@@ -260,6 +261,42 @@ describe( 'DimensionRenderer', () => {
 		test( 'returns true for point at endpoint', () => {
 			const layer = { x1: 0, y1: 0, x2: 100, y2: 0 };
 			const result = renderer.hitTest( layer, 0, 0 );
+			expect( result ).toBe( true );
+		} );
+
+		// P1-018 regression: hitTest must account for dimensionOffset
+		test( 'returns true for point on offset dimension line (dimensionOffset)', () => {
+			// Line from (0,50) to (100,50) with offset 30 means the visible
+			// dimension line is drawn at y = 50 - 30 = 20 (perp = (0,-1))
+			const layer = { x1: 0, y1: 50, x2: 100, y2: 50, dimensionOffset: 30 };
+			const result = renderer.hitTest( layer, 50, 20 );
+			expect( result ).toBe( true );
+		} );
+
+		test( 'returns false for point on baseline when offset is large (P1-018)', () => {
+			// With large offset, baseline itself should NOT be a hit target
+			const layer = { x1: 0, y1: 50, x2: 100, y2: 50, dimensionOffset: 80 };
+			// Point right on the baseline at (50, 50) should be far from the
+			// offset line at y = 50 - 80 = -30
+			const result = renderer.hitTest( layer, 50, 50 );
+			expect( result ).toBe( false );
+		} );
+
+		test( 'returns true for point near extension line (P1-018)', () => {
+			// Extension lines go from base points toward the offset dimension line
+			// For a horizontal line at y=50 offset by 30, extension from (0,50) to (0,20)
+			const layer = { x1: 0, y1: 50, x2: 100, y2: 50, dimensionOffset: 30 };
+			// Point near the extension line from (0,50) to (0,20)
+			const result = renderer.hitTest( layer, 2, 35 );
+			expect( result ).toBe( true );
+		} );
+
+		test( 'hitTest works with default offset from extensionGap/Length', () => {
+			// Without explicit dimensionOffset, offset = extensionGap + extensionLength/2
+			// Default extensionGap=10, extensionLength=10 => offset = 10 + 5 = 15
+			const layer = { x1: 0, y1: 50, x2: 100, y2: 50, extensionGap: 10, extensionLength: 10 };
+			// Dimension line should be at y = 50 - 15 = 35
+			const result = renderer.hitTest( layer, 50, 35 );
 			expect( result ).toBe( true );
 		} );
 	} );

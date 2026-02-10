@@ -661,13 +661,15 @@ class CustomShapeRenderer {
 		// Use Path2D and canvas context for accurate hit testing
 		const path = this.getPath2D( shapeData.path );
 
-		// Create temporary canvas for hit testing
-		const canvas = document.createElement( 'canvas' );
-		canvas.width = 1;
-		canvas.height = 1;
-		const ctx = canvas.getContext( '2d' );
+		// Reuse cached 1x1 canvas for hit testing (avoids per-call allocation)
+		if ( !this._hitTestCtx ) {
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 1;
+			canvas.height = 1;
+			this._hitTestCtx = canvas.getContext( '2d' );
+		}
 
-		return ctx.isPointInPath( path, localX, localY, shapeData.fillRule || 'nonzero' );
+		return this._hitTestCtx.isPointInPath( path, localX, localY, shapeData.fillRule || 'nonzero' );
 	}
 
 	/**

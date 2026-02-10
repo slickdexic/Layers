@@ -858,8 +858,19 @@
 			this.showSpinner( this.getMessage( 'layers-saving' ) );
 			this.disableSaveButton();
 
-			const payload = this.buildSavePayload();
-			const layersJson = JSON.stringify( this.editor.stateManager.get( 'layers' ) || [] );
+			let payload;
+			let layersJson;
+			try {
+				payload = this.buildSavePayload();
+				layersJson = JSON.stringify( this.editor.stateManager.get( 'layers' ) || [] );
+			} catch ( buildError ) {
+				mw.log.error( '[APIManager] saveLayers: failed to build payload:', buildError.message );
+				this.hideSpinner();
+				this.saveInProgress = false;
+				this.enableSaveButton();
+				reject( buildError );
+				return;
+			}
 
 			if ( !this.checkSizeLimit( layersJson ) ) {
 				mw.log.error( '[APIManager] saveLayers: data too large' );
@@ -1426,7 +1437,19 @@
 
 	checkSizeLimit( data ) {
 		const maxBytes = mw.config.get( 'wgLayersMaxBytes' ) || 2097152; // 2MB default
-		return data.length <= maxBytes;
+		// Use TextEncoder for accurate byte count (handles multibyte chars like emoji/CJK)
+		let byteLength;
+		if ( typeof TextEncoder !== 'undefined' ) {
+			byteLength = new TextEncoder().encode( data ).length;
+		} else {
+			// Fallback: approximate with encodeURIComponent
+			try {
+				byteLength = encodeURIComponent( data ).replace( /%[A-F\d]{2}/g, 'U' ).length;
+			} catch ( e ) {
+				byteLength = data.length;
+			}
+		}
+		return byteLength <= maxBytes;
 	}
 
 	sanitizeInput( input ) {

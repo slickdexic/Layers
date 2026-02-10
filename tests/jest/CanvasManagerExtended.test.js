@@ -76,13 +76,17 @@ describe( 'CanvasManager Extended Coverage', () => {
 			startDrag: jest.fn(),
 			handleDrag: jest.fn(),
 			finishDrag: jest.fn(),
-			getResizeCursor: jest.fn( () => 'default' ),
-			calculateResize: jest.fn(),
 			isResizing: false,
 			isRotating: false,
 			isDragging: false,
 			resizeHandle: null
 		} ) );
+
+		// ResizeCalculator is now called directly by CanvasManager
+		global.ResizeCalculator = {
+			getResizeCursor: jest.fn( () => 'default' ),
+			calculateResize: jest.fn()
+		};
 
 		global.ClipboardController = jest.fn( () => ( {
 			copy: jest.fn(),
@@ -323,9 +327,10 @@ describe( 'CanvasManager Extended Coverage', () => {
 
 	// Note: deepCloneLayers tests removed - method was dead code (never called in production)
 
-	describe( 'calculateResize without TransformController', () => {
-		it( 'should return null and log error when TransformController unavailable', () => {
-			canvasManager.transformController = null;
+	describe( 'calculateResize without ResizeCalculator', () => {
+		it( 'should return null and log error when ResizeCalculator unavailable', () => {
+			const savedRC = global.ResizeCalculator;
+			delete global.ResizeCalculator;
 
 			window.mw = {
 				log: {
@@ -343,10 +348,11 @@ describe( 'CanvasManager Extended Coverage', () => {
 
 			expect( result ).toBeNull();
 			expect( window.mw.log.error ).toHaveBeenCalledWith(
-				'Layers: TransformController not available for calculateResize'
+				'Layers: ResizeCalculator not available for calculateResize'
 			);
 
 			delete window.mw;
+			global.ResizeCalculator = savedRC;
 		} );
 	} );
 
@@ -644,8 +650,6 @@ describe( 'CanvasManager Extended Coverage', () => {
 			canvasManager.startPoint = { x: 100, y: 100 };
 			canvasManager.startResize( 'se' );
 			expect( canvasManager.transformController.startResize ).toHaveBeenCalledWith( 'se', { x: 100, y: 100 } );
-			expect( canvasManager.isResizing ).toBe( true );
-			expect( canvasManager.resizeHandle ).toBe( 'se' );
 		} );
 
 		it( 'should delegate startRotation to transformController', () => {
@@ -655,7 +659,6 @@ describe( 'CanvasManager Extended Coverage', () => {
 			};
 			canvasManager.startRotation( { x: 100, y: 100 } );
 			expect( canvasManager.transformController.startRotation ).toHaveBeenCalledWith( { x: 100, y: 100 } );
-			expect( canvasManager.isRotating ).toBe( true );
 		} );
 
 		it( 'should delegate startDrag to transformController', () => {
@@ -666,21 +669,20 @@ describe( 'CanvasManager Extended Coverage', () => {
 			canvasManager.startPoint = { x: 50, y: 50 };
 			canvasManager.startDrag();
 			expect( canvasManager.transformController.startDrag ).toHaveBeenCalledWith( { x: 50, y: 50 } );
-			expect( canvasManager.isDragging ).toBe( true );
 		} );
 
-		it( 'should delegate getResizeCursor to transformController', () => {
-			canvasManager.transformController = {
-				getResizeCursor: jest.fn( () => 'nwse-resize' )
-			};
+		it( 'should delegate getResizeCursor to ResizeCalculator', () => {
+			global.ResizeCalculator.getResizeCursor.mockReturnValue( 'nwse-resize' );
 			const result = canvasManager.getResizeCursor( 'se', 0 );
 			expect( result ).toBe( 'nwse-resize' );
 		} );
 
-		it( 'should return default cursor when transformController unavailable', () => {
-			canvasManager.transformController = null;
+		it( 'should return default cursor when ResizeCalculator unavailable', () => {
+			const savedRC = global.ResizeCalculator;
+			delete global.ResizeCalculator;
 			const result = canvasManager.getResizeCursor( 'se', 0 );
 			expect( result ).toBe( 'default' );
+			global.ResizeCalculator = savedRC;
 		} );
 	} );
 
@@ -1051,8 +1053,9 @@ describe( 'CanvasManager Extended Coverage', () => {
 	} );
 
 	describe( 'calculateResize fallback', () => {
-		it( 'should return null when transformController is unavailable', () => {
-			canvasManager.transformController = null;
+		it( 'should return null when ResizeCalculator is unavailable', () => {
+			const savedRC = global.ResizeCalculator;
+			delete global.ResizeCalculator;
 
 			const result = canvasManager.calculateResize(
 				{ id: 'layer-1', type: 'rectangle', x: 0, y: 0, width: 100, height: 100 },
@@ -1063,6 +1066,7 @@ describe( 'CanvasManager Extended Coverage', () => {
 			);
 
 			expect( result ).toBeNull();
+			global.ResizeCalculator = savedRC;
 		} );
 	} );
 

@@ -56,9 +56,16 @@ describe( 'TextUtils', () => {
 			expect( TextUtils.sanitizeTextContent( 'Test\x1FString' ) ).toBe( 'TestString' );
 		} );
 
-		it( 'should strip HTML tags', () => {
-			expect( TextUtils.sanitizeTextContent( '<b>Bold</b>' ) ).toBe( 'Bold' );
+		it( 'should strip dangerous HTML tags but preserve harmless ones', () => {
+			// Harmless tags (e.g., <b>) preserved for Canvas rendering
+			expect( TextUtils.sanitizeTextContent( '<b>Bold</b>' ) ).toBe( '<b>Bold</b>' );
+			// Dangerous tags stripped
 			expect( TextUtils.sanitizeTextContent( '<script>alert("xss")</script>' ) ).toBe( 'alert("xss")' );
+		} );
+
+		it( 'should preserve math expressions with angle brackets', () => {
+			expect( TextUtils.sanitizeTextContent( 'x < 5' ) ).toBe( 'x < 5' );
+			expect( TextUtils.sanitizeTextContent( 'a > b' ) ).toBe( 'a > b' );
 		} );
 
 		it( 'should preserve extended Unicode characters', () => {

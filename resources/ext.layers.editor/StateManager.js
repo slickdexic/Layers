@@ -24,6 +24,7 @@ const getDefaults = () => {
 class StateManager {
 	constructor( editor ) {
 		this.editor = editor;
+		this._layersVersion = 0;
 		this.state = {
 			// Core editor state
 			isDirty: false,
@@ -113,6 +114,11 @@ class StateManager {
 		const oldValue = this.state[ key ];
 		this.state[ key ] = value;
 
+		// Bump version counter when layers change (used by SmartGuidesController cache)
+		if ( key === 'layers' ) {
+			this._layersVersion++;
+		}
+
 		// Notify listeners of the change
 		this.notifyListeners( key, value, oldValue );
 	}
@@ -201,6 +207,11 @@ class StateManager {
 				}
 			} );
 
+			// Bump version counter when layers change
+			if ( changedKeys.includes( 'layers' ) ) {
+				this._layersVersion++;
+			}
+
 			// Notify listeners for each changed key
 			changedKeys.forEach( key => {
 				this.notifyListeners( key, this.state[ key ], oldState[ key ] );
@@ -276,6 +287,11 @@ class StateManager {
 						changedKeys.push( key );
 					}
 				} );
+
+				// Bump version counter when layers change
+				if ( changedKeys.includes( 'layers' ) ) {
+					this._layersVersion++;
+				}
 
 				// Notify listeners for each changed key
 				changedKeys.forEach( key => {
@@ -575,6 +591,18 @@ class StateManager {
 
 	getLayers() {
 		return this.state.layers.slice();
+	}
+
+	/**
+	 * Get the layers version counter.
+	 * Incremented every time the layers array is replaced via set/update/atomic.
+	 * Used by SmartGuidesController to determine cache validity without
+	 * relying on reference equality (which fails because getLayers returns a copy).
+	 *
+	 * @return {number} Current layers version
+	 */
+	getLayersVersion() {
+		return this._layersVersion;
 	}
 
 	/**
@@ -896,8 +924,6 @@ class StateManager {
 		this.markClean();
 	}
 
-	/**
-	 * Clean up state manager resources
 	/**
 	 * Destroy state manager and clean up resources
 	 */

@@ -740,112 +740,8 @@
 			if ( this.ValidationHelpers && this.ValidationHelpers.isValidColor ) {
 				return this.ValidationHelpers.isValidColor( color );
 			}
-
-			// Fallback implementation
-			if ( typeof color !== 'string' ) {
-				return false;
-			}
-
-			// Prevent extremely long color strings
-			if ( color.length > 50 ) {
-				return false;
-			}
-
-			// Allow hex colors (3, 4, 6, 8 digits)
-			if ( /^#[0-9a-fA-F]{3,8}$/.test( color ) ) {
-				return true;
-			}
-
-			// Allow rgb/rgba with strict validation
-			// Alpha accepts: 0, 1, 0.5, .5, 1.0, etc.
-			if ( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/.test( color ) ) {
-				const matches = color.match( /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/ );
-				// Validate RGB values are in 0-255 range
-				for ( let i = 1; i <= 3; i++ ) {
-					if (
-						matches[ i ] &&
-						( parseInt( matches[ i ], 10 ) < 0 || parseInt( matches[ i ], 10 ) > 255 )
-					) {
-						return false;
-					}
-				}
-				// Validate alpha is in 0-1 range
-				if ( matches[ 4 ] !== undefined ) {
-					const alpha = parseFloat( matches[ 4 ] );
-					if ( isNaN( alpha ) || alpha < 0 || alpha > 1 ) {
-						return false;
-					}
-				}
-				return true;
-			}
-
-			// Allow HSL/HSLA with strict validation
-			// Alpha accepts: 0, 1, 0.5, .5, 1.0, etc.
-			if ( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/.test( color ) ) {
-				const hslMatches = color.match( /^hsla?\(\s*(\d{1,3})\s*,\s*(\d{1,3})%\s*,\s*(\d{1,3})%\s*(?:,\s*(0(?:\.\d+)?|1(?:\.0+)?|\.\d+))?\s*\)$/ );
-				// Validate HSL values
-				if (
-					hslMatches[ 1 ] &&
-					( parseInt( hslMatches[ 1 ], 10 ) < 0 || parseInt( hslMatches[ 1 ], 10 ) > 360 )
-				) {
-					return false;
-				}
-				if (
-					hslMatches[ 2 ] &&
-					( parseInt( hslMatches[ 2 ], 10 ) < 0 || parseInt( hslMatches[ 2 ], 10 ) > 100 )
-				) {
-					return false;
-				}
-				if (
-					hslMatches[ 3 ] &&
-					( parseInt( hslMatches[ 3 ], 10 ) < 0 || parseInt( hslMatches[ 3 ], 10 ) > 100 )
-				) {
-					return false;
-				}
-				// Validate alpha is in 0-1 range
-				if ( hslMatches[ 4 ] !== undefined ) {
-					const alpha = parseFloat( hslMatches[ 4 ] );
-					if ( isNaN( alpha ) || alpha < 0 || alpha > 1 ) {
-						return false;
-					}
-				}
-				return true;
-			}
-
-			// CSS named colors - synchronized with server-side ColorValidator.php
-			// 148 standard CSS color names including 'none' and 'transparent'
-			const safeColors = [
-				'none', 'transparent',
-				'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure',
-				'beige', 'bisque', 'black', 'blanchedalmond', 'blue', 'blueviolet',
-				'brown', 'burlywood', 'cadetblue', 'chartreuse', 'chocolate', 'coral',
-				'cornflowerblue', 'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan',
-				'darkgoldenrod', 'darkgray', 'darkgreen', 'darkgrey', 'darkkhaki',
-				'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid', 'darkred',
-				'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray',
-				'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue',
-				'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite',
-				'forestgreen', 'fuchsia', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod',
-				'gray', 'green', 'greenyellow', 'grey', 'honeydew', 'hotpink', 'indianred',
-				'indigo', 'ivory', 'khaki', 'lavender', 'lavenderblush', 'lawngreen',
-				'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan',
-				'lightgoldenrodyellow', 'lightgray', 'lightgreen', 'lightgrey', 'lightpink',
-				'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray',
-				'lightslategrey', 'lightsteelblue', 'lightyellow', 'lime', 'limegreen',
-				'linen', 'magenta', 'maroon', 'mediumaquamarine', 'mediumblue',
-				'mediumorchid', 'mediumpurple', 'mediumseagreen', 'mediumslateblue',
-				'mediumspringgreen', 'mediumturquoise', 'mediumvioletred', 'midnightblue',
-				'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy', 'oldlace',
-				'olive', 'olivedrab', 'orange', 'orangered', 'orchid', 'palegoldenrod',
-				'palegreen', 'paleturquoise', 'palevioletred', 'papayawhip', 'peachpuff',
-				'peru', 'pink', 'plum', 'powderblue', 'purple', 'red', 'rosybrown',
-				'royalblue', 'saddlebrown', 'salmon', 'sandybrown', 'seagreen', 'seashell',
-				'sienna', 'silver', 'skyblue', 'slateblue', 'slategray', 'slategrey',
-				'snow', 'springgreen', 'steelblue', 'tan', 'teal', 'thistle', 'tomato',
-				'turquoise', 'violet', 'wheat', 'white', 'whitesmoke', 'yellow', 'yellowgreen'
-			];
-
-			return safeColors.includes( color.toLowerCase() );
+			// Minimal fallback: accept hex colors only when ValidationHelpers unavailable
+			return typeof color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test( color );
 		}
 
 		/**
@@ -859,13 +755,9 @@
 			if ( this.ValidationHelpers && this.ValidationHelpers.containsScriptInjection ) {
 				return this.ValidationHelpers.containsScriptInjection( text );
 			}
-			// Fallback when ValidationHelpers not available
-			// Detect: <script>, javascript:, data:, vbscript:, event handlers (onclick=, etc.),
-			// and expression() (IE CSS XSS vector)
-			if ( typeof text !== 'string' ) {
-				return false;
-			}
-			return /<script|javascript:|data:|vbscript:|on\w+\s*=|expression\s*\(/i.test( text );
+			// Minimal fallback
+			return typeof text === 'string' &&
+				/<script|javascript:|data:|vbscript:|on\w+\s*=|expression\s*\(/i.test( text );
 		}
 
 		/**
@@ -883,86 +775,13 @@
 			if ( this.ValidationHelpers && this.ValidationHelpers.getMessage ) {
 				return this.ValidationHelpers.getMessage( key, ...args );
 			}
-
-			// Fallback messages in English (used when i18n unavailable)
-			const fallbacks = {
-				'layers-validation-layer-invalid': 'Invalid layer object',
-				'layers-validation-id-required': 'Layer ID is required',
-				'layers-validation-type-required': 'Layer type is required',
-				'layers-validation-type-invalid': 'Invalid layer type: $1',
-				'layers-validation-id-type': 'Layer ID must be a string',
-				'layers-validation-id-too-long': 'Layer ID cannot be longer than $1 characters',
-				'layers-validation-id-invalid-chars': 'Layer ID contains invalid characters',
-				'layers-validation-coordinate-invalid': 'Invalid coordinate value for $1',
-				'layers-validation-coordinate-too-large': 'Coordinate $1 is too large (max: $2)',
-				'layers-validation-fontsize-invalid': 'Invalid font size',
-				'layers-validation-fontsize-range': 'Font size must be between $1 and $2',
-				'layers-validation-strokewidth-invalid': 'Invalid stroke width',
-				'layers-validation-strokewidth-range': 'Stroke width must be between $1 and $2',
-				'layers-validation-opacity-invalid': 'Invalid opacity value',
-				'layers-validation-opacity-range': 'Opacity must be between $1 and $2',
-				'layers-validation-fillopacity-invalid': 'Invalid fill opacity value',
-				'layers-validation-fillopacity-range': 'Fill opacity must be between $1 and $2',
-				'layers-validation-strokeopacity-invalid': 'Invalid stroke opacity value',
-				'layers-validation-strokeopacity-range': 'Stroke opacity must be between $1 and $2',
-				'layers-validation-sides-invalid': 'Invalid number of sides',
-				'layers-validation-sides-range': 'Number of sides must be between $1 and $2',
-				'layers-validation-blurradius-invalid': 'Invalid blur radius',
-				'layers-validation-blurradius-range': 'Blur radius must be between $1 and $2',
-				'layers-validation-text-type': 'Text content must be a string',
-				'layers-validation-text-too-long': 'Text content cannot be longer than $1 characters',
-				'layers-validation-text-unsafe': 'Text content contains potentially unsafe content',
-				'layers-validation-fontfamily-type': 'Font family must be a string',
-				'layers-validation-fontfamily-too-long': 'Font family cannot be longer than $1 characters',
-				'layers-validation-fontfamily-invalid': 'Font family contains invalid characters',
-				'layers-validation-textalign-invalid': 'Invalid text alignment',
-				'layers-validation-color-invalid': 'Invalid color value for $1',
-				'layers-validation-points-array': 'Points must be an array',
-				'layers-validation-points-too-many': 'Too many points (max: $1)',
-				'layers-validation-point-invalid': 'Invalid point at index $1',
-				'layers-validation-point-coordinates': 'Invalid coordinates for point at index $1',
-				'layers-validation-point-too-large': 'Point coordinates too large at index $1',
-				'layers-validation-arrowstyle-invalid': 'Invalid arrow style',
-				'layers-validation-blendmode-invalid': 'Invalid blend mode',
-				'layers-validation-layers-array': 'Layers must be an array',
-				'layers-validation-too-many-layers': 'Too many layers (max: $1)',
-				'layers-validation-layer-error': 'Layer $1: $2',
-				'layers-validation-duplicate-id': 'Duplicate layer ID: $1'
-			};
-
-			const fallback = fallbacks[ key ] || key;
-
-			// Use MessageHelper if available (handles mw.message delegation)
-			if ( window.layersMessages && typeof window.layersMessages.getWithParams === 'function' ) {
-				if ( args.length > 0 ) {
-					return window.layersMessages.getWithParams( key, ...args ) || fallback;
-				}
-				return window.layersMessages.get( key, fallback );
-			}
-
-			// Direct mw.message fallback (when MessageHelper not loaded yet)
-			if ( window.mw && window.mw.message ) {
-				try {
-					const msg = mw.message( key );
-					if ( msg && typeof msg.text === 'function' ) {
-						if ( args.length > 0 ) {
-							return msg.params( args ).text();
-						}
-						return msg.text();
-					}
-				} catch ( e ) {
-					// Fall through to fallback substitution
-				}
-			}
-
-			// Manual parameter substitution for fallback messages
-			let message = fallback;
+			// Minimal fallback: return key with parameter substitution
+			let message = key;
 			if ( args.length > 0 ) {
 				args.forEach( ( arg, index ) => {
 					message = message.replace( '$' + ( index + 1 ), String( arg ) );
 				} );
 			}
-
 			return message;
 		}
 

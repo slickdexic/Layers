@@ -13,6 +13,14 @@
 ( function () {
 	'use strict';
 
+	// Resolve GroupHierarchyHelper dependency
+	let GroupHierarchyHelper;
+	if ( typeof mw !== 'undefined' && mw.ext && mw.ext.layers ) {
+		GroupHierarchyHelper = mw.ext.layers.GroupHierarchyHelper;
+	} else if ( typeof require !== 'undefined' ) {
+		GroupHierarchyHelper = require( './GroupHierarchyHelper.js' );
+	}
+
 	/**
 	 * GroupManager class
 	 *
@@ -88,13 +96,9 @@
 			this._historyManager = options.historyManager || this._historyManager;
 		}
 
-		/**
-		 * Generate a unique group ID
-		 *
-		 * @return {string} Unique group ID
-		 */
+		/** @see GroupHierarchyHelper.generateGroupId */
 		generateGroupId() {
-			return 'group-' + Date.now() + '-' + Math.random().toString( 36 ).substr( 2, 9 );
+			return GroupHierarchyHelper.generateGroupId();
 		}
 
 		/**
@@ -242,59 +246,19 @@
 			return folder;
 		}
 
-		/**
-		 * Generate a default name for a new folder
-		 *
-		 * @param {Array} layers Current layers array
-		 * @return {string} Default folder name
-		 */
+		/** @see GroupHierarchyHelper.generateDefaultFolderName */
 		generateDefaultFolderName( layers ) {
-			const existingFolders = layers.filter( ( l ) => l.type === 'group' );
-			return 'Folder ' + ( existingFolders.length + 1 );
+			return GroupHierarchyHelper.generateDefaultFolderName( layers );
 		}
 
-		/**
-		 * Generate a default name for a new group
-		 *
-		 * @param {Array} layers Current layers array
-		 * @return {string} Default group name
-		 */
+		/** @see GroupHierarchyHelper.generateDefaultGroupName */
 		generateDefaultGroupName( layers ) {
-			const existingGroups = layers.filter( ( l ) => l.type === 'group' );
-			return 'Folder ' + ( existingGroups.length + 1 );
+			return GroupHierarchyHelper.generateDefaultGroupName( layers );
 		}
 
-		/**
-		 * Check if a layer is a descendant of another layer (folder).
-		 * Used to prevent circular references when moving folders.
-		 *
-		 * @param {string} potentialDescendantId ID of the layer to check
-		 * @param {string} ancestorId ID of the potential ancestor
-		 * @param {Array} layers Current layers array
-		 * @return {boolean} True if potentialDescendantId is inside ancestorId's tree
-		 */
-		isDescendantOf( potentialDescendantId, ancestorId, layers ) {
-			const ancestor = layers.find( ( l ) => l.id === ancestorId );
-			if ( !ancestor || ancestor.type !== 'group' || !ancestor.children ) {
-				return false;
-			}
-
-			// Direct child check
-			if ( ancestor.children.includes( potentialDescendantId ) ) {
-				return true;
-			}
-
-			// Recursive check through all children that are groups
-			for ( const childId of ancestor.children ) {
-				const child = layers.find( ( l ) => l.id === childId );
-				if ( child && child.type === 'group' ) {
-					if ( this.isDescendantOf( potentialDescendantId, childId, layers ) ) {
-						return true;
-					}
-				}
-			}
-
-			return false;
+		/** @see GroupHierarchyHelper.isDescendantOf */
+		isDescendantOf( potentialDescendantId, ancestorId, layers, depth = 0 ) {
+			return GroupHierarchyHelper.isDescendantOf( potentialDescendantId, ancestorId, layers, this.maxNestingDepth, depth );
 		}
 
 		/**
@@ -791,229 +755,72 @@
 			this.stateManager.set( 'layers', updatedLayers );
 		}
 
-		/**
-		 * Get all children of a group (including nested children)
-		 *
-		 * @param {string} groupId ID of the group
-		 * @param {boolean} [recursive=true] Whether to include nested children
-		 * @return {Array} Array of child layer objects
-		 */
-		getGroupChildren( groupId, recursive = true ) {
+		/** @see GroupHierarchyHelper.getGroupChildren */
+		getGroupChildren( groupId, recursive = true, depth = 0 ) {
 			if ( !this.stateManager ) {
 				return [];
 			}
 
 			const layers = this.stateManager.get( 'layers' ) || [];
-			const group = layers.find( ( l ) => l.id === groupId && l.type === 'group' );
-
-			if ( !group ) {
-				return [];
-			}
-
-			const children = [];
-			for ( const childId of group.children || [] ) {
-				const child = layers.find( ( l ) => l.id === childId );
-				if ( child ) {
-					children.push( child );
-					if ( recursive && child.type === 'group' ) {
-						children.push( ...this.getGroupChildren( child.id, true ) );
-					}
-				}
-			}
-
-			return children;
+			return GroupHierarchyHelper.getGroupChildren( groupId, layers, this.maxNestingDepth, recursive, depth );
 		}
 
-		/**
-		 * Get the nesting depth of a layer by ID
-		 * Convenience method for LayerPanel that resolves the layer internally
-		 *
-		 * @param {string|Object} layerOrId Layer object or layer ID
-		 * @param {Array} [layers] All layers array (optional, will be fetched if not provided)
-		 * @return {number} Nesting depth (0 = root level)
-		 */
+		/** @see GroupHierarchyHelper.getLayerDepth */
 		getLayerDepth( layerOrId, layers ) {
 			// If layers not provided, get from stateManager
 			if ( !layers && this.stateManager ) {
 				layers = this.stateManager.get( 'layers' ) || [];
 			}
-			if ( !layers ) {
-				return 0;
-			}
-
-			// If passed an ID (string), find the layer object
-			let layer = layerOrId;
-			if ( typeof layerOrId === 'string' ) {
-				layer = layers.find( ( l ) => l.id === layerOrId );
-				if ( !layer ) {
-					return 0;
-				}
-			}
-
-			let depth = 0;
-			let current = layer;
-
-			while ( current && current.parentGroup ) {
-				const parent = layers.find( ( l ) => l.id === current.parentGroup );
-				if ( !parent ) {
-					break;
-				}
-				depth++;
-				current = parent;
-
-				// Safety check to prevent infinite loops
-				if ( depth > this.maxNestingDepth + 1 ) {
-					break;
-				}
-			}
-
-			return depth;
+			return GroupHierarchyHelper.getLayerDepth( layerOrId, layers, this.maxNestingDepth );
 		}
 
-		/**
-		 * Get the maximum depth of children within a group
-		 *
-		 * @param {Object} group Group layer object
-		 * @param {Array} layers All layers array
-		 * @return {number} Maximum child depth
-		 */
-		getMaxChildDepth( group, layers ) {
-			if ( group.type !== 'group' || !group.children || group.children.length === 0 ) {
-				return 0;
-			}
-
-			let maxDepth = 0;
-			for ( const childId of group.children ) {
-				const child = layers.find( ( l ) => l.id === childId );
-				if ( child && child.type === 'group' ) {
-					const childDepth = 1 + this.getMaxChildDepth( child, layers );
-					maxDepth = Math.max( maxDepth, childDepth );
-				}
-			}
-
-			return maxDepth;
+		/** @see GroupHierarchyHelper.getMaxChildDepth */
+		getMaxChildDepth( group, layers, depth = 0 ) {
+			return GroupHierarchyHelper.getMaxChildDepth( group, layers, this.maxNestingDepth, depth );
 		}
 
-		/**
-		 * Calculate the bounding box of a group (union of all children bounds)
-		 *
-		 * @param {string} groupId ID of the group
-		 * @return {Object|null} Bounding box { x, y, width, height } or null
-		 */
+		/** @see GroupHierarchyHelper.getGroupBounds */
 		getGroupBounds( groupId ) {
-			const children = this.getGroupChildren( groupId, true );
-
-			if ( children.length === 0 ) {
+			if ( !this.stateManager ) {
 				return null;
 			}
 
-			let minX = Infinity;
-			let minY = Infinity;
-			let maxX = -Infinity;
-			let maxY = -Infinity;
-
-			for ( const child of children ) {
-				if ( child.type === 'group' ) {
-					continue; // Skip group layers themselves
-				}
-
-				const bounds = this.getLayerBounds( child );
-				if ( bounds ) {
-					minX = Math.min( minX, bounds.x );
-					minY = Math.min( minY, bounds.y );
-					maxX = Math.max( maxX, bounds.x + bounds.width );
-					maxY = Math.max( maxY, bounds.y + bounds.height );
-				}
-			}
-
-			if ( minX === Infinity ) {
-				return null;
-			}
-
-			return {
-				x: minX,
-				y: minY,
-				width: maxX - minX,
-				height: maxY - minY
-			};
+			const layers = this.stateManager.get( 'layers' ) || [];
+			return GroupHierarchyHelper.getGroupBounds( groupId, layers, this.maxNestingDepth );
 		}
 
-		/**
-		 * Get bounds for a single layer
-		 *
-		 * @param {Object} layer Layer object
-		 * @return {Object|null} Bounding box { x, y, width, height }
-		 */
+		/** @see GroupHierarchyHelper.getLayerBounds */
 		getLayerBounds( layer ) {
-			if ( !layer ) {
-				return null;
-			}
-
-			// Try to use BoundsCalculator if available
-			if ( window.Layers && window.Layers.BoundsCalculator ) {
-				return window.Layers.BoundsCalculator.calculateBounds( layer );
-			}
-
-			// Fallback basic bounds calculation
-			const x = layer.x || 0;
-			const y = layer.y || 0;
-			const width = layer.width || layer.radius * 2 || 100;
-			const height = layer.height || layer.radius * 2 || 100;
-
-			return { x, y, width, height };
+			return GroupHierarchyHelper.getLayerBounds( layer );
 		}
 
-		/**
-		 * Get all top-level layers (not inside any group)
-		 *
-		 * @return {Array} Array of top-level layer objects
-		 */
+		/** @see GroupHierarchyHelper.getTopLevelLayers */
 		getTopLevelLayers() {
 			if ( !this.stateManager ) {
 				return [];
 			}
 
 			const layers = this.stateManager.get( 'layers' ) || [];
-			return layers.filter( ( l ) => !l.parentGroup );
+			return GroupHierarchyHelper.getTopLevelLayers( layers );
 		}
 
-		/**
-		 * Check if a layer is a group
-		 *
-		 * @param {Object|string} layerOrId Layer object or ID
-		 * @return {boolean} True if layer is a group
-		 */
+		/** @see GroupHierarchyHelper.isGroup */
 		isGroup( layerOrId ) {
-			if ( typeof layerOrId === 'string' ) {
-				if ( !this.stateManager ) {
-					return false;
-				}
+			if ( typeof layerOrId === 'string' && this.stateManager ) {
 				const layers = this.stateManager.get( 'layers' ) || [];
-				const layer = layers.find( ( l ) => l.id === layerOrId );
-				return layer ? layer.type === 'group' : false;
+				return GroupHierarchyHelper.isGroup( layerOrId, layers );
 			}
-			return layerOrId && layerOrId.type === 'group';
+			return GroupHierarchyHelper.isGroup( layerOrId );
 		}
 
-		/**
-		 * Get the parent group of a layer
-		 *
-		 * @param {string} layerId ID of the layer
-		 * @return {Object|null} Parent group layer or null
-		 */
+		/** @see GroupHierarchyHelper.getParentGroup */
 		getParentGroup( layerId ) {
 			if ( !this.stateManager ) {
 				return null;
 			}
 
 			const layers = this.stateManager.get( 'layers' ) || [];
-			const layer = layers.find( ( l ) => l.id === layerId );
-
-			if ( !layer || !layer.parentGroup ) {
-				return null;
-			}
-
-			return layers.find( ( l ) => l.id === layer.parentGroup && l.type === 'group' ) || null;
+			return GroupHierarchyHelper.getParentGroup( layerId, layers );
 		}
 
 		/**

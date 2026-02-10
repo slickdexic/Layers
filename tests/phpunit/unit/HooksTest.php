@@ -65,9 +65,9 @@ class HooksTest extends \MediaWikiUnitTestCase {
 			->getMock();
 		$outputPageMock->method( 'getConfig' )
 			->willReturn( $config );
-		$outputPageMock->expects( $this->once() )
-			->method( 'addModules' )
-			->with( 'ext.layers' );
+		// When extension is disabled, no modules should be loaded
+		$outputPageMock->expects( $this->never() )
+			->method( 'addModules' );
 
 		$skinMock = $this->getMockBuilder( \Skin::class )
 			->disableOriginalConstructor()

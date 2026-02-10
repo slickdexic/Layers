@@ -508,7 +508,7 @@ describe('Integration: HistoryManager Workflows', () => {
             redraw: jest.fn()
         };
 
-        historyManager = new HistoryManager({}, mockCanvasManager);
+        historyManager = new HistoryManager({ canvasManager: mockCanvasManager });
     });
 
     describe('History State Management', () => {

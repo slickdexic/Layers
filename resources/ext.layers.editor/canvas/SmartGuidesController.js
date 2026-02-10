@@ -32,7 +32,7 @@
 
 			// Configuration
 			this.enabled = false; // Off by default - toggle with ';' key
-			this.canvasSnapEnabled = false; // Canvas snap off by default - toggle with "'" key
+			this.canvasSnapEnabled = true; // Canvas snap on by default - toggle with "'" key
 			this.snapThreshold = 8; // Pixels to snap within
 			this.showGuides = true;
 
@@ -55,7 +55,7 @@
 			// Snap points cache (rebuilt when layers change)
 			this.snapPointsCache = null;
 			this.cacheExcludedIds = null;
-			this._cachedLayersRef = null;
+			this._cachedLayersVersion = -1;
 		}
 
 		/**
@@ -99,7 +99,7 @@
 		invalidateCache() {
 			this.snapPointsCache = null;
 			this.cacheExcludedIds = null;
-			this._cachedLayersRef = null;
+			this._cachedLayersVersion = -1;
 		}
 
 		/**
@@ -352,9 +352,14 @@
 		buildSnapPoints( layers, excludeIds ) {
 			const cacheKey = excludeIds ? excludeIds.sort().join( ',' ) : '';
 
-			// Return cached if valid (same excluded IDs AND same layers reference)
+			// Use StateManager version counter for cache validity instead of
+			// reference equality (getLayers() returns .slice() copies)
+			const currentVersion = this.manager && this.manager.editor &&
+				this.manager.editor.stateManager ?
+				this.manager.editor.stateManager.getLayersVersion() : -1;
+
 			if ( this.snapPointsCache && this.cacheExcludedIds === cacheKey &&
-				this._cachedLayersRef === layers ) {
+				this._cachedLayersVersion === currentVersion && currentVersion >= 0 ) {
 				return this.snapPointsCache;
 			}
 
@@ -364,7 +369,7 @@
 			if ( !layers || layers.length === 0 ) {
 				this.snapPointsCache = { horizontal, vertical };
 				this.cacheExcludedIds = cacheKey;
-				this._cachedLayersRef = layers;
+				this._cachedLayersVersion = currentVersion;
 				return this.snapPointsCache;
 			}
 
@@ -407,7 +412,7 @@
 
 			this.snapPointsCache = { horizontal, vertical };
 			this.cacheExcludedIds = cacheKey;
-			this._cachedLayersRef = layers;
+			this._cachedLayersVersion = currentVersion;
 			return this.snapPointsCache;
 		}
 

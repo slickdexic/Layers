@@ -668,10 +668,35 @@ describe( 'SmartGuidesController', () => {
 		} );
 
 		it( 'should cache results', () => {
+			// Set up stateManager mock so version-based caching works
+			mockCanvasManager.editor = {
+				stateManager: { getLayersVersion: () => 1 }
+			};
 			const snapPoints1 = controller.buildSnapPoints( mockLayers, [ 'layer1' ] );
 			const snapPoints2 = controller.buildSnapPoints( mockLayers, [ 'layer1' ] );
 
 			expect( snapPoints1 ).toBe( snapPoints2 ); // Same reference (cached)
+		} );
+
+		it( 'should invalidate cache when layers version changes', () => {
+			let version = 1;
+			mockCanvasManager.editor = {
+				stateManager: { getLayersVersion: () => version }
+			};
+			const snapPoints1 = controller.buildSnapPoints( mockLayers, [ 'layer1' ] );
+			version = 2; // Simulate a layers mutation via StateManager
+			const snapPoints2 = controller.buildSnapPoints( mockLayers, [ 'layer1' ] );
+
+			expect( snapPoints1 ).not.toBe( snapPoints2 ); // Different reference (rebuilt)
+		} );
+
+		it( 'should not cache when stateManager is unavailable', () => {
+			// No editor.stateManager — cache disabled (version = -1)
+			delete mockCanvasManager.editor;
+			const snapPoints1 = controller.buildSnapPoints( mockLayers, [ 'layer1' ] );
+			const snapPoints2 = controller.buildSnapPoints( mockLayers, [ 'layer1' ] );
+
+			expect( snapPoints1 ).not.toBe( snapPoints2 ); // Rebuilt each time
 		} );
 
 		it( 'should return empty arrays for empty layers', () => {
@@ -1487,9 +1512,9 @@ describe( 'SmartGuidesController', () => {
 		} );
 
 		describe( 'canvasSnapEnabled default value', () => {
-			it( 'should be disabled by default', () => {
+			it( 'should be enabled by default', () => {
 				const newController = new SmartGuidesController( mockCanvasManager );
-				expect( newController.canvasSnapEnabled ).toBe( false );
+				expect( newController.canvasSnapEnabled ).toBe( true );
 				newController.destroy();
 			} );
 		} );

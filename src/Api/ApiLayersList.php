@@ -171,6 +171,7 @@ class ApiLayersList extends ApiBase {
 				$slide['modifiedBy'] = $userNames[$slide['modifiedById']];
 			}
 		}
+		unset( $slide );
 
 		return $slides;
 	}

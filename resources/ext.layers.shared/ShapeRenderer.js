@@ -183,13 +183,9 @@
 			return false;
 		}
 
-		// ========================================================================
 		// Shadow Helper Methods (delegate to shadowRenderer or provide fallbacks)
-		// ========================================================================
 
-		/**
-		 * Clear shadow settings from context
-		 */
+		/** Clear shadow settings from context */
 		clearShadow() {
 			if ( this.shadowRenderer ) {
 				this.shadowRenderer.clearShadow();
@@ -201,12 +197,7 @@
 			}
 		}
 
-		/**
-		 * Apply shadow settings to context
-		 *
-		 * @param {Object} layer - Layer with shadow properties
-		 * @param {Object} scale - Scale factors
-		 */
+		/** Apply shadow settings to context @see ShadowRenderer#applyShadow */
 		applyShadow( layer, scale ) {
 			if ( this.shadowRenderer ) {
 				this.shadowRenderer.applyShadow( layer, scale );
@@ -214,12 +205,7 @@
 			// No fallback - shadows require ShadowRenderer for full support
 		}
 
-		/**
-		 * Check if shadow is enabled on a layer
-		 *
-		 * @param {Object} layer - Layer to check
-		 * @return {boolean} True if shadow is enabled
-		 */
+		/** Check if shadow is enabled on a layer @return {boolean} */
 		hasShadowEnabled( layer ) {
 			if ( this.shadowRenderer ) {
 				return !!this.shadowRenderer.hasShadowEnabled( layer );
@@ -231,13 +217,7 @@
 				( typeof layer.shadow === 'object' && layer.shadow );
 		}
 
-		/**
-		 * Get shadow spread value from layer
-		 *
-		 * @param {Object} layer - Layer with shadow properties
-		 * @param {Object} scale - Scale factors
-		 * @return {number} Spread value in pixels
-		 */
+		/** Get shadow spread value @return {number} Spread in pixels */
 		getShadowSpread( layer, scale ) {
 			if ( this.shadowRenderer ) {
 				return this.shadowRenderer.getShadowSpread( layer, scale );
@@ -252,15 +232,7 @@
 			return 0;
 		}
 
-		/**
-		 * Draw spread shadow for a filled shape
-		 *
-		 * @param {Object} layer - Layer with shadow properties
-		 * @param {Object} scale - Scale factors
-		 * @param {number} spread - Spread amount
-		 * @param {Function} drawPathFn - Function to draw the path
-		 * @param {number} opacity - Opacity for the shadow
-		 */
+		/** Draw spread shadow for a filled shape @see ShadowRenderer#drawSpreadShadow */
 		drawSpreadShadow( layer, scale, spread, drawPathFn, opacity ) {
 			if ( this.shadowRenderer ) {
 				this.shadowRenderer.drawSpreadShadow( layer, scale, spread, drawPathFn, opacity );
@@ -268,15 +240,7 @@
 			// If no shadowRenderer, shadows are not drawn
 		}
 
-		/**
-		 * Draw spread shadow for a stroked shape
-		 *
-		 * @param {Object} layer - Layer with shadow properties
-		 * @param {Object} scale - Scale factors
-		 * @param {number} strokeWidth - Stroke width
-		 * @param {Function} drawPathFn - Function to draw the path
-		 * @param {number} opacity - Opacity for the shadow
-		 */
+		/** Draw spread shadow for a stroked shape @see ShadowRenderer#drawSpreadShadowStroke */
 		drawSpreadShadowStroke( layer, scale, strokeWidth, drawPathFn, opacity ) {
 			if ( this.shadowRenderer ) {
 				this.shadowRenderer.drawSpreadShadowStroke( layer, scale, strokeWidth, drawPathFn, opacity );
@@ -284,31 +248,16 @@
 			// If no shadowRenderer, shadows are not drawn
 		}
 
-		// ========================================================================
 		// Geometry Helper Methods (delegate to PolygonStarRenderer)
-		// ========================================================================
 
-		/**
-		 * Draw a rounded polygon path on the context
-		 * Delegates to PolygonStarRenderer if available
-		 *
-		 * @param {Array<{x: number, y: number}>} vertices - Array of vertex points
-		 * @param {number} cornerRadius - Radius for rounded corners
-		 */
+		/** Draw a rounded polygon path @see PolygonStarRenderer#drawRoundedPolygonPath */
 		drawRoundedPolygonPath( vertices, cornerRadius ) {
 			if ( this.polygonStarRenderer ) {
 				this.polygonStarRenderer.drawRoundedPolygonPath( vertices, cornerRadius );
 			}
 		}
 
-		/**
-		 * Draw a rounded star path on the context with different radii for points and valleys
-		 * Delegates to PolygonStarRenderer if available
-		 *
-		 * @param {Array<{x: number, y: number}>} vertices - Array of vertex points (alternating outer/inner)
-		 * @param {number} pointRadius - Radius for outer point corners
-		 * @param {number} valleyRadius - Radius for inner valley corners
-		 */
+		/** Draw a rounded star path @see PolygonStarRenderer#drawRoundedStarPath */
 		drawRoundedStarPath( vertices, pointRadius, valleyRadius ) {
 			if ( this.polygonStarRenderer ) {
 				this.polygonStarRenderer.drawRoundedStarPath( vertices, pointRadius, valleyRadius );

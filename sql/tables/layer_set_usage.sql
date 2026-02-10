@@ -7,8 +7,5 @@ CREATE TABLE /*_*/layer_set_usage (
     PRIMARY KEY (lsu_layer_set_id, lsu_page_id),
     KEY lsu_page_id (lsu_page_id),
     KEY lsu_timestamp (lsu_timestamp),
-    KEY lsu_usage_count (lsu_usage_count),
-    -- Foreign key constraints to ensure referenced records exist
-    CONSTRAINT fk_layer_set_usage_layer_set_id FOREIGN KEY (lsu_layer_set_id) REFERENCES /*_*/layer_sets (ls_id) ON DELETE CASCADE,
-    CONSTRAINT fk_layer_set_usage_page_id FOREIGN KEY (lsu_page_id) REFERENCES /*_*/page (page_id) ON DELETE CASCADE
+    KEY lsu_usage_count (lsu_usage_count)
 ) /*$wgDBTableOptions*/;

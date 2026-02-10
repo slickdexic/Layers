@@ -4,25 +4,94 @@ Version history for the Layers extension.
 
 ---
 
-## Unreleased
+## Version 1.5.55 (July 23, 2025)
 
 ### Added
-- **Abort Handling Toggle** — Optional `$wgLayersRejectAbortedRequests` (or `editor.config.rejectAbortedRequests`) surfaces aborted API requests as rejections for debugging. Default remains false to preserve legacy behavior.
+- **Abort Handling Toggle** — Optional `$wgLayersRejectAbortedRequests` surfaces aborted API requests as rejections for debugging
+- **i18n Message** — Added `layers-unknown-user` message key for fallback display name
 
 ### Fixed
-- **API Error Handling** — Fixed bare `\Throwable` catch in ApiLayersDelete.php that swallowed `ApiUsageException`
+- **ON DELETE CASCADE Destroys User Content (P1-011)** — Changed FK actions to `ON DELETE SET NULL` on user_id columns
+- **ls_name Allows NULL (P1-012)** — Changed `ls_name` to `NOT NULL DEFAULT 'default'`
+- **ShadowRenderer Scale on Rotation (P1-017)** — Decompose and preserve scale from transform matrix
+- **DimensionRenderer hitTest Ignores Offset (P1-018)** — Rewrote hitTest for offset dimension lines
+- **APIManager saveInProgress Stuck on Throw (P1-019)** — Proper error handling in save flow
+- **PresetStorage Strips Gradient Data (P1-020)** — Added gradient to ALLOWED_STYLE_PROPERTIES
+- **Rich Text Word Wrap Wrong Metrics (P1-014)** — Created `wrapRichText()` with per-run font measurement
+- **SmartGuides Cache Always Stale (P2-009)** — Version-counter caching via StateManager
+- **i18n: Hardcoded 'Anonymous' (P3-005)** — Uses `wfMessage('layers-unknown-user')` now
+- **enrichWithUserNames Duplicated (P2-013)** — Consolidated to single generic helper
+- **Toolbar innerHTML XSS (P2-014)** — Replaced with safe DOM construction
+- **init.js Event Listener Leak (P2-015)** — Guard flag prevents duplicates
+- **ImageLoader Timeout Orphaned (P2-016)** — Added `clearTimeout()` in onload
+- **window.open Without noopener (P2-017)** — Added `'noopener,noreferrer'`
+- **ShadowRenderer/EffectsRenderer Per-Frame Canvas (P2-018)** — Instance-cached offscreen canvases
+- **Canvas Reuse for Renderers** — Extended caching to EffectsRenderer and CustomShapeRenderer
+- **TextBoxRenderer Long Word Overflow (P2-019)** — Character-by-character breaking for long words
+- **ApiLayersSave Redundant Token (P2-020)** — Removed from `getAllowedParams()`
+- **LayersSchemaManager DI Bypass (P2-021)** — Proper constructor injection
+- **sanitizeString Strips Math Brackets (P2-008)** — Targeted dangerous-tag-only stripping
+- **phpunit.xml Deprecated Attributes (P2-026)** — Updated to PHPUnit 10.5 schema
+- **UIHooks Unused Variables (P3-002)** — Removed unused assignments
+- **ApiLayersList Missing unset() (P3-001)** — Added unset after foreach-by-reference
+- **StateManager Malformed JSDoc (P3-003)** — Fixed unclosed comment block
+- **ThumbnailRenderer Exception (P3-004)** — Changed to `\Throwable` catch
+- **APIManager Byte vs Char (P3-007)** — TextEncoder for accurate UTF-8 size
+- **ThumbnailRenderer Shadow Blur Corruption (P1-015)** — Isolated blur with sub-image operations
+- **SVG Sanitization Regex Bypassable (P2-007)** — DOMParser-based sanitizer
+- **Duplicate Prompt Dialogs (P2-012)** — Removed ~200 lines dead/duplicated code
+- **SpecialEditSlide Non-Existent Module (P2-023)** — Removed dead `addModuleStyles()` call
+- **Duplicate Message Keys (P2-025)** — Removed 9 intra-module duplicates
+- **Dead ext.layers.slides Files (P2-006/P2-024)** — Deleted 694 source + 425 test lines
+- **ToolManager Dead Fallbacks (P2-010)** — Removed 415 lines unreachable code; fixed `toolStyles` naming bug
+- **ShadowRenderer Temp Canvas Stale State** — Fixed `_getTempCanvas()` not resetting `globalCompositeOperation`/`globalAlpha` when reusing cached canvas. Root cause of shadows failing with multiple shadow layers.
+- **Toolbar Checkbox Double-Toggle** — Fixed dropdown toggles toggling twice due to `<label>` + JS handler conflict
+- **Modal Editor X-Frame-Options** — Fixed `allowClickjacking()` for modal mode (GitHub #53)
+- **InstantCommons Editor Load** — Fixed CSP blocking ResourceLoader scripts (GitHub #52)
+- **Font Size Toolbar Persistence** — Fixed toolbar showing wrong fontSize after re-editing textbox
+- **API Error Handling** — Fixed bare `\Throwable` catch in ApiLayersDelete.php
 - **Schema Cache Performance** — Added `schemaReadyResult` cache to LayersSchemaManager
+<<<<<<< HEAD
 - **Text Length Validation** — Changed `maxTextLength` from 500 to 10,000 to match server-side limit
 - **Save Button Timer Leak** — Fixed `_scheduleTimeout` timer leak in APIManager.js `disableSaveButton()`
 - **Multi-Selection Deletion** — Fixed `deleteSelectedLayers()` to operate on full selection array
+=======
+- **Text Length Validation** — Changed `maxTextLength` from 500 to 10,000
+- **Save Button Timer Leak** — Fixed timer leak in APIManager.js
+- **Multi-Selection Deletion** — Fixed `deleteSelectedLayers()` to use full selection
+- **ThumbnailProcessor Null Safety** — Fixed 4 `method_exists()` crashes
+- **ThumbnailProcessor Undefined Variable** — Fixed `$file` scoping bug
+- **SlideNameValidator** — Fixed trailing hyphens and consecutive spaces
+
+### Changed
+- **Conditional Module Loading (P2-005)** — ext.layers loaded only on File: pages and layerset= pages
+- **SQLite-Compatible Migrations (P1-016)** — PHP methods with `$dbType` branching
+- **Selection State Cleanup (P1-013)** — Removed 5 ghost properties from CanvasManager
+- **HistoryManager Clean Constructor (P2-011)** — Single options-object pattern
+- **GroupManager Hierarchy Extraction** — New GroupHierarchyHelper.js (335 lines)
+- **LayersValidator Dedup** — Removed ~180 lines of duplicate fallback code
+- **ResizeCalculator Dedup** — Extracted helpers, reduced below god-class threshold
+- **ShapeRenderer JSDoc Condensation** — Below god-class threshold
+- **TransformController Wrapper Removal** — Removed 8 pass-through wrappers, 67 redundant tests
+- **Canvas Snap Enabled by Default** — Canvas snap now on by default
+>>>>>>> 5d352930 (v1.5.55: Code review fixes, shadow rendering, canvas snap, god class reduction)
 
 ### Removed
-- **diagnose.php** — Removed diagnostic script (security risk; functionality covered by MediaWiki core)
+- **diagnose.php** — Security risk; covered by MediaWiki core diagnostics
+- **FK Constraints (P2-022)** — Dropped per MediaWiki conventions
+- **Dead Hooks.php Schema Handler** — Never registered; superseded by LayersSchemaManager
+- **12 Orphaned SQL Patches** — Never registered or superseded
 
 ### Technical Details
+<<<<<<< HEAD
 - Applies to APIManager abort handlers for revision and named set loading
 - v27 code review: 3 CRITICAL + 6 HIGH issues fixed across 6 files
 - All 11,254 tests pass (165 test suites) ✅
+=======
+- v27 code review: 3 CRITICAL + 6 HIGH issues fixed
+- All 11,140 JS tests pass (164 suites) ✅
+- ESLint: 0 errors, phpcs: 0 errors
+>>>>>>> 5d352930 (v1.5.55: Code review fixes, shadow rendering, canvas snap, god class reduction)
 
 ## Version 1.5.52 (February 5, 2026)
 

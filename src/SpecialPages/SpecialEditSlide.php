@@ -128,8 +128,8 @@ class SpecialEditSlide extends SpecialPage {
 		$out->setPageTitle( $this->msg( 'special-editslide-title', $slideName )->text() );
 
 		// Add ResourceLoader modules for the editor
+		// CSS is included via the styles array in ext.layers.editor module definition
 		$out->addModules( 'ext.layers.editor' );
-		$out->addModuleStyles( 'ext.layers.editor.styles' );
 
 		// Provide editor init configuration (same format as EditLayersAction)
 		// The slide-specific config is passed via wgLayersEditorInit to trigger auto-bootstrap

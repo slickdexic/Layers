@@ -69,7 +69,8 @@ describe( 'ShadowRenderer', () => {
 			getTransform: jest.fn( () => ( {
 				a: 1, b: 0, c: 0, d: 1, e: 0, f: 0
 			} ) ),
-			drawImage: jest.fn()
+			drawImage: jest.fn(),
+			clearRect: jest.fn()
 		};
 	}
 
@@ -98,6 +99,10 @@ describe( 'ShadowRenderer', () => {
 			}
 			return {};
 		} );
+
+		// Reset the cached temp canvas between tests
+		renderer._tempCanvas = null;
+		renderer._tempCtx = null;
 	} );
 
 	afterEach( () => {
@@ -467,6 +472,9 @@ describe( 'ShadowRenderer', () => {
 		} );
 
 		test( 'should fall back to applyShadow if tempCtx fails', () => {
+			// Reset cache so null context is picked up
+			renderer._tempCanvas = null;
+			renderer._tempCtx = null;
 			// Mock getContext to return null
 			document.createElement = jest.fn( () => ( {
 				width: 0,
@@ -551,6 +559,9 @@ describe( 'ShadowRenderer', () => {
 		} );
 
 		test( 'should fall back to applyShadow if tempCtx fails', () => {
+			// Reset cache so null context is picked up
+			renderer._tempCanvas = null;
+			renderer._tempCtx = null;
 			document.createElement = jest.fn( () => ( {
 				width: 0,
 				height: 0,
@@ -845,6 +856,69 @@ describe( 'ShadowRenderer', () => {
 			const MAX_CANVAS_DIM = 8192;
 			expect( createdCanvas.width ).toBeLessThanOrEqual( MAX_CANVAS_DIM );
 			expect( createdCanvas.height ).toBeLessThanOrEqual( MAX_CANVAS_DIM );
+		} );
+
+		// P1-017 regression: scale must be preserved when removing rotation
+		test( 'preserves zoom scale when removing rotation for spread shadows', () => {
+			// Simulate a zoomed + rotated context:
+			// zoom=2, rotation=45° => a = 2*cos(45°), b = 2*sin(45°)
+			const cos45 = Math.cos( Math.PI / 4 );
+			const sin45 = Math.sin( Math.PI / 4 );
+			const zoom = 2;
+			const mockTransform = {
+				a: zoom * cos45, b: zoom * sin45,
+				c: -zoom * sin45, d: zoom * cos45,
+				e: 100, f: 100
+			};
+
+			ctx.getTransform = jest.fn( () => mockTransform );
+
+			let capturedTransform = null;
+			let createdCanvas;
+
+			// Mock createElement to capture the temp canvas context
+			document.createElement = jest.fn( ( tag ) => {
+				if ( tag === 'canvas' ) {
+					const mockTempCtx = createMockContext();
+					mockTempCtx.setTransform = jest.fn( ( transform ) => {
+						capturedTransform = transform;
+					} );
+					createdCanvas = {
+						width: 0,
+						height: 0,
+						getContext: jest.fn( () => mockTempCtx )
+					};
+					return createdCanvas;
+				}
+				return {};
+			} );
+
+			const layer = {
+				shadow: true,
+				shadowSpread: 5,
+				shadowBlur: 10,
+				shadowOffsetX: 5,
+				shadowOffsetY: 5
+			};
+			const scale = { sx: zoom, sy: zoom, avg: zoom };
+			const drawFn = jest.fn();
+
+			canvas.width = 800;
+			canvas.height = 600;
+			renderer = new ShadowRenderer( ctx, { canvas: canvas } );
+
+			renderer.drawSpreadShadow( layer, scale, 5, drawFn );
+
+			// The transform set on temp canvas should preserve scale (≈2)
+			// NOT be identity [1,0,0,1,e,f]
+			expect( capturedTransform ).toBeDefined();
+			if ( capturedTransform ) {
+				// DOMMatrix: a=scaleX, d=scaleY
+				const scaleX = capturedTransform.a || capturedTransform[ 0 ];
+				const scaleY = capturedTransform.d || capturedTransform[ 3 ];
+				expect( scaleX ).toBeCloseTo( zoom, 1 );
+				expect( scaleY ).toBeCloseTo( zoom, 1 );
+			}
 		} );
 	} );
 } );
