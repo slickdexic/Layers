@@ -20,67 +20,21 @@
 	 */
 	class HistoryManager {
 		/**
-		 * @param {Object} config Configuration object or editor/canvasManager reference
-		 * @param {CanvasManager} canvasManager Reference to the canvas manager (optional)
+		 * @param {Object} [options={}] Configuration options
+		 * @param {Object} [options.editor] Editor reference
+		 * @param {CanvasManager} [options.canvasManager] Canvas manager reference
+		 * @param {number} [options.maxHistorySteps=50] Maximum history steps
 		 */
-		constructor( config, canvasManager ) {
-			// Normalize arguments - support multiple calling conventions:
-			// 1. new HistoryManager(editor) - editor passed as first arg
-			// 2. new HistoryManager(config, canvasManager) - traditional
-			// 3. new HistoryManager(canvasManager) - canvasManager as first arg
-			// 4. new HistoryManager(objectWithLayers) - object with layers array
-
-			// Detect if first arg is an editor (has stateManager, toolbar, etc.)
-			// Also check for filename + containerElement which are set early in LayersEditor
-			const isEditor = config && (
-				config.stateManager ||
-				config.toolbar ||
-				( typeof config.getLayers === 'function' ) ||
-				( config.filename && config.containerElement )
-			);
-
-			// Detect if first arg is a canvasManager (has canvas, ctx, editor, etc.)
-			const isCanvasManager = config && !isEditor && (
-				config.canvas ||
-				config.ctx ||
-				( config.editor && config.editor.layers )
-			);
-
-			// Detect if first arg is an object with layers (legacy/test usage)
-			const hasLayers = config && !isEditor && !isCanvasManager &&
-				Array.isArray( config.layers );
-
-			if ( isEditor ) {
-				// Editor passed directly - store reference
-				this.editor = config;
-				this.canvasManager = config.canvasManager || null;
-				this.config = {};
-			} else if ( isCanvasManager ) {
-				// CanvasManager passed as first arg
-				this.canvasManager = config;
-				this.editor = config.editor || null;
-				this.config = {};
-			} else if ( hasLayers ) {
-				// Object with layers (legacy/test pattern) - treat as canvasManager-like
-				this.canvasManager = config;
-				this.editor = config.editor || null;
-				this.config = {};
-			} else if ( canvasManager ) {
-				// Traditional (config, canvasManager) signature
-				this.config = config || {};
-				this.canvasManager = canvasManager;
-				this.editor = canvasManager.editor || null;
-			} else {
-				// Plain config object
-				this.config = config || {};
-				this.canvasManager = null;
-				this.editor = null;
-			}
+		constructor( options = {} ) {
+			this.editor = options.editor || null;
+			this.canvasManager = options.canvasManager ||
+				( this.editor && this.editor.canvasManager ) || null;
+			this.config = {};
 
 			// History state
 			this.history = [];
 			this.historyIndex = -1;
-			this.maxHistorySteps = this.config.maxHistorySteps || 50;
+			this.maxHistorySteps = options.maxHistorySteps || 50;
 			// Backward-compat properties expected by legacy tests
 			Object.defineProperty( this, 'currentIndex', {
 				get: () => this.historyIndex
@@ -108,7 +62,7 @@
 		}
 
 		/**
-		 * Get the editor reference (handles both direct and via canvasManager)
+		 * Get the editor reference
 		 * @private
 		 * @return {Object|null} Editor reference
 		 */
@@ -119,10 +73,6 @@
 			if ( this.canvasManager && this.canvasManager.editor ) {
 				return this.canvasManager.editor;
 			}
-			// Check if canvasManager has stateManager (meaning it IS the editor)
-			if ( this.canvasManager && this.canvasManager.stateManager ) {
-				return this.canvasManager;
-			}
 			return null;
 		}
 
@@ -132,20 +82,11 @@
 		 * @return {Object|null} CanvasManager reference
 		 */
 		getCanvasManager() {
-			// First, check if editor has canvasManager
 			const editor = this.getEditor();
 			if ( editor && editor.canvasManager ) {
 				return editor.canvasManager;
 			}
-			// Then check direct canvasManager reference
-			if ( this.canvasManager && this.canvasManager.canvas ) {
-				return this.canvasManager;
-			}
-			// Fallback to stored canvasManager (may be a mock or simplified object)
-			if ( this.canvasManager ) {
-				return this.canvasManager;
-			}
-			return null;
+			return this.canvasManager || null;
 		}
 
 		/**

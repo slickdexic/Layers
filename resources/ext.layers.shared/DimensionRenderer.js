@@ -71,7 +71,7 @@
 	 */
 	const TOLERANCE_TYPES = {
 		NONE: 'none',
-		SYMMETRIC: 'symmetric',   // ±value
+		SYMMETRIC: 'symmetric',   // +/- value
 		DEVIATION: 'deviation',   // +upper/-lower
 		LIMITS: 'limits',         // min-max format
 		BASIC: 'basic'            // boxed (reference dimension)
@@ -140,13 +140,13 @@
 
 			switch ( toleranceType ) {
 				case TOLERANCE_TYPES.SYMMETRIC: {
-					// ±tolerance (e.g., "10.5 ±0.2 mm")
+					// +/- tolerance (e.g., "10.5 +/-0.2 mm")
 					// Parse as number - tolerance values may be stored as strings
 					const tol = parseFloat( layer.toleranceValue ) || DEFAULTS.toleranceValue;
 					if ( tol === 0 || isNaN( tol ) ) {
 						return value + unitSuffix;
 					}
-					return value + ' ±' + tol.toFixed( precision ) + unitSuffix;
+					return value + ' \u00B1' + tol.toFixed( precision ) + unitSuffix;
 				}
 
 				case TOLERANCE_TYPES.DEVIATION: {
@@ -300,7 +300,7 @@
 				offsetDistance = layer.dimensionOffset;
 			} else {
 				// Legacy/default: calculate from extensionGap and extensionLength
-				offsetDistance = extensionGap + extensionLength / 2;
+				offsetDistance = extensionGap + ( extensionLength / 2 );
 			}
 
 			// Draw extension lines (auto-adjust based on offset)
@@ -455,7 +455,7 @@
 					if ( !tol ) {
 						return text;
 					}
-					return text + ' ±' + tol;
+					return text + ' \u00B1' + tol;
 				}
 
 				case TOLERANCE_TYPES.DEVIATION: {
@@ -753,9 +753,57 @@
 			const x2 = layer.x2 || 0;
 			const y2 = layer.y2 || 0;
 
-			// Check distance to main line
-			const distance = this._pointToLineDistance( px, py, x1, y1, x2, y2 );
-			return distance <= 10;
+			const dx = x2 - x1;
+			const dy = y2 - y1;
+			const dist = Math.sqrt( dx * dx + dy * dy );
+
+			if ( dist < 1 ) {
+				return false;
+			}
+
+			// Calculate perpendicular direction
+			const perpX = -dy / dist;
+			const perpY = dx / dist;
+
+			// Calculate offset distance (same logic as _drawInternal)
+			let offsetDistance;
+			if ( typeof layer.dimensionOffset === 'number' && !isNaN( layer.dimensionOffset ) ) {
+				offsetDistance = layer.dimensionOffset;
+			} else {
+				let extensionGap = layer.extensionGap;
+				if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
+					extensionGap = 10;
+				}
+				let extensionLength = layer.extensionLength;
+				if ( typeof extensionLength !== 'number' || isNaN( extensionLength ) ) {
+					extensionLength = 20;
+				}
+				offsetDistance = extensionGap + ( extensionLength / 2 );
+			}
+
+			// FIX (2026-02-10): Test against the OFFSET dimension line, not the raw baseline.
+			// The visible dimension line is rendered offset perpendicularly from (x1,y1) to (x2,y2)
+			// by offsetDistance pixels. The old code tested against the baseline, which could be
+			// far from where the line actually appears on screen.
+			const offsetX1 = x1 - perpX * offsetDistance;
+			const offsetY1 = y1 - perpY * offsetDistance;
+			const offsetX2 = x2 - perpX * offsetDistance;
+			const offsetY2 = y2 - perpY * offsetDistance;
+
+			// Check distance to offset dimension line
+			const dimLineDistance = this._pointToLineDistance( px, py, offsetX1, offsetY1, offsetX2, offsetY2 );
+			if ( dimLineDistance <= 10 ) {
+				return true;
+			}
+
+			// Also check extension lines (from base points toward dimension line)
+			const ext1Distance = this._pointToLineDistance( px, py, x1, y1, offsetX1, offsetY1 );
+			if ( ext1Distance <= 8 ) {
+				return true;
+			}
+
+			const ext2Distance = this._pointToLineDistance( px, py, x2, y2, offsetX2, offsetY2 );
+			return ext2Distance <= 8;
 		}
 
 		/**

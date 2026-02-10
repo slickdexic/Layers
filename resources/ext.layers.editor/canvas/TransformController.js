@@ -137,7 +137,8 @@ class TransformController {
 
 		// Get rotation for proper cursor
 		const rotation = layer ? layer.rotation : 0;
-		this.manager.canvas.style.cursor = this.getResizeCursor( handle.type, rotation );
+		const RC = getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
+		this.manager.canvas.style.cursor = RC ? RC.getResizeCursor( handle.type, rotation ) : 'default';
 
 		// Store original layer state using efficient cloning
 		if ( layer ) {
@@ -265,121 +266,6 @@ class TransformController {
 		} else if ( this.manager && typeof this.manager.saveState === 'function' ) {
 			this.manager.saveState( 'Resize layer' );
 		}
-	}
-
-	/** Get the appropriate cursor for a resize handle @return {string} CSS cursor value */
-	getResizeCursor ( handleType, rotation ) {
-		// Base angles for each handle type (direction of resize in local space)
-		// 0° = up (north), 90° = right (east), etc.
-		const handleAngles = {
-			n: 0, // resize vertically (up/down)
-			ne: 45, // resize diagonally
-			e: 90, // resize horizontally (left/right)
-			se: 135,
-			s: 180,
-			sw: 225,
-			w: 270,
-			nw: 315
-		};
-
-		// Get the base angle for this handle
-		const baseAngle = handleAngles[ handleType ];
-		if ( baseAngle === undefined ) {
-			return 'default';
-		}
-
-		// Add rotation to get the world-space cursor direction
-		const worldAngle = ( baseAngle + ( rotation || 0 ) ) % 360;
-
-		// Normalize to 0-360
-		const normalizedAngle = ( ( worldAngle % 360 ) + 360 ) % 360;
-
-		// CSS only has 4 resize cursors: n-resize, ne-resize, e-resize, nw-resize
-		// (plus their opposites which look the same: s=n, sw=ne, w=e, se=nw)
-		// Map the angle to the nearest cursor direction (8 sectors of 45° each)
-		// Sector centers: 0°=n, 45°=ne, 90°=e, 135°=se, 180°=s, 225°=sw, 270°=w, 315°=nw
-		const sector = Math.round( normalizedAngle / 45 ) % 8;
-
-		// Map sectors to CSS cursor values
-		// Sectors 0,4 (n,s) -> ns-resize
-		// Sectors 1,5 (ne,sw) -> nesw-resize
-		// Sectors 2,6 (e,w) -> ew-resize
-		// Sectors 3,7 (se,nw) -> nwse-resize
-		const cursorMap = [
-			'ns-resize', // 0: north (0°)
-			'nesw-resize', // 1: northeast (45°)
-			'ew-resize', // 2: east (90°)
-			'nwse-resize', // 3: southeast (135°)
-			'ns-resize', // 4: south (180°)
-			'nesw-resize', // 5: southwest (225°)
-			'ew-resize', // 6: west (270°)
-			'nwse-resize' // 7: northwest (315°)
-		];
-
-		return cursorMap[ sector ];
-	}
-
-	// ==================== Resize Calculation Wrappers ====================
-	// These methods delegate to ResizeCalculator for backwards compatibility.
-	// See ResizeCalculator for full JSDoc documentation.
-
-	/** @private Get ResizeCalculator class reference */
-	_getResizeCalculator() {
-		return getClass( 'Canvas.ResizeCalculator', 'ResizeCalculator' );
-	}
-
-	/** Delegates to ResizeCalculator.calculateResize @return {Object|null} */
-	calculateResize( originalLayer, handleType, deltaX, deltaY, modifiers ) {
-		const RC = this._getResizeCalculator();
-		return RC ? RC.calculateResize( originalLayer, handleType, deltaX, deltaY, modifiers ) : null;
-	}
-
-	/** Delegates to ResizeCalculator.calculateRectangleResize @return {Object} */
-	calculateRectangleResize( originalLayer, handleType, deltaX, deltaY, modifiers ) {
-		const RC = this._getResizeCalculator();
-		return RC ? RC.calculateRectangleResize( originalLayer, handleType, deltaX, deltaY, modifiers ) : {};
-	}
-
-	/** Delegates to ResizeCalculator.applyRotatedResizeCorrection */
-	applyRotatedResizeCorrection( updates, originalLayer, handleType ) {
-		const RC = this._getResizeCalculator();
-		if ( RC ) { RC.applyRotatedResizeCorrection( updates, originalLayer, handleType ); }
-	}
-
-	/** Delegates to ResizeCalculator.calculateCircleResize @return {Object|null} */
-	calculateCircleResize( originalLayer, handleType, deltaX, deltaY ) {
-		const RC = this._getResizeCalculator();
-		return RC ? RC.calculateCircleResize( originalLayer, handleType, deltaX, deltaY ) : null;
-	}
-
-	/** Delegates to ResizeCalculator.calculateEllipseResize @return {Object} */
-	calculateEllipseResize( originalLayer, handleType, deltaX, deltaY ) {
-		const RC = this._getResizeCalculator();
-		return RC ? RC.calculateEllipseResize( originalLayer, handleType, deltaX, deltaY ) : {};
-	}
-
-	/** Delegates to ResizeCalculator.calculatePolygonResize @return {Object} */
-	calculatePolygonResize( originalLayer, handleType, deltaX, deltaY ) {
-		const RC = this._getResizeCalculator();
-		return RC ? RC.calculatePolygonResize( originalLayer, handleType, deltaX, deltaY ) : {};
-	}
-
-	/** Delegates to ResizeCalculator.calculateLineResize @return {Object} */
-	calculateLineResize( originalLayer, handleType, deltaX, deltaY ) {
-		const RC = this._getResizeCalculator();
-		return RC ? RC.calculateLineResize( originalLayer, handleType, deltaX, deltaY ) : {};
-	}
-
-	/** Delegates to ResizeCalculator.calculatePathResize @return {Object|null} */
-	calculatePathResize( originalLayer, handleType, deltaX, deltaY ) {
-		const RC = this._getResizeCalculator();
-		return RC ? RC.calculatePathResize( originalLayer, handleType, deltaX, deltaY ) : null;
-	}
-
-	/** Delegates to ResizeCalculator.calculateTextResize @return {Object} */
-	calculateTextResize( originalLayer, handleType, deltaX, deltaY ) {
-		const RC = this._getResizeCalculator();
-		return RC ? RC.calculateTextResize( originalLayer, handleType, deltaX, deltaY ) : {};
 	}
 
 	// ==================== Rotation Operations ====================
@@ -972,19 +858,9 @@ class TransformController {
 	// ==================== Utility Methods ====================
 
 	/**
-	 * Emit a custom event with current transform values
-	 * to allow the properties panel to sync during manipulation.
-	 *
-	 * Events are emitted synchronously to ensure the UI updates before
-	 * expensive rendering operations. The receiving handler (syncPropertiesFromLayer)
-	 * only updates a few input values, which is very fast.
-	 *
-	 * Performance: Creates a lightweight copy of the layer, omitting large data
-	 * like base64 image sources (layer.src) and SVG paths (layer.path) to avoid
-	 * expensive JSON serialization during rapid drag/resize operations.
-	 *
+	 * Emit custom event with current transform values for properties panel sync.
+	 * Creates lightweight layer copy (omits src/path to avoid expensive serialization).
 	 * @param {Object} layer The layer object to serialize and emit
-	 * @param {boolean} [_force=false] Deprecated parameter, kept for compatibility
 	 */
 	emitTransforming ( layer, _force ) {
 		if ( !layer ) {
@@ -1031,20 +907,12 @@ class TransformController {
 		}
 	}
 
-	/**
-	 * Check if any transform operation is active
-	 *
-	 * @return {boolean} True if resizing, rotating, dragging, or arrow-tip-dragging
-	 */
+	/** Check if any transform operation is active @return {boolean} */
 	isTransforming () {
 		return this.isResizing || this.isRotating || this.isDragging || this.isArrowTipDragging;
 	}
 
-	/**
-	 * Get the current transform state
-	 *
-	 * @return {Object} Current transform state
-	 */
+	/** Get the current transform state @return {Object} */
 	getState () {
 		return {
 			isResizing: this.isResizing,

@@ -351,6 +351,11 @@
 		 * Resize the canvas to match the image and re-render
 		 */
 		resizeCanvasAndRender() {
+			// Guard against calls after destroy()
+			if ( !this.canvas || !this.imageElement ) {
+				return;
+			}
+
 			// Set canvas pixel size to MATCH the displayed image size for crisp alignment
 			let displayW = this.imageElement.offsetWidth;
 			let displayH = this.imageElement.offsetHeight;
@@ -382,6 +387,11 @@
 		 */
 		renderLayers() {
 			if ( !this.layerData || !this.layerData.layers ) {
+				return;
+			}
+
+			// Guard against calls after destroy() (e.g., onImageLoad firing late)
+			if ( !this.ctx || !this.canvas ) {
 				return;
 			}
 

@@ -1047,7 +1047,10 @@
 			// Smart Guides toggle section
 			const snapSection = document.createElement( 'div' );
 			snapSection.className = 'dropdown-section';
-			snapSection.innerHTML = `<div class="dropdown-section-title">${ t( 'layers-snap-options', 'Snap Options' ) }</div>`;
+			const snapTitle = document.createElement( 'div' );
+			snapTitle.className = 'dropdown-section-title';
+			snapTitle.textContent = t( 'layers-snap-options', 'Snap Options' );
+			snapSection.appendChild( snapTitle );
 
 			const smartGuidesItem = this.createDropdownToggleItem(
 				'smart-guides',
@@ -1063,7 +1066,7 @@
 				t( 'layers-canvas-snap', 'Canvas Snap' ),
 				t( 'layers-canvas-snap-desc', 'Snap to canvas edges and center' ),
 				'\'',
-				false // Default off
+				true // Default on
 			);
 			snapSection.appendChild( canvasSnapItem );
 			dropdownMenu.appendChild( snapSection );
@@ -1074,7 +1077,10 @@
 			// Alignment section
 			const alignSection = document.createElement( 'div' );
 			alignSection.className = 'dropdown-section';
-			alignSection.innerHTML = `<div class="dropdown-section-title">${ t( 'layers-align-section', 'Align (2+ layers)' ) }</div>`;
+			const alignTitle = document.createElement( 'div' );
+			alignTitle.className = 'dropdown-section-title';
+			alignTitle.textContent = t( 'layers-align-section', 'Align (2+ layers)' );
+			alignSection.appendChild( alignTitle );
 
 			const alignItems = [
 				{ id: 'align-left', icon: icons.alignLeft, label: t( 'layers-align-left', 'Align Left' ) },
@@ -1096,7 +1102,10 @@
 			// Distribute section
 			const distSection = document.createElement( 'div' );
 			distSection.className = 'dropdown-section';
-			distSection.innerHTML = `<div class="dropdown-section-title">${ t( 'layers-distribute-section', 'Distribute (3+ layers)' ) }</div>`;
+			const distTitle = document.createElement( 'div' );
+			distTitle.className = 'dropdown-section-title';
+			distTitle.textContent = t( 'layers-distribute-section', 'Distribute (3+ layers)' );
+			distSection.appendChild( distTitle );
 
 			const distItems = [
 				{ id: 'distribute-h', icon: icons.distributeH, label: t( 'layers-distribute-h', 'Distribute Horizontally' ) },
@@ -1221,10 +1230,16 @@
 			item.dataset.align = config.id;
 			item.disabled = true; // Enabled based on selection
 
-			item.innerHTML = `
-				<span class="dropdown-item-icon">${ config.icon }</span>
-				<span class="dropdown-item-label">${ config.label }</span>
-			`;
+			const iconSpan = document.createElement( 'span' );
+			iconSpan.className = 'dropdown-item-icon';
+			iconSpan.innerHTML = config.icon;
+
+			const labelSpan = document.createElement( 'span' );
+			labelSpan.className = 'dropdown-item-label';
+			labelSpan.textContent = config.label;
+
+			item.appendChild( iconSpan );
+			item.appendChild( labelSpan );
 
 			return item;
 		}
@@ -1252,18 +1267,14 @@
 			// Handle menu item clicks
 			this.addListener( menu, 'click', ( e ) => {
 				const actionItem = e.target.closest( '.dropdown-action-item' );
-				const toggleItem = e.target.closest( '.dropdown-toggle-item' );
 
 				if ( actionItem && !actionItem.disabled ) {
 					this.executeAlignmentAction( actionItem.dataset.align );
 					// Don't close - user might want multiple operations
-				} else if ( toggleItem ) {
-					const checkbox = toggleItem.querySelector( 'input[type="checkbox"]' );
-					if ( checkbox && e.target !== checkbox ) {
-						checkbox.checked = !checkbox.checked;
-						checkbox.dispatchEvent( new Event( 'change' ) );
-					}
 				}
+				// Toggle items use <label> wrapping <input>, so native click
+				// handles checkbox toggle and fires the change event automatically.
+				// No manual toggle needed here — doing so would double-toggle.
 			} );
 
 			// Handle toggle changes

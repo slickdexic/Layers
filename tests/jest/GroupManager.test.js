@@ -6,6 +6,9 @@
 // Load DeepClone first for omitProperty utility
 require( '../../resources/ext.layers.shared/DeepClone.js' );
 
+// Load GroupHierarchyHelper before GroupManager (dependency)
+require( '../../resources/ext.layers.editor/GroupHierarchyHelper.js' );
+
 // Load the module
 require( '../../resources/ext.layers.editor/GroupManager.js' );
 

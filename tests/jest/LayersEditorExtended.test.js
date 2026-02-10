@@ -9,7 +9,7 @@
  * - validateDependencies
  * - buildRevisionSelector / buildSetSelector
  * - loadLayerSetByName
- * - showCancelConfirmDialog
+ * - cancel behavior
  * - navigateBackToFile / navigateBackToFileWithName
  * - save flow
  * - hasUnsavedChanges / updateSaveButtonState
@@ -770,89 +770,6 @@ describe( 'LayersEditor Extended', () => {
 					// Expected navigation errors in JSDOM are okay
 				}
 			} ).not.toThrow();
-		} );
-	} );
-
-	describe( 'showCancelConfirmDialog', () => {
-		beforeEach( () => {
-			editor = new LayersEditor( { filename: 'Test.jpg', container: mockContainer } );
-			window.mw = {
-				message: jest.fn().mockReturnValue( { text: ( fallback ) => fallback } ),
-				config: { get: jest.fn() }
-			};
-		} );
-
-		it( 'should create dialog elements', () => {
-			const onConfirm = jest.fn();
-			editor.showCancelConfirmDialog( onConfirm );
-
-			expect( document.querySelector( '.layers-modal-overlay' ) ).not.toBeNull();
-			expect( document.querySelector( '.layers-modal-dialog' ) ).not.toBeNull();
-		} );
-
-		it( 'should call onConfirm when discard clicked', () => {
-			const onConfirm = jest.fn();
-			editor.showCancelConfirmDialog( onConfirm );
-
-			const confirmBtn = document.querySelector( '.layers-btn-danger' );
-			confirmBtn.click();
-
-			expect( onConfirm ).toHaveBeenCalled();
-		} );
-
-		it( 'should remove dialog on cancel', () => {
-			const onConfirm = jest.fn();
-			editor.showCancelConfirmDialog( onConfirm );
-
-			const cancelBtn = document.querySelector( '.layers-btn-primary' );
-			cancelBtn.click();
-
-			expect( document.querySelector( '.layers-modal-overlay' ) ).toBeNull();
-			expect( document.querySelector( '.layers-modal-dialog' ) ).toBeNull();
-		} );
-
-		it( 'should remove dialog on Escape key', () => {
-			const onConfirm = jest.fn();
-			editor.showCancelConfirmDialog( onConfirm );
-
-			const event = new KeyboardEvent( 'keydown', { key: 'Escape' } );
-			document.dispatchEvent( event );
-
-			expect( document.querySelector( '.layers-modal-overlay' ) ).toBeNull();
-		} );
-
-		it( 'should handle Tab key for focus trap', () => {
-			const onConfirm = jest.fn();
-			editor.showCancelConfirmDialog( onConfirm );
-
-			const buttons = document.querySelectorAll( '.layers-modal-dialog button' );
-			const firstBtn = buttons[ 0 ];
-			const lastBtn = buttons[ buttons.length - 1 ];
-
-			// Focus last button
-			lastBtn.focus();
-
-			// Tab forward from last should go to first
-			const tabEvent = new KeyboardEvent( 'keydown', { key: 'Tab', shiftKey: false } );
-			document.dispatchEvent( tabEvent );
-
-			// Focus first button
-			firstBtn.focus();
-
-			// Shift+Tab from first should go to last
-			const shiftTabEvent = new KeyboardEvent( 'keydown', { key: 'Tab', shiftKey: true } );
-			document.dispatchEvent( shiftTabEvent );
-
-			// Dialog should still be present
-			expect( document.querySelector( '.layers-modal-dialog' ) ).not.toBeNull();
-		} );
-
-		it( 'should focus cancel button by default', () => {
-			const onConfirm = jest.fn();
-			editor.showCancelConfirmDialog( onConfirm );
-
-			const cancelBtn = document.querySelector( '.layers-btn-primary' );
-			expect( document.activeElement ).toBe( cancelBtn );
 		} );
 	} );
 

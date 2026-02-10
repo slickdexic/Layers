@@ -65,13 +65,16 @@
 	visibility: visible;
 }
 
-/* Shared button styles for overlay buttons */
+/* DEPRECATED: Old slide-specific button styles.
+ * Slide overlays now use .layers-viewer-overlay-btn classes
+ * (defined in LayersLightbox.css) for visual consistency with image overlays.
+ * Kept for backwards compatibility with any cached HTML. */
 .layers-slide-overlay-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 32px;
-	height: 32px;
+	width: 26px;
+	height: 26px;
 	padding: 0;
 	margin: 0;
 	background: rgba( 255, 255, 255, 0.1 );
@@ -107,8 +110,8 @@
 
 /* Icon styling */
 .layers-slide-overlay-btn svg {
-	width: 16px;
-	height: 16px;
+	width: 14px;
+	height: 14px;
 	flex-shrink: 0;
 }
 

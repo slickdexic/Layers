@@ -440,12 +440,38 @@ class ApiLayersInfo extends ApiBase {
 	}
 
 	/**
-	 * Enrich layer set rows with user names
+	 * Enrich layer set rows with user names (delegates to generic helper)
 	 *
 	 * @param array $rows Array of layer set rows
 	 * @return array Enriched rows
 	 */
 	private function enrichWithUserNames( array $rows ): array {
+		return $this->enrichRowsWithUserNames( $rows, 'ls_user_id', 'ls_user_name' );
+	}
+
+	/**
+	 * Enrich named sets summary with user names (delegates to generic helper)
+	 *
+	 * @param array $namedSets Array of named set summaries
+	 * @return array Enriched named sets
+	 */
+	private function enrichNamedSetsWithUserNames( array $namedSets ): array {
+		return $this->enrichRowsWithUserNames( $namedSets, 'latest_user_id', 'latest_user_name' );
+	}
+
+	/**
+	 * Generic helper to enrich rows with user names by batch-loading from UserFactory
+	 *
+	 * @param array $rows Array of associative arrays containing user IDs
+	 * @param string $userIdField Key name for the user ID field in each row
+	 * @param string $userNameField Key name for the user name field to populate
+	 * @return array Enriched rows with user names added
+	 */
+	private function enrichRowsWithUserNames(
+		array $rows,
+		string $userIdField,
+		string $userNameField
+	): array {
 		if ( empty( $rows ) ) {
 			return $rows;
 		}
@@ -454,7 +480,7 @@ class ApiLayersInfo extends ApiBase {
 			// Collect all unique user IDs
 			$userIds = [];
 			foreach ( $rows as $row ) {
-				$userId = (int)( $row['ls_user_id'] ?? 0 );
+				$userId = (int)( $row[$userIdField] ?? 0 );
 				if ( $userId > 0 ) {
 					$userIds[] = $userId;
 				}
@@ -473,66 +499,20 @@ class ApiLayersInfo extends ApiBase {
 				}
 			}
 
-			// Apply user names to layer sets
+			// Apply user names; use i18n fallback for unknown users
+			$fallback = wfMessage( 'layers-unknown-user' )->inContentLanguage()->text();
 			foreach ( $rows as &$row ) {
-				$userId = (int)( $row['ls_user_id'] ?? 0 );
-				$row['ls_user_name'] = $users[$userId] ?? 'Anonymous';
+				$userId = (int)( $row[$userIdField] ?? 0 );
+				$row[$userNameField] = $users[$userId] ?? $fallback;
 			}
 			unset( $row );
 		} catch ( \Throwable $e ) {
-			// If user lookup fails, proceed without names
-			$this->getLogger()->warning( 'Failed to batch load user names for layer sets: ' . $e->getMessage() );
+			$this->getLogger()->warning(
+				'Failed to batch load user names: ' . $e->getMessage()
+			);
 		}
 
 		return $rows;
-	}
-
-	/**
-	 * Enrich named sets summary with user names
-	 *
-	 * @param array $namedSets Array of named set summaries
-	 * @return array Enriched named sets
-	 */
-	private function enrichNamedSetsWithUserNames( array $namedSets ): array {
-		if ( empty( $namedSets ) ) {
-			return $namedSets;
-		}
-
-		try {
-			// Collect all unique user IDs
-			$userIds = [];
-			foreach ( $namedSets as $set ) {
-				$userId = (int)( $set['latest_user_id'] ?? 0 );
-				if ( $userId > 0 ) {
-					$userIds[] = $userId;
-				}
-			}
-
-			// Batch load users using UserFactory (modern MediaWiki API)
-			$users = [];
-			if ( !empty( $userIds ) ) {
-				$userIds = array_unique( $userIds );
-				$userFactory = MediaWikiServices::getInstance()->getUserFactory();
-				foreach ( $userIds as $userId ) {
-					$user = $userFactory->newFromId( $userId );
-					if ( $user ) {
-						$users[$userId] = $user->getName();
-					}
-				}
-			}
-
-			// Apply user names
-			foreach ( $namedSets as &$set ) {
-				$userId = (int)( $set['latest_user_id'] ?? 0 );
-				$set['latest_user_name'] = $users[$userId] ?? 'Anonymous';
-			}
-			unset( $set );
-		} catch ( \Throwable $e ) {
-			// If user lookup fails, proceed without names
-			$this->getLogger()->warning( 'Failed to batch load user names for named sets: ' . $e->getMessage() );
-		}
-
-		return $namedSets;
 	}
 
 	/**

@@ -33,6 +33,8 @@
 		'arrowStyle', 'arrowhead', 'arrowSize', 'arrowHeadType', 'headScale', 'tailWidth',
 		// Polygon/Star
 		'sides', 'points', 'innerRadius', 'outerRadius', 'pointRadius', 'valleyRadius',
+		// Gradient fill
+		'gradient',
 		// Shadow
 		'shadow', 'shadowColor', 'shadowBlur',
 		'shadowOffsetX', 'shadowOffsetY', 'shadowSpread',

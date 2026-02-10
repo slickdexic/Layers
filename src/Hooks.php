@@ -76,37 +76,43 @@ class Hooks {
 	 */
 	public static function onBeforePageDisplay( $out, $skin ) {
 		try {
-			// Reset the page layers flag for each new page request
-			WikitextHooks::resetPageLayersFlag();
-
-			// Always add viewer resources so layered thumbnails on any page can render
-			// This is critical for layers to display properly
-			$out->addModules( 'ext.layers' );
-
 			// Use proper logger instead of conditional calls
 			$logger = self::getLogger();
-			$logger->info( 'Layers: BeforePageDisplay hook called, added viewer module' );
 
-			// Check if extension is enabled for additional features
+			// Check if extension is enabled
 			$config = $out->getConfig();
 			if ( !$config->get( 'LayersEnable' ) ) {
-				$logger->info( 'Layers: Extension disabled, not loading editor module' );
+				$logger->info( 'Layers: Extension disabled, not loading modules' );
+				WikitextHooks::resetPageLayersFlag();
 				return;
 			}
 
-			// Add editor resources on file pages when the user can edit layers
 			$title = $out->getTitle();
-			if ( $title && $title->inNamespace( NS_FILE ) ) {
+			$isFilePage = $title && $title->inNamespace( NS_FILE );
+
+			// Detect whether this page needs layers using multiple signals:
+			// 1. File: pages (always — for viewer overlay + editor action)
+			// 2. Parser flag set during current request ($pageHasLayers)
+			// 3. Parser cache: ext.layers module already added to OutputPage
+			//    by cached ParserOutput (parser hooks don't re-run on cached views)
+			$parserDetected = WikitextHooks::pageHasLayers();
+			$fromParserCache = in_array( 'ext.layers', $out->getModules() );
+			$needsLayers = $isFilePage || $parserDetected || $fromParserCache;
+
+			// Reset the parser flag now that we've captured its value.
+			// This prevents stale state in long-running processes.
+			WikitextHooks::resetPageLayersFlag();
+
+			if ( $needsLayers ) {
+				$out->addModules( 'ext.layers' );
+				$logger->info( 'Layers: Added viewer module' );
+			}
+
+			// Add editor resources on file pages when the user can edit layers
+			if ( $isFilePage ) {
 				if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
 					$logger->info( 'Layers: Adding editor module for file page' );
 					$out->addModules( 'ext.layers.editor' );
-
-					// Note: We no longer add CSP here because:
-					// 1. MediaWiki handles site-wide CSP configuration
-					// 2. The editor action (?action=editlayers) has its own CSP handling
-					// 3. File pages may contain template images from foreign sources
-					//    (e.g., Commons via InstantCommons) that we can't enumerate
-					// 4. Adding restrictive CSP here was blocking template images (Issue #34)
 				}
 			}
 		} catch ( \Throwable $e ) {
@@ -179,6 +185,20 @@ class Hooks {
 	 */
 	public static function onMakeGlobalVariablesScript( &$vars, $out ) {
 		try {
+			$title = $out->getTitle();
+			$isFilePage = $title && $title->inNamespace( NS_FILE );
+			// Detect layers need from: File page, parser flag, or parser cache modules.
+			// The parser flag may have been reset by onBeforePageDisplay, so also
+			// check whether ext.layers was already added to OutputPage (from parser
+			// cache or from onBeforePageDisplay itself).
+			$hasLayersModule = in_array( 'ext.layers', $out->getModules() );
+			$needsLayers = $isFilePage || $hasLayersModule || WikitextHooks::pageHasLayers();
+
+			// Only export Layers JS config vars on pages that need them
+			if ( !$needsLayers ) {
+				return true;
+			}
+
 			$vars['wgLayersEnabled'] = true;
 			// Surface server config toggle for client-side debug logging
 			try {
@@ -206,7 +226,6 @@ class Hooks {
 					if ( $req ) {
 						$val = $req->getVal( 'layers', null );
 						if ( $val === null ) {
-							// Some setups might have different capitalization
 							$val = $req->getVal( 'Layers', null );
 						}
 						if ( $val !== null && $val !== '' ) {
@@ -215,42 +234,11 @@ class Hooks {
 					}
 				}
 
-				// NOTE: We no longer set wgLayersParam='all' just because some image
-				// on the page has layers. The pageHasLayers() flag indicates that SOME
-				// image on the page has layers= specified, but we should NOT apply layers
-				// to ALL images. Only images with explicit layers= should get layers.
-				// The client-side init.js will only apply layers to images that have
-				// data-layer-data or data-layers-intent attributes set by the server.
-
-				// Debug logging
-				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-					$logger = \call_user_func(
-						[ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ],
-						'Layers'
-					);
-					$logger->info(
-						'Layers: pageHasLayers() = ' .
-						( WikitextHooks::pageHasLayers() ? 'true' : 'false' ) .
-						', layersParam = ' .
-						( $layersParam ?: 'null' )
-					);
-				}
-
 				if ( $layersParam ) {
 					$vars['wgLayersParam'] = $layersParam;
-
-					// Debug logging
-					if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-						$logger->info( "Layers: Setting client config wgLayersParam=$layersParam" );
-					}
 				}
 			} catch ( \Throwable $e3 ) {
 				// ignore
-			}
-			// Also proactively register the viewer module to be safe
-			if ( method_exists( $out, 'addModules' ) ) {
-				$out->addModules( 'ext.layers' );
 			}
 		} catch ( \Throwable $e ) {
 			// ignore
@@ -302,72 +290,6 @@ class Hooks {
 				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 				$logger->error( 'Layers: Error registering parser functions', [ 'exception' => $e ] );
 			}
-		}
-	}
-
-	/**
-	 * LoadExtensionSchemaUpdates hook handler
-	 *
-	 * @param mixed $updater DatabaseUpdater
-	 * @return void
-	 */
-	public static function onLoadExtensionSchemaUpdates( $updater ) {
-		$dir = dirname( __DIR__ );
-		$tablesDir = $dir . '/sql/tables';
-		$monolithic = $dir . '/sql/layers_tables.sql';
-
-		// Prefer per-table files to avoid re-running a monolithic schema multiple times
-		if (
-			is_dir( $tablesDir )
-			&& file_exists( $tablesDir . '/layer_sets.sql' )
-			&& file_exists( $tablesDir . '/layer_assets.sql' )
-			&& file_exists( $tablesDir . '/layer_set_usage.sql' )
-		) {
-			$updater->addExtensionTable( 'layer_sets', $tablesDir . '/layer_sets.sql' );
-			$updater->addExtensionTable( 'layer_assets', $tablesDir . '/layer_assets.sql' );
-			$updater->addExtensionTable( 'layer_set_usage', $tablesDir . '/layer_set_usage.sql' );
-		} else {
-			// Fallback: run the monolithic schema once, anchored on layer_sets
-			if ( file_exists( $monolithic ) ) {
-				$updater->addExtensionTable( 'layer_sets', $monolithic );
-			}
-		}
-
-		// Add post-install patches for added columns (Updater will no-op if already present)
-		$patchDir = $dir . '/sql/patches';
-		$patchSize = $patchDir . '/patch-layer_sets-add-ls_size.sql';
-		$patchCount = $patchDir . '/patch-layer_sets-add-ls_layer_count.sql';
-		$patchConstraints = $patchDir . '/patch-add-check-constraints.sql';
-		$patchDataCleanup = $patchDir . '/patch-data-cleanup.sql';
-		$patchLayerAssetsSize = $patchDir . '/patch-layer_assets-add-la_size.sql';
-		$patchLayerAssetsSizeConstraints = $patchDir . '/patch-layer_assets-add-la_size-constraints.sql';
-
-		if ( file_exists( $patchSize ) ) {
-			$updater->addExtensionField( 'layer_sets', 'ls_size', $patchSize );
-		}
-		if ( file_exists( $patchCount ) ) {
-			$updater->addExtensionField( 'layer_sets', 'ls_layer_count', $patchCount );
-		}
-
-		// Add missing columns to layer_assets table
-		if ( file_exists( $patchLayerAssetsSize ) ) {
-			$updater->addExtensionField( 'layer_assets', 'la_size', $patchLayerAssetsSize );
-		}
-
-		// Add check constraints for data integrity after base tables are created
-		if ( file_exists( $patchConstraints ) ) {
-			$updater->addExtensionUpdate( [ 'applyPatch', $patchConstraints, true ] );
-		}
-
-		// Add foreign key constraints for existing installations without them
-		$patchForeignKeys = $patchDir . '/patch-add-foreign-key-constraints.sql';
-		if ( file_exists( $patchForeignKeys ) ) {
-			$updater->addExtensionUpdate( [ 'applyPatch', $patchForeignKeys, true ] );
-		}
-
-		// Add constraints for la_size column after it's been added
-		if ( file_exists( $patchLayerAssetsSizeConstraints ) ) {
-			$updater->addExtensionUpdate( [ 'applyPatch', $patchLayerAssetsSizeConstraints, true ] );
 		}
 	}
 

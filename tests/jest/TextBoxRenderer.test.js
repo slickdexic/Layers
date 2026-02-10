@@ -267,6 +267,85 @@ describe( 'TextBoxRenderer', () => {
 			expect( lines.length ).toBeGreaterThanOrEqual( 1 );
 			expect( lines.join( '' ) ).toContain( 'Supercalifragilisticexpialidocious' );
 		} );
+
+		it( 'should break long words character-by-character (P2-019)', () => {
+			// Mock: 8px per char, maxWidth=48px fits 6 chars
+			// 'abcdefghijklmnop' = 16 chars = 128px, should break into 3+ lines
+			const lines = renderer.wrapText( 'abcdefghijklmnop', 48, 16, 'Arial' );
+			expect( lines.length ).toBeGreaterThan( 1 );
+			// All characters should be preserved across all lines
+			expect( lines.join( '' ) ).toBe( 'abcdefghijklmnop' );
+			// Each line (except possibly the last) should fit within maxWidth
+			for ( let i = 0; i < lines.length - 1; i++ ) {
+				expect( lines[ i ].length ).toBeLessThanOrEqual( 6 );
+			}
+		} );
+
+		it( 'should break long URL words in mixed text (P2-019)', () => {
+			// 'See https://example.com/very/long/path end' with 80px (10 chars)
+			const lines = renderer.wrapText(
+				'See https://example.com/very/long/path end', 80, 16, 'Arial'
+			);
+			// All chars preserved (join without separator since breaks are mid-word)
+			const allText = lines.join( '' );
+			expect( allText ).toContain( 'https://example.com/very/long/path' );
+			// The URL should be broken across multiple lines
+			expect( lines.length ).toBeGreaterThan( 2 );
+		} );
+	} );
+
+	// ========================================================================
+	// wrapRichText Tests (P1-014)
+	// ========================================================================
+
+	describe( 'wrapRichText', () => {
+		it( 'should return empty line for empty input', () => {
+			const lines = renderer.wrapRichText( [], 100, { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal' }, { avg: 1 } );
+			expect( lines ).toEqual( [ '' ] );
+		} );
+
+		it( 'should wrap simple single-run text', () => {
+			// Mock: 8px per char, maxWidth=80 fits 10 chars
+			const richText = [ { text: 'Hello world from rich text' } ];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal' };
+			const lines = renderer.wrapRichText( richText, 80, baseStyle, { avg: 1 } );
+			expect( lines.length ).toBeGreaterThan( 1 );
+			expect( lines.join( '' ).replace( /\s/g, '' ) ).toBe( 'Helloworldfromrichtext' );
+		} );
+
+		it( 'should handle newlines in runs', () => {
+			const richText = [ { text: 'Line1\nLine2' } ];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal' };
+			const lines = renderer.wrapRichText( richText, 1000, baseStyle, { avg: 1 } );
+			expect( lines.length ).toBe( 2 );
+			expect( lines[ 0 ] ).toBe( 'Line1' );
+			expect( lines[ 1 ] ).toBe( 'Line2' );
+		} );
+
+		it( 'should use per-run font size for measurement (P1-014)', () => {
+			// Two runs: first at base size (16px→8px/char), second at double (32px→16px/char)
+			// The mock measureText returns text.length * 8 regardless of font,
+			// so we verify the method sets ctx.font correctly per-run
+			const richText = [
+				{ text: 'Small ' },
+				{ text: 'BIG', style: { fontSize: 32 } }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal' };
+			const lines = renderer.wrapRichText( richText, 1000, baseStyle, { avg: 1 } );
+			// Just verify font was set at least twice (once per distinct run)
+			expect( ctx.font ).toContain( '32px' );
+			// All text preserved
+			expect( lines.join( '' ).replace( /\s/g, '' ) ).toBe( 'SmallBIG' );
+		} );
+
+		it( 'should break long words in rich text (P1-014)', () => {
+			const richText = [ { text: 'abcdefghijklmnop' } ];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal' };
+			// 48px maxWidth, 8px/char = 6 chars per line
+			const lines = renderer.wrapRichText( richText, 48, baseStyle, { avg: 1 } );
+			expect( lines.length ).toBeGreaterThan( 1 );
+			expect( lines.join( '' ) ).toBe( 'abcdefghijklmnop' );
+		} );
 	} );
 
 	// ========================================================================

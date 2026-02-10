@@ -27,8 +27,9 @@
 			let safeText = text == null ? '' : String( text );
 			// Remove control characters but keep printable ASCII and extended Unicode
 			safeText = safeText.replace( /[^\x20-\x7E\u00A0-\uFFFF]/g, '' );
-			// Strip HTML tags
-			safeText = safeText.replace( /<[^>]+>/g, '' );
+			// Strip only dangerous HTML tags; preserve standalone < and >
+			// for math expressions (Canvas2D renders text literally)
+			safeText = safeText.replace( /<\s*\/?\s*(script|style|iframe|object|embed|form|input|textarea|button|select|link|meta|base)\b[^>]*>/gi, '' );
 			return safeText;
 		}
 

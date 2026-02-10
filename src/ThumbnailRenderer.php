@@ -23,6 +23,13 @@ class ThumbnailRenderer {
 	/** @var LoggerInterface|null */
 	private $logger;
 
+	/**
+	 * Render dimensions of the current canvas (set during overlayLayers).
+	 * Used by buildShadowSubImage to create isolated shadow canvases.
+	 */
+	private int $renderWidth = 0;
+	private int $renderHeight = 0;
+
 	public function __construct( ?Config $config = null, ?LoggerInterface $logger = null ) {
 		if ( $config === null && class_exists( MediaWikiServices::class ) ) {
 			$config = MediaWikiServices::getInstance()->getMainConfig();
@@ -104,10 +111,10 @@ class ThumbnailRenderer {
 			$scaleX = $origW > 0 ? ( $targetW / $origW ) : 1.0;
 			$scaleY = $origH > 0 ? ( $targetH / $origH ) : $scaleX;
 
-			if ( $this->overlayLayers( $basePath, $layers, $outputPath, $scaleX, $scaleY ) ) {
+			if ( $this->overlayLayers( $basePath, $layers, $outputPath, $scaleX, $scaleY, $targetW, $targetH ) ) {
 				return $outputPath;
 			}
-		} catch ( Exception $e ) {
+		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
 				$this->logger->warning(
 					'Layers: thumbnail generation failed: {message}',
@@ -127,7 +134,9 @@ class ThumbnailRenderer {
 		array $layers,
 		string $outputPath,
 		float $scaleX,
-		float $scaleY
+		float $scaleY,
+		int $targetW = 0,
+		int $targetH = 0
 	): bool {
 		if ( !$this->config || !$this->config->get( 'UseImageMagick' ) ) {
 			return false;
@@ -136,6 +145,10 @@ class ThumbnailRenderer {
 		if ( !$convert ) {
 			return false;
 		}
+
+		// Store canvas dimensions for shadow sub-image isolation
+		$this->renderWidth = $targetW;
+		$this->renderHeight = $targetH;
 
 		$args = [ $convert, $basePath ];
 
@@ -242,6 +255,39 @@ class ThumbnailRenderer {
 		}
 	}
 
+	/**
+	 * Wrap shadow drawing arguments in a parenthesized sub-image to isolate
+	 * the blur effect. Without this, -blur affects all previously drawn
+	 * content on the canvas (corrupting earlier layers).
+	 *
+	 * Uses ImageMagick's parenthesized sub-image: creates a fresh transparent
+	 * canvas, draws the shadow shape, blurs it, then composites back.
+	 *
+	 * @param array $drawArgs Arguments to draw the shadow shape (fill, draw commands)
+	 * @param int $blurRadius Blur radius for the shadow
+	 * @return array ImageMagick arguments with isolated blur
+	 */
+	private function buildShadowSubImage( array $drawArgs, int $blurRadius ): array {
+		if ( $this->renderWidth <= 0 || $this->renderHeight <= 0 || $blurRadius <= 0 ) {
+			// Fallback: draw without blur if dimensions unknown
+			return $drawArgs;
+		}
+		return array_merge(
+			[
+				'(',
+				'-size', $this->renderWidth . 'x' . $this->renderHeight,
+				'xc:none',
+			],
+			$drawArgs,
+			[
+				'-blur', '0x' . $blurRadius,
+				')',
+				'-compose', 'Over',
+				'-composite',
+			]
+		);
+	}
+
 	private function buildTextArguments( array $layer, float $scaleX, float $scaleY ): array {
 		$x = ( $layer['x'] ?? 0 ) * $scaleX;
 		$y = ( $layer['y'] ?? 0 ) * $scaleY;
@@ -262,14 +308,16 @@ class ThumbnailRenderer {
 			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
 			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
 			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
-			$args = array_merge( $args, [
+			$shadowDrawArgs = [
 				'-fill', $shadowColor,
 				'-pointsize', (string)$fontSize,
 				'-font', $font,
 				'-annotate', '+' . (int)( $x + $shadowOffsetX ) . '+' . (int)( $y + $shadowOffsetY ),
 				$text,
-				'-blur', '0x' . (int)$shadowBlur
-			] );
+			];
+			$args = array_merge( $args, $this->buildShadowSubImage(
+				$shadowDrawArgs, (int)$shadowBlur
+			) );
 		}
 		$args = array_merge( $args, [
 			'-pointsize', (string)$fontSize,
@@ -310,14 +358,16 @@ class ThumbnailRenderer {
 			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
 			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
 			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
-			$args = array_merge( $args, [
+			$shadowDrawArgs = [
 				'-fill', $shadowColor,
 				'-draw',
 				'rectangle ' .
 					(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
 					(int)( $x + $width + $shadowOffsetX ) . ',' . (int)( $y + $height + $shadowOffsetY ),
-				'-blur', '0x' . (int)$shadowBlur
-			] );
+			];
+			$args = array_merge( $args, $this->buildShadowSubImage(
+				$shadowDrawArgs, (int)$shadowBlur
+			) );
 		}
 
 		// Draw the rectangle background
@@ -373,14 +423,16 @@ class ThumbnailRenderer {
 			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
 			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
 			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
-				$args = array_merge( $args, [
-					'-fill', $shadowColor,
-					'-draw',
-					'rectangle ' .
-						(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
-						(int)( $x + $width + $shadowOffsetX ) . ',' . (int)( $y + $height + $shadowOffsetY ),
-					'-blur', '0x' . (int)$shadowBlur
-				] );
+			$shadowDrawArgs = [
+				'-fill', $shadowColor,
+				'-draw',
+				'rectangle ' .
+					(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
+					(int)( $x + $width + $shadowOffsetX ) . ',' . (int)( $y + $height + $shadowOffsetY ),
+			];
+			$args = array_merge( $args, $this->buildShadowSubImage(
+				$shadowDrawArgs, (int)$shadowBlur
+			) );
 		}
 		$args = array_merge( $args, [
 			'-stroke', $stroke,
@@ -409,13 +461,15 @@ class ThumbnailRenderer {
 			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
 			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
 			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
-			$args = array_merge( $args, [
+			$shadowDrawArgs = [
 				'-fill', $shadowColor,
 				'-draw',
-					'circle ' . (int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' '
-					. (int)( $x + $radius + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ),
-				'-blur', '0x' . (int)$shadowBlur
-			] );
+				'circle ' . (int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' '
+				. (int)( $x + $radius + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ),
+			];
+			$args = array_merge( $args, $this->buildShadowSubImage(
+				$shadowDrawArgs, (int)$shadowBlur
+			) );
 		}
 		$args = array_merge( $args, [
 			'-stroke', $stroke,

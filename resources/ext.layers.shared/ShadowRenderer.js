@@ -48,6 +48,10 @@ class ShadowRenderer {
 		this.ctx = ctx;
 		this.config = config || {};
 		this.canvas = this.config.canvas || null;
+		/** @private Cached offscreen canvas for spread shadow rendering */
+		this._tempCanvas = null;
+		/** @private Cached offscreen canvas context */
+		this._tempCtx = null;
 	}
 
 	// ========================================================================
@@ -84,6 +88,38 @@ class ShadowRenderer {
 		this.ctx.shadowBlur = 0;
 		this.ctx.shadowOffsetX = 0;
 		this.ctx.shadowOffsetY = 0;
+	}
+
+	/**
+	 * Get or create a reusable offscreen canvas for spread shadow rendering.
+	 * Grows the canvas only when needed to avoid repeated GPU reallocation.
+	 *
+	 * @private
+	 * @param {number} width - Required canvas width
+	 * @param {number} height - Required canvas height
+	 * @return {{ canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D }|null}
+	 */
+	_getTempCanvas( width, height ) {
+		if ( !this._tempCanvas ) {
+			this._tempCanvas = document.createElement( 'canvas' );
+			this._tempCanvas.width = width;
+			this._tempCanvas.height = height;
+			this._tempCtx = this._tempCanvas.getContext( '2d' );
+		} else if ( this._tempCanvas.width < width || this._tempCanvas.height < height ) {
+			// Grow to accommodate larger size
+			this._tempCanvas.width = Math.max( this._tempCanvas.width, width );
+			this._tempCanvas.height = Math.max( this._tempCanvas.height, height );
+		} else {
+			// Same size — clear pixels and reset essential state.
+			// CRITICAL: drawSpreadShadow leaves globalCompositeOperation as 'destination-out'
+			// after erasing the shape. Without resetting it here, subsequent calls would
+			// fill() with destination-out on a clear canvas, producing nothing (no shadow).
+			this._tempCtx.setTransform( 1, 0, 0, 1, 0, 0 );
+			this._tempCtx.globalCompositeOperation = 'source-over';
+			this._tempCtx.globalAlpha = 1;
+			this._tempCtx.clearRect( 0, 0, this._tempCanvas.width, this._tempCanvas.height );
+		}
+		return this._tempCtx ? { canvas: this._tempCanvas, ctx: this._tempCtx } : null;
 	}
 
 	/**
@@ -282,17 +318,17 @@ class ShadowRenderer {
 		const canvasWidth = this.canvas ? this.canvas.width : 800;
 		const canvasHeight = this.canvas ? this.canvas.height : 600;
 
-		// Create temporary canvas - needs to be wide enough for the offset shape
-		// Cap dimensions to prevent exceeding browser limits
-		const tempCanvas = document.createElement( 'canvas' );
-		tempCanvas.width = Math.min( MAX_CANVAS_DIM, canvasWidth + FAR_OFFSET + blur + Math.abs( sp.offsetX ) );
-		tempCanvas.height = Math.min( MAX_CANVAS_DIM, canvasHeight + blur + Math.abs( sp.offsetY ) );
-		const tempCtx = tempCanvas.getContext( '2d' );
+		// Reuse cached offscreen canvas to avoid per-frame GPU allocation
+		const tempW = Math.min( MAX_CANVAS_DIM, canvasWidth + FAR_OFFSET + blur + Math.abs( sp.offsetX ) );
+		const tempH = Math.min( MAX_CANVAS_DIM, canvasHeight + blur + Math.abs( sp.offsetY ) );
+		const temp = this._getTempCanvas( tempW, tempH );
 
-		if ( !tempCtx ) {
+		if ( !temp ) {
 			this.applyShadow( layer, scale );
 			return;
 		}
+		const tempCanvas = temp.canvas;
+		const tempCtx = temp.ctx;
 
 		// FIX (2025-12-08): Handle rotation separately from the FAR_OFFSET technique.
 		// The problem: FAR_OFFSET shifts the shape horizontally in transformed space,
@@ -315,13 +351,18 @@ class ShadowRenderer {
 				// Extract rotation angle from transform matrix
 				rotationAngle = Math.atan2( currentTransform.b, currentTransform.a );
 
-				// For temp canvas, use identity + translation only (no scale, no rotation)
-				// The shape coordinates in drawExpandedPathFn are already in local (rotated) space
-				// We just need to position correctly
+				// FIX (2026-02-10): Preserve scale when removing rotation.
+				// For a matrix [a,b,c,d,e,f] with rotation+scale:
+				//   scaleX = sqrt(a² + b²), scaleY = sqrt(c² + d²)
+				// Previously used identity [1,0,0,1,e,f] which discarded zoom scale,
+				// causing spread shadows to render at wrong size when zoom ≠ 1.
+				const { a, b, c, d, e, f } = currentTransform;
+				const scaleX = Math.sqrt( a * a + b * b );
+				const scaleY = Math.sqrt( c * c + d * d );
 				transformWithoutRotation = new DOMMatrix( [
-					1, 0, 0, 1,
-					currentTransform.e,
-					currentTransform.f
+					scaleX, 0, 0, scaleY,
+					e,
+					f
 				] );
 			}
 		}
@@ -395,10 +436,6 @@ class ShadowRenderer {
 		this.ctx.globalAlpha = shadowOpacity;
 		this.ctx.drawImage( tempCanvas, 0, 0 );
 		this.ctx.restore();
-
-		// Release GPU memory for temp canvas
-		tempCanvas.width = 0;
-		tempCanvas.height = 0;
 	}
 
 	/**
@@ -424,15 +461,17 @@ class ShadowRenderer {
 		const canvasWidth = this.canvas ? this.canvas.width : 800;
 		const canvasHeight = this.canvas ? this.canvas.height : 600;
 
-		const tempCanvas = document.createElement( 'canvas' );
-		tempCanvas.width = Math.min( MAX_CANVAS_DIM, canvasWidth + FAR_OFFSET + sp.blur + Math.abs( sp.offsetX ) );
-		tempCanvas.height = Math.min( MAX_CANVAS_DIM, canvasHeight + sp.blur + Math.abs( sp.offsetY ) );
-		const tempCtx = tempCanvas.getContext( '2d' );
+		// Reuse cached offscreen canvas to avoid per-frame GPU allocation
+		const tempW = Math.min( MAX_CANVAS_DIM, canvasWidth + FAR_OFFSET + sp.blur + Math.abs( sp.offsetX ) );
+		const tempH = Math.min( MAX_CANVAS_DIM, canvasHeight + sp.blur + Math.abs( sp.offsetY ) );
+		const temp = this._getTempCanvas( tempW, tempH );
 
-		if ( !tempCtx ) {
+		if ( !temp ) {
 			this.applyShadow( layer, scale );
 			return;
 		}
+		const tempCanvas = temp.canvas;
+		const tempCtx = temp.ctx;
 
 		// FIX (2025-12-08): Handle rotation separately from the FAR_OFFSET technique.
 		// Same approach as drawSpreadShadow - extract rotation and apply separately.
@@ -446,10 +485,15 @@ class ShadowRenderer {
 			if ( currentTransform.b !== 0 || currentTransform.c !== 0 ) {
 				hasRotation = true;
 				rotationAngle = Math.atan2( currentTransform.b, currentTransform.a );
+				// FIX (2026-02-10): Preserve scale when removing rotation.
+				// Same fix as drawSpreadShadow — decompose scale from the matrix.
+				const { a, b, c, d, e, f } = currentTransform;
+				const scaleX = Math.sqrt( a * a + b * b );
+				const scaleY = Math.sqrt( c * c + d * d );
 				transformWithoutRotation = new DOMMatrix( [
-					1, 0, 0, 1,
-					currentTransform.e,
-					currentTransform.f
+					scaleX, 0, 0, scaleY,
+					e,
+					f
 				] );
 			}
 		}
@@ -519,10 +563,6 @@ class ShadowRenderer {
 		this.ctx.globalAlpha = shadowOpacity;
 		this.ctx.drawImage( tempCanvas, 0, 0 );
 		this.ctx.restore();
-
-		// Release GPU memory for temp canvas
-		tempCanvas.width = 0;
-		tempCanvas.height = 0;
 	}
 
 	// ========================================================================

@@ -3508,7 +3508,7 @@ describe( 'Toolbar', function () {
 	} );
 
 	describe( 'arrange dropdown events', () => {
-		it( 'should handle toggle item click to toggle checkbox', () => {
+		it( 'should handle toggle item click to toggle checkbox via native label behavior', () => {
 			const container = document.createElement( 'div' );
 			const toolbar = new Toolbar( {
 				editor: mockEditor,
@@ -3518,8 +3518,8 @@ describe( 'Toolbar', function () {
 			// Get the arrange dropdown menu
 			const menu = container.querySelector( '.arrange-dropdown-menu' );
 			if ( menu ) {
-				// Create a mock toggle item
-				const toggleItem = document.createElement( 'div' );
+				// Use a <label> like createDropdownToggleItem does — native behavior toggles checkbox
+				const toggleItem = document.createElement( 'label' );
 				toggleItem.className = 'dropdown-toggle-item';
 				const checkbox = document.createElement( 'input' );
 				checkbox.type = 'checkbox';
@@ -3527,10 +3527,11 @@ describe( 'Toolbar', function () {
 				toggleItem.appendChild( checkbox );
 				menu.appendChild( toggleItem );
 
-				// Simulate click on toggle item (not directly on checkbox)
+				// Simulate click on label (not directly on checkbox)
+				// Native <label> behavior toggles the wrapped checkbox
 				toggleItem.click();
 
-				// Checkbox should be toggled
+				// Checkbox should be toggled by native label behavior
 				expect( checkbox.checked ).toBe( true );
 			}
 		} );

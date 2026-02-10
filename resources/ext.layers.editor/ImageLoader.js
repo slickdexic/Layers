@@ -289,6 +289,11 @@
 
 			this.image.onload = () => {
 				this.isLoading = false;
+				// Clear the timeout — image loaded successfully
+				if ( this.loadTimeoutId ) {
+					clearTimeout( this.loadTimeoutId );
+					this.loadTimeoutId = null;
+				}
 				this.onLoad( this.image, {
 					width: PLACEHOLDER_SIZE.width,
 					height: PLACEHOLDER_SIZE.height,

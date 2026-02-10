@@ -33,6 +33,10 @@
 			this.backgroundImage = this.config.backgroundImage || null;
 			this.baseWidth = this.config.baseWidth || null;
 			this.baseHeight = this.config.baseHeight || null;
+			/** @private Cached offscreen canvas for blur rendering */
+			this._blurCanvas = null;
+			/** @private Cached offscreen canvas context */
+			this._blurCtx = null;
 		}
 
 		/**
@@ -115,11 +119,19 @@
 			const canvasWidth = this.canvas.width;
 			const canvasHeight = this.canvas.height;
 
-			// Create temp canvas to capture current content
-			const tempCanvas = document.createElement( 'canvas' );
-			tempCanvas.width = canvasWidth;
-			tempCanvas.height = canvasHeight;
-			const tempCtx = tempCanvas.getContext( '2d' );
+			// Reuse cached offscreen canvas to avoid per-frame GPU allocation
+			if ( !this._blurCanvas ||
+				this._blurCanvas.width !== canvasWidth ||
+				this._blurCanvas.height !== canvasHeight ) {
+				this._blurCanvas = document.createElement( 'canvas' );
+				this._blurCanvas.width = canvasWidth;
+				this._blurCanvas.height = canvasHeight;
+				this._blurCtx = this._blurCanvas.getContext( '2d' );
+			} else {
+				this._blurCtx.clearRect( 0, 0, canvasWidth, canvasHeight );
+			}
+			const tempCanvas = this._blurCanvas;
+			const tempCtx = this._blurCtx;
 
 			if ( tempCtx ) {
 				try {
@@ -268,11 +280,17 @@
 			const paddedW = Math.min( canvasW - paddedX, Math.ceil( captureW + padding * 2 ) );
 			const paddedH = Math.min( canvasH - paddedY, Math.ceil( captureH + padding * 2 ) );
 
-			// Create temp canvas for the blur region
-			const tempCanvas = document.createElement( 'canvas' );
-			tempCanvas.width = Math.max( 1, paddedW );
-			tempCanvas.height = Math.max( 1, paddedH );
-			const tempCtx = tempCanvas.getContext( '2d' );
+			// Reuse temp canvas for the blur region (avoids per-frame allocation)
+			const reqW = Math.max( 1, paddedW );
+			const reqH = Math.max( 1, paddedH );
+			if ( !this._blurFillCanvas ) {
+				this._blurFillCanvas = document.createElement( 'canvas' );
+				this._blurFillCtx = this._blurFillCanvas.getContext( '2d' );
+			}
+			this._blurFillCanvas.width = reqW;
+			this._blurFillCanvas.height = reqH;
+			const tempCanvas = this._blurFillCanvas;
+			const tempCtx = this._blurFillCtx;
 
 			if ( !tempCtx ) {
 				return;

@@ -32,7 +32,7 @@ describe('HistoryManager', () => {
         };
 
         // Create HistoryManager instance
-        historyManager = new HistoryManager(mockCanvasManager);
+        historyManager = new HistoryManager({ canvasManager: mockCanvasManager });
     });
 
     describe('initialization', () => {
@@ -373,10 +373,10 @@ describe('HistoryManager', () => {
                 markDirty: jest.fn()
             };
             
-            const managerWithEditor = new HistoryManager({}, {
+            const managerWithEditor = new HistoryManager({ canvasManager: {
                 editor: mockEditor,
                 layers: mockLayers
-            });
+            } });
             
             managerWithEditor.saveState('Initial');
             mockEditor.layers[0].x = 999;
@@ -399,7 +399,7 @@ describe('HistoryManager', () => {
                 redraw: jest.fn()
             };
             
-            const managerLegacy = new HistoryManager({}, mockCanvasManagerLegacy);
+            const managerLegacy = new HistoryManager({ canvasManager: mockCanvasManagerLegacy });
             managerLegacy.saveState('Initial');
             managerLegacy.saveState('Changed');
             managerLegacy.undo();
@@ -430,7 +430,7 @@ describe('HistoryManager', () => {
                 redraw: jest.fn()
             };
             
-            const managerWithToolbar = new HistoryManager({}, mockWithToolbar);
+            const managerWithToolbar = new HistoryManager({ canvasManager: mockWithToolbar });
             managerWithToolbar.saveState('First');
             managerWithToolbar.saveState('Second');
             
@@ -460,7 +460,7 @@ describe('HistoryManager', () => {
                 redraw: jest.fn()
             };
             
-            const managerWithToolbar = new HistoryManager({}, mockWithToolbar);
+            const managerWithToolbar = new HistoryManager({ canvasManager: mockWithToolbar });
             managerWithToolbar.saveState('Only');
             
             expect(undoBtn.disabled).toBe(true);
@@ -651,7 +651,7 @@ describe('HistoryManager', () => {
                 isModified: false
             };
 
-            textLayerHistoryManager = new HistoryManager(textLayerCanvasManager);
+            textLayerHistoryManager = new HistoryManager({ canvasManager: textLayerCanvasManager });
         });
 
         test('should correctly undo text layer move - verifying history[0] has layers', () => {
@@ -716,7 +716,7 @@ describe('HistoryManager', () => {
             };
 
             // Step 3: Create HistoryManager with editor reference
-            const editorHistoryManager = new HistoryManager(mockEditor);
+            const editorHistoryManager = new HistoryManager({ editor: mockEditor });
 
             // At this point, layers are empty (like after initializeState())
             expect(mockStateManager.getLayers().length).toBe(0);
@@ -774,7 +774,7 @@ describe('HistoryManager', () => {
                 stateManager: mockStateManager
             };
 
-            const editorHistoryManager = new HistoryManager(mockEditor);
+            const editorHistoryManager = new HistoryManager({ editor: mockEditor });
 
             // BUG: saveState called while layers are still empty
             editorHistoryManager.saveState('premature-initial');
@@ -816,7 +816,7 @@ describe('HistoryManager', () => {
                 stateManager: mockStateManager
             };
 
-            const editorHistoryManager = new HistoryManager(mockEditor);
+            const editorHistoryManager = new HistoryManager({ editor: mockEditor });
 
             // Simulate premature saveState (e.g., from some initialization code)
             editorHistoryManager.saveState('premature-init');
@@ -869,7 +869,7 @@ describe('HistoryManager', () => {
                 stateManager: mockStateManager
             };
 
-            const hm = new HistoryManager(mockEditor);
+            const hm = new HistoryManager({ editor: mockEditor });
 
             // Initial state: both layers at original positions
             hm.saveInitialState();
@@ -923,7 +923,7 @@ describe('HistoryManager', () => {
                 set: (key, value) => { mockStateManagerState[key] = value; }
             };
 
-            const hm = new HistoryManager({ stateManager: mockStateManager });
+            const hm = new HistoryManager({ editor: { stateManager: mockStateManager } });
 
             // Build up history: initial, move1, move2, move3
             hm.saveInitialState();
@@ -977,75 +977,65 @@ describe('HistoryManager', () => {
                 editor: { name: 'testEditor' }
             };
             
-            const hm = new HistoryManager(canvasManagerLike);
+            const hm = new HistoryManager({ canvasManager: canvasManagerLike });
             
             expect(hm.canvasManager).toBe(canvasManagerLike);
-            expect(hm.editor).toBe(canvasManagerLike.editor);
+            expect(hm.editor).toBeNull();
+            // Editor is still accessible at runtime via getEditor()
+            expect(hm.getEditor()).toBe(canvasManagerLike.editor);
             expect(hm.config).toEqual({});
         });
 
         test('should handle plain config object without canvasManager', () => {
-            const plainConfig = { maxHistorySteps: 25 };
+            const hm = new HistoryManager({ maxHistorySteps: 25 });
             
-            const hm = new HistoryManager(plainConfig);
-            
-            expect(hm.config).toBe(plainConfig);
+            expect(hm.config).toEqual({});
             expect(hm.canvasManager).toBeNull();
             expect(hm.editor).toBeNull();
             expect(hm.maxHistorySteps).toBe(25);
         });
 
-        test('should handle traditional (config, canvasManager) signature', () => {
-            const config = { maxHistorySteps: 30 };
+        test('should accept both editor and canvasManager via options', () => {
+            const editorRef = { name: 'myEditor' };
             const canvasMgr = {
                 layers: [],
-                renderLayers: jest.fn(),
-                editor: { name: 'myEditor' }
+                renderLayers: jest.fn()
             };
             
-            const hm = new HistoryManager(config, canvasMgr);
+            const hm = new HistoryManager({ editor: editorRef, canvasManager: canvasMgr, maxHistorySteps: 30 });
             
-            expect(hm.config).toBe(config);
             expect(hm.canvasManager).toBe(canvasMgr);
-            expect(hm.editor).toBe(canvasMgr.editor);
+            expect(hm.editor).toBe(editorRef);
+            expect(hm.maxHistorySteps).toBe(30);
         });
     });
 
     describe('getEditor edge cases', () => {
         test('should return editor from direct reference', () => {
             const editor = { name: 'directEditor' };
-            const hm = new HistoryManager({ stateManager: {} });
+            const hm = new HistoryManager({ editor: { stateManager: {} } });
             hm.editor = editor;
             
             expect(hm.getEditor()).toBe(editor);
         });
 
-        test('should return canvasManager when it has stateManager', () => {
-            const canvasManagerWithState = {
+        test('should return editor from canvasManager.editor', () => {
+            const editorRef = { name: 'indirectEditor' };
+            const canvasManagerWithEditor = {
                 layers: [],
-                stateManager: { get: jest.fn() }
+                editor: editorRef
             };
-            const hm = new HistoryManager(canvasManagerWithState);
+            const hm = new HistoryManager({ canvasManager: canvasManagerWithEditor });
             
-            // getEditor should return canvasManager when it has stateManager (meaning it IS the editor)
-            expect(hm.getEditor()).toBe(canvasManagerWithState);
+            // getEditor finds editor via canvasManager.editor
+            expect(hm.getEditor()).toBe(editorRef);
         });
 
-        test('should return canvasManager via stateManager when canvasManager has stateManager but no editor', () => {
-            // Create a plain config object (not editor, not canvasManager-like)
-            // Then manually set canvasManager to something with stateManager
-            const hm = new HistoryManager({ maxHistorySteps: 10 });
+        test('should return editor when passed explicitly with canvasManager', () => {
+            const editorRef = { name: 'explicitEditor', stateManager: { get: jest.fn() } };
+            const hm = new HistoryManager({ editor: editorRef });
             
-            // Manually set up scenario: no direct editor, canvasManager without .editor, but WITH .stateManager
-            hm.editor = null;
-            hm.canvasManager = {
-                stateManager: { get: jest.fn() },
-                layers: []
-            };
-            
-            // Now getEditor should: skip direct editor (null), skip canvasManager.editor (undefined),
-            // then hit canvasManager.stateManager check and return canvasManager
-            expect(hm.getEditor()).toBe(hm.canvasManager);
+            expect(hm.getEditor()).toBe(editorRef);
         });
 
         test('should return null when no editor references available', () => {
@@ -1059,7 +1049,7 @@ describe('HistoryManager', () => {
         test('should return canvasManager from editor.canvasManager', () => {
             const innerCanvasManager = { canvas: document.createElement('canvas') };
             const editor = { canvasManager: innerCanvasManager };
-            const hm = new HistoryManager({ stateManager: {} });
+            const hm = new HistoryManager({ editor: { stateManager: {} } });
             hm.editor = editor;
             
             expect(hm.getCanvasManager()).toBe(innerCanvasManager);
@@ -1070,14 +1060,14 @@ describe('HistoryManager', () => {
                 layers: [],
                 canvas: document.createElement('canvas')
             };
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             
             expect(hm.getCanvasManager()).toBe(canvasMgr);
         });
 
         test('should fallback to stored canvasManager without canvas', () => {
             const simpleMock = { layers: [] };
-            const hm = new HistoryManager(simpleMock);
+            const hm = new HistoryManager({ canvasManager: simpleMock });
             
             expect(hm.getCanvasManager()).toBe(simpleMock);
         });
@@ -1097,7 +1087,7 @@ describe('HistoryManager', () => {
                 }
             };
             
-            const hm = new HistoryManager(editor);
+            const hm = new HistoryManager({ editor: editor });
             hm.saveState('test');
             
             expect(mockUpdateUndoRedoState).toHaveBeenCalledWith(false, false);
@@ -1115,7 +1105,7 @@ describe('HistoryManager', () => {
                 }
             };
             
-            const hm = new HistoryManager(editor);
+            const hm = new HistoryManager({ editor: editor });
             hm.startBatch('test batch');
             
             // Simulate some changes
@@ -1141,7 +1131,7 @@ describe('HistoryManager', () => {
                 }
             };
             
-            const hm = new HistoryManager(editor);
+            const hm = new HistoryManager({ editor: editor });
             hm.startBatch('test batch');
             
             // Simulate changes
@@ -1163,7 +1153,7 @@ describe('HistoryManager', () => {
                 canvas: document.createElement('canvas')
             };
             
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             hm.startBatch('test batch');
             
             // Simulate changes
@@ -1181,7 +1171,7 @@ describe('HistoryManager', () => {
             const canvasMgr = {
                 layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
             };
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             hm.maxHistorySteps = 10;
             
             // Add only 5 entries (half of max)
@@ -1203,7 +1193,7 @@ describe('HistoryManager', () => {
             const canvasMgr = {
                 layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
             };
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             hm.maxHistorySteps = 10;
             
             // Add 6 entries (more than half of max)
@@ -1227,7 +1217,7 @@ describe('HistoryManager', () => {
             const canvasMgr = {
                 layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
             };
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             
             // Add some history
             hm.saveState('state 1');
@@ -1253,7 +1243,7 @@ describe('HistoryManager', () => {
             const canvasMgr = {
                 layers: []
             };
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             
             hm.destroy();
             hm.destroy(); // Should not throw
@@ -1271,7 +1261,7 @@ describe('HistoryManager', () => {
                 editor: editorRef
             };
             
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             hm.editor = null; // Ensure no direct editor reference
             
             expect(hm.getEditor()).toBe(editorRef);
@@ -1286,7 +1276,7 @@ describe('HistoryManager', () => {
                 redraw: jest.fn()
             };
             
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             hm.editor = null; // Ensure no editor
             
             hm.startBatch('test batch');
@@ -1306,7 +1296,7 @@ describe('HistoryManager', () => {
             const canvasMgr = {
                 layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
             };
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             
             // Add initial state
             hm.saveState('initial');
@@ -1326,7 +1316,7 @@ describe('HistoryManager', () => {
             const canvasMgr = {
                 layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
             };
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             
             hm.saveState('state 1');
             hm.saveState('state 2');
@@ -1346,7 +1336,7 @@ describe('HistoryManager', () => {
             const canvasMgr = {
                 layers: [{ id: '1', type: 'rect', x: 0, y: 0, width: 50, height: 50 }]
             };
-            const hm = new HistoryManager(canvasMgr);
+            const hm = new HistoryManager({ canvasManager: canvasMgr });
             
             hm.saveState('state 1');
             hm.saveState('state 2');
@@ -1364,13 +1354,13 @@ describe('HistoryManager', () => {
         });
 
         test('should set isDestroyed flag on construction', () => {
-            const hm = new HistoryManager({ layers: [] });
+            const hm = new HistoryManager({ canvasManager: { layers: [] } });
             expect(hm.isDestroyed).toBe(false);
         });
 
         test('should clear editor reference on destroy', () => {
             const editor = { stateManager: { getLayers: () => [] } };
-            const hm = new HistoryManager(editor);
+            const hm = new HistoryManager({ editor: editor });
             expect(hm.editor).toBe(editor);
             
             hm.destroy();
@@ -1383,7 +1373,7 @@ describe('HistoryManager', () => {
             const originalLayers = window.Layers;
             delete window.Layers;
             
-            const hm = new HistoryManager({ layers: [] });
+            const hm = new HistoryManager({ canvasManager: { layers: [] } });
             expect(hm._getCloneLayersEfficient()).toBeNull();
             
             window.Layers = originalLayers;
@@ -1393,7 +1383,7 @@ describe('HistoryManager', () => {
             const originalLayers = window.Layers;
             window.Layers = {};
             
-            const hm = new HistoryManager({ layers: [] });
+            const hm = new HistoryManager({ canvasManager: { layers: [] } });
             expect(hm._getCloneLayersEfficient()).toBeNull();
             
             window.Layers = originalLayers;
@@ -1403,7 +1393,7 @@ describe('HistoryManager', () => {
             const originalLayers = window.Layers;
             window.Layers = { Utils: { cloneLayersEfficient: 'not a function' } };
             
-            const hm = new HistoryManager({ layers: [] });
+            const hm = new HistoryManager({ canvasManager: { layers: [] } });
             expect(hm._getCloneLayersEfficient()).toBeNull();
             
             window.Layers = originalLayers;
@@ -1414,7 +1404,7 @@ describe('HistoryManager', () => {
             const mockCloneFn = jest.fn();
             window.Layers = { Utils: { cloneLayersEfficient: mockCloneFn } };
             
-            const hm = new HistoryManager({ layers: [] });
+            const hm = new HistoryManager({ canvasManager: { layers: [] } });
             expect(hm._getCloneLayersEfficient()).toBe(mockCloneFn);
             
             window.Layers = originalLayers;
@@ -1429,7 +1419,7 @@ describe('HistoryManager', () => {
             window.Layers = { Utils: { cloneLayersEfficient: mockCloneFn } };
             
             const testLayers = [{ id: '1', type: 'rect' }];
-            const hm = new HistoryManager({ layers: testLayers });
+            const hm = new HistoryManager({ canvasManager: { layers: testLayers } });
             const snapshot = hm.getLayersSnapshot();
             
             expect(mockCloneFn).toHaveBeenCalledWith(testLayers);
@@ -1443,7 +1433,7 @@ describe('HistoryManager', () => {
             delete window.Layers;
             
             const testLayers = [{ id: '1', type: 'rect', x: 100 }];
-            const hm = new HistoryManager({ layers: testLayers });
+            const hm = new HistoryManager({ canvasManager: { layers: testLayers } });
             const snapshot = hm.getLayersSnapshot();
             
             // Should be a deep copy
@@ -1458,7 +1448,7 @@ describe('HistoryManager', () => {
             const originalLayers = window.Layers;
             delete window.Layers;
             
-            const hm = new HistoryManager({ layers: [] });
+            const hm = new HistoryManager({ canvasManager: { layers: [] } });
             const snapshot = hm.getLayersSnapshot();
             
             expect(snapshot).toEqual([]);
@@ -1470,7 +1460,7 @@ describe('HistoryManager', () => {
             const originalLayers = window.Layers;
             delete window.Layers;
             
-            const hm = new HistoryManager({ layers: undefined });
+            const hm = new HistoryManager({ canvasManager: { layers: undefined } });
             const snapshot = hm.getLayersSnapshot();
             
             expect(snapshot).toEqual([]);

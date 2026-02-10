@@ -212,6 +212,10 @@ class WikitextHooks {
 				$injector = self::getLayerInjector();
 				if ( $injector->injectIntoAttributes( $attribs, $file, $setName, 'ImageBeforeProduceHTML' ) ) {
 					self::$pageHasLayers = true;
+					// Register viewer module via ParserOutput for reliable cached delivery
+					if ( $parser && method_exists( $parser, 'getOutput' ) ) {
+						$parser->getOutput()->addModules( [ 'ext.layers' ] );
+					}
 				}
 			}
 		} catch ( \Throwable $e ) {
@@ -402,6 +406,10 @@ class WikitextHooks {
 
 		// Mark page has layers
 		self::$pageHasLayers = true;
+		// Register viewer module via ParserOutput for reliable cached delivery
+		if ( $parser && method_exists( $parser, 'getOutput' ) ) {
+			$parser->getOutput()->addModules( [ 'ext.layers' ] );
+		}
 
 		// Get injector instance for layer data injection
 		$injector = self::getLayerInjector();

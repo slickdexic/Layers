@@ -73,9 +73,15 @@ describe( 'ValidationManager', () => {
 			expect( manager.sanitizeString( [] ) ).toBe( '' );
 		} );
 
-		test( 'should remove angle brackets', () => {
-			expect( manager.sanitizeString( '<script>alert("xss")</script>' ) ).toBe( 'scriptalert("xss")/script' );
-			expect( manager.sanitizeString( '<div>test</div>' ) ).toBe( 'divtest/div' );
+		test( 'should strip dangerous HTML tags but preserve angle brackets', () => {
+			expect( manager.sanitizeString( '<script>alert("xss")</script>' ) ).toBe( 'alert("xss")' );
+			expect( manager.sanitizeString( '<div>test</div>' ) ).toBe( '<div>test</div>' );
+		} );
+
+		test( 'should preserve math expressions with angle brackets', () => {
+			expect( manager.sanitizeString( 'x < 5' ) ).toBe( 'x < 5' );
+			expect( manager.sanitizeString( 'a > b' ) ).toBe( 'a > b' );
+			expect( manager.sanitizeString( '3 < x < 10' ) ).toBe( '3 < x < 10' );
 		} );
 
 		test( 'should remove javascript: protocol', () => {
@@ -103,8 +109,6 @@ describe( 'ValidationManager', () => {
 		test( 'should handle multiple dangerous patterns', () => {
 			const malicious = '<img onerror=javascript:alert(1)>';
 			const result = manager.sanitizeString( malicious );
-			expect( result ).not.toContain( '<' );
-			expect( result ).not.toContain( '>' );
 			expect( result ).not.toContain( 'javascript:' );
 			expect( result ).not.toMatch( /on\w+=/i );
 		} );
@@ -132,7 +136,7 @@ describe( 'ValidationManager', () => {
 				name: 'onclick=hack()'
 			};
 			const result = manager.sanitizeLayerData( input );
-			expect( result.text ).not.toContain( '<' );
+			expect( result.text ).not.toContain( '<script>' );
 			expect( result.name ).not.toMatch( /on\w+=/i );
 		} );
 
@@ -157,7 +161,8 @@ describe( 'ValidationManager', () => {
 				}
 			};
 			const result = manager.sanitizeLayerData( input );
-			expect( result.style.color ).toBe( 'red' );
+			// <red> is not a dangerous tag, so it's preserved
+			expect( result.style.color ).toBe( '<red>' );
 			expect( result.style.shadow.text ).toBe( 'test()' );
 		} );
 
@@ -784,16 +789,71 @@ describe( 'ValidationManager', () => {
 				svg: '<svg><script>evil()</script><path d="M0 0 L10 10"/></svg>'
 			};
 			const result = manager.sanitizeLayerData( input );
-			// SVG sanitization removes <script but preserves valid SVG structure
-			// The sanitizer replaces /<\s*script/gi with '' leaving just >evil()
-			expect( result.svg ).not.toMatch( /<\s*script/i );
-			expect( result.svg ).toContain( '<svg>' );
-			expect( result.svg ).toContain( '<path' );
+			// DOMParser-based sanitizer removes <script> elements entirely
+			expect( result.svg ).not.toMatch( /script/i );
+			expect( result.svg ).toContain( 'svg' );
+			expect( result.svg ).toContain( 'path' );
 		} );
 
 		test( 'should handle non-string input in sanitizeSvgString', () => {
 			const result = manager.sanitizeSvgString( 123 );
 			expect( result ).toBe( '' );
+		} );
+
+		test( 'should remove style elements from SVG', () => {
+			const input = '<svg><style>*{background:url("javascript:alert(1)")}</style><rect/></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).not.toMatch( /<style/i );
+			expect( result ).toContain( 'rect' );
+		} );
+
+		test( 'should remove foreignObject elements from SVG', () => {
+			const input = '<svg><foreignObject><body onload="alert(1)"></body></foreignObject><circle/></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).not.toMatch( /foreignObject/i );
+			expect( result ).toContain( 'circle' );
+		} );
+
+		test( 'should remove event handler attributes from SVG elements', () => {
+			const input = '<svg><rect onclick="alert(1)" onmouseover="evil()" width="10"/></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).not.toMatch( /onclick/i );
+			expect( result ).not.toMatch( /onmouseover/i );
+			expect( result ).toContain( 'rect' );
+		} );
+
+		test( 'should remove javascript: URLs from href attributes', () => {
+			const input = '<svg><a href="javascript:alert(1)"><text>click</text></a></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).not.toMatch( /javascript:/i );
+		} );
+
+		test( 'should remove vbscript: URLs from SVG', () => {
+			const input = '<svg><a href="vbscript:MsgBox(1)"><text>click</text></a></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).not.toMatch( /vbscript:/i );
+		} );
+
+		test( 'should remove dangerous CSS patterns from style attributes', () => {
+			const input = '<svg><rect style="behavior:url(evil.htc)" width="10"/></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).not.toMatch( /behavior/i );
+			expect( result ).toContain( 'rect' );
+		} );
+
+		test( 'should return empty string for malformed SVG', () => {
+			const input = '<svg><not-closed';
+			const result = manager.sanitizeSvgString( input );
+			// DOMParser will generate a parsererror for malformed XML
+			expect( result ).toBe( '' );
+		} );
+
+		test( 'should preserve valid SVG with paths and transforms', () => {
+			const input = '<svg viewBox="0 0 100 100"><g transform="translate(10,10)"><path d="M0 0 L50 50"/></g></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).toContain( 'path' );
+			expect( result ).toContain( 'transform' );
+			expect( result ).toContain( 'viewBox' );
 		} );
 
 		test( 'should handle canvas context creation error in checkBrowserCompatibility', () => {

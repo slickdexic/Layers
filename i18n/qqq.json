@@ -755,5 +755,7 @@
 	"layers-input-text-too-long": "Error message shown when text exceeds the character limit. $1 is the maximum character count",
 	"layers-input-char-limit-warning": "Warning message shown when approaching character limit. $1 is current count, $2 is maximum",
 
+	"layers-unknown-user": "Fallback display name used when a user account cannot be resolved (e.g., deleted user)",
+
 	"specialpages-group-layers": "Name of the special pages group for Layers extension pages on Special:SpecialPages"
 }

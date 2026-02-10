@@ -709,7 +709,7 @@
 			// Create edit button if user has permission
 			if ( canEdit ) {
 				const editBtn = document.createElement( 'button' );
-				editBtn.className = 'layers-slide-overlay-btn layers-slide-overlay-btn--edit';
+				editBtn.className = 'layers-viewer-overlay-btn layers-viewer-overlay-btn--edit';
 				editBtn.setAttribute( 'type', 'button' );
 				editBtn.setAttribute( 'title', this._msg( 'layers-viewer-edit', 'Edit layers' ) );
 				editBtn.setAttribute( 'aria-label', this._msg( 'layers-viewer-edit', 'Edit layers' ) );
@@ -726,7 +726,7 @@
 
 			// Create view full size button
 			const viewBtn = document.createElement( 'button' );
-			viewBtn.className = 'layers-slide-overlay-btn layers-slide-overlay-btn--view';
+			viewBtn.className = 'layers-viewer-overlay-btn layers-viewer-overlay-btn--view';
 			viewBtn.setAttribute( 'type', 'button' );
 			viewBtn.setAttribute( 'title', this._msg( 'layers-viewer-view', 'View full size' ) );
 			viewBtn.setAttribute( 'aria-label', this._msg( 'layers-viewer-view', 'View full size' ) );
@@ -1052,25 +1052,38 @@
 		 * @return {SVGElement} Pencil icon SVG
 		 */
 		_createPencilIcon() {
+			const svgNs = 'http://www.w3.org/2000/svg';
+
 			// Try to use IconFactory if available (consistent with ViewerOverlay)
 			if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
 				window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createPencilIcon ) {
-				return window.Layers.UI.IconFactory.createPencilIcon( { size: 20, color: 'currentColor' } );
+				return window.Layers.UI.IconFactory.createPencilIcon( { size: 16, color: '#fff' } );
 			}
 
-			// Fallback inline SVG
-			const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
-			svg.setAttribute( 'viewBox', '0 0 20 20' );
-			svg.setAttribute( 'width', '20' );
-			svg.setAttribute( 'height', '20' );
+			// Fallback inline SVG — matches ViewerOverlay exactly
+			const svg = document.createElementNS( svgNs, 'svg' );
+			svg.setAttribute( 'width', '16' );
+			svg.setAttribute( 'height', '16' );
+			svg.setAttribute( 'viewBox', '0 0 24 24' );
+			svg.setAttribute( 'fill', 'none' );
 			svg.setAttribute( 'aria-hidden', 'true' );
-			svg.classList.add( 'layers-viewer-icon' );
 
-			const path = document.createElementNS( 'http://www.w3.org/2000/svg', 'path' );
-			path.setAttribute( 'd', 'M16.77 8l1.94-2a1 1 0 0 0 0-1.41l-3.34-3.3a1 1 0 0 0-1.41 0L12 3.23zM1 14.25V19h4.75l9.96-9.96-4.75-4.75z' );
-			path.setAttribute( 'fill', 'currentColor' );
+			const path1 = document.createElementNS( svgNs, 'path' );
+			path1.setAttribute( 'd', 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' );
+			path1.setAttribute( 'stroke', '#fff' );
+			path1.setAttribute( 'stroke-width', '2' );
+			path1.setAttribute( 'stroke-linecap', 'round' );
+			path1.setAttribute( 'stroke-linejoin', 'round' );
+			svg.appendChild( path1 );
 
-			svg.appendChild( path );
+			const path2 = document.createElementNS( svgNs, 'path' );
+			path2.setAttribute( 'd', 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' );
+			path2.setAttribute( 'stroke', '#fff' );
+			path2.setAttribute( 'stroke-width', '2' );
+			path2.setAttribute( 'stroke-linecap', 'round' );
+			path2.setAttribute( 'stroke-linejoin', 'round' );
+			svg.appendChild( path2 );
+
 			return svg;
 		}
 
@@ -1082,34 +1095,60 @@
 		 * @return {SVGElement} Expand icon SVG
 		 */
 		_createExpandIcon() {
+			const svgNs = 'http://www.w3.org/2000/svg';
+
 			// Try to use IconFactory if available (consistent with ViewerOverlay)
 			if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
-				window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createExpandIcon ) {
-				return window.Layers.UI.IconFactory.createExpandIcon( false, { size: 20, color: 'currentColor' } );
+				window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createFullscreenIcon ) {
+				return window.Layers.UI.IconFactory.createFullscreenIcon( { size: 16, color: '#fff' } );
 			}
 
-			// Fallback inline SVG
-			const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
-			svg.setAttribute( 'viewBox', '0 0 20 20' );
-			svg.setAttribute( 'width', '20' );
-			svg.setAttribute( 'height', '20' );
+			// Fallback inline SVG — matches ViewerOverlay exactly
+			const svg = document.createElementNS( svgNs, 'svg' );
+			svg.setAttribute( 'width', '16' );
+			svg.setAttribute( 'height', '16' );
+			svg.setAttribute( 'viewBox', '0 0 24 24' );
+			svg.setAttribute( 'fill', 'none' );
 			svg.setAttribute( 'aria-hidden', 'true' );
-			svg.classList.add( 'layers-viewer-icon' );
 
-			// Create paths for expand arrows
-			const paths = [
-				'M3 1h4v2H5.414L8 5.586 6.586 7 4 4.414V6H2V2a1 1 0 0 1 1-1z',
-				'M17 1h-4v2h1.586L12 5.586 13.414 7 16 4.414V6h2V2a1 1 0 0 0-1-1z',
-				'M3 19h4v-2H5.414L8 14.414 6.586 13 4 15.586V14H2v4a1 1 0 0 0 1 1z',
-				'M17 19h-4v-2h1.586L12 14.414 13.414 13 16 15.586V14h2v4a1 1 0 0 1-1 1z'
-			];
+			// Top-right corner
+			const path1 = document.createElementNS( svgNs, 'path' );
+			path1.setAttribute( 'd', 'M15 3h6v6' );
+			path1.setAttribute( 'stroke', '#fff' );
+			path1.setAttribute( 'stroke-width', '2' );
+			path1.setAttribute( 'stroke-linecap', 'round' );
+			path1.setAttribute( 'stroke-linejoin', 'round' );
+			svg.appendChild( path1 );
 
-			paths.forEach( ( d ) => {
-				const path = document.createElementNS( 'http://www.w3.org/2000/svg', 'path' );
-				path.setAttribute( 'd', d );
-				path.setAttribute( 'fill', 'currentColor' );
-				svg.appendChild( path );
-			} );
+			// Bottom-left corner
+			const path2 = document.createElementNS( svgNs, 'path' );
+			path2.setAttribute( 'd', 'M9 21H3v-6' );
+			path2.setAttribute( 'stroke', '#fff' );
+			path2.setAttribute( 'stroke-width', '2' );
+			path2.setAttribute( 'stroke-linecap', 'round' );
+			path2.setAttribute( 'stroke-linejoin', 'round' );
+			svg.appendChild( path2 );
+
+			// Diagonal lines
+			const line1 = document.createElementNS( svgNs, 'line' );
+			line1.setAttribute( 'x1', '21' );
+			line1.setAttribute( 'y1', '3' );
+			line1.setAttribute( 'x2', '14' );
+			line1.setAttribute( 'y2', '10' );
+			line1.setAttribute( 'stroke', '#fff' );
+			line1.setAttribute( 'stroke-width', '2' );
+			line1.setAttribute( 'stroke-linecap', 'round' );
+			svg.appendChild( line1 );
+
+			const line2 = document.createElementNS( svgNs, 'line' );
+			line2.setAttribute( 'x1', '3' );
+			line2.setAttribute( 'y1', '21' );
+			line2.setAttribute( 'x2', '10' );
+			line2.setAttribute( 'y2', '14' );
+			line2.setAttribute( 'stroke', '#fff' );
+			line2.setAttribute( 'stroke-width', '2' );
+			line2.setAttribute( 'stroke-linecap', 'round' );
+			svg.appendChild( line2 );
 
 			return svg;
 		}

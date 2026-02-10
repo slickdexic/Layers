@@ -629,116 +629,22 @@ describe('LayersEditor cancel method', () => {
         expect(mockShowDialog).toHaveBeenCalled();
     });
 
-    test('should use fallback showCancelConfirmDialog when dialogManager not available', () => {
-        const mockShowDialog = jest.fn();
+    test('should use window.confirm fallback when dialogManager not available', () => {
         const editorInstance = Object.create(LayersEditor.prototype);
         editorInstance.filename = 'Test.png';
-        editorInstance.stateManager = { get: jest.fn().mockReturnValue(true) };
+        editorInstance.stateManager = { get: jest.fn().mockReturnValue(true), set: jest.fn() };
         editorInstance.dialogManager = null;
-        editorInstance.showCancelConfirmDialog = mockShowDialog;
+        editorInstance.draftManager = { clearDraft: jest.fn() };
+        editorInstance.eventManager = { destroy: jest.fn() };
+        editorInstance.uiManager = { destroy: jest.fn() };
+        editorInstance.navigateBackToFileWithName = jest.fn();
+        window.confirm = jest.fn().mockReturnValue(true);
+        window.mw = { message: jest.fn().mockReturnValue({ text: () => 'Unsaved changes' }) };
         
         editorInstance.cancel(true);
         
-        expect(mockShowDialog).toHaveBeenCalled();
-    });
-});
-
-describe('LayersEditor showCancelConfirmDialog', () => {
-    let LayersEditor;
-
-    beforeEach(() => {
-        jest.resetModules();
-        window.StateManager = StateManager;
-        window.HistoryManager = HistoryManager;
-        require('../../resources/ext.layers.editor/LayersEditor.js');
-        LayersEditor = window.Layers.Core.Editor;
-        document.body.innerHTML = '';
-    });
-
-    afterEach(() => {
-        document.body.innerHTML = '';
-    });
-
-    test('should create dialog elements', () => {
-        const editorInstance = Object.create(LayersEditor.prototype);
-        
-        editorInstance.showCancelConfirmDialog(jest.fn());
-        
-        expect(document.querySelector('.layers-modal-overlay')).not.toBeNull();
-        expect(document.querySelector('.layers-modal-dialog')).not.toBeNull();
-    });
-
-    test('should set ARIA attributes on dialog', () => {
-        const editorInstance = Object.create(LayersEditor.prototype);
-        
-        editorInstance.showCancelConfirmDialog(jest.fn());
-        
-        const dialog = document.querySelector('.layers-modal-dialog');
-        expect(dialog.getAttribute('role')).toBe('alertdialog');
-        expect(dialog.getAttribute('aria-modal')).toBe('true');
-    });
-
-    test('should have cancel and confirm buttons', () => {
-        const editorInstance = Object.create(LayersEditor.prototype);
-        
-        editorInstance.showCancelConfirmDialog(jest.fn());
-        
-        const buttons = document.querySelectorAll('.layers-modal-buttons button');
-        expect(buttons.length).toBe(2);
-    });
-
-    test('should call onConfirm when discard button clicked', () => {
-        const onConfirm = jest.fn();
-        const editorInstance = Object.create(LayersEditor.prototype);
-        
-        editorInstance.showCancelConfirmDialog(onConfirm);
-        
-        // Second button is the confirm/discard button
-        const confirmBtn = document.querySelectorAll('.layers-modal-buttons button')[1];
-        confirmBtn.click();
-        
-        expect(onConfirm).toHaveBeenCalled();
-    });
-
-    test('should remove dialog when cancel button clicked', () => {
-        const editorInstance = Object.create(LayersEditor.prototype);
-        
-        editorInstance.showCancelConfirmDialog(jest.fn());
-        
-        // First button is the cancel/continue button
-        const cancelBtn = document.querySelectorAll('.layers-modal-buttons button')[0];
-        cancelBtn.click();
-        
-        expect(document.querySelector('.layers-modal-overlay')).toBeNull();
-        expect(document.querySelector('.layers-modal-dialog')).toBeNull();
-    });
-
-    test('should use layersMessages if available', () => {
-        window.layersMessages = {
-            get: jest.fn((key, fallback) => `translated-${key}`)
-        };
-        
-        const editorInstance = Object.create(LayersEditor.prototype);
-        
-        editorInstance.showCancelConfirmDialog(jest.fn());
-        
-        expect(window.layersMessages.get).toHaveBeenCalled();
-        
-        delete window.layersMessages;
-    });
-
-    test('should handle escape key to close dialog', () => {
-        const editorInstance = Object.create(LayersEditor.prototype);
-        
-        editorInstance.showCancelConfirmDialog(jest.fn());
-        
-        expect(document.querySelector('.layers-modal-dialog')).not.toBeNull();
-        
-        // Simulate escape key
-        const event = new KeyboardEvent('keydown', { key: 'Escape' });
-        document.dispatchEvent(event);
-        
-        expect(document.querySelector('.layers-modal-dialog')).toBeNull();
+        // eslint-disable-next-line no-alert
+        expect(window.confirm).toHaveBeenCalled();
     });
 });
 

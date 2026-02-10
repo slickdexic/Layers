@@ -462,10 +462,10 @@
 			// Fallback: open image in new tab/File page
 			if ( typeof mw !== 'undefined' && mw.util ) {
 				const fileUrl = mw.util.getUrl( 'File:' + this.filename ) + '?layers=on';
-				window.open( fileUrl, '_blank' );
+				window.open( fileUrl, '_blank', 'noopener,noreferrer' );
 			} else {
 				// Basic fallback
-				window.open( this.imageElement.src, '_blank' );
+				window.open( this.imageElement.src, '_blank', 'noopener,noreferrer' );
 			}
 		}
 
