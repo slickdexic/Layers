@@ -56,8 +56,14 @@ class ValidationManager {
 	}
 
 	/**
-	 * Sanitize SVG string input
-	 * Preserves < and > for valid SVG markup but removes dangerous content
+	 * Sanitize SVG string input using DOM parser for robust defense-in-depth.
+	 * Removes dangerous elements (script, style, foreignObject, etc.),
+	 * dangerous attributes (event handlers, javascript:/vbscript: URLs),
+	 * and dangerous CSS patterns. Falls back to regex stripping if DOM
+	 * parsing is unavailable.
+	 *
+	 * Note: Server-side validation in ServerSideLayerValidator::validateSvgString()
+	 * is the primary security boundary. This is defense-in-depth.
 	 *
 	 * @param {string} input - SVG string to sanitize
 	 * @return {string} Sanitized SVG string
@@ -66,12 +72,93 @@ class ValidationManager {
 		if ( typeof input !== 'string' ) {
 			return '';
 		}
-		// Remove dangerous content but preserve valid SVG markup
-		return input
-			.replace( /<\s*script/gi, '' ) // Remove script tags
-			.replace( /javascript:/gi, '' ) // Remove javascript: URLs
-			.replace( /on\w+\s*=/gi, '' ) // Remove event handlers
-			.trim();
+
+		// Dangerous elements to remove entirely (lowercase for comparison)
+		const DANGEROUS_ELEMENTS = [
+			'script', 'style', 'foreignobject', 'iframe', 'object',
+			'embed', 'form', 'input', 'textarea', 'button', 'select',
+			'link', 'meta', 'base'
+		];
+		// Include camelCase variants needed for XML-case-sensitive getElementsByTagName
+		const DANGEROUS_ELEMENTS_VARIANTS = [
+			...DANGEROUS_ELEMENTS, 'foreignObject'
+		];
+
+		// Dangerous URL schemes
+		const DANGEROUS_URL_RE = /^\s*(javascript|vbscript|data\s*:\s*text\/html)/i;
+
+		// Dangerous CSS patterns
+		const DANGEROUS_CSS_RE = /(expression|javascript|vbscript|-moz-binding|behavior|@import)/i;
+
+		// URL-bearing attributes
+		const URL_ATTRS = [ 'href', 'xlink:href', 'src', 'action', 'formaction' ];
+
+		try {
+			if ( typeof DOMParser === 'undefined' ) {
+				throw new Error( 'DOMParser not available' );
+			}
+
+			const parser = new DOMParser();
+			const doc = parser.parseFromString( input, 'image/svg+xml' );
+
+			// Check for XML parse error
+			if ( doc.querySelector( 'parsererror' ) ) {
+				return '';
+			}
+
+			// Remove dangerous elements (case-insensitive for XML/SVG)
+			for ( const tag of DANGEROUS_ELEMENTS_VARIANTS ) {
+				const elements = doc.getElementsByTagName( tag );
+				while ( elements.length > 0 ) {
+					elements[ 0 ].parentNode.removeChild( elements[ 0 ] );
+				}
+			}
+
+			// Walk all remaining elements and sanitize attributes
+			const allElements = doc.querySelectorAll( '*' );
+			for ( const el of allElements ) {
+				// Check if element tag is dangerous (case-insensitive catch-all)
+				if ( DANGEROUS_ELEMENTS.indexOf( el.tagName.toLowerCase() ) !== -1 ) {
+					el.parentNode.removeChild( el );
+					continue;
+				}
+				const attrs = Array.from( el.attributes );
+				for ( const attr of attrs ) {
+					const name = attr.name.toLowerCase();
+					const value = ( attr.value || '' ).trim();
+
+					// Remove event handler attributes (onclick, onload, etc.)
+					if ( /^on/i.test( name ) ) {
+						el.removeAttribute( attr.name );
+						continue;
+					}
+
+					// Remove dangerous URL schemes from href-like attributes
+					if ( URL_ATTRS.indexOf( name ) !== -1 ) {
+						if ( DANGEROUS_URL_RE.test( value ) ) {
+							el.removeAttribute( attr.name );
+							continue;
+						}
+					}
+
+					// Remove dangerous CSS patterns from style attributes
+					if ( name === 'style' && DANGEROUS_CSS_RE.test( value ) ) {
+						el.removeAttribute( attr.name );
+					}
+				}
+			}
+
+			// Serialize back to string
+			return new XMLSerializer().serializeToString( doc.documentElement );
+		} catch ( e ) {
+			// Fallback: regex stripping if DOM parsing unavailable or fails
+			return input
+				.replace( /<\s*\/?\s*(script|style|iframe|foreignobject|object|embed|form|input|textarea|button|select|link|meta|base)\b[^>]*>/gi, '' )
+				.replace( /javascript\s*:/gi, '' )
+				.replace( /vbscript\s*:/gi, '' )
+				.replace( /on\w+\s*=/gi, '' )
+				.trim();
+		}
 	}
 
 	/**
@@ -85,8 +172,12 @@ class ValidationManager {
 		if ( typeof input !== 'string' ) {
 			return '';
 		}
+		// Strip dangerous HTML tags (script, style, iframe, etc.) but preserve
+		// standalone < and > characters for math expressions (e.g., x < 5).
+		// Canvas2D fillText/strokeText renders text literally — it does not
+		// parse HTML, so angle brackets are harmless in this context.
 		return input
-			.replace( /[<>]/g, '' )
+			.replace( /<\s*\/?\s*(script|style|iframe|object|embed|form|input|textarea|button|select|link|meta|base)\b[^>]*>/gi, '' )
 			.replace( /javascript:/gi, '' )
 			.replace( /on\w+\s*=/gi, '' )
 			.trim();

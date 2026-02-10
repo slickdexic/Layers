@@ -123,7 +123,7 @@ class LayersEditor {
 			this.registry.register( 'APIManager', () => new APIManager( this ), [] );
 			this.registry.register( 'ValidationManager', () => new ValidationManager( this ), [] );
 			this.registry.register( 'StateManager', () => new StateManager( this ), [] );
-			this.registry.register( 'HistoryManager', () => new HistoryManager( this ), [] );
+			this.registry.register( 'HistoryManager', () => new HistoryManager( { editor: this } ), [] );
 		}
 	}
 
@@ -158,7 +158,7 @@ class LayersEditor {
 					APIManager: () => ( typeof APIManager === 'function' ) ? new APIManager( this ) : { loadLayers: function () { return Promise.resolve( {} ); }, saveLayers: function () { return Promise.resolve( {} ); }, destroy: function () {} },
 					ValidationManager: () => ( typeof ValidationManager === 'function' ) ? new ValidationManager( this ) : { checkBrowserCompatibility: function () { return true; }, sanitizeLayerData: function ( d ) { return d; }, validateLayers: function () { return true; }, destroy: function () {} },
 					StateManager: () => ( typeof StateManager === 'function' ) ? new StateManager( this ) : this.createStubStateManager(),
-					HistoryManager: () => ( typeof HistoryManager === 'function' ) ? new HistoryManager( this ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
+					HistoryManager: () => ( typeof HistoryManager === 'function' ) ? new HistoryManager( { editor: this } ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
 					Toolbar: () => ( typeof Toolbar === 'function' ) ? new Toolbar( { container: ( this.uiManager && this.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {}, updateAlignmentButtons: function () {} },
 					LayerPanel: () => ( typeof LayerPanel === 'function' ) ? new LayerPanel( { container: ( this.uiManager && this.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
 					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
@@ -1570,12 +1570,12 @@ class LayersEditor {
 					}
 				} );
 			} else {
-				// Fallback to showCancelConfirmDialog method
-				this.showCancelConfirmDialog( () => {
+				// Fallback to window.confirm when DialogManager unavailable
+				// eslint-disable-next-line no-alert
+				if ( window.confirm( mw.message( 'layers-cancel-confirm' ).text() ) ) {
 					if ( this.stateManager ) {
 						this.stateManager.set( 'isDirty', false );
 					}
-					// Clear draft when user confirms discarding changes
 					if ( this.draftManager ) {
 						this.draftManager.clearDraft();
 					}
@@ -1586,7 +1586,7 @@ class LayersEditor {
 					if ( navigateBack ) {
 						this.navigateBackToFileWithName( savedFilename );
 					}
-				} );
+				}
 			}
 		} else {
 			// No unsaved changes - clear any stale draft and close
@@ -1598,90 +1598,6 @@ class LayersEditor {
 				this.navigateBackToFileWithName( savedFilename );
 			}
 		}
-	}
-
-	/**
-	 * Show cancel confirmation dialog (fallback when DialogManager not available)
-	 * @param {Function} onConfirm Callback when user confirms
-	 * @private
-	 */
-	showCancelConfirmDialog ( onConfirm ) {
-		const t = function ( key, fallback ) {
-			if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
-				return window.layersMessages.get( key, fallback );
-			}
-			return fallback;
-		};
-
-		const overlay = document.createElement( 'div' );
-		overlay.className = 'layers-modal-overlay';
-		overlay.setAttribute( 'role', 'presentation' );
-
-		const dialog = document.createElement( 'div' );
-		dialog.className = 'layers-modal-dialog';
-		dialog.setAttribute( 'role', 'alertdialog' );
-		dialog.setAttribute( 'aria-modal', 'true' );
-		dialog.setAttribute( 'aria-label', t( 'layers-confirm-title', 'Confirm' ) );
-
-		const text = document.createElement( 'p' );
-		text.textContent = t( 'layers-cancel-confirm', 'You have unsaved changes. Are you sure you want to close the editor? All changes will be lost.' );
-		dialog.appendChild( text );
-
-		const buttons = document.createElement( 'div' );
-		buttons.className = 'layers-modal-buttons';
-
-		const cancelBtn = document.createElement( 'button' );
-		cancelBtn.textContent = t( 'layers-cancel-continue', 'Continue Editing' );
-		cancelBtn.className = 'layers-btn layers-btn-primary';
-
-		const confirmBtn = document.createElement( 'button' );
-		confirmBtn.textContent = t( 'layers-cancel-discard', 'Discard Changes' );
-		confirmBtn.className = 'layers-btn layers-btn-secondary layers-btn-danger';
-
-		buttons.appendChild( cancelBtn );
-		buttons.appendChild( confirmBtn );
-		dialog.appendChild( buttons );
-
-		document.body.appendChild( overlay );
-		document.body.appendChild( dialog );
-
-		const cleanup = function () {
-			if ( overlay.parentNode ) {
-				overlay.parentNode.removeChild( overlay );
-			}
-			if ( dialog.parentNode ) {
-				dialog.parentNode.removeChild( dialog );
-			}
-			document.removeEventListener( 'keydown', handleKey );
-		};
-
-		const handleKey = function ( e ) {
-			if ( e.key === 'Escape' ) {
-				cleanup();
-			} else if ( e.key === 'Tab' ) {
-				const focusable = dialog.querySelectorAll( 'button' );
-				if ( focusable.length ) {
-					const first = focusable[ 0 ];
-					const last = focusable[ focusable.length - 1 ];
-					if ( e.shiftKey && document.activeElement === first ) {
-						e.preventDefault();
-						last.focus();
-					} else if ( !e.shiftKey && document.activeElement === last ) {
-						e.preventDefault();
-						first.focus();
-					}
-				}
-			}
-		};
-		document.addEventListener( 'keydown', handleKey );
-
-		cancelBtn.addEventListener( 'click', cleanup );
-		confirmBtn.addEventListener( 'click', function () {
-			cleanup();
-			onConfirm();
-		} );
-
-		cancelBtn.focus();
 	}
 
 	/**

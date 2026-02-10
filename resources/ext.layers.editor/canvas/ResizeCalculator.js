@@ -10,6 +10,46 @@
 	/** ResizeCalculator class - static methods for resize calculations */
 	class ResizeCalculator {
 		/**
+		 * Determine if a handle drag is growing or shrinking
+		 * @param {string} handleType Handle being dragged (n/s/e/w/ne/nw/se/sw)
+		 * @param {number} deltaX Delta X movement
+		 * @param {number} deltaY Delta Y movement
+		 * @return {boolean} True if the drag direction indicates growth
+		 */
+		static _isGrowingDirection( handleType, deltaX, deltaY ) {
+			switch ( handleType ) {
+				case 'e': return deltaX > 0;
+				case 'w': return deltaX < 0;
+				case 'n': return deltaY < 0;
+				case 's': return deltaY > 0;
+				case 'ne': return ( deltaX - deltaY ) > 0;
+				case 'nw': return ( -deltaX - deltaY ) > 0;
+				case 'se': return ( deltaX + deltaY ) > 0;
+				case 'sw': return ( -deltaX + deltaY ) > 0;
+				default: return false;
+			}
+		}
+
+		/**
+		 * Calculate scalar property resize (used by text fontSize and marker size)
+		 * @param {number} originalValue Original property value
+		 * @param {string} handleType Handle being dragged
+		 * @param {number} deltaX Delta X movement
+		 * @param {number} deltaY Delta Y movement
+		 * @param {number} scale Scale factor for diagonal delta
+		 * @param {number} min Minimum allowed value
+		 * @param {number} max Maximum allowed value
+		 * @return {number} New rounded value clamped to [min, max]
+		 */
+		static _calculateScalarResize( originalValue, handleType, deltaX, deltaY, scale, min, max ) {
+			const diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
+			const change = diagonalDelta * scale;
+			const isGrowing = ResizeCalculator._isGrowingDirection( handleType, deltaX, deltaY );
+			const newValue = isGrowing ? originalValue + change : originalValue - change;
+			return Math.round( Math.max( min, Math.min( max, newValue ) ) );
+		}
+
+		/**
 		 * Calculate resize updates based on layer type
 		 * @return {Object|null} Updates object with new dimensions
 		 */
@@ -498,35 +538,7 @@
 			}
 
 			// Determine direction (growing or shrinking)
-			// Cardinal handles: check the relevant axis only.
-			// Diagonal handles: use dot product with handle direction vector.
-			let growing = false;
-			switch ( handleType ) {
-				case 'e':
-					growing = deltaX > 0;
-					break;
-				case 'w':
-					growing = deltaX < 0;
-					break;
-				case 'n':
-					growing = deltaY < 0;
-					break;
-				case 's':
-					growing = deltaY > 0;
-					break;
-				case 'ne':
-					growing = ( deltaX - deltaY ) > 0;
-					break;
-				case 'nw':
-					growing = ( -deltaX - deltaY ) > 0;
-					break;
-				case 'se':
-					growing = ( deltaX + deltaY ) > 0;
-					break;
-				case 'sw':
-					growing = ( -deltaX + deltaY ) > 0;
-					break;
-			}
+			const growing = ResizeCalculator._isGrowingDirection( handleType, deltaX, deltaY );
 
 			const newRadius = growing ?
 				origRadius + deltaDistance :
@@ -738,7 +750,6 @@
 
 		/**
 		 * Calculate text resize adjustments (changes font size)
-		 *
 		 * @param {Object} originalLayer Original layer properties
 		 * @param {string} handleType Handle being dragged
 		 * @param {number} deltaX Delta X movement
@@ -748,112 +759,22 @@
 		static calculateTextResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
-			const updates = {};
-			const originalFontSize = originalLayer.fontSize || 16;
-
-			// Calculate font size change based on diagonal movement
-			const diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
-			const fontSizeChange = diagonalDelta * 0.2;
-
-			// Determine if we're growing or shrinking based on handle direction
-			// Cardinal handles: check relevant axis only.
-			// Diagonal handles: use dot product with handle direction vector.
-			let isGrowing = false;
-			switch ( handleType ) {
-				case 'e':
-					isGrowing = deltaX > 0;
-					break;
-				case 'w':
-					isGrowing = deltaX < 0;
-					break;
-				case 'n':
-					isGrowing = deltaY < 0;
-					break;
-				case 's':
-					isGrowing = deltaY > 0;
-					break;
-				case 'se':
-					isGrowing = ( deltaX + deltaY ) > 0;
-					break;
-				case 'nw':
-					isGrowing = ( -deltaX - deltaY ) > 0;
-					break;
-				case 'ne':
-					isGrowing = ( deltaX - deltaY ) > 0;
-					break;
-				case 'sw':
-					isGrowing = ( -deltaX + deltaY ) > 0;
-					break;
-			}
-
-			let newFontSize = originalFontSize;
-			if ( isGrowing ) {
-				newFontSize += fontSizeChange;
-			} else {
-				newFontSize -= fontSizeChange;
-			}
-
-			// Clamp font size to reasonable bounds (6-500)
-			newFontSize = Math.max( 6, Math.min( 500, newFontSize ) );
-			updates.fontSize = Math.round( newFontSize );
-
-			return updates;
+			return {
+				fontSize: ResizeCalculator._calculateScalarResize(
+					originalLayer.fontSize || 16, handleType, deltaX, deltaY, 0.2, 6, 500
+				)
+			};
 		}
 
 		/** Calculate marker resize (scale the size property) @return {Object} */
 		static calculateMarkerResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
-			const updates = {};
-			const originalSize = originalLayer.size || 24;
-
-			// Calculate size change based on diagonal movement
-			const diagonalDelta = Math.sqrt( deltaX * deltaX + deltaY * deltaY );
-			const sizeChange = diagonalDelta * 0.5;
-
-			// Determine if we're growing or shrinking based on handle direction
-			// Cardinal handles: check relevant axis only.
-			// Diagonal handles: use dot product with handle direction vector.
-			let isGrowing = false;
-			switch ( handleType ) {
-				case 'e':
-					isGrowing = deltaX > 0;
-					break;
-				case 'w':
-					isGrowing = deltaX < 0;
-					break;
-				case 'n':
-					isGrowing = deltaY < 0;
-					break;
-				case 's':
-					isGrowing = deltaY > 0;
-					break;
-				case 'se':
-					isGrowing = ( deltaX + deltaY ) > 0;
-					break;
-				case 'nw':
-					isGrowing = ( -deltaX - deltaY ) > 0;
-					break;
-				case 'ne':
-					isGrowing = ( deltaX - deltaY ) > 0;
-					break;
-				case 'sw':
-					isGrowing = ( -deltaX + deltaY ) > 0;
-					break;
-			}
-
-			let newSize = originalSize;
-			if ( isGrowing ) {
-				newSize += sizeChange;
-			} else {
-				newSize -= sizeChange;
-			}
-
-			// Clamp size to reasonable bounds (10-200)
-			newSize = Math.max( 10, Math.min( 200, newSize ) );
-			updates.size = Math.round( newSize );
-
-			return updates;
+			return {
+				size: ResizeCalculator._calculateScalarResize(
+					originalLayer.size || 24, handleType, deltaX, deltaY, 0.5, 10, 200
+				)
+			};
 		}
 
 		/** Calculate dimension resize (move endpoints) @return {Object} */
@@ -999,6 +920,34 @@
 			updates.tailTipY = currentLocalTipY + localDeltaY;
 
 			return updates;
+		}
+
+		/**
+		 * Get the appropriate CSS cursor for a resize handle, accounting for rotation
+		 * @param {string} handleType Handle type (n/s/e/w/ne/nw/se/sw)
+		 * @param {number} [rotation] Layer rotation in degrees
+		 * @return {string} CSS cursor value
+		 */
+		static getResizeCursor( handleType, rotation ) {
+			const handleAngles = {
+				n: 0, ne: 45, e: 90, se: 135,
+				s: 180, sw: 225, w: 270, nw: 315
+			};
+
+			const baseAngle = handleAngles[ handleType ];
+			if ( baseAngle === undefined ) {
+				return 'default';
+			}
+
+			const normalizedAngle = ( ( ( baseAngle + ( rotation || 0 ) ) % 360 ) + 360 ) % 360;
+			const sector = Math.round( normalizedAngle / 45 ) % 8;
+
+			const cursorMap = [
+				'ns-resize', 'nesw-resize', 'ew-resize', 'nwse-resize',
+				'ns-resize', 'nesw-resize', 'ew-resize', 'nwse-resize'
+			];
+
+			return cursorMap[ sector ];
 		}
 	}
 

@@ -379,9 +379,10 @@ class UIHooks {
 		}
 
 		// Enrich the sets
+		$fallback = \wfMessage( 'layers-unknown-user' )->inContentLanguage()->text();
 		foreach ( $namedSets as &$set ) {
 			$userId = (int)( $set['latest_user_id'] ?? 0 );
-			$set['latest_user_name'] = $userNames[$userId] ?? ( $userId > 0 ? "User #$userId" : 'Unknown' );
+			$set['latest_user_name'] = $userNames[$userId] ?? $fallback;
 		}
 
 		return $namedSets;
@@ -409,7 +410,6 @@ class UIHooks {
 		$revisionsLabel = $msg( 'layers-filepage-revisions', 'Revisions' );
 		$lastModifiedLabel = $msg( 'layers-filepage-last-modified', 'Last Modified' );
 		$editLabel = $msg( 'layers-filepage-edit', 'Edit' );
-		$viewLabel = $msg( 'layers-filepage-view', 'View' );
 
 		$html = '<div class="layers-filepage-section mw-collapsible mw-collapsed">';
 		$html .= '<h2 class="layers-filepage-header mw-collapsible-toggle">';
@@ -428,7 +428,7 @@ class UIHooks {
 
 		foreach ( $namedSets as $set ) {
 			$setName = $set['ls_name'] ?? $set['name'] ?? LayersConstants::DEFAULT_SET_NAME;
-			$author = $set['latest_user_name'] ?? 'Unknown';
+			$author = $set['latest_user_name'] ?? \wfMessage( 'layers-unknown-user' )->inContentLanguage()->text();
 			$revisions = (int)( $set['revision_count'] ?? 1 );
 			$timestamp = $set['latest_timestamp'] ?? '';
 
@@ -449,9 +449,6 @@ class UIHooks {
 				'action' => 'editlayers',
 				'setname' => $setName
 			] );
-
-			// Build view URL (wikitext syntax hint)
-			$viewUrl = $title->getLocalURL();
 
 			$html .= '<tr>';
 			$html .= '<td><code>' . \htmlspecialchars( $setName ) . '</code></td>';

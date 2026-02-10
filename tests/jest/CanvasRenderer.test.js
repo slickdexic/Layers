@@ -520,8 +520,8 @@ describe('CanvasRenderer', () => {
             expect(TextUtils.sanitizeTextContent(123)).toBe('123');
         });
 
-        test('should remove HTML tags', () => {
-            expect(TextUtils.sanitizeTextContent('<b>bold</b>')).toBe('bold');
+        test('should strip dangerous HTML tags but preserve harmless ones', () => {
+            expect(TextUtils.sanitizeTextContent('<b>bold</b>')).toBe('<b>bold</b>');
             expect(TextUtils.sanitizeTextContent('<script>alert("xss")</script>')).toBe('alert("xss")');
         });
 

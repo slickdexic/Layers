@@ -70,8 +70,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Canvas controllers (`resources/ext.layers.editor/canvas/`): Extracted from CanvasManager for separation of concerns:
     - `ZoomPanController.js` (~385 lines) - zoom, pan, fit-to-window, coordinate transforms
     - `SmartGuidesController.js` (~745 lines) - smart guides and snap alignment
-    - `TransformController.js` (~1,117 lines) - resize, rotation, multi-layer transforms [GOD CLASS]
-    - `ResizeCalculator.js` (~995 lines) - shape-specific resize calculations
+    - `TransformController.js` (~985 lines) - resize, rotation, multi-layer transforms
+    - `ResizeCalculator.js` (~963 lines) - shape-specific resize calculations, cursor mapping
     - `HitTestController.js` (~580 lines) - selection handle and layer hit testing
     - `DrawingController.js` (~826 lines) - shape/tool creation and drawing preview
     - `ClipboardController.js` (~277 lines) - copy/cut/paste operations
@@ -111,11 +111,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 21 files exceed 1,000 lines:
+  - **God classes:** 16 files exceed 1,000 lines:
     - **Generated data files (exempt):** ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,055 lines)
-    - **Hand-written JS files (17):** LayerPanel (~2,191), CanvasManager (~2,053), Toolbar (~1,891), LayersEditor (~1,846), InlineTextEditor (~1,672), APIManager (~1,570), PropertyBuilders (~1,495), SelectionManager (~1,415), CanvasRenderer (~1,391), ViewerManager (~1,320), ToolManager (~1,214), GroupManager (~1,207), SlideController (~1,131), TransformController (~1,117), LayersValidator (~1,116), ResizeCalculator (~1,017), ShapeRenderer (~1,010)
+    - **Hand-written JS files (12):** LayerPanel (~2,191), CanvasManager (~2,053), Toolbar (~1,891), LayersEditor (~1,846), InlineTextEditor (~1,672), APIManager (~1,570), PropertyBuilders (~1,495), SelectionManager (~1,415), CanvasRenderer (~1,391), ViewerManager (~1,320), SlideController (~1,131), TextBoxRenderer (~1,120)
     - **PHP god classes (2):** ServerSideLayerValidator.php (~1,346 lines), LayersDatabase.php (~1,363 lines)
-    - **Near-threshold files (7):** ToolbarStyleControls (~998), TextBoxRenderer (~996), PropertiesForm (~994), ArrowRenderer (~974), LayerRenderer (~973), CalloutRenderer (~961), StateManager (~940)
+    - **Near-threshold files (10):** ToolbarStyleControls (~998), PropertiesForm (~994), GroupManager (~987), TransformController (~985), ArrowRenderer (~974), LayerRenderer (~973), CalloutRenderer (~961), ShapeRenderer (~959), ResizeCalculator (~963), LayersValidator (~935)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -405,7 +405,7 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,254 tests in 165 suites — verified February 8, 2026)
+- Test count (11,140 tests in 164 suites — verified July 23, 2025)
 - Coverage (95.19% statement, 84.96% branch — verified February 8, 2026)
 - JavaScript file count (140 files total, ~96,886 lines)
 - PHP file count (39 files, ~15,034 lines)
@@ -415,4 +415,4 @@ Common metrics to keep synchronized:
 - Shape library count (5,116 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.52)
+- Version number (1.5.55)

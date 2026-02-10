@@ -19,7 +19,10 @@ return [
 		return new LayersLogger();
 	},
 	'LayersSchemaManager' => static function ( MediaWikiServices $services ): LayersSchemaManager {
-		return new LayersSchemaManager();
+		return new LayersSchemaManager(
+			$services->get( 'LayersLogger' ),
+			$services->getConnectionProvider()
+		);
 	},
 	'LayersDatabase' => static function ( MediaWikiServices $services ): LayersDatabase {
 		return new LayersDatabase(

@@ -805,7 +805,7 @@ describe( 'ViewerOverlay', () => {
 			const viewBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--view' );
 			viewBtn.click();
 
-			expect( mockOpen ).toHaveBeenCalledWith( img.src, '_blank' );
+			expect( mockOpen ).toHaveBeenCalledWith( img.src, '_blank', 'noopener,noreferrer' );
 
 			window.open = originalOpen;
 		} );

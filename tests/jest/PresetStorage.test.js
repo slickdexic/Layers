@@ -409,5 +409,55 @@ describe( 'PresetStorage', () => {
 			expect( PresetStorage.ALLOWED_STYLE_PROPERTIES ).toContain( 'stroke' );
 			expect( PresetStorage.ALLOWED_STYLE_PROPERTIES ).toContain( 'fill' );
 		} );
+
+		// P1-020 regression: gradient must be in the allowed properties
+		test( 'includes gradient in ALLOWED_STYLE_PROPERTIES', () => {
+			expect( PresetStorage.ALLOWED_STYLE_PROPERTIES ).toContain( 'gradient' );
+		} );
+	} );
+
+	describe( 'gradient preset preservation (P1-020)', () => {
+		test( 'sanitizeStyle preserves gradient property', () => {
+			const style = {
+				fill: '#ff0000',
+				gradient: {
+					type: 'linear',
+					angle: 90,
+					colors: [
+						{ offset: 0, color: '#ff0000' },
+						{ offset: 1, color: '#0000ff' }
+					]
+				},
+				stroke: '#000000'
+			};
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized.gradient ).toBeDefined();
+			expect( sanitized.gradient.type ).toBe( 'linear' );
+			expect( sanitized.gradient.colors ).toHaveLength( 2 );
+		} );
+
+		test( 'gradient data survives save/load round-trip', () => {
+			const presets = [ {
+				id: 'test-gradient',
+				name: 'Gradient Test',
+				tool: 'rectangle',
+				style: {
+					fill: 'transparent',
+					gradient: {
+						type: 'radial',
+						centerX: 0.5,
+						centerY: 0.5,
+						colors: [
+							{ offset: 0, color: '#ffffff' },
+							{ offset: 1, color: '#000000' }
+						]
+					}
+				}
+			} ];
+			storage.save( presets );
+			const loaded = storage.load();
+			expect( loaded[ 0 ].style.gradient ).toBeDefined();
+			expect( loaded[ 0 ].style.gradient.type ).toBe( 'radial' );
+		} );
 	} );
 } );

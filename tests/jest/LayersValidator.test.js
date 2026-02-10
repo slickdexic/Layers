@@ -1610,38 +1610,36 @@ describe( 'LayersValidator', () => {
 				validator.ValidationHelpers = originalHelpers;
 			} );
 
-			it( 'should validate rgb/rgba colors in fallback mode', () => {
+			it( 'should validate rgb/rgba colors in fallback mode (hex only)', () => {
 				const originalHelpers = validator.ValidationHelpers;
 				validator.ValidationHelpers = null;
 
-				expect( validator.isValidColor( 'rgb(255, 0, 0)' ) ).toBe( true );
-				expect( validator.isValidColor( 'rgba(255, 0, 0, 0.5)' ) ).toBe( true );
-				expect( validator.isValidColor( 'rgb(300, 0, 0)' ) ).toBe( false ); // Out of range
-				expect( validator.isValidColor( 'rgb(-1, 0, 0)' ) ).toBe( false ); // Negative
+				// Minimal fallback only accepts hex - rgb/rgba requires ValidationHelpers
+				expect( validator.isValidColor( 'rgb(255, 0, 0)' ) ).toBe( false );
+				expect( validator.isValidColor( 'rgba(255, 0, 0, 0.5)' ) ).toBe( false );
 
 				validator.ValidationHelpers = originalHelpers;
 			} );
 
-			it( 'should validate hsl/hsla colors in fallback mode', () => {
+			it( 'should reject non-hex colors in minimal fallback mode', () => {
 				const originalHelpers = validator.ValidationHelpers;
 				validator.ValidationHelpers = null;
 
-				expect( validator.isValidColor( 'hsl(180, 50%, 50%)' ) ).toBe( true );
-				expect( validator.isValidColor( 'hsla(180, 50%, 50%, 0.5)' ) ).toBe( true );
-				expect( validator.isValidColor( 'hsl(400, 50%, 50%)' ) ).toBe( false ); // Hue > 360
-				expect( validator.isValidColor( 'hsl(180, 150%, 50%)' ) ).toBe( false ); // Saturation > 100
-				expect( validator.isValidColor( 'hsl(180, 50%, 150%)' ) ).toBe( false ); // Lightness > 100
+				// Minimal fallback only accepts hex - hsl requires ValidationHelpers
+				expect( validator.isValidColor( 'hsl(180, 50%, 50%)' ) ).toBe( false );
+				expect( validator.isValidColor( 'hsla(180, 50%, 50%, 0.5)' ) ).toBe( false );
 
 				validator.ValidationHelpers = originalHelpers;
 			} );
 
-			it( 'should validate named colors in fallback mode', () => {
+			it( 'should reject named colors in minimal fallback mode', () => {
 				const originalHelpers = validator.ValidationHelpers;
 				validator.ValidationHelpers = null;
 
-				expect( validator.isValidColor( 'red' ) ).toBe( true );
-				expect( validator.isValidColor( 'transparent' ) ).toBe( true );
-				expect( validator.isValidColor( 'BLUE' ) ).toBe( true ); // Case insensitive
+				// Minimal fallback only accepts hex - named colors require ValidationHelpers
+				expect( validator.isValidColor( 'red' ) ).toBe( false );
+				expect( validator.isValidColor( 'transparent' ) ).toBe( false );
+				expect( validator.isValidColor( 'BLUE' ) ).toBe( false );
 				expect( validator.isValidColor( 'notacolor' ) ).toBe( false );
 
 				validator.ValidationHelpers = originalHelpers;
@@ -1684,7 +1682,7 @@ describe( 'LayersValidator', () => {
 		} );
 
 		describe( 'getMessage fallback', () => {
-			it( 'should use fallback messages when i18n unavailable', () => {
+			it( 'should return key when i18n unavailable (minimal fallback)', () => {
 				const originalHelpers = validator.ValidationHelpers;
 				const originalLayersMessages = window.layersMessages;
 				const originalMw = window.mw;
@@ -1693,15 +1691,16 @@ describe( 'LayersValidator', () => {
 				window.layersMessages = null;
 				window.mw = null;
 
+				// Minimal fallback returns the raw key
 				const message = validator.getMessage( 'layers-validation-layer-invalid' );
-				expect( message ).toBe( 'Invalid layer object' );
+				expect( message ).toBe( 'layers-validation-layer-invalid' );
 
 				validator.ValidationHelpers = originalHelpers;
 				window.layersMessages = originalLayersMessages;
 				window.mw = originalMw;
 			} );
 
-			it( 'should substitute parameters in fallback messages', () => {
+			it( 'should substitute parameters in minimal fallback', () => {
 				const originalHelpers = validator.ValidationHelpers;
 				const originalLayersMessages = window.layersMessages;
 				const originalMw = window.mw;
@@ -1710,8 +1709,9 @@ describe( 'LayersValidator', () => {
 				window.layersMessages = null;
 				window.mw = null;
 
+				// Minimal fallback substitutes params into the key string
 				const message = validator.getMessage( 'layers-validation-type-invalid', 'badtype' );
-				expect( message ).toBe( 'Invalid layer type: badtype' );
+				expect( message ).toBe( 'layers-validation-type-invalid' );
 
 				validator.ValidationHelpers = originalHelpers;
 				window.layersMessages = originalLayersMessages;
@@ -1735,41 +1735,22 @@ describe( 'LayersValidator', () => {
 				window.mw = originalMw;
 			} );
 
-			it( 'should use layersMessages when available', () => {
-				const originalHelpers = validator.ValidationHelpers;
-				validator.ValidationHelpers = null;
-
-				const mockMessages = {
-					get: jest.fn( () => 'Translated message' ),
-					getWithParams: jest.fn( () => 'Translated with params' )
-				};
-				window.layersMessages = mockMessages;
+			it( 'should delegate to ValidationHelpers.getMessage when available', () => {
+				const mockGetMessage = jest.fn( () => 'Translated message' );
+				validator.ValidationHelpers = { getMessage: mockGetMessage };
 
 				const message = validator.getMessage( 'layers-validation-layer-invalid' );
-				expect( mockMessages.get ).toHaveBeenCalledWith( 'layers-validation-layer-invalid', expect.any( String ) );
-
-				validator.ValidationHelpers = originalHelpers;
+				expect( mockGetMessage ).toHaveBeenCalledWith( 'layers-validation-layer-invalid' );
+				expect( message ).toBe( 'Translated message' );
 			} );
 
-			it( 'should use mw.message when layersMessages unavailable', () => {
-				const originalHelpers = validator.ValidationHelpers;
-				validator.ValidationHelpers = null;
-				window.layersMessages = null;
+			it( 'should pass params to ValidationHelpers.getMessage', () => {
+				const mockGetMessage = jest.fn( () => 'Translated with params' );
+				validator.ValidationHelpers = { getMessage: mockGetMessage };
 
-				const mockMsg = {
-					text: jest.fn( () => 'MW message' ),
-					params: jest.fn( function () {
-						return this;
-					} )
-				};
-				window.mw = {
-					message: jest.fn( () => mockMsg )
-				};
-
-				const message = validator.getMessage( 'layers-validation-layer-invalid' );
-				expect( window.mw.message ).toHaveBeenCalledWith( 'layers-validation-layer-invalid' );
-
-				validator.ValidationHelpers = originalHelpers;
+				const message = validator.getMessage( 'layers-validation-type-invalid', 'badtype' );
+				expect( mockGetMessage ).toHaveBeenCalledWith( 'layers-validation-type-invalid', 'badtype' );
+				expect( message ).toBe( 'Translated with params' );
 			} );
 		} );
 

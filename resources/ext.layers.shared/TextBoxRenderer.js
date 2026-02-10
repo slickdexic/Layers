@@ -572,11 +572,135 @@
 					} else {
 						currentLine = testLine;
 					}
+
+					// Break long words that exceed maxWidth character-by-character
+					while ( currentLine.length > 1 &&
+						this.ctx.measureText( currentLine ).width > maxWidth ) {
+						let breakIdx = currentLine.length - 1;
+						while ( breakIdx > 1 &&
+							this.ctx.measureText( currentLine.substring( 0, breakIdx ) ).width > maxWidth ) {
+							breakIdx--;
+						}
+						lines.push( currentLine.substring( 0, breakIdx ) );
+						currentLine = currentLine.substring( breakIdx );
+					}
 				}
 
 				if ( currentLine ) {
 					lines.push( currentLine );
 				}
+			}
+
+			this.ctx.restore();
+			return lines.length > 0 ? lines : [ '' ];
+		}
+
+		/**
+		 * Wrap rich text with per-run font metrics for accurate line breaking.
+		 * Unlike wrapText(), this sets ctx.font per-run to measure each segment
+		 * at its actual rendered font size, avoiding incorrect line breaks when
+		 * runs have different font sizes. Falls back to wrapText() for
+		 * non-rich-text or when runs lack style overrides.
+		 *
+		 * @param {Array} richText - Rich text runs [{text, style?}, ...]
+		 * @param {number} maxWidth - Maximum line width in pixels
+		 * @param {Object} baseStyle - Base style {fontSize, fontFamily, fontWeight, fontStyle}
+		 * @param {Object} scale - Scale factors {avg}
+		 * @return {Array<string>} Wrapped lines
+		 */
+		wrapRichText( richText, maxWidth, baseStyle, scale ) {
+			if ( !Array.isArray( richText ) || richText.length === 0 ) {
+				return [ '' ];
+			}
+
+			this.ctx.save();
+
+			// Build a flat list of word/space/newline tokens with their run style
+			const tokens = [];
+			for ( const run of richText ) {
+				if ( !run || !run.text ) {
+					continue;
+				}
+				const style = run.style || {};
+				const fontSize = ( style.fontSize || baseStyle.fontSize ) * scale.avg;
+				const fontFamily = style.fontFamily || baseStyle.fontFamily;
+				const fontWeight = style.fontWeight || baseStyle.fontWeight;
+				const fontStyle = style.fontStyle || baseStyle.fontStyle;
+				const font = `${ fontStyle } ${ fontWeight } ${ fontSize }px ${ fontFamily }`;
+
+				// Split run text into word/space/newline segments
+				const segments = run.text.split( /(\s)/ );
+				for ( const seg of segments ) {
+					if ( seg === '' ) {
+						continue;
+					}
+					tokens.push( { text: seg, font: font } );
+				}
+			}
+
+			// Walk tokens and build lines
+			const lines = [];
+			let currentLine = '';
+			let currentWidth = 0;
+			let lastFont = '';
+
+			for ( const token of tokens ) {
+				if ( token.text === '\n' ) {
+					lines.push( currentLine );
+					currentLine = '';
+					currentWidth = 0;
+					continue;
+				}
+
+				// Measure token at its actual font
+				if ( token.font !== lastFont ) {
+					this.ctx.font = token.font;
+					lastFont = token.font;
+				}
+				const tokenWidth = this.ctx.measureText( token.text ).width;
+
+				if ( token.text === ' ' ) {
+					// Space token — accumulate but allow break here
+					if ( currentWidth + tokenWidth > maxWidth && currentLine.length > 0 ) {
+						lines.push( currentLine );
+						currentLine = '';
+						currentWidth = 0;
+					} else {
+						currentLine += ' ';
+						currentWidth += tokenWidth;
+					}
+					continue;
+				}
+
+				// Word token
+				if ( currentWidth + tokenWidth > maxWidth && currentLine.length > 0 ) {
+					// Word doesn't fit on current line — wrap
+					lines.push( currentLine );
+					currentLine = '';
+					currentWidth = 0;
+				}
+
+				// Break oversized word character-by-character
+				if ( tokenWidth > maxWidth ) {
+					const chars = token.text;
+					for ( let i = 0; i < chars.length; i++ ) {
+						const charW = this.ctx.measureText( chars[ i ] ).width;
+						if ( currentWidth + charW > maxWidth && currentLine.length > 0 ) {
+							lines.push( currentLine );
+							currentLine = '';
+							currentWidth = 0;
+						}
+						currentLine += chars[ i ];
+						currentWidth += charW;
+					}
+				} else {
+					currentLine += token.text;
+					currentWidth += tokenWidth;
+				}
+			}
+
+			if ( currentLine.length > 0 ) {
+				lines.push( currentLine );
 			}
 
 			this.ctx.restore();
@@ -807,8 +931,8 @@
 			this.ctx.textBaseline = 'alphabetic';
 			this.ctx.globalAlpha = baseOpacity;
 
-			// Wrap text and calculate line metrics
-			const lines = this.wrapText( plainText, width - padding * 2, baseFontSize, baseStyle.fontFamily, baseStyle.fontWeight, baseStyle.fontStyle );
+			// Wrap text using per-run font metrics for accurate line breaking
+			const lines = this.wrapRichText( richText, width - padding * 2, baseStyle, scale );
 			const lineMetrics = RichTextUtils ?
 				RichTextUtils.calculateLineMetrics( lines, richText, plainText, baseFontSize, lineHeightMultiplier, scale ) :
 				this._calculateLineMetricsFallback( lines, richText, plainText, baseFontSize, lineHeightMultiplier, scale );

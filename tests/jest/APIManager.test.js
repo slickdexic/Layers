@@ -1143,6 +1143,40 @@ describe( 'APIManager', function () {
 
 			expect( result ).toBe( true );
 		} );
+
+		// P3-007 regression: checkSizeLimit must count bytes, not UTF-16 code units
+		it( 'should count bytes correctly for multibyte characters', function () {
+			mw.config.get = jest.fn( function ( key ) {
+				if ( key === 'wgLayersMaxBytes' ) {
+					return 10;
+				}
+				return null;
+			} );
+
+			// 3 emoji characters: each emoji is 4 bytes in UTF-8
+			// String.length would say 6 (surrogate pairs) but byte count is 12
+			const emojiData = '\u{1F600}\u{1F601}\u{1F602}';
+			const result = apiManager.checkSizeLimit( emojiData );
+
+			// 12 bytes > 10 byte limit, so should be false
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should count CJK characters as multi-byte', function () {
+			mw.config.get = jest.fn( function ( key ) {
+				if ( key === 'wgLayersMaxBytes' ) {
+					return 5;
+				}
+				return null;
+			} );
+
+			// 2 CJK characters: 3 bytes each in UTF-8 = 6 total
+			const cjkData = '\u4e16\u754c';
+			const result = apiManager.checkSizeLimit( cjkData );
+
+			// 6 bytes > 5 byte limit
+			expect( result ).toBe( false );
+		} );
 	} );
 
 	describe( 'sanitizeInput', function () {
@@ -3037,6 +3071,56 @@ describe( 'APIManager', function () {
 			);
 
 			mw.log = originalMwLog;
+		} );
+	} );
+
+	// P1-019 regression: saveInProgress must clear if buildSavePayload throws
+	describe( 'saveLayers payload build failure (P1-019)', () => {
+		it( 'should clear saveInProgress when buildSavePayload throws', async () => {
+			const testApiManager = new APIManager( mockEditor );
+
+			testApiManager.saveInProgress = false;
+			testApiManager.validateBeforeSave = jest.fn().mockReturnValue( true );
+			testApiManager.showSpinner = jest.fn();
+			testApiManager.hideSpinner = jest.fn();
+			testApiManager.disableSaveButton = jest.fn();
+			testApiManager.enableSaveButton = jest.fn();
+			testApiManager.buildSavePayload = jest.fn( () => {
+				throw new Error( 'Circular reference in layer data' );
+			} );
+
+			await expect( testApiManager.saveLayers() ).rejects.toThrow( 'Circular reference' );
+
+			// The critical assertion: saveInProgress must be false after the throw
+			expect( testApiManager.saveInProgress ).toBe( false );
+			expect( testApiManager.hideSpinner ).toHaveBeenCalled();
+			expect( testApiManager.enableSaveButton ).toHaveBeenCalled();
+		} );
+
+		it( 'should clear saveInProgress when JSON.stringify throws', async () => {
+			const testApiManager = new APIManager( mockEditor );
+
+			testApiManager.saveInProgress = false;
+			testApiManager.validateBeforeSave = jest.fn().mockReturnValue( true );
+			testApiManager.showSpinner = jest.fn();
+			testApiManager.hideSpinner = jest.fn();
+			testApiManager.disableSaveButton = jest.fn();
+			testApiManager.enableSaveButton = jest.fn();
+
+			// buildSavePayload succeeds but stateManager returns circular data
+			testApiManager.buildSavePayload = jest.fn( () => ( {} ) );
+			const circular = {};
+			circular.self = circular;
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [ circular ];
+				}
+				return null;
+			} );
+
+			await expect( testApiManager.saveLayers() ).rejects.toThrow();
+
+			expect( testApiManager.saveInProgress ).toBe( false );
 		} );
 	} );
 

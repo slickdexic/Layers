@@ -111,7 +111,7 @@ describe( 'Rotated Resize Behavior', () => {
 			};
 
 			// Apply correction
-			controller.applyRotatedResizeCorrection( updates, layer, 'n' );
+			ResizeCalculator.applyRotatedResizeCorrection( updates, layer, 'n' );
 
 			// Calculate new south edge position
 			const newLayer = {
@@ -142,7 +142,7 @@ describe( 'Rotated Resize Behavior', () => {
 			};
 
 			// Apply correction
-			controller.applyRotatedResizeCorrection( updates, layer, 'e' );
+			ResizeCalculator.applyRotatedResizeCorrection( updates, layer, 'e' );
 
 			// Calculate new west edge position
 			const newLayer = {
@@ -170,7 +170,7 @@ describe( 'Rotated Resize Behavior', () => {
 			const origUpdates = { ...updates };
 
 			// Apply correction for corner handle (SE corner means NW corner should stay fixed)
-			controller.applyRotatedResizeCorrection( updates, layer, 'se' );
+			ResizeCalculator.applyRotatedResizeCorrection( updates, layer, 'se' );
 
 			// Should modify x,y to keep opposite corner fixed in world space
 			// The correction compensates for the rotation
@@ -192,7 +192,7 @@ describe( 'Rotated Resize Behavior', () => {
 			const origUpdates = { ...updates };
 
 			// Apply correction
-			controller.applyRotatedResizeCorrection( updates, layer, 'n' );
+			ResizeCalculator.applyRotatedResizeCorrection( updates, layer, 'n' );
 
 			// Should not modify updates when no rotation
 			expect( updates.y ).toBe( origUpdates.y );

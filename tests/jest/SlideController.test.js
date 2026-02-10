@@ -287,8 +287,8 @@ describe( 'SlideController', () => {
 			const overlay = container.querySelector( '.layers-slide-overlay' );
 			expect( overlay ).not.toBeNull();
 
-			const editBtn = overlay.querySelector( '.layers-slide-overlay-btn--edit' );
-			const viewBtn = overlay.querySelector( '.layers-slide-overlay-btn--view' );
+			const editBtn = overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
+			const viewBtn = overlay.querySelector( '.layers-viewer-overlay-btn--view' );
 			expect( editBtn ).not.toBeNull();
 			expect( viewBtn ).not.toBeNull();
 		} );
@@ -311,8 +311,8 @@ describe( 'SlideController', () => {
 			const overlay = container.querySelector( '.layers-slide-overlay' );
 			expect( overlay ).not.toBeNull();
 
-			const editBtn = overlay.querySelector( '.layers-slide-overlay-btn--edit' );
-			const viewBtn = overlay.querySelector( '.layers-slide-overlay-btn--view' );
+			const editBtn = overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
+			const viewBtn = overlay.querySelector( '.layers-viewer-overlay-btn--view' );
 			expect( editBtn ).toBeNull();
 			expect( viewBtn ).not.toBeNull();
 		} );
@@ -1586,7 +1586,7 @@ describe( 'SlideController', () => {
 			window.Layers = {
 				UI: {
 					IconFactory: {
-						createExpandIcon: jest.fn( () => mockIcon )
+						createFullscreenIcon: jest.fn( () => mockIcon )
 					}
 				}
 			};
@@ -1594,7 +1594,7 @@ describe( 'SlideController', () => {
 			const controller = new SlideController();
 			const icon = controller._createExpandIcon();
 
-			expect( window.Layers.UI.IconFactory.createExpandIcon ).toHaveBeenCalled();
+			expect( window.Layers.UI.IconFactory.createFullscreenIcon ).toHaveBeenCalled();
 			expect( icon ).toBe( mockIcon );
 		} );
 	} );

@@ -759,5 +759,7 @@
 	"layers-input-text-too-long": "Text is too long. Maximum $1 characters allowed.",
 	"layers-input-char-limit-warning": "Approaching character limit ($1/$2)",
 
+	"layers-unknown-user": "Unknown user",
+
 	"specialpages-group-layers": "Layers"
 }

@@ -601,8 +601,8 @@
 				ctx.closePath();
 			};
 
-			// Shadow handling with spread
-			if ( spread > 0 && this.hasShadowEnabled( layer ) ) {
+			// Shadow handling - always use drawSpreadShadow (consistent with ShapeRenderer)
+			if ( this.hasShadowEnabled( layer ) ) {
 				// Draw fill shadow at fill opacity
 				if ( hasFill && !isBlurFill ) {
 					const fillShadowOpacity = baseOpacity * fillOpacity;
@@ -619,14 +619,10 @@
 						buildExpandedArrowPath( ctx, 0 );
 					}, strokeShadowOpacity );
 				}
-			} else if ( this.hasShadowEnabled( layer ) ) {
-				this.applyShadow( layer, shadowScale );
 			}
 
-			// Clear shadow for actual drawing if spread was used
-			if ( spread > 0 ) {
-				this.clearShadow();
-			}
+			// Always clear shadow for actual drawing
+			this.clearShadow();
 
 			// Draw fill (blur fill or regular)
 			if ( hasFill ) {
@@ -788,8 +784,8 @@
 			const angle = Math.atan2( y2 - y1, x2 - x1 );
 			const perpAngle = angle + Math.PI / 2;
 
-			// Shadow handling with spread
-			if ( spread > 0 && this.hasShadowEnabled( layer ) ) {
+			// Shadow handling - always use drawSpreadShadow (consistent with ShapeRenderer)
+			if ( this.hasShadowEnabled( layer ) ) {
 				const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none';
 				const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none';
 
@@ -836,14 +832,10 @@
 						}
 					}, strokeShadowOpacity );
 				}
-			} else if ( this.hasShadowEnabled( layer ) ) {
-				this.applyShadow( layer, shadowScale );
 			}
 
-			// Draw actual arrow
-			if ( spread > 0 ) {
-				this.clearShadow();
-			}
+			// Always clear shadow for actual drawing
+			this.clearShadow();
 
 			const vertices = this.buildArrowVertices(
 				x1, y1, x2, y2, angle, perpAngle, shaftWidth / 2,
@@ -869,9 +861,9 @@
 			const isBlurFill = layer.fill === 'blur';
 			const hasFill = layer.fill && layer.fill !== 'transparent' && layer.fill !== 'none' && fillOpacity > 0;
 			const hasStroke = layer.stroke && layer.stroke !== 'transparent' && layer.stroke !== 'none' && strokeOpacity > 0;
-			const shadowEnabled = this.hasShadowEnabled( layer ) && spread === 0;
 
 			// Draw fill (blur fill or regular)
+			// Shadows are already handled above via drawSpreadShadow
 			if ( hasFill ) {
 				if ( isBlurFill && this.effectsRenderer ) {
 					// Blur fill - use EffectsRenderer to blur background within arrow
@@ -890,10 +882,6 @@
 						opts
 					);
 				} else if ( !isBlurFill ) {
-					// Regular color fill (with shadow if enabled and spread === 0)
-					if ( shadowEnabled ) {
-						this.applyShadow( layer, shadowScale );
-					}
 					drawArrowPath();
 					this.ctx.fillStyle = layer.fill;
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
@@ -901,45 +889,15 @@
 				}
 			}
 
-			// Clear shadow before stroke only if there was a visible fill
-			if ( hasFill && !isBlurFill ) {
-				this.clearShadow();
-			}
-
 			// Draw stroke
 			if ( hasStroke ) {
-				if ( !hasFill && shadowEnabled ) {
-					this.applyShadow( layer, shadowScale );
-					drawArrowPath();
-					this.ctx.strokeStyle = layer.stroke;
-					this.ctx.lineWidth = strokeWidth;
-					this.ctx.lineJoin = 'miter';
-					this.ctx.miterLimit = 10;
-					this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-					this.ctx.stroke();
-				} else {
-					drawArrowPath();
-					this.ctx.strokeStyle = layer.stroke;
-					this.ctx.lineWidth = strokeWidth;
-					this.ctx.lineJoin = 'miter';
-					this.ctx.miterLimit = 10;
-					this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-					this.ctx.stroke();
-
-					if ( shadowEnabled ) {
-						this.ctx.save();
-						this.ctx.globalCompositeOperation = 'destination-over';
-						this.applyShadow( layer, shadowScale );
-						drawArrowPath();
-						this.ctx.strokeStyle = layer.stroke;
-						this.ctx.lineWidth = strokeWidth;
-						this.ctx.lineJoin = 'miter';
-						this.ctx.miterLimit = 10;
-						this.ctx.globalAlpha = baseOpacity * strokeOpacity;
-						this.ctx.stroke();
-						this.ctx.restore();
-					}
-				}
+				drawArrowPath();
+				this.ctx.strokeStyle = layer.stroke;
+				this.ctx.lineWidth = strokeWidth;
+				this.ctx.lineJoin = 'miter';
+				this.ctx.miterLimit = 10;
+				this.ctx.globalAlpha = baseOpacity * strokeOpacity;
+				this.ctx.stroke();
 			}
 
 			this.ctx.restore();

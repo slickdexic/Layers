@@ -184,162 +184,6 @@ describe( 'DialogManager', () => {
 		} );
 	} );
 
-	describe( 'showPromptDialog', () => {
-		it( 'should create dialog with title', () => {
-			dialogManager.showPromptDialog( {
-				title: 'Enter Name',
-				onConfirm: jest.fn()
-			} );
-
-			const title = document.querySelector( '.layers-modal-title' );
-			expect( title.textContent ).toBe( 'Enter Name' );
-		} );
-
-		it( 'should create dialog with message', () => {
-			dialogManager.showPromptDialog( {
-				message: 'Please enter a name',
-				onConfirm: jest.fn()
-			} );
-
-			const message = document.querySelector( '.layers-modal-dialog p' );
-			expect( message.textContent ).toBe( 'Please enter a name' );
-		} );
-
-		it( 'should create input with placeholder and default value', () => {
-			dialogManager.showPromptDialog( {
-				placeholder: 'Type here...',
-				defaultValue: 'Default',
-				onConfirm: jest.fn()
-			} );
-
-			const input = document.querySelector( '.layers-modal-input' );
-			expect( input.placeholder ).toBe( 'Type here...' );
-			expect( input.value ).toBe( 'Default' );
-		} );
-
-		it( 'should focus and select input', () => {
-			dialogManager.showPromptDialog( {
-				defaultValue: 'Test',
-				onConfirm: jest.fn()
-			} );
-
-			const input = document.querySelector( '.layers-modal-input' );
-			expect( document.activeElement ).toBe( input );
-		} );
-
-		it( 'should call onConfirm with input value when OK clicked', () => {
-			const onConfirm = jest.fn();
-			dialogManager.showPromptDialog( {
-				defaultValue: 'Test Value',
-				onConfirm
-			} );
-
-			const okBtn = document.querySelector( '.layers-btn-primary' );
-			okBtn.click();
-
-			expect( onConfirm ).toHaveBeenCalledWith( 'Test Value' );
-		} );
-
-		it( 'should call onCancel when Cancel clicked', () => {
-			const onCancel = jest.fn();
-			dialogManager.showPromptDialog( {
-				onConfirm: jest.fn(),
-				onCancel
-			} );
-
-			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
-			cancelBtn.click();
-
-			expect( onCancel ).toHaveBeenCalled();
-		} );
-
-		it( 'should call onConfirm when Enter key pressed', () => {
-			const onConfirm = jest.fn();
-			dialogManager.showPromptDialog( {
-				defaultValue: 'Enter Test',
-				onConfirm
-			} );
-
-			const event = new KeyboardEvent( 'keydown', { key: 'Enter' } );
-			document.dispatchEvent( event );
-
-			expect( onConfirm ).toHaveBeenCalledWith( 'Enter Test' );
-		} );
-
-		it( 'should call onCancel when Escape key pressed', () => {
-			const onCancel = jest.fn();
-			dialogManager.showPromptDialog( {
-				onConfirm: jest.fn(),
-				onCancel
-			} );
-
-			const event = new KeyboardEvent( 'keydown', { key: 'Escape' } );
-			document.dispatchEvent( event );
-
-			expect( onCancel ).toHaveBeenCalled();
-		} );
-
-		it( 'should handle missing onCancel gracefully', () => {
-			dialogManager.showPromptDialog( {
-				onConfirm: jest.fn()
-				// No onCancel
-			} );
-
-			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
-
-			// Should not throw
-			expect( () => cancelBtn.click() ).not.toThrow();
-		} );
-
-		it( 'should trap Tab focus at last element', () => {
-			dialogManager.showPromptDialog( {
-				onConfirm: jest.fn()
-			} );
-
-			const confirmBtn = document.querySelector( '.layers-btn-primary' );
-			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
-
-			// Focus confirm button (last focusable)
-			confirmBtn.focus();
-
-			// Tab should wrap to input (first focusable)
-			const tabEvent = new KeyboardEvent( 'keydown', { key: 'Tab', bubbles: true } );
-			Object.defineProperty( tabEvent, 'preventDefault', { value: jest.fn() } );
-			document.dispatchEvent( tabEvent );
-
-			expect( tabEvent.preventDefault ).toHaveBeenCalled();
-
-			// Clean up
-			cancelBtn.click();
-		} );
-
-		it( 'should trap Shift+Tab focus at first element', () => {
-			dialogManager.showPromptDialog( {
-				onConfirm: jest.fn()
-			} );
-
-			const input = document.querySelector( '.layers-modal-input' );
-			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
-
-			// Focus input (first focusable)
-			input.focus();
-
-			// Shift+Tab should wrap to confirm button (last focusable)
-			const tabEvent = new KeyboardEvent( 'keydown', {
-				key: 'Tab',
-				shiftKey: true,
-				bubbles: true
-			} );
-			Object.defineProperty( tabEvent, 'preventDefault', { value: jest.fn() } );
-			document.dispatchEvent( tabEvent );
-
-			expect( tabEvent.preventDefault ).toHaveBeenCalled();
-
-			// Clean up
-			cancelBtn.click();
-		} );
-	} );
-
 	describe( 'showKeyboardShortcutsDialog', () => {
 		it( 'should create dialog with shortcuts list', () => {
 			dialogManager.showKeyboardShortcutsDialog();
@@ -882,7 +726,6 @@ describe( 'DialogManager', () => {
 		it( 'should trap Tab focus within dialog', () => {
 			dialogManager.showPromptDialogAsync( {} );
 
-			const input = document.querySelector( '.layers-modal-input' );
 			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
 			const confirmBtn = document.querySelector( '.layers-btn-primary' );
 
@@ -905,7 +748,6 @@ describe( 'DialogManager', () => {
 
 			const input = document.querySelector( '.layers-modal-input' );
 			const cancelBtn = document.querySelector( '.layers-btn-secondary' );
-			const confirmBtn = document.querySelector( '.layers-btn-primary' );
 
 			// Focus input (first focusable)
 			input.focus();

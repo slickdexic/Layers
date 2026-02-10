@@ -143,20 +143,24 @@ describe( 'CanvasManager', () => {
 			startResize: jest.fn(),
 			handleResize: jest.fn(),
 			finishResize: jest.fn(),
-			calculateResize: jest.fn( () => ( { width: 100, height: 100 } ) ),
 			startRotation: jest.fn(),
 			handleRotation: jest.fn(),
 			finishRotation: jest.fn(),
 			startDrag: jest.fn(),
 			handleDrag: jest.fn(),
 			finishDrag: jest.fn(),
-			getResizeCursor: jest.fn( () => 'nwse-resize' ),
 			isResizing: false,
 			isRotating: false,
 			isDragging: false,
 			resizeHandle: null,
 			showDragPreview: false
 		} ) );
+
+		// ResizeCalculator is now called directly by CanvasManager (not via TransformController)
+		global.ResizeCalculator = {
+			getResizeCursor: jest.fn( () => 'nwse-resize' ),
+			calculateResize: jest.fn( () => ( { width: 100, height: 100 } ) )
+		};
 
 		global.HitTestController = jest.fn( () => ( {
 			hitTestSelectionHandles: jest.fn( () => null ),
@@ -334,9 +338,6 @@ describe( 'CanvasManager', () => {
 
 		it( 'should initialize selection state', () => {
 			expect( canvasManager.selectionHandles ).toEqual( [] );
-			expect( canvasManager.isResizing ).toBe( false );
-			expect( canvasManager.isRotating ).toBe( false );
-			expect( canvasManager.isDragging ).toBe( false );
 		} );
 
 		it( 'should initialize marquee selection state', () => {
@@ -758,9 +759,10 @@ describe( 'CanvasManager', () => {
 			expect( canvasManager.transformController.finishDrag ).toHaveBeenCalled();
 		} );
 
-		it( 'should delegate getResizeCursor to TransformController', () => {
-			canvasManager.getResizeCursor( 'se', 0 );
-			expect( canvasManager.transformController.getResizeCursor ).toHaveBeenCalledWith( 'se', 0 );
+		it( 'should delegate getResizeCursor to ResizeCalculator', () => {
+			const result = canvasManager.getResizeCursor( 'se', 0 );
+			expect( global.ResizeCalculator.getResizeCursor ).toHaveBeenCalledWith( 'se', 0 );
+			expect( result ).toBe( 'nwse-resize' );
 		} );
 	} );
 
@@ -895,8 +897,8 @@ describe( 'CanvasManager', () => {
 			canvasManager.currentTool = 'pointer';
 			canvasManager.hitTestController.hitTestSelectionHandles.mockReturnValue( { type: 'n' } );
 
-			// Mock getResizeCursor to use real rotation logic
-			canvasManager.transformController.getResizeCursor = jest.fn( ( handleType, rotation ) => {
+			// Mock ResizeCalculator.getResizeCursor to use real rotation logic
+			global.ResizeCalculator.getResizeCursor = jest.fn( ( handleType, rotation ) => {
 				const handleAngles = { n: 0, ne: 45, e: 90, se: 135, s: 180, sw: 225, w: 270, nw: 315 };
 				const baseAngle = handleAngles[ handleType ];
 				if ( baseAngle === undefined ) {
@@ -912,7 +914,7 @@ describe( 'CanvasManager', () => {
 			canvasManager.updateCursor( { x: 100, y: 100 } );
 
 			// At 45° rotation, N handle should show nesw-resize (diagonal)
-			expect( canvasManager.transformController.getResizeCursor ).toHaveBeenCalledWith( 'n', 45 );
+			expect( global.ResizeCalculator.getResizeCursor ).toHaveBeenCalledWith( 'n', 45 );
 			expect( canvasManager.canvas.style.cursor ).toBe( 'nesw-resize' );
 		} );
 	} );
@@ -1921,7 +1923,7 @@ describe( 'CanvasManager', () => {
 			expect( () => canvasManager.startResize( 'nw' ) ).not.toThrow();
 		} );
 
-		it( 'should delegate to transformController and sync state', () => {
+		it( 'should delegate to transformController', () => {
 			canvasManager.transformController = {
 				startResize: jest.fn(),
 				isResizing: true,
@@ -1929,8 +1931,6 @@ describe( 'CanvasManager', () => {
 			};
 			canvasManager.startResize( 'se' );
 			expect( canvasManager.transformController.startResize ).toHaveBeenCalled();
-			expect( canvasManager.isResizing ).toBe( true );
-			expect( canvasManager.resizeHandle ).toBe( 'se' );
 		} );
 	} );
 
@@ -1940,14 +1940,13 @@ describe( 'CanvasManager', () => {
 			expect( () => canvasManager.startRotation( { x: 100, y: 100 } ) ).not.toThrow();
 		} );
 
-		it( 'should delegate to transformController and sync state', () => {
+		it( 'should delegate to transformController', () => {
 			canvasManager.transformController = {
 				startRotation: jest.fn(),
 				isRotating: true
 			};
 			canvasManager.startRotation( { x: 100, y: 100 } );
 			expect( canvasManager.transformController.startRotation ).toHaveBeenCalled();
-			expect( canvasManager.isRotating ).toBe( true );
 		} );
 	} );
 
@@ -1957,29 +1956,29 @@ describe( 'CanvasManager', () => {
 			expect( () => canvasManager.startDrag() ).not.toThrow();
 		} );
 
-		it( 'should delegate to transformController and sync state', () => {
+		it( 'should delegate to transformController', () => {
 			canvasManager.transformController = {
 				startDrag: jest.fn(),
 				isDragging: true
 			};
 			canvasManager.startDrag();
 			expect( canvasManager.transformController.startDrag ).toHaveBeenCalled();
-			expect( canvasManager.isDragging ).toBe( true );
 		} );
 	} );
 
 	describe( 'getResizeCursor delegation', () => {
-		it( 'should return default when transformController unavailable', () => {
-			canvasManager.transformController = null;
+		it( 'should return default when ResizeCalculator unavailable', () => {
+			const savedRC = global.ResizeCalculator;
+			delete global.ResizeCalculator;
 			expect( canvasManager.getResizeCursor( 'nw', 0 ) ).toBe( 'default' );
+			global.ResizeCalculator = savedRC;
 		} );
 
-		it( 'should delegate to transformController', () => {
-			canvasManager.transformController = {
-				getResizeCursor: jest.fn( () => 'nwse-resize' )
-			};
+		it( 'should delegate to ResizeCalculator', () => {
+			global.ResizeCalculator.getResizeCursor.mockReturnValue( 'nwse-resize' );
 			const result = canvasManager.getResizeCursor( 'nw', 45 );
 			expect( result ).toBe( 'nwse-resize' );
+			expect( global.ResizeCalculator.getResizeCursor ).toHaveBeenCalledWith( 'nw', 45 );
 		} );
 	} );
 
