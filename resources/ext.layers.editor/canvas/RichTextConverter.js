@@ -174,6 +174,15 @@
 					// Check for data attribute (unscaled font size)
 					if ( node.dataset && node.dataset.fontSize ) {
 						currentStyle.fontSize = parseFloat( node.dataset.fontSize );
+						// Debug logging for fontSize extraction
+						if ( typeof mw !== 'undefined' && mw.config &&
+							mw.config.get( 'wgLayersDebug' ) ) {
+							// eslint-disable-next-line no-console
+							console.log( '[RichTextConverter] fontSize from data-font-size:', {
+								dataFontSize: node.dataset.fontSize,
+								parsed: currentStyle.fontSize
+							} );
+						}
 					}
 
 					// Check for inline style
@@ -194,6 +203,17 @@
 								const displaySize = parseFloat( sizeMatch[ 1 ] );
 								currentStyle.fontSize = scale > 0 ?
 									Math.round( displaySize / scale ) : displaySize;
+								// Debug logging for fallback fontSize extraction (divided by scale)
+								if ( typeof mw !== 'undefined' && mw.config &&
+									mw.config.get( 'wgLayersDebug' ) ) {
+									// eslint-disable-next-line no-console
+									console.log( '[RichTextConverter] fontSize from inline style (FALLBACK):', {
+										inlineStyleFontSize: inlineStyle.fontSize,
+										displaySize: displaySize,
+										scale: scale,
+										computedFontSize: currentStyle.fontSize
+									} );
+								}
 							}
 						}
 						if ( inlineStyle.fontFamily ) {

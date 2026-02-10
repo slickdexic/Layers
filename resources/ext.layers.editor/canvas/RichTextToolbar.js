@@ -38,6 +38,17 @@
 			this.editorElement = options.editorElement || null;
 			this.containerElement = options.containerElement || null;
 
+			// Debug: Track fontSize when toolbar is created
+			const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
+			if ( debug && this.layer ) {
+				// eslint-disable-next-line no-console
+				console.log( '[RichTextToolbar] constructor - fontSize tracking', {
+					layerId: this.layer.id,
+					layerFontSize: this.layer.fontSize,
+					hasRichText: !!this.layer.richText
+				} );
+			}
+
 			// Callbacks
 			this.onFormat = options.onFormat || ( () => {} );
 			this.onSaveSelection = options.onSaveSelection || ( () => {} );

@@ -156,6 +156,20 @@
 			// Calculate display scale FIRST so richTextToHtml uses correct scaling
 			this._calculateDisplayScale();
 
+			// Debug: Track fontSize at edit start
+			const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
+			if ( debug ) {
+				// eslint-disable-next-line no-console
+				console.log( '[InlineTextEditor] startEditing - fontSize tracking', {
+					layerId: layer.id,
+					layerFontSize: layer.fontSize,
+					hasRichText: !!layer.richText,
+					richTextFontSizes: layer.richText ? layer.richText.map( ( r ) =>
+						r.style && r.style.fontSize ).filter( Boolean ) : [],
+					displayScale: this._displayScale
+				} );
+			}
+
 			// Create and position the editor FIRST (before modifying layer)
 			this._createEditor();
 			this._positionEditor();
@@ -266,13 +280,21 @@
 						this.editingLayer.fontSize = dominantFontSize;
 					}
 
-					if ( debug && typeof mw.log !== 'undefined' ) {
-						mw.log( '[InlineTextEditor] Extracted content', {
-							html: html,
-							newText: newText,
-							newRichTextLength: newRichText ? newRichText.length : 0,
-							newRichTextSample: newRichText ? JSON.stringify( newRichText ).substring( 0, 200 ) : null,
-							dominantFontSize: dominantFontSize
+					if ( debug ) {
+						// Enhanced logging to trace fontSize bug
+						const richTextFontSizes = newRichText ?
+							newRichText.map( ( r ) => ( {
+								text: r.text ? r.text.substring( 0, 20 ) : '',
+								fontSize: r.style ? r.style.fontSize : undefined
+							} ) ) : [];
+						// eslint-disable-next-line no-console
+						console.log( '[InlineTextEditor] finishEditing - fontSize tracking', {
+							html: html.substring( 0, 500 ),
+							displayScale: this._displayScale,
+							richTextFontSizes: richTextFontSizes,
+							dominantFontSize: dominantFontSize,
+							layerFontSizeAfter: this.editingLayer.fontSize,
+							layerId: this.editingLayer.id
 						} );
 					}
 				} else {
@@ -1077,18 +1099,26 @@
 			}
 
 			// Traverse up to find formatting spans
+			// For fontSize, we want the INNERMOST (most specific) value, so stop at first found
+			// For fontFamily, we also want the innermost value
+			let foundFontSize = false;
+			let foundFontFamily = false;
 			while ( node && node !== this.editorElement ) {
 				if ( node.nodeType === Node.ELEMENT_NODE ) {
 					// Check for data-font-size attribute (our custom unscaled value)
-					if ( node.dataset && node.dataset.fontSize ) {
+					// Only take the first (innermost) one - it's the most recently applied
+					if ( !foundFontSize && node.dataset && node.dataset.fontSize ) {
 						info.fontSize = parseFloat( node.dataset.fontSize );
 						info.fontSizeFromDOM = true;
+						foundFontSize = true;
 					}
 
 					// Check for font-family in inline style
-					if ( node.style && node.style.fontFamily ) {
+					// Only take the first (innermost) one
+					if ( !foundFontFamily && node.style && node.style.fontFamily ) {
 						// Clean up quotes from font family
 						info.fontFamily = node.style.fontFamily.replace( /["']/g, '' ).split( ',' )[ 0 ].trim();
+						foundFontFamily = true;
 					}
 
 					// Check for background-color (highlight)
@@ -1428,6 +1458,19 @@
 						// Ensure _displayScale is valid (default to 1 if not)
 						const scale = ( this._displayScale && this._displayScale > 0 ) ? this._displayScale : 1;
 						const scaledValue = value * scale;
+
+						// Debug logging for fontSize application
+						const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
+						if ( debug ) {
+							// eslint-disable-next-line no-console
+							console.log( '[InlineTextEditor] _applyFormatToSelection fontSize:', {
+								unscaledValue: value,
+								displayScale: this._displayScale,
+								usedScale: scale,
+								scaledValue: scaledValue
+							} );
+						}
+
 						// Use setProperty with important to override inherited styles
 						span.style.setProperty( 'font-size', scaledValue + 'px', 'important' );
 						span.dataset.fontSize = value; // Store unscaled value for parsing
