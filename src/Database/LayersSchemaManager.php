@@ -6,7 +6,7 @@ namespace MediaWiki\Extension\Layers\Database;
 
 use DatabaseUpdater;
 use Psr\Log\LoggerInterface;
-use Wikimedia\Rdbms\IConnectionProvider;
+use Wikimedia\Rdbms\ILoadBalancer;
 
 /**
  * Schema management for the Layers extension
