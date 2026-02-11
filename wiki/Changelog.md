@@ -4,6 +4,12 @@ Version history for the Layers extension.
 
 ---
 
+## Version 1.5.56 (February 11, 2026)
+
+### Fixed
+- **MediaWiki 1.43 Compatibility (REL1_43)** — Fixed `IConnectionProvider` → `ILoadBalancer` for MW 1.43
+- **MediaWiki 1.39 Compatibility (REL1_39)** — Same fix plus replaced ES2020 syntax (`??`, `?.`) with ES6 alternatives
+
 ## Version 1.5.55 (July 23, 2025)
 
 ### Added

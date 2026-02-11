@@ -2,6 +2,12 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.56] - 2026-02-11
+
+### Fixed
+- **MediaWiki 1.43 Compatibility (REL1_43)** — Fixed `IConnectionProvider` → `ILoadBalancer` in `LayersSchemaManager.php` and `services.php`. The `IConnectionProvider` interface was introduced in MW 1.44 and is not available in MW 1.43.
+- **MediaWiki 1.39 Compatibility (REL1_39)** — Same `ILoadBalancer` fix plus replaced ES2020 JavaScript syntax (`??`, `?.`) with ES6-compatible alternatives in `DimensionRenderer.js` and `ShapeRenderer.js`. MW 1.39's ResourceLoader doesn't support nullish coalescing or optional chaining.
+
 ## [1.5.55] - 2025-07-23
 
 ### Added
