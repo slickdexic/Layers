@@ -538,8 +538,8 @@ class LayersSchemaManager {
 	/** @var LoggerInterface|null */
 	private ?LoggerInterface $logger;
 
-	/** @var IConnectionProvider|null */
-	private ?IConnectionProvider $connectionProvider;
+	/** @var ILoadBalancer|null */
+	private ?ILoadBalancer $loadBalancer;
 
 	/** @var array Schema version requirements */
 	private const SCHEMA_REQUIREMENTS = [
@@ -579,11 +579,11 @@ class LayersSchemaManager {
 
 	/**
 	 * @param LoggerInterface|null $logger Logger instance (injected via DI)
-	 * @param IConnectionProvider|null $connectionProvider DB connection provider (injected via DI)
+	 * @param ILoadBalancer|null $loadBalancer DB load balancer (injected via DI)
 	 */
-	public function __construct( ?LoggerInterface $logger = null, ?IConnectionProvider $connectionProvider = null ) {
+	public function __construct( ?LoggerInterface $logger = null, ?ILoadBalancer $loadBalancer = null ) {
 		$this->logger = $logger;
-		$this->connectionProvider = $connectionProvider;
+		$this->loadBalancer = $loadBalancer;
 	}
 
 	/**
@@ -754,10 +754,10 @@ class LayersSchemaManager {
 	 */
 	private function columnExists( string $table, string $column ): bool {
 		try {
-			if ( !$this->connectionProvider ) {
+			if ( !$this->loadBalancer ) {
 				return false;
 			}
-			$dbr = $this->connectionProvider->getReplicaDatabase();
+			$dbr = $this->loadBalancer->getConnection( DB_REPLICA );
 
 			// Use MediaWiki's fieldExists method which is designed for this purpose
 			return $dbr->fieldExists( $table, $column, __METHOD__ );
