@@ -109,7 +109,7 @@
 		 * @return {string} Formatted value string
 		 */
 		formatMeasurement( value, layer ) {
-			const scale = layer.scale ?? DEFAULTS.scale;
+			const scale = layer.scale != null ? layer.scale : DEFAULTS.scale;
 			const unit = layer.unit || DEFAULTS.unit;
 			const precision = layer.precision !== undefined ? layer.precision : DEFAULTS.precision;
 			const showUnit = layer.showUnit !== false;
@@ -617,13 +617,13 @@
 		_drawMeasurementText( ctx, x1, y1, x2, y2, angle, text, fontSize, fontFamily, color, position, layer ) {
 			// Apply textOffset to shift text along the dimension line axis
 			// 0 = centered, positive = toward x2, negative = toward x1
-			const textOffset = typeof layer?.textOffset === 'number' ? layer.textOffset : 0;
+			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
 			const unitDx = Math.cos( angle );
 			const unitDy = Math.sin( angle );
 
 			const centerX = ( x1 + x2 ) / 2 + unitDx * textOffset;
 			const centerY = ( y1 + y2 ) / 2 + unitDy * textOffset;
-			const toleranceType = layer?.toleranceType || DEFAULTS.toleranceType;
+			const toleranceType = ( layer && layer.toleranceType ) || DEFAULTS.toleranceType;
 
 			// Calculate perpendicular offset for text
 			const perpX = -Math.sin( angle );
@@ -649,7 +649,7 @@
 			}
 
 			// Determine text angle based on textDirection setting
-			const textDirection = layer?.textDirection || 'auto';
+			const textDirection = ( layer && layer.textDirection ) || 'auto';
 			let textAngle;
 			if ( textDirection === 'horizontal' ) {
 				// Force horizontal text regardless of line angle
@@ -680,8 +680,8 @@
 			const metrics = ctx.measureText( text );
 			const padding = 3;
 			// Handle both boolean false and integer 0 (from PHP serialization)
-			const showBackground = layer?.showBackground !== false && layer?.showBackground !== 0;
-			const backgroundColor = layer?.backgroundColor || '#ffffff';
+			const showBackground = layer && layer.showBackground !== false && layer.showBackground !== 0;
+			const backgroundColor = ( layer && layer.backgroundColor ) || '#ffffff';
 
 			// Draw background for readability (optional, default on)
 			if ( showBackground ) {
