@@ -6,7 +6,7 @@ This document outlines the branch strategy and support policy for the Layers ext
 
 ## Primary Branch: `main`
 
-**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (11,290+ tests, 165 suites) runs on `main` as the source of truth.
+**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (11,140 tests, 164 suites) runs on `main` as the source of truth.
 
 Changes are **cherry-picked** from `main` to the REL branches after verification. REL branches never receive changes that haven't been tested on `main` first.
 
@@ -16,9 +16,9 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 
 | Branch | MediaWiki Version | Current Version | Status |
 |--------|------------------|-----------------|--------|
-| **`main`** | **1.44+** | **1.5.52** | **Primary — all development and testing** |
-| `REL1_43` | 1.43.x | 1.5.52-REL1_43 | LTS support (until Dec 2027) |
-| `REL1_39` | 1.39.x - 1.42.x | 1.5.52-REL1_39 | Legacy LTS support (MW 1.39 EOL Dec 2025) |
+| **`main`** | **1.44+** | **1.5.55** | **Primary — all development and testing** |
+| `REL1_43` | 1.43.x | 1.5.55-REL1_43 | LTS support (until Dec 2027) |
+| `REL1_39` | 1.39.x - 1.42.x | 1.5.55-REL1_39 | Legacy LTS support (MW 1.39 EOL Dec 2025) |
 
 ### Development Workflow
 
@@ -85,9 +85,9 @@ Users on MW 1.39-1.42 should plan to upgrade to MW 1.43+ and switch to REL1_43.
 
 | Branch | Version Format | Example |
 |--------|---------------|---------|
-| `main` | X.Y.Z | 1.5.52 |
-| `REL1_43` | X.Y.Z-REL1_43 | 1.5.52-REL1_43 |
-| `REL1_39` | X.Y.Z-REL1_39 | 1.5.52-REL1_39 |
+| `main` | X.Y.Z | 1.5.55 |
+| `REL1_43` | X.Y.Z-REL1_43 | 1.5.55-REL1_43 |
+| `REL1_39` | X.Y.Z-REL1_39 | 1.5.55-REL1_39 |
 
 ---
 
@@ -232,4 +232,4 @@ php maintenance/run.php update.php
 
 ---
 
-*Last updated: February 8, 2026*
+*Last updated: February 11, 2026*
