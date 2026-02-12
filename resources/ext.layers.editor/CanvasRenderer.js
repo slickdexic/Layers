@@ -1366,6 +1366,7 @@
 			this._selectionRenderer = null;
 
 			// Clear references
+			this._blurTempCanvas = null;
 			this.backgroundImage = null;
 			this.canvas = null;
 			this.ctx = null;

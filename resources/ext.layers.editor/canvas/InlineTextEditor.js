@@ -275,7 +275,10 @@
 
 					// Extract dominant fontSize from richText to update layer.fontSize
 					// This ensures the toolbar shows the correct value when re-editing
-					const dominantFontSize = this._extractDominantFontSize( newRichText );
+					// Pass current layer.fontSize so runs without explicit fontSize
+					// are counted as using the base size (prevents overwrite bug)
+					const baseFontSize = this.editingLayer.fontSize || 16;
+					const dominantFontSize = this._extractDominantFontSize( newRichText, baseFontSize );
 					if ( dominantFontSize !== null ) {
 						this.editingLayer.fontSize = dominantFontSize;
 					}
@@ -1681,9 +1684,11 @@
 		 *
 		 * @private
 		 * @param {Array|null} richText - Array of {text, style} objects
+		 * @param {number} [baseFontSize] - Layer's current base fontSize; runs without
+		 *   explicit style.fontSize are counted as using this value
 		 * @return {number|null} Dominant font size or null if mixed/none
 		 */
-		_extractDominantFontSize( richText ) {
+		_extractDominantFontSize( richText, baseFontSize ) {
 			if ( !Array.isArray( richText ) || richText.length === 0 ) {
 				return null;
 			}
@@ -1697,6 +1702,12 @@
 				}
 				if ( run.style && typeof run.style.fontSize === 'number' ) {
 					fontSizes.push( run.style.fontSize );
+				} else if ( typeof baseFontSize === 'number' ) {
+					// Runs without explicit fontSize use the layer's base fontSize.
+					// We must count them so the dominant calculation is accurate;
+					// otherwise changing some text to a new size would make that
+					// size appear "dominant" and overwrite the base for all unstyled runs.
+					fontSizes.push( baseFontSize );
 				}
 			}
 

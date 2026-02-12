@@ -2635,12 +2635,20 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 			expect( editor._extractDominantFontSize( [] ) ).toBeNull();
 		} );
 
-		test( 'should return null when no fontSize in any run', () => {
+		test( 'should return null when no fontSize in any run and no baseFontSize', () => {
 			const richText = [
 				{ text: 'Hello', style: { fontWeight: 'bold' } },
 				{ text: ' World', style: {} }
 			];
 			expect( editor._extractDominantFontSize( richText ) ).toBeNull();
+		} );
+
+		test( 'should return baseFontSize when no fontSize in any run but baseFontSize given', () => {
+			const richText = [
+				{ text: 'Hello', style: { fontWeight: 'bold' } },
+				{ text: ' World', style: {} }
+			];
+			expect( editor._extractDominantFontSize( richText, 16 ) ).toBe( 16 );
 		} );
 
 		test( 'should return fontSize when all runs have same size', () => {
@@ -2651,12 +2659,36 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 			expect( editor._extractDominantFontSize( richText ) ).toBe( 72 );
 		} );
 
-		test( 'should return single fontSize when only one run has it', () => {
+		test( 'should return single fontSize when only one run has it (no baseFontSize)', () => {
 			const richText = [
 				{ text: 'Hello', style: { fontSize: 48 } },
 				{ text: ' ', style: {} }
 			];
 			expect( editor._extractDominantFontSize( richText ) ).toBe( 48 );
+		} );
+
+		test( 'should NOT let partial fontSize change become dominant when baseFontSize is provided', () => {
+			// Regression: user selects some text and changes to 24px.
+			// Only the modified run gets explicit fontSize; others use base.
+			// Without baseFontSize, 24 would appear "dominant" and overwrite layer.fontSize.
+			const richText = [
+				{ text: 'Hello ', style: {} },
+				{ text: 'world', style: { fontSize: 24 } },
+				{ text: ' test', style: {} }
+			];
+			// With baseFontSize=16: two runs at 16, one at 24 → dominant is 16
+			expect( editor._extractDominantFontSize( richText, 16 ) ).toBe( 16 );
+		} );
+
+		test( 'should return new size as dominant when majority of runs have it', () => {
+			// If user changes most text to a new size, that should become dominant
+			const richText = [
+				{ text: 'Hello ', style: { fontSize: 24 } },
+				{ text: 'world', style: {} },
+				{ text: ' test', style: { fontSize: 24 } }
+			];
+			// With baseFontSize=16: one run at 16, two at 24 → dominant is 24
+			expect( editor._extractDominantFontSize( richText, 16 ) ).toBe( 24 );
 		} );
 
 		test( 'should return dominant fontSize when mixed sizes', () => {
@@ -2687,6 +2719,31 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 				{ text: 'Line 2', style: { fontSize: 36 } }
 			];
 			expect( editor._extractDominantFontSize( richText ) ).toBe( 36 );
+		} );
+
+		test( 'should count unstyled runs as baseFontSize in mixed scenarios', () => {
+			// 4 runs without explicit fontSize (base=20), 1 run at 32
+			const richText = [
+				{ text: 'One ', style: {} },
+				{ text: 'Two ', style: {} },
+				{ text: 'Three', style: { fontSize: 32 } },
+				{ text: ' Four ', style: {} },
+				{ text: 'Five', style: {} }
+			];
+			// baseFontSize=20: four runs at 20, one at 32 → dominant is 20
+			expect( editor._extractDominantFontSize( richText, 20 ) ).toBe( 20 );
+		} );
+
+		test( 'should handle tie-breaking correctly with baseFontSize', () => {
+			// Equal count: 2 explicit + 2 base → first encountered wins
+			const richText = [
+				{ text: 'A', style: {} },
+				{ text: 'B', style: { fontSize: 24 } },
+				{ text: 'C', style: {} },
+				{ text: 'D', style: { fontSize: 24 } }
+			];
+			// baseFontSize=16: two at 16, two at 24 → 16 encountered first
+			expect( editor._extractDominantFontSize( richText, 16 ) ).toBe( 16 );
 		} );
 	} );
 

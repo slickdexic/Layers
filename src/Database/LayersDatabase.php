@@ -171,7 +171,7 @@ class LayersDatabase {
 						$this->logError( 'Named set limit reached', [
 							'imgName' => $normalizedImgName, 'count' => $setCount, 'max' => $maxSets
 						] );
-						$dbw->endAtomic( __METHOD__ );
+						// Let the catch block handle endAtomic, then re-throw
 						throw new \OverflowException( 'layers-max-sets-reached' );
 					}
 				}
@@ -234,6 +234,11 @@ class LayersDatabase {
 				return $layerSetId;
 			} catch ( \Throwable $e ) {
 				$dbw->endAtomic( __METHOD__ );
+				// Re-throw OverflowException so ApiLayersSave can return
+				// the correct 'layers-max-sets-reached' error to the client
+				if ( $e instanceof \OverflowException ) {
+					throw $e;
+				}
 				if ( $dbw->isDuplicateKeyError( $e ) ) {
 					$this->logError( "Race condition in saveLayerSet, retrying." );
 					continue;

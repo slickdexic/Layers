@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** February 10, 2026 — v34 fixes (version 1.5.54)
+**Last updated:** February 11, 2026 — v35 fixes (version 1.5.56)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -11,10 +11,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 4 | 4 | 0 |
-| P1 | 20 | 20 | 0 |
-| P2 | 42 | 26 | 16 |
-| P3 | 32 | 10 | 22 |
-| **Total** | **98** | **60** | **38** |
+| P1 | 25 | 25 | 0 |
+| P2 | 47 | 47 | 0 |
+| P3 | 41 | 13 | 28 |
+| **Total** | **117** | **89** | **28** |
 
 ---
 
@@ -187,6 +187,64 @@ All P0 issues have been fixed.
   strips all gradient data from the saved preset.
 - **Introduced:** v33 review
 - **Resolution:** Added 'gradient' to ALLOWED_STYLE_PROPERTIES. 3 regression tests added.
+
+### ✅ P1-021: OverflowException Double endAtomic in LayersDatabase (Fixed v35)
+
+- **File:** src/Database/LayersDatabase.php L174-245
+- **Impact:** When named set limit was reached, `\OverflowException`
+  was thrown after `endAtomic()`, caught by generic `\Throwable`
+  catch block which called `endAtomic()` again, swallowing the error.
+- **Introduced:** v35 review
+- **Resolution:** Removed premature `endAtomic()` before throw.
+  Added `OverflowException` re-throw in catch block. Existing test
+  `testSaveLayerSetMaxSetsReached` validates the fix.
+
+### ✅ P1-022: TextSanitizer html_entity_decode After strip_tags (Fixed v35)
+
+- **File:** src/Validation/TextSanitizer.php L35-45
+- **Impact:** Sanitization ordered strip_tags() before
+  html_entity_decode(). Entity-encoded HTML could survive.
+  Not exploitable (text rendered via Canvas/ImageMagick, not
+  innerHTML), but fixed as defense-in-depth.
+- **Introduced:** v35 review
+- **Resolution:** Added second `strip_tags()` after `html_entity_decode()`
+  in both `sanitizeText()` and `sanitizeRichTextRun()`. New test
+  `testSanitizeTextStripsEntityEncodedTags` validates all variants.
+
+### ✅ P1-023: EditLayersAction Clickjacking — Not a Bug (Reclassified v35)
+
+- **File:** src/Action/EditLayersAction.php L107-119
+- **Impact:** The modal mode (`?modal=true`) is the extension's own
+  feature for loading the editor in an iframe. CSRF tokens protect
+  all write operations. No fix needed.
+- **Introduced:** v35 review
+- **Resolution:** Reclassified as intentional design. Not a bug.
+
+### ✅ P1-024: ApiLayersList Database Error Info Disclosure (Fixed v35)
+
+- **File:** src/Api/ApiLayersList.php L106-109
+- **Impact:** `$e->getMessage()` from database exceptions was exposed
+  directly in API error response, leaking internal details.
+- **Introduced:** v35 review
+- **Resolution:** Replaced with generic `LayersConstants::ERROR_DB`.
+  Exception details now logged server-side only.
+
+### ✅ P1-025: RichText fontSize Overwritten on Deselect (Fixed v35)
+
+- **File:** resources/ext.layers.editor/canvas/InlineTextEditor.js
+  L276-280, L1686-1733
+- **Impact:** Changing font size on *some* selected text in a textbox
+  caused ALL text to change to that size on deselect. The
+  `_extractDominantFontSize()` method only counted runs with explicit
+  `style.fontSize`, ignoring runs that relied on the layer's base
+  fontSize. When a partial selection was changed, only the new size
+  was counted as "dominant" and overwrote `layer.fontSize`, causing
+  all unstyled runs to inherit it on re-render.
+- **Introduced:** User-reported bug (found during REL1_39 testing)
+- **Resolution:** `_extractDominantFontSize()` now accepts a
+  `baseFontSize` parameter. Runs without explicit `style.fontSize`
+  are counted as using the base, so partial changes don't overwrite
+  the layer's base fontSize. 5 regression tests added.
 
 ---
 
@@ -366,6 +424,50 @@ All P0 issues have been fixed.
   deprecated attributes; added cacheDirectory and new display
   settings
 
+### ✅ P2-027: ThumbnailRenderer visible === false Ignores 0 (Fixed v35)
+
+- **File:** src/ThumbnailRenderer.php L158-161
+- **Impact:** PHP API serialization converts `false` to integer `0`.
+  ThumbnailRenderer used `=== false` which didn't match integer 0.
+- **Introduced:** v35 review
+- **Resolution:** Changed to check both `=== false` and `=== 0`.
+
+### ✅ P2-028: $set Param Ignored in layerEditParserFunction (Fixed v35)
+
+- **File:** src/Hooks.php L354-392
+- **Impact:** `{{#layeredit:File|set}}` parser function accepted
+  a set name but never passed it to the edit URL.
+- **Introduced:** v35 review
+- **Resolution:** Built `$editParams` array that includes
+  `'setname' => $set` when set name is provided.
+
+### ✅ P2-029: RevisionManager UTC Timestamps as Local (Fixed v35)
+
+- **File:** resources/ext.layers.editor/editor/RevisionManager.js L60
+- **Impact:** `new Date()` created local-timezone dates from UTC
+  timestamps. Revision timestamps displayed wrong for non-UTC users.
+- **Introduced:** v35 review
+- **Resolution:** Changed to `new Date(Date.UTC(...))`. 3 regression
+  tests validate UTC correctness.
+
+### ✅ P2-030: EditorBootstrap Conditional Global — Not a Bug (Reclassified v35)
+
+- **File:** resources/ext.layers.editor/editor/EditorBootstrap.js L436
+- **Impact:** `window.layersEditorInstance` only set in debug mode.
+  This is intentional — debug-only globals should not be set in
+  production. Not a bug.
+- **Introduced:** v35 review
+- **Resolution:** Reclassified as intentional design.
+
+### ✅ P2-031: CanvasRenderer _blurTempCanvas Not Cleaned (Fixed v35)
+
+- **File:** resources/ext.layers.editor/CanvasRenderer.js L1328-1378
+- **Impact:** `destroy()` did not nullify `_blurTempCanvas` off-screen
+  canvas. Minor memory leak on editor close.
+- **Introduced:** v35 review
+- **Resolution:** Added `this._blurTempCanvas = null;` in `destroy()`.
+  3 regression tests validate cleanup.
+
 ---
 
 ## P3 — Low Priority
@@ -424,7 +526,7 @@ All P0 issues have been fixed.
 
 ### ❌ P3-011: Version Numbers Stale Across 6+ Documents
 
-- **Impact:** Version 1.5.52 appears in 6+ files; actual is 1.5.54
+- **Impact:** Version 1.5.52-1.5.54 appears in 6+ files; actual is 1.5.56
 - **Files:** ARCHITECTURE.md, copilot-instructions.md,
   LTS_BRANCH_STRATEGY.md, SLIDE_MODE.md, Mediawiki-Extension.mediawiki
 
@@ -435,7 +537,7 @@ All P0 issues have been fixed.
 
 ### ❌ P3-013: i18n Key Count Wrong in 2 Files
 
-- **Impact:** Documents say "749 message keys"; actual is 730
+- **Impact:** Documents say "749 message keys"; actual is 731
 - **Files:** ARCHITECTURE.md, wiki/Home.md
 
 ### ❌ P3-014: README Uses Wrong Slide Parameter
@@ -500,7 +602,7 @@ All P0 issues have been fixed.
 ### ❌ P3-025: JS/PHP Line Counts Slightly Off
 
 - **Impact:** README says 96,886 JS lines and 15,034 PHP lines;
-  actual is ~96,916 and ~15,096
+  actual is ~96,152 and ~15,339
 - **Files:** README.md, Mediawiki-Extension-Layers.mediawiki
 
 ### ❌ P3-026: SSLV.php Line Count Wrong in Docs
@@ -524,7 +626,75 @@ All P0 issues have been fixed.
 
 - Multiple additional stale metrics across wiki/, docs/, and root
   documentation files. See Documentation Debt in codebase_review.md
-  for the full 46-item breakdown.
+  for the full 42-item breakdown.
+
+### ❌ P3-033: SHA1 Fallback Reimplemented Outside Trait
+
+- **File:** src/Api/ApiLayersSave.php L297-315
+- **Impact:** Duplicates `ForeignFileHelperTrait::getFileSha1()` logic
+  with inline SHA1 fallback code. DRY violation.
+- **Introduced:** v35 review
+
+### ✅ P3-034: SchemaManager CURRENT_VERSION Stale (Fixed v35)
+
+- **File:** src/Database/LayersSchemaManager.php L574
+- **Impact:** `CURRENT_VERSION` constant said 1.5.52 but actual
+  extension version was 1.5.56
+- **Introduced:** v35 review
+- **Resolution:** Updated constant to '1.5.56'.
+
+### ❌ P3-035: ImageLayerRenderer Stale Cache on src Change
+
+- **File:** resources/ext.layers.shared/ImageLayerRenderer.js L165
+- **Impact:** Image cache key ignores `layer.src` changes. If src
+  changes on the same layer ID, stale cached image is rendered.
+- **Introduced:** v35 review
+
+### ❌ P3-036: DimensionRenderer hitTest Fallback Mismatch
+
+- **File:** resources/ext.layers.shared/DimensionRenderer.js L803
+- **Impact:** hitTest extensionGap fallback is 10 but DEFAULTS
+  constant is 3. Inconsistent behavior when extensionGap unset.
+- **Introduced:** v35 review
+
+### ❌ P3-037: ColorValidator Alpha Channel Regex
+
+- **File:** src/Validation/ColorValidator.php L149
+- **Impact:** Regex for alpha validation accepts malformed values
+  like `1.2.3` (multiple dots)
+- **Introduced:** v35 review
+
+### ✅ P3-038: WikitextHooks Info Logging Every Thumbnail (Fixed v35)
+
+- **File:** src/Hooks/WikitextHooks.php L320-327
+- **Impact:** Logged at `info` level for every thumbnail render,
+  causing log spam in production.
+- **Introduced:** v35 review
+- **Resolution:** Changed `self::log()` to `self::logDebug()` for
+  thumbnail rendering log calls.
+
+### ❌ P3-039: EditLayersAction Dead MW < 1.44 Fallbacks
+
+- **File:** src/Action/EditLayersAction.php L40-57
+- **Impact:** Compatibility code for MediaWiki < 1.44 but
+  `extension.json` requires `>= 1.44.0`. Dead code.
+- **Introduced:** v35 review
+
+### ❌ P3-040: ErrorHandler retryOperation No-Op
+
+- **File:** resources/ext.layers.editor/ErrorHandler.js L529
+- **Impact:** Shows "Retrying..." message but doesn't actually
+  retry the operation. Misleading UX.
+- **Introduced:** v35 review
+
+### ✅ P3-041: LayersLightbox Hardcoded English Alt Text (Fixed v35)
+
+- **File:** resources/ext.layers/viewer/LayersLightbox.js L316
+- **Impact:** Alt text was hardcoded in English instead of i18n.
+- **Introduced:** v35 review
+- **Resolution:** Changed to `mw.message('layers-lightbox-alt').text()`.
+  Added i18n key to en.json, qqq.json, and extension.json module.
+  Regression test validates mw.message() is called.
 
 ---
 

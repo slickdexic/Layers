@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** February 9, 2026 — v33 review (version 1.5.54)
+**Last updated:** February 11, 2026 — v35 review (version 1.5.56)
 
 This plan organizes all open issues from the codebase review into
 prioritized phases with effort estimates. Each phase targets related
@@ -18,8 +18,9 @@ issues for efficient batching.
 | 4 | Code quality & dead code | 10 | 8 | 2 | 6-8 hours |
 | 5 | Performance | 5 | 5 | 0 | 2-3 hours |
 | 6 | Infrastructure | 5 | 5 | 0 | 3-4 hours |
-| 7 | Documentation debt | 46 | 0 | 46 | 4-6 hours |
-| **Total** | | **100** | **53** | **47** | **26-36 hrs** |
+| 7 | Documentation debt | 42 | 0 | 42 | 4-6 hours |
+| 8 | v35 findings (security + bugs) | 19 | 13 | 6 | 6-8 hours |
+| **Total** | | **115** | **65** | **50** | **32-44 hrs** |
 
 ---
 
@@ -180,7 +181,7 @@ maintainability.*
 
 ---
 
-## Phase 7: Documentation Debt (46 Items)
+## Phase 7: Documentation Debt (42 Items)
 
 *Target: Bring all documentation into sync with actual codebase state.*
 
@@ -221,17 +222,71 @@ docs/DOCUMENTATION_UPDATE_GUIDE.md as the checklist.
 
 ---
 
+## Phase 8: v35 Findings — Security & Bugs (18 Items)
+
+*Target: Fix new HIGH-priority security gaps and MEDIUM/LOW bugs
+discovered in the v35 comprehensive review.*
+
+### 8A: Security Fixes (HIGH — 4 items, ~2 hours)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 8.1 | OverflowException double endAtomic | P1-021 | ✅ Fixed | 30m |
+| 8.2 | TextSanitizer html_entity_decode after strip_tags | P1-022 | ✅ Fixed | 20m |
+| 8.3 | EditLayersAction clickjacking via ?modal=true | P1-023 | ✅ Not a bug | 0m |
+| 8.4 | ApiLayersList database error info disclosure | P1-024 | ✅ Fixed | 15m |
+
+**All 4 HIGH items resolved.** 2 fixed with regression tests,
+1 downgraded (defense-in-depth fix applied), 1 reclassified as
+intentional design (not a bug).
+
+### 8B: Medium Bugs (5 items, ~2 hours)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 8.5 | ThumbnailRenderer visible === false ignores 0 | P2-027 | ✅ Fixed | 15m |
+| 8.6 | $set param ignored in layerEditParserFunction | P2-028 | ✅ Fixed | 30m |
+| 8.7 | RevisionManager UTC timestamps as local | P2-029 | ✅ Fixed | 20m |
+| 8.8 | EditorBootstrap conditional global | P2-030 | ✅ Not a bug | 0m |
+| 8.9 | CanvasRenderer _blurTempCanvas not cleaned | P2-031 | ✅ Fixed | 10m |
+
+### 8C: Low Priority (9 items, ~2 hours)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 8.10 | SHA1 fallback outside trait | P3-033 | ❌ Open | 20m |
+| 8.11 | SchemaManager CURRENT_VERSION stale | P3-034 | ✅ Fixed | 5m |
+| 8.12 | ImageLayerRenderer stale cache on src | P3-035 | ❌ Open | 15m |
+| 8.13 | DimensionRenderer hitTest fallback mismatch | P3-036 | ❌ Open | 10m |
+| 8.14 | ColorValidator alpha regex gap | P3-037 | ❌ Open | 15m |
+| 8.15 | WikitextHooks info→debug log level | P3-038 | ✅ Fixed | 5m |
+| 8.16 | EditLayersAction dead MW < 1.44 code | P3-039 | ❌ Open | 15m |
+| 8.17 | ErrorHandler retryOperation no-op | P3-040 | ❌ Open | 20m |
+| 8.18 | LayersLightbox hardcoded English alt | P3-041 | ✅ Fixed | 10m |
+
+### 8D: User-Reported Bugs (1 item, ~30 min)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 8.19 | RichText fontSize overwritten on deselect | P1-025 | ✅ Fixed | 30m |
+
+**Fix:** `_extractDominantFontSize()` now accepts `baseFontSize`
+parameter. Runs without explicit `style.fontSize` are counted as
+using the base size, preventing partial format changes from
+overwriting `layer.fontSize`. 5 regression tests added.
+
+---
+
 ## Recommended Execution Order
 
-1. **Quick wins first** (Phases 1-3 quick wins): ~1 hour for 10 fixes
-   - P1-019, P1-020, P1-011, P2-017, P2-015, P3-004, P2-016,
-     P2-020, P3-003, P3-001
-2. **Phase 1 remaining**: Critical rendering and data bugs
+1. **Phase 8A first** (security fixes): ~2 hours for 4 HIGH fixes
+   - P1-021 (double endAtomic), P1-022 (TextSanitizer XSS),
+     P1-023 (clickjacking), P1-024 (info disclosure)
+2. **Phase 8B** (medium bugs): ~2 hours for 5 fixes
 3. **Phase 7A**: Version/metrics sync (prevents confusion)
-4. **Phase 2**: Security hardening
-5. **Phase 3 remaining**: Reliability fixes
-6. **Phase 7B-C**: Stale documents and cross-references
-7. **Phase 4-6**: Code quality, performance, infrastructure
+4. **Phase 8C**: Low-priority fixes from v35
+5. **Phase 7B-C**: Stale documents and cross-references
+6. **Phase 4 remaining**: God class reduction (ongoing)
 
 ---
 
@@ -250,7 +305,8 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
-| 2026-02-10 | v34 (batch 3): Fixed 6 more issues (P1-015, P2-007, P2-012, P2-023, P2-025, P3-006 by-design). ThumbnailRenderer shadow isolation, DOMParser SVG sanitizer, duplicate dialog cleanup (~200 lines removed), dead module reference, duplicate message keys. 12 new tests added. 11,321 tests passing. Phase 2 now 100% complete. |
+| 2026-02-11 | v35: Fresh comprehensive review. All v33 issues fixed in v34. Added Phase 8 with 18 new items (4 HIGH security, 5 MED bugs, 9 LOW). Updated doc debt to 42 items. |
+| 2026-02-10 | v34 (batch 3): Fixed 6 more issues. Phase 2 100% complete. |
 | 2026-02-10 | v34 (continued): Fixed 5 more issues (P1-014, P2-008, P2-018, P2-019, P2-021). Rich text word wrap font metrics, sanitizeString math angle brackets, shadow/effects canvas caching, long word overflow, SchemaManager DI. 9 regression tests added. 11,337 tests passing. Phase 3 now 100% complete. |
 | 2026-02-09 | v34: Fixed 23 issues (P1-011, P1-012, P1-017, P1-018, P1-019, P1-020, P2-009, P2-013, P2-014, P2-015, P2-016, P2-017, P2-020, P2-026, P3-001, P3-002, P3-003, P3-004, P3-005, P3-007). Added version-counter caching for SmartGuides. DB schema patches for CASCADE→SET NULL and ls_name NOT NULL. 13 regression tests added. 11,328 tests passing. |
 | 2026-02-09 | v33: Fresh comprehensive review. Added 4 new P1 (v33-1 through v33-4), 8 new P2, 7 new P3. Updated totals. Corrected Phase 1 counts (was claiming 8 fixed, 2 open; actual is 4 fixed, 10 open). |

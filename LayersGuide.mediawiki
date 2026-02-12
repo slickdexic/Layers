@@ -1,0 +1,156 @@
+__NOTOC__
+= Wikitext Syntax =
+=== Basic Syntax ===
+Add the `layerset` parameter to any file link to display annotations:
+
+<code><nowiki>[[File: Example.jpg | layerset=on]]</nowiki></code><br>
+'''Note:''' 'layers=' is also supported for backwards compatibility. Both parameters work identically.
+
+=== 'layerset=' Parameter Values ===
+{| class='wikitable'
+! Value !! Effect 
+|-
+| <code>on</code> || Display the default layer set
+|-
+| <code>default</code> || Display the default layer set (explicit)
+|-
+| <code>SetName</code> || Display a specific named layer set
+|-
+| <code>off</code> || Explicitly disable layers
+|-
+| <code>none</code> || Explicitly disable layers (alternative)
+|}
+
+=== Examples ===
+'''Default layer set:'''<br>
+<code><nowiki>[[File: Diagram.png | layerset=on]]</nowiki></code><br>
+<code><nowiki>[[File: Diagram.png | layerset=default]]</nowiki></code><br>
+Both of these display the default layer set on '''Diagram.png'''.
+
+'''Named layer sets:'''<br>
+<code><nowiki>[[File: Heart.png | layerset=anatomy]]</nowiki></code><br>
+<code><nowiki>[[File: Heart.png | layerset=blood-flow]]</nowiki></code></br>
+Both of these display '''Heart.png''' but with different layer sets.
+
+'''No layer sets:'''<br>
+<code><nowiki>[[File: Diagram.png | layerset=off]]</nowiki></code></br>
+<code><nowiki>[[File: Diagram.png | layerset=none]]</nowiki></code></br>
+<code><nowiki>[[File: Diagram.png]]</nowiki></code></br>
+These examples display '''Diagram.png''' with no layer set.
+
+=== Combining with Image Parameters ===
+The 'layerset' parameter works with all standard MediaWiki image parameters:<br>
+'''Thumbnails'''<br>
+<code><nowiki>[[File: Diagram.png | thumb | layerset=on | Diagram with annotations]]</nowiki></code></br>
+<code><nowiki>[[File: Diagram.png | thumb | 300px | layerset=anatomy | Anatomical labels]]</nowiki></code>
+
+'''Alignment'''<br>
+<code><nowiki>[[File: Diagram.png | left | layerset=on]]</nowiki></code></br>
+<code><nowiki>[[File: Diagram.png | center | layerset=on]]</nowiki></code></br>
+<code><nowiki>[[File: Diagram.png | right | layerset=on]]</nowiki></code>
+
+'''Size'''<br>
+<code><nowiki>[[File: Diagram.png | 200px | layerset=on]]</nowiki></code></br>
+<code><nowiki>[[File: Diagram.png | 300x200px | layerset=on]]</nowiki></code>
+
+'''Border and Framing'''<br>
+<code><nowiki>[[File: Diagram.png | border | layerset=on]]</nowiki></code></br>
+<code><nowiki>[[File: Diagram.png | frame | layerset=on | Caption text]]</nowiki></code></br>
+<code><nowiki>[[File: Diagram.png | frameless | layerset=on]]</nowiki></code>
+
+'''Complete Example'''<br>
+<code><nowiki>[[File: Human_Heart.png | thumb | 400px | right | border | layerset=anatomy | Human heart with anatomical labels]]</nowiki></code>
+
+=== Link Behavior (layerslink=) ===
+Control what happens when users click on layered images with the 'layerslink=' parameter:<br>
+'''Note:''' 'layerslink=' must be used together with 'layerset='. It controls the click behavior for images that have layers enabled. Without 'layerset=' or 'layers=', the 'layerslink=' parameter has no effect.
+{| class='wikitable'
+! Value !! Effect
+|-
+| (none) || Standard MediaWiki link to File page
+|-
+| 'editor' || Opens the layer editor, returns to originating page on close
+|-
+| 'editor-newtab' || Opens editor in a new browser tab
+|-
+| 'editor-modal' || Opens editor in overlay without navigation
+|-
+| 'viewer' || Opens fullscreen lightbox viewer
+|-
+| 'lightbox' || Alias for 'viewer'
+|}
+
+'''Examples'''<br>
+<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=editor]]</nowiki></code> Opens editor</br>
+<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=viewer]]</nowiki></code> Opens full size preview</br>
+<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=lightbox]]</nowiki></code> Same as 'viewer'</br>
+<code><nowiki>[[File: Diagram.png | layerset=anatomy]]</nowiki></code>Opens image's 'File:' page
+
+'''Advanced Editor Modes'''<br>
+For additional control over editor behavior:<br>
+<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=editor-newtab]]</nowiki></code> Opens the editor in a new tab<br>
+<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=editor-modal]]</nowiki></code> Opens the editor in an overlay (iframe).
+
+'''Note:''' 'layerslink=' is a depreciated feature with the new overlay buttons [[File:Layers-overlay-buttons.png]] (edit / view full size) that display on hover.<br>
+The 'Edit layers' button will open the Layers editor modally (overlay) so the user never leaves the page they are viewing. Saved edits are updated immediately on editor close.<br>
+The 'View full size' button opens a 'lightbox' (overlay) preview of the image. On overlay close, no navigation takes place, so the user remains on the same page.
+
+'''Link to editor'''<br>
+Direct linking to the editor is also possible:<br>
+<code>/wiki/File: Example.jpg?action=editlayers&setname=anatomy</code><br>
+Supported URL parameters:<br>
+- 'setname' - Layer set name to load<br>
+- 'layerset' - Alias for 'setname'</br>
+- 'layers' - Alias for 'setname' (backwards compatibility)
+
+=== Behavior Notes ===
+'''Non-existent Sets'''<br>
+If a named set doesn't exist, no layers are displayed (silent failure). The image shows without annotations.<br>
+<code><nowiki>[[File: Diagram.png | layerset=nonexistent]]</nowiki></code> If 'nonexistent' set doesn't exist, shows image only.<br>
+Overlay link to editor will appear when a layer set is included. Clicking 'Edit layers' will open the editor and create the new layer set.<br>
+Other 'layerslink=' parameters will also work once 'layerset=' is included.
+
+'''Case Sensitivity'''<br>
+Set names are case-sensitive.<br>
+<code><nowiki>[[File: Diagram.png | layerset=Anatomy]]</nowiki></code> is not the same as <code><nowiki>[[File: Diagram.png | layerset=anatomy]]</nowiki></code><br>
+
+'''Parameter Order'''<br>
+The 'layerset' parameter can appear anywhere in the parameter list:<br>
+<code><nowiki>[[File: Diagram.png | layerset=on | thumb | 300px]]</nowiki></code><br>
+<code><nowiki>[[File: Diagram.png | thumb | layerset=on | 300px]]</nowiki></code><br>
+<code><nowiki>[[File: Diagram.png | thumb | 300px | layerset=on]]</nowiki></code><br>
+All three examples behave exactly the same.
+
+= Slide Mode =
+Create standalone graphics without a base image using the <code><nowiki>{{#slide:}}</nowiki></code> parser function:<br>
+<code><nowiki>{{#slide: MySlideName}}</nowiki></code><br>
+<code><nowiki>{{#Slide: ... }}</nowiki></code> Capitalized 'Slide' is also supported for backwards compatibility.
+
+Just like images, slides support multiple named layer sets.
+
+'''Slide Parameters'''
+{| class="wikitable"
+! Parameter !! Description !! Example !! More
+|-
+| layerset || Named layer set to display || layerset=english || Same as with images
+|-
+|canvas || Canvas size (WxH) || canvas=1920x1080 || Only used when creating a new slide, otherwise ignored<br>Canvas dimensions can be changed in the editor
+|-
+| size || Display size || size=800x600 || Similar to images (px omitted). Aspect ratio is preserved without exceeding stated width and height
+|-
+| noedit || disables edit button || noedit || this prevents the 'Edit layers' overlay button
+|}
+
+'''Basic slide''' (default layer set)<br>
+<code><nowiki>{{#slide: MyDiagram}}</nowiki></code>
+
+'''Specific named layer set'''<br>
+<code><nowiki>{{#slide: MyDiagram | layerset=english}}</nowiki></code><br>
+<code><nowiki>{{#slide: MyDiagram | layerset=spanish}}</nowiki></code>
+
+'''Custom canvas and display size'''<br>
+<code><nowiki>{{#slide: Infographic | canvas=1200x800 | size=600x400}}</nowiki></code>
+
+'''View-only mode'''<br>
+<code><nowiki>{{#slide: Published | noedit}}</nowiki></code>
+<headertabs />

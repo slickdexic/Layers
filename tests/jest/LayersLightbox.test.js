@@ -1186,4 +1186,19 @@ describe( 'LayersLightbox edge cases', () => {
 			expect( () => lightbox.close() ).not.toThrow();
 		} );
 	} );
+
+	describe( 'i18n alt text', () => {
+		it( 'should use mw.message for image alt text instead of hardcoded string', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+
+			lightbox.renderViewer( 'http://example.com/test.jpg', { layers: [] } );
+
+			const img = lightbox.imageWrapper.querySelector( 'img' );
+			expect( img ).not.toBeNull();
+			// mw.message returns {text: () => 'msg:key'} in our mock
+			expect( img.alt ).toBe( 'msg:layers-lightbox-alt' );
+			expect( mw.message ).toHaveBeenCalledWith( 'layers-lightbox-alt' );
+		} );
+	} );
 } );

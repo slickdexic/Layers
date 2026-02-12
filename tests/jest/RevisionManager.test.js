@@ -134,12 +134,12 @@ describe( 'RevisionManager', () => {
 	describe( 'parseMWTimestamp', () => {
 		it( 'should parse MediaWiki binary(14) timestamp format', () => {
 			const result = revisionManager.parseMWTimestamp( '20251217143025' );
-			expect( result.getFullYear() ).toBe( 2025 );
-			expect( result.getMonth() ).toBe( 11 ); // December (0-indexed)
-			expect( result.getDate() ).toBe( 17 );
-			expect( result.getHours() ).toBe( 14 );
-			expect( result.getMinutes() ).toBe( 30 );
-			expect( result.getSeconds() ).toBe( 25 );
+			expect( result.getUTCFullYear() ).toBe( 2025 );
+			expect( result.getUTCMonth() ).toBe( 11 ); // December (0-indexed)
+			expect( result.getUTCDate() ).toBe( 17 );
+			expect( result.getUTCHours() ).toBe( 14 );
+			expect( result.getUTCMinutes() ).toBe( 30 );
+			expect( result.getUTCSeconds() ).toBe( 25 );
 		} );
 
 		it( 'should return current date for null timestamp', () => {
@@ -865,6 +865,40 @@ describe( 'RevisionManager', () => {
 			revisionManager.updateNewSetButtonState();
 
 			expect( mockUIManager.setNewBtnEl.title ).toContain( '15' );
+		} );
+	} );
+
+	describe( 'parseMWTimestamp UTC regression', () => {
+		it( 'should return UTC date, not local time', () => {
+			// MediaWiki timestamps are UTC. The parsed date must use Date.UTC()
+			// so getUTCHours() matches the input, not getHours() (which is local).
+			const result = revisionManager.parseMWTimestamp( '20251217143025' );
+
+			expect( result.getUTCFullYear() ).toBe( 2025 );
+			expect( result.getUTCMonth() ).toBe( 11 ); // December (0-indexed)
+			expect( result.getUTCDate() ).toBe( 17 );
+			expect( result.getUTCHours() ).toBe( 14 );
+			expect( result.getUTCMinutes() ).toBe( 30 );
+			expect( result.getUTCSeconds() ).toBe( 25 );
+		} );
+
+		it( 'should produce consistent UTC date for midnight timestamps', () => {
+			const result = revisionManager.parseMWTimestamp( '20250101000000' );
+
+			expect( result.getUTCFullYear() ).toBe( 2025 );
+			expect( result.getUTCMonth() ).toBe( 0 ); // January
+			expect( result.getUTCDate() ).toBe( 1 );
+			expect( result.getUTCHours() ).toBe( 0 );
+			expect( result.getUTCMinutes() ).toBe( 0 );
+			expect( result.getUTCSeconds() ).toBe( 0 );
+		} );
+
+		it( 'should preserve exact UTC time for end-of-day timestamps', () => {
+			const result = revisionManager.parseMWTimestamp( '20250630235959' );
+
+			expect( result.getUTCHours() ).toBe( 23 );
+			expect( result.getUTCMinutes() ).toBe( 59 );
+			expect( result.getUTCSeconds() ).toBe( 59 );
 		} );
 	} );
 } );

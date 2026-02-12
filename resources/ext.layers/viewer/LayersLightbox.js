@@ -276,7 +276,7 @@
 			// Create image element
 			const img = document.createElement( 'img' );
 			img.className = 'layers-lightbox-image';
-			img.alt = 'Full size image with layers';
+			img.alt = mw.message( 'layers-lightbox-alt' ).text();
 
 			// Handle image load
 			img.onload = () => {

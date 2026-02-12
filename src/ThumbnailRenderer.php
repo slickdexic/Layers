@@ -12,7 +12,6 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers;
 
 use Config;
-use Exception;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -155,7 +154,9 @@ class ThumbnailRenderer {
 		// Draw back-to-front: earlier array entries are background; later entries are on top
 		// Render in given order so top-most (last) are applied last
 		foreach ( $layers as $layer ) {
-			if ( ( $layer['visible'] ?? true ) === false ) {
+			// Handle both boolean false and integer 0 (API serialization)
+			$visible = $layer['visible'] ?? true;
+			if ( $visible === false || $visible === 0 ) {
 				continue;
 			}
 			$args = array_merge( $args, $this->buildLayerArguments( $layer, $scaleX, $scaleY ) );
