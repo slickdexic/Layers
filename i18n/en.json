@@ -628,6 +628,7 @@
 	"layers-lightbox-close": "Close",
 	"layers-lightbox-close-tooltip": "Close viewer (Escape)",
 	"layers-lightbox-loading": "Loading layers...",
+	"layers-lightbox-alt": "Full size image with layers",
 
 	"layers-viewer-overlay-label": "Layer actions",
 	"layers-viewer-edit": "Edit layers",

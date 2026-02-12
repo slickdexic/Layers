@@ -332,7 +332,11 @@ class Hooks {
 				return '';
 			}
 
-			$editUrl = $fileTitle->getLocalURL( [ 'action' => 'editlayers' ] );
+			$editParams = [ 'action' => 'editlayers' ];
+			if ( $set !== '' ) {
+				$editParams['setname'] = $set;
+			}
+			$editUrl = $fileTitle->getLocalURL( $editParams );
 			$linkText = 'Edit Layers';
 
 			return "[$editUrl $linkText]";

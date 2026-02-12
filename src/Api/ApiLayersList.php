@@ -101,12 +101,10 @@ class ApiLayersList extends ApiBase {
 		} catch ( \Exception $e ) {
 			$this->getLogger()->error(
 				'Failed to list slides: {error}',
-				[ 'error' => $e->getMessage() ]
+				[ 'error' => $e->getMessage(), 'exception' => $e ]
 			);
-			$this->dieWithError(
-				[ LayersConstants::ERROR_DB, $e->getMessage() ],
-				'db-error'
-			);
+			// Return generic error — never expose DB internals to clients
+			$this->dieWithError( LayersConstants::ERROR_DB, 'db-error' );
 		}
 
 		// Enrich with user names

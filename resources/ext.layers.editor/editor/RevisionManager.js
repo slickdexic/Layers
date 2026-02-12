@@ -57,7 +57,8 @@
 			const minute = parseInt( mwTimestamp.substring( 10, 12 ), 10 );
 			const second = parseInt( mwTimestamp.substring( 12, 14 ), 10 );
 
-			return new Date( year, month, day, hour, minute, second );
+			// MediaWiki timestamps are UTC; use Date.UTC to preserve timezone
+			return new Date( Date.UTC( year, month, day, hour, minute, second ) );
 		}
 
 		/**

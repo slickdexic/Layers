@@ -318,11 +318,11 @@ class WikitextHooks {
 		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
 
 		// Log queue state for troubleshooting foreign file issues
-		self::log(
+		self::logDebug(
 			"onThumbnailBeforeProduceHTML: filename=$filename, linkType=" .
 			( $fileParams['linkType'] ?? 'null' )
 		);
-		self::log(
+		self::logDebug(
 			"Queue state for $filename: " . json_encode( self::$fileLinkTypes[$filename] ?? [] )
 		);
 
