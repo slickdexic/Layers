@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95.19%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C140%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-11%2C152%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.56 (February 11, 2026)  
+> **Version:** 1.5.56 (February 12, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -52,7 +52,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 {{#Slide: MySlide | layerset=annotations}}       <!-- Render specific named layer set -->
 {{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
 {{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
-{{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
+{{#Slide: MySlide | background=#f0f0f0}}         <!-- Custom background color -->
 {{#Slide: MySlide | size=800x600 | noedit}}      <!-- View-only (no edit overlay) -->
 ```
 
@@ -309,8 +309,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,034 lines across 39 files**
-- **Frontend:** HTML5 Canvas editor with **140 JS files (~96,886 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,308 lines across 39 files**
+- **Frontend:** HTML5 Canvas editor with **139 JS files (~96,144 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **21 god classes** (files >1,000 lines), all use proper delegation patterns
@@ -321,8 +321,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,290 passing (165 suites) |
-| PHPUnit tests | 24 test files |
+| Jest tests | 11,152 passing (164 suites) |
+| PHPUnit tests | 31 test files |
 | Statement coverage | 95.19% |
 | Branch coverage | 84.96% |
 | Function coverage | 93.67% |
@@ -377,11 +377,11 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 140 | ✅ |
-| Total JS lines | ~96,886 | ✅ Hand-written (+ ~14,354 generated) |
-| ES6 classes | 140 | ✅ 100% migrated |
+| Total JS files | 139 | ✅ |
+| Total JS lines | ~96,144 | ✅ Hand-written (+ ~14,354 generated) |
+| ES6 classes | 139 | ✅ 100% migrated |
 | God classes (>1000 lines) | 21 | ✅ Well-delegated facades |
-| Tests passing | 11,290 | ✅ |
+| Tests passing | 11,152 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.19% | ✅ Excellent |
 | Branch coverage | 84.96% | ✅ Target met |

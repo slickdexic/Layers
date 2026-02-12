@@ -405,10 +405,10 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,140 tests in 164 suites — verified July 23, 2025)
+- Test count (11,152 tests in 164 suites — verified February 12, 2026)
 - Coverage (95.19% statement, 84.96% branch — verified February 8, 2026)
-- JavaScript file count (140 files total, ~96,886 lines)
-- PHP file count (39 files, ~15,034 lines)
+- JavaScript file count (139 files total, ~96,144 lines)
+- PHP file count (39 files, ~15,308 lines)
 - God class count (21 files >1,000 lines; 2 generated data files, 17 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (15 tools)

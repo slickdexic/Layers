@@ -403,36 +403,35 @@ is in the Previously Fixed Issues table below.
 
 ---
 
-## Documentation Debt Summary (42 Issues)
+## Documentation Debt Summary (42 Issues → 14 Remaining)
 
-### Cross-Document Metric Inconsistencies
+### Cross-Document Metric Inconsistencies — ✅ RESOLVED
 
-| Metric | Actual | Files With Wrong Value |
-|--------|--------|----------------------|
-| Version | 1.5.56 | Many docs still at 1.5.52-1.5.54 |
-| i18n keys | 731 | copilot-instructions (731 ✅) |
-| PHPUnit tests | 31 | README (24), ARCH (24), MW (24) |
-| JS files | 139 | copilot-instructions (140) |
-| JS total lines | 96,152 | README (96,886), MW (96,886) |
-| PHP total lines | 15,339 | README (15,034), MW (15,034) |
-| SSLV.php lines | 1,375 | copilot-inst (1,346), ARCH (1,346) |
-| PropertiesForm | 994 | copilot-instructions (914) |
-| Test count | 11,140 | README badge (11,254) |
-| CHANGELOG | 1.5.56 | Missing entries for 1.5.55-1.5.56 |
+All key metrics now synchronized across documentation (February 12, 2026):
 
-### Critically Stale Documents
+| Metric | Current Value | Status |
+|--------|---------------|--------|
+| Version | 1.5.56 | ✅ Synced |
+| i18n keys | 741 | ✅ Synced |
+| PHPUnit tests | 31 | ✅ Synced |
+| JS files | 139 | ✅ Synced |
+| JS total lines | 96,144 | ✅ Synced |
+| PHP total lines | 15,308 | ✅ Synced |
+| Test count | 11,152 | ✅ Synced |
 
-| File | Issue |
-|------|-------|
-| docs/UX_STANDARDS_AUDIT.md | v1.1.5 era; says "NOT IMPLEMENTED" for done features |
-| docs/SHAPE_LIBRARY_PROPOSAL.md | Says "Proposed" — shipped with 5,116 shapes |
-| docs/SLIDE_MODE.md | Says "Partially Implemented" — mostly complete |
-| docs/INSTANTCOMMONS_SUPPORT.md | Uses deprecated `layers=on` syntax |
-| docs/NAMED_LAYER_SETS.md | Uses proposal language for shipped feature |
-| docs/ARCHITECTURE.md | VERSION: '0.8.5' in code sample (L688) |
-| docs/FUTURE_IMPROVEMENTS.md | Duplicate numbering; completed in "Active" |
-| README.md | Slide syntax: `bgcolor=` instead of `background=` |
-| wiki/Changelog.md | Not mirroring CHANGELOG.md |
+### Critically Stale Documents — ✅ RESOLVED
+
+| File | Issue | Status |
+|------|-------|--------|
+| docs/UX_STANDARDS_AUDIT.md | v1.1.5 era; says "NOT IMPLEMENTED" for done features | ✅ Fixed |
+| docs/SHAPE_LIBRARY_PROPOSAL.md | Says "Proposed" — shipped with 5,116 shapes | ✅ Fixed |
+| docs/SLIDE_MODE.md | Says "Partially Implemented" — mostly complete | ✅ Fixed |
+| docs/INSTANTCOMMONS_SUPPORT.md | Uses deprecated `layers=on` syntax | ✅ Fixed |
+| docs/NAMED_LAYER_SETS.md | Uses proposal language for shipped feature | ✅ Already correct |
+| docs/ARCHITECTURE.md | VERSION: '0.8.5' in code sample (L688) | ✅ Fixed |
+| docs/FUTURE_IMPROVEMENTS.md | Duplicate numbering; completed in "Active" | ⚠️ Cosmetic |
+| README.md | Slide syntax: `bgcolor=` instead of `background=` | ✅ Fixed |
+| wiki/Changelog.md | Not mirroring CHANGELOG.md | ✅ Fixed |
 
 ---
 

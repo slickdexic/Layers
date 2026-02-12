@@ -13,7 +13,7 @@ This document describes the Layers extension's support for files from foreign re
 The Layers extension now fully supports annotating files from foreign repositories (InstantCommons, ForeignDB, etc.). This means users can:
 
 - Create, edit, save, and delete layer annotations on Commons files
-- Use `layers=` and `layerslink=` wikitext parameters with foreign files
+- Use `layerset=` and `layerslink=` wikitext parameters with foreign files
 - Link directly to the editor for foreign files
 - Annotate non-web image formats (TIFF, BMP) using automatic thumbnail conversion
 
@@ -80,13 +80,13 @@ Foreign files work identically to local files:
 
 ```wikitext
 <!-- Display layers on a Commons file -->
-[[File:Example_from_Commons.jpg|layers=on]]
+[[File:Example_from_Commons.jpg|layerset=on]]
 
 <!-- Link to editor for a Commons file -->
 [[File:Example_from_Commons.jpg|layerslink=editor]]
 
 <!-- Named layer set -->
-[[File:Example_from_Commons.jpg|layers=anatomy|layerslink=editor:anatomy]]
+[[File:Example_from_Commons.jpg|layerset=anatomy|layerslink=editor:anatomy]]
 ```
 
 ---

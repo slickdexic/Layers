@@ -2,11 +2,21 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
-## [1.5.56] - 2026-02-11
+## [1.5.56] - 2026-02-12
 
 ### Fixed
 - **MediaWiki 1.43 Compatibility (REL1_43)** — Fixed `IConnectionProvider` → `ILoadBalancer` in `LayersSchemaManager.php` and `services.php`. The `IConnectionProvider` interface was introduced in MW 1.44 and is not available in MW 1.43.
 - **MediaWiki 1.39 Compatibility (REL1_39)** — Same `ILoadBalancer` fix plus replaced ES2020 JavaScript syntax (`??`, `?.`) with ES6-compatible alternatives in `DimensionRenderer.js` and `ShapeRenderer.js`. MW 1.39's ResourceLoader doesn't support nullish coalescing or optional chaining.
+- **SHA1 Fallback Outside Trait (P3-033)** — ApiLayersSave.php now uses `ForeignFileHelperTrait::getFileSha1()` instead of duplicating the fallback SHA1 logic locally. DRY and consistent foreign file handling across all API modules.
+- **ImageLayerRenderer Stale Cache (P3-035)** — Cache key now includes hash of `src` property. Previously, changing an image layer's source reused the cached image of the old source until the entire cache was cleared.
+- **DimensionRenderer hitTest Fallback Mismatch (P3-036)** — Default values in fallback code now use `DEFAULTS.OFFSET` and `DEFAULTS.TEXT_OFFSET` constants instead of hardcoded 50 and 0, matching the rendering code.
+- **ColorValidator Alpha Regex Gap (P3-037)** — Strict alpha value regex updated to accept all 6 CSS-valid alpha formats: 0, 1, 0.5, .5, 0.50, 1.0. Previously rejected `.5` (leading-dot shorthand) and `1.0` (trailing zero).
+- **EditLayersAction Dead MW < 1.44 Code (P3-039)** — Removed obsolete `ActionInfo` compatibility wrapper for MediaWiki versions below 1.44. Extension requires MW 1.44+.
+- **ErrorHandler retryOperation No-Op (P3-040)** — Removed misleading `retryOperation()` method that never actually retried. Now uses `mw.notify()` to show user-friendly error with action label. Clearer API without false retry promises.
+
+### Technical Details
+- All 11,152 tests pass (164 test suites) ✅
+- Grade upgraded from A- to A with zero open code issues
 
 ## [1.5.55] - 2025-07-23
 

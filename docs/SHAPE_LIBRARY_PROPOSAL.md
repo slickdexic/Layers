@@ -1,9 +1,10 @@
-# Shape Library Feature Proposal
+# Shape Library Feature
 
-**Status:** Proposed  
+**Status:** ✅ Implemented  
 **Author:** Development Team  
 **Date:** January 2026  
-**Target Version:** 1.5.0
+**Target Version:** 1.5.0  
+**Shipped In:** v1.5.8+ (5,116 shapes in 12 categories)
 
 ## Executive Summary
 

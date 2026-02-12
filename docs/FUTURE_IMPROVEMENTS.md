@@ -2,7 +2,7 @@
 
 This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
 
-**Last Updated:** February 6, 2026
+**Last Updated:** February 12, 2026
 
 ---
 

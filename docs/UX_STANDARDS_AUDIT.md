@@ -1,7 +1,7 @@
 # UX Standards Audit - Layers Editor vs Industry Standards
 
-**Date:** December 18, 2025  
-**Version:** 1.1.5  
+**Date:** February 12, 2026  
+**Version:** 1.5.56  
 **Compared Against:** Figma, Canva, Adobe Photoshop, Sketch, Google Drawings
 
 ---
@@ -31,7 +31,7 @@ The Layers editor is **95% compliant** with modern design tool conventions. User
 ### ✅ COMPLIANT - Core Drawing Tools
 
 **What users expect:** 11+ drawing tools with intuitive behavior  
-**What we have:** 11 tools (Pointer, Text, Text Box, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line). Blur effect available via fill='blur' on any shape.
+**What we have:** 15 tools (Pointer, Text, Text Box, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Blur, Image, Dimension, Marker). Shape library with 5,116 shapes in 12 categories.
 
 | Feature | Figma | Canva | Layers | Notes |
 |---------|-------|-------|--------|-------|
@@ -101,63 +101,51 @@ The Layers editor is **95% compliant** with modern design tool conventions. User
 | Standard palette | ✅ | ✅ | ✅ | |
 | Hex input | ✅ | ✅ | ✅ | |
 | Recent/saved colors | ✅ | ✅ | ✅ | 16 slots |
-| Opacity slider | ✅ | ✅ | ❌ | Medium |
+| Opacity slider | ✅ | ✅ | ✅ | In properties panel |
 | Eyedropper | ✅ | ✅ | ✅ | Native picker |
-| Gradient | ✅ | ✅ | ❌ | Low |
+| Gradient | ✅ | ✅ | ✅ | 6 presets + custom |
 
-**Missing Features:**
-1. **Opacity in color picker** - Currently separate control (Medium priority)
-2. **Gradient fill** - Not essential for annotations (Low priority)
-
-**Verdict:** ✅ Feature-complete for annotation use
+**Verdict:** ✅ Complete with gradients and opacity
 
 ---
 
-### ❌ MISSING - Alignment & Distribution
+### ✅ COMPLIANT - Alignment & Distribution
 
 **What users expect:** Align left/center/right, top/middle/bottom, distribute evenly  
-**What we have:** NOT IMPLEMENTED
+**What we have:** Full implementation via AlignmentController
 
-| Feature | Figma | Canva | Layers | Priority |
-|---------|-------|-------|--------|----------|
-| Align left | ✅ | ✅ | ❌ | High |
-| Align center (H) | ✅ | ✅ | ❌ | High |
-| Align right | ✅ | ✅ | ❌ | High |
-| Align top | ✅ | ✅ | ❌ | High |
-| Align middle (V) | ✅ | ✅ | ❌ | High |
-| Align bottom | ✅ | ✅ | ❌ | High |
-| Distribute horizontally | ✅ | ✅ | ❌ | Medium |
-| Distribute vertically | ✅ | ✅ | ❌ | Medium |
+| Feature | Figma | Canva | Layers | Notes |
+|---------|-------|-------|--------|-------|
+| Align left | ✅ | ✅ | ✅ | |
+| Align center (H) | ✅ | ✅ | ✅ | |
+| Align right | ✅ | ✅ | ✅ | |
+| Align top | ✅ | ✅ | ✅ | |
+| Align middle (V) | ✅ | ✅ | ✅ | |
+| Align bottom | ✅ | ✅ | ✅ | |
+| Distribute horizontally | ✅ | ✅ | ✅ | |
+| Distribute vertically | ✅ | ✅ | ✅ | |
 
-**Impact:** Users with multiple annotations cannot easily align them. This is a significant gap for professional use.
-
-**Recommendation:** Implement alignment toolbar buttons for multi-selection scenarios.
-
-**Verdict:** ❌ Critical gap for power users
+**Verdict:** ✅ Full feature parity
 
 ---
 
-### ⚠️ PARTIAL - Snapping & Smart Guides
+### ✅ COMPLIANT - Snapping & Smart Guides
 
 **What users expect:** Snap to grid, snap to objects, smart alignment guides  
-**What we have:** Basic snap-to-grid, guides from rulers, NO smart guides
+**What we have:** Full implementation via SmartGuidesController
 
-| Feature | Figma | Canva | Layers | Priority |
-|---------|-------|-------|--------|----------|
-| Snap to grid | ✅ | ✅ | ✅ | Implemented |
-| Toggle grid | ✅ | ✅ | ✅ | In state |
-| Rulers | ✅ | ✅ | ✅ | Drag-to-create guides |
-| Custom guides | ✅ | ✅ | ✅ | Drag from rulers |
-| Smart guides (object snap) | ✅ | ✅ | ❌ | High |
-| Center snap | ✅ | ✅ | ❌ | High |
-| Edge snap | ✅ | ✅ | ❌ | Medium |
+| Feature | Figma | Canva | Layers | Notes |
+|---------|-------|-------|--------|-------|
+| Snap to grid | ✅ | ✅ | ✅ | |
+| Toggle grid | ✅ | ✅ | ✅ | |
+| Rulers | ✅ | ✅ | ✅ | |
+| Custom guides | ✅ | ✅ | ✅ | |
+| Smart guides (object snap) | ✅ | ✅ | ✅ | Version-cached |
+| Center snap | ✅ | ✅ | ✅ | |
+| Edge snap | ✅ | ✅ | ✅ | |
+| Canvas snap | ✅ | ✅ | ✅ | On by default |
 
-**Missing Features:**
-1. **Smart guides** - Lines that appear when objects align (High priority)
-2. **Snap to object centers** - Align with other layer centers
-3. **Snap to object edges** - Align with other layer edges
-
-**Verdict:** ⚠️ Basic snapping works, needs smart guides
+**Verdict:** ✅ Full feature parity
 
 ---
 
@@ -180,22 +168,20 @@ The Layers editor is **95% compliant** with modern design tool conventions. User
 
 ---
 
-### ❌ MISSING - Object Operations
+### ✅ COMPLIANT - Object Operations
 
 **What users expect:** Flip horizontal/vertical, group/ungroup  
-**What we have:** NOT IMPLEMENTED
+**What we have:** Full implementation via GroupManager
 
-| Feature | Figma | Canva | Layers | Priority |
-|---------|-------|-------|--------|----------|
-| Flip horizontal | ✅ | ✅ | ❌ | Medium |
-| Flip vertical | ✅ | ✅ | ❌ | Medium |
-| Group layers | ✅ | ✅ | ❌ | Medium |
-| Ungroup | ✅ | ✅ | ❌ | Medium |
-| Boolean operations | ✅ | ❌ | ❌ | Low |
+| Feature | Figma | Canva | Layers | Notes |
+|---------|-------|-------|--------|-------|
+| Flip horizontal | ✅ | ✅ | ✅ | |
+| Flip vertical | ✅ | ✅ | ✅ | |
+| Group layers | ✅ | ✅ | ✅ | Folders |
+| Ungroup | ✅ | ✅ | ✅ | |
+| Boolean operations | ✅ | ❌ | ❌ | Not planned |
 
-**Impact:** Users cannot flip mirrored annotations or group related elements.
-
-**Verdict:** ❌ Missing but not critical for annotation use case
+**Verdict:** ✅ Full feature parity
 
 ---
 

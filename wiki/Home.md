@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C290%20passing-brightgreen" alt="11,290 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C152%20passing-brightgreen" alt="11,152 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
@@ -20,17 +20,17 @@
 
 ---
 
-## 🆕 What's New in v1.5.52
+## 🆕 What's New in v1.5.56
 
-- **API Documentation** — Added missing `layerslist` endpoint to API Reference
-- **Depth Guards** — All GroupManager recursive functions now protected from stack overflow
-- **Cache Key Fix** — ImageLayerRenderer now uses hash for collision-resistant cache keys
-- **Documentation** — Updated JS file count (140), API module count (5), version references
+- **Grade A Codebase** — All code issues (HIGH, MEDIUM, LOW) resolved across 35 review cycles
+- **6 P3 Fixes** — SHA1 DRY violation, cache invalidation, hitTest alignment, regex validation, dead code removal
+- **Strict Validation** — ColorValidator now rejects malformed alpha values like `1.2.3`
+- **Documentation Sync** — All metrics updated to accurate February 2026 values
 
-### Previous v1.5.51 Highlights
+### Previous v1.5.55 Highlights
 
-- **Unified Dimension Text Drag** — Dimension text now acts as a CAD-style drag handle
-- **Arrow Position Control** — Dimension arrows can now point inside or outside
+- **10 Bug Fixes** — Transaction safety, TextSanitizer XSS, info disclosure, boolean serialization
+- **FontSize Bug** — Rich text fontSize no longer overwritten on deselect (user-reported P1-025)
 
 ### Previous v1.5.49 Highlights
 
@@ -303,20 +303,20 @@ See [[Changelog]] for full details.
 | Metric | Value |
 |--------|-------|
 | **Version (main)** | 1.5.56 |
-| **Version (REL1_43)** | 1.5.51-REL1_43 |
-| **Version (REL1_39)** | 1.5.51-REL1_39 |
-| **Release Date** | February 5, 2026 |
-| **Test Suites** | 165 |
-| **Total Tests** | 11,290 |
-| **PHPUnit Test Files** | 24 |
+| **Version (REL1_43)** | 1.5.56 |
+| **Version (REL1_39)** | 1.5.56 |
+| **Release Date** | February 12, 2026 |
+| **Test Suites** | 164 |
+| **Total Tests** | 11,152 |
+| **PHPUnit Test Files** | 31 |
 | **Statement Coverage** | 95.19% |
 | **Branch Coverage** | 84.96% |
 | **Function Coverage** | 93.67% |
 | **Line Coverage** | 95.32% |
-| **JavaScript Files** | 140 |
-| **ES6 Classes** | 140 |
+| **JavaScript Files** | 139 |
+| **ES6 Classes** | 139 |
 | **God Classes** | 21 (2 generated, 17 JS, 2 PHP) |
-| **i18n Messages** | 749 |
+| **i18n Messages** | 741 |
 
 ---
 

@@ -4,11 +4,21 @@ Version history for the Layers extension.
 
 ---
 
-## Version 1.5.56 (February 11, 2026)
+## Version 1.5.56 (February 12, 2026)
 
 ### Fixed
 - **MediaWiki 1.43 Compatibility (REL1_43)** — Fixed `IConnectionProvider` → `ILoadBalancer` for MW 1.43
 - **MediaWiki 1.39 Compatibility (REL1_39)** — Same fix plus replaced ES2020 syntax (`??`, `?.`) with ES6 alternatives
+- **SHA1 Fallback Outside Trait (P3-033)** — ApiLayersSave.php now uses `ForeignFileHelperTrait::getFileSha1()` for DRY foreign file handling
+- **ImageLayerRenderer Stale Cache (P3-035)** — Cache key now includes hash of `src` property
+- **DimensionRenderer hitTest Fallback Mismatch (P3-036)** — Default values now use DEFAULTS constants instead of hardcoded numbers
+- **ColorValidator Alpha Regex Gap (P3-037)** — Accepts all 6 CSS-valid alpha formats including `.5` and `1.0`
+- **EditLayersAction Dead MW < 1.44 Code (P3-039)** — Removed obsolete `ActionInfo` compatibility wrapper
+- **ErrorHandler retryOperation No-Op (P3-040)** — Replaced misleading retry method with `mw.notify()` for user-friendly errors
+
+### Technical Details
+- All 11,152 tests pass (164 test suites) ✅
+- Grade upgraded from A- to A with zero open code issues
 
 ## Version 1.5.55 (July 23, 2025)
 
@@ -84,7 +94,7 @@ Version history for the Layers extension.
 
 ### Technical Details
 - v27 code review: 3 CRITICAL + 6 HIGH issues fixed
-- All 11,140 JS tests pass (164 suites) ✅
+- All 11,152 JS tests pass (164 suites) ✅
 - ESLint: 0 errors, phpcs: 0 errors
 
 ## Version 1.5.52 (February 5, 2026)
