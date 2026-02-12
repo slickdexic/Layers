@@ -453,16 +453,12 @@
 		getRecoveryStrategy( errorInfo ) {
 			const strategies = {
 				'load': {
-					action: 'retry',
-					delay: 2000,
-					maxAttempts: 2,
-					message: 'Retrying layer load...'
+					action: 'notify',
+					message: 'Layer load failed. Please try again.'
 				},
 				'save': {
-					action: 'retry',
-					delay: 3000,
-					maxAttempts: 1,
-					message: 'Retrying save operation...'
+					action: 'notify',
+					message: 'Save failed. Please try again.'
 				},
 				'canvas': {
 					action: 'refresh',
@@ -483,14 +479,8 @@
 		 * @param {Object} strategy - Recovery strategy
 		 * @param {Object} errorInfo - Error information
 		 */
-		executeRecoveryStrategy( strategy, errorInfo ) {
+		executeRecoveryStrategy( strategy, _errorInfo ) {
 			switch ( strategy.action ) {
-				case 'retry':
-					this.showRecoveryNotification( strategy.message );
-					this._scheduleTimeout( () => {
-						this.retryOperation( errorInfo );
-					}, strategy.delay );
-					break;
 				case 'refresh':
 					this.showRecoveryNotification( strategy.message );
 					this._scheduleTimeout( () => {
@@ -512,20 +502,6 @@
 			if ( window.mw && window.mw.notify ) {
 				mw.notify( message, { type: 'info', autoHide: true } );
 			}
-		}
-
-		/**
-		 * Retry failed operation
-		 *
-		 * @param {Object} errorInfo - Error information
-		 */
-		retryOperation( errorInfo ) {
-			// This would need to be implemented based on the specific operation
-			// For now, just log that a retry was attempted
-			this.logError( Object.assign( {}, errorInfo, {
-				message: 'Recovery: Retrying operation - ' + errorInfo.message,
-				severity: 'low'
-			} ) );
 		}
 
 		/**

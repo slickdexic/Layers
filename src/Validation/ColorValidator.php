@@ -140,7 +140,7 @@ class ColorValidator {
 		}
 
 		// RGBA format: rgba(255, 255, 255, 0.5)
-		if ( preg_match( '/^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/i', $color, $matches ) ) {
+		if ( preg_match( '/^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+(?:\.\d+)?|\.\d+)\s*\)$/i', $color, $matches ) ) {
 			$alpha = (float)$matches[4];
 			return $this->areRgbValuesValid( (int)$matches[1], (int)$matches[2], (int)$matches[3] ) &&
 				$alpha >= 0 && $alpha <= 1;
@@ -170,7 +170,7 @@ class ColorValidator {
 		}
 
 		// HSLA format: hsla(360, 100%, 50%, 0.5)
-		if ( preg_match( '/^hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([\d.]+)\s*\)$/i', $color, $matches ) ) {
+		if ( preg_match( '/^hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*(\d+(?:\.\d+)?|\.\d+)\s*\)$/i', $color, $matches ) ) {
 			$h = (int)$matches[1];
 			$s = (int)$matches[2];
 			$l = (int)$matches[3];
@@ -223,7 +223,7 @@ class ColorValidator {
 			return "rgb($r, $g, $b)";
 		}
 
-		if ( preg_match( '/^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/i', $color, $matches ) ) {
+		if ( preg_match( '/^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+(?:\.\d+)?|\.\d+)\s*\)$/i', $color, $matches ) ) {
 			$r = max( 0, min( 255, (int)$matches[1] ) );
 			$g = max( 0, min( 255, (int)$matches[2] ) );
 			$b = max( 0, min( 255, (int)$matches[3] ) );
@@ -248,7 +248,7 @@ class ColorValidator {
 			return "hsl($h, $s%, $l%)";
 		}
 
-		if ( preg_match( '/^hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([\d.]+)\s*\)$/i', $color, $matches ) ) {
+		if ( preg_match( '/^hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*(\d+(?:\.\d+)?|\.\d+)\s*\)$/i', $color, $matches ) ) {
 			$h = max( 0, min( 360, (int)$matches[1] ) );
 			$s = max( 0, min( 100, (int)$matches[2] ) );
 			$l = max( 0, min( 100, (int)$matches[3] ) );
@@ -294,5 +294,84 @@ class ColorValidator {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Static helper to check if a color value is valid
+	 *
+	 * Validates that the color is a recognized format (hex, rgb, rgba, hsl, hsla, or named color)
+	 * and doesn't contain dangerous content.
+	 *
+	 * @param string $color Color value to validate
+	 * @return bool True if color is valid
+	 */
+	public static function isValidColor( string $color ): bool {
+		// ReDoS protection: reject excessively long inputs
+		if ( strlen( $color ) > self::MAX_COLOR_LENGTH ) {
+			return false;
+		}
+
+		$color = trim( strtolower( $color ) );
+
+		// Check for dangerous patterns first
+		$dangerousPatterns = [
+			'/javascript:/i',
+			'/expression\s*\(/i',
+			'/url\s*\(/i',
+			'/<script/i',
+			'/eval\s*\(/i'
+		];
+
+		foreach ( $dangerousPatterns as $pattern ) {
+			if ( preg_match( $pattern, $color ) ) {
+				return false;
+			}
+		}
+
+		// Check for named colors (including transparent)
+		if ( in_array( $color, self::NAMED_COLORS, true ) ) {
+			return true;
+		}
+
+		// Check for hex colors (#RGB, #RGBA, #RRGGBB, #RRGGBBAA)
+		if ( preg_match( '/^#([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i', $color ) ) {
+			return true;
+		}
+
+		// Check for RGB format: rgb(255, 255, 255)
+		if ( preg_match( '/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i', $color, $matches ) ) {
+			$r = (int)$matches[1];
+			$g = (int)$matches[2];
+			$b = (int)$matches[3];
+			return $r >= 0 && $r <= 255 && $g >= 0 && $g <= 255 && $b >= 0 && $b <= 255;
+		}
+
+		// Check for RGBA format: rgba(255, 255, 255, 0.5)
+		if ( preg_match( '/^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+(?:\.\d+)?|\.\d+)\s*\)$/i', $color, $matches ) ) {
+			$r = (int)$matches[1];
+			$g = (int)$matches[2];
+			$b = (int)$matches[3];
+			$a = (float)$matches[4];
+			return $r >= 0 && $r <= 255 && $g >= 0 && $g <= 255 && $b >= 0 && $b <= 255 && $a >= 0 && $a <= 1;
+		}
+
+		// Check for HSL format: hsl(360, 100%, 50%)
+		if ( preg_match( '/^hsl\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)$/i', $color, $matches ) ) {
+			$h = (int)$matches[1];
+			$s = (int)$matches[2];
+			$l = (int)$matches[3];
+			return $h >= 0 && $h <= 360 && $s >= 0 && $s <= 100 && $l >= 0 && $l <= 100;
+		}
+
+		// Check for HSLA format: hsla(360, 100%, 50%, 0.5)
+		if ( preg_match( '/^hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*(\d+(?:\.\d+)?|\.\d+)\s*\)$/i', $color, $matches ) ) {
+			$h = (int)$matches[1];
+			$s = (int)$matches[2];
+			$l = (int)$matches[3];
+			$a = (float)$matches[4];
+			return $h >= 0 && $h <= 360 && $s >= 0 && $s <= 100 && $l >= 0 && $l <= 100 && $a >= 0 && $a <= 1;
+		}
+
+		return false;
 	}
 }

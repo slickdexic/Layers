@@ -357,10 +357,9 @@ describe( 'ImageLayerRenderer', () => {
 				src: 'data:image/png;base64,test'
 			};
 
+			expect( renderer.getCacheSize() ).toBe( 0 );
 			renderer.draw( layer );
-
-			expect( renderer.isCached( 'check-cache-test' ) ).toBe( true );
-			expect( renderer.isCached( 'nonexistent' ) ).toBe( false );
+			expect( renderer.getCacheSize() ).toBe( 1 );
 		} );
 
 		it( 'should clear cache', () => {
@@ -374,6 +373,83 @@ describe( 'ImageLayerRenderer', () => {
 
 			renderer.clearCache();
 			expect( renderer.getCacheSize() ).toBe( 0 );
+		} );
+
+		it( 'should use hash for layers without id', () => {
+			// Two layers with same base64 prefix but different content
+			const layer1 = {
+				src: 'data:image/png;base64,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+			};
+			const layer2 = {
+				src: 'data:image/png;base64,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABB'
+			};
+
+			// Without hash, both would have same cache key (first 50 chars identical)
+			// With hash, they should get different cache keys
+			renderer.draw( layer1 );
+			renderer.draw( layer2 );
+
+			// Should have 2 entries (not colliding)
+			expect( renderer.getCacheSize() ).toBe( 2 );
+		} );
+
+		it( 'should invalidate cache when layer.src changes (P3-035)', () => {
+			const layer = {
+				id: 'img-1',
+				src: 'data:image/png;base64,OriginalImageData'
+			};
+
+			renderer.draw( layer );
+			expect( renderer.getCacheSize() ).toBe( 1 );
+
+			// Change the src on the same layer id (user replaced image)
+			const updatedLayer = {
+				id: 'img-1',
+				src: 'data:image/png;base64,ReplacementImageData'
+			};
+
+			renderer.draw( updatedLayer );
+			// Should have 2 entries — old and new src produce different cache keys
+			expect( renderer.getCacheSize() ).toBe( 2 );
+		} );
+	} );
+
+	describe( '_hashString', () => {
+		it( 'should generate consistent hashes', () => {
+			const hash1 = renderer._hashString( 'test string' );
+			const hash2 = renderer._hashString( 'test string' );
+
+			expect( hash1 ).toBe( hash2 );
+		} );
+
+		it( 'should generate different hashes for different strings', () => {
+			const hash1 = renderer._hashString( 'string one' );
+			const hash2 = renderer._hashString( 'string two' );
+
+			expect( hash1 ).not.toBe( hash2 );
+		} );
+
+		it( 'should return prefixed hash', () => {
+			const hash = renderer._hashString( 'test' );
+
+			expect( hash ).toMatch( /^img_[a-z0-9]+$/ );
+		} );
+
+		it( 'should handle empty string', () => {
+			const hash = renderer._hashString( '' );
+
+			expect( hash ).toMatch( /^img_[a-z0-9]+$/ );
+		} );
+
+		it( 'should handle very long strings efficiently', () => {
+			const longString = 'x'.repeat( 100000 );
+			const start = Date.now();
+			const hash = renderer._hashString( longString );
+			const elapsed = Date.now() - start;
+
+			expect( hash ).toMatch( /^img_[a-z0-9]+$/ );
+			// Should complete in reasonable time (< 100ms)
+			expect( elapsed ).toBeLessThan( 100 );
 		} );
 	} );
 
@@ -556,7 +632,7 @@ describe( 'ImageLayerRenderer', () => {
 
 			expect( mw.log.warn ).toHaveBeenCalledWith(
 				'[ImageLayerRenderer] Failed to load image layer:',
-				'error-test'
+				expect.stringContaining( 'error-test' )
 			);
 			testRenderer.destroy();
 		} );

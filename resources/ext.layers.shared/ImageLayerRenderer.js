@@ -145,6 +145,25 @@
 		}
 
 		/**
+		 * Generate a simple hash from a string for cache keys
+		 * Uses djb2 algorithm - fast and produces good distribution
+		 *
+		 * @private
+		 * @param {string} str - String to hash
+		 * @return {string} Hash string prefixed with 'img_'
+		 */
+		_hashString( str ) {
+			let hash = 5381;
+			for ( let i = 0; i < str.length; i++ ) {
+				// hash * 33 + char (djb2 algorithm)
+				hash = ( ( hash << 5 ) + hash ) + str.charCodeAt( i );
+				hash |= 0; // Convert to 32-bit integer
+			}
+			// Convert to base36 for shorter key, make positive
+			return 'img_' + ( hash >>> 0 ).toString( 36 );
+		}
+
+		/**
 		 * Get or create cached image element for a layer
 		 *
 		 * @param {Object} layer - Image layer
@@ -155,8 +174,11 @@
 				return null;
 			}
 
-			// Use layer id as cache key
-			const cacheKey = layer.id || layer.src.substring( 0, 50 );
+			// Use layer id + src hash as cache key so changing src invalidates cache,
+			// or hash the src alone for layers without an id
+			const cacheKey = layer.id
+				? ( layer.id + '_' + this._hashString( layer.src ) )
+				: this._hashString( layer.src );
 
 			if ( this._imageCache.has( cacheKey ) ) {
 				// Move to end for LRU tracking (delete and re-add)

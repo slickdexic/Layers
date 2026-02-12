@@ -139,6 +139,16 @@ class ColorValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $validator->isValidRgbColor( 'rgb(255, 0)' ) );
 		// Alpha out of range
 		$this->assertFalse( $validator->isValidRgbColor( 'rgba(255, 0, 0, 2)' ) );
+
+		// P3-037: Malformed alpha values rejected by strict regex
+		$this->assertFalse( $validator->isValidRgbColor( 'rgba(255, 0, 0, 1.2.3)' ) );
+		$this->assertFalse( $validator->isValidRgbColor( 'rgba(255, 0, 0, 0..5)' ) );
+		$this->assertFalse( $validator->isValidRgbColor( 'rgba(255, 0, 0, ...)' ) );
+
+		// Valid alpha edge cases
+		$this->assertTrue( $validator->isValidRgbColor( 'rgba(255, 0, 0, 0)' ) );
+		$this->assertTrue( $validator->isValidRgbColor( 'rgba(255, 0, 0, .5)' ) );
+		$this->assertTrue( $validator->isValidRgbColor( 'rgba(255, 0, 0, 1.0)' ) );
 	}
 
 	/**
@@ -159,6 +169,13 @@ class ColorValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $validator->isValidHslColor( 'hsl(0, 101%, 50%)' ) );
 		// Lightness out of range
 		$this->assertFalse( $validator->isValidHslColor( 'hsl(0, 100%, 101%)' ) );
+
+		// P3-037: Malformed HSLA alpha values rejected
+		$this->assertFalse( $validator->isValidHslColor( 'hsla(0, 100%, 50%, 1.2.3)' ) );
+		$this->assertFalse( $validator->isValidHslColor( 'hsla(0, 100%, 50%, 0..5)' ) );
+		// Valid HSLA alpha edge cases
+		$this->assertTrue( $validator->isValidHslColor( 'hsla(0, 100%, 50%, .5)' ) );
+		$this->assertTrue( $validator->isValidHslColor( 'hsla(0, 100%, 50%, 0)' ) );
 	}
 
 	/**
