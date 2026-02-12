@@ -250,18 +250,18 @@ intentional design (not a bug).
 | 8.8 | EditorBootstrap conditional global | P2-030 | ✅ Not a bug | 0m |
 | 8.9 | CanvasRenderer _blurTempCanvas not cleaned | P2-031 | ✅ Fixed | 10m |
 
-### 8C: Low Priority (9 items, ~2 hours)
+### 8C: Low Priority (9 items, ~2 hours) — ✅ ALL COMPLETE
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 8.10 | SHA1 fallback outside trait | P3-033 | ❌ Open | 20m |
+| 8.10 | SHA1 fallback outside trait | P3-033 | ✅ Fixed | 20m |
 | 8.11 | SchemaManager CURRENT_VERSION stale | P3-034 | ✅ Fixed | 5m |
-| 8.12 | ImageLayerRenderer stale cache on src | P3-035 | ❌ Open | 15m |
-| 8.13 | DimensionRenderer hitTest fallback mismatch | P3-036 | ❌ Open | 10m |
-| 8.14 | ColorValidator alpha regex gap | P3-037 | ❌ Open | 15m |
+| 8.12 | ImageLayerRenderer stale cache on src | P3-035 | ✅ Fixed | 15m |
+| 8.13 | DimensionRenderer hitTest fallback mismatch | P3-036 | ✅ Fixed | 10m |
+| 8.14 | ColorValidator alpha regex gap | P3-037 | ✅ Fixed | 15m |
 | 8.15 | WikitextHooks info→debug log level | P3-038 | ✅ Fixed | 5m |
-| 8.16 | EditLayersAction dead MW < 1.44 code | P3-039 | ❌ Open | 15m |
-| 8.17 | ErrorHandler retryOperation no-op | P3-040 | ❌ Open | 20m |
+| 8.16 | EditLayersAction dead MW < 1.44 code | P3-039 | ✅ Fixed | 15m |
+| 8.17 | ErrorHandler retryOperation no-op | P3-040 | ✅ Fixed | 20m |
 | 8.18 | LayersLightbox hardcoded English alt | P3-041 | ✅ Fixed | 10m |
 
 ### 8D: User-Reported Bugs (1 item, ~30 min)

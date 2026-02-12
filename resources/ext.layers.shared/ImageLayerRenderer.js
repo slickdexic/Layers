@@ -172,8 +172,11 @@
 				return null;
 			}
 
-			// Use layer id as cache key, or hash the src for collision-resistant fallback
-			const cacheKey = layer.id || this._hashString( layer.src );
+			// Use layer id + src hash as cache key so changing src invalidates cache,
+			// or hash the src alone for layers without an id
+			const cacheKey = layer.id
+				? ( layer.id + '_' + this._hashString( layer.src ) )
+				: this._hashString( layer.src );
 
 			if ( this._imageCache.has( cacheKey ) ) {
 				// Move to end for LRU tracking (delete and re-add)

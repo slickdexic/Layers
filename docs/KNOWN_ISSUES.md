@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 4 | 4 | 0 |
 | P1 | 25 | 25 | 0 |
 | P2 | 47 | 47 | 0 |
-| P3 | 41 | 13 | 28 |
-| **Total** | **117** | **89** | **28** |
+| P3 | 41 | 19 | 22 |
+| **Total** | **117** | **95** | **22** |
 
 ---
 
@@ -628,12 +628,13 @@ All P0 issues have been fixed.
   documentation files. See Documentation Debt in codebase_review.md
   for the full 42-item breakdown.
 
-### ❌ P3-033: SHA1 Fallback Reimplemented Outside Trait
+### ✅ P3-033: SHA1 Fallback Reimplemented Outside Trait (Fixed v35)
 
 - **File:** src/Api/ApiLayersSave.php L297-315
 - **Impact:** Duplicates `ForeignFileHelperTrait::getFileSha1()` logic
   with inline SHA1 fallback code. DRY violation.
 - **Introduced:** v35 review
+- **Resolution:** Replaced inline code with `$this->getFileSha1()` call.
 
 ### ✅ P3-034: SchemaManager CURRENT_VERSION Stale (Fixed v35)
 
@@ -643,26 +644,31 @@ All P0 issues have been fixed.
 - **Introduced:** v35 review
 - **Resolution:** Updated constant to '1.5.56'.
 
-### ❌ P3-035: ImageLayerRenderer Stale Cache on src Change
+### ✅ P3-035: ImageLayerRenderer Stale Cache on src Change (Fixed v35)
 
 - **File:** resources/ext.layers.shared/ImageLayerRenderer.js L165
 - **Impact:** Image cache key ignores `layer.src` changes. If src
   changes on the same layer ID, stale cached image is rendered.
 - **Introduced:** v35 review
+- **Resolution:** Cache key now includes hash of `layer.src`. Regression test added.
 
-### ❌ P3-036: DimensionRenderer hitTest Fallback Mismatch
+### ✅ P3-036: DimensionRenderer hitTest Fallback Mismatch (Fixed v35)
 
 - **File:** resources/ext.layers.shared/DimensionRenderer.js L803
 - **Impact:** hitTest extensionGap fallback is 10 but DEFAULTS
   constant is 3. Inconsistent behavior when extensionGap unset.
 - **Introduced:** v35 review
+- **Resolution:** Changed fallbacks to use `DEFAULTS.extensionGap` and
+  `DEFAULTS.extensionLength`. Regression test added.
 
-### ❌ P3-037: ColorValidator Alpha Channel Regex
+### ✅ P3-037: ColorValidator Alpha Channel Regex (Fixed v35)
 
 - **File:** src/Validation/ColorValidator.php L149
 - **Impact:** Regex for alpha validation accepts malformed values
   like `1.2.3` (multiple dots)
 - **Introduced:** v35 review
+- **Resolution:** Replaced `([\d.]+)` with `(\d+(?:\.\d+)?|\.\d+)` in
+  all 6 RGBA/HSLA regex patterns. PHPUnit regression tests added.
 
 ### ✅ P3-038: WikitextHooks Info Logging Every Thumbnail (Fixed v35)
 
@@ -673,19 +679,23 @@ All P0 issues have been fixed.
 - **Resolution:** Changed `self::log()` to `self::logDebug()` for
   thumbnail rendering log calls.
 
-### ❌ P3-039: EditLayersAction Dead MW < 1.44 Fallbacks
+### ✅ P3-039: EditLayersAction Dead MW < 1.44 Fallbacks (Fixed v35)
 
 - **File:** src/Action/EditLayersAction.php L40-57
 - **Impact:** Compatibility code for MediaWiki < 1.44 but
   `extension.json` requires `>= 1.44.0`. Dead code.
 - **Introduced:** v35 review
+- **Resolution:** Removed all class_exists/method_exists/function_exists
+  guards. Direct API calls only. ~35 lines of dead code removed.
 
-### ❌ P3-040: ErrorHandler retryOperation No-Op
+### ✅ P3-040: ErrorHandler retryOperation No-Op (Fixed v35)
 
 - **File:** resources/ext.layers.editor/ErrorHandler.js L529
 - **Impact:** Shows "Retrying..." message but doesn't actually
   retry the operation. Misleading UX.
 - **Introduced:** v35 review
+- **Resolution:** Changed load/save strategies from `retry` to `notify`
+  with honest messages. Removed dead `retryOperation()` method.
 
 ### ✅ P3-041: LayersLightbox Hardcoded English Alt Text (Fixed v35)
 

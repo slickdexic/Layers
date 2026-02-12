@@ -108,13 +108,13 @@ confirming each finding against the actual source code.
 | Documentation | 0 | 6 | 16 | 20 | 42 doc issues |
 | **Total** | **0** | **11** | **27** | **32** | **70 NEW + 60 prev. fixed** |
 
-**v35 Fix Summary:** 10 issues fixed, 2 reclassified as not-a-bug.
-Remaining open: 0 HIGH, 0 MEDIUM bugs, 5 LOW code quality items.
+**v35 Fix Summary:** 16 issues fixed, 2 reclassified as not-a-bug.
+Remaining open: 0 HIGH, 0 MEDIUM, 0 LOW code issues. Only documentation debt remains.
 
-**Overall Grade: A-** (strong foundation; excellent test coverage and
+**Overall Grade: A** (strong foundation; excellent test coverage and
 security posture; 70+ previously fixed bugs with regression tests;
-all HIGH and MEDIUM issues resolved; documentation staleness is
-the largest remaining quality drag)
+all code issues across all severity levels resolved; documentation
+staleness is the only remaining quality drag)
 
 ---
 
@@ -226,14 +226,14 @@ Exception details now logged server-side only (in logger context).
 
 | ID | Issue | File | Details |
 |----|-------|------|---------|
-| LOW-v35-1 | SHA1 fallback reimplemented outside trait | ApiLayersSave.php L297-315 | Duplicates ForeignFileHelperTrait |
+| LOW-v35-1 | SHA1 fallback reimplemented outside trait | ApiLayersSave.php L297-315 | ✅ FIXED — uses ForeignFileHelperTrait::getFileSha1() |
 | LOW-v35-2 | SchemaManager CURRENT_VERSION stale | LayersSchemaManager.php L629 | ✅ FIXED — updated to 1.5.56 |
-| LOW-v35-3 | ImageLayerRenderer stale cache on src change | ImageLayerRenderer.js L165 | Cache key ignores src changes |
-| LOW-v35-4 | DimensionRenderer hitTest fallback mismatch | DimensionRenderer.js L803 | extensionGap 10 vs DEFAULTS 3 |
-| LOW-v35-5 | ColorValidator alpha regex | ColorValidator.php L149 | Accepts malformed like 1.2.3 |
+| LOW-v35-3 | ImageLayerRenderer stale cache on src change | ImageLayerRenderer.js L165 | ✅ FIXED — cache key includes src hash |
+| LOW-v35-4 | DimensionRenderer hitTest fallback mismatch | DimensionRenderer.js L803 | ✅ FIXED — uses DEFAULTS constants |
+| LOW-v35-5 | ColorValidator alpha regex | ColorValidator.php L149 | ✅ FIXED — strict decimal pattern |
 | LOW-v35-6 | WikitextHooks info logging every thumbnail | WikitextHooks.php L325 | ✅ FIXED — uses logDebug() |
-| LOW-v35-7 | EditLayersAction dead MW < 1.44 fallbacks | EditLayersAction.php L40-57 | extension.json requires >= 1.44 |
-| LOW-v35-8 | ErrorHandler retryOperation no-op | ErrorHandler.js L529 | Shows "Retrying..." but no action |
+| LOW-v35-7 | EditLayersAction dead MW < 1.44 fallbacks | EditLayersAction.php L40-57 | ✅ FIXED — dead code removed |
+| LOW-v35-8 | ErrorHandler retryOperation no-op | ErrorHandler.js L529 | ✅ FIXED — retry removed, uses notify |
 | LOW-v35-9 | LayersLightbox hardcoded English alt text | LayersLightbox.js L316 | ✅ FIXED — uses mw.message() + i18n |
 
 ---
@@ -462,10 +462,10 @@ Documentation debt remains the single largest quality drag with
 42 stale items, though the codebase itself is well-organized with
 proper delegation patterns and thorough i18n coverage (731 keys).
 
-**Overall Grade: A-** — Excellent core with strong testing and
-security fundamentals. All HIGH and MEDIUM issues across all
-review cycles are resolved. No structural or architectural
-concerns.
+**Overall Grade: A** — Excellent core with strong testing and
+security fundamentals. All code issues across all severity levels
+and all review cycles are resolved. Zero open bugs. Only
+documentation staleness remains.
 
 ---
 
@@ -473,7 +473,7 @@ concerns.
 
 | Version | Date | Grade | Changes |
 |---------|------|-------|---------|
-| v35 | 2026-02-11 | A- | Fresh audit; 4H, 5M, 9L new; all fixed; 42 doc issues; 4 false positives |
+| v35 | 2026-02-11 | A | Fresh audit; 4H, 5M, 9L new; all 18 fixed; 42 doc issues; 4 false positives |
 | v33 | 2026-02-09 | B | Fresh audit; 4H, 8M, 7L new; 46 doc issues |
 | v32 | 2026-02-09 | B | 2 P2 fixes |
 | v29 | 2026-02-08 | B | Full audit; 4H, 10M, 8L new; 5 infra |

@@ -291,7 +291,8 @@ class ApiLayersSave extends ApiBase {
 			// SHA1: Ensures layers are associated with specific file version
 			// MIME: Allows future filtering (e.g., only allow layers on images)
 			// If file is replaced, SHA1 changes, creating logical separation
-			$sha1 = $file->getSha1();
+			// Uses ForeignFileHelperTrait::getFileSha1() for consistent foreign file handling
+			$sha1 = $this->getFileSha1( $file, $fileDbKey );
 			$mimeType = $file->getMimeType();
 
 			// Log file metadata for debugging (especially for foreign files)
@@ -299,23 +300,11 @@ class ApiLayersSave extends ApiBase {
 			$this->getLogger()->info( 'Layers: File metadata', [
 				'filename' => $fileDbKey,
 				'sha1' => $sha1 ?: '(empty)',
-				'sha1Length' => strlen( $sha1 ?? '' ),
+				'sha1Length' => strlen( $sha1 ),
 				'mime' => $mimeType,
 				'isForeign' => $isForeign ? 'yes' : 'no',
 				'fileClass' => get_class( $file )
 			] );
-
-			// For foreign files, if SHA1 is not available, generate a stable identifier
-			// based on the filename. This allows layers to work with foreign files
-			// that don't expose SHA1 via the API.
-			if ( empty( $sha1 ) && $isForeign ) {
-				// Use a hash of the filename as a fallback (prefixed for clarity)
-				$sha1 = 'foreign_' . sha1( $fileDbKey );
-				$this->getLogger()->warning( 'Layers: Using fallback SHA1 for foreign file', [
-					'filename' => $fileDbKey,
-					'fallbackSha1' => $sha1
-				] );
-			}
 
 			$imgMetadata = [
 				'mime' => $mimeType,

@@ -28,28 +28,11 @@ class EditLayersAction extends \Action {
 	/** @inheritDoc */
 	public function show() {
 		$out = $this->getOutput();
-		$user = $this->getUser();
 		$title = $this->getTitle();
 		$request = $this->getRequest();
 
-		// Check permission using Authority (modern MW 1.36+) or PermissionManager
-		$hasPermission = false;
-		$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
-			? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-			: null;
-
-		if ( $services && method_exists( $services, 'getPermissionManager' ) ) {
-			// Use PermissionManager (MW 1.33+)
-			$permManager = $services->getPermissionManager();
-			$hasPermission = $permManager->userHasRight( $user, 'editlayers' );
-		} elseif ( method_exists( $this, 'getAuthority' ) ) {
-			// Use Authority interface (MW 1.36+)
-			$authority = $this->getAuthority();
-			$hasPermission = $authority->isAllowed( 'editlayers' );
-		} elseif ( method_exists( $user, 'isAllowed' ) ) {
-			// Legacy fallback
-			$hasPermission = $user->isAllowed( 'editlayers' );
-		}
+		// Check permission using Authority (MW 1.36+, guaranteed in MW 1.44+)
+		$hasPermission = $this->getAuthority()->isAllowed( 'editlayers' );
 
 		if ( !$hasPermission ) {
 			throw new \PermissionsError( 'editlayers' );
@@ -60,11 +43,8 @@ class EditLayersAction extends \Action {
 			return;
 		}
 
-		$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
-			? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-			: null;
-		$repoGroup = $services ? $services->getRepoGroup() : null;
-		$file = $repoGroup ? $repoGroup->findFile( $title ) : null;
+		$repoGroup = \MediaWiki\MediaWikiServices::getInstance()->getRepoGroup();
+		$file = $repoGroup->findFile( $title );
 		if ( !$file || !$file->exists() ) {
 			$out->showErrorPage( 'error', 'layers-file-not-found' );
 			return;
@@ -93,11 +73,7 @@ class EditLayersAction extends \Action {
 		$returnToUrl = null;
 		if ( $returnTo !== '' ) {
 			// Validate returnto is a valid title to prevent open redirects
-			// Use fully qualified class name for MW 1.44+ compatibility
-			$titleClass = class_exists( '\\MediaWiki\\Title\\Title' )
-				? '\\MediaWiki\\Title\\Title'
-				: '\\Title';
-			$returnTitle = $titleClass::newFromText( $returnTo );
+			$returnTitle = \MediaWiki\Title\Title::newFromText( $returnTo );
 			if ( $returnTitle && $returnTitle->isKnown() ) {
 				$returnToUrl = $returnTitle->getLocalURL();
 			}
@@ -109,22 +85,15 @@ class EditLayersAction extends \Action {
 		// In modal mode, allow the page to be framed (loaded in iframe)
 		// Otherwise MediaWiki's default X-Frame-Options header blocks it
 		if ( $isModalMode ) {
-			// Method available in MW 1.38+ to disable clickjacking protection
-			// This allows the editor to be embedded in the modal iframe
-			if ( method_exists( $out, 'allowClickjacking' ) ) {
-				$out->allowClickjacking();
-			} elseif ( method_exists( $out, 'setPreventClickjacking' ) ) {
-				// Alternative method name in some MW versions
-				$out->setPreventClickjacking( false );
-			}
+			// Allow the page to be framed (loaded in iframe) for modal editor
+			// Otherwise MediaWiki's default X-Frame-Options header blocks it
+			$out->allowClickjacking();
 		}
 
 		// Page title
 		$out->setPageTitle(
-			( function_exists( 'wfMessage' )
-				? wfMessage( 'layers-editor-title' )->text()
-				: 'Edit layers'
-			) . ': ' . $file->getName()
+			wfMessage( 'layers-editor-title' )->text()
+			. ': ' . $file->getName()
 		);
 
 		// Load editor module
@@ -135,16 +104,14 @@ class EditLayersAction extends \Action {
 		$isForeign = $this->isForeignFile( $file );
 
 		// Log URL generation for troubleshooting foreign file issues
-		if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-			$logger->debug( sprintf(
-				'EditLayersAction: file=%s, class=%s, isForeign=%s, url=%s',
-				$file->getName(),
-				get_class( $file ),
-				$isForeign ? 'yes' : 'no',
-				$fileUrl
-			) );
-		}
+		$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
+		$logger->debug( sprintf(
+			'EditLayersAction: file=%s, class=%s, isForeign=%s, url=%s',
+			$file->getName(),
+			get_class( $file ),
+			$isForeign ? 'yes' : 'no',
+			$fileUrl
+		) );
 
 		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
 		$out->addJsConfigVars( [
@@ -270,9 +237,9 @@ class EditLayersAction extends \Action {
 			// Use the file's name directly (without namespace prefix)
 			// Special:Redirect/file expects just the filename, not File:Filename
 			$filename = method_exists( $file, 'getName' ) ? $file->getName() : null;
-			if ( $filename && \class_exists( '\\SpecialPage' ) ) {
+			if ( $filename ) {
 				$param = 'file/' . $filename;
-				$spTitle = \call_user_func( [ '\\SpecialPage', 'getTitleFor' ], 'Redirect', $param );
+				$spTitle = \SpecialPage::getTitleFor( 'Redirect', $param );
 				if ( $spTitle ) {
 					// For TIFF and other non-web formats, request a large thumbnail
 					// MediaWiki will generate a PNG/JPEG that browsers can render
@@ -282,15 +249,13 @@ class EditLayersAction extends \Action {
 						$url = $spTitle->getLocalURL();
 					}
 					// Log redirect URL for troubleshooting
-					if ( class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-						$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-						$logger->debug( sprintf(
-							'getLocalRedirectUrl: filename=%s, needsThumbnail=%s, url=%s',
-							$filename,
-							$needsThumbnail ? 'yes' : 'no',
-							$url
-						) );
-					}
+					$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
+					$logger->debug( sprintf(
+						'getLocalRedirectUrl: filename=%s, needsThumbnail=%s, url=%s',
+						$filename,
+						$needsThumbnail ? 'yes' : 'no',
+						$url
+					) );
 					return $url;
 				}
 			}

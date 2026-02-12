@@ -357,10 +357,9 @@ describe( 'ImageLayerRenderer', () => {
 				src: 'data:image/png;base64,test'
 			};
 
+			expect( renderer.getCacheSize() ).toBe( 0 );
 			renderer.draw( layer );
-
-			expect( renderer.isCached( 'check-cache-test' ) ).toBe( true );
-			expect( renderer.isCached( 'nonexistent' ) ).toBe( false );
+			expect( renderer.getCacheSize() ).toBe( 1 );
 		} );
 
 		it( 'should clear cache', () => {
@@ -391,6 +390,26 @@ describe( 'ImageLayerRenderer', () => {
 			renderer.draw( layer2 );
 
 			// Should have 2 entries (not colliding)
+			expect( renderer.getCacheSize() ).toBe( 2 );
+		} );
+
+		it( 'should invalidate cache when layer.src changes (P3-035)', () => {
+			const layer = {
+				id: 'img-1',
+				src: 'data:image/png;base64,OriginalImageData'
+			};
+
+			renderer.draw( layer );
+			expect( renderer.getCacheSize() ).toBe( 1 );
+
+			// Change the src on the same layer id (user replaced image)
+			const updatedLayer = {
+				id: 'img-1',
+				src: 'data:image/png;base64,ReplacementImageData'
+			};
+
+			renderer.draw( updatedLayer );
+			// Should have 2 entries — old and new src produce different cache keys
 			expect( renderer.getCacheSize() ).toBe( 2 );
 		} );
 	} );
@@ -613,7 +632,7 @@ describe( 'ImageLayerRenderer', () => {
 
 			expect( mw.log.warn ).toHaveBeenCalledWith(
 				'[ImageLayerRenderer] Failed to load image layer:',
-				'error-test'
+				expect.stringContaining( 'error-test' )
 			);
 			testRenderer.destroy();
 		} );

@@ -293,10 +293,19 @@ describe( 'DimensionRenderer', () => {
 
 		test( 'hitTest works with default offset from extensionGap/Length', () => {
 			// Without explicit dimensionOffset, offset = extensionGap + extensionLength/2
-			// Default extensionGap=10, extensionLength=10 => offset = 10 + 5 = 15
+			// Explicit extensionGap=10, extensionLength=10 => offset = 10 + 5 = 15
 			const layer = { x1: 0, y1: 50, x2: 100, y2: 50, extensionGap: 10, extensionLength: 10 };
 			// Dimension line should be at y = 50 - 15 = 35
 			const result = renderer.hitTest( layer, 50, 35 );
+			expect( result ).toBe( true );
+		} );
+
+		test( 'hitTest fallback uses DEFAULTS.extensionGap and DEFAULTS.extensionLength (P3-036)', () => {
+			// Without explicit extensionGap/extensionLength AND no dimensionOffset,
+			// should use DEFAULTS: extensionGap=3, extensionLength=10 => offset = 3 + 5 = 8
+			const layer = { x1: 0, y1: 50, x2: 100, y2: 50 };
+			// Dimension line should be at y = 50 - 8 = 42
+			const result = renderer.hitTest( layer, 50, 42 );
 			expect( result ).toBe( true );
 		} );
 	} );
