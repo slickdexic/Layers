@@ -1842,5 +1842,31 @@ describe('CanvasRenderer', () => {
             expect(renderer._computeLayerHash(layer1)).toBe(renderer._computeLayerHash(layer2));
         });
     });
+
+    describe('destroy _blurTempCanvas cleanup', () => {
+        test('should nullify _blurTempCanvas on destroy', () => {
+            // Simulate a blur temp canvas being created during rendering
+            renderer._blurTempCanvas = document.createElement('canvas');
+            renderer._blurTempCanvas.width = 800;
+            renderer._blurTempCanvas.height = 600;
+
+            renderer.destroy();
+
+            expect(renderer._blurTempCanvas).toBeNull();
+        });
+
+        test('should handle destroy when _blurTempCanvas is already null', () => {
+            renderer._blurTempCanvas = null;
+
+            expect(() => renderer.destroy()).not.toThrow();
+            expect(renderer._blurTempCanvas).toBeNull();
+        });
+
+        test('should handle destroy when _blurTempCanvas is undefined', () => {
+            delete renderer._blurTempCanvas;
+
+            expect(() => renderer.destroy()).not.toThrow();
+        });
+    });
 });
 

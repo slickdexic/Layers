@@ -624,6 +624,7 @@
 	"layers-lightbox-close": "Label for the close button in the layers lightbox viewer",
 	"layers-lightbox-close-tooltip": "Tooltip for the close button in the layers lightbox viewer",
 	"layers-lightbox-loading": "Loading message shown while the lightbox is fetching layer data",
+	"layers-lightbox-alt": "Alt text for the full-size image displayed in the layers lightbox viewer",
 
 	"layers-viewer-overlay-label": "Accessible label for the hover overlay toolbar on images with layers",
 	"layers-viewer-edit": "Tooltip for the edit button in the viewer overlay (opens layer editor)",

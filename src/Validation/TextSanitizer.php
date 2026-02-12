@@ -38,6 +38,10 @@ class TextSanitizer {
 		// (e.g., from copy-paste of HTML content)
 		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
+		// Re-strip tags: entity decoding can reconstruct HTML tags
+		// from encoded input like &lt;script&gt; → <script>
+		$text = strip_tags( $text );
+
 		// Remove dangerous protocols
 		$text = $this->removeDangerousProtocols( $text );
 
@@ -185,6 +189,9 @@ class TextSanitizer {
 
 		// Decode any HTML entities that might have been passed in
 		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// Re-strip tags: entity decoding can reconstruct HTML tags
+		$text = strip_tags( $text );
 
 		// Remove dangerous protocols
 		$text = $this->removeDangerousProtocols( $text );

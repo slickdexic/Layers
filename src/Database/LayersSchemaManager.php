@@ -569,7 +569,7 @@ class LayersSchemaManager {
 	];
 
 	/** @var string Current extension version */
-	private const CURRENT_VERSION = '1.5.52';
+	private const CURRENT_VERSION = '1.5.56';
 
 	/** @var array Cached schema validation results */
 	private $schemaCache = [];

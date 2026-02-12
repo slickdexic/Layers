@@ -143,4 +143,34 @@ class TextSanitizerTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $sanitizer->isSafeText( 'vbscript:msgbox(1)' ) );
 		$this->assertFalse( $sanitizer->isSafeText( 'data:text/html,<script>' ) );
 	}
+
+	/**
+	 * Regression test: entity-encoded HTML tags must be stripped after decoding.
+	 * Input like &lt;script&gt; should not survive sanitization as <script>.
+	 *
+	 * @covers ::sanitizeText
+	 */
+	public function testSanitizeTextStripsEntityEncodedTags() {
+		$sanitizer = $this->createSanitizer();
+
+		// Entity-encoded <script> tag should be fully stripped after decoding
+		$result = $sanitizer->sanitizeText( '&lt;script&gt;alert(1)&lt;/script&gt;' );
+		$this->assertStringNotContainsString( '<script>', $result );
+		$this->assertStringNotContainsString( '</script>', $result );
+
+		// Entity-encoded <img> with event handler
+		$result = $sanitizer->sanitizeText( '&lt;img src=x onerror=alert(1)&gt;' );
+		$this->assertStringNotContainsString( '<img', $result );
+		$this->assertStringNotContainsString( 'onerror', $result );
+
+		// Double-encoded should still be safe (first decode produces entities, second produces tags)
+		$result = $sanitizer->sanitizeText( '&amp;lt;b&amp;gt;bold&amp;lt;/b&amp;gt;' );
+		$this->assertStringNotContainsString( '<b>', $result );
+
+		// Mixed content: normal text with entity-encoded tags
+		$result = $sanitizer->sanitizeText( 'Hello &lt;b&gt;world&lt;/b&gt; test' );
+		$this->assertStringContainsString( 'Hello', $result );
+		$this->assertStringContainsString( 'test', $result );
+		$this->assertStringNotContainsString( '<b>', $result );
+	}
 }
