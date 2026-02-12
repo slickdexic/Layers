@@ -772,11 +772,11 @@
 			} else {
 				let extensionGap = layer.extensionGap;
 				if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
-					extensionGap = 10;
+					extensionGap = DEFAULTS.extensionGap;
 				}
 				let extensionLength = layer.extensionLength;
 				if ( typeof extensionLength !== 'number' || isNaN( extensionLength ) ) {
-					extensionLength = 20;
+					extensionLength = DEFAULTS.extensionLength;
 				}
 				offsetDistance = extensionGap + ( extensionLength / 2 );
 			}

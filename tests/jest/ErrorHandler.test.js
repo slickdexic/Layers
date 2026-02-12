@@ -892,21 +892,20 @@ describe( 'ErrorHandler', function () {
 	} );
 
 	describe( 'getRecoveryStrategy', function () {
-		it( 'should return retry strategy for load errors', function () {
+		it( 'should return notify strategy for load errors', function () {
 			const strategy = errorHandler.getRecoveryStrategy( { type: 'load' } );
 
 			expect( strategy ).not.toBeNull();
-			expect( strategy.action ).toBe( 'retry' );
-			expect( strategy.delay ).toBe( 2000 );
-			expect( strategy.maxAttempts ).toBe( 2 );
+			expect( strategy.action ).toBe( 'notify' );
+			expect( strategy.message ).toContain( 'try again' );
 		} );
 
-		it( 'should return retry strategy for save errors', function () {
+		it( 'should return notify strategy for save errors', function () {
 			const strategy = errorHandler.getRecoveryStrategy( { type: 'save' } );
 
 			expect( strategy ).not.toBeNull();
-			expect( strategy.action ).toBe( 'retry' );
-			expect( strategy.delay ).toBe( 3000 );
+			expect( strategy.action ).toBe( 'notify' );
+			expect( strategy.message ).toContain( 'try again' );
 		} );
 
 		it( 'should return refresh strategy for canvas errors', function () {
@@ -937,22 +936,6 @@ describe( 'ErrorHandler', function () {
 
 		afterEach( function () {
 			jest.useRealTimers();
-		} );
-
-		it( 'should show notification and retry for retry action', function () {
-			const notifySpy = jest.spyOn( errorHandler, 'showRecoveryNotification' );
-			const retrySpy = jest.spyOn( errorHandler, 'retryOperation' );
-
-			const strategy = { action: 'retry', delay: 1000, message: 'Retrying...' };
-			const errorInfo = { type: 'load', message: 'Load failed' };
-
-			errorHandler.executeRecoveryStrategy( strategy, errorInfo );
-
-			expect( notifySpy ).toHaveBeenCalledWith( 'Retrying...' );
-
-			jest.advanceTimersByTime( 1500 );
-
-			expect( retrySpy ).toHaveBeenCalledWith( errorInfo );
 		} );
 
 		it( 'should show notification for notify action', function () {
@@ -1021,21 +1004,6 @@ describe( 'ErrorHandler', function () {
 			} ).not.toThrow();
 
 			mw.notify = originalNotify;
-		} );
-	} );
-
-	describe( 'retryOperation', function () {
-		it( 'should log retry attempt', function () {
-			const logSpy = jest.spyOn( errorHandler, 'logError' );
-
-			errorHandler.retryOperation( { message: 'Original error', severity: 'high' } );
-
-			expect( logSpy ).toHaveBeenCalledWith(
-				expect.objectContaining( {
-					message: expect.stringContaining( 'Recovery: Retrying operation' ),
-					severity: 'low'
-				} )
-			);
 		} );
 	} );
 
