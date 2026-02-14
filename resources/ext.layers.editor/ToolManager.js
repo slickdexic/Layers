@@ -743,7 +743,7 @@ class ToolManager {
 		if( this.styleManager && typeof this.styleManager.get === 'function' ) {
 			return this.styleManager.get();
 		}
-		return Object.assign( {}, this.currentStyle );
+		return { ...this.currentStyle };
 	}
 
 	/**

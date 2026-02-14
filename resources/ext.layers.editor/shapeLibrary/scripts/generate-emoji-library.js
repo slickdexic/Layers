@@ -336,9 +336,7 @@ output += `\t];
 		 * @return {Object[]} Array of emoji in that category
 		 */
 		getByCategory: function ( categoryId ) {
-			return EMOJI.filter( function ( e ) {
-				return e.category === categoryId;
-			} );
+			return EMOJI.filter( ( e ) => e.category === categoryId );
 		},
 
 		/**
@@ -358,7 +356,7 @@ output += `\t];
 		 */
 		search: function ( query ) {
 			const q = query.toLowerCase();
-			return EMOJI.filter( function ( e ) {
+			return EMOJI.filter( ( e ) => {
 				return e.name.toLowerCase().includes( q ) ||
 					e.id.toLowerCase().includes( q );
 			} );

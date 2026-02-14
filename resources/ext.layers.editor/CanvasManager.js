@@ -1846,17 +1846,17 @@ class CanvasManager {
 		this.redrawScheduled = true;
 
 		if ( window.requestAnimationFrame ) {
-			this.animationFrameId = window.requestAnimationFrame( function () {
+			this.animationFrameId = window.requestAnimationFrame( () => {
 				this.redraw();
 				this.redrawScheduled = false;
-			}.bind( this ) );
+			} );
 		} else {
 			// Fallback for older browsers
-			this.fallbackTimeoutId = setTimeout( function () {
+			this.fallbackTimeoutId = setTimeout( () => {
 				this.redraw();
 				this.redrawScheduled = false;
 				this.fallbackTimeoutId = null;
-			}.bind( this ), 16 ); // ~60fps
+			}, 16 ); // ~60fps
 		}
 	}
 

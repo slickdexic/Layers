@@ -885,7 +885,7 @@ class TransformController {
 						lightweightLayer[ key ] = value.slice();
 					} else if ( typeof value === 'object' && value !== null ) {
 						// For nested objects, do a shallow clone
-						lightweightLayer[ key ] = Object.assign( {}, value );
+						lightweightLayer[ key ] = { ...value };
 					} else {
 						lightweightLayer[ key ] = value;
 					}

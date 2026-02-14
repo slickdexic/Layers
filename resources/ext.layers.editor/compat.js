@@ -57,7 +57,7 @@
 
 		if ( found.length ) {
 			logWarn( '[Layers] Deprecated global exports detected. These will be removed in v1.0:' );
-			found.forEach( function ( item ) {
+			found.forEach( ( item ) => {
 				logWarn( '  ' + item );
 			} );
 			logWarn( '[Layers] To disable this warning, use localStorage.removeItem("layersDebug")' );

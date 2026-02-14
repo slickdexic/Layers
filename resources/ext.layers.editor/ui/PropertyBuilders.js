@@ -420,7 +420,7 @@
 			// Apply style to all runs
 			const updatedRichText = richText.map( ( run ) => ( {
 				text: run.text,
-				style: Object.assign( {}, run.style || {}, styleUpdates )
+				style: { ...( run.style || {} ), ...styleUpdates }
 			} ) );
 
 			editor.updateLayer( layer.id, { richText: updatedRichText } );

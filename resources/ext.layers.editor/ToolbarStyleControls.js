@@ -972,7 +972,7 @@ class ToolbarStyleControls {
 		// Clean up input validators — call destroy() on each to remove
 		// event listeners before clearing (P2-051)
 		if ( this.inputValidators ) {
-			this.inputValidators.forEach( function ( v ) {
+			this.inputValidators.forEach( ( v ) => {
 				if ( v && typeof v.destroy === 'function' ) {
 					v.destroy();
 				}

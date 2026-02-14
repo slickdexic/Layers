@@ -1872,7 +1872,7 @@
 				const newLocked = !layer.locked;
 				const layers = this.editor.getLayers().map( ( l ) => {
 					if ( l.id === layerId ) {
-						return Object.assign( {}, l, { locked: newLocked } );
+						return { ...l, locked: newLocked };
 					}
 					return l;
 				} );

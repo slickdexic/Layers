@@ -40,7 +40,7 @@
 			this.message = config.message || '';
 			this.onConfirm = config.onConfirm || function () {};
 			this.onCancel = config.onCancel || function () {};
-			this.strings = Object.assign( {}, DEFAULT_STRINGS, config.strings || {} );
+			this.strings = { ...DEFAULT_STRINGS, ...( config.strings || {} ) };
 			this.confirmClass = config.confirmClass || 'layers-btn-danger';
 			this.registerCleanup = config.registerCleanup || function () {};
 

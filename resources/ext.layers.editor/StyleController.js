@@ -43,7 +43,7 @@
 		 */
 		constructor( editor = null ) {
 			this.editor = editor;
-			this.currentStyle = Object.assign( {}, DEFAULT_STYLE );
+			this.currentStyle = { ...DEFAULT_STYLE };
 		}
 
 		/**
@@ -53,7 +53,7 @@
 		 * @return {Object} Default style settings
 		 */
 		static getDefaultStyle() {
-			return Object.assign( {}, DEFAULT_STYLE );
+			return { ...DEFAULT_STYLE };
 		}
 
 		/**
@@ -62,7 +62,7 @@
 		 * @param {Object} style - Style properties to merge
 		 */
 		setCurrentStyle( style ) {
-			this.currentStyle = Object.assign( {}, this.currentStyle, style );
+			this.currentStyle = { ...this.currentStyle, ...style };
 		}
 
 		/**
@@ -85,7 +85,7 @@
 			const prev = this.currentStyle;
 
 			// Start with previous style to preserve unmanaged properties (like arrowhead, arrowSize)
-			const next = Object.assign( {}, prev );
+			const next = { ...prev };
 
 			// Update managed properties if defined in options
 			if ( isDefined( options.color ) ) {

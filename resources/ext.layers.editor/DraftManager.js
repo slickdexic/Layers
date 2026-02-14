@@ -193,7 +193,7 @@
 					// Strip base64 image src data to avoid localStorage overflow
 					layers: layers.map( ( l ) => {
 						if ( l.type === 'image' && l.src && l.src.length > 1024 ) {
-							const copy = Object.assign( {}, l );
+							const copy = { ...l };
 							delete copy.src;
 							copy._srcStripped = true;
 							return copy;

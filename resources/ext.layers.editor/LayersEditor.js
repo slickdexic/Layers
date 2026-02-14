@@ -272,14 +272,12 @@ class LayersEditor {
 	 */
 	defineLegacyLayersProperty () {
 		Object.defineProperty( this, 'layers', {
-			get: function () {
-				return this.stateManager.getLayers();
-			}.bind( this ),
-			set: function ( layers ) {
+			get: () => this.stateManager.getLayers(),
+			set: ( layers ) => {
 				if ( Array.isArray( layers ) ) {
 					this.stateManager.set( 'layers', layers );
 				}
-			}.bind( this ),
+			},
 			enumerable: true,
 			configurable: true
 		} );
@@ -287,9 +285,7 @@ class LayersEditor {
 		// Alias 'container' to 'containerElement' for backward compatibility
 		// Some components reference editor.container instead of editor.containerElement
 		Object.defineProperty( this, 'container', {
-			get: function () {
-				return this.containerElement;
-			}.bind( this ),
+			get: () => this.containerElement,
 			enumerable: true,
 			configurable: true
 		} );
@@ -1368,7 +1364,7 @@ class LayersEditor {
 		}
 		// Shallow-clone selected layers to avoid mutating state in-place
 		const layers = ( this.stateManager.get( 'layers' ) || [] ).map(
-			( l ) => ids.includes( l.id ) ? Object.assign( {}, l ) : l
+			( l ) => ids.includes( l.id ) ? { ...l } : l
 		);
 		for ( let i = 0; i < ids.length; i++ ) {
 			const layer = layers.find( ( l ) => l.id === ids[ i ] );
@@ -1562,7 +1558,7 @@ class LayersEditor {
 		}
 		return layers.map( ( layer ) => {
 			if ( layer.visible === undefined ) {
-				return Object.assign( {}, layer, { visible: true } );
+				return { ...layer, visible: true };
 			}
 			return layer;
 		} );

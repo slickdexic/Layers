@@ -157,7 +157,7 @@
 					const text = node.textContent;
 					if ( text ) {
 						// Clone inherited style and add this run
-						const runStyle = Object.assign( {}, inheritedStyle );
+						const runStyle = { ...inheritedStyle };
 						runs.push( { text: text, style: runStyle } );
 					}
 					return;
@@ -183,7 +183,7 @@
 					}
 
 					// Build style from this element
-					const currentStyle = Object.assign( {}, inheritedStyle );
+					const currentStyle = { ...inheritedStyle };
 
 					// Check for data attribute (unscaled font size)
 					if ( node.dataset && node.dataset.fontSize ) {
@@ -324,9 +324,9 @@
 			}
 
 			const merged = [];
-			let current = Object.assign( {}, runs[ 0 ] );
+			let current = { ...runs[ 0 ] };
 			if ( current.style ) {
-				current.style = Object.assign( {}, current.style );
+				current.style = { ...current.style };
 			}
 
 			for ( let i = 1; i < runs.length; i++ ) {
@@ -340,9 +340,9 @@
 				} else {
 					// Different style - push current and start new
 					merged.push( current );
-					current = Object.assign( {}, run );
+					current = { ...run };
 					if ( current.style ) {
-						current.style = Object.assign( {}, current.style );
+						current.style = { ...current.style };
 					}
 				}
 			}

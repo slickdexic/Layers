@@ -485,7 +485,7 @@
 
 		// Update category buttons
 		const buttons = this.categoryList.querySelectorAll( '.layers-shape-library-category' );
-		buttons.forEach( function ( btn ) {
+		buttons.forEach( ( btn ) => {
 			if ( btn.dataset.category === categoryId ) {
 				btn.style.background = 'var(--background-color-interactive-subtle, #eaecf0)';
 			} else {

@@ -104,7 +104,7 @@
 			// Manual substitution fallback
 			let result = fallback || '';
 			if ( params && params.length > 0 ) {
-				params.forEach( function ( param, index ) {
+				params.forEach( ( param, index ) => {
 					result = result.replace( '$' + ( index + 1 ), String( param ) );
 				} );
 			}

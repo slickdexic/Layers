@@ -275,9 +275,7 @@
 			}
 
 			const stops = gradient.colors
-				.map( function ( c ) {
-					return c.color + ' ' + ( c.offset * 100 ) + '%';
-				} )
+				.map( ( c ) => c.color + ' ' + ( c.offset * 100 ) + '%' )
 				.join( ', ' );
 
 			if ( gradient.type === 'radial' ) {
@@ -325,14 +323,14 @@
 			valueDisplay.className = 'gradient-angle-value';
 			valueDisplay.textContent = input.value + '°';
 
-			this._addListener( input, 'input', function ( e ) {
+			this._addListener( input, 'input', ( e ) => {
 				const angle = parseInt( e.target.value, 10 );
 				valueDisplay.textContent = angle + '°';
 				if ( this.currentGradient ) {
 					this.currentGradient.angle = angle;
 					this._notifyChange();
 				}
-			}.bind( this ) );
+			} );
 
 			row.appendChild( label );
 			row.appendChild( input );
@@ -364,14 +362,14 @@
 			radiusValue.className = 'gradient-radius-value';
 			radiusValue.textContent = Math.round( radiusInput.value * 100 ) + '%';
 
-			this._addListener( radiusInput, 'input', function ( e ) {
+			this._addListener( radiusInput, 'input', ( e ) => {
 				const radius = parseFloat( e.target.value );
 				radiusValue.textContent = Math.round( radius * 100 ) + '%';
 				if ( this.currentGradient ) {
 					this.currentGradient.radius = radius;
 					this._notifyChange();
 				}
-			}.bind( this ) );
+			} );
 
 			radiusRow.appendChild( radiusLabel );
 			radiusRow.appendChild( radiusInput );
@@ -441,9 +439,9 @@
 			colorInput.type = 'color';
 			colorInput.value = stop.color || '#000000';
 			colorInput.className = 'gradient-stop-color';
-			this._addListener( colorInput, 'input', function ( e ) {
+			this._addListener( colorInput, 'input', ( e ) => {
 				this._updateColorStop( index, 'color', e.target.value );
-			}.bind( this ) );
+			} );
 
 			// Offset slider
 			const offsetInput = document.createElement( 'input' );
@@ -452,11 +450,11 @@
 			offsetInput.max = 100;
 			offsetInput.value = Math.round( ( stop.offset || 0 ) * 100 );
 			offsetInput.className = 'gradient-stop-offset';
-			this._addListener( offsetInput, 'input', function ( e ) {
+			this._addListener( offsetInput, 'input', ( e ) => {
 				const offset = parseInt( e.target.value, 10 ) / 100;
 				offsetValue.textContent = e.target.value + '%';
 				this._updateColorStop( index, 'offset', offset );
-			}.bind( this ) );
+			} );
 
 			const offsetValue = document.createElement( 'span' );
 			offsetValue.className = 'gradient-stop-offset-value';
@@ -469,9 +467,9 @@
 			deleteButton.textContent = '×';
 			deleteButton.title = msg( 'layers-gradient-remove-stop', 'Remove color stop' );
 			deleteButton.disabled = totalStops <= 2;
-			this._addListener( deleteButton, 'click', function () {
+			this._addListener( deleteButton, 'click', () => {
 				this._removeColorStop( index );
-			}.bind( this ) );
+			} );
 
 			row.appendChild( colorInput );
 			row.appendChild( offsetInput );
@@ -500,9 +498,7 @@
 			this.currentGradient.colors.push( { offset: 0.5, color: '#888888' } );
 
 			// Sort by offset
-			this.currentGradient.colors.sort( function ( a, b ) {
-				return a.offset - b.offset;
-			} );
+			this.currentGradient.colors.sort( ( a, b ) => a.offset - b.offset );
 
 			this._notifyChange();
 			this._build(); // Rebuild UI

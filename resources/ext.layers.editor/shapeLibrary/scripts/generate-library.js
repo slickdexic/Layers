@@ -533,9 +533,7 @@ output += `\t];
 		 * @return {Object[]} Array of shapes in category
 		 */
 		getShapesByCategory: function ( categoryId ) {
-			return SHAPES.filter( function ( s ) {
-				return s.category === categoryId;
-			} );
+			return SHAPES.filter( ( s ) => s.category === categoryId );
 		},
 
 		/**
@@ -545,9 +543,7 @@ output += `\t];
 		 * @return {Object|null} Shape object or null
 		 */
 		getShape: function ( shapeId ) {
-			return SHAPES.find( function ( s ) {
-				return s.id === shapeId;
-			} ) || null;
+			return SHAPES.find( ( s ) => s.id === shapeId ) || null;
 		},
 
 		/**
@@ -562,15 +558,13 @@ output += `\t];
 			}
 
 			const q = query.toLowerCase();
-			return SHAPES.filter( function ( s ) {
+			return SHAPES.filter( ( s ) => {
 				// Search in name
 				if ( s.name.toLowerCase().includes( q ) ) {
 					return true;
 				}
 				// Search in tags
-				return s.tags.some( function ( tag ) {
-					return tag.includes( q );
-				} );
+				return s.tags.some( ( tag ) => tag.includes( q ) );
 			} );
 		},
 

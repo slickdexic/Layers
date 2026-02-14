@@ -91,7 +91,7 @@ class StateManager {
 	 * Get current state
 	 */
 	getState() {
-		return Object.assign( {}, this.state );
+		return { ...this.state };
 	}
 
 	/**
@@ -197,7 +197,7 @@ class StateManager {
 		this.lockState();
 
 		try {
-			const oldState = Object.assign( {}, this.state );
+			const oldState = { ...this.state };
 			const changedKeys = [];
 
 			Object.keys( updates ).forEach( key => {
@@ -243,7 +243,7 @@ class StateManager {
 				mw.log.warn( `[StateManager] Pending operations queue full (${MAX_PENDING_OPERATIONS}), coalescing update operations` );
 			}
 			// Convert pending set operations into a single update
-			const coalescedUpdates = Object.assign( {}, updates );
+			const coalescedUpdates = { ...updates };
 			let foundSets = false;
 			for ( let i = 0; i < this.pendingOperations.length; i++ ) {
 				const op = this.pendingOperations[ i ];
@@ -273,7 +273,7 @@ class StateManager {
 		this.lockState();
 
 		try {
-			const oldState = Object.assign( {}, this.state );
+			const oldState = { ...this.state };
 			
 			// Apply the update function to get new state
 			const newState = updateFunction( oldState );
@@ -519,7 +519,8 @@ class StateManager {
 	 * Layer management methods with atomic operations
 	 */
 	addLayer( layerData ) {
-		const layer = Object.assign( {}, layerData, {
+		const layer = {
+			...layerData,
 			id: layerData.id || (
 				( window.Layers && window.Layers.Utils && window.Layers.Utils.generateLayerId )
 					? window.Layers.Utils.generateLayerId()
@@ -527,7 +528,7 @@ class StateManager {
 			),
 			visible: layerData.visible !== false,
 			locked: layerData.locked || false
-		} );
+		};
 
 		this.atomic( ( state ) => {
 			const newLayers = [ layer, ...state.layers ]; // Add to top
@@ -577,7 +578,7 @@ class StateManager {
 				return null; // No changes - layer was removed
 			}
 			const newLayers = [ ...state.layers ];
-			newLayers[ layerIndex ] = Object.assign( {}, newLayers[ layerIndex ], updates );
+			newLayers[ layerIndex ] = { ...newLayers[ layerIndex ], ...updates };
 			
 			return {
 				layers: newLayers,

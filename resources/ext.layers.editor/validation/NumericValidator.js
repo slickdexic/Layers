@@ -66,7 +66,7 @@
 		 * @param {Object} [rules] - Custom validation rules to merge with defaults
 		 */
 		constructor( rules ) {
-			this.rules = Object.assign( {}, NumericValidator.DEFAULT_RULES, rules || {} );
+			this.rules = { ...NumericValidator.DEFAULT_RULES, ...( rules || {} ) };
 			this.helpers = getValidationHelpers();
 		}
 

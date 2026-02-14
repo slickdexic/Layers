@@ -235,7 +235,7 @@
 			{ cx: 9, cy: 14 }
 		];
 
-		positions.forEach( function ( pos ) {
+		positions.forEach( ( pos ) => {
 			const circle = IconFactory.createSVGElement( 'circle', {
 				cx: String( pos.cx ),
 				cy: String( pos.cy ),

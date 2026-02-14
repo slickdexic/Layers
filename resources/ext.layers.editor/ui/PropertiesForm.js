@@ -377,7 +377,7 @@
 		labelEl.setAttribute( 'for', inputId );
 		const select = document.createElement( 'select' );
 		select.id = inputId;
-		( opts.options || [] ).forEach( function ( o ) {
+		( opts.options || [] ).forEach( ( o ) => {
 			const opt = document.createElement( 'option' );
 			opt.value = o.value;
 			opt.textContent = o.text;

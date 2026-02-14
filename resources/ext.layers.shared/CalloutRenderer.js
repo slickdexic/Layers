@@ -888,14 +888,15 @@
 			// Draw text inside the callout (delegate to TextBoxRenderer if available)
 			if ( layer.text && this.textBoxRenderer ) {
 				// Create a temporary layer for text rendering with adjusted bounds
-				const textLayer = Object.assign( {}, layer, {
+				const textLayer = {
+					...layer,
 					x: x,
 					y: y,
 					width: width,
 					height: height,
 					// Don't re-apply rotation - already applied to context
 					rotation: 0
-				} );
+				};
 
 				// Use TextBoxRenderer's text drawing logic with correct parameters
 				this.textBoxRenderer.drawTextContent( textLayer, x, y, width, height, padding / scale.avg, scale, shadowScale, baseOpacity );
