@@ -21,6 +21,7 @@ module.exports = {
 		'resources/ext.layers.editor/**/*.js',
 		'resources/ext.layers.shared/**/*.js',
 		'resources/ext.layers.modal/**/*.js',
+		'resources/ext.layers.slides/**/*.js',
 		'!**/*.min.js',
 		'!**/node_modules/**',
 		'!**/vendor/**',

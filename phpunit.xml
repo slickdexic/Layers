@@ -1,15 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
          bootstrap="tests/phpunit/bootstrap.php"
-         cacheDirectory=".phpunit.cache"
+         cacheResultFile=".phpunit.cache/test-results"
          executionOrder="depends,defects"
-         requireCoverageMetadata="true"
          beStrictAboutOutputDuringTests="true"
          failOnRisky="true"
-         failOnWarning="true"
-         displayDetailsOnTestsThatTriggerDeprecations="true"
-         displayDetailsOnTestsThatTriggerWarnings="true">
+         failOnWarning="true">
     <testsuites>
         <testsuite name="Unit">
             <directory suffix="Test.php">tests/phpunit/unit</directory>
@@ -19,7 +16,7 @@
         </testsuite>
     </testsuites>
 
-    <source>
+    <coverage>
         <include>
             <directory suffix=".php">src</directory>
         </include>
@@ -28,9 +25,6 @@
             <directory>tests</directory>
             <directory>node_modules</directory>
         </exclude>
-    </source>
-
-    <coverage>
         <report>
             <html outputDirectory="coverage-html"/>
             <text outputFile="coverage.txt"/>
