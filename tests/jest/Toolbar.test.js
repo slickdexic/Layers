@@ -112,6 +112,7 @@ describe( 'Toolbar', function () {
 			deleteSelected: jest.fn(),
 			duplicateSelected: jest.fn(),
 			showKeyboardShortcutsDialog: jest.fn(),
+			showHelpDialog: jest.fn(),
 			save: jest.fn(),
 			cancel: jest.fn()
 		};
@@ -3548,7 +3549,7 @@ describe( 'Toolbar', function () {
 			const helpButton = container.querySelector( '.help-button' );
 			if ( helpButton ) {
 				helpButton.click();
-				expect( mockEditor.showKeyboardShortcutsDialog ).toHaveBeenCalled();
+				expect( mockEditor.showHelpDialog ).toHaveBeenCalled();
 			}
 		} );
 

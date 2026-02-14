@@ -1143,7 +1143,7 @@ describe('HistoryManager', () => {
             expect(editor.layers[0].x).toBe(10);
         });
 
-        test('should call redraw after restoring batch', () => {
+        test('should call renderLayers after restoring batch', () => {
             const mockRedraw = jest.fn();
             const mockRenderLayers = jest.fn();
             const canvasMgr = {
@@ -1161,8 +1161,8 @@ describe('HistoryManager', () => {
             
             hm.cancelBatch();
             
+            // renderLayers internally calls redraw(), so only renderLayers should be called
             expect(mockRenderLayers).toHaveBeenCalled();
-            expect(mockRedraw).toHaveBeenCalled();
         });
     });
 

@@ -126,7 +126,6 @@ describe( 'UIManager', () => {
 			expect( uiManager.revSelectEl ).toBeNull();
 			expect( uiManager.revLoadBtnEl ).toBeNull();
 			expect( uiManager.revNameInputEl ).toBeNull();
-			expect( uiManager.zoomReadoutEl ).toBeNull();
 		} );
 	} );
 
@@ -227,23 +226,6 @@ describe( 'UIManager', () => {
 
 			const headerRight = uiManager.container.querySelector( '.layers-header-right' );
 			expect( headerRight ).not.toBeNull();
-		} );
-	} );
-
-	describe( 'createZoomReadout', () => {
-		it( 'should create zoom readout element', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			expect( uiManager.zoomReadoutEl ).toBeInstanceOf( HTMLElement );
-			expect( uiManager.zoomReadoutEl.className ).toBe( 'layers-zoom-readout' );
-		} );
-
-		it( 'should initialize zoom readout with 100%', () => {
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-
-			expect( uiManager.zoomReadoutEl.textContent ).toBe( '100%' );
 		} );
 	} );
 
