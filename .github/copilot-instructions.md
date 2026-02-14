@@ -441,7 +441,7 @@ Common metrics to keep synchronized:
 - JavaScript file count (140 files total, ~96,943 lines)
 - PHP file count (40 files, ~15,081 lines)
 - God class count (16 files >1,000 lines; 2 generated data files, 12 JS, 2 PHP)
-- ESLint disable count (11 - all legitimate)
+- ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
 - Shape library count (5,116 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)

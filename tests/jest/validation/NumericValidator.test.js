@@ -70,7 +70,7 @@ describe( 'NumericValidator', () => {
 
 			// Mock require to throw
 			const originalRequire = global.require;
-			let requireCalled = false;
+			const requireCalled = false;
 
 			// Can't easily mock require in Jest, so test stub behavior directly
 			const stubHelpers = {

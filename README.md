@@ -78,7 +78,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 ## Features
 
-### Drawing Tools (15 Available)
+### Drawing Tools (17 Available)
 
 | Tool          | Shortcut | Purpose                                      |
 | ------------- | -------- | -------------------------------------------- |
@@ -96,6 +96,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Line          | L        | Straight lines                               |
 | Marker    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
+| Image         | —        | Import images from clipboard or file         |
 | Custom Shape  | —        | 5,116 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
 | Emoji         | —        | 2,817 Noto Color Emoji with search and categories |
 
@@ -378,7 +379,7 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 140 | ✅ |
-| Total JS lines | ~96,877 | ✅ Hand-written (+ ~14,354 generated) |
+| Total JS lines | ~96,943 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>1000 lines) | 16 | ✅ Well-delegated facades |
 | Tests passing | 11,122 | ✅ |

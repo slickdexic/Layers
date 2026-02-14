@@ -300,7 +300,7 @@ JavaScript runs in the browser, so MW version doesn't affect compatibility. The 
 - [ ] All 10,667 Jest tests pass
 - [ ] PHPUnit tests pass on MW 1.39
 - [ ] ESLint/Stylelint pass
-- [ ] Manual testing of all 15 tools
+- [ ] Manual testing of all 17 tools
 - [ ] Slide Mode works (if included)
 - [ ] No regressions in existing functionality
 

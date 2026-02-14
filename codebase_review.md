@@ -36,7 +36,7 @@ source code. 7 claims verified, 6 confirmed true, 1 reclassified
 (ClipboardController undo — correct pattern, not a bug).
 
 ### Key Strengths (Genuine)
-1. **High Test Coverage:** 95.19% statement coverage across 163 suites
+1. **High Test Coverage:** 95.19% statement coverage across 162 suites
 2. **Server-Side Validation:** ServerSideLayerValidator is thorough
    (110+ properties, strict whitelist)
 3. **Modern Architecture:** 100% ES6 classes, facade/controller
@@ -115,7 +115,7 @@ source code. 7 claims verified, 6 confirmed true, 1 reclassified
 #### Build Infrastructure
 
 8. **npm test skips Jest unit tests:**
-   ❌ Open — Only runs lint; 11,139 tests require `npm run test:js`.
+   ❌ Open — Only runs lint; 11,122 tests require `npm run test:js`.
 
 ### Issue Summary (February 14, 2026 — v39 Fresh Audit)
 
@@ -322,7 +322,7 @@ const MAX_SLIDE_QUERIES_PER_PARSE = 50;
 #### HIGH-v39-5: wiki/Drawing-Tools.md Missing Marker and Dimension Docs
 
 **Status:** ❌ OPEN
-**Severity:** HIGH (Documentation — 2 of 15 tools undocumented)
+**Severity:** HIGH (Documentation — 2 of 17 tools undocumented)
 **File:** wiki/Drawing-Tools.md
 
 **Issue:** Claims "17 professional drawing tools" and the overview
@@ -407,7 +407,7 @@ this.inputValidators = [];
 **Files:** package.json L8, Gruntfile.js L47
 
 **Issue:** `npm test` runs `grunt test` = `['eslint', 'stylelint',
-'banana']` only. The 11,139 Jest tests require `npm run test:js`.
+'banana']` only. The 11,122 Jest tests require `npm run test:js`.
 CI using only `npm test` has zero unit test coverage.
 
 **Recommended Fix:**
@@ -624,10 +624,10 @@ defines it.
 | Version | 1.5.57 | 1.5.56 (10+ files) | README, ARCH, wiki, LTS |
 | i18n keys | 816 | 731 or 741 (4+ files) | ARCH, wiki/Home, CONTRIBUTING |
 | God classes | 16 (12JS+2PHP+2gen) | 21 (6+ files) | README, ARCH, CONTRIBUTING |
-| Test count | 11,139 | 11,152 or 11,290 | wiki/Arch, CONTRIBUTING, LTS |
-| Test suites | 163 | 164 or 165 | wiki/Arch, LTS, ARCH |
-| JS total lines | ~96,888 | ~96,144 | Multiple |
-| PHP total lines | ~15,357 | ~15,330 | Multiple |
+| Test count | 11,122 | 11,152 or 11,290 | wiki/Arch, CONTRIBUTING, LTS |
+| Test suites | 162 | 164 or 165 | wiki/Arch, LTS, ARCH |
+| JS total lines | ~96,943 | ~96,144 | Multiple |
+| PHP total lines | ~15,081 | ~15,330 | Multiple |
 | Debug default | false | true (2 wiki files) | wiki/Config, Installation |
 | Near-threshold | 10 | 12 | copilot-instructions.md |
 
@@ -637,7 +637,7 @@ defines it.
 |----------|-------|----------|
 | wiki/Drawing-Tools.md | Missing Marker and Dimension tool docs | HIGH |
 | wiki/Frontend-Architecture.md | God class table lists 17 JS (actual 12) | HIGH |
-| wiki/Architecture-Overview.md | 165 suites/11,290 tests (actual 163/11,139) | HIGH |
+| wiki/Architecture-Overview.md | 165 suites/11,290 tests (actual 162/11,122) | HIGH |
 | docs/LTS_BRANCH_STRATEGY.md | Version 1.5.56 (3 places), test count wrong | MEDIUM |
 | docs/SLIDE_MODE.md | Version 1.5.56 | MEDIUM |
 | docs/ARCHITECTURE.md | 16 god classes, test counts wrong | MEDIUM |
@@ -696,7 +696,7 @@ The **most actionable improvements** are:
 **Overall Grade: A-** — Excellent core with strong testing and
 security fundamentals. The extension handles 17 drawing tools,
 5,116 shapes, 2,817 emoji, named layer sets, rich text formatting,
-and presentation mode. 11,139 tests pass in 163 suites with 95%+
+and presentation mode. 11,122 tests pass in 162 suites with 95%+
 statement coverage. The grade drops from A to A- due to the richText
 fontFamily security gap and the npm test/Jest disconnect.
 

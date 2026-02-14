@@ -682,7 +682,7 @@ All P0 issues have been fixed.
 
 - **Files:** package.json L8, Gruntfile.js L47
 - **Impact:** `npm test` = grunt (eslint, stylelint, banana) only.
-  11,139 Jest tests require separate `npm run test:js`. CI using
+  11,122 Jest tests require separate `npm run test:js`. CI using
   only `npm test` has zero unit test coverage.
 - **Introduced:** v39 review
 - **Recommended Fix:** Add `&& npx jest --passWithNoTests` to npm test.

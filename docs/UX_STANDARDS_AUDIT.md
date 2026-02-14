@@ -31,7 +31,7 @@ The Layers editor is **95% compliant** with modern design tool conventions. User
 ### ✅ COMPLIANT - Core Drawing Tools
 
 **What users expect:** 11+ drawing tools with intuitive behavior  
-**What we have:** 15 tools (Pointer, Text, Text Box, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Blur, Image, Dimension, Marker). Shape library with 5,116 shapes in 12 categories.
+**What we have:** 17 tools (Pointer, Text, Text Box, Callout, Pen, Rectangle, Circle, Ellipse, Polygon, Star, Arrow, Line, Marker, Dimension, Custom Shape, Emoji, Image). Shape library with 5,116 shapes in 12 categories.
 
 | Feature | Figma | Canva | Layers | Notes |
 |---------|-------|-------|--------|-------|

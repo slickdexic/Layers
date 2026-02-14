@@ -970,7 +970,7 @@ describe( 'TextBoxRenderer', () => {
 	describe( 'text stroke with shadow', () => {
 		it( 'should temporarily disable shadow for text stroke', () => {
 			// Track shadowColor changes
-			let shadowColorHistory = [];
+			const shadowColorHistory = [];
 			Object.defineProperty( ctx, 'shadowColor', {
 				get: function() { return this._shadowColor || 'transparent'; },
 				set: function( val ) {

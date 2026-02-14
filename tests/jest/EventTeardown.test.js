@@ -3,8 +3,8 @@ const path = '../../resources/ext.layers.editor/';
 describe('Event Listener Teardown', () => {
 	let originalAdd;
 	let originalRemove;
-	let listenerMap = new Map();
-	let count = () => listenerMap.size;
+	const listenerMap = new Map();
+	const count = () => listenerMap.size;
 
 	beforeAll(() => {
 		// Wrap addEventListener/removeEventListener to track listeners

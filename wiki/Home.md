@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C139%20passing-brightgreen" alt="11,139 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C122%20passing-brightgreen" alt="11,122 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
@@ -264,7 +264,7 @@ See [[Changelog]] for full details.
 - [[Configuration Reference]] — All configuration parameters explained
 
 ### User Guide
-- [[Drawing Tools]] — Complete guide to all 15 tools
+- [[Drawing Tools]] — Complete guide to all 17 tools
 - [[Keyboard Shortcuts]] — Master the keyboard for faster editing
 - [[Style Presets]] — Save and reuse style configurations
 - [[Named Layer Sets]] — Multiple annotation sets per image
@@ -305,8 +305,8 @@ See [[Changelog]] for full details.
 | **Version (REL1_43)** | 1.5.57 |
 | **Version (REL1_39)** | 1.5.57 |
 | **Release Date** | February 13, 2026 |
-| **Test Suites** | 163 |
-| **Total Tests** | 11,139 |
+| **Test Suites** | 162 |
+| **Total Tests** | 11,122 |
 | **PHPUnit Test Files** | 31 |
 | **Statement Coverage** | 95.19% |
 | **Branch Coverage** | 84.96% |

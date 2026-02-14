@@ -983,7 +983,7 @@ describe('Integration: Layer Ordering Operations', () => {
             // undo() method no longer exists (CORE-6)
             // HistoryManager handles undo/redo in the editor
             
-            let layers = stateManager.getLayers();
+            const layers = stateManager.getLayers();
             expect(layers[0].name).toBe('Layer 2'); // Layer 2 at front
             expect(layers[1].name).toBe('Layer 1'); // Layer 1 second
         });
