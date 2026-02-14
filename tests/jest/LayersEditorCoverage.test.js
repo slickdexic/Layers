@@ -1182,7 +1182,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 		} );
 
 		test( 'uses nameKey for localized name when provided', () => {
-			editor.msg = jest.fn( ( key, fallback ) => 'Localized Star' );
+			editor.getMessage = jest.fn( ( key, fallback ) => 'Localized Star' );
 
 			const shapeData = {
 				id: 'shapes/star',
@@ -1193,7 +1193,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 
 			editor.createCustomShapeLayer( shapeData );
 
-			expect( editor.msg ).toHaveBeenCalledWith( 'layers-shape-star', 'star' );
+			expect( editor.getMessage ).toHaveBeenCalledWith( 'layers-shape-star', 'star' );
 			expect( editor.addLayer ).toHaveBeenCalledWith( expect.objectContaining( {
 				name: 'Localized Star'
 			} ) );

@@ -581,7 +581,7 @@ describe('ClipboardController', () => {
             const pastedIds = clipboardController.paste();
 
             expect(pastedIds).toHaveLength(1);
-            const pastedLine = mockLayers.find(l => l.id === pastedIds[0]);
+            const pastedLine = mockEditor.layers.find(l => l.id === pastedIds[0]);
             // Zero coords should be offset by PASTE_OFFSET (20) using fallback
             expect(pastedLine.x1).toBe(20);
             expect(pastedLine.y1).toBe(20);
