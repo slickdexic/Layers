@@ -4,6 +4,9 @@
  *
  * @class ValidationManager
  */
+( function () {
+	'use strict';
+
 class ValidationManager {
 	/**
 	 * Creates a new ValidationManager instance
@@ -425,3 +428,5 @@ if ( typeof window !== 'undefined' ) {
 if ( typeof module !== 'undefined' && module.exports ) {
 	module.exports = ValidationManager;
 }
+
+}() );

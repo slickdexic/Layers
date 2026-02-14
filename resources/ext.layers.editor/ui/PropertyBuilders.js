@@ -269,11 +269,11 @@
 				}
 				editor.updateLayer( layer.id, updates );
 				// Refresh properties panel to show/hide text shadow settings
-				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-					setTimeout( function () {
+				setTimeout( function () {
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
 						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}, 0 );
-				}
+					}
+				}, 0 );
 			}
 		} );
 
@@ -466,11 +466,11 @@
 					applyStyleToAllRuns( { backgroundColor: null } );
 				}
 				// Refresh panel to show/hide color picker
-				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-					setTimeout( function () {
+				setTimeout( function () {
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
 						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}, 0 );
-				}
+					}
+				}, 0 );
 			}
 		} );
 
@@ -657,11 +657,11 @@
 				}
 				editor.updateLayer( layer.id, updates );
 				// Refresh properties panel to show/hide tail width control based on arrowStyle
-				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-					setTimeout( function () {
+				setTimeout( function () {
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
 						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}, 0 );
-				}
+					}
+				}, 0 );
 			}
 		} );
 
@@ -1398,11 +1398,11 @@
 			onChange: function ( v ) {
 				updateWithDefaults( { showBackground: v } );
 				// Refresh panel to show/hide background color
-				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-					setTimeout( function () {
+				setTimeout( function () {
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
 						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}, 0 );
-				}
+					}
+				}, 0 );
 			}
 		} );
 
@@ -1433,11 +1433,11 @@
 			onChange: function ( v ) {
 				editor.updateLayer( layer.id, { toleranceType: v } );
 				// Refresh panel to show/hide tolerance value inputs
-				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-					setTimeout( function () {
+				setTimeout( function () {
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
 						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}, 0 );
-				}
+					}
+				}, 0 );
 			}
 		} );
 

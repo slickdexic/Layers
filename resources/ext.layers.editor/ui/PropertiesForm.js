@@ -858,12 +858,11 @@
 						editor.updateLayer( layer.id, { fill: restoredFill } );
 					}
 					// Refresh properties panel to show/hide blur radius and fill color picker
-					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-						// Use setTimeout to let the layer update complete first
-						setTimeout( function () {
+					setTimeout( function () {
+						if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
 							editor.layerPanel.updatePropertiesPanel( layer.id );
-						}, 0 );
-					}
+						}
+					}, 0 );
 				} } );
 				// Blur radius (only shown when blur fill is enabled)
 				if ( isBlurFill ) {
@@ -895,11 +894,11 @@
 							},
 							onFillTypeChange: function () {
 								// Refresh properties panel when switching between solid/gradient
+							setTimeout( function () {
 								if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-									setTimeout( function () {
-										editor.layerPanel.updatePropertiesPanel( layer.id );
-									}, 0 );
+									editor.layerPanel.updatePropertiesPanel( layer.id );
 								}
+							}, 0 );
 							}
 						} );
 
@@ -961,11 +960,11 @@
 				}
 				editor.updateLayer( layer.id, updates );
 				// Refresh properties panel to show/hide shadow settings
-				if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-					setTimeout( function () {
+				setTimeout( function () {
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
 						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}, 0 );
-				}
+					}
+				}, 0 );
 			} } );
 			// Only show shadow settings when shadow is enabled
 			if ( layer.shadow ) {

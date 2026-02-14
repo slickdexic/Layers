@@ -10,6 +10,14 @@
 	'use strict';
 
 	/**
+	 * WeakMap tracking active input validators to prevent listener accumulation.
+	 * When createInputValidator is called on an input that already has a validator,
+	 * the previous one is automatically destroyed first.
+	 * @type {WeakMap<Element, Object>}
+	 */
+	const activeValidators = new WeakMap();
+
+	/**
 	 * Get ValidationHelpers from namespace or require
 	 *
 	 * @return {Object|null} ValidationHelpers class
@@ -818,6 +826,13 @@
 		 * @return {Object} Input validator with enable and disable methods
 		 */
 		createInputValidator( input, validationType, options ) {
+			// Auto-destroy any previous validator on this input to prevent
+			// listener accumulation (P3-057)
+			const existingValidator = activeValidators.get( input );
+			if ( existingValidator && typeof existingValidator.destroy === 'function' ) {
+				existingValidator.destroy();
+			}
+
 			options = options || {};
 			let errorElement = null;
 
@@ -914,14 +929,20 @@
 				validate();
 			}
 
-			return {
+			const validator = {
 				validate: validate,
 				destroy: () => {
 					hideError();
 					input.removeEventListener( 'input', validate );
 					input.removeEventListener( 'blur', validate );
+					activeValidators.delete( input );
 				}
 			};
+
+			// Track this validator for auto-cleanup on re-creation
+			activeValidators.set( input, validator );
+
+			return validator;
 		}
 	}
 

@@ -139,9 +139,9 @@
 		 * @return {Array} Array of {text, style} objects
 		 */
 		static htmlToRichText( html, displayScale = 1 ) {
-			// Create a temporary container to parse HTML
-			const container = document.createElement( 'div' );
-			container.innerHTML = html;
+			// Use DOMParser for safer HTML parsing (avoids innerHTML)
+			const doc = new DOMParser().parseFromString( html, 'text/html' );
+			const container = doc.body;
 
 			const runs = [];
 			const scale = ( displayScale && displayScale > 0 ) ? displayScale : 1;
@@ -365,11 +365,10 @@
 				return '';
 			}
 
-			// If it's a string, treat as HTML
+			// If it's a string, treat as HTML using DOMParser (avoids innerHTML)
 			if ( typeof source === 'string' ) {
-				const div = document.createElement( 'div' );
-				div.innerHTML = source;
-				return RichTextConverter.getPlainText( div );
+				const doc = new DOMParser().parseFromString( source, 'text/html' );
+				return RichTextConverter.getPlainText( doc.body );
 			}
 
 			// Handle input/textarea elements

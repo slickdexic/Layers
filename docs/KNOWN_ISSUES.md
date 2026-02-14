@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 4 | 4 | 0 |
 | P1 | 31 | 31 | 0 |
 | P2 | 68 | 66 | 2 |
-| P3 | 72 | 59 | 13 |
-| **Total** | **175** | **160** | **15** |
+| P3 | 72 | 65 | 7 |
+| **Total** | **175** | **166** | **9** |
 
 ---
 
@@ -292,22 +292,15 @@ All P0 issues have been fixed.
 - **Resolution:** destroy() at L948-950 now cancels _arrowTipRafId
   alongside the other 3 RAF IDs.
 
-### ❌ P2-042: wiki/Configuration-Reference.md LayersDebug Default Wrong (NEW v38)
+### ✅ P2-042: wiki/Configuration-Reference.md LayersDebug Default (Fixed v39)
 
-- **File:** wiki/Configuration-Reference.md L54
-- **Impact:** Documents show `$wgLayersDebug` default as `true`, but
-  extension.json sets it to `false`. Users may expect debug logging
-  to be on by default when it's not.
-- **Introduced:** v38 review
-- **Recommended Fix:** Change `| Default | `true` |` to `| Default | `false` |`
+- **File:** wiki/Configuration-Reference.md
+- **Fix:** Already shows correct default of `false`.
 
-### ❌ P2-043: wiki/Installation.md LayersDebug Default Wrong (NEW v38)
+### ✅ P2-043: wiki/Installation.md LayersDebug Default (Fixed v39)
 
-- **File:** wiki/Installation.md L121
-- **Impact:** Example comment says `// Enable debug logging (default: true)`
-  but actual default is `false`.
-- **Introduced:** v38 review
-- **Recommended Fix:** Change comment to `(default: false)`
+- **File:** wiki/Installation.md
+- **Fix:** Already shows correct default of `false`.
 
 ### ✅ P2-001: Negative Dimensions for Rectangle/TextBox (Fixed v28)
 
@@ -381,13 +374,10 @@ All P0 issues have been fixed.
 - **Resolution:** Removed unguarded `console.log('[Layers] Help
   button clicked')` statement.
 
-### ❌ P3-043: ValidationManager Not Wrapped in IIFE
+### ✅ P3-043: ValidationManager IIFE Wrapping (Fixed v39)
 
 - **File:** resources/ext.layers.editor/ValidationManager.js
-- **Impact:** Class declaration at module top level without IIFE
-  wrapper; inconsistent with project convention (all other modules
-  use IIFE or equivalent scoping).
-- **Introduced:** v36 review
+- **Fix:** Wrapped class in IIFE for scope isolation consistency.
 
 ### ✅ P3-044: AlignmentController getCombinedBounds Fixed (Fixed v36)
 
@@ -444,63 +434,44 @@ All P0 issues have been fixed.
 - **File:** src/Database/LayersSchemaManager.php
 - **Resolution:** Updated CURRENT_VERSION from '1.5.56' to '1.5.57'.
 
-### ❌ P3-053: RichTextConverter innerHTML for HTML Parsing
+### ✅ P3-053: RichTextConverter innerHTML Replaced (Fixed v39)
 
 - **File:** resources/ext.layers.editor/canvas/RichTextConverter.js
-  L120-125
-- **Impact:** htmlToRichText() creates a temporary div and sets
-  innerHTML to parse rich text from contentEditable. DOMParser
-  would be safer. Risk is academic since HTML comes from user's
-  own browser session, not external sources.
-- **Introduced:** v36 review
+- **Fix:** Replaced `innerHTML` with `DOMParser` in `htmlToRichText()`
+  and `getPlainText()` for safer HTML parsing.
 
-### ❌ P3-054: Untracked setTimeout in PropertiesForm.js (NEW v37)
+### ✅ P3-054: PropertiesForm setTimeout Guards (Fixed v39)
 
-- **File:** resources/ext.layers.editor/ui/PropertiesForm.js L316
-- **Impact:** Multiple setTimeout calls without tracking. If the
-  form is destroyed while timeouts are pending, callbacks may
-  execute on stale/destroyed components, potentially causing
-  errors or unexpected behavior.
-- **Introduced:** v37 review
-- **Recommended Fix:** Track timeout IDs in an array property and
-  clear them in a cleanup/destroy method.
+- **File:** resources/ext.layers.editor/ui/PropertiesForm.js
+- **Fix:** Moved `editor.layerPanel` guard inside `setTimeout` callbacks
+  to prevent stale reference access if panel is destroyed.
 
-### ❌ P3-055: Same setTimeout Pattern in PropertyBuilders.js (NEW v37)
+### ✅ P3-055: PropertyBuilders setTimeout Guards (Fixed v39)
 
-- **File:** resources/ext.layers.editor/ui/PropertyBuilders.js L273
-- **Impact:** Same issue as P3-054 — 5 instances of untracked
-  setTimeout calls that could execute after component destruction.
-- **Introduced:** v37 review
-- **Recommended Fix:** Same as P3-054.
+- **File:** resources/ext.layers.editor/ui/PropertyBuilders.js
+- **Fix:** Moved `editor.layerPanel` guard inside all 5 `setTimeout`
+  callbacks to prevent stale reference access.
 
 ### ✅ P3-056: DraftManager Missing Editor Reference Cleanup (Fixed v39)
 
 - **File:** resources/ext.layers.editor/DraftManager.js
 - **Resolution:** destroy() now nulls editor and filename references.
 
-### ❌ P3-057: LayersValidator Listener Accumulation Risk (NEW v38)
+### ✅ P3-057: LayersValidator Listener Accumulation (Fixed v39)
 
-- **File:** resources/ext.layers.editor/LayersValidator.js L848-858
-- **Impact:** `createInputValidator()` adds event listeners but if
-  called multiple times on the same input without calling `destroy()`,
-  listeners accumulate. Each call creates a new closure. Not a direct
-  bug but defensive coding opportunity.
-- **Introduced:** v38 review
-- **Recommended Fix:** Document or enforce single-validator-per-input
-  pattern, or auto-remove previous validator on same input.
+- **File:** resources/ext.layers.editor/LayersValidator.js
+- **Fix:** Added WeakMap-based tracking. `createInputValidator()` now
+  auto-destroys any previous validator on the same input element.
 
 ### ✅ P3-058: ErrorHandler DOM Initialization Timing (Fixed v39)
 
 - **File:** resources/ext.layers.editor/ErrorHandler.js
 - **Fix:** Added `document.body` guard with DOMContentLoaded fallback.
 
-### ❌ P3-059: README.md Test Count Badge Wrong (NEW v38)
+### ✅ P3-059: README.md Test Count Badge (Fixed v39)
 
-- **File:** README.md L7
-- **Impact:** Badge shows "11,152 passing" but actual test count is
-  11,139. Badge not updated during version sync.
-- **Introduced:** v38 review
-- **Recommended Fix:** Update badge to show 11,139.
+- **File:** README.md
+- **Fix:** Updated badge and tables to 11,122 tests (162 suites).
 
 ### ✅ P3-001: ApiLayersList Missing unset() (Fixed v34)
 
