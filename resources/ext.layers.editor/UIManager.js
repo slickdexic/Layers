@@ -45,7 +45,6 @@
 		this.revSelectEl = null;
 		this.revLoadBtnEl = null;
 		this.revNameInputEl = null;
-		this.zoomReadoutEl = null;
 
 		/**
 		 * Tracked timeout IDs for cleanup
@@ -188,13 +187,6 @@
 	createHeaderRight() {
 		const headerRight = document.createElement( 'div' );
 		headerRight.className = 'layers-header-right';
-
-		// Zoom readout
-		this.zoomReadoutEl = document.createElement( 'span' );
-		this.zoomReadoutEl.className = 'layers-zoom-readout';
-		this.zoomReadoutEl.setAttribute( 'aria-label', 'Current zoom level' );
-		this.zoomReadoutEl.textContent = '100%';
-		headerRight.appendChild( this.zoomReadoutEl );
 
 		// Named Set selector (primary grouping)
 		const setWrap = this.createSetSelector();
@@ -574,7 +566,6 @@
 		this.newSetBtnEl = null;
 		this.revSelectEl = null;
 		this.revLoadBtnEl = null;
-		this.zoomReadoutEl = null;
 	}
 }
 

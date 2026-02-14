@@ -98,6 +98,11 @@
 
 		editor.saveState();
 
+		// Build new layers array with clones at top (consistent with cutSelected)
+		const currentLayers = editor.stateManager ?
+			editor.stateManager.getLayers() : editor.layers;
+		const newLayers = currentLayers.slice();
+
 		this.clipboard.forEach( ( layer ) => {
 			const clone = this._cloneLayer( layer );
 
@@ -108,9 +113,16 @@
 			clone.id = this.generateLayerId( editor );
 
 			// Insert at top of layer stack
-			editor.layers.unshift( clone );
+			newLayers.unshift( clone );
 			pastedIds.push( clone.id );
 		} );
+
+		// Update via StateManager for proper event broadcasting
+		if ( editor.stateManager ) {
+			editor.stateManager.set( 'layers', newLayers );
+		} else {
+			editor.layers = newLayers;
+		}
 
 		// Select the pasted layers
 		if ( pastedIds.length > 0 ) {

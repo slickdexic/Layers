@@ -222,13 +222,18 @@
 
 			const bounds = layers.map( ( layer ) => this.getLayerBounds( layer ) );
 
+			const left = Math.min( ...bounds.map( ( b ) => b.left ) );
+			const top = Math.min( ...bounds.map( ( b ) => b.top ) );
+			const right = Math.max( ...bounds.map( ( b ) => b.right ) );
+			const bottom = Math.max( ...bounds.map( ( b ) => b.bottom ) );
+
 			return {
-				left: Math.min( ...bounds.map( ( b ) => b.left ) ),
-				top: Math.min( ...bounds.map( ( b ) => b.top ) ),
-				right: Math.max( ...bounds.map( ( b ) => b.right ) ),
-				bottom: Math.max( ...bounds.map( ( b ) => b.bottom ) ),
-				width: 0, // Will be calculated
-				height: 0
+				left: left,
+				top: top,
+				right: right,
+				bottom: bottom,
+				width: right - left,
+				height: bottom - top
 			};
 		}
 
