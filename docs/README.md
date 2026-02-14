@@ -41,6 +41,7 @@ This directory contains technical documentation for the Layers MediaWiki extensi
 - [KNOWN_ISSUES.md](KNOWN_ISSUES.md) - Current bugs and limitations
 - [layers-all-troubleshooting.md](layers-all-troubleshooting.md) - Troubleshooting guide for layer visibility issues
 - [POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md](POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md) - Boolean serialization bug analysis
+- [POSTMORTEM_IFRAME_MODAL_500_ERROR.md](POSTMORTEM_IFRAME_MODAL_500_ERROR.md) - Iframe modal HTTP 500 fatal error
 
 ### Planning
 - [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) - Active feature proposals and ideas

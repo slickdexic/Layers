@@ -2,6 +2,15 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.57] - 2026-02-13
+
+### Fixed
+- **Iframe Modal HTTP 500 for Image Layers** — Fixed critical fatal error when clicking "Edit layers" on images from article pages. `EditLayersAction.php` was calling `$out->allowClickjacking()` directly, but this method was removed in MediaWiki 1.44. Added `method_exists()` guard matching the pattern already used in `SpecialEditSlide.php`. See `docs/POSTMORTEM_IFRAME_MODAL_500_ERROR.md` for full analysis.
+
+### Documentation
+- **Critical Postmortem Added** — Created `docs/POSTMORTEM_IFRAME_MODAL_500_ERROR.md` documenting the iframe modal bug, its misleading symptoms, incorrect theories pursued, actual root cause, and prevention checklist.
+- **Copilot Instructions Updated** — Added "OutputPage Methods Change Between MW Versions" warning section with `method_exists()` pattern requirement. Updated troubleshooting tips with iframe modal debugging guidance.
+
 ## [1.5.56] - 2026-02-12
 
 ### Fixed

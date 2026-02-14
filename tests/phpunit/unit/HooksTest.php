@@ -41,15 +41,21 @@ class HooksTest extends \MediaWikiUnitTestCase {
 		$outputPageMock->method( 'getUser' )
 			->willReturn( $userMock );
 
+		$addedModules = [];
 		$outputPageMock->expects( $this->exactly( 2 ) )
 			->method( 'addModules' )
-			->withConsecutive( [ 'ext.layers' ], [ 'ext.layers.editor' ] );
+			->willReturnCallback( function ( $module ) use ( &$addedModules ) {
+				$addedModules[] = $module;
+			} );
 
 		$skinMock = $this->getMockBuilder( \Skin::class )
 			->disableOriginalConstructor()
 			->getMock();
 
 		( new Hooks() )->onBeforePageDisplay( $outputPageMock, $skinMock );
+
+		$this->assertContains( 'ext.layers', $addedModules );
+		$this->assertContains( 'ext.layers.editor', $addedModules );
 	}
 
 	/**
