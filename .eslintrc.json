@@ -125,15 +125,17 @@
 				"node": true
 			},
 			"parserOptions": {
-				"ecmaVersion": 2020
+				"ecmaVersion": 2022
 			},
 			"globals": {
 				"mw": "readonly",
 				"$": "readonly",
-				"jQuery": "readonly"
+				"jQuery": "readonly",
+				"OO": "readonly"
 			},
 			"rules": {
-				"no-unused-vars": ["error", { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }]
+				"no-unused-vars": ["warn", { "varsIgnorePattern": "^_", "argsIgnorePattern": "^_" }],
+				"no-redeclare": "warn"
 			}
 		}
 	]

@@ -432,13 +432,8 @@ All god classes use the delegation pattern:
 | SelectionManager | ~1,415 | 3 modules |
 | CanvasRenderer | ~1,391 | SelectionRenderer |
 | ViewerManager | ~1,320 | Sub-renderers |
-| ToolManager | ~1,214 | 2 handlers |
-| GroupManager | ~1,207 | SelectionManager |
 | SlideController | ~1,131 | Slide rendering |
-| TransformController | ~1,117 | CanvasManager |
-| LayersValidator | ~1,116 | Validation rules |
-| ResizeCalculator | ~1,017 | Shape resize calculations |
-| ShapeRenderer | ~1,010 | Shape rendering with gradients |
+| TextBoxRenderer | ~1,120 | Rich text runs |
 
 ---
 

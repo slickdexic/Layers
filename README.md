@@ -349,7 +349,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Large images** - performance may degrade with images >4096px
 
 **Resolved Issues:**
-- ✅ **God class monitoring** - 21 files >1,000 lines with proper delegation patterns (Feb 8, 2026)
+- ✅ **God class monitoring** - 16 files >1,000 lines with proper delegation patterns (Feb 8, 2026)
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
 - ✅ **Background image load failure** - user now notified via mw.notify()
 - ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up

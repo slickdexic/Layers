@@ -28,7 +28,7 @@ This extension is feature-rich by design—**17 drawing tools**, multiple render
 
 ## ⚠️ MANDATORY: God Class Rules
 
-**We have 21 "god classes" (files >1,000 lines) that represent technical debt. 2 are generated data files (exempt), 19 are hand-written (17 JS + 2 PHP). These rules are enforced by CI:**
+**We have 16 "god classes" (files >1,000 lines) that represent technical debt. 2 are generated data files (exempt), 14 are hand-written (12 JS + 2 PHP). These rules are enforced by CI:**
 
 ### Rule 1: No God Class Growth
 - **CI will BLOCK your PR** if you increase the size of any hand-written god class
@@ -54,31 +54,34 @@ This extension is feature-rich by design—**17 drawing tools**, multiple render
 **Hand-written JS files (use delegation patterns):**
 | File | Lines | Status |
 |------|-------|--------|
-| LayerPanel.js | ~2,180 | Delegates to 9 controllers |
+| LayerPanel.js | ~2,191 | Delegates to 9 controllers |
 | CanvasManager.js | ~2,053 | Facade - delegates to 10+ controllers |
 | Toolbar.js | ~1,891 | Needs split |
-| LayersEditor.js | ~1,836 | Partial delegation |
-| InlineTextEditor.js | ~1,670 | Inline text editing |
-| APIManager.js | ~1,566 | Delegates to APIErrorHandler |
-| PropertyBuilders.js | ~1,464 | Reusable property builders |
+| LayersEditor.js | ~1,846 | Partial delegation |
+| InlineTextEditor.js | ~1,672 | Inline text editing |
+| APIManager.js | ~1,570 | Delegates to APIErrorHandler |
+| PropertyBuilders.js | ~1,495 | Reusable property builders |
 | SelectionManager.js | ~1,415 | Delegates to SelectionState, SelectionHandles |
-| CanvasRenderer.js | ~1,365 | Delegates to SelectionRenderer |
+| CanvasRenderer.js | ~1,391 | Delegates to SelectionRenderer |
 | ViewerManager.js | ~1,320 | Viewer instance management |
-| ToolManager.js | ~1,214 | Delegates to tool handlers |
-| GroupManager.js | ~1,205 | Layer grouping logic |
 | SlideController.js | ~1,131 | Slide mode logic |
-| TransformController.js | ~1,117 | Resize/rotation logic |
-| LayersValidator.js | ~1,116 | Validation logic |
+| TextBoxRenderer.js | ~1,120 | Rich text run rendering |
 
 **PHP god classes:**
-- ServerSideLayerValidator.php (~1,346 lines)
-- LayersDatabase.php (~1,363 lines)
+- ServerSideLayerValidator.php (~1,383 lines)
+- LayersDatabase.php (~1,369 lines)
 
 **Near-threshold files (900-999 lines, watch carefully):**
 - ToolbarStyleControls.js (~998)
-- ResizeCalculator.js (~995)
+- PropertiesForm.js (~993)
+- GroupManager.js (~987)
+- TransformController.js (~985)
 - ArrowRenderer.js (~974)
+- LayerRenderer.js (~973)
+- ResizeCalculator.js (~963)
 - CalloutRenderer.js (~961)
+- ShapeRenderer.js (~959)
+- LayersValidator.js (~935)
 
 See [`improvement_plan.md`](improvement_plan.md) for refactoring guidance.
 

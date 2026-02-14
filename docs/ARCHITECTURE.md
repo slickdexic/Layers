@@ -97,7 +97,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - Shape Library with 5,116 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
-### God Classes (21 Files ≥1,000 Lines)
+### God Classes (16 Files ≥1,000 Lines)
 
 **Generated Data Files (exempt from refactoring):**
 | File | Lines | Notes |

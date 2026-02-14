@@ -272,7 +272,7 @@ Version history for the Layers extension.
 - **Metrics Synchronization** — Updated all documentation with correct metrics:
   - Coverage: 95.42% statement, 85.25% branch
   - Test count: 11,112 tests in 163 suites
-  - God classes: 21 total (2 generated, 17 JS hand-written, 2 PHP)
+  - God classes: 16 total (2 generated, 12 JS hand-written, 2 PHP)
   - PHP files: 42 files
 - **README.md Fix** — Replaced unimplemented `lock=view` with implemented `noedit` parameter
 - **CONTRIBUTING.md Fix** — Updated from outdated 92.59%/9,967+ to current 95.42%/11,112

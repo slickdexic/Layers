@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 4 | 4 | 0 |
 | P1 | 31 | 31 | 0 |
 | P2 | 68 | 68 | 0 |
-| P3 | 72 | 65 | 7 |
-| **Total** | **175** | **168** | **7** |
+| P3 | 72 | 63 | 9 |
+| **Total** | **175** | **166** | **9** |
 
 ---
 
@@ -419,12 +419,13 @@ All P0 issues have been fixed.
 - **File:** Gruntfile.js
 - **Resolution:** Changed `cache: false` to `cache: true`.
 
-### ❌ P3-050: Test Files Not Linted by Grunt
+### ❌ P3-050: Test Files Not Linted by Grunt — ✅ RESOLVED
 
 - **File:** Gruntfile.js
-- **Impact:** tests/jest/** excluded from eslint.all pattern. Test
-  files can accumulate style violations unnoticed.
-- **Introduced:** v36 review
+- **Fix:** Removed `!tests/jest/**` exclusion from Gruntfile.js. Updated
+  `.eslintrc.json` test override: ecmaVersion 2020→2022, added `OO` global,
+  `no-unused-vars`/`no-redeclare` set to warn (test-specific patterns).
+  129 warnings, 0 errors. All 11,122 tests still pass.
 
 ### ❌ P3-051: PHP Tests Use Only Existence Assertions
 
@@ -528,7 +529,11 @@ All P0 issues have been fixed.
 
 ### ❌ P3-018: INSTANTCOMMONS_SUPPORT.md Deprecated Syntax — ✅ RESOLVED
 
-### ❌ P3-019: NAMED_LAYER_SETS.md Uses Proposal Language
+### ❌ P3-019: NAMED_LAYER_SETS.md Uses Proposal Language — ✅ RESOLVED
+
+- **Fix:** Full rewrite in P2-038 commit: "Proposed Design" → "Architecture",
+  schema corrected, removed nonexistent config keys, marked delete/rename
+  as implemented.
 
 ### ❌ P3-020: SHAPE_LIBRARY_PROPOSAL.md Says "Proposed" — ✅ RESOLVED
 
@@ -536,11 +541,15 @@ All P0 issues have been fixed.
 
 ### ❌ P3-022: SLIDE_MODE.md Partially Implemented — ✅ RESOLVED
 
-### ❌ P3-023: FUTURE_IMPROVEMENTS.md Duplicate Section Numbers
+### ❌ P3-023: FUTURE_IMPROVEMENTS.md Duplicate Section Numbers — ✅ RESOLVED
 
-- **Impact:** Completed items listed under "Active Proposals"
+- **Fix:** Removed 5 completed items (FR-8, FR-12, FR-13, FR-14, FR-16)
+  from Active Proposals. Renumbered remaining proposals. Added to
+  Recently Completed table.
 
-### ❌ P3-024: README Badge Test Count Outdated
+### ❌ P3-024: README Badge Test Count Outdated — ✅ RESOLVED
+
+- **Fix:** Already fixed in P3-059 (updated to 11,122 tests / 162 suites).
 
 ### ❌ P3-025: JS/PHP Line Counts Slightly Off
 
@@ -551,11 +560,11 @@ All P0 issues have been fixed.
 
 ### ❌ P3-027: PropertiesForm.js Line Count Wrong
 
-### ❌ P3-028: God Class Count Wrong in Multiple Docs
+### ❌ P3-028: God Class Count Wrong in Multiple Docs — ✅ RESOLVED
 
-- **Impact:** README, wiki/Home, ARCHITECTURE, CONTRIBUTING all
-  claim 21 god classes. Actual is 16 (12 JS + 2 PHP + 2 generated).
-  5 files were refactored below 1,000 lines in v1.5.55.
+- **Fix:** Updated 21→16 across README.md, CONTRIBUTING.md (including
+  god class table), ARCHITECTURE.md, GOD_CLASS_REFACTORING_PLAN.md,
+  codebase_review.md, wiki/Changelog.md, wiki/Frontend-Architecture.md.
 
 ### ❌ P3-029 through P3-032: Additional Documentation Staleness
 

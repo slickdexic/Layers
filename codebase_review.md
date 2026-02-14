@@ -640,8 +640,8 @@ defines it.
 | wiki/Architecture-Overview.md | 165 suites/11,290 tests (actual 163/11,139) | HIGH |
 | docs/LTS_BRANCH_STRATEGY.md | Version 1.5.56 (3 places), test count wrong | MEDIUM |
 | docs/SLIDE_MODE.md | Version 1.5.56 | MEDIUM |
-| docs/ARCHITECTURE.md | 21 god classes (actual 16), test counts wrong | MEDIUM |
-| CONTRIBUTING.md | 11,290 tests, 21 god classes, table wrong | MEDIUM |
+| docs/ARCHITECTURE.md | 16 god classes, test counts wrong | MEDIUM |
+| CONTRIBUTING.md | 11,290 tests, 16 god classes, table wrong | MEDIUM |
 | Mediawiki-Extension-Layers.mediawiki | 11,152 tests, 164 suites | MEDIUM |
 | jest.config.js | Coverage comment stale | LOW |
 

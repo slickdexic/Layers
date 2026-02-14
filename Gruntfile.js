@@ -19,7 +19,6 @@ module.exports = function ( grunt ) {
 				'!resources/dist/**',
 				'!resources/ext.layers.editor/shapeLibrary/scripts/**',
 				'!scripts/**',
-				'!tests/jest/**',
 				'!TempToolIcons/**',
 				'!docs/api/**',
 				'!.eslintrc.json',
