@@ -34,11 +34,17 @@
 	}
 
 	/**
+	 * Pending retry timer IDs for cleanup on page unload
+	 *
+	 * @type {number[]}
+	 */
+	const pendingTimers = [];
+
+	/**
 	 * Required classes for editor initialization, mapped to their namespace paths
 	 * @type {Object.<string, string>}
 	 */
 	const REQUIRED_CLASSES = {
-		UIManager: 'UI.Manager',
 		EventManager: 'Core.EventManager',
 		APIManager: 'Core.APIManager',
 		ValidationManager: 'Validation.Manager',
@@ -194,9 +200,9 @@
 							hookDependencyRetries + '/' + MAX_DEPENDENCY_RETRIES + '), deferring...' );
 					}
 					// Defer and retry
-					setTimeout( function () {
+					pendingTimers.push( setTimeout( function () {
 						hookListener( config );
-					}, 100 );
+					}, 100 ) );
 					return;
 				}
 				// Max retries reached - proceed anyway and let validateDependencies handle it
@@ -250,7 +256,7 @@
 				} else {
 					mwHookRetries++;
 					if ( mwHookRetries < MAX_MW_HOOK_RETRIES ) {
-						setTimeout( addHookListener, timing.HOOK_LISTENER_DELAY );
+						pendingTimers.push( setTimeout( addHookListener, timing.HOOK_LISTENER_DELAY ) );
 					}
 				}
 			};
@@ -304,6 +310,11 @@
 	 * Clean up global editor instance
 	 */
 	function cleanupGlobalEditorInstance() {
+		// Clear any pending retry timers
+		while ( pendingTimers.length > 0 ) {
+			clearTimeout( pendingTimers.pop() );
+		}
+
 		if ( window.layersEditorInstance && typeof window.layersEditorInstance.destroy === 'function' ) {
 			window.layersEditorInstance.destroy();
 			window.layersEditorInstance = null;
@@ -354,7 +365,7 @@
 				// Check if MediaWiki is available
 				if ( !window.mw || !mw.config || !mw.config.get ) {
 					debugLog( 'MediaWiki not ready, retrying...' );
-					setTimeout( tryBootstrap, timing.DEPENDENCY_WAIT_DELAY );
+					pendingTimers.push( setTimeout( tryBootstrap, timing.DEPENDENCY_WAIT_DELAY ) );
 					return;
 				}
 
@@ -372,7 +383,7 @@
 					if ( dependencyRetries < MAX_DEPENDENCY_RETRIES ) {
 						debugLog( 'Dependencies not ready (attempt ' + dependencyRetries + '/' +
 							MAX_DEPENDENCY_RETRIES + '), retrying...' );
-						setTimeout( tryBootstrap, timing.BOOTSTRAP_RETRY_DELAY );
+						pendingTimers.push( setTimeout( tryBootstrap, timing.BOOTSTRAP_RETRY_DELAY ) );
 						return;
 					}
 					debugLog( 'Max dependency retries reached, proceeding with available dependencies' );

@@ -86,7 +86,7 @@
 	 */
 	function logError() {
 		if ( window.mw && window.mw.log && typeof window.mw.log.error === 'function' ) {
-			const args = Array.prototype.slice.call( arguments );
+			const args = Array.from( arguments );
 			args.unshift( '[PropertiesForm]' );
 			window.mw.log.error.apply( window.mw.log, args );
 		}

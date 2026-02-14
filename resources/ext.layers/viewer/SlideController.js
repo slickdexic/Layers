@@ -56,7 +56,7 @@
 
 		/** Initialize all slides on the page */
 		initializeSlides() {
-			const containers = Array.prototype.slice.call(
+			const containers = Array.from(
 				document.querySelectorAll( '.layers-slide-container' )
 			);
 
@@ -198,7 +198,7 @@
 		 * @param {number} maxAttempts Total number of retry attempts
 		 */
 		_retryFailedSlides( attemptNum, maxAttempts ) {
-			const failedContainers = Array.prototype.slice.call(
+			const failedContainers = Array.from(
 				document.querySelectorAll( '.layers-slide-container' )
 			).filter( ( container ) => {
 				// Include containers that haven't been successfully initialized yet
@@ -505,7 +505,7 @@
 		refreshAllSlides() {
 			this.debugLog( 'refreshAllSlides: starting' );
 
-			const slideContainers = Array.prototype.slice.call(
+			const slideContainers = Array.from(
 				document.querySelectorAll( '.layers-slide-container[data-slide-name]' )
 			);
 

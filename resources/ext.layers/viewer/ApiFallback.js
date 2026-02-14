@@ -89,7 +89,7 @@ class ApiFallback {
 
 		const addAll = function ( selector ) {
 			const list = document.querySelectorAll( selector );
-			Array.prototype.forEach.call( list, ( el ) => {
+			list.forEach( ( el ) => {
 				if ( candidates.indexOf( el ) === -1 ) {
 					candidates.push( el );
 				}

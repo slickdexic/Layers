@@ -14,11 +14,16 @@
 	 * Shape Library Panel class
 	 *
 	 * @class
-	 * @param {Object} options - Panel options
-	 * @param {Function} options.onSelect - Callback when shape is selected
-	 * @param {HTMLElement} [options.container] - Container element (defaults to document.body)
 	 */
-	function ShapeLibraryPanel( options ) {
+	class ShapeLibraryPanel {
+		/**
+		 * Create a ShapeLibraryPanel instance
+		 *
+		 * @param {Object} options - Panel options
+		 * @param {Function} options.onSelect - Callback when shape is selected
+		 * @param {HTMLElement} [options.container] - Container element (defaults to document.body)
+		 */
+		constructor( options ) {
 		this.options = options || {};
 		this.onSelect = this.options.onSelect || function () {};
 		this.container = this.options.container || document.body;
@@ -41,24 +46,24 @@
 		this._searchTimeout = null;
 
 		this.init();
-	}
+		}
 
-	/**
-	 * Initialize the panel
-	 *
-	 * @private
-	 */
-	ShapeLibraryPanel.prototype.init = function () {
+		/**
+		 * Initialize the panel
+		 *
+		 * @private
+		 */
+		init() {
 		this.createPanel();
 		this.bindEvents();
-	};
+		}
 
-	/**
-	 * Create the panel DOM structure
-	 *
-	 * @private
-	 */
-	ShapeLibraryPanel.prototype.createPanel = function () {
+		/**
+		 * Create the panel DOM structure
+		 *
+		 * @private
+		 */
+		createPanel() {
 		const Z_INDEX = window.Layers.Constants.Z_INDEX;
 
 		// Create overlay
@@ -207,14 +212,14 @@
 
 		// Build category list
 		this.buildCategories();
-	};
+		}
 
-	/**
-	 * Build the category list with hierarchical structure
-	 *
-	 * @private
-	 */
-	ShapeLibraryPanel.prototype.buildCategories = function () {
+		/**
+		 * Build the category list with hierarchical structure
+		 *
+		 * @private
+		 */
+		buildCategories() {
 		const categories = window.Layers.ShapeLibrary.getCategories();
 
 		// Use DocumentFragment to batch DOM operations for performance
@@ -473,14 +478,14 @@
 		// Single DOM update: clear and append all at once
 		this.categoryList.innerHTML = '';
 		this.categoryList.appendChild( fragment );
-	};
+		}
 
-	/**
-	 * Select a category
-	 *
-	 * @param {string} categoryId - Category ID
-	 */
-	ShapeLibraryPanel.prototype.selectCategory = function ( categoryId ) {
+		/**
+		 * Select a category
+		 *
+		 * @param {string} categoryId - Category ID
+		 */
+		selectCategory( categoryId ) {
 		this.activeCategory = categoryId;
 		this.searchInput.value = '';
 
@@ -496,14 +501,14 @@
 
 		// Show shapes
 		this.showShapes( window.Layers.ShapeLibrary.getShapesByCategory( categoryId ) );
-	};
+		}
 
-	/**
-	 * Show shapes in the grid
-	 *
-	 * @param {Object[]} shapes - Array of shape objects
-	 */
-	ShapeLibraryPanel.prototype.showShapes = function ( shapes ) {
+		/**
+		 * Show shapes in the grid
+		 *
+		 * @param {Object[]} shapes - Array of shape objects
+		 */
+		showShapes( shapes ) {
 		this.shapeGrid.innerHTML = '';
 
 		if ( shapes.length === 0 ) {
@@ -609,7 +614,7 @@
 
 			this.shapeGrid.appendChild( item );
 		} );
-	};
+	}
 
 	/**
 	 * Truncate shape name for display
@@ -617,7 +622,7 @@
 	 * @param {string} name - Shape name
 	 * @return {string} Truncated name
 	 */
-	ShapeLibraryPanel.prototype.truncateName = function ( name ) {
+	truncateName( name ) {
 		// Extract just the descriptive part if it has a code
 		const match = name.match( /^[A-Z]\d+:\s*(.+)$/ );
 		if ( match ) {
@@ -629,24 +634,24 @@
 			return name.substring( 0, 12 ) + '...';
 		}
 		return name;
-	};
+	}
 
 	/**
 	 * Select a shape
 	 *
 	 * @param {Object} shape - Shape object
 	 */
-	ShapeLibraryPanel.prototype.selectShape = function ( shape ) {
+	selectShape( shape ) {
 		this.close();
 		this.onSelect( shape );
-	};
+	}
 
 	/**
 	 * Bind event listeners
 	 *
 	 * @private
 	 */
-	ShapeLibraryPanel.prototype.bindEvents = function () {
+	bindEvents() {
 		// Close button - bind handler for cleanup
 		this._boundCloseClickHandler = () => {
 			this.close();
@@ -692,12 +697,12 @@
 			}, 200 );
 		};
 		this.searchInput.addEventListener( 'input', this._boundSearchInputHandler );
-	};
+	}
 
 	/**
 	 * Open the panel
 	 */
-	ShapeLibraryPanel.prototype.open = function () {
+	open() {
 		// Don't open if destroyed
 		if ( this.isDestroyed ) {
 			return;
@@ -718,12 +723,12 @@
 
 		// Show initial category
 		this.selectCategory( this.activeCategory );
-	};
+	}
 
 	/**
 	 * Close the panel
 	 */
-	ShapeLibraryPanel.prototype.close = function () {
+	close() {
 		this.isOpen = false;
 		// Defensive checks for null DOM elements (e.g., after partial cleanup)
 		if ( this.overlay ) {
@@ -732,12 +737,12 @@
 		if ( this.panel ) {
 			this.panel.style.display = 'none';
 		}
-	};
+	}
 
 	/**
 	 * Destroy the panel and cleanup all resources
 	 */
-	ShapeLibraryPanel.prototype.destroy = function () {
+	destroy() {
 		// Prevent double destroy
 		if ( this.isDestroyed ) {
 			return;
@@ -793,7 +798,8 @@
 		this.shapeGrid = null;
 		this.onSelect = null;
 		this.options = null;
-	};
+		}
+	}
 
 	// Export
 	window.Layers = window.Layers || {};

@@ -4,8 +4,6 @@
  * Tests for the shape library modal dialog functionality
  */
 
-/* global describe, it, expect, beforeEach, afterEach, jest */
-
 describe( 'ShapeLibraryPanel', () => {
 	let ShapeLibraryPanel;
 	let panel;

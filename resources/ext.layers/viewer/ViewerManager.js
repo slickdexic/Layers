@@ -414,7 +414,7 @@ class ViewerManager {
 		this.debugLog( 'refreshAllViewers: starting' );
 
 		// Find all images with layer viewers
-		const viewerImages = Array.prototype.slice.call(
+		const viewerImages = Array.from(
 			document.querySelectorAll( 'img' )
 		).filter( ( img ) => img.layersViewer );
 
@@ -625,12 +625,12 @@ class ViewerManager {
 	 */
 	initializeLayerViewers () {
 		// Primary: attributes directly on <img>
-		const images = Array.prototype.slice.call(
+		const images = Array.from(
 			document.querySelectorAll( 'img[data-layer-data]' )
 		);
 
 		// Also find images that have large data marked for API fetch
-		const largeImages = Array.prototype.slice.call(
+		const largeImages = Array.from(
 			document.querySelectorAll( 'img[data-layers-large]' )
 		);
 
@@ -651,7 +651,7 @@ class ViewerManager {
 		this.debugLog( 'Found', images.length, 'candidate <img> elements with data-layer-data' );
 
 		// Fallback: attributes on wrapping <a>, move them to img for viewer
-		const anchors = Array.prototype.slice.call(
+		const anchors = Array.from(
 			document.querySelectorAll( 'a[data-layer-data] > img' )
 		);
 

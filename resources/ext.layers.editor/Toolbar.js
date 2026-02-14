@@ -1696,7 +1696,7 @@
 
 	selectTool( toolId ) {
 		// Update UI - clear active state from all standalone tool buttons
-		Array.prototype.forEach.call( this.container.querySelectorAll( '.tool-button:not(.tool-dropdown-trigger)' ), ( button ) => {
+		this.container.querySelectorAll( '.tool-button:not(.tool-dropdown-trigger)' ).forEach( ( button ) => {
 			button.classList.remove( 'active' );
 			button.setAttribute( 'aria-pressed', 'false' );
 		} );

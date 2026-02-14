@@ -339,7 +339,7 @@ class LayersEditor {
 	 */
 	debugLog () {
 		if ( this.debug && mw.log ) {
-			const sanitizedArgs = Array.prototype.slice.call( arguments )
+			const sanitizedArgs = Array.from( arguments )
 				.map( ( arg ) => this.sanitizeLogMessage( arg ) );
 			mw.log.apply( mw, sanitizedArgs );
 		}
@@ -350,7 +350,7 @@ class LayersEditor {
 	 * @param {...*} args Arguments to log
 	 */
 	errorLog () {
-		const sanitizedArgs = Array.prototype.slice.call( arguments )
+		const sanitizedArgs = Array.from( arguments )
 			.map( ( arg ) => this.sanitizeLogMessage( arg ) );
 		if ( mw.log ) {
 			mw.log.error.apply( mw.log, sanitizedArgs );
