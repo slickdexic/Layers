@@ -158,9 +158,7 @@
 					clone[ key ] = value.slice();
 				} else if ( key === 'points' && Array.isArray( value ) ) {
 					// points array needs deep clone (mutable during path editing)
-					clone[ key ] = value.map( function ( pt ) {
-						return { x: pt.x, y: pt.y };
-					} );
+					clone[ key ] = value.map( ( pt ) => ( { x: pt.x, y: pt.y } ) );
 				} else if ( value !== null && typeof value === 'object' ) {
 					// For other objects, use structuredClone or JSON fallback
 					clone[ key ] = deepClone( value );

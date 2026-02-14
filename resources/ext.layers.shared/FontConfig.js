@@ -130,9 +130,7 @@ function getFonts() {
  * @return {Array<{value: string, text: string}>} Array of option objects
  */
 function getFontOptions() {
-	return getFonts().map( function ( font ) {
-		return { value: font, text: font };
-	} );
+	return getFonts().map( ( font ) => ( { value: font, text: font } ) );
 }
 
 /**
@@ -176,9 +174,7 @@ function normalizeFontFamily( fontFamily ) {
 function isFontAvailable( fontFamily ) {
 	const fonts = getFonts();
 	const normalized = normalizeFontFamily( fontFamily );
-	return fonts.some( function ( font ) {
-		return font.toLowerCase() === normalized.toLowerCase();
-	} );
+	return fonts.some( ( font ) => font.toLowerCase() === normalized.toLowerCase() );
 }
 
 /**
@@ -192,9 +188,7 @@ function getValidFont( fontFamily ) {
 	const normalized = normalizeFontFamily( fontFamily );
 
 	// Check if the normalized font is in the list
-	const matchIndex = fonts.findIndex( function ( font ) {
-		return font.toLowerCase() === normalized.toLowerCase();
-	} );
+	const matchIndex = fonts.findIndex( ( font ) => font.toLowerCase() === normalized.toLowerCase() );
 
 	if ( matchIndex !== -1 ) {
 		return fonts[ matchIndex ];

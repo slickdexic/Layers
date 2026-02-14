@@ -451,9 +451,7 @@ class RenderCoordinator {
 			};
 		}
 
-		const sum = this.frameTimes.reduce( function ( a, b ) {
-			return a + b;
-		}, 0 );
+		const sum = this.frameTimes.reduce( ( a, b ) => a + b, 0 );
 		const avgFrameTime = sum / this.frameTimes.length;
 		const fps = avgFrameTime > 0 ? 1000 / avgFrameTime : 0;
 

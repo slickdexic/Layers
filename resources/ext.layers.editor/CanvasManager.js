@@ -845,12 +845,10 @@ class CanvasManager {
 				break;
 			case 'path':
 				if ( layer.points && originalState.points ) {
-					layer.points = originalState.points.map( function ( pt ) {
-						return {
-							x: pt.x + deltaX,
-							y: pt.y + deltaY
-						};
-					} );
+					layer.points = originalState.points.map( ( pt ) => ( {
+						x: pt.x + deltaX,
+						y: pt.y + deltaY
+					} ) );
 				}
 				break;
 		}
@@ -1382,8 +1380,8 @@ class CanvasManager {
 
 	selectAll () {
 		const allIds = ( this.editor.layers || [] )
-			.filter( function ( layer ) { return layer.visible !== false; } )
-			.map( function ( layer ) { return layer.id; } );
+			.filter( ( layer ) => layer.visible !== false )
+			.map( ( layer ) => layer.id );
 		this.setSelectedLayerIds( allIds );
 		// Update lastSelectedId for key object alignment (last layer is key object)
 		if ( this.selectionManager && allIds.length > 0 ) {
@@ -1964,7 +1962,7 @@ class CanvasManager {
 			'imageLoader'
 		];
 
-		controllersToDestroy.forEach( function ( name ) {
+		controllersToDestroy.forEach( ( name ) => {
 			if ( this[ name ] ) {
 				if ( typeof this[ name ].destroy === 'function' ) {
 					try {
@@ -1977,7 +1975,7 @@ class CanvasManager {
 				}
 				this[ name ] = null;
 			}
-		}, this );
+		} );
 
 		// Unsubscribe from state manager to prevent memory leaks
 		if ( this.stateUnsubscribers && this.stateUnsubscribers.length > 0 ) {

@@ -202,7 +202,7 @@ class TransformController {
 
 		// Apply updates to layer
 		if ( updates ) {
-			Object.keys( updates ).forEach( function ( key ) {
+			Object.keys( updates ).forEach( ( key ) => {
 				layer[ key ] = updates[ key ];
 			} );
 
@@ -580,9 +580,7 @@ class TransformController {
 				break;
 			case 'path':
 				if ( originalState.points && originalState.points.length > 0 ) {
-					layer.points = originalState.points.map( function ( pt ) {
-						return { x: pt.x + deltaX, y: pt.y + deltaY };
-					} );
+					layer.points = originalState.points.map( ( pt ) => ( { x: pt.x + deltaX, y: pt.y + deltaY } ) );
 				}
 				break;
 		}

@@ -868,8 +868,8 @@
 				if ( isBlurFill && this.effectsRenderer ) {
 					// Blur fill - use EffectsRenderer to blur background within arrow
 					// Calculate bounding box from vertices
-					const xs = vertices.map( function ( v ) { return v.x; } );
-					const ys = vertices.map( function ( v ) { return v.y; } );
+					const xs = vertices.map( ( v ) => v.x );
+					const ys = vertices.map( ( v ) => v.y );
 					const minX = Math.min( ...xs );
 					const minY = Math.min( ...ys );
 					const maxX = Math.max( ...xs );

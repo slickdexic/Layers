@@ -241,9 +241,7 @@
 			}
 
 			if ( Array.isArray( obj ) ) {
-				return obj.map( function ( item ) {
-					return CanvasUtilities.deepClone( item );
-				} );
+				return obj.map( ( item ) => CanvasUtilities.deepClone( item ) );
 			}
 
 			const cloned = {};

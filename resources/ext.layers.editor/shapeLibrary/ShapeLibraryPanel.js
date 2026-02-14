@@ -231,15 +231,9 @@
 		}
 
 		// Separate parent categories, subcategories, and standalone categories
-		const parentCategories = categories.filter( function ( cat ) {
-			return cat.isParent === true;
-		} );
-		const subcategories = categories.filter( function ( cat ) {
-			return cat.parentId;
-		} );
-		const standaloneCategories = categories.filter( function ( cat ) {
-			return !cat.isParent && !cat.parentId;
-		} );
+		const parentCategories = categories.filter( ( cat ) => cat.isParent === true );
+		const subcategories = categories.filter( ( cat ) => cat.parentId );
+		const standaloneCategories = categories.filter( ( cat ) => !cat.isParent && !cat.parentId );
 
 		// Helper to count shapes in a parent category (sum of all subcategories)
 		const getParentShapeCount = ( parentId ) => subcategories

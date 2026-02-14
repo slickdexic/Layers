@@ -97,9 +97,7 @@
 				centerX: gradient.centerX,
 				centerY: gradient.centerY,
 				radius: gradient.radius,
-				colors: gradient.colors ? gradient.colors.map( function ( c ) {
-					return { offset: c.offset, color: c.color };
-				} ) : []
+				colors: gradient.colors ? gradient.colors.map( ( c ) => ( { offset: c.offset, color: c.color } ) ) : []
 			};
 		}
 
