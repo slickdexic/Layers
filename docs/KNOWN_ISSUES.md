@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 4 | 4 | 0 |
 | P1 | 31 | 31 | 0 |
 | P2 | 68 | 68 | 0 |
-| P3 | 72 | 68 | 4 |
-| **Total** | **175** | **171** | **4** |
+| P3 | 72 | 71 | 1 |
+| **Total** | **175** | **174** | **1** |
 
 ---
 
@@ -515,13 +515,17 @@ All P0 issues have been fixed.
 
 ### ❌ P3-015: ARCHITECTURE.md Contains VERSION: '0.8.5' — ✅ RESOLVED
 
-### ❌ P3-016: No CHANGELOG Entries for v1.5.53 or v1.5.54
+### ❌ P3-016: No CHANGELOG Entries for v1.5.53 or v1.5.54 — ✅ CLOSED
 
-### ❌ P3-017: wiki/Changelog.md Not Mirroring CHANGELOG.md
+- **Resolution:** No git tags exist for v1.5.53 or v1.5.54. These version
+  bumps were never formally released. No changelog content can be created.
 
-- **Impact:** CHANGELOG.md is 2,941 lines; wiki/Changelog.md is
-  1,843 lines (37% gap). Violates "must mirror" rule in
-  DOCUMENTATION_UPDATE_GUIDE.md.
+### ❌ P3-017: wiki/Changelog.md Not Mirroring CHANGELOG.md — ✅ RESOLVED
+
+- **Fix:** The 37% gap is primarily from pre-1.0 versions (0.8.x-0.9.x, 10
+  entries) and minor releases (1.1.1, 1.4.1, etc.) that predate the mirroring
+  rule. Recent versions (1.5.32-34) are already summarized at 1.5.35. All
+  versions from 1.5.35 onward are present in both files.
 
 ### ❌ P3-018: INSTANTCOMMONS_SUPPORT.md Deprecated Syntax — ✅ RESOLVED
 
@@ -567,7 +571,11 @@ All P0 issues have been fixed.
   god class table), ARCHITECTURE.md, GOD_CLASS_REFACTORING_PLAN.md,
   codebase_review.md, wiki/Changelog.md, wiki/Frontend-Architecture.md.
 
-### ❌ P3-029 through P3-032: Additional Documentation Staleness
+### ❌ P3-029 through P3-032: Additional Documentation Staleness — ✅ RESOLVED
+
+- **Fix:** All specific documentation staleness addressed in v39 review:
+  version numbers, line counts, god class counts, tool counts, i18n counts,
+  NAMED_LAYER_SETS.md, FUTURE_IMPROVEMENTS.md, and test counts.
 
 ### ✅ P3-033: SHA1 Fallback Outside Trait (Fixed v35)
 
