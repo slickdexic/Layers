@@ -28,11 +28,29 @@ class EditLayersAction extends \Action {
 	/** @inheritDoc */
 	public function show() {
 		$out = $this->getOutput();
+		$user = $this->getUser();
 		$title = $this->getTitle();
 		$request = $this->getRequest();
 
-		// Check permission using Authority (MW 1.36+, guaranteed in MW 1.44+)
-		$hasPermission = $this->getAuthority()->isAllowed( 'editlayers' );
+		// Debug logging for iframe issues
+		$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
+		$logger->debug( sprintf(
+			'EditLayersAction::show - user=%s, id=%d, registered=%s, request=%s',
+			$user->getName(),
+			$user->getId(),
+			$user->isRegistered() ? 'yes' : 'no',
+			$request->getRequestURL()
+		) );
+
+		// Check permission using PermissionManager (same pattern as SpecialEditSlide)
+		$services = \MediaWiki\MediaWikiServices::getInstance();
+		$permissionManager = $services->getPermissionManager();
+		$hasPermission = $permissionManager->userHasRight( $user, 'editlayers' );
+
+		$logger->debug( sprintf(
+			'EditLayersAction::show - hasPermission=%s',
+			$hasPermission ? 'yes' : 'no'
+		) );
 
 		if ( !$hasPermission ) {
 			throw new \PermissionsError( 'editlayers' );
@@ -85,9 +103,13 @@ class EditLayersAction extends \Action {
 		// In modal mode, allow the page to be framed (loaded in iframe)
 		// Otherwise MediaWiki's default X-Frame-Options header blocks it
 		if ( $isModalMode ) {
-			// Allow the page to be framed (loaded in iframe) for modal editor
-			// Otherwise MediaWiki's default X-Frame-Options header blocks it
-			$out->allowClickjacking();
+			// Use method_exists for compatibility across MediaWiki versions
+			// allowClickjacking was deprecated in MW 1.43
+			if ( method_exists( $out, 'allowClickjacking' ) ) {
+				$out->allowClickjacking();
+			} elseif ( method_exists( $out, 'setPreventClickjacking' ) ) {
+				$out->setPreventClickjacking( false );
+			}
 		}
 
 		// Page title
