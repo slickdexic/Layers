@@ -16,7 +16,7 @@ Never suggest committing directly to REL branches. Always work on `main` first, 
 
 **Target: <110,000 lines of JavaScript** — There is NO 50K or 75K limit.
 
-This extension is feature-rich by design with **15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 5,116 shapes**, and an **Emoji Picker with 2,817 emoji**. The generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~14,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
+This extension is feature-rich by design with **17 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 5,116 shapes**, and an **Emoji Picker with 2,817 emoji**. The generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~14,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
 - God classes (files >1,000 lines) — minimize hand-written ones; generated data files are exempt
 - Test coverage — maintain 90%+ statement coverage
 - Security — CSRF, rate limiting, validation
@@ -442,7 +442,7 @@ Common metrics to keep synchronized:
 - PHP file count (39 files, ~15,330 lines)
 - God class count (16 files >1,000 lines; 2 generated data files, 12 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
-- Drawing tool count (15 tools)
+- Drawing tool count (17 tools)
 - Shape library count (5,116 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)

@@ -29,7 +29,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - ✅ Original images preserved (non-destructive)
 - ✅ Modern, intuitive editor UI
-- ✅ **15 drawing tools** with customizable properties
+- ✅ **17 drawing tools** with customizable properties
 - ✅ Multiple named layer sets per image with version history
 - ✅ **Slide Mode** — Create standalone canvas graphics without a base image
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
@@ -70,7 +70,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 |---------|-------------|
 | Custom canvas sizes | Any size from 100×100 to 4096×4096 |
 | Background colors | Any CSS color or transparent |
-| All 15 drawing tools | Full access to shapes, text, arrows, etc. |
+| All 17 drawing tools | Full access to shapes, text, arrows, etc. |
 | Instant refresh | Changes appear immediately after saving ✨ |
 | Lightbox view | Full-size viewing without editing |
 

@@ -43,7 +43,7 @@ main (primary)
 
 ### Feature Parity
 The REL1_43 branch maintains **full feature parity** with `main`:
-- 15 drawing tools including Shape Library (5,116 shapes) and Emoji Picker (2,817 emoji)
+- 17 drawing tools including Shape Library (5,116 shapes) and Emoji Picker (2,817 emoji)
 - Layer grouping/folders (Ctrl+G, Ctrl+Shift+G)
 - Named layer sets with revision history
 - Smart guides and alignment tools
@@ -151,7 +151,7 @@ All three branches are kept at feature parity. The only differences between bran
 
 | Feature | main | REL1_43 | REL1_39 |
 |---------|------|---------|---------|
-| 15 Drawing Tools | ✅ | ✅ | ✅ |
+| 17 Drawing Tools | ✅ | ✅ | ✅ |
 | Named Layer Sets | ✅ | ✅ | ✅ |
 | Version History | ✅ | ✅ | ✅ |
 | Image Import | ✅ | ✅ | ✅ |

@@ -16,7 +16,7 @@
 
 | 🎨 **Professional Tools** | 🔒 **Non-Destructive** | 🖼️ **Slide Mode** | ♿ **Accessible** |
 |---------------------------|------------------------|-------------------|------------------|
-| **15 drawing tools**, style presets, alignment & distribution | Original images never modified | Create standalone graphics without a base image | WCAG 2.1 compliant, full keyboard support |
+| **17 drawing tools**, style presets, alignment & distribution | Original images never modified | Create standalone graphics without a base image | WCAG 2.1 compliant, full keyboard support |
 
 ---
 

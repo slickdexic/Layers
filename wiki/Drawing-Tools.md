@@ -1,6 +1,6 @@
 # Drawing Tools
 
-Layers provides **15 professional drawing tools** for comprehensive image annotation.
+Layers provides **17 professional drawing tools** for comprehensive image annotation.
 
 ---
 
@@ -12,6 +12,8 @@ Layers provides **15 professional drawing tools** for comprehensive image annota
 | **Text** | `T` | T | Annotation | Single-line text labels |
 | **Text Box** | `X` | 📝 | Annotation | Multi-line text with container |
 | **Callout** | `B` | 💬 | Annotation | Speech bubbles with draggable tail |
+| **Marker** | `M` | ① | Annotation | Numbered/lettered markers for labeling |
+| **Dimension** | `D` | ↔ | Annotation | Technical measurement annotations |
 | **Pen** | `P` | ✏️ | Drawing | Freehand path drawing |
 | **Rectangle** | `R` | ▢ | Shape | Rectangles and squares |
 | **Circle** | `C` | ○ | Shape | Perfect circles |
@@ -141,6 +143,134 @@ Line:      │ Simple single-line pointer
 **Text Properties:**
 - Same as Text Box (font, alignment, padding, etc.)
 - Multi-line text with word wrap
+
+### Marker Tool (M)
+
+Add numbered or lettered markers for step-by-step labeling.
+Auto-numbers sequentially — great for instructions, diagrams,
+and part callouts.
+
+**Marker Styles:**
+
+| Style | Display | Example |
+|-------|---------|---------|
+| Circled (default) | Filled circle | ①②③ |
+| Parentheses | Number in parens | (1)(2)(3) |
+| Plain | Dotted number | 1. 2. 3. |
+| Letter | Capital letter | A B C |
+| Letter Circled | Letter in circle | Ⓐ Ⓑ Ⓒ |
+
+Letter styles map values 1–26 → A–Z and values > 26 → AA, AB, etc.
+
+**Properties:**
+
+| Property | Range | Default |
+|----------|-------|---------|
+| Value | Number, letter, or custom (e.g. "1A") | Auto-increment |
+| Marker Style | circled, parentheses, plain, letter, letter-circled | circled |
+| Marker Size | 10–200 px | 24 |
+| Font Size Adjust | -10 to 20 | 0 |
+| Text Color | Any color | #000000 |
+| Fill Color | Any color | #ffffff |
+| Stroke Color | Any color | #000000 |
+| Stroke Width | 0–10, step 0.5 | 2 |
+| Show Arrow | On/Off | Off |
+| Arrow Style | arrow, dot | arrow |
+
+**Leader Arrow:**
+- Toggle **Show Arrow** to add a pointer from the marker
+  to a target location
+- Drag the arrow endpoint to reposition it
+- Arrow size scales automatically with marker size
+
+**Usage:**
+1. Press `M` or select **Marker** from the Annotation dropdown
+2. Click on the canvas to place a marker (auto-numbered)
+3. Keep clicking to place sequential markers
+4. Optionally enter custom values (e.g., "1A", "1.1")
+5. Enable **Show Arrow** to add leader lines
+
+**Tips:**
+- Markers auto-number based on existing markers in the set
+- Use Letter style for reference diagrams (Part A, Part B)
+- Combine markers with text boxes for detailed annotations
+- Supports shadow effects for visibility on busy images
+
+### Dimension Tool (D)
+
+Add technical measurement annotations with extension lines.
+Shows distance with customizable units — ideal for engineering,
+architectural, and technical illustrations.
+
+**End Styles:**
+
+| Style | Display |
+|-------|---------|
+| Arrow (default) | Arrowheads (▶──────◀) |
+| Tick | Diagonal tick marks |
+| Dot | Small dots |
+| None | No end markers |
+
+**Text Position:**
+
+| Position | Description |
+|----------|-------------|
+| Above (default) | Text above the dimension line |
+| Below | Text below the dimension line |
+| Center | Text centered on the line |
+
+**Orientation:**
+
+| Mode | Description |
+|------|-------------|
+| Free (default) | Any angle |
+| Horizontal | Constrained horizontal |
+| Vertical | Constrained vertical |
+
+**Properties:**
+
+| Property | Range | Default |
+|----------|-------|---------|
+| Dimension Value | Custom text or auto-calculated | Auto |
+| Font Size | 6–200 px | 12 |
+| Text Color | Any color | #000000 |
+| Line Color | Any color | #000000 |
+| Line Width | 0.5–10, step 0.5 | 1 |
+| End Style | arrow, tick, dot, none | arrow |
+| Marker Size | 2–40 | 8 |
+| Arrow Position | Inside, Outside | Inside |
+| Text Position | above, below, center | above |
+| Text Direction | auto, auto-reversed, horizontal | auto |
+| Extension Length | 0–100 | 10 |
+| Dimension Offset | -500 to 500 | 15 |
+| Text Offset | -2000 to 2000 | 0 |
+
+**Text Background:**
+- Enable **Show Background** to add a backdrop behind the text
+- Customize background color (default: white)
+
+**Tolerance Annotations:**
+
+| Type | Display | Example |
+|------|---------|---------|
+| None (default) | No tolerance | 50 px |
+| Symmetric ± | Plus/minus | 50 ±0.2 px |
+| Deviation +/- | Upper/lower | 50 +0.2/-0.1 px |
+| Limits | Min–max range | 49.8–50.2 px |
+| Basic | Boxed (reference) | [50 px] |
+
+**Usage:**
+1. Press `D` or select **Dimension** from the Annotation dropdown
+2. Click and drag to define the two measured points
+3. The dimension line appears with auto-calculated distance
+4. Optionally enter custom text (e.g., "25.4 mm")
+5. Adjust offset, extension lines, and tolerances as needed
+
+**Tips:**
+- Use **Horizontal** or **Vertical** orientation for clean layouts
+- Set `Arrow Position: Outside` for small dimensions
+- Combine multiple dimensions for comprehensive measurements
+- Tolerance annotations follow engineering drawing conventions
 
 ---
 
@@ -454,6 +584,8 @@ Images are stored as base64 data URLs. The maximum size is configurable:
 | Highlight area | Rectangle (R) with semi-transparent fill |
 | Blur background | Any shape with `fill: blur` |
 | Freehand annotation | Pen (P) |
+| Step-by-step labels | Marker (M) |
+| Technical measurement | Dimension (D) |
 | Decorative arrow | Custom Shape (arrows category) |
 | Visual indicator/emotion | Emoji (✅ ⚠️ 😀) |
 | External logo/screenshot | Image (paste or import) |

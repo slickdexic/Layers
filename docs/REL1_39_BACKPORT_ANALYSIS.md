@@ -252,7 +252,7 @@ JavaScript runs in the browser, so MW version doesn't affect compatibility. The 
 
 1. **Core Layer Operations**
    - Create/edit/delete layers on images
-   - All 15 drawing tools
+   - All 17 drawing tools
    - Undo/redo functionality
    - Layer panel operations
 

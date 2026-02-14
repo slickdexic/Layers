@@ -12,9 +12,9 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 |----------|-------|-------|------|
 | P0 | 4 | 4 | 0 |
 | P1 | 31 | 31 | 0 |
-| P2 | 68 | 66 | 2 |
+| P2 | 68 | 68 | 0 |
 | P3 | 72 | 65 | 7 |
-| **Total** | **175** | **166** | **9** |
+| **Total** | **175** | **168** | **7** |
 
 ---
 
@@ -261,7 +261,7 @@ All P0 issues have been fixed.
 - **Resolution:** Added `'resources/ext.layers.slides/**/*.js'` to
   collectCoverageFrom array.
 
-### ❌ P2-038: NAMED_LAYER_SETS.md Stale Throughout
+### ✅ P2-038: NAMED_LAYER_SETS.md Stale Throughout (Fixed v39)
 
 - **File:** docs/NAMED_LAYER_SETS.md
 - **Impact:** Uses "Proposed Design" header for implemented feature.
@@ -272,6 +272,11 @@ All P0 issues have been fixed.
 - **Introduced:** v36 review
 - **Recommended Fix:** Major rewrite to document actual
   implementation, correct schema, and real config keys.
+- **Resolution:** Rewrote document: corrected schema to actual
+  NOT NULL DEFAULT 'default', removed nonexistent config keys,
+  added SetNameSanitizer validation details, replaced Option A/B
+  with actual implementation, updated set count to 15, marked
+  deletion/renaming as implemented, changed header to Architecture.
 
 ### ✅ P2-039: Missing SlideNameValidator in API Modules (Fixed v39)
 
@@ -614,7 +619,7 @@ All P0 issues have been fixed.
 - **Introduced:** v39 review
 - **Recommended Fix:** Add static counter (max 50/page) and cache.
 
-### ❌ P2-048: wiki/Drawing-Tools.md Missing 2 Tool Docs (NEW v39)
+### ✅ P2-048: wiki/Drawing-Tools.md Missing 2 Tool Docs (Fixed v39)
 
 - **File:** wiki/Drawing-Tools.md
 - **Impact:** Claims 15 tools but Marker and Dimension tools have
@@ -622,6 +627,9 @@ All P0 issues have been fixed.
   lines respectively).
 - **Introduced:** v39 review
 - **Recommended Fix:** Add Marker and Dimension sections.
+- **Resolution:** Added comprehensive Marker and Dimension tool
+  documentation sections. Updated tool count from 15 → 17 across
+  all documentation files (13 files).
 
 ### ✅ P2-049: Double HTML-Escaping in LayeredFileRenderer (Fixed v39)
 

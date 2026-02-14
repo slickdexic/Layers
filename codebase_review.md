@@ -325,7 +325,7 @@ const MAX_SLIDE_QUERIES_PER_PARSE = 50;
 **Severity:** HIGH (Documentation — 2 of 15 tools undocumented)
 **File:** wiki/Drawing-Tools.md
 
-**Issue:** Claims "15 professional drawing tools" but the overview
+**Issue:** Claims "17 professional drawing tools" and the overview
 table and documentation sections are missing **Marker** and
 **Dimension** tools entirely. These are registered in ToolRegistry.js
 with dedicated renderers (MarkerRenderer.js ~601 lines,
@@ -694,7 +694,7 @@ The **most actionable improvements** are:
 7. Update documentation metrics using DOCUMENTATION_UPDATE_GUIDE.md
 
 **Overall Grade: A-** — Excellent core with strong testing and
-security fundamentals. The extension handles 15 drawing tools,
+security fundamentals. The extension handles 17 drawing tools,
 5,116 shapes, 2,817 emoji, named layer sets, rich text formatting,
 and presentation mode. 11,139 tests pass in 163 suites with 95%+
 statement coverage. The grade drops from A to A- due to the richText

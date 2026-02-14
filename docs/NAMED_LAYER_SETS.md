@@ -2,7 +2,7 @@
 
 **Created:** January 2025  
 **Status:** ✅ Implemented (v1.5.0+)  
-**Version:** 1.1
+**Version:** 1.2 (updated to reflect actual implementation)
 
 ---
 
@@ -15,7 +15,7 @@ This document describes the Named Layer Sets feature, which restructures the lay
 - **Named Layer Set**: A logical grouping of layer annotations identified by a human-readable name (e.g., "default", "anatomy-labels", "tourist-highlights")
 - **Revision**: A specific saved state of a named layer set, identified by timestamp
 - **Version History**: Up to 50 most recent revisions stored per named set
-- **Layer Set Slot**: Each image can have up to 10-20 named layer sets
+- **Layer Set Slot**: Each image can have up to 15 named layer sets (configurable via `$wgLayersMaxNamedSets`)
 
 ### User Value
 
@@ -27,47 +27,51 @@ This document describes the Named Layer Sets feature, which restructures the lay
 
 ---
 
-## Current System Analysis
+## System Details
 
-### Current Database Schema
+### Database Schema
 
 ```sql
-CREATE TABLE layer_sets (
-    ls_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    ls_img_name VARCHAR(255) NOT NULL,
-    ls_img_sha1 VARCHAR(40) NOT NULL,
-    ls_img_major_mime VARCHAR(20),
-    ls_img_minor_mime VARCHAR(100),
-    ls_json_blob MEDIUMBLOB NOT NULL,
-    ls_user_id INT UNSIGNED NOT NULL,
-    ls_timestamp BINARY(14) NOT NULL,
-    ls_revision INT UNSIGNED DEFAULT 1,
-    ls_name VARCHAR(255),
-    ls_size INT UNSIGNED,
-    ls_layer_count INT UNSIGNED
-);
+CREATE TABLE /*_*/layer_sets (
+    ls_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    ls_img_name varchar(255) NOT NULL,
+    ls_img_sha1 varchar(40) NOT NULL DEFAULT '',
+    ls_img_major_mime varchar(20) DEFAULT NULL,
+    ls_img_minor_mime varchar(100) DEFAULT NULL,
+    ls_json_blob mediumblob NOT NULL,
+    ls_user_id int unsigned DEFAULT NULL,
+    ls_timestamp binary(14) NOT NULL,
+    ls_revision int unsigned NOT NULL DEFAULT 1,
+    ls_name varchar(255) NOT NULL DEFAULT 'default',
+    ls_size int unsigned NOT NULL DEFAULT 0,
+    ls_layer_count smallint unsigned NOT NULL DEFAULT 0,
+    UNIQUE KEY ls_img_name_set_revision
+        (ls_img_name, ls_img_sha1, ls_name, ls_revision)
+) ENGINE=InnoDB DEFAULT CHARSET=binary;
 ```
 
-### Current Behavior
+Additional indexes:
+- `idx_layer_sets_named (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC)`
+- `idx_layer_sets_setname_revision (ls_img_name, ls_img_sha1, ls_name, ls_revision DESC)`
+- `ls_img_lookup (ls_img_name, ls_img_sha1)`
+- `ls_user_timestamp (ls_user_id, ls_timestamp)`
+- `ls_size_performance (ls_img_name, ls_size)`
 
-1. Each save creates a new row with incrementing `ls_revision` (global per image)
-2. `ls_name` exists but is optional and unused for organization
-3. All revisions are returned in `all_layersets` API response
-4. No revision limits - unlimited growth
-5. `layerset=` parameter was not yet implemented in wikitext parser
+### Pre-Implementation History
 
-### Problems with Current Approach
+Before v1.5.0, the system stored anonymous revisions per image:
+- `ls_name` was nullable and unused
+- All revisions were shown in a flat `all_layersets` list
+- No revision limits — unbounded growth
+- No `layerset=` wikitext parameter
 
-1. **Unbounded Growth**: No limit on stored revisions per image
-2. **No Logical Grouping**: Can't have "english" and "french" annotation sets
-3. **No Direct Linking**: Can't reference a specific named set in wikitext
-4. **Confusing History**: All saves mixed together without context
+These limitations motivated the named sets feature.
 
 ---
 
-## Proposed Design
+## Architecture
 
-### New Data Model
+### Data Model
 
 ```
 Image (File:Example.jpg)
@@ -80,7 +84,7 @@ Image (File:Example.jpg)
 │   ├── Revision 3 (latest)
 │   ├── Revision 2
 │   └── Revision 1
-└── Named Set: "tourist-poi" (up to 10-20 named sets per image)
+└── Named Set: "tourist-poi" (up to 15 named sets per image)
     └── Revision 1
 ```
 
@@ -91,45 +95,27 @@ Image (File:Example.jpg)
 | `$wgLayersMaxNamedSets` | 15 | Maximum named sets per image |
 | `$wgLayersMaxRevisionsPerSet` | 50 | Maximum revisions kept per named set |
 | `$wgLayersDefaultSetName` | "default" | Name for auto-created sets |
-| `$wgLayersSetNameMaxLength` | 64 | Maximum characters for set name |
-| `$wgLayersSetNamePattern` | `/^[\p{L}\p{N}_-]+$/u` | Allowed characters (unicode alphanumeric, underscore, dash) |
 
-### Database Schema Changes
+**Set Name Validation** (hardcoded in `SetNameSanitizer`):
+- Max length: 255 characters (matches DB column)
+- Allowed characters: Unicode letters, numbers, underscores, dashes, spaces
+- Regex: `/^[\p{L}\p{N}_\-\s]+$/u`
+- Empty names default to "default"
+- Consecutive whitespace collapsed to single space
 
-#### Option A: Minimal Changes (Recommended)
+### Database Implementation
 
-Keep existing schema, add compound index and constraints:
+The `ls_name` column directly on `layer_sets` provides named set
+support with a compound unique index ensuring no duplicate revisions.
+Revision pruning and named set counting are handled in application
+logic (`LayersDatabase.php`).
 
-```sql
--- Add index for efficient named set queries
-CREATE INDEX idx_layer_sets_name_lookup 
-ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
-
--- Note: Revision pruning handled in application logic
-```
-
-#### Option B: Separate Tables (More Complex)
-
-```sql
--- New table for named set metadata
-CREATE TABLE layer_set_names (
-    lsn_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    lsn_img_name VARCHAR(255) NOT NULL,
-    lsn_img_sha1 VARCHAR(40) NOT NULL,
-    lsn_name VARCHAR(64) NOT NULL,
-    lsn_created_by INT UNSIGNED NOT NULL,
-    lsn_created_at BINARY(14) NOT NULL,
-    lsn_revision_count INT UNSIGNED DEFAULT 0,
-    UNIQUE KEY idx_lsn_unique (lsn_img_name, lsn_img_sha1, lsn_name)
-);
-
--- Existing layer_sets gets foreign key
-ALTER TABLE layer_sets 
-ADD COLUMN ls_set_name_id INT UNSIGNED,
-ADD FOREIGN KEY (ls_set_name_id) REFERENCES layer_set_names(lsn_id);
-```
-
-**Recommendation**: Use Option A for simplicity. Option B is overkill for current scale.
+Key methods:
+- `getNamedSetsForImage()` — lists all named sets with metadata
+- `getSetRevisions()` — revision history for a specific set
+- `pruneOldRevisions()` — removes oldest revisions beyond limit
+- `countNamedSetsForImage()` — enforces per-image set limit
+- `namedSetExists()` — checks for name conflicts before rename
 
 ---
 
@@ -377,8 +363,8 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 
 ## Open Questions
 
-1. **Set Deletion**: Should users be able to delete entire named sets? (Probably yes for set owner/sysop)
-2. **Set Renaming**: Allow renaming named sets? (Probably yes, with redirect handling)
+1. ~~**Set Deletion**: Should users be able to delete entire named sets?~~ **Implemented** via `ApiLayersDelete` — set owner or admin can delete.
+2. ~~**Set Renaming**: Allow renaming named sets?~~ **Implemented** via `ApiLayersRename` — set owner or admin can rename (cannot rename to "default").
 3. **Cross-Image Sets**: Should a named set be able to apply to multiple related images? (Future consideration)
 4. **Revision Comparison**: Visual diff between revisions? (Future enhancement)
 
