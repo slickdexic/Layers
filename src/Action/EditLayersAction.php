@@ -8,6 +8,8 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Action;
 
+use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+
 class EditLayersAction extends \Action {
 
 	/** @inheritDoc */
@@ -123,7 +125,7 @@ class EditLayersAction extends \Action {
 
 		// Init config via JS config vars; module will bootstrap itself
 		$fileUrl = $this->getPublicImageUrl( $file );
-		$isForeign = $this->isForeignFile( $file );
+		$isForeign = ForeignFileHelper::isForeignFile( $file );
 
 		// Log URL generation for troubleshooting foreign file issues
 		$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
@@ -170,35 +172,6 @@ class EditLayersAction extends \Action {
 	}
 
 	/**
-	 * Check if a file is from a foreign repository (like InstantCommons)
-	 *
-	 * @param mixed $file File object
-	 * @return bool True if the file is from a foreign repository
-	 */
-	private function isForeignFile( $file ): bool {
-		// Check for ForeignAPIFile or ForeignDBFile
-		if ( $file instanceof \ForeignAPIFile || $file instanceof \ForeignDBFile ) {
-			return true;
-		}
-
-		// Check using class name (for namespaced classes)
-		$className = get_class( $file );
-		if ( strpos( $className, 'Foreign' ) !== false ) {
-			return true;
-		}
-
-		// Check if the file's repo is foreign
-		if ( method_exists( $file, 'getRepo' ) ) {
-			$repo = $file->getRepo();
-			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
 	 * Resolve a best-effort public URL for the image, with a robust fallback for private repos.
 	 *
 	 * For foreign files (InstantCommons, etc.), we prefer the local Special:Redirect/file
@@ -211,7 +184,7 @@ class EditLayersAction extends \Action {
 	 * @return string
 	 */
 	private function getPublicImageUrl( $file ): string {
-		$isForeign = $this->isForeignFile( $file );
+		$isForeign = ForeignFileHelper::isForeignFile( $file );
 		$filename = method_exists( $file, 'getName' ) ? $file->getName() : '';
 		$needsThumbnail = $this->isNonWebFormat( $filename );
 

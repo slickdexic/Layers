@@ -37,7 +37,9 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ApiLayersRename`: rename endpoint to rename a named layer set (requires CSRF token, owner or admin)
     - `ApiLayersList`: list slides for Special:Slides page (requires read permission, rate limited)
   - Shared traits (`src/Api/Traits/`)
-    - `ForeignFileHelperTrait`: shared by all 5 API modules; provides `isForeignFile()` (detects InstantCommons/foreign files) and `getFileSha1()` (deterministic fallback hash for foreign files)
+    - `ForeignFileHelperTrait`: delegates to `ForeignFileHelper` static utility; used by API modules for convenient instance-method access
+  - Utility classes (`src/Utility/`)
+    - `ForeignFileHelper`: canonical static utility for `isForeignFile()` (3-step detection: instanceof, class name, repo isLocal) and `getFileSha1()` (deterministic fallback hash). Used by all API modules (via trait), Hooks, Processors, Actions, and ThumbnailRenderer.
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
     - Uses LoadBalancer for DB connections (lazy init pattern with getWriteDb/getReadDb)
     - Implements retry logic with exponential backoff (3 retries, 100ms base delay) for transaction conflicts

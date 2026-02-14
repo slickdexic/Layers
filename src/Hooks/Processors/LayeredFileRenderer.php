@@ -15,6 +15,7 @@ namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
+use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 use Title;
@@ -89,7 +90,7 @@ class LayeredFileRenderer {
 				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
 			}
 
-			$layerSets = $db->getLayerSetsForImage( $file->getName(), $this->getFileSha1( $file ) );
+			$layerSets = $db->getLayerSetsForImage( $file->getName(), ForeignFileHelper::getFileSha1( $file ) );
 			if ( empty( $layerSets ) ) {
 				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
 			}
@@ -278,53 +279,5 @@ class LayeredFileRenderer {
 		if ( $this->logger ) {
 			$this->logger->error( "Layers: $message", $context );
 		}
-	}
-
-	/**
-	 * Get a stable SHA1 identifier for a file.
-	 *
-	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
-	 * we generate a stable fallback identifier based on the filename.
-	 *
-	 * @param mixed $file File object
-	 * @return string SHA1 hash or fallback identifier
-	 */
-	private function getFileSha1( $file ): string {
-		$sha1 = $file->getSha1();
-		if ( !empty( $sha1 ) ) {
-			return $sha1;
-		}
-
-		// Check if this is a foreign file
-		if ( $this->isForeignFile( $file ) ) {
-			// Use a hash of the filename as a fallback (prefixed for clarity)
-			return 'foreign_' . sha1( $file->getName() );
-		}
-
-		return $sha1 ?? '';
-	}
-
-	/**
-	 * Check if a file is from a foreign repository (like InstantCommons)
-	 *
-	 * @param mixed $file File object
-	 * @return bool True if the file is from a foreign repository
-	 */
-	private function isForeignFile( $file ): bool {
-		// Check if file is a ForeignAPIFile or ForeignDBFile
-		$className = get_class( $file );
-		if ( strpos( $className, 'Foreign' ) !== false ) {
-			return true;
-		}
-
-		// Check if the file's repository is not local
-		if ( method_exists( $file, 'getRepo' ) ) {
-			$repo = $file->getRepo();
-			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 }

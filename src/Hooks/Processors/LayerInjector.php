@@ -13,6 +13,7 @@ namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -89,7 +90,7 @@ class LayerInjector {
 		$filename = $file->getName();
 
 		// Determine which layer set to fetch
-		$sha1 = $this->getFileSha1( $file );
+		$sha1 = ForeignFileHelper::getFileSha1( $file );
 		$layerSet = null;
 		if ( $setNameFromQueue === null
 			|| $setNameFromQueue === 'on'
@@ -138,7 +139,7 @@ class LayerInjector {
 		} elseif ( strpos( $layersParam, 'name:' ) === 0 ) {
 			// Layer set by name
 			$layerSetName = substr( $layersParam, 5 );
-			$layerSet = $db->getLayerSetByName( $file->getName(), $this->getFileSha1( $file ), $layerSetName );
+			$layerSet = $db->getLayerSetByName( $file->getName(), ForeignFileHelper::getFileSha1( $file ), $layerSetName );
 		} else {
 			// Legacy format or other formats
 			$layerSet = null;
@@ -169,7 +170,7 @@ class LayerInjector {
 		if ( !$db ) {
 			return;
 		}
-		$sha1 = $this->getFileSha1( $file );
+		$sha1 = ForeignFileHelper::getFileSha1( $file );
 		$latest = $db->getLatestLayerSet( $file->getName(), $sha1 );
 		if ( !$latest || !isset( $latest['data']['layers'] ) ) {
 			return;
@@ -221,7 +222,7 @@ class LayerInjector {
 
 		// Get layer data from database
 		// Use getLatestLayerSet with optional setName filter (sha1 required for DB lookup)
-		$sha1 = $this->getFileSha1( $file );
+		$sha1 = ForeignFileHelper::getFileSha1( $file );
 		$isNamedSet = $setName !== null
 			&& $setName !== LayersConstants::DEFAULT_SET_NAME
 			&& $setName !== 'on'
@@ -299,58 +300,5 @@ class LayerInjector {
 	 */
 	public function setHtmlInjector( ?LayersHtmlInjector $injector ): void {
 		$this->htmlInjector = $injector;
-	}
-
-	/**
-	 * Get the SHA1 hash for a file, with fallback for foreign files
-	 *
-	 * For foreign files (from InstantCommons, etc.) that don't have a SHA1,
-	 * we generate a stable fallback identifier based on the filename.
-	 *
-	 * @param mixed $file File object
-	 * @return string SHA1 hash or fallback identifier
-	 */
-	private function getFileSha1( $file ): string {
-		$sha1 = $file->getSha1();
-		if ( !empty( $sha1 ) ) {
-			return $sha1;
-		}
-
-		// Check if this is a foreign file
-		if ( $this->isForeignFile( $file ) ) {
-			// Use a hash of the filename as a fallback (prefixed for clarity)
-			return 'foreign_' . sha1( $file->getName() );
-		}
-
-		return $sha1 ?? '';
-	}
-
-	/**
-	 * Check if a file is from a foreign repository (like InstantCommons)
-	 *
-	 * @param mixed $file File object
-	 * @return bool True if the file is from a foreign repository
-	 */
-	private function isForeignFile( $file ): bool {
-		// Check for ForeignAPIFile or ForeignDBFile
-		if ( $file instanceof \ForeignAPIFile || $file instanceof \ForeignDBFile ) {
-			return true;
-		}
-
-		// Check using class name (for namespaced classes)
-		$className = get_class( $file );
-		if ( strpos( $className, 'Foreign' ) !== false ) {
-			return true;
-		}
-
-		// Check if the file's repo is foreign
-		if ( method_exists( $file, 'getRepo' ) ) {
-			$repo = $file->getRepo();
-			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 }

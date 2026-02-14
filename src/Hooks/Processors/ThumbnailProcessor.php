@@ -8,6 +8,7 @@ use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
+use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
@@ -80,7 +81,7 @@ class ThumbnailProcessor {
 		$file = ( $thumbnail !== null && method_exists( $thumbnail, 'getFile' ) )
 			? $thumbnail->getFile() : null;
 		$fileName = $file ? $file->getName() : 'unknown';
-		$isForeign = $file && $this->isForeignFile( $file );
+		$isForeign = $file && ForeignFileHelper::isForeignFile( $file );
 		$this->log( "ThumbnailBeforeProduceHTML for: $fileName (foreign=" . ( $isForeign ? 'yes' : 'no' ) . ")" );
 		$this->log(
 			"linkTypeFromQueue=" . ( $linkTypeFromQueue ?? 'null' ) .
@@ -293,7 +294,7 @@ class ThumbnailProcessor {
 			$sha1 = $file->getSha1();
 
 			// For foreign files without SHA1, use fallback identifier
-			if ( empty( $sha1 ) && $this->isForeignFile( $file ) ) {
+			if ( empty( $sha1 ) && ForeignFileHelper::isForeignFile( $file ) ) {
 				$sha1 = 'foreign_' . sha1( $filename );
 				$this->log( "Using fallback SHA1 for foreign file: $filename" );
 			}
@@ -568,7 +569,7 @@ class ThumbnailProcessor {
 		// Ensure we have a valid local File: title for building the editor URL.
 		if ( !$title ) {
 			$title = Title::makeTitleSafe( NS_FILE, $filename );
-		} elseif ( $this->isForeignFile( $file ) ) {
+		} elseif ( ForeignFileHelper::isForeignFile( $file ) ) {
 			// Foreign files may have a title that doesn't produce correct local URLs
 			// Create a local File: title for the editor link
 			$localTitle = Title::makeTitleSafe( NS_FILE, $filename );
@@ -658,34 +659,5 @@ class ThumbnailProcessor {
 
 			$this->log( "Applied viewer deep link: $viewerUrl" );
 		}
-	}
-
-	/**
-	 * Check if a file is from a foreign repository (like InstantCommons)
-	 *
-	 * @param mixed $file File object
-	 * @return bool True if the file is from a foreign repository
-	 */
-	private function isForeignFile( $file ): bool {
-		// Check for ForeignAPIFile or ForeignDBFile
-		if ( $file instanceof \ForeignAPIFile || $file instanceof \ForeignDBFile ) {
-			return true;
-		}
-
-		// Check using class name (for namespaced classes)
-		$className = get_class( $file );
-		if ( strpos( $className, 'Foreign' ) !== false ) {
-			return true;
-		}
-
-		// Check if the file's repo is foreign
-		if ( method_exists( $file, 'getRepo' ) ) {
-			$repo = $file->getRepo();
-			if ( $repo && method_exists( $repo, 'isLocal' ) && !$repo->isLocal() ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 }

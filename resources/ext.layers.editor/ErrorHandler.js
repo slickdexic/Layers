@@ -41,7 +41,16 @@
 			this.notificationContainer.className = 'layers-error-notifications';
 			this.notificationContainer.setAttribute( 'role', 'alert' );
 			this.notificationContainer.setAttribute( 'aria-live', 'polite' );
-			document.body.appendChild( this.notificationContainer );
+			// Guard against early initialization before document.body exists (P3-058)
+			if ( document.body ) {
+				document.body.appendChild( this.notificationContainer );
+			} else {
+				document.addEventListener( 'DOMContentLoaded', () => {
+					if ( document.body && this.notificationContainer ) {
+						document.body.appendChild( this.notificationContainer );
+					}
+				} );
+			}
 		}
 
 		/**

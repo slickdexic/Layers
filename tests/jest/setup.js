@@ -23,16 +23,13 @@ global.console.error = function ( ...args ) {
     originalConsoleError.apply( console, args );
 };
 
-// Mock console methods in tests to avoid noise
-global.console = Object.assign({}, console, {
-    // Keep log, warn, error for debugging
-    log: jest.fn(),
-    warn: jest.fn(),
-    // error is already handled above
-    // Silence debug and info
-    debug: jest.fn(),
-    info: jest.fn()
-});
+// Mock console methods in tests to reduce noise while keeping spy
+// ability. Using jest.spyOn preserves original behavior and allows
+// tests to assert on console output when needed (P3-060).
+jest.spyOn( console, 'log' ).mockImplementation( () => {} );
+jest.spyOn( console, 'warn' ).mockImplementation( () => {} );
+jest.spyOn( console, 'debug' ).mockImplementation( () => {} );
+jest.spyOn( console, 'info' ).mockImplementation( () => {} );
 
 // Mock window.alert and confirm
 global.alert = jest.fn();

@@ -12,9 +12,9 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 |----------|-------|-------|------|
 | P0 | 4 | 4 | 0 |
 | P1 | 31 | 31 | 0 |
-| P2 | 68 | 65 | 3 |
-| P3 | 72 | 56 | 16 |
-| **Total** | **175** | **156** | **19** |
+| P2 | 68 | 66 | 2 |
+| P3 | 72 | 59 | 13 |
+| **Total** | **175** | **160** | **15** |
 
 ---
 
@@ -489,16 +489,10 @@ All P0 issues have been fixed.
 - **Recommended Fix:** Document or enforce single-validator-per-input
   pattern, or auto-remove previous validator on same input.
 
-### ❌ P3-058: ErrorHandler DOM Initialization Timing (NEW v38)
+### ✅ P3-058: ErrorHandler DOM Initialization Timing (Fixed v39)
 
-- **File:** resources/ext.layers.editor/ErrorHandler.js L29-45
-- **Impact:** `initErrorContainer()` appends to `document.body` without
-  checking existence. Singleton created at module load (L594). If
-  script loads before `document.body` exists, throws error. MediaWiki's
-  ResourceLoader typically defers execution, making this unlikely.
-- **Introduced:** v38 review
-- **Recommended Fix:** Guard with `if (document.body)` check or use
-  `document.addEventListener('DOMContentLoaded', ...)`.
+- **File:** resources/ext.layers.editor/ErrorHandler.js
+- **Fix:** Added `document.body` guard with DOMContentLoaded fallback.
 
 ### ❌ P3-059: README.md Test Count Badge Wrong (NEW v38)
 
@@ -620,16 +614,16 @@ All P0 issues have been fixed.
 - **Recommended Fix:** Apply `sanitizeIdentifier()` to richText
   fontFamily server-side; escape CSS values client-side.
 
-### ❌ P2-045: ForeignFileHelper Code Duplication (6 Files) (NEW v39)
+### ✅ P2-045: ForeignFileHelper Code Duplication (Fixed v39)
 
 - **Files:** Hooks.php, EditLayersAction.php, LayerInjector.php,
-  LayeredFileRenderer.php, ThumbnailProcessor.php, ThumbnailRenderer.php
+  LayeredFileRenderer.php, ThumbnailProcessor.php, ThumbnailRenderer.php,
+  ImageLinkProcessor.php
 - **Impact:** `isForeignFile()` and/or `getFileSha1()` duplicated in
-  6 files outside the existing ForeignFileHelperTrait. If detection
-  logic changes, all duplicates must be updated or data mismatches
-  occur silently.
-- **Introduced:** v39 review
-- **Recommended Fix:** Refactor trait into static utility class.
+  7 files outside the existing ForeignFileHelperTrait.
+- **Fix:** Created `src/Utility/ForeignFileHelper.php` static utility class
+  with canonical 3-step detection. All 7 files + trait now delegate to it.
+  ~280 lines of duplicate code removed.
 
 ### ✅ P2-046: ThumbnailRenderer Ignores Opacity for Named Colors (Fixed v39)
 
@@ -705,18 +699,17 @@ All P0 issues have been fixed.
 - **Introduced:** v39 review
 - **Recommended Fix:** Remove pre-1.44 compatibility guards.
 
-### ❌ P3-060: console.log/warn Globally Mocked in Test Setup (NEW v39)
+### ✅ P3-060: console.log/warn Globally Mocked in Test Setup (Fixed v39)
 
-- **File:** tests/jest/setup.js L28-34
-- **Impact:** Production code warnings invisible during tests.
-- **Introduced:** v39 review
+- **File:** tests/jest/setup.js
+- **Fix:** Replaced `global.console = Object.assign(...)` with
+  individual `jest.spyOn()` calls that auto-restore between tests.
 
-### ❌ P3-061: BasicLayersTest.test.js Tautological Tests (NEW v39)
+### ✅ P3-061: BasicLayersTest.test.js Tautological Tests (Fixed v39)
 
-- **File:** tests/jest/BasicLayersTest.test.js
-- **Impact:** 276 lines testing inline objects — zero production
-  code imports. Inflates test count without coverage.
-- **Introduced:** v39 review
+- **File:** tests/jest/BasicLayersTest.test.js (DELETED)
+- **Fix:** Deleted 275-line file that tested inline objects without
+  importing any production code. Test count: 11,139 → 11,122.
 
 ### ✅ P3-062: jest.config.js Coverage Comment Stale (Fixed v39)
 
