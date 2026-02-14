@@ -75,7 +75,7 @@
 			this.listeners.push( entry );
 
 			if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
-				mw.log( '[EventTracker] Added listener: ' + type );
+				mw.log( `[EventTracker] Added listener: ${type}` );
 			}
 
 			return entry;
@@ -201,7 +201,7 @@
 			} );
 
 			if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
-				mw.log( '[EventTracker] Destroyed ' + this.listeners.length + ' listeners' );
+				mw.log( `[EventTracker] Destroyed ${this.listeners.length} listeners` );
 			}
 
 			this.listeners = [];

@@ -733,7 +733,7 @@
 		// Debug logging controlled by extension config
 		const cacheHint = fromCache ? ' (from cache)' : '';
 		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
-			mw.log( '[APIManager] Loaded layer set by name' + cacheHint + ':', {
+			mw.log( `[APIManager] Loaded layer set by name${cacheHint}:`, {
 				setName: setName,
 				layersCount: layers.length,
 				currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),

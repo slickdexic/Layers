@@ -355,7 +355,7 @@
 				if ( inThrottle || this._destroyed ) {
 					return;
 				}
-				fn.apply( this, args );
+				fn( ...args );
 				inThrottle = true;
 				this._throttleTimeoutId = setTimeout( () => {
 					inThrottle = false;

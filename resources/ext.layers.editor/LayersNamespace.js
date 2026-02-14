@@ -58,16 +58,16 @@
 		// For functions (classes), wrap them
 		if ( typeof target === 'function' ) {
 			const warned = {};
-			return function DeprecatedWrapper() {
+			return function DeprecatedWrapper( ...args ) {
 				if ( !warned[ oldName ] ) {
 					warnDeprecated( oldName, newPath );
 					warned[ oldName ] = true;
 				}
 				// Support both new ClassName() and ClassName() calls
 				if ( new.target ) {
-					return new target( ...arguments );
+					return new target( ...args );
 				}
-				return target.apply( this, arguments );
+				return target.apply( this, args );
 			};
 		}
 		// For objects, just return them (instances like layersRegistry)

@@ -184,8 +184,7 @@
 			const hasImageLayers = Array.isArray( layers ) &&
 				layers.some( layer => layer && layer.type === 'image' && layer.src );
 			if ( hasImageLayers && typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[HistoryManager] Using JSON cloning for layers with images - ' +
-					'may cause high memory usage. Consider loading DeepClone module.' );
+				mw.log.warn( '[HistoryManager] Using JSON cloning for layers with images - may cause high memory usage. Consider loading DeepClone module.' );
 			}
 
 			// Fallback to JSON cloning

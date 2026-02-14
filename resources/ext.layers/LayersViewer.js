@@ -532,7 +532,7 @@
 					this.ctx.globalCompositeOperation = String( blendMode );
 				} catch ( e ) {
 					if ( window.mw && window.mw.log ) {
-						mw.log.warn( '[LayersViewer] Unsupported blend mode: ' + blendMode );
+						mw.log.warn( `[LayersViewer] Unsupported blend mode: ${blendMode}` );
 					}
 				}
 			}

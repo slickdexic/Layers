@@ -67,9 +67,8 @@
 	/** Simple debounce utility for input handlers @return {Function} */
 	function debounce( fn, delay ) {
 		let timer = null;
-		return function () {
+		return function ( ...args ) {
 			const context = this;
-			const args = arguments;
 			if ( timer !== null ) {
 				clearTimeout( timer );
 			}
@@ -84,11 +83,10 @@
 	 * Safe error logging
 	 * @param {...*} args - Arguments to log
 	 */
-	function logError() {
+	function logError( ...args ) {
 		if ( window.mw && window.mw.log && typeof window.mw.log.error === 'function' ) {
-			const args = Array.from( arguments );
 			args.unshift( '[PropertiesForm]' );
-			window.mw.log.error.apply( window.mw.log, args );
+			window.mw.log.error( ...args );
 		}
 	}
 

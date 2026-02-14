@@ -196,8 +196,7 @@
 				hookDependencyRetries++;
 				if ( hookDependencyRetries < MAX_DEPENDENCY_RETRIES ) {
 					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-						mw.log.warn( '[EditorBootstrap] Hook fired but dependencies not ready (attempt ' +
-							hookDependencyRetries + '/' + MAX_DEPENDENCY_RETRIES + '), deferring...' );
+						mw.log.warn( `[EditorBootstrap] Hook fired but dependencies not ready (attempt ${hookDependencyRetries}/${MAX_DEPENDENCY_RETRIES}), deferring...` );
 					}
 					// Defer and retry
 					pendingTimers.push( setTimeout( function () {
@@ -358,7 +357,7 @@
 
 				const debugLog = function ( msg ) {
 					if ( debug && mw.log ) {
-						mw.log( '[EditorBootstrap] ' + msg );
+						mw.log( `[EditorBootstrap] ${msg}` );
 					}
 				};
 

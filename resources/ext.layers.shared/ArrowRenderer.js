@@ -870,10 +870,10 @@
 					// Calculate bounding box from vertices
 					const xs = vertices.map( function ( v ) { return v.x; } );
 					const ys = vertices.map( function ( v ) { return v.y; } );
-					const minX = Math.min.apply( null, xs );
-					const minY = Math.min.apply( null, ys );
-					const maxX = Math.max.apply( null, xs );
-					const maxY = Math.max.apply( null, ys );
+					const minX = Math.min( ...xs );
+					const minY = Math.min( ...ys );
+					const maxX = Math.max( ...xs );
+					const maxY = Math.max( ...ys );
 					this.ctx.globalAlpha = baseOpacity * fillOpacity;
 					this.effectsRenderer.drawBlurFill(
 						layer,

@@ -549,9 +549,7 @@ class CanvasManager {
 			this.canvas.width = this.baseWidth;
 			this.canvas.height = this.baseHeight;
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log( '[CanvasManager] Using base dimensions for canvas: ' +
-					this.baseWidth + 'x' + this.baseHeight +
-					' (loaded image: ' + ( info.width || image.width ) + 'x' + ( info.height || image.height ) + ')' );
+				mw.log( `[CanvasManager] Using base dimensions for canvas: ${this.baseWidth}x${this.baseHeight} (loaded image: ${info.width || image.width}x${info.height || image.height})` );
 			}
 		} else {
 			// Fall back to loaded image dimensions
@@ -1554,9 +1552,7 @@ class CanvasManager {
 			// Only resize if dimensions differ significantly (avoid unnecessary redraws)
 			if ( this.canvas.width !== width || this.canvas.height !== height ) {
 				if ( typeof mw !== 'undefined' && mw.log ) {
-					mw.log( '[CanvasManager] Resizing canvas from ' +
-						this.canvas.width + 'x' + this.canvas.height +
-						' to base dimensions ' + width + 'x' + height );
+					mw.log( `[CanvasManager] Resizing canvas from ${this.canvas.width}x${this.canvas.height} to base dimensions ${width}x${height}` );
 				}
 				this.canvas.width = width;
 				this.canvas.height = height;

@@ -337,11 +337,11 @@ class LayersEditor {
 	 * Debug logging utility
 	 * @param {...*} args Arguments to log
 	 */
-	debugLog () {
+	debugLog ( ...rawArgs ) {
 		if ( this.debug && mw.log ) {
-			const sanitizedArgs = Array.from( arguments )
+			const sanitizedArgs = rawArgs
 				.map( ( arg ) => this.sanitizeLogMessage( arg ) );
-			mw.log.apply( mw, sanitizedArgs );
+			mw.log( ...sanitizedArgs );
 		}
 	}
 
@@ -349,11 +349,11 @@ class LayersEditor {
 	 * Error logging utility
 	 * @param {...*} args Arguments to log
 	 */
-	errorLog () {
-		const sanitizedArgs = Array.from( arguments )
+	errorLog ( ...rawArgs ) {
+		const sanitizedArgs = rawArgs
 			.map( ( arg ) => this.sanitizeLogMessage( arg ) );
 		if ( mw.log ) {
-			mw.log.error.apply( mw.log, sanitizedArgs );
+			mw.log.error( ...sanitizedArgs );
 		}
 	}
 
