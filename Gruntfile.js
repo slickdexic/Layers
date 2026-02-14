@@ -9,7 +9,7 @@ module.exports = function ( grunt ) {
 	grunt.initConfig( {
 		eslint: {
 			options: {
-				cache: false,
+				cache: true,
 				fix: grunt.option( 'fix' )
 			},
 			all: [
@@ -17,8 +17,13 @@ module.exports = function ( grunt ) {
 				'!node_modules/**',
 				'!vendor/**',
 				'!resources/dist/**',
+				'!resources/ext.layers.editor/shapeLibrary/scripts/**',
+				'!scripts/**',
 				'!tests/jest/**',
-				'!.eslintrc.json'
+				'!TempToolIcons/**',
+				'!docs/api/**',
+				'!.eslintrc.json',
+				'!**/*.ts'
 			]
 		},
 		stylelint: {
