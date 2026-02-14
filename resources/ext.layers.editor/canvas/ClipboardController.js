@@ -165,7 +165,7 @@
 		const ids = selectedIds.slice();
 		editor.saveState();
 		const remaining = editor.layers.filter( ( layer ) => {
-			return ids.indexOf( layer.id ) === -1;
+			return !ids.includes( layer.id );
 		} );
 		if ( editor.stateManager ) {
 			editor.stateManager.set( 'layers', remaining );

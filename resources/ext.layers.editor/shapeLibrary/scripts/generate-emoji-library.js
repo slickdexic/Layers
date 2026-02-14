@@ -359,8 +359,8 @@ output += `\t];
 		search: function ( query ) {
 			const q = query.toLowerCase();
 			return EMOJI.filter( function ( e ) {
-				return e.name.toLowerCase().indexOf( q ) !== -1 ||
-					e.id.toLowerCase().indexOf( q ) !== -1;
+				return e.name.toLowerCase().includes( q ) ||
+					e.id.toLowerCase().includes( q );
 			} );
 		},
 

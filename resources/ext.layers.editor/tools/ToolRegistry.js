@@ -182,7 +182,7 @@
 				this.categories.set( category, [] );
 			}
 			const categoryTools = this.categories.get( category );
-			if ( categoryTools.indexOf( name ) === -1 ) {
+			if ( !categoryTools.includes( name ) ) {
 				categoryTools.push( name );
 			}
 		}
@@ -315,7 +315,7 @@
 			if ( !toolDef ) {
 				return false;
 			}
-			return [ 'drawing', 'shape', 'line', 'annotation' ].indexOf( toolDef.category ) !== -1;
+			return [ 'drawing', 'shape', 'line', 'annotation' ].includes( toolDef.category );
 		}
 
 		/**

@@ -810,7 +810,7 @@ class DrawingController {
 			'text', 'textbox', 'callout', 'pen', 'rectangle', 'circle',
 			'ellipse', 'polygon', 'star', 'line', 'arrow', 'marker', 'dimension'
 		];
-		return drawingTools.indexOf( tool ) !== -1;
+		return drawingTools.includes( tool );
 	}
 
 	/**

@@ -435,9 +435,7 @@
 
 				// Check for duplicate names
 				const namedSets = this.stateManager.get( 'namedSets' ) || [];
-				const exists = namedSets.some( function ( s ) {
-					return s.name.toLowerCase() === trimmedName.toLowerCase();
-				} );
+				const exists = namedSets.some( ( s ) => s.name.toLowerCase() === trimmedName.toLowerCase() );
 				if ( exists ) {
 					if ( typeof mw !== 'undefined' && mw.notify ) {
 						mw.notify(

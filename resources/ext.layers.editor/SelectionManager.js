@@ -176,14 +176,14 @@
 				}
 				// Skip locked or invisible layers
 				if ( layerId && layer && layer.locked !== true && layer.visible !== false &&
-					this.selectedLayerIds.indexOf( layerId ) === -1 ) {
+					!this.selectedLayerIds.includes( layerId ) ) {
 					this.selectedLayerIds.push( layerId );
 					this.lastSelectedId = layerId;
 
 					// If group, also select all children
 					if ( isGroup && childIds.length > 0 ) {
 						childIds.forEach( ( childId ) => {
-							if ( this.selectedLayerIds.indexOf( childId ) === -1 ) {
+							if ( !this.selectedLayerIds.includes( childId ) ) {
 								this.selectedLayerIds.push( childId );
 							}
 						} );
@@ -358,7 +358,7 @@
 			if ( this._selectionState ) {
 				return this._selectionState.isSelected( layerId );
 			}
-			return this.selectedLayerIds.indexOf( layerId ) !== -1;
+			return this.selectedLayerIds.includes( layerId );
 		}
 
 		/**
@@ -1196,7 +1196,7 @@
 				const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
 					this.canvasManager.layers || [];
 				const remaining = layers.filter( ( layer ) =>
-					this.selectedLayerIds.indexOf( layer.id ) === -1
+					!this.selectedLayerIds.includes( layer.id )
 				);
 				if ( this.canvasManager.editor && this.canvasManager.editor.stateManager ) {
 					this.canvasManager.editor.stateManager.set( 'layers', remaining );

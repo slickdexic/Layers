@@ -1235,7 +1235,7 @@ class ViewerManager {
 			const canonNs = mw.config.get( 'wgCanonicalNamespace' ) || 'File';
 			const prefix = canonNs + ':';
 			let filename;
-			if ( pageName.indexOf( prefix ) === 0 ) {
+			if ( pageName.startsWith( prefix ) ) {
 				filename = pageName.slice( prefix.length );
 			} else {
 				filename = pageName;

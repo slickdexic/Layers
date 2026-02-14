@@ -564,12 +564,12 @@ output += `\t];
 			const q = query.toLowerCase();
 			return SHAPES.filter( function ( s ) {
 				// Search in name
-				if ( s.name.toLowerCase().indexOf( q ) !== -1 ) {
+				if ( s.name.toLowerCase().includes( q ) ) {
 					return true;
 				}
 				// Search in tags
 				return s.tags.some( function ( tag ) {
-					return tag.indexOf( q ) !== -1;
+					return tag.includes( q );
 				} );
 			} );
 		},

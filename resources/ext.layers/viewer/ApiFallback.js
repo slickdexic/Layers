@@ -90,7 +90,7 @@ class ApiFallback {
 		const addAll = function ( selector ) {
 			const list = document.querySelectorAll( selector );
 			list.forEach( ( el ) => {
-				if ( candidates.indexOf( el ) === -1 ) {
+				if ( !candidates.includes( el ) ) {
 					candidates.push( el );
 				}
 			} );
@@ -229,7 +229,7 @@ class ApiFallback {
 					const pageName = mw.config.get( 'wgPageName' ) || '';
 					const canonNs = mw.config.get( 'wgCanonicalNamespace' ) || 'File';
 					const prefix = canonNs + ':';
-					if ( pageName.indexOf( prefix ) === 0 ) {
+					if ( pageName.startsWith( prefix ) ) {
 						filename = pageName.slice( prefix.length ).replace( /_/g, ' ' );
 					}
 				}

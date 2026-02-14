@@ -121,7 +121,7 @@ class ValidationManager {
 			const allElements = doc.querySelectorAll( '*' );
 			for ( const el of allElements ) {
 				// Check if element tag is dangerous (case-insensitive catch-all)
-				if ( DANGEROUS_ELEMENTS.indexOf( el.tagName.toLowerCase() ) !== -1 ) {
+				if ( DANGEROUS_ELEMENTS.includes( el.tagName.toLowerCase() ) ) {
 					el.parentNode.removeChild( el );
 					continue;
 				}
@@ -137,7 +137,7 @@ class ValidationManager {
 					}
 
 					// Remove dangerous URL schemes from href-like attributes
-					if ( URL_ATTRS.indexOf( name ) !== -1 ) {
+					if ( URL_ATTRS.includes( name ) ) {
 						if ( DANGEROUS_URL_RE.test( value ) ) {
 							el.removeAttribute( attr.name );
 							continue;

@@ -580,7 +580,7 @@
 				this.notificationContainer.parentNode.removeChild( this.notificationContainer );
 			}
 			if ( this.globalListeners && this.globalListeners.length ) {
-				this.globalListeners.forEach( function ( listener ) {
+				this.globalListeners.forEach( ( listener ) => {
 					window.removeEventListener( listener.type, listener.handler, listener.options );
 				} );
 			}

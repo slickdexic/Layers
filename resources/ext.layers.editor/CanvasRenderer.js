@@ -1046,7 +1046,7 @@
 		}
 
 		supportsGlow( type ) {
-			return [ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'arrow', 'path' ].indexOf( type ) !== -1;
+			return [ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'arrow', 'path' ].includes( type );
 		}
 
 		drawGlow( layer ) {
@@ -1328,7 +1328,7 @@
 		destroy() {
 			// Clear canvas pool
 			if ( this.canvasPool && this.canvasPool.length > 0 ) {
-				this.canvasPool.forEach( function ( pooledCanvas ) {
+				this.canvasPool.forEach( ( pooledCanvas ) => {
 					pooledCanvas.width = 0;
 					pooledCanvas.height = 0;
 				} );

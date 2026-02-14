@@ -358,13 +358,13 @@
 			if ( !layer.richText || !Array.isArray( layer.richText ) || layer.richText.length === 0 ) {
 				return false;
 			}
-			return layer.richText.every( function ( run ) {
+			return layer.richText.every( ( run ) => {
 				if ( !run.style ) {
 					return false;
 				}
 				const current = run.style[ prop ] || '';
 				// Support space-separated combined values (e.g. 'underline line-through')
-				return current === value || current.indexOf( value ) !== -1;
+				return current === value || current.includes( value );
 			} );
 		}
 
@@ -378,9 +378,7 @@
 		function toggleDecoration( keyword, add ) {
 			const first = ( layer.richText && layer.richText[ 0 ] &&
 				layer.richText[ 0 ].style && layer.richText[ 0 ].style.textDecoration ) || 'none';
-			const parts = first.split( /\s+/ ).filter( function ( p ) {
-				return p && p !== 'none';
-			} );
+			const parts = first.split( /\s+/ ).filter( ( p ) => p && p !== 'none' );
 			const idx = parts.indexOf( keyword );
 			if ( add && idx === -1 ) {
 				parts.push( keyword );
@@ -420,10 +418,10 @@
 			}
 
 			// Apply style to all runs
-			const updatedRichText = richText.map( function ( run ) {
-				const newStyle = Object.assign( {}, run.style || {}, styleUpdates );
-				return { text: run.text, style: newStyle };
-			} );
+			const updatedRichText = richText.map( ( run ) => ( {
+				text: run.text,
+				style: Object.assign( {}, run.style || {}, styleUpdates )
+			} ) );
 
 			editor.updateLayer( layer.id, { richText: updatedRichText } );
 		}

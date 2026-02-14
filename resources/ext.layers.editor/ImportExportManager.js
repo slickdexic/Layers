@@ -194,7 +194,7 @@
 				}
 
 				// Validate type — reject unknown types
-				if ( obj.type && validTypes.indexOf( obj.type ) === -1 ) {
+				if ( obj.type && !validTypes.includes( obj.type ) ) {
 					obj.type = 'rectangle';
 				}
 

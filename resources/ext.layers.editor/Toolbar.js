@@ -301,7 +301,7 @@
 					btn.title = color;
 				}
 				if ( previewTemplate ) {
-					const previewText = previewTemplate.indexOf( '$1' ) !== -1 ?
+					const previewText = previewTemplate.includes( '$1' ) ?
 						previewTemplate.replace( '$1', labelValue ) :
 						previewTemplate + ' ' + labelValue;
 					btn.setAttribute( 'aria-label', previewText );

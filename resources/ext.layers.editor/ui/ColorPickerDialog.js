@@ -108,7 +108,7 @@ class ColorPickerDialog {
 		if ( typeof template !== 'string' ) {
 			return value;
 		}
-		return template.indexOf( '$1' ) !== -1 ? template.replace( '$1', value ) : template + ' ' + value;
+		return template.includes( '$1' ) ? template.replace( '$1', value ) : template + ' ' + value;
 	}
 
 	/**
@@ -143,7 +143,7 @@ class ColorPickerDialog {
 		}
 		try {
 			let colors = this.getSavedColors();
-			if ( colors.indexOf( color ) === -1 ) {
+			if ( !colors.includes( color ) ) {
 				colors.unshift( color );
 				colors = colors.slice( 0, MAX_CUSTOM_COLORS );
 				localStorage.setItem( STORAGE_KEY, JSON.stringify( colors ) );
@@ -681,7 +681,7 @@ class ColorPickerDialog {
 		button.title = labelValue;
 
 		const template = strings.previewTemplate || 'Current color: $1';
-		const ariaLabel = template.indexOf( '$1' ) !== -1 ?
+		const ariaLabel = template.includes( '$1' ) ?
 			template.replace( '$1', labelValue ) :
 			template + ' ' + labelValue;
 		button.setAttribute( 'aria-label', ariaLabel );

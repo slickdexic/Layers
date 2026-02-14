@@ -587,7 +587,7 @@
 
 			// Copy to clipboard
 			if ( navigator.clipboard && navigator.clipboard.writeText ) {
-				navigator.clipboard.writeText( embedCode ).then( function () {
+				navigator.clipboard.writeText( embedCode ).then( () => {
 					// Show success feedback
 					if ( typeof mw !== 'undefined' && mw.notify ) {
 						mw.notify( msg( 'layers-slide-embed-copied', 'Embed code copied!' ), {
@@ -595,13 +595,13 @@
 							tag: 'layers-embed'
 						} );
 					}
-				} ).catch( function ( err ) {
+				} ).catch( ( err ) => {
 					// Clipboard API failed, log and use fallback
 					if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
 						mw.log.warn( '[SlidePropertiesPanel] Clipboard API failed:', err );
 					}
 					this.fallbackCopy( embedCode );
-				}.bind( this ) );
+				} );
 			} else {
 				this.fallbackCopy( embedCode );
 			}

@@ -199,7 +199,7 @@
 			if ( typeof proxy === 'function' ) {
 				proxy._layersDeprecated = true;
 				// Copy static properties
-				Object.keys( classOrObject ).forEach( function ( key ) {
+				Object.keys( classOrObject ).forEach( ( key ) => {
 					proxy[ key ] = classOrObject[ key ];
 				} );
 			}
@@ -222,7 +222,7 @@
 		window.Layers.VERSION = VERSION;
 		window.Layers.initialized = true;
 
-		Object.keys( exportRegistry ).forEach( function ( oldName ) {
+		Object.keys( exportRegistry ).forEach( ( oldName ) => {
 			const existing = window[ oldName ];
 			if ( existing ) {
 				registerExport( oldName, existing );

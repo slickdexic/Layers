@@ -120,7 +120,7 @@
 			// Check if font is in whitelist
 			const lowerFont = fontFamily.toLowerCase();
 			for ( let i = 0; i < SAFE_FONTS.length; i++ ) {
-				if ( lowerFont.indexOf( SAFE_FONTS[ i ].toLowerCase() ) !== -1 ) {
+				if ( lowerFont.includes( SAFE_FONTS[ i ].toLowerCase() ) ) {
 					return fontFamily;
 				}
 			}
@@ -194,7 +194,7 @@
 		 * @return {boolean} True if valid blend mode
 		 */
 		static isValidBlendMode( blendMode ) {
-			return VALID_BLEND_MODES.indexOf( blendMode ) !== -1;
+			return VALID_BLEND_MODES.includes( blendMode );
 		}
 
 		/**

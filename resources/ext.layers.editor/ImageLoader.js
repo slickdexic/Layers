@@ -62,7 +62,7 @@
 			return false;
 		}
 		const ext = filename.split( '.' ).pop().toLowerCase();
-		return NON_WEB_FORMATS.indexOf( ext ) !== -1;
+		return NON_WEB_FORMATS.includes( ext );
 	}
 
 	/**
@@ -140,7 +140,7 @@
 			);
 			for ( let i = 0; i < pageImages.length; i++ ) {
 				const imgSrc = pageImages[ i ].src;
-				if ( imgSrc && imageUrls.indexOf( imgSrc ) === -1 ) {
+				if ( imgSrc && !imageUrls.includes( imgSrc ) ) {
 					imageUrls.push( imgSrc );
 				}
 			}

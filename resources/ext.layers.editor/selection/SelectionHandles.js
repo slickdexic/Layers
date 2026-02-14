@@ -267,7 +267,7 @@
 		 * @return {boolean} True if corner handle
 		 */
 		isCornerHandle( handleType ) {
-			return [ 'nw', 'ne', 'se', 'sw' ].indexOf( handleType ) !== -1;
+			return [ 'nw', 'ne', 'se', 'sw' ].includes( handleType );
 		}
 
 		/**
@@ -277,7 +277,7 @@
 		 * @return {boolean} True if edge handle
 		 */
 		isEdgeHandle( handleType ) {
-			return [ 'n', 'e', 's', 'w' ].indexOf( handleType ) !== -1;
+			return [ 'n', 'e', 's', 'w' ].includes( handleType );
 		}
 
 		/**

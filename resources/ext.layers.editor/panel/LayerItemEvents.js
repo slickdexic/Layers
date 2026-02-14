@@ -344,7 +344,7 @@
 		 * @return {boolean} True if the event is a navigation key
 		 */
 		isNavigationKey( e ) {
-			return [ 'ArrowUp', 'ArrowDown', 'Home', 'End' ].indexOf( e.key ) !== -1;
+			return [ 'ArrowUp', 'ArrowDown', 'Home', 'End' ].includes( e.key );
 		}
 
 		/**

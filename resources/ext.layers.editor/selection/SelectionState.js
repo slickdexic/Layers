@@ -58,7 +58,7 @@
 			}
 
 			// Skip if no layerId or already selected
-			if ( !layerId || this.selectedLayerIds.indexOf( layerId ) !== -1 ) {
+			if ( !layerId || this.selectedLayerIds.includes( layerId ) ) {
 				this.notifySelectionChange();
 				return;
 			}
@@ -138,7 +138,7 @@
 		 * @return {boolean} True if selected
 		 */
 		isSelected( layerId ) {
-			return this.selectedLayerIds.indexOf( layerId ) !== -1;
+			return this.selectedLayerIds.includes( layerId );
 		}
 
 		/**

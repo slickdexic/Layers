@@ -443,8 +443,8 @@
 				if ( hasSearch ) {
 					const layerName = ( layer.name || layer.type || '' ).toLowerCase();
 					const layerText = ( layer.text || '' ).toLowerCase();
-					const matchesSearch = layerName.indexOf( searchTerm ) !== -1 ||
-						layerText.indexOf( searchTerm ) !== -1;
+					const matchesSearch = layerName.includes( searchTerm ) ||
+						layerText.includes( searchTerm );
 					if ( !matchesSearch ) {
 						return false;
 					}
@@ -1781,7 +1781,7 @@
 				// When adding to selection, the clicked layer becomes the key object
 				// When replacing selection, the selected layer is the key object
 				if ( this.editor.canvasManager.selectionManager && layerId ) {
-					const isStillSelected = selectedIds.indexOf( layerId ) !== -1;
+					const isStillSelected = selectedIds.includes( layerId );
 					if ( isStillSelected ) {
 						this.editor.canvasManager.selectionManager.lastSelectedId = layerId;
 					} else if ( selectedIds.length > 0 ) {

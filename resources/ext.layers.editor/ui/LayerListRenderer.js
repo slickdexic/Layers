@@ -184,7 +184,7 @@
 			// First pass: Remove items that are no longer in the layer list
 			const newLayerIds = layers.map( ( l ) => String( l.id ) );
 			for ( const id in existingItems ) {
-				if ( newLayerIds.indexOf( id ) === -1 ) {
+				if ( !newLayerIds.includes( id ) ) {
 					listContainer.removeChild( existingItems[ id ] );
 				}
 			}

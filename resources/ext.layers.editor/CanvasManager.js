@@ -1438,7 +1438,7 @@ class CanvasManager {
 
 		// Update lastSelectedId for key object alignment
 		if ( this.selectionManager ) {
-			const isHitSelected = newIds.indexOf( hit.id ) !== -1;
+			const isHitSelected = newIds.includes( hit.id );
 			if ( isHitSelected ) {
 				// The clicked layer is selected, it becomes the key object
 				this.selectionManager.lastSelectedId = hit.id;
@@ -1995,7 +1995,7 @@ class CanvasManager {
 
 		// Clear canvas pool to prevent memory leaks
 		if ( this.canvasPool && this.canvasPool.length > 0 ) {
-			this.canvasPool.forEach( function ( pooledCanvas ) {
+			this.canvasPool.forEach( ( pooledCanvas ) => {
 				if ( pooledCanvas.canvas ) {
 					pooledCanvas.canvas.width = 0;
 					pooledCanvas.canvas.height = 0;

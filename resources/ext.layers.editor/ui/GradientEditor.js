@@ -159,7 +159,7 @@
 				{ value: 'radial', text: msg( 'layers-fill-radial', 'Radial Gradient' ) }
 			];
 
-			options.forEach( function ( opt ) {
+			options.forEach( ( opt ) => {
 				const optionEl = document.createElement( 'option' );
 				optionEl.value = opt.value;
 				optionEl.textContent = opt.text;
@@ -167,7 +167,7 @@
 					optionEl.selected = true;
 				}
 				select.appendChild( optionEl );
-			}, this );
+			} );
 
 			this._addListener( select, 'change', this._onFillTypeChange.bind( this ) );
 
@@ -216,7 +216,7 @@
 			const presets = this._getPresets();
 			const presetNames = Object.keys( presets );
 
-			presetNames.forEach( function ( name ) {
+			presetNames.forEach( ( name ) => {
 				const preset = presets[ name ];
 				const swatch = document.createElement( 'button' );
 				swatch.type = 'button';
@@ -224,12 +224,12 @@
 				swatch.title = name.charAt( 0 ).toUpperCase() + name.slice( 1 );
 				swatch.style.background = this._gradientToCss( preset );
 
-				this._addListener( swatch, 'click', function () {
+				this._addListener( swatch, 'click', () => {
 					this._applyPreset( preset );
-				}.bind( this ) );
+				} );
 
 				presetContainer.appendChild( swatch );
-			}, this );
+			} );
 
 			row.appendChild( label );
 			row.appendChild( presetContainer );
@@ -413,10 +413,10 @@
 				{ offset: 1, color: '#000000' }
 			];
 
-			colors.forEach( function ( stop, index ) {
+			colors.forEach( ( stop, index ) => {
 				const stopRow = this._createColorStopRow( stop, index, colors.length );
 				stopsList.appendChild( stopRow );
-			}, this );
+			} );
 
 			container.appendChild( stopsList );
 			this.container.appendChild( container );

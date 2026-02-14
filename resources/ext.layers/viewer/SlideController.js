@@ -630,7 +630,7 @@
 			}
 			const rights = mw.config.get( 'wgUserRights' );
 			if ( rights && Array.isArray( rights ) ) {
-				return rights.indexOf( 'editlayers' ) !== -1;
+				return rights.includes( 'editlayers' );
 			}
 			return false;
 		}
