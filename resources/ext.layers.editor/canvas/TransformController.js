@@ -945,6 +945,10 @@ class TransformController {
 			window.cancelAnimationFrame( this._dragRafId );
 			this._dragRafId = null;
 		}
+		if ( this._arrowTipRafId !== null ) {
+			window.cancelAnimationFrame( this._arrowTipRafId );
+			this._arrowTipRafId = null;
+		}
 
 		// Clear RAF scheduling flags
 		this._resizeRenderScheduled = false;
@@ -960,10 +964,13 @@ class TransformController {
 		this.isResizing = false;
 		this.isRotating = false;
 		this.isDragging = false;
+		this.isArrowTipDragging = false;
+		this.arrowTipLayerId = null;
 		this.resizeHandle = null;
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
 		this.originalMultiLayerStates = null;
+		this.showDragPreview = false;
 
 		// Clear reference
 		this.manager = null;

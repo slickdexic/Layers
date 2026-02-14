@@ -33,7 +33,7 @@ module.exports = {
 	],
 
 	// Coverage thresholds - protect against regression
-	// Current coverage (Jan 2026): 94.19% statements, 84.43% branches, 92.19% functions, 94.32% lines
+	// Current coverage (Feb 2026): 95.19% statements, 84.96% branches, 93.67% functions, 95.32% lines
 	// These thresholds ensure we don't regress from current quality levels
 	coverageThreshold: {
 		global: {

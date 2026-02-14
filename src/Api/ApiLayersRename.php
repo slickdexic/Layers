@@ -10,6 +10,7 @@ use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
+use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
@@ -58,6 +59,11 @@ class ApiLayersRename extends ApiBase {
 
 		// Handle slide renames (slidename parameter)
 		if ( $slidename !== null && $slidename !== '' ) {
+			// Validate slidename for security and consistency
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideRename( $user, $slidename, $oldName, $newName );
 			return;
 		}
@@ -65,6 +71,11 @@ class ApiLayersRename extends ApiBase {
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
 		if ( $requestedFilename !== null && strpos( $requestedFilename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
+			// Validate extracted slidename
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideRename( $user, $slidename, $oldName, $newName );
 			return;
 		}
@@ -275,6 +286,11 @@ class ApiLayersRename extends ApiBase {
 	 * @param string $newName The new set name
 	 */
 	private function executeSlideRename( $user, string $slidename, string $oldName, string $newName ): void {
+		// Validate old name format using central validator (consistency with file rename path)
+		if ( !SetNameSanitizer::isValid( $oldName ) ) {
+			$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
+		}
+
 		// Validate new name format using central validator
 		if ( !SetNameSanitizer::isValid( $newName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );

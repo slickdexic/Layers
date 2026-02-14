@@ -471,6 +471,10 @@
 				this.stateSubscription();
 				this.stateSubscription = null;
 			}
+
+			// Clear references to allow GC
+			this.editor = null;
+			this.filename = null;
 		}
 	}
 

@@ -75,7 +75,7 @@ class LayeredFileRenderer {
 			// Get the file
 			$file = $this->findFile( $filename );
 			if ( !$file ) {
-				return $this->errorSpan( 'File not found: ' . htmlspecialchars( $filename ) );
+				return $this->errorSpan( 'File not found: ' . $filename );
 			}
 
 			// If layers are not requested, fall back to normal image display

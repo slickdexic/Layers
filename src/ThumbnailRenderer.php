@@ -717,8 +717,54 @@ class ThumbnailRenderer {
 			return $color;
 		}
 
-		// Unknown (e.g., named colors). Best effort: if opacity < 1, return rgba black with that opacity? No.
-		// Keep original to avoid unexpected color changes.
+		// Named CSS colors → RGB lookup (P2-046)
+		// Covers the 17 standard CSS2.1 named colors plus common extras
+		// that users are likely to select in the editor
+		$namedColors = [
+			'black' => [ 0, 0, 0 ],
+			'white' => [ 255, 255, 255 ],
+			'red' => [ 255, 0, 0 ],
+			'green' => [ 0, 128, 0 ],
+			'blue' => [ 0, 0, 255 ],
+			'yellow' => [ 255, 255, 0 ],
+			'cyan' => [ 0, 255, 255 ],
+			'magenta' => [ 255, 0, 255 ],
+			'silver' => [ 192, 192, 192 ],
+			'gray' => [ 128, 128, 128 ],
+			'grey' => [ 128, 128, 128 ],
+			'maroon' => [ 128, 0, 0 ],
+			'olive' => [ 128, 128, 0 ],
+			'lime' => [ 0, 255, 0 ],
+			'aqua' => [ 0, 255, 255 ],
+			'teal' => [ 0, 128, 128 ],
+			'navy' => [ 0, 0, 128 ],
+			'fuchsia' => [ 255, 0, 255 ],
+			'purple' => [ 128, 0, 128 ],
+			'orange' => [ 255, 165, 0 ],
+			'pink' => [ 255, 192, 203 ],
+			'brown' => [ 165, 42, 42 ],
+			'coral' => [ 255, 127, 80 ],
+			'crimson' => [ 220, 20, 60 ],
+			'gold' => [ 255, 215, 0 ],
+			'indigo' => [ 75, 0, 130 ],
+			'ivory' => [ 255, 255, 240 ],
+			'khaki' => [ 240, 230, 140 ],
+			'lavender' => [ 230, 230, 250 ],
+			'salmon' => [ 250, 128, 114 ],
+			'tan' => [ 210, 180, 140 ],
+			'tomato' => [ 255, 99, 71 ],
+			'turquoise' => [ 64, 224, 208 ],
+			'violet' => [ 238, 130, 238 ],
+			'wheat' => [ 245, 222, 179 ],
+		];
+
+		if ( isset( $namedColors[$lc] ) ) {
+			[ $r, $g, $b ] = $namedColors[$lc];
+			$a = max( 0.0, min( 1.0, $opacity ) );
+			return sprintf( 'rgba(%d,%d,%d,%.3f)', $r, $g, $b, $a );
+		}
+
+		// Unknown color format. Keep original to avoid unexpected color changes.
 		return $color;
 	}
 

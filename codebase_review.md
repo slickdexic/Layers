@@ -1,8 +1,8 @@
 # Layers MediaWiki Extension - Codebase Review
 
-**Review Date:** February 13, 2026 (v37 comprehensive fresh audit)
+**Review Date:** February 14, 2026 (v39 comprehensive fresh audit)
 **Version:** 1.5.57
-**Reviewer:** GitHub Copilot (Claude Opus 4.5)
+**Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
 ---
 
@@ -11,8 +11,8 @@
 - **Branch Reviewed:** main
 - **Coverage:** 95.19% statements, 84.96% branches, 93.67% functions,
     95.32% lines (coverage/coverage-summary.json)
-- **JS source files:** 140 files in `resources/` (~96,877 lines) *(excludes dist/)*
-- **PHP production files:** 39 in `src/` (~15,330 lines)
+- **JS source files:** 140 files in `resources/` (~96,888 lines) *(excludes dist/)*
+- **PHP production files:** 39 in `src/` (~15,357 lines)
 - **Jest test suites:** 163
 - **Jest tests:** 11,139
 - **PHPUnit test files:** 31
@@ -23,22 +23,20 @@
 
 ## Executive Summary
 
-The v36 review is a fully independent, line-level audit of the entire
+The v39 review is a fully independent, line-level audit of the entire
 codebase performed on the main branch at version 1.5.57. Every finding
 has been verified against actual source code with specific file and
 line-number evidence. False positives from sub-agent reviews were
-filtered through dedicated verification passes — one false positive
-was identified and excluded (DraftManager does have QuotaExceededError
-handling via try/catch).
+filtered through dedicated verification passes.
 
 **Methodology:** Four parallel sub-agent reviews (PHP backend, JS
-frontend, documentation, tests/config), followed by a targeted
-cross-verification pass confirming each finding against the actual
-source code (10 claims tested, 9 confirmed true, 1 false positive
-excluded).
+frontend, documentation, tests/config), followed by two targeted
+cross-verification passes confirming each finding against the actual
+source code. 7 claims verified, 6 confirmed true, 1 reclassified
+(ClipboardController undo — correct pattern, not a bug).
 
 ### Key Strengths (Genuine)
-1. **High Test Coverage:** 95.19% statement coverage across 164 suites
+1. **High Test Coverage:** 95.19% statement coverage across 163 suites
 2. **Server-Side Validation:** ServerSideLayerValidator is thorough
    (110+ properties, strict whitelist)
 3. **Modern Architecture:** 100% ES6 classes, facade/controller
@@ -56,7 +54,7 @@ excluded).
 10. **CSP via MW API:** EditLayersAction prefers addExtraHeader(),
     raw header() only as guarded fallback
 11. **Font Sanitization:** sanitizeIdentifier() strips fontFamily to
-    `[a-zA-Z0-9_.-]` at save time
+    `[a-zA-Z0-9_.-]` at save time (top-level only)
 12. **Renderer Context Cascading:** ShapeRenderer.setContext()
     propagates to PolygonStarRenderer automatically
 13. **WikitextHooks State Reset:** resetPageLayersFlag() resets all
@@ -68,59 +66,90 @@ excluded).
 16. **DraftManager Storage Safety:** localStorage writes wrapped in
     try/catch; base64 image data proactively stripped
 
-### Key Weaknesses (Verified — NEW in v36, ALL FIXED)
-1. **ClipboardController paste() bypassed StateManager:** ✅ Fixed —
-   Rewrote to build new array and set via StateManager.
-2. **RenderCoordinator hash omitted rendering properties:** ✅ Fixed —
-   Expanded from 8 to 30+ properties.
-3. **SecurityAndRobustness.test.js tested mocks, not real code:**
-   ✅ Fixed — Deleted (existing focused tests provide real coverage).
-4. **PHPUnit version mismatch:** ✅ Fixed — Downgraded schema to 9.6,
-   replaced withConsecutive().
-5. **npm test --force bypassed lint failures:** ✅ Fixed — Removed
-   --force, aligned Gruntfile globs.
-6. **No default rate limits in extension.json:** ✅ Not a bug —
-   Intentionally admin-configurable.
-7. **ErrorHandler auto-reload on canvas errors:** ✅ Fixed — Now
-   saves draft before reload.
-8. **ErrorHandler singleton lifecycle mismatch:** ✅ False positive —
-   Singleton re-created on module load.
+### Previously Open Issues Now Fixed (v37/v38 → v39)
+1. **MED-v37-1: SlideNameValidator in API modules:** ✅ Fixed —
+   ApiLayersInfo and ApiLayersRename now validate slide names.
+2. **MED-v38-1: ApiLayersRename oldName validation:** ✅ Fixed —
+   executeSlideRename() now validates both oldName and newName.
+3. **MED-v38-2: TransformController _arrowTipRafId cleanup:** ✅ Fixed —
+   destroy() now cancels all 4 RAF IDs including _arrowTipRafId.
+4. **LOW-v38-1: DraftManager editor reference cleanup:** ✅ Fixed —
+   destroy() now nulls editor and filename references.
 
-### Key Weaknesses (NEW in v37)
-1. **ApiLayersInfo/ApiLayersRename missing slide name validation:**
-   ❌ Open — ApiLayersSave and ApiLayersDelete use SlideNameValidator,
-   but ApiLayersInfo and ApiLayersRename don't. Inconsistent validation.
-2. **Untracked setTimeout in PropertiesForm:** ❌ Open — Multiple
-   setTimeout callbacks not tracked; could execute on destroyed form.
+### Key Weaknesses (NEW in v39 — ALL VERIFIED)
 
-### Issue Summary (February 13, 2026 — v37 Fresh Audit)
+#### Security
+
+1. **RichText fontFamily CSS injection (defense-in-depth gap):**
+   ✅ Fixed — Server now applies `sanitizeIdentifier()` to richText
+   fontFamily. Client-side `richTextToHtml()` now escapes all CSS
+   property values via `escapeCSSValue()`. See HIGH-v39-1 below.
+
+#### PHP Backend
+
+2. **ForeignFileHelper code duplication (6 files):**
+   ❌ Open — `isForeignFile()` and `getFileSha1()` are duplicated
+   in 6 files outside the existing `ForeignFileHelperTrait`.
+
+3. **ThumbnailRenderer ignores opacity for named CSS colors:**
+   ✅ Fixed — `withOpacity()` now includes a 35-entry named color
+   lookup table and properly converts them to `rgba()` with opacity.
+
+4. **No rate limiting on {{#Slide:}} parser function DB queries:**
+   ✅ Fixed — Added per-parse cache and query limit (50 max) to
+   `getSavedSlideDimensions()`.
+
+5. **Double HTML-escaping in LayeredFileRenderer error messages:**
+   ✅ Fixed — Removed extra `htmlspecialchars()` from L78 call site.
+
+6. **Hooks.php fallback logger missing PSR-3 methods:**
+   ✅ Fixed — Replaced 30-line anonymous class with
+   `new \Psr\Log\NullLogger()`.
+
+#### JavaScript Frontend
+
+7. **ToolbarStyleControls validator cleanup leak:**
+   ✅ Fixed — `destroy()` now calls `.destroy()` on each validator
+   before clearing the array.
+
+#### Build Infrastructure
+
+8. **npm test skips Jest unit tests:**
+   ❌ Open — Only runs lint; 11,139 tests require `npm run test:js`.
+
+### Issue Summary (February 14, 2026 — v39 Fresh Audit)
 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
-| Bugs | 0 | 0 | 1 | 2 | Missing validation, setTimeout |
-| Security | 0 | 0 | 0 | 1 | innerHTML (academic) |
-| Code Quality | 0 | 0 | 0 | 1 | ValidationManager IIFE (style) |
-| Performance | 0 | 0 | 0 | 0 | False positives confirmed |
-| Infrastructure | 0 | 0 | 0 | 1 | PHP existence-only tests |
-| Documentation | 0 | 1 | 8 | 20 | Version drift, metrics |
-| **Total** | **0** | **1** | **9** | **25** | **35 items** |
+| Security | 0 | 0 | 0 | 0 | RichText fontFamily ✅ Fixed |
+| Bugs | 0 | 0 | 0 | 0 | Opacity, parser DoS, double-escape ✅ Fixed |
+| Code Quality | 0 | 1 | 0 | 0 | ForeignFileHelper duplication remains |
+| Infrastructure | 0 | 0 | 0 | 2 | console mocking, tautological tests |
+| Documentation | 0 | 2 | 13 | 5+ | Missing tool docs, wrong metrics/counts |
+| **Total** | **0** | **3** | **13** | **7+** | **23+ items (10 fixed this session)** |
 
-**All v36 code issues are confirmed resolved.** The v37 fresh audit
-discovered 1 new MEDIUM issue (missing SlideNameValidator usage in
-ApiLayersInfo/ApiLayersRename) and 2 LOW issues. The only remaining
-HIGH item is documentation version drift across 10+ files.
+**All v37/v38 code issues are confirmed resolved (4 of 7 fixed).**
+The v39 fresh audit discovered 1 HIGH security issue (richText CSS
+injection), 4 HIGH bugs/quality issues, 5 MEDIUM issues, and 4 LOW
+issues. All findings verified against actual source code.
 
-**Overall Grade: A** (strong foundation; excellent test coverage
-and security posture; 86+ previously fixed bugs with regression
-tests; remaining items are minor validation gap, documentation
-staleness, and stylistic preferences)
+**Overall Grade: A-** (strong foundation; excellent test coverage
+and security posture; 90+ previously fixed bugs with regression
+tests; new findings are defense-in-depth gaps, code hygiene, and
+documentation staleness)
 
 ---
 
-## Confirmed False Positives (v24-v37)
+## Confirmed False Positives (v24-v39)
 
 | Report | Claimed Issue | Why It's False |
 |--------|---------------|----------------|
+| v39 | ClipboardController paste() saveState before mutation breaks undo | saveState() BEFORE mutation is the correct undo pattern — saves state to undo TO |
+| v39 | htmlToRichText innerHTML XSS risk | Detached element (never in DOM); source is user's own contentEditable content; only extracts text/styles |
+| v39 | document.execCommand deprecation risk | Only practical way to apply rich text formatting in contentEditable; all browsers support it |
+| v39 | HistoryManager getMemoryUsage() performance hazard | Only called on-demand/debug, never during normal operation |
+| v38 | innerHTML for SVG icons is XSS | Hardcoded trusted strings, not user data |
+| v38 | StateManager.saveToHistory() dead code | Intentionally disabled, called for consistency |
 | v37 | ColorPickerDialog JSON.parse missing try-catch | getSavedColors() L119-131 HAS try-catch |
 | v37 | PresetStorage JSON.parse missing try-catch | load() L97-110 HAS try-catch |
 | v37 | RichTextConverter innerHTML XSS risk | escapeHtml() used on text; styles are CSS-only |
@@ -148,261 +177,391 @@ staleness, and stylistic preferences)
 
 ---
 
-## NEW Issues — v37
+## NEW Issues — v39
 
-### MEDIUM (New in v37)
+### HIGH (New in v39)
 
-#### MED-v37-1: Missing Slide Name Validation in API Modules
+#### HIGH-v39-1: RichText fontFamily CSS Attribute Injection
 
-**Status:** ❌ OPEN
-**Severity:** MEDIUM (Inconsistency — potential for malformed data)
-**Files:** src/Api/ApiLayersInfo.php, src/Api/ApiLayersRename.php
+**Status:** ✅ FIXED
+**Severity:** HIGH (Security — defense-in-depth gap)
+**Files:** src/Validation/ServerSideLayerValidator.php L899,
+resources/ext.layers.editor/canvas/RichTextConverter.js L89-108
 
-**Issue:** ApiLayersSave.php and ApiLayersDelete.php both use
-`SlideNameValidator::isValid()` to validate slidename parameters
-before processing. However, ApiLayersInfo.php and ApiLayersRename.php
-do NOT validate slidename, creating an inconsistency:
+**Issue:** The server-side validator validates richText `fontFamily`
+only as type `string` (line 899) but does NOT apply
+`sanitizeIdentifier()` like it does for the top-level `fontFamily`
+property (line 505). This means richText fontFamily values can
+contain characters like `"`, `<`, `>`, `;`.
 
-```php
-// ApiLayersSave.php L112 - HAS validation
-$validator = new SlideNameValidator();
-if ( !$validator->isValid( $slidename ) ) { ... }
-
-// ApiLayersInfo.php executeSlideRequest() - NO validation
-private function executeSlideRequest(
-    string $slidename,  // Not validated!
-    ...
-)
-```
-
-**Impact:** While the impact is limited (the slidename is only used
-to construct `LayersConstants::SLIDE_PREFIX . $slidename` for DB
-lookup), the inconsistency could lead to confusion and potentially
-allow malformed slide names to be queried.
-
-**Recommended Fix:** Add SlideNameValidator check to both
-`ApiLayersInfo::executeSlideRequest()` and
-`ApiLayersRename::executeSlideRename()` for consistency with the
-save/delete modules.
-
----
-
-### LOW (New in v37)
-
-#### LOW-v37-1: Untracked setTimeout in PropertiesForm.js
-
-**Status:** ❌ OPEN
-**Severity:** LOW (Code quality — potential for stale callbacks)
-**File:** resources/ext.layers.editor/ui/PropertiesForm.js L316
-
-**Issue:** Multiple setTimeout calls without tracking. If the form
-is destroyed while timeouts are pending, callbacks may execute on
-stale/destroyed components.
+On the client side, `richTextToHtml()` interpolates these unsanitized
+values directly into HTML `style` attributes:
 
 ```javascript
-setTimeout( function () {
-    input.value = lastValidValue;
-    validateInput( lastValidValue, false );
-}, 100 );
+// RichTextConverter.js L89 — NO escaping of style.fontFamily
+if ( style.fontFamily ) {
+    styleProps.push( `font-family: ${ style.fontFamily }` );
+}
+// L107-108 — interpolated into HTML attribute
+const styleAttr = styleProps.length > 0 ?
+    `style="${ styleProps.join( '; ' ) }"` : '';
 ```
 
-**Recommended Fix:** Track timeout IDs in an array and clear them
-in a cleanup/destroy method.
+The HTML output is set via `innerHTML` at InlineTextEditor.js L530:
+```javascript
+contentWrapper.innerHTML = RichTextConverter.richTextToHtml(
+    layer.richText, this._displayScale );
+```
+
+A crafted fontFamily like `Arial" onmouseover="alert(1)` could
+break out of the style attribute and inject event handlers.
+
+**Mitigating factors:** The attack requires either a compromised API
+or direct database manipulation, since saves go through server-side
+validation. However, the server validation is the gap here — richText
+fontFamily is accepted as any string while top-level fontFamily is
+properly sanitized via `sanitizeIdentifier()`.
+
+**Recommended Fix (two layers):**
+1. **Server (primary):** Apply `sanitizeIdentifier()` to richText
+   fontFamily values in `validateRichText()` at line ~942 of
+   ServerSideLayerValidator.php, matching the top-level treatment.
+2. **Client (defense-in-depth):** Escape `"`, `<`, `>`, `&` in CSS
+   property values before interpolation in `richTextToHtml()`, or
+   build span DOM elements using `element.style.setProperty()`.
 
 ---
 
-#### LOW-v37-2: Same Pattern in PropertyBuilders.js
+#### HIGH-v39-2: ForeignFileHelper Code Duplication (6 Files)
 
 **Status:** ❌ OPEN
-**Severity:** LOW (Same issue as LOW-v37-1)
-**File:** resources/ext.layers.editor/ui/PropertyBuilders.js L273
+**Severity:** HIGH (Code quality — maintenance risk)
+**Files:** 6 files duplicate logic from ForeignFileHelperTrait
 
-**Recommended Fix:** Same as above.
+**Issue:** `isForeignFile()` and/or `getFileSha1()` are independently
+re-implemented in 6 files outside the existing `ForeignFileHelperTrait`
+(which only 4 API modules use):
 
----
+| File | isForeignFile | getFileSha1 |
+|------|---------------|-------------|
+| Hooks.php L426 | ✅ static copy | ✅ static copy |
+| EditLayersAction.php L178 | ✅ copy | ❌ |
+| LayerInjector.php L334 | ✅ copy | ✅ copy |
+| LayeredFileRenderer.php L313 | ✅ copy | ✅ copy |
+| ThumbnailProcessor.php L669 | ✅ copy | ❌ |
+| ThumbnailRenderer.php L755 | ✅ copy | ✅ copy |
 
-## NEW Issues — v36
+**Risk:** If foreign file detection logic changes (new foreign file
+class, different SHA1 algorithm), all 6 duplicates must be updated.
+A missed update could cause silent data mismatches where different
+code paths use different SHA1 values for the same file.
 
-### HIGH (New in v36)
-**File:** resources/ext.layers.editor/canvas/ClipboardController.js
-
-**Resolution:** Rewrote paste() to build a new layers array with
-cloned layers at top, then set via
-`editor.stateManager.set('layers', newLayers)` with fallback to
-direct assignment. Consistent with cutSelected() approach.
-
----
-
-#### HIGH-v36-2: RenderCoordinator Hash Omits Rendering Properties
-
-**Status:** ✅ FIXED v36
-**Severity:** HIGH (Bug — stale renders after property changes)
-**File:** resources/ext.layers.editor/canvas/RenderCoordinator.js
-
-**Resolution:** Expanded `_computeLayersHash()` from 8 to 30+
-properties covering all rendering-affecting fields: fill, stroke,
-text, fontSize, fontFamily, strokeWidth, shadow, gradient, src,
-richText, points, locked, name, blendMode, radius, and more.
+**Recommended Fix:** Refactor the trait into a static utility class
+(e.g., `ForeignFileHelper::isForeignFile()` static methods) and
+replace all 6 duplicates with calls to the shared utility.
 
 ---
 
-#### HIGH-v36-3: SecurityAndRobustness.test.js Tests Mocks Not Code
+#### HIGH-v39-3: ThumbnailRenderer Ignores Opacity for Named CSS Colors
 
-**Status:** ✅ FIXED v36
-**Severity:** HIGH (Code Quality — false security confidence)
-**File:** tests/jest/SecurityAndRobustness.test.js (DELETED)
+**Status:** ✅ FIXED
+**Severity:** HIGH (Bug — visual inconsistency)
+**File:** src/ThumbnailRenderer.php L645-722
 
-**Resolution:** File deleted entirely (490 lines, 18 tests, zero
-require() calls). Existing focused test suites (LayersValidator,
-ErrorHandler, ValidationManager) already provide real coverage.
+**Issue:** The `withOpacity()` method handles hex colors, `rgb()`,
+`rgba()`, transparent, and empty string, but falls through for named
+CSS colors ("red", "blue", "white", etc.), returning them unchanged:
 
----
+```php
+// ThumbnailRenderer.php L718-722
+// Unknown (e.g., named colors). Best effort:
+// Keep original to avoid unexpected color changes.
+return $color;
+```
 
-#### HIGH-v36-4: PHPUnit Version Mismatch
+Server-side thumbnails render layers with named colors at full
+opacity regardless of the `opacity` property value. The client-side
+canvas correctly applies transparency via `ctx.globalAlpha`, creating
+a visual mismatch between inline thumbnails and the interactive
+viewer.
 
-**Status:** ✅ FIXED v36
-**Severity:** HIGH (Infrastructure)
-**File:** phpunit.xml, tests/phpunit/unit/HooksTest.php
-
-**Resolution:** Downgraded phpunit.xml schema from 10.5 to 9.6.
-Removed PHPUnit 10-only attributes (cacheDirectory,
-requireCoverageMetadata, displayDetails*). Replaced
-withConsecutive() in HooksTest.php with willReturnCallback().
-
----
-
-#### HIGH-v36-5: npm test --force Bypasses Lint Failures
-
-**Status:** ✅ FIXED v36
-**Severity:** HIGH (Infrastructure — CI/CD bypass)
-**File:** package.json, Gruntfile.js
-
-**Resolution:** Removed `--force` flag from npm test script. Fixed
-Gruntfile.js ESLint glob to exclude patterns matching .eslintrc.json
-ignorePatterns. Grunt now passes cleanly without --force.
+**Recommended Fix:** Add a lookup table for the 17 standard CSS named
+colors → RGB values, then apply opacity as `rgba()`.
 
 ---
 
-#### HIGH-v36-6: ErrorHandler Auto-Reload Loses Unsaved Work
+#### HIGH-v39-4: No Rate Limiting on {{#Slide:}} Parser Function
 
-**Status:** ✅ FIXED v36
-**Severity:** HIGH (Bug — data loss risk)
-**File:** resources/ext.layers.editor/ErrorHandler.js
+**Status:** ✅ FIXED
+**Severity:** HIGH (Performance — DoS vector)
+**File:** src/Hooks/SlideHooks.php L150, L327-360
 
-**Resolution:** Added `_saveDraftBeforeReload()` method that saves
-draft via `window.layersEditorInstance.draftManager.saveDraft()`
-before reload. Best-effort with try/catch.
+**Issue:** `getSavedSlideDimensions()` performs a database query per
+`{{#Slide:}}` parser function invocation. No counter, cache, or
+per-page limit exists. A page with 200+ `{{#Slide:SomeName}}` calls
+generates 200+ uncached DB queries during a single page parse.
 
----
+```php
+// SlideHooks.php L327-334
+private static function getSavedSlideDimensions( ... ): ?array {
+    $db = MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
+    $layerSet = $db->getLayerSetByName( $imgName, ... );
+    // ... no limit, no cache
+}
+```
 
-### MEDIUM (New in v36)
-
-| ID | Issue | File | Details |
-|----|-------|------|---------|
-| MED-v36-1 | ErrorHandler singleton lifecycle — FP | ErrorHandler.js | ✅ False positive: re-created on module load |
-| MED-v36-2 | InlineTextEditor blur setTimeout | InlineTextEditor.js | ✅ Fixed v36: tracked and cleared |
-| MED-v36-3 | No default rate limits | extension.json | ✅ Not a bug: admin-configurable by design |
-| MED-v36-4 | CanvasManager JSON clone per frame | CanvasManager.js | ✅ Overstated: rAF-gated, once per frame max |
-| MED-v36-5 | HistoryManager JSON.stringify richText | HistoryManager.js | ✅ Low impact: infrequent check only |
-| MED-v36-6 | i18n key count wrong across 4+ documents | Multiple | ❌ Open (docs) |
-| MED-v36-7 | God class count wrong across 6+ documents | Multiple | ❌ Open (docs) |
-| MED-v36-8 | wiki/Configuration-Reference.md debug default wrong | wiki/Config-Ref | ❌ Open (docs) |
-| MED-v36-9 | MediaWiki table docs stale FK constraints | 3 .mediawiki files | ❌ Open (docs) |
-| MED-v36-10 | DEVELOPER_ONBOARDING.md references deleted file | docs/DEVELOPER_ONBOARDING | ❌ Open (docs) |
-| MED-v36-11 | ext.layers.slides excluded from Jest coverage | jest.config.js | ✅ Fixed v36: added to collectCoverageFrom |
-| MED-v36-12 | NAMED_LAYER_SETS.md stale schema and configs | docs/NAMED_LAYER_SETS | ❌ Open (docs) |
-| MED-v36-13 | CONTRIBUTING.md stale metrics | CONTRIBUTING.md | ❌ Open (docs) |
-
-### LOW (New in v36)
-
-| ID | Issue | File | Details |
-|----|-------|------|---------|
-| LOW-v36-1 | console.log in Toolbar.js | Toolbar.js | ✅ Fixed v36: removed |
-| LOW-v36-2 | ValidationManager not in IIFE | ValidationManager.js | ❌ Open (style) |
-| LOW-v36-3 | StateManager constants in global scope | StateManager.js | ❌ Open (style) |
-| LOW-v36-4 | AlignmentController getCombinedBounds | AlignmentController.js | ✅ Fixed v36 |
-| LOW-v36-5 | HistoryManager cancelBatch double redraws | HistoryManager.js | ✅ Fixed v36 |
-| LOW-v36-6 | Inconsistent module resolution patterns | Multiple | ❌ Open (by design) |
-| LOW-v36-7 | InlineTextEditor optional chaining | InlineTextEditor.js | ✅ Fixed v36 |
-| LOW-v36-8 | CanvasManager JSON drops undefined/NaN | CanvasManager.js | ✅ Overstated (rAF-gated) |
-| LOW-v36-9 | RichTextConverter innerHTML | RichTextConverter.js | ❌ Open (academic) |
-| LOW-v36-10 | ViewerManager DOM properties — FP | ViewerManager.js | ✅ False positive: properly cleaned |
-| LOW-v36-11 | ts-jest unused dependency | package.json | ✅ Fixed v36: removed |
-| LOW-v36-12 | Gruntfile ESLint cache disabled | Gruntfile.js | ✅ Fixed v36: enabled |
-| LOW-v36-13 | Test files not linted by Grunt | Gruntfile.js | ❌ Open (by design) |
-| LOW-v36-14 | PHP weak existence-only assertions | ApiLayersSaveTest.php | ❌ Open (low value) |
-| LOW-v36-15 | CHANGELOG not mirrored in wiki | Both files | ❌ Open (docs) |
-| LOW-v36-16 | FUTURE_IMPROVEMENTS completed in Active | docs/FUTURE_IMPROVEMENTS | ❌ Open (docs) |
-| LOW-v36-17 | LayersGuide.mediawiki typo | LayersGuide.mediawiki | ❌ Open (docs) |
-| LOW-v36-18 | GOD_CLASS_REFACTORING_PLAN target met | docs/GOD_CLASS_REFACTORING | ❌ Open (docs) |
-| LOW-v36-19 | PROJECT_GOD_CLASS_REDUCTION stale | docs/PROJECT_GOD_CLASS | ❌ Open (docs) |
-| LOW-v36-20 | SchemaManager CURRENT_VERSION | LayersSchemaManager.php | ✅ Fixed v36 |
+**Recommended Fix:** Add static counter and result cache:
+```php
+private static $slideQueryCount = 0;
+private static $slideCache = [];
+const MAX_SLIDE_QUERIES_PER_PARSE = 50;
+```
 
 ---
 
-## Inherited Issues — All Resolved
+#### HIGH-v39-5: wiki/Drawing-Tools.md Missing Marker and Dimension Docs
 
-All HIGH, MEDIUM, and Infrastructure issues from prior reviews
-(v25–v35) have been **resolved**. The complete fix history
-is preserved below.
+**Status:** ❌ OPEN
+**Severity:** HIGH (Documentation — 2 of 15 tools undocumented)
+**File:** wiki/Drawing-Tools.md
 
-### Previously Fixed — v35 Issues (All Fixed)
+**Issue:** Claims "15 professional drawing tools" but the overview
+table and documentation sections are missing **Marker** and
+**Dimension** tools entirely. These are registered in ToolRegistry.js
+with dedicated renderers (MarkerRenderer.js ~601 lines,
+DimensionRenderer.js ~927 lines). Zero mentions of "marker" or
+"dimension" in the entire 250+ line file.
 
-| ID | Issue | Fixed In |
-|----|-------|----------|
-| HIGH-v35-1 | OverflowException double endAtomic | v35 |
-| HIGH-v35-2 | TextSanitizer html_entity_decode after strip_tags | v35 |
-| HIGH-v35-3 | EditLayersAction clickjacking — Not a Bug | v35 |
-| HIGH-v35-4 | ApiLayersList database error info disclosure | v35 |
-| MED-v35-1 | ThumbnailRenderer visible === false ignores 0 | v35 |
-| MED-v35-2 | $set param ignored in layerEditParserFunction | v35 |
-| MED-v35-3 | RevisionManager UTC timestamps as local | v35 |
-| MED-v35-4 | EditorBootstrap conditional global — Not a Bug | v35 |
-| MED-v35-5 | _blurTempCanvas not cleaned in destroy() | v35 |
-| LOW-v35-(1-9) | 9 LOW items (see v35 review) | v35 |
-
-### Previously Fixed — v33 Issues (All 19 Fixed in v34)
-
-| ID | Issue | Fixed In |
-|----|-------|----------|
-| HIGH-v33-(1-4) | ShadowRenderer scale, DimensionRenderer hitTest, APIManager stuck, PresetStorage gradient | v34 |
-| MED-v33-(1-8) | innerHTML, listener leak, timeout, noopener, temp canvas, word break, redundant token, DI bypass | v34 |
-| LOW-v33-(1-7) | unset, unused vars, JSDoc, Exception→Throwable, Anonymous, djb2, .length→bytes | v34 |
-
-### Previously Fixed — v25-v29 Issues (All Fixed)
-
-| ID | Issue | Fixed In |
-|----|-------|----------|
-| CRIT-v28-2, CRIT-v27-(1-3) | groupSelected, ApiLayersDelete/Rename swallow, diagnose.php | v27-v28 |
-| HIGH-v25-v29 (15+ items) | CASCADE, ls_name NULL, selection, word wrap, shadow blur, SQLite, hitTest, coordinates, mutate | v27-v34 |
-| MED-v25-v29 (15+ items) | ext.layers every page, dead code, sanitization, SmartGuides, construtor, dialogs | v30-v34 |
-| INFRA-v29-(1-5) | FK constraints, missing modules, duplicate keys, PHPUnit 9 | v34 |
+**Recommended Fix:** Add Marker and Dimension tool sections with
+feature descriptions, keyboard shortcuts, and property docs.
 
 ---
 
-## Security Controls Status (v36 — Verified)
+### MEDIUM (New in v39)
+
+#### MED-v39-1: Double HTML-Escaping in LayeredFileRenderer
+
+**Status:** ✅ FIXED
+**Severity:** MEDIUM (Bug — display issue)
+**File:** src/Hooks/Processors/LayeredFileRenderer.php L78, L267-268
+
+**Issue:** Line 78 calls `htmlspecialchars($filename)` before passing
+to `errorSpan()`, which calls `htmlspecialchars()` again at L268.
+Filenames with `&` display as `&amp;amp;`.
+
+```php
+// L78 — first escape
+return $this->errorSpan( 'File not found: ' . htmlspecialchars( $filename ) );
+// L267-268 — second escape
+private function errorSpan( string $message ): string {
+    return '<span class="error">' . htmlspecialchars( $message ) . '</span>';
+}
+```
+
+Only line 78 has this issue; L60, L69, L114 pass string literals.
+
+**Recommended Fix:** Remove `htmlspecialchars()` from the call site
+on line 78.
+
+---
+
+#### MED-v39-2: Hooks.php Fallback Logger Incomplete PSR-3
+
+**Status:** ✅ FIXED
+**Severity:** MEDIUM (Reliability — potential fatal error)
+**File:** src/Hooks.php L139-172
+
+**Issue:** Anonymous class fallback logger implements only 3 of 8
+PSR-3 LoggerInterface methods: `info()`, `error()`, `warning()`.
+Missing: `debug()`, `notice()`, `critical()`, `alert()`, `emergency()`,
+`log()`. Any code path calling `$logger->debug()` via this fallback
+triggers a PHP fatal error.
+
+**Recommended Fix:** Use `\Psr\Log\NullLogger` as fallback, or
+extend `\Psr\Log\AbstractLogger`.
+
+---
+
+#### MED-v39-3: ToolbarStyleControls Validator Cleanup Leak
+
+**Status:** ✅ FIXED
+**Severity:** MEDIUM (Memory leak)
+**File:** resources/ext.layers.editor/ToolbarStyleControls.js L973
+
+**Issue:** `destroy()` sets `this.inputValidators = []` without
+calling `.destroy()` on each validator first. Event listeners remain
+attached to old input elements, causing a memory leak.
+
+**Recommended Fix:**
+```javascript
+this.inputValidators.forEach( v => v.destroy() );
+this.inputValidators = [];
+```
+
+---
+
+#### MED-v39-4: npm test Skips All Jest Unit Tests
+
+**Status:** ✅ Fixed
+**Severity:** MEDIUM (Infrastructure — CI gap)
+**Files:** package.json L8, Gruntfile.js L47
+
+**Issue:** `npm test` runs `grunt test` = `['eslint', 'stylelint',
+'banana']` only. The 11,139 Jest tests require `npm run test:js`.
+CI using only `npm test` has zero unit test coverage.
+
+**Recommended Fix:**
+```json
+"test": "grunt test && npx jest --passWithNoTests"
+```
+
+---
+
+#### MED-v39-5: UIHooks Excessive Defensive Coding
+
+**Status:** ✅ FIXED
+**Severity:** MEDIUM (Code quality — maintainability)
+**File:** src/Hooks/UIHooks.php
+
+**Issue:** 28 `method_exists()`/`is_object()`/`isset()` checks in
+479 lines for APIs guaranteed since MW 1.18+. Extension requires
+MW >= 1.44.0, making all guards dead code noise.
+
+**Recommended Fix:** Remove pre-1.44 compatibility guards.
+
+---
+
+### LOW (New in v39)
+
+#### LOW-v39-1: console.log/warn Globally Mocked in Test Setup
+
+**Status:** ❌ OPEN
+**Severity:** LOW (Test quality)
+**File:** tests/jest/setup.js L28-34
+
+**Issue:** `console.log`, `console.warn`, `console.debug`,
+`console.info` replaced with silent `jest.fn()`. Production code
+warnings invisible during tests.
+
+**Recommended Fix:** Use `jest.spyOn()` instead.
+
+---
+
+#### LOW-v39-2: BasicLayersTest.test.js Tautological Tests
+
+**Status:** ❌ OPEN
+**Severity:** LOW (Test quality — 276 lines, zero coverage)
+**File:** tests/jest/BasicLayersTest.test.js
+
+**Issue:** Tests create inline objects and assert their own properties.
+Zero `require()` of production code. Inflates test count.
+
+**Recommended Fix:** Delete or rewrite to test production modules.
+
+---
+
+#### LOW-v39-3: jest.config.js Coverage Comment Stale
+
+**Status:** ✅ FIXED
+**Severity:** LOW (Documentation)
+**File:** jest.config.js L36
+
+**Issue:** Comment says "94.19% statements, 84.43% branches".
+Actual: 95.19% statements, 84.96% branches.
+
+---
+
+#### LOW-v39-4: Hooks.php/UIHooks.php Unnecessary NS_FILE Guard
+
+**Status:** ✅ FIXED
+**Severity:** LOW (Dead code)
+**Files:** src/Hooks.php L21-23, src/Hooks/UIHooks.php L21-23
+
+**Issue:** Both define `NS_FILE` if not set. MW >= 1.44.0 always
+defines it.
+
+---
+
+## Previously Open Issues — Status Update
+
+### Resolved Since v38
+
+| Issue | Status | Evidence |
+|-------|--------|----------|
+| MED-v37-1: SlideNameValidator in API modules | ✅ Fixed | ApiLayersInfo L104-117, ApiLayersRename L63-75 |
+| MED-v38-1: ApiLayersRename oldName validation | ✅ Fixed | executeSlideRename() L290-295 |
+| MED-v38-2: TransformController _arrowTipRafId | ✅ Fixed | TransformController.js L948-950 |
+| LOW-v38-1: DraftManager editor ref cleanup | ✅ Fixed | DraftManager.js destroy() nulls editor, filename |
+
+### Still Open from v37/v38
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| LOW-v37-1: Untracked setTimeout in PropertiesForm | ❌ Open | 0ms defers, minimal risk |
+| LOW-v37-2: Untracked setTimeout in PropertyBuilders | ❌ Open | Same pattern |
+| LOW-v38-2: LayersValidator listener accumulation | ❌ Open | destroy() exists but callers don't always call it |
+| LOW-v38-3: ErrorHandler DOM initialization timing | ❌ Open | document.body check missing |
+
+---
+
+## Inherited Issues from v36 — Still Open
+
+### Documentation (Open from v36)
+
+| ID | Issue | Status |
+|----|-------|--------|
+| MED-v36-6 | i18n key count wrong (816 actual) across 4+ docs | ❌ Open |
+| MED-v36-7 | God class count wrong (16 actual) across 6+ docs | ❌ Open |
+| MED-v36-8 | wiki/Configuration-Reference debug default wrong | ❌ Open |
+| MED-v36-9 | MediaWiki table docs stale FK constraints | ❌ Open |
+| MED-v36-10 | DEVELOPER_ONBOARDING references deleted file | ❌ Open |
+| MED-v36-12 | NAMED_LAYER_SETS.md stale schema and configs | ❌ Open |
+| MED-v36-13 | CONTRIBUTING.md stale metrics | ❌ Open |
+| LOW-v36-2 | ValidationManager not in IIFE | ❌ Open (style) |
+| LOW-v36-6 | Inconsistent module resolution patterns | ❌ Open |
+| LOW-v36-9 | RichTextConverter innerHTML academic | ❌ Open |
+| LOW-v36-13 | Test files not linted by Grunt | ❌ Open |
+| LOW-v36-14 | PHP weak existence-only assertions | ❌ Open |
+| LOW-v36-15 | CHANGELOG not mirrored in wiki | ❌ Open |
+| LOW-v36-16 | FUTURE_IMPROVEMENTS completed in Active | ❌ Open |
+| LOW-v36-17 | LayersGuide.mediawiki typo | ❌ Open |
+| LOW-v36-18 | GOD_CLASS_REFACTORING_PLAN target met | ❌ Open |
+| LOW-v36-19 | PROJECT_GOD_CLASS_REDUCTION stale | ❌ Open |
+
+### Code Quality (Open from v36)
+
+| ID | Issue | Status |
+|----|-------|--------|
+| P3-043 | ValidationManager not wrapped in IIFE | ❌ Open (style) |
+| P3-050 | Test files not linted by Grunt | ❌ Open (by design) |
+| P3-051 | PHP tests use only existence assertions | ❌ Open |
+| P3-053 | RichTextConverter innerHTML for HTML parsing | ❌ Open (academic) |
+
+---
+
+## Security Controls Status (v39 — Verified)
 
 | Control | Status | Notes |
 |---------|--------|-------|
 | CSRF Protection | ✅ PASS | All writes require tokens |
 | SQL Injection | ✅ PASS | Parameterized queries |
-| Rate Limiting | ⚠️ GAP | Supported but not enabled by default |
+| Rate Limiting | ⚠️ GAP | API: supported; Parser: unbounded |
 | Input Validation | ✅ PASS | 110+ property whitelist |
+| RichText Font Sanitization | ⚠️ GAP | Top-level sanitized; richText NOT |
 | Authorization | ✅ PASS | Owner/admin checks |
 | Boolean Normalization | ✅ PASS | API serialization OK |
 | IM File Disclosure | ✅ PASS | Shell::command escapes |
 | CSP Header | ✅ PASS | addExtraHeader() pattern |
-| Font Sanitization | ✅ PASS | sanitizeIdentifier() |
+| Font Sanitization | ✅ PASS | sanitizeIdentifier() (top-level) |
 | SVG Sanitization | ✅ PASS | CSS injection blocked |
 | Client-Side SVG | ✅ PASS | DOMParser sanitizer |
 | User Deletion | ✅ PASS | ON DELETE SET NULL |
-| innerHTML Pattern | ⚠️ GAP | Some SVG icons still via innerHTML |
+| innerHTML Pattern | ⚠️ GAP | SVG icons + richText via innerHTML |
 | window.open | ✅ PASS | noopener,noreferrer |
-| IM Font Path | ⚠️ GAP | No allowlist check |
 | TextSanitizer XSS | ✅ PASS | Second strip_tags after decode |
 | Info Disclosure | ✅ PASS | Generic error + server logging |
 | Transaction Safety | ✅ PASS | OverflowException re-thrown |
-| Build Pipeline | ✅ PASS | --force flag removed; lint is blocking |
+| Build Pipeline | ⚠️ GAP | npm test skips Jest |
 
 ---
 
@@ -421,8 +580,8 @@ is preserved below.
 |------|-------|
 | LayerPanel.js | 2,195 |
 | CanvasManager.js | 2,043 |
-| Toolbar.js | 1,911 |
-| InlineTextEditor.js | 1,816 |
+| Toolbar.js | 1,910 |
+| InlineTextEditor.js | 1,822 |
 | LayersEditor.js | 1,799 |
 | APIManager.js | 1,593 |
 | PropertyBuilders.js | 1,495 |
@@ -439,60 +598,66 @@ is preserved below.
 | ServerSideLayerValidator.php | 1,375 |
 | LayersDatabase.php | 1,369 |
 
-### Near-Threshold (900–999 lines — 12 files)
+### Near-Threshold (900–999 lines — 10 files)
 
 | File | Lines |
 |------|-------|
 | ToolbarStyleControls.js | 998 |
 | PropertiesForm.js | 994 |
+| TransformController.js | 992 |
 | GroupManager.js | 987 |
-| TransformController.js | 985 |
 | LayerRenderer.js | 973 |
 | CalloutRenderer.js | 968 |
 | StateManager.js | 966 |
 | ResizeCalculator.js | 966 |
 | ShapeRenderer.js | 959 |
 | LayersValidator.js | 935 |
-| ArrowRenderer.js | 932 |
-| DimensionRenderer.js | 927 |
 
 ---
 
-## Documentation Debt Summary (31 Items)
+## Documentation Debt Summary (35+ Items)
 
-### Cross-Document Metric Inconsistencies — ❌ STALE AGAIN
+### Cross-Document Metric Inconsistencies — ❌ STALE
 
-Version bump to 1.5.57 and codebase changes have pushed metrics
-out of sync again. The "11 Files Rule" was not followed for the
-latest version bump.
+| Metric | Actual Value | Common Documented Value | Files Affected |
+|--------|-------------|------------------------|----------------|
+| Version | 1.5.57 | 1.5.56 (10+ files) | README, ARCH, wiki, LTS |
+| i18n keys | 816 | 731 or 741 (4+ files) | ARCH, wiki/Home, CONTRIBUTING |
+| God classes | 16 (12JS+2PHP+2gen) | 21 (6+ files) | README, ARCH, CONTRIBUTING |
+| Test count | 11,139 | 11,152 or 11,290 | wiki/Arch, CONTRIBUTING, LTS |
+| Test suites | 163 | 164 or 165 | wiki/Arch, LTS, ARCH |
+| JS total lines | ~96,888 | ~96,144 | Multiple |
+| PHP total lines | ~15,357 | ~15,330 | Multiple |
+| Debug default | false | true (2 wiki files) | wiki/Config, Installation |
+| Near-threshold | 10 | 12 | copilot-instructions.md |
 
-| Metric | Current Value | Documented Value | Status |
-|--------|---------------|------------------|--------|
-| Version | 1.5.57 | 1.5.56 (10+ files) | ❌ Stale |
-| i18n keys | 816 | 731 or 741 (4+ files) | ❌ Stale |
-| JS files | 140 | 139 (most files) | ❌ Stale |
-| JS total lines | ~96,805 | ~96,144 or ~96,152 | ❌ Stale |
-| PHP total lines | ~15,330 | ~15,308 or ~15,339 | ❌ Stale |
-| God class count | 16 (12 JS + 2 PHP + 2 gen) | 21 (6+ files) | ❌ Stale |
-| Test count | 11,152 | 11,290 (CONTRIBUTING) | ❌ Stale |
-| $wgLayersDebug default | false | true (wiki/Config) | ❌ Wrong |
-
-### Stale Documents Requiring Updates
+### NEW Documentation Issues (v39)
 
 | Document | Issue | Severity |
 |----------|-------|----------|
-| wiki/Configuration-Reference.md | $wgLayersDebug default shown as `true` (actual: `false`) | HIGH |
-| CONTRIBUTING.md | 11,290 tests; 17 JS god classes (actual: 11,152; 12) | MEDIUM |
+| wiki/Drawing-Tools.md | Missing Marker and Dimension tool docs | HIGH |
+| wiki/Frontend-Architecture.md | God class table lists 17 JS (actual 12) | HIGH |
+| wiki/Architecture-Overview.md | 165 suites/11,290 tests (actual 163/11,139) | HIGH |
+| docs/LTS_BRANCH_STRATEGY.md | Version 1.5.56 (3 places), test count wrong | MEDIUM |
+| docs/SLIDE_MODE.md | Version 1.5.56 | MEDIUM |
+| docs/ARCHITECTURE.md | 21 god classes (actual 16), test counts wrong | MEDIUM |
+| CONTRIBUTING.md | 11,290 tests, 21 god classes, table wrong | MEDIUM |
+| Mediawiki-Extension-Layers.mediawiki | 11,152 tests, 164 suites | MEDIUM |
+| jest.config.js | Coverage comment stale | LOW |
+
+### Previously Tracked Stale Documents
+
+| Document | Issue | Severity |
+|----------|-------|----------|
+| wiki/Configuration-Reference.md | Debug default `true` (actual: `false`) | HIGH |
+| docs/NAMED_LAYER_SETS.md | Proposal language, wrong schema/configs | MEDIUM |
 | docs/DEVELOPER_ONBOARDING.md | References deleted SlideManager.js | MEDIUM |
-| docs/GOD_CLASS_REFACTORING_PLAN.md | "⚠️ Regressed" but target already met | MEDIUM |
-| docs/PROJECT_GOD_CLASS_REDUCTION.md | Says 15 JS god classes (actual: 12) | MEDIUM |
-| docs/NAMED_LAYER_SETS.md | Stale schema, "Proposed" language, nonexistent configs | MEDIUM |
-| Mediawiki-layer_sets-table.mediawiki | Deleted FK constraints, nullable ls_name | MEDIUM |
-| Mediawiki-layer_assets-table.mediawiki | Deleted FK constraints | MEDIUM |
-| Mediawiki-layer_set_usage-table.mediawiki | Deleted FK constraints | MEDIUM |
-| wiki/Changelog.md | 37% shorter than CHANGELOG.md, not mirrored | LOW |
-| docs/FUTURE_IMPROVEMENTS.md | 3 completed items in "Active" section | LOW |
-| LayersGuide.mediawiki | "depreciated" typo (should be "deprecated") | LOW |
+| docs/GOD_CLASS_REFACTORING_PLAN.md | Shows "regressed" but target met | MEDIUM |
+| docs/PROJECT_GOD_CLASS_REDUCTION.md | 15 JS god classes (actual: 12) | MEDIUM |
+| 3x Mediawiki-*-table.mediawiki | Stale FK constraints, nonexistent tables | MEDIUM |
+| wiki/Changelog.md | 37% shorter than CHANGELOG.md | LOW |
+| docs/FUTURE_IMPROVEMENTS.md | Completed items in "Active" | LOW |
+| LayersGuide.mediawiki | "depreciated" typo | LOW |
 
 ---
 
@@ -501,33 +666,39 @@ latest version bump.
 The Layers extension has a **strong foundation** with excellent test
 coverage (95.19% statement, 84.96% branch), modern ES6 architecture
 (100% class migration), comprehensive server-side validation, and
-proper CSRF/SQL injection protection. Over 70 bugs have been found
-and fixed across v24-v36 review cycles, with regression tests added
+proper CSRF/SQL injection protection. Over 90 bugs have been found
+and fixed across v24-v38 review cycles, with regression tests added
 for nearly all fixes.
 
-The v37 fresh audit performed a comprehensive re-review of:
-- PHP backend (API modules, database, security, validation)
-- JavaScript frontend (editor, canvas, UI modules)
+The v39 fresh audit performed a comprehensive re-review of:
+- PHP backend (API modules, hooks, database, security, validation)
+- JavaScript frontend (editor, canvas, UI modules, renderers)
+- Test infrastructure and build pipeline
 - Documentation accuracy (all *.md and *.mediawiki files)
 
-**v37 Findings:**
-- 1 MEDIUM issue: Missing SlideNameValidator usage in
-  ApiLayersInfo/ApiLayersRename (inconsistent with save/delete modules)
-- 2 LOW issues: Untracked setTimeout in PropertiesForm/PropertyBuilders
-- 3 False positives identified and excluded: ColorPickerDialog,
-  PresetStorage, and RichTextConverter JSON.parse/innerHTML
+**v39 Findings:**
+- 1 HIGH security: RichText fontFamily CSS injection (defense-in-depth)
+- 4 HIGH: Code duplication, opacity bug, parser DoS, missing docs
+- 5 MEDIUM: Double-escaping, PSR-3 logger, validator leak, npm test, UIHooks
+- 4 LOW: Console mocking, tautological tests, stale comment, NS_FILE
+- 4 Previously open issues confirmed FIXED
+- 4 False positives identified and excluded
 
-The **most actionable remaining improvements** are:
-1. Add SlideNameValidator to ApiLayersInfo and ApiLayersRename
-2. Synchronize documentation metrics using the "11 Files Rule"
-3. Rewrite docs/NAMED_LAYER_SETS.md to match implementation
-4. Track and clear setTimeout handlers in PropertiesForm
+The **most actionable improvements** are:
+1. Apply `sanitizeIdentifier()` to richText fontFamily server-side
+2. Escape CSS values in `richTextToHtml()` client-side
+3. Refactor ForeignFileHelper duplication into shared utility
+4. Add per-page limit to `{{#Slide:}}` parser function queries
+5. Add Marker/Dimension documentation to wiki/Drawing-Tools.md
+6. Add Jest to `npm test`
+7. Update documentation metrics using DOCUMENTATION_UPDATE_GUIDE.md
 
-**Overall Grade: A** — Excellent core with strong testing and
+**Overall Grade: A-** — Excellent core with strong testing and
 security fundamentals. The extension handles 15 drawing tools,
 5,116 shapes, 2,817 emoji, named layer sets, rich text formatting,
-and presentation mode — a feature set that justifies its ~96K JS
-lines. 11,139 tests pass in 163 suites with 95%+ statement coverage.
+and presentation mode. 11,139 tests pass in 163 suites with 95%+
+statement coverage. The grade drops from A to A- due to the richText
+fontFamily security gap and the npm test/Jest disconnect.
 
 ---
 
@@ -535,16 +706,14 @@ lines. 11,139 tests pass in 163 suites with 95%+ statement coverage.
 
 | Version | Date | Grade | Changes |
 |---------|------|-------|---------|
-| v37 | 2026-02-13 | A | Fresh comprehensive audit; 1M new (SlideNameValidator), 2L new (setTimeout), 3 FPs excluded. 11,139 tests, 163 suites, 140 JS files (~96,877 lines). |
-| v36 | 2026-02-13 | A | Fresh audit + fixes; 6H found and all fixed; 13M triaged (7 fixed/closed, 6 docs open); 20L triaged (10 fixed/closed, 10 open). |
-| v35 | 2026-02-11 | A | Fresh audit; 4H, 5M, 9L new; all 18 fixed; 42 doc issues |
-| v33 | 2026-02-09 | B | Fresh audit; 4H, 8M, 7L new; 46 doc issues |
-| v32 | 2026-02-09 | B | 2 P2 fixes |
-| v29 | 2026-02-08 | B | Full audit; 4H, 10M, 8L new; 5 infra |
-| v28-fix | 2026-02-09 | B+ | Fixed 7 issues; 26 regression tests |
-| v28 | 2026-02-08 | B | Full audit; 1C, 10H, 9M, 6L |
-| v27 | 2026-02-07 | B | 3C (fixed), 15H, 20M, 17L |
-| v26 | 2026-02-07 | B+ | 0C, 9H, 12M, 12L |
-| v25 | 2026-02-07 | B+ | 2C (fixed), 8H, 9M, 11L |
-| v24 | 2026-02-07 | B→A- | 4C (2 false positive), 11 HIGH |
-| v22 | 2026-02-05 | B+ | Initial comprehensive review |
+| v39 | 2026-02-14 | A- | Fresh audit (Claude Opus 4.6); 1H security, 4H bugs/quality, 5M, 4L new; 4 prev issues fixed; 4 FPs excluded. npm test/Jest gap. |
+| v38 | 2026-02-14 | A | Fresh audit; 2M new (validation, RAF), 4L new (cleanup), 2H docs, 2 FPs. |
+| v37 | 2026-02-13 | A | Fresh audit; 1M new, 2L new, 3 FPs excluded. |
+| v36 | 2026-02-13 | A | Fresh audit + fixes; 6H found and all fixed; 13M; 20L. |
+| v35 | 2026-02-11 | A | Fresh audit; 4H, 5M, 9L new; all 18 fixed. |
+| v33 | 2026-02-09 | B | Fresh audit; 4H, 8M, 7L new. |
+| v29 | 2026-02-08 | B | Full audit; 4H, 10M, 8L new. |
+| v28 | 2026-02-08 | B | Full audit; 1C, 10H, 9M, 6L. |
+| v27 | 2026-02-07 | B | 3C (fixed), 15H, 20M, 17L. |
+| v25 | 2026-02-07 | B+ | 2C (fixed), 8H, 9M, 11L. |
+| v22 | 2026-02-05 | B+ | Initial comprehensive review. |

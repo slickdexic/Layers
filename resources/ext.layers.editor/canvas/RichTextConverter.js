@@ -41,6 +41,19 @@
 		}
 
 		/**
+		 * Sanitize a CSS property value by removing characters that could
+		 * break out of style attributes. Defense-in-depth: the server also
+		 * sanitizes fontFamily via sanitizeIdentifier() (P2-044).
+		 *
+		 * @static
+		 * @param {string} value - CSS value to sanitize
+		 * @return {string} Safe CSS value
+		 */
+		static escapeCSSValue( value ) {
+			return String( value ).replace( /["'<>&;{}()\\]/g, '' );
+		}
+
+		/**
 		 * Convert richText array to HTML string for contentEditable
 		 *
 		 * @static
@@ -70,12 +83,13 @@
 				const styleProps = [];
 				// Track data attributes for unscaled values
 				const dataAttrs = [];
+				const esc = RichTextConverter.escapeCSSValue;
 
 				if ( style.fontWeight && style.fontWeight !== 'normal' ) {
-					styleProps.push( `font-weight: ${ style.fontWeight }` );
+					styleProps.push( `font-weight: ${ esc( style.fontWeight ) }` );
 				}
 				if ( style.fontStyle && style.fontStyle !== 'normal' ) {
-					styleProps.push( `font-style: ${ style.fontStyle }` );
+					styleProps.push( `font-style: ${ esc( style.fontStyle ) }` );
 				}
 				if ( style.fontSize ) {
 					// Scale for display, store unscaled in data attribute
@@ -85,20 +99,20 @@
 					dataAttrs.push( `data-font-size="${ style.fontSize }"` );
 				}
 				if ( style.fontFamily ) {
-					styleProps.push( `font-family: ${ style.fontFamily }` );
+					styleProps.push( `font-family: ${ esc( style.fontFamily ) }` );
 				}
 				if ( style.color ) {
-					styleProps.push( `color: ${ style.color }` );
+					styleProps.push( `color: ${ esc( style.color ) }` );
 				}
 				if ( style.textDecoration && style.textDecoration !== 'none' ) {
-					styleProps.push( `text-decoration: ${ style.textDecoration }` );
+					styleProps.push( `text-decoration: ${ esc( style.textDecoration ) }` );
 				}
 				if ( style.backgroundColor ) {
-					styleProps.push( `background-color: ${ style.backgroundColor }` );
+					styleProps.push( `background-color: ${ esc( style.backgroundColor ) }` );
 				}
 				if ( style.textStrokeWidth && style.textStrokeColor ) {
 					styleProps.push(
-						`-webkit-text-stroke: ${ style.textStrokeWidth }px ${ style.textStrokeColor }`
+						`-webkit-text-stroke: ${ style.textStrokeWidth }px ${ esc( style.textStrokeColor ) }`
 					);
 				}
 

@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"test:e2e": "npx playwright test --workers=1",
-		"test": "grunt test",
+		"test": "grunt test && jest --passWithNoTests",
 		"test:js": "jest",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",

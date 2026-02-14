@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** February 13, 2026 — v37 fresh audit (version 1.5.57)
+**Last updated:** February 14, 2026 — v39 fresh audit (version 1.5.57)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -12,9 +12,9 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 |----------|-------|-------|------|
 | P0 | 4 | 4 | 0 |
 | P1 | 31 | 31 | 0 |
-| P2 | 55 | 53 | 2 |
-| P3 | 64 | 50 | 14 |
-| **Total** | **154** | **138** | **16** |
+| P2 | 68 | 65 | 3 |
+| P3 | 72 | 56 | 16 |
+| **Total** | **175** | **156** | **19** |
 
 ---
 
@@ -273,19 +273,41 @@ All P0 issues have been fixed.
 - **Recommended Fix:** Major rewrite to document actual
   implementation, correct schema, and real config keys.
 
-### ❌ P2-039: Missing SlideNameValidator in API Modules (NEW v37)
+### ✅ P2-039: Missing SlideNameValidator in API Modules (Fixed v39)
 
 - **Files:** src/Api/ApiLayersInfo.php, src/Api/ApiLayersRename.php
-- **Impact:** ApiLayersSave.php and ApiLayersDelete.php use
-  `SlideNameValidator::isValid()` to validate slidename parameters,
-  but ApiLayersInfo.php and ApiLayersRename.php don't validate
-  slidename. This creates an inconsistency where malformed slide
-  names could be queried (though impact is limited since names
-  are only used for DB lookup with prefixed imgName).
-- **Introduced:** v37 review
-- **Recommended Fix:** Add `SlideNameValidator::isValid()` check
-  to `executeSlideRequest()` in ApiLayersInfo.php and
-  `executeSlideRename()` in ApiLayersRename.php for consistency.
+- **Resolution:** SlideNameValidator added to ApiLayersInfo L104-117
+  and ApiLayersRename L63-75. All 4 API modules now consistently
+  validate slide names.
+
+### ✅ P2-040: ApiLayersRename Missing oldName Validation in Slide Path (Fixed v39)
+
+- **File:** src/Api/ApiLayersRename.php
+- **Resolution:** executeSlideRename() L290-295 now validates oldName
+  with SetNameSanitizer::isValid(), matching the file rename path.
+
+### ✅ P2-041: TransformController Missing _arrowTipRafId Cleanup (Fixed v39)
+
+- **File:** resources/ext.layers.editor/canvas/TransformController.js
+- **Resolution:** destroy() at L948-950 now cancels _arrowTipRafId
+  alongside the other 3 RAF IDs.
+
+### ❌ P2-042: wiki/Configuration-Reference.md LayersDebug Default Wrong (NEW v38)
+
+- **File:** wiki/Configuration-Reference.md L54
+- **Impact:** Documents show `$wgLayersDebug` default as `true`, but
+  extension.json sets it to `false`. Users may expect debug logging
+  to be on by default when it's not.
+- **Introduced:** v38 review
+- **Recommended Fix:** Change `| Default | `true` |` to `| Default | `false` |`
+
+### ❌ P2-043: wiki/Installation.md LayersDebug Default Wrong (NEW v38)
+
+- **File:** wiki/Installation.md L121
+- **Impact:** Example comment says `// Enable debug logging (default: true)`
+  but actual default is `false`.
+- **Introduced:** v38 review
+- **Recommended Fix:** Change comment to `(default: false)`
 
 ### ✅ P2-001: Negative Dimensions for Rectangle/TextBox (Fixed v28)
 
@@ -451,6 +473,41 @@ All P0 issues have been fixed.
 - **Introduced:** v37 review
 - **Recommended Fix:** Same as P3-054.
 
+### ✅ P3-056: DraftManager Missing Editor Reference Cleanup (Fixed v39)
+
+- **File:** resources/ext.layers.editor/DraftManager.js
+- **Resolution:** destroy() now nulls editor and filename references.
+
+### ❌ P3-057: LayersValidator Listener Accumulation Risk (NEW v38)
+
+- **File:** resources/ext.layers.editor/LayersValidator.js L848-858
+- **Impact:** `createInputValidator()` adds event listeners but if
+  called multiple times on the same input without calling `destroy()`,
+  listeners accumulate. Each call creates a new closure. Not a direct
+  bug but defensive coding opportunity.
+- **Introduced:** v38 review
+- **Recommended Fix:** Document or enforce single-validator-per-input
+  pattern, or auto-remove previous validator on same input.
+
+### ❌ P3-058: ErrorHandler DOM Initialization Timing (NEW v38)
+
+- **File:** resources/ext.layers.editor/ErrorHandler.js L29-45
+- **Impact:** `initErrorContainer()` appends to `document.body` without
+  checking existence. Singleton created at module load (L594). If
+  script loads before `document.body` exists, throws error. MediaWiki's
+  ResourceLoader typically defers execution, making this unlikely.
+- **Introduced:** v38 review
+- **Recommended Fix:** Guard with `if (document.body)` check or use
+  `document.addEventListener('DOMContentLoaded', ...)`.
+
+### ❌ P3-059: README.md Test Count Badge Wrong (NEW v38)
+
+- **File:** README.md L7
+- **Impact:** Badge shows "11,152 passing" but actual test count is
+  11,139. Badge not updated during version sync.
+- **Introduced:** v38 review
+- **Recommended Fix:** Update badge to show 11,139.
+
 ### ✅ P3-001: ApiLayersList Missing unset() (Fixed v34)
 
 ### ✅ P3-002: UIHooks Unused Variables (Fixed v34)
@@ -549,6 +606,130 @@ All P0 issues have been fixed.
 ### ✅ P3-040: ErrorHandler retryOperation No-Op (Fixed v35)
 
 ### ✅ P3-041: LayersLightbox Hardcoded English Alt (Fixed v35)
+
+### ✅ P2-044: RichText fontFamily CSS Attribute Injection (Fixed v39)
+
+- **Files:** src/Validation/ServerSideLayerValidator.php L899,
+  resources/ext.layers.editor/canvas/RichTextConverter.js L89-108
+- **Impact:** Server validates richText `fontFamily` as type `string`
+  only, NOT sanitized with `sanitizeIdentifier()` like top-level
+  fontFamily. Client interpolates into HTML style attributes without
+  escaping. A crafted fontFamily could break out of the style
+  attribute. Requires compromised API or direct DB access.
+- **Introduced:** v39 review
+- **Recommended Fix:** Apply `sanitizeIdentifier()` to richText
+  fontFamily server-side; escape CSS values client-side.
+
+### ❌ P2-045: ForeignFileHelper Code Duplication (6 Files) (NEW v39)
+
+- **Files:** Hooks.php, EditLayersAction.php, LayerInjector.php,
+  LayeredFileRenderer.php, ThumbnailProcessor.php, ThumbnailRenderer.php
+- **Impact:** `isForeignFile()` and/or `getFileSha1()` duplicated in
+  6 files outside the existing ForeignFileHelperTrait. If detection
+  logic changes, all duplicates must be updated or data mismatches
+  occur silently.
+- **Introduced:** v39 review
+- **Recommended Fix:** Refactor trait into static utility class.
+
+### ✅ P2-046: ThumbnailRenderer Ignores Opacity for Named Colors (Fixed v39)
+
+- **File:** src/ThumbnailRenderer.php L645-722
+- **Impact:** `withOpacity()` returns named CSS colors unchanged
+  regardless of opacity value. Visual mismatch between thumbnails
+  (full opacity) and canvas viewer (correct opacity).
+- **Introduced:** v39 review
+- **Recommended Fix:** Add CSS named color → RGB lookup table.
+
+### ✅ P2-047: No Rate Limiting on {{#Slide:}} Parser Function (Fixed v39)
+
+- **File:** src/Hooks/SlideHooks.php L150, L327-360
+- **Impact:** One uncached DB query per `{{#Slide:}}` invocation
+  with no per-page counter or result cache. 200+ invocations on
+  one page generates 200+ queries.
+- **Introduced:** v39 review
+- **Recommended Fix:** Add static counter (max 50/page) and cache.
+
+### ❌ P2-048: wiki/Drawing-Tools.md Missing 2 Tool Docs (NEW v39)
+
+- **File:** wiki/Drawing-Tools.md
+- **Impact:** Claims 15 tools but Marker and Dimension tools have
+  zero documentation. Both have dedicated renderers (601 and 927
+  lines respectively).
+- **Introduced:** v39 review
+- **Recommended Fix:** Add Marker and Dimension sections.
+
+### ✅ P2-049: Double HTML-Escaping in LayeredFileRenderer (Fixed v39)
+
+- **File:** src/Hooks/Processors/LayeredFileRenderer.php L78
+- **Impact:** `htmlspecialchars()` called on filename before passing
+  to `errorSpan()` which calls `htmlspecialchars()` again. Filenames
+  with `&` display as `&amp;amp;`.
+- **Introduced:** v39 review
+- **Recommended Fix:** Remove `htmlspecialchars()` from call site L78.
+
+### ✅ P2-050: Hooks.php Fallback Logger Incomplete PSR-3 (Fixed v39)
+
+- **File:** src/Hooks.php L139-172
+- **Impact:** Fallback logger only implements `info()`, `error()`,
+  `warning()` — missing `debug()`, `notice()`, `critical()`,
+  `alert()`, `emergency()`, `log()`. Any code calling missing
+  methods via this fallback triggers fatal error.
+- **Introduced:** v39 review
+- **Recommended Fix:** Use `\Psr\Log\NullLogger` as fallback.
+
+### ✅ P2-051: ToolbarStyleControls Validator Cleanup Leak (Fixed v39)
+
+- **File:** resources/ext.layers.editor/ToolbarStyleControls.js L973
+- **Impact:** `destroy()` sets `this.inputValidators = []` without
+  calling `.destroy()` on each validator, leaving event listeners
+  attached to old input elements.
+- **Introduced:** v39 review
+- **Recommended Fix:** Add `this.inputValidators.forEach(v => v.destroy())`
+  before clearing.
+
+### ✅ P2-052: npm test Skips Jest Unit Tests (Fixed v39)
+
+- **Files:** package.json L8, Gruntfile.js L47
+- **Impact:** `npm test` = grunt (eslint, stylelint, banana) only.
+  11,139 Jest tests require separate `npm run test:js`. CI using
+  only `npm test` has zero unit test coverage.
+- **Introduced:** v39 review
+- **Recommended Fix:** Add `&& npx jest --passWithNoTests` to npm test.
+
+### ✅ P2-053: UIHooks Excessive Defensive Coding (Fixed v39)
+
+- **File:** src/Hooks/UIHooks.php
+- **Impact:** 28 `method_exists()`/`is_object()` checks for APIs
+  guaranteed since MW 1.18+. Extension requires MW >= 1.44.0.
+  Dead code noise reduces readability.
+- **Introduced:** v39 review
+- **Recommended Fix:** Remove pre-1.44 compatibility guards.
+
+### ❌ P3-060: console.log/warn Globally Mocked in Test Setup (NEW v39)
+
+- **File:** tests/jest/setup.js L28-34
+- **Impact:** Production code warnings invisible during tests.
+- **Introduced:** v39 review
+
+### ❌ P3-061: BasicLayersTest.test.js Tautological Tests (NEW v39)
+
+- **File:** tests/jest/BasicLayersTest.test.js
+- **Impact:** 276 lines testing inline objects — zero production
+  code imports. Inflates test count without coverage.
+- **Introduced:** v39 review
+
+### ✅ P3-062: jest.config.js Coverage Comment Stale (Fixed v39)
+
+- **File:** jest.config.js L36
+- **Impact:** Comment says 94.19% statements; actual is 95.19%.
+- **Introduced:** v39 review
+
+### ✅ P3-063: Hooks.php/UIHooks.php Unnecessary NS_FILE Guard (Fixed v39)
+
+- **Files:** src/Hooks.php L21-23, src/Hooks/UIHooks.php L21-23
+- **Impact:** Both define NS_FILE if not set. MW >= 1.44.0 always
+  defines it. Dead code.
+- **Introduced:** v39 review
 
 ---
 

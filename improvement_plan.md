@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** February 13, 2026 — v37 fresh audit (version 1.5.57)
+**Last updated:** February 14, 2026 — v39 fresh audit (version 1.5.57)
 
 This plan organizes all open issues from the codebase review into
 prioritized phases with effort estimates. Each phase targets related
@@ -21,8 +21,10 @@ issues for efficient batching.
 | 7 | Documentation debt | 42 | 7 | 35 | 4-6 hours |
 | 8 | v35 findings (security + bugs) | 19 | 19 | 0 | — |
 | 9 | v36 findings (code + testing) | 25 | 16 | 9 | 2-4 hours |
-| 10 | v37 findings (validation + quality) | 3 | 0 | 3 | 1-2 hours |
-| **Total** | | **143** | **94** | **49** | **12-18 hrs** |
+| 10 | v37 findings (validation + quality) | 3 | 1 | 2 | 1 hour |
+| 11 | v38 findings (API + cleanup + docs) | 8 | 3 | 5 | 1-2 hours |
+| 12 | v39 findings (security + quality) | 13 | 10 | 3 | 1-2 hours |
+| **Total** | | **164** | **98** | **66** | **18-27 hrs** |
 
 ---
 
@@ -429,7 +431,7 @@ discovered in the v37 comprehensive review.*
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 10.1 | Missing SlideNameValidator in API modules | P2-039 | ❌ Open | 15m |
+| 10.1 | Missing SlideNameValidator in API modules | P2-039 | ✅ Fixed v39 | 15m |
 
 #### 10.1 Fix: Add SlideNameValidator (P2-039)
 
@@ -481,16 +483,302 @@ if ( this._pendingTimeouts ) {
 
 ---
 
+## Phase 11: v38 Findings — API Validation, Cleanup & Docs (8 Items)
+
+*Target: Fix API validation inconsistencies, memory cleanup issues,
+and documentation errors discovered in the v38 comprehensive review.*
+
+### 11A: MEDIUM Priority (3 items) — ❌ OPEN
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 11.1 | ApiLayersRename missing oldName validation | P2-040 | ✅ Fixed v39 | 15m |
+| 11.2 | TransformController missing RAF cleanup | P2-041 | ✅ Fixed v39 | 10m |
+| 11.3 | wiki/Configuration-Reference debug default | P2-042 | ❌ Open | 5m |
+
+#### 11.1 Fix: ApiLayersRename oldName Validation (P2-040)
+
+**File:** ApiLayersRename.php executeSlideRename()
+
+Add oldName validation to match the file rename path:
+
+```php
+// Add at start of executeSlideRename(), before newName validation:
+if ( !SetNameSanitizer::isValid( $oldName ) ) {
+    $this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
+}
+```
+
+#### 11.2 Fix: TransformController RAF Cleanup (P2-041)
+
+**File:** TransformController.js destroy() method
+
+Add missing `_arrowTipRafId` cleanup after `_dragRafId`:
+
+```javascript
+if ( this._arrowTipRafId !== null ) {
+    window.cancelAnimationFrame( this._arrowTipRafId );
+    this._arrowTipRafId = null;
+}
+```
+
+#### 11.3 Fix: Configuration-Reference Debug Default (P2-042)
+
+**File:** wiki/Configuration-Reference.md L54
+
+Change the Default row from `true` to `false`:
+```markdown
+| Default | `false` |
+```
+
+### 11B: LOW Priority (5 items) — ❌ OPEN
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 11.4 | wiki/Installation.md debug default wrong | P2-043 | ❌ Open | 5m |
+| 11.5 | DraftManager missing editor ref cleanup | P3-056 | ✅ Fixed v39 | 5m |
+| 11.6 | LayersValidator listener accumulation | P3-057 | ❌ Open | 15m |
+| 11.7 | ErrorHandler DOM initialization timing | P3-058 | ❌ Open | 10m |
+| 11.8 | README.md test count badge wrong | P3-059 | ❌ Open | 5m |
+
+#### 11.4 Fix: Installation.md Debug Default (P2-043)
+
+**File:** wiki/Installation.md L121
+
+Change comment from `(default: true)` to `(default: false)`.
+
+#### 11.5 Fix: DraftManager Cleanup (P3-056)
+
+**File:** DraftManager.js destroy() method
+
+Add reference cleanup:
+```javascript
+destroy() {
+    this.stopAutoSaveTimer();
+    if ( this.stateSubscription && typeof this.stateSubscription === 'function' ) {
+        this.stateSubscription();
+        this.stateSubscription = null;
+    }
+    // Add these lines:
+    this.editor = null;
+    this.filename = null;
+}
+```
+
+#### 11.6 Fix: LayersValidator Listeners (P3-057)
+
+**File:** LayersValidator.js createInputValidator()
+
+Option 1 (Document): Add JSDoc comment explaining single-validator
+requirement.
+
+Option 2 (Enforce): Store validator reference on input element and
+auto-destroy previous:
+```javascript
+if ( input._layersValidator ) {
+    input._layersValidator.destroy();
+}
+input._layersValidator = { validate, destroy };
+return input._layersValidator;
+```
+
+#### 11.7 Fix: ErrorHandler DOM Timing (P3-058)
+
+**File:** ErrorHandler.js initErrorContainer()
+
+Add body existence check:
+```javascript
+initErrorContainer() {
+    if ( !document.body ) {
+        // Defer until body exists
+        document.addEventListener( 'DOMContentLoaded', () => {
+            this.initErrorContainer();
+        } );
+        return;
+    }
+    // ... existing code
+}
+```
+
+#### 11.8 Fix: README Badge (P3-059)
+
+**File:** README.md L7
+
+Change `11%2C152` to `11%2C139` in the badge URL.
+
+---
+
+## Phase 12: v39 Findings — Security, Quality & Infrastructure (13 Items)
+
+*Target: Fix richText CSS injection, code duplication, parser DoS,
+and infrastructure gaps discovered in the v39 comprehensive review.*
+
+### 12A: HIGH Priority — Security & Bugs (5 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 12.1 | RichText fontFamily CSS injection | P2-044 | ✅ Fixed | 45m |
+| 12.2 | ForeignFileHelper code duplication | P2-045 | ❌ Open | 2h |
+| 12.3 | ThumbnailRenderer named color opacity | P2-046 | ✅ Fixed | 30m |
+| 12.4 | {{#Slide:}} parser function no rate limit | P2-047 | ✅ Fixed | 30m |
+| 12.5 | wiki/Drawing-Tools.md missing 2 tools | P2-048 | ❌ Open | 1h |
+
+#### 12.1 Fix: RichText fontFamily Sanitization (P2-044)
+
+**Server (primary):** Apply `sanitizeIdentifier()` to richText
+fontFamily in `validateRichText()`:
+
+```php
+// ServerSideLayerValidator.php ~L942, inside richText run validation
+if ( isset( $run->style->fontFamily ) ) {
+    $run->style->fontFamily = $this->sanitizeIdentifier(
+        $run->style->fontFamily );
+}
+```
+
+**Client (defense-in-depth):** Escape CSS values in richTextToHtml():
+
+```javascript
+// RichTextConverter.js L89 — escape quotes in CSS values
+function escapeCSSValue( val ) {
+    return String( val ).replace( /["'<>&;]/g, '' );
+}
+if ( style.fontFamily ) {
+    styleProps.push( 'font-family: ' + escapeCSSValue( style.fontFamily ) );
+}
+```
+
+#### 12.2 Fix: ForeignFileHelper Consolidation (P2-045)
+
+Create static utility class from existing trait:
+
+```php
+// src/Utility/ForeignFileHelper.php
+class ForeignFileHelper {
+    public static function isForeignFile( $file ): bool { ... }
+    public static function getFileSha1( $file ): string { ... }
+}
+```
+
+Replace all 6 duplicates with `ForeignFileHelper::isForeignFile()`.
+
+#### 12.3 Fix: Named Color Opacity (P2-046)
+
+Add CSS named color lookup table in ThumbnailRenderer.php:
+
+```php
+private const NAMED_COLORS = [
+    'red' => [255,0,0], 'blue' => [0,0,255],
+    'green' => [0,128,0], 'white' => [255,255,255],
+    // ... all 17 standard CSS colors
+];
+
+// In withOpacity():
+$lower = strtolower( $color );
+if ( isset( self::NAMED_COLORS[$lower] ) ) {
+    [$r, $g, $b] = self::NAMED_COLORS[$lower];
+    return "rgba($r,$g,$b,$opacity)";
+}
+```
+
+#### 12.4 Fix: Slide Parser Rate Limit (P2-047)
+
+Add static counter and cache to SlideHooks.php:
+
+```php
+private static $slideQueryCount = 0;
+private static $slideCache = [];
+const MAX_SLIDE_QUERIES_PER_PARSE = 50;
+
+private static function getSavedSlideDimensions( ... ): ?array {
+    $cacheKey = $imgName . '|' . $setName;
+    if ( isset( self::$slideCache[$cacheKey] ) ) {
+        return self::$slideCache[$cacheKey];
+    }
+    if ( self::$slideQueryCount >= self::MAX_SLIDE_QUERIES_PER_PARSE ) {
+        return null;
+    }
+    self::$slideQueryCount++;
+    // ... existing DB query ...
+    self::$slideCache[$cacheKey] = $result;
+    return $result;
+}
+```
+
+#### 12.5 Fix: Drawing-Tools.md (P2-048)
+
+Add Marker tool and Dimension tool sections to wiki/Drawing-Tools.md
+with feature descriptions, keyboard shortcuts, and property docs.
+
+### 12B: MEDIUM Priority (4 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 12.6 | Double HTML-escaping in LayeredFileRenderer | P2-049 | ✅ Fixed | 5m |
+| 12.7 | Hooks.php fallback logger incomplete PSR-3 | P2-050 | ✅ Fixed | 10m |
+| 12.8 | ToolbarStyleControls validator leak | P2-051 | ✅ Fixed | 10m |
+| 12.9 | npm test skips Jest | P2-052 | ✅ Fixed | 5m |
+
+#### Quick Wins (12B)
+
+**P2-049:** Remove `htmlspecialchars()` from L78 of
+LayeredFileRenderer.php (errorSpan already escapes).
+
+**P2-050:** Replace anonymous logger with `new \Psr\Log\NullLogger()`
+in Hooks.php L139.
+
+**P2-051:** Add `this.inputValidators.forEach(v => v.destroy())` before
+`this.inputValidators = []` in ToolbarStyleControls.js L973.
+
+**P2-052:** Change package.json test script to:
+`"test": "grunt test && npx jest --passWithNoTests"`
+
+### 12C: LOW Priority (4 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 12.10 | console.log/warn globally mocked | P3-060 | ❌ Open | 15m |
+| 12.11 | BasicLayersTest.test.js tautological | P3-061 | ❌ Open | 15m |
+| 12.12 | jest.config.js coverage comment stale | P3-062 | ✅ Fixed | 2m |
+| 12.13 | NS_FILE guard unnecessary | P3-063 | ✅ Fixed | 5m |
+
+#### Quick Wins (12C)
+
+**P3-060:** Use `jest.spyOn(console, 'log')` instead of
+`jest.fn()` in setup.js.
+
+**P3-061:** Delete BasicLayersTest.test.js or rewrite to
+`require()` production modules.
+
+**P3-062:** Update coverage comment in jest.config.js L36 to
+95.19% statements.
+
+**P3-063:** Remove `if (!defined('NS_FILE'))` blocks from
+Hooks.php and UIHooks.php.
+
+---
+
 ## Recommended Execution Order
 
-1. **Phase 10A first** (MEDIUM): ~15 minutes
-   - P2-039 (SlideNameValidator) — validation consistency
-2. **Phase 9 remainder** (docs, style, academic)
-3. **Phase 10B** (LOW): ~40 minutes
+1. **Phase 12A.1 first** (SECURITY): ~45 minutes
+   - P2-044 (richText fontFamily CSS injection — both server and client)
+2. **Phase 12B quick wins** (MEDIUM): ~30 minutes
+   - P2-049 (double escaping), P2-050 (PSR-3 logger),
+   - P2-051 (validator leak), P2-052 (npm test + Jest)
+3. **Phase 12A.3-4** (BUGS): ~1 hour
+   - P2-046 (named color opacity), P2-047 (parser rate limit)
+4. **Phase 12A.2** (QUALITY): ~2 hours
+   - P2-045 (ForeignFileHelper consolidation — 6 files)
+5. **Phase 12A.5 + 12C** (DOCS + LOW): ~1.5 hours
+   - P2-048 (Drawing-Tools.md), P3-060 through P3-063
+6. **Phase 11 remaining** (v38 open): ~1 hour
+   - P2-042, P2-043 (config doc defaults)
+   - P3-057, P3-058 (validator listeners, DOM timing)
+7. **Phase 10 remaining** (v37 open): ~40 minutes
    - P3-054, P3-055 (setTimeout tracking)
-4. **Phase 7A**: Version/metrics sync across 10+ docs (~2 hours)
-5. **Phase 7B-E**: Stale documents, wiki sync, config doc
-6. **Phase 4.7**: God class reduction (ongoing)
+8. **Phase 7A**: Version/metrics sync across 10+ docs (~2 hours)
+9. **Phase 7B-E**: Stale documents, wiki sync, config doc
+10. **Phase 4.7**: God class reduction (ongoing)
 
 ---
 
@@ -509,7 +797,9 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
-| 2026-02-13 | v37: Fresh comprehensive audit. Added Phase 10 with 3 new items (1 MED validation, 2 LOW code quality). 3 false positives excluded. 11,139 tests, 163 suites. Grade: A (maintained). |
+| 2026-02-14 | v39: Fresh audit. Added Phase 12 with 13 items (5 HIGH, 4 MED, 4 LOW). RichText CSS injection, ForeignFileHelper duplication, parser DoS, npm test gap. 4 prev issues fixed (P2-039/040/041, P3-056). 4 FPs excluded. Grade: A-. |
+| 2026-02-14 | v38: Fresh audit. Added Phase 11 with 8 items. 2 FPs excluded. |
+| 2026-02-13 | v37: Fresh audit. Added Phase 10 with 3 items. 3 FPs excluded. |
 | 2026-02-13 | v36 fixes: Fixed 16 of 25 Phase 9 items (all 6 HIGH, 2 MED, 8 LOW). |
 | 2026-02-13 | v36: Fresh comprehensive review. Added Phase 9 with 25 new items. |
 | 2026-02-11 | v35: Fresh comprehensive review. Added Phase 8 with 19 new items. |

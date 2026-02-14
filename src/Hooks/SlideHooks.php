@@ -44,6 +44,25 @@ class SlideHooks {
 	use StaticLoggerAwareTrait;
 
 	/**
+	 * Per-parse cache for slide dimension lookups (P2-047).
+	 * Prevents unbounded DB queries when a page has many {{#Slide:}} calls.
+	 * @var array<string, array|null>
+	 */
+	private static $slideDimensionCache = [];
+
+	/**
+	 * Counter for slide DB queries in the current parse (P2-047).
+	 * @var int
+	 */
+	private static $slideQueryCount = 0;
+
+	/**
+	 * Maximum number of DB queries per parse for slide dimensions.
+	 * Beyond this limit, getSavedSlideDimensions() returns null.
+	 */
+	private const MAX_SLIDE_QUERIES_PER_PARSE = 50;
+
+	/**
 	 * Register the #Slide parser function.
 	 *
 	 * @param Parser $parser The parser instance
@@ -325,7 +344,21 @@ class SlideHooks {
 	 * @return array|null Array with 'width' and 'height' keys, or null if not found
 	 */
 	private static function getSavedSlideDimensions( string $slideName, string $layerSetName ): ?array {
+		// Check per-parse cache first (P2-047)
+		$cacheKey = $slideName . '|' . $layerSetName;
+		if ( array_key_exists( $cacheKey, self::$slideDimensionCache ) ) {
+			return self::$slideDimensionCache[$cacheKey];
+		}
+
+		// Enforce per-parse query limit to prevent DoS via many {{#Slide:}} calls
+		if ( self::$slideQueryCount >= self::MAX_SLIDE_QUERIES_PER_PARSE ) {
+			self::log( 'Slide dimension query limit reached (' .
+				self::MAX_SLIDE_QUERIES_PER_PARSE . ')' );
+			return null;
+		}
+
 		try {
+			self::$slideQueryCount++;
 			$db = MediaWikiServices::getInstance()->getService( 'LayersDatabase' );
 			$imgName = LayersConstants::SLIDE_PREFIX . $slideName;
 
@@ -339,10 +372,12 @@ class SlideHooks {
 				$width = isset( $data['canvasWidth'] ) ? (int)$data['canvasWidth'] : 0;
 				$height = isset( $data['canvasHeight'] ) ? (int)$data['canvasHeight'] : 0;
 				if ( $width > 0 && $height > 0 ) {
-					return [
+					$result = [
 						'width' => $width,
 						'height' => $height
 					];
+					self::$slideDimensionCache[$cacheKey] = $result;
+					return $result;
 				}
 			}
 		} catch ( \Throwable $e ) {
@@ -350,6 +385,7 @@ class SlideHooks {
 			self::log( 'Error fetching slide dimensions: ' . $e->getMessage() );
 		}
 
+		self::$slideDimensionCache[$cacheKey] = null;
 		return null;
 	}
 

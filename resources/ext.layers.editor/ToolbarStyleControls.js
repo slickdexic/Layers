@@ -969,7 +969,15 @@ class ToolbarStyleControls {
 			this.eventTracker = null;
 		}
 
-		// Clear input validators
+		// Clean up input validators — call destroy() on each to remove
+		// event listeners before clearing (P2-051)
+		if ( this.inputValidators ) {
+			this.inputValidators.forEach( function ( v ) {
+				if ( v && typeof v.destroy === 'function' ) {
+					v.destroy();
+				}
+			} );
+		}
 		this.inputValidators = [];
 
 		// Clear DOM references (text-related refs are in TextEffectsControls)

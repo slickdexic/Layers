@@ -987,6 +987,14 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 				// Only include style if it has valid properties
 				if ( count( $validStyle ) > 0 ) {
+					// Sanitize fontFamily with same treatment as top-level property
+					// Rich text fontFamily must go through sanitizeIdentifier() to prevent
+					// CSS injection via style attributes (see P2-044)
+					if ( isset( $validStyle['fontFamily'] ) ) {
+						$validStyle['fontFamily'] = $this->textSanitizer->sanitizeIdentifier(
+							$validStyle['fontFamily']
+						);
+					}
 					$validRun['style'] = $validStyle;
 				}
 			}

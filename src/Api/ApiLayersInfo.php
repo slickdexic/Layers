@@ -20,6 +20,7 @@ use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
+use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
@@ -99,6 +100,11 @@ class ApiLayersInfo extends ApiBase {
 
 		// Handle slide requests (slidename parameter)
 		if ( $slidename !== null && $slidename !== '' ) {
+			// Validate slidename for security and consistency
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideRequest( $slidename, $setName, $limit, $layerSetId );
 			return;
 		}
@@ -107,6 +113,11 @@ class ApiLayersInfo extends ApiBase {
 		if ( $filename !== null && strpos( $filename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
 			$slidename = substr( $filename, strlen( LayersConstants::SLIDE_PREFIX ) );
+			// Validate extracted slidename
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideRequest( $slidename, $setName, $limit, $layerSetId );
 			return;
 		}

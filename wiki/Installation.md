@@ -118,7 +118,7 @@ $wgLayersMaxLayerCount = 200;
 // Increase max layer sets per image (default: 15)
 $wgLayersMaxNamedSets = 25;
 
-// Enable debug logging (default: true)
+// Enable debug logging (default: false)
 $wgLayersDebug = true;
 
 // Rate limiting for saves

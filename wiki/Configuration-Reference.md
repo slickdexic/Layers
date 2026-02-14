@@ -50,7 +50,7 @@ Enable debug logging to the 'Layers' log channel.
 | Property | Value |
 |----------|-------|
 | Type | `boolean` |
-| Default | `true` |
+| Default | `false` |
 
 ```php
 // Disable debug logging in production

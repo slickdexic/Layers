@@ -16,11 +16,6 @@ use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\MediaWikiServices;
 
-// Define constants if not already defined (for static analysis/local tools)
-if ( !\defined( 'NS_FILE' ) ) {
-	\define( 'NS_FILE', 6 );
-}
-
 class UIHooks {
 	/**
 	 * Add "Edit Layers" tab to file pages
@@ -32,74 +27,38 @@ class UIHooks {
 		$dbg = false;
 		$req = null;
 		try {
-			$cfg = ( is_object( $sktemplate ) && method_exists( $sktemplate, 'getConfig' ) )
-				? $sktemplate->getConfig()
-				: null;
-			if ( $cfg && method_exists( $cfg, 'get' ) ) {
-				$dbgCfg = (bool)$cfg->get( 'LayersDebug' );
-			} else {
-				$dbgCfg = false;
-			}
-			if ( is_object( $sktemplate ) ) {
-				$req = method_exists( $sktemplate, 'getRequest' )
-					? $sktemplate->getRequest()
-					: ( method_exists( $sktemplate, 'getContext' )
-						? $sktemplate->getContext()->getRequest()
-						: null );
-				if ( $req && method_exists( $req, 'getVal' ) ) {
-					$paramDbg = $req->getVal( 'layersdebug' );
-					// Only honor request param when config debug is enabled
-					if ( $dbgCfg && $paramDbg !== null ) {
-						$val = strtolower( trim( (string)$paramDbg ) );
-						if ( $val === '1' || $val === 'true' || $val === 'yes' ) {
-							$dbg = true;
-						} elseif ( $val === '0' || $val === 'false' || $val === 'no' ) {
-							$dbg = false;
-						}
-					}
+			$cfg = $sktemplate->getConfig();
+			$dbgCfg = (bool)$cfg->get( 'LayersDebug' );
+			$req = $sktemplate->getRequest();
+			$paramDbg = $req->getVal( 'layersdebug' );
+			// Only honor request param when config debug is enabled
+			if ( $dbgCfg && $paramDbg !== null ) {
+				$val = strtolower( trim( (string)$paramDbg ) );
+				if ( $val === '1' || $val === 'true' || $val === 'yes' ) {
+					$dbg = true;
+				} elseif ( $val === '0' || $val === 'false' || $val === 'no' ) {
+					$dbg = false;
 				}
 			}
 			// Default to config if request param didn't set it
-			if ( !isset( $dbg ) || $dbg === false ) {
+			if ( $dbg === false ) {
 				$dbg = (bool)$dbgCfg;
 			}
 		} catch ( \Throwable $e ) {
 			// Fail silently on config access errors - default to no debug
-			// This can happen during early initialization
 		}
 		$log = static function ( $msg ) use ( $dbg ) {
 			if ( !$dbg ) {
 				return;
 			}
 			try {
-				if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-					$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-					$logger->info( '[Tab] ' . $msg );
-				}
+				\MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' )->info( '[Tab] ' . $msg );
 			} catch ( \Throwable $e ) {
-				// Fail silently if logger unavailable - cannot log about logging failure
+				// Fail silently if logger unavailable
 			}
 		};
-		// Be defensive about how we get Title/User across skins/versions
-		$title = null;
-		if ( is_object( $sktemplate ) ) {
-			if ( method_exists( $sktemplate, 'getTitle' ) ) {
-				$title = $sktemplate->getTitle();
-			} elseif ( method_exists( $sktemplate, 'getContext' ) ) {
-				$ctx = $sktemplate->getContext();
-				$title = $ctx && method_exists( $ctx, 'getTitle' ) ? $ctx->getTitle() : null;
-			}
-		}
-
-		$user = null;
-		if ( is_object( $sktemplate ) ) {
-			if ( method_exists( $sktemplate, 'getUser' ) ) {
-				$user = $sktemplate->getUser();
-			} elseif ( method_exists( $sktemplate, 'getContext' ) ) {
-				$ctx = $sktemplate->getContext();
-				$user = $ctx && method_exists( $ctx, 'getUser' ) ? $ctx->getUser() : null;
-			}
-		}
+		$title = $sktemplate->getTitle();
+		$user = $sktemplate->getUser();
 
 		// Only add to file pages
 		if ( !$title || !$title->inNamespace( NS_FILE ) ) {
@@ -107,43 +66,17 @@ class UIHooks {
 			return;
 		}
 
-		// Only add for users with editlayers permission (unless debugging enabled)
-		if ( !$user ) {
-			$log( 'Skip: no user object' );
-			if ( !$dbg ) {
-				return;
-			}
-		}
-
-		if ( $user && !method_exists( $user, 'isAllowed' ) ) {
-			$log( 'Skip: user object has no isAllowed method' );
-			if ( !$dbg ) {
-				return;
-			}
-		}
-
-		// Check editlayers permission using PermissionManager for consistency
+		// Check editlayers permission using PermissionManager (unless debugging enabled)
 		$hasEditLayersPermission = false;
 		try {
-			$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
-				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-				: null;
-			if ( $services && method_exists( $services, 'getPermissionManager' ) ) {
-				$permManager = $services->getPermissionManager();
-				$hasEditLayersPermission = $permManager->userHasRight( $user, 'editlayers' );
-			} elseif ( $user && method_exists( $user, 'isAllowed' ) ) {
-				$hasEditLayersPermission = $user->isAllowed( 'editlayers' );
-			}
+			$permManager = MediaWikiServices::getInstance()->getPermissionManager();
+			$hasEditLayersPermission = $permManager->userHasRight( $user, 'editlayers' );
 		} catch ( \Throwable $e ) {
-			// If permission check fails, default to false
 			$hasEditLayersPermission = false;
 		}
 
 		if ( !$hasEditLayersPermission ) {
-			$userGroups = [];
-			if ( $user && method_exists( $user, 'getEffectiveGroups' ) ) {
-				$userGroups = $user->getEffectiveGroups();
-			}
+			$userGroups = $user->getEffectiveGroups();
 			$log( 'Skip: user missing editlayers permission - user groups: ' . implode( ',', $userGroups ) );
 			if ( !$dbg ) {
 				return;
@@ -151,25 +84,19 @@ class UIHooks {
 		}
 
 		// Do not block on config; if set explicitly false, skip
-		$config = method_exists( $sktemplate, 'getConfig' ) ? $sktemplate->getConfig() : null;
-		if ( $config && method_exists( $config, 'get' ) ) {
-			try {
-				if ( $config->get( 'LayersEnable' ) === false ) {
-					$log( 'Skip: LayersEnable=false' );
-					return;
-				}
-			} catch ( \Throwable $e ) {
-				// ignore
+		try {
+			if ( $sktemplate->getConfig()->get( 'LayersEnable' ) === false ) {
+				$log( 'Skip: LayersEnable=false' );
+				return;
 			}
+		} catch ( \Throwable $e ) {
+			// ignore
 		}
 
 		// Optionally check file existence (relaxed: show tab even if lookup fails)
 		try {
-			$services = class_exists( '\\MediaWiki\\MediaWikiServices' )
-				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-				: null;
-			$repoGroup = $services ? $services->getRepoGroup() : null;
-			$file = $repoGroup ? $repoGroup->findFile( $title ) : null;
+			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+			$file = $repoGroup->findFile( $title );
 			// Do not return early if missing; still offer the tab to start the editor
 		} catch ( \Throwable $e ) {
 			// Ignore lookup errors
@@ -178,15 +105,10 @@ class UIHooks {
 		// Determine if our tab is the selected action
 		$isSelected = false;
 		try {
-			// $req may already be set above
-			if ( !$req && is_object( $sktemplate ) ) {
-				$req = method_exists( $sktemplate, 'getRequest' )
-					? $sktemplate->getRequest()
-					: ( method_exists( $sktemplate, 'getContext' )
-						? $sktemplate->getContext()->getRequest()
-						: null );
+			if ( !$req ) {
+				$req = $sktemplate->getRequest();
 			}
-			$isSelected = $req && method_exists( $req, 'getVal' ) && $req->getVal( 'action' ) === 'editlayers';
+			$isSelected = $req->getVal( 'action' ) === 'editlayers';
 			$log( 'Selected? ' . ( $isSelected ? 'yes' : 'no' ) );
 		} catch ( \Throwable $e ) {
 			$isSelected = false;
@@ -195,7 +117,7 @@ class UIHooks {
 		// Create edit layers tab data
 		$editLayersTab = [
 			'class' => $isSelected ? 'selected' : false,
-			'text' => ( \function_exists( 'wfMessage' ) ? \wfMessage( 'layers-editor-title' )->text() : 'Edit layers' ),
+			'text' => \wfMessage( 'layers-editor-title' )->text(),
 			'href' => self::getEditLayersURL( $title ),
 			'context' => 'main',
 		];
@@ -331,9 +253,7 @@ class UIHooks {
 
 		} catch ( \Throwable $e ) {
 			// Fail silently - don't break the file page
-			if ( \function_exists( 'wfDebugLog' ) ) {
-				\wfDebugLog( 'Layers', 'UIHooks::onImagePageAfterImageLinks error: ' . $e->getMessage() );
-			}
+			\wfDebugLog( 'Layers', 'UIHooks::onImagePageAfterImageLinks error: ' . $e->getMessage() );
 		}
 
 		return true;
@@ -397,11 +317,8 @@ class UIHooks {
 	 */
 	private static function buildLayerSetsSection( $title, array $namedSets ): string {
 		$msg = static function ( $key, $default = '' ) {
-			if ( \function_exists( 'wfMessage' ) ) {
-				$message = \wfMessage( $key );
-				return $message->exists() ? $message->text() : $default;
-			}
-			return $default;
+			$message = \wfMessage( $key );
+			return $message->exists() ? $message->text() : $default;
 		};
 
 		$headerText = $msg( 'layers-filepage-section-title', 'Layer Annotations' );

@@ -17,11 +17,6 @@ use MediaWiki\MediaWikiServices;
 
 // Avoid direct hard dependency on MediaWiki classes for static analysis
 
-// Define constants if not already defined
-if ( !defined( 'NS_FILE' ) ) {
-	define( 'NS_FILE', 6 );
-}
-
 class Hooks {
 	/**
 	 * Extension registration callback.
@@ -135,41 +130,9 @@ class Hooks {
 			if ( class_exists( '\MediaWiki\Logger\LoggerFactory' ) ) {
 				$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
 			} else {
-				// Fallback logger that uses wfDebugLog (safer than error_log)
-				$logger = new class {
-					/**
-					 * Log an informational message
-					 * @param string $message
-					 * @param array $context
-					 * @return void
-					 */
-					public function info( $message, $context = [] ) {
-						wfDebugLog( 'Layers', "INFO: $message" );
-					}
-
-					/**
-					 * Log an error message
-					 * @param string $message
-					 * @param array $context
-					 * @return void
-					 */
-					public function error( $message, $context = [] ) {
-						wfDebugLog( 'Layers', "ERROR: $message" );
-						if ( isset( $context['exception'] ) ) {
-							wfDebugLog( 'Layers', "Exception: " . $context['exception'] );
-						}
-					}
-
-					/**
-					 * Log a warning message
-					 * @param string $message
-					 * @param array $context
-					 * @return void
-					 */
-					public function warning( $message, $context = [] ) {
-						wfDebugLog( 'Layers', "WARNING: $message" );
-					}
-				};
+				// Fully PSR-3 compliant fallback — NullLogger silently discards
+				// all log messages when LoggerFactory is unavailable (P2-050)
+				$logger = new \Psr\Log\NullLogger();
 			}
 		}
 		return $logger;
