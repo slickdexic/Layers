@@ -25,6 +25,7 @@
 		"node_modules/",
 		"vendor/",
 		"docs/api/",
+		"TempToolIcons/",
 		"**/*.ts"
 	],
 	"rules": {
