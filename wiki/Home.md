@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C152%20passing-brightgreen" alt="11,152 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C139%20passing-brightgreen" alt="11,139 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
@@ -20,14 +20,13 @@
 
 ---
 
-## 🆕 What's New in v1.5.56
+## 🆕 What's New in v1.5.57
 
-- **Grade A Codebase** — All code issues (HIGH, MEDIUM, LOW) resolved across 35 review cycles
-- **6 P3 Fixes** — SHA1 DRY violation, cache invalidation, hitTest alignment, regex validation, dead code removal
-- **Strict Validation** — ColorValidator now rejects malformed alpha values like `1.2.3`
-- **Documentation Sync** — All metrics updated to accurate February 2026 values
+- **Documentation Sync** — All metrics synchronized across 97+ files (February 13, 2026)
+- **VERSION Constant** — LayersNamespace.js now matches extension.json
+- **v37 Audit** — Fresh comprehensive code review, grade A maintained
 
-### Previous v1.5.55 Highlights
+### Previous v1.5.56 Highlights
 
 - **10 Bug Fixes** — Transaction safety, TextSanitizer XSS, info disclosure, boolean serialization
 - **FontSize Bug** — Rich text fontSize no longer overwritten on deselect (user-reported P1-025)
@@ -302,21 +301,21 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.56 |
-| **Version (REL1_43)** | 1.5.56 |
-| **Version (REL1_39)** | 1.5.56 |
-| **Release Date** | February 12, 2026 |
-| **Test Suites** | 164 |
-| **Total Tests** | 11,152 |
+| **Version (main)** | 1.5.57 |
+| **Version (REL1_43)** | 1.5.57 |
+| **Version (REL1_39)** | 1.5.57 |
+| **Release Date** | February 13, 2026 |
+| **Test Suites** | 163 |
+| **Total Tests** | 11,139 |
 | **PHPUnit Test Files** | 31 |
 | **Statement Coverage** | 95.19% |
 | **Branch Coverage** | 84.96% |
 | **Function Coverage** | 93.67% |
 | **Line Coverage** | 95.32% |
-| **JavaScript Files** | 139 |
-| **ES6 Classes** | 139 |
-| **God Classes** | 21 (2 generated, 17 JS, 2 PHP) |
-| **i18n Messages** | 741 |
+| **JavaScript Files** | 140 |
+| **ES6 Classes** | 140 |
+| **God Classes** | 16 (2 generated, 12 JS, 2 PHP) |
+| **i18n Messages** | 816 |
 
 ---
 

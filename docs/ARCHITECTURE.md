@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** February 12, 2026
-**Version:** 1.5.56
+**Last Updated:** February 13, 2026
+**Version:** 1.5.57
 
 ---
 
@@ -17,28 +17,28 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (February 12, 2026)
+## Codebase Statistics (February 13, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **139** |
-| Total JS lines | **~96,144** |
+| Total JS files | **140** |
+| Total JS lines | **~96,877** |
 | Total PHP files | **39** |
-| Total PHP lines | **~15,308** |
+| Total PHP lines | **~15,330** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~14,354 lines (generated) |
-| ES6 classes | **139** |
+| ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.19% stmt, 84.96% branch** |
-| Jest tests | **11,152** (164 suites) |
+| Jest tests | **11,139** (163 suites) |
 | PHPUnit test files | 31 |
-| God classes (>1000 lines) | **21** (2 generated, 17 JS, 2 PHP) |
+| God classes (>1000 lines) | **16** (2 generated, 12 JS, 2 PHP) |
 | Drawing tools | **15** |
 | Shape library | **5,116 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **741** |
+| i18n messages | **816** |
 | eslint-disable comments | **11** ✅ |
 
 ---
@@ -685,7 +685,7 @@ window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
 ```javascript
 window.Layers = {
-    VERSION: '1.5.56',
+    VERSION: '1.5.57',
     Editor: LayersEditor,
     Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
     UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm, LayerItemFactory },

@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.56 (February 12, 2026)  
+> **Version:** 1.5.57 (February 13, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -309,19 +309,19 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,308 lines across 39 files**
-- **Frontend:** HTML5 Canvas editor with **139 JS files (~96,144 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,330 lines across 39 files**
+- **Frontend:** HTML5 Canvas editor with **140 JS files (~96,877 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **21 god classes** (files >1,000 lines), all use proper delegation patterns
+- **Technical Debt:** **16 god classes** (files >1,000 lines), all use proper delegation patterns
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
-  - All other god classes have proper facade/delegation patterns
+  - All other god classes (12 JS + 2 PHP) have proper facade/delegation patterns
 
 **Test Coverage (Verified February 2, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,152 passing (164 suites) |
+| Jest tests | 11,139 passing (163 suites) |
 | PHPUnit tests | 31 test files |
 | Statement coverage | 95.19% |
 | Branch coverage | 84.96% |
@@ -377,11 +377,11 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 139 | ✅ |
-| Total JS lines | ~96,144 | ✅ Hand-written (+ ~14,354 generated) |
-| ES6 classes | 139 | ✅ 100% migrated |
-| God classes (>1000 lines) | 21 | ✅ Well-delegated facades |
-| Tests passing | 11,152 | ✅ |
+| Total JS files | 140 | ✅ |
+| Total JS lines | ~96,877 | ✅ Hand-written (+ ~14,354 generated) |
+| ES6 classes | 140 | ✅ 100% migrated |
+| God classes (>1000 lines) | 16 | ✅ Well-delegated facades |
+| Tests passing | 11,139 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.19% | ✅ Excellent |
 | Branch coverage | 84.96% | ✅ Target met |
