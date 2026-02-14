@@ -653,7 +653,7 @@
 					this.ctx.globalCompositeOperation = String( layer.blend );
 				} catch ( blendError ) {
 					// Invalid blend mode - fall back to default 'source-over'
-					mw.log.warn( '[CanvasRenderer] Invalid blend mode "' + layer.blend + '":', blendError.message );
+					mw.log.warn( `[CanvasRenderer] Invalid blend mode "${layer.blend}":`, blendError.message );
 					this.ctx.globalCompositeOperation = 'source-over';
 				}
 			}

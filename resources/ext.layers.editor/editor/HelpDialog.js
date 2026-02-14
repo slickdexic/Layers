@@ -70,41 +70,17 @@
 		 * Show the help dialog
 		 */
 		show() {
-			console.log( '[Layers] HelpDialog.show() called' );
 			if ( this.dialog ) {
-				console.log( '[Layers] HelpDialog already open, returning' );
 				return; // Already open
 			}
 
 			try {
-				console.log( '[Layers] Creating overlay...' );
 				this.createOverlay();
-				console.log( '[Layers] Creating dialog...' );
 				this.createDialog();
-				console.log( '[Layers] Rendering content...' );
 				this.renderContent();
 
-				console.log( '[Layers] Appending to body...' );
-				console.log( '[Layers] document.body:', document.body );
-				console.log( '[Layers] body dimensions:', document.body.offsetWidth, 'x', document.body.offsetHeight );
-				console.log( '[Layers] in iframe:', window.frameElement !== null );
-				console.log( '[Layers] window dimensions:', window.innerWidth, 'x', window.innerHeight );
 				document.body.appendChild( this.overlay );
 				document.body.appendChild( this.dialog );
-				console.log( '[Layers] Dialog appended successfully' );
-				console.log( '[Layers] overlay in DOM:', document.body.contains( this.overlay ) );
-				console.log( '[Layers] dialog in DOM:', document.body.contains( this.dialog ) );
-				console.log( '[Layers] overlay computed style:', window.getComputedStyle( this.overlay ).display );
-				console.log( '[Layers] dialog computed style:', window.getComputedStyle( this.dialog ).display );
-				console.log( '[Layers] dialog dimensions:', this.dialog.offsetWidth, 'x', this.dialog.offsetHeight );
-				console.log( '[Layers] dialog getBoundingClientRect:', JSON.stringify( this.dialog.getBoundingClientRect() ) );
-				console.log( '[Layers] overlay getBoundingClientRect:', JSON.stringify( this.overlay.getBoundingClientRect() ) );
-				// Check for elements potentially covering the dialog
-				const rect = this.dialog.getBoundingClientRect();
-				const centerX = rect.left + rect.width / 2;
-				const centerY = rect.top + rect.height / 2;
-				const elementAtCenter = document.elementFromPoint( centerX, centerY );
-				console.log( '[Layers] element at dialog center:', elementAtCenter );
 
 				// Focus first tab button
 				const firstTab = this.dialog.querySelector( '.layers-help-tab' );
@@ -120,7 +96,9 @@
 				};
 				document.addEventListener( 'keydown', this.handleKeydown );
 			} catch ( error ) {
-				console.error( '[Layers] HelpDialog.show() error:', error );
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[HelpDialog] show() error:', error );
+				}
 			}
 		}
 
@@ -133,10 +111,6 @@
 			this.overlay.className = 'layers-help-overlay';
 			this.overlay.setAttribute( 'role', 'presentation' );
 			this.overlay.addEventListener( 'click', () => this.close() );
-			// DEBUG: Add inline styles to ensure visibility
-			// Editor has z-index 999999, so we need to be above that
-			this.overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999999;';
-			console.log( '[Layers] overlay created:', this.overlay );
 		}
 
 		/**
@@ -149,10 +123,6 @@
 			this.dialog.setAttribute( 'role', 'dialog' );
 			this.dialog.setAttribute( 'aria-modal', 'true' );
 			this.dialog.setAttribute( 'aria-label', this.getMessage( 'layers-help-title', 'Layers Editor Help' ) );
-			// DEBUG: Add inline styles to ensure visibility
-			// Editor has z-index 999999, so we need to be above that
-			this.dialog.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;z-index:9999999;width:90%;max-width:700px;max-height:80vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.3);display:flex;flex-direction:column;overflow:hidden;';
-			console.log( '[Layers] dialog created:', this.dialog );
 
 			// Header with title and close button
 			const header = document.createElement( 'div' );

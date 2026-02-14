@@ -232,7 +232,7 @@
 
 			// Use MediaWiki logging if available
 			if ( window.mw && window.mw.log ) {
-				mw.log.error( 'Layers Error: ' + errorInfo.context + ' - ' + errorInfo.message );
+				mw.log.error( `Layers Error: ${errorInfo.context} - ${errorInfo.message}` );
 			}
 		}
 

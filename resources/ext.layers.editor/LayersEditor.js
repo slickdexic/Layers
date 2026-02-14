@@ -1133,11 +1133,6 @@ class LayersEditor {
 	 */
 	showHelpDialog() {
 		const HelpDialog = window.Layers && window.Layers.UI && window.Layers.UI.HelpDialog;
-		// Debug logging
-		console.log( '[Layers] showHelpDialog called' );
-		console.log( '[Layers] window.Layers:', window.Layers );
-		console.log( '[Layers] window.Layers.UI:', window.Layers && window.Layers.UI );
-		console.log( '[Layers] HelpDialog class:', HelpDialog );
 		if ( HelpDialog ) {
 			if ( !this.helpDialog ) {
 				this.helpDialog = new HelpDialog();
@@ -1145,10 +1140,10 @@ class LayersEditor {
 			this.helpDialog.show();
 		} else if ( this.dialogManager ) {
 			// Fallback to shortcuts dialog if HelpDialog not loaded
-			console.log( '[Layers] HelpDialog not found, falling back to shortcuts dialog' );
+			this.debugLog( '[Layers] HelpDialog not found, falling back to shortcuts dialog' );
 			this.dialogManager.showKeyboardShortcutsDialog();
 		} else {
-			console.log( '[Layers] Neither HelpDialog nor dialogManager available' );
+			this.debugLog( '[Layers] Neither HelpDialog nor dialogManager available' );
 		}
 	}
 

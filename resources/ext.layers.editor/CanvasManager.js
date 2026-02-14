@@ -82,7 +82,7 @@
 		} catch ( e ) {
 			// Global scope access failed - expected in some restricted environments
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[CanvasManager] findClass failed for "' + name + '":', e.message );
+				mw.log.warn( `[CanvasManager] findClass failed for "${name}":`, e.message );
 			}
 		}
 		return undefined;
@@ -1975,7 +1975,7 @@ class CanvasManager {
 						this[ name ].destroy();
 					} catch ( e ) {
 						if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-							mw.log.warn( '[CanvasManager] Error destroying ' + name + ':', e.message );
+							mw.log.warn( `[CanvasManager] Error destroying ${name}:`, e.message );
 						}
 					}
 				}

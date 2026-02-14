@@ -142,7 +142,7 @@ class StateManager {
 		// No existing operation for this key, add new one
 		if ( this.pendingOperations.length >= MAX_PENDING_OPERATIONS ) {
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[StateManager] Pending operations queue full (' + MAX_PENDING_OPERATIONS + '), coalescing operations' );
+				mw.log.warn( `[StateManager] Pending operations queue full (${MAX_PENDING_OPERATIONS}), coalescing operations` );
 			}
 			// Try to coalesce with update operations instead of dropping
 			this._coalesceIntoUpdate( key, value );
@@ -240,7 +240,7 @@ class StateManager {
 		// No existing update operation, add new one or coalesce with sets
 		if ( this.pendingOperations.length >= MAX_PENDING_OPERATIONS ) {
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[StateManager] Pending operations queue full (' + MAX_PENDING_OPERATIONS + '), coalescing update operations' );
+				mw.log.warn( `[StateManager] Pending operations queue full (${MAX_PENDING_OPERATIONS}), coalescing update operations` );
 			}
 			// Convert pending set operations into a single update
 			const coalescedUpdates = Object.assign( {}, updates );
@@ -311,7 +311,7 @@ class StateManager {
 		if ( this.lockStuckSince ) {
 			const stuckDuration = Date.now() - this.lockStuckSince;
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[StateManager] Recovered from stuck lock after ' + stuckDuration + 'ms' );
+				mw.log.warn( `[StateManager] Recovered from stuck lock after ${stuckDuration}ms` );
 			}
 			this.lockStuckSince = null;
 		}
@@ -405,7 +405,7 @@ class StateManager {
 
 		if ( wasLocked ) {
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[StateManager] Force unlock triggered (' + ( reason || 'manual' ) + '), ' + pendingCount + ' pending operations' );
+				mw.log.warn( `[StateManager] Force unlock triggered (${reason || 'manual'}), ${pendingCount} pending operations` );
 			}
 		}
 
