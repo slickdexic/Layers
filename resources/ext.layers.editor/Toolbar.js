@@ -1531,13 +1531,18 @@
 		separator2.className = 'toolbar-separator';
 		actionGroup.appendChild( separator2 );
 
-		// Help button for keyboard shortcuts
+		// Help button - shows built-in user guide
 		const helpButton = document.createElement( 'button' );
 		helpButton.className = 'toolbar-button help-button';
-		helpButton.textContent = '?';
-		helpButton.title = t( 'layers-keyboard-shortcuts', 'Keyboard Shortcuts' ) + ' (Shift+?)';
-		helpButton.setAttribute( 'aria-label', t( 'layers-keyboard-shortcuts', 'Keyboard Shortcuts' ) );
-		helpButton.dataset.action = 'show-shortcuts';
+		// Book/help icon
+		helpButton.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<circle cx="12" cy="12" r="10"/>
+			<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+			<line x1="12" y1="17" x2="12.01" y2="17"/>
+		</svg>`;
+		helpButton.title = t( 'layers-help-title', 'Help' ) + ' (Shift+?)';
+		helpButton.setAttribute( 'aria-label', t( 'layers-help-title', 'Help' ) );
+		helpButton.dataset.action = 'show-help';
 		actionGroup.appendChild( helpButton );
 
 		// Save and Cancel buttons
@@ -1777,6 +1782,9 @@
 				break;
 			case 'show-shortcuts':
 				this.editor.showKeyboardShortcutsDialog();
+				break;
+			case 'show-help':
+				this.editor.showHelpDialog();
 				break;
 		}
 	}

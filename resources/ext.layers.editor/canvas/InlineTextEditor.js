@@ -902,7 +902,7 @@
 			// Use setTimeout to allow click events and toolbar interactions to process first.
 			// 250ms gives dropdowns/color pickers enough time to set their interaction flags
 			// before this handler checks them (was 150ms, causing race with 100ms toolbar opens).
-			setTimeout( () => {
+			this._blurTimeout = setTimeout( () => {
 				// Don't finish editing if we're interacting with the toolbar or a dialog
 				// Check both the local flag and the toolbar instance
 				const toolbarInteracting = this._isToolbarInteraction ||
@@ -968,6 +968,12 @@
 			if ( this._inputDebounceTimer ) {
 				clearTimeout( this._inputDebounceTimer );
 				this._inputDebounceTimer = null;
+			}
+
+			// Clean up blur timeout
+			if ( this._blurTimeout ) {
+				clearTimeout( this._blurTimeout );
+				this._blurTimeout = null;
 			}
 
 			if ( this._boundSelectionChangeHandler ) {
@@ -1079,8 +1085,8 @@
 		 */
 		_getSelectionFormatInfo() {
 			const info = {
-				fontSize: this.editingLayer?.fontSize || 16,
-				fontFamily: this.editingLayer?.fontFamily || 'Arial',
+				fontSize: ( this.editingLayer && this.editingLayer.fontSize ) || 16,
+				fontFamily: ( this.editingLayer && this.editingLayer.fontFamily ) || 'Arial',
 				backgroundColor: null,
 				fontSizeFromDOM: false
 			};
