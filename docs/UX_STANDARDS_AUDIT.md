@@ -1,7 +1,7 @@
 # UX Standards Audit - Layers Editor vs Industry Standards
 
 **Date:** February 12, 2026  
-**Version:** 1.5.56  
+**Version:** 1.5.57  
 **Compared Against:** Figma, Canva, Adobe Photoshop, Sketch, Google Drawings
 
 ---

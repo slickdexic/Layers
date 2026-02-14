@@ -1,7 +1,7 @@
 # PHP Codebase Critical Review — Layers Extension
 
 **Review Date:** June 2025  
-**Scope:** All PHP source files (~39 files, ~15,034 lines)  
+**Scope:** All PHP source files (~40 files, ~15,081 lines)  
 **Reviewer:** Automated Critical Review  
 
 ---

@@ -97,7 +97,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `LayerItemFactory.js` (~299 lines) - layer list item DOM creation
     - `LayerListRenderer.js` - layer list rendering
     - `LayerDragDrop.js` - drag and drop reordering
-    - `PropertiesForm.js` (~914 lines) - layer properties panel factory, delegates to PropertyBuilders
+    - `PropertiesForm.js` (~993 lines) - layer properties panel factory, delegates to PropertyBuilders
     - `PropertyBuilders.js` (~1,464 lines) - reusable property group builders (dimensions, text, alignment, etc.) [GOD CLASS]
     - `GradientEditor.js` (~350 lines) - gradient fill editor UI with color stops, type selection, angle/position sliders
     - `ConfirmDialog.js` - confirmation dialogs
@@ -116,8 +116,8 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - **God classes:** 16 files exceed 1,000 lines:
     - **Generated data files (exempt):** ShapeLibraryData.js (~11,299 lines), EmojiLibraryIndex.js (~3,055 lines)
     - **Hand-written JS files (12):** LayerPanel (~2,191), CanvasManager (~2,053), Toolbar (~1,891), LayersEditor (~1,846), InlineTextEditor (~1,672), APIManager (~1,570), PropertyBuilders (~1,495), SelectionManager (~1,415), CanvasRenderer (~1,391), ViewerManager (~1,320), SlideController (~1,131), TextBoxRenderer (~1,120)
-    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,346 lines), LayersDatabase.php (~1,363 lines)
-    - **Near-threshold files (10):** ToolbarStyleControls (~998), PropertiesForm (~994), GroupManager (~987), TransformController (~985), ArrowRenderer (~974), LayerRenderer (~973), CalloutRenderer (~961), ShapeRenderer (~959), ResizeCalculator (~963), LayersValidator (~935)
+    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,383 lines), LayersDatabase.php (~1,369 lines)
+    - **Near-threshold files (10):** ToolbarStyleControls (~998), PropertiesForm (~993), GroupManager (~987), TransformController (~985), ArrowRenderer (~974), LayerRenderer (~973), CalloutRenderer (~961), ShapeRenderer (~959), ResizeCalculator (~963), LayersValidator (~935)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.emojiPicker/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -436,10 +436,10 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,139 tests in 163 suites — verified February 14, 2026)
+- Test count (11,122 tests in 162 suites — verified February 14, 2026)
 - Coverage (95.19% statement, 84.96% branch — verified February 8, 2026)
-- JavaScript file count (140 files total, ~96,877 lines)
-- PHP file count (39 files, ~15,330 lines)
+- JavaScript file count (140 files total, ~96,943 lines)
+- PHP file count (40 files, ~15,081 lines)
 - God class count (16 files >1,000 lines; 2 generated data files, 12 JS, 2 PHP)
 - ESLint disable count (11 - all legitimate)
 - Drawing tool count (17 tools)

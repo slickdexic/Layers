@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 4 | 4 | 0 |
 | P1 | 31 | 31 | 0 |
 | P2 | 68 | 68 | 0 |
-| P3 | 72 | 63 | 9 |
-| **Total** | **175** | **166** | **9** |
+| P3 | 72 | 68 | 4 |
+| **Total** | **175** | **171** | **4** |
 
 ---
 
@@ -499,21 +499,17 @@ All P0 issues have been fixed.
 
 ### ✅ P3-010: services.php Missing strict_types (Fixed v30)
 
-### ❌ P3-011: Version Numbers Stale Across 10+ Documents
+### ❌ P3-011: Version Numbers Stale Across 10+ Documents — ✅ RESOLVED
 
-- **Impact:** Version 1.5.56 or older in 10+ files; actual is 1.5.57
-- **Files:** README.md, ARCHITECTURE.md, copilot-instructions.md,
-  LTS_BRANCH_STRATEGY.md, SLIDE_MODE.md, wiki/Home.md,
-  wiki/Installation.md (worst: 1.5.52), Mediawiki-Extension.mediawiki
+- **Fix:** Updated 1.5.56→1.5.57 in UX_STANDARDS_AUDIT.md, SLIDE_MODE.md,
+  LTS_BRANCH_STRATEGY.md (6 version references). Other files already correct.
 
 ### ❌ P3-012: PHPUnit Test Count Wrong in Files — ✅ RESOLVED
 
-### ❌ P3-013: i18n Key Count Wrong — WORSE (v36 update)
+### ❌ P3-013: i18n Key Count Wrong — ✅ RESOLVED
 
-- **Impact:** Documents claim 731 or 741 keys; actual is 816.
-  ~10% undercount across 4+ files.
-- **Files:** codebase_review.md (was 731), ARCHITECTURE.md,
-  wiki/Home.md, copilot-instructions.md
+- **Fix:** All key docs already show 816 (matching en.json). Original
+  731/741 counts were corrected in earlier sessions.
 
 ### ❌ P3-014: README Uses Wrong Slide Parameter — ✅ RESOLVED
 
@@ -551,14 +547,19 @@ All P0 issues have been fixed.
 
 - **Fix:** Already fixed in P3-059 (updated to 11,122 tests / 162 suites).
 
-### ❌ P3-025: JS/PHP Line Counts Slightly Off
+### ❌ P3-025: JS/PHP Line Counts Slightly Off — ✅ RESOLVED
 
-- **Impact:** Multiple documents show stale line counts. Actual:
-  140 JS files (~96,805 lines), 39 PHP files (~15,330 lines).
+- **Fix:** Updated across 8 files: JS 96,943 lines, PHP 40 files / 15,081 lines.
 
-### ❌ P3-026: SSLV.php Line Count Wrong in Docs
+### ❌ P3-026: SSLV.php Line Count Wrong in Docs — ✅ RESOLVED
 
-### ❌ P3-027: PropertiesForm.js Line Count Wrong
+- **Fix:** Updated SSLV 1,346/1,375→1,383 and LayersDatabase 1,363→1,369
+  across ARCHITECTURE.md, codebase_review.md, copilot-instructions.md.
+
+### ❌ P3-027: PropertiesForm.js Line Count Wrong — ✅ RESOLVED
+
+- **Fix:** Updated PropertiesForm 914/994/1,001→993 across 5 files.
+  Updated PropertyBuilders 1,284→1,495 in ARCHITECTURE.md.
 
 ### ❌ P3-028: God Class Count Wrong in Multiple Docs — ✅ RESOLVED
 

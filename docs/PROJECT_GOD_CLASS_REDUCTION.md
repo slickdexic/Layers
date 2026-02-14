@@ -427,7 +427,7 @@ This achieves the goal of bringing ArrowRenderer below the 1,000 line threshold.
 | ArrowRenderer.js | 1,310 | 971 | -25% | Phase 5 |
 | TextBoxRenderer.js | 1,117 | 993 | -11% | Phase 6 |
 | ToolbarStyleControls.js | 1,070 | 998 | -7% | Phase 7 |
-| PropertiesForm.js | 1,006 | 994 | -1% | Phase 8 |
+| PropertiesForm.js | 1,006 | 993 | -1% | Phase 8 |
 | ResizeCalculator.js | 1,105 | 995 | -10% | Phase 8 |
 
 ### New Extracted Modules (6 files)

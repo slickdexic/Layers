@@ -22,9 +22,9 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Metric | Value |
 |--------|-------|
 | Total JS files | **140** |
-| Total JS lines | **~96,877** |
-| Total PHP files | **39** |
-| Total PHP lines | **~15,330** |
+| Total JS lines | **~96,943** |
+| Total PHP files | **40** |
+| Total PHP lines | **~15,081** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
@@ -127,8 +127,8 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 **PHP God Classes:**
 | File | Lines | Notes |
 |------|-------|-------|
-| ServerSideLayerValidator.php | 1,346 | Validation complexity |
-| LayersDatabase.php | 1,363 | Uses delegation pattern |
+| ServerSideLayerValidator.php | 1,383 | Validation complexity |
+| LayersDatabase.php | 1,369 | Uses delegation pattern |
 
 **New God Classes (crossed 1,000 lines):**
 | File | Lines | Notes |
@@ -980,8 +980,8 @@ extensions/Layers/
 │   │   ├── ui/              # UI controllers (15+ files)
 │   │   │   ├── LayerListRenderer.js
 │   │   │   ├── VirtualLayerList.js  # NEW: Virtual scrolling
-│   │   │   ├── PropertyBuilders.js (1,284 lines)
-│   │   │   └── PropertiesForm.js (1,001 lines)
+│   │   │   ├── PropertyBuilders.js (1,495 lines)
+│   │   │   └── PropertiesForm.js (993 lines)
 │   │   ├── shapeLibrary/    # Shape & Emoji libraries (~14,000 lines)
 │   │   │   ├── ShapeLibraryData.js (~11,299 lines, generated)
 │   │   │   ├── EmojiLibraryIndex.js (~3,055 lines, generated)

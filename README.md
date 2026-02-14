@@ -309,8 +309,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,330 lines across 39 files**
-- **Frontend:** HTML5 Canvas editor with **140 JS files (~96,877 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,081 lines across 40 files**
+- **Frontend:** HTML5 Canvas editor with **140 JS files (~96,943 lines)**, 100+ ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **16 god classes** (files >1,000 lines), all use proper delegation patterns

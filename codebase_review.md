@@ -11,10 +11,10 @@
 - **Branch Reviewed:** main
 - **Coverage:** 95.19% statements, 84.96% branches, 93.67% functions,
     95.32% lines (coverage/coverage-summary.json)
-- **JS source files:** 140 files in `resources/` (~96,888 lines) *(excludes dist/)*
-- **PHP production files:** 39 in `src/` (~15,357 lines)
-- **Jest test suites:** 163
-- **Jest tests:** 11,139
+- **JS source files:** 140 files in `resources/` (~96,943 lines) *(excludes dist/)*
+- **PHP production files:** 40 in `src/` (~15,081 lines)
+- **Jest test suites:** 162
+- **Jest tests:** 11,122
 - **PHPUnit test files:** 31
 - **i18n message keys:** 816 (in en.json, all documented in qqq.json)
 - **API Modules:** 5 (layersinfo, layerssave, layersdelete, layersrename, layerslist)
@@ -595,7 +595,7 @@ defines it.
 
 | File | Lines |
 |------|-------|
-| ServerSideLayerValidator.php | 1,375 |
+| ServerSideLayerValidator.php | 1,383 |
 | LayersDatabase.php | 1,369 |
 
 ### Near-Threshold (900–999 lines — 10 files)
@@ -603,7 +603,7 @@ defines it.
 | File | Lines |
 |------|-------|
 | ToolbarStyleControls.js | 998 |
-| PropertiesForm.js | 994 |
+| PropertiesForm.js | 993 |
 | TransformController.js | 992 |
 | GroupManager.js | 987 |
 | LayerRenderer.js | 973 |
