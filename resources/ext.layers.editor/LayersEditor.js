@@ -867,7 +867,7 @@ class LayersEditor {
 			width: width,
 			height: height,
 			name: shapeData.nameKey ?
-				this.msg( shapeData.nameKey, shapeData.id.split( '/' ).pop() ) :
+				this.getMessage( shapeData.nameKey, shapeData.id.split( '/' ).pop() ) :
 				shapeData.id.split( '/' ).pop()
 		};
 
@@ -1124,6 +1124,30 @@ class LayersEditor {
 	showKeyboardShortcutsDialog() {
 		if ( this.dialogManager ) {
 			this.dialogManager.showKeyboardShortcutsDialog();
+		}
+	}
+
+	/**
+	 * Show the built-in help dialog
+	 */
+	showHelpDialog() {
+		const HelpDialog = window.Layers && window.Layers.UI && window.Layers.UI.HelpDialog;
+		// Debug logging
+		console.log( '[Layers] showHelpDialog called' );
+		console.log( '[Layers] window.Layers:', window.Layers );
+		console.log( '[Layers] window.Layers.UI:', window.Layers && window.Layers.UI );
+		console.log( '[Layers] HelpDialog class:', HelpDialog );
+		if ( HelpDialog ) {
+			if ( !this.helpDialog ) {
+				this.helpDialog = new HelpDialog();
+			}
+			this.helpDialog.show();
+		} else if ( this.dialogManager ) {
+			// Fallback to shortcuts dialog if HelpDialog not loaded
+			console.log( '[Layers] HelpDialog not found, falling back to shortcuts dialog' );
+			this.dialogManager.showKeyboardShortcutsDialog();
+		} else {
+			console.log( '[Layers] Neither HelpDialog nor dialogManager available' );
 		}
 	}
 
@@ -1660,6 +1684,12 @@ class LayersEditor {
 		if ( this.layerPanel && typeof this.layerPanel.destroy === 'function' ) {
 			this.layerPanel.destroy();
 		}
+
+		// Clean up help dialog
+		if ( this.helpDialog && typeof this.helpDialog.close === 'function' ) {
+			this.helpDialog.close();
+		}
+		this.helpDialog = null;
 
 		// Clean up DOM event listeners
 		this.cleanupDOMEventListeners();

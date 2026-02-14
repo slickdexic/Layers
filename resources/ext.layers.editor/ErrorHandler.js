@@ -483,6 +483,8 @@
 			switch ( strategy.action ) {
 				case 'refresh':
 					this.showRecoveryNotification( strategy.message );
+					// Save draft before reload to prevent unsaved work loss
+					this._saveDraftBeforeReload();
 					this._scheduleTimeout( () => {
 						window.location.reload();
 					}, 2000 );
@@ -490,6 +492,24 @@
 				case 'notify':
 					this.showRecoveryNotification( strategy.message );
 					break;
+			}
+		}
+
+		/**
+		 * Attempt to save the current draft before a page reload.
+		 * This prevents data loss when the error handler triggers auto-reload.
+		 *
+		 * @private
+		 */
+		_saveDraftBeforeReload() {
+			try {
+				const editor = window.layersEditorInstance;
+				if ( editor && editor.draftManager &&
+					typeof editor.draftManager.saveDraft === 'function' ) {
+					editor.draftManager.saveDraft();
+				}
+			} catch ( e ) {
+				// Best-effort — don't let draft save failure block recovery
 			}
 		}
 

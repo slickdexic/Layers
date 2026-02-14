@@ -199,7 +199,7 @@ class RenderCoordinator {
 		const parts = [ layers.length.toString() ];
 		for ( let i = 0; i < layers.length; i++ ) {
 			const layer = layers[ i ];
-			// Include key properties that affect rendering
+			// Include all properties that affect visual rendering
 			parts.push(
 				layer.id || '',
 				layer.x || 0,
@@ -207,8 +207,41 @@ class RenderCoordinator {
 				layer.width || 0,
 				layer.height || 0,
 				layer.rotation || 0,
-				layer.visible !== false ? '1' : '0',
-				layer.opacity || 1
+				layer.visible !== false && layer.visible !== 0 ? '1' : '0',
+				layer.opacity || 1,
+				// Style properties
+				layer.fill || '',
+				layer.stroke || '',
+				layer.strokeWidth || 0,
+				layer.fillOpacity !== undefined ? layer.fillOpacity : '',
+				layer.strokeOpacity !== undefined ? layer.strokeOpacity : '',
+				// Text properties
+				layer.text || '',
+				layer.fontSize || '',
+				layer.fontFamily || '',
+				layer.fontWeight || '',
+				layer.fontStyle || '',
+				layer.textAlign || '',
+				// Shape/line endpoints
+				layer.x1 || 0,
+				layer.y1 || 0,
+				layer.x2 || 0,
+				layer.y2 || 0,
+				layer.radius || 0,
+				// Effects
+				layer.shadow ? '1' : '0',
+				layer.shadowBlur || 0,
+				layer.blurRadius || 0,
+				layer.blendMode || '',
+				// Image source (use length to avoid huge strings)
+				layer.src ? layer.src.length : 0,
+				// Complex properties (use JSON length as proxy for changes)
+				layer.richText ? layer.richText.length : 0,
+				layer.gradient ? ( layer.gradient.type || '' ) : '',
+				layer.points ? layer.points.length : 0,
+				// Locked/name (affect rendering of selection handles)
+				layer.locked ? '1' : '0',
+				layer.name || ''
 			);
 		}
 		// Also include selection state and zoom/pan

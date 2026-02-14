@@ -426,9 +426,6 @@
 				if ( canvasMgr && typeof canvasMgr.renderLayers === 'function' ) {
 					canvasMgr.renderLayers( layers );
 				}
-				if ( canvasMgr && typeof canvasMgr.redraw === 'function' ) {
-					canvasMgr.redraw();
-				}
 			}
 			this.batchMode = false;
 			this.batchChanges = [];
