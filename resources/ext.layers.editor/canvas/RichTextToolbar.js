@@ -26,6 +26,7 @@
 	 * @param {boolean} options.isRichTextMode - Whether rich text formatting is supported
 	 * @param {HTMLElement} options.editorElement - The editor DOM element (for positioning)
 	 * @param {HTMLElement} options.containerElement - Container to append toolbar to
+	 * @param {string} [options.highlightColor='#ffff00'] - Initial highlight color (persists across sessions)
 	 * @param {Function} options.onFormat - Callback for format changes: (property, value) => void
 	 * @param {Function} options.onSaveSelection - Callback to save current selection
 	 * @param {Function} options.onFocusEditor - Callback to refocus the editor
@@ -37,6 +38,9 @@
 			this.isRichTextMode = options.isRichTextMode || false;
 			this.editorElement = options.editorElement || null;
 			this.containerElement = options.containerElement || null;
+
+			// Initial highlight color (persisted from previous edit sessions)
+			this._initialHighlightColor = options.highlightColor || '#ffff00';
 
 			// Debug: Track fontSize when toolbar is created
 			const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
@@ -447,12 +451,13 @@
 			wrapper.style.display = 'inline-flex';
 			wrapper.style.alignItems = 'stretch';
 
-			let currentColor = '#ffff00';
+			// Use initial highlight color from options (persisted from previous sessions)
+			let currentColor = this._initialHighlightColor;
 
 			// Main highlight button
 			const btn = document.createElement( 'button' );
 			btn.className = 'layers-text-toolbar-btn layers-text-toolbar-highlight-main';
-			btn.innerHTML = '<span style="background:#ffff00;padding:0 2px;">H</span>';
+			btn.innerHTML = `<span style="background:${ currentColor };padding:0 2px;">H</span>`;
 			btn.title = this.msg( 'layers-text-toolbar-highlight', 'Highlight' );
 			btn.setAttribute( 'data-format', 'highlight' );
 

@@ -102,6 +102,43 @@ describe( 'RichTextConverter', () => {
 
 	} );
 
+	describe( 'escapeCSSValue', () => {
+
+		it( 'should pass through simple values', () => {
+			expect( RichTextConverter.escapeCSSValue( 'bold' ) ).toBe( 'bold' );
+			expect( RichTextConverter.escapeCSSValue( 'Arial' ) ).toBe( 'Arial' );
+		} );
+
+		it( 'should remove quotes from values', () => {
+			expect( RichTextConverter.escapeCSSValue( '"Times New Roman"' ) ).toBe( 'Times New Roman' );
+			expect( RichTextConverter.escapeCSSValue( "'Arial'" ) ).toBe( 'Arial' );
+		} );
+
+		it( 'should preserve rgb() function syntax', () => {
+			expect( RichTextConverter.escapeCSSValue( 'rgb(255, 255, 0)' ) ).toBe( 'rgb(255, 255, 0)' );
+		} );
+
+		it( 'should preserve rgba() function syntax', () => {
+			expect( RichTextConverter.escapeCSSValue( 'rgba(255, 255, 0, 0.5)' ) ).toBe( 'rgba(255, 255, 0, 0.5)' );
+		} );
+
+		it( 'should preserve hsl() function syntax', () => {
+			expect( RichTextConverter.escapeCSSValue( 'hsl(60, 100%, 50%)' ) ).toBe( 'hsl(60, 100%, 50%)' );
+		} );
+
+		it( 'should remove dangerous characters that could enable injection', () => {
+			expect( RichTextConverter.escapeCSSValue( 'red; background: url(evil)' ) ).toBe( 'red background: url(evil)' );
+			expect( RichTextConverter.escapeCSSValue( 'value{injection}' ) ).toBe( 'valueinjection' );
+			expect( RichTextConverter.escapeCSSValue( 'test<script>' ) ).toBe( 'testscript' );
+		} );
+
+		it( 'should handle hex color values', () => {
+			expect( RichTextConverter.escapeCSSValue( '#ffff00' ) ).toBe( '#ffff00' );
+			expect( RichTextConverter.escapeCSSValue( '#ff0' ) ).toBe( '#ff0' );
+		} );
+
+	} );
+
 	describe( 'richTextToHtml', () => {
 
 		it( 'should return empty string for empty array', () => {
@@ -148,6 +185,18 @@ describe( 'RichTextConverter', () => {
 			const richText = [ { text: 'Highlighted', style: { backgroundColor: '#ffff00' } } ];
 			const html = RichTextConverter.richTextToHtml( richText );
 			expect( html ).toContain( 'background-color: #ffff00' );
+		} );
+
+		it( 'should preserve rgb() syntax in background color', () => {
+			const richText = [ { text: 'RGB', style: { backgroundColor: 'rgb(255, 255, 0)' } } ];
+			const html = RichTextConverter.richTextToHtml( richText );
+			expect( html ).toContain( 'background-color: rgb(255, 255, 0)' );
+		} );
+
+		it( 'should preserve rgba() syntax in background color', () => {
+			const richText = [ { text: 'RGBA', style: { backgroundColor: 'rgba(255, 255, 0, 0.5)' } } ];
+			const html = RichTextConverter.richTextToHtml( richText );
+			expect( html ).toContain( 'background-color: rgba(255, 255, 0, 0.5)' );
 		} );
 
 		it( 'should scale font size with displayScale', () => {

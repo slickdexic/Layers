@@ -69,6 +69,9 @@
 			// Display scale factor for coordinate/font conversions
 			// Updated in _positionEditor, used for font size scaling
 			this._displayScale = 1;
+
+			// Last used highlight color - persists across editing sessions
+			this._lastHighlightColor = '#ffff00';
 		}
 
 		/**
@@ -1174,7 +1177,14 @@
 				isRichTextMode: this._isRichTextMode,
 				editorElement: this.editorElement,
 				containerElement: this.containerElement,
-				onFormat: ( property, value ) => this._applyFormat( property, value ),
+				highlightColor: this._lastHighlightColor,
+				onFormat: ( property, value ) => {
+					// Track highlight color changes
+					if ( property === 'highlight' && value && value !== 'transparent' ) {
+						this._lastHighlightColor = value;
+					}
+					this._applyFormat( property, value );
+				},
 				onSaveSelection: () => this._saveSelection(),
 				onFocusEditor: () => {
 					const editableEl = this._getEditableElement();

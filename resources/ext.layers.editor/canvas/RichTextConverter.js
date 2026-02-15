@@ -45,12 +45,17 @@
 		 * break out of style attributes. Defense-in-depth: the server also
 		 * sanitizes fontFamily via sanitizeIdentifier() (P2-044).
 		 *
+		 * Note: Parentheses and commas are allowed for valid CSS functions
+		 * like rgb(), rgba(), hsl(), etc.
+		 *
 		 * @static
 		 * @param {string} value - CSS value to sanitize
 		 * @return {string} Safe CSS value
 		 */
 		static escapeCSSValue( value ) {
-			return String( value ).replace( /["'<>&;{}()\\]/g, '' );
+			// Remove characters that could break out of style attributes or enable injection
+			// but KEEP parentheses for valid CSS functions like rgb(), rgba(), hsl()
+			return String( value ).replace( /["'<>&;{}\\]/g, '' );
 		}
 
 		/**
