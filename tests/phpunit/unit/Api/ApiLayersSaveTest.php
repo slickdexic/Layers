@@ -3,7 +3,6 @@
 namespace MediaWiki\Extension\Layers\Tests\Unit\Api;
 
 use MediaWiki\Extension\Layers\Api\ApiLayersSave;
-use MediaWiki\Extension\Layers\Security\RateLimiter;
 
 /**
  * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave
@@ -383,23 +382,40 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * Test data size validation
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::execute
+	 * Test write-mode security contract
+	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::needsToken
+	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::isWriteMode
+	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::mustBePosted
 	 */
-	public function testDataSizeValidation() {
-		// This would require setting up a more complete mock
-		// For now, just verify the method exists
-		$this->assertTrue( method_exists( ApiLayersSave::class, 'execute' ) );
+	public function testWriteModeSecurityContract(): void {
+		$api = $this->createMockApi();
+
+		$this->assertSame( 'csrf', $api->needsToken() );
+		$this->assertTrue( $api->isWriteMode() );
+		$this->assertTrue( $api->mustBePosted() );
 	}
 
 	/**
-	 * Test rate limiting integration
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::execute
+	 * Test API parameter contract
+	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::getAllowedParams
 	 */
-	public function testRateLimitingIntegration() {
-		// This would require mocking the rate limiter
-		// For now, just verify the class exists
-		$this->assertTrue( class_exists( RateLimiter::class ) );
+	public function testGetAllowedParamsContract(): void {
+		$api = $this->createMockApi();
+		$params = $api->getAllowedParams();
+
+		$this->assertArrayHasKey( 'filename', $params );
+		$this->assertArrayHasKey( 'slidename', $params );
+		$this->assertArrayHasKey( 'data', $params );
+		$this->assertArrayHasKey( 'setname', $params );
+
+		$this->assertSame( 'string', $params['filename'][ApiLayersSave::PARAM_TYPE] );
+		$this->assertFalse( $params['filename'][ApiLayersSave::PARAM_REQUIRED] );
+		$this->assertSame( 'string', $params['slidename'][ApiLayersSave::PARAM_TYPE] );
+		$this->assertFalse( $params['slidename'][ApiLayersSave::PARAM_REQUIRED] );
+		$this->assertSame( 'string', $params['data'][ApiLayersSave::PARAM_TYPE] );
+		$this->assertTrue( $params['data'][ApiLayersSave::PARAM_REQUIRED] );
+		$this->assertSame( 'string', $params['setname'][ApiLayersSave::PARAM_TYPE] );
+		$this->assertFalse( $params['setname'][ApiLayersSave::PARAM_REQUIRED] );
 	}
 
 	/**

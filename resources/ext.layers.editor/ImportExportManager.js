@@ -252,7 +252,8 @@
 			// Re-render
 			if ( editor.canvasManager && typeof editor.canvasManager.renderLayers === 'function' ) {
 				const currentLayers = editor.stateManager ?
-					( editor.stateManager.get( 'layers' ) || [] ) : [];
+					( editor.stateManager.get( 'layers' ) || [] ) :
+					( Array.isArray( editor.layers ) ? editor.layers : [] );
 				editor.canvasManager.renderLayers( currentLayers );
 			}
 

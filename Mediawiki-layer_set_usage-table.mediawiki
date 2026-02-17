@@ -13,9 +13,9 @@ The '''layer_set_usage''' table tracks article usage for the [[Extension:Layers|
 {| class="wikitable"
 ! Column !! Type !! Nullable !! Default !! Description
 |-
-| <code>lsu_layer_set_id</code> || int unsigned || No || — || Layer set ID (foreign key to layer_sets.ls_id)
+| <code>lsu_layer_set_id</code> || int unsigned || No || — || Layer set ID
 |-
-| <code>lsu_page_id</code> || int unsigned || No || — || Page ID of the article using the layered image (foreign key to page.page_id)
+| <code>lsu_page_id</code> || int unsigned || No || — || Page ID of the article using the layered image
 |-
 | <code>lsu_timestamp</code> || binary(14) || No || — || When the usage was recorded
 |-
@@ -38,13 +38,8 @@ The '''layer_set_usage''' table tracks article usage for the [[Extension:Layers|
 
 == Foreign Keys ==
 
-{| class="wikitable"
-! Column !! References !! On Delete
-|-
-| <code>lsu_layer_set_id</code> || <code>layer_sets.ls_id</code> || CASCADE
-|-
-| <code>lsu_page_id</code> || <code>page.page_id</code> || CASCADE
-|}
+No database-level foreign keys are declared. Per MediaWiki convention,
+referential integrity is enforced at the application level.
 
 == Usage ==
 

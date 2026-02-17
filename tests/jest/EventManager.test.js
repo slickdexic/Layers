@@ -11,6 +11,16 @@ describe( 'EventManager', () => {
 	let eventManager;
 	let mockEditor;
 
+	// Helper function for creating keyboard events
+	const createKeyEvent = ( key, options = {} ) => ( {
+		key,
+		ctrlKey: options.ctrlKey || false,
+		metaKey: options.metaKey || false,
+		shiftKey: options.shiftKey || false,
+		target: options.target || document.createElement( 'div' ),
+		preventDefault: jest.fn()
+	} );
+
 	beforeEach( () => {
 		// Create mock editor
 		mockEditor = {
@@ -173,15 +183,6 @@ describe( 'EventManager', () => {
 	} );
 
 	describe( 'handleKeyDown', () => {
-		const createKeyEvent = ( key, options = {} ) => ( {
-			key,
-			ctrlKey: options.ctrlKey || false,
-			metaKey: options.metaKey || false,
-			shiftKey: options.shiftKey || false,
-			target: options.target || document.createElement( 'div' ),
-			preventDefault: jest.fn()
-		} );
-
 		it( 'should ignore shortcuts in INPUT elements', () => {
 			const input = document.createElement( 'input' );
 			const event = createKeyEvent( 'Delete', { target: input } );
@@ -283,23 +284,24 @@ describe( 'EventManager', () => {
 	} );
 
 	describe( 'handleUndo', () => {
-		it( 'should call editor.undo and renderLayers on success', () => {
+		it( 'should call editor.undo (renderLayers/markDirty are called by restoreState)', () => {
 			mockEditor.undo.mockReturnValue( true );
 
 			eventManager.handleUndo();
 
 			expect( mockEditor.undo ).toHaveBeenCalled();
-			expect( mockEditor.renderLayers ).toHaveBeenCalled();
-			expect( mockEditor.markDirty ).toHaveBeenCalled();
+			// Note: renderLayers and markDirty are NOT called here anymore
+			// They are called by HistoryManager.restoreState() to avoid double-render
+			expect( mockEditor.renderLayers ).not.toHaveBeenCalled();
+			expect( mockEditor.markDirty ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should not render when undo returns false', () => {
+		it( 'should call undo regardless of return value', () => {
 			mockEditor.undo.mockReturnValue( false );
 
 			eventManager.handleUndo();
 
 			expect( mockEditor.undo ).toHaveBeenCalled();
-			expect( mockEditor.renderLayers ).not.toHaveBeenCalled();
 		} );
 
 		it( 'should handle missing undo method', () => {
@@ -307,46 +309,223 @@ describe( 'EventManager', () => {
 
 			expect( () => eventManager.handleUndo() ).not.toThrow();
 		} );
-
-		it( 'should handle missing renderLayers method', () => {
-			mockEditor.undo.mockReturnValue( true );
-			eventManager.editor.renderLayers = undefined;
-
-			expect( () => eventManager.handleUndo() ).not.toThrow();
-		} );
-
-		it( 'should handle missing markDirty method', () => {
-			mockEditor.undo.mockReturnValue( true );
-			eventManager.editor.markDirty = undefined;
-
-			expect( () => eventManager.handleUndo() ).not.toThrow();
-		} );
 	} );
 
 	describe( 'handleRedo', () => {
-		it( 'should call editor.redo and renderLayers on success', () => {
+		it( 'should call editor.redo (renderLayers/markDirty are called by restoreState)', () => {
 			mockEditor.redo.mockReturnValue( true );
 
 			eventManager.handleRedo();
 
 			expect( mockEditor.redo ).toHaveBeenCalled();
-			expect( mockEditor.renderLayers ).toHaveBeenCalled();
-			expect( mockEditor.markDirty ).toHaveBeenCalled();
+			// Note: renderLayers and markDirty are NOT called here anymore
+			// They are called by HistoryManager.restoreState() to avoid double-render
+			expect( mockEditor.renderLayers ).not.toHaveBeenCalled();
+			expect( mockEditor.markDirty ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should not render when redo returns false', () => {
+		it( 'should call redo regardless of return value', () => {
 			mockEditor.redo.mockReturnValue( false );
 
 			eventManager.handleRedo();
 
 			expect( mockEditor.redo ).toHaveBeenCalled();
-			expect( mockEditor.renderLayers ).not.toHaveBeenCalled();
 		} );
 
 		it( 'should handle missing redo method', () => {
 			eventManager.editor.redo = undefined;
 
 			expect( () => eventManager.handleRedo() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'handleArrowKeyNudge', () => {
+		let mockSelectionManager;
+		let mockLayer;
+
+		beforeEach( () => {
+			mockLayer = { id: 'layer1', x: 100, y: 100, locked: false };
+			mockSelectionManager = {
+				getSelectedLayers: jest.fn( () => [ mockLayer ] )
+			};
+			mockEditor.canvasManager.selectionManager = mockSelectionManager;
+			mockEditor.stateManager = {};
+			mockEditor.historyManager = {
+				snapshot: jest.fn()
+			};
+			mockEditor.updateStatusBar = jest.fn();
+		} );
+
+		it( 'should return false for non-arrow keys', () => {
+			const event = createKeyEvent( 'a' );
+			const result = eventManager.handleArrowKeyNudge( event );
+
+			expect( result ).toBe( false );
+			expect( event.preventDefault ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return false when no layers are selected', () => {
+			mockSelectionManager.getSelectedLayers.mockReturnValue( [] );
+			const event = createKeyEvent( 'ArrowLeft' );
+
+			const result = eventManager.handleArrowKeyNudge( event );
+
+			expect( result ).toBe( false );
+			expect( event.preventDefault ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should nudge left by 1px with ArrowLeft', () => {
+			const event = createKeyEvent( 'ArrowLeft' );
+
+			const result = eventManager.handleArrowKeyNudge( event );
+
+			expect( result ).toBe( true );
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockLayer.x ).toBe( 99 );
+			expect( mockLayer.y ).toBe( 100 );
+		} );
+
+		it( 'should nudge right by 1px with ArrowRight', () => {
+			const event = createKeyEvent( 'ArrowRight' );
+
+			const result = eventManager.handleArrowKeyNudge( event );
+
+			expect( result ).toBe( true );
+			expect( mockLayer.x ).toBe( 101 );
+			expect( mockLayer.y ).toBe( 100 );
+		} );
+
+		it( 'should nudge up by 1px with ArrowUp', () => {
+			const event = createKeyEvent( 'ArrowUp' );
+
+			const result = eventManager.handleArrowKeyNudge( event );
+
+			expect( result ).toBe( true );
+			expect( mockLayer.x ).toBe( 100 );
+			expect( mockLayer.y ).toBe( 99 );
+		} );
+
+		it( 'should nudge down by 1px with ArrowDown', () => {
+			const event = createKeyEvent( 'ArrowDown' );
+
+			const result = eventManager.handleArrowKeyNudge( event );
+
+			expect( result ).toBe( true );
+			expect( mockLayer.x ).toBe( 100 );
+			expect( mockLayer.y ).toBe( 101 );
+		} );
+
+		it( 'should nudge by 10px when Shift is held', () => {
+			const event = createKeyEvent( 'ArrowRight', { shiftKey: true } );
+
+			const result = eventManager.handleArrowKeyNudge( event );
+
+			expect( result ).toBe( true );
+			expect( mockLayer.x ).toBe( 110 );
+		} );
+
+		it( 'should not nudge locked layers', () => {
+			mockLayer.locked = true;
+			const event = createKeyEvent( 'ArrowRight' );
+
+			eventManager.handleArrowKeyNudge( event );
+
+			expect( mockLayer.x ).toBe( 100 ); // unchanged
+		} );
+
+		it( 'should record history snapshot after nudge', () => {
+			const event = createKeyEvent( 'ArrowRight' );
+
+			eventManager.handleArrowKeyNudge( event );
+
+			expect( mockEditor.historyManager.snapshot ).toHaveBeenCalledWith( 'nudge' );
+		} );
+
+		it( 'should mark editor as dirty and re-render', () => {
+			const event = createKeyEvent( 'ArrowRight' );
+
+			eventManager.handleArrowKeyNudge( event );
+
+			expect( mockEditor.markDirty ).toHaveBeenCalled();
+			expect( mockEditor.renderLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should update status bar for single layer selection', () => {
+			const event = createKeyEvent( 'ArrowRight' );
+
+			eventManager.handleArrowKeyNudge( event );
+
+			expect( mockEditor.updateStatusBar ).toHaveBeenCalled();
+		} );
+
+		it( 'should return false when selectionManager is missing', () => {
+			mockEditor.canvasManager.selectionManager = null;
+			const event = createKeyEvent( 'ArrowLeft' );
+
+			const result = eventManager.handleArrowKeyNudge( event );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle layers with undefined x/y', () => {
+			mockLayer.x = undefined;
+			mockLayer.y = undefined;
+			const event = createKeyEvent( 'ArrowRight' );
+
+			eventManager.handleArrowKeyNudge( event );
+
+			expect( mockLayer.x ).toBe( 1 );
+			expect( mockLayer.y ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'nudgeSelectedLayers', () => {
+		let mockSelectionManager;
+		let mockLayers;
+
+		beforeEach( () => {
+			mockLayers = [
+				{ id: 'layer1', x: 100, y: 100, locked: false },
+				{ id: 'layer2', x: 200, y: 200, locked: false }
+			];
+			mockSelectionManager = {
+				getSelectedLayers: jest.fn( () => mockLayers )
+			};
+			mockEditor.canvasManager.selectionManager = mockSelectionManager;
+			mockEditor.stateManager = {};
+			mockEditor.historyManager = {
+				snapshot: jest.fn()
+			};
+		} );
+
+		it( 'should nudge multiple layers', () => {
+			eventManager.nudgeSelectedLayers( 5, -3 );
+
+			expect( mockLayers[ 0 ].x ).toBe( 105 );
+			expect( mockLayers[ 0 ].y ).toBe( 97 );
+			expect( mockLayers[ 1 ].x ).toBe( 205 );
+			expect( mockLayers[ 1 ].y ).toBe( 197 );
+		} );
+
+		it( 'should skip locked layers', () => {
+			mockLayers[ 1 ].locked = true;
+
+			eventManager.nudgeSelectedLayers( 10, 10 );
+
+			expect( mockLayers[ 0 ].x ).toBe( 110 );
+			expect( mockLayers[ 1 ].x ).toBe( 200 ); // unchanged
+		} );
+
+		it( 'should handle missing stateManager gracefully', () => {
+			mockEditor.stateManager = null;
+
+			expect( () => eventManager.nudgeSelectedLayers( 5, 5 ) ).not.toThrow();
+		} );
+
+		it( 'should handle missing historyManager gracefully', () => {
+			mockEditor.historyManager = null;
+
+			expect( () => eventManager.nudgeSelectedLayers( 5, 5 ) ).not.toThrow();
 		} );
 	} );
 

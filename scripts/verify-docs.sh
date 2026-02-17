@@ -31,12 +31,12 @@ check_file() {
     local file=$1
     local pattern=$2
     local description=$3
-    
+
     if [ ! -f "$file" ]; then
         echo -e "${RED}✗ MISSING:${NC} $file"
         return 1
     fi
-    
+
     if grep -q "$CURRENT_VERSION" "$file"; then
         echo -e "${GREEN}✓${NC} $file - contains $CURRENT_VERSION"
         return 0
@@ -46,23 +46,27 @@ check_file() {
     fi
 }
 
-echo "Checking the 12 required files for version $CURRENT_VERSION..."
+echo "Checking the 11 required files for version $CURRENT_VERSION..."
 echo ""
 
 ERRORS=0
 
-# The 12 files that must contain the current version
-check_file "extension.json" "$CURRENT_VERSION" "Source of truth" || ((ERRORS++))
-check_file "package.json" "$CURRENT_VERSION" "NPM package version" || ((ERRORS++))
-check_file "README.md" "$CURRENT_VERSION" "Main documentation" || ((ERRORS++))
-check_file "CHANGELOG.md" "$CURRENT_VERSION" "Version history" || ((ERRORS++))
-check_file "Mediawiki-Extension-Layers.mediawiki" "$CURRENT_VERSION" "MediaWiki.org page" || ((ERRORS++))
-check_file "wiki/Home.md" "$CURRENT_VERSION" "GitHub Wiki homepage" || ((ERRORS++))
-check_file "wiki/Installation.md" "$CURRENT_VERSION" "Installation guide" || ((ERRORS++))
-check_file "wiki/Changelog.md" "$CURRENT_VERSION" "Wiki changelog" || ((ERRORS++))
-check_file "codebase_review.md" "$CURRENT_VERSION" "Code review document" || ((ERRORS++))
-check_file "improvement_plan.md" "$CURRENT_VERSION" "Improvement plan" || ((ERRORS++))
-check_file "docs/KNOWN_ISSUES.md" "$CURRENT_VERSION" "Known issues" || ((ERRORS++))
+increment_errors() {
+    ERRORS=$((ERRORS + 1))
+}
+
+# The 11 files that must contain the current version
+check_file "extension.json" "$CURRENT_VERSION" "Source of truth" || increment_errors
+check_file "README.md" "$CURRENT_VERSION" "Main documentation" || increment_errors
+check_file "CHANGELOG.md" "$CURRENT_VERSION" "Version history" || increment_errors
+check_file "Mediawiki-Extension-Layers.mediawiki" "$CURRENT_VERSION" "MediaWiki.org page" || increment_errors
+check_file "wiki/Home.md" "$CURRENT_VERSION" "GitHub Wiki homepage" || increment_errors
+check_file "wiki/Installation.md" "$CURRENT_VERSION" "Installation guide" || increment_errors
+check_file "wiki/Changelog.md" "$CURRENT_VERSION" "Wiki changelog" || increment_errors
+check_file "codebase_review.md" "$CURRENT_VERSION" "Code review document" || increment_errors
+check_file "improvement_plan.md" "$CURRENT_VERSION" "Improvement plan" || increment_errors
+check_file "docs/KNOWN_ISSUES.md" "$CURRENT_VERSION" "Known issues" || increment_errors
+check_file ".github/copilot-instructions.md" "$CURRENT_VERSION" "Copilot instructions" || increment_errors
 
 echo ""
 
@@ -70,7 +74,7 @@ echo ""
 if [ -n "$OLD_VERSION" ]; then
     echo "Checking for stale references to old version $OLD_VERSION..."
     echo ""
-    
+
     OLD_REFS=$(grep -rn --include="*.md" --include="*.txt" "$OLD_VERSION" . \
         | grep -v node_modules \
         | grep -v vendor \
@@ -78,7 +82,7 @@ if [ -n "$OLD_VERSION" ]; then
         | grep -v wiki/Changelog.md \
         | grep -v coverage \
         || true)
-    
+
     if [ -n "$OLD_REFS" ]; then
         echo -e "${YELLOW}⚠ Found references to old version $OLD_VERSION:${NC}"
         echo "$OLD_REFS"
@@ -97,6 +101,6 @@ if [ $ERRORS -gt 0 ]; then
     echo "See docs/DOCUMENTATION_UPDATE_GUIDE.md for the full checklist."
     exit 1
 else
-    echo -e "${GREEN}PASSED: All 12 required files contain version $CURRENT_VERSION${NC}"
+    echo -e "${GREEN}PASSED: All 11 required files contain version $CURRENT_VERSION${NC}"
     exit 0
 fi

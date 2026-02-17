@@ -2,6 +2,60 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.58] - 2026-02-17
+
+### Fixed
+- **Arrow Key Nudge Support** — Selected layers can now be nudged 1px with arrow keys, 10px with Shift+Arrow, matching the Figma/Canva pattern. Includes smart guide snapping and full undo/redo integration.
+- **Color Preview Mutation** — Fixed ToolbarStyleControls color picker mutating layer state during preview. New `commitColorChange()` method properly commits the previewed color on close.
+- **Double Render on Undo/Redo** — Removed redundant `renderLayers()`/`markDirty()` calls from EventManager's undo/redo handlers; `HistoryManager.restoreState()` already performs these.
+- **Clipboard Callout Tail Offset** — Removed PASTE_OFFSET from `tailTipX`/`tailTipY` in ClipboardController (local coordinates, not absolute).
+- **CSS Font Shorthand Order** — Swapped fontStyle/fontWeight in InlineTextEditor's CSS font shorthand to match CSS spec (`font-style font-weight font-size/line-height font-family`).
+- **Timestamp UTC Parsing** — `parseMWTimestamp()` in LayerSetManager now uses `Date.UTC()` instead of local `new Date()`, fixing timezone-dependent display.
+- **ApiLayersInfo Null Dereference** — Added null guard before accessing `layerset.data` in `ApiLayersInfo.php`.
+- **REL1_43 Modal 500 Error** — Restored `method_exists()` guard for `allowClickjacking()` on REL1_43 branch. Cherry-pick d7fbde38 had incorrectly removed MW <1.44 compatibility code.
+
+### Changed
+- **ToolbarKeyboard i18n** — Four toolbar labels now use `mw.message()` with fallback strings instead of hardcoded English text.
+- **ES6 Modernization** — Eliminated `.bind(this)` patterns, converted to arrow functions and spread syntax across 9+ files. Replaced `.indexOf()` with `.includes()`/`.startsWith()`. Converted string concatenation to template literals. Removed 27 debug `console.log` statements.
+
+### Added
+- **Built-in Help Dialog** — New help dialog accessible via Shift+? showing keyboard shortcuts and tool descriptions.
+
+### Documentation
+- **Documentation Review Report** — Comprehensive 540-line audit of all 35+ documentation files identifying 47 issues (7 critical, 15 outdated, 8 contradictions).
+- **Full metric synchronization** — Updated god class count (16→17), line counts, test counts across all documentation files.
+
+### Technical Details
+- All 11,148 tests pass (162 test suites) ✅
+- Coverage: 95.19% statements, 84.96% branches
+- God classes: 17 (13 hand-written JS, 2 generated, 2 PHP)
+- i18n messages: 820
+
+## [1.5.57] - 2026-02-13
+
+### Fixed
+- **Iframe Modal HTTP 500 for Image Layers** — Fixed critical fatal error when clicking "Edit layers" on images from article pages. `EditLayersAction.php` was calling `$out->allowClickjacking()` directly, but this method was removed in MediaWiki 1.44. Added `method_exists()` guard matching the pattern already used in `SpecialEditSlide.php`. See `docs/POSTMORTEM_IFRAME_MODAL_500_ERROR.md` for full analysis.
+
+### Documentation
+- **Critical Postmortem Added** — Created `docs/POSTMORTEM_IFRAME_MODAL_500_ERROR.md` documenting the iframe modal bug, its misleading symptoms, incorrect theories pursued, actual root cause, and prevention checklist.
+- **Copilot Instructions Updated** — Added "OutputPage Methods Change Between MW Versions" warning section with `method_exists()` pattern requirement. Updated troubleshooting tips with iframe modal debugging guidance.
+
+## [1.5.56] - 2026-02-12
+
+### Fixed
+- **MediaWiki 1.43 Compatibility (REL1_43)** — Fixed `IConnectionProvider` → `ILoadBalancer` in `LayersSchemaManager.php` and `services.php`. The `IConnectionProvider` interface was introduced in MW 1.44 and is not available in MW 1.43.
+- **MediaWiki 1.39 Compatibility (REL1_39)** — Same `ILoadBalancer` fix plus replaced ES2020 JavaScript syntax (`??`, `?.`) with ES6-compatible alternatives in `DimensionRenderer.js` and `ShapeRenderer.js`. MW 1.39's ResourceLoader doesn't support nullish coalescing or optional chaining.
+- **SHA1 Fallback Outside Trait (P3-033)** — ApiLayersSave.php now uses `ForeignFileHelperTrait::getFileSha1()` instead of duplicating the fallback SHA1 logic locally. DRY and consistent foreign file handling across all API modules.
+- **ImageLayerRenderer Stale Cache (P3-035)** — Cache key now includes hash of `src` property. Previously, changing an image layer's source reused the cached image of the old source until the entire cache was cleared.
+- **DimensionRenderer hitTest Fallback Mismatch (P3-036)** — Default values in fallback code now use `DEFAULTS.OFFSET` and `DEFAULTS.TEXT_OFFSET` constants instead of hardcoded 50 and 0, matching the rendering code.
+- **ColorValidator Alpha Regex Gap (P3-037)** — Strict alpha value regex updated to accept all 6 CSS-valid alpha formats: 0, 1, 0.5, .5, 0.50, 1.0. Previously rejected `.5` (leading-dot shorthand) and `1.0` (trailing zero).
+- **EditLayersAction Dead MW < 1.44 Code (P3-039)** — Removed obsolete `ActionInfo` compatibility wrapper for MediaWiki versions below 1.44. Extension requires MW 1.44+.
+- **ErrorHandler retryOperation No-Op (P3-040)** — Removed misleading `retryOperation()` method that never actually retried. Now uses `mw.notify()` to show user-friendly error with action label. Clearer API without false retry promises.
+
+### Technical Details
+- All 11,152 tests pass (164 test suites) ✅
+- Grade upgraded from A- to A with zero open code issues
+
 ## [1.5.55] - 2025-07-23
 
 ### Added

@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C254%20passing-brightgreen" alt="11,254 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C148%20passing-brightgreen" alt="11,148 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
@@ -20,7 +20,14 @@
 
 ---
 
-## 🆕 What's New in v1.5.52
+## 🆕 What's New in v1.5.58
+
+- **8 Bug Fixes** — Arrow key nudging, color preview mutation, double render on undo/redo, clipboard callout tail offset, CSS font order, UTC timestamp parsing, ApiLayersInfo null guard, REL1_43 modal 500 error
+- **Built-in Help Dialog** — Accessible via Shift+? with keyboard shortcuts and tool descriptions
+- **ES6 Modernization** — Arrow functions, template literals, spread syntax, removed 27 debug console.log statements
+- **Documentation Audit** — 540-line comprehensive review of 35+ docs, 47 issues identified and fixed
+
+### Previous v1.5.57 Highlights
 
 - **API Documentation** — Added missing `layerslist` endpoint to API Reference
 - **Depth Guards** — All GroupManager recursive functions now protected from stack overflow
@@ -66,7 +73,7 @@
 - **All P0-P3 Issues Resolved** — TailCalculator, API bugs, N+1 queries, and UX issues all fixed
 - **UX Improvements** — Easier drag handle clicking (4px tolerance), smaller overlay buttons
 - **Code Quality** — New `LayersApiHelperTrait` extracts common API patterns
-- **11,254 tests passing** (165 suites), 95.19% statement coverage, 84.96% branch coverage
+- **Comprehensive test coverage maintained** with all CI checks passing
 
 ### Previous v1.5.39 Highlights
 
@@ -302,21 +309,21 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.55 |
-| **Version (REL1_43)** | 1.5.51-REL1_43 |
-| **Version (REL1_39)** | 1.5.51-REL1_39 |
-| **Release Date** | February 5, 2026 |
-| **Test Suites** | 165 |
-| **Total Tests** | 11,254 |
-| **PHPUnit Test Files** | 24 |
+| **Version (main)** | 1.5.58 |
+| **Version (REL1_43)** | 1.5.58 |
+| **Version (REL1_39)** | 1.5.58 |
+| **Release Date** | February 17, 2026 |
+| **Test Suites** | 162 |
+| **Total Tests** | 11,148 |
+| **PHPUnit Test Files** | 31 |
 | **Statement Coverage** | 95.19% |
 | **Branch Coverage** | 84.96% |
 | **Function Coverage** | 93.67% |
 | **Line Coverage** | 95.32% |
 | **JavaScript Files** | 140 |
 | **ES6 Classes** | 140 |
-| **God Classes** | 21 (2 generated, 17 JS, 2 PHP) |
-| **i18n Messages** | 749 |
+| **God Classes** | 17 (2 generated, 13 JS, 2 PHP) |
+| **i18n Messages** | 820 |
 
 ---
 

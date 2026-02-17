@@ -302,6 +302,11 @@
 	"layers-shortcut-smart-guides": "Toggle Smart Guides",
 	"layers-shortcut-show-help": "Show Keyboard Shortcuts",
 
+	"layers-group-success": "Layers grouped",
+	"layers-ungroup-success": "Group dissolved",
+	"layers-smart-guides-on": "Smart Guides: On",
+	"layers-smart-guides-off": "Smart Guides: Off",
+
 	"layers-help-title": "Layers Editor Help",
 	"layers-help-close": "Close",
 	"layers-help-tab-overview": "Overview",

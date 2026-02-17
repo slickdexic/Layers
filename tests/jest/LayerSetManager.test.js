@@ -119,14 +119,15 @@ describe( 'LayerSetManager', () => {
 	} );
 
 	describe( 'parseMWTimestamp', () => {
-		it( 'should parse valid MediaWiki binary(14) timestamp', () => {
+		it( 'should parse valid MediaWiki binary(14) timestamp as UTC', () => {
 			const date = layerSetManager.parseMWTimestamp( '20250115143022' );
-			expect( date.getFullYear() ).toBe( 2025 );
-			expect( date.getMonth() ).toBe( 0 ); // January (0-indexed)
-			expect( date.getDate() ).toBe( 15 );
-			expect( date.getHours() ).toBe( 14 );
-			expect( date.getMinutes() ).toBe( 30 );
-			expect( date.getSeconds() ).toBe( 22 );
+			// MediaWiki timestamps are UTC, so we verify UTC values
+			expect( date.getUTCFullYear() ).toBe( 2025 );
+			expect( date.getUTCMonth() ).toBe( 0 ); // January (0-indexed)
+			expect( date.getUTCDate() ).toBe( 15 );
+			expect( date.getUTCHours() ).toBe( 14 );
+			expect( date.getUTCMinutes() ).toBe( 30 );
+			expect( date.getUTCSeconds() ).toBe( 22 );
 		} );
 
 		it( 'should return current date for null input', () => {
@@ -147,11 +148,11 @@ describe( 'LayerSetManager', () => {
 			expect( date instanceof Date ).toBe( true );
 		} );
 
-		it( 'should parse midnight correctly', () => {
+		it( 'should parse midnight correctly as UTC', () => {
 			const date = layerSetManager.parseMWTimestamp( '20250101000000' );
-			expect( date.getHours() ).toBe( 0 );
-			expect( date.getMinutes() ).toBe( 0 );
-			expect( date.getSeconds() ).toBe( 0 );
+			expect( date.getUTCHours() ).toBe( 0 );
+			expect( date.getUTCMinutes() ).toBe( 0 );
+			expect( date.getUTCSeconds() ).toBe( 0 );
 		} );
 	} );
 
@@ -701,17 +702,17 @@ describe( 'LayerSetManager', () => {
 			expect( result.getTime() ).toBeLessThanOrEqual( after );
 		} );
 
-		it( 'should parse valid MediaWiki timestamp', () => {
-			// YYYYMMDDHHmmss format
+		it( 'should parse valid MediaWiki timestamp as UTC', () => {
+			// YYYYMMDDHHmmss format - MediaWiki timestamps are UTC
 			const result = layerSetManager.parseMWTimestamp( '20240315143025' );
 
 			expect( result ).toBeInstanceOf( Date );
-			expect( result.getFullYear() ).toBe( 2024 );
-			expect( result.getMonth() ).toBe( 2 ); // 0-indexed, so March = 2
-			expect( result.getDate() ).toBe( 15 );
-			expect( result.getHours() ).toBe( 14 );
-			expect( result.getMinutes() ).toBe( 30 );
-			expect( result.getSeconds() ).toBe( 25 );
+			expect( result.getUTCFullYear() ).toBe( 2024 );
+			expect( result.getUTCMonth() ).toBe( 2 ); // 0-indexed, so March = 2
+			expect( result.getUTCDate() ).toBe( 15 );
+			expect( result.getUTCHours() ).toBe( 14 );
+			expect( result.getUTCMinutes() ).toBe( 30 );
+			expect( result.getUTCSeconds() ).toBe( 25 );
 		} );
 	} );
 

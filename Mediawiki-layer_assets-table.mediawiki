@@ -21,7 +21,7 @@ The '''layer_assets''' table stores reusable layer asset presets for the [[Exten
 |-
 | <code>la_preview_sha1</code> || varchar(32) || Yes || NULL || SHA-1 hash of preview thumbnail (optional)
 |-
-| <code>la_user_id</code> || int unsigned || No || — || User ID who created the asset (foreign key to user table)
+| <code>la_user_id</code> || int unsigned || Yes || NULL || User ID who created the asset
 |-
 | <code>la_timestamp</code> || binary(14) || No || — || When the asset was created
 |-
@@ -44,11 +44,8 @@ The '''layer_assets''' table stores reusable layer asset presets for the [[Exten
 
 == Foreign Keys ==
 
-{| class="wikitable"
-! Column !! References !! On Delete
-|-
-| <code>la_user_id</code> || <code>user.user_id</code> || CASCADE
-|}
+No database-level foreign keys are declared. Per MediaWiki convention,
+referential integrity is enforced at the application level.
 
 == How Assets Work ==
 

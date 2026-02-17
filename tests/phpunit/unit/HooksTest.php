@@ -43,7 +43,9 @@ class HooksTest extends \MediaWikiUnitTestCase {
 
 		$outputPageMock->expects( $this->exactly( 2 ) )
 			->method( 'addModules' )
-			->withConsecutive( [ 'ext.layers' ], [ 'ext.layers.editor' ] );
+			->willReturnCallback( static function ( $module ) use ( &$addedModules ) {
+				$addedModules[] = $module;
+			} );
 
 		$skinMock = $this->getMockBuilder( \Skin::class )
 			->disableOriginalConstructor()

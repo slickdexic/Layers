@@ -113,8 +113,9 @@
 
 		/**
 		 * Parse MediaWiki binary(14) timestamp format (YYYYMMDDHHmmss)
+		 * MediaWiki timestamps are in UTC, so we parse them as UTC dates.
 		 * @param {string} mwTimestamp The timestamp string
-		 * @return {Date} Parsed date object
+		 * @return {Date} Parsed date object (UTC)
 		 */
 		parseMWTimestamp( mwTimestamp ) {
 			if ( !mwTimestamp || typeof mwTimestamp !== 'string' ) {
@@ -134,7 +135,8 @@
 			const minute = parseInt( mwTimestamp.substring( 10, 12 ), 10 );
 			const second = parseInt( mwTimestamp.substring( 12, 14 ), 10 );
 
-			return new Date( year, month, day, hour, minute, second );
+			// Use Date.UTC to correctly interpret MediaWiki's UTC timestamps
+			return new Date( Date.UTC( year, month, day, hour, minute, second ) );
 		}
 
 		/**
