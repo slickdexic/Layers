@@ -76,7 +76,8 @@
 		const result = this.editor.groupManager.groupSelected();
 		if ( result ) {
 			// Show success message
-			const msg = 'Layers grouped';
+			const msg = typeof mw !== 'undefined' && mw.message ?
+				mw.message( 'layers-group-success' ).text() : 'Layers grouped';
 			if ( this.editor.showStatus ) {
 				this.editor.showStatus( msg, 1500 );
 			}
@@ -103,7 +104,8 @@
 		const result = this.editor.groupManager.ungroupSelected();
 		if ( result ) {
 			// Show success message
-			const msg = 'Group dissolved';
+			const msg = typeof mw !== 'undefined' && mw.message ?
+				mw.message( 'layers-ungroup-success' ).text() : 'Group dissolved';
 			if ( this.editor.showStatus ) {
 				this.editor.showStatus( msg, 1500 );
 			}
@@ -226,7 +228,14 @@
 		}
 
 		// Show brief status message
-		const msg = newState ? 'Smart Guides: On' : 'Smart Guides: Off';
+		let msg;
+		if ( typeof mw !== 'undefined' && mw.message ) {
+			msg = newState ?
+				mw.message( 'layers-smart-guides-on' ).text() :
+				mw.message( 'layers-smart-guides-off' ).text();
+		} else {
+			msg = newState ? 'Smart Guides: On' : 'Smart Guides: Off';
+		}
 		if ( this.editor.showStatus ) {
 			this.editor.showStatus( msg, 1500 );
 		}

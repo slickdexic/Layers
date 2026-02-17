@@ -8,8 +8,8 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.55
-|update          = 2026-02-05
+|version         = 1.5.58
+|update          = 2026-02-17
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
@@ -44,7 +44,7 @@ The '''Layers''' extension is a modern, non-destructive image annotation and edi
 All edits are stored as validated JSON and rendered client-side for precise positioning. The system fully integrates into MediaWiki's file pages and parser. Click the {{key press|'''Edit layers'''}} tab on any image's <code>File:</code> page to access the editor.
 
 == Why Layers? ==
-* '''Professional Tools:''' 15 drawing tools, style presets, and industry-standard alignment—everything needed to annotate like a pro.
+* '''Professional Tools:''' 17 [[#Drawing Tools|drawing tools]], style presets, live preview, industry-standard alignment, a rich selection of [[#Annotation Tools|built-in shapes and emoji]], and '''[[#Slide Mode (v1.5.22+)|Slide Mode]]''' for standalone graphics—everything needed to annotate like a pro.
 * '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
 * '''Accessible:''' WCAG 2.1 compliant with full keyboard navigation, screen reader support, and high-contrast indicators.
 
@@ -121,11 +121,11 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.52
+| 1.44+ || <code>main</code> || 1.5.58
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.51-REL1_43
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.58
 |-
-| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.5.51-REL1_39
+| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.5.58
 |}
 {{ExtensionInstall
 |registration=required
@@ -277,6 +277,8 @@ Control how users interact with layered images using the <code>layerslink</code>
 | Custom Shape || — || Shape Library || Arrows, symbols, flowchart shapes, and more
 |-
 | Emoji || — || Emoji Library || 2,817 Noto Color Emoji in 19 categories
+|-
+| Image || — || Import Images || Add PNG, JPG, GIF, WebP images as layers
 |}
 
 == Keyboard Shortcuts ==
@@ -308,7 +310,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~113k lines including generated shape/emoji data).
-* '''Stability:''' 11,254 Jest tests (165 suites) with 95.19% statement coverage and 84.96% branch coverage.
+* '''Stability:''' 11,148 Jest tests (162 suites) with 95.19% statement coverage and 84.96% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

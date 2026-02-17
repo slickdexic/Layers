@@ -250,6 +250,8 @@ class ToolbarStyleControls {
 					if ( !isNone ) {
 						this.strokeColorValue = color;
 					}
+					// Commit preview changes via StateManager for proper undo/redo
+					this.commitColorChange( 'stroke', isNone ? 'transparent' : color );
 					this.notifyStyleChange();
 				},
 				onColorPreview: ( color, isNone ) => {
@@ -270,6 +272,8 @@ class ToolbarStyleControls {
 					if ( !isNone ) {
 						this.fillColorValue = color;
 					}
+					// Commit preview changes via StateManager for proper undo/redo
+					this.commitColorChange( 'fill', isNone ? 'transparent' : color );
 					this.notifyStyleChange();
 				},
 				onColorPreview: ( color, isNone ) => {
@@ -289,6 +293,8 @@ class ToolbarStyleControls {
 					if ( !isNone ) {
 						this.strokeColorValue = color;
 					}
+					// Commit preview changes via StateManager for proper undo/redo
+					this.commitColorChange( 'stroke', isNone ? 'transparent' : color );
 					this.notifyStyleChange();
 				},
 				onColorPreview: ( color, isNone ) => {
@@ -307,6 +313,8 @@ class ToolbarStyleControls {
 					if ( !isNone ) {
 						this.fillColorValue = color;
 					}
+					// Commit preview changes via StateManager for proper undo/redo
+					this.commitColorChange( 'fill', isNone ? 'transparent' : color );
 					this.notifyStyleChange();
 				},
 				onColorPreview: ( color, isNone ) => {
@@ -561,6 +569,65 @@ class ToolbarStyleControls {
 		// Re-render to show preview
 		if ( canvasManager.renderLayers && editor.layers ) {
 			canvasManager.renderLayers( editor.layers );
+		}
+	}
+
+	/**
+	 * Commit color changes via StateManager for proper undo/redo tracking.
+	 * Called when user confirms the color in the picker dialog.
+	 *
+	 * @param {string} colorType 'stroke' or 'fill'
+	 * @param {string} color The confirmed color value
+	 */
+	commitColorChange( colorType, color ) {
+		if ( !this.toolbar || !this.toolbar.editor ) {
+			return;
+		}
+
+		const editor = this.toolbar.editor;
+		const stateManager = editor.stateManager;
+		const canvasManager = editor.canvasManager;
+		if ( !stateManager || !canvasManager ) {
+			return;
+		}
+
+		// Get selected layer IDs
+		const selectedIds = canvasManager.getSelectedLayerIds ? canvasManager.getSelectedLayerIds() : [];
+		if ( !selectedIds || !selectedIds.length ) {
+			return;
+		}
+
+		// Commit each layer's color change via StateManager
+		for ( const id of selectedIds ) {
+			const layer = editor.getLayerById ? editor.getLayerById( id ) : null;
+			if ( !layer ) {
+				continue;
+			}
+
+			const updates = {};
+			if ( colorType === 'stroke' ) {
+				// For text layers, stroke color = fill
+				if ( layer.type === 'text' ) {
+					updates.fill = color;
+				} else {
+					updates.stroke = color;
+				}
+			} else if ( colorType === 'fill' ) {
+				// Fill applies to shapes (not text or line)
+				if ( layer.type !== 'text' && layer.type !== 'line' ) {
+					updates.fill = color;
+				}
+			}
+
+			// Only update if there are changes
+			if ( Object.keys( updates ).length > 0 ) {
+				stateManager.updateLayer( id, updates );
+			}
+		}
+
+		// Mark editor as dirty
+		if ( typeof editor.markDirty === 'function' ) {
+			editor.markDirty();
 		}
 	}
 

@@ -1,8 +1,8 @@
 # Named Layer Sets Architecture
 
 **Created:** January 2025  
-**Status:** ✅ Implemented (v1.5.0+)  
-**Version:** 1.1
+**Status:** ✅ Implemented (verified on v1.5.58)  
+**Version:** 1.3 (v40 verification refresh)
 
 ---
 
@@ -32,23 +32,29 @@ This document describes the Named Layer Sets feature, which restructures the lay
 ### Current Database Schema
 
 ```sql
-CREATE TABLE layer_sets (
-    ls_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    ls_img_name VARCHAR(255) NOT NULL,
-    ls_img_sha1 VARCHAR(40) NOT NULL,
-    ls_img_major_mime VARCHAR(20),
-    ls_img_minor_mime VARCHAR(100),
-    ls_json_blob MEDIUMBLOB NOT NULL,
-    ls_user_id INT UNSIGNED NOT NULL,
-    ls_timestamp BINARY(14) NOT NULL,
-    ls_revision INT UNSIGNED DEFAULT 1,
-    ls_name VARCHAR(255),
-    ls_size INT UNSIGNED,
-    ls_layer_count INT UNSIGNED
-);
+CREATE TABLE /*_*/layer_sets (
+    ls_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  ls_img_name varchar(255) binary NOT NULL,
+  ls_img_major_mime varchar(16) NOT NULL,
+  ls_img_minor_mime varchar(100) NOT NULL,
+  ls_img_sha1 varchar(32) NOT NULL,
+    ls_json_blob mediumblob NOT NULL,
+    ls_user_id int unsigned DEFAULT NULL,
+    ls_timestamp binary(14) NOT NULL,
+    ls_revision int unsigned NOT NULL DEFAULT 1,
+    ls_name varchar(255) NOT NULL DEFAULT 'default',
+    ls_size int unsigned NOT NULL DEFAULT 0,
+    ls_layer_count smallint unsigned NOT NULL DEFAULT 0,
+    UNIQUE KEY ls_img_name_set_revision
+        (ls_img_name, ls_img_sha1, ls_name, ls_revision)
+) ENGINE=InnoDB DEFAULT CHARSET=binary;
 ```
 
-### Current Behavior
+Additional indexes:
+- `ls_img_lookup (ls_img_name, ls_img_sha1)`
+- `ls_user_timestamp (ls_user_id, ls_timestamp)`
+- `ls_timestamp (ls_timestamp)`
+- `ls_size_performance (ls_size, ls_layer_count)`
 
 1. Each save creates a new row with incrementing `ls_revision` (global per image)
 2. `ls_name` exists but is optional and unused for organization
@@ -94,7 +100,13 @@ Image (File:Example.jpg)
 | `$wgLayersSetNameMaxLength` | 64 | Maximum characters for set name |
 | `$wgLayersSetNamePattern` | `/^[\p{L}\p{N}_-]+$/u` | Allowed characters (unicode alphanumeric, underscore, dash) |
 
-### Database Schema Changes
+**Set Name Validation** (in `SetNameSanitizer`):
+- Max length: 255 characters (matches DB column, multibyte-aware truncation)
+- Allowed characters: Unicode letters, numbers, underscores, dashes, spaces
+- Regex: `/^[\p{L}\p{N}_\-\s]+$/u`
+- Empty names sanitize to "default"
+- Consecutive whitespace collapsed to single space
+- Control chars and path separators (`/`, `\\`) removed before whitelist filtering
 
 #### Option A: Minimal Changes (Recommended)
 
@@ -137,10 +149,12 @@ ADD FOREIGN KEY (ls_set_name_id) REFERENCES layer_set_names(lsn_id);
 
 ### layersinfo API
 
-**New Parameters:**
-- `setname` (string, optional): Return specific named set and its revisions
+**Parameters relevant to named sets:**
+- `setname` (string, optional): Return specific named set and `set_revisions`
+- `limit` (integer, optional, default 50, max 200)
+- `offset` / `continue` (pagination for fallback revision listing)
 
-**Changed Response Structure:**
+**Response Structure (current):**
 
 ```json
 {
@@ -174,13 +188,14 @@ ADD FOREIGN KEY (ls_set_name_id) REFERENCES layer_set_names(lsn_id);
         "latest_user_name": "Bob"
       }
     ],
-    "set_revisions": [
+    "all_layersets": [
       {
         "ls_id": 456,
         "ls_revision": 3,
         "ls_timestamp": "20250108123456",
         "ls_user_id": 123,
-        "ls_user_name": "Alice"
+        "ls_user_name": "Alice",
+        "ls_layer_count": 12
       },
       {
         "ls_id": 455,
@@ -193,6 +208,10 @@ ADD FOREIGN KEY (ls_set_name_id) REFERENCES layer_set_names(lsn_id);
   }
 }
 ```
+
+When `setname` is explicitly requested, the module returns
+`set_revisions` for that set. In default mode, it returns
+`all_layersets` for the currently selected set.
 
 ### layerssave API
 
@@ -226,7 +245,8 @@ Named layer sets use the standard MediaWiki file syntax with the `layers=` param
 - `layers=none` or `layers=off`: Explicitly hide layers
 - Omitting `layers=` means no layers are displayed (opt-in model)
 
-**Note:** The `layers=all` syntax is deprecated. Use `layers=on` or a specific set name instead. If a set named "all" exists, `layers=all` will load that set.
+**Note:** `layerset=all` is still accepted as an enabled alias in parser
+normalization (alongside `on`, `true`, and `1`).
 
 ### File: Page Behavior
 

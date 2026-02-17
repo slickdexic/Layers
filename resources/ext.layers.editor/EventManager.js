@@ -83,6 +83,11 @@ class EventManager {
 		const ctrlOrCmd = e.ctrlKey || e.metaKey;
 		const key = e.key.toLowerCase();
 
+		// Handle arrow keys for nudging selected layers
+		if ( this.handleArrowKeyNudge( e ) ) {
+			return;
+		}
+
 		switch ( true ) {
 			case ctrlOrCmd && key === 'z' && !e.shiftKey:
 				e.preventDefault();
@@ -112,7 +117,109 @@ class EventManager {
 	}
 
 	/**
-	 * Check if an element is an input element (input, textarea, or contentEditable)
+	 * Handle arrow key nudging of selected layers
+	 *
+	 * When layers are selected, arrow keys nudge them by 1px (10px with Shift).
+	 * This follows standard UX conventions from Figma, Photoshop, etc.
+	 *
+	 * @param {KeyboardEvent} e - The keydown event
+	 * @return {boolean} True if event was handled (layers were nudged)
+	 */
+	handleArrowKeyNudge( e ) {
+		// Only handle arrow keys
+		const arrowKeys = [ 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown' ];
+		if ( !arrowKeys.includes( e.key ) ) {
+			return false;
+		}
+
+		// Check if we have selected layers to nudge
+		const selectionManager = this.editor.canvasManager?.selectionManager;
+		if ( !selectionManager ) {
+			return false;
+		}
+
+		const selectedLayers = selectionManager.getSelectedLayers?.() || [];
+		if ( selectedLayers.length === 0 ) {
+			// No selection - don't handle, let default panning behavior occur
+			return false;
+		}
+
+		// Determine nudge amount: 10px with Shift, 1px otherwise
+		const step = e.shiftKey ? 10 : 1;
+
+		// Determine direction
+		let dx = 0;
+		let dy = 0;
+		switch ( e.key ) {
+			case 'ArrowLeft':
+				dx = -step;
+				break;
+			case 'ArrowRight':
+				dx = step;
+				break;
+			case 'ArrowUp':
+				dy = -step;
+				break;
+			case 'ArrowDown':
+				dy = step;
+				break;
+		}
+
+		// Nudge the selected layers
+		e.preventDefault();
+		this.nudgeSelectedLayers( dx, dy );
+		return true;
+	}
+
+	/**
+	 * Nudge selected layers by the given offset
+	 *
+	 * @param {number} dx - Horizontal offset in pixels
+	 * @param {number} dy - Vertical offset in pixels
+	 */
+	nudgeSelectedLayers( dx, dy ) {
+		const selectionManager = this.editor.canvasManager?.selectionManager;
+		const stateManager = this.editor.stateManager;
+		if ( !selectionManager || !stateManager ) {
+			return;
+		}
+
+		const selectedLayers = selectionManager.getSelectedLayers?.() || [];
+		if ( selectedLayers.length === 0 ) {
+			return;
+		}
+
+		// Batch the position updates
+		selectedLayers.forEach( layer => {
+			if ( layer && !layer.locked ) {
+				// Update position
+				layer.x = ( layer.x || 0 ) + dx;
+				layer.y = ( layer.y || 0 ) + dy;
+			}
+		} );
+
+		// Record history for undo/redo
+		if ( this.editor.historyManager && typeof this.editor.historyManager.snapshot === 'function' ) {
+			this.editor.historyManager.snapshot( 'nudge' );
+		}
+
+		// Mark as dirty and re-render
+		if ( typeof this.editor.markDirty === 'function' ) {
+			this.editor.markDirty();
+		}
+		if ( typeof this.editor.renderLayers === 'function' ) {
+			this.editor.renderLayers();
+		}
+
+		// Update status bar with new position (if single layer)
+		if ( selectedLayers.length === 1 && this.editor.updateStatusBar ) {
+			this.editor.updateStatusBar();
+		}
+	}
+
+	/**
+	 * Check if an element is an input element (input, textarea, select,
+	 * contentEditable, or OOUI text input widget)
 	 *
 	 * @param {Element} element - The DOM element to check
 	 * @return {boolean} True if the element is an input element
@@ -126,37 +233,29 @@ class EventManager {
 
 	/**
 	 * Handle undo keyboard shortcut (Ctrl+Z)
+	 *
+	 * Note: editor.undo() calls HistoryManager.undo() which calls restoreState(),
+	 * and restoreState() already calls renderLayers() and markDirty().
+	 * We intentionally don't call them again to avoid redundant re-renders.
 	 */
 	handleUndo() {
 		if ( this.editor && typeof this.editor.undo === 'function' ) {
-			if ( this.editor.undo() ) {
-				// Trigger re-render
-				if ( typeof this.editor.renderLayers === 'function' ) {
-					this.editor.renderLayers();
-				}
-				// Mark as dirty
-				if ( typeof this.editor.markDirty === 'function' ) {
-					this.editor.markDirty();
-				}
-			}
+			this.editor.undo();
+			// Note: renderLayers() and markDirty() are called by restoreState()
 		}
 	}
 
 	/**
 	 * Handle redo keyboard shortcut (Ctrl+Y or Ctrl+Shift+Z)
+	 *
+	 * Note: editor.redo() calls HistoryManager.redo() which calls restoreState(),
+	 * and restoreState() already calls renderLayers() and markDirty().
+	 * We intentionally don't call them again to avoid redundant re-renders.
 	 */
 	handleRedo() {
 		if ( this.editor && typeof this.editor.redo === 'function' ) {
-			if ( this.editor.redo() ) {
-				// Trigger re-render
-				if ( typeof this.editor.renderLayers === 'function' ) {
-					this.editor.renderLayers();
-				}
-				// Mark as dirty
-				if ( typeof this.editor.markDirty === 'function' ) {
-					this.editor.markDirty();
-				}
-			}
+			this.editor.redo();
+			// Note: renderLayers() and markDirty() are called by restoreState()
 		}
 	}
 

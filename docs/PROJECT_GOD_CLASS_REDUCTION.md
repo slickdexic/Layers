@@ -3,14 +3,14 @@
 **Project Start:** January 29, 2026  
 **Completion Date:** January 29, 2026  
 **Owner:** Lead Engineer  
-**Status:** ✅ COMPLETE
+**Status:** ✅ Complete for original extraction scope; maintenance tracking continues
 
 ---
 
 ## Executive Summary
 
-This initiative addresses the primary architectural debt identified in the v47
-codebase review: **20 hand-written JavaScript files exceeding 1,000 lines**. 
+This initiative addresses major architectural debt identified in prior
+codebase reviews: **20 hand-written JavaScript files exceeding 1,000 lines**.
 These "god classes" increase cognitive load, reduce testability, and create 
 maintenance challenges. This project will reduce the count to **≤12** through
 strategic extraction of cohesive modules.
@@ -27,9 +27,9 @@ strategic extraction of cohesive modules.
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| JS god classes (hand-written) | **12** | ≤12 | ✅ **TARGET ACHIEVED** |
-| Test coverage | 95.53% | ≥95% | ✅ Maintained |
-| All tests passing | 10,840+ | 10,860+ | ✅ Maintained |
+| JS god classes (hand-written) | **13** | ≤12 | 🔄 Ongoing (1 above target) |
+| Test coverage | 95.19% | ≥95% | ✅ Maintained |
+| All tests passing | 11,148 | 11,148 | ✅ Passing |
 | ESLint errors | 0 | 0 | ✅ Maintained |
 
 ---
@@ -397,24 +397,27 @@ This achieves the goal of bringing ArrowRenderer below the 1,000 line threshold.
 
 ## Appendix: Final God Class Inventory
 
-*Updated: January 29, 2026 — Project Complete*
+### Snapshot Update
 
-### Remaining God Classes (12 files ≥1,000 lines)
+Updated February 17, 2026 for v1.5.58 metrics refresh.
+
+### Remaining Hand-Written JS God Classes (13 files ≥1,000 lines)
 
 | File | Lines | Type | Status |
 |------|-------|------|--------|
 | LayerPanel.js | 2,175 | UI Controller | ✅ Well-delegated (9 controllers) |
 | CanvasManager.js | 2,044 | Facade | ✅ Well-delegated (10+ controllers) |
 | Toolbar.js | 1,891 | UI | ✅ Well-delegated |
-| LayersEditor.js | 1,850 | Main Entry | ✅ Acceptable |
-| SelectionManager.js | 1,431 | Manager | ✅ Clean separation |
-| PropertyBuilders.js | 1,414 | Builder | ✅ Intentional design |
-| InlineTextEditor.js | 1,393 | Controller | ✅ Phase 1 Complete |
-| APIManager.js | 1,393 | Service | ✅ Phase 3 Complete |
-| ViewerManager.js | 1,277 | Manager | ✅ Phase 2 Complete |
-| ToolManager.js | 1,224 | Controller | ✅ Acceptable |
-| CanvasRenderer.js | 1,219 | Renderer | ✅ Acceptable |
-| GroupManager.js | 1,171 | Manager | ✅ Acceptable |
+| LayersEditor.js | 1,836 | Main Entry | ✅ Acceptable |
+| InlineTextEditor.js | 1,670 | Controller | ✅ Phase 1 Complete |
+| APIManager.js | 1,566 | Service | ✅ Phase 3 Complete |
+| PropertyBuilders.js | 1,464 | Builder | ✅ Intentional design |
+| SelectionManager.js | 1,415 | Manager | ✅ Clean separation |
+| CanvasRenderer.js | 1,365 | Renderer | ✅ Acceptable |
+| ViewerManager.js | 1,320 | Manager | ✅ Phase 2 Complete |
+| SlideController.js | 1,170 | Controller | ✅ Acceptable |
+| TextBoxRenderer.js | 1,120 | Renderer | ✅ Acceptable |
+| ToolbarStyleControls.js | 1,006 | UI Controller | ⚠️ Slightly above 1K |
 
 ### Files Reduced Below 1,000 Lines (8 files)
 

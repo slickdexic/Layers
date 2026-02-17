@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
+use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
@@ -36,6 +37,7 @@ use Psr\Log\LoggerInterface;
  *   });
  */
 class ApiLayersRename extends ApiBase {
+	use CacheInvalidationTrait;
 	use ForeignFileHelperTrait;
 	use LayersApiHelperTrait;
 
@@ -171,6 +173,10 @@ class ApiLayersRename extends ApiBase {
 				'newname' => $newName,
 				'user' => $user->getName()
 			] );
+
+			// CACHE INVALIDATION: Purge caches for the file page and pages embedding this file
+			// This ensures pages using [[File:X.jpg|layerset=on]] will re-render with new set name
+			$this->invalidateCachesForFile( $title );
 
 			// Return success
 			$this->getResult()->addValue( 'layersrename', 'success', 1 );

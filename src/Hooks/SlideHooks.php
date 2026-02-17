@@ -44,6 +44,41 @@ class SlideHooks {
 	use StaticLoggerAwareTrait;
 
 	/**
+	 * Per-parse cache for slide dimension lookups (P2-047).
+	 * Prevents unbounded DB queries when a page has many {{#Slide:}} calls.
+	 * @var array<string, array|null>
+	 */
+	private static $slideDimensionCache = [];
+
+	/**
+	 * Counter for slide DB queries in the current parse (P2-047).
+	 * @var int
+	 */
+	private static $slideQueryCount = 0;
+
+	/**
+	 * Maximum number of DB queries per parse for slide dimensions.
+	 * Beyond this limit, getSavedSlideDimensions() returns null.
+	 */
+	private const MAX_SLIDE_QUERIES_PER_PARSE = 50;
+
+	/**
+	 * Reset per-parse static state.
+	 *
+	 * Called via ParserClearState hook to ensure static caches and counters
+	 * are cleared between page parses. Essential for long-running processes
+	 * like job queues where the same process handles multiple pages.
+	 *
+	 * @param Parser $parser The parser instance (unused but required by hook signature)
+	 * @return bool
+	 */
+	public static function onParserClearState( Parser $parser ): bool {
+		self::$slideDimensionCache = [];
+		self::$slideQueryCount = 0;
+		return true;
+	}
+
+	/**
 	 * Register the #Slide parser function.
 	 *
 	 * @param Parser $parser The parser instance

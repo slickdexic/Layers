@@ -214,6 +214,16 @@ describe( 'ImportExportManager', () => {
 			expect( mockEditor.canvasManager.renderLayers ).toHaveBeenCalled();
 		} );
 
+		it( 'should re-render using editor.layers when stateManager is unavailable', () => {
+			mockEditor.stateManager = null;
+			const manager = new ImportExportManager( { editor: mockEditor } );
+			const layers = [ { id: 'layer1', type: 'rectangle' } ];
+
+			manager.applyImportedLayers( layers );
+
+			expect( mockEditor.canvasManager.renderLayers ).toHaveBeenCalledWith( layers );
+		} );
+
 		it( 'should mark editor as dirty', () => {
 			const manager = new ImportExportManager( { editor: mockEditor } );
 			const layers = [ { id: 'layer1', type: 'rectangle' } ];

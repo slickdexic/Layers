@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiUsageException;
+use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
@@ -62,6 +63,7 @@ use Title;
  * @see LayersDatabase::saveLayerSet() for persistence logic
  */
 class ApiLayersSave extends ApiBase {
+	use CacheInvalidationTrait;
 	use ForeignFileHelperTrait;
 	use LayerSaveGuardsTrait;
 
@@ -670,101 +672,5 @@ class ApiLayersSave extends ApiBase {
 			$this->logger = MediaWikiServices::getInstance()->get( 'LayersLogger' );
 		}
 		return $this->logger;
-	}
-
-	/**
-	 * Invalidate parser caches for the file page and pages embedding this file.
-	 *
-	 * When layers are saved, we need to ensure that:
-	 * 1. The File: page itself is purged so it shows updated layer data
-	 * 2. All pages embedding this file via [[File:X.jpg|layers=on]] are purged
-	 *    so they re-render with the new layer data instead of stale cached content
-	 *
-	 * Uses a hybrid approach for reliability:
-	 * - File page is purged synchronously (fast, needed immediately)
-	 * - Backlink pages are purged via job queue (prevents race conditions, handles many pages)
-	 *
-	 * @param Title $fileTitle The title of the file whose layers were saved
-	 */
-	protected function invalidateCachesForFile( Title $fileTitle ): void {
-		try {
-			$services = MediaWikiServices::getInstance();
-
-			// 1. Purge the File: page itself synchronously (fast, always needed)
-			$wikiPage = $services->getWikiPageFactory()->newFromTitle( $fileTitle );
-			if ( $wikiPage->exists() ) {
-				$wikiPage->doPurge();
-			}
-
-			// 2. Queue job to purge all pages embedding this file
-			// Using HTMLCacheUpdateJob ensures:
-			// - No race condition with client navigation
-			// - Handles images embedded in many pages (no artificial limit)
-			// - MediaWiki handles batching and retries automatically
-			try {
-				$job = \HTMLCacheUpdateJob::newForBacklinks(
-					$fileTitle,
-					'imagelinks',
-					[ 'causeAction' => 'layers-save', 'causeAgent' => $this->getUser()->getName() ]
-				);
-				$services->getJobQueueGroup()->lazyPush( $job );
-
-				$this->getLogger()->debug(
-					'Queued cache invalidation job for file: {filename}',
-					[ 'filename' => $fileTitle->getText() ]
-				);
-			} catch ( \Throwable $e ) {
-				// Fallback to synchronous purge of limited backlinks if job queue fails
-				$this->getLogger()->debug(
-					'Job queue unavailable, falling back to synchronous purge: {error}',
-					[ 'error' => $e->getMessage() ]
-				);
-				$this->purgeBacklinksSynchronously( $fileTitle, $services );
-			}
-		} catch ( \Throwable $e ) {
-			// Log but don't fail the save operation
-			$this->getLogger()->warning(
-				'Failed to invalidate caches for file: {filename}, error: {error}',
-				[
-					'filename' => $fileTitle->getText(),
-					'error' => $e->getMessage()
-				]
-			);
-		}
-	}
-
-	/**
-	 * Maximum number of backlinks to purge synchronously
-	 * This is a fallback limit when job queue is unavailable
-	 */
-	private const SYNC_BACKLINK_PURGE_LIMIT = 100;
-
-	/**
-	 * Fallback: Purge backlinks synchronously when job queue is unavailable
-	 *
-	 * @param Title $fileTitle The file title
-	 * @param MediaWikiServices $services Service container
-	 */
-	private function purgeBacklinksSynchronously( Title $fileTitle, MediaWikiServices $services ): void {
-		$backlinkCache = $services->getBacklinkCacheFactory()->getBacklinkCache( $fileTitle );
-		$backlinkTitles = $backlinkCache->getLinkPages(
-			'imagelinks',
-			null,
-			self::SYNC_BACKLINK_PURGE_LIMIT
-		);
-
-		$purgedCount = 0;
-		foreach ( $backlinkTitles as $backlinkTitle ) {
-			$backlinkPage = $services->getWikiPageFactory()->newFromTitle( $backlinkTitle );
-			if ( $backlinkPage->exists() ) {
-				$backlinkPage->doPurge();
-				$purgedCount++;
-			}
-		}
-
-		$this->getLogger()->debug(
-			'Synchronously purged {count} backlinks for file: {filename}',
-			[ 'count' => $purgedCount, 'filename' => $fileTitle->getText() ]
-		);
 	}
 }

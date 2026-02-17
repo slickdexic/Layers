@@ -791,8 +791,9 @@
 
 			const ctx = this.canvasManager.ctx;
 			ctx.save();
-			ctx.font = ( layer.fontWeight || 'normal' ) + ' ' +
-				( layer.fontStyle || 'normal' ) + ' ' +
+			// CSS font shorthand order: font-style font-variant font-weight font-size font-family
+			ctx.font = ( layer.fontStyle || 'normal' ) + ' ' +
+				( layer.fontWeight || 'normal' ) + ' ' +
 				( layer.fontSize || 16 ) + 'px ' +
 				( layer.fontFamily || 'Arial' );
 			const metrics = ctx.measureText( layer.text || '' );

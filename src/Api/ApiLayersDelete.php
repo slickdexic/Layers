@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
+use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
@@ -35,6 +36,7 @@ use Psr\Log\LoggerInterface;
  *   });
  */
 class ApiLayersDelete extends ApiBase {
+	use CacheInvalidationTrait;
 	use ForeignFileHelperTrait;
 	use LayersApiHelperTrait;
 
@@ -177,6 +179,10 @@ class ApiLayersDelete extends ApiBase {
 				'user' => $user->getName(),
 				'rowsDeleted' => $rowsDeleted
 			] );
+
+			// CACHE INVALIDATION: Purge caches for the file page and pages embedding this file
+			// This ensures pages using [[File:X.jpg|layerset=on]] will re-render with current layer data
+			$this->invalidateCachesForFile( $title );
 
 			// Return success
 			$this->getResult()->addValue( 'layersdelete', 'success', 1 );

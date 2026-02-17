@@ -3,7 +3,7 @@
 > **Status:** Partially Implemented  
 > **Version:** 1.0  
 > **Date:** January 31, 2026  
-> **Current Release:** v1.5.43
+> **Current Release:** v1.5.58
 
 ## Implementation Status
 
