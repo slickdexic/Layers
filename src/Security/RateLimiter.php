@@ -5,6 +5,25 @@ declare( strict_types=1 );
 /**
  * Rate limiting and performance protection
  *
+ * RATE LIMIT CONFIGURATION:
+ * This class uses MediaWiki's built-in rate limiting via User::pingLimiter().
+ * Limits must be configured in LocalSettings.php using $wgRateLimits.
+ *
+ * Example configuration in LocalSettings.php:
+ * ```php
+ * $wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];   // 30 saves/hour
+ * $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];  // 5 saves/hour for new users
+ * $wgRateLimits['editlayers-delete']['user'] = [ 20, 3600 ]; // 20 deletes/hour
+ * $wgRateLimits['editlayers-rename']['user'] = [ 20, 3600 ]; // 20 renames/hour
+ * $wgRateLimits['editlayers-create']['user'] = [ 10, 3600 ]; // 10 creates/hour
+ * $wgRateLimits['editlayers-render']['user'] = [ 100, 3600 ]; // 100 renders/hour
+ * $wgRateLimits['editlayers-info']['user'] = [ 200, 3600 ];  // 200 info requests/hour
+ * $wgRateLimits['editlayers-list']['user'] = [ 100, 3600 ];  // 100 list requests/hour
+ * ```
+ *
+ * Supported actions: save, delete, rename, create, render, info, list
+ * Without configuration, no rate limiting is enforced.
+ *
  * @file
  * @ingroup Extensions
  */
@@ -35,116 +54,30 @@ class RateLimiter {
 	}
 
 	/**
-	 * Check if user is within rate limits for layer operations
-	 * Implements separate rate limits for privileged users to prevent resource exhaustion
-	 * attacks from compromised admin accounts
+	 * Check if user is within rate limits for layer operations.
 	 *
-	 * @param User $user
-	 * @param string $action Type of action: 'save', 'render', 'create'
+	 * Uses MediaWiki's built-in rate limiting via User::pingLimiter().
+	 * Limits must be configured in $wgRateLimits (see class docblock for examples).
+	 *
+	 * Supported actions and their limit keys:
+	 * - save: editlayers-save
+	 * - delete: editlayers-delete
+	 * - rename: editlayers-rename
+	 * - create: editlayers-create
+	 * - render: editlayers-render
+	 * - info: editlayers-info
+	 * - list: editlayers-list
+	 *
+	 * @param User $user The user performing the action
+	 * @param string $action Type of action: 'save', 'delete', 'rename', 'create', 'render', 'info', 'list'
 	 * @return bool True if allowed, false if rate limited
 	 */
 	public function checkRateLimit( User $user, string $action ): bool {
-		// Get rate limits from config with proper fallback
-		$config = $this->getConfig();
-		$rateLimits = $config->get( 'RateLimits' ) ?? [];
-
 		$limitKey = "editlayers-{$action}";
 
-		// Default limits if not configured - includes privileged user limits
-		$defaultLimits = [
-			'editlayers-save' => [
-				// 30 saves per hour for users
-				'user' => [ 30, 3600 ],
-				// 5 saves per hour for new users
-				'newbie' => [ 5, 3600 ],
-				// 50 saves per hour for autoconfirmed
-				'autoconfirmed' => [ 50, 3600 ],
-				// Higher but limited rate for privileged users (prevents abuse)
-				'sysop' => [ 100, 3600 ],
-				// Separate limit for library managers
-				'managelayerlibrary' => [ 200, 3600 ],
-			],
-			'editlayers-delete' => [
-				// 20 deletes per hour for users (lower than save since deletes are destructive)
-				'user' => [ 20, 3600 ],
-				// 3 deletes per hour for new users (very restrictive)
-				'newbie' => [ 3, 3600 ],
-				// 30 deletes per hour for autoconfirmed
-				'autoconfirmed' => [ 30, 3600 ],
-				// Higher but limited rate for privileged users
-				'sysop' => [ 50, 3600 ],
-				// Separate limit for library managers
-				'managelayerlibrary' => [ 100, 3600 ],
-			],
-			'editlayers-render' => [
-				// 100 renders per hour
-				'user' => [ 100, 3600 ],
-				// 20 renders per hour for new users
-				'newbie' => [ 20, 3600 ],
-				// 200 renders per hour for autoconfirmed
-				'autoconfirmed' => [ 200, 3600 ],
-				// Higher but limited rate for privileged users
-				'sysop' => [ 500, 3600 ],
-				'managelayerlibrary' => [ 1000, 3600 ],
-			],
-			'editlayers-create' => [
-				// 10 new layer sets per hour
-				'user' => [ 10, 3600 ],
-				// 2 new layer sets per hour for new users
-				'newbie' => [ 2, 3600 ],
-				// 20 new layer sets per hour for autoconfirmed
-				'autoconfirmed' => [ 20, 3600 ],
-				// Higher but limited rate for privileged users
-				'sysop' => [ 50, 3600 ],
-				'managelayerlibrary' => [ 100, 3600 ],
-			],
-			'editlayers-rename' => [
-				// 20 renames per hour for users (same as delete since it's a metadata change)
-				'user' => [ 20, 3600 ],
-				// 3 renames per hour for new users (restrictive)
-				'newbie' => [ 3, 3600 ],
-				// 30 renames per hour for autoconfirmed
-				'autoconfirmed' => [ 30, 3600 ],
-				// Higher but limited rate for privileged users
-				'sysop' => [ 50, 3600 ],
-				// Separate limit for library managers
-				'managelayerlibrary' => [ 100, 3600 ],
-			],
-			'editlayers-info' => [
-				// 200 info requests per hour for users (read-only but still limited)
-				'user' => [ 200, 3600 ],
-				// 50 info requests per hour for new users
-				'newbie' => [ 50, 3600 ],
-				// 500 info requests per hour for autoconfirmed
-				'autoconfirmed' => [ 500, 3600 ],
-				// Higher limits for privileged users
-				'sysop' => [ 1000, 3600 ],
-				'managelayerlibrary' => [ 2000, 3600 ],
-			],
-			'editlayers-list' => [
-				// 100 list requests per hour for users (Special:Slides pagination)
-				'user' => [ 100, 3600 ],
-				// 30 list requests per hour for new users
-				'newbie' => [ 30, 3600 ],
-				// 200 list requests per hour for autoconfirmed
-				'autoconfirmed' => [ 200, 3600 ],
-				// Higher limits for privileged users
-				'sysop' => [ 500, 3600 ],
-				'managelayerlibrary' => [ 1000, 3600 ],
-			],
-		];
-
-		// Use configured limits or fall back to defaults
-		$limits = $rateLimits[$limitKey] ?? $defaultLimits[$limitKey] ?? null;
-
-		if ( !$limits ) {
-			// No limits configured - allow but log this condition
-			$this->logRateLimitEvent( $user, $action, 'no_limits_configured' );
-			return true;
-		}
-
 		// Check against MediaWiki's rate limiting system
-		// This will automatically handle different user groups and their limits
+		// pingLimiter() returns true if the user is being rate limited
+		// Limits must be configured in $wgRateLimits (see class docblock)
 		$isLimited = $user->pingLimiter( $limitKey );
 
 		if ( $isLimited ) {

@@ -63,6 +63,22 @@ class SlideHooks {
 	private const MAX_SLIDE_QUERIES_PER_PARSE = 50;
 
 	/**
+	 * Reset per-parse static state.
+	 *
+	 * Called via ParserClearState hook to ensure static caches and counters
+	 * are cleared between page parses. Essential for long-running processes
+	 * like job queues where the same process handles multiple pages.
+	 *
+	 * @param Parser $parser The parser instance (unused but required by hook signature)
+	 * @return bool
+	 */
+	public static function onParserClearState( Parser $parser ): bool {
+		self::$slideDimensionCache = [];
+		self::$slideQueryCount = 0;
+		return true;
+	}
+
+	/**
 	 * Register the #Slide parser function.
 	 *
 	 * @param Parser $parser The parser instance

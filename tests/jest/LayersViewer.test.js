@@ -1013,6 +1013,43 @@ describe( 'LayersViewer', () => {
 			expect( scaled.arrowY ).toBe( 150 ); // 50 * 3
 			expect( scaled.fontSizeAdjust ).toBe( 10 ); // 4 * 2.5
 		} );
+
+		test( 'should scale per-run fontSize in richText (P1-034 regression)', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: { baseWidth: 800, baseHeight: 600, layers: [] }
+			} );
+
+			const layer = {
+				type: 'textbox',
+				x: 100,
+				y: 50,
+				fontSize: 16,
+				richText: [
+					{ text: 'Normal text' },
+					{ text: 'Large text', style: { fontSize: 24 } },
+					{ text: 'Small text', style: { fontSize: 10 } },
+					{ text: 'Style without fontSize', style: { fontWeight: 'bold' } }
+				]
+			};
+
+			const scaled = viewer.scaleLayerCoordinates( layer, 2, 2, 2 );
+
+			// Top-level fontSize should be scaled
+			expect( scaled.fontSize ).toBe( 32 ); // 16 * 2
+
+			// Per-run fontSize in richText should also be scaled
+			expect( scaled.richText ).toHaveLength( 4 );
+			expect( scaled.richText[ 0 ].style ).toBeUndefined(); // No style object
+			expect( scaled.richText[ 1 ].style.fontSize ).toBe( 48 ); // 24 * 2
+			expect( scaled.richText[ 2 ].style.fontSize ).toBe( 20 ); // 10 * 2
+			expect( scaled.richText[ 3 ].style.fontSize ).toBeUndefined(); // No fontSize in style
+			expect( scaled.richText[ 3 ].style.fontWeight ).toBe( 'bold' ); // Other styles preserved
+		} );
 	} );
 
 	describe( 'drawBackgroundOnCanvas', () => {

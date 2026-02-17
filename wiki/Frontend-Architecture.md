@@ -409,10 +409,10 @@ global.mw = {
 | Metric | Value |
 |--------|-------|
 | Total JS Files | 140 |
-| Total Lines | ~96,943 |
+| Total Lines | ~97,072 |
 | ES6 Classes | 140 |
 | Test Files | 162 suites |
-| Test Cases | 11,122 |
+| Test Cases | 11,148 |
 | Statement Coverage | 95.19% |
 | Branch Coverage | 84.96% |
 
@@ -422,18 +422,19 @@ All god classes use the delegation pattern:
 
 | Class | Lines | Delegates To |
 |-------|-------|--------------|
-| LayerPanel | ~2,191 | 9 controllers |
-| CanvasManager | ~2,053 | 10+ controllers |
-| Toolbar | ~1,891 | 4 modules |
-| LayersEditor | ~1,846 | 3 modules |
-| InlineTextEditor | ~1,672 | Rich text modules |
-| APIManager | ~1,570 | APIErrorHandler |
-| PropertyBuilders | ~1,495 | UI builders |
-| SelectionManager | ~1,415 | 3 modules |
-| CanvasRenderer | ~1,391 | SelectionRenderer |
+| LayerPanel | ~2,195 | 9 controllers |
+| CanvasManager | ~2,037 | 10+ controllers |
+| Toolbar | ~1,910 | 4 modules |
+| InlineTextEditor | ~1,833 | Rich text modules |
+| LayersEditor | ~1,790 | 3 modules |
+| APIManager | ~1,593 | APIErrorHandler |
+| PropertyBuilders | ~1,493 | UI builders |
+| SelectionManager | ~1,418 | 3 modules |
+| CanvasRenderer | ~1,390 | SelectionRenderer |
 | ViewerManager | ~1,320 | Sub-renderers |
-| SlideController | ~1,131 | Slide rendering |
+| SlideController | ~1,170 | Slide rendering |
 | TextBoxRenderer | ~1,120 | Rich text runs |
+| ToolbarStyleControls | ~1,073 | Style control panel |
 
 ---
 

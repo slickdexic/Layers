@@ -578,6 +578,13 @@
 			}
 			if ( Array.isArray( L.richText ) ) {
 				L.richText = JSON.parse( JSON.stringify( L.richText ) );
+				// Scale per-run fontSize within richText (P1-034 fix)
+				// Without this, mixed font sizes in richText render incorrectly at zoom != 1
+				for ( const run of L.richText ) {
+					if ( run.style && typeof run.style.fontSize === 'number' ) {
+						run.style.fontSize = run.style.fontSize * scaleAvg;
+					}
+				}
 			}
 			if ( typeof L.x === 'number' ) {
 				L.x = L.x * sx;

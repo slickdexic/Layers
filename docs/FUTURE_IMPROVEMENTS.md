@@ -140,36 +140,6 @@ Make layers clickable to navigate to wiki pages. Low priority - may revisit late
 - Tooltip preview on hover
 - Image maps with multiple clickable regions
 
-### Gradient Fills ✅ COMPLETED
-
-**Complexity:** Low | **Value:** Medium | **Status:** ✅ Completed (v1.5.x)
-
-Linear and radial gradient fills for shapes.
-
-**What's Implemented:**
-- ✅ `GradientRenderer.js` — Shared gradient rendering utility
-- ✅ `GradientEditor.js` — UI for editing gradient color stops
-- ✅ Linear gradients with angle control
-- ✅ Radial gradients with center position and radius
-- ✅ 6 built-in presets (sunset, ocean, forest, fire, steel, rainbow)
-- ✅ Custom color stops (2-10 stops)
-- ✅ Server-side validation of gradient properties
-
-### Custom Fonts ✅ COMPLETED
-
-**Complexity:** Medium | **Value:** Medium | **Status:** ✅ Completed (v1.5.47)
-
-Self-hosted font library with 32 Google Fonts bundled as WOFF2 files.
-
-**What's Implemented:**
-- ✅ 32 fonts across 5 categories (Sans-serif, Serif, Display, Handwriting, Mono)
-- ✅ 106 WOFF2 font files (~2.5MB total)
-- ✅ No external requests to Google (privacy-focused)
-- ✅ `FontConfig.js` manages font categories and display names
-- ✅ Font selector dropdown in toolbar and properties panel
-
----
-
 ## Recently Completed
 
 The following features have been completed and archived:

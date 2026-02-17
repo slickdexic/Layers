@@ -251,6 +251,23 @@ class ApiLayersInfo extends ApiBase {
 					'layerset' => null,
 					'message' => $this->msg( 'layers-no-layers' )->text()
 				];
+				// Get all revisions (no specific set context)
+				$fetchLimit = min( $limit + 1, 201 );
+				$allLayerSets = $db->getLayerSetsForImageWithOptions(
+					$normalizedName,
+					$fileSha1,
+					[
+						'sort' => 'ls_revision',
+						'direction' => 'DESC',
+						'limit' => $fetchLimit,
+						'offset' => $offset,
+						'includeData' => false
+					]
+				);
+				$hasMore = count( $allLayerSets ) > $limit;
+				if ( $hasMore ) {
+					$allLayerSets = array_slice( $allLayerSets, 0, $limit );
+				}
 			} else {
 				// Normalize response format for getLayerSetByName result
 				if ( isset( $layerSet['setName'] ) ) {
@@ -273,31 +290,31 @@ class ApiLayersInfo extends ApiBase {
 				$result = [
 					'layerset' => $layerSet
 				];
-			}
 
-			// Get all revisions for the CURRENT set only (not all sets)
-			// This ensures the revision selector shows only relevant history
-			$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;
-			if ( $currentSetName ) {
-				// Use set-specific revisions
-				$allLayerSets = $db->getSetRevisions( $normalizedName, $fileSha1, $currentSetName, $limit );
-			} else {
-				// Fallback for backwards compatibility - get all revisions
-				$fetchLimit = min( $limit + 1, 201 );
-				$allLayerSets = $db->getLayerSetsForImageWithOptions(
-					$normalizedName,
-					$fileSha1,
-					[
-						'sort' => 'ls_revision',
-						'direction' => 'DESC',
-						'limit' => $fetchLimit,
-						'offset' => $offset,
-						'includeData' => false
-					]
-				);
-				$hasMore = count( $allLayerSets ) > $limit;
-				if ( $hasMore ) {
-					$allLayerSets = array_slice( $allLayerSets, 0, $limit );
+				// Get all revisions for the CURRENT set only (not all sets)
+				// This ensures the revision selector shows only relevant history
+				$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;
+				if ( $currentSetName ) {
+					// Use set-specific revisions
+					$allLayerSets = $db->getSetRevisions( $normalizedName, $fileSha1, $currentSetName, $limit );
+				} else {
+					// Fallback for backwards compatibility - get all revisions
+					$fetchLimit = min( $limit + 1, 201 );
+					$allLayerSets = $db->getLayerSetsForImageWithOptions(
+						$normalizedName,
+						$fileSha1,
+						[
+							'sort' => 'ls_revision',
+							'direction' => 'DESC',
+							'limit' => $fetchLimit,
+							'offset' => $offset,
+							'includeData' => false
+						]
+					);
+					$hasMore = count( $allLayerSets ) > $limit;
+					if ( $hasMore ) {
+						$allLayerSets = array_slice( $allLayerSets, 0, $limit );
+					}
 				}
 			}
 			$allLayerSets = $this->enrichWithUserNames( $allLayerSets );

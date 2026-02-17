@@ -44,7 +44,7 @@ class HooksTest extends \MediaWikiUnitTestCase {
 		$addedModules = [];
 		$outputPageMock->expects( $this->exactly( 2 ) )
 			->method( 'addModules' )
-			->willReturnCallback( function ( $module ) use ( &$addedModules ) {
+			->willReturnCallback( static function ( $module ) use ( &$addedModules ) {
 				$addedModules[] = $module;
 			} );
 

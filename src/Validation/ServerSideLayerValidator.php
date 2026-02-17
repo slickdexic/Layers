@@ -218,9 +218,17 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'tailWidth' => [ 'min' => 0, 'max' => 100 ],
 		'blurRadius' => [ 'min' => 0, 'max' => 100 ],
 		'padding' => [ 'min' => 0, 'max' => 100 ],
+		// Text stroke (P2-070 fix)
+		'textStrokeWidth' => [ 'min' => 0, 'max' => 50 ],
+		// Text shadow effects
 		'textShadowBlur' => [ 'min' => 0, 'max' => 50 ],
 		'textShadowOffsetX' => [ 'min' => -100, 'max' => 100 ],
 		'textShadowOffsetY' => [ 'min' => -100, 'max' => 100 ],
+		// Layer shadow effects (P2-070 fix - consistent with text shadow limits)
+		'shadowBlur' => [ 'min' => 0, 'max' => 100 ],
+		'shadowOffsetX' => [ 'min' => -200, 'max' => 200 ],
+		'shadowOffsetY' => [ 'min' => -200, 'max' => 200 ],
+		'shadowSpread' => [ 'min' => 0, 'max' => 100 ],
 		'lineHeight' => [ 'min' => 0.5, 'max' => 5 ],
 		'cornerRadius' => [ 'min' => 0, 'max' => 500 ],
 		'tailPosition' => [ 'min' => 0, 'max' => 1 ],
@@ -1348,6 +1356,21 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		// SECURITY: Block foreignObject which can embed HTML - check both versions
 		if ( preg_match( '/<\s*foreignObject/i', $svg ) || preg_match( '/<\s*foreignObject/i', $decodedSvg ) ) {
 			return [ 'valid' => false, 'error' => 'SVG must not contain foreignObject elements' ];
+		}
+
+		// SECURITY: Block embed, object, iframe, applet (P2-071 fix)
+		// These elements can load external resources or execute code
+		if ( preg_match( '/<\s*embed/i', $svg ) || preg_match( '/<\s*embed/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain embed elements' ];
+		}
+		if ( preg_match( '/<\s*object/i', $svg ) || preg_match( '/<\s*object/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain object elements' ];
+		}
+		if ( preg_match( '/<\s*iframe/i', $svg ) || preg_match( '/<\s*iframe/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain iframe elements' ];
+		}
+		if ( preg_match( '/<\s*applet/i', $svg ) || preg_match( '/<\s*applet/i', $decodedSvg ) ) {
+			return [ 'valid' => false, 'error' => 'SVG must not contain applet elements' ];
 		}
 
 		// SECURITY: Block use elements with external references - check both versions

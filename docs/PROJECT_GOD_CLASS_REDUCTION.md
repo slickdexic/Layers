@@ -3,14 +3,14 @@
 **Project Start:** January 29, 2026  
 **Completion Date:** January 29, 2026  
 **Owner:** Lead Engineer  
-**Status:** ✅ COMPLETE
+**Status:** ✅ Complete for original extraction scope; maintenance tracking continues
 
 ---
 
 ## Executive Summary
 
-This initiative addresses the primary architectural debt identified in the v47
-codebase review: **20 hand-written JavaScript files exceeding 1,000 lines**. 
+This initiative addresses major architectural debt identified in prior
+codebase reviews: **20 hand-written JavaScript files exceeding 1,000 lines**.
 These "god classes" increase cognitive load, reduce testability, and create 
 maintenance challenges. This project will reduce the count to **≤12** through
 strategic extraction of cohesive modules.
@@ -27,9 +27,9 @@ strategic extraction of cohesive modules.
 
 | Metric | Current | Target | Status |
 |--------|---------|--------|--------|
-| JS god classes (hand-written) | **15** | ≤12 | ⚠️ Regressed (was 12, 3 grew back) |
-| Test coverage | 95.53% | ≥95% | ✅ Maintained |
-| All tests passing | 10,840+ | 10,860+ | ✅ Maintained |
+| JS god classes (hand-written) | **13** | ≤12 | 🔄 Ongoing (1 above target) |
+| Test coverage | 95.19% | ≥95% | ✅ Maintained |
+| All tests passing | 11,148 | 11,148 | ✅ Passing |
 | ESLint errors | 0 | 0 | ✅ Maintained |
 
 ---
@@ -397,9 +397,11 @@ This achieves the goal of bringing ArrowRenderer below the 1,000 line threshold.
 
 ## Appendix: Final God Class Inventory
 
-*Updated: January 29, 2026 — Project Complete*
+### Snapshot Update
 
-### Remaining God Classes (15 files ≥1,000 lines)
+Updated February 17, 2026 for v1.5.58 metrics refresh.
+
+### Remaining Hand-Written JS God Classes (13 files ≥1,000 lines)
 
 | File | Lines | Type | Status |
 |------|-------|------|--------|
@@ -413,11 +415,9 @@ This achieves the goal of bringing ArrowRenderer below the 1,000 line threshold.
 | SelectionManager.js | 1,415 | Manager | ✅ Clean separation |
 | CanvasRenderer.js | 1,365 | Renderer | ✅ Acceptable |
 | ViewerManager.js | 1,320 | Manager | ✅ Phase 2 Complete |
-| ToolManager.js | 1,214 | Controller | ✅ Acceptable |
-| GroupManager.js | 1,205 | Manager | ✅ Acceptable |
-| SlideController.js | 1,131 | Controller | ⚠️ Grew back above 1K |
-| TransformController.js | 1,117 | Controller | ⚠️ Grew back above 1K |
-| LayersValidator.js | 1,116 | Validator | ✅ Acceptable |
+| SlideController.js | 1,170 | Controller | ✅ Acceptable |
+| TextBoxRenderer.js | 1,120 | Renderer | ✅ Acceptable |
+| ToolbarStyleControls.js | 1,006 | UI Controller | ⚠️ Slightly above 1K |
 
 ### Files Reduced Below 1,000 Lines (6 files)
 

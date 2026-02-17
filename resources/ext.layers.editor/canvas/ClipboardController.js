@@ -243,19 +243,17 @@
 			layer.controlY = ( layer.controlY || 0 ) + PASTE_OFFSET;
 		}
 
-		// Offset marker/callout arrow tip and tail tip
+		// Offset marker/callout arrow tip
+		// Note: arrowX/arrowY are world coordinates, so they need offset
 		if ( layer.arrowX !== undefined ) {
 			layer.arrowX = ( layer.arrowX || 0 ) + PASTE_OFFSET;
 		}
 		if ( layer.arrowY !== undefined ) {
 			layer.arrowY = ( layer.arrowY || 0 ) + PASTE_OFFSET;
 		}
-		if ( layer.tailTipX !== undefined ) {
-			layer.tailTipX = ( layer.tailTipX || 0 ) + PASTE_OFFSET;
-		}
-		if ( layer.tailTipY !== undefined ) {
-			layer.tailTipY = ( layer.tailTipY || 0 ) + PASTE_OFFSET;
-		}
+		// Note: tailTipX/tailTipY are LOCAL coordinates relative to callout center.
+		// They move with the callout when layer.x/y change, so we should NOT offset them.
+		// Applying PASTE_OFFSET here would displace the tail relative to the body.
 
 		// Offset polygon/path points
 		if ( layer.points && Array.isArray( layer.points ) ) {

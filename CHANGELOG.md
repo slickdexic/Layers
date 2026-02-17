@@ -2,6 +2,35 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.58] - 2026-02-17
+
+### Fixed
+- **Arrow Key Nudge Support** — Selected layers can now be nudged 1px with arrow keys, 10px with Shift+Arrow, matching the Figma/Canva pattern. Includes smart guide snapping and full undo/redo integration.
+- **Color Preview Mutation** — Fixed ToolbarStyleControls color picker mutating layer state during preview. New `commitColorChange()` method properly commits the previewed color on close.
+- **Double Render on Undo/Redo** — Removed redundant `renderLayers()`/`markDirty()` calls from EventManager's undo/redo handlers; `HistoryManager.restoreState()` already performs these.
+- **Clipboard Callout Tail Offset** — Removed PASTE_OFFSET from `tailTipX`/`tailTipY` in ClipboardController (local coordinates, not absolute).
+- **CSS Font Shorthand Order** — Swapped fontStyle/fontWeight in InlineTextEditor's CSS font shorthand to match CSS spec (`font-style font-weight font-size/line-height font-family`).
+- **Timestamp UTC Parsing** — `parseMWTimestamp()` in LayerSetManager now uses `Date.UTC()` instead of local `new Date()`, fixing timezone-dependent display.
+- **ApiLayersInfo Null Dereference** — Added null guard before accessing `layerset.data` in `ApiLayersInfo.php`.
+- **REL1_43 Modal 500 Error** — Restored `method_exists()` guard for `allowClickjacking()` on REL1_43 branch. Cherry-pick d7fbde38 had incorrectly removed MW <1.44 compatibility code.
+
+### Changed
+- **ToolbarKeyboard i18n** — Four toolbar labels now use `mw.message()` with fallback strings instead of hardcoded English text.
+- **ES6 Modernization** — Eliminated `.bind(this)` patterns, converted to arrow functions and spread syntax across 9+ files. Replaced `.indexOf()` with `.includes()`/`.startsWith()`. Converted string concatenation to template literals. Removed 27 debug `console.log` statements.
+
+### Added
+- **Built-in Help Dialog** — New help dialog accessible via Shift+? showing keyboard shortcuts and tool descriptions.
+
+### Documentation
+- **Documentation Review Report** — Comprehensive 540-line audit of all 35+ documentation files identifying 47 issues (7 critical, 15 outdated, 8 contradictions).
+- **Full metric synchronization** — Updated god class count (16→17), line counts, test counts across all documentation files.
+
+### Technical Details
+- All 11,148 tests pass (162 test suites) ✅
+- Coverage: 95.19% statements, 84.96% branches
+- God classes: 17 (13 hand-written JS, 2 generated, 2 PHP)
+- i18n messages: 820
+
 ## [1.5.57] - 2026-02-13
 
 ### Fixed

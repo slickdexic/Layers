@@ -21,14 +21,14 @@ This extension is feature-rich by design—**17 drawing tools**, multiple render
 **There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns
 - ✅ Secure with CSRF protection, rate limiting, validation
-- ✅ Thoroughly tested (95.19% coverage, 11,122 tests)
+- ✅ Thoroughly tested (95.19% coverage, 11,148 tests)
 - ✅ Properly delegated (god classes use controller patterns)
 
 ---
 
 ## ⚠️ MANDATORY: God Class Rules
 
-**We have 16 "god classes" (files >1,000 lines) that represent technical debt. 2 are generated data files (exempt), 14 are hand-written (12 JS + 2 PHP). These rules are enforced by CI:**
+**We have 17 "god classes" (files >1,000 lines) that represent technical debt. 2 are generated data files (exempt), 15 are hand-written (13 JS + 2 PHP). These rules are enforced by CI:**
 
 ### Rule 1: No God Class Growth
 - **CI will BLOCK your PR** if you increase the size of any hand-written god class
@@ -48,40 +48,40 @@ This extension is feature-rich by design—**17 drawing tools**, multiple render
 ### Current God Classes (Do Not Grow These)
 
 **Generated data files (exempt from refactoring):**
-- ShapeLibraryData.js (~11,299 lines)
+- ShapeLibraryData.js (~11,293 lines)
 - EmojiLibraryIndex.js (~3,055 lines)
 
 **Hand-written JS files (use delegation patterns):**
 | File | Lines | Status |
 |------|-------|--------|
-| LayerPanel.js | ~2,191 | Delegates to 9 controllers |
-| CanvasManager.js | ~2,053 | Facade - delegates to 10+ controllers |
-| Toolbar.js | ~1,891 | Needs split |
-| LayersEditor.js | ~1,846 | Partial delegation |
-| InlineTextEditor.js | ~1,672 | Inline text editing |
-| APIManager.js | ~1,570 | Delegates to APIErrorHandler |
-| PropertyBuilders.js | ~1,495 | Reusable property builders |
-| SelectionManager.js | ~1,415 | Delegates to SelectionState, SelectionHandles |
-| CanvasRenderer.js | ~1,391 | Delegates to SelectionRenderer |
+| LayerPanel.js | ~2,195 | Delegates to 9 controllers |
+| CanvasManager.js | ~2,037 | Facade - delegates to 10+ controllers |
+| Toolbar.js | ~1,910 | Needs split |
+| InlineTextEditor.js | ~1,833 | Inline text editing |
+| LayersEditor.js | ~1,790 | Partial delegation |
+| APIManager.js | ~1,593 | Delegates to APIErrorHandler |
+| PropertyBuilders.js | ~1,493 | Reusable property builders |
+| SelectionManager.js | ~1,418 | Delegates to SelectionState, SelectionHandles |
+| CanvasRenderer.js | ~1,390 | Delegates to SelectionRenderer |
 | ViewerManager.js | ~1,320 | Viewer instance management |
-| SlideController.js | ~1,131 | Slide mode logic |
+| SlideController.js | ~1,170 | Slide mode logic |
 | TextBoxRenderer.js | ~1,120 | Rich text run rendering |
+| ToolbarStyleControls.js | ~1,073 | Style control panel |
 
 **PHP god classes:**
-- ServerSideLayerValidator.php (~1,383 lines)
+- ServerSideLayerValidator.php (~1,406 lines)
 - LayersDatabase.php (~1,369 lines)
 
 **Near-threshold files (900-999 lines, watch carefully):**
-- ToolbarStyleControls.js (~998)
-- PropertiesForm.js (~993)
+- PropertiesForm.js (~991)
+- TransformController.js (~990)
 - GroupManager.js (~987)
-- TransformController.js (~985)
-- ArrowRenderer.js (~974)
 - LayerRenderer.js (~973)
-- ResizeCalculator.js (~963)
-- CalloutRenderer.js (~961)
+- CalloutRenderer.js (~969)
+- ResizeCalculator.js (~966)
 - ShapeRenderer.js (~959)
-- LayersValidator.js (~935)
+- LayersValidator.js (~956)
+- ArrowRenderer.js (~932)
 
 See [`improvement_plan.md`](improvement_plan.md) for refactoring guidance.
 

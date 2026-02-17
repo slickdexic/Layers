@@ -23,7 +23,7 @@ class UIHooks {
 	 * @param array &$links Navigation links bucket
 	 */
 	public static function onSkinTemplateNavigation( $sktemplate, array &$links ): void {
-	// Debug flag comes from config; request param can only narrow when config already enabled
+	// Debug flag comes from config; request param can override when config already enabled
 		$dbg = false;
 		$req = null;
 		try {
@@ -31,18 +31,21 @@ class UIHooks {
 			$dbgCfg = (bool)$cfg->get( 'LayersDebug' );
 			$req = $sktemplate->getRequest();
 			$paramDbg = $req->getVal( 'layersdebug' );
-			// Only honor request param when config debug is enabled
+			// URL param can override (enable or disable) when config debug is enabled
+			// P2-073 FIX: Allow URL param to disable debug mode
 			if ( $dbgCfg && $paramDbg !== null ) {
 				$val = strtolower( trim( (string)$paramDbg ) );
 				if ( $val === '1' || $val === 'true' || $val === 'yes' ) {
 					$dbg = true;
 				} elseif ( $val === '0' || $val === 'false' || $val === 'no' ) {
 					$dbg = false;
+				} else {
+					// Unknown value - use config default
+					$dbg = $dbgCfg;
 				}
-			}
-			// Default to config if request param didn't set it
-			if ( $dbg === false ) {
-				$dbg = (bool)$dbgCfg;
+			} else {
+				// No param or config debug disabled - use config value
+				$dbg = $dbgCfg;
 			}
 		} catch ( \Throwable $e ) {
 			// Fail silently on config access errors - default to no debug

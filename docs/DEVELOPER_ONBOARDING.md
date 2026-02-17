@@ -14,15 +14,15 @@ This document provides an overview of the Layers extension architecture and onbo
 
 | Module | Purpose | Lines |
 |--------|---------|-------|
-| `LayersEditor.js` | Main orchestrator | ~1,836 |
-| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,053 |
-| `LayerPanel.js` | Layer list UI component | ~2,180 |
-| `SelectionManager.js` | Selection state management | ~1,415 |
-| `ToolManager.js` | Tool state and switching | ~1,214 |
-| `ArrowRenderer.js` | Arrow rendering (curved support) | ~974 |
-| `ShapeRenderer.js` | Shape rendering (shared) | ~995 |
-| `LayerRenderer.js` | Shared rendering engine | ~969 |
-| `TransformController.js` | Resize, rotate, drag operations | ~1,117 |
+| `LayersEditor.js` | Main orchestrator | ~1,790 |
+| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,037 |
+| `LayerPanel.js` | Layer list UI component | ~2,195 |
+| `SelectionManager.js` | Selection state management | ~1,418 |
+| `ToolManager.js` | Tool state and switching | ~799 |
+| `ArrowRenderer.js` | Arrow rendering (curved support) | ~932 |
+| `ShapeRenderer.js` | Shape rendering (shared) | ~959 |
+| `LayerRenderer.js` | Shared rendering engine | ~973 |
+| `TransformController.js` | Resize, rotate, drag operations | ~990 |
 | `DialogManager.js` | Modal dialogs with ARIA | ~736 |
 | `ShadowRenderer.js` | Shadow effect rendering | ~576 |
 | `RevisionManager.js` | Revision and named set management | ~499 |
@@ -81,7 +81,7 @@ Slide Mode (v1.5.22+) allows creating standalone graphics without a parent image
 | `src/Api/ApiLayersSave.php` | POST save slide (via `executeSlideSave()`) |
 | `src/SpecialPages/SpecialSlides.php` | Management dashboard |
 | `src/SpecialPages/SpecialEditSlide.php` | Direct editor access |
-| `resources/ext.layers.slides/SlideManager.js` | Slide loading/caching |
+| `resources/ext.layers.slides/SpecialSlides.js` | Special:Slides page UI logic |
 | `resources/ext.layers.editor/ui/SlidePropertiesPanel.js` | Canvas size/background UI |
 
 ### Creating a Test Slide

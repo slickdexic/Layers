@@ -91,7 +91,7 @@ For additional control over editor behavior:<br>
 <code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=editor-newtab]]</nowiki></code> Opens the editor in a new tab<br>
 <code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=editor-modal]]</nowiki></code> Opens the editor in an overlay (iframe).
 
-'''Note:''' 'layerslink=' is a depreciated feature with the new overlay buttons [[File:Layers-overlay-buttons.png]] (edit / view full size) that display on hover.<br>
+'''Note:''' 'layerslink=' is a deprecated feature with the new overlay buttons [[File:Layers-overlay-buttons.png]] (edit / view full size) that display on hover.<br>
 The 'Edit layers' button will open the Layers editor modally (overlay) so the user never leaves the page they are viewing. Saved edits are updated immediately on editor close.<br>
 The 'View full size' button opens a 'lightbox' (overlay) preview of the image. On overlay close, no navigation takes place, so the user remains on the same page.
 
