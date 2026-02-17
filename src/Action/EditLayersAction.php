@@ -31,7 +31,7 @@ class EditLayersAction extends \Action {
 		$title = $this->getTitle();
 		$request = $this->getRequest();
 
-		// Check permission using Authority (MW 1.36+, guaranteed in MW 1.44+)
+		// Check permission using Authority (MW 1.36+)
 		$hasPermission = $this->getAuthority()->isAllowed( 'editlayers' );
 
 		if ( !$hasPermission ) {
@@ -85,9 +85,13 @@ class EditLayersAction extends \Action {
 		// In modal mode, allow the page to be framed (loaded in iframe)
 		// Otherwise MediaWiki's default X-Frame-Options header blocks it
 		if ( $isModalMode ) {
-			// Allow the page to be framed (loaded in iframe) for modal editor
-			// Otherwise MediaWiki's default X-Frame-Options header blocks it
-			$out->allowClickjacking();
+			// allowClickjacking() deprecated in MW 1.41, removed in MW 1.44
+			// Use method_exists() guard for cross-version compatibility
+			if ( method_exists( $out, 'allowClickjacking' ) ) {
+				$out->allowClickjacking();
+			} elseif ( method_exists( $out, 'setPreventClickjacking' ) ) {
+				$out->setPreventClickjacking( false );
+			}
 		}
 
 		// Page title
