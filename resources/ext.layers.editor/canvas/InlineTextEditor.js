@@ -343,6 +343,21 @@
 
 					changesApplied = true;
 
+					// Mark editor state as dirty so the discard-changes dialog
+					// appears when the user exits without saving.
+					// Direct layer mutations bypass StateManager.updateLayer(),
+					// so isDirty would not be set otherwise.
+					const editorRef = this.canvasManager && this.canvasManager.editor;
+					if ( editorRef && editorRef.stateManager ) {
+						if ( typeof editorRef.stateManager.markDirty === 'function' ) {
+							editorRef.stateManager.markDirty();
+						} else if ( typeof editorRef.stateManager.setDirty === 'function' ) {
+							editorRef.stateManager.setDirty( true );
+						} else {
+							editorRef.stateManager.set( 'isDirty', true );
+						}
+					}
+
 					if ( debug && typeof mw.log !== 'undefined' ) {
 						mw.log( '[InlineTextEditor] Layer updated', {
 							layerId: this.editingLayer.id,
