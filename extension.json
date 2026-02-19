@@ -1001,6 +1001,7 @@
 				"layers-prop-extension-length",
 				"layers-prop-dimension-offset",
 				"layers-prop-text-offset",
+				"layers-prop-text-radial-offset",
 				"layers-prop-unit",
 				"layers-prop-scale",
 				"layers-prop-precision",
