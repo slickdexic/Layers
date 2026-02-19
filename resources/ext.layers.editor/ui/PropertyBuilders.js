@@ -1252,14 +1252,31 @@
 				{ value: 'vertical', text: t( 'layers-dimension-orientation-vertical', 'Vertical' ) }
 			],
 			onChange: function ( v ) {
-				// When changing to constrained orientation, adjust endpoints
+				// Use current layer state, not the stale closure reference.
+				// The closure's `layer` is from when the form was built; the user
+				// may have moved the dimension since then, making x1/y1 stale.
+				const current = ( typeof editor.getLayerById === 'function' &&
+					editor.getLayerById( layer.id ) ) || layer;
+				const curX1 = current.x1 || 0;
+				const curY1 = current.y1 || 0;
+				const curX2 = current.x2 || 0;
+				const curY2 = current.y2 || 0;
+
 				const updates = { orientation: v };
 				if ( v === 'horizontal' ) {
 					// Align y2 to y1 (make horizontal)
-					updates.y2 = layer.y1;
+					updates.y2 = curY1;
+					// If horizontal span would be too small, use the old vertical span
+					if ( Math.abs( curX2 - curX1 ) < 20 ) {
+						updates.x2 = curX1 + Math.max( Math.abs( curY2 - curY1 ), 100 );
+					}
 				} else if ( v === 'vertical' ) {
 					// Align x2 to x1 (make vertical)
-					updates.x2 = layer.x1;
+					updates.x2 = curX1;
+					// If vertical span would be too small, use the old horizontal span
+					if ( Math.abs( curY2 - curY1 ) < 20 ) {
+						updates.y2 = curY1 + Math.max( Math.abs( curX2 - curX1 ), 100 );
+					}
 				}
 				editor.updateLayer( layer.id, updates );
 			}

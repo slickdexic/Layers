@@ -1687,6 +1687,64 @@ describe( 'PropertyBuilders', () => {
 			);
 		} );
 
+		test( 'orientation change to vertical should ensure minimum span', () => {
+			// When switching a horizontal line to vertical, y span is too small
+			const ctx = createMockContext( {
+				type: 'dimension',
+				orientation: 'free',
+				x1: 100,
+				y1: 200,
+				x2: 300,
+				y2: 200
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const orientCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].value === 'free'
+			);
+			const onChange = orientCall[ 0 ].onChange;
+
+			onChange( 'vertical' );
+			// y2-y1=0 which is <20, so y2 should be extended using old x span (200)
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ orientation: 'vertical', x2: 100, y2: 400 }
+			);
+		} );
+
+		test( 'orientation snap should use current layer state, not stale closure', () => {
+			const ctx = createMockContext( {
+				type: 'dimension',
+				orientation: 'free',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 200
+			} );
+			// Simulate a moved layer: getLayerById returns different coords
+			ctx.editor.getLayerById = jest.fn().mockReturnValue( {
+				id: 'test-layer-1',
+				x1: 150, y1: 150, x2: 250, y2: 250
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensionProperties( ctx );
+
+			const orientCall = ctx.addSelect.mock.calls.find(
+				( call ) => call[ 0 ].value === 'free'
+			);
+			const onChange = orientCall[ 0 ].onChange;
+
+			onChange( 'vertical' );
+			// Should use current x1=150, not stale x1=100
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ orientation: 'vertical', x2: 150 }
+			);
+		} );
+
 		test( 'endStyle select should update layer', () => {
 			const ctx = createMockContext( {
 				type: 'dimension',
