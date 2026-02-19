@@ -220,6 +220,7 @@
 				'path': 'path',
 				'rectangle': 'rectangle',
 				'dimension': 'dimension',
+				'angleDimension': 'angleDimension',
 				'marker': 'marker',
 				'callout': 'callout'
 			};
@@ -264,6 +265,8 @@
 				if ( canvasManager ) {
 					if ( layerType === 'dimension' && canvasManager.updateDimensionDefaults ) {
 						canvasManager.updateDimensionDefaults( style );
+					} else if ( layerType === 'angleDimension' && canvasManager.updateAngleDimensionDefaults ) {
+						canvasManager.updateAngleDimensionDefaults( style );
 					} else if ( layerType === 'marker' && canvasManager.updateMarkerDefaults ) {
 						canvasManager.updateMarkerDefaults( style );
 					}
@@ -274,6 +277,8 @@
 				const currentTool = this.toolbar.currentTool;
 				if ( currentTool === 'dimension' && canvasManager.updateDimensionDefaults ) {
 					canvasManager.updateDimensionDefaults( style );
+				} else if ( currentTool === 'angleDimension' && canvasManager.updateAngleDimensionDefaults ) {
+					canvasManager.updateAngleDimensionDefaults( style );
 				} else if ( currentTool === 'marker' && canvasManager.updateMarkerDefaults ) {
 					canvasManager.updateMarkerDefaults( style );
 				}

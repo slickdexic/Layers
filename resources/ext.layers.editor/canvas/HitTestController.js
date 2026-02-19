@@ -183,6 +183,10 @@
 					// Dimensions use line-based hit testing
 					return this.isPointNearDimension( point, layer );
 
+				case 'angleDimension':
+					// Angle dimensions use arc and arm line hit testing
+					return this.isPointNearAngleDimension( point, layer );
+
 				default:
 					return false;
 			}
@@ -299,6 +303,107 @@
 			);
 			if ( distToText <= textHitRadius ) {
 				return true;
+			}
+
+			return false;
+		}
+
+		/**
+		 * Test if point is near an angle dimension layer
+		 * Checks proximity to arc, arm lines, and text area
+		 *
+		 * @param {Object} point Point with x, y
+		 * @param {Object} layer Angle dimension layer
+		 * @return {boolean} True if hit
+		 */
+		isPointNearAngleDimension( point, layer ) {
+			const cx = layer.cx || 0;
+			const cy = layer.cy || 0;
+			const ax = layer.ax || 0;
+			const ay = layer.ay || 0;
+			const bx = layer.bx || 0;
+			const by = layer.by || 0;
+			const arcRadius = layer.arcRadius || 40;
+
+			// Test 1: Near vertex point
+			const distToVertex = Math.sqrt(
+				( point.x - cx ) * ( point.x - cx ) +
+				( point.y - cy ) * ( point.y - cy )
+			);
+			if ( distToVertex <= 10 ) {
+				return true;
+			}
+
+			// Test 2: Near arm1 line (vertex to arm1 endpoint)
+			const distToArm1 = this.pointToLineDistance( point.x, point.y, cx, cy, ax, ay );
+			if ( distToArm1 <= 8 ) {
+				return true;
+			}
+
+			// Test 3: Near arm2 line (vertex to arm2 endpoint)
+			const distToArm2 = this.pointToLineDistance( point.x, point.y, cx, cy, bx, by );
+			if ( distToArm2 <= 8 ) {
+				return true;
+			}
+
+			// Test 4: Near the arc
+			const distFromVertex = Math.sqrt(
+				( point.x - cx ) * ( point.x - cx ) +
+				( point.y - cy ) * ( point.y - cy )
+			);
+			// Check if distance from vertex is approximately arcRadius
+			if ( Math.abs( distFromVertex - arcRadius ) <= 10 ) {
+				// Also check point is within the angle sweep
+				const pointAngle = Math.atan2( point.y - cy, point.x - cx );
+				const startAngle = Math.atan2( ay - cy, ax - cx );
+				const endAngle = Math.atan2( by - cy, bx - cx );
+
+				// Determine sweep
+				let sweep = endAngle - startAngle;
+				const reflexAngle = layer.reflexAngle === true || layer.reflexAngle === 1;
+
+				if ( !reflexAngle ) {
+					if ( sweep < 0 ) {
+						sweep += 2 * Math.PI;
+					}
+					if ( sweep > Math.PI ) {
+						sweep = sweep - 2 * Math.PI;
+					}
+				} else {
+					if ( sweep <= 0 ) {
+						sweep += 2 * Math.PI;
+					}
+					if ( sweep <= Math.PI ) {
+						sweep = sweep + 2 * Math.PI;
+					}
+					if ( sweep > 2 * Math.PI ) {
+						sweep -= 2 * Math.PI;
+					}
+				}
+
+				// Check if the point angle is within the arc sweep
+				let testAngle = pointAngle - startAngle;
+				if ( sweep >= 0 ) {
+					while ( testAngle < 0 ) {
+						testAngle += 2 * Math.PI;
+					}
+					while ( testAngle > 2 * Math.PI ) {
+						testAngle -= 2 * Math.PI;
+					}
+					if ( testAngle <= sweep + 0.2 ) {
+						return true;
+					}
+				} else {
+					while ( testAngle > 0 ) {
+						testAngle -= 2 * Math.PI;
+					}
+					while ( testAngle < -2 * Math.PI ) {
+						testAngle += 2 * Math.PI;
+					}
+					if ( testAngle >= sweep - 0.2 ) {
+						return true;
+					}
+				}
 			}
 
 			return false;

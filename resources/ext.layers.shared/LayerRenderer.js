@@ -62,6 +62,10 @@
 	const DimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.DimensionRenderer ) ||
 		( typeof require !== 'undefined' ? require( './DimensionRenderer.js' ) : null );
 
+	// Get AngleDimensionRenderer - it should be loaded before this module
+	const AngleDimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer ) ||
+		( typeof require !== 'undefined' ? require( './AngleDimensionRenderer.js' ) : null );
+
 	// Get GradientRenderer - it should be loaded before this module
 	const GradientRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.Renderers && window.Layers.Renderers.GradientRenderer ) ||
 		( typeof require !== 'undefined' ? require( './GradientRenderer.js' ) : null );
@@ -217,6 +221,13 @@ class LayerRenderer {
 		} else {
 			this.dimensionRenderer = null;
 		}
+
+		// Create AngleDimensionRenderer instance for angle measurement operations
+		if ( AngleDimensionRenderer ) {
+			this.angleDimensionRenderer = new AngleDimensionRenderer( ctx );
+		} else {
+			this.angleDimensionRenderer = null;
+		}
 	}
 
 	// ========================================================================
@@ -261,6 +272,9 @@ class LayerRenderer {
 		}
 		if ( this.dimensionRenderer ) {
 			this.dimensionRenderer.setContext( ctx );
+		}
+		if ( this.angleDimensionRenderer ) {
+			this.angleDimensionRenderer.setContext( ctx );
 		}
 		if ( this.gradientRenderer ) {
 			this.gradientRenderer.setContext( ctx );
@@ -630,6 +644,14 @@ class LayerRenderer {
 		}
 	}
 
+	/** Draw an angle dimension layer (angle measurement annotation with arc) */
+	drawAngleDimension( layer, options ) {
+		if ( this.angleDimensionRenderer ) {
+			this.angleDimensionRenderer.setContext( this.ctx );
+			this.angleDimensionRenderer.draw( layer, this._prepareRenderOptions( options ) );
+		}
+	}
+
 	// ========================================================================
 	// Blur Blend Mode Support
 	// ========================================================================
@@ -910,6 +932,9 @@ class LayerRenderer {
 			case 'dimension':
 				this.drawDimension( layer, options );
 				break;
+			case 'angleDimension':
+				this.drawAngleDimension( layer, options );
+				break;
 		}
 	}
 
@@ -934,6 +959,7 @@ class LayerRenderer {
 			'imageLayerRenderer',
 			'markerRenderer',
 			'dimensionRenderer',
+			'angleDimensionRenderer',
 			'gradientRenderer',
 			'_customShapeRenderer'
 		];

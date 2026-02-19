@@ -154,6 +154,12 @@
 				category: 'annotation',
 				createsLayer: true
 			} );
+
+			this.register( 'angleDimension', {
+				cursor: 'crosshair',
+				category: 'annotation',
+				createsLayer: true
+			} );
 		}
 
 		/**

@@ -369,6 +369,25 @@
 						height: Math.max( Math.abs( dy2 - dy1 ), 1 )
 					};
 				}
+				case 'angleDimension': {
+					// Angle dimension has vertex (cx,cy) and two arm endpoints (ax,ay, bx,by)
+					const adCx = layer.cx || 0;
+					const adCy = layer.cy || 0;
+					const adAx = layer.ax || 0;
+					const adAy = layer.ay || 0;
+					const adBx = layer.bx || 0;
+					const adBy = layer.by || 0;
+					const adMinX = Math.min( adCx, adAx, adBx );
+					const adMinY = Math.min( adCy, adAy, adBy );
+					const adMaxX = Math.max( adCx, adAx, adBx );
+					const adMaxY = Math.max( adCy, adAy, adBy );
+					return {
+						x: adMinX,
+						y: adMinY,
+						width: Math.max( adMaxX - adMinX, 1 ),
+						height: Math.max( adMaxY - adMinY, 1 )
+					};
+				}
 				default: {
 					// Default fallback for unknown types
 					rectX = layer.x || 0;

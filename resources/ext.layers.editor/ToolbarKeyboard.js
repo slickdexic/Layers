@@ -141,6 +141,13 @@
 			return;
 		}
 
+		// Handle Shift+D for angle dimension tool
+		if ( e.shiftKey && key === 'd' ) {
+			e.preventDefault();
+			this.toolbar.selectTool( 'angleDimension' );
+			return;
+		}
+
 		switch ( key ) {
 			case ';':
 				e.preventDefault();
@@ -186,6 +193,9 @@
 			case 'l':
 				this.toolbar.selectTool( 'line' );
 				break;
+			case 'd':
+				this.toolbar.selectTool( 'dimension' );
+				break;
 			case '+':
 			case '=':
 				e.preventDefault();
@@ -204,7 +214,16 @@
 				this.editor.deleteSelected();
 				break;
 			case 'escape':
-				this.editor.cancel();
+				// Cancel multi-phase angle dimension if in progress
+				if ( this.editor.canvasManager && this.editor.canvasManager.drawingController &&
+					this.editor.canvasManager.drawingController.isAngleDimensionInProgress() ) {
+					this.editor.canvasManager.drawingController.cancelAngleDimension();
+					this.editor.canvasManager.tempLayer = null;
+					this.editor.canvasManager.renderLayers( this.editor.layers );
+					this.toolbar.selectTool( 'pointer' );
+				} else {
+					this.editor.cancel();
+				}
 				break;
 		}
 	}
