@@ -353,6 +353,12 @@
 					desc: msg( 'layers-help-tool-dimension', 'Add measurement annotations with extension lines. Shows distance with customizable units.' )
 				},
 				{
+					id: 'angleDimension',
+					name: msg( 'layers-tool-angle-dimension', 'Angle Dimension' ),
+					key: 'Shift+D',
+					desc: msg( 'layers-help-tool-angle-dimension', 'Add angle measurement annotations. Click to set vertex, drag to first arm, click to set second arm. Supports reflex angles and tolerance.' )
+				},
+				{
 					id: 'pen',
 					name: msg( 'layers-tool-pen', 'Pen' ),
 					key: 'P',
@@ -460,6 +466,7 @@
 						{ key: 'L', action: msg( 'layers-tool-line', 'Line' ) },
 						{ key: 'M', action: msg( 'layers-tool-marker', 'Marker' ) },
 						{ key: 'D', action: msg( 'layers-tool-dimension', 'Dimension' ) },
+						{ key: 'Shift+D', action: msg( 'layers-tool-angle-dimension', 'Angle Dimension' ) },
 						{ key: 'P', action: msg( 'layers-tool-pen', 'Pen' ) },
 						{ key: 'G', action: msg( 'layers-shape-library', 'Shape Library' ) },
 						{ key: 'J', action: msg( 'layers-help-tool-emoji-name', 'Emoji' ) }

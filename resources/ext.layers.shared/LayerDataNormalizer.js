@@ -38,7 +38,10 @@
 		'strokeOnly',
 		// Dimension layer properties
 		'showUnit',
-		'showBackground'
+		'showBackground',
+		// Angle dimension layer properties
+		'reflexAngle',
+		'arrowsInside'
 	];
 
 	/**
@@ -57,7 +60,9 @@
 		'textShadowBlur', 'textShadowOffsetX', 'textShadowOffsetY',
 		'textStrokeWidth', 'arrowSize', 'blurRadius', 'tailWidth',
 		// Marker properties
-		'size', 'arrowX', 'arrowY', 'fontSizeAdjust'
+		'size', 'arrowX', 'arrowY', 'fontSizeAdjust',
+		// Angle dimension properties
+		'cx', 'cy', 'ax', 'ay', 'bx', 'by', 'arcRadius', 'textOffset'
 	];
 
 	/**

@@ -214,7 +214,7 @@ class ValidationManager {
 		if ( !layer.type || typeof layer.type !== 'string' ) {
 			errors.push( this.getMessage( 'layers-validation-type-required' ) );
 		} else {
-			const validTypes = [ 'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape', 'marker', 'dimension' ];
+			const validTypes = [ 'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape', 'marker', 'dimension', 'angleDimension' ];
 			if ( !validTypes.includes( layer.type ) ) {
 				errors.push( this.getMessage( 'layers-validation-type-invalid' ) );
 			}

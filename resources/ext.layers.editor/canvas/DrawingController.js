@@ -90,6 +90,9 @@ class DrawingController {
 			case 'dimension':
 				this.startDimensionTool( point, style );
 				break;
+			case 'angleDimension':
+				this.startAngleDimensionTool( point, style );
+				break;
 			default:
 				// Unknown tool - do nothing
 				break;
@@ -105,25 +108,6 @@ class DrawingController {
 		if ( this.tempLayer ) {
 			this.updatePreview( point );
 		}
-	}
-
-	/**
-	 * Finish drawing operation and create layer
-	 *
-	 * @param {Object} point - Final mouse position {x, y}
-	 * @param {string} _currentTool - Current tool name (unused but kept for API compatibility)
-	 * @return {Object|null} Layer data if valid, null otherwise
-	 */
-	finishDrawing ( point, _currentTool ) {
-		this.isDrawing = false;
-
-		// Finish drawing and create layer
-		const layerData = this.createLayerFromDrawing( point );
-
-		// Clean up
-		this.tempLayer = null;
-
-		return layerData;
 	}
 
 	/**
@@ -366,6 +350,115 @@ class DrawingController {
 	}
 
 	/**
+	 * Start angle dimension tool - phase 1: place vertex
+	 * Uses 3-click workflow: vertex → arm1 → arm2
+	 *
+	 * @param {Object} point - Starting point (vertex position)
+	 * @param {Object} style - Style options
+	 */
+	startAngleDimensionTool( point, style ) {
+		this._angleDimensionPhase = 1;
+		this.tempLayer = {
+			type: 'angleDimension',
+			cx: point.x,
+			cy: point.y,
+			ax: point.x,
+			ay: point.y,
+			bx: point.x,
+			by: point.y,
+			stroke: style.stroke || style.color || '#000000',
+			strokeWidth: style.strokeWidth || 1,
+			fontSize: style.fontSize || 12,
+			fontFamily: style.fontFamily || 'Arial, sans-serif',
+			color: style.color || '#000000',
+			arcRadius: style.arcRadius || 40,
+			endStyle: style.endStyle || 'arrow',
+			textPosition: style.textPosition || 'above',
+			extensionLength: style.extensionLength || 10,
+			arrowSize: style.arrowSize || 8,
+			tickSize: style.tickSize || 6,
+			showBackground: style.showBackground !== false,
+			backgroundColor: style.backgroundColor || '#ffffff',
+			precision: style.precision !== undefined ? style.precision : 1,
+			reflexAngle: style.reflexAngle || false,
+			textOffset: style.textOffset || 0,
+			toleranceType: style.toleranceType || 'none',
+			toleranceValue: style.toleranceValue || 0,
+			toleranceUpper: style.toleranceUpper || 0,
+			toleranceLower: style.toleranceLower || 0,
+			textDirection: style.textDirection || 'auto',
+			text: '', // Empty = auto-calculate angle
+			visible: true,
+			locked: false,
+			opacity: 1,
+			name: 'Angle'
+		};
+	}
+
+	/**
+	 * Finish drawing operation and create layer
+	 * Overridden to support multi-phase angle dimension tool
+	 *
+	 * @param {Object} point - Final mouse position {x, y}
+	 * @param {string} currentTool - Current tool name
+	 * @return {Object|null} Layer data if valid and complete, null if mid-phase or invalid
+	 */
+	finishDrawing ( point, currentTool ) {
+		// Handle multi-phase angle dimension
+		if ( currentTool === 'angleDimension' && this.tempLayer ) {
+			if ( this._angleDimensionPhase === 1 ) {
+				// Phase 1 complete: vertex placed, arm1 endpoint set
+				this.tempLayer.ax = point.x;
+				this.tempLayer.ay = point.y;
+				this._angleDimensionPhase = 2;
+				this.isDrawing = false;
+				// Return null but keep tempLayer alive for phase 2
+				return null;
+			} else if ( this._angleDimensionPhase === 2 ) {
+				// Phase 2 complete: arm2 endpoint set, finalize
+				this.tempLayer.bx = point.x;
+				this.tempLayer.by = point.y;
+				this._angleDimensionPhase = 0;
+				this.isDrawing = false;
+				const layerData = this.tempLayer;
+				this.tempLayer = null;
+				if ( !this.isValidShape( layerData ) ) {
+					return null;
+				}
+				return layerData;
+			}
+		}
+
+		this.isDrawing = false;
+
+		// Finish drawing and create layer
+		const layerData = this.createLayerFromDrawing( point );
+
+		// Clean up
+		this.tempLayer = null;
+
+		return layerData;
+	}
+
+	/**
+	 * Check if the angle dimension tool is in a multi-phase drawing operation
+	 *
+	 * @return {boolean} True if mid-phase
+	 */
+	isAngleDimensionInProgress() {
+		return this._angleDimensionPhase === 1 || this._angleDimensionPhase === 2;
+	}
+
+	/**
+	 * Cancel a multi-phase angle dimension drawing
+	 */
+	cancelAngleDimension() {
+		this._angleDimensionPhase = 0;
+		this.tempLayer = null;
+		this.isDrawing = false;
+	}
+
+	/**
 	 * Start circle tool
 	 *
 	 * @param {Object} point - Starting point
@@ -561,6 +654,16 @@ class DrawingController {
 				this.tempLayer.x2 = point.x;
 				this.tempLayer.y2 = point.y;
 				break;
+			case 'angleDimension':
+				// Multi-phase: update current phase endpoint
+				if ( this._angleDimensionPhase === 1 ) {
+					this.tempLayer.ax = point.x;
+					this.tempLayer.ay = point.y;
+				} else if ( this._angleDimensionPhase === 2 ) {
+					this.tempLayer.bx = point.x;
+					this.tempLayer.by = point.y;
+				}
+				break;
 			case 'path':
 				// Add point to path for pen tool
 				// Cap at 1000 points to match server-side limit
@@ -701,6 +804,16 @@ class DrawingController {
 				layer.x2 = point.x;
 				layer.y2 = point.y;
 				break;
+			case 'angleDimension':
+				// Multi-phase finalization handled in finishDrawing
+				if ( this._angleDimensionPhase === 1 ) {
+					layer.ax = point.x;
+					layer.ay = point.y;
+				} else if ( this._angleDimensionPhase === 2 ) {
+					layer.bx = point.x;
+					layer.by = point.y;
+				}
+				break;
 			case 'path':
 				// Path is already complete
 				break;
@@ -757,6 +870,19 @@ class DrawingController {
 				return dimLength >= this.MIN_LINE_LENGTH;
 			}
 
+			case 'angleDimension': {
+				// Require both arms to have minimum length from vertex
+				const arm1Len = Math.sqrt(
+					Math.pow( ( layer.ax || 0 ) - ( layer.cx || 0 ), 2 ) +
+					Math.pow( ( layer.ay || 0 ) - ( layer.cy || 0 ), 2 )
+				);
+				const arm2Len = Math.sqrt(
+					Math.pow( ( layer.bx || 0 ) - ( layer.cx || 0 ), 2 ) +
+					Math.pow( ( layer.by || 0 ) - ( layer.cy || 0 ), 2 )
+				);
+				return arm1Len >= this.MIN_LINE_LENGTH && arm2Len >= this.MIN_LINE_LENGTH;
+			}
+
 			case 'path':
 				return layer.points && layer.points.length >= this.MIN_PATH_POINTS;
 
@@ -791,6 +917,7 @@ class DrawingController {
 			case 'arrow':
 			case 'marker':
 			case 'dimension':
+			case 'angleDimension':
 				return 'crosshair';
 			case 'text':
 				return 'text';
@@ -808,7 +935,8 @@ class DrawingController {
 	isDrawingTool ( tool ) {
 		const drawingTools = [
 			'text', 'textbox', 'callout', 'pen', 'rectangle', 'circle',
-			'ellipse', 'polygon', 'star', 'line', 'arrow', 'marker', 'dimension'
+			'ellipse', 'polygon', 'star', 'line', 'arrow', 'marker', 'dimension',
+			'angleDimension'
 		];
 		return drawingTools.includes( tool );
 	}

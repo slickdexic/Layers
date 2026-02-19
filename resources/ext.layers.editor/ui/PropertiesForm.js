@@ -817,6 +817,10 @@
 			case 'dimension':
 				Builders.addDimensionProperties( ctx );
 				break;
+
+			case 'angleDimension':
+				Builders.addAngleDimensionProperties( ctx );
+				break;
 		}
 
 		// Appearance section
@@ -824,7 +828,7 @@
 		// These have baked-in colors, don't use fill at all, or have their own color controls.
 		// Basic path shapes (layer.path without layer.svg) still use configurable stroke/fill.
 		const hasBakedInColors = layer.svg || ( layer.paths && Array.isArray( layer.paths ) );
-		if ( layer.type !== 'image' && layer.type !== 'dimension' && layer.type !== 'marker' && !hasBakedInColors ) {
+		if ( layer.type !== 'image' && layer.type !== 'dimension' && layer.type !== 'angleDimension' && layer.type !== 'marker' && !hasBakedInColors ) {
 			addSection( t( 'layers-section-appearance', 'Appearance' ), 'appearance' );
 			if ( layer.type !== 'text' ) {
 				addColorPicker( { label: t( 'layers-prop-stroke-color', 'Stroke Color' ), value: layer.stroke, property: 'stroke', onChange: function ( newColor ) { editor.updateLayer( layer.id, { stroke: newColor } ); } } );
@@ -938,8 +942,8 @@
 			{ value: 'difference', text: t( 'layers-blend-difference', 'Difference' ) },
 			{ value: 'exclusion', text: t( 'layers-blend-exclusion', 'Exclusion' ) }
 		], onChange: function ( v ) { editor.updateLayer( layer.id, { blend: v } ); } } );
-		// Shadow controls - not available for dimension layers (shadows not supported)
-		if ( layer.type !== 'dimension' ) {
+		// Shadow controls - not available for dimension/angleDimension layers (shadows not supported)
+		if ( layer.type !== 'dimension' && layer.type !== 'angleDimension' ) {
 			addCheckbox( { label: t( 'layers-effect-shadow', 'Drop Shadow' ), value: !!layer.shadow, onChange: function ( checked ) {
 				const updates = { shadow: !!checked };
 				if ( checked ) {

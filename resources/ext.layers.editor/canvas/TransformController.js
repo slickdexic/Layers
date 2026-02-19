@@ -578,6 +578,14 @@ class TransformController {
 					layer.controlY = originalState.controlY + deltaY;
 				}
 				break;
+			case 'angleDimension':
+				layer.cx = ( originalState.cx || 0 ) + deltaX;
+				layer.cy = ( originalState.cy || 0 ) + deltaY;
+				layer.ax = ( originalState.ax || 0 ) + deltaX;
+				layer.ay = ( originalState.ay || 0 ) + deltaY;
+				layer.bx = ( originalState.bx || 0 ) + deltaX;
+				layer.by = ( originalState.by || 0 ) + deltaY;
+				break;
 			case 'path':
 				if ( originalState.points && originalState.points.length > 0 ) {
 					layer.points = originalState.points.map( ( pt ) => ( { x: pt.x + deltaX, y: pt.y + deltaY } ) );

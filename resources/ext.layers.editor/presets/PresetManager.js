@@ -500,7 +500,7 @@
 			}
 			return [
 				'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
-				'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker'
+				'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker', 'angleDimension'
 			];
 		}
 
@@ -620,7 +620,7 @@
 	PresetManager.SCHEMA_VERSION = 1;
 	PresetManager.SUPPORTED_TOOLS = [
 		'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
-		'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker'
+		'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker', 'angleDimension'
 	];
 
 	// For backward compatibility, expose BUILT_IN_PRESETS via getter

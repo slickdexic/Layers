@@ -78,7 +78,7 @@
 				validTypes: [
 					'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
 					'polygon', 'star', 'line', 'path', 'blur', 'image', 'group', 'customShape', 'marker',
-					'dimension'
+					'dimension', 'angleDimension'
 				],
 
 				// Coordinate limits

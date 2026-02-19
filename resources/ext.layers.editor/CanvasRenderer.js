@@ -1107,6 +1107,30 @@
 					this.ctx.stroke();
 					break;
 				}
+				case 'angleDimension': {
+					// Use arc-based glow for angle dimension
+					const adCx = layer.cx || 0;
+					const adCy = layer.cy || 0;
+					const adAx = layer.ax || 0;
+					const adAy = layer.ay || 0;
+					const adBx = layer.bx || 0;
+					const adBy = layer.by || 0;
+					const adArcR = layer.arcRadius || 40;
+					const adStartAngle = Math.atan2( adAy - adCy, adAx - adCx );
+					const adEndAngle = Math.atan2( adBy - adCy, adBx - adCx );
+					// Draw arm lines
+					this.ctx.beginPath();
+					this.ctx.moveTo( adCx, adCy );
+					this.ctx.lineTo( adAx, adAy );
+					this.ctx.moveTo( adCx, adCy );
+					this.ctx.lineTo( adBx, adBy );
+					this.ctx.stroke();
+					// Draw arc
+					this.ctx.beginPath();
+					this.ctx.arc( adCx, adCy, adArcR, adStartAngle, adEndAngle );
+					this.ctx.stroke();
+					break;
+				}
 				// Add others as needed
 			}
 		}

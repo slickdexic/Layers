@@ -109,6 +109,10 @@
 					return ResizeCalculator.calculateDimensionResize(
 						originalLayer, handleType, deltaX, deltaY
 					);
+				case 'angleDimension':
+					return ResizeCalculator.calculateAngleDimensionResize(
+						originalLayer, handleType, deltaX, deltaY
+					);
 				default:
 					return null;
 			}
@@ -860,6 +864,71 @@
 					// Bottom handle - move both Y values down
 					updates.y1 = y1 + deltaY;
 					updates.y2 = y2 + deltaY;
+					break;
+			}
+
+			return updates;
+		}
+
+		/**
+		 * Calculate angle dimension resize (move anchors individually)
+		 *
+		 * Handle types map to anchors:
+		 * - nw/n/ne: vertex (cx, cy)
+		 * - w/sw: arm1 endpoint (ax, ay)
+		 * - e/se: arm2 endpoint (bx, by)
+		 *
+		 * Uses anchorIndex from the selection handle when available.
+		 *
+		 * @param {Object} originalLayer Original layer properties
+		 * @param {string} handleType Handle being dragged
+		 * @param {number} deltaX Delta X movement
+		 * @param {number} deltaY Delta Y movement
+		 * @param {Object} [handle] Selection handle metadata (may include anchorIndex)
+		 * @return {Object} Updates object
+		 */
+		static calculateAngleDimensionResize(
+			originalLayer, handleType, deltaX, deltaY, handle
+		) {
+			const updates = {};
+
+			// Determine which anchor to move based on handle metadata or handleType
+			let anchorIndex = handle && typeof handle.anchorIndex === 'number' ? handle.anchorIndex : -1;
+
+			if ( anchorIndex < 0 ) {
+				// Fallback: determine from handleType
+				switch ( handleType ) {
+					case 'nw':
+					case 'n':
+					case 'ne':
+						anchorIndex = 0; // vertex
+						break;
+					case 'w':
+					case 'sw':
+						anchorIndex = 1; // arm1
+						break;
+					case 'e':
+					case 'se':
+						anchorIndex = 2; // arm2
+						break;
+					default:
+						anchorIndex = 0;
+						break;
+				}
+			}
+
+			switch ( anchorIndex ) {
+				case 0: // Vertex
+					updates.cx = ( originalLayer.cx || 0 ) + deltaX;
+					updates.cy = ( originalLayer.cy || 0 ) + deltaY;
+					break;
+				case 1: // Arm 1
+					updates.ax = ( originalLayer.ax || 0 ) + deltaX;
+					updates.ay = ( originalLayer.ay || 0 ) + deltaY;
+					break;
+				case 2: // Arm 2
+					updates.bx = ( originalLayer.bx || 0 ) + deltaX;
+					updates.by = ( originalLayer.by || 0 ) + deltaY;
 					break;
 			}
 

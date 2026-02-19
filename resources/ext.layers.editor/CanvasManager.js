@@ -203,6 +203,30 @@ class CanvasManager {
 			autoNumber: false  // When true, marker tool stays active and auto-increments
 		};
 
+		this.angleDimensionDefaults = {
+			endStyle: 'arrow',
+			arrowSize: 8,
+			tickSize: 6,
+			textPosition: 'above',
+			textDirection: 'auto',
+			extensionLength: 10,
+			arcRadius: 40,
+			textOffset: 0,
+			reflexAngle: false,
+			arrowsInside: false,
+			showBackground: true,
+			backgroundColor: '#ffffff',
+			precision: 1,
+			toleranceType: 'none',
+			toleranceValue: 0,
+			toleranceUpper: 0,
+			toleranceLower: 0,
+			stroke: null,
+			color: null,
+			fontSize: null,
+			strokeWidth: null
+		};
+
 		// Zoom and pan functionality
 		this.zoom = 1.0;
 		this.minZoom = uiConsts ? uiConsts.MIN_ZOOM : 0.1;
@@ -659,6 +683,34 @@ class CanvasManager {
 		dimensionProps.forEach( ( prop ) => {
 			if ( props[ prop ] !== undefined ) {
 				this.dimensionDefaults[ prop ] = props[ prop ];
+			}
+		} );
+	}
+
+	/**
+	 * Update angle dimension tool defaults from a layer's properties.
+	 * Call this when angle dimension layer properties are modified to persist settings.
+	 *
+	 * @param {Object} props - Angle dimension properties to persist
+	 */
+	updateAngleDimensionDefaults( props ) {
+		if ( !props ) {
+			return;
+		}
+		if ( !this.angleDimensionDefaults ) {
+			this.angleDimensionDefaults = {};
+		}
+		const angleDimProps = [
+			'endStyle', 'arrowSize', 'tickSize', 'textPosition', 'textDirection',
+			'extensionLength', 'arcRadius', 'textOffset', 'reflexAngle',
+			'arrowsInside', 'showBackground', 'backgroundColor',
+			'precision', 'stroke', 'color', 'fontSize', 'strokeWidth',
+			// Tolerance settings
+			'toleranceType', 'toleranceValue', 'toleranceUpper', 'toleranceLower'
+		];
+		angleDimProps.forEach( ( prop ) => {
+			if ( props[ prop ] !== undefined ) {
+				this.angleDimensionDefaults[ prop ] = props[ prop ];
 			}
 		} );
 	}
@@ -1677,6 +1729,8 @@ class CanvasManager {
 		// Merge tool-specific defaults for dimension and marker tools
 		if ( this.currentTool === 'dimension' && this.dimensionDefaults ) {
 			style = { ...style, ...this.dimensionDefaults };
+		} else if ( this.currentTool === 'angleDimension' && this.angleDimensionDefaults ) {
+			style = { ...style, ...this.angleDimensionDefaults };
 		} else if ( this.currentTool === 'marker' && this.markerDefaults ) {
 			style = { ...style, ...this.markerDefaults };
 		}
@@ -1721,6 +1775,15 @@ class CanvasManager {
 			const currentTool = this.currentTool;
 			const layerData = this.drawingController.finishDrawing( point, currentTool );
 			this.tempLayer = null;
+
+			// Handle multi-phase angle dimension: if still in progress, don't reset tool
+			if ( currentTool === 'angleDimension' && this.drawingController.isAngleDimensionInProgress() ) {
+				// Keep tempLayer reference for continued preview rendering
+				this.tempLayer = this.drawingController.getTempLayer();
+				this.renderLayers( this.editor.layers );
+				return;
+			}
+
 			// Check if marker autonumber mode is enabled
 			// If so, stay on marker tool instead of switching to pointer
 			const isMarkerAutoNumber = currentTool === 'marker' &&

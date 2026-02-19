@@ -27,7 +27,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	private const SUPPORTED_LAYER_TYPES = [
 		'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
 		'polygon', 'star', 'line', 'path', 'image', 'group', 'customShape', 'marker',
-		'dimension'
+		'dimension', 'angleDimension'
 	];
 
 	/** @var array Allowed properties and their types */
@@ -161,6 +161,15 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'toleranceValue' => 'string',
 		'toleranceUpper' => 'string',
 		'toleranceLower' => 'string',
+		// Angle dimension properties
+		'cx' => 'numeric',
+		'cy' => 'numeric',
+		'ax' => 'numeric',
+		'ay' => 'numeric',
+		'bx' => 'numeric',
+		'by' => 'numeric',
+		'arcRadius' => 'numeric',
+		'reflexAngle' => 'boolean',
 		// Rich text formatting (array of styled text runs)
 		'richText' => 'array'
 	];
@@ -243,7 +252,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'textOffset' => [ 'min' => -2000, 'max' => 2000 ],
 		'tickSize' => [ 'min' => 2, 'max' => 50 ],
 		'scale' => [ 'min' => 0.001, 'max' => 1000 ],
-		'precision' => [ 'min' => 0, 'max' => 6 ]
+		'precision' => [ 'min' => 0, 'max' => 6 ],
+		// Angle dimension constraints
+		'arcRadius' => [ 'min' => 1, 'max' => 1000 ]
 	];
 
 	/** @var int Maximum points in a path/polygon */
@@ -1059,6 +1070,14 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 				if ( !isset( $layer['x1'] ) || !isset( $layer['y1'] ) ||
 					 !isset( $layer['x2'] ) || !isset( $layer['y2'] ) ) {
 					return [ 'valid' => false, 'error' => "$type layer must have x1, y1, x2, y2" ];
+				}
+				break;
+
+			case 'angleDimension':
+				if ( !isset( $layer['cx'] ) || !isset( $layer['cy'] ) ||
+					 !isset( $layer['ax'] ) || !isset( $layer['ay'] ) ||
+					 !isset( $layer['bx'] ) || !isset( $layer['by'] ) ) {
+					return [ 'valid' => false, 'error' => 'angleDimension layer must have cx, cy, ax, ay, bx, by' ];
 				}
 				break;
 

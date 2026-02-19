@@ -473,6 +473,14 @@
 				<text x="12" y="9" font-size="6" text-anchor="middle" fill="${stroke}" stroke="none">50</text>
 			</svg>`,
 
+				// Angle Dimension tool - Arc between two lines showing angle
+				angleDimension: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
+				<line x1="4" y1="20" x2="20" y2="20"/>
+				<line x1="4" y1="20" x2="14" y2="4"/>
+				<path d="M10,20 A7,7 0 0,1 8.2,13.6" fill="none"/>
+				<text x="12" y="16" font-size="5" text-anchor="middle" fill="${stroke}" stroke="none">45°</text>
+			</svg>`,
+
 				// Custom Shape Library - Grid of shapes
 				customShapes: `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round">
 				<rect x="3" y="3" width="7" height="7"/>
@@ -608,7 +616,8 @@
 			// Annotation tools group (markers, dimensions)
 			const annotationTools = [
 				{ id: 'marker', icon: icons.marker, title: t( 'layers-tool-marker', 'Marker Tool' ), key: 'M', isSvg: true },
-				{ id: 'dimension', icon: icons.dimension, title: t( 'layers-tool-dimension', 'Dimension Tool' ), key: 'D', isSvg: true }
+				{ id: 'dimension', icon: icons.dimension, title: t( 'layers-tool-dimension', 'Dimension Tool' ), key: 'D', isSvg: true },
+				{ id: 'angleDimension', icon: icons.angleDimension, title: t( 'layers-tool-angle-dimension', 'Angle Dimension Tool' ), key: 'Shift+D', isSvg: true }
 			];
 
 			// Shape tools group

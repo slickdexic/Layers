@@ -253,6 +253,7 @@
 				"CalloutRenderer.js",
 				"MarkerRenderer.js",
 				"DimensionRenderer.js",
+				"AngleDimensionRenderer.js",
 				"ShapeRenderer.js",
 				"EffectsRenderer.js",
 				"ImageLayerRenderer.js",
@@ -729,6 +730,7 @@
 				"layers-help-tool-line",
 				"layers-help-tool-marker",
 				"layers-help-tool-dimension",
+				"layers-help-tool-angle-dimension",
 				"layers-help-tool-pen",
 				"layers-help-tool-shapes",
 				"layers-help-tool-emoji-name",
@@ -1034,6 +1036,12 @@
 				"layers-section-background",
 				"layers-prop-show-background",
 				"layers-prop-background-color",
+
+				"layers-tool-angle-dimension",
+				"layers-section-angle-dimension",
+				"layers-prop-arc-radius",
+				"layers-prop-reflex-angle",
+				"layers-prop-angle-value-placeholder",
 
 				"layers-shape-library",
 				"layers-shape-search-placeholder",

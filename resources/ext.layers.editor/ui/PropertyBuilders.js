@@ -1496,6 +1496,322 @@
 		}
 	};
 
+	/**
+	 * Add angle dimension-specific properties
+	 * Shares many controls with dimension but has angle-specific options
+	 * @param {Object} ctx - Context with addInput, addSelect, addCheckbox, layer, editor
+	 */
+	PropertyBuilders.addAngleDimensionProperties = function ( ctx ) {
+		const layer = ctx.layer;
+		const editor = ctx.editor;
+		const t = msg;
+
+		/**
+		 * Helper to update layer and persist angle dimension defaults
+		 * @param {Object} props - Properties to update
+		 */
+		function updateWithDefaults( props ) {
+			editor.updateLayer( layer.id, props );
+			if ( editor.canvasManager && editor.canvasManager.updateAngleDimensionDefaults ) {
+				editor.canvasManager.updateAngleDimensionDefaults( props );
+			}
+		}
+
+		ctx.addSection( t( 'layers-section-angle-dimension', 'Angle Dimension Properties' ), 'angleDimension' );
+
+		// Dimension value override (empty = auto-calculate angle)
+		ctx.addInput( {
+			label: t( 'layers-prop-dimension-value', 'Dimension Value' ),
+			type: 'text',
+			value: layer.text || '',
+			prop: 'text',
+			placeholder: t( 'layers-prop-angle-value-placeholder', 'e.g., 45°' ),
+			onChange: function ( v ) {
+				editor.updateLayer( layer.id, { text: v || undefined } );
+			}
+		} );
+
+		ctx.addInput( {
+			label: t( 'layers-prop-font-size', 'Font Size' ),
+			type: 'number',
+			value: layer.fontSize || 12,
+			min: 6,
+			max: 200,
+			step: 1,
+			prop: 'fontSize',
+			onChange: function ( v ) {
+				const val = Math.max( 6, Math.min( 200, parseInt( v, 10 ) || 12 ) );
+				updateWithDefaults( { fontSize: val } );
+			}
+		} );
+
+		ctx.addColorPicker( {
+			label: t( 'layers-prop-text-color', 'Text Color' ),
+			value: layer.color || '#000000',
+			prop: 'color',
+			onChange: function ( v ) {
+				updateWithDefaults( { color: v } );
+			}
+		} );
+
+		ctx.addColorPicker( {
+			label: t( 'layers-prop-stroke-color', 'Line Color' ),
+			value: layer.stroke || '#000000',
+			prop: 'stroke',
+			onChange: function ( v ) {
+				updateWithDefaults( { stroke: v } );
+			}
+		} );
+
+		ctx.addInput( {
+			label: t( 'layers-prop-line-width', 'Line Width' ),
+			type: 'number',
+			value: layer.strokeWidth || 1,
+			min: 0.5,
+			max: 10,
+			step: 0.5,
+			prop: 'strokeWidth',
+			onChange: function ( v ) {
+				const val = Math.max( 0.5, Math.min( 10, parseFloat( v ) || 1 ) );
+				const rounded = Math.round( val * 2 ) / 2;
+				updateWithDefaults( { strokeWidth: rounded } );
+			}
+		} );
+
+		// Arc radius control
+		ctx.addInput( {
+			label: t( 'layers-prop-arc-radius', 'Arc Radius' ),
+			type: 'number',
+			value: layer.arcRadius || 40,
+			min: 10,
+			max: 500,
+			step: 5,
+			prop: 'arcRadius',
+			onChange: function ( v ) {
+				const val = Math.max( 10, Math.min( 500, parseInt( v, 10 ) || 40 ) );
+				updateWithDefaults( { arcRadius: val } );
+			}
+		} );
+
+		// Reflex angle toggle
+		const reflexAngle = layer.reflexAngle === true || layer.reflexAngle === 1;
+		ctx.addCheckbox( {
+			label: t( 'layers-prop-reflex-angle', 'Reflex Angle (>180°)' ),
+			checked: reflexAngle,
+			prop: 'reflexAngle',
+			onChange: function ( v ) {
+				updateWithDefaults( { reflexAngle: v } );
+			}
+		} );
+
+		// Precision (decimal places)
+		ctx.addInput( {
+			label: t( 'layers-prop-precision', 'Decimal Places' ),
+			type: 'number',
+			value: layer.precision !== undefined ? layer.precision : 1,
+			min: 0,
+			max: 6,
+			step: 1,
+			prop: 'precision',
+			onChange: function ( v ) {
+				const val = Math.max( 0, Math.min( 6, parseInt( v, 10 ) || 0 ) );
+				updateWithDefaults( { precision: val } );
+			}
+		} );
+
+		ctx.addSelect( {
+			label: t( 'layers-prop-end-style', 'End Style' ),
+			value: layer.endStyle || 'arrow',
+			options: [
+				{ value: 'arrow', text: t( 'layers-dimension-end-arrow', 'Arrow' ) },
+				{ value: 'tick', text: t( 'layers-dimension-end-tick', 'Tick' ) },
+				{ value: 'dot', text: t( 'layers-dimension-end-dot', 'Dot' ) },
+				{ value: 'none', text: t( 'layers-dimension-end-none', 'None' ) }
+			],
+			onChange: function ( v ) {
+				updateWithDefaults( { endStyle: v } );
+			}
+		} );
+
+		// Arrow/marker size control
+		const endStyle = layer.endStyle || 'arrow';
+		if ( endStyle === 'arrow' || endStyle === 'tick' || endStyle === 'dot' ) {
+			ctx.addInput( {
+				label: t( 'layers-prop-marker-size', 'Marker Size' ),
+				type: 'number',
+				value: endStyle === 'tick' ? ( layer.tickSize || 6 ) : ( layer.arrowSize || 8 ),
+				min: 2,
+				max: 40,
+				step: 1,
+				prop: endStyle === 'tick' ? 'tickSize' : 'arrowSize',
+				onChange: function ( v ) {
+					const val = Math.max( 2, Math.min( 40, parseInt( v, 10 ) || 8 ) );
+					const prop = endStyle === 'tick' ? 'tickSize' : 'arrowSize';
+					updateWithDefaults( { [ prop ]: val } );
+				}
+			} );
+		}
+
+		// Arrows inside/outside option
+		if ( endStyle === 'arrow' ) {
+			const arrowsInside = layer.arrowsInside !== false && layer.arrowsInside !== 0;
+			ctx.addSelect( {
+				label: t( 'layers-prop-arrow-position', 'Arrow Position' ),
+				value: arrowsInside ? 'inside' : 'outside',
+				options: [
+					{ value: 'inside', text: t( 'layers-arrow-position-inside', 'Inside' ) },
+					{ value: 'outside', text: t( 'layers-arrow-position-outside', 'Outside' ) }
+				],
+				onChange: function ( v ) {
+					updateWithDefaults( { arrowsInside: v === 'inside' } );
+				}
+			} );
+		}
+
+		ctx.addSelect( {
+			label: t( 'layers-prop-text-position', 'Text Position' ),
+			value: layer.textPosition || 'above',
+			options: [
+				{ value: 'above', text: t( 'layers-dimension-text-above', 'Above' ) },
+				{ value: 'below', text: t( 'layers-dimension-text-below', 'Below' ) },
+				{ value: 'center', text: t( 'layers-dimension-text-center', 'Center' ) }
+			],
+			onChange: function ( v ) {
+				updateWithDefaults( { textPosition: v } );
+			}
+		} );
+
+		ctx.addSelect( {
+			label: t( 'layers-prop-text-direction', 'Text Direction' ),
+			value: layer.textDirection || 'auto',
+			options: [
+				{ value: 'auto', text: t( 'layers-dimension-text-direction-auto', 'Auto' ) },
+				{ value: 'auto-reversed', text: t( 'layers-dimension-text-direction-auto-reversed', 'Auto Reversed' ) },
+				{ value: 'horizontal', text: t( 'layers-dimension-text-direction-horizontal', 'Horizontal' ) }
+			],
+			onChange: function ( v ) {
+				updateWithDefaults( { textDirection: v } );
+			}
+		} );
+
+		ctx.addInput( {
+			label: t( 'layers-prop-extension-length', 'Extension Length' ),
+			type: 'number',
+			value: layer.extensionLength || 10,
+			min: 0,
+			max: 100,
+			step: 1,
+			prop: 'extensionLength',
+			onChange: function ( v ) {
+				const val = Math.max( 0, Math.min( 100, parseInt( v, 10 ) || 10 ) );
+				updateWithDefaults( { extensionLength: val } );
+			}
+		} );
+
+		ctx.addInput( {
+			label: t( 'layers-prop-text-offset', 'Text Offset' ),
+			type: 'number',
+			value: layer.textOffset !== undefined ? layer.textOffset : 0,
+			min: -2000,
+			max: 2000,
+			step: 1,
+			prop: 'textOffset',
+			onChange: function ( v ) {
+				const val = Math.max( -2000, Math.min( 2000, parseInt( v, 10 ) || 0 ) );
+				updateWithDefaults( { textOffset: val } );
+			}
+		} );
+
+		// Background section
+		ctx.addSection( t( 'layers-section-background', 'Text Background' ), 'background' );
+
+		const showBg = layer.showBackground !== false;
+		ctx.addCheckbox( {
+			label: t( 'layers-prop-show-background', 'Show Background' ),
+			checked: showBg,
+			prop: 'showBackground',
+			onChange: function ( v ) {
+				updateWithDefaults( { showBackground: v } );
+				setTimeout( function () {
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+						editor.layerPanel.updatePropertiesPanel( layer.id );
+					}
+				}, 0 );
+			}
+		} );
+
+		if ( showBg ) {
+			ctx.addColorPicker( {
+				label: t( 'layers-prop-background-color', 'Background Color' ),
+				value: layer.backgroundColor || '#ffffff',
+				prop: 'backgroundColor',
+				onChange: function ( v ) {
+					updateWithDefaults( { backgroundColor: v } );
+				}
+			} );
+		}
+
+		// Tolerance section
+		ctx.addSection( t( 'layers-section-tolerance', 'Tolerance' ), 'tolerance' );
+
+		ctx.addSelect( {
+			label: t( 'layers-prop-tolerance-type', 'Tolerance Type' ),
+			value: layer.toleranceType || 'none',
+			options: [
+				{ value: 'none', text: t( 'layers-tolerance-none', 'None' ) },
+				{ value: 'symmetric', text: t( 'layers-tolerance-symmetric', 'Symmetric (±)' ) },
+				{ value: 'deviation', text: t( 'layers-tolerance-deviation', 'Deviation (+/-)' ) },
+				{ value: 'limits', text: t( 'layers-tolerance-limits', 'Limits (min-max)' ) },
+				{ value: 'basic', text: t( 'layers-tolerance-basic', 'Basic (reference)' ) }
+			],
+			onChange: function ( v ) {
+				editor.updateLayer( layer.id, { toleranceType: v } );
+				setTimeout( function () {
+					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+						editor.layerPanel.updatePropertiesPanel( layer.id );
+					}
+				}, 0 );
+			}
+		} );
+
+		if ( layer.toleranceType === 'symmetric' ) {
+			ctx.addInput( {
+				label: t( 'layers-prop-tolerance-value', 'Tolerance (±)' ),
+				type: 'text',
+				value: layer.toleranceValue || '',
+				prop: 'toleranceValue',
+				placeholder: 'e.g., 0.5',
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, { toleranceValue: v } );
+				}
+			} );
+		}
+
+		if ( layer.toleranceType === 'deviation' || layer.toleranceType === 'limits' ) {
+			ctx.addInput( {
+				label: t( 'layers-prop-tolerance-upper', 'Upper Tolerance' ),
+				type: 'text',
+				value: layer.toleranceUpper || '',
+				prop: 'toleranceUpper',
+				placeholder: 'e.g., +0.5',
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, { toleranceUpper: v } );
+				}
+			} );
+
+			ctx.addInput( {
+				label: t( 'layers-prop-tolerance-lower', 'Lower Tolerance' ),
+				type: 'text',
+				value: layer.toleranceLower || '',
+				prop: 'toleranceLower',
+				placeholder: 'e.g., -0.3',
+				onChange: function ( v ) {
+					editor.updateLayer( layer.id, { toleranceLower: v } );
+				}
+			} );
+		}
+	};
+
 	// Export to window.Layers namespace
 	if ( typeof window !== 'undefined' ) {
 		window.Layers = window.Layers || {};
