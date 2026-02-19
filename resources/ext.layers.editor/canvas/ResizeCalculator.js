@@ -777,7 +777,24 @@
 			};
 		}
 
-		/** Calculate dimension resize (move endpoints) @return {Object} */
+		/**
+		 * Calculate dimension resize (move endpoints)
+		 *
+		 * When orientation is constrained (horizontal/vertical), the constrained axis
+		 * moves BOTH anchors together (coupled movement) so the user can reposition
+		 * the dimension line on that axis. The free axis moves the dragged anchor
+		 * individually, changing the measured span.
+		 *
+		 * - Horizontal: each anchor moves independently in X; Y movement is coupled
+		 * - Vertical: each anchor moves independently in Y; X movement is coupled
+		 * - Free: each anchor moves independently in both axes
+		 *
+		 * @param {Object} originalLayer Original layer properties
+		 * @param {string} handleType Handle being dragged
+		 * @param {number} deltaX Delta X movement
+		 * @param {number} deltaY Delta Y movement
+		 * @return {Object} Updates object
+		 */
 		static calculateDimensionResize(
 			originalLayer, handleType, deltaX, deltaY
 		) {
@@ -792,39 +809,57 @@
 			const isHorizontal = orientation === 'horizontal';
 			const isVertical = orientation === 'vertical';
 
-			// Constrain deltas based on orientation
-			const constrainedDeltaX = isVertical ? 0 : deltaX;
-			const constrainedDeltaY = isHorizontal ? 0 : deltaY;
-
 			// Move endpoints based on which handle is dragged
 			switch ( handleType ) {
 				case 'nw':
 				case 'w':
 				case 'sw':
 					// These handles move the start point (x1, y1)
-					updates.x1 = x1 + constrainedDeltaX;
-					updates.y1 = y1 + constrainedDeltaY;
+					if ( isHorizontal ) {
+						// Horizontal: x1 moves individually, y moves BOTH anchors together
+						updates.x1 = x1 + deltaX;
+						updates.y1 = y1 + deltaY;
+						updates.y2 = y2 + deltaY;
+					} else if ( isVertical ) {
+						// Vertical: y1 moves individually, x moves BOTH anchors together
+						updates.x1 = x1 + deltaX;
+						updates.x2 = x2 + deltaX;
+						updates.y1 = y1 + deltaY;
+					} else {
+						// Free: move start point in both axes
+						updates.x1 = x1 + deltaX;
+						updates.y1 = y1 + deltaY;
+					}
 					break;
 				case 'ne':
 				case 'e':
 				case 'se':
 					// These handles move the end point (x2, y2)
-					updates.x2 = x2 + constrainedDeltaX;
-					updates.y2 = y2 + constrainedDeltaY;
+					if ( isHorizontal ) {
+						// Horizontal: x2 moves individually, y moves BOTH anchors together
+						updates.x2 = x2 + deltaX;
+						updates.y1 = y1 + deltaY;
+						updates.y2 = y2 + deltaY;
+					} else if ( isVertical ) {
+						// Vertical: y2 moves individually, x moves BOTH anchors together
+						updates.x1 = x1 + deltaX;
+						updates.x2 = x2 + deltaX;
+						updates.y2 = y2 + deltaY;
+					} else {
+						// Free: move end point in both axes
+						updates.x2 = x2 + deltaX;
+						updates.y2 = y2 + deltaY;
+					}
 					break;
 				case 'n':
-					// Top handle - move both Y values up (only if not horizontal)
-					if ( !isHorizontal ) {
-						updates.y1 = y1 + deltaY;
-						updates.y2 = y2 + deltaY;
-					}
+					// Top handle - move both Y values up
+					updates.y1 = y1 + deltaY;
+					updates.y2 = y2 + deltaY;
 					break;
 				case 's':
-					// Bottom handle - move both Y values down (only if not horizontal)
-					if ( !isHorizontal ) {
-						updates.y1 = y1 + deltaY;
-						updates.y2 = y2 + deltaY;
-					}
+					// Bottom handle - move both Y values down
+					updates.y1 = y1 + deltaY;
+					updates.y2 = y2 + deltaY;
 					break;
 			}
 

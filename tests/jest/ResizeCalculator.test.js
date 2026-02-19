@@ -1008,20 +1008,44 @@ describe( 'ResizeCalculator', () => {
 			expect( result.y1 ).toBe( 70 );
 		} );
 
-		it( 'should constrain to horizontal when orientation=horizontal', () => {
+		it( 'should constrain to horizontal when orientation=horizontal (coupled Y)', () => {
 			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100, orientation: 'horizontal' };
 			const result = ResizeCalculator.calculateDimensionResize( layer, 'e', 50, 30 );
-			// Y should not change due to horizontal constraint
+			// X moves individually for the dragged anchor
 			expect( result.x2 ).toBe( 250 );
-			expect( result.y2 ).toBe( 100 ); // unchanged
+			// Y moves BOTH anchors together (coupled movement for repositioning)
+			expect( result.y1 ).toBe( 130 );
+			expect( result.y2 ).toBe( 130 );
 		} );
 
-		it( 'should constrain to vertical when orientation=vertical', () => {
+		it( 'should constrain to vertical when orientation=vertical (coupled X)', () => {
 			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 100, y2: 200, orientation: 'vertical' };
 			const result = ResizeCalculator.calculateDimensionResize( layer, 'e', 50, 30 );
-			// X should not change due to vertical constraint
-			expect( result.x2 ).toBe( 100 ); // unchanged
+			// X moves BOTH anchors together (coupled movement for repositioning)
+			expect( result.x1 ).toBe( 150 );
+			expect( result.x2 ).toBe( 150 );
+			// Y moves individually for the dragged anchor
 			expect( result.y2 ).toBe( 230 );
+		} );
+
+		it( 'should couple X movement for vertical W handle', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 100, y2: 200, orientation: 'vertical' };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'w', -30, 20 );
+			// X moves BOTH anchors together
+			expect( result.x1 ).toBe( 70 );
+			expect( result.x2 ).toBe( 70 );
+			// Y moves individually for start point
+			expect( result.y1 ).toBe( 120 );
+		} );
+
+		it( 'should couple Y movement for horizontal W handle', () => {
+			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100, orientation: 'horizontal' };
+			const result = ResizeCalculator.calculateDimensionResize( layer, 'w', -30, 20 );
+			// X moves individually for start point
+			expect( result.x1 ).toBe( 70 );
+			// Y moves BOTH anchors together
+			expect( result.y1 ).toBe( 120 );
+			expect( result.y2 ).toBe( 120 );
 		} );
 
 		it( 'should move both Y values when dragging N handle', () => {
@@ -1038,12 +1062,12 @@ describe( 'ResizeCalculator', () => {
 			expect( result.y2 ).toBe( 130 );
 		} );
 
-		it( 'should not move Y values for N handle when horizontal orientation', () => {
+		it( 'should move both Y values for N handle even with horizontal orientation', () => {
 			const layer = { type: 'dimension', x1: 100, y1: 100, x2: 200, y2: 100, orientation: 'horizontal' };
 			const result = ResizeCalculator.calculateDimensionResize( layer, 'n', 0, -20 );
-			// Should not have y1 or y2 in updates
-			expect( result.y1 ).toBeUndefined();
-			expect( result.y2 ).toBeUndefined();
+			// N/S handles always move both Y values (repositioning)
+			expect( result.y1 ).toBe( 80 );
+			expect( result.y2 ).toBe( 80 );
 		} );
 
 		it( 'should use default coordinates when not specified', () => {
