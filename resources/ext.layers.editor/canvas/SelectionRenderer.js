@@ -584,6 +584,84 @@
 					anchorIndex: i // 0=vertex, 1=arm1, 2=arm2
 				} );
 			}
+
+			// Draw text handle indicator at text position (draggable circle)
+			this._drawAngleDimensionTextHandle( layer, handleSize, isKeyObject );
+		}
+
+		/**
+		 * Draw text handle indicator for angle dimension.
+		 * Shows a circle at the text position on the arc that can be dragged.
+		 *
+		 * @param {Object} layer - The angle dimension layer
+		 * @param {number} handleSize - Size of handles
+		 * @param {boolean} isKeyObject - Whether this is the key object
+		 * @private
+		 */
+		_drawAngleDimensionTextHandle( layer, handleSize, isKeyObject ) {
+			const cx = layer.cx || 0;
+			const cy = layer.cy || 0;
+			const arcRadius = layer.arcRadius || 40;
+			const fontSize = layer.fontSize || 12;
+
+			// Calculate angles using the same logic as the renderer
+			const AngleDimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer ) ||
+				null;
+
+			if ( !AngleDimensionRenderer ) {
+				return;
+			}
+
+			const tempRenderer = new AngleDimensionRenderer( null );
+			const angles = tempRenderer.calculateAngles( layer );
+
+			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+			const midAngle = angles.startAngle + angles.sweepAngle / 2 + textOffset * ( Math.PI / 180 );
+
+			// Determine text radius based on text position
+			let textRadius = arcRadius;
+			const perpOffset = fontSize * 0.8;
+			const textPosition = layer.textPosition || 'center';
+
+			if ( textPosition === 'above' ) {
+				textRadius = arcRadius - perpOffset;
+			} else if ( textPosition === 'below' ) {
+				textRadius = arcRadius + perpOffset;
+			}
+
+			const textX = cx + textRadius * Math.cos( midAngle );
+			const textY = cy + textRadius * Math.sin( midAngle );
+
+			// Draw a circle handle at the text position
+			const radius = handleSize / 2 + 1;
+
+			if ( isKeyObject ) {
+				this.ctx.fillStyle = '#fffde7'; // Light yellow for text handle
+				this.ctx.strokeStyle = '#ff9800';
+				this.ctx.lineWidth = 2;
+			} else {
+				this.ctx.fillStyle = '#fffde7';
+				this.ctx.strokeStyle = this.handleBorderColor;
+				this.ctx.lineWidth = 1;
+			}
+
+			this.ctx.beginPath();
+			this.ctx.arc( textX, textY, radius, 0, 2 * Math.PI );
+			this.ctx.fill();
+			this.ctx.stroke();
+
+			// Register as a special text handle (not used for resize, just visual indicator)
+			// Text dragging is handled directly by CanvasEvents.isPointInAngleDimensionTextArea
+			this.selectionHandles.push( {
+				type: 'angleDimensionText',
+				x: textX - radius,
+				y: textY - radius,
+				width: radius * 2,
+				height: radius * 2,
+				layerId: layer.id,
+				rotation: 0,
+				isAngleDimensionText: true
+			} );
 		}
 
 		/**

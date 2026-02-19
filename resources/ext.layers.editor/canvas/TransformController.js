@@ -737,6 +737,128 @@ class TransformController {
 		}
 	}
 
+	// ==================== Angle Dimension Text Drag Methods ====================
+
+	/**
+	 * Start dragging the angle dimension text.
+	 * Converts mouse movement into angular offset (textOffset in degrees).
+	 *
+	 * @param {Object} handle The angleDimensionText handle with cx, cy, midAngle, arcRadius
+	 * @param {Object} startPoint The starting mouse point
+	 */
+	startAngleDimensionTextDrag( handle, startPoint ) {
+		const layer = this.manager.editor.getLayerById( handle.layerId );
+
+		// Prevent drag on locked layers
+		if ( this.isLayerEffectivelyLocked( layer ) ) {
+			return;
+		}
+
+		this.isAngleDimensionTextDragging = true;
+		this.dragStartPoint = startPoint;
+		this.angleDimTextLayerId = handle.layerId;
+		this.angleDimVertexX = handle.cx;
+		this.angleDimVertexY = handle.cy;
+		this.angleDimMidAngle = handle.midAngle;
+		this.angleDimArcRadius = handle.arcRadius;
+		this.manager.canvas.style.cursor = 'move';
+
+		// Store original layer state
+		if ( layer ) {
+			this.originalLayerState = this._cloneLayer( layer );
+		}
+	}
+
+	/**
+	 * Handle angle dimension text dragging during mouse move.
+	 * Converts the mouse position to an angular offset (degrees) from the arc midpoint.
+	 *
+	 * @param {Object} point Current mouse point
+	 */
+	handleAngleDimensionTextDrag( point ) {
+		if ( !this.isAngleDimensionTextDragging || !this.angleDimTextLayerId ) {
+			return;
+		}
+
+		const layer = this.manager.editor.getLayerById( this.angleDimTextLayerId );
+		if ( !layer ) {
+			return;
+		}
+
+		// Calculate angle from vertex to current mouse position
+		const dx = point.x - this.angleDimVertexX;
+		const dy = point.y - this.angleDimVertexY;
+		const mouseAngle = Math.atan2( dy, dx );
+
+		// Calculate textOffset = difference between mouse angle and arc midpoint, in degrees
+		let offsetRadians = mouseAngle - this.angleDimMidAngle;
+
+		// Normalize to [-π, π]
+		while ( offsetRadians > Math.PI ) {
+			offsetRadians -= 2 * Math.PI;
+		}
+		while ( offsetRadians < -Math.PI ) {
+			offsetRadians += 2 * Math.PI;
+		}
+
+		let offsetDegrees = offsetRadians * ( 180 / Math.PI );
+
+		// Snap to center when near zero (within 3 degrees)
+		const snapThreshold = 3;
+		if ( Math.abs( offsetDegrees ) < snapThreshold ) {
+			offsetDegrees = 0;
+		}
+
+		// Update textOffset
+		this.manager.editor.updateLayer( this.angleDimTextLayerId, {
+			textOffset: Math.round( offsetDegrees * 10 ) / 10 // 1 decimal place
+		} );
+
+		this.showDragPreview = true;
+
+		// Emit transform event for live properties panel update
+		this.emitTransforming( layer );
+
+		// Render layers
+		this.manager.renderLayers( this.manager.editor.layers );
+	}
+
+	/**
+	 * Finish the angle dimension text drag operation
+	 */
+	finishAngleDimensionTextDrag() {
+		const hadMovement = this.showDragPreview;
+
+		// Emit final transform event
+		if ( hadMovement && this.angleDimTextLayerId ) {
+			const layer = this.manager.editor.getLayerById( this.angleDimTextLayerId );
+			if ( layer ) {
+				this.emitTransforming( layer, true );
+			}
+		}
+
+		this.isAngleDimensionTextDragging = false;
+		this.angleDimTextLayerId = null;
+		this.angleDimVertexX = 0;
+		this.angleDimVertexY = 0;
+		this.angleDimMidAngle = 0;
+		this.angleDimArcRadius = 0;
+		this.showDragPreview = false;
+		this.originalLayerState = null;
+		this.dragStartPoint = null;
+
+		// Reset cursor
+		this.manager.canvas.style.cursor = this.manager.getToolCursor( this.manager.currentTool );
+
+		// Mark dirty and save state
+		if ( hadMovement ) {
+			this.manager.editor.markDirty();
+			if ( this.manager.editor && typeof this.manager.editor.saveState === 'function' ) {
+				this.manager.editor.saveState( 'Move angle dimension text' );
+			}
+		}
+	}
+
 	// ==================== Dimension Offset Drag Methods ====================
 
 	/**

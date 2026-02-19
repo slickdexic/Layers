@@ -922,6 +922,10 @@ class CanvasManager {
 					this.canvas.style.cursor = 'grab';
 					return;
 				}
+				if ( handleHit.type === 'angleDimensionText' ) {
+					this.canvas.style.cursor = 'move';
+					return;
+				}
 				const selectedLayer = this.editor.getLayerById( currentSelectedId );
 				const rotation = selectedLayer ? selectedLayer.rotation : 0;
 				this.canvas.style.cursor = this.getResizeCursor( handleHit.type, rotation );

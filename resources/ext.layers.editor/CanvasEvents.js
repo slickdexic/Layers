@@ -264,6 +264,15 @@
 						if ( tc ) {
 							tc.startDimensionOffsetDrag( handleHit, cm.startPoint || point );
 						}
+					} else if ( handleHit.type === 'angleDimensionText' && handleHit.isAngleDimensionText ) {
+						// Special handling for angle dimension text handle - start text drag
+						if ( tc ) {
+							const selectedLayer = cm.editor.getLayerById( handleHit.layerId );
+							if ( selectedLayer ) {
+								const handle = this.createAngleDimensionTextHandle( selectedLayer );
+								tc.startAngleDimensionTextDrag( handle, cm.startPoint || point );
+							}
+						}
 					} else {
 						if ( tc ) {
 							tc.startResize( handleHit, cm.startPoint || point );
@@ -292,6 +301,14 @@
 									// Create a handle for unified text dragging (both offsets)
 									const handle = this.createDimensionTextHandle( selectedLayer );
 									cm.transformController.startDimensionTextDrag( handle, cm.startPoint || point );
+								}
+							}
+							// If not in text area, just select (no drag) - anchors moved via handles
+						} else if ( selectedLayer.type === 'angleDimension' ) {
+							if ( this.isPointInAngleDimensionTextArea( point, selectedLayer ) ) {
+								if ( cm.transformController ) {
+									const handle = this.createAngleDimensionTextHandle( selectedLayer );
+									cm.transformController.startAngleDimensionTextDrag( handle, cm.startPoint || point );
 								}
 							}
 							// If not in text area, just select (no drag) - anchors moved via handles
@@ -373,6 +390,11 @@
 				return;
 			}
 
+			if ( tc && tc.isAngleDimensionTextDragging && tc.dragStartPoint ) {
+				tc.handleAngleDimensionTextDrag( point );
+				return;
+			}
+
 			if ( tc && tc.isResizing && tc.resizeHandle && tc.dragStartPoint ) {
 				try {
 					tc.handleResize( point, e );
@@ -396,7 +418,7 @@
 			}
 
 			// Always update cursor when not actively transforming
-			const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging || tc.isArrowTipDragging || tc.isDimensionTextDragging );
+			const isTransforming = tc && ( tc.isResizing || tc.isRotating || tc.isDragging || tc.isArrowTipDragging || tc.isDimensionTextDragging || tc.isAngleDimensionTextDragging );
 			if ( !isTransforming ) {
 				cm.updateCursor( point );
 			}
@@ -453,6 +475,11 @@
 
 			if ( tc && tc.isDimensionTextDragging ) {
 				tc.finishDimensionTextDrag();
+				return;
+			}
+
+			if ( tc && tc.isAngleDimensionTextDragging ) {
+				tc.finishAngleDimensionTextDrag();
 				return;
 			}
 
@@ -873,6 +900,94 @@
 				perpX: perpX,
 				perpY: perpY,
 				lineLength: len
+			};
+		}
+
+		/**
+		 * Check if a point is in the text area of an angle dimension layer.
+		 * The text area is a region around the text position on/near the arc.
+		 *
+		 * @param {Object} point Point with x, y
+		 * @param {Object} layer Angle dimension layer
+		 * @return {boolean} True if point is in text area
+		 */
+		isPointInAngleDimensionTextArea( point, layer ) {
+			const cx = layer.cx || 0;
+			const cy = layer.cy || 0;
+			const arcRadius = layer.arcRadius || 40;
+			const fontSize = layer.fontSize || 12;
+
+			// Calculate angles to find arc midpoint
+			const AngleDimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer ) ||
+				( typeof require !== 'undefined' && require( '../ext.layers.shared/AngleDimensionRenderer.js' ) );
+
+			if ( !AngleDimensionRenderer ) {
+				return false;
+			}
+
+			const tempRenderer = new AngleDimensionRenderer( null );
+			const angles = tempRenderer.calculateAngles( layer );
+
+			// Calculate text position (same logic as _drawAngleText)
+			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+			const midAngle = angles.startAngle + angles.sweepAngle / 2 + textOffset * ( Math.PI / 180 );
+
+			// Determine text radius based on text position
+			let textRadius = arcRadius;
+			const perpOffset = fontSize * 0.8;
+			const textPosition = layer.textPosition || 'center';
+
+			if ( textPosition === 'above' ) {
+				textRadius = arcRadius - perpOffset;
+			} else if ( textPosition === 'below' ) {
+				textRadius = arcRadius + perpOffset;
+			}
+
+			const textX = cx + textRadius * Math.cos( midAngle );
+			const textY = cy + textRadius * Math.sin( midAngle );
+
+			// Text hit radius
+			const textHitRadius = Math.max( fontSize * 1.5, 20 );
+			const distToText = Math.sqrt(
+				( point.x - textX ) * ( point.x - textX ) +
+				( point.y - textY ) * ( point.y - textY )
+			);
+
+			return distToText <= textHitRadius;
+		}
+
+		/**
+		 * Create a handle for angle dimension text dragging.
+		 * The handle stores vertex position and arc midpoint angle for computing
+		 * textOffset from mouse position during drag.
+		 *
+		 * @param {Object} layer The angle dimension layer
+		 * @return {Object} Handle object for startAngleDimensionTextDrag
+		 */
+		createAngleDimensionTextHandle( layer ) {
+			const cx = layer.cx || 0;
+			const cy = layer.cy || 0;
+			const arcRadius = layer.arcRadius || 40;
+
+			// Calculate angles to find arc midpoint
+			const AngleDimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer ) ||
+				( typeof require !== 'undefined' && require( '../ext.layers.shared/AngleDimensionRenderer.js' ) );
+
+			let midAngle = 0;
+			if ( AngleDimensionRenderer ) {
+				const tempRenderer = new AngleDimensionRenderer( null );
+				const angles = tempRenderer.calculateAngles( layer );
+				midAngle = angles.startAngle + angles.sweepAngle / 2;
+			}
+
+			return {
+				type: 'angleDimensionText',
+				layerId: layer.id,
+				isAngleDimensionText: true,
+				cx: cx,
+				cy: cy,
+				arcRadius: arcRadius,
+				midAngle: midAngle
 			};
 		}
 	}

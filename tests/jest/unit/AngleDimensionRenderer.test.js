@@ -487,6 +487,28 @@ describe( 'AngleDimensionRenderer', () => {
 			const hasToleranceText = textCalls.some( ( call ) => call[ 0 ].includes( '±' ) );
 			expect( hasToleranceText ).toBe( true );
 		} );
+
+		test( 'draws text at offset position when textOffset is set', () => {
+			renderer.draw( makeLayer( { textOffset: 15 } ) );
+			// Text should still be drawn (textOffset shifts the angular position)
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+			expect( mockCtx.translate ).toHaveBeenCalled();
+		} );
+
+		test( 'draws text at negative offset position', () => {
+			renderer.draw( makeLayer( { textOffset: -20 } ) );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'draws with text position above', () => {
+			renderer.draw( makeLayer( { textPosition: 'above' } ) );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'draws with text position below', () => {
+			renderer.draw( makeLayer( { textPosition: 'below' } ) );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'getBounds', () => {
