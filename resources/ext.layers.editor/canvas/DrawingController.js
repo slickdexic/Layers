@@ -387,7 +387,6 @@ class DrawingController {
 			precision: style.precision !== undefined ? style.precision : 1,
 			reflexAngle: style.reflexAngle || false,
 			textOffset: style.textOffset || 0,
-			textRadialOffset: style.textRadialOffset || 0,
 			toleranceType: style.toleranceType || 'none',
 			toleranceValue: style.toleranceValue || 0,
 			toleranceUpper: style.toleranceUpper || 0,

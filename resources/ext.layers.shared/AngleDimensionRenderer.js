@@ -79,7 +79,6 @@
 		precision: 1,
 		reflexAngle: false,
 		textOffset: 0,
-		textRadialOffset: 0,
 		toleranceType: 'none',
 		toleranceValue: 0,
 		toleranceUpper: 0,
@@ -679,7 +678,6 @@
 		_drawAngleText( ctx, cx, cy, arcRadius, angles, text, fontSize, fontFamily, color, position, layer ) {
 			// Calculate midpoint of the arc for text placement
 			const textOffset = typeof layer?.textOffset === 'number' ? layer.textOffset : 0;
-			const textRadialOffset = typeof layer?.textRadialOffset === 'number' ? layer.textRadialOffset : 0;
 			const midAngle = angles.startAngle + angles.sweepAngle / 2 + textOffset * ( Math.PI / 180 );
 
 			// Text position perpendicular to arc
@@ -701,9 +699,6 @@
 					textRadius = arcRadius;
 					break;
 			}
-
-			// Apply radial offset (positive = away from vertex, negative = toward vertex)
-			textRadius += textRadialOffset;
 
 			const textX = cx + textRadius * Math.cos( midAngle );
 			const textY = cy + textRadius * Math.sin( midAngle );
@@ -939,7 +934,6 @@
 				precision: options.precision !== undefined ? options.precision : DEFAULTS.precision,
 				reflexAngle: options.reflexAngle || false,
 				textOffset: options.textOffset !== undefined ? options.textOffset : DEFAULTS.textOffset,
-				textRadialOffset: options.textRadialOffset !== undefined ? options.textRadialOffset : DEFAULTS.textRadialOffset,
 				toleranceType: options.toleranceType || DEFAULTS.toleranceType,
 				toleranceValue: options.toleranceValue !== undefined ? options.toleranceValue : DEFAULTS.toleranceValue,
 				toleranceUpper: options.toleranceUpper !== undefined ? options.toleranceUpper : DEFAULTS.toleranceUpper,
