@@ -500,20 +500,20 @@ describe( 'AngleDimensionRenderer', () => {
 			expect( mockCtx.fillText ).toHaveBeenCalled();
 		} );
 
-		test( 'draws text with positive radial offset (away from vertex)', () => {
-			renderer.draw( makeLayer( { textRadialOffset: 30 } ) );
+		test( 'draws text with larger arcRadius (arc farther from vertex)', () => {
+			renderer.draw( makeLayer( { arcRadius: 80 } ) );
 			expect( mockCtx.fillText ).toHaveBeenCalled();
 			expect( mockCtx.translate ).toHaveBeenCalled();
 		} );
 
-		test( 'draws text with negative radial offset (toward vertex)', () => {
-			renderer.draw( makeLayer( { textRadialOffset: -20 } ) );
+		test( 'draws text with smaller arcRadius (arc closer to vertex)', () => {
+			renderer.draw( makeLayer( { arcRadius: 20 } ) );
 			expect( mockCtx.fillText ).toHaveBeenCalled();
 			expect( mockCtx.translate ).toHaveBeenCalled();
 		} );
 
-		test( 'draws text with both angular and radial offset', () => {
-			renderer.draw( makeLayer( { textOffset: 15, textRadialOffset: 25 } ) );
+		test( 'draws text with both angular offset and modified arcRadius', () => {
+			renderer.draw( makeLayer( { textOffset: 15, arcRadius: 65 } ) );
 			expect( mockCtx.fillText ).toHaveBeenCalled();
 			expect( mockCtx.translate ).toHaveBeenCalled();
 		} );
@@ -717,16 +717,15 @@ describe( 'AngleDimensionRenderer', () => {
 			expect( layer.showBackground ).toBe( true );
 			expect( layer.toleranceType ).toBe( 'none' );
 			expect( layer.textOffset ).toBe( 0 );
-			expect( layer.textRadialOffset ).toBe( 0 );
 			expect( layer.name ).toBe( 'Angle Dimension' );
 		} );
 
-		test( 'accepts custom textRadialOffset', () => {
+		test( 'accepts custom arcRadius for layer creation', () => {
 			const layer = AngleDimensionRenderer.createAngleDimensionLayer(
 				0, 0, 100, 0, 0, 100,
-				{ textRadialOffset: 25 }
+				{ arcRadius: 80 }
 			);
-			expect( layer.textRadialOffset ).toBe( 25 );
+			expect( layer.arcRadius ).toBe( 80 );
 		} );
 
 		test( 'accepts custom id', () => {
@@ -763,7 +762,6 @@ describe( 'AngleDimensionRenderer', () => {
 			expect( defaults ).toHaveProperty( 'reflexAngle', false );
 			expect( defaults ).toHaveProperty( 'extensionLength', 10 );
 			expect( defaults ).toHaveProperty( 'showBackground', true );
-			expect( defaults ).toHaveProperty( 'textRadialOffset', 0 );
 
 			// Verify it returns a copy (not the original)
 			defaults.arcRadius = 999;
