@@ -1125,4 +1125,115 @@ describe( 'DrawingController', () => {
 			expect( result.height ).toBeGreaterThan( 0 );
 		} );
 	} );
+
+	describe( 'angle dimension 3-click drawing flow', () => {
+		const style = { color: '#000000', strokeWidth: 1 };
+
+		it( 'should initialize phase 1 with arm1 endpoint at click position', () => {
+			controller.startDrawing( { x: 100, y: 200 }, 'angleDimension', style );
+			const temp = controller.getTempLayer();
+			expect( temp.type ).toBe( 'angleDimension' );
+			expect( temp.ax ).toBe( 100 );
+			expect( temp.ay ).toBe( 200 );
+			expect( controller.isAngleDimensionInProgress() ).toBe( true );
+		} );
+
+		it( 'should update cx/cy (vertex preview) during phase 1 mouse move', () => {
+			controller.startDrawing( { x: 100, y: 200 }, 'angleDimension', style );
+			controller.continueDrawing( { x: 250, y: 250 } );
+			const temp = controller.getTempLayer();
+			// Phase 1: mouse tracks potential vertex
+			expect( temp.ax ).toBe( 100 ); // arm1 stays at click
+			expect( temp.ay ).toBe( 200 );
+			expect( temp.cx ).toBe( 250 ); // vertex follows mouse
+			expect( temp.cy ).toBe( 250 );
+		} );
+
+		it( 'should advance from phase 1 to phase 2 on finishDrawing', () => {
+			controller.startDrawing( { x: 100, y: 200 }, 'angleDimension', style );
+			// Click 2: place vertex
+			const result = controller.finishDrawing( { x: 200, y: 200 }, 'angleDimension' );
+			expect( result ).toBeNull(); // Not finalized yet
+			expect( controller.isAngleDimensionInProgress() ).toBe( true );
+			const temp = controller.getTempLayer();
+			expect( temp.cx ).toBe( 200 );
+			expect( temp.cy ).toBe( 200 );
+		} );
+
+		it( 'should update bx/by (arm2 preview) during phase 2 mouse move', () => {
+			controller.startDrawing( { x: 100, y: 200 }, 'angleDimension', style );
+			controller.finishDrawing( { x: 200, y: 200 }, 'angleDimension' ); // Phase 1→2
+			controller.continueDrawing( { x: 200, y: 100 } );
+			const temp = controller.getTempLayer();
+			// Phase 2: mouse tracks arm2 endpoint
+			expect( temp.bx ).toBe( 200 );
+			expect( temp.by ).toBe( 100 );
+			// Vertex stays fixed
+			expect( temp.cx ).toBe( 200 );
+			expect( temp.cy ).toBe( 200 );
+		} );
+
+		it( 'should finalize on phase 2 finishDrawing with valid arms', () => {
+			controller.startDrawing( { x: 100, y: 200 }, 'angleDimension', style );
+			controller.finishDrawing( { x: 200, y: 200 }, 'angleDimension' ); // Phase 1→2
+			const result = controller.finishDrawing( { x: 200, y: 100 }, 'angleDimension' );
+			expect( result ).not.toBeNull();
+			expect( result.type ).toBe( 'angleDimension' );
+			expect( result.ax ).toBe( 100 );
+			expect( result.ay ).toBe( 200 );
+			expect( result.cx ).toBe( 200 );
+			expect( result.cy ).toBe( 200 );
+			expect( result.bx ).toBe( 200 );
+			expect( result.by ).toBe( 100 );
+			expect( controller.isAngleDimensionInProgress() ).toBe( false );
+		} );
+
+		it( 'should reject angle dimension with arms too short', () => {
+			controller.startDrawing( { x: 200, y: 200 }, 'angleDimension', style );
+			controller.finishDrawing( { x: 200, y: 200 }, 'angleDimension' ); // vertex at same point
+			const result = controller.finishDrawing( { x: 200, y: 200 }, 'angleDimension' );
+			expect( result ).toBeNull(); // Invalid - zero length arms
+		} );
+
+		it( 'should cancel angle dimension via cancelAngleDimension', () => {
+			controller.startDrawing( { x: 100, y: 200 }, 'angleDimension', style );
+			expect( controller.isAngleDimensionInProgress() ).toBe( true );
+			controller.cancelAngleDimension();
+			expect( controller.isAngleDimensionInProgress() ).toBe( false );
+			expect( controller.getTempLayer() ).toBeNull();
+		} );
+
+		it( 'should include textRadialOffset default in created layer', () => {
+			controller.startDrawing( { x: 100, y: 200 }, 'angleDimension', style );
+			controller.finishDrawing( { x: 200, y: 200 }, 'angleDimension' );
+			const result = controller.finishDrawing( { x: 200, y: 100 }, 'angleDimension' );
+			expect( result ).not.toBeNull();
+			expect( result.textRadialOffset ).toBe( 0 );
+			expect( result.textOffset ).toBe( 0 );
+		} );
+
+		it( 'should complete full 3-click flow: arm1 → vertex → arm2', () => {
+			// Click 1: arm1 endpoint
+			controller.startDrawing( { x: 50, y: 300 }, 'angleDimension', style );
+			// Mouse moves to vertex position
+			controller.continueDrawing( { x: 200, y: 300 } );
+
+			// Click 2: vertex
+			const afterClick2 = controller.finishDrawing( { x: 200, y: 300 }, 'angleDimension' );
+			expect( afterClick2 ).toBeNull(); // Still in progress
+
+			// Mouse moves to arm2 position
+			controller.continueDrawing( { x: 200, y: 150 } );
+
+			// Click 3: arm2 endpoint
+			const result = controller.finishDrawing( { x: 200, y: 150 }, 'angleDimension' );
+			expect( result ).not.toBeNull();
+			expect( result.ax ).toBe( 50 );
+			expect( result.ay ).toBe( 300 );
+			expect( result.cx ).toBe( 200 );
+			expect( result.cy ).toBe( 300 );
+			expect( result.bx ).toBe( 200 );
+			expect( result.by ).toBe( 150 );
+		} );
+	} );
 } );

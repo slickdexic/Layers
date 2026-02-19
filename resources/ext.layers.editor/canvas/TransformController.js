@@ -761,6 +761,7 @@ class TransformController {
 		this.angleDimVertexY = handle.cy;
 		this.angleDimMidAngle = handle.midAngle;
 		this.angleDimArcRadius = handle.arcRadius;
+		this.angleDimInitialTextRadialOffset = layer ? ( layer.textRadialOffset || 0 ) : 0;
 		this.manager.canvas.style.cursor = 'move';
 
 		// Store original layer state
@@ -771,7 +772,9 @@ class TransformController {
 
 	/**
 	 * Handle angle dimension text dragging during mouse move.
-	 * Converts the mouse position to an angular offset (degrees) from the arc midpoint.
+	 * Converts the mouse position to:
+	 * - Angular offset (degrees) from the arc midpoint (textOffset)
+	 * - Radial offset (pixels) from the arc radius (textRadialOffset)
 	 *
 	 * @param {Object} point Current mouse point
 	 */
@@ -785,10 +788,11 @@ class TransformController {
 			return;
 		}
 
-		// Calculate angle from vertex to current mouse position
+		// Calculate angle and distance from vertex to current mouse position
 		const dx = point.x - this.angleDimVertexX;
 		const dy = point.y - this.angleDimVertexY;
 		const mouseAngle = Math.atan2( dy, dx );
+		const mouseDistance = Math.sqrt( dx * dx + dy * dy );
 
 		// Calculate textOffset = difference between mouse angle and arc midpoint, in degrees
 		let offsetRadians = mouseAngle - this.angleDimMidAngle;
@@ -809,9 +813,22 @@ class TransformController {
 			offsetDegrees = 0;
 		}
 
-		// Update textOffset
+		// Calculate radial offset = distance from arc to mouse position along radial direction
+		let radialOffset = mouseDistance - this.angleDimArcRadius;
+
+		// Snap to arc when close (within 5 pixels)
+		const radialSnapThreshold = 5;
+		if ( Math.abs( radialOffset ) < radialSnapThreshold ) {
+			radialOffset = 0;
+		}
+
+		// Round to 1 decimal place
+		radialOffset = Math.round( radialOffset * 10 ) / 10;
+
+		// Update both textOffset and textRadialOffset
 		this.manager.editor.updateLayer( this.angleDimTextLayerId, {
-			textOffset: Math.round( offsetDegrees * 10 ) / 10 // 1 decimal place
+			textOffset: Math.round( offsetDegrees * 10 ) / 10, // 1 decimal place
+			textRadialOffset: radialOffset
 		} );
 
 		this.showDragPreview = true;
@@ -843,6 +860,7 @@ class TransformController {
 		this.angleDimVertexY = 0;
 		this.angleDimMidAngle = 0;
 		this.angleDimArcRadius = 0;
+		this.angleDimInitialTextRadialOffset = 0;
 		this.showDragPreview = false;
 		this.originalLayerState = null;
 		this.dragStartPoint = null;

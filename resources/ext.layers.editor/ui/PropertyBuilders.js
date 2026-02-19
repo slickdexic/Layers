@@ -1722,6 +1722,21 @@
 			}
 		} );
 
+		// Radial text offset (toward/away from vertex)
+		ctx.addInput( {
+			label: t( 'layers-prop-text-radial-offset', 'Radial Text Offset' ),
+			type: 'number',
+			value: layer.textRadialOffset !== undefined ? layer.textRadialOffset : 0,
+			min: -500,
+			max: 500,
+			step: 1,
+			prop: 'textRadialOffset',
+			onChange: function ( v ) {
+				const val = Math.max( -500, Math.min( 500, parseInt( v, 10 ) || 0 ) );
+				updateWithDefaults( { textRadialOffset: val } );
+			}
+		} );
+
 		// Background section
 		ctx.addSection( t( 'layers-section-background', 'Text Background' ), 'background' );
 

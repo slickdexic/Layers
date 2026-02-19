@@ -350,20 +350,25 @@ class DrawingController {
 	}
 
 	/**
-	 * Start angle dimension tool - phase 1: place vertex
-	 * Uses 3-click workflow: vertex → arm1 → arm2
+	 * Start angle dimension tool - phase 1: place arm1 endpoint
+	 * Uses 3-click workflow: arm1 → vertex → arm2
+	 * Click 1 places arm1 endpoint, mouse follows to show preview line.
+	 * Click 2 places vertex, mouse follows to show second arm preview.
+	 * Click 3 places arm2 endpoint and finalizes the angle dimension.
 	 *
-	 * @param {Object} point - Starting point (vertex position)
+	 * @param {Object} point - Starting point (arm1 endpoint position)
 	 * @param {Object} style - Style options
 	 */
 	startAngleDimensionTool( point, style ) {
 		this._angleDimensionPhase = 1;
 		this.tempLayer = {
 			type: 'angleDimension',
-			cx: point.x,
-			cy: point.y,
+			// Arm1 endpoint placed at first click
 			ax: point.x,
 			ay: point.y,
+			// Vertex and arm2 start at same point; will be set by clicks 2 and 3
+			cx: point.x,
+			cy: point.y,
 			bx: point.x,
 			by: point.y,
 			stroke: style.stroke || style.color || '#000000',
@@ -382,6 +387,7 @@ class DrawingController {
 			precision: style.precision !== undefined ? style.precision : 1,
 			reflexAngle: style.reflexAngle || false,
 			textOffset: style.textOffset || 0,
+			textRadialOffset: style.textRadialOffset || 0,
 			toleranceType: style.toleranceType || 'none',
 			toleranceValue: style.toleranceValue || 0,
 			toleranceUpper: style.toleranceUpper || 0,
@@ -404,18 +410,21 @@ class DrawingController {
 	 * @return {Object|null} Layer data if valid and complete, null if mid-phase or invalid
 	 */
 	finishDrawing ( point, currentTool ) {
-		// Handle multi-phase angle dimension
+		// Handle multi-phase angle dimension (3-click: arm1 → vertex → arm2)
 		if ( currentTool === 'angleDimension' && this.tempLayer ) {
 			if ( this._angleDimensionPhase === 1 ) {
-				// Phase 1 complete: vertex placed, arm1 endpoint set
-				this.tempLayer.ax = point.x;
-				this.tempLayer.ay = point.y;
+				// Phase 1 complete: vertex placed (click 2)
+				this.tempLayer.cx = point.x;
+				this.tempLayer.cy = point.y;
+				// Set bx/by to vertex so the preview starts from there
+				this.tempLayer.bx = point.x;
+				this.tempLayer.by = point.y;
 				this._angleDimensionPhase = 2;
 				this.isDrawing = false;
 				// Return null but keep tempLayer alive for phase 2
 				return null;
 			} else if ( this._angleDimensionPhase === 2 ) {
-				// Phase 2 complete: arm2 endpoint set, finalize
+				// Phase 2 complete: arm2 endpoint set (click 3), finalize
 				this.tempLayer.bx = point.x;
 				this.tempLayer.by = point.y;
 				this._angleDimensionPhase = 0;
@@ -655,11 +664,18 @@ class DrawingController {
 				this.tempLayer.y2 = point.y;
 				break;
 			case 'angleDimension':
-				// Multi-phase: update current phase endpoint
+				// 3-click flow: arm1 → vertex → arm2
 				if ( this._angleDimensionPhase === 1 ) {
-					this.tempLayer.ax = point.x;
-					this.tempLayer.ay = point.y;
+					// Phase 1: mouse tracks potential vertex position
+					// Shows preview line from arm1 endpoint to cursor
+					this.tempLayer.cx = point.x;
+					this.tempLayer.cy = point.y;
+					// Keep bx/by at vertex for cleaner preview
+					this.tempLayer.bx = point.x;
+					this.tempLayer.by = point.y;
 				} else if ( this._angleDimensionPhase === 2 ) {
+					// Phase 2: mouse tracks arm2 endpoint
+					// Shows preview line from vertex to cursor
 					this.tempLayer.bx = point.x;
 					this.tempLayer.by = point.y;
 				}
@@ -805,11 +821,13 @@ class DrawingController {
 				layer.y2 = point.y;
 				break;
 			case 'angleDimension':
-				// Multi-phase finalization handled in finishDrawing
+				// Multi-phase finalization handled in finishDrawing (3-click: arm1 → vertex → arm2)
 				if ( this._angleDimensionPhase === 1 ) {
-					layer.ax = point.x;
-					layer.ay = point.y;
+					// Phase 1→2: set vertex position
+					layer.cx = point.x;
+					layer.cy = point.y;
 				} else if ( this._angleDimensionPhase === 2 ) {
+					// Phase 2→final: set arm2 endpoint
 					layer.bx = point.x;
 					layer.by = point.y;
 				}

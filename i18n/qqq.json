@@ -155,6 +155,7 @@
 	"layers-prop-extension-length": "Property label for dimension extension line length in pixels",
 	"layers-prop-dimension-offset": "Property label for the perpendicular distance from anchor points to the dimension line. Negative values flip the dimension to the opposite side.",
 	"layers-prop-text-offset": "Property label for the distance along the dimension line axis to shift the text from center. Positive values move toward the second anchor point, negative values toward the first.",
+	"layers-prop-text-radial-offset": "Property label for the radial distance offset to shift the angle dimension text toward or away from the vertex. Positive values move away from vertex, negative values move toward it.",
 	"layers-prop-unit": "Property label for measurement unit (px, cm, in, etc.)",
 	"layers-prop-scale": "Property label for measurement scale factor (e.g., 1px = 1cm)",
 	"layers-prop-precision": "Property label for decimal precision of measurement display",

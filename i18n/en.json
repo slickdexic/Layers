@@ -146,6 +146,7 @@
 	"layers-prop-extension-length": "Extension Length",
 	"layers-prop-dimension-offset": "Dimension Offset",
 	"layers-prop-text-offset": "Text Offset",
+	"layers-prop-text-radial-offset": "Radial Text Offset",
 	"layers-prop-unit": "Unit",
 	"layers-prop-scale": "Scale",
 	"layers-prop-precision": "Precision",
