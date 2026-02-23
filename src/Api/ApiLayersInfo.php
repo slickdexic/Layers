@@ -293,7 +293,10 @@ class ApiLayersInfo extends ApiBase {
 
 				// Get all revisions for the CURRENT set only (not all sets)
 				// This ensures the revision selector shows only relevant history
-				$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;
+				$currentSetName = null;
+				if ( $layerSet ) {
+					$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;
+				}
 				if ( $currentSetName ) {
 					// Use set-specific revisions
 					$allLayerSets = $db->getSetRevisions( $normalizedName, $fileSha1, $currentSetName, $limit );

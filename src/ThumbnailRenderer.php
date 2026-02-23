@@ -301,6 +301,10 @@ class ThumbnailRenderer {
 		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
 		$fill = $this->withOpacity( $fill, $opacity );
 		$font = (string)( $layer['fontFamily'] ?? 'DejaVu-Sans' );
+		$allowedFonts = $this->config->get( 'LayersDefaultFonts' );
+		if ( !in_array( $font, $allowedFonts, true ) ) {
+			$font = 'DejaVu-Sans';
+		}
 
 		$args = [];
 		// Shadow support
@@ -388,6 +392,10 @@ class ThumbnailRenderer {
 			$textColor = (string)( $layer['color'] ?? '#000000' );
 			$textColor = $this->withOpacity( $textColor, $opacity );
 			$font = (string)( $layer['fontFamily'] ?? 'DejaVu-Sans' );
+			$allowedFonts = $this->config->get( 'LayersDefaultFonts' );
+			if ( !in_array( $font, $allowedFonts, true ) ) {
+				$font = 'DejaVu-Sans';
+			}
 			$padding = ( $layer['padding'] ?? 8 ) * ( ( $scaleX + $scaleY ) / 2 );
 
 			// Calculate text position (simplified - top-left alignment)
