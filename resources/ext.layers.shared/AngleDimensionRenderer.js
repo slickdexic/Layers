@@ -67,7 +67,7 @@
 		fontFamily: 'Arial, sans-serif',
 		color: '#000000',
 		endStyle: END_STYLES.ARROW,
-		textPosition: TEXT_POSITIONS.CENTER,
+		textPosition: TEXT_POSITIONS.ABOVE,
 		arcRadius: 40,
 		extensionLength: 10,
 		arrowsInside: true,

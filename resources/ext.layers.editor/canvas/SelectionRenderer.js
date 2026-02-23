@@ -632,22 +632,19 @@
 			const textX = cx + textRadius * Math.cos( midAngle );
 			const textY = cy + textRadius * Math.sin( midAngle );
 
-			// Draw a circle handle at the text position
+			// Draw a small ring handle at the text position (outline only to avoid obscuring text)
 			const radius = handleSize / 2 + 1;
 
 			if ( isKeyObject ) {
-				this.ctx.fillStyle = '#fffde7'; // Light yellow for text handle
 				this.ctx.strokeStyle = '#ff9800';
 				this.ctx.lineWidth = 2;
 			} else {
-				this.ctx.fillStyle = '#fffde7';
 				this.ctx.strokeStyle = this.handleBorderColor;
 				this.ctx.lineWidth = 1;
 			}
 
 			this.ctx.beginPath();
 			this.ctx.arc( textX, textY, radius, 0, 2 * Math.PI );
-			this.ctx.fill();
 			this.ctx.stroke();
 
 			// Register as a special text handle (not used for resize, just visual indicator)
