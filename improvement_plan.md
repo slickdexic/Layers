@@ -25,9 +25,9 @@ issues for efficient batching.
 | 11 | v38 findings (API + cleanup + docs) | 8 | 8 | 0 | — |
 | 12 | v39 findings (security + quality) | 13 | 13 | 0 | — |
 | 13 | v40 findings (verification addendum) | 5 | 5 | 0 | 2-4 hours |
-| 14 | v41 findings (security + rendering + quality) | 23 | 3 | 20 | 12-20 hours |
-| 15 | v42 findings (infra + rendering + UX + quality) | 32 | 0 | 32 | 20-30 hours |
-| **Total** | | **224** | **175** | **52** | **—** |
+| 14 | v41 findings (security + rendering + quality) | 23 | 4 | 19 | 12-20 hours |
+| 15 | v42 findings (infra + rendering + UX + quality) | 31 | 2 | 29 | 20-30 hours |
+| **Total** | | **223** | **175** | **48** | **—** |
 
 ---
 
@@ -57,7 +57,7 @@ code quality issues found in the v41 comprehensive review.*
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
 | 14.1 | Rate limiter `$defaultLimits` dead code | P1-032 | ✅ Fixed v41 | 1h |
-| 14.2 | Missing cache invalidation after delete/rename | P1-033 | ⚠️ NOT FIXED → P0-005 | 1h |
+| 14.2 | Missing cache invalidation after delete/rename | P1-033 | ✅ Fixed v41 | 1h |
 | 14.3 | Rich text per-run `fontSize` not scaled in viewer | P1-034 | ✅ Fixed v41 | 30m |
 
 **14.1 Fix:** Either (a) merge `$defaultLimits` into `$wgRateLimits`
@@ -132,26 +132,15 @@ SVG element blocklist in `ServerSideLayerValidator.php` `validateSvgString()`.
 
 ## Phase 15: v42 Findings — Infrastructure, Rendering, UX & Quality (32 Items)
 
-*Target: resolve critical infrastructure failure (missing trait file
-blocking all write operations), fix rendering inconsistencies,
-implement missing UX features, and address code quality issues
-found in the v42 comprehensive fresh audit.*
+*Target: resolve rendering inconsistencies, implement missing UX features, and address code quality issues found in the v42 comprehensive fresh audit.*
 
-### CRITICAL (1 item — fix IMMEDIATELY)
+### CRITICAL (0 items)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 15.1 | CacheInvalidationTrait.php missing — all writes broken | P0-005 | Open | 2h |
+| 15.1 | ~~CacheInvalidationTrait.php missing~~ | P0-005 | ✅ False Positive | 0h |
 
-**15.1 Fix:** Create `src/Api/Traits/CacheInvalidationTrait.php`
-implementing `invalidateCachesForFile(Title $title)`. The method
-should: (1) call `$title->invalidateCache()` for the file page,
-(2) queue `HTMLCacheUpdateJob` for backlink pages, and (3)
-invalidate parser cache. Base the implementation on the pattern
-previously inline in `ApiLayersSave.php` before the trait
-extraction. This unblocks ALL write API operations (save, delete,
-rename). Reopens and escalates P1-033 from v41 which falsely
-claimed this was fixed but the file was never committed.
+**15.1 Fix:** Verified that `src/Api/Traits/CacheInvalidationTrait.php` exists and is intact. No action needed.
 
 ### HIGH (4 items — fix first after P0)
 
@@ -160,7 +149,7 @@ claimed this was fixed but the file was never committed.
 | 15.2 | ApiLayersInfo null dereference on L280 | P1-035 | ✅ Done | 30m |
 | 15.3 | Arrow keys always pan, never nudge | P1-036 | ✅ Done | 2h |
 | 15.4 | Color preview mutates layers directly | P1-037 | Open | 1.5h |
-| 15.5 | ThumbnailRenderer font not in whitelist | P1-038 | Open | 45m |
+| 15.5 | ThumbnailRenderer font not in whitelist | P1-038 | ✅ Done | 45m |
 
 **15.2 Fix:** ✅ RESOLVED — Restructured `ApiLayersInfo.php` so
 that when `$layerSet` is null, it fetches general revisions,
@@ -180,9 +169,9 @@ and 17 new tests.
 Apply same pattern to `FolderOperationsController.toggleLayerVisibility`
 and `StyleController.applyToLayer`.
 
-**15.5 Fix:** In `ThumbnailRenderer`, before passing fontFamily
+**15.5 Fix:** ✅ RESOLVED — In `ThumbnailRenderer`, before passing fontFamily
 to ImageMagick, validate against `$wgLayersDefaultFonts`. If not
-in list, fall back to 'DejaVu-Sans'. Add a `validateFontName()`
+in list, fall back to 'DejaVu-Sans'. Added a `validateFontName()`
 helper method to centralize the check.
 
 ### MEDIUM (10 items)

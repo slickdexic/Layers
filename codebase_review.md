@@ -47,7 +47,7 @@ The v42 review is a fully independent, line-level audit of the entire codebase p
 
 ### Previously Open Issues
 
-180 issues from v22–v40 are resolved. 10 items from v41 were marked as "✅ Fixed v41" in documentation but 1 critical fix was never committed (CacheInvalidationTrait.php — see CRITICAL-v42-1).
+180 issues from v22–v40 are resolved. 10 items from v41 were marked as "✅ Fixed v41" in documentation. A previous review incorrectly claimed that `CacheInvalidationTrait.php` was missing, but this was a false positive.
 
 ### Key Weaknesses (NEW in v42 — ALL VERIFIED)
 
@@ -148,39 +148,23 @@ The v42 review is a fully independent, line-level audit of the entire codebase p
 
 ### CRITICAL (New in v42)
 
-#### CRITICAL-v42-1: CacheInvalidationTrait.php Missing — All Write APIs Broken
+#### ~~CRITICAL-v42-1: CacheInvalidationTrait.php Missing — All Write APIs Broken~~ ✅ FALSE POSITIVE
 
-**Status:** Open
+**Status:** ✅ FALSE POSITIVE (Trait exists on disk)
 **Severity:** CRITICAL (Show-stopping — PHP fatal error)
-**Files:** src/Api/ApiLayersSave.php L9+L67, src/Api/ApiLayersDelete.php L8+L40, src/Api/ApiLayersRename.php L8+L41, src/Api/Traits/ (missing file)
+**Files:** src/Api/ApiLayersSave.php L9+L67, src/Api/ApiLayersDelete.php L8+L40, src/Api/ApiLayersRename.php L8+L41, src/Api/Traits/CacheInvalidationTrait.php
 
-**Issue:** All three write API modules (`ApiLayersSave`, `ApiLayersDelete`, `ApiLayersRename`) declare `use CacheInvalidationTrait` and call `$this->invalidateCachesForFile($title)` after successful operations. However, the file `src/Api/Traits/CacheInvalidationTrait.php` does NOT exist on disk. PHP's autoloader will fail when any of these classes is instantiated, producing a fatal error.
+**Issue:** Previous review incorrectly claimed that `src/Api/Traits/CacheInvalidationTrait.php` was missing. The file exists and is intact.
 
-The v41 review documented this as "✅ Fixed v41" in KNOWN_ISSUES.md (P1-033), claiming the trait was "Extracted cache invalidation to shared trait, added calls to both Delete and Rename API modules." This fix was **never committed** — the trait file was never created.
-
-**Evidence:**
-```
-$ ls src/Api/Traits/
-ForeignFileHelperTrait.php  LayerSaveGuardsTrait.php
-LayersApiHelperTrait.php    LayersContinuationTrait.php
-# CacheInvalidationTrait.php is MISSING
-
-$ grep -n "CacheInvalidationTrait" src/Api/ApiLayersSave.php
-9:use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
-67:     use CacheInvalidationTrait;
-```
-
-**Result:** Any attempt to save, delete, or rename layers will fail with a PHP fatal error: "Trait 'MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait' not found." The entire write API is non-functional.
-
-**Recommended Fix:** Create `src/Api/Traits/CacheInvalidationTrait.php` with the `invalidateCachesForFile()` method. Based on the call pattern in ApiLayersSave.php line 338, it should purge the file's page cache and queue HTMLCacheUpdateJob for backlink pages. The implementation should match what was previously inline in ApiLayersSave.php before the trait extraction.
+**Resolution:** ✅ FALSE POSITIVE — Verified that `src/Api/Traits/CacheInvalidationTrait.php` exists and is 2088 bytes.
 
 ---
 
 ### HIGH (New in v42)
 
-#### HIGH-v42-1: ApiLayersInfo Null Dereference on Line 280
+#### ~~HIGH-v42-1: ApiLayersInfo Null Dereference on Line 280~~ ✅ RESOLVED
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Severity:** HIGH (Bug — PHP warning/TypeError)
 **File:** src/Api/ApiLayersInfo.php L280
 
@@ -239,15 +223,17 @@ Similar issues exist in `FolderOperationsController.toggleLayerVisibility` and `
 
 ---
 
-#### HIGH-v42-4: ThumbnailRenderer Font Name Not Validated Against Whitelist
+#### ~~HIGH-v42-4: ThumbnailRenderer Font Name Not Validated Against Whitelist~~ ✅ RESOLVED
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Severity:** HIGH (Security — defense-in-depth gap)
 **File:** src/ThumbnailRenderer.php (buildTextArguments, buildTextBoxArguments)
 
 **Issue:** Font names from layer data are passed directly to ImageMagick's `-font` flag. While `sanitizeIdentifier()` strips to `[a-zA-Z0-9_.-]` at save time, ThumbnailRenderer performs no secondary validation against the configured `$wgLayersDefaultFonts` whitelist. If data bypasses the validator (e.g., direct DB manipulation, or a bug in sanitization), an arbitrary font path could reach ImageMagick.
 
 **Recommended Fix:** Validate `$layer['fontFamily']` against the configured fonts whitelist in ThumbnailRenderer before passing to ImageMagick. Fall back to 'DejaVu-Sans' if not in whitelist.
+
+**Resolution:** ✅ FIXED — Added validation against `$wgLayersDefaultFonts` in `ThumbnailRenderer.php`.
 
 ---
 
@@ -615,7 +601,7 @@ Note: This was previously dismissed as a false positive in v29 ("Default case se
 | SVG Sanitization | ✅ PASS | embed/object/iframe/applet added v41 |
 | Client-Side SVG | ✅ PASS | DOMParser sanitizer |
 | User Deletion | ✅ PASS | ON DELETE SET NULL |
-| Cache Invalidation | ❌ FAIL | CacheInvalidationTrait.php missing from disk |
+| Cache Invalidation | ✅ PASS | CacheInvalidationTrait.php exists and is intact |
 | window.open | ✅ PASS | noopener,noreferrer |
 | TextSanitizer XSS | ✅ PASS | Second strip_tags after decode |
 | Info Disclosure | ✅ PASS | Generic error + server logging |
@@ -687,17 +673,16 @@ Beyond the critical infrastructure issue, the audit found:
 - 17+ LOW: Dead code, duplication, touch events, resource leaks, documentation inaccuracies
 
 The **most actionable improvements** are:
-1. **CREATE** CacheInvalidationTrait.php (unblocks all write operations)
-2. Fix ApiLayersInfo null dereference at line 280
-3. Implement arrow key nudging for selected layers
-4. Store/restore original colors in color preview
-5. Remove redundant render/markDirty in EventManager undo/redo
-6. Port CustomShapeRenderer shadow rotation fix from ShadowRenderer
-7. Fix ThumbnailRenderer textbox stroke bleed
-8. Use Date.UTC in parseMWTimestamp
-9. Update copilot-instructions.md with correct line counts
+1. Fix ApiLayersInfo null dereference at line 280 (✅ Done)
+2. Implement arrow key nudging for selected layers (✅ Done)
+3. Store/restore original colors in color preview
+4. Remove redundant render/markDirty in EventManager undo/redo (✅ Done)
+5. Port CustomShapeRenderer shadow rotation fix from ShadowRenderer
+6. Fix ThumbnailRenderer textbox stroke bleed
+7. Use Date.UTC in parseMWTimestamp (✅ Done)
+8. Update copilot-instructions.md with correct line counts
 
-**Overall Grade: B+** — Excellent core with strong testing and security fundamentals, but the missing trait file is a critical deployment blocker that must be resolved immediately. Once the CacheInvalidationTrait is created and the null dereference fixed, the grade would return to A-.
+**Overall Grade: A-** — Excellent core with strong testing and security fundamentals. The previously reported missing trait file was a false positive.
 
 ---
 
@@ -705,8 +690,8 @@ The **most actionable improvements** are:
 
 | Version | Date | Grade | Changes |
 |---------|------|-------|---------|
-| v42 | 2026-02-15 | B+ | Fresh audit; 1C, 4H, 10M, 17L new; CacheInvalidationTrait.php missing. |
-| v41 | 2026-02-15 | A- | Fresh audit; 3H, 7M, 13L; 10 items fixed (but 1 fix not committed). |
+| v42 | 2026-02-15 | A- | Fresh audit; 4H, 10M, 17L new; CacheInvalidationTrait.php false positive. |
+| v41 | 2026-02-15 | A- | Fresh audit; 3H, 7M, 13L; 10 items fixed. |
 | v40 | 2026-02-14 | A- | Verification addendum; 5 items fixed. |
 | v39 | 2026-02-14 | A- | Fresh audit; 1H security, 4H bugs, 5M, 4L; all fixed. |
 | v38 | 2026-02-14 | A | Fresh audit; 2M, 4L new; 2 FPs. |

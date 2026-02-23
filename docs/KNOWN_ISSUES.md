@@ -10,17 +10,17 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
-| P0 | 5 | 4 | 1 |
-| P1 | 38 | 34 | 4 |
+| P0 | 4 | 4 | 0 |
+| P1 | 38 | 36 | 2 |
 | P2 | 87 | 70 | 17 |
 | P3 | 105 | 75 | 30 |
-| **Total** | **235** | **183** | **52** |
+| **Total** | **234** | **185** | **49** |
 
 ---
 
 ## Newly Confirmed in v42
 
-### P0-005: CacheInvalidationTrait.php Missing — All Write APIs Broken
+### ~~P0-005: CacheInvalidationTrait.php Missing — All Write APIs Broken~~ (FALSE POSITIVE)
 
 - **Files:** `src/Api/ApiLayersSave.php` L9+L67, `src/Api/ApiLayersDelete.php`
   L8+L40, `src/Api/ApiLayersRename.php` L8+L41
@@ -33,10 +33,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Root Cause:** v41 review documented P1-033 as "✅ Fixed v41" claiming the
   trait was extracted. The fix was **never committed** — the trait file was never
   created. Reopens and escalates P1-033 to P0.
-- **Status:** Open
+- **Status:** ✅ False Positive (Trait exists on disk)
 - **Introduced:** v41 (documented as fixed but never committed); confirmed v42
 
-### P1-035: ApiLayersInfo Null Dereference on Line 280
+### ~~P1-035: ApiLayersInfo Null Dereference on Line 280~~ (RESOLVED)
 
 - **File:** `src/Api/ApiLayersInfo.php` L280
 - **Impact:** When no layers exist for an image (`$layerSet` is null from
@@ -46,7 +46,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Evidence:** Code reads `$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;`
   outside the `if ($layerSet)` guard.
 - **Recommended Fix:** Wrap lines 280-310 in `if ( $layerSet ) { ... }`.
-- **Status:** Open
+- **Status:** ✅ Resolved in v42 fixes
 - **Introduced:** v42 review
 
 ### ~~P1-036: Arrow Keys Always Pan, Never Nudge Selected Layers~~ (RESOLVED)
@@ -72,7 +72,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Status:** Open
 - **Introduced:** v42 review
 
-### P1-038: ThumbnailRenderer Font Name Not Validated Against Whitelist
+### ~~P1-038: ThumbnailRenderer Font Name Not Validated Against Whitelist~~ (RESOLVED)
 
 - **File:** `src/ThumbnailRenderer.php`
 - **Impact:** Font names from layer data are passed to ImageMagick's `-font`
@@ -81,7 +81,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   secondary check. If data bypasses validation (direct DB edit), an
   arbitrary font path could reach ImageMagick.
 - **Recommended Fix:** Validate against whitelist; fall back to 'DejaVu-Sans'.
-- **Status:** Open
+- **Status:** ✅ Resolved in v42 fixes
 - **Introduced:** v42 review
 
 ### P2-074: Double Render on Every Undo/Redo
