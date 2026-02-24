@@ -121,6 +121,13 @@
 				return;
 			}
 
+			// Special handling for angle dimension: 3 anchor handles
+			if ( layer.type === 'angleDimension' ) {
+				this.drawAngleDimensionSelectionIndicators( layer, isKeyObject );
+				this.ctx.restore();
+				return;
+			}
+
 			// Special handling for marker: circular selection around the marker
 			if ( layer.type === 'marker' ) {
 				this.drawMarkerSelectionIndicators( layer, isKeyObject );
@@ -496,6 +503,87 @@
 
 			// Note: No center offset handle - dimension text can be dragged directly
 			// to adjust both perpendicular offset (up/down) and text offset (left/right)
+		}
+
+		/**
+		 * Draw selection indicators for angle dimension layers - 3 vertex/arm handles
+		 *
+		 * @param {Object} layer - The angle dimension layer
+		 * @param {boolean} [isKeyObject=false] - Whether this is the key object
+		 */
+		drawAngleDimensionSelectionIndicators( layer, isKeyObject ) {
+			const handleSize = this.handleSize;
+
+			const cx = layer.cx || 0;
+			const cy = layer.cy || 0;
+			const ax = layer.ax || 0;
+			const ay = layer.ay || 0;
+			const bx = layer.bx || 0;
+			const by = layer.by || 0;
+
+			// Draw arm lines as visual guides (dashed)
+			this.ctx.strokeStyle = '#666';
+			this.ctx.lineWidth = 1;
+			this.ctx.setLineDash( [ 3, 3 ] );
+			this.ctx.beginPath();
+			this.ctx.moveTo( cx, cy );
+			this.ctx.lineTo( ax, ay );
+			this.ctx.moveTo( cx, cy );
+			this.ctx.lineTo( bx, by );
+			this.ctx.stroke();
+			this.ctx.setLineDash( [] );
+
+			// Draw and register handles: vertex (cx,cy), arm1 (ax,ay), arm2 (bx,by)
+			const endpoints = [
+				{ x: cx, y: cy, type: 'nw' },  // Vertex handle
+				{ x: ax, y: ay, type: 'w' },    // Arm 1 endpoint
+				{ x: bx, y: by, type: 'e' }     // Arm 2 endpoint
+			];
+
+			// Set style for handles
+			if ( isKeyObject ) {
+				this.ctx.fillStyle = this.handleColor;
+				this.ctx.strokeStyle = '#ff9800';
+				this.ctx.lineWidth = 3;
+			} else {
+				this.ctx.fillStyle = this.handleColor;
+				this.ctx.strokeStyle = this.handleBorderColor;
+				this.ctx.lineWidth = 1;
+			}
+
+			for ( let i = 0; i < endpoints.length; i++ ) {
+				const ep = endpoints[ i ];
+
+				// Draw vertex as diamond shape to distinguish from arm endpoints
+				if ( i === 0 ) {
+					const half = handleSize / 2;
+					this.ctx.beginPath();
+					this.ctx.moveTo( ep.x, ep.y - half );
+					this.ctx.lineTo( ep.x + half, ep.y );
+					this.ctx.lineTo( ep.x, ep.y + half );
+					this.ctx.lineTo( ep.x - half, ep.y );
+					this.ctx.closePath();
+					this.ctx.fill();
+					this.ctx.stroke();
+				} else {
+					// Arm endpoints as squares
+					this.ctx.fillRect( ep.x - handleSize / 2, ep.y - handleSize / 2, handleSize, handleSize );
+					this.ctx.strokeRect( ep.x - handleSize / 2, ep.y - handleSize / 2, handleSize, handleSize );
+				}
+
+				// Register handle for hit testing - isAngleDimension handles move specific anchor points
+				this.selectionHandles.push( {
+					type: ep.type,
+					x: ep.x - handleSize / 2,
+					y: ep.y - handleSize / 2,
+					width: handleSize,
+					height: handleSize,
+					layerId: layer.id,
+					rotation: 0,
+					isAngleDimension: true,
+					anchorIndex: i // 0=vertex, 1=arm1, 2=arm2
+				} );
+			}
 		}
 
 		/**

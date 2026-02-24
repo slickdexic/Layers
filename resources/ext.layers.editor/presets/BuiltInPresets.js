@@ -16,7 +16,7 @@
 	 */
 	const SUPPORTED_TOOLS = [
 		'arrow', 'text', 'textbox', 'callout', 'rectangle', 'circle',
-		'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker'
+		'ellipse', 'line', 'polygon', 'star', 'path', 'dimension', 'marker', 'angleDimension'
 	];
 
 	/**

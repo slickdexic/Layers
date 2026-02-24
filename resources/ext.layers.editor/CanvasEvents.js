@@ -305,7 +305,16 @@
 					cm.startMarqueeSelection( point );
 				}
 			} else {
-				cm.startDrawing( point );
+				// For multi-phase angle dimension: if phase 2, start drawing continues
+				// from the existing tempLayer (vertex + arm1 already placed)
+				const dc = cm.drawingController;
+				if ( cm.currentTool === 'angleDimension' && dc && dc.isAngleDimensionInProgress() ) {
+					// Phase 2: user clicks to start drawing arm2
+					dc.isDrawing = true;
+					cm.isDrawing = true;
+				} else {
+					cm.startDrawing( point );
+				}
 			}
 		}
 

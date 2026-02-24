@@ -337,6 +337,23 @@
 						};
 					}
 
+				case 'angleDimension':
+					{
+						const adCx = layer.cx || 0;
+						const adCy = layer.cy || 0;
+						const adAx = layer.ax || 0;
+						const adAy = layer.ay || 0;
+						const adBx = layer.bx || 0;
+						const adBy = layer.by || 0;
+						const adPad = ( layer.arcRadius || 40 ) + 20;
+						return {
+							x: Math.min( adCx, adAx, adBx ) - adPad,
+							y: Math.min( adCy, adAy, adBy ) - adPad,
+							width: Math.max( adCx, adAx, adBx ) - Math.min( adCx, adAx, adBx ) + adPad * 2,
+							height: Math.max( adCy, adAy, adBy ) - Math.min( adCy, adAy, adBy ) + adPad * 2
+						};
+					}
+
 				default:
 					return null;
 			}
