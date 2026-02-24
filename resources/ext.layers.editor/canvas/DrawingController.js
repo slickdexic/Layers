@@ -378,8 +378,9 @@ class DrawingController {
 			color: style.color || '#000000',
 			arcRadius: style.arcRadius || 40,
 			endStyle: style.endStyle || 'arrow',
-			textPosition: style.textPosition || 'above',
+			textPosition: style.textPosition || 'center',
 			extensionLength: style.extensionLength || 10,
+			extensionGap: style.extensionGap || 3,
 			arrowSize: style.arrowSize || 8,
 			tickSize: style.tickSize || 6,
 			showBackground: style.showBackground !== false,
@@ -677,6 +678,10 @@ class DrawingController {
 					// Shows preview line from vertex to cursor
 					this.tempLayer.bx = point.x;
 					this.tempLayer.by = point.y;
+					// Update arcRadius to match the distance to the third anchor
+					const dx = point.x - this.tempLayer.cx;
+					const dy = point.y - this.tempLayer.cy;
+					this.tempLayer.arcRadius = Math.max( 10, Math.sqrt( dx * dx + dy * dy ) );
 				}
 				break;
 			case 'path':

@@ -406,6 +406,41 @@
 				}
 			}
 
+			// Test 5: Text area
+			const AngleDimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer ) ||
+				( typeof require !== 'undefined' && require( '../../ext.layers.shared/AngleDimensionRenderer.js' ) );
+
+			if ( AngleDimensionRenderer ) {
+				const angleRenderer = new AngleDimensionRenderer( null );
+				const angles = angleRenderer.calculateAngles( layer );
+				const midAngle = angles.startAngle + angles.sweepAngle / 2;
+				const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+				const textAngle = midAngle + textOffset * ( Math.PI / 180 );
+
+				const fontSize = layer.fontSize || 12;
+				const perpOffset = fontSize * 0.8;
+				let textRadius = arcRadius;
+				const textPosition = layer.textPosition || 'center';
+
+				if ( textPosition === 'above' ) {
+					textRadius = arcRadius + perpOffset;
+				} else if ( textPosition === 'below' ) {
+					textRadius = arcRadius - perpOffset;
+				}
+
+				const textX = cx + textRadius * Math.cos( textAngle );
+				const textY = cy + textRadius * Math.sin( textAngle );
+
+				const textHitRadius = Math.max( fontSize * 1.5, 25 );
+				const distToText = Math.sqrt(
+					( point.x - textX ) * ( point.x - textX ) +
+					( point.y - textY ) * ( point.y - textY )
+				);
+				if ( distToText <= textHitRadius ) {
+					return true;
+				}
+			}
+
 			return false;
 		}
 

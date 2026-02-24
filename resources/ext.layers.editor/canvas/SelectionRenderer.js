@@ -624,9 +624,9 @@
 			const textPosition = layer.textPosition || 'center';
 
 			if ( textPosition === 'above' ) {
-				textRadius = arcRadius - perpOffset;
-			} else if ( textPosition === 'below' ) {
 				textRadius = arcRadius + perpOffset;
+			} else if ( textPosition === 'below' ) {
+				textRadius = arcRadius - perpOffset;
 			}
 
 			const textX = cx + textRadius * Math.cos( midAngle );
