@@ -1203,12 +1203,11 @@ describe( 'DrawingController', () => {
 			expect( controller.getTempLayer() ).toBeNull();
 		} );
 
-		it( 'should include textRadialOffset default in created layer', () => {
+		it( 'should include textOffset default in created layer', () => {
 			controller.startDrawing( { x: 100, y: 200 }, 'angleDimension', style );
 			controller.finishDrawing( { x: 200, y: 200 }, 'angleDimension' );
 			const result = controller.finishDrawing( { x: 200, y: 100 }, 'angleDimension' );
 			expect( result ).not.toBeNull();
-			expect( result.textRadialOffset ).toBe( 0 );
 			expect( result.textOffset ).toBe( 0 );
 		} );
 

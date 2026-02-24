@@ -62,7 +62,7 @@
 		// Marker properties
 		'size', 'arrowX', 'arrowY', 'fontSizeAdjust',
 		// Angle dimension properties
-		'cx', 'cy', 'ax', 'ay', 'bx', 'by', 'arcRadius', 'textOffset', 'textRadialOffset'
+		'cx', 'cy', 'ax', 'ay', 'bx', 'by', 'arcRadius', 'textOffset'
 	];
 
 	/**
