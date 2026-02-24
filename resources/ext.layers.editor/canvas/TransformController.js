@@ -804,6 +804,16 @@ class TransformController {
 		// Update arcRadius based on mouse distance from vertex (CAD behavior: arc follows text)
 		let newArcRadius = mouseDistance;
 
+		// Adjust for textPosition so the text stays under the mouse
+		const fontSize = layer.fontSize || 12;
+		const perpOffset = fontSize * 0.8;
+		const textPosition = layer.textPosition || 'center';
+		if ( textPosition === 'above' ) {
+			newArcRadius -= perpOffset;
+		} else if ( textPosition === 'below' ) {
+			newArcRadius += perpOffset;
+		}
+
 		// Snap to original arc radius when close (within 5 pixels)
 		const radialSnapThreshold = 5;
 		if ( Math.abs( newArcRadius - this.angleDimArcRadius ) < radialSnapThreshold ) {

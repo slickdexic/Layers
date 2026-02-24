@@ -67,9 +67,10 @@
 		fontFamily: 'Arial, sans-serif',
 		color: '#000000',
 		endStyle: END_STYLES.ARROW,
-		textPosition: TEXT_POSITIONS.ABOVE,
+		textPosition: TEXT_POSITIONS.CENTER,
 		arcRadius: 40,
 		extensionLength: 10,
+		extensionGap: 3,
 		arrowsInside: true,
 		arrowSize: 8,
 		tickSize: 6,
@@ -426,8 +427,8 @@
 			ctx.lineCap = 'round';
 			ctx.lineJoin = 'round';
 
-			// Draw extension lines along each arm (from vertex outward)
-			this._drawExtensionLines( ctx, cx, cy, ax, ay, bx, by, arcRadius, extensionLength, angles );
+			// Draw extension lines along each arm (from anchors to arc)
+			this._drawExtensionLines( ctx, cx, cy, ax, ay, bx, by, arcRadius, extensionLength, angles, layer );
 
 			// Draw the arc
 			// Handle both boolean false and integer 0 (from PHP serialization)
@@ -462,29 +463,59 @@
 		 * @param {Object} angles - Calculated angle data
 		 * @private
 		 */
-		_drawExtensionLines( ctx, cx, cy, ax, ay, bx, by, arcRadius, extensionLength, _angles ) {
+		_drawExtensionLines( ctx, cx, cy, ax, ay, bx, by, arcRadius, extensionLength, _angles, layer ) {
 			// Calculate arm unit vectors
 			const armALen = Math.sqrt( ( ax - cx ) * ( ax - cx ) + ( ay - cy ) * ( ay - cy ) );
 			const armBLen = Math.sqrt( ( bx - cx ) * ( bx - cx ) + ( by - cy ) * ( by - cy ) );
+
+			if ( armALen < 1 || armBLen < 1 ) {
+				return;
+			}
 
 			const armAUnitX = ( ax - cx ) / armALen;
 			const armAUnitY = ( ay - cy ) / armALen;
 			const armBUnitX = ( bx - cx ) / armBLen;
 			const armBUnitY = ( by - cy ) / armBLen;
 
-			// Extension line for arm A: from vertex to arcRadius + extensionLength
-			const extEndA = arcRadius + extensionLength;
-			ctx.beginPath();
-			ctx.moveTo( cx, cy );
-			ctx.lineTo( cx + armAUnitX * extEndA, cy + armAUnitY * extEndA );
-			ctx.stroke();
+			let extensionGap = layer.extensionGap;
+			if ( typeof extensionGap !== 'number' || isNaN( extensionGap ) ) {
+				extensionGap = DEFAULTS.extensionGap || 3;
+			}
 
-			// Extension line for arm B: from vertex to arcRadius + extensionLength
-			const extEndB = arcRadius + extensionLength;
-			ctx.beginPath();
-			ctx.moveTo( cx, cy );
-			ctx.lineTo( cx + armBUnitX * extEndB, cy + armBUnitY * extEndB );
-			ctx.stroke();
+			// Extension line for arm A
+			let startA, endA;
+			if ( arcRadius >= armALen ) {
+				startA = armALen + extensionGap;
+				endA = arcRadius + extensionLength;
+			} else {
+				startA = armALen - extensionGap;
+				endA = arcRadius - extensionLength;
+			}
+
+			// Only draw if start and end are in the correct order (don't draw if gap is larger than distance)
+			if ( ( arcRadius >= armALen && endA > startA ) || ( arcRadius < armALen && endA < startA ) ) {
+				ctx.beginPath();
+				ctx.moveTo( cx + armAUnitX * startA, cy + armAUnitY * startA );
+				ctx.lineTo( cx + armAUnitX * endA, cy + armAUnitY * endA );
+				ctx.stroke();
+			}
+
+			// Extension line for arm B
+			let startB, endB;
+			if ( arcRadius >= armBLen ) {
+				startB = armBLen + extensionGap;
+				endB = arcRadius + extensionLength;
+			} else {
+				startB = armBLen - extensionGap;
+				endB = arcRadius - extensionLength;
+			}
+
+			if ( ( arcRadius >= armBLen && endB > startB ) || ( arcRadius < armBLen && endB < startB ) ) {
+				ctx.beginPath();
+				ctx.moveTo( cx + armBUnitX * startB, cy + armBUnitY * startB );
+				ctx.lineTo( cx + armBUnitX * endB, cy + armBUnitY * endB );
+				ctx.stroke();
+			}
 		}
 
 		/**
@@ -505,29 +536,42 @@
 			const showBackground = layer.showBackground !== false && layer.showBackground !== 0;
 			const needsLineBreak = layer.textPosition === TEXT_POSITIONS.CENTER && !showBackground;
 
-			if ( needsLineBreak ) {
-				// Draw arc with gap for text
-				const midAngle = angles.startAngle + angles.sweepAngle / 2;
-				const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
-				const textAngle = midAngle + textOffset * ( Math.PI / 180 );
+			const midAngle = angles.startAngle + angles.sweepAngle / 2;
+			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+			const textAngle = midAngle + textOffset * ( Math.PI / 180 );
 
+			let drawStartAngle = angles.startAngle;
+			let drawEndAngle = angles.startAngle + angles.sweepAngle;
+
+			// Extend arc if text is dragged outside the angle legs
+			if ( textAngle < drawStartAngle ) {
+				drawStartAngle = textAngle;
+			} else if ( textAngle > drawEndAngle ) {
+				drawEndAngle = textAngle;
+			}
+
+			if ( needsLineBreak ) {
 				// Estimate gap based on font size
 				const fontSize = layer.fontSize || DEFAULTS.fontSize;
 				const gapAngle = ( fontSize * 1.5 ) / arcRadius; // approximate angular gap
 
 				// Draw first half
-				ctx.beginPath();
-				ctx.arc( cx, cy, arcRadius, angles.startAngle, textAngle - gapAngle / 2 );
-				ctx.stroke();
+				if ( textAngle - gapAngle / 2 > drawStartAngle ) {
+					ctx.beginPath();
+					ctx.arc( cx, cy, arcRadius, drawStartAngle, textAngle - gapAngle / 2 );
+					ctx.stroke();
+				}
 
 				// Draw second half
-				ctx.beginPath();
-				ctx.arc( cx, cy, arcRadius, textAngle + gapAngle / 2, angles.startAngle + angles.sweepAngle );
-				ctx.stroke();
+				if ( textAngle + gapAngle / 2 < drawEndAngle ) {
+					ctx.beginPath();
+					ctx.arc( cx, cy, arcRadius, textAngle + gapAngle / 2, drawEndAngle );
+					ctx.stroke();
+				}
 			} else {
 				// Draw continuous arc
 				ctx.beginPath();
-				ctx.arc( cx, cy, arcRadius, angles.startAngle, angles.startAngle + angles.sweepAngle );
+				ctx.arc( cx, cy, arcRadius, drawStartAngle, drawEndAngle );
 				ctx.stroke();
 			}
 		}
@@ -686,12 +730,12 @@
 
 			switch ( position ) {
 				case TEXT_POSITIONS.ABOVE:
-					// Above = inside the curve (closer to vertex)
-					textRadius = arcRadius - perpOffset;
+					// Above = outside the curve (farther from vertex)
+					textRadius = arcRadius + perpOffset;
 					break;
 				case TEXT_POSITIONS.BELOW:
-					// Below = outside the curve (farther from vertex)
-					textRadius = arcRadius + perpOffset;
+					// Below = inside the curve (closer to vertex)
+					textRadius = arcRadius - perpOffset;
 					break;
 				case TEXT_POSITIONS.CENTER:
 				default:
@@ -779,13 +823,15 @@
 			const bx = layer.bx || 0;
 			const by = layer.by || 0;
 			const arcRadius = layer.arcRadius || DEFAULTS.arcRadius;
+			const extensionLength = layer.extensionLength || DEFAULTS.extensionLength;
+			const maxRadius = arcRadius + extensionLength;
 			const padding = 20;
 
 			// Bounding box encompasses vertex, arm endpoints, and the arc
-			const minX = Math.min( cx - arcRadius, ax, bx ) - padding;
-			const minY = Math.min( cy - arcRadius, ay, by ) - padding;
-			const maxX = Math.max( cx + arcRadius, ax, bx ) + padding;
-			const maxY = Math.max( cy + arcRadius, ay, by ) + padding;
+			const minX = Math.min( cx - maxRadius, ax, bx ) - padding;
+			const minY = Math.min( cy - maxRadius, ay, by ) - padding;
+			const maxX = Math.max( cx + maxRadius, ax, bx ) + padding;
+			const maxY = Math.max( cy + maxRadius, ay, by ) + padding;
 
 			return {
 				x: minX,
@@ -830,7 +876,40 @@
 				return true;
 			}
 			const distToArmB = this._pointToLineDistance( px, py, cx, cy, bx, by );
-			return distToArmB <= tolerance;
+			if ( distToArmB <= tolerance ) {
+				return true;
+			}
+
+			// Test 3: Text area
+			const angles = this.calculateAngles( layer );
+			const midAngle = angles.startAngle + angles.sweepAngle / 2;
+			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+			const textAngle = midAngle + textOffset * ( Math.PI / 180 );
+
+			const fontSize = layer.fontSize || DEFAULTS.fontSize;
+			const perpOffset = fontSize * 0.8;
+			let textRadius = arcRadius;
+			const textPosition = layer.textPosition || DEFAULTS.textPosition;
+
+			if ( textPosition === TEXT_POSITIONS.ABOVE ) {
+				textRadius = arcRadius + perpOffset;
+			} else if ( textPosition === TEXT_POSITIONS.BELOW ) {
+				textRadius = arcRadius - perpOffset;
+			}
+
+			const textX = cx + textRadius * Math.cos( textAngle );
+			const textY = cy + textRadius * Math.sin( textAngle );
+
+			const textHitRadius = Math.max( fontSize * 1.5, 25 );
+			const distToText = Math.sqrt(
+				( px - textX ) * ( px - textX ) +
+				( py - textY ) * ( py - textY )
+			);
+			if ( distToText <= textHitRadius ) {
+				return true;
+			}
+
+			return false;
 		}
 
 		/**

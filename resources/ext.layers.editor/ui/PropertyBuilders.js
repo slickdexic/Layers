@@ -1672,7 +1672,7 @@
 
 		ctx.addSelect( {
 			label: t( 'layers-prop-text-position', 'Text Position' ),
-			value: layer.textPosition || 'above',
+			value: layer.textPosition || 'center',
 			options: [
 				{ value: 'above', text: t( 'layers-dimension-text-above', 'Above' ) },
 				{ value: 'below', text: t( 'layers-dimension-text-below', 'Below' ) },
