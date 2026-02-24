@@ -698,6 +698,12 @@ class DrawingController {
 		if ( this.canvasManager && this.canvasManager.renderer ) {
 			this.canvasManager.renderer.drawLayer( this.tempLayer );
 
+			// Draw angle dimension construction lines during the 3-click flow
+			// (the renderer skips degenerate cases where arm2 = vertex)
+			if ( this.tempLayer.type === 'angleDimension' && this._angleDimensionPhase > 0 ) {
+				this._drawAngleDimensionPreview( this.tempLayer );
+			}
+
 			// For textbox with transparent stroke, draw a visible bounding box
 			// so users can see what they're creating during the drag operation
 			// (Callout has visible stroke so doesn't need this)
@@ -707,6 +713,66 @@ class DrawingController {
 				this._drawPreviewBoundingBox( this.tempLayer );
 			}
 		}
+	}
+
+	/**
+	 * Draw construction lines during angle dimension 3-click drawing.
+	 * Phase 1: dashed line from arm1 endpoint to cursor (potential vertex).
+	 * Phase 2: dashed lines from vertex to arm1 and from vertex to cursor (arm2).
+	 *
+	 * @private
+	 * @param {Object} layer - The angle dimension temp layer
+	 */
+	_drawAngleDimensionPreview ( layer ) {
+		const ctx = this.canvasManager.ctx;
+		if ( !ctx ) {
+			return;
+		}
+
+		const stroke = layer.stroke || '#000000';
+
+		ctx.save();
+		ctx.strokeStyle = stroke;
+		ctx.lineWidth = Math.max( 1, layer.strokeWidth || 1 );
+		ctx.setLineDash( [ 6, 4 ] );
+		ctx.globalAlpha = 0.7;
+
+		if ( this._angleDimensionPhase === 1 ) {
+			// Phase 1: line from arm1 (ax,ay) to cursor position (cx,cy = potential vertex)
+			ctx.beginPath();
+			ctx.moveTo( layer.ax, layer.ay );
+			ctx.lineTo( layer.cx, layer.cy );
+			ctx.stroke();
+
+			// Draw a small circle at arm1 (placed point)
+			ctx.setLineDash( [] );
+			ctx.beginPath();
+			ctx.arc( layer.ax, layer.ay, 4, 0, 2 * Math.PI );
+			ctx.stroke();
+		} else if ( this._angleDimensionPhase === 2 ) {
+			// Phase 2: line from vertex (cx,cy) to arm1 (ax,ay)
+			ctx.beginPath();
+			ctx.moveTo( layer.cx, layer.cy );
+			ctx.lineTo( layer.ax, layer.ay );
+			ctx.stroke();
+
+			// Line from vertex (cx,cy) to arm2 cursor (bx,by)
+			ctx.beginPath();
+			ctx.moveTo( layer.cx, layer.cy );
+			ctx.lineTo( layer.bx, layer.by );
+			ctx.stroke();
+
+			// Small circles at placed points (arm1 and vertex)
+			ctx.setLineDash( [] );
+			ctx.beginPath();
+			ctx.arc( layer.ax, layer.ay, 4, 0, 2 * Math.PI );
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc( layer.cx, layer.cy, 4, 0, 2 * Math.PI );
+			ctx.stroke();
+		}
+
+		ctx.restore();
 	}
 
 	/**
