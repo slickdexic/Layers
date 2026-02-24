@@ -616,6 +616,7 @@
 			const angles = tempRenderer.calculateAngles( layer );
 
 			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
+			const textRadialOffset = typeof layer.textRadialOffset === 'number' ? layer.textRadialOffset : 0;
 			const midAngle = angles.startAngle + angles.sweepAngle / 2 + textOffset * ( Math.PI / 180 );
 
 			// Determine text radius based on text position
@@ -628,6 +629,9 @@
 			} else if ( textPosition === 'below' ) {
 				textRadius = arcRadius + perpOffset;
 			}
+
+			// Apply radial offset (positive = away from vertex, negative = toward vertex)
+			textRadius += textRadialOffset;
 
 			const textX = cx + textRadius * Math.cos( midAngle );
 			const textY = cy + textRadius * Math.sin( midAngle );

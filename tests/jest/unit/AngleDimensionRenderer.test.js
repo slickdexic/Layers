@@ -500,6 +500,24 @@ describe( 'AngleDimensionRenderer', () => {
 			expect( mockCtx.fillText ).toHaveBeenCalled();
 		} );
 
+		test( 'draws text with positive radial offset (away from vertex)', () => {
+			renderer.draw( makeLayer( { textRadialOffset: 30 } ) );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+			expect( mockCtx.translate ).toHaveBeenCalled();
+		} );
+
+		test( 'draws text with negative radial offset (toward vertex)', () => {
+			renderer.draw( makeLayer( { textRadialOffset: -20 } ) );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+			expect( mockCtx.translate ).toHaveBeenCalled();
+		} );
+
+		test( 'draws text with both angular and radial offset', () => {
+			renderer.draw( makeLayer( { textOffset: 15, textRadialOffset: 25 } ) );
+			expect( mockCtx.fillText ).toHaveBeenCalled();
+			expect( mockCtx.translate ).toHaveBeenCalled();
+		} );
+
 		test( 'draws with text position above', () => {
 			renderer.draw( makeLayer( { textPosition: 'above' } ) );
 			expect( mockCtx.fillText ).toHaveBeenCalled();
@@ -698,7 +716,17 @@ describe( 'AngleDimensionRenderer', () => {
 			expect( layer.endStyle ).toBe( 'arrow' );
 			expect( layer.showBackground ).toBe( true );
 			expect( layer.toleranceType ).toBe( 'none' );
+			expect( layer.textOffset ).toBe( 0 );
+			expect( layer.textRadialOffset ).toBe( 0 );
 			expect( layer.name ).toBe( 'Angle Dimension' );
+		} );
+
+		test( 'accepts custom textRadialOffset', () => {
+			const layer = AngleDimensionRenderer.createAngleDimensionLayer(
+				0, 0, 100, 0, 0, 100,
+				{ textRadialOffset: 25 }
+			);
+			expect( layer.textRadialOffset ).toBe( 25 );
 		} );
 
 		test( 'accepts custom id', () => {
@@ -735,6 +763,7 @@ describe( 'AngleDimensionRenderer', () => {
 			expect( defaults ).toHaveProperty( 'reflexAngle', false );
 			expect( defaults ).toHaveProperty( 'extensionLength', 10 );
 			expect( defaults ).toHaveProperty( 'showBackground', true );
+			expect( defaults ).toHaveProperty( 'textRadialOffset', 0 );
 
 			// Verify it returns a copy (not the original)
 			defaults.arcRadius = 999;
