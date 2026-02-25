@@ -673,6 +673,28 @@
 			if ( typeof L.tickSize === 'number' ) {
 				L.tickSize = L.tickSize * scaleAvg;
 			}
+			// Angle dimension specific properties
+			if ( typeof L.cx === 'number' ) {
+				L.cx = L.cx * sx;
+			}
+			if ( typeof L.cy === 'number' ) {
+				L.cy = L.cy * sy;
+			}
+			if ( typeof L.ax === 'number' ) {
+				L.ax = L.ax * sx;
+			}
+			if ( typeof L.ay === 'number' ) {
+				L.ay = L.ay * sy;
+			}
+			if ( typeof L.bx === 'number' ) {
+				L.bx = L.bx * sx;
+			}
+			if ( typeof L.by === 'number' ) {
+				L.by = L.by * sy;
+			}
+			if ( typeof L.arcRadius === 'number' ) {
+				L.arcRadius = L.arcRadius * scaleAvg;
+			}
 			// Marker-specific properties
 			if ( typeof L.size === 'number' ) {
 				L.size = L.size * scaleAvg;
