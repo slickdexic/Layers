@@ -756,6 +756,7 @@
 	"layers-filepage-usage-hint": "To display layers on a page, use: [[File:Example.jpg|layerset=setname]]",
 
 	"special-editslide-title": "Edit Slide: $1",
+	"special-editslide-desc": "Edit a slide graphic",
 	"layers-slide-disabled": "Slides feature is disabled",
 	"layers-slide-name-required": "Slide name is required",
 	"layers-slide-invalid-name": "Invalid slide name",

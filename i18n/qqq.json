@@ -665,6 +665,7 @@
 	"layers-filepage-usage-hint": "Hint text shown below the layer sets table explaining wikitext syntax to display layers",
 
 	"special-editslide-title": "Page title for the Special:EditSlide page. $1 is the slide name.",
+	"special-editslide-desc": "Description of the Special:EditSlide page.",
 	"layers-slide-disabled": "Error message when slides feature is disabled in configuration",
 	"layers-slide-name-required": "Error message when slide name is not provided in parser function",
 	"layers-slide-invalid-name": "Error message when slide name contains invalid characters",
