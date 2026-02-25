@@ -1089,10 +1089,11 @@ class LayersEditor {
 	 * @param {string} setName The name of the set to load
 	 * @return {Promise<void>}
 	 */
-	async loadLayerSetByName( setName ) {
+	loadLayerSetByName( setName ) {
 		if ( this.revisionManager ) {
 			return this.revisionManager.loadLayerSetByName( setName );
 		}
+		return Promise.resolve();
 	}
 
 	/**
@@ -1101,11 +1102,11 @@ class LayersEditor {
 	 * @param {string} setName The name for the new set
 	 * @return {Promise<boolean>}
 	 */
-	async createNewLayerSet( setName ) {
+	createNewLayerSet( setName ) {
 		if ( this.revisionManager ) {
 			return this.revisionManager.createNewLayerSet( setName );
 		}
-		return false;
+		return Promise.resolve( false );
 	}
 
 	/**

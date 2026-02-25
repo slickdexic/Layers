@@ -395,13 +395,13 @@
 		 * Handle save current style click
 		 * Uses accessible dialog if DialogManager is available
 		 */
-		async handleSaveClick() {
+		handleSaveClick() {
 			this.close();
 
 			// Prompt for name using accessible dialog
-			let name = null;
+			let namePromise;
 			if ( this.dialogManager && typeof this.dialogManager.showPromptDialogAsync === 'function' ) {
-				name = await this.dialogManager.showPromptDialogAsync( {
+				namePromise = this.dialogManager.showPromptDialogAsync( {
 					title: this.getMessage( 'layers-presets-save-title', 'Save Preset' ),
 					message: this.getMessage( 'layers-presets-enter-name', 'Enter a name for the preset:' ),
 					placeholder: this.getMessage( 'layers-presets-name-placeholder', 'Preset name' )
@@ -409,35 +409,37 @@
 			} else {
 				// Fallback to native prompt only if DialogManager unavailable
 				// eslint-disable-next-line no-alert
-				name = window.prompt( this.getMessage( 'layers-presets-enter-name', 'Enter a name for the preset:' ) );
+				namePromise = Promise.resolve( window.prompt( this.getMessage( 'layers-presets-enter-name', 'Enter a name for the preset:' ) ) );
 			}
 
-			if ( !name || !name.trim() ) {
-				return;
-			}
-
-			// Get current style from callback
-			this.onSave( ( style ) => {
-				if ( style ) {
-					const result = this.presetManager.addPreset(
-						this.currentTool,
-						name.trim(),
-						style
-					);
-					if ( result && result.error === 'duplicate' ) {
-						// Show error for duplicate name
-						this.showNotification(
-							this.getMessage( 'layers-presets-name-exists', 'A preset named "$1" already exists' )
-								.replace( '$1', result.existingName ),
-							'error'
-						);
-					} else if ( result ) {
-						this.showNotification(
-							this.getMessage( 'layers-presets-saved' )
-								.replace( '$1', result.name )
-						);
-					}
+			namePromise.then( ( name ) => {
+				if ( !name || !name.trim() ) {
+					return;
 				}
+
+				// Get current style from callback
+				this.onSave( ( style ) => {
+					if ( style ) {
+						const result = this.presetManager.addPreset(
+							this.currentTool,
+							name.trim(),
+							style
+						);
+						if ( result && result.error === 'duplicate' ) {
+							// Show error for duplicate name
+							this.showNotification(
+								this.getMessage( 'layers-presets-name-exists', 'A preset named "$1" already exists' )
+									.replace( '$1', result.existingName ),
+								'error'
+							);
+						} else if ( result ) {
+							this.showNotification(
+								this.getMessage( 'layers-presets-saved' )
+									.replace( '$1', result.name )
+							);
+						}
+					}
+				} );
 			} );
 		}
 
@@ -458,13 +460,13 @@
 		 * @param {string} presetId Preset ID
 		 * @param {string} name Preset name for confirmation
 		 */
-		async handleDelete( presetId, name ) {
+		handleDelete( presetId, name ) {
 			const confirmMsg = this.getMessage( 'layers-presets-confirm-delete', 'Delete preset "$1"?' )
 				.replace( '$1', name );
 
-			let confirmed = false;
+			let confirmPromise;
 			if ( this.dialogManager && typeof this.dialogManager.showConfirmDialog === 'function' ) {
-				confirmed = await this.dialogManager.showConfirmDialog( {
+				confirmPromise = this.dialogManager.showConfirmDialog( {
 					title: this.getMessage( 'layers-presets-delete-title', 'Delete Preset' ),
 					message: confirmMsg,
 					isDanger: true,
@@ -474,13 +476,15 @@
 			} else {
 				// Fallback to native confirm only if DialogManager unavailable
 				// eslint-disable-next-line no-alert
-				confirmed = window.confirm( confirmMsg );
+				confirmPromise = Promise.resolve( window.confirm( confirmMsg ) );
 			}
 
-			if ( confirmed ) {
-				this.presetManager.deletePreset( this.currentTool, presetId );
-				this.renderMenu(); // Refresh
-			}
+			confirmPromise.then( ( confirmed ) => {
+				if ( confirmed ) {
+					this.presetManager.deletePreset( this.currentTool, presetId );
+					this.renderMenu(); // Refresh
+				}
+			} );
 		}
 
 		/**

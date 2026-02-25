@@ -75,13 +75,13 @@
 		 * @param {boolean} [options.isDanger] Whether this is a destructive action
 		 * @return {Promise<boolean>} Resolves to true if confirmed
 		 */
-		async showConfirmDialog( options ) {
+		showConfirmDialog( options ) {
 			if ( this.editor && this.editor.dialogManager ) {
 				return this.editor.dialogManager.showConfirmDialog( options );
 			}
 			// Fallback to native confirm
 			// eslint-disable-next-line no-alert
-			return window.confirm( options.message );
+			return Promise.resolve( window.confirm( options.message ) );
 		}
 
 		/**
@@ -92,49 +92,53 @@
 		 * @param {boolean} [options.confirmOverwrite=true] Prompt for confirmation if unsaved changes
 		 * @return {Promise<Array>} Resolves with imported layers or rejects on error
 		 */
-		async importFromFile( file, options ) {
+		importFromFile( file, options ) {
 			options = options || {};
 			const confirmOverwrite = options.confirmOverwrite !== false;
 
 			if ( !file ) {
-				throw new Error( 'No file provided' );
+				return Promise.reject( new Error( 'No file provided' ) );
 			}
+
+			let confirmPromise = Promise.resolve( true );
 
 			// Confirm overwrite if there are unsaved changes
 			if ( confirmOverwrite && this.editor && this.editor.isDirty ) {
 				const msg = this.msg( 'layers-import-unsaved-confirm', 'You have unsaved changes. Import anyway?' );
-				const confirmed = await this.showConfirmDialog( {
+				confirmPromise = this.showConfirmDialog( {
 					message: msg,
 					title: this.msg( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
 					confirmText: this.msg( 'layers-import-anyway', 'Import Anyway' ),
 					isDanger: true
 				} );
+			}
+
+			return confirmPromise.then( ( confirmed ) => {
 				if ( !confirmed ) {
 					throw new Error( 'Import cancelled by user' );
 				}
-			}
 
-			return new Promise( ( resolve, reject ) => {
-				const reader = new FileReader();
+				return new Promise( ( resolve, reject ) => {
+					const reader = new FileReader();
 
-				reader.onload = () => {
-					try {
-						const text = String( reader.result || '' );
-						const layers = this.parseLayersJSON( text );
-						this.applyImportedLayers( layers );
-						this.notify(
-							this.msg( 'layers-import-success', 'Import complete' ),
-							'success'
-						);
-						resolve( layers );
-					} catch ( err ) {
-						this.notify(
-							this.msg( 'layers-import-error', 'Import failed' ),
-							'error'
-						);
-						reject( err );
-					}
-				};
+					reader.onload = () => {
+						try {
+							const text = String( reader.result || '' );
+							const layers = this.parseLayersJSON( text );
+							this.applyImportedLayers( layers );
+							this.notify(
+								this.msg( 'layers-import-success', 'Import complete' ),
+								'success'
+							);
+							resolve( layers );
+						} catch ( err ) {
+							this.notify(
+								this.msg( 'layers-import-error', 'Import failed' ),
+								'error'
+							);
+							reject( err );
+						}
+					};
 
 				reader.onerror = () => {
 					this.notify(
@@ -146,7 +150,8 @@
 
 				reader.readAsText( file );
 			} );
-		}
+		} );
+	}
 
 		/**
 		 * Parse layers from JSON text

@@ -371,10 +371,11 @@
 	 * Delegates to SetSelectorController
 	 * @return {Promise<void>}
 	 */
-	async deleteCurrentSet() {
+	deleteCurrentSet() {
 		if ( this.setSelectorController ) {
 			return this.setSelectorController.deleteCurrentSet();
 		}
+		return Promise.resolve();
 	}
 
 	/**
@@ -382,10 +383,11 @@
 	 * Delegates to SetSelectorController
 	 * @return {Promise<void>}
 	 */
-	async renameCurrentSet() {
+	renameCurrentSet() {
 		if ( this.setSelectorController ) {
 			return this.setSelectorController.renameCurrentSet();
 		}
+		return Promise.resolve();
 	}
 
 	/**
@@ -424,13 +426,13 @@
 	 * @param {boolean} [options.isDanger] - Whether this is a dangerous action
 	 * @return {Promise<boolean>} Resolves to true if confirmed, false if cancelled
 	 */
-	async showConfirmDialog( options ) {
+	showConfirmDialog( options ) {
 		if ( this.editor && this.editor.dialogManager ) {
 			return this.editor.dialogManager.showConfirmDialog( options );
 		}
 		// Fallback to native confirm if DialogManager not available
 		// eslint-disable-next-line no-alert
-		return window.confirm( options.message );
+		return Promise.resolve( window.confirm( options.message ) );
 	}
 
 	/**
@@ -444,13 +446,14 @@
 	 * @param {boolean} [options.isError] - Whether this is an error message
 	 * @return {Promise<void>} Resolves when dialog is dismissed
 	 */
-	async showAlertDialog( options ) {
+	showAlertDialog( options ) {
 		if ( this.editor && this.editor.dialogManager ) {
 			return this.editor.dialogManager.showAlertDialog( options );
 		}
 		// Fallback to native alert if DialogManager not available
 		// eslint-disable-next-line no-alert
 		window.alert( options.message );
+		return Promise.resolve();
 	}
 
 	/**
@@ -466,13 +469,13 @@
 	 * @param {string} [options.cancelText] - Text for cancel button
 	 * @return {Promise<string|null>} Resolves to input value if confirmed, null if cancelled
 	 */
-	async showPromptDialog( options ) {
+	showPromptDialog( options ) {
 		if ( this.editor && this.editor.dialogManager ) {
 			return this.editor.dialogManager.showPromptDialogAsync( options );
 		}
 		// Fallback to native prompt if DialogManager not available
 		// eslint-disable-next-line no-alert
-		return window.prompt( options.message, options.defaultValue || '' );
+		return Promise.resolve( window.prompt( options.message, options.defaultValue || '' ) );
 	}
 
 	showSpinner( message ) {

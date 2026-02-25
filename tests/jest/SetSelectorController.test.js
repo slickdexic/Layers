@@ -593,7 +593,11 @@ describe( 'SetSelectorController', () => {
 		} );
 
 		it( 'should call API to rename with valid name', async () => {
-			mockStateManager.get.mockReturnValue( 'test-set' );
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'test-set';
+				if ( key === 'namedSets' ) return [];
+				return null;
+			} );
 			mockUiManager.showPromptDialog.mockResolvedValue( 'new-valid-name' );
 
 			await controller.renameCurrentSet();
@@ -602,7 +606,11 @@ describe( 'SetSelectorController', () => {
 		} );
 
 		it( 'should log error on API failure', async () => {
-			mockStateManager.get.mockReturnValue( 'test-set' );
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'test-set';
+				if ( key === 'namedSets' ) return [];
+				return null;
+			} );
 			mockUiManager.showPromptDialog.mockResolvedValue( 'new-name' );
 			mockApiManager.renameLayerSet.mockRejectedValue( new Error( 'API error' ) );
 
@@ -614,7 +622,11 @@ describe( 'SetSelectorController', () => {
 		} );
 
 		it( 'should show error if apiManager is not available', async () => {
-			mockStateManager.get.mockReturnValue( 'test-set' );
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'test-set';
+				if ( key === 'namedSets' ) return [];
+				return null;
+			} );
 			mockUiManager.showPromptDialog.mockResolvedValue( 'new-name' );
 			mockEditor.apiManager = null;
 

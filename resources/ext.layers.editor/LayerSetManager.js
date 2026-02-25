@@ -150,13 +150,13 @@
 		 * @param {boolean} [options.isDanger] Whether this is a destructive action
 		 * @return {Promise<boolean>} Resolves to true if confirmed
 		 */
-		async showConfirmDialog( options ) {
+		showConfirmDialog( options ) {
 			if ( this.editor && this.editor.dialogManager ) {
 				return this.editor.dialogManager.showConfirmDialog( options );
 			}
 			// Fallback to native confirm
 			// eslint-disable-next-line no-alert
-			return window.confirm( options.message );
+			return Promise.resolve( window.confirm( options.message ) );
 		}
 
 		/**
@@ -349,12 +349,14 @@
 		 * @param {string} setName The name of the set to load
 		 * @return {Promise<void>}
 		 */
-		async loadLayerSetByName( setName ) {
+		loadLayerSetByName( setName ) {
 			try {
 				if ( !setName ) {
 					this.errorLog( 'loadLayerSetByName: No set name provided' );
-					return;
+					return Promise.resolve();
 				}
+
+				let confirmPromise = Promise.resolve( true );
 
 				// Check for unsaved changes before switching
 				if ( this.hasUnsavedChanges() ) {
@@ -362,37 +364,51 @@
 						'layers-unsaved-changes-warning',
 						'You have unsaved changes. Switch sets without saving?'
 					);
-					const confirmSwitch = await this.showConfirmDialog( {
+					confirmPromise = this.showConfirmDialog( {
 						message: confirmMsg,
 						title: this.getMessage( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
 						confirmText: this.getMessage( 'layers-switch-anyway', 'Switch Anyway' ),
 						isDanger: true
 					} );
+				}
+
+				return confirmPromise.then( ( confirmSwitch ) => {
 					if ( !confirmSwitch ) {
 						// Revert selector to current set
 						this.buildSetSelector();
 						return;
 					}
-				}
 
-				this.debugLog( 'Loading layer set: ' + setName );
+					this.debugLog( 'Loading layer set: ' + setName );
 
-				// Update current set name in state
-				this.stateManager.set( 'currentSetName', setName );
+					// Update current set name in state
+					this.stateManager.set( 'currentSetName', setName );
 
-				// Load the set via API
-				if ( this.apiManager && typeof this.apiManager.loadLayersBySetName === 'function' ) {
-					await this.apiManager.loadLayersBySetName( setName );
-				}
+					// Load the set via API
+					let loadPromise = Promise.resolve();
+					if ( this.apiManager && typeof this.apiManager.loadLayersBySetName === 'function' ) {
+						loadPromise = this.apiManager.loadLayersBySetName( setName );
+					}
 
-				// Notify user
-				if ( typeof mw !== 'undefined' && mw.notify ) {
-					mw.notify(
-						this.getMessage( 'layers-set-loaded', 'Loaded layer set: ' + setName )
-							.replace( '$1', setName ),
-						{ type: 'info' }
-					);
-				}
+					return loadPromise.then( () => {
+						// Notify user
+						if ( typeof mw !== 'undefined' && mw.notify ) {
+							mw.notify(
+								this.getMessage( 'layers-set-loaded', 'Loaded layer set: ' + setName )
+									.replace( '$1', setName ),
+								{ type: 'info' }
+							);
+						}
+					} ).catch( ( error ) => {
+						this.errorLog( 'Error loading layer set by name:', error );
+						if ( typeof mw !== 'undefined' && mw.notify ) {
+							mw.notify(
+								this.getMessage( 'layers-set-load-error', 'Failed to load layer set' ),
+								{ type: 'error' }
+							);
+						}
+					} );
+				} );
 			} catch ( error ) {
 				this.errorLog( 'Error loading layer set by name:', error );
 				if ( typeof mw !== 'undefined' && mw.notify ) {
@@ -401,6 +417,7 @@
 						{ type: 'error' }
 					);
 				}
+				return Promise.resolve();
 			}
 		}
 
@@ -409,7 +426,7 @@
 		 * @param {string} setName The name for the new set
 		 * @return {Promise<boolean>} True if creation succeeded
 		 */
-		async createNewLayerSet( setName ) {
+		createNewLayerSet( setName ) {
 			try {
 				if ( !setName || !setName.trim() ) {
 					if ( typeof mw !== 'undefined' && mw.notify ) {
@@ -418,7 +435,7 @@
 							{ type: 'warn' }
 						);
 					}
-					return false;
+					return Promise.resolve( false );
 				}
 
 				const trimmedName = setName.trim();
@@ -432,7 +449,7 @@
 							{ type: 'error' }
 						);
 					}
-					return false;
+					return Promise.resolve( false );
 				}
 
 				// Check for duplicate names
@@ -447,7 +464,7 @@
 							{ type: 'error' }
 						);
 					}
-					return false;
+					return Promise.resolve( false );
 				}
 
 				// Check limit
@@ -461,7 +478,7 @@
 							{ type: 'error' }
 						);
 					}
-					return false;
+					return Promise.resolve( false );
 				}
 
 				this.debugLog( 'Creating new layer set: ' + trimmedName );
@@ -518,7 +535,7 @@
 					);
 				}
 
-				return true;
+				return Promise.resolve( true );
 			} catch ( error ) {
 				this.errorLog( 'Error creating new layer set:', error );
 				if ( typeof mw !== 'undefined' && mw.notify ) {
@@ -527,7 +544,7 @@
 						{ type: 'error' }
 					);
 				}
-				return false;
+				return Promise.resolve( false );
 			}
 		}
 
@@ -566,16 +583,23 @@
 		 * Reload revisions list from API
 		 * @return {Promise<void>}
 		 */
-		async reloadRevisions() {
+		reloadRevisions() {
 			try {
 				this.debugLog( 'Reloading revisions list' );
 				if ( this.apiManager && typeof this.apiManager.fetchLayerSetInfo === 'function' ) {
-					await this.apiManager.fetchLayerSetInfo();
+					return this.apiManager.fetchLayerSetInfo().then( () => {
+						this.buildRevisionSelector();
+						this.buildSetSelector();
+					} ).catch( ( error ) => {
+						this.errorLog( 'Error reloading revisions:', error );
+					} );
 				}
 				this.buildRevisionSelector();
 				this.buildSetSelector();
+				return Promise.resolve();
 			} catch ( error ) {
 				this.errorLog( 'Error reloading revisions:', error );
+				return Promise.resolve();
 			}
 		}
 

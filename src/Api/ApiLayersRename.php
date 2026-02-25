@@ -12,8 +12,8 @@ use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\MediaWikiServices;
-use Title;
 use Psr\Log\LoggerInterface;
+use Title;
 
 /**
  * API module for renaming layer sets.

@@ -422,35 +422,35 @@
 		 *
 		 * @return {Promise<boolean>} Resolves to true if draft was recovered
 		 */
-		async checkAndRecoverDraft() {
+		checkAndRecoverDraft() {
 			if ( !this.hasDraft() ) {
-				return false;
+				return Promise.resolve( false );
 			}
 
-			const shouldRecover = await this.showRecoveryDialog();
-
-			if ( shouldRecover ) {
-				const recovered = this.recoverDraft();
-				if ( recovered ) {
-					// Clear the draft after successful recovery
-					this.clearDraft();
-					
-					// Show notification
-					if ( typeof mw !== 'undefined' && mw.notify ) {
-						mw.notify(
-							mw.message( 'layers-draft-recovered' ).exists() ?
-								mw.message( 'layers-draft-recovered' ).text() :
-								'Draft recovered successfully',
-							{ type: 'success' }
-						);
+			return this.showRecoveryDialog().then( ( shouldRecover ) => {
+				if ( shouldRecover ) {
+					const recovered = this.recoverDraft();
+					if ( recovered ) {
+						// Clear the draft after successful recovery
+						this.clearDraft();
+						
+						// Show notification
+						if ( typeof mw !== 'undefined' && mw.notify ) {
+							mw.notify(
+								mw.message( 'layers-draft-recovered' ).exists() ?
+									mw.message( 'layers-draft-recovered' ).text() :
+									'Draft recovered successfully',
+								{ type: 'success' }
+							);
+						}
 					}
+					return recovered;
+				} else {
+					// User chose to discard
+					this.clearDraft();
+					return false;
 				}
-				return recovered;
-			} else {
-				// User chose to discard
-				this.clearDraft();
-				return false;
-			}
+			} );
 		}
 
 		/**

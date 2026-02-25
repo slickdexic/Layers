@@ -190,7 +190,7 @@
 			}
 
 			// Handle set selection change
-			this.addListener( this.setSelectEl, 'change', async () => {
+			this.addListener( this.setSelectEl, 'change', () => {
 				// Prevent action during pending operations
 				if ( this.isPendingOperation ) {
 					// Restore previous selection
@@ -216,19 +216,22 @@
 							this.editor.stateManager.get( 'isDirty' ) : false;
 
 						if ( isDirty ) {
-							const confirmed = await this.showConfirmDialog( {
+							this.showConfirmDialog( {
 								message: this.getMessage( 'layers-switch-set-unsaved-confirm' ),
 								title: this.getMessage( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
 								confirmText: this.getMessage( 'layers-switch-anyway', 'Switch Anyway' ),
 								isDanger: true
+							} ).then( ( confirmed ) => {
+								if ( !confirmed ) {
+									// Restore previous selection
+									const currentSet = this.editor.stateManager ?
+										this.editor.stateManager.get( 'currentSetName' ) : 'default';
+									this.setSelectEl.value = currentSet;
+									return;
+								}
+								this.editor.loadLayerSetByName( selectedValue );
 							} );
-							if ( !confirmed ) {
-								// Restore previous selection
-								const currentSet = this.editor.stateManager ?
-									this.editor.stateManager.get( 'currentSetName' ) : 'default';
-								this.setSelectEl.value = currentSet;
-								return;
-							}
+							return;
 						}
 
 						this.editor.loadLayerSetByName( selectedValue );
@@ -316,7 +319,7 @@
 
 			// Check if name already exists
 			const namedSets = this.editor.stateManager ?
-				this.editor.stateManager.get( 'namedSets' ) : [];
+				( this.editor.stateManager.get( 'namedSets' ) || [] ) : [];
 			const exists = namedSets.some( set => set.name.toLowerCase() === newName.toLowerCase() );
 
 			if ( exists ) {
@@ -373,23 +376,22 @@
 		 * Delete the current layer set with confirmation
 		 * Only the original creator or an admin can delete a set
 		 */
-		async deleteCurrentSet() {
+		deleteCurrentSet() {
 			// Prevent concurrent operations
 			if ( this.isPendingOperation ) {
-				return;
+				return Promise.resolve();
 			}
 
 			const currentSet = this.editor.stateManager ?
 				this.editor.stateManager.get( 'currentSetName' ) : 'default';
 
 			if ( !currentSet ) {
-				return;
+				return Promise.resolve();
 			}
 
 			// For the default set, offer to clear all layers instead of deleting
 			if ( currentSet === 'default' ) {
-				await this.clearDefaultSet();
-				return;
+				return this.clearDefaultSet();
 			}
 
 			// Get revision count for confirmation message
@@ -403,55 +405,55 @@
 				.replace( '$1', currentSet )
 				.replace( '$2', revisionCount );
 
-			const confirmed = await this.showConfirmDialog( {
+			return this.showConfirmDialog( {
 				message: confirmMsg,
 				title: this.getMessage( 'layers-confirm-delete-title', 'Delete Layer Set' ),
 				confirmText: this.getMessage( 'layers-delete', 'Delete' ),
 				isDanger: true
+			} ).then( ( confirmed ) => {
+				if ( !confirmed ) {
+					return;
+				}
+
+				// Call API to delete the set
+				if ( this.editor.apiManager && typeof this.editor.apiManager.deleteLayerSet === 'function' ) {
+					this.setPendingState( true );
+					this.editor.apiManager.deleteLayerSet( currentSet ).then( () => {
+						// The APIManager reloads layers after delete, so we just update the selector
+						if ( this.editor.buildSetSelector ) {
+							this.editor.buildSetSelector();
+						} else if ( this.editor.revisionManager ) {
+							this.editor.revisionManager.buildSetSelector();
+						}
+					} ).catch( ( error ) => {
+						// Error notification is handled by APIManager
+						if ( mw.log && mw.log.error ) {
+							mw.log.error( '[SetSelectorController] deleteCurrentSet error:', error );
+						}
+					} ).finally( () => {
+						this.setPendingState( false );
+					} );
+				} else {
+					mw.notify( this.getMessage( 'layers-delete-failed' ), { type: 'error' } );
+				}
 			} );
-
-			if ( !confirmed ) {
-				return;
-			}
-
-			// Call API to delete the set
-			if ( this.editor.apiManager && typeof this.editor.apiManager.deleteLayerSet === 'function' ) {
-				this.setPendingState( true );
-				this.editor.apiManager.deleteLayerSet( currentSet ).then( () => {
-					// The APIManager reloads layers after delete, so we just update the selector
-					if ( this.editor.buildSetSelector ) {
-						this.editor.buildSetSelector();
-					} else if ( this.editor.revisionManager ) {
-						this.editor.revisionManager.buildSetSelector();
-					}
-				} ).catch( ( error ) => {
-					// Error notification is handled by APIManager
-					if ( mw.log && mw.log.error ) {
-						mw.log.error( '[SetSelectorController] deleteCurrentSet error:', error );
-					}
-				} ).finally( () => {
-					this.setPendingState( false );
-				} );
-			} else {
-				mw.notify( this.getMessage( 'layers-delete-failed' ), { type: 'error' } );
-			}
 		}
 
 		/**
 		 * Clear all layers from the default set (cannot delete default)
 		 * @private
 		 */
-		async clearDefaultSet() {
+		clearDefaultSet() {
 			// Prevent concurrent operations
 			if ( this.isPendingOperation ) {
-				return;
+				return Promise.resolve();
 			}
 
 			const layers = this.editor.stateManager ?
 				this.editor.stateManager.get( 'layers' ) : [];
 			if ( !layers || layers.length === 0 ) {
 				mw.notify( this.getMessage( 'layers-no-layers-to-clear', 'No layers to clear' ), { type: 'info' } );
-				return;
+				return Promise.resolve();
 			}
 
 			// Confirm clearing all layers from default set using DialogManager
@@ -460,66 +462,66 @@
 				'Clear all layers from the default set? This will remove all annotations.'
 			);
 
-			const confirmed = await this.showConfirmDialog( {
+			return this.showConfirmDialog( {
 				message: clearMsg,
 				title: this.getMessage( 'layers-confirm-clear-title', 'Clear Layers' ),
 				confirmText: this.getMessage( 'layers-clear', 'Clear' ),
 				isDanger: true
-			} );
+			} ).then( ( confirmed ) => {
+				if ( !confirmed ) {
+					return;
+				}
 
-			if ( !confirmed ) {
-				return;
-			}
+				// Clear all layers and save immediately
+				if ( this.editor.stateManager ) {
+					this.editor.stateManager.set( 'layers', [] );
+				}
+				if ( this.editor.canvasManager ) {
+					this.editor.canvasManager.renderLayers( [] );
+				}
+				if ( this.editor.layerPanel ) {
+					this.editor.layerPanel.renderLayerList();
+				}
+				if ( this.editor.selectionManager ) {
+					this.editor.selectionManager.clearSelection();
+				}
 
-			// Clear all layers and save immediately
-			if ( this.editor.stateManager ) {
-				this.editor.stateManager.set( 'layers', [] );
-			}
-			if ( this.editor.canvasManager ) {
-				this.editor.canvasManager.renderLayers( [] );
-			}
-			if ( this.editor.layerPanel ) {
-				this.editor.layerPanel.renderLayerList();
-			}
-			if ( this.editor.selectionManager ) {
-				this.editor.selectionManager.clearSelection();
-			}
-
-			// Save the empty layer set immediately via API
-			if ( this.editor.apiManager && typeof this.editor.apiManager.saveLayers === 'function' ) {
-				this.setPendingState( true );
-				this.editor.apiManager.saveLayers( [], 'default' ).then( () => {
-					if ( this.editor.stateManager ) {
-						this.editor.stateManager.set( 'isDirty', false );
-					}
+				// Save the empty layer set immediately via API
+				if ( this.editor.apiManager && typeof this.editor.apiManager.saveLayers === 'function' ) {
+					this.setPendingState( true );
+					this.editor.apiManager.saveLayers( [], 'default' ).then( () => {
+						if ( this.editor.stateManager ) {
+							this.editor.stateManager.set( 'isDirty', false );
+						}
+						mw.notify(
+							this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
+							{ type: 'success' }
+						);
+					} ).catch( ( error ) => {
+						if ( mw.log && mw.log.error ) {
+							mw.log.error( '[SetSelectorController] Failed to save cleared layers:', error );
+						}
+						mw.notify( this.getMessage( 'layers-save-failed', 'Failed to save changes' ), { type: 'error' } );
+					} ).finally( () => {
+						this.setPendingState( false );
+					} );
+				} else {
 					mw.notify(
 						this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
 						{ type: 'success' }
 					);
-				} ).catch( ( error ) => {
-					if ( mw.log && mw.log.error ) {
-						mw.log.error( '[SetSelectorController] Failed to save cleared layers:', error );
-					}
-					mw.notify( this.getMessage( 'layers-save-failed', 'Failed to save changes' ), { type: 'error' } );
-				} ).finally( () => {
-					this.setPendingState( false );
-				} );
-			} else {
-				mw.notify(
-					this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
-					{ type: 'success' }
-				);
-			}
+				}
+			} );
 		}
 
 		/**
 		 * Rename the current layer set
 		 * Uses a prompt dialog to get the new name, then calls API to rename
 		 */
-		async renameCurrentSet() {
+		renameCurrentSet() {
 			// Prevent concurrent operations
 			if ( this.isPendingOperation ) {
-				return;
+				return Promise.resolve();
 			}
 
 			const currentSet = this.editor.stateManager ?
@@ -531,7 +533,7 @@
 					this.getMessage( 'layers-cannot-rename-default', 'The default layer set cannot be renamed' ),
 					{ type: 'warn' }
 				);
-				return;
+				return Promise.resolve();
 			}
 
 			// Prompt for new name using DialogManager
@@ -539,58 +541,72 @@
 				'layers-rename-set-prompt',
 				'Enter new name for layer set:'
 			);
-			const newName = await this.showPromptDialog( {
+			return this.showPromptDialog( {
 				message: promptMsg,
 				title: this.getMessage( 'layers-rename-set', 'Rename Set' ),
 				defaultValue: currentSet,
 				confirmText: this.getMessage( 'layers-rename', 'Rename' )
-			} );
+			} ).then( ( newName ) => {
+				// User cancelled or empty input
+				if ( !newName || newName.trim() === '' ) {
+					return;
+				}
 
-			// User cancelled or empty input
-			if ( !newName || newName.trim() === '' ) {
-				return;
-			}
+				const trimmedName = newName.trim();
 
-			const trimmedName = newName.trim();
+				// No change
+				if ( trimmedName === currentSet ) {
+					return;
+				}
 
-			// No change
-			if ( trimmedName === currentSet ) {
-				return;
-			}
+				// Validate name format (must match createNewSet and server-side SetNameSanitizer)
+				if ( !/^[\p{L}\p{N}_\-\s]+$/u.test( trimmedName ) || trimmedName.length > 255 ) {
+					mw.notify(
+						this.getMessage(
+							'layers-invalid-setname',
+							'Invalid set name. Use only letters, numbers, hyphens, underscores, and spaces.'
+						),
+						{ type: 'error' }
+					);
+					return;
+				}
 
-			// Validate name format (must match createNewSet and server-side SetNameSanitizer)
-			if ( !/^[\p{L}\p{N}_\-\s]+$/u.test( trimmedName ) || trimmedName.length > 255 ) {
-				mw.notify(
-					this.getMessage(
-						'layers-invalid-setname',
-						'Invalid set name. Use only letters, numbers, hyphens, underscores, and spaces.'
-					),
-					{ type: 'error' }
-				);
-				return;
-			}
-
-			// Call API to rename the set
-			if ( this.editor.apiManager && typeof this.editor.apiManager.renameLayerSet === 'function' ) {
-				this.setPendingState( true );
-				this.editor.apiManager.renameLayerSet( currentSet, trimmedName ).then( () => {
-					// The APIManager reloads layers after rename, so we just update the selector
-					if ( this.editor.buildSetSelector ) {
-						this.editor.buildSetSelector();
-					} else if ( this.editor.revisionManager ) {
-						this.editor.revisionManager.buildSetSelector();
-					}
-				} ).catch( ( error ) => {
-					// Error notification is handled by APIManager
-					if ( mw.log && mw.log.error ) {
-						mw.log.error( '[SetSelectorController] renameCurrentSet error:', error );
-					}
-				} ).finally( () => {
-					this.setPendingState( false );
+				// Check for duplicate names
+				const namedSets = this.editor.stateManager ?
+					( this.editor.stateManager.get( 'namedSets' ) || [] ) : [];
+				const exists = namedSets.some( function ( s ) {
+					return s.name.toLowerCase() === trimmedName.toLowerCase();
 				} );
-			} else {
-				mw.notify( this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' ), { type: 'error' } );
-			}
+				if ( exists ) {
+					mw.notify(
+						this.getMessage( 'layers-set-name-exists', 'A set with this name already exists' ),
+						{ type: 'error' }
+					);
+					return;
+				}
+
+				// Call API to rename the set
+				if ( this.editor.apiManager && typeof this.editor.apiManager.renameLayerSet === 'function' ) {
+					this.setPendingState( true );
+					this.editor.apiManager.renameLayerSet( currentSet, trimmedName ).then( () => {
+						// The APIManager reloads layers after rename, so we just update the selector
+						if ( this.editor.buildSetSelector ) {
+							this.editor.buildSetSelector();
+						} else if ( this.editor.revisionManager ) {
+							this.editor.revisionManager.buildSetSelector();
+						}
+					} ).catch( ( error ) => {
+						// Error notification is handled by APIManager
+						if ( mw.log && mw.log.error ) {
+							mw.log.error( '[SetSelectorController] renameCurrentSet error:', error );
+						}
+					} ).finally( () => {
+						this.setPendingState( false );
+					} );
+				} else {
+					mw.notify( this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' ), { type: 'error' } );
+				}
+			} );
 		}
 
 		/**

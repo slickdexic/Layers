@@ -1022,7 +1022,7 @@ describe( 'LayerSetManager', () => {
 			};
 
 			// Should not throw
-			await expect( layerSetManager.loadLayerSetByName( 'test-set' ) ).resolves.not.toThrow();
+			await expect( layerSetManager.loadLayerSetByName( 'test-set' ) ).resolves.toBeUndefined();
 
 			// Should show error notification
 			expect( mw.notify ).toHaveBeenCalledWith(

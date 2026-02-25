@@ -127,7 +127,7 @@
 		 * @param {File} file - The image file to import
 		 * @return {Promise<void>}
 		 */
-		async handleImageImport( file ) {
+		handleImageImport( file ) {
 			// Validate file size using configurable limit (default 1MB)
 			const maxSize = ( typeof mw !== 'undefined' && mw.config ) ?
 				mw.config.get( 'wgLayersMaxImageBytes', 1048576 ) : 1048576;
@@ -137,7 +137,7 @@
 					this.msg( 'layers-import-image-too-large', 'Image file is too large' ) + ` (max ${maxSizeKB}KB)`,
 					{ type: 'error' }
 				);
-				return;
+				return Promise.resolve();
 			}
 
 			// Validate file type
@@ -147,48 +147,46 @@
 					this.msg( 'layers-import-image-invalid-type', 'Invalid image type. Allowed: PNG, JPEG, GIF, WebP' ),
 					{ type: 'error' }
 				);
-				return;
+				return Promise.resolve();
 			}
 
-			try {
-				// Read file as base64 data URL
-				const dataUrl = await this.readFileAsDataURL( file );
-
+			// Read file as base64 data URL
+			return this.readFileAsDataURL( file ).then( ( dataUrl ) => {
 				// Load image to get dimensions
-				const img = await this.loadImage( dataUrl );
+				return this.loadImage( dataUrl ).then( ( img ) => {
+					// Create a new image layer
+					const layer = {
+						id: 'image-' + Date.now() + '-' + Math.random().toString( 36 ).slice( 2, 9 ),
+						type: 'image',
+						name: file.name.replace( /\.[^.]+$/, '' ),
+						src: dataUrl,
+						x: 50,
+						y: 50,
+						width: img.naturalWidth,
+						height: img.naturalHeight,
+						originalWidth: img.naturalWidth,
+						originalHeight: img.naturalHeight,
+						opacity: 1,
+						rotation: 0,
+						visible: true,
+						locked: false,
+						preserveAspectRatio: true
+					};
 
-				// Create a new image layer
-				const layer = {
-					id: 'image-' + Date.now() + '-' + Math.random().toString( 36 ).slice( 2, 9 ),
-					type: 'image',
-					name: file.name.replace( /\.[^.]+$/, '' ),
-					src: dataUrl,
-					x: 50,
-					y: 50,
-					width: img.naturalWidth,
-					height: img.naturalHeight,
-					originalWidth: img.naturalWidth,
-					originalHeight: img.naturalHeight,
-					opacity: 1,
-					rotation: 0,
-					visible: true,
-					locked: false,
-					preserveAspectRatio: true
-				};
-
-				// Add the layer via the editor's state management
-				if ( this.editor && this.editor.stateManager ) {
-					this.editor.stateManager.addLayer( layer );
-					// Save to undo/redo history
-					if ( typeof this.editor.saveState === 'function' ) {
-						this.editor.saveState( 'Import image layer' );
+					// Add the layer via the editor's state management
+					if ( this.editor && this.editor.stateManager ) {
+						this.editor.stateManager.addLayer( layer );
+						// Save to undo/redo history
+						if ( typeof this.editor.saveState === 'function' ) {
+							this.editor.saveState( 'Import image layer' );
+						}
+						// Trigger a redraw
+						if ( this.editor.canvasManager ) {
+							this.editor.canvasManager.redraw();
+						}
 					}
-					// Trigger a redraw
-					if ( this.editor.canvasManager ) {
-						this.editor.canvasManager.redraw();
-					}
-				}
-			} catch ( error ) {
+				} );
+			} ).catch( ( error ) => {
 				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
 					mw.log.error( '[Toolbar] Failed to import image:', error );
 				}
@@ -196,7 +194,7 @@
 					this.msg( 'layers-import-image-failed', 'Failed to import image' ),
 					{ type: 'error' }
 				);
-			}
+			} );
 		}
 
 		/**

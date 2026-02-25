@@ -872,7 +872,7 @@ describe( 'UIManager', () => {
 
 	describe( 'deleteCurrentSet', () => {
 		it( 'should do nothing when currentSet is not set', async () => {
-			mockStateManager.get.mockReturnValue( null );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'namedSets' ) return []; return null; } );
 
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
@@ -1119,7 +1119,11 @@ describe( 'UIManager', () => {
 
 	describe( 'renameCurrentSet', () => {
 		it( 'should not allow renaming default set', async () => {
-			mockStateManager.get.mockReturnValue( 'default' );
+			mockStateManager.get.mockImplementation( ( key ) => {
+				if ( key === 'currentSetName' ) return 'default';
+				if ( key === 'namedSets' ) return [];
+				return null;
+			} );
 
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
@@ -1132,7 +1136,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should do nothing when user cancels prompt', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
@@ -1147,7 +1151,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should do nothing when new name is empty', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 
 			const mockApiManager = { renameLayerSet: jest.fn() };
 			mockEditor.apiManager = mockApiManager;
@@ -1163,7 +1167,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should do nothing when new name is same as current', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 			const mockApiManager = { renameLayerSet: jest.fn() };
 			mockEditor.apiManager = mockApiManager;
 
@@ -1178,7 +1182,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should reject invalid set name format', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
@@ -1194,7 +1198,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should reject set name that is too long', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
@@ -1210,7 +1214,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should call API to rename with valid name', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 
 			const mockApiManager = {
 				renameLayerSet: jest.fn().mockResolvedValue( {} )
@@ -1231,7 +1235,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should trim whitespace from new name', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 
 			const mockApiManager = {
 				renameLayerSet: jest.fn().mockResolvedValue( {} )
@@ -1252,7 +1256,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should handle rename API error gracefully', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 
 			const mockApiManager = {
 				renameLayerSet: jest.fn().mockRejectedValue( new Error( 'Rename failed' ) )
@@ -1278,7 +1282,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should show error when apiManager is not available', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 			mockEditor.apiManager = null;
 
 			const uiManager = new UIManager( mockEditor );
@@ -1295,7 +1299,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should accept valid alphanumeric names with hyphens and underscores', async () => {
-			mockStateManager.get.mockReturnValue( 'old-set' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'old-set'; if ( key === 'namedSets' ) return []; return null; } );
 
 			const mockApiManager = {
 				renameLayerSet: jest.fn().mockResolvedValue( {} )
@@ -1316,7 +1320,7 @@ describe( 'UIManager', () => {
 		} );
 
 		it( 'should use editor.buildSetSelector if revisionManager is not available', async () => {
-			mockStateManager.get.mockReturnValue( 'annotations' );
+			mockStateManager.get.mockImplementation( ( key ) => { if ( key === 'currentSetName' ) return 'annotations'; if ( key === 'namedSets' ) return []; return null; } );
 			window.prompt = jest.fn( () => 'new-name' );
 
 			const mockApiManager = {

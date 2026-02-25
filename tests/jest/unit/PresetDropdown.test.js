@@ -528,18 +528,18 @@ describe( 'PresetDropdown', () => {
 			expect( mockOnSave ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should call onSave with callback when name provided', () => {
+		it( 'should call onSave with callback when name provided', async () => {
 			window.prompt = jest.fn( () => 'My Preset' );
-			dropdown.handleSaveClick();
+			await dropdown.handleSaveClick();
 			expect( mockOnSave ).toHaveBeenCalledWith( expect.any( Function ) );
 		} );
 
-		it( 'should add preset when onSave callback provides style', () => {
+		it( 'should add preset when onSave callback provides style', async () => {
 			window.prompt = jest.fn( () => 'New Preset' );
 			mockOnSave.mockImplementation( ( callback ) => {
 				callback( { stroke: '#ff0000', strokeWidth: 2 } );
 			} );
-			dropdown.handleSaveClick();
+			await dropdown.handleSaveClick();
 			expect( mockPresetManager.addPreset ).toHaveBeenCalledWith(
 				'rectangle',
 				'New Preset',
@@ -547,22 +547,22 @@ describe( 'PresetDropdown', () => {
 			);
 		} );
 
-		it( 'should show notification after saving preset', () => {
+		it( 'should show notification after saving preset', async () => {
 			global.mw = { notify: jest.fn() };
 			window.prompt = jest.fn( () => 'Saved Preset' );
 			mockOnSave.mockImplementation( ( callback ) => {
 				callback( { stroke: '#00ff00' } );
 			} );
-			dropdown.handleSaveClick();
+			await dropdown.handleSaveClick();
 			expect( global.mw.notify ).toHaveBeenCalled();
 		} );
 
-		it( 'should not add preset when onSave callback provides null style', () => {
+		it( 'should not add preset when onSave callback provides null style', async () => {
 			window.prompt = jest.fn( () => 'Test' );
 			mockOnSave.mockImplementation( ( callback ) => {
 				callback( null );
 			} );
-			dropdown.handleSaveClick();
+			await dropdown.handleSaveClick();
 			expect( mockPresetManager.addPreset ).not.toHaveBeenCalled();
 		} );
 
@@ -704,22 +704,22 @@ describe( 'PresetDropdown', () => {
 			window.confirm = originalConfirm;
 		} );
 
-		it( 'should not delete when not confirmed', () => {
+		it( 'should not delete when not confirmed', async () => {
 			window.confirm = jest.fn( () => false );
-			dropdown.handleDelete( 'preset-1', 'Test' );
+			await dropdown.handleDelete( 'preset-1', 'Test' );
 			expect( mockPresetManager.deletePreset ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should delete when confirmed', () => {
+		it( 'should delete when confirmed', async () => {
 			window.confirm = jest.fn( () => true );
-			dropdown.handleDelete( 'preset-1', 'Test' );
+			await dropdown.handleDelete( 'preset-1', 'Test' );
 			expect( mockPresetManager.deletePreset ).toHaveBeenCalledWith( 'rectangle', 'preset-1' );
 		} );
 
-		it( 'should refresh menu when confirmed', () => {
+		it( 'should refresh menu when confirmed', async () => {
 			window.confirm = jest.fn( () => true );
 			const spy = jest.spyOn( dropdown, 'renderMenu' );
-			dropdown.handleDelete( 'preset-1', 'Test' );
+			await dropdown.handleDelete( 'preset-1', 'Test' );
 			expect( spy ).toHaveBeenCalled();
 		} );
 	} );
