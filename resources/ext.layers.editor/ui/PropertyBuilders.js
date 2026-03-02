@@ -115,7 +115,7 @@
 	 * @param {boolean} [options.skipTextarea=false] - Skip textarea entirely (for richText layers like textbox/callout)
 	 * @param {number} [options.maxLength=5000] - Max text length
 	 * @param {number} [options.rows=5] - Textarea rows
-	 * @param {number} [options.maxFontSize=200] - Max font size
+	 * @param {number} [options.maxFontSize=1000] - Max font size
 	 */
 	PropertyBuilders.addTextProperties = function ( ctx, options ) {
 		const opts = options || {};
@@ -125,7 +125,7 @@
 		const useTextarea = opts.useTextarea !== false;
 		const skipTextarea = opts.skipTextarea === true;
 		const maxLength = opts.maxLength || ( useTextarea ? 5000 : 1000 );
-		const maxFontSize = opts.maxFontSize || 200;
+		const maxFontSize = opts.maxFontSize || 1000;
 
 		// Text content - skip for layers that use richText (textbox/callout)
 		// These layers are edited inline on canvas with full formatting support
@@ -1202,11 +1202,11 @@
 			type: 'number',
 			value: layer.fontSize || 12,
 			min: 6,
-			max: 200,
+			max: 1000,
 			step: 1,
 			prop: 'fontSize',
 			onChange: function ( v ) {
-				const val = Math.max( 6, Math.min( 200, parseInt( v, 10 ) || 12 ) );
+				const val = Math.max( 6, Math.min( 1000, parseInt( v, 10 ) || 12 ) );
 				updateWithDefaults( { fontSize: val } );
 			}
 		} );
@@ -1538,11 +1538,11 @@
 			type: 'number',
 			value: layer.fontSize || 12,
 			min: 6,
-			max: 200,
+			max: 1000,
 			step: 1,
 			prop: 'fontSize',
 			onChange: function ( v ) {
-				const val = Math.max( 6, Math.min( 200, parseInt( v, 10 ) || 12 ) );
+				const val = Math.max( 6, Math.min( 1000, parseInt( v, 10 ) || 12 ) );
 				updateWithDefaults( { fontSize: val } );
 			}
 		} );

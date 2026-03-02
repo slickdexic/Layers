@@ -28,6 +28,13 @@
 		FONT_SIZE: 16,
 
 		/**
+		 * Maximum font size in pixels
+		 *
+		 * @type {number}
+		 */
+		MAX_FONT_SIZE: 1000,
+
+		/**
 		 * Default font family
 		 *
 		 * @type {string}
