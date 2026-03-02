@@ -364,7 +364,7 @@
 
 			if ( this.fontSizeInput ) {
 				inputValidators.push(
-					validator.createInputValidator( this.fontSizeInput, 'number', { min: 1, max: 200 } )
+					validator.createInputValidator( this.fontSizeInput, 'number', { min: 1, max: 1000 } )
 				);
 			}
 
