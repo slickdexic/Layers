@@ -163,6 +163,32 @@ class WikitextHooks {
 	private static $fileLinkTypes = [];
 
 	/**
+	 * Timestamp of the last request that triggered a state reset.
+	 * Used to detect request boundaries in PHP-FPM (max_requests > 1).
+	 * @var float
+	 */
+	private static float $lastResetRequestTime = 0.0;
+
+	/**
+	 * Ensure per-page static state is reset between HTTP requests.
+	 *
+	 * In PHP-FPM with max_requests > 1, static properties persist across
+	 * requests. This method detects request boundaries using
+	 * REQUEST_TIME_FLOAT and resets page-specific state (but NOT the
+	 * stateless processor singletons, which are safe to reuse).
+	 */
+	private static function ensureRequestStateReset(): void {
+		$requestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
+		if ( $requestTime !== self::$lastResetRequestTime ) {
+			self::$lastResetRequestTime = $requestTime;
+			self::$pageHasLayers = false;
+			self::$fileSetNames = [];
+			self::$fileRenderCount = [];
+			self::$fileLinkTypes = [];
+		}
+	}
+
+	/**
 	 * Handle file parameter parsing in wikitext
 	 * Called when MediaWiki processes [[File:...]] syntax
 	 *
@@ -560,6 +586,7 @@ class WikitextHooks {
 		self::$fileSetNames = [];
 		self::$fileRenderCount = [];
 		self::$fileLinkTypes = [];
+		self::$lastResetRequestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
 		// Reset processor singletons to prevent stale state in long-running processes
 		self::$imageLinkProcessor = null;
 		self::$thumbnailProcessor = null;
@@ -580,6 +607,9 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserBeforeInternalParse( $parser, &$text, $stripState ): bool {
+		// Ensure stale state from previous requests is cleared (PHP-FPM reuse)
+		self::ensureRequestStateReset();
+
 		// Handle null or non-string text (PHP 8.1+ strict)
 		if ( $text === null || !is_string( $text ) ) {
 			return true;

@@ -11,10 +11,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 40 | 39 | 1 |
-| P2 | 96 | 83 | 13 |
+| P1 | 40 | 40 | 0 |
+| P2 | 96 | 93 | 3 |
 | P3 | 121 | 87 | 34 |
-| **Total** | **262** | **214** | **48** |
+| **Total** | **262** | **225** | **37** |
 
 ---
 
@@ -144,7 +144,9 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   individual DB queries.
 - **Recommended Fix:** Collect unique user IDs, batch load with
   `UserArray::newFromIDs()`.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026)
+- **Fix:** Replaced per-user `UserFactory::newFromId()` loop with single
+  `UserArray::newFromIDs()` batch query.
 - **Introduced:** v45 review
 
 ### P2-089: TextSanitizer Zero-Width-Space Keyword Defense Incomplete
@@ -164,7 +166,12 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   persist for PHP process lifetime. In PHP-FPM with `max_requests > 1`,
   state bleeds between requests. `resetPageLayersFlag()` only resets via
   `ParserBeforeInternalParse` hook — job runners and API calls bypass reset.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026)
+- **Fix:** Added `ensureRequestStateReset()` using `REQUEST_TIME_FLOAT`
+  to detect request boundaries. Called at start of
+  `onParserBeforeInternalParse()`. Only resets per-page state; stateless
+  singletons are preserved for reuse. `resetPageLayersFlag()` also
+  updates the timestamp to prevent redundant resets.
 - **Introduced:** v45 review
 
 ### P2-091: Duplicate getLayerBounds Implementations
@@ -174,7 +181,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** Both classes have nearly identical `getLayerBounds()` and
   `_getRawLayerBounds()` with different fallback logic. Changes to one
   may silently diverge from the other, causing selection/hit-test misalignment.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026)
+- **Fix:** CanvasRenderer.getLayerBounds() now delegates to
+  CanvasManager.getLayerBounds() as single source of truth.
+  Local `_getRawLayerBounds()` retained as fallback during init only.
 - **Introduced:** v45 review
 
 ### P2-092: Ellipse Validation Uses OR Instead of AND

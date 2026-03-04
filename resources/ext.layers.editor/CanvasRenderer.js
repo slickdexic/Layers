@@ -1140,15 +1140,15 @@
 		}
 
 		getLayerBounds( layer ) {
-			// Uses TextUtils/GeometryUtils for bounds calculation
 			if ( !layer ) {
 				return null;
 			}
-			const baseBounds = this._getRawLayerBounds( layer );
-			if ( !baseBounds ) {
-				return null;
+			// Delegate to CanvasManager for single source of truth (P2-091 DRY fix)
+			if ( this.editor && this.editor.canvasManager ) {
+				return this.editor.canvasManager.getLayerBounds( layer );
 			}
-			return baseBounds; // Simplified for now, rotation handled in drawSelectionIndicators
+			// Fallback when canvasManager unavailable (e.g., during init)
+			return this._getRawLayerBounds( layer );
 		}
 
 		_getRawLayerBounds( layer ) {

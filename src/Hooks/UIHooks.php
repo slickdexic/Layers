@@ -285,17 +285,12 @@ class UIHooks {
 			return $namedSets;
 		}
 
-		// Look up user names
+		// Batch load user names in a single query
 		$userNames = [];
 		try {
-			$services = MediaWikiServices::getInstance();
-			$userFactory = $services->getUserFactory();
-
-			foreach ( array_keys( $userIds ) as $userId ) {
-				$user = $userFactory->newFromId( $userId );
-				if ( $user ) {
-					$userNames[$userId] = $user->getName();
-				}
+			$userArray = \UserArray::newFromIDs( array_keys( $userIds ) );
+			foreach ( $userArray as $user ) {
+				$userNames[$user->getId()] = $user->getName();
 			}
 		} catch ( \Throwable $e ) {
 			// Fall back to user IDs

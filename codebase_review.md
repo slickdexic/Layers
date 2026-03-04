@@ -92,11 +92,11 @@ The v45 review is a comprehensive fresh audit of the entire codebase at version 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
 | Security | 0 | 0 | ~~2~~→0 | 2 | ~~Clickjacking~~ ✅, ~~innerHTML~~ FP, ~~SVG URI~~ ✅, ~~manual HTML~~ ✅, ~~TextSanitizer~~ ✅ |
-| Bugs | 0 | 0 | ~~3~~→1 | ~~8~~→1 | ~~State mutation~~ FP, rendering, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅, ~~lightbox race~~ ✅, ~~color preview~~ ✅, ~~DimRender defaults~~ ✅ |
-| Performance | 0 | 0 | ~~2~~→1 | ~~5~~→1 | ~~Blur texture~~ ✅, N+1 users, ~~hit test~~ ✅, ~~ViewerManager API~~ ✅, ~~serialize~~ ✅, ~~blob leak~~ ✅ |
-| Code Quality | 0 | 0 | 3 | ~~12~~→8 | Duplication, ~~indirection~~ ✅, DRY, ~~bgVisible~~ ✅, ~~dead cache~~ ✅, ~~opacity clamp~~ ✅ |
+| Bugs | 0 | 0 | ~~3~~→1 | ~~8~~→1 | ~~State mutation~~ FP, rendering, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅, ~~lightbox race~~ ✅, ~~color preview~~ ✅, ~~DimRender defaults~~ ✅, ~~static state~~ ✅ |
+| Performance | 0 | 0 | ~~2~~→0 | ~~5~~→1 | ~~Blur texture~~ ✅, ~~N+1 users~~ ✅, ~~hit test~~ ✅, ~~ViewerManager API~~ ✅, ~~serialize~~ ✅, ~~blob leak~~ ✅ |
+| Code Quality | 0 | 0 | ~~3~~→2 | ~~12~~→8 | Duplication, ~~indirection~~ ✅, DRY, ~~bgVisible~~ ✅, ~~dead cache~~ ✅, ~~opacity clamp~~ ✅, ~~dup bounds~~ ✅ |
 | Documentation | 0 | 5 | 8 | 7 | Stale counts, wrong versions, god class count |
-| **Total** | **0** | **5** | **13** | **19+** | **~39 open items (21 fixed, 2 FPs reclassified from v45 audit)** |
+| **Total** | **0** | **5** | **11** | **17+** | **~36 open items (24 fixed, 2 FPs reclassified from v45 audit)** |
 
 **Overall Grade: A** (strong foundation, excellent tests and security; all critical/high security issues resolved; remaining items are code quality, performance optimizations, and documentation accuracy)
 
@@ -738,11 +738,13 @@ StateManager is used for editor-level state (tool selection, zoom, etc.), NOT fo
 
 #### MED-v45-4: UIHooks N+1 User Queries
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Severity:** MEDIUM (Performance — database)
 **File:** src/Hooks/UIHooks.php L282-310
 
 **Issue:** `enrichNamedSetsWithUserNames()` makes N individual `UserFactory::newFromId()` calls. For 15 named sets (the maximum), up to 15 DB queries. MediaWiki provides `UserArray::newFromIDs()` for batch loading.
+
+**Resolution:** Replaced per-user loop with single `UserArray::newFromIDs()` batch query.
 
 ---
 
@@ -760,21 +762,25 @@ StateManager is used for editor-level state (tool selection, zoom, etc.), NOT fo
 
 #### MED-v45-6: WikitextHooks Static State May Bleed Between Requests
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Severity:** MEDIUM (Bug — potential in long-running PHP)
 **File:** src/Hooks/WikitextHooks.php L149-163
 
 **Issue:** Six static properties persist for PHP process lifetime. In PHP-FPM with `max_requests > 1`, state from one request could bleed into the next. `resetPageLayersFlag()` only resets via `ParserBeforeInternalParse` hook — job runners and API calls that bypass the parser would not trigger the reset.
 
+**Resolution:** Added `ensureRequestStateReset()` using `REQUEST_TIME_FLOAT` for request-boundary detection. Called at start of `onParserBeforeInternalParse()`. Only resets per-page state; stateless processor singletons preserved.
+
 ---
 
 #### MED-v45-7: Duplicate getLayerBounds Implementations
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Severity:** MEDIUM (Code quality — divergence risk)
 **Files:** resources/ext.layers.editor/CanvasManager.js L1081-1145, resources/ext.layers.editor/CanvasRenderer.js L1296-1325
 
 **Issue:** Both classes implement nearly identical `getLayerBounds()` and `_getRawLayerBounds()` with different fallback logic. Changes to one may not be reflected in the other.
+
+**Resolution:** CanvasRenderer.getLayerBounds() now delegates to CanvasManager.getLayerBounds() when available. Local `_getRawLayerBounds()` retained as init-time fallback only.
 
 ---
 

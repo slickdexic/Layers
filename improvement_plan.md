@@ -1097,10 +1097,10 @@ the current name, not the first-ever name. Regression test added.
 | 17.6 | SVG data URI in image layers bypasses validation | P2-085 | ✅ Fixed v45.2 | 2h |
 | 17.7 | Failed images stored in cache as broken | P2-086 | ✅ Fixed v45 | 30m |
 | 17.8 | Blur texture canvas reallocated every frame | P2-087 | ✅ Fixed v45.2 | 1h |
-| 17.9 | N+1 query in LayersDatabase batch operations | P2-088 | Open | 1h |
+| 17.9 | N+1 query in UIHooks user name enrichment | P2-088 | ✅ Fixed v45.5 | 1h |
 | 17.10 | TextSanitizer keyword defense-in-depth gap | P2-089 | ✅ Fixed v45.3 | 1h |
-| 17.11 | SlideHooks & SlideController static state | P2-090 | Open | 1h |
-| 17.12 | Duplicate bounds calculation methods | P2-091 | Open | 45m |
+| 17.11 | WikitextHooks static state bleed in PHP-FPM | P2-090 | ✅ Fixed v45.5 | 1h |
+| 17.12 | Duplicate getLayerBounds implementations | P2-091 | ✅ Fixed v45.5 | 45m |
 | 17.13 | DrawingController ellipse validation OR vs AND | P2-092 | ✅ Fixed v45 | 15m |
 
 **17.6 Fix (✅ Done v45.2):** Updated `DANGEROUS_URL_RE` to use negative
@@ -1204,6 +1204,7 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
+| 2026-03-04 | v45.5 batch 5: 3 P2 fixes (P2-088 N+1 batch query, P2-090 request-boundary state reset, P2-091 getLayerBounds delegation). Totals: 254/208/46. |
 | 2026-03-04 | v45.4 batch 4: 5 fixes (P1-037 color preview cancel, P3-080 dead cache code, P3-084 DimensionRenderer defaults, P3-085 opacity clamp, P3-086 blob URL leak). Totals: 254/205/49. |
 | 2026-03-04 | v45.3 batch 3: 5 fixes (P2-089 keywords, P3-099 call_user_func, P3-102 serialize, P3-106 bgVisible, P3-111 lightbox race). Totals: 254/200/54. |
 | 2026-03-04 | v45.2 batch 2: 6 fixes (P2-085, P2-087, P3-103, P3-104, P3-105, P3-108, P3-110, P3-112). |
