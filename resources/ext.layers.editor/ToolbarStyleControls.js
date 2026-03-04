@@ -256,6 +256,9 @@ class ToolbarStyleControls {
 				},
 				onColorPreview: ( color, isNone ) => {
 					this.applyColorPreview( 'stroke', isNone ? 'transparent' : color );
+				},
+				onColorCancel: () => {
+					this.cancelColorPreview();
 				}
 			} );
 			this.strokeColorButton = this.strokeControl.button;
@@ -278,6 +281,9 @@ class ToolbarStyleControls {
 				},
 				onColorPreview: ( color, isNone ) => {
 					this.applyColorPreview( 'fill', isNone ? 'transparent' : color );
+				},
+				onColorCancel: () => {
+					this.cancelColorPreview();
 				}
 			} );
 			this.fillColorButton = this.fillControl.button;
@@ -299,6 +305,9 @@ class ToolbarStyleControls {
 				},
 				onColorPreview: ( color, isNone ) => {
 					this.applyColorPreview( 'stroke', isNone ? 'transparent' : color );
+				},
+				onColorCancel: () => {
+					this.cancelColorPreview();
 				}
 			} );
 			this.strokeColorButton = strokeItem.button;
@@ -319,6 +328,9 @@ class ToolbarStyleControls {
 				},
 				onColorPreview: ( color, isNone ) => {
 					this.applyColorPreview( 'fill', isNone ? 'transparent' : color );
+				},
+				onColorCancel: () => {
+					this.cancelColorPreview();
 				}
 			} );
 			this.fillColorButton = fillItem.button;
@@ -365,7 +377,12 @@ class ToolbarStyleControls {
 				onPreview: options.onColorPreview ? ( previewColor ) => {
 					const none = previewColor === 'none';
 					options.onColorPreview( none ? currentValue : previewColor, none );
-				} : null
+				} : null,
+				onCancel: () => {
+					if ( typeof options.onColorCancel === 'function' ) {
+						options.onColorCancel();
+					}
+				}
 			} );
 		} );
 
@@ -522,6 +539,8 @@ class ToolbarStyleControls {
 	/**
 	 * Apply color preview to selected layers without committing to history.
 	 * Used for live preview in color picker dialog.
+	 * Saves original per-layer colors on first call so cancelColorPreview()
+	 * can restore each layer individually.
 	 *
 	 * @param {string} colorType 'stroke' or 'fill'
 	 * @param {string} color The preview color value
@@ -541,6 +560,20 @@ class ToolbarStyleControls {
 		const selectedIds = canvasManager.getSelectedLayerIds ? canvasManager.getSelectedLayerIds() : [];
 		if ( !selectedIds || !selectedIds.length ) {
 			return;
+		}
+
+		// Save original per-layer colors on first preview call
+		if ( !this._previewOriginalColors ) {
+			this._previewOriginalColors = new Map();
+			for ( const id of selectedIds ) {
+				const layer = editor.getLayerById ? editor.getLayerById( id ) : null;
+				if ( layer ) {
+					this._previewOriginalColors.set( id, {
+						fill: layer.fill,
+						stroke: layer.stroke
+					} );
+				}
+			}
 		}
 
 		// Apply preview color to each selected layer
@@ -568,6 +601,36 @@ class ToolbarStyleControls {
 
 		// Re-render to show preview
 		if ( canvasManager.renderLayers && editor.layers ) {
+			canvasManager.renderLayers( editor.layers );
+		}
+	}
+
+	/**
+	 * Cancel color preview and restore each layer's original colors.
+	 * Called when user cancels the color picker dialog.
+	 */
+	cancelColorPreview() {
+		if ( !this._previewOriginalColors || !this.toolbar || !this.toolbar.editor ) {
+			this._previewOriginalColors = null;
+			return;
+		}
+
+		const editor = this.toolbar.editor;
+		const canvasManager = editor.canvasManager;
+
+		// Restore each layer's original colors
+		for ( const [ id, originals ] of this._previewOriginalColors ) {
+			const layer = editor.getLayerById ? editor.getLayerById( id ) : null;
+			if ( layer ) {
+				layer.fill = originals.fill;
+				layer.stroke = originals.stroke;
+			}
+		}
+
+		this._previewOriginalColors = null;
+
+		// Re-render to show restored colors
+		if ( canvasManager && canvasManager.renderLayers && editor.layers ) {
 			canvasManager.renderLayers( editor.layers );
 		}
 	}
@@ -629,6 +692,9 @@ class ToolbarStyleControls {
 		if ( typeof editor.markDirty === 'function' ) {
 			editor.markDirty();
 		}
+
+		// Clear preview tracking — commit is done
+		this._previewOriginalColors = null;
 	}
 
 	/** Get current style options @return {Object} */

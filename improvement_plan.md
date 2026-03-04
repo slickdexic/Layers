@@ -150,7 +150,7 @@ SVG element blocklist in `ServerSideLayerValidator.php` `validateSvgString()`.
 |---|-------|-----|--------|--------|
 | 15.2 | ApiLayersInfo null dereference on L280 | P1-035 | ✅ Done | 30m |
 | 15.3 | Arrow keys always pan, never nudge | P1-036 | ✅ Done | 2h |
-| 15.4 | Color preview mutates layers directly | P1-037 | Open | 1.5h |
+| 15.4 | Color preview mutates layers directly | P1-037 | ✅ Fixed v45.4 | 1.5h |
 | 15.5 | ThumbnailRenderer font not in whitelist | P1-038 | ✅ Done | 45m |
 
 **15.2 Fix:** ✅ RESOLVED — Restructured `ApiLayersInfo.php` so
@@ -164,12 +164,11 @@ nudge selected layers by 1px (10px with Shift). Includes
 locked layer protection, history recording for undo/redo,
 and 17 new tests.
 
-**15.4 Fix:** In `ToolbarStyleControls.applyColorPreview()`:
-(1) Store original colors in a Map before first preview call,
-(2) Restore from Map on cancel/close,
-(3) On confirm, commit via `StateManager.set()`.
-Apply same pattern to `FolderOperationsController.toggleLayerVisibility`
-and `StyleController.applyToLayer`.
+**15.4 Fix (✅ Done v45.4):** `applyColorPreview()` now saves per-layer
+original colors in `_previewOriginalColors` Map on first call. New
+`cancelColorPreview()` method restores each layer individually.
+`onColorCancel` callback wired to all 4 color control creation sites
+(factory stroke/fill, fallback stroke/fill). Map cleared on commit.
 
 **15.5 Fix:** ✅ RESOLVED — In `ThumbnailRenderer`, before passing fontFamily
 to ImageMagick, validate against `$wgLayersDefaultFonts`. If not
@@ -228,13 +227,13 @@ Add 4 new i18n keys: `layers-group-done`, `layers-ungroup-done`,
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 15.16 | Dead layer cache code (~140 lines) | P3-080 | Open | 15m |
+| 15.16 | Dead layer cache code (~140 lines) | P3-080 | ✅ Fixed v45.4 | 15m |
 | 15.17 | StyleController triple-apply | P3-081 | Open | 20m |
 | 15.18 | Duplicate sanitizeLogMessage x3 | P3-082 | Open | 30m |
 | 15.19 | SelectionManager boolean handling | P3-083 | Open | 15m |
-| 15.20 | DimensionRenderer falsy-sensitive defaults | P3-084 | Open | 10m |
-| 15.21 | CustomShapeRenderer opacity not clamped | P3-085 | Open | 10m |
-| 15.22 | ExportController Blob URL leak | P3-086 | Open | 10m |
+| 15.20 | DimensionRenderer falsy-sensitive defaults | P3-084 | ✅ Fixed v45.4 | 10m |
+| 15.21 | CustomShapeRenderer opacity not clamped | P3-085 | ✅ Fixed v45.4 | 10m |
+| 15.22 | ExportController Blob URL leak | P3-086 | ✅ Fixed v45.4 | 10m |
 | 15.23 | RenderCoordinator hash gaps | P3-087 | Open | 30m |
 | 15.24 | Modal Escape no unsaved check | P3-088 | Open | 30m |
 | 15.25 | Duplicated SVG icon code | P3-089 | Open | 20m |
@@ -245,6 +244,23 @@ Add 4 new i18n keys: `layers-group-done`, `layers-ungroup-done`,
 | 15.30 | CustomShape oversized temp canvas | P3-094 | Open | 20m |
 | 15.31 | Unguarded mw.log.warn in CanvasRenderer | P3-095 | Open | 10m |
 | 15.32 | ~~ToolManager IIFE load-time references~~ | P3-096 | ✅ False Positive | 0m |
+
+**15.16 Fix (✅ Done v45.4):** Removed ~150 lines of dead code from
+CanvasRenderer: 3 constructor properties, 5 methods
+(`_computeLayerHash`, `_hashString`, `_getCachedLayer`,
+`_setCachedLayer`, `invalidateLayerCache`), destroy() cleanup.
+Also removed 7 dead tests from CanvasRenderer.test.js.
+
+**15.20 Fix (✅ Done v45.4):** Changed 7 numeric properties in
+`_createFromOptions()` from `||` to `!== undefined ? ... : DEFAULTS`:
+strokeWidth, extensionLength, extensionGap, arrowSize, tickSize, scale.
+
+**15.21 Fix (✅ Done v45.4):** Added `Math.max( 0, Math.min( 1, ... ) )`
+clamping to `getOpacity()` return value, matching all other renderers.
+
+**15.22 Fix (✅ Done v45.4):** Wrapped blob download link
+creation/click/removal in `try/finally` to ensure
+`URL.revokeObjectURL(url)` always executes.
 
 ---
 
@@ -1188,6 +1204,7 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
+| 2026-03-04 | v45.4 batch 4: 5 fixes (P1-037 color preview cancel, P3-080 dead cache code, P3-084 DimensionRenderer defaults, P3-085 opacity clamp, P3-086 blob URL leak). Totals: 254/205/49. |
 | 2026-03-04 | v45.3 batch 3: 5 fixes (P2-089 keywords, P3-099 call_user_func, P3-102 serialize, P3-106 bgVisible, P3-111 lightbox race). Totals: 254/200/54. |
 | 2026-03-04 | v45.2 batch 2: 6 fixes (P2-085, P2-087, P3-103, P3-104, P3-105, P3-108, P3-110, P3-112). |
 | 2026-03-04 | v45 fixes: 5 items fixed (P0-006, P1-039, P1-042, P2-086, P2-092), 2 FPs (P1-040, P1-041). Totals: 254/195/59. |

@@ -11,10 +11,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 40 | 38 | 2 |
+| P1 | 40 | 39 | 1 |
 | P2 | 96 | 83 | 13 |
-| P3 | 121 | 83 | 38 |
-| **Total** | **262** | **209** | **53** |
+| P3 | 121 | 87 | 34 |
+| **Total** | **262** | **214** | **48** |
 
 ---
 
@@ -418,7 +418,11 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   `renderLayers()` without any saveState or StateManager interaction.
 - **Recommended Fix:** Store original colors before preview, restore on cancel,
   commit via StateManager on confirm.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026)
+- **Fix:** `applyColorPreview()` now saves per-layer original colors in a
+  `_previewOriginalColors` Map on first call. New `cancelColorPreview()` method
+  restores each layer individually from the map. `onColorCancel` callback wired
+  to all 4 color control creation sites. Map cleared on commit.
 - **Introduced:** v42 review
 
 ### ~~P1-038: ThumbnailRenderer Font Name Not Validated Against Whitelist~~ (RESOLVED)
@@ -558,7 +562,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.editor/CanvasRenderer.js`
 - **Impact:** layerCache, _getCachedLayer, _setCachedLayer,
   invalidateLayerCache defined but never called. Dead code.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026)
+- **Fix:** Removed ~150 lines of dead code: 3 constructor properties, 5 methods
+  (`_computeLayerHash`, `_hashString`, `_getCachedLayer`, `_setCachedLayer`,
+  `invalidateLayerCache`), and destroy() cleanup. Also removed 7 dead tests.
 - **Introduced:** v42 review
 
 ### P3-081: StyleController.updateStyleOptions Triple-Applies Properties
@@ -589,7 +596,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.shared/DimensionRenderer.js`
 - **Impact:** `extensionGap: opts.extensionGap || 10` rejects valid 0.
   Same file uses `!== undefined` for precision/toleranceValue correctly.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026)
+- **Fix:** Changed 8 numeric properties in `_createFromOptions()` from `||` to
+  `!== undefined ? options.prop : DEFAULTS.prop`: strokeWidth, fontSize,
+  extensionLength, extensionGap, arrowSize, tickSize, scale.
 - **Introduced:** v42 review
 
 ### P3-085: CustomShapeRenderer Opacity Not Clamped
@@ -597,14 +607,18 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.shared/CustomShapeRenderer.js`
 - **Impact:** getOpacity() returns unclamped value. All other renderers
   use clampOpacity() from MathUtils.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026)
+- **Fix:** Added `Math.max( 0, Math.min( 1, ... ) )` clamping to `getOpacity()`
+  return value, matching all other renderers.
 - **Introduced:** v42 review
 
 ### P3-086: ExportController Blob URL Leak on Error
 
 - **File:** `resources/ext.layers.editor/ExportController.js`
 - **Impact:** If removeChild throws, revokeObjectURL is skipped. Minor leak.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026)
+- **Fix:** Wrapped download link creation/click/removal in `try/finally` to
+  ensure `URL.revokeObjectURL(url)` always executes.
 - **Introduced:** v42 review
 
 ### P3-087: RenderCoordinator Hash Misses Visual Properties

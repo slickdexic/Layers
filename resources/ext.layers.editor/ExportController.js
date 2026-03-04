@@ -211,13 +211,16 @@
 
 				// Create download link
 				const url = URL.createObjectURL( blob );
-				const a = document.createElement( 'a' );
-				a.href = url;
-				a.download = downloadName;
-				document.body.appendChild( a );
-				a.click();
-				document.body.removeChild( a );
-				URL.revokeObjectURL( url );
+				try {
+					const a = document.createElement( 'a' );
+					a.href = url;
+					a.download = downloadName;
+					document.body.appendChild( a );
+					a.click();
+					document.body.removeChild( a );
+				} finally {
+					URL.revokeObjectURL( url );
+				}
 
 				const msg = this._msg( 'layers-export-success', 'Image exported successfully' );
 				if ( typeof mw !== 'undefined' && mw.notify ) {

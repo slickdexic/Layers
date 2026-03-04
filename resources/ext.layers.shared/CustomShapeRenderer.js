@@ -603,7 +603,7 @@ class CustomShapeRenderer {
 	getOpacity( specificOpacity, layerOpacity ) {
 		const specific = specificOpacity !== undefined ? specificOpacity : 1;
 		const overall = layerOpacity !== undefined ? layerOpacity : 1;
-		return specific * overall;
+		return Math.max( 0, Math.min( 1, specific * overall ) );
 	}
 
 	/**

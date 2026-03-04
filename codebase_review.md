@@ -61,7 +61,7 @@ The v45 review is a comprehensive fresh audit of the entire codebase at version 
 
 - **Nudge handler mutates layers directly:** EventManager.js L196-206 modifies `layer.x`, `layer.y`, `layer.x1`, etc. in-place without StateManager notification. DraftManager change detection and subscribers miss nudge operations.
 - **SelectionManager drag/resize/rotate mutates in-place:** During interactive transforms, layer objects are modified directly. StateManager's `_layersVersion` counter is never incremented until `finishDrag()`. Mid-transform snapshots would capture corrupt state.
-- **Color preview mutates layers without StateManager (P1-037):** `applyColorPreview()` directly writes to layer properties with no undo/rollback mechanism.
+- **Color preview mutates layers without StateManager (P1-037):** ✅ RESOLVED — `applyColorPreview()` now saves per-layer original colors in a `_previewOriginalColors` Map. New `cancelColorPreview()` restores each layer individually. `onColorCancel` wired to all 4 color control sites.
 
 #### Rendering
 
@@ -73,7 +73,7 @@ The v45 review is a comprehensive fresh audit of the entire codebase at version 
 #### Code Quality
 
 - **`call_user_func` indirection unnecessary:** 10 instances of `\call_user_func(['\\MediaWiki\\MediaWikiServices', 'getInstance'])` across 5 PHP files. Since MW >= 1.44.0 is required, direct static calls should be used.
-- **Dead code: ~140 lines CanvasRenderer layer cache (P3-080)**
+- **Dead code: ~140 lines CanvasRenderer layer cache (P3-080):** ✅ RESOLVED — Removed ~150 lines: 3 constructor properties, 5 methods, destroy() cleanup, and 7 dead tests.
 - **Dead code: StateManager.saveToHistory() no-op called from 10+ locations**
 - **Stale `originalName` in LayerPanel.editLayerName causes spurious undo entries:** `_hasEditListeners` guard prevents `dataset.originalName` from refreshing on subsequent edits.
 - **Duplicate backgroundVisible normalization in 5+ locations** across viewer subsystem
@@ -92,11 +92,11 @@ The v45 review is a comprehensive fresh audit of the entire codebase at version 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
 | Security | 0 | 0 | ~~2~~→0 | 2 | ~~Clickjacking~~ ✅, ~~innerHTML~~ FP, ~~SVG URI~~ ✅, ~~manual HTML~~ ✅, ~~TextSanitizer~~ ✅ |
-| Bugs | 0 | 0 | ~~3~~→2 | ~~8~~→4 | ~~State mutation~~ FP, rendering, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅, ~~lightbox race~~ ✅ |
-| Performance | 0 | 0 | ~~2~~→1 | ~~5~~→2 | ~~Blur texture~~ ✅, N+1 users, ~~hit test~~ ✅, ~~ViewerManager API~~ ✅, ~~serialize~~ ✅ |
-| Code Quality | 0 | 0 | 3 | ~~12~~→10 | Duplication, ~~indirection~~ ✅, DRY, ~~bgVisible~~ ✅ |
+| Bugs | 0 | 0 | ~~3~~→1 | ~~8~~→1 | ~~State mutation~~ FP, rendering, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅, ~~lightbox race~~ ✅, ~~color preview~~ ✅, ~~DimRender defaults~~ ✅ |
+| Performance | 0 | 0 | ~~2~~→1 | ~~5~~→1 | ~~Blur texture~~ ✅, N+1 users, ~~hit test~~ ✅, ~~ViewerManager API~~ ✅, ~~serialize~~ ✅, ~~blob leak~~ ✅ |
+| Code Quality | 0 | 0 | 3 | ~~12~~→8 | Duplication, ~~indirection~~ ✅, DRY, ~~bgVisible~~ ✅, ~~dead cache~~ ✅, ~~opacity clamp~~ ✅ |
 | Documentation | 0 | 5 | 8 | 7 | Stale counts, wrong versions, god class count |
-| **Total** | **0** | **5** | **14** | **25+** | **~44 open items (16 fixed, 2 FPs reclassified from v45 audit)** |
+| **Total** | **0** | **5** | **13** | **19+** | **~39 open items (21 fixed, 2 FPs reclassified from v45 audit)** |
 
 **Overall Grade: A** (strong foundation, excellent tests and security; all critical/high security issues resolved; remaining items are code quality, performance optimizations, and documentation accuracy)
 
@@ -426,31 +426,37 @@ fontStyle appears before fontWeight, which is precisely what CSS spec requires. 
 
 #### LOW-v42-5: DimensionRenderer createDimensionLayer Uses || for Falsy Defaults
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Severity:** LOW (Bug for edge cases)
 **File:** resources/ext.layers.shared/DimensionRenderer.js
 
 **Issue:** Properties like `extensionGap` use `||` which rejects legitimate `0` values. The same file uses `!== undefined` correctly for `precision` and `toleranceValue`, showing the inconsistency.
 
+**Resolution:** Changed 7 numeric properties in `_createFromOptions()` from `||` to `!== undefined ? options.prop : DEFAULTS.prop`.
+
 ---
 
 #### LOW-v42-6: CustomShapeRenderer Opacity Not Clamped
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Severity:** LOW (Inconsistency)
 **File:** resources/ext.layers.shared/CustomShapeRenderer.js
 
 **Issue:** `getOpacity()` returns `specific * overall` without clamping. All other renderers use `clampOpacity()` from MathUtils.
 
+**Resolution:** Added `Math.max( 0, Math.min( 1, ... ) )` clamping to `getOpacity()` return value.
+
 ---
 
 #### LOW-v42-7: ExportController Blob URL Leak on Error
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Severity:** LOW (Resource leak)
 **File:** resources/ext.layers.editor/ExportController.js
 
 **Issue:** If `document.body.removeChild(a)` throws, `URL.revokeObjectURL(url)` is skipped. Should use try/finally.
+
+**Resolution:** Wrapped download link creation/click/removal in `try/finally` to ensure `URL.revokeObjectURL(url)` always executes.
 
 ---
 

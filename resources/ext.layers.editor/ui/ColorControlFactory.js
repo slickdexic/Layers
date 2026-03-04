@@ -142,7 +142,10 @@
 					} : null,
 					onCancel: () => {
 						// Button display is already correct (not updated during preview)
-						// The canvas will be restored by ColorPickerDialog.restoreOriginalColor
+						// Notify caller to restore per-layer original colors
+						if ( typeof options.onColorCancel === 'function' ) {
+							options.onColorCancel();
+						}
 					}
 				} );
 			} );
