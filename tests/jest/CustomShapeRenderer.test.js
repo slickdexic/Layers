@@ -667,7 +667,7 @@ describe( 'CustomShapeRenderer', () => {
 
 			// Add missing methods to mockCtx for spread shadow
 			mockCtx.setTransform = jest.fn();
-			mockCtx.getTransform = jest.fn().mockReturnValue( { e: 0, f: 0 } );
+			mockCtx.getTransform = jest.fn().mockReturnValue( { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 } );
 			mockCtx.canvas = { width: 800, height: 600 };
 
 			// Mock document.createElement to track offscreen canvas creation
@@ -676,6 +676,7 @@ describe( 'CustomShapeRenderer', () => {
 				restore: jest.fn(),
 				setTransform: jest.fn(),
 				translate: jest.fn(),
+				rotate: jest.fn(),
 				beginPath: jest.fn(),
 				rect: jest.fn(),
 				fill: jest.fn(),

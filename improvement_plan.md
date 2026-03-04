@@ -180,13 +180,13 @@ helper method to centralize the check.
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
 | 15.6 | ~~Double render on undo/redo~~ | P2-074 | ✅ False Positive | 0m |
-| 15.7 | CustomShape shadow ignores rotation | P2-075 | Open | 1h |
+| 15.7 | CustomShape shadow ignores rotation | P2-075 | ✅ Fixed v45.6 | 1h |
 | 15.8 | TextBox stroke bleeds into text (thumb) | P2-076 | ✅ Fixed v44 | 15m |
 | 15.9 | Ellipse missing shadow (thumb) | P2-077 | ✅ Fixed v44 | 30m |
 | 15.10 | AlignmentController missing dim/marker | P2-078 | ✅ Fixed v44 | 1h |
 | 15.11 | ~~Clipboard paste offset on local coords~~ | P2-079 | ✅ False Positive | 0m |
 | 15.12 | parseMWTimestamp uses local time | P2-080 | ✅ Done | 10m |
-| 15.13 | Callout blur bounds ignore dragged tail | P2-081 | Open | 30m |
+| 15.13 | Callout blur bounds ignore dragged tail | P2-081 | ✅ Fixed v45.6 | 30m |
 | 15.14 | ~~Font shorthand order in InlineTextEditor~~ | P2-082 | ✅ False Positive | 0m |
 | 15.15 | Hardcoded English in ToolbarKeyboard | P2-083 | ✅ Done | 45m |
 
@@ -1204,6 +1204,7 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
+| 2026-03-04 | v45.6 batch 6: 3 P2 fixes (P2-081 callout blur bounds, P2-083 i18n shortcut descriptions, P2-075 shadow rotation decomposition). All P2 items now resolved. Totals: 262/228/34. |
 | 2026-03-04 | v45.5 batch 5: 3 P2 fixes (P2-088 N+1 batch query, P2-090 request-boundary state reset, P2-091 getLayerBounds delegation). Totals: 254/208/46. |
 | 2026-03-04 | v45.4 batch 4: 5 fixes (P1-037 color preview cancel, P3-080 dead cache code, P3-084 DimensionRenderer defaults, P3-085 opacity clamp, P3-086 blob URL leak). Totals: 254/205/49. |
 | 2026-03-04 | v45.3 batch 3: 5 fixes (P2-089 keywords, P3-099 call_user_func, P3-102 serialize, P3-106 bgVisible, P3-111 lightbox race). Totals: 254/200/54. |

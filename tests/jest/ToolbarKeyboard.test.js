@@ -10,6 +10,29 @@ describe( 'ToolbarKeyboard', function () {
 	let keyboardHandler;
 	let mockToolbar;
 	let mockEditor;
+	let originalMessage;
+
+	beforeAll( function () {
+		// Add mw.message mock for i18n shortcut descriptions
+		originalMessage = global.mw.message;
+		global.mw.message = jest.fn( function ( key ) {
+			return {
+				text: jest.fn( function () {
+					return key;
+				} ),
+				parse: jest.fn( function () {
+					return key;
+				} ),
+				exists: jest.fn( function () {
+					return true;
+				} )
+			};
+		} );
+	} );
+
+	afterAll( function () {
+		global.mw.message = originalMessage;
+	} );
 
 	beforeEach( function () {
 		// Create mock editor
@@ -186,7 +209,7 @@ describe( 'ToolbarKeyboard', function () {
 			const shortcuts = keyboardHandler.getShortcutsConfig();
 			const viewShortcuts = shortcuts.filter( s => s.category === 'view' );
 
-			expect( viewShortcuts.some( s => s.key === ';' && s.description === 'Toggle Smart Guides' ) ).toBe( true );
+			expect( viewShortcuts.some( s => s.key === ';' && s.description === 'layers-shortcut-smart-guides' ) ).toBe( true );
 		} );
 	} );
 
@@ -343,7 +366,7 @@ describe( 'ToolbarKeyboard', function () {
 
 			keyboardHandler.toggleSmartGuides();
 
-			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Smart Guides: On', 1500 );
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'layers-smart-guides-on', 1500 );
 		} );
 
 		it( 'should be triggered by semicolon key', function () {
@@ -664,7 +687,7 @@ describe( 'ToolbarKeyboard', function () {
 
 			keyboardHandler.handleKeyboardShortcuts( event );
 
-			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Layers grouped', 1500 );
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'layers-group-success', 1500 );
 		} );
 
 		it( 'should show status message when ungrouping succeeds', function () {
@@ -685,7 +708,7 @@ describe( 'ToolbarKeyboard', function () {
 
 			keyboardHandler.handleKeyboardShortcuts( event );
 
-			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'Group dissolved', 1500 );
+			expect( mockEditor.showStatus ).toHaveBeenCalledWith( 'layers-ungroup-success', 1500 );
 		} );
 	} );
 

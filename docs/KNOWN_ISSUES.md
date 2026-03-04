@@ -12,9 +12,9 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 40 | 40 | 0 |
-| P2 | 96 | 93 | 3 |
+| P2 | 96 | 96 | 0 |
 | P3 | 121 | 87 | 34 |
-| **Total** | **262** | **225** | **37** |
+| **Total** | **262** | **228** | **34** |
 
 ---
 
@@ -469,7 +469,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   was fixed to properly decompose transforms but this was never ported.
   Rotated custom shapes render shadows at wrong angle.
 - **Recommended Fix:** Port ShadowRenderer's rotation decomposition.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.6 — Ported ShadowRenderer's rotation decomposition
+  (atan2 + scale extraction) to drawSpreadShadowForImage. Now decomposes
+  transform into scale+translation, applies rotation separately via
+  save/rotate/restore around the dilation drawing loops.
 - **Introduced:** v42 review
 
 ### P2-076: ThumbnailRenderer TextBox Stroke Bleeds Into Text
@@ -542,7 +545,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   blur capture bounds use `tailDirection` instead of actual tailTipX/Y.
   Blur effect clips when tail is dragged to different side.
 - **Recommended Fix:** Compute bounds from actual tip coordinates.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.6 — Both rotated and non-rotated branches now
+  include actual tailTipX/tailTipY in blur capture bounds. Rotated branch
+  transforms local coords to absolute via rotation matrix; non-rotated
+  branch takes union of direction-based bounds with actual tip point.
 - **Introduced:** v42 review
 
 ### ~~P2-082: CSS Font Shorthand Order Wrong in InlineTextEditor~~ (FALSE POSITIVE)
@@ -564,7 +570,11 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   with English-only fallbacks for non-MW contexts.
 - **Recommended Fix:** Replace shortcut description strings with mw.message()
   lookups; add corresponding i18n keys for each description.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.6 — All 24 shortcut descriptions now use
+  `mw.message('key').text()`. Reuses existing tool/action keys where
+  available; added 4 new keys (layers-shortcut-save, toggle-snap,
+  toggle-background, cancel). Also registered 8 previously unregistered
+  shortcut keys in extension.json messages array.
 - **Introduced:** v42 review (description refined in v43)
 
 ### P3-080: ~140 Lines Dead Layer Cache Code in CanvasRenderer

@@ -351,38 +351,38 @@
 	getShortcutsConfig() {
 		return [
 			// Tool shortcuts
-			{ key: 'V', description: 'Select Tool', category: 'tools' },
-			{ key: 'T', description: 'Text Tool', category: 'tools' },
-			{ key: 'X', description: 'Text Box Tool', category: 'tools' },
-			{ key: 'P', description: 'Pen Tool', category: 'tools' },
-			{ key: 'R', description: 'Rectangle Tool', category: 'tools' },
-			{ key: 'C', description: 'Circle Tool', category: 'tools' },
-			{ key: 'E', description: 'Ellipse Tool', category: 'tools' },
-			{ key: 'Y', description: 'Polygon Tool', category: 'tools' },
-			{ key: 'S', description: 'Star Tool', category: 'tools' },
-			{ key: 'A', description: 'Arrow Tool', category: 'tools' },
-			{ key: 'L', description: 'Line Tool', category: 'tools' },
-			{ key: 'B', description: 'Callout Tool', category: 'tools' },
+			{ key: 'V', description: mw.message( 'layers-tool-select' ).text(), category: 'tools' },
+			{ key: 'T', description: mw.message( 'layers-tool-text' ).text(), category: 'tools' },
+			{ key: 'X', description: mw.message( 'layers-tool-textbox' ).text(), category: 'tools' },
+			{ key: 'P', description: mw.message( 'layers-tool-pen' ).text(), category: 'tools' },
+			{ key: 'R', description: mw.message( 'layers-tool-rectangle' ).text(), category: 'tools' },
+			{ key: 'C', description: mw.message( 'layers-tool-circle' ).text(), category: 'tools' },
+			{ key: 'E', description: mw.message( 'layers-tool-ellipse' ).text(), category: 'tools' },
+			{ key: 'Y', description: mw.message( 'layers-tool-polygon' ).text(), category: 'tools' },
+			{ key: 'S', description: mw.message( 'layers-tool-star' ).text(), category: 'tools' },
+			{ key: 'A', description: mw.message( 'layers-tool-arrow' ).text(), category: 'tools' },
+			{ key: 'L', description: mw.message( 'layers-tool-line' ).text(), category: 'tools' },
+			{ key: 'B', description: mw.message( 'layers-tool-callout' ).text(), category: 'tools' },
 
 			// View shortcuts
-			{ key: '+/=', description: 'Zoom In', category: 'view' },
-			{ key: '-', description: 'Zoom Out', category: 'view' },
-			{ key: '0', description: 'Fit to Window', category: 'view' },
-			{ key: ';', description: 'Toggle Smart Guides', category: 'view' },
-			{ key: "'", description: 'Toggle Canvas Snap', category: 'view' },
-			{ key: 'Shift+B', description: 'Toggle Background', category: 'view' },
+			{ key: '+/=', description: mw.message( 'layers-zoom-in' ).text(), category: 'view' },
+			{ key: '-', description: mw.message( 'layers-zoom-out' ).text(), category: 'view' },
+			{ key: '0', description: mw.message( 'layers-zoom-fit' ).text(), category: 'view' },
+			{ key: ';', description: mw.message( 'layers-shortcut-smart-guides' ).text(), category: 'view' },
+			{ key: "'", description: mw.message( 'layers-shortcut-toggle-snap' ).text(), category: 'view' },
+			{ key: 'Shift+B', description: mw.message( 'layers-shortcut-toggle-background' ).text(), category: 'view' },
 			// Ctrl shortcuts
-			{ key: 'Ctrl+Z', description: 'Undo', category: 'edit' },
-			{ key: 'Ctrl+Shift+Z', description: 'Redo', category: 'edit' },
-			{ key: 'Ctrl+Y', description: 'Redo', category: 'edit' },
-			{ key: 'Ctrl+S', description: 'Save', category: 'file' },
-			{ key: 'Ctrl+D', description: 'Duplicate', category: 'edit' },
-			{ key: 'Ctrl+G', description: 'Group Selected', category: 'layers' },
-			{ key: 'Ctrl+Shift+G', description: 'Ungroup', category: 'layers' },
+			{ key: 'Ctrl+Z', description: mw.message( 'layers-undo' ).text(), category: 'edit' },
+			{ key: 'Ctrl+Shift+Z', description: mw.message( 'layers-redo' ).text(), category: 'edit' },
+			{ key: 'Ctrl+Y', description: mw.message( 'layers-redo' ).text(), category: 'edit' },
+			{ key: 'Ctrl+S', description: mw.message( 'layers-shortcut-save' ).text(), category: 'file' },
+			{ key: 'Ctrl+D', description: mw.message( 'layers-duplicate-selected' ).text(), category: 'edit' },
+			{ key: 'Ctrl+G', description: mw.message( 'layers-shortcut-group' ).text(), category: 'layers' },
+			{ key: 'Ctrl+Shift+G', description: mw.message( 'layers-shortcut-ungroup' ).text(), category: 'layers' },
 			// Other
-			{ key: 'Delete/Backspace', description: 'Delete Selected', category: 'edit' },
-			{ key: 'Escape', description: 'Cancel Operation', category: 'general' },
-			{ key: 'Shift+?', description: 'Show Keyboard Shortcuts', category: 'general' }
+			{ key: 'Delete/Backspace', description: mw.message( 'layers-delete-selected' ).text(), category: 'edit' },
+			{ key: 'Escape', description: mw.message( 'layers-shortcut-cancel' ).text(), category: 'general' },
+			{ key: 'Shift+?', description: mw.message( 'layers-shortcut-show-help' ).text(), category: 'general' }
 		];
 	}
 

@@ -451,10 +451,24 @@ class CustomShapeRenderer {
 			return;
 		}
 
-		// Copy transform (excluding rotation which is already applied)
+		// Copy transform, handling rotation separately for correct shadow rendering.
+		// Same decomposition approach as ShadowRenderer.drawSpreadShadowForImage.
 		const currentTransform = ctx.getTransform ? ctx.getTransform() : null;
+		let hasRotation = false;
+		let rotationAngle = 0;
+
 		if ( currentTransform ) {
-			tempCtx.setTransform( 1, 0, 0, 1, currentTransform.e, currentTransform.f );
+			if ( currentTransform.b !== 0 || currentTransform.c !== 0 ) {
+				hasRotation = true;
+				rotationAngle = Math.atan2( currentTransform.b, currentTransform.a );
+				// Decompose scale from the matrix, stripping rotation
+				const { a, b, c, d, e, f } = currentTransform;
+				const scaleX = Math.sqrt( a * a + b * b );
+				const scaleY = Math.sqrt( c * c + d * d );
+				tempCtx.setTransform( scaleX, 0, 0, scaleY, e, f );
+			} else {
+				tempCtx.setTransform( currentTransform );
+			}
 		}
 
 		// Shift by FAR_OFFSET in both X and Y to prevent clipping
@@ -471,6 +485,11 @@ class CustomShapeRenderer {
 		// Number of samples increases with spread size for smooth edges.
 		const numSamples = Math.max( 16, Math.ceil( spread * 1.5 ) );
 
+		if ( hasRotation ) {
+			tempCtx.save();
+			tempCtx.rotate( rotationAngle );
+		}
+
 		for ( let i = 0; i < numSamples; i++ ) {
 			const angle = ( i / numSamples ) * 2 * Math.PI;
 			const dx = Math.cos( angle ) * spread;
@@ -481,12 +500,21 @@ class CustomShapeRenderer {
 		// Also draw at center to fill any gaps
 		tempCtx.drawImage( img, x, y, width, height );
 
+		if ( hasRotation ) {
+			tempCtx.restore();
+		}
+
 		// Erase the dilated shape (leaving only its shadow)
 		tempCtx.globalCompositeOperation = 'destination-out';
 		tempCtx.shadowColor = 'transparent';
 		tempCtx.shadowBlur = 0;
 		tempCtx.shadowOffsetX = 0;
 		tempCtx.shadowOffsetY = 0;
+
+		if ( hasRotation ) {
+			tempCtx.save();
+			tempCtx.rotate( rotationAngle );
+		}
 
 		// Erase using the same dilation pattern
 		for ( let i = 0; i < numSamples; i++ ) {
@@ -496,6 +524,10 @@ class CustomShapeRenderer {
 			tempCtx.drawImage( img, x + dx, y + dy, width, height );
 		}
 		tempCtx.drawImage( img, x, y, width, height );
+
+		if ( hasRotation ) {
+			tempCtx.restore();
+		}
 
 		// Draw shadow to main canvas
 		ctx.save();

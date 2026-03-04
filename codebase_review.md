@@ -65,8 +65,8 @@ The v45 review is a comprehensive fresh audit of the entire codebase at version 
 
 #### Rendering
 
-- **CustomShapeRenderer spread shadow ignores rotation AND scale (P2-075)**
-- **CalloutRenderer blur bounds ignore dragged tail position (P2-081)**
+- **CustomShapeRenderer spread shadow ignores rotation AND scale (P2-075):** ✅ RESOLVED — Ported ShadowRenderer's rotation decomposition (atan2 + scale extraction) to `drawSpreadShadowForImage()`. Transform now decomposed into scale+translation; rotation applied separately via save/rotate/restore around dilation loops.
+- **CalloutRenderer blur bounds ignore dragged tail position (P2-081):** ✅ RESOLVED — Both rotated (local→absolute coordinate transform via rotation matrix) and non-rotated (union of direction bounds with actual tip point) branches now include `tailTipX/tailTipY` in blur capture bounds.
 - **Failed images persist in ImageLayerRenderer LRU cache:** `onerror` handler logs but never removes the broken entry — cache slot wasted permanently.
 - **`_blurFillCanvas` GPU texture reallocation every frame:** Unconditionally sets `.width`/`.height` on every render, triggering GPU texture deallocation even when dimensions haven't changed.
 
@@ -92,11 +92,11 @@ The v45 review is a comprehensive fresh audit of the entire codebase at version 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
 | Security | 0 | 0 | ~~2~~→0 | 2 | ~~Clickjacking~~ ✅, ~~innerHTML~~ FP, ~~SVG URI~~ ✅, ~~manual HTML~~ ✅, ~~TextSanitizer~~ ✅ |
-| Bugs | 0 | 0 | ~~3~~→1 | ~~8~~→1 | ~~State mutation~~ FP, rendering, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅, ~~lightbox race~~ ✅, ~~color preview~~ ✅, ~~DimRender defaults~~ ✅, ~~static state~~ ✅ |
+| Bugs | 0 | 0 | ~~3~~→0 | ~~8~~→1 | ~~State mutation~~ FP, ~~rendering P2-075~~ ✅, ~~rendering P2-081~~ ✅, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅, ~~lightbox race~~ ✅, ~~color preview~~ ✅, ~~DimRender defaults~~ ✅, ~~static state~~ ✅ |
 | Performance | 0 | 0 | ~~2~~→0 | ~~5~~→1 | ~~Blur texture~~ ✅, ~~N+1 users~~ ✅, ~~hit test~~ ✅, ~~ViewerManager API~~ ✅, ~~serialize~~ ✅, ~~blob leak~~ ✅ |
-| Code Quality | 0 | 0 | ~~3~~→2 | ~~12~~→8 | Duplication, ~~indirection~~ ✅, DRY, ~~bgVisible~~ ✅, ~~dead cache~~ ✅, ~~opacity clamp~~ ✅, ~~dup bounds~~ ✅ |
+| Code Quality | 0 | 0 | ~~3~~→1 | ~~12~~→8 | Duplication, ~~indirection~~ ✅, DRY, ~~bgVisible~~ ✅, ~~dead cache~~ ✅, ~~opacity clamp~~ ✅, ~~dup bounds~~ ✅, ~~i18n shortcuts~~ ✅ |
 | Documentation | 0 | 5 | 8 | 7 | Stale counts, wrong versions, god class count |
-| **Total** | **0** | **5** | **11** | **17+** | **~36 open items (24 fixed, 2 FPs reclassified from v45 audit)** |
+| **Total** | **0** | **5** | **9** | **17+** | **~33 open items (27 fixed, 2 FPs reclassified from v45 audit)** |
 
 **Overall Grade: A** (strong foundation, excellent tests and security; all critical/high security issues resolved; remaining items are code quality, performance optimizations, and documentation accuracy)
 
@@ -1109,20 +1109,18 @@ The Layers extension has a **strong foundation** with excellent test coverage (9
 - ✅ LOW-v45-12 (API Instances) — Fixed: ViewerManager reuses single mw.Api() via `_getApi()`
 - ✅ LOW-v45-14 (Dead Code) — Fixed: Removed dead renderCodeSnippet with unescaped HTML
 
-Open items as of v45 (post-fixes):
+Open items as of v45.6 (post-batch 6):
 - 0 CRITICAL
 - 2 HIGH: Color preview (v42), UIHooks manual HTML (remainder of HIGH-v45-1)
-- 5 MEDIUM: CustomShapeRenderer shadow (v42), CalloutRenderer blur (v42), CHANGELOG gaps (v43), N+1 queries, TextSanitizer, static state, duplicate bounds
+- 2 MEDIUM: CHANGELOG gaps (v43), TextSanitizer
 - 26+ LOW: Duplication, resource leaks, call_user_func, shadow duplication, color table drift, EventTracker bypass, shallow clone, bgVisible DRY, icon duplication, hash completeness, lightbox race, etc.
 
-The **most actionable remaining improvements** are:
-1. Store/restore original colors in color preview before mutation (undo/cancel support)
-2. Replace manual HTML with `Html::element()` / `Html::rawElement()` in UIHooks.php
-3. Batch user queries in UIHooks.enrichNamedSetsWithUserNames
-4. Update documentation metrics (god class count, line counts, test counts)
-5. Extract `isFalsyBackground(value)` to LayerDataNormalizer (DRY)
+**All P2 issues now resolved.** The **most actionable remaining improvements** are:
+1. Replace manual HTML with `Html::element()` / `Html::rawElement()` in UIHooks.php
+2. Update documentation metrics (god class count, line counts, test counts)
+3. Extract `isFalsyBackground(value)` to LayerDataNormalizer (DRY)
 
-**Overall Grade: A** — Excellent core with strong testing (11,255 tests, 95.19% coverage), modern architecture, and thorough security controls. All critical and high-severity security issues resolved. The remaining open items are predominantly code quality improvements and documentation accuracy.
+**Overall Grade: A** — Excellent core with strong testing (11,249 tests, 95.19% coverage), modern architecture, and thorough security controls. All critical and high-severity security issues resolved. All P2 items resolved. The remaining open items are predominantly code quality (P3) improvements and documentation accuracy.
 
 ---
 
@@ -1130,6 +1128,7 @@ The **most actionable remaining improvements** are:
 
 | Version | Date | Grade | Changes |
 |---------|------|-------|------|
+| v45.6 | 2026-03-04 | A | Batch 6: Last 3 P2s fixed (P2-081 callout blur, P2-083 i18n shortcuts, P2-075 shadow rotation). All P2 items now resolved; 34 P3 remain. |
 | v45.2 | 2026-03-04 | A | Batch 2 fixes: 6 more (SVG URI, blur texture, sort mutation, hit test singleton, API reuse, dead code removal); 11 total fixed from v45 |
 | v45.1 | 2026-03-04 | A | Post-fix update; 5 fixed (clickjacking, manual HTML, stale name, cache, ellipse); 2 FPs (innerHTML, state mutation); grade A-→A |
 | v45 | 2026-03-04 | A- | Fresh audit; 1C, 4H, 8M, 14+L new; god class count corrected 17→20; 3 files crossed threshold; PropertyBuilders +333 lines undercounted |

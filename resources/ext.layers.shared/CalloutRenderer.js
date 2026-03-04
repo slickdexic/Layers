@@ -809,13 +809,33 @@
 					const angleRad = ( layer.rotation * Math.PI ) / 180;
 					const cos = Math.abs( Math.cos( angleRad ) );
 					const sin = Math.abs( Math.sin( angleRad ) );
-					const aabbWidth = width * cos + height * sin;
-					const aabbHeight = width * sin + height * cos;
+					let aabbWidth = width * cos + height * sin;
+					let aabbHeight = width * sin + height * cos;
+					let aabbX = centerX - aabbWidth / 2;
+					let aabbY = centerY - aabbHeight / 2;
+
+					// Include dragged tail tip in AABB (P2-081 fix)
+					if ( tailTipX !== null && tailTipY !== null ) {
+						// tailTipX/Y are local coords - transform to absolute
+						const cosR = Math.cos( angleRad );
+						const sinR = Math.sin( angleRad );
+						const tipAbsX = centerX + tailTipX * cosR - tailTipY * sinR;
+						const tipAbsY = centerY + tailTipX * sinR + tailTipY * cosR;
+						const right = Math.max( aabbX + aabbWidth, tipAbsX );
+						const bottom = Math.max( aabbY + aabbHeight, tipAbsY );
+						aabbX = Math.min( aabbX, tipAbsX );
+						aabbY = Math.min( aabbY, tipAbsY );
+						aabbWidth = right - aabbX;
+						aabbHeight = bottom - aabbY;
+					} else {
+						aabbHeight += tailSize;
+					}
+
 					blurBounds = {
-						x: centerX - aabbWidth / 2,
-						y: centerY - aabbHeight / 2,
+						x: aabbX,
+						y: aabbY,
 						width: aabbWidth,
-						height: aabbHeight + tailSize
+						height: aabbHeight
 					};
 				} else {
 				// Include tail in bounds - handle all 8 tail directions
@@ -834,6 +854,17 @@
 				} else if ( tailDirection === 'right' ) {
 					boundsWidth = width + tailSize;
 				}
+
+				// Include dragged tail tip in bounds (P2-081 fix)
+				if ( tailTipX !== null && tailTipY !== null ) {
+					const right = Math.max( boundsX + boundsWidth, tailTipX );
+					const bottom = Math.max( boundsY + boundsHeight, tailTipY );
+					boundsX = Math.min( boundsX, tailTipX );
+					boundsY = Math.min( boundsY, tailTipY );
+					boundsWidth = right - boundsX;
+					boundsHeight = bottom - boundsY;
+				}
+
 				blurBounds = { x: boundsX, y: boundsY, width: boundsWidth, height: boundsHeight };
 				}
 

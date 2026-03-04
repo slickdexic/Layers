@@ -306,6 +306,10 @@
 	"layers-shortcut-ungroup": "Ungroup",
 	"layers-shortcut-smart-guides": "Toggle Smart Guides",
 	"layers-shortcut-show-help": "Show Keyboard Shortcuts",
+	"layers-shortcut-save": "Save",
+	"layers-shortcut-toggle-snap": "Toggle Canvas Snap",
+	"layers-shortcut-toggle-background": "Toggle Background",
+	"layers-shortcut-cancel": "Cancel Operation",
 
 	"layers-group-success": "Layers grouped",
 	"layers-ungroup-success": "Group dissolved",
