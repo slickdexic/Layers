@@ -834,6 +834,18 @@ describe( 'ValidationManager', () => {
 			expect( result ).not.toMatch( /vbscript:/i );
 		} );
 
+		test( 'should remove data:image/svg+xml URLs from SVG (MED-v45-1 fix)', () => {
+			const input = '<svg><image href="data:image/svg+xml,&lt;svg onload=alert(1)&gt;"/></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).not.toMatch( /data:image\/svg/i );
+		} );
+
+		test( 'should allow safe data:image/png URLs in SVG', () => {
+			const input = '<svg><image href="data:image/png;base64,iVBORw0KGgo="/></svg>';
+			const result = manager.sanitizeSvgString( input );
+			expect( result ).toContain( 'data:image/png' );
+		} );
+
 		test( 'should remove dangerous CSS patterns from style attributes', () => {
 			const input = '<svg><rect style="behavior:url(evil.htc)" width="10"/></svg>';
 			const result = manager.sanitizeSvgString( input );

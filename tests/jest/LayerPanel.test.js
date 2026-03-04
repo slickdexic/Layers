@@ -3031,6 +3031,38 @@ describe('LayerPanel editLayerName', () => {
         // Verify originalName stored in dataset
         expect(nameEl.dataset.originalName).toBe('Original Name');
     });
+
+    test('should update dataset.originalName on subsequent edits (P1-042 fix)', () => {
+        const container = document.getElementById('test-container');
+        const panel = new LayerPanel({ container, editor: mockEditor });
+        mockEditor.updateLayer = jest.fn();
+
+        const nameEl = document.createElement('span');
+        nameEl.textContent = 'Layer 1';
+        nameEl.focus = jest.fn();
+        document.body.appendChild(nameEl);
+
+        // First edit session — adds listeners
+        panel.editLayerName('layer1', nameEl);
+        expect(nameEl.dataset.originalName).toBe('Layer 1');
+        expect(nameEl._hasEditListeners).toBe(true);
+
+        // Simulate rename + blur: user changed text and blurred
+        nameEl.textContent = 'Renamed';
+        nameEl.dispatchEvent(new Event('blur'));
+        // blur handler sets contentEditable to false
+        expect(nameEl.contentEditable).toBe('false');
+
+        // Second edit session — _hasEditListeners is still true,
+        // but dataset.originalName should be updated to the CURRENT text
+        panel.editLayerName('layer1', nameEl);
+        expect(nameEl.dataset.originalName).toBe('Renamed');
+
+        // Pressing Escape should now revert to 'Renamed', NOT 'Layer 1'
+        nameEl.textContent = 'Wrong Name';
+        nameEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        expect(nameEl.textContent).toBe('Renamed');
+    });
 });
 
 describe('LayerPanel simpleConfirm', () => {
@@ -3119,106 +3151,6 @@ describe('LayerPanel simpleConfirm', () => {
         expect(panel.logWarn).toHaveBeenCalled();
 
         window.confirm = originalConfirm;
-    });
-});
-
-describe('LayerPanel renderCodeSnippet', () => {
-    let LayerPanel;
-    let mockEditor;
-    let mockStateManager;
-
-    beforeEach(() => {
-        jest.resetModules();
-        window.Layers = window.Layers || {};
-        window.Layers.UI = window.Layers.UI || {};
-        window.Layers.UI.IconFactory = {
-            createEyeIcon: jest.fn(() => document.createElement('span')),
-            createLockIcon: jest.fn(() => document.createElement('span')),
-            createDeleteIcon: jest.fn(() => document.createElement('span')),
-            createGrabIcon: jest.fn(() => document.createElement('span'))
-        };
-        window.EventTracker = jest.fn(function () {
-            this.listeners = [];
-            this.add = jest.fn((el, ev, h, o) => { el.addEventListener(ev, h, o); this.listeners.push({el, ev, h}); });
-            this.remove = jest.fn();
-            this.removeAllForElement = jest.fn();
-            this.count = jest.fn(() => this.listeners.length);
-            this.destroy = jest.fn(() => { this.listeners = []; });
-        });
-        window.Layers.Utils = { EventTracker: window.EventTracker };
-
-        document.body.innerHTML = '<div id="test-container"></div>';
-
-        const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
-        mockStateManager = new StateManager();
-        mockStateManager.set('layers', []);
-        mockStateManager.set('selectedLayerIds', []);
-
-        mockEditor = {
-            stateManager: mockStateManager,
-            container: document.body,
-            saveState: jest.fn(),
-            filename: 'TestImage.jpg'
-        };
-
-        require('../../resources/ext.layers.editor/LayerPanel.js');
-        LayerPanel = window.Layers.UI.LayerPanel;
-    });
-
-    test('should show no layers message when no visible layers', () => {
-        mockStateManager.set('layers', [{ id: 'layer1', visible: false }]);
-
-        const container = document.getElementById('test-container');
-        const panel = new LayerPanel({ container, editor: mockEditor });
-
-        const html = panel.renderCodeSnippet();
-
-        expect(html).toContain('No layers visible');
-    });
-
-    test('should show layers=all when all layers visible', () => {
-        mockStateManager.set('layers', [
-            { id: 'layer1', visible: true },
-            { id: 'layer2', visible: true }
-        ]);
-
-        const container = document.getElementById('test-container');
-        const panel = new LayerPanel({ container, editor: mockEditor });
-
-        const html = panel.renderCodeSnippet();
-
-        expect(html).toContain('layers=all');
-        expect(html).toContain('TestImage.jpg');
-    });
-
-    test('should show specific layer IDs when some layers hidden', () => {
-        mockStateManager.set('layers', [
-            { id: 'layer1', visible: true },
-            { id: 'layer2', visible: false },
-            { id: 'layer3', visible: true }
-        ]);
-
-        const container = document.getElementById('test-container');
-        const panel = new LayerPanel({ container, editor: mockEditor });
-
-        const html = panel.renderCodeSnippet();
-
-        expect(html).toContain('layer1,layer3');
-    });
-
-    test('should accept layers parameter override', () => {
-        const container = document.getElementById('test-container');
-        const panel = new LayerPanel({ container, editor: mockEditor });
-
-        // Use two layers with one hidden to show specific IDs
-        const customLayers = [
-            { id: 'custom1', visible: true },
-            { id: 'custom2', visible: false }
-        ];
-        const html = panel.renderCodeSnippet(customLayers);
-
-        expect(html).toContain('custom1');
-        expect(html).not.toContain('custom2'); // hidden layer excluded
     });
 });
 

@@ -403,6 +403,9 @@ class ThumbnailRenderer {
 			$textY = (int)( $y + $padding + $fontSize );
 
 			$args = array_merge( $args, [
+				// Reset stroke so it does not bleed onto the text (P2-076)
+				'-stroke', 'none',
+				'-strokewidth', '0',
 				'-fill', $textColor,
 				'-pointsize', (string)$fontSize,
 				'-font', $font,
@@ -502,13 +505,32 @@ class ThumbnailRenderer {
 		$fill = $this->withOpacity( $fill, $opacity );
 		$stroke = $this->withOpacity( $stroke, $opacity );
 
-		return [
+		$args = [];
+		if ( !empty( $layer['shadow'] ) ) {
+			$shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
+			$shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
+			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
+			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
+			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+			$shadowDrawArgs = [
+				'-fill', $shadowColor,
+				'-draw',
+				'ellipse ' .
+					(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
+					(int)$radiusX . ',' . (int)$radiusY . ' 0,360',
+			];
+			$args = array_merge( $args, $this->buildShadowSubImage(
+				$shadowDrawArgs, (int)$shadowBlur
+			) );
+		}
+		$args = array_merge( $args, [
 			'-stroke', $stroke,
 			'-strokewidth', (string)$strokeWidth,
 			'-fill', $fill,
 			'-draw',
 			'ellipse ' . (int)$x . ',' . (int)$y . ' ' . (int)$radiusX . ',' . (int)$radiusY . ' 0,360'
-		];
+		] );
+		return $args;
 	}
 
 	private function buildPolygonArguments( array $layer, float $scaleX, float $scaleY ): array {

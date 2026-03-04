@@ -58,6 +58,9 @@ class ViewerManager {
 
 		// Track created wrappers for cleanup
 		this._createdWrappers = new WeakMap();
+
+		/** @type {Object|null} Cached mw.Api instance for reuse */
+		this._api = null;
 	}
 
 	/**
@@ -82,6 +85,22 @@ class ViewerManager {
 		if ( this.debug && typeof mw !== 'undefined' && mw.log ) {
 			mw.log.warn( '[Layers:ViewerManager]', ...args );
 		}
+	}
+
+	/**
+	 * Get or create a cached mw.Api instance.
+	 *
+	 * @private
+	 * @return {Object|null} mw.Api instance or null if unavailable
+	 */
+	_getApi() {
+		if ( typeof mw === 'undefined' || !mw.Api ) {
+			return null;
+		}
+		if ( !this._api ) {
+			this._api = new mw.Api();
+		}
+		return this._api;
 	}
 
 	/**
@@ -438,7 +457,8 @@ class ViewerManager {
 		}
 
 		// Fetch fresh data for each viewer via API
-		if ( typeof mw === 'undefined' || !mw.Api ) {
+		const api = this._getApi();
+		if ( !api ) {
 			this.debugWarn( 'refreshAllViewers: mw.Api not available' );
 			return Promise.resolve( {
 				refreshed: 0,
@@ -447,8 +467,6 @@ class ViewerManager {
 				errors: [ { filename: null, error: 'mw.Api not available' } ]
 			} );
 		}
-
-		const api = new mw.Api();
 		let refreshCount = 0;
 		const errors = [];
 
@@ -719,12 +737,11 @@ class ViewerManager {
 			return;
 		}
 
-		if ( typeof mw === 'undefined' || !mw.Api ) {
+		const api = this._getApi();
+		if ( !api ) {
 			this.debugWarn( 'mw.Api not available for large image fetch' );
 			return;
 		}
-
-		const api = new mw.Api();
 
 		images.forEach( ( img ) => {
 			// Skip if already initialized or pending
@@ -1248,7 +1265,11 @@ class ViewerManager {
 			filename = filename.replace( /_/g, ' ' );
 
 			// Fetch layer data via API
-			const api = new mw.Api();
+			const api = this._getApi();
+			if ( !api ) {
+				this.debugWarn( 'mw.Api not available for layer data fetch' );
+				return Promise.resolve();
+			}
 			return api.get( {
 				action: 'layersinfo',
 				format: 'json',

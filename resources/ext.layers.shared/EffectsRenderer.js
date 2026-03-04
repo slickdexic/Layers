@@ -287,8 +287,11 @@
 				this._blurFillCanvas = document.createElement( 'canvas' );
 				this._blurFillCtx = this._blurFillCanvas.getContext( '2d' );
 			}
-			this._blurFillCanvas.width = reqW;
-			this._blurFillCanvas.height = reqH;
+			// Only resize if dimensions changed (avoids GPU texture reallocation)
+			if ( this._blurFillCanvas.width !== reqW || this._blurFillCanvas.height !== reqH ) {
+				this._blurFillCanvas.width = reqW;
+				this._blurFillCanvas.height = reqH;
+			}
 			const tempCanvas = this._blurFillCanvas;
 			const tempCtx = this._blurFillCtx;
 

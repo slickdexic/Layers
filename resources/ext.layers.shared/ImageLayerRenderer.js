@@ -213,6 +213,8 @@
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log.warn( '[ImageLayerRenderer] Failed to load image layer:', cacheKey );
 				}
+				// Remove failed image from cache so next render retries loading
+				this._imageCache.delete( cacheKey );
 			};
 
 			// Set src after handlers to ensure events fire

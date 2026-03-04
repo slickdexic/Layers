@@ -367,7 +367,7 @@
 		 * @return {Object} Snap points { horizontal: [], vertical: [] }
 		 */
 		buildSnapPoints( layers, excludeIds ) {
-			const cacheKey = excludeIds ? excludeIds.sort().join( ',' ) : '';
+			const cacheKey = excludeIds ? [ ...excludeIds ].sort().join( ',' ) : '';
 
 			// Use StateManager version counter for cache validity instead of
 			// reference equality (getLayers() returns .slice() copies)

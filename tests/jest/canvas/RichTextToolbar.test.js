@@ -527,10 +527,10 @@ describe( 'RichTextToolbar', () => {
 			expect( sizeInput.value ).toBe( '8' );
 
 			// Test above maximum
-			sizeInput.value = '300';
+			sizeInput.value = '1200';
 			sizeInput.dispatchEvent( new Event( 'change' ) );
-			expect( mockOnFormat ).toHaveBeenCalledWith( 'fontSize', 200 );
-			expect( sizeInput.value ).toBe( '200' );
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'fontSize', 1000 );
+			expect( sizeInput.value ).toBe( '1000' );
 		} );
 	} );
 

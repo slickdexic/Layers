@@ -2,6 +2,20 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [1.5.59] - 2026-03-04
+
+### Fixed
+- **RichText Font Size Cap** (P2-085) — `RichTextToolbar.js` inline canvas toolbar capped per-run font sizes at 200px. Raised to 1,000px to match the layer-level limit. `ServerSideLayerValidator.php` richText per-run fontSize max also raised from 500 to 1,000 for consistency.
+- **Arrow Key Nudge for Endpoint Layers** (P2-084) — `EventManager.nudgeSelectedLayers()` previously moved only `x/y`. Dimension, line, and arrow layers use `x1/y1/x2/y2`; nudge now dispatches the correct coordinate model for each layer type.
+- **ThumbnailRenderer TextBox Stroke Bleed** (P2-076) — After drawing the bounding rectangle, ImageMagick retained the stroke color. Added `-stroke none -strokewidth 0` reset before the text `-annotate` command in `buildTextBoxArguments()`.
+- **ThumbnailRenderer Missing Ellipse Shadow** (P2-077) — `buildEllipseArguments()` had no shadow support. Added the standard shadow block matching `buildCircleArguments()`. Ellipse shadows now render in server-side thumbnails.
+- **AlignmentController Missing Dimension/Marker Types** (P2-078) — `getLayerBounds()` and `moveLayer()` lacked a `dimension` case (uses `x1/y1/x2/y2` not `x/y`) and a `marker` case (centered circle at `x/y/size`). Alignment operations now produce correct results for all layer types.
+
+### Technical Details
+- All 11,260 tests pass (163 test suites) ✅
+- Coverage: 95.19% statements, 84.96% branches
+- God classes: 17 (13 hand-written JS, 2 generated, 2 PHP)
+
 ## [1.5.58] - 2026-02-17
 
 ### Fixed

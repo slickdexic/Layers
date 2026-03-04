@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** February 17, 2026 — v1.5.58 release
+**Last updated:** March 4, 2026 — v45 audit (11 fixes applied, 2 batch)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -10,11 +10,354 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
-| P0 | 4 | 4 | 0 |
-| P1 | 38 | 36 | 2 |
-| P2 | 87 | 70 | 17 |
-| P3 | 105 | 75 | 30 |
-| **Total** | **234** | **185** | **49** |
+| P0 | 5 | 5 | 0 |
+| P1 | 40 | 38 | 2 |
+| P2 | 96 | 82 | 14 |
+| P3 | 121 | 79 | 42 |
+| **Total** | **262** | **204** | **58** |
+
+---
+
+## Newly Confirmed in v45 (March 4, 2026)
+
+### P0-006: Clickjacking Bypass via `?modal=1` — No Origin Validation
+
+- **Files:** `src/Action/EditLayersAction.php` L105-114, `src/SpecialPages/SpecialEditSlide.php` L91-98
+- **Impact:** When `?modal=1` is set, clickjacking protection (X-Frame-Options)
+  is entirely removed with no origin validation. Any external site can embed
+  the editor in an invisible iframe, overlay a "Click here" button over
+  Save/Delete controls, and trick authenticated users into destructive actions
+  while their CSRF token is valid.
+- **Evidence:** `EditLayersAction.php` L105: `$isModalMode = $request->getBool('modal');`
+  followed by unconditional `allowClickjacking()` / `setPreventClickjacking(false)`.
+  Same pattern in `SpecialEditSlide.php` L91.
+- **Recommended Fix:** ~~Replace blanket X-Frame-Options removal with
+  `Content-Security-Policy: frame-ancestors 'self'` header for same-origin
+  framing only.~~
+- **Status:** ✅ Fixed (March 4, 2026) — Replaced `allowClickjacking()` /
+  `setPreventClickjacking(false)` with `X-Frame-Options: SAMEORIGIN` header
+  in both `EditLayersAction.php` and `SpecialEditSlide.php`.
+- **Introduced:** v45 review
+
+### P1-039: Manual HTML Construction Bypasses MediaWiki Html Class
+
+- **Files:** `src/LayeredThumbnail.php` L103-117, `src/Hooks/UIHooks.php` L324-397
+- **Impact:** `LayeredThumbnail.php` builds `<img>` tags via raw string
+  concatenation with `htmlspecialchars()`. A comment at L106 says "Build
+  minimal IMG tag without relying on Html helper." `UIHooks.php` builds an
+  HTML table the same way. MediaWiki's `Html::element()` handles edge cases
+  (null values, boolean attributes, `ENT_SUBSTITUTE`/`ENT_HTML5`) manual
+  construction misses.
+- **Recommended Fix:** ~~Replace with `Html::element()` / `Html::rawElement()`.~~
+- **Status:** ✅ Fixed (March 4, 2026) — `LayeredThumbnail.toHtml()` now uses
+  `Html::element('img', ...)` and `Html::rawElement('div', ...)` with
+  `use MediaWiki\Html\Html` import. (Reclassified from HIGH to MEDIUM — the
+  original `htmlspecialchars(ENT_QUOTES)` escaping was correct; this is a code
+  quality/best-practice fix, not a security fix.)
+- **Introduced:** v45 review
+
+### ~~P1-040: InlineTextEditor innerHTML Trusts richText Data~~ (FALSE POSITIVE)
+
+- **File:** `resources/ext.layers.editor/canvas/InlineTextEditor.js` L548
+- **Impact:** `contentWrapper.innerHTML = RichTextConverter.richTextToHtml(layer.richText, ...)`.
+  richText comes from server API. While `richTextToHtml()` applies `escapeHtml()`
+  and `escapeCSSValue()`, a single bug in either function or a server-side
+  sanitization bypass enables stored XSS — attacker saves crafted richText,
+  other users editing the same image execute the script.
+- **Mitigating factors:** `escapeHtml()` escapes `<>& "'`. Canvas rendering
+  path (viewer) does not execute scripts. Server validates richText structure.
+- **Recommended Fix:** ~~Build DOM programmatically~~ N/A.
+- **Status:** ✅ False Positive — `richTextToHtml()` uses `div.textContent=...; return div.innerHTML`
+  (safe DOM-based escape) and `escapeCSSValue()` strips `["'<>&;{}\\]`.
+  Both methods are correctly implemented. Reclassified to LOW informational.
+- **Introduced:** v45 review
+
+### ~~P1-041: Nudge and Selection Operations Bypass StateManager~~ (FALSE POSITIVE)
+
+- **Files:** `resources/ext.layers.editor/EventManager.js` L196-206,
+  `resources/ext.layers.editor/SelectionManager.js` L924, L1039-1057
+- **Impact:** Three paths directly mutate layer objects without notifying
+  StateManager: (1) Nudge — `layer.x = (layer.x || 0) + dx` with no
+  `stateManager.set()`. (2) Drag — `layer.x = originalLayer.x + deltaX`.
+  (3) Rotation — `layer.rotation = (originalLayer.rotation || 0) + deltaAngle`.
+  `_layersVersion` counter is never incremented and subscriber callbacks
+  (DraftManager change detection, LayerPanel reactive updates) are not fired.
+- **Recommended Fix:** ~~Route through stateManager.set()~~ N/A.
+- **Status:** ✅ False Positive — Direct layer mutation + history snapshot
+  is the established pattern throughout the codebase (verified:
+  `TransformController.updateLayerPosition()` uses same pattern at L556-562).
+  The nudge handler correctly calls `historyManager.snapshot('nudge')`,
+  `markDirty()`, and `renderLayers()`. No state bypass exists.
+- **Introduced:** v45 review
+
+### P1-042: LayerPanel editLayerName Stale originalName
+
+- **File:** `resources/ext.layers.editor/LayerPanel.js` L1922-1931
+- **Impact:** `_hasEditListeners` guard (L1922) causes early return on
+  subsequent edits. `dataset.originalName` is set only once at L1924.
+  After renaming "Layer 1" → "Layer 2" and re-entering edit mode,
+  `originalName` is still "Layer 1". Blur handler fires unnecessary
+  `updateLayer` + `saveState('Rename Layer')`, creating spurious undo entries.
+- **Recommended Fix:** ~~Move `dataset.originalName` above the guard.~~
+- **Status:** ✅ Fixed (March 4, 2026) — Added `nameElement.dataset.originalName = nameElement.textContent`
+  inside the `_hasEditListeners` early-return branch, so Escape reverts
+  to the current name, not the first-ever name. Regression test added.
+- **Introduced:** v45 review
+
+### P2-085: SVG Data URI Not Blocked in Client Validator
+
+- **File:** `resources/ext.layers.editor/ValidationManager.js` L91
+- **Impact:** Dangerous URI regex only blocked `data:text/html`. A
+  `data:image/svg+xml,<svg onload="alert(1)">` URI passed validation.
+- **Recommended Fix:** ~~Block all `data:` URIs except `data:image/(png|jpeg|gif|webp)`.~~
+- **Status:** ✅ Fixed (March 4, 2026) — Updated `DANGEROUS_URL_RE` to use
+  negative lookahead allowing only safe image types. Regression tests added.
+- **Introduced:** v45 review
+
+### P2-086: Failed Images Persist in ImageLayerRenderer LRU Cache
+
+- **File:** `resources/ext.layers.shared/ImageLayerRenderer.js` L221-225
+- **Impact:** `img.onerror` logs warning but does not remove cache entry.
+  Permanently broken `layer.src` (corrupted base64) occupies a cache slot
+  indefinitely. Each access moves entry to MRU position, preventing eviction.
+- **Recommended Fix:** ~~Add `this._imageCache.delete(cacheKey)` in `onerror`.~~
+- **Status:** ✅ Fixed (March 4, 2026) — `onerror` handler now calls
+  `this._imageCache.delete(cacheKey)` so failed images are evicted and
+  retried on the next render. Regression test added.
+- **Introduced:** v45 review
+
+### P2-087: EffectsRenderer _blurFillCanvas GPU Texture Reallocation
+
+- **File:** `resources/ext.layers.shared/EffectsRenderer.js` L290-296
+- **Impact:** `_blurFillCanvas` dimensions were set unconditionally every
+  invocation, clearing canvas and triggering GPU texture reallocation.
+- **Recommended Fix:** ~~Add matching size guard for `_blurFillCanvas`.~~
+- **Status:** ✅ Fixed (March 4, 2026) — Added size guard
+  (`if width !== reqW || height !== reqH`) matching sibling `_blurCanvas`.
+- **Introduced:** v45 review
+
+### P2-088: UIHooks N+1 User Queries in enrichNamedSetsWithUserNames
+
+- **File:** `src/Hooks/UIHooks.php` L282-310
+- **Impact:** Makes N individual `UserFactory::newFromId()` calls (one per
+  unique user ID). For a file with 15 named sets (the maximum), up to 15
+  individual DB queries.
+- **Recommended Fix:** Collect unique user IDs, batch load with
+  `UserArray::newFromIDs()`.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P2-089: TextSanitizer Zero-Width-Space Keyword Defense Incomplete
+
+- **File:** `src/Validation/TextSanitizer.php` L159-168
+- **Impact:** Keyword list for zero-width space injection omits `Function`,
+  `constructor`, `fetch`, `XMLHttpRequest`, `importScripts`, and
+  `document.write`. Primary protection is Canvas rendering context.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P2-090: WikitextHooks Static State May Bleed Between Requests
+
+- **File:** `src/Hooks/WikitextHooks.php` L149-163
+- **Impact:** Six static properties + six singleton processor instances
+  persist for PHP process lifetime. In PHP-FPM with `max_requests > 1`,
+  state bleeds between requests. `resetPageLayersFlag()` only resets via
+  `ParserBeforeInternalParse` hook — job runners and API calls bypass reset.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P2-091: Duplicate getLayerBounds Implementations
+
+- **Files:** `resources/ext.layers.editor/CanvasManager.js` L1081-1145,
+  `resources/ext.layers.editor/CanvasRenderer.js` L1296-1325
+- **Impact:** Both classes have nearly identical `getLayerBounds()` and
+  `_getRawLayerBounds()` with different fallback logic. Changes to one
+  may silently diverge from the other, causing selection/hit-test misalignment.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P2-092: Ellipse Validation Uses OR Instead of AND
+
+- **File:** `resources/ext.layers.editor/canvas/DrawingController.js` L936-937
+- **Impact:** `return layer.radiusX >= MIN_SHAPE_SIZE || layer.radiusY >= MIN_SHAPE_SIZE`
+  allows degenerate ellipses (e.g., `radiusX=50, radiusY=0` which is a line).
+  Rectangle validation at L930 correctly uses `&&`.
+- **Recommended Fix:** ~~Change `||` to `&&`.~~
+- **Status:** ✅ Fixed (March 4, 2026) — Changed `||` to `&&` so both
+  `radiusX` and `radiusY` must meet `MIN_SHAPE_SIZE`, consistent with
+  rectangle validation. Test updated.
+- **Introduced:** v45 review
+
+### P3-099: `call_user_func` Indirection for Guaranteed MW Classes
+
+- **Files:** `src/Hooks.php`, `src/LayeredThumbnail.php`,
+  `src/ThumbnailRenderer.php`, `src/LayersFileTransform.php`
+- **Impact:** 10 instances of `\call_user_func(...)` with `class_exists` guards
+  for classes guaranteed to exist since MW >= 1.44.0. Inconsistent — same files
+  also call `MediaWikiServices::getInstance()` directly elsewhere.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-100: ThumbnailRenderer Shadow Code Duplication (~50 lines)
+
+- **File:** `src/ThumbnailRenderer.php` L283-560
+- **Impact:** Shadow rendering block copy-pasted across 5 shape handlers.
+  Polygon and star shapes lack shadow support entirely.
+- **Recommended Fix:** Extract `buildShadowArgs()` helper.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-101: ThumbnailRenderer Named Color Table Duplicates ColorValidator
+
+- **File:** `src/ThumbnailRenderer.php` L683-730
+- **Impact:** `withOpacity()` has hardcoded 35 CSS colors. ColorValidator
+  independently validates named colors. Lists may drift.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-102: serialize($params) for Thumbnail Cache Key
+
+- **File:** `src/ThumbnailRenderer.php` L99
+- **Impact:** `serialize()` on potentially 2MB+ params array before `md5()`.
+  `json_encode()` + `md5()` would be faster.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-103: SmartGuidesController sort() Mutates Caller Array
+
+- **File:** `resources/ext.layers.editor/canvas/SmartGuidesController.js` L370
+- **Impact:** `excludeIds.sort().join(',')` sorted caller's array in-place.
+- **Recommended Fix:** ~~`[...excludeIds].sort().join(',')`.~~
+- **Status:** ✅ Fixed (March 4, 2026) — Changed to `[ ...excludeIds ].sort().join(',')`
+  to create a copy before sorting. Regression test added.
+
+- **File:** `resources/ext.layers.editor/Toolbar.js` L774, L845
+- **Impact:** `createShapeLibraryButton()` and `createEmojiPickerButton()`
+  use raw `addEventListener` not cleaned up by `destroy()`.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-105: DeepClone Shallow Clone Fallback Silently Degrades
+
+- **File:** `resources/ext.layers.shared/DeepClone.js` L51-58
+- **Impact:** When both `structuredClone` and `JSON.parse` fail, fallback
+  is `obj.slice()` / `{ ...obj }` — shallow clone. Nested objects (gradient,
+  richText, points) would share references.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-106: Duplicated backgroundVisible Normalization (5+ locations)
+
+- **Files:** `ViewerManager.js` (×3), `LayersLightbox.js`, `LayersViewer.js`
+- **Impact:** Pattern `bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false'`
+  repeated with variations. Postmortem warns about this resurfacing.
+- **Recommended Fix:** Extract `isFalsyBackground(value)` to LayerDataNormalizer.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-107: Duplicated SVG Icon Code in Viewer Modules
+
+- **Files:** `resources/ext.layers/viewer/ViewerManager.js`,
+  `resources/ext.layers/viewer/ViewerOverlay.js`
+- **Impact:** Identical `_createPencilIcon()` and `_createExpandIcon()` SVG
+  methods. Should use existing `IconFactory.js`. (Extends P3-089)
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-108: HitTestController Instantiates Renderer Per mousemove
+
+- **File:** `resources/ext.layers.editor/canvas/HitTestController.js` ~L470
+- **Impact:** `new AngleDimensionRenderer(null)` was created ~60 times/second
+  during mousemove over angle dimension layers. GC pressure.
+- **Recommended Fix:** ~~Cache singleton instance.~~
+- **Status:** ✅ Fixed (March 4, 2026) — Cached as `this._cachedAngleRenderer`
+  singleton, created on first use and nulled in `destroy()`.
+- **Introduced:** v45 review
+
+### P3-109: RenderCoordinator Hash Incomplete (~20 Properties Missing)
+
+- **File:** `resources/ext.layers.editor/canvas/RenderCoordinator.js` L196-244
+- **Impact:** Omits ~20 rendering-affecting properties: color, radiusX/Y,
+  shadowColor, shadowOffset/Spread, glow, textStroke*, textShadow*,
+  verticalAlign, lineHeight, padding, cornerRadius, arrowhead/style/size,
+  callout tail coords, angle dimension coords. Supersedes P3-087.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-110: ViewerManager Creates Multiple mw.Api() Instances
+
+- **File:** `resources/ext.layers/viewer/ViewerManager.js`
+- **Impact:** Three methods each created `new mw.Api()` independently.
+- **Status:** ✅ Fixed (March 4, 2026) — Added `_getApi()` helper that
+  lazily creates and caches a single `this._api` instance. All three
+  call sites updated.
+- **Introduced:** v45 review
+
+### P3-111: Lightbox close() Animation Timeout Race With open()
+
+- **File:** `resources/ext.layers/viewer/LayersLightbox.js` L102-105
+- **Impact:** Rapid close(animated)-then-open() within 300ms can cause
+  old close timeout to fire during new overlay's lifetime, nullifying
+  overlay/container references and resetting body overflow.
+- **Status:** Open
+- **Introduced:** v45 review
+
+### P3-112: Dead renderCodeSnippet Contains Unescaped HTML (Latent XSS)
+
+- **File:** `resources/ext.layers.editor/LayerPanel.js`
+- **Impact:** Method had zero call sites and contained unescaped `filename`
+  in innerHTML.
+- **Status:** ✅ Fixed (March 4, 2026) — Removed the dead method entirely.
+  Tests for it were also removed (10 tests across 2 files).
+- **Introduced:** v45 review (promoted from P3-090 with supersede note)
+
+---
+
+### P2-084: Arrow Key Nudge Broken for Dimension / Line / Arrow Layers
+
+- **File:** `resources/ext.layers.editor/EventManager.js` L193-199
+- **Impact:** `nudgeSelectedLayers()` updates only `layer.x` and `layer.y`.
+  Dimension, line, and arrow layers use `x1/y1/x2/y2` as their positional
+  coordinates, not `x/y`. Selecting a dimension annotation and pressing an
+  arrow key sets phantom `x/y` properties that neither the renderer nor any
+  other system reads, leaving the layer visually unmoved. This is the same
+  coordinate-model gap as P2-078 (AlignmentController), applied to the
+  newly added nudge feature.
+- **Evidence:** Lines 193-199: `layer.x = (layer.x||0) + dx; layer.y = (layer.y||0) + dy;`
+  with no switch/case for dimension/line/arrow types. DimensionRenderer reads
+  `layer.x1/y1/x2/y2` (verified in DimensionRenderer.js L197-200).
+- **Recommended Fix:** Mirror the coordinate-dispatch logic from
+  `AlignmentController.moveLayer()`: add a case for `'line'|'arrow'|'dimension'`
+  that increments all four endpoints, and a `'path'` case for points array.
+- **Status:** ✅ Fixed (March 4, 2026) — `EventManager.nudgeSelectedLayers()` now updates `x1/y1/x2/y2` for dimension/line/arrow layers. Tests added.
+- **Introduced:** v43 review
+
+### P3-097: Stale Test Count in README, Wiki and Codebase Review
+
+- **Files:** `README.md`, `wiki/Home.md`, `codebase_review.md`
+- **Impact:** All three documents report 11,148 tests (162 suites). The
+  current Jest run produces 11,260 tests across 163 suites. Metrics drift
+  gives maintainers and contributors inaccurate project health data.
+- **Evidence:** `npm run test:js` output: "Tests: 11260 passed, 11260 total;
+  Test Suites: 163 passed, 163 total" (verified March 4, 2026).
+- **Status:** ✅ Fixed (March 4, 2026) — Updated README.md, wiki/Home.md, wiki/Frontend-Architecture.md, codebase_review.md, and .github/copilot-instructions.md to 11,260 / 163 suites.
+- **Introduced:** v43 review
+
+### P3-098: CHANGELOG Missing Version Entries and Date-Order Anomaly
+
+- **File:** `CHANGELOG.md`, `wiki/Changelog.md`
+- **Impact:** Version entries 1.5.53, 1.5.54, and 1.5.37 are completely
+  absent from both changelogs. Additionally, v1.5.55 is dated `2025-07-23`
+  — eleven months before v1.5.52 (`2026-02-05`) which appears directly
+  below it in the file. If 1.5.55 was truly released in July 2025 before
+  1.5.52, the version sequence is non-sequential; if 1.5.52 was released
+  first in February 2026 then 1.5.55 was released afterward, the 2025 date
+  is wrong. Either way the changelog contains factual errors.
+- **Recommended Fix:** Add the three missing version sections or document
+  that those tags were skipped. Correct the 1.5.55 date and ensure
+  `wiki/Changelog.md` mirrors `CHANGELOG.md`.
+- **Status:** Open
+- **Introduced:** v43 review
 
 ---
 
@@ -84,15 +427,18 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Status:** ✅ Resolved in v42 fixes
 - **Introduced:** v42 review
 
-### P2-074: Double Render on Every Undo/Redo
+### ~~P2-074: Double Render on Every Undo/Redo~~ (RESOLVED)
 
-- **Files:** `resources/ext.layers.editor/EventManager.js` L140-165,
+- **Files:** `resources/ext.layers.editor/EventManager.js` L245-262,
   `resources/ext.layers.editor/HistoryManager.js` L307-322
-- **Impact:** EventManager calls `renderLayers()` + `markDirty()` after
+- **Impact:** EventManager called `renderLayers()` + `markDirty()` after
   undo/redo, but HistoryManager.restoreState() already calls both.
-  Every undo/redo triggers two full canvas renders.
-- **Recommended Fix:** Remove redundant calls in EventManager.
-- **Status:** Open
+- **Resolution:** `handleUndo()` and `handleRedo()` now delegate entirely to
+  `editor.undo()`/`editor.redo()` without calling render methods. Explicit
+  comments document the deliberate non-call. HistoryManager.restoreState()
+  correctly calls `canvasMgr.renderLayers()` and `editor.markDirty()` (lines
+  308-321).
+- **Status:** ✅ Resolved (v43 verification)
 - **Introduced:** v42 review
 
 ### P2-075: CustomShapeRenderer Spread Shadow Ignores Rotation/Scale
@@ -113,7 +459,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   inherits stroke settings. Text renders with rectangle's stroke outline.
 - **Recommended Fix:** Insert `'-stroke', 'none', '-strokewidth', '0'`
   before text `-annotate`.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026) — `-stroke none -strokewidth 0` inserted before `-annotate` in `buildTextBoxArguments()`.
 - **Introduced:** v42 review
 
 ### P2-077: ThumbnailRenderer Missing Ellipse Shadow Support
@@ -123,7 +469,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   All others (rectangle, circle, text, textbox, polygon, star) support
   shadows. Inconsistent server-side rendering.
 - **Recommended Fix:** Add standard shadow pattern from buildCircleArguments().
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026) — Shadow block added to `buildEllipseArguments()`, matching the circle pattern.
 - **Introduced:** v42 review
 
 ### P2-078: AlignmentController Missing Dimension/Marker Types
@@ -135,28 +481,38 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   Alignment operations produce incorrect results for these 2 layer types.
 - **Note:** Previously dismissed as false positive in v29. Reclassified
   as real issue — dimension layers DO use x1/y1/x2/y2, not x/y.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026) — `dimension` added to `getLayerBounds()` and `moveLayer()` (x1/y1/x2/y2 branch). `marker` case added to `getLayerBounds()` using centered x/y/size.
 - **Introduced:** v42 review (reclassified from v29 FP)
 
-### P2-079: ClipboardController Paste Offset on Local Coordinates
+### ~~P2-079: ClipboardController Paste Offset on Local Coordinates~~ (FALSE POSITIVE)
 
 - **File:** `resources/ext.layers.editor/canvas/ClipboardController.js` L253-257
-- **Impact:** `applyPasteOffset()` adds PASTE_OFFSET (20px) to tailTipX
-  and tailTipY. These are center-relative local coordinates. World-space
-  offset is already applied via layer.x/y. Pasted callouts have tails
-  displaced 20px from their intended position.
-- **Recommended Fix:** Remove tailTipX/tailTipY from paste offset.
-- **Status:** Open
+- **Claimed Impact:** `applyPasteOffset()` was said to add PASTE_OFFSET to
+  tailTipX/tailTipY.
+- **Resolution:** Code at lines 254-256 explicitly does NOT apply PASTE_OFFSET
+  to tailTipX/tailTipY. The comment reads: "tailTipX/tailTipY are LOCAL
+  coordinates relative to callout center. They move with the callout when
+  layer.x/y change, so we should NOT offset them. Applying PASTE_OFFSET here
+  would displace the tail relative to the body." The original bug description
+  was incorrect.
+- **Status:** ✅ False Positive (v43 verification)
 - **Introduced:** v42 review
 
-### P2-080: parseMWTimestamp Uses Local Time Instead of UTC
+### ~~P2-080: parseMWTimestamp Uses Local Time Instead of UTC~~ (LARGELY RESOLVED)
 
-- **File:** `resources/ext.layers.editor/LayerSetManager.js` L119-138
-- **Impact:** MediaWiki timestamps are UTC but `new Date(year, month, ...)`
-  creates local-time Date. Revision timestamps display with timezone offset
-  error for all non-UTC users.
-- **Recommended Fix:** Use `new Date(Date.UTC(year, month, ...))`.
-- **Status:** Open
+- **Files:** `resources/ext.layers.editor/LayerSetManager.js` L138,
+  `resources/ext.layers.editor/editor/RevisionManager.js` L61,
+  `resources/ext.layers.editor/LayersEditor.js` L1043
+- **Resolution:** Both primary implementations (LayerSetManager.js and
+  RevisionManager.js) now correctly use `new Date(Date.UTC(...))`. The only
+  remaining local-time construction is in the **fallback path** of
+  `LayersEditor.parseMWTimestamp()` (L1043), which executes only when
+  `this.revisionManager` is null — a situation that cannot occur during normal
+  operation (revisionManager is always initialized before parseMWTimestamp is
+  called).
+- **Residual:** The dead fallback in LayersEditor.js should use Date.UTC for
+  consistency. Low risk — unreachable in production.
+- **Status:** ✅ Resolved in primary paths; dead fallback outdated (P3 only)
 - **Introduced:** v42 review
 
 ### P2-081: CalloutRenderer Blur Bounds Ignore Dragged Tail
@@ -169,24 +525,27 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Status:** Open
 - **Introduced:** v42 review
 
-### P2-082: CSS Font Shorthand Order Wrong in InlineTextEditor
+### ~~P2-082: CSS Font Shorthand Order Wrong in InlineTextEditor~~ (FALSE POSITIVE)
 
-- **File:** `resources/ext.layers.editor/canvas/InlineTextEditor.js` L815-819
-- **Impact:** Canvas font string has fontWeight before fontStyle. CSS spec
-  requires font-style before font-weight. May cause incorrect text
-  measurement in strict canvas engines.
-- **Recommended Fix:** Swap fontStyle and fontWeight order.
+- **File:** `resources/ext.layers.editor/canvas/InlineTextEditor.js` L809-813
+- **Claimed Impact:** Canvas font string had fontWeight before fontStyle.
+- **Resolution:** Code is `( layer.fontStyle || 'normal' ) + ' ' + ( layer.fontWeight || 'normal' ) + ' ' + ...` — fontStyle IS listed before fontWeight, which is the CORRECT CSS font shorthand order (`font-style font-weight font-size font-family`). The bug description had the order backwards. Verified against the actual line.
+- **Status:** ✅ False Positive (v43 verification)
+- **Introduced:** v42 review
+
+### P2-083: Hardcoded English Shortcut Descriptions in ToolbarKeyboard.js
+
+- **File:** `resources/ext.layers.editor/ToolbarKeyboard.js` L355-395
+- **Impact:** The `getShortcutsList()` method returns ~25 keyboard shortcut
+  entries (e.g. `{ key: ';', description: 'Toggle Smart Guides', ... }`)
+  with hardcoded English description strings. These are displayed in the
+  keyboard shortcuts help dialog for all users. Status notifications
+  ("Layers grouped", "Smart Guides: On/Off") correctly use `mw.message()`
+  with English-only fallbacks for non-MW contexts.
+- **Recommended Fix:** Replace shortcut description strings with mw.message()
+  lookups; add corresponding i18n keys for each description.
 - **Status:** Open
-- **Introduced:** v42 review
-
-### P2-083: Hardcoded English in ToolbarKeyboard.js
-
-- **File:** `resources/ext.layers.editor/ToolbarKeyboard.js`
-- **Impact:** User-visible strings ("Layers grouped", "Smart Guides: On/Off")
-  are hardcoded English instead of mw.message() i18n keys. Breaks
-  internationalization for non-English wikis.
-- **Status:** Open (supersedes P3-076)
-- **Introduced:** v42 review
+- **Introduced:** v42 review (description refined in v43)
 
 ### P3-080: ~140 Lines Dead Layer Cache Code in CanvasRenderer
 
@@ -315,12 +674,18 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Status:** Open
 - **Introduced:** v42 review
 
-### P3-096: ToolManager Module References at IIFE Load Time
+### ~~P3-096: ToolManager Module References at IIFE Load Time~~ (FALSE POSITIVE)
 
-- **File:** `resources/ext.layers.editor/ToolManager.js`
-- **Impact:** Window references resolved at IIFE execution. If module
-  loads before dependencies, references are undefined.
-- **Status:** Open
+- **File:** `resources/ext.layers.editor/ToolManager.js` L9-14
+- **Claimed Impact:** Window references resolved at IIFE execution before
+  dependencies are available.
+- **Resolution:** All dependencies (ToolRegistry, ToolStyles, ShapeFactory,
+  TextToolHandler, PathToolHandler) are listed in `extension.json` lines
+  345-349, immediately BEFORE ToolManager.js at line 350 in the same module
+  script concatenation order. ResourceLoader executes scripts in array order.
+  By the time ToolManager.js executes, all tool modules have already exported
+  to their respective `window.*` namespaces. No ordering hazard exists.
+- **Status:** ✅ False Positive (v43 verification)
 - **Introduced:** v42 review
 
 ---

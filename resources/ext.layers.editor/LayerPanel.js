@@ -1919,6 +1919,9 @@
 
 			// Prevent adding duplicate listeners
 			if ( nameElement._hasEditListeners ) {
+				// Update original name for existing listeners so Escape
+				// reverts to the CURRENT name, not the first-ever name
+				nameElement.dataset.originalName = nameElement.textContent;
 				return;
 			}
 			nameElement._hasEditListeners = true;
@@ -2150,39 +2153,6 @@
 				this.logWarn( 'Confirmation dialog unavailable; auto-confirming action', message );
 			}
 			return true;
-		}
-
-		/**
-		 * Pure renderer for Wikitext code so LayersEditor can embed it in the footer
-		 *
-		 * @param {Array} [layers] Layer array (defaults to current layers)
-		 * @return {string} HTML string for the code snippet
-		 */
-		renderCodeSnippet( layers ) {
-			const t = this.msg.bind( this );
-			const list = Array.isArray( layers ) ? layers : this.getLayers();
-			const visibleLayers = list.filter( ( layer ) => layer.visible !== false );
-			const filename = this.editor && this.editor.filename ? this.editor.filename : 'YourImage.jpg';
-			let codeHtml = '';
-			if ( visibleLayers.length === 0 ) {
-				codeHtml = '<p><strong>' + t( 'layers-code-none', 'No layers visible.' ) + '</strong> ' +
-					t( 'layers-code-enable', 'Enable layers to see the code.' ) + '</p>';
-			} else if ( visibleLayers.length === list.length ) {
-				codeHtml = '<p><strong>' + t( 'layers-code-all-visible', 'All layers visible:' ) + '</strong></p>' +
-					'<code class="layers-code">[[File:' + filename + '|500px|layers=all|' +
-					t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
-					'<button class="copy-btn" data-code="layers=all">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
-			} else {
-				const layerIds = visibleLayers.map( ( layer ) =>
-					layer.id || ( 'layer_' + Math.random().toString( 36 ).slice( 2, 6 ) )
-				);
-				const layersParam = layerIds.join( ',' );
-				codeHtml = '<p><strong>' + t( 'layers-code-selected-visible', 'Selected layers visible:' ) + '</strong></p>' +
-					'<code class="layers-code">[[File:' + filename + '|500px|layers=' + layersParam + '|' +
-					t( 'layers-code-caption', 'Your caption' ) + ']]</code>' +
-					'<button class="copy-btn" data-code="layers=' + layersParam + '">' + t( 'layers-code-copy', 'Copy' ) + '</button>';
-			}
-			return codeHtml;
 		}
 	}
 

@@ -10,6 +10,8 @@ declare( strict_types=1 );
  */
 namespace MediaWiki\Extension\Layers;
 
+use MediaWiki\Html\Html;
+
 class LayeredThumbnail extends \MediaTransformOutput {
 
 	/** @var string */
@@ -97,17 +99,15 @@ class LayeredThumbnail extends \MediaTransformOutput {
 			$attribs['title'] = $title;
 		}
 
-		// Build minimal IMG tag without relying on Html helper
-		$attrs = [];
-		foreach ( $attribs as $k => $v ) {
-			$attrs[] = htmlspecialchars( $k, ENT_QUOTES ) . '="' . htmlspecialchars( (string)$v, ENT_QUOTES ) . '"';
-		}
-		$html = '<img ' . implode( ' ', $attrs ) . ' />';
+		// Build IMG tag using MediaWiki Html helper for proper escaping
+		$html = Html::element( 'img', $attribs );
 
 		// Add layer data attributes for viewer
 		if ( !empty( $options['layers'] ) ) {
-			$dataLayers = htmlspecialchars( json_encode( $options['layers'] ) );
-			$html = '<div class="layers-image-container" data-layers="' . $dataLayers . '">' . $html . '</div>';
+			$html = Html::rawElement( 'div', [
+				'class' => 'layers-image-container',
+				'data-layers' => json_encode( $options['layers'] )
+			], $html );
 		}
 
 		return $html;

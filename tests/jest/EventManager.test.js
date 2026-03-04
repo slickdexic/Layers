@@ -545,6 +545,45 @@ describe( 'EventManager', () => {
 			expect( mockLayers[ 1 ].x ).toBe( 200 ); // unchanged
 		} );
 
+		it( 'should nudge dimension layers using x1/y1/x2/y2', () => {
+			const dimLayer = { id: 'dim1', type: 'dimension', x1: 10, y1: 20, x2: 110, y2: 120, locked: false };
+			mockSelectionManager.getSelectedLayers.mockReturnValue( [ dimLayer ] );
+
+			eventManager.nudgeSelectedLayers( 5, -3 );
+
+			expect( dimLayer.x1 ).toBe( 15 );
+			expect( dimLayer.y1 ).toBe( 17 );
+			expect( dimLayer.x2 ).toBe( 115 );
+			expect( dimLayer.y2 ).toBe( 117 );
+			// x/y should NOT be modified
+			expect( dimLayer.x ).toBeUndefined();
+			expect( dimLayer.y ).toBeUndefined();
+		} );
+
+		it( 'should nudge line layers using x1/y1/x2/y2', () => {
+			const lineLayer = { id: 'line1', type: 'line', x1: 0, y1: 0, x2: 50, y2: 50, locked: false };
+			mockSelectionManager.getSelectedLayers.mockReturnValue( [ lineLayer ] );
+
+			eventManager.nudgeSelectedLayers( 10, 10 );
+
+			expect( lineLayer.x1 ).toBe( 10 );
+			expect( lineLayer.y1 ).toBe( 10 );
+			expect( lineLayer.x2 ).toBe( 60 );
+			expect( lineLayer.y2 ).toBe( 60 );
+		} );
+
+		it( 'should nudge arrow layers using x1/y1/x2/y2', () => {
+			const arrowLayer = { id: 'arrow1', type: 'arrow', x1: 5, y1: 5, x2: 55, y2: 55, locked: false };
+			mockSelectionManager.getSelectedLayers.mockReturnValue( [ arrowLayer ] );
+
+			eventManager.nudgeSelectedLayers( -5, 0 );
+
+			expect( arrowLayer.x1 ).toBe( 0 );
+			expect( arrowLayer.y1 ).toBe( 5 );
+			expect( arrowLayer.x2 ).toBe( 50 );
+			expect( arrowLayer.y2 ).toBe( 55 );
+		} );
+
 		it( 'should handle missing stateManager gracefully', () => {
 			mockEditor.stateManager = null;
 

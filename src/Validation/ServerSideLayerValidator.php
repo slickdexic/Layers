@@ -990,7 +990,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 					// Validate numeric ranges
 					if ( $styleProp === 'fontSize' ) {
 						$styleValue = (float)$styleValue;
-						if ( $styleValue < 1 || $styleValue > 500 ) {
+						if ( $styleValue < 1 || $styleValue > 1000 ) {
 							continue;
 						}
 					}

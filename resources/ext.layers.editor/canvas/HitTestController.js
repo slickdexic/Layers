@@ -25,6 +25,8 @@
 		 */
 		constructor( canvasManager ) {
 			this.manager = canvasManager;
+			/** @type {Object|null} Cached AngleDimensionRenderer singleton */
+			this._cachedAngleRenderer = null;
 		}
 
 		// ==================== Selection Handle Hit Testing ====================
@@ -411,7 +413,11 @@
 				( typeof require !== 'undefined' && require( '../../ext.layers.shared/AngleDimensionRenderer.js' ) );
 
 			if ( AngleDimensionRenderer ) {
-				const angleRenderer = new AngleDimensionRenderer( null );
+				// Cache the renderer singleton to avoid GC pressure on mousemove
+				if ( !this._cachedAngleRenderer ) {
+					this._cachedAngleRenderer = new AngleDimensionRenderer( null );
+				}
+				const angleRenderer = this._cachedAngleRenderer;
 				const angles = angleRenderer.calculateAngles( layer );
 				const midAngle = angles.startAngle + angles.sweepAngle / 2;
 				const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
@@ -790,6 +796,7 @@
 		 */
 		destroy() {
 			this.manager = null;
+			this._cachedAngleRenderer = null;
 		}
 	}
 

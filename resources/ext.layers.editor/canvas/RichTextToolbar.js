@@ -351,7 +351,7 @@
 			input.className = 'layers-text-toolbar-size';
 			input.value = this.layer.fontSize || 16;
 			input.min = 8;
-			input.max = 200;
+			input.max = 1000;
 			input.title = this.msg( 'layers-text-toolbar-size', 'Font size' );
 
 			input.addEventListener( 'mousedown', () => {
@@ -365,7 +365,7 @@
 			} );
 
 			input.addEventListener( 'change', () => {
-				const size = Math.max( 8, Math.min( 200, parseInt( input.value, 10 ) || 16 ) );
+				const size = Math.max( 8, Math.min( 1000, parseInt( input.value, 10 ) || 16 ) );
 				input.value = size;
 				this._isInteracting = true; // Keep interacting during format apply
 				this.onFormat( 'fontSize', size );

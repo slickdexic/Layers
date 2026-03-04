@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** February 17, 2026 — v1.5.58 release
+**Last updated:** March 4, 2026 — v1.5.59 release (v45 fixes: 5 applied, 2 FPs reclassified)
 
 This plan organizes all open issues from the codebase review into
 prioritized phases with effort estimates. Each phase targets related
@@ -26,8 +26,10 @@ issues for efficient batching.
 | 12 | v39 findings (security + quality) | 13 | 13 | 0 | — |
 | 13 | v40 findings (verification addendum) | 5 | 5 | 0 | 2-4 hours |
 | 14 | v41 findings (security + rendering + quality) | 23 | 4 | 19 | 12-20 hours |
-| 15 | v42 findings (infra + rendering + UX + quality) | 31 | 2 | 29 | 20-30 hours |
-| **Total** | | **223** | **175** | **48** | **—** |
+| 15 | v42 findings (infra + rendering + UX + quality) | 32 | 13 | 19 | 20-30 hours |
+| 16 | v43 verification (UX gaps, docs, FP cleanup) | 3 | 2 | 1 | 2h |
+| 17 | v45 findings (security + state + quality) | 27 | 7 | 20 | 25-35 hours |
+| **Total** | | **254** | **195** | **59** | **—** |
 
 ---
 
@@ -178,20 +180,18 @@ helper method to centralize the check.
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 15.6 | Double render on undo/redo | P2-074 | ✅ Done | 15m |
+| 15.6 | ~~Double render on undo/redo~~ | P2-074 | ✅ False Positive | 0m |
 | 15.7 | CustomShape shadow ignores rotation | P2-075 | Open | 1h |
-| 15.8 | TextBox stroke bleeds into text (thumb) | P2-076 | Open | 15m |
-| 15.9 | Ellipse missing shadow (thumb) | P2-077 | Open | 30m |
-| 15.10 | AlignmentController missing dim/marker | P2-078 | Open | 1h |
-| 15.11 | Clipboard paste offset on local coords | P2-079 | ✅ Done | 15m |
+| 15.8 | TextBox stroke bleeds into text (thumb) | P2-076 | ✅ Fixed v44 | 15m |
+| 15.9 | Ellipse missing shadow (thumb) | P2-077 | ✅ Fixed v44 | 30m |
+| 15.10 | AlignmentController missing dim/marker | P2-078 | ✅ Fixed v44 | 1h |
+| 15.11 | ~~Clipboard paste offset on local coords~~ | P2-079 | ✅ False Positive | 0m |
 | 15.12 | parseMWTimestamp uses local time | P2-080 | ✅ Done | 10m |
 | 15.13 | Callout blur bounds ignore dragged tail | P2-081 | Open | 30m |
-| 15.14 | Font shorthand order in InlineTextEditor | P2-082 | ✅ Done | 10m |
+| 15.14 | ~~Font shorthand order in InlineTextEditor~~ | P2-082 | ✅ False Positive | 0m |
 | 15.15 | Hardcoded English in ToolbarKeyboard | P2-083 | ✅ Done | 45m |
 
-**15.6 Fix:** Remove `renderLayers()` and `markDirty()` calls
-from `EventManager.handleUndo()` and `handleRedo()`.
-`HistoryManager.restoreState()` already calls both.
+**15.6 Note (v43):** ✅ FALSE POSITIVE — Verified that handleUndo/handleRedo were already fixed. They delegate to editor.undo()/redo() only. Comments in code explicitly state rendering is handled by HistoryManager.restoreState(). The v42 reviewer described behavior that did not exist in the source.
 
 **15.7 Fix:** Port `ShadowRenderer.drawSpreadShadow()` rotation
 decomposition logic to `CustomShapeRenderer.drawSpreadShadowForImage()`.
@@ -208,10 +208,7 @@ into `buildEllipseArguments()`.
 x2/y2 by delta) and `marker` type (also move arrowX/arrowY) in
 both `moveLayer()` and `getLayerBounds()` methods.
 
-**15.11 Fix:** Remove `tailTipX` and `tailTipY` from the
-properties that receive `PASTE_OFFSET` in `applyPasteOffset()`.
-They are center-relative local coordinates that move with the
-callout body automatically.
+**15.11 Note (v43):** ✅ FALSE POSITIVE — Verified the code at L254-256 explicitly does NOT apply PASTE_OFFSET to tailTipX/tailTipY. A comment explains: "tailTipX/tailTipY are LOCAL coordinates relative to callout center." The v42 reviewer described code behavior that does not exist.
 
 **15.12 Fix:** Change `new Date(year, month, day, hour, minute, second)`
 to `new Date(Date.UTC(year, month, day, hour, minute, second))`
@@ -221,8 +218,7 @@ in `parseMWTimestamp()`.
 defined, compute blur capture bounds from actual tip coordinates
 instead of using `tailDirection` estimates.
 
-**15.14 Fix:** Swap fontStyle and fontWeight in the canvas font
-string construction in `_measureTextWidth()`.
+**15.14 Note (v43):** ✅ FALSE POSITIVE — Verified the font string at L809-813 IS in correct CSS order (fontStyle before fontWeight). The v42 reviewer described the order backwards; no fix was needed or applied.
 
 **15.15 Fix:** Replace hardcoded strings with `mw.message()` calls.
 Add 4 new i18n keys: `layers-group-done`, `layers-ungroup-done`,
@@ -242,13 +238,62 @@ Add 4 new i18n keys: `layers-group-done`, `layers-ungroup-done`,
 | 15.23 | RenderCoordinator hash gaps | P3-087 | Open | 30m |
 | 15.24 | Modal Escape no unsaved check | P3-088 | Open | 30m |
 | 15.25 | Duplicated SVG icon code | P3-089 | Open | 20m |
-| 15.26 | Dead renderCodeSnippet + XSS | P3-090 | Open | 10m |
+| 15.26 | Dead renderCodeSnippet + XSS | P3-090 | ✅ Fixed v45.2 | 10m |
 | 15.27 | RichTextToolbar drag listener leak | P3-091 | Open | 15m |
 | 15.28 | Touch events missing key modifiers | P3-092 | Open | 20m |
 | 15.29 | SlideController no concurrency limit | P3-093 | Open | 20m |
 | 15.30 | CustomShape oversized temp canvas | P3-094 | Open | 20m |
 | 15.31 | Unguarded mw.log.warn in CanvasRenderer | P3-095 | Open | 10m |
-| 15.32 | ToolManager IIFE load-time references | P3-096 | Open | 15m |
+| 15.32 | ~~ToolManager IIFE load-time references~~ | P3-096 | ✅ False Positive | 0m |
+
+---
+
+## Phase 16: v43 Verification — UX Gaps, Docs & False Positive Cleanup (3 Items)
+
+*Target: address the nudge UX failure discovered in v43 and correct
+documentation inconsistencies. The 4 false positives corrected in
+this cycle are noted in Phase 15.*
+
+### MEDIUM (1 item)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 16.1 | Nudge broken for dimension/line/arrow layers | P2-084 | ✅ Fixed v44 | 45m |
+
+**16.1 Fix:** In `EventManager.nudgeSelectedLayers()`, add a branch
+for endpoint-based layers:
+
+```javascript
+if ( [ 'dimension', 'line', 'arrow' ].includes( layer.type ) ) {
+    layer.x1 = ( layer.x1 || 0 ) + deltaX;
+    layer.y1 = ( layer.y1 || 0 ) + deltaY;
+    layer.x2 = ( layer.x2 || 0 ) + deltaX;
+    layer.y2 = ( layer.y2 || 0 ) + deltaY;
+} else {
+    layer.x = ( layer.x || 0 ) + deltaX;
+    layer.y = ( layer.y || 0 ) + deltaY;
+}
+```
+
+Add tests: nudging a dimension layer updates x1/y1/x2/y2; nudging
+an arrow layer updates x1/y1/x2/y2; nudging a rect layer updates x/y.
+
+### LOW (2 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 16.2 | Stale test count across all docs | P3-097 | ✅ Fixed v44 | 15m |
+| 16.3 | CHANGELOG missing versions + date anomaly | P3-098 | Open | 30m |
+
+**16.2 Fix (✅ Done v44):** Updated all documentation files to "11,260 tests in 163 suites":
+- README.md, wiki/Home.md, wiki/Frontend-Architecture.md, .github/copilot-instructions.md, codebase_review.md
+
+**16.3 Fix:**
+- Add missing CHANGELOG entries for v1.5.37, v1.5.53, v1.5.54
+  (check git log for notable changes in those releases)
+- Fix v1.5.55 date from `2025-07-23` to the correct 2026 date
+  (check git commit timestamp for v1.5.55 tag)
+- Mirror any changes to wiki/Changelog.md
 
 ---
 
@@ -986,17 +1031,124 @@ Hooks.php and UIHooks.php.
 
 ---
 
+## Phase 17: v45 Findings — Security, State Management & Quality (27 Items)
+
+*Target: fix the clickjacking critical, close the 4 HIGH state-management
+and security issues, then address the remaining MEDIUM and LOW items
+found in the v45 fresh audit.*
+
+### CRITICAL (1 item)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 17.1 | Clickjacking: `?modal=1` disables frame protection | P0-006 | ✅ Fixed v45 | 1h |
+
+**17.1 Fix (✅ Done v45):** In `EditLayersAction.php` and `SpecialEditSlide.php`,
+suppressed MediaWiki's default DENY via `setPreventClickjacking(false)`, then
+set `X-Frame-Options: SAMEORIGIN` header. Same-wiki iframes allowed; cross-origin
+embedding blocked.
+
+### HIGH (4 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 17.2 | Manual HTML in LayeredThumbnail bypasses escaping | P1-039 | ✅ Fixed v45 | 2h |
+| 17.3 | ~~InlineTextEditor innerHTML trusts richTextToHtml~~ | P1-040 | ✅ False Positive | 0h |
+| 17.4 | ~~EventManager nudge mutates state bypassing StateManager~~ | P1-041 | ✅ False Positive | 0h |
+| 17.5 | LayerPanel stale originalName after rename | P1-042 | ✅ Fixed v45 | 30m |
+
+**17.2 Fix (✅ Done v45):** Replaced raw string concatenation in
+`LayeredThumbnail.php` with `Html::element('img', ...)` and
+`Html::rawElement('div', ...)`. Added `use MediaWiki\Html\Html`.
+(Reclassified from HIGH to MEDIUM — original escaping was correct.)
+
+**17.3 Note (✅ FALSE POSITIVE):** `richTextToHtml()` uses DOM-based
+`div.textContent=...; return div.innerHTML` escaping and `escapeCSSValue()`
+strips dangerous chars. Both methods are correctly implemented.
+
+**17.4 Note (✅ FALSE POSITIVE):** Direct layer mutation + history snapshot
+is the established pattern throughout the codebase. Verified:
+`TransformController.updateLayerPosition()` at L556-562 uses the same pattern.
+
+**17.5 Fix (✅ Done v45):** Added `nameElement.dataset.originalName = nameElement.textContent`
+inside the `_hasEditListeners` early-return branch so Escape reverts to
+the current name, not the first-ever name. Regression test added.
+
+### MEDIUM (8 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 17.6 | SVG data URI in image layers bypasses validation | P2-085 | ✅ Fixed v45.2 | 2h |
+| 17.7 | Failed images stored in cache as broken | P2-086 | ✅ Fixed v45 | 30m |
+| 17.8 | Blur texture canvas reallocated every frame | P2-087 | ✅ Fixed v45.2 | 1h |
+| 17.9 | N+1 query in LayersDatabase batch operations | P2-088 | Open | 1h |
+| 17.10 | TextSanitizer char-by-char loop (O(n²) risk) | P2-089 | Open | 1h |
+| 17.11 | SlideHooks & SlideController static state | P2-090 | Open | 1h |
+| 17.12 | Duplicate bounds calculation methods | P2-091 | Open | 45m |
+| 17.13 | DrawingController ellipse validation OR vs AND | P2-092 | ✅ Fixed v45 | 15m |
+
+**17.6 Fix (✅ Done v45.2):** Updated `DANGEROUS_URL_RE` to use negative
+lookahead allowing only safe image types (png/jpeg/gif/webp). Blocks
+`data:image/svg+xml` and all other dangerous `data:` URIs. 2 regression tests added.
+
+**17.7 Fix (✅ Done v45):** Added `this._imageCache.delete(cacheKey)` in
+`onerror` handler so failed images are evicted and retried. Regression test added.
+
+**17.8 Fix (✅ Done v45.2):** Added size guard (`if width !== reqW || height !== reqH`)
+before setting `_blurFillCanvas` dimensions, matching sibling `_blurCanvas` pattern.
+
+**17.9 Fix:** Batch the per-layer DB queries in `LayersDatabase`;
+use a single SELECT with `WHERE id IN (...)`.
+
+**17.10 Fix:** Replace the char-by-char loop in `TextSanitizer`
+with a regex-based approach.
+
+**17.11 Fix:** Move static state in `SlideHooks.php` and
+`SlideController.js` to instance properties or request-scoped
+containers.
+
+**17.12 Fix:** Consolidate duplicate `getSelectionBounds()` and
+`calculateBounds()` into a single shared utility.
+
+**17.13 Fix (✅ Done v45):** Changed `||` to `&&` so both radii must
+meet `MIN_SHAPE_SIZE`, consistent with rectangle validation. Test updated.
+
+### LOW (14 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 17.14 | call_user_func indirection in PHP modules | P3-099 | Open | 30m |
+| 17.15 | Image src validation missing protocol check | P3-100 | Open | 15m |
+| 17.16 | Duplicated icon SVG strings across modules | P3-101 | Open | 1h |
+| 17.17 | Duplicated bgVisible reconciliation logic | P3-102 | Open | 30m |
+| 17.18 | RenderCoordinator hash collision on layers | P3-103 | Open | 30m |
+| 17.19 | SmartGuides sort mutates input array | P3-104 | ✅ Fixed v45.2 | 10m |
+| 17.20 | HitTestController allocations in hot loop | P3-105 | ✅ Fixed v45.2 | 30m |
+| 17.21 | Toolbar getToolIcon fallback inconsistency | P3-106 | Open | 15m |
+| 17.22 | LightboxController lazy-init race window | P3-107 | Open | 30m |
+| 17.23 | JSON clone used in hot render paths | P3-108 | Open | 1h |
+| 17.24 | Dead saveToHistory call in SelectionManager | P3-109 | Open | 10m |
+| 17.25 | renderCodeSnippet HTML injection surface | P3-110 | ✅ Fixed v45.2 | 30m |
+| 17.26 | God class count drift in docs (17→20) | P3-111 | Open | 30m |
+| 17.27 | PropertyBuilders line count off by 333 | P3-112 | Open | 10m |
+
+---
+
 ## Recommended Execution Order
 
-All tracked improvement-plan issues are now closed.
+Phase 17 items should be addressed in this order:
 
-If you want to continue cleanup work, use this order:
-1. **Maintenance Track A:** God class reduction (architecture KPI)
-    - Follow docs/GOD_CLASS_REFACTORING_PLAN.md and docs/PROJECT_GOD_CLASS_REDUCTION.md
-2. **Maintenance Track B:** Metrics/doc drift prevention
-    - Run scripts/verify-docs.sh during release prep
-3. **Maintenance Track C:** Targeted coverage hardening
-    - Add tests only where new/refactored code lacks branch confidence
+1. **CRITICAL first:** 17.1 (clickjacking) — security release blocker
+2. **HIGH security:** 17.2 (manual HTML), 17.3 (innerHTML trust)
+3. **HIGH state bugs:** 17.4 (nudge mutation), 17.5 (stale rename)
+4. **MEDIUM security:** 17.6 (SVG data URI)
+5. **MEDIUM perf/quality:** 17.7-17.13 in any order
+6. **LOW items:** 17.14-17.27 as time permits
+
+Ongoing maintenance tracks:
+- **Track A:** God class reduction — follow docs/GOD_CLASS_REFACTORING_PLAN.md
+- **Track B:** Metrics/doc drift prevention — run scripts/verify-docs.sh
+- **Track C:** Targeted coverage hardening for new/refactored code
 
 ---
 
@@ -1015,6 +1167,9 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
+| 2026-03-04 | v45 fixes: 5 items fixed (P0-006, P1-039, P1-042, P2-086, P2-092), 2 FPs (P1-040, P1-041). Totals: 254/195/59. |
+| 2026-03-04 | v45 fresh audit: 27 new findings added as Phase 17. Fixed v44 items: 15.8/15.9/15.10 and 16.1. |
+| 2026-02-17 | v43 verification audit: corrected 4 Phase 15 false positives (P2-074, P2-079, P2-082, P3-096); added Phase 16 with 3 new items (P2-084 nudge, P3-097 stale docs, P3-098 CHANGELOG); updated Phase Summary totals to 227/183/44. |
 | 2026-02-15 | v41 fixes: Fixed all HIGH (3) and all MEDIUM (7) Phase 14 items. Cache invalidation trait, rate limiter cleanup, richText viewer scaling, SQL schema consistency, SVG blocklist, SlideHooks ParserClearState reset, debug URL param logic. 13 LOW items remain. |
 | 2026-02-15 | v41: Fresh comprehensive review. Added Phase 14 with 23 items (3 HIGH, 7 MED, 13 LOW). Rate limiter dead code, cache invalidation gaps, richText viewer scaling, schema inconsistencies, SVG validation, god class #17. 4 FPs excluded. Grade: A-. |
 | 2026-02-14 | v40 closure pass: re-scoped Phase 4.7 to maintenance tracking, marked Phase 4 complete, and rebalanced plan totals to 169 fixed / 0 open. |

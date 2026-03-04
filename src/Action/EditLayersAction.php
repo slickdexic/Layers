@@ -102,16 +102,18 @@ class EditLayersAction extends \Action {
 		// Check if editor is in modal mode
 		$isModalMode = $request->getBool( 'modal' );
 
-		// In modal mode, allow the page to be framed (loaded in iframe)
-		// Otherwise MediaWiki's default X-Frame-Options header blocks it
+		// In modal mode, allow same-origin framing (loaded in iframe from this wiki)
+		// Replace the default DENY with SAMEORIGIN to allow our own iframe
+		// while blocking cross-origin embedding (clickjacking protection)
 		if ( $isModalMode ) {
-			// Use method_exists for compatibility across MediaWiki versions
-			// allowClickjacking was deprecated in MW 1.43
-			if ( method_exists( $out, 'allowClickjacking' ) ) {
-				$out->allowClickjacking();
-			} elseif ( method_exists( $out, 'setPreventClickjacking' ) ) {
+			// Suppress MediaWiki's default X-Frame-Options: DENY
+			if ( method_exists( $out, 'setPreventClickjacking' ) ) {
 				$out->setPreventClickjacking( false );
+			} elseif ( method_exists( $out, 'allowClickjacking' ) ) {
+				$out->allowClickjacking();
 			}
+			// Set SAMEORIGIN instead — allows same-wiki iframes, blocks cross-origin
+			$request->response()->header( 'X-Frame-Options: SAMEORIGIN' );
 		}
 
 		// Page title

@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C148%20passing-brightgreen" alt="11,148 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C260%20passing-brightgreen" alt="11,260 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
@@ -20,7 +20,12 @@
 
 ---
 
-## 🆕 What's New in v1.5.58
+## 🆕 What's New in v1.5.59
+
+- **5 Bug Fixes** — RichText font size cap (200→1000px), arrow key nudge for dimension/line/arrow layers, thumbnail TextBox stroke bleed, thumbnail ellipse shadow missing, AlignmentController dimension/marker layer support
+- **Test Suite** — 11,260 tests passing (163 suites), all bugs covered by regression tests
+
+### Previous v1.5.58 Highlights
 
 - **8 Bug Fixes** — Arrow key nudging, color preview mutation, double render on undo/redo, clipboard callout tail offset, CSS font order, UTC timestamp parsing, ApiLayersInfo null guard, REL1_43 modal 500 error
 - **Built-in Help Dialog** — Accessible via Shift+? with keyboard shortcuts and tool descriptions
@@ -308,12 +313,12 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.58 |
-| **Version (REL1_43)** | 1.5.58 |
-| **Version (REL1_39)** | 1.5.58 |
-| **Release Date** | February 17, 2026 |
-| **Test Suites** | 162 |
-| **Total Tests** | 11,148 |
+| **Version (main)** | 1.5.59 |
+| **Version (REL1_43)** | 1.5.59 |
+| **Version (REL1_39)** | 1.5.59 |
+| **Release Date** | March 4, 2026 |
+| **Test Suites** | 163 |
+| **Total Tests** | 11,260 |
 | **PHPUnit Test Files** | 31 |
 | **Statement Coverage** | 95.19% |
 | **Branch Coverage** | 84.96% |

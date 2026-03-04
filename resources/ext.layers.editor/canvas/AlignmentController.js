@@ -89,6 +89,7 @@
 
 				case 'line':
 				case 'arrow':
+				case 'dimension':
 					left = Math.min( layer.x1 || 0, layer.x2 || 0 );
 					right = Math.max( layer.x1 || 0, layer.x2 || 0 );
 					top = Math.min( layer.y1 || 0, layer.y2 || 0 );
@@ -145,6 +146,16 @@
 					break;
 				}
 
+				case 'marker': {
+					// Marker is a centered circle; size is the full diameter
+					const markerRadius = ( layer.size || 24 ) / 2;
+					left = ( layer.x || 0 ) - markerRadius;
+					top = ( layer.y || 0 ) - markerRadius;
+					right = ( layer.x || 0 ) + markerRadius;
+					bottom = ( layer.y || 0 ) + markerRadius;
+					break;
+				}
+
 				default:
 					// Rectangle, textbox, blur, image
 					left = layer.x || 0;
@@ -180,6 +191,7 @@
 			switch ( layer.type ) {
 				case 'line':
 				case 'arrow':
+				case 'dimension':
 					layer.x1 = ( layer.x1 || 0 ) + deltaX;
 					layer.y1 = ( layer.y1 || 0 ) + deltaY;
 					layer.x2 = ( layer.x2 || 0 ) + deltaX;

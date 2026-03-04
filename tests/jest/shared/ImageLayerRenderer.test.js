@@ -636,5 +636,41 @@ describe( 'ImageLayerRenderer', () => {
 			);
 			testRenderer.destroy();
 		} );
+
+		it( 'should remove failed image from cache on error (P2-086 fix)', () => {
+			const testRenderer = new ImageLayerRenderer( mockCtx, {} );
+
+			global.Image = class {
+				constructor() {
+					this.complete = false;
+					this.naturalWidth = 0;
+					this.naturalHeight = 0;
+				}
+
+				set src( value ) {
+					this._src = value;
+					// Trigger onerror for testing
+					if ( this.onerror ) {
+						this.onerror();
+					}
+				}
+
+				get src() {
+					return this._src;
+				}
+			};
+
+			const layer = {
+				id: 'cache-evict-test',
+				src: 'data:image/png;base64,bad-data'
+			};
+
+			testRenderer._getImageElement( layer );
+
+			// After error, the failed image should NOT be in cache
+			// so that the next call creates a fresh Image (retry)
+			expect( testRenderer._imageCache.size ).toBe( 0 );
+			testRenderer.destroy();
+		} );
 	} );
 } );

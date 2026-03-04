@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.58 (February 17, 2026)  
+> **Version:** 1.5.59 (March 4, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -318,11 +318,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
   - All other god classes (13 JS + 2 PHP) have proper facade/delegation patterns
 
-**Test Coverage (Verified February 17, 2026):**
+**Test Coverage (Verified March 4, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,148 passing (162 suites) |
+| Jest tests | 11,260 passing (163 suites) |
 | PHPUnit tests | 31 test files |
 | Statement coverage | 95.19% |
 | Branch coverage | 84.96% |
@@ -382,7 +382,7 @@ npm run test:js -- --coverage
 | Total JS lines | ~97,072 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>1000 lines) | 17 | ✅ Well-delegated facades |
-| Tests passing | 11,148 | ✅ |
+| Tests passing | 11,260 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.19% | ✅ Excellent |
 | Branch coverage | 84.96% | ✅ Target met |

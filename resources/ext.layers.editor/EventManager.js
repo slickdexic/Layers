@@ -192,9 +192,17 @@ class EventManager {
 		// Batch the position updates
 		selectedLayers.forEach( layer => {
 			if ( layer && !layer.locked ) {
-				// Update position
-				layer.x = ( layer.x || 0 ) + dx;
-				layer.y = ( layer.y || 0 ) + dy;
+				// dimension, line and arrow layers store position as x1/y1/x2/y2 instead of x/y
+				if ( [ 'dimension', 'line', 'arrow' ].includes( layer.type ) ) {
+					layer.x1 = ( layer.x1 || 0 ) + dx;
+					layer.y1 = ( layer.y1 || 0 ) + dy;
+					layer.x2 = ( layer.x2 || 0 ) + dx;
+					layer.y2 = ( layer.y2 || 0 ) + dy;
+				} else {
+					// Update position
+					layer.x = ( layer.x || 0 ) + dx;
+					layer.y = ( layer.y || 0 ) + dy;
+				}
 			}
 		} );
 

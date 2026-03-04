@@ -87,8 +87,8 @@ class ValidationManager {
 			...DANGEROUS_ELEMENTS, 'foreignObject'
 		];
 
-		// Dangerous URL schemes
-		const DANGEROUS_URL_RE = /^\s*(javascript|vbscript|data\s*:\s*text\/html)/i;
+		// Dangerous URL schemes (block all data: except safe image types)
+		const DANGEROUS_URL_RE = /^\s*(javascript|vbscript|data\s*:(?!\s*image\/(?:png|jpeg|gif|webp)[;,]))/i;
 
 		// Dangerous CSS patterns
 		const DANGEROUS_CSS_RE = /(expression|javascript|vbscript|-moz-binding|behavior|@import)/i;

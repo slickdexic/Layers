@@ -553,18 +553,25 @@ describe( 'DrawingController', () => {
 			} ) ).toBe( false );
 		} );
 
-		it( 'should validate ellipse radii (at least one must be valid)', () => {
+		it( 'should validate ellipse radii (both must be valid)', () => {
+			expect( controller.isValidShape( {
+				type: 'ellipse',
+				radiusX: 10,
+				radiusY: 10
+			} ) ).toBe( true );
+
+			// Both radii must meet minimum — one small radius is invalid (P2-092 fix)
 			expect( controller.isValidShape( {
 				type: 'ellipse',
 				radiusX: 10,
 				radiusY: 3
-			} ) ).toBe( true );
+			} ) ).toBe( false );
 
 			expect( controller.isValidShape( {
 				type: 'ellipse',
 				radiusX: 3,
 				radiusY: 10
-			} ) ).toBe( true );
+			} ) ).toBe( false );
 
 			expect( controller.isValidShape( {
 				type: 'ellipse',

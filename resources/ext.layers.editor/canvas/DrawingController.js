@@ -934,7 +934,7 @@ class DrawingController {
 				return layer.radius >= this.MIN_SHAPE_SIZE;
 
 			case 'ellipse':
-				return layer.radiusX >= this.MIN_SHAPE_SIZE ||
+				return layer.radiusX >= this.MIN_SHAPE_SIZE &&
 					layer.radiusY >= this.MIN_SHAPE_SIZE;
 
 			case 'star':

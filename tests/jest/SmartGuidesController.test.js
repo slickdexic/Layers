@@ -704,6 +704,13 @@ describe( 'SmartGuidesController', () => {
 			expect( snapPoints.horizontal ).toEqual( [] );
 			expect( snapPoints.vertical ).toEqual( [] );
 		} );
+
+		it( 'should not mutate the excludeIds array (LOW-v45-5 fix)', () => {
+			const excludeIds = [ 'layer2', 'layer1' ];
+			const originalOrder = [ ...excludeIds ];
+			controller.buildSnapPoints( mockLayers, excludeIds );
+			expect( excludeIds ).toEqual( originalOrder );
+		} );
 	} );
 
 	describe( 'findNearestSnap', () => {
