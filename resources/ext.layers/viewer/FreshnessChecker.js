@@ -226,11 +226,10 @@
 							// If stale, extract full layer data for re-initialization
 							if ( inlineRevision < latestRevision && layerset.data ) {
 								// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
-								let bgVisible = true;
-								if ( layerset.data.backgroundVisible !== undefined ) {
-									const bgVal = layerset.data.backgroundVisible;
-									bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
-								}
+								const bgVisible = ( window.Layers && window.Layers.LayerDataNormalizer )
+									? window.Layers.LayerDataNormalizer.normalizeBackgroundVisible(
+										layerset.data.backgroundVisible )
+									: true;
 
 								layerData = {
 									layers: layerset.data.layers || [],

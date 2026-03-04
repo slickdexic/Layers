@@ -11,6 +11,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers;
 
 use MediaWiki\Html\Html;
+use MediaWiki\MediaWikiServices;
 
 class LayeredThumbnail extends \MediaTransformOutput {
 
@@ -52,17 +53,10 @@ class LayeredThumbnail extends \MediaTransformOutput {
 	 * @return string
 	 */
 	private function getLayeredUrl( string $path ): string {
-		// Prefer MediaWikiServices when available; otherwise fallback to globals
-		$uploadDir = null;
-		$uploadPath = null;
-		if ( \class_exists( '\\MediaWiki\\MediaWikiServices' ) ) {
-			$config = \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )->getMainConfig();
-			$uploadDir = $config->get( 'UploadDirectory' );
-			$uploadPath = $config->get( 'UploadPath' );
-		} else {
-			$uploadDir = $GLOBALS['wgUploadDirectory'] ?? sys_get_temp_dir();
-			$uploadPath = $GLOBALS['wgUploadPath'] ?? '/images';
-		}
+		// Get upload directory and path from config
+		$config = MediaWikiServices::getInstance()->getMainConfig();
+		$uploadDir = $config->get( 'UploadDirectory' );
+		$uploadPath = $config->get( 'UploadPath' );
 
 		// Convert absolute path to relative URL
 		// Normalize slashes for Windows paths

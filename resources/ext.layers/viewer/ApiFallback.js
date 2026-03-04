@@ -332,11 +332,10 @@ class ApiFallback {
 				}
 
 				// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
-				let bgVisible = true;
-				if ( ls.data.backgroundVisible !== undefined ) {
-					const bgVal = ls.data.backgroundVisible;
-					bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
-				}
+				const bgVisible = ( window.Layers && window.Layers.LayerDataNormalizer )
+					? window.Layers.LayerDataNormalizer.normalizeBackgroundVisible(
+						ls.data.backgroundVisible )
+					: true;
 
 				const payload = {
 					layers: layersArr,

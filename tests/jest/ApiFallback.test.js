@@ -81,6 +81,9 @@ describe( 'ApiFallback', () => {
 			return null;
 		} );
 
+		// Load shared LayerDataNormalizer (used by ApiFallback for bgVisible normalization)
+		require( '../../resources/ext.layers.shared/LayerDataNormalizer.js' );
+
 		// Load module
 		ApiFallback = require( '../../resources/ext.layers/viewer/ApiFallback.js' );
 	} );

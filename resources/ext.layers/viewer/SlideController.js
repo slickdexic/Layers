@@ -125,9 +125,11 @@
 						}
 
 						// Build payload for slide viewer
-						// Handle backgroundVisible - API returns 0/1 integers, need to normalize
-						const bgVal = layerset.data.backgroundVisible;
-						const bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
+						// Normalize backgroundVisible: API returns 0/1 integers
+						const bgVisible = ( window.Layers && window.Layers.LayerDataNormalizer )
+							? window.Layers.LayerDataNormalizer.normalizeBackgroundVisible(
+								layerset.data.backgroundVisible )
+							: true;
 						const payload = {
 							layers: layerset.data.layers,
 							baseWidth: layerset.baseWidth || layerset.data.canvasWidth || canvasWidth,
@@ -565,8 +567,9 @@
 							layers: layersArr,
 							baseWidth: ( layerset && layerset.baseWidth ) || ( layerset && layerset.data && layerset.data.canvasWidth ) || canvasWidth,
 							baseHeight: ( layerset && layerset.baseHeight ) || ( layerset && layerset.data && layerset.data.canvasHeight ) || canvasHeight,
-							backgroundVisible: layerset && layerset.data && layerset.data.backgroundVisible !== undefined
-								? ( layerset.data.backgroundVisible !== false && layerset.data.backgroundVisible !== 0 )
+							backgroundVisible: ( window.Layers && window.Layers.LayerDataNormalizer )
+								? window.Layers.LayerDataNormalizer.normalizeBackgroundVisible(
+									layerset && layerset.data && layerset.data.backgroundVisible )
 								: true,
 							backgroundOpacity: layerset && layerset.data && typeof layerset.data.backgroundOpacity === 'number'
 								? layerset.data.backgroundOpacity

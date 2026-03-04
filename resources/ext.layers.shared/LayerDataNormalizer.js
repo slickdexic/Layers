@@ -326,6 +326,23 @@
 			}
 			return undefined;
 		}
+
+		/**
+		 * Normalize backgroundVisible from API data to boolean.
+		 *
+		 * The API returns 0/1 integers (due to PHP boolean serialization).
+		 * Legacy data may store strings ('0', 'false') or booleans.
+		 * Returns true when the value is undefined or any truthy representation.
+		 *
+		 * @param {*} val - The backgroundVisible value from API data
+		 * @returns {boolean} true if background should be visible
+		 */
+		static normalizeBackgroundVisible( val ) {
+			if ( val === undefined ) {
+				return true;
+			}
+			return val !== false && val !== 0 && val !== '0' && val !== 'false';
+		}
 	}
 
 	// Export to Layers namespace (preferred)

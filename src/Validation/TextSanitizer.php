@@ -155,7 +155,13 @@ class TextSanitizer {
 		// Neutralize JavaScript keywords followed by '(' by inserting a zero-width space
 		// This prevents code execution while preserving legitimate text like "Use alert() carefully"
 		// The zero-width space (\u200B) makes "alert(" become "alert\u200B(" which is not callable
-		$jsKeywords = [ 'alert', 'confirm', 'prompt', 'eval', 'setTimeout', 'setInterval' ];
+		$jsKeywords = [
+			'alert', 'confirm', 'prompt', 'eval',
+			'setTimeout', 'setInterval',
+			'Function', 'constructor',
+			'fetch', 'XMLHttpRequest', 'importScripts',
+			'document.write',
+		];
 		foreach ( $jsKeywords as $keyword ) {
 			// Insert a zero-width space before the opening paren to neutralize the call
 			$text = preg_replace(

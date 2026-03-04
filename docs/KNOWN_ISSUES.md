@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 4, 2026 — v45 audit (11 fixes applied, 2 batch)
+**Last updated:** March 4, 2026 — v45 audit (16 fixes applied, 3 batches)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -12,9 +12,9 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 40 | 38 | 2 |
-| P2 | 96 | 82 | 14 |
-| P3 | 121 | 79 | 42 |
-| **Total** | **262** | **204** | **58** |
+| P2 | 96 | 83 | 13 |
+| P3 | 121 | 83 | 38 |
+| **Total** | **262** | **209** | **53** |
 
 ---
 
@@ -150,10 +150,11 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 ### P2-089: TextSanitizer Zero-Width-Space Keyword Defense Incomplete
 
 - **File:** `src/Validation/TextSanitizer.php` L159-168
-- **Impact:** Keyword list for zero-width space injection omits `Function`,
-  `constructor`, `fetch`, `XMLHttpRequest`, `importScripts`, and
-  `document.write`. Primary protection is Canvas rendering context.
-- **Status:** Open
+- **Impact:** Keyword list for zero-width space injection omitted
+  `Function`, `constructor`, `fetch`, `XMLHttpRequest`,
+  `importScripts`, and `document.write`.
+- **Status:** ✅ Fixed (March 4, 2026) — Added 6 missing keywords
+  to the JS keyword neutralization list.
 - **Introduced:** v45 review
 
 ### P2-090: WikitextHooks Static State May Bleed Between Requests
@@ -192,10 +193,11 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 
 - **Files:** `src/Hooks.php`, `src/LayeredThumbnail.php`,
   `src/ThumbnailRenderer.php`, `src/LayersFileTransform.php`
-- **Impact:** 10 instances of `\call_user_func(...)` with `class_exists` guards
-  for classes guaranteed to exist since MW >= 1.44.0. Inconsistent — same files
-  also call `MediaWikiServices::getInstance()` directly elsewhere.
-- **Status:** Open
+- **Impact:** 10 instances of `\call_user_func(...)` with `class_exists`
+  guards for classes guaranteed since MW >= 1.44.0.
+- **Status:** ✅ Fixed (March 4, 2026) — Replaced all 10 instances
+  with direct calls. Added `use` imports for LoggerFactory,
+  MediaWikiServices, and Shell. Removed dead else branches.
 - **Introduced:** v45 review
 
 ### P3-100: ThumbnailRenderer Shadow Code Duplication (~50 lines)
@@ -218,9 +220,10 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 ### P3-102: serialize($params) for Thumbnail Cache Key
 
 - **File:** `src/ThumbnailRenderer.php` L99
-- **Impact:** `serialize()` on potentially 2MB+ params array before `md5()`.
-  `json_encode()` + `md5()` would be faster.
-- **Status:** Open
+- **Impact:** `serialize()` on potentially 2MB+ params array before
+  `md5()`. `json_encode()` + `md5()` is faster.
+- **Status:** ✅ Fixed (March 4, 2026) — Changed `serialize()`
+  to `json_encode()` for cache key generation.
 - **Introduced:** v45 review
 
 ### P3-103: SmartGuidesController sort() Mutates Caller Array
@@ -248,11 +251,12 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 
 ### P3-106: Duplicated backgroundVisible Normalization (5+ locations)
 
-- **Files:** `ViewerManager.js` (×3), `LayersLightbox.js`, `LayersViewer.js`
-- **Impact:** Pattern `bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false'`
-  repeated with variations. Postmortem warns about this resurfacing.
-- **Recommended Fix:** Extract `isFalsyBackground(value)` to LayerDataNormalizer.
-- **Status:** Open
+- **Files:** `ViewerManager.js` (×3), `SlideController.js`,
+  `FreshnessChecker.js`, `ApiFallback.js`
+- **Impact:** Pattern repeated with variations across 6+ locations.
+- **Status:** ✅ Fixed (March 4, 2026) — Added
+  `LayerDataNormalizer.normalizeBackgroundVisible()` static method.
+  Replaced all 6 inline normalization blocks across 4 files.
 - **Introduced:** v45 review
 
 ### P3-107: Duplicated SVG Icon Code in Viewer Modules
@@ -296,10 +300,12 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 ### P3-111: Lightbox close() Animation Timeout Race With open()
 
 - **File:** `resources/ext.layers/viewer/LayersLightbox.js` L102-105
-- **Impact:** Rapid close(animated)-then-open() within 300ms can cause
+- **Impact:** Rapid close(animated)-then-open() within 300ms could cause
   old close timeout to fire during new overlay's lifetime, nullifying
   overlay/container references and resetting body overflow.
-- **Status:** Open
+- **Status:** ✅ Fixed (March 4, 2026) — `open()` now cancels any
+  pending close timeout before creating new overlay, and also checks
+  for stale overlay DOM nodes regardless of `isOpen` state.
 - **Introduced:** v45 review
 
 ### P3-112: Dead renderCodeSnippet Contains Unescaped HTML (Latent XSS)

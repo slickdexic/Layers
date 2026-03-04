@@ -91,12 +91,12 @@ The v45 review is a comprehensive fresh audit of the entire codebase at version 
 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
-| Security | 0 | 0 | ~~2~~→1 | 2 | ~~Clickjacking~~ ✅, ~~innerHTML~~ FP, ~~SVG URI~~ ✅, ~~manual HTML~~ ✅ |
-| Bugs | 0 | 0 | ~~3~~→2 | ~~8~~→5 | ~~State mutation~~ FP, rendering, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅ |
-| Performance | 0 | 0 | ~~2~~→1 | ~~5~~→3 | ~~Blur texture~~ ✅, N+1 users, ~~hit test~~ ✅, ~~ViewerManager API~~ ✅ |
-| Code Quality | 0 | 0 | 3 | 12+ | Duplication, indirection, DRY |
+| Security | 0 | 0 | ~~2~~→0 | 2 | ~~Clickjacking~~ ✅, ~~innerHTML~~ FP, ~~SVG URI~~ ✅, ~~manual HTML~~ ✅, ~~TextSanitizer~~ ✅ |
+| Bugs | 0 | 0 | ~~3~~→2 | ~~8~~→4 | ~~State mutation~~ FP, rendering, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅, ~~lightbox race~~ ✅ |
+| Performance | 0 | 0 | ~~2~~→1 | ~~5~~→2 | ~~Blur texture~~ ✅, N+1 users, ~~hit test~~ ✅, ~~ViewerManager API~~ ✅, ~~serialize~~ ✅ |
+| Code Quality | 0 | 0 | 3 | ~~12~~→10 | Duplication, ~~indirection~~ ✅, DRY, ~~bgVisible~~ ✅ |
 | Documentation | 0 | 5 | 8 | 7 | Stale counts, wrong versions, god class count |
-| **Total** | **0** | **5** | **15** | **29+** | **~49 open items (11 fixed, 2 FPs reclassified from v45 audit)** |
+| **Total** | **0** | **5** | **14** | **25+** | **~44 open items (16 fixed, 2 FPs reclassified from v45 audit)** |
 
 **Overall Grade: A** (strong foundation, excellent tests and security; all critical/high security issues resolved; remaining items are code quality, performance optimizations, and documentation accuracy)
 
@@ -740,13 +740,15 @@ StateManager is used for editor-level state (tool selection, zoom, etc.), NOT fo
 
 ---
 
-#### MED-v45-5: TextSanitizer Zero-Width-Space Defense Incomplete
+#### ~~MED-v45-5: TextSanitizer Zero-Width-Space Defense Incomplete~~ ✅ RESOLVED
 
-**Status:** Open
+**Status:** ✅ Fixed (v45 fixes batch 3)
 **Severity:** MEDIUM (Security — defense-in-depth)
 **File:** src/Validation/TextSanitizer.php L159-168
 
-**Issue:** Keyword list for zero-width space injection omits `Function`, `constructor`, `fetch`, `XMLHttpRequest`, `importScripts`, and `document.write`. Primary protection is rendering context (Canvas doesn't execute scripts).
+**Issue:** Keyword list for zero-width space injection omitted `Function`, `constructor`, `fetch`, `XMLHttpRequest`, `importScripts`, and `document.write`.
+
+**Resolution:** Expanded `$jsKeywords` from 6 to 12 entries. All modern attack vectors now covered.
 
 ---
 
@@ -784,13 +786,15 @@ StateManager is used for editor-level state (tool selection, zoom, etc.), NOT fo
 
 ### LOW (New in v45)
 
-#### LOW-v45-1: `call_user_func` Indirection for Guaranteed MW Classes
+#### ~~LOW-v45-1: `call_user_func` Indirection for Guaranteed MW Classes~~ ✅ RESOLVED
 
-**Status:** Open
+**Status:** ✅ Fixed (v45 fixes batch 3)
 **Severity:** LOW (Code quality)
 **Files:** src/Hooks.php, src/LayeredThumbnail.php, src/ThumbnailRenderer.php, src/LayersFileTransform.php
 
-**Issue:** 10 instances of `\call_user_func(['\\MediaWiki\\MediaWikiServices', 'getInstance'])` with `class_exists`/`is_callable` guards. Since `extension.json` requires MW >= 1.44.0, these classes are guaranteed.
+**Issue:** 10 instances of `\call_user_func` with `class_exists`/`is_callable` guards for guaranteed MW classes.
+
+**Resolution:** Replaced all 10 patterns with direct calls to `LoggerFactory::getInstance()`, `Shell::command()`, and `MediaWikiServices::getInstance()`.
 
 ---
 
@@ -814,13 +818,15 @@ StateManager is used for editor-level state (tool selection, zoom, etc.), NOT fo
 
 ---
 
-#### LOW-v45-4: serialize($params) for Thumbnail Cache Key
+#### ~~LOW-v45-4: serialize($params) for Thumbnail Cache Key~~ ✅ RESOLVED
 
-**Status:** Open
+**Status:** ✅ Fixed (v45 fixes batch 3)
 **Severity:** LOW (Performance)
 **File:** src/ThumbnailRenderer.php L99
 
-**Issue:** `serialize($params)` on potentially 2MB+ params before `md5()`. `json_encode()` + `md5()` would be faster.
+**Issue:** `serialize($params)` on potentially 2MB+ params before `md5()`. `json_encode()` is faster.
+
+**Resolution:** Changed `serialize($params)` to `json_encode($params)`. Deterministic output, no PHP object injection risk.
 
 ---
 
@@ -856,15 +862,15 @@ StateManager is used for editor-level state (tool selection, zoom, etc.), NOT fo
 
 ---
 
-#### LOW-v45-8: Duplicated backgroundVisible Normalization (5+ locations)
+#### ~~LOW-v45-8: Duplicated backgroundVisible Normalization (5+ locations)~~ ✅ RESOLVED
 
-**Status:** Open
+**Status:** ✅ Fixed (v45 fixes batch 3)
 **Severity:** LOW (Code quality — DRY violation)
-**Files:** ViewerManager.js (×3), LayersLightbox.js, LayersViewer.js
+**Files:** ViewerManager.js (×3), FreshnessChecker.js, ApiFallback.js, SlideController.js (×2)
 
-**Issue:** Pattern `bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false'` repeated with variations. Postmortem warns about this pattern resurfacing.
+**Issue:** Pattern `bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false'` repeated across 7 locations.
 
-**Recommended Fix:** Extract `isFalsyBackground(value)` to `LayerDataNormalizer`.
+**Resolution:** Extracted `LayerDataNormalizer.normalizeBackgroundVisible(val)` and replaced all 7 inline normalization blocks. Single source of truth for background visibility sentinel handling.
 
 ---
 
@@ -912,13 +918,15 @@ StateManager is used for editor-level state (tool selection, zoom, etc.), NOT fo
 
 ---
 
-#### LOW-v45-13: Lightbox close() Animation Timeout Race With open()
+#### ~~LOW-v45-13: Lightbox close() Animation Timeout Race With open()~~ ✅ RESOLVED
 
-**Status:** Open
+**Status:** ✅ Fixed (v45 fixes batch 3)
 **Severity:** LOW (Bug — race condition)
 **File:** resources/ext.layers/viewer/LayersLightbox.js L102-105
 
-**Issue:** Rapid close(animated)-then-open() within 300ms can cause the old close timeout to fire during the new overlay's lifetime, nullifying `this.overlay`/`this.container`.
+**Issue:** Rapid close(animated)-then-open() within 300ms could cause old close timeout to fire during new overlay's lifetime.
+
+**Resolution:** `open()` now cancels any pending `closeTimeoutId` before creating a new overlay, and checks for stale overlay DOM nodes regardless of `isOpen` state.
 
 ---
 

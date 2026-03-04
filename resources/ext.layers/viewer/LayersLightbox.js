@@ -89,8 +89,15 @@
 		 * @param {Object} [config.layerData] Pre-loaded layer data (if available)
 		 */
 		open( config ) {
-			if ( this.isOpen ) {
-				// Force synchronous close to prevent duplicate overlays during animation
+			// Cancel any pending close animation timeout to prevent it from
+			// destroying the overlay we're about to create (P3-111 race fix)
+			if ( this.closeTimeoutId ) {
+				clearTimeout( this.closeTimeoutId );
+				this.closeTimeoutId = null;
+			}
+
+			if ( this.isOpen || ( this.overlay && this.overlay.parentNode ) ) {
+				// Force synchronous close to prevent duplicate overlays
 				this.close( true );
 			}
 

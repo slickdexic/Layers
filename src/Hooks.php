@@ -14,9 +14,8 @@ namespace MediaWiki\Extension\Layers;
 use Exception;
 use MediaWiki\Extension\Layers\Hooks\WikitextHooks;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
-
-// Avoid direct hard dependency on MediaWiki classes for static analysis
 
 class Hooks {
 	/**
@@ -231,10 +230,8 @@ class Hooks {
 			$db->deleteLayerSetsForImage( $file->getName(), ForeignFileHelper::getFileSha1( $file ) );
 		} catch ( Exception $e ) {
 			// Log error but don't break deletion
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Error cleaning up layer sets', [ 'exception' => $e ] );
-			}
+			LoggerFactory::getInstance( 'Layers' )
+				->error( 'Layers: Error cleaning up layer sets', [ 'exception' => $e ] );
 		}
 	}
 
@@ -250,10 +247,8 @@ class Hooks {
 			$parser->setFunctionHook( 'layerlist', [ self::class, 'layerListParserFunction' ] );
 			$parser->setFunctionHook( 'layeredit', [ self::class, 'layerEditParserFunction' ] );
 		} catch ( Exception $e ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Error registering parser functions', [ 'exception' => $e ] );
-			}
+			LoggerFactory::getInstance( 'Layers' )
+				->error( 'Layers: Error registering parser functions', [ 'exception' => $e ] );
 		}
 	}
 
@@ -277,12 +272,8 @@ class Hooks {
 		}
 
 		try {
-			// Get file using MediaWikiServices if available
-			$services = \is_callable( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-				: null;
-			$repoGroup = $services ? $services->getRepoGroup() : null;
-			$fileObj = $repoGroup ? $repoGroup->findFile( $file ) : null;
+			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+			$fileObj = $repoGroup->findFile( $file );
 			if ( !$fileObj || !$fileObj->exists() ) {
 				return '';
 			}
@@ -299,10 +290,8 @@ class Hooks {
 
 			return implode( ', ', $names );
 		} catch ( Exception $e ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Error in layerListParserFunction', [ 'exception' => $e ] );
-			}
+			LoggerFactory::getInstance( 'Layers' )
+				->error( 'Layers: Error in layerListParserFunction', [ 'exception' => $e ] );
 			return '';
 		}
 	}
@@ -321,16 +310,8 @@ class Hooks {
 		}
 
 		try {
-			// Check class existence for compatibility
-			if ( !class_exists( 'RepoGroup' ) || !class_exists( 'Title' ) ) {
-				return '';
-			}
-
-			$services = \is_callable( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-				? \call_user_func( [ '\\MediaWiki\\MediaWikiServices', 'getInstance' ] )
-				: null;
-			$repoGroup = $services ? $services->getRepoGroup() : null;
-			$fileObj = $repoGroup ? $repoGroup->findFile( $file ) : null;
+			$repoGroup = MediaWikiServices::getInstance()->getRepoGroup();
+			$fileObj = $repoGroup->findFile( $file );
 			if ( !$fileObj || !$fileObj->exists() ) {
 				return '';
 			}
@@ -349,10 +330,8 @@ class Hooks {
 
 			return "[$editUrl $linkText]";
 		} catch ( Exception $e ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Error in layerEditParserFunction', [ 'exception' => $e ] );
-			}
+			LoggerFactory::getInstance( 'Layers' )
+				->error( 'Layers: Error in layerEditParserFunction', [ 'exception' => $e ] );
 			return '';
 		}
 	}

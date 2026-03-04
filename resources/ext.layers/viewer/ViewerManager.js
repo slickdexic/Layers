@@ -515,11 +515,10 @@ class ViewerManager {
 					}
 
 					// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
-					let bgVisible = true;
-					if ( layerset.data && layerset.data.backgroundVisible !== undefined ) {
-						const bgVal = layerset.data.backgroundVisible;
-						bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
-					}
+					const bgVisible = ( window.Layers && window.Layers.LayerDataNormalizer )
+						? window.Layers.LayerDataNormalizer.normalizeBackgroundVisible(
+							layerset.data && layerset.data.backgroundVisible )
+						: true;
 
 					const payload = {
 						layers: layersArr,
@@ -798,11 +797,10 @@ class ViewerManager {
 					}
 
 					// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
-					let bgVisible = true;
-					if ( layerset.data.backgroundVisible !== undefined ) {
-						const bgVal = layerset.data.backgroundVisible;
-						bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
-					}
+					const bgVisible = ( window.Layers && window.Layers.LayerDataNormalizer )
+						? window.Layers.LayerDataNormalizer.normalizeBackgroundVisible(
+							layerset.data.backgroundVisible )
+						: true;
 
 					const payload = {
 						layers: layersArr,
@@ -1297,11 +1295,10 @@ class ViewerManager {
 					}
 
 				// Normalize backgroundVisible: API returns 0/1 integers, convert to boolean
-				let bgVisible = true;
-				if ( layerset.data.backgroundVisible !== undefined ) {
-					const bgVal = layerset.data.backgroundVisible;
-					bgVisible = bgVal !== false && bgVal !== 0 && bgVal !== '0' && bgVal !== 'false';
-				}
+				const bgVisible = ( window.Layers && window.Layers.LayerDataNormalizer )
+					? window.Layers.LayerDataNormalizer.normalizeBackgroundVisible(
+						layerset.data.backgroundVisible )
+					: true;
 
 				const payload = {
 					layers: layersArr,

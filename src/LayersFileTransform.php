@@ -13,6 +13,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers;
 
 use Exception;
+use MediaWiki\Logger\LoggerFactory;
 
 class LayersFileTransform {
 	/**
@@ -46,10 +47,8 @@ class LayersFileTransform {
 			// We handled it
 			return false;
 		} catch ( Exception $e ) {
-			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
-				$logger->error( 'Layers: Exception in BitmapHandlerTransform', [ 'exception' => $e ] );
-			}
+			LoggerFactory::getInstance( 'Layers' )
+				->error( 'Layers: Exception in BitmapHandlerTransform', [ 'exception' => $e ] );
 			return true;
 		}
 	}

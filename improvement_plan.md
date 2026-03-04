@@ -1082,7 +1082,7 @@ the current name, not the first-ever name. Regression test added.
 | 17.7 | Failed images stored in cache as broken | P2-086 | ✅ Fixed v45 | 30m |
 | 17.8 | Blur texture canvas reallocated every frame | P2-087 | ✅ Fixed v45.2 | 1h |
 | 17.9 | N+1 query in LayersDatabase batch operations | P2-088 | Open | 1h |
-| 17.10 | TextSanitizer char-by-char loop (O(n²) risk) | P2-089 | Open | 1h |
+| 17.10 | TextSanitizer keyword defense-in-depth gap | P2-089 | ✅ Fixed v45.3 | 1h |
 | 17.11 | SlideHooks & SlideController static state | P2-090 | Open | 1h |
 | 17.12 | Duplicate bounds calculation methods | P2-091 | Open | 45m |
 | 17.13 | DrawingController ellipse validation OR vs AND | P2-092 | ✅ Fixed v45 | 15m |
@@ -1100,8 +1100,9 @@ before setting `_blurFillCanvas` dimensions, matching sibling `_blurCanvas` patt
 **17.9 Fix:** Batch the per-layer DB queries in `LayersDatabase`;
 use a single SELECT with `WHERE id IN (...)`.
 
-**17.10 Fix:** Replace the char-by-char loop in `TextSanitizer`
-with a regex-based approach.
+**17.10 Fix (✅ Done v45.3):** Expanded `$jsKeywords` from 6 to 12 entries,
+adding `Function`, `constructor`, `fetch`, `XMLHttpRequest`, `importScripts`,
+`document.write`. Zero-width space injection now covers modern attack vectors.
 
 **17.11 Fix:** Move static state in `SlideHooks.php` and
 `SlideController.js` to instance properties or request-scoped
@@ -1117,20 +1118,40 @@ meet `MIN_SHAPE_SIZE`, consistent with rectangle validation. Test updated.
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 17.14 | call_user_func indirection in PHP modules | P3-099 | Open | 30m |
+| 17.14 | call_user_func indirection in PHP modules | P3-099 | ✅ Fixed v45.3 | 30m |
 | 17.15 | Image src validation missing protocol check | P3-100 | Open | 15m |
 | 17.16 | Duplicated icon SVG strings across modules | P3-101 | Open | 1h |
-| 17.17 | Duplicated bgVisible reconciliation logic | P3-102 | Open | 30m |
+| 17.17 | ThumbnailRenderer serialize() for cache key | P3-102 | ✅ Fixed v45.3 | 30m |
 | 17.18 | RenderCoordinator hash collision on layers | P3-103 | Open | 30m |
 | 17.19 | SmartGuides sort mutates input array | P3-104 | ✅ Fixed v45.2 | 10m |
 | 17.20 | HitTestController allocations in hot loop | P3-105 | ✅ Fixed v45.2 | 30m |
-| 17.21 | Toolbar getToolIcon fallback inconsistency | P3-106 | Open | 15m |
+| 17.21 | backgroundVisible normalization scattered | P3-106 | ✅ Fixed v45.3 | 15m |
 | 17.22 | LightboxController lazy-init race window | P3-107 | Open | 30m |
 | 17.23 | JSON clone used in hot render paths | P3-108 | Open | 1h |
 | 17.24 | Dead saveToHistory call in SelectionManager | P3-109 | Open | 10m |
 | 17.25 | renderCodeSnippet HTML injection surface | P3-110 | ✅ Fixed v45.2 | 30m |
-| 17.26 | God class count drift in docs (17→20) | P3-111 | Open | 30m |
+| 17.26 | Lightbox close/open animation race | P3-111 | ✅ Fixed v45.3 | 30m |
 | 17.27 | PropertyBuilders line count off by 333 | P3-112 | Open | 10m |
+
+**17.14 Fix (✅ Done v45.3):** Replaced 10 `call_user_func`/`class_exists`
+indirection patterns in 4 PHP files (Hooks, LayeredThumbnail,
+ThumbnailRenderer, LayersFileTransform) with direct calls to
+`LoggerFactory::getInstance()`, `Shell::command()`, and
+`MediaWikiServices::getInstance()`.
+
+**17.17 Fix (✅ Done v45.3):** Changed `serialize($params)` to
+`json_encode($params)` in ThumbnailRenderer cache key generation.
+Deterministic output, no PHP object injection risk.
+
+**17.21 Fix (✅ Done v45.3):** Extracted
+`LayerDataNormalizer.normalizeBackgroundVisible()` and replaced 7
+inline normalization blocks across ViewerManager (3), FreshnessChecker (1),
+ApiFallback (1), SlideController (2). Single source of truth for
+`false/0/'0'/'false'` sentinel handling.
+
+**17.26 Fix (✅ Done v45.3):** `open()` in LayersLightbox now cancels
+any pending `closeTimeoutId` before creating a new overlay, and checks
+for stale overlay DOM nodes regardless of `isOpen` state.
 
 ---
 
@@ -1167,6 +1188,8 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
+| 2026-03-04 | v45.3 batch 3: 5 fixes (P2-089 keywords, P3-099 call_user_func, P3-102 serialize, P3-106 bgVisible, P3-111 lightbox race). Totals: 254/200/54. |
+| 2026-03-04 | v45.2 batch 2: 6 fixes (P2-085, P2-087, P3-103, P3-104, P3-105, P3-108, P3-110, P3-112). |
 | 2026-03-04 | v45 fixes: 5 items fixed (P0-006, P1-039, P1-042, P2-086, P2-092), 2 FPs (P1-040, P1-041). Totals: 254/195/59. |
 | 2026-03-04 | v45 fresh audit: 27 new findings added as Phase 17. Fixed v44 items: 15.8/15.9/15.10 and 16.1. |
 | 2026-02-17 | v43 verification audit: corrected 4 Phase 15 false positives (P2-074, P2-079, P2-082, P3-096); added Phase 16 with 3 new items (P2-084 nudge, P3-097 stale docs, P3-098 CHANGELOG); updated Phase Summary totals to 227/183/44. |

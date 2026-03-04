@@ -13,7 +13,9 @@ namespace MediaWiki\Extension\Layers;
 
 use Config;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Shell\Shell;
 use Psr\Log\LoggerInterface;
 
 class ThumbnailRenderer {
@@ -35,8 +37,8 @@ class ThumbnailRenderer {
 			$config = MediaWikiServices::getInstance()->getMainConfig();
 		}
 		$this->config = $config ?? new \HashConfig( [] );
-		if ( $logger === null && \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
-			$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+		if ( $logger === null ) {
+			$logger = LoggerFactory::getInstance( 'Layers' );
 		}
 		$this->logger = $logger;
 	}
@@ -85,7 +87,7 @@ class ThumbnailRenderer {
 				}
 			}
 
-			$outputPath = $thumbDir . '/' . ForeignFileHelper::getFileSha1( $file ) . '_' . md5( serialize( $params ) ) . '.png';
+			$outputPath = $thumbDir . '/' . ForeignFileHelper::getFileSha1( $file ) . '_' . md5( json_encode( $params ) ) . '.png';
 			if ( file_exists( $outputPath ) ) {
 				return $outputPath;
 			}
@@ -181,40 +183,32 @@ class ThumbnailRenderer {
 			$limits = [ 'time' => (int)( $this->config->get( 'LayersImageMagickTimeout' ) ?? 30 ) ];
 		}
 
-		if ( \class_exists( '\\MediaWiki\\Shell\\Shell' ) ) {
-			try {
-				$result = \call_user_func( [ '\\MediaWiki\\Shell\\Shell', 'command' ], ...$args )
-					->limits( $limits )
-					->includeStderr()
-					->execute();
+		try {
+			$result = Shell::command( ...$args )
+				->limits( $limits )
+				->includeStderr()
+				->execute();
 
-				if (
-					method_exists( $result, 'getExitCode' )
-						? $result->getExitCode() !== 0
-						: ( method_exists( $result, 'isOK' ) ? !$result->isOK() : false )
-				) {
-					$stderr = method_exists( $result, 'getStderr' ) ? $result->getStderr() : '';
-					if ( $this->logger ) {
-						$this->logger->error(
-							'Layers: ImageMagick failed',
-							[ 'stderr' => $stderr, 'args' => $args ]
-						);
-					}
-					return false;
-				}
-			} catch ( \Throwable $e ) {
+			if (
+				method_exists( $result, 'getExitCode' )
+					? $result->getExitCode() !== 0
+					: ( method_exists( $result, 'isOK' ) ? !$result->isOK() : false )
+			) {
+				$stderr = method_exists( $result, 'getStderr' ) ? $result->getStderr() : '';
 				if ( $this->logger ) {
 					$this->logger->error(
-						'Layers: Shell execution failed',
-						[ 'exception' => $e, 'args' => $args ]
+						'Layers: ImageMagick failed',
+						[ 'stderr' => $stderr, 'args' => $args ]
 					);
 				}
 				return false;
 			}
-		} else {
-			// Shell not available; cannot safely execute ImageMagick
+		} catch ( \Throwable $e ) {
 			if ( $this->logger ) {
-				$this->logger->warning( 'Layers: Shell class not available; skipping overlay' );
+				$this->logger->error(
+					'Layers: Shell execution failed',
+					[ 'exception' => $e, 'args' => $args ]
+				);
 			}
 			return false;
 		}
