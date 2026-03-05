@@ -350,5 +350,14 @@ global.createMockEditor = function () {
         } catch ( e ) {
             // PropertyBuilders not found, tests will use fallback
         }
+
+        // Load LogSanitizer utility for sanitizeLogMessage delegation
+        try {
+            const LogSanitizer = require( '../../resources/ext.layers.editor/utils/LogSanitizer.js' );
+            window.Layers.Utils = window.Layers.Utils || {};
+            window.Layers.Utils.sanitizeLogMessage = LogSanitizer.sanitizeLogMessage;
+        } catch ( e ) {
+            // LogSanitizer not found, tests will use fallback
+        }
     }
 }() );

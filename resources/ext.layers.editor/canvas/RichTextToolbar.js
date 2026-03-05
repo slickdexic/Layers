@@ -271,6 +271,13 @@
 		destroy() {
 			this._stopDrag();
 
+			// Remove mousedown listener from drag handle to prevent memory leak
+			if ( this._dragHandle && this._boundMouseDown ) {
+				this._dragHandle.removeEventListener( 'mousedown', this._boundMouseDown );
+				this._boundMouseDown = null;
+				this._dragHandle = null;
+			}
+
 			if ( this.toolbarElement && this.toolbarElement.parentNode ) {
 				this.toolbarElement.parentNode.removeChild( this.toolbarElement );
 			}
@@ -749,7 +756,8 @@
 		 * @param {HTMLElement} handle - Drag handle element
 		 */
 		_setupDrag( handle ) {
-			handle.addEventListener( 'mousedown', ( e ) => {
+			this._dragHandle = handle;
+			this._boundMouseDown = ( e ) => {
 				e.preventDefault();
 				this._isDragging = true;
 
@@ -764,7 +772,8 @@
 
 				document.addEventListener( 'mousemove', this._boundMouseMove );
 				document.addEventListener( 'mouseup', this._boundMouseUp );
-			} );
+			};
+			handle.addEventListener( 'mousedown', this._boundMouseDown );
 		}
 
 		/**

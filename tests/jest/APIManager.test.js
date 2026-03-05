@@ -227,16 +227,16 @@ describe( 'APIManager', function () {
 	} );
 
 	describe( 'sanitizeLogMessage (via errorHandler)', function () {
-		it( 'should return sanitized message for non-string input', function () {
+		it( 'should pass through non-string non-object input', function () {
 			const result = apiManager.errorHandler.sanitizeLogMessage( 12345 );
 
-			expect( result ).toBe( 'Non-string error message' );
+			expect( result ).toBe( 12345 );
 		} );
 
-		it( 'should return sanitized message for object input', function () {
-			const result = apiManager.errorHandler.sanitizeLogMessage( { key: 'value' } );
+		it( 'should filter object input keys', function () {
+			const result = apiManager.errorHandler.sanitizeLogMessage( { key: 'value', type: 'test' } );
 
-			expect( result ).toBe( 'Non-string error message' );
+			expect( result ).toEqual( { key: '[FILTERED]', type: 'test' } );
 		} );
 
 		it( 'should remove long token patterns', function () {

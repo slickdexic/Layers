@@ -175,7 +175,8 @@
 					return;
 				}
 				// Skip locked or invisible layers
-				if ( layerId && layer && layer.locked !== true && layer.visible !== false &&
+				if ( layerId && layer && layer.locked !== true && layer.locked !== 1 &&
+					layer.visible !== false && layer.visible !== 0 &&
 					!this.selectedLayerIds.includes( layerId ) ) {
 					this.selectedLayerIds.push( layerId );
 					this.lastSelectedId = layerId;

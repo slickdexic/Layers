@@ -248,9 +248,9 @@ describe( 'APIErrorHandler', () => {
 	} );
 
 	describe( 'sanitizeLogMessage', () => {
-		it( 'should return sanitized string for non-string input', () => {
+		it( 'should pass through non-string non-object input', () => {
 			const result = handler.sanitizeLogMessage( 123 );
-			expect( result ).toBe( 'Non-string error message' );
+			expect( result ).toBe( 123 );
 		} );
 
 		it( 'should replace long token-like strings', () => {

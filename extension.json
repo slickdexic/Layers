@@ -330,6 +330,7 @@
 			"scripts": [
 			"compat.js",
 				"utils/NamespaceHelper.js",
+				"utils/LogSanitizer.js",
 				"MessageHelper.js",
 				"AccessibilityAnnouncer.js",
 				"EventTracker.js",

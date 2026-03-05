@@ -351,47 +351,15 @@ class ValidationManager {
 	}
 
 	/**
-	 * Sanitize log messages for security
-	 * Removes sensitive data like tokens, URLs, IPs, and emails before logging
+	 * Sanitize log messages for security.
+	 * Delegates to shared LogSanitizer utility.
 	 *
-	 * @param {string|Object|*} message - Message to sanitize
-	 * @return {string|Object|*} Sanitized message safe for logging
+	 * @param {*} message - Message to sanitize
+	 * @return {*} Sanitized message safe for logging
 	 */
 	sanitizeLogMessage( message ) {
-		if ( typeof message !== 'string' ) {
-			if ( typeof message === 'object' && message !== null ) {
-				const safeKeys = [ 'type', 'action', 'status', 'tool', 'layer', 'count', 'x', 'y', 'width', 'height' ];
-				const obj = {};
-				for ( const key in message ) {
-					if ( Object.prototype.hasOwnProperty.call( message, key ) ) {
-						if ( safeKeys.includes( key ) ) {
-							obj[ key ] = message[ key ];
-						} else {
-							obj[ key ] = '[FILTERED]';
-						}
-					}
-				}
-				return obj;
-			}
-			return message;
-		}
-
-		let result = String( message );
-
-		// Remove potentially sensitive patterns
-		result = result.replace( /[a-zA-Z0-9+/=]{20,}/g, '[TOKEN]' );
-		result = result.replace( /[a-fA-F0-9]{16,}/g, '[HEX]' );
-		result = result.replace( /\/[\w\s.-]+/g, '[PATH]' );
-		result = result.replace( /https?:\/\/[^\s'"<>&]*/gi, '[URL]' );
-		result = result.replace( /\w+:\/\/[^\s'"<>&]*/gi, '[CONNECTION]' );
-		result = result.replace( /\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[IP]' );
-		result = result.replace( /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]' );
-
-		if ( result.length > 200 ) {
-			result = result.slice( 0, 200 ) + '[TRUNCATED]';
-		}
-
-		return result;
+		const sanitizer = window.Layers && window.Layers.Utils && window.Layers.Utils.sanitizeLogMessage;
+		return sanitizer ? sanitizer( message ) : message;
 	}
 
 	/**

@@ -354,40 +354,14 @@ class LayersEditor {
 	}
 
 	/**
-	 * Sanitize log messages to prevent sensitive information disclosure
+	 * Sanitize log messages to prevent sensitive information disclosure.
+	 * Delegates to shared LogSanitizer utility.
 	 * @param {*} message The message to sanitize
 	 * @return {*} Sanitized message
 	 */
 	sanitizeLogMessage ( message ) {
-		if ( typeof message !== 'string' ) {
-			if ( typeof message === 'object' && message !== null ) {
-				const safeKeys = [ 'type', 'action', 'status', 'tool', 'layer', 'count', 'x', 'y', 'width', 'height' ];
-				const obj = {};
-				for ( const key in message ) {
-					if ( Object.prototype.hasOwnProperty.call( message, key ) ) {
-						obj[ key ] = safeKeys.includes( key ) ? message[ key ] : '[FILTERED]';
-					}
-				}
-				return obj;
-			}
-			return message;
-		}
-
-		let result = String( message );
-		result = result.replace( /[a-zA-Z0-9+/=]{20,}/g, '[TOKEN]' );
-		result = result.replace( /[a-fA-F0-9]{16,}/g, '[HEX]' );
-		result = result.replace( /[A-Za-z]:[\\/][\w\s\\.-]*/g, '[PATH]' );
-		result = result.replace( /\/[\w\s.-]+/g, '[PATH]' );
-		result = result.replace( /https?:\/\/[^\s'"<>&]*/gi, '[URL]' );
-		result = result.replace( /\w+:\/\/[^\s'"<>&]*/gi, '[CONNECTION]' );
-		result = result.replace( /\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[IP]' );
-		result = result.replace( /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]' );
-
-		if ( result.length > 200 ) {
-			result = result.slice( 0, 200 ) + '[TRUNCATED]';
-		}
-
-		return result;
+		const sanitizer = window.Layers && window.Layers.Utils && window.Layers.Utils.sanitizeLogMessage;
+		return sanitizer ? sanitizer( message ) : message;
 	}
 
 	/**
@@ -1298,13 +1272,21 @@ class LayersEditor {
 	}
 
 	/**
-	 * Duplicate the selected layer(s)
+	 * Duplicate the selected layer(s).
+	 * Delegates to SelectionManager if available.
 	 */
 	duplicateSelected () {
+		// Prefer SelectionManager's implementation to avoid duplication
+		if ( this.canvasManager && this.canvasManager.selectionManager &&
+			typeof this.canvasManager.selectionManager.duplicateSelected === 'function' ) {
+			this.canvasManager.selectionManager.duplicateSelected();
+			return;
+		}
+
+		// Fallback for cases where canvasManager isn't ready
 		const selectedIds = this.getSelectedLayerIds();
 		if ( selectedIds.length > 0 ) {
 			const newIds = [];
-			// Duplicate all selected layers, not just the last one
 			for ( const layerId of selectedIds ) {
 				const layer = this.getLayerById( layerId );
 				if ( layer ) {
@@ -1318,7 +1300,6 @@ class LayersEditor {
 					}
 				}
 			}
-			// Select the newly duplicated layers
 			if ( newIds.length > 0 && this.canvasManager &&
 				typeof this.canvasManager.setSelectedLayerIds === 'function' ) {
 				this.canvasManager.setSelectedLayerIds( newIds );

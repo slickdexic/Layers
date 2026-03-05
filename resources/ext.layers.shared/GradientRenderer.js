@@ -390,6 +390,8 @@
 		window.Layers = window.Layers || {};
 		window.Layers.Renderers = window.Layers.Renderers || {};
 		window.Layers.Renderers.GradientRenderer = GradientRenderer;
+		// Also register at flat namespace for consistency with other renderers
+		window.Layers.GradientRenderer = GradientRenderer;
 	}
 
 	// CommonJS export for Jest

@@ -604,7 +604,9 @@
 				}
 			} catch ( e ) {
 				// Error fallback - draw a semi-transparent overlay
-				mw.log.warn( '[CanvasRenderer] Blur blend mode failed:', e.message );
+				if ( typeof mw !== 'undefined' ) {
+					mw.log.warn( '[CanvasRenderer] Blur blend mode failed:', e.message );
+				}
 				this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
 				this.ctx.beginPath();
 				this._drawBlurClipPath( layer );

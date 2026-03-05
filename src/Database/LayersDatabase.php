@@ -832,13 +832,14 @@ class LayersDatabase {
 	 * @return int|null User ID of the owner, or null if not found
 	 */
 	public function getNamedSetOwner( string $imgName, string $sha1, string $setName ): ?int {
-		$dbr = $this->getReadDb();
-		if ( !$dbr ) {
+		// Use primary DB to avoid replication lag for permission checks
+		$dbw = $this->getWriteDb();
+		if ( !$dbw ) {
 			return null;
 		}
 
 		// Get the first revision (oldest) to find the original creator
-		$row = $dbr->selectRow(
+		$row = $dbw->selectRow(
 			'layer_sets',
 			[ 'ls_user_id' ],
 			[

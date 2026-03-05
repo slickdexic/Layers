@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 4, 2026 — v45 audit (16 fixes applied, 3 batches)
+**Last updated:** March 5, 2026 — v45.7 (batch 7: 10 P3 fixes)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 5 | 5 | 0 |
 | P1 | 40 | 40 | 0 |
 | P2 | 96 | 96 | 0 |
-| P3 | 121 | 87 | 34 |
-| **Total** | **262** | **228** | **34** |
+| P3 | 121 | 97 | 24 |
+| **Total** | **262** | **238** | **24** |
 
 ---
 
@@ -592,7 +592,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 
 - **File:** `resources/ext.layers.editor/StyleController.js` L85-144
 - **Impact:** Three redundant passes over style properties. Low perf impact.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v42 review
 
 ### P3-082: Duplicate sanitizeLogMessage in 3 Files
@@ -600,7 +600,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Files:** `LayersEditor.js`, `APIErrorHandler.js`, `ValidationManager.js`
 - **Impact:** Identical function duplicated. Bug fixes must be applied 3x.
 - **Recommended Fix:** Extract to shared utility.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v42 review
 
 ### P3-083: SelectionManager Boolean Handling Inconsistency
@@ -608,7 +608,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.editor/SelectionManager.js`
 - **Impact:** `selectAll()` correctly checks `!== 0` but `selectLayer()`
   fallback only checks `!== true` / `!== false`, missing integer API values.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v42 review
 
 ### P3-084: DimensionRenderer Uses || for Falsy-Sensitive Defaults
@@ -671,7 +671,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.editor/LayerPanel.js` L2161
 - **Impact:** Never called but contains unescaped filename in innerHTML.
   Remove or fix before any caller is added.
-- **Status:** Open
+- **Status:** Fixed (superseded by P3-112; method removed March 4, 2026)
 - **Introduced:** v42 review
 
 ### P3-091: RichTextToolbar Potential Drag Listener Leak
@@ -679,7 +679,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.editor/canvas/RichTextToolbar.js`
 - **Impact:** Document-level mouse handlers during drag not cleaned in
   destroy() if destroyed mid-drag.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v42 review
 
 ### P3-092: Touch Events Missing Key Modifier Properties
@@ -711,7 +711,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.editor/CanvasRenderer.js`
 - **Impact:** Uses `mw.log.warn()` without typeof guard. ReferenceError
   in Jest test environment.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v42 review
 
 ### ~~P3-096: ToolManager Module References at IIFE Load Time~~ (FALSE POSITIVE)
@@ -933,7 +933,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Files:** `CanvasManager.js`, `ClipboardController.js`
 - **Impact:** Layer duplication logic exists in both files.
   Behavioral drift is possible if only one is updated.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v41 review
 
 ### P3-071: GradientRenderer Namespace Registration Inconsistency
@@ -942,7 +942,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** Registered under `mw.ext.layers.GradientRenderer`
   (shared namespace) but instantiated differently in editor vs.
   viewer contexts. Minor inconsistency in module loading.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v41 review
 
 ### P3-072: RenderCoordinator Hash Misses Deep Object Changes
@@ -981,7 +981,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** No `module.exports` fallback for Jest test
   environments. Tests must mock or re-create the defaults
   object rather than importing it directly.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v41 review
 
 ### P3-076: Hard-Coded English Strings in UI Components
@@ -1009,7 +1009,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   to determine ownership for delete/rename authorization. Under
   replication lag, a just-created set might not be found,
   causing a false permission denial.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.7
 - **Introduced:** v41 review
 
 ### P3-079: ValidationResult Mixed Error Structure

@@ -87,65 +87,12 @@
 			// Start with previous style to preserve unmanaged properties (like arrowhead, arrowSize)
 			const next = { ...prev };
 
-			// Update managed properties if defined in options
-			if ( isDefined( options.color ) ) {
-				next.color = options.color;
-			}
-			if ( isDefined( options.fill ) ) {
-				next.fill = options.fill;
-			}
-			if ( isDefined( options.strokeWidth ) ) {
-				next.strokeWidth = options.strokeWidth;
-			}
-			if ( isDefined( options.fontSize ) ) {
-				next.fontSize = options.fontSize;
-			}
-			if ( isDefined( options.fontFamily ) ) {
-				next.fontFamily = options.fontFamily;
-			}
-			if ( isDefined( options.textStrokeColor ) ) {
-				next.textStrokeColor = options.textStrokeColor;
-			}
-			if ( isDefined( options.textStrokeWidth ) ) {
-				next.textStrokeWidth = options.textStrokeWidth;
-			}
-			if ( isDefined( options.textShadow ) ) {
-				next.textShadow = options.textShadow;
-			}
-			if ( isDefined( options.textShadowColor ) ) {
-				next.textShadowColor = options.textShadowColor;
-			}
-			if ( isDefined( options.arrowStyle ) ) {
-				next.arrowStyle = options.arrowStyle;
-			}
-			// Allow unmanaged properties to be set via options too
-			// This allows PresetStyleManager to inject properties like arrowhead
+			// Merge all defined options onto next in a single pass
 			Object.keys( options ).forEach( ( k ) => {
-				// Skip properties we already handled specifically if we want specific logic,
-				// but for now, simple overwrite for others is fine.
-				// We exclude the ones above only if we wanted custom logic, but we don't.
-				// However, to be safe and cleaner, let's just merge options onto next.
 				if ( isDefined( options[ k ] ) ) {
 					next[ k ] = options[ k ];
 				}
 			} );
-
-			// Basic shadow properties mapping
-			if ( isDefined( options.shadow ) ) {
-				next.shadow = options.shadow;
-			}
-			if ( isDefined( options.shadowColor ) ) {
-				next.shadowColor = options.shadowColor;
-			}
-			if ( isDefined( options.shadowBlur ) ) {
-				next.shadowBlur = options.shadowBlur;
-			}
-			if ( isDefined( options.shadowOffsetX ) ) {
-				next.shadowOffsetX = options.shadowOffsetX;
-			}
-			if ( isDefined( options.shadowOffsetY ) ) {
-				next.shadowOffsetY = options.shadowOffsetY;
-			}
 
 			// Ensure essential defaults
 			if ( !next.fontFamily ) {

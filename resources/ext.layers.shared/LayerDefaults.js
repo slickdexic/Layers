@@ -236,4 +236,9 @@
 	mw.ext.layers = mw.ext.layers || {};
 	mw.ext.layers.LayerDefaults = LayerDefaults;
 
+	// CommonJS export for Jest
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = LayerDefaults;
+	}
+
 }() );

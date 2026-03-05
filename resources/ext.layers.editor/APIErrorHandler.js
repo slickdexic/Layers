@@ -209,34 +209,14 @@
 		}
 		
 		/**
-		 * Sanitize log message to prevent information disclosure
-		 * @param {string} message Raw error message
-		 * @return {string} Sanitized message
+		 * Sanitize log message to prevent information disclosure.
+		 * Delegates to shared LogSanitizer utility.
+		 * @param {*} message Raw error message
+		 * @return {*} Sanitized message
 		 */
 		sanitizeLogMessage( message ) {
-			if ( typeof message !== 'string' ) {
-				return 'Non-string error message';
-			}
-			
-			// Apply same sanitization as in LayersEditor
-			let sanitized = message;
-			
-			// Remove tokens and sensitive patterns
-			sanitized = sanitized.replace( /[a-zA-Z0-9+/=]{20,}/g, '[TOKEN]' );
-			sanitized = sanitized.replace( /[a-fA-F0-9]{16,}/g, '[HEX]' );
-			sanitized = sanitized.replace( /[A-Za-z]:[\\/][\w\s\\.-]*/g, '[PATH]' );
-			sanitized = sanitized.replace( /\/[\w\s.-]+/g, '[PATH]' );
-			sanitized = sanitized.replace( /https?:\/\/[^\s'"<>&]*/gi, '[URL]' );
-			sanitized = sanitized.replace( /\w+:\/\/[^\s'"<>&]*/gi, '[CONNECTION]' );
-			sanitized = sanitized.replace( /\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, '[IP]' );
-			sanitized = sanitized.replace( /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL]' );
-			
-			// Truncate if too long
-			if ( sanitized.length > 200 ) {
-				sanitized = sanitized.slice( 0, 200 ) + '[TRUNCATED]';
-			}
-			
-			return sanitized;
+			const sanitizer = window.Layers && window.Layers.Utils && window.Layers.Utils.sanitizeLogMessage;
+			return sanitizer ? sanitizer( message ) : message;
 		}
 		
 		/**
