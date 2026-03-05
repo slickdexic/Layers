@@ -252,6 +252,33 @@ class ThumbnailRenderer {
 	}
 
 	/**
+	 * Extract and compute shadow parameters from a layer.
+	 *
+	 * Centralises the shadow property extraction that was previously duplicated
+	 * across buildTextArguments, buildTextBoxArguments, buildRectangleArguments,
+	 * buildCircleArguments and buildEllipseArguments.
+	 *
+	 * @param array $layer Layer data
+	 * @param float $scaleX X scale factor
+	 * @param float $scaleY Y scale factor
+	 * @return array|null Associative array with 'color', 'blur', 'offsetX', 'offsetY',
+	 *                    or null if shadow is not enabled on this layer
+	 */
+	private function extractShadowParams( array $layer, float $scaleX, float $scaleY ): ?array {
+		if ( empty( $layer['shadow'] ) ) {
+			return null;
+		}
+		$shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
+		$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+		return [
+			'color' => $shadowColor,
+			'blur' => (int)( ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY ) ),
+			'offsetX' => ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX,
+			'offsetY' => ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY,
+		];
+	}
+
+	/**
 	 * Wrap shadow drawing arguments in a parenthesized sub-image to isolate
 	 * the blur effect. Without this, -blur affects all previously drawn
 	 * content on the canvas (corrupting earlier layers).
@@ -302,21 +329,17 @@ class ThumbnailRenderer {
 
 		$args = [];
 		// Shadow support
-		if ( !empty( $layer['shadow'] ) ) {
-			$shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
-			$shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
-			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
-			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
-			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
+		if ( $shadow !== null ) {
 			$shadowDrawArgs = [
-				'-fill', $shadowColor,
+				'-fill', $shadow['color'],
 				'-pointsize', (string)$fontSize,
 				'-font', $font,
-				'-annotate', '+' . (int)( $x + $shadowOffsetX ) . '+' . (int)( $y + $shadowOffsetY ),
+				'-annotate', '+' . (int)( $x + $shadow['offsetX'] ) . '+' . (int)( $y + $shadow['offsetY'] ),
 				$text,
 			];
 			$args = array_merge( $args, $this->buildShadowSubImage(
-				$shadowDrawArgs, (int)$shadowBlur
+				$shadowDrawArgs, $shadow['blur']
 			) );
 		}
 		$args = array_merge( $args, [
@@ -352,21 +375,17 @@ class ThumbnailRenderer {
 		$args = [];
 
 		// Draw shadow if enabled
-		if ( !empty( $layer['shadow'] ) ) {
-			$shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
-			$shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
-			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
-			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
-			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
+		if ( $shadow !== null ) {
 			$shadowDrawArgs = [
-				'-fill', $shadowColor,
+				'-fill', $shadow['color'],
 				'-draw',
 				'rectangle ' .
-					(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
-					(int)( $x + $width + $shadowOffsetX ) . ',' . (int)( $y + $height + $shadowOffsetY ),
+					(int)( $x + $shadow['offsetX'] ) . ',' . (int)( $y + $shadow['offsetY'] ) . ' ' .
+					(int)( $x + $width + $shadow['offsetX'] ) . ',' . (int)( $y + $height + $shadow['offsetY'] ),
 			];
 			$args = array_merge( $args, $this->buildShadowSubImage(
-				$shadowDrawArgs, (int)$shadowBlur
+				$shadowDrawArgs, $shadow['blur']
 			) );
 		}
 
@@ -424,21 +443,17 @@ class ThumbnailRenderer {
 		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		$args = [];
-		if ( !empty( $layer['shadow'] ) ) {
-			$shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
-			$shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
-			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
-			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
-			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
+		if ( $shadow !== null ) {
 			$shadowDrawArgs = [
-				'-fill', $shadowColor,
+				'-fill', $shadow['color'],
 				'-draw',
 				'rectangle ' .
-					(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
-					(int)( $x + $width + $shadowOffsetX ) . ',' . (int)( $y + $height + $shadowOffsetY ),
+					(int)( $x + $shadow['offsetX'] ) . ',' . (int)( $y + $shadow['offsetY'] ) . ' ' .
+					(int)( $x + $width + $shadow['offsetX'] ) . ',' . (int)( $y + $height + $shadow['offsetY'] ),
 			];
 			$args = array_merge( $args, $this->buildShadowSubImage(
-				$shadowDrawArgs, (int)$shadowBlur
+				$shadowDrawArgs, $shadow['blur']
 			) );
 		}
 		$args = array_merge( $args, [
@@ -462,20 +477,16 @@ class ThumbnailRenderer {
 		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		$args = [];
-		if ( !empty( $layer['shadow'] ) ) {
-			$shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
-			$shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
-			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
-			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
-			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
+		if ( $shadow !== null ) {
 			$shadowDrawArgs = [
-				'-fill', $shadowColor,
+				'-fill', $shadow['color'],
 				'-draw',
-				'circle ' . (int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' '
-				. (int)( $x + $radius + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ),
+				'circle ' . (int)( $x + $shadow['offsetX'] ) . ',' . (int)( $y + $shadow['offsetY'] ) . ' '
+				. (int)( $x + $radius + $shadow['offsetX'] ) . ',' . (int)( $y + $shadow['offsetY'] ),
 			];
 			$args = array_merge( $args, $this->buildShadowSubImage(
-				$shadowDrawArgs, (int)$shadowBlur
+				$shadowDrawArgs, $shadow['blur']
 			) );
 		}
 		$args = array_merge( $args, [
@@ -500,21 +511,17 @@ class ThumbnailRenderer {
 		$stroke = $this->withOpacity( $stroke, $opacity );
 
 		$args = [];
-		if ( !empty( $layer['shadow'] ) ) {
-			$shadowColor = $layer['shadowColor'] ?? 'rgba(0,0,0,0.4)';
-			$shadowBlur = ( (float)( $layer['shadowBlur'] ?? 8 ) ) * min( $scaleX, $scaleY );
-			$shadowOffsetX = ( (float)( $layer['shadowOffsetX'] ?? 2 ) ) * $scaleX;
-			$shadowOffsetY = ( (float)( $layer['shadowOffsetY'] ?? 2 ) ) * $scaleY;
-			$shadowColor = $this->withOpacity( $shadowColor, 1.0 );
+		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
+		if ( $shadow !== null ) {
 			$shadowDrawArgs = [
-				'-fill', $shadowColor,
+				'-fill', $shadow['color'],
 				'-draw',
 				'ellipse ' .
-					(int)( $x + $shadowOffsetX ) . ',' . (int)( $y + $shadowOffsetY ) . ' ' .
+					(int)( $x + $shadow['offsetX'] ) . ',' . (int)( $y + $shadow['offsetY'] ) . ' ' .
 					(int)$radiusX . ',' . (int)$radiusY . ' 0,360',
 			];
 			$args = array_merge( $args, $this->buildShadowSubImage(
-				$shadowDrawArgs, (int)$shadowBlur
+				$shadowDrawArgs, $shadow['blur']
 			) );
 		}
 		$args = array_merge( $args, [

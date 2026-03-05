@@ -456,6 +456,7 @@ class LayersEditor {
 		// Set up event handlers
 		this.eventManager.setupGlobalHandlers();
 		this.setupCloseButton();
+		this.setupModalCloseListener();
 
 		document.title = '🎨 Layers Editor - ' + ( this.filename || 'Unknown File' );
 	}
@@ -717,6 +718,31 @@ class LayersEditor {
 			};
 			this.trackEventListener( closeBtn, 'click', closeHandler );
 		}
+	}
+
+	/**
+	 * Set up postMessage listener for modal close requests.
+	 * When the editor runs inside an iframe modal, the parent page sends
+	 * 'layers-editor-request-close' when the user presses Escape. This
+	 * triggers the editor's own cancel flow which checks for unsaved changes.
+	 * @private
+	 */
+	setupModalCloseListener () {
+		const isModalMode = typeof mw !== 'undefined' && mw.config &&
+			mw.config.get( 'wgLayersIsModalMode' );
+		if ( !isModalMode || window.parent === window ) {
+			return;
+		}
+
+		this._modalCloseHandler = ( event ) => {
+			if ( event.origin !== window.location.origin ) {
+				return;
+			}
+			if ( event.data && event.data.type === 'layers-editor-request-close' ) {
+				this.cancel( true );
+			}
+		};
+		window.addEventListener( 'message', this._modalCloseHandler );
 	}
 
 	/**
@@ -1629,6 +1655,12 @@ class LayersEditor {
 
 		// Clean up event listeners
 		this.cleanupGlobalEventListeners();
+
+		// Clean up modal close listener
+		if ( this._modalCloseHandler ) {
+			window.removeEventListener( 'message', this._modalCloseHandler );
+			this._modalCloseHandler = null;
+		}
 
 		// Clean up managers
 		const managers = [

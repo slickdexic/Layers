@@ -236,16 +236,57 @@ describe( 'LayersEditorModal', () => {
 	} );
 
 	describe( 'escape key handling', () => {
-		it( 'should close modal on Escape key', async () => {
+		it( 'should send close request to iframe on Escape key', async () => {
 			const modal = new LayersEditorModal();
 			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			// Mock iframe.contentWindow.postMessage
+			const mockPostMessage = jest.fn();
+			Object.defineProperty( modal.iframe, 'contentWindow', {
+				value: { postMessage: mockPostMessage },
+				writable: true
+			} );
 
 			// Simulate Escape key
 			const escapeEvent = new KeyboardEvent( 'keydown', { key: 'Escape' } );
 			document.dispatchEvent( escapeEvent );
 
-			const result = await openPromise;
+			// Should have sent postMessage to iframe, not closed directly
+			expect( mockPostMessage ).toHaveBeenCalledWith(
+				{ type: 'layers-editor-request-close' },
+				window.location.origin
+			);
 
+			// Modal is still open (waiting for editor to respond)
+			expect( modal.overlay ).not.toBeNull();
+
+			modal.close( false );
+			await openPromise;
+		} );
+
+		it( 'should close modal when editor responds to escape', async () => {
+			const modal = new LayersEditorModal();
+			const openPromise = modal.open( 'Test.jpg', 'default' );
+
+			// Setup message listener (simulates iframe load)
+			modal.iframe.dispatchEvent( new Event( 'load' ) );
+
+			// Mock iframe.contentWindow for Escape handler
+			Object.defineProperty( modal.iframe, 'contentWindow', {
+				value: { postMessage: jest.fn() },
+				writable: true
+			} );
+
+			// Simulate Escape key
+			document.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape' } ) );
+
+			// Simulate the editor responding with close confirmation
+			window.dispatchEvent( new MessageEvent( 'message', {
+				origin: window.location.origin,
+				data: { type: 'layers-editor-close', saved: false }
+			} ) );
+
+			const result = await openPromise;
 			expect( modal.overlay ).toBeNull();
 			expect( result.saved ).toBe( false );
 		} );

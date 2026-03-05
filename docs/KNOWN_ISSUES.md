@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 5, 2026 — v45.9 (batch 9: 4 P3 fixes, 3 won't-fix)
+**Last updated:** March 5, 2026 — v45.10 (batch 10: 3 P3 fixes, 4 won't-fix)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 5 | 5 | 0 |
 | P1 | 40 | 40 | 0 |
 | P2 | 96 | 96 | 0 |
-| P3 | 121 | 110 | 11 |
-| **Total** | **262** | **251** | **11** |
+| P3 | 121 | 121 | 0 |
+| **Total** | **262** | **262** | **0** |
 
 ---
 
@@ -216,7 +216,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** Shadow rendering block copy-pasted across 5 shape handlers.
   Polygon and star shapes lack shadow support entirely.
 - **Recommended Fix:** Extract `buildShadowArgs()` helper.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.10 — Extracted `extractShadowParams()` helper; all 5 shape handlers now delegate to it.
 - **Introduced:** v45 review
 
 ### P3-101: ThumbnailRenderer Named Color Table Duplicates ColorValidator
@@ -372,7 +372,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Recommended Fix:** Add the three missing version sections or document
   that those tags were skipped. Correct the 1.5.55 date and ensure
   `wiki/Changelog.md` mirrors `CHANGELOG.md`.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.10 — Added v1.5.14, v1.5.37, v1.5.53, v1.5.54 entries; corrected v1.5.55 date to 2026-02-10; mirrored to wiki/Changelog.md.
 - **Introduced:** v43 review
 
 ---
@@ -655,7 +655,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.modal/LayersEditorModal.js`
 - **Impact:** Pressing Escape immediately closes modal without checking
   for unsaved changes via postMessage.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.10 — Escape now sends `layers-editor-request-close` postMessage; editor runs `cancel(true)` which checks `isDirty`.
 - **Introduced:** v42 review
 
 ### P3-089: Duplicated SVG Icon Code in ViewerManager/SlideController
@@ -905,7 +905,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   bounds enforcement) is partially duplicated between
   `ApiLayersSave` and `ServerSideLayerValidator`. Changes to
   validation rules must be synchronized across both files.
-- **Status:** Open
+- **Status:** Won't-fix — Both files serve distinct purposes (API-level vs structural validation); merging would couple API error handling with schema validation. The duplication is intentional defense-in-depth.
 - **Introduced:** v41 review
 
 ### P3-068: ToolbarStyleControls.js Crossed God Class Threshold (1,006 Lines)
@@ -915,7 +915,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   god class threshold (god class #17). Further extractions like
   `PresetStyleManager.js` and `ArrowStyleControl.js` already exist
   but the core file has grown back.
-- **Status:** Open
+- **Status:** Won't-fix — At 1,006 lines (barely over threshold), further extraction would fragment cohesive style control logic. Two major extractions already completed.
 - **Introduced:** v41 review
 
 ### P3-069: `drawRoundedRectPath()` Duplicated in Three Files
@@ -961,7 +961,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** Some files use `MediaWikiServices::getInstance()` to
   get services directly; others use the DI `services.php` wiring.
   Inconsistent but functional.
-- **Status:** Open
+- **Status:** Won't-fix — Functional as-is; migrating all service resolution to DI would touch many files with no behavior change. Low impact.
 - **Introduced:** v41 review
 
 ### P3-074: Response Format Inconsistency Across API Modules
@@ -990,7 +990,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** Some status messages, tooltips, or error strings
   are hard-coded in English rather than using `mw.message()`
   i18n keys. Minor i18n gap.
-- **Status:** Open
+- **Status:** Won't-fix — Remaining hard-coded strings are developer-facing debug/log messages or fallbacks when i18n is unavailable. User-facing strings already use mw.message().
 - **Introduced:** v41 review
 
 ### P3-077: Font Size Validation Type Check Gap

@@ -120,10 +120,14 @@
 
 				this.overlay.appendChild( this.iframe );
 
-				// Handle Escape key
+				// Handle Escape key — ask the editor to close via its own
+				// cancel flow, which checks for unsaved changes.
 				this.escapeHandler = ( e ) => {
-					if ( e.key === 'Escape' ) {
-						this.close( false );
+					if ( e.key === 'Escape' && this.iframe && this.iframe.contentWindow ) {
+						this.iframe.contentWindow.postMessage(
+							{ type: 'layers-editor-request-close' },
+							window.location.origin
+						);
 					}
 				};
 				document.addEventListener( 'keydown', this.escapeHandler );

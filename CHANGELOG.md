@@ -70,7 +70,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - All 11,152 tests pass (164 test suites) ✅
 - Grade upgraded from A- to A with zero open code issues
 
-## [1.5.55] - 2025-07-23
+## [1.5.55] - 2026-02-10
 
 ### Added
 - **Abort Handling Toggle** — Added optional `$wgLayersRejectAbortedRequests` (and `editor.config.rejectAbortedRequests`) to surface aborted API requests as rejections during debugging. Default remains false to preserve existing behavior.
@@ -169,6 +169,16 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - PHP test suite: 0 failures (was 11), 134 structural errors (MW core dependencies), 549 tests, 765 assertions
 - All 11,140 JS tests pass (164 test suites) ✅
 - ESLint: 0 errors (was 1), phpcs: 0 errors (was 29 line-ending issues)
+
+## [1.5.54] - 2026-02-09
+
+### Fixed
+- **Iframe Modal X-Frame-Options** — Fixed Firefox security error when opening modal editor from article pages. MediaWiki's default `X-Frame-Options` header blocked the iframe. Added `allowClickjacking()` call when `?modal=1` is present.
+
+## [1.5.53] - 2026-02-09
+
+### Fixed
+- **Toolbar Font Size Not Persisted** — When editing a textbox and changing font size via the floating toolbar, `layer.fontSize` was not updated (only richText runs stored the value). Toolbar showed the old value when re-editing. Added `_extractDominantFontSize()` to update `layer.fontSize` from richText runs on finish.
 
 ## [1.5.52] - 2026-02-05
 
@@ -568,6 +578,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Test coverage: 94.65% statement, 84.49% branch, 92.93% function, 94.77% line
 - God Class Reduction Initiative complete: reduced from 20 to 12 god classes
 - ESLint passes on all modified files
+
+---
+
+## [1.5.37] - 2026-01-28
+
+### Fixed
+- **Text Loss on Vertical Align Change** — Fixed text loss when changing `verticalAlign` during inline textbox editing.
+- **Vertical Alignment During Editing** — Vertical alignment now applied visually during inline text editing.
+- **Slide Viewer Layer Order** — Fixed reversed layer order in slide viewer rendering.
 
 ---
 
@@ -1057,6 +1076,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - New icons in `IconFactory.js`: `createPencilIcon()`, `createFullscreenIcon()`
 
 ---
+
+## [1.5.14] - 2026-01-18
+
+### Added
+- **Floating Text Formatting Toolbar** — Added draggable floating toolbar for inline text editing with font family, font size, bold, italic, text alignment, and color controls.
+
+### Fixed
+- **Focus/Blur Issues** — Fixed focus and blur handling with font selector and color picker in inline text editor.
+- **Textbox Background Visibility** — Fixed textbox background visibility bug during inline editing.
 
 ## [1.5.13] - 2026-01-18
 
