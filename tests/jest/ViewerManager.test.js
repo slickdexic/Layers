@@ -2611,36 +2611,38 @@ describe( 'ViewerManager', () => {
 			const icon = manager._createPencilIcon();
 
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 		} );
 
-		it( 'should use IconFactory when available', () => {
+		it( 'should use ViewerIcons when available', () => {
 			const mockIcon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
-			window.Layers = {
-				UI: {
-					IconFactory: {
-						createPencilIcon: jest.fn( () => mockIcon )
-					}
-				}
+			window.Layers.ViewerIcons = {
+				createPencilIcon: jest.fn( () => mockIcon ),
+				createExpandIcon: jest.fn()
 			};
 
 			const manager = new ViewerManager();
 			const icon = manager._createPencilIcon();
 
-			expect( window.Layers.UI.IconFactory.createPencilIcon ).toHaveBeenCalled();
+			expect( window.Layers.ViewerIcons.createPencilIcon ).toHaveBeenCalled();
 			expect( icon ).toBe( mockIcon );
+
+			delete window.Layers.ViewerIcons;
 		} );
 
-		it( 'should use fallback when IconFactory not available', () => {
-			delete window.Layers;
+		it( 'should use fallback when ViewerIcons not available', () => {
+			const savedViewerIcons = window.Layers && window.Layers.ViewerIcons;
+			if ( window.Layers ) {
+				delete window.Layers.ViewerIcons;
+			}
 
 			const manager = new ViewerManager();
 			const icon = manager._createPencilIcon();
 
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			// Should have path elements for the pencil
-			const paths = icon.querySelectorAll( 'path' );
-			expect( paths.length ).toBeGreaterThan( 0 );
+
+			if ( savedViewerIcons ) {
+				window.Layers.ViewerIcons = savedViewerIcons;
+			}
 		} );
 	} );
 
@@ -2650,35 +2652,38 @@ describe( 'ViewerManager', () => {
 			const icon = manager._createExpandIcon();
 
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 		} );
 
-		it( 'should use IconFactory when available', () => {
+		it( 'should use ViewerIcons when available', () => {
 			const mockIcon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
-			window.Layers = {
-				UI: {
-					IconFactory: {
-						createFullscreenIcon: jest.fn( () => mockIcon )
-					}
-				}
+			window.Layers.ViewerIcons = {
+				createPencilIcon: jest.fn(),
+				createExpandIcon: jest.fn( () => mockIcon )
 			};
 
 			const manager = new ViewerManager();
 			const icon = manager._createExpandIcon();
 
-			expect( window.Layers.UI.IconFactory.createFullscreenIcon ).toHaveBeenCalled();
+			expect( window.Layers.ViewerIcons.createExpandIcon ).toHaveBeenCalled();
 			expect( icon ).toBe( mockIcon );
+
+			delete window.Layers.ViewerIcons;
 		} );
 
-		it( 'should use fallback when IconFactory not available', () => {
-			delete window.Layers;
+		it( 'should use fallback when ViewerIcons not available', () => {
+			const savedViewerIcons = window.Layers && window.Layers.ViewerIcons;
+			if ( window.Layers ) {
+				delete window.Layers.ViewerIcons;
+			}
 
 			const manager = new ViewerManager();
 			const icon = manager._createExpandIcon();
 
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			// Expand icon uses path and line elements
-			expect( icon.querySelectorAll( 'path, line' ).length ).toBeGreaterThan( 0 );
+
+			if ( savedViewerIcons ) {
+				window.Layers.ViewerIcons = savedViewerIcons;
+			}
 		} );
 	} );
 

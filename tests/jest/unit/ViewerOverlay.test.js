@@ -508,21 +508,20 @@ describe( 'ViewerOverlay', () => {
 	} );
 
 	describe( 'icon factory integration', () => {
-		it( 'should use IconFactory when available', () => {
+		it( 'should use ViewerIcons when available', () => {
 			const mockCreatePencilIcon = jest.fn( () => {
 				const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 				return svg;
 			} );
-			const mockCreateFullscreenIcon = jest.fn( () => {
+			const mockCreateExpandIcon = jest.fn( () => {
 				const svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 				return svg;
 			} );
 
-			window.Layers.UI = {
-				IconFactory: {
-					createPencilIcon: mockCreatePencilIcon,
-					createFullscreenIcon: mockCreateFullscreenIcon
-				}
+			const savedViewerIcons = window.Layers.ViewerIcons;
+			window.Layers.ViewerIcons = {
+				createPencilIcon: mockCreatePencilIcon,
+				createExpandIcon: mockCreateExpandIcon
 			};
 
 			const overlay = new ViewerOverlay( {
@@ -532,13 +531,14 @@ describe( 'ViewerOverlay', () => {
 			} );
 
 			expect( mockCreatePencilIcon ).toHaveBeenCalled();
-			expect( mockCreateFullscreenIcon ).toHaveBeenCalled();
+			expect( mockCreateExpandIcon ).toHaveBeenCalled();
 
-			delete window.Layers.UI;
+			window.Layers.ViewerIcons = savedViewerIcons;
 		} );
 
-		it( 'should fall back to inline SVG when IconFactory not available', () => {
-			delete window.Layers.UI;
+		it( 'should fall back to inline SVG when ViewerIcons not available', () => {
+			const savedViewerIcons = window.Layers.ViewerIcons;
+			delete window.Layers.ViewerIcons;
 
 			const overlay = new ViewerOverlay( {
 				container: container,
@@ -549,8 +549,11 @@ describe( 'ViewerOverlay', () => {
 			const editBtn = overlay.overlay.querySelector( '.layers-viewer-overlay-btn--edit' );
 			const svg = editBtn.querySelector( 'svg' );
 
+			// Fallback creates a bare SVG element
 			expect( svg ).not.toBeNull();
-			expect( svg.getAttribute( 'viewBox' ) ).toBe( '0 0 24 24' );
+			expect( svg.tagName.toLowerCase() ).toBe( 'svg' );
+
+			window.Layers.ViewerIcons = savedViewerIcons;
 		} );
 	} );
 

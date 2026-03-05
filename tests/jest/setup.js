@@ -359,5 +359,13 @@ global.createMockEditor = function () {
         } catch ( e ) {
             // LogSanitizer not found, tests will use fallback
         }
+
+        // Load ViewerIcons for shared viewer icon delegation
+        try {
+            const ViewerIcons = require( '../../resources/ext.layers.shared/ViewerIcons.js' );
+            window.Layers.ViewerIcons = ViewerIcons;
+        } catch ( e ) {
+            // ViewerIcons not found, tests will use fallback
+        }
     }
 }() );

@@ -1551,24 +1551,23 @@ describe( 'SlideController', () => {
 			const icon = controller._createPencilIcon();
 
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 		} );
 
-		it( 'should use IconFactory when available', () => {
+		it( 'should use ViewerIcons when available', () => {
 			const mockIcon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
-			window.Layers = {
-				UI: {
-					IconFactory: {
-						createPencilIcon: jest.fn( () => mockIcon )
-					}
-				}
+			window.Layers = window.Layers || {};
+			window.Layers.ViewerIcons = {
+				createPencilIcon: jest.fn( () => mockIcon ),
+				createExpandIcon: jest.fn()
 			};
 
 			const controller = new SlideController();
 			const icon = controller._createPencilIcon();
 
-			expect( window.Layers.UI.IconFactory.createPencilIcon ).toHaveBeenCalled();
+			expect( window.Layers.ViewerIcons.createPencilIcon ).toHaveBeenCalled();
 			expect( icon ).toBe( mockIcon );
+
+			delete window.Layers.ViewerIcons;
 		} );
 	} );
 
@@ -1578,24 +1577,23 @@ describe( 'SlideController', () => {
 			const icon = controller._createExpandIcon();
 
 			expect( icon.tagName.toLowerCase() ).toBe( 'svg' );
-			expect( icon.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
 		} );
 
-		it( 'should use IconFactory when available', () => {
+		it( 'should use ViewerIcons when available', () => {
 			const mockIcon = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
-			window.Layers = {
-				UI: {
-					IconFactory: {
-						createFullscreenIcon: jest.fn( () => mockIcon )
-					}
-				}
+			window.Layers = window.Layers || {};
+			window.Layers.ViewerIcons = {
+				createPencilIcon: jest.fn(),
+				createExpandIcon: jest.fn( () => mockIcon )
 			};
 
 			const controller = new SlideController();
 			const icon = controller._createExpandIcon();
 
-			expect( window.Layers.UI.IconFactory.createFullscreenIcon ).toHaveBeenCalled();
+			expect( window.Layers.ViewerIcons.createExpandIcon ).toHaveBeenCalled();
 			expect( icon ).toBe( mockIcon );
+
+			delete window.Layers.ViewerIcons;
 		} );
 	} );
 

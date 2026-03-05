@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 5, 2026 — v45.8 (batch 8: 6 P3 fixes)
+**Last updated:** March 5, 2026 — v45.9 (batch 9: 4 P3 fixes, 3 won't-fix)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 5 | 5 | 0 |
 | P1 | 40 | 40 | 0 |
 | P2 | 96 | 96 | 0 |
-| P3 | 121 | 103 | 18 |
-| **Total** | **262** | **244** | **18** |
+| P3 | 121 | 110 | 11 |
+| **Total** | **262** | **251** | **11** |
 
 ---
 
@@ -224,7 +224,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `src/ThumbnailRenderer.php` L683-730
 - **Impact:** `withOpacity()` has hardcoded 35 CSS colors. ColorValidator
   independently validates named colors. Lists may drift.
-- **Status:** Open
+- **Status:** Won't-fix — ThumbnailRenderer's 35-entry RGB table (name→[r,g,b] for rgba conversion) serves a different purpose than ColorValidator's 148-name validation list; merging would add unnecessary coupling.
 - **Introduced:** v45 review
 
 ### P3-102: serialize($params) for Thumbnail Cache Key
@@ -247,7 +247,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.editor/Toolbar.js` L774, L845
 - **Impact:** `createShapeLibraryButton()` and `createEmojiPickerButton()`
   use raw `addEventListener` not cleaned up by `destroy()`.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.9 — Stored click handler and button references; `destroy()` now calls `removeEventListener` before nulling.
 - **Introduced:** v45 review
 
 ### P3-105: DeepClone Shallow Clone Fallback Silently Degrades
@@ -275,7 +275,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   `resources/ext.layers/viewer/ViewerOverlay.js`
 - **Impact:** Identical `_createPencilIcon()` and `_createExpandIcon()` SVG
   methods. Should use existing `IconFactory.js`. (Extends P3-089)
-- **Status:** Open
+- **Status:** ✅ Fixed v45.9 — Created shared `ViewerIcons.js` in `ext.layers.shared`; all 3 viewer modules now delegate to it.
 - **Introduced:** v45 review
 
 ### P3-108: HitTestController Instantiates Renderer Per mousemove
@@ -663,7 +663,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Files:** `ViewerManager.js`, `SlideController.js`
 - **Impact:** Identical _createPencilIcon() and _createExpandIcon() methods.
   Should use IconFactory.js.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.9 (superseded by P3-107) — All 3 modules now delegate to shared `ViewerIcons.js`.
 - **Introduced:** v42 review
 
 ### P3-090: Dead Code renderCodeSnippet with XSS Vector
@@ -703,7 +703,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.shared/CustomShapeRenderer.js`
 - **Impact:** Creates new canvas 5000+ px wider than needed per call,
   no reuse or size limit. GC pressure.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.9 — Added `MAX_TEMP_DIM = 8192` ceiling; both width and height clamped with `Math.min()`.
 - **Introduced:** v42 review
 
 ### P3-095: Unguarded mw.log.warn in CanvasRenderer
@@ -925,7 +925,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** Identical rounded-rectangle path logic duplicated
   across three canvas rendering files. Bug fixes must be
   applied to all three copies.
-- **Status:** Open
+- **Status:** Won't-fix — Implementations differ (arcTo vs quadraticCurveTo); extraction would risk rendering regressions for minimal DRY benefit.
 - **Introduced:** v41 review
 
 ### P3-070: `duplicateSelected()` Duplicated in Two Files
@@ -972,7 +972,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   Delete returns `{ success: 1, revisionsDeleted: N }`, Rename
   returns `{ success: 1, oldname, newname }`. No consistent
   success envelope. Clients must handle each shape individually.
-- **Status:** Open
+- **Status:** Won't-fix — Changing response shapes would be a breaking API change; each format serves its endpoint's semantics.
 - **Introduced:** v41 review
 
 ### P3-075: Missing CommonJS Export in LayerDefaults.js

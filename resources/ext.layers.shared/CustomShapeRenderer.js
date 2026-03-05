@@ -436,10 +436,16 @@ class CustomShapeRenderer {
 		const canvasWidth = ctx.canvas ? ctx.canvas.width : 1600;
 		const canvasHeight = ctx.canvas ? ctx.canvas.height : 1200;
 
+		// Clamp temporary canvas to reasonable size to reduce memory pressure.
+		// FAR_OFFSET technique needs the canvas large enough for the shadow offset trick,
+		// but we cap total size at 8192px per dimension (common GPU texture limit).
+		const MAX_TEMP_DIM = 8192;
 		// Create temporary canvas for the dilated shape
 		const tempCanvas = document.createElement( 'canvas' );
-		tempCanvas.width = canvasWidth + FAR_OFFSET_X + shadowBlur + Math.abs( offsetX ) + spread * 2;
-		tempCanvas.height = canvasHeight + FAR_OFFSET_Y + shadowBlur + Math.abs( offsetY ) + spread * 2;
+		tempCanvas.width = Math.min( MAX_TEMP_DIM,
+			canvasWidth + FAR_OFFSET_X + shadowBlur + Math.abs( offsetX ) + spread * 2 );
+		tempCanvas.height = Math.min( MAX_TEMP_DIM,
+			canvasHeight + FAR_OFFSET_Y + shadowBlur + Math.abs( offsetY ) + spread * 2 );
 		const tempCtx = tempCanvas.getContext( '2d' );
 
 		if ( !tempCtx ) {

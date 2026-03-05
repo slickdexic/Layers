@@ -944,105 +944,33 @@ class ViewerManager {
 	 * @private
 	 * @return {SVGElement} Pencil icon
 	 */
+	/**
+	 * Create pencil icon SVG for edit button.
+	 * Delegates to shared ViewerIcons utility.
+	 *
+	 * @private
+	 * @return {SVGElement} Pencil icon
+	 */
 	_createPencilIcon() {
-		const SVG_NS = 'http://www.w3.org/2000/svg';
-
-		// Try to use IconFactory if available
-		if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
-			window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createPencilIcon ) {
-			return window.Layers.UI.IconFactory.createPencilIcon( { size: 16, color: '#fff' } );
+		if ( window.Layers && window.Layers.ViewerIcons ) {
+			return window.Layers.ViewerIcons.createPencilIcon( { size: 16, color: '#fff' } );
 		}
-
-		// Fallback: pencil with document icon
-		const svg = document.createElementNS( SVG_NS, 'svg' );
-		svg.setAttribute( 'width', '16' );
-		svg.setAttribute( 'height', '16' );
-		svg.setAttribute( 'viewBox', '0 0 24 24' );
-		svg.setAttribute( 'fill', 'none' );
-		svg.setAttribute( 'aria-hidden', 'true' );
-
-		const path1 = document.createElementNS( SVG_NS, 'path' );
-		path1.setAttribute( 'd', 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' );
-		path1.setAttribute( 'stroke', '#fff' );
-		path1.setAttribute( 'stroke-width', '2' );
-		path1.setAttribute( 'stroke-linecap', 'round' );
-		path1.setAttribute( 'stroke-linejoin', 'round' );
-		svg.appendChild( path1 );
-
-		const path2 = document.createElementNS( SVG_NS, 'path' );
-		path2.setAttribute( 'd', 'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' );
-		path2.setAttribute( 'stroke', '#fff' );
-		path2.setAttribute( 'stroke-width', '2' );
-		path2.setAttribute( 'stroke-linecap', 'round' );
-		path2.setAttribute( 'stroke-linejoin', 'round' );
-		svg.appendChild( path2 );
-
-		return svg;
+		// Should not happen — ViewerIcons is in ext.layers.shared dependency
+		return document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 	}
 
 	/**
 	 * Create expand icon SVG for view button.
-	 * Kept in ViewerManager as it's also used by ViewerOverlay.
+	 * Delegates to shared ViewerIcons utility.
 	 *
 	 * @private
 	 * @return {SVGElement} Expand icon
 	 */
 	_createExpandIcon() {
-		// Use IconFactory if available
-		if ( typeof window !== 'undefined' && window.Layers && window.Layers.UI &&
-			window.Layers.UI.IconFactory && window.Layers.UI.IconFactory.createFullscreenIcon ) {
-			return window.Layers.UI.IconFactory.createFullscreenIcon( { size: 16, color: '#fff' } );
+		if ( window.Layers && window.Layers.ViewerIcons ) {
+			return window.Layers.ViewerIcons.createExpandIcon( { size: 16, color: '#fff' } );
 		}
-
-		// Fallback: expand arrows icon
-		const SVG_NS = 'http://www.w3.org/2000/svg';
-		const svg = document.createElementNS( SVG_NS, 'svg' );
-		svg.setAttribute( 'width', '16' );
-		svg.setAttribute( 'height', '16' );
-		svg.setAttribute( 'viewBox', '0 0 24 24' );
-		svg.setAttribute( 'fill', 'none' );
-		svg.setAttribute( 'aria-hidden', 'true' );
-
-		// Top-right corner
-		const path1 = document.createElementNS( SVG_NS, 'path' );
-		path1.setAttribute( 'd', 'M15 3h6v6' );
-		path1.setAttribute( 'stroke', '#fff' );
-		path1.setAttribute( 'stroke-width', '2' );
-		path1.setAttribute( 'stroke-linecap', 'round' );
-		path1.setAttribute( 'stroke-linejoin', 'round' );
-		svg.appendChild( path1 );
-
-		// Bottom-left corner
-		const path2 = document.createElementNS( SVG_NS, 'path' );
-		path2.setAttribute( 'd', 'M9 21H3v-6' );
-		path2.setAttribute( 'stroke', '#fff' );
-		path2.setAttribute( 'stroke-width', '2' );
-		path2.setAttribute( 'stroke-linecap', 'round' );
-		path2.setAttribute( 'stroke-linejoin', 'round' );
-		svg.appendChild( path2 );
-
-		// Diagonal lines
-		const line1 = document.createElementNS( SVG_NS, 'line' );
-		line1.setAttribute( 'x1', '21' );
-		line1.setAttribute( 'y1', '3' );
-		line1.setAttribute( 'x2', '14' );
-		line1.setAttribute( 'y2', '10' );
-		line1.setAttribute( 'stroke', '#fff' );
-		line1.setAttribute( 'stroke-width', '2' );
-		line1.setAttribute( 'stroke-linecap', 'round' );
-		svg.appendChild( line1 );
-
-		const line2 = document.createElementNS( SVG_NS, 'line' );
-		line2.setAttribute( 'x1', '3' );
-		line2.setAttribute( 'y1', '21' );
-		line2.setAttribute( 'x2', '10' );
-		line2.setAttribute( 'y2', '14' );
-		line2.setAttribute( 'stroke', '#fff' );
-		line2.setAttribute( 'stroke-width', '2' );
-		line2.setAttribute( 'stroke-linecap', 'round' );
-		svg.appendChild( line2 );
-
-		return svg;
+		return document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
 	}
 
 	/**

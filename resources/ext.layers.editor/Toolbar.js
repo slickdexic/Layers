@@ -239,6 +239,16 @@
 				this.styleControls.destroy();
 				this.styleControls = null;
 			}
+			if ( this._shapeLibraryButton && this._shapeLibraryClickHandler ) {
+				this._shapeLibraryButton.removeEventListener( 'click', this._shapeLibraryClickHandler );
+				this._shapeLibraryButton = null;
+				this._shapeLibraryClickHandler = null;
+			}
+			if ( this._emojiPickerButton && this._emojiPickerClickHandler ) {
+				this._emojiPickerButton.removeEventListener( 'click', this._emojiPickerClickHandler );
+				this._emojiPickerButton = null;
+				this._emojiPickerClickHandler = null;
+			}
 		}
 
 		init() {
@@ -771,9 +781,11 @@
 				'<rect x="14" y="14" width="7" height="7" rx="1"/>' +
 				'</svg>';
 
-			button.addEventListener( 'click', () => {
+			this._shapeLibraryClickHandler = () => {
 				this.openShapeLibrary();
-			} );
+			};
+			button.addEventListener( 'click', this._shapeLibraryClickHandler );
+			this._shapeLibraryButton = button;
 
 			return button;
 		}
@@ -842,9 +854,11 @@
 				'<path d="M8 14c1.5 2 6.5 2 8 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
 				'</svg>';
 
-			button.addEventListener( 'click', () => {
+			this._emojiPickerClickHandler = () => {
 				this.openEmojiPicker();
-			} );
+			};
+			button.addEventListener( 'click', this._emojiPickerClickHandler );
+			this._emojiPickerButton = button;
 
 			return button;
 		}
