@@ -402,11 +402,11 @@ describe( 'DeepClone', () => {
 			const original = { self: null };
 			const cloned = freshModule.deepClone( original );
 
-			// Should return a shallow clone (not the same reference)
+			// Should return a recursive clone (not the same reference)
 			expect( cloned ).not.toBe( original );
 			expect( cloned ).toEqual( original );
 			expect( global.mw.log.warn ).toHaveBeenCalledWith(
-				'[DeepClone] Failed to deep clone, using shallow clone:',
+				'[DeepClone] JSON clone failed, using recursive fallback:',
 				'Converting circular structure'
 			);
 

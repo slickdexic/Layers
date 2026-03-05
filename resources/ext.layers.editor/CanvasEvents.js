@@ -648,11 +648,15 @@
 				return;
 			}
 
-			// Convert touch to mouse event
+			// Convert touch to mouse event with modifier keys
 			const mouseEvent = {
 				clientX: touch.clientX,
 				clientY: touch.clientY,
 				button: 0,
+				ctrlKey: e.ctrlKey || false,
+				metaKey: e.metaKey || false,
+				shiftKey: e.shiftKey || false,
+				altKey: e.altKey || false,
 				preventDefault: function () {},
 				stopPropagation: function () {}
 			};
@@ -675,11 +679,15 @@
 				return;
 			}
 
-			// Convert touch to mouse event
+			// Convert touch to mouse event with modifier keys
 			const mouseEvent = {
 				clientX: touch.clientX,
 				clientY: touch.clientY,
 				button: 0,
+				ctrlKey: e.ctrlKey || false,
+				metaKey: e.metaKey || false,
+				shiftKey: e.shiftKey || false,
+				altKey: e.altKey || false,
 				preventDefault: function () {},
 				stopPropagation: function () {}
 			};
@@ -713,6 +721,10 @@
 				clientX: clientX,
 				clientY: clientY,
 				button: 0,
+				ctrlKey: e.ctrlKey || false,
+				metaKey: e.metaKey || false,
+				shiftKey: e.shiftKey || false,
+				altKey: e.altKey || false,
 				preventDefault: function () {},
 				stopPropagation: function () {}
 			};

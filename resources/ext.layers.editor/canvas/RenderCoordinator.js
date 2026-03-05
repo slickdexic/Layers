@@ -212,6 +212,7 @@ class RenderCoordinator {
 				// Style properties
 				layer.fill || '',
 				layer.stroke || '',
+				layer.color || '',
 				layer.strokeWidth || 0,
 				layer.fillOpacity !== undefined ? layer.fillOpacity : '',
 				layer.strokeOpacity !== undefined ? layer.strokeOpacity : '',
@@ -222,23 +223,46 @@ class RenderCoordinator {
 				layer.fontWeight || '',
 				layer.fontStyle || '',
 				layer.textAlign || '',
+				layer.verticalAlign || '',
+				layer.padding || 0,
+				layer.lineHeight || 0,
+				layer.cornerRadius || 0,
+				layer.textStrokeColor || '',
+				layer.textStrokeWidth || 0,
+				layer.textShadow ? '1' : '0',
+				layer.textShadowColor || '',
+				layer.textShadowBlur || 0,
+				layer.textShadowOffsetX || 0,
+				layer.textShadowOffsetY || 0,
 				// Shape/line endpoints
 				layer.x1 || 0,
 				layer.y1 || 0,
 				layer.x2 || 0,
 				layer.y2 || 0,
 				layer.radius || 0,
+				layer.radiusX || 0,
+				layer.radiusY || 0,
+				// Arrow properties
+				layer.arrowhead || '',
+				layer.arrowStyle || '',
+				layer.arrowSize || 0,
 				// Effects
 				layer.shadow ? '1' : '0',
+				layer.shadowColor || '',
 				layer.shadowBlur || 0,
+				layer.shadowOffsetX || 0,
+				layer.shadowOffsetY || 0,
+				layer.shadowSpread || 0,
+				layer.glow ? '1' : '0',
 				layer.blurRadius || 0,
 				layer.blendMode || '',
-				// Image source (use length to avoid huge strings)
+				// Image properties
 				layer.src ? layer.src.length : 0,
-				// Complex properties (use JSON length as proxy for changes)
-				layer.richText ? layer.richText.length : 0,
-				layer.gradient ? ( layer.gradient.type || '' ) : '',
-				layer.points ? layer.points.length : 0,
+				layer.preserveAspectRatio ? '1' : '0',
+				// Complex properties — deep-hash to detect content changes
+				layer.richText ? JSON.stringify( layer.richText ) : '',
+				layer.gradient ? JSON.stringify( layer.gradient ) : '',
+				layer.points ? JSON.stringify( layer.points ) : '',
 				// Locked/name (affect rendering of selection handles)
 				layer.locked ? '1' : '0',
 				layer.name || ''

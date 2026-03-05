@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 5, 2026 — v45.7 (batch 7: 10 P3 fixes)
+**Last updated:** March 5, 2026 — v45.8 (batch 8: 6 P3 fixes)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,8 +13,8 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 | P0 | 5 | 5 | 0 |
 | P1 | 40 | 40 | 0 |
 | P2 | 96 | 96 | 0 |
-| P3 | 121 | 97 | 24 |
-| **Total** | **262** | **238** | **24** |
+| P3 | 121 | 103 | 18 |
+| **Total** | **262** | **244** | **18** |
 
 ---
 
@@ -256,7 +256,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** When both `structuredClone` and `JSON.parse` fail, fallback
   is `obj.slice()` / `{ ...obj }` — shallow clone. Nested objects (gradient,
   richText, points) would share references.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.8 — Replaced shallow fallback with recursive `manualDeepClone()` that handles nested objects/arrays.
 - **Introduced:** v45 review
 
 ### P3-106: Duplicated backgroundVisible Normalization (5+ locations)
@@ -295,7 +295,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   shadowColor, shadowOffset/Spread, glow, textStroke*, textShadow*,
   verticalAlign, lineHeight, padding, cornerRadius, arrowhead/style/size,
   callout tail coords, angle dimension coords. Supersedes P3-087.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.8 — Added all ~20 missing properties. Deep-hash gradient, richText, points via JSON.stringify instead of length proxy. Also resolves P3-087 and P3-072.
 - **Introduced:** v45 review
 
 ### P3-110: ViewerManager Creates Multiple mw.Api() Instances
@@ -647,7 +647,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** Hash omits radiusX/Y, controlX/Y, tailTipX/Y, cornerRadius,
   lineHeight, color, arrowhead/style/size, gradient stops, shadow offsets.
   Changes to these may not trigger re-renders. Supersedes P3-072.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.8 (superseded by P3-109)
 - **Introduced:** v42 review
 
 ### P3-088: Escape Closes Modal Without Unsaved Changes Check
@@ -687,15 +687,15 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **File:** `resources/ext.layers.editor/CanvasEvents.js` L600-614
 - **Impact:** Synthetic mouse events from touch lack ctrlKey, metaKey,
   shiftKey. Multi-select via touch impossible.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.8 — Added ctrlKey, metaKey, shiftKey, altKey to all 3 synthetic mouse events.
 - **Introduced:** v42 review
 
 ### P3-093: SlideController.refreshAllSlides No Concurrency Limit
 
-- **File:** `resources/ext.layers.slides/SlideController.js`
+- **File:** `resources/ext.layers/viewer/SlideController.js`
 - **Impact:** Uses bare Promise.all(). ViewerManager has proper concurrency
   limiting (5 parallel via _processWithConcurrency).
-- **Status:** Open
+- **Status:** ✅ Fixed v45.8 — Added `_processWithConcurrency()` method (limit 5) matching ViewerManager pattern.
 - **Introduced:** v42 review
 
 ### P3-094: CustomShapeRenderer Creates Oversized Temp Canvas
@@ -952,7 +952,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
   properties but does not deep-hash `gradient` or `richText`
   sub-objects. Changes to gradient stops or richText runs may
   not trigger re-renders.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.8 (superseded by P3-109)
 - **Introduced:** v41 review
 
 ### P3-073: Inconsistent Service Resolution Pattern
@@ -999,7 +999,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** `fontSize` is validated as numeric and range-checked,
   but string values like `"12px"` or `"1em"` pass the initial
   type filter and may cause unexpected behavior downstream.
-- **Status:** Open
+- **Status:** ✅ Fixed v45.8 — Added CSS unit suffix stripping (px/em/rem/pt/%) before `is_numeric()` check.
 - **Introduced:** v41 review
 
 ### P3-078: `getNamedSetOwner()` Reads from Replica DB
@@ -1018,7 +1018,7 @@ and P3 (low/cosmetic). Issues are organized by priority and status.
 - **Impact:** `ValidationResult` sometimes contains flat error
   strings and sometimes structured objects with `field` and
   `message` properties. Consumers must handle both formats.
-- **Status:** Open
+- **Status:** Won't fix — No callers use the `$field` parameter; all use the flat string form. The mixed format capability exists but is unused dead code.
 - **Introduced:** v41 review
 
 ---

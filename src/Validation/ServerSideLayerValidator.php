@@ -661,6 +661,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 	 * @return array Validation result
 	 */
 	private function validateNumericProperty( string $property, $value ): array {
+		// Strip common CSS unit suffixes (e.g., "12px", "1.5em", "100%")
+		if ( is_string( $value ) ) {
+			$value = preg_replace( '/\s*(px|em|rem|pt|%)\s*$/i', '', $value );
+		}
+
 		if ( !is_numeric( $value ) ) {
 			return [ 'valid' => false, 'error' => 'Must be numeric' ];
 		}

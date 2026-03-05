@@ -532,7 +532,9 @@
 			let refreshCount = 0;
 			const errors = [];
 
-			const refreshPromises = slideContainers.map( ( container ) => {
+			const refreshPromises = this._processWithConcurrency(
+				slideContainers,
+				( container ) => {
 				const slideName = container.getAttribute( 'data-slide-name' );
 				const setName = container.getAttribute( 'data-layerset' ) || 'default';
 				const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
@@ -601,9 +603,9 @@
 					errors.push( { slideName: slideName, error: errMsg } );
 					return { success: false, slideName: slideName };
 				} );
-			} );
+			}, 5 );
 
-			return Promise.all( refreshPromises ).then( ( results ) => {
+			return refreshPromises.then( ( results ) => {
 				const failed = results.filter( ( r ) => !r.success ).length;
 				this.debugLog( 'refreshAllSlides: completed, refreshed', refreshCount, 'of', slideContainers.length, 'slides' );
 				if ( errors.length > 0 ) {
@@ -616,6 +618,38 @@
 					errors: errors
 				};
 			} );
+		}
+
+		/**
+		 * Process items with a concurrency limit to avoid API flooding.
+		 *
+		 * @param {Array} items Items to process
+		 * @param {Function} processor Async function to process each item
+		 * @param {number} [concurrency=5] Maximum concurrent operations
+		 * @return {Promise<Array>} Promise resolving to array of results
+		 */
+		_processWithConcurrency( items, processor, concurrency ) {
+			const limit = concurrency || 5;
+			const results = [];
+			let index = 0;
+
+			const processNext = () => {
+				if ( index >= items.length ) {
+					return Promise.resolve();
+				}
+				const currentIndex = index++;
+				return processor( items[ currentIndex ], currentIndex ).then( ( result ) => {
+					results[ currentIndex ] = result;
+					return processNext();
+				} );
+			};
+
+			const chains = [];
+			for ( let i = 0; i < Math.min( limit, items.length ); i++ ) {
+				chains.push( processNext() );
+			}
+
+			return Promise.all( chains ).then( () => results );
 		}
 
 		/**

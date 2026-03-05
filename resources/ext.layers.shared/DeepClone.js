@@ -46,15 +46,35 @@
 		try {
 			return JSON.parse( JSON.stringify( obj ) );
 		} catch ( e ) {
-			// Last resort: shallow clone for objects that can't be deep cloned
+			// Last resort: recursive manual clone
 			if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-				mw.log.warn( '[DeepClone] Failed to deep clone, using shallow clone:', e.message );
+				mw.log.warn( '[DeepClone] JSON clone failed, using recursive fallback:', e.message );
 			}
-			if ( Array.isArray( obj ) ) {
-				return obj.slice();
-			}
-			return { ...obj };
+			return manualDeepClone( obj );
 		}
+	}
+
+	/**
+	 * Recursive manual deep clone for objects that JSON.stringify cannot handle.
+	 * Handles plain objects and arrays; other types are returned as-is.
+	 *
+	 * @param {*} obj - The value to clone
+	 * @return {*} A deep clone of the value
+	 */
+	function manualDeepClone( obj ) {
+		if ( obj === null || typeof obj !== 'object' ) {
+			return obj;
+		}
+		if ( Array.isArray( obj ) ) {
+			return obj.map( ( item ) => manualDeepClone( item ) );
+		}
+		const clone = {};
+		for ( const key in obj ) {
+			if ( Object.prototype.hasOwnProperty.call( obj, key ) ) {
+				clone[ key ] = manualDeepClone( obj[ key ] );
+			}
+		}
+		return clone;
 	}
 
 	/**
