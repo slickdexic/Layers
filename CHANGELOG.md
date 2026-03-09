@@ -10,12 +10,17 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Custom Shape Spread Shadow Allocation** — `CustomShapeRenderer.js` now sizes the temporary spread-shadow canvas from the actual draw bounds instead of using oversized fixed offsets.
 
 ### Documentation
-- **Metrics synchronization** — Updated core docs to the March 9, 2026 audited repository totals: 11,250 Jest tests in 163 suites, 143 JS source files, ~99,699 JS source lines, 41 PHP production files, ~15,122 PHP lines, and 832 i18n keys.
+- **Metrics synchronization** — Updated core docs to the March 9, 2026 audited repository totals: 11,336 Jest tests in 165 suites, 143 JS source files, ~99,730 JS source lines, 41 PHP production files, ~15,197 PHP lines, and 832 i18n keys.
 - **Branch/support sync** — Refreshed install, architecture, and support-policy docs so `main`, `REL1_43`, and `REL1_39` all reflect the current 1.5.59 branch state.
+
+### Code Quality
+- **PHPCS zero warnings** — Fixed all 33 errors (line endings) and 13 warnings across 6 PHP files: wrapped long regex lines in `ColorValidator.php`, `ThumbnailRenderer.php`, and `LayerInjector.php`; replaced `wfMessage()` with `$this->msg()` in `ApiLayersInfo.php`; added phpcs:ignore for legitimate same-line `@codeCoverageIgnore` comments.
 
 ### Tests
 - Added PHPUnit regression coverage for polygon/star thumbnail shadow generation.
 - Tightened Jest coverage around custom-shape spread-shadow temp canvas sizing.
+- Added `LogSanitizer.test.js` — 26 tests covering sanitization of tokens, hex strings, paths, URLs, IPs, emails, truncation, and object traversal.
+- Added `GroupHierarchyHelper.test.js` — 52 tests covering all 12 static methods including hierarchy traversal, bounds calculation, and group operations.
 
 ## [1.5.59] - 2026-03-04
 
@@ -27,7 +32,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **AlignmentController Missing Dimension/Marker Types** (P2-078) — `getLayerBounds()` and `moveLayer()` lacked a `dimension` case (uses `x1/y1/x2/y2` not `x/y`) and a `marker` case (centered circle at `x/y/size`). Alignment operations now produce correct results for all layer types.
 
 ### Technical Details
-- All 11,260 tests pass (163 test suites) ✅
+- All 11,258 tests pass (163 test suites) ✅
 - Coverage: 95.19% statements, 84.96% branches
 - God classes: 17 (13 hand-written JS, 2 generated, 2 PHP)
 

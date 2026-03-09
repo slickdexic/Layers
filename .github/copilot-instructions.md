@@ -113,11 +113,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 17 files exceed 1,000 lines:
-    - **Generated data files (exempt):** ShapeLibraryData.js (~11,293 lines), EmojiLibraryIndex.js (~3,055 lines)
-    - **Hand-written JS files (13):** LayerPanel (~2,195), CanvasManager (~2,037), Toolbar (~1,910), InlineTextEditor (~1,833), LayersEditor (~1,790), APIManager (~1,593), PropertyBuilders (~1,493), SelectionManager (~1,418), CanvasRenderer (~1,390), ViewerManager (~1,320), SlideController (~1,170), TextBoxRenderer (~1,120), ToolbarStyleControls (~1,073)
-    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,406 lines), LayersDatabase.php (~1,369 lines)
-    - **Near-threshold files (9):** PropertiesForm (~991), TransformController (~990), GroupManager (~987), LayerRenderer (~973), CalloutRenderer (~969), ResizeCalculator (~966), ShapeRenderer (~959), LayersValidator (~956), ArrowRenderer (~932)
+  - **God classes:** 22 files exceed 1,000 lines:
+    - **Generated data files (2, exempt):** ShapeLibraryData.js (~11,293 lines), EmojiLibraryIndex.js (~3,055 lines)
+    - **Hand-written JS files (18):** LayerPanel (~2,165), CanvasManager (~2,111), Toolbar (~1,933), InlineTextEditor (~1,848), PropertyBuilders (~1,826), LayersEditor (~1,803), APIManager (~1,593), SelectionManager (~1,419), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,149), ToolbarStyleControls (~1,139), SlideController (~1,126), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,053), CanvasEvents (~1,033)
+    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,431 lines), LayersDatabase.php (~1,372 lines)
+    - **Near-threshold files (7):** PropertiesForm (~991), GroupManager (~987), LayerRenderer (~973), CalloutRenderer (~969), ShapeRenderer (~959), LayersValidator (~956), ArrowRenderer (~932)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.editor/shapeLibrary/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -436,11 +436,11 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,258 tests in 163 suites — verified March 9, 2026)
+- Test count (11,336 tests in 165 suites — verified March 9, 2026)
 - Coverage (95.19% statement, 84.96% branch — verified March 9, 2026)
-- JavaScript file count (143 files total, ~99,699 lines)
-- PHP file count (41 files, ~15,122 lines)
-- God class count (17 files >1,000 lines; 2 generated data files, 13 JS, 2 PHP)
+- JavaScript file count (143 files total, ~99,730 lines)
+- PHP file count (41 files, ~15,197 lines)
+- God class count (22 files >1,000 lines; 2 generated data files, 18 JS, 2 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
 - Shape library count (5,116 shapes in 12 categories)

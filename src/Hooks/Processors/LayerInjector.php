@@ -139,7 +139,11 @@ class LayerInjector {
 		} elseif ( strpos( $layersParam, 'name:' ) === 0 ) {
 			// Layer set by name
 			$layerSetName = substr( $layersParam, 5 );
-			$layerSet = $db->getLayerSetByName( $file->getName(), ForeignFileHelper::getFileSha1( $file ), $layerSetName );
+			$layerSet = $db->getLayerSetByName(
+				$file->getName(),
+				ForeignFileHelper::getFileSha1( $file ),
+				$layerSetName
+			);
 		} else {
 			// Legacy format or other formats
 			$layerSet = null;

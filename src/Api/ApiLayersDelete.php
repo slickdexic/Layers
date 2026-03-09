@@ -215,6 +215,7 @@ class ApiLayersDelete extends ApiBase {
 				'setname' => $setName
 			] );
 			$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
+			// phpcs:ignore MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment.NewLineComment
 			return; // @codeCoverageIgnore
 		}
 	}
@@ -290,6 +291,7 @@ class ApiLayersDelete extends ApiBase {
 				'setname' => $setName
 			] );
 			$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
+			// phpcs:ignore MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment.NewLineComment
 			return; // @codeCoverageIgnore
 		}
 	}

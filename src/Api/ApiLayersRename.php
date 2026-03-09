@@ -207,6 +207,7 @@ class ApiLayersRename extends ApiBase {
 				'newname' => $newName
 			] );
 			$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
+			// phpcs:ignore MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment.NewLineComment
 			return; // @codeCoverageIgnore
 		}
 	}
@@ -376,6 +377,7 @@ class ApiLayersRename extends ApiBase {
 				'newname' => $newName
 			] );
 			$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
+			// phpcs:ignore MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment.NewLineComment
 			return; // @codeCoverageIgnore
 		}
 	}

@@ -87,7 +87,9 @@ class ThumbnailRenderer {
 				}
 			}
 
-			$outputPath = $thumbDir . '/' . ForeignFileHelper::getFileSha1( $file ) . '_' . md5( json_encode( $params ) ) . '.png';
+			$outputPath = $thumbDir . '/' .
+				ForeignFileHelper::getFileSha1( $file ) . '_' .
+				md5( json_encode( $params ) ) . '.png';
 			if ( file_exists( $outputPath ) ) {
 				return $outputPath;
 			}

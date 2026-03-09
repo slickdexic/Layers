@@ -531,7 +531,7 @@ class ApiLayersInfo extends ApiBase {
 			}
 
 			// Apply user names; use i18n fallback for unknown users
-			$fallback = wfMessage( 'layers-unknown-user' )->inContentLanguage()->text();
+			$fallback = $this->msg( 'layers-unknown-user' )->inContentLanguage()->text();
 			foreach ( $rows as &$row ) {
 				$userId = (int)( $row[$userIdField] ?? 0 );
 				$row[$userNameField] = $users[$userId] ?? $fallback;

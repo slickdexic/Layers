@@ -47,7 +47,7 @@ section below as the authoritative current backlog.
 - God class count corrected from 21 → 23 (3 files newly tracked:
   AngleDimensionRenderer 1,067, CanvasEvents 1,033, CalloutRenderer 1,000).
 - PHP lines updated from ~15,161 → ~15,187.
-- `npm test` passed with **163 suites / 11,250 tests**.
+- `npm test` passed with **165 suites / 11,336 tests**.
 - i18n key count confirmed at **831** (still misstated as 832 in docs).
 - All v47 open items carried forward and re-verified as still present.
 
@@ -415,7 +415,7 @@ an arrow layer updates x1/y1/x2/y2; nudging a rect layer updates x/y.
 | 16.2 | Stale test count across all docs | P3-097 | ✅ Fixed v44 | 15m |
 | 16.3 | CHANGELOG missing versions + date anomaly | P3-098 | Open | 30m |
 
-**16.2 Fix (✅ Done v44):** Updated all documentation files to "11,260 tests in 163 suites":
+**16.2 Fix (✅ Done v44):** Updated all documentation files to "11,258 tests in 163 suites":
 - README.md, wiki/Home.md, wiki/Frontend-Architecture.md, .github/copilot-instructions.md, codebase_review.md
 
 **16.3 Fix:**

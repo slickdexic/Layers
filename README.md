@@ -310,11 +310,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,122 lines across 41 files**
-- **Frontend:** HTML5 Canvas editor with **143 JS files (~99,699 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,197 lines across 41 files**
+- **Frontend:** HTML5 Canvas editor with **143 JS files (~99,730 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **17 god classes** (files >1,000 lines), all use proper delegation patterns
+- **Technical Debt:** **22 god classes** (files >1,000 lines), all use proper delegation patterns
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
   - All other god classes (13 JS + 2 PHP) have proper facade/delegation patterns
 
@@ -322,7 +322,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,250 passing (163 suites) |
+| Jest tests | 11,336 passing (165 suites) |
 | PHPUnit tests | 31 test files |
 | Statement coverage | 95.19% |
 | Branch coverage | 84.96% |
@@ -379,10 +379,10 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 143 | ✅ |
-| Total JS lines | ~99,699 | ✅ Hand-written (+ ~14,354 generated) |
+| Total JS lines | ~99,730 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 140 | ✅ 100% migrated |
-| God classes (>1000 lines) | 17 | ✅ Well-delegated facades |
-| Tests passing | 11,250 | ✅ |
+| God classes (>1000 lines) | 22 | ✅ Well-delegated facades |
+| Tests passing | 11,336 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.19% | ✅ Excellent |
 | Branch coverage | 84.96% | ✅ Target met |

@@ -32,9 +32,9 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.19% stmt, 84.96% branch** |
-| Jest tests | **11,250** (163 suites) |
+| Jest tests | **11,336** (165 suites) |
 | PHPUnit test files | 31 |
-| God classes (>1000 lines) | **17** (2 generated, 13 JS, 2 PHP) |
+| God classes (>1000 lines) | **22** (2 generated, 18 JS, 2 PHP) |
 | Drawing tools | **17** |
 | Shape library | **5,116 shapes** |
 | Emoji library | **2,817 emoji** |
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,250 tests, 163 suites)
+│   ├── jest/                # Unit tests (11,336 tests, 165 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

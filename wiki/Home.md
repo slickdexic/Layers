@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C250%20passing-brightgreen" alt="11,250 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C336%20passing-brightgreen" alt="11,336 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
@@ -23,7 +23,7 @@
 ## 🆕 What's New in v1.5.59
 
 - **5 Bug Fixes** — RichText font size cap (200→1000px), arrow key nudge for dimension/line/arrow layers, thumbnail TextBox stroke bleed, thumbnail ellipse shadow missing, AlignmentController dimension/marker layer support
-- **Test Suite** — 11,250 tests passing (163 suites), all bugs covered by regression tests
+- **Test Suite** — 11,336 tests passing (165 suites), all bugs covered by regression tests
 
 ### Previous v1.5.58 Highlights
 
@@ -317,8 +317,8 @@ See [[Changelog]] for full details.
 | **Version (REL1_43)** | 1.5.59 |
 | **Version (REL1_39)** | 1.5.59 |
 | **Release Date** | March 4, 2026 |
-| **Test Suites** | 163 |
-| **Total Tests** | 11,250 |
+| **Test Suites** | 165 |
+| **Total Tests** | 11,336 |
 | **PHPUnit Test Files** | 31 |
 | **Statement Coverage** | 95.19% |
 | **Branch Coverage** | 84.96% |
@@ -326,7 +326,7 @@ See [[Changelog]] for full details.
 | **Line Coverage** | 95.32% |
 | **JavaScript Files** | 143 |
 | **ES6 Classes** | 140 |
-| **God Classes** | 17 (2 generated, 13 JS, 2 PHP) |
+| **God Classes** | 22 (2 generated, 18 JS, 2 PHP) |
 | **i18n Messages** | 832 |
 
 ---
