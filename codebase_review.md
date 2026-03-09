@@ -1,6 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 4, 2026 (v45 audit)
+**Review Date:** March 10, 2026 (v47 audit)
+**Previous Review:** March 9, 2026 (v46 audit addendum)
 **Version:** 1.5.59
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -8,97 +9,276 @@
 
 ## Scope & Verification
 
-- **Branch Reviewed:** main
-- **Coverage:** 95.19% statements, 84.96% branches, 93.67% functions, 95.32% lines (coverage/coverage-summary.json)
-- **JS source files:** 141 files in `resources/` (~99,661 lines) *(excludes dist/)*
-- **PHP production files:** 41 in `src/` (~15,106 lines)
-- **Jest test suites:** 163 files (~11,260 test cases)
-- **PHPUnit test files:** 31
-- **i18n message keys:** 820 (in en.json, all documented in qqq.json)
-- **API Modules:** 5 (layersinfo, layerssave, layersdelete, layersrename, layerslist)
-- **eslint-disable directives:** 18 (all legitimate)
-- **God classes (>1,000 lines):** 20 (2 generated data files, 16 hand-written JS, 2 PHP)
+- **Branch Reviewed:** `main`
+- **Verification Method:** Direct source inspection with multi-pass
+    verification; all findings individually confirmed before inclusion.
+    15 subagent-reported issues were eliminated as false positives during
+    verification rounds.
+- **Coverage:** 95.19% statements, 84.96% branches, 93.67% functions,
+    95.32% lines (`coverage/coverage-summary.json`)
+- **JS source files:** 143 in `resources/` excluding `resources/dist` (~99,701 lines)
+- **PHP production files:** 41 in `src/` (~15,161 lines)
+- **Jest test suites:** 163
+- **Jest test cases:** 11,250 (`npm run test:js`)
+- **PHPUnit test files:** 31 in `tests/phpunit`
+- **i18n message keys:** 831 in `i18n/en.json`, 831 in `i18n/qqq.json`
+- **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
+  `layersrename`, `layerslist`)
+- **Files >1,000 lines:** 21 total (2 generated JS, 17 hand-written JS, 2 PHP)
 
 ---
 
 ## Executive Summary
 
-The v45 review is a comprehensive fresh audit of the entire codebase at version 1.5.59 on the main branch. Every finding is verified against actual source code with specific file and line-number evidence. Previous false positives have been preserved for reference. This review adds 18 PHP findings, 14 JS core findings, 8 canvas controller findings, and 19 renderer/viewer findings — all verified against source.
+This v47 audit performed a full-codebase review of all PHP (`src/`) and
+JavaScript (`resources/`) source files with aggressive false-positive
+elimination (15 subagent-reported issues were verified as non-issues and
+excluded). The codebase is well-structured with strong test coverage, but
+this review found **6 real bugs** that the v46 audit missed, including
+3 HIGH-severity issues where functionality silently fails (1 already fixed).
 
-**Methodology:** Full codebase re-read of all 41 PHP files and all key JavaScript modules (editor, canvas controllers, renderers, viewers). Targeted security audit of authentication, authorization, input validation, HTML construction, and iframe framing policies. Documentation cross-checked against actual codebase metrics via `wc -l`. All findings verified by reading source code at specific line numbers.
+The verified open backlog now includes:
 
-### Key Strengths (Genuine)
-1. **High Test Coverage:** 95.19% statement coverage across 163 test suites (11,260 tests)
-2. **Server-Side Validation:** ServerSideLayerValidator is thorough (110+ properties, strict whitelist, numeric constraints)
-3. **Modern Architecture:** 100% ES6 classes, facade/controller delegation patterns
-4. **CSRF Protection:** All write endpoints require tokens via `api.postWithToken('csrf', ...)`
-5. **SQL Parameterization:** All database queries parameterized via MediaWiki's RDBMS abstraction
-6. **Defense in Depth:** TextSanitizer, ColorValidator, property whitelist, LayerDataNormalizer, SVG element blocklist
-7. **Transaction Safety:** Atomic with retry/backoff and FOR UPDATE
-8. **Rate Limiting Infrastructure:** All 5 API endpoints support rate limiting (via RateLimiter.php + User::pingLimiter())
-9. **IM Injection Protection:** Shell::command escapes all args; `@` prefix stripped from text inputs
-10. **CSP via MW API:** EditLayersAction prefers addExtraHeader(), raw header() only as guarded fallback
-11. **Font Sanitization:** sanitizeIdentifier() strips fontFamily to `[a-zA-Z0-9_.-]` at save time (top-level and richText runs)
-12. **Renderer Context Cascading:** ShapeRenderer.setContext() propagates to PolygonStarRenderer automatically
-13. **WikitextHooks State Reset:** resetPageLayersFlag() resets all 6 static properties + 6 singletons on each page render
-14. **Boolean Serialization:** preserveLayerBooleans() robustly handles MW API's boolean serialization behavior
-15. **Deep Clone for History:** HistoryManager uses DeepClone.js cloneLayersEfficient() with proper nested object handling
-16. **DraftManager Storage Safety:** localStorage writes wrapped in try/catch; base64 image data proactively stripped
-17. **Cleanup Discipline:** All 13 canvas controllers implement `destroy()` methods with proper reference nulling and rAF cancellation
-18. **Coordinate Math:** Rotation-aware code correctly handles local-to-world transforms throughout the canvas subsystem
+1. **3 HIGH bugs:** Nudge operations have no undo/redo history (broken
+   `snapshot()` call), draft recovery permanently loses image data
+   without warning, and ~~font names with spaces corrupted on save~~
+   (**FIXED** — `sanitizeFontFamily()` added).
+2. **3 MEDIUM bugs:** Viewer blend-mode rendering error, API delete race
+   condition, and database pruning outside transaction scope.
+3. **Expanded documentation drift** (extends P2-098): i18n key count is
+   831 (not 832 as all docs claim), plus stale god-class counts and test
+   counts in `.github/copilot-instructions.md` and `CHANGELOG.md`.
+4. **Pre-existing LOW items** carried forward from v46.
 
-### Key Weaknesses (v45 — All Verified)
+Additionally, 4 items previously marked Open in `improvement_plan.md`
+were verified as false positives or already fixed and should be closed.
 
-#### Security
+Historical v45/v46 detail is retained below for traceability. Where older
+narrative conflicts with this v47 section, this section is authoritative.
 
-- **NEW — Clickjacking bypass via `?modal=1`:** EditLayersAction.php and SpecialEditSlide.php remove clickjacking protection (X-Frame-Options) when `?modal=1` is present, with no origin/referrer validation. Any external site can embed the editor in an iframe.
-- **Manual HTML construction bypasses MediaWiki's Html class:** LayeredThumbnail.php and UIHooks.php build HTML via string concatenation with `htmlspecialchars()` instead of using `Html::element()`.
-- **InlineTextEditor `innerHTML` trusts external richText data:** `contentWrapper.innerHTML = RichTextConverter.richTextToHtml(layer.richText)` — relies entirely on server-side sanitization and `escapeHtml()` but does not independently sanitize before DOM insertion.
-- **SVG data URI not blocked in ValidationManager:** `DANGEROUS_URL_RE` blocks `data:text/html` but allows `data:image/svg+xml` which can contain `<svg onload=...>`.
-- **TextSanitizer zero-width space injection incomplete:** Missing keywords (`Function`, `constructor`, `fetch`, `XMLHttpRequest`). The technique provides false defense-in-depth since canvas rendering is the actual XSS barrier.
+## Confirmed Open Findings (March 10, 2026)
 
-#### State Management
+### High
 
-- **Nudge handler mutates layers directly:** EventManager.js L196-206 modifies `layer.x`, `layer.y`, `layer.x1`, etc. in-place without StateManager notification. DraftManager change detection and subscribers miss nudge operations.
-- **SelectionManager drag/resize/rotate mutates in-place:** During interactive transforms, layer objects are modified directly. StateManager's `_layersVersion` counter is never incremented until `finishDrag()`. Mid-transform snapshots would capture corrupt state.
-- **Color preview mutates layers without StateManager (P1-037):** ✅ RESOLVED — `applyColorPreview()` now saves per-layer original colors in a `_previewOriginalColors` Map. New `cancelColorPreview()` restores each layer individually. `onColorCancel` wired to all 4 color control sites.
+1. **EventManager nudge calls non-existent `snapshot()` on HistoryManager**
+     - **File:** `resources/ext.layers.editor/EventManager.js` L210-211
+     - **Verification:** `HistoryManager.js` has no `snapshot()` method —
+         only `saveState()`, `getLayersSnapshot()`, and `batchStartSnapshot`.
+         The `typeof` guard at L210 prevents a crash, but `snapshot()` is
+         never a function, so the call is silently skipped every time.
+     - **Impact:** Arrow-key nudge operations have **no undo/redo history**.
+         Users cannot undo nudge movements. This was introduced when nudge
+         was implemented (v42, HIGH-v42-2) — the feature works visually but
+         the history recording was never functional.
+     - **Recommended Fix:** Change `this.editor.historyManager.snapshot( 'nudge' )`
+         to `this.editor.historyManager.saveState( 'nudge' )`.
 
-#### Rendering
+2. **DraftManager silently loses image layer data on draft recovery**
+     - **File:** `resources/ext.layers.editor/DraftManager.js` L193-199, L318-365
+     - **Verification:** `saveDraft()` strips `src` from image layers >1KB
+         and sets `_srcStripped = true` (L198). `recoverDraft()` at L318-365
+         directly applies `draft.layers` to the editor without checking
+         `_srcStripped` — confirmed by searching for `_srcStripped` in the
+         entire file (only 1 occurrence, at L198).
+     - **Impact:** When recovering from a draft, all image layers appear as
+         broken/empty images with no user-visible warning. The image data is
+         permanently lost from the draft. Users may not realize their images
+         are gone until they try to save.
+     - **Recommended Fix:** In `recoverDraft()`, check each layer for
+         `_srcStripped === true` and either (a) warn the user that image
+         layers could not be recovered, or (b) attempt to reload images
+         from the last saved revision.
 
-- **CustomShapeRenderer spread shadow ignores rotation AND scale (P2-075):** ✅ RESOLVED — Ported ShadowRenderer's rotation decomposition (atan2 + scale extraction) to `drawSpreadShadowForImage()`. Transform now decomposed into scale+translation; rotation applied separately via save/rotate/restore around dilation loops.
-- **CalloutRenderer blur bounds ignore dragged tail position (P2-081):** ✅ RESOLVED — Both rotated (local→absolute coordinate transform via rotation matrix) and non-rotated (union of direction bounds with actual tip point) branches now include `tailTipX/tailTipY` in blur capture bounds.
-- **Failed images persist in ImageLayerRenderer LRU cache:** `onerror` handler logs but never removes the broken entry — cache slot wasted permanently.
-- **`_blurFillCanvas` GPU texture reallocation every frame:** Unconditionally sets `.width`/`.height` on every render, triggering GPU texture deallocation even when dimensions haven't changed.
+3. **~~Font names with spaces corrupted on save~~ (FIXED)**
+     - **File:** `src/Validation/TextSanitizer.php`,
+         `src/Validation/ServerSideLayerValidator.php`
+     - **Verification:** `sanitizeIdentifier()` regex `/[^a-zA-Z0-9_.-]/`
+         strips spaces from fontFamily values. "Times New Roman" becomes
+         "TimesNewRoman", which browsers cannot match, falling back to
+         Arial. Reproduced on MW 1.44 — fonts display correctly in editor
+         but revert after save/reload round-trip.
+     - **Impact:** All multi-word font names silently corrupted on every
+         save. Affected both top-level and richText fontFamily properties.
+     - **Fix applied:** Added `sanitizeFontFamily()` method allowing spaces.
+         Updated `ServerSideLayerValidator` to use it for both top-level
+         and richText fontFamily. PHPUnit test added with 10 assertions.
+     - **Status:** Fixed (March 10, 2026)
 
-#### Code Quality
+### Medium
 
-- **`call_user_func` indirection unnecessary:** 10 instances of `\call_user_func(['\\MediaWiki\\MediaWikiServices', 'getInstance'])` across 5 PHP files. Since MW >= 1.44.0 is required, direct static calls should be used.
-- **Dead code: ~140 lines CanvasRenderer layer cache (P3-080):** ✅ RESOLVED — Removed ~150 lines: 3 constructor properties, 5 methods, destroy() cleanup, and 7 dead tests.
-- **Dead code: StateManager.saveToHistory() no-op called from 10+ locations**
-- **Stale `originalName` in LayerPanel.editLayerName causes spurious undo entries:** `_hasEditListeners` guard prevents `dataset.originalName` from refreshing on subsequent edits.
-- **Duplicate backgroundVisible normalization in 5+ locations** across viewer subsystem
-- **20 god classes** (was 17 — TransformController, ResizeCalculator, and DrawingController have each crossed 1,000 lines; PropertyBuilders has grown to 1,826 lines)
+1. **LayersViewer blend mode + hidden background renders white rectangle**
+     - **File:** `resources/ext.layers/LayersViewer.js` L450-464
+     - **Verification:** When `backgroundVisible` is false and layers use
+         blend modes, `drawBackgroundOnCanvas()` fills the canvas with
+         `#ffffff` (for blend compositing) then `return`s immediately.
+         The white fill is painted but the actual image is never drawn.
+     - **Impact:** Viewers see a white rectangle beneath blend-mode layers
+         instead of transparency or the underlying page content.
+     - **Recommended Fix:** When background is hidden, either skip the
+         white fill entirely (accepting that blend modes won't composite
+         as expected), or use `clearRect` for transparent canvas.
 
-#### Documentation
+2. **ApiLayersDelete does not handle 0-row delete (concurrent request race)**
+     - **File:** `src/Api/ApiLayersDelete.php` L174
+     - **Verification:** Code checks `$rowsDeleted === null` for error
+         (L174) but treats `$rowsDeleted === 0` as success. If two
+         concurrent delete requests race, the second gets 0 rows deleted
+         but returns `success: 1, revisionsDeleted: 0`.
+     - **Impact:** Misleading API response. The client believes the delete
+         succeeded when the set was actually already deleted. Low severity
+         in practice since the end state is correct (set is gone).
+     - **Recommended Fix:** Add `$rowsDeleted === 0` check with a distinct
+         warning or `'layers-already-deleted'` response.
 
-- **God class count wrong in 6+ documents:** All say 17, actual is 20
-- **README test badge says 11,148:** Body text says 11,260 (correct), but the badge at the top is stale
-- **Multiple line counts stale:** PropertyBuilders (doc: ~1,493, actual: 1,826), TransformController (doc: ~990, actual: 1,146), ResizeCalculator (doc: ~966, actual: 1,070)
-- **docs/RELEASE_GUIDE.md example template says MW 1.39+ / PHP 7.4+:** Actual requirements are MW >= 1.44.0 / PHP >= 8.1
-- **Version inconsistencies:** ARCHITECTURE.md, codebase_review.md header (before this update) said 1.5.58; should be 1.5.59
+3. **LayersDatabase pruneOldRevisions called outside transaction**
+     - **File:** `src/Database/LayersDatabase.php` L227-232
+     - **Verification:** `$dbw->endAtomic(__METHOD__)` at L227, then
+         `$this->pruneOldRevisions(...)` at L232. If pruning fails (DB
+         timeout, connection drop), the save is already committed and the
+         revision count can exceed `$wgLayersMaxRevisionsPerSet`.
+     - **Impact:** Revision count can grow unbounded if pruning
+         consistently fails. Low probability but could cause gradual
+         storage bloat.
+     - **Recommended Fix:** Move `pruneOldRevisions()` inside the
+         atomic section (before `endAtomic`), or add a separate cleanup
+         job/maintenance script that enforces the limit.
 
-### Issue Summary (March 4, 2026 — v45 Fresh Audit)
+4. **Documentation metrics drift (extends P2-098)**
+     - **i18n key count:** Verified 831 keys in both `en.json` and
+         `qqq.json` (via Python JSON parse, excluding `@metadata`). All
+         docs claim 832 — off by one everywhere.
+     - **`.github/copilot-instructions.md` L115:** Says "83 modules with
+         constructors" — should be 143 source files.
+     - **`.github/copilot-instructions.md` L118:** Lists 13 hand-written
+         JS god classes — should be 17 (missing: TransformController,
+         ResizeCalculator, AngleDimensionRenderer, DrawingController, each
+         >1,000 lines).
+     - **`CHANGELOG.md` v1.5.59 entry:** Says "11,260 tests" — should be
+         "11,250 tests".
+     - **`README.md` L314:** Says "100+ ES6 classes" — should be "140 ES6
+         classes".
+     - **JS lines:** ~99,701 (docs say ~99,699).
+     - **PHP lines:** ~15,161 (docs say ~15,122).
+
+### Low
+
+1. **`npm run test:php` still fails on pre-existing PHPCS errors**
+     - Carried forward from v46 (P3-125). No change.
+
+2. **Missing test coverage for 3 modules**
+     - `LogSanitizer.js` — no test file
+     - `GroupHierarchyHelper.js` — no test file (medium priority — core
+         folder operation logic)
+     - `ViewerIcons.js` — no test file (low — static data)
+
+## Verified Non-Issues / Reclassifications (v47)
+
+The following items were reported by subagent analysis but verified as
+**not real issues** during manual inspection:
+
+- **RateLimiter image dimension validation:** Fallback logic is correct;
+    default dimensions are applied when values are missing.
+- **TextSanitizer event handler regex vulnerability:** Text is rendered
+    on canvas, never injected into HTML DOM. No XSS vector.
+- **ThumbnailRenderer ltrim('@') ImageMagick injection:** `Shell::command()`
+    escapes each argument. `ltrim('@')` is defense-in-depth, not the
+    primary protection.
+- **UIHooks htmlspecialchars without ENT_QUOTES:** All calls are in text
+    content contexts, not attribute contexts.
+- **SpecialEditSlide backgroundColor XSS:** Value is validated before use
+    and `addJsConfigVars` JSON-encodes.
+- **ApiLayersInfo null check on $file:** PHP short-circuit evaluation
+    prevents the null dereference.
+- **DeepClone circular reference bug:** Layer objects are JSON-serializable
+    by design and never contain circular references.
+- **DeepClone richText shallow clone:** `deepClone()` recurses into arrays
+    and objects; richText IS deep-cloned.
+- **GradientRenderer NaN offset:** `stop.offset || 0` converts NaN to 0
+    via JavaScript falsy coercion.
+- **InlineTextEditor selectionchange listener leak:** Listener is properly
+    removed in `destroy()` and `finishEditing()`.
+- **RichTextConverter innerHTML XSS:** Uses DOM-based `textContent` →
+    `innerHTML` escaping (browser-native, safe).
+- **HistoryManager batch mode race condition:** JavaScript is
+    single-threaded; no race possible.
+- **APIManager cache poisoning:** Data passes through normalization chain
+    before use.
+- **GroupManager folder validation missing:** "Already in folder" check
+    exists at line 396.
+- **EventManager direct mutation race condition:** Single-threaded JS;
+    direct mutation is the established architectural pattern.
+
+## Items Reclassified from improvement_plan.md
+
+The following items still marked `Open` in `improvement_plan.md` have been
+verified as false positives or already fixed:
+
+- **15.17 (StyleController triple-apply, P3-081):** VERIFIED FALSE — properties
+    are applied exactly once; the `Object.keys` loop IS the application, the
+    preceding individual checks are early-return guards for specific defaults.
+- **15.19 (SelectionManager boolean handling, P3-083):** VERIFIED FALSE — both
+    `selectAll()` and `selectLayer()` handle integer 0 consistently via the
+    `visible !== false && visible !== 0` pattern.
+- **15.23 (RenderCoordinator hash gaps, P3-087):** Already fixed per P3-109
+    in KNOWN_ISSUES (Fixed v45.8).
+- **15.25 (Duplicated SVG icon code, P3-089):** Already fixed per P3-107
+    in KNOWN_ISSUES (Fixed v45.9).
+
+## Fixed In v46 Round (March 9, 2026)
+
+- `src/ThumbnailRenderer.php` now renders polygon and star shadows in
+    server thumbnails, matching the editor/viewer path.
+- `resources/ext.layers.shared/CustomShapeRenderer.js` now sizes the
+    spread-shadow temp canvas from the actual draw bounds instead of using
+    the previous large fixed offset allocation.
+- `docs/RELEASE_GUIDE.md` now uses the current `main` branch template
+    requirements: MediaWiki 1.44+ and PHP 8.1+.
+- `composer.json` and `package.json` now run `parallel-lint` with
+    deprecation notices suppressed, eliminating the PHP 8.4 vendor warning
+    from the contributor test path.
+- `tests/phpunit/unit/ThumbnailRendererTest.php` was made self-contained
+    for the standalone extension PHPUnit bootstrap used in this repo, and
+    now covers polygon/star shadow generation.
+
+## Current Metrics (Verified March 10, 2026)
+
+| Metric | Verified Current Value |
+|--------|------------------------|
+| Extension version | 1.5.59 |
+| MediaWiki requirement | >= 1.44.0 |
+| PHP requirement | 8.1+ |
+| JS source files (excluding `resources/dist`) | 143 |
+| JS source lines (excluding `resources/dist`) | ~99,701 |
+| PHP production files (`src/`) | 41 |
+| PHP production lines (`src/`) | ~15,161 |
+| Jest test suites | 163 |
+| Jest tests | 11,250 |
+| i18n keys (`en.json`, `qqq.json`) | 831 |
+| Files > 1,000 lines | 21 total |
+
+## Issue Summary (March 10, 2026)
 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
-| Security | 0 | 0 | ~~2~~→0 | 2 | ~~Clickjacking~~ ✅, ~~innerHTML~~ FP, ~~SVG URI~~ ✅, ~~manual HTML~~ ✅, ~~TextSanitizer~~ ✅ |
-| Bugs | 0 | 0 | ~~3~~→0 | ~~8~~→1 | ~~State mutation~~ FP, ~~rendering P2-075~~ ✅, ~~rendering P2-081~~ ✅, ~~stale name~~ ✅, ~~cache~~ ✅, ~~ellipse~~ ✅, ~~sort~~ ✅, ~~dead code~~ ✅, ~~lightbox race~~ ✅, ~~color preview~~ ✅, ~~DimRender defaults~~ ✅, ~~static state~~ ✅ |
-| Performance | 0 | 0 | ~~2~~→0 | ~~5~~→1 | ~~Blur texture~~ ✅, ~~N+1 users~~ ✅, ~~hit test~~ ✅, ~~ViewerManager API~~ ✅, ~~serialize~~ ✅, ~~blob leak~~ ✅ |
-| Code Quality | 0 | 0 | ~~3~~→1 | ~~12~~→8 | Duplication, ~~indirection~~ ✅, DRY, ~~bgVisible~~ ✅, ~~dead cache~~ ✅, ~~opacity clamp~~ ✅, ~~dup bounds~~ ✅, ~~i18n shortcuts~~ ✅ |
-| Documentation | 0 | 5 | 8 | 7 | Stale counts, wrong versions, god class count |
-| **Total** | **0** | **5** | **9** | **17+** | **~33 open items (27 fixed, 2 FPs reclassified from v45 audit)** |
+| Bugs | 0 | 2 (+1 fixed) | 3 | 0 | Nudge history, draft image loss, ~~font save~~, viewer blend, delete race, prune scope |
+| Documentation | 0 | 0 | 1 | 0 | Metrics drift expanded — i18n count off by 1, stale god class list |
+| Tooling | 0 | 0 | 0 | 1 | PHPCS line-ending/style backlog (carried forward) |
+| Test coverage | 0 | 0 | 0 | 1 | 3 modules without test files |
+| **Total open** | **0** | **2** | **4** | **2** | **8 verified open items (1 fixed same session)** |
 
-**Overall Grade: A** (strong foundation, excellent tests and security; all critical/high security issues resolved; remaining items are code quality, performance optimizations, and documentation accuracy)
+## Overall Grade: B+
+
+The codebase has strong architecture, comprehensive test coverage (95%+),
+and no critical security vulnerabilities. However, this review found 2
+HIGH-severity bugs where user-facing functionality silently fails (nudge
+history never recorded, draft recovery loses images), plus 3 MEDIUM bugs
+in the viewer and backend. The documentation metrics are consistently
+wrong in one place (i18n count 831 vs 832). Downgraded from A- to B+
+pending fixes for the HIGH items.
+
+---
+
+## Historical v45 Detail
 
 ---
 

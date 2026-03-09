@@ -160,8 +160,8 @@ npm run test:php
 |status      = stable
 |version     = 1.3.2
 |update      = 2025-12-31
-|mediawiki   = 1.39+
-|php         = 7.4+
+|mediawiki   = 1.44+
+|php         = 8.1+
 |license     = GPL-2.0-or-later
 ...
 }}

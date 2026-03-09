@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** February 17, 2026
-**Version:** 1.5.58
+**Last Updated:** March 9, 2026
+**Version:** 1.5.59
 
 ---
 
@@ -17,14 +17,14 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (February 17, 2026)
+## Codebase Statistics (March 9, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **140** |
-| Total JS lines | **~97,072** |
-| Total PHP files | **40** |
-| Total PHP lines | **~14,991** |
+| Total JS files | **143** |
+| Total JS lines | **~99,699** |
+| Total PHP files | **41** |
+| Total PHP lines | **~15,122** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
@@ -32,13 +32,13 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.19% stmt, 84.96% branch** |
-| Jest tests | **11,148** (162 suites) |
+| Jest tests | **11,250** (163 suites) |
 | PHPUnit test files | 31 |
 | God classes (>1000 lines) | **17** (2 generated, 13 JS, 2 PHP) |
 | Drawing tools | **17** |
 | Shape library | **5,116 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **820** |
+| i18n messages | **832** |
 | eslint-disable comments | **18** ✅ |
 
 ---
@@ -694,7 +694,7 @@ window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
 ```javascript
 window.Layers = {
-    VERSION: '1.5.58',
+    VERSION: '1.5.59',
     Editor: LayersEditor,
     Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
     UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm, LayerItemFactory },
@@ -944,7 +944,7 @@ E2E tests run against a real MediaWiki installation in CI.
 extensions/Layers/
 ├── extension.json           # MW manifest
 ├── services.php             # DI container setup
-├── src/                     # PHP backend (~14,991 lines)
+├── src/                     # PHP backend (~15,122 lines)
 │   ├── Api/                 # API modules (5 endpoints)
 │   ├── Database/            # Data access
 │   ├── Hooks/               # MW hook handlers
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,148 tests, 162 suites)
+│   ├── jest/                # Unit tests (11,250 tests, 163 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

@@ -173,4 +173,32 @@ class TextSanitizerTest extends \MediaWikiUnitTestCase {
 		$this->assertStringContainsString( 'test', $result );
 		$this->assertStringNotContainsString( '<b>', $result );
 	}
+
+	/**
+	 * @covers ::sanitizeFontFamily
+	 */
+	public function testSanitizeFontFamilyPreservesSpaces() {
+		$sanitizer = $this->createSanitizer();
+
+		// Font names with spaces should be preserved
+		$this->assertEquals( 'Times New Roman', $sanitizer->sanitizeFontFamily( 'Times New Roman' ) );
+		$this->assertEquals( 'Courier New', $sanitizer->sanitizeFontFamily( 'Courier New' ) );
+		$this->assertEquals( 'Open Sans', $sanitizer->sanitizeFontFamily( 'Open Sans' ) );
+		$this->assertEquals( 'Noto Sans', $sanitizer->sanitizeFontFamily( 'Noto Sans' ) );
+		$this->assertEquals( 'Source Sans 3', $sanitizer->sanitizeFontFamily( 'Source Sans 3' ) );
+
+		// Single-word fonts should work fine
+		$this->assertEquals( 'Arial', $sanitizer->sanitizeFontFamily( 'Arial' ) );
+		$this->assertEquals( 'Roboto', $sanitizer->sanitizeFontFamily( 'Roboto' ) );
+
+		// Special characters should be stripped
+		$this->assertEquals( 'Bad Font', $sanitizer->sanitizeFontFamily( 'Bad<script> Font' ) );
+		$this->assertEquals( 'Test Font', $sanitizer->sanitizeFontFamily( 'Test@#$ Font' ) );
+
+		// Multiple spaces should be collapsed
+		$this->assertEquals( 'Times New Roman', $sanitizer->sanitizeFontFamily( 'Times  New  Roman' ) );
+
+		// Leading/trailing whitespace should be trimmed
+		$this->assertEquals( 'Arial', $sanitizer->sanitizeFontFamily( '  Arial  ' ) );
+	}
 }

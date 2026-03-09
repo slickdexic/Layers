@@ -1,37 +1,148 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 4, 2026 — v1.5.59 release (v45 fixes: 5 applied, 2 FPs reclassified)
+**Last updated:** March 10, 2026 — v47 audit
 
-This plan organizes all open issues from the codebase review into
-prioritized phases with effort estimates. Each phase targets related
-issues for efficient batching.
+This plan now distinguishes between the **verified current backlog** and the
+historical phase log retained below. Many line items still marked `Open` in the
+older phases were rechecked during the March 9–10 audits and found to be fixed,
+false positives, or superseded by broader documentation work. Use the v47
+section below as the authoritative current backlog.
+
+---
+
+## Verified Current Backlog (Authoritative as of March 10, 2026)
+
+| Area | Verified Open Items | Est. Effort |
+|------|---------------------|-------------|
+| Bugs (High) | 2 | 30m-1h |
+| Bugs (Medium) | 3 | 2-3h |
+| Documentation remediation | 2 | 4-8h |
+| Tooling maintenance | 1 | 30-60m |
+| Test coverage gaps | 1 | 2-3h |
+| **Total** | **9** | **9-16h** |
+
+### Current Priorities
+
+| # | Issue | Ref | Priority | Effort |
+|---|-------|-----|----------|--------|
+| 19.1 | EventManager nudge `snapshot()` → `saveState()` | P1-041 | **High** | 15m |
+| 19.2 | DraftManager image loss on recovery | P1-042 | **High** | 1h |
+| 19.3 | LayersViewer blend mode white background | P2-099 | Medium | 30m |
+| 19.4 | ApiLayersDelete 0-row race condition | P2-100 | Medium | 30m |
+| 19.5 | pruneOldRevisions outside transaction | P2-101 | Medium | 30m |
+| 19.6 | i18n key count 831→832 in all docs | P3-126 | Low | 30m |
+| 19.7 | Missing tests for 3 modules | P3-127 | Low | 2-3h |
+| 19.8 | Clean remaining secondary stale docs | P2-098 | Medium | 1-2h |
+| 19.9 | Normalize PHP line endings/style | P3-125 | Low | 1-2h |
+
+### v47 Notes
+
+- `main` branch reviewed directly; all findings verified individually.
+- `npm test` passed with **163 suites / 11,250 tests**.
+- i18n key count verified at **831** (not 832 as all docs claim).
+- JS source lines verified at **~99,701**; PHP lines at **~15,161**.
+- 4 items previously Open in phases 14-15 reclassified:
+    - 15.17 (StyleController triple-apply) → **False Positive**
+    - 15.19 (SelectionManager boolean handling) → **False Positive**
+    - 15.23 (RenderCoordinator hash gaps) → **Already Fixed** (P3-109, v45.8)
+    - 15.25 (Duplicated SVG icon code) → **Already Fixed** (P3-107, v45.9)
 
 ---
 
-## Phase Summary
+## Phase 19: v47 Findings — Bugs, Backend & Documentation (9 Items)
 
-| Phase | Focus | Items | Fixed | Open | Est. Effort |
-|-------|-------|-------|-------|------|-------------|
-| 1 | Critical bugs & data safety | 14 | 14 | 0 | — |
-| 2 | Security hardening | 8 | 8 | 0 | — |
-| 3 | Reliability & correctness | 12 | 12 | 0 | — |
-| 4 | Code quality & dead code | 10 | 10 | 0 | — |
-| 5 | Performance | 5 | 5 | 0 | — |
-| 6 | Infrastructure | 5 | 5 | 0 | — |
-| 7 | Documentation debt | 42 | 42 | 0 | — |
-| 8 | v35 findings (security + bugs) | 19 | 19 | 0 | — |
-| 9 | v36 findings (code + testing) | 25 | 25 | 0 | — |
-| 10 | v37 findings (validation + quality) | 3 | 3 | 0 | — |
-| 11 | v38 findings (API + cleanup + docs) | 8 | 8 | 0 | — |
-| 12 | v39 findings (security + quality) | 13 | 13 | 0 | — |
-| 13 | v40 findings (verification addendum) | 5 | 5 | 0 | 2-4 hours |
-| 14 | v41 findings (security + rendering + quality) | 23 | 4 | 19 | 12-20 hours |
-| 15 | v42 findings (infra + rendering + UX + quality) | 32 | 13 | 19 | 20-30 hours |
-| 16 | v43 verification (UX gaps, docs, FP cleanup) | 3 | 2 | 1 | 2h |
-| 17 | v45 findings (security + state + quality) | 27 | 7 | 20 | 25-35 hours |
-| **Total** | | **254** | **195** | **59** | **—** |
+*Target: fix 2 HIGH-priority silent failures, 3 MEDIUM backend/viewer
+bugs, and address documentation accuracy and test coverage gaps.*
+
+### HIGH (2 items — fix first)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 19.1 | EventManager nudge calls non-existent `snapshot()` | P1-041 | Open | 15m |
+| 19.2 | DraftManager draft recovery loses image layers | P1-042 | Open | 1h |
+
+**19.1 Fix:** In `EventManager.js` L210-211, change:
+```javascript
+// BEFORE (broken — snapshot() does not exist):
+if ( this.editor.historyManager && typeof this.editor.historyManager.snapshot === 'function' ) {
+    this.editor.historyManager.snapshot( 'nudge' );
+}
+
+// AFTER (correct):
+if ( this.editor.historyManager && typeof this.editor.historyManager.saveState === 'function' ) {
+    this.editor.historyManager.saveState( 'nudge' );
+}
+```
+Add regression test: nudge a layer, verify `saveState` was called.
+
+**19.2 Fix:** In `DraftManager.js` `recoverDraft()`, after loading
+draft layers, iterate and detect `_srcStripped === true` entries.
+Options: (a) show a warning toast via `mw.notify()` listing the
+number of image layers that could not be recovered, (b) attempt
+to reload from the last saved revision via `APIManager`, or
+(c) both. At minimum, delete the `_srcStripped` flag from
+recovered layers so it doesn't persist into saved data.
+
+### MEDIUM (3 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 19.3 | LayersViewer blend mode + hidden background = white | P2-099 | Open | 30m |
+| 19.4 | ApiLayersDelete 0-row concurrent delete race | P2-100 | Open | 30m |
+| 19.5 | pruneOldRevisions called outside transaction | P2-101 | Open | 30m |
+
+**19.3 Fix:** In `LayersViewer.js` `drawBackgroundOnCanvas()`, when
+`isHidden` is true, use `ctx.clearRect()` instead of filling white.
+This gives a transparent canvas, which is the correct behavior when
+the background is intentionally hidden. Blend modes won't composite
+correctly against transparent, but that's expected — the user chose
+to hide the background.
+
+**19.4 Fix:** In `ApiLayersDelete.php`, after the
+`$rowsDeleted === null` check, add:
+```php
+if ( $rowsDeleted === 0 ) {
+    $this->getLogger()->warning( 'Layer set already deleted', [...] );
+    // Still return success — the end state is correct
+}
+```
+Or return a distinct `'layers-already-deleted'` status code.
+
+**19.5 Fix:** In `LayersDatabase.php`, move `pruneOldRevisions()`
+call to before `$dbw->endAtomic()`. This ensures pruning is part
+of the same transaction as the insert. If pruning fails, the entire
+save rolls back (which is safer than unbounded revision growth).
+
+### LOW (4 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 19.6 | i18n count 831 not 832 everywhere | P3-126 | Open | 30m |
+| 19.7 | Missing test files for 3 modules | P3-127 | Open | 2-3h |
+| 19.8 | Clean remaining stale docs (extends 18.1) | P2-098 | Open | 1-2h |
+| 19.9 | Normalize PHP line endings (extends 18.2) | P3-125 | Open | 1-2h |
+
+**19.6 Fix:** Global find-and-replace "832" → "831" in all `.md`
+and `.mediawiki` files that reference i18n key counts. Check
+`.github/copilot-instructions.md` as well.
+
+**19.7 Fix:** Create test files:
+- `tests/jest/LogSanitizer.test.js`
+- `tests/jest/GroupHierarchyHelper.test.js`
+- `tests/jest/ViewerIcons.test.js` (low priority — static data)
+
+### Reclassified Items (from Phase 15)
+
+| # | Issue | Old Status | New Status | Reason |
+|---|-------|------------|------------|--------|
+| 15.17 | StyleController triple-apply (P3-081) | Open | ✅ False Positive | Properties applied once; preceding checks are guards |
+| 15.19 | SelectionManager boolean handling (P3-083) | Open | ✅ False Positive | Both paths handle integer 0 correctly |
+| 15.23 | RenderCoordinator hash gaps (P3-087) | Open | ✅ Already Fixed | Fixed v45.8 per P3-109 |
+| 15.25 | Duplicated SVG icon code (P3-089) | Open | ✅ Already Fixed | Fixed v45.9 per P3-107 |
 
 ---
+
+## Historical Phase Log
 
 ## Phase 13: v40 Findings — Verification Addendum (5 Items)
 
@@ -228,15 +339,15 @@ Add 4 new i18n keys: `layers-group-done`, `layers-ungroup-done`,
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
 | 15.16 | Dead layer cache code (~140 lines) | P3-080 | ✅ Fixed v45.4 | 15m |
-| 15.17 | StyleController triple-apply | P3-081 | Open | 20m |
+| 15.17 | StyleController triple-apply | P3-081 | ✅ False Positive (v47) | 0m |
 | 15.18 | Duplicate sanitizeLogMessage x3 | P3-082 | Open | 30m |
-| 15.19 | SelectionManager boolean handling | P3-083 | Open | 15m |
+| 15.19 | SelectionManager boolean handling | P3-083 | ✅ False Positive (v47) | 0m |
 | 15.20 | DimensionRenderer falsy-sensitive defaults | P3-084 | ✅ Fixed v45.4 | 10m |
 | 15.21 | CustomShapeRenderer opacity not clamped | P3-085 | ✅ Fixed v45.4 | 10m |
 | 15.22 | ExportController Blob URL leak | P3-086 | ✅ Fixed v45.4 | 10m |
-| 15.23 | RenderCoordinator hash gaps | P3-087 | Open | 30m |
+| 15.23 | RenderCoordinator hash gaps | P3-087 | ✅ Already Fixed (v45.8) | 0m |
 | 15.24 | Modal Escape no unsaved check | P3-088 | Open | 30m |
-| 15.25 | Duplicated SVG icon code | P3-089 | Open | 20m |
+| 15.25 | Duplicated SVG icon code | P3-089 | ✅ Already Fixed (v45.9) | 0m |
 | 15.26 | Dead renderCodeSnippet + XSS | P3-090 | ✅ Fixed v45.2 | 10m |
 | 15.27 | RichTextToolbar drag listener leak | P3-091 | Open | 15m |
 | 15.28 | Touch events missing key modifiers | P3-092 | Open | 20m |

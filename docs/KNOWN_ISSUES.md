@@ -1,24 +1,242 @@
 # Known Issues
 
-**Last updated:** March 5, 2026 — v45.10 (batch 10: 3 P3 fixes, 4 won't-fix)
+**Last updated:** March 10, 2026 — v47 audit
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
-and P3 (low/cosmetic). Issues are organized by priority and status.
+and P3 (low/cosmetic). Historical fixed items are retained for audit
+traceability, but the March 10, 2026 entries below are the current open backlog.
 
 ## Summary
 
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 40 | 40 | 0 |
-| P2 | 96 | 96 | 0 |
-| P3 | 121 | 121 | 0 |
-| **Total** | **262** | **262** | **0** |
+| P1 | 43 | 41 | 2 |
+| P2 | 101 | 97 | 4 |
+| P3 | 127 | 123 | 4 |
+| **Total** | **276** | **266** | **10** |
 
 ---
 
-## Newly Confirmed in v45 (March 4, 2026)
+## Open Issues — v47 (March 10, 2026)
+
+### P1-041: EventManager Nudge Has No Undo/Redo History
+
+- **File:** `resources/ext.layers.editor/EventManager.js` L210-211
+- **Impact:** Arrow-key nudge operations are not recorded in the undo
+  history. Users cannot undo or redo nudge movements.
+- **Evidence:** `nudgeSelectedLayers()` calls
+  `this.editor.historyManager.snapshot('nudge')`, but `HistoryManager`
+  has no `snapshot()` method — only `saveState()`. The `typeof` guard
+  silently skips the call every time. Searched entire
+  `HistoryManager.js`: zero occurrences of a `snapshot` method
+  definition.
+- **Recommended Fix:** Change `snapshot` to `saveState` at L211.
+- **Status:** Open
+- **Introduced:** v47 review (bug present since nudge was implemented in v42)
+
+### P1-042: DraftManager Draft Recovery Silently Loses Image Layers
+
+- **File:** `resources/ext.layers.editor/DraftManager.js` L193-199, L318-365
+- **Impact:** When recovering from an auto-saved draft, all image layers
+  appear as broken/empty with no warning. Image data is permanently
+  lost from the draft.
+- **Evidence:** `saveDraft()` strips `src` from image layers >1KB and
+  sets `_srcStripped = true` (L198). `recoverDraft()` at L318 directly
+  applies `draft.layers` without checking `_srcStripped` — only 1
+  occurrence of `_srcStripped` in the entire file (at L198, the setter).
+- **Recommended Fix:** In `recoverDraft()`, detect `_srcStripped` layers
+  and either warn the user or attempt to reload from the last saved
+  revision.
+- **Status:** Open
+- **Introduced:** v47 review
+
+### ~~P1-043: Font Names With Spaces Corrupted On Save~~ (FIXED)
+
+- **File:** `src/Validation/TextSanitizer.php`,
+  `src/Validation/ServerSideLayerValidator.php`
+- **Impact:** Multi-word font names (e.g., "Times New Roman", "Open
+  Sans") were mangled to single words ("TimesNewRoman") on save,
+  causing browsers to fall back to Arial on reload.
+- **Evidence:** `sanitizeIdentifier()` regex `/[^a-zA-Z0-9_.-]/`
+  stripped spaces. Both top-level and richText `fontFamily` passed
+  through this method.
+- **Fix:** Added `sanitizeFontFamily()` method that preserves spaces.
+  Updated `ServerSideLayerValidator` to use it for both top-level and
+  richText fontFamily properties. PHPUnit test added.
+- **Status:** Fixed
+- **Introduced:** v47 review (bug present since font support was added)
+
+### P2-099: LayersViewer Blend Mode + Hidden Background Renders White
+
+- **File:** `resources/ext.layers/LayersViewer.js` L450-464
+- **Impact:** Viewers see a white rectangle beneath blend-mode layers
+  when `backgroundVisible` is false, instead of transparency.
+- **Evidence:** `drawBackgroundOnCanvas()` fills canvas with `#ffffff`
+  when background is hidden (for blend mode compositing), then returns
+  immediately without drawing the actual image. The white fill is
+  visible to the user.
+- **Recommended Fix:** Use `clearRect` instead of white fill when
+  background is hidden, or skip the fill entirely.
+- **Status:** Open
+- **Introduced:** v47 review
+
+### P2-100: ApiLayersDelete Concurrent Request Race Condition
+
+- **File:** `src/Api/ApiLayersDelete.php` L174
+- **Impact:** If two concurrent delete requests target the same set,
+  the second returns `success: 1, revisionsDeleted: 0` — misleading
+  but functionally harmless since the set is gone either way.
+- **Evidence:** Code checks `$rowsDeleted === null` (error) at L174
+  but treats `$rowsDeleted === 0` as success without distinction.
+- **Recommended Fix:** Add a `$rowsDeleted === 0` check and return
+  a `layers-already-deleted` informational status.
+- **Status:** Open
+- **Introduced:** v47 review
+
+### P2-101: LayersDatabase pruneOldRevisions Called Outside Transaction
+
+- **File:** `src/Database/LayersDatabase.php` L227-232
+- **Impact:** If pruning fails after a successful save, revision count
+  can exceed `$wgLayersMaxRevisionsPerSet`, causing gradual storage
+  bloat. Low probability but unbounded growth.
+- **Evidence:** `$dbw->endAtomic(__METHOD__)` at L227, then
+  `$this->pruneOldRevisions(...)` at L232 — pruning happens after
+  the transaction commits.
+- **Recommended Fix:** Move `pruneOldRevisions()` inside the atomic
+  section, or add a maintenance script to enforce the limit.
+- **Status:** Open
+- **Introduced:** v47 review
+
+### P3-126: i18n Key Count Is 831, Not 832
+
+- **Files:** All documentation files claiming 832 i18n keys
+- **Impact:** Documentation consistently overstates the i18n key count
+  by 1. Minor but pervasive.
+- **Evidence:** Python JSON parse of `i18n/en.json` excluding
+  `@metadata`: 831 keys. Same for `i18n/qqq.json`.
+- **Recommended Fix:** Update all docs from 832 to 831.
+- **Status:** Open
+- **Introduced:** v47 review
+
+### P3-127: Missing Test Coverage for 3 Modules
+
+- **Files:** `LogSanitizer.js`, `GroupHierarchyHelper.js`,
+  `ViewerIcons.js`
+- **Impact:** No Jest test files exist for these modules.
+  `GroupHierarchyHelper.js` is the most important (core folder logic).
+- **Status:** Open
+- **Introduced:** v47 review
+
+### Carried Forward from v46
+
+### P2-098: Core Documentation Drift Misstates Current Support and Project Metrics
+
+(See v46 entry below — scope expanded in v47 to include i18n count
+discrepancy, stale god-class list in copilot-instructions.md, and
+wrong test count in CHANGELOG.md v1.5.59.)
+
+- **Status:** Open (expanded)
+- **Introduced:** v46 review, expanded v47
+
+### P3-125: `npm run test:php` Still Fails on Existing PHPCS Errors
+
+- **Status:** Open (carried forward)
+- **Introduced:** v46 review
+
+---
+
+## Previous Open Issues — v46 (March 9, 2026)
+
+### P2-098: Core Documentation Drift Misstates Current Support and Project Metrics
+
+- **Files:** `README.md`, `wiki/Installation.md`,
+  `docs/ARCHITECTURE.md`, `docs/LTS_BRANCH_STRATEGY.md`,
+  `CHANGELOG.md`, `wiki/Changelog.md`,
+  `Mediawiki-Extension-Layers.mediawiki`,
+  `.github/copilot-instructions.md`, `codebase_review.md`
+- **Impact:** The repo currently contains conflicting claims about
+  version, branch support, test totals, i18n counts, JS file counts,
+  and god-class counts. That directly affects release communication,
+  contributor onboarding, and support guidance.
+- **Evidence:** Verified current values are: version `1.5.59`,
+  `MediaWiki >= 1.44.0`, 143 JS source files excluding `resources/dist`,
+  ~99,699 JS source lines, 41 PHP production files, 11,250 Jest tests
+  in 163 suites, and 832 i18n keys. Multiple docs still claim `1.5.58`,
+  `11,148` or `11,260` tests, `820` i18n keys, `140`/`141` JS files,
+  or `17`/`20` god classes.
+- **Recommended Fix:** Treat documentation metrics as release-blocking
+  data. Update the affected docs together from a single metrics pass
+  instead of hand-editing counts opportunistically.
+- **Status:** Open
+- **Introduced:** v46 review
+
+### P3-124: `npm run test:php` Emits Vendor Deprecation Warnings on PHP 8.4
+
+- **Files:** `composer.json` (via `php-parallel-lint/php-parallel-lint` 1.3.2)
+- **Impact:** Contributor tooling emits deprecation noise before the
+  extension's own linting begins, which makes real issues harder to spot
+  and signals that the dev toolchain is lagging current PHP versions.
+- **Evidence:** Running `npm run test:php` produced
+  `JakubOnderka\PhpParallelLint\Manager::run(): Implicitly marking
+  parameter $settings as nullable is deprecated` from vendor code under
+  PHP 8.4.11.
+- **Recommended Fix:** Upgrade or replace `php-parallel-lint`, or pin
+  PHP for that task until the dependency is compatible.
+- **Status:** ✅ Fixed (March 9, 2026) — Updated `composer.json` and
+  `package.json` to run `parallel-lint` with deprecation notices
+  suppressed, so the vendor PHP 8.4 warning no longer appears before the
+  real lint output.
+- **Introduced:** v46 review
+
+### P3-125: `npm run test:php` Still Fails on Existing PHPCS Errors
+
+- **Files:** Multiple existing PHP files, including
+  `src/Database/LayersSchemaManager.php`,
+  `src/Hooks/Processors/ImageLinkProcessor.php`, and
+  `src/Hooks/Processors/LayeredFileRenderer.php`
+- **Impact:** Contributor PHP checks still fail even after the vendor
+  deprecation warning is removed.
+- **Evidence:** A fresh `npm run test:php` now reaches PHPCS without the
+  `php-parallel-lint` deprecation and reports existing invalid EOL
+  character errors across many untouched PHP files, plus a smaller set of
+  long-line warnings.
+- **Recommended Fix:** Normalize PHP file line endings and clear the
+  remaining PHPCS backlog in a dedicated formatting/style pass.
+- **Status:** Open
+- **Introduced:** March 9, 2026 follow-up remediation
+
+---
+
+## Fixed In This Round (March 9, 2026)
+
+### P2-097: Server Thumbnails Omit Shadows for Polygon and Star Layers
+
+- **Files:** `src/ThumbnailRenderer.php`
+- **Status:** ✅ Fixed (March 9, 2026)
+- **Fix:** Added isolated shadow-subimage generation to
+  `buildPolygonArguments()` and `buildStarArguments()`. Added PHPUnit
+  regression coverage for both paths.
+
+### P3-122: CustomShapeRenderer Spread Shadow Uses Oversized Temporary Canvases
+
+- **Files:** `resources/ext.layers.shared/CustomShapeRenderer.js`
+- **Status:** ✅ Fixed (March 9, 2026)
+- **Fix:** Replaced the large fixed-offset temp-canvas sizing with
+  bounds-based sizing derived from the current draw geometry, blur, and
+  spread margins. Added Jest regression coverage.
+
+### P3-123: Release Guide Template Still Uses Obsolete Compatibility Requirements
+
+- **Files:** `docs/RELEASE_GUIDE.md`
+- **Status:** ✅ Fixed (March 9, 2026)
+- **Fix:** Updated the template snippet to MediaWiki 1.44+ and PHP 8.1+
+  so future release docs do not reintroduce stale compatibility claims.
+
+---
+
+## Historical Entries (v45 and Earlier)
 
 ### P0-006: Clickjacking Bypass via `?modal=1` — No Origin Validation
 

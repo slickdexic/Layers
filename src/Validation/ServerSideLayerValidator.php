@@ -521,12 +521,15 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
-		if ( in_array( $property, [ 'id', 'type', 'fontFamily' ], true ) ) {
-			// Identifiers - sanitize
+		if ( in_array( $property, [ 'id', 'type' ], true ) ) {
+			// Identifiers - sanitize (no spaces allowed)
 			$sanitized = $this->textSanitizer->sanitizeIdentifier( $value );
-			// Font names are cosmetic and not a security risk when sanitized
-			// Allow any sanitized font name rather than restricting to configured list
-			// This prevents data loss when users paste layers from other sources
+			return [ 'valid' => true, 'value' => $sanitized ];
+		}
+
+		if ( $property === 'fontFamily' ) {
+			// Font names need spaces preserved (e.g. "Times New Roman")
+			$sanitized = $this->textSanitizer->sanitizeFontFamily( $value );
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
@@ -1011,11 +1014,9 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 				// Only include style if it has valid properties
 				if ( count( $validStyle ) > 0 ) {
-					// Sanitize fontFamily with same treatment as top-level property
-					// Rich text fontFamily must go through sanitizeIdentifier() to prevent
-					// CSS injection via style attributes (see P2-044)
+					// Sanitize fontFamily preserving spaces (e.g. "Times New Roman")
 					if ( isset( $validStyle['fontFamily'] ) ) {
-						$validStyle['fontFamily'] = $this->textSanitizer->sanitizeIdentifier(
+						$validStyle['fontFamily'] = $this->textSanitizer->sanitizeFontFamily(
 							$validStyle['fontFamily']
 						);
 					}

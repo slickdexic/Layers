@@ -2,6 +2,21 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Font Names With Spaces Lost On Save** — `TextSanitizer::sanitizeIdentifier()` stripped spaces from `fontFamily`, mangling names like "Times New Roman" → "TimesNewRoman". Added dedicated `sanitizeFontFamily()` method that preserves spaces. Updated `ServerSideLayerValidator` to use it for both top-level and richText fontFamily properties.
+- **Thumbnail Shadow Parity** — `ThumbnailRenderer.php` now renders polygon and star shadows in server-generated thumbnails, matching editor and viewer output.
+- **Custom Shape Spread Shadow Allocation** — `CustomShapeRenderer.js` now sizes the temporary spread-shadow canvas from the actual draw bounds instead of using oversized fixed offsets.
+
+### Documentation
+- **Metrics synchronization** — Updated core docs to the March 9, 2026 audited repository totals: 11,250 Jest tests in 163 suites, 143 JS source files, ~99,699 JS source lines, 41 PHP production files, ~15,122 PHP lines, and 832 i18n keys.
+- **Branch/support sync** — Refreshed install, architecture, and support-policy docs so `main`, `REL1_43`, and `REL1_39` all reflect the current 1.5.59 branch state.
+
+### Tests
+- Added PHPUnit regression coverage for polygon/star thumbnail shadow generation.
+- Tightened Jest coverage around custom-shape spread-shadow temp canvas sizing.
+
 ## [1.5.59] - 2026-03-04
 
 ### Fixed

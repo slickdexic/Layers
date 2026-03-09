@@ -703,6 +703,10 @@ describe( 'CustomShapeRenderer', () => {
 
 			// Should not throw with spread shadow
 			expect( () => renderer.drawSVGImage( mockCtx, mockImg, layer ) ).not.toThrow();
+			expect( mockTempCanvas.width ).toBeLessThan( 1500 );
+			expect( mockTempCanvas.height ).toBeLessThan( 1200 );
+			expect( mockTempCanvas.width ).toBeGreaterThan( 0 );
+			expect( mockTempCanvas.height ).toBeGreaterThan( 0 );
 
 			global.document.createElement = originalCreateElement;
 		} );

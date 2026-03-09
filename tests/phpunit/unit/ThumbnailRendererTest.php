@@ -1,12 +1,21 @@
 <?php
 
-namespace MediaWiki\Extension\Layers\Tests;
+namespace {
+	require_once __DIR__ . '/../../../src/ThumbnailRenderer.php';
+
+	if ( !class_exists( 'Config' ) ) {
+		require_once __DIR__ . '/stubs/Config.php';
+	}
+
+	if ( !class_exists( 'HashConfig' ) ) {
+		require_once __DIR__ . '/stubs/HashConfig.php';
+	}
+}
+
+namespace MediaWiki\Extension\Layers\Tests {
 
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
 
-/**
- * @coversDefaultClass \MediaWiki\Extension\Layers\ThumbnailRenderer
- */
 class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 
 	private function newRenderer(): ThumbnailRenderer {
@@ -15,6 +24,7 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 			'UseImageMagick' => false,
 			'ImageMagickConvertCommand' => '/usr/bin/convert',
 			'LayersImageMagickTimeout' => 30,
+			'LayersDefaultFonts' => [ 'DejaVu-Sans' ],
 			'MaxShellMemory' => 0,
 			'MaxShellTime' => 0,
 			'MaxShellFileSize' => 0
@@ -33,9 +43,21 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 	 * @covers ::generateLayeredThumbnail
 	 */
 	public function testGenerateLayeredThumbnailWithoutLayers() {
-		$fileMock = $this->createMock( \File::class );
-		$fileMock->method( 'getName' )->willReturn( 'test.jpg' );
-		$fileMock->method( 'getSha1' )->willReturn( 'abc123' );
+		$fileMock = new class {
+			/**
+			 * @return string
+			 */
+			public function getName() {
+				return 'test.jpg';
+			}
+
+			/**
+			 * @return string
+			 */
+			public function getSha1() {
+				return 'abc123';
+			}
+		};
 
 		$renderer = $this->newRenderer();
 		$result = $renderer->generateLayeredThumbnail( $fileMock, [] );
@@ -89,7 +111,7 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 		$drawIndex = array_search( '-draw', $result );
 		$this->assertNotFalse( $drawIndex );
 		$this->assertSame( 'rectangle 10,20 110,70', $result[$drawIndex + 1] );
-		$this->assertContains( '#ff0000', $result );
+		$this->assertContains( 'rgba(255,0,0,1.000)', $result );
 	}
 
 	/**
@@ -237,4 +259,71 @@ class ThumbnailRendererTest extends \MediaWikiUnitTestCase {
 		$this->assertGreaterThanOrEqual( 2, $drawCount,
 			'Should have one draw for shadow, one for actual circle' );
 	}
+
+	/**
+	 * @covers ::buildShadowSubImage
+	 * @covers ::buildPolygonArguments
+	 */
+	public function testPolygonShadowUsesIsolatedSubImage() {
+		$renderer = $this->newRenderer();
+
+		$widthProp = new \ReflectionProperty( ThumbnailRenderer::class, 'renderWidth' );
+		$widthProp->setAccessible( true );
+		$widthProp->setValue( $renderer, 600 );
+		$heightProp = new \ReflectionProperty( ThumbnailRenderer::class, 'renderHeight' );
+		$heightProp->setAccessible( true );
+		$heightProp->setValue( $renderer, 450 );
+
+		$method = $this->getPrivateMethod( 'buildPolygonArguments' );
+
+		$layer = [
+			'x' => 120, 'y' => 90, 'radius' => 40, 'sides' => 6,
+			'stroke' => '#000', 'fill' => '#f00',
+			'shadow' => true, 'shadowBlur' => 6,
+			'shadowOffsetX' => 4, 'shadowOffsetY' => 3
+		];
+
+		$result = $method->invoke( $renderer, $layer, 1.0, 1.0 );
+
+		$this->assertContains( '(', $result );
+		$this->assertContains( '600x450', $result );
+		$this->assertContains( 'xc:none', $result );
+		$this->assertContains( '-composite', $result );
+		$this->assertGreaterThanOrEqual( 2, count( array_keys( $result, '-draw' ) ) );
+	}
+
+	/**
+	 * @covers ::buildShadowSubImage
+	 * @covers ::buildStarArguments
+	 */
+	public function testStarShadowUsesIsolatedSubImage() {
+		$renderer = $this->newRenderer();
+
+		$widthProp = new \ReflectionProperty( ThumbnailRenderer::class, 'renderWidth' );
+		$widthProp->setAccessible( true );
+		$widthProp->setValue( $renderer, 640 );
+		$heightProp = new \ReflectionProperty( ThumbnailRenderer::class, 'renderHeight' );
+		$heightProp->setAccessible( true );
+		$heightProp->setValue( $renderer, 480 );
+
+		$method = $this->getPrivateMethod( 'buildStarArguments' );
+
+		$layer = [
+			'x' => 140, 'y' => 120,
+			'outerRadius' => 45, 'innerRadius' => 20, 'points' => 5,
+			'stroke' => '#000', 'fill' => '#ff0',
+			'shadow' => true, 'shadowBlur' => 5,
+			'shadowOffsetX' => 2, 'shadowOffsetY' => 2
+		];
+
+		$result = $method->invoke( $renderer, $layer, 1.0, 1.0 );
+
+		$this->assertContains( '(', $result );
+		$this->assertContains( '640x480', $result );
+		$this->assertContains( 'xc:none', $result );
+		$this->assertContains( '-composite', $result );
+		$this->assertGreaterThanOrEqual( 2, count( array_keys( $result, '-draw' ) ) );
+	}
+}
+
 }

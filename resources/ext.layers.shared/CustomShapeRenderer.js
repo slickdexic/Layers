@@ -431,8 +431,10 @@ class CustomShapeRenderer {
 		// multiple times at offset positions around a circle. This creates uniform perpendicular
 		// distance from all edges, matching CSS box-shadow spread behavior.
 
-		const FAR_OFFSET_X = 5000;
-		const FAR_OFFSET_Y = spread + shadowBlur + Math.abs( offsetY ) + 100;
+		const marginX = Math.ceil( spread + shadowBlur + Math.abs( offsetX ) + 20 );
+		const marginY = Math.ceil( spread + shadowBlur + Math.abs( offsetY ) + 20 );
+		const FAR_OFFSET_X = Math.max( marginX, Math.ceil( -x + spread + 1 ) );
+		const FAR_OFFSET_Y = Math.max( marginY, Math.ceil( -y + spread + 1 ) );
 		const canvasWidth = ctx.canvas ? ctx.canvas.width : 1600;
 		const canvasHeight = ctx.canvas ? ctx.canvas.height : 1200;
 
@@ -443,9 +445,9 @@ class CustomShapeRenderer {
 		// Create temporary canvas for the dilated shape
 		const tempCanvas = document.createElement( 'canvas' );
 		tempCanvas.width = Math.min( MAX_TEMP_DIM,
-			canvasWidth + FAR_OFFSET_X + shadowBlur + Math.abs( offsetX ) + spread * 2 );
+			Math.max( canvasWidth, Math.ceil( x + width + marginX ) ) + FAR_OFFSET_X );
 		tempCanvas.height = Math.min( MAX_TEMP_DIM,
-			canvasHeight + FAR_OFFSET_Y + shadowBlur + Math.abs( offsetY ) + spread * 2 );
+			Math.max( canvasHeight, Math.ceil( y + height + marginY ) ) + FAR_OFFSET_Y );
 		const tempCtx = tempCanvas.getContext( '2d' );
 
 		if ( !tempCtx ) {

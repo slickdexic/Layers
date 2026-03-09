@@ -552,12 +552,31 @@ class ThumbnailRenderer {
 			$pts[] = (int)( $x + $radius * cos( $angle ) ) . ',' . (int)( $y + $radius * sin( $angle ) );
 		}
 
-		return [
+		$args = [];
+		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
+		if ( $shadow !== null ) {
+			$shadowPts = [];
+			for ( $i = 0; $i < $sides; $i++ ) {
+				$angle = ( $i * 2 * M_PI / $sides ) - ( M_PI / 2 );
+				$shadowPts[] =
+					(int)( $x + $shadow['offsetX'] + $radius * cos( $angle ) ) . ',' .
+					(int)( $y + $shadow['offsetY'] + $radius * sin( $angle ) );
+			}
+			$shadowDrawArgs = [
+				'-fill', $shadow['color'],
+				'-draw', 'polygon ' . implode( ' ', $shadowPts )
+			];
+			$args = array_merge( $args, $this->buildShadowSubImage(
+				$shadowDrawArgs, $shadow['blur']
+			) );
+		}
+
+		return array_merge( $args, [
 			'-stroke', $stroke,
 			'-strokewidth', (string)$strokeWidth,
 			'-fill', $fill,
 			'-draw', 'polygon ' . implode( ' ', $pts )
-		];
+		] );
 	}
 
 	private function buildStarArguments( array $layer, float $scaleX, float $scaleY ): array {
@@ -580,12 +599,32 @@ class ThumbnailRenderer {
 			$pts[] = (int)( $x + $radius * cos( $angle ) ) . ',' . (int)( $y + $radius * sin( $angle ) );
 		}
 
-		return [
+		$args = [];
+		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
+		if ( $shadow !== null ) {
+			$shadowPts = [];
+			for ( $i = 0; $i < $numPoints * 2; $i++ ) {
+				$radius = ( $i % 2 === 0 ) ? $outerRadius : $innerRadius;
+				$angle = ( $i * M_PI / $numPoints ) - ( M_PI / 2 );
+				$shadowPts[] =
+					(int)( $x + $shadow['offsetX'] + $radius * cos( $angle ) ) . ',' .
+					(int)( $y + $shadow['offsetY'] + $radius * sin( $angle ) );
+			}
+			$shadowDrawArgs = [
+				'-fill', $shadow['color'],
+				'-draw', 'polygon ' . implode( ' ', $shadowPts )
+			];
+			$args = array_merge( $args, $this->buildShadowSubImage(
+				$shadowDrawArgs, $shadow['blur']
+			) );
+		}
+
+		return array_merge( $args, [
 			'-stroke', $stroke,
 			'-strokewidth', (string)$strokeWidth,
 			'-fill', $fill,
 			'-draw', 'polygon ' . implode( ' ', $pts )
-		];
+		] );
 	}
 
 	private function buildPathArguments( array $layer, float $scaleX, float $scaleY ): array {

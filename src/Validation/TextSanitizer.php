@@ -82,6 +82,31 @@ class TextSanitizer {
 	}
 
 	/**
+	 * Sanitize font family names, preserving spaces.
+	 *
+	 * Unlike sanitizeIdentifier(), this allows spaces in the value
+	 * since CSS font family names commonly contain them
+	 * (e.g. "Times New Roman", "Courier New").
+	 *
+	 * @param string $fontFamily Raw font family name
+	 * @return string Sanitized font family name
+	 */
+	public function sanitizeFontFamily( string $fontFamily ): string {
+		// Allow alphanumeric, spaces, underscores, hyphens, and dots
+		$fontFamily = preg_replace( '/[^a-zA-Z0-9 _.-]/', '', $fontFamily );
+
+		// Collapse multiple spaces to single space and trim
+		$fontFamily = trim( preg_replace( '/\s+/', ' ', $fontFamily ) );
+
+		// Limit length
+		if ( strlen( $fontFamily ) > 255 ) {
+			$fontFamily = substr( $fontFamily, 0, 255 );
+		}
+
+		return $fontFamily;
+	}
+
+	/**
 	 * Sanitize shape ID strings - allows forward slash for category paths
 	 *
 	 * Shape IDs use category/shape format like 'iso7010-w/iso_7010_w001'
