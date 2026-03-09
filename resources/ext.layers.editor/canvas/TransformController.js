@@ -692,6 +692,9 @@ class TransformController {
 		if ( !this._arrowTipRafId ) {
 			this._arrowTipRafId = requestAnimationFrame( () => {
 				this._arrowTipRafId = null;
+				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
+					return;
+				}
 				this.manager.renderLayers( this.manager.editor.layers );
 			} );
 		}

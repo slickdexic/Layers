@@ -1,51 +1,85 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 10, 2026 — v47 audit
+**Last updated:** March 9, 2026 — v48 audit
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. Many line items still marked `Open` in the
 older phases were rechecked during the March 9–10 audits and found to be fixed,
-false positives, or superseded by broader documentation work. Use the v47
+false positives, or superseded by broader documentation work. Use the v48
 section below as the authoritative current backlog.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 10, 2026)
+## Verified Current Backlog (Authoritative as of March 9, 2026)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| Bugs (High) | 2 | 30m-1h |
-| Bugs (Medium) | 3 | 2-3h |
+| Bugs (High) | 3 | 45m-1.5h |
+| Bugs (Medium) | 5 | 3-5h |
 | Documentation remediation | 2 | 4-8h |
 | Tooling maintenance | 1 | 30-60m |
 | Test coverage gaps | 1 | 2-3h |
-| **Total** | **9** | **9-16h** |
+| **Total** | **12** | **10-18h** |
 
 ### Current Priorities
 
 | # | Issue | Ref | Priority | Effort |
 |---|-------|-----|----------|--------|
-| 19.1 | EventManager nudge `snapshot()` → `saveState()` | P1-041 | **High** | 15m |
-| 19.2 | DraftManager image loss on recovery | P1-042 | **High** | 1h |
-| 19.3 | LayersViewer blend mode white background | P2-099 | Medium | 30m |
-| 19.4 | ApiLayersDelete 0-row race condition | P2-100 | Medium | 30m |
-| 19.5 | pruneOldRevisions outside transaction | P2-101 | Medium | 30m |
-| 19.6 | i18n key count 831→832 in all docs | P3-126 | Low | 30m |
+| 20.1 | ~~CanvasManager division by zero~~ | P1-044 | ~~Fixed~~ | — |
+| 20.2 | ~~Angle dimension phase not reset on tool switch~~ | P2-102 | ~~Fixed~~ | — |
+| 20.3 | ~~Arrow tip RAF missing destruction guards~~ | P2-103 | ~~Fixed~~ | — |
+| 19.1 | ~~EventManager nudge `snapshot()` → `saveState()`~~ | P1-041 | ~~Fixed~~ | — |
+| 19.2 | ~~DraftManager image loss on recovery~~ | P1-042b | ~~Fixed~~ | — |
+| 19.3 | ~~LayersViewer blend mode white background~~ | P2-099 | ~~Fixed~~ | — |
+| 19.4 | ~~ApiLayersDelete 0-row race condition~~ | P2-100 | ~~Fixed~~ | — |
+| 19.5 | ~~pruneOldRevisions outside transaction~~ | P2-101 | ~~Fixed~~ | — |
+| 19.6 | ~~i18n key count now 832~~ | P3-126 | ~~Fixed~~ | — |
 | 19.7 | Missing tests for 3 modules | P3-127 | Low | 2-3h |
 | 19.8 | Clean remaining secondary stale docs | P2-098 | Medium | 1-2h |
 | 19.9 | Normalize PHP line endings/style | P3-125 | Low | 1-2h |
 
-### v47 Notes
+### v48 Notes
 
-- `main` branch reviewed directly; all findings verified individually.
+- Full re-audit of `main` branch; all findings individually verified.
+- **3 new bugs found:** 1 HIGH (P1-044, CanvasManager division by zero),
+  2 MEDIUM (P2-102 angle dimension, P2-103 arrow tip RAF guards).
+- **16 false positives eliminated** during v48 verification rounds.
+- God class count corrected from 21 → 23 (3 files newly tracked:
+  AngleDimensionRenderer 1,067, CanvasEvents 1,033, CalloutRenderer 1,000).
+- PHP lines updated from ~15,161 → ~15,187.
 - `npm test` passed with **163 suites / 11,250 tests**.
-- i18n key count verified at **831** (not 832 as all docs claim).
-- JS source lines verified at **~99,701**; PHP lines at **~15,161**.
-- 4 items previously Open in phases 14-15 reclassified:
-    - 15.17 (StyleController triple-apply) → **False Positive**
-    - 15.19 (SelectionManager boolean handling) → **False Positive**
-    - 15.23 (RenderCoordinator hash gaps) → **Already Fixed** (P3-109, v45.8)
-    - 15.25 (Duplicated SVG icon code) → **Already Fixed** (P3-107, v45.9)
+- i18n key count confirmed at **831** (still misstated as 832 in docs).
+- All v47 open items carried forward and re-verified as still present.
+
+---
+
+## Phase 20: v48 Findings — New Bugs (3 Items)
+
+*Target: fix 1 HIGH coordinate conversion bug, 2 MEDIUM tool/RAF
+consistency bugs identified in the March 9, 2026 v48 audit.*
+
+### HIGH (1 item — ~~fixed~~)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 20.1 | ~~CanvasManager.getMousePointFromClient() divides by zero~~ | P1-044 | ~~Fixed~~ | — |
+
+**20.1:** ✅ Fixed. Added ternary zero guards in `CanvasManager.js`
+L1721-1722. Regression test added.
+
+### MEDIUM (2 items — ~~fixed~~)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 20.2 | ~~DrawingController angle dimension phase on tool switch~~ | P2-102 | ~~Fixed~~ | — |
+| 20.3 | ~~TransformController arrow tip RAF destruction guards~~ | P2-103 | ~~Fixed~~ | — |
+
+**20.2:** ✅ Fixed. Added cleanup in `CanvasManager.setTool()` that
+calls `drawingController.cancelAngleDimension()` when switching away
+from `angleDimension`. Regression tests added.
+
+**20.3:** ✅ Fixed. Added destruction guard matching the pattern used
+by all other RAF callbacks in the same file. Regression tests added.
 
 ---
 
@@ -54,77 +88,46 @@ section below as the authoritative current backlog.
 *Target: fix 2 HIGH-priority silent failures, 3 MEDIUM backend/viewer
 bugs, and address documentation accuracy and test coverage gaps.*
 
-### HIGH (2 items — fix first)
+### HIGH (2 items — ~~fixed~~)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 19.1 | EventManager nudge calls non-existent `snapshot()` | P1-041 | Open | 15m |
-| 19.2 | DraftManager draft recovery loses image layers | P1-042 | Open | 1h |
+| 19.1 | ~~EventManager nudge `snapshot()` → `saveState()`~~ | P1-041 | ~~Fixed~~ | — |
+| 19.2 | ~~DraftManager draft recovery loses image layers~~ | P1-042b | ~~Fixed~~ | — |
 
-**19.1 Fix:** In `EventManager.js` L210-211, change:
-```javascript
-// BEFORE (broken — snapshot() does not exist):
-if ( this.editor.historyManager && typeof this.editor.historyManager.snapshot === 'function' ) {
-    this.editor.historyManager.snapshot( 'nudge' );
-}
+**19.1:** ✅ Fixed. Changed `snapshot('nudge')` to `saveState('nudge')`
+in `EventManager.js` L210-211. Regression test updated.
 
-// AFTER (correct):
-if ( this.editor.historyManager && typeof this.editor.historyManager.saveState === 'function' ) {
-    this.editor.historyManager.saveState( 'nudge' );
-}
-```
-Add regression test: nudge a layer, verify `saveState` was called.
+**19.2:** ✅ Fixed. Added `_srcStripped` detection in `recoverDraft()`,
+cleanup of internal flags, and `mw.notify` warning with `autoHide: false`.
+New i18n key `layers-draft-images-lost` with PLURAL support. Regression
+tests added.
 
-**19.2 Fix:** In `DraftManager.js` `recoverDraft()`, after loading
-draft layers, iterate and detect `_srcStripped === true` entries.
-Options: (a) show a warning toast via `mw.notify()` listing the
-number of image layers that could not be recovered, (b) attempt
-to reload from the last saved revision via `APIManager`, or
-(c) both. At minimum, delete the `_srcStripped` flag from
-recovered layers so it doesn't persist into saved data.
-
-### MEDIUM (3 items)
+### MEDIUM (3 items — ~~fixed~~)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 19.3 | LayersViewer blend mode + hidden background = white | P2-099 | Open | 30m |
-| 19.4 | ApiLayersDelete 0-row concurrent delete race | P2-100 | Open | 30m |
-| 19.5 | pruneOldRevisions called outside transaction | P2-101 | Open | 30m |
+| 19.3 | ~~LayersViewer blend mode + hidden background~~ | P2-099 | ~~Fixed~~ | — |
+| 19.4 | ~~ApiLayersDelete 0-row concurrent delete race~~ | P2-100 | ~~Fixed~~ | — |
+| 19.5 | ~~pruneOldRevisions called outside transaction~~ | P2-101 | ~~Fixed~~ | — |
 
-**19.3 Fix:** In `LayersViewer.js` `drawBackgroundOnCanvas()`, when
-`isHidden` is true, use `ctx.clearRect()` instead of filling white.
-This gives a transparent canvas, which is the correct behavior when
-the background is intentionally hidden. Blend modes won't composite
-correctly against transparent, but that's expected — the user chose
-to hide the background.
+**19.3:** ✅ Fixed. Changed from `fillRect('#ffffff')` to `clearRect()`
+when background is hidden in LayersViewer. Tests updated.
 
-**19.4 Fix:** In `ApiLayersDelete.php`, after the
-`$rowsDeleted === null` check, add:
-```php
-if ( $rowsDeleted === 0 ) {
-    $this->getLogger()->warning( 'Layer set already deleted', [...] );
-    // Still return success — the end state is correct
-}
-```
-Or return a distinct `'layers-already-deleted'` status code.
+**19.4:** ✅ Fixed. Added `$rowsDeleted === 0` check with warning log
+in ApiLayersDelete.php. Returns success since end state is correct.
 
-**19.5 Fix:** In `LayersDatabase.php`, move `pruneOldRevisions()`
-call to before `$dbw->endAtomic()`. This ensures pruning is part
-of the same transaction as the insert. If pruning fails, the entire
-save rolls back (which is safer than unbounded revision growth).
+**19.5:** ✅ Fixed. Moved `pruneOldRevisions()` inside the atomic
+transaction (before `endAtomic`) in LayersDatabase.php.
 
 ### LOW (4 items)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 19.6 | i18n count 831 not 832 everywhere | P3-126 | Open | 30m |
+| 19.6 | ~~i18n count now 832~~ | P3-126 | ~~Fixed~~ | — |
 | 19.7 | Missing test files for 3 modules | P3-127 | Open | 2-3h |
-| 19.8 | Clean remaining stale docs (extends 18.1) | P2-098 | Open | 1-2h |
-| 19.9 | Normalize PHP line endings (extends 18.2) | P3-125 | Open | 1-2h |
-
-**19.6 Fix:** Global find-and-replace "832" → "831" in all `.md`
-and `.mediawiki` files that reference i18n key counts. Check
-`.github/copilot-instructions.md` as well.
+| 19.8 | Clean remaining stale docs | P2-098 | Open | 1-2h |
+| 19.9 | Normalize PHP line endings | P3-125 | Open | 1-2h |
 
 **19.7 Fix:** Create test files:
 - `tests/jest/LogSanitizer.test.js`

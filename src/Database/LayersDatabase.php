@@ -223,13 +223,15 @@ class LayersDatabase {
 
 				$dbw->insert( 'layer_sets', $row, __METHOD__ );
 				$layerSetId = $dbw->insertId();
+
+				// Prune old revisions inside the transaction so failure
+				// rolls back the entire save rather than allowing unbounded growth
+				$maxRevisions = (int)$this->config->get( 'LayersMaxRevisionsPerSet' );
+				$this->pruneOldRevisions( $normalizedImgName, $sha1, $setName, $maxRevisions );
+
 				$dbw->endAtomic( __METHOD__ );
 
 				$this->clearCache( $normalizedImgName );
-
-				// Prune old revisions for this named set
-				$maxRevisions = (int)$this->config->get( 'LayersMaxRevisionsPerSet' );
-				$this->pruneOldRevisions( $normalizedImgName, $sha1, $setName, $maxRevisions );
 
 				return $layerSetId;
 			} catch ( \Throwable $e ) {

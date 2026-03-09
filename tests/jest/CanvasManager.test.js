@@ -845,6 +845,20 @@ describe( 'CanvasManager', () => {
 			expect( point.x ).toBeDefined();
 			expect( point.y ).toBeDefined();
 		} );
+
+		it( 'should handle zero-size bounding rect without division by zero', () => {
+			// P1-044 regression: getBoundingClientRect can return zero dimensions
+			// when the canvas is hidden (display:none, offscreen, etc.)
+			canvasManager.canvas.getBoundingClientRect = jest.fn( () => ( {
+				left: 0,
+				top: 0,
+				width: 0,
+				height: 0
+			} ) );
+			const point = canvasManager.getMousePointFromClient( 100, 100 );
+			expect( Number.isFinite( point.x ) ).toBe( true );
+			expect( Number.isFinite( point.y ) ).toBe( true );
+		} );
 	} );
 
 	describe( 'cursor update', () => {
@@ -2237,6 +2251,29 @@ describe( 'CanvasManager', () => {
 			canvasManager.drawingController = { getToolCursor: jest.fn( () => 'default' ) };
 			canvasManager.setTool( 'text' );
 			expect( canvasManager.editor.updateStatus ).toHaveBeenCalledWith( { tool: 'text' } );
+		} );
+
+		it( 'should cancel angle dimension when switching away from angleDimension tool', () => {
+			// P2-102 regression: angle dimension phase was not reset on tool switch
+			const mockCancel = jest.fn();
+			canvasManager.drawingController = {
+				getToolCursor: jest.fn( () => 'crosshair' ),
+				cancelAngleDimension: mockCancel
+			};
+			canvasManager.currentTool = 'angleDimension';
+			canvasManager.setTool( 'pointer' );
+			expect( mockCancel ).toHaveBeenCalled();
+		} );
+
+		it( 'should not call cancelAngleDimension when staying on angleDimension tool', () => {
+			const mockCancel = jest.fn();
+			canvasManager.drawingController = {
+				getToolCursor: jest.fn( () => 'crosshair' ),
+				cancelAngleDimension: mockCancel
+			};
+			canvasManager.currentTool = 'angleDimension';
+			canvasManager.setTool( 'angleDimension' );
+			expect( mockCancel ).not.toHaveBeenCalled();
 		} );
 	} );
 

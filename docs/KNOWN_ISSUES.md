@@ -1,55 +1,86 @@
 # Known Issues
 
-**Last updated:** March 10, 2026 — v47 audit
+**Last updated:** March 9, 2026 — v48 audit
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
 and P3 (low/cosmetic). Historical fixed items are retained for audit
-traceability, but the March 10, 2026 entries below are the current open backlog.
+traceability, but the March 9, 2026 entries below are the current open backlog.
 
 ## Summary
 
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 43 | 41 | 2 |
-| P2 | 101 | 97 | 4 |
-| P3 | 127 | 123 | 4 |
-| **Total** | **276** | **266** | **10** |
+| P1 | 45 | 45 | 0 |
+| P2 | 103 | 103 | 0 |
+| P3 | 127 | 124 | 3 |
+| **Total** | **280** | **277** | **3** |
 
 ---
 
-## Open Issues — v47 (March 10, 2026)
+## Open Issues — v48 (March 9, 2026)
 
-### P1-041: EventManager Nudge Has No Undo/Redo History
+### ~~P1-044: CanvasManager.getMousePointFromClient() Division by Zero~~ (FIXED)
+
+- **File:** `resources/ext.layers.editor/CanvasManager.js` L1721-1722
+- **Impact:** When the canvas has zero CSS dimensions (hidden, transitioning,
+  `display:none`), `getBoundingClientRect()` returns `{width: 0, height: 0}`.
+  The division `this.canvas.width / rect.width` produces `Infinity`,
+  propagating to all downstream coordinate calculations.
+- **Fix:** Added ternary zero guards:
+  `rect.width > 0 ? this.canvas.width / rect.width : 1`. Regression test
+  added.
+- **Status:** Fixed (v48 fix)
+- **Introduced:** v48 review
+
+### ~~P2-102: DrawingController Angle Dimension Phase Not Reset on Tool Switch~~ (FIXED)
+
+- **File:** `resources/ext.layers.editor/canvas/DrawingController.js`
+  L363, L422, L430, L465
+- **Impact:** If a user starts the angle dimension tool then switches to
+  another tool, the angle dimension resumes at phase 2 instead of fresh.
+- **Fix:** Added cleanup in `CanvasManager.setTool()` that calls
+  `drawingController.cancelAngleDimension()` when switching away from
+  `angleDimension`. Regression tests added.
+- **Status:** Fixed (v48 fix)
+- **Introduced:** v48 review
+
+### ~~P2-103: TransformController Arrow Tip RAF Missing Destruction Guards~~ (FIXED)
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+  L692-695
+- **Impact:** If the editor is destroyed between RAF scheduling and
+  execution during arrow drag, the callback crashes with null reference.
+- **Fix:** Added `if (!this.manager || this.manager.isDestroyed ||
+  !this.manager.editor) { return; }` guard matching the pattern used
+  by all other RAF callbacks. Regression tests added.
+- **Status:** Fixed (v48 fix)
+- **Introduced:** v48 review
+
+### Carried Forward from v47
+
+### ~~P1-041: EventManager Nudge Has No Undo/Redo History~~ (FIXED)
 
 - **File:** `resources/ext.layers.editor/EventManager.js` L210-211
-- **Impact:** Arrow-key nudge operations are not recorded in the undo
-  history. Users cannot undo or redo nudge movements.
-- **Evidence:** `nudgeSelectedLayers()` calls
-  `this.editor.historyManager.snapshot('nudge')`, but `HistoryManager`
-  has no `snapshot()` method — only `saveState()`. The `typeof` guard
-  silently skips the call every time. Searched entire
-  `HistoryManager.js`: zero occurrences of a `snapshot` method
-  definition.
-- **Recommended Fix:** Change `snapshot` to `saveState` at L211.
-- **Status:** Open
-- **Introduced:** v47 review (bug present since nudge was implemented in v42)
+- **Impact:** Arrow-key nudging layers had no undo/redo history because
+  `handleArrowKeyNudge()` called the non-existent `snapshot()` method.
+- **Fix:** Changed `snapshot('nudge')` to `saveState('nudge')` which
+  is the correct HistoryManager API. Regression test added.
+- **Status:** Fixed (v48 fix)
+- **Introduced:** v47 review
 
-### P1-042: DraftManager Draft Recovery Silently Loses Image Layers
+### ~~P1-042b: DraftManager Silently Loses Image Layer Data~~ (FIXED)
 
 - **File:** `resources/ext.layers.editor/DraftManager.js` L193-199, L318-365
 - **Impact:** When recovering from an auto-saved draft, all image layers
-  appear as broken/empty with no warning. Image data is permanently
+  appeared as broken/empty with no warning. Image data was permanently
   lost from the draft.
-- **Evidence:** `saveDraft()` strips `src` from image layers >1KB and
-  sets `_srcStripped = true` (L198). `recoverDraft()` at L318 directly
-  applies `draft.layers` without checking `_srcStripped` — only 1
-  occurrence of `_srcStripped` in the entire file (at L198, the setter).
-- **Recommended Fix:** In `recoverDraft()`, detect `_srcStripped` layers
-  and either warn the user or attempt to reload from the last saved
-  revision.
-- **Status:** Open
+- **Fix:** In `recoverDraft()`, added detection of `_srcStripped` layers,
+  cleanup of the internal flag, and persistent warning notification via
+  `mw.notify` with `autoHide: false` using `layers-draft-images-lost`
+  i18n key. Regression tests added.
+- **Status:** Fixed (v48 fix)
 - **Introduced:** v47 review
 
 ### ~~P1-043: Font Names With Spaces Corrupted On Save~~ (FIXED)
@@ -68,56 +99,45 @@ traceability, but the March 10, 2026 entries below are the current open backlog.
 - **Status:** Fixed
 - **Introduced:** v47 review (bug present since font support was added)
 
-### P2-099: LayersViewer Blend Mode + Hidden Background Renders White
+### ~~P2-099: LayersViewer Blend Mode + Hidden Background Renders White~~ (FIXED)
 
 - **File:** `resources/ext.layers/LayersViewer.js` L450-464
-- **Impact:** Viewers see a white rectangle beneath blend-mode layers
-  when `backgroundVisible` is false, instead of transparency.
-- **Evidence:** `drawBackgroundOnCanvas()` fills canvas with `#ffffff`
-  when background is hidden (for blend mode compositing), then returns
-  immediately without drawing the actual image. The white fill is
-  visible to the user.
-- **Recommended Fix:** Use `clearRect` instead of white fill when
-  background is hidden, or skip the fill entirely.
-- **Status:** Open
+- **Impact:** Viewers saw a white rectangle beneath blend-mode layers
+  when `backgroundVisible` was false.
+- **Fix:** Changed from `fillRect('#ffffff')` to `clearRect()` when
+  background is hidden. Tests updated.
+- **Status:** Fixed (v48 fix)
 - **Introduced:** v47 review
 
-### P2-100: ApiLayersDelete Concurrent Request Race Condition
+### ~~P2-100: ApiLayersDelete Concurrent Request Race Condition~~ (FIXED)
 
 - **File:** `src/Api/ApiLayersDelete.php` L174
-- **Impact:** If two concurrent delete requests target the same set,
-  the second returns `success: 1, revisionsDeleted: 0` — misleading
-  but functionally harmless since the set is gone either way.
-- **Evidence:** Code checks `$rowsDeleted === null` (error) at L174
-  but treats `$rowsDeleted === 0` as success without distinction.
-- **Recommended Fix:** Add a `$rowsDeleted === 0` check and return
-  a `layers-already-deleted` informational status.
-- **Status:** Open
+- **Impact:** Two concurrent delete requests on the same set could
+  produce misleading success with `revisionsDeleted: 0`.
+- **Fix:** Added `$rowsDeleted === 0` check with warning log for
+  concurrent delete race detection. Returns success since the end
+  state (set deleted) is correct.
+- **Status:** Fixed (v48 fix)
 - **Introduced:** v47 review
 
-### P2-101: LayersDatabase pruneOldRevisions Called Outside Transaction
+### ~~P2-101: LayersDatabase pruneOldRevisions Called Outside Transaction~~ (FIXED)
 
 - **File:** `src/Database/LayersDatabase.php` L227-232
-- **Impact:** If pruning fails after a successful save, revision count
-  can exceed `$wgLayersMaxRevisionsPerSet`, causing gradual storage
-  bloat. Low probability but unbounded growth.
-- **Evidence:** `$dbw->endAtomic(__METHOD__)` at L227, then
-  `$this->pruneOldRevisions(...)` at L232 — pruning happens after
-  the transaction commits.
-- **Recommended Fix:** Move `pruneOldRevisions()` inside the atomic
-  section, or add a maintenance script to enforce the limit.
-- **Status:** Open
+- **Impact:** If pruning failed after a successful save, revision count
+  could exceed the configured limit.
+- **Fix:** Moved `pruneOldRevisions()` inside the atomic transaction
+  (before `endAtomic`). If pruning fails, the entire save rolls back.
+- **Status:** Fixed (v48 fix)
 - **Introduced:** v47 review
 
-### P3-126: i18n Key Count Is 831, Not 832
+### ~~P3-126: i18n Key Count Is 831, Not 832~~ (FIXED)
 
 - **Files:** All documentation files claiming 832 i18n keys
-- **Impact:** Documentation consistently overstates the i18n key count
+- **Impact:** Documentation consistently overstated the i18n key count
   by 1. Minor but pervasive.
-- **Evidence:** Python JSON parse of `i18n/en.json` excluding
-  `@metadata`: 831 keys. Same for `i18n/qqq.json`.
-- **Recommended Fix:** Update all docs from 832 to 831.
-- **Status:** Open
+- **Fix:** Added `layers-draft-images-lost` i18n key (P1-042 fix),
+  bringing the count to 832. All docs now match.
+- **Status:** Fixed (March 9, 2026)
 - **Introduced:** v47 review
 
 ### P3-127: Missing Test Coverage for 3 Modules

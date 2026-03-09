@@ -180,6 +180,14 @@ class ApiLayersDelete extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
 			}
 
+			if ( $rowsDeleted === 0 ) {
+				$this->getLogger()->warning( 'Layer set already deleted (concurrent request)', [
+					'filename' => $requestedFilename,
+					'setname' => $setName,
+					'user' => $user->getName()
+				] );
+			}
+
 			$this->getLogger()->info( 'Layer set deleted', [
 				'filename' => $requestedFilename,
 				'setname' => $setName,

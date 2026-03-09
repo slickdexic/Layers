@@ -1717,9 +1717,10 @@ class CanvasManager {
 		// Position within the displayed (transformed) element
 		const relX = clientX - rect.left;
 		const relY = clientY - rect.top;
-		// Scale to logical canvas pixels
-		const scaleX = this.canvas.width / rect.width;
-		const scaleY = this.canvas.height / rect.height;
+		// Scale to logical canvas pixels (guard against zero CSS dimensions
+		// e.g. hidden canvas via display:none returning {width:0, height:0})
+		const scaleX = rect.width > 0 ? this.canvas.width / rect.width : 1;
+		const scaleY = rect.height > 0 ? this.canvas.height / rect.height : 1;
 		const canvasX = relX * scaleX;
 		const canvasY = relY * scaleY;
 
@@ -1830,6 +1831,12 @@ class CanvasManager {
 	}
 
 	setTool ( tool ) {
+		// Cancel any in-progress angle dimension drawing when switching tools
+		if ( this.drawingController &&
+			this.currentTool === 'angleDimension' &&
+			tool !== 'angleDimension' ) {
+			this.drawingController.cancelAngleDimension();
+		}
 		this.currentTool = tool;
 		this.canvas.style.cursor = this.getToolCursor( tool );
 		if ( this.editor && typeof this.editor.updateStatus === 'function' ) {

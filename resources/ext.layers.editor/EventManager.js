@@ -207,8 +207,8 @@ class EventManager {
 		} );
 
 		// Record history for undo/redo
-		if ( this.editor.historyManager && typeof this.editor.historyManager.snapshot === 'function' ) {
-			this.editor.historyManager.snapshot( 'nudge' );
+		if ( this.editor.historyManager && typeof this.editor.historyManager.saveState === 'function' ) {
+			this.editor.historyManager.saveState( 'nudge' );
 		}
 
 		// Mark as dirty and re-render

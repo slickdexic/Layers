@@ -1077,7 +1077,7 @@ describe( 'LayersViewer', () => {
 			expect( imageElement.style.visibility ).toBe( 'hidden' );
 		} );
 
-		test( 'should fill with white when background is hidden', () => {
+		test( 'should clear to transparent when background is hidden', () => {
 			const container = createMockContainer();
 			const imageElement = createMockImageElement();
 			imageElement.style = { visibility: '' };
@@ -1097,8 +1097,8 @@ describe( 'LayersViewer', () => {
 				layerData: layerData
 			} );
 
-			// Background hidden but blend mode present - should still work
-			expect( viewer.ctx.fillStyle ).toBe( '#ffffff' );
+			// Background hidden - should clearRect (transparent), not fill white
+			expect( viewer.ctx.fillStyle ).not.toBe( '#ffffff' );
 		} );
 
 		test( 'should apply background opacity from layer data', () => {
@@ -1215,8 +1215,8 @@ describe( 'LayersViewer', () => {
 				layerData: layerData
 			} );
 
-			// Background hidden via string "false"
-			expect( viewer.ctx.fillStyle ).toBe( '#ffffff' );
+			// Background hidden via string "false" - should clearRect, not fill white
+			expect( viewer.ctx.fillStyle ).not.toBe( '#ffffff' );
 		} );
 
 		test( 'should handle backgroundVisible as string "0"', () => {
@@ -1239,7 +1239,8 @@ describe( 'LayersViewer', () => {
 				layerData: layerData
 			} );
 
-			expect( viewer.ctx.fillStyle ).toBe( '#ffffff' );
+			// Background hidden via string "0" - should clearRect, not fill white
+			expect( viewer.ctx.fillStyle ).not.toBe( '#ffffff' );
 		} );
 
 		test( 'should handle backgroundVisible as integer 0', () => {
@@ -1262,7 +1263,8 @@ describe( 'LayersViewer', () => {
 				layerData: layerData
 			} );
 
-			expect( viewer.ctx.fillStyle ).toBe( '#ffffff' );
+			// Background hidden via integer 0 - should clearRect, not fill white
+			expect( viewer.ctx.fillStyle ).not.toBe( '#ffffff' );
 		} );
 	} );
 

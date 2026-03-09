@@ -336,6 +336,23 @@
 					} );
 				}
 
+				// Warn user if any image layers had their data stripped
+				const strippedCount = draft.layers.filter(
+					( l ) => l._srcStripped === true
+				).length;
+				if ( strippedCount > 0 ) {
+					// Clean the internal flag so it doesn't persist into saved data
+					draft.layers.forEach( ( l ) => {
+						delete l._srcStripped;
+					} );
+					if ( typeof mw !== 'undefined' && mw.notify && mw.message ) {
+						mw.notify(
+							mw.message( 'layers-draft-images-lost', strippedCount ).text(),
+							{ type: 'warn', autoHide: false }
+						);
+					}
+				}
+
 				// Re-render the layers
 				if ( this.editor.canvasManager ) {
 					this.editor.canvasManager.renderLayers( draft.layers );

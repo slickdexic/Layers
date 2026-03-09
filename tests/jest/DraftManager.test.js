@@ -328,6 +328,61 @@ describe( 'DraftManager', function () {
 
 			expect( mockEditor.canvasManager.renderLayers ).toHaveBeenCalled();
 		} );
+
+		it( 'should warn user when draft has stripped image layers', function () {
+			// P1-042 regression: drafts with large images have src stripped,
+			// and the user should be warned about lost images
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [
+					{ id: 'layer1', type: 'rectangle' },
+					{ id: 'layer2', type: 'image', _srcStripped: true },
+					{ id: 'layer3', type: 'image', _srcStripped: true }
+				]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+
+			draftManager.recoverDraft();
+
+			expect( mw.notify ).toHaveBeenCalled();
+			const notifyCall = mw.notify.mock.calls[ 0 ];
+			expect( notifyCall[ 1 ] ).toMatchObject( { autoHide: false } );
+		} );
+
+		it( 'should clean up _srcStripped flags from recovered layers', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [
+					{ id: 'layer1', type: 'image', _srcStripped: true },
+					{ id: 'layer2', type: 'rectangle' }
+				]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+
+			draftManager.recoverDraft();
+
+			const updateCall = mockEditor.stateManager.update.mock.calls[ 0 ][ 0 ];
+			const recoveredLayers = updateCall.layers;
+			expect( recoveredLayers[ 0 ]._srcStripped ).toBeUndefined();
+		} );
+
+		it( 'should not warn when no images were stripped', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [
+					{ id: 'layer1', type: 'rectangle' },
+					{ id: 'layer2', type: 'circle' }
+				]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+
+			draftManager.recoverDraft();
+
+			expect( mw.notify ).not.toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'onSaveSuccess', function () {

@@ -457,9 +457,11 @@
 			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
 
 			if ( isHidden ) {
-				// Even when hidden, fill with white so blend modes have something to blend with
-				this.ctx.fillStyle = '#ffffff';
-				this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+				// When background is hidden, clear to transparent instead of
+				// filling white. Blend modes won't composite correctly against
+				// transparent, but that's expected — the user chose to hide
+				// the background.
+				this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 				return;
 			}
 
