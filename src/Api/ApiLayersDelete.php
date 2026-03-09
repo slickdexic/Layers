@@ -173,6 +173,14 @@ class ApiLayersDelete extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
 			}
 
+			if ( $rowsDeleted === 0 ) {
+				$this->getLogger()->warning( 'Delete returned 0 rows — possible concurrent delete', [
+					'filename' => $requestedFilename,
+					'setname' => $setName,
+					'user' => $user->getName()
+				] );
+			}
+
 			$this->getLogger()->info( 'Layer set deleted', [
 				'filename' => $requestedFilename,
 				'setname' => $setName,
@@ -251,6 +259,14 @@ class ApiLayersDelete extends ApiBase {
 					'user' => $user->getName()
 				] );
 				$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
+			}
+
+			if ( $rowsDeleted === 0 ) {
+				$this->getLogger()->warning( 'Delete returned 0 rows — possible concurrent delete', [
+					'slidename' => $slidename,
+					'setname' => $setName,
+					'user' => $user->getName()
+				] );
 			}
 
 			$this->getLogger()->info( 'Slide layer set deleted', [

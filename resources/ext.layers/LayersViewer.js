@@ -455,9 +455,8 @@
 			const isHidden = bgVisible === false || bgVisible === 'false' || bgVisible === '0' || bgVisible === 0;
 
 			if ( isHidden ) {
-				// Even when hidden, fill with white so blend modes have something to blend with
-				this.ctx.fillStyle = '#ffffff';
-				this.ctx.fillRect( 0, 0, this.canvas.width, this.canvas.height );
+				// Clear to transparent so blend modes work with page background
+				this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 				return;
 			}
 
