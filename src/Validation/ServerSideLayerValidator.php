@@ -521,12 +521,15 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
-		if ( in_array( $property, [ 'id', 'type', 'fontFamily' ], true ) ) {
-			// Identifiers - sanitize
+		if ( in_array( $property, [ 'id', 'type' ], true ) ) {
+			// Identifiers - sanitize (no spaces allowed)
 			$sanitized = $this->textSanitizer->sanitizeIdentifier( $value );
-			// Font names are cosmetic and not a security risk when sanitized
-			// Allow any sanitized font name rather than restricting to configured list
-			// This prevents data loss when users paste layers from other sources
+			return [ 'valid' => true, 'value' => $sanitized ];
+		}
+
+		if ( $property === 'fontFamily' ) {
+			// Font names need spaces preserved (e.g., "Times New Roman")
+			$sanitized = $this->textSanitizer->sanitizeFontFamily( $value );
 			return [ 'valid' => true, 'value' => $sanitized ];
 		}
 
@@ -978,6 +981,11 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 							continue;
 						}
 						$styleValue = $this->colorValidator->sanitizeColor( $styleValue );
+					}
+
+					// Sanitize font family to preserve spaces
+					if ( $styleProp === 'fontFamily' ) {
+						$styleValue = $this->textSanitizer->sanitizeFontFamily( $styleValue );
 					}
 
 					// Check enum constraints
