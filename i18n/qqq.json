@@ -722,6 +722,7 @@
 	"layers-draft-recover": "Button label to recover the draft",
 	"layers-draft-discard": "Button label to discard the draft",
 	"layers-draft-recovered": "Notification message shown after successfully recovering a draft",
+	"layers-draft-images-lost": "Warning notification shown when a recovered draft had image layers that were too large to save. $1 is the number of stripped image layers. Uses PLURAL.",
 	"layers-search-placeholder": "Placeholder text for the layer search input",
 	"layers-search-clear": "Tooltip for the button that clears the search filter",
 	"layers-search-results": "Status text showing filtered layer count. $1 is visible count, $2 is total count",

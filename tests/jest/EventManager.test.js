@@ -351,7 +351,7 @@ describe( 'EventManager', () => {
 			mockEditor.canvasManager.selectionManager = mockSelectionManager;
 			mockEditor.stateManager = {};
 			mockEditor.historyManager = {
-				snapshot: jest.fn()
+				saveState: jest.fn()
 			};
 			mockEditor.updateStatusBar = jest.fn();
 		} );
@@ -433,12 +433,12 @@ describe( 'EventManager', () => {
 			expect( mockLayer.x ).toBe( 100 ); // unchanged
 		} );
 
-		it( 'should record history snapshot after nudge', () => {
+		it( 'should record history state after nudge', () => {
 			const event = createKeyEvent( 'ArrowRight' );
 
 			eventManager.handleArrowKeyNudge( event );
 
-			expect( mockEditor.historyManager.snapshot ).toHaveBeenCalledWith( 'nudge' );
+			expect( mockEditor.historyManager.saveState ).toHaveBeenCalledWith( 'nudge' );
 		} );
 
 		it( 'should mark editor as dirty and re-render', () => {
@@ -494,7 +494,7 @@ describe( 'EventManager', () => {
 			mockEditor.canvasManager.selectionManager = mockSelectionManager;
 			mockEditor.stateManager = {};
 			mockEditor.historyManager = {
-				snapshot: jest.fn()
+				saveState: jest.fn()
 			};
 		} );
 

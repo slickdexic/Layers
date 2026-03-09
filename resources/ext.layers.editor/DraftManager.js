@@ -336,6 +336,21 @@
 					} );
 				}
 
+				// Detect and warn about image layers that lost their data
+				const strippedLayers = draft.layers.filter( ( l ) => l._srcStripped );
+				if ( strippedLayers.length > 0 ) {
+					// Clean up the temporary flag from recovered layers
+					strippedLayers.forEach( ( l ) => {
+						delete l._srcStripped;
+					} );
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify(
+							mw.message( 'layers-draft-images-lost', strippedLayers.length ).text(),
+							{ type: 'warn', autoHide: false }
+						);
+					}
+				}
+
 				// Re-render the layers
 				if ( this.editor.canvasManager ) {
 					this.editor.canvasManager.renderLayers( draft.layers );

@@ -223,13 +223,14 @@ class LayersDatabase {
 
 				$dbw->insert( 'layer_sets', $row, __METHOD__ );
 				$layerSetId = $dbw->insertId();
-				$dbw->endAtomic( __METHOD__ );
 
 				$this->clearCache( $normalizedImgName );
 
-				// Prune old revisions for this named set
+				// Prune old revisions for this named set (inside atomic transaction)
 				$maxRevisions = (int)$this->config->get( 'LayersMaxRevisionsPerSet' );
 				$this->pruneOldRevisions( $normalizedImgName, $sha1, $setName, $maxRevisions );
+
+				$dbw->endAtomic( __METHOD__ );
 
 				return $layerSetId;
 			} catch ( \Throwable $e ) {
