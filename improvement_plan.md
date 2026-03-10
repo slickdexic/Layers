@@ -1,35 +1,300 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** February 17, 2026 — v1.5.58 release
+**Last updated:** March 10, 2026 — v49 audit
 
-This plan organizes all open issues from the codebase review into
-prioritized phases with effort estimates. Each phase targets related
-issues for efficient batching.
+This plan now distinguishes between the **verified current backlog** and the
+historical phase log retained below. Many line items still marked `Open` in the
+older phases were rechecked during the March 9–10 audits and found to be fixed,
+false positives, or superseded by broader documentation work. Use the v49
+section below as the authoritative current backlog.
+
+---
+
+## Verified Current Backlog (Authoritative as of March 10, 2026)
+
+| Area | Verified Open Items | Est. Effort |
+|------|---------------------|-------------|
+| PHP bugs (High) | 3 | 2-4h |
+| PHP bugs (Medium) | 7 | 4-6h |
+| PHP bugs (Low) | 8 | 3-5h |
+| JS bugs (High) | 5 | 3-5h |
+| JS bugs (Medium) | 6 | 3-5h |
+| JS bugs (Low) | 3 | 1-2h |
+| Canvas bugs (High) | 3 | 1-2h |
+| Canvas bugs (Medium) | 5 | 2-3h |
+| Canvas bugs (Low) | 3 | 1-2h |
+| Documentation fixes | 10 | 1-2h |
+| Code quality (carried) | 2 | 30-60m |
+| **Total** | **55** | **21-37h** |
+
+### Current Priorities (v49)
+
+| # | Issue | Ref | Priority | Effort |
+|---|-------|-----|----------|--------|
+| 21.01 | LayersApiHelperTrait admin check uses page-delete right | P1-045 | HIGH | 30m |
+| 21.02 | SpecialSlides.php DB before permission check | P1-046 | HIGH | 15m |
+| 21.03 | SpecialEditSlide.php DB before permission check | P1-047 | HIGH | 15m |
+| 21.04 | APIManager cache exception hangs Promise forever | P1-048 | HIGH | 30m |
+| 21.05 | APIManager .catch() drops jQuery `result` (4 sites) | P1-049 | HIGH | 45m |
+| 21.06 | HistoryManager lastSaveHistoryIndex not decremented | P1-050 | HIGH | 30m |
+| 21.07 | EditorBootstrap duplicate editors in production | P1-051 | HIGH | 15m |
+| 21.08 | ValidationManager wrong bounds vs. server | P1-052 | HIGH | 15m |
+| 21.09 | Smart guides non-functional for line/arrow/path/dim | P1-053 | HIGH | 2h |
+| 21.10 | ZoomPanController fitToWindow null parentNode | P1-054 | HIGH | 15m |
+| 21.11 | ZoomPanController zoomToFitLayers null parentNode | P1-055 | HIGH | 15m |
+| 21.12 | TextSanitizer zero-width space corrupts user text | P2-104 | MED | 30m |
+| 21.13 | blend property bypasses enum validation | P2-105 | MED | 30m |
+| 21.14 | usleep() blocking in DB retry loop | P2-106 | MED | 15m |
+| 21.15 | N+1 user lookup in ApiLayersInfo | P2-107 | MED | 45m |
+| 21.16 | Cache invalidation errors silently suppressed | P2-108 | MED | 15m |
+| 21.17 | wfLogWarning() deprecated in RateLimiter | P2-109 | MED | 15m |
+| 21.18 | ApiLayersRename wrong error code for invalid format | P2-110 | MED | 15m |
+| 21.19 | parseMWTimestamp fallback uses local timezone | P2-111 | MED | 15m |
+| 21.20 | RevisionManager mutates currentSetName before load | P2-112 | MED | 15m |
+| 21.21 | DraftManager auto-save bypasses isRecoveryMode | P2-113 | MED | 15m |
+| 21.22 | APIManager hardcodes layer limit 100 | P2-114 | MED | 15m |
+| 21.23 | EventManager nudge bypasses StateManager | P2-115 | MED | 30m |
+| 21.24 | DraftManager storage key collision | P2-116 | MED | 30m |
+| 21.25 | CanvasManager emitTransforming RAF post-destroy | P2-117 | MED | 30m |
+| 21.26 | ZoomPanController animationFrameId stale on complete | P2-118 | MED | 15m |
+| 21.27 | SelectionRenderer AngleDimensionRenderer per-frame alloc | P2-119 | MED | 15m |
+| 21.28 | TransformController _arrowTipRafId missing from ctor | P2-120 | MED | 10m |
+| 21.29 | TransformController text-drag state vars uninitialized | P2-121 | MED | 15m |
+| 21.30 | Documentation: README/CHANGELOG wrong coverage % | D-049 | MED | 1h |
+| 21.31 | Documentation: ARCHITECTURE.md god class table gaps | D-049 | MED | 30m |
+| 19.7 | Missing tests for ViewerIcons module | P3-127 | Low | 1h |
+| 19.8 | Stale secondary docs cleanup | P2-098 | Low | 1h |
+
+### v48 Notes
+
+- Full re-audit of `main` branch; all findings individually verified.
+- **3 new bugs found:** 1 HIGH (P1-044, CanvasManager division by zero),
+  2 MEDIUM (P2-102 angle dimension, P2-103 arrow tip RAF guards).
+- **16 false positives eliminated** during v48 verification rounds.
+- God class count corrected from 21 → 23 (3 files newly tracked:
+  AngleDimensionRenderer 1,067, CanvasEvents 1,033, CalloutRenderer 1,000).
+- PHP lines updated from ~15,161 → ~15,187.
+- `npm test` passed with **167 suites / 11,421 tests**.
+- i18n key count confirmed at **832** (KNOWN_ISSUES P3-126 fix note, CHANGELOG [Unreleased], and all other sources agree; prior v48 note of 831 was in error).
+- All v47 open items carried forward and re-verified as still present.
 
 ---
 
-## Phase Summary
+## Phase 21: v49 Findings — Security, Logic & Quality (54 Items)
 
-| Phase | Focus | Items | Fixed | Open | Est. Effort |
-|-------|-------|-------|-------|------|-------------|
-| 1 | Critical bugs & data safety | 14 | 14 | 0 | — |
-| 2 | Security hardening | 8 | 8 | 0 | — |
-| 3 | Reliability & correctness | 12 | 12 | 0 | — |
-| 4 | Code quality & dead code | 10 | 10 | 0 | — |
-| 5 | Performance | 5 | 5 | 0 | — |
-| 6 | Infrastructure | 5 | 5 | 0 | — |
-| 7 | Documentation debt | 42 | 42 | 0 | — |
-| 8 | v35 findings (security + bugs) | 19 | 19 | 0 | — |
-| 9 | v36 findings (code + testing) | 25 | 25 | 0 | — |
-| 10 | v37 findings (validation + quality) | 3 | 3 | 0 | — |
-| 11 | v38 findings (API + cleanup + docs) | 8 | 8 | 0 | — |
-| 12 | v39 findings (security + quality) | 13 | 13 | 0 | — |
-| 13 | v40 findings (verification addendum) | 5 | 5 | 0 | 2-4 hours |
-| 14 | v41 findings (security + rendering + quality) | 23 | 3 | 20 | 12-20 hours |
-| 15 | v42 findings (infra + rendering + UX + quality) | 32 | 0 | 32 | 20-30 hours |
-| **Total** | | **224** | **175** | **52** | **—** |
+*Target: resolve all 11 HIGH-priority bugs first (total 11h estimated),
+then work through 28 MEDIUM items, 15 LOW items, and 10 documentation
+fixes found in the March 10, 2026 v49 audit.*
+
+### PHP HIGH (3 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.01 | LayersApiHelperTrait admin check uses page-delete right | P1-045 | Open | 30m |
+| 21.02 | SpecialSlides.php DB query before permission check | P1-046 | Open | 15m |
+| 21.03 | SpecialEditSlide.php DB query before permission check | P1-047 | Open | 15m |
+
+**21.01:** Introduce `layers-admin` right in `extension.json`. Replace
+`$user->isAllowed('delete')` with `$user->isAllowed('layers-admin')` in
+`LayersApiHelperTrait.php` L106.
+
+**21.02:** Move `$user->authorizeAction('read')` / `userHasRight()` check
+above the `getLayerSetByName()` DB call in `SpecialSlides.php`.
+
+**21.03:** Same reordering fix in `SpecialEditSlide.php`.
+
+### JavaScript HIGH (5 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.04 | APIManager cache exception hangs Promise | P1-048 | Open | 30m |
+| 21.05 | APIManager .catch() drops jQuery result (4 sites) | P1-049 | Open | 45m |
+| 21.06 | HistoryManager lastSaveHistoryIndex not decremented | P1-050 | Open | 30m |
+| 21.07 | EditorBootstrap duplicate editors in production | P1-051 | Open | 15m |
+| 21.08 | ValidationManager wrong bounds vs. server | P1-052 | Open | 15m |
+
+**21.04:** Move `return;` inside the `try` block in `APIManager.js`
+`loadRevisionById` cache-hit path so the catch falls through to the
+network fetch.
+
+**21.05:** Change `.then(s).catch(f)` to `.then(s, f)` at all four
+call sites (L315, L640, L815, L975) to preserve jQuery deferred rejection
+args.
+
+**21.06:** After `history.shift()` in `HistoryManager.saveState()`, add:
+`if (this.lastSaveHistoryIndex > 0) { this.lastSaveHistoryIndex--; }
+else { this.lastSaveHistoryIndex = -1; }`
+
+**21.07:** Move `window.layersEditorInstance = editor` in
+`EditorBootstrap.js` outside the `if (debug)` guard so all code paths
+register the instance.
+
+**21.08:** In `ValidationManager.js` L240: `fontSize < 1`.
+L246: `strokeWidth > 100`.
+
+### Canvas HIGH (3 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.09 | Smart guides non-functional for line/arrow/path/dim | P1-053 | Open | 2h |
+| 21.10 | ZoomPanController fitToWindow null parentNode | P1-054 | Open | 15m |
+| 21.11 | ZoomPanController zoomToFitLayers null parentNode | P1-055 | Open | 15m |
+
+**21.09:** In `TransformController.js` `_applySmartGuideDrag()`, derive
+reference position from `getLayerBounds()` for layer types that lack
+`.x`/`.y` (line, arrow, path, dimension, angleDimension, marker).
+
+**21.10/11:** Add `if (!container) { return; }` null guards at L232 and
+L295 in `ZoomPanController.js`.
+
+### PHP MEDIUM (7 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.12 | TextSanitizer zero-width space injection | P2-104 | Open | 30m |
+| 21.13 | blend property bypasses enum validation | P2-105 | Open | 30m |
+| 21.14 | usleep() blocking in DB retry loop | P2-106 | Open | 15m |
+| 21.15 | N+1 user lookup in ApiLayersInfo | P2-107 | Open | 45m |
+| 21.16 | Cache invalidation errors silently suppressed | P2-108 | Open | 15m |
+| 21.17 | wfLogWarning() deprecated in RateLimiter | P2-109 | Open | 15m |
+| 21.18 | ApiLayersRename wrong error code for format failure | P2-110 | Open | 15m |
+
+### JavaScript MEDIUM (6 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.19 | parseMWTimestamp fallback uses local timezone | P2-111 | Open | 15m |
+| 21.20 | RevisionManager mutates currentSetName before load | P2-112 | Open | 15m |
+| 21.21 | DraftManager auto-save bypasses isRecoveryMode | P2-113 | Open | 15m |
+| 21.22 | APIManager hardcodes layer limit to 100 | P2-114 | Open | 15m |
+| 21.23 | EventManager nudge bypasses StateManager | P2-115 | Open | 30m |
+| 21.24 | DraftManager storage key collision | P2-116 | Open | 30m |
+
+### Canvas MEDIUM (5 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.25 | CanvasManager emitTransforming RAF post-destroy | P2-117 | Open | 30m |
+| 21.26 | ZoomPanController animationFrameId stale on complete | P2-118 | Open | 15m |
+| 21.27 | SelectionRenderer AngleDimensionRenderer per-frame | P2-119 | Open | 15m |
+| 21.28 | TransformController _arrowTipRafId missing from ctor | P2-120 | Open | 10m |
+| 21.29 | TransformController text-drag state vars uninitialized | P2-121 | Open | 15m |
+
+### Documentation (10 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.30 | README.md coverage badge 95.19% → 92.19% | D-049-01/02 | Open | 15m |
+| 21.31 | CHANGELOG.md [1.5.59] wrong coverage/test/god counts | D-049-03 | Open | 15m |
+| 21.32 | ARCHITECTURE.md god class table missing 6 entries | D-049-04/05 | Open | 30m |
+| 21.33 | ARCHITECTURE.md still shows 95.19% coverage | D-049-06 | Open | 5m |
+| 21.34 | LayersGuide.mediawiki incorrectly deprecates layerslink= | D-049-07 | Open | 15m |
+| 21.35 | DEVELOPER_ONBOARDING.md TransformController size wrong | D-049-08 | Open | 5m |
+| 21.36 | RELEASE_GUIDE.md contradicts CHANGELOG tense | D-049-09 | Open | 15m |
+| 21.37 | DOCUMENTATION_UPDATE_GUIDE.md 11 vs 12 files | D-049-10 | Open | 5m |
+| 21.38 | copilot-instructions.md god class count 22→23 | — | Open | 5m |
+| 21.39 | copilot-instructions.md JS god class count 18→19 | — | Open | 5m |
+
+### LOW items (15 items)
+
+P3-128 through P3-141 (see KNOWN_ISSUES.md for details). Estimated
+5-8h total.
 
 ---
+
+## Phase 20: v48 Findings — New Bugs (3 Items)
+
+*Target: fix 1 HIGH coordinate conversion bug, 2 MEDIUM tool/RAF
+consistency bugs identified in the March 9, 2026 v48 audit.*
+
+### HIGH (1 item — ~~fixed~~)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 20.1 | ~~CanvasManager.getMousePointFromClient() divides by zero~~ | P1-044 | ~~Fixed~~ | — |
+
+**20.1:** ✅ Fixed. Added ternary zero guards in `CanvasManager.js`
+L1721-1722. Regression test added.
+
+### MEDIUM (2 items — ~~fixed~~)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 20.2 | ~~DrawingController angle dimension phase on tool switch~~ | P2-102 | ~~Fixed~~ | — |
+| 20.3 | ~~TransformController arrow tip RAF destruction guards~~ | P2-103 | ~~Fixed~~ | — |
+
+**20.2:** ✅ Fixed. Added cleanup in `CanvasManager.setTool()` that
+calls `drawingController.cancelAngleDimension()` when switching away
+from `angleDimension`. Regression tests added.
+
+**20.3:** ✅ Fixed. Added destruction guard matching the pattern used
+by all other RAF callbacks in the same file. Regression tests added.
+
+---
+
+## Phase 19: v47 Findings — Bugs, Backend & Documentation (9 Items)
+
+*Target: fix 2 HIGH-priority silent failures, 3 MEDIUM backend/viewer
+bugs, and address documentation accuracy and test coverage gaps.*
+
+### HIGH (2 items — ~~fixed~~)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 19.1 | ~~EventManager nudge `snapshot()` → `saveState()`~~ | P1-041 | ~~Fixed~~ | — |
+| 19.2 | ~~DraftManager draft recovery loses image layers~~ | P1-042b | ~~Fixed~~ | — |
+
+**19.1:** ✅ Fixed. Changed `snapshot('nudge')` to `saveState('nudge')`
+in `EventManager.js` L210-211. Regression test updated.
+
+**19.2:** ✅ Fixed. Added `_srcStripped` detection in `recoverDraft()`,
+cleanup of internal flags, and `mw.notify` warning with `autoHide: false`.
+New i18n key `layers-draft-images-lost` with PLURAL support. Regression
+tests added.
+
+### MEDIUM (3 items — ~~fixed~~)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 19.3 | ~~LayersViewer blend mode + hidden background~~ | P2-099 | ~~Fixed~~ | — |
+| 19.4 | ~~ApiLayersDelete 0-row concurrent delete race~~ | P2-100 | ~~Fixed~~ | — |
+| 19.5 | ~~pruneOldRevisions called outside transaction~~ | P2-101 | ~~Fixed~~ | — |
+
+**19.3:** ✅ Fixed. Changed from `fillRect('#ffffff')` to `clearRect()`
+when background is hidden in LayersViewer. Tests updated.
+
+**19.4:** ✅ Fixed. Added `$rowsDeleted === 0` check with warning log
+in ApiLayersDelete.php. Returns success since end state is correct.
+
+**19.5:** ✅ Fixed. Moved `pruneOldRevisions()` inside the atomic
+transaction (before `endAtomic`) in LayersDatabase.php.
+
+### LOW (4 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 19.6 | ~~i18n count now 832~~ | P3-126 | ~~Fixed~~ | — |
+| 19.7 | Missing test files for 3 modules | P3-127 | Open | 2-3h |
+| 19.8 | Clean remaining stale docs | P2-098 | Open | 1-2h |
+| 19.9 | Normalize PHP line endings | P3-125 | Open | 1-2h |
+
+**19.7 Fix:** Create test files:
+- `tests/jest/LogSanitizer.test.js`
+- `tests/jest/GroupHierarchyHelper.test.js`
+- `tests/jest/ViewerIcons.test.js` (low priority — static data)
+
+### Reclassified Items (from Phase 15)
+
+| # | Issue | Old Status | New Status | Reason |
+|---|-------|------------|------------|--------|
+| 15.17 | StyleController triple-apply (P3-081) | Open | ✅ False Positive | Properties applied once; preceding checks are guards |
+| 15.19 | SelectionManager boolean handling (P3-083) | Open | ✅ False Positive | Both paths handle integer 0 correctly |
+| 15.23 | RenderCoordinator hash gaps (P3-087) | Open | ✅ Already Fixed | Fixed v45.8 per P3-109 |
+| 15.25 | Duplicated SVG icon code (P3-089) | Open | ✅ Already Fixed | Fixed v45.9 per P3-107 |
+
+---
+
+## Historical Phase Log
 
 ## Phase 13: v40 Findings — Verification Addendum (5 Items)
 
@@ -57,7 +322,7 @@ code quality issues found in the v41 comprehensive review.*
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
 | 14.1 | Rate limiter `$defaultLimits` dead code | P1-032 | ✅ Fixed v41 | 1h |
-| 14.2 | Missing cache invalidation after delete/rename | P1-033 | ⚠️ NOT FIXED → P0-005 | 1h |
+| 14.2 | Missing cache invalidation after delete/rename | P1-033 | ✅ Fixed v41 | 1h |
 | 14.3 | Rich text per-run `fontSize` not scaled in viewer | P1-034 | ✅ Fixed v41 | 30m |
 
 **14.1 Fix:** Either (a) merge `$defaultLimits` into `$wgRateLimits`
@@ -132,26 +397,15 @@ SVG element blocklist in `ServerSideLayerValidator.php` `validateSvgString()`.
 
 ## Phase 15: v42 Findings — Infrastructure, Rendering, UX & Quality (32 Items)
 
-*Target: resolve critical infrastructure failure (missing trait file
-blocking all write operations), fix rendering inconsistencies,
-implement missing UX features, and address code quality issues
-found in the v42 comprehensive fresh audit.*
+*Target: resolve rendering inconsistencies, implement missing UX features, and address code quality issues found in the v42 comprehensive fresh audit.*
 
-### CRITICAL (1 item — fix IMMEDIATELY)
+### CRITICAL (0 items)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 15.1 | CacheInvalidationTrait.php missing — all writes broken | P0-005 | Open | 2h |
+| 15.1 | ~~CacheInvalidationTrait.php missing~~ | P0-005 | ✅ False Positive | 0h |
 
-**15.1 Fix:** Create `src/Api/Traits/CacheInvalidationTrait.php`
-implementing `invalidateCachesForFile(Title $title)`. The method
-should: (1) call `$title->invalidateCache()` for the file page,
-(2) queue `HTMLCacheUpdateJob` for backlink pages, and (3)
-invalidate parser cache. Base the implementation on the pattern
-previously inline in `ApiLayersSave.php` before the trait
-extraction. This unblocks ALL write API operations (save, delete,
-rename). Reopens and escalates P1-033 from v41 which falsely
-claimed this was fixed but the file was never committed.
+**15.1 Fix:** Verified that `src/Api/Traits/CacheInvalidationTrait.php` exists and is intact. No action needed.
 
 ### HIGH (4 items — fix first after P0)
 
@@ -159,8 +413,8 @@ claimed this was fixed but the file was never committed.
 |---|-------|-----|--------|--------|
 | 15.2 | ApiLayersInfo null dereference on L280 | P1-035 | ✅ Done | 30m |
 | 15.3 | Arrow keys always pan, never nudge | P1-036 | ✅ Done | 2h |
-| 15.4 | Color preview mutates layers directly | P1-037 | Open | 1.5h |
-| 15.5 | ThumbnailRenderer font not in whitelist | P1-038 | Open | 45m |
+| 15.4 | Color preview mutates layers directly | P1-037 | ✅ Fixed v45.4 | 1.5h |
+| 15.5 | ThumbnailRenderer font not in whitelist | P1-038 | ✅ Done | 45m |
 
 **15.2 Fix:** ✅ RESOLVED — Restructured `ApiLayersInfo.php` so
 that when `$layerSet` is null, it fetches general revisions,
@@ -173,36 +427,33 @@ nudge selected layers by 1px (10px with Shift). Includes
 locked layer protection, history recording for undo/redo,
 and 17 new tests.
 
-**15.4 Fix:** In `ToolbarStyleControls.applyColorPreview()`:
-(1) Store original colors in a Map before first preview call,
-(2) Restore from Map on cancel/close,
-(3) On confirm, commit via `StateManager.set()`.
-Apply same pattern to `FolderOperationsController.toggleLayerVisibility`
-and `StyleController.applyToLayer`.
+**15.4 Fix (✅ Done v45.4):** `applyColorPreview()` now saves per-layer
+original colors in `_previewOriginalColors` Map on first call. New
+`cancelColorPreview()` method restores each layer individually.
+`onColorCancel` callback wired to all 4 color control creation sites
+(factory stroke/fill, fallback stroke/fill). Map cleared on commit.
 
-**15.5 Fix:** In `ThumbnailRenderer`, before passing fontFamily
+**15.5 Fix:** ✅ RESOLVED — In `ThumbnailRenderer`, before passing fontFamily
 to ImageMagick, validate against `$wgLayersDefaultFonts`. If not
-in list, fall back to 'DejaVu-Sans'. Add a `validateFontName()`
+in list, fall back to 'DejaVu-Sans'. Added a `validateFontName()`
 helper method to centralize the check.
 
 ### MEDIUM (10 items)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 15.6 | Double render on undo/redo | P2-074 | ✅ Done | 15m |
-| 15.7 | CustomShape shadow ignores rotation | P2-075 | Open | 1h |
-| 15.8 | TextBox stroke bleeds into text (thumb) | P2-076 | Open | 15m |
-| 15.9 | Ellipse missing shadow (thumb) | P2-077 | Open | 30m |
-| 15.10 | AlignmentController missing dim/marker | P2-078 | Open | 1h |
-| 15.11 | Clipboard paste offset on local coords | P2-079 | ✅ Done | 15m |
+| 15.6 | ~~Double render on undo/redo~~ | P2-074 | ✅ False Positive | 0m |
+| 15.7 | CustomShape shadow ignores rotation | P2-075 | ✅ Fixed v45.6 | 1h |
+| 15.8 | TextBox stroke bleeds into text (thumb) | P2-076 | ✅ Fixed v44 | 15m |
+| 15.9 | Ellipse missing shadow (thumb) | P2-077 | ✅ Fixed v44 | 30m |
+| 15.10 | AlignmentController missing dim/marker | P2-078 | ✅ Fixed v44 | 1h |
+| 15.11 | ~~Clipboard paste offset on local coords~~ | P2-079 | ✅ False Positive | 0m |
 | 15.12 | parseMWTimestamp uses local time | P2-080 | ✅ Done | 10m |
-| 15.13 | Callout blur bounds ignore dragged tail | P2-081 | Open | 30m |
-| 15.14 | Font shorthand order in InlineTextEditor | P2-082 | ✅ Done | 10m |
+| 15.13 | Callout blur bounds ignore dragged tail | P2-081 | ✅ Fixed v45.6 | 30m |
+| 15.14 | ~~Font shorthand order in InlineTextEditor~~ | P2-082 | ✅ False Positive | 0m |
 | 15.15 | Hardcoded English in ToolbarKeyboard | P2-083 | ✅ Done | 45m |
 
-**15.6 Fix:** Remove `renderLayers()` and `markDirty()` calls
-from `EventManager.handleUndo()` and `handleRedo()`.
-`HistoryManager.restoreState()` already calls both.
+**15.6 Note (v43):** ✅ FALSE POSITIVE — Verified that handleUndo/handleRedo were already fixed. They delegate to editor.undo()/redo() only. Comments in code explicitly state rendering is handled by HistoryManager.restoreState(). The v42 reviewer described behavior that did not exist in the source.
 
 **15.7 Fix:** Port `ShadowRenderer.drawSpreadShadow()` rotation
 decomposition logic to `CustomShapeRenderer.drawSpreadShadowForImage()`.
@@ -219,10 +470,7 @@ into `buildEllipseArguments()`.
 x2/y2 by delta) and `marker` type (also move arrowX/arrowY) in
 both `moveLayer()` and `getLayerBounds()` methods.
 
-**15.11 Fix:** Remove `tailTipX` and `tailTipY` from the
-properties that receive `PASTE_OFFSET` in `applyPasteOffset()`.
-They are center-relative local coordinates that move with the
-callout body automatically.
+**15.11 Note (v43):** ✅ FALSE POSITIVE — Verified the code at L254-256 explicitly does NOT apply PASTE_OFFSET to tailTipX/tailTipY. A comment explains: "tailTipX/tailTipY are LOCAL coordinates relative to callout center." The v42 reviewer described code behavior that does not exist.
 
 **15.12 Fix:** Change `new Date(year, month, day, hour, minute, second)`
 to `new Date(Date.UTC(year, month, day, hour, minute, second))`
@@ -232,8 +480,7 @@ in `parseMWTimestamp()`.
 defined, compute blur capture bounds from actual tip coordinates
 instead of using `tailDirection` estimates.
 
-**15.14 Fix:** Swap fontStyle and fontWeight in the canvas font
-string construction in `_measureTextWidth()`.
+**15.14 Note (v43):** ✅ FALSE POSITIVE — Verified the font string at L809-813 IS in correct CSS order (fontStyle before fontWeight). The v42 reviewer described the order backwards; no fix was needed or applied.
 
 **15.15 Fix:** Replace hardcoded strings with `mw.message()` calls.
 Add 4 new i18n keys: `layers-group-done`, `layers-ungroup-done`,
@@ -243,23 +490,89 @@ Add 4 new i18n keys: `layers-group-done`, `layers-ungroup-done`,
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 15.16 | Dead layer cache code (~140 lines) | P3-080 | Open | 15m |
-| 15.17 | StyleController triple-apply | P3-081 | Open | 20m |
+| 15.16 | Dead layer cache code (~140 lines) | P3-080 | ✅ Fixed v45.4 | 15m |
+| 15.17 | StyleController triple-apply | P3-081 | ✅ False Positive (v47) | 0m |
 | 15.18 | Duplicate sanitizeLogMessage x3 | P3-082 | Open | 30m |
-| 15.19 | SelectionManager boolean handling | P3-083 | Open | 15m |
-| 15.20 | DimensionRenderer falsy-sensitive defaults | P3-084 | Open | 10m |
-| 15.21 | CustomShapeRenderer opacity not clamped | P3-085 | Open | 10m |
-| 15.22 | ExportController Blob URL leak | P3-086 | Open | 10m |
-| 15.23 | RenderCoordinator hash gaps | P3-087 | Open | 30m |
+| 15.19 | SelectionManager boolean handling | P3-083 | ✅ False Positive (v47) | 0m |
+| 15.20 | DimensionRenderer falsy-sensitive defaults | P3-084 | ✅ Fixed v45.4 | 10m |
+| 15.21 | CustomShapeRenderer opacity not clamped | P3-085 | ✅ Fixed v45.4 | 10m |
+| 15.22 | ExportController Blob URL leak | P3-086 | ✅ Fixed v45.4 | 10m |
+| 15.23 | RenderCoordinator hash gaps | P3-087 | ✅ Already Fixed (v45.8) | 0m |
 | 15.24 | Modal Escape no unsaved check | P3-088 | Open | 30m |
-| 15.25 | Duplicated SVG icon code | P3-089 | Open | 20m |
-| 15.26 | Dead renderCodeSnippet + XSS | P3-090 | Open | 10m |
+| 15.25 | Duplicated SVG icon code | P3-089 | ✅ Already Fixed (v45.9) | 0m |
+| 15.26 | Dead renderCodeSnippet + XSS | P3-090 | ✅ Fixed v45.2 | 10m |
 | 15.27 | RichTextToolbar drag listener leak | P3-091 | Open | 15m |
 | 15.28 | Touch events missing key modifiers | P3-092 | Open | 20m |
 | 15.29 | SlideController no concurrency limit | P3-093 | Open | 20m |
 | 15.30 | CustomShape oversized temp canvas | P3-094 | Open | 20m |
 | 15.31 | Unguarded mw.log.warn in CanvasRenderer | P3-095 | Open | 10m |
-| 15.32 | ToolManager IIFE load-time references | P3-096 | Open | 15m |
+| 15.32 | ~~ToolManager IIFE load-time references~~ | P3-096 | ✅ False Positive | 0m |
+
+**15.16 Fix (✅ Done v45.4):** Removed ~150 lines of dead code from
+CanvasRenderer: 3 constructor properties, 5 methods
+(`_computeLayerHash`, `_hashString`, `_getCachedLayer`,
+`_setCachedLayer`, `invalidateLayerCache`), destroy() cleanup.
+Also removed 7 dead tests from CanvasRenderer.test.js.
+
+**15.20 Fix (✅ Done v45.4):** Changed 7 numeric properties in
+`_createFromOptions()` from `||` to `!== undefined ? ... : DEFAULTS`:
+strokeWidth, extensionLength, extensionGap, arrowSize, tickSize, scale.
+
+**15.21 Fix (✅ Done v45.4):** Added `Math.max( 0, Math.min( 1, ... ) )`
+clamping to `getOpacity()` return value, matching all other renderers.
+
+**15.22 Fix (✅ Done v45.4):** Wrapped blob download link
+creation/click/removal in `try/finally` to ensure
+`URL.revokeObjectURL(url)` always executes.
+
+---
+
+## Phase 16: v43 Verification — UX Gaps, Docs & False Positive Cleanup (3 Items)
+
+*Target: address the nudge UX failure discovered in v43 and correct
+documentation inconsistencies. The 4 false positives corrected in
+this cycle are noted in Phase 15.*
+
+### MEDIUM (1 item)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 16.1 | Nudge broken for dimension/line/arrow layers | P2-084 | ✅ Fixed v44 | 45m |
+
+**16.1 Fix:** In `EventManager.nudgeSelectedLayers()`, add a branch
+for endpoint-based layers:
+
+```javascript
+if ( [ 'dimension', 'line', 'arrow' ].includes( layer.type ) ) {
+    layer.x1 = ( layer.x1 || 0 ) + deltaX;
+    layer.y1 = ( layer.y1 || 0 ) + deltaY;
+    layer.x2 = ( layer.x2 || 0 ) + deltaX;
+    layer.y2 = ( layer.y2 || 0 ) + deltaY;
+} else {
+    layer.x = ( layer.x || 0 ) + deltaX;
+    layer.y = ( layer.y || 0 ) + deltaY;
+}
+```
+
+Add tests: nudging a dimension layer updates x1/y1/x2/y2; nudging
+an arrow layer updates x1/y1/x2/y2; nudging a rect layer updates x/y.
+
+### LOW (2 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 16.2 | Stale test count across all docs | P3-097 | ✅ Fixed v44 | 15m |
+| 16.3 | CHANGELOG missing versions + date anomaly | P3-098 | Open | 30m |
+
+**16.2 Fix (✅ Done v44):** Updated all documentation files to "11,258 tests in 163 suites":
+- README.md, wiki/Home.md, wiki/Frontend-Architecture.md, .github/copilot-instructions.md, codebase_review.md
+
+**16.3 Fix:**
+- Add missing CHANGELOG entries for v1.5.37, v1.5.53, v1.5.54
+  (check git log for notable changes in those releases)
+- Fix v1.5.55 date from `2025-07-23` to the correct 2026 date
+  (check git commit timestamp for v1.5.55 tag)
+- Mirror any changes to wiki/Changelog.md
 
 ---
 
@@ -269,110 +582,62 @@ Add 4 new i18n keys: `layers-group-done`, `layers-ungroup-done`,
 marked as "✅ Fixed v41" but the fix was never committed. It has been
 reopened as P0-005 and escalated to Phase 15 item 15.1.*
 
-*Target: Fix HIGH-priority bugs that affect data integrity, save
-reliability, and rendering correctness.*
+*All 14 items fixed across v27–v34.*
 
-| # | Issue | Ref | Status | Effort |
-|---|-------|-----|--------|--------|
-| 1.1 | ON DELETE CASCADE destroys user content | P1-011 | ✅ Fixed v34 | 30m |
-| 1.2 | ls_name allows NULL in schema | P1-012 | ✅ Fixed v34 | 30m |
-| 1.3 | Triple source of truth for selection | P1-013 | ✅ Fixed v34 | 2h |
-| 1.4 | Rich text word wrap wrong font metrics | P1-014 | ✅ Fixed v34 | 1h |
-| 1.5 | ThumbnailRenderer shadow blur corrupts canvas | P1-015 | ✅ Done | 1h |
-| 1.6 | SQLite-incompatible schema migrations | P1-016 | ✅ Fixed v34 | 2h |
-| 1.7 | ShadowRenderer discards scale on rotation | P1-017 | ✅ Fixed v34 | 45m |
-| 1.8 | DimensionRenderer hitTest ignores offset | P1-018 | ✅ Fixed v34 | 30m |
-| 1.9 | APIManager saveInProgress stuck on throw | P1-019 | ✅ Fixed v34 | 15m |
-| 1.10 | PresetStorage strips gradient data | P1-020 | ✅ Fixed v34 | 15m |
-| 1.11 | groupSelected() passes object not ID | P0-001 | ✅ Fixed v28 | — |
-| 1.12 | HitTest fails on rotated shapes | P1-005 | ✅ Fixed v29 | — |
-| 1.13 | normalizeLayers mutates input | P1-008 | ✅ Fixed v29 | — |
-| 1.14 | isSchemaReady 23 uncached queries | P1-009 | ✅ Fixed v27 | — |
-
-### Phase 1 Quick Wins (< 30 minutes each)
-
-**P1-019 (saveInProgress):** Add try/finally around L859-870:
-```javascript
-try {
-    this.saveInProgress = true;
-    const payload = this.buildSavePayload();
-    const json = JSON.stringify(payload);
-    // ... save logic
-} catch (e) {
-    this.saveInProgress = false;
-    throw e;
-} finally {
-    // saveInProgress reset in success/error callbacks
-}
-```
-
-**P1-020 (gradient presets):** Add `'gradient'` to
-ALLOWED_STYLE_PROPERTIES array in PresetStorage.js L20-56.
-
-**P1-011 (CASCADE):** Change `ON DELETE CASCADE` to
-`ON DELETE SET NULL` in layers_tables.sql and add a migration patch.
+| # | Issue | Ref | Status |
+|---|-------|-----|--------|
+| 1.1 | ON DELETE CASCADE destroys user content | P1-011 | ✅ Fixed v34 |
+| 1.2 | ls_name allows NULL in schema | P1-012 | ✅ Fixed v34 |
+| 1.3 | Triple source of truth for selection | P1-013 | ✅ Fixed v34 |
+| 1.4 | Rich text word wrap wrong font metrics | P1-014 | ✅ Fixed v34 |
+| 1.5 | ThumbnailRenderer shadow blur corrupts canvas | P1-015 | ✅ Done |
+| 1.6 | SQLite-incompatible schema migrations | P1-016 | ✅ Fixed v34 |
+| 1.7 | ShadowRenderer discards scale on rotation | P1-017 | ✅ Fixed v34 |
+| 1.8 | DimensionRenderer hitTest ignores offset | P1-018 | ✅ Fixed v34 |
+| 1.9 | APIManager saveInProgress stuck on throw | P1-019 | ✅ Fixed v34 |
+| 1.10 | PresetStorage strips gradient data | P1-020 | ✅ Fixed v34 |
+| 1.11 | groupSelected() passes object not ID | P0-001 | ✅ Fixed v28 |
+| 1.12 | HitTest fails on rotated shapes | P1-005 | ✅ Fixed v29 |
+| 1.13 | normalizeLayers mutates input | P1-008 | ✅ Fixed v29 |
+| 1.14 | isSchemaReady 23 uncached queries | P1-009 | ✅ Fixed v27 |
 
 ---
 
-## Phase 2: Security Hardening
+## Phase 2: Security Hardening — ✅ ALL COMPLETE
 
-*Target: Close latent security gaps and strengthen input validation.*
+*All 8 items fixed across v28–v34.*
 
-| # | Issue | Ref | Status | Effort |
-|---|-------|-----|--------|--------|
-| 2.1 | Toolbar innerHTML with .text() | P2-014 | ✅ Fixed v34 | 30m |
-| 2.2 | Client SVG sanitization regex bypassable | P2-007 | ✅ Done | 1h |
-| 2.3 | sanitizeString strips `<>` destroying math | P2-008 | ✅ Fixed v34 | 45m |
-| 2.4 | window.open without noopener | P2-017 | ✅ Fixed v34 | 10m |
-| 2.5 | init.js event listener accumulation | P2-015 | ✅ Fixed v34 | 15m |
-| 2.6 | Hardcoded 'Anonymous' not i18n | P3-005 | ✅ Fixed v34 | 15m |
-| 2.7 | ThumbnailRenderer Exception not Throwable | P3-004 | ✅ Fixed v34 | 5m |
-| 2.8 | checkSizeLimit .length vs bytes | P3-007 | ✅ Fixed v34 | 20m |
-
-### Phase 2 Quick Wins
-
-**P2-017 (noopener):** Add `'noopener,noreferrer'` as third arg to
-`window.open()` at ViewerOverlay.js L465, L468.
-
-**P2-015 (listener guard):** Add a module-level flag
-`let modalListenerRegistered = false;` and check before adding
-the listener at init.js L124.
-
-**P3-004 (Throwable):** Change `catch ( \Exception $e )` to
-`catch ( \Throwable $e )` at ThumbnailRenderer.php L110.
+| # | Issue | Ref | Status |
+|---|-------|-----|--------|
+| 2.1 | Toolbar innerHTML with .text() | P2-014 | ✅ Fixed v34 |
+| 2.2 | Client SVG sanitization regex bypassable | P2-007 | ✅ Done |
+| 2.3 | sanitizeString strips `<>` destroying math | P2-008 | ✅ Fixed v34 |
+| 2.4 | window.open without noopener | P2-017 | ✅ Fixed v34 |
+| 2.5 | init.js event listener accumulation | P2-015 | ✅ Fixed v34 |
+| 2.6 | Hardcoded 'Anonymous' not i18n | P3-005 | ✅ Fixed v34 |
+| 2.7 | ThumbnailRenderer Exception not Throwable | P3-004 | ✅ Fixed v34 |
+| 2.8 | checkSizeLimit .length vs bytes | P3-007 | ✅ Fixed v34 |
 
 ---
 
-## Phase 3: Reliability & Correctness
+## Phase 3: Reliability & Correctness — ✅ ALL COMPLETE
 
-*Target: Fix medium-priority bugs affecting editor reliability.*
+*All 12 items fixed across v27–v34.*
 
-| # | Issue | Ref | Status | Effort |
-|---|-------|-----|--------|--------|
-| 3.1 | SmartGuides cache stale on mutations | P2-009 | ✅ Fixed v34 | 45m |
-| 3.2 | ImageLoader timeout orphaned on success | P2-016 | ✅ Fixed v34 | 10m |
-| 3.3 | TextBoxRenderer wrapText no long word break | P2-019 | ✅ Fixed v34 | 45m |
-| 3.4 | ApiLayersSave redundant token parameter | P2-020 | ✅ Fixed v34 | 5m |
-| 3.5 | LayersSchemaManager bypasses DI | P2-021 | ✅ Fixed v34 | 20m |
-| 3.6 | enrichWithUserNames duplicated | P2-013 | ✅ Fixed v34 | 30m |
-| 3.7 | StateManager malformed JSDoc | P3-003 | ✅ Fixed v34 | 5m |
-| 3.8 | ApiLayersList missing unset() | P3-001 | ✅ Fixed v34 | 5m |
-| 3.9 | CalloutRenderer blur clips L/R tails | — | ✅ Fixed v31 | — |
-| 3.10 | closeAllDialogs leaks handlers | — | ✅ Fixed v30 | — |
-| 3.11 | LayerInjector logger arg | — | ✅ Fixed v30 | — |
-| 3.12 | SlideHooks isValidColor too weak | — | ✅ Fixed v30 | — |
-
-### Phase 3 Quick Wins
-
-**P2-016 (timeout):** In ImageLoader.js loadTestImage(), save the
-timeout ID and call `clearTimeout(timeoutId)` in the onload handler.
-
-**P2-020 (redundant token):** Remove explicit 'token' from
-getAllowedParams() in ApiLayersSave.php L589-594; needsToken()
-handles it.
-
-**P3-003 (JSDoc):** Close the unclosed `/**` comment at
-StateManager.js L894-898.
+| # | Issue | Ref | Status |
+|---|-------|-----|--------|
+| 3.1 | SmartGuides cache stale on mutations | P2-009 | ✅ Fixed v34 |
+| 3.2 | ImageLoader timeout orphaned on success | P2-016 | ✅ Fixed v34 |
+| 3.3 | TextBoxRenderer wrapText no long word break | P2-019 | ✅ Fixed v34 |
+| 3.4 | ApiLayersSave redundant token parameter | P2-020 | ✅ Fixed v34 |
+| 3.5 | LayersSchemaManager bypasses DI | P2-021 | ✅ Fixed v34 |
+| 3.6 | enrichWithUserNames duplicated | P2-013 | ✅ Fixed v34 |
+| 3.7 | StateManager malformed JSDoc | P3-003 | ✅ Fixed v34 |
+| 3.8 | ApiLayersList missing unset() | P3-001 | ✅ Fixed v34 |
+| 3.9 | CalloutRenderer blur clips L/R tails | — | ✅ Fixed v31 |
+| 3.10 | closeAllDialogs leaks handlers | — | ✅ Fixed v30 |
+| 3.11 | LayerInjector logger arg | — | ✅ Fixed v30 |
+| 3.12 | SlideHooks isValidColor too weak | — | ✅ Fixed v30 |
 
 ---
 
@@ -396,35 +661,31 @@ continues as a maintenance KPI in dedicated architecture/refactoring docs.*
 
 ---
 
-## Phase 5: Performance
+## Phase 5: Performance — ✅ ALL COMPLETE
 
-*Target: Reduce GC pressure and unnecessary allocations.*
-
-| # | Issue | Ref | Status | Effort |
-|---|-------|-----|--------|--------|
-| 5.1 | ShadowRenderer/EffectsRenderer temp canvas | P2-018 | ✅ Fixed v34 | 1h |
-| 5.2 | ext.layers loaded every page | P2-005 | ✅ Fixed v34 | 30m |
-| 5.3 | Canvas reuse pool for renderers | — | ✅ Fixed v34 | 1h |
-| 5.4 | SmartGuides spatial index | — | ✅ Closed (not needed) | 2h |
-| 5.5 | Lazy-load viewer overlay | — | ✅ Closed (marginal benefit) | 30m |
+| # | Issue | Ref | Status |
+|---|-------|-----|--------|
+| 5.1 | ShadowRenderer/EffectsRenderer temp canvas | P2-018 | ✅ Fixed v34 |
+| 5.2 | ext.layers loaded every page | P2-005 | ✅ Fixed v34 |
+| 5.3 | Canvas reuse pool for renderers | — | ✅ Fixed v34 |
+| 5.4 | SmartGuides spatial index | — | ✅ Closed |
+| 5.5 | Lazy-load viewer overlay | — | ✅ Closed |
 
 ---
 
-## Phase 6: Infrastructure
+## Phase 6: Infrastructure — ✅ ALL COMPLETE
 
-*Target: Fix schema issues and MW convention violations.*
-
-| # | Issue | Ref | Status | Effort |
-|---|-------|-----|--------|--------|
-| 6.1 | Foreign key constraints violate MW conventions | P2-022 | ✅ Fixed v34 | 1h |
-| 6.2 | SpecialEditSlide references missing module | P2-023 | ✅ Done | 15m |
-| 6.3 | ext.layers.slides incomplete module | P2-024 | ✅ Fixed | 30m |
-| 6.4 | SQLite migration compatibility | P1-016 | ✅ Fixed v34 | 2h |
-| 6.5 | Schema NULL constraint for ls_name | P1-012 | ✅ Fixed v34 | 30m |
+| # | Issue | Ref | Status |
+|---|-------|-----|--------|
+| 6.1 | Foreign key constraints violate MW conventions | P2-022 | ✅ Fixed v34 |
+| 6.2 | SpecialEditSlide references missing module | P2-023 | ✅ Done |
+| 6.3 | ext.layers.slides incomplete module | P2-024 | ✅ Fixed |
+| 6.4 | SQLite migration compatibility | P1-016 | ✅ Fixed v34 |
+| 6.5 | Schema NULL constraint for ls_name | P1-012 | ✅ Fixed v34 |
 
 ---
 
-## Phase 7: Documentation Debt (46 Items)
+## Phase 7: Documentation Debt (42 Items)
 
 *Target: Bring all documentation into sync with actual codebase state.
 42 items resolved; 0 open.*
@@ -462,7 +723,7 @@ Key files requiring updates:
 | wiki/Changelog.md | Mirror CHANGELOG.md | ✅ Resolved v40 |
 | README.md | Fix `bgcolor=` → `background=` | ✅ Resolved v35 |
 
-### 7C: Cross-Reference Consistency (16 items, ~1 hour)
+### 7C: Cross-Reference Consistency (12 items, ~1 hour)
 
 Systematic pass to align all metric references. Use
 docs/DOCUMENTATION_UPDATE_GUIDE.md as the checklist. See
@@ -1049,17 +1310,145 @@ Hooks.php and UIHooks.php.
 
 ---
 
+## Phase 17: v45 Findings — Security, State Management & Quality (27 Items)
+
+*Target: fix the clickjacking critical, close the 4 HIGH state-management
+and security issues, then address the remaining MEDIUM and LOW items
+found in the v45 fresh audit.*
+
+### CRITICAL (1 item)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 17.1 | Clickjacking: `?modal=1` disables frame protection | P0-006 | ✅ Fixed v45 | 1h |
+
+**17.1 Fix (✅ Done v45):** In `EditLayersAction.php` and `SpecialEditSlide.php`,
+suppressed MediaWiki's default DENY via `setPreventClickjacking(false)`, then
+set `X-Frame-Options: SAMEORIGIN` header. Same-wiki iframes allowed; cross-origin
+embedding blocked.
+
+### HIGH (4 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 17.2 | Manual HTML in LayeredThumbnail bypasses escaping | P1-039 | ✅ Fixed v45 | 2h |
+| 17.3 | ~~InlineTextEditor innerHTML trusts richTextToHtml~~ | P1-040 | ✅ False Positive | 0h |
+| 17.4 | ~~EventManager nudge mutates state bypassing StateManager~~ | P1-041 | ✅ False Positive | 0h |
+| 17.5 | LayerPanel stale originalName after rename | P1-042 | ✅ Fixed v45 | 30m |
+
+**17.2 Fix (✅ Done v45):** Replaced raw string concatenation in
+`LayeredThumbnail.php` with `Html::element('img', ...)` and
+`Html::rawElement('div', ...)`. Added `use MediaWiki\Html\Html`.
+(Reclassified from HIGH to MEDIUM — original escaping was correct.)
+
+**17.3 Note (✅ FALSE POSITIVE):** `richTextToHtml()` uses DOM-based
+`div.textContent=...; return div.innerHTML` escaping and `escapeCSSValue()`
+strips dangerous chars. Both methods are correctly implemented.
+
+**17.4 Note (✅ FALSE POSITIVE):** Direct layer mutation + history snapshot
+is the established pattern throughout the codebase. Verified:
+`TransformController.updateLayerPosition()` at L556-562 uses the same pattern.
+
+**17.5 Fix (✅ Done v45):** Added `nameElement.dataset.originalName = nameElement.textContent`
+inside the `_hasEditListeners` early-return branch so Escape reverts to
+the current name, not the first-ever name. Regression test added.
+
+### MEDIUM (8 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 17.6 | SVG data URI in image layers bypasses validation | P2-085 | ✅ Fixed v45.2 | 2h |
+| 17.7 | Failed images stored in cache as broken | P2-086 | ✅ Fixed v45 | 30m |
+| 17.8 | Blur texture canvas reallocated every frame | P2-087 | ✅ Fixed v45.2 | 1h |
+| 17.9 | N+1 query in UIHooks user name enrichment | P2-088 | ✅ Fixed v45.5 | 1h |
+| 17.10 | TextSanitizer keyword defense-in-depth gap | P2-089 | ✅ Fixed v45.3 | 1h |
+| 17.11 | WikitextHooks static state bleed in PHP-FPM | P2-090 | ✅ Fixed v45.5 | 1h |
+| 17.12 | Duplicate getLayerBounds implementations | P2-091 | ✅ Fixed v45.5 | 45m |
+| 17.13 | DrawingController ellipse validation OR vs AND | P2-092 | ✅ Fixed v45 | 15m |
+
+**17.6 Fix (✅ Done v45.2):** Updated `DANGEROUS_URL_RE` to use negative
+lookahead allowing only safe image types (png/jpeg/gif/webp). Blocks
+`data:image/svg+xml` and all other dangerous `data:` URIs. 2 regression tests added.
+
+**17.7 Fix (✅ Done v45):** Added `this._imageCache.delete(cacheKey)` in
+`onerror` handler so failed images are evicted and retried. Regression test added.
+
+**17.8 Fix (✅ Done v45.2):** Added size guard (`if width !== reqW || height !== reqH`)
+before setting `_blurFillCanvas` dimensions, matching sibling `_blurCanvas` pattern.
+
+**17.9 Fix:** Batch the per-layer DB queries in `LayersDatabase`;
+use a single SELECT with `WHERE id IN (...)`.
+
+**17.10 Fix (✅ Done v45.3):** Expanded `$jsKeywords` from 6 to 12 entries,
+adding `Function`, `constructor`, `fetch`, `XMLHttpRequest`, `importScripts`,
+`document.write`. Zero-width space injection now covers modern attack vectors.
+
+**17.11 Fix:** Move static state in `SlideHooks.php` and
+`SlideController.js` to instance properties or request-scoped
+containers.
+
+**17.12 Fix:** Consolidate duplicate `getSelectionBounds()` and
+`calculateBounds()` into a single shared utility.
+
+**17.13 Fix (✅ Done v45):** Changed `||` to `&&` so both radii must
+meet `MIN_SHAPE_SIZE`, consistent with rectangle validation. Test updated.
+
+### LOW (14 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 17.14 | call_user_func indirection in PHP modules | P3-099 | ✅ Fixed v45.3 | 30m |
+| 17.15 | Image src validation missing protocol check | P3-100 | Open | 15m |
+| 17.16 | Duplicated icon SVG strings across modules | P3-101 | Open | 1h |
+| 17.17 | ThumbnailRenderer serialize() for cache key | P3-102 | ✅ Fixed v45.3 | 30m |
+| 17.18 | RenderCoordinator hash collision on layers | P3-103 | Open | 30m |
+| 17.19 | SmartGuides sort mutates input array | P3-104 | ✅ Fixed v45.2 | 10m |
+| 17.20 | HitTestController allocations in hot loop | P3-105 | ✅ Fixed v45.2 | 30m |
+| 17.21 | backgroundVisible normalization scattered | P3-106 | ✅ Fixed v45.3 | 15m |
+| 17.22 | LightboxController lazy-init race window | P3-107 | Open | 30m |
+| 17.23 | JSON clone used in hot render paths | P3-108 | Open | 1h |
+| 17.24 | Dead saveToHistory call in SelectionManager | P3-109 | Open | 10m |
+| 17.25 | renderCodeSnippet HTML injection surface | P3-110 | ✅ Fixed v45.2 | 30m |
+| 17.26 | Lightbox close/open animation race | P3-111 | ✅ Fixed v45.3 | 30m |
+| 17.27 | PropertyBuilders line count off by 333 | P3-112 | Open | 10m |
+
+**17.14 Fix (✅ Done v45.3):** Replaced 10 `call_user_func`/`class_exists`
+indirection patterns in 4 PHP files (Hooks, LayeredThumbnail,
+ThumbnailRenderer, LayersFileTransform) with direct calls to
+`LoggerFactory::getInstance()`, `Shell::command()`, and
+`MediaWikiServices::getInstance()`.
+
+**17.17 Fix (✅ Done v45.3):** Changed `serialize($params)` to
+`json_encode($params)` in ThumbnailRenderer cache key generation.
+Deterministic output, no PHP object injection risk.
+
+**17.21 Fix (✅ Done v45.3):** Extracted
+`LayerDataNormalizer.normalizeBackgroundVisible()` and replaced 7
+inline normalization blocks across ViewerManager (3), FreshnessChecker (1),
+ApiFallback (1), SlideController (2). Single source of truth for
+`false/0/'0'/'false'` sentinel handling.
+
+**17.26 Fix (✅ Done v45.3):** `open()` in LayersLightbox now cancels
+any pending `closeTimeoutId` before creating a new overlay, and checks
+for stale overlay DOM nodes regardless of `isOpen` state.
+
+---
+
 ## Recommended Execution Order
 
-All tracked improvement-plan issues are now closed.
+Phase 17 items should be addressed in this order:
 
-If you want to continue cleanup work, use this order:
-1. **Maintenance Track A:** God class reduction (architecture KPI)
-    - Follow docs/GOD_CLASS_REFACTORING_PLAN.md and docs/PROJECT_GOD_CLASS_REDUCTION.md
-2. **Maintenance Track B:** Metrics/doc drift prevention
-    - Run scripts/verify-docs.sh during release prep
-3. **Maintenance Track C:** Targeted coverage hardening
-    - Add tests only where new/refactored code lacks branch confidence
+1. **CRITICAL first:** 17.1 (clickjacking) — security release blocker
+2. **HIGH security:** 17.2 (manual HTML), 17.3 (innerHTML trust)
+3. **HIGH state bugs:** 17.4 (nudge mutation), 17.5 (stale rename)
+4. **MEDIUM security:** 17.6 (SVG data URI)
+5. **MEDIUM perf/quality:** 17.7-17.13 in any order
+6. **LOW items:** 17.14-17.27 as time permits
+
+Ongoing maintenance tracks:
+- **Track A:** God class reduction — follow docs/GOD_CLASS_REFACTORING_PLAN.md
+- **Track B:** Metrics/doc drift prevention — run scripts/verify-docs.sh
+- **Track C:** Targeted coverage hardening for new/refactored code
 
 ---
 
@@ -1078,6 +1467,14 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
+| 2026-03-04 | v45.6 batch 6: 3 P2 fixes (P2-081 callout blur bounds, P2-083 i18n shortcut descriptions, P2-075 shadow rotation decomposition). All P2 items now resolved. Totals: 262/228/34. |
+| 2026-03-04 | v45.5 batch 5: 3 P2 fixes (P2-088 N+1 batch query, P2-090 request-boundary state reset, P2-091 getLayerBounds delegation). Totals: 254/208/46. |
+| 2026-03-04 | v45.4 batch 4: 5 fixes (P1-037 color preview cancel, P3-080 dead cache code, P3-084 DimensionRenderer defaults, P3-085 opacity clamp, P3-086 blob URL leak). Totals: 254/205/49. |
+| 2026-03-04 | v45.3 batch 3: 5 fixes (P2-089 keywords, P3-099 call_user_func, P3-102 serialize, P3-106 bgVisible, P3-111 lightbox race). Totals: 254/200/54. |
+| 2026-03-04 | v45.2 batch 2: 6 fixes (P2-085, P2-087, P3-103, P3-104, P3-105, P3-108, P3-110, P3-112). |
+| 2026-03-04 | v45 fixes: 5 items fixed (P0-006, P1-039, P1-042, P2-086, P2-092), 2 FPs (P1-040, P1-041). Totals: 254/195/59. |
+| 2026-03-04 | v45 fresh audit: 27 new findings added as Phase 17. Fixed v44 items: 15.8/15.9/15.10 and 16.1. |
+| 2026-02-17 | v43 verification audit: corrected 4 Phase 15 false positives (P2-074, P2-079, P2-082, P3-096); added Phase 16 with 3 new items (P2-084 nudge, P3-097 stale docs, P3-098 CHANGELOG); updated Phase Summary totals to 227/183/44. |
 | 2026-02-15 | v41 fixes: Fixed all HIGH (3) and all MEDIUM (7) Phase 14 items. Cache invalidation trait, rate limiter cleanup, richText viewer scaling, SQL schema consistency, SVG blocklist, SlideHooks ParserClearState reset, debug URL param logic. 13 LOW items remain. |
 | 2026-02-15 | v41: Fresh comprehensive review. Added Phase 14 with 23 items (3 HIGH, 7 MED, 13 LOW). Rate limiter dead code, cache invalidation gaps, richText viewer scaling, schema inconsistencies, SVG validation, god class #17. 4 FPs excluded. Grade: A-. |
 | 2026-02-14 | v40 closure pass: re-scoped Phase 4.7 to maintenance tracking, marked Phase 4 complete, and rebalanced plan totals to 169 fixed / 0 open. |

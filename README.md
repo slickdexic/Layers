@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-95.19%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C148%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-92.19%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-11%2C250%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.58 (February 17, 2026)  
+> **Version:** 1.5.60 (March 10, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -29,7 +29,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 - ✅ Original images preserved (non-destructive)
 - ✅ Modern, intuitive editor UI
-- ✅ **15 drawing tools** with customizable properties
+- ✅ **17 drawing tools** with customizable properties
 - ✅ Multiple named layer sets per image with version history
 - ✅ **Slide Mode** — Create standalone canvas graphics without a base image
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
@@ -52,7 +52,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 {{#Slide: MySlide | layerset=annotations}}       <!-- Render specific named layer set -->
 {{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
 {{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
-{{#Slide: MySlide | bgcolor=#f0f0f0}}            <!-- Custom background color -->
+{{#Slide: MySlide | background=#f0f0f0}}         <!-- Custom background color -->
 {{#Slide: MySlide | size=800x600 | noedit}}      <!-- View-only (no edit overlay) -->
 ```
 
@@ -70,7 +70,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 |---------|-------------|
 | Custom canvas sizes | Any size from 100×100 to 4096×4096 |
 | Background colors | Any CSS color or transparent |
-| All 15 drawing tools | Full access to shapes, text, arrows, etc. |
+| All 17 drawing tools | Full access to shapes, text, arrows, etc. |
 | Instant refresh | Changes appear immediately after saving ✨ |
 | Lightbox view | Full-size viewing without editing |
 
@@ -78,7 +78,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 
 ## Features
 
-### Drawing Tools (15 Available)
+### Drawing Tools (17 Available)
 
 | Tool          | Shortcut | Purpose                                      |
 | ------------- | -------- | -------------------------------------------- |
@@ -96,6 +96,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Line          | L        | Straight lines                               |
 | Marker    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
+| Image         | —        | Import images from clipboard or file         |
 | Custom Shape  | —        | 5,116 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
 | Emoji         | —        | 2,817 Noto Color Emoji with search and categories |
 
@@ -309,24 +310,24 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~14,991 lines across 40 files**
-- **Frontend:** HTML5 Canvas editor with **140 JS files (~97,072 lines)**, 100+ ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,197 lines across 41 files**
+- **Frontend:** HTML5 Canvas editor with **143 JS files (~99,730 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **17 god classes** (files >1,000 lines), all use proper delegation patterns
+- **Technical Debt:** **22 god classes** (files >1,000 lines), all use proper delegation patterns
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
   - All other god classes (13 JS + 2 PHP) have proper facade/delegation patterns
 
-**Test Coverage (Verified February 17, 2026):**
+**Test Coverage (Verified March 10, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,148 passing (162 suites) |
+| Jest tests | 11,421 passing (167 suites) |
 | PHPUnit tests | 31 test files |
-| Statement coverage | 95.19% |
-| Branch coverage | 84.96% |
-| Function coverage | 93.67% |
-| Line coverage | 95.32% |
+| Statement coverage | 92.19% |
+| Branch coverage | 82.15% |
+| Function coverage | 91.48% |
+| Line coverage | 92.25% |
 
 **Security:**
 
@@ -377,14 +378,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 140 | ✅ |
-| Total JS lines | ~97,072 | ✅ Hand-written (+ ~14,354 generated) |
+| Total JS files | 143 | ✅ |
+| Total JS lines | ~99,730 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 140 | ✅ 100% migrated |
-| God classes (>1000 lines) | 17 | ✅ Well-delegated facades |
-| Tests passing | 11,148 | ✅ |
+| God classes (>1000 lines) | 23 | ✅ Well-delegated facades |
+| Tests passing | 11,421 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 95.19% | ✅ Excellent |
-| Branch coverage | 84.96% | ✅ Target met |
+| Statement coverage | 92.19% | ✅ Excellent |
+| Branch coverage | 82.15% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
@@ -407,7 +408,7 @@ npm run docs:markdown # Markdown in docs/API.md
 | [DEVELOPER_ONBOARDING.md](docs/DEVELOPER_ONBOARDING.md) | Getting started for contributors |
 | [NAMED_LAYER_SETS.md](docs/NAMED_LAYER_SETS.md) | Named sets feature documentation |
 | [WIKITEXT_USAGE.md](docs/WIKITEXT_USAGE.md) | Wikitext syntax guide |
-| [codebase_review.md](codebase_review.md) | Technical assessment (January 31, 2026) |
+| [codebase_review.md](codebase_review.md) | Technical assessment (March 9, 2026 addendum) |
 | [improvement_plan.md](improvement_plan.md) | Development roadmap with priorities |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 

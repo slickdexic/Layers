@@ -8,6 +8,7 @@ use ApiBase;
 use ApiResult;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -65,7 +66,8 @@ class ApiLayersList extends ApiBase {
 
 		// P2.8 FIX: Rate limit slide listing to prevent abuse
 		$user = $this->getUser();
-		if ( $user->pingLimiter( 'editlayers-list' ) ) {
+		$rateLimiter = $this->createRateLimiter();
+		if ( !$rateLimiter->checkRateLimit( $user, 'list' ) ) {
 			$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 		}
 
@@ -172,6 +174,15 @@ class ApiLayersList extends ApiBase {
 		unset( $slide );
 
 		return $slides;
+	}
+
+	/**
+	 * Factory for RateLimiter to allow overrides in tests.
+	 *
+	 * @return RateLimiter
+	 */
+	protected function createRateLimiter(): RateLimiter {
+		return new RateLimiter();
 	}
 
 	/**

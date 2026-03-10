@@ -11,6 +11,7 @@ use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
+use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
@@ -60,6 +61,11 @@ class ApiLayersRename extends ApiBase {
 
 		// Handle slide renames (slidename parameter)
 		if ( $slidename !== null && $slidename !== '' ) {
+			// Validate slidename for security and consistency
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideRename( $user, $slidename, $oldName, $newName );
 			return;
 		}
@@ -67,6 +73,11 @@ class ApiLayersRename extends ApiBase {
 		// Also handle slides when filename starts with 'Slide:' (editor compatibility)
 		if ( $requestedFilename !== null && strpos( $requestedFilename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			$slidename = substr( $requestedFilename, strlen( LayersConstants::SLIDE_PREFIX ) );
+			// Validate extracted slidename
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideRename( $user, $slidename, $oldName, $newName );
 			return;
 		}
@@ -74,6 +85,11 @@ class ApiLayersRename extends ApiBase {
 		// For file operations, filename is required
 		if ( $requestedFilename === '' || $requestedFilename === null ) {
 			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
+		}
+
+		// Validate old name format using central validator
+		if ( !SetNameSanitizer::isValid( $oldName ) ) {
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
 		// Validate new name format using central validator
@@ -92,6 +108,12 @@ class ApiLayersRename extends ApiBase {
 
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
+
+			// RATE LIMITING: Check early before expensive DB work
+			$rateLimiter = $this->createRateLimiter();
+			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+			}
 
 			// Validate filename - Title must be valid and in File namespace
 			// Note: We do NOT check $title->exists() because foreign files
@@ -144,16 +166,6 @@ class ApiLayersRename extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
-			// RATE LIMITING: Prevent abuse by limiting rename operations per user
-			// Uses MediaWiki's core rate limiter via User::pingLimiter()
-			// Configure in LocalSettings.php:
-			//   $wgRateLimits['editlayers-rename']['user'] = [ 20, 3600 ]; // 20 renames per hour
-			//   $wgRateLimits['editlayers-rename']['newbie'] = [ 3, 3600 ]; // stricter for new users
-			$rateLimiter = $this->createRateLimiter();
-			if ( !$rateLimiter->checkRateLimit( $user, 'rename' ) ) {
-				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
-			}
-
 			// Perform the rename
 			$success = $db->renameNamedSet( $imgName, $sha1, $oldName, $newName );
 
@@ -195,6 +207,7 @@ class ApiLayersRename extends ApiBase {
 				'newname' => $newName
 			] );
 			$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
+			// phpcs:ignore MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment.NewLineComment
 			return; // @codeCoverageIgnore
 		}
 	}
@@ -280,6 +293,11 @@ class ApiLayersRename extends ApiBase {
 	 * @param string $newName The new set name
 	 */
 	private function executeSlideRename( $user, string $slidename, string $oldName, string $newName ): void {
+		// Validate old name format using central validator (consistency with file rename path)
+		if ( !SetNameSanitizer::isValid( $oldName ) ) {
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
+		}
+
 		// Validate new name format using central validator
 		if ( !SetNameSanitizer::isValid( $newName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
@@ -359,6 +377,7 @@ class ApiLayersRename extends ApiBase {
 				'newname' => $newName
 			] );
 			$this->dieWithError( LayersConstants::ERROR_RENAME_FAILED, 'renamefailed' );
+			// phpcs:ignore MediaWiki.WhiteSpace.SpaceBeforeSingleLineComment.NewLineComment
 			return; // @codeCoverageIgnore
 		}
 	}

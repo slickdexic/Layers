@@ -409,13 +409,39 @@ describe('ZoomPanController', () => {
 
             zoomPanController.zoomBy(1.0, point); // zoom from 1.0 to 2.0
 
-            // The point should stay in the same screen position
-            // screenX = panX + zoom * point.x
-            // Before: 0 + 1.0 * 400 = 400
-            // After: panX + 2.0 * 400 = 400
-            // So panX = 400 - 800 = -400
+            // canvas.style.width is unset → rx = 1.0, so buffer pixel == CSS pixel.
+            // screenX = panX + zoom * cx == 0 + 1.0 * 400 = 400
+            // After: panX + 2.0 * 400 = 400 → panX = -400
             expect(mockCanvasManager.panX).toBe(-400);
             expect(mockCanvasManager.panY).toBe(-300);
+        });
+
+        test('should anchor zoom correctly when CSS display size differs from buffer size', () => {
+            // Simulate resizeCanvas() scaling a 800×600 canvas to fill a larger container:
+            // canvas.width = 800 (buffer pixels), canvas.style.width = '1000px' (CSS display).
+            // rx = 1000/800 = 1.25 — the conversion factor between buffer and CSS space.
+            mockCanvas.style.width = '1000px';
+            mockCanvas.style.height = '750px'; // ry = 750/600 = 1.25
+
+            mockCanvasManager.zoom = 1.0;
+            mockCanvasManager.panX = 0;
+            mockCanvasManager.panY = 0;
+
+            // Buffer-pixel point from getMousePointFromClient() for a cursor at CSS (250, 187.5):
+            // bufX = 250 / 1.25 = 200,  bufY = 187.5 / 1.25 = 150
+            const point = { x: 200, y: 150 };
+
+            zoomPanController.zoomBy(1.0, point); // zoom 1.0 → 2.0
+
+            // cx = 200 * 1.25 = 250 (CSS pixels)
+            // screenX = 0 + 1.0 * 250 = 250
+            // panX_new = 250 - 2.0 * 250 = -250   (anchor stays at CSS x=250)
+            expect(mockCanvasManager.panX).toBe(-250);
+            expect(mockCanvasManager.panY).toBe(-187.5);
+
+            // Restore default
+            mockCanvas.style.width = '';
+            mockCanvas.style.height = '';
         });
 
         test('should not zoom if already at limit', () => {

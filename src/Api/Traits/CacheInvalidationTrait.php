@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Api\Traits;
 
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 
 /**
@@ -57,7 +58,10 @@ trait CacheInvalidationTrait {
 		} catch ( \Throwable $e ) {
 			// Cache invalidation is best-effort; don't fail the save/delete/rename
 			// if cache purging encounters an error
-			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch
+			LoggerFactory::getInstance( 'Layers' )->warning(
+				'Cache invalidation failed for {title}',
+				[ 'title' => $title->getPrefixedText(), 'exception' => $e ]
+			);
 		}
 	}
 }

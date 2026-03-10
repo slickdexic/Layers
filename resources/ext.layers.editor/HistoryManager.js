@@ -130,6 +130,13 @@
 			// Trim history if it exceeds max size
 			if ( this.history.length > this.maxHistorySteps ) {
 				this.history.shift();
+				// Adjust lastSaveHistoryIndex to account for the removed entry
+				if ( this.lastSaveHistoryIndex > 0 ) {
+					this.lastSaveHistoryIndex--;
+				} else if ( this.lastSaveHistoryIndex === 0 ) {
+					// The saved state was discarded; mark as unsaved
+					this.lastSaveHistoryIndex = -1;
+				}
 			}
 
 			// Always point to the most recently saved state

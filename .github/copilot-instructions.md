@@ -16,7 +16,7 @@ Never suggest committing directly to REL branches. Always work on `main` first, 
 
 **Target: <110,000 lines of JavaScript** — There is NO 50K or 75K limit.
 
-This extension is feature-rich by design with **15 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 5,116 shapes**, and an **Emoji Picker with 2,817 emoji**. The generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~14,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
+This extension is feature-rich by design with **17 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 5,116 shapes**, and an **Emoji Picker with 2,817 emoji**. The generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~14,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
 - God classes (files >1,000 lines) — minimize hand-written ones; generated data files are exempt
 - Test coverage — maintain 90%+ statement coverage
 - Security — CSRF, rate limiting, validation
@@ -37,7 +37,9 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ApiLayersRename`: rename endpoint to rename a named layer set (requires CSRF token, owner or admin)
     - `ApiLayersList`: list slides for Special:Slides page (requires read permission, rate limited)
   - Shared traits (`src/Api/Traits/`)
-    - `ForeignFileHelperTrait`: shared by all 5 API modules; provides `isForeignFile()` (detects InstantCommons/foreign files) and `getFileSha1()` (deterministic fallback hash for foreign files)
+    - `ForeignFileHelperTrait`: delegates to `ForeignFileHelper` static utility; used by API modules for convenient instance-method access
+  - Utility classes (`src/Utility/`)
+    - `ForeignFileHelper`: canonical static utility for `isForeignFile()` (3-step detection: instanceof, class name, repo isLocal) and `getFileSha1()` (deterministic fallback hash). Used by all API modules (via trait), Hooks, Processors, Actions, and ThumbnailRenderer.
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
     - Uses LoadBalancer for DB connections (lazy init pattern with getWriteDb/getReadDb)
     - Implements retry logic with exponential backoff (3 retries, 100ms base delay) for transaction conflicts
@@ -111,11 +113,11 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 17 files exceed 1,000 lines:
-    - **Generated data files (exempt):** ShapeLibraryData.js (~11,293 lines), EmojiLibraryIndex.js (~3,055 lines)
-    - **Hand-written JS files (13):** LayerPanel (~2,195), CanvasManager (~2,037), Toolbar (~1,910), InlineTextEditor (~1,833), LayersEditor (~1,790), APIManager (~1,593), PropertyBuilders (~1,493), SelectionManager (~1,418), CanvasRenderer (~1,390), ViewerManager (~1,320), SlideController (~1,170), TextBoxRenderer (~1,120), ToolbarStyleControls (~1,073)
-    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,406 lines), LayersDatabase.php (~1,369 lines)
-    - **Near-threshold files (9):** PropertiesForm (~991), TransformController (~990), GroupManager (~987), LayerRenderer (~973), CalloutRenderer (~969), ResizeCalculator (~966), ShapeRenderer (~959), LayersValidator (~956), ArrowRenderer (~932)
+  - **God classes:** 23 files exceed 1,000 lines:
+    - **Generated data files (2, exempt):** ShapeLibraryData.js (~11,293 lines), EmojiLibraryIndex.js (~3,055 lines)
+    - **Hand-written JS files (19):** LayerPanel (~2,165), CanvasManager (~2,111), Toolbar (~1,933), InlineTextEditor (~1,848), PropertyBuilders (~1,826), LayersEditor (~1,803), APIManager (~1,593), SelectionManager (~1,419), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,149), ToolbarStyleControls (~1,139), SlideController (~1,126), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,053), CanvasEvents (~1,033), CalloutRenderer (~1,000)
+    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,431 lines), LayersDatabase.php (~1,372 lines)
+    - **Near-threshold files (6):** PropertiesForm (~991), GroupManager (~987), LayerRenderer (~973), ShapeRenderer (~959), LayersValidator (~956), ArrowRenderer (~932)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.editor/shapeLibrary/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -210,6 +212,34 @@ if ( bgVal === false || bgVal === 0 || bgVal === '0' || bgVal === 'false' ) {
 **Why this matters:** JavaScript's strict equality (`!==`) does NOT convert types. `0 !== false` evaluates to `true` because they are different types (number vs boolean), even though they both represent "falsy" values.
 
 **See:** `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md` for the full story of how this bug resurfaced three times.
+
+### ⚠️ CRITICAL: OutputPage Methods Change Between MW Versions
+
+**MediaWiki frequently deprecates and removes OutputPage methods.** Always use `method_exists()` guards:
+
+```php
+// ❌ WRONG - will cause fatal error if method is removed
+$out->allowClickjacking();
+
+// ✅ CORRECT - gracefully handles method removal
+if ( method_exists( $out, 'allowClickjacking' ) ) {
+    $out->allowClickjacking();
+} elseif ( method_exists( $out, 'setPreventClickjacking' ) ) {
+    $out->setPreventClickjacking( false );
+}
+```
+
+**Notable removals:**
+- `allowClickjacking()` - Deprecated MW 1.43, **removed MW 1.44** (use `setPreventClickjacking(false)`)
+
+**Why this matters:** Fatal errors from removed methods often only occur in specific code paths (e.g., iframe modal mode), making them extremely hard to debug. The HTTP 500 response provides no useful error message.
+
+**When updating MW compatibility code:**
+1. Check ALL PHP files for the same pattern
+2. Ensure `EditLayersAction.php` and `SpecialEditSlide.php` use identical guards
+3. Test both direct navigation AND iframe modal opening
+
+**See:** `docs/POSTMORTEM_IFRAME_MODAL_500_ERROR.md` for the full debugging story.
 
 ## 3) Data model (Layer objects)
 
@@ -370,6 +400,7 @@ Database
 - Database errors on save: confirm tables exist and run `maintenance/update.php`; server returns 'dbschema-missing' if not detected
 - Missing messages: add to i18n and ResourceModules messages arrays; run `npm test` to see Banana warnings
 - Rate limited: adjust `$wgRateLimits['editlayers-save']` etc. or use an account with appropriate rights
+- Iframe modal HTTP 500: If the editor loads via direct URL but returns 500 via iframe, check for removed OutputPage methods (e.g., `allowClickjacking`). Always use `method_exists()` guards. Enable PHP error logging to see the actual fatal error. See `docs/POSTMORTEM_IFRAME_MODAL_500_ERROR.md`.
 
 ## 11) Quick reference (contracts)
 
@@ -405,14 +436,14 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,148 tests in 162 suites — verified February 17, 2026)
-- Coverage (95.19% statement, 84.96% branch — verified February 17, 2026)
-- JavaScript file count (140 files total, ~97,072 lines)
-- PHP file count (40 files, ~14,991 lines)
-- God class count (17 files >1,000 lines; 2 generated data files, 13 JS, 2 PHP)
+- Test count (11,445 tests in 168 suites — verified March 10, 2026)
+- Coverage (92.19% statement, 82.15% branch — verified March 10, 2026)
+- JavaScript file count (143 files total, ~99,730 lines)
+- PHP file count (41 files, ~15,197 lines)
+- God class count (23 files >1,000 lines; 2 generated data files, 19 JS, 2 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
 - Shape library count (5,116 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.58)
+- Version number (1.5.60)

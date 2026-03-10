@@ -5,6 +5,7 @@
 		]
 	},
 	"layers-desc": "{{desc|name=Layers|url=https://www.mediawiki.org/wiki/Extension:Layers}}",
+	"layers-edit-link-text": "Link text for the 'Edit Layers' wikitext parser function link ({{#layersedit:}}). Displayed as inline wikitext link to open the layer editor.",
 	"layers-editor-title": "Title of the Layers editor interface shown on file pages",
 	"layers-toolbar-title": "Accessibility label for the main editor toolbar",
 	"layers-editor-close": "Label or tooltip for the close button in the Layers editor header",

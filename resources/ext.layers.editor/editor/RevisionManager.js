@@ -312,11 +312,11 @@
 
 				this.debugLog( `Loading layer set: ${ setName }` );
 
-				// Update current set name in state
-				this.stateManager.set( 'currentSetName', setName );
-
 				// Load the set via API
 				await this.apiManager.loadLayersBySetName( setName );
+
+				// Update current set name in state only after successful load
+				this.stateManager.set( 'currentSetName', setName );
 
 				// Notify user
 				mw.notify(
@@ -408,15 +408,15 @@
 					this.editor.layerPanel.updateLayerList( [] );
 				}
 
-				// Add to named sets list
-				namedSets.push( {
+				// Add to named sets list — create a new array so state listeners see a changed reference
+				const newItem = {
 					name: trimmedName,
 					revision_count: 0,
 					latest_revision: null,
 					latest_timestamp: null,
 					latest_user_name: mw.config.get( 'wgUserName' )
-				} );
-				this.stateManager.set( 'namedSets', namedSets );
+				};
+				this.stateManager.set( 'namedSets', [ ...namedSets, newItem ] );
 
 				// Rebuild selector
 				this.buildSetSelector();

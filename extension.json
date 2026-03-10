@@ -8,13 +8,14 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.58",
+	"version": "1.5.60",
 	"requires": {
-		"MediaWiki": ">= 1.43.0"
+		"MediaWiki": ">= 1.44.0"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
 	},
+	"callback": "MediaWiki\\Extension\\Layers\\Hooks::onRegistration",
 	"ServiceWiringFiles": [
 		"services.php"
 	],
@@ -257,7 +258,8 @@
 				"EffectsRenderer.js",
 				"ImageLayerRenderer.js",
 				"LayerRenderer.js",
-				"CustomShapeRenderer.js"
+				"CustomShapeRenderer.js",
+				"ViewerIcons.js"
 			]
 		},
 		"ext.layers": {
@@ -329,6 +331,7 @@
 			"scripts": [
 			"compat.js",
 				"utils/NamespaceHelper.js",
+				"utils/LogSanitizer.js",
 				"MessageHelper.js",
 				"AccessibilityAnnouncer.js",
 				"EventTracker.js",
@@ -687,6 +690,17 @@
 				"layers-shortcut-select-all",
 				"layers-shortcut-deselect",
 				"layers-shortcut-zoom",
+				"layers-shortcut-copy",
+				"layers-shortcut-cut",
+				"layers-shortcut-paste",
+				"layers-shortcut-group",
+				"layers-shortcut-ungroup",
+				"layers-shortcut-smart-guides",
+				"layers-shortcut-show-help",
+				"layers-shortcut-save",
+				"layers-shortcut-toggle-snap",
+				"layers-shortcut-toggle-background",
+				"layers-shortcut-cancel",
 
 				"layers-help-title",
 				"layers-help-close",
@@ -1236,7 +1250,8 @@
 	},
 	"AvailableRights": [
 		"editlayers",
-		"managelayerlibrary"
+		"managelayerlibrary",
+		"layers-admin"
 	],
 	"GroupPermissions": {
 		"*": {
@@ -1247,7 +1262,8 @@
 		},
 		"sysop": {
 			"editlayers": true,
-			"managelayerlibrary": true
+			"managelayerlibrary": true,
+			"layers-admin": true
 		}
 	}
 }

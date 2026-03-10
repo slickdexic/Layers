@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C148%20passing-brightgreen" alt="11,148 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C445%20passing-brightgreen" alt="11,445 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
 </p>
 
@@ -16,28 +16,30 @@
 
 | 🎨 **Professional Tools** | 🔒 **Non-Destructive** | 🖼️ **Slide Mode** | ♿ **Accessible** |
 |---------------------------|------------------------|-------------------|------------------|
-| **15 drawing tools**, style presets, alignment & distribution | Original images never modified | Create standalone graphics without a base image | WCAG 2.1 compliant, full keyboard support |
+| **17 drawing tools**, style presets, alignment & distribution | Original images never modified | Create standalone graphics without a base image | WCAG 2.1 compliant, full keyboard support |
 
 ---
 
-## 🆕 What's New in v1.5.58
+## 🆕 What's New in v1.5.60
 
-- **8 Bug Fixes** — Arrow key nudging, color preview mutation, double render on undo/redo, clipboard callout tail offset, CSS font order, UTC timestamp parsing, ApiLayersInfo null guard, REL1_43 modal 500 error
-- **Built-in Help Dialog** — Accessible via Shift+? with keyboard shortcuts and tool descriptions
-- **ES6 Modernization** — Arrow functions, template literals, spread syntax, removed 27 debug console.log statements
-- **Documentation Audit** — 540-line comprehensive review of 35+ docs, 47 issues identified and fixed
+- **16 Bug Fixes** — Zoom-to-pointer anchor drift (coordinate-space mismatch in ZoomPanController), 15 P3 code-quality fixes: errorSpan filename echo, requiresUnblock false, returnTo namespace guard, TextSanitizer mb_strlen, ApiLayersList rate limiter, SchemaManager error parsing, hardcoded i18n string, ThumbnailProcessor dead branch, double spinner, mw.notify guard, RevisionManager array mutation, double render on image load, updateLayerPosition delegation, SelectionManager iteration order, ESLint varsIgnorePattern
+- **Test Suite** — 11,445 tests passing (168 suites), regression test added for zoom anchor with CSS/buffer size mismatch
 
-### Previous v1.5.57 Highlights
+### Previous v1.5.59 Highlights
 
-- **API Documentation** — Added missing `layerslist` endpoint to API Reference
-- **Depth Guards** — All GroupManager recursive functions now protected from stack overflow
-- **Cache Key Fix** — ImageLayerRenderer now uses hash for collision-resistant cache keys
-- **Documentation** — Updated JS file count (140), API module count (5), version references
+- **5 Bug Fixes** — RichText font size cap (200→1000px), arrow key nudge for dimension/line/arrow layers, thumbnail TextBox stroke bleed, thumbnail ellipse shadow missing, AlignmentController dimension/marker layer support
+- **Test Suite** — 11,421 tests passing (167 suites), all bugs covered by regression tests
 
-### Previous v1.5.51 Highlights
+### Previous v1.5.58 Highlights
 
-- **Unified Dimension Text Drag** — Dimension text now acts as a CAD-style drag handle
-- **Arrow Position Control** — Dimension arrows can now point inside or outside
+- **Documentation Sync** — All metrics synchronized across 97+ files (February 13, 2026)
+- **VERSION Constant** — LayersNamespace.js now matches extension.json
+- **v37 Audit** — Fresh comprehensive code review, grade A maintained
+
+### Previous v1.5.56 Highlights
+
+- **10 Bug Fixes** — Transaction safety, TextSanitizer XSS, info disclosure, boolean serialization
+- **FontSize Bug** — Rich text fontSize no longer overwritten on deselect (user-reported P1-025)
 
 ### Previous v1.5.49 Highlights
 
@@ -272,7 +274,7 @@ See [[Changelog]] for full details.
 - [[Configuration Reference]] — All configuration parameters explained
 
 ### User Guide
-- [[Drawing Tools]] — Complete guide to all 15 tools
+- [[Drawing Tools]] — Complete guide to all 17 tools
 - [[Keyboard Shortcuts]] — Master the keyboard for faster editing
 - [[Style Presets]] — Save and reuse style configurations
 - [[Named Layer Sets]] — Multiple annotation sets per image
@@ -309,21 +311,21 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.58 |
-| **Version (REL1_43)** | 1.5.58 |
-| **Version (REL1_39)** | 1.5.58 |
-| **Release Date** | February 17, 2026 |
-| **Test Suites** | 162 |
-| **Total Tests** | 11,148 |
+| **Version (main)** | 1.5.60 |
+| **Version (REL1_43)** | 1.5.60 |
+| **Version (REL1_39)** | 1.5.60 |
+| **Release Date** | March 10, 2026 |
+| **Test Suites** | 168 |
+| **Total Tests** | 11,445 |
 | **PHPUnit Test Files** | 31 |
-| **Statement Coverage** | 95.19% |
-| **Branch Coverage** | 84.96% |
+| **Statement Coverage** | 92.19% |
+| **Branch Coverage** | 82.15% |
 | **Function Coverage** | 93.67% |
 | **Line Coverage** | 95.32% |
-| **JavaScript Files** | 140 |
+| **JavaScript Files** | 143 |
 | **ES6 Classes** | 140 |
-| **God Classes** | 17 (2 generated, 13 JS, 2 PHP) |
-| **i18n Messages** | 820 |
+| **God Classes** | 22 (2 generated, 18 JS, 2 PHP) |
+| **i18n Messages** | 832 |
 
 ---
 

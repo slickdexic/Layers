@@ -2,6 +2,65 @@
 
 All notable changes to the Layers MediaWiki Extension will be documented in this file.
 
+## [Unreleased]
+
+## [1.5.60] - 2026-03-10
+
+### Fixed
+- **Font Names With Spaces Lost On Save** — `TextSanitizer::sanitizeIdentifier()` stripped spaces from `fontFamily`, mangling names like "Times New Roman" → "TimesNewRoman". Added dedicated `sanitizeFontFamily()` method that preserves spaces. Updated `ServerSideLayerValidator` to use it for both top-level and richText fontFamily properties.
+- **Thumbnail Shadow Parity** — `ThumbnailRenderer.php` now renders polygon and star shadows in server-generated thumbnails, matching editor and viewer output.
+- **Custom Shape Spread Shadow Allocation** — `CustomShapeRenderer.js` now sizes the temporary spread-shadow canvas from the actual draw bounds instead of using oversized fixed offsets.
+- **Zoom-to-Pointer Drift** — Wheel-zoom anchor drifted from the cursor because `ZoomPanController.zoomBy()` expected CSS display coordinates but received buffer-pixel coordinates from `getMousePointFromClient()`. `resizeCanvas()` scales the canvas CSS display size to fit the container while keeping buffer dimensions at the image's native resolution — these two coordinate spaces diverge for every real image. Fixed by converting the anchor point from buffer pixels to CSS display pixels (`cx = point.x * cssWidth / canvas.width`) before computing screen-space invariant.
+- **P3-128 — `errorSpan` Echoes User-Supplied Filename** — `LayeredFileRenderer.php`: replaced user filename interpolation with a generic i18n error message.
+- **P3-129 — `EditLayersAction::requiresUnblock()` Always `false`** — Blocked users were able to open the full editor UI; now returns `true` to reject blocked users immediately.
+- **P3-130 — `returnTo` Rejects Valid Redirect Targets** — `EditLayersAction.php`: relaxed `isKnown()` check to `isValid()` with a namespace allowlist so unsaved/draft-page return paths are accepted.
+- **P3-131 — `TextSanitizer` Uses `strlen()` for Character Limits** — Replaced with `mb_strlen($text, 'UTF-8')` so CJK and emoji-heavy text is counted in characters, not bytes.
+- **P3-132 — `ApiLayersList` Bypasses Shared `RateLimiter`** — Replaced direct `pingLimiter()` call with `RateLimiter::checkRateLimit()` so future rate-limit enhancements (metrics, logging, config overrides) apply uniformly.
+- **P3-133 — `LayersSchemaManager` Brittile Error String Parsing** — Replaced fragile `preg_match('/^Error (\d+):/', ...)` pattern with typed RDBMS exception handling and `IF NOT EXISTS` DDL guard.
+- **P3-134 — Hardcoded `'Edit Layers'` Link Text** — `Hooks.php`: replaced hardcoded English string with `wfMessage('layers-edit-link-text')->text()`; added `layers-edit-link-text` i18n key.
+- **P3-135 — `ThumbnailProcessor` Dead `=== false` on `?string`** — Removed the unreachable `|| $layersFlag === false` branch from the null-check condition.
+- **P3-136 — Double Spinner on Every Save** — `LayersEditor.save()` owns the full spinner lifecycle (show on start, hide on both success and error paths); removed duplicate `showSpinner()` from `APIManager.saveLayers()`.
+- **P3-137 — `APIManager` `mw.notify()` Without `typeof mw` Guard** — Added `typeof mw !== 'undefined'` guard consistent with all other `mw.*` calls in the file; prevents throws in Jest/pre-MW environments.
+- **P3-138 — `RevisionManager` Mutates State Array Before `set()`** — Replaced `namedSets.push(...)` with spread syntax `[...namedSets, newItem]` so old and new values in change notifications have distinct references.
+- **P3-139 — Double Render in `handleImageLoaded()`** — Removed superfluous `this.redraw()` called immediately before `this.renderLayers()` (which itself calls `this.redraw()`).
+- **P3-140 — `CanvasManager.updateLayerPosition()` Dead/Incomplete** — Replaced stub implementation with delegation to `this.transformController.updateLayerPosition()`, covering all layer types.
+- **P3-141 — `SelectionManager` Fallback Hit-Test Wrong Iteration Order** — Fallback `getLayerAtPoint()` iterated bottom-to-top (returning deepest layer); changed to top-to-bottom so topmost visible layer is returned first, matching `HitTestController` behaviour.
+- **P3-142 — ESLint Blanket `no-unused-vars: off` for Manager Files** — Replaced blanket override with `varsIgnorePattern` targeting only the specific public-API patterns that legitimately go uncalled within their own file.
+
+### Documentation
+- **Metrics synchronization** — Updated core docs to the March 10, 2026 audited repository totals: 11,445 Jest tests in 168 suites, 92.19% statement coverage.
+- **Branch/support sync** — Refreshed install, architecture, and support-policy docs so `main`, `REL1_43`, and `REL1_39` all reflect the current 1.5.60 branch state.
+
+### Code Quality
+- **PHPCS zero warnings** — Fixed all 33 errors (line endings) and 13 warnings across 6 PHP files: wrapped long regex lines in `ColorValidator.php`, `ThumbnailRenderer.php`, and `LayerInjector.php`; replaced `wfMessage()` with `$this->msg()` in `ApiLayersInfo.php`; added phpcs:ignore for legitimate same-line `@codeCoverageIgnore` comments.
+- **PHP line endings normalized** — Converted all 78 PHP files from CRLF to LF. Added `.gitattributes` with `eol=lf` to prevent future line ending drift on Windows.
+
+### Tests
+- Added PHPUnit regression coverage for polygon/star thumbnail shadow generation.
+- Tightened Jest coverage around custom-shape spread-shadow temp canvas sizing.
+- Added `LogSanitizer.test.js` — 26 tests covering sanitization of tokens, hex strings, paths, URLs, IPs, emails, truncation, and object traversal.
+- Added `GroupHierarchyHelper.test.js` — 52 tests covering all 12 static methods including hierarchy traversal, bounds calculation, and group operations.
+- Added `LayerDefaults.test.js` — 18 tests covering all constants, immutability (Object.freeze), and exports.
+- Added `HelpDialog.test.js` — 40 tests covering constructor, show/close lifecycle, overlay/dialog ARIA, 4-tab system, DOM cleanup, and destroy.
+- Added `ViewerIcons.test.js` — 27 tests covering SVG icon generation, namespace isolation, and all icon variants.
+- Extended `ToolManager.test.js` — 27 new dispatch tests covering startTool/updateTool/finishTool switch-case paths for all 9 tool types, plus pen drawing and ShapeFactory integration. Total: 111 tests (up from 84).
+- Added regression test for zoom-to-pointer anchor with CSS display size differing from buffer size (`ZoomPanController.test.js`).
+- **Jest coverage** — 92.19% statements, 82.15% branches, 92.25% lines (168 suites, 11,445 tests).
+
+## [1.5.59] - 2026-03-04
+
+### Fixed
+- **RichText Font Size Cap** (P2-085) — `RichTextToolbar.js` inline canvas toolbar capped per-run font sizes at 200px. Raised to 1,000px to match the layer-level limit. `ServerSideLayerValidator.php` richText per-run fontSize max also raised from 500 to 1,000 for consistency.
+- **Arrow Key Nudge for Endpoint Layers** (P2-084) — `EventManager.nudgeSelectedLayers()` previously moved only `x/y`. Dimension, line, and arrow layers use `x1/y1/x2/y2`; nudge now dispatches the correct coordinate model for each layer type.
+- **ThumbnailRenderer TextBox Stroke Bleed** (P2-076) — After drawing the bounding rectangle, ImageMagick retained the stroke color. Added `-stroke none -strokewidth 0` reset before the text `-annotate` command in `buildTextBoxArguments()`.
+- **ThumbnailRenderer Missing Ellipse Shadow** (P2-077) — `buildEllipseArguments()` had no shadow support. Added the standard shadow block matching `buildCircleArguments()`. Ellipse shadows now render in server-side thumbnails.
+- **AlignmentController Missing Dimension/Marker Types** (P2-078) — `getLayerBounds()` and `moveLayer()` lacked a `dimension` case (uses `x1/y1/x2/y2` not `x/y`) and a `marker` case (centered circle at `x/y/size`). Alignment operations now produce correct results for all layer types.
+
+### Technical Details
+- All 11,421 tests pass (167 test suites) ✅
+- Coverage: 92.19% statements, 82.15% branches
+- God classes: 23 (19 hand-written JS, 2 generated, 2 PHP)
+
 ## [1.5.58] - 2026-02-17
 
 ### Fixed
@@ -56,7 +115,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - All 11,152 tests pass (164 test suites) ✅
 - Grade upgraded from A- to A with zero open code issues
 
-## [1.5.55] - 2025-07-23
+## [1.5.55] - 2026-02-10
 
 ### Added
 - **Abort Handling Toggle** — Added optional `$wgLayersRejectAbortedRequests` (and `editor.config.rejectAbortedRequests`) to surface aborted API requests as rejections during debugging. Default remains false to preserve existing behavior.
@@ -105,9 +164,66 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Text Length Validation** — Changed `maxTextLength` from 500 to 10,000 in LayersValidator.js to match server-side `MAX_TEXT_LENGTH` constant
 - **Save Button Timer Leak** — Replaced `_scheduleTimeout` with proper `setTimeout`/`clearTimeout` lifecycle in APIManager.js `disableSaveButton()` to prevent timer leaks
 - **Multi-Selection Deletion** — Fixed `deleteSelectedLayers()` in LayersEditor.js to operate on full selection array instead of only the last selected layer
+- **ThumbnailProcessor Null Safety** — Fixed 4 `method_exists()` calls that crashed with `TypeError` when `$thumbnail` was null (lines 80, 113, 126, 145)
+- **ThumbnailProcessor Undefined Variable** — Fixed `$file` scoping bug in `injectThumbnailLayerData()`: variable was defined inside `if` block but referenced in `else` block (line 458)
+- **SlideNameValidator Trailing Hyphens** — Added `rtrim($name, '_-')` to `sanitize()` so slide names like `'--slide--'` produce `'slide'` instead of `'slide--'`
+- **SlideNameValidator Multiple Spaces** — Added `preg_replace('/\s+/', ' ', $name)` to collapse consecutive spaces before hyphen replacement (e.g., `'my  slide'` → `'my-slide'` instead of `'my--slide'`)
+- **ESLint Error** — Prefixed unused `backgroundImage` parameter with underscore in `TransformationEngine.fitToWindow()` to satisfy `no-unused-vars` rule
+- **ShadowRenderer Temp Canvas Stale State** — Fixed `_getTempCanvas()` not resetting `globalCompositeOperation` and `globalAlpha` when reusing the cached offscreen canvas. After `drawSpreadShadow()` set `destination-out` for shape erasure, subsequent shadow calls used stale composite mode on a clear canvas, producing nothing. First shadow worked; all others silently failed. Root cause of shadows not rendering when multiple layers had shadows enabled.
+- **Toolbar Checkbox Double-Toggle** — Fixed dropdown toggle items (Smart Guides, Canvas Snap) where clicking the text label toggled the checkbox twice (back to original state). The `<label>` element natively toggles its wrapped `<input>`, but the JS click handler also did `checkbox.checked = !checkbox.checked`. Removed manual toggle, relying on native `<label>` behavior.
+
+### Fixed (Tests)
+- **SmartGuidesController Cache Tests** — Updated cache test to provide stateManager mock for version-based caching. Added 2 new tests: version-change invalidation and no-cache-without-stateManager.
+- **ViewerOverlay noopener Tests** — Updated `window.open` assertion to include `'noopener,noreferrer'` third argument (P2-017 regression test).
+- **DimensionRenderer Offset hitTest Tests** — Added 4 tests for offset dimension line hit testing (P1-018). Updated 3 existing tests to use `dimensionOffset: 0`.
+- **ShadowRenderer Scale Preservation Test** — Added test verifying zoom scale is preserved on rotated contexts (P1-017).
+- **PresetStorage Gradient Tests** — Added 3 tests for gradient in ALLOWED_STYLE_PROPERTIES and round-trip preservation (P1-020).
+- **APIManager Save Error & Byte Count Tests** — Added 2 tests for saveInProgress reset on throw (P1-019), plus 2 tests for multibyte byte counting (P3-007).
+- **ApiLayersSaveTest**: Complete rewrite — removed reflection on 6 methods that were refactored into dedicated validator classes; now tests `ServerSideLayerValidator`, `ColorValidator`, `TextSanitizer`, `SetNameSanitizer` directly (12 tests, 27 assertions)
+- **ThumbnailProcessorTest**: Replaced `stdClass` mock helpers with anonymous classes using real methods (fixes `method_exists()` failures); fixed Closure→string parameter mismatch; corrected flag normalization assertions for disabled flags (29 tests, 46 assertions)
+- **ColorValidatorTest**: Fixed hex color case expectation (`#FF0000`→`#ff0000`); added CSS4 4-digit `#RGBA` format support test (was incorrectly rejected)
+- **SetNameSanitizerTest**: Renamed test and changed assertions — `isValid()` correctly rejects `@` and `#` characters
+- **SlideNameValidatorTest**: Fixed `assertStringNotMatches()` → `assertDoesNotMatchRegularExpression()` (correct PHPUnit 9.x method name)
+- **ServerSideLayerValidatorTest**: Fixed 3 test expectations for updated validation behavior
+- **LayersParamExtractorTest**: Fixed 19 test errors from class/constant loading issues
+
+- **ToolManager Tests Rewritten (P2-010)** — Rewrote ToolManager.test.js from 171 tests (2,032 lines) to 84 focused tests (~700 lines). Removed 87 tests that tested dead fallback behavior. All tests now verify delegation to extracted modules and proper cleanup.
+
+### Changed
+- **Conditional Module Loading (P2-005)** — `ext.layers` viewer module is now loaded only on File: pages and pages containing `layerset=` wikitext syntax. Previously loaded unconditionally on every page site-wide (10+ JS files, 2 CSS files, 5 module dependencies). Module registration moved to ParserOutput for reliable cached page delivery.
+- **SQLite-Compatible Schema Migrations (P1-016)** — Converted all 6 MySQL-only migration patches (MODIFY COLUMN, DROP FOREIGN KEY, ADD CONSTRAINT) to PHP methods with `$dbType` branching. SQLite operations are no-ops where appropriate (dynamic typing, no FK enforcement). All remaining SQL patches use cross-platform syntax (ADD COLUMN, CREATE INDEX, UPDATE). Also added 3 missing `addExtensionField` registrations (ls_size, ls_layer_count, la_size) that were only in the dead Hooks.php handler.
+- **Selection State Cleanup (P1-013)** — Removed 5 ghost (write-only) properties from CanvasManager that duplicated TransformController state (isResizing, isRotating, isDragging, resizeHandle, originalLayerState). Eliminated sync writes on every mouse interaction. TransformController is now the single authority for transform state.
+- **HistoryManager Clean Constructor (P2-011)** — Replaced 5-way duck-type constructor with single options-object pattern `{ editor, canvasManager, maxHistorySteps }`. Removed ~30 lines of property-sniffing logic. Simplified `getEditor()` and `getCanvasManager()` accessors. Updated 2 production call sites and 44 test call sites.
+- **GroupManager Hierarchy Extraction** — Extracted 12 static hierarchy/query methods (tree traversal, bounds, depth, group detection) to `GroupHierarchyHelper.js` (335 lines). GroupManager reduced from 1,207 to 987 lines (below god-class threshold). Delegation wrappers preserve the existing public API.
+- **LayersValidator Duplication Removal** — Removed ~180 lines of duplicated fallback code (`isValidColor`, `getMessage`, `containsScriptInjection`) that were identical copies of already-extracted `ValidationHelpers` methods. LayersValidator reduced from 1,116 to 935 lines (below god-class threshold). Minimal hex-only/key-only fallbacks retained for resilience.
+- **ResizeCalculator Deduplication** — Extracted `_isGrowingDirection()` helper to eliminate 3 identical 18-line switch blocks, and merged near-identical `calculateTextResize`/`calculateMarkerResize` into generic `_calculateScalarResize()`. ResizeCalculator reduced from 1,018 to 938 lines (below god-class threshold).
+- **ShapeRenderer JSDoc Condensation** — Condensed verbose JSDoc on thin shadow/geometry delegation wrappers to single-line `@see` references. ShapeRenderer reduced from 1,011 to 959 lines (below god-class threshold).
+- **TransformController Wrapper Removal** — Removed 8 pure pass-through ResizeCalculator wrapper methods and moved `getResizeCursor()` to ResizeCalculator as static method. CanvasManager now calls ResizeCalculator directly. TransformController reduced from 1,118 to 985 lines (below god-class threshold). 67 redundant wrapper tests removed (covered by ResizeCalculator's 123 tests).
+- **Canvas Snap Enabled by Default** — Changed canvas snap from disabled to enabled by default in SmartGuidesController and Toolbar. Canvas snap helps users align layers to canvas edges and center.
+
+### Removed
+- **Dead ext.layers.slides Files (P2-006/P2-024)** — Deleted `resources/ext.layers.slides/init.js`, `SlideManager.js`, `slides.css` (694 source lines) and `tests/jest/SlideManager.test.js` (425 lines). No module definition in extension.json; no references in codebase.
+- **diagnose.php** — Removed diagnostic script (security: exposed server environment details; functionality covered by `maintenance/update.php` and MediaWiki core diagnostics)
+- **FK Constraints Removed (P2-022)** — Dropped all 4 foreign key constraints from schema per MediaWiki conventions. Application-level enforcement used instead. Deleted 2 orphaned FK patch files that were never registered.
+- **Dead Hooks.php Schema Handler** — Removed unreachable `onLoadExtensionSchemaUpdates()` from `Hooks.php` (never registered in extension.json; superseded by `LayersSchemaManager`). Migrated missing field/constraint registrations to `LayersSchemaManager`.
+- **12 Orphaned SQL Patches** — Deleted 12 SQL patch files that were either never registered in the schema manager, superseded by PHP methods, or converted to PHP for SQLite compatibility.
+
+### Technical Details
+- Applies to APIManager abort handlers for revision and named set loads
+- v27 code review: 3 CRITICAL + 6 HIGH issues fixed across 6 files
 - PHP test suite: 0 failures (was 11), 134 structural errors (MW core dependencies), 549 tests, 765 assertions
 - All 11,140 JS tests pass (164 test suites) ✅
 - ESLint: 0 errors (was 1), phpcs: 0 errors (was 29 line-ending issues)
+
+## [1.5.54] - 2026-02-09
+
+### Fixed
+- **Iframe Modal X-Frame-Options** — Fixed Firefox security error when opening modal editor from article pages. MediaWiki's default `X-Frame-Options` header blocked the iframe. Added `allowClickjacking()` call when `?modal=1` is present.
+
+## [1.5.53] - 2026-02-09
+
+### Fixed
+- **Toolbar Font Size Not Persisted** — When editing a textbox and changing font size via the floating toolbar, `layer.fontSize` was not updated (only richText runs stored the value). Toolbar showed the old value when re-editing. Added `_extractDominantFontSize()` to update `layer.fontSize` from richText runs on finish.
 
 ## [1.5.52] - 2026-02-05
 
@@ -507,6 +623,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Test coverage: 94.65% statement, 84.49% branch, 92.93% function, 94.77% line
 - God Class Reduction Initiative complete: reduced from 20 to 12 god classes
 - ESLint passes on all modified files
+
+---
+
+## [1.5.37] - 2026-01-28
+
+### Fixed
+- **Text Loss on Vertical Align Change** — Fixed text loss when changing `verticalAlign` during inline textbox editing.
+- **Vertical Alignment During Editing** — Vertical alignment now applied visually during inline text editing.
+- **Slide Viewer Layer Order** — Fixed reversed layer order in slide viewer rendering.
 
 ---
 
@@ -996,6 +1121,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - New icons in `IconFactory.js`: `createPencilIcon()`, `createFullscreenIcon()`
 
 ---
+
+## [1.5.14] - 2026-01-18
+
+### Added
+- **Floating Text Formatting Toolbar** — Added draggable floating toolbar for inline text editing with font family, font size, bold, italic, text alignment, and color controls.
+
+### Fixed
+- **Focus/Blur Issues** — Fixed focus and blur handling with font selector and color picker in inline text editor.
+- **Textbox Background Visibility** — Fixed textbox background visibility bug during inline editing.
 
 ## [1.5.13] - 2026-01-18
 

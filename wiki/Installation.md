@@ -18,9 +18,9 @@ This guide covers downloading, configuring, and setting up the Layers extension 
 
 | MediaWiki Version | Branch | Current Version | Notes |
 |-------------------|--------|-----------------|-------|
-| 1.44+ | **`main`** | 1.5.58 | Primary branch |
-| 1.43.x (LTS) | `REL1_43` | 1.5.58-REL1_43 | Current LTS |
-| 1.39.x - 1.42.x | `REL1_39` | 1.5.58-REL1_39 | Previous LTS |
+| 1.44+ | **`main`** | 1.5.60 | Primary branch |
+| 1.43.x (LTS) | `REL1_43` | 1.5.60-REL1_43 | Current LTS |
+| 1.39.x - 1.42.x | `REL1_39` | 1.5.60-REL1_39 | Previous LTS |
 
 > **Note:** MediaWiki 1.39 LTS reached end-of-life on December 31, 2025. The REL1_39 branch is still supported for users on MW 1.39-1.42, but users should plan to upgrade to MW 1.43+ and switch to the REL1_43 branch.
 
@@ -118,7 +118,7 @@ $wgLayersMaxLayerCount = 200;
 // Increase max layer sets per image (default: 15)
 $wgLayersMaxNamedSets = 25;
 
-// Enable debug logging (default: true)
+// Enable debug logging (default: false)
 $wgLayersDebug = true;
 
 // Rate limiting for saves

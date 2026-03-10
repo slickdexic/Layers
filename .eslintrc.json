@@ -109,7 +109,7 @@
 				"resources/ext.layers.editor/LayerPanel.js"
 			],
 			"rules": {
-				"no-unused-vars": "off"
+				"no-unused-vars": ["warn", { "varsIgnorePattern": "^_|[A-Z]", "argsIgnorePattern": "^_" }]
 			}
 		},
 		{
