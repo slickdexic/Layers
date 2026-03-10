@@ -209,7 +209,7 @@ class LayersSchemaManager {
 					$message = $e->getMessage();
 					// MySQL uses error 3822 for duplicate CHECK constraint
 					// MariaDB uses error 1826 for duplicate CHECK constraint name
-					if ( preg_match( '/^Error (\d+):/', $message, $matches ) &&
+					if ( preg_match( '/^Error\s+(\d+):/i', $message, $matches ) &&
 						 in_array( (int)$matches[1], [ 3822, 1826 ] ) ) {
 						$updater->output( "   ...constraint {$constraintName} already exists.\n" );
 					} else {
@@ -523,7 +523,7 @@ class LayersSchemaManager {
 				$updater->output( "   Added constraint {$constraintName}.\n" );
 			} catch ( \Wikimedia\Rdbms\DBQueryError $e ) {
 				$message = $e->getMessage();
-				if ( preg_match( '/^Error (\d+):/', $message, $matches ) &&
+				if ( preg_match( '/^Error\s+(\d+):/i', $message, $matches ) &&
 					 in_array( (int)$matches[1], [ 3822, 1826 ] ) ) {
 					$updater->output( "   ...constraint {$constraintName} already exists.\n" );
 				} else {

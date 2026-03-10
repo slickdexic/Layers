@@ -31,6 +31,9 @@
 			// Selection state
 			this.selectionHandles = [];
 
+			// Cached AngleDimensionRenderer instance to avoid per-frame allocation
+			this._cachedAngleRenderer = null;
+
 			// Style configuration
 			this.handleSize = 12;
 			this.handleColor = '#2196f3';
@@ -612,7 +615,10 @@
 				return;
 			}
 
-			const tempRenderer = new AngleDimensionRenderer( null );
+			if ( !this._cachedAngleRenderer ) {
+				this._cachedAngleRenderer = new AngleDimensionRenderer( null );
+			}
+			const tempRenderer = this._cachedAngleRenderer;
 			const angles = tempRenderer.calculateAngles( layer );
 
 			const textOffset = typeof layer.textOffset === 'number' ? layer.textOffset : 0;
@@ -960,6 +966,7 @@
 			this.getLayerById = null;
 			this.getLayerBounds = null;
 			this.config = null;
+			this._cachedAngleRenderer = null;
 		}
 	}
 

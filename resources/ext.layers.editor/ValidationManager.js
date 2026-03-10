@@ -233,14 +233,14 @@ class ValidationManager {
 			if ( layer.text && layer.text.length > 1000 ) {
 				errors.push( this.getMessage( 'layers-validation-text-too-long' ) );
 			}
-			// FIX 2025-11-14: Updated max from 200 to 1000
-			if ( layer.fontSize && ( typeof layer.fontSize !== 'number' || layer.fontSize < 8 || layer.fontSize > 1000 ) ) {
+			// FIX 2025-11-14: Updated max from 200 to 1000; min corrected to 1
+			if ( layer.fontSize != null && ( typeof layer.fontSize !== 'number' || layer.fontSize < 1 || layer.fontSize > 1000 ) ) {
 				errors.push( this.getMessage( 'layers-validation-fontsize-range' ) );
 			}
 		}
 
 		// Validate stroke width
-		if ( layer.strokeWidth && ( typeof layer.strokeWidth !== 'number' || layer.strokeWidth < 0 || layer.strokeWidth > 50 ) ) {
+		if ( layer.strokeWidth && ( typeof layer.strokeWidth !== 'number' || layer.strokeWidth < 0 || layer.strokeWidth > 100 ) ) {
 			errors.push( this.getMessage( 'layers-validation-strokewidth-range' ) );
 		}
 

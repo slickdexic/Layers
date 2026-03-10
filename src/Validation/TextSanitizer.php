@@ -27,8 +27,8 @@ class TextSanitizer {
 	 */
 	public function sanitizeText( string $text ): string {
 		// Basic length check
-		if ( strlen( $text ) > self::MAX_TEXT_LENGTH ) {
-			$text = substr( $text, 0, self::MAX_TEXT_LENGTH );
+		if ( mb_strlen( $text, 'UTF-8' ) > self::MAX_TEXT_LENGTH ) {
+			$text = mb_substr( $text, 0, self::MAX_TEXT_LENGTH );
 		}
 
 		// Strip HTML tags
@@ -82,23 +82,21 @@ class TextSanitizer {
 	}
 
 	/**
-	 * Sanitize font family names, preserving spaces for multi-word font names.
+	 * Sanitize font family names, preserving spaces.
 	 *
-	 * Unlike sanitizeIdentifier(), this allows spaces so that font names like
-	 * "Times New Roman" and "Open Sans" are preserved correctly.
+	 * Unlike sanitizeIdentifier(), this allows spaces in the value
+	 * since CSS font family names commonly contain them
+	 * (e.g. "Times New Roman", "Courier New").
 	 *
 	 * @param string $fontFamily Raw font family name
 	 * @return string Sanitized font family name
 	 */
 	public function sanitizeFontFamily( string $fontFamily ): string {
-		// Remove any non-alphanumeric characters except space, underscore, hyphen, and dot
+		// Allow alphanumeric, spaces, underscores, hyphens, and dots
 		$fontFamily = preg_replace( '/[^a-zA-Z0-9 _.-]/', '', $fontFamily );
 
-		// Collapse multiple spaces into one
-		$fontFamily = preg_replace( '/\s+/', ' ', $fontFamily );
-
-		// Trim leading/trailing whitespace
-		$fontFamily = trim( $fontFamily );
+		// Collapse multiple spaces to single space and trim
+		$fontFamily = trim( preg_replace( '/\s+/', ' ', $fontFamily ) );
 
 		// Limit length
 		if ( strlen( $fontFamily ) > 255 ) {
@@ -179,19 +177,6 @@ class TextSanitizer {
 		// Remove <script> tags and their content
 		$text = preg_replace( '/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', '', $text );
 
-		// Neutralize JavaScript keywords followed by '(' by inserting a zero-width space
-		// This prevents code execution while preserving legitimate text like "Use alert() carefully"
-		// The zero-width space (\u200B) makes "alert(" become "alert\u200B(" which is not callable
-		$jsKeywords = [ 'alert', 'confirm', 'prompt', 'eval', 'setTimeout', 'setInterval' ];
-		foreach ( $jsKeywords as $keyword ) {
-			// Insert a zero-width space before the opening paren to neutralize the call
-			$text = preg_replace(
-				'/\b(' . preg_quote( $keyword, '/' ) . ')\s*\(/i',
-				'$1' . "\xE2\x80\x8B" . '(',
-				$text
-			);
-		}
-
 		return $text;
 	}
 
@@ -207,8 +192,8 @@ class TextSanitizer {
 	 */
 	public function sanitizeRichTextRun( string $text ): string {
 		// Basic length check
-		if ( strlen( $text ) > self::MAX_TEXT_LENGTH ) {
-			$text = substr( $text, 0, self::MAX_TEXT_LENGTH );
+		if ( mb_strlen( $text, 'UTF-8' ) > self::MAX_TEXT_LENGTH ) {
+			$text = mb_substr( $text, 0, self::MAX_TEXT_LENGTH );
 		}
 
 		// Strip HTML tags
@@ -237,7 +222,7 @@ class TextSanitizer {
 	 * @return bool True if within limits
 	 */
 	public function isValidLength( string $text ): bool {
-		return strlen( $text ) <= self::MAX_TEXT_LENGTH;
+		return mb_strlen( $text, 'UTF-8' ) <= self::MAX_TEXT_LENGTH;
 	}
 
 	/**

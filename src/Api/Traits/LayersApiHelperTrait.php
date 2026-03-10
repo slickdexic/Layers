@@ -103,7 +103,7 @@ trait LayersApiHelperTrait {
 		$ownerId = $db->getNamedSetOwner( $imgName, $sha1, $setName );
 		$userId = $user->getId();
 		$isOwner = ( $ownerId !== null && $ownerId === $userId );
-		$isAdmin = $user->isAllowed( 'delete' );
+		$isAdmin = $user->isAllowed( 'layers-admin' );
 
 		return $isOwner || $isAdmin;
 	}

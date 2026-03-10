@@ -82,7 +82,7 @@
 		} catch ( e ) {
 			// Global scope access failed - expected in some restricted environments
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log.warn( '[CanvasManager] findClass failed for "' + name + '":', e.message );
+				mw.log.warn( `[CanvasManager] findClass failed for "${name}":`, e.message );
 			}
 		}
 		return undefined;
@@ -139,6 +139,7 @@ class CanvasManager {
 		// Throttle transform event emission for live UI sync
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;
+		this._transformRafId = null;
 
 		// Drag visual feedback
 		this.dragPreview = false;
@@ -573,9 +574,7 @@ class CanvasManager {
 			this.canvas.width = this.baseWidth;
 			this.canvas.height = this.baseHeight;
 			if ( typeof mw !== 'undefined' && mw.log ) {
-				mw.log( '[CanvasManager] Using base dimensions for canvas: ' +
-					this.baseWidth + 'x' + this.baseHeight +
-					' (loaded image: ' + ( info.width || image.width ) + 'x' + ( info.height || image.height ) + ')' );
+				mw.log( `[CanvasManager] Using base dimensions for canvas: ${this.baseWidth}x${this.baseHeight} (loaded image: ${info.width || image.width}x${info.height || image.height})` );
 			}
 		} else {
 			// Fall back to loaded image dimensions
@@ -588,10 +587,11 @@ class CanvasManager {
 		// Resize canvas display to fit container
 		this.resizeCanvas();
 
-		// Draw the image and any layers
-		this.redraw();
+		// Draw the image and all layers in one call (renderLayers calls redraw internally)
 		if ( this.editor && this.editor.layers ) {
 			this.renderLayers( this.editor.layers );
+		} else {
+			this.redraw();
 		}
 	}
 
@@ -842,7 +842,8 @@ class CanvasManager {
 			return;
 		}
 		this.transformEventScheduled = true;
-		window.requestAnimationFrame( () => {
+		this._transformRafId = window.requestAnimationFrame( () => {
+			this._transformRafId = null;
 			this.transformEventScheduled = false;
 			const target = ( this.editor && this.editor.container ) || this.container || document;
 			try {
@@ -862,51 +863,18 @@ class CanvasManager {
 	}
 
 	/**
-	 * Update layer position during drag operation
+	/**
+	 * Update layer position during drag operation.
+	 * Delegates to TransformController which handles all layer types.
 	 *
 	 * @param {Object} layer Layer to update
 	 * @param {Object} originalState Original state before drag
 	 * @param {number} deltaX X offset
 	 * @param {number} deltaY Y offset
 	 */
-	updateLayerPosition (
-		layer, originalState, deltaX, deltaY
-	) {
-		switch ( layer.type ) {
-			case 'rectangle':
-			case 'blur':
-			case 'circle':
-			case 'text':
-			case 'ellipse':
-			case 'polygon':
-			case 'star':
-				layer.x = ( originalState.x || 0 ) + deltaX;
-				layer.y = ( originalState.y || 0 ) + deltaY;
-				break;
-			case 'line':
-			case 'arrow':
-				layer.x1 = ( originalState.x1 || 0 ) + deltaX;
-				layer.y1 = ( originalState.y1 || 0 ) + deltaY;
-				layer.x2 = ( originalState.x2 || 0 ) + deltaX;
-				layer.y2 = ( originalState.y2 || 0 ) + deltaY;
-				// Move control point with the arrow (for curved arrows)
-				if ( originalState.controlX !== undefined ) {
-					layer.controlX = originalState.controlX + deltaX;
-				}
-				if ( originalState.controlY !== undefined ) {
-					layer.controlY = originalState.controlY + deltaY;
-				}
-				break;
-			case 'path':
-				if ( layer.points && originalState.points ) {
-					layer.points = originalState.points.map( function ( pt ) {
-						return {
-							x: pt.x + deltaX,
-							y: pt.y + deltaY
-						};
-					} );
-				}
-				break;
+	updateLayerPosition ( layer, originalState, deltaX, deltaY ) {
+		if ( this.transformController ) {
+			this.transformController.updateLayerPosition( layer, originalState, deltaX, deltaY );
 		}
 	}
 
@@ -1440,8 +1408,8 @@ class CanvasManager {
 
 	selectAll () {
 		const allIds = ( this.editor.layers || [] )
-			.filter( function ( layer ) { return layer.visible !== false; } )
-			.map( function ( layer ) { return layer.id; } );
+			.filter( ( layer ) => layer.visible !== false )
+			.map( ( layer ) => layer.id );
 		this.setSelectedLayerIds( allIds );
 		// Update lastSelectedId for key object alignment (last layer is key object)
 		if ( this.selectionManager && allIds.length > 0 ) {
@@ -1498,7 +1466,7 @@ class CanvasManager {
 
 		// Update lastSelectedId for key object alignment
 		if ( this.selectionManager ) {
-			const isHitSelected = newIds.indexOf( hit.id ) !== -1;
+			const isHitSelected = newIds.includes( hit.id );
 			if ( isHitSelected ) {
 				// The clicked layer is selected, it becomes the key object
 				this.selectionManager.lastSelectedId = hit.id;
@@ -1610,9 +1578,7 @@ class CanvasManager {
 			// Only resize if dimensions differ significantly (avoid unnecessary redraws)
 			if ( this.canvas.width !== width || this.canvas.height !== height ) {
 				if ( typeof mw !== 'undefined' && mw.log ) {
-					mw.log( '[CanvasManager] Resizing canvas from ' +
-						this.canvas.width + 'x' + this.canvas.height +
-						' to base dimensions ' + width + 'x' + height );
+					mw.log( `[CanvasManager] Resizing canvas from ${this.canvas.width}x${this.canvas.height} to base dimensions ${width}x${height}` );
 				}
 				this.canvas.width = width;
 				this.canvas.height = height;
@@ -1723,7 +1689,8 @@ class CanvasManager {
 		// Position within the displayed (transformed) element
 		const relX = clientX - rect.left;
 		const relY = clientY - rect.top;
-		// Scale to logical canvas pixels
+		// Scale to logical canvas pixels (guard against zero CSS dimensions
+		// e.g. hidden canvas via display:none returning {width:0, height:0})
 		const scaleX = rect.width > 0 ? this.canvas.width / rect.width : 1;
 		const scaleY = rect.height > 0 ? this.canvas.height / rect.height : 1;
 		const canvasX = relX * scaleX;
@@ -1836,8 +1803,10 @@ class CanvasManager {
 	}
 
 	setTool ( tool ) {
-		// Cancel angle dimension if switching away from it
-		if ( this.drawingController && this.currentTool === 'angleDimension' && tool !== 'angleDimension' ) {
+		// Cancel any in-progress angle dimension drawing when switching tools
+		if ( this.drawingController &&
+			this.currentTool === 'angleDimension' &&
+			tool !== 'angleDimension' ) {
 			this.drawingController.cancelAngleDimension();
 		}
 		this.currentTool = tool;
@@ -1923,17 +1892,17 @@ class CanvasManager {
 		this.redrawScheduled = true;
 
 		if ( window.requestAnimationFrame ) {
-			this.animationFrameId = window.requestAnimationFrame( function () {
+			this.animationFrameId = window.requestAnimationFrame( () => {
 				this.redraw();
 				this.redrawScheduled = false;
-			}.bind( this ) );
+			} );
 		} else {
 			// Fallback for older browsers
-			this.fallbackTimeoutId = setTimeout( function () {
+			this.fallbackTimeoutId = setTimeout( () => {
 				this.redraw();
 				this.redrawScheduled = false;
 				this.fallbackTimeoutId = null;
-			}.bind( this ), 16 ); // ~60fps
+			}, 16 ); // ~60fps
 		}
 	}
 
@@ -2011,6 +1980,11 @@ class CanvasManager {
 			window.cancelAnimationFrame( this.animationFrameId );
 			this.animationFrameId = null;
 		}
+		// Cancel throttled transform event RAF
+		if ( this._transformRafId ) {
+			window.cancelAnimationFrame( this._transformRafId );
+			this._transformRafId = null;
+		}
 		// Cancel fallback timeout if used
 		if ( this.fallbackTimeoutId ) {
 			clearTimeout( this.fallbackTimeoutId );
@@ -2039,20 +2013,20 @@ class CanvasManager {
 			'imageLoader'
 		];
 
-		controllersToDestroy.forEach( function ( name ) {
+		controllersToDestroy.forEach( ( name ) => {
 			if ( this[ name ] ) {
 				if ( typeof this[ name ].destroy === 'function' ) {
 					try {
 						this[ name ].destroy();
 					} catch ( e ) {
 						if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
-							mw.log.warn( '[CanvasManager] Error destroying ' + name + ':', e.message );
+							mw.log.warn( `[CanvasManager] Error destroying ${name}:`, e.message );
 						}
 					}
 				}
 				this[ name ] = null;
 			}
-		}, this );
+		} );
 
 		// Unsubscribe from state manager to prevent memory leaks
 		if ( this.stateUnsubscribers && this.stateUnsubscribers.length > 0 ) {
@@ -2072,9 +2046,11 @@ class CanvasManager {
 
 		// Clear canvas pool to prevent memory leaks
 		if ( this.canvasPool && this.canvasPool.length > 0 ) {
-			this.canvasPool.forEach( function ( pooledCanvas ) {
-				pooledCanvas.width = 0;
-				pooledCanvas.height = 0;
+			this.canvasPool.forEach( ( pooledCanvas ) => {
+				if ( pooledCanvas.canvas ) {
+					pooledCanvas.canvas.width = 0;
+					pooledCanvas.canvas.height = 0;
+				}
 			} );
 			this.canvasPool = [];
 		}

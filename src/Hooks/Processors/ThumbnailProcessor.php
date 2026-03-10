@@ -104,7 +104,7 @@ class ThumbnailProcessor {
 		$this->log( "layersFlag=$layersFlag, hasData=" . ( $layerData !== null ? 'yes' : 'no' ) );
 
 		// Respect explicit disable
-		if ( $layersFlag === 'off' || $layersFlag === 'none' || $layersFlag === false ) {
+		if ( $layersFlag === 'off' || $layersFlag === 'none' ) {
 			$this->log( 'Layers explicitly disabled' );
 			return true;
 		}

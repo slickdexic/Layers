@@ -386,6 +386,28 @@ describe( 'TransformController', () => {
 			expect( layer.x2 ).toBe( 65 );
 			expect( layer.y2 ).toBe( 70 );
 		} );
+
+		it( 'should update control points for curved arrows', () => {
+			const layer = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100, controlX: 50, controlY: 50 };
+			const original = { x1: 0, y1: 0, x2: 100, y2: 100, controlX: 50, controlY: 50 };
+
+			controller.updateLayerPosition( layer, original, 20, 30 );
+
+			expect( layer.x1 ).toBe( 20 );
+			expect( layer.y1 ).toBe( 30 );
+			expect( layer.controlX ).toBe( 70 ); // 50 + 20
+			expect( layer.controlY ).toBe( 80 ); // 50 + 30
+		} );
+
+		it( 'should not set control points when absent from original', () => {
+			const layer = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 100 };
+			const original = { x1: 0, y1: 0, x2: 100, y2: 100 };
+
+			controller.updateLayerPosition( layer, original, 20, 30 );
+
+			expect( layer.controlX ).toBeUndefined();
+			expect( layer.controlY ).toBeUndefined();
+		} );
 	} );
 
 	describe( 'finishDrag', () => {

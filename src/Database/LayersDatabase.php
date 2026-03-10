@@ -130,9 +130,9 @@ class LayersDatabase {
 				return null;
 			}
 
-			// Exponential backoff to prevent DB hammering (100ms, 200ms)
+			// Brief backoff to yield to other requests before retry (10ms, 20ms)
 			if ( $retryCount > 0 ) {
-				usleep( $retryCount * 100000 );
+				usleep( $retryCount * 10000 );
 			}
 			$dbw->startAtomic( __METHOD__ );
 			try {

@@ -269,64 +269,62 @@
 		 * @param {string} setName The name of the set to load
 		 * @return {Promise<void>}
 		 */
-		loadLayerSetByName( setName ) {
+		async loadLayerSetByName( setName ) {
 			// Delegate to LayerSetManager if available
 			if ( this.editor.layerSetManager ) {
 				return this.editor.layerSetManager.loadLayerSetByName( setName );
 			}
 
-			if ( !setName ) {
-				if ( mw.log && mw.log.error ) {
-					mw.log.error( '[RevisionManager] loadLayerSetByName: No set name provided' );
-				}
-				return Promise.resolve();
-			}
-
-			let confirmPromise = Promise.resolve( true );
-
-			// Check for unsaved changes before switching
-			if ( this.editor.hasUnsavedChanges() ) {
-				if ( this.editor.dialogManager && typeof this.editor.dialogManager.showConfirmDialog === 'function' ) {
-					confirmPromise = this.editor.dialogManager.showConfirmDialog( {
-						title: this.getMessage( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
-						message: this.getMessage( 'layers-unsaved-changes-warning',
-							'You have unsaved changes. Switch sets without saving?' ),
-						isDanger: true,
-						confirmText: this.getMessage( 'layers-discard', 'Discard' ),
-						cancelText: this.getMessage( 'layers-cancel', 'Cancel' )
-					} );
-				} else {
-					// Fallback to native confirm only if DialogManager unavailable
-					// eslint-disable-next-line no-alert
-					confirmPromise = Promise.resolve( window.confirm(
-						this.getMessage( 'layers-unsaved-changes-warning',
-							'You have unsaved changes. Switch sets without saving?' )
-					) );
-				}
-			}
-
-			return confirmPromise.then( ( confirmSwitch ) => {
-				if ( !confirmSwitch ) {
-					// Revert selector to current set
-					this.buildSetSelector();
+			try {
+				if ( !setName ) {
+					if ( mw.log && mw.log.error ) {
+						mw.log.error( '[RevisionManager] loadLayerSetByName: No set name provided' );
+					}
 					return;
+				}
+
+				// Check for unsaved changes before switching
+				if ( this.editor.hasUnsavedChanges() ) {
+					let confirmSwitch = false;
+					if ( this.editor.dialogManager && typeof this.editor.dialogManager.showConfirmDialog === 'function' ) {
+						confirmSwitch = await this.editor.dialogManager.showConfirmDialog( {
+							title: this.getMessage( 'layers-unsaved-changes-title', 'Unsaved Changes' ),
+							message: this.getMessage( 'layers-unsaved-changes-warning',
+								'You have unsaved changes. Switch sets without saving?' ),
+							isDanger: true,
+							confirmText: this.getMessage( 'layers-discard', 'Discard' ),
+							cancelText: this.getMessage( 'layers-cancel', 'Cancel' )
+						} );
+					} else {
+						// Fallback to native confirm only if DialogManager unavailable
+						// eslint-disable-next-line no-alert
+						confirmSwitch = window.confirm(
+							this.getMessage( 'layers-unsaved-changes-warning',
+								'You have unsaved changes. Switch sets without saving?' )
+						);
+					}
+					if ( !confirmSwitch ) {
+						// Revert selector to current set
+						this.buildSetSelector();
+						return;
+					}
 				}
 
 				this.debugLog( `Loading layer set: ${ setName }` );
 
-				// Update current set name in state
+				// Load the set via API
+				await this.apiManager.loadLayersBySetName( setName );
+
+				// Update current set name in state only after successful load
 				this.stateManager.set( 'currentSetName', setName );
 
-				// Load the set via API
-				return this.apiManager.loadLayersBySetName( setName ).then( () => {
-					// Notify user
-					mw.notify(
-						this.getMessage( 'layers-set-loaded', `Loaded layer set: ${ setName }` )
-							.replace( '$1', setName ),
-						{ type: 'info' }
-					);
-				} );
-			} ).catch( ( error ) => {
+				// Notify user
+				mw.notify(
+					this.getMessage( 'layers-set-loaded', `Loaded layer set: ${ setName }` )
+						.replace( '$1', setName ),
+					{ type: 'info' }
+				);
+			} catch ( error ) {
 				if ( mw.log && mw.log.error ) {
 					mw.log.error( '[RevisionManager] Error loading layer set by name:', error );
 				}
@@ -334,7 +332,7 @@
 					this.getMessage( 'layers-set-load-error', 'Failed to load layer set' ),
 					{ type: 'error' }
 				);
-			} );
+			}
 		}
 
 		/**
@@ -342,7 +340,7 @@
 		 * @param {string} setName The name for the new set
 		 * @return {Promise<boolean>} True if creation succeeded
 		 */
-		createNewLayerSet( setName ) {
+		async createNewLayerSet( setName ) {
 			// Delegate to LayerSetManager if available
 			if ( this.editor.layerSetManager ) {
 				return this.editor.layerSetManager.createNewLayerSet( setName );
@@ -354,7 +352,7 @@
 						this.getMessage( 'layers-set-name-required', 'Please enter a name for the new set' ),
 						{ type: 'warn' }
 					);
-					return Promise.resolve( false );
+					return false;
 				}
 
 				const trimmedName = setName.trim();
@@ -366,7 +364,7 @@
 							'Set name can only contain letters, numbers, hyphens, and underscores' ),
 						{ type: 'error' }
 					);
-					return Promise.resolve( false );
+					return false;
 				}
 
 				// Check for duplicate names
@@ -377,7 +375,7 @@
 						this.getMessage( 'layers-set-name-exists', 'A set with this name already exists' ),
 						{ type: 'error' }
 					);
-					return Promise.resolve( false );
+					return false;
 				}
 
 				// Check limit
@@ -388,7 +386,7 @@
 							.replace( '$1', maxSets ),
 						{ type: 'error' }
 					);
-					return Promise.resolve( false );
+					return false;
 				}
 
 				this.debugLog( `Creating new layer set: ${ trimmedName }` );
@@ -410,15 +408,15 @@
 					this.editor.layerPanel.updateLayerList( [] );
 				}
 
-				// Add to named sets list
-				namedSets.push( {
+				// Add to named sets list — create a new array so state listeners see a changed reference
+				const newItem = {
 					name: trimmedName,
 					revision_count: 0,
 					latest_revision: null,
 					latest_timestamp: null,
 					latest_user_name: mw.config.get( 'wgUserName' )
-				} );
-				this.stateManager.set( 'namedSets', namedSets );
+				};
+				this.stateManager.set( 'namedSets', [ ...namedSets, newItem ] );
 
 				// Rebuild selector
 				this.buildSetSelector();
@@ -433,7 +431,7 @@
 					{ type: 'info' }
 				);
 
-				return Promise.resolve( true );
+				return true;
 			} catch ( error ) {
 				if ( mw.log && mw.log.error ) {
 					mw.log.error( '[RevisionManager] Error creating new layer set:', error );
@@ -442,7 +440,7 @@
 					this.getMessage( 'layers-set-create-error', 'Failed to create layer set' ),
 					{ type: 'error' }
 				);
-				return Promise.resolve( false );
+				return false;
 			}
 		}
 

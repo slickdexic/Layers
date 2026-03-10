@@ -20,8 +20,9 @@ use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
+use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use Title;
+use MediaWiki\Title\Title;
 
 class ApiLayersInfo extends ApiBase {
 	use ForeignFileHelperTrait;
@@ -99,6 +100,11 @@ class ApiLayersInfo extends ApiBase {
 
 		// Handle slide requests (slidename parameter)
 		if ( $slidename !== null && $slidename !== '' ) {
+			// Validate slidename for security and consistency
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideRequest( $slidename, $setName, $limit, $layerSetId );
 			return;
 		}
@@ -107,6 +113,11 @@ class ApiLayersInfo extends ApiBase {
 		if ( $filename !== null && strpos( $filename, LayersConstants::SLIDE_PREFIX ) === 0 ) {
 			// Remove 'Slide:' prefix
 			$slidename = substr( $filename, strlen( LayersConstants::SLIDE_PREFIX ) );
+			// Validate extracted slidename
+			$validator = new SlideNameValidator();
+			if ( !$validator->isValid( $slidename ) ) {
+				$this->dieWithError( 'layers-invalid-slidename', 'invalidslidename' );
+			}
 			$this->executeSlideRequest( $slidename, $setName, $limit, $layerSetId );
 			return;
 		}
@@ -142,10 +153,19 @@ class ApiLayersInfo extends ApiBase {
 		$normalizedName = $title->getDBkey();
 
 		// Capture original image dimensions for client-side scaling
-		$origWidth = method_exists( $file, 'getWidth' ) ? (int)$file->getWidth() : null;
-		$origHeight = method_exists( $file, 'getHeight' ) ? (int)$file->getHeight() : null;
+		$origWidth = (int)$file->getWidth();
+		$origHeight = (int)$file->getHeight();
 
 		$db = $this->getLayersDatabase();
+
+		// Verify database schema exists
+		if ( !$db->isSchemaReady() ) {
+			$this->dieWithError(
+				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
+				'dbschema-missing'
+			);
+		}
+
 		$fileSha1 = $this->getFileSha1( $file, $normalizedName );
 
 		// SHA1 mismatch fallback: for foreign files, the SHA1 may have been
@@ -273,7 +293,10 @@ class ApiLayersInfo extends ApiBase {
 
 				// Get all revisions for the CURRENT set only (not all sets)
 				// This ensures the revision selector shows only relevant history
-				$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;
+				$currentSetName = null;
+				if ( $layerSet ) {
+					$currentSetName = $layerSet['name'] ?? $layerSet['setName'] ?? null;
+				}
 				if ( $currentSetName ) {
 					// Use set-specific revisions
 					$allLayerSets = $db->getSetRevisions( $normalizedName, $fileSha1, $currentSetName, $limit );
@@ -337,6 +360,14 @@ class ApiLayersInfo extends ApiBase {
 		$setName = $setName ?? LayersConstants::DEFAULT_SET_NAME;
 
 		$db = $this->getLayersDatabase();
+
+		// Verify database schema exists
+		if ( !$db->isSchemaReady() ) {
+			$this->dieWithError(
+				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
+				'dbschema-missing'
+			);
+		}
 
 		// Get the slide layer set - either by specific ID or by name
 		if ( $layerSetId !== null ) {
@@ -486,24 +517,26 @@ class ApiLayersInfo extends ApiBase {
 				}
 			}
 
-			// Batch load users
+			// Batch load users with a single SQL query to avoid N+1 per-user queries
 			$users = [];
 			if ( !empty( $userIds ) ) {
 				$userIds = array_unique( $userIds );
-				$dbr = $this->getDB();
-				$userRows = $dbr->select(
+				$dbr = MediaWikiServices::getInstance()
+					->getDBLoadBalancer()
+					->getConnection( DB_REPLICA );
+				$res = $dbr->select(
 					'user',
 					[ 'user_id', 'user_name' ],
 					[ 'user_id' => $userIds ],
 					__METHOD__
 				);
-				foreach ( $userRows as $userRow ) {
+				foreach ( $res as $userRow ) {
 					$users[(int)$userRow->user_id] = $userRow->user_name;
 				}
 			}
 
 			// Apply user names; use i18n fallback for unknown users
-			$fallback = wfMessage( 'layers-unknown-user' )->inContentLanguage()->text();
+			$fallback = $this->msg( 'layers-unknown-user' )->inContentLanguage()->text();
 			foreach ( $rows as &$row ) {
 				$userId = (int)( $row[$userIdField] ?? 0 );
 				$row[$userNameField] = $users[$userId] ?? $fallback;
@@ -560,31 +593,6 @@ class ApiLayersInfo extends ApiBase {
 	}
 
 	/**
-	 * Parse the continue parameter into an offset integer.
-	 *
-	 * @param string $continue
-	 * @return int
-	 */
-	protected function parseContinueParameter( string $continue ): int {
-		if ( strpos( $continue, 'offset|' ) === 0 ) {
-			$parts = explode( '|', $continue );
-			$offset = (int)( $parts[1] ?? 0 );
-			return max( 0, $offset );
-		}
-		return max( 0, (int)$continue );
-	}
-
-	/**
-	 * Build a continue parameter for the next offset.
-	 *
-	 * @param int $offset
-	 * @return string
-	 */
-	protected function formatContinueParameter( int $offset ): string {
-		return 'offset|' . max( 0, $offset );
-	}
-
-	/**
 	 * Get example messages for this API module
 	 *
 	 * @return array Array of example API calls with message keys
@@ -631,7 +639,7 @@ class ApiLayersInfo extends ApiBase {
 	 * @return \Wikimedia\Rdbms\IDatabase Database connection
 	 */
 	protected function getDB(): \Wikimedia\Rdbms\IDatabase {
-		return MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection( DB_REPLICA );
+		return MediaWikiServices::getInstance()->getConnectionProvider()->getReplicaDatabase();
 	}
 
 	/**

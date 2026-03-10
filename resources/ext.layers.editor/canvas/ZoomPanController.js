@@ -205,6 +205,7 @@
 			} else {
 				// Animation complete
 				this.isAnimatingZoom = false;
+				this.animationFrameId = null;
 				this.setZoomDirect( this.zoomAnimationTargetZoom );
 			}
 		}
@@ -230,6 +231,9 @@
 			}
 
 			const container = canvas.parentNode;
+			if ( !container ) {
+				return;
+			}
 			const containerWidth = container.clientWidth - 40; // padding
 			const containerHeight = container.clientHeight - 40;
 
@@ -293,6 +297,9 @@
 			const contentHeight = ( maxY - minY ) + ( padding * 2 );
 
 			const container = this.manager.canvas.parentNode;
+			if ( !container ) {
+				return;
+			}
 			const containerWidth = container.clientWidth - 40;
 			const containerHeight = container.clientHeight - 40;
 
@@ -321,19 +328,31 @@
 		 * Public zoom helper used by external handlers (wheel/pinch)
 		 *
 		 * @param {number} delta Positive to zoom in, negative to zoom out (in zoom units)
-		 * @param {{x: number, y: number}} point Canvas coordinate under the cursor to anchor zoom around
+		 * @param {{x: number, y: number}} point Buffer-pixel canvas coordinate under the cursor to anchor zoom around
 		 */
 		zoomBy( delta, point ) {
 			const target = Math.max( this.minZoom, Math.min( this.maxZoom, this.manager.zoom + delta ) );
 			if ( target === this.manager.zoom ) {
 				return;
 			}
-			// Anchor zoom around the point
-			const screenX = this.manager.panX + this.manager.zoom * point.x;
-			const screenY = this.manager.panY + this.manager.zoom * point.y;
+			// Convert buffer-pixel canvas coordinates to CSS display coordinates.
+			// resizeCanvas() sets canvas.style.width/height to fit the container while
+			// keeping canvas.width/height at the image's native pixel dimensions, so these
+			// two coordinate spaces usually differ. The CSS transform
+			// translate(panX,panY) scale(zoom) operates on CSS display units, so the
+			// anchor point must be converted before computing screen position.
+			const cssW = parseFloat( this.manager.canvas.style.width ) || this.manager.canvas.width;
+			const cssH = parseFloat( this.manager.canvas.style.height ) || this.manager.canvas.height;
+			const rx = cssW / this.manager.canvas.width;
+			const ry = cssH / this.manager.canvas.height;
+			const cx = point.x * rx;
+			const cy = point.y * ry;
+			// Anchor zoom around the point (in CSS display space)
+			const screenX = this.manager.panX + this.manager.zoom * cx;
+			const screenY = this.manager.panY + this.manager.zoom * cy;
 			this.manager.zoom = target;
-			this.manager.panX = screenX - this.manager.zoom * point.x;
-			this.manager.panY = screenY - this.manager.zoom * point.y;
+			this.manager.panX = screenX - this.manager.zoom * cx;
+			this.manager.panY = screenY - this.manager.zoom * cy;
 			this.manager.userHasSetZoom = true;
 			this.updateCanvasTransform();
 		}
