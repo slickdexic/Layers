@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-92.19%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C250%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-91.32%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-11%2C445%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -322,12 +322,12 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,421 passing (167 suites) |
+| Jest tests | 11,445 passing (168 suites) |
 | PHPUnit tests | 31 test files |
-| Statement coverage | 92.19% |
-| Branch coverage | 82.15% |
-| Function coverage | 91.48% |
-| Line coverage | 92.25% |
+| Statement coverage | 91.32% |
+| Branch coverage | 81.69% |
+| Function coverage | 90.62% |
+| Line coverage | 91.39% |
 
 **Security:**
 
@@ -382,10 +382,10 @@ npm run test:js -- --coverage
 | Total JS lines | ~99,730 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>1000 lines) | 23 | ✅ Well-delegated facades |
-| Tests passing | 11,421 | ✅ |
+| Tests passing | 11,445 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 92.19% | ✅ Excellent |
-| Branch coverage | 82.15% | ✅ Target met |
+| Statement coverage | 91.32% | ✅ Excellent |
+| Branch coverage | 81.69% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

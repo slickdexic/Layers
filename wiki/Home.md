@@ -5,7 +5,7 @@
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
   <img src="https://img.shields.io/badge/Tests-11%2C445%20passing-brightgreen" alt="11,445 Tests">
-  <img src="https://img.shields.io/badge/Coverage-95.19%25-brightgreen" alt="95.19% Coverage">
+  <img src="https://img.shields.io/badge/Coverage-91.32%25-brightgreen" alt="91.32% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -318,10 +318,10 @@ See [[Changelog]] for full details.
 | **Test Suites** | 168 |
 | **Total Tests** | 11,445 |
 | **PHPUnit Test Files** | 31 |
-| **Statement Coverage** | 92.19% |
-| **Branch Coverage** | 82.15% |
-| **Function Coverage** | 93.67% |
-| **Line Coverage** | 95.32% |
+| **Statement Coverage** | 91.32% |
+| **Branch Coverage** | 81.69% |
+| **Function Coverage** | 90.62% |
+| **Line Coverage** | 91.39% |
 | **JavaScript Files** | 143 |
 | **ES6 Classes** | 140 |
 | **God Classes** | 22 (2 generated, 18 JS, 2 PHP) |
