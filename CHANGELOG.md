@@ -15,12 +15,17 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Code Quality
 - **PHPCS zero warnings** — Fixed all 33 errors (line endings) and 13 warnings across 6 PHP files: wrapped long regex lines in `ColorValidator.php`, `ThumbnailRenderer.php`, and `LayerInjector.php`; replaced `wfMessage()` with `$this->msg()` in `ApiLayersInfo.php`; added phpcs:ignore for legitimate same-line `@codeCoverageIgnore` comments.
+- **PHP line endings normalized** — Converted all 78 PHP files from CRLF to LF. Added `.gitattributes` with `eol=lf` to prevent future line ending drift on Windows.
 
 ### Tests
 - Added PHPUnit regression coverage for polygon/star thumbnail shadow generation.
 - Tightened Jest coverage around custom-shape spread-shadow temp canvas sizing.
 - Added `LogSanitizer.test.js` — 26 tests covering sanitization of tokens, hex strings, paths, URLs, IPs, emails, truncation, and object traversal.
 - Added `GroupHierarchyHelper.test.js` — 52 tests covering all 12 static methods including hierarchy traversal, bounds calculation, and group operations.
+- Added `LayerDefaults.test.js` — 18 tests covering all constants, immutability (Object.freeze), and exports.
+- Added `HelpDialog.test.js` — 40 tests covering constructor, show/close lifecycle, overlay/dialog ARIA, 4-tab system, DOM cleanup, and destroy.
+- Extended `ToolManager.test.js` — 27 new dispatch tests covering startTool/updateTool/finishTool switch-case paths for all 9 tool types, plus pen drawing and ShapeFactory integration. Total: 111 tests (up from 84).
+- **Jest coverage threshold achieved** — 92.19% statements, 82.15% branches, 92.25% lines (167 suites, 11,421 tests).
 
 ## [1.5.59] - 2026-03-04
 

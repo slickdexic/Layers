@@ -1039,4 +1039,259 @@ describe( 'ToolManager', () => {
 			expect( () => toolManager.setTool( 'circle' ) ).not.toThrow();
 		} );
 	} );
+
+	describe( 'startTool dispatch', () => {
+		const point = { x: 50, y: 50 };
+
+		it( 'should dispatch pen to startPenDrawing', () => {
+			toolManager.currentTool = 'pen';
+			const spy = jest.spyOn( toolManager, 'startPenDrawing' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+			expect( toolManager.isDrawing ).toBe( true );
+		} );
+
+		it( 'should dispatch rectangle to startRectangleTool', () => {
+			toolManager.currentTool = 'rectangle';
+			const spy = jest.spyOn( toolManager, 'startRectangleTool' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+
+		it( 'should dispatch textbox to startTextBoxTool', () => {
+			toolManager.currentTool = 'textbox';
+			const spy = jest.spyOn( toolManager, 'startTextBoxTool' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+
+		it( 'should dispatch circle to startCircleTool', () => {
+			toolManager.currentTool = 'circle';
+			const spy = jest.spyOn( toolManager, 'startCircleTool' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+
+		it( 'should dispatch ellipse to startEllipseTool', () => {
+			toolManager.currentTool = 'ellipse';
+			const spy = jest.spyOn( toolManager, 'startEllipseTool' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+
+		it( 'should dispatch line to startLineTool', () => {
+			toolManager.currentTool = 'line';
+			const spy = jest.spyOn( toolManager, 'startLineTool' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+
+		it( 'should dispatch arrow to startArrowTool', () => {
+			toolManager.currentTool = 'arrow';
+			const spy = jest.spyOn( toolManager, 'startArrowTool' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+
+		it( 'should dispatch polygon to startPolygonTool', () => {
+			toolManager.currentTool = 'polygon';
+			const spy = jest.spyOn( toolManager, 'startPolygonTool' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+
+		it( 'should dispatch star to startStarTool', () => {
+			toolManager.currentTool = 'star';
+			const spy = jest.spyOn( toolManager, 'startStarTool' );
+			toolManager.startTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+	} );
+
+	describe( 'updateTool dispatch', () => {
+		const startPt = { x: 50, y: 50 };
+		const updatePt = { x: 150, y: 150 };
+
+		beforeEach( () => {
+			toolManager.isDrawing = true;
+			toolManager.startPoint = startPt;
+			toolManager.tempLayer = {
+				type: 'rectangle',
+				x: 50, y: 50, width: 0, height: 0,
+				radius: 0, radiusX: 0, radiusY: 0,
+				x2: 0, y2: 0, outerRadius: 0, innerRadius: 0,
+				points: [ { x: 50, y: 50 } ]
+			};
+		} );
+
+		it( 'should dispatch pen to updatePenDrawing', () => {
+			toolManager.currentTool = 'pen';
+			toolManager.updateTool( updatePt );
+			expect( toolManager.tempLayer.points ).toHaveLength( 2 );
+			expect( toolManager.tempLayer.points[ 1 ] ).toEqual( updatePt );
+		} );
+
+		it( 'should dispatch rectangle to updateRectangleTool', () => {
+			toolManager.currentTool = 'rectangle';
+			toolManager.updateTool( updatePt );
+			expect( toolManager.tempLayer.width ).toBe( 100 );
+			expect( toolManager.tempLayer.height ).toBe( 100 );
+		} );
+
+		it( 'should dispatch textbox to updateRectangleTool', () => {
+			toolManager.currentTool = 'textbox';
+			toolManager.updateTool( updatePt );
+			expect( toolManager.tempLayer.width ).toBe( 100 );
+		} );
+
+		it( 'should dispatch circle to updateCircleTool', () => {
+			toolManager.currentTool = 'circle';
+			toolManager.updateTool( updatePt );
+			const expected = Math.sqrt( 100 * 100 + 100 * 100 );
+			expect( toolManager.tempLayer.radius ).toBeCloseTo( expected );
+		} );
+
+		it( 'should dispatch ellipse to updateEllipseTool', () => {
+			toolManager.currentTool = 'ellipse';
+			toolManager.updateTool( updatePt );
+			expect( toolManager.tempLayer.radiusX ).toBe( 50 );
+			expect( toolManager.tempLayer.radiusY ).toBe( 50 );
+			expect( toolManager.tempLayer.x ).toBe( 100 );
+			expect( toolManager.tempLayer.y ).toBe( 100 );
+		} );
+
+		it( 'should dispatch line to updateLineTool', () => {
+			toolManager.currentTool = 'line';
+			toolManager.updateTool( updatePt );
+			expect( toolManager.tempLayer.x2 ).toBe( 150 );
+			expect( toolManager.tempLayer.y2 ).toBe( 150 );
+		} );
+
+		it( 'should dispatch arrow to updateLineTool', () => {
+			toolManager.currentTool = 'arrow';
+			toolManager.updateTool( updatePt );
+			expect( toolManager.tempLayer.x2 ).toBe( 150 );
+		} );
+
+		it( 'should dispatch polygon to updatePolygonTool', () => {
+			toolManager.currentTool = 'polygon';
+			toolManager.updateTool( updatePt );
+			const expected = Math.sqrt( 100 * 100 + 100 * 100 );
+			expect( toolManager.tempLayer.radius ).toBeCloseTo( expected );
+		} );
+
+		it( 'should dispatch star to updateStarTool', () => {
+			toolManager.currentTool = 'star';
+			toolManager.updateTool( updatePt );
+			const expected = Math.sqrt( 100 * 100 + 100 * 100 );
+			expect( toolManager.tempLayer.outerRadius ).toBeCloseTo( expected );
+			expect( toolManager.tempLayer.radius ).toBeCloseTo( expected );
+			expect( toolManager.tempLayer.innerRadius ).toBeCloseTo( expected * 0.4 );
+		} );
+	} );
+
+	describe( 'finishTool dispatch', () => {
+		const point = { x: 150, y: 150 };
+
+		it( 'should dispatch pen to finishPenDrawing and add layer with valid points', () => {
+			toolManager.isDrawing = true;
+			toolManager.currentTool = 'pen';
+			toolManager.tempLayer = {
+				type: 'path',
+				points: [ { x: 10, y: 10 }, { x: 50, y: 50 } ]
+			};
+			const spy = jest.spyOn( toolManager, 'addLayerToCanvas' );
+			toolManager.finishTool( point );
+			expect( spy ).toHaveBeenCalled();
+			expect( toolManager.isDrawing ).toBe( false );
+			expect( toolManager.startPoint ).toBeNull();
+		} );
+
+		it( 'should not add pen layer with only one point', () => {
+			toolManager.isDrawing = true;
+			toolManager.currentTool = 'pen';
+			toolManager.tempLayer = {
+				type: 'path',
+				points: [ { x: 10, y: 10 } ]
+			};
+			const spy = jest.spyOn( toolManager, 'addLayerToCanvas' );
+			toolManager.finishTool( point );
+			expect( spy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should dispatch shape tools to finishShapeDrawing', () => {
+			const shapeTools = [ 'rectangle', 'textbox', 'circle', 'ellipse', 'line', 'arrow', 'polygon', 'star' ];
+			for ( const tool of shapeTools ) {
+				toolManager.isDrawing = true;
+				toolManager.currentTool = tool;
+				toolManager.tempLayer = { type: tool, width: 100, height: 100, radius: 50 };
+				const spy = jest.spyOn( toolManager, 'finishShapeDrawing' );
+				toolManager.finishTool( point );
+				expect( spy ).toHaveBeenCalled();
+				expect( toolManager.isDrawing ).toBe( false );
+				spy.mockRestore();
+			}
+		} );
+
+		it( 'should add valid-sized layer via finishShapeDrawing', () => {
+			toolManager.isDrawing = true;
+			toolManager.currentTool = 'rectangle';
+			toolManager.tempLayer = { type: 'rectangle', width: 100, height: 100 };
+			const spy = jest.spyOn( toolManager, 'addLayerToCanvas' );
+			toolManager.finishTool( point );
+			expect( spy ).toHaveBeenCalled();
+			expect( toolManager.tempLayer ).toBeNull();
+		} );
+
+		it( 'should not add zero-size layer via finishShapeDrawing', () => {
+			toolManager.isDrawing = true;
+			toolManager.currentTool = 'rectangle';
+			toolManager.tempLayer = { type: 'rectangle', width: 0, height: 0 };
+			if ( toolManager.shapeFactory ) {
+				jest.spyOn( toolManager.shapeFactory, 'hasValidSize' ).mockReturnValue( false );
+			}
+			toolManager.finishTool( point );
+			expect( toolManager.tempLayer ).toBeNull();
+		} );
+	} );
+
+	describe( 'startTextBoxTool', () => {
+		it( 'should create temp layer via ShapeFactory', () => {
+			const point = { x: 100, y: 100 };
+			toolManager.shapeFactory = {
+				createTextBox: jest.fn().mockReturnValue( { type: 'textbox', x: 100, y: 100, width: 0, height: 0 } )
+			};
+			toolManager.startTextBoxTool( point );
+			expect( toolManager.shapeFactory.createTextBox ).toHaveBeenCalledWith( point );
+			expect( toolManager.tempLayer ).toBeDefined();
+		} );
+	} );
+
+	describe( 'startTextTool fallback', () => {
+		it( 'should call showTextEditor when textToolHandler is null', () => {
+			const point = { x: 100, y: 100 };
+			toolManager.textToolHandler = null;
+			const spy = jest.spyOn( toolManager, 'showTextEditor' ).mockImplementation( () => {} );
+			toolManager.startTextTool( point );
+			expect( spy ).toHaveBeenCalledWith( point );
+		} );
+	} );
+
+	describe( 'pen drawing methods', () => {
+		it( 'should create path via ShapeFactory in startPenDrawing', () => {
+			const point = { x: 10, y: 10 };
+			toolManager.shapeFactory = {
+				createPath: jest.fn().mockReturnValue( { type: 'path', points: [ point ] } )
+			};
+			toolManager.startPenDrawing( point );
+			expect( toolManager.shapeFactory.createPath ).toHaveBeenCalledWith( point );
+			expect( toolManager.tempLayer ).toBeDefined();
+		} );
+
+		it( 'should append point in updatePenDrawing', () => {
+			toolManager.tempLayer = { type: 'path', points: [ { x: 10, y: 10 } ] };
+			toolManager.updatePenDrawing( { x: 20, y: 20 } );
+			expect( toolManager.tempLayer.points ).toHaveLength( 2 );
+		} );
+	} );
 } );

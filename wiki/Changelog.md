@@ -10,7 +10,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **Custom Shape Spread Shadow Allocation** — `CustomShapeRenderer.js` now sizes the temporary spread-shadow canvas from the actual draw bounds instead of using oversized fixed offsets.
 
 ### Documentation
-- **Metrics synchronization** — Updated core docs to the March 9, 2026 audited repository totals: 11,336 Jest tests in 165 suites, 143 JS source files, ~99,730 JS source lines, 41 PHP production files, ~15,197 PHP lines, and 832 i18n keys.
+- **Metrics synchronization** — Updated core docs to the March 9, 2026 audited repository totals: 11,421 Jest tests in 167 suites, 143 JS source files, ~99,730 JS source lines, 41 PHP production files, ~15,197 PHP lines, and 832 i18n keys.
 - **Branch/support sync** — Refreshed install, architecture, and support-policy docs so `main`, `REL1_43`, and `REL1_39` all reflect the current 1.5.59 branch state.
 
 ### Code Quality

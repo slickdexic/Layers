@@ -14,12 +14,12 @@
     verification; all findings individually confirmed before inclusion.
     20+ subagent-reported issues were eliminated as false positives during
     verification rounds (see Verified Non-Issues section).
-- **Coverage:** 95.19% statements, 84.96% branches, 93.67% functions,
-    95.32% lines (`coverage/coverage-summary.json`)
+- **Coverage:** 92.19% statements, 82.15% branches, 91.48% functions,
+    92.25% lines (verified March 10, 2026)
 - **JS source files:** 143 in `resources/` excluding `resources/dist` (~99,701 lines)
 - **PHP production files:** 41 in `src/` (~15,187 lines)
 - **Jest test suites:** 163
-- **Jest test cases:** 11,336 (`npm run test:js` — verified March 9, 2026)
+- **Jest test cases:** 11,421 (`npm run test:js` — verified March 10, 2026)
 - **PHPUnit test files:** 31 in `tests/phpunit`
 - **i18n message keys:** 832 in `i18n/en.json`, 832 in `i18n/qqq.json`
 - **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
@@ -166,7 +166,7 @@ but verified as non-issues:
 | PHP production files (`src/`) | 41 |
 | PHP production lines (`src/`) | ~15,187 |
 | Jest test suites | 163 |
-| Jest tests | 11,336 |
+| Jest tests | 11,421 |
 | i18n keys (`en.json`, `qqq.json`) | 832 |
 | Files > 1,000 lines | 23 total |
 
@@ -1436,7 +1436,7 @@ StateManager is used for editor-level state (tool selection, zoom, etc.), NOT fo
 
 ## Conclusion
 
-The Layers extension has a **strong foundation** with excellent test coverage (95.19% statement, 84.96% branch), modern ES6 architecture (100% class migration), comprehensive server-side validation, and proper CSRF/SQL injection protection. 205 bugs have been found and fixed across v22–v45 review cycles.
+The Layers extension has a **strong foundation** with excellent test coverage (92.19% statement, 82.15% branch), modern ES6 architecture (100% class migration), comprehensive server-side validation, and proper CSRF/SQL injection protection. 205 bugs have been found and fixed across v22–v45 review cycles.
 
 **The v45 fresh audit** uncovered 1 critical security issue (clickjacking bypass), 4 high-severity issues (manual HTML, innerHTML trust, state mutation bypass, stale originalName), 8 medium issues (SVG data URI, cache pollution, GPU churn, N+1 queries, TextSanitizer gaps, static state bleed, duplicate bounds, ellipse validation), and 14+ low issues (code quality, duplication, performance micro-optimizations). The god class count was corrected from 17 to 20.
 
@@ -1468,7 +1468,7 @@ Open items as of v45.6 (post-batch 6):
 2. Update documentation metrics (god class count, line counts, test counts)
 3. Extract `isFalsyBackground(value)` to LayerDataNormalizer (DRY)
 
-**Overall Grade: A** — Excellent core with strong testing (11,336 tests, 95.19% coverage), modern architecture, and thorough security controls. All critical and high-severity security issues resolved. All P2 items resolved. The remaining open items are predominantly code quality (P3) improvements and documentation accuracy.
+**Overall Grade: A** — Excellent core with strong testing (11,421 tests, 92.19% coverage), modern architecture, and thorough security controls. All critical and high-severity security issues resolved. All P2 items resolved. The remaining open items are predominantly code quality (P3) improvements and documentation accuracy.
 
 ---
 

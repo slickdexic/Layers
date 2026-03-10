@@ -47,7 +47,7 @@ section below as the authoritative current backlog.
 - God class count corrected from 21 → 23 (3 files newly tracked:
   AngleDimensionRenderer 1,067, CanvasEvents 1,033, CalloutRenderer 1,000).
 - PHP lines updated from ~15,161 → ~15,187.
-- `npm test` passed with **165 suites / 11,336 tests**.
+- `npm test` passed with **167 suites / 11,421 tests**.
 - i18n key count confirmed at **831** (still misstated as 832 in docs).
 - All v47 open items carried forward and re-verified as still present.
 

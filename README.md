@@ -322,7 +322,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,336 passing (165 suites) |
+| Jest tests | 11,421 passing (167 suites) |
 | PHPUnit tests | 31 test files |
 | Statement coverage | 95.19% |
 | Branch coverage | 84.96% |
@@ -382,7 +382,7 @@ npm run test:js -- --coverage
 | Total JS lines | ~99,730 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>1000 lines) | 22 | ✅ Well-delegated facades |
-| Tests passing | 11,336 | ✅ |
+| Tests passing | 11,421 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.19% | ✅ Excellent |
 | Branch coverage | 84.96% | ✅ Target met |
