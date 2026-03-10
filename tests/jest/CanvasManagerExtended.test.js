@@ -76,6 +76,7 @@ describe( 'CanvasManager Extended Coverage', () => {
 			startDrag: jest.fn(),
 			handleDrag: jest.fn(),
 			finishDrag: jest.fn(),
+			updateLayerPosition: jest.fn(),
 			isResizing: false,
 			isRotating: false,
 			isDragging: false,
@@ -1146,7 +1147,7 @@ describe( 'CanvasManager Extended Coverage', () => {
 	} );
 
 	describe( 'updateLayerPosition for paths with control points', () => {
-		it( 'should move control points for curved arrows', () => {
+		it( 'should delegate curved arrow position update to TransformController', () => {
 			const layer = {
 				id: 'arrow-1',
 				type: 'arrow',
@@ -1159,11 +1160,11 @@ describe( 'CanvasManager Extended Coverage', () => {
 
 			canvasManager.updateLayerPosition( layer, originalState, 20, 30 );
 
-			expect( layer.controlX ).toBe( 70 ); // 50 + 20
-			expect( layer.controlY ).toBe( 80 ); // 50 + 30
+			expect( canvasManager.transformController.updateLayerPosition )
+				.toHaveBeenCalledWith( layer, originalState, 20, 30 );
 		} );
 
-		it( 'should handle arrows without control points', () => {
+		it( 'should delegate arrow-without-controls to TransformController', () => {
 			const layer = {
 				id: 'arrow-1',
 				type: 'arrow',
@@ -1174,8 +1175,8 @@ describe( 'CanvasManager Extended Coverage', () => {
 
 			canvasManager.updateLayerPosition( layer, originalState, 20, 30 );
 
-			expect( layer.controlX ).toBeUndefined();
-			expect( layer.controlY ).toBeUndefined();
+			expect( canvasManager.transformController.updateLayerPosition )
+				.toHaveBeenCalledWith( layer, originalState, 20, 30 );
 		} );
 	} );
 

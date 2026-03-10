@@ -312,7 +312,7 @@
 					allLayerSets: this.editor.stateManager.get( 'allLayerSets' ) || [],
 					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' )
 				} );
-			} ).catch( ( code, result ) => {
+			}, ( code, result ) => {
 				this.hideSpinner();
 				// Clear loading state on error
 				if ( this.editor.stateManager ) {
@@ -589,7 +589,9 @@
 		}
 
 		const cacheHint = fromCache ? ' (from cache)' : '';
-		mw.notify( this.getMessage( 'layers-revision-loaded' ) + cacheHint, { type: 'success' } );
+		if ( typeof mw !== 'undefined' ) {
+			mw.notify( this.getMessage( 'layers-revision-loaded' ) + cacheHint, { type: 'success' } );
+		}
 		return data;
 	}
 
@@ -606,11 +608,11 @@
 				try {
 					const result = this._processRevisionData( cachedData, true );
 					resolve( result );
+					return;
 				} catch ( error ) {
 					// Cache data was invalid, fall through to API fetch
 					this.responseCache.delete( cacheKey );
 				}
-				return;
 			}
 
 			this.showSpinner( this.getMessage( 'layers-loading' ) );
@@ -637,7 +639,7 @@
 				} else {
 					reject( new Error( 'Revision not found' ) );
 				}
-			} ).catch( ( code, result ) => {
+			}, ( code, result ) => {
 				this._clearRequest( 'loadRevision' );
 				// Ignore aborted requests (user switched before this completed)
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {
@@ -812,7 +814,7 @@
 				const result = this._processSetNameData( data, setName, false );
 				resolve( result );
 
-			} ).catch( ( code, result ) => {
+			}, ( code, result ) => {
 				this._clearRequest( 'loadSetByName' );
 				// Ignore aborted requests (user switched before this completed)
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {
@@ -857,7 +859,6 @@
 			}
 
 			this.saveInProgress = true;
-			this.showSpinner( this.getMessage( 'layers-saving' ) );
 			this.disableSaveButton();
 
 			let payload;
@@ -895,7 +896,8 @@
 		}
 		
 		const validator = new LayersValidator();
-		const validationResult = validator.validateLayers( layers, 100 );
+		const maxLayers = ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersMaxLayerCount' ) ) || 100;
+		const validationResult = validator.validateLayers( layers, maxLayers );
 
 		if ( !validationResult.isValid ) {
 			validator.showValidationErrors( validationResult.errors, 'save' );
@@ -972,7 +974,7 @@
 			this.enableSaveButton();
 			this.handleSaveSuccess( data );
 			resolve( data );
-		} ).catch( ( code, result ) => {
+		}, ( code, result ) => {
 			// Log errors for debugging (controlled by extension config)
 			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 				mw.log.error( '[APIManager] Save error caught:', {

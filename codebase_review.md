@@ -1,9 +1,9 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 9, 2026 (v48 audit)
-**Previous Review:** March 10, 2026 (v47 audit)
-**Version:** 1.5.59
-**Reviewer:** GitHub Copilot (Claude Opus 4.6)
+**Review Date:** March 10, 2026 (v49 audit)
+**Previous Review:** March 9, 2026 (v48 audit)
+**Version:** 1.5.60
+**Reviewer:** GitHub Copilot (Claude Sonnet 4.6)
 
 ---
 
@@ -11,14 +11,15 @@
 
 - **Branch Reviewed:** `main`
 - **Verification Method:** Direct source inspection with multi-pass
-    verification; all findings individually confirmed before inclusion.
-    20+ subagent-reported issues were eliminated as false positives during
-    verification rounds (see Verified Non-Issues section).
+    verification; all findings individually confirmed against actual code
+    before inclusion. Known false-positive patterns from prior reviews
+    were checked and excluded. 5 subagent-reported issues were eliminated
+    as false positives during this v49 round (see Verified Non-Issues).
 - **Coverage:** 92.19% statements, 82.15% branches, 91.48% functions,
     92.25% lines (verified March 10, 2026)
-- **JS source files:** 143 in `resources/` excluding `resources/dist` (~99,701 lines)
-- **PHP production files:** 41 in `src/` (~15,187 lines)
-- **Jest test suites:** 163
+- **JS source files:** 143 in `resources/` excluding `resources/dist` (~99,730 lines)
+- **PHP production files:** 41 in `src/` (~15,197 lines)
+- **Jest test suites:** 167
 - **Jest test cases:** 11,421 (`npm run test:js` — verified March 10, 2026)
 - **PHPUnit test files:** 31 in `tests/phpunit`
 - **i18n message keys:** 832 in `i18n/en.json`, 832 in `i18n/qqq.json`
@@ -30,131 +31,654 @@
 
 ## Executive Summary
 
-This v48 audit performed a comprehensive full-codebase review of all PHP
-(`src/`) and JavaScript (`resources/`) source files, documentation
-(all `.md` and `.mediawiki` files), configuration (`extension.json`,
-`.eslintrc.json`, `jest.config.js`), and test infrastructure. Over 20
-subagent-reported issues were verified as false positives and excluded.
+This v49 audit performed a full-codebase review of all PHP (`src/`) and
+JavaScript (`resources/`) source files plus all documentation. The review
+was conducted with a high false-positive threshold — all findings were
+verified against literal source code before inclusion.
 
-The v48 review found **3 new verified bugs** not previously reported,
-plus significant metrics drift in documentation. **All 9 bugs (3 HIGH,
-5 MEDIUM, 1 docs) have been fixed and verified with 8 new regression
-tests.** The codebase demonstrates excellent architecture with 95%+ test
-coverage and no critical security vulnerabilities.
+The v49 review found **54 new verified issues**: 11 HIGH, 18 MEDIUM,
+15 LOW, and 10 documentation issues. These are distributed across PHP
+backend, JavaScript editor core, canvas/rendering modules, and documentation.
+Unlike prior reviews, none of the new HIGH findings have been fixed yet —
+they are all open as of March 10, 2026.
 
-### New Findings (v48) — All Fixed
+Notable new findings include a **privilege escalation risk** (wiki page-deletion
+right used as Layers admin gate), **information disclosure** in two special
+pages (DB queries run before permission checks), a **permanently-hanging Promise**
+when cached revision data is corrupt, **wrong validation bounds** in
+ValidationManager (more restrictive than the server), and **smart guides
+completely non-functional** for line/arrow/path/dimension layer types.
 
-1. ~~**1 HIGH bug:**~~ Division by zero in `CanvasManager.getMousePointFromClient()`
-   — **Fixed** with zero guards + regression test.
-2. ~~**2 MEDIUM bugs:**~~ Angle dimension phase not reset on tool switch;
-   missing destruction guards in arrow tip RAF — **Both fixed** with
-   regression tests.
-3. **Documentation metrics drift** (partially fixed): i18n key count
-   corrected to 832. God class count, PHP line count, test count still
-   diverge slightly across docs.
+All v48 bugs have been confirmed as fixed. The codebase retains strong
+architecture and comprehensive test coverage, but this audit reveals a
+cluster of correctness bugs in the JS layer that did not exist in earlier
+versions, introduced during the large v42–v46 feature additions. The
+documentation drift problem (incorrect metrics in README, CHANGELOG, and
+ARCHITECTURE.md) continues despite partial fixes in prior reviews.
 
-### Previously Open Items (Carried Forward from v47) — All Fixed
+---
 
-1. **2 HIGH bugs (from v47):** ~~P1-041~~ (nudge `snapshot()` →
-   `saveState()`) — Fixed. ~~P1-042b~~ (DraftManager image loss
-   on recovery) — Fixed with `mw.notify` warning.
-2. **3 MEDIUM bugs (from v47):** ~~P2-099~~ (viewer blend mode) —
-   Fixed with `clearRect`. ~~P2-100~~ (delete race) — Fixed with
-   warning log. ~~P2-101~~ (prune outside transaction) — Fixed by
-   moving inside atomic block.
-3. **Pre-existing LOW items** carried forward from v46.
+## Confirmed Open Findings (v49 — March 10, 2026)
 
-Historical v45–v47 detail is retained below for traceability. Where older
-narrative conflicts with this v48 section, this section is authoritative.
+### High
 
-## Confirmed Open Findings (v48 — March 9, 2026)
+#### PHP — 3 items
 
-*All HIGH and MEDIUM bugs from v48 have been fixed. Only LOW items remain.*
+**P1-045 · LayersApiHelperTrait `isAllowed('delete')` Privilege Confusion**
+- **File:** `src/Api/Traits/LayersApiHelperTrait.php` L106
+- **Code:** `$isAdmin = $user->isAllowed( 'delete' );`
+- **Impact:** The `'delete'` right in MediaWiki controls wiki **page deletion**,
+    not layer administration. Any user with page-deletion rights (typically
+    `sysop`) becomes an unrestricted Layers admin, able to delete or rename
+    any user's layer sets. Conversely, a dedicated layers admin who does not
+    have page-deletion rights cannot moderate layer content. The two domains
+    are completely unrelated.
+- **Fix:** Introduce a `layers-admin` right in `extension.json` (default
+    `sysop`) and check that instead:
+    `$isAdmin = $user->isAllowed( 'layers-admin' );`
 
-### High — All Fixed
+**P1-046 · SpecialSlides.php DB Query Before Permission Check**
+- **File:** `src/SpecialPages/SpecialSlides.php` L172 (DB query), L179 (permission check)
+- **Impact:** `getLayerSetByName()` is called on line 172 before
+    `userHasRight( $user, 'editlayers' )` is checked on line 179.
+    Unauthorized users can probe slide existence by observing which error
+    message they receive. Different code paths (does-not-exist vs. no-permission)
+    produce distinct responses, allowing enumeration of slide names via
+    timing or error message differences.
+- **Fix:** Move the permission check to before the DB query (before line 172).
 
-1. ~~**CanvasManager.getMousePointFromClient() division by zero**~~
-     (P1-044) — Fixed. Added ternary zero guards. Regression test added.
+**P1-047 · SpecialEditSlide.php DB Query Before Permission Check**
+- **File:** `src/SpecialPages/SpecialEditSlide.php`
+- **Impact:** Same pattern as P1-046 — slide record fetched from DB before
+    edit permission is verified. Same information-disclosure consequence.
+- **Fix:** Same as P1-046 — reorder the permission check to precede any
+    database query.
 
-2. ~~**EventManager nudge calls non-existent `snapshot()`**~~
-     (P1-041) — Fixed. Changed to `saveState('nudge')`. Test updated.
+#### JavaScript — 5 items
 
-3. ~~**DraftManager silently loses image layer data on recovery**~~
-     (P1-042b) — Fixed. Added `_srcStripped` detection, cleanup,
-     and `mw.notify` warning. New i18n key added. Regression tests added.
+**P1-048 · APIManager Cache Exception Leaves Promise Permanently Pending**
+- **File:** `resources/ext.layers.editor/APIManager.js` L617–636
+    (`loadRevisionById`, cache-hit path)
+- **Code:**
+    ```javascript
+    try {
+        const result = this._processRevisionData( cachedData, true );
+        resolve( result );
+    } catch ( error ) {
+        this.responseCache.delete( cacheKey );
+    }
+    return;   // ← executes even after the catch
+    ```
+- **Impact:** When `_processRevisionData` throws on corrupt cached data,
+    the cache entry is deleted but `return` still exits the Promise
+    constructor. The Promise is left in perpetually-pending state —
+    no error is surfaced, no retry fires, and the editor silently freezes
+    on revision load.
+- **Fix:** Move `return;` inside the `try` block (before `resolve`), so the
+    catch falls through to the API fetch below.
 
-### Medium — All Fixed
+**P1-049 · APIManager `.catch()` Always Receives Undefined `result` — 4 Sites**
+- **File:** `resources/ext.layers.editor/APIManager.js` L315, L640, L815, L975
+- **Code:** `} ).catch( ( code, result ) => {`
+- **Impact:** In jQuery ≥ 3.0, `.then()` → `.catch()` chains lose all
+    arguments after the first on rejection (documented jQuery behavior).
+    `result` is always `undefined` at all four call sites. Consequences:
+    abort detection (`result.textStatus === 'abort'`) never fires — aborted
+    requests during rapid revision switching produce spurious error notifications;
+    retry logic (`isRetryableError`) classifies every failure as retryable
+    (including `permissiondenied`), causing 3 wasted retries before the real
+    error is shown; error detail (`result.error.info`) is always lost.
+- **Fix:** Replace `.then( success ).catch( failure )` with
+    `.then( success, failure )` to preserve both jQuery deferred rejection
+    arguments. Or use `.done( success ).fail( failure )` throughout.
 
-4. ~~**DrawingController angle dimension phase not reset on tool switch**~~
-     (P2-102) — Fixed. Added cleanup in `CanvasManager.setTool()`.
-     Regression tests added.
+**P1-050 · HistoryManager `lastSaveHistoryIndex` Not Decremented on History Trim**
+- **File:** `resources/ext.layers.editor/HistoryManager.js` L128–136
+    (`saveState`)
+- **Code:**
+    ```javascript
+    this.history.push( state );
+    if ( this.history.length > this.maxHistorySteps ) {
+        this.history.shift();   // shifts all indices by -1
+    }
+    this.historyIndex = this.history.length - 1;  // corrected
+    // lastSaveHistoryIndex is NOT adjusted
+    ```
+- **Impact:** After reaching history capacity, `lastSaveHistoryIndex`
+    exceeds `history.length - 1`. `history[lastSaveHistoryIndex]` is
+    `undefined`. `hasUnsavedChanges()` falls back to comparing against
+    `history[0]` (initial load state) instead of the actual last-saved
+    state. The "unsaved changes" indicator becomes permanently incorrect
+    once the history is full. The fast-path short-circuit is also disabled
+    permanently, forcing a deep `layersEqual` scan on every dirty check.
+- **Fix:** After `history.shift()`, add:
+    `if ( this.lastSaveHistoryIndex > 0 ) { this.lastSaveHistoryIndex--; }`
 
-5. ~~**TransformController arrow tip RAF missing destruction guards**~~
-     (P2-103) — Fixed. Added destruction guard matching other RAF
-     callbacks. Regression tests added.
+**P1-051 · EditorBootstrap Creates Duplicate Editor Instances in Production**
+- **File:** `resources/ext.layers.editor/editor/EditorBootstrap.js` L442–443
+- **Code:** `if ( window.mw && window.mw.config.get( 'debug' ) ) { window.layersEditorInstance = editor; }`
+- **Impact:** The duplicate-prevention guard is `if ( window.layersEditorInstance ) return`.
+    In production (non-debug mode), `autoBootstrap` never registers the
+    new editor in that global. When `areEditorDependenciesReady()` returns
+    false, the hook listener defers via 100ms `setTimeout` and returns without
+    creating an editor. `autoBootstrap` sees `window.layersEditorInstance === null`,
+    creates an editor but does NOT register it. When the timeout fires, the
+    hook listener also sees `null` and creates a second editor. Two editors
+    share the same container in production.
+- **Fix:** Always set `window.layersEditorInstance = editor` after creating,
+    regardless of debug mode. Move the assignment outside the debug guard.
 
-6. ~~**LayersViewer blend mode + hidden background renders white**~~
-     (P2-099) — Fixed. Changed to `clearRect()`. Tests updated.
+**P1-052 · ValidationManager Bounds Stricter Than Server — Valid Data Rejected**
+- **File:** `resources/ext.layers.editor/ValidationManager.js` L240, L246
+- **Code:**
+    ```javascript
+    // L240: rejects fontSize < 8 (server allows 1)
+    if ( layer.fontSize && ( ... layer.fontSize < 8 || layer.fontSize > 1000 ) )
+    // L246: rejects strokeWidth > 50 (server allows 100)
+    if ( layer.strokeWidth && ( ... layer.strokeWidth > 50 ) )
+    ```
+- **Impact:** `LayersValidator` and the server both allow `fontSize` down to
+    1 and `strokeWidth` up to 100. `ValidationManager` rejects font sizes 1–7
+    and stroke widths 51–100 as invalid before the save reaches the server.
+    On wikis that use small font sizes or thick strokes (accessible design,
+    infographics), these values are blocked client-side with no clear validation
+    message.
+- **Fix:** Align `ValidationManager` bounds with the server:
+    `fontSize < 1`, `strokeWidth > 100`.
 
-7. ~~**ApiLayersDelete concurrent request race condition**~~
-     (P2-100) — Fixed. Added `$rowsDeleted === 0` warning log.
+#### Canvas — 3 items
 
-8. ~~**LayersDatabase pruneOldRevisions called outside transaction**~~
-     (P2-101) — Fixed. Moved inside atomic block.
+**P1-053 · Smart Guides Non-Functional for Line, Arrow, Path, and Dimension Layers**
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js` L486–505
+- **Code:**
+    ```javascript
+    const proposedX = ( originalState.x || 0 ) + deltaX;
+    const proposedY = ( originalState.y || 0 ) + deltaY;
+    ```
+- **Impact:** Line, arrow, path, dimension, and angleDimension layers use
+    `x1/y1/x2/y2` or a `points` array — they have no `.x`/`.y` properties.
+    `originalState.x` is `undefined`, coercing to `0`. The snap calculation
+    receives `proposedX = deltaX` (~10px) instead of the layer's actual
+    position (~200px). All snap targets are hundreds of pixels away from
+    the proposed position, so `findNearestSnap` never fires. Smart guides
+    appear enabled in the UI but are completely inert for these layer types.
+- **Fix:** For geometric layers without `.x`/`.y`, derive the reference
+    point from `getLayerBounds()` before computing the proposed position,
+    then back-calculate the adjusted delta using the bounds-based reference.
 
-9. ~~**Documentation metrics drift**~~ (P2-098/P3-126) — ✅ Fixed.
-     - God class count: corrected to 22 (2 generated, 18 JS, 2 PHP).
-     - ~~i18n key count~~ — Fixed (verified at 832).
-     - ~~CHANGELOG v1.5.59 test count~~ — Fixed (11,258).
-     - JS lines: updated to ~99,730. PHP lines: updated to ~15,197.
+**P1-054 · ZoomPanController `fitToWindow()` Null Dereference on `canvas.parentNode`**
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js` L232–234
+- **Code:**
+    ```javascript
+    const container = canvas.parentNode;
+    const containerWidth = container.clientWidth - 40;  // ← throws if parentNode is null
+    ```
+- **Impact:** If `fitToWindow()` is called while the canvas is detached
+    from the DOM (during editor teardown, in test environments, or during
+    transition animations), `canvas.parentNode` is `null` and
+    `container.clientWidth` throws `TypeError`. Prior guards check for
+    `!canvas` but not for `!canvas.parentNode`.
+- **Fix:** Add `if ( !container ) { return; }` after line 232.
+
+**P1-055 · ZoomPanController `zoomToFitLayers()` Same Null Dereference**
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js` L295–296
+- **Code:** `const container = this.manager.canvas.parentNode;`
+    followed immediately by `container.clientWidth`
+- **Impact:** Identical issue to P1-054 in the `zoomToFitLayers` path.
+- **Fix:** Same — add `if ( !container ) { return; }` guard.
+
+---
+
+### Medium
+
+#### PHP — 7 items
+
+**P2-104 · TextSanitizer Zero-Width Space Injection Corrupts User Text**
+- **File:** `src/Validation/TextSanitizer.php` L180–197
+- **Code:** Inserts `\u200B` (invisible zero-width space) before `(` in
+    patterns like `alert(`, `confirm(`, `eval(`, etc.
+- **Impact:** User annotations containing JavaScript-keyword-like text
+    (code examples, tutorials, documentation labels) are silently mutated
+    with an invisible character. `"Use alert() to notify users"` is stored
+    as `"Use alert\u200B() to notify users"`. The stored data differs from
+    what the user typed, the mutation is invisible in rendered output, and
+    it is non-reversible upon retrieval. The mitigation is also unnecessary:
+    Canvas `fillText()` cannot execute JavaScript; `removeDangerousProtocols()`
+    already strips `javascript:` URIs; and the server never executes stored
+    text as code.
+- **Fix:** Remove the zero-width space injection block entirely. The
+    existing `removeEventHandlers()` and `removeDangerousProtocols()`
+    methods provide sufficient protection for the actual threat model
+    (no XSS from canvas text).
+
+**P2-105 · `blend` Property Bypasses Enum Validation in ServerSideLayerValidator**
+- **File:** `src/Validation/ServerSideLayerValidator.php` L419–425, L544–555
+- **Code:** `'blend' => 'string'` in `ALLOWED_PROPERTIES`; `'blend'` not
+    listed in the enum-constrained properties checked against `VALUE_CONSTRAINTS`.
+- **Impact:** The `blend` property (alias for `blendMode`) is validated only
+    as an arbitrary string (max 1000 chars), not constrained to the valid
+    Canvas `globalCompositeOperation` values. Any string passes validation
+    and is then copied to `blendMode` without re-validation. Invalid blend
+    mode strings are silently stored to the DB and passed to the Canvas API,
+    which falls back to `source-over` with no error.
+- **Fix:** Add `'blend'` to the enum-constrained list using `blendMode`'s
+    `VALUE_CONSTRAINTS` for lookups.
+
+**P2-106 · `usleep()` Blocking in DB Retry Loop — Up to 300ms Added to HTTP Request**
+- **File:** `src/Database/LayersDatabase.php` L134–135
+- **Code:** `usleep( $retryCount * 100000 );  // 100ms, 200ms per retry`
+- **Impact:** On transaction conflicts (concurrent saves), the retry loop
+    calls `usleep()` with up to 300ms total sleep inside a synchronous
+    PHP-FPM worker. On wikis with concurrent editors, this cascades:
+    multiple in-flight requests sleeping together can exhaust PHP-FPM
+    worker pools and database connection pools under load.
+- **Fix:** Reduce to 10ms/20ms, or avoid sleeping entirely since the DB
+    transaction isolation already handles the conflict.
+
+**P2-107 · N+1 User Lookup in `ApiLayersInfo.enrichWithUserNames()`**
+- **File:** `src/Api/ApiLayersInfo.php` L522–528
+- **Code:**
+    ```php
+    foreach ( $userIds as $userId ) {
+        $user = $userFactory->newFromId( $userId );
+        if ( $user ) { $users[$userId] = $user->getName(); }
+    }
+    ```
+- **Impact:** Despite the `// Batch load users using UserFactory` comment,
+    `UserFactory::newFromId()` creates a lazy `User` whose name is fetched
+    via an individual DB query when `getName()` is called. For a layer set
+    history page with 50 revisions by 15 distinct users, this executes
+    15 sequential DB queries.
+- **Fix:** Replace with a single `SELECT user_id, user_name FROM user WHERE
+    user_id IN (...)` query via the connection provider's replica database.
+
+**P2-108 · Cache Invalidation Errors Silently Suppressed**
+- **File:** `src/Api/Traits/CacheInvalidationTrait.php` L55–58
+- **Code:**
+    ```php
+    } catch ( \Throwable $e ) {
+        // Cache invalidation is best-effort; don't fail the save
+    }
+    ```
+- **Impact:** Any exception during cache purging (infrastructure failure,
+    misconfiguration, CDN errors) is completely swallowed with no log entry.
+    On high-traffic wikis, stale cached content can persist indefinitely
+    with no operator visibility. The "best-effort" architecture is reasonable;
+    the silent suppression is not.
+- **Fix:** Add a warning log entry:
+    `$this->getLogger()->warning( 'Cache invalidation failed', [ 'exception' => $e ] );`
+
+**P2-109 · `wfLogWarning()` Deprecated API in RateLimiter**
+- **File:** `src/Security/RateLimiter.php` L99–100
+- **Code:** `if ( function_exists( 'wfLogWarning' ) ) { wfLogWarning( ... ); }`
+- **Impact:** `wfLogWarning()` is deprecated in MediaWiki and may be removed
+    in a future version. The `function_exists` guard prevents a fatal error
+    but causes silent loss of rate limit logging when the function is removed —
+    a security monitoring regression. All other code in the extension uses
+    `LoggerFactory::getInstance('Layers')->warning(...)` consistently.
+- **Fix:** Replace with `$this->getLogger()->warning( 'Layers rate limit: {action}...', [...] );`
+    and remove the `function_exists` guard.
+
+**P2-110 · `ApiLayersRename` Returns Wrong Error Code for Invalid Name Format**
+- **File:** `src/Api/ApiLayersRename.php`
+- **Impact:** When the `oldname` parameter fails format validation
+    (invalid characters), the API returns `ERROR_LAYERSET_NOT_FOUND`
+    ("Layer set not found"). The actual problem is a structurally invalid
+    input name, not a missing set. API consumers receive a "not found"
+    response when the correct behavior would distinguish "bad input" from
+    "not found," breaking client-side retry/create logic.
+- **Fix:** Return `ERROR_INVALID_SETNAME` for format-validation failures.
+
+#### JavaScript — 6 items
+
+**P2-111 · `parseMWTimestamp` Fallback Creates Date in Local Timezone, Not UTC**
+- **File:** `resources/ext.layers.editor/LayersEditor.js` L1042–1047
+- **Code:**
+    `return new Date( year, month, day, hour, minute, second );  // LOCAL timezone`
+    — the `revisionManager` delegate path (primary) correctly uses `Date.UTC(...)`.
+- **Impact:** When `revisionManager` is null (early initialization or an
+    error loading the module), the fallback creates timestamps in the user's
+    local timezone. For UTC+8 users, timestamps appear 8 hours ahead of the
+    actual revision time in the revision history display.
+- **Fix:** `return new Date( Date.UTC( year, month, day, hour, minute, second ) );`
+
+**P2-112 · `RevisionManager.loadLayerSetByName` Mutates `currentSetName` Before Load Succeeds**
+- **File:** `resources/ext.layers.editor/editor/RevisionManager.js` L316 (before), L319 (after)
+- **Code:**
+    ```javascript
+    this.stateManager.set( 'currentSetName', setName );   // Line 316 — optimistic
+    await this.apiManager.loadLayersBySetName( setName ); // Line 319 — may fail
+    ```
+- **Impact:** If `loadLayersBySetName` rejects (network error, set not
+    found), `currentSetName` has already been set to the failed target.
+    The error handler logs and notifies the user but never reverts
+    `currentSetName`. Subsequent saves write to the non-existent named set.
+- **Fix:** Move `stateManager.set( 'currentSetName', setName )` to after
+    the `await` call (inside the success path only).
+
+**P2-113 · DraftManager `setInterval` Callback Bypasses `isRecoveryMode` Check**
+- **File:** `resources/ext.layers.editor/DraftManager.js` L140–143
+- **Code:**
+    ```javascript
+    this.autoSaveTimer = setInterval( () => {
+        if ( this.editor.isDirty && this.editor.isDirty() ) {
+            this.saveDraft();   // No isRecoveryMode check
+        }
+    }, AUTO_SAVE_INTERVAL_MS );
+    ```
+    The `scheduleAutoSave` path (L115) correctly gates on `isRecoveryMode`,
+    but the `setInterval` callback does not.
+- **Impact:** While the recovery confirmation dialog is shown, if the
+    auto-save interval fires the editor is dirty, `saveDraft()` runs and
+    can overwrite the draft with pre-recovery data or partially-initialized
+    state.
+- **Fix:** Add `if ( this.isRecoveryMode ) { return; }` inside the interval
+    callback, mirroring the `scheduleAutoSave` guard.
+
+**P2-114 · APIManager Hardcodes Layer Limit to 100, Ignores `wgLayersMaxLayerCount`**
+- **File:** `resources/ext.layers.editor/APIManager.js` L898
+- **Code:** `const validationResult = validator.validateLayers( layers, 100 );`
+- **Impact:** On wikis configured with `$wgLayersMaxLayerCount` ≠ 100, the
+    client validation disagrees with the server. With limit = 50, layers
+    51–100 are allowed client-side but rejected server-side with a confusing
+    server error. With limit = 150, layers 101–150 are blocked client-side
+    with a "too many layers" message even though the server would accept them.
+- **Fix:** `const maxLayers = ( mw.config.get( 'wgLayersMaxLayerCount' ) ) || 100;`
+
+**P2-115 · EventManager `nudgeSelectedLayers` Directly Mutates Layer State**
+- **File:** `resources/ext.layers.editor/EventManager.js` L203–204
+- **Code:**
+    ```javascript
+    layer.x = ( layer.x || 0 ) + dx;   // Direct mutation of state object
+    layer.y = ( layer.y || 0 ) + dy;
+    ```
+- **Impact:** `getSelectedLayers()` returns references to actual objects
+    in `StateManager.state.layers`. Mutating them in-place bypasses
+    `stateManager.set('layers', ...)`: `_layersVersion` is not incremented
+    (SmartGuidesController snap cache goes stale), and layer-change
+    subscribers (DraftManager, LayerPanel coordinate display) are not
+    notified. `historyManager.saveState('nudge')` is called afterward and
+    does capture the correct final position — but the notification window
+    between mutation and save is skipped.
+- **Fix:** Use `stateManager.updateLayer( layer.id, { x: ..., y: ... } )`
+    for each nudged layer, which goes through the proper notification path.
+
+**P2-116 · DraftManager Storage Key Collision Between Files With Spaces vs Underscores**
+- **File:** `resources/ext.layers.editor/DraftManager.js` (constructor)
+- **Code:** `this.storageKey = STORAGE_KEY_PREFIX + this.filename.replace( /[^a-zA-Z0-9_.-]/g, '_' );`
+- **Impact:** `File:My Budget.jpg` and `File:My_Budget.jpg` are distinct
+    MediaWiki files (different SHA1, different history) but both normalize
+    to `File_My_Budget_jpg`, producing the same localStorage key. Opening
+    either file in the editor reads the other's draft. On shared computers
+    this causes draft cross-contamination.
+- **Fix:** Append a short hash of the raw (pre-normalization) filename to
+    ensure uniqueness.
+
+#### Canvas — 5 items
+
+**P2-117 · `CanvasManager.emitTransforming()` RAF Return Value Discarded — Fires Post-Destroy**
+- **File:** `resources/ext.layers.editor/CanvasManager.js` L843
+- **Code:**
+    ```javascript
+    this.transformEventScheduled = true;
+    window.requestAnimationFrame( () => {   // ← return value discarded
+        this.transformEventScheduled = false;
+        ...dispatch CustomEvent...
+    } );
+    ```
+    All other RAF callbacks in the codebase (`_dragRafId`, `_resizeRafId`,
+    `_rotationRafId`) store and cancel their IDs in `destroy()`.
+- **Impact:** The RAF always fires one frame after it is scheduled, even if
+    the editor is destroyed during a drag operation. The callback dispatches
+    a `layers:transforming` event using potentially stale or null data.
+- **Fix:** Store the RAF ID and cancel it in `destroy()`, matching the
+    pattern used by TransformController's other RAF animations.
+
+**P2-118 · `ZoomPanController.animationFrameId` Not Nulled When Animation Completes**
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js` L215–218
+- **Code:** Completion branch:
+    ```javascript
+    this.isAnimatingZoom = false;
+    this.setZoomDirect( this.zoomAnimationTargetZoom );
+    // ← animationFrameId still holds the old numeric ID
+    ```
+- **Impact:** After a completed animation, `animationFrameId` remains truthy.
+    Every subsequent `smoothZoomTo()` call starts by cancelling the stale
+    ID via `cancelAnimationFrame( lastId )`. This is harmless in isolation
+    but is semantically wrong and would cause issues in any code that
+    guards on `if (this.animationFrameId)` to detect "animation in progress."
+- **Fix:** Add `this.animationFrameId = null;` in the completion branch.
+
+**P2-119 · `SelectionRenderer` Allocates New `AngleDimensionRenderer` on Every Render Frame**
+- **File:** `resources/ext.layers.editor/canvas/SelectionRenderer.js` L598
+- **Code:**
+    ```javascript
+    const tempRenderer = new AngleDimensionRenderer( null );
+    const angles = tempRenderer.calculateAngles( layer );
+    ```
+    Called on every `mousemove` while an angleDimension layer is selected.
+- **Impact:** ~60 heap allocations per second during drag. `HitTestController`
+    solves the identical problem with a cached lazy instance; `SelectionRenderer`
+    does not.
+- **Fix:** Add a `_cachedAngleRenderer` property (initialized `null` in
+    constructor) and lazily create it on first use, mirroring `HitTestController`.
+
+**P2-120 · `TransformController._arrowTipRafId` Absent from Constructor**
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+    (constructor, `destroy()` L1105)
+- **Code:** `destroy()` checks `if ( this._arrowTipRafId !== null )` but the
+    property is never initialized in the constructor. Before the first arrow-tip
+    drag, `this._arrowTipRafId` is `undefined`.
+- **Impact:** The guard `undefined !== null` evaluates to `true`, causing
+    `cancelAnimationFrame(undefined)` to be called on every `destroy()`
+    invocation before any arrow drag. Unlike `_resizeRafId`, `_dragRafId`,
+    and `_rotationRafId` which are correctly initialized to `null`.
+- **Fix:** Add `this._arrowTipRafId = null;` to the constructor.
+
+**P2-121 · `TransformController` Text-Drag State Variables Uninitialized**
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js` (constructor)
+- **Missing init:** `isAngleDimensionTextDragging`, `isDimensionTextDragging`,
+    `angleDimTextLayerId`, `dimensionTextLayerId`, `_pendingDragLayerId`
+- **Impact:** These are first assigned at drag-start time. Code elsewhere
+    guards on their truthiness. While `undefined` is falsy and works correctly
+    for boolean guards today, it creates fragility: `destroy()` sets
+    `_pendingDragLayerId = null` even though it was never declared, and the
+    `_arrowTipRafId !== null` bug (P2-120) shows what happens when null-vs-
+    undefined is confused in this same file.
+- **Fix:** Initialize all five to their respective null/false defaults in
+    the constructor.
+
+---
 
 ### Low
 
-10. ~~**`npm run test:php` pre-existing PHPCS errors** (P3-125)~~ — Fixed: 33 errors (line endings) auto-fixed by phpcbf, 13 warnings resolved manually (regex wrapping, wfMessage→$this->msg, phpcs:ignore for @codeCoverageIgnore). PHPCS now reports 0 errors, 0 warnings.
-11. ~~**Missing test coverage for 3 modules** (P3-127)~~ — Fixed (2 of 3): Added LogSanitizer.test.js (26 tests) and GroupHierarchyHelper.test.js (52 tests). ViewerIcons.js remains untested (static data, low priority).
-12. **ESLint `no-unused-vars: off` for Manager files** — blanket disable
-     could hide dead code; `varsIgnorePattern` would be more precise.
+#### PHP — 8 items
 
-## v48 Verified Non-Issues (False Positives Eliminated)
+**P3-128 · `layeredFileRenderer.errorSpan` Echoes User-Supplied Filename**
+- **File:** `src/Hooks/Processors/LayeredFileRenderer.php` L79
+- **Code:** `return $this->errorSpan( 'File not found: ' . $filename );`
+- **Note:** The `errorSpan()` method correctly calls `htmlspecialchars()`,
+    so **there is no XSS risk**. However, the user-supplied filename is
+    echoed into the rendered page output visible to other users.
+- **Fix:** Use a generic i18n error message: `$this->msg( 'layers-file-not-found' )->text()`
 
-The following were reported by automated analysis during this v48 review
+**P3-129 · `EditLayersAction::requiresUnblock()` Returns `false`**
+- **File:** `src/Action/EditLayersAction.php`
+- **Impact:** Blocked users can load the full editor UI, including layer
+    data fetched via `layersinfo`, before receiving a rejection only at save
+    time. MediaWiki's "you are blocked" interstitial page is bypassed.
+- **Fix:** Return `true` unless there is a documented reason why blocked users
+    need editor access.
+
+**P3-130 · `returnTo` Only Accepted for Existing Pages**
+- **File:** `src/Action/EditLayersAction.php` L85–90
+- **Code:** `if ( $returnTitle && $returnTitle->isKnown() ) {`
+- **Impact:** If the editor is opened from a not-yet-saved page, the
+    `returnTo` parameter is silently dropped and the user has no path back.
+- **Fix:** Use `isValid()` plus a namespace allowlist instead of `isKnown()`.
+
+**P3-131 · `TextSanitizer` Uses `strlen()` Not `mb_strlen()` for Length Check**
+- **File:** `src/Validation/TextSanitizer.php`
+- **Code:** `if ( strlen( $text ) > self::MAX_TEXT_LENGTH ) {`
+- **Impact:** For CJK or emoji-heavy text, UTF-8 multi-byte characters
+    count more than one byte each. A 400-character Japanese annotation
+    uses ~1,200 bytes and may be incorrectly rejected.
+- **Fix:** `if ( mb_strlen( $text, 'UTF-8' ) > self::MAX_TEXT_CHAR_LENGTH ) {`
+
+**P3-132 · `ApiLayersList` Bypasses Shared `RateLimiter` Class**
+- **File:** `src/Api/ApiLayersList.php`
+- **Code:** Direct `$user->pingLimiter( 'editlayers-list' );` call instead
+    of using `RateLimiter::checkRateLimit()`.
+- **Impact:** Future rate-limiter enhancements (logging, overrides, metrics)
+    won't apply to list requests. Inconsistency with every other API module.
+- **Fix:** Use `RateLimiter::checkRateLimit()` via the shared trait.
+
+**P3-133 · `LayersSchemaManager` Brittle Error Message String Parsing**
+- **File:** `src/Database/LayersSchemaManager.php`
+- **Code:** `preg_match( '/^Error (\d+):/', $message, $matches )`
+- **Impact:** MySQL 5.x, MySQL 8.x, and MariaDB format error messages
+    differently. Future DB versions could break duplicate-constraint
+    detection, causing schema migration patches to be applied twice.
+- **Fix:** Catch specific typed RDBMS exceptions rather than parsing
+    error message strings. Use `IF NOT EXISTS` DDL where supported.
+
+**P3-134 · Hardcoded English String `'Edit Layers'` in `Hooks.php`**
+- **File:** `src/Hooks.php`
+- **Code:** `$linkText = 'Edit Layers'; return "[$editUrl $linkText]";`
+- **Impact:** Non-English wikis display an English link text.
+    Contradicts the extension's own i18n system.
+- **Fix:** `$linkText = wfMessage( 'layers-edit-link-text' )->text();`
+    — add key to `i18n/en.json` and `i18n/qqq.json`.
+
+**P3-135 · `ThumbnailProcessor` Dead Boolean Comparison on `?string` Type**
+- **File:** `src/Hooks/Processors/ThumbnailProcessor.php` L110
+- **Code:** `if ( $layersFlag === 'off' || ... || $layersFlag === false ) {`
+- **Impact:** `$layersFlag` is `?string`; with `declare(strict_types=1)`,
+    `$layersFlag === false` can never be true (string vs boolean). The
+    boolean branch of the condition is unreachable dead code.
+- **Fix:** Remove `|| $layersFlag === false` from the condition.
+
+#### JavaScript — 3 items
+
+**P3-136 · APIManager `mw.notify()` Called Without `typeof mw` Guard**
+- **File:** `resources/ext.layers.editor/APIManager.js` L592
+- **Code:** `mw.notify( this.getMessage( ... ), { type: 'success' } );`
+- **Impact:** All other `mw.*` calls in the file are guarded. This bare
+    call will throw `ReferenceError` in Jest tests or if the module loads
+    before MediaWiki is initialized.
+- **Fix:** Wrap with `if ( typeof mw !== 'undefined' ) { ... }`
+
+**P3-137 · RevisionManager `namedSets.push()` Mutates StateManager Array Before `set()`**
+- **File:** `resources/ext.layers.editor/editor/RevisionManager.js` L412–419
+- **Code:**
+    ```javascript
+    const namedSets = this.stateManager.get( 'namedSets' ) || [];
+    namedSets.push( { name: trimmedName, ... } );    // ← in-place mutation
+    this.stateManager.set( 'namedSets', namedSets ); // same reference
+    ```
+- **Impact:** State subscribers using `(newValue, oldValue)` arguments to
+    detect changes receive the same reference for both. Diff-based
+    optimizations in `SetSelectorController` or `LayerPanel` may not
+    detect the change. If an exception occurs between `push()` and `set()`,
+    `state.namedSets` already contains the new item with no notification.
+- **Fix:** `this.stateManager.set( 'namedSets', [ ...namedSets, { name: trimmedName, ... } ] );`
+
+**P3-138 · Double `showSpinner` / Double `hideSpinner` on Every Save**
+- **File:** `resources/ext.layers.editor/LayersEditor.js` +
+    `resources/ext.layers.editor/APIManager.js`
+- **Impact:** `LayersEditor.save()` calls `showSpinner()` then
+    `this.apiManager.saveLayers()` which calls `showSpinner()` internally.
+    On error, `performSaveWithRetry` calls `hideSpinner()` and
+    `LayersEditor.save()`'s `.catch()` calls `hideSpinner()` a second time.
+    Double-hide can leave spinner UI in an undefined state depending on
+    whether the implementation counts references.
+- **Fix:** Establish single ownership — either `LayersEditor.save()` or
+    `saveLayers()` manages the spinner lifecycle, not both.
+
+#### Canvas — 3 items
+
+**P3-139 · CanvasManager `handleImageLoaded()` Renders Canvas Twice**
+- **File:** `resources/ext.layers.editor/CanvasManager.js` L590–592
+- **Code:**
+    ```javascript
+    this.redraw();                                    // Full render #1
+    if ( this.editor && this.editor.layers ) {
+        this.renderLayers( this.editor.layers );      // Full render #2 (same result)
+    }
+    ```
+    `renderLayers` delegates to `redraw`, so two full canvas renders occur.
+- **Impact:** Doubles the render cost at the most expensive moment
+    (first image paint), causing unnecessary frame budget consumption
+    on complex layer sets.
+- **Fix:** Remove the first `this.redraw()` call entirely.
+
+**P3-140 · CanvasManager Legacy `updateLayerPosition()` Is Dead/Incomplete Code**
+- **File:** `resources/ext.layers.editor/CanvasManager.js`
+- **Impact:** `CanvasManager.updateLayerPosition()` handles only 7 of
+    ~15 layer types and is never called — `TransformController.handleDrag()`
+    uses its own complete version. Being public on the facade object, it
+    is a trap for future callers that would get silent no-ops for
+    arrow/line/path/dimension/textbox/image/marker layers.
+- **Fix:** Either delegate to `this.transformController.updateLayerPosition()`
+    or delete the method.
+
+**P3-141 · SelectionManager Fallback `getLayerAtPoint()` Iterates in Wrong Order**
+- **File:** `resources/ext.layers.editor/SelectionManager.js` L783–800
+- **Impact:** The fallback (used in tests or when `canvasManager` is
+    unavailable) iterates `length - 1 → 0`, returning the bottom-most
+    visual layer instead of the top-most. `CanvasRenderer` renders
+    `length - 1 → 0` meaning index 0 is the topmost layer. `HitTestController`
+    correctly iterates `0 → N` with an explanatory comment; this fallback
+    does the opposite.
+- **Fix:** Change the loop direction to `0 → N` with a matching comment.
+
+---
+
+### Documentation Issues (v49)
+
+See [KNOWN_ISSUES.md docs section](#doc-issues) for full tracking. Summary:
+
+| # | File | Issue |
+|---|------|-------|
+| D-049-01 | `README.md` | Coverage badge shows `95.19%` (correct: `92.19%`) |
+| D-049-02 | `README.md` | Statistics table also shows `95.19%` |
+| D-049-03 | `CHANGELOG.md [1.5.59]` | Technical Details: wrong coverage (`95.19%`), wrong test count (`11,258`), wrong god class count (`17`) |
+| D-049-04 | `docs/ARCHITECTURE.md` | God class table: 13 JS hand-written listed, 19 exist (6 missing entirely: TransformController, ResizeCalculator, AngleDimensionRenderer, DrawingController, CanvasEvents, CalloutRenderer) |
+| D-049-05 | `docs/ARCHITECTURE.md` | Near-threshold table misclassifies 3 god-class files (TransformController, ResizeCalculator, CalloutRenderer) |
+| D-049-06 | `docs/ARCHITECTURE.md` | Coverage note still states `95.19%` |
+| D-049-07 | `LayersGuide.mediawiki` | Says `layerslink=` is "a deprecated feature" — directly contradicts README.md and WIKITEXT_USAGE.md which actively document it |
+| D-049-08 | `docs/DEVELOPER_ONBOARDING.md` | TransformController listed as ~990 lines (it's ~1,149 — a god class) |
+| D-049-09 | `docs/RELEASE_GUIDE.md` | Instructs "Use present tense ('Add' not 'Added')" but every CHANGELOG entry uses past tense |
+| D-049-10 | `docs/DOCUMENTATION_UPDATE_GUIDE.md` | Internal contradiction: calls it "the '11 Files' rule" then references "12 files" in the Common Mistakes table |
+
+---
+
+## v49 Verified Non-Issues (False Positives Eliminated)
+
+The following were reported by automated analysis during this v49 review
 but verified as non-issues:
 
-- **SQL injection via `makeList()` in LayersDatabase.php:** `$safeKeepIds`
-    validated with `array_map('intval', ...)`. MediaWiki's `makeList()`
-    parameterizes. SAFE.
-- **FOR UPDATE deadlock in LayersDatabase.php:** Both queries lock the
-    same table sequentially in the same transaction. No circular dependency.
-- **getNamedSetOwner() uses getWriteDb():** Intentional — documented as
-    "Use primary DB to avoid replication lag for permission checks."
-- **ColorValidator regex ReDoS:** All patterns length-checked to 50 chars
-    before regex. No catastrophic backtracking vectors.
-- **SetNameSanitizer silent default:** Multi-layer sanitization with safe
-    default is the correct pattern for user input.
-- **processLayersData() catch missing editor destroyed check:** Error
-    handler delegates properly. Single-threaded JS; low risk.
-- **APIManager race condition on concurrent loads:** `_trackRequest()`
-    properly aborts old requests before setting new ones.
-- **disableSaveButton() timeout leak:** No timeout — synchronous button
-    state change. FALSE.
-- **InlineTextEditor _resizeDebounceTimer cleanup:** Timer IS cleaned up
-    in `_removeEventHandlers()` called during `finishEditing()`.
-- **SelectionManager child validation:** `childIds.length > 0` check
-    exists; `_getGroupDescendantIds` validates.
-- **TransformController resize RAF layer validation:** `.some()` check
-    correctly validates layer existence.
-- **InteractionController JSON.parse fallback:** `cloneLayerEfficient`
-    preferred when available; parse is correct fallback.
-- **DraftManager subscription cleanup:** MEM-2 leak prevention with
-    `typeof` check properly implemented.
-- **CanvasRenderer getBackgroundOpacity:** NaN checks and 0–1 clamping
-    are correct.
-- **ServerSideLayerValidator error exposure:** Validation errors are
-    intentionally detailed; fatal errors return generic messages.
-- **RichTextConverter double-escaping:** DOM `textContent → innerHTML`
-    escaping is browser-native and safe.
+- **TextSanitizer `errorSpan` XSS:** `errorSpan()` at L269 calls
+    `htmlspecialchars( $message )`. The HTML is properly escaped. Downgraded
+    to LOW info-disclosure only.
+- **Hooks.php `layerListParserFunction` wikitext injection:** SetNameSanitizer
+    restricts names to `[a-zA-Z0-9\-_]` which cannot form valid wikitext
+    syntax. Not currently exploitable. Retained as defense-in-depth note only.
+- **RateLimiter `isComplexityAllowed` group children not counted:** Groups in
+    this extension are always stored flat — group layers reference children by
+    ID in a sibling `childIds` field; children are separate entries in the
+    top-level `$layers` array. The child complexity IS counted via their own
+    array entries. FALSE POSITIVE.
+- **`parseMWTimestamp` BUG-5 (subagent misidentification):** The subagent
+    described a separate fallback block. Actual code confirmed: the fallback
+    at L1042–1047 IS the only non-delegate path and DOES use the local-timezone
+    `new Date(year,month,day,...)` constructor. CONFIRMED as P2-111.
+- **RevisionManager `loadLayerSetByName` success-case `currentSetName` mutation:**
+    The code at L316 precedes the `await` at L319 — this order IS wrong. CONFIRMED as P2-112.
 
-## Current Metrics (Verified March 9, 2026)
+---
+
+## Current Metrics (Verified March 10, 2026)
 
 | Metric | Verified Current Value |
 |--------|------------------------|
@@ -162,10 +686,10 @@ but verified as non-issues:
 | MediaWiki requirement | >= 1.44.0 |
 | PHP requirement | 8.1+ |
 | JS source files (excluding `resources/dist`) | 143 |
-| JS source lines (excluding `resources/dist`) | ~99,701 |
+| JS source lines (excluding `resources/dist`) | ~99,730 |
 | PHP production files (`src/`) | 41 |
-| PHP production lines (`src/`) | ~15,187 |
-| Jest test suites | 163 |
+| PHP production lines (`src/`) | ~15,197 |
+| Jest test suites | 167 |
 | Jest tests | 11,421 |
 | i18n keys (`en.json`, `qqq.json`) | 832 |
 | Files > 1,000 lines | 23 total |
@@ -220,7 +744,18 @@ but verified as non-issues:
 | LayersValidator.js | 956 |
 | ArrowRenderer.js | 932 |
 
-## Issue Summary (v48 — March 9, 2026)
+## Issue Summary (v49 — March 10, 2026)
+
+| Category | Critical | High | Medium | Low | Notes |
+|----------|----------|------|--------|-----|-------|
+| PHP bugs | 0 | 3 | 7 | 8 | P1-045–047, P2-104–110, P3-128–135 |
+| JS bugs | 0 | 5 | 6 | 3 | P1-048–052, P2-111–116, P3-136–138 |
+| Canvas bugs | 0 | 3 | 5 | 3 | P1-053–055, P2-117–121, P3-139–141 |
+| Documentation | 0 | 0 | 10 | 0 | D-049-01–10 (see list above) |
+| Code quality | 0 | 0 | 0 | 1 | P3-142: ESLint `no-unused-vars: off` blanket |
+| **Total open** | **0** | **11** | **28** | **15** | **54 open items (2 carried from v48)** |
+
+## v48 Issue Summary (March 9, 2026 — superseded by v49)
 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
@@ -231,22 +766,22 @@ but verified as non-issues:
 | Code quality | 0 | 0 | 0 | 1 | ESLint config improvement |
 | **Total open** | **0** | **0** | **1** | **1** | **2 open items (11 fixed)** |
 
-## Overall Grade: A-
+## Overall Grade: B+
 
-The codebase has strong architecture, comprehensive test coverage (95%+),
+The codebase has strong architecture, comprehensive test coverage (92%+),
 modern ES6 class patterns (100% migrated), and no critical security
-vulnerabilities. All 8 functional bugs found in v47–v48 have been fixed
-with regression tests. All security controls pass (CSRF, SQL injection, rate
-limiting, input validation, clickjacking protection, SVG sanitization).
+vulnerabilities. All v48 bugs were confirmed fixed. Security controls pass
+(CSRF, SQL injection, rate limiting, input validation, clickjacking
+protection, SVG sanitization).
 
-However, this v48 review identified 3 HIGH-severity bugs: one new
-(division-by-zero in coordinate conversion), and two carried forward from
-v47 (nudge history never recorded, draft recovery loses images). The
-documentation metrics are consistently stale across multiple files,
-with god class count underreported by 2–6 depending on document.
+The v49 review found a cluster of correctness and reliability bugs
+introduced during the large v42–v46 feature additions — these were not
+caught in prior reviews because some only manifest under specific
+conditions (history full, concurrent save, debug mode off, non-standard
+file names). The documentation drift problem continues.
 
-Downgraded from A (v47) to B+ pending fixes for the 3 HIGH items and
-documentation synchronization.
+Grade remains B+ pending fixes for 11 HIGH items and documentation
+synchronization.
 
 ---
 

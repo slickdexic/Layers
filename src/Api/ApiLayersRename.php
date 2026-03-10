@@ -89,7 +89,7 @@ class ApiLayersRename extends ApiBase {
 
 		// Validate old name format using central validator
 		if ( !SetNameSanitizer::isValid( $oldName ) ) {
-			$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
 		// Validate new name format using central validator
@@ -295,7 +295,7 @@ class ApiLayersRename extends ApiBase {
 	private function executeSlideRename( $user, string $slidename, string $oldName, string $newName ): void {
 		// Validate old name format using central validator (consistency with file rename path)
 		if ( !SetNameSanitizer::isValid( $oldName ) ) {
-			$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
 		// Validate new name format using central validator

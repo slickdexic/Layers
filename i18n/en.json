@@ -5,6 +5,7 @@
 		]
 	},
 	"layers-desc": "Non-destructive image annotation extension for MediaWiki",
+	"layers-edit-link-text": "Edit Layers",
 	"layers-editor-title": "Edit layers",
 	"layers-toolbar-title": "Toolbar",
 	"layers-editor-save": "Save",

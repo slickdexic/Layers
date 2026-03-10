@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.59",
+	"version": "1.5.60",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -1250,7 +1250,8 @@
 	},
 	"AvailableRights": [
 		"editlayers",
-		"managelayerlibrary"
+		"managelayerlibrary",
+		"layers-admin"
 	],
 	"GroupPermissions": {
 		"*": {
@@ -1261,7 +1262,8 @@
 		},
 		"sysop": {
 			"editlayers": true,
-			"managelayerlibrary": true
+			"managelayerlibrary": true,
+			"layers-admin": true
 		}
 	}
 }

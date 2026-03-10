@@ -935,11 +935,10 @@ describe( 'APIManager', function () {
 			// Simulate a real API error with proper promise rejection pattern
 			apiManager.api.get = jest.fn( () => {
 				return {
-					then: function ( successCallback ) {
-						return this;
-					},
-					catch: function ( errorCallback ) {
-						errorCallback( 'internal_error', { error: { info: 'Server error' } } );
+					then: function ( _successCallback, errorCallback ) {
+						if ( errorCallback ) {
+							errorCallback( 'internal_error', { error: { info: 'Server error' } } );
+						}
 						return this;
 					}
 				};
@@ -1555,11 +1554,10 @@ describe( 'APIManager', function () {
 			// that passes (code, result) to catch handler
 			apiManager.api.postWithToken = jest.fn().mockImplementation( () => {
 				return {
-					then: function () {
-						return this;
-					},
-					catch: function ( fn ) {
-						fn( 'permissiondenied', { error: { code: 'permissiondenied' } } );
+					then: function ( _successCb, errorCb ) {
+						if ( errorCb ) {
+							errorCb( 'permissiondenied', { error: { code: 'permissiondenied' } } );
+						}
 						return this;
 					}
 				};

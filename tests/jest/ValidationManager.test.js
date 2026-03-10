@@ -332,9 +332,9 @@ describe( 'ValidationManager', () => {
 				expect( result.errors.some( e => e.includes( 'text-too-long' ) ) ).toBe( false );
 			} );
 
-			test( 'should validate fontSize range (8-1000)', () => {
-				expect( manager.validateLayer( { ...textLayer, fontSize: 7 } ).isValid ).toBe( false );
-				expect( manager.validateLayer( { ...textLayer, fontSize: 8 } ).isValid ).toBe( true );
+			test( 'should validate fontSize range (1-1000)', () => {
+				expect( manager.validateLayer( { ...textLayer, fontSize: 0 } ).isValid ).toBe( false );
+				expect( manager.validateLayer( { ...textLayer, fontSize: 1 } ).isValid ).toBe( true );
 				expect( manager.validateLayer( { ...textLayer, fontSize: 1000 } ).isValid ).toBe( true );
 				expect( manager.validateLayer( { ...textLayer, fontSize: 1001 } ).isValid ).toBe( false );
 			} );
@@ -357,14 +357,14 @@ describe( 'ValidationManager', () => {
 				expect( result.errors.some( e => e.includes( 'strokewidth-range' ) ) ).toBe( true );
 			} );
 
-			test( 'should reject strokeWidth over 50', () => {
-				const result = manager.validateLayer( { ...validLayer, strokeWidth: 51 } );
+			test( 'should reject strokeWidth over 100', () => {
+				const result = manager.validateLayer( { ...validLayer, strokeWidth: 101 } );
 				expect( result.isValid ).toBe( false );
 			} );
 
 			test( 'should accept strokeWidth at boundaries', () => {
 				expect( manager.validateLayer( { ...validLayer, strokeWidth: 0 } ).isValid ).toBe( true );
-				expect( manager.validateLayer( { ...validLayer, strokeWidth: 50 } ).isValid ).toBe( true );
+				expect( manager.validateLayer( { ...validLayer, strokeWidth: 100 } ).isValid ).toBe( true );
 			} );
 		} );
 

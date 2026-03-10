@@ -31,6 +31,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Security;
 
 use Config;
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use User;
 
@@ -95,15 +96,14 @@ class RateLimiter {
 	 * @param string $result The result (rate_limited, no_limits_configured, etc.)
 	 */
 	private function logRateLimitEvent( User $user, string $action, string $result ): void {
-		// Use MediaWiki logging if available
-		if ( function_exists( 'wfLogWarning' ) ) {
-			wfLogWarning( sprintf(
-				'Layers rate limit: user=%d action=%s result=%s',
-				$user->getId(),
-				$action,
-				$result
-			) );
-		}
+		LoggerFactory::getInstance( 'Layers' )->warning(
+			'Layers rate limit: user={userId} action={action} result={result}',
+			[
+				'userId' => $user->getId(),
+				'action' => $action,
+				'result' => $result,
+			]
+		);
 	}
 
 	/**

@@ -224,7 +224,7 @@ describe( 'Integration: Save/Load Workflow', () => {
 			expect( parsedData.layers[ 0 ].id ).toBe( 'layer_1' );
 		} );
 
-		test( 'should show spinner during save operation', async () => {
+		test( 'should hide spinner after save operation completes', async () => {
 			mockEditor.layers = [ sampleLayers[ 0 ] ];
 			mockEditor.stateManager.get = jest.fn( ( key ) => {
 				if ( key === 'layers' ) {
@@ -240,7 +240,8 @@ describe( 'Integration: Save/Load Workflow', () => {
 
 			await apiManager.saveLayers();
 
-			expect( mockEditor.uiManager.showSpinner ).toHaveBeenCalled();
+			// APIManager hides the spinner on completion; showing the spinner is
+			// the responsibility of the calling component (LayersEditor.save()).
 			expect( mockEditor.uiManager.hideSpinner ).toHaveBeenCalled();
 		} );
 

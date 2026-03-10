@@ -541,16 +541,19 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 
 		// P1.3 FIX: All enum-like properties defined in VALUE_CONSTRAINTS must be validated
 		// Previously only 9 of 15 constrained properties were checked here
+		// 'blend' is the deprecated alias for 'blendMode' — validate against the same enum
 		if ( in_array( $property, [
-			'blendMode', 'arrowhead', 'arrowStyle', 'arrowHeadType',
+			'blendMode', 'blend', 'arrowhead', 'arrowStyle', 'arrowHeadType',
 			'textAlign', 'verticalAlign', 'fontWeight', 'fontStyle', 'fillRule',
 			// Added missing constrained properties (callout, marker, dimension):
 			'tailDirection', 'tailStyle', 'style', 'endStyle',
 			'textPosition', 'orientation', 'textDirection', 'toleranceType'
 		], true ) ) {
+			// 'blend' shares the same allowed values as 'blendMode'
+			$constraintKey = ( $property === 'blend' ) ? 'blendMode' : $property;
 			// Constrained values
-			if ( isset( self::VALUE_CONSTRAINTS[$property] ) ) {
-				if ( !in_array( $value, self::VALUE_CONSTRAINTS[$property], true ) ) {
+			if ( isset( self::VALUE_CONSTRAINTS[$constraintKey] ) ) {
+				if ( !in_array( $value, self::VALUE_CONSTRAINTS[$constraintKey], true ) ) {
 					return [ 'valid' => false, 'error' => 'Invalid value for ' . $property ];
 				}
 			}

@@ -139,6 +139,7 @@ class CanvasManager {
 		// Throttle transform event emission for live UI sync
 		this.transformEventScheduled = false;
 		this.lastTransformPayload = null;
+		this._transformRafId = null;
 
 		// Drag visual feedback
 		this.dragPreview = false;
@@ -586,10 +587,11 @@ class CanvasManager {
 		// Resize canvas display to fit container
 		this.resizeCanvas();
 
-		// Draw the image and any layers
-		this.redraw();
+		// Draw the image and all layers in one call (renderLayers calls redraw internally)
 		if ( this.editor && this.editor.layers ) {
 			this.renderLayers( this.editor.layers );
+		} else {
+			this.redraw();
 		}
 	}
 
@@ -840,7 +842,8 @@ class CanvasManager {
 			return;
 		}
 		this.transformEventScheduled = true;
-		window.requestAnimationFrame( () => {
+		this._transformRafId = window.requestAnimationFrame( () => {
+			this._transformRafId = null;
 			this.transformEventScheduled = false;
 			const target = ( this.editor && this.editor.container ) || this.container || document;
 			try {
@@ -860,49 +863,18 @@ class CanvasManager {
 	}
 
 	/**
-	 * Update layer position during drag operation
+	/**
+	 * Update layer position during drag operation.
+	 * Delegates to TransformController which handles all layer types.
 	 *
 	 * @param {Object} layer Layer to update
 	 * @param {Object} originalState Original state before drag
 	 * @param {number} deltaX X offset
 	 * @param {number} deltaY Y offset
 	 */
-	updateLayerPosition (
-		layer, originalState, deltaX, deltaY
-	) {
-		switch ( layer.type ) {
-			case 'rectangle':
-			case 'blur':
-			case 'circle':
-			case 'text':
-			case 'ellipse':
-			case 'polygon':
-			case 'star':
-				layer.x = ( originalState.x || 0 ) + deltaX;
-				layer.y = ( originalState.y || 0 ) + deltaY;
-				break;
-			case 'line':
-			case 'arrow':
-				layer.x1 = ( originalState.x1 || 0 ) + deltaX;
-				layer.y1 = ( originalState.y1 || 0 ) + deltaY;
-				layer.x2 = ( originalState.x2 || 0 ) + deltaX;
-				layer.y2 = ( originalState.y2 || 0 ) + deltaY;
-				// Move control point with the arrow (for curved arrows)
-				if ( originalState.controlX !== undefined ) {
-					layer.controlX = originalState.controlX + deltaX;
-				}
-				if ( originalState.controlY !== undefined ) {
-					layer.controlY = originalState.controlY + deltaY;
-				}
-				break;
-			case 'path':
-				if ( layer.points && originalState.points ) {
-					layer.points = originalState.points.map( ( pt ) => ( {
-						x: pt.x + deltaX,
-						y: pt.y + deltaY
-					} ) );
-				}
-				break;
+	updateLayerPosition ( layer, originalState, deltaX, deltaY ) {
+		if ( this.transformController ) {
+			this.transformController.updateLayerPosition( layer, originalState, deltaX, deltaY );
 		}
 	}
 
@@ -2007,6 +1979,11 @@ class CanvasManager {
 		if ( this.animationFrameId ) {
 			window.cancelAnimationFrame( this.animationFrameId );
 			this.animationFrameId = null;
+		}
+		// Cancel throttled transform event RAF
+		if ( this._transformRafId ) {
+			window.cancelAnimationFrame( this._transformRafId );
+			this._transformRafId = null;
 		}
 		// Cancel fallback timeout if used
 		if ( this.fallbackTimeoutId ) {

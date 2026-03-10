@@ -61,6 +61,16 @@ class TransformController {
 		this._rotationRenderScheduled = false;
 		this._rotationRafId = null; // Track rAF for cancellation
 		this._pendingRotationLayer = null;
+		this._arrowTipRafId = null; // Track rAF for marker arrow tip drag
+
+		// Angle dimension and dimension text drag state
+		this.isAngleDimensionTextDragging = false;
+		this.angleDimTextLayerId = null;
+		this.isDimensionTextDragging = false;
+		this.dimensionTextLayerId = null;
+
+		// Pending drag layer (set on mousedown, cleared on first mousemove)
+		this._pendingDragLayerId = null;
 
 		// Cache efficient cloning function reference
 		this._cloneLayerEfficient = null;
@@ -481,25 +491,48 @@ class TransformController {
 			let adjustedDeltaX = deltaX;
 			let adjustedDeltaY = deltaY;
 
+			// Derive the reference position for snap calculations.
+			// Geometric layers (line, arrow, dimension, angleDimension) store position
+			// as endpoint coordinates rather than x/y, so compute the bounding box
+			// top-left corner as the reference instead of using 0/0.
+			const _getRefPoint = ( state ) => {
+				const t = state.type;
+				if ( t === 'line' || t === 'arrow' || t === 'dimension' ) {
+					return {
+						x: Math.min( state.x1 || 0, state.x2 || 0 ),
+						y: Math.min( state.y1 || 0, state.y2 || 0 )
+					};
+				}
+				if ( t === 'angleDimension' ) {
+					return {
+						x: Math.min( state.cx || 0, state.ax || 0, state.bx || 0 ),
+						y: Math.min( state.cy || 0, state.ay || 0, state.by || 0 )
+					};
+				}
+				return { x: state.x || 0, y: state.y || 0 };
+			};
+
 			if ( this.manager.snapToGrid && this.manager.gridSize > 0 ) {
-				const newX = ( originalState.x || 0 ) + deltaX;
-				const newY = ( originalState.y || 0 ) + deltaY;
+				const ref = _getRefPoint( originalState );
+				const newX = ref.x + deltaX;
+				const newY = ref.y + deltaY;
 				const snappedPoint = this.manager.snapPointToGrid( { x: newX, y: newY } );
-				adjustedDeltaX = snappedPoint.x - ( originalState.x || 0 );
-				adjustedDeltaY = snappedPoint.y - ( originalState.y || 0 );
+				adjustedDeltaX = snappedPoint.x - ref.x;
+				adjustedDeltaY = snappedPoint.y - ref.y;
 			} else if ( this.manager.smartGuidesController &&
 				( this.manager.smartGuidesController.enabled || this.manager.smartGuidesController.canvasSnapEnabled ) ) {
 				// Apply smart guides snapping when grid snap is disabled
-				const proposedX = ( originalState.x || 0 ) + deltaX;
-				const proposedY = ( originalState.y || 0 ) + deltaY;
+				const ref = _getRefPoint( originalState );
+				const proposedX = ref.x + deltaX;
+				const proposedY = ref.y + deltaY;
 				const snapped = this.manager.smartGuidesController.calculateSnappedPosition(
 					layerToMove,
 					proposedX,
 					proposedY,
 					this.manager.editor.layers
 				);
-				adjustedDeltaX = snapped.x - ( originalState.x || 0 );
-				adjustedDeltaY = snapped.y - ( originalState.y || 0 );
+				adjustedDeltaX = snapped.x - ref.x;
+				adjustedDeltaY = snapped.y - ref.y;
 			}
 
 			// Update layer position based on type

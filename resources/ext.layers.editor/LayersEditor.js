@@ -1040,7 +1040,7 @@ class LayersEditor {
 		const hour = parseInt( mwTimestamp.substring( 8, 10 ), 10 );
 		const minute = parseInt( mwTimestamp.substring( 10, 12 ), 10 );
 		const second = parseInt( mwTimestamp.substring( 12, 14 ), 10 );
-		return new Date( year, month, day, hour, minute, second );
+		return new Date( Date.UTC( year, month, day, hour, minute, second ) );
 	}
 
 	/**
@@ -1523,21 +1523,31 @@ class LayersEditor {
 		}
 
 		const savingMsg = window.layersMessages ?
-			window.layersMessages.get( 'layers-saving', 'Saving...' ) :
-			'Saving...';
-		this.uiManager.showSpinner( savingMsg );
+			window.layersMessages.get( 'layers-saving', 'Saving…' ) :
+			'Saving…';
+		if ( this.uiManager ) {
+			this.uiManager.showSpinner( savingMsg );
+		}
 
 		this.apiManager.saveLayers()
 			.then( ( result ) => {
 				this.stateManager.set( 'currentLayerSetId', result.layersetid );
 			} )
 			.catch( ( error ) => {
-				this.uiManager.hideSpinner();
-				const defaultErrorMsg = window.layersMessages ?
-					window.layersMessages.get( 'layers-save-error', 'Failed to save layers' ) :
-					'Failed to save layers';
-				const errorMsg = error.info || error.message || defaultErrorMsg;
-				mw.notify( errorMsg, { type: 'error' } );
+				// APIManager hides the spinner and shows error in production;
+				// handle here as a fallback for unexpected rejections.
+				if ( this.uiManager ) {
+					this.uiManager.hideSpinner();
+				}
+				const errorMsg = ( error && error.info ) ? error.info :
+					( error && error.message ) ? error.message :
+					( window.layersMessages ? window.layersMessages.get( 'layers-save-error', 'Failed to save layers' ) : 'Failed to save layers' );
+				if ( typeof mw !== 'undefined' && mw.notify ) {
+					mw.notify( errorMsg, { type: 'error' } );
+				}
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.error( '[LayersEditor] saveLayers rejected:', error );
+				}
 			} );
 	}
 

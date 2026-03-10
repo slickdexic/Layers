@@ -1,42 +1,69 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 9, 2026 — v48 audit
+**Last updated:** March 10, 2026 — v49 audit
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. Many line items still marked `Open` in the
 older phases were rechecked during the March 9–10 audits and found to be fixed,
-false positives, or superseded by broader documentation work. Use the v48
+false positives, or superseded by broader documentation work. Use the v49
 section below as the authoritative current backlog.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 9, 2026)
+## Verified Current Backlog (Authoritative as of March 10, 2026)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| Bugs (High) | 3 | 45m-1.5h |
-| Bugs (Medium) | 5 | 3-5h |
-| Documentation remediation | 2 | 4-8h |
-| Tooling maintenance | 1 | 30-60m |
-| Test coverage gaps | 1 | 2-3h |
-| **Total** | **12** | **10-18h** |
+| PHP bugs (High) | 3 | 2-4h |
+| PHP bugs (Medium) | 7 | 4-6h |
+| PHP bugs (Low) | 8 | 3-5h |
+| JS bugs (High) | 5 | 3-5h |
+| JS bugs (Medium) | 6 | 3-5h |
+| JS bugs (Low) | 3 | 1-2h |
+| Canvas bugs (High) | 3 | 1-2h |
+| Canvas bugs (Medium) | 5 | 2-3h |
+| Canvas bugs (Low) | 3 | 1-2h |
+| Documentation fixes | 10 | 1-2h |
+| Code quality (carried) | 2 | 30-60m |
+| **Total** | **55** | **21-37h** |
 
-### Current Priorities
+### Current Priorities (v49)
 
 | # | Issue | Ref | Priority | Effort |
 |---|-------|-----|----------|--------|
-| 20.1 | ~~CanvasManager division by zero~~ | P1-044 | ~~Fixed~~ | — |
-| 20.2 | ~~Angle dimension phase not reset on tool switch~~ | P2-102 | ~~Fixed~~ | — |
-| 20.3 | ~~Arrow tip RAF missing destruction guards~~ | P2-103 | ~~Fixed~~ | — |
-| 19.1 | ~~EventManager nudge `snapshot()` → `saveState()`~~ | P1-041 | ~~Fixed~~ | — |
-| 19.2 | ~~DraftManager image loss on recovery~~ | P1-042b | ~~Fixed~~ | — |
-| 19.3 | ~~LayersViewer blend mode white background~~ | P2-099 | ~~Fixed~~ | — |
-| 19.4 | ~~ApiLayersDelete 0-row race condition~~ | P2-100 | ~~Fixed~~ | — |
-| 19.5 | ~~pruneOldRevisions outside transaction~~ | P2-101 | ~~Fixed~~ | — |
-| 19.6 | ~~i18n key count now 832~~ | P3-126 | ~~Fixed~~ | — |
-| 19.7 | Missing tests for 3 modules | P3-127 | Low | 2-3h |
-| 19.8 | Clean remaining secondary stale docs | P2-098 | Medium | 1-2h |
-| 19.9 | Normalize PHP line endings/style | P3-125 | Low | 1-2h |
+| 21.01 | LayersApiHelperTrait admin check uses page-delete right | P1-045 | HIGH | 30m |
+| 21.02 | SpecialSlides.php DB before permission check | P1-046 | HIGH | 15m |
+| 21.03 | SpecialEditSlide.php DB before permission check | P1-047 | HIGH | 15m |
+| 21.04 | APIManager cache exception hangs Promise forever | P1-048 | HIGH | 30m |
+| 21.05 | APIManager .catch() drops jQuery `result` (4 sites) | P1-049 | HIGH | 45m |
+| 21.06 | HistoryManager lastSaveHistoryIndex not decremented | P1-050 | HIGH | 30m |
+| 21.07 | EditorBootstrap duplicate editors in production | P1-051 | HIGH | 15m |
+| 21.08 | ValidationManager wrong bounds vs. server | P1-052 | HIGH | 15m |
+| 21.09 | Smart guides non-functional for line/arrow/path/dim | P1-053 | HIGH | 2h |
+| 21.10 | ZoomPanController fitToWindow null parentNode | P1-054 | HIGH | 15m |
+| 21.11 | ZoomPanController zoomToFitLayers null parentNode | P1-055 | HIGH | 15m |
+| 21.12 | TextSanitizer zero-width space corrupts user text | P2-104 | MED | 30m |
+| 21.13 | blend property bypasses enum validation | P2-105 | MED | 30m |
+| 21.14 | usleep() blocking in DB retry loop | P2-106 | MED | 15m |
+| 21.15 | N+1 user lookup in ApiLayersInfo | P2-107 | MED | 45m |
+| 21.16 | Cache invalidation errors silently suppressed | P2-108 | MED | 15m |
+| 21.17 | wfLogWarning() deprecated in RateLimiter | P2-109 | MED | 15m |
+| 21.18 | ApiLayersRename wrong error code for invalid format | P2-110 | MED | 15m |
+| 21.19 | parseMWTimestamp fallback uses local timezone | P2-111 | MED | 15m |
+| 21.20 | RevisionManager mutates currentSetName before load | P2-112 | MED | 15m |
+| 21.21 | DraftManager auto-save bypasses isRecoveryMode | P2-113 | MED | 15m |
+| 21.22 | APIManager hardcodes layer limit 100 | P2-114 | MED | 15m |
+| 21.23 | EventManager nudge bypasses StateManager | P2-115 | MED | 30m |
+| 21.24 | DraftManager storage key collision | P2-116 | MED | 30m |
+| 21.25 | CanvasManager emitTransforming RAF post-destroy | P2-117 | MED | 30m |
+| 21.26 | ZoomPanController animationFrameId stale on complete | P2-118 | MED | 15m |
+| 21.27 | SelectionRenderer AngleDimensionRenderer per-frame alloc | P2-119 | MED | 15m |
+| 21.28 | TransformController _arrowTipRafId missing from ctor | P2-120 | MED | 10m |
+| 21.29 | TransformController text-drag state vars uninitialized | P2-121 | MED | 15m |
+| 21.30 | Documentation: README/CHANGELOG wrong coverage % | D-049 | MED | 1h |
+| 21.31 | Documentation: ARCHITECTURE.md god class table gaps | D-049 | MED | 30m |
+| 19.7 | Missing tests for ViewerIcons module | P3-127 | Low | 1h |
+| 19.8 | Stale secondary docs cleanup | P2-098 | Low | 1h |
 
 ### v48 Notes
 
@@ -48,8 +75,130 @@ section below as the authoritative current backlog.
   AngleDimensionRenderer 1,067, CanvasEvents 1,033, CalloutRenderer 1,000).
 - PHP lines updated from ~15,161 → ~15,187.
 - `npm test` passed with **167 suites / 11,421 tests**.
-- i18n key count confirmed at **831** (still misstated as 832 in docs).
+- i18n key count confirmed at **832** (KNOWN_ISSUES P3-126 fix note, CHANGELOG [Unreleased], and all other sources agree; prior v48 note of 831 was in error).
 - All v47 open items carried forward and re-verified as still present.
+
+---
+
+## Phase 21: v49 Findings — Security, Logic & Quality (54 Items)
+
+*Target: resolve all 11 HIGH-priority bugs first (total 11h estimated),
+then work through 28 MEDIUM items, 15 LOW items, and 10 documentation
+fixes found in the March 10, 2026 v49 audit.*
+
+### PHP HIGH (3 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.01 | LayersApiHelperTrait admin check uses page-delete right | P1-045 | Open | 30m |
+| 21.02 | SpecialSlides.php DB query before permission check | P1-046 | Open | 15m |
+| 21.03 | SpecialEditSlide.php DB query before permission check | P1-047 | Open | 15m |
+
+**21.01:** Introduce `layers-admin` right in `extension.json`. Replace
+`$user->isAllowed('delete')` with `$user->isAllowed('layers-admin')` in
+`LayersApiHelperTrait.php` L106.
+
+**21.02:** Move `$user->authorizeAction('read')` / `userHasRight()` check
+above the `getLayerSetByName()` DB call in `SpecialSlides.php`.
+
+**21.03:** Same reordering fix in `SpecialEditSlide.php`.
+
+### JavaScript HIGH (5 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.04 | APIManager cache exception hangs Promise | P1-048 | Open | 30m |
+| 21.05 | APIManager .catch() drops jQuery result (4 sites) | P1-049 | Open | 45m |
+| 21.06 | HistoryManager lastSaveHistoryIndex not decremented | P1-050 | Open | 30m |
+| 21.07 | EditorBootstrap duplicate editors in production | P1-051 | Open | 15m |
+| 21.08 | ValidationManager wrong bounds vs. server | P1-052 | Open | 15m |
+
+**21.04:** Move `return;` inside the `try` block in `APIManager.js`
+`loadRevisionById` cache-hit path so the catch falls through to the
+network fetch.
+
+**21.05:** Change `.then(s).catch(f)` to `.then(s, f)` at all four
+call sites (L315, L640, L815, L975) to preserve jQuery deferred rejection
+args.
+
+**21.06:** After `history.shift()` in `HistoryManager.saveState()`, add:
+`if (this.lastSaveHistoryIndex > 0) { this.lastSaveHistoryIndex--; }
+else { this.lastSaveHistoryIndex = -1; }`
+
+**21.07:** Move `window.layersEditorInstance = editor` in
+`EditorBootstrap.js` outside the `if (debug)` guard so all code paths
+register the instance.
+
+**21.08:** In `ValidationManager.js` L240: `fontSize < 1`.
+L246: `strokeWidth > 100`.
+
+### Canvas HIGH (3 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.09 | Smart guides non-functional for line/arrow/path/dim | P1-053 | Open | 2h |
+| 21.10 | ZoomPanController fitToWindow null parentNode | P1-054 | Open | 15m |
+| 21.11 | ZoomPanController zoomToFitLayers null parentNode | P1-055 | Open | 15m |
+
+**21.09:** In `TransformController.js` `_applySmartGuideDrag()`, derive
+reference position from `getLayerBounds()` for layer types that lack
+`.x`/`.y` (line, arrow, path, dimension, angleDimension, marker).
+
+**21.10/11:** Add `if (!container) { return; }` null guards at L232 and
+L295 in `ZoomPanController.js`.
+
+### PHP MEDIUM (7 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.12 | TextSanitizer zero-width space injection | P2-104 | Open | 30m |
+| 21.13 | blend property bypasses enum validation | P2-105 | Open | 30m |
+| 21.14 | usleep() blocking in DB retry loop | P2-106 | Open | 15m |
+| 21.15 | N+1 user lookup in ApiLayersInfo | P2-107 | Open | 45m |
+| 21.16 | Cache invalidation errors silently suppressed | P2-108 | Open | 15m |
+| 21.17 | wfLogWarning() deprecated in RateLimiter | P2-109 | Open | 15m |
+| 21.18 | ApiLayersRename wrong error code for format failure | P2-110 | Open | 15m |
+
+### JavaScript MEDIUM (6 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.19 | parseMWTimestamp fallback uses local timezone | P2-111 | Open | 15m |
+| 21.20 | RevisionManager mutates currentSetName before load | P2-112 | Open | 15m |
+| 21.21 | DraftManager auto-save bypasses isRecoveryMode | P2-113 | Open | 15m |
+| 21.22 | APIManager hardcodes layer limit to 100 | P2-114 | Open | 15m |
+| 21.23 | EventManager nudge bypasses StateManager | P2-115 | Open | 30m |
+| 21.24 | DraftManager storage key collision | P2-116 | Open | 30m |
+
+### Canvas MEDIUM (5 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.25 | CanvasManager emitTransforming RAF post-destroy | P2-117 | Open | 30m |
+| 21.26 | ZoomPanController animationFrameId stale on complete | P2-118 | Open | 15m |
+| 21.27 | SelectionRenderer AngleDimensionRenderer per-frame | P2-119 | Open | 15m |
+| 21.28 | TransformController _arrowTipRafId missing from ctor | P2-120 | Open | 10m |
+| 21.29 | TransformController text-drag state vars uninitialized | P2-121 | Open | 15m |
+
+### Documentation (10 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 21.30 | README.md coverage badge 95.19% → 92.19% | D-049-01/02 | Open | 15m |
+| 21.31 | CHANGELOG.md [1.5.59] wrong coverage/test/god counts | D-049-03 | Open | 15m |
+| 21.32 | ARCHITECTURE.md god class table missing 6 entries | D-049-04/05 | Open | 30m |
+| 21.33 | ARCHITECTURE.md still shows 95.19% coverage | D-049-06 | Open | 5m |
+| 21.34 | LayersGuide.mediawiki incorrectly deprecates layerslink= | D-049-07 | Open | 15m |
+| 21.35 | DEVELOPER_ONBOARDING.md TransformController size wrong | D-049-08 | Open | 5m |
+| 21.36 | RELEASE_GUIDE.md contradicts CHANGELOG tense | D-049-09 | Open | 15m |
+| 21.37 | DOCUMENTATION_UPDATE_GUIDE.md 11 vs 12 files | D-049-10 | Open | 5m |
+| 21.38 | copilot-instructions.md god class count 22→23 | — | Open | 5m |
+| 21.39 | copilot-instructions.md JS god class count 18→19 | — | Open | 5m |
+
+### LOW items (15 items)
+
+P3-128 through P3-141 (see KNOWN_ISSUES.md for details). Estimated
+5-8h total.
 
 ---
 

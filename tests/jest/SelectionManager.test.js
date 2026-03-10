@@ -149,8 +149,8 @@ describe('SelectionManager', () => {
         });
 
         test('should prioritize topmost visible layer', () => {
-            // Add overlapping layer
-            mockLayers.push({
+            // New layers are added via unshift (index 0 = top); simulate that here.
+            mockLayers.unshift({
                 id: 'layer4',
                 type: 'rectangle',
                 x: 0,
@@ -163,7 +163,7 @@ describe('SelectionManager', () => {
 
             const layer = selectionManager.getLayerAtPoint(50, 40);
 
-            expect(layer.id).toBe('layer4'); // Most recent layer should be on top
+            expect(layer.id).toBe('layer4'); // Most recent layer is at index 0 (top)
         });
 
         test('should skip invisible layers in hit testing', () => {

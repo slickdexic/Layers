@@ -787,7 +787,8 @@
 			}
 			const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
 				this.canvasManager.layers || [];
-			for ( let i = layers.length - 1; i >= 0; i-- ) {
+			// Layers are drawn from end to start, so index 0 is visually on top (same as HitTestController).
+			for ( let i = 0; i < layers.length; i++ ) {
 				const layer = layers[ i ];
 				if ( layer.visible === false ) {
 					continue;

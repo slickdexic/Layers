@@ -149,6 +149,7 @@ describe( 'CanvasManager', () => {
 			startDrag: jest.fn(),
 			handleDrag: jest.fn(),
 			finishDrag: jest.fn(),
+			updateLayerPosition: jest.fn(),
 			isResizing: false,
 			isRotating: false,
 			isDragging: false,
@@ -985,30 +986,28 @@ describe( 'CanvasManager', () => {
 	} );
 
 	describe( 'layer position update', () => {
-		it( 'should update rectangle position', () => {
+		it( 'should delegate rectangle position to TransformController', () => {
 			const layer = { type: 'rectangle', x: 100, y: 100 };
 			const original = { x: 100, y: 100 };
 			canvasManager.updateLayerPosition( layer, original, 50, 50 );
-			expect( layer.x ).toBe( 150 );
-			expect( layer.y ).toBe( 150 );
+			expect( canvasManager.transformController.updateLayerPosition )
+				.toHaveBeenCalledWith( layer, original, 50, 50 );
 		} );
 
-		it( 'should update line position', () => {
+		it( 'should delegate line position to TransformController', () => {
 			const layer = { type: 'line', x1: 100, y1: 100, x2: 200, y2: 200 };
 			const original = { x1: 100, y1: 100, x2: 200, y2: 200 };
 			canvasManager.updateLayerPosition( layer, original, 25, 25 );
-			expect( layer.x1 ).toBe( 125 );
-			expect( layer.y1 ).toBe( 125 );
-			expect( layer.x2 ).toBe( 225 );
-			expect( layer.y2 ).toBe( 225 );
+			expect( canvasManager.transformController.updateLayerPosition )
+				.toHaveBeenCalledWith( layer, original, 25, 25 );
 		} );
 
-		it( 'should update path points', () => {
+		it( 'should delegate path position to TransformController', () => {
 			const layer = { type: 'path', points: [ { x: 0, y: 0 }, { x: 100, y: 100 } ] };
 			const original = { points: [ { x: 0, y: 0 }, { x: 100, y: 100 } ] };
 			canvasManager.updateLayerPosition( layer, original, 10, 10 );
-			expect( layer.points[ 0 ] ).toEqual( { x: 10, y: 10 } );
-			expect( layer.points[ 1 ] ).toEqual( { x: 110, y: 110 } );
+			expect( canvasManager.transformController.updateLayerPosition )
+				.toHaveBeenCalledWith( layer, original, 10, 10 );
 		} );
 	} );
 

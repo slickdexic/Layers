@@ -439,9 +439,7 @@
 					debugLog( 'Direct editor creation successful' );
 
 					document.title = '🎨 Layers Editor - ' + ( init.filename || 'Unknown File' );
-					if ( window.mw && window.mw.config.get( 'debug' ) ) {
-						window.layersEditorInstance = editor;
-					}
+				window.layersEditorInstance = editor;
 				} catch ( directError ) {
 					if ( mw.log && mw.log.error ) {
 						mw.log.error( '[EditorBootstrap] Direct editor creation failed:',

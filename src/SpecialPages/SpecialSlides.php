@@ -166,6 +166,10 @@ class SpecialSlides extends SpecialPage {
 			return;
 		}
 
+		// Check permissions first (before querying the database)
+		$permissionManager = $services->getPermissionManager();
+		$canEdit = $permissionManager->userHasRight( $user, 'editlayers' );
+
 		// Check if slide exists
 		$db = $services->get( 'LayersDatabase' );
 		$normalizedName = LayersConstants::SLIDE_PREFIX . $slideName;
@@ -174,10 +178,6 @@ class SpecialSlides extends SpecialPage {
 			LayersConstants::TYPE_SLIDE,
 			LayersConstants::DEFAULT_SET_NAME
 		);
-
-		// Check permissions
-		$permissionManager = $services->getPermissionManager();
-		$canEdit = $permissionManager->userHasRight( $user, 'editlayers' );
 
 		if ( !$layerSet ) {
 			// Slide doesn't exist

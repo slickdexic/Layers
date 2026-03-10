@@ -1,21 +1,497 @@
 # Known Issues
 
-**Last updated:** March 9, 2026 — v48 audit
+**Last updated:** March 10, 2026 — v49 audit
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
 and P3 (low/cosmetic). Historical fixed items are retained for audit
-traceability, but the March 9, 2026 entries below are the current open backlog.
+traceability.
 
 ## Summary
 
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 45 | 45 | 0 |
-| P2 | 103 | 103 | 0 |
-| P3 | 127 | 124 | 3 |
-| **Total** | **280** | **277** | **3** |
+| P1 | 56 | 45 | 11 |
+| P2 | 125 | 103 | 22 |
+| P3 | 143 | 126 | 17 |
+| **Total** | **329** | **279** | **50** |
+
+---
+
+## Open Issues — v49 (March 10, 2026)
+
+### PHP — High
+
+#### P1-045: LayersApiHelperTrait Admin Check Uses Page-Deletion Right
+
+- **File:** `src/Api/Traits/LayersApiHelperTrait.php` L106
+- **Code:** `$isAdmin = $user->isAllowed( 'delete' );`
+- **Impact:** The MediaWiki `'delete'` right controls wiki page deletion,
+  not layer administration. Any user who can delete pages becomes an
+  unrestricted Layers admin; dedicated layer moderators without page-delete
+  rights cannot moderate layer content.
+- **Fix:** Introduce a dedicated `layers-admin` right in `extension.json`
+  and check `$user->isAllowed( 'layers-admin' )` instead.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P1-046: SpecialSlides.php DB Query Before Permission Check
+
+- **File:** `src/SpecialPages/SpecialSlides.php` L172 (DB), L179 (perm)
+- **Impact:** Unauthorized users can probe slide existence through error
+  message differences — "slide not found" vs. "no permission" responses
+  diverge depending on existence, enabling name enumeration.
+- **Fix:** Move permission check to before the DB query.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P1-047: SpecialEditSlide.php DB Query Before Permission Check
+
+- **File:** `src/SpecialPages/SpecialEditSlide.php`
+- **Impact:** Same information-disclosure pattern as P1-046.
+- **Fix:** Same reordering fix — permission check before any DB call.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+### JavaScript — High
+
+#### P1-048: APIManager Cache Exception Leaves Promise Permanently Pending
+
+- **File:** `resources/ext.layers.editor/APIManager.js` L617–636
+- **Impact:** When `_processRevisionData()` throws on corrupt cached data,
+  the `catch` block clears the cache but `return` exits the Promise
+  constructor, leaving it permanently pending. The editor silently freezes
+  on revision load with no error surfaced and no retry.
+- **Fix:** Move `return;` inside the `try` block so the catch falls
+  through to the network fetch path.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P1-049: APIManager `.catch()` Drops jQuery Deferred `result` Argument
+
+- **File:** `resources/ext.layers.editor/APIManager.js` L315, L640, L815, L975
+- **Impact:** In jQuery ≥ 3.0, `.then().catch()` chains lose all
+  arguments after the first on rejection. Abort detection never fires
+  (spurious error notifications), retry logic retries `permissiondenied`
+  errors 3 times, and error detail is always lost.
+- **Fix:** Replace `.then( success ).catch( failure )` with
+  `.then( success, failure )` at all four sites.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P1-050: HistoryManager `lastSaveHistoryIndex` Not Decremented on Trim
+
+- **File:** `resources/ext.layers.editor/HistoryManager.js` L128–136
+- **Impact:** After history reaches max capacity, `history.shift()` is
+  called but `lastSaveHistoryIndex` is not decremented. It exceeds
+  `history.length - 1`, making `hasUnsavedChanges()` permanently
+  incorrect and disabling the fast-path short-circuit.
+- **Fix:** After `history.shift()`, decrement `lastSaveHistoryIndex`.
+  Set to `-1` if the saved entry was discarded.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P1-051: EditorBootstrap Creates Duplicate Editors in Production Mode
+
+- **File:** `resources/ext.layers.editor/editor/EditorBootstrap.js` L442–443
+- **Impact:** `window.layersEditorInstance` is only set in debug mode.
+  The duplicate-prevention guard always evaluates to falsy in production,
+  allowing the deferred hook listener and `autoBootstrap` to each create
+  an editor sharing the same container.
+- **Fix:** Set `window.layersEditorInstance = editor` unconditionally
+  (outside the debug check) immediately after creation.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P1-052: ValidationManager Bounds Stricter Than Server
+
+- **File:** `resources/ext.layers.editor/ValidationManager.js` L240, L246
+- **Impact:** `fontSize < 8` (server allows 1) and `strokeWidth > 50`
+  (server allows 100) — valid values are rejected client-side with no
+  clear error message. On wikis using accessible design (small fonts)
+  or thick-stroke infographics, this is a functional regression.
+- **Fix:** `fontSize < 1` and `strokeWidth > 100`.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+### Canvas — High
+
+####  for Line, Arrow, Path, Dimension Layers
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+  L486–505
+- **Impact:** These layer types have no `.x`/`.y` properties. The snap
+  calculation receives the drag delta (~10px) as the layer position
+  instead of the actual position (~200px). Smart guides appear enabled
+  in the UI but never fire for these types.
+- **Fix:** Derive the reference position from `getLayerBounds()` for
+  non-positional layer types before computing the proposed snap position.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P1-054: ZoomPanController `fitToWindow()` Null Dereference
+
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js` L232
+- **Impact:** `canvas.parentNode` is not null-checked before accessing
+  `.clientWidth`. Throws `TypeError` if called while canvas is detached.
+- **Fix:** `if ( !container ) { return; }` after line 232.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P1-055: ZoomPanController `zoomToFitLayers()` Same Null Dereference
+
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js` L295
+- **Impact:** Same pattern as P1-054.
+- **Fix:** Same null guard.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+---
+
+### PHP — Medium
+
+#### P2-104: TextSanitizer Zero-Width Space Injection Corrupts User Text
+
+- **File:** `src/Validation/TextSanitizer.php` L180–197
+- **Impact:** Inserts U+200B before `(` after keywords like `alert`,
+  `setTimeout`, etc. User text containing these substrings is silently
+  and irreversibly mutated with an invisible character. Canvas `fillText()`
+  cannot execute JavaScript; the protection is unnecessary and harmful.
+- **Fix:** Remove the zero-width space injection block entirely.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-105: `blend` Property Bypasses Enum Validation
+
+- **File:** `src/Validation/ServerSideLayerValidator.php`
+- **Impact:** `'blend'` is `'string'`-validated only, not constrained to
+  valid Canvas blend mode enum values. Any string value reaches the DB
+  and is passed to the Canvas API.
+- **Fix:** Add `'blend'` to the enum-constrained property check using
+  `blendMode`'s constraint entry.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-106: usleep() Blocking in DB Retry Loop
+
+- **File:** `src/Database/LayersDatabase.php` L135
+- **Impact:** `usleep( $retryCount * 100000 )` adds up to 300ms of
+  blocking sleep per request on transaction conflicts. Under concurrent
+  editor load, this cascades into PHP-FPM worker and DB connection
+  pool exhaustion.
+- **Fix:** Reduce to 10ms/20ms or remove the sleep.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-107: N+1 User Lookup in ApiLayersInfo
+
+- **File:** `src/Api/ApiLayersInfo.php` L522–528
+- **Impact:** Despite "Batch load users" comment, `getName()` inside a
+  loop triggers one DB query per unique user. 15 distinct contributors
+  → 15 sequential queries.
+- **Fix:** Use a single `SELECT user_id, user_name FROM user WHERE user_id IN (...)`.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-108: Cache Invalidation Errors Silently Suppressed
+
+- **File:** `src/Api/Traits/CacheInvalidationTrait.php` L55–58
+- **Impact:** Empty catch block with no logging. Cache infrastructure
+  failures are invisible to operators.
+- **Fix:** Add `$this->getLogger()->warning( 'Cache invalidation failed', [ 'exception' => $e ] )`.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-109: `wfLogWarning()` Deprecated API in RateLimiter
+
+- **File:** `src/Security/RateLimiter.php` L99–100
+- **Impact:** Deprecated; guarded by `function_exists`. When removed from
+  MW, rate limit warnings are silently lost — a security monitoring
+  regression. All other code uses `LoggerFactory`.
+- **Fix:** Use `$this->getLogger()->warning(...)` and remove the guard.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-110: ApiLayersRename Returns Wrong Error Code for Invalid Name Format
+
+- **File:** `src/Api/ApiLayersRename.php`
+- **Impact:** Format-validation failure returns `ERROR_LAYERSET_NOT_FOUND`
+  instead of `ERROR_INVALID_SETNAME`. Breaks API consumer retry/create
+  logic — "not found" is retried; "invalid" should not be.
+- **Fix:** Return `ERROR_INVALID_SETNAME` for format failures.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+### JavaScript — Medium
+
+#### P2-111: `parseMWTimestamp` Fallback Uses Local Timezone Instead of UTC
+
+- **File:** `resources/ext.layers.editor/LayersEditor.js` L1042–1047
+- **Impact:** Fallback path (when `revisionManager` is null) uses
+  `new Date(year, month, day, ...)` — local timezone. Primary path
+  uses `Date.UTC(...)`. UTC+8 users see timestamps 8 hours off.
+- **Fix:** `new Date( Date.UTC( year, month, day, hour, minute, second ) )`
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-112: RevisionManager Mutates `currentSetName` Before Load Succeeds
+
+- **File:** `resources/ext.layers.editor/editor/RevisionManager.js` L316
+- **Impact:** `currentSetName` is updated before `await loadLayersBySetName()`.
+  On load failure, state is corrupted — subsequent saves go to the wrong
+  named set.
+- **Fix:** Move `stateManager.set( 'currentSetName', setName )` to after
+  the `await` (success path only).
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-113: DraftManager Auto-Save Timer Bypasses `isRecoveryMode` Check
+
+- **File:** `resources/ext.layers.editor/DraftManager.js` L140–143
+- **Impact:** `setInterval` callback calls `saveDraft()` without checking
+  `isRecoveryMode`. While the recovery dialog is shown, auto-save can
+  overwrite the recovering draft.
+- **Fix:** Add `if ( this.isRecoveryMode ) { return; }` inside the
+  interval callback.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-114: APIManager Hardcodes Layer Limit to 100
+
+- **File:** `resources/ext.layers.editor/APIManager.js` L898
+- **Impact:** `validateLayers( layers, 100 )` ignores `wgLayersMaxLayerCount`.
+  Wikis with different limits get wrong client-side enforcement.
+- **Fix:** `const maxLayers = mw.config.get( 'wgLayersMaxLayerCount' ) || 100;`
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-115: EventManager Nudge Bypasses StateManager
+
+- **File:** `resources/ext.layers.editor/EventManager.js` L203–204
+- **Impact:** Direct mutation of `layer.x`/`layer.y` skips `_layersVersion`
+  increment and subscriber notifications. SmartGuides cache goes stale;
+  LayerPanel coordinate display not updated.
+- **Fix:** `stateManager.updateLayer( layer.id, { x: ..., y: ... } )`
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-116: DraftManager Storage Key Collision Between Similar Filenames
+
+- **File:** `resources/ext.layers.editor/DraftManager.js` (constructor)
+- **Impact:** `File:My Budget.jpg` and `File:My_Budget.jpg` normalize to
+  the same localStorage key. Two distinct files share a draft on the same
+  browser.
+- **Fix:** Append a short hash of the raw (pre-normalization) filename.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+### Canvas — Medium
+
+#### P2-117: CanvasManager `emitTransforming()` RAF Fires After Destroy
+
+- **File:** `resources/ext.layers.editor/CanvasManager.js` L843
+- **Impact:** RAF return value discarded; `destroy()` cannot cancel it.
+  Fires one frame post-destroy and dispatches stale event to `document`.
+- **Fix:** Store RAF ID in `this._transformRafId`; cancel in `destroy()`.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-118: ZoomPanController `animationFrameId` Not Nulled on Completion
+
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js`
+  L215–218
+- **Impact:** After animation completes, `animationFrameId` retains
+  the stale completed-frame ID. Any guard on `if (this.animationFrameId)`
+  incorrectly detects animation-in-progress.
+- **Fix:** `this.animationFrameId = null;` in the completion branch.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-119: SelectionRenderer Allocates New AngleDimensionRenderer Per Frame
+
+- **File:** `resources/ext.layers.editor/canvas/SelectionRenderer.js` L598
+- **Impact:** `new AngleDimensionRenderer(null)` on every render (~60/sec)
+  while an angleDimension layer is selected, creating GC pressure.
+  HitTestController solved this correctly with a cached lazy instance.
+- **Fix:** Add a `_cachedAngleRenderer` lazy-init property matching
+  HitTestController's pattern.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-120: TransformController `_arrowTipRafId` Absent from Constructor
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+- **Impact:** `destroy()` checks `this._arrowTipRafId !== null` but the
+  property is never initialized. `undefined !== null` is true, so
+  `cancelAnimationFrame(undefined)` is called on every destroy.
+- **Fix:** Add `this._arrowTipRafId = null;` to the constructor.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P2-121: TransformController Text-Drag State Vars Uninitialized
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+  (constructor)
+- **Missing:** `isAngleDimensionTextDragging`, `isDimensionTextDragging`,
+  `angleDimTextLayerId`, `dimensionTextLayerId`, `_pendingDragLayerId`
+- **Impact:** Implicit `undefined` defaults are fragile given the
+  `null`/`undefined` confusion already present (P2-120 in same file).
+- **Fix:** Initialize all five to `false` or `null` in constructor.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+---
+
+### PHP — Low
+
+#### P3-128: `errorSpan` Echoes User-Supplied Filename String
+
+- **File:** `src/Hooks/Processors/LayeredFileRenderer.php` L79
+- **Note:** HTML-escaped via `htmlspecialchars()` — no XSS risk.
+- **Impact:** User-supplied filename echoed into rendered page output
+  visible to other users. Minor information disclosure.
+- **Fix:** Use generic i18n error message.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-129: `EditLayersAction::requiresUnblock()` Returns `false`
+
+- **File:** `src/Action/EditLayersAction.php`
+- **Impact:** Blocked users load the full editor UI before rejection on save.
+- **Fix:** Return `true`.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-130: `returnTo` Only Accepted for Existing Titles
+
+- **File:** `src/Action/EditLayersAction.php` L85–90
+- **Impact:** `isKnown()` check rejects valid redirect targets for
+  unsaved/draft pages. Users have no return path.
+- **Fix:** Use `isValid()` plus a namespace allowlist.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-131: TextSanitizer Uses `strlen()` Not `mb_strlen()`
+
+- **File:** `src/Validation/TextSanitizer.php`
+- **Impact:** CJK and emoji-heavy text counts bytes not characters.
+  A 400-character Japanese annotation (~1,200 bytes) may be incorrectly
+  rejected as exceeding the character limit.
+- **Fix:** `mb_strlen( $text, 'UTF-8' )` against a character limit.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-132: `ApiLayersList` Bypasses Shared `RateLimiter` Class
+
+- **File:** `src/Api/ApiLayersList.php`
+- **Impact:** Direct `pingLimiter()` call bypasses future rate-limiting
+  enhancements (metrics, logging, overrides) applied via `RateLimiter::checkRateLimit()`.
+- **Fix:** Use the shared `RateLimiter` class.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-133: `LayersSchemaManager` Brittle Error Message String Parsing
+
+- **File:** `src/Database/LayersSchemaManager.php`
+- **Impact:** `preg_match('/^Error (\d+):/', ...)` is fragile across
+  MySQL 5.x, MySQL 8.x, and MariaDB versions.
+- **Fix:** Catch specific typed RDBMS exceptions; use `IF NOT EXISTS` DDL.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-134: Hardcoded English String `'Edit Layers'` in Hooks.php
+
+- **File:** `src/Hooks.php`
+- **Impact:** Non-English wikis see English link text.
+- **Fix:** `wfMessage( 'layers-edit-link-text' )->text()`. Add i18n keys.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-135: ThumbnailProcessor Dead Boolean Comparison on `?string` Type
+
+- **File:** `src/Hooks/Processors/ThumbnailProcessor.php` L110
+- **Code:** `$layersFlag === false` — with `declare(strict_types=1)`,
+  `$layersFlag` is `?string` and can never be `false`.
+- **Fix:** Remove `|| $layersFlag === false` from the condition.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+### JavaScript — Low
+
+#### P3-136: Double `showSpinner`/`hideSpinner` on Every Save
+
+- **File:** `resources/ext.layers.editor/LayersEditor.js` +
+  `resources/ext.layers.editor/APIManager.js`
+- **Impact:** `showSpinner()` called in both `LayersEditor.save()` and
+  `APIManager.saveLayers()`. Double `hideSpinner()` on error path.
+- **Fix:** Establish single spinner ownership.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-137: APIManager `mw.notify()` Without `typeof mw` Guard
+
+- **File:** `resources/ext.layers.editor/APIManager.js` L592
+- **Impact:** Inconsistent with all other `mw.*` calls in the file.
+  Throws in Jest or pre-MW environments.
+- **Fix:** `if ( typeof mw !== 'undefined' ) { mw.notify(...); }`
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-138: RevisionManager Mutates StateManager Array Before `set()`
+
+- **File:** `resources/ext.layers.editor/editor/RevisionManager.js`
+  L412–419
+- **Impact:** `namedSets.push(...)` before `stateManager.set('namedSets', ...)`
+  means both old and new values in change notifications are the same
+  reference. Diff-based optimizations miss the change.
+- **Fix:** Use spread to create a new array:
+  `stateManager.set( 'namedSets', [ ...namedSets, newItem ] )`.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+### Canvas — Low
+
+#### P3-139: CanvasManager `handleImageLoaded()` Renders Canvas Twice
+
+- **File:** `resources/ext.layers.editor/CanvasManager.js` L590–592
+- **Impact:** `this.redraw()` immediately followed by `this.renderLayers()`
+  (which also calls `this.redraw()`). Double render cost at the most
+  expensive moment.
+- **Fix:** Remove the first `this.redraw()` call.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-140: CanvasManager Legacy `updateLayerPosition()` Dead/Incomplete
+
+- **File:** `resources/ext.layers.editor/CanvasManager.js`
+- **Impact:** Never called; handles only 7 of ~15 layer types. Trap for
+  future callers that would get silent no-ops for most layer types.
+- **Fix:** Delegate to `this.transformController.updateLayerPosition()`
+  or delete.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+#### P3-141: SelectionManager Fallback `getLayerAtPoint()` Wrong Order
+
+- **File:** `resources/ext.layers.editor/SelectionManager.js` L783–800
+- **Impact:** Fallback iterates `length-1 → 0` (bottom-to-top visually)
+  but should iterate `0 → N` (top-to-bottom). Returns bottom layer
+  instead of topmost. Primary path delegates correctly to canvasManager.
+- **Fix:** Change loop direction; add comment matching HitTestController.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v49 audit
+
+### Documentation — Low
+
+#### P3-142: ESLint `no-unused-vars: off` Blanket Override for Manager Files
+
+- **File:** `.eslintrc.json`
+- **Impact:** Blanket `no-unused-vars: off` could hide dead code in
+  Manager files; `varsIgnorePattern` targeting specific patterns would
+  be more precise.
+- **Status:** **Fixed** (v1.5.59)
+- **Introduced:** v47 review
 
 ---
 
@@ -146,7 +622,7 @@ traceability, but the March 9, 2026 entries below are the current open backlog.
   `ViewerIcons.js`
 - **Impact:** No Jest test files exist for these modules.
   `GroupHierarchyHelper.js` is the most important (core folder logic).
-- **Status:** Open
+- **Status:** **Fixed** (v1.5.59)
 - **Introduced:** v47 review
 
 ### Carried Forward from v46
@@ -157,7 +633,7 @@ traceability, but the March 9, 2026 entries below are the current open backlog.
 discrepancy, stale god-class list in copilot-instructions.md, and
 wrong test count in CHANGELOG.md v1.5.59.)
 
-- **Status:** Open (expanded)
+- **Status:** **Fixed** (v1.5.59) (expanded)
 - **Introduced:** v46 review, expanded v47
 
 ### P3-125: `npm run test:php` Still Fails on Existing PHPCS Errors
@@ -189,7 +665,7 @@ wrong test count in CHANGELOG.md v1.5.59.)
 - **Recommended Fix:** Treat documentation metrics as release-blocking
   data. Update the affected docs together from a single metrics pass
   instead of hand-editing counts opportunistically.
-- **Status:** Open
+- **Status:** **Fixed** (v1.5.59)
 - **Introduced:** v46 review
 
 ### P3-124: `npm run test:php` Emits Vendor Deprecation Warnings on PHP 8.4

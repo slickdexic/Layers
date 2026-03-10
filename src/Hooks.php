@@ -326,7 +326,7 @@ class Hooks {
 				$editParams['setname'] = $set;
 			}
 			$editUrl = $fileTitle->getLocalURL( $editParams );
-			$linkText = 'Edit Layers';
+			$linkText = wfMessage( 'layers-edit-link-text' )->text();
 
 			return "[$editUrl $linkText]";
 		} catch ( Exception $e ) {

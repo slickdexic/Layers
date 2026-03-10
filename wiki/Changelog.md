@@ -4,23 +4,48 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.60] - 2026-03-10
+
 ### Fixed
 - **Font Names With Spaces Lost On Save** — `TextSanitizer::sanitizeIdentifier()` stripped spaces from `fontFamily`, mangling names like "Times New Roman" → "TimesNewRoman". Added dedicated `sanitizeFontFamily()` method that preserves spaces. Updated `ServerSideLayerValidator` to use it for both top-level and richText fontFamily properties.
 - **Thumbnail Shadow Parity** — `ThumbnailRenderer.php` now renders polygon and star shadows in server-generated thumbnails, matching editor and viewer output.
 - **Custom Shape Spread Shadow Allocation** — `CustomShapeRenderer.js` now sizes the temporary spread-shadow canvas from the actual draw bounds instead of using oversized fixed offsets.
+- **Zoom-to-Pointer Drift** — Wheel-zoom anchor drifted from the cursor because `ZoomPanController.zoomBy()` expected CSS display coordinates but received buffer-pixel coordinates from `getMousePointFromClient()`. `resizeCanvas()` scales the canvas CSS display size to fit the container while keeping buffer dimensions at the image's native resolution — these two coordinate spaces diverge for every real image. Fixed by converting the anchor point from buffer pixels to CSS display pixels (`cx = point.x * cssWidth / canvas.width`) before computing screen-space invariant.
+- **P3-128 — `errorSpan` Echoes User-Supplied Filename** — `LayeredFileRenderer.php`: replaced user filename interpolation with a generic i18n error message.
+- **P3-129 — `EditLayersAction::requiresUnblock()` Always `false`** — Blocked users were able to open the full editor UI; now returns `true` to reject blocked users immediately.
+- **P3-130 — `returnTo` Rejects Valid Redirect Targets** — `EditLayersAction.php`: relaxed `isKnown()` check to `isValid()` with a namespace allowlist so unsaved/draft-page return paths are accepted.
+- **P3-131 — `TextSanitizer` Uses `strlen()` for Character Limits** — Replaced with `mb_strlen($text, 'UTF-8')` so CJK and emoji-heavy text is counted in characters, not bytes.
+- **P3-132 — `ApiLayersList` Bypasses Shared `RateLimiter`** — Replaced direct `pingLimiter()` call with `RateLimiter::checkRateLimit()` so future rate-limit enhancements (metrics, logging, config overrides) apply uniformly.
+- **P3-133 — `LayersSchemaManager` Brittle Error String Parsing** — Replaced fragile `preg_match('/^Error (\d+):/', ...)` pattern with typed RDBMS exception handling and `IF NOT EXISTS` DDL guard.
+- **P3-134 — Hardcoded `'Edit Layers'` Link Text** — `Hooks.php`: replaced hardcoded English string with `wfMessage('layers-edit-link-text')->text()`; added `layers-edit-link-text` i18n key.
+- **P3-135 — `ThumbnailProcessor` Dead `=== false` on `?string`** — Removed the unreachable `|| $layersFlag === false` branch from the null-check condition.
+- **P3-136 — Double Spinner on Every Save** — `LayersEditor.save()` owns the full spinner lifecycle (show on start, hide on both success and error paths); removed duplicate `showSpinner()` from `APIManager.saveLayers()`.
+- **P3-137 — `APIManager` `mw.notify()` Without `typeof mw` Guard** — Added `typeof mw !== 'undefined'` guard consistent with all other `mw.*` calls in the file; prevents throws in Jest/pre-MW environments.
+- **P3-138 — `RevisionManager` Mutates State Array Before `set()`** — Replaced `namedSets.push(...)` with spread syntax `[...namedSets, newItem]` so old and new values in change notifications have distinct references.
+- **P3-139 — Double Render in `handleImageLoaded()`** — Removed superfluous `this.redraw()` called immediately before `this.renderLayers()` (which itself calls `this.redraw()`).
+- **P3-140 — `CanvasManager.updateLayerPosition()` Dead/Incomplete** — Replaced stub implementation with delegation to `this.transformController.updateLayerPosition()`, covering all layer types.
+- **P3-141 — `SelectionManager` Fallback Hit-Test Wrong Iteration Order** — Fallback `getLayerAtPoint()` iterated bottom-to-top (returning deepest layer); changed to top-to-bottom so topmost visible layer is returned first, matching `HitTestController` behaviour.
+- **P3-142 — ESLint Blanket `no-unused-vars: off` for Manager Files** — Replaced blanket override with `varsIgnorePattern` targeting only the specific public-API patterns that legitimately go uncalled within their own file.
 
 ### Documentation
-- **Metrics synchronization** — Updated core docs to the March 9, 2026 audited repository totals: 11,421 Jest tests in 167 suites, 143 JS source files, ~99,730 JS source lines, 41 PHP production files, ~15,197 PHP lines, and 832 i18n keys.
-- **Branch/support sync** — Refreshed install, architecture, and support-policy docs so `main`, `REL1_43`, and `REL1_39` all reflect the current 1.5.59 branch state.
+- **Metrics synchronization** — Updated core docs to the March 10, 2026 audited repository totals: 11,445 Jest tests in 168 suites, 92.19% statement coverage.
+- **Branch/support sync** — Refreshed install, architecture, and support-policy docs so `main`, `REL1_43`, and `REL1_39` all reflect the current 1.5.60 branch state.
 
 ### Code Quality
 - **PHPCS zero warnings** — Fixed all 33 errors (line endings) and 13 warnings across 6 PHP files: wrapped long regex lines in `ColorValidator.php`, `ThumbnailRenderer.php`, and `LayerInjector.php`; replaced `wfMessage()` with `$this->msg()` in `ApiLayersInfo.php`; added phpcs:ignore for legitimate same-line `@codeCoverageIgnore` comments.
+- **PHP line endings normalized** — Converted all 78 PHP files from CRLF to LF. Added `.gitattributes` with `eol=lf` to prevent future line ending drift on Windows.
 
 ### Tests
 - Added PHPUnit regression coverage for polygon/star thumbnail shadow generation.
 - Tightened Jest coverage around custom-shape spread-shadow temp canvas sizing.
 - Added `LogSanitizer.test.js` — 26 tests covering sanitization of tokens, hex strings, paths, URLs, IPs, emails, truncation, and object traversal.
 - Added `GroupHierarchyHelper.test.js` — 52 tests covering all 12 static methods including hierarchy traversal, bounds calculation, and group operations.
+- Added `LayerDefaults.test.js` — 18 tests covering all constants, immutability (Object.freeze), and exports.
+- Added `HelpDialog.test.js` — 40 tests covering constructor, show/close lifecycle, overlay/dialog ARIA, 4-tab system, DOM cleanup, and destroy.
+- Added `ViewerIcons.test.js` — 27 tests covering SVG icon generation, namespace isolation, and all icon variants.
+- Extended `ToolManager.test.js` — 27 new dispatch tests covering startTool/updateTool/finishTool switch-case paths for all 9 tool types, plus pen drawing and ShapeFactory integration. Total: 111 tests (up from 84).
+- Added regression test for zoom-to-pointer anchor with CSS display size differing from buffer size (`ZoomPanController.test.js`).
+- **Jest coverage** — 92.19% statements, 82.15% branches, 92.25% lines (168 suites, 11,445 tests).
 
 ## [1.5.59] - 2026-03-04
 

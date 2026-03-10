@@ -24,7 +24,7 @@ class EditLayersAction extends \Action {
 
 	/** @inheritDoc */
 	public function requiresUnblock() {
-		return false;
+		return true;
 	}
 
 	/** @inheritDoc */
@@ -92,9 +92,12 @@ class EditLayersAction extends \Action {
 		$returnTo = $request->getText( 'returnto', '' );
 		$returnToUrl = null;
 		if ( $returnTo !== '' ) {
-			// Validate returnto is a valid title to prevent open redirects
+			// Validate returnto is a valid local title to prevent open redirects.
+			// Use isValid() rather than isKnown() so unsaved/draft pages are accepted.
 			$returnTitle = \MediaWiki\Title\Title::newFromText( $returnTo );
-			if ( $returnTitle && $returnTitle->isKnown() ) {
+			$allowedNamespaces = [ NS_MAIN, NS_FILE, NS_FILE_TALK, NS_SPECIAL ];
+			if ( $returnTitle && $returnTitle->isValid()
+				&& in_array( $returnTitle->getNamespace(), $allowedNamespaces, true ) ) {
 				$returnToUrl = $returnTitle->getLocalURL();
 			}
 		}

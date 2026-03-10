@@ -189,19 +189,29 @@ class EventManager {
 			return;
 		}
 
-		// Batch the position updates
+		// Batch the position updates through StateManager so listeners are notified
 		selectedLayers.forEach( layer => {
 			if ( layer && !layer.locked ) {
 				// dimension, line and arrow layers store position as x1/y1/x2/y2 instead of x/y
+				let updates;
 				if ( [ 'dimension', 'line', 'arrow' ].includes( layer.type ) ) {
-					layer.x1 = ( layer.x1 || 0 ) + dx;
-					layer.y1 = ( layer.y1 || 0 ) + dy;
-					layer.x2 = ( layer.x2 || 0 ) + dx;
-					layer.y2 = ( layer.y2 || 0 ) + dy;
+					updates = {
+						x1: ( layer.x1 || 0 ) + dx,
+						y1: ( layer.y1 || 0 ) + dy,
+						x2: ( layer.x2 || 0 ) + dx,
+						y2: ( layer.y2 || 0 ) + dy
+					};
 				} else {
-					// Update position
-					layer.x = ( layer.x || 0 ) + dx;
-					layer.y = ( layer.y || 0 ) + dy;
+					updates = {
+						x: ( layer.x || 0 ) + dx,
+						y: ( layer.y || 0 ) + dy
+					};
+				}
+				if ( typeof stateManager.updateLayer === 'function' ) {
+					stateManager.updateLayer( layer.id, updates );
+				} else {
+					// Fallback for environments where StateManager lacks updateLayer
+					Object.assign( layer, updates );
 				}
 			}
 		} );

@@ -517,16 +517,21 @@ class ApiLayersInfo extends ApiBase {
 				}
 			}
 
-			// Batch load users using UserFactory (modern MediaWiki API)
+			// Batch load users with a single SQL query to avoid N+1 per-user queries
 			$users = [];
 			if ( !empty( $userIds ) ) {
 				$userIds = array_unique( $userIds );
-				$userFactory = MediaWikiServices::getInstance()->getUserFactory();
-				foreach ( $userIds as $userId ) {
-					$user = $userFactory->newFromId( $userId );
-					if ( $user ) {
-						$users[$userId] = $user->getName();
-					}
+				$dbr = MediaWikiServices::getInstance()
+					->getDBLoadBalancer()
+					->getConnection( DB_REPLICA );
+				$res = $dbr->select(
+					'user',
+					[ 'user_id', 'user_name' ],
+					[ 'user_id' => $userIds ],
+					__METHOD__
+				);
+				foreach ( $res as $userRow ) {
+					$users[(int)$userRow->user_id] = $userRow->user_name;
 				}
 			}
 

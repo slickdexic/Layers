@@ -142,10 +142,11 @@ describe('LayersEditor utility methods', () => {
             const date = LayersEditor.prototype.parseMWTimestamp(timestamp);
 
             expect(date).toBeInstanceOf(Date);
-            expect(date.getFullYear()).toBe(2025);
-            expect(date.getMonth()).toBe(0); // January is 0
-            expect(date.getDate()).toBe(1);
-            expect(date.getHours()).toBe(12);
+            // MW timestamps are UTC; use UTC accessors to avoid timezone-dependent failures
+            expect(date.getUTCFullYear()).toBe(2025);
+            expect(date.getUTCMonth()).toBe(0); // January is 0
+            expect(date.getUTCDate()).toBe(1);
+            expect(date.getUTCHours()).toBe(12);
         });
 
         test('should parse different date', () => {
@@ -153,12 +154,13 @@ describe('LayersEditor utility methods', () => {
             const date = LayersEditor.prototype.parseMWTimestamp(timestamp);
 
             expect(date).toBeInstanceOf(Date);
-            expect(date.getFullYear()).toBe(2023);
-            expect(date.getMonth()).toBe(11); // December is 11
-            expect(date.getDate()).toBe(15);
-            expect(date.getHours()).toBe(23);
-            expect(date.getMinutes()).toBe(59);
-            expect(date.getSeconds()).toBe(59);
+            // MW timestamps are UTC; use UTC accessors to avoid timezone-dependent failures
+            expect(date.getUTCFullYear()).toBe(2023);
+            expect(date.getUTCMonth()).toBe(11); // December is 11
+            expect(date.getUTCDate()).toBe(15);
+            expect(date.getUTCHours()).toBe(23);
+            expect(date.getUTCMinutes()).toBe(59);
+            expect(date.getUTCSeconds()).toBe(59);
         });
 
         test('should return current date for invalid input (null)', () => {

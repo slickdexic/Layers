@@ -49,7 +49,19 @@
 		constructor( editor ) {
 			this.editor = editor;
 			this.filename = editor.filename || '';
-			this.storageKey = STORAGE_KEY_PREFIX + this.filename.replace( /[^a-zA-Z0-9_.-]/g, '_' );
+			// Append a short FNV-1a hash of the original filename to prevent key
+			// collisions when two filenames sanitize to the same string
+			// (e.g. "Foo/bar.jpg" and "Foo_bar.jpg" both become "Foo_bar.jpg")
+			const _fnv = ( s ) => {
+				let h = 2166136261;
+				for ( let i = 0; i < s.length; i++ ) {
+					h = Math.imul( h ^ s.charCodeAt( i ), 16777619 ) >>> 0;
+				}
+				return ( h >>> 0 ).toString( 36 ).slice( 0, 4 );
+			};
+			this.storageKey = STORAGE_KEY_PREFIX +
+				this.filename.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
+				'_' + _fnv( this.filename );
 			this.autoSaveTimer = null;
 			this.debounceTimer = null;
 			this.isRecoveryMode = false;
@@ -138,6 +150,9 @@
 
 			// Set up periodic auto-save
 			this.autoSaveTimer = setInterval( () => {
+				if ( this.isRecoveryMode ) {
+					return;
+				}
 				if ( this.editor.isDirty && this.editor.isDirty() ) {
 					this.saveDraft();
 				}
