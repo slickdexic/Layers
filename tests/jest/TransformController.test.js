@@ -928,6 +928,53 @@ describe( 'TransformController', () => {
 			// clearGuides should be called when smart guides controller is available
 			expect( smartGuidesController.clearGuides ).toHaveBeenCalled();
 		} );
+
+		it( 'should derive ref point from points array for path layer (P2-122 regression)', () => {
+			// Path layers have no top-level x/y — position is encoded in the points array.
+			// Before the fix, _getRefPoint fell through to {x:0,y:0}, so smart guides
+			// received a proposedX/Y based on the origin rather than the layer's actual position.
+			const pathLayer = {
+				id: 'path1',
+				type: 'path',
+				points: [ { x: 50, y: 200 }, { x: 150, y: 100 }, { x: 250, y: 200 } ]
+			};
+			mockEditor.layers = [ pathLayer ];
+			mockManager.selectedLayerId = 'path1';
+			mockManager.selectedLayerIds = [ 'path1' ];
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 120, y: 115 } );
+
+			expect( smartGuidesController.calculateSnappedPosition ).toHaveBeenCalled();
+
+			// ref = { x: min(50,150,250)=50, y: min(200,100,200)=100 }
+			// proposedX = 50 + (120-100) = 70; proposedY = 100 + (115-100) = 115
+			const call = smartGuidesController.calculateSnappedPosition.mock.calls[ 0 ];
+			expect( call[ 1 ] ).toBe( 70 );
+			expect( call[ 2 ] ).toBe( 115 );
+		} );
+
+		it( 'should use grid snap ref point correctly for path layer', () => {
+			mockManager.snapToGrid = true;
+			mockManager.gridSize = 10;
+			const pathLayer = {
+				id: 'path1',
+				type: 'path',
+				points: [ { x: 50, y: 200 }, { x: 150, y: 100 }, { x: 250, y: 200 } ]
+			};
+			mockEditor.layers = [ pathLayer ];
+			mockManager.selectedLayerId = 'path1';
+			mockManager.selectedLayerIds = [ 'path1' ];
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 120, y: 115 } );
+
+			// Grid snap is used; smart guides should not be called
+			expect( smartGuidesController.calculateSnappedPosition ).not.toHaveBeenCalled();
+			// snapPointToGrid should have been called with the correct proposed position
+			// ref = {x:50, y:100}; proposed = {x:70, y:115}
+			expect( mockManager.snapPointToGrid ).toHaveBeenCalledWith( { x: 70, y: 115 } );
+		} );
 	} );
 
 	describe( 'layer lock protection', () => {

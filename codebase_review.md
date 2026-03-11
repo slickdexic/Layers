@@ -1,8 +1,8 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 10, 2026 (v49 audit)
-**Previous Review:** March 9, 2026 (v48 audit)
-**Version:** 1.5.60
+**Review Date:** March 10, 2026 (v50 audit)
+**Previous Review:** March 10, 2026 (v49 audit)
+**Version:** 1.5.61
 **Reviewer:** GitHub Copilot (Claude Sonnet 4.6)
 
 ---
@@ -15,12 +15,12 @@
     before inclusion. Known false-positive patterns from prior reviews
     were checked and excluded. 5 subagent-reported issues were eliminated
     as false positives during this v49 round (see Verified Non-Issues).
-- **Coverage:** 92.19% statements, 82.15% branches, 91.48% functions,
-    92.25% lines (verified March 10, 2026)
+- **Coverage:** 91.32% statements, 81.69% branches, 90.62% functions,
+    91.39% lines (verified March 10, 2026 — commit 4f315a5f)
 - **JS source files:** 143 in `resources/` excluding `resources/dist` (~99,730 lines)
 - **PHP production files:** 41 in `src/` (~15,197 lines)
-- **Jest test suites:** 167
-- **Jest test cases:** 11,421 (`npm run test:js` — verified March 10, 2026)
+- **Jest test suites:** 168
+- **Jest test cases:** 11,445 (`npm run test:js` — verified March 10, 2026)
 - **PHPUnit test files:** 31 in `tests/phpunit`
 - **i18n message keys:** 832 in `i18n/en.json`, 832 in `i18n/qqq.json`
 - **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
@@ -58,7 +58,189 @@ ARCHITECTURE.md) continues despite partial fixes in prior reviews.
 
 ---
 
-## Confirmed Open Findings (v49 — March 10, 2026)
+## Confirmed Findings (v50 — March 10, 2026) — All 7 Fixed in v1.5.61
+
+### v49 Verification Summary
+
+All 53 of 54 v49 issues verified as fixed (v1.5.59/v1.5.60). P1-053 is
+partially fixed; remaining path-type issue re-tracked as P2-122 below.
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P1-045 | ✅ Fixed v1.5.59 | `layers-admin` right added; `LayersApiHelperTrait.php` L106 corrected |
+| P1-046 | ✅ Fixed v1.5.59 | Permission check moved before DB query in SpecialSlides |
+| P1-047 | ✅ Fixed v1.5.59 | Permission check moved before DB query in SpecialEditSlide |
+| P1-048 | ✅ Fixed v1.5.59 | `return;` moved inside `try` block; Promise now resolves/rejects |
+| P1-049 | ✅ Fixed v1.5.59 | 4 sites converted to `.then(success, failure)` pattern |
+| P1-050 | ✅ Fixed v1.5.59 | `lastSaveHistoryIndex` decremented correctly on history trim |
+| P1-051 | ✅ Fixed v1.5.59 | `EditorBootstrap` no longer creates duplicate editors |
+| P1-052 | ✅ Fixed v1.5.59 | `ValidationManager` bounds now match server (`fontSize < 1`, `strokeWidth > 100`) |
+| P1-053 | ✅ Fixed v1.5.61 | path type fixed (P2-122); all types now fully working |
+| P1-054 | ✅ Fixed v1.5.59 | `canvas.parentNode` null-checked in `fitToWindow()` |
+| P1-055 | ✅ Fixed v1.5.59 | Same null-check applied in `zoomToFitLayers()` |
+| P2-104 | ✅ Fixed v1.5.59 | Zero-width space no longer injected in `TextSanitizer` |
+| P2-105 | ✅ Fixed v1.5.59 | `blend` property now validated against enum in `ServerSideLayerValidator` |
+| P2-106 | ✅ Fixed v1.5.59 | `usleep()` reduced to 10ms/20ms |
+| P2-107 | ✅ Fixed v1.5.59 | N+1 replaced with batch SQL — but introduced deprecated API (see P2-123) |
+| P2-108 | ✅ Fixed v1.5.59 | `CacheInvalidationTrait` now logs warning on cache failure |
+| P2-109 | ✅ Fixed v1.5.59 | `wfLogWarning()` replaced with `LoggerFactory` in `RateLimiter` |
+| P2-110 | ✅ Fixed v1.5.59 | `ApiLayersRename` returns `ERROR_INVALID_SETNAME` for bad format |
+| P2-111 | ✅ Fixed v1.5.59 | `parseMWTimestamp` fallback uses `Date.UTC(...)` |
+| P2-112 | ✅ Fixed v1.5.59 | `currentSetName` set only after successful load |
+| P2-113 | ✅ Fixed v1.5.59 | Auto-save interval now checks `isRecoveryMode` |
+| P2-114 | ✅ Fixed v1.5.59 | APIManager reads `wgLayersMaxLayerCount` instead of hardcoded 100 |
+| P2-115 | ✅ Fixed v1.5.59 | `nudgeSelectedLayers` uses `stateManager.updateLayer()` |
+| P2-116 | ✅ Fixed v1.5.59 | Draft storage key uses hash to prevent collision |
+| P2-117 | ✅ Fixed v1.5.59 | `emitTransforming()` RAF ID stored and cancelled on destroy |
+| P2-118 | ✅ Fixed v1.5.59 | `animationFrameId` nulled on animation completion |
+| P2-119 | ✅ Fixed v1.5.59 | `AngleDimensionRenderer` cached as singleton in `SelectionRenderer` |
+| P2-120 | ✅ Fixed v1.5.59 | `_arrowTipRafId` initialized to `null` in constructor |
+| P2-121 | ✅ Fixed v1.5.59 | Text-drag state variables initialized in constructor |
+| P3-128 | ✅ Fixed v1.5.60 | i18n message used instead of raw filename in error span |
+| P3-129 | ✅ Fixed v1.5.60 | `requiresUnblock()` returns `true` |
+| P3-130 | ✅ Fixed v1.5.60 | `returnTo` validation uses `isValid()` + namespace allowlist |
+| P3-131 | ✅ Fixed v1.5.60 | `sanitizeText()` and `sanitizeRichTextRun()` use `mb_strlen()` |
+| P3-132 | ✅ Fixed v1.5.60 | `ApiLayersList` uses shared `RateLimiter::checkRateLimit()` |
+| P3-133 | ✅ Fixed v1.5.60 | `LayersSchemaManager` uses typed exception instead of string parsing |
+| P3-134 | ✅ Fixed v1.5.60 | i18n key used for 'Edit Layers' link text |
+| P3-135 | ✅ Fixed v1.5.60 | Dead `=== false` comparison removed from `ThumbnailProcessor` |
+| P3-136 | ✅ Fixed v1.5.60 | `mw.notify()` wrapped in `typeof mw !== 'undefined'` guard |
+| P3-137 | ✅ Fixed v1.5.60 | `namedSets.push()` replaced with spread: `[...namedSets, {...}]` |
+| P3-138 | ✅ Fixed v1.5.60 | Single spinner ownership established |
+| P3-139 | ✅ Fixed v1.5.60 | Double `redraw()` in `handleImageLoaded()` removed |
+| P3-140 | ✅ Fixed v1.5.60 | Dead `updateLayerPosition()` delegated or removed |
+| P3-141 | ✅ Fixed v1.5.60 | `getLayerAtPoint()` fallback loop direction corrected |
+| P3-142 | ✅ Fixed v1.5.60 | ESLint `no-unused-vars: off` scoped to individual files |
+| D-049-01 through D-049-10 | ✅ Fixed v1.5.60 | Documentation metrics synchronized |
+
+---
+
+### New Findings (v50) — All Fixed in v1.5.61
+
+### High
+
+#### PHP — 1 item
+
+**P1-056 · SpecialSlides.php `$canDelete` Uses Page-Deletion Right Instead of `layers-admin`**
+- **File:** `src/SpecialPages/SpecialSlides.php` L80
+- **Code:** `$canDelete = $permissionManager->userHasRight( $user, 'delete' );`
+- **Impact:** The `$canDelete` flag is passed as `wgLayersSlidesConfig.canDelete`
+    to the `SpecialSlides.js` frontend (L85), where it controls visibility of
+    the delete-slide button (L185). Because it checks the wiki page-deletion
+    right instead of `layers-admin`:
+    1. Any user who can delete wiki pages (sysops) sees the delete button
+       but could also already delete via the `layers-admin` API path —
+       so this is not an exploitation path, just a wrong-gate dependency.
+    2. A dedicated `layers-admin` user **without** the page-deletion right
+       cannot see the delete button in the UI, even though the API would
+       accept their deletion request. Legitimate layer admins are
+       denied the delete UI.
+    Security note: the `layersdelete` API is correctly gated by `layers-admin`
+    (in `LayersApiHelperTrait.php`, fixed in P1-045). This is a **UI-only
+    authorization inconsistency**, not an API bypass.
+- **Fix:** `$canDelete = $permissionManager->userHasRight( $user, 'layers-admin' );`
+- **Root cause:** P1-045 fixed `LayersApiHelperTrait.php` but missed this
+    call in `SpecialSlides.php`. The bug was introduced simultaneously.
+- **Status:** ✅ **Fixed** (v1.5.61)
+
+### Medium
+
+#### Canvas — 1 item
+
+**P2-122 · Smart Guides Broken for `path` Layer Type — Incomplete P1-053 Fix**
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+    L498–520, function `_getRefPoint()`
+- **Code:**
+    ```javascript
+    const _getRefPoint = ( state ) => {
+        const t = state.type;
+        if ( t === 'line' || t === 'arrow' || t === 'dimension' ) { ... }
+        if ( t === 'angleDimension' ) { ... }
+        return { x: state.x || 0, y: state.y || 0 };  // ← path falls here
+    };
+    ```
+- **Impact:** `path` layers store geometry as `points: [{x,y}, ...]` with
+    no top-level `.x` or `.y`. The fallthrough branch returns `{x:0, y:0}`
+    for path layers, making snap calculations use the canvas origin as the
+    reference. Smart guides fire but snap to globally wrong positions —
+    effectively non-functional for freeform path layers.
+    P1-053's original title listed "Line, Arrow, **Path**, Dimension" but
+    the `path` case was not added to the fix.
+- **Fix:**
+    ```javascript
+    if ( t === 'path' ) {
+        const pts = state.points || [];
+        return {
+            x: pts.length ? Math.min( ...pts.map( p => p.x ) ) : 0,
+            y: pts.length ? Math.min( ...pts.map( p => p.y ) ) : 0
+        };
+    }
+    ```
+- **Status:** ✅ **Fixed** (v1.5.61)
+
+#### PHP — 1 item
+
+**P2-123 · `ApiLayersInfo.enrichRowsWithUserNames()` Uses Deprecated `ILoadBalancer` API**
+- **File:** `src/Api/ApiLayersInfo.php` L524–526
+- **Code:**
+    ```php
+    $dbr = MediaWikiServices::getInstance()
+        ->getDBLoadBalancer()
+        ->getConnection( DB_REPLICA );
+    ```
+- **Context:** This code was introduced by the P2-107 fix (batch user
+    lookup). The same class already has a `getDb()` method at L642 that
+    correctly uses `getConnectionProvider()->getReplicaDatabase()` — the
+    modern MW 1.39+ API.
+- **Impact:** `ILoadBalancer::getConnection()` is deprecated since MW 1.39
+    and will be removed in a future version. When removed, this will cause
+    a fatal error on every call to `layersinfo` that has revision history
+    with non-zero user IDs. Other files in the extension use the modern API;
+    this is an inconsistency introduced during the P2-107 fix.
+- **Fix:** Replace L524–526 with `$dbr = $this->getDb();`
+- **Status:** ✅ **Fixed** (v1.5.61)
+
+### Low
+
+#### Documentation — 4 items
+
+**D-050-01 · `docs/ARCHITECTURE.md` Stale Coverage and Test Metrics**
+- **File:** `docs/ARCHITECTURE.md` L34–35, L148
+- **Issues:**
+  - L34: `92.19% statements, 82.15% branches` → should be `91.32%, 81.69%`
+  - L35: `11,421 tests (167 suites)` → should be `11,445 (168 suites)`
+  - L148: `95.19% coverage` → completely outdated (ancient value from before v40)
+- **Fix:** Update all three lines to current verified values.
+
+**D-050-02 · `CHANGELOG.md` v1.5.60 Documentation Section Claims Wrong Coverage**
+- **File:** `CHANGELOG.md`, v1.5.60 Documentation section
+- **Issue:** States coverage metrics were updated to `92.19%` — but the
+    actual coverage at the v1.5.60 commit is `91.32%` (commit `4f315a5f`).
+- **Fix:** Update CHANGELOG v1.5.60 entry to reflect `91.32%`.
+
+**D-050-03 · `wiki/Changelog.md` Same Stale Coverage Value as D-050-02**
+- **File:** `wiki/Changelog.md`, v1.5.60 entry
+- **Issue:** Mirrors the `CHANGELOG.md` v1.5.60 Documentation section
+    with the same incorrect `92.19%` value.
+- **Fix:** Sync with corrected CHANGELOG.md after D-050-02 is fixed.
+
+**D-050-04 · `README.md` Internal God-Class Count Contradiction**
+- **File:** `README.md` L317, L353, L384
+- **Issues:**
+  - L317: "22 god classes" — incorrect (correct value is 23)
+  - L353: "17 files" with a Feb 17, 2026 date note — stale (correct is
+    19 hand-written JS + 2 PHP = 21 excluding 2 generated)
+  - L384 (metrics table): correctly says `23` — creates an internal
+    contradiction with L317
+- **Fix:** Update L317 and L353 to say 23 and 21 hand-written respectively.
+- **Status:** ✅ **Fixed** (v1.5.61)
+
+---
+
+## v49 Confirmed Open Findings (Historical Reference — March 10, 2026)
+
+All items below were open as of the v49 audit and have since been fixed.
+See KNOWN_ISSUES.md for the canonical tracking record.
 
 ### High
 
@@ -678,19 +860,21 @@ but verified as non-issues:
 
 ---
 
-## Current Metrics (Verified March 10, 2026)
+## Current Metrics (Verified March 10, 2026 — v50 audit)
 
 | Metric | Verified Current Value |
 |--------|------------------------|
-| Extension version | 1.5.59 |
+| Extension version | 1.5.61 |
 | MediaWiki requirement | >= 1.44.0 |
 | PHP requirement | 8.1+ |
 | JS source files (excluding `resources/dist`) | 143 |
 | JS source lines (excluding `resources/dist`) | ~99,730 |
 | PHP production files (`src/`) | 41 |
 | PHP production lines (`src/`) | ~15,197 |
-| Jest test suites | 167 |
-| Jest tests | 11,421 |
+| Jest test suites | 168 |
+| Jest tests | 11,445 |
+| Statement coverage | 91.32% |
+| Branch coverage | 81.69% |
 | i18n keys (`en.json`, `qqq.json`) | 832 |
 | Files > 1,000 lines | 23 total |
 
@@ -744,44 +928,38 @@ but verified as non-issues:
 | LayersValidator.js | 956 |
 | ArrowRenderer.js | 932 |
 
-## Issue Summary (v49 — March 10, 2026)
+## Issue Summary (v50 — March 10, 2026)
 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
-| PHP bugs | 0 | 3 | 7 | 8 | P1-045–047, P2-104–110, P3-128–135 |
-| JS bugs | 0 | 5 | 6 | 3 | P1-048–052, P2-111–116, P3-136–138 |
-| Canvas bugs | 0 | 3 | 5 | 3 | P1-053–055, P2-117–121, P3-139–141 |
-| Documentation | 0 | 0 | 10 | 0 | D-049-01–10 (see list above) |
-| Code quality | 0 | 0 | 0 | 1 | P3-142: ESLint `no-unused-vars: off` blanket |
-| **Total open** | **0** | **11** | **28** | **15** | **54 open items (2 carried from v48)** |
+| PHP bugs | 0 | ~~1~~ 0 | ~~1~~ 0 | 0 | All fixed v1.5.61 |
+| Canvas bugs | 0 | 0 | ~~1~~ 0 | 0 | All fixed v1.5.61 |
+| Documentation | 0 | 0 | 0 | ~~4~~ 0 | All fixed v1.5.61 |
+| **Total open** | **0** | **0** | **0** | **0** | **All 7 v50 items fixed in v1.5.61** |
 
-## v48 Issue Summary (March 9, 2026 — superseded by v49)
+## v49 Issue Summary (March 10, 2026 — superseded by v50)
 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
-| Bugs | 0 | ~~3~~ 0 | ~~5~~ 0 | 0 | All 8 bugs fixed |
-| Documentation | 0 | 0 | 1 | 0 | Metrics drift (partial fix) |
-| Tooling | 0 | 0 | 0 | ~~1~~ 0 | ~~PHPCS carried forward~~ Fixed |
-| Test coverage | 0 | 0 | 0 | ~~1~~ 0 | ~~3 modules without tests~~ 2 of 3 covered |
-| Code quality | 0 | 0 | 0 | 1 | ESLint config improvement |
-| **Total open** | **0** | **0** | **1** | **1** | **2 open items (11 fixed)** |
+| PHP bugs | 0 | ~~3~~ 0 | ~~7~~ 0 | ~~8~~ 0 | All fixed v1.5.59/v1.5.60 |
+| JS bugs | 0 | ~~5~~ 0 | ~~6~~ 0 | ~~3~~ 0 | All fixed v1.5.59/v1.5.60 |
+| Canvas bugs | 0 | ~~3~~ 0 | ~~5~~ 0 | ~~3~~ 0 | All fixed v1.5.59/v1.5.60 |
+| Documentation | 0 | 0 | ~~10~~ 0 | 0 | All fixed v1.5.60 |
+| Code quality | 0 | 0 | 0 | ~~1~~ 0 | Fixed v1.5.60 |
+| **Total open** | **0** | **0** | **0** | **0** | **All 54 items closed** |
 
-## Overall Grade: B+
+## Overall Grade: A
 
-The codebase has strong architecture, comprehensive test coverage (92%+),
-modern ES6 class patterns (100% migrated), and no critical security
-vulnerabilities. All v48 bugs were confirmed fixed. Security controls pass
-(CSRF, SQL injection, rate limiting, input validation, clickjacking
-protection, SVG sanitization).
+The codebase has strong architecture, comprehensive test coverage (91.32%
+statements, 11,445 tests in 168 suites), 100% ES6 class migration, and
+no critical security vulnerabilities. All v49 bugs were confirmed fixed.
+Security controls pass: CSRF protection, SQL injection prevention,
+rate limiting, input validation/sanitization, and SVG sanitization.
 
-The v49 review found a cluster of correctness and reliability bugs
-introduced during the large v42–v46 feature additions — these were not
-caught in prior reviews because some only manifest under specific
-conditions (history full, concurrent save, debug mode off, non-standard
-file names). The documentation drift problem continues.
-
-Grade remains B+ pending fixes for 11 HIGH items and documentation
-synchronization.
+The v50 review found 7 new items: 1 HIGH (UI authorization inconsistency
+in SpecialSlides), 2 MEDIUM (smart guides path type incomplete, deprecated
+DB API from P2-107 fix), and 4 LOW (documentation metrics). All 7 were
+fixed in v1.5.61. Grade: **A**.
 
 ---
 
@@ -2011,6 +2189,8 @@ Open items as of v45.6 (post-batch 6):
 
 | Version | Date | Grade | Changes |
 |---------|------|-------|------|
+| v50 | 2026-03-10 | A | Verification audit of v49 fixes; 53/54 v49 fixed, 1 partial (P1-053 path type → P2-122). 7 new items: 1H (P1-056 SpecialSlides wrong right), 2M (P2-122 path smart guides, P2-123 deprecated DB API), 4L (D-050-01–04 docs). |
+| v49 | 2026-03-10 | B+ | Full re-audit; 54 new items (11H, 18M, 15L, 10 docs); all opened; privilege escalation via wrong permission right; documentation drift; smart guides broken for 4 types. |
 | v48 | 2026-03-09 | B+ | Full re-audit; 1 new HIGH (CanvasManager division by zero), 2 new MEDIUM (angle dimension phase, arrow RAF guards); god class recount 21→23; 16 false positives eliminated; metrics verified. |
 | v47 | 2026-03-10 | B+ | Fresh audit; 2H (nudge history, draft image loss), 3M (viewer blend, delete race, prune scope), 1 fixed same-session (font sanitizer). |
 | v45.6 | 2026-03-04 | A | Batch 6: Last 3 P2s fixed (P2-081 callout blur, P2-083 i18n shortcuts, P2-075 shadow rotation). All P2 items now resolved; 34 P3 remain. |
