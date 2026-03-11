@@ -24,6 +24,50 @@ if ( !defined( 'NS_FILE' ) ) {
 
 class Hooks {
 	/**
+	 * Extension registration callback.
+	 * Registers default rate limits into $wgRateLimits so that
+	 * User::pingLimiter() enforces them out of the box.
+	 */
+	public static function onRegistration(): void {
+		global $wgRateLimits;
+		$defaults = [
+			'editlayers-save' => [
+				'user' => [ 30, 3600 ],
+				'newbie' => [ 5, 3600 ],
+			],
+			'editlayers-delete' => [
+				'user' => [ 20, 3600 ],
+				'newbie' => [ 3, 3600 ],
+			],
+			'editlayers-render' => [
+				'user' => [ 100, 3600 ],
+				'newbie' => [ 20, 3600 ],
+			],
+			'editlayers-create' => [
+				'user' => [ 10, 3600 ],
+				'newbie' => [ 2, 3600 ],
+			],
+			'editlayers-rename' => [
+				'user' => [ 20, 3600 ],
+				'newbie' => [ 3, 3600 ],
+			],
+			'editlayers-info' => [
+				'user' => [ 200, 3600 ],
+				'newbie' => [ 50, 3600 ],
+			],
+			'editlayers-list' => [
+				'user' => [ 100, 3600 ],
+				'newbie' => [ 30, 3600 ],
+			],
+		];
+		foreach ( $defaults as $key => $limits ) {
+			if ( !isset( $wgRateLimits[$key] ) ) {
+				$wgRateLimits[$key] = $limits;
+			}
+		}
+	}
+
+	/**
 	 * BeforePageDisplay hook handler
 	 *
 	 * @param mixed $out OutputPage
