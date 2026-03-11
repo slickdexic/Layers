@@ -261,6 +261,20 @@
 				return { x: p.x + PASTE_OFFSET, y: p.y + PASTE_OFFSET };
 			} );
 		}
+
+		// Offset angle dimension anchor points (ax/ay = arm1, cx/cy = vertex, bx/by = arm2)
+		if ( layer.ax !== undefined ) {
+			layer.ax = ( layer.ax || 0 ) + PASTE_OFFSET;
+			layer.ay = ( layer.ay || 0 ) + PASTE_OFFSET;
+		}
+		if ( layer.cx !== undefined ) {
+			layer.cx = ( layer.cx || 0 ) + PASTE_OFFSET;
+			layer.cy = ( layer.cy || 0 ) + PASTE_OFFSET;
+		}
+		if ( layer.bx !== undefined ) {
+			layer.bx = ( layer.bx || 0 ) + PASTE_OFFSET;
+			layer.by = ( layer.by || 0 ) + PASTE_OFFSET;
+		}
 	}
 
 	/**

@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 11, 2026 — v1.5.61 (v50 audit — all items fixed)
+**Last updated:** March 12, 2026 — v1.5.62 (v51 audit — all items fixed)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -14,10 +14,38 @@ traceability.
 | P0 | 5 | 5 | 0 |
 | P1 | 57 | 57 | 0 |
 | P2 | 127 | 127 | 0 |
-| P3 | 143 | 143 | 0 |
-| **Total** | **332** | **332** | **0** |
+| P3 | 145 | 145 | 0 |
+| **Total** | **334** | **334** | **0** |
 
 ---
+
+## Fixed Issues — v51 (March 12, 2026) — All Fixed in v1.5.62
+
+### Canvas — High
+
+#### P3-143: Angle Dimension Anchor Points Not Offset on Paste
+
+- **File:** `resources/ext.layers.editor/canvas/ClipboardController.js`, `applyPasteOffset()`
+- **Impact:** Pasting an angle dimension layer left all six anchor points
+  (`ax/ay`, `cx/cy`, `bx/by`) at their original canvas coordinates while the
+  new layer received a fresh ID. The pasted copy, visually appearing at the
+  same location, would overlap the original and could not be repositioned.
+- **Fix:** Added three conditional offset blocks for `ax/ay`, `cx/cy`, and
+  `bx/by` after the existing `points[]` block.
+- **Status:** **Fixed** (v1.5.62)
+- **Introduced:** Angle dimension feature (v1.5.x)
+- **Tests added:** 2 (`ClipboardController.test.js`)
+
+#### P3-144: DrawingController._angleDimensionPhase Uninitialized in Constructor
+
+- **File:** `resources/ext.layers.editor/canvas/DrawingController.js`, `constructor()`
+- **Impact:** `_angleDimensionPhase` was never declared in the constructor, only
+  inside `startAngleDimensionTool()`. Any code path checking the property before
+  tool activation received `undefined`, causing phase-comparison guards to fail.
+- **Fix:** Added `this._angleDimensionPhase = 0` to the constructor.
+- **Status:** **Fixed** (v1.5.62)
+- **Introduced:** Angle dimension feature (v1.5.x)
+- **Tests added:** 1 (`DrawingController.test.js`)
 
 ## Fixed Issues — v50 (March 10, 2026) — All Fixed in v1.5.61
 
