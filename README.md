@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.60 (March 10, 2026)  
+> **Version:** 1.5.62 (March 11, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -314,9 +314,9 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 - **Frontend:** HTML5 Canvas editor with **143 JS files (~99,730 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **22 god classes** (files >1,000 lines), all use proper delegation patterns
+- **Technical Debt:** **23 god classes** (files >1,000 lines), all use proper delegation patterns
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
-  - All other god classes (13 JS + 2 PHP) have proper facade/delegation patterns
+  - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
 
 **Test Coverage (Verified March 10, 2026):**
 

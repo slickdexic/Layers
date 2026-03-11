@@ -394,6 +394,51 @@ describe('ClipboardController', () => {
             expect(layer.x).toBe(20); // null becomes 0, + 20
             expect(layer.y).toBe(20);
         });
+
+        test('should offset angle dimension anchor points (ax/ay, cx/cy, bx/by)', () => {
+            // P3-143: angle dimension layers use ax/ay (arm1), cx/cy (vertex),
+            // bx/by (arm2) instead of standard x/y - all 6 must be offset
+            const layer = {
+                type: 'angleDimension',
+                ax: 100,
+                ay: 200,
+                cx: 150,
+                cy: 250,
+                bx: 200,
+                by: 200
+            };
+
+            clipboardController.applyPasteOffset(layer);
+
+            expect(layer.ax).toBe(120);
+            expect(layer.ay).toBe(220);
+            expect(layer.cx).toBe(170);
+            expect(layer.cy).toBe(270);
+            expect(layer.bx).toBe(220);
+            expect(layer.by).toBe(220);
+        });
+
+        test('should offset angle dimension anchor points when coords are zero', () => {
+            // P3-143: zero anchor points should still be offset (not left at 0)
+            const layer = {
+                type: 'angleDimension',
+                ax: 0,
+                ay: 0,
+                cx: 0,
+                cy: 0,
+                bx: 0,
+                by: 0
+            };
+
+            clipboardController.applyPasteOffset(layer);
+
+            expect(layer.ax).toBe(20);
+            expect(layer.ay).toBe(20);
+            expect(layer.cx).toBe(20);
+            expect(layer.cy).toBe(20);
+            expect(layer.bx).toBe(20);
+            expect(layer.by).toBe(20);
+        });
     });
 
     describe('generateLayerId', () => {

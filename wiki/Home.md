@@ -311,7 +311,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.60 |
+| **Version (main)** | 1.5.62 |
 | **Version (REL1_43)** | 1.5.60 |
 | **Version (REL1_39)** | 1.5.60 |
 | **Release Date** | March 10, 2026 |
