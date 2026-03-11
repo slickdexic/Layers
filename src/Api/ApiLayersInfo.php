@@ -521,9 +521,7 @@ class ApiLayersInfo extends ApiBase {
 			$users = [];
 			if ( !empty( $userIds ) ) {
 				$userIds = array_unique( $userIds );
-				$dbr = MediaWikiServices::getInstance()
-					->getDBLoadBalancer()
-					->getConnection( DB_REPLICA );
+				$dbr = $this->getDB();
 				$res = $dbr->select(
 					'user',
 					[ 'user_id', 'user_name' ],

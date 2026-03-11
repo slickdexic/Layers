@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 10, 2026 — v49 audit
+**Last updated:** March 11, 2026 — v1.5.61 (v50 audit — all items fixed)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -12,14 +12,132 @@ traceability.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 56 | 45 | 11 |
-| P2 | 125 | 103 | 22 |
-| P3 | 143 | 126 | 17 |
-| **Total** | **329** | **279** | **50** |
+| P1 | 57 | 57 | 0 |
+| P2 | 127 | 127 | 0 |
+| P3 | 143 | 143 | 0 |
+| **Total** | **332** | **332** | **0** |
 
 ---
 
-## Open Issues — v49 (March 10, 2026)
+## Fixed Issues — v50 (March 10, 2026) — All Fixed in v1.5.61
+
+### PHP — High
+
+#### P1-056: SpecialSlides.php `$canDelete` Uses Page-Deletion Right
+
+- **File:** `src/SpecialPages/SpecialSlides.php` L80
+- **Code:** `$canDelete = $permissionManager->userHasRight( $user, 'delete' );`
+- **Impact:** The `$canDelete` flag is passed to `SpecialSlides.js` as
+  `wgLayersSlidesConfig.canDelete` and controls delete-button visibility (L185).
+  Any wiki user with page-deletion rights sees the delete button; a dedicated
+  `layers-admin` user without page-deletion rights does not see it, even though
+  the `layersdelete` API would accept their request. This is a
+  **UI-only authorization inconsistency** — the API itself is correctly gated
+  by `layers-admin` (see P1-045, fixed). The P1-045 fix applied to
+  `LayersApiHelperTrait.php` missed this file.
+- **Fix:** `$canDelete = $permissionManager->userHasRight( $user, 'layers-admin' );`
+- **Status:** **Fixed** (v1.5.61)
+- **Introduced:** v50 audit
+
+### Canvas — Medium
+
+#### P2-122: Smart Guides Broken for `path` Layer Type (Incomplete P1-053 Fix)
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+  L498–520, function `_getRefPoint()`
+- **Code:**
+  ```javascript
+  const _getRefPoint = ( state ) => {
+      const t = state.type;
+      if ( t === 'line' || t === 'arrow' || t === 'dimension' ) { ... }
+      if ( t === 'angleDimension' ) { ... }
+      return { x: state.x || 0, y: state.y || 0 }; // path falls through here
+  };
+  ```
+- **Impact:** Freeform `path` layers use a `points: [{x,y}, ...]` array with
+  no top-level `.x`/`.y`. The fallthrough branch returns `{x:0, y:0}`,
+  causing snap calculations to use the canvas origin as the reference position.
+  Smart guides fire but snap to the wrong location — effectively
+  non-functional for path layers. The P1-053 fix (v1.5.59) handled
+  line/arrow/dimension/angleDimension but missed the `path` case despite
+  it being named in the original issue title.
+- **Fix:**
+  ```javascript
+  if ( t === 'path' ) {
+      const pts = state.points || [];
+      return {
+          x: pts.length ? Math.min( ...pts.map( p => p.x ) ) : 0,
+          y: pts.length ? Math.min( ...pts.map( p => p.y ) ) : 0
+      };
+  }
+  ```
+- **Status:** **Fixed** (v1.5.61)
+- **Introduced:** v50 audit (incomplete fix of P1-053)
+
+### PHP — Medium
+
+#### P2-123: `ApiLayersInfo.enrichRowsWithUserNames()` Uses Deprecated `ILoadBalancer`
+
+- **File:** `src/Api/ApiLayersInfo.php` L524–526
+- **Code:**
+  ```php
+  $dbr = MediaWikiServices::getInstance()
+      ->getDBLoadBalancer()
+      ->getConnection( DB_REPLICA );
+  ```
+- **Context:** Introduced by the P2-107 fix (batch user lookup). The same
+  class has `getDb()` at L642 using `getConnectionProvider()->getReplicaDatabase()`
+  — the modern MW 1.39+ API.
+- **Impact:** `ILoadBalancer::getConnection()` is deprecated since MW 1.39 and
+  will be removed in a future version, causing a fatal error on any `layersinfo`
+  call that loads user names. All other DB access in the extension uses the
+  modern API; this is isolated to the P2-107 fix.
+- **Fix:** Replace L524–526 with `$dbr = $this->getDb();`
+- **Status:** **Fixed** (v1.5.61)
+- **Introduced:** v50 audit
+
+### Documentation — Low
+
+#### D-050-01: `docs/ARCHITECTURE.md` Stale Coverage and Test Count Metrics
+
+- **File:** `docs/ARCHITECTURE.md` L34–35, L148
+- `L34`: `92.19% statements, 82.15% branches` → should be `91.32%, 81.69%`
+- `L35`: `11,421 tests (167 suites)` → should be `11,445 (168 suites)`
+- `L148`: states `95.19% coverage` — completely outdated (ancient pre-v40 value)
+- **Fix:** Update all three lines to current verified values.
+- **Status:** **Fixed** (v1.5.61)
+- **Introduced:** v50 audit
+
+#### D-050-02: `CHANGELOG.md` v1.5.60 Documentation Section Claims Wrong Coverage
+
+- **File:** `CHANGELOG.md`, v1.5.60 Documentation section
+- States coverage was updated to `92.19%`; actual coverage at commit
+  `4f315a5f` is `91.32%`.
+- **Fix:** Update v1.5.60 Documentation entry to `91.32%`.
+- **Status:** **Fixed** (v1.5.61)
+- **Introduced:** v50 audit
+
+#### D-050-03: `wiki/Changelog.md` Matches D-050-02 (Stale Coverage)
+
+- **File:** `wiki/Changelog.md`, v1.5.60 entry
+- Mirrors `CHANGELOG.md` v1.5.60 with same incorrect `92.19%` value.
+- **Fix:** Sync with corrected `CHANGELOG.md`.
+- **Status:** **Fixed** (v1.5.61)
+- **Introduced:** v50 audit
+
+#### D-050-04: `README.md` God-Class Count Internal Contradiction
+
+- **File:** `README.md` L317, L353, L384
+- L317 says "22 god classes" (wrong; correct is 23)
+- L353 says "17 files" with Feb 17, 2026 date note (stale; correct is 19 JS + 2 PHP)
+- L384 metrics table correctly says `23` — creates internal contradiction
+- **Fix:** Update L317 and L353 to match L384.
+- **Status:** **Fixed** (v1.5.61)
+- **Introduced:** v50 audit
+
+---
+
+## Open Issues — v49 (March 10, 2026) — All Fixed in v1.5.60
 
 ### PHP — High
 
@@ -117,7 +235,7 @@ traceability.
 
 ### Canvas — High
 
-####  for Line, Arrow, Path, Dimension Layers
+#### P1-053: Smart Guides Non-Functional for Line, Arrow, Path, Dimension Layers
 
 - **File:** `resources/ext.layers.editor/canvas/TransformController.js`
   L486–505
@@ -127,7 +245,8 @@ traceability.
   in the UI but never fire for these types.
 - **Fix:** Derive the reference position from `getLayerBounds()` for
   non-positional layer types before computing the proposed snap position.
-- **Status:** **Fixed** (v1.5.59)
+- **Status:** **Partially fixed** (v1.5.59) — line/arrow/dimension/angleDimension
+  now work correctly; `path` type still broken (see P2-122)
 - **Introduced:** v49 audit
 
 #### P1-054: ZoomPanController `fitToWindow()` Null Dereference

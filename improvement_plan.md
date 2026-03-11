@@ -1,69 +1,77 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 10, 2026 — v49 audit
+**Last updated:** March 11, 2026 — v1.5.61
 
 This plan now distinguishes between the **verified current backlog** and the
-historical phase log retained below. Many line items still marked `Open` in the
-older phases were rechecked during the March 9–10 audits and found to be fixed,
-false positives, or superseded by broader documentation work. Use the v49
-section below as the authoritative current backlog.
+historical phase log retained below. All v49 issues were resolved in v1.5.60.
+All v50 issues were resolved in v1.5.61.
+Use the section below as the authoritative current backlog (currently empty).
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 10, 2026)
+## Verified Current Backlog (Authoritative as of March 11, 2026 — v1.5.61)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| PHP bugs (High) | 3 | 2-4h |
-| PHP bugs (Medium) | 7 | 4-6h |
-| PHP bugs (Low) | 8 | 3-5h |
-| JS bugs (High) | 5 | 3-5h |
-| JS bugs (Medium) | 6 | 3-5h |
-| JS bugs (Low) | 3 | 1-2h |
-| Canvas bugs (High) | 3 | 1-2h |
-| Canvas bugs (Medium) | 5 | 2-3h |
-| Canvas bugs (Low) | 3 | 1-2h |
-| Documentation fixes | 10 | 1-2h |
-| Code quality (carried) | 2 | 30-60m |
-| **Total** | **55** | **21-37h** |
+| **Total** | **0** | **—** |
 
-### Current Priorities (v49)
+### Current Priorities (v50 — All Fixed in v1.5.61)
 
-| # | Issue | Ref | Priority | Effort |
+| # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
-| 21.01 | LayersApiHelperTrait admin check uses page-delete right | P1-045 | HIGH | 30m |
-| 21.02 | SpecialSlides.php DB before permission check | P1-046 | HIGH | 15m |
-| 21.03 | SpecialEditSlide.php DB before permission check | P1-047 | HIGH | 15m |
-| 21.04 | APIManager cache exception hangs Promise forever | P1-048 | HIGH | 30m |
-| 21.05 | APIManager .catch() drops jQuery `result` (4 sites) | P1-049 | HIGH | 45m |
-| 21.06 | HistoryManager lastSaveHistoryIndex not decremented | P1-050 | HIGH | 30m |
-| 21.07 | EditorBootstrap duplicate editors in production | P1-051 | HIGH | 15m |
-| 21.08 | ValidationManager wrong bounds vs. server | P1-052 | HIGH | 15m |
-| 21.09 | Smart guides non-functional for line/arrow/path/dim | P1-053 | HIGH | 2h |
-| 21.10 | ZoomPanController fitToWindow null parentNode | P1-054 | HIGH | 15m |
-| 21.11 | ZoomPanController zoomToFitLayers null parentNode | P1-055 | HIGH | 15m |
-| 21.12 | TextSanitizer zero-width space corrupts user text | P2-104 | MED | 30m |
-| 21.13 | blend property bypasses enum validation | P2-105 | MED | 30m |
-| 21.14 | usleep() blocking in DB retry loop | P2-106 | MED | 15m |
-| 21.15 | N+1 user lookup in ApiLayersInfo | P2-107 | MED | 45m |
-| 21.16 | Cache invalidation errors silently suppressed | P2-108 | MED | 15m |
-| 21.17 | wfLogWarning() deprecated in RateLimiter | P2-109 | MED | 15m |
-| 21.18 | ApiLayersRename wrong error code for invalid format | P2-110 | MED | 15m |
-| 21.19 | parseMWTimestamp fallback uses local timezone | P2-111 | MED | 15m |
-| 21.20 | RevisionManager mutates currentSetName before load | P2-112 | MED | 15m |
-| 21.21 | DraftManager auto-save bypasses isRecoveryMode | P2-113 | MED | 15m |
-| 21.22 | APIManager hardcodes layer limit 100 | P2-114 | MED | 15m |
-| 21.23 | EventManager nudge bypasses StateManager | P2-115 | MED | 30m |
-| 21.24 | DraftManager storage key collision | P2-116 | MED | 30m |
-| 21.25 | CanvasManager emitTransforming RAF post-destroy | P2-117 | MED | 30m |
-| 21.26 | ZoomPanController animationFrameId stale on complete | P2-118 | MED | 15m |
-| 21.27 | SelectionRenderer AngleDimensionRenderer per-frame alloc | P2-119 | MED | 15m |
-| 21.28 | TransformController _arrowTipRafId missing from ctor | P2-120 | MED | 10m |
-| 21.29 | TransformController text-drag state vars uninitialized | P2-121 | MED | 15m |
-| 21.30 | Documentation: README/CHANGELOG wrong coverage % | D-049 | MED | 1h |
-| 21.31 | Documentation: ARCHITECTURE.md god class table gaps | D-049 | MED | 30m |
-| 19.7 | Missing tests for ViewerIcons module | P3-127 | Low | 1h |
-| 19.8 | Stale secondary docs cleanup | P2-098 | Low | 1h |
+| 22.01 | SpecialSlides canDelete checks 'delete' not 'layers-admin' | P1-056 | HIGH | ✅ Fixed v1.5.61 |
+| 22.02 | Smart guides broken for path layers (incomplete P1-053 fix) | P2-122 | MED | ✅ Fixed v1.5.61 |
+| 22.03 | ApiLayersInfo uses deprecated getDBLoadBalancer() API | P2-123 | MED | ✅ Fixed v1.5.61 |
+| 22.04 | ARCHITECTURE.md stale coverage 92.19% / 11,421 tests | D-050-01 | Low | ✅ Fixed v1.5.61 |
+| 22.05 | CHANGELOG.md v1.5.60 claims wrong coverage 92.19% | D-050-02 | Low | ✅ Fixed v1.5.61 |
+| 22.06 | wiki/Changelog.md same stale coverage as D-050-02 | D-050-03 | Low | ✅ Fixed v1.5.61 |
+| 22.07 | README.md god-class count contradiction (22 vs 23) | D-050-04 | Low | ✅ Fixed v1.5.61 |
+
+### v50 Notes
+
+- v49 verification pass: all 54 v49 issues confirmed fixed in v1.5.59/v1.5.60.
+- **P1-053 partially fixed**: path type still returns `{x:0,y:0}` in
+  `_getRefPoint()`. Re-tracked as P2-122.
+- **7 new items found**: 1 HIGH, 2 MEDIUM, 4 documentation LOW.
+- **All 7 fixed in v1.5.61.**
+
+### v49 Items (All Fixed in v1.5.59/v1.5.60)
+
+| # | Issue | Ref | Status |
+|---|-------|-----|--------|
+| 21.01 | LayersApiHelperTrait admin check uses page-delete right | P1-045 | ✅ Fixed |
+| 21.02 | SpecialSlides.php DB before permission check | P1-046 | ✅ Fixed |
+| 21.03 | SpecialEditSlide.php DB before permission check | P1-047 | ✅ Fixed |
+| 21.04 | APIManager cache exception hangs Promise forever | P1-048 | ✅ Fixed |
+| 21.05 | APIManager .catch() drops jQuery `result` (4 sites) | P1-049 | ✅ Fixed |
+| 21.06 | HistoryManager lastSaveHistoryIndex not decremented | P1-050 | ✅ Fixed |
+| 21.07 | EditorBootstrap duplicate editors in production | P1-051 | ✅ Fixed |
+| 21.08 | ValidationManager wrong bounds vs. server | P1-052 | ✅ Fixed |
+| 21.09 | Smart guides non-functional for line/arrow/path/dim | P1-053 | ✅ Fixed (path type → P2-122, v1.5.61) |
+| 21.10 | ZoomPanController fitToWindow null parentNode | P1-054 | ✅ Fixed |
+| 21.11 | ZoomPanController zoomToFitLayers null parentNode | P1-055 | ✅ Fixed |
+| 21.12 | TextSanitizer zero-width space corrupts user text | P2-104 | ✅ Fixed |
+| 21.13 | blend property bypasses enum validation | P2-105 | ✅ Fixed |
+| 21.14 | usleep() blocking in DB retry loop | P2-106 | ✅ Fixed |
+| 21.15 | N+1 user lookup in ApiLayersInfo | P2-107 | ✅ Fixed |
+| 21.16 | Cache invalidation errors silently suppressed | P2-108 | ✅ Fixed |
+| 21.17 | wfLogWarning() deprecated in RateLimiter | P2-109 | ✅ Fixed |
+| 21.18 | ApiLayersRename wrong error code for invalid format | P2-110 | ✅ Fixed |
+| 21.19 | parseMWTimestamp fallback uses local timezone | P2-111 | ✅ Fixed |
+| 21.20 | RevisionManager mutates currentSetName before load | P2-112 | ✅ Fixed |
+| 21.21 | DraftManager auto-save bypasses isRecoveryMode | P2-113 | ✅ Fixed |
+| 21.22 | APIManager hardcodes layer limit 100 | P2-114 | ✅ Fixed |
+| 21.23 | EventManager nudge bypasses StateManager | P2-115 | ✅ Fixed |
+| 21.24 | DraftManager storage key collision | P2-116 | ✅ Fixed |
+| 21.25 | CanvasManager emitTransforming RAF post-destroy | P2-117 | ✅ Fixed |
+| 21.26 | ZoomPanController animationFrameId stale on complete | P2-118 | ✅ Fixed |
+| 21.27 | SelectionRenderer AngleDimensionRenderer per-frame alloc | P2-119 | ✅ Fixed |
+| 21.28 | TransformController _arrowTipRafId missing from ctor | P2-120 | ✅ Fixed |
+| 21.29 | TransformController text-drag state vars uninitialized | P2-121 | ✅ Fixed |
+| 21.30 | Documentation: README/CHANGELOG wrong coverage % | D-049 | ✅ Fixed |
+| 21.31 | Documentation: ARCHITECTURE.md god class table gaps | D-049 | ✅ Fixed |
+| 19.7 | Missing tests for ViewerIcons module | P3-127 | ✅ Fixed |
+| 19.8 | Stale secondary docs cleanup | P2-098 | ✅ Fixed |
 
 ### v48 Notes
 
@@ -80,19 +88,95 @@ section below as the authoritative current backlog.
 
 ---
 
-## Phase 21: v49 Findings — Security, Logic & Quality (54 Items)
+## Phase 22: v50 Findings — Security, Logic & Documentation (7 Items) — ALL FIXED
 
-*Target: resolve all 11 HIGH-priority bugs first (total 11h estimated),
-then work through 28 MEDIUM items, 15 LOW items, and 10 documentation
-fixes found in the March 10, 2026 v49 audit.*
+*All 7 items found in the March 10, 2026 v50 audit were resolved in v1.5.61.*
+
+### PHP HIGH (1 item)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 22.01 | SpecialSlides canDelete checks 'delete' not 'layers-admin' | P1-056 | Fixed v1.5.61 | – |
+
+**22.01 (`SpecialSlides.php` L80):** `$canDelete` is set via
+`$permissionManager->userHasRight( $user, 'delete' )`. It should use
+`'layers-admin'` (consistent with `LayersApiHelperTrait.php` and the
+`ApiLayersDelete` server-side check). Impact: regular editors who only
+have `editlayers` cannot see the delete button even when they own the
+set; wiki admins with `delete` but not `layers-admin` can see it when
+they shouldn't. Fix: change L80 to
+`$permissionManager->userHasRight( $user, 'layers-admin' )`.
+
+### Canvas MEDIUM (1 item)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 22.02 | Smart guides broken for path layers | P2-122 | Fixed v1.5.61 | – |
+
+**22.02 (`TransformController.js` `_getRefPoint()`):** The incomplete
+P1-053 fix handles `line`, `arrow`, `dimension`, and `angleDimension`
+types but not `path`. Path layers store geometry as
+`state.points: [{x,y}...]` with no top-level `x`/`y`, so the fallback
+`{ x: state.x || 0, y: state.y || 0 }` always returns `{x:0, y:0}`.
+Smart guides / snap alignment are therefore non-functional for any path
+layer. Fix: add a `path` branch in `_getRefPoint()` that derives `x`/`y`
+from `Math.min(...state.points.map(p => p.x))` and
+`Math.min(...state.points.map(p => p.y))`, mirroring how other
+point-array types are handled.
+
+### PHP MEDIUM (1 item)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 22.03 | ApiLayersInfo uses deprecated getDBLoadBalancer() | P2-123 | Fixed v1.5.61 | – |
+
+**22.03 (`ApiLayersInfo.php` `enrichRowsWithUserNames()` L524–526):**
+The P2-107 fix introduced a new `enrichRowsWithUserNames()` method that
+calls `MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_REPLICA)`.
+Both `getDBLoadBalancer()` and `getConnection()` are deprecated in MW
+1.44+ (replaced by `getConnectionProvider()->getReplicaDatabase()`). The
+class already has a correct `getDb()` helper at L642 that uses the new
+API. Fix: replace the inline `MediaWikiServices` call with
+`$dbr = $this->getDb();`.
+
+### Documentation LOW (4 items)
+
+| # | Issue | Ref | Status | Effort |
+|---|-------|-----|--------|--------|
+| 22.04 | ARCHITECTURE.md stale metrics | D-050-01 | Fixed v1.5.61 | – |
+| 22.05 | CHANGELOG.md v1.5.60 wrong coverage% | D-050-02 | Fixed v1.5.61 | – |
+| 22.06 | wiki/Changelog.md same wrong coverage% | D-050-03 | Fixed v1.5.61 | – |
+| 22.07 | README.md god class count contradiction | D-050-04 | Fixed v1.5.61 | – |
+
+**22.04:** `docs/ARCHITECTURE.md` L34–35 says "92.19% statement coverage"
+and "11,421 tests in 167 suites"; actual is 91.32%, 11,445 tests, 168
+suites. L148 shows stale "95.19%" in a separate table.
+
+**22.05:** `CHANGELOG.md` under `[1.5.60]` states "92.19% statement
+coverage". Actual: 91.32%.
+
+**22.06:** `wiki/Changelog.md` under `[1.5.60]` contains the same stale
+92.19% figure.
+
+**22.07:** `README.md` L317 says "22 files exceed 1,000 lines"; L384 in
+the same file correctly says 23. The section at L317 was not updated when
+`CalloutRenderer.js` was added to the god class list.
+
+---
+
+## Phase 21: v49 Findings — Security, Logic & Quality (54 Items) — ALL FIXED
+
+*All 54 items found in the March 10, 2026 v49 audit were resolved in
+v1.5.59/v1.5.60. P1-053 was partially fixed (path type remains broken,
+re-tracked as P2-122 above).*
 
 ### PHP HIGH (3 items)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 21.01 | LayersApiHelperTrait admin check uses page-delete right | P1-045 | Open | 30m |
-| 21.02 | SpecialSlides.php DB query before permission check | P1-046 | Open | 15m |
-| 21.03 | SpecialEditSlide.php DB query before permission check | P1-047 | Open | 15m |
+| 21.01 | LayersApiHelperTrait admin check uses page-delete right | P1-045 | Fixed v1.5.60 | – |
+| 21.02 | SpecialSlides.php DB query before permission check | P1-046 | Fixed v1.5.60 | – |
+| 21.03 | SpecialEditSlide.php DB query before permission check | P1-047 | Fixed v1.5.60 | – |
 
 **21.01:** Introduce `layers-admin` right in `extension.json`. Replace
 `$user->isAllowed('delete')` with `$user->isAllowed('layers-admin')` in
@@ -107,11 +191,11 @@ above the `getLayerSetByName()` DB call in `SpecialSlides.php`.
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 21.04 | APIManager cache exception hangs Promise | P1-048 | Open | 30m |
-| 21.05 | APIManager .catch() drops jQuery result (4 sites) | P1-049 | Open | 45m |
-| 21.06 | HistoryManager lastSaveHistoryIndex not decremented | P1-050 | Open | 30m |
-| 21.07 | EditorBootstrap duplicate editors in production | P1-051 | Open | 15m |
-| 21.08 | ValidationManager wrong bounds vs. server | P1-052 | Open | 15m |
+| 21.04 | APIManager cache exception hangs Promise | P1-048 | Fixed v1.5.60 | – |
+| 21.05 | APIManager .catch() drops jQuery result (4 sites) | P1-049 | Fixed v1.5.60 | – |
+| 21.06 | HistoryManager lastSaveHistoryIndex not decremented | P1-050 | Fixed v1.5.60 | – |
+| 21.07 | EditorBootstrap duplicate editors in production | P1-051 | Fixed v1.5.60 | – |
+| 21.08 | ValidationManager wrong bounds vs. server | P1-052 | Fixed v1.5.60 | – |
 
 **21.04:** Move `return;` inside the `try` block in `APIManager.js`
 `loadRevisionById` cache-hit path so the catch falls through to the
@@ -136,9 +220,9 @@ L246: `strokeWidth > 100`.
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 21.09 | Smart guides non-functional for line/arrow/path/dim | P1-053 | Open | 2h |
-| 21.10 | ZoomPanController fitToWindow null parentNode | P1-054 | Open | 15m |
-| 21.11 | ZoomPanController zoomToFitLayers null parentNode | P1-055 | Open | 15m |
+| 21.09 | Smart guides non-functional for line/arrow/path/dim | P1-053 | Partial v1.5.59 (path → P2-122) | – |
+| 21.10 | ZoomPanController fitToWindow null parentNode | P1-054 | Fixed v1.5.60 | – |
+| 21.11 | ZoomPanController zoomToFitLayers null parentNode | P1-055 | Fixed v1.5.60 | – |
 
 **21.09:** In `TransformController.js` `_applySmartGuideDrag()`, derive
 reference position from `getLayerBounds()` for layer types that lack
@@ -151,49 +235,49 @@ L295 in `ZoomPanController.js`.
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 21.12 | TextSanitizer zero-width space injection | P2-104 | Open | 30m |
-| 21.13 | blend property bypasses enum validation | P2-105 | Open | 30m |
-| 21.14 | usleep() blocking in DB retry loop | P2-106 | Open | 15m |
-| 21.15 | N+1 user lookup in ApiLayersInfo | P2-107 | Open | 45m |
-| 21.16 | Cache invalidation errors silently suppressed | P2-108 | Open | 15m |
-| 21.17 | wfLogWarning() deprecated in RateLimiter | P2-109 | Open | 15m |
-| 21.18 | ApiLayersRename wrong error code for format failure | P2-110 | Open | 15m |
+| 21.12 | TextSanitizer zero-width space injection | P2-104 | Fixed v1.5.60 | – |
+| 21.13 | blend property bypasses enum validation | P2-105 | Fixed v1.5.60 | – |
+| 21.14 | usleep() blocking in DB retry loop | P2-106 | Fixed v1.5.60 | – |
+| 21.15 | N+1 user lookup in ApiLayersInfo | P2-107 | Fixed v1.5.60 | – |
+| 21.16 | Cache invalidation errors silently suppressed | P2-108 | Fixed v1.5.60 | – |
+| 21.17 | wfLogWarning() deprecated in RateLimiter | P2-109 | Fixed v1.5.60 | – |
+| 21.18 | ApiLayersRename wrong error code for format failure | P2-110 | Fixed v1.5.60 | – |
 
 ### JavaScript MEDIUM (6 items)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 21.19 | parseMWTimestamp fallback uses local timezone | P2-111 | Open | 15m |
-| 21.20 | RevisionManager mutates currentSetName before load | P2-112 | Open | 15m |
-| 21.21 | DraftManager auto-save bypasses isRecoveryMode | P2-113 | Open | 15m |
-| 21.22 | APIManager hardcodes layer limit to 100 | P2-114 | Open | 15m |
-| 21.23 | EventManager nudge bypasses StateManager | P2-115 | Open | 30m |
-| 21.24 | DraftManager storage key collision | P2-116 | Open | 30m |
+| 21.19 | parseMWTimestamp fallback uses local timezone | P2-111 | Fixed v1.5.60 | – |
+| 21.20 | RevisionManager mutates currentSetName before load | P2-112 | Fixed v1.5.60 | – |
+| 21.21 | DraftManager auto-save bypasses isRecoveryMode | P2-113 | Fixed v1.5.60 | – |
+| 21.22 | APIManager hardcodes layer limit to 100 | P2-114 | Fixed v1.5.60 | – |
+| 21.23 | EventManager nudge bypasses StateManager | P2-115 | Fixed v1.5.60 | – |
+| 21.24 | DraftManager storage key collision | P2-116 | Fixed v1.5.60 | – |
 
 ### Canvas MEDIUM (5 items)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 21.25 | CanvasManager emitTransforming RAF post-destroy | P2-117 | Open | 30m |
-| 21.26 | ZoomPanController animationFrameId stale on complete | P2-118 | Open | 15m |
-| 21.27 | SelectionRenderer AngleDimensionRenderer per-frame | P2-119 | Open | 15m |
-| 21.28 | TransformController _arrowTipRafId missing from ctor | P2-120 | Open | 10m |
-| 21.29 | TransformController text-drag state vars uninitialized | P2-121 | Open | 15m |
+| 21.25 | CanvasManager emitTransforming RAF post-destroy | P2-117 | Fixed v1.5.60 | – |
+| 21.26 | ZoomPanController animationFrameId stale on complete | P2-118 | Fixed v1.5.60 | – |
+| 21.27 | SelectionRenderer AngleDimensionRenderer per-frame | P2-119 | Fixed v1.5.60 | – |
+| 21.28 | TransformController _arrowTipRafId missing from ctor | P2-120 | Fixed v1.5.60 | – |
+| 21.29 | TransformController text-drag state vars uninitialized | P2-121 | Fixed v1.5.60 | – |
 
 ### Documentation (10 items)
 
 | # | Issue | Ref | Status | Effort |
 |---|-------|-----|--------|--------|
-| 21.30 | README.md coverage badge 95.19% → 92.19% | D-049-01/02 | Open | 15m |
-| 21.31 | CHANGELOG.md [1.5.59] wrong coverage/test/god counts | D-049-03 | Open | 15m |
-| 21.32 | ARCHITECTURE.md god class table missing 6 entries | D-049-04/05 | Open | 30m |
-| 21.33 | ARCHITECTURE.md still shows 95.19% coverage | D-049-06 | Open | 5m |
-| 21.34 | LayersGuide.mediawiki incorrectly deprecates layerslink= | D-049-07 | Open | 15m |
-| 21.35 | DEVELOPER_ONBOARDING.md TransformController size wrong | D-049-08 | Open | 5m |
-| 21.36 | RELEASE_GUIDE.md contradicts CHANGELOG tense | D-049-09 | Open | 15m |
-| 21.37 | DOCUMENTATION_UPDATE_GUIDE.md 11 vs 12 files | D-049-10 | Open | 5m |
-| 21.38 | copilot-instructions.md god class count 22→23 | — | Open | 5m |
-| 21.39 | copilot-instructions.md JS god class count 18→19 | — | Open | 5m |
+| 21.30 | README.md coverage badge 95.19% → 92.19% | D-049-01/02 | Fixed v1.5.60 | – |
+| 21.31 | CHANGELOG.md [1.5.59] wrong coverage/test/god counts | D-049-03 | Fixed v1.5.60 | – |
+| 21.32 | ARCHITECTURE.md god class table missing 6 entries | D-049-04/05 | Fixed v1.5.60 | – |
+| 21.33 | ARCHITECTURE.md still shows 95.19% coverage | D-049-06 | Fixed v1.5.60 | – |
+| 21.34 | LayersGuide.mediawiki incorrectly deprecates layerslink= | D-049-07 | Fixed v1.5.60 | – |
+| 21.35 | DEVELOPER_ONBOARDING.md TransformController size wrong | D-049-08 | Fixed v1.5.60 | – |
+| 21.36 | RELEASE_GUIDE.md contradicts CHANGELOG tense | D-049-09 | Fixed v1.5.60 | – |
+| 21.37 | DOCUMENTATION_UPDATE_GUIDE.md 11 vs 12 files | D-049-10 | Fixed v1.5.60 | – |
+| 21.38 | copilot-instructions.md god class count 22→23 | — | Fixed v1.5.60 | – |
+| 21.39 | copilot-instructions.md JS god class count 18→19 | — | Fixed v1.5.60 | – |
 
 ### LOW items (15 items)
 

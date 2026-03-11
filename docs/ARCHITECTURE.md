@@ -31,10 +31,10 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Shape/Emoji data | ~14,354 lines (generated) |
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.19% stmt, 84.96% branch** |
-| Jest tests | **11,148** (162 suites) |
+| Test coverage | **91.32% stmt, 81.69% branch** |
+| Jest tests | **11,445** (168 suites) |
 | PHPUnit test files | 31 |
-| God classes (>1000 lines) | **17** (2 generated, 13 JS, 2 PHP) |
+| God classes (>1000 lines) | **23** (2 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |
 | Shape library | **5,116 shapes** |
 | Emoji library | **2,817 emoji** |
@@ -145,7 +145,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | LayersValidator.js | 956 | Client-side validation |
 | ArrowRenderer.js | 932 | Arrow rendering |
 
-**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 95.19% test coverage.
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 91.32% statement test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for detailed status.
 
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,148 tests, 162 suites)
+│   ├── jest/                # Unit tests (11,445 tests, 168 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

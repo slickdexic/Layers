@@ -4,6 +4,27 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.61] - 2026-03-11
+
+### Fixed
+- **P1-056 — SpecialSlides Delete Button Wrong Permission Check** — `SpecialSlides.php` was checking the generic `'delete'` right to control `$canDelete` visibility in the Special:Slides UI. The correct right is `'layers-admin'` (consistent with `LayersApiHelperTrait` and the `ApiLayersDelete` server-side check). Without the fix, wiki admins with `'delete'` but not `'layers-admin'` saw the button incorrectly; set owners with only `'editlayers'` did not see it when they should. The API itself was already correctly protected — this was a UI-only display error.
+- **P2-122 — Smart Guides Non-Functional for Path Layers** — `TransformController._getRefPoint()` handled `line`, `arrow`, `dimension`, and `angleDimension` types but not `path`. Path layers store geometry as `points: [{x,y}...]` with no top-level `x`/`y`, so the fallback `{x: state.x || 0, y: state.y || 0}` always returned `{x:0, y:0}`. Smart guide snapping and grid-snap for paths therefore anchored to the canvas origin instead of the layer's actual bounding box. Fixed by adding a `path` branch that derives the reference point from `Math.min(...points.map(p => p.x/y))`. Added two Jest regression tests.
+- **P2-123 — ApiLayersInfo Uses Deprecated LoadBalancer API** — The P2-107 batch user-lookup fix (`enrichRowsWithUserNames()`) introduced `MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_REPLICA)`. Both `getDBLoadBalancer()` and `getConnection()` are deprecated in MW 1.44+. The class already contained a correct `getDB()` helper using `getConnectionProvider()->getReplicaDatabase()`. Replaced the inline call with `$this->getDB()`.
+
+### Documentation
+- **Coverage metrics corrected** — v1.5.60 changelog entries incorrectly stated "92.19% statement coverage" (which was the coverage before the v1.5.60 test additions). Actual verified value: **91.32% statements, 81.69% branches, 90.62% functions, 91.39% lines** (168 suites, 11,445 tests).
+- **ARCHITECTURE.md metrics corrected** — Updated test count (11,421 → 11,445), suite count (167 → 168), coverage (92.19%/82.15% → 91.32%/81.69%), god class count (22 → 23, 18 JS → 19 JS) in the stats table and directory tree.
+- **README.md god class count corrected** — L317 said "22 god classes" while L384 in the same file correctly said 23. Both now read 23 (2 generated + 19 hand-written JS + 2 PHP).
+
+### Tests
+- Added 2 `TransformController` regression tests for P2-122: verify that correct `proposedX/Y` values (based on `min(points.x/y)` bounding box) are passed to the smart guides controller and grid snap for path layers.
+
+### Technical Details
+- All 11,447 tests pass (168 test suites) ✅
+- Coverage: 91.32% statements, 81.69% branches (no regression)
+- God classes: 23 (19 hand-written JS, 2 generated, 2 PHP)
+- Cherry-pick targets: `REL1_43`, `REL1_39`
+
 ## [1.5.60] - 2026-03-10
 
 ### Fixed
@@ -28,7 +49,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **P3-142 — ESLint Blanket `no-unused-vars: off` for Manager Files** — Replaced blanket override with `varsIgnorePattern` targeting only the specific public-API patterns that legitimately go uncalled within their own file.
 
 ### Documentation
-- **Metrics synchronization** — Updated core docs to the March 10, 2026 audited repository totals: 11,445 Jest tests in 168 suites, 92.19% statement coverage.
+- **Metrics synchronization** — Updated core docs to the March 10, 2026 audited repository totals: 11,445 Jest tests in 168 suites, 91.32% statement coverage.
 - **Branch/support sync** — Refreshed install, architecture, and support-policy docs so `main`, `REL1_43`, and `REL1_39` all reflect the current 1.5.60 branch state.
 
 ### Code Quality
@@ -45,7 +66,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Added `ViewerIcons.test.js` — 27 tests covering SVG icon generation, namespace isolation, and all icon variants.
 - Extended `ToolManager.test.js` — 27 new dispatch tests covering startTool/updateTool/finishTool switch-case paths for all 9 tool types, plus pen drawing and ShapeFactory integration. Total: 111 tests (up from 84).
 - Added regression test for zoom-to-pointer anchor with CSS display size differing from buffer size (`ZoomPanController.test.js`).
-- **Jest coverage** — 92.19% statements, 82.15% branches, 92.25% lines (168 suites, 11,445 tests).
+- **Jest coverage** — 91.32% statements, 81.69% branches, 90.62% functions, 91.39% lines (168 suites, 11,445 tests).
 
 ## [1.5.59] - 2026-03-04
 

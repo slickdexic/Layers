@@ -495,6 +495,7 @@ class TransformController {
 			// Geometric layers (line, arrow, dimension, angleDimension) store position
 			// as endpoint coordinates rather than x/y, so compute the bounding box
 			// top-left corner as the reference instead of using 0/0.
+			// Path layers store geometry as a points array and also need special handling.
 			const _getRefPoint = ( state ) => {
 				const t = state.type;
 				if ( t === 'line' || t === 'arrow' || t === 'dimension' ) {
@@ -507,6 +508,12 @@ class TransformController {
 					return {
 						x: Math.min( state.cx || 0, state.ax || 0, state.bx || 0 ),
 						y: Math.min( state.cy || 0, state.ay || 0, state.by || 0 )
+					};
+				}
+				if ( t === 'path' && state.points && state.points.length > 0 ) {
+					return {
+						x: Math.min( ...state.points.map( ( p ) => p.x ) ),
+						y: Math.min( ...state.points.map( ( p ) => p.y ) )
 					};
 				}
 				return { x: state.x || 0, y: state.y || 0 };

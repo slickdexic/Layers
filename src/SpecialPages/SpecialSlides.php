@@ -77,7 +77,7 @@ class SpecialSlides extends SpecialPage {
 		// Check if user can create slides
 		$permissionManager = $services->getPermissionManager();
 		$canCreate = $permissionManager->userHasRight( $user, 'editlayers' );
-		$canDelete = $permissionManager->userHasRight( $user, 'delete' );
+		$canDelete = $permissionManager->userHasRight( $user, 'layers-admin' );
 
 		// Get configuration for JS
 		$jsConfig = [
