@@ -49,6 +49,12 @@ describe( 'DrawingController', () => {
 			expect( controller.MIN_LINE_LENGTH ).toBe( 5 );
 			expect( controller.MIN_PATH_POINTS ).toBe( 2 );
 		} );
+
+		it( 'should initialize _angleDimensionPhase to 0 (P3-144)', () => {
+			// P3-144: _angleDimensionPhase must be initialized in the constructor
+			// so phase checks work correctly before startAngleDimensionTool() is called
+			expect( controller._angleDimensionPhase ).toBe( 0 );
+		} );
 	} );
 
 	describe( 'startDrawing', () => {

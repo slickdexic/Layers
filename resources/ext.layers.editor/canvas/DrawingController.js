@@ -29,6 +29,7 @@ class DrawingController {
 		this.canvasManager = canvasManager;
 		this.tempLayer = null;
 		this.isDrawing = false;
+		this._angleDimensionPhase = 0;
 
 		// Minimum size thresholds for shape creation
 		this.MIN_SHAPE_SIZE = 5;

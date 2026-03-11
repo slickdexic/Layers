@@ -4,6 +4,21 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.62] - 2026-03-12
+
+### Fixed
+- **P3-143 — Angle Dimension Anchor Points Not Offset on Paste** — `ClipboardController.applyPasteOffset()` applied `PASTE_OFFSET` to standard `x/y`, `x1/y1/x2/y2`, and `points[]` coordinates, but angle dimension layers store their geometry exclusively in `ax/ay` (arm1 endpoint), `cx/cy` (vertex), and `bx/by` (arm2 endpoint). Pasting an angle dimension therefore left all six anchor points at their original canvas coordinates while the layer received a new ID, causing the pasted layer to render at the wrong position. Added three conditional offset blocks for `ax/ay`, `cx/cy`, and `bx/by` after the existing `points` block.
+- **P3-144 — DrawingController._angleDimensionPhase Not Initialized in Constructor** — The `_angleDimensionPhase` property was set only inside `startAngleDimensionTool()` and never declared in the constructor. Any code path that checked `_angleDimensionPhase` before the tool was activated received `undefined` rather than `0`, causing phase-comparison guards to behave incorrectly. Added `this._angleDimensionPhase = 0` to the constructor alongside the existing `tempLayer` and `isDrawing` initializations.
+
+### Tests
+- Added 2 `ClipboardController` regression tests for P3-143: verify `ax/ay/cx/cy/bx/by` are each incremented by `PASTE_OFFSET` for both non-zero and zero starting coordinates.
+- Added 1 `DrawingController` regression test for P3-144: verify `_angleDimensionPhase` is `0` immediately after construction.
+
+### Technical Details
+- All 11,450 tests pass (168 test suites) ✅
+- Coverage: 91.32% statements, 81.69% branches (no regression)
+- Cherry-pick targets: `REL1_43`, `REL1_39`
+
 ## [1.5.61] - 2026-03-11
 
 ### Fixed
