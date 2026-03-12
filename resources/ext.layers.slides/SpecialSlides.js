@@ -536,4 +536,9 @@
 		}
 	} );
 
+	// CommonJS export for testing
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = { SlidesManager, CreateSlideDialog };
+	}
+
 }() );

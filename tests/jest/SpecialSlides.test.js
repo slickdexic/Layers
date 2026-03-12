@@ -1,473 +1,771 @@
-/**
+﻿/**
  * @jest-environment jsdom
  */
 
-/* eslint-disable no-unused-vars */
+'use strict';
 
 /**
- * Tests for SpecialSlides.js
+ * Tests for SpecialSlides.js â€” SlidesManager and CreateSlideDialog classes.
  *
- * These tests verify the slide management functionality for Special:Slides.
- * Since the module depends on MediaWiki's mw and OO globals, we test
- * the helper functions and message formatting.
+ * The module requires MediaWiki globals (mw, $, OO) to be set up before load.
+ * We use beforeAll to load the module once, and beforeEach to reset mock state.
  *
  * @see resources/ext.layers.slides/SpecialSlides.js
  */
 
+let SlidesManager;
+let CreateSlideDialog;
+let mockEl;
+let mockApi;
+
+/** Flush all pending promise microtasks (needed when testing .then/.catch chains that aren't returned). */
+const flushPromises = () => new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+/** @return {Object} A chainable jQuery-like mock element */
+function createMockEl() {
+	return {
+		length: 1,
+		on: jest.fn().mockReturnThis(),
+		off: jest.fn().mockReturnThis(),
+		html: jest.fn().mockReturnThis(),
+		val: jest.fn( () => '' ),
+		empty: jest.fn().mockReturnThis(),
+		append: jest.fn().mockReturnThis(),
+		appendTo: jest.fn().mockReturnThis(),
+		addClass: jest.fn().mockReturnThis(),
+		removeClass: jest.fn().mockReturnThis(),
+		find: jest.fn().mockReturnThis(),
+		text: jest.fn().mockReturnThis(),
+		attr: jest.fn().mockReturnThis(),
+		prop: jest.fn().mockReturnThis(),
+		remove: jest.fn().mockReturnThis(),
+		data: jest.fn(),
+		closest: jest.fn().mockReturnThis(),
+		trigger: jest.fn().mockReturnThis(),
+		hide: jest.fn().mockReturnThis(),
+		show: jest.fn().mockReturnThis()
+	};
+}
+
+/** @return {Function} A jQuery mock that returns mockEl for selectors, ignores ready callbacks */
+function createMockJQuery( el ) {
+	return jest.fn( ( selectorOrFn ) => {
+		if ( typeof selectorOrFn === 'function' ) {
+			// $(fn) â€” ready callback; don't execute during module load
+			return {};
+		}
+		return el;
+	} );
+}
+
+function setupGlobals() {
+	mockEl = createMockEl();
+	mockApi = {
+		get: jest.fn().mockResolvedValue( { layerslist: { slides: [], total: 0 } } ),
+		postWithToken: jest.fn().mockResolvedValue( { layersdelete: { success: 1 } } )
+	};
+
+	global.$ = createMockJQuery( mockEl );
+	global.jQuery = global.$;
+
+	global.mw = {
+		Api: jest.fn( () => mockApi ),
+		config: {
+			get: jest.fn( ( key ) => {
+				if ( key === 'wgLayersSlidesConfig' ) {
+					return { canDelete: true, canCreate: true, defaultWidth: 800, defaultHeight: 600, defaultBackground: '#ffffff' };
+				}
+				return null;
+			} )
+		},
+		message: jest.fn( ( key ) => ( {
+			text: () => `[${ key }]`,
+			escaped: () => `[${ key }]`,
+			parse: () => `<span>[${ key }]</span>`
+		} ) ),
+		html: {
+			escape: ( str ) => String( str ).replace( /[&<>"']/g, ( c ) => (
+				{ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ c ]
+			) )
+		},
+		util: {
+			getUrl: jest.fn( ( page ) => `/wiki/${ page }` )
+		},
+		log: { error: jest.fn() },
+		notify: jest.fn()
+	};
+
+	global.OO = {
+		ui: {
+			confirm: jest.fn().mockResolvedValue( true ),
+			ProcessDialog: class MockProcessDialog {
+				constructor( config ) { this.config = config || {}; }
+
+				initialize() {}
+
+				close() {}
+
+				getActionProcess() {}
+
+				getBodyHeight() { return 300; }
+			},
+			WindowManager: class MockWindowManager {
+				constructor() { this.$element = mockEl; }
+
+				addWindows() {}
+
+				openWindow() { return { closed: Promise.resolve( {} ) }; }
+			},
+			PanelLayout: class MockPanelLayout {
+				constructor() { this.$element = mockEl; }
+			},
+			TextInputWidget: class MockTextInputWidget {
+				getValue() { return ''; }
+			},
+			NumberInputWidget: class MockNumberInputWidget {
+				getValue() { return 800; }
+			},
+			DropdownWidget: class MockDropdownWidget {
+				getMenu() {
+					return {
+						selectItemByData: jest.fn(),
+						findSelectedItem: () => ( { getData: () => '800x600' } ),
+						on: jest.fn()
+					};
+				}
+			},
+			MenuOptionWidget: class MockMenuOptionWidget {},
+			HorizontalLayout: class MockHorizontalLayout {
+				constructor() { this.$element = mockEl; }
+			},
+			LabelWidget: class MockLabelWidget {},
+			FieldLayout: class MockFieldLayout {
+				constructor() { this.$element = mockEl; }
+			},
+			Process: class MockProcess {
+				constructor( fn ) { this.fn = fn; }
+			},
+			Error: class MockOOError {
+				constructor( msg ) { this.message = msg; }
+			}
+		}
+	};
+}
+
 describe( 'SpecialSlides', () => {
-	let mockApi;
-	let mockConfig;
+	beforeAll( () => {
+		setupGlobals();
+		// eslint-disable-next-line no-unused-vars
+		( { SlidesManager, CreateSlideDialog } = require( '../../resources/ext.layers.slides/SpecialSlides.js' ) );
+	} );
 
 	beforeEach( () => {
-		// Reset DOM
-		document.body.innerHTML = '';
-
-		// Mock mw object
+		// Rebuild mocks so each test starts clean
+		mockEl = createMockEl();
+		global.$ = createMockJQuery( mockEl );
+		global.jQuery = global.$;
 		mockApi = {
-			get: jest.fn().mockResolvedValue( {
-				layerslist: {
-					slides: [],
-					total: 0
-				}
-			} ),
+			get: jest.fn().mockResolvedValue( { layerslist: { slides: [], total: 0 } } ),
 			postWithToken: jest.fn().mockResolvedValue( { layersdelete: { success: 1 } } )
 		};
-
-		mockConfig = {
-			canCreate: true,
-			canDelete: true,
-			defaultWidth: 800,
-			defaultHeight: 600,
-			defaultBackground: '#ffffff',
-			maxWidth: 4096,
-			maxHeight: 4096
-		};
-
-		global.mw = {
-			Api: jest.fn( () => mockApi ),
-			config: {
-				get: jest.fn( ( key ) => {
-					if ( key === 'wgLayersSlidesConfig' ) {
-						return mockConfig;
-					}
-					return null;
-				} )
-			},
-			message: jest.fn( ( key, ...params ) => ( {
-				escaped: () => `[${ key }]`,
-				text: () => `[${ key }]`,
-				parse: () => `<span>[${ key }]</span>`
-			} ) ),
-			html: {
-				escape: ( str ) => String( str ).replace( /[&<>"']/g, ( c ) => ( {
-					'&': '&amp;',
-					'<': '&lt;',
-					'>': '&gt;',
-					'"': '&quot;',
-					"'": '&#39;'
-				}[ c ] ) )
-			},
-			util: {
-				getUrl: ( page ) => `/wiki/${ page }`
-			},
-			notify: jest.fn(),
-			log: {
-				error: jest.fn()
-			}
-		};
-
-		// Mock jQuery
-		const mockJQuery = jest.fn( ( selector ) => ( {
-			length: 1,
-			addClass: jest.fn().mockReturnThis(),
-			removeClass: jest.fn().mockReturnThis(),
-			append: jest.fn().mockReturnThis(),
-			appendTo: jest.fn().mockReturnThis(),
-			empty: jest.fn().mockReturnThis(),
-			find: jest.fn().mockReturnThis(),
-			on: jest.fn().mockReturnThis(),
-			val: jest.fn( () => '' ),
-			text: jest.fn().mockReturnThis(),
-			html: jest.fn().mockReturnThis(),
-			attr: jest.fn().mockReturnThis(),
-			prop: jest.fn().mockReturnThis(),
-			remove: jest.fn().mockReturnThis(),
-			first: jest.fn().mockReturnThis(),
-			each: jest.fn().mockReturnThis(),
-			trigger: jest.fn().mockReturnThis(),
-			hide: jest.fn().mockReturnThis(),
-			show: jest.fn().mockReturnThis(),
-			data: jest.fn(),
-			closest: jest.fn().mockReturnThis()
+		global.mw.Api = jest.fn( () => mockApi );
+		global.mw.log.error = jest.fn();
+		global.mw.notify = jest.fn();
+		global.mw.util.getUrl = jest.fn( ( page ) => `/wiki/${ page }` );
+		jest.clearAllMocks();
+		// Re-apply default implementations after clearAllMocks
+		mockApi.get.mockResolvedValue( { layerslist: { slides: [], total: 0 } } );
+		mockApi.postWithToken.mockResolvedValue( { layersdelete: { success: 1 } } );
+		global.OO.ui.confirm.mockResolvedValue( true );
+		global.mw.message.mockImplementation( ( key ) => ( {
+			text: () => `[${ key }]`,
+			escaped: () => `[${ key }]`,
+			parse: () => `<span>[${ key }]</span>`
 		} ) );
+		global.mw.html.escape = ( str ) => String( str ).replace( /[&<>"']/g, ( c ) => (
+			{ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ c ]
+		) );
+		global.mw.util.getUrl.mockImplementation( ( page ) => `/wiki/${ page }` );
+		global.OO.ui.WindowManager = class MockWindowManager {
+			constructor() { this.$element = mockEl; }
 
-		global.$ = mockJQuery;
-		global.jQuery = mockJQuery;
+			addWindows() {}
 
-		// Mock OO.ui
-		global.OO = {
-			ui: {
-				confirm: jest.fn().mockResolvedValue( true ),
-				ProcessDialog: class MockProcessDialog {
-					static static = { name: 'test', title: 'Test', actions: [] };
-				},
-				WindowManager: class MockWindowManager {
-					constructor() {
-						this.$element = global.$( '<div>' );
-					}
-
-					addWindows() {}
-
-					openWindow() {
-						return { closed: Promise.resolve( {} ) };
-					}
-				},
-				PanelLayout: class MockPanelLayout {
-					constructor() {
-						this.$element = global.$( '<div>' );
-					}
-				},
-				TextInputWidget: class MockTextInputWidget {
-					getValue() {
-						return '';
-					}
-				},
-				NumberInputWidget: class MockNumberInputWidget {
-					getValue() {
-						return 800;
-					}
-				},
-				DropdownWidget: class MockDropdownWidget {
-					getMenu() {
-						return {
-							selectItemByData: jest.fn(),
-							findSelectedItem: () => ( { getData: () => '800x600' } ),
-							on: jest.fn()
-						};
-					}
-				},
-				MenuOptionWidget: class MockMenuOptionWidget {},
-				HorizontalLayout: class MockHorizontalLayout {
-					constructor() {
-						this.$element = global.$( '<div>' );
-					}
-				},
-				LabelWidget: class MockLabelWidget {},
-				FieldLayout: class MockFieldLayout {
-					constructor() {
-						this.$element = global.$( '<div>' );
-					}
-				},
-				Process: class MockProcess {
-					constructor( fn ) {
-						this.fn = fn;
-					}
-				},
-				Error: class MockError {
-					constructor( msg ) {
-						this.message = msg;
-					}
-				}
-			}
+			openWindow() { return { closed: Promise.resolve( {} ) }; }
 		};
 	} );
 
 	afterEach( () => {
-		jest.clearAllMocks();
-		jest.resetModules();
 		document.body.innerHTML = '';
+		jest.useRealTimers();
 	} );
 
-	describe( 'Configuration loading', () => {
-		it( 'should read configuration from mw.config', () => {
-			const config = mw.config.get( 'wgLayersSlidesConfig' );
-			expect( config ).toEqual( mockConfig );
-			expect( config.canCreate ).toBe( true );
-			expect( config.defaultWidth ).toBe( 800 );
-			expect( config.defaultHeight ).toBe( 600 );
+	/**
+	 * Create a SlidesManager without triggering constructor side effects (init).
+	 *
+	 * @param {Object} [config]
+	 * @return {Object} SlidesManager instance
+	 */
+	function createManager( config ) {
+		const initSpy = jest.spyOn( SlidesManager.prototype, 'init' ).mockImplementation( () => {} );
+		const manager = new SlidesManager( config !== undefined ? config : { canDelete: true, canCreate: true } );
+		initSpy.mockRestore();
+		manager.api = mockApi;
+		return manager;
+	}
+
+	// â”€â”€ Module exports â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'Module exports', () => {
+		it( 'exports SlidesManager class', () => {
+			expect( SlidesManager ).toBeDefined();
+			expect( typeof SlidesManager ).toBe( 'function' );
 		} );
 
-		it( 'should handle missing configuration gracefully', () => {
-			mw.config.get.mockReturnValue( null );
-			const config = mw.config.get( 'wgLayersSlidesConfig' );
-			expect( config ).toBeNull();
+		it( 'exports CreateSlideDialog class', () => {
+			expect( CreateSlideDialog ).toBeDefined();
+			expect( typeof CreateSlideDialog ).toBe( 'function' );
+		} );
+
+		it( 'SlidesManager is instantiable', () => {
+			const manager = createManager();
+			expect( manager ).toBeInstanceOf( SlidesManager );
 		} );
 	} );
 
-	describe( 'API interactions', () => {
-		it( 'should create API instance', () => {
-			const api = new mw.Api();
-			expect( mw.Api ).toHaveBeenCalled();
-			expect( api.get ).toBeDefined();
-			expect( api.postWithToken ).toBeDefined();
+	// â”€â”€ Constructor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'constructor', () => {
+		it( 'sets default pagination properties', () => {
+			const manager = createManager( { canDelete: true } );
+			expect( manager.currentOffset ).toBe( 0 );
+			expect( manager.limit ).toBe( 20 );
+			expect( manager.searchPrefix ).toBe( '' );
+			expect( manager.sortBy ).toBe( 'name' );
+			expect( manager.totalSlides ).toBe( 0 );
+			expect( Array.isArray( manager.slides ) ).toBe( true );
 		} );
 
-		it( 'should format API request for listing slides', async () => {
-			const api = new mw.Api();
-			await api.get( {
-				action: 'layerslist',
-				limit: 20,
-				offset: 0,
-				sort: 'name'
-			} );
-
-			expect( api.get ).toHaveBeenCalledWith( {
-				action: 'layerslist',
-				limit: 20,
-				offset: 0,
-				sort: 'name'
-			} );
+		it( 'stores provided config', () => {
+			const config = { canDelete: false, canCreate: true };
+			const manager = createManager( config );
+			expect( manager.config ).toEqual( config );
 		} );
 
-		it( 'should format API request with search prefix', async () => {
-			const api = new mw.Api();
-			await api.get( {
-				action: 'layerslist',
-				prefix: 'Process',
-				limit: 20
-			} );
+		it( 'defaults to empty config when null is passed', () => {
+			const manager = createManager( null );
+			expect( manager.config ).toEqual( {} );
+		} );
 
-			expect( api.get ).toHaveBeenCalledWith(
-				expect.objectContaining( {
-					action: 'layerslist',
-					prefix: 'Process'
-				} )
+		it( 'creates a mw.Api instance', () => {
+			global.mw.Api.mockClear();
+			createManager();
+			expect( global.mw.Api ).toHaveBeenCalled();
+		} );
+	} );
+
+	// â”€â”€ formatRelativeTime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'formatRelativeTime', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+			jest.useFakeTimers();
+			jest.setSystemTime( new Date( '2026-03-12T12:00:00.000Z' ) );
+		} );
+
+		it( 'returns "?" for falsy timestamps', () => {
+			expect( manager.formatRelativeTime( null ) ).toBe( '?' );
+			expect( manager.formatRelativeTime( undefined ) ).toBe( '?' );
+			expect( manager.formatRelativeTime( '' ) ).toBe( '?' );
+		} );
+
+		it( 'returns "just now" message for timestamps under 1 minute ago', () => {
+			const thirtySecondsAgo = new Date( '2026-03-12T11:59:45.000Z' ).toISOString();
+			const result = manager.formatRelativeTime( thirtySecondsAgo );
+			expect( global.mw.message ).toHaveBeenCalledWith( 'special-slides-just-now' );
+			expect( result ).toBe( '[special-slides-just-now]' );
+		} );
+
+		it( 'returns "minutes ago" message for timestamps 1â€“59 minutes ago', () => {
+			const thirtyMinutesAgo = new Date( '2026-03-12T11:30:00.000Z' ).toISOString();
+			const result = manager.formatRelativeTime( thirtyMinutesAgo );
+			expect( global.mw.message ).toHaveBeenCalledWith( 'special-slides-minutes-ago', 30 );
+			expect( result ).toBe( '[special-slides-minutes-ago]' );
+		} );
+
+		it( 'returns "hours ago" message for timestamps 1â€“23 hours ago', () => {
+			const threeHoursAgo = new Date( '2026-03-12T09:00:00.000Z' ).toISOString();
+			const result = manager.formatRelativeTime( threeHoursAgo );
+			expect( global.mw.message ).toHaveBeenCalledWith( 'special-slides-hours-ago', 3 );
+			expect( result ).toBe( '[special-slides-hours-ago]' );
+		} );
+
+		it( 'returns "days ago" message for timestamps 1â€“29 days ago', () => {
+			const tenDaysAgo = new Date( '2026-03-02T12:00:00.000Z' ).toISOString();
+			const result = manager.formatRelativeTime( tenDaysAgo );
+			expect( global.mw.message ).toHaveBeenCalledWith( 'special-slides-days-ago', 10 );
+			expect( result ).toBe( '[special-slides-days-ago]' );
+		} );
+
+		it( 'returns locale date string for timestamps 30+ days ago', () => {
+			global.mw.message.mockClear();
+			const sixtyDaysAgo = new Date( '2026-01-11T12:00:00.000Z' ).toISOString();
+			const result = manager.formatRelativeTime( sixtyDaysAgo );
+			expect( result ).toBe( new Date( sixtyDaysAgo ).toLocaleDateString() );
+			expect( global.mw.message ).not.toHaveBeenCalledWith( 'special-slides-days-ago', expect.any( Number ) );
+		} );
+	} );
+
+	// â”€â”€ renderSlides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'renderSlides', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+		} );
+
+		it( 'shows empty message when slides array is empty', () => {
+			manager.slides = [];
+			manager.renderSlides();
+			expect( mockEl.html ).toHaveBeenCalledWith(
+				expect.stringContaining( 'layers-slides-empty' )
 			);
 		} );
 
-		it( 'should handle API error responses', async () => {
-			mockApi.get.mockRejectedValue( new Error( 'Network error' ) );
-			const api = new mw.Api();
-
-			await expect( api.get( { action: 'layerslist' } ) )
-				.rejects.toThrow( 'Network error' );
+		it( 'renders HTML for each slide item', () => {
+			manager.slides = [
+				{ name: 'Alpha', canvasWidth: 800, canvasHeight: 600, layerCount: 2, modifiedBy: 'alice', modified: null },
+				{ name: 'Beta', canvasWidth: 1280, canvasHeight: 720, layerCount: 0, modifiedBy: 'bob', modified: null }
+			];
+			manager.renderSlides();
+			const htmlArg = mockEl.html.mock.calls[ mockEl.html.mock.calls.length - 1 ][ 0 ];
+			expect( htmlArg ).toContain( 'Alpha' );
+			expect( htmlArg ).toContain( 'Beta' );
 		} );
 	} );
 
-	describe( 'Delete operations', () => {
-		it( 'should call postWithToken for delete', async () => {
-			const api = new mw.Api();
-			await api.postWithToken( 'csrf', {
-				action: 'layersdelete',
-				filename: 'Slide:TestSlide'
-			} );
+	// â”€â”€ renderSlideItem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-			expect( api.postWithToken ).toHaveBeenCalledWith( 'csrf', {
-				action: 'layersdelete',
-				filename: 'Slide:TestSlide'
-			} );
-		} );
+	describe( 'renderSlideItem', () => {
+		let manager;
 
-		it( 'should show confirmation dialog before delete', async () => {
-			const confirmed = await OO.ui.confirm( 'Delete this slide?' );
-			expect( OO.ui.confirm ).toHaveBeenCalledWith( 'Delete this slide?' );
-			expect( confirmed ).toBe( true );
-		} );
-
-		it( 'should cancel delete when user declines', async () => {
-			OO.ui.confirm.mockResolvedValue( false );
-			const confirmed = await OO.ui.confirm( 'Delete this slide?' );
-			expect( confirmed ).toBe( false );
-		} );
-	} );
-
-	describe( 'Message formatting', () => {
-		it( 'should format "just now" message', () => {
-			const msg = mw.message( 'special-slides-just-now' ).text();
-			expect( msg ).toBe( '[special-slides-just-now]' );
-		} );
-
-		it( 'should format "minutes ago" message with parameter', () => {
-			const msg = mw.message( 'special-slides-minutes-ago', 5 ).text();
-			expect( msg ).toBe( '[special-slides-minutes-ago]' );
-			expect( mw.message ).toHaveBeenCalledWith( 'special-slides-minutes-ago', 5 );
-		} );
-
-		it( 'should format "hours ago" message with parameter', () => {
-			const msg = mw.message( 'special-slides-hours-ago', 2 ).text();
-			expect( msg ).toBe( '[special-slides-hours-ago]' );
-			expect( mw.message ).toHaveBeenCalledWith( 'special-slides-hours-ago', 2 );
-		} );
-
-		it( 'should format "days ago" message with parameter', () => {
-			const msg = mw.message( 'special-slides-days-ago', 3 ).text();
-			expect( msg ).toBe( '[special-slides-days-ago]' );
-			expect( mw.message ).toHaveBeenCalledWith( 'special-slides-days-ago', 3 );
-		} );
-
-		it( 'should format slide count message', () => {
-			const msg = mw.message( 'special-slides-count', 1, 20, 50 ).text();
-			expect( mw.message ).toHaveBeenCalledWith( 'special-slides-count', 1, 20, 50 );
-		} );
-
-		it( 'should escape HTML in slide names', () => {
-			const escaped = mw.html.escape( '<script>alert(1)</script>' );
-			expect( escaped ).toBe( '&lt;script&gt;alert(1)&lt;/script&gt;' );
-		} );
-	} );
-
-	describe( 'URL generation', () => {
-		it( 'should generate edit slide URL', () => {
-			const url = mw.util.getUrl( 'Special:EditSlide/TestSlide' );
-			expect( url ).toBe( '/wiki/Special:EditSlide/TestSlide' );
-		} );
-
-		it( 'should generate slides list URL', () => {
-			const url = mw.util.getUrl( 'Special:Slides' );
-			expect( url ).toBe( '/wiki/Special:Slides' );
-		} );
-
-		it( 'should generate slide namespace URL', () => {
-			const url = mw.util.getUrl( 'Slide:MyPresentation' );
-			expect( url ).toBe( '/wiki/Slide:MyPresentation' );
-		} );
-	} );
-
-	describe( 'Window manager for dialogs', () => {
-		it( 'should create window manager', () => {
-			const windowManager = new OO.ui.WindowManager();
-			expect( windowManager.$element ).toBeDefined();
-		} );
-
-		it( 'should add windows to manager', () => {
-			const windowManager = new OO.ui.WindowManager();
-			const addWindowsSpy = jest.spyOn( windowManager, 'addWindows' );
-			windowManager.addWindows( [ {} ] );
-			expect( addWindowsSpy ).toHaveBeenCalled();
-		} );
-
-		it( 'should open window and return promise', async () => {
-			const windowManager = new OO.ui.WindowManager();
-			const result = windowManager.openWindow( 'dialog' );
-			expect( result.closed ).toBeInstanceOf( Promise );
-			await result.closed;
-		} );
-	} );
-
-	describe( 'Slide item rendering', () => {
-		it( 'should format slide dimensions correctly', () => {
-			const width = 1920;
-			const height = 1080;
-			const dimensions = `${ width }×${ height }`;
-			expect( dimensions ).toBe( '1920×1080' );
-		} );
-
-		it( 'should format layer count message', () => {
-			const layerCount = 5;
-			mw.message( 'special-slides-layer-count', layerCount );
-			expect( mw.message ).toHaveBeenCalledWith( 'special-slides-layer-count', 5 );
-		} );
-
-		it( 'should generate slide icon emoji', () => {
-			const icon = '🖼️';
-			expect( icon ).toBe( '🖼️' );
-		} );
-	} );
-
-	describe( 'Create dialog form fields', () => {
-		it( 'should create text input widget for name', () => {
-			const input = new OO.ui.TextInputWidget();
-			expect( input.getValue ).toBeDefined();
-			expect( input.getValue() ).toBe( '' );
-		} );
-
-		it( 'should create number input widget for dimensions', () => {
-			const input = new OO.ui.NumberInputWidget();
-			expect( input.getValue ).toBeDefined();
-			expect( input.getValue() ).toBe( 800 );
-		} );
-
-		it( 'should create dropdown widget for presets', () => {
-			const dropdown = new OO.ui.DropdownWidget();
-			const menu = dropdown.getMenu();
-			expect( menu.selectItemByData ).toBeDefined();
-			expect( menu.findSelectedItem ).toBeDefined();
-		} );
-
-		it( 'should create field layout for form fields', () => {
-			const field = new OO.ui.FieldLayout();
-			expect( field.$element ).toBeDefined();
-		} );
-	} );
-
-	describe( 'Error handling', () => {
-		it( 'should log errors to mw.log.error', () => {
-			mw.log.error( 'Test error' );
-			expect( mw.log.error ).toHaveBeenCalledWith( 'Test error' );
-		} );
-
-		it( 'should show error notification', () => {
-			mw.notify( 'Error message', { type: 'error' } );
-			expect( mw.notify ).toHaveBeenCalledWith( 'Error message', { type: 'error' } );
-		} );
-
-		it( 'should create OO.ui.Error for dialog errors', () => {
-			const error = new OO.ui.Error( 'Dialog error' );
-			expect( error.message ).toBe( 'Dialog error' );
-		} );
-	} );
-
-	describe( 'Pagination calculations', () => {
-		it( 'should calculate correct page count', () => {
-			const total = 50;
-			const perPage = 20;
-			const pageCount = Math.ceil( total / perPage );
-			expect( pageCount ).toBe( 3 );
-		} );
-
-		it( 'should calculate offset from page number', () => {
-			const page = 2;
-			const perPage = 20;
-			const offset = ( page - 1 ) * perPage;
-			expect( offset ).toBe( 20 );
-		} );
-
-		it( 'should determine if has next page', () => {
-			const offset = 20;
-			const perPage = 20;
-			const total = 50;
-			const hasNext = offset + perPage < total;
-			expect( hasNext ).toBe( true );
-		} );
-
-		it( 'should determine if has previous page', () => {
-			const offset = 20;
-			const hasPrev = offset > 0;
-			expect( hasPrev ).toBe( true );
-		} );
-	} );
-
-	describe( 'Search debouncing', () => {
 		beforeEach( () => {
-			jest.useFakeTimers();
+			manager = createManager();
 		} );
 
-		afterEach( () => {
-			jest.useRealTimers();
+		it( 'builds valid HTML containing slide name and dimensions', () => {
+			const slide = { name: 'TestSlide', canvasWidth: 1920, canvasHeight: 1080, layerCount: 5, modifiedBy: 'testuser', modified: null };
+			const html = manager.renderSlideItem( slide );
+			expect( html ).toContain( 'TestSlide' );
+			expect( html ).toContain( '1920' );
+			expect( html ).toContain( '1080' );
+			expect( html ).toContain( 'layers-slide-item' );
 		} );
 
-		it( 'should debounce search input', () => {
-			const searchFn = jest.fn();
-			const debounced = ( fn, delay ) => {
-				let timeoutId;
-				return ( ...args ) => {
-					clearTimeout( timeoutId );
-					timeoutId = setTimeout( () => fn( ...args ), delay );
-				};
+		it( 'escapes HTML in slide name to prevent XSS', () => {
+			const slide = { name: '<script>xss</script>', canvasWidth: 800, canvasHeight: 600, layerCount: 0, modifiedBy: 'u', modified: null };
+			const html = manager.renderSlideItem( slide );
+			expect( html ).not.toContain( '<script>' );
+			expect( html ).toContain( '&lt;script&gt;' );
+		} );
+
+		it( 'includes delete button when canDelete is true', () => {
+			manager.config = { canDelete: true };
+			const slide = { name: 'S', canvasWidth: 800, canvasHeight: 600, layerCount: 0, modifiedBy: 'u', modified: null };
+			const html = manager.renderSlideItem( slide );
+			expect( html ).toContain( 'layers-slide-delete-btn' );
+		} );
+
+		it( 'omits delete button when canDelete is false', () => {
+			manager.config = { canDelete: false };
+			const slide = { name: 'S', canvasWidth: 800, canvasHeight: 600, layerCount: 0, modifiedBy: 'u', modified: null };
+			const html = manager.renderSlideItem( slide );
+			expect( html ).not.toContain( 'layers-slide-delete-btn' );
+		} );
+
+		it( 'defaults layerCount to 0 when missing', () => {
+			const slide = { name: 'S', canvasWidth: 800, canvasHeight: 600, modifiedBy: 'u', modified: null };
+			const html = manager.renderSlideItem( slide );
+			expect( html ).toContain( 'S' );
+		} );
+
+		it( 'does not call mw.html.escape for null modifiedBy', () => {
+			// When modifiedBy is null, code uses literal '?' as fallback (no escape call needed)
+			const slide = { name: 'S', canvasWidth: 800, canvasHeight: 600, layerCount: 0, modifiedBy: null, modified: null };
+			const html = manager.renderSlideItem( slide );
+			// Confirm it renders without throwing and produces a message call with '?' as the modifiedBy param
+			expect( html ).toContain( 'layers-slide-item' );
+			expect( global.mw.message ).toHaveBeenCalledWith( 'special-slides-modified-by', expect.anything(), '?' );
+		} );
+
+		it( 'passes escaped modifiedBy to mw.message (XSS prevention)', () => {
+			// modifiedBy is escaped via mw.html.escape before being passed to mw.message
+			// The escaped value becomes a param to mw.message, not raw HTML in our output
+			const slide = { name: 'S', canvasWidth: 800, canvasHeight: 600, layerCount: 0, modifiedBy: '<b>admin</b>', modified: null };
+			manager.renderSlideItem( slide );
+			expect( global.mw.message ).toHaveBeenCalledWith(
+				'special-slides-modified-by',
+				expect.anything(),
+				'&lt;b&gt;admin&lt;/b&gt;'
+			);
+		} );
+	} );
+
+	// â”€â”€ renderPagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'renderPagination', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+		} );
+
+		it( 'clears pagination when all results fit on one page', () => {
+			manager.totalSlides = 10;
+			manager.limit = 20;
+			manager.renderPagination();
+			expect( mockEl.empty ).toHaveBeenCalled();
+		} );
+
+		it( 'renders pagination controls when results span multiple pages', () => {
+			manager.totalSlides = 100;
+			manager.limit = 20;
+			manager.currentOffset = 0;
+			manager.renderPagination();
+			const htmlArg = mockEl.html.mock.calls[ mockEl.html.mock.calls.length - 1 ][ 0 ];
+			expect( htmlArg ).toContain( 'layers-pagination-prev' );
+			expect( htmlArg ).toContain( 'layers-pagination-next' );
+		} );
+
+		it( 'disables prev button on the first page', () => {
+			manager.totalSlides = 50;
+			manager.limit = 20;
+			manager.currentOffset = 0;
+			manager.renderPagination();
+			const htmlArg = mockEl.html.mock.calls[ mockEl.html.mock.calls.length - 1 ][ 0 ];
+			expect( htmlArg ).toMatch( /layers-pagination-prev[^"]*"\s+disabled/ );
+		} );
+
+		it( 'disables next button on the last page', () => {
+			manager.totalSlides = 50;
+			manager.limit = 20;
+			manager.currentOffset = 40;
+			manager.renderPagination();
+			const htmlArg = mockEl.html.mock.calls[ mockEl.html.mock.calls.length - 1 ][ 0 ];
+			expect( htmlArg ).toMatch( /layers-pagination-next[^"]*"\s+disabled/ );
+		} );
+
+		it( 'includes count message in pagination', () => {
+			manager.totalSlides = 50;
+			manager.limit = 20;
+			manager.currentOffset = 0;
+			manager.renderPagination();
+			expect( global.mw.message ).toHaveBeenCalledWith( 'special-slides-count', 1, 20, 50 );
+		} );
+	} );
+
+	// â”€â”€ loadSlides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'loadSlides', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+			jest.spyOn( manager, 'renderSlides' ).mockImplementation( () => {} );
+			jest.spyOn( manager, 'renderPagination' ).mockImplementation( () => {} );
+		} );
+
+		it( 'shows a loading indicator immediately', () => {
+			manager.loadSlides();
+			expect( mockEl.html ).toHaveBeenCalledWith(
+				expect.stringContaining( 'layers-slides-loading' )
+			);
+		} );
+
+		it( 'calls api.get with the correct parameters', () => {
+			manager.searchPrefix = 'proc';
+			manager.currentOffset = 20;
+			manager.sortBy = 'date';
+			manager.loadSlides();
+			expect( mockApi.get ).toHaveBeenCalledWith( {
+				action: 'layerslist',
+				prefix: 'proc',
+				limit: 20,
+				offset: 20,
+				sort: 'date'
+			} );
+		} );
+
+		it( 'updates slides and totalSlides on success', async () => {
+			const slides = [ { name: 'S', canvasWidth: 800, canvasHeight: 600, layerCount: 1, modifiedBy: 'u', modified: null } ];
+			mockApi.get.mockResolvedValue( { layerslist: { slides, total: 1 } } );
+			await manager.loadSlides();
+			expect( manager.slides ).toEqual( slides );
+			expect( manager.totalSlides ).toBe( 1 );
+		} );
+
+		it( 'handles missing layerslist key gracefully', async () => {
+			mockApi.get.mockResolvedValue( {} );
+			await manager.loadSlides();
+			expect( manager.slides ).toEqual( [] );
+			expect( manager.totalSlides ).toBe( 0 );
+		} );
+
+		it( 'shows error message and logs on API failure', async () => {
+			mockApi.get.mockRejectedValue( new Error( 'Network error' ) );
+			manager.loadSlides();
+			await flushPromises();
+			expect( mockEl.html ).toHaveBeenCalledWith(
+				expect.stringContaining( 'layers-slides-error' )
+			);
+			expect( global.mw.log.error ).toHaveBeenCalled();
+		} );
+
+		it( 'calls renderSlides and renderPagination on success', async () => {
+			await manager.loadSlides();
+			expect( manager.renderSlides ).toHaveBeenCalled();
+			expect( manager.renderPagination ).toHaveBeenCalled();
+		} );
+	} );
+
+	// â”€â”€ deleteSlide â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'deleteSlide', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+			jest.spyOn( manager, 'loadSlides' ).mockImplementation( () => {} );
+		} );
+
+		it( 'calls postWithToken with correct parameters', async () => {
+			await manager.deleteSlide( 'TestSlide' );
+			expect( mockApi.postWithToken ).toHaveBeenCalledWith( 'csrf', {
+				action: 'layersdelete',
+				slidename: 'TestSlide',
+				setname: 'default'
+			} );
+		} );
+
+		it( 'shows success notification after delete', async () => {
+			await manager.deleteSlide( 'TestSlide' );
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				{ type: 'success' }
+			);
+		} );
+
+		it( 'reloads slides after successful delete', async () => {
+			await manager.deleteSlide( 'TestSlide' );
+			expect( manager.loadSlides ).toHaveBeenCalled();
+		} );
+
+		it( 'shows error notification on API failure', async () => {
+			mockApi.postWithToken.mockRejectedValue( new Error( 'Delete failed' ) );
+			manager.deleteSlide( 'TestSlide' );
+			await flushPromises();
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				{ type: 'error' }
+			);
+		} );
+
+		it( 'logs error on API failure', async () => {
+			mockApi.postWithToken.mockRejectedValue( new Error( 'Delete failed' ) );
+			manager.deleteSlide( 'TestSlide' );
+			await flushPromises();
+			expect( global.mw.log.error ).toHaveBeenCalled();
+		} );
+	} );
+
+	// â”€â”€ confirmDeleteSlide â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'confirmDeleteSlide', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+			jest.spyOn( manager, 'deleteSlide' ).mockImplementation( () => {} );
+		} );
+
+		it( 'calls OO.ui.confirm with a message containing the slide name', async () => {
+			await manager.confirmDeleteSlide( 'TestSlide' );
+			expect( global.mw.message ).toHaveBeenCalledWith( 'special-slides-delete-confirm', 'TestSlide' );
+			expect( global.OO.ui.confirm ).toHaveBeenCalled();
+		} );
+
+		it( 'calls deleteSlide when user confirms', async () => {
+			global.OO.ui.confirm.mockResolvedValue( true );
+			await manager.confirmDeleteSlide( 'TestSlide' );
+			expect( manager.deleteSlide ).toHaveBeenCalledWith( 'TestSlide' );
+		} );
+
+		it( 'does not call deleteSlide when user cancels', async () => {
+			global.OO.ui.confirm.mockResolvedValue( false );
+			await manager.confirmDeleteSlide( 'TestSlide' );
+			expect( manager.deleteSlide ).not.toHaveBeenCalled();
+		} );
+
+		it( 'handles confirm() rejection gracefully', async () => {
+			global.OO.ui.confirm.mockRejectedValue( new Error( 'Dialog error' ) );
+			manager.confirmDeleteSlide( 'TestSlide' );
+			await flushPromises();
+			expect( global.mw.log.error ).toHaveBeenCalled();
+		} );
+	} );
+
+	// â”€â”€ editSlide â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'editSlide', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+		} );
+
+		it( 'calls mw.util.getUrl with the correct path', () => {
+			manager.editSlide( 'TestSlide' );
+			expect( global.mw.util.getUrl ).toHaveBeenCalledWith( 'Special:EditSlide/TestSlide' );
+		} );
+	} );
+
+	// â”€â”€ destroy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'destroy', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+		} );
+
+		it( 'calls off() on all jQuery element references', () => {
+			manager.destroy();
+			expect( mockEl.off ).toHaveBeenCalled();
+		} );
+
+		it( 'clears all DOM references to null', () => {
+			manager.destroy();
+			expect( manager.$container ).toBeNull();
+			expect( manager.$list ).toBeNull();
+			expect( manager.$pagination ).toBeNull();
+			expect( manager.$searchInput ).toBeNull();
+			expect( manager.$sortSelect ).toBeNull();
+			expect( manager.$createBtn ).toBeNull();
+		} );
+
+		it( 'clears slides array', () => {
+			manager.slides = [ { name: 'S' } ];
+			manager.destroy();
+			expect( manager.slides ).toEqual( [] );
+		} );
+
+		it( 'clears api and config references', () => {
+			manager.destroy();
+			expect( manager.api ).toBeNull();
+			expect( manager.config ).toBeNull();
+		} );
+	} );
+
+	// â”€â”€ bindEvents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'bindEvents', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+		} );
+
+		it( 'binds "input" event for search', () => {
+			manager.bindEvents();
+			expect( mockEl.on ).toHaveBeenCalledWith( 'input', expect.any( Function ) );
+		} );
+
+		it( 'binds "change" event for sort', () => {
+			manager.bindEvents();
+			expect( mockEl.on ).toHaveBeenCalledWith( 'change', expect.any( Function ) );
+		} );
+
+		it( 'binds "click" event for create button', () => {
+			manager.bindEvents();
+			expect( mockEl.on ).toHaveBeenCalledWith( 'click', expect.any( Function ) );
+		} );
+
+		it( 'binds "click" event for pagination', () => {
+			manager.bindEvents();
+			expect( mockEl.on ).toHaveBeenCalledWith( 'click', '.layers-pagination-prev', expect.any( Function ) );
+			expect( mockEl.on ).toHaveBeenCalledWith( 'click', '.layers-pagination-next', expect.any( Function ) );
+		} );
+
+		it( 'binds "click" event for edit and delete actions on list', () => {
+			manager.bindEvents();
+			expect( mockEl.on ).toHaveBeenCalledWith( 'click', '.layers-slide-edit-btn', expect.any( Function ) );
+			expect( mockEl.on ).toHaveBeenCalledWith( 'click', '.layers-slide-delete-btn', expect.any( Function ) );
+		} );
+	} );
+
+	// â”€â”€ showCreateDialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+	describe( 'showCreateDialog', () => {
+		let manager;
+
+		beforeEach( () => {
+			manager = createManager();
+		} );
+
+		it( 'creates a WindowManager and opens a dialog', () => {
+			const mockWm = { $element: mockEl, addWindows: jest.fn(), openWindow: jest.fn().mockReturnValue( { closed: Promise.resolve( {} ) } ) };
+			const wmMock = jest.fn().mockImplementation( () => mockWm );
+			global.OO.ui.WindowManager = wmMock;
+			manager.showCreateDialog();
+			expect( wmMock ).toHaveBeenCalled();
+		} );
+
+		it( 'navigates to edit URL when dialog closes with create action', async () => {
+			const editSpy = jest.spyOn( manager, 'editSlide' ).mockImplementation( () => {} );
+			const mockWm = {
+				$element: mockEl,
+				addWindows: jest.fn(),
+				openWindow: jest.fn().mockReturnValue( {
+					closed: Promise.resolve( { action: 'create', slideName: 'NewPresentation' } )
+				} )
 			};
+			jest.spyOn( global.OO.ui, 'WindowManager' ).mockImplementation( () => mockWm );
+			await manager.showCreateDialog();
+			await Promise.resolve(); // flush microtask queue
+			expect( editSpy ).toHaveBeenCalledWith( 'NewPresentation' );
+		} );
 
-			const debouncedSearch = debounced( searchFn, 300 );
+		it( 'does not navigate when dialog is cancelled (no action)', async () => {
+			const editSpy = jest.spyOn( manager, 'editSlide' ).mockImplementation( () => {} );
+			const mockWm = {
+				$element: mockEl,
+				addWindows: jest.fn(),
+				openWindow: jest.fn().mockReturnValue( {
+					closed: Promise.resolve( null )
+				} )
+			};
+			jest.spyOn( global.OO.ui, 'WindowManager' ).mockImplementation( () => mockWm );
+			await manager.showCreateDialog();
+			await Promise.resolve();
+			expect( editSpy ).not.toHaveBeenCalled();
+		} );
 
-			debouncedSearch( 'a' );
-			debouncedSearch( 'ab' );
-			debouncedSearch( 'abc' );
-
-			expect( searchFn ).not.toHaveBeenCalled();
-
-			jest.advanceTimersByTime( 300 );
-
-			expect( searchFn ).toHaveBeenCalledTimes( 1 );
-			expect( searchFn ).toHaveBeenCalledWith( 'abc' );
+		it( 'logs error if dialog throws', async () => {
+			const mockWm = {
+				$element: mockEl,
+				addWindows: jest.fn(),
+				openWindow: jest.fn().mockReturnValue( {
+					closed: Promise.reject( new Error( 'Dialog crash' ) )
+				} )
+			};
+			jest.spyOn( global.OO.ui, 'WindowManager' ).mockImplementation( () => mockWm );
+			await manager.showCreateDialog();
+			await Promise.resolve();
+			expect( global.mw.log.error ).toHaveBeenCalled();
 		} );
 	} );
 } );
+

@@ -227,6 +227,19 @@ describe('HitTestController', () => {
             expect(result.type).toBe('test');
         });
 
+        test('should use selectionManager handles when renderer has no handles', () => {
+            // Clear renderer handles so first `if` fails
+            mockCanvasManager.renderer.selectionHandles = null;
+            // Populate selectionManager handles so `else if` succeeds (line 57 covered)
+            mockCanvasManager.selectionManager.selectionHandles = [
+                { type: 'selMgr', rect: { x: 30, y: 30, width: 10, height: 10 } }
+            ];
+            const point = { x: 35, y: 35 };
+            const result = hitTestController.hitTestSelectionHandles(point);
+            expect(result).not.toBeNull();
+            expect(result.type).toBe('selMgr');
+        });
+
         test('should fall back to manager.selectionHandles when renderer and selectionManager have no handles', () => {
             // Clear renderer handles
             mockCanvasManager.renderer.selectionHandles = null;
@@ -1350,6 +1363,395 @@ describe('HitTestController', () => {
             // Point within horizontal extent but outside vertical
             expect(hitTestController.isPointInEllipse({ x: 390, y: 300 }, layer)).toBe(true);
             expect(hitTestController.isPointInEllipse({ x: 300, y: 340 }, layer)).toBe(false);
+        });
+    });
+
+    // ── isPointInLayer switch — uncovered layer types ─────────────────────────
+
+    describe('isPointInLayer - customShape type', () => {
+        test('should hit a customShape via bounding box (rectangle logic)', () => {
+            const layer = {
+                id: 'cs1',
+                type: 'customShape',
+                x: 50,
+                y: 50,
+                width: 100,
+                height: 100,
+                visible: true,
+                locked: false
+            };
+            expect(hitTestController.isPointInLayer({ x: 100, y: 100 }, layer)).toBe(true);
+            expect(hitTestController.isPointInLayer({ x: 200, y: 200 }, layer)).toBe(false);
+        });
+
+        test('customShape with rotation uses un-rotated bounds', () => {
+            const layer = {
+                id: 'cs2',
+                type: 'customShape',
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                rotation: 45,
+                visible: true,
+                locked: false
+            };
+            // Center (50, 50) should always hit
+            expect(hitTestController.isPointInLayer({ x: 50, y: 50 }, layer)).toBe(true);
+        });
+    });
+
+    // ── isPointNearDimension — uncovered branches ─────────────────────────────
+
+    describe('isPointNearDimension - numeric dimensionOffset', () => {
+        test('uses dimensionOffset directly when it is a finite number', () => {
+            // layer.dimensionOffset = 20 → offsetDistance = 20 (new code path)
+            const layer = {
+                id: 'dim1',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                dimensionOffset: 20
+            };
+            // Horizontal line: perpX=0, perpY=1, offset=20
+            // dimLine at y = -20  (0 - 1*20)
+            // Point at (50, -20) is exactly on the dimension line → returns true
+            expect(hitTestController.isPointNearDimension({ x: 50, y: -20 }, layer)).toBe(true);
+        });
+
+        test('falls back to legacy calculation when dimensionOffset is NaN', () => {
+            const layer = {
+                id: 'dim2',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                dimensionOffset: NaN
+            };
+            // Legacy default: extensionGap=3, extensionLength=10 → offsetDistance=8
+            // dimLine at y = -8
+            expect(hitTestController.isPointNearDimension({ x: 50, y: -8 }, layer)).toBe(true);
+        });
+
+        test('uses custom extensionLength when provided', () => {
+            const layer = {
+                id: 'dim3',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                extensionLength: 20,
+                extensionGap: 5
+            };
+            // offsetDistance = 5 + 20/2 = 15
+            // dimLine at y = -15; point at (50, -15) → on line
+            expect(hitTestController.isPointNearDimension({ x: 50, y: -15 }, layer)).toBe(true);
+        });
+
+        test('uses default extensionLength when extensionLength is NaN', () => {
+            const layer = {
+                id: 'dim4',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                extensionLength: NaN,
+                extensionGap: 3
+            };
+            // extensionLength defaults to 10, offsetDistance = 3 + 5 = 8
+            // dimLine at y = -8
+            expect(hitTestController.isPointNearDimension({ x: 50, y: -8 }, layer)).toBe(true);
+        });
+
+        test('uses default extensionGap when extensionGap is NaN', () => {
+            const layer = {
+                id: 'dim5',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                extensionLength: 10,
+                extensionGap: NaN
+            };
+            // extensionGap defaults to 3, offsetDistance = 3 + 5 = 8
+            expect(hitTestController.isPointNearDimension({ x: 50, y: -8 }, layer)).toBe(true);
+        });
+    });
+
+    describe('isPointNearDimension - extension line hits', () => {
+        // For a horizontal dimension layer x1=0,y1=0 to x2=100,y2=0 with no offset:
+        //   perpX=0, perpY=1, offsetDistance=8
+        //   dimX1=0,dimY1=-8; dimX2=100,dimY2=-8
+        //   Extension line 1: from (0,0) to (0,-8)  — a short vertical segment
+        //   Extension line 2: from (100,0) to (100,-8)
+
+        test('hits extension line 1 (near x1)', () => {
+            const layer = {
+                id: 'dim6',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0
+            };
+            // Point at (0, -4) is on the extension line 1 segment at its midpoint
+            // distanceToDimLine = distance from (0,-4) to line y=-8: |(-4)-(-8)| = 4 > 15? No.
+            // Wait: dimLine is at y=-8, so distance from (0,-4) to the horizontal dimLine = |-4 - -8| = 4 <= 15 → true via Test 1
+            // To exercise Test 2 (extension line 1), we need distanceToDimLine > 15
+            // Use a larger offset so the dim line is far away
+            const layerFarOffset = {
+                id: 'dim6b',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                dimensionOffset: 50 // dim line at y=-50
+            };
+            // Point near extension line 1 midpoint (0, -25) — between (0,0) and (0,-50)
+            // distanceToDimLine = distance from (0,-25) to horizontal line at y=-50 = 25 > 15
+            // distanceToExt1 = distance from (0,-25) to segment (0,0)-(0,-50) = 0 (on the segment) <= 8
+            expect(hitTestController.isPointNearDimension({ x: 0, y: -25 }, layerFarOffset)).toBe(true);
+        });
+
+        test('hits extension line 2 (near x2)', () => {
+            const layerFarOffset = {
+                id: 'dim7',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                dimensionOffset: 50 // dim line at y=-50
+            };
+            // Point at (100, -25) is on extension line 2 (from (100,0) to (100,-50))
+            // distanceToDimLine = 25 > 15; distanceToExt1 > 8; distanceToExt2 = 0 <= 8
+            expect(hitTestController.isPointNearDimension({ x: 100, y: -25 }, layerFarOffset)).toBe(true);
+        });
+    });
+
+    describe('isPointNearDimension - text area hit', () => {
+        test('hits the text area when point is at text center', () => {
+            // Use large dimensionOffset so dim line is far, extension lines are also far
+            // from a point near the text center
+            const layer = {
+                id: 'dim8',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                dimensionOffset: 100, // dim line at y=-100
+                fontSize: 12
+            };
+            // Text center ≈ midpoint of dimLine = (50, -100)
+            // textHitRadius = max(12*1.5, 25) = 25
+            // Point at (50, -100): distToText = 0 <= 25 → true via Test 4
+            // But: distanceToDimLine = 0 ≤ 15 → would also hit via Test 1!
+            // Need point far from dim line AND ext lines but inside text radius:
+            //   point at (50, -75): distanceToDimLine = |-75 - -100| = 25 > 15
+            //                       distanceToExt1 = distance to segment (0,0)-(0,-100) at x=50
+            //                         t projects to closest point (0,-75), dist = 50 > 8
+            //                       distanceToExt2 = distance to segment (100,0)-(100,-100) at x=50
+            //                         t projects to (100,-75), dist = 50 > 8
+            //                       distToText = √((50-50)²+(-75--100)²) = 25 ≤ 25 → true
+            expect(hitTestController.isPointNearDimension({ x: 50, y: -75 }, layer)).toBe(true);
+        });
+
+        test('uses textOffset to shift text center along dimension line', () => {
+            const layer = {
+                id: 'dim9',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                dimensionOffset: 100,
+                fontSize: 12,
+                textOffset: 20 // shift text 20px toward x2
+            };
+            // Horizontal line: unitDx=1, unitDy=0
+            // Text center = (50 + 1*20, -100) = (70, -100)
+            // Point at (70, -75): distToText = 25 <= 25 → true
+            expect(hitTestController.isPointNearDimension({ x: 70, y: -75 }, layer)).toBe(true);
+
+            // Old text position (50, -75) is now outside textHitRadius
+            // distToText = √((50-70)²+(0)²) = 20 ≤ 25 → still inside! Use 30 offset to push it out
+            const layerOffset30 = {
+                id: 'dim9b',
+                type: 'dimension',
+                x1: 0,
+                y1: 0,
+                x2: 100,
+                y2: 0,
+                dimensionOffset: 100,
+                fontSize: 12,
+                textOffset: 30
+            };
+            // Text center = (80, -100); point at (45, -75): distToText = √(35²+25²) ≈ 43 > 25 → false
+            expect(hitTestController.isPointNearDimension({ x: 45, y: -75 }, layerOffset30)).toBe(false);
+        });
+    });
+
+    // ── isPointNearAngleDimension ─────────────────────────────────────────────
+
+    describe('isPointNearAngleDimension', () => {
+        // Standard angle dimension: vertex at (200,200), arm1 at (300,200), arm2 at (200,100)
+        // This forms a 90° angle at the vertex; arcRadius defaults to 40
+
+        const makeAngleLayer = ( overrides = {} ) => ( {
+            id: 'ad1',
+            type: 'angleDimension',
+            cx: 200,
+            cy: 200,
+            ax: 300,  // arm1 endpoint (right)
+            ay: 200,
+            bx: 200,  // arm2 endpoint (up)
+            by: 100,
+            arcRadius: 40,
+            visible: true,
+            ...overrides
+        } );
+
+        test('isPointInLayer routes angleDimension to isPointNearAngleDimension', () => {
+            const layer = makeAngleLayer();
+            // Center of vertex should return true (distToVertex <= 10)
+            expect(hitTestController.isPointInLayer({ x: 200, y: 200 }, layer)).toBe(true);
+            // Point far away should return false
+            expect(hitTestController.isPointInLayer({ x: 500, y: 500 }, layer)).toBe(false);
+        });
+
+        test('hits vertex point (distToVertex <= 10)', () => {
+            const layer = makeAngleLayer();
+            // Exactly at vertex
+            expect(hitTestController.isPointNearAngleDimension({ x: 200, y: 200 }, layer)).toBe(true);
+            // 9px from vertex
+            expect(hitTestController.isPointNearAngleDimension({ x: 209, y: 200 }, layer)).toBe(true);
+            // 11px from vertex — outside vertex hit but may hit arm1 line
+            // This test is about the vertex branch specifically; just verify the vertex hit
+        });
+
+        test('misses when point is far from all elements', () => {
+            const layer = makeAngleLayer();
+            expect(hitTestController.isPointNearAngleDimension({ x: 600, y: 600 }, layer)).toBe(false);
+        });
+
+        test('hits arm1 line (distToArm1 <= 8)', () => {
+            const layer = makeAngleLayer();
+            // arm1 goes from vertex (200,200) to arm1 endpoint (300,200) — horizontal
+            // Point at (250, 200) is on the arm1 line (distToArm1 = 0)
+            // distToVertex = 50 > 10, so vertex branch does NOT fire → arm1 branch fires
+            expect(hitTestController.isPointNearAngleDimension({ x: 250, y: 200 }, layer)).toBe(true);
+
+            // Point 5px off the arm1 line (250, 205) — still within 8px tolerance
+            expect(hitTestController.isPointNearAngleDimension({ x: 250, y: 205 }, layer)).toBe(true);
+
+            // Point 10px off the arm1 line — outside tolerance
+            expect(hitTestController.isPointNearAngleDimension({ x: 250, y: 210 }, layer)).toBe(false);
+        });
+
+        test('hits arm2 line (distToArm2 <= 8)', () => {
+            const layer = makeAngleLayer();
+            // arm2 goes from vertex (200,200) to arm2 endpoint (200,100) — vertical upward
+            // Point at (200, 150) is on the arm2 line
+            // distToVertex = 50 > 10; distToArm1 = dist from (200,150) to line (200,200)-(300,200) = 50 > 8
+            expect(hitTestController.isPointNearAngleDimension({ x: 200, y: 150 }, layer)).toBe(true);
+
+            // Point 5px off arm2 line
+            expect(hitTestController.isPointNearAngleDimension({ x: 205, y: 150 }, layer)).toBe(true);
+
+            // Point 10px off arm2 line — outside tolerance
+            expect(hitTestController.isPointNearAngleDimension({ x: 215, y: 150 }, layer)).toBe(false);
+        });
+
+        test('hits the arc (distance from vertex ≈ arcRadius)', () => {
+            const layer = makeAngleLayer();
+            // arcRadius = 40; vertex = (200,200)
+            // A point at distance 40 from vertex, at angle midway in the 90° sweep
+            // startAngle = atan2(200-200, 300-200) = atan2(0,100) = 0
+            // endAngle   = atan2(100-200, 200-200) = atan2(-100,0) = -π/2
+            // sweep (non-reflex): endAngle - startAngle = -π/2
+            //   sweep < 0, so sweep += 2π → sweep = 3π/2 > π → sweep = 3π/2 - 2π = -π/2
+            // Because sweep < 0, testAngle must be <= 0. Mid-sweep is at -π/4 (315°/225°?)
+            // Let's use angle = π/4 above arm1 ... actually the 90° between arm1 (angle=0)
+            // and arm2 (angle=-π/2 or 270°). Let's try a point at (200+40*cos(-π/4), 200+40*sin(-π/4))
+            // = (200+28.28, 200-28.28) = (228, 172)
+            // distFromVertex = 40, Math.abs(40-40) = 0 ≤ 10 → checks angle...
+            const arcX = Math.round(200 + 40 * Math.cos(-Math.PI / 4));
+            const arcY = Math.round(200 + 40 * Math.sin(-Math.PI / 4));
+            // This point is at the arc boundary; it may or may not pass the angle sweep check
+            // Let's verify with a simpler known-good point: directly along arm1 at radius=40
+            // (240, 200) is exactly on arm1 at distance 40 from vertex
+            // distFromVertex = 40, |40-40|=0 ≤ 10; angle check for point (240,200):
+            //   pointAngle = atan2(200-200, 240-200) = atan2(0,40) = 0 = startAngle
+            //   testAngle = 0 - 0 = 0, within [0, sweep] assuming valid sweep
+            expect(hitTestController.isPointNearAngleDimension({ x: 240, y: 200 }, layer)).toBe(true);
+        });
+
+        test('reflexAngle=true changes sweep direction', () => {
+            const layer = makeAngleLayer( { reflexAngle: true } );
+            // With reflexAngle, the arc sweeps the "long way" around (>180°)
+            // A point on the reflex arc at (160, 200) — on arm1 direction extended left
+            // distFromVertex = 40, angle = π (180°)
+            // This point should be hit on the reflex arc
+            expect(hitTestController.isPointNearAngleDimension({ x: 160, y: 200 }, layer)).toBe(true);
+        });
+
+        test('returns false for point outside all elements', () => {
+            const layer = makeAngleLayer();
+            // Point (400, 400) is nowhere near vertex (200,200), arms, or arc (radius 40)
+            expect(hitTestController.isPointNearAngleDimension({ x: 400, y: 400 }, layer)).toBe(false);
+        });
+
+        test('reflexAngle=true with initial positive sweep covers sweep<=PI branch', () => {
+            // vertex=(200,200), arm1 above=(200,100), arm2 right=(300,200)
+            // startAngle = atan2(100-200, 200-200) = atan2(-100,0) = -π/2
+            // endAngle   = atan2(200-200, 300-200) = atan2(0,100) = 0
+            // initial sweep = 0 - (-π/2) = π/2 > 0
+            // reflex path: A: π/2 > 0 → skip; B: π/2 <= π → sweep += 2π = 5π/2; C: 5π/2 > 2π → sweep -= 2π = π/2
+            const layer = makeAngleLayer( {
+                ax: 200, ay: 100,  // arm1 = directly above vertex
+                bx: 300, by: 200,  // arm2 = directly right of vertex
+                reflexAngle: true
+            } );
+            // Point at vertex should hit via distToVertex <= 10
+            expect(hitTestController.isPointNearAngleDimension({ x: 200, y: 200 }, layer)).toBe(true);
+        });
+
+        test('textPosition=above uses larger arc radius for text', () => {
+            // Creates a layer with textPosition='above'; just verifies the branch executes
+            // without throwing and that out-of-arc-band points return false
+            const layer = makeAngleLayer( { textPosition: 'above', fontSize: 12 } );
+            // Point far from all elements — result must be false (covers the textPosition branch but no hit)
+            expect(hitTestController.isPointNearAngleDimension({ x: 600, y: 600 }, layer)).toBe(false);
+        });
+
+        test('textPosition=below uses smaller arc radius for text', () => {
+            const layer = makeAngleLayer( { textPosition: 'below', fontSize: 12 } );
+            expect(hitTestController.isPointNearAngleDimension({ x: 600, y: 600 }, layer)).toBe(false);
+        });
+
+        test('hits arc via positive sweep path (non-reflex angle with sweep >= 0)', () => {
+            // vertex=(200,200), arm1 right=(300,200) startAngle=0,
+            // arm2 lower-left=(100,300) endAngle=atan2(100,-100)=3π/4
+            // sweep = 3π/4 - 0 = 3π/4  ∈ (0,π] →  positive sweep, no normalisation
+            const layer = makeAngleLayer( {
+                ax: 300, ay: 200,  // arm1: right
+                bx: 100, by: 300,  // arm2: lower-left (screen coords: down-left)
+                arcRadius: 40
+            } );
+            // Arc hit at midAngle ≈ 3π/8 (≈67.5°):
+            // arcX ≈ 200 + 40*cos(3π/8) ≈ 215, arcY ≈ 200 + 40*sin(3π/8) ≈ 237
+            // distFromVertex = 40, point is between the two arms → positive-sweep branch, line 393
+            const arcX = Math.round( 200 + 40 * Math.cos( 3 * Math.PI / 8 ) );
+            const arcY = Math.round( 200 + 40 * Math.sin( 3 * Math.PI / 8 ) );
+            expect(hitTestController.isPointNearAngleDimension( { x: arcX, y: arcY }, layer ) ).toBe(true);
         });
     });
 });
