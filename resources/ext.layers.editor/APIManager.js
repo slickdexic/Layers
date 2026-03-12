@@ -409,7 +409,9 @@
 			const standardizedError = this.handleError( error, 'load', { phase: 'processLayersData' } );
 			this.handleLoadError( 'process-error', { error: standardizedError } );
 		}
-	}	extractLayerSetData( layerSet ) {
+	}
+
+	extractLayerSetData( layerSet ) {
 		// Defensive null check - layerSet can be null when no layers exist for the file
 		if ( !layerSet ) {
 			this.editor.stateManager.set( 'baseWidth', null );
