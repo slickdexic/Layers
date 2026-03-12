@@ -36,7 +36,7 @@
 |hook11          = ParserMakeImageParams
 |hook12          = SkinTemplateNavigation::Universal
 |hook13          = ThumbnailBeforeProduceHTML
-|description     = A professional-grade, non-destructive image annotation system with 17 drawing tools, 5,116 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI), '''Slide Mode''' for standalone graphics, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
+|description     = A professional-grade, non-destructive image annotation system with 17 drawing tools, 1,385 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI), '''Slide Mode''' for standalone graphics, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
 }}
 
 The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
@@ -184,7 +184,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 * '''Callouts & Speech Bubbles''': Professional callouts with draggable tail positioning, three tail styles (triangle, curved, line), and rounded corners—perfect for tutorials and explanations.
 * '''Curved Arrows''': Arrows support curved paths via a draggable control point, with configurable head types (arrow, circle, diamond, triangle) and line styles (solid, dashed, dotted).
 * '''Text & Text Boxes''': Simple click-to-place text or advanced text boxes with word wrap, vertical alignment, padding, and corner radius.
-* '''Shape Library (5,116 Shapes)''': Built-in library with 12 categories including arrows, basic shapes, callouts, flowchart, [[w:ISO 7010|ISO 7010]] safety symbols, [https://www.iso.org/obp/ui/#iso:pub:PUB400008:en IEC 60417], ISO 7000, [[w:GHS hazard pictograms|GHS]], ECB, math, and more. All shapes render as crisp SVG vectors.
+* '''Shape Library (1,385 Shapes)''': Built-in library with 12 categories including arrows, basic shapes, callouts, flowchart, [[w:ISO 7010|ISO 7010]] safety symbols, [https://www.iso.org/obp/ui/#iso:pub:PUB400008:en IEC 60417], ISO 7000, [[w:GHS hazard pictograms|GHS]], ECB, math, and more. All shapes render as crisp SVG vectors.
 * '''Emoji Library (2,817 Emoji)''': Google Noto Color Emoji library with 19 categories (smileys, gestures, people, animals, food, travel, sports, and more). Lazy-loaded SVG thumbnails for fast browsing.
 
 === Visual Effects ===
@@ -310,7 +310,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~113k lines including generated shape/emoji data).
-* '''Stability:''' 11,445 Jest tests (168 suites) with 91.32% statement coverage and 81.69% branch coverage.
+* '''Stability:''' 11,474 Jest tests (168 suites) with 91.32% statement coverage and 81.69% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

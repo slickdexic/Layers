@@ -16,7 +16,7 @@ Never suggest committing directly to REL branches. Always work on `main` first, 
 
 **Target: <110,000 lines of JavaScript** — There is NO 50K or 75K limit.
 
-This extension is feature-rich by design with **17 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 5,116 shapes**, and an **Emoji Picker with 2,817 emoji**. The generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~14,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
+This extension is feature-rich by design with **17 drawing tools**, multiple rendering systems, comprehensive validation, extensive test coverage, a **Shape Library with 1,385 shapes**, and an **Emoji Picker with 2,817 emoji**. The generated data files (ShapeLibraryData.js, EmojiLibraryIndex.js) account for ~14,000 lines. A well-structured, secure, thoroughly-tested codebase of this size is appropriate. Do NOT add warnings about approaching line limits or suggest arbitrary line limits. Focus on code quality metrics:
 - God classes (files >1,000 lines) — minimize hand-written ones; generated data files are exempt
 - Test coverage — maintain 90%+ statement coverage
 - Security — CSRF, rate limiting, validation
@@ -436,14 +436,14 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,445 tests in 168 suites — verified March 10, 2026)
-- Coverage (91.32% statement, 81.69% branch — verified March 9, 2026)
+- Test count (11,474 tests in 168 suites — verified March 12, 2026)
+- Coverage (91.32% statement, 81.69% branch — verified March 12, 2026)
 - JavaScript file count (143 files total, ~99,730 lines)
 - PHP file count (41 files, ~15,197 lines)
 - God class count (23 files >1,000 lines; 2 generated data files, 19 JS, 2 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
-- Shape library count (5,116 shapes in 12 categories)
+- Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.60)
+- Version number (1.5.62)

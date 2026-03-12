@@ -15,7 +15,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Added 1 `DrawingController` regression test for P3-144: verify `_angleDimensionPhase` is `0` immediately after construction.
 
 ### Technical Details
-- All 11,450 tests pass (168 test suites) ✅
+- All 11,474 tests pass (168 test suites) ✅
 - Coverage: 91.32% statements, 81.69% branches (no regression)
 - Cherry-pick targets: `REL1_43`, `REL1_39`
 

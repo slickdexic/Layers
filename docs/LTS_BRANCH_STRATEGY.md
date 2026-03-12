@@ -6,7 +6,7 @@ This document outlines the branch strategy and support policy for the Layers ext
 
 ## Primary Branch: `main`
 
-**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (11,148 tests, 162 suites) runs on `main` as the source of truth.
+**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (11,421 tests, 167 suites) runs on `main` as the source of truth.
 
 Changes are **cherry-picked** from `main` to the REL branches after verification. REL branches never receive changes that haven't been tested on `main` first.
 
@@ -16,9 +16,9 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 
 | Branch | MediaWiki Version | Current Version | Status |
 |--------|------------------|-----------------|--------|
-| **`main`** | **1.44+** | **1.5.58** | **Primary — all development and testing** |
-| `REL1_43` | 1.43.x | 1.5.58 | LTS support (until Dec 2027) |
-| `REL1_39` | 1.39.x - 1.42.x | 1.5.58 | Legacy LTS support (MW 1.39 EOL Dec 2025) |
+| **`main`** | **1.44+** | **1.5.59** | **Primary — all development and testing** |
+| `REL1_43` | 1.43.x | 1.5.59 | LTS support (until Dec 2027) |
+| `REL1_39` | 1.39.x - 1.42.x | 1.5.59 | Legacy LTS support (MW 1.39 EOL Dec 2025) |
 
 ### Development Workflow
 
@@ -26,7 +26,7 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 main (primary)
   │
   ├── All development happens here
-  ├── All tests run here first (11,148 tests)
+  ├── All tests run here first (11,250 tests)
   ├── All code reviews done here
   │
   ├──── cherry-pick ──→ REL1_43 (current LTS)
@@ -43,7 +43,7 @@ main (primary)
 
 ### Feature Parity
 The REL1_43 branch maintains **full feature parity** with `main`:
-- 15 drawing tools including Shape Library (5,116 shapes) and Emoji Picker (2,817 emoji)
+- 17 drawing tools including Shape Library (1,385 shapes) and Emoji Picker (2,817 emoji)
 - Layer grouping/folders (Ctrl+G, Ctrl+Shift+G)
 - Named layer sets with revision history
 - Smart guides and alignment tools
@@ -85,9 +85,9 @@ Users on MW 1.39-1.42 should plan to upgrade to MW 1.43+ and switch to REL1_43.
 
 | Branch | Version Format | Example |
 |--------|---------------|---------|
-| `main` | X.Y.Z | 1.5.58 |
-| `REL1_43` | X.Y.Z-REL1_43 | 1.5.58-REL1_43 |
-| `REL1_39` | X.Y.Z-REL1_39 | 1.5.58-REL1_39 |
+| `main` | X.Y.Z | 1.5.59 |
+| `REL1_43` | X.Y.Z-REL1_43 | 1.5.59-REL1_43 |
+| `REL1_39` | X.Y.Z-REL1_39 | 1.5.59-REL1_39 |
 
 ---
 
@@ -151,7 +151,7 @@ All three branches are kept at feature parity. The only differences between bran
 
 | Feature | main | REL1_43 | REL1_39 |
 |---------|------|---------|---------|
-| 15 Drawing Tools | ✅ | ✅ | ✅ |
+| 17 Drawing Tools | ✅ | ✅ | ✅ |
 | Named Layer Sets | ✅ | ✅ | ✅ |
 | Version History | ✅ | ✅ | ✅ |
 | Image Import | ✅ | ✅ | ✅ |
@@ -232,4 +232,4 @@ php maintenance/run.php update.php
 
 ---
 
-*Last updated: February 8, 2026*
+*Last updated: March 9, 2026*
