@@ -36,7 +36,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | PHPUnit test files | 31 |
 | God classes (>1000 lines) | **17** (2 generated, 13 JS, 2 PHP) |
 | Drawing tools | **17** |
-| Shape library | **5,116 shapes** |
+| Shape library | **1,385 shapes** |
 | Emoji library | **2,817 emoji** |
 | i18n messages | **820** |
 | eslint-disable comments | **18** ✅ |
@@ -94,7 +94,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 ### Previous Releases
 
 **v1.5.11-v1.5.12 - Libraries:**
-- Shape Library with 5,116 shapes (ISO 7010, IEC 60417, etc.)
+- Shape Library with 1,385 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
 ### God Classes (17 Files ≥1,000 Lines)

@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C445%20passing-brightgreen" alt="11,445 Tests">
-  <img src="https://img.shields.io/badge/Coverage-91.32%25-brightgreen" alt="91.32% Coverage">
+  <img src="https://img.shields.io/badge/Tests-11%2C474%20passing-brightgreen" alt="11,474 Tests">
+   <img src="https://img.shields.io/badge/Coverage-91.32%25-brightgreen" alt="91.32% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -182,7 +182,7 @@ Perfect for diagrams, infographics, flowcharts, and presentations!
   - ISO 7000 Symbols (198 shapes): Equipment and graphical symbols
   - GHS Hazard Pictograms (8 shapes): Chemical hazard warning pictograms
   - ECB Hazard Symbols (10 shapes): European chemical hazard symbols
-  - Total library now contains **5,116 shapes** across **12 categories**
+  - Total library now contains **1,385 shapes** across **12 categories**
 - **Shape Library Rendering Fix** — Fixed critical bug where custom shapes failed to render
 
 ### Previous v1.5.10 Highlights
@@ -316,7 +316,7 @@ See [[Changelog]] for full details.
 | **Version (REL1_39)** | 1.5.60 |
 | **Release Date** | March 10, 2026 |
 | **Test Suites** | 168 |
-| **Total Tests** | 11,445 |
+| **Total Tests** | 11,474 |
 | **PHPUnit Test Files** | 31 |
 | **Statement Coverage** | 91.32% |
 | **Branch Coverage** | 81.69% |
@@ -324,8 +324,8 @@ See [[Changelog]] for full details.
 | **Line Coverage** | 91.39% |
 | **JavaScript Files** | 143 |
 | **ES6 Classes** | 140 |
-| **God Classes** | 22 (2 generated, 18 JS, 2 PHP) |
-| **i18n Messages** | 832 |
+| **God Classes** | 23 (2 generated, 19 JS, 2 PHP) |
+| **i18n Messages** | 780 |
 
 ---
 
