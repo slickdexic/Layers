@@ -7,7 +7,7 @@ namespace MediaWiki\Extension\Layers\SpecialPages;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\SpecialPage\SpecialPage;
+use SpecialPage;
 
 /**
  * Special:Slides - Management interface for Layers slides.
