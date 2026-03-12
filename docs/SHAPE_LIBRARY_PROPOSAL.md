@@ -4,7 +4,7 @@
 **Author:** Development Team  
 **Date:** January 2026  
 **Target Version:** 1.5.0  
-**Shipped In:** v1.5.8+ (5,116 shapes in 12 categories)
+**Shipped In:** v1.5.8+ (1,385 shapes in 12 categories)
 
 ## Executive Summary
 

@@ -1,23 +1,71 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 11, 2026 — v1.5.61
+**Last updated:** March 12, 2026 — v1.5.62
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
-All v50 issues were resolved in v1.5.61.
-Use the section below as the authoritative current backlog (currently empty).
+All v50 issues were resolved in v1.5.61. All v51 issues were resolved in
+v1.5.62. All v52 items were fixed during the v52 audit session.
+All v53 documentation items were fixed during the v53 audit session;
+P3-145 (SpecialSlides.js zero test coverage) remains open.
+Use the section below as the authoritative current backlog.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 11, 2026 — v1.5.61)
+## Verified Current Backlog (Authoritative as of March 12, 2026 — v1.5.62)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| **Total** | **0** | **—** |
+| Testing | 1 (P3-145) | Medium |
+| **Total** | **1** | |
 
-### Current Priorities (v50 — All Fixed in v1.5.61)
+### Current Priorities (v53 — 4 Docs Fixed, 1 Open)
 
 | # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 25.01 | Coverage 92.35% overstated → correct to 91.32% | D-053-01 | Low | ✅ Fixed |
+| 25.02 | CHANGELOG.md + wiki/Changelog.md test count 11,450 → 11,474 | D-053-02 | Low | ✅ Fixed |
+| 25.03 | codebase_review.md grade section test count 11,450 → 11,474 | D-053-03 | Low | ✅ Fixed |
+| 25.04 | i18n count inconsistency (784/778/780) → corrected to 780 | D-053-04 | Low | ✅ Fixed |
+| 25.05 | SpecialSlides.js has zero test coverage | P3-145 | Low | 🔲 Open |
+
+### v53 Notes
+
+- v52 verification pass: all 4 v52 issues confirmed fixed. No regressions.
+- Full codebase audit (all 41 PHP files + all major JS modules + docs): **no
+  new security vulnerabilities, functional bugs, or logic errors found.**
+- 4 documentation inaccuracies found and fixed (coverage overstated, stale
+  test counts, i18n count triple inconsistency).
+- 1 testing gap found: SpecialSlides.js 0% coverage (open).
+- Coverage corrected from claimed 92.35% to actual measured 91.32%.
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 24.01 | APIManager.js missing blank line between methods | CODE-052-01 | Low | ✅ Fixed |
+| 24.02 | README.md test count 11,445 → 11,450 | D-052-01 | Low | ✅ Fixed |
+| 24.03 | codebase_review.md test count 11,445 → 11,450 | D-052-02 | Low | ✅ Fixed |
+| 24.04 | codebase_review.md i18n key count 832 → 784 | D-052-03 | Low | ✅ Fixed |
+
+### v52 Notes
+
+- v51 verification pass: both v51 issues confirmed fixed in v1.5.62.
+- Full codebase audit (all 41 PHP files + major JS modules): **no new
+  security vulnerabilities, functional bugs, or logic errors found.**
+- 4 new items found: 1 code style, 3 documentation inaccuracies.
+- All 4 fixed same session.
+
+### Current Priorities (v51 — All Fixed in v1.5.62)
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 23.01 | ClipboardController paste offset skips angle dim anchors | P3-143 | Low | ✅ Fixed v1.5.62 |
+| 23.02 | DrawingController._angleDimensionPhase uninitialized | P3-144 | Low | ✅ Fixed v1.5.62 |
+
+### v51 Notes
+
+- v50 verification pass: all 7 v50 issues confirmed fixed in v1.5.61.
+- **2 new items found**: both LOW (canvas clip offset, constructor init).
+- **Both fixed in v1.5.62.**
 |---|-------|-----|----------|--------|
 | 22.01 | SpecialSlides canDelete checks 'delete' not 'layers-admin' | P1-056 | HIGH | ✅ Fixed v1.5.61 |
 | 22.02 | Smart guides broken for path layers (incomplete P1-053 fix) | P2-122 | MED | ✅ Fixed v1.5.61 |

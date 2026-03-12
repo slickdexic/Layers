@@ -3,7 +3,7 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-91.32%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C445%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-11%2C474%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -97,7 +97,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 | Marker    | M        | Numbered/lettered markers with optional arrows |
 | **Dimension** | D        | Technical measurement annotations            |
 | Image         | —        | Import images from clipboard or file         |
-| Custom Shape  | —        | 5,116 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
+| Custom Shape  | —        | 1,385 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI) |
 | Emoji         | —        | 2,817 Noto Color Emoji with search and categories |
 
 > **Note:** Use `+`/`-` to zoom, `0` to fit, and hold `Space` to pan. The Pointer tool includes marquee selection (drag to select multiple layers).
@@ -318,11 +318,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
   - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
   - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
 
-**Test Coverage (Verified March 10, 2026):**
+**Test Coverage (Verified March 12, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,445 passing (168 suites) |
+| Jest tests | 11,474 passing (168 suites) |
 | PHPUnit tests | 31 test files |
 | Statement coverage | 91.32% |
 | Branch coverage | 81.69% |
@@ -382,7 +382,7 @@ npm run test:js -- --coverage
 | Total JS lines | ~99,730 | ✅ Hand-written (+ ~14,354 generated) |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>1000 lines) | 23 | ✅ Well-delegated facades |
-| Tests passing | 11,445 | ✅ |
+| Tests passing | 11,474 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 91.32% | ✅ Excellent |
 | Branch coverage | 81.69% | ✅ Target met |

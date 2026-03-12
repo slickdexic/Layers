@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 12, 2026 — v1.5.62 (v51 audit — all items fixed)
+**Last updated:** March 12, 2026 — v1.5.62 (v53 audit — 4 docs fixed, 1 open)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -14,8 +14,146 @@ traceability.
 | P0 | 5 | 5 | 0 |
 | P1 | 57 | 57 | 0 |
 | P2 | 127 | 127 | 0 |
-| P3 | 145 | 145 | 0 |
-| **Total** | **334** | **334** | **0** |
+| P3 | 150 | 149 | 1 |
+| **Total** | **339** | **338** | **1** |
+
+*Open item: P3-145 (SpecialSlides.js zero test coverage)*
+
+---
+
+## Open Issues — v53 (March 12, 2026)
+
+### Testing Gap — Low
+
+#### P3-145: `SpecialSlides.js` Zero Test Coverage
+
+- **File:** `resources/ext.layers.slides/SpecialSlides.js`
+- **Coverage:** 0% statements, 0% branches, 0% functions, 0% lines
+- **Verified by:** Fresh `npm run test:js -- --coverage` this session;
+  `coverage/coverage-summary.json` shows `ext.layers.slides` at `0|0|0|0`
+- **Impact:** The entire interactive UI for Special:Slides (listing, search,
+  sort, create, delete, pagination) is untested. Any regression in
+  `SlidesManager` would go undetected by CI.
+- **Suggested fix:** Create `tests/jest/SpecialSlides.test.js` covering:
+  `SlidesManager` constructor, `loadSlides()`, `showCreateDialog()`,
+  `confirmDeleteSlide()`, search debounce, sort toggle, and error paths.
+- **Status:** **Open** — tracked for future session
+- **Introduced:** Module existed without tests since initial implementation
+
+---
+
+## Fixed Issues — v53 (March 12, 2026) — All 4 Fixed This Session
+
+### v52 Verification Summary
+
+All 4 v52 items verified as fixed in v1.5.62. No regressions.
+
+### Documentation — Low
+
+#### D-053-01: Coverage Overstated in Three Files (92.35% → 91.32%)
+
+- **Files:** `README.md` (badge URL, metrics table, health table),
+  `Mediawiki-Extension-Layers.mediawiki` (line 313),
+  `codebase_review.md` (Scope header, Current Metrics table)
+- **Issue:** Five locations claimed 92.35% statement coverage and 82.30%
+  branch coverage. Fresh `npm run test:js -- --coverage` on HEAD `353dd640`
+  with `cat coverage/coverage-summary.json` shows:
+  91.32% statements, 81.69% branches, 90.62% functions, 91.39% lines.
+  The 92.35% figure does not appear in any prior verified baseline.
+  `docs/ARCHITECTURE.md` correctly stated 91.32% throughout.
+- **Fix:** Updated all five locations to actual measured values.
+- **Status:** **Fixed** (this session)
+- **Introduced:** Incorrect speculative figure introduced during
+  documentation maintenance after v52
+
+#### D-053-02: CHANGELOG.md and wiki/Changelog.md Show Stale Test Count (11,450 → 11,474)
+
+- **Files:** `CHANGELOG.md` (v1.5.62 entry, line 18),
+  `wiki/Changelog.md` (v1.5.62 entry, line 18)
+- **Issue:** Both files stated `"All 11,450 tests pass (168 test suites)"`
+  for the v1.5.62 entry. Current run shows 11,474 tests. The 24-test
+  discrepancy is from regression tests added after the changelog entry
+  was written (tests for P3-143, P3-144, and D-052-01 documented post-release).
+- **Fix:** Updated both v1.5.62 entries to 11,474.
+- **Verified by:** `npm run test:js --silent` → `11474 passed`.
+- **Status:** **Fixed** (this session)
+
+#### D-053-03: codebase_review.md Grade Section Shows Stale Test Count (11,450 → 11,474)
+
+- **File:** `codebase_review.md` (Overall Grade section)
+- **Issue:** Grade paragraph read `"91.32% statements, 11,450 tests"` —
+  the 11,450 figure was from the v51 session and not updated when D-052-01
+  corrected the count to 11,474 in the Scope header and Metrics table.
+- **Fix:** Updated to 11,474.
+- **Status:** **Fixed** (this session)
+
+#### D-053-04: i18n Key Count Triple Inconsistency (Scope: 784, Metrics: 778, Actual: 780)
+
+- **File:** `codebase_review.md` (Scope header line 26, Current Metrics table)
+- **Issue:** Three different values for i18n key count:
+  - Scope header: 784 (set by D-052-03)
+  - Current Metrics table: 778 (never updated by D-052-03)
+  - Actual JSON-parse count: 780 (`layers-` prefixed keys in `en.json`)
+  All three values differ. D-052-03 corrected the Scope header but
+  missed the Metrics table, and the true count changed slightly since.
+- **Verified by:** `python -c "import json; print(sum(1 for k in json.load(open('i18n/en.json')) if k.startswith('layers-')))"` → `780`.
+- **Fix:** Updated both locations to 780.
+- **Status:** **Fixed** (this session)
+
+---
+
+## Fixed Issues — v52 (March 11, 2026) — All Fixed That Session
+
+### Code Style — Low
+
+#### CODE-052-01: `APIManager.js` Missing Blank Line Between Methods
+
+- **File:** `resources/ext.layers.editor/APIManager.js` L412
+- **Code:** `} [TAB] extractLayerSetData( layerSet ) {` (closing brace and
+  next method declaration on same line, separated by a tab character)
+- **Impact:** Cosmetic. IDE navigation and diff readability slightly
+  impaired. No functional effect.
+- **Fix:** Added missing blank line separator between `processLayersData()`
+  and `extractLayerSetData()`.
+- **Status:** **Fixed** (this session)
+- **Introduced:** Prior merge that omitted blank line separator
+
+### Documentation — Low
+
+#### D-052-01: Test Count 11,445 → 11,450 in Documentation
+
+- **Files:** `README.md` (badge URL, metrics table, health table),
+  `codebase_review.md` (Scope header, Current Metrics table)
+- **Issue:** Five locations across two files claimed 11,445 tests. Running
+  `npm run test:js` on commit `e29f5df9` produced `11450 passed, 11450
+  total`. The 5-test discrepancy is from regression tests added in v1.5.61
+  (2 for P2-122, 3 for P3-144) that post-dated the v50 documentation update.
+- **Fix:** Updated all five locations to 11,450.
+- **Verified by:** `npx jest --passWithNoTests --no-coverage --silent`
+- **Status:** **Fixed** (this session)
+
+#### D-052-02: i18n Key Count 832 → 784 in Documentation
+
+- **Files:** `codebase_review.md` (Scope header, Current Metrics table)
+- **Issue:** `codebase_review.md` stated 832 keys in `i18n/en.json` and
+  `i18n/qqq.json`. Counting via `grep -E '"layers-[^"]+":' i18n/en.json
+  | wc -l` returns **784**. Verified against the historically-referenced
+  commit `4f315a5f` via `git show` — also 784, meaning the "832" claim was
+  never accurate. Note: P3-126 (v46) added one key to reach "832" but was
+  measuring a broader pattern; the audit-consistent count has always been 784.
+  No keys are missing: both `en.json` and `qqq.json` have identical 784
+  entries with no undocumented keys.
+- **Fix:** Updated both occurrences in `codebase_review.md` to 784.
+- **Status:** **Fixed** (this session)
+
+#### D-052-03: `codebase_review.md` Header Showed v50/v1.5.61 After v1.5.62 Release
+
+- **File:** `codebase_review.md` (header section)
+- **Issue:** After release of v1.5.62, the review document header still
+  showed `Review Date: March 10, 2026 (v50 audit)` and `Version: 1.5.61`.
+- **Fix:** Updated header to `March 11, 2026 (v52 audit)` and `1.5.62`;
+  added v51 and v52 findings sections.
+- **Status:** **Fixed** (this session)
 
 ---
 

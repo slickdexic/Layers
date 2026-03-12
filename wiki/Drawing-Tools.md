@@ -20,7 +20,7 @@ Layers provides **17 professional drawing tools** for comprehensive image annota
 | **Ellipse** | `E` | ⬭ | Shape | Ovals with independent radii |
 | **Polygon** | `Y` | ⬡ | Shape | Multi-sided polygons |
 | **Star** | `S` | ★ | Shape | Star shapes |
-| **Custom Shape** | — | 📎 | Shape | Built-in shape library (5,116 shapes) |
+| **Custom Shape** | — | 📎 | Shape | Built-in shape library (1,385 shapes) |
 | **Emoji** | — | 😀 | Media | Emoji picker (2,817 Noto Color Emoji) |
 | **Image** | — | 🖼️ | Media | Import images from clipboard or file |
 | **Arrow** | `A` | ➔ | Line | Arrows with customizable heads |
@@ -465,7 +465,7 @@ Any filled shape can use **blur fill** instead of a solid color — creating a "
 
 ## Custom Shape Tool (v1.5.0+)
 
-Access a built-in library of **5,116 pre-made shapes** organized by category.
+Access a built-in library of **1,385 pre-made shapes** organized by category.
 
 ### How to Use
 1. Click the **Custom Shape** tool in the toolbar (or use the toolbar dropdown)
