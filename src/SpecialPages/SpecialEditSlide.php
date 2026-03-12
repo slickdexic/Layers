@@ -8,7 +8,7 @@ use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\SpecialPage\SpecialPage;
+use SpecialPage;
 
 /**
  * Special:EditSlide - Direct slide editor access.
@@ -180,6 +180,6 @@ class SpecialEditSlide extends SpecialPage {
 	 * @inheritDoc
 	 */
 	public function getDescription() {
-		return $this->msg( 'special-editslide-desc' );
+		return $this->msg( 'special-editslide-desc' )->text();
 	}
 }
