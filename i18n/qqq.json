@@ -693,6 +693,8 @@
 	"layers-shape-library-count": "Text showing the number of shapes in a category. $1 is the count.",
 	"layers-shape-library-empty": "Message shown when no shapes match the search query",
 	"layers-shape-library-not-loaded": "Error shown when the shape library module is not available",
+	"layers-shape-library-loading": "Loading indicator shown while shape category data is being fetched",
+	"layers-shape-library-load-error": "Error shown when a shape library category fails to load",
 	"layers-shape-library-button": "Button label for opening the shape library",
 	"layers-shape-library-tooltip": "Tooltip for the shape library button",
 	"layers-emoji-picker-title": "Dialog title for the emoji picker panel",

@@ -784,6 +784,8 @@
 	"layers-shape-library-count": "$1 shapes",
 	"layers-shape-library-empty": "No shapes found",
 	"layers-shape-library-not-loaded": "Shape library is not available",
+	"layers-shape-library-loading": "Loading shapes...",
+	"layers-shape-library-load-error": "Failed to load shapes. Please try again.",
 	"layers-shape-library-button": "Shape Library",
 	"layers-shape-library-tooltip": "Insert a shape from the library",
 	"layers-emoji-picker-title": "Emoji Picker",

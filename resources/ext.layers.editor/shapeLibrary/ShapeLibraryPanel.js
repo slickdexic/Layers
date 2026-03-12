@@ -235,11 +235,13 @@
 		const subcategories = categories.filter( ( cat ) => cat.parentId );
 		const standaloneCategories = categories.filter( ( cat ) => !cat.isParent && !cat.parentId );
 
-		// Helper to count shapes in a parent category (sum of all subcategories)
+		// Helper to count shapes in a parent category (sum of all subcategories).
+		// Uses getCategoryCount() which reads the always-available SHAPE_INDEX,
+		// so counts are correct even before category SVG data is lazy-loaded.
 		const getParentShapeCount = ( parentId ) => subcategories
 			.filter( ( sub ) => sub.parentId === parentId )
 			.reduce( ( total, sub ) =>
-				total + window.Layers.ShapeLibrary.getShapesByCategory( sub.id ).length, 0 );
+				total + window.Layers.ShapeLibrary.getCategoryCount( sub.id ), 0 );
 
 		// Render parent categories with their children
 		parentCategories.forEach( ( parent ) => {
@@ -331,7 +333,7 @@
 
 			// Render child categories
 			childCategories.forEach( ( cat ) => {
-				const count = window.Layers.ShapeLibrary.getShapesByCategory( cat.id ).length;
+				const count = window.Layers.ShapeLibrary.getCategoryCount( cat.id );
 
 				const item = document.createElement( 'button' );
 				item.className = 'layers-shape-library-category';
@@ -403,7 +405,7 @@
 
 		// Render standalone categories (not part of any parent)
 		standaloneCategories.forEach( ( cat ) => {
-			const count = window.Layers.ShapeLibrary.getShapesByCategory( cat.id ).length;
+			const count = window.Layers.ShapeLibrary.getCategoryCount( cat.id );
 
 			const item = document.createElement( 'button' );
 			item.className = 'layers-shape-library-category';
@@ -475,7 +477,37 @@
 		}
 
 		/**
-		 * Select a category
+		 * Load SVG data for a single category on demand.
+		 * Returns a resolved Promise immediately if already loaded.
+		 *
+		 * @param {string} categoryId - Category ID
+		 * @return {jQuery.Promise}
+		 */
+		loadCategoryData( categoryId ) {
+		if ( window.Layers.ShapeLibrary.isCategoryLoaded( categoryId ) ) {
+			return Promise.resolve();
+		}
+		return mw.loader.using( 'ext.layers.shapeLibrary.data.' + categoryId );
+		}
+
+		/**
+		 * Load SVG data for all categories (used before cross-category search).
+		 * Already-loaded categories are skipped.
+		 *
+		 * @return {jQuery.Promise}
+		 */
+		loadAllCategoryData() {
+		const unloaded = window.Layers.ShapeLibrary.getCategories()
+			.filter( ( c ) => !c.isParent && !window.Layers.ShapeLibrary.isCategoryLoaded( c.id ) )
+			.map( ( c ) => 'ext.layers.shapeLibrary.data.' + c.id );
+		if ( unloaded.length === 0 ) {
+			return Promise.resolve();
+		}
+		return mw.loader.using( unloaded );
+		}
+
+		/**
+		 * Select a category — lazy-loads its SVG data if not yet available.
 		 *
 		 * @param {string} categoryId - Category ID
 		 */
@@ -486,15 +518,60 @@
 		// Update category buttons
 		const buttons = this.categoryList.querySelectorAll( '.layers-shape-library-category' );
 		buttons.forEach( ( btn ) => {
-			if ( btn.dataset.category === categoryId ) {
-				btn.style.background = 'var(--background-color-interactive-subtle, #eaecf0)';
-			} else {
-				btn.style.background = 'transparent';
-			}
+			btn.style.background = btn.dataset.category === categoryId ?
+				'var(--background-color-interactive-subtle, #eaecf0)' : 'transparent';
 		} );
 
-		// Show shapes
-		this.showShapes( window.Layers.ShapeLibrary.getShapesByCategory( categoryId ) );
+		// Show loading state, then load category data and render shapes
+		this.showLoading();
+		this.loadCategoryData( categoryId ).then( () => {
+			this.showShapes( window.Layers.ShapeLibrary.getShapesByCategory( categoryId ) );
+		} ).catch( ( err ) => {
+			this.showLoadError();
+			mw.log.error( 'Failed to load shape library category:', categoryId, err );
+		} );
+		}
+
+		/**
+		 * Show a loading indicator in the shape grid.
+		 *
+		 * @private
+		 */
+		showLoading() {
+		if ( this.isDestroyed || !this.shapeGrid ) {
+			return;
+		}
+		this.shapeGrid.innerHTML = '';
+		const loading = document.createElement( 'div' );
+		loading.textContent = mw.message( 'layers-shape-library-loading' ).text();
+		loading.style.cssText = `
+			grid-column: 1 / -1;
+			text-align: center;
+			padding: 40px;
+			color: var(--color-subtle, #72777d);
+		`;
+		this.shapeGrid.appendChild( loading );
+		}
+
+		/**
+		 * Show a load error message in the shape grid.
+		 *
+		 * @private
+		 */
+		showLoadError() {
+		if ( this.isDestroyed || !this.shapeGrid ) {
+			return;
+		}
+		this.shapeGrid.innerHTML = '';
+		const error = document.createElement( 'div' );
+		error.textContent = mw.message( 'layers-shape-library-load-error' ).text();
+		error.style.cssText = `
+			grid-column: 1 / -1;
+			text-align: center;
+			padding: 40px;
+			color: var(--color-error, #b32424);
+		`;
+		this.shapeGrid.appendChild( error );
 		}
 
 		/**
@@ -503,6 +580,9 @@
 		 * @param {Object[]} shapes - Array of shape objects
 		 */
 		showShapes( shapes ) {
+		if ( this.isDestroyed || !this.shapeGrid ) {
+			return;
+		}
 		this.shapeGrid.innerHTML = '';
 
 		if ( shapes.length === 0 ) {
@@ -677,13 +757,21 @@
 
 			this._searchTimeout = setTimeout( () => {
 				if ( query.length >= 2 ) {
+				// Show loading state while all category data loads for cross-category search
+				this.showLoading();
+				// Clear category selection
+				const buttons = this.categoryList.querySelectorAll( '.layers-shape-library-category' );
+				buttons.forEach( ( btn ) => {
+					btn.style.background = 'transparent';
+				} );
+				// Load all category data for comprehensive search, then render results
+				this.loadAllCategoryData().then( () => {
 					const results = window.Layers.ShapeLibrary.search( query );
 					this.showShapes( results );
-
-					// Clear category selection
-					const buttons = this.categoryList.querySelectorAll( '.layers-shape-library-category' );
-					buttons.forEach( ( btn ) => {
-						btn.style.background = 'transparent';
+				} ).catch( () => {
+					// Partial failure: show results from already-loaded categories
+					const results = window.Layers.ShapeLibrary.search( query );
+					this.showShapes( results.filter( ( s ) => s.svg ) );
 					} );
 				} else if ( query.length === 0 ) {
 					this.selectCategory( this.activeCategory );

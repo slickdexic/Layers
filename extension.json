@@ -1160,8 +1160,87 @@
 				"layers-shape-library-count",
 				"layers-shape-library-empty",
 				"layers-shape-library-not-loaded",
+				"layers-shape-library-loading",
+				"layers-shape-library-load-error",
 				"layers-close"
 			]
+		},
+		"ext.layers.shapeLibrary.data.iso7010-w": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.iso7010-w.js" ]
+		},
+		"ext.layers.shapeLibrary.data.iso7010-p": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.iso7010-p.js" ]
+		},
+		"ext.layers.shapeLibrary.data.iso7010-m": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.iso7010-m.js" ]
+		},
+		"ext.layers.shapeLibrary.data.iso7010-e": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.iso7010-e.js" ]
+		},
+		"ext.layers.shapeLibrary.data.iso7010-f": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.iso7010-f.js" ]
+		},
+		"ext.layers.shapeLibrary.data.iso7000": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.iso7000.js" ]
+		},
+		"ext.layers.shapeLibrary.data.iec60417": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.iec60417.js" ]
+		},
+		"ext.layers.shapeLibrary.data.ghs": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.ghs.js" ]
+		},
+		"ext.layers.shapeLibrary.data.ecb": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.ecb.js" ]
+		},
+		"ext.layers.shapeLibrary.data.ansi": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.ansi.js" ]
+		},
+		"ext.layers.shapeLibrary.data.other": {
+			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
+			"remoteExtPath": "Layers/resources/ext.layers.editor/shapeLibrary",
+			"targets": [ "desktop", "mobile" ],
+			"dependencies": [ "ext.layers.shapeLibrary" ],
+			"scripts": [ "ShapeLibraryData.other.js" ]
 		},
 		"ext.layers.emojiPicker": {
 			"localBasePath": "resources/ext.layers.editor/shapeLibrary",
