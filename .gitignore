@@ -23,6 +23,8 @@ resources/dist/
 .Trashes
 ehthumbs.db
 Thumbs.db
+# Windows null device artifact (created by accidental `> nul` redirects)
+nul
 
 # Logs
 *.log
