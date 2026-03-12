@@ -7,7 +7,7 @@ namespace MediaWiki\Extension\Layers\SpecialPages;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use SpecialPage;
+use MediaWiki\SpecialPage\SpecialPage;
 
 /**
  * Special:Slides - Management interface for Layers slides.
@@ -77,7 +77,7 @@ class SpecialSlides extends SpecialPage {
 		// Check if user can create slides
 		$permissionManager = $services->getPermissionManager();
 		$canCreate = $permissionManager->userHasRight( $user, 'editlayers' );
-		$canDelete = $permissionManager->userHasRight( $user, 'delete' );
+		$canDelete = $permissionManager->userHasRight( $user, 'layers-admin' );
 
 		// Get configuration for JS
 		$jsConfig = [
@@ -295,13 +295,13 @@ class SpecialSlides extends SpecialPage {
 	 * @inheritDoc
 	 */
 	protected function getGroupName() {
-		return 'media';
+		return 'layers';
 	}
 
 	/**
 	 * @inheritDoc
 	 */
 	public function getDescription() {
-		return $this->msg( 'special-slides-desc' )->text();
+		return $this->msg( 'special-slides-desc' );
 	}
 }
