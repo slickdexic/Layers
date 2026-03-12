@@ -1870,7 +1870,7 @@
 			const layer = this.editor.getLayerById( layerId );
 			if ( layer ) {
 				const newLocked = !layer.locked;
-				const layers = this.editor.getLayers().map( ( l ) => {
+				const layers = this.getLayers().map( ( l ) => {
 					if ( l.id === layerId ) {
 						return Object.assign( {}, l, { locked: newLocked } );
 					}
@@ -1878,7 +1878,7 @@
 				} );
 				this.editor.stateManager.set( 'layers', layers );
 				this.renderLayerList();
-				this.editor.canvasManager.renderLayers( this.editor.getLayers() );
+				this.editor.canvasManager.renderLayers( this.getLayers() );
 				this.editor.saveState( newLocked ? 'Lock Layer' : 'Unlock Layer' );
 			}
 		}
