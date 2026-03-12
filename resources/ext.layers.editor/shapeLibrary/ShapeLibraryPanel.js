@@ -14,11 +14,16 @@
 	 * Shape Library Panel class
 	 *
 	 * @class
-	 * @param {Object} options - Panel options
-	 * @param {Function} options.onSelect - Callback when shape is selected
-	 * @param {HTMLElement} [options.container] - Container element (defaults to document.body)
 	 */
-	function ShapeLibraryPanel( options ) {
+	class ShapeLibraryPanel {
+		/**
+		 * Create a ShapeLibraryPanel instance
+		 *
+		 * @param {Object} options - Panel options
+		 * @param {Function} options.onSelect - Callback when shape is selected
+		 * @param {HTMLElement} [options.container] - Container element (defaults to document.body)
+		 */
+		constructor( options ) {
 		this.options = options || {};
 		this.onSelect = this.options.onSelect || function () {};
 		this.container = this.options.container || document.body;
@@ -41,24 +46,24 @@
 		this._searchTimeout = null;
 
 		this.init();
-	}
+		}
 
-	/**
-	 * Initialize the panel
-	 *
-	 * @private
-	 */
-	ShapeLibraryPanel.prototype.init = function () {
+		/**
+		 * Initialize the panel
+		 *
+		 * @private
+		 */
+		init() {
 		this.createPanel();
 		this.bindEvents();
-	};
+		}
 
-	/**
-	 * Create the panel DOM structure
-	 *
-	 * @private
-	 */
-	ShapeLibraryPanel.prototype.createPanel = function () {
+		/**
+		 * Create the panel DOM structure
+		 *
+		 * @private
+		 */
+		createPanel() {
 		const Z_INDEX = window.Layers.Constants.Z_INDEX;
 
 		// Create overlay
@@ -207,14 +212,14 @@
 
 		// Build category list
 		this.buildCategories();
-	};
+		}
 
-	/**
-	 * Build the category list with hierarchical structure
-	 *
-	 * @private
-	 */
-	ShapeLibraryPanel.prototype.buildCategories = function () {
+		/**
+		 * Build the category list with hierarchical structure
+		 *
+		 * @private
+		 */
+		buildCategories() {
 		const categories = window.Layers.ShapeLibrary.getCategories();
 
 		// Use DocumentFragment to batch DOM operations for performance
@@ -226,21 +231,17 @@
 		}
 
 		// Separate parent categories, subcategories, and standalone categories
-		const parentCategories = categories.filter( function ( cat ) {
-			return cat.isParent === true;
-		} );
-		const subcategories = categories.filter( function ( cat ) {
-			return cat.parentId;
-		} );
-		const standaloneCategories = categories.filter( function ( cat ) {
-			return !cat.isParent && !cat.parentId;
-		} );
+		const parentCategories = categories.filter( ( cat ) => cat.isParent === true );
+		const subcategories = categories.filter( ( cat ) => cat.parentId );
+		const standaloneCategories = categories.filter( ( cat ) => !cat.isParent && !cat.parentId );
 
-		// Helper to count shapes in a parent category (sum of all subcategories)
+		// Helper to count shapes in a parent category (sum of all subcategories).
+		// Uses getCategoryCount() which reads the always-available SHAPE_INDEX,
+		// so counts are correct even before category SVG data is lazy-loaded.
 		const getParentShapeCount = ( parentId ) => subcategories
 			.filter( ( sub ) => sub.parentId === parentId )
 			.reduce( ( total, sub ) =>
-				total + window.Layers.ShapeLibrary.getShapesByCategory( sub.id ).length, 0 );
+				total + window.Layers.ShapeLibrary.getCategoryCount( sub.id ), 0 );
 
 		// Render parent categories with their children
 		parentCategories.forEach( ( parent ) => {
@@ -332,7 +333,7 @@
 
 			// Render child categories
 			childCategories.forEach( ( cat ) => {
-				const count = window.Layers.ShapeLibrary.getShapesByCategory( cat.id ).length;
+				const count = window.Layers.ShapeLibrary.getCategoryCount( cat.id );
 
 				const item = document.createElement( 'button' );
 				item.className = 'layers-shape-library-category';
@@ -404,7 +405,7 @@
 
 		// Render standalone categories (not part of any parent)
 		standaloneCategories.forEach( ( cat ) => {
-			const count = window.Layers.ShapeLibrary.getShapesByCategory( cat.id ).length;
+			const count = window.Layers.ShapeLibrary.getCategoryCount( cat.id );
 
 			const item = document.createElement( 'button' );
 			item.className = 'layers-shape-library-category';
@@ -473,37 +474,115 @@
 		// Single DOM update: clear and append all at once
 		this.categoryList.innerHTML = '';
 		this.categoryList.appendChild( fragment );
-	};
+		}
 
-	/**
-	 * Select a category
-	 *
-	 * @param {string} categoryId - Category ID
-	 */
-	ShapeLibraryPanel.prototype.selectCategory = function ( categoryId ) {
+		/**
+		 * Load SVG data for a single category on demand.
+		 * Returns a resolved Promise immediately if already loaded.
+		 *
+		 * @param {string} categoryId - Category ID
+		 * @return {jQuery.Promise}
+		 */
+		loadCategoryData( categoryId ) {
+		if ( window.Layers.ShapeLibrary.isCategoryLoaded( categoryId ) ) {
+			return Promise.resolve();
+		}
+		return mw.loader.using( 'ext.layers.shapeLibrary.data.' + categoryId );
+		}
+
+		/**
+		 * Load SVG data for all categories (used before cross-category search).
+		 * Already-loaded categories are skipped.
+		 *
+		 * @return {jQuery.Promise}
+		 */
+		loadAllCategoryData() {
+		const unloaded = window.Layers.ShapeLibrary.getCategories()
+			.filter( ( c ) => !c.isParent && !window.Layers.ShapeLibrary.isCategoryLoaded( c.id ) )
+			.map( ( c ) => 'ext.layers.shapeLibrary.data.' + c.id );
+		if ( unloaded.length === 0 ) {
+			return Promise.resolve();
+		}
+		return mw.loader.using( unloaded );
+		}
+
+		/**
+		 * Select a category — lazy-loads its SVG data if not yet available.
+		 *
+		 * @param {string} categoryId - Category ID
+		 */
+		selectCategory( categoryId ) {
 		this.activeCategory = categoryId;
 		this.searchInput.value = '';
 
 		// Update category buttons
 		const buttons = this.categoryList.querySelectorAll( '.layers-shape-library-category' );
-		buttons.forEach( function ( btn ) {
-			if ( btn.dataset.category === categoryId ) {
-				btn.style.background = 'var(--background-color-interactive-subtle, #eaecf0)';
-			} else {
-				btn.style.background = 'transparent';
-			}
+		buttons.forEach( ( btn ) => {
+			btn.style.background = btn.dataset.category === categoryId ?
+				'var(--background-color-interactive-subtle, #eaecf0)' : 'transparent';
 		} );
 
-		// Show shapes
-		this.showShapes( window.Layers.ShapeLibrary.getShapesByCategory( categoryId ) );
-	};
+		// Show loading state, then load category data and render shapes
+		this.showLoading();
+		this.loadCategoryData( categoryId ).then( () => {
+			this.showShapes( window.Layers.ShapeLibrary.getShapesByCategory( categoryId ) );
+		} ).catch( ( err ) => {
+			this.showLoadError();
+			mw.log.error( 'Failed to load shape library category:', categoryId, err );
+		} );
+		}
 
-	/**
-	 * Show shapes in the grid
-	 *
-	 * @param {Object[]} shapes - Array of shape objects
-	 */
-	ShapeLibraryPanel.prototype.showShapes = function ( shapes ) {
+		/**
+		 * Show a loading indicator in the shape grid.
+		 *
+		 * @private
+		 */
+		showLoading() {
+		if ( this.isDestroyed || !this.shapeGrid ) {
+			return;
+		}
+		this.shapeGrid.innerHTML = '';
+		const loading = document.createElement( 'div' );
+		loading.textContent = mw.message( 'layers-shape-library-loading' ).text();
+		loading.style.cssText = `
+			grid-column: 1 / -1;
+			text-align: center;
+			padding: 40px;
+			color: var(--color-subtle, #72777d);
+		`;
+		this.shapeGrid.appendChild( loading );
+		}
+
+		/**
+		 * Show a load error message in the shape grid.
+		 *
+		 * @private
+		 */
+		showLoadError() {
+		if ( this.isDestroyed || !this.shapeGrid ) {
+			return;
+		}
+		this.shapeGrid.innerHTML = '';
+		const error = document.createElement( 'div' );
+		error.textContent = mw.message( 'layers-shape-library-load-error' ).text();
+		error.style.cssText = `
+			grid-column: 1 / -1;
+			text-align: center;
+			padding: 40px;
+			color: var(--color-error, #b32424);
+		`;
+		this.shapeGrid.appendChild( error );
+		}
+
+		/**
+		 * Show shapes in the grid
+		 *
+		 * @param {Object[]} shapes - Array of shape objects
+		 */
+		showShapes( shapes ) {
+		if ( this.isDestroyed || !this.shapeGrid ) {
+			return;
+		}
 		this.shapeGrid.innerHTML = '';
 
 		if ( shapes.length === 0 ) {
@@ -609,7 +688,7 @@
 
 			this.shapeGrid.appendChild( item );
 		} );
-	};
+	}
 
 	/**
 	 * Truncate shape name for display
@@ -617,7 +696,7 @@
 	 * @param {string} name - Shape name
 	 * @return {string} Truncated name
 	 */
-	ShapeLibraryPanel.prototype.truncateName = function ( name ) {
+	truncateName( name ) {
 		// Extract just the descriptive part if it has a code
 		const match = name.match( /^[A-Z]\d+:\s*(.+)$/ );
 		if ( match ) {
@@ -629,24 +708,24 @@
 			return name.substring( 0, 12 ) + '...';
 		}
 		return name;
-	};
+	}
 
 	/**
 	 * Select a shape
 	 *
 	 * @param {Object} shape - Shape object
 	 */
-	ShapeLibraryPanel.prototype.selectShape = function ( shape ) {
+	selectShape( shape ) {
 		this.close();
 		this.onSelect( shape );
-	};
+	}
 
 	/**
 	 * Bind event listeners
 	 *
 	 * @private
 	 */
-	ShapeLibraryPanel.prototype.bindEvents = function () {
+	bindEvents() {
 		// Close button - bind handler for cleanup
 		this._boundCloseClickHandler = () => {
 			this.close();
@@ -678,13 +757,21 @@
 
 			this._searchTimeout = setTimeout( () => {
 				if ( query.length >= 2 ) {
+				// Show loading state while all category data loads for cross-category search
+				this.showLoading();
+				// Clear category selection
+				const buttons = this.categoryList.querySelectorAll( '.layers-shape-library-category' );
+				buttons.forEach( ( btn ) => {
+					btn.style.background = 'transparent';
+				} );
+				// Load all category data for comprehensive search, then render results
+				this.loadAllCategoryData().then( () => {
 					const results = window.Layers.ShapeLibrary.search( query );
 					this.showShapes( results );
-
-					// Clear category selection
-					const buttons = this.categoryList.querySelectorAll( '.layers-shape-library-category' );
-					buttons.forEach( ( btn ) => {
-						btn.style.background = 'transparent';
+				} ).catch( () => {
+					// Partial failure: show results from already-loaded categories
+					const results = window.Layers.ShapeLibrary.search( query );
+					this.showShapes( results.filter( ( s ) => s.svg ) );
 					} );
 				} else if ( query.length === 0 ) {
 					this.selectCategory( this.activeCategory );
@@ -692,12 +779,12 @@
 			}, 200 );
 		};
 		this.searchInput.addEventListener( 'input', this._boundSearchInputHandler );
-	};
+	}
 
 	/**
 	 * Open the panel
 	 */
-	ShapeLibraryPanel.prototype.open = function () {
+	open() {
 		// Don't open if destroyed
 		if ( this.isDestroyed ) {
 			return;
@@ -718,12 +805,12 @@
 
 		// Show initial category
 		this.selectCategory( this.activeCategory );
-	};
+	}
 
 	/**
 	 * Close the panel
 	 */
-	ShapeLibraryPanel.prototype.close = function () {
+	close() {
 		this.isOpen = false;
 		// Defensive checks for null DOM elements (e.g., after partial cleanup)
 		if ( this.overlay ) {
@@ -732,12 +819,12 @@
 		if ( this.panel ) {
 			this.panel.style.display = 'none';
 		}
-	};
+	}
 
 	/**
 	 * Destroy the panel and cleanup all resources
 	 */
-	ShapeLibraryPanel.prototype.destroy = function () {
+	destroy() {
 		// Prevent double destroy
 		if ( this.isDestroyed ) {
 			return;
@@ -793,7 +880,8 @@
 		this.shapeGrid = null;
 		this.onSelect = null;
 		this.options = null;
-	};
+		}
+	}
 
 	// Export
 	window.Layers = window.Layers || {};

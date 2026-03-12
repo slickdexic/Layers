@@ -53,11 +53,24 @@ describe( 'ShapeLibraryPanel', () => {
 			getShapesByCategory: jest.fn( ( categoryId ) => {
 				return mockShapes.filter( ( s ) => s.categoryId === categoryId );
 			} ),
+			getCategoryCount: jest.fn( ( categoryId ) => {
+				return mockShapes.filter( ( s ) => s.categoryId === categoryId ).length;
+			} ),
+			isCategoryLoaded: jest.fn( () => false ),
+			registerCategoryShapes: jest.fn(),
+			getAllShapes: jest.fn( () => mockShapes ),
+			getShape: jest.fn( ( shapeId ) => mockShapes.find( ( s ) => s.id === shapeId ) || null ),
+			getCount: jest.fn( () => mockShapes.length ),
 			search: jest.fn( ( query ) => {
 				return mockShapes.filter( ( s ) =>
 					s.name.toLowerCase().includes( query.toLowerCase() )
 				);
 			} )
+		};
+
+		// Setup mw.loader mock for lazy-loading category data modules
+		global.mw.loader = {
+			using: jest.fn( () => Promise.resolve() )
 		};
 
 		// Load the module
@@ -321,7 +334,7 @@ describe( 'ShapeLibraryPanel', () => {
 			jest.useRealTimers();
 		} );
 
-		it( 'should search on input with debounce', () => {
+		it( 'should search on input with debounce', async () => {
 			panel = new ShapeLibraryPanel( { container: mockContainer } );
 			panel.open();
 
@@ -332,6 +345,7 @@ describe( 'ShapeLibraryPanel', () => {
 			expect( window.Layers.ShapeLibrary.search ).not.toHaveBeenCalled();
 
 			jest.advanceTimersByTime( 200 );
+			await Promise.resolve(); // flush loadAllCategoryData().then() microtask
 
 			expect( window.Layers.ShapeLibrary.search ).toHaveBeenCalledWith( 'warning' );
 		} );
@@ -363,7 +377,7 @@ describe( 'ShapeLibraryPanel', () => {
 			expect( selectSpy ).toHaveBeenCalledWith( 'iso7010-w' );
 		} );
 
-		it( 'should clear previous timeout on rapid input', () => {
+		it( 'should clear previous timeout on rapid input', async () => {
 			panel = new ShapeLibraryPanel( { container: mockContainer } );
 			panel.open();
 
@@ -376,6 +390,7 @@ describe( 'ShapeLibraryPanel', () => {
 			panel.searchInput.dispatchEvent( new Event( 'input' ) );
 
 			jest.advanceTimersByTime( 200 );
+			await Promise.resolve(); // flush loadAllCategoryData().then() microtask
 
 			// Should only search once with final value
 			expect( window.Layers.ShapeLibrary.search ).toHaveBeenCalledTimes( 1 );
@@ -384,17 +399,19 @@ describe( 'ShapeLibraryPanel', () => {
 	} );
 
 	describe( 'Category Selection', () => {
-		it( 'should select category and show shapes', () => {
+		it( 'should select category and show shapes', async () => {
 			panel = new ShapeLibraryPanel( { container: mockContainer } );
 			panel.selectCategory( 'arrows' );
+			await Promise.resolve(); // flush loadCategoryData().then() microtask
 
 			expect( panel.activeCategory ).toBe( 'arrows' );
 			expect( window.Layers.ShapeLibrary.getShapesByCategory ).toHaveBeenCalledWith( 'arrows' );
 		} );
 
-		it( 'should update grid with shapes from category', () => {
+		it( 'should update grid with shapes from category', async () => {
 			panel = new ShapeLibraryPanel( { container: mockContainer } );
 			panel.selectCategory( 'arrows' );
+			await Promise.resolve(); // flush loadCategoryData().then() microtask
 
 			// Should have one shape item (arrow-right)
 			const items = panel.shapeGrid.querySelectorAll( '.layers-shape-library-item' );
@@ -418,13 +435,14 @@ describe( 'ShapeLibraryPanel', () => {
 	} );
 
 	describe( 'Shape Selection', () => {
-		it( 'should call onSelect callback with shape', () => {
+		it( 'should call onSelect callback with shape', async () => {
 			panel = new ShapeLibraryPanel( {
 				container: mockContainer,
 				onSelect: onSelectCallback
 			} );
 			panel.open();
 			panel.selectCategory( 'arrows' );
+			await Promise.resolve(); // flush loadCategoryData().then() microtask
 
 			const shapeItem = panel.shapeGrid.querySelector( '.layers-shape-library-item' );
 			shapeItem.click();
@@ -433,13 +451,14 @@ describe( 'ShapeLibraryPanel', () => {
 			expect( panel.isOpen ).toBe( false );
 		} );
 
-		it( 'should close panel after selection', () => {
+		it( 'should close panel after selection', async () => {
 			panel = new ShapeLibraryPanel( {
 				container: mockContainer,
 				onSelect: onSelectCallback
 			} );
 			panel.open();
 			panel.selectCategory( 'arrows' );
+			await Promise.resolve(); // flush loadCategoryData().then() microtask
 
 			const shapeItem = panel.shapeGrid.querySelector( '.layers-shape-library-item' );
 			shapeItem.click();
