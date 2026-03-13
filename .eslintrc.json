@@ -58,7 +58,8 @@
 				"resources/ext.layers.editor/panel/*.js",
 				"resources/ext.layers.editor/validation/*.js",
 				"resources/ext.layers.shared/*.js",
-				"resources/ext.layers/viewer/*.js"
+				"resources/ext.layers/viewer/*.js",
+				"resources/ext.layers.slides/*.js"
 			],
 			"globals": {
 				"require": "readonly",
