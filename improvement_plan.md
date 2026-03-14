@@ -1,25 +1,75 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 12, 2026 — v1.5.62
+**Last updated:** March 14, 2026 — v1.5.62 (v54 audit)
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
 All v50 issues were resolved in v1.5.61. All v51 issues were resolved in
 v1.5.62. All v52 items were fixed during the v52 audit session.
-All v53 documentation items were fixed during the v53 audit session;
-P3-145 (SpecialSlides.js zero test coverage) remains open.
+All v53 documentation items were fixed during the v53 audit session.
+P3-145 (SpecialSlides.js zero test coverage) resolved — tests now exist.
+v54 audit found 26 new items (1 HIGH security, 4 medium, 7 low, 14 docs).
 Use the section below as the authoritative current backlog.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 12, 2026 — v1.5.62)
+## Verified Current Backlog (Authoritative as of March 14, 2026 — v1.5.62)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| Testing | 1 (P3-145) | Medium |
-| **Total** | **1** | |
+| Security | 1 (P1-057 IDOR) | Small (add ownership check) |
+| PHP Medium | 2 (P2-124, P2-125) | Small–Medium |
+| JS Medium | 2 (P2-126, P2-127) | Small |
+| PHP Low | 4 (P3-146 thru P3-149) | Small–Medium |
+| JS Low | 3 (P3-150 thru P3-152) | Small |
+| Documentation | 14 (D-054-01 thru D-054-14) | Small (metric updates) |
+| **Total** | **26** | |
 
-### Current Priorities (v53 — 4 Docs Fixed, 1 Open)
+### Current Priorities (v54 — 26 Open)
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 26.01 | IDOR: `id:` prefix fetches any layer set without file check | P1-057 | **HIGH** | 🔲 Open |
+| 26.02 | enrichRowsWithUserNames queries user table directly | P2-124 | MED | 🔲 Open |
+| 26.03 | EditLayersAction set name regex rejects Unicode/spaces | P2-125 | MED | 🔲 Open |
+| 26.04 | Arrow key conflict: simultaneous nudge + pan | P2-126 | MED | 🔲 Open |
+| 26.05 | TextRenderer double shadow on stroke+fill (non-spread) | P2-127 | MED | 🔲 Open |
+| 26.06 | layer_set_usage table dead/unimplemented | P3-146 | Low | 🔲 Open |
+| 26.07 | buildImageNameLookup redundant SQL variants | P3-147 | Low | 🔲 Open |
+| 26.08 | LayerValidatorInterface unused in DI | P3-148 | Low | 🔲 Open |
+| 26.09 | ThumbnailRenderer no own color validation | P3-149 | Low | 🔲 Open |
+| 26.10 | ShadowRenderer._tempCanvas grows unboundedly | P3-150 | Low | 🔲 Open |
+| 26.11 | ImageLayerRenderer closures hold ref after destroy | P3-151 | Low | 🔲 Open |
+| 26.12 | EffectsRenderer division by zero in blur fill | P3-152 | Low | 🔲 Open |
+| 26.13 | JS file/line count stale across docs | D-054-01 | Low | 🔲 Open |
+| 26.14 | Test count stale (11,474 → 11,494) | D-054-02 | Low | 🔲 Open |
+| 26.15 | PHP line count stale | D-054-03 | Low | 🔲 Open |
+| 26.16 | God class count stale (23 → 26) | D-054-04 | Low | 🔲 Open |
+| 26.17 | CONTRIBUTING.md grossly stale metrics | D-054-05 | Low | 🔲 Open |
+| 26.18 | ARCHITECTURE.md stale version and metrics | D-054-06 | Low | 🔲 Open |
+| 26.19 | Mediawiki-Extension-Layers.mediawiki multiple issues | D-054-07 | Low | 🔲 Open |
+| 26.20 | LTS_BRANCH_STRATEGY.md stale throughout | D-054-08 | Low | 🔲 Open |
+| 26.21 | SLIDE_MODE_ISSUES.md extremely stale test count | D-054-09 | Low | 🔲 Open |
+| 26.22 | Testing-Guide.md wrong coverage | D-054-10 | Low | 🔲 Open |
+| 26.23 | Architecture-Overview.md stale metrics | D-054-11 | Low | 🔲 Open |
+| 26.24 | Frontend-Architecture.md stale metrics | D-054-12 | Low | 🔲 Open |
+| 26.25 | Home.md stale "What's New" section | D-054-13 | Low | 🔲 Open |
+| 26.26 | Installation.md stale branch versions | D-054-14 | Low | 🔲 Open |
+
+### v54 Notes
+
+- v53 verification pass: all 4 v53 doc fixes confirmed. P3-145 **resolved**
+  (tests now exist at `tests/jest/SpecialSlides.test.js`).
+- Full codebase audit (all 41 PHP files, all 156 JS modules, all .md/.mediawiki):
+  **1 security HIGH (IDOR), 4 medium bugs, 7 low code issues, 14 doc items.**
+- 7 false positives eliminated during verification (boolean normalization,
+  XSS in HelpDialog, SVG injection, ClipboardController, EffectsRenderer,
+  WikitextHooks, ThumbnailRenderer cache key).
+- Grade reduced from A to A- due to IDOR finding.
+- **Recommended fix order:** P1-057 (security) first, then P2-126/P2-127
+  (user-visible bugs), then P2-124/P2-125 (code quality), then P3/D items.
+
+### Current Priorities (v53 — All Fixed/Resolved)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
@@ -27,7 +77,7 @@ Use the section below as the authoritative current backlog.
 | 25.02 | CHANGELOG.md + wiki/Changelog.md test count 11,450 → 11,474 | D-053-02 | Low | ✅ Fixed |
 | 25.03 | codebase_review.md grade section test count 11,450 → 11,474 | D-053-03 | Low | ✅ Fixed |
 | 25.04 | i18n count inconsistency (784/778/780) → corrected to 780 | D-053-04 | Low | ✅ Fixed |
-| 25.05 | SpecialSlides.js has zero test coverage | P3-145 | Low | 🔲 Open |
+| 25.05 | SpecialSlides.js has zero test coverage | P3-145 | Low | ✅ Resolved |
 
 ### v53 Notes
 

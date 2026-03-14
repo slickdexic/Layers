@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 12, 2026 — v1.5.62 (v53 audit — 4 docs fixed, 1 open)
+**Last updated:** March 14, 2026 — v1.5.62 (v54 audit — 26 new items, P3-145 resolved)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -12,37 +12,255 @@ traceability.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 57 | 57 | 0 |
-| P2 | 127 | 127 | 0 |
-| P3 | 150 | 149 | 1 |
-| **Total** | **339** | **338** | **1** |
+| P1 | 58 | 57 | 1 |
+| P2 | 131 | 127 | 4 |
+| P3 | 171 | 150 | 21 |
+| **Total** | **365** | **339** | **26** |
 
-*Open item: P3-145 (SpecialSlides.js zero test coverage)*
+*Open: P1-057 (IDOR), P2-124 thru P2-127 (4 medium), P3-146 thru P3-152
+(7 low code), D-054-01 thru D-054-14 (14 documentation)*
 
 ---
 
-## Open Issues — v53 (March 12, 2026)
+## Open Issues — v54 (March 14, 2026)
+
+### Security — High
+
+#### P1-057: IDOR via `layers=id:NNN` Wikitext Prefix
+
+- **Files:** `src/Hooks/Processors/LayerInjector.php` L135–137,
+  `src/Hooks/Processors/ImageLinkProcessor.php` L429–431,
+  `src/Hooks/Processors/LayeredFileRenderer.php` L210–215
+- **Issue:** All three files parse `layers=id:NNN` from wikitext and call
+  `$db->getLayerSet( (int)$id )` which queries only by `ls_id` without
+  verifying the returned set belongs to the current file. An attacker can
+  craft `[[File:Innocent.jpg|layers=id:456]]` to render layer data from a
+  different (possibly private) image.
+- **Impact:** OWASP A01:2021 (Broken Access Control / IDOR). Layer data
+  (text, shapes, embedded base64 images) from other files exposed.
+  The `name:` prefix variant is safe (scoped by filename + SHA1).
+- **Suggested fix:** After fetching by ID, verify ownership:
+  `if ( $layerSet && $layerSet['imgName'] !== $file->getName() ) { $layerSet = null; }`
+  Or remove the undocumented `id:` feature entirely.
+- **Status:** **Open**
+- **Introduced:** Original `id:` prefix feature implementation
+
+### PHP — Medium
+
+#### P2-124: `enrichRowsWithUserNames()` Queries `user` Table Directly
+
+- **File:** `src/Api/ApiLayersInfo.php` L501–520
+- **Issue:** Bypasses MediaWiki's `UserFactory`/`ActorStore` abstraction
+  by querying the `user` table directly. The `user` table is an
+  implementation detail; MW is migrating to actor-based identity.
+  Also bypasses user visibility restrictions (suppressed users).
+- **Suggested fix:** Use `UserFactory::newFromId()` batch loop or
+  `ActorStore` for batch lookup.
+- **Status:** **Open**
+
+#### P2-125: `EditLayersAction` Set Name Regex Rejects Unicode/Spaces
+
+- **File:** `src/Action/EditLayersAction.php` L83
+- **Issue:** Uses `/^[a-zA-Z0-9_-]+$/` (ASCII-only, no spaces) while
+  `SetNameSanitizer::isValid()` accepts Unicode (`\p{L}`, `\p{N}`) and
+  spaces. Sets created via API with Unicode/spaces become inaccessible
+  via the editor URL.
+- **Suggested fix:** Replace hardcoded regex with `SetNameSanitizer::isValid()`.
+- **Status:** **Open**
+
+### JavaScript — Medium
+
+#### P2-126: Arrow Key Conflict — Simultaneous Nudge + Pan
+
+- **Files:** `resources/ext.layers.editor/CanvasEvents.js` L592–618,
+  `resources/ext.layers.editor/EventManager.js` L86–170
+- **Issue:** Both modules register `document` `keydown` for arrow keys.
+  EventManager nudges selected layers and calls `e.preventDefault()`.
+  CanvasEvents also fires and pans by 20px. `preventDefault()` only
+  prevents browser default, not other listeners. CanvasEvents doesn't
+  check `e.defaultPrevented`. Result: layers nudge 1px AND canvas pans
+  20px simultaneously.
+- **Suggested fix:** Add `if ( e.defaultPrevented ) return;` in
+  CanvasEvents arrow handler, or check selection state.
+- **Status:** **Open**
+
+#### P2-127: TextRenderer Double Shadow on Stroke+Fill (Non-Spread Path)
+
+- **File:** `resources/ext.layers.shared/TextRenderer.js` L256–278
+- **Issue:** When shadow enabled with `spread === 0`: `applyShadow()`
+  activates shadow, `strokeText()` renders shadow #1, `clearShadow()`
+  only called when `spread > 0`, so `fillText()` renders shadow #2.
+  TextBoxRenderer handles this correctly.
+- **Suggested fix:** Clear shadow after strokeText when `spread <= 0`.
+- **Status:** **Open**
+
+### PHP — Low
+
+#### P3-146: `layer_set_usage` Table — Dead/Unimplemented Feature
+
+- **Files:** `sql/layers_tables.sql` L43–52,
+  `src/Database/LayersSchemaManager.php`, `src/LayersConstants.php` L239
+- **Issue:** Table defined in schema, columns validated in SchemaManager,
+  constant exists, but `LayersDatabase.php` has zero references.
+  No code reads/writes/deletes from this table.
+- **Status:** **Open**
+
+#### P3-147: `buildImageNameLookup` Generates Redundant SQL Variants
+
+- **File:** `src/Database/LayersDatabase.php` L1115–1126
+- **Issue:** Every query (19 call sites) generates 2–4 name variants for
+  `IN (...)` clauses, doubling index scans. Workaround for historical
+  inconsistent data rather than a proper fix.
+- **Status:** **Open**
+
+#### P3-148: `LayerValidatorInterface` Not Used in DI Container
+
+- **File:** `src/Validation/LayerValidatorInterface.php`
+- **Issue:** Interface defined, implemented by ServerSideLayerValidator,
+  but no code type-hints against it. Not wired in services.php.
+- **Status:** **Open**
+
+#### P3-149: `ThumbnailRenderer` Has No Own Color Validation (Defense-in-Depth)
+
+- **File:** `src/ThumbnailRenderer.php`
+- **Issue:** Colors pass to Shell::command() (ImageMagick) without
+  ThumbnailRenderer's own validation. Mitigated by upstream
+  ServerSideLayerValidator + Shell's escapeshellarg(), but no defense
+  if data enters bypassing ApiLayersSave.
+- **Status:** **Open**
+
+### JavaScript — Low
+
+#### P3-150: `ShadowRenderer._tempCanvas` Grows Unboundedly
+
+- **File:** `resources/ext.layers.shared/ShadowRenderer.js` L107–114
+- **Issue:** Temp canvas grows to MAX_CANVAS_DIM (8192) for large shadows
+  (~256MB pixel data) but never shrinks.
+- **Status:** **Open**
+
+#### P3-151: `ImageLayerRenderer` Closures Hold Reference After Destroy
+
+- **File:** `resources/ext.layers.shared/ImageLayerRenderer.js` L200–222
+- **Issue:** onload/onerror callbacks capture `this`. If destroyed while
+  images load, callbacks prevent GC and may access nulled `_imageCache`.
+- **Status:** **Open**
+
+#### P3-152: `EffectsRenderer` Division by Zero in Blur Fill Scale
+
+- **File:** `resources/ext.layers.shared/EffectsRenderer.js` L303–310
+- **Issue:** `mapCanvasW`/`mapCanvasH` can be 0 if canvas unsized and
+  baseWidth is 0, producing Infinity scale factors.
+- **Status:** **Open**
+
+### Documentation — Low (14 items)
+
+#### D-054-01: JS File/Line Count Stale Across Core Docs
+
+- **Files:** `codebase_review.md`, `README.md`, `docs/ARCHITECTURE.md`,
+  `copilot-instructions.md`
+- **Issue:** All claim 143 JS files / ~99,730 lines. Actual: 156 / ~113,390.
+- **Status:** **Open**
+
+#### D-054-02: Test Count Stale (11,474 → 11,494)
+
+- **Files:** `codebase_review.md`, `README.md`, `CHANGELOG.md`,
+  `wiki/Changelog.md`, `docs/ARCHITECTURE.md`
+- **Issue:** All claim 11,474 tests. Actual: 11,494.
+- **Status:** **Open**
+
+#### D-054-03: PHP Line Count Stale (~15,197 → ~15,236)
+
+- **Files:** `codebase_review.md`, `README.md`, `copilot-instructions.md`
+- **Status:** **Open**
+
+#### D-054-04: God Class Count Stale (23 → 26)
+
+- **Files:** `codebase_review.md`, `README.md`, `copilot-instructions.md`,
+  `docs/ARCHITECTURE.md`
+- **Issue:** Actual: 5 generated + 19 hand-written JS + 2 PHP = 26.
+- **Status:** **Open**
+
+#### D-054-05: `CONTRIBUTING.md` Grossly Stale Metrics
+
+- **File:** `CONTRIBUTING.md`
+- **Issue:** States 95.19% coverage, 11,250 tests, 17 god classes.
+  Correct: 91.32%, 11,494, 26.
+- **Status:** **Open**
+
+#### D-054-06: `docs/ARCHITECTURE.md` Stale Version and Metrics
+
+- **File:** `docs/ARCHITECTURE.md`
+- **Issue:** Version 1.5.59, god class count 17, test count 11,445.
+- **Status:** **Open**
+
+#### D-054-07: `Mediawiki-Extension-Layers.mediawiki` Multiple Issues
+
+- **File:** `Mediawiki-Extension-Layers.mediawiki`
+- **Issue:** Stale date (2026-03-04), branch versions (1.5.60),
+  missing ParserClearState hook, missing layers-admin right,
+  missing 8 config parameters.
+- **Status:** **Open**
+
+#### D-054-08: `docs/LTS_BRANCH_STRATEGY.md` Stale Throughout
+
+- **File:** `docs/LTS_BRANCH_STRATEGY.md`
+- **Issue:** All versions say 1.5.59; test count 11,250.
+- **Status:** **Open**
+
+#### D-054-09: `docs/SLIDE_MODE_ISSUES.md` Extremely Stale Test Count
+
+- **File:** `docs/SLIDE_MODE_ISSUES.md`
+- **Issue:** States 9,922 tests (off by ~1,572).
+- **Status:** **Open**
+
+#### D-054-10: `wiki/Testing-Guide.md` Wrong Coverage
+
+- **File:** `wiki/Testing-Guide.md`
+- **Issue:** Shows 95.19% (correct: 91.32%).
+- **Status:** **Open**
+
+#### D-054-11: `wiki/Architecture-Overview.md` Stale Metrics
+
+- **File:** `wiki/Architecture-Overview.md`
+- **Issue:** Test Cases: 11,250, Coverage: 95.19%.
+- **Status:** **Open**
+
+#### D-054-12: `wiki/Frontend-Architecture.md` Stale Metrics
+
+- **File:** `wiki/Frontend-Architecture.md`
+- **Issue:** Test Cases: 11,250, Coverage: 95.19%, Branch: 84.96%.
+- **Status:** **Open**
+
+#### D-054-13: `wiki/Home.md` Stale "What's New" Section
+
+- **File:** `wiki/Home.md`
+- **Issue:** Features v1.5.60 highlights; missing v1.5.61/v1.5.62.
+- **Status:** **Open**
+
+#### D-054-14: `wiki/Installation.md` Stale Branch Versions
+
+- **File:** `wiki/Installation.md`
+- **Issue:** Branch versions say 1.5.61 (main should be 1.5.62).
+- **Status:** **Open**
+
+---
+
+## Fixed Issues — v54 (March 14, 2026) — 1 Prior Issue Resolved
 
 ### Testing Gap — Low
 
-#### P3-145: `SpecialSlides.js` Zero Test Coverage
+#### P3-145: `SpecialSlides.js` Zero Test Coverage — **RESOLVED**
 
 - **File:** `resources/ext.layers.slides/SpecialSlides.js`
-- **Coverage:** 0% statements, 0% branches, 0% functions, 0% lines
-- **Verified by:** Fresh `npm run test:js -- --coverage` this session;
-  `coverage/coverage-summary.json` shows `ext.layers.slides` at `0|0|0|0`
-- **Impact:** The entire interactive UI for Special:Slides (listing, search,
-  sort, create, delete, pagination) is untested. Any regression in
-  `SlidesManager` would go undetected by CI.
-- **Suggested fix:** Create `tests/jest/SpecialSlides.test.js` covering:
-  `SlidesManager` constructor, `loadSlides()`, `showCreateDialog()`,
-  `confirmDeleteSlide()`, search debounce, sort toggle, and error paths.
-- **Status:** **Open** — tracked for future session
-- **Introduced:** Module existed without tests since initial implementation
+- **Previously:** 0% coverage across all metrics.
+- **Resolution:** Test file `tests/jest/SpecialSlides.test.js` now exists
+  with substantial coverage of `SlidesManager` and `CreateSlideDialog`.
+  PHPUnit tests also exist at `tests/phpunit/unit/SpecialPages/SpecialSlidesTest.php`.
+- **Status:** **Fixed** (resolved between v53 and v54 audits)
 
 ---
 
-## Fixed Issues — v53 (March 12, 2026) — All 4 Fixed This Session
+## Fixed Issues — v53 (March 12, 2026) — All 4 Fixed + P3-145 Resolved in v54
 
 ### v52 Verification Summary
 
@@ -50,55 +268,30 @@ All 4 v52 items verified as fixed in v1.5.62. No regressions.
 
 ### Documentation — Low
 
-#### D-053-01: Coverage Overstated in Three Files (92.35% → 91.32%)
+#### D-053-01: Coverage Overstated (92.35% → 91.32%)
 
-- **Files:** `README.md` (badge URL, metrics table, health table),
-  `Mediawiki-Extension-Layers.mediawiki` (line 313),
-  `codebase_review.md` (Scope header, Current Metrics table)
-- **Issue:** Five locations claimed 92.35% statement coverage and 82.30%
-  branch coverage. Fresh `npm run test:js -- --coverage` on HEAD `353dd640`
-  with `cat coverage/coverage-summary.json` shows:
-  91.32% statements, 81.69% branches, 90.62% functions, 91.39% lines.
-  The 92.35% figure does not appear in any prior verified baseline.
-  `docs/ARCHITECTURE.md` correctly stated 91.32% throughout.
-- **Fix:** Updated all five locations to actual measured values.
-- **Status:** **Fixed** (this session)
-- **Introduced:** Incorrect speculative figure introduced during
-  documentation maintenance after v52
+- **Files:** `README.md`, `Mediawiki-Extension-Layers.mediawiki`,
+  `codebase_review.md` (5 locations)
+- **Fix:** Updated all to actual measured values.
+- **Status:** **Fixed** (v53 session)
 
-#### D-053-02: CHANGELOG.md and wiki/Changelog.md Show Stale Test Count (11,450 → 11,474)
+#### D-053-02: CHANGELOG.md Test Count (11,450 → 11,474)
 
-- **Files:** `CHANGELOG.md` (v1.5.62 entry, line 18),
-  `wiki/Changelog.md` (v1.5.62 entry, line 18)
-- **Issue:** Both files stated `"All 11,450 tests pass (168 test suites)"`
-  for the v1.5.62 entry. Current run shows 11,474 tests. The 24-test
-  discrepancy is from regression tests added after the changelog entry
-  was written (tests for P3-143, P3-144, and D-052-01 documented post-release).
-- **Fix:** Updated both v1.5.62 entries to 11,474.
-- **Verified by:** `npm run test:js --silent` → `11474 passed`.
-- **Status:** **Fixed** (this session)
+- **Files:** `CHANGELOG.md`, `wiki/Changelog.md`
+- **Fix:** Updated both v1.5.62 entries.
+- **Status:** **Fixed** (v53 session)
 
-#### D-053-03: codebase_review.md Grade Section Shows Stale Test Count (11,450 → 11,474)
+#### D-053-03: codebase_review.md Grade Test Count (11,450 → 11,474)
 
-- **File:** `codebase_review.md` (Overall Grade section)
-- **Issue:** Grade paragraph read `"91.32% statements, 11,450 tests"` —
-  the 11,450 figure was from the v51 session and not updated when D-052-01
-  corrected the count to 11,474 in the Scope header and Metrics table.
+- **File:** `codebase_review.md`
 - **Fix:** Updated to 11,474.
-- **Status:** **Fixed** (this session)
+- **Status:** **Fixed** (v53 session)
 
-#### D-053-04: i18n Key Count Triple Inconsistency (Scope: 784, Metrics: 778, Actual: 780)
+#### D-053-04: i18n Key Count Triple Inconsistency (784/778/780)
 
-- **File:** `codebase_review.md` (Scope header line 26, Current Metrics table)
-- **Issue:** Three different values for i18n key count:
-  - Scope header: 784 (set by D-052-03)
-  - Current Metrics table: 778 (never updated by D-052-03)
-  - Actual JSON-parse count: 780 (`layers-` prefixed keys in `en.json`)
-  All three values differ. D-052-03 corrected the Scope header but
-  missed the Metrics table, and the true count changed slightly since.
-- **Verified by:** `python -c "import json; print(sum(1 for k in json.load(open('i18n/en.json')) if k.startswith('layers-')))"` → `780`.
-- **Fix:** Updated both locations to 780.
-- **Status:** **Fixed** (this session)
+- **File:** `codebase_review.md`
+- **Fix:** Updated both locations to actual count (780).
+- **Status:** **Fixed** (v53 session)
 
 ---
 
