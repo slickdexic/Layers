@@ -324,6 +324,10 @@
 					mapCanvasH = this.baseHeight || canvasH;
 				}
 
+				// Guard against zero dimensions
+				mapCanvasW = Math.max( 1, mapCanvasW );
+				mapCanvasH = Math.max( 1, mapCanvasH );
+
 				// Map canvas coords to image coords
 				const imgScaleX = imgW / mapCanvasW;
 				const imgScaleY = imgH / mapCanvasH;

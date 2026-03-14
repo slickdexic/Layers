@@ -299,9 +299,14 @@
 				this.ctx.lineWidth = strokeW;
 				this.ctx.globalAlpha = baseOpacity * clampOpacity( layer.strokeOpacity );
 				this.ctx.strokeText( text, x, y );
+
+				// Shadow was rendered via strokeText; clear it so fillText doesn't double it
+				if ( this.hasShadowEnabled( layer ) ) {
+					this.clearShadow();
+				}
 			}
 
-			// Clear shadow before drawing actual text (shadow already rendered)
+			// Clear shadow before drawing fill (spread > 0 already handled above)
 			if ( this.hasShadowEnabled( layer ) && spread > 0 ) {
 				this.clearShadow();
 			}

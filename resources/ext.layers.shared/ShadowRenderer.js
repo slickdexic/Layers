@@ -605,6 +605,8 @@ class ShadowRenderer {
 		this.ctx = null;
 		this.config = null;
 		this.canvas = null;
+		this._tempCanvas = null;
+		this._tempCtx = null;
 	}
 }
 

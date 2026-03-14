@@ -200,6 +200,9 @@
 
 			// Request redraw when image loads
 			img.onload = () => {
+				if ( !this._imageCache ) {
+					return;
+				}
 				// Use the configured callback (preferred)
 				if ( this.onImageLoad && typeof this.onImageLoad === 'function' ) {
 					this.onImageLoad();
@@ -212,6 +215,9 @@
 
 			// Handle load errors gracefully
 			img.onerror = () => {
+				if ( !this._imageCache ) {
+					return;
+				}
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log.warn( '[ImageLayerRenderer] Failed to load image layer:', cacheKey );
 				}
