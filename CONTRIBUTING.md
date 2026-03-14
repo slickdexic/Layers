@@ -21,14 +21,14 @@ This extension is feature-rich by design—**17 drawing tools**, multiple render
 **There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns
 - ✅ Secure with CSRF protection, rate limiting, validation
-- ✅ Thoroughly tested (95.19% coverage, 11,250 tests)
+- ✅ Thoroughly tested (91.32% coverage, 11,494 tests)
 - ✅ Properly delegated (god classes use controller patterns)
 
 ---
 
 ## ⚠️ MANDATORY: God Class Rules
 
-**We have 17 "god classes" (files >1,000 lines) that represent technical debt. 2 are generated data files (exempt), 15 are hand-written (13 JS + 2 PHP). These rules are enforced by CI:**
+**We have 26 "god classes" (files >=1,000 lines) that represent technical debt. 5 are generated data files (exempt), 19 are hand-written JS + 2 PHP. These rules are enforced by CI:**
 
 ### Rule 1: No God Class Growth
 - **CI will BLOCK your PR** if you increase the size of any hand-written god class

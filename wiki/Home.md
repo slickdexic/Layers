@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C474%20passing-brightgreen" alt="11,474 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C494%20passing-brightgreen" alt="11,494 Tests">
    <img src="https://img.shields.io/badge/Coverage-91.32%25-brightgreen" alt="91.32% Coverage">
 </p>
 
@@ -20,10 +20,15 @@
 
 ---
 
-## 🆕 What's New in v1.5.60
+## 🆕 What's New in v1.5.62
 
-- **16 Bug Fixes** — Zoom-to-pointer anchor drift (coordinate-space mismatch in ZoomPanController), 15 P3 code-quality fixes: errorSpan filename echo, requiresUnblock false, returnTo namespace guard, TextSanitizer mb_strlen, ApiLayersList rate limiter, SchemaManager error parsing, hardcoded i18n string, ThumbnailProcessor dead branch, double spinner, mw.notify guard, RevisionManager array mutation, double render on image load, updateLayerPosition delegation, SelectionManager iteration order, ESLint varsIgnorePattern
-- **Test Suite** — 11,445 tests passing (168 suites), regression test added for zoom anchor with CSS/buffer size mismatch
+- **v54 Audit** — Security fix (IDOR ownership check), 7 code-quality fixes, grade restored to A
+- **Test Suite** — 11,494 tests passing (168 suites), 91.32% statement coverage
+
+### Previous v1.5.60 Highlights
+
+- **16 Bug Fixes** — Zoom-to-pointer anchor drift, 15 P3 code-quality fixes
+- **Test Suite** — 11,445 tests passing (168 suites)
 
 ### Previous v1.5.59 Highlights
 

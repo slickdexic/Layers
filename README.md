@@ -310,19 +310,19 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,197 lines across 41 files**
-- **Frontend:** HTML5 Canvas editor with **143 JS files (~99,730 lines)**, 140 ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,244 lines across 41 files**
+- **Frontend:** HTML5 Canvas editor with **156 JS files (~113,407 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **23 god classes** (files >1,000 lines), all use proper delegation patterns
-  - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
+- **Technical Debt:** **26 god classes** (files >=1,000 lines), all use proper delegation patterns
+  - 5 generated data files (ShapeLibraryData variants + EmojiLibraryIndex) are exempt from refactoring
   - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
 
 **Test Coverage (Verified March 12, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,474 passing (168 suites) |
+| Jest tests | 11,494 passing (168 suites) |
 | PHPUnit tests | 31 test files |
 | Statement coverage | 91.32% |
 | Branch coverage | 81.69% |
@@ -378,11 +378,11 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 143 | ✅ |
-| Total JS lines | ~99,730 | ✅ Hand-written (+ ~14,354 generated) |
+| Total JS files | 156 | ✅ |
+| Total JS lines | ~113,407 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
-| God classes (>1000 lines) | 23 | ✅ Well-delegated facades |
-| Tests passing | 11,474 | ✅ |
+| God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
+| Tests passing | 11,494 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 91.32% | ✅ Excellent |
 | Branch coverage | 81.69% | ✅ Target met |

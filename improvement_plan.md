@@ -9,8 +9,8 @@ v1.5.62. All v52 items were fixed during the v52 audit session.
 All v53 documentation items were fixed during the v53 audit session.
 P3-145 (SpecialSlides.js zero test coverage) resolved — tests now exist.
 v54 audit found 26 new items; **8 code fixes applied** (commit 0cba25e2),
-1 reclassified as false positive, 1 deferred. 16 items remain open
-(2 low code deferrals + 14 documentation drift).
+1 reclassified as false positive, 1 deferred. **14 documentation drift items
+fixed.** 2 items remain open (2 low code deferrals).
 Use the section below as the authoritative current backlog.
 
 ---
@@ -24,8 +24,8 @@ Use the section below as the authoritative current backlog.
 | JS Medium | ~~2~~ 0 (P2-126, P2-127 FIXED) | — |
 | PHP Low | 2 (P3-146, P3-147 deferred) | Medium (schema/data migration) |
 | JS Low | ~~3~~ 0 (P3-150/151/152 FIXED) | — |
-| Documentation | 14 (D-054-01 thru D-054-14) | Small (metric updates) |
-| **Total** | **16** | |
+| Documentation | ~~14~~ 0 (D-054-01 thru D-054-14 ALL FIXED) | — |
+| **Total** | **2** | |
 
 ### Current Priorities (v54 — 16 Open)
 
@@ -43,20 +43,20 @@ Use the section below as the authoritative current backlog.
 | 26.10 | ShadowRenderer._tempCanvas grows unboundedly | P3-150 | Low | ✅ Fixed |
 | 26.11 | ImageLayerRenderer closures hold ref after destroy | P3-151 | Low | ✅ Fixed |
 | 26.12 | EffectsRenderer division by zero in blur fill | P3-152 | Low | ✅ Fixed |
-| 26.13 | JS file/line count stale across docs | D-054-01 | Low | 🔲 Open |
-| 26.14 | Test count stale (11,474 → 11,494) | D-054-02 | Low | 🔲 Open |
-| 26.15 | PHP line count stale | D-054-03 | Low | 🔲 Open |
-| 26.16 | God class count stale (23 → 26) | D-054-04 | Low | 🔲 Open |
-| 26.17 | CONTRIBUTING.md grossly stale metrics | D-054-05 | Low | 🔲 Open |
-| 26.18 | ARCHITECTURE.md stale version and metrics | D-054-06 | Low | 🔲 Open |
-| 26.19 | Mediawiki-Extension-Layers.mediawiki multiple issues | D-054-07 | Low | 🔲 Open |
-| 26.20 | LTS_BRANCH_STRATEGY.md stale throughout | D-054-08 | Low | 🔲 Open |
-| 26.21 | SLIDE_MODE_ISSUES.md extremely stale test count | D-054-09 | Low | 🔲 Open |
-| 26.22 | Testing-Guide.md wrong coverage | D-054-10 | Low | 🔲 Open |
-| 26.23 | Architecture-Overview.md stale metrics | D-054-11 | Low | 🔲 Open |
-| 26.24 | Frontend-Architecture.md stale metrics | D-054-12 | Low | 🔲 Open |
-| 26.25 | Home.md stale "What's New" section | D-054-13 | Low | 🔲 Open |
-| 26.26 | Installation.md stale branch versions | D-054-14 | Low | 🔲 Open |
+| 26.13 | JS file/line count stale across docs | D-054-01 | Low | ✅ Fixed |
+| 26.14 | Test count stale (11,474 → 11,494) | D-054-02 | Low | ✅ Fixed |
+| 26.15 | PHP line count stale | D-054-03 | Low | ✅ Fixed |
+| 26.16 | God class count stale (23 → 26) | D-054-04 | Low | ✅ Fixed |
+| 26.17 | CONTRIBUTING.md grossly stale metrics | D-054-05 | Low | ✅ Fixed |
+| 26.18 | ARCHITECTURE.md stale version and metrics | D-054-06 | Low | ✅ Fixed |
+| 26.19 | Mediawiki-Extension-Layers.mediawiki multiple issues | D-054-07 | Low | ✅ Fixed |
+| 26.20 | LTS_BRANCH_STRATEGY.md stale throughout | D-054-08 | Low | ✅ Fixed |
+| 26.21 | SLIDE_MODE_ISSUES.md extremely stale test count | D-054-09 | Low | ✅ Fixed |
+| 26.22 | Testing-Guide.md wrong coverage | D-054-10 | Low | ✅ Fixed |
+| 26.23 | Architecture-Overview.md stale metrics | D-054-11 | Low | ✅ Fixed |
+| 26.24 | Frontend-Architecture.md stale metrics | D-054-12 | Low | ✅ Fixed |
+| 26.25 | Home.md stale "What's New" section | D-054-13 | Low | ✅ Fixed |
+| 26.26 | Installation.md stale branch versions | D-054-14 | Low | ✅ Fixed |
 
 ### v54 Notes
 
@@ -71,7 +71,7 @@ Use the section below as the authoritative current backlog.
   P3-150–P3-152. P3-149 reclassified as false positive.
   P3-146/P3-147/P3-148 deferred (schema/data migration needed or low value).
 - Grade restored from A- to **A** after IDOR fix.
-- Remaining 16 items: 2 low code deferrals + 14 documentation drift.
+- Remaining 2 items: 2 low code deferrals (P3-146, P3-147).
 
 ### Current Priorities (v53 — All Fixed/Resolved)
 

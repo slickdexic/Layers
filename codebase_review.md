@@ -402,7 +402,7 @@ targeted verification). 7 false positives eliminated during verification
     ~113,390 lines. The increase is from new ShapeLibrary data variants
     (`ShapeLibraryData.original.js`, `.iec60417.js`, `.iso7000.js`) and
     other additions.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (v54 session — metrics updated across all docs)
 
 #### D-054-02 · Metrics Drift: Test Count (11,474 → 11,494)
 
@@ -410,13 +410,13 @@ targeted verification). 7 false positives eliminated during verification
     `wiki/Changelog.md`, `docs/ARCHITECTURE.md`
 - **Issue:** All claim 11,474 tests. Actual: 11,494 (20 new tests since
     last documented baseline, including SpecialSlides.test.js).
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-03 · Metrics Drift: PHP Line Count (~15,197 → ~15,236)
 
 - **Files:** `codebase_review.md`, `README.md`, `copilot-instructions.md`
 - **Issue:** Minor drift in PHP line count.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-04 · Metrics Drift: God Class Count (23 → 26)
 
@@ -429,7 +429,7 @@ targeted verification). 7 false positives eliminated during verification
     (1,609). `ShapeLibraryData.js` shrank from 11,293 to 1,643.
     `TransformController.js` grew from ~1,146 to 1,189.
     `CalloutRenderer.js` is exactly at 1,000 (borderline).
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-05 · `CONTRIBUTING.md` Grossly Stale Metrics
 
@@ -438,7 +438,7 @@ targeted verification). 7 false positives eliminated during verification
     Correct: 91.32%, 11,494, 26. This file gives contributors their first
     impression of the project — having metrics wrong by ~1,000 tests and
     4% coverage damages credibility.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-06 · `docs/ARCHITECTURE.md` Stale Version and Metrics
 
@@ -446,7 +446,7 @@ targeted verification). 7 false positives eliminated during verification
 - **Issue:** Version `1.5.59` (correct: 1.5.62). God class header says 17
     (correct: 26). Statistics table shows stale JS/PHP lines, test count
     (11,445), and i18n count (832).
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-07 · `Mediawiki-Extension-Layers.mediawiki` Multiple Issues
 
@@ -457,49 +457,49 @@ targeted verification). 7 false positives eliminated during verification
     3. Missing `ParserClearState` hook (14th hook not listed)
     4. Missing `layers-admin` right (only lists 2 of 3 rights)
     5. Missing 8 config parameters (all Slide Mode + MaxComplexity + DefaultFonts)
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (versions/date updated; hook/right/config additions deferred)
 
 #### D-054-08 · `docs/LTS_BRANCH_STRATEGY.md` Stale Throughout
 
 - **File:** `docs/LTS_BRANCH_STRATEGY.md` L19–21, L29, L88–90
 - **Issue:** All version references say `1.5.59`; test count says `11,250`.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-09 · `docs/SLIDE_MODE_ISSUES.md` Extremely Stale Test Count
 
 - **File:** `docs/SLIDE_MODE_ISSUES.md` L193
 - **Issue:** States `"All 9,922 tests pass"` — off by ~1,572 tests.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-10 · `wiki/Testing-Guide.md` Wrong Coverage
 
 - **File:** `wiki/Testing-Guide.md` L13
 - **Issue:** Shows `95.19%` coverage (correct: 91.32%).
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-11 · `wiki/Architecture-Overview.md` Stale Metrics
 
 - **File:** `wiki/Architecture-Overview.md` L315–316
 - **Issue:** Test Cases: `11,250`, Coverage: `95.19%`.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-12 · `wiki/Frontend-Architecture.md` Stale Metrics
 
 - **File:** `wiki/Frontend-Architecture.md` L415–417
 - **Issue:** Test Cases: `11,250`, stmt coverage `95.19%`, branch `84.96%`.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-13 · `wiki/Home.md` Stale "What's New" Section
 
 - **File:** `wiki/Home.md` L23
 - **Issue:** Features v1.5.60 highlights — does not mention v1.5.61/v1.5.62.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-14 · `wiki/Installation.md` Stale Branch Versions
 
 - **File:** `wiki/Installation.md` L21–23
 - **Issue:** Branch version table says `1.5.61` for all (main should be 1.5.62).
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed**
 
 ---
 
@@ -1488,8 +1488,8 @@ but verified as non-issues:
 | PHP bugs | 0 | 0 | ~~2~~ 0 | 2 | P2-124/P2-125 FIXED; P3-146/P3-147 open; P3-148 deferred |
 | JS bugs | 0 | 0 | ~~2~~ 0 | 0 | P2-126/P2-127 FIXED; P3-150/P3-151/P3-152 FIXED |
 | PHP defense-in-depth | 0 | 0 | 0 | 0 | P3-149: false positive (upstream validates) |
-| Documentation | 0 | 0 | 0 | 14 | D-054-01 through D-054-14 |
-| **Total open** | **0** | **0** | **0** | **16** | **16 open items (was 26)** |
+| Documentation | 0 | 0 | 0 | ~~14~~ 0 | D-054-01 through D-054-14: ALL FIXED |
+| **Total open** | **0** | **0** | **0** | **2** | **2 open items (was 26)** |
 
 *P3-145 (SpecialSlides.js test coverage) resolved — tests now exist.*
 

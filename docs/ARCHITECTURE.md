@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** March 9, 2026
-**Version:** 1.5.59
+**Last Updated:** March 14, 2026
+**Version:** 1.5.62
 
 ---
 
@@ -17,28 +17,28 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (March 9, 2026)
+## Codebase Statistics (March 14, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **143** |
-| Total JS lines | **~99,699** |
+| Total JS files | **156** |
+| Total JS lines | **~113,407** |
 | Total PHP files | **41** |
-| Total PHP lines | **~15,122** |
+| Total PHP lines | **~15,244** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
-| Shape/Emoji data | ~14,354 lines (generated) |
+| Shape/Emoji data | ~23,500 lines (generated) |
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **91.32% stmt, 81.69% branch** |
-| Jest tests | **11,445** (168 suites) |
+| Jest tests | **11,494** (168 suites) |
 | PHPUnit test files | 31 |
-| God classes (>1000 lines) | **23** (2 generated, 19 JS, 2 PHP) |
+| God classes (>=1000 lines) | **26** (5 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |
 | Shape library | **1,385 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **832** |
+| i18n messages | **835** |
 | eslint-disable comments | **18** ✅ |
 
 ---
@@ -694,7 +694,7 @@ window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
 ```javascript
 window.Layers = {
-    VERSION: '1.5.59',
+    VERSION: '1.5.62',
     Editor: LayersEditor,
     Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
     UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm, LayerItemFactory },
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,445 tests, 168 suites)
+│   ├── jest/                # Unit tests (11,494 tests, 168 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

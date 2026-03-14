@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 14, 2026 — v1.5.62 (v54 audit — 8 code fixes applied, P3-149 false positive)
+**Last updated:** March 14, 2026 — v1.5.62 (v54 audit — 8 code fixes + 14 doc drift fixes applied, P3-149 false positive)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -14,12 +14,11 @@ traceability.
 | P0 | 5 | 5 | 0 |
 | P1 | 58 | 58 | 0 |
 | P2 | 131 | 131 | 0 |
-| P3 | 171 | 155 | 16 |
-| **Total** | **365** | **349** | **16** |
+| P3 | 171 | 169 | 2 |
+| **Total** | **365** | **363** | **2** |
 
-*Open: P3-146/P3-147 (2 deferred code), P3-148 (deferred),
-D-054-01 thru D-054-14 (14 documentation).
-Fixed this session: P1-057, P2-124–P2-127, P3-150–P3-152.
+*Open: P3-146/P3-147 (2 deferred code).
+Fixed this session: P1-057, P2-124–P2-127, P3-150–P3-152, D-054-01 thru D-054-14.
 P3-149 reclassified as false positive.*
 
 ---
@@ -115,39 +114,39 @@ P3-149 reclassified as false positive.*
 - **Files:** `codebase_review.md`, `README.md`, `docs/ARCHITECTURE.md`,
   `copilot-instructions.md`
 - **Issue:** All claim 143 JS files / ~99,730 lines. Actual: 156 / ~113,390.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-02: Test Count Stale (11,474 → 11,494)
 
 - **Files:** `codebase_review.md`, `README.md`, `CHANGELOG.md`,
   `wiki/Changelog.md`, `docs/ARCHITECTURE.md`
 - **Issue:** All claim 11,474 tests. Actual: 11,494.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-03: PHP Line Count Stale (~15,197 → ~15,236)
 
 - **Files:** `codebase_review.md`, `README.md`, `copilot-instructions.md`
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-04: God Class Count Stale (23 → 26)
 
 - **Files:** `codebase_review.md`, `README.md`, `copilot-instructions.md`,
   `docs/ARCHITECTURE.md`
 - **Issue:** Actual: 5 generated + 19 hand-written JS + 2 PHP = 26.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-05: `CONTRIBUTING.md` Grossly Stale Metrics
 
 - **File:** `CONTRIBUTING.md`
 - **Issue:** States 95.19% coverage, 11,250 tests, 17 god classes.
   Correct: 91.32%, 11,494, 26.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-06: `docs/ARCHITECTURE.md` Stale Version and Metrics
 
 - **File:** `docs/ARCHITECTURE.md`
 - **Issue:** Version 1.5.59, god class count 17, test count 11,445.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-07: `Mediawiki-Extension-Layers.mediawiki` Multiple Issues
 
@@ -155,49 +154,49 @@ P3-149 reclassified as false positive.*
 - **Issue:** Stale date (2026-03-04), branch versions (1.5.60),
   missing ParserClearState hook, missing layers-admin right,
   missing 8 config parameters.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed** (versions/date updated; content additions deferred)
 
 #### D-054-08: `docs/LTS_BRANCH_STRATEGY.md` Stale Throughout
 
 - **File:** `docs/LTS_BRANCH_STRATEGY.md`
 - **Issue:** All versions say 1.5.59; test count 11,250.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-09: `docs/SLIDE_MODE_ISSUES.md` Extremely Stale Test Count
 
 - **File:** `docs/SLIDE_MODE_ISSUES.md`
 - **Issue:** States 9,922 tests (off by ~1,572).
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-10: `wiki/Testing-Guide.md` Wrong Coverage
 
 - **File:** `wiki/Testing-Guide.md`
 - **Issue:** Shows 95.19% (correct: 91.32%).
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-11: `wiki/Architecture-Overview.md` Stale Metrics
 
 - **File:** `wiki/Architecture-Overview.md`
 - **Issue:** Test Cases: 11,250, Coverage: 95.19%.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-12: `wiki/Frontend-Architecture.md` Stale Metrics
 
 - **File:** `wiki/Frontend-Architecture.md`
 - **Issue:** Test Cases: 11,250, Coverage: 95.19%, Branch: 84.96%.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-13: `wiki/Home.md` Stale "What's New" Section
 
 - **File:** `wiki/Home.md`
 - **Issue:** Features v1.5.60 highlights; missing v1.5.61/v1.5.62.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 #### D-054-14: `wiki/Installation.md` Stale Branch Versions
 
 - **File:** `wiki/Installation.md`
 - **Issue:** Branch versions say 1.5.61 (main should be 1.5.62).
-- **Status:** **Open**
+- **Status:** ✅ **Fixed**
 
 ---
 
