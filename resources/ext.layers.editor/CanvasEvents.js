@@ -589,8 +589,8 @@
 
 			// Note: Delete/Backspace is handled by EventManager to avoid duplicate handlers
 
-			// Pan shortcuts with arrow keys
-			if ( !e.ctrlKey && !e.metaKey ) {
+			// Pan shortcuts with arrow keys (only if not already handled by nudge)
+			if ( !e.ctrlKey && !e.metaKey && !e.defaultPrevented ) {
 				const panDistance = 20;
 				switch ( e.key ) {
 					case 'ArrowUp':

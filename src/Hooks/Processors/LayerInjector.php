@@ -132,9 +132,12 @@ class LayerInjector {
 		}
 
 		if ( strpos( $layersParam, 'id:' ) === 0 ) {
-			// Layer set by ID
+			// Layer set by ID — verify it belongs to this file
 			$layerSetId = (int)substr( $layersParam, 3 );
 			$layerSet = $db->getLayerSet( $layerSetId );
+			if ( $layerSet && $layerSet['imgName'] !== $file->getName() ) {
+				$layerSet = null;
+			}
 		} elseif ( strpos( $layersParam, 'name:' ) === 0 ) {
 			// Layer set by name
 			$layerSetName = substr( $layersParam, 5 );
