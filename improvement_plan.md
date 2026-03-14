@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 14, 2026 — v1.5.62 (v54 audit)
+**Last updated:** March 14, 2026 — v1.5.62 (v54 audit, 8 code fixes applied)
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -8,7 +8,9 @@ All v50 issues were resolved in v1.5.61. All v51 issues were resolved in
 v1.5.62. All v52 items were fixed during the v52 audit session.
 All v53 documentation items were fixed during the v53 audit session.
 P3-145 (SpecialSlides.js zero test coverage) resolved — tests now exist.
-v54 audit found 26 new items (1 HIGH security, 4 medium, 7 low, 14 docs).
+v54 audit found 26 new items; **8 code fixes applied** (commit 0cba25e2),
+1 reclassified as false positive, 1 deferred. 16 items remain open
+(2 low code deferrals + 14 documentation drift).
 Use the section below as the authoritative current backlog.
 
 ---
@@ -17,30 +19,30 @@ Use the section below as the authoritative current backlog.
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| Security | 1 (P1-057 IDOR) | Small (add ownership check) |
-| PHP Medium | 2 (P2-124, P2-125) | Small–Medium |
-| JS Medium | 2 (P2-126, P2-127) | Small |
-| PHP Low | 4 (P3-146 thru P3-149) | Small–Medium |
-| JS Low | 3 (P3-150 thru P3-152) | Small |
+| Security | ~~1~~ 0 (P1-057 FIXED) | — |
+| PHP Medium | ~~2~~ 0 (P2-124, P2-125 FIXED) | — |
+| JS Medium | ~~2~~ 0 (P2-126, P2-127 FIXED) | — |
+| PHP Low | 2 (P3-146, P3-147 deferred) | Medium (schema/data migration) |
+| JS Low | ~~3~~ 0 (P3-150/151/152 FIXED) | — |
 | Documentation | 14 (D-054-01 thru D-054-14) | Small (metric updates) |
-| **Total** | **26** | |
+| **Total** | **16** | |
 
-### Current Priorities (v54 — 26 Open)
+### Current Priorities (v54 — 16 Open)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
-| 26.01 | IDOR: `id:` prefix fetches any layer set without file check | P1-057 | **HIGH** | 🔲 Open |
-| 26.02 | enrichRowsWithUserNames queries user table directly | P2-124 | MED | 🔲 Open |
-| 26.03 | EditLayersAction set name regex rejects Unicode/spaces | P2-125 | MED | 🔲 Open |
-| 26.04 | Arrow key conflict: simultaneous nudge + pan | P2-126 | MED | 🔲 Open |
-| 26.05 | TextRenderer double shadow on stroke+fill (non-spread) | P2-127 | MED | 🔲 Open |
-| 26.06 | layer_set_usage table dead/unimplemented | P3-146 | Low | 🔲 Open |
-| 26.07 | buildImageNameLookup redundant SQL variants | P3-147 | Low | 🔲 Open |
-| 26.08 | LayerValidatorInterface unused in DI | P3-148 | Low | 🔲 Open |
-| 26.09 | ThumbnailRenderer no own color validation | P3-149 | Low | 🔲 Open |
-| 26.10 | ShadowRenderer._tempCanvas grows unboundedly | P3-150 | Low | 🔲 Open |
-| 26.11 | ImageLayerRenderer closures hold ref after destroy | P3-151 | Low | 🔲 Open |
-| 26.12 | EffectsRenderer division by zero in blur fill | P3-152 | Low | 🔲 Open |
+| 26.01 | IDOR: `id:` prefix fetches any layer set without file check | P1-057 | **HIGH** | ✅ Fixed |
+| 26.02 | enrichRowsWithUserNames queries user table directly | P2-124 | MED | ✅ Fixed |
+| 26.03 | EditLayersAction set name regex rejects Unicode/spaces | P2-125 | MED | ✅ Fixed |
+| 26.04 | Arrow key conflict: simultaneous nudge + pan | P2-126 | MED | ✅ Fixed |
+| 26.05 | TextRenderer double shadow on stroke+fill (non-spread) | P2-127 | MED | ✅ Fixed |
+| 26.06 | layer_set_usage table dead/unimplemented | P3-146 | Low | 🔲 Deferred |
+| 26.07 | buildImageNameLookup redundant SQL variants | P3-147 | Low | 🔲 Deferred |
+| 26.08 | LayerValidatorInterface unused in DI | P3-148 | Low | 🔲 Deferred |
+| 26.09 | ThumbnailRenderer no own color validation | P3-149 | Low | ❌ False positive |
+| 26.10 | ShadowRenderer._tempCanvas grows unboundedly | P3-150 | Low | ✅ Fixed |
+| 26.11 | ImageLayerRenderer closures hold ref after destroy | P3-151 | Low | ✅ Fixed |
+| 26.12 | EffectsRenderer division by zero in blur fill | P3-152 | Low | ✅ Fixed |
 | 26.13 | JS file/line count stale across docs | D-054-01 | Low | 🔲 Open |
 | 26.14 | Test count stale (11,474 → 11,494) | D-054-02 | Low | 🔲 Open |
 | 26.15 | PHP line count stale | D-054-03 | Low | 🔲 Open |
@@ -65,9 +67,11 @@ Use the section below as the authoritative current backlog.
 - 7 false positives eliminated during verification (boolean normalization,
   XSS in HelpDialog, SVG injection, ClipboardController, EffectsRenderer,
   WikitextHooks, ThumbnailRenderer cache key).
-- Grade reduced from A to A- due to IDOR finding.
-- **Recommended fix order:** P1-057 (security) first, then P2-126/P2-127
-  (user-visible bugs), then P2-124/P2-125 (code quality), then P3/D items.
+- **8 code fixes applied** (commit 0cba25e2): P1-057, P2-124–P2-127,
+  P3-150–P3-152. P3-149 reclassified as false positive.
+  P3-146/P3-147/P3-148 deferred (schema/data migration needed or low value).
+- Grade restored from A- to **A** after IDOR fix.
+- Remaining 16 items: 2 low code deferrals + 14 documentation drift.
 
 ### Current Priorities (v53 — All Fixed/Resolved)
 

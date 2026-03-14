@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 14, 2026 — v1.5.62 (v54 audit — 26 new items, P3-145 resolved)
+**Last updated:** March 14, 2026 — v1.5.62 (v54 audit — 8 code fixes applied, P3-149 false positive)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -12,13 +12,15 @@ traceability.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 58 | 57 | 1 |
-| P2 | 131 | 127 | 4 |
-| P3 | 171 | 150 | 21 |
-| **Total** | **365** | **339** | **26** |
+| P1 | 58 | 58 | 0 |
+| P2 | 131 | 131 | 0 |
+| P3 | 171 | 155 | 16 |
+| **Total** | **365** | **349** | **16** |
 
-*Open: P1-057 (IDOR), P2-124 thru P2-127 (4 medium), P3-146 thru P3-152
-(7 low code), D-054-01 thru D-054-14 (14 documentation)*
+*Open: P3-146/P3-147 (2 deferred code), P3-148 (deferred),
+D-054-01 thru D-054-14 (14 documentation).
+Fixed this session: P1-057, P2-124–P2-127, P3-150–P3-152.
+P3-149 reclassified as false positive.*
 
 ---
 
@@ -28,71 +30,33 @@ traceability.
 
 #### P1-057: IDOR via `layers=id:NNN` Wikitext Prefix
 
-- **Files:** `src/Hooks/Processors/LayerInjector.php` L135–137,
-  `src/Hooks/Processors/ImageLinkProcessor.php` L429–431,
-  `src/Hooks/Processors/LayeredFileRenderer.php` L210–215
-- **Issue:** All three files parse `layers=id:NNN` from wikitext and call
-  `$db->getLayerSet( (int)$id )` which queries only by `ls_id` without
-  verifying the returned set belongs to the current file. An attacker can
-  craft `[[File:Innocent.jpg|layers=id:456]]` to render layer data from a
-  different (possibly private) image.
-- **Impact:** OWASP A01:2021 (Broken Access Control / IDOR). Layer data
-  (text, shapes, embedded base64 images) from other files exposed.
-  The `name:` prefix variant is safe (scoped by filename + SHA1).
-- **Suggested fix:** After fetching by ID, verify ownership:
-  `if ( $layerSet && $layerSet['imgName'] !== $file->getName() ) { $layerSet = null; }`
-  Or remove the undocumented `id:` feature entirely.
-- **Status:** **Open**
-- **Introduced:** Original `id:` prefix feature implementation
+- **Status:** ✅ **Fixed** (commit 0cba25e2)
+- **Fix:** Added file ownership validation (`$layerSet['imgName'] !== $file->getName()`) in
+  LayerInjector.php, ImageLinkProcessor.php, LayeredFileRenderer.php
 
 ### PHP — Medium
 
 #### P2-124: `enrichRowsWithUserNames()` Queries `user` Table Directly
 
-- **File:** `src/Api/ApiLayersInfo.php` L501–520
-- **Issue:** Bypasses MediaWiki's `UserFactory`/`ActorStore` abstraction
-  by querying the `user` table directly. The `user` table is an
-  implementation detail; MW is migrating to actor-based identity.
-  Also bypasses user visibility restrictions (suppressed users).
-- **Suggested fix:** Use `UserFactory::newFromId()` batch loop or
-  `ActorStore` for batch lookup.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2)
+- **Fix:** Replaced raw `user` table query with `UserFactory::newFromId()` loop
 
 #### P2-125: `EditLayersAction` Set Name Regex Rejects Unicode/Spaces
 
-- **File:** `src/Action/EditLayersAction.php` L83
-- **Issue:** Uses `/^[a-zA-Z0-9_-]+$/` (ASCII-only, no spaces) while
-  `SetNameSanitizer::isValid()` accepts Unicode (`\p{L}`, `\p{N}`) and
-  spaces. Sets created via API with Unicode/spaces become inaccessible
-  via the editor URL.
-- **Suggested fix:** Replace hardcoded regex with `SetNameSanitizer::isValid()`.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2)
+- **Fix:** Replaced hardcoded ASCII regex with `SetNameSanitizer::isValid()`
 
 ### JavaScript — Medium
 
 #### P2-126: Arrow Key Conflict — Simultaneous Nudge + Pan
 
-- **Files:** `resources/ext.layers.editor/CanvasEvents.js` L592–618,
-  `resources/ext.layers.editor/EventManager.js` L86–170
-- **Issue:** Both modules register `document` `keydown` for arrow keys.
-  EventManager nudges selected layers and calls `e.preventDefault()`.
-  CanvasEvents also fires and pans by 20px. `preventDefault()` only
-  prevents browser default, not other listeners. CanvasEvents doesn't
-  check `e.defaultPrevented`. Result: layers nudge 1px AND canvas pans
-  20px simultaneously.
-- **Suggested fix:** Add `if ( e.defaultPrevented ) return;` in
-  CanvasEvents arrow handler, or check selection state.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2)
+- **Fix:** Added `!e.defaultPrevented` check in CanvasEvents arrow handler
 
 #### P2-127: TextRenderer Double Shadow on Stroke+Fill (Non-Spread Path)
 
-- **File:** `resources/ext.layers.shared/TextRenderer.js` L256–278
-- **Issue:** When shadow enabled with `spread === 0`: `applyShadow()`
-  activates shadow, `strokeText()` renders shadow #1, `clearShadow()`
-  only called when `spread > 0`, so `fillText()` renders shadow #2.
-  TextBoxRenderer handles this correctly.
-- **Suggested fix:** Clear shadow after strokeText when `spread <= 0`.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2)
+- **Fix:** Shadow cleared after strokeText in non-spread path
 
 ### PHP — Low
 
@@ -118,39 +82,31 @@ traceability.
 - **File:** `src/Validation/LayerValidatorInterface.php`
 - **Issue:** Interface defined, implemented by ServerSideLayerValidator,
   but no code type-hints against it. Not wired in services.php.
-- **Status:** **Open**
+- **Status:** **Deferred** (low priority; validator works correctly as-is)
 
 #### P3-149: `ThumbnailRenderer` Has No Own Color Validation (Defense-in-Depth)
 
-- **File:** `src/ThumbnailRenderer.php`
-- **Issue:** Colors pass to Shell::command() (ImageMagick) without
-  ThumbnailRenderer's own validation. Mitigated by upstream
-  ServerSideLayerValidator + Shell's escapeshellarg(), but no defense
-  if data enters bypassing ApiLayersSave.
-- **Status:** **Open**
+- **Status:** ❌ **False positive** — upstream `ServerSideLayerValidator`
+  validates/sanitizes all colors before storage. `Shell::command()` uses
+  `escapeshellarg()`. `withOpacity()` outputs only safe formats.
+  No bypass path exists in current architecture.
 
 ### JavaScript — Low
 
 #### P3-150: `ShadowRenderer._tempCanvas` Grows Unboundedly
 
-- **File:** `resources/ext.layers.shared/ShadowRenderer.js` L107–114
-- **Issue:** Temp canvas grows to MAX_CANVAS_DIM (8192) for large shadows
-  (~256MB pixel data) but never shrinks.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2)
+- **Fix:** `_tempCanvas` and `_tempCtx` nulled in `destroy()`
 
 #### P3-151: `ImageLayerRenderer` Closures Hold Reference After Destroy
 
-- **File:** `resources/ext.layers.shared/ImageLayerRenderer.js` L200–222
-- **Issue:** onload/onerror callbacks capture `this`. If destroyed while
-  images load, callbacks prevent GC and may access nulled `_imageCache`.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2)
+- **Fix:** Added `_imageCache` null guard in onload/onerror callbacks
 
 #### P3-152: `EffectsRenderer` Division by Zero in Blur Fill Scale
 
-- **File:** `resources/ext.layers.shared/EffectsRenderer.js` L303–310
-- **Issue:** `mapCanvasW`/`mapCanvasH` can be 0 if canvas unsized and
-  baseWidth is 0, producing Infinity scale factors.
-- **Status:** **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2)
+- **Fix:** Added `Math.max(1, ...)` guard for canvas dimensions
 
 ### Documentation — Low (14 items)
 

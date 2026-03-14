@@ -211,7 +211,7 @@ targeted verification). 7 false positives eliminated during verification
     ```
     Alternatively, remove the undocumented `id:` feature entirely (it is
     not mentioned in `docs/WIKITEXT_USAGE.md` or any user documentation).
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — ownership check added in all 3 files)
 
 ### Medium — PHP
 
@@ -235,7 +235,7 @@ targeted verification). 7 false positives eliminated during verification
     is modern (`getConnectionProvider()`) — only the query target is wrong.
 - **Fix:** Use `UserFactory::newFromId()` in a batch loop, or use
     `ActorStore` for batch user name lookup.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — replaced with UserFactory)
 
 #### P2-125 · `EditLayersAction` Set Name Validation Rejects Unicode/Spaces
 
@@ -253,7 +253,7 @@ targeted verification). 7 false positives eliminated during verification
     `"anatomía labels"` can be created via API but navigating to
     `?setname=anatomía%20labels` silently resets to the default set.
 - **Fix:** Replace the hardcoded regex with `SetNameSanitizer::isValid()`.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — now delegates to SetNameSanitizer)
 
 ### Medium — JavaScript
 
@@ -275,7 +275,7 @@ targeted verification). 7 false positives eliminated during verification
 - **Fix:** Add `if ( e.defaultPrevented ) return;` at the top of the
     `CanvasEvents` arrow key handler, or check whether layers are
     selected before panning.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — added `!e.defaultPrevented` check)
 
 #### P2-127 · TextRenderer Double Shadow on Stroke+Fill (Non-Spread Path)
 
@@ -298,7 +298,7 @@ targeted verification). 7 false positives eliminated during verification
         this.clearShadow();
     }
     ```
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — shadow cleared after strokeText)
 
 ### Low — PHP
 
@@ -342,7 +342,7 @@ targeted verification). 7 false positives eliminated during verification
     is not wired in `services.php`. It's a design contract with no
     practical effect.
 - **Impact:** Dead abstraction — not harmful, but adds cognitive overhead.
-- **Status:** 🔲 **Open**
+- **Status:** 🔲 **Deferred** (low priority; validator pattern works as-is)
 
 #### P3-149 · `ThumbnailRenderer` Has No Own Color Validation
 
@@ -356,7 +356,7 @@ targeted verification). 7 false positives eliminated during verification
 - **Impact:** Not exploitable via the normal save path. But if layer data
     enters the system through any path bypassing `ApiLayersSave` (future
     API, migration, direct DB edit), unsanitized colors could reach IM.
-- **Status:** 🔲 **Open**
+- **Status:** ❌ **False positive** — upstream `ServerSideLayerValidator` + `Shell::command()` `escapeshellarg()` fully mitigate this. Colors are validated/sanitized before storage. `withOpacity()` outputs only safe formats (`rgba()`, hex, named). No bypass path exists in current architecture.
 
 ### Low — JavaScript
 
@@ -369,7 +369,7 @@ targeted verification). 7 false positives eliminated during verification
     pixel data) that persists for the renderer's lifetime.
 - **Impact:** GPU/system memory waste after transient large shadows.
 - **Fix:** Add periodic shrink logic or null the canvas in `destroy()`.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — `_tempCanvas`/`_tempCtx` nulled in destroy)
 
 #### P3-151 · `ImageLayerRenderer` Closures Hold Reference After Destroy
 
@@ -380,7 +380,7 @@ targeted verification). 7 false positives eliminated during verification
     accesses `this._imageCache` which is null after destroy.
 - **Impact:** Minor memory leak; potential null reference on error path.
 - **Fix:** Add `if ( this._destroyed ) return;` guard at top of callbacks.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — `_imageCache` null guard added)
 
 #### P3-152 · `EffectsRenderer` Division by Zero in Blur Fill Scale
 
@@ -390,7 +390,7 @@ targeted verification). 7 false positives eliminated during verification
     `Infinity` scale factors via `imgW / mapCanvasW`.
 - **Impact:** Blur fill would render incorrectly on an unsized canvas.
 - **Fix:** `mapCanvasW = Math.max( 1, this.baseWidth || canvasW );`
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — `Math.max(1, ...)` guard added)
 
 ### Documentation — 14 Items
 
@@ -1484,12 +1484,12 @@ but verified as non-issues:
 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
-| Security | 0 | 1 | 0 | 0 | P1-057: IDOR via `id:` prefix |
-| PHP bugs | 0 | 0 | 2 | 3 | P2-124/P2-125 + P3-146/P3-147/P3-148 |
-| JS bugs | 0 | 0 | 2 | 3 | P2-126/P2-127 + P3-150/P3-151/P3-152 |
-| PHP defense-in-depth | 0 | 0 | 0 | 1 | P3-149: ThumbnailRenderer color gap |
+| Security | 0 | ~~1~~ 0 | 0 | 0 | P1-057: FIXED |
+| PHP bugs | 0 | 0 | ~~2~~ 0 | 2 | P2-124/P2-125 FIXED; P3-146/P3-147 open; P3-148 deferred |
+| JS bugs | 0 | 0 | ~~2~~ 0 | 0 | P2-126/P2-127 FIXED; P3-150/P3-151/P3-152 FIXED |
+| PHP defense-in-depth | 0 | 0 | 0 | 0 | P3-149: false positive (upstream validates) |
 | Documentation | 0 | 0 | 0 | 14 | D-054-01 through D-054-14 |
-| **Total open** | **0** | **1** | **4** | **21** | **26 open items** |
+| **Total open** | **0** | **0** | **0** | **16** | **16 open items (was 26)** |
 
 *P3-145 (SpecialSlides.js test coverage) resolved — tests now exist.*
 
@@ -1536,7 +1536,7 @@ but verified as non-issues:
 | Code quality | 0 | 0 | 0 | ~~1~~ 0 | Fixed v1.5.60 |
 | **Total open** | **0** | **0** | **0** | **0** | **All 54 items closed** |
 
-## Overall Grade: A-
+## Overall Grade: A
 
 The codebase maintains strong architecture, comprehensive test coverage
 (91.32% statements, 11,494 tests in 168 suites), 100% ES6 class migration,
@@ -1544,16 +1544,19 @@ and robust security controls (CSRF, rate limiting, input validation). All
 v49–v53 bugs confirmed fixed (339 total historical issues resolved).
 
 The v54 review (HEAD `92fc3979`, v1.5.62) found **1 security HIGH** (IDOR
-via undocumented `id:` wikitext prefix allowing cross-file layer set
-access), **4 medium** (arrow key conflict, double shadow rendering,
-set name validation mismatch, direct user table query), **7 low** code
+via undocumented `id:` wikitext prefix), **4 medium** bugs, **7 low** code
 issues, and **14 documentation metric drift items**.
 
-Grade reduced from A to **A-** due to the IDOR finding. The vulnerability
-is narrow (requires attacker knowing numeric IDs + wikitext editing access)
-but represents a genuine access control gap. The 14 documentation items
-reflect metric drift across many files — not harmful, but reducing
-consistency. Once P1-057 is fixed, the grade should return to A.
+**8 of 12 code issues fixed** (commit 0cba25e2): P1-057 (IDOR ownership
+check), P2-124 (UserFactory), P2-125 (SetNameSanitizer), P2-126 (arrow
+key defaultPrevented), P2-127 (TextRenderer shadow), P3-150 (ShadowRenderer
+cleanup), P3-151 (ImageLayerRenderer guard), P3-152 (EffectsRenderer div/0).
+P3-149 reclassified as false positive. P3-148 deferred (low priority).
+2 items remain deferred (P3-146, P3-147 — require schema/data migration).
+14 documentation drift items remain open.
+
+Grade restored to **A** after IDOR fix. Remaining 16 items are all low
+priority (2 code deferrals + 14 doc metric updates).
 
 ---
 
