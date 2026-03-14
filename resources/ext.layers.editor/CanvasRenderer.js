@@ -553,7 +553,7 @@
 			// So layers array is Top-to-Bottom.
 			for ( let i = layers.length - 1; i >= 0; i-- ) {
 				const layer = layers[ i ];
-				if ( layer && layer.visible !== false ) {
+				if ( layer && layer.visible !== false && layer.visible !== 0 ) {
 					this.drawLayerWithEffects( layer );
 				}
 			}
@@ -596,7 +596,7 @@
 				// Render layers (bottom to top)
 				for ( let i = layers.length - 1; i >= 0; i-- ) {
 					const layer = layers[ i ];
-					if ( layer && layer.visible !== false ) {
+					if ( layer && layer.visible !== false && layer.visible !== 0 ) {
 						this.drawLayerWithEffects( layer );
 					}
 				}

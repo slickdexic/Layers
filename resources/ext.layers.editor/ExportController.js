@@ -99,7 +99,7 @@
 				const backgroundOpacity = this.editor.stateManager.get( 'backgroundOpacity' );
 				const includeBackground = options.includeBackground !== undefined ?
 					options.includeBackground :
-					( backgroundVisible !== false && backgroundOpacity > 0 );
+					( backgroundVisible !== false && backgroundVisible !== 0 && backgroundOpacity > 0 );
 				const scale = options.scale || 1;
 				const format = options.format || 'png';
 				const quality = options.quality || 0.92;
@@ -146,7 +146,7 @@
 
 					// Draw all visible layers
 					const layers = this.editor.stateManager.get( 'layers' ) || [];
-					const visibleLayers = layers.filter( ( layer ) => layer.visible !== false );
+					const visibleLayers = layers.filter( ( layer ) => layer.visible !== false && layer.visible !== 0 );
 
 					// Use the canvas renderer to draw layers
 					if ( canvasManager.renderer &&

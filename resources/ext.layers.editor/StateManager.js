@@ -521,7 +521,7 @@ class StateManager {
 	addLayer( layerData ) {
 		const layer = Object.assign( {}, layerData, {
 			id: layerData.id || this.generateLayerId(),
-			visible: layerData.visible !== false,
+			visible: layerData.visible !== false && layerData.visible !== 0,
 			locked: layerData.locked || false
 		} );
 
