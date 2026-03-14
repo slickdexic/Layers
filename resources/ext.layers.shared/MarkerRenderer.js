@@ -561,7 +561,7 @@
 				arrowX: options.arrowX,
 				arrowY: options.arrowY,
 				arrowStyle: options.arrowStyle || DEFAULTS.arrowStyle,
-				visible: options.visible !== false,
+				visible: options.visible !== false && options.visible !== 0,
 				locked: options.locked || false,
 				opacity: options.opacity !== undefined ? options.opacity : 1,
 				name: options.name || 'Marker ' + displayValue

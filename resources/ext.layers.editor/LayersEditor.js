@@ -752,7 +752,7 @@ class LayersEditor {
 	addLayer ( layerData ) {
 		layerData = this.validationManager.sanitizeLayerData( layerData );
 		layerData.id = this.apiManager.generateLayerId();
-		layerData.visible = layerData.visible !== false;
+		layerData.visible = layerData.visible !== false && layerData.visible !== 0;
 
 		const layers = [ ...( this.stateManager.get( 'layers' ) || [] ) ];
 		layers.unshift( layerData );
@@ -774,7 +774,7 @@ class LayersEditor {
 	addLayerWithoutSelection ( layerData ) {
 		layerData = this.validationManager.sanitizeLayerData( layerData );
 		layerData.id = this.apiManager.generateLayerId();
-		layerData.visible = layerData.visible !== false;
+		layerData.visible = layerData.visible !== false && layerData.visible !== 0;
 
 		const layers = [ ...( this.stateManager.get( 'layers' ) || [] ) ];
 		layers.unshift( layerData );

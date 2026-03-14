@@ -190,7 +190,7 @@
 				delete layer.richText;
 			} else {
 				// Hide simple text layers entirely
-				this._originalVisible = layer.visible !== false;
+				this._originalVisible = layer.visible !== false && layer.visible !== 0;
 				layer.visible = false;
 			}
 

@@ -526,7 +526,7 @@ class StateManager {
 					? window.Layers.Utils.generateLayerId()
 					: 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 )
 			),
-			visible: layerData.visible !== false,
+			visible: layerData.visible !== false && layerData.visible !== 0,
 			locked: layerData.locked || false
 		};
 

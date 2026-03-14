@@ -372,7 +372,7 @@
 		_createVisibilityButton( layer, t ) {
 			const visibilityBtn = document.createElement( 'button' );
 			visibilityBtn.className = 'layer-visibility';
-			visibilityBtn.appendChild( this._createEyeIcon( layer.visible !== false ) );
+			visibilityBtn.appendChild( this._createEyeIcon( layer.visible !== false && layer.visible !== 0 ) );
 			visibilityBtn.title = t( 'layers-toggle-visibility', 'Toggle visibility' );
 			visibilityBtn.type = 'button';
 			visibilityBtn.setAttribute( 'aria-label', t( 'layers-toggle-visibility', 'Toggle visibility' ) );
@@ -492,7 +492,7 @@
 				while ( visibilityBtn.firstChild ) {
 					visibilityBtn.removeChild( visibilityBtn.firstChild );
 				}
-				visibilityBtn.appendChild( this._createEyeIcon( layer.visible !== false ) );
+				visibilityBtn.appendChild( this._createEyeIcon( layer.visible !== false && layer.visible !== 0 ) );
 			}
 
 			// Update name (only if not currently being edited)

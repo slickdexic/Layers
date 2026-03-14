@@ -1018,7 +1018,7 @@
 				toleranceUpper: options.toleranceUpper !== undefined ? options.toleranceUpper : DEFAULTS.toleranceUpper,
 				toleranceLower: options.toleranceLower !== undefined ? options.toleranceLower : DEFAULTS.toleranceLower,
 				text: options.text || '',
-				visible: options.visible !== false,
+				visible: options.visible !== false && options.visible !== 0,
 				locked: options.locked || false,
 				opacity: options.opacity !== undefined ? options.opacity : 1,
 				name: options.name || 'Angle Dimension'

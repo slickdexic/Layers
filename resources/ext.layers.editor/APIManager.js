@@ -594,6 +594,12 @@
 		if ( typeof mw !== 'undefined' ) {
 			mw.notify( this.getMessage( 'layers-revision-loaded' ) + cacheHint, { type: 'success' } );
 		}
+
+		// Clear loading state after successful load
+		if ( this.editor.stateManager ) {
+			this.editor.stateManager.set( 'isLoading', false );
+		}
+
 		return data;
 	}
 
@@ -617,6 +623,10 @@
 				}
 			}
 
+			// Set loading state to prevent user interactions during load
+			if ( this.editor.stateManager ) {
+				this.editor.stateManager.set( 'isLoading', true );
+			}
 			this.showSpinner( this.getMessage( 'layers-loading' ) );
 
 			const jqXHR = this.api.get( {
@@ -645,12 +655,20 @@
 				this._clearRequest( 'loadRevision' );
 				// Ignore aborted requests (user switched before this completed)
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {
+					// Clear loading state even for aborted requests
+					if ( this.editor.stateManager ) {
+						this.editor.stateManager.set( 'isLoading', false );
+					}
 					if ( this.rejectAbortedRequests ) {
 						reject( { aborted: true, code, result } );
 					}
 					return;
 				}
 				this.hideSpinner();
+				// Clear loading state on error
+				if ( this.editor.stateManager ) {
+					this.editor.stateManager.set( 'isLoading', false );
+				}
 				const errorMsg = result && result.error && result.error.info
 					? result.error.info
 					: this.getMessage( 'layers-revision-not-found' );
