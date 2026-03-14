@@ -121,7 +121,7 @@
 		selectAll() {
 			const layers = this.getLayersArray();
 			this.selectedLayerIds = layers
-				.filter( ( layer ) => layer.visible !== false && layer.locked !== true )
+				.filter( ( layer ) => layer.visible !== false && layer.visible !== 0 && layer.locked !== true && layer.locked !== 1 )
 				.map( ( layer ) => layer.id );
 
 			if ( this.selectedLayerIds.length > 0 ) {

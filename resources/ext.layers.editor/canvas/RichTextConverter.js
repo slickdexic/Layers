@@ -78,11 +78,14 @@
 					styleProps.push( `font-style: ${ style.fontStyle }` );
 				}
 				if ( style.fontSize ) {
-					// Scale for display, store unscaled in data attribute
-					const scaledSize = style.fontSize * scale;
-					// Use !important to override container font-size
-					styleProps.push( `font-size: ${ scaledSize }px !important` );
-					dataAttrs.push( `data-font-size="${ style.fontSize }"` );
+					const numericSize = parseFloat( style.fontSize );
+					if ( !isNaN( numericSize ) && numericSize > 0 ) {
+						// Scale for display, store unscaled in data attribute
+						const scaledSize = numericSize * scale;
+						// Use !important to override container font-size
+						styleProps.push( `font-size: ${ scaledSize }px !important` );
+						dataAttrs.push( `data-font-size="${ numericSize }"` );
+					}
 				}
 				if ( style.fontFamily ) {
 					styleProps.push( `font-family: ${ style.fontFamily }` );
@@ -97,9 +100,12 @@
 					styleProps.push( `background-color: ${ style.backgroundColor }` );
 				}
 				if ( style.textStrokeWidth && style.textStrokeColor ) {
-					styleProps.push(
-						`-webkit-text-stroke: ${ style.textStrokeWidth }px ${ style.textStrokeColor }`
-					);
+					const numericStroke = parseFloat( style.textStrokeWidth );
+					if ( !isNaN( numericStroke ) && numericStroke > 0 ) {
+						styleProps.push(
+							`-webkit-text-stroke: ${ numericStroke }px ${ style.textStrokeColor }`
+						);
+					}
 				}
 
 				// Wrap in span if has styles or data attrs, otherwise just add text

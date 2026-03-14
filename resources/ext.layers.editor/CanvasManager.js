@@ -1408,7 +1408,7 @@ class CanvasManager {
 
 	selectAll () {
 		const allIds = ( this.editor.layers || [] )
-			.filter( ( layer ) => layer.visible !== false )
+			.filter( ( layer ) => layer.visible !== false && layer.visible !== 0 )
 			.map( ( layer ) => layer.id );
 		this.setSelectedLayerIds( allIds );
 		// Update lastSelectedId for key object alignment (last layer is key object)

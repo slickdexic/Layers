@@ -370,7 +370,7 @@
 		toggleLayerVisibility( layerId ) {
 			const layer = this.editor.getLayerById( layerId );
 			if ( layer ) {
-				const newVisibility = !( layer.visible !== false );
+				const newVisibility = !( layer.visible !== false && layer.visible !== 0 );
 				layer.visible = newVisibility;
 
 				// If this is a group, cascade visibility to all children
