@@ -212,7 +212,10 @@ class LayeredFileRenderer {
 			if ( $db ) {
 				$id = (int)substr( $layersParam, 3 );
 				$layerSet = $db->getLayerSet( $id );
-				if ( $layerSet && isset( $layerSet['name'] ) ) {
+				// Verify the set belongs to this file (prevent IDOR)
+				if ( $layerSet && isset( $layerSet['name'] )
+					&& $layerSet['imgName'] === $file->getName()
+				) {
 					return $layerSet['name'];
 				}
 			}

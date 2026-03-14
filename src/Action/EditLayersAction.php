@@ -9,6 +9,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Action;
 
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 
 class EditLayersAction extends \Action {
 
@@ -79,8 +80,8 @@ class EditLayersAction extends \Action {
 		if ( $initialSetName === '' ) {
 			$initialSetName = $request->getText( 'layers', '' );
 		}
-		// Sanitize: only allow alphanumeric, hyphens, underscores
-		if ( $initialSetName !== '' && !preg_match( '/^[a-zA-Z0-9_-]+$/', $initialSetName ) ) {
+		// Sanitize: must pass the same validation as the API
+		if ( $initialSetName !== '' && !SetNameSanitizer::isValid( $initialSetName ) ) {
 			$initialSetName = '';
 		}
 

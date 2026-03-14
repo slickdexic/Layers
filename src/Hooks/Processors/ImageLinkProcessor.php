@@ -425,9 +425,12 @@ class ImageLinkProcessor {
 			return $this->extractLayerDataFromSet( $latest );
 		}
 
-		// 'id:123' => specific set by ID
+		// 'id:123' => specific set by ID — verify it belongs to this file
 		if ( preg_match( '/^id:(\d+)$/', $param, $idM ) ) {
 			$ls = $db->getLayerSet( (int)$idM[1] );
+			if ( $ls && $ls['imgName'] !== $filename ) {
+				$ls = null;
+			}
 			return $this->extractLayerDataFromSet( $ls );
 		}
 
