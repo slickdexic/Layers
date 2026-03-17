@@ -184,7 +184,8 @@ class TransformController {
 		}
 
 		// Limit delta values to prevent sudden jumps during rapid mouse movements
-		const maxDelta = 1000;
+		// Scale clamp proportionally to canvas dimensions for large images
+		const maxDelta = Math.max( 1000, this.manager.baseWidth || 1000, this.manager.baseHeight || 1000 );
 		deltaX = Math.max( -maxDelta, Math.min( maxDelta, deltaX ) );
 		deltaY = Math.max( -maxDelta, Math.min( maxDelta, deltaY ) );
 

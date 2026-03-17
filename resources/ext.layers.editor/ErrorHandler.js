@@ -20,6 +20,8 @@
 			this.notificationContainer = null;
 			this.debugMode = false;
 			this.globalListeners = [];
+			/** @type {boolean} Recursion guard for handleError */
+			this._isHandlingError = false;
 			/**
 			 * Tracked timeout IDs for cleanup
 			 * @type {Set<number>}
@@ -104,22 +106,32 @@
 		 * @param {Object} metadata - Additional error metadata
 		 */
 		handleError( error, context, type, metadata ) {
-			const errorInfo = this.processError( error, context, type, metadata );
+			// Recursion guard: if handleError itself throws (e.g., DOM torn down),
+			// the global error handler would re-enter here infinitely.
+			if ( this._isHandlingError ) {
+				return;
+			}
+			this._isHandlingError = true;
+			try {
+				const errorInfo = this.processError( error, context, type, metadata );
 
-			// Add to error queue
-			this.addToErrorQueue( errorInfo );
+				// Add to error queue
+				this.addToErrorQueue( errorInfo );
 
-			// Log error for developers
-			this.logError( errorInfo );
+				// Log error for developers
+				this.logError( errorInfo );
 
-			// Show user notification based on error severity
-			this.showUserNotification( errorInfo );
+				// Show user notification based on error severity
+				this.showUserNotification( errorInfo );
 
-			// Attempt recovery for recoverable errors
-			this.attemptRecovery( errorInfo );
+				// Attempt recovery for recoverable errors
+				this.attemptRecovery( errorInfo );
 
-			// Report to external services if configured
-			this.reportError( errorInfo );
+				// Report to external services if configured
+				this.reportError( errorInfo );
+			} finally {
+				this._isHandlingError = false;
+			}
 		}
 
 		/**

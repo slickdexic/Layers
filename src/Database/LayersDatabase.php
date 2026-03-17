@@ -267,7 +267,11 @@ class LayersDatabase {
 
 		$cacheKey = 'layerset_' . $layerSetId;
 		if ( isset( $this->layerSetCache[$cacheKey] ) ) {
-			return $this->layerSetCache[$cacheKey];
+			// Promote to MRU position so array_shift evicts least-recently-used
+			$value = $this->layerSetCache[$cacheKey];
+			unset( $this->layerSetCache[$cacheKey] );
+			$this->layerSetCache[$cacheKey] = $value;
+			return $value;
 		}
 
 		$dbr = $this->getReadDb();

@@ -25,6 +25,9 @@
 	 *
 	 * @class
 	 */
+	/** @type {HTMLDivElement|null} Cached element for HTML escaping */
+	let escapeDiv = null;
+
 	class RichTextConverter {
 
 		/**
@@ -35,9 +38,11 @@
 		 * @return {string} HTML-escaped text
 		 */
 		static escapeHtml( text ) {
-			const div = document.createElement( 'div' );
-			div.textContent = text;
-			return div.innerHTML;
+			if ( !escapeDiv ) {
+				escapeDiv = document.createElement( 'div' );
+			}
+			escapeDiv.textContent = text;
+			return escapeDiv.innerHTML;
 		}
 
 		/**
@@ -55,7 +60,10 @@
 		static escapeCSSValue( value ) {
 			// Remove characters that could break out of style attributes or enable injection
 			// but KEEP parentheses for valid CSS functions like rgb(), rgba(), hsl()
-			return String( value ).replace( /["'<>&;{}\\]/g, '' );
+			let safe = String( value ).replace( /["'<>&;{}\\]/g, '' );
+			// Block CSS injection keywords (url, expression, javascript)
+			safe = safe.replace( /\b(?:url|expression|javascript)\s*\(/gi, '(' );
+			return safe;
 		}
 
 		/**

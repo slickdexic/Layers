@@ -99,16 +99,45 @@
 				const stored = localStorage.getItem( this.storageKey );
 				if ( stored ) {
 					const parsed = JSON.parse( stored );
-					if ( parsed.version === SCHEMA_VERSION ) {
+					if ( parsed.version === SCHEMA_VERSION && this._validateSchema( parsed ) ) {
 						return parsed;
 					}
-					// Future: handle migrations here
-					this.logWarn( 'Schema version mismatch, ignoring stored data' );
+					this.logWarn( 'Schema version mismatch or invalid structure, ignoring stored data' );
 				}
 			} catch ( err ) {
 				this.logError( 'Failed to load presets:', err );
 			}
 			return null;
+		}
+
+		/**
+		 * Validate the structure of loaded preset data
+		 *
+		 * @param {Object} data Parsed data
+		 * @return {boolean} Whether data has valid structure
+		 */
+		_validateSchema( data ) {
+			if ( !data || typeof data !== 'object' ) {
+				return false;
+			}
+			// Must have toolPresets as an object
+			if ( !data.toolPresets || typeof data.toolPresets !== 'object' || Array.isArray( data.toolPresets ) ) {
+				return false;
+			}
+			// Validate each tool's preset array
+			for ( const tool in data.toolPresets ) {
+				if ( !Array.isArray( data.toolPresets[ tool ] ) ) {
+					return false;
+				}
+				for ( const preset of data.toolPresets[ tool ] ) {
+					if ( !preset || typeof preset !== 'object' ||
+						typeof preset.name !== 'string' || preset.name.length === 0 ||
+						!preset.style || typeof preset.style !== 'object' ) {
+						return false;
+					}
+				}
+			}
+			return true;
 		}
 
 		/**

@@ -107,7 +107,8 @@
 		// Re-scan when page content changes
 		// Using arrow function to preserve 'this' context
 		try {
-			if ( mw && mw.hook && typeof mw.hook === 'function' ) {
+			if ( !this._contentHookRegistered && mw && mw.hook && typeof mw.hook === 'function' ) {
+				this._contentHookRegistered = true;
 				mw.hook( 'wikipage.content' ).add( () => {
 					this.viewerManager.initializeLayerViewers();
 					this.viewerManager.initializeFilePageFallback();
