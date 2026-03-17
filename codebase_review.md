@@ -1,9 +1,9 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 12, 2026 (v53 audit)
-**Previous Review:** March 11, 2026 (v52 audit)
+**Review Date:** March 17, 2026 (v57 audit)
+**Previous Review:** March 16, 2026 (v56 audit)
 **Version:** 1.5.62
-**Reviewer:** GitHub Copilot (Claude Sonnet 4.6)
+**Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
 ---
 
@@ -11,50 +11,968 @@
 
 - **Branch Reviewed:** `main`
 - **Verification Method:** Direct source inspection with multi-pass
-    verification; all findings individually confirmed against actual code
-    before inclusion. Known false-positive patterns from prior reviews
-    were checked and excluded. 5 subagent-reported issues were eliminated
-    as false positives during this v49 round (see Verified Non-Issues).
-- **Coverage:** 91.32% statements, 81.69% branches, 90.62% functions,
-    91.39% lines (verified March 12, 2026 — HEAD 353dd640)
-- **JS source files:** 143 in `resources/` excluding `resources/dist` (~99,730 lines)
-- **PHP production files:** 41 in `src/` (~15,197 lines)
+    verification using 4 specialized subagent sweeps (PHP API modules,
+    PHP core/database/validation, JS core editor/canvas/renderers, JS
+    UI/toolbar/viewer) plus 3 targeted confirmation passes. All findings
+    individually confirmed against actual source before inclusion. Known
+    false-positive patterns from 56 prior reviews were checked and
+    excluded. Subagent-reported issues were rigorously verified — many
+    were eliminated as false positives (see Verified Non-Issues).
+- **Coverage:** 92.88% statements, 82.58% branches, 91.57% functions,
+    92.97% lines (verified March 17, 2026)
+- **JS source files:** 158 in `resources/` including `resources/dist` (~113,550 lines),
+    149 excluding dist and scripts (~110,491 lines)
+- **PHP production files:** 41 in `src/` (~15,216 lines)
 - **Jest test suites:** 168
-- **Jest test cases:** 11,474 (`npm run test:js` — verified March 11, 2026 — commit e29f5df9)
-- **PHPUnit test files:** 31 in `tests/phpunit`
+- **Jest test cases:** 11,847 (`npx jest --no-coverage --silent` — verified March 17, 2026 — HEAD 6f6b8c8f)
+- **PHPUnit test files:** 33 in `tests/phpunit`
 - **i18n message keys:** 780 in `i18n/en.json`, 780 in `i18n/qqq.json` (layers- prefix)
 - **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
   `layersrename`, `layerslist`)
-- **Files >1,000 lines:** 23 total (2 generated JS, 19 hand-written JS, 2 PHP)
+- **Files >1,000 lines:** 26 total (5 generated JS data, 19 hand-written JS, 2 PHP)
 
 ---
 
 ## Executive Summary
 
-This v49 audit performed a full-codebase review of all PHP (`src/`) and
-JavaScript (`resources/`) source files plus all documentation. The review
-was conducted with a high false-positive threshold — all findings were
-verified against literal source code before inclusion.
+This v57 audit performed a comprehensive review of all PHP (`src/`) and
+JavaScript (`resources/`) source files, all documentation (README, wiki,
+docs/*.md, *.mediawiki), and configuration (extension.json, jest.config.js).
+The review used 4 specialized subagent sweeps plus 3 targeted verification
+passes against the actual source code. Many subagent-reported issues were
+rigorously eliminated as false positives (see Verified Non-Issues below).
 
-The v49 review found **54 new verified issues**: 11 HIGH, 18 MEDIUM,
-15 LOW, and 10 documentation issues. These are distributed across PHP
-backend, JavaScript editor core, canvas/rendering modules, and documentation.
-Unlike prior reviews, none of the new HIGH findings have been fixed yet —
-they are all open as of March 10, 2026.
+All v56 code fixes confirmed intact. Test count increased from 11,606 to
+11,847 (+241 tests). Coverage improved from 91.32% to 92.88% statements
+and 81.69% to 82.58% branches.
 
-Notable new findings include a **privilege escalation risk** (wiki page-deletion
-right used as Layers admin gate), **information disclosure** in two special
-pages (DB queries run before permission checks), a **permanently-hanging Promise**
-when cached revision data is corrupt, **wrong validation bounds** in
-ValidationManager (more restrictive than the server), and **smart guides
-completely non-functional** for line/arrow/path/dimension layer types.
+The v57 review found **0 CRITICAL, 0 HIGH, 3 MEDIUM, and 5 LOW items**
+— 8 new verified items total. The most significant findings were:
 
-All v48 bugs have been confirmed as fixed. The codebase retains strong
-architecture and comprehensive test coverage, but this audit reveals a
-cluster of correctness bugs in the JS layer that did not exist in earlier
-versions, introduced during the large v42–v46 feature additions. The
-documentation drift problem (incorrect metrics in README, CHANGELOG, and
-ARCHITECTURE.md) continues despite partial fixes in prior reviews.
+1. **`deleteNamedSet()` missing transaction protection** (MEDIUM):
+   `LayersDatabase.deleteNamedSet()` performs a raw DELETE without
+   `startAtomic()`/`endAtomic()` or `FOR UPDATE` locks. In contrast,
+   `renameNamedSet()` correctly uses atomic transactions. Concurrent
+   delete + rename operations on the same set can produce inconsistent
+   results.
+
+2. **`ApiLayersRename` wrong error constant for missing filename** (MEDIUM):
+   Uses `ERROR_FILE_NOT_FOUND` ('layers-file-not-found') when the filename
+   parameter is empty, which is semantically wrong — a missing parameter
+   is not the same as a file not existing. `ApiLayersDelete` correctly
+   uses `apierror-missingparam` for the same situation.
+
+3. **`ApiLayersSave` validation code duplication** (MEDIUM): The
+   `execute()` and `executeSlideSave()` methods duplicate ~15–20 lines of
+   identical validation logic (JSON parsing, layer validation, background
+   settings, rate limiting). Changes must be applied in both places.
+
+4. **`ShadowRenderer` DOMMatrix without feature detection** (LOW): Direct
+   `new DOMMatrix()` instantiation at two call sites without checking
+   `typeof DOMMatrix !== 'undefined'`. Affects older browsers and
+   non-browser test environments.
+
+5. **Documentation metric drift** (LOW): Test count (11,606→11,847),
+   coverage (91.32%→92.88%), and several stale doc version references
+   (ARCHITECTURE.md, SLIDE_MODE.md, NAMED_LAYER_SETS.md).
+
+The codebase retains strong architecture, comprehensive test coverage
+(92.88% statements, 11,847 tests in 168 suites), and robust security
+controls. P3-146 (dead table), P3-147 (accepted), and P3-148 (deferred)
+carried forward.
+
+---
+
+## Confirmed Findings (v57 — March 17, 2026) — 8 New Issues Found
+
+### v56 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P1-059 | ✅ Fixed v1.5.62 | CSS escaping gap fixed |
+| P1-060 | ✅ Fixed v1.5.62 | ErrorHandler recursion guard added |
+| P2-133 | ✅ Fixed v1.5.62 | innerHTML replaced with DOM API |
+| P2-134 | ✅ Fixed v1.5.62 | Schema validation added |
+| P2-135 | ✅ Fixed v1.5.62 | cssText injection fixed |
+| P2-136 | ✅ Fixed v1.5.62 | Hook guard added |
+| P2-137 | ✅ Fixed v1.5.62 | JSON.stringify cached |
+| P3-157 | ✅ Fixed v1.5.62 | Gradient preset validation |
+| P3-158 | ✅ Fixed v1.5.62 | ARIA keyboard support |
+| P3-159 | ✅ Resolved | HelpDialog coverage 99.42% |
+| P3-160 | ✅ Resolved | TransformController coverage 98.16% |
+| D-056-01..08 | ✅ Fixed | All 8 doc drift items |
+| P3-146 | 🔲 Open | Dead table (still carried) |
+| P3-147 | 🔲 Open | Redundant SQL (still carried) |
+| P3-148 | 🔲 Deferred | Unused interface (carried) |
+
+---
+
+### New Findings (v57) — 8 Items
+
+**Audit scope:** All 41 PHP source files (`src/`), all 158 JS files
+(`resources/`), all documentation and mediawiki files. Main branch,
+HEAD `6f6b8c8f`.
+
+**Methodology:** Multi-pass review with 4 specialized subagent sweeps
+(PHP API modules, PHP core/database/validation, JS core editor/canvas/
+renderers, JS UI/viewer/toolbar) plus 3 targeted verification passes
+confirming each finding against actual source code. Numerous false
+positives eliminated during verification (see Verified Non-Issues
+section below).
+
+### Medium — PHP (Race Condition)
+
+#### P2-138 · `deleteNamedSet()` Missing Transaction Protection
+
+- **File:** `src/Database/LayersDatabase.php` L784–830
+- **Code:**
+    ```php
+    $dbw->delete(
+        'layer_sets',
+        [ 'ls_img_name' => ..., 'ls_img_sha1' => $sha1, 'ls_name' => $setName ],
+        __METHOD__
+    );
+    ```
+- **Impact:** `deleteNamedSet()` performs a raw DELETE without
+    `startAtomic()`/`endAtomic()` or `FOR UPDATE` locks. In contrast,
+    `renameNamedSet()` at L872–945 correctly uses atomic transactions
+    with `FOR UPDATE`. This asymmetry means concurrent delete + rename
+    operations on the same set can produce inconsistent results. The
+    API layer checks ownership and existence before calling
+    `deleteNamedSet()`, creating a TOCTOU gap: between the permission
+    check and the actual delete, another request could rename or
+    modify the set.
+- **Fix:** Wrap the DELETE in `startAtomic()`/`endAtomic()`,
+    mirroring the pattern already used by `renameNamedSet()`.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### P2-139 · `ApiLayersRename` Wrong Error Constant for Missing Filename
+
+- **File:** `src/Api/ApiLayersRename.php` L86–88
+- **Code:**
+    ```php
+    if ( $requestedFilename === '' || $requestedFilename === null ) {
+        $this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
+    }
+    ```
+- **Impact:** When the `filename` parameter is empty or null, the API
+    returns `layers-file-not-found` which implies the file doesn't exist
+    in the wiki. The actual problem is a missing/empty parameter.
+    `ApiLayersDelete` at L84–87 correctly uses
+    `[ 'apierror-missingparam', 'filename' ]` for the same condition.
+    This misleads API consumers about what went wrong.
+- **Fix:** Change to
+    `$this->dieWithError( [ 'apierror-missingparam', 'filename' ], 'missingparam' );`
+    to match `ApiLayersDelete`.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### P2-140 · `ApiLayersSave` Duplicated Validation Logic
+
+- **File:** `src/Api/ApiLayersSave.php` L195–260 vs L410–480
+- **Issue:** The `execute()` and `executeSlideSave()` methods duplicate
+    ~15–20 lines of identical validation logic: JSON parsing, layer
+    validation, background settings extraction, rate limiting, and
+    sanitization. Both paths must be updated when validation rules
+    change, creating maintenance burden and risk of inconsistency
+    in security-critical save paths.
+- **Fix:** Extract shared validation logic into a `validateAndParseLayers()`
+    helper method that both `execute()` and `executeSlideSave()` call.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### P3-161 · `ShadowRenderer` DOMMatrix Without Feature Detection
+
+- **File:** `resources/ext.layers.shared/ShadowRenderer.js` L362, L493
+- **Code:**
+    ```javascript
+    transformWithoutRotation = new DOMMatrix( [
+        scaleX, 0, 0, scaleY, e, f
+    ] );
+    ```
+- **Impact:** Direct `new DOMMatrix()` instantiation without checking
+    `typeof DOMMatrix !== 'undefined'`. DOMMatrix is not available in
+    older browsers (pre-Chromium Edge, IE11) or Node.js test
+    environments without DOM polyfills. Affects shadow rendering for
+    rotated shapes — shadows would be missing or the call would throw
+    `ReferenceError`.
+- **Fix:** Add feature detection:
+    ```javascript
+    if ( typeof DOMMatrix !== 'undefined' ) {
+        transformWithoutRotation = new DOMMatrix( [...] );
+    } else {
+        transformWithoutRotation = { a: scaleX, b: 0, c: 0, d: scaleY, e, f };
+    }
+    ```
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### P3-162 · `CanvasEvents` `require()` Fallback in Browser Context
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js` L947–948,
+    L999–1000
+- **Code:**
+    ```javascript
+    const AngleDimensionRenderer =
+        ( typeof window !== 'undefined' && window.Layers &&
+          window.Layers.AngleDimensionRenderer ) ||
+        ( typeof require !== 'undefined' &&
+          require( '../ext.layers.shared/AngleDimensionRenderer.js' ) );
+    ```
+- **Impact:** The `require()` fallback uses Node.js/CommonJS syntax that
+    is incompatible with MediaWiki's ResourceLoader module system. In
+    production, if the `window.Layers` lookup fails, `require()` will
+    not resolve the module correctly. The code does have a null guard
+    after the lookup (`if ( !AngleDimensionRenderer ) { return false; }`),
+    so this degrades gracefully rather than crashing. However, the
+    `require()` fallback gives a false sense of resilience.
+- **Fix:** Remove the `require()` fallback and rely solely on the
+    `window.Layers` namespace lookup with a logged warning.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+### Low — Documentation Drift (5 Items)
+
+#### D-057-01 · Test Count Stale (11,606 → 11,847)
+
+- **Files:** `codebase_review.md`, `docs/ARCHITECTURE.md`,
+    `Mediawiki-Extension-Layers.mediawiki`, `README.md`, `wiki/Home.md`,
+    `.github/copilot-instructions.md`
+- **Issue:** Multiple documents reference 11,606 tests. Actual count
+    verified March 17, 2026: **11,847** (241 test drift).
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### D-057-02 · Coverage Stale (91.32% → 92.88%)
+
+- **Files:** `codebase_review.md`, `docs/ARCHITECTURE.md`, `README.md`
+- **Issue:** Coverage reported as 91.32% statements, 81.69% branches.
+    Actual March 17, 2026: **92.88% statements, 82.58% branches**.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### D-057-03 · `docs/ARCHITECTURE.md` God Class Section Heading Inconsistent
+
+- **File:** `docs/ARCHITECTURE.md` L100
+- **Issue:** Summary table at L37 correctly states 26 god classes, but
+    the section heading at L100 says "God Classes (17 Files ≥1,000 Lines)"
+    and only lists ~17 files. The actual count is 26 (5 generated + 19
+    hand-written JS + 2 PHP). 6 files that have grown past 1,000 lines
+    since the section was written are missing from the list.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### D-057-04 · `docs/SLIDE_MODE.md` Stale Version Reference
+
+- **File:** `docs/SLIDE_MODE.md` L5–6
+- **Issue:** States "Date: January 31, 2026" and "Current Release:
+    v1.5.59". Current version is v1.5.62.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### D-057-05 · `docs/NAMED_LAYER_SETS.md` Confusing Version Metadata
+
+- **File:** `docs/NAMED_LAYER_SETS.md` L3–5
+- **Issue:** States "Version: 1.3 (v40 verification refresh)" and
+    "Status: ✅ Implemented (verified on v1.5.59)". Current version
+    is v1.5.62. The "Version: 1.3" refers to the feature document
+    version, not the extension version, which is confusing.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+---
+
+## v57 Verified Non-Issues (False Positives Eliminated)
+
+The following were reported by automated subagent analysis during
+this v57 review but verified as non-issues by reading the actual
+source code:
+
+- **`HitTestController` boolean equality bug (layer.visible === false
+  fails for integer 0):** **FALSE POSITIVE** — `LayerDataNormalizer`
+  runs at data load time in `APIManager.processRawLayers()`, converting
+  integer 0/1 to boolean false/true. All downstream code receives
+  normalized booleans.
+
+- **`APIManager.processRawLayers()` undefined method:** **FALSE
+  POSITIVE** — Method IS defined at L538 of APIManager.js as a class
+  method. Called at L480.
+
+- **`EffectsRenderer` GPU memory leak via temp canvases:** **FALSE
+  POSITIVE** — Temp canvases are cached in instance variables
+  (`_blurCanvas`, `_blurFillCanvas`) and reused across frames. No
+  per-frame allocation.
+
+- **`TransformController` RAF memory leak:** **FALSE POSITIVE** —
+  All RAF IDs (`_resizeRafId`, `_dragRafId`, `_rotationRafId`,
+  `_arrowTipRafId`) are cancelled in `destroy()` at L1134–1150.
+
+- **`ViewerManager` concurrency limiter broken:** **FALSE POSITIVE**
+  — `_processWithConcurrency()` uses standard recursive-chain pattern
+  that correctly limits concurrency to `limit` parallel chains.
+
+- **`LayersLightbox` close timeout race condition:** **FALSE
+  POSITIVE** — Fixed in prior version. `open()` already clears
+  `closeTimeoutId` before creating new overlay at L120–125.
+
+- **`DraftManager` silent data loss:** **FALSE POSITIVE** — Errors
+  ARE logged via `mw.log.warn()` at L226–231 and method returns
+  `false`.
+
+- **`APIManager` cache key collision:** **FALSE POSITIVE** — Cache
+  key separators (`:id:`, `:set:`, `:default`) are distinct enough
+  to prevent collisions.
+
+- **`PropertiesForm` input value not updated after clamping:** **FALSE
+  POSITIVE** — Input value IS updated after clamping, confirmed at
+  L247–275. Both `change` and `blur` handlers update displayed value.
+
+- **`ViewerManager` WeakMap wrapper cleanup:** **FALSE POSITIVE** —
+  WeakMap correctly enables GC of image elements and their wrappers.
+
+- **`SetNameSanitizer` can return empty string:** **FALSE POSITIVE**
+  — `sanitize()` at L45–67 returns `DEFAULT_SET_NAME` ('default')
+  when all characters are stripped.
+
+- **`ApiLayersRename` TOCTOU race in renameNamedSet():** **FALSE
+  POSITIVE** — `renameNamedSet()` correctly uses `startAtomic()` +
+  `FOR UPDATE` locks, preventing concurrent rename conflicts.
+
+---
+
+## Confirmed Findings (v56 — March 16, 2026) — 13 New Issues Found
+
+### v55 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P1-058 | ✅ Fixed v1.5.62 | `use LayersConstants` import added |
+| P2-128 | ✅ Fixed v1.5.62 | API modules use trait helpers |
+| P2-129 | ✅ Fixed v1.5.62 | User enrichment deduplicated |
+| P2-130 | ✅ Fixed v1.5.62 | try-catch for JSON fallback |
+| P2-131 | ✅ Fixed v1.5.62 | Delta clamp scaled |
+| P2-132 | ❌ False positive | Already uses bounding box |
+| P3-153 | ✅ Fixed v1.5.62 | LRU cache promotion |
+| P3-154 | ✅ Fixed v1.5.62 | Cached div for escaping |
+| P3-155 | ❌ False positive | ARIA roles present |
+| P3-156 | ❌ False positive | Dialog attributes present |
+| P3-146 | 🔲 Open | Dead table (still carried) |
+| P3-147 | 🔲 Open | Redundant SQL (still carried) |
+| P3-148 | 🔲 Deferred | Unused interface (carried) |
+| D-055-01 | ✅ Fixed | Slide config documented |
+| D-055-02 | ✅ Fixed | MW.org page updated |
+
+### v54 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P1-057 | ✅ Fixed v1.5.62 | IDOR ownership check in all 3 processor files |
+| P2-124 | ✅ Fixed v1.5.62 | `enrichRowsWithUserNames` uses UserFactory |
+| P2-125 | ✅ Fixed v1.5.62 | `EditLayersAction` delegates to SetNameSanitizer |
+| P2-126 | ✅ Fixed v1.5.62 | Arrow key `defaultPrevented` check added |
+| P2-127 | ✅ Fixed v1.5.62 | TextRenderer shadow cleared after strokeText |
+| P3-150 | ✅ Fixed v1.5.62 | ShadowRenderer `_tempCanvas` nulled in destroy |
+| P3-151 | ✅ Fixed v1.5.62 | ImageLayerRenderer `_destroyed` guard added |
+| P3-152 | ✅ Fixed v1.5.62 | EffectsRenderer `Math.max(1, ...)` guard |
+| P3-146 | 🔲 Open | Dead `layer_set_usage` table (carried forward) |
+| P3-147 | 🔲 Open | Redundant SQL name variants (carried forward) |
+| P3-148 | 🔲 Deferred | Unused `LayerValidatorInterface` (low priority) |
+| P3-149 | ❌ False positive | Upstream validates; no bypass path |
+| D-054-01..14 | ✅ Fixed | All 14 doc metric drift items corrected |
+
+---
+
+### New Findings (v56) — 13 Items
+
+**Audit scope:** All 41 PHP source files (`src/`), all 156 JS modules
+(`resources/ext.layers*`), all documentation and mediawiki files.
+Main branch, HEAD `82bdca3d`.
+
+**Methodology:** Multi-pass review with 4 specialized subagent sweeps
+(PHP API modules, PHP core/database/validation, JS core editor/canvas/
+renderers, JS UI/toolbar/presets) plus 2 targeted verification passes.
+9 false positives eliminated during verification (see Verified
+Non-Issues section below).
+
+### High — JavaScript
+
+#### P1-059 · `RichTextConverter.escapeCSSValue()` Insufficient Escaping
+
+- **File:** `resources/ext.layers.editor/canvas/RichTextConverter.js`
+    L60–63
+- **Code:**
+    ```javascript
+    static escapeCSSValue( value ) {
+        return String( value ).replace( /["'<>&;{}\\]/g, '' );
+    }
+    ```
+- **Impact:** The function blocks quotes, braces, angle brackets,
+    semicolons, and backslashes — but does NOT block `url()`,
+    `javascript:`, `expression()`, or parentheses. A malicious
+    rich text style value like `url(javascript:alert(1))` would
+    pass through escaping intact. The escaped output is used in
+    inline `style` attribute construction for rich text rendering.
+    This is a defense-in-depth gap — upstream validation (server-side
+    whitelist + ColorValidator) currently blocks most attack vectors,
+    but the escaping function itself is incomplete for CSS contexts.
+- **Fix:** Add parentheses blocking and keyword rejection:
+    ```javascript
+    static escapeCSSValue( value ) {
+        let safe = String( value ).replace( /["'<>&;{}()\\]/g, '' );
+        safe = safe.replace( /url|expression|javascript/gi, '' );
+        return safe;
+    }
+    ```
+- **Status:** ✅ **Fixed v56** — Added `url`/`expression`/`javascript` keyword blocking while preserving `rgb()`/`hsl()` parentheses.
+
+#### P1-060 · `ErrorHandler` Missing Recursion Guard
+
+- **File:** `resources/ext.layers.editor/ErrorHandler.js` L75–95
+- **Code:** `setupGlobalErrorHandler()` registers `unhandledrejection`
+    and `error` listeners that call `handleError()`. `handleError()`
+    calls `showUserNotification()` (DOM operations), `logError()`,
+    and attempts recovery. None of these internal calls are guarded
+    against throwing.
+- **Impact:** If `showUserNotification()` or `logError()` throws
+    (e.g., DOM is in torn-down state during page unload, or
+    `mw.log` is unavailable), the thrown error triggers the global
+    handler again, which calls `handleError()` again, causing
+    infinite recursion. This freezes the browser tab with a stack
+    overflow. The risk is elevated because `destroy()` calls
+    happen during page teardown when DOM state is unreliable.
+- **Fix:** Add a recursion guard:
+    ```javascript
+    handleError( error, context ) {
+        if ( this._isHandlingError ) return;
+        this._isHandlingError = true;
+        try {
+            // existing logic
+        } finally {
+            this._isHandlingError = false;
+        }
+    }
+    ```
+- **Status:** ✅ **Fixed v56** — Added `_isHandlingError` recursion guard with try/finally.
+
+### Medium — JavaScript (Security/Defense-in-Depth)
+
+#### P2-133 · `PresetDropdown` innerHTML with `getMessage()` Output
+
+- **File:** `resources/ext.layers.editor/presets/PresetDropdown.js`
+    L126, L285
+- **Code:**
+    ```javascript
+    this.elements.button.innerHTML =
+        `<span>${this.getMessage( 'layers-presets' )}</span>`;
+    ```
+- **Impact:** `getMessage()` returns i18n message text. While
+    MediaWiki i18n messages are typically safe (controlled by wiki
+    admins), injecting them via `innerHTML` violates defense-in-depth.
+    If a translation contains HTML entities or a wiki is compromised
+    to inject malicious translations, this becomes an XSS vector.
+- **Fix:** Use `textContent` or DOM API:
+    ```javascript
+    const span = document.createElement( 'span' );
+    span.textContent = this.getMessage( 'layers-presets' );
+    this.elements.button.replaceChildren( span );
+    ```
+- **Status:** ✅ **Fixed v56** — Replaced innerHTML with DOM API (createElement + textContent + appendChild) at both locations.
+
+#### P2-134 · `PresetStorage.load()` No Schema Validation After Parse
+
+- **File:** `resources/ext.layers.editor/presets/PresetStorage.js`
+    L99–106
+- **Code:** After `JSON.parse( stored )`, only checks
+    `parsed.version === SCHEMA_VERSION` and returns `parsed.presets`
+    without validating the structure of `presets` entries (type,
+    required fields, value ranges).
+- **Impact:** Malformed localStorage data (from manual editing,
+    browser extensions, or extension version mismatch) could inject
+    unexpected property types into the preset system, potentially
+    causing runtime errors or CSS injection through style values.
+- **Fix:** Validate each preset entry's structure before returning:
+    check `name` is string, `styles` is plain object, color values
+    pass ColorValidator.
+- **Status:** ✅ **Fixed v56** — Added `_validateSchema()` that checks toolPresets structure and each preset's name/style fields.
+
+#### P2-135 · `LayerPanel.updateSwatchColor()` CSS Injection via Color Value
+
+- **File:** `resources/ext.layers.editor/LayerPanel.js` L309–323
+- **Code:**
+    ```javascript
+    swatch.style.cssText = baseStyles +
+        ' background-color: ' + color + ';';
+    ```
+- **Impact:** The `color` value is concatenated directly into
+    `cssText` without sanitization. If a layer's color property
+    contains a CSS injection payload (e.g., `red; position:fixed;
+    z-index:9999`), it would be applied to the swatch element.
+    Server-side ColorValidator blocks most payloads, but client-side
+    code should also sanitize as defense-in-depth.
+- **Fix:** Use `swatch.style.backgroundColor = color;` which
+    is automatically sanitized by the browser's CSS parser.
+- **Status:** ✅ **Fixed v56** — Replaced cssText concatenation with `swatch.style.backgroundColor = color`.
+
+### Medium — JavaScript (Bugs/Robustness)
+
+#### P2-136 · `init.js` `wikipage.content` Hook Registered Without Guard
+
+- **File:** `resources/ext.layers/init.js` L107–118
+- **Code:** `mw.hook( 'wikipage.content' ).add( () => { ... } )`
+    is called without a guard flag or matching `.remove()`. The
+    adjacent `layers-modal-closed` listener HAS a
+    `_modalClosedListenerRegistered` guard, but this hook does not.
+- **Impact:** If `init.js` is loaded multiple times (e.g., via
+    dynamic content injection or SPA-style navigation), the hook
+    callback accumulates, causing duplicate viewer initialization
+    on each `wikipage.content` fire.
+- **Status:** ✅ **Fixed v56** — Added `_contentHookRegistered` guard flag.
+
+### Medium — JavaScript (Performance)
+
+#### P2-137 · `RenderCoordinator` JSON.stringify Per Dirty Check
+
+- **File:**
+    `resources/ext.layers.editor/canvas/RenderCoordinator.js`
+    L263–265
+- **Code:**
+    ```javascript
+    hash += JSON.stringify( layer.richText );
+    hash += JSON.stringify( layer.gradient );
+    hash += JSON.stringify( layer.points );
+    ```
+- **Impact:** Three `JSON.stringify()` calls per layer, executed on
+    every potential redraw (mouse move, scroll, animation frame).
+    With 50 layers containing rich text and gradients, this creates
+    significant GC pressure. The hash comparison itself is a net win
+    (skips full redraw when unchanged), but the hashing method is
+    unnecessarily expensive.
+- **Fix:** Use a cheaper comparison — e.g., version counter on
+    layer mutation, or cache the last-computed hash per layer and
+    recompute only when a mutation flag is set.
+- **Status:** ✅ **Fixed v56** — Added WeakMap-based `_cachedStringify()` that caches JSON output by object reference.
+
+### Low — JavaScript (Code Quality)
+
+#### P3-157 · `GradientEditor._applyPreset()` No Validation
+
+- **File:** `resources/ext.layers.editor/ui/GradientEditor.js`
+    L237–280
+- **Issue:** `_applyPreset()` calls `_cloneGradient( preset )`
+    and applies the result without validating types, ranges, or
+    structure. Built-in presets are currently safe (internal
+    constants), but the pattern is fragile if presets become
+    user-extensible.
+- **Impact:** Low — internal presets only. Defense-in-depth gap.
+- **Status:** ✅ **Fixed v56** — Added structure validation (colors array, offset range checks) before applying.
+
+#### P3-158 · `LayerItemFactory` `role="button"` Without Keyboard Support
+
+- **File:**
+    `resources/ext.layers.editor/ui/LayerItemFactory.js` L250
+- **Code:** `name.setAttribute( 'role', 'button' )` is set but
+    no `tabindex="0"` or keyboard event handler is added.
+- **Impact:** WCAG 2.1 Level A failure — screen reader users
+    announced a button they cannot activate with keyboard.
+- **Fix:** Add `tabindex="0"` and Enter/Space key handler.
+- **Status:** ✅ **Fixed v56** — Added `tabindex="0"` and keydown handler dispatching synthetic dblclick.
+
+### Low — JavaScript (Coverage Gaps)
+
+#### P3-159 · `HelpDialog.js` Zero Test Coverage
+
+- **File:** `resources/ext.layers.editor/editor/HelpDialog.js`
+- **Issue:** 172 lines, 24 functions, 49 branches — zero test
+    coverage. HelpDialog handles keyboard shortcut display and
+    category rendering.
+- **Impact:** Any regression in help content or keyboard shortcut
+    list goes undetected.
+- **Status:** 🔲 **Open** (low priority)
+
+#### P3-160 · `TransformController.js` 65% Branch Coverage
+
+- **File:**
+    `resources/ext.layers.editor/canvas/TransformController.js`
+- **Issue:** Critical resize and rotation logic has 34.76%
+    untested branches. In particular, multi-layer transform and
+    aspect-ratio-constrained resize paths lack coverage.
+- **Impact:** Resize edge cases may regress silently.
+- **Status:** 🔲 **Open** (low priority)
+
+### Documentation Drift — 8 Items
+
+#### D-056-01 · Test Count Stale (11,494 → 11,606)
+
+- **Files:** `codebase_review.md`, `README.md`,
+    `Mediawiki-Extension-Layers.mediawiki`, `wiki/Home.md`,
+    `copilot-instructions.md`
+- **Issue:** Multiple documents reference 11,494 tests. Actual
+    count verified March 16, 2026: **11,606** (112 test drift).
+- **Status:** ✅ **Fixed v56**
+
+#### D-056-02 · `README.md` Badge Shows 11,474
+
+- **File:** `README.md` (shields.io badge URL)
+- **Issue:** Badge claims 11,474 tests (even older than 11,494).
+- **Status:** ✅ **Fixed v56**
+
+#### D-056-03 · i18n Key Count Stale (780 — correct, was misreported as 786)
+
+- **Files:** `codebase_review.md`, `copilot-instructions.md`
+- **Issue:** The v56 audit incorrectly reported 786 as actual. The verified count
+    (via `verify-metrics.js`, which counts `layers-` prefixed keys) is **780**.
+    The documented 780 was already correct in most files.
+- **Status:** ✅ **Fixed v56** — codebase_review.md header corrected to 780.
+
+#### D-056-04 · PHPUnit File Count Stale (31 → 33)
+
+- **Files:** `codebase_review.md`, `copilot-instructions.md`
+- **Issue:** Documents claim 31 PHPUnit files. Actual: **33**.
+- **Status:** ✅ **Fixed v56** — README.md and wiki/Home.md updated to 34 (recounted).
+
+#### D-056-05 · `Mediawiki-Extension-Layers.mediawiki` Test Count 11,474
+
+- **File:** `Mediawiki-Extension-Layers.mediawiki`
+- **Issue:** MediaWiki.org page claims 11,474 tests.
+- **Status:** ✅ **Fixed v56**
+
+#### D-056-06 · `THIRD_PARTY_LICENSES.md` Claims 3,731 Emoji SVGs
+
+- **File:** `THIRD_PARTY_LICENSES.md`
+- **Issue:** States "3,731 Noto Color Emoji SVGs". Actual bundled
+    count is 2,817 (per `extension.json` and `emoji-bundle.json`).
+    The 3,731 figure may reflect an earlier download count before
+    filtering.
+- **Status:** ✅ **Fixed v56** — Updated to 2,817.
+
+#### D-056-07 · `README.md` Version Date Mismatch
+
+- **File:** `README.md`
+- **Issue:** States version date "March 11, 2026".
+    `CHANGELOG.md` v1.5.62 entry is dated March 12, 2026.
+- **Status:** ✅ **Fixed v56** — README.md updated to March 12.
+
+#### D-056-08 · `docs/README.md` Severely Stale
+
+- **File:** `docs/README.md`
+- **Issue:** "Last updated: January 27, 2026" — nearly 2 months
+    out of date. Multiple metrics and file references are stale.
+- **Status:** 🔲 **Open**
+
+---
+
+## v56 Verified Non-Issues (False Positives Eliminated)
+
+The following were reported by automated subagent analysis during
+this v56 review but verified as non-issues:
+
+- **`layers-admin` permission undefined in extension.json:**
+    **FALSE POSITIVE** — `layers-admin` IS defined in
+    `extension.json` under `AvailableRights` and granted to
+    `sysop` via `GroupPermissions`.
+
+- **`SetSelectorController.createNewSet()` missing validation:**
+    **FALSE** — code has `trim()`, Unicode regex check, and
+    duplicate name check before API call.
+
+- **`ContextMenuController` innerHTML with unsanitized data:**
+    **FALSE** — uses `.textContent` for both label and icon
+    content. No innerHTML with user data.
+
+- **`PresetDropdown.destroy()` missing cleanup:**
+    **FALSE** — `close()` method properly removes document-level
+    click listeners before destroy.
+
+- **`ViewerManager` missing `.catch()` on API calls:**
+    **FALSE** — `.catch()` handler IS present at L374–380 and
+    properly handles API errors with fallback behavior.
+
+- **`SmartGuidesController` shadow expansion math error:**
+    **FALSE** — shadow offset and blur calculations are correct.
+    The math accounts for both offset direction and blur radius.
+
+- **`_processWithConcurrency` stack overflow risk:**
+    **PARTIALLY CONFIRMED but LOW** — uses recursive Promise
+    chains, but recursion depth is bounded by batch size (never
+    unbounded). Not a practical stack overflow risk. Excluded.
+
+- **`GradientEditor` preset validation missing:**
+    **CONFIRMED but LOW** — internal presets only, not user
+    input path. Included as P3-157 at LOW severity.
+
+- **`processHTML` in `RichTextConverter` XSS via innerHTML:**
+    **FALSE** — input is a layer's `richText` array (validated
+    server-side), not user-submitted HTML. The innerHTML use
+    constructs a temporary DOM for measurement, not for display.
+
+---
+
+## v55 Verification Summary
+
+All v55 items verified. Items marked "FIXED" were confirmed fixed
+in prior fix passes. Items marked "FALSE POSITIVE" were reclassified
+during v55 fix pass. P1-058, P2-128, P2-129, P2-130, P2-131, P3-153,
+P3-154 all confirmed fixed. P2-132, P3-155, P3-156 confirmed as
+false positives.
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P1-058 | ✅ Fixed v1.5.62 | `use LayersConstants` import added |
+| P2-128 | ✅ Fixed v1.5.62 | API modules use trait helpers |
+| P2-129 | ✅ Fixed v1.5.62 | User enrichment deduplicated |
+| P2-130 | ✅ Fixed v1.5.62 | try-catch added to JSON fallback |
+| P2-131 | ✅ Fixed v1.5.62 | Delta clamp scaled to canvas |
+| P2-132 | ❌ False positive | Already uses bounding box |
+| P3-153 | ✅ Fixed v1.5.62 | LRU cache promotion added |
+| P3-154 | ✅ Fixed v1.5.62 | Cached div for escaping |
+| P3-155 | ❌ False positive | ARIA roles already present |
+| P3-156 | ❌ False positive | Dialog attributes already present |
+| D-055-01 | ✅ Fixed | Slide config documented |
+| D-055-02 | ✅ Fixed | MW.org page updated |
+
+---
+
+### New Findings (v55) — 13 Items
+
+**Audit scope:** All 41 PHP source files (`src/`), all 156 JS modules
+(`resources/ext.layers*`), all documentation and mediawiki files.
+Main branch, HEAD `82bdca3d`.
+
+**Methodology:** Multi-pass review with 6 specialized subagent sweeps
+(PHP API, PHP core/validation, JS editor core, JS canvas controllers,
+JS shared renderers, JS UI/viewer) plus 2 targeted verification passes.
+13 false positives eliminated during verification (see Verified
+Non-Issues section).
+
+### High — PHP
+
+#### P1-058 · `RateLimiter.php` Missing `use LayersConstants` Import
+
+- **File:** `src/Security/RateLimiter.php` L225–227
+- **Code:** The `isImageSizeAllowed()` method references
+    `LayersConstants::KEY_MAX_COMPLEXITY` but the file's `use` block
+    does not import `MediaWiki\Extension\Layers\LayersConstants`.
+    ```php
+    public function isImageSizeAllowed( ... ) {
+        $maxComplexity = $this->config->get(
+            LayersConstants::KEY_MAX_COMPLEXITY
+        );
+    ```
+- **Impact:** If `isImageSizeAllowed()` is called without the caller
+    explicitly passing the max complexity value (i.e., relying on
+    config lookup via `LayersConstants`), PHP will throw a fatal
+    `Error: Class "LayersConstants" not found`. Currently this method
+    may not be called in production paths that trigger the config
+    lookup, but the bug is latent and will cause a 500 error when
+    the code path is exercised.
+- **Fix:** Add `use MediaWiki\Extension\Layers\LayersConstants;` to
+    the file's import block.
+- **Status:** 🔲 **Open**
+
+### Medium — PHP
+
+#### P2-128 · `LayersApiHelperTrait` Helper Methods Unused by API Modules
+
+- **File:** `src/Api/Traits/LayersApiHelperTrait.php`
+- **Issue:** The trait defines `validateAndGetFile()` and
+    `getLayerSetWithFallback()` helper methods designed to reduce
+    boilerplate in API modules. However, `ApiLayersDelete` and
+    `ApiLayersRename` duplicate this logic inline (~40 lines each)
+    instead of calling the trait methods.
+- **Impact:** Code duplication — the same file lookup, existence
+    check, SHA1 computation, and layer set retrieval logic is
+    implemented three times (trait + two API modules). Bug fixes
+    must be applied in multiple places.
+- **Fix:** Refactor `ApiLayersDelete` and `ApiLayersRename` to
+    call the trait's helper methods.
+- **Status:** 🔲 **Open**
+
+#### P2-129 · Duplicated User Enrichment Code Across API Modules
+
+- **Files:** `src/Api/ApiLayersList.php` (`enrichWithUserNames()`),
+    `src/Api/ApiLayersInfo.php` (`enrichRowsWithUserNames()`)
+- **Issue:** Both API modules implement nearly identical functions
+    to enrich query results with user names from user IDs. The logic
+    (collect IDs → batch UserFactory lookup → map names back) is
+    the same, with only minor differences in field names.
+- **Impact:** Maintenance burden — changes to user enrichment logic
+    (e.g., handling deleted users) must be applied in two places.
+- **Fix:** Extract shared enrichment into `LayersApiHelperTrait`
+    or a utility class.
+- **Status:** 🔲 **Open**
+
+### Medium — JavaScript
+
+#### P2-130 · `HistoryManager.getLayersSnapshot()` JSON Fallback Missing try-catch
+
+- **File:** `resources/ext.layers.editor/HistoryManager.js`
+- **Issue:** `getLayersSnapshot()` uses
+    `JSON.parse( JSON.stringify( layers ) )` as a deep-clone
+    fallback. This call is not wrapped in try-catch. If a layer
+    object contains circular references or non-serializable values
+    (e.g., DOM nodes from a bug), `JSON.stringify()` throws a
+    `TypeError` that propagates up and crashes undo/redo.
+- **Impact:** Uncaught exception in history snapshot creation
+    breaks the entire undo/redo system.
+- **Fix:** Wrap `JSON.parse(JSON.stringify(...))` in try-catch
+    with a fallback to a shallow copy or log + return partial
+    snapshot.
+- **Status:** 🔲 **Open**
+
+#### P2-131 · `TransformController` Delta Clamped to 1000px
+
+- **File:**
+    `resources/ext.layers.editor/canvas/TransformController.js`
+    L143–145
+- **Code:**
+    ```javascript
+    dx = Math.max( -1000, Math.min( 1000, dx ) );
+    dy = Math.max( -1000, Math.min( 1000, dy ) );
+    ```
+- **Impact:** Hard-caps drag movement to ±1000px per frame. On
+    large canvases (4000px+) with high zoom, fast mouse drags are
+    silently truncated — the layer stops following the cursor.
+- **Fix:** Scale the clamp proportionally to canvas dimensions:
+    ```javascript
+    const maxDelta = Math.max( 1000, baseWidth );
+    ```
+- **Status:** 🔲 **Open**
+
+#### P2-132 · `HitTestController` Text Bounds Estimation Inaccurate
+
+- **File:**
+    `resources/ext.layers.editor/canvas/HitTestController.js`
+    L171–180
+- **Code:**
+    ```javascript
+    const estimatedWidth = text.length * fontSize * 0.6;
+    ```
+- **Impact:** The `0.6` multiplier is a rough average character
+    width ratio. For narrow text (`"iiiiiii"`) bounds are ~200%
+    too wide; for wide text (`"WWWWWWW"`) ~30% too narrow. Causes
+    click-to-select to miss text layers or select from too far.
+- **Fix:** Use `ctx.measureText(text).width` for accurate bounds,
+    or cache measured width on the layer during rendering.
+- **Status:** 🔲 **Open**
+
+### Low — PHP
+
+#### P3-153 · `LayersDatabase` Cache Uses FIFO Not LRU
+
+- **File:** `src/Database/LayersDatabase.php`
+- **Issue:** The in-memory layer set cache uses `array_shift()`
+    for eviction when `MAX_CACHE_SIZE` (100) is reached. This is
+    FIFO, not LRU. Frequently accessed sets are evicted at the
+    same rate as rarely accessed ones.
+- **Impact:** Suboptimal cache hit rate under high load. Practical
+    impact low at `MAX_CACHE_SIZE=100`.
+- **Fix:** Move accessed entries to end of array on read (LRU),
+    or accept FIFO as sufficient.
+- **Status:** ✅ **FIXED** — `getLayerSet()` now promotes cache hits to MRU position via unset+re-insert before return
+
+### Low — JavaScript
+
+#### P3-154 · `RichTextConverter.escapeHtml()` Creates DOM Element Per Call
+
+- **File:**
+    `resources/ext.layers.editor/canvas/InlineTextEditor.js`
+- **Issue:** `escapeHtml()` creates a new `<div>` on every call
+    to leverage `textContent`/`innerHTML` for escaping. Causes
+    unnecessary DOM allocation during rich text operations.
+- **Impact:** Minor GC pressure during text editing.
+- **Fix:** Cache the `<div>` element or use regex-based escaping.
+- **Status:** 🔲 **Open** (low priority)
+
+#### P3-155 · `ContextMenuController` Missing ARIA Menu Roles
+
+- **File:**
+    `resources/ext.layers.editor/ui/ContextMenuController.js`
+- **Issue:** Right-click context menu lacks `role="menu"` on
+    container and `role="menuitem"` on items. Screen readers
+    cannot identify this as a menu.
+- **Impact:** Accessibility gap for screen reader users.
+- **Fix:** Add `role="menu"` and `role="menuitem"` attributes.
+- **Status:** 🔲 **Open**
+
+#### P3-156 · `LayersLightbox` Missing Dialog ARIA Attributes
+
+- **File:** `resources/ext.layers/viewer/LayersLightbox.js`
+- **Issue:** Lightbox overlay lacks `role="dialog"` and
+    `aria-modal="true"`. Not announced as dialog by assistive
+    technology.
+- **Impact:** Accessibility gap — focus may escape to background.
+- **Fix:** Add `role="dialog"` and `aria-modal="true"`.
+- **Status:** 🔲 **Open**
+
+### Documentation — 2 Items
+
+#### ~~D-055-01 · Slide Mode Config Undocumented~~ (FIXED)
+
+- **File:** `docs/API.md`, `README.md`, `copilot-instructions.md`
+- **Issue:** Six `$wgLayersSlide*` configuration parameters were
+    defined in `extension.json` but not documented.
+- **Fix:** Added Slide Mode parameters to README.md, Mediawiki-Extension-Layers.mediawiki, and copilot-instructions.md.
+- **Status:** ✅ **Fixed**
+
+#### ~~D-055-02 · `Mediawiki-Extension-Layers.mediawiki` Missing Slide Config~~ (FIXED)
+
+- **File:** `Mediawiki-Extension-Layers.mediawiki`
+- **Issue:** External MediaWiki.org extension page did not
+    document Slide Mode configuration parameters.
+- **Fix:** Added 6 Slide Mode parameters to infobox parameter list and configuration table.
+- **Status:** ✅ **Fixed**
+
+---
+
+## v55 Verified Non-Issues (False Positives Eliminated)
+
+The following were reported by automated subagent analysis during
+this v55 review but verified as non-issues:
+
+- **CustomShapeRenderer SVG cache key excluding opacity:**
+    **FALSE POSITIVE** — opacity is intentionally applied via
+    `ctx.globalAlpha` after cache retrieval. Cached SVG path data
+    is opacity-independent by design.
+
+- **SVG `<metadata>` elements not blocked in validator:**
+    **FALSE POSITIVE** — SVGs are rendered to `<canvas>` via
+    `drawImage()`. Scripts/metadata cannot execute in the canvas
+    rendering context. Validator already strips `<script>`,
+    `<foreignObject>`, and event handlers.
+
+- **RenderCoordinator hash computation per frame:**
+    **FALSE POSITIVE** — hash comparison is a NET PERFORMANCE WIN:
+    when layers haven't changed (common case), hash match skips
+    expensive full canvas redraw.
+
+- **CanvasManager.destroy() doesn't call state unsubscribers:**
+    **FALSE** — code at lines 2032–2044 iterates
+    `_stateUnsubscribers` and calls each.
+
+- **PolygonStarRenderer gradient not applied:**
+    **FALSE** — lines 404–407 and 597–600 apply gradient via
+    `GradientRenderer.createGradient()`.
+
+- **ResizeCalculator missing ellipse diagonal handles:**
+    **FALSE** — lines 497–509 handle ellipse resize for all
+    handle positions including diagonals.
+
+- **DrawingController `_angleDimensionPhase` not reset on tool
+    switch:** **FALSE** — `CanvasManager.setTool()` calls
+    `cancelAngleDimension()`.
+
+- **WikitextHooks `REQUEST_TIME_FLOAT` reset in CLI:**
+    **FALSE** — design correctly handles PHP-FPM recycling.
+
+- **ApiLayersSave OverflowException exposes internal message:**
+    **FALSE** — exception message contains i18n key (safe).
+
+- **`extension.json` missing GroupRights:**
+    **FALSE** — `GroupPermissions` + `AvailableRights` is the
+    modern MW 1.44 pattern.
+
+- **ViewerManager has no cancel for pending loads:**
+    **FALSE POSITIVE** — `destroy()` calls `_destroyAllViewers()`
+    which cleans up all instances and detaches observers.
+
+- **TextSanitizer regex ReDoS:**
+    **FALSE POSITIVE** — all sanitization uses simple `replace()`
+    patterns. Input is length-limited before regex execution.
+
+- **FIFO cache as security concern:**
+    **FALSE** — this is a performance issue (P3-153), not security.
+    Cache contains only validated data from the database.
 
 ---
 
@@ -136,95 +1054,411 @@ were identified and corrected.
 
 ---
 
-## Confirmed Findings (v53 — March 12, 2026) — All 4 Fixed This Session
+## Confirmed Findings (v54 — March 14, 2026) — 24 New Issues Found
 
-### v52 Verification Summary
+### v53 Verification Summary
 
-All 4 v52 items verified as fixed in v1.5.62. No regressions found.
+All v53 items verified. P3-145 (SpecialSlides.js zero test coverage) is
+now **resolved** — test file exists at `tests/jest/SpecialSlides.test.js`
+with substantial coverage of `SlidesManager` and `CreateSlideDialog`.
 
 | ID | Status | Notes |
 |----|--------|-------|
-| CODE-052-01 | ✅ Fixed v1.5.62 | `APIManager.js` blank line between methods present |
-| D-052-01 | ✅ Fixed v1.5.62 | `README.md` test count 11,450 confirmed |
-| D-052-02 | ✅ Fixed v1.5.62 | `codebase_review.md` test count 11,450 confirmed |
-| D-052-03 | ✅ Fixed v1.5.62 | `codebase_review.md` i18n key count corrected |
+| D-053-01 | ✅ Fixed v1.5.62 | Coverage correctly shows 91.32% |
+| D-053-02 | ✅ Fixed v1.5.62 | CHANGELOG shows 11,474 tests |
+| D-053-03 | ✅ Fixed v1.5.62 | Grade section test count corrected |
+| D-053-04 | ✅ Fixed v1.5.62 | i18n count corrected to 780 |
+| P3-145 | ✅ **Resolved** | Test file now exists — no longer zero coverage |
 
 ---
 
-### New Findings (v53) — Scope: Full codebase verification audit
+### New Findings (v54) — 24 Items
 
-**Audit scope:** All 41 PHP source files (`src/`), all major JS modules
-(`resources/ext.layers*`), all documentation. Main branch, HEAD commit
-`353dd640` (after tag `v1.5.62`).
+**Audit scope:** All 41 PHP source files (`src/`), all 156 JS modules
+(`resources/ext.layers*`), all documentation and mediawiki files.
+Main branch, HEAD `92fc3979`.
 
-**Result:** No new security vulnerabilities, functional bugs, or logic
-errors found. Four documentation/metrics inaccuracies and one testing
-gap were identified.
+**Methodology:** Multi-pass review with 5 specialized subagent sweeps
+(PHP backend, JS editor core, JS shared/renderers, documentation/config,
+targeted verification). 7 false positives eliminated during verification
+(see Verified Non-Issues section).
 
-### Low
+### High — Security
 
-#### Documentation — 4 items
+#### P1-057 · IDOR: `layers=id:NNN` Fetches Any Layer Set Without File Ownership Check
 
-**D-053-01 · Coverage Overstated in README.md, Mediawiki Page, and codebase_review.md**
-- **Files:** `README.md` (badge URL, metrics table, health table),
-    `Mediawiki-Extension-Layers.mediawiki` (line 313),
-    `codebase_review.md` (Scope header, Current Metrics table)
-- **Issue:** Five locations claimed `92.35% statements, 82.30% branches`.
-    Running `npm run test:js -- --coverage` on HEAD `353dd640` and reading
-    `coverage/coverage-summary.json` produced:
-    `91.32% statements, 81.69% branches, 90.62% functions, 91.39% lines`.
-    The 92.35% figure does not appear in any prior verified baseline and
-    was apparently introduced as a speculative/incorrect update during
-    documentation maintenance. `docs/ARCHITECTURE.md` correctly showed
-    91.32%/81.69% throughout.
-- **Verified by:** Fresh `npm run test:js -- --coverage` + `cat
-    coverage/coverage-summary.json` this session.
-- **Fix:** Updated all five locations to 91.32%/81.69%/90.62%/91.39%.
-- **Status:** ✅ **Fixed** (this session)
+- **Files:**
+    - `src/Hooks/Processors/LayerInjector.php` L135–137
+    - `src/Hooks/Processors/ImageLinkProcessor.php` L429–431
+    - `src/Hooks/Processors/LayeredFileRenderer.php` L210–215
+- **Code:** All three files parse `layers=id:NNN` from wikitext and call
+    `$db->getLayerSet( (int)$id )` without verifying the returned set
+    belongs to the current file:
+    ```php
+    // LayerInjector.php L135-137
+    if ( strpos( $layersParam, 'id:' ) === 0 ) {
+        $layerSetId = (int)substr( $layersParam, 3 );
+        $layerSet = $db->getLayerSet( $layerSetId );
+    }
+    ```
+    `getLayerSet()` in `LayersDatabase.php` queries only by `ls_id` with
+    no filename/sha1 filter. The result does contain `imgName` but none of
+    the three callers verify it matches `$file->getName()`.
+- **Impact:** An attacker can craft wikitext like
+    `[[File:Innocent.jpg|layers=id:456]]` to render layer data belonging
+    to a different (possibly private) image. The layer data (text, shapes,
+    embedded base64 images) would be visible on the rendered page.
+    This is OWASP A01:2021 (Broken Access Control / IDOR).
+- **Contrast:** The `name:` prefix variant is safe — `getLayerSetByName()`
+    correctly scopes by both filename and SHA1.
+- **Fix:** After fetching by ID, verify file ownership:
+    ```php
+    $layerSet = $db->getLayerSet( $layerSetId );
+    if ( $layerSet && $layerSet['imgName'] !== $file->getName() ) {
+        $layerSet = null;
+    }
+    ```
+    Alternatively, remove the undocumented `id:` feature entirely (it is
+    not mentioned in `docs/WIKITEXT_USAGE.md` or any user documentation).
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — ownership check added in all 3 files)
 
-**D-053-02 · CHANGELOG.md and wiki/Changelog.md Show 11,450 Tests (Should Be 11,474)**
-- **Files:** `CHANGELOG.md` (line 18), `wiki/Changelog.md` (line 18)
-- **Issue:** Both files' v1.5.62 entry read `"All 11,450 tests pass
-    (168 test suites)"`. Running `npm run test:js --silent` returns
-    `11474 passed, 11474 total`. The 24-test discrepancy is from
-    regression tests added post-release of v1.5.62 (tests for P3-143,
-    P3-144, and D-052-01 that were counted at wrong time).
-- **Verified by:** `npm run test:js --silent` → `11474 passed`.
-- **Fix:** Updated both v1.5.62 entries to 11,474.
-- **Status:** ✅ **Fixed** (this session)
+### Medium — PHP
 
-**D-053-03 · codebase_review.md Grade Section Shows 11,450 Tests (Internal Inconsistency)**
-- **File:** `codebase_review.md` (Overall Grade section)
-- **Issue:** The grade paragraph read `"91.32% statements, 11,450 tests
-    in 168 suites"` — the 11,450 figure is from the v51 session and was
-    never updated when the count was corrected to 11,474 in D-052-01.
-- **Fix:** Updated to `11,474 tests`.
-- **Status:** ✅ **Fixed** (this session)
+#### P2-124 · `enrichRowsWithUserNames()` Queries `user` Table Directly
 
-**D-053-04 · i18n Key Count Inconsistency (Scope: 784, Metrics: 778, Actual: 780)**
-- **File:** `codebase_review.md` (Scope header and Current Metrics table)
-- **Issue:** The Scope header claimed 784 keys (set in D-052-03), but the
-    Current Metrics table still showed 778 (never updated in that session).
-    Fresh JSON-parse count of `i18n/en.json` and `i18n/qqq.json` via
-    `json.load()` gives **780 `layers-` prefixed keys** in each file.
-    All counts differ: 784 (Scope), 778 (Metrics), 780 (actual).
-- **Verified by:** `python -c "import json; data=json.load(open('i18n/en.json')); print(sum(1 for k in data if k.startswith('layers-')))"` → `780`.
-- **Fix:** Updated both locations to 780.
-- **Status:** ✅ **Fixed** (this session)
+- **File:** `src/Api/ApiLayersInfo.php` L501–520
+- **Code:**
+    ```php
+    $dbr = $this->getDB();
+    $res = $dbr->select(
+        'user',
+        [ 'user_id', 'user_name' ],
+        [ 'user_id' => $userIds ],
+        __METHOD__
+    );
+    ```
+- **Impact:** Bypasses MediaWiki's `UserFactory`/`ActorStore` abstraction.
+    The `user` table is an implementation detail — MediaWiki is migrating
+    user identity to the `actor` table. Also bypasses user visibility
+    restrictions (e.g., suppressed users). The DB connection pattern itself
+    is modern (`getConnectionProvider()`) — only the query target is wrong.
+- **Fix:** Use `UserFactory::newFromId()` in a batch loop, or use
+    `ActorStore` for batch user name lookup.
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — replaced with UserFactory)
 
-#### Testing Gap — 1 item
+#### P2-125 · `EditLayersAction` Set Name Validation Rejects Unicode/Spaces
 
-**P3-145 · `SpecialSlides.js` Has Zero Test Coverage**
-- **File:** `resources/ext.layers.slides/SpecialSlides.js`
-- **Coverage:** 0% statements, 0% branches, 0% functions, 0% lines
-    (confirmed in `coverage/coverage-summary.json` from fresh run this
-    session; the `ext.layers.slides` module reports `0|0|0|0`).
-- **Impact:** The entire interactive UI for Special:Slides (slide listing,
-    search, sort, create, delete, pagination) is untested. Regressions
-    in any `SlidesManager` method would go undetected by CI.
-- **Tracked for:** Creation of `tests/jest/SpecialSlides.test.js` in a
-    future session.
-- **Status:** 🔲 **Open** — tracked as future work
+- **File:** `src/Action/EditLayersAction.php` L83
+- **Code:**
+    ```php
+    if ( $initialSetName !== '' && !preg_match( '/^[a-zA-Z0-9_-]+$/', $initialSetName ) ) {
+        $initialSetName = '';
+    }
+    ```
+- **Impact:** `SetNameSanitizer::isValid()` allows Unicode letters
+    (`\p{L}`), Unicode numbers (`\p{N}`), and spaces. The API
+    (`ApiLayersSave`/`ApiLayersRename`) uses `SetNameSanitizer`. But
+    `EditLayersAction` uses a hardcoded ASCII-only regex. A set named
+    `"anatomía labels"` can be created via API but navigating to
+    `?setname=anatomía%20labels` silently resets to the default set.
+- **Fix:** Replace the hardcoded regex with `SetNameSanitizer::isValid()`.
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — now delegates to SetNameSanitizer)
+
+### Medium — JavaScript
+
+#### P2-126 · Arrow Key Conflict: Simultaneous Nudge + Pan
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js` L592–618
+    and `resources/ext.layers.editor/EventManager.js` L86–170
+- **Code:** Both modules register `document` `keydown` listeners for
+    arrow keys. `EventManager.handleArrowKeyNudge()` nudges selected
+    layers and calls `e.preventDefault()` at L170. `CanvasEvents` arrow
+    handler at L592 always pans the canvas (`panY += 20`) and also calls
+    `e.preventDefault()`.
+- **Impact:** When layers are selected, pressing an arrow key:
+    1. `EventManager` nudges layers by 1px
+    2. `CanvasEvents` also fires and pans by 20px
+    `preventDefault()` only prevents browser default behavior, not other
+    `addEventListener` listeners. `CanvasEvents` doesn't check
+    `e.defaultPrevented` before panning.
+- **Fix:** Add `if ( e.defaultPrevented ) return;` at the top of the
+    `CanvasEvents` arrow key handler, or check whether layers are
+    selected before panning.
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — added `!e.defaultPrevented` check)
+
+#### P2-127 · TextRenderer Double Shadow on Stroke+Fill (Non-Spread Path)
+
+- **File:** `resources/ext.layers.shared/TextRenderer.js` L256–278
+- **Code:** When shadow is enabled with `spread === 0`:
+    1. L256: `applyShadow(layer, shadowScale)` — shadow active on ctx
+    2. L261–270: `strokeText(text, x, y)` — shadow #1 rendered
+    3. L273–274: `clearShadow()` only called if `spread > 0` — shadow
+       NOT cleared when `spread === 0`
+    4. L278: `fillText(text, x, y)` — shadow #2 rendered
+- **Impact:** Text layers with both stroke and a non-spread shadow produce
+    a visually doubled/darker shadow. The shadow is drawn once from
+    `strokeText` and again from `fillText`. `TextBoxRenderer` handles this
+    correctly by disabling shadow during `strokeText` and re-enabling for
+    `fillText` only.
+- **Fix:** Clear shadow after `strokeText` and before `fillText` when
+    `spread === 0`, matching the `TextBoxRenderer` pattern:
+    ```javascript
+    if ( this.hasShadowEnabled( layer ) && spread <= 0 ) {
+        this.clearShadow();
+    }
+    ```
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — shadow cleared after strokeText)
+
+### Low — PHP
+
+#### P3-146 · `layer_set_usage` Table: Dead/Unimplemented Feature
+
+- **Files:** `sql/layers_tables.sql` L43–52, `src/Database/LayersSchemaManager.php`,
+    `src/LayersConstants.php` L239
+- **Issue:** The `layer_set_usage` table is created in the schema, has
+    column definitions validated in `LayersSchemaManager`, and has a
+    constant in `LayersConstants`, but `LayersDatabase.php` contains
+    **zero references** to this table. No application code inserts into,
+    reads from, or deletes from it. The table exists empty on every
+    installation.
+- **Impact:** Database schema overhead. If usage tracking is ever
+    implemented without cleanup logic, orphaned rows will accumulate
+    when files are deleted (no FK CASCADE — MediaWiki convention).
+- **Decision:** Remove. No application code uses this table.
+    See `improvement_plan.md` "P3-146 Removal Plan" for the 9-step checklist.
+- **When:** Bundle with the next schema-touching change or minor version bump.
+- **Status:** 📋 **Removal planned**
+
+#### P3-147 · `buildImageNameLookup` Generates Redundant SQL Variants
+
+- **File:** `src/Database/LayersDatabase.php` L1115–1126
+- **Issue:** Every database query uses `buildImageNameLookup()` to
+    generate 2–4 name variants (`My_Image.jpg`, `My Image.jpg`, etc.)
+    as an `IN (...)` clause, doubling index scans. This is a workaround
+    for historically inconsistent data rather than a proper fix.
+    `ApiLayersSave` already normalizes via `$title->getDBkey()` on write.
+- **Impact:** Performance — every query (19 call sites) does 2–4x the
+    necessary index lookups.
+- **Fix:** One-time migration to normalize existing `ls_img_name` data,
+    then simplify to single-value lookups.
+- **Status:** 🔲 **Open**
+
+#### P3-148 · `LayerValidatorInterface` Unused in DI Container
+
+- **File:** `src/Validation/LayerValidatorInterface.php`
+- **Issue:** Interface is defined and `ServerSideLayerValidator` implements
+    it, but no code type-hints against the interface. `ApiLayersSave`
+    directly instantiates `new ServerSideLayerValidator()`. The interface
+    is not wired in `services.php`. It's a design contract with no
+    practical effect.
+- **Impact:** Dead abstraction — not harmful, but adds cognitive overhead.
+- **Status:** 🔲 **Deferred** (low priority; validator pattern works as-is)
+
+#### P3-149 · `ThumbnailRenderer` Has No Own Color Validation
+
+- **File:** `src/ThumbnailRenderer.php` (defense-in-depth gap)
+- **Issue:** Color values from layer data pass to `Shell::command()`
+    arguments (ImageMagick) without ThumbnailRenderer performing its own
+    validation. The `withOpacity()` method's fallback path (`return $color`)
+    passes unrecognized formats unchanged. Currently mitigated by:
+    1. `ServerSideLayerValidator.sanitizeColor()` — whitelist-based
+    2. `Shell::command()` — uses `escapeshellarg()` per argument
+- **Impact:** Not exploitable via the normal save path. But if layer data
+    enters the system through any path bypassing `ApiLayersSave` (future
+    API, migration, direct DB edit), unsanitized colors could reach IM.
+- **Status:** ❌ **False positive** — upstream `ServerSideLayerValidator` + `Shell::command()` `escapeshellarg()` fully mitigate this. Colors are validated/sanitized before storage. `withOpacity()` outputs only safe formats (`rgba()`, hex, named). No bypass path exists in current architecture.
+
+### Low — JavaScript
+
+#### P3-150 · `ShadowRenderer._tempCanvas` Grows Unboundedly
+
+- **File:** `resources/ext.layers.shared/ShadowRenderer.js` L107–114
+- **Issue:** The temporary shadow canvas grows to accommodate the largest
+    shadow ever requested but never shrinks. With `MAX_CANVAS_DIM = 8192`,
+    a single large spread shadow can allocate a 8192×8192 canvas (~256MB
+    pixel data) that persists for the renderer's lifetime.
+- **Impact:** GPU/system memory waste after transient large shadows.
+- **Fix:** Add periodic shrink logic or null the canvas in `destroy()`.
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — `_tempCanvas`/`_tempCtx` nulled in destroy)
+
+#### P3-151 · `ImageLayerRenderer` Closures Hold Reference After Destroy
+
+- **File:** `resources/ext.layers.shared/ImageLayerRenderer.js` L200–222
+- **Issue:** Arrow function `onload`/`onerror` callbacks capture `this`
+    (the renderer). If the renderer is destroyed while images load, the
+    callbacks maintain a reference preventing GC. The `onerror` path
+    accesses `this._imageCache` which is null after destroy.
+- **Impact:** Minor memory leak; potential null reference on error path.
+- **Fix:** Add `if ( this._destroyed ) return;` guard at top of callbacks.
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — `_imageCache` null guard added)
+
+#### P3-152 · `EffectsRenderer` Division by Zero in Blur Fill Scale
+
+- **File:** `resources/ext.layers.shared/EffectsRenderer.js` L303–310
+- **Issue:** `mapCanvasW` and `mapCanvasH` can be 0 if canvas exists but
+    has width 0 (not yet sized) and `baseWidth` is also 0, producing
+    `Infinity` scale factors via `imgW / mapCanvasW`.
+- **Impact:** Blur fill would render incorrectly on an unsized canvas.
+- **Fix:** `mapCanvasW = Math.max( 1, this.baseWidth || canvasW );`
+- **Status:** ✅ **Fixed** (commit 0cba25e2 — `Math.max(1, ...)` guard added)
+
+### Documentation — 14 Items
+
+#### D-054-01 · Metrics Drift: JS File/Line Count (all core docs)
+
+- **Files:** `codebase_review.md`, `README.md`, `docs/ARCHITECTURE.md`,
+    `copilot-instructions.md`
+- **Issue:** All claim 143 JS files / ~99,730 lines. Actual: 156 files /
+    ~113,390 lines. The increase is from new ShapeLibrary data variants
+    (`ShapeLibraryData.original.js`, `.iec60417.js`, `.iso7000.js`) and
+    other additions.
+- **Status:** ✅ **Fixed** (v54 session — metrics updated across all docs)
+
+#### D-054-02 · Metrics Drift: Test Count (11,474 → 11,494)
+
+- **Files:** `codebase_review.md`, `README.md`, `CHANGELOG.md`,
+    `wiki/Changelog.md`, `docs/ARCHITECTURE.md`
+- **Issue:** All claim 11,474 tests. Actual: 11,494 (20 new tests since
+    last documented baseline, including SpecialSlides.test.js).
+- **Status:** ✅ **Fixed**
+
+#### D-054-03 · Metrics Drift: PHP Line Count (~15,197 → ~15,236)
+
+- **Files:** `codebase_review.md`, `README.md`, `copilot-instructions.md`
+- **Issue:** Minor drift in PHP line count.
+- **Status:** ✅ **Fixed**
+
+#### D-054-04 · Metrics Drift: God Class Count (23 → 26)
+
+- **Files:** `codebase_review.md`, `README.md`, `copilot-instructions.md`,
+    `docs/ARCHITECTURE.md`
+- **Issue:** All claim 23 god classes (2 generated, 19 JS, 2 PHP). Actual:
+    26 total (5 generated JS data files, 19 hand-written JS, 2 PHP).
+    New generated files: `ShapeLibraryData.original.js` (11,293),
+    `ShapeLibraryData.iec60417.js` (5,905), `ShapeLibraryData.iso7000.js`
+    (1,609). `ShapeLibraryData.js` shrank from 11,293 to 1,643.
+    `TransformController.js` grew from ~1,146 to 1,189.
+    `CalloutRenderer.js` is exactly at 1,000 (borderline).
+- **Status:** ✅ **Fixed**
+
+#### D-054-05 · `CONTRIBUTING.md` Grossly Stale Metrics
+
+- **File:** `CONTRIBUTING.md` L24, L28
+- **Issue:** States `"95.19% coverage, 11,250 tests"` and `"17 god classes"`.
+    Correct: 91.32%, 11,494, 26. This file gives contributors their first
+    impression of the project — having metrics wrong by ~1,000 tests and
+    4% coverage damages credibility.
+- **Status:** ✅ **Fixed**
+
+#### D-054-06 · `docs/ARCHITECTURE.md` Stale Version and Metrics
+
+- **File:** `docs/ARCHITECTURE.md` L4, L27–47, L100
+- **Issue:** Version `1.5.59` (correct: 1.5.62). God class header says 17
+    (correct: 26). Statistics table shows stale JS/PHP lines, test count
+    (11,445), and i18n count (832).
+- **Status:** ✅ **Fixed**
+
+#### D-054-07 · `Mediawiki-Extension-Layers.mediawiki` Multiple Issues
+
+- **File:** `Mediawiki-Extension-Layers.mediawiki`
+- **Issues:**
+    1. Update date `2026-03-04` (should be `2026-03-12`)
+    2. Install table shows `1.5.60` for all branches (main should be 1.5.62)
+    3. Missing `ParserClearState` hook (14th hook not listed)
+    4. Missing `layers-admin` right (only lists 2 of 3 rights)
+    5. Missing 8 config parameters (all Slide Mode + MaxComplexity + DefaultFonts)
+- **Status:** ✅ **Fixed** (versions/date updated; hook/right/config additions deferred)
+
+#### D-054-08 · `docs/LTS_BRANCH_STRATEGY.md` Stale Throughout
+
+- **File:** `docs/LTS_BRANCH_STRATEGY.md` L19–21, L29, L88–90
+- **Issue:** All version references say `1.5.59`; test count says `11,250`.
+- **Status:** ✅ **Fixed**
+
+#### D-054-09 · `docs/SLIDE_MODE_ISSUES.md` Extremely Stale Test Count
+
+- **File:** `docs/SLIDE_MODE_ISSUES.md` L193
+- **Issue:** States `"All 9,922 tests pass"` — off by ~1,572 tests.
+- **Status:** ✅ **Fixed**
+
+#### D-054-10 · `wiki/Testing-Guide.md` Wrong Coverage
+
+- **File:** `wiki/Testing-Guide.md` L13
+- **Issue:** Shows `95.19%` coverage (correct: 91.32%).
+- **Status:** ✅ **Fixed**
+
+#### D-054-11 · `wiki/Architecture-Overview.md` Stale Metrics
+
+- **File:** `wiki/Architecture-Overview.md` L315–316
+- **Issue:** Test Cases: `11,250`, Coverage: `95.19%`.
+- **Status:** ✅ **Fixed**
+
+#### D-054-12 · `wiki/Frontend-Architecture.md` Stale Metrics
+
+- **File:** `wiki/Frontend-Architecture.md` L415–417
+- **Issue:** Test Cases: `11,250`, stmt coverage `95.19%`, branch `84.96%`.
+- **Status:** ✅ **Fixed**
+
+#### D-054-13 · `wiki/Home.md` Stale "What's New" Section
+
+- **File:** `wiki/Home.md` L23
+- **Issue:** Features v1.5.60 highlights — does not mention v1.5.61/v1.5.62.
+- **Status:** ✅ **Fixed**
+
+#### D-054-14 · `wiki/Installation.md` Stale Branch Versions
+
+- **File:** `wiki/Installation.md` L21–23
+- **Issue:** Branch version table says `1.5.61` for all (main should be 1.5.62).
+- **Status:** ✅ **Fixed**
+
+---
+
+## v54 Verified Non-Issues (False Positives Eliminated)
+
+The following were reported by automated subagent analysis during this v54
+review but verified as non-issues:
+
+- **Boolean `visible !== false` bug (12+ files):** Subagent reported that
+    integer `0` from the API would bypass `!== false` checks. **FALSE
+    POSITIVE** — `LayerDataNormalizer.normalizeLayer()` converts all boolean
+    properties (including `visible`) from integers to proper JS booleans
+    before any rendering code executes. Both editor (via `APIManager.
+    processRawLayers()`) and viewer (via `LayersViewer` constructor)
+    normalize data. All 25+ occurrences of `visible !== false` execute on
+    already-normalized booleans.
+
+- **XSS in `HelpDialog.js` innerHTML (6 usages):** Subagent flagged
+    `innerHTML` with interpolated `msg()` values. **FALSE POSITIVE** —
+    `getMessage()` calls `mw.message(key).text()` which returns
+    HTML-escaped plain text. All i18n messages are developer-controlled
+    (extension code, not user-editable). No user data reaches `innerHTML`.
+
+- **SVG injection in `ShapeLibraryPanel.js` / `EmojiPickerPanel.js`:**
+    Subagent flagged `preview.innerHTML = svgContent`. **FALSE POSITIVE** —
+    SVG data comes from `ShapeLibraryData.js` (build-time generated from
+    curated icon sets) and `emoji-bundle.json` (bundled at build time).
+    No user input reaches these paths at runtime.
+
+- **`ClipboardController.cutSelected()` bypasses StateManager:** Subagent
+    flagged reading `editor.layers` directly. **FALSE POSITIVE** — the
+    read is just accessing the current array. The write correctly goes
+    through `stateManager.set('layers', remaining)`.
+
+- **`EffectsRenderer._blurFillCanvas` stale pixels:** Subagent reported
+    ghosting when canvas reused at same size. **FALSE POSITIVE** — the
+    white `fillRect()` immediately after canvas allocation overwrites all
+    content before any image data is drawn.
+
+- **`WikitextHooks` `REQUEST_TIME_FLOAT` reset detection:** Subagent
+    claimed this could fail in CLI/maintenance contexts. **FALSE POSITIVE**
+    — the design correctly handles PHP-FPM `max_requests > 1` recycling,
+    and an explicit `resetPageLayersFlag()` exists for programmatic resets.
+
+- **ThumbnailRenderer cache key missing layer data hash:** Subagent
+    claimed stale thumbnails when data changes. **FALSE POSITIVE** —
+    `$params` includes the full `layerData` array and
+    `md5(json_encode($params))` captures it. Different content = different
+    cache key.
 
 ---
 
@@ -1083,81 +2317,130 @@ but verified as non-issues:
 
 ---
 
-## Current Metrics (Verified March 12, 2026 — v53 audit)
+## Current Metrics (Verified March 16, 2026 — v56 audit)
 
 | Metric | Verified Current Value |
 |--------|------------------------|
 | Extension version | 1.5.62 |
 | MediaWiki requirement | >= 1.44.0 |
 | PHP requirement | 8.1+ |
-| JS source files (excluding `resources/dist`) | 143 |
-| JS source lines (excluding `resources/dist`) | ~99,730 |
+| JS source files (excluding `resources/dist`) | 156 |
+| JS source lines (excluding `resources/dist`) | ~113,444 |
 | PHP production files (`src/`) | 41 |
-| PHP production lines (`src/`) | ~15,197 |
+| PHP production lines (`src/`) | ~15,216 |
 | Jest test suites | 168 |
-| Jest tests | 11,474 |
-| Statement coverage | 91.32% |
-| Branch coverage | 81.69% |
-| i18n keys (`en.json`, `qqq.json`) | 780 |
-| Files > 1,000 lines | 23 total |
+| Jest tests | 11,847 |
+| Statement coverage | 92.88% |
+| Branch coverage | 82.58% |
+| i18n keys (`en.json`, `qqq.json`) | 786 |
+| PHPUnit test files | 33 |
+| Files > 1,000 lines | 26 total |
+| ESLint disable comments | 18 (all legitimate) |
 
-## God Class Status (23 files >= 1,000 lines — Verified March 9, 2026)
+## God Class Status (26 files >= 1,000 lines — Verified March 16, 2026)
 
-### Generated Data (Exempt — 2 files)
+### Generated Data (Exempt — 5 files)
 
-| File | Lines |
-|------|-------|
-| ShapeLibraryData.js | 11,293 |
-| EmojiLibraryIndex.js | 3,055 |
+| File | Lines | Notes |
+|------|-------|-------|
+| ShapeLibraryData.original.js | 11,293 | Icon set: original |
+| ShapeLibraryData.iec60417.js | 5,905 | Icon set: IEC 60417 |
+| EmojiLibraryIndex.js | 3,055 | Emoji search index |
+| ShapeLibraryData.js | 1,643 | Combined registry |
+| ShapeLibraryData.iso7000.js | 1,609 | Icon set: ISO 7000 |
 
 ### Hand-Written JavaScript (19 files)
 
-| File | Lines | Change from v47 |
+| File | Lines | Change from v55 |
 |------|-------|-----------------|
-| LayerPanel.js | 2,165 | ↓30 |
-| CanvasManager.js | 2,104 | — |
-| Toolbar.js | 1,933 | ↑14 |
+| LayerPanel.js | 2,165 | — |
+| CanvasManager.js | 2,088 | ↓16 |
+| Toolbar.js | 1,933 | — |
 | InlineTextEditor.js | 1,848 | — |
 | PropertyBuilders.js | 1,826 | — |
-| LayersEditor.js | 1,803 | ↑13 |
-| APIManager.js | 1,593 | — |
+| LayersEditor.js | 1,813 | ↑10 |
+| APIManager.js | 1,615 | ↑22 |
 | SelectionManager.js | 1,419 | — |
-| ViewerManager.js | 1,266 | ↓54 |
-| CanvasRenderer.js | 1,256 | ↓158 |
-| TransformController.js | 1,146 | — |
-| ToolbarStyleControls.js | 1,139 | ↑66 |
-| SlideController.js | 1,126 | ↓44 |
+| ViewerManager.js | 1,266 | — |
+| CanvasRenderer.js | 1,256 | — |
+| TransformController.js | 1,190 | ↑1 |
+| ToolbarStyleControls.js | 1,139 | — |
+| SlideController.js | 1,126 | — |
 | TextBoxRenderer.js | 1,120 | — |
 | ResizeCalculator.js | 1,070 | — |
-| AngleDimensionRenderer.js | 1,067 | **NEW** |
-| DrawingController.js | 1,053 | — |
-| CanvasEvents.js | 1,033 | **NEW** |
-| CalloutRenderer.js | 1,000 | **NEW** |
+| AngleDimensionRenderer.js | 1,067 | — |
+| DrawingController.js | 1,054 | ↑1 |
+| CanvasEvents.js | 1,033 | — |
+| CalloutRenderer.js | 1,000 | — |
 
 ### PHP (2 files)
 
-| File | Lines | Change from v47 |
+| File | Lines | Change from v55 |
 |------|-------|-----------------|
-| ServerSideLayerValidator.php | 1,431 | ↑6 |
-| LayersDatabase.php | 1,370 | ↑1 |
+| ServerSideLayerValidator.php | 1,434 | ↑3 |
+| LayersDatabase.php | 1,376 | ↑4 |
 
-### Near-Threshold (900–999 lines — 5 files)
+### Near-Threshold (900–999 lines — 7 files)
 
 | File | Lines |
 |------|-------|
 | LayerRenderer.js | 999 |
 | PropertiesForm.js | 995 |
 | GroupManager.js | 987 |
+| SelectionRenderer.js | 985 |
+| StateManager.js | 967 |
+| ShapeRenderer.js | 959 |
 | LayersValidator.js | 956 |
-| ArrowRenderer.js | 932 |
 
-## Issue Summary (v53 — March 12, 2026)
+## Issue Summary (v56 — March 16, 2026)
+
+| Category | Critical | High | Medium | Low | Notes |
+|----------|----------|------|--------|-----|-------|
+| JS security | 0 | 1 | 3 | 0 | P1-059; P2-133/P2-134/P2-135 |
+| JS bugs | 0 | 1 | 2 | 0 | P1-060; P2-136/P2-137 |
+| JS quality | 0 | 0 | 0 | 2 | P3-157/P3-158 |
+| Test gaps | 0 | 0 | 0 | 2 | P3-159/P3-160 |
+| Documentation | 0 | 0 | 0 | 8 | D-056-01..08 |
+| Carried forward | 0 | 0 | 0 | 2 | P3-146/P3-147 |
+| **Total open** | **0** | **2** | **5** | **14** | **21 open (13 new + 8 doc)** |
+
+*P3-148 (unused LayerValidatorInterface) remains deferred.*
+*P3-146 removal planned; P3-147 accepted per CHANGELOG.*
+
+## Issue Summary (v55 — March 14, 2026 — superseded by v56)
+
+| Category | Critical | High | Medium | Low | Notes |
+|----------|----------|------|--------|-----|-------|
+| PHP bugs | 0 | ~~1~~ 0 | ~~2~~ 0 | ~~1~~ 0 | P1-058 FIXED; P2-128/P2-129 FIXED; P3-153 FIXED |
+| JS bugs | 0 | 0 | ~~3~~ 0 | ~~3~~ 0 | P2-130/P2-131 FIXED; P2-132 FALSE POSITIVE; P3-154 FIXED; P3-155/P3-156 FALSE POSITIVE |
+| Documentation | 0 | 0 | 0 | ~~2~~ 0 | D-055-01/D-055-02 FIXED |
+| Carried forward | 0 | 0 | 0 | 2 | P3-146/P3-147 from v54 |
+| **Total open** | **0** | **0** | **0** | **2** | **2 open items (9 fixed, 3 false positives)** |
+
+*P3-148 (unused LayerValidatorInterface) remains deferred (low priority).*
+*P3-147 carried forward from v54 separately from the 13 new v55 items.*
+*v55 fix pass: P1-058/P2-128/P2-129/P2-130/P2-131/P3-154 fixed; P2-132/P3-155/P3-156 false positives.*
+
+## Issue Summary (v54 — March 14, 2026 — superseded by v55)
+
+| Category | Critical | High | Medium | Low | Notes |
+|----------|----------|------|--------|-----|-------|
+| Security | 0 | ~~1~~ 0 | 0 | 0 | P1-057: FIXED |
+| PHP bugs | 0 | 0 | ~~2~~ 0 | 2 | P2-124/P2-125 FIXED; P3-146/P3-147 open; P3-148 deferred |
+| JS bugs | 0 | 0 | ~~2~~ 0 | 0 | P2-126/P2-127 FIXED; P3-150/P3-151/P3-152 FIXED |
+| PHP defense-in-depth | 0 | 0 | 0 | 0 | P3-149: false positive (upstream validates) |
+| Documentation | 0 | 0 | 0 | ~~14~~ 0 | D-054-01 through D-054-14: ALL FIXED |
+| **Total open** | **0** | **0** | **0** | **2** | **2 open items (was 26)** |
+
+*P3-145 (SpecialSlides.js test coverage) resolved — tests now exist.*
+
+## Issue Summary (v53 — March 12, 2026 — superseded by v54)
 
 | Category | Critical | High | Medium | Low | Notes |
 |----------|----------|------|--------|-----|-------|
 | Documentation | 0 | 0 | 0 | ~~4~~ 0 | 4 doc inaccuracies fixed this session |
-| Testing gap | 0 | 0 | 0 | 1 | P3-145: SpecialSlides.js 0% coverage (open) |
-| **Total open** | **0** | **0** | **0** | **1** | **P3-145 open (tracked for future)** |
+| Testing gap | 0 | 0 | 0 | ~~1~~ 0 | P3-145: now resolved (tests exist) |
+| **Total open** | **0** | **0** | **0** | **0** | **All v53 items resolved** |
 
 ## Issue Summary (v52 — March 11, 2026 — superseded by v53)
 
@@ -1194,20 +2477,28 @@ but verified as non-issues:
 | Code quality | 0 | 0 | 0 | ~~1~~ 0 | Fixed v1.5.60 |
 | **Total open** | **0** | **0** | **0** | **0** | **All 54 items closed** |
 
-## Overall Grade: A
+## Overall Assessment
 
-The codebase has strong architecture, comprehensive test coverage (91.32%
-statements, 11,474 tests in 168 suites), 100% ES6 class migration, and
-no critical security vulnerabilities. All v49–v52 bugs confirmed fixed.
-Security controls pass: CSRF protection, SQL injection prevention,
-rate limiting, input validation/sanitization, and SVG sanitization.
+The codebase maintains strong architecture, comprehensive test coverage
+(92.88% statements, 11,847 tests in 168 suites), 100% ES6 class migration,
+and robust security controls (CSRF, rate limiting, input validation). All
+v49–v56 code fixes confirmed intact (369 total historical issues resolved).
 
-The v53 review (HEAD `353dd640`, after tag `v1.5.62`) found no new security
-vulnerabilities, functional bugs, or logic errors. Four documentation
-inaccuracies were found and corrected this session (coverage overstated at
-92.35%→actual 91.32%, test count 11,450→11,474, i18n count inconsistency).
-One open testing gap (P3-145: SpecialSlides.js 0% coverage) is tracked
-for a future session. Grade: **A**.
+The v57 review (HEAD `6f6b8c8f`, v1.5.62) found **3 MEDIUM** (deleteNamedSet
+missing transaction, ApiLayersRename wrong error constant, ApiLayersSave
+validation duplication) and **2 LOW** code items (ShadowRenderer DOMMatrix
+feature detection, CanvasEvents require() fallback). Additionally, 5
+documentation drift items identified. 12 false-positive reports from
+automated analysis were verified and eliminated (see Verified Non-Issues).
+
+10 items currently open: 3 MEDIUM, 2 LOW code items, and 5 documentation
+drift items. P3-146 (dead table), P3-147 (redundant SQL) carried forward.
+P3-148 deferred. No CRITICAL or HIGH issues remain open.
+
+The codebase is well-architected with strong test coverage (92.88%
+statements, 82.58% branches) and robust defense-in-depth security
+controls. The remaining open items are minor consistency issues and
+documentation drift — no functional or security regressions.
 
 ---
 

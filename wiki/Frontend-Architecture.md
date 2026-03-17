@@ -408,13 +408,13 @@ global.mw = {
 
 | Metric | Value |
 |--------|-------|
-| Total JS Files | 140 |
-| Total Lines | ~97,072 |
+| Total JS Files | 156 |
+| Total Lines | ~113,407 |
 | ES6 Classes | 140 |
-| Test Files | 162 suites |
-| Test Cases | 11,148 |
-| Statement Coverage | 95.19% |
-| Branch Coverage | 84.96% |
+| Test Files | 168 suites |
+| Test Cases | 11,847 |
+| Statement Coverage | 92.88% |
+| Branch Coverage | 82.58% |
 
 ### God Classes (>1,000 lines)
 

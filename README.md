@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-91.32%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C474%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-92.88%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-11%2C847%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.62 (March 11, 2026)  
+> **Version:** 1.5.62 (March 17, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -295,6 +295,14 @@ $wgLayersThumbnailCache = true;        // Cache composite thumbnails
 $wgLayersImageMagickTimeout = 30;      // ImageMagick timeout (seconds)
 $wgLayersMaxImageDimensions = 8192;    // Max width/height for processing
 
+// Slide Mode
+$wgLayersSlidesEnable = true;            // Enable Slide Mode
+$wgLayersSlideDefaultWidth = 800;       // Default slide width (px)
+$wgLayersSlideDefaultHeight = 600;      // Default slide height (px)
+$wgLayersSlideMaxWidth = 4096;          // Maximum slide width (px)
+$wgLayersSlideMaxHeight = 4096;         // Maximum slide height (px)
+$wgLayersSlideDefaultBackground = '#ffffff'; // Default slide background
+
 // Permissions
 $wgGroupPermissions['user']['editlayers'] = true;
 $wgGroupPermissions['sysop']['managelayerlibrary'] = true;
@@ -310,22 +318,22 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,197 lines across 41 files**
-- **Frontend:** HTML5 Canvas editor with **143 JS files (~99,730 lines)**, 140 ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,216 lines across 41 files**
+- **Frontend:** HTML5 Canvas editor with **158 JS files (~113,550 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **23 god classes** (files >1,000 lines), all use proper delegation patterns
-  - ShapeLibraryData.js and EmojiLibraryIndex.js are generated data (exempt from refactoring)
+- **Technical Debt:** **26 god classes** (files >=1,000 lines), all use proper delegation patterns
+  - 5 generated data files (ShapeLibraryData variants + EmojiLibraryIndex) are exempt from refactoring
   - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
 
-**Test Coverage (Verified March 12, 2026):**
+**Test Coverage (Verified March 17, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,474 passing (168 suites) |
-| PHPUnit tests | 31 test files |
-| Statement coverage | 91.32% |
-| Branch coverage | 81.69% |
+| Jest tests | 11,847 passing (168 suites) |
+| PHPUnit tests | 34 test files |
+| Statement coverage | 92.88% |
+| Branch coverage | 82.58% |
 | Function coverage | 90.62% |
 | Line coverage | 91.39% |
 
@@ -350,7 +358,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Large images** - performance may degrade with images >4096px
 
 **Resolved Issues:**
-- ✅ **God class monitoring** - 17 files >1,000 lines with proper delegation patterns (Feb 17, 2026)
+- ✅ **God class monitoring** - 26 god classes (5 generated, 19 JS, 2 PHP) with proper delegation patterns
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
 - ✅ **Background image load failure** - user now notified via mw.notify()
 - ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up
@@ -378,14 +386,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 143 | ✅ |
-| Total JS lines | ~99,730 | ✅ Hand-written (+ ~14,354 generated) |
+| Total JS files | 158 | ✅ |
+| Total JS lines | ~113,550 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
-| God classes (>1000 lines) | 23 | ✅ Well-delegated facades |
-| Tests passing | 11,474 | ✅ |
+| God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
+| Tests passing | 11,847 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 91.32% | ✅ Excellent |
-| Branch coverage | 81.69% | ✅ Target met |
+| Statement coverage | 92.88% | ✅ Excellent |
+| Branch coverage | 82.58% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

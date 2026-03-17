@@ -113,10 +113,10 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 23 files exceed 1,000 lines:
-    - **Generated data files (2, exempt):** ShapeLibraryData.js (~11,293 lines), EmojiLibraryIndex.js (~3,055 lines)
-    - **Hand-written JS files (19):** LayerPanel (~2,165), CanvasManager (~2,111), Toolbar (~1,933), InlineTextEditor (~1,848), PropertyBuilders (~1,826), LayersEditor (~1,803), APIManager (~1,593), SelectionManager (~1,419), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,149), ToolbarStyleControls (~1,139), SlideController (~1,126), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,053), CanvasEvents (~1,033), CalloutRenderer (~1,000)
-    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,431 lines), LayersDatabase.php (~1,372 lines)
+  - **God classes:** 26 files >= 1,000 lines:
+    - **Generated data files (5, exempt):** ShapeLibraryData.original.js (~11,293 lines), ShapeLibraryData.iec60417.js (~5,905 lines), EmojiLibraryIndex.js (~3,055 lines), ShapeLibraryData.js (~1,643 lines), ShapeLibraryData.iso7000.js (~1,609 lines)
+    - **Hand-written JS files (19):** LayerPanel (~2,165), CanvasManager (~2,088), Toolbar (~1,933), InlineTextEditor (~1,848), PropertyBuilders (~1,826), LayersEditor (~1,813), APIManager (~1,597), SelectionManager (~1,420), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,189), ToolbarStyleControls (~1,139), SlideController (~1,126), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,054), CanvasEvents (~1,033), CalloutRenderer (~1,000)
+    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,434 lines), LayersDatabase.php (~1,372 lines)
     - **Near-threshold files (6):** PropertiesForm (~991), GroupManager (~987), LayerRenderer (~973), ShapeRenderer (~959), LayersValidator (~956), ArrowRenderer (~932)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
@@ -291,6 +291,12 @@ Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersThumbnailCache (LayersThumbnailCache): cache composite thumbs
 - $wgLayersImageMagickTimeout (LayersImageMagickTimeout): seconds for IM ops
 - $wgLayersMaxImageDimensions (LayersMaxImageDimensions): max width/height for processing
+- $wgLayersSlidesEnable (LayersSlidesEnable): enable Slide Mode (default true)
+- $wgLayersSlideDefaultWidth (LayersSlideDefaultWidth): default slide canvas width in px (default 800)
+- $wgLayersSlideDefaultHeight (LayersSlideDefaultHeight): default slide canvas height in px (default 600)
+- $wgLayersSlideMaxWidth (LayersSlideMaxWidth): max slide canvas width in px (default 4096)
+- $wgLayersSlideMaxHeight (LayersSlideMaxHeight): max slide canvas height in px (default 4096)
+- $wgLayersSlideDefaultBackground (LayersSlideDefaultBackground): default slide background color (default '#ffffff')
 
 ### Image Layer Size Recommendations
 
@@ -436,11 +442,11 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,474 tests in 168 suites — verified March 12, 2026)
-- Coverage (91.32% statement, 81.69% branch — verified March 12, 2026)
-- JavaScript file count (143 files total, ~99,730 lines)
-- PHP file count (41 files, ~15,197 lines)
-- God class count (23 files >1,000 lines; 2 generated data files, 19 JS, 2 PHP)
+- Test count (11,847 tests in 168 suites — verified March 17, 2026)
+- Coverage (92.88% statement, 82.58% branch — verified March 17, 2026)
+- JavaScript file count (158 files total, ~113,550 lines)
+- PHP file count (41 files, ~15,216 lines)
+- God class count (26 files >=1,000 lines; 5 generated data files, 19 JS, 2 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
 - Shape library count (1,385 shapes in 12 categories)

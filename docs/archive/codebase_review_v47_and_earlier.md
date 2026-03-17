@@ -1226,37 +1226,37 @@ Open items as of v45.6 (post-batch 6):
 2. Update documentation metrics (god class count, line counts, test counts)
 3. Extract `isFalsyBackground(value)` to LayerDataNormalizer (DRY)
 
-**Overall Grade: A** — Excellent core with strong testing (11,421 tests, 92.19% coverage), modern architecture, and thorough security controls. All critical and high-severity security issues resolved. All P2 items resolved. The remaining open items are predominantly code quality (P3) improvements and documentation accuracy.
+**Overall Assessment** — Strong core with thorough testing (11,421 tests, 92.19% coverage), modern architecture, and robust security controls. All critical and high-severity security issues resolved. All P2 items resolved. The remaining open items are predominantly code quality (P3) improvements and documentation accuracy.
 
 ---
 
 ## Change History
 
-| Version | Date | Grade | Changes |
-|---------|------|-------|------|
-| v52 | 2026-03-11 | A | Full-codebase verification audit of v51 fixes (both confirmed). 4 new items: 1 code style (APIManager blank line), 3 docs (test count 11,445→11,450, i18n count 832→784 ×2). All 4 fixed same session. |
-| v51 | 2026-03-10 | A | Verification audit of v50 fixes; all 7 confirmed. 2 new items: P3-143 (angle dim paste offset), P3-144 (DrawingController phase init). Both fixed in v1.5.62. |
-| v50 | 2026-03-10 | A | Verification audit of v49 fixes; 53/54 v49 fixed, 1 partial (P1-053 path type → P2-122). 7 new items: 1H (P1-056 SpecialSlides wrong right), 2M (P2-122 path smart guides, P2-123 deprecated DB API), 4L (D-050-01–04 docs). |
-| v49 | 2026-03-10 | B+ | Full re-audit; 54 new items (11H, 18M, 15L, 10 docs); all opened; privilege escalation via wrong permission right; documentation drift; smart guides broken for 4 types. |
-| v48 | 2026-03-09 | B+ | Full re-audit; 1 new HIGH (CanvasManager division by zero), 2 new MEDIUM (angle dimension phase, arrow RAF guards); god class recount 21→23; 16 false positives eliminated; metrics verified. |
-| v47 | 2026-03-10 | B+ | Fresh audit; 2H (nudge history, draft image loss), 3M (viewer blend, delete race, prune scope), 1 fixed same-session (font sanitizer). |
-| v45.6 | 2026-03-04 | A | Batch 6: Last 3 P2s fixed (P2-081 callout blur, P2-083 i18n shortcuts, P2-075 shadow rotation). All P2 items now resolved; 34 P3 remain. |
-| v45.2 | 2026-03-04 | A | Batch 2 fixes: 6 more (SVG URI, blur texture, sort mutation, hit test singleton, API reuse, dead code removal); 11 total fixed from v45 |
-| v45.1 | 2026-03-04 | A | Post-fix update; 5 fixed (clickjacking, manual HTML, stale name, cache, ellipse); 2 FPs (innerHTML, state mutation); grade A-→A |
-| v45 | 2026-03-04 | A- | Fresh audit; 1C, 4H, 8M, 14+L new; god class count corrected 17→20; 3 files crossed threshold; PropertyBuilders +333 lines undercounted |
-| v44 | 2026-03-04 | A | 5 bugs fixed (P2-076/077/078/084 + RichText font cap); docs synced to v1.5.59 |
-| v43 | 2026-02-17 | A- | Verification audit; 4 v42 FPs corrected; 1M+2L new; nudge, docs |
-| v42 | 2026-02-15 | A- | Fresh audit; 4H, 10M, 17L new; CacheInvalidationTrait.php false positive. |
-| v41 | 2026-02-15 | A- | Fresh audit; 3H, 7M, 13L; 10 items fixed. |
-| v40 | 2026-02-14 | A- | Verification addendum; 5 items fixed. |
-| v39 | 2026-02-14 | A- | Fresh audit; 1H security, 4H bugs, 5M, 4L; all fixed. |
-| v38 | 2026-02-14 | A | Fresh audit; 2M, 4L new; 2 FPs. |
-| v37 | 2026-02-13 | A | Fresh audit; 1M, 2L new; 3 FPs. |
-| v36 | 2026-02-13 | A | Fresh audit + fixes; 6H fixed; 13M; 20L. |
-| v35 | 2026-02-11 | A | Fresh audit; 4H, 5M, 9L; all 18 fixed. |
-| v33 | 2026-02-09 | B | Fresh audit; 4H, 8M, 7L new. |
-| v29 | 2026-02-08 | B | Full audit; 4H, 10M, 8L new. |
-| v28 | 2026-02-08 | B | Full audit; 1C, 10H, 9M, 6L. |
-| v27 | 2026-02-07 | B | 3C (fixed), 15H, 20M, 17L. |
-| v25 | 2026-02-07 | B+ | 2C (fixed), 8H, 9M, 11L. |
-| v22 | 2026-02-05 | B+ | Initial comprehensive review. |
+| Version | Date | Changes |
+|---------|------|------|
+| v52 | 2026-03-11 | Full-codebase verification audit of v51 fixes (both confirmed). 4 new items: 1 code style (APIManager blank line), 3 docs (test count 11,445→11,450, i18n count 832→784 ×2). All 4 fixed same session. |
+| v51 | 2026-03-10 | Verification audit of v50 fixes; all 7 confirmed. 2 new items: P3-143 (angle dim paste offset), P3-144 (DrawingController phase init). Both fixed in v1.5.62. |
+| v50 | 2026-03-10 | Verification audit of v49 fixes; 53/54 v49 fixed, 1 partial (P1-053 path type → P2-122). 7 new items: 1H (P1-056 SpecialSlides wrong right), 2M (P2-122 path smart guides, P2-123 deprecated DB API), 4L (D-050-01–04 docs). |
+| v49 | 2026-03-10 | Full re-audit; 54 new items (11H, 18M, 15L, 10 docs); all opened; privilege escalation via wrong permission right; documentation drift; smart guides broken for 4 types. |
+| v48 | 2026-03-09 | Full re-audit; 1 new HIGH (CanvasManager division by zero), 2 new MEDIUM (angle dimension phase, arrow RAF guards); god class recount 21→23; 16 false positives eliminated; metrics verified. |
+| v47 | 2026-03-10 | Fresh audit; 2H (nudge history, draft image loss), 3M (viewer blend, delete race, prune scope), 1 fixed same-session (font sanitizer). |
+| v45.6 | 2026-03-04 | Batch 6: Last 3 P2s fixed (P2-081 callout blur, P2-083 i18n shortcuts, P2-075 shadow rotation). All P2 items now resolved; 34 P3 remain. |
+| v45.2 | 2026-03-04 | Batch 2 fixes: 6 more (SVG URI, blur texture, sort mutation, hit test singleton, API reuse, dead code removal); 11 total fixed from v45 |
+| v45.1 | 2026-03-04 | Post-fix update; 5 fixed (clickjacking, manual HTML, stale name, cache, ellipse); 2 FPs (innerHTML, state mutation) |
+| v45 | 2026-03-04 | Fresh audit; 1C, 4H, 8M, 14+L new; god class count corrected 17→20; 3 files crossed threshold; PropertyBuilders +333 lines undercounted |
+| v44 | 2026-03-04 | 5 bugs fixed (P2-076/077/078/084 + RichText font cap); docs synced to v1.5.59 |
+| v43 | 2026-02-17 | Verification audit; 4 v42 FPs corrected; 1M+2L new; nudge, docs |
+| v42 | 2026-02-15 | Fresh audit; 4H, 10M, 17L new; CacheInvalidationTrait.php false positive. |
+| v41 | 2026-02-15 | Fresh audit; 3H, 7M, 13L; 10 items fixed. |
+| v40 | 2026-02-14 | Verification addendum; 5 items fixed. |
+| v39 | 2026-02-14 | Fresh audit; 1H security, 4H bugs, 5M, 4L; all fixed. |
+| v38 | 2026-02-14 | Fresh audit; 2M, 4L new; 2 FPs. |
+| v37 | 2026-02-13 | Fresh audit; 1M, 2L new; 3 FPs. |
+| v36 | 2026-02-13 | Fresh audit + fixes; 6H fixed; 13M; 20L. |
+| v35 | 2026-02-11 | Fresh audit; 4H, 5M, 9L; all 18 fixed. |
+| v33 | 2026-02-09 | Fresh audit; 4H, 8M, 7L new. |
+| v29 | 2026-02-08 | Full audit; 4H, 10M, 8L new. |
+| v28 | 2026-02-08 | Full audit; 1C, 10H, 9M, 6L. |
+| v27 | 2026-02-07 | 3C (fixed), 15H, 20M, 17L. |
+| v25 | 2026-02-07 | 2C (fixed), 8H, 9M, 11L. |
+| v22 | 2026-02-05 | Initial comprehensive review. |

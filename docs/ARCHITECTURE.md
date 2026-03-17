@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** February 17, 2026
-**Version:** 1.5.58
+**Last Updated:** March 14, 2026
+**Version:** 1.5.62
 
 ---
 
@@ -17,28 +17,28 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (February 17, 2026)
+## Codebase Statistics (March 17, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **140** |
-| Total JS lines | **~97,072** |
-| Total PHP files | **40** |
-| Total PHP lines | **~14,991** |
+| Total JS files | **158** |
+| Total JS lines | **~113,550** |
+| Total PHP files | **41** |
+| Total PHP lines | **~15,216** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
-| Shape/Emoji data | ~14,354 lines (generated) |
+| Shape/Emoji data | ~23,500 lines (generated) |
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **95.19% stmt, 84.96% branch** |
-| Jest tests | **11,148** (162 suites) |
-| PHPUnit test files | 31 |
-| God classes (>1000 lines) | **17** (2 generated, 13 JS, 2 PHP) |
+| Test coverage | **92.88% stmt, 82.58% branch** |
+| Jest tests | **11,847** (168 suites) |
+| PHPUnit test files | 34 |
+| God classes (>=1000 lines) | **26** (5 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |
 | Shape library | **1,385 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **820** |
+| i18n messages | **835** |
 | eslint-disable comments | **18** ✅ |
 
 ---
@@ -97,7 +97,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - Shape Library with 1,385 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
-### God Classes (17 Files ≥1,000 Lines)
+### God Classes (26 Files ≥1,000 Lines)
 
 **Generated Data Files (exempt from refactoring):**
 
@@ -145,7 +145,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | LayersValidator.js | 956 | Client-side validation |
 | ArrowRenderer.js | 932 | Arrow rendering |
 
-**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 95.19% test coverage.
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 92.88% statement test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for detailed status.
 
@@ -694,7 +694,7 @@ window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
 ```javascript
 window.Layers = {
-    VERSION: '1.5.58',
+    VERSION: '1.5.62',
     Editor: LayersEditor,
     Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
     UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm, LayerItemFactory },
@@ -925,7 +925,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **11,254 tests, 95.19% statement coverage, 84.96% branch coverage**
+- **11,847 tests, 92.88% statement coverage, 82.58% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -944,7 +944,7 @@ E2E tests run against a real MediaWiki installation in CI.
 extensions/Layers/
 ├── extension.json           # MW manifest
 ├── services.php             # DI container setup
-├── src/                     # PHP backend (~14,991 lines)
+├── src/                     # PHP backend (~15,122 lines)
 │   ├── Api/                 # API modules (5 endpoints)
 │   ├── Database/            # Data access
 │   ├── Hooks/               # MW hook handlers
@@ -989,8 +989,8 @@ extensions/Layers/
 │   │   ├── ui/              # UI controllers (15+ files)
 │   │   │   ├── LayerListRenderer.js
 │   │   │   ├── VirtualLayerList.js  # NEW: Virtual scrolling
-│   │   │   ├── PropertyBuilders.js (1,284 lines)
-│   │   │   └── PropertiesForm.js (1,001 lines)
+│   │   │   ├── PropertyBuilders.js (1,495 lines)
+│   │   │   └── PropertiesForm.js (993 lines)
 │   │   ├── shapeLibrary/    # Shape & Emoji libraries (~14,000 lines)
 │   │   │   ├── ShapeLibraryData.js (~11,299 lines, generated)
 │   │   │   ├── EmojiLibraryIndex.js (~3,055 lines, generated)
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,148 tests, 162 suites)
+│   ├── jest/                # Unit tests (11,847 tests, 168 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation
