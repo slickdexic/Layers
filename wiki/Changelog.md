@@ -4,20 +4,43 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
-## [1.5.62] - 2026-03-12
+## [1.5.62] - 2026-03-17
+
+### Security
+- **P1-059 — RichTextConverter CSS escaping hardened** — `escapeCSSValue()` now blocks `url()`, `expression()`, `javascript:` keywords and strips injection-prone characters while preserving valid CSS functions like `rgb()`.
+- **P2-133 — PresetDropdown innerHTML sanitized** — Replaced `innerHTML` with `textContent` for i18n message injection.
+- **P2-134 — PresetStorage schema validation** — Added structure validation after `JSON.parse()` to reject malformed preset data from localStorage.
+- **P2-135 — LayerPanel CSS injection fix** — Color values now set via `style.backgroundColor` instead of `cssText` concatenation.
 
 ### Fixed
-- **P3-143 — Angle Dimension Anchor Points Not Offset on Paste** — `ClipboardController.applyPasteOffset()` applied `PASTE_OFFSET` to standard `x/y`, `x1/y1/x2/y2`, and `points[]` coordinates, but angle dimension layers store their geometry exclusively in `ax/ay` (arm1 endpoint), `cx/cy` (vertex), and `bx/by` (arm2 endpoint). Pasting an angle dimension therefore left all six anchor points at their original canvas coordinates while the layer received a new ID, causing the pasted layer to render at the wrong position. Added three conditional offset blocks for `ax/ay`, `cx/cy`, and `bx/by` after the existing `points` block.
-- **P3-144 — DrawingController._angleDimensionPhase Not Initialized in Constructor** — The `_angleDimensionPhase` property was set only inside `startAngleDimensionTool()` and never declared in the constructor. Any code path that checked `_angleDimensionPhase` before the tool was activated received `undefined` rather than `0`, causing phase-comparison guards to behave incorrectly. Added `this._angleDimensionPhase = 0` to the constructor alongside the existing `tempLayer` and `isDrawing` initializations.
+- **P1-060 — ErrorHandler recursion guard** — Added `_isHandlingError` flag to prevent infinite loops when error handlers themselves throw (e.g., during page teardown).
+- **P2-136 — init.js hook guard** — Added guard flag to `wikipage.content` handler to prevent duplicate initialization on content re-load.
+- **P2-137 — RenderCoordinator performance** — Replaced per-frame `JSON.stringify()` with `_cachedStringify()` using WeakMap cache for richText, gradient, and points change detection.
+- **P3-157 — GradientEditor preset validation** — Added type/range validation before applying gradient presets.
+- **P3-158 — LayerItemFactory WCAG keyboard** — Added `tabindex="0"` and Enter/Space key handler to `role="button"` elements.
+- **P1-057 — IDOR fix** — `id:` prefix fetch now validates file ownership.
+- **P2-124 — User name enrichment** — Replaced direct user table queries with `UserIdentityLookup`.
+- **P2-125 — Set name regex** — Updated to accept Unicode and spaces.
+- **P2-126 — Arrow key conflict** — Resolved simultaneous nudge + pan.
+- **P2-127 — TextRenderer double shadow** — Fixed stroke+fill shadow duplication.
+- **P3-143 — Angle dimension paste offset** — Added `ax/ay/cx/cy/bx/by` offset handling.
+- **P3-144 — DrawingController phase init** — `_angleDimensionPhase` now initialized in constructor.
+- **ApiLayersDelete** — Added rate limiting and shared `validateAndGetFile()` helper trait.
+- **ApiLayersRename** — Removed unused `Title` import.
+- **RenderCoordinator** — Added `preserveAspectRatio` to dirty-check fingerprint.
 
 ### Tests
-- Added 2 `ClipboardController` regression tests for P3-143: verify `ax/ay/cx/cy/bx/by` are each incremented by `PASTE_OFFSET` for both non-zero and zero starting coordinates.
-- Added 1 `DrawingController` regression test for P3-144: verify `_angleDimensionPhase` is `0` immediately after construction.
+- 168 test suites, 11,847 tests — all passing
+- Coverage: 94.4% statements, 84.33% branches, 93.38% functions
+- Comprehensive coverage improvements across 13 test suites (+4,929 lines)
+- HelpDialog: 0% → 99.42% coverage (40 tests)
+- TransformController: improved to 98.16% statements, 83.66% branches
 
-### Technical Details
-- All 11,606 tests pass (168 test suites) ✅
-- Coverage: 91.32% statements, 81.69% branches (no regression)
-- Cherry-pick targets: `REL1_43`, `REL1_39`
+### Documentation
+- Closed all 8 documentation drift items (D-056-01 through D-056-08)
+- Updated docs/README.md index (added 11 missing documents)
+- KNOWN_ISSUES.md: 385/386 items fixed (99.7%)
+- Improvement plan: 1 open item remaining (P3-146 dead table)
 
 ## [1.5.61] - 2026-03-11
 
