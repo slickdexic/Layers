@@ -77,6 +77,106 @@ class ApiLayersSave extends ApiBase {
 	private ?LoggerInterface $logger = null;
 
 	/**
+	 * Shared validation pipeline for save operations.
+	 *
+	 * Both execute() and executeSlideSave() share the same validation steps:
+	 * schema check, size limit, JSON parse, layer validation, rate limiting.
+	 * This method extracts that shared logic to ensure consistency.
+	 *
+	 * @param \User $user Current authenticated user
+	 * @param array $params Extracted API request parameters
+	 * @return array{
+	 *     db: \MediaWiki\Extension\Layers\Database\LayersDatabase,
+	 *     sanitizedData: array,
+	 *     layerCount: int,
+	 *     backgroundSettings: array,
+	 *     rawData: array,
+	 *     setName: string
+	 * }
+	 * @throws ApiUsageException On any validation failure
+	 */
+	private function validateAndParseLayers( $user, array $params ): array {
+		$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+
+		if ( !$db->isSchemaReady() ) {
+			$this->dieWithError(
+				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
+				'dbschema-missing'
+			);
+		}
+
+		$data = $params['data'];
+		$rawSetName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
+		$setName = SetNameSanitizer::sanitize( $rawSetName );
+
+		// Size limit check
+		$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
+		if ( strlen( $data ) > $maxBytes ) {
+			$this->dieWithError( LayersConstants::ERROR_DATA_TOO_LARGE, 'datatoolarge' );
+		}
+
+		// Parse JSON
+		try {
+			$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
+		} catch ( \JsonException $e ) {
+			$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
+		}
+
+		// Handle both old and new data formats
+		$layersData = [];
+		$backgroundSettings = [];
+
+		if ( isset( $rawData['layers'] ) && is_array( $rawData['layers'] ) ) {
+			$layersData = $rawData['layers'];
+			$backgroundSettings = [
+				'backgroundVisible' => isset( $rawData['backgroundVisible'] )
+					? (bool)$rawData['backgroundVisible'] : true,
+				'backgroundOpacity' => isset( $rawData['backgroundOpacity'] )
+					? max( 0.0, min( 1.0, (float)$rawData['backgroundOpacity'] ) ) : 1.0
+			];
+		} elseif ( is_array( $rawData ) && !isset( $rawData['layers'] ) ) {
+			$layersData = $rawData;
+		}
+
+		// Validate layers
+		$validator = new ServerSideLayerValidator();
+		$validationResult = $validator->validateLayers( $layersData );
+
+		if ( !$validationResult->isValid() ) {
+			$errors = implode( '; ', $validationResult->getErrors() );
+			$this->dieWithError( [ LayersConstants::ERROR_VALIDATION_FAILED, $errors ], 'validationfailed' );
+		}
+
+		$sanitizedData = $validationResult->getData();
+		$layerCount = count( $sanitizedData );
+
+		if ( $validationResult->hasWarnings() ) {
+			$warnings = implode( '; ', $validationResult->getWarnings() );
+			$this->getLogger()->warning(
+				'Layers validation warnings: {warnings}',
+				[ 'warnings' => $warnings ]
+			);
+		}
+
+		// Rate limiting
+		$rateLimiter = $this->createRateLimiter();
+		$this->enforceLayerLimits( $rateLimiter, $sanitizedData, $layerCount );
+		if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
+			$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+		}
+
+		return [
+			'db' => $db,
+			'sanitizedData' => $sanitizedData,
+			'layerCount' => $layerCount,
+			'backgroundSettings' => $backgroundSettings,
+			'rawData' => $rawData,
+			'setName' => $setName,
+			'rateLimiter' => $rateLimiter,
+		];
+	}
+
+	/**
 	 * Main execution function for the layerssave API endpoint.
 	 *
 	 * Implements a comprehensive validation pipeline with defense-in-depth security:
@@ -141,40 +241,11 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		try {
-			// Get LayersDatabase service via dependency injection
-			// Service is wired in services.php with LoadBalancer, Config, Logger, SchemaManager
-			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
-
-			// CRITICAL: Verify database schema exists before any operations
-			// Prevents cryptic SQL errors if admin hasn't run update.php
-			// Schema is created/updated via LayersSchemaManager on LoadExtensionSchemaUpdates hook
-			if ( !$db->isSchemaReady() ) {
-				$this->dieWithError(
-					[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
-					'dbschema-missing'
-				);
-			}
-
-			// Extract parameters from the API request
-			$fileName = $requestedFilename;
-			$data = $params['data'];
-			$rawSetName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
-			$setName = SetNameSanitizer::sanitize( $rawSetName );
-
-			// Log set name processing via MediaWiki's debug log
-			$this->getLogger()->debug(
-				'ApiLayersSave: raw setname={rawSetName}, sanitized={setName}, filename={fileName}',
-				[
-					'rawSetName' => $rawSetName,
-					'setName' => $setName,
-					'fileName' => $fileName
-				]
-			);
-
 			// VALIDATION: Ensure filename resolves to a valid File namespace title
 			// Title::newFromText normalizes and validates the format, but does not require
 			// the file page to exist locally. This allows saving layers on files served
 			// from shared repositories (e.g., Wikimedia Commons remotes).
+			$fileName = $requestedFilename;
 			$title = Title::newFromText( $fileName, NS_FILE );
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
 				$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
@@ -187,94 +258,18 @@ class ApiLayersSave extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 			}
 
-			// SIZE LIMIT: Check payload size before expensive JSON parsing
-			// This prevents DoS attacks via large payloads that could:
-			// - Exhaust PHP memory during json_decode()
-			// - Fill database with excessive data
-			// - Slow down validation of malicious large structures
-			// Default: 2MB (configurable via $wgLayersMaxBytes)
-			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
-			if ( strlen( $data ) > $maxBytes ) {
-				$this->dieWithError( LayersConstants::ERROR_DATA_TOO_LARGE, 'datatoolarge' );
-			}
+			// Shared validation: schema check, size limit, JSON parse, layer validation, rate limiting
+			$validated = $this->validateAndParseLayers( $user, $params );
+			$db = $validated['db'];
+			$sanitizedData = $validated['sanitizedData'];
+			$backgroundSettings = $validated['backgroundSettings'];
+			$setName = $validated['setName'];
+			$rateLimiter = $validated['rateLimiter'];
 
-			// PARSE: Decode JSON structure from client
-			// Client sends array of layer objects: [{id, type, x, y, ...}, ...]
-			// json_decode with associative=true converts to PHP array
-			// Using JSON_THROW_ON_ERROR for explicit error handling
-			try {
-				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
-			} catch ( \JsonException $e ) {
-				// JSON parsing failed - invalid syntax, encoding issues, or malformed data
-				$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
-			}
-
-			// HANDLE BOTH OLD AND NEW DATA FORMATS
-			// Old format: array of layers [{id, type, ...}, ...]
-			// New format: {layers: [...], backgroundVisible: bool, backgroundOpacity: float}
-			$layersData = [];
-			$backgroundSettings = [];
-
-			if ( isset( $rawData['layers'] ) && is_array( $rawData['layers'] ) ) {
-				// New format with settings
-				$layersData = $rawData['layers'];
-				// Extract and validate background settings
-				$backgroundSettings = [
-					'backgroundVisible' => isset( $rawData['backgroundVisible'] )
-						? (bool)$rawData['backgroundVisible'] : true,
-					'backgroundOpacity' => isset( $rawData['backgroundOpacity'] )
-						? max( 0.0, min( 1.0, (float)$rawData['backgroundOpacity'] ) ) : 1.0
-				];
-			} elseif ( is_array( $rawData ) && !isset( $rawData['layers'] ) ) {
-				// Old format: raw layers array (for backwards compatibility)
-				$layersData = $rawData;
-			}
-
-			// VALIDATION PIPELINE: Comprehensive security-focused validation
-			// ServerSideLayerValidator enforces:
-			// - Layer count limits ($wgLayersMaxLayerCount, default 100)
-			// - Strict property whitelist (40+ allowed fields, see ALLOWED_PROPERTIES)
-			// - Type validation (numeric ranges, enum values, boolean conversions)
-			// - Sanitization (text XSS prevention, color validation, coordinate bounds)
-			// - Duplicate ID detection
-			// Unknown properties are SILENTLY DROPPED (not errors)
-			$validator = new ServerSideLayerValidator();
-			$validationResult = $validator->validateLayers( $layersData );
-
-			// Check for validation errors (structural problems, invalid values)
-			if ( !$validationResult->isValid() ) {
-				// Combine all error messages with i18n keys for client display
-				$errors = implode( '; ', $validationResult->getErrors() );
-				$this->dieWithError( [ LayersConstants::ERROR_VALIDATION_FAILED, $errors ], 'validationfailed' );
-			}
-
-			// Extract sanitized data (validator has cleaned/normalized all fields)
-			// This is the data we'll persist to database
-			$sanitizedData = $validationResult->getData();
-			$layerCount = count( $sanitizedData );
-
-			// Log warnings (non-fatal issues like dropped unknown properties)
-			// These are logged server-side but don't block the save operation
-			if ( $validationResult->hasWarnings() ) {
-				$warnings = implode( '; ', $validationResult->getWarnings() );
-				$this->getLogger()->warning(
-					'Layers validation warnings: {warnings}',
-					[ 'warnings' => $warnings ]
-				);
-			}
-
-			// RATE LIMITING & SAFEGUARDS: Prevent abuse by limiting save operations per user
-			// and enforce configured image/complexity caps before performing expensive work.
-			$rateLimiter = $this->createRateLimiter();
-			$this->enforceLayerLimits( $rateLimiter, $sanitizedData, $layerCount );
-			// Uses MediaWiki's core rate limiter via User::pingLimiter()
-			// Configuration in LocalSettings.php:
-			//   $wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ]; // 30 saves per hour
-			//   $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ]; // stricter for new users
-			// Rate limit is checked AFTER validation to avoid wasting limit on invalid data
-			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
-				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
-			}
+			$this->getLogger()->debug(
+				'ApiLayersSave: sanitized setName={setName}, filename={fileName}',
+				[ 'setName' => $setName, 'fileName' => $fileName ]
+			);
 
 			// FILE VERIFICATION: Ensure target file exists and is accessible
 			// RepoGroup handles both local and foreign (wikimedia commons) files
@@ -405,46 +400,17 @@ class ApiLayersSave extends ApiBase {
 	 */
 	private function executeSlideSave( $user, array $params, string $slidename ): void {
 		try {
-			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+			// Shared validation: schema check, size limit, JSON parse, layer validation, rate limiting
+			$validated = $this->validateAndParseLayers( $user, $params );
+			$db = $validated['db'];
+			$sanitizedData = $validated['sanitizedData'];
+			$backgroundSettings = $validated['backgroundSettings'];
+			$rawData = $validated['rawData'];
+			$setName = $validated['setName'];
 
-			if ( !$db->isSchemaReady() ) {
-				$this->dieWithError(
-					[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
-					'dbschema-missing'
-				);
-			}
-
-			$data = $params['data'];
-			$rawSetName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
-			$setName = SetNameSanitizer::sanitize( $rawSetName );
-
-			// Size limit check
-			$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
-			if ( strlen( $data ) > $maxBytes ) {
-				$this->dieWithError( LayersConstants::ERROR_DATA_TOO_LARGE, 'datatoolarge' );
-			}
-
-			// Parse JSON
-			try {
-				$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
-			} catch ( \JsonException $e ) {
-				$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
-			}
-
-			// Handle both old and new data formats
-			$layersData = [];
-			$backgroundSettings = [];
+			// Extract slide-specific settings from raw data
 			$slideSettings = [];
-
-			if ( isset( $rawData['layers'] ) && is_array( $rawData['layers'] ) ) {
-				$layersData = $rawData['layers'];
-				$backgroundSettings = [
-					'backgroundVisible' => isset( $rawData['backgroundVisible'] )
-						? (bool)$rawData['backgroundVisible'] : true,
-					'backgroundOpacity' => isset( $rawData['backgroundOpacity'] )
-						? max( 0.0, min( 1.0, (float)$rawData['backgroundOpacity'] ) ) : 1.0
-				];
-				// Extract slide-specific settings with validation
+			if ( is_array( $rawData ) && isset( $rawData['layers'] ) ) {
 				$slideSettings = [
 					'isSlide' => true,
 					'canvasWidth' => isset( $rawData['canvasWidth'] )
@@ -460,27 +426,6 @@ class ApiLayersSave extends ApiBase {
 						$slideSettings['backgroundColor'] = $bgColor;
 					}
 				}
-			} elseif ( is_array( $rawData ) && !isset( $rawData['layers'] ) ) {
-				$layersData = $rawData;
-			}
-
-			// Validate layers
-			$validator = new ServerSideLayerValidator();
-			$validationResult = $validator->validateLayers( $layersData );
-
-			if ( !$validationResult->isValid() ) {
-				$errors = implode( '; ', $validationResult->getErrors() );
-				$this->dieWithError( [ LayersConstants::ERROR_VALIDATION_FAILED, $errors ], 'validationfailed' );
-			}
-
-			$sanitizedData = $validationResult->getData();
-			$layerCount = count( $sanitizedData );
-
-			// Rate limiting
-			$rateLimiter = $this->createRateLimiter();
-			$this->enforceLayerLimits( $rateLimiter, $sanitizedData, $layerCount );
-			if ( !$rateLimiter->checkRateLimit( $user, 'save' ) ) {
-				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
 			// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1

@@ -944,8 +944,7 @@
 			const fontSize = layer.fontSize || 12;
 
 			// Calculate angles to find arc midpoint
-			const AngleDimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer ) ||
-				( typeof require !== 'undefined' && require( '../ext.layers.shared/AngleDimensionRenderer.js' ) );
+			const AngleDimensionRenderer = typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer;
 
 			if ( !AngleDimensionRenderer ) {
 				return false;
@@ -996,8 +995,7 @@
 			const arcRadius = layer.arcRadius || 40;
 
 			// Calculate angles to find arc midpoint
-			const AngleDimensionRenderer = ( typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer ) ||
-				( typeof require !== 'undefined' && require( '../ext.layers.shared/AngleDimensionRenderer.js' ) );
+			const AngleDimensionRenderer = typeof window !== 'undefined' && window.Layers && window.Layers.AngleDimensionRenderer;
 
 			let midAngle = 0;
 			if ( AngleDimensionRenderer ) {

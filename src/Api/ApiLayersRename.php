@@ -83,7 +83,10 @@ class ApiLayersRename extends ApiBase {
 
 		// For file operations, filename is required
 		if ( $requestedFilename === '' || $requestedFilename === null ) {
-			$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
+			$this->dieWithError(
+				[ 'apierror-missingparam', 'filename' ],
+				'missingparam'
+			);
 		}
 
 		// Validate old name format using central validator

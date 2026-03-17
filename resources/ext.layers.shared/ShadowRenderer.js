@@ -359,11 +359,13 @@ class ShadowRenderer {
 				const { a, b, c, d, e, f } = currentTransform;
 				const scaleX = Math.sqrt( a * a + b * b );
 				const scaleY = Math.sqrt( c * c + d * d );
-				transformWithoutRotation = new DOMMatrix( [
-					scaleX, 0, 0, scaleY,
-					e,
-					f
-				] );
+				if ( typeof DOMMatrix !== 'undefined' ) {
+					transformWithoutRotation = new DOMMatrix( [
+						scaleX, 0, 0, scaleY,
+						e,
+						f
+					] );
+				}
 			}
 		}
 
@@ -490,11 +492,13 @@ class ShadowRenderer {
 				const { a, b, c, d, e, f } = currentTransform;
 				const scaleX = Math.sqrt( a * a + b * b );
 				const scaleY = Math.sqrt( c * c + d * d );
-				transformWithoutRotation = new DOMMatrix( [
-					scaleX, 0, 0, scaleY,
-					e,
-					f
-				] );
+				if ( typeof DOMMatrix !== 'undefined' ) {
+					transformWithoutRotation = new DOMMatrix( [
+						scaleX, 0, 0, scaleY,
+						e,
+						f
+					] );
+				}
 			}
 		}
 
