@@ -795,17 +795,27 @@ class LayersDatabase {
 				return null;
 			}
 
-			$dbw->delete(
-				'layer_sets',
-				[
-					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-					'ls_img_sha1' => $sha1,
-					'ls_name' => $setName
-				],
-				__METHOD__
-			);
+			// Use atomic transaction to prevent race conditions with concurrent
+			// rename/delete operations on the same set (mirrors renameNamedSet pattern)
+			$dbw->startAtomic( __METHOD__ );
 
-			$rowsDeleted = $dbw->affectedRows();
+			try {
+				$dbw->delete(
+					'layer_sets',
+					[
+						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+						'ls_img_sha1' => $sha1,
+						'ls_name' => $setName
+					],
+					__METHOD__
+				);
+
+				$rowsDeleted = $dbw->affectedRows();
+				$dbw->endAtomic( __METHOD__ );
+			} catch ( \Throwable $e ) {
+				$dbw->endAtomic( __METHOD__ );
+				throw $e;
+			}
 
 			$this->logger->info( 'Named layer set deleted', [
 				'imgName' => $imgName,
