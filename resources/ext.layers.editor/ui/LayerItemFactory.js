@@ -288,7 +288,15 @@
 			name.contentEditable = 'false';
 			name.style.cursor = 'pointer';
 			name.setAttribute( 'role', 'button' );
+			name.setAttribute( 'tabindex', '0' );
 			name.setAttribute( 'aria-label', t( 'layers-layer-name', 'Layer Name' ) );
+			// Keyboard activation for rename — mirrors dblclick behavior
+			name.addEventListener( 'keydown', ( e ) => {
+				if ( e.key === 'Enter' || e.key === ' ' ) {
+					e.preventDefault();
+					name.dispatchEvent( new MouseEvent( 'dblclick', { bubbles: true } ) );
+				}
+			} );
 
 			// Lock toggle
 			const lockBtn = document.createElement( 'button' );

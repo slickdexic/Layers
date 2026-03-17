@@ -13,7 +13,6 @@ use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use Title;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -115,41 +114,24 @@ class ApiLayersRename extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
 			}
 
-			// Validate filename - Title must be valid and in File namespace
-			// Note: We do NOT check $title->exists() because foreign files
-			// (from InstantCommons) don't have local wiki pages
-			$title = Title::newFromText( $requestedFilename, NS_FILE );
-			if ( !$title || $title->getNamespace() !== NS_FILE ) {
-				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
-			}
-
-			// Get file metadata (use getRepoGroup() to support foreign repos like Commons)
-			$file = MediaWikiServices::getInstance()->getRepoGroup()->findFile( $title );
-			if ( !$file || !$file->exists() ) {
-				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
-			}
-
-			// Use DB key form for consistency with ApiLayersSave
-			// This ensures layers saved on foreign files can be renamed correctly
-			$imgName = $title->getDBkey();
+			// Validate filename and get file info (via LayersApiHelperTrait)
+			$fileInfo = $this->validateAndGetFile( $requestedFilename );
+			$title = $fileInfo['title'];
+			$file = $fileInfo['file'];
+			$imgName = $fileInfo['imgName'];
 			$sha1 = $this->getFileSha1( $file, $imgName );
 
-			// Check if the source layer set exists
-			$layerSet = $db->getLayerSetByName( $imgName, $sha1, $oldName );
-			if ( !$layerSet ) {
-				// SHA1 mismatch fallback: for foreign files, the SHA1 may have been
-				// saved before InstantCommons support was added.
-				$storedSha1 = $db->findSetSha1( $imgName, $oldName );
-				if ( $storedSha1 !== null && $storedSha1 !== $sha1 ) {
-					$this->getLogger()->info( 'Layers rename: SHA1 mismatch, using stored value', [
-						'imgName' => $imgName,
-						'oldName' => $oldName,
-						'expectedSha1' => $sha1,
-						'storedSha1' => $storedSha1
-					] );
-					$sha1 = $storedSha1;
-					$layerSet = $db->getLayerSetByName( $imgName, $sha1, $oldName );
-				}
+			// Find source layer set with SHA1 fallback (via LayersApiHelperTrait)
+			$originalSha1 = $sha1;
+			$layerSet = $this->getLayerSetWithFallback( $db, $imgName, $sha1, $oldName );
+
+			if ( $sha1 !== $originalSha1 ) {
+				$this->getLogger()->info( 'Layers rename: SHA1 mismatch, using stored value', [
+					'imgName' => $imgName,
+					'oldName' => $oldName,
+					'expectedSha1' => $originalSha1,
+					'storedSha1' => $sha1
+				] );
 			}
 
 			if ( !$layerSet ) {

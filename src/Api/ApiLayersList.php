@@ -137,41 +137,48 @@ class ApiLayersList extends ApiBase {
 			return $slides;
 		}
 
-		// Collect unique user IDs
-		$userIds = [];
-		foreach ( $slides as $slide ) {
-			if ( isset( $slide['createdById'] ) && $slide['createdById'] > 0 ) {
-				$userIds[$slide['createdById']] = true;
+		try {
+			// Collect unique user IDs
+			$userIds = [];
+			foreach ( $slides as $slide ) {
+				if ( isset( $slide['createdById'] ) && $slide['createdById'] > 0 ) {
+					$userIds[$slide['createdById']] = true;
+				}
+				if ( isset( $slide['modifiedById'] ) && $slide['modifiedById'] > 0 ) {
+					$userIds[$slide['modifiedById']] = true;
+				}
 			}
-			if ( isset( $slide['modifiedById'] ) && $slide['modifiedById'] > 0 ) {
-				$userIds[$slide['modifiedById']] = true;
-			}
-		}
 
-		if ( empty( $userIds ) ) {
-			return $slides;
-		}
+			if ( empty( $userIds ) ) {
+				return $slides;
+			}
 
-		// Batch fetch user names
-		$userFactory = MediaWikiServices::getInstance()->getUserFactory();
-		$userNames = [];
-		foreach ( array_keys( $userIds ) as $userId ) {
-			$user = $userFactory->newFromId( $userId );
-			if ( $user ) {
-				$userNames[$userId] = $user->getName();
+			// Batch fetch user names via UserFactory
+			$userFactory = MediaWikiServices::getInstance()->getUserFactory();
+			$userNames = [];
+			foreach ( array_keys( $userIds ) as $userId ) {
+				$user = $userFactory->newFromId( $userId );
+				$user->load();
+				if ( $user->isRegistered() ) {
+					$userNames[$userId] = $user->getName();
+				}
 			}
-		}
 
-		// Enrich slides
-		foreach ( $slides as &$slide ) {
-			if ( isset( $slide['createdById'] ) && isset( $userNames[$slide['createdById']] ) ) {
-				$slide['createdBy'] = $userNames[$slide['createdById']];
+			// Enrich slides with resolved user names
+			foreach ( $slides as &$slide ) {
+				if ( isset( $slide['createdById'] ) && isset( $userNames[$slide['createdById']] ) ) {
+					$slide['createdBy'] = $userNames[$slide['createdById']];
+				}
+				if ( isset( $slide['modifiedById'] ) && isset( $userNames[$slide['modifiedById']] ) ) {
+					$slide['modifiedBy'] = $userNames[$slide['modifiedById']];
+				}
 			}
-			if ( isset( $slide['modifiedById'] ) && isset( $userNames[$slide['modifiedById']] ) ) {
-				$slide['modifiedBy'] = $userNames[$slide['modifiedById']];
-			}
+			unset( $slide );
+		} catch ( \Throwable $e ) {
+			$this->getLogger()->warning(
+				'Failed to batch load user names for slides: ' . $e->getMessage()
+			);
 		}
-		unset( $slide );
 
 		return $slides;
 	}

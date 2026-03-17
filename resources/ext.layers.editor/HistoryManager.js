@@ -196,7 +196,14 @@
 			}
 
 			// Fallback to JSON cloning
-			return JSON.parse( JSON.stringify( layers || [] ) );
+			try {
+				return JSON.parse( JSON.stringify( layers || [] ) );
+			} catch ( e ) {
+				if ( typeof mw !== 'undefined' && mw.log ) {
+					mw.log.warn( '[HistoryManager] JSON cloning failed, returning shallow copy:', e );
+				}
+				return ( layers || [] ).map( layer => Object.assign( {}, layer ) );
+			}
 		}
 
 		/**

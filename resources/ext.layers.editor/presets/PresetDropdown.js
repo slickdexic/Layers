@@ -123,11 +123,24 @@
 			this.elements.button.className = 'layers-preset-button';
 			this.elements.button.setAttribute( 'aria-haspopup', 'listbox' );
 			this.elements.button.setAttribute( 'aria-expanded', 'false' );
-			this.elements.button.innerHTML = `
-				<span class="layers-preset-button-icon">${ this.getPresetIcon() }</span>
-				<span class="layers-preset-button-label">${ this.getMessage( 'layers-presets' ) }</span>
-				<span class="layers-preset-button-arrow">▼</span>
-			`;
+
+			const iconSpan = document.createElement( 'span' );
+			iconSpan.className = 'layers-preset-button-icon';
+			// getPresetIcon() returns hardcoded SVG markup from this class
+			iconSpan.innerHTML = this.getPresetIcon();
+
+			const labelSpan = document.createElement( 'span' );
+			labelSpan.className = 'layers-preset-button-label';
+			labelSpan.textContent = this.getMessage( 'layers-presets' );
+
+			const arrowSpan = document.createElement( 'span' );
+			arrowSpan.className = 'layers-preset-button-arrow';
+			arrowSpan.textContent = '\u25BC';
+
+			this.elements.button.appendChild( iconSpan );
+			this.elements.button.appendChild( labelSpan );
+			this.elements.button.appendChild( arrowSpan );
+
 			this.elements.button.addEventListener( 'click', () => this.toggle() );
 
 			// Dropdown menu
@@ -282,10 +295,13 @@
 			const saveBtn = document.createElement( 'button' );
 			saveBtn.type = 'button';
 			saveBtn.className = 'layers-preset-action';
-			saveBtn.innerHTML = `
-				<span class="layers-preset-action-icon">+</span>
-				${ this.getMessage( 'layers-presets-save-current' ) }
-			`;
+
+			const saveIconSpan = document.createElement( 'span' );
+			saveIconSpan.className = 'layers-preset-action-icon';
+			saveIconSpan.textContent = '+';
+			saveBtn.appendChild( saveIconSpan );
+			saveBtn.appendChild( document.createTextNode( this.getMessage( 'layers-presets-save-current' ) ) );
+
 			saveBtn.addEventListener( 'click', ( e ) => {
 				e.stopPropagation();
 				this.handleSaveClick();

@@ -320,7 +320,8 @@
 				// Red diagonal stripe pattern - matches ColorPickerDialog exactly
 				swatch.style.cssText = baseStyles + ' background: repeating-linear-gradient(45deg, #ff0000 0, #ff0000 4px, transparent 4px, transparent 8px);';
 			} else {
-				swatch.style.cssText = baseStyles + ' background-color: ' + color + ';';
+				swatch.style.cssText = baseStyles;
+				swatch.style.backgroundColor = color;
 			}
 		}
 
