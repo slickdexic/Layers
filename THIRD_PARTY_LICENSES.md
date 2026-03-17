@@ -9,7 +9,7 @@ The Layers extension includes the following third-party assets:
 | Asset Category | Count | License | Source |
 |----------------|-------|---------|--------|
 | Google Fonts (WOFF2) | 106 files | SIL Open Font License 1.1 | Google Fonts |
-| Google Noto Color Emoji | 3,731 SVGs | SIL Open Font License 1.1 | GitHub |
+| Google Noto Color Emoji | 2,817 SVGs | SIL Open Font License 1.1 | GitHub |
 | IEC 60417 Symbols | ~500 SVGs | Public Domain / CC0 | Wikimedia Commons |
 | ISO 7010 Safety Signs | varies | Public Domain | Wikimedia Commons |
 | ISO 7000 Symbols | varies | Public Domain | Wikimedia Commons |

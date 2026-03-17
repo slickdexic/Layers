@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C494%20passing-brightgreen" alt="11,494 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C606%20passing-brightgreen" alt="11,606 Tests">
    <img src="https://img.shields.io/badge/Coverage-91.32%25-brightgreen" alt="91.32% Coverage">
 </p>
 
@@ -23,7 +23,7 @@
 ## 🆕 What's New in v1.5.62
 
 - **v54 Audit** — Security fix (IDOR ownership check), 7 code-quality fixes, grade restored to A
-- **Test Suite** — 11,494 tests passing (168 suites), 91.32% statement coverage
+- **Test Suite** — 11,606 tests passing (168 suites), 91.32% statement coverage
 
 ### Previous v1.5.60 Highlights
 
@@ -321,15 +321,15 @@ See [[Changelog]] for full details.
 | **Version (REL1_39)** | 1.5.60 |
 | **Release Date** | March 10, 2026 |
 | **Test Suites** | 168 |
-| **Total Tests** | 11,474 |
-| **PHPUnit Test Files** | 31 |
+| **Total Tests** | 11,606 |
+| **PHPUnit Test Files** | 34 |
 | **Statement Coverage** | 91.32% |
 | **Branch Coverage** | 81.69% |
 | **Function Coverage** | 90.62% |
 | **Line Coverage** | 91.39% |
-| **JavaScript Files** | 143 |
+| **JavaScript Files** | 158 |
 | **ES6 Classes** | 140 |
-| **God Classes** | 23 (2 generated, 19 JS, 2 PHP) |
+| **God Classes** | 26 (5 generated, 19 JS, 2 PHP) |
 | **i18n Messages** | 780 |
 
 ---

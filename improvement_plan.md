@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 14, 2026 — v1.5.62 (v54 audit, 8 code fixes applied)
+**Last updated:** March 16, 2026 — v1.5.62 (v56 audit, 13 new code issues + 8 doc drift items)
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -10,24 +10,119 @@ All v53 documentation items were fixed during the v53 audit session.
 P3-145 (SpecialSlides.js zero test coverage) resolved — tests now exist.
 v54 audit found 26 new items; **8 code fixes applied** (commit 0cba25e2),
 1 reclassified as false positive, 1 deferred. **14 documentation drift items
-fixed.** 2 items remain open (2 low code deferrals).
+fixed.** v55 audit found **13 new items** (1 HIGH, 5 MEDIUM, 7 LOW).
+2 carried forward from v54 (P3-146, P3-147). v55 fix pass: 6 fixed, 3
+reclassified as false positives. **5 remained open.**
+v56 audit found **13 new code issues** (2 HIGH, 5 MEDIUM, 6 LOW) plus
+**8 documentation drift items**. 9 false positives eliminated. P3-146,
+P3-147, P3-148 carried forward. **21 total open items.**
 Use the section below as the authoritative current backlog.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 14, 2026 — v1.5.62)
+## Verified Current Backlog (Authoritative as of March 16, 2026 — v1.5.62)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| Security | ~~1~~ 0 (P1-057 FIXED) | — |
-| PHP Medium | ~~2~~ 0 (P2-124, P2-125 FIXED) | — |
-| JS Medium | ~~2~~ 0 (P2-126, P2-127 FIXED) | — |
-| PHP Low | 2 (P3-146, P3-147 deferred) | Medium (schema/data migration) |
-| JS Low | ~~3~~ 0 (P3-150/151/152 FIXED) | — |
-| Documentation | ~~14~~ 0 (D-054-01 thru D-054-14 ALL FIXED) | — |
-| **Total** | **2** | |
+| JS High | 2 (P1-059 CSS escaping, P1-060 recursion guard) | 1h |
+| JS Medium (Security) | 3 (P2-133, P2-134, P2-135) | 2h |
+| JS Medium (Bugs) | 1 (P2-136 hook guard) | 15m |
+| JS Medium (Perf) | 1 (P2-137 JSON.stringify) | 1h |
+| JS Low (Quality) | 2 (P3-157, P3-158) | 1h |
+| JS Low (Coverage) | 2 (P3-159, P3-160) | 3h |
+| PHP/Schema Low | 1 (P3-146 dead table removal) | 1h |
+| Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
+| Documentation | 8 (D-056-01..D-056-08) | 1h |
+| **Total** | **21 open** (+ 1 accepted) | ~10h |
 
-### Current Priorities (v54 — 16 Open)
+### Current Priorities (v56 — 13 New Code + 8 Doc + 3 Carried)
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 28.01 | RichTextConverter.escapeCSSValue() insufficient | P1-059 | **HIGH** | ✅ Fixed |
+| 28.02 | ErrorHandler missing recursion guard | P1-060 | **HIGH** | ✅ Fixed |
+| 28.03 | PresetDropdown innerHTML with getMessage() | P2-133 | MED | ✅ Fixed |
+| 28.04 | PresetStorage.load() no schema validation | P2-134 | MED | ✅ Fixed |
+| 28.05 | LayerPanel.updateSwatchColor CSS injection | P2-135 | MED | ✅ Fixed |
+| 28.06 | init.js wikipage.content hook without guard | P2-136 | MED | ✅ Fixed |
+| 28.07 | RenderCoordinator JSON.stringify per dirty check | P2-137 | MED | ✅ Fixed |
+| 28.08 | GradientEditor._applyPreset() no validation | P3-157 | Low | ✅ Fixed |
+| 28.09 | LayerItemFactory role="button" without keyboard | P3-158 | Low | ✅ Fixed |
+| 28.10 | HelpDialog.js zero test coverage | P3-159 | Low | 🔲 Open |
+| 28.11 | TransformController.js 65% branch coverage | P3-160 | Low | 🔲 Open |
+| 28.12 | Test count stale (11,494→11,606) | D-056-01 | Low | ✅ Fixed |
+| 28.13 | README badge shows 11,474 | D-056-02 | Low | ✅ Fixed |
+| 28.14 | i18n key count was correct (780) | D-056-03 | Low | ✅ Fixed |
+| 28.15 | PHPUnit file count stale (31→34) | D-056-04 | Low | ✅ Fixed |
+| 28.16 | MW.org page test count 11,474 | D-056-05 | Low | ✅ Fixed |
+| 28.17 | THIRD_PARTY_LICENSES emoji count wrong | D-056-06 | Low | ✅ Fixed |
+| 28.18 | README version date mismatch | D-056-07 | Low | ✅ Fixed |
+| 28.19 | docs/README.md severely stale | D-056-08 | Low | 🔲 Open |
+| 28.20 | layer_set_usage table dead | P3-146 | Low | 📋 Removal planned |
+| 28.21 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
+| 28.22 | LayerValidatorInterface unused in DI | P3-148 | Low | 🔲 Deferred |
+
+### v56 Notes
+
+- v55 verification pass: all 9 v55 code fixes confirmed intact. All 3
+  reclassified false positives confirmed (P2-132, P3-155, P3-156).
+  P3-146/P3-147/P3-148 carried forward (unchanged).
+- Full codebase audit (all 41 PHP files, all 156 JS modules, all docs):
+  **2 HIGH (CSS escaping gap, recursion guard), 5 MEDIUM (innerHTML,
+  schema validation, cssText injection, hook guard, JSON.stringify perf),
+  6 LOW (gradient validation, ARIA keyboard, 2 coverage gaps).** Plus
+  8 documentation drift items.
+- 9 false positives eliminated during verification (layers-admin
+  permission, SetSelectorController validation, ContextMenuController
+  innerHTML, PresetDropdown destroy, ViewerManager catch, SmartGuides
+  math, _processWithConcurrency recursion, GradientEditor presets,
+  processHTML XSS).
+- Metrics verified: 11,606 tests (was 11,494), 786 i18n keys (was 780),
+  33 PHPUnit files (was 31), ~113,444 JS lines, ~15,216 PHP lines.
+- Grade maintained at **A**.
+
+### P3-146 Removal Plan: `layer_set_usage` Table
+
+**Decision:** Remove. The table has been dead code since creation — zero
+reads/writes in `LayersDatabase.php`. If usage tracking is ever needed,
+it should be designed against actual requirements, not speculative schema.
+
+**When:** Bundle with the next schema-touching change or minor version bump.
+Not urgent — the empty table costs negligible disk/runtime overhead.
+
+**Steps:**
+1. Create `sql/patches/patch-drop-layer_set_usage.sql`:
+   `DROP TABLE IF EXISTS /*_*/layer_set_usage;`
+2. `LayersSchemaManager.php`: Remove all `layer_set_usage` references:
+   - `addExtensionTable` call (~L46)
+   - `addExtensionField` for `lsu_usage_count` (~L58)
+   - CHECK constraints in `ensureCheckConstraints()` (~L194)
+   - FK references in `ensureForeignKeys()` (~L461)
+   - Schema validation in `SCHEMA_CONFIG` (~L565)
+   - Add `addExtensionUpdate` to run the drop patch
+3. `LayersConstants.php`: Remove `TABLE_LAYER_SET_USAGE` (~L239)
+4. `sql/tables/layer_set_usage.sql`: Delete file
+5. `sql/layers_tables.sql`: Remove the `layer_set_usage` CREATE TABLE block
+6. `sql/patches/patch-add-lsu_usage_count.sql`: Delete file (dead patch)
+7. `Mediawiki-layer_set_usage-table.mediawiki`: Delete file
+8. Test: Run `php maintenance/update.php` on MySQL and SQLite
+9. Update `extension.json` if table is referenced there
+
+### v55 Notes
+
+- v54 verification pass: all 8 code fixes confirmed intact; all 14 doc
+  drift fixes confirmed. P3-146/P3-147 carried forward.
+- Full codebase audit (all 41 PHP files, all 156 JS modules, all docs):
+  **1 HIGH (missing import), 5 MEDIUM (duplication, error handling, UX),
+  7 LOW (cache, accessibility, documentation).**
+- 13 false positives eliminated during verification (CustomShapeRenderer
+  opacity, SVG metadata, RenderCoordinator hash, CanvasManager destroy,
+  PolygonStarRenderer gradient, ResizeCalculator ellipse, DrawingController
+  phase, WikitextHooks reset, OverflowException, GroupRights, ViewerManager
+  cancel, TextSanitizer regex, FIFO security).
+- Grade maintained at **A**.
+
+### Current Priorities (v54 — All Fixed/Carried)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|

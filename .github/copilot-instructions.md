@@ -291,6 +291,12 @@ Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersThumbnailCache (LayersThumbnailCache): cache composite thumbs
 - $wgLayersImageMagickTimeout (LayersImageMagickTimeout): seconds for IM ops
 - $wgLayersMaxImageDimensions (LayersMaxImageDimensions): max width/height for processing
+- $wgLayersSlidesEnable (LayersSlidesEnable): enable Slide Mode (default true)
+- $wgLayersSlideDefaultWidth (LayersSlideDefaultWidth): default slide canvas width in px (default 800)
+- $wgLayersSlideDefaultHeight (LayersSlideDefaultHeight): default slide canvas height in px (default 600)
+- $wgLayersSlideMaxWidth (LayersSlideMaxWidth): max slide canvas width in px (default 4096)
+- $wgLayersSlideMaxHeight (LayersSlideMaxHeight): max slide canvas height in px (default 4096)
+- $wgLayersSlideDefaultBackground (LayersSlideDefaultBackground): default slide background color (default '#ffffff')
 
 ### Image Layer Size Recommendations
 
@@ -436,10 +442,10 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,494 tests in 168 suites — verified March 14, 2026)
+- Test count (11,606 tests in 168 suites — verified March 14, 2026)
 - Coverage (91.32% statement, 81.69% branch — verified March 14, 2026)
-- JavaScript file count (156 files total, ~113,407 lines)
-- PHP file count (41 files, ~15,244 lines)
+- JavaScript file count (158 files total, ~113,550 lines)
+- PHP file count (41 files, ~15,216 lines)
 - God class count (26 files >=1,000 lines; 5 generated data files, 19 JS, 2 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)

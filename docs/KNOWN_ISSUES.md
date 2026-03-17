@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 14, 2026 — v1.5.62 (v54 audit — 8 code fixes + 14 doc drift fixes applied, P3-149 false positive)
+**Last updated:** March 16, 2026 — v1.5.62 (v56 audit — 13 new code issues + 8 doc drift items)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -12,18 +12,274 @@ traceability.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 58 | 58 | 0 |
-| P2 | 131 | 131 | 0 |
-| P3 | 171 | 169 | 2 |
-| **Total** | **365** | **363** | **2** |
+| P1 | 61 | 59 | 2 |
+| P2 | 138 | 133 | 5 |
+| P3 | 182 | 177 | 5 |
+| **Total** | **386** | **374** | **12** |
 
-*Open: P3-146/P3-147 (2 deferred code).
-Fixed this session: P1-057, P2-124–P2-127, P3-150–P3-152, D-054-01 thru D-054-14.
-P3-149 reclassified as false positive.*
+*Open code items from v56: P1-059, P1-060, P2-133..P2-137,
+P3-157..P3-160 (13 items).
+Carried forward: P3-146 (removal planned). P3-147 accepted.
+P3-148 deferred.
+Documentation drift: D-056-01 through D-056-08 (8 items).*
 
 ---
 
-## Open Issues — v54 (March 14, 2026)
+## v56 Issues (March 16, 2026; 13 code items + 8 doc drift)
+
+### JavaScript — High
+
+#### P1-059: `RichTextConverter.escapeCSSValue()` Insufficient Escaping
+
+- **File:** `resources/ext.layers.editor/canvas/RichTextConverter.js`
+  L60–63
+- **Issue:** Blocks quotes/braces/angle/semicolons/backslashes but
+  does NOT block `url()`, `javascript:`, `expression()`, or
+  parentheses. Output used in inline `style` construction. Server-side
+  whitelist + ColorValidator mitigates most vectors, but client-side
+  escaping is incomplete for CSS contexts.
+- **Fix:** Add parentheses to regex; reject `url`, `expression`,
+  `javascript` keywords.
+- **Status:** 🔲 **Open**
+
+#### P1-060: `ErrorHandler` Missing Recursion Guard
+
+- **File:** `resources/ext.layers.editor/ErrorHandler.js` L75–95
+- **Issue:** Global `unhandledrejection`/`error` handlers call
+  `handleError()` → `showUserNotification()` (DOM ops) + `logError()`.
+  If any throw (e.g., page teardown), infinite recursion freezes the
+  browser tab.
+- **Fix:** Add `_isHandlingError` guard flag with try/finally.
+- **Status:** 🔲 **Open**
+
+### JavaScript — Medium (Security/Defense-in-Depth)
+
+#### P2-133: `PresetDropdown` innerHTML with `getMessage()`
+
+- **File:** `resources/ext.layers.editor/presets/PresetDropdown.js`
+  L126, L285
+- **Issue:** i18n output injected via `innerHTML`. Fragile if
+  translations compromised.
+- **Fix:** Use `textContent` or DOM API.
+- **Status:** 🔲 **Open**
+
+#### P2-134: `PresetStorage.load()` No Schema Validation
+
+- **File:** `resources/ext.layers.editor/presets/PresetStorage.js`
+  L99–106
+- **Issue:** After `JSON.parse()`, only checks version. No structure
+  validation on preset entries.
+- **Fix:** Validate types, ranges, required fields per entry.
+- **Status:** 🔲 **Open**
+
+#### P2-135: `LayerPanel.updateSwatchColor()` CSS Injection
+
+- **File:** `resources/ext.layers.editor/LayerPanel.js` L309–323
+- **Issue:** Color concatenated into `cssText` without sanitization.
+  Server-side mitigates; client should also sanitize.
+- **Fix:** Use `swatch.style.backgroundColor = color;`.
+- **Status:** 🔲 **Open**
+
+### JavaScript — Medium (Bugs/Robustness)
+
+#### P2-136: `init.js` `wikipage.content` Hook Without Guard
+
+- **File:** `resources/ext.layers/init.js` L107–118
+- **Issue:** No guard flag or `.remove()`. Adjacent listener has
+  guard, this does not. Causes duplicate init on re-load.
+- **Status:** 🔲 **Open**
+
+### JavaScript — Medium (Performance)
+
+#### P2-137: `RenderCoordinator` JSON.stringify Per Dirty Check
+
+- **File:** `resources/ext.layers.editor/canvas/RenderCoordinator.js`
+  L263–265
+- **Issue:** Three `JSON.stringify()` per layer on every potential
+  redraw. GC pressure with 50+ complex layers.
+- **Fix:** Version counters or cached hash per layer.
+- **Status:** 🔲 **Open**
+
+### JavaScript — Low (Code Quality)
+
+#### P3-157: `GradientEditor._applyPreset()` No Validation
+
+- **File:** `resources/ext.layers.editor/ui/GradientEditor.js`
+  L237–280
+- **Issue:** Applies cloned preset without type/range validation.
+  Safe with internal presets; fragile if user-extensible.
+- **Status:** 🔲 **Open** (low priority)
+
+#### P3-158: `LayerItemFactory` `role="button"` Without Keyboard
+
+- **File:** `resources/ext.layers.editor/ui/LayerItemFactory.js` L250
+- **Issue:** `role="button"` without `tabindex="0"` or key handler.
+  WCAG 2.1 Level A failure.
+- **Status:** 🔲 **Open**
+
+### JavaScript — Low (Coverage Gaps)
+
+#### P3-159: `HelpDialog.js` Zero Test Coverage
+
+- **File:** `resources/ext.layers.editor/editor/HelpDialog.js`
+- **Issue:** 172 lines, 24 functions, 49 branches — zero coverage.
+- **Status:** 🔲 **Open** (low priority)
+
+#### P3-160: `TransformController.js` 65% Branch Coverage
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+- **Issue:** 34.76% untested branches in critical resize/rotation
+  logic.
+- **Status:** 🔲 **Open** (low priority)
+
+### Documentation Drift — 8 Items
+
+| ID | Issue | Status |
+|----|-------|--------|
+| D-056-01 | Test count 11,494→11,606 in 5+ docs | 🔲 Open |
+| D-056-02 | README badge shows 11,474 | 🔲 Open |
+| D-056-03 | i18n count 780→786 | 🔲 Open |
+| D-056-04 | PHPUnit files 31→33 | 🔲 Open |
+| D-056-05 | MW.org page shows 11,474 | 🔲 Open |
+| D-056-06 | THIRD_PARTY_LICENSES 3,731→2,817 emoji | 🔲 Open |
+| D-056-07 | README date mismatch (Mar 11 vs 12) | 🔲 Open |
+| D-056-08 | docs/README.md stale (Jan 27) | 🔲 Open |
+
+### Carried Forward
+
+- **P3-146:** Dead `layer_set_usage` table — removal planned
+- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
+- **P3-148:** Unused `LayerValidatorInterface` — deferred
+
+---
+
+## v55 Issues (March 14, 2026; 9 fixed, 3 false positives, 1 planned removal)
+
+### PHP — High
+
+#### ~~P1-058: `RateLimiter.php` Missing `use LayersConstants` Import~~ (FIXED)
+
+- **File:** `src/Security/RateLimiter.php` L225–227
+- **Issue:** `isImageSizeAllowed()` references
+  `LayersConstants::KEY_MAX_COMPLEXITY` but the file does not import
+  `LayersConstants`. Fatal `Class not found` error when code path
+  exercised.
+- **Status:** ✅ **Fixed** — Added missing `use` import.
+
+### PHP — Medium
+
+#### ~~P2-128: `LayersApiHelperTrait` Helper Methods Unused by API Modules~~ (FIXED)
+
+- **File:** `src/Api/Traits/LayersApiHelperTrait.php`
+- **Issue:** `validateAndGetFile()` and `getLayerSetWithFallback()`
+  defined but `ApiLayersDelete`/`ApiLayersRename` duplicate logic inline
+  (~40 lines each).
+- **Status:** ✅ **Fixed** — Refactored both modules to use trait
+  helpers. SHA1 fallback logging preserved via by-reference detection.
+
+#### ~~P2-129: Duplicated User Enrichment Code Across API Modules~~ (FIXED)
+
+- **Files:** `src/Api/ApiLayersList.php` (`enrichWithUserNames()`),
+  `src/Api/ApiLayersInfo.php` (`enrichRowsWithUserNames()`)
+- **Issue:** Nearly identical user name enrichment functions in two
+  modules. ApiLayersList lacked try-catch and isRegistered() check.
+- **Status:** ✅ **Fixed** — Hardened ApiLayersList's method with
+  try-catch, `$user->load()`, and `isRegistered()` checks.
+
+### JavaScript — Medium
+
+#### ~~P2-130: `HistoryManager.getLayersSnapshot()` JSON Fallback Missing try-catch~~ (FIXED)
+
+- **File:** `resources/ext.layers.editor/HistoryManager.js`
+- **Issue:** `JSON.parse(JSON.stringify(layers))` not wrapped in
+  try-catch. Circular references or non-serializable values crash
+  undo/redo.
+- **Status:** ✅ **Fixed** — Wrapped in try-catch with shallow-copy
+  fallback.
+
+#### ~~P2-131: `TransformController` Delta Clamped to 1000px~~ (FIXED)
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+  L143–145
+- **Issue:** Hard-caps drag movement to ±1000px per frame. Truncates
+  fast drags on large canvases (4000px+).
+- **Status:** ✅ **Fixed** — Clamp now proportional to
+  `Math.max(1000, baseWidth, baseHeight)`.
+
+#### ~~P2-132: `HitTestController` Text Bounds Estimation Inaccurate~~ (FALSE POSITIVE)
+
+- **File:** `resources/ext.layers.editor/canvas/HitTestController.js`
+- **Issue:** Originally reported `text.length * fontSize * 0.6`
+  multiplier. Verification found text hit testing uses bounding box
+  via `getLayerBounds(layer)`, not character-based estimation.
+- **Status:** ❌ **False Positive** — code does not exist.
+
+### PHP — Low
+
+#### ~~P3-153: `LayersDatabase` Cache Uses FIFO Not LRU~~ (FIXED)
+
+- **File:** `src/Database/LayersDatabase.php`
+- **Issue:** `array_shift()` eviction is FIFO, not LRU. Low practical
+  impact at `MAX_CACHE_SIZE=100`.
+- **Status:** ✅ **Fixed** — `getLayerSet()` now promotes cache hits to MRU position via unset+re-insert.
+
+### JavaScript — Low
+
+#### ~~P3-154: `RichTextConverter.escapeHtml()` Creates DOM Element Per Call~~ (FIXED)
+
+- **File:** `resources/ext.layers.editor/canvas/RichTextConverter.js`
+- **Issue:** Created new `<div>` per call for HTML escaping. Minor
+  GC pressure.
+- **Status:** ✅ **Fixed** — Cached module-level `escapeDiv` with lazy init.
+
+#### ~~P3-155: `ContextMenuController` Missing ARIA Menu Roles~~ (FALSE POSITIVE)
+
+- **File:** `resources/ext.layers.editor/ui/ContextMenuController.js`
+- **Issue:** Originally reported no `role="menu"` / `role="menuitem"`.
+  Verification found ARIA roles already present in code.
+- **Status:** ❌ **False Positive** — ARIA attributes already exist.
+
+#### ~~P3-156: `LayersLightbox` Missing Dialog ARIA Attributes~~ (FALSE POSITIVE)
+
+- **File:** `resources/ext.layers/viewer/LayersLightbox.js`
+- **Issue:** Originally reported no `role="dialog"` / `aria-modal="true"`.
+  Verification found ARIA dialog attributes already present.
+- **Status:** ❌ **False Positive** — ARIA attributes already exist.
+
+### Documentation — Low
+
+#### ~~D-055-01: Slide Mode Config Undocumented~~ (FIXED)
+
+- **File:** `README.md`, `Mediawiki-Extension-Layers.mediawiki`, `copilot-instructions.md`
+- **Issue:** Six `$wgLayersSlide*` parameters not documented.
+- **Status:** ✅ **Fixed** — Added to README.md, MediaWiki extension page, and copilot-instructions.md.
+
+#### ~~D-055-02: `Mediawiki-Extension-Layers.mediawiki` Missing Slide Config~~ (FIXED)
+
+- **File:** `Mediawiki-Extension-Layers.mediawiki`
+- **Issue:** External page omits Slide Mode configuration.
+- **Status:** ✅ **Fixed** — Added 6 Slide params to infobox and configuration table.
+
+### Carried Forward from v54
+
+#### P3-146: `layer_set_usage` Table — Dead/Unimplemented Feature
+
+- **Decision:** Remove. Table has zero reads/writes in application code.
+  See `improvement_plan.md` “P3-146 Removal Plan” for the 9-step checklist.
+- **When:** Bundle with the next schema-touching change or minor version bump.
+- **Status:** 📋 **Removal planned**
+
+#### P3-147: `buildImageNameLookup` Generates Redundant SQL Variants
+
+- **Status:** ✅ **Accepted** — defensive pattern per CHANGELOG (MED-12).
+
+#### P3-148: `LayerValidatorInterface` Not Used in DI Container
+
+- **Status:** **Deferred** (since v54)
+
+---
+
+## Fixed Issues — v54 (March 14, 2026)
 
 ### Security — High
 
@@ -61,27 +317,15 @@ P3-149 reclassified as false positive.*
 
 #### P3-146: `layer_set_usage` Table — Dead/Unimplemented Feature
 
-- **Files:** `sql/layers_tables.sql` L43–52,
-  `src/Database/LayersSchemaManager.php`, `src/LayersConstants.php` L239
-- **Issue:** Table defined in schema, columns validated in SchemaManager,
-  constant exists, but `LayersDatabase.php` has zero references.
-  No code reads/writes/deletes from this table.
-- **Status:** **Open**
+- **Status:** **Open** — carried forward to v55
 
 #### P3-147: `buildImageNameLookup` Generates Redundant SQL Variants
 
-- **File:** `src/Database/LayersDatabase.php` L1115–1126
-- **Issue:** Every query (19 call sites) generates 2–4 name variants for
-  `IN (...)` clauses, doubling index scans. Workaround for historical
-  inconsistent data rather than a proper fix.
-- **Status:** **Open**
+- **Status:** **Open** — carried forward to v55
 
 #### P3-148: `LayerValidatorInterface` Not Used in DI Container
 
-- **File:** `src/Validation/LayerValidatorInterface.php`
-- **Issue:** Interface defined, implemented by ServerSideLayerValidator,
-  but no code type-hints against it. Not wired in services.php.
-- **Status:** **Deferred** (low priority; validator works correctly as-is)
+- **Status:** **Deferred** — carried forward to v55
 
 #### P3-149: `ThumbnailRenderer` Has No Own Color Validation (Defense-in-Depth)
 
