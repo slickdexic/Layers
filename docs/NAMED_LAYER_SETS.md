@@ -1,8 +1,8 @@
 # Named Layer Sets Architecture
 
 **Created:** January 2025  
-**Status:** ✅ Implemented (verified on v1.5.58)  
-**Version:** 1.3 (v40 verification refresh)
+**Status:** ✅ Implemented (verified on v1.5.62)  
+**Version:** 1.3 (v57 verification refresh)
 
 ---
 
@@ -15,21 +15,21 @@ This document describes the Named Layer Sets feature, which restructures the lay
 - **Named Layer Set**: A logical grouping of layer annotations identified by a human-readable name (e.g., "default", "anatomy-labels", "tourist-highlights")
 - **Revision**: A specific saved state of a named layer set, identified by timestamp
 - **Version History**: Up to 50 most recent revisions stored per named set
-- **Layer Set Slot**: Each image can have up to 10-20 named layer sets
+- **Layer Set Slot**: Each image can have up to 15 named layer sets (configurable via `$wgLayersMaxNamedSets`)
 
 ### User Value
 
 1. **Organized Annotations**: Multiple named annotation sets per image (e.g., "english-labels", "french-labels")
 2. **Version History**: Undo to previous saves, compare revisions
-3. **Direct Linking**: Use `{{#layers:File.jpg|layers=anatomy-labels}}` to embed specific annotation sets
+3. **Direct Linking**: Use `[[File:Example.jpg|layerset=anatomy-labels]]` to embed specific annotation sets
 4. **Collaboration**: Different users can work on different named sets
 5. **Migration Path**: Existing anonymous revisions become "default" set
 
 ---
 
-## Current System Analysis
+## System Details
 
-### Current Database Schema
+### Database Schema
 
 ```sql
 CREATE TABLE /*_*/layer_sets (
@@ -56,24 +56,21 @@ Additional indexes:
 - `ls_timestamp (ls_timestamp)`
 - `ls_size_performance (ls_size, ls_layer_count)`
 
-1. Each save creates a new row with incrementing `ls_revision` (global per image)
-2. `ls_name` exists but is optional and unused for organization
-3. All revisions are returned in `all_layersets` API response
-4. No revision limits - unlimited growth
-5. `layers=` parameter doesn't exist in wikitext parser
+### Pre-Implementation History
 
-### Problems with Current Approach
+Before v1.5.0, the system stored anonymous revisions per image:
+- `ls_name` was nullable and unused
+- All revisions were shown in a flat `all_layersets` list
+- No revision limits — unbounded growth
+- No `layerset=` wikitext parameter
 
-1. **Unbounded Growth**: No limit on stored revisions per image
-2. **No Logical Grouping**: Can't have "english" and "french" annotation sets
-3. **No Direct Linking**: Can't reference a specific named set in wikitext
-4. **Confusing History**: All saves mixed together without context
+These limitations motivated the named sets feature.
 
 ---
 
-## Proposed Design
+## Architecture
 
-### New Data Model
+### Data Model
 
 ```
 Image (File:Example.jpg)
@@ -86,7 +83,7 @@ Image (File:Example.jpg)
 │   ├── Revision 3 (latest)
 │   ├── Revision 2
 │   └── Revision 1
-└── Named Set: "tourist-poi" (up to 10-20 named sets per image)
+└── Named Set: "tourist-poi" (up to 15 named sets per image)
     └── Revision 1
 ```
 
@@ -97,8 +94,6 @@ Image (File:Example.jpg)
 | `$wgLayersMaxNamedSets` | 15 | Maximum named sets per image |
 | `$wgLayersMaxRevisionsPerSet` | 50 | Maximum revisions kept per named set |
 | `$wgLayersDefaultSetName` | "default" | Name for auto-created sets |
-| `$wgLayersSetNameMaxLength` | 64 | Maximum characters for set name |
-| `$wgLayersSetNamePattern` | `/^[\p{L}\p{N}_-]+$/u` | Allowed characters (unicode alphanumeric, underscore, dash) |
 
 **Set Name Validation** (in `SetNameSanitizer`):
 - Max length: 255 characters (matches DB column, multibyte-aware truncation)
@@ -108,40 +103,19 @@ Image (File:Example.jpg)
 - Consecutive whitespace collapsed to single space
 - Control chars and path separators (`/`, `\\`) removed before whitelist filtering
 
-#### Option A: Minimal Changes (Recommended)
+### Database Implementation
 
-Keep existing schema, add compound index and constraints:
+The `ls_name` column directly on `layer_sets` provides named set
+support with a compound unique index ensuring no duplicate revisions.
+Revision pruning and named set counting are handled in application
+logic (`LayersDatabase.php`).
 
-```sql
--- Add index for efficient named set queries
-CREATE INDEX idx_layer_sets_name_lookup 
-ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
-
--- Note: Revision pruning handled in application logic
-```
-
-#### Option B: Separate Tables (More Complex)
-
-```sql
--- New table for named set metadata
-CREATE TABLE layer_set_names (
-    lsn_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    lsn_img_name VARCHAR(255) NOT NULL,
-    lsn_img_sha1 VARCHAR(40) NOT NULL,
-    lsn_name VARCHAR(64) NOT NULL,
-    lsn_created_by INT UNSIGNED NOT NULL,
-    lsn_created_at BINARY(14) NOT NULL,
-    lsn_revision_count INT UNSIGNED DEFAULT 0,
-    UNIQUE KEY idx_lsn_unique (lsn_img_name, lsn_img_sha1, lsn_name)
-);
-
--- Existing layer_sets gets foreign key
-ALTER TABLE layer_sets 
-ADD COLUMN ls_set_name_id INT UNSIGNED,
-ADD FOREIGN KEY (ls_set_name_id) REFERENCES layer_set_names(lsn_id);
-```
-
-**Recommendation**: Use Option A for simplicity. Option B is overkill for current scale.
+Key methods:
+- `getNamedSetsForImage()` — lists all named sets with metadata
+- `getSetRevisions()` — revision history for a specific set
+- `pruneOldRevisions()` — removes oldest revisions beyond limit
+- `countNamedSetsForImage()` — enforces per-image set limit
+- `namedSetExists()` — checks for name conflicts before rename
 
 ---
 
@@ -231,26 +205,26 @@ When `setname` is explicitly requested, the module returns
 
 ### Standard File Syntax
 
-Named layer sets use the standard MediaWiki file syntax with the `layers=` parameter:
+Named layer sets use the standard MediaWiki file syntax with the `layerset=` parameter:
 
 ```wikitext
-[[File:Example.jpg|layers=on]]              <!-- Show default layer set -->
-[[File:Example.jpg|layers=anatomy-labels]]  <!-- Show specific named set -->
-[[File:Example.jpg|layers=none]]            <!-- Explicitly disable layers -->
+[[File:Example.jpg|layerset=on]]              <!-- Show default layer set -->
+[[File:Example.jpg|layerset=anatomy-labels]]  <!-- Show specific named set -->
+[[File:Example.jpg|layerset=none]]            <!-- Explicitly disable layers -->
 ```
 
 **Parameters:**
-- `layers=on`: Load the default layer set
-- `layers=<setname>`: Load a specific named set (e.g., `anatomy-labels`, `french-labels`)
-- `layers=none` or `layers=off`: Explicitly hide layers
-- Omitting `layers=` means no layers are displayed (opt-in model)
+- `layerset=on`: Load the default layer set
+- `layerset=<setname>`: Load a specific named set (e.g., `anatomy-labels`, `french-labels`)
+- `layerset=none` or `layerset=off`: Explicitly hide layers
+- Omitting `layerset=` means no layers are displayed (opt-in model)
 
 **Note:** `layerset=all` is still accepted as an enabled alias in parser
 normalization (alongside `on`, `true`, and `1`).
 
 ### File: Page Behavior
 
-Layers are NOT automatically displayed on File: pages. Users must explicitly add `layers=on` or `layers=setname` in the wikitext to display layers.
+Layers are NOT automatically displayed on File: pages. Users must explicitly add `layerset=on` or `layerset=setname` in the wikitext to display layers.
 
 ---
 
@@ -328,7 +302,7 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 
 ### Phase 4: Parser Integration
 
-1. Add `layers=` parameter to parser function
+1. Add `layerset=` parameter to file syntax handler
 2. Update wikitext examples in documentation
 
 ---
@@ -336,43 +310,43 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 ## Implementation Checklist
 
 ### Database Layer
-- [ ] Add migration script for default name assignment
-- [ ] Add new index for named set queries
-- [ ] Add `getNamedSetsForImage()` method
-- [ ] Add `getSetRevisions()` method
-- [ ] Add `pruneOldRevisions()` method
-- [ ] Add `countNamedSetsForImage()` method
-- [ ] Update `saveLayerSet()` to handle revision pruning
+- [x] Add migration script for default name assignment
+- [x] Add new index for named set queries
+- [x] Add `getNamedSetsForImage()` method
+- [x] Add `getSetRevisions()` method
+- [x] Add `pruneOldRevisions()` method
+- [x] Add `countNamedSetsForImage()` method
+- [x] Update `saveLayerSet()` to handle revision pruning
 
 ### API Layer
-- [ ] Update `ApiLayersInfo` to return named_sets structure
-- [ ] Update `ApiLayersInfo` to support setname parameter
-- [ ] Update `ApiLayersSave` to enforce named set limits
-- [ ] Update `ApiLayersSave` to trigger revision pruning
-- [ ] Add new error messages to i18n
+- [x] Update `ApiLayersInfo` to return named_sets structure
+- [x] Update `ApiLayersInfo` to support setname parameter
+- [x] Update `ApiLayersSave` to enforce named set limits
+- [x] Update `ApiLayersSave` to trigger revision pruning
+- [x] Add new error messages to i18n
 
 ### Frontend
-- [ ] Add set selector dropdown component
-- [ ] Add version history panel
-- [ ] Update save dialog with set name option
-- [ ] Update `APIManager.js` to handle new response format
-- [ ] Add set switching logic to editor
+- [x] Add set selector dropdown component
+- [x] Add version history panel
+- [x] Update save dialog with set name option
+- [x] Update `APIManager.js` to handle new response format
+- [x] Add set switching logic to editor
 
 ### Parser/Hooks
-- [ ] Update parser function to support `layers=` parameter
-- [ ] Update hook to pass set name to renderer
+- [x] Update file syntax handler to support `layerset=` parameter
+- [x] Update hook to pass set name to renderer
 
 ### Testing
-- [ ] Add unit tests for new database methods
-- [ ] Add API tests for named set operations
-- [ ] Add Jest tests for UI components
-- [ ] Add integration test for full workflow
+- [x] Add unit tests for new database methods
+- [x] Add API tests for named set operations
+- [x] Add Jest tests for UI components
+- [x] Add integration test for full workflow
 
 ### Documentation
-- [ ] Update `copilot-instructions.md` with new API contracts
-- [ ] Update `README.md` with named sets feature
-- [ ] Update `WIKITEXT_USAGE.md` with layers= parameter
-- [ ] Add user guide for named sets
+- [x] Update `copilot-instructions.md` with new API contracts
+- [x] Update `README.md` with named sets feature
+- [x] Update `WIKITEXT_USAGE.md` with `layerset=` parameter
+- [x] Add user guide for named sets
 
 ---
 
@@ -397,8 +371,8 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 
 ## Open Questions
 
-1. **Set Deletion**: Should users be able to delete entire named sets? (Probably yes for set owner/sysop)
-2. **Set Renaming**: Allow renaming named sets? (Probably yes, with redirect handling)
+1. ~~**Set Deletion**: Should users be able to delete entire named sets?~~ **Implemented** via `ApiLayersDelete` — set owner or admin can delete.
+2. ~~**Set Renaming**: Allow renaming named sets?~~ **Implemented** via `ApiLayersRename` — set owner or admin can rename (cannot rename to "default").
 3. **Cross-Image Sets**: Should a named set be able to apply to multiple related images? (Future consideration)
 4. **Revision Comparison**: Visual diff between revisions? (Future enhancement)
 
