@@ -25,6 +25,9 @@
 	 *
 	 * @class
 	 */
+	/** @type {HTMLDivElement|null} Cached element for HTML escaping */
+	let escapeDiv = null;
+
 	class RichTextConverter {
 
 		/**
@@ -35,9 +38,32 @@
 		 * @return {string} HTML-escaped text
 		 */
 		static escapeHtml( text ) {
-			const div = document.createElement( 'div' );
-			div.textContent = text;
-			return div.innerHTML;
+			if ( !escapeDiv ) {
+				escapeDiv = document.createElement( 'div' );
+			}
+			escapeDiv.textContent = text;
+			return escapeDiv.innerHTML;
+		}
+
+		/**
+		 * Sanitize a CSS property value by removing characters that could
+		 * break out of style attributes. Defense-in-depth: the server also
+		 * sanitizes fontFamily via sanitizeIdentifier() (P2-044).
+		 *
+		 * Note: Parentheses and commas are allowed for valid CSS functions
+		 * like rgb(), rgba(), hsl(), etc.
+		 *
+		 * @static
+		 * @param {string} value - CSS value to sanitize
+		 * @return {string} Safe CSS value
+		 */
+		static escapeCSSValue( value ) {
+			// Remove characters that could break out of style attributes or enable injection
+			// but KEEP parentheses for valid CSS functions like rgb(), rgba(), hsl()
+			let safe = String( value ).replace( /["'<>&;{}\\]/g, '' );
+			// Block CSS injection keywords (url, expression, javascript)
+			safe = safe.replace( /\b(?:url|expression|javascript)\s*\(/gi, '(' );
+			return safe;
 		}
 
 		/**

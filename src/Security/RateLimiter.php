@@ -31,6 +31,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Security;
 
 use Config;
+use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use User;

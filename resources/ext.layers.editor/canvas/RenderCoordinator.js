@@ -58,6 +58,9 @@ class RenderCoordinator {
 
 		// Bind methods to preserve context
 		this._boundRenderFrame = this._renderFrame.bind( this );
+
+		// Cache for JSON.stringify results keyed by object reference
+		this._jsonCache = new WeakMap();
 	}
 
 	/**
@@ -235,10 +238,11 @@ class RenderCoordinator {
 				layer.blendMode || '',
 				// Image source (use length to avoid huge strings)
 				layer.src ? layer.src.length : 0,
-				// Complex properties (use JSON length as proxy for changes)
-				layer.richText ? layer.richText.length : 0,
-				layer.gradient ? ( layer.gradient.type || '' ) : '',
-				layer.points ? layer.points.length : 0,
+				layer.preserveAspectRatio ? '1' : '0',
+				// Complex properties — deep-hash to detect content changes
+				layer.richText ? this._cachedStringify( layer.richText ) : '',
+				layer.gradient ? this._cachedStringify( layer.gradient ) : '',
+				layer.points ? this._cachedStringify( layer.points ) : '',
 				// Locked/name (affect rendering of selection handles)
 				layer.locked ? '1' : '0',
 				layer.name || ''
@@ -255,6 +259,27 @@ class RenderCoordinator {
 			}
 		}
 		return parts.join( '|' );
+	}
+
+	/**
+	 * Cached JSON.stringify — returns a cached string if the object reference
+	 * has not changed since last call. Avoids re-serializing richText, gradient,
+	 * and points arrays on every frame when nothing has changed.
+	 *
+	 * @param {Object|Array} obj - Object to stringify
+	 * @return {string} JSON string
+	 * @private
+	 */
+	_cachedStringify( obj ) {
+		if ( !obj || typeof obj !== 'object' ) {
+			return '';
+		}
+		let cached = this._jsonCache.get( obj );
+		if ( cached === undefined ) {
+			cached = JSON.stringify( obj );
+			this._jsonCache.set( obj, cached );
+		}
+		return cached;
 	}
 
 	/**

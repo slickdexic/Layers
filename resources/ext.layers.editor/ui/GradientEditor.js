@@ -297,7 +297,18 @@
 		 */
 		_applyPreset( preset ) {
 			// Clone the preset and ensure correct type
-			this.currentGradient = this._cloneGradient( preset );
+			const cloned = this._cloneGradient( preset );
+			// Validate preset structure before applying
+			if ( !cloned || !Array.isArray( cloned.colors ) || cloned.colors.length < 2 ) {
+				return;
+			}
+			// Ensure color stops have valid offsets
+			for ( const stop of cloned.colors ) {
+				if ( typeof stop.offset !== 'number' || stop.offset < 0 || stop.offset > 1 ) {
+					return;
+				}
+			}
+			this.currentGradient = cloned;
 			this.currentGradient.type = this.fillType; // Keep current type
 
 			this._notifyChange();
