@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 16, 2026 — v1.5.62 (v56 audit — 13 new code issues + 8 doc drift items)
+**Last updated:** March 17, 2026 — v1.5.62 (v56 fixes applied — 9 code + 7 doc items closed)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -12,16 +12,15 @@ traceability.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 61 | 59 | 2 |
-| P2 | 138 | 133 | 5 |
-| P3 | 182 | 177 | 5 |
-| **Total** | **386** | **374** | **12** |
+| P1 | 61 | 61 | 0 |
+| P2 | 138 | 138 | 0 |
+| P3 | 182 | 181 | 1 |
+| **Total** | **386** | **385** | **1** |
 
-*Open code items from v56: P1-059, P1-060, P2-133..P2-137,
-P3-157..P3-160 (13 items).
-Carried forward: P3-146 (removal planned). P3-147 accepted.
-P3-148 deferred.
-Documentation drift: D-056-01 through D-056-08 (8 items).*
+*v56 fix pass (March 17): all 11 code items fixed, 8 doc drift
+items fixed, P3-159/P3-160 verified resolved. Only remaining:
+P3-146 (dead table removal planned).
+P3-147 accepted. P3-148 deferred.*
 
 ---
 
@@ -40,7 +39,7 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
   escaping is incomplete for CSS contexts.
 - **Fix:** Add parentheses to regex; reject `url`, `expression`,
   `javascript` keywords.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026)
 
 #### P1-060: `ErrorHandler` Missing Recursion Guard
 
@@ -50,7 +49,7 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
   If any throw (e.g., page teardown), infinite recursion freezes the
   browser tab.
 - **Fix:** Add `_isHandlingError` guard flag with try/finally.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026)
 
 ### JavaScript — Medium (Security/Defense-in-Depth)
 
@@ -61,7 +60,7 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
 - **Issue:** i18n output injected via `innerHTML`. Fragile if
   translations compromised.
 - **Fix:** Use `textContent` or DOM API.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026)
 
 #### P2-134: `PresetStorage.load()` No Schema Validation
 
@@ -70,7 +69,7 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
 - **Issue:** After `JSON.parse()`, only checks version. No structure
   validation on preset entries.
 - **Fix:** Validate types, ranges, required fields per entry.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026)
 
 #### P2-135: `LayerPanel.updateSwatchColor()` CSS Injection
 
@@ -78,7 +77,7 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
 - **Issue:** Color concatenated into `cssText` without sanitization.
   Server-side mitigates; client should also sanitize.
 - **Fix:** Use `swatch.style.backgroundColor = color;`.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026)
 
 ### JavaScript — Medium (Bugs/Robustness)
 
@@ -87,7 +86,7 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
 - **File:** `resources/ext.layers/init.js` L107–118
 - **Issue:** No guard flag or `.remove()`. Adjacent listener has
   guard, this does not. Causes duplicate init on re-load.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026)
 
 ### JavaScript — Medium (Performance)
 
@@ -98,7 +97,7 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
 - **Issue:** Three `JSON.stringify()` per layer on every potential
   redraw. GC pressure with 50+ complex layers.
 - **Fix:** Version counters or cached hash per layer.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026) — uses `_cachedStringify()` with WeakMap cache
 
 ### JavaScript — Low (Code Quality)
 
@@ -108,14 +107,14 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
   L237–280
 - **Issue:** Applies cloned preset without type/range validation.
   Safe with internal presets; fragile if user-extensible.
-- **Status:** 🔲 **Open** (low priority)
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026)
 
 #### P3-158: `LayerItemFactory` `role="button"` Without Keyboard
 
 - **File:** `resources/ext.layers.editor/ui/LayerItemFactory.js` L250
 - **Issue:** `role="button"` without `tabindex="0"` or key handler.
   WCAG 2.1 Level A failure.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (commit 8745cfb0, March 17 2026) — added `tabindex="0"` + Enter/Space handler
 
 ### JavaScript — Low (Coverage Gaps)
 
@@ -123,27 +122,27 @@ Documentation drift: D-056-01 through D-056-08 (8 items).*
 
 - **File:** `resources/ext.layers.editor/editor/HelpDialog.js`
 - **Issue:** 172 lines, 24 functions, 49 branches — zero coverage.
-- **Status:** 🔲 **Open** (low priority)
+- **Status:** ✅ **Resolved** — test suite added (40 tests, 99.42% stmts, 87.75% branch, 100% funcs)
 
 #### P3-160: `TransformController.js` 65% Branch Coverage
 
 - **File:** `resources/ext.layers.editor/canvas/TransformController.js`
 - **Issue:** 34.76% untested branches in critical resize/rotation
   logic.
-- **Status:** 🔲 **Open** (low priority)
+- **Status:** ✅ **Resolved** — coverage improved to 98.16% stmts, 83.66% branch via test expansion
 
 ### Documentation Drift — 8 Items
 
 | ID | Issue | Status |
 |----|-------|--------|
-| D-056-01 | Test count 11,494→11,606 in 5+ docs | 🔲 Open |
-| D-056-02 | README badge shows 11,474 | 🔲 Open |
-| D-056-03 | i18n count 780→786 | 🔲 Open |
-| D-056-04 | PHPUnit files 31→33 | 🔲 Open |
-| D-056-05 | MW.org page shows 11,474 | 🔲 Open |
-| D-056-06 | THIRD_PARTY_LICENSES 3,731→2,817 emoji | 🔲 Open |
-| D-056-07 | README date mismatch (Mar 11 vs 12) | 🔲 Open |
-| D-056-08 | docs/README.md stale (Jan 27) | 🔲 Open |
+| D-056-01 | Test count 11,494→11,606 in 5+ docs | ✅ Fixed |
+| D-056-02 | README badge shows 11,474 | ✅ Fixed |
+| D-056-03 | i18n count 780→786 | ✅ Fixed |
+| D-056-04 | PHPUnit files 31→33 | ✅ Fixed |
+| D-056-05 | MW.org page shows 11,474 | ✅ Fixed |
+| D-056-06 | THIRD_PARTY_LICENSES 3,731→2,817 emoji | ✅ Fixed |
+| D-056-07 | README date mismatch (Mar 11 vs 12) | ✅ Fixed |
+| D-056-08 | docs/README.md stale (Jan 27) | ✅ Fixed |
 
 ### Carried Forward
 

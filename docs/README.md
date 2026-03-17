@@ -1,6 +1,6 @@
 # Layers Extension Documentation
 
-**Last Updated:** January 27, 2026
+**Last Updated:** March 17, 2026
 
 This directory contains technical documentation for the Layers MediaWiki extension. For user-facing documentation, see the [wiki/](../wiki/) directory.
 
@@ -27,26 +27,34 @@ This directory contains technical documentation for the Layers MediaWiki extensi
 - [DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md) - Setup, testing, contribution workflow
 - [CSP_GUIDE.md](CSP_GUIDE.md) - Content Security Policy compliance
 - [LTS_BRANCH_STRATEGY.md](LTS_BRANCH_STRATEGY.md) - Long-term support versioning strategy
+- [REFACTORING_PLAYBOOK.md](REFACTORING_PLAYBOOK.md) - Patterns and process for safe refactoring
+- [DOCUMENTATION_UPDATE_GUIDE.md](DOCUMENTATION_UPDATE_GUIDE.md) - Checklist for doc updates on release
+- [RELEASE_GUIDE.md](RELEASE_GUIDE.md) - Release checklist and process
 
 ### Features
 - [NAMED_LAYER_SETS.md](NAMED_LAYER_SETS.md) - Multiple named annotation sets per image
 - [WIKITEXT_USAGE.md](WIKITEXT_USAGE.md) - Wikitext syntax for embedding layers
-- [SHAPE_LIBRARY_PROPOSAL.md](SHAPE_LIBRARY_PROPOSAL.md) - **NEW** Built-in shape library feature proposal
+- [SLIDE_MODE.md](SLIDE_MODE.md) - Slide presentation mode
+- [SHAPE_LIBRARY_PROPOSAL.md](SHAPE_LIBRARY_PROPOSAL.md) - Built-in shape library (1,385 shapes)
+- [INSTANTCOMMONS_SUPPORT.md](INSTANTCOMMONS_SUPPORT.md) - Foreign file / InstantCommons support
 
 ### Quality & Standards
 - [ACCESSIBILITY.md](ACCESSIBILITY.md) - ARIA roles, keyboard navigation, screen reader support
 - [UX_STANDARDS_AUDIT.md](UX_STANDARDS_AUDIT.md) - UX consistency audit results
+- [PROJECT_GOD_CLASS_REDUCTION.md](PROJECT_GOD_CLASS_REDUCTION.md) - God class tracking and reduction plan
 
-### Troubleshooting
+### Troubleshooting & Postmortems
 - [KNOWN_ISSUES.md](KNOWN_ISSUES.md) - Current bugs and limitations
-- [layers-all-troubleshooting.md](layers-all-troubleshooting.md) - Troubleshooting guide for layer visibility issues
-- [POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md](POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md) - Boolean serialization bug analysis
-- [POSTMORTEM_IFRAME_MODAL_500_ERROR.md](POSTMORTEM_IFRAME_MODAL_500_ERROR.md) - Iframe modal HTTP 500 fatal error
+- [layers-all-troubleshooting.md](layers-all-troubleshooting.md) - Layer visibility troubleshooting
+- [POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md](POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md) - Boolean serialization bug
+- [POSTMORTEM_IFRAME_MODAL_500_ERROR.md](POSTMORTEM_IFRAME_MODAL_500_ERROR.md) - Iframe modal HTTP 500
+- [POSTMORTEM_TEXTBOX_DEFAULTS.md](POSTMORTEM_TEXTBOX_DEFAULTS.md) - Textbox defaults regression
 
-### Planning
+### Planning & Proposals
 - [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) - Active feature proposals and ideas
-- [SHAPE_LIBRARY_PROPOSAL.md](SHAPE_LIBRARY_PROPOSAL.md) - Shape library feature proposal (v1.5.0)
-- [RELEASE_GUIDE.md](RELEASE_GUIDE.md) - Release checklist and process
+- [GOD_CLASS_REFACTORING_PLAN.md](GOD_CLASS_REFACTORING_PLAN.md) - Refactoring plan for large files
+- [SLIDES_REQUIREMENTS.md](SLIDES_REQUIREMENTS.md) - Slide mode feature requirements
+- [SLIDE_MODE_ISSUES.md](SLIDE_MODE_ISSUES.md) - Known slide mode issues
 
 ---
 

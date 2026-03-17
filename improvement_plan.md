@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 16, 2026 — v1.5.62 (v56 audit, 13 new code issues + 8 doc drift items)
+**Last updated:** March 17, 2026 — v1.5.62 (v56 fix pass complete)
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -15,25 +15,24 @@ fixed.** v55 audit found **13 new items** (1 HIGH, 5 MEDIUM, 7 LOW).
 reclassified as false positives. **5 remained open.**
 v56 audit found **13 new code issues** (2 HIGH, 5 MEDIUM, 6 LOW) plus
 **8 documentation drift items**. 9 false positives eliminated. P3-146,
-P3-147, P3-148 carried forward. **21 total open items.**
+P3-147, P3-148 carried forward. v56 fix pass (March 17): **all 11 code
+items fixed**, P3-159/P3-160 verified resolved (coverage >98%),
+7 doc drift items fixed, D-056-08 fixed. **0 open code items.**
 Use the section below as the authoritative current backlog.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 16, 2026 — v1.5.62)
+## Verified Current Backlog (Authoritative as of March 17, 2026 — v1.5.62)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS High | 2 (P1-059 CSS escaping, P1-060 recursion guard) | 1h |
-| JS Medium (Security) | 3 (P2-133, P2-134, P2-135) | 2h |
-| JS Medium (Bugs) | 1 (P2-136 hook guard) | 15m |
-| JS Medium (Perf) | 1 (P2-137 JSON.stringify) | 1h |
-| JS Low (Quality) | 2 (P3-157, P3-158) | 1h |
-| JS Low (Coverage) | 2 (P3-159, P3-160) | 3h |
+| JS High | 0 | — |
+| JS Medium | 0 | — |
+| JS Low (Coverage) | 0 (P3-159, P3-160 verified resolved) | — |
 | PHP/Schema Low | 1 (P3-146 dead table removal) | 1h |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
-| Documentation | 8 (D-056-01..D-056-08) | 1h |
-| **Total** | **21 open** (+ 1 accepted) | ~10h |
+| Documentation | 0 (D-056-08 fixed) | — |
+| **Total** | **1 open** (+ 2 deferred) | ~1h |
 
 ### Current Priorities (v56 — 13 New Code + 8 Doc + 3 Carried)
 
@@ -48,8 +47,8 @@ Use the section below as the authoritative current backlog.
 | 28.07 | RenderCoordinator JSON.stringify per dirty check | P2-137 | MED | ✅ Fixed |
 | 28.08 | GradientEditor._applyPreset() no validation | P3-157 | Low | ✅ Fixed |
 | 28.09 | LayerItemFactory role="button" without keyboard | P3-158 | Low | ✅ Fixed |
-| 28.10 | HelpDialog.js zero test coverage | P3-159 | Low | 🔲 Open |
-| 28.11 | TransformController.js 65% branch coverage | P3-160 | Low | 🔲 Open |
+| 28.10 | HelpDialog.js zero test coverage | P3-159 | Low | ✅ Resolved (99.42% stmts) |
+| 28.11 | TransformController.js 65% branch coverage | P3-160 | Low | ✅ Resolved (98.16% stmts) |
 | 28.12 | Test count stale (11,494→11,606) | D-056-01 | Low | ✅ Fixed |
 | 28.13 | README badge shows 11,474 | D-056-02 | Low | ✅ Fixed |
 | 28.14 | i18n key count was correct (780) | D-056-03 | Low | ✅ Fixed |
@@ -57,7 +56,7 @@ Use the section below as the authoritative current backlog.
 | 28.16 | MW.org page test count 11,474 | D-056-05 | Low | ✅ Fixed |
 | 28.17 | THIRD_PARTY_LICENSES emoji count wrong | D-056-06 | Low | ✅ Fixed |
 | 28.18 | README version date mismatch | D-056-07 | Low | ✅ Fixed |
-| 28.19 | docs/README.md severely stale | D-056-08 | Low | 🔲 Open |
+| 28.19 | docs/README.md severely stale | D-056-08 | Low | ✅ Fixed |
 | 28.20 | layer_set_usage table dead | P3-146 | Low | 📋 Removal planned |
 | 28.21 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
 | 28.22 | LayerValidatorInterface unused in DI | P3-148 | Low | 🔲 Deferred |
