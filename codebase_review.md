@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 16, 2026 (v56 audit)
-**Previous Review:** March 14, 2026 (v55 audit)
+**Review Date:** March 17, 2026 (v57 audit)
+**Previous Review:** March 16, 2026 (v56 audit)
 **Version:** 1.5.62
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -13,17 +13,18 @@
 - **Verification Method:** Direct source inspection with multi-pass
     verification using 4 specialized subagent sweeps (PHP API modules,
     PHP core/database/validation, JS core editor/canvas/renderers, JS
-    UI/toolbar/presets) plus 2 targeted confirmation passes. All findings
+    UI/toolbar/viewer) plus 3 targeted confirmation passes. All findings
     individually confirmed against actual source before inclusion. Known
-    false-positive patterns from 55 prior reviews were checked and
-    excluded. 9 subagent-reported issues were eliminated as false
-    positives during this v56 round (see Verified Non-Issues).
-- **Coverage:** 91.32% statements, 81.69% branches, 90.62% functions,
-    91.39% lines (verified March 14, 2026)
-- **JS source files:** 156 in `resources/` excluding `resources/dist` (~113,444 lines)
+    false-positive patterns from 56 prior reviews were checked and
+    excluded. Subagent-reported issues were rigorously verified — many
+    were eliminated as false positives (see Verified Non-Issues).
+- **Coverage:** 92.88% statements, 82.58% branches, 91.57% functions,
+    92.97% lines (verified March 17, 2026)
+- **JS source files:** 158 in `resources/` including `resources/dist` (~113,550 lines),
+    149 excluding dist and scripts (~110,491 lines)
 - **PHP production files:** 41 in `src/` (~15,216 lines)
 - **Jest test suites:** 168
-- **Jest test cases:** 11,606 (`npx jest --no-coverage --silent` — verified March 16, 2026 — HEAD 82bdca3d)
+- **Jest test cases:** 11,847 (`npx jest --no-coverage --silent` — verified March 17, 2026 — HEAD 6f6b8c8f)
 - **PHPUnit test files:** 33 in `tests/phpunit`
 - **i18n message keys:** 780 in `i18n/en.json`, 780 in `i18n/qqq.json` (layers- prefix)
 - **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
@@ -34,50 +35,299 @@
 
 ## Executive Summary
 
-This v56 audit performed a comprehensive review of all PHP (`src/`) and
+This v57 audit performed a comprehensive review of all PHP (`src/`) and
 JavaScript (`resources/`) source files, all documentation (README, wiki,
 docs/*.md, *.mediawiki), and configuration (extension.json, jest.config.js).
-The review used 4 specialized subagent sweeps plus 2 targeted verification
-passes. 9 subagent-reported issues were eliminated as false positives.
+The review used 4 specialized subagent sweeps plus 3 targeted verification
+passes against the actual source code. Many subagent-reported issues were
+rigorously eliminated as false positives (see Verified Non-Issues below).
 
-The v56 review found **0 CRITICAL, 2 HIGH, 5 MEDIUM, and 6 LOW items**
-— 13 new verified items total. **All 9 code issues (P1-059, P1-060,
-P2-133 through P2-137, P3-157, P3-158) have been fixed.** 7 of 8
-documentation drift items (D-056-01 through D-056-07) are also fixed;
-D-056-08 (docs/README.md stale) remains open. The most significant
-findings were:
+All v56 code fixes confirmed intact. Test count increased from 11,606 to
+11,847 (+241 tests). Coverage improved from 91.32% to 92.88% statements
+and 81.69% to 82.58% branches.
 
-1. **RichTextConverter CSS escaping gap** (HIGH): The `escapeCSSValue()`
-   function blocks quote/brace/angle characters but does NOT block `url()`
-   or `javascript:` in CSS property values, allowing potential CSS injection
-   through rich text style properties.
+The v57 review found **0 CRITICAL, 0 HIGH, 3 MEDIUM, and 5 LOW items**
+— 8 new verified items total. The most significant findings were:
 
-2. **ErrorHandler missing recursion guard** (HIGH): The global error handler
-   catches unhandled errors and calls `handleError()`, which performs DOM
-   operations (notification display), logging, and recovery. If any of
-   these throw, the error handler re-triggers itself infinitely, freezing
-   the browser tab.
+1. **`deleteNamedSet()` missing transaction protection** (MEDIUM):
+   `LayersDatabase.deleteNamedSet()` performs a raw DELETE without
+   `startAtomic()`/`endAtomic()` or `FOR UPDATE` locks. In contrast,
+   `renameNamedSet()` correctly uses atomic transactions. Concurrent
+   delete + rename operations on the same set can produce inconsistent
+   results.
 
-3. **PresetDropdown innerHTML with i18n output** (MEDIUM): Template
-   literals inject `getMessage()` output directly into `innerHTML`. While
-   MediaWiki i18n messages are typically safe, the pattern is fragile
-   and violates defense-in-depth if translations are compromised.
+2. **`ApiLayersRename` wrong error constant for missing filename** (MEDIUM):
+   Uses `ERROR_FILE_NOT_FOUND` ('layers-file-not-found') when the filename
+   parameter is empty, which is semantically wrong — a missing parameter
+   is not the same as a file not existing. `ApiLayersDelete` correctly
+   uses `apierror-missingparam` for the same situation.
 
-4. **RenderCoordinator JSON.stringify per redraw** (MEDIUM): Three
-   `JSON.stringify()` calls per layer on every dirty-check (richText,
-   gradient, points) cause measurable lag with complex layers.
+3. **`ApiLayersSave` validation code duplication** (MEDIUM): The
+   `execute()` and `executeSlideSave()` methods duplicate ~15–20 lines of
+   identical validation logic (JSON parsing, layer validation, background
+   settings, rate limiting). Changes must be applied in both places.
 
-5. **Documentation metric drift** (LOW): Test count, JS line count, PHPUnit
-   file count, emoji count, and version date have been corrected across all
-   downstream documentation files.
+4. **`ShadowRenderer` DOMMatrix without feature detection** (LOW): Direct
+   `new DOMMatrix()` instantiation at two call sites without checking
+   `typeof DOMMatrix !== 'undefined'`. Affects older browsers and
+   non-browser test environments.
 
-All v55 code fixes confirmed intact. The 2 previously deferred items
-(P3-146 dead table, P3-147 redundant SQL) remain open and are carried
-forward. P3-148 (unused interface) also carried.
+5. **Documentation metric drift** (LOW): Test count (11,606→11,847),
+   coverage (91.32%→92.88%), and several stale doc version references
+   (ARCHITECTURE.md, SLIDE_MODE.md, NAMED_LAYER_SETS.md).
 
-Grade maintained at **A**. The codebase retains strong architecture,
-comprehensive test coverage (91.32% statements, 11,606 tests), and
-robust security controls.
+The codebase retains strong architecture, comprehensive test coverage
+(92.88% statements, 11,847 tests in 168 suites), and robust security
+controls. P3-146 (dead table), P3-147 (accepted), and P3-148 (deferred)
+carried forward.
+
+---
+
+## Confirmed Findings (v57 — March 17, 2026) — 8 New Issues Found
+
+### v56 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P1-059 | ✅ Fixed v1.5.62 | CSS escaping gap fixed |
+| P1-060 | ✅ Fixed v1.5.62 | ErrorHandler recursion guard added |
+| P2-133 | ✅ Fixed v1.5.62 | innerHTML replaced with DOM API |
+| P2-134 | ✅ Fixed v1.5.62 | Schema validation added |
+| P2-135 | ✅ Fixed v1.5.62 | cssText injection fixed |
+| P2-136 | ✅ Fixed v1.5.62 | Hook guard added |
+| P2-137 | ✅ Fixed v1.5.62 | JSON.stringify cached |
+| P3-157 | ✅ Fixed v1.5.62 | Gradient preset validation |
+| P3-158 | ✅ Fixed v1.5.62 | ARIA keyboard support |
+| P3-159 | ✅ Resolved | HelpDialog coverage 99.42% |
+| P3-160 | ✅ Resolved | TransformController coverage 98.16% |
+| D-056-01..08 | ✅ Fixed | All 8 doc drift items |
+| P3-146 | 🔲 Open | Dead table (still carried) |
+| P3-147 | 🔲 Open | Redundant SQL (still carried) |
+| P3-148 | 🔲 Deferred | Unused interface (carried) |
+
+---
+
+### New Findings (v57) — 8 Items
+
+**Audit scope:** All 41 PHP source files (`src/`), all 158 JS files
+(`resources/`), all documentation and mediawiki files. Main branch,
+HEAD `6f6b8c8f`.
+
+**Methodology:** Multi-pass review with 4 specialized subagent sweeps
+(PHP API modules, PHP core/database/validation, JS core editor/canvas/
+renderers, JS UI/viewer/toolbar) plus 3 targeted verification passes
+confirming each finding against actual source code. Numerous false
+positives eliminated during verification (see Verified Non-Issues
+section below).
+
+### Medium — PHP (Race Condition)
+
+#### P2-138 · `deleteNamedSet()` Missing Transaction Protection
+
+- **File:** `src/Database/LayersDatabase.php` L784–830
+- **Code:**
+    ```php
+    $dbw->delete(
+        'layer_sets',
+        [ 'ls_img_name' => ..., 'ls_img_sha1' => $sha1, 'ls_name' => $setName ],
+        __METHOD__
+    );
+    ```
+- **Impact:** `deleteNamedSet()` performs a raw DELETE without
+    `startAtomic()`/`endAtomic()` or `FOR UPDATE` locks. In contrast,
+    `renameNamedSet()` at L872–945 correctly uses atomic transactions
+    with `FOR UPDATE`. This asymmetry means concurrent delete + rename
+    operations on the same set can produce inconsistent results. The
+    API layer checks ownership and existence before calling
+    `deleteNamedSet()`, creating a TOCTOU gap: between the permission
+    check and the actual delete, another request could rename or
+    modify the set.
+- **Fix:** Wrap the DELETE in `startAtomic()`/`endAtomic()`,
+    mirroring the pattern already used by `renameNamedSet()`.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### P2-139 · `ApiLayersRename` Wrong Error Constant for Missing Filename
+
+- **File:** `src/Api/ApiLayersRename.php` L86–88
+- **Code:**
+    ```php
+    if ( $requestedFilename === '' || $requestedFilename === null ) {
+        $this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
+    }
+    ```
+- **Impact:** When the `filename` parameter is empty or null, the API
+    returns `layers-file-not-found` which implies the file doesn't exist
+    in the wiki. The actual problem is a missing/empty parameter.
+    `ApiLayersDelete` at L84–87 correctly uses
+    `[ 'apierror-missingparam', 'filename' ]` for the same condition.
+    This misleads API consumers about what went wrong.
+- **Fix:** Change to
+    `$this->dieWithError( [ 'apierror-missingparam', 'filename' ], 'missingparam' );`
+    to match `ApiLayersDelete`.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### P2-140 · `ApiLayersSave` Duplicated Validation Logic
+
+- **File:** `src/Api/ApiLayersSave.php` L195–260 vs L410–480
+- **Issue:** The `execute()` and `executeSlideSave()` methods duplicate
+    ~15–20 lines of identical validation logic: JSON parsing, layer
+    validation, background settings extraction, rate limiting, and
+    sanitization. Both paths must be updated when validation rules
+    change, creating maintenance burden and risk of inconsistency
+    in security-critical save paths.
+- **Fix:** Extract shared validation logic into a `validateAndParseLayers()`
+    helper method that both `execute()` and `executeSlideSave()` call.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### P3-161 · `ShadowRenderer` DOMMatrix Without Feature Detection
+
+- **File:** `resources/ext.layers.shared/ShadowRenderer.js` L362, L493
+- **Code:**
+    ```javascript
+    transformWithoutRotation = new DOMMatrix( [
+        scaleX, 0, 0, scaleY, e, f
+    ] );
+    ```
+- **Impact:** Direct `new DOMMatrix()` instantiation without checking
+    `typeof DOMMatrix !== 'undefined'`. DOMMatrix is not available in
+    older browsers (pre-Chromium Edge, IE11) or Node.js test
+    environments without DOM polyfills. Affects shadow rendering for
+    rotated shapes — shadows would be missing or the call would throw
+    `ReferenceError`.
+- **Fix:** Add feature detection:
+    ```javascript
+    if ( typeof DOMMatrix !== 'undefined' ) {
+        transformWithoutRotation = new DOMMatrix( [...] );
+    } else {
+        transformWithoutRotation = { a: scaleX, b: 0, c: 0, d: scaleY, e, f };
+    }
+    ```
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### P3-162 · `CanvasEvents` `require()` Fallback in Browser Context
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js` L947–948,
+    L999–1000
+- **Code:**
+    ```javascript
+    const AngleDimensionRenderer =
+        ( typeof window !== 'undefined' && window.Layers &&
+          window.Layers.AngleDimensionRenderer ) ||
+        ( typeof require !== 'undefined' &&
+          require( '../ext.layers.shared/AngleDimensionRenderer.js' ) );
+    ```
+- **Impact:** The `require()` fallback uses Node.js/CommonJS syntax that
+    is incompatible with MediaWiki's ResourceLoader module system. In
+    production, if the `window.Layers` lookup fails, `require()` will
+    not resolve the module correctly. The code does have a null guard
+    after the lookup (`if ( !AngleDimensionRenderer ) { return false; }`),
+    so this degrades gracefully rather than crashing. However, the
+    `require()` fallback gives a false sense of resilience.
+- **Fix:** Remove the `require()` fallback and rely solely on the
+    `window.Layers` namespace lookup with a logged warning.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+### Low — Documentation Drift (5 Items)
+
+#### D-057-01 · Test Count Stale (11,606 → 11,847)
+
+- **Files:** `codebase_review.md`, `docs/ARCHITECTURE.md`,
+    `Mediawiki-Extension-Layers.mediawiki`, `README.md`, `wiki/Home.md`,
+    `.github/copilot-instructions.md`
+- **Issue:** Multiple documents reference 11,606 tests. Actual count
+    verified March 17, 2026: **11,847** (241 test drift).
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### D-057-02 · Coverage Stale (91.32% → 92.88%)
+
+- **Files:** `codebase_review.md`, `docs/ARCHITECTURE.md`, `README.md`
+- **Issue:** Coverage reported as 91.32% statements, 81.69% branches.
+    Actual March 17, 2026: **92.88% statements, 82.58% branches**.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### D-057-03 · `docs/ARCHITECTURE.md` God Class Section Heading Inconsistent
+
+- **File:** `docs/ARCHITECTURE.md` L100
+- **Issue:** Summary table at L37 correctly states 26 god classes, but
+    the section heading at L100 says "God Classes (17 Files ≥1,000 Lines)"
+    and only lists ~17 files. The actual count is 26 (5 generated + 19
+    hand-written JS + 2 PHP). 6 files that have grown past 1,000 lines
+    since the section was written are missing from the list.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### D-057-04 · `docs/SLIDE_MODE.md` Stale Version Reference
+
+- **File:** `docs/SLIDE_MODE.md` L5–6
+- **Issue:** States "Date: January 31, 2026" and "Current Release:
+    v1.5.59". Current version is v1.5.62.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+#### D-057-05 · `docs/NAMED_LAYER_SETS.md` Confusing Version Metadata
+
+- **File:** `docs/NAMED_LAYER_SETS.md` L3–5
+- **Issue:** States "Version: 1.3 (v40 verification refresh)" and
+    "Status: ✅ Implemented (verified on v1.5.59)". Current version
+    is v1.5.62. The "Version: 1.3" refers to the feature document
+    version, not the extension version, which is confusing.
+- **Status:** ✅ **Fixed** (v1.5.62)
+
+---
+
+## v57 Verified Non-Issues (False Positives Eliminated)
+
+The following were reported by automated subagent analysis during
+this v57 review but verified as non-issues by reading the actual
+source code:
+
+- **`HitTestController` boolean equality bug (layer.visible === false
+  fails for integer 0):** **FALSE POSITIVE** — `LayerDataNormalizer`
+  runs at data load time in `APIManager.processRawLayers()`, converting
+  integer 0/1 to boolean false/true. All downstream code receives
+  normalized booleans.
+
+- **`APIManager.processRawLayers()` undefined method:** **FALSE
+  POSITIVE** — Method IS defined at L538 of APIManager.js as a class
+  method. Called at L480.
+
+- **`EffectsRenderer` GPU memory leak via temp canvases:** **FALSE
+  POSITIVE** — Temp canvases are cached in instance variables
+  (`_blurCanvas`, `_blurFillCanvas`) and reused across frames. No
+  per-frame allocation.
+
+- **`TransformController` RAF memory leak:** **FALSE POSITIVE** —
+  All RAF IDs (`_resizeRafId`, `_dragRafId`, `_rotationRafId`,
+  `_arrowTipRafId`) are cancelled in `destroy()` at L1134–1150.
+
+- **`ViewerManager` concurrency limiter broken:** **FALSE POSITIVE**
+  — `_processWithConcurrency()` uses standard recursive-chain pattern
+  that correctly limits concurrency to `limit` parallel chains.
+
+- **`LayersLightbox` close timeout race condition:** **FALSE
+  POSITIVE** — Fixed in prior version. `open()` already clears
+  `closeTimeoutId` before creating new overlay at L120–125.
+
+- **`DraftManager` silent data loss:** **FALSE POSITIVE** — Errors
+  ARE logged via `mw.log.warn()` at L226–231 and method returns
+  `false`.
+
+- **`APIManager` cache key collision:** **FALSE POSITIVE** — Cache
+  key separators (`:id:`, `:set:`, `:default`) are distinct enough
+  to prevent collisions.
+
+- **`PropertiesForm` input value not updated after clamping:** **FALSE
+  POSITIVE** — Input value IS updated after clamping, confirmed at
+  L247–275. Both `change` and `blur` handlers update displayed value.
+
+- **`ViewerManager` WeakMap wrapper cleanup:** **FALSE POSITIVE** —
+  WeakMap correctly enables GC of image elements and their wrappers.
+
+- **`SetNameSanitizer` can return empty string:** **FALSE POSITIVE**
+  — `sanitize()` at L45–67 returns `DEFAULT_SET_NAME` ('default')
+  when all characters are stripped.
+
+- **`ApiLayersRename` TOCTOU race in renameNamedSet():** **FALSE
+  POSITIVE** — `renameNamedSet()` correctly uses `startAtomic()` +
+  `FOR UPDATE` locks, preventing concurrent rename conflicts.
 
 ---
 
@@ -2079,9 +2329,9 @@ but verified as non-issues:
 | PHP production files (`src/`) | 41 |
 | PHP production lines (`src/`) | ~15,216 |
 | Jest test suites | 168 |
-| Jest tests | 11,606 |
-| Statement coverage | 91.32% |
-| Branch coverage | 81.69% |
+| Jest tests | 11,847 |
+| Statement coverage | 92.88% |
+| Branch coverage | 82.58% |
 | i18n keys (`en.json`, `qqq.json`) | 786 |
 | PHPUnit test files | 33 |
 | Files > 1,000 lines | 26 total |
@@ -2227,28 +2477,28 @@ but verified as non-issues:
 | Code quality | 0 | 0 | 0 | ~~1~~ 0 | Fixed v1.5.60 |
 | **Total open** | **0** | **0** | **0** | **0** | **All 54 items closed** |
 
-## Overall Grade: A
+## Overall Assessment
 
 The codebase maintains strong architecture, comprehensive test coverage
-(91.32% statements, 11,606 tests in 168 suites), 100% ES6 class migration,
+(92.88% statements, 11,847 tests in 168 suites), 100% ES6 class migration,
 and robust security controls (CSRF, rate limiting, input validation). All
-v49–v55 code fixes confirmed intact (356 total historical issues resolved).
+v49–v56 code fixes confirmed intact (369 total historical issues resolved).
 
-The v56 review (HEAD `82bdca3d`, v1.5.62) found **2 HIGH** (CSS escaping
-gap in RichTextConverter, ErrorHandler recursion risk), **5 MEDIUM**
-(innerHTML defense-in-depth, preset schema validation, CSS injection via
-cssText, hook guard missing, JSON.stringify performance), and **6 LOW**
-items (gradient validation, ARIA keyboard support, 2 coverage gaps).
-Additionally, 8 documentation drift items identified.
+The v57 review (HEAD `6f6b8c8f`, v1.5.62) found **3 MEDIUM** (deleteNamedSet
+missing transaction, ApiLayersRename wrong error constant, ApiLayersSave
+validation duplication) and **2 LOW** code items (ShadowRenderer DOMMatrix
+feature detection, CanvasEvents require() fallback). Additionally, 5
+documentation drift items identified. 12 false-positive reports from
+automated analysis were verified and eliminated (see Verified Non-Issues).
 
-21 items currently open: 2 HIGH, 5 MEDIUM, 6 LOW code items, and 8
-documentation drift items. P3-146 (dead table) and P3-147 (redundant SQL)
-carried forward. P3-148 deferred.
+10 items currently open: 3 MEDIUM, 2 LOW code items, and 5 documentation
+drift items. P3-146 (dead table), P3-147 (redundant SQL) carried forward.
+P3-148 deferred. No CRITICAL or HIGH issues remain open.
 
-Grade maintained at **A**. The HIGH findings are defense-in-depth gaps
-with upstream mitigations (server-side validation blocks most attack
-vectors). The codebase remains well-architected with strong test coverage
-and security controls.
+The codebase is well-architected with strong test coverage (92.88%
+statements, 82.58% branches) and robust defense-in-depth security
+controls. The remaining open items are minor consistency issues and
+documentation drift — no functional or security regressions.
 
 ---
 

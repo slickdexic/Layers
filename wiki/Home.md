@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C606%20passing-brightgreen" alt="11,606 Tests">
-   <img src="https://img.shields.io/badge/Coverage-91.32%25-brightgreen" alt="91.32% Coverage">
+  <img src="https://img.shields.io/badge/Tests-11%2C847%20passing-brightgreen" alt="11,847 Tests">
+   <img src="https://img.shields.io/badge/Coverage-92.88%25-brightgreen" alt="92.88% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -22,8 +22,8 @@
 
 ## 🆕 What's New in v1.5.62
 
-- **v54 Audit** — Security fix (IDOR ownership check), 7 code-quality fixes, grade restored to A
-- **Test Suite** — 11,606 tests passing (168 suites), 91.32% statement coverage
+- **v54 Audit** — Security fix (IDOR ownership check), 7 code-quality fixes
+- **Test Suite** — 11,847 tests passing (168 suites), 92.88% statement coverage
 
 ### Previous v1.5.60 Highlights
 
@@ -39,7 +39,7 @@
 
 - **Documentation Sync** — All metrics synchronized across 97+ files (February 13, 2026)
 - **VERSION Constant** — LayersNamespace.js now matches extension.json
-- **v37 Audit** — Fresh comprehensive code review, grade A maintained
+- **v37 Audit** — Fresh comprehensive code review, all issues resolved
 
 ### Previous v1.5.56 Highlights
 
@@ -321,10 +321,10 @@ See [[Changelog]] for full details.
 | **Version (REL1_39)** | 1.5.60 |
 | **Release Date** | March 10, 2026 |
 | **Test Suites** | 168 |
-| **Total Tests** | 11,606 |
+| **Total Tests** | 11,847 |
 | **PHPUnit Test Files** | 34 |
-| **Statement Coverage** | 91.32% |
-| **Branch Coverage** | 81.69% |
+| **Statement Coverage** | 92.88% |
+| **Branch Coverage** | 82.58% |
 | **Function Coverage** | 90.62% |
 | **Line Coverage** | 91.39% |
 | **JavaScript Files** | 158 |

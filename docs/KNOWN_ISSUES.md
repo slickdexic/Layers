@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 17, 2026 — v1.5.62 (v56 fixes applied — 9 code + 7 doc items closed)
+**Last updated:** March 17, 2026 — v1.5.62 (v57 audit — 3 MEDIUM + 2 LOW code + 5 doc drift items found)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,14 +13,90 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 138 | 138 | 0 |
-| P3 | 182 | 181 | 1 |
-| **Total** | **386** | **385** | **1** |
+| P2 | 141 | 138 | 3 |
+| P3 | 184 | 181 | 3 |
+| **Total** | **391** | **385** | **6** |
 
-*v56 fix pass (March 17): all 11 code items fixed, 8 doc drift
-items fixed, P3-159/P3-160 verified resolved. Only remaining:
-P3-146 (dead table removal planned).
-P3-147 accepted. P3-148 deferred.*
+*v57 audit (March 17): Found 3 MEDIUM (P2-138 to P2-140), 2 LOW
+(P3-161, P3-162), and 5 documentation drift items (D-057-01 to
+D-057-05). All v56 fixes confirmed intact. Carried: P3-146 (dead
+table), P3-147 (redundant SQL), P3-148 (deferred interface).
+12 automated-analysis false positives verified and eliminated.*
+
+---
+
+## v57 Issues (March 17, 2026; 3 MEDIUM + 2 LOW code + 5 doc drift)
+
+### PHP — Medium (Race Condition)
+
+#### P2-138: `deleteNamedSet()` Missing Transaction Protection
+
+- **File:** `src/Database/LayersDatabase.php` L784–830
+- **Issue:** `deleteNamedSet()` performs a raw DELETE without
+  `startAtomic()`/`endAtomic()` or `FOR UPDATE` locks. In contrast,
+  `renameNamedSet()` at L872–945 correctly uses atomic transactions.
+  Concurrent delete + rename operations on the same set may produce
+  inconsistent results. TOCTOU gap between ownership check and
+  actual delete.
+- **Fix:** Wrap DELETE in `startAtomic()`/`endAtomic()`, mirroring
+  `renameNamedSet()`.
+- **Status:** ✅ **Fixed** (v1.5.62 — wrapped in startAtomic/endAtomic)
+
+#### P2-139: `ApiLayersRename` Wrong Error Constant for Missing Filename
+
+- **File:** `src/Api/ApiLayersRename.php` L86–88
+- **Issue:** Returns `layers-file-not-found` when `filename` parameter
+  is empty/null. `ApiLayersDelete` correctly uses
+  `[ 'apierror-missingparam', 'filename' ]` for the same condition.
+  Misleads API consumers.
+- **Fix:** Change to
+  `$this->dieWithError( [ 'apierror-missingparam', 'filename' ], 'missingparam' );`
+- **Status:** ✅ **Fixed** (v1.5.62 — matches ApiLayersDelete pattern)
+
+#### P2-140: `ApiLayersSave` Duplicated Validation Logic
+
+- **File:** `src/Api/ApiLayersSave.php` L195–260 vs L410–480
+- **Issue:** `execute()` and `executeSlideSave()` duplicate ~15–20
+  lines of identical validation logic (JSON parsing, layer validation,
+  background extraction, rate limiting, sanitization). Both paths must
+  be updated when validation rules change.
+- **Fix:** Extract shared logic into `validateAndParseLayers()` helper.
+- **Status:** ✅ **Fixed** (v1.5.62 — extracted validateAndParseLayers helper)
+
+#### P3-161: `ShadowRenderer` DOMMatrix Without Feature Detection
+
+- **File:** `resources/ext.layers.shared/ShadowRenderer.js` L362, L493
+- **Issue:** Direct `new DOMMatrix()` without checking
+  `typeof DOMMatrix !== 'undefined'`. Not available in older browsers
+  or Node.js test environments without polyfills. Affects shadow
+  rendering for rotated shapes.
+- **Fix:** Add feature detection with plain-object fallback.
+- **Status:** ✅ **Fixed** (v1.5.62 — added typeof DOMMatrix guard)
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js` L947–948,
+  L999–1000
+- **Issue:** `require()` fallback is incompatible with MediaWiki's
+  ResourceLoader. Has null guard so degrades gracefully, but the
+  `require()` fallback gives a false sense of resilience.
+- **Fix:** Remove `require()` fallback; rely on `window.Layers`
+  namespace lookup with a logged warning.
+- **Status:** ✅ **Fixed** (v1.5.62 — removed require() fallback)
+
+### Documentation Drift — 5 Items
+
+| ID | Issue | Status |
+|----|-------|--------|
+| D-057-01 | Test count 11,606→11,847 in 6+ docs | ✅ Fixed |
+| D-057-02 | Coverage 91.32%→92.88% in 3+ docs | ✅ Fixed |
+| D-057-03 | ARCHITECTURE.md god class heading says 17, table says 26 | ✅ Fixed |
+| D-057-04 | SLIDE_MODE.md references v1.5.59 | ✅ Fixed |
+| D-057-05 | NAMED_LAYER_SETS.md confusing version metadata (v1.3/v40) | ✅ Fixed |
+
+### Carried Forward
+
+- **P3-146:** Dead `layer_set_usage` table — removal planned
+- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
+- **P3-148:** Unused `LayerValidatorInterface` — deferred
 
 ---
 

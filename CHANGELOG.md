@@ -172,7 +172,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Technical Details
 - All 11,152 tests pass (164 test suites) ✅
-- Grade upgraded from A- to A with zero open code issues
+- Zero open code issues
 
 ## [1.5.55] - 2026-02-10
 

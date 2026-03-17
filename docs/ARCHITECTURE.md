@@ -17,23 +17,23 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (March 14, 2026)
+## Codebase Statistics (March 17, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **156** |
-| Total JS lines | **~113,407** |
+| Total JS files | **158** |
+| Total JS lines | **~113,550** |
 | Total PHP files | **41** |
-| Total PHP lines | **~15,244** |
+| Total PHP lines | **~15,216** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~23,500 lines (generated) |
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **91.32% stmt, 81.69% branch** |
-| Jest tests | **11,494** (168 suites) |
-| PHPUnit test files | 31 |
+| Test coverage | **92.88% stmt, 82.58% branch** |
+| Jest tests | **11,847** (168 suites) |
+| PHPUnit test files | 34 |
 | God classes (>=1000 lines) | **26** (5 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |
 | Shape library | **1,385 shapes** |
@@ -97,7 +97,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 - Shape Library with 1,385 shapes (ISO 7010, IEC 60417, etc.)
 - Emoji Picker with 2,817 Noto Color Emoji
 
-### God Classes (17 Files ≥1,000 Lines)
+### God Classes (26 Files ≥1,000 Lines)
 
 **Generated Data Files (exempt from refactoring):**
 
@@ -145,7 +145,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | LayersValidator.js | 956 | Client-side validation |
 | ArrowRenderer.js | 932 | Arrow rendering |
 
-**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 91.32% statement test coverage.
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 92.88% statement test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for detailed status.
 
@@ -925,7 +925,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **11,122 tests, 95.19% statement coverage, 84.96% branch coverage**
+- **11,847 tests, 92.88% statement coverage, 82.58% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,494 tests, 168 suites)
+│   ├── jest/                # Unit tests (11,847 tests, 168 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

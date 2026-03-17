@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 17, 2026 — v1.5.62 (v56 fix pass complete)
+**Last updated:** March 17, 2026 — v1.5.62 (v57 audit)
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -17,7 +17,10 @@ v56 audit found **13 new code issues** (2 HIGH, 5 MEDIUM, 6 LOW) plus
 **8 documentation drift items**. 9 false positives eliminated. P3-146,
 P3-147, P3-148 carried forward. v56 fix pass (March 17): **all 11 code
 items fixed**, P3-159/P3-160 verified resolved (coverage >98%),
-7 doc drift items fixed, D-056-08 fixed. **0 open code items.**
+7 doc drift items fixed, D-056-08 fixed. **0 open code items from v56.**
+v57 audit found **5 new code issues** (3 MEDIUM, 2 LOW) plus **5
+documentation drift items**. 12 false positives eliminated during
+verification. P3-146, P3-147, P3-148 carried forward.
 Use the section below as the authoritative current backlog.
 
 ---
@@ -26,15 +29,50 @@ Use the section below as the authoritative current backlog.
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS High | 0 | — |
-| JS Medium | 0 | — |
-| JS Low (Coverage) | 0 (P3-159, P3-160 verified resolved) | — |
+| PHP Medium | 0 (P2-138, P2-139, P2-140 all fixed) | — |
+| JS Low | 0 (P3-161, P3-162 both fixed) | — |
 | PHP/Schema Low | 1 (P3-146 dead table removal) | 1h |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
-| Documentation | 0 (D-056-08 fixed) | — |
+| Documentation | 0 (D-057-01 to D-057-05 all fixed) | — |
 | **Total** | **1 open** (+ 2 deferred) | ~1h |
 
-### Current Priorities (v56 — 13 New Code + 8 Doc + 3 Carried)
+### Current Priorities (v57 — All Fixed)
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 29.01 | deleteNamedSet() missing transaction | P2-138 | MED | ✅ Fixed |
+| 29.02 | ApiLayersRename wrong error constant | P2-139 | MED | ✅ Fixed |
+| 29.03 | ApiLayersSave duplicated validation | P2-140 | MED | ✅ Fixed |
+| 29.04 | ShadowRenderer DOMMatrix no feature check | P3-161 | Low | ✅ Fixed |
+| 29.05 | CanvasEvents require() fallback | P3-162 | Low | ✅ Fixed |
+| 29.06 | Test count stale (11,606→11,847) | D-057-01 | Low | ✅ Fixed |
+| 29.07 | Coverage stale (91.32%→92.88%) | D-057-02 | Low | ✅ Fixed |
+| 29.08 | ARCHITECTURE.md god class heading | D-057-03 | Low | ✅ Fixed |
+| 29.09 | SLIDE_MODE.md references v1.5.59 | D-057-04 | Low | ✅ Fixed |
+| 29.10 | NAMED_LAYER_SETS.md version metadata | D-057-05 | Low | ✅ Fixed |
+| 29.11 | layer_set_usage table dead | P3-146 | Low | 📋 Planned |
+| 29.12 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
+| 29.13 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+
+### v57 Notes
+
+- v56 verification pass: all 11 v56 code fixes confirmed intact. All 8
+  doc drift fixes confirmed. P3-159/P3-160 verified resolved (>98%).
+  P3-146/P3-147/P3-148 carried forward (unchanged).
+- Full codebase audit (all 41 PHP files, all 158 JS modules, all docs):
+  **3 MEDIUM (transaction gap, error constant, validation duplication),
+  2 LOW (DOMMatrix feature detection, require() fallback).** Plus
+  5 documentation drift items.
+- 12 false positives eliminated during verification (boolean normalization,
+  processRawLayers undefined, GPU memory leak, RAF cleanup, concurrency
+  limiter, lightbox race, DraftManager data loss, cache key collision,
+  PropertiesForm input update, WeakMap cleanup, SetNameSanitizer empty,
+  renameNamedSet TOCTOU).
+- Metrics verified: 11,847 tests (was 11,606), 92.88% stmt coverage
+  (was 91.32%), 82.58% branch (was 81.69%), ~113,550 JS lines, ~15,216
+  PHP lines, 158 JS files.
+
+### Current Priorities (v56 — All Fixed)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
@@ -71,14 +109,9 @@ Use the section below as the authoritative current backlog.
   schema validation, cssText injection, hook guard, JSON.stringify perf),
   6 LOW (gradient validation, ARIA keyboard, 2 coverage gaps).** Plus
   8 documentation drift items.
-- 9 false positives eliminated during verification (layers-admin
-  permission, SetSelectorController validation, ContextMenuController
-  innerHTML, PresetDropdown destroy, ViewerManager catch, SmartGuides
-  math, _processWithConcurrency recursion, GradientEditor presets,
-  processHTML XSS).
+- 9 false positives eliminated during verification.
 - Metrics verified: 11,606 tests (was 11,494), 786 i18n keys (was 780),
   33 PHPUnit files (was 31), ~113,444 JS lines, ~15,216 PHP lines.
-- Grade maintained at **A**.
 
 ### P3-146 Removal Plan: `layer_set_usage` Table
 
@@ -119,7 +152,6 @@ Not urgent — the empty table costs negligible disk/runtime overhead.
   PolygonStarRenderer gradient, ResizeCalculator ellipse, DrawingController
   phase, WikitextHooks reset, OverflowException, GroupRights, ViewerManager
   cancel, TextSanitizer regex, FIFO security).
-- Grade maintained at **A**.
 
 ### Current Priorities (v54 — All Fixed/Carried)
 
@@ -164,7 +196,6 @@ Not urgent — the empty table costs negligible disk/runtime overhead.
 - **8 code fixes applied** (commit 0cba25e2): P1-057, P2-124–P2-127,
   P3-150–P3-152. P3-149 reclassified as false positive.
   P3-146/P3-147/P3-148 deferred (schema/data migration needed or low value).
-- Grade restored from A- to **A** after IDOR fix.
 - Remaining 2 items: 2 low code deferrals (P3-146, P3-147).
 
 ### Current Priorities (v53 — All Fixed/Resolved)
@@ -1756,7 +1787,7 @@ When an issue is fixed:
 | 2026-03-04 | v45 fresh audit: 27 new findings added as Phase 17. Fixed v44 items: 15.8/15.9/15.10 and 16.1. |
 | 2026-02-17 | v43 verification audit: corrected 4 Phase 15 false positives (P2-074, P2-079, P2-082, P3-096); added Phase 16 with 3 new items (P2-084 nudge, P3-097 stale docs, P3-098 CHANGELOG); updated Phase Summary totals to 227/183/44. |
 | 2026-02-15 | v41 fixes: Fixed all HIGH (3) and all MEDIUM (7) Phase 14 items. Cache invalidation trait, rate limiter cleanup, richText viewer scaling, SQL schema consistency, SVG blocklist, SlideHooks ParserClearState reset, debug URL param logic. 13 LOW items remain. |
-| 2026-02-15 | v41: Fresh comprehensive review. Added Phase 14 with 23 items (3 HIGH, 7 MED, 13 LOW). Rate limiter dead code, cache invalidation gaps, richText viewer scaling, schema inconsistencies, SVG validation, god class #17. 4 FPs excluded. Grade: A-. |
+| 2026-02-15 | v41: Fresh comprehensive review. Added Phase 14 with 23 items (3 HIGH, 7 MED, 13 LOW). Rate limiter dead code, cache invalidation gaps, richText viewer scaling, schema inconsistencies, SVG validation, god class #17. 4 FPs excluded. |
 | 2026-02-14 | v40 closure pass: re-scoped Phase 4.7 to maintenance tracking, marked Phase 4 complete, and rebalanced plan totals to 169 fixed / 0 open. |
 | 2026-02-14 | v40 tracker sync: closed stale-open P3-043; rebalanced totals. |
 | 2026-02-14 | v40 tracker sync: closed stale-open rows; rebalanced totals. |
@@ -1765,7 +1796,7 @@ When an issue is fixed:
 | 2026-02-14 | v40 docs pass: fixed the 3 MediaWiki table docs to match SQL schema and MediaWiki no-FK convention; marked MED-v36-9 resolved. |
 | 2026-02-14 | v40 consistency pass: synced Phase 11 statuses to fixed for P2-042, P2-043, P3-057, P3-058, and P3-059 after code/doc verification. |
 | 2026-02-14 | v40 follow-up: Re-verified P2-045 status as already fixed in code (shared ForeignFileHelper utility in use across call sites). Synced stale plan status. |
-| 2026-02-14 | v39: Fresh audit. Added Phase 12 with 13 items (5 HIGH, 4 MED, 4 LOW). RichText CSS injection, ForeignFileHelper duplication, parser DoS, npm test gap. 4 prev issues fixed (P2-039/040/041, P3-056). 4 FPs excluded. Grade: A-. |
+| 2026-02-14 | v39: Fresh audit. Added Phase 12 with 13 items (5 HIGH, 4 MED, 4 LOW). RichText CSS injection, ForeignFileHelper duplication, parser DoS, npm test gap. 4 prev issues fixed (P2-039/040/041, P3-056). 4 FPs excluded. |
 | 2026-02-14 | v38: Fresh audit. Added Phase 11 with 8 items. 2 FPs excluded. |
 | 2026-02-13 | v37: Fresh audit. Added Phase 10 with 3 items. 3 FPs excluded. |
 | 2026-02-13 | v36 fixes: Fixed 16 of 25 Phase 9 items (all 6 HIGH, 2 MED, 8 LOW). |

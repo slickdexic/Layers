@@ -25,7 +25,10 @@ strategic extraction of cohesive modules.
 
 ### Success Metrics
 
-| Metric | Current | Target | Status |
+> **Note:** Metrics below reflect state at plan completion (v1.5.58).
+> See `.github/copilot-instructions.md` for current counts.
+
+| Metric | At Plan Completion | Target | Status |
 |--------|---------|--------|--------|
 | JS god classes (hand-written) | **13** | ≤12 | 🔄 Ongoing (1 above target) |
 | Test coverage | 95.19% | ≥95% | ✅ Maintained |

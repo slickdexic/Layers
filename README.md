@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-91.32%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C606%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-92.88%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-11%2C847%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.62 (March 12, 2026)  
+> **Version:** 1.5.62 (March 17, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -326,14 +326,14 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
   - 5 generated data files (ShapeLibraryData variants + EmojiLibraryIndex) are exempt from refactoring
   - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
 
-**Test Coverage (Verified March 12, 2026):**
+**Test Coverage (Verified March 17, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,606 passing (168 suites) |
+| Jest tests | 11,847 passing (168 suites) |
 | PHPUnit tests | 34 test files |
-| Statement coverage | 91.32% |
-| Branch coverage | 81.69% |
+| Statement coverage | 92.88% |
+| Branch coverage | 82.58% |
 | Function coverage | 90.62% |
 | Line coverage | 91.39% |
 
@@ -358,7 +358,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Large images** - performance may degrade with images >4096px
 
 **Resolved Issues:**
-- ✅ **God class monitoring** - 17 files >1,000 lines with proper delegation patterns (Feb 17, 2026)
+- ✅ **God class monitoring** - 26 god classes (5 generated, 19 JS, 2 PHP) with proper delegation patterns
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
 - ✅ **Background image load failure** - user now notified via mw.notify()
 - ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up
@@ -390,10 +390,10 @@ npm run test:js -- --coverage
 | Total JS lines | ~113,550 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
-| Tests passing | 11,606 | ✅ |
+| Tests passing | 11,847 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 91.32% | ✅ Excellent |
-| Branch coverage | 81.69% | ✅ Target met |
+| Statement coverage | 92.88% | ✅ Excellent |
+| Branch coverage | 82.58% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

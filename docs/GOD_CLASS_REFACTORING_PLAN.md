@@ -4,7 +4,7 @@
 **Updated:** February 14, 2026  
 **Author:** GitHub Copilot (GPT-5.3-Codex)  
 **Status:** ✅ Coverage target exceeded; god class reduction ongoing  
-*(13 hand-written JS files >1,000 lines)*  
+*(Metrics below reflect state at time of plan creation; see copilot-instructions.md for current counts)*  
 **Target:** Reduce god classes, maintain branch coverage at 80%+
 
 ---
