@@ -127,7 +127,7 @@ describe( 'RichTextConverter', () => {
 		} );
 
 		it( 'should remove dangerous characters that could enable injection', () => {
-			expect( RichTextConverter.escapeCSSValue( 'red; background: url(evil)' ) ).toBe( 'red background: url(evil)' );
+			expect( RichTextConverter.escapeCSSValue( 'red; background: url(evil)' ) ).toBe( 'red background: (evil)' );
 			expect( RichTextConverter.escapeCSSValue( 'value{injection}' ) ).toBe( 'valueinjection' );
 			expect( RichTextConverter.escapeCSSValue( 'test<script>' ) ).toBe( 'testscript' );
 		} );

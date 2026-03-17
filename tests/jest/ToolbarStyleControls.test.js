@@ -2337,4 +2337,422 @@ it( 'should show fillControl for arrow tool (arrows support fill)', () => {
 			expect( styleControls.markerContainer.classList.contains( 'context-hidden' ) ).toBe( true );
 		} );
 	} );
+
+	describe( 'cancelColorPreview', () => {
+		let mockEditor;
+		let mockCanvasManager;
+
+		beforeEach( () => {
+			mockCanvasManager = {
+				getSelectedLayerIds: jest.fn().mockReturnValue( [ 'layer1', 'layer2' ] ),
+				renderLayers: jest.fn()
+			};
+
+			mockEditor = {
+				canvasManager: mockCanvasManager,
+				layers: [ { id: 'layer1', type: 'rectangle', fill: '#ff0000', stroke: '#000000' },
+					{ id: 'layer2', type: 'circle', fill: '#00ff00', stroke: '#111111' } ],
+				getLayerById: jest.fn( ( id ) => mockEditor.layers.find( ( l ) => l.id === id ) || null )
+			};
+		} );
+
+		it( 'should return early when no preview colors saved', () => {
+			styleControls.toolbar = { editor: mockEditor };
+			styleControls._previewOriginalColors = null;
+
+			styleControls.cancelColorPreview();
+
+			expect( mockCanvasManager.renderLayers ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when toolbar.editor is not available', () => {
+			styleControls.toolbar = {};
+			styleControls._previewOriginalColors = new Map();
+
+			styleControls.cancelColorPreview();
+
+			expect( styleControls._previewOriginalColors ).toBeNull();
+		} );
+
+		it( 'should restore original colors for each layer', () => {
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+
+			// Simulate preview state: original colors saved, layers modified
+			const origColors = new Map();
+			origColors.set( 'layer1', { fill: '#original1', stroke: '#origStroke1' } );
+			origColors.set( 'layer2', { fill: '#original2', stroke: '#origStroke2' } );
+			styleControls._previewOriginalColors = origColors;
+
+			// Modify layers (as if preview was applied)
+			mockEditor.layers[ 0 ].fill = '#preview1';
+			mockEditor.layers[ 1 ].fill = '#preview2';
+
+			styleControls.cancelColorPreview();
+
+			// Layers should be restored
+			expect( mockEditor.layers[ 0 ].fill ).toBe( '#original1' );
+			expect( mockEditor.layers[ 0 ].stroke ).toBe( '#origStroke1' );
+			expect( mockEditor.layers[ 1 ].fill ).toBe( '#original2' );
+			expect( mockEditor.layers[ 1 ].stroke ).toBe( '#origStroke2' );
+			expect( styleControls._previewOriginalColors ).toBeNull();
+		} );
+
+		it( 'should re-render after restoring colors', () => {
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+
+			const origColors = new Map();
+			origColors.set( 'layer1', { fill: '#fff', stroke: '#000' } );
+			styleControls._previewOriginalColors = origColors;
+
+			styleControls.cancelColorPreview();
+
+			expect( mockCanvasManager.renderLayers ).toHaveBeenCalledWith( mockEditor.layers );
+		} );
+
+		it( 'should skip unknown layer IDs in preview map', () => {
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+
+			const origColors = new Map();
+			origColors.set( 'nonexistent', { fill: '#fff', stroke: '#000' } );
+			origColors.set( 'layer1', { fill: '#restored', stroke: '#restoredS' } );
+			styleControls._previewOriginalColors = origColors;
+
+			styleControls.cancelColorPreview();
+
+			expect( mockEditor.layers[ 0 ].fill ).toBe( '#restored' );
+		} );
+	} );
+
+	describe( 'commitColorChange', () => {
+		let mockEditor;
+		let mockCanvasManager;
+		let mockStateManager;
+
+		beforeEach( () => {
+			mockStateManager = {
+				updateLayer: jest.fn()
+			};
+
+			mockCanvasManager = {
+				getSelectedLayerIds: jest.fn().mockReturnValue( [ 'layer1' ] ),
+				renderLayers: jest.fn()
+			};
+
+			mockEditor = {
+				canvasManager: mockCanvasManager,
+				stateManager: mockStateManager,
+				layers: [ { id: 'layer1', type: 'rectangle', fill: '#fff', stroke: '#000' } ],
+				getLayerById: jest.fn( ( id ) => mockEditor.layers.find( ( l ) => l.id === id ) || null ),
+				markDirty: jest.fn()
+			};
+		} );
+
+		it( 'should return early when toolbar.editor is not available', () => {
+			styleControls.toolbar = {};
+			styleControls.commitColorChange( 'stroke', '#ff0000' );
+
+			expect( mockStateManager.updateLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when stateManager is null', () => {
+			mockEditor.stateManager = null;
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'stroke', '#ff0000' );
+
+			expect( mockStateManager.updateLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when no layers selected', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [] );
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'stroke', '#ff0000' );
+
+			expect( mockStateManager.updateLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should apply stroke color to non-text layer', () => {
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'stroke', '#ff0000' );
+
+			expect( mockStateManager.updateLayer ).toHaveBeenCalledWith( 'layer1', { stroke: '#ff0000' } );
+			expect( mockEditor.markDirty ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply stroke color as fill for text layers', () => {
+			mockEditor.layers[ 0 ].type = 'text';
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'stroke', '#ff0000' );
+
+			expect( mockStateManager.updateLayer ).toHaveBeenCalledWith( 'layer1', { fill: '#ff0000' } );
+		} );
+
+		it( 'should apply fill color to shape layers', () => {
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'fill', '#00ff00' );
+
+			expect( mockStateManager.updateLayer ).toHaveBeenCalledWith( 'layer1', { fill: '#00ff00' } );
+		} );
+
+		it( 'should not apply fill to text layers', () => {
+			mockEditor.layers[ 0 ].type = 'text';
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'fill', '#00ff00' );
+
+			expect( mockStateManager.updateLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not apply fill to line layers', () => {
+			mockEditor.layers[ 0 ].type = 'line';
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'fill', '#00ff00' );
+
+			expect( mockStateManager.updateLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should skip layers not found by getLayerById', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'nonexistent' ] );
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'stroke', '#ff0000' );
+
+			expect( mockStateManager.updateLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should commit changes for multiple selected layers', () => {
+			mockEditor.layers.push( { id: 'layer2', type: 'circle', fill: '#ccc', stroke: '#333' } );
+			mockEditor.getLayerById = jest.fn( ( id ) => mockEditor.layers.find( ( l ) => l.id === id ) || null );
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1', 'layer2' ] );
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls.commitColorChange( 'stroke', '#aabbcc' );
+
+			expect( mockStateManager.updateLayer ).toHaveBeenCalledTimes( 2 );
+			expect( mockStateManager.updateLayer ).toHaveBeenCalledWith( 'layer1', { stroke: '#aabbcc' } );
+			expect( mockStateManager.updateLayer ).toHaveBeenCalledWith( 'layer2', { stroke: '#aabbcc' } );
+		} );
+
+		it( 'should clear preview original colors', () => {
+			styleControls.toolbar = { ...mockToolbar, editor: mockEditor };
+			styleControls._previewOriginalColors = new Map();
+			styleControls.commitColorChange( 'stroke', '#ff0000' );
+
+			expect( styleControls._previewOriginalColors ).toBeNull();
+		} );
+	} );
+
+	describe( 'showAllControls with preset and fill containers', () => {
+		it( 'should remove context-hidden from presetContainer', () => {
+			styleControls.create();
+			// Manually set presetContainer to test the branch
+			styleControls.presetContainer = document.createElement( 'div' );
+			styleControls.presetContainer.classList.add( 'context-hidden' );
+
+			styleControls.showAllControls();
+
+			expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( false );
+		} );
+
+		it( 'should remove context-hidden from fillControl.container', () => {
+			styleControls.create();
+			// Ensure fillControl has a container
+			styleControls.fillControl = { container: document.createElement( 'div' ) };
+			styleControls.fillControl.container.classList.add( 'context-hidden' );
+
+			styleControls.showAllControls();
+
+			expect( styleControls.fillControl.container.classList.contains( 'context-hidden' ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'updateContextVisibility with real preset and fill containers', () => {
+		it( 'should show/hide presetContainer for drawing vs pointer tools', () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+			styleControls.presetContainer = document.createElement( 'div' );
+
+			styleControls.updateContextVisibility( 'rectangle' );
+			expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( false );
+
+			styleControls.updateContextVisibility( 'pointer' );
+			expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( true );
+		} );
+
+		it( 'should hide fillControl for stroke-only tools', () => {
+			styleControls.contextAwareEnabled = true;
+			styleControls.create();
+			const fillContainer = document.createElement( 'div' );
+			styleControls.fillControl = { container: fillContainer };
+
+			styleControls.updateContextVisibility( 'pen' );
+			expect( fillContainer.classList.contains( 'context-hidden' ) ).toBe( true );
+
+			styleControls.updateContextVisibility( 'rectangle' );
+			expect( fillContainer.classList.contains( 'context-hidden' ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'hideControlsForSelectedLayers with fill and marker containers', () => {
+		it( 'should hide fillControl.container when layers selected', () => {
+			styleControls.create();
+			const fillContainer = document.createElement( 'div' );
+			styleControls.fillControl = { container: fillContainer };
+
+			styleControls.hideControlsForSelectedLayers( [ { id: '1', type: 'rect' } ] );
+
+			expect( fillContainer.classList.contains( 'context-hidden' ) ).toBe( true );
+		} );
+
+		it( 'should hide markerContainer when layers selected', () => {
+			styleControls.create();
+			styleControls.markerContainer = document.createElement( 'div' );
+
+			styleControls.hideControlsForSelectedLayers( [ { id: '1', type: 'rect' } ] );
+
+			expect( styleControls.markerContainer.classList.contains( 'context-hidden' ) ).toBe( true );
+		} );
+
+		it( 'should show presetContainer when layers selected', () => {
+			styleControls.create();
+			styleControls.presetContainer = document.createElement( 'div' );
+			styleControls.presetContainer.classList.add( 'context-hidden' );
+
+			styleControls.hideControlsForSelectedLayers( [ { id: '1', type: 'rect' } ] );
+
+			expect( styleControls.presetContainer.classList.contains( 'context-hidden' ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'destroy with inputValidators', () => {
+		it( 'should call destroy on each input validator', () => {
+			styleControls.create();
+			const mockValidator1 = { destroy: jest.fn() };
+			const mockValidator2 = { destroy: jest.fn() };
+			styleControls.inputValidators = [ mockValidator1, mockValidator2 ];
+
+			styleControls.destroy();
+
+			expect( mockValidator1.destroy ).toHaveBeenCalled();
+			expect( mockValidator2.destroy ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip validators without destroy method', () => {
+			styleControls.create();
+			styleControls.inputValidators = [ {}, null, { destroy: jest.fn() } ];
+
+			expect( () => styleControls.destroy() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'createColorControlFallback onPreview callback', () => {
+		it( 'should invoke onColorPreview through the fallback control', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+
+			// Mock openColorPicker to capture config
+			let capturedPickerConfig;
+			controls.openColorPicker = jest.fn( ( _btn, _color, config ) => {
+				capturedPickerConfig = config;
+			} );
+
+			controls.create();
+
+			// Click the stroke button to trigger openColorPicker
+			controls.strokeColorButton.click();
+
+			// Verify onPreview callback was passed
+			expect( capturedPickerConfig ).toBeDefined();
+			expect( capturedPickerConfig.onPreview ).toBeDefined();
+
+			// Invoke the onPreview with a color
+			capturedPickerConfig.onPreview( '#ff0000' );
+
+			// The preview should work without error
+			expect( controls.openColorPicker ).toHaveBeenCalled();
+
+			controls.destroy();
+		} );
+
+		it( 'should handle none in onPreview callback', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+
+			let capturedPickerConfig;
+			controls.openColorPicker = jest.fn( ( _btn, _color, config ) => {
+				capturedPickerConfig = config;
+			} );
+
+			controls.create();
+
+			// Click fill button
+			controls.fillColorButton.click();
+
+			// onPreview with 'none'
+			capturedPickerConfig.onPreview( 'none' );
+
+			expect( controls.openColorPicker ).toHaveBeenCalled();
+
+			controls.destroy();
+		} );
+
+		it( 'should invoke onCancel callback', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+
+			let capturedPickerConfig;
+			controls.openColorPicker = jest.fn( ( _btn, _color, config ) => {
+				capturedPickerConfig = config;
+			} );
+
+			controls.create();
+
+			controls.strokeColorButton.click();
+
+			// Invoke onCancel
+			capturedPickerConfig.onCancel();
+
+			expect( controls.openColorPicker ).toHaveBeenCalled();
+
+			controls.destroy();
+		} );
+
+		it( 'should invoke onApply through the fallback control', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+
+			let capturedPickerConfig;
+			controls.openColorPicker = jest.fn( ( _btn, _color, config ) => {
+				capturedPickerConfig = config;
+			} );
+
+			controls.create();
+
+			controls.strokeColorButton.click();
+
+			// Invoke onApply
+			capturedPickerConfig.onApply( '#aabbcc' );
+
+			expect( controls.strokeColorValue ).toBe( '#aabbcc' );
+
+			controls.destroy();
+		} );
+
+		it( 'should handle none in onApply callback', () => {
+			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			controls.colorFactory = null;
+
+			let capturedPickerConfig;
+			controls.openColorPicker = jest.fn( ( _btn, _color, config ) => {
+				capturedPickerConfig = config;
+			} );
+
+			controls.create();
+
+			controls.strokeColorButton.click();
+
+			// Apply 'none'
+			capturedPickerConfig.onApply( 'none' );
+
+			expect( controls.strokeColorNone ).toBe( true );
+
+			controls.destroy();
+		} );
+	} );
 } );

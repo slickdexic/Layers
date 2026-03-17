@@ -1191,6 +1191,770 @@ describe( 'CanvasEvents', () => {
 		} );
 	} );
 
+	describe( 'handleContainerMouseDown', () => {
+		it( 'should ignore clicks on child elements (not container itself)', () => {
+			mockCanvasManager.container = document.createElement( 'div' );
+			canvasEvents = new CanvasEvents( mockCanvasManager );
+
+			const childEl = document.createElement( 'canvas' );
+			const event = { target: childEl };
+			canvasEvents.handleContainerMouseDown( event );
+
+			expect( mockCanvasManager.deselectAll ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should finish inline text editing when clicking container', () => {
+			const container = document.createElement( 'div' );
+			mockCanvasManager.container = container;
+			mockCanvasManager.isTextEditing = true;
+			mockCanvasManager.inlineTextEditor = { finishEditing: jest.fn() };
+			mockCanvasManager.currentTool = 'pointer';
+			canvasEvents = new CanvasEvents( mockCanvasManager );
+
+			canvasEvents.handleContainerMouseDown( { target: container } );
+
+			expect( mockCanvasManager.inlineTextEditor.finishEditing ).toHaveBeenCalledWith( true );
+		} );
+
+		it( 'should deselect all with pointer tool', () => {
+			const container = document.createElement( 'div' );
+			mockCanvasManager.container = container;
+			mockCanvasManager.currentTool = 'pointer';
+			canvasEvents = new CanvasEvents( mockCanvasManager );
+
+			canvasEvents.handleContainerMouseDown( { target: container } );
+
+			expect( mockCanvasManager.deselectAll ).toHaveBeenCalled();
+		} );
+
+		it( 'should deselect all with marquee tool', () => {
+			const container = document.createElement( 'div' );
+			mockCanvasManager.container = container;
+			mockCanvasManager.currentTool = 'marquee';
+			canvasEvents = new CanvasEvents( mockCanvasManager );
+
+			canvasEvents.handleContainerMouseDown( { target: container } );
+
+			expect( mockCanvasManager.deselectAll ).toHaveBeenCalled();
+		} );
+
+		it( 'should not deselect with non-pointer tools', () => {
+			const container = document.createElement( 'div' );
+			mockCanvasManager.container = container;
+			mockCanvasManager.currentTool = 'rectangle';
+			canvasEvents = new CanvasEvents( mockCanvasManager );
+
+			canvasEvents.handleContainerMouseDown( { target: container } );
+
+			expect( mockCanvasManager.deselectAll ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'handleDoubleClick', () => {
+		it( 'should do nothing when already text editing', () => {
+			mockCanvasManager.isTextEditing = true;
+			const event = { clientX: 100, clientY: 100, preventDefault: jest.fn() };
+			canvasEvents.handleDoubleClick( event );
+
+			expect( event.preventDefault ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should block when interactionController blocks interaction', () => {
+			mockCanvasManager.interactionController = { shouldBlockInteraction: jest.fn( () => true ) };
+			const event = { clientX: 100, clientY: 100, preventDefault: jest.fn() };
+			canvasEvents.handleDoubleClick( event );
+
+			expect( event.preventDefault ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should do nothing with non-pointer tool', () => {
+			mockCanvasManager.currentTool = 'rectangle';
+			const event = { clientX: 100, clientY: 100, preventDefault: jest.fn() };
+			canvasEvents.handleDoubleClick( event );
+
+			expect( event.preventDefault ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should start editing when text layer found', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			mockCanvasManager.inlineTextEditor = { startEditing: jest.fn() };
+			mockCanvasManager.editor.layers = [
+				{ id: 'txt1', type: 'textbox', x: 50, y: 50, width: 200, height: 100, visible: true }
+			];
+			mockCanvasManager.hitTestController = {
+				hitTestLayer: jest.fn( () => true )
+			};
+
+			const event = { clientX: 100, clientY: 80, preventDefault: jest.fn() };
+			canvasEvents.handleDoubleClick( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockCanvasManager.inlineTextEditor.startEditing ).toHaveBeenCalledWith(
+				expect.objectContaining( { id: 'txt1', type: 'textbox' } )
+			);
+		} );
+
+		it( 'should not start editing when no text layer at point', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			mockCanvasManager.inlineTextEditor = { startEditing: jest.fn() };
+			mockCanvasManager.editor.layers = [
+				{ id: 'rect1', type: 'rectangle', x: 50, y: 50, width: 200, height: 100, visible: true }
+			];
+			const event = { clientX: 100, clientY: 80, preventDefault: jest.fn() };
+			canvasEvents.handleDoubleClick( event );
+
+			expect( mockCanvasManager.inlineTextEditor.startEditing ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'findTextLayerAtPoint', () => {
+		it( 'should find topmost text layer at point', () => {
+			mockCanvasManager.hitTestController = {
+				hitTestLayer: jest.fn( () => true )
+			};
+			const layers = [
+				{ id: 'txt1', type: 'text', visible: true },
+				{ id: 'txt2', type: 'textbox', visible: true }
+			];
+
+			const result = canvasEvents.findTextLayerAtPoint( { x: 100, y: 100 }, layers );
+
+			// Should return topmost (last in array)
+			expect( result.id ).toBe( 'txt2' );
+		} );
+
+		it( 'should skip hidden layers (visible === false)', () => {
+			mockCanvasManager.hitTestController = {
+				hitTestLayer: jest.fn( () => true )
+			};
+			const layers = [
+				{ id: 'txt1', type: 'text', visible: true },
+				{ id: 'txt2', type: 'textbox', visible: false }
+			];
+
+			const result = canvasEvents.findTextLayerAtPoint( { x: 100, y: 100 }, layers );
+
+			expect( result.id ).toBe( 'txt1' );
+		} );
+
+		it( 'should skip hidden layers (visible === 0)', () => {
+			mockCanvasManager.hitTestController = {
+				hitTestLayer: jest.fn( () => true )
+			};
+			const layers = [
+				{ id: 'txt1', type: 'text', visible: true },
+				{ id: 'txt2', type: 'textbox', visible: 0 }
+			];
+
+			const result = canvasEvents.findTextLayerAtPoint( { x: 100, y: 100 }, layers );
+
+			expect( result.id ).toBe( 'txt1' );
+		} );
+
+		it( 'should skip non-text layer types', () => {
+			mockCanvasManager.hitTestController = {
+				hitTestLayer: jest.fn( () => true )
+			};
+			const layers = [
+				{ id: 'rect1', type: 'rectangle', visible: true },
+				{ id: 'txt1', type: 'callout', visible: true }
+			];
+
+			const result = canvasEvents.findTextLayerAtPoint( { x: 100, y: 100 }, layers );
+
+			expect( result.id ).toBe( 'txt1' );
+		} );
+
+		it( 'should return null when no text layers found', () => {
+			const layers = [
+				{ id: 'rect1', type: 'rectangle', visible: true }
+			];
+
+			const result = canvasEvents.findTextLayerAtPoint( { x: 100, y: 100 }, layers );
+
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should return null for empty layers array', () => {
+			const result = canvasEvents.findTextLayerAtPoint( { x: 100, y: 100 }, [] );
+
+			expect( result ).toBeNull();
+		} );
+	} );
+
+	describe( 'isPointInLayer', () => {
+		it( 'should use HitTestController when available', () => {
+			mockCanvasManager.hitTestController = {
+				hitTestLayer: jest.fn( () => true )
+			};
+			const layer = { id: 'test', x: 0, y: 0, width: 100, height: 100 };
+			const result = canvasEvents.isPointInLayer( { x: 50, y: 50 }, layer );
+
+			expect( result ).toBe( true );
+			expect( mockCanvasManager.hitTestController.hitTestLayer ).toHaveBeenCalledWith( layer, { x: 50, y: 50 } );
+		} );
+
+		it( 'should fall back to bounding box check', () => {
+			mockCanvasManager.hitTestController = null;
+			const layer = { x: 10, y: 20, width: 100, height: 50 };
+
+			expect( canvasEvents.isPointInLayer( { x: 50, y: 40 }, layer ) ).toBe( true );
+			expect( canvasEvents.isPointInLayer( { x: 5, y: 40 }, layer ) ).toBe( false );
+			expect( canvasEvents.isPointInLayer( { x: 50, y: 80 }, layer ) ).toBe( false );
+		} );
+
+		it( 'should use defaults for missing dimensions', () => {
+			mockCanvasManager.hitTestController = null;
+			const layer = {}; // No x, y, width, height
+
+			// Defaults: x=0, y=0, width=100, height=50
+			expect( canvasEvents.isPointInLayer( { x: 50, y: 25 }, layer ) ).toBe( true );
+			expect( canvasEvents.isPointInLayer( { x: 150, y: 25 }, layer ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'handleMouseDown - dimension handling', () => {
+		it( 'should start dimension text drag when clicking in text area', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			const dimensionLayer = {
+				id: 'dim1', type: 'dimension',
+				x1: 0, y1: 0, x2: 200, y2: 0,
+				fontSize: 12
+			};
+			mockCanvasManager.handleLayerSelection.mockReturnValue( dimensionLayer );
+			mockCanvasManager.transformController.startDimensionTextDrag = jest.fn();
+
+			// Mock isPointInDimensionTextArea to return true
+			jest.spyOn( canvasEvents, 'isPointInDimensionTextArea' ).mockReturnValue( true );
+
+			const event = { clientX: 100, clientY: 0, button: 0, ctrlKey: false, metaKey: false };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.transformController.startDimensionTextDrag ).toHaveBeenCalled();
+		} );
+
+		it( 'should not drag dimension layer when clicking outside text area', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			const dimensionLayer = { id: 'dim1', type: 'dimension' };
+			mockCanvasManager.handleLayerSelection.mockReturnValue( dimensionLayer );
+			mockCanvasManager.transformController.startDimensionTextDrag = jest.fn();
+
+			jest.spyOn( canvasEvents, 'isPointInDimensionTextArea' ).mockReturnValue( false );
+
+			const event = { clientX: 100, clientY: 0, button: 0, ctrlKey: false, metaKey: false };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.transformController.startDimensionTextDrag ).not.toHaveBeenCalled();
+			// Also should NOT start regular drag for dimension layers
+			expect( mockCanvasManager.transformController.startDrag ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should start angle dimension text drag when clicking in text area', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			const angleLayer = { id: 'ang1', type: 'angleDimension' };
+			mockCanvasManager.handleLayerSelection.mockReturnValue( angleLayer );
+			mockCanvasManager.transformController.startAngleDimensionTextDrag = jest.fn();
+
+			jest.spyOn( canvasEvents, 'isPointInAngleDimensionTextArea' ).mockReturnValue( true );
+
+			const event = { clientX: 100, clientY: 100, button: 0, ctrlKey: false, metaKey: false };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.transformController.startAngleDimensionTextDrag ).toHaveBeenCalled();
+		} );
+
+		it( 'should not drag angle dimension when clicking outside text area', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			const angleLayer = { id: 'ang1', type: 'angleDimension' };
+			mockCanvasManager.handleLayerSelection.mockReturnValue( angleLayer );
+			mockCanvasManager.transformController.startAngleDimensionTextDrag = jest.fn();
+
+			jest.spyOn( canvasEvents, 'isPointInAngleDimensionTextArea' ).mockReturnValue( false );
+
+			const event = { clientX: 100, clientY: 100, button: 0, ctrlKey: false, metaKey: false };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.transformController.startAngleDimensionTextDrag ).not.toHaveBeenCalled();
+			expect( mockCanvasManager.transformController.startDrag ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should block mousedown when interactionController blocks', () => {
+			mockCanvasManager.interactionController = { shouldBlockInteraction: jest.fn( () => true ) };
+			const event = { clientX: 100, clientY: 100, button: 0 };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.startDrawing ).not.toHaveBeenCalled();
+			expect( mockCanvasManager.handleLayerSelection ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should finish text editing on mousedown then continue', () => {
+			mockCanvasManager.isTextEditing = true;
+			mockCanvasManager.inlineTextEditor = { finishEditing: jest.fn() };
+			mockCanvasManager.currentTool = 'rectangle';
+
+			const event = { clientX: 100, clientY: 100, button: 0 };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.inlineTextEditor.finishEditing ).toHaveBeenCalledWith( true );
+			expect( mockCanvasManager.startDrawing ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle arrowTip handle hit with marker flag', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			mockCanvasManager.getSelectedLayerId.mockReturnValue( 'layer1' );
+			mockCanvasManager.hitTestSelectionHandles.mockReturnValue( {
+				type: 'arrowTip', isMarker: true
+			} );
+			mockCanvasManager.transformController.startArrowTipDrag = jest.fn();
+
+			const event = { clientX: 100, clientY: 100, button: 0 };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.transformController.startArrowTipDrag ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle dimensionOffset handle hit', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			mockCanvasManager.getSelectedLayerId.mockReturnValue( 'layer1' );
+			mockCanvasManager.hitTestSelectionHandles.mockReturnValue( {
+				type: 'dimensionOffset', isDimensionOffset: true
+			} );
+			mockCanvasManager.transformController.startDimensionOffsetDrag = jest.fn();
+
+			const event = { clientX: 100, clientY: 100, button: 0 };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.transformController.startDimensionOffsetDrag ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle angleDimensionText handle hit', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			mockCanvasManager.getSelectedLayerId.mockReturnValue( 'layer1' );
+			mockCanvasManager.editor.getLayerById = jest.fn( () => ( {
+				id: 'ang1', type: 'angleDimension', cx: 100, cy: 100, arcRadius: 40
+			} ) );
+			mockCanvasManager.hitTestSelectionHandles.mockReturnValue( {
+				type: 'angleDimensionText', isAngleDimensionText: true, layerId: 'ang1'
+			} );
+			mockCanvasManager.transformController.startAngleDimensionTextDrag = jest.fn();
+
+			// Mock AngleDimensionRenderer for createAngleDimensionTextHandle
+			global.window.Layers = { AngleDimensionRenderer: null };
+
+			const event = { clientX: 100, clientY: 100, button: 0 };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.transformController.startAngleDimensionTextDrag ).toHaveBeenCalled();
+		} );
+
+		it( 'should start resize for generic handle hit', () => {
+			mockCanvasManager.currentTool = 'pointer';
+			mockCanvasManager.getSelectedLayerId.mockReturnValue( 'layer1' );
+			mockCanvasManager.hitTestSelectionHandles.mockReturnValue( {
+				type: 'corner', position: 'se'
+			} );
+
+			const event = { clientX: 100, clientY: 100, button: 0 };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.transformController.startResize ).toHaveBeenCalled();
+		} );
+
+		it( 'should advance angle dimension phase when in progress', () => {
+			mockCanvasManager.currentTool = 'angleDimension';
+			mockCanvasManager.drawingController = {
+				isAngleDimensionInProgress: jest.fn( () => true )
+			};
+
+			const event = { clientX: 100, clientY: 100, button: 0 };
+			canvasEvents.handleMouseDown( event );
+
+			expect( mockCanvasManager.finishDrawing ).toHaveBeenCalled();
+			expect( mockCanvasManager.startDrawing ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'handleMouseMove - transform controller paths', () => {
+		it( 'should handle arrow tip drag', () => {
+			mockCanvasManager.transformController.isArrowTipDragging = true;
+			mockCanvasManager.transformController.dragStartPoint = { x: 0, y: 0 };
+			mockCanvasManager.transformController.handleArrowTipDrag = jest.fn();
+
+			const event = { clientX: 150, clientY: 150 };
+			canvasEvents.handleMouseMove( event );
+
+			expect( mockCanvasManager.transformController.handleArrowTipDrag ).toHaveBeenCalledWith( { x: 150, y: 150 } );
+		} );
+
+		it( 'should handle dimension text drag', () => {
+			mockCanvasManager.transformController.isDimensionTextDragging = true;
+			mockCanvasManager.transformController.dragStartPoint = { x: 0, y: 0 };
+			mockCanvasManager.transformController.handleDimensionTextDrag = jest.fn();
+
+			const event = { clientX: 150, clientY: 150 };
+			canvasEvents.handleMouseMove( event );
+
+			expect( mockCanvasManager.transformController.handleDimensionTextDrag ).toHaveBeenCalledWith( { x: 150, y: 150 } );
+		} );
+
+		it( 'should handle angle dimension text drag', () => {
+			mockCanvasManager.transformController.isAngleDimensionTextDragging = true;
+			mockCanvasManager.transformController.dragStartPoint = { x: 0, y: 0 };
+			mockCanvasManager.transformController.handleAngleDimensionTextDrag = jest.fn();
+
+			const event = { clientX: 150, clientY: 150 };
+			canvasEvents.handleMouseMove( event );
+
+			expect( mockCanvasManager.transformController.handleAngleDimensionTextDrag ).toHaveBeenCalledWith( { x: 150, y: 150 } );
+		} );
+
+		it( 'should update angle dimension preview between clicks', () => {
+			mockCanvasManager.currentTool = 'angleDimension';
+			mockCanvasManager.isDrawing = false;
+			mockCanvasManager.drawingController = {
+				isAngleDimensionInProgress: jest.fn( () => true )
+			};
+
+			const event = { clientX: 150, clientY: 150 };
+			canvasEvents.handleMouseMove( event );
+
+			expect( mockCanvasManager.continueDrawing ).toHaveBeenCalled();
+		} );
+
+		it( 'should not update preview when angle dimension not in progress', () => {
+			mockCanvasManager.currentTool = 'angleDimension';
+			mockCanvasManager.isDrawing = false;
+			mockCanvasManager.drawingController = {
+				isAngleDimensionInProgress: jest.fn( () => false )
+			};
+
+			const event = { clientX: 150, clientY: 150 };
+			canvasEvents.handleMouseMove( event );
+
+			expect( mockCanvasManager.continueDrawing ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'handleMouseUp - additional paths', () => {
+		it( 'should finish arrow tip drag', () => {
+			mockCanvasManager.transformController.isArrowTipDragging = true;
+			mockCanvasManager.transformController.finishArrowTipDrag = jest.fn();
+
+			const event = { clientX: 100, clientY: 100 };
+			canvasEvents.handleMouseUp( event );
+
+			expect( mockCanvasManager.transformController.finishArrowTipDrag ).toHaveBeenCalled();
+		} );
+
+		it( 'should finish dimension text drag', () => {
+			mockCanvasManager.transformController.isDimensionTextDragging = true;
+			mockCanvasManager.transformController.finishDimensionTextDrag = jest.fn();
+
+			const event = { clientX: 100, clientY: 100 };
+			canvasEvents.handleMouseUp( event );
+
+			expect( mockCanvasManager.transformController.finishDimensionTextDrag ).toHaveBeenCalled();
+		} );
+
+		it( 'should finish angle dimension text drag', () => {
+			mockCanvasManager.transformController.isAngleDimensionTextDragging = true;
+			mockCanvasManager.transformController.finishAngleDimensionTextDrag = jest.fn();
+
+			const event = { clientX: 100, clientY: 100 };
+			canvasEvents.handleMouseUp( event );
+
+			expect( mockCanvasManager.transformController.finishAngleDimensionTextDrag ).toHaveBeenCalled();
+		} );
+
+		it( 'should not finalize angle dimension when in progress', () => {
+			mockCanvasManager.isDrawing = true;
+			mockCanvasManager.currentTool = 'angleDimension';
+			mockCanvasManager.drawingController = {
+				isAngleDimensionInProgress: jest.fn( () => true )
+			};
+
+			const event = { clientX: 100, clientY: 100 };
+			canvasEvents.handleMouseUp( event );
+
+			expect( mockCanvasManager.finishDrawing ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not zoom when arrow tip dragging', () => {
+			mockCanvasManager.transformController.isArrowTipDragging = true;
+			const event = { deltaY: -100, preventDefault: jest.fn() };
+			canvasEvents.handleWheel( event );
+
+			expect( event.preventDefault ).toHaveBeenCalled();
+			expect( mockCanvasManager.zoomBy ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'isPointInDimensionTextArea', () => {
+		it( 'should return false for zero-length dimension', () => {
+			const layer = { x1: 100, y1: 100, x2: 100, y2: 100 };
+			expect( canvasEvents.isPointInDimensionTextArea( { x: 100, y: 100 }, layer ) ).toBe( false );
+		} );
+
+		it( 'should detect point near text area of horizontal dimension', () => {
+			const layer = {
+				x1: 0, y1: 0, x2: 200, y2: 0,
+				fontSize: 12, dimensionOffset: 20, textOffset: 0
+			};
+			// Text should be near (100, -20) — midpoint offset perpendicular
+			expect( canvasEvents.isPointInDimensionTextArea( { x: 100, y: -20 }, layer ) ).toBe( true );
+		} );
+
+		it( 'should return false for point far from text', () => {
+			const layer = {
+				x1: 0, y1: 0, x2: 200, y2: 0,
+				fontSize: 12, dimensionOffset: 20, textOffset: 0
+			};
+			expect( canvasEvents.isPointInDimensionTextArea( { x: 100, y: 100 }, layer ) ).toBe( false );
+		} );
+
+		it( 'should handle missing dimensionOffset using extensionLength fallback', () => {
+			const layer = {
+				x1: 0, y1: 0, x2: 200, y2: 0,
+				fontSize: 12, extensionLength: 10, extensionGap: 3
+			};
+			// offsetDistance = extensionGap + extensionLength/2 = 3 + 5 = 8
+			// Text near (100, -8)
+			expect( canvasEvents.isPointInDimensionTextArea( { x: 100, y: -8 }, layer ) ).toBe( true );
+		} );
+
+		it( 'should account for textOffset along the line', () => {
+			const layer = {
+				x1: 0, y1: 0, x2: 200, y2: 0,
+				fontSize: 12, dimensionOffset: 20, textOffset: 50
+			};
+			// Text position shifted along line by 50: (150, -20)
+			expect( canvasEvents.isPointInDimensionTextArea( { x: 150, y: -20 }, layer ) ).toBe( true );
+		} );
+
+		it( 'should use default values for missing properties', () => {
+			const layer = { x1: 0, y1: 0, x2: 200, y2: 0 };
+			// Uses default extensionLength=10, extensionGap=3, fontSize=12, textOffset=0
+			// Should not throw
+			const result = canvasEvents.isPointInDimensionTextArea( { x: 100, y: -8 }, layer );
+			expect( typeof result ).toBe( 'boolean' );
+		} );
+	} );
+
+	describe( 'createDimensionOffsetHandle', () => {
+		it( 'should create handle with correct properties', () => {
+			const layer = { id: 'dim1', x1: 0, y1: 0, x2: 200, y2: 0 };
+			const handle = canvasEvents.createDimensionOffsetHandle( layer );
+
+			expect( handle.type ).toBe( 'dimensionOffset' );
+			expect( handle.layerId ).toBe( 'dim1' );
+			expect( handle.isDimensionOffset ).toBe( true );
+			expect( handle.anchorMidX ).toBe( 100 );
+			expect( handle.anchorMidY ).toBe( 0 );
+			expect( typeof handle.perpX ).toBe( 'number' );
+			expect( typeof handle.perpY ).toBe( 'number' );
+		} );
+
+		it( 'should handle diagonal dimension', () => {
+			const layer = { id: 'dim2', x1: 0, y1: 0, x2: 100, y2: 100 };
+			const handle = canvasEvents.createDimensionOffsetHandle( layer );
+
+			expect( handle.anchorMidX ).toBe( 50 );
+			expect( handle.anchorMidY ).toBe( 50 );
+		} );
+
+		it( 'should use defaults for missing coordinates', () => {
+			const layer = { id: 'dim3' };
+			const handle = canvasEvents.createDimensionOffsetHandle( layer );
+
+			expect( handle.anchorMidX ).toBe( 0 );
+			expect( handle.anchorMidY ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'createDimensionTextHandle', () => {
+		it( 'should create handle with direction vectors for horizontal dimension', () => {
+			const layer = { id: 'dim1', x1: 0, y1: 0, x2: 200, y2: 0 };
+			const handle = canvasEvents.createDimensionTextHandle( layer );
+
+			expect( handle.type ).toBe( 'dimensionText' );
+			expect( handle.layerId ).toBe( 'dim1' );
+			expect( handle.isDimensionText ).toBe( true );
+			expect( handle.anchorMidX ).toBe( 100 );
+			expect( handle.anchorMidY ).toBe( 0 );
+			expect( handle.unitDx ).toBeCloseTo( 1, 5 );
+			expect( handle.unitDy ).toBeCloseTo( 0, 5 );
+			expect( handle.lineLength ).toBe( 200 );
+		} );
+
+		it( 'should handle zero-length dimension', () => {
+			const layer = { id: 'dim1', x1: 50, y1: 50, x2: 50, y2: 50 };
+			const handle = canvasEvents.createDimensionTextHandle( layer );
+
+			// Fallback: unitDx=1, unitDy=0 when length is 0
+			expect( handle.unitDx ).toBe( 1 );
+			expect( handle.unitDy ).toBe( 0 );
+			expect( handle.lineLength ).toBe( 0 );
+		} );
+
+		it( 'should compute correct vectors for diagonal dimension', () => {
+			const layer = { id: 'dim1', x1: 0, y1: 0, x2: 100, y2: 100 };
+			const handle = canvasEvents.createDimensionTextHandle( layer );
+
+			const expectedLen = Math.sqrt( 20000 );
+			expect( handle.lineLength ).toBeCloseTo( expectedLen, 1 );
+			expect( handle.unitDx ).toBeCloseTo( 100 / expectedLen, 5 );
+			expect( handle.unitDy ).toBeCloseTo( 100 / expectedLen, 5 );
+		} );
+	} );
+
+	describe( 'isPointInAngleDimensionTextArea', () => {
+		beforeEach( () => {
+			// Mock AngleDimensionRenderer
+			global.window.Layers = {
+				AngleDimensionRenderer: class {
+					constructor() {}
+					calculateAngles() {
+						return { startAngle: 0, sweepAngle: Math.PI / 2 };
+					}
+				}
+			};
+		} );
+
+		it( 'should return false when AngleDimensionRenderer is not available', () => {
+			global.window.Layers = {};
+			const layer = { cx: 100, cy: 100, arcRadius: 40, fontSize: 12 };
+			const result = canvasEvents.isPointInAngleDimensionTextArea( { x: 100, y: 100 }, layer );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should detect point near text on arc', () => {
+			const layer = { cx: 0, cy: 0, arcRadius: 40, fontSize: 12 };
+			// Mid angle = 0 + (PI/2)/2 = PI/4 = 45 degrees
+			// Text at (40*cos(PI/4), 40*sin(PI/4)) ≈ (28.28, 28.28)
+			const result = canvasEvents.isPointInAngleDimensionTextArea( { x: 28, y: 28 }, layer );
+
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should return false for point far from text', () => {
+			const layer = { cx: 0, cy: 0, arcRadius: 40, fontSize: 12 };
+			const result = canvasEvents.isPointInAngleDimensionTextArea( { x: 200, y: 200 }, layer );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should handle textPosition above', () => {
+			const layer = { cx: 0, cy: 0, arcRadius: 40, fontSize: 12, textPosition: 'above' };
+			// textRadius = arcRadius + fontSize * 0.8 = 40 + 9.6 = 49.6
+			const midAngle = Math.PI / 4;
+			const textX = 49.6 * Math.cos( midAngle );
+			const textY = 49.6 * Math.sin( midAngle );
+
+			const result = canvasEvents.isPointInAngleDimensionTextArea( { x: textX, y: textY }, layer );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should handle textPosition below', () => {
+			const layer = { cx: 0, cy: 0, arcRadius: 40, fontSize: 12, textPosition: 'below' };
+			// textRadius = arcRadius - fontSize * 0.8 = 40 - 9.6 = 30.4
+			const midAngle = Math.PI / 4;
+			const textX = 30.4 * Math.cos( midAngle );
+			const textY = 30.4 * Math.sin( midAngle );
+
+			const result = canvasEvents.isPointInAngleDimensionTextArea( { x: textX, y: textY }, layer );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should use default values for missing properties', () => {
+			const layer = {}; // all defaults
+			// cx=0, cy=0, arcRadius=40, fontSize=12
+			const result = canvasEvents.isPointInAngleDimensionTextArea( { x: 200, y: 200 }, layer );
+			expect( typeof result ).toBe( 'boolean' );
+		} );
+	} );
+
+	describe( 'createAngleDimensionTextHandle', () => {
+		beforeEach( () => {
+			global.window.Layers = {
+				AngleDimensionRenderer: class {
+					constructor() {}
+					calculateAngles() {
+						return { startAngle: 0, sweepAngle: Math.PI / 2 };
+					}
+				}
+			};
+		} );
+
+		it( 'should create handle with correct properties', () => {
+			const layer = { id: 'ang1', cx: 50, cy: 60, arcRadius: 40 };
+			const handle = canvasEvents.createAngleDimensionTextHandle( layer );
+
+			expect( handle.type ).toBe( 'angleDimensionText' );
+			expect( handle.layerId ).toBe( 'ang1' );
+			expect( handle.isAngleDimensionText ).toBe( true );
+			expect( handle.cx ).toBe( 50 );
+			expect( handle.cy ).toBe( 60 );
+			expect( handle.arcRadius ).toBe( 40 );
+			expect( handle.midAngle ).toBeCloseTo( Math.PI / 4, 5 );
+		} );
+
+		it( 'should still compute midAngle via require fallback when window.Layers is empty', () => {
+			global.window.Layers = {};
+			const layer = { id: 'ang1', cx: 50, cy: 60, arcRadius: 40 };
+			const handle = canvasEvents.createAngleDimensionTextHandle( layer );
+
+			// require() fallback loads real AngleDimensionRenderer, so midAngle is computed
+			expect( typeof handle.midAngle ).toBe( 'number' );
+			expect( handle.type ).toBe( 'angleDimensionText' );
+		} );
+
+		it( 'should use default values for missing layer properties', () => {
+			const layer = { id: 'ang1' };
+			const handle = canvasEvents.createAngleDimensionTextHandle( layer );
+
+			expect( handle.cx ).toBe( 0 );
+			expect( handle.cy ).toBe( 0 );
+			expect( handle.arcRadius ).toBe( 40 );
+		} );
+	} );
+
+	describe( 'setup - container listener', () => {
+		it( 'should attach container mousedown listener when container exists', () => {
+			const container = document.createElement( 'div' );
+			container.addEventListener = jest.fn();
+			mockCanvasManager.container = container;
+
+			const ce = new CanvasEvents( mockCanvasManager );
+
+			expect( container.addEventListener ).toHaveBeenCalledWith(
+				'mousedown', ce.onContainerMouseDown
+			);
+		} );
+
+		it( 'should skip container listener when no container', () => {
+			// Already tested implicitly in default setup (no container), but be explicit
+			mockCanvasManager.container = null;
+			expect( () => new CanvasEvents( mockCanvasManager ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'destroy - container cleanup', () => {
+		it( 'should remove container listener on destroy', () => {
+			const container = document.createElement( 'div' );
+			container.addEventListener = jest.fn();
+			container.removeEventListener = jest.fn();
+			mockCanvasManager.container = container;
+
+			const ce = new CanvasEvents( mockCanvasManager );
+			ce.destroy();
+
+			expect( container.removeEventListener ).toHaveBeenCalledWith(
+				'mousedown', ce.onContainerMouseDown
+			);
+		} );
+	} );
+
 	describe( 'module exports', () => {
 		it( 'should export CanvasEvents', () => {
 			expect( CanvasEvents ).toBeDefined();

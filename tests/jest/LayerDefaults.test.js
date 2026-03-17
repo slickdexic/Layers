@@ -126,5 +126,22 @@ describe( 'LayerDefaults', () => {
 		it( 'should be exported to mw.ext.layers namespace', () => {
 			expect( global.mw.ext.layers.LayerDefaults ).toBe( LayerDefaults );
 		} );
+
+		it( 'should create mw.ext when it does not exist', () => {
+			jest.resetModules();
+			global.mw = {};
+			const LD = require( '../../resources/ext.layers.shared/LayerDefaults.js' );
+			expect( global.mw.ext ).toBeDefined();
+			expect( global.mw.ext.layers ).toBeDefined();
+			expect( global.mw.ext.layers.LayerDefaults ).toBe( LD );
+		} );
+
+		it( 'should create mw.ext.layers when only mw.ext exists', () => {
+			jest.resetModules();
+			global.mw = { ext: {} };
+			const LD = require( '../../resources/ext.layers.shared/LayerDefaults.js' );
+			expect( global.mw.ext.layers ).toBeDefined();
+			expect( global.mw.ext.layers.LayerDefaults ).toBe( LD );
+		} );
 	} );
 } );

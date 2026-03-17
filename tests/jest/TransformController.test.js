@@ -1401,4 +1401,1018 @@ describe( 'TransformController', () => {
 			} );
 		} );
 	} );
+
+	// ==================== Angle Dimension Text Drag ====================
+
+	describe( 'Angle dimension text drag operations', () => {
+		let mockAngleLayer;
+
+		beforeEach( () => {
+			mockAngleLayer = {
+				id: 'angle-1',
+				type: 'angleDimension',
+				cx: 200,
+				cy: 200,
+				ax: 300,
+				ay: 200,
+				bx: 200,
+				by: 100,
+				textOffset: 0,
+				arcRadius: 60,
+				fontSize: 14,
+				textPosition: 'center',
+				locked: false
+			};
+
+			mockManager = {
+				editor: {
+					getLayerById: jest.fn( ( id ) => {
+						if ( id === 'angle-1' ) {
+							return mockAngleLayer;
+						}
+						return null;
+					} ),
+					layers: [ mockAngleLayer ],
+					updateLayer: jest.fn( ( id, updates ) => {
+						Object.assign( mockAngleLayer, updates );
+					} ),
+					markDirty: jest.fn(),
+					saveState: jest.fn()
+				},
+				canvas: { style: { cursor: '' } },
+				renderLayers: jest.fn(),
+				getToolCursor: jest.fn( () => 'default' ),
+				currentTool: 'select',
+				eventManager: {
+					emit: jest.fn()
+				},
+				container: document.createElement( 'div' )
+			};
+
+			controller = new TransformController( mockManager );
+		} );
+
+		describe( 'startAngleDimensionTextDrag', () => {
+			it( 'should initialize drag state correctly', () => {
+				const handle = {
+					layerId: 'angle-1',
+					cx: 200,
+					cy: 200,
+					midAngle: Math.PI / 4,
+					arcRadius: 60
+				};
+				const startPoint = { x: 250, y: 160 };
+
+				controller.startAngleDimensionTextDrag( handle, startPoint );
+
+				expect( controller.isAngleDimensionTextDragging ).toBe( true );
+				expect( controller.dragStartPoint ).toBe( startPoint );
+				expect( controller.angleDimTextLayerId ).toBe( 'angle-1' );
+				expect( controller.angleDimVertexX ).toBe( 200 );
+				expect( controller.angleDimVertexY ).toBe( 200 );
+				expect( controller.angleDimMidAngle ).toBe( Math.PI / 4 );
+				expect( controller.angleDimArcRadius ).toBe( 60 );
+				expect( mockManager.canvas.style.cursor ).toBe( 'move' );
+				expect( controller.originalLayerState ).toBeTruthy();
+				expect( controller.originalLayerState.id ).toBe( 'angle-1' );
+			} );
+
+			it( 'should not start drag for locked layer', () => {
+				mockAngleLayer.locked = true;
+				const handle = {
+					layerId: 'angle-1',
+					cx: 200,
+					cy: 200,
+					midAngle: Math.PI / 4,
+					arcRadius: 60
+				};
+
+				controller.startAngleDimensionTextDrag( handle, { x: 250, y: 160 } );
+
+				expect( controller.isAngleDimensionTextDragging ).toBeFalsy();
+			} );
+
+			it( 'should not start drag for layer locked via parent folder', () => {
+				const parentFolder = {
+					id: 'folder-1',
+					type: 'folder',
+					locked: true
+				};
+				mockAngleLayer.parentGroup = 'folder-1';
+				mockManager.editor.layers = [ parentFolder, mockAngleLayer ];
+
+				const handle = {
+					layerId: 'angle-1',
+					cx: 200,
+					cy: 200,
+					midAngle: 0,
+					arcRadius: 60
+				};
+
+				controller.startAngleDimensionTextDrag( handle, { x: 250, y: 160 } );
+
+				expect( controller.isAngleDimensionTextDragging ).toBeFalsy();
+			} );
+
+			it( 'should handle non-existent layer gracefully', () => {
+				const handle = {
+					layerId: 'nonexistent',
+					cx: 200,
+					cy: 200,
+					midAngle: 0,
+					arcRadius: 60
+				};
+
+				controller.startAngleDimensionTextDrag( handle, { x: 250, y: 160 } );
+
+				// isLayerEffectivelyLocked returns false for null, so drag state is set
+				expect( controller.isAngleDimensionTextDragging ).toBe( true );
+				// But originalLayerState should be null since layer wasn't found
+				expect( controller.originalLayerState ).toBeNull();
+			} );
+		} );
+
+		describe( 'handleAngleDimensionTextDrag', () => {
+			const handle = {
+				layerId: 'angle-1',
+				cx: 200,
+				cy: 200,
+				midAngle: 0, // 0 radians = pointing right
+				arcRadius: 60
+			};
+
+			beforeEach( () => {
+				controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+			} );
+
+			it( 'should update textOffset and arcRadius based on mouse position', () => {
+				// Move mouse to a position at ~45 degrees from vertex, 80px away
+				controller.handleAngleDimensionTextDrag( { x: 257, y: 143 } );
+
+				expect( mockManager.editor.updateLayer ).toHaveBeenCalledWith(
+					'angle-1',
+					expect.objectContaining( {
+						textOffset: expect.any( Number ),
+						arcRadius: expect.any( Number )
+					} )
+				);
+				expect( mockManager.renderLayers ).toHaveBeenCalled();
+				expect( controller.showDragPreview ).toBe( true );
+			} );
+
+			it( 'should snap textOffset to zero when near center (within 3 degrees)', () => {
+				// Move mouse almost at midAngle (0) direction, just 1 degree off
+				// At 80px distance, sin(1°) * 80 ≈ 1.4px offset
+				const smallAngle = 1 * ( Math.PI / 180 );
+				const px = 200 + 80 * Math.cos( smallAngle );
+				const py = 200 + 80 * Math.sin( smallAngle );
+
+				controller.handleAngleDimensionTextDrag( { x: px, y: py } );
+
+				// textOffset should snap to 0
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].textOffset ).toBe( 0 );
+			} );
+
+			it( 'should not snap textOffset when beyond 3 degree threshold', () => {
+				// Move mouse at 10 degrees off midAngle
+				const angle = 10 * ( Math.PI / 180 );
+				const px = 200 + 80 * Math.cos( angle );
+				const py = 200 + 80 * Math.sin( angle );
+
+				controller.handleAngleDimensionTextDrag( { x: px, y: py } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].textOffset ).not.toBe( 0 );
+			} );
+
+			it( 'should snap arcRadius to original when within 5 pixels', () => {
+				// Move mouse at exactly the original arcRadius distance (60px) from vertex
+				const px = 200 + 62; // 62px = within 5px of 60
+				const py = 200;
+
+				controller.handleAngleDimensionTextDrag( { x: px, y: py } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].arcRadius ).toBe( 60 ); // snapped to original
+			} );
+
+			it( 'should not snap arcRadius when beyond 5 pixel threshold', () => {
+				// Move mouse at 80px from vertex (20px beyond 60px original)
+				const px = 200 + 80;
+				const py = 200;
+
+				controller.handleAngleDimensionTextDrag( { x: px, y: py } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].arcRadius ).not.toBe( 60 );
+			} );
+
+			it( 'should clamp arcRadius to minimum of 10', () => {
+				// Move mouse very close to vertex (5px away)
+				controller.handleAngleDimensionTextDrag( { x: 205, y: 200 } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].arcRadius ).toBeGreaterThanOrEqual( 10 );
+			} );
+
+			it( 'should clamp arcRadius to maximum of 500', () => {
+				// Move mouse very far from vertex (600px away)
+				controller.handleAngleDimensionTextDrag( { x: 800, y: 200 } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].arcRadius ).toBeLessThanOrEqual( 500 );
+			} );
+
+			it( 'should adjust arcRadius for textPosition "above"', () => {
+				mockAngleLayer.textPosition = 'above';
+				// Move mouse 100px from vertex
+				controller.handleAngleDimensionTextDrag( { x: 300, y: 200 } );
+
+				// arcRadius = mouseDistance - perpOffset; the perpOffset is subtracted
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].arcRadius ).toBeDefined();
+			} );
+
+			it( 'should adjust arcRadius for textPosition "below"', () => {
+				mockAngleLayer.textPosition = 'below';
+				// Move mouse 100px from vertex
+				controller.handleAngleDimensionTextDrag( { x: 300, y: 200 } );
+
+				// arcRadius = mouseDistance + perpOffset
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].arcRadius ).toBeDefined();
+			} );
+
+			it( 'should normalize offset angle to [-π, π] range', () => {
+				// Move mouse to create a large angle (nearly opposite to midAngle)
+				controller.handleAngleDimensionTextDrag( { x: 100, y: 200 } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				// The offset should be normalized, not outside ±180
+				expect( Math.abs( updateCall[ 1 ].textOffset ) ).toBeLessThanOrEqual( 180 );
+			} );
+
+			it( 'should do nothing if not dragging', () => {
+				controller.isAngleDimensionTextDragging = false;
+
+				controller.handleAngleDimensionTextDrag( { x: 300, y: 200 } );
+
+				expect( mockManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should do nothing if layerId is null', () => {
+				controller.angleDimTextLayerId = null;
+
+				controller.handleAngleDimensionTextDrag( { x: 300, y: 200 } );
+
+				expect( mockManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should do nothing if layer not found', () => {
+				controller.angleDimTextLayerId = 'nonexistent';
+
+				controller.handleAngleDimensionTextDrag( { x: 300, y: 200 } );
+
+				expect( mockManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should use default fontSize of 12 when not set', () => {
+				delete mockAngleLayer.fontSize;
+				mockAngleLayer.textPosition = 'above';
+
+				controller.handleAngleDimensionTextDrag( { x: 300, y: 200 } );
+
+				expect( mockManager.editor.updateLayer ).toHaveBeenCalled();
+			} );
+
+			it( 'should round textOffset to one decimal place', () => {
+				// Move at an angle that produces a non-round offset
+				const angle = 7.777 * ( Math.PI / 180 );
+				const px = 200 + 80 * Math.cos( angle );
+				const py = 200 + 80 * Math.sin( angle );
+
+				controller.handleAngleDimensionTextDrag( { x: px, y: py } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				const offset = updateCall[ 1 ].textOffset;
+				// Check it's rounded to 1 decimal place
+				expect( offset ).toBe( Math.round( offset * 10 ) / 10 );
+			} );
+
+			it( 'should emit transform event for live panel update', () => {
+				const dispatchSpy = jest.spyOn( mockManager.container, 'dispatchEvent' );
+
+				controller.handleAngleDimensionTextDrag( { x: 280, y: 160 } );
+
+				// emitTransforming dispatches a CustomEvent
+				expect( dispatchSpy ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'finishAngleDimensionTextDrag', () => {
+			const handle = {
+				layerId: 'angle-1',
+				cx: 200,
+				cy: 200,
+				midAngle: 0,
+				arcRadius: 60
+			};
+
+			it( 'should reset all drag state', () => {
+				controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+				controller.handleAngleDimensionTextDrag( { x: 280, y: 160 } );
+				controller.finishAngleDimensionTextDrag();
+
+				expect( controller.isAngleDimensionTextDragging ).toBe( false );
+				expect( controller.angleDimTextLayerId ).toBeNull();
+				expect( controller.angleDimVertexX ).toBe( 0 );
+				expect( controller.angleDimVertexY ).toBe( 0 );
+				expect( controller.angleDimMidAngle ).toBe( 0 );
+				expect( controller.angleDimArcRadius ).toBe( 0 );
+				expect( controller.showDragPreview ).toBe( false );
+				expect( controller.originalLayerState ).toBeNull();
+				expect( controller.dragStartPoint ).toBeNull();
+			} );
+
+			it( 'should mark dirty and save state when movement occurred', () => {
+				controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+				controller.handleAngleDimensionTextDrag( { x: 280, y: 160 } );
+				controller.finishAngleDimensionTextDrag();
+
+				expect( mockManager.editor.markDirty ).toHaveBeenCalled();
+				expect( mockManager.editor.saveState ).toHaveBeenCalledWith( 'Move angle dimension text' );
+			} );
+
+			it( 'should not mark dirty when no movement occurred', () => {
+				controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+				// No handleAngleDimensionTextDrag call
+				controller.finishAngleDimensionTextDrag();
+
+				expect( mockManager.editor.markDirty ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should emit final transform event when movement occurred', () => {
+				controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+				controller.handleAngleDimensionTextDrag( { x: 280, y: 160 } );
+
+				const dispatchSpy = jest.fn();
+				mockManager.editor.container = { dispatchEvent: dispatchSpy };
+
+				controller.finishAngleDimensionTextDrag();
+
+				// emitTransforming with isFinal=true
+				expect( dispatchSpy ).toHaveBeenCalled();
+			} );
+
+			it( 'should reset cursor to tool cursor', () => {
+				controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+				controller.finishAngleDimensionTextDrag();
+
+				expect( mockManager.getToolCursor ).toHaveBeenCalled();
+				expect( mockManager.canvas.style.cursor ).toBe( 'default' );
+			} );
+
+			it( 'should handle finish without saveState method gracefully', () => {
+				delete mockManager.editor.saveState;
+				controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+				controller.handleAngleDimensionTextDrag( { x: 280, y: 160 } );
+
+				expect( () => {
+					controller.finishAngleDimensionTextDrag();
+				} ).not.toThrow();
+
+				expect( mockManager.editor.markDirty ).toHaveBeenCalled();
+			} );
+		} );
+	} );
+
+	// ==================== Dimension Text Drag ====================
+
+	describe( 'Dimension text drag operations', () => {
+		let mockDimLayer;
+
+		beforeEach( () => {
+			mockDimLayer = {
+				id: 'dim-1',
+				type: 'dimension',
+				x1: 100,
+				y1: 200,
+				x2: 300,
+				y2: 200,
+				dimensionOffset: 40,
+				textOffset: 0,
+				locked: false
+			};
+
+			mockManager = {
+				editor: {
+					getLayerById: jest.fn( ( id ) => {
+						if ( id === 'dim-1' ) {
+							return mockDimLayer;
+						}
+						return null;
+					} ),
+					layers: [ mockDimLayer ],
+					updateLayer: jest.fn( ( id, updates ) => {
+						Object.assign( mockDimLayer, updates );
+					} ),
+					markDirty: jest.fn(),
+					saveState: jest.fn()
+				},
+				canvas: { style: { cursor: '' } },
+				renderLayers: jest.fn(),
+				getToolCursor: jest.fn( () => 'default' ),
+				currentTool: 'select',
+				eventManager: {
+					emit: jest.fn()
+				},
+				container: document.createElement( 'div' )
+			};
+
+			controller = new TransformController( mockManager );
+		} );
+
+		describe( 'startDimensionTextDrag', () => {
+			it( 'should initialize dimension text drag state', () => {
+				const handle = {
+					layerId: 'dim-1',
+					perpX: 0,
+					perpY: -1,
+					unitDx: 1,
+					unitDy: 0,
+					anchorMidX: 200,
+					anchorMidY: 200,
+					lineLength: 200
+				};
+				const startPoint = { x: 200, y: 160 };
+
+				controller.startDimensionTextDrag( handle, startPoint );
+
+				expect( controller.isDimensionTextDragging ).toBe( true );
+				expect( controller.dragStartPoint ).toBe( startPoint );
+				expect( controller.dimensionTextLayerId ).toBe( 'dim-1' );
+				expect( controller.dimensionPerpX ).toBe( 0 );
+				expect( controller.dimensionPerpY ).toBe( -1 );
+				expect( controller.dimensionUnitDx ).toBe( 1 );
+				expect( controller.dimensionUnitDy ).toBe( 0 );
+				expect( controller.dimensionAnchorMidX ).toBe( 200 );
+				expect( controller.dimensionAnchorMidY ).toBe( 200 );
+				expect( controller.dimensionLineLength ).toBe( 200 );
+				expect( mockManager.canvas.style.cursor ).toBe( 'move' );
+				expect( controller.originalLayerState ).toBeTruthy();
+			} );
+
+			it( 'should not start drag for locked layer', () => {
+				mockDimLayer.locked = true;
+				const handle = {
+					layerId: 'dim-1',
+					perpX: 0,
+					perpY: -1,
+					unitDx: 1,
+					unitDy: 0,
+					anchorMidX: 200,
+					anchorMidY: 200,
+					lineLength: 200
+				};
+
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+
+				expect( controller.isDimensionTextDragging ).toBeFalsy();
+			} );
+
+			it( 'should use default direction values when handle properties missing', () => {
+				const handle = {
+					layerId: 'dim-1'
+					// No perpX, perpY, unitDx, etc.
+				};
+
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+
+				expect( controller.dimensionPerpX ).toBe( 0 );
+				expect( controller.dimensionPerpY ).toBe( -1 );
+				expect( controller.dimensionUnitDx ).toBe( 1 );
+				expect( controller.dimensionUnitDy ).toBe( 0 );
+				expect( controller.dimensionAnchorMidX ).toBe( 0 );
+				expect( controller.dimensionAnchorMidY ).toBe( 0 );
+				expect( controller.dimensionLineLength ).toBe( 100 );
+			} );
+
+			it( 'should not start drag for layer locked via parent folder', () => {
+				const parentFolder = {
+					id: 'folder-1',
+					type: 'folder',
+					locked: true
+				};
+				mockDimLayer.parentGroup = 'folder-1';
+				mockManager.editor.layers = [ parentFolder, mockDimLayer ];
+
+				const handle = {
+					layerId: 'dim-1',
+					perpX: 0,
+					perpY: -1,
+					unitDx: 1,
+					unitDy: 0,
+					anchorMidX: 200,
+					anchorMidY: 200,
+					lineLength: 200
+				};
+
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+
+				expect( controller.isDimensionTextDragging ).toBeFalsy();
+			} );
+		} );
+
+		describe( 'handleDimensionTextDrag', () => {
+			const handle = {
+				layerId: 'dim-1',
+				perpX: 0,
+				perpY: -1,
+				unitDx: 1,
+				unitDy: 0,
+				anchorMidX: 200,
+				anchorMidY: 200,
+				lineLength: 200
+			};
+
+			beforeEach( () => {
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+			} );
+
+			it( 'should update dimensionOffset and textOffset', () => {
+				// Move mouse perpendicular (up) and parallel (right)
+				controller.handleDimensionTextDrag( { x: 250, y: 150 } );
+
+				expect( mockManager.editor.updateLayer ).toHaveBeenCalledWith(
+					'dim-1',
+					expect.objectContaining( {
+						dimensionOffset: expect.any( Number ),
+						textOffset: expect.any( Number )
+					} )
+				);
+				expect( mockManager.renderLayers ).toHaveBeenCalled();
+				expect( controller.showDragPreview ).toBe( true );
+			} );
+
+			it( 'should calculate perpendicular offset correctly for horizontal dimension', () => {
+				// For perpX=0, perpY=-1 (pointing up), dragging up should give positive offset
+				// Mouse at (200, 150) → dy = 150-200 = -50; perpOffset = -(0*0 + (-50)*(-1)) = -50
+				controller.handleDimensionTextDrag( { x: 200, y: 150 } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].dimensionOffset ).toBe( -50 );
+			} );
+
+			it( 'should snap textOffset to zero when within 10 pixels of center', () => {
+				// Move mouse slightly right of anchor midpoint: dx=5 along unitDx=1
+				controller.handleDimensionTextDrag( { x: 205, y: 200 } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].textOffset ).toBe( 0 ); // snapped
+			} );
+
+			it( 'should not snap textOffset when beyond 10 pixel threshold', () => {
+				// Move mouse 50px right of anchor midpoint
+				controller.handleDimensionTextDrag( { x: 250, y: 200 } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( updateCall[ 1 ].textOffset ).not.toBe( 0 );
+			} );
+
+			it( 'should round dimension offsets to integers', () => {
+				controller.handleDimensionTextDrag( { x: 233.7, y: 177.3 } );
+
+				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+				expect( Number.isInteger( updateCall[ 1 ].dimensionOffset ) ).toBe( true );
+				expect( Number.isInteger( updateCall[ 1 ].textOffset ) ).toBe( true );
+			} );
+
+			it( 'should do nothing if not dragging', () => {
+				controller.isDimensionTextDragging = false;
+
+				controller.handleDimensionTextDrag( { x: 250, y: 150 } );
+
+				expect( mockManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should do nothing if layerId is null', () => {
+				controller.dimensionTextLayerId = null;
+
+				controller.handleDimensionTextDrag( { x: 250, y: 150 } );
+
+				expect( mockManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should do nothing if layer not found', () => {
+				controller.dimensionTextLayerId = 'nonexistent';
+
+				controller.handleDimensionTextDrag( { x: 250, y: 150 } );
+
+				expect( mockManager.editor.updateLayer ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should emit transform event for live panel update', () => {
+				const dispatchSpy = jest.spyOn( mockManager.container, 'dispatchEvent' );
+
+				controller.handleDimensionTextDrag( { x: 250, y: 150 } );
+
+				expect( dispatchSpy ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle diagonal dimension line correctly', () => {
+				// Reset with diagonal perpendicular/unit vectors
+				controller.dimensionPerpX = -0.707;
+				controller.dimensionPerpY = -0.707;
+				controller.dimensionUnitDx = 0.707;
+				controller.dimensionUnitDy = -0.707;
+
+				controller.handleDimensionTextDrag( { x: 250, y: 150 } );
+
+				expect( mockManager.editor.updateLayer ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'finishDimensionTextDrag', () => {
+			const handle = {
+				layerId: 'dim-1',
+				perpX: 0,
+				perpY: -1,
+				unitDx: 1,
+				unitDy: 0,
+				anchorMidX: 200,
+				anchorMidY: 200,
+				lineLength: 200
+			};
+
+			it( 'should reset all drag state', () => {
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+				controller.handleDimensionTextDrag( { x: 250, y: 120 } );
+				controller.finishDimensionTextDrag();
+
+				expect( controller.isDimensionTextDragging ).toBe( false );
+				expect( controller.dimensionTextLayerId ).toBeNull();
+				expect( controller.dimensionPerpX ).toBe( 0 );
+				expect( controller.dimensionPerpY ).toBe( 0 );
+				expect( controller.dimensionUnitDx ).toBe( 0 );
+				expect( controller.dimensionUnitDy ).toBe( 0 );
+				expect( controller.dimensionAnchorMidX ).toBe( 0 );
+				expect( controller.dimensionAnchorMidY ).toBe( 0 );
+				expect( controller.dimensionLineLength ).toBe( 0 );
+				expect( controller.showDragPreview ).toBe( false );
+				expect( controller.originalLayerState ).toBeNull();
+				expect( controller.dragStartPoint ).toBeNull();
+			} );
+
+			it( 'should mark dirty and save state when movement occurred', () => {
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+				controller.handleDimensionTextDrag( { x: 250, y: 120 } );
+				controller.finishDimensionTextDrag();
+
+				expect( mockManager.editor.markDirty ).toHaveBeenCalled();
+				expect( mockManager.editor.saveState ).toHaveBeenCalledWith( 'Move dimension text' );
+			} );
+
+			it( 'should not mark dirty when no movement occurred', () => {
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+				controller.finishDimensionTextDrag();
+
+				expect( mockManager.editor.markDirty ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should emit final transform event when movement occurred', () => {
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+				controller.handleDimensionTextDrag( { x: 250, y: 120 } );
+
+				const dispatchSpy = jest.fn();
+				mockManager.editor.container = { dispatchEvent: dispatchSpy };
+
+				controller.finishDimensionTextDrag();
+
+				expect( dispatchSpy ).toHaveBeenCalled();
+			} );
+
+			it( 'should reset cursor to tool cursor', () => {
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+				controller.finishDimensionTextDrag();
+
+				expect( mockManager.getToolCursor ).toHaveBeenCalled();
+				expect( mockManager.canvas.style.cursor ).toBe( 'default' );
+			} );
+
+			it( 'should handle finish without saveState method gracefully', () => {
+				delete mockManager.editor.saveState;
+				controller.startDimensionTextDrag( handle, { x: 200, y: 160 } );
+				controller.handleDimensionTextDrag( { x: 250, y: 120 } );
+
+				expect( () => {
+					controller.finishDimensionTextDrag();
+				} ).not.toThrow();
+
+				expect( mockManager.editor.markDirty ).toHaveBeenCalled();
+			} );
+		} );
+	} );
+
+	// ==================== Additional Branch Coverage ====================
+
+	describe( 'updateLayerPosition type coverage', () => {
+		it( 'should move angleDimension layers by updating cx/cy/ax/ay/bx/by', () => {
+			const layer = {
+				id: 'ad-1',
+				type: 'angleDimension',
+				cx: 200,
+				cy: 200,
+				ax: 300,
+				ay: 200,
+				bx: 200,
+				by: 100
+			};
+			const original = { ...layer };
+
+			controller.updateLayerPosition( layer, original, 50, 30 );
+
+			expect( layer.cx ).toBe( 250 );
+			expect( layer.cy ).toBe( 230 );
+			expect( layer.ax ).toBe( 350 );
+			expect( layer.ay ).toBe( 230 );
+			expect( layer.bx ).toBe( 250 );
+			expect( layer.by ).toBe( 130 );
+		} );
+
+		it( 'should move arrow controlX/controlY when present', () => {
+			const layer = {
+				id: 'a-1',
+				type: 'arrow',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 200,
+				controlX: 150,
+				controlY: 120
+			};
+			const original = { ...layer };
+
+			controller.updateLayerPosition( layer, original, 10, 20 );
+
+			expect( layer.controlX ).toBe( 160 );
+			expect( layer.controlY ).toBe( 140 );
+		} );
+
+		it( 'should not set controlX/controlY when not in original layer', () => {
+			const layer = {
+				id: 'a-2',
+				type: 'arrow',
+				x1: 100,
+				y1: 100,
+				x2: 200,
+				y2: 200
+			};
+			const original = { ...layer };
+
+			controller.updateLayerPosition( layer, original, 10, 20 );
+
+			expect( layer.controlX ).toBeUndefined();
+			expect( layer.controlY ).toBeUndefined();
+		} );
+	} );
+
+	describe( '_cloneLayer', () => {
+		it( 'should use efficient clone function from window.Layers.Utils when available', () => {
+			const clonedOutput = { id: 'clone', type: 'rect' };
+			global.window.Layers.Utils = {
+				cloneLayerEfficient: jest.fn( () => clonedOutput )
+			};
+
+			// Reset cached reference
+			controller._cloneLayerEfficient = null;
+			const result = controller._cloneLayer( { id: 'test', type: 'rect' } );
+
+			expect( result ).toBe( clonedOutput );
+			expect( global.window.Layers.Utils.cloneLayerEfficient ).toHaveBeenCalled();
+
+			// Cleanup
+			delete global.window.Layers.Utils;
+		} );
+
+		it( 'should fall back to JSON clone when Utils not available', () => {
+			controller._cloneLayerEfficient = null;
+			delete global.window.Layers.Utils;
+
+			const original = { id: 'test', x: 100, y: 200 };
+			const result = controller._cloneLayer( original );
+
+			expect( result ).toEqual( original );
+			expect( result ).not.toBe( original ); // Different reference
+		} );
+	} );
+
+	describe( 'destroy with pending RAF callbacks', () => {
+		it( 'should cancel pending rotation RAF', () => {
+			const cancelSpy = jest.spyOn( window, 'cancelAnimationFrame' );
+			controller._rotationRafId = 42;
+
+			controller.destroy();
+
+			expect( cancelSpy ).toHaveBeenCalledWith( 42 );
+			cancelSpy.mockRestore();
+		} );
+
+		it( 'should cancel pending drag RAF', () => {
+			const cancelSpy = jest.spyOn( window, 'cancelAnimationFrame' );
+			controller._dragRafId = 99;
+
+			controller.destroy();
+
+			expect( cancelSpy ).toHaveBeenCalledWith( 99 );
+			cancelSpy.mockRestore();
+		} );
+
+		it( 'should cancel pending arrow tip RAF', () => {
+			const cancelSpy = jest.spyOn( window, 'cancelAnimationFrame' );
+			controller._arrowTipRafId = 77;
+
+			controller.destroy();
+
+			expect( cancelSpy ).toHaveBeenCalledWith( 77 );
+			cancelSpy.mockRestore();
+		} );
+
+		it( 'should cancel all pending RAFs simultaneously', () => {
+			const cancelSpy = jest.spyOn( window, 'cancelAnimationFrame' );
+			controller._resizeRafId = 10;
+			controller._rotationRafId = 20;
+			controller._dragRafId = 30;
+			controller._arrowTipRafId = 40;
+
+			controller.destroy();
+
+			expect( cancelSpy ).toHaveBeenCalledTimes( 4 );
+			expect( controller._resizeRafId ).toBeNull();
+			expect( controller._rotationRafId ).toBeNull();
+			expect( controller._dragRafId ).toBeNull();
+			expect( controller._arrowTipRafId ).toBeNull();
+			cancelSpy.mockRestore();
+		} );
+	} );
+
+	describe( 'Angle dimension offset normalization edge cases', () => {
+		let mockAngleLayer2;
+
+		beforeEach( () => {
+			mockAngleLayer2 = {
+				id: 'angle-2',
+				type: 'angleDimension',
+				cx: 200,
+				cy: 200,
+				ax: 300,
+				ay: 200,
+				bx: 200,
+				by: 100,
+				textOffset: 0,
+				arcRadius: 60,
+				fontSize: 14,
+				textPosition: 'center',
+				locked: false
+			};
+
+			mockManager = {
+				editor: {
+					getLayerById: jest.fn( () => mockAngleLayer2 ),
+					layers: [ mockAngleLayer2 ],
+					updateLayer: jest.fn( ( id, updates ) => {
+						Object.assign( mockAngleLayer2, updates );
+					} ),
+					markDirty: jest.fn(),
+					saveState: jest.fn()
+				},
+				canvas: { style: { cursor: '' } },
+				renderLayers: jest.fn(),
+				getToolCursor: jest.fn( () => 'default' ),
+				currentTool: 'select',
+				eventManager: { emit: jest.fn() },
+				container: document.createElement( 'div' )
+			};
+
+			controller = new TransformController( mockManager );
+		} );
+
+		it( 'should normalize angle offset > π (triggers while loop subtraction)', () => {
+			// Set midAngle to -π (pointing left)
+			// Move mouse to the right (+x): atan2(0, +dx) = 0
+			// offsetRadians = 0 - (-π) = π... but if midAngle is < -π we get > 2π
+			// To guarantee the while loop fires: set midAngle to -3π so offset = 0 - (-3π) = 3π
+			const handle = {
+				layerId: 'angle-2',
+				cx: 200,
+				cy: 200,
+				midAngle: -3 * Math.PI, // Forces offset > π
+				arcRadius: 60
+			};
+
+			controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+			controller.handleAngleDimensionTextDrag( { x: 260, y: 200 } );
+
+			expect( mockManager.editor.updateLayer ).toHaveBeenCalled();
+			const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+			// After normalization, textOffset should be in [-180, 180]
+			expect( Math.abs( updateCall[ 1 ].textOffset ) ).toBeLessThanOrEqual( 180 );
+		} );
+
+		it( 'should normalize angle offset < -π (triggers while loop addition)', () => {
+			// Set midAngle to 3π so offset = mouseAngle - 3π < -π
+			const handle = {
+				layerId: 'angle-2',
+				cx: 200,
+				cy: 200,
+				midAngle: 3 * Math.PI, // Forces offset < -π
+				arcRadius: 60
+			};
+
+			controller.startAngleDimensionTextDrag( handle, { x: 260, y: 200 } );
+			controller.handleAngleDimensionTextDrag( { x: 260, y: 200 } );
+
+			expect( mockManager.editor.updateLayer ).toHaveBeenCalled();
+			const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
+			expect( Math.abs( updateCall[ 1 ].textOffset ) ).toBeLessThanOrEqual( 180 );
+		} );
+	} );
+
+	describe( 'Snap-to-grid with geometric layer types', () => {
+		it( 'should compute reference point for angleDimension in snap-to-grid drag', () => {
+			const angleLayer = {
+				id: 'ad-snap',
+				type: 'angleDimension',
+				cx: 200,
+				cy: 200,
+				ax: 300,
+				ay: 200,
+				bx: 200,
+				by: 100,
+				locked: false
+			};
+			mockEditor.layers = [ angleLayer ];
+			mockManager.selectedLayerId = 'ad-snap';
+			mockManager.selectedLayerIds = [ 'ad-snap' ];
+			mockManager.snapToGrid = true;
+			mockManager.gridSize = 10;
+
+			controller.startDrag( { x: 200, y: 200 } );
+			controller.handleDrag( { x: 213, y: 207 } );
+
+			// The snapping should have been applied via _getRefPoint
+			expect( mockManager.renderLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should compute reference point for path layers in snap-to-grid drag', () => {
+			const pathLayer = {
+				id: 'path-snap',
+				type: 'path',
+				points: [ { x: 50, y: 60 }, { x: 100, y: 120 }, { x: 150, y: 80 } ],
+				locked: false
+			};
+			mockEditor.layers = [ pathLayer ];
+			mockManager.selectedLayerId = 'path-snap';
+			mockManager.selectedLayerIds = [ 'path-snap' ];
+			mockManager.snapToGrid = true;
+			mockManager.gridSize = 10;
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 113, y: 107 } );
+
+			expect( mockManager.renderLayers ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'Resize RAF destruction guard', () => {
+		it( 'should handle destroyed manager during resize RAF callback', () => {
+			// Start a resize to schedule the RAF
+			controller.startResize( { type: 'se' }, { x: 300, y: 250 } );
+
+			// Set destroyed flag before RAF fires (our mock runs synchronously so we test the guard directly)
+			controller.manager.isDestroyed = true;
+			controller._resizeRenderScheduled = false;
+			controller._pendingResizeLayer = testLayer;
+
+			// Simulate another resize move - the RAF guard should detect destruction
+			controller.handleResize( { x: 350, y: 300 }, {} );
+
+			// Still should not throw; RAF guard protects
+			expect( controller.isResizing ).toBe( true );
+		} );
+	} );
+
+	describe( 'Rotation RAF destruction guard', () => {
+		it( 'should handle destroyed manager during rotation RAF callback', () => {
+			controller.startRotation( { x: 300, y: 100 } );
+			controller.manager.isDestroyed = true;
+			controller._rotationRenderScheduled = false;
+
+			// Try to rotate after destruction
+			controller.handleRotation( { x: 350, y: 150 }, {} );
+
+			// Should not throw
+			expect( controller.isRotating ).toBe( true );
+		} );
+	} );
 } );

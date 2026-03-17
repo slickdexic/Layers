@@ -437,27 +437,32 @@ describe( 'PresetStorage', () => {
 		} );
 
 		test( 'gradient data survives save/load round-trip', () => {
-			const presets = [ {
-				id: 'test-gradient',
-				name: 'Gradient Test',
-				tool: 'rectangle',
-				style: {
-					fill: 'transparent',
-					gradient: {
-						type: 'radial',
-						centerX: 0.5,
-						centerY: 0.5,
-						colors: [
-							{ offset: 0, color: '#ffffff' },
-							{ offset: 1, color: '#000000' }
-						]
-					}
-				}
-			} ];
-			storage.save( presets );
+			const data = {
+				version: 1,
+				toolPresets: {
+					rectangle: [ {
+						id: 'test-gradient',
+						name: 'Gradient Test',
+						style: {
+							fill: 'transparent',
+							gradient: {
+								type: 'radial',
+								centerX: 0.5,
+								centerY: 0.5,
+								colors: [
+									{ offset: 0, color: '#ffffff' },
+									{ offset: 1, color: '#000000' }
+								]
+							}
+						}
+					} ]
+				},
+				defaultPresets: {}
+			};
+			storage.save( data );
 			const loaded = storage.load();
-			expect( loaded[ 0 ].style.gradient ).toBeDefined();
-			expect( loaded[ 0 ].style.gradient.type ).toBe( 'radial' );
+			expect( loaded.toolPresets.rectangle[ 0 ].style.gradient ).toBeDefined();
+			expect( loaded.toolPresets.rectangle[ 0 ].style.gradient.type ).toBe( 'radial' );
 		} );
 	} );
 } );

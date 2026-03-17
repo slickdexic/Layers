@@ -1294,4 +1294,290 @@ describe( 'ToolManager', () => {
 			expect( toolManager.tempLayer.points ).toHaveLength( 2 );
 		} );
 	} );
+
+	// =========================================================
+	// Branch coverage tests — v55 strategic improvement
+	// =========================================================
+
+	describe( 'addLayerToCanvas branch coverage', () => {
+		it( 'should use generateLayerId when window.Layers.Utils is available', () => {
+			window.Layers = {
+				Utils: { generateLayerId: jest.fn().mockReturnValue( 'gen-id-123' ) },
+				Tools: window.Layers && window.Layers.Tools ? window.Layers.Tools : {}
+			};
+			mockEditor.stateManager = { addLayer: jest.fn(), getLayers: jest.fn().mockReturnValue( [] ) };
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+			expect( layer.id ).toBe( 'gen-id-123' );
+			expect( window.Layers.Utils.generateLayerId ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip stateManager.addLayer when stateManager is null', () => {
+			mockEditor.stateManager = null;
+			mockEditor.layers = [];
+			mockCanvasManager.selectionManager = { selectLayer: jest.fn() };
+			mockCanvasManager.historyManager = { saveState: jest.fn() };
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			expect( () => toolManager.addLayerToCanvas( layer ) ).not.toThrow();
+			expect( mockCanvasManager.renderLayers ).toHaveBeenCalledWith( mockEditor.layers );
+		} );
+
+		it( 'should skip selectionManager when null', () => {
+			mockCanvasManager.selectionManager = null;
+			mockCanvasManager.historyManager = { saveState: jest.fn() };
+			mockEditor.stateManager = { addLayer: jest.fn(), getLayers: jest.fn().mockReturnValue( [] ) };
+			const layer = { type: 'circle', width: 50, height: 50 };
+			expect( () => toolManager.addLayerToCanvas( layer ) ).not.toThrow();
+			expect( mockCanvasManager.historyManager.saveState ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip historyManager when null', () => {
+			mockCanvasManager.selectionManager = { selectLayer: jest.fn() };
+			mockCanvasManager.historyManager = null;
+			mockEditor.stateManager = { addLayer: jest.fn(), getLayers: jest.fn().mockReturnValue( [] ) };
+			const layer = { type: 'ellipse', width: 50, height: 50 };
+			expect( () => toolManager.addLayerToCanvas( layer ) ).not.toThrow();
+			expect( mockCanvasManager.selectionManager.selectLayer ).toHaveBeenCalled();
+		} );
+
+		it( 'should fall back to editor.layers when stateManager is null', () => {
+			mockEditor.stateManager = null;
+			mockEditor.layers = [ { id: 'existing' } ];
+			mockCanvasManager.selectionManager = { selectLayer: jest.fn() };
+			mockCanvasManager.historyManager = { saveState: jest.fn() };
+			const layer = { type: 'line', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+			expect( mockCanvasManager.renderLayers ).toHaveBeenCalledWith( mockEditor.layers );
+		} );
+
+		it( 'should skip layerPanel.updateLayers when layerPanel is null', () => {
+			mockEditor.layerPanel = null;
+			mockEditor.stateManager = { addLayer: jest.fn(), getLayers: jest.fn().mockReturnValue( [] ) };
+			mockCanvasManager.selectionManager = { selectLayer: jest.fn() };
+			mockCanvasManager.historyManager = { saveState: jest.fn() };
+			const layer = { type: 'rectangle', width: 50, height: 50 };
+			expect( () => toolManager.addLayerToCanvas( layer ) ).not.toThrow();
+		} );
+
+		it( 'should call layerPanel.updateLayers when layerPanel is present', () => {
+			const layersList = [ { id: 'l1' } ];
+			mockEditor.layerPanel = { updateLayers: jest.fn() };
+			mockEditor.stateManager = { addLayer: jest.fn(), getLayers: jest.fn().mockReturnValue( layersList ) };
+			mockCanvasManager.selectionManager = { selectLayer: jest.fn() };
+			mockCanvasManager.historyManager = { saveState: jest.fn() };
+			const layer = { type: 'star', width: 50, height: 50 };
+			toolManager.addLayerToCanvas( layer );
+			expect( mockEditor.layerPanel.updateLayers ).toHaveBeenCalledWith( layersList );
+		} );
+	} );
+
+	describe( 'finishCurrentDrawing branch coverage', () => {
+		it( 'should call hideTextEditor even when isDrawing is false', () => {
+			toolManager.isDrawing = false;
+			toolManager.textToolHandler = { hideTextEditor: jest.fn() };
+			toolManager.finishCurrentDrawing();
+			expect( toolManager.textToolHandler.hideTextEditor ).toHaveBeenCalled();
+		} );
+
+		it( 'should reset when isDrawing is true but pathToolHandler is null', () => {
+			toolManager.isDrawing = true;
+			toolManager.tempLayer = { type: 'rectangle' };
+			toolManager.pathToolHandler = null;
+			toolManager.textToolHandler = { hideTextEditor: jest.fn() };
+			toolManager.finishCurrentDrawing();
+			expect( toolManager.isDrawing ).toBe( false );
+			expect( toolManager.tempLayer ).toBeNull();
+		} );
+
+		it( 'should reset pathToolHandler when isDrawing is true', () => {
+			const mockReset = jest.fn();
+			toolManager.isDrawing = true;
+			toolManager.tempLayer = { type: 'path' };
+			toolManager.pathToolHandler = { reset: mockReset };
+			toolManager.textToolHandler = { hideTextEditor: jest.fn() };
+			toolManager.finishCurrentDrawing();
+			expect( mockReset ).toHaveBeenCalled();
+			expect( toolManager.isDrawing ).toBe( false );
+		} );
+	} );
+
+	describe( 'handlePathPoint and completePath null handler', () => {
+		it( 'handlePathPoint should be a no-op without pathToolHandler', () => {
+			toolManager.pathToolHandler = null;
+			expect( () => toolManager.handlePathPoint( { x: 100, y: 100 } ) ).not.toThrow();
+		} );
+
+		it( 'completePath should be a no-op without pathToolHandler', () => {
+			toolManager.pathToolHandler = null;
+			toolManager.isDrawing = true;
+			toolManager.completePath();
+			// isDrawing should remain true since the body was never entered
+			expect( toolManager.isDrawing ).toBe( true );
+		} );
+
+		it( 'handlePathPoint should set isDrawing true when point not completed', () => {
+			toolManager.pathToolHandler = { handlePoint: jest.fn().mockReturnValue( false ) };
+			toolManager.isDrawing = false;
+			toolManager.handlePathPoint( { x: 50, y: 50 } );
+			expect( toolManager.isDrawing ).toBe( true );
+		} );
+
+		it( 'handlePathPoint should set isDrawing false when path completed', () => {
+			toolManager.pathToolHandler = { handlePoint: jest.fn().mockReturnValue( true ) };
+			toolManager.isDrawing = true;
+			toolManager.handlePathPoint( { x: 50, y: 50 } );
+			expect( toolManager.isDrawing ).toBe( false );
+		} );
+	} );
+
+	describe( 'showTextEditor null handler', () => {
+		it( 'should be a no-op without textToolHandler', () => {
+			toolManager.textToolHandler = null;
+			expect( () => toolManager.showTextEditor( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'update*Tool null guard branches', () => {
+		it( 'updatePenDrawing should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			expect( () => toolManager.updatePenDrawing( { x: 20, y: 20 } ) ).not.toThrow();
+		} );
+
+		it( 'updatePenDrawing should be a no-op when tempLayer has no points', () => {
+			toolManager.tempLayer = { type: 'path' };
+			expect( () => toolManager.updatePenDrawing( { x: 20, y: 20 } ) ).not.toThrow();
+		} );
+
+		it( 'updateRectangleTool should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			toolManager.startPoint = { x: 0, y: 0 };
+			expect( () => toolManager.updateRectangleTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updateRectangleTool should be a no-op when startPoint is null', () => {
+			toolManager.tempLayer = { type: 'rectangle' };
+			toolManager.startPoint = null;
+			expect( () => toolManager.updateRectangleTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updateCircleTool should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			toolManager.startPoint = { x: 0, y: 0 };
+			expect( () => toolManager.updateCircleTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updateCircleTool should be a no-op when startPoint is null', () => {
+			toolManager.tempLayer = { type: 'circle' };
+			toolManager.startPoint = null;
+			expect( () => toolManager.updateCircleTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updateEllipseTool should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			toolManager.startPoint = { x: 0, y: 0 };
+			expect( () => toolManager.updateEllipseTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updateEllipseTool should be a no-op when startPoint is null', () => {
+			toolManager.tempLayer = { type: 'ellipse' };
+			toolManager.startPoint = null;
+			expect( () => toolManager.updateEllipseTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updateLineTool should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			expect( () => toolManager.updateLineTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updatePolygonTool should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			toolManager.startPoint = { x: 0, y: 0 };
+			expect( () => toolManager.updatePolygonTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updatePolygonTool should be a no-op when startPoint is null', () => {
+			toolManager.tempLayer = { type: 'polygon' };
+			toolManager.startPoint = null;
+			expect( () => toolManager.updatePolygonTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updateStarTool should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			toolManager.startPoint = { x: 0, y: 0 };
+			expect( () => toolManager.updateStarTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+
+		it( 'updateStarTool should be a no-op when startPoint is null', () => {
+			toolManager.tempLayer = { type: 'star' };
+			toolManager.startPoint = null;
+			expect( () => toolManager.updateStarTool( { x: 50, y: 50 } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'start*Tool without shapeFactory', () => {
+		const startMethods = [
+			'startPenDrawing',
+			'startRectangleTool',
+			'startTextBoxTool',
+			'startCircleTool',
+			'startEllipseTool',
+			'startLineTool',
+			'startArrowTool',
+			'startPolygonTool',
+			'startStarTool'
+		];
+
+		for ( const method of startMethods ) {
+			it( `${ method } should be a no-op without shapeFactory`, () => {
+				toolManager.shapeFactory = null;
+				toolManager.tempLayer = null;
+				toolManager[ method ]( { x: 10, y: 20 } );
+				expect( toolManager.tempLayer ).toBeNull();
+			} );
+		}
+	} );
+
+	describe( 'finishShapeDrawing and finishPenDrawing null tempLayer', () => {
+		it( 'finishShapeDrawing should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			const spy = jest.spyOn( toolManager, 'addLayerToCanvas' );
+			toolManager.finishShapeDrawing( { x: 100, y: 100 } );
+			expect( spy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'finishPenDrawing should be a no-op when tempLayer is null', () => {
+			toolManager.tempLayer = null;
+			const spy = jest.spyOn( toolManager, 'addLayerToCanvas' );
+			toolManager.finishPenDrawing( { x: 100, y: 100 } );
+			expect( spy ).not.toHaveBeenCalled();
+			expect( toolManager.tempLayer ).toBeNull();
+		} );
+
+		it( 'finishPenDrawing should not add layer with only 1 point', () => {
+			toolManager.tempLayer = { type: 'path', points: [ { x: 10, y: 10 } ] };
+			const spy = jest.spyOn( toolManager, 'addLayerToCanvas' );
+			toolManager.finishPenDrawing( { x: 100, y: 100 } );
+			expect( spy ).not.toHaveBeenCalled();
+			expect( toolManager.tempLayer ).toBeNull();
+		} );
+
+		it( 'finishPenDrawing should add layer with 2+ points', () => {
+			toolManager.tempLayer = { type: 'path', points: [ { x: 10, y: 10 }, { x: 20, y: 20 } ] };
+			mockEditor.stateManager = { addLayer: jest.fn(), getLayers: jest.fn().mockReturnValue( [] ) };
+			mockCanvasManager.selectionManager = { selectLayer: jest.fn() };
+			mockCanvasManager.historyManager = { saveState: jest.fn() };
+			toolManager.finishPenDrawing( { x: 100, y: 100 } );
+			expect( mockEditor.stateManager.addLayer ).toHaveBeenCalled();
+			expect( toolManager.tempLayer ).toBeNull();
+		} );
+
+		it( 'finishShapeDrawing should not add layer when hasValidSize returns false', () => {
+			toolManager.tempLayer = { type: 'rectangle', width: 0, height: 0 };
+			toolManager.shapeFactory = { hasValidSize: jest.fn().mockReturnValue( false ) };
+			const spy = jest.spyOn( toolManager, 'addLayerToCanvas' );
+			toolManager.finishShapeDrawing( { x: 100, y: 100 } );
+			expect( spy ).not.toHaveBeenCalled();
+			expect( toolManager.tempLayer ).toBeNull();
+		} );
+	} );
 } );

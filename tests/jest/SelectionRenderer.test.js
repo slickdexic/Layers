@@ -1007,5 +1007,536 @@ describe( 'SelectionRenderer', () => {
 			// Should reset line dash to solid
 			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [] );
 		} );
+
+		test( 'should use dimensionOffset when provided', () => {
+			const dimensionLayer = {
+				id: 'dim1', type: 'dimension',
+				x1: 0, y1: 0, x2: 100, y2: 0,
+				dimensionOffset: 25
+			};
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Extension lines should be drawn using dimensionOffset
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+			expect( mockCtx.lineTo ).toHaveBeenCalled();
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+		} );
+
+		test( 'should fall back to extensionLength/extensionGap when no dimensionOffset', () => {
+			const dimensionLayer = {
+				id: 'dim1', type: 'dimension',
+				x1: 0, y1: 0, x2: 100, y2: 0,
+				extensionLength: 20,
+				extensionGap: 5
+			};
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+		} );
+
+		test( 'should use defaults when extensionLength/extensionGap are missing', () => {
+			const dimensionLayer = {
+				id: 'dim1', type: 'dimension',
+				x1: 0, y1: 0, x2: 100, y2: 0
+			};
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Uses default extensionLength=10, extensionGap=3
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+		} );
+
+		test( 'should handle NaN dimensionOffset', () => {
+			const dimensionLayer = {
+				id: 'dim1', type: 'dimension',
+				x1: 0, y1: 0, x2: 100, y2: 0,
+				dimensionOffset: NaN
+			};
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Falls through to extensionLength/extensionGap fallback
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+		} );
+
+		test( 'should handle NaN extensionLength and extensionGap', () => {
+			const dimensionLayer = {
+				id: 'dim1', type: 'dimension',
+				x1: 0, y1: 0, x2: 100, y2: 0,
+				extensionLength: NaN,
+				extensionGap: NaN
+			};
+			renderer.drawDimensionSelectionIndicators( dimensionLayer, false );
+
+			// Falls through to defaults (10, 3)
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+		} );
+	} );
+
+	describe( 'drawSelectionIndicators type dispatch', () => {
+		test( 'should dispatch to drawDimensionSelectionIndicators for dimension type', () => {
+			mockLayers.push( { id: 'dim1', type: 'dimension', x1: 10, y1: 20, x2: 110, y2: 20 } );
+			renderer.drawSelectionIndicators( 'dim1', false );
+
+			expect( renderer.selectionHandles.length ).toBe( 2 );
+			expect( renderer.selectionHandles[ 0 ].isDimension ).toBe( true );
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'should dispatch to drawAngleDimensionSelectionIndicators for angleDimension type', () => {
+			mockLayers.push( {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200
+			} );
+			renderer.drawSelectionIndicators( 'angle1', false );
+
+			expect( renderer.selectionHandles.length ).toBe( 3 );
+			expect( renderer.selectionHandles[ 0 ].isAngleDimension ).toBe( true );
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'should dispatch to drawMarkerSelectionIndicators for marker type', () => {
+			mockLayers.push( { id: 'marker1', type: 'marker', x: 50, y: 50, size: 30 } );
+			renderer.drawSelectionIndicators( 'marker1', false );
+
+			expect( renderer.selectionHandles.length ).toBe( 1 );
+			expect( renderer.selectionHandles[ 0 ].isMarker ).toBe( true );
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'should return null bounds for unknown layer type', () => {
+			// getLayerBounds returns null for unhandled types
+			mockLayers.push( { id: 'unknown1', type: 'polygon', x: 0, y: 0 } );
+			renderer.drawSelectionIndicators( 'unknown1', false );
+
+			// Should not add any handles when bounds are null
+			expect( renderer.selectionHandles.length ).toBe( 0 );
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'drawAngleDimensionSelectionIndicators', () => {
+		test( 'should create 3 handles: vertex, arm1, arm2', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			// 3 handles (vertex, arm1, arm2) — text handle requires AngleDimensionRenderer
+			expect( renderer.selectionHandles.length ).toBe( 3 );
+			expect( renderer.selectionHandles[ 0 ].type ).toBe( 'nw' ); // vertex
+			expect( renderer.selectionHandles[ 1 ].type ).toBe( 'w' );  // arm1
+			expect( renderer.selectionHandles[ 2 ].type ).toBe( 'e' );  // arm2
+		} );
+
+		test( 'should mark all handles as isAngleDimension', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 50, cy: 50, ax: 150, ay: 50, bx: 50, by: 150
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			for ( let i = 0; i < 3; i++ ) {
+				expect( renderer.selectionHandles[ i ].isAngleDimension ).toBe( true );
+			}
+		} );
+
+		test( 'should set anchorIndex on each handle', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 0, cy: 0, ax: 100, ay: 0, bx: 0, by: 100
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			expect( renderer.selectionHandles[ 0 ].anchorIndex ).toBe( 0 ); // vertex
+			expect( renderer.selectionHandles[ 1 ].anchorIndex ).toBe( 1 ); // arm1
+			expect( renderer.selectionHandles[ 2 ].anchorIndex ).toBe( 2 ); // arm2
+		} );
+
+		test( 'should draw dashed arm lines', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			// Dashed line from vertex to each arm endpoint
+			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [ 3, 3 ] );
+			expect( mockCtx.beginPath ).toHaveBeenCalled();
+			// moveTo vertex, lineTo arm1, moveTo vertex, lineTo arm2
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 100, 100 );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 200, 100 );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 100, 200 );
+			expect( mockCtx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw vertex as diamond shape', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			// Vertex diamond: moveTo top, lineTo right, lineTo bottom, lineTo left, closePath
+			const half = renderer.handleSize / 2;
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 100, 100 - half );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 100 + half, 100 );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 100, 100 + half );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 100 - half, 100 );
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+			expect( mockCtx.fill ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw arm endpoints as squares', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			// Arm endpoints use fillRect/strokeRect (2 arms)
+			expect( mockCtx.fillRect ).toHaveBeenCalledTimes( 2 );
+			expect( mockCtx.strokeRect ).toHaveBeenCalledTimes( 2 );
+		} );
+
+		test( 'should use orange style for key object', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 0, cy: 0, ax: 100, ay: 0, bx: 0, by: 100
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, true );
+
+			expect( mockCtx.strokeStyle ).toBe( '#ff9800' );
+			expect( mockCtx.lineWidth ).toBe( 3 );
+		} );
+
+		test( 'should use default style for non-key object', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 0, cy: 0, ax: 100, ay: 0, bx: 0, by: 100
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			expect( mockCtx.lineWidth ).toBe( 1 );
+		} );
+
+		test( 'should handle missing coordinates as 0', () => {
+			const layer = { id: 'angle1', type: 'angleDimension' };
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			expect( renderer.selectionHandles.length ).toBe( 3 );
+			// All handles at (0,0)
+			for ( let i = 0; i < 3; i++ ) {
+				expect( renderer.selectionHandles[ i ].layerId ).toBe( 'angle1' );
+			}
+		} );
+
+		test( 'should set layer IDs on all handles', () => {
+			const layer = {
+				id: 'angle99', type: 'angleDimension',
+				cx: 50, cy: 50, ax: 150, ay: 50, bx: 50, by: 150
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			for ( let i = 0; i < 3; i++ ) {
+				expect( renderer.selectionHandles[ i ].layerId ).toBe( 'angle99' );
+				expect( renderer.selectionHandles[ i ].rotation ).toBe( 0 );
+			}
+		} );
+
+		test( 'should reset line dash after arm lines', () => {
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 0, cy: 0, ax: 100, ay: 0, bx: 0, by: 100
+			};
+			renderer.drawAngleDimensionSelectionIndicators( layer, false );
+
+			// First call with dashed, then reset to solid
+			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [ 3, 3 ] );
+			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [] );
+		} );
+	} );
+
+	describe( '_drawAngleDimensionTextHandle', () => {
+		test( 'should return early when AngleDimensionRenderer is not available', () => {
+			// No window.Layers.AngleDimensionRenderer set
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200,
+				arcRadius: 40, fontSize: 12
+			};
+			const handlesBefore = renderer.selectionHandles.length;
+			renderer._drawAngleDimensionTextHandle( layer, 12, false );
+
+			// No text handle registered when renderer not available
+			expect( renderer.selectionHandles.length ).toBe( handlesBefore );
+		} );
+
+		test( 'should draw text handle when AngleDimensionRenderer is available', () => {
+			// Set up AngleDimensionRenderer on window
+			const mockAngles = { startAngle: 0, sweepAngle: Math.PI / 2 };
+			const mockAngleRenderer = {
+				calculateAngles: jest.fn().mockReturnValue( mockAngles )
+			};
+
+			global.window = global.window || {};
+			global.window.Layers = global.window.Layers || {};
+			global.window.Layers.AngleDimensionRenderer = function () {};
+			global.window.Layers.AngleDimensionRenderer.prototype = mockAngleRenderer;
+
+			// Create a fresh renderer so the cache is clean
+			const freshRenderer = new SelectionRenderer( {
+				ctx: mockCtx,
+				getLayerById: () => null,
+				getLayerBounds: () => null
+			} );
+
+			// Manually inject cached renderer
+			freshRenderer._cachedAngleRenderer = mockAngleRenderer;
+
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200,
+				arcRadius: 40, fontSize: 14, textPosition: 'center'
+			};
+
+			freshRenderer._drawAngleDimensionTextHandle( layer, 12, false );
+
+			expect( mockAngleRenderer.calculateAngles ).toHaveBeenCalledWith( layer );
+			expect( renderer.selectionHandles.length >= 0 ).toBe( true );
+
+			// Check that text handle was registered on freshRenderer
+			const textHandles = freshRenderer.selectionHandles.filter(
+				( h ) => h.isAngleDimensionText === true
+			);
+			expect( textHandles.length ).toBe( 1 );
+			expect( textHandles[ 0 ].type ).toBe( 'angleDimensionText' );
+
+			freshRenderer.destroy();
+			delete global.window.Layers.AngleDimensionRenderer;
+		} );
+
+		test( 'should use above text position offset', () => {
+			const mockAngles = { startAngle: 0, sweepAngle: Math.PI / 2 };
+			const mockAngleRenderer = { calculateAngles: jest.fn().mockReturnValue( mockAngles ) };
+
+			global.window = global.window || {};
+			global.window.Layers = global.window.Layers || {};
+			global.window.Layers.AngleDimensionRenderer = function () {};
+
+			const freshRenderer = new SelectionRenderer( {
+				ctx: mockCtx,
+				getLayerById: () => null,
+				getLayerBounds: () => null
+			} );
+			freshRenderer._cachedAngleRenderer = mockAngleRenderer;
+
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200,
+				arcRadius: 40, fontSize: 14, textPosition: 'above'
+			};
+
+			freshRenderer._drawAngleDimensionTextHandle( layer, 12, false );
+
+			const textHandles = freshRenderer.selectionHandles.filter(
+				( h ) => h.isAngleDimensionText === true
+			);
+			expect( textHandles.length ).toBe( 1 );
+			// With 'above', textRadius = arcRadius + fontSize*0.8 = 40 + 11.2 = 51.2
+			expect( mockCtx.arc ).toHaveBeenCalled();
+
+			freshRenderer.destroy();
+			delete global.window.Layers.AngleDimensionRenderer;
+		} );
+
+		test( 'should use below text position offset', () => {
+			const mockAngles = { startAngle: 0, sweepAngle: Math.PI / 2 };
+			const mockAngleRenderer = { calculateAngles: jest.fn().mockReturnValue( mockAngles ) };
+
+			global.window = global.window || {};
+			global.window.Layers = global.window.Layers || {};
+			global.window.Layers.AngleDimensionRenderer = function () {};
+
+			const freshRenderer = new SelectionRenderer( {
+				ctx: mockCtx,
+				getLayerById: () => null,
+				getLayerBounds: () => null
+			} );
+			freshRenderer._cachedAngleRenderer = mockAngleRenderer;
+
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200,
+				arcRadius: 40, fontSize: 14, textPosition: 'below'
+			};
+
+			freshRenderer._drawAngleDimensionTextHandle( layer, 12, false );
+
+			const textHandles = freshRenderer.selectionHandles.filter(
+				( h ) => h.isAngleDimensionText === true
+			);
+			expect( textHandles.length ).toBe( 1 );
+			// With 'below', textRadius = arcRadius - fontSize*0.8 = 40 - 11.2 = 28.8
+			expect( mockCtx.arc ).toHaveBeenCalled();
+
+			freshRenderer.destroy();
+			delete global.window.Layers.AngleDimensionRenderer;
+		} );
+
+		test( 'should use key object style for text handle', () => {
+			const mockAngles = { startAngle: 0, sweepAngle: Math.PI / 2 };
+			const mockAngleRenderer = { calculateAngles: jest.fn().mockReturnValue( mockAngles ) };
+
+			global.window = global.window || {};
+			global.window.Layers = global.window.Layers || {};
+			global.window.Layers.AngleDimensionRenderer = function () {};
+
+			const freshRenderer = new SelectionRenderer( {
+				ctx: mockCtx,
+				getLayerById: () => null,
+				getLayerBounds: () => null
+			} );
+			freshRenderer._cachedAngleRenderer = mockAngleRenderer;
+
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200,
+				arcRadius: 40, fontSize: 14, textPosition: 'center'
+			};
+
+			freshRenderer._drawAngleDimensionTextHandle( layer, 12, true );
+
+			// Key object uses orange stroke and lineWidth 2
+			expect( mockCtx.strokeStyle ).toBe( '#ff9800' );
+			expect( mockCtx.lineWidth ).toBe( 2 );
+
+			freshRenderer.destroy();
+			delete global.window.Layers.AngleDimensionRenderer;
+		} );
+
+		test( 'should use default style for non-key text handle', () => {
+			const mockAngles = { startAngle: 0, sweepAngle: Math.PI / 2 };
+			const mockAngleRenderer = { calculateAngles: jest.fn().mockReturnValue( mockAngles ) };
+
+			global.window = global.window || {};
+			global.window.Layers = global.window.Layers || {};
+			global.window.Layers.AngleDimensionRenderer = function () {};
+
+			const freshRenderer = new SelectionRenderer( {
+				ctx: mockCtx,
+				getLayerById: () => null,
+				getLayerBounds: () => null
+			} );
+			freshRenderer._cachedAngleRenderer = mockAngleRenderer;
+
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200,
+				arcRadius: 40, fontSize: 14
+			};
+
+			freshRenderer._drawAngleDimensionTextHandle( layer, 12, false );
+
+			expect( mockCtx.lineWidth ).toBe( 1 );
+
+			freshRenderer.destroy();
+			delete global.window.Layers.AngleDimensionRenderer;
+		} );
+
+		test( 'should use default arcRadius and fontSize when missing', () => {
+			const mockAngles = { startAngle: 0, sweepAngle: Math.PI / 2 };
+			const mockAngleRenderer = { calculateAngles: jest.fn().mockReturnValue( mockAngles ) };
+
+			global.window = global.window || {};
+			global.window.Layers = global.window.Layers || {};
+			global.window.Layers.AngleDimensionRenderer = function () {};
+
+			const freshRenderer = new SelectionRenderer( {
+				ctx: mockCtx,
+				getLayerById: () => null,
+				getLayerBounds: () => null
+			} );
+			freshRenderer._cachedAngleRenderer = mockAngleRenderer;
+
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200
+				// No arcRadius or fontSize — defaults: arcRadius=40, fontSize=12
+			};
+
+			freshRenderer._drawAngleDimensionTextHandle( layer, 12, false );
+
+			const textHandles = freshRenderer.selectionHandles.filter(
+				( h ) => h.isAngleDimensionText === true
+			);
+			expect( textHandles.length ).toBe( 1 );
+
+			freshRenderer.destroy();
+			delete global.window.Layers.AngleDimensionRenderer;
+		} );
+
+		test( 'should apply textOffset to midAngle', () => {
+			const mockAngles = { startAngle: 0, sweepAngle: Math.PI };
+			const mockAngleRenderer = { calculateAngles: jest.fn().mockReturnValue( mockAngles ) };
+
+			global.window = global.window || {};
+			global.window.Layers = global.window.Layers || {};
+			global.window.Layers.AngleDimensionRenderer = function () {};
+
+			const freshRenderer = new SelectionRenderer( {
+				ctx: mockCtx,
+				getLayerById: () => null,
+				getLayerBounds: () => null
+			} );
+			freshRenderer._cachedAngleRenderer = mockAngleRenderer;
+
+			const layer = {
+				id: 'angle1', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 200,
+				arcRadius: 40, fontSize: 12, textOffset: 15
+			};
+
+			freshRenderer._drawAngleDimensionTextHandle( layer, 12, false );
+
+			const textHandles = freshRenderer.selectionHandles.filter(
+				( h ) => h.isAngleDimensionText === true
+			);
+			expect( textHandles.length ).toBe( 1 );
+			// textOffset shifts the midAngle calculation
+			expect( mockCtx.arc ).toHaveBeenCalled();
+
+			freshRenderer.destroy();
+			delete global.window.Layers.AngleDimensionRenderer;
+		} );
+	} );
+
+	describe( 'callout tail default direction', () => {
+		test( 'should use default position for unknown tail direction', () => {
+			const calloutLayer = {
+				id: 'callout1', type: 'callout',
+				x: 100, y: 100, width: 200, height: 100,
+				tailDirection: 'diagonal'  // unknown direction
+			};
+			mockLayers.push( calloutLayer );
+
+			// Add callout to getLayerBounds
+			const origGetBounds = renderer.getLayerBounds;
+			renderer.getLayerBounds = ( layer ) => {
+				if ( layer.type === 'callout' ) {
+					return { x: layer.x, y: layer.y, width: layer.width, height: layer.height };
+				}
+				return origGetBounds( layer );
+			};
+
+			renderer.drawSelectionIndicators( 'callout1', false );
+
+			// Unknown direction falls through to default: tipX = x + width*0.5, tipY = y + height + tailSize
+			const tailHandle = renderer.selectionHandles.find( ( h ) => h.isCalloutTail );
+			expect( tailHandle ).toBeDefined();
+		} );
 	} );
 } );

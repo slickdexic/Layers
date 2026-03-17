@@ -1111,4 +1111,446 @@ describe( 'RichTextToolbar', () => {
 			expect( fontSelect.value ).toBe( 'Courier New' );
 		} );
 	} );
+
+	describe( 'constructor debug logging', () => {
+		it( 'should log when debug mode is enabled', () => {
+			const consoleSpy = jest.spyOn( console, 'log' ).mockImplementation( () => {} );
+			global.mw = { config: { get: jest.fn( () => true ) } };
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+
+			expect( consoleSpy ).toHaveBeenCalledWith(
+				'[RichTextToolbar] constructor - fontSize tracking',
+				expect.objectContaining( { layerId: 'layer-1', layerFontSize: 16 } )
+			);
+			consoleSpy.mockRestore();
+		} );
+	} );
+
+	describe( 'position() edge cases', () => {
+		it( 'should clamp toolbar to container width when near right edge', () => {
+			// Editor positioned near right edge
+			mockEditorElement.getBoundingClientRect.mockReturnValue( {
+				left: 750, top: 200, right: 850, bottom: 250, width: 100, height: 50
+			} );
+			mockContainerElement.getBoundingClientRect.mockReturnValue( {
+				left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600
+			} );
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+			toolbar.position();
+
+			const left = parseInt( toolbar.toolbarElement.style.left, 10 );
+			expect( left ).toBeLessThanOrEqual( 380 ); // 800 - 420 toolbar width
+		} );
+
+		it( 'should move toolbar below editor when above viewport', () => {
+			// Editor positioned at the very top
+			mockEditorElement.getBoundingClientRect.mockReturnValue( {
+				left: 100, top: 10, right: 300, bottom: 60, width: 200, height: 50
+			} );
+			mockContainerElement.getBoundingClientRect.mockReturnValue( {
+				left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600
+			} );
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+			toolbar.position();
+
+			// When top < 0, toolbar should be placed below the editor
+			const top = parseInt( toolbar.toolbarElement.style.top, 10 );
+			expect( top ).toBeGreaterThanOrEqual( 60 ); // editorRect.bottom + gap
+		} );
+
+		it( 'should return early when editorElement has no getBoundingClientRect', () => {
+			const noRectEditor = document.createElement( 'div' );
+			delete noRectEditor.getBoundingClientRect;
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: noRectEditor,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			expect( () => toolbar.position() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'font select focus and blur', () => {
+		it( 'should set isInteracting on font select focus', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onSaveSelection: mockOnSaveSelection,
+				onFocusEditor: mockOnFocusEditor,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const fontSelect = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-font' );
+			fontSelect.dispatchEvent( new Event( 'focus' ) );
+			expect( toolbar.isInteracting() ).toBe( true );
+		} );
+
+		it( 'should clear isInteracting on font select blur', () => {
+			jest.useFakeTimers();
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onSaveSelection: mockOnSaveSelection,
+				onFocusEditor: mockOnFocusEditor,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const fontSelect = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-font' );
+			toolbar._isInteracting = true;
+			fontSelect.dispatchEvent( new Event( 'blur' ) );
+			jest.advanceTimersByTime( 200 );
+
+			expect( toolbar.isInteracting() ).toBe( false );
+			expect( mockOnFocusEditor ).toHaveBeenCalled();
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'font size focus, blur, and input', () => {
+		it( 'should set isInteracting on font size focus', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+			sizeInput.dispatchEvent( new Event( 'focus' ) );
+			expect( toolbar.isInteracting() ).toBe( true );
+		} );
+
+		it( 'should clear isInteracting on font size blur', () => {
+			jest.useFakeTimers();
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			toolbar._isInteracting = true;
+			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+			sizeInput.dispatchEvent( new Event( 'blur' ) );
+			jest.advanceTimersByTime( 200 );
+
+			expect( toolbar.isInteracting() ).toBe( false );
+			jest.useRealTimers();
+		} );
+
+		it( 'should set isInteracting on font size input event', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+			sizeInput.dispatchEvent( new Event( 'input' ) );
+			expect( toolbar.isInteracting() ).toBe( true );
+		} );
+
+		it( 'should call onSaveSelection on font size mousedown', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onSaveSelection: mockOnSaveSelection,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const sizeInput = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-size' );
+			sizeInput.dispatchEvent( new MouseEvent( 'mousedown' ) );
+			expect( mockOnSaveSelection ).toHaveBeenCalled();
+			expect( toolbar.isInteracting() ).toBe( true );
+		} );
+	} );
+
+	describe( 'vertical alignment buttons', () => {
+		it( 'should create vertical alignment buttons in rich text mode', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const valignBtns = toolbar.toolbarElement.querySelectorAll( '.layers-text-toolbar-valign' );
+			expect( valignBtns.length ).toBe( 3 );
+		} );
+
+		it( 'should mark current vertical alignment as active', () => {
+			mockLayer.verticalAlign = 'middle';
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const middleBtn = toolbar.toolbarElement.querySelector( '[data-valign="middle"]' );
+			expect( middleBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+
+		it( 'should call onFormat when vertical align button clicked', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const bottomBtn = toolbar.toolbarElement.querySelector( '[data-valign="bottom"]' );
+			bottomBtn.click();
+
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'verticalAlign', 'bottom' );
+		} );
+
+		it( 'should deactivate other vertical align buttons on click', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const topBtn = toolbar.toolbarElement.querySelector( '[data-valign="top"]' );
+			const middleBtn = toolbar.toolbarElement.querySelector( '[data-valign="middle"]' );
+			topBtn.classList.add( 'active' );
+			middleBtn.click();
+
+			expect( topBtn.classList.contains( 'active' ) ).toBe( false );
+			expect( middleBtn.classList.contains( 'active' ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'highlight with ColorPickerDialog', () => {
+		it( 'should use ColorPickerDialog when available for highlight dropdown', () => {
+			const mockDialogInstance = { open: jest.fn() };
+			const MockColorPickerDialog = jest.fn( () => mockDialogInstance );
+
+			window.Layers.UI = {
+				ColorPickerDialog: MockColorPickerDialog
+			};
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onSaveSelection: mockOnSaveSelection,
+				onFocusEditor: mockOnFocusEditor,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const dropdownBtn = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-highlight-dropdown' );
+			dropdownBtn.click();
+
+			expect( MockColorPickerDialog ).toHaveBeenCalled();
+			expect( mockDialogInstance.open ).toHaveBeenCalled();
+
+			// Test onApply callback
+			const config = MockColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			config.onApply( '#ff0000' );
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'highlight', '#ff0000' );
+			expect( mockOnFocusEditor ).toHaveBeenCalled();
+
+			// Test onPreview callback
+			config.onPreview( '#00ff00' );
+
+			// Test onCancel callback
+			config.onCancel();
+			expect( mockOnFocusEditor ).toHaveBeenCalled();
+
+			delete window.Layers.UI;
+		} );
+	} );
+
+	describe( 'color picker with ColorPickerDialog', () => {
+		it( 'should use ColorPickerDialog when available for text color', () => {
+			const mockDialogInstance = { open: jest.fn() };
+			const MockColorPickerDialog = jest.fn( () => mockDialogInstance );
+			MockColorPickerDialog.createColorButton = jest.fn( ( config ) => {
+				const btn = document.createElement( 'button' );
+				btn.className = 'layers-text-toolbar-color-button';
+				btn.addEventListener( 'click', config.onClick );
+				return btn;
+			} );
+			MockColorPickerDialog.updateColorButton = jest.fn();
+
+			window.Layers.UI = {
+				ColorPickerDialog: MockColorPickerDialog
+			};
+
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				isRichTextMode: true,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				onSaveSelection: mockOnSaveSelection,
+				onFocusEditor: mockOnFocusEditor,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const colorBtn = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-color-button' );
+			colorBtn.click();
+
+			expect( MockColorPickerDialog ).toHaveBeenCalled();
+
+			// Test onApply callback
+			const config = MockColorPickerDialog.mock.calls[ 0 ][ 0 ];
+			config.onApply( '#ff0000' );
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'color', '#ff0000' );
+			expect( MockColorPickerDialog.updateColorButton ).toHaveBeenCalled();
+
+			// Test onPreview callback
+			config.onPreview( '#00ff00' );
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'color', '#00ff00' );
+
+			// Test onCancel callback
+			config.onCancel();
+			expect( mockOnFormat ).toHaveBeenCalledWith( 'color', '#000000' );
+
+			delete window.Layers.UI;
+		} );
+	} );
+
+	describe( 'drag movement and stop', () => {
+		it( 'should move toolbar during drag', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			const handle = toolbar.toolbarElement.querySelector( '.layers-text-toolbar-handle' );
+
+			// Start drag
+			handle.dispatchEvent( new MouseEvent( 'mousedown', {
+				clientX: 100, clientY: 50
+			} ) );
+
+			expect( toolbar._isDragging ).toBe( true );
+
+			// Simulate mouse move
+			document.dispatchEvent( new MouseEvent( 'mousemove', {
+				clientX: 200, clientY: 100
+			} ) );
+
+			// Toolbar should have been repositioned
+			expect( toolbar.toolbarElement.style.left ).toBeDefined();
+			expect( toolbar.toolbarElement.style.top ).toBeDefined();
+
+			// Stop drag
+			document.dispatchEvent( new MouseEvent( 'mouseup' ) );
+			expect( toolbar._isDragging ).toBe( false );
+			expect( toolbar._boundMouseMove ).toBeNull();
+			expect( toolbar._boundMouseUp ).toBeNull();
+		} );
+
+		it( 'should not move when not dragging', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: mockContainerElement,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			toolbar.create();
+
+			// Call _handleDrag directly without starting drag
+			toolbar._handleDrag( new MouseEvent( 'mousemove', {
+				clientX: 200, clientY: 100
+			} ) );
+
+			// Should not crash, no position change (isDragging is false)
+			expect( toolbar._isDragging ).toBe( false );
+		} );
+
+		it( 'should handle drag without container element', () => {
+			toolbar = new RichTextToolbar( {
+				layer: mockLayer,
+				editorElement: mockEditorElement,
+				containerElement: null,
+				onFormat: mockOnFormat,
+				msg: mockMsg
+			} );
+			// Manually create since container is null
+			toolbar.toolbarElement = document.createElement( 'div' );
+			toolbar._setupDrag( document.createElement( 'div' ) );
+
+			toolbar._isDragging = true;
+			toolbar._dragOffset = { x: 0, y: 0 };
+
+			expect( () => toolbar._handleDrag( new MouseEvent( 'mousemove', {
+				clientX: 200, clientY: 100
+			} ) ) ).not.toThrow();
+		} );
+	} );
 } );

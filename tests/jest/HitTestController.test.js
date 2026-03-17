@@ -1754,4 +1754,124 @@ describe('HitTestController', () => {
             expect(hitTestController.isPointNearAngleDimension( { x: arcX, y: arcY }, layer ) ).toBe(true);
         });
     });
+
+    // =========================================================
+    // Branch coverage tests — v55 strategic improvement
+    // =========================================================
+
+    describe( 'branch coverage: hitTestSelectionHandles flat handle', () => {
+        test( 'should detect handle when handle object has no nested .rect', () => {
+            // Flat handle: {type, x, y, width, height} without .rect property
+            mockCanvasManager.renderer.selectionHandles = [
+                { type: 'flat-nw', x: 50, y: 50, width: 10, height: 10 }
+            ];
+            const result = hitTestController.hitTestSelectionHandles( { x: 55, y: 55 } );
+            expect( result ).not.toBeNull();
+            expect( result.type ).toBe( 'flat-nw' );
+        } );
+    } );
+
+    describe( 'branch coverage: isPointInLayer callout type', () => {
+        test( 'should detect point inside callout layer using rectangle logic', () => {
+            const layer = {
+                type: 'callout', x: 100, y: 100, width: 200, height: 100,
+                visible: true, locked: false
+            };
+            expect( hitTestController.isPointInLayer( { x: 200, y: 150 }, layer ) ).toBe( true );
+            expect( hitTestController.isPointInLayer( { x: 50, y: 50 }, layer ) ).toBe( false );
+        } );
+    } );
+
+    describe( 'branch coverage: isPointInTextLayer null bounds', () => {
+        test( 'should return false when getLayerBounds returns null', () => {
+            mockCanvasManager.getLayerBounds = jest.fn( () => null );
+            const layer = { type: 'text', x: 100, y: 100 };
+            expect( hitTestController.isPointInTextLayer( { x: 100, y: 100 }, layer ) ).toBeFalsy();
+        } );
+    } );
+
+    describe( 'branch coverage: isPointInMarker hasArrow without arrowX', () => {
+        test( 'should not check arrow line when arrowX/arrowY are undefined', () => {
+            const layer = {
+                type: 'marker', x: 100, y: 100, size: 30,
+                hasArrow: true  // hasArrow but no arrowX/arrowY
+            };
+            // Point outside marker radius (15+5=20) — should return false
+            expect( hitTestController.isPointInMarker( { x: 150, y: 100 }, layer ) ).toBe( false );
+        } );
+    } );
+
+    describe( 'branch coverage: angle dimension text area HIT', () => {
+        const makeAngleLayer = ( overrides = {} ) => ( {
+            id: 'ad-text',
+            type: 'angleDimension',
+            cx: 200, cy: 200,
+            ax: 300, ay: 200,
+            bx: 200, by: 100,
+            arcRadius: 40,
+            visible: true,
+            ...overrides
+        } );
+
+        test( 'should hit text area with textPosition=above', () => {
+            // With fontSize=24, textPosition='above':
+            // textRadius = 40 + 24*0.8 = 59.2
+            // midAngle = 7π/4 (from calculateAngles: start=3π/2, sweep=π/2)
+            // textCenter ≈ (242, 158), textHitRadius = max(36, 25) = 36
+            // Point (242, 158) is within 1px of text center
+            // distToVertex ≈ 59 > 10, distToArms > 8, |distFromVertex-40| > 10
+            const layer = makeAngleLayer( { fontSize: 24, textPosition: 'above' } );
+            expect( hitTestController.isPointNearAngleDimension( { x: 242, y: 158 }, layer ) ).toBe( true );
+        } );
+
+        test( 'should hit text area with textPosition=below', () => {
+            // textRadius = 40 - 24*0.8 = 20.8
+            // textCenter ≈ (215, 185), textHitRadius = 36
+            // Point (215, 185): distToVertex ≈ 21, |21-40| = 19 > 10 → not on arc
+            const layer = makeAngleLayer( { fontSize: 24, textPosition: 'below' } );
+            expect( hitTestController.isPointNearAngleDimension( { x: 215, y: 185 }, layer ) ).toBe( true );
+        } );
+
+        test( 'should hit text area with textOffset shifting text angle', () => {
+            // textOffset=90 shifts midAngle from 7π/4 to 7π/4 + π/2 = 9π/4 ≡ π/4
+            // textCenter = (200 + 40*cos(π/4), 200 + 40*sin(π/4)) ≈ (228, 228)
+            // textHitRadius = max(24*1.5, 25) = 36
+            // Point (228, 228):
+            //   distToVertex ≈ 39.6 > 10 (vertex miss)
+            //   distToArm1 = 28 > 8, distToArm2 = 39.6 > 8
+            //   |39.6-40| = 0.4 ≤ 10 → enters arc check, but angle π/4 outside sweep → arc miss
+            //   distToText ≈ 0 ≤ 36 → TEXT HIT
+            const layer = makeAngleLayer( { fontSize: 24, textOffset: 90 } );
+            expect( hitTestController.isPointNearAngleDimension( { x: 228, y: 228 }, layer ) ).toBe( true );
+        } );
+
+        test( 'should miss text area when point is beyond textHitRadius', () => {
+            // Use small fontSize for small textHitRadius
+            const layer = makeAngleLayer( { fontSize: 8, textPosition: 'above' } );
+            // textRadius = 40 + 8*0.8 = 46.4, textCenter ≈ (233, 167)
+            // textHitRadius = max(12, 25) = 25
+            // Point (280, 120): distToText ≈ sqrt(47²+47²) ≈ 66 > 25 → miss
+            // Also far from vertex, arms, and arc
+            expect( hitTestController.isPointNearAngleDimension( { x: 280, y: 120 }, layer ) ).toBe( false );
+        } );
+    } );
+
+    describe( 'branch coverage: dimension zero-length fallback', () => {
+        test( 'should use fallback unit vector for zero-length dimension text hit', () => {
+            // When x1===x2 && y1===y2, distance=0, unitDx=1, unitDy=0
+            // Extension lines are zero-length, dim line is a point at offset
+            const layer = {
+                type: 'dimension',
+                x1: 100, y1: 100, x2: 100, y2: 100,
+                dimensionOffset: 30,
+                fontSize: 24
+            };
+            // With zero-length line: angle=atan2(0,0)=0, perpX=-sin(0)=0, perpY=cos(0)=1
+            // dimX1 = dimX2 = 100 - 0*30 = 100, dimY1 = dimY2 = 100 - 1*30 = 70
+            // textCenter = (100, 70) + unitDx*0 = (100, 70)
+            // textHitRadius = max(24*1.5, 25) = 36
+            // Point (100, 70) should hit text
+            expect( hitTestController.isPointNearDimension( { x: 100, y: 70 }, layer ) ).toBe( true );
+        } );
+    } );
 });
