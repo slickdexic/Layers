@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
 use ApiUsageException;
+use MediaWiki\Extension\Layers\Api\Traits\AuditTrailTrait;
 use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
@@ -64,6 +65,7 @@ use Psr\Log\LoggerInterface;
  * @see LayersDatabase::saveLayerSet() for persistence logic
  */
 class ApiLayersSave extends ApiBase {
+	use AuditTrailTrait;
 	use CacheInvalidationTrait;
 	use ForeignFileHelperTrait;
 	use LayerSaveGuardsTrait;
@@ -331,6 +333,9 @@ class ApiLayersSave extends ApiBase {
 				// This ensures pages using [[File:X.jpg|layers=on]] will re-render with new layer data
 				// instead of showing stale cached content.
 				$this->invalidateCachesForFile( $title );
+
+				// AUDIT TRAIL: Create a null edit on the File: page for RC/watchlist visibility
+				$this->createAuditTrailEntry( $title, $user, 'save', $setName );
 
 				// Response format matches MediaWiki API conventions
 				// Client can use layersetid to fetch this specific revision later

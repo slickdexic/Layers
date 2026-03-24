@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
+use MediaWiki\Extension\Layers\Api\Traits\AuditTrailTrait;
 use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
@@ -35,6 +36,7 @@ use Psr\Log\LoggerInterface;
  *   });
  */
 class ApiLayersDelete extends ApiBase {
+	use AuditTrailTrait;
 	use CacheInvalidationTrait;
 	use ForeignFileHelperTrait;
 	use LayersApiHelperTrait;
@@ -175,6 +177,9 @@ class ApiLayersDelete extends ApiBase {
 			// CACHE INVALIDATION: Purge caches for the file page and pages embedding this file
 			// This ensures pages using [[File:X.jpg|layerset=on]] will re-render with current layer data
 			$this->invalidateCachesForFile( $title );
+
+			// AUDIT TRAIL: Create a null edit on the File: page for RC/watchlist visibility
+			$this->createAuditTrailEntry( $title, $user, 'delete', $setName );
 
 			// Return success
 			$this->getResult()->addValue( 'layersdelete', 'success', 1 );

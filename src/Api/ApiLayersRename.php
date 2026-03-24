@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Api;
 
 use ApiBase;
+use MediaWiki\Extension\Layers\Api\Traits\AuditTrailTrait;
 use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
@@ -37,6 +38,7 @@ use Psr\Log\LoggerInterface;
  *   });
  */
 class ApiLayersRename extends ApiBase {
+	use AuditTrailTrait;
 	use CacheInvalidationTrait;
 	use ForeignFileHelperTrait;
 	use LayersApiHelperTrait;
@@ -174,6 +176,12 @@ class ApiLayersRename extends ApiBase {
 			// CACHE INVALIDATION: Purge caches for the file page and pages embedding this file
 			// This ensures pages using [[File:X.jpg|layerset=on]] will re-render with new set name
 			$this->invalidateCachesForFile( $title );
+
+			// AUDIT TRAIL: Create a null edit on the File: page for RC/watchlist visibility
+			$this->createAuditTrailEntry( $title, $user, 'rename', $oldName, [
+				'oldname' => $oldName,
+				'newname' => $newName,
+			] );
 
 			// Return success
 			$this->getResult()->addValue( 'layersrename', 'success', 1 );
