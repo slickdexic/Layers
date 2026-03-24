@@ -12,7 +12,7 @@ This document tracks **active** feature ideas for the Layers extension. For comp
 
 **Priority:** HIGH  
 **Complexity:** High  
-**Status:** ⏳ Proposed (January 25, 2026)
+**Status:** ✅ Implemented (v1.5.60)
 
 Add an angle dimension tool for measuring and annotating angles.
 

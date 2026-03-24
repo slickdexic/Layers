@@ -1,12 +1,14 @@
 {| class="wikitable" style="float:right; margin-left:1em; width:300px;"
-! colspan="2" | layer_set_usage table
+! colspan=\"2\" | layer_set_usage table (REMOVED)
 |-
 | '''Extension''' || [[Extension:Layers]]
 |-
-| '''Description''' || Tracks which wiki articles embed images with layer sets.
+| '''Status''' || '''Removed''' in v1.5.63 (P3-146)
+|-
+| '''Description''' || Formerly tracked which wiki articles embed images with layer sets.
 |}
 
-The '''layer_set_usage''' table tracks article usage for the [[Extension:Layers|Layers]] extension. This enables cache invalidation when layer data changes and provides usage statistics.
+'''Note:''' The '''layer_set_usage''' table was '''removed''' in v1.5.63 via the <code>patch-drop-layer_set_usage.sql</code> migration. MediaWiki's built-in page link tracking (<code>imagelinks</code> table) handles this functionality. This page is retained for historical reference only.
 
 == Table Structure ==
 

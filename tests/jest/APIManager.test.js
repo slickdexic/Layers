@@ -3488,4 +3488,252 @@ describe( 'APIManager', function () {
 			expect( key ).toBe( 'Test.jpg:default' );
 		} );
 	} );
+
+	describe( 'Branch coverage: showSpinner/hideSpinner null guards', function () {
+		it( 'should not throw when uiManager is null', function () {
+			apiManager.editor.uiManager = null;
+			expect( function () {
+				apiManager.showSpinner( 'Loading...' );
+			} ).not.toThrow();
+		} );
+
+		it( 'should not throw when hideSpinner and uiManager is null', function () {
+			apiManager.editor.uiManager = null;
+			expect( function () {
+				apiManager.hideSpinner();
+			} ).not.toThrow();
+		} );
+
+		it( 'should call uiManager.showSpinner when available', function () {
+			apiManager.editor.uiManager = {
+				showSpinner: jest.fn(),
+				hideSpinner: jest.fn()
+			};
+			apiManager.showSpinner( 'Loading...' );
+			expect( apiManager.editor.uiManager.showSpinner ).toHaveBeenCalledWith( 'Loading...' );
+		} );
+	} );
+
+	describe( 'Branch coverage: extractLayerSetData formats', function () {
+		it( 'should handle old array format (data is layers array)', function () {
+			const layerSet = {
+				data: [
+					{ id: '1', type: 'rectangle', x: 0, y: 0, width: 100, height: 50 }
+				],
+				baseWidth: 800,
+				baseHeight: 600
+			};
+			apiManager.extractLayerSetData( layerSet );
+			// Old format: backgroundVisible defaults to true
+			const setCalls = mockEditor.stateManager.set.mock.calls;
+			const bgCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'backgroundVisible';
+			} );
+			expect( bgCall[ 1 ] ).toBe( true );
+			const layerCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'layers';
+			} );
+			expect( layerCall[ 1 ] ).toHaveLength( 1 );
+		} );
+
+		it( 'should normalize backgroundVisible=0 to false', function () {
+			const layerSet = {
+				data: {
+					layers: [ { id: '1', type: 'text', x: 0, y: 0 } ],
+					backgroundVisible: 0
+				},
+				baseWidth: 800,
+				baseHeight: 600
+			};
+			apiManager.extractLayerSetData( layerSet );
+			const setCalls = mockEditor.stateManager.set.mock.calls;
+			const bgCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'backgroundVisible';
+			} );
+			expect( bgCall[ 1 ] ).toBe( false );
+		} );
+
+		it( 'should normalize backgroundVisible="false" to false', function () {
+			const layerSet = {
+				data: {
+					layers: [ { id: '1', type: 'text', x: 0, y: 0 } ],
+					backgroundVisible: 'false'
+				},
+				baseWidth: 800,
+				baseHeight: 600
+			};
+			apiManager.extractLayerSetData( layerSet );
+			const setCalls = mockEditor.stateManager.set.mock.calls;
+			const bgCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'backgroundVisible';
+			} );
+			expect( bgCall[ 1 ] ).toBe( false );
+		} );
+
+		it( 'should handle null/undefined backgroundVisible as true', function () {
+			const layerSet = {
+				data: {
+					layers: [],
+					backgroundVisible: undefined
+				},
+				baseWidth: 800,
+				baseHeight: 600
+			};
+			apiManager.extractLayerSetData( layerSet );
+			const setCalls = mockEditor.stateManager.set.mock.calls;
+			const bgCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'backgroundVisible';
+			} );
+			expect( bgCall[ 1 ] ).toBe( true );
+		} );
+
+		it( 'should extract slide canvas dimensions when isSlide', function () {
+			// Make stateManager.get return isSlide=true
+			const origGet = mockEditor.stateManager.get;
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				return origGet( key );
+			} );
+			const layerSet = {
+				data: {
+					layers: [],
+					canvasWidth: 1024,
+					canvasHeight: 768,
+					backgroundColor: '#ff0000'
+				},
+				baseWidth: 800,
+				baseHeight: 600
+			};
+			apiManager.extractLayerSetData( layerSet );
+			const setCalls = mockEditor.stateManager.set.mock.calls;
+			const widthCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'slideCanvasWidth';
+			} );
+			expect( widthCall[ 1 ] ).toBe( 1024 );
+			const heightCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'slideCanvasHeight';
+			} );
+			expect( heightCall[ 1 ] ).toBe( 768 );
+			const bgColorCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'slideBackgroundColor';
+			} );
+			expect( bgColorCall[ 1 ] ).toBe( '#ff0000' );
+			// Restore
+			mockEditor.stateManager.get = origGet;
+		} );
+
+		it( 'should handle data with no layers property (else branch)', function () {
+			const layerSet = {
+				data: { backgroundVisible: true },
+				baseWidth: 800,
+				baseHeight: 600
+			};
+			apiManager.extractLayerSetData( layerSet );
+			const setCalls = mockEditor.stateManager.set.mock.calls;
+			const layerCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'layers';
+			} );
+			expect( layerCall[ 1 ] ).toHaveLength( 0 );
+		} );
+
+		it( 'should handle null layerSet (defensive guard)', function () {
+			apiManager.extractLayerSetData( null );
+			const setCalls = mockEditor.stateManager.set.mock.calls;
+			const layerCall = setCalls.find( function ( c ) {
+				return c[ 0 ] === 'layers';
+			} );
+			expect( layerCall[ 1 ] ).toEqual( [] );
+		} );
+	} );
+
+	describe( 'Branch coverage: checkSizeLimit', function () {
+		it( 'should use TextEncoder when available', function () {
+			const result = apiManager.checkSizeLimit( 'small data' );
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should use fallback when TextEncoder unavailable', function () {
+			const originalTextEncoder = global.TextEncoder;
+			delete global.TextEncoder;
+			try {
+				const result = apiManager.checkSizeLimit( 'small data' );
+				expect( result ).toBe( true );
+			} finally {
+				global.TextEncoder = originalTextEncoder;
+			}
+		} );
+
+		it( 'should return false for data exceeding limit', function () {
+			// Default limit is 2MB; create 3MB string
+			const bigData = 'x'.repeat( 3 * 1024 * 1024 );
+			const result = apiManager.checkSizeLimit( bigData );
+			expect( result ).toBe( false );
+		} );
+	} );
+
+	describe( 'Branch coverage: handleSaveSuccess', function () {
+		it( 'should work when historyManager is null', function () {
+			apiManager.editor.historyManager = null;
+			apiManager.editor.draftManager = null;
+			// Mock the reloadRevisions to prevent API call
+			apiManager.reloadRevisions = jest.fn();
+
+			expect( function () {
+				apiManager.handleSaveSuccess( {
+					layerssave: { success: 1, layersetid: 42 }
+				} );
+			} ).not.toThrow();
+			expect( apiManager.editor.stateManager.markClean ).toHaveBeenCalled();
+		} );
+
+		it( 'should call historyManager.markAsSaved when available', function () {
+			apiManager.editor.historyManager = {
+				markAsSaved: jest.fn()
+			};
+			apiManager.editor.draftManager = {
+				onSaveSuccess: jest.fn()
+			};
+			apiManager.reloadRevisions = jest.fn();
+
+			apiManager.handleSaveSuccess( {
+				layerssave: { success: 1, layersetid: 42 }
+			} );
+			expect( apiManager.editor.historyManager.markAsSaved ).toHaveBeenCalled();
+			expect( apiManager.editor.draftManager.onSaveSuccess ).toHaveBeenCalled();
+		} );
+
+		it( 'should call handleSaveError when save not successful', function () {
+			apiManager.handleSaveError = jest.fn();
+			apiManager.handleSaveSuccess( { layerssave: { success: 0 } } );
+			expect( apiManager.handleSaveError ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'Branch coverage: sanitizeInput', function () {
+		it( 'should return empty string for non-string input', function () {
+			expect( apiManager.sanitizeInput( null ) ).toBe( '' );
+			expect( apiManager.sanitizeInput( 123 ) ).toBe( '' );
+			expect( apiManager.sanitizeInput( undefined ) ).toBe( '' );
+		} );
+
+		it( 'should strip dangerous content', function () {
+			expect( apiManager.sanitizeInput( '<script>alert(1)</script>' ) ).toBe( 'scriptalert(1)/script' );
+			expect( apiManager.sanitizeInput( 'javascript:void(0)' ) ).toBe( 'void(0)' );
+			expect( apiManager.sanitizeInput( 'onclick=evil()' ) ).toBe( 'evil()' );
+		} );
+	} );
+
+	describe( 'Branch coverage: isRetryableError', function () {
+		it( 'should treat null/missing error as retryable (network error)', function () {
+			expect( apiManager.isRetryableError( null ) ).toBe( true );
+			expect( apiManager.isRetryableError( {} ) ).toBe( true );
+		} );
+
+		it( 'should not retry permission errors', function () {
+			expect( apiManager.isRetryableError( { error: { code: 'badtoken' } } ) ).toBe( false );
+			expect( apiManager.isRetryableError( { error: { code: 'permissiondenied' } } ) ).toBe( false );
+		} );
+	} );
 } );

@@ -39,23 +39,17 @@
 		}
 
 		/**
-		 * Deep clone a layer using the shared DeepClone utility
-		 * Falls back to structuredClone or JSON if utility unavailable
+		 * Clone a layer using the shared DeepClone utility.
+		 * Uses cloneLayerEfficient (preserves immutable src/path by reference).
 		 *
 		 * @private
 		 * @param {Object} layer - Layer to clone
 		 * @return {Object} Cloned layer
 		 */
 		_cloneLayer( layer ) {
-			// Prefer the shared utility which handles all edge cases
-			if ( window.Layers?.Utils?.deepCloneLayer ) {
-				return window.Layers.Utils.deepCloneLayer( layer );
+			if ( window.Layers?.Utils?.cloneLayerEfficient ) {
+				return window.Layers.Utils.cloneLayerEfficient( layer );
 			}
-			// Fallback to structuredClone (modern browsers)
-			if ( typeof structuredClone === 'function' ) {
-				return structuredClone( layer );
-			}
-			// Last resort: JSON (loses some types but works)
 			return JSON.parse( JSON.stringify( layer ) );
 		}
 

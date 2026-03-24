@@ -30,6 +30,9 @@
 	// Get ExportController class for export delegation
 	const ExportController = getClass( 'Editor.ExportController', 'ExportController' );
 
+	// Get APICacheManager class for cache delegation
+	const APICacheManager = getClass( 'Editor.APICacheManager', 'APICacheManager' );
+
 	// Get shared LayerDataNormalizer for consistent data handling
 	const LayerDataNormalizer = ( window.Layers && window.Layers.LayerDataNormalizer ) || window.LayerDataNormalizer;
 
@@ -51,12 +54,12 @@
 		// Values: jqXHR object (has abort() method)
 		this.pendingRequests = new Map();
 		
-		// API response cache for performance optimization
-		// Caches layersinfo responses to reduce redundant API calls
-		// Key format: 'filename:setname' or 'filename:id:revisionId'
-		this.responseCache = new Map();
-		this.cacheMaxSize = 20; // Max entries to prevent unbounded growth
-		this.cacheTTL = 5 * 60 * 1000; // 5 minutes TTL
+		// API response cache — delegated to APICacheManager
+		this.cacheManager = APICacheManager ? new APICacheManager() : null;
+		// Backward-compatible Map reference for tests/external code
+		this.responseCache = this.cacheManager ? this.cacheManager.responseCache : new Map();
+		this.cacheMaxSize = 20;
+		this.cacheTTL = 5 * 60 * 1000;
 		
 		// Prevent concurrent save operations (CORE-3 fix)
 		this.saveInProgress = false;
@@ -154,16 +157,17 @@
 	 * @private
 	 */
 	_getCached( key ) {
+		if ( this.cacheManager ) {
+			return this.cacheManager.getCached( key );
+		}
 		const entry = this.responseCache.get( key );
 		if ( !entry ) {
 			return null;
 		}
-		// Check if expired
 		if ( Date.now() - entry.timestamp > this.cacheTTL ) {
 			this.responseCache.delete( key );
 			return null;
 		}
-		// LRU behavior: move to end by re-inserting
 		this.responseCache.delete( key );
 		this.responseCache.set( key, entry );
 		return entry.data;
@@ -176,7 +180,10 @@
 	 * @private
 	 */
 	_setCache( key, data ) {
-		// Enforce max size by removing oldest entries (LRU)
+		if ( this.cacheManager ) {
+			this.cacheManager.setCache( key, data );
+			return;
+		}
 		while ( this.responseCache.size >= this.cacheMaxSize ) {
 			const firstKey = this.responseCache.keys().next().value;
 			this.responseCache.delete( firstKey );
@@ -193,11 +200,14 @@
 	 * @private
 	 */
 	_invalidateCache( filename ) {
+		if ( this.cacheManager ) {
+			this.cacheManager.invalidateCache( filename );
+			return;
+		}
 		if ( !filename ) {
 			this.responseCache.clear();
 			return;
 		}
-		// Remove all entries for this filename
 		for ( const key of this.responseCache.keys() ) {
 			if ( key.startsWith( filename + ':' ) ) {
 				this.responseCache.delete( key );
@@ -213,6 +223,9 @@
 	 * @private
 	 */
 	_buildCacheKey( filename, options = {} ) {
+		if ( this.cacheManager ) {
+			return this.cacheManager.buildCacheKey( filename, options );
+		}
 		if ( options.layersetid ) {
 			return `${ filename }:id:${ options.layersetid }`;
 		}
@@ -1534,6 +1547,15 @@
 	 * @private
 	 */
 	clearFreshnessCache() {
+		if ( this.cacheManager ) {
+			const filename = this.editor ? this.editor.filename : null;
+			const namedSets = this.editor && this.editor.stateManager ?
+				this.editor.stateManager.get( 'namedSets' ) || [] : [];
+			const currentSetName = this.editor && this.editor.stateManager ?
+				this.editor.stateManager.get( 'currentSetName' ) || 'default' : 'default';
+			this.cacheManager.clearFreshnessCache( filename, namedSets, currentSetName );
+			return;
+		}
 		try {
 			const filename = this.editor.filename;
 			if ( !filename ) {
@@ -1588,6 +1610,9 @@
 		this._abortAllRequests();
 		
 		// Clear API response cache
+		if ( this.cacheManager ) {
+			this.cacheManager.destroy();
+		}
 		if ( this.responseCache ) {
 			this.responseCache.clear();
 		}

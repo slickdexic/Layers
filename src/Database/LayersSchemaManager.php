@@ -36,16 +36,13 @@ class LayersSchemaManager {
 			is_dir( $tablesDir )
 			&& file_exists( "$tablesDir/layer_sets.sql" )
 			&& file_exists( "$tablesDir/layer_assets.sql" )
-			&& file_exists( "$tablesDir/layer_set_usage.sql" )
 		) {
 			$updater->addExtensionTable( 'layer_sets', "$tablesDir/layer_sets.sql" );
 			$updater->addExtensionTable( 'layer_assets', "$tablesDir/layer_assets.sql" );
-			$updater->addExtensionTable( 'layer_set_usage', "$tablesDir/layer_set_usage.sql" );
 		} else {
 			// Fallback: run the monolithic schema once, anchored on layer_sets
 			$updater->addExtensionTable( 'layer_sets', "$base/layers_tables.sql" );
 			$updater->addExtensionTable( 'layer_assets', "$base/layers_tables.sql" );
-			$updater->addExtensionTable( 'layer_set_usage', "$base/layers_tables.sql" );
 		}
 
 		// Patches for existing installations.
@@ -53,13 +50,6 @@ class LayersSchemaManager {
 		// It should be the column (or index) that the patch adds.
 		if ( $dbType === 'mysql' || $dbType === 'sqlite' ) {
 			// --- Column additions (compatible SQL: ALTER TABLE ADD COLUMN) ---
-
-			// Add lsu_usage_count column if it doesn't exist.
-			$updater->addExtensionField(
-				'layer_set_usage',
-				'lsu_usage_count',
-				"$base/patches/patch-add-lsu_usage_count.sql"
-			);
 
 			// Add ls_size column for existing installations
 			$updater->addExtensionField(
@@ -156,6 +146,13 @@ class LayersSchemaManager {
 			$updater->addExtensionUpdate( [
 				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::applyLaSizeConstraintsPatch'
 			] );
+
+			// P3-146: Drop the dead layer_set_usage table (zero reads/writes since creation)
+			$updater->addExtensionUpdate( [
+				'applyPatch',
+				"$base/patches/patch-drop-layer_set_usage.sql",
+				true
+			] );
 		}
 	}
 
@@ -191,10 +188,6 @@ class LayersSchemaManager {
 			'layer_assets' => [
 				'chk_la_title_not_empty' => "CHECK (la_title != '')",
 			],
-			'layer_set_usage' => [
-				'chk_lsu_usage_count_positive' => 'CHECK (lsu_usage_count >= 0)',
-				'chk_lsu_usage_count_reasonable' => 'CHECK (lsu_usage_count <= 1000000)',
-			]
 		];
 
 		foreach ( $constraints as $tableNameSuffix => $tableConstraints ) {
@@ -458,7 +451,6 @@ class LayersSchemaManager {
 		$fksToDrop = [
 			'layer_sets' => [ 'fk_layer_sets_user_id' ],
 			'layer_assets' => [ 'fk_layer_assets_user_id' ],
-			'layer_set_usage' => [ 'fk_layer_set_usage_layer_set_id', 'fk_layer_set_usage_page_id' ],
 		];
 
 		foreach ( $fksToDrop as $table => $fks ) {
@@ -559,12 +551,6 @@ class LayersSchemaManager {
 			'required_columns' => [
 				'la_id', 'la_title', 'la_json_blob', 'la_preview_sha1',
 				'la_user_id', 'la_timestamp', 'la_size'
-			],
-			'optional_columns' => []
-		],
-		'layer_set_usage' => [
-			'required_columns' => [
-				'lsu_layer_set_id', 'lsu_page_id', 'lsu_timestamp', 'lsu_usage_count'
 			],
 			'optional_columns' => []
 		]

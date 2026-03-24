@@ -1038,4 +1038,98 @@ describe( 'DraftManager', function () {
 			expect( originalLayers[ 0 ]._srcStripped ).toBeUndefined();
 		} );
 	} );
+
+	describe( 'Branch coverage: null stateManager', function () {
+		it( 'should initialize without error when stateManager is null', function () {
+			mockEditor.stateManager = null;
+			const dm = new DraftManager( mockEditor );
+			expect( function () {
+				dm.initialize();
+			} ).not.toThrow();
+			dm.destroy();
+		} );
+	} );
+
+	describe( 'Branch coverage: auto-save timer', function () {
+		it( 'should not save when isDirty returns false', function () {
+			jest.useFakeTimers();
+			mockEditor.isDirty = jest.fn( function () {
+				return false;
+			} );
+			const dm = new DraftManager( mockEditor );
+			dm.initialize();
+
+			// Spy on saveDraft AFTER initialize (timer already set)
+			const spy = jest.spyOn( dm, 'saveDraft' );
+
+			// Advance timer past AUTO_SAVE_INTERVAL (30s)
+			jest.advanceTimersByTime( 31000 );
+
+			expect( spy ).not.toHaveBeenCalled();
+			dm.destroy();
+			jest.useRealTimers();
+		} );
+
+		it( 'should save when isDirty returns true', function () {
+			jest.useFakeTimers();
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+			const dm = new DraftManager( mockEditor );
+			dm.initialize();
+			// Stop existing timer and re-create so spy captures callback
+			dm.stopAutoSaveTimer();
+			const spy = jest.spyOn( dm, 'saveDraft' );
+			dm.startAutoSaveTimer();
+
+			// Advance timer past AUTO_SAVE_INTERVAL (30s)
+			jest.advanceTimersByTime( 31000 );
+
+			expect( spy ).toHaveBeenCalled();
+			dm.destroy();
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'Branch coverage: saveDraft error handling', function () {
+		it( 'should return false when localStorage.setItem throws', function () {
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+			const dm = new DraftManager( mockEditor );
+			dm.initialize();
+
+			// Mock localStorage to throw on setItem (quota exceeded)
+			global.localStorage.setItem.mockImplementation( function () {
+				throw new Error( 'QuotaExceededError' );
+			} );
+
+			const result = dm.saveDraft();
+			expect( result ).toBe( false );
+			dm.destroy();
+		} );
+	} );
+
+	describe( 'Branch coverage: loadDraft expiry', function () {
+		it( 'should return null for expired draft', function () {
+			const dm = new DraftManager( mockEditor );
+			dm.initialize();
+
+			// Store a draft with a very old timestamp (more than 24h ago)
+			const oldDraft = {
+				version: 1,
+				timestamp: Date.now() - ( 25 * 60 * 60 * 1000 ),
+				filename: 'Test.jpg',
+				setName: 'default',
+				layers: [ { id: '1', type: 'rectangle' } ],
+				backgroundVisible: true,
+				backgroundOpacity: 1.0
+			};
+			mockLocalStorage[ dm.getStorageKey() ] = JSON.stringify( oldDraft );
+
+			const result = dm.loadDraft();
+			expect( result ).toBe( null );
+			dm.destroy();
+		} );
+	} );
 } );

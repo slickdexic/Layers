@@ -234,11 +234,6 @@ class LayersConstants {
 	public const TABLE_LAYER_SETS = 'layer_sets';
 
 	/**
-	 * Layer set usage tracking table
-	 */
-	public const TABLE_LAYER_SET_USAGE = 'layer_set_usage';
-
-	/**
 	 * Layer assets table
 	 */
 	public const TABLE_LAYER_ASSETS = 'layer_assets';

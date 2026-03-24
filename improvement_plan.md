@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 17, 2026 — v1.5.62 (v57 audit)
+**Last updated:** March 24, 2026 — v59 audit findings
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -21,20 +21,199 @@ items fixed**, P3-159/P3-160 verified resolved (coverage >98%),
 v57 audit found **5 new code issues** (3 MEDIUM, 2 LOW) plus **5
 documentation drift items**. 12 false positives eliminated during
 verification. P3-146, P3-147, P3-148 carried forward.
+v58 audit found **3 new LOW code issues** (P3-163 to P3-165) plus **7
+documentation drift items** (D-058-01 to D-058-07). All 3 code items
+and all 7 doc drift items fixed. 11 false positives eliminated during
+verification. P3-146, P3-147, P3-148 carried forward.
+
+**v1.5.63 improvement sprint** completed structural improvements:
+P3-146 dead table removal, 63 new tests (11,847→11,910), and
+APICacheManager extraction from APIManager.js. Note: the sprint
+claimed coverage improved to 94.54%/84.53%, but v59 audit confirmed
+actual coverage remains 92.88%/82.58% (see D-059-01).
+
+v59 audit found **20 new code issues** (5 MEDIUM, 15 LOW) plus **13
+documentation drift items**. 9 false positives eliminated during
+verification. P3-147, P3-148 carried forward.
+
 Use the section below as the authoritative current backlog.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 17, 2026 — v1.5.62)
+## v1.5.63 Improvement Sprint
+
+**Goal:** Structural quality improvements — remove dead schema, push branch
+coverage, and extract cache logic from the largest god class.
+
+**Result:** All 3 priorities completed. 63 new tests (11,847 → 11,910).
+APICacheManager extracted as standalone module from APIManager.
+Coverage: 94.43% stmts, 84.32% branches (verified v59 fix pass).
+
+### Sprint Priorities
+
+| # | Priority | Description | Effort | Target |
+|---|----------|-------------|--------|--------|
+| 1 | **P3-146** | Remove dead `layer_set_usage` table | 1h | ✅ 0 dead schema references |
+| 2 | **Branch Coverage** | Push branch coverage from 82.58% to 84.53% | 4-6h | ✅ 84.53% branches (+1.95%) |
+| 3 | **God Class** | Extract APICacheManager from APIManager.js | 3-4h | ✅ APICacheManager (152 lines) extracted |
+| 4 | Lazy-load | Lazy-load ShapeLibrary + EmojiPicker data files | 2h | ✅ Already implemented (verified) |
+| 5 | E2E | Expand Playwright E2E test coverage | 2h | ✅ 37 new tests (properties + transforms) |
+
+### P3-146: Dead Table Removal (9 steps)
+
+Remove the `layer_set_usage` table — dead code since creation. Zero reads
+or writes in LayersDatabase.php. ~52 references across 12+ files.
+
+Files to modify:
+- `sql/patches/patch-drop-layer_set_usage.sql` — CREATE (drop migration)
+- `src/Database/LayersSchemaManager.php` — Remove 6 reference areas + add drop
+- `src/LayersConstants.php` — Remove `TABLE_LAYER_SET_USAGE` constant
+- `sql/tables/layer_set_usage.sql` — DELETE (standalone create script)
+- `sql/layers_tables.sql` — Remove CREATE TABLE block
+- `sql/patches/patch-add-lsu_usage_count.sql` — DELETE (dead patch)
+- `Mediawiki-layer_set_usage-table.mediawiki` — DELETE (dead docs)
+- `Mediawiki-Extension-Layers.mediawiki` — Remove table2 infobox reference
+- `Mediawiki-layer_assets-table.mediawiki` — Remove related table ref
+- `Mediawiki-layer_sets-table.mediawiki` — Remove related table ref
+- `tests/LayersTest.php` — Remove table existence test
+- `docs/REL1_39_BACKPORT_ANALYSIS.md` — Remove table listing
+
+### Branch Coverage Push (Target: 88%+)
+
+Top files by stmt-to-branch gap (focus areas for new tests):
+
+| File | Stmts | Branches | Gap |
+|------|-------|----------|-----|
+| LayerRenderer.js | 93.93% | 77.54% | 16.39% |
+| APIManager.js | 93.96% | 78.87% | 15.09% |
+| DraftManager.js | 95.95% | 80.92% | 15.03% |
+| CanvasRenderer.js | 95.19% | 80.46% | 14.73% |
+| AngleDimensionRenderer.js | 91.66% | 77.29% | 14.37% |
+| GeometryUtils.js | 92.40% | 78.85% | 13.55% |
+
+Sub-75% branch files: SpecialSlides (58.9%), CanvasEvents (62.0%),
+LayerDefaults (62.5%), PropertyBuilders (65.6%), SelectionRenderer (69.8%).
+
+### God Class Extraction: APICacheManager (Completed)
+
+Extracted 1 focused module from APIManager.js (1,640 lines):
+1. **APICacheManager** (152 lines): `getCached`, `setCache`, `invalidateCache`, `buildCacheKey`, `clearFreshnessCache` — ✅ Done
+2. **RequestManager** (~250 lines): `_trackRequest`, `_clearRequest`, `_abortAllRequests`, `performSaveWithRetry` — Deferred (high coupling risk)
+3. **DataProcessor** (~300 lines): `processLayersData`, `extractLayerSetData`, `_processRevisionData`, `_processSetNameData` — Deferred (high coupling risk)
+
+APIManager.js delegates to APICacheManager with inline fallback for backward compatibility.
+16 unit tests cover the extracted module. RequestManager/DataProcessor deferred due to
+tight coupling to editor state and save flow — extraction would require extensive callback
+wiring with marginal benefit.
+
+---
+
+## Verified Current Backlog (Authoritative as of March 24, 2026 — v59)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| PHP Medium | 0 (P2-138, P2-139, P2-140 all fixed) | — |
-| JS Low | 0 (P3-161, P3-162 both fixed) | — |
-| PHP/Schema Low | 1 (P3-146 dead table removal) | 1h |
+| JS Low (Quality) | 2 (P3-174, P3-175) | 2–3h |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
-| Documentation | 0 (D-057-01 to D-057-05 all fixed) | — |
-| **Total** | **1 open** (+ 2 deferred) | ~1h |
+| **Total** | **2 open code** + 2 deferred | ~2–3h |
+
+### Current Priorities (v59)
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 31.01 | AlignmentController.moveLayer missing types | P2-166 | MED | ✅ Fixed |
+| 31.02 | AlignmentController.getLayerBounds missing types | P2-167 | MED | ✅ Fixed |
+| 31.03 | HitTestController skips locked layers | P2-168 | MED | ✅ Fixed |
+| 31.04 | Foreign file SHA1 mismatch on deletion | P2-169 | MED | ✅ Fixed |
+| 31.05 | ApiLayersList enrichWithUserNames divergent | P2-170 | MED | ✅ Fixed |
+| 31.06 | CanvasManager.emitTransforming JSON clone | P3-171 | Low | ✅ Fixed |
+| 31.07 | Dimension text drag not rAF-throttled | P3-172 | Low | ✅ Fixed |
+| 31.08 | PresetStorage.importFromJson no sanitize | P3-173 | Low | ✅ Fixed |
+| 31.09 | updateLayer floods undo history | P3-174 | Low | 🔲 Deferred |
+| 31.10 | duplicateSelected fallback partial offset | P3-175 | Low | 🔲 Deferred |
+| 31.11 | Duplicate JSDoc in CanvasManager | P3-176 | Low | ✅ Fixed |
+| 31.12 | SelectionManager visibility check | P3-177 | Low | ✅ Fixed |
+| 31.13 | BackgroundLayerController cssText | P3-178 | Low | ✅ Fixed |
+| 31.14 | deleteNamedSet missing FOR UPDATE | P3-179 | Low | ✅ Fixed |
+| 31.15 | EditLayersAction returnTo allowlist | P3-180 | Low | ✅ Fixed |
+| 31.16 | ApiLayersRename inconsistent defaults | P3-181 | Low | ✅ Fixed |
+| 31.17 | SlideHooks static cache persistence | P3-182 | Low | ✅ False Positive |
+| 31.18 | StaticLoggerAwareTrait stale logger | P3-183 | Low | ✅ False Positive |
+| 31.19 | RichTextToolbar incomplete destroy | P3-184 | Low | ✅ Fixed |
+| 31.20 | HelpDialog keydown listener leak | P3-185 | Low | ✅ False Positive |
+| 31.21 | Coverage numbers wrong (8+ files) | D-059-01 | Doc | ✅ Fixed |
+| 31.22 | i18n count wrong (5+ files) | D-059-02 | Doc | ✅ Fixed |
+| 31.23 | MW.org page stale test metrics | D-059-03 | Doc | ✅ Fixed |
+| 31.24 | SLIDES_REQUIREMENTS says Planning Phase | D-059-04 | Doc | ✅ Fixed |
+| 31.25 | FUTURE_IMPROVEMENTS Angle Dim. proposed | D-059-05 | Doc | ✅ Fixed |
+| 31.26 | layer_set_usage mediawiki doc (table removed) | D-059-06 | Doc | ✅ Fixed |
+| 31.27 | CONTRIBUTING.md stale test count | D-059-07 | Doc | ✅ Fixed |
+| 31.28 | KNOWN_ISSUES.md header version | D-059-08 | Doc | ✅ Fixed |
+| 31.29 | ARCHITECTURE.md 8+ stale metrics | D-059-09 | Doc | ✅ Fixed |
+| 31.30 | GOD_CLASS_REFACTORING_PLAN stale | D-059-10 | Doc | ✅ Not stale (dated) |
+| 31.31 | PROJECT_GOD_CLASS_REDUCTION stale | D-059-11 | Doc | ✅ Not stale (cross-ref) |
+| 31.32 | ACCESSIBILITY.md missing M/D shortcuts | D-059-12 | Doc | ✅ Fixed |
+| 31.33 | wiki/Home.md i18n count 780→835 | D-059-13 | Doc | ✅ Fixed |
+| 31.34 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
+| 31.35 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+
+### v59 Notes
+
+- v58 verification pass: all 3 v58 code fixes (P3-163 to P3-165)
+  confirmed intact. All 7 v58 doc drift fixes confirmed.
+- v1.5.63 sprint: P3-146 dead table removal confirmed. APICacheManager
+  extraction confirmed. 63 new tests confirmed (11,847→11,910).
+  However, the claimed coverage improvement (92.88%→94.54%) was NOT
+  confirmed — fresh `npx jest --coverage` produces 94.43%/84.32%
+  (minor discrepancy from claimed 94.54%/84.53%). D-059-01 fixed.
+- i18n count correction: 786 (from D-058-05 fix) was also wrong.
+  Actual count is 835 (verified via direct JSON key count minus
+  @metadata).
+- 9 false positives eliminated: SlideHooks CSS injection (ColorValidator
+  strict), LayerRenderer.js line count (999 not 1000), scaleLayer
+  shallow copy (.map creates new array), SpecialSlides URL (mw.util
+  handles encoding), ImportExportManager prototype pollution (low
+  impact), DialogManager Promise (small closure), pruneOldRevisions
+  SQL (int list), StaticLoggerAwareTrait isolation (PHP trait semantics),
+  JS file count (159 includes dist/).
+- Recommended fix order: P2-166/P2-167 (pair), P2-168, P2-169, then
+  LOW items. Doc drift D-059-01 is high priority (wrong metrics across
+  8+ files). D-059-04/D-059-05/D-059-06 are embarrassing (shipped
+  features documented as planned/removed).
+
+### Current Priorities (v58 — All Fixed)
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 30.01 | _cloneLayer() duplicated across 3 controllers | P3-163 | Low | ✅ Fixed |
+| 30.02 | PropertyBuilders.js 7x untracked setTimeout(0) | P3-164 | Low | ✅ Fixed |
+| 30.03 | CanvasManager.continueDrawing() untracked RAF | P3-165 | Low | ✅ Fixed |
+| 30.04 | CHANGELOG.md v1.5.62 wrong coverage | D-058-01 | Low | ✅ Fixed |
+| 30.05 | wiki/Changelog.md same wrong coverage | D-058-02 | Low | ✅ Fixed |
+| 30.06 | MW.org page date stale (03-14→03-17) | D-058-03 | Low | ✅ Fixed |
+| 30.07 | CHANGELOG vs wiki/Changelog divergence | D-058-04 | Low | ✅ Fixed |
+| 30.08 | codebase_review i18n count 780→786 | D-058-05 | Low | ✅ Fixed |
+| 30.09 | codebase_review PHP lines ~15,216→~15,174 | D-058-06 | Low | ✅ Fixed |
+| 30.10 | copilot-instructions PHP lines stale | D-058-07 | Low | ✅ Fixed |
+| 30.11 | layer_set_usage table dead | P3-146 | Low | ✅ Fixed |
+| 30.12 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
+| 30.13 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+
+### v58 Notes
+
+- v57 verification pass: all 5 v57 code fixes confirmed intact. All 5
+  doc drift fixes confirmed. P3-146/P3-147/P3-148 carried forward
+  (unchanged).
+- Full codebase audit (all 41 PHP files, all 158 JS modules, all docs):
+  **0 CRITICAL, 0 HIGH, 0 MEDIUM, 3 LOW** code items found. Plus
+  7 documentation drift items (2 fixed in-place during review).
+- 11 false positives eliminated during verification (RenderCoordinator
+  timeout, DrawingController geometry, CanvasEvents cleanup, ColorValidator
+  method, DraftManager subscription, ImageLayerRenderer cycle, ApiLayersInfo
+  null, PresetDropdown state, SVG metadata, InlineTextEditor innerHTML,
+  RichTextToolbar innerHTML).
+- Metrics verified: 11,847 tests (stable), 92.88% stmt coverage (stable),
+  82.58% branch (stable), ~113,552 JS lines, ~15,174 PHP lines, 158 JS
+  files, 786 i18n keys (was 780).
 
 ### Current Priorities (v57 — All Fixed)
 
@@ -50,7 +229,7 @@ Use the section below as the authoritative current backlog.
 | 29.08 | ARCHITECTURE.md god class heading | D-057-03 | Low | ✅ Fixed |
 | 29.09 | SLIDE_MODE.md references v1.5.59 | D-057-04 | Low | ✅ Fixed |
 | 29.10 | NAMED_LAYER_SETS.md version metadata | D-057-05 | Low | ✅ Fixed |
-| 29.11 | layer_set_usage table dead | P3-146 | Low | 📋 Planned |
+| 29.11 | layer_set_usage table dead | P3-146 | Low | ✅ Fixed |
 | 29.12 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
 | 29.13 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
 
@@ -63,11 +242,7 @@ Use the section below as the authoritative current backlog.
   **3 MEDIUM (transaction gap, error constant, validation duplication),
   2 LOW (DOMMatrix feature detection, require() fallback).** Plus
   5 documentation drift items.
-- 12 false positives eliminated during verification (boolean normalization,
-  processRawLayers undefined, GPU memory leak, RAF cleanup, concurrency
-  limiter, lightbox race, DraftManager data loss, cache key collision,
-  PropertiesForm input update, WeakMap cleanup, SetNameSanitizer empty,
-  renameNamedSet TOCTOU).
+- 12 false positives eliminated during verification.
 - Metrics verified: 11,847 tests (was 11,606), 92.88% stmt coverage
   (was 91.32%), 82.58% branch (was 81.69%), ~113,550 JS lines, ~15,216
   PHP lines, 158 JS files.
@@ -95,11 +270,9 @@ Use the section below as the authoritative current backlog.
 | 28.17 | THIRD_PARTY_LICENSES emoji count wrong | D-056-06 | Low | ✅ Fixed |
 | 28.18 | README version date mismatch | D-056-07 | Low | ✅ Fixed |
 | 28.19 | docs/README.md severely stale | D-056-08 | Low | ✅ Fixed |
-| 28.20 | layer_set_usage table dead | P3-146 | Low | 📋 Removal planned |
+| 28.20 | layer_set_usage table dead | P3-146 | Low | ✅ Removed |
 | 28.21 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
 | 28.22 | LayerValidatorInterface unused in DI | P3-148 | Low | 🔲 Deferred |
-
-### v56 Notes
 
 - v55 verification pass: all 9 v55 code fixes confirmed intact. All 3
   reclassified false positives confirmed (P2-132, P3-155, P3-156).

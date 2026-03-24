@@ -3940,4 +3940,90 @@ describe( 'LayerRenderer', () => {
 			testRenderer.destroy();
 		} );
 	} );
+
+	describe( 'drawLayer dispatch — dimension types', () => {
+		test( 'should dispatch dimension type to drawDimension', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Spy on drawDimension
+			testRenderer.drawDimension = jest.fn();
+
+			const layer = {
+				type: 'dimension',
+				x: 10, y: 20, width: 200, height: 50,
+				visible: true, opacity: 1
+			};
+
+			testRenderer.drawLayer( layer );
+			expect( testRenderer.drawDimension ).toHaveBeenCalledWith( layer, undefined );
+			testRenderer.destroy();
+		} );
+
+		test( 'should dispatch angleDimension type to drawAngleDimension', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+
+			// Spy on drawAngleDimension
+			testRenderer.drawAngleDimension = jest.fn();
+
+			const layer = {
+				type: 'angleDimension',
+				cx: 100, cy: 100,
+				ax: 50, ay: 50,
+				bx: 200, by: 150,
+				visible: true, opacity: 1
+			};
+
+			testRenderer.drawLayer( layer );
+			expect( testRenderer.drawAngleDimension ).toHaveBeenCalledWith( layer, undefined );
+			testRenderer.destroy();
+		} );
+	} );
+
+	describe( 'null renderer guards', () => {
+		test( 'should not throw when drawMarker called with null markerRenderer', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+			testRenderer.markerRenderer = null;
+
+			const layer = { type: 'marker', x: 10, y: 20, number: 1 };
+			expect( () => testRenderer.drawMarker( layer ) ).not.toThrow();
+			testRenderer.destroy();
+		} );
+
+		test( 'should not throw when drawDimension called with null dimensionRenderer', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+			testRenderer.dimensionRenderer = null;
+
+			const layer = { type: 'dimension', x: 10, y: 20 };
+			expect( () => testRenderer.drawDimension( layer ) ).not.toThrow();
+			testRenderer.destroy();
+		} );
+
+		test( 'should not throw when drawAngleDimension called with null angleDimensionRenderer', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+			testRenderer.angleDimensionRenderer = null;
+
+			const layer = { type: 'angleDimension', cx: 100, cy: 100 };
+			expect( () => testRenderer.drawAngleDimension( layer ) ).not.toThrow();
+			testRenderer.destroy();
+		} );
+
+		test( 'should fallback when drawLayerWithBlurBlend has no effectsRenderer', () => {
+			const mockCtx = createMockContext();
+			const testRenderer = new LayerRenderer( mockCtx );
+			testRenderer.effectsRenderer = null;
+
+			// Spy on _drawLayerByType to verify fallback path
+			testRenderer._drawLayerByType = jest.fn();
+
+			const layer = { type: 'rectangle', x: 10, y: 20, width: 100, height: 50, blendMode: 'blur' };
+			expect( () => testRenderer.drawLayerWithBlurBlend( layer ) ).not.toThrow();
+			expect( testRenderer._drawLayerByType ).toHaveBeenCalledWith( layer, undefined );
+			testRenderer.destroy();
+		} );
+	} );
 } );

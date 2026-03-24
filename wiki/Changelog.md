@@ -4,6 +4,31 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.63] - 2026-03-23
+
+### Added
+- **APICacheManager** — Extracted cache logic from APIManager.js into
+  standalone `APICacheManager.js` module (152 lines, 16 unit tests).
+  APIManager delegates to APICacheManager with inline fallback.
+
+### Fixed
+- **P3-146 — Dead table removal** — Removed `layer_set_usage` table
+  (dead since creation). Cleaned up references in SchemaManager,
+  LayersConstants, layers_tables.sql, and documentation files. Added
+  `patch-drop-layer_set_usage.sql` migration.
+
+### Tests
+- 63 new unit tests across 7 test files: GeometryUtils (4), LayerRenderer (7),
+  DraftManager (5), APIManager (19), DialogManager (7), CanvasRenderer (5),
+  APICacheManager (16). Coverage: 94.43% stmts, 84.32% branches
+  (was 92.88% / 82.58%). Total: 11,910 tests in 169 suites.
+- 37 new E2E tests in 2 files: properties.spec.js (24 tests — property panel
+  visibility, per-type property inputs, value changes, undo), transforms.spec.js
+  (13 tests — drag-move, property-based positioning, multi-select, nudge,
+  duplication, z-order). E2E total: 164 tests in 10 files.
+- Enhanced fixtures.js POM with property panel selectors, `getPropertyValue()`,
+  `setPropertyValue()`, `createAndSelectLayer()`, `dragOnCanvas()` helpers.
+
 ## [1.5.62] - 2026-03-17
 
 ### Security
@@ -31,7 +56,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Tests
 - 168 test suites, 11,847 tests — all passing
-- Coverage: 94.4% statements, 84.33% branches, 93.38% functions
+- Coverage: 92.88% statements, 82.58% branches, 91.57% functions
 - Comprehensive coverage improvements across 13 test suites (+4,929 lines)
 - HelpDialog: 0% → 99.42% coverage (40 tests)
 - TransformController: improved to 98.16% statements, 83.66% branches
@@ -116,9 +141,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **AlignmentController Missing Dimension/Marker Types** (P2-078) — `getLayerBounds()` and `moveLayer()` lacked a `dimension` case (uses `x1/y1/x2/y2` not `x/y`) and a `marker` case (centered circle at `x/y/size`). Alignment operations now produce correct results for all layer types.
 
 ### Technical Details
-- All 11,258 tests pass (163 test suites) ✅
-- Coverage: 95.19% statements, 84.96% branches
-- God classes: 17 (13 hand-written JS, 2 generated, 2 PHP)
+- All 11,421 tests pass (167 test suites) ✅
+- Coverage: 92.19% statements, 82.15% branches
+- God classes: 23 (19 hand-written JS, 2 generated, 2 PHP)
 
 ## [1.5.58] - 2026-02-17
 

@@ -65,6 +65,8 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 | `A` | Select arrow tool |
 | `L` | Select line tool |
 | `B` | Select callout tool |
+| `M` | Select marker tool |
+| `D` | Select dimension tool |
 
 #### View Shortcuts
 

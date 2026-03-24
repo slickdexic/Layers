@@ -843,4 +843,87 @@ describe( 'DialogManager', () => {
 			expect( window.Layers.UI.DialogManager ).toBe( DialogManager );
 		} );
 	} );
+
+	describe( 'Branch coverage: getMessage fallback', () => {
+		it( 'should return fallback when layersMessages.get is not a function', () => {
+			const original = window.layersMessages;
+			window.layersMessages = { get: 'not-a-function' };
+			const result = dialogManager.getMessage( 'some-key', 'fallback-text' );
+			expect( result ).toBe( 'fallback-text' );
+			window.layersMessages = original;
+		} );
+
+		it( 'should return fallback when layersMessages is undefined', () => {
+			const original = window.layersMessages;
+			delete window.layersMessages;
+			const result = dialogManager.getMessage( 'some-key', 'fallback-text' );
+			expect( result ).toBe( 'fallback-text' );
+			window.layersMessages = original;
+		} );
+	} );
+
+	describe( 'Branch coverage: Tab focus trap', () => {
+		it( 'should not prevent default for Tab when no focusable elements', () => {
+			dialogManager.showCancelConfirmDialog( jest.fn() );
+			const dialog = document.querySelector( '.layers-modal-dialog' );
+			// Remove all buttons to make focusable empty
+			dialog.querySelectorAll( 'button' ).forEach( ( btn ) => btn.remove() );
+
+			const tabEvent = new KeyboardEvent( 'keydown', { key: 'Tab', bubbles: true } );
+			const preventSpy = jest.spyOn( tabEvent, 'preventDefault' );
+			document.dispatchEvent( tabEvent );
+
+			expect( preventSpy ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'Branch coverage: closeAllDialogs', () => {
+		it( 'should handle entry with null handleKey', () => {
+			const overlay = document.createElement( 'div' );
+			const dialog = document.createElement( 'div' );
+			document.body.appendChild( overlay );
+			document.body.appendChild( dialog );
+
+			dialogManager.activeDialogs.push( { overlay, dialog, handleKey: null } );
+
+			expect( () => {
+				dialogManager.closeAllDialogs();
+			} ).not.toThrow();
+			expect( dialogManager.activeDialogs.length ).toBe( 0 );
+		} );
+
+		it( 'should handle already-detached DOM nodes', () => {
+			const overlay = document.createElement( 'div' );
+			const dialog = document.createElement( 'div' );
+			// Don't append to DOM — parentNode will be null
+
+			dialogManager.activeDialogs.push( { overlay, dialog, handleKey: jest.fn() } );
+
+			expect( () => {
+				dialogManager.closeAllDialogs();
+			} ).not.toThrow();
+			expect( dialogManager.activeDialogs.length ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'Branch coverage: cleanup detached nodes', () => {
+		it( 'should not throw when overlay/dialog already removed from DOM', () => {
+			const onConfirm = jest.fn();
+			dialogManager.showCancelConfirmDialog( onConfirm );
+
+			const overlay = document.querySelector( '.layers-modal-overlay' );
+			const dialog = document.querySelector( '.layers-modal-dialog' );
+
+			// Remove elements from DOM before clicking cancel
+			overlay.remove();
+			dialog.remove();
+
+			// The cancel button was in the now-removed dialog, so we
+			// trigger cleanup via Escape key instead
+			const escEvent = new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } );
+			document.dispatchEvent( escEvent );
+
+			expect( dialogManager.activeDialogs.length ).toBe( 0 );
+		} );
+	} );
 } );

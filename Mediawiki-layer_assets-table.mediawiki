@@ -69,7 +69,6 @@ This approach:
 == Related Tables ==
 
 * [[Extension:Layers/layer_sets table|layer_sets]] — Stores layer data that references assets
-* [[Extension:Layers/layer_set_usage table|layer_set_usage]] — Tracks article usage
 
 == See Also ==
 

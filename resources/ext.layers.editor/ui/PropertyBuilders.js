@@ -48,6 +48,22 @@
 	}
 
 	/**
+	 * Defer a properties panel refresh to the next microtask.
+	 * Centralizes the 7 identical setTimeout(fn, 0) patterns used by onChange
+	 * handlers that toggle conditional UI sections (shadow, highlight, etc.).
+	 *
+	 * @param {Object} editor - Editor instance
+	 * @param {string} layerId - Layer ID to refresh
+	 */
+	function deferPanelRefresh( editor, layerId ) {
+		setTimeout( function () {
+			if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
+				editor.layerPanel.updatePropertiesPanel( layerId );
+			}
+		}, 0 );
+	}
+
+	/**
 	 * PropertyBuilders - Factory methods for property groups
 	 * @namespace
 	 */
@@ -269,11 +285,7 @@
 				}
 				editor.updateLayer( layer.id, updates );
 				// Refresh properties panel to show/hide text shadow settings
-				setTimeout( function () {
-					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}
-				}, 0 );
+				deferPanelRefresh( editor, layer.id );
 			}
 		} );
 
@@ -464,11 +476,7 @@
 					applyStyleToAllRuns( { backgroundColor: null } );
 				}
 				// Refresh panel to show/hide color picker
-				setTimeout( function () {
-					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}
-				}, 0 );
+				deferPanelRefresh( editor, layer.id );
 			}
 		} );
 
@@ -655,11 +663,7 @@
 				}
 				editor.updateLayer( layer.id, updates );
 				// Refresh properties panel to show/hide tail width control based on arrowStyle
-				setTimeout( function () {
-					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}
-				}, 0 );
+				deferPanelRefresh( editor, layer.id );
 			}
 		} );
 
@@ -1413,11 +1417,7 @@
 			onChange: function ( v ) {
 				updateWithDefaults( { showBackground: v } );
 				// Refresh panel to show/hide background color
-				setTimeout( function () {
-					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}
-				}, 0 );
+				deferPanelRefresh( editor, layer.id );
 			}
 		} );
 
@@ -1448,11 +1448,7 @@
 			onChange: function ( v ) {
 				editor.updateLayer( layer.id, { toleranceType: v } );
 				// Refresh panel to show/hide tolerance value inputs
-				setTimeout( function () {
-					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}
-				}, 0 );
+				deferPanelRefresh( editor, layer.id );
 			}
 		} );
 
@@ -1732,11 +1728,7 @@
 			prop: 'showBackground',
 			onChange: function ( v ) {
 				updateWithDefaults( { showBackground: v } );
-				setTimeout( function () {
-					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}
-				}, 0 );
+				deferPanelRefresh( editor, layer.id );
 			}
 		} );
 
@@ -1766,11 +1758,7 @@
 			],
 			onChange: function ( v ) {
 				editor.updateLayer( layer.id, { toleranceType: v } );
-				setTimeout( function () {
-					if ( editor.layerPanel && typeof editor.layerPanel.updatePropertiesPanel === 'function' ) {
-						editor.layerPanel.updatePropertiesPanel( layer.id );
-					}
-				}, 0 );
+				deferPanelRefresh( editor, layer.id );
 			}
 		} );
 

@@ -20,12 +20,13 @@
 
 ---
 
-## 🆕 What's New in v1.5.62
+## 🆕 What's New in v1.5.63
 
-- **v54 Audit** — Security fix (IDOR ownership check), 7 code-quality fixes
-- **Test Suite** — 11,847 tests passing (168 suites), 92.88% statement coverage
+- **APICacheManager Extracted** — Cache logic separated from APIManager into standalone module
+- **P3-146 Dead Table Removed** — `layer_set_usage` table fully cleaned up
+- **63 New Tests** — 11,910 tests (169 suites), 94.43% stmts, 84.32% branches
 
-### Previous v1.5.60 Highlights
+### Previous v1.5.62 Highlights
 
 - **16 Bug Fixes** — Zoom-to-pointer anchor drift, 15 P3 code-quality fixes
 - **Test Suite** — 11,445 tests passing (168 suites)
@@ -316,21 +317,21 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.62 |
+| **Version (main)** | 1.5.63 |
 | **Version (REL1_43)** | 1.5.60 |
 | **Version (REL1_39)** | 1.5.60 |
-| **Release Date** | March 10, 2026 |
-| **Test Suites** | 168 |
-| **Total Tests** | 11,847 |
+| **Release Date** | March 23, 2026 |
+| **Test Suites** | 169 |
+| **Total Tests** | 11,910 |
 | **PHPUnit Test Files** | 34 |
-| **Statement Coverage** | 92.88% |
-| **Branch Coverage** | 82.58% |
-| **Function Coverage** | 90.62% |
-| **Line Coverage** | 91.39% |
-| **JavaScript Files** | 158 |
+| **Statement Coverage** | 94.43% |
+| **Branch Coverage** | 84.32% |
+| **Function Coverage** | 93.52% |
+| **Line Coverage** | 94.53% |
+| **JavaScript Files** | 157 |
 | **ES6 Classes** | 140 |
 | **God Classes** | 26 (5 generated, 19 JS, 2 PHP) |
-| **i18n Messages** | 780 |
+| **i18n Messages** | 835 |
 
 ---
 

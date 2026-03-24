@@ -17,22 +17,22 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (March 17, 2026)
+## Codebase Statistics (March 24, 2026)
 
 | Metric | Value |
 |--------|-------|
-| Total JS files | **158** |
-| Total JS lines | **~113,550** |
+| Total JS files | **157** |
+| Total JS lines | **~113,765** |
 | Total PHP files | **41** |
-| Total PHP lines | **~15,216** |
+| Total PHP lines | **~15,175** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~23,500 lines (generated) |
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **92.88% stmt, 82.58% branch** |
-| Jest tests | **11,847** (168 suites) |
+| Test coverage | **94.43% stmt, 84.32% branch** |
+| Jest tests | **11,910** (169 suites) |
 | PHPUnit test files | 34 |
 | God classes (>=1000 lines) | **26** (5 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |

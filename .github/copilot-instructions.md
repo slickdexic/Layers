@@ -110,12 +110,13 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `PresetStorage.js` (~426 lines) - localStorage operations, import/export, style sanitization
     - `PresetDropdown.js` (~528 lines) - dropdown UI component for selecting presets
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`, `APIErrorHandler.js`
+  - Cache: `APICacheManager.js` (~152 lines) - extracted from APIManager, handles LRU response cache with TTL and sessionStorage freshness cache
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
   - **God classes:** 26 files >= 1,000 lines:
     - **Generated data files (5, exempt):** ShapeLibraryData.original.js (~11,293 lines), ShapeLibraryData.iec60417.js (~5,905 lines), EmojiLibraryIndex.js (~3,055 lines), ShapeLibraryData.js (~1,643 lines), ShapeLibraryData.iso7000.js (~1,609 lines)
-    - **Hand-written JS files (19):** LayerPanel (~2,165), CanvasManager (~2,088), Toolbar (~1,933), InlineTextEditor (~1,848), PropertyBuilders (~1,826), LayersEditor (~1,813), APIManager (~1,597), SelectionManager (~1,420), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,189), ToolbarStyleControls (~1,139), SlideController (~1,126), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,054), CanvasEvents (~1,033), CalloutRenderer (~1,000)
+    - **Hand-written JS files (19):** LayerPanel (~2,165), CanvasManager (~2,088), Toolbar (~1,933), InlineTextEditor (~1,848), PropertyBuilders (~1,826), LayersEditor (~1,813), APIManager (~1,640), SelectionManager (~1,420), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,189), ToolbarStyleControls (~1,139), SlideController (~1,126), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,054), CanvasEvents (~1,033), CalloutRenderer (~1,000)
     - **PHP god classes (2):** ServerSideLayerValidator.php (~1,434 lines), LayersDatabase.php (~1,372 lines)
     - **Near-threshold files (6):** PropertiesForm (~991), GroupManager (~987), LayerRenderer (~973), ShapeRenderer (~959), LayersValidator (~956), ArrowRenderer (~932)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
@@ -442,14 +443,14 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,847 tests in 168 suites — verified March 17, 2026)
-- Coverage (92.88% statement, 82.58% branch — verified March 17, 2026)
-- JavaScript file count (158 files total, ~113,550 lines)
-- PHP file count (41 files, ~15,216 lines)
+- Test count (11,910 tests in 169 suites — verified March 23, 2026)
+- Coverage (94.43% statement, 84.32% branch — verified March 24, 2026)
+- JavaScript file count (157 files total, ~113,765 lines)
+- PHP file count (41 files, ~15,175 lines)
 - God class count (26 files >=1,000 lines; 5 generated data files, 19 JS, 2 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.62)
+- Version number (1.5.63)

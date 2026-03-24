@@ -725,7 +725,7 @@ For developers or wiki admins installing the Layers extension, the process is st
    php maintenance/update.php
    ```
 
-   This will create tables such as `layer_sets`, `layer_assets`, `layer_set_usage` in the wiki database. The table definitions are in the extension’s SQL file. After running, verify that the tables exist.
+   This will create tables such as `layer_sets` and `layer_assets` in the wiki database. The table definitions are in the extension's SQL file. After running, verify that the tables exist.
 
 6. **Verify Installation:** Navigate to Special\:Version on your wiki – the Layers extension should appear in the list of installed extensions if loaded correctly. Also verify that on File pages, an "Edit Layers" tab now shows (for users with permission).
 
@@ -813,7 +813,6 @@ The backend encompasses the PHP code that integrates with MediaWiki's databases,
 
   * **`layer_sets`**: Core table. Each row represents a set of layers (annotations) for an image. Columns likely include an ID, the image (file) identifier (maybe filename or file\_id and the file’s SHA1), the JSON blob of all layer data (`ls_json_blob`), possibly a name for the layer set, timestamp, user who saved it, etc. There could be a version number or a flag for the current set. Since the extension might allow saving multiple versions (to support history), this table can hold multiple entries per image. The `getLatestLayerSet(file)` function fetches the one marked latest (or highest id).
   * **`layer_assets`**: A table intended for reusable assets (like custom shapes or templates a user can save for reuse). Not fully fleshed out in current code – likely columns for asset name, data (perhaps JSON or SVG of the asset), user who created it, etc. The UI for it is planned (asset library panel) but not implemented yet.
-  * **`layer_set_usage`**: Possibly to track usage of layer sets on pages. For example, if an image's specific layer set is embedded on a page, this table might record that relationship, maybe for cache invalidation or listing where annotations are used. The analysis said it's underutilized currently.
   * These tables are created via the schema update hook on install. They do not alter core MW tables, so it's self-contained.
 
 * **Hooks Implementation:**

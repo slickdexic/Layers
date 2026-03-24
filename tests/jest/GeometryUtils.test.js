@@ -563,4 +563,51 @@ describe( 'GeometryUtils', () => {
 		} );
 	} );
 
+	describe( 'clientToCanvas edge cases', () => {
+		it( 'should return canvas center when rect has zero dimensions', () => {
+			const canvas = {
+				width: 800,
+				height: 600,
+				getBoundingClientRect: () => ( { width: 0, height: 0, left: 0, top: 0 } )
+			};
+			const result = GeometryUtils.clientToCanvas( canvas, 100, 200 );
+			expect( result ).toEqual( { x: 400, y: 300 } );
+		} );
+
+		it( 'should return canvas center when rect has zero width', () => {
+			const canvas = {
+				width: 400,
+				height: 300,
+				getBoundingClientRect: () => ( { width: 0, height: 100, left: 0, top: 0 } )
+			};
+			const result = GeometryUtils.clientToCanvas( canvas, 50, 50 );
+			expect( result ).toEqual( { x: 200, y: 150 } );
+		} );
+	} );
+
+	describe( 'getLayerBoundsForType with angleDimension', () => {
+		it( 'should compute bounds for angleDimension type', () => {
+			const layer = {
+				type: 'angleDimension',
+				cx: 100, cy: 100,
+				ax: 50, ay: 50,
+				bx: 200, by: 150
+			};
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 50 );
+			expect( bounds.y ).toBe( 50 );
+			expect( bounds.width ).toBe( 150 );
+			expect( bounds.height ).toBe( 100 );
+		} );
+
+		it( 'should handle angleDimension with missing coords', () => {
+			const layer = { type: 'angleDimension' };
+			const bounds = GeometryUtils.getLayerBoundsForType( layer );
+			expect( bounds.x ).toBe( 0 );
+			expect( bounds.y ).toBe( 0 );
+			expect( bounds.width ).toBeGreaterThanOrEqual( 1 );
+			expect( bounds.height ).toBeGreaterThanOrEqual( 1 );
+		} );
+	} );
+
 } );

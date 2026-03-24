@@ -88,11 +88,6 @@ class LayersTest extends Maintenance {
 			"layer_assets table exists",
 			$dbr->tableExists( 'layer_assets' )
 		);
-
-		$this->test(
-			"layer_set_usage table exists",
-			$dbr->tableExists( 'layer_set_usage' )
-		);
 	}
 
 	/**

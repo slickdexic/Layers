@@ -2,13 +2,13 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-92.88%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C847%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-94.43%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-11%2C910%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.62 (March 17, 2026)  
+> **Version:** 1.5.63 (March 23, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -318,24 +318,24 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,216 lines across 41 files**
-- **Frontend:** HTML5 Canvas editor with **158 JS files (~113,550 lines)**, 140 ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,175 lines across 41 files**
+- **Frontend:** HTML5 Canvas editor with **157 JS files (~113,765 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **26 god classes** (files >=1,000 lines), all use proper delegation patterns
   - 5 generated data files (ShapeLibraryData variants + EmojiLibraryIndex) are exempt from refactoring
   - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
 
-**Test Coverage (Verified March 17, 2026):**
+**Test Coverage (Verified March 23, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,847 passing (168 suites) |
+| Jest tests | 11,910 passing (169 suites) |
 | PHPUnit tests | 34 test files |
-| Statement coverage | 92.88% |
-| Branch coverage | 82.58% |
-| Function coverage | 90.62% |
-| Line coverage | 91.39% |
+| Statement coverage | 94.43% |
+| Branch coverage | 84.32% |
+| Function coverage | 93.52% |
+| Line coverage | 94.53% |
 
 **Security:**
 
@@ -386,14 +386,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 158 | ✅ |
-| Total JS lines | ~113,550 | ✅ Hand-written + generated data |
+| Total JS files | 157 | ✅ |
+| Total JS lines | ~113,765 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
-| Tests passing | 11,847 | ✅ |
+| Tests passing | 11,910 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 92.88% | ✅ Excellent |
-| Branch coverage | 82.58% | ✅ Target met |
+| Statement coverage | 94.43% | ✅ Excellent |
+| Branch coverage | 84.32% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

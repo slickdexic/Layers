@@ -1782,5 +1782,76 @@ describe('CanvasRenderer', () => {
             expect(() => renderer.destroy()).not.toThrow();
         });
     });
+
+    describe('Branch coverage: renderLayers visible===0', () => {
+        test('should skip layers with visible===0 (integer false from API)', () => {
+            const layer = { id: '1', type: 'rectangle', x: 10, y: 10, width: 100, height: 50, visible: 0 };
+            const drawSpy = jest.spyOn(renderer, 'drawLayerWithEffects');
+            renderer.renderLayers([layer]);
+            expect(drawSpy).not.toHaveBeenCalled();
+            drawSpy.mockRestore();
+        });
+
+        test('should render layers with visible===1 (integer true from API)', () => {
+            const layer = { id: '1', type: 'rectangle', x: 10, y: 10, width: 100, height: 50, visible: 1 };
+            const drawSpy = jest.spyOn(renderer, 'drawLayerWithEffects');
+            renderer.renderLayers([layer]);
+            expect(drawSpy).toHaveBeenCalled();
+            drawSpy.mockRestore();
+        });
+    });
+
+    describe('Branch coverage: _drawBlurStroke skip types', () => {
+        test('should skip stroke for arrow type', () => {
+            renderer._drawBlurStroke(
+                { type: 'arrow', stroke: '#f00', strokeWidth: 2 },
+                false, 50, 50
+            );
+            // ctx.stroke should NOT have been called (early return)
+            const postCallCount = ctx.stroke.mock.calls.length;
+            // Reset and try with rectangle which should draw stroke
+            ctx.stroke.mockClear();
+            renderer._drawBlurStroke(
+                { type: 'rectangle', stroke: '#f00', strokeWidth: 2, x: 0, y: 0, width: 100, height: 50 },
+                false, 50, 50
+            );
+            expect(ctx.stroke).toHaveBeenCalled();
+        });
+
+        test('should skip stroke for line type', () => {
+            const saveCalls = ctx.save.mock.calls.length;
+            renderer._drawBlurStroke(
+                { type: 'line', stroke: '#f00', strokeWidth: 2 },
+                false, 50, 50
+            );
+            // save should NOT have been called (early return before save)
+            expect(ctx.save.mock.calls.length).toBe(saveCalls);
+        });
+
+        test('should skip stroke for text type', () => {
+            const saveCalls = ctx.save.mock.calls.length;
+            renderer._drawBlurStroke(
+                { type: 'text', stroke: '#f00', strokeWidth: 2 },
+                false, 50, 50
+            );
+            expect(ctx.save.mock.calls.length).toBe(saveCalls);
+        });
+    });
+
+    describe('Branch coverage: drawLayerShapeOnly angleDimension', () => {
+        test('should draw angleDimension shape', () => {
+            const layer = {
+                type: 'angleDimension',
+                cx: 50, cy: 50,
+                ax: 100, ay: 50,
+                bx: 50, by: 0,
+                arcRadius: 40
+            };
+            expect(() => {
+                renderer.drawLayerShapeOnly(layer, renderer.ctx, 1);
+            }).not.toThrow();
+            expect(ctx.beginPath).toHaveBeenCalled();
+        });
+    });
 });
 

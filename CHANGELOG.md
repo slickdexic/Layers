@@ -4,6 +4,31 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.63] - 2026-03-23
+
+### Added
+- **APICacheManager** — Extracted cache logic from APIManager.js into
+  standalone `APICacheManager.js` module (152 lines, 16 unit tests).
+  APIManager delegates to APICacheManager with inline fallback.
+
+### Fixed
+- **P3-146 — Dead table removal** — Removed `layer_set_usage` table
+  (dead since creation). Cleaned up references in SchemaManager,
+  LayersConstants, layers_tables.sql, and documentation files. Added
+  `patch-drop-layer_set_usage.sql` migration.
+
+### Tests
+- 63 new unit tests across 7 test files: GeometryUtils (4), LayerRenderer (7),
+  DraftManager (5), APIManager (19), DialogManager (7), CanvasRenderer (5),
+  APICacheManager (16). Coverage: 94.43% stmts, 84.32% branches
+  (was 92.88% / 82.58%). Total: 11,910 tests in 169 suites.
+- 37 new E2E tests in 2 files: properties.spec.js (24 tests — property panel
+  visibility, per-type property inputs, value changes, undo), transforms.spec.js
+  (13 tests — drag-move, property-based positioning, multi-select, nudge,
+  duplication, z-order). E2E total: 164 tests in 10 files.
+- Enhanced fixtures.js POM with property panel selectors, `getPropertyValue()`,
+  `setPropertyValue()`, `createAndSelectLayer()`, `dragOnCanvas()` helpers.
+
 ## [1.5.62] - 2026-03-17
 
 ### Security
@@ -31,7 +56,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Tests
 - 168 test suites, 11,847 tests — all passing
-- Coverage: 94.4% statements, 84.33% branches, 93.38% functions
+- Coverage: 92.88% statements, 82.58% branches, 91.57% functions
 - Comprehensive coverage improvements across 13 test suites (+4,929 lines)
 - HelpDialog: 0% → 99.42% coverage (40 tests)
 - TransformController: improved to 98.16% statements, 83.66% branches
@@ -75,7 +100,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **P3-130 — `returnTo` Rejects Valid Redirect Targets** — `EditLayersAction.php`: relaxed `isKnown()` check to `isValid()` with a namespace allowlist so unsaved/draft-page return paths are accepted.
 - **P3-131 — `TextSanitizer` Uses `strlen()` for Character Limits** — Replaced with `mb_strlen($text, 'UTF-8')` so CJK and emoji-heavy text is counted in characters, not bytes.
 - **P3-132 — `ApiLayersList` Bypasses Shared `RateLimiter`** — Replaced direct `pingLimiter()` call with `RateLimiter::checkRateLimit()` so future rate-limit enhancements (metrics, logging, config overrides) apply uniformly.
-- **P3-133 — `LayersSchemaManager` Brittile Error String Parsing** — Replaced fragile `preg_match('/^Error (\d+):/', ...)` pattern with typed RDBMS exception handling and `IF NOT EXISTS` DDL guard.
+- **P3-133 — `LayersSchemaManager` Brittle Error String Parsing** — Replaced fragile `preg_match('/^Error (\d+):/', ...)` pattern with typed RDBMS exception handling and `IF NOT EXISTS` DDL guard.
 - **P3-134 — Hardcoded `'Edit Layers'` Link Text** — `Hooks.php`: replaced hardcoded English string with `wfMessage('layers-edit-link-text')->text()`; added `layers-edit-link-text` i18n key.
 - **P3-135 — `ThumbnailProcessor` Dead `=== false` on `?string`** — Removed the unreachable `|| $layersFlag === false` branch from the null-check condition.
 - **P3-136 — Double Spinner on Every Save** — `LayersEditor.save()` owns the full spinner lifecycle (show on start, hide on both success and error paths); removed duplicate `showSpinner()` from `APIManager.saveLayers()`.

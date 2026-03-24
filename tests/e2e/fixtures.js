@@ -97,7 +97,21 @@ class LayersEditorPage {
 			layerName: '.layer-name',
 			layerVisibility: '.layer-visibility-toggle',
 			layerLock: '.layer-lock-toggle',
-			deleteLayerBtn: '.delete-layer-btn, [data-action="delete-layer"]'
+			deleteLayerBtn: '.delete-layer-btn, [data-action="delete-layer"]',
+			
+			// Property panel
+			propertiesForm: '.layer-properties-form',
+			propertySection: '.property-section',
+			propertySectionHeader: '.property-section-header',
+			propertySectionBody: '.property-section-body',
+			propertyField: '.property-field',
+			propertyFieldColor: '.property-field--color',
+			propertyFieldCheckbox: '.property-field--checkbox',
+			propertyFieldCompound: '.property-field--compound',
+			colorButton: '.color-display-button',
+			
+			// Selection state
+			selectedLayerItem: '.layer-item.selected, .layer-item[aria-selected="true"]'
 		};
 		
 		// Tool keyboard shortcuts (used by selectTool for dropdown tools)
@@ -289,6 +303,98 @@ class LayersEditorPage {
 	 */
 	async redo() {
 		await this.page.keyboard.press( 'Control+Shift+z' );
+	}
+
+	/**
+	 * Get the value of a property input by its data-prop attribute
+	 * @param {string} propName - The data-prop value (e.g., 'width', 'height', 'rotation')
+	 * @return {Promise<string|null>} The input value or null if not found
+	 */
+	async getPropertyValue( propName ) {
+		const input = await this.page.$( `[data-prop="${ propName }"]` );
+		if ( !input ) {
+			return null;
+		}
+		return input.inputValue();
+	}
+
+	/**
+	 * Set a property input value by its data-prop attribute
+	 * @param {string} propName - The data-prop value (e.g., 'width', 'height', 'rotation')
+	 * @param {string|number} value - The value to set
+	 */
+	async setPropertyValue( propName, value ) {
+		const input = await this.page.$( `[data-prop="${ propName }"]` );
+		if ( !input ) {
+			throw new Error( `Property input not found: ${ propName }` );
+		}
+		await input.fill( String( value ) );
+		// Trigger change event by pressing Tab (moves focus, fires change)
+		await input.press( 'Tab' );
+		await this.page.waitForTimeout( 200 );
+	}
+
+	/**
+	 * Check if the properties panel is visible
+	 * @return {Promise<boolean>}
+	 */
+	async isPropertiesPanelVisible() {
+		const form = await this.page.$( this.selectors.propertiesForm );
+		return form !== null;
+	}
+
+	/**
+	 * Get the number of property sections visible
+	 * @return {Promise<number>}
+	 */
+	async getPropertySectionCount() {
+		const sections = await this.page.$$( this.selectors.propertySection );
+		return sections.length;
+	}
+
+	/**
+	 * Create a layer and select it (convenience for property/transform tests)
+	 * @param {string} toolName - Tool to use (e.g., 'rectangle', 'circle')
+	 * @param {number} [x1=100] - Start X
+	 * @param {number} [y1=100] - Start Y
+	 * @param {number} [x2=250] - End X
+	 * @param {number} [y2=250] - End Y
+	 */
+	async createAndSelectLayer( toolName, x1 = 100, y1 = 100, x2 = 250, y2 = 250 ) {
+		await this.selectTool( toolName );
+		await this.drawOnCanvas( x1, y1, x2, y2 );
+		await this.page.waitForTimeout( 300 );
+		// Switch to pointer and click on the layer to select it
+		await this.selectTool( 'pointer' );
+		const midX = ( x1 + x2 ) / 2;
+		const midY = ( y1 + y2 ) / 2;
+		await this.clickCanvas( midX, midY );
+		await this.page.waitForTimeout( 300 );
+	}
+
+	/**
+	 * Drag a layer from one position to another
+	 * @param {number} fromX - Start X on canvas
+	 * @param {number} fromY - Start Y on canvas
+	 * @param {number} toX - End X on canvas
+	 * @param {number} toY - End Y on canvas
+	 */
+	async dragOnCanvas( fromX, fromY, toX, toY ) {
+		const canvas = await this.page.$( this.selectors.canvas );
+		const box = await canvas.boundingBox();
+		
+		await this.page.mouse.move( box.x + fromX, box.y + fromY );
+		await this.page.waitForTimeout( 100 );
+		await this.page.mouse.down();
+		// Move in steps for more reliable drag
+		const steps = 5;
+		for ( let i = 1; i <= steps; i++ ) {
+			const x = fromX + ( toX - fromX ) * ( i / steps );
+			const y = fromY + ( toY - fromY ) * ( i / steps );
+			await this.page.mouse.move( box.x + x, box.y + y );
+		}
+		await this.page.mouse.up();
+		await this.page.waitForTimeout( 200 );
 	}
 }
 

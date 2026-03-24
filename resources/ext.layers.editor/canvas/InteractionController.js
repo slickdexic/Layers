@@ -58,38 +58,23 @@ class InteractionController {
 		this.dragGuideOrientation = null; // 'h' | 'v'
 		this.dragGuidePos = 0;
 
-		// Cache efficient cloning function reference
-		this._cloneLayerEfficient = null;
 	}
 
 	/**
-	 * Clone a layer efficiently (preserves src/path by reference)
+	 * Clone a layer efficiently (preserves immutable src/path by reference).
+	 * Uses shared DeepClone utility from ext.layers.shared.
 	 *
 	 * @private
 	 * @param {Object} layer - Layer to clone
-	 * @return {Object} Cloned layer
+	 * @return {Object|null} Cloned layer, or null if input is falsy
 	 */
 	_cloneLayer( layer ) {
 		if ( !layer ) {
 			return null;
 		}
-
-		// Lazy-load efficient cloning function
-		if ( !this._cloneLayerEfficient ) {
-			if ( typeof window !== 'undefined' &&
-				window.Layers &&
-				window.Layers.Utils &&
-				typeof window.Layers.Utils.cloneLayerEfficient === 'function' ) {
-				this._cloneLayerEfficient = window.Layers.Utils.cloneLayerEfficient;
-			}
+		if ( window.Layers?.Utils?.cloneLayerEfficient ) {
+			return window.Layers.Utils.cloneLayerEfficient( layer );
 		}
-
-		// Use efficient cloning if available
-		if ( this._cloneLayerEfficient ) {
-			return this._cloneLayerEfficient( layer );
-		}
-
-		// Fallback to JSON cloning
 		return JSON.parse( JSON.stringify( layer ) );
 	}
 

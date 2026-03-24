@@ -124,7 +124,6 @@ The following hooks are currently used and need verification for MW 1.39:
 The database schema is **backwards compatible**. The same tables exist:
 - `layer_sets` — Layer set storage
 - `layer_assets` — Asset storage (not heavily used)
-- `layer_set_usage` — Usage tracking
 
 **Schema patches to review:**
 - `patch-add-name-column.sql` — Adds `ls_name` column (already applied in REL1_39)
