@@ -77,4 +77,25 @@ class HooksTest extends \MediaWikiUnitTestCase {
 
 		( new Hooks() )->onBeforePageDisplay( $outputPageMock, $skinMock );
 	}
+
+	/**
+	 * @covers ::onChangeTagsAllowedAdd
+	 */
+	public function testOnChangeTagsAllowedAddRegistersLayersTag(): void {
+		$allowedTags = [];
+		Hooks::onChangeTagsAllowedAdd( $allowedTags );
+		$this->assertContains( 'layers-data-change', $allowedTags );
+	}
+
+	/**
+	 * @covers ::onChangeTagsAllowedAdd
+	 */
+	public function testOnChangeTagsAllowedAddPreservesExistingTags(): void {
+		$allowedTags = [ 'existing-tag', 'another-tag' ];
+		Hooks::onChangeTagsAllowedAdd( $allowedTags );
+		$this->assertContains( 'existing-tag', $allowedTags );
+		$this->assertContains( 'another-tag', $allowedTags );
+		$this->assertContains( 'layers-data-change', $allowedTags );
+		$this->assertCount( 3, $allowedTags );
+	}
 }

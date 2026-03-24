@@ -863,5 +863,12 @@
 
 	"layers-unknown-user": "Unknown user",
 
+	"layers-audit-save": "Layers: Updated layer set \"$1\"",
+	"layers-audit-delete": "Layers: Deleted layer set \"$1\"",
+	"layers-audit-rename": "Layers: Renamed layer set \"$1\" to \"$2\"",
+	"layers-audit-change": "Layers: Modified layer set \"$1\"",
+	"tag-layers-data-change": "Layers data change",
+	"tag-layers-data-change-description": "This edit was automatically created to record a change to image annotation layers (save, delete, or rename).",
+
 	"specialpages-group-layers": "Layers"
 }

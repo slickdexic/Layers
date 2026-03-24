@@ -169,6 +169,10 @@
 		"LayersSlideDefaultBackground": {
 			"description": "Default background color for slides",
 			"value": "#ffffff"
+		},
+		"LayersTrackChangesInRecentChanges": {
+			"description": "When enabled, layer save/delete/rename operations create a null edit on the associated File: page, making the change visible in Recent Changes, page history, and watchlists. Requires the 'layers-data-change' change tag.",
+			"value": false
 		}
 	},
 	"HookHandlers": {
@@ -187,6 +191,7 @@
 	},
 	"Hooks": {
 		"BeforePageDisplay": "LayersHooks",
+		"ChangeTagsAllowedAdd": "LayersHooks",
 		"FileDeleteComplete": "LayersHooks",
 		"ImagePageAfterImageLinks": "LayersUIHooks",
 		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Database\\LayersSchemaManager::onLoadExtensionSchemaUpdates",
