@@ -862,5 +862,11 @@
 	"layers-help-tips-display": "Category heading for display tips",
 	"layers-help-tips-display-intro": "Introduction to wikitext layer display syntax",
 	"layers-help-tips-display-default": "Wikitext syntax for showing default layer set",
-	"layers-help-tips-display-named": "Wikitext syntax for showing a named layer set"
+	"layers-help-tips-display-named": "Wikitext syntax for showing a named layer set",
+	"layers-audit-save": "Edit summary when a layer set is saved. $1 is the set name.",
+	"layers-audit-delete": "Edit summary when a layer set is deleted. $1 is the set name.",
+	"layers-audit-rename": "Edit summary when a layer set is renamed. $1 is the old name, $2 is the new name.",
+	"layers-audit-change": "Generic edit summary for layer set modifications. $1 is the set name.",
+	"tag-layers-data-change": "Short name for the layers-data-change change tag, shown in Recent Changes.",
+	"tag-layers-data-change-description": "Description of the layers-data-change change tag, shown on Special:Tags."
 }

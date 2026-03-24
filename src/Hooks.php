@@ -63,6 +63,17 @@ class Hooks {
 	}
 
 	/**
+	 * ChangeTagsAllowedAdd hook handler.
+	 * Registers the 'layers-data-change' tag so it can be applied to edits
+	 * created by the audit trail feature.
+	 *
+	 * @param array &$allowedTags Array of allowed change tag names
+	 */
+	public static function onChangeTagsAllowedAdd( array &$allowedTags ): void {
+		$allowedTags[] = 'layers-data-change';
+	}
+
+	/**
 	 * BeforePageDisplay hook handler
 	 *
 	 * @param mixed $out OutputPage
