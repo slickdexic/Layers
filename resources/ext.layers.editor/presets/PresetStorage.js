@@ -325,12 +325,16 @@
 						}
 					}
 
-					// Add preset
-					newData.toolPresets[ tool ].push( {
+					// Add preset with sanitized style
+					const sanitizedPreset = {
 						...preset,
 						builtIn: false,
 						importedAt: new Date().toISOString()
-					} );
+					};
+					if ( sanitizedPreset.style ) {
+						sanitizedPreset.style = this.sanitizeStyle( sanitizedPreset.style );
+					}
+					newData.toolPresets[ tool ].push( sanitizedPreset );
 					result.imported++;
 				} );
 			} );

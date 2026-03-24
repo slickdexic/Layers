@@ -317,11 +317,12 @@ describe('HitTestController', () => {
             expect(result).toBeNull();
         });
 
-        test('should skip locked layers', () => {
+        test('should return locked layers (locked layers are selectable but not movable)', () => {
             mockLayers[0].locked = true;
             const point = { x: 150, y: 150 };
             const result = hitTestController.getLayerAtPoint(point);
-            expect(result).toBeNull();
+            expect(result).not.toBeNull();
+            expect(result.locked).toBe(true);
         });
 
         test('should return topmost layer when overlapping', () => {

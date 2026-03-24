@@ -136,12 +136,37 @@
 					break;
 				}
 
-				case 'star': {
+					case 'star': {
 					const starRadius = layer.radius || layer.outerRadius || 0;
 					left = ( layer.x || 0 ) - starRadius;
 					top = ( layer.y || 0 ) - starRadius;
 					right = ( layer.x || 0 ) + starRadius;
 					bottom = ( layer.y || 0 ) + starRadius;
+					break;
+				}
+
+				case 'angleDimension': {
+					const adCx = layer.cx || 0;
+					const adCy = layer.cy || 0;
+					const adAx = layer.ax || 0;
+					const adAy = layer.ay || 0;
+					const adBx = layer.bx || 0;
+					const adBy = layer.by || 0;
+					const adPad = ( layer.arcRadius || 40 ) + 20;
+					left = Math.min( adCx, adAx, adBx ) - adPad;
+					top = Math.min( adCy, adAy, adBy ) - adPad;
+					right = Math.max( adCx, adAx, adBx ) + adPad;
+					bottom = Math.max( adCy, adAy, adBy ) + adPad;
+					break;
+				}
+
+				case 'marker': {
+					// Marker is a centered circle; size is the full diameter
+					const markerRadius = ( layer.size || 24 ) / 2;
+					left = ( layer.x || 0 ) - markerRadius;
+					top = ( layer.y || 0 ) - markerRadius;
+					right = ( layer.x || 0 ) + markerRadius;
+					bottom = ( layer.y || 0 ) + markerRadius;
 					break;
 				}
 
@@ -200,6 +225,15 @@
 							y: p.y + deltaY
 						} ) );
 					}
+					break;
+
+				case 'angleDimension':
+					layer.cx = ( layer.cx || 0 ) + deltaX;
+					layer.cy = ( layer.cy || 0 ) + deltaY;
+					layer.ax = ( layer.ax || 0 ) + deltaX;
+					layer.ay = ( layer.ay || 0 ) + deltaY;
+					layer.bx = ( layer.bx || 0 ) + deltaX;
+					layer.by = ( layer.by || 0 ) + deltaY;
 					break;
 
 				default:

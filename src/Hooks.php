@@ -264,7 +264,7 @@ class Hooks {
 
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
-			$db->deleteLayerSetsForImage( $file->getName(), self::getFileSha1( $file ) );
+$db->deleteLayerSetsForImage( $file->getName(), self::getFileSha1( $file ) );
 		} catch ( Exception $e ) {
 			// Log error but don't break deletion
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
@@ -324,7 +324,7 @@ class Hooks {
 			}
 
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
-			$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), self::getFileSha1( $fileObj ) );
+$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), self::getFileSha1( $fileObj ) );
 
 			$names = [];
 			foreach ( $layerSets as $layerSet ) {
@@ -410,8 +410,10 @@ class Hooks {
 
 		// Check if this is a foreign file
 		if ( self::isForeignFile( $file ) ) {
+			// Normalize spaces to underscores for consistent hashing
+			$imgName = str_replace( ' ', '_', $file->getName() );
 			// Use a hash of the filename as a fallback (prefixed for clarity)
-			return 'foreign_' . sha1( $file->getName() );
+			return 'foreign_' . sha1( $imgName );
 		}
 
 		return $sha1 ?? '';
