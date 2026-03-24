@@ -98,10 +98,12 @@
 					if ( colorIcon ) {
 						const currentColor = this.getSlideBackgroundColor();
 						const isTransparent = !currentColor || currentColor === 'transparent' || currentColor === 'none';
+						const baseStyle = 'width: 20px; height: 20px; border: 1px solid #999; border-radius: 3px; cursor: pointer; margin-right: 6px; flex-shrink: 0;';
 						if ( isTransparent ) {
-							colorIcon.style.cssText = `width: 20px; height: 20px; border: 1px solid #999; border-radius: 3px; cursor: pointer; margin-right: 6px; flex-shrink: 0; background-color: #fff; background-image: linear-gradient(45deg, #ff0000 25%, transparent 25%), linear-gradient(-45deg, #ff0000 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ff0000 75%), linear-gradient(-45deg, transparent 75%, #ff0000 75%); background-size: 6px 6px; background-position: 0 0, 0 3px, 3px -3px, -3px 0px;`;
+							colorIcon.style.cssText = baseStyle + ' background-color: #fff; background-image: linear-gradient(45deg, #ff0000 25%, transparent 25%), linear-gradient(-45deg, #ff0000 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ff0000 75%), linear-gradient(-45deg, transparent 75%, #ff0000 75%); background-size: 6px 6px; background-position: 0 0, 0 3px, 3px -3px, -3px 0px;';
 						} else {
-							colorIcon.style.cssText = `width: 20px; height: 20px; border: 1px solid #999; border-radius: 3px; cursor: pointer; margin-right: 6px; flex-shrink: 0; background-color: ${ currentColor };`;
+							colorIcon.style.cssText = baseStyle;
+							colorIcon.style.backgroundColor = currentColor;
 						}
 					}
 				}
@@ -361,8 +363,12 @@
 				margin: 4px;
 				border: 2px solid #ccc;
 				border-radius: 4px;
-				background: ${ isTransparent ? 'repeating-linear-gradient(45deg, #ff0000 0, #ff0000 4px, transparent 4px, transparent 8px)' : color };
 			`;
+			if ( isTransparent ) {
+				swatchDisplay.style.background = 'repeating-linear-gradient(45deg, #ff0000 0, #ff0000 4px, transparent 4px, transparent 8px)';
+			} else {
+				swatchDisplay.style.backgroundColor = color;
+			}
 
 			return swatchDisplay;
 		}

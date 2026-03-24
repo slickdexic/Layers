@@ -801,6 +801,19 @@ class LayersDatabase {
 			$dbw->startAtomic( __METHOD__ );
 
 			try {
+				// Lock rows before deleting to prevent race with concurrent rename
+				$dbw->selectField(
+					'layer_sets',
+					'COUNT(*)',
+					[
+						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+						'ls_img_sha1' => $sha1,
+						'ls_name' => $setName
+					],
+					__METHOD__,
+					[ 'FOR UPDATE' ]
+				);
+
 				$dbw->delete(
 					'layer_sets',
 					[

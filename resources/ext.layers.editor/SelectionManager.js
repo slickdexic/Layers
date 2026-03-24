@@ -790,7 +790,7 @@
 			// Layers are drawn from end to start, so index 0 is visually on top (same as HitTestController).
 			for ( let i = 0; i < layers.length; i++ ) {
 				const layer = layers[ i ];
-				if ( layer.visible === false ) {
+				if ( layer.visible === false || layer.visible === 0 ) {
 					continue;
 				}
 				if ( typeof layer.x === 'number' && typeof layer.y === 'number' && typeof layer.width === 'number' && typeof layer.height === 'number' ) {

@@ -102,7 +102,7 @@
 			// Layers are drawn from end to start, so index 0 is visually on top
 			for ( let i = 0; i < layers.length; i++ ) {
 				const layer = layers[ i ];
-				if ( layer.visible === false || layer.locked === true ) {
+				if ( layer.visible === false ) {
 					continue;
 				}
 				if ( this.isPointInLayer( point, layer ) ) {

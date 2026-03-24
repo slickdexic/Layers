@@ -72,22 +72,19 @@ class TransformController {
 		// Pending drag layer (set on mousedown, cleared on first mousemove)
 		this._pendingDragLayerId = null;
 
-		// Cache efficient cloning function reference
-		this._cloneLayerEfficient = null;
 	}
 
-	/** Clone a layer efficiently (preserves src/path by reference) @private @return {Object} */
+	/**
+	 * Clone a layer efficiently (preserves immutable src/path by reference).
+	 * Uses shared DeepClone utility from ext.layers.shared.
+	 *
+	 * @private
+	 * @param {Object} layer - Layer to clone
+	 * @return {Object} Cloned layer
+	 */
 	_cloneLayer( layer ) {
-		if ( !this._cloneLayerEfficient ) {
-			if ( typeof window !== 'undefined' &&
-				window.Layers &&
-				window.Layers.Utils &&
-				typeof window.Layers.Utils.cloneLayerEfficient === 'function' ) {
-				this._cloneLayerEfficient = window.Layers.Utils.cloneLayerEfficient;
-			}
-		}
-		if ( this._cloneLayerEfficient ) {
-			return this._cloneLayerEfficient( layer );
+		if ( window.Layers?.Utils?.cloneLayerEfficient ) {
+			return window.Layers.Utils.cloneLayerEfficient( layer );
 		}
 		return JSON.parse( JSON.stringify( layer ) );
 	}
@@ -886,11 +883,18 @@ class TransformController {
 
 		this.showDragPreview = true;
 
-		// Emit transform event for live properties panel update
-		this.emitTransforming( layer );
-
-		// Render layers
-		this.manager.renderLayers( this.manager.editor.layers );
+		// Throttle rendering using rAF (matching handleDrag pattern)
+		if ( !this._angleDimRenderScheduled ) {
+			this._angleDimRenderScheduled = true;
+			window.requestAnimationFrame( () => {
+				this._angleDimRenderScheduled = false;
+				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
+					return;
+				}
+				this.manager.renderLayers( this.manager.editor.layers );
+				this.emitTransforming( layer );
+			} );
+		}
 	}
 
 	/**
@@ -1007,11 +1011,18 @@ class TransformController {
 
 		this.showDragPreview = true;
 
-		// Emit transform event for live properties panel update
-		this.emitTransforming( layer );
-
-		// Render layers
-		this.manager.renderLayers( this.manager.editor.layers );
+		// Throttle rendering using rAF (matching handleDrag pattern)
+		if ( !this._dimTextRenderScheduled ) {
+			this._dimTextRenderScheduled = true;
+			window.requestAnimationFrame( () => {
+				this._dimTextRenderScheduled = false;
+				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
+					return;
+				}
+				this.manager.renderLayers( this.manager.editor.layers );
+				this.emitTransforming( layer );
+			} );
+		}
 	}
 
 	/**
