@@ -410,8 +410,10 @@ class Hooks {
 
 		// Check if this is a foreign file
 		if ( self::isForeignFile( $file ) ) {
+			// Normalize spaces to underscores for consistent hashing
+			$imgName = str_replace( ' ', '_', $file->getName() );
 			// Use a hash of the filename as a fallback (prefixed for clarity)
-			return 'foreign_' . sha1( $file->getName() );
+			return 'foreign_' . sha1( $imgName );
 		}
 
 		return $sha1 ?? '';

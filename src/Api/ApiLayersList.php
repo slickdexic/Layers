@@ -142,10 +142,10 @@ class ApiLayersList extends ApiBase {
 			$userIds = [];
 			foreach ( $slides as $slide ) {
 				if ( isset( $slide['createdById'] ) && $slide['createdById'] > 0 ) {
-					$userIds[$slide['createdById']] = true;
+					$userIds[] = (int)$slide['createdById'];
 				}
 				if ( isset( $slide['modifiedById'] ) && $slide['modifiedById'] > 0 ) {
-					$userIds[$slide['modifiedById']] = true;
+					$userIds[] = (int)$slide['modifiedById'];
 				}
 			}
 
@@ -154,9 +154,11 @@ class ApiLayersList extends ApiBase {
 			}
 
 			// Batch fetch user names via UserFactory
+			// Mirrors ApiLayersInfo::enrichRowsWithUserNames() pattern
+			$userIds = array_unique( $userIds );
 			$userFactory = MediaWikiServices::getInstance()->getUserFactory();
 			$userNames = [];
-			foreach ( array_keys( $userIds ) as $userId ) {
+			foreach ( $userIds as $userId ) {
 				$user = $userFactory->newFromId( $userId );
 				$user->load();
 				if ( $user->isRegistered() ) {
@@ -164,13 +166,17 @@ class ApiLayersList extends ApiBase {
 				}
 			}
 
-			// Enrich slides with resolved user names
+			// Apply user names with i18n fallback for unknown users
+			$fallback = $this->msg( 'layers-unknown-user' )
+				->inContentLanguage()->text();
 			foreach ( $slides as &$slide ) {
-				if ( isset( $slide['createdById'] ) && isset( $userNames[$slide['createdById']] ) ) {
-					$slide['createdBy'] = $userNames[$slide['createdById']];
+				if ( isset( $slide['createdById'] ) ) {
+					$uid = (int)$slide['createdById'];
+					$slide['createdBy'] = $userNames[$uid] ?? $fallback;
 				}
-				if ( isset( $slide['modifiedById'] ) && isset( $userNames[$slide['modifiedById']] ) ) {
-					$slide['modifiedBy'] = $userNames[$slide['modifiedById']];
+				if ( isset( $slide['modifiedById'] ) ) {
+					$uid = (int)$slide['modifiedById'];
+					$slide['modifiedBy'] = $userNames[$uid] ?? $fallback;
 				}
 			}
 			unset( $slide );

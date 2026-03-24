@@ -275,6 +275,9 @@
 				this.toolbarElement.parentNode.removeChild( this.toolbarElement );
 			}
 			this.toolbarElement = null;
+			this.layer = null;
+			this.editor = null;
+			this.containerElement = null;
 		}
 
 		/**

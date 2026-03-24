@@ -50,7 +50,7 @@ class ApiLayersRename extends ApiBase {
 	public function execute() {
 		$user = $this->getUser();
 		$params = $this->extractRequestParams();
-		$requestedFilename = $params['filename'] ?? '';
+		$requestedFilename = $params['filename'] ?? null;
 		$slidename = $params['slidename'] ?? null;
 		$oldName = trim( $params['oldname'] );
 		$newName = trim( $params['newname'] );

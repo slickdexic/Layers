@@ -75,11 +75,10 @@ class EditLayersAction extends \Action {
 		$returnToUrl = null;
 		if ( $returnTo !== '' ) {
 			// Validate returnto is a valid local title to prevent open redirects.
-			// Use isValid() rather than isKnown() so unsaved/draft pages are accepted.
+			// Title::newFromText + isValid + getLocalURL already guarantees a local URL;
+			// no namespace allowlist needed — any valid wiki page is a safe destination.
 			$returnTitle = \MediaWiki\Title\Title::newFromText( $returnTo );
-			$allowedNamespaces = [ NS_MAIN, NS_FILE, NS_FILE_TALK, NS_SPECIAL ];
-			if ( $returnTitle && $returnTitle->isValid()
-				&& in_array( $returnTitle->getNamespace(), $allowedNamespaces, true ) ) {
+			if ( $returnTitle && $returnTitle->isValid() ) {
 				$returnToUrl = $returnTitle->getLocalURL();
 			}
 		}

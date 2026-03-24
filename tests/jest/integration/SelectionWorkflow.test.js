@@ -181,11 +181,12 @@ describe( 'Integration: HitTestController Layer Detection', () => {
 			expect( hitLayer ).toBeNull();
 		} );
 
-		test( 'should not select locked layers', () => {
-			// Click inside locked rectangle
+		test( 'should return locked layers (selectable but not movable)', () => {
+			// Click inside locked rectangle - locked layers are now selectable
 			const hitLayer = hitTestController.getLayerAtPoint( { x: 650, y: 150 } );
 
-			expect( hitLayer ).toBeNull();
+			expect( hitLayer ).not.toBeNull();
+			expect( hitLayer.locked ).toBe( true );
 		} );
 
 		test( 'should return null when clicking empty area', () => {
@@ -586,7 +587,8 @@ describe( 'Integration: HitTestController Layer Detection', () => {
 			];
 
 			const hit = hitTestController.getLayerAtPoint( { x: 175, y: 175 } );
-			expect( hit.id ).toBe( 'unlocked' );
+			// Locked layers are now selectable, so the topmost (locked) layer is returned
+			expect( hit.id ).toBe( 'locked' );
 		} );
 	} );
 

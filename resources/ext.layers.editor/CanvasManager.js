@@ -847,9 +847,26 @@ class CanvasManager {
 			this.transformEventScheduled = false;
 			const target = ( this.editor && this.editor.container ) || this.container || document;
 			try {
+				// Create lightweight copy, omitting large data (base64 src, SVG paths)
+				const lightweightLayer = {};
+				for ( const key in this.lastTransformPayload ) {
+					if ( Object.prototype.hasOwnProperty.call( this.lastTransformPayload, key ) ) {
+						if ( key === 'src' || key === 'path' ) {
+							continue;
+						}
+						const value = this.lastTransformPayload[ key ];
+						if ( Array.isArray( value ) ) {
+							lightweightLayer[ key ] = value.slice();
+						} else if ( typeof value === 'object' && value !== null ) {
+							lightweightLayer[ key ] = { ...value };
+						} else {
+							lightweightLayer[ key ] = value;
+						}
+					}
+				}
 				const detail = {
 					id: this.lastTransformPayload.id,
-					layer: JSON.parse( JSON.stringify( this.lastTransformPayload ) )
+					layer: lightweightLayer
 				};
 				const evt = new CustomEvent( 'layers:transforming', { detail: detail } );
 				target.dispatchEvent( evt );
@@ -862,7 +879,6 @@ class CanvasManager {
 		} );
 	}
 
-	/**
 	/**
 	 * Update layer position during drag operation.
 	 * Delegates to TransformController which handles all layer types.
@@ -1731,8 +1747,9 @@ class CanvasManager {
 			// Throttle rendering using requestAnimationFrame to avoid lag
 			if ( this.tempLayer && !this._drawingFrameScheduled ) {
 				this._drawingFrameScheduled = true;
-				window.requestAnimationFrame( () => {
+				this._drawingRafId = window.requestAnimationFrame( () => {
 					this._drawingFrameScheduled = false;
+					this._drawingRafId = null;
 					// Guard against destroyed state to prevent null reference errors
 					if ( this.isDestroyed ) {
 						return;
@@ -1984,6 +2001,11 @@ class CanvasManager {
 		if ( this._transformRafId ) {
 			window.cancelAnimationFrame( this._transformRafId );
 			this._transformRafId = null;
+		}
+		// Cancel drawing preview RAF
+		if ( this._drawingRafId ) {
+			window.cancelAnimationFrame( this._drawingRafId );
+			this._drawingRafId = null;
 		}
 		// Cancel fallback timeout if used
 		if ( this.fallbackTimeoutId ) {
