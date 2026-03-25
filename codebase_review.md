@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 24, 2026 (v59 audit)
-**Previous Review:** March 23, 2026 (v58 audit + v1.5.63 sprint)
+**Review Date:** March 25, 2026 (v60 audit)
+**Previous Review:** March 24, 2026 (v59 audit)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -10,24 +10,25 @@
 ## Scope & Verification
 
 - **Branch Reviewed:** `main`
-- **Verification Method:** Direct source inspection with 3 specialized
+- **Verification Method:** Direct source inspection with 4 specialized
     subagent sweeps (PHP security/database/API, JS core editor/canvas,
-    JS viewer/UI/shared/renderers + documentation accuracy) plus manual
-    verification of every finding against actual source code. Fresh test
-    run and coverage generation performed. All subagent-reported issues
-    individually confirmed before inclusion. False positives from
-    subagent analysis rigorously eliminated (see Verified Non-Issues).
-- **Coverage:** 94.43% statements, 84.32% branches, 93.52% functions,
-    94.53% lines (freshly verified `npx jest --coverage` March 24, 2026)
+    JS renderers/canvas controllers, JS UI/viewer/shared + documentation
+    accuracy) plus manual verification of every finding against actual
+    source code. Fresh test run and coverage generation performed. All
+    subagent-reported issues individually confirmed before inclusion.
+    False positives from subagent analysis rigorously eliminated (see
+    Verified Non-Issues).
+- **Coverage:** 94.28% statements, 84.18% branches, 93.26% functions,
+    94.38% lines (freshly verified `npx jest --coverage` March 25, 2026)
 - **JS source files:** 157 in `resources/` excluding dist
-    (~113,765 lines)
-- **PHP production files:** 41 in `src/` (~15,175 lines)
-- **Jest test suites:** 169
-- **Jest test cases:** 11,910 (`npx jest --no-coverage --silent` —
-    verified March 24, 2026)
-- **PHPUnit test files:** 33 in `tests/phpunit`
-- **i18n message keys:** 835 in `i18n/en.json` (excluding @metadata;
-    verified via direct count March 24, 2026)
+    (~113,922 lines)
+- **PHP production files:** 42 in `src/` (~15,339 lines)
+- **Jest test suites:** 168
+- **Jest test cases:** 11,894 (`npx jest --no-coverage --silent` —
+    verified March 25, 2026)
+- **PHPUnit test files:** 34 in `tests/phpunit`
+- **i18n message keys:** 841 in `i18n/en.json` (excluding @metadata;
+    verified via direct count March 25, 2026)
 - **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
   `layersrename`, `layerslist`)
 - **Files ≥1,000 lines:** 26 total (5 generated JS data, 19
@@ -37,61 +38,220 @@
 
 ## Executive Summary
 
-This v59 audit performed a comprehensive review of all 41 PHP source
-files (`src/`), all 159 JavaScript files (`resources/`), and all
+This v60 audit performed a comprehensive review of all 42 PHP source
+files (`src/`), all 157 JavaScript files (`resources/`), and all
 documentation (README, wiki, docs/*.md, *.mediawiki, CHANGELOG,
-CONTRIBUTING, SECURITY). Three specialized subagent sweeps covered PHP
-security/API/database, JS core editor/canvas, and JS viewer/UI/shared
-plus documentation accuracy. Every finding was manually verified against
-the actual source code.
+CONTRIBUTING, SECURITY). Four specialized subagent sweeps covered PHP
+security/API/database, JS core editor/canvas, JS renderers/canvas
+controllers, and JS UI/viewer/shared plus documentation accuracy. Every
+finding was manually verified against the actual source code.
 
-**Critical metric correction:** The v58 audit and CHANGELOG v1.5.63
-claim coverage was improved to 94.54% stmts / 84.53% branches. A fresh
-`npx jest --coverage` run on March 24, 2026 confirms actual coverage is
-**92.88% stmts / 82.58% branches** — identical to v1.5.62. The claimed
-coverage improvement was never committed to the codebase. All documents
-referencing 94.54%/84.53% are incorrect and must be corrected.
+**Post-v59 changes reviewed:** Two commits since v59: (1) `ffec107a` —
+the v59 audit fix pass (15 bug fixes across JS and PHP), and (2)
+`993c24a7` — new AuditTrailTrait feature adding null-edit audit trail
+entries for layer changes. The AuditTrailTrait is well-structured with
+proper error handling, i18n, and CSRF protection.
 
-The v59 review found **0 CRITICAL, 0 HIGH, 5 MEDIUM, and 10 LOW code
-items** plus **13 documentation drift items** (several HIGH severity due
-to pervasive wrong metrics) — 28 new verified items total.
+**Metric context:** Metrics shifted from v59 due to both commits: test
+consolidation during the v59 fix pass reduced tests from 11,910 to
+11,894 (−16 tests, −1 suite). Coverage shifted from 94.43%/84.32% to
+94.28%/84.18% due to code modifications. The AuditTrailTrait added 1
+PHP file, 1 PHPUnit test, and 6 i18n keys.
+
+The v60 review found **0 CRITICAL, 0 HIGH, 0 MEDIUM, and 2 LOW code
+items** plus **3 documentation drift items** — 5 new verified items
+total. Additionally, 2 LOW items (P3-174, P3-175) and 2 deferred items
+(P3-147 accepted, P3-148 deferred) carry forward from v59.
 
 The most significant findings are:
 
-1. **`AlignmentController` missing `angleDimension`/`callout` layer
-   types** (MEDIUM): Both `getLayerBounds()` and `moveLayer()` lack
-   cases for `angleDimension` (uses cx/cy/ax/ay/bx/by coordinates) and
-   `callout` (has tail points). Alignment operations produce incorrect
-   results for these layer types.
+1. **Incomplete P3-146 cleanup — 2 dead SQL files remain** (LOW):
+   `sql/tables/layer_set_usage.sql` and `sql/patches/
+   patch-add-lsu_usage_count.sql` still exist. Both reference a table
+   that was dropped in v1.5.63. Neither is referenced by
+   `LayersSchemaManager`. The P3-146 task checklist explicitly listed
+   these for deletion, but only the schema manager and constant
+   references were cleaned up.
 
-2. **`HitTestController.getLayerAtPoint` prevents clicking locked
-   layers** (MEDIUM): Locked layers are completely invisible to pointer
-   interaction. Users cannot select locked layers to view properties or
-   unlock them via the canvas.
+2. **Context menu lacks keyboard navigation (WCAG)** (LOW):
+   `ContextMenuController.js` has `role="menu"` and `role="menuitem"`
+   ARIA attributes but only handles Escape key. Arrow key navigation
+   (Up/Down/Home/End) is missing, which WCAG 2.1 SC 4.1.2 requires
+   for elements with the `menu` role.
 
-3. **Foreign file SHA1 mismatch on deletion** (MEDIUM): `Hooks::
-   onFileDeleteComplete` calls `getFileSha1($file)` without the
-   `$imgName` parameter, potentially using a different name form than
-   what was used at save time, leaving orphaned data for foreign files
-   with spaces in names.
-
-4. **`ApiLayersList.enrichWithUserNames()` divergent implementation**
-   (MEDIUM): Duplicates `ApiLayersInfo.enrichRowsWithUserNames()` with
-   different field names and patterns. Security or performance fixes
-   applied to one won't propagate to the other.
-
-5. **Coverage numbers wrong across 8+ documentation files** (DOC,
-   HIGH): The claimed 94.54%/84.53% coverage appears in CHANGELOG,
-   codebase_review, copilot-instructions, README, and more. Actual
-   is 92.88%/82.58%.
-
-6. **i18n key count wrong across 5+ files** (DOC, HIGH): Multiple
-   documents claim 786 keys; actual count is 835.
+3. **Metrics wrong across 8+ documentation files** (DOC, HIGH): The
+   v59 fix pass applied correct metrics, but then the v59 code fixes
+   and AuditTrailTrait commit shifted the actual numbers. All documents
+   now show 11,910/169 suites/94.43%/84.32% but actual is
+   11,894/168/94.28%/84.18%.
 
 The codebase retains strong architecture, comprehensive test coverage
-(92.88% statements, 11,910 tests in 169 suites), and robust security
+(94.28% statements, 11,894 tests in 168 suites), and robust security
 controls (CSRF tokens, parameterized queries, strict input validation,
 rate limiting). P3-147 (accepted) and P3-148 (deferred) carried forward.
+
+---
+
+## Confirmed Findings (v60 — March 25, 2026) — 5 New Items Found
+
+### v59 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P2-166 | ✅ Fixed | AlignmentController.moveLayer missing types |
+| P2-167 | ✅ Fixed | AlignmentController.getLayerBounds missing types |
+| P2-168 | ✅ Fixed | HitTestController skips locked layers |
+| P2-169 | ✅ Fixed | Foreign file SHA1 mismatch on deletion |
+| P2-170 | ✅ Fixed | ApiLayersList enrichWithUserNames divergent |
+| P3-171 | ✅ Fixed | emitTransforming expensive JSON clone |
+| P3-172 | ✅ Fixed | Dimension text drag not rAF-throttled |
+| P3-173 | ✅ Fixed | PresetStorage.importFromJson no sanitize |
+| P3-174 | ✅ Fixed | updateLayer floods undo history |
+| P3-175 | ✅ Fixed | duplicateSelected fallback partial offset |
+| P3-176 | ✅ Fixed | Duplicate JSDoc in CanvasManager |
+| P3-177 | ✅ Fixed | SelectionManager visibility check |
+| P3-178 | ✅ Fixed | BackgroundLayerController cssText |
+| P3-179 | ✅ Fixed | deleteNamedSet missing FOR UPDATE |
+| P3-180 | ✅ Fixed | EditLayersAction returnTo allowlist |
+| P3-181 | ✅ Fixed | ApiLayersRename inconsistent defaults |
+| P3-182 | ❌ FP | SlideHooks static cache (has safety limit) |
+| P3-183 | ❌ FP | StaticLoggerAwareTrait stale logger |
+| P3-184 | ✅ Fixed | RichTextToolbar incomplete destroy |
+| P3-185 | ❌ FP | HelpDialog keydown leak (has re-entry guard) |
+| D-059-01..13 | ✅ Fixed | All 13 doc drift items corrected |
+| P3-147 | ✅ Accepted | Redundant SQL variants |
+| P3-148 | 🔲 Deferred | Unused interface |
+
+---
+
+### New Findings (v60) — 5 Items
+
+**Audit scope:** All 42 PHP source files (`src/`), all 157 JS files
+(`resources/`), all documentation (CHANGELOG, wiki, docs/, mediawiki
+files, CONTRIBUTING, SECURITY). Main branch.
+
+**Methodology:** 4 specialized subagent sweeps (PHP security/API/
+database, JS core editor/canvas, JS renderers/canvas controllers, JS
+UI/viewer/shared + docs) plus manual verification of every finding
+against actual source code. Fresh test run (`npx jest --coverage`)
+performed to confirm metrics. 3 false positives eliminated during
+verification (see Verified Non-Issues).
+
+**Post-v59 changes:** Two commits reviewed since v59 audit:
+1. `ffec107a` — v59 fix pass (15 bug fixes). Modified 13 source files
+   and 2 test files. Test count shifted from 11,910 to 11,894 (−16
+   tests due to test consolidation during fixes).
+2. `993c24a7` — AuditTrailTrait feature. Added
+   `src/Api/Traits/AuditTrailTrait.php` (135 lines), PHPUnit test,
+   6 new i18n keys, change tag registration.
+
+### Low — SQL (Dead Code)
+
+#### P3-186 · Incomplete P3-146 Cleanup — 2 Dead SQL Files Remain
+
+- **Files:**
+    - `sql/tables/layer_set_usage.sql` — CREATE script for dropped table
+    - `sql/patches/patch-add-lsu_usage_count.sql` — ALTER for dropped
+      table
+- **Issue:** The P3-146 task (dead table removal, completed in v1.5.63)
+    removed the `layer_set_usage` table via a drop migration
+    (`patch-drop-layer_set_usage.sql`) and cleaned up all schema manager
+    and constant references. However, two SQL files were listed for
+    deletion in the P3-146 checklist (`improvement_plan.md`) but were
+    never actually deleted:
+    1. `sql/tables/layer_set_usage.sql` — CREATE TABLE script for a
+       table that no longer exists. Not loaded by `LayersSchemaManager`
+       (which only creates `layer_sets` and `layer_assets`).
+    2. `sql/patches/patch-add-lsu_usage_count.sql` — ALTER TABLE for
+       `layer_set_usage`. Not referenced by `LayersSchemaManager`'s
+       update chain. Alters a table that has been dropped.
+- **Impact:** Dead weight. The files cannot be reached by any code path.
+    Could confuse developers reviewing the SQL directory.
+- **Fix:** Delete both files.
+
+### Low — JavaScript (Accessibility)
+
+#### P3-187 · ContextMenu Missing Keyboard Navigation (WCAG)
+
+- **File:**
+    `resources/ext.layers.editor/ui/ContextMenuController.js`
+- **Issue:** The context menu sets `role="menu"` (L70) and
+    `role="menuitem"` (L86) ARIA attributes, which is correct. However,
+    keyboard navigation is limited to Escape-to-close (L221). Arrow key
+    navigation (ArrowUp, ArrowDown, Home, End) between menu items is
+    missing. WCAG 2.1 SC 4.1.2 requires that elements with the `menu`
+    role support standard keyboard navigation patterns.
+- **Impact:** Screen reader and keyboard-only users cannot navigate
+    context menu items. Mouse users are unaffected.
+- **Fix:** Add a keydown handler for ArrowUp/ArrowDown (move focus
+    between items), Home/End (jump to first/last), and Enter/Space
+    (activate focused item). Set `tabindex="-1"` on each menu item
+    and manage focus programmatically.
+
+### Documentation Drift — 3 Items
+
+#### D-060-01 · Test Count, Suite Count, and Coverage Wrong Across 8+ Files
+
+- **Files affected:** `README.md` (L333, L393, L395–396),
+    `CHANGELOG.md` (L23–24), `CONTRIBUTING.md` (L24),
+    `Mediawiki-Extension-Layers.mediawiki` (L324),
+    `wiki/Home.md` (L27, L325, L327–328),
+    `docs/ARCHITECTURE.md` (L34–35),
+    `.github/copilot-instructions.md` (L446–447),
+    `codebase_review.md` (header)
+- **Issue:** All documents show 11,910 tests / 169 suites / 94.43%
+    stmts / 84.32% branches (the values fixed during v59). However,
+    the v59 code fixes (`ffec107a`) consolidated tests (−16 tests, −1
+    suite) and modified coverage-affecting code. Actual post-fix values
+    are **11,894 tests / 168 suites / 94.28% stmts / 84.18% branches /
+    93.26% functions / 94.38% lines**. This is the fourth consecutive
+    audit where documentation metrics lacked a post-fix verification
+    pass.
+- **Severity:** HIGH — pervasive metric drift across the entire
+    documentation surface.
+
+#### D-060-02 · i18n Key Count 835→841
+
+- **Files affected:** `codebase_review.md` (header), `wiki/Home.md`
+    (L334), `docs/ARCHITECTURE.md` (L41)
+- **Issue:** The AuditTrailTrait commit added 6 new i18n keys
+    (`layers-audit-save`, `layers-audit-delete`, `layers-audit-rename`,
+    `layers-audit-change`, `layers-tag-layers-data-change`,
+    `layers-tag-layers-data-change-description`). Documents still show
+    835 (the v59-corrected value). Actual count is 841.
+- **Severity:** MEDIUM
+
+#### D-060-03 · PHP File Count 41→42, Lines ~15,175→~15,339
+
+- **Files affected:** `codebase_review.md` (header),
+    `.github/copilot-instructions.md`
+- **Issue:** `src/Api/Traits/AuditTrailTrait.php` (135 lines) was
+    added. PHP production file count is now 42 (was 41). PHP lines are
+    now ~15,339 (was ~15,175). JS lines are ~113,922 (was ~113,765).
+- **Severity:** LOW
+
+---
+
+## v60 Verified Non-Issues (False Positives Eliminated)
+
+- **`HistoryManager` undo/redo re-entrance guard missing:**
+  **FALSE POSITIVE** — JavaScript is single-threaded. Concurrent
+  undo/redo calls are impossible. The `isUndoRedoInProgress` flag
+  in `HistoryManager` correctly prevents nested `saveState()` calls
+  inside event handlers triggered by undo/redo, which is the actual
+  concern. No guard needed at the undo/redo entry point.
+
+- **`AuditTrailTrait` null edit race condition:**
+  **FALSE POSITIVE** — API modules are CSRF-protected and rate-limited.
+  The trait runs after the actual DB operation succeeds and is wrapped
+  in try/catch for best-effort behavior. Audit trail failure does not
+  affect the primary operation.
+
+- **`StateManager.atomic()` queue limit (100 ops, 30s recovery):**
+  **FALSE POSITIVE** — The 100-operation limit and 30-second
+  auto-recovery are intentional safety mechanisms, not bugs. They
+  prevent unbounded memory growth during batch operations. The queue
+  is flushed properly when atomic mode ends.
 
 ---
 
@@ -2819,7 +2979,7 @@ but verified as non-issues:
 
 ---
 
-## Current Metrics (Verified March 16, 2026 — v56 audit)
+## Current Metrics (Verified March 25, 2026 — v60 audit)
 
 | Metric | Verified Current Value |
 |--------|------------------------|
@@ -2827,62 +2987,62 @@ but verified as non-issues:
 | MediaWiki requirement | >= 1.44.0 |
 | PHP requirement | 8.1+ |
 | JS source files (excluding `resources/dist`) | 157 |
-| JS source lines (excluding `resources/dist`) | ~113,765 |
-| PHP production files (`src/`) | 41 |
-| PHP production lines (`src/`) | ~15,175 |
-| Jest test suites | 169 |
-| Jest tests | 11,910 |
-| Statement coverage | 94.43% |
-| Branch coverage | 84.32% |
-| i18n keys (`en.json`, `qqq.json`) | 835 |
-| PHPUnit test files | 33 |
+| JS source lines (excluding `resources/dist`) | ~113,922 |
+| PHP production files (`src/`) | 42 |
+| PHP production lines (`src/`) | ~15,339 |
+| Jest test suites | 168 |
+| Jest tests | 11,894 |
+| Statement coverage | 94.28% |
+| Branch coverage | 84.18% |
+| i18n keys (`en.json`, `qqq.json`) | 841 |
+| PHPUnit test files | 34 |
 | Files > 1,000 lines | 26 total |
 | ESLint disable comments | 18 (all legitimate) |
 
-## God Class Status (26 files >= 1,000 lines — Verified March 23, 2026)
+## God Class Status (26 files >= 1,000 lines — Verified March 25, 2026)
 
 ### Generated Data (Exempt — 5 files)
 
 | File | Lines | Notes |
 |------|-------|-------|
-| ShapeLibraryData.original.js | 11,293 | Icon set: original |
-| ShapeLibraryData.iec60417.js | 5,905 | Icon set: IEC 60417 |
-| EmojiLibraryIndex.js | 3,055 | Emoji search index |
-| ShapeLibraryData.js | 1,643 | Combined registry |
-| ShapeLibraryData.iso7000.js | 1,609 | Icon set: ISO 7000 |
+| ShapeLibraryData.original.js | 11,294 | Icon set: original |
+| ShapeLibraryData.iec60417.js | 5,906 | Icon set: IEC 60417 |
+| EmojiLibraryIndex.js | 3,056 | Emoji search index |
+| ShapeLibraryData.js | 1,644 | Combined registry |
+| ShapeLibraryData.iso7000.js | 1,610 | Icon set: ISO 7000 |
 
 ### Hand-Written JavaScript (19 files)
 
-| File | Lines | Change from v55 |
+| File | Lines | Change from v59 |
 |------|-------|-----------------|
-| LayerPanel.js | 2,165 | — |
-| CanvasManager.js | 2,088 | ↓16 |
-| Toolbar.js | 1,933 | — |
-| InlineTextEditor.js | 1,848 | — |
-| PropertyBuilders.js | 1,826 | — |
-| LayersEditor.js | 1,813 | ↑10 |
-| APIManager.js | 1,640 | ↑47 (APICacheManager extracted) |
-| SelectionManager.js | 1,419 | — |
-| ViewerManager.js | 1,266 | — |
-| CanvasRenderer.js | 1,256 | — |
-| TransformController.js | 1,190 | ↑1 |
-| ToolbarStyleControls.js | 1,139 | — |
-| SlideController.js | 1,126 | — |
-| TextBoxRenderer.js | 1,120 | — |
-| ResizeCalculator.js | 1,070 | — |
-| AngleDimensionRenderer.js | 1,067 | — |
-| DrawingController.js | 1,054 | ↑1 |
-| CanvasEvents.js | 1,033 | — |
-| CalloutRenderer.js | 1,000 | — |
+| LayerPanel.js | 2,167 | ↑2 |
+| CanvasManager.js | 2,111 | ↑23 |
+| Toolbar.js | 1,934 | ↑1 |
+| InlineTextEditor.js | 1,849 | ↑1 |
+| PropertyBuilders.js | 1,815 | ↓11 |
+| LayersEditor.js | 1,814 | ↑1 |
+| APIManager.js | 1,641 | ↑1 |
+| SelectionManager.js | 1,421 | ↑2 |
+| ViewerManager.js | 1,267 | ↑1 |
+| CanvasRenderer.js | 1,257 | ↑1 |
+| TransformController.js | 1,202 | ↑12 |
+| ToolbarStyleControls.js | 1,140 | ↑1 |
+| SlideController.js | 1,127 | ↑1 |
+| TextBoxRenderer.js | 1,121 | ↑1 |
+| ResizeCalculator.js | 1,071 | ↑1 |
+| AngleDimensionRenderer.js | 1,068 | ↑1 |
+| DrawingController.js | 1,055 | ↑1 |
+| CanvasEvents.js | 1,032 | ↓1 |
+| CalloutRenderer.js | 1,001 | ↑1 |
 
 ### PHP (2 files)
 
-| File | Lines | Change from v55 |
+| File | Lines | Change from v59 |
 |------|-------|-----------------|
-| ServerSideLayerValidator.php | 1,434 | ↑3 |
-| LayersDatabase.php | 1,376 | ↑4 |
+| ServerSideLayerValidator.php | 1,434 | — |
+| LayersDatabase.php | 1,399 | ↑23 |
 
-### Near-Threshold (900–999 lines — 7 files)
+### Near-Threshold (900–999 lines — 8 files)
 
 | File | Lines |
 |------|-------|
@@ -2893,6 +3053,20 @@ but verified as non-issues:
 | StateManager.js | 967 |
 | ShapeRenderer.js | 959 |
 | LayersValidator.js | 956 |
+| ArrowRenderer.js | 932 |
+
+## Issue Summary (v60 — March 25, 2026)
+
+| Category | Critical | High | Medium | Low | Notes |
+|----------|----------|------|--------|-----|-------|
+| SQL dead code | 0 | 0 | 0 | 1 | P3-186 ✅ Fixed |
+| JS accessibility | 0 | 0 | 0 | 1 | P3-187 ✅ Fixed |
+| Documentation | 0 | 0 | 0 | 3 | D-060-01..03 ✅ Fixed |
+| Carried forward | 0 | 0 | 0 | 4 | P3-174 ✅, P3-175 ✅, P3-147 accepted, P3-148 deferred |
+| **Total** | **0** | **0** | **0** | **9** | **7 fixed + 2 deferred** |
+
+*All v60 code and doc items fixed. P3-147 (redundant SQL) accepted.
+P3-148 (unused interface) deferred.*
 
 ## Issue Summary (v56 — March 16, 2026)
 

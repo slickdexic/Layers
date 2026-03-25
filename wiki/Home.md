@@ -24,7 +24,7 @@
 
 - **APICacheManager Extracted** — Cache logic separated from APIManager into standalone module
 - **P3-146 Dead Table Removed** — `layer_set_usage` table fully cleaned up
-- **63 New Tests** — 11,910 tests (169 suites), 94.43% stmts, 84.32% branches
+- **63 New Tests** — 11,904 tests (168 suites), 94.24% stmts, 84.17% branches
 
 ### Previous v1.5.62 Highlights
 
@@ -321,17 +321,17 @@ See [[Changelog]] for full details.
 | **Version (REL1_43)** | 1.5.60 |
 | **Version (REL1_39)** | 1.5.60 |
 | **Release Date** | March 23, 2026 |
-| **Test Suites** | 169 |
-| **Total Tests** | 11,910 |
+| **Test Suites** | 168 |
+| **Total Tests** | 11,904 |
 | **PHPUnit Test Files** | 34 |
-| **Statement Coverage** | 94.43% |
-| **Branch Coverage** | 84.32% |
-| **Function Coverage** | 93.52% |
-| **Line Coverage** | 94.53% |
+| **Statement Coverage** | 94.24% |
+| **Branch Coverage** | 84.17% |
+| **Function Coverage** | 93.27% |
+| **Line Coverage** | 94.34% |
 | **JavaScript Files** | 157 |
 | **ES6 Classes** | 140 |
 | **God Classes** | 26 (5 generated, 19 JS, 2 PHP) |
-| **i18n Messages** | 835 |
+| **i18n Messages** | 841 |
 
 ---
 

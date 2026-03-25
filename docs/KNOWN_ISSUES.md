@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 24, 2026 — v1.5.63 (v59 audit — 5 MEDIUM + 15 LOW code + 13 doc drift)
+**Last updated:** March 25, 2026 — v1.5.63 (v60 audit — 2 LOW code + 3 doc drift)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -14,16 +14,59 @@ traceability.
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
 | P2 | 146 | 146 | 0 |
-| P3 | 202 | 198 | 4 |
-| **Total** | **414** | **410** | **4** |
+| P3 | 204 | 202 | 2 |
+| **Total** | **416** | **414** | **2** |
 
-*v59 audit (March 24): Found 5 MEDIUM code items (P2-166 to P2-170),
-15 LOW code items (P3-171 to P3-185), and 13 documentation drift
-items (D-059-01 to D-059-13). All 5 MEDIUM and 10 LOW code items
-fixed. 3 LOW reclassified as false positives (P3-182, P3-183,
-P3-185). All 13 doc drift items resolved. 2 LOW deferred by design
-(P3-174, P3-175). Carried forward: P3-147 (accepted), P3-148
-(deferred).*
+*v60 fix pass (March 25): Fixed P3-174, P3-175, P3-186, P3-187 and
+D-060-01/02/03. Remaining open: P3-147 (accepted), P3-148 (deferred).
+3 false positives eliminated during v60 audit.*
+
+---
+
+## v60 Issues (March 25, 2026; 2 LOW code + 3 doc drift)
+
+### SQL — Low (Dead Code)
+
+#### P3-186: Incomplete P3-146 Cleanup — 2 Dead SQL Files
+
+- **Files:** `sql/tables/layer_set_usage.sql`,
+  `sql/patches/patch-add-lsu_usage_count.sql`
+- **Issue:** P3-146 (dead table removal, v1.5.63) removed the table via
+  drop migration and cleaned up schema manager references, but 2 SQL
+  files listed for deletion in the P3-146 checklist were never deleted.
+  Neither file is referenced by any code path.
+- **Status:** ✅ Fixed (deleted both files)
+
+#### P3-187: ContextMenu Missing Keyboard Navigation (WCAG)
+
+- **File:** `resources/ext.layers.editor/ui/ContextMenuController.js`
+- **Issue:** Has `role="menu"` and `role="menuitem"` ARIA attributes
+  but only handles Escape key. Arrow key navigation between items is
+  missing (WCAG 2.1 SC 4.1.2).
+- **Status:** ✅ Fixed (added ArrowUp/ArrowDown with wrap-around, tabindex="-1", auto-focus)
+
+### Documentation Drift — 3 Items
+
+| ID | Issue | Status |
+|----|-------|--------|
+| D-060-01 | Test/coverage metrics wrong in 8+ files (post-fix shift) | ✅ Fixed |
+| D-060-02 | i18n count 835→841 (AuditTrailTrait keys) | ✅ Fixed |
+| D-060-03 | PHP file count 41→42, lines ~15,175→~15,339 | ✅ Fixed |
+
+### Carried Forward
+
+- **P3-174:** updateLayer floods undo history — ✅ Fixed (300ms debounce)
+- **P3-175:** duplicateSelected fallback partial offset — ✅ Fixed (all coordinate systems)
+- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
+- **P3-148:** Unused `LayerValidatorInterface` — deferred
+
+### v60 Verified Non-Issues (False Positives Eliminated)
+
+1. `HistoryManager` undo/redo re-entrance guard — JS is single-threaded;
+   `isUndoRedoInProgress` flag handles nested saveState correctly.
+2. `AuditTrailTrait` null edit race — best-effort with try/catch;
+   failure doesn't affect primary operation.
+3. `StateManager.atomic()` queue limit — intentional safety mechanism.
 
 ---
 
@@ -119,7 +162,7 @@ P3-185). All 13 doc drift items resolved. 2 LOW deferred by design
 - **Issue:** Every `updateLayer()` calls `saveState('Update layer')`.
   Rapid property changes (slider drags) create 50+ undo entries.
   Canvas rendering is rAF-throttled but `saveState` is not.
-- **Status:** Open
+- **Status:** ✅ Fixed (300ms debounce on saveState in updateLayer)
 
 #### P3-175: `duplicateSelected` Fallback Only Offsets x/y
 
@@ -127,7 +170,7 @@ P3-185). All 13 doc drift items resolved. 2 LOW deferred by design
 - **Issue:** Fallback path only offsets `x/y`. Arrow/line/dimension
   types (`x1/y1/x2/y2`), path (`points`), and angleDimension use
   different coordinate systems; duplicate overlaps exactly.
-- **Status:** Open
+- **Status:** ✅ Fixed (all coordinate systems now offset: x1/y1/x2/y2, controlX/controlY, arrowX/arrowY, points, ax/ay/cx/cy/bx/by)
 
 #### P3-176: Duplicate `/**` JSDoc in CanvasManager
 

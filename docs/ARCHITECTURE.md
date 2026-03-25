@@ -22,23 +22,23 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Metric | Value |
 |--------|-------|
 | Total JS files | **157** |
-| Total JS lines | **~113,765** |
-| Total PHP files | **41** |
-| Total PHP lines | **~15,175** |
+| Total JS lines | **~113,900** |
+| Total PHP files | **42** |
+| Total PHP lines | **~15,339** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~23,500 lines (generated) |
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **94.43% stmt, 84.32% branch** |
-| Jest tests | **11,910** (169 suites) |
+| Test coverage | **94.24% stmt, 84.17% branch** |
+| Jest tests | **11,904** (168 suites) |
 | PHPUnit test files | 34 |
 | God classes (>=1000 lines) | **26** (5 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |
 | Shape library | **1,385 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **835** |
+| i18n messages | **841** |
 | eslint-disable comments | **18** ✅ |
 
 ---

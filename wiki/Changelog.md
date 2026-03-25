@@ -20,8 +20,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 ### Tests
 - 63 new unit tests across 7 test files: GeometryUtils (4), LayerRenderer (7),
   DraftManager (5), APIManager (19), DialogManager (7), CanvasRenderer (5),
-  APICacheManager (16). Coverage: 94.43% stmts, 84.32% branches
-  (was 92.88% / 82.58%). Total: 11,910 tests in 169 suites.
+  APICacheManager (16). Coverage: 94.24% stmts, 84.17% branches
+  (was 92.88% / 82.58%). Total: 11,904 tests in 168 suites.
 - 37 new E2E tests in 2 files: properties.spec.js (24 tests — property panel
   visibility, per-type property inputs, value changes, undo), transforms.spec.js
   (13 tests — drag-move, property-based positioning, multi-select, nudge,

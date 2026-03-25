@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 24, 2026 — v59 audit findings
+**Last updated:** March 25, 2026 — v60 audit findings
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -36,6 +36,13 @@ v59 audit found **20 new code issues** (5 MEDIUM, 15 LOW) plus **13
 documentation drift items**. 9 false positives eliminated during
 verification. P3-147, P3-148 carried forward.
 
+v60 audit found **2 new LOW code issues** (P3-186, P3-187) plus **3
+documentation drift items** (D-060-01 to D-060-03). 3 false positives
+eliminated during verification. P3-174, P3-175 (open from v59), P3-147
+(accepted), P3-148 (deferred) carried forward. Post-v59 commits shifted
+metrics: 11,894 tests (168 suites), 94.28%/84.18% coverage, 841 i18n
+keys, 42 PHP files.
+
 Use the section below as the authoritative current backlog.
 
 ---
@@ -47,7 +54,8 @@ coverage, and extract cache logic from the largest god class.
 
 **Result:** All 3 priorities completed. 63 new tests (11,847 → 11,910).
 APICacheManager extracted as standalone module from APIManager.
-Coverage: 94.43% stmts, 84.32% branches (verified v59 fix pass).
+Coverage at v59: 94.43% stmts, 84.32% branches (verified v59 fix pass).
+Post-v59 commits shifted to 94.28% stmts, 84.18% branches (verified v60).
 
 ### Sprint Priorities
 
@@ -108,13 +116,53 @@ wiring with marginal benefit.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 24, 2026 — v59)
+## Verified Current Backlog (Authoritative as of March 25, 2026 — v60)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS Low (Quality) | 2 (P3-174, P3-175) | 2–3h |
+| JS Low (Quality) | 0 (P3-174 ✅, P3-175 ✅) | — |
+| JS Low (Code) | 0 (P3-187 ✅) | — |
+| PHP/SQL Low (Cleanup) | 0 (P3-186 ✅) | — |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
-| **Total** | **2 open code** + 2 deferred | ~2–3h |
+| **Total** | **0 open code** + 2 deferred | — |
+
+### Current Priorities (v60)
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 32.01 | Dead SQL files (layer_set_usage) | P3-186 | Low | ✅ Fixed |
+| 32.02 | Context menu missing arrow-key nav | P3-187 | Low | ✅ Fixed |
+| 32.03 | Test/coverage metrics stale (8+ files) | D-060-01 | Doc | ✅ Fixed |
+| 32.04 | i18n count stale (835→841) | D-060-02 | Doc | ✅ Fixed |
+| 32.05 | PHP file count stale (41→42) | D-060-03 | Doc | ✅ Fixed |
+| 32.06 | updateLayer floods undo history | P3-174 | Low | ✅ Fixed |
+| 32.07 | duplicateSelected fallback offset | P3-175 | Low | ✅ Fixed |
+| 32.08 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
+| 32.09 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+
+### v60 Notes
+
+- v59 fix pass verified: all 15 code fixes (P2-166 through P3-185)
+  confirmed intact. 13 documentation drift items confirmed fixed.
+- Post-v59 commits: `ffec107a` (v59 fixes, consolidated tests -16/
+  -1 suite) and `993c24a7` (AuditTrailTrait feature, +1 PHP file,
+  +6 i18n keys).
+- AuditTrailTrait.php reviewed: well-implemented with proper error
+  handling, i18n, CSRF protection, configurable via
+  `$wgLayersTrackChangesInRecentChanges` (default false).
+- P3-186: `sql/tables/layer_set_usage.sql` and
+  `sql/patches/patch-add-lsu_usage_count.sql` were listed for
+  deletion in P3-146 checklist but never removed. Neither file is
+  referenced by LayersSchemaManager — safe to delete.
+- P3-187: ContextMenuController has `role="menu"` / `role="menuitem"`
+  attributes but only handles Escape key. WCAG 2.1 SC 4.1.2 requires
+  arrow-key navigation for menu widgets.
+- 3 false positives eliminated: HistoryManager undo/redo re-entrance
+  guard (JS single-threaded, nested saveState handled correctly),
+  AuditTrailTrait null edit race (best-effort with try/catch),
+  StateManager.atomic() queue limit (intentional safety mechanism).
+- Recommended fix order: D-060-01/02/03 (metrics drift, ~1h),
+  P3-186 (dead SQL, <30min), P3-187 (arrow-key nav, ~1-2h).
 
 ### Current Priorities (v59)
 

@@ -318,8 +318,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,175 lines across 41 files**
-- **Frontend:** HTML5 Canvas editor with **157 JS files (~113,765 lines)**, 140 ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,339 lines across 42 files**
+- **Frontend:** HTML5 Canvas editor with **157 JS files (~113,900 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **26 god classes** (files >=1,000 lines), all use proper delegation patterns
@@ -330,11 +330,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,910 passing (169 suites) |
+| Jest tests | 11,904 passing (168 suites) |
 | PHPUnit tests | 34 test files |
-| Statement coverage | 94.43% |
-| Branch coverage | 84.32% |
-| Function coverage | 93.52% |
+| Statement coverage | 94.24% |
+| Branch coverage | 84.17% |
+| Function coverage | 93.27% |
 | Line coverage | 94.53% |
 
 **Security:**
@@ -387,13 +387,13 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 157 | ✅ |
-| Total JS lines | ~113,765 | ✅ Hand-written + generated data |
+| Total JS lines | ~113,900 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
-| Tests passing | 11,910 | ✅ |
+| Tests passing | 11,904 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.43% | ✅ Excellent |
-| Branch coverage | 84.32% | ✅ Target met |
+| Statement coverage | 94.24% | ✅ Excellent |
+| Branch coverage | 84.17% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 
