@@ -381,6 +381,28 @@ describe( 'LayersEditor Core', () => {
 			expect( updatedLayer ).not.toBe( originalLayer );
 			expect( updatedLayer.x ).toBe( 100 );
 		} );
+
+		it( 'should debounce saveState during rapid updates', () => {
+			jest.useFakeTimers();
+			const layerId = editor.layers[ 0 ].id;
+			const saveStateSpy = jest.spyOn( editor, 'saveState' );
+
+			// Rapid updates (simulating slider drag)
+			editor.updateLayer( layerId, { x: 10 } );
+			editor.updateLayer( layerId, { x: 20 } );
+			editor.updateLayer( layerId, { x: 30 } );
+
+			// saveState should NOT have been called yet (debounced)
+			expect( saveStateSpy ).not.toHaveBeenCalled();
+
+			// After debounce period, it should fire once
+			jest.advanceTimersByTime( 300 );
+			expect( saveStateSpy ).toHaveBeenCalledTimes( 1 );
+			expect( saveStateSpy ).toHaveBeenCalledWith( 'Update layer' );
+
+			saveStateSpy.mockRestore();
+			jest.useRealTimers();
+		} );
 	} );
 
 	describe( 'removeLayer', () => {
