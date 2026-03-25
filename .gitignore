@@ -43,6 +43,11 @@ pids
 coverage/
 *.lcov
 
+# Test output artifacts
+jest_result.txt
+phpunit_out.txt
+coverage_output.txt
+
 # nyc test coverage
 .nyc_output
 
