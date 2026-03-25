@@ -781,6 +781,102 @@ describe('SelectionManager', () => {
             expect(newLayer.x).toBe(mockLayers[0].x + 20);
             expect(newLayer.y).toBe(mockLayers[0].y + 20);
         });
+
+        test('should offset arrow/line endpoints (x1, y1, x2, y2)', () => {
+            const arrowLayer = {
+                id: 'arrow1', type: 'arrow',
+                x1: 10, y1: 20, x2: 100, y2: 200,
+                visible: true, locked: false
+            };
+            mockCanvasManager.layers = [ arrowLayer ];
+            mockCanvasManager.editor = {
+                layers: [ arrowLayer ],
+                markDirty: jest.fn()
+            };
+
+            selectionManager.selectLayer('arrow1', false);
+            selectionManager.duplicateSelected();
+
+            const dup = mockCanvasManager.editor.layers[
+                mockCanvasManager.editor.layers.length - 1
+            ];
+            expect(dup.x1).toBe(30);
+            expect(dup.y1).toBe(40);
+            expect(dup.x2).toBe(120);
+            expect(dup.y2).toBe(220);
+        });
+
+        test('should offset path points array', () => {
+            const pathLayer = {
+                id: 'path1', type: 'path',
+                points: [ { x: 0, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 0 } ],
+                visible: true, locked: false
+            };
+            mockCanvasManager.layers = [ pathLayer ];
+            mockCanvasManager.editor = {
+                layers: [ pathLayer ],
+                markDirty: jest.fn()
+            };
+
+            selectionManager.selectLayer('path1', false);
+            selectionManager.duplicateSelected();
+
+            const dup = mockCanvasManager.editor.layers[
+                mockCanvasManager.editor.layers.length - 1
+            ];
+            expect(dup.points).toEqual([
+                { x: 20, y: 20 }, { x: 70, y: 70 }, { x: 120, y: 20 }
+            ]);
+        });
+
+        test('should offset angle dimension anchors (ax, ay, cx, cy, bx, by)', () => {
+            const dimLayer = {
+                id: 'dim1', type: 'angle-dimension',
+                ax: 10, ay: 10, cx: 50, cy: 50, bx: 90, by: 10,
+                visible: true, locked: false
+            };
+            mockCanvasManager.layers = [ dimLayer ];
+            mockCanvasManager.editor = {
+                layers: [ dimLayer ],
+                markDirty: jest.fn()
+            };
+
+            selectionManager.selectLayer('dim1', false);
+            selectionManager.duplicateSelected();
+
+            const dup = mockCanvasManager.editor.layers[
+                mockCanvasManager.editor.layers.length - 1
+            ];
+            expect(dup.ax).toBe(30);
+            expect(dup.ay).toBe(30);
+            expect(dup.cx).toBe(70);
+            expect(dup.cy).toBe(70);
+            expect(dup.bx).toBe(110);
+            expect(dup.by).toBe(30);
+        });
+
+        test('should offset curved arrow control points', () => {
+            const curvedArrow = {
+                id: 'curved1', type: 'arrow',
+                x1: 0, y1: 0, x2: 100, y2: 100,
+                controlX: 50, controlY: 0,
+                visible: true, locked: false
+            };
+            mockCanvasManager.layers = [ curvedArrow ];
+            mockCanvasManager.editor = {
+                layers: [ curvedArrow ],
+                markDirty: jest.fn()
+            };
+
+            selectionManager.selectLayer('curved1', false);
+            selectionManager.duplicateSelected();
+
+            const dup = mockCanvasManager.editor.layers[
+                mockCanvasManager.editor.layers.length - 1
+            ];
+            expect(dup.controlX).toBe(70);
+            expect(dup.controlY).toBe(20);
+        });
     });
 
     describe('generateLayerId', () => {

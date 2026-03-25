@@ -84,6 +84,7 @@
 				item.className = 'layers-context-menu-item';
 				item.type = 'button';
 				item.setAttribute( 'role', 'menuitem' );
+				item.setAttribute( 'tabindex', '-1' );
 				item.style.display = 'flex';
 				item.style.alignItems = 'center';
 				item.style.width = '100%';
@@ -212,13 +213,39 @@
 				document.addEventListener( 'click', this._boundCloseHandler );
 			}, 0 );
 
-			// Close on Escape - store reference for cleanup
+			// Close on Escape, arrow-key navigation (WCAG 2.1 SC 4.1.2)
 			this._boundEscHandler = ( evt ) => {
 				if ( evt.key === 'Escape' ) {
 					this.closeLayerContextMenu();
+					return;
+				}
+				if ( evt.key === 'ArrowDown' || evt.key === 'ArrowUp' ) {
+					evt.preventDefault();
+					const items = Array.from(
+						menu.querySelectorAll( '[role="menuitem"]:not([disabled])' )
+					);
+					if ( items.length === 0 ) {
+						return;
+					}
+					const current = menu.querySelector( '[role="menuitem"]:focus' );
+					let idx = items.indexOf( current );
+					if ( evt.key === 'ArrowDown' ) {
+						idx = idx < items.length - 1 ? idx + 1 : 0;
+					} else {
+						idx = idx > 0 ? idx - 1 : items.length - 1;
+					}
+					items[ idx ].focus();
 				}
 			};
 			document.addEventListener( 'keydown', this._boundEscHandler );
+
+			// Focus the first enabled menu item for keyboard accessibility
+			requestAnimationFrame( () => {
+				const firstItem = menu.querySelector( '[role="menuitem"]:not([disabled])' );
+				if ( firstItem ) {
+					firstItem.focus();
+				}
+			} );
 		}
 
 		/**
