@@ -978,7 +978,17 @@ class LayersEditor {
 					} );
 				}
 				this.markDirty();
-				this.saveState( 'Update layer' );
+
+				// Debounce history save to prevent undo flooding during rapid
+				// property changes (e.g., slider drags). Coalesces rapid updates
+				// into a single undo entry after 300ms of inactivity.
+				if ( this._updateLayerSaveTimer ) {
+					clearTimeout( this._updateLayerSaveTimer );
+				}
+				this._updateLayerSaveTimer = setTimeout( () => {
+					this._updateLayerSaveTimer = null;
+					this.saveState( 'Update layer' );
+				}, 300 );
 			}
 		} catch ( error ) {
 			if ( this.debug ) {
@@ -1317,8 +1327,55 @@ class LayersEditor {
 				const layer = this.getLayerById( layerId );
 				if ( layer ) {
 					const duplicate = JSON.parse( JSON.stringify( layer ) );
-					duplicate.x = ( duplicate.x || 0 ) + 20;
-					duplicate.y = ( duplicate.y || 0 ) + 20;
+					const offset = 20;
+					duplicate.x = ( duplicate.x || 0 ) + offset;
+					duplicate.y = ( duplicate.y || 0 ) + offset;
+					// Line/arrow endpoints
+					if ( duplicate.x1 !== undefined ) {
+						duplicate.x1 += offset;
+					}
+					if ( duplicate.y1 !== undefined ) {
+						duplicate.y1 += offset;
+					}
+					if ( duplicate.x2 !== undefined ) {
+						duplicate.x2 += offset;
+					}
+					if ( duplicate.y2 !== undefined ) {
+						duplicate.y2 += offset;
+					}
+					// Curved arrow control points
+					if ( duplicate.controlX !== undefined ) {
+						duplicate.controlX += offset;
+					}
+					if ( duplicate.controlY !== undefined ) {
+						duplicate.controlY += offset;
+					}
+					// Marker/callout arrow tip (world coordinates)
+					if ( duplicate.arrowX !== undefined ) {
+						duplicate.arrowX += offset;
+					}
+					if ( duplicate.arrowY !== undefined ) {
+						duplicate.arrowY += offset;
+					}
+					// Polygon/path points
+					if ( Array.isArray( duplicate.points ) ) {
+						duplicate.points = duplicate.points.map( ( p ) => ( {
+							x: p.x + offset, y: p.y + offset
+						} ) );
+					}
+					// Angle dimension anchors
+					if ( duplicate.ax !== undefined ) {
+						duplicate.ax += offset;
+						duplicate.ay += offset;
+					}
+					if ( duplicate.cx !== undefined ) {
+						duplicate.cx += offset;
+						duplicate.cy += offset;
+					}
+					if ( duplicate.bx !== undefined ) {
+						duplicate.bx += offset;
+						duplicate.by += offset;
+					}
 					delete duplicate.id;
 					this.addLayer( duplicate );
 					if ( duplicate.id ) {
@@ -1714,6 +1771,12 @@ class LayersEditor {
 
 		// Clean up DOM event listeners
 		this.cleanupDOMEventListeners();
+
+		// Clear pending debounce timers
+		if ( this._updateLayerSaveTimer ) {
+			clearTimeout( this._updateLayerSaveTimer );
+			this._updateLayerSaveTimer = null;
+		}
 
 		// Clear all object references
 		this.uiManager = null;

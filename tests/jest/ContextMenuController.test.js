@@ -335,6 +335,76 @@ describe( 'ContextMenuController', () => {
 				expect( item.getAttribute( 'role' ) ).toBe( 'menuitem' );
 			} );
 		} );
+
+		it( 'should set tabindex="-1" on menu items', () => {
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const menuItems = document.querySelectorAll( '.layers-context-menu-item' );
+			menuItems.forEach( ( item ) => {
+				expect( item.getAttribute( 'tabindex' ) ).toBe( '-1' );
+			} );
+		} );
+
+		it( 'should move focus down with ArrowDown key', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const items = document.querySelectorAll( '[role="menuitem"]:not([disabled])' );
+			// Focus first item to start
+			items[ 0 ].focus();
+
+			const arrowDown = new KeyboardEvent( 'keydown', { key: 'ArrowDown' } );
+			document.dispatchEvent( arrowDown );
+
+			expect( document.activeElement ).toBe( items[ 1 ] );
+		} );
+
+		it( 'should move focus up with ArrowUp key', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const items = document.querySelectorAll( '[role="menuitem"]:not([disabled])' );
+			// Focus second item
+			items[ 1 ].focus();
+
+			const arrowUp = new KeyboardEvent( 'keydown', { key: 'ArrowUp' } );
+			document.dispatchEvent( arrowUp );
+
+			expect( document.activeElement ).toBe( items[ 0 ] );
+		} );
+
+		it( 'should wrap around from last to first with ArrowDown', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const items = document.querySelectorAll( '[role="menuitem"]:not([disabled])' );
+			// Focus last item
+			items[ items.length - 1 ].focus();
+
+			const arrowDown = new KeyboardEvent( 'keydown', { key: 'ArrowDown' } );
+			document.dispatchEvent( arrowDown );
+
+			expect( document.activeElement ).toBe( items[ 0 ] );
+		} );
+
+		it( 'should wrap around from first to last with ArrowUp', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const items = document.querySelectorAll( '[role="menuitem"]:not([disabled])' );
+			// Focus first item
+			items[ 0 ].focus();
+
+			const arrowUp = new KeyboardEvent( 'keydown', { key: 'ArrowUp' } );
+			document.dispatchEvent( arrowUp );
+
+			expect( document.activeElement ).toBe( items[ items.length - 1 ] );
+		} );
 	} );
 
 	describe( 'outside click handling', () => {

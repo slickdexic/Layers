@@ -1239,12 +1239,59 @@
 				? window.Layers.Utils.generateLayerId()
 				: 'layer_' + Date.now() + '_' + Math.random().toString( 36 ).slice( 2, 11 );
 
-				// Offset duplicate
+				// Offset duplicate — all coordinate systems
+				const offset = 20;
 				if ( typeof clone.x === 'number' ) {
-					clone.x += 20;
+					clone.x += offset;
 				}
 				if ( typeof clone.y === 'number' ) {
-					clone.y += 20;
+					clone.y += offset;
+				}
+				// Line/arrow endpoints
+				if ( clone.x1 !== undefined ) {
+					clone.x1 += offset;
+				}
+				if ( clone.y1 !== undefined ) {
+					clone.y1 += offset;
+				}
+				if ( clone.x2 !== undefined ) {
+					clone.x2 += offset;
+				}
+				if ( clone.y2 !== undefined ) {
+					clone.y2 += offset;
+				}
+				// Curved arrow control points
+				if ( clone.controlX !== undefined ) {
+					clone.controlX += offset;
+				}
+				if ( clone.controlY !== undefined ) {
+					clone.controlY += offset;
+				}
+				// Marker/callout arrow tip (world coordinates)
+				if ( clone.arrowX !== undefined ) {
+					clone.arrowX += offset;
+				}
+				if ( clone.arrowY !== undefined ) {
+					clone.arrowY += offset;
+				}
+				// Polygon/path points
+				if ( Array.isArray( clone.points ) ) {
+					clone.points = clone.points.map( ( p ) => ( {
+						x: p.x + offset, y: p.y + offset
+					} ) );
+				}
+				// Angle dimension anchors
+				if ( clone.ax !== undefined ) {
+					clone.ax += offset;
+					clone.ay += offset;
+				}
+				if ( clone.cx !== undefined ) {
+					clone.cx += offset;
+					clone.cy += offset;
+				}
+				if ( clone.bx !== undefined ) {
+					clone.bx += offset;
+					clone.by += offset;
 				}
 
 				newLayers.push( clone );
