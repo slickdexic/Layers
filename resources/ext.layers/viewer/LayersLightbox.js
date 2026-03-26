@@ -304,6 +304,11 @@
 
 			// Handle image load
 			img.onload = () => {
+				// Guard against callback after close (P3-206)
+				if ( !this.imageWrapper || !this.isOpen ) {
+					return;
+				}
+
 				this.debugLog( 'Image loaded:', img.naturalWidth, 'x', img.naturalHeight );
 
 				// Create viewer overlay

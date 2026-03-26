@@ -1,0 +1,32 @@
+PHPUnit 9.6.34 by Sebastian Bergmann and contributors.
+
+Warning:       No code coverage driver available
+
+EEEE                                                                4 / 4 (100%)
+
+Time: 00:04.101, Memory: 6.00 MB
+
+There were 4 errors:
+
+1) MediaWiki\Extension\Layers\Tests\HooksTest::testOnBeforePageDisplayWithFileNamespace
+Error: Class "HashConfig" not found
+
+F:\Docker\mediawiki\extensions\Layers\tests\phpunit\unit\HooksTest.php:16
+
+2) MediaWiki\Extension\Layers\Tests\HooksTest::testOnBeforePageDisplayDisabled
+Error: Class "HashConfig" not found
+
+F:\Docker\mediawiki\extensions\Layers\tests\phpunit\unit\HooksTest.php:66
+
+3) MediaWiki\Extension\Layers\Tests\HooksTest::testOnChangeTagsAllowedAddRegistersLayersTag
+Error: Class "MediaWiki\Extension\Layers\Hooks" not found
+
+F:\Docker\mediawiki\extensions\Layers\tests\phpunit\unit\HooksTest.php:90
+
+4) MediaWiki\Extension\Layers\Tests\HooksTest::testOnChangeTagsAllowedAddPreservesExistingTags
+Error: Class "MediaWiki\Extension\Layers\Hooks" not found
+
+F:\Docker\mediawiki\extensions\Layers\tests\phpunit\unit\HooksTest.php:99
+
+ERRORS!
+Tests: 4, Assertions: 0, Errors: 4.

@@ -657,8 +657,11 @@
 			} else if ( textDirection === 'auto-reversed' ) {
 				// Auto reversed: follow line angle but flipped 180 degrees
 				textAngle = angle + Math.PI;
-				// Normalize for readability (keep text upright)
-				if ( textAngle > Math.PI / 2 || textAngle < -Math.PI / 2 ) {
+				// Normalize for readability (P3-207: use while loop for correct wrap)
+				while ( textAngle > Math.PI / 2 ) {
+					textAngle -= Math.PI;
+				}
+				while ( textAngle < -Math.PI / 2 ) {
 					textAngle += Math.PI;
 				}
 			} else {
