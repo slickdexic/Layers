@@ -796,10 +796,10 @@ class ViewerManager {
 							? parseFloat( layerset.data.backgroundOpacity ) : 1.0
 					};
 
-						const success = this.initializeViewer( img, payload );
-					if ( !success ) {
-						img.layersPending = false;
-					}
+						this.initializeViewer( img, payload );
+					// Always clear pending flag (P3-208: was only cleared on failure,
+					// blocking re-initialization after viewer destruction)
+					img.layersPending = false;
 				} catch ( e2 ) {
 					this.debugWarn( 'Error processing fetched large image data:', e2 );
 					img.layersPending = false;

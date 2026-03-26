@@ -886,7 +886,10 @@
 			}
 
 			// Draw text inside the callout (delegate to TextBoxRenderer if available)
-			if ( layer.text && this.textBoxRenderer ) {
+			// P3-209: Check richText in addition to text (matches TextBoxRenderer pattern)
+			const hasText = ( layer.text && layer.text.length > 0 ) ||
+				( layer.richText && Array.isArray( layer.richText ) && layer.richText.length > 0 );
+			if ( hasText && this.textBoxRenderer ) {
 				// Create a temporary layer for text rendering with adjusted bounds
 				const textLayer = Object.assign( {}, layer, {
 					x: x,
