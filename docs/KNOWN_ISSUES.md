@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 26, 2026 — v1.5.63 (v62 fix pass — all items resolved)
+**Last updated:** March 26, 2026 — v1.5.63 (v63 fix pass — all items resolved)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,13 +13,66 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 150 | 150 | 0 |
-| P3 | 207 | 205 | 2 |
-| **Total** | **423** | **421** | **2** |
+| P2 | 153 | 153 | 0 |
+| P3 | 208 | 206 | 2 |
+| **Total** | **427** | **425** | **2** |
 
-*v62 fix pass (March 26): Fixed P2-192, P2-193, P3-194. 4 false
-positives eliminated. PHP security audit clean. Remaining open:
-P3-147 (accepted), P3-148 (deferred).*
+*v63 fix pass (March 26): Fixed P2-195, P2-196, P2-197, P3-198.
+7 non-issues eliminated. Audit scope: 10 files (5 shared renderers +
+5 canvas controllers). Remaining open: P3-147 (accepted), P3-148
+(deferred).*
+
+---
+
+## v63 Issues (March 26, 2026; 3 MEDIUM + 1 LOW code)
+
+### JavaScript — Medium (Logic Bug)
+
+#### P2-195: `SmartGuidesController` Right-Edge Snap Tautology
+
+- **File:** `resources/ext.layers.editor/canvas/SmartGuidesController.js`
+- **Issue:** Right-edge snap override condition `|a-b| < |b-a|` is a
+  mathematical identity (always false). Right-edge snaps could never
+  override left-edge snaps even when geometrically closer.
+- **Status:** ✅ Fixed (compare against verticalOffset instead)
+
+#### P2-196: `HitTestController` Reflex Angle Arc Hit Test
+
+- **File:** `resources/ext.layers.editor/canvas/HitTestController.js`
+- **Issue:** 3-step reflex sweep calculation canceled itself out for
+  sweep ≤ π. Reflex arcs (>180°) were not clickable.
+- **Status:** ✅ Fixed (use `2π - sweep` complement)
+
+#### P2-197: `TransformController` Rotation rAF Missing Layer Check
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+- **Issue:** handleResize had layer-existence guard in rAF callback but
+  handleRotation did not. Stale reference if layer deleted mid-rotation.
+- **Status:** ✅ Fixed (layer existence check added)
+
+### JavaScript — Low (Resource Leak)
+
+#### P3-198: `TransformController` Untracked Dimension Text rAF IDs
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+- **Issue:** angleDim and dimText drag rAFs never stored return values.
+  destroy() couldn't cancel them; scheduling flags not reset.
+- **Status:** ✅ Fixed (rAF IDs tracked, cancelled in destroy)
+
+### Non-Issues Eliminated — 7 Items
+
+- **Negative radii** — server validates min:0
+- **Zero-width stroke shadow** — performance only, no visual bug
+- **ArrowRenderer '1' fallback** — minimal impact, server normalizes
+- **Uncached lookup** — once per render, not per-pixel
+- **visible === false** — LayerDataNormalizer handles boolean conversion
+- **Dead code in angleDim finalization** — unreachable but harmless
+- **ShadowRenderer blur bounds** — server validates range (1–64)
+
+### Carried Forward
+
+- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
+- **P3-148:** Unused `LayerValidatorInterface` — deferred
 
 ---
 

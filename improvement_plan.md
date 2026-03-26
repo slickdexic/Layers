@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 26, 2026 — v62 fix pass complete
+**Last updated:** March 26, 2026 — v63 fix pass complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -61,6 +61,15 @@ eliminated. i18n keys: 842 (added `layers-draft-save-failed`).
 v62 fix pass (March 26): Fixed P2-192 (exception-safe destroy),
 P2-193 (DraftManager save failure notification), P3-194 (rich text
 color validation). **0 open code items. 0 open doc items.**
+
+v63 audit found **3 MEDIUM + 1 LOW code issues** (P2-195, P2-196,
+P2-197, P3-198). Audit scope: 10 files (5 shared renderers + 5 canvas
+controllers, ~8,300 lines). 7 non-issues eliminated.
+
+v63 fix pass (March 26): Fixed P2-195 (SmartGuides snap tautology),
+P2-196 (reflex angle arc hit test), P2-197 (rotation rAF layer
+check), P3-198 (untracked dimension text rAF IDs). Cherry-picked to
+REL1_43 and REL1_39. **0 open code items. 0 open doc items.**
 
 Use the section below as the authoritative current backlog.
 
@@ -135,43 +144,46 @@ wiring with marginal benefit.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 26, 2026 — v62)
+## Verified Current Backlog (Authoritative as of March 26, 2026 — v63)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS Medium (Lifecycle) | 0 (P2-192 ✅) | — |
-| JS Medium (Silent Fail) | 0 (P2-193 ✅) | — |
-| JS Low (Validation) | 0 (P3-194 ✅) | — |
+| JS Medium (Logic Bug) | 0 (P2-195/196/197 ✅) | — |
+| JS Low (Resource Leak) | 0 (P3-198 ✅) | — |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
 | **Total** | **0 open code** + 0 doc + 2 deferred | — |
 
-### Current Priorities (v62)
+### Current Priorities (v63)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
-| 34.01 | LayersEditor.destroy exception safety | P2-192 | MED | ✅ Fixed |
-| 34.02 | DraftManager silent save failure | P2-193 | MED | ✅ Fixed |
-| 34.03 | Rich text color validation gap | P3-194 | Low | ✅ Fixed |
-| 34.04 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
-| 34.05 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+| 35.01 | SmartGuides right-edge snap tautology | P2-195 | MED | ✅ Fixed |
+| 35.02 | HitTestController reflex angle arc | P2-196 | MED | ✅ Fixed |
+| 35.03 | TransformController rotation rAF guard | P2-197 | MED | ✅ Fixed |
+| 35.04 | TransformController untracked rAF IDs | P3-198 | Low | ✅ Fixed |
+| 35.05 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
+| 35.06 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
 
-### v62 Notes
+### v63 Notes
 
-- PHP security audit of all 42 files: completely clean. No issues.
-- 4 false positives eliminated: APIManager.sanitizeInput (dead code),
-  isValidColor CSS injection (regex rejects), StateManager shallow
-  copy (no callers mutate), ToolStyles XSS (canvas-only rendering).
-- **v62 fix pass (March 26):**
-  - P2-192: Wrapped each manager's `destroy()` in try/catch in
-    `LayersEditor.destroy()`. Added try/finally in
-    `EditorBootstrap.cleanupGlobalEditorInstance()`.
-  - P2-193: Added `saveDraft()` return value check in both
-    `scheduleAutoSave()` and `startAutoSaveTimer()` with one-time
-    `mw.notify()` warning using `layers-draft-save-failed`.
-  - P3-194: Added `isValidColor()` check for color,
-    backgroundColor, textStrokeColor in `validateRichText()`.
-- i18n keys increased from 841 to 842 (added layers-draft-save-failed).
-- Cherry-picked to REL1_43 (5ce7d2a4) and REL1_39 (ae5ef022).
+- Audit scope: 5 shared renderers (TextBoxRenderer, ArrowRenderer,
+  ShapeRenderer, LayerRenderer, ShadowRenderer) + 5 canvas controllers
+  (TransformController, DrawingController, SmartGuidesController,
+  ResizeCalculator, HitTestController). ~8,300 lines total.
+- 7 non-issues eliminated: negative radii (server validates), zero-width
+  stroke shadow (perf only), ArrowRenderer '1' fallback (minimal),
+  uncached lookup (once per render), visible===false (normalizer handles),
+  dead code in angleDim finalization, ShadowRenderer blur bounds.
+- **v63 fix pass (March 26):**
+  - P2-195: Changed `|a-b| < |b-a|` (always false) to compare
+    against `verticalOffset` in SmartGuidesController.
+  - P2-196: Replaced 3-step self-canceling reflex sweep with
+    `2π - sweep` complement in HitTestController.
+  - P2-197: Added `editor.layers.find()` guard in rotation rAF
+    callback matching the existing P2.20 resize pattern.
+  - P3-198: Stored rAF IDs for `_angleDimRafId`/`_dimTextRafId`,
+    added cancellation + flag resets in `destroy()`.
+- Cherry-picked to REL1_43 and REL1_39.
 - 11,904 tests pass. All lint checks pass.
 
 ### Current Priorities (v59)

@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 26, 2026 (v62 audit + fix pass)
-**Previous Review:** March 26, 2026 (v61 audit + fix pass)
+**Review Date:** March 26, 2026 (v63 audit + fix pass)
+**Previous Review:** March 26, 2026 (v62 audit + fix pass)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -37,24 +37,152 @@
 
 ## Executive Summary
 
-The v62 audit focused on JavaScript frontend code quality and lifecycle
-safety across the editor module system. Two specialized subagent sweeps
-covered PHP backend security (all 42 files — clean) and JavaScript
-frontend core (5 key files with 12 candidate issues). Manual
-verification eliminated 4 false positives and confirmed 3 real findings.
+The v63 audit focused on two major areas: shared renderer code (5 files:
+TextBoxRenderer, ArrowRenderer, ShapeRenderer, LayerRenderer,
+ShadowRenderer) and canvas controller code (5 files:
+TransformController, DrawingController, SmartGuidesController,
+ResizeCalculator, HitTestController). Two specialized subagent sweeps
+identified 4+7=11 candidate issues. Manual verification confirmed 4 real
+findings (3 P2, 1 P3) plus 7 non-issues.
 
-**v62 findings:** 0 CRITICAL, 0 HIGH, 2 MEDIUM, 1 LOW code items.
-The PHP security audit was completely clean — all 5 API modules, all
-traits, RateLimiter, and all validation classes passed.
+**v63 findings:** 0 CRITICAL, 0 HIGH, 3 MEDIUM, 1 LOW code items.
 
-**v62 fix pass (March 26):** P2-192 fixed (exception-safe destroy
-chain), P2-193 fixed (DraftManager save failure notification), P3-194
-fixed (rich text color validation gap). 4 false positives eliminated.
+**v63 fix pass (March 26):** P2-195 fixed (SmartGuides right-edge snap
+tautological condition), P2-196 fixed (reflex angle arc hit test sweep
+logic), P2-197 fixed (rotation rAF missing layer-existence check),
+P3-198 fixed (untracked rAF IDs in destroy). All cherry-picked to
+REL1_43 and REL1_39.
 **0 open code items. 0 open doc items.** 11,904 tests passing.
 
 The codebase retains strong architecture, comprehensive test coverage
 (94.24% statements, 11,904 tests in 168 suites), and robust security
 controls. P3-147 (accepted) and P3-148 (deferred) carried forward.
+
+---
+
+## Confirmed Findings (v63 — March 26, 2026) — 4 Code Items
+
+### v62 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P2-192 | ✅ Fixed | Exception-safe destroy chain |
+| P2-193 | ✅ Fixed | Draft save failure notification |
+| P3-194 | ✅ Fixed | Rich text color validation parity |
+| P3-147 | ✅ Accepted | Redundant SQL variants |
+| P3-148 | 🔲 Deferred | Unused interface |
+
+---
+
+### New Findings (v63) — 4 Items
+
+**Audit scope:** 5 shared renderers (TextBoxRenderer, ArrowRenderer,
+ShapeRenderer, LayerRenderer, ShadowRenderer — ~4,200 lines) and
+5 canvas controllers (TransformController, DrawingController,
+SmartGuidesController, ResizeCalculator, HitTestController — ~4,100
+lines). 10 files total, ~8,300 lines on main branch.
+
+**Methodology:** 2 specialized subagent sweeps identified 11 candidate
+issues. Manual verification confirmed 4 real findings (3 P2, 1 P3)
+and eliminated 7 non-issues (false positives or accepted low-risk).
+
+### Medium — JavaScript (Logic Bug)
+
+#### P2-195 · `SmartGuidesController` Right-Edge Snap Tautology
+
+- **File:** `resources/ext.layers.editor/canvas/SmartGuidesController.js`
+- **Line:** ~574
+- **Issue:** The right-edge snap override condition used
+    `Math.abs(right - rightSnap.value) < Math.abs(rightSnap.value - right)`
+    which is `|a - b| < |b - a|` — a mathematical identity that is
+    always false. Right-edge snaps could never override left-edge
+    snaps, even when the right edge was geometrically closer.
+- **Root cause:** Copy-paste error. The condition should compare the
+    right-edge offset against the current best `verticalOffset`, not
+    recompute the same distance with swapped operands.
+- **Fix:** Changed to `Math.abs(right - rightSnap.value) < Math.abs(verticalOffset)`
+    matching the pattern used by centerXSnap.
+- **Status:** ✅ Fixed (right-edge snap comparison corrected)
+
+#### P2-196 · `HitTestController` Reflex Angle Arc Hit Test
+
+- **File:** `resources/ext.layers.editor/canvas/HitTestController.js`
+- **Lines:** ~375–383
+- **Issue:** The reflex angle sweep calculation used a 3-step approach:
+    (1) calculate sweep, (2) if sweep ≤ π, add 2π, (3) if sweep > 2π,
+    subtract 2π. Steps 2 and 3 cancel each other out for the exact
+    case they handle (sweep ≤ π → becomes ≤ 3π → step 3 subtracts 2π
+    → back to original). Reflex arcs were not hittable.
+- **Root cause:** Incorrect reflex complement logic. Should use
+    `sweep = 2π - sweep` (the angular complement).
+- **Fix:** Replaced 3-step logic with `sweep = 2 * Math.PI - sweep`,
+    matching the pattern in `AngleDimensionRenderer.calculateAngles()`.
+- **Status:** ✅ Fixed (reflex arc hit detection corrected)
+
+#### P2-197 · `TransformController` Rotation rAF Missing Layer Check
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+- **Line:** ~353
+- **Issue:** The `handleResize` rAF callback had a P2.20 FIX that
+    validates the layer still exists in `editor.layers` before calling
+    `renderLayers`/`emitTransforming`. The `handleRotation` rAF
+    callback lacked the same guard. If a layer is deleted during a
+    pending rotation animation frame, the stale reference would cause
+    the properties panel to show data for a deleted layer.
+- **Fix:** Added `editor.layers.find()` existence check to the
+    rotation rAF callback, matching the resize pattern.
+- **Status:** ✅ Fixed (rotation rAF layer guard added)
+
+### Low — JavaScript (Resource Leak)
+
+#### P3-198 · `TransformController` Untracked Dimension Text rAF IDs
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+- **Lines:** ~888, ~1016
+- **Issue:** `handleAngleDimensionTextDrag` and
+    `handleDimensionTextDrag` each schedule a `requestAnimationFrame`
+    but never store the return value. The `destroy()` method cancels
+    resize/rotation/drag/arrowTip rAFs but cannot cancel these two
+    because the IDs are not tracked. Their scheduling flags also
+    weren't reset in `destroy()`.
+- **Fix:** Stored rAF return values as `_angleDimRafId` and
+    `_dimTextRafId` with null assignment in callback. Added
+    cancellation and flag resets in `destroy()`.
+- **Status:** ✅ Fixed (all rAF IDs now tracked and cancelled)
+
+---
+
+## v63 Verified Non-Issues (7 Eliminated)
+
+- **Negative radii reaching canvas (P2-001 candidate):**
+  Server validates `min:0` for radius/radiusX/radiusY/width/height.
+  Client-side negative values are caught before reaching canvas APIs.
+
+- **Zero-width stroke shadow performance (P2-002 candidate):**
+  `strokeWidth: 0` with shadow enabled wastes a canvas draw call but
+  produces no visual artifact. Performance-only — not worth guarding.
+
+- **ArrowRenderer '1' string fallback (P3-001 candidate):**
+  The `|| 1` fallback for arrowSize handles both `0` and `undefined`.
+  Minimal visual impact; server normalizes to proper integers.
+
+- **Uncached lookup in hot path (P3-002 candidate):**
+  The lookup occurs once per render, not per-pixel. Caching would add
+  complexity for negligible performance gain.
+
+- **LayerRenderer `visible === false` check (F6 candidate):**
+  `LayerDataNormalizer` includes `'visible'` in BOOLEAN_PROPERTIES,
+  converting `0` → `false` before rendering code sees it. The strict
+  comparison is correct post-normalization.
+
+- **Dead code in angleDimension finalization (F7 candidate):**
+  Unreachable branch in angle dimension drag end. Harmless — the
+  condition can never be true given the preceding control flow.
+
+- **ShadowRenderer missing blur bounds check:**
+  Canvas `shadowBlur` accepts any non-negative number. The server
+  already validates blurRadius range (1–64). No additional guard
+  needed in the renderer.
 
 ---
 
