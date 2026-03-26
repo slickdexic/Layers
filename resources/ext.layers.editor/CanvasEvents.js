@@ -157,7 +157,8 @@
 				const layer = layers[ i ];
 
 				// Skip hidden or locked layers
-				if ( layer.visible === false || layer.visible === 0 ) {
+				if ( layer.visible === false || layer.visible === 0 ||
+					layer.locked === true || layer.locked === 1 ) {
 					continue;
 				}
 
@@ -617,7 +618,10 @@
 			}
 
 			// Space key for temporary pan mode
-			if ( e.code === 'Space' && !e.repeat ) {
+			// P2-203 FIX: Don't capture Space when a button/select has focus
+			if ( e.code === 'Space' && !e.repeat &&
+				e.target.tagName !== 'BUTTON' && e.target.tagName !== 'SELECT' &&
+				!e.target.closest( '.oo-ui-widget' ) ) {
 				e.preventDefault();
 				cm.spacePressed = true;
 				cm.canvas.style.cursor = 'grab';
@@ -661,7 +665,7 @@
 				stopPropagation: function () {}
 			};
 
-			cm.lastTouchTime = Date.now();
+			cm.lastTouchPoint = { clientX: touch.clientX, clientY: touch.clientY };
 			this.handleMouseDown( mouseEvent );
 		}
 
@@ -701,12 +705,15 @@
 			if ( changedTouch ) {
 				cm.lastTouchPoint = { clientX: changedTouch.clientX, clientY: changedTouch.clientY };
 			}
-			// Handle double-tap for zoom
+			// P2-199 FIX: Double-tap detection must measure interval between
+			// consecutive touchEnds, not tap duration (touchEnd - touchStart).
 			const now = Date.now();
 			if ( cm.lastTouchTime && ( now - cm.lastTouchTime ) < 300 ) {
 				this.handleDoubleTap( e );
+				cm.lastTouchTime = 0;
 				return;
 			}
+			cm.lastTouchTime = now;
 
 			// Handle pinch end
 			if ( cm.isPinching ) {

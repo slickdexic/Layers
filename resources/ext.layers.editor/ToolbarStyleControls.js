@@ -171,10 +171,12 @@ class ToolbarStyleControls {
 		}
 
 		// Arrow style options (via ArrowStyleControl delegation)
-		this.arrowContainer = this.arrowStyleControl.create();
-		// Expose internal select for backward compatibility with existing code
-		this.arrowStyleSelect = this.arrowStyleControl.arrowStyleSelect;
-		styleGroup.appendChild( this.arrowContainer );
+		if ( this.arrowStyleControl ) {
+			this.arrowContainer = this.arrowStyleControl.create();
+			// Expose internal select for backward compatibility with existing code
+			this.arrowStyleSelect = this.arrowStyleControl.arrowStyleSelect;
+			styleGroup.appendChild( this.arrowContainer );
+		}
 
 		// Marker autonumber control (visible only when marker tool is selected)
 		this.markerContainer = this.createMarkerControls();

@@ -842,7 +842,7 @@ describe( 'CanvasEvents', () => {
 
 		it( 'should enable pan mode with Space key', () => {
 			const event = {
-				target: { tagName: 'CANVAS' },
+				target: { tagName: 'CANVAS', closest: jest.fn().mockReturnValue( null ) },
 				code: 'Space',
 				repeat: false,
 				preventDefault: jest.fn()
@@ -911,16 +911,13 @@ describe( 'CanvasEvents', () => {
 			expect( mockCanvasManager.lastTouchPoint ).toEqual( { clientX: 100, clientY: 200 } );
 		} );
 
-		it( 'should store last touch time', () => {
-			const before = Date.now();
+		it( 'should store last touch point (P2-199: time moved to touchEnd)', () => {
 			const event = {
 				touches: [ { clientX: 100, clientY: 200 } ]
 			};
 			canvasEvents.handleTouchStart( event );
-			const after = Date.now();
 
-			expect( mockCanvasManager.lastTouchTime ).toBeGreaterThanOrEqual( before );
-			expect( mockCanvasManager.lastTouchTime ).toBeLessThanOrEqual( after );
+			expect( mockCanvasManager.lastTouchPoint ).toEqual( { clientX: 100, clientY: 200 } );
 		} );
 
 		it( 'should handle multi-touch as pinch start', () => {
