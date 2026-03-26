@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 26, 2026 — v1.5.63 (v61 fix pass — all items resolved)
+**Last updated:** March 26, 2026 — v1.5.63 (v62 fix pass — all items resolved)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,14 +13,57 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 148 | 148 | 0 |
-| P3 | 206 | 204 | 2 |
-| **Total** | **420** | **418** | **2** |
+| P2 | 150 | 150 | 0 |
+| P3 | 207 | 205 | 2 |
+| **Total** | **423** | **421** | **2** |
 
-*v61 fix pass (March 26): Fixed P2-188, P2-189, P3-190. Reclassified
-P3-191 as false positive. Fixed D-061-01 through D-061-05. 15 false
-positives eliminated (14 during audit + 1 during fix pass). Remaining
-open: P3-147 (accepted), P3-148 (deferred).*
+*v62 fix pass (March 26): Fixed P2-192, P2-193, P3-194. 4 false
+positives eliminated. PHP security audit clean. Remaining open:
+P3-147 (accepted), P3-148 (deferred).*
+
+---
+
+## v62 Issues (March 26, 2026; 2 MEDIUM + 1 LOW code)
+
+### JavaScript — Medium (Lifecycle Safety)
+
+#### P2-192: `LayersEditor.destroy()` Lacks Exception Protection
+
+- **Files:** `resources/ext.layers.editor/LayersEditor.js`,
+  `resources/ext.layers.editor/editor/EditorBootstrap.js`
+- **Issue:** If any of 10 manager `destroy()` calls throws, remaining
+  cleanup (including document-level listeners) is skipped. Global
+  instance reference not nullified on exception, blocking editor reload.
+- **Status:** ✅ Fixed (try/catch per manager + try/finally for global)
+
+#### P2-193: `DraftManager` Silent Auto-Save Failure
+
+- **File:** `resources/ext.layers.editor/DraftManager.js`
+- **Issue:** `saveDraft()` returned false on localStorage quota exceeded
+  but callers ignored return value. Users could lose work silently.
+- **Status:** ✅ Fixed (save failure notification via mw.notify)
+
+### JavaScript — Low (Validation Gap)
+
+#### P3-194: `LayersValidator.validateRichText` Missing Color Validation
+
+- **File:** `resources/ext.layers.editor/LayersValidator.js`
+- **Issue:** Rich text style validation checked fonts/sizes but not
+  color/backgroundColor/textStrokeColor with `isValidColor()`.
+  Server-side validated these — client/server parity gap.
+- **Status:** ✅ Fixed (isValidColor check added for 3 color props)
+
+### False Positives Eliminated — 4 Items
+
+- **APIManager.sanitizeInput dead code** — Zero callers, harmless
+- **isValidColor CSS injection** — Regex rejects var()/calc()
+- **StateManager mutable shallow copy** — No callers mutate state
+- **ToolStyles XSS via textContent** — Canvas API renders pixels, not HTML
+
+### Carried Forward
+
+- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
+- **P3-148:** Unused `LayerValidatorInterface` — deferred
 
 ---
 

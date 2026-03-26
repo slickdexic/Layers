@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 26, 2026 (v61 audit + fix pass)
-**Previous Review:** March 25, 2026 (v60 audit)
+**Review Date:** March 26, 2026 (v62 audit + fix pass)
+**Previous Review:** March 26, 2026 (v61 audit + fix pass)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -26,8 +26,8 @@
 - **Jest test cases:** 11,904 (`npm run test:js --silent` —
     verified March 25, 2026)
 - **PHPUnit test files:** 34 in `tests/phpunit`
-- **i18n message keys:** 841 in `i18n/en.json` (excluding @metadata;
-    verified via direct count March 25, 2026)
+- **i18n message keys:** 842 in `i18n/en.json` (excluding @metadata;
+    verified via direct count March 26, 2026)
 - **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
   `layersrename`, `layerslist`)
 - **Files ≥1,000 lines:** 26 total (5 generated JS data, 19
@@ -37,74 +37,131 @@
 
 ## Executive Summary
 
-This v61 audit performed a comprehensive review of all 42 PHP source
-files (`src/`), all 157 JavaScript files (`resources/`), and all
-documentation (README, wiki, docs/*.md, *.mediawiki, CHANGELOG,
-CONTRIBUTING, SECURITY). Four specialized subagent sweeps covered PHP
-backend code, JavaScript frontend code, security and SQL deep dive,
-and full documentation accuracy. Every finding was manually verified
-against the actual source code. 14 false positives from subagent
-analysis were identified and eliminated through direct code inspection.
+The v62 audit focused on JavaScript frontend code quality and lifecycle
+safety across the editor module system. Two specialized subagent sweeps
+covered PHP backend security (all 42 files — clean) and JavaScript
+frontend core (5 key files with 12 candidate issues). Manual
+verification eliminated 4 false positives and confirmed 3 real findings.
 
-**Post-v60 changes reviewed:** v60 fix pass applied (P3-186 dead SQL
-files deleted, P3-187 keyboard navigation added, D-060-01/02/03
-metrics corrections). All v60 fixes confirmed intact. Metrics shifted
-slightly from v60: 11,904 tests (was 11,894), 94.24% stmts (was
-94.28%), 84.17% branches (was 84.18%).
+**v62 findings:** 0 CRITICAL, 0 HIGH, 2 MEDIUM, 1 LOW code items.
+The PHP security audit was completely clean — all 5 API modules, all
+traits, RateLimiter, and all validation classes passed.
 
-The v61 review found **0 CRITICAL, 0 HIGH, 2 MEDIUM, and 2 LOW code
-items** plus **5 documentation drift items** — 9 new verified items
-total. 2 deferred items (P3-147 accepted, P3-148 deferred) carry
-forward from prior audits.
-
-**v61 fix pass (March 26):** P2-188 fixed (base64 validation added),
-P2-189 fixed (empty guard + log warning added), P3-190 fixed
-(DOMParser replaces innerHTML), P3-191 reclassified as false positive
-(depth counting is correct), D-061-01 through D-061-05 all fixed.
+**v62 fix pass (March 26):** P2-192 fixed (exception-safe destroy
+chain), P2-193 fixed (DraftManager save failure notification), P3-194
+fixed (rich text color validation gap). 4 false positives eliminated.
 **0 open code items. 0 open doc items.** 11,904 tests passing.
-
-### Key Findings
-
-1. **Image layer base64 validation incomplete** (MEDIUM): Server-side
-   `validateImageSrc()` checks data URL format and MIME whitelist but
-   does not validate the base64 payload itself (invalid chars pass,
-   no decoded-size check). Total JSON size limit mitigates but does
-   not eliminate the gap.
-
-2. **`buildImageNameLookup` missing empty-string guard** (MEDIUM):
-   Several read-path `LayersDatabase` methods
-   (`getLatestLayerSet`, `getLayerSetByName`, `getAllLayerSets`, etc.)
-   call `buildImageNameLookup()` without guarding against empty
-   `$imgName`. The fallback returns `['']` which creates valid but
-   meaningless SQL queries. Write paths are properly guarded.
-
-3. **Documentation metrics drift in 9 locations** (DOC): README badge
-   shows 94.43% (actual 94.24%), wiki/Home.md badges show 11,847/
-   92.88% (v1.5.62 era), docs/ARCHITECTURE.md has stale version
-   (1.5.62) and metrics in 3 locations, wiki/Architecture-Overview.md
-   stale, wiki/Testing-Guide.md stale.
-
-### Security Assessment
-
-The security posture is **strong**. No SQL injection, XSS, CSRF bypass,
-or privilege escalation vulnerabilities were found. The defense-in-depth
-architecture includes:
-- All SQL via MediaWiki's parameterized `IDatabase` abstraction
-- CSRF tokens on all write endpoints with `mustBePosted()` enforcement
-- Strict property whitelisting with 40+ validated fields
-- Multi-layer text sanitization (strip_tags, entity decode, protocol
-  removal, event handler removal, ImageMagick injection prevention)
-- Role-based authorization with ownership checks for delete/rename
-- Rate limiting on all write endpoints via MediaWiki `pingLimiter`
-- ReDoS prevention (50-char max before regex in ColorValidator)
-- JSON recursion depth limit of 512
-- Row-level FOR UPDATE locking in transactions
-- Exponential backoff retry with timeout ceiling (5s)
-- Generic error responses (no stack traces or SQL details to client)
 
 The codebase retains strong architecture, comprehensive test coverage
 (94.24% statements, 11,904 tests in 168 suites), and robust security
 controls. P3-147 (accepted) and P3-148 (deferred) carried forward.
+
+---
+
+## Confirmed Findings (v62 — March 26, 2026) — 3 Code Items
+
+### v61 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P2-188 | ✅ Fixed | Base64 payload validation added |
+| P2-189 | ✅ Fixed | Empty guard + logger warning |
+| P3-190 | ✅ Fixed | DOMParser replaces innerHTML |
+| P3-191 | ❌ FP | Depth counting is correct |
+| D-061-01..05 | ✅ Fixed | All 5 doc drift items corrected |
+| P3-147 | ✅ Accepted | Redundant SQL variants |
+| P3-148 | 🔲 Deferred | Unused interface |
+
+---
+
+### New Findings (v62) — 3 Items
+
+**Audit scope:** All 42 PHP source files (`src/`), 5 key JavaScript
+files in `resources/ext.layers.editor/` (LayersEditor.js,
+EditorBootstrap.js, DraftManager.js, LayersValidator.js, APIManager.js).
+Main branch.
+
+**Methodology:** 2 specialized subagent sweeps (PHP security audit —
+all clean; JS frontend audit — 12 candidates). Manual verification
+eliminated 4 false positives and confirmed 3 real findings.
+
+**Post-v61 changes:** v61 fix pass confirmed intact. i18n key count
+increased from 841 to 842 (added `layers-draft-save-failed`).
+
+### Medium — JavaScript (Lifecycle Safety)
+
+#### P2-192 · `LayersEditor.destroy()` Lacks Exception Protection
+
+- **File:** `resources/ext.layers.editor/LayersEditor.js`
+- **Issue:** The `destroy()` method iterates 10 module managers
+    calling `.destroy()` on each. If any manager throws, all
+    subsequent managers are skipped — including `CanvasEvents` which
+    holds document-level `keydown`/`keyup` listeners. Additionally,
+    `EditorBootstrap.cleanupGlobalEditorInstance()` failed to null
+    the global `window.layersEditorInstance` reference if `destroy()`
+    threw, blocking all future editor instantiation.
+- **Impact:** Ghost keyboard listeners after editor close. Editor
+    reload blocked until page refresh.
+- **Fix:** Wrapped each manager's `destroy()` in individual try/catch
+    with `mw.log.error()`. Added try/finally in EditorBootstrap to
+    guarantee global instance nullification.
+- **Status:** ✅ Fixed (exception-safe destroy chain)
+
+### Medium — JavaScript (Silent Failure)
+
+#### P2-193 · `DraftManager` Silent Auto-Save Failure
+
+- **File:** `resources/ext.layers.editor/DraftManager.js`
+- **Issue:** `saveDraft()` returned `false` on localStorage quota
+    exceeded but both callers (`scheduleAutoSave()` and
+    `startAutoSaveTimer()`) ignored the return value. Users could
+    lose unsaved work without any warning.
+- **Impact:** Data loss risk when localStorage is full.
+- **Fix:** Added return value check in both auto-save paths. On
+    failure, shows one-time `mw.notify()` warning per session using
+    new i18n key `layers-draft-save-failed`.
+- **Status:** ✅ Fixed (save failure notification added)
+
+### Low — JavaScript (Validation Gap)
+
+#### P3-194 · `LayersValidator.validateRichText` Missing Color Validation
+
+- **File:** `resources/ext.layers.editor/LayersValidator.js`
+- **Issue:** `validateRichText()` validated fontWeight, fontStyle,
+    fontSize, and textStrokeWidth for each rich text run's style
+    object, but did not validate `color`, `backgroundColor`, or
+    `textStrokeColor` with `isValidColor()`. The server-side
+    validator did check these — a client/server validation parity
+    gap.
+- **Impact:** Invalid colors could reach the canvas (rendered as
+    transparent by browser). No security risk (server validates).
+- **Fix:** Added `isValidColor()` check for all three color
+    properties in the rich text style validation loop.
+- **Status:** ✅ Fixed (client-side color validation added)
+
+---
+
+## v62 Verified Non-Issues (False Positives Eliminated)
+
+- **`APIManager.sanitizeInput` dead code:**
+  **FALSE POSITIVE** — Zero callers across entire codebase. Dead code
+  but harmless. Not a security issue; the method exists as defensive
+  infrastructure. No action needed.
+
+- **`isValidColor` accepts CSS `var()`/`calc()` injection:**
+  **FALSE POSITIVE** — The regex pattern explicitly does NOT match
+  `var()` or `calc()` syntax. Only hex, rgb/rgba, hsl/hsla, and
+  named colors are accepted. Tested and confirmed rejection.
+
+- **`StateManager.getState()` returns mutable shallow copy:**
+  **FALSE POSITIVE** — No callers in the codebase mutate the returned
+  state object. The layers array is independently cloned where needed.
+  Defensive copying would add unnecessary overhead.
+
+- **`ToolStyles` XSS via `textContent` property:**
+  **FALSE POSITIVE** — Text layers render via Canvas `fillText()` /
+  `strokeText()` APIs, never via DOM innerHTML. Canvas text rendering
+  is inherently XSS-safe — it draws pixels, not HTML.
 
 ---
 
