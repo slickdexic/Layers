@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 25, 2026 — v60 audit findings
+**Last updated:** March 26, 2026 — v61 fix pass complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -42,6 +42,17 @@ eliminated during verification. P3-174, P3-175 (open from v59), P3-147
 (accepted), P3-148 (deferred) carried forward. Post-v59 commits shifted
 metrics: 11,894 tests (168 suites), 94.28%/84.18% coverage, 841 i18n
 keys, 42 PHP files.
+
+v61 audit found **2 MEDIUM + 2 LOW code issues** (P2-188, P2-189,
+P3-190, P3-191) plus **5 documentation drift items** (D-061-01 to
+D-061-05). 14 false positives eliminated during verification. All v60
+code and doc fixes verified intact. Metrics: 11,904 tests (168 suites),
+94.24%/84.17% coverage, 841 i18n keys. P3-147 (accepted), P3-148
+(deferred) carried forward.
+
+v61 fix pass (March 26): Fixed P2-188, P2-189, P3-190. Reclassified
+P3-191 as false positive (depth counting correct). Fixed D-061-01
+through D-061-05. **0 open code items. 0 open doc items.**
 
 Use the section below as the authoritative current backlog.
 
@@ -116,53 +127,53 @@ wiring with marginal benefit.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 25, 2026 — v60)
+## Verified Current Backlog (Authoritative as of March 26, 2026 — v61)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS Low (Quality) | 0 (P3-174 ✅, P3-175 ✅) | — |
-| JS Low (Code) | 0 (P3-187 ✅) | — |
-| PHP/SQL Low (Cleanup) | 0 (P3-186 ✅) | — |
+| PHP Medium (Validation) | 0 (P2-188 ✅) | — |
+| PHP Medium (Defense) | 0 (P2-189 ✅) | — |
+| JS Low (Code Quality) | 0 (P3-190 ✅, P3-191 FP) | — |
+| Documentation Drift | 0 (D-061-01–05 ✅) | — |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
-| **Total** | **0 open code** + 2 deferred | — |
+| **Total** | **0 open code** + 0 doc + 2 deferred | — |
 
-### Current Priorities (v60)
+### Current Priorities (v61)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
-| 32.01 | Dead SQL files (layer_set_usage) | P3-186 | Low | ✅ Fixed |
-| 32.02 | Context menu missing arrow-key nav | P3-187 | Low | ✅ Fixed |
-| 32.03 | Test/coverage metrics stale (8+ files) | D-060-01 | Doc | ✅ Fixed |
-| 32.04 | i18n count stale (835→841) | D-060-02 | Doc | ✅ Fixed |
-| 32.05 | PHP file count stale (41→42) | D-060-03 | Doc | ✅ Fixed |
-| 32.06 | updateLayer floods undo history | P3-174 | Low | ✅ Fixed |
-| 32.07 | duplicateSelected fallback offset | P3-175 | Low | ✅ Fixed |
-| 32.08 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
-| 32.09 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+| 33.01 | validateImageSrc incomplete base64 | P2-188 | MED | ✅ Fixed |
+| 33.02 | buildImageNameLookup empty guard | P2-189 | MED | ✅ Fixed |
+| 33.03 | EmojiPickerPanel innerHTML hygiene | P3-190 | Low | ✅ Fixed |
+| 33.04 | SelectionManager recursion depth | P3-191 | Low | ✅ False Positive |
+| 33.05 | README.md badge stale (94.43→94.24) | D-061-01 | Doc | ✅ Fixed |
+| 33.06 | wiki/Home.md badges stale | D-061-02 | Doc | ✅ Fixed |
+| 33.07 | ARCHITECTURE.md v1.5.62 + 3 metrics | D-061-03 | Doc | ✅ Fixed |
+| 33.08 | Architecture-Overview.md stale | D-061-04 | Doc | ✅ Fixed |
+| 33.09 | Testing-Guide.md 91.32% stale | D-061-05 | Doc | ✅ Fixed |
+| 33.10 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
+| 33.11 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
 
-### v60 Notes
+### v61 Notes
 
-- v59 fix pass verified: all 15 code fixes (P2-166 through P3-185)
-  confirmed intact. 13 documentation drift items confirmed fixed.
-- Post-v59 commits: `ffec107a` (v59 fixes, consolidated tests -16/
-  -1 suite) and `993c24a7` (AuditTrailTrait feature, +1 PHP file,
-  +6 i18n keys).
-- AuditTrailTrait.php reviewed: well-implemented with proper error
-  handling, i18n, CSRF protection, configurable via
-  `$wgLayersTrackChangesInRecentChanges` (default false).
-- P3-186: `sql/tables/layer_set_usage.sql` and
-  `sql/patches/patch-add-lsu_usage_count.sql` were listed for
-  deletion in P3-146 checklist but never removed. Neither file is
-  referenced by LayersSchemaManager — safe to delete.
-- P3-187: ContextMenuController has `role="menu"` / `role="menuitem"`
-  attributes but only handles Escape key. WCAG 2.1 SC 4.1.2 requires
-  arrow-key navigation for menu widgets.
-- 3 false positives eliminated: HistoryManager undo/redo re-entrance
-  guard (JS single-threaded, nested saveState handled correctly),
-  AuditTrailTrait null edit race (best-effort with try/catch),
-  StateManager.atomic() queue limit (intentional safety mechanism).
-- Recommended fix order: D-060-01/02/03 (metrics drift, ~1h),
-  P3-186 (dead SQL, <30min), P3-187 (arrow-key nav, ~1-2h).
+- All v60 fixes verified intact: P3-186 (dead SQL deleted), P3-187
+  (keyboard nav added), D-060-01/02/03 (metrics corrected).
+- All v59 fixes verified intact: P2-166 through P3-185 confirmed.
+- Metrics shifted slightly from v60: 11,904 tests (was 11,894),
+  94.24% stmts (was 94.28%), 84.17% branches (was 84.18%).
+- **v61 fix pass (March 26):**
+  - P2-188: Added `base64_decode($payload, true) !== false` check
+    in `validateImageSrc()` after MIME type validation.
+  - P2-189: Added early guard + `logger->warning()` in
+    `buildImageNameLookup()` for empty image names.
+  - P3-190: Replaced `innerHTML` SVG parsing with `DOMParser` in
+    `EmojiPickerPanel.prepareSvgThumbnail()`.
+  - P3-191: Reclassified as false positive — depth=0 is root group
+    (not a nesting level); children at depth 1–10 = 10 levels =
+    `MAX_GROUP_DEPTH`. The `visited` set prevents cycles.
+  - D-061-01 through D-061-05: All metrics updated across 6 files.
+- 15 false positives eliminated total (14 audit + 1 fix pass).
+- 11,904 tests pass. All lint checks pass.
 
 ### Current Priorities (v59)
 

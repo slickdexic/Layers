@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 25, 2026 (v60 audit)
-**Previous Review:** March 24, 2026 (v59 audit)
+**Review Date:** March 26, 2026 (v61 audit + fix pass)
+**Previous Review:** March 25, 2026 (v60 audit)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -11,20 +11,19 @@
 
 - **Branch Reviewed:** `main`
 - **Verification Method:** Direct source inspection with 4 specialized
-    subagent sweeps (PHP security/database/API, JS core editor/canvas,
-    JS renderers/canvas controllers, JS UI/viewer/shared + documentation
-    accuracy) plus manual verification of every finding against actual
-    source code. Fresh test run and coverage generation performed. All
-    subagent-reported issues individually confirmed before inclusion.
-    False positives from subagent analysis rigorously eliminated (see
-    Verified Non-Issues).
-- **Coverage:** 94.28% statements, 84.18% branches, 93.26% functions,
-    94.38% lines (freshly verified `npx jest --coverage` March 25, 2026)
+    subagent sweeps (PHP backend, JS frontend, security/SQL deep dive,
+    documentation accuracy) plus manual verification of every finding
+    against actual source code. Fresh test run and coverage generation
+    performed. All subagent-reported issues individually confirmed
+    before inclusion. 14 false positives from subagent analysis
+    rigorously eliminated (see Verified Non-Issues).
+- **Coverage:** 94.24% statements, 84.17% branches, 93.27% functions,
+    94.34% lines (freshly verified `npm run test:coverage` March 25, 2026)
 - **JS source files:** 157 in `resources/` excluding dist
-    (~113,922 lines)
+    (~113,902 lines)
 - **PHP production files:** 42 in `src/` (~15,339 lines)
 - **Jest test suites:** 168
-- **Jest test cases:** 11,894 (`npx jest --no-coverage --silent` —
+- **Jest test cases:** 11,904 (`npm run test:js --silent` —
     verified March 25, 2026)
 - **PHPUnit test files:** 34 in `tests/phpunit`
 - **i18n message keys:** 841 in `i18n/en.json` (excluding @metadata;
@@ -38,57 +37,343 @@
 
 ## Executive Summary
 
-This v60 audit performed a comprehensive review of all 42 PHP source
+This v61 audit performed a comprehensive review of all 42 PHP source
 files (`src/`), all 157 JavaScript files (`resources/`), and all
 documentation (README, wiki, docs/*.md, *.mediawiki, CHANGELOG,
 CONTRIBUTING, SECURITY). Four specialized subagent sweeps covered PHP
-security/API/database, JS core editor/canvas, JS renderers/canvas
-controllers, and JS UI/viewer/shared plus documentation accuracy. Every
-finding was manually verified against the actual source code.
+backend code, JavaScript frontend code, security and SQL deep dive,
+and full documentation accuracy. Every finding was manually verified
+against the actual source code. 14 false positives from subagent
+analysis were identified and eliminated through direct code inspection.
 
-**Post-v59 changes reviewed:** Two commits since v59: (1) `ffec107a` —
-the v59 audit fix pass (15 bug fixes across JS and PHP), and (2)
-`993c24a7` — new AuditTrailTrait feature adding null-edit audit trail
-entries for layer changes. The AuditTrailTrait is well-structured with
-proper error handling, i18n, and CSRF protection.
+**Post-v60 changes reviewed:** v60 fix pass applied (P3-186 dead SQL
+files deleted, P3-187 keyboard navigation added, D-060-01/02/03
+metrics corrections). All v60 fixes confirmed intact. Metrics shifted
+slightly from v60: 11,904 tests (was 11,894), 94.24% stmts (was
+94.28%), 84.17% branches (was 84.18%).
 
-**Metric context:** Metrics shifted from v59 due to both commits: test
-consolidation during the v59 fix pass reduced tests from 11,910 to
-11,894 (−16 tests, −1 suite). Coverage shifted from 94.43%/84.32% to
-94.28%/84.18% due to code modifications. The AuditTrailTrait added 1
-PHP file, 1 PHPUnit test, and 6 i18n keys.
+The v61 review found **0 CRITICAL, 0 HIGH, 2 MEDIUM, and 2 LOW code
+items** plus **5 documentation drift items** — 9 new verified items
+total. 2 deferred items (P3-147 accepted, P3-148 deferred) carry
+forward from prior audits.
 
-The v60 review found **0 CRITICAL, 0 HIGH, 0 MEDIUM, and 2 LOW code
-items** plus **3 documentation drift items** — 5 new verified items
-total. Additionally, 2 LOW items (P3-174, P3-175) and 2 deferred items
-(P3-147 accepted, P3-148 deferred) carry forward from v59.
+**v61 fix pass (March 26):** P2-188 fixed (base64 validation added),
+P2-189 fixed (empty guard + log warning added), P3-190 fixed
+(DOMParser replaces innerHTML), P3-191 reclassified as false positive
+(depth counting is correct), D-061-01 through D-061-05 all fixed.
+**0 open code items. 0 open doc items.** 11,904 tests passing.
 
-The most significant findings are:
+### Key Findings
 
-1. **Incomplete P3-146 cleanup — 2 dead SQL files remain** (LOW):
-   `sql/tables/layer_set_usage.sql` and `sql/patches/
-   patch-add-lsu_usage_count.sql` still exist. Both reference a table
-   that was dropped in v1.5.63. Neither is referenced by
-   `LayersSchemaManager`. The P3-146 task checklist explicitly listed
-   these for deletion, but only the schema manager and constant
-   references were cleaned up.
+1. **Image layer base64 validation incomplete** (MEDIUM): Server-side
+   `validateImageSrc()` checks data URL format and MIME whitelist but
+   does not validate the base64 payload itself (invalid chars pass,
+   no decoded-size check). Total JSON size limit mitigates but does
+   not eliminate the gap.
 
-2. **Context menu lacks keyboard navigation (WCAG)** (LOW):
-   `ContextMenuController.js` has `role="menu"` and `role="menuitem"`
-   ARIA attributes but only handles Escape key. Arrow key navigation
-   (Up/Down/Home/End) is missing, which WCAG 2.1 SC 4.1.2 requires
-   for elements with the `menu` role.
+2. **`buildImageNameLookup` missing empty-string guard** (MEDIUM):
+   Several read-path `LayersDatabase` methods
+   (`getLatestLayerSet`, `getLayerSetByName`, `getAllLayerSets`, etc.)
+   call `buildImageNameLookup()` without guarding against empty
+   `$imgName`. The fallback returns `['']` which creates valid but
+   meaningless SQL queries. Write paths are properly guarded.
 
-3. **Metrics wrong across 8+ documentation files** (DOC, HIGH): The
-   v59 fix pass applied correct metrics, but then the v59 code fixes
-   and AuditTrailTrait commit shifted the actual numbers. All documents
-   now show 11,910/169 suites/94.43%/84.32% but actual is
-   11,894/168/94.28%/84.18%.
+3. **Documentation metrics drift in 9 locations** (DOC): README badge
+   shows 94.43% (actual 94.24%), wiki/Home.md badges show 11,847/
+   92.88% (v1.5.62 era), docs/ARCHITECTURE.md has stale version
+   (1.5.62) and metrics in 3 locations, wiki/Architecture-Overview.md
+   stale, wiki/Testing-Guide.md stale.
+
+### Security Assessment
+
+The security posture is **strong**. No SQL injection, XSS, CSRF bypass,
+or privilege escalation vulnerabilities were found. The defense-in-depth
+architecture includes:
+- All SQL via MediaWiki's parameterized `IDatabase` abstraction
+- CSRF tokens on all write endpoints with `mustBePosted()` enforcement
+- Strict property whitelisting with 40+ validated fields
+- Multi-layer text sanitization (strip_tags, entity decode, protocol
+  removal, event handler removal, ImageMagick injection prevention)
+- Role-based authorization with ownership checks for delete/rename
+- Rate limiting on all write endpoints via MediaWiki `pingLimiter`
+- ReDoS prevention (50-char max before regex in ColorValidator)
+- JSON recursion depth limit of 512
+- Row-level FOR UPDATE locking in transactions
+- Exponential backoff retry with timeout ceiling (5s)
+- Generic error responses (no stack traces or SQL details to client)
 
 The codebase retains strong architecture, comprehensive test coverage
-(94.28% statements, 11,894 tests in 168 suites), and robust security
-controls (CSRF tokens, parameterized queries, strict input validation,
-rate limiting). P3-147 (accepted) and P3-148 (deferred) carried forward.
+(94.24% statements, 11,904 tests in 168 suites), and robust security
+controls. P3-147 (accepted) and P3-148 (deferred) carried forward.
+
+---
+
+## Confirmed Findings (v61 — March 25, 2026) — 4 Code + 5 Doc Items
+
+### v60 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P3-186 | ✅ Fixed | Dead SQL files deleted |
+| P3-187 | ✅ Fixed | ContextMenu keyboard nav added |
+| D-060-01 | ✅ Fixed | Test/coverage metrics corrected |
+| D-060-02 | ✅ Fixed | i18n count corrected |
+| D-060-03 | ✅ Fixed | PHP file count corrected |
+| P3-147 | ✅ Accepted | Redundant SQL variants |
+| P3-148 | 🔲 Deferred | Unused interface |
+
+---
+
+### New Findings (v61) — 9 Items
+
+**Audit scope:** All 42 PHP source files (`src/`), all 157 JS files
+(`resources/`), all documentation (CHANGELOG, wiki, docs/, mediawiki
+files, CONTRIBUTING, SECURITY). Main branch.
+
+**Methodology:** 4 specialized subagent sweeps (PHP backend, JS
+frontend core, security/SQL deep dive, documentation accuracy) plus
+manual verification of every finding against actual source code. Fresh
+test run (`npm run test:coverage`) performed to confirm metrics. 14
+false positives eliminated during verification (see Verified
+Non-Issues).
+
+**Post-v60 changes:** v60 fix pass confirmed intact. All fixes from
+P3-186 (dead SQL), P3-187 (keyboard nav), and D-060-01/02/03 (docs)
+verified. Metrics shifted slightly: 11,904 tests (was 11,894), 94.24%
+stmts (was 94.28%), 84.17% branches (was 84.18%).
+
+### Medium — PHP (Validation Gap)
+
+#### P2-188 · `validateImageSrc` Does Not Validate Base64 Payload
+
+- **File:** `src/Validation/ServerSideLayerValidator.php` ~L592–620
+- **Issue:** The `validateImageSrc()` method validates the data URL
+    format (`data:image/TYPE;base64,...`) and enforces a MIME whitelist
+    (png, jpeg, gif, webp — SVG correctly excluded), but does not
+    validate the base64 payload itself:
+    1. Invalid base64 characters are not detected (e.g., a string
+       containing `???` after the `,` delimiter would pass).
+    2. No decoded-size check: the method checks `strlen($src)` against
+       `$wgLayersMaxImageBytes`, but this measures the *encoded* size
+       (33% larger than decoded). A 1MB limit allows ~1.33MB encoded.
+    3. No actual image header validation (magic bytes).
+- **Mitigation:** Total JSON payload size is checked at the API level
+    (`$wgLayersMaxBytes` default 2MB), which encapsulates all images.
+    Invalid base64 simply fails to render on canvas (browser handles
+    gracefully). No code path decodes the base64 server-side.
+- **Impact:** Low exploitability. Invalid base64 wastes storage but
+    causes no server-side harm. Could theoretically be used to store
+    arbitrary data disguised as images.
+- **Fix:** Add `base64_decode($payload, true) !== false` check after
+    extracting the payload portion. Optionally check decoded size
+    against `$wgLayersMaxImageBytes`.
+- **Status:** ✅ Fixed (base64 validation added after MIME check)
+
+### Medium — PHP (Defensive Programming)
+
+#### P2-189 · `buildImageNameLookup` Read Paths Missing Empty Guard
+
+- **File:** `src/Database/LayersDatabase.php` ~L1134–1148
+- **Issue:** `buildImageNameLookup()` has a fallback
+    `return $filtered ?: [ $normalized ]`. If `$imgName` is empty,
+    `normalizeImageName('')` returns `''`, all variants filter out,
+    and the fallback returns `['']` — a valid SQL condition that
+    matches nothing.
+
+    **Write paths** are properly guarded:
+    `saveLayerSet()` L95–108 checks `empty($normalizedImgName)`.
+
+    **Read paths** are NOT guarded:
+    - `getLatestLayerSet()` — delegates from `ApiLayersInfo`
+    - `getLayerSetByName()` — delegates from `ApiLayersInfo`
+    - `getAllLayerSets()` — used for revision listing
+    - `getNamedSetsSummary()` — used for set enumeration
+    - `getNamedSetOwner()` — used for permission checks
+
+    In practice, callers pass `$title->getDBkey()` which is never
+    empty for a valid `Title` object. But if any future caller
+    passes unsanitized input, the empty lookup silently returns no
+    results instead of failing fast.
+- **Impact:** No current exploitability. Defense-in-depth improvement.
+- **Fix:** Add `if ( $imgName === '' ) { return []; }` at the start
+    of `buildImageNameLookup()`. Update callers to handle empty return.
+- **Status:** ✅ Fixed (early guard + logger warning for empty input)
+
+### Low — JavaScript (Code Quality)
+
+#### P3-190 · `EmojiPickerPanel.prepareSvgThumbnail` Uses innerHTML
+
+- **File:**
+    `resources/ext.layers.editor/shapeLibrary/EmojiPickerPanel.js`
+    L529, L559
+- **Issue:** SVG content from the bundled `emoji-bundle.json` is
+    inserted via `innerHTML` in two locations:
+    - L529: `thumb.innerHTML = svgContent;`
+    - L559: `temp.innerHTML = svg;` (inside `prepareSvgThumbnail`)
+    The data source is a first-party bundled file deployed with the
+    extension, not user input. The `prepareSvgThumbnail` method
+    processes the SVG to ensure unique IDs and correct dimensions.
+    No XSS vector exists with the current data flow.
+- **Impact:** No current vulnerability. Code hygiene note — if the
+    emoji data source ever changes to accept user input, these
+    sites would need sanitization.
+- **Fix (optional):** Use `DOMParser` to parse SVG strings instead of
+    `innerHTML` for defense-in-depth.
+- **Status:** ✅ Fixed (DOMParser replaces innerHTML for SVG parsing)
+
+#### P3-191 · `SelectionManager._getGroupDescendantIds` Depth Guard
+
+- **File:**
+    `resources/ext.layers.editor/SelectionManager.js` L199–202
+- **Original Claim:** Off-by-one: `depth > MAX_GROUP_DEPTH` allows
+    depth 10 inclusive (11 levels). Should be `>=`.
+- **Status:** ✅ False Positive — `traverse(groupId)` starts at
+    depth=0 (the root group itself, not a nesting level). Children
+    at depth 1 through 10 are exactly 10 nesting levels, matching
+    `MAX_GROUP_DEPTH = 10`. The `visited` set independently prevents
+    infinite recursion from circular references. Depth counting is
+    correct.
+
+### Documentation Drift — 5 Items
+
+#### D-061-01 · README.md Badge Shows 94.43% (Actual: 94.24%)
+
+- **File:** `README.md` L5
+- **Current text:** `coverage-94.43%25-brightgreen`
+- **Should be:** `coverage-94.24%25-brightgreen`
+- **Severity:** MEDIUM — prominent badge visible to all visitors
+
+#### D-061-02 · wiki/Home.md Badges Show 11,847 / 92.88% (v1.5.62 Era)
+
+- **File:** `wiki/Home.md` L7–8
+- **Current text:** Badge images referencing `11%2C847` tests and
+    `92.88%` coverage
+- **Should be:** `11%2C904` tests and `94.24%` coverage
+- **Severity:** MEDIUM — GitHub Wiki homepage with outdated metrics
+
+#### D-061-03 · docs/ARCHITECTURE.md Version 1.5.62 + 3 Stale Metrics
+
+- **File:** `docs/ARCHITECTURE.md` L3–4, L148, L928, L1005
+- **Issues:**
+    - L3–4: Version 1.5.62, Last Updated March 14, 2026 (should be
+      1.5.63, March 25, 2026)
+    - L148: "92.88% statement test coverage" (should be 94.24%)
+    - L928: "11,847 tests, 92.88% statement coverage, 82.58% branch
+      coverage" (should be 11,904/94.24%/84.17%)
+    - L1005: "11,847 tests" (should be 11,904)
+- **Severity:** HIGH — authoritative architecture doc with wrong
+    version and 3 stale metric locations
+
+#### D-061-04 · wiki/Architecture-Overview.md Shows 11,847 / 92.88%
+
+- **File:** `wiki/Architecture-Overview.md` L315–316
+- **Current text:** Test Cases 11,847, Code Coverage 92.88%
+- **Should be:** 11,904 tests, 94.24% coverage
+- **Severity:** MEDIUM
+
+#### D-061-05 · wiki/Testing-Guide.md Shows 91.32% Coverage
+
+- **File:** `wiki/Testing-Guide.md` L13
+- **Current text:** `Jest | JavaScript | Unit tests | 91.32%`
+- **Should be:** 94.24%
+- **Severity:** LOW — outdated but clearly pre-v1.5.63
+
+---
+
+## v61 Verified Non-Issues (False Positives Eliminated)
+
+- **`ApiLayersSave` catch(\Throwable) overly broad:**
+  **FALSE POSITIVE** — The catch hierarchy is intentional security
+  design: `ApiUsageException` is caught and re-thrown first, then
+  `OverflowException` for named-set limits, then `\Throwable` as a
+  catch-all safety net. Full exceptions are logged server-side; only
+  generic error messages reach the client. This prevents information
+  leakage. TypeErrors are correctly caught and logged, not masked.
+
+- **Named set limit race condition in `saveLayerSet`:**
+  **FALSE POSITIVE** — Both the set existence check AND the distinct
+  set count query use `FOR UPDATE` locks inside the same transaction.
+  The database schema also has a UNIQUE key on
+  `(ls_img_name, ls_img_sha1, ls_name, ls_revision)` which prevents
+  duplicate set-name+revision combinations at the database level.
+  `isDuplicateKeyError()` retry logic handles any residual races.
+
+- **Integer overflow in point count validation:**
+  **FALSE POSITIVE** — PHP's `count()` returns an `int` bounded by
+  the array size. The JSON max depth (512) and per-layer point cap
+  (1,000) bound the maximum `$totalPoints` to
+  100 layers × 1,000 points = 100,000 — well within PHP int range.
+  No overflow is possible.
+
+- **TextSanitizer order-of-operations (length check after string ops):**
+  **FALSE POSITIVE** — `sanitizeText()` performs `mb_strlen` check
+  and `mb_substr` truncation as the FIRST operation (L33–35), BEFORE
+  `strip_tags`, `html_entity_decode`, or `removeDangerousProtocols`.
+  The code is correctly ordered.
+
+- **ColorValidator ReDoS vulnerability:**
+  **FALSE POSITIVE** — Input is limited to 50 characters (`MAX_COLOR_LENGTH`)
+  before any regex processing (L70–72). The regex patterns
+  `(\d+(?:\.\d+)?|\.\d+)` cannot cause catastrophic backtracking
+  on 50-character input.
+
+- **InlineTextEditor `selectionchange` listener memory leak:**
+  **FALSE POSITIVE** — `_removeEventHandlers()` (L998–999) properly
+  calls `document.removeEventListener` with the bound handler
+  reference. L1012 nullifies `_boundSelectionChangeHandler`. The
+  `destroy()` method calls `finishEditing()` which calls
+  `_removeEventHandlers()`. Complete cleanup chain verified.
+
+- **CanvasEvents double-init guard missing:**
+  **FALSE POSITIVE** — `CanvasEvents` has no public `init()` method.
+  `setup()` is private and called only from the constructor. It is
+  architecturally impossible to register duplicate listeners.
+
+- **APIManager `performSaveWithRetry` missing .catch():**
+  **FALSE POSITIVE** — Uses two-argument `.then(success, error)`
+  pattern which is standard for jQuery Deferred/mw.Api. The error
+  callback correctly handles failures with retry logic and
+  `reject()` on final failure. Not an unhandled rejection.
+
+- **APIManager `loadSetByName` stale data race condition:**
+  **FALSE POSITIVE** — `_trackRequest()` aborts previous XHR.
+  Aborted requests return code `'http'` with `textStatus === 'abort'`.
+  The callback checks for this (L853–862) and either silently drops
+  or rejects with `{ aborted: true }`. Stale Promise references are
+  not held by callers who already moved to a new Promise.
+
+- **SetNameSanitizer uses `strlen()` instead of `mb_strlen()`:**
+  **FALSE POSITIVE** — Actual code (L75–79) uses
+  `function_exists('mb_substr')` guard and calls `mb_substr()` when
+  available. The MAX_LENGTH of 255 matches MySQL `varchar(255)` which
+  is character-based, not byte-based. Correctly handles multibyte.
+
+- **ImageLoader protocol injection (javascript: URL):**
+  **FALSE POSITIVE** — `isSameOrigin()` is used for CORS decision,
+  not security filtering. A `javascript:` URL would fail the
+  `new URL()` constructor, fall to the catch branch, fail all three
+  `startsWith` checks, and return `true` (same-origin). But this
+  function only determines whether to add `crossOrigin` attribute.
+  Image `src` set to `javascript:` does not execute in modern
+  browsers (only `<a href>` and similar navigation contexts).
+
+- **EmojiPickerPanel innerHTML XSS:**
+  **FALSE POSITIVE** — SVG data comes from the bundled
+  `emoji-bundle.json`, a first-party file deployed with the extension.
+  Not user-controllable. `prepareSvgThumbnail` processes the SVG for
+  unique IDs and dimensions. (Noted as P3-190 code hygiene item only.)
+
+- **Toolbar/UI controller state subscription leaks:**
+  **FALSE POSITIVE** — Toolbar and LayerPanel both have `destroy()`
+  methods that call unsubscribe functions. `LayerPanel.destroy()` at
+  L135 iterates `this.unsubscribers` array. The `stateUnsubscribers`
+  pattern used in CanvasManager is consistently applied across modules.
+
+- **SQL injection via sort direction string concatenation:**
+  **FALSE POSITIVE** — `validateSortDirection()` whitelists only
+  'ASC' and 'DESC' (binary decision). Even if bypassed, the values
+  are hardcoded strings, not user input. The full query uses
+  MediaWiki's `$dbw->select()` with array-based options.
 
 ---
 

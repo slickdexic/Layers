@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C847%20passing-brightgreen" alt="11,847 Tests">
-   <img src="https://img.shields.io/badge/Coverage-92.88%25-brightgreen" alt="92.88% Coverage">
+  <img src="https://img.shields.io/badge/Tests-11%2C904%20passing-brightgreen" alt="11,904 Tests">
+  <img src="https://img.shields.io/badge/Coverage-94.24%25-brightgreen" alt="94.24% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.

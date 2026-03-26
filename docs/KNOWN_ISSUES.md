@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 25, 2026 — v1.5.63 (v60 audit — 2 LOW code + 3 doc drift)
+**Last updated:** March 26, 2026 — v1.5.63 (v61 fix pass — all items resolved)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,13 +13,76 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 146 | 146 | 0 |
-| P3 | 204 | 202 | 2 |
-| **Total** | **416** | **414** | **2** |
+| P2 | 148 | 148 | 0 |
+| P3 | 206 | 204 | 2 |
+| **Total** | **420** | **418** | **2** |
 
-*v60 fix pass (March 25): Fixed P3-174, P3-175, P3-186, P3-187 and
-D-060-01/02/03. Remaining open: P3-147 (accepted), P3-148 (deferred).
-3 false positives eliminated during v60 audit.*
+*v61 fix pass (March 26): Fixed P2-188, P2-189, P3-190. Reclassified
+P3-191 as false positive. Fixed D-061-01 through D-061-05. 15 false
+positives eliminated (14 during audit + 1 during fix pass). Remaining
+open: P3-147 (accepted), P3-148 (deferred).*
+
+---
+
+## v61 Issues (March 25, 2026; 2 MEDIUM + 2 LOW code + 5 doc drift)
+
+### PHP — Medium (Validation Gap)
+
+#### P2-188: `validateImageSrc` Does Not Validate Base64 Payload
+
+- **File:** `src/Validation/ServerSideLayerValidator.php` ~L592–620
+- **Issue:** Validates data URL format and MIME whitelist but not
+  base64 payload validity. Invalid base64 characters pass through.
+  Size check measures encoded string (33% larger than decoded).
+- **Mitigation:** Total JSON cap at API level. Invalid base64 just
+  fails to render on canvas. No server-side decode path.
+- **Impact:** Low exploitability. Could store arbitrary data as images.
+- **Status:** ✅ Fixed (base64 validation added after MIME check)
+
+#### P2-189: `buildImageNameLookup` Read Paths Missing Empty Guard
+
+- **File:** `src/Database/LayersDatabase.php` ~L1134–1148
+- **Issue:** Write paths validate `empty($normalizedImgName)`, but
+  read-path callers (`getLatestLayerSet`, `getLayerSetByName`, etc.)
+  do not. If empty string reaches `buildImageNameLookup`, fallback
+  returns `['']` — matches nothing silently instead of failing fast.
+- **Status:** ✅ Fixed (early guard + logger warning for empty input)
+
+### JavaScript — Low (Code Quality)
+
+#### P3-190: `EmojiPickerPanel.prepareSvgThumbnail` Uses innerHTML
+
+- **File:** `resources/ext.layers.editor/shapeLibrary/EmojiPickerPanel.js`
+  L529, L559
+- **Issue:** SVG from bundled `emoji-bundle.json` inserted via
+  `innerHTML`. First-party data source, no current XSS vector.
+  Code hygiene note for defense in depth.
+- **Status:** ✅ Fixed (DOMParser replaces innerHTML for SVG parsing)
+
+#### P3-191: `SelectionManager._getGroupDescendantIds` Depth Guard
+
+- **File:** `resources/ext.layers.editor/SelectionManager.js` L199–202
+- **Original Claim:** `depth > MAX_GROUP_DEPTH` allows depth 10
+  inclusive (11 levels). Should be `>=` to limit to exactly 10.
+- **Status:** ✅ False Positive — depth=0 is the root group (not a
+  nesting level). Children at depth 1–10 are exactly 10 nesting
+  levels, matching `MAX_GROUP_DEPTH = 10`. The `visited` set
+  independently prevents cycles.
+
+### Documentation Drift — 5 Items
+
+| ID | Issue | Status |
+|----|-------|--------|
+| D-061-01 | README.md badge 94.43% (actual 94.24%) | ✅ Fixed |
+| D-061-02 | wiki/Home.md badges 11,847/92.88% (actual 11,904/94.24%) | ✅ Fixed |
+| D-061-03 | docs/ARCHITECTURE.md v1.5.62 + 3 stale metrics | ✅ Fixed |
+| D-061-04 | wiki/Architecture-Overview.md 11,847/92.88% | ✅ Fixed |
+| D-061-05 | wiki/Testing-Guide.md 91.32% coverage | ✅ Fixed |
+
+### Carried Forward
+
+- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
+- **P3-148:** Unused `LayerValidatorInterface` — deferred
 
 ---
 

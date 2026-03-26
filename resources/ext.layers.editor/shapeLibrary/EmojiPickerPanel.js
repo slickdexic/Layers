@@ -554,10 +554,10 @@
 			// Generate unique prefix for this thumbnail
 			const uniqueId = 'et' + Math.random().toString( 36 ).substr( 2, 6 );
 
-			// Create a temporary container to parse the SVG
-			const temp = document.createElement( 'div' );
-			temp.innerHTML = svg;
-			const svgEl = temp.querySelector( 'svg' );
+			// Parse SVG using DOMParser for proper namespace handling
+			const parser = new DOMParser();
+			const doc = parser.parseFromString( svg, 'text/html' );
+			const svgEl = doc.querySelector( 'svg' );
 
 			if ( !svgEl ) {
 				return '<span style="color:#999">?</span>';

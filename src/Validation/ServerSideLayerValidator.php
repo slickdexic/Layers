@@ -617,7 +617,17 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => false, 'error' => 'Unsupported image type: ' . $mimeType ];
 		}
 
-		// Basic validation passed - accept the value
+		// Validate base64 payload if present
+		if ( isset( $matches[2] ) ) {
+			$commaPos = strpos( $value, ',' );
+			if ( $commaPos !== false ) {
+				$payload = substr( $value, $commaPos + 1 );
+				if ( $payload === '' || base64_decode( $payload, true ) === false ) {
+					return [ 'valid' => false, 'error' => 'Invalid base64 image data' ];
+				}
+			}
+		}
+
 		return [ 'valid' => true, 'value' => $value ];
 	}
 
