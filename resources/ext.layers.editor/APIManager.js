@@ -653,6 +653,8 @@
 				this._clearRequest( 'loadRevision' );
 				// Ignore aborted requests (user switched before this completed)
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {
+					// P3-215 FIX: Hide spinner on abort to prevent stuck spinner
+					this.hideSpinner();
 					// Clear loading state even for aborted requests
 					if ( this.editor.stateManager ) {
 						this.editor.stateManager.set( 'isLoading', false );
@@ -836,6 +838,8 @@
 				this._clearRequest( 'loadSetByName' );
 				// Ignore aborted requests (user switched before this completed)
 				if ( code === 'http' && result && result.textStatus === 'abort' ) {
+					// P3-215 FIX: Hide spinner on abort to prevent stuck spinner
+					this.hideSpinner();
 					// Clear loading state even for aborted requests
 					if ( this.editor.stateManager ) {
 						this.editor.stateManager.set( 'isLoading', false );
@@ -1487,11 +1491,17 @@
 
 	isRetryableError( error ) {
 		// Retry on network errors, timeouts, and server errors (5xx)
-		if ( !error || !error.error ) {
+		if ( !error ) {
 			return true; // Network or timeout error
 		}
 
-		const code = error.error.code || '';
+		// P2-210 FIX: error object is flat {code, info} from callers, not nested {error: {code}}
+		const code = ( error.error && error.error.code ) || error.code || '';
+
+		// No code at all suggests a network/timeout error — retryable
+		if ( !code ) {
+			return true;
+		}
 
 		// Session/token errors should NOT be retried - user needs to refresh page
 		const nonRetryableCodes = [

@@ -299,8 +299,26 @@ describe( 'APIManager', function () {
 			expect( result ).toBe( true );
 		} );
 
-		it( 'should return true for error without error property', function () {
+		it( 'should return false for flat error with unknown code (P2-210 fix)', function () {
 			const result = apiManager.isRetryableError( { code: 'some-code' } );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return true for flat error with retryable code', function () {
+			const result = apiManager.isRetryableError( { code: 'internal_api_error' } );
+
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should return false for flat error with non-retryable code', function () {
+			const result = apiManager.isRetryableError( { code: 'badtoken' } );
+
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should return true for error with no code (network error)', function () {
+			const result = apiManager.isRetryableError( {} );
 
 			expect( result ).toBe( true );
 		} );
