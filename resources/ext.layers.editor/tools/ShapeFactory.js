@@ -248,7 +248,8 @@
 		 */
 		createText( point, text ) {
 			const style = this.getCurrentStyle();
-			return {
+			// P3-214 FIX: Apply shadow like all other factory methods
+			const layer = {
 				type: 'text',
 				x: point.x,
 				y: point.y,
@@ -257,6 +258,7 @@
 				fontFamily: style.fontFamily,
 				color: style.color
 			};
+			return this.applyShadow( layer, style );
 		}
 
 		/**
