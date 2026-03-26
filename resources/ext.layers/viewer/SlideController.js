@@ -838,6 +838,7 @@
 
 			const dataUrl = canvas.toDataURL( 'image/png' );
 			const lightbox = new LightboxClass( { debug: this.debug } );
+			// P2-211 FIX: Use actual background visibility/opacity from payload
 			lightbox.open( {
 				filename: slideName,
 				imageUrl: dataUrl,
@@ -845,8 +846,8 @@
 					layers: currentPayload.layers || [],
 					baseWidth: currentPayload.baseWidth,
 					baseHeight: currentPayload.baseHeight,
-					backgroundVisible: true,
-					backgroundOpacity: 1.0,
+					backgroundVisible: currentPayload.backgroundVisible !== undefined ? currentPayload.backgroundVisible : true,
+					backgroundOpacity: currentPayload.backgroundOpacity !== undefined ? currentPayload.backgroundOpacity : 1.0,
 					backgroundColor: currentPayload.backgroundColor
 				}
 			} );

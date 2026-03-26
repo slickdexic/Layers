@@ -173,7 +173,9 @@
 			this.zoomAnimationStartTime = performance.now();
 			this.zoomAnimationStartZoom = this.manager.zoom;
 			this.zoomAnimationTargetZoom = targetZoom;
-			this.zoomAnimationDuration = duration;
+			// P3-213 FIX: Use local duration for this animation only;
+			// don't overwrite the instance default for future calls.
+			this.currentAnimationDuration = duration;
 
 			this.animateZoom();
 		}
@@ -188,7 +190,8 @@
 
 			const currentTime = performance.now();
 			const elapsed = currentTime - this.zoomAnimationStartTime;
-			const progress = Math.min( elapsed / this.zoomAnimationDuration, 1.0 );
+			const duration = this.currentAnimationDuration || this.zoomAnimationDuration;
+			const progress = Math.min( elapsed / duration, 1.0 );
 
 			// Use easing function for smooth animation (ease-out cubic)
 			const easedProgress = 1 - Math.pow( 1 - progress, 3 );
@@ -303,18 +306,28 @@
 			const containerWidth = container.clientWidth - 40;
 			const containerHeight = container.clientHeight - 40;
 
-			const scaleX = containerWidth / contentWidth;
-			const scaleY = containerHeight / contentHeight;
+			// P2-212 FIX: Convert content dimensions from buffer pixels to CSS
+			// display pixels. resizeCanvas() sets canvas.style.width/height differently
+			// from canvas.width/height, and the CSS transform operates in CSS space.
+			const cssW = parseFloat( this.manager.canvas.style.width ) || this.manager.canvas.width;
+			const cssH = parseFloat( this.manager.canvas.style.height ) || this.manager.canvas.height;
+			const rx = cssW / this.manager.canvas.width;
+			const ry = cssH / this.manager.canvas.height;
+			const contentCSSWidth = contentWidth * rx;
+			const contentCSSHeight = contentHeight * ry;
+
+			const scaleX = containerWidth / contentCSSWidth;
+			const scaleY = containerHeight / contentCSSHeight;
 			let targetZoom = Math.min( scaleX, scaleY );
 
 			// Clamp to zoom limits
 			targetZoom = Math.max( this.minZoom, Math.min( this.maxZoom, targetZoom ) );
 
-			// Center the content
-			const centerX = ( minX + maxX ) / 2;
-			const centerY = ( minY + maxY ) / 2;
-			const canvasCenterX = this.manager.canvas.width / 2;
-			const canvasCenterY = this.manager.canvas.height / 2;
+			// Center the content (convert to CSS space)
+			const centerX = ( ( minX + maxX ) / 2 ) * rx;
+			const centerY = ( ( minY + maxY ) / 2 ) * ry;
+			const canvasCenterX = cssW / 2;
+			const canvasCenterY = cssH / 2;
 
 			this.manager.panX = ( canvasCenterX - centerX ) * targetZoom;
 			this.manager.panY = ( canvasCenterY - centerY ) * targetZoom;
