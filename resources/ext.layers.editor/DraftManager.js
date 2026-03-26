@@ -135,7 +135,13 @@
 
 			// Debounce the save
 			this.debounceTimer = setTimeout( () => {
-				this.saveDraft();
+				if ( !this.saveDraft() && !this._saveFailNotified ) {
+					this._saveFailNotified = true;
+					mw.notify(
+						mw.message( 'layers-draft-save-failed' ).text(),
+						{ type: 'warn', autoHideSeconds: 5 }
+					);
+				}
 			}, AUTO_SAVE_DEBOUNCE_MS );
 		}
 
@@ -154,7 +160,13 @@
 					return;
 				}
 				if ( this.editor.isDirty && this.editor.isDirty() ) {
-					this.saveDraft();
+					if ( !this.saveDraft() && !this._saveFailNotified ) {
+						this._saveFailNotified = true;
+						mw.notify(
+							mw.message( 'layers-draft-save-failed' ).text(),
+							{ type: 'warn', autoHideSeconds: 5 }
+						);
+					}
 				}
 			}, AUTO_SAVE_INTERVAL_MS );
 		}
