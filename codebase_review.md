@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 26, 2026 (v65 audit + fix pass)
-**Previous Review:** March 26, 2026 (v64 audit + fix pass)
+**Review Date:** March 26, 2026 (v66 audit + fix pass)
+**Previous Review:** March 26, 2026 (v65 audit + fix pass)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -23,8 +23,8 @@
     (~113,902 lines)
 - **PHP production files:** 42 in `src/` (~15,339 lines)
 - **Jest test suites:** 168
-- **Jest test cases:** 11,904 (`npm run test:js --silent` —
-    verified March 25, 2026)
+- **Jest test cases:** 11,907 (`npm run test:js --silent` —
+    verified March 26, 2026)
 - **PHPUnit test files:** 34 in `tests/phpunit`
 - **i18n message keys:** 842 in `i18n/en.json` (excluding @metadata;
     verified via direct count March 26, 2026)
@@ -37,30 +37,178 @@
 
 ## Executive Summary
 
-The v65 audit covered two major areas: viewer stack (4 files:
-ViewerManager, LayersViewer, LayersLightbox, ViewerOverlay — ~2,961
-lines plus ImageLayerRenderer ~278 lines) and remaining shared
-renderers (5 files: EffectsRenderer, MarkerRenderer,
-DimensionRenderer, CalloutRenderer, AngleDimensionRenderer — ~3,006
-lines). Two specialized subagent sweeps identified 7+5=12 candidate
-issues. Manual verification confirmed 5 real findings (1 P2, 4 P3)
-and eliminated 7 non-issues.
+The v66 audit covered two major areas: critical data flow modules
+(APIManager ~1,640 lines, SlideController ~1,126 lines) and canvas
+controllers + tool factory (ZoomPanController ~385 lines,
+InteractionController ~556 lines, RenderCoordinator ~404 lines,
+SelectionRenderer ~793 lines, ShapeFactory ~531 lines) plus shared
+renderers (GradientRenderer ~392 lines, TextRenderer ~345 lines,
+LayerDataNormalizer ~325 lines). Two specialized subagent sweeps
+identified 7+6=13 candidate issues. Manual verification confirmed 6
+real findings (3 P2, 3 P3) and eliminated 7 non-issues.
 
-**v65 findings:** 0 CRITICAL, 0 HIGH, 1 MEDIUM, 4 LOW code items.
+**v66 findings:** 0 CRITICAL, 0 HIGH, 3 MEDIUM, 3 LOW code items.
 
-**v65 fix pass (March 26):** P2-205 fixed (ImageLayerRenderer broken
-image retry storm — onerror deleted cache entry causing infinite
-network requests on re-render), P3-206 fixed (LayersLightbox race
-condition on close during image load), P3-207 fixed (DimensionRenderer
-auto-reversed text normalization math), P3-208 fixed (ViewerManager
-layersPending not cleared on success), P3-209 fixed (CalloutRenderer
-richText gate on layer.text). All cherry-picked to REL1_43 and
-REL1_39.
-**0 open code items. 0 open doc items.** 11,904 tests passing.
+**v66 fix pass (March 26):** P2-210 fixed (APIManager isRetryableError
+shape mismatch — all errors treated as retryable, wasting 3 retries
+before showing real errors), P2-211 fixed (SlideController hardcoded
+backgroundVisible/backgroundOpacity in lightbox), P2-212 fixed
+(ZoomPanController zoomToFitLayers mixed buffer/CSS coordinate
+spaces), P3-213 fixed (smoothZoomTo permanently overwrote animation
+duration), P3-214 fixed (ShapeFactory createText missing shadow
+application), P3-215 fixed (APIManager spinner stuck on request abort).
+All cherry-picked to REL1_43 and REL1_39.
+**0 open code items. 0 open doc items.** 11,907 tests passing.
 
 The codebase retains strong architecture, comprehensive test coverage
 (94.24% statements, 11,904 tests in 168 suites), and robust security
 controls. P3-147 (accepted) and P3-148 (deferred) carried forward.
+
+---
+
+## Confirmed Findings (v66 — March 26, 2026) — 6 Code Items
+
+### v65 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P2-205 | ✅ Fixed | ImageLayerRenderer broken image retry storm |
+| P3-206 | ✅ Fixed | LayersLightbox race on close during load |
+| P3-207 | ✅ Fixed | DimensionRenderer auto-reversed math |
+| P3-208 | ✅ Fixed | ViewerManager layersPending not cleared |
+| P3-209 | ✅ Fixed | CalloutRenderer richText gate |
+| P3-147 | ✅ Accepted | Redundant SQL variants |
+| P3-148 | 🔲 Deferred | Unused interface |
+
+---
+
+### New Findings (v66) — 6 Items
+
+**Audit scope:** 5 data-flow modules (APIManager ~1,640 lines,
+SlideController ~1,126 lines, LayerDataNormalizer ~325 lines,
+GradientRenderer ~392 lines, TextRenderer ~345 lines) + 5 canvas
+controllers/tools (ZoomPanController ~385 lines, InteractionController
+~556 lines, RenderCoordinator ~404 lines, SelectionRenderer ~793
+lines, ShapeFactory ~531 lines). 10 files total, ~6,497 lines on
+main branch.
+
+**Methodology:** 2 specialized subagent sweeps identified 13 candidate
+issues. Manual verification confirmed 6 real findings (3 P2, 3 P3)
+and eliminated 7 non-issues.
+
+### Medium — JavaScript (Error Handling Bug)
+
+#### P2-210 · `APIManager.isRetryableError` Shape Mismatch
+
+- **File:** `resources/ext.layers.editor/APIManager.js`
+- **Lines:** ~1020, ~1503
+- **Issue:** `isRetryableError` checked `error.error.code` (nested
+    shape) but callers passed flat `{code, info}` objects. Since
+    `error.error` was always undefined, `!error.error` was always
+    true, so every error was treated as retryable. Non-retryable
+    errors like `badtoken`, `permissiondenied`, `assertuserfailed`
+    were retried 3 times with exponential backoff before finally
+    showing the real error.
+- **Fix:** Check both `error.error.code` and `error.code` for
+    compatibility with both shapes. Return `true` only when there
+    is no code at all (network/timeout).
+- **Status:** ✅ Fixed (non-retryable errors fail immediately)
+
+#### P2-211 · `SlideController` Lightbox Background Hardcoded
+
+- **File:** `resources/ext.layers/viewer/SlideController.js`
+- **Line:** ~847
+- **Issue:** `handleSlideViewClick` hardcoded `backgroundVisible: true`
+    and `backgroundOpacity: 1.0` in the lightbox payload, ignoring
+    the actual values in `currentPayload`. Slides with hidden or
+    semi-transparent backgrounds appeared fully opaque white in
+    lightbox view.
+- **Fix:** Read from `currentPayload.backgroundVisible` and
+    `currentPayload.backgroundOpacity` with fallback defaults.
+- **Status:** ✅ Fixed (lightbox respects background settings)
+
+#### P2-212 · `ZoomPanController.zoomToFitLayers` Coordinate Mismatch
+
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js`
+- **Lines:** ~296-320
+- **Issue:** Content dimensions were in canvas buffer pixels (native
+    image coordinates, e.g., 4000×3000) but container dimensions
+    were in CSS display pixels (e.g., 800×600). The zoom ratio
+    `containerWidth / contentWidth` mixed coordinate spaces, producing
+    incorrect zoom levels. `fitToWindow()` and `zoomBy()` correctly
+    converted buffer→CSS; `zoomToFitLayers` did not.
+- **Fix:** Convert content dimensions and center coordinates from
+    buffer to CSS display space using the same ratio pattern as
+    `zoomBy()`.
+- **Status:** ✅ Fixed (correct zoom level and centering)
+
+### Low — JavaScript (State Bug)
+
+#### P3-213 · `ZoomPanController.smoothZoomTo` Overwrites Duration
+
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js`
+- **Line:** ~178
+- **Issue:** `smoothZoomTo(targetZoom, duration)` wrote
+    `this.zoomAnimationDuration = duration`, permanently changing the
+    instance's default animation duration for all future calls.
+    Any caller passing a custom duration would silently change the
+    animation speed for `zoomIn()`, `zoomOut()`, `resetZoom()`.
+- **Fix:** Store per-animation duration in `currentAnimationDuration`;
+    read it in `animateZoom()` with fallback to instance default.
+- **Status:** ✅ Fixed (custom duration doesn't leak)
+
+#### P3-214 · `ShapeFactory.createText` Missing Shadow
+
+- **File:** `resources/ext.layers.editor/tools/ShapeFactory.js`
+- **Line:** ~252
+- **Issue:** `createText` was the only factory method (of 11) that
+    did not call `this.applyShadow(layer, style)`. When the user
+    had shadow enabled in the toolbar and drew a text layer, the
+    layer had no shadow properties.
+- **Fix:** Store layer in variable and call `applyShadow` before
+    returning, matching all other factory methods.
+- **Status:** ✅ Fixed (text layers get shadow when enabled)
+
+#### P3-215 · `APIManager` Spinner Stuck on Abort
+
+- **File:** `resources/ext.layers.editor/APIManager.js`
+- **Lines:** ~673, ~858
+- **Issue:** In both `loadRevisionById` and `loadLayersBySetName`,
+    the abort handler cleared `isLoading` state but did not call
+    `hideSpinner()`. When a user rapidly switched revisions or
+    named sets (triggering abort of the previous request), the
+    loading spinner stayed visible permanently.
+- **Fix:** Added `this.hideSpinner()` at the start of both abort
+    branches.
+- **Status:** ✅ Fixed (spinner cleared on abort)
+
+---
+
+## v66 Verified Non-Issues (7 Eliminated)
+
+- **RenderCoordinator `_cachedStringify` stale data** — WeakMap caches
+  JSON.stringify by object reference, so in-place array mutations
+  (points.push) could return stale hash. Mitigated: `forceNextRedraw`
+  flag bypasses hash check; interactive drawing paths use this flag.
+- **APIManager client-side size check underestimates** — Checks only
+  layers array, not full payload with background settings. Server
+  validates final size with clear error; low-impact edge case.
+- **APIManager promise never settles on abort** — By design;
+  `rejectAbortedRequests` is false. User navigated away, no caller
+  needs the result.
+- **APIManager `.then().catch()` may lose second rejection argument**
+  — Delete/rename use `.catch(code, data)` but code path still
+  produces useful error messages via `|| code || 'Unknown error'`.
+- **TextRenderer applyShadow/hasShadowEnabled mismatch** — `applyShadow`
+  checks 3 representations, `hasShadowEnabled` checks 5. Data is
+  always normalized before rendering; the missing `'1'` and object
+  cases never reach the fallback path.
+- **ZoomPanController `visible === undefined` in zoomToFitLayers** —
+  LayerDataNormalizer always sets `visible` property; undefined case
+  doesn't occur in practice.
+- **ZoomPanController pan drift during zoom animation** — Pan is
+  computed for target zoom and set immediately while zoom animates.
+  Visual-only issue during 300ms animation; resolves at completion.
 
 ---
 

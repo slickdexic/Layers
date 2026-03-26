@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 26, 2026 — v65 fix pass complete
+**Last updated:** March 26, 2026 — v66 fix pass complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -93,6 +93,18 @@ image retry storm), P3-206 (LayersLightbox race condition), P3-207
 layersPending flag), P3-209 (CalloutRenderer richText gate).
 Cherry-picked to REL1_43 and REL1_39. **0 open code items.**
 
+v66 audit found **3 MEDIUM + 3 LOW code issues** (P2-210, P2-211,
+P2-212, P3-213, P3-214, P3-215). Audit scope: 10 files (5 data-flow
+modules + 5 canvas controllers/tools, ~6,497 lines). 7 non-issues
+eliminated.
+
+v66 fix pass (March 26): Fixed P2-210 (APIManager isRetryableError
+shape mismatch), P2-211 (SlideController lightbox background hardcoded),
+P2-212 (ZoomPanController zoomToFitLayers coordinate mismatch), P3-213
+(smoothZoomTo duration overwrite), P3-214 (ShapeFactory createText
+missing shadow), P3-215 (APIManager spinner stuck on abort).
+Cherry-picked to REL1_43 and REL1_39. **0 open code items.**
+
 Use the section below as the authoritative current backlog.
 
 ---
@@ -166,53 +178,58 @@ wiring with marginal benefit.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 26, 2026 — v65)
+## Verified Current Backlog (Authoritative as of March 26, 2026 — v66)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS Medium (Network) | 0 (P2-205 ✅) | — |
-| JS Low (Race/Math/Lifecycle/Render) | 0 (P3-206/207/208/209 ✅) | — |
+| JS Medium (Error/Render/Coord) | 0 (P2-210/211/212 ✅) | — |
+| JS Low (State/Shadow/UI) | 0 (P3-213/214/215 ✅) | — |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
 | **Total** | **0 open code** + 0 doc + 2 deferred | — |
 
-### Current Priorities (v65)
+### Current Priorities (v66)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
-| 37.01 | ImageLayerRenderer retry storm | P2-205 | MED | ✅ Fixed |
-| 37.02 | LayersLightbox onload race | P3-206 | Low | ✅ Fixed |
-| 37.03 | DimensionRenderer auto-reversed math | P3-207 | Low | ✅ Fixed |
-| 37.04 | ViewerManager layersPending flag | P3-208 | Low | ✅ Fixed |
-| 37.05 | CalloutRenderer richText gate | P3-209 | Low | ✅ Fixed |
-| 37.06 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
-| 37.07 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+| 38.01 | APIManager isRetryableError shape mismatch | P2-210 | MED | ✅ Fixed |
+| 38.02 | SlideController lightbox background hardcoded | P2-211 | MED | ✅ Fixed |
+| 38.03 | ZoomPanController zoomToFitLayers coordinates | P2-212 | MED | ✅ Fixed |
+| 38.04 | smoothZoomTo duration overwrite | P3-213 | Low | ✅ Fixed |
+| 38.05 | ShapeFactory createText missing shadow | P3-214 | Low | ✅ Fixed |
+| 38.06 | APIManager spinner stuck on abort | P3-215 | Low | ✅ Fixed |
+| 38.07 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
+| 38.08 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
 
-### v65 Notes
+### v66 Notes
 
-- Audit scope: 4 viewer files (ViewerManager ~1,320, LayersViewer ~571,
-  LayersLightbox ~560, ViewerOverlay ~510) + ImageLayerRenderer (~278)
-  + 5 shared renderers (EffectsRenderer ~459, MarkerRenderer ~601,
-  DimensionRenderer ~879, CalloutRenderer ~1,000,
-  AngleDimensionRenderer ~1,067). 10 files total, ~6,245 lines.
-- 7 non-issues eliminated: LayersViewer load listener (narrow timing),
-  mw.Api() per-call (waste not bug), mw.log in catch (unreachable),
-  canEdit integer 0 (latent), markers >702 (max layers=100), restore
-  corruption (arithmetic window), factory integer 0 (JS callers).
-- **v65 fix pass (March 26):**
-  - P2-205: Added `_failedUrls` Set to track broken image URLs,
-    skip re-creation in `_getImageElement`. Prevents network spam
-    during resize events.
-  - P3-206: Added `!this.imageWrapper || !this.isOpen` guard inside
-    `img.onload` callback in `renderViewer()`.
-  - P3-207: Replaced single `if` normalization with `while` loop
-    for correct angle wrapping after +π reversal.
-  - P3-208: Unconditionally clear `layersPending` flag after
-    `initializeViewer()` regardless of success/failure.
-  - P3-209: Added `richText` check to text rendering gate matching
-    TextBoxRenderer pattern.
-- Cherry-picked to REL1_43 (merge conflict in ImageLayerRenderer.js
-  resolved) and REL1_39 (same conflict resolved).
-- 11,904 tests pass. All lint checks pass.
+- Audit scope: 5 data-flow modules (APIManager ~1,640,
+  SlideController ~1,126, LayerDataNormalizer ~325,
+  GradientRenderer ~392, TextRenderer ~345) + 5 canvas
+  controllers/tools (ZoomPanController ~385,
+  InteractionController ~556, RenderCoordinator ~404,
+  SelectionRenderer ~793, ShapeFactory ~531). 10 files total,
+  ~6,497 lines.
+- 7 non-issues eliminated: RenderCoordinator cache stale (forceRedraw
+  mitigates), APIManager size check (server validates), promise on
+  abort (by design), .then/.catch error loss (fallback works),
+  TextRenderer shadow mismatch (data normalized), visible===undefined
+  (normalizer sets it), pan drift during animation (cosmetic 300ms).
+- **v66 fix pass (March 26):**
+  - P2-210: Check both `error.error.code` and `error.code` shapes;
+    return true only when no code at all (network/timeout).
+  - P2-211: Read `backgroundVisible`/`backgroundOpacity` from
+    `currentPayload` with `!== undefined` fallback defaults.
+  - P2-212: Convert content dimensions from buffer to CSS display
+    pixels using `cssW/canvasWidth` ratio, matching `zoomBy()` pattern.
+  - P3-213: Store per-animation duration in `currentAnimationDuration`;
+    read in `animateZoom()` with fallback to instance default.
+  - P3-214: Store layer in variable, call `this.applyShadow(layer,
+    style)` before returning, matching all 10 other factory methods.
+  - P3-215: Added `this.hideSpinner()` at start of both abort
+    branches in `loadRevisionById` and `loadLayersBySetName`.
+- Cherry-picked cleanly to both REL1_43 and REL1_39 (no conflicts).
+- 11,907 tests pass (3 new test cases for isRetryableError). All lint
+  checks pass.
 
 ### Current Priorities (v59)
 

@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 26, 2026 — v1.5.63 (v65 fix pass — all items resolved)
+**Last updated:** March 26, 2026 — v1.5.63 (v66 fix pass — all items resolved)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,14 +13,89 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 159 | 159 | 0 |
-| P3 | 213 | 211 | 2 |
-| **Total** | **438** | **436** | **2** |
+| P2 | 162 | 162 | 0 |
+| P3 | 216 | 214 | 2 |
+| **Total** | **444** | **442** | **2** |
 
-*v65 fix pass (March 26): Fixed P2-205, P3-206, P3-207, P3-208,
-P3-209. 7 non-issues eliminated. Audit scope: 10 files (4 viewer
-files + ImageLayerRenderer + 5 shared renderers). Remaining open:
+*v66 fix pass (March 26): Fixed P2-210, P2-211, P2-212, P3-213,
+P3-214, P3-215. 7 non-issues eliminated. Audit scope: 10 files
+(5 data-flow modules + 5 canvas controllers/tools). Remaining open:
 P3-147 (accepted), P3-148 (deferred).*
+
+---
+
+## v66 Issues (March 26, 2026; 3 MEDIUM + 3 LOW code)
+
+### JavaScript — Medium (Error Handling Bug)
+
+#### P2-210: `APIManager.isRetryableError` Shape Mismatch
+
+- **File:** `resources/ext.layers.editor/APIManager.js`
+- **Issue:** Checked `error.error.code` but received flat `{code, info}`
+  objects. All errors treated as retryable — non-retryable errors like
+  badtoken/permissiondenied retried 3 times before showing real error.
+- **Status:** ✅ Fixed (check both nested and flat code shapes)
+
+### JavaScript — Medium (Rendering Bug)
+
+#### P2-211: `SlideController` Lightbox Background Hardcoded
+
+- **File:** `resources/ext.layers/viewer/SlideController.js`
+- **Issue:** `handleSlideViewClick` hardcoded `backgroundVisible: true`
+  and `backgroundOpacity: 1.0`, ignoring actual payload values.
+  Slides with hidden/semi-transparent backgrounds showed fully opaque.
+- **Status:** ✅ Fixed (read from currentPayload with defaults)
+
+#### P2-212: `ZoomPanController.zoomToFitLayers` Coordinate Mismatch
+
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js`
+- **Issue:** Content in buffer pixels, container in CSS pixels. Canvas
+  buffer size differs from CSS display size for image-backed editors.
+  Produced wrong zoom level and off-center content.
+- **Status:** ✅ Fixed (convert to CSS display space like zoomBy)
+
+### JavaScript — Low (State Bug)
+
+#### P3-213: `ZoomPanController.smoothZoomTo` Duration Overwrite
+
+- **File:** `resources/ext.layers.editor/canvas/ZoomPanController.js`
+- **Issue:** Custom duration parameter permanently overwrote instance
+  default `zoomAnimationDuration` for all future calls.
+- **Status:** ✅ Fixed (per-animation duration variable)
+
+### JavaScript — Low (Missing Feature)
+
+#### P3-214: `ShapeFactory.createText` Missing Shadow
+
+- **File:** `resources/ext.layers.editor/tools/ShapeFactory.js`
+- **Issue:** Only factory method (of 11) not calling `applyShadow()`.
+  Text layers silently ignored shadow toolbar setting.
+- **Status:** ✅ Fixed (call applyShadow like all other methods)
+
+### JavaScript — Low (UI Bug)
+
+#### P3-215: `APIManager` Spinner Stuck on Abort
+
+- **File:** `resources/ext.layers.editor/APIManager.js`
+- **Issue:** Abort handler in loadRevisionById/loadLayersBySetName
+  cleared isLoading state but not the spinner. Rapid switching left
+  spinner visible permanently.
+- **Status:** ✅ Fixed (hideSpinner in abort branch)
+
+### Carried Forward
+
+- **P3-147** (Redundant SQL variants) — Accepted; no code change needed
+- **P3-148** (Unused interface) — Deferred
+
+### Non-Issues Eliminated (7)
+
+- RenderCoordinator `_cachedStringify` stale data (mitigated by forceRedraw)
+- APIManager client-side size check (server validates)
+- APIManager promise on abort (by design)
+- APIManager `.then().catch()` error loss (fallback messages work)
+- TextRenderer shadow check mismatch (data always normalized)
+- ZoomPanController visible===undefined (normalizer sets it)
+- ZoomPanController pan drift during animation (cosmetic, 300ms)
 
 ---
 
