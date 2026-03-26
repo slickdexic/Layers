@@ -1310,9 +1310,8 @@ class CanvasManager {
 		}
 		if ( this.selectionManager ) {
 			this.selectionManager.finishMarqueeSelection();
-			// Sync selection state back
-			const selectedIds = this.selectionManager.getSelectedLayerIds ?
-				this.selectionManager.getSelectedLayerIds() : [];
+			// P2-200 FIX: Use selectedLayerIds property (not nonexistent method)
+			const selectedIds = this.selectionManager.selectedLayerIds || [];
 			if ( selectedIds.length > 0 ) {
 				this.setSelectedLayerIds( selectedIds );
 				this.drawMultiSelectionIndicators();
@@ -1424,7 +1423,8 @@ class CanvasManager {
 
 	selectAll () {
 		const allIds = ( this.editor.layers || [] )
-			.filter( ( layer ) => layer.visible !== false && layer.visible !== 0 )
+			.filter( ( layer ) => layer.visible !== false && layer.visible !== 0 &&
+				layer.locked !== true && layer.locked !== 1 )
 			.map( ( layer ) => layer.id );
 		this.setSelectedLayerIds( allIds );
 		// Update lastSelectedId for key object alignment (last layer is key object)

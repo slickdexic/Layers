@@ -1354,7 +1354,8 @@ describe( 'CanvasManager', () => {
 			canvasManager.marqueeEnd = { x: 100, y: 100 };
 			canvasManager.isMarqueeSelecting = true;
 			canvasManager.selectionManager.finishMarqueeSelection = jest.fn();
-			canvasManager.selectionManager.getSelectedLayerIds = jest.fn( () => [ 'layer1', 'layer2' ] );
+			// P2-200 FIX: Use property (not method) to provide selected IDs
+			canvasManager.selectionManager.selectedLayerIds = [ 'layer1', 'layer2' ];
 		} );
 
 		it( 'should delegate to selectionManager', () => {
@@ -1371,7 +1372,7 @@ describe( 'CanvasManager', () => {
 		} );
 
 		it( 'should deselect all when no layers selected', () => {
-			canvasManager.selectionManager.getSelectedLayerIds = jest.fn( () => [] );
+			canvasManager.selectionManager.selectedLayerIds = [];
 			const deselectSpy = jest.spyOn( canvasManager, 'deselectAll' );
 			canvasManager.finishMarqueeSelection();
 			expect( deselectSpy ).toHaveBeenCalled();
