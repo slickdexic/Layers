@@ -806,6 +806,7 @@
 				"layers-draft-recover",
 				"layers-draft-discard",
 				"layers-draft-recovered",
+				"layers-draft-save-failed",
 				"layers-draft-images-lost",
 				"layers-search-placeholder",
 				"layers-search-clear",
