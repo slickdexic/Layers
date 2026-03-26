@@ -46,6 +46,9 @@
 
 			// LRU cache for loaded images
 			this._imageCache = new Map();
+
+			// Track failed image URLs to prevent retry storms (P2-205)
+			this._failedUrls = new Set();
 		}
 
 		/**
@@ -172,6 +175,11 @@
 				return null;
 			}
 
+			// Skip URLs that previously failed to prevent retry storms (P2-205)
+			if ( this._failedUrls && this._failedUrls.has( layer.src ) ) {
+				return null;
+			}
+
 			// Use layer id + src hash as cache key so changing src invalidates cache,
 			// or hash the src alone for layers without an id
 			const cacheKey = layer.id
@@ -219,7 +227,11 @@
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log.warn( '[ImageLayerRenderer] Failed to load image layer:', cacheKey );
 				}
-				// Remove failed image from cache so next render retries loading
+				// Track failed URL to prevent retry storms (P2-205)
+				if ( this._failedUrls ) {
+					this._failedUrls.add( layer.src );
+				}
+				// Remove failed image from cache
 				this._imageCache.delete( cacheKey );
 			};
 

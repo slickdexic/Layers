@@ -1054,6 +1054,7 @@ describe( 'LayersLightbox', () => {
 			// Simulate image load with dimensions
 			Object.defineProperty( img, 'naturalWidth', { value: 800, configurable: true } );
 			Object.defineProperty( img, 'naturalHeight', { value: 600, configurable: true } );
+			lightbox.isOpen = true;
 			img.onload();
 
 			// Should have created a viewer
@@ -1080,6 +1081,7 @@ describe( 'LayersLightbox', () => {
 			const img = lightbox.imageWrapper.querySelector( 'img' );
 			Object.defineProperty( img, 'naturalWidth', { value: 1024, configurable: true } );
 			Object.defineProperty( img, 'naturalHeight', { value: 768, configurable: true } );
+			lightbox.isOpen = true;
 			img.onload();
 
 			// Should have been called with updated layerData
