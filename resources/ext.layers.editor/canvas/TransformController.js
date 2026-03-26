@@ -351,8 +351,16 @@ class TransformController {
 					return;
 				}
 				if ( this._pendingRotationLayer ) {
-					this.manager.renderLayers( this.manager.editor.layers );
-					this.emitTransforming( this._pendingRotationLayer );
+					// P2-197 FIX: Validate layer still exists in layers array
+					// (matches handleResize P2.20 FIX pattern)
+					const layerId = this._pendingRotationLayer.id;
+					const stillExists = this.manager.editor.layers.some(
+						( l ) => l.id === layerId
+					);
+					if ( stillExists ) {
+						this.manager.renderLayers( this.manager.editor.layers );
+						this.emitTransforming( this._pendingRotationLayer );
+					}
 				}
 			} );
 		}
@@ -872,8 +880,9 @@ class TransformController {
 		// Throttle rendering using rAF (matching handleDrag pattern)
 		if ( !this._angleDimRenderScheduled ) {
 			this._angleDimRenderScheduled = true;
-			window.requestAnimationFrame( () => {
+			this._angleDimRafId = window.requestAnimationFrame( () => {
 				this._angleDimRenderScheduled = false;
+				this._angleDimRafId = null;
 				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
 					return;
 				}
@@ -1000,8 +1009,9 @@ class TransformController {
 		// Throttle rendering using rAF (matching handleDrag pattern)
 		if ( !this._dimTextRenderScheduled ) {
 			this._dimTextRenderScheduled = true;
-			window.requestAnimationFrame( () => {
+			this._dimTextRafId = window.requestAnimationFrame( () => {
 				this._dimTextRenderScheduled = false;
+				this._dimTextRafId = null;
 				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
 					return;
 				}
@@ -1140,11 +1150,21 @@ class TransformController {
 			window.cancelAnimationFrame( this._dragRafId );
 			this._dragRafId = null;
 		}
+		if ( this._angleDimRafId !== null ) {
+			window.cancelAnimationFrame( this._angleDimRafId );
+			this._angleDimRafId = null;
+		}
+		if ( this._dimTextRafId !== null ) {
+			window.cancelAnimationFrame( this._dimTextRafId );
+			this._dimTextRafId = null;
+		}
 
 		// Clear RAF scheduling flags
 		this._resizeRenderScheduled = false;
 		this._rotationRenderScheduled = false;
 		this._dragRenderScheduled = false;
+		this._angleDimRenderScheduled = false;
+		this._dimTextRenderScheduled = false;
 
 		// Clear pending layer references for RAF callbacks
 		this._pendingResizeLayer = null;
