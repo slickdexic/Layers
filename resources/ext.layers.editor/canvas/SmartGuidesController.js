@@ -571,7 +571,7 @@
 				verticalOffset = leftSnap.value - left;
 				verticalSnapType = leftSnap.type;
 			}
-			if ( rightSnap && ( !bestVerticalSnap || Math.abs( right - rightSnap.value ) < Math.abs( rightSnap.value - right ) ) ) {
+			if ( rightSnap && ( !bestVerticalSnap || Math.abs( right - rightSnap.value ) < Math.abs( verticalOffset ) ) ) {
 				const rightOffset = rightSnap.value - right;
 				if ( !bestVerticalSnap || Math.abs( rightOffset ) < Math.abs( verticalOffset ) ) {
 					bestVerticalSnap = rightSnap;

@@ -2244,14 +2244,18 @@ describe( 'TransformController', () => {
 			controller._rotationRafId = 20;
 			controller._dragRafId = 30;
 			controller._arrowTipRafId = 40;
+			controller._angleDimRafId = 50;
+			controller._dimTextRafId = 60;
 
 			controller.destroy();
 
-			expect( cancelSpy ).toHaveBeenCalledTimes( 4 );
+			expect( cancelSpy ).toHaveBeenCalledTimes( 6 );
 			expect( controller._resizeRafId ).toBeNull();
 			expect( controller._rotationRafId ).toBeNull();
 			expect( controller._dragRafId ).toBeNull();
 			expect( controller._arrowTipRafId ).toBeNull();
+			expect( controller._angleDimRafId ).toBeNull();
+			expect( controller._dimTextRafId ).toBeNull();
 			cancelSpy.mockRestore();
 		} );
 	} );

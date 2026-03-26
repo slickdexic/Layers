@@ -375,11 +375,9 @@
 					if ( sweep <= 0 ) {
 						sweep += 2 * Math.PI;
 					}
+					// Use complementary angle for reflex (matches AngleDimensionRenderer.calculateAngles)
 					if ( sweep <= Math.PI ) {
-						sweep = sweep + 2 * Math.PI;
-					}
-					if ( sweep > 2 * Math.PI ) {
-						sweep -= 2 * Math.PI;
+						sweep = 2 * Math.PI - sweep;
 					}
 				}
 
