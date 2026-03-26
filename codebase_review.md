@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 26, 2026 (v64 audit + fix pass)
-**Previous Review:** March 26, 2026 (v63 audit + fix pass)
+**Review Date:** March 26, 2026 (v65 audit + fix pass)
+**Previous Review:** March 26, 2026 (v64 audit + fix pass)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -37,28 +37,167 @@
 
 ## Executive Summary
 
-The v64 audit covered two major areas: UI god classes (5 files:
-Toolbar, LayerPanel, ToolbarStyleControls, PropertyBuilders,
-InlineTextEditor — ~8,570 lines) and core editor logic (5 files:
-CanvasManager, SelectionManager, CanvasRenderer, CanvasEvents,
-GroupManager — ~7,865 lines). Two specialized subagent sweeps
-identified 5+10=15 candidate issues. Manual verification confirmed 6
-real findings (5 P2, 1 P3) and eliminated 9 non-issues.
+The v65 audit covered two major areas: viewer stack (4 files:
+ViewerManager, LayersViewer, LayersLightbox, ViewerOverlay — ~2,961
+lines plus ImageLayerRenderer ~278 lines) and remaining shared
+renderers (5 files: EffectsRenderer, MarkerRenderer,
+DimensionRenderer, CalloutRenderer, AngleDimensionRenderer — ~3,006
+lines). Two specialized subagent sweeps identified 7+5=12 candidate
+issues. Manual verification confirmed 5 real findings (1 P2, 4 P3)
+and eliminated 7 non-issues.
 
-**v64 findings:** 0 CRITICAL, 0 HIGH, 5 MEDIUM, 1 LOW code items.
+**v65 findings:** 0 CRITICAL, 0 HIGH, 1 MEDIUM, 4 LOW code items.
 
-**v64 fix pass (March 26):** P2-199 fixed (touch double-tap measured
-tap duration not interval), P2-200 fixed (finishMarqueeSelection
-called nonexistent method), P2-201 fixed (locked text layers editable
-via double-click), P2-202 fixed (selectAll included locked layers),
-P2-203 fixed (Space key blocked toolbar button activation), P3-204
-fixed (ArrowStyleControl null guard). All cherry-picked to REL1_43
-and REL1_39.
+**v65 fix pass (March 26):** P2-205 fixed (ImageLayerRenderer broken
+image retry storm — onerror deleted cache entry causing infinite
+network requests on re-render), P3-206 fixed (LayersLightbox race
+condition on close during image load), P3-207 fixed (DimensionRenderer
+auto-reversed text normalization math), P3-208 fixed (ViewerManager
+layersPending not cleared on success), P3-209 fixed (CalloutRenderer
+richText gate on layer.text). All cherry-picked to REL1_43 and
+REL1_39.
 **0 open code items. 0 open doc items.** 11,904 tests passing.
 
 The codebase retains strong architecture, comprehensive test coverage
 (94.24% statements, 11,904 tests in 168 suites), and robust security
 controls. P3-147 (accepted) and P3-148 (deferred) carried forward.
+
+---
+
+## Confirmed Findings (v65 — March 26, 2026) — 5 Code Items
+
+### v64 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P2-199 | ✅ Fixed | Touch double-tap measured tap duration |
+| P2-200 | ✅ Fixed | Marquee selection nonexistent method |
+| P2-201 | ✅ Fixed | Locked text layers editable |
+| P2-202 | ✅ Fixed | selectAll included locked layers |
+| P2-203 | ✅ Fixed | Space key blocked toolbar buttons |
+| P3-204 | ✅ Fixed | ArrowStyleControl null guard |
+| P3-147 | ✅ Accepted | Redundant SQL variants |
+| P3-148 | 🔲 Deferred | Unused interface |
+
+---
+
+### New Findings (v65) — 5 Items
+
+**Audit scope:** 4 viewer files (ViewerManager, LayersViewer,
+LayersLightbox, ViewerOverlay — ~2,961 lines) + ImageLayerRenderer
+(~278 lines) + 5 shared renderers (EffectsRenderer, MarkerRenderer,
+DimensionRenderer, CalloutRenderer, AngleDimensionRenderer — ~3,006
+lines). 10 files total, ~6,245 lines on main branch.
+
+**Methodology:** 2 specialized subagent sweeps identified 12 candidate
+issues. Manual verification confirmed 5 real findings (1 P2, 4 P3)
+and eliminated 7 non-issues.
+
+### Medium — JavaScript (Network Bug)
+
+#### P2-205 · `ImageLayerRenderer` Broken Image Retry Storm
+
+- **File:** `resources/ext.layers.shared/ImageLayerRenderer.js`
+- **Lines:** ~223, ~181
+- **Issue:** `img.onerror` handler deleted the cache entry for a
+    failed image. On the next render cycle (resize, RAF), `_getImageElement`
+    found no cache entry, created a new `Image` with the same broken
+    URL, and started a new network request. During continuous resize
+    events (60fps via RAF), this fired dozens of requests per second
+    to a failing endpoint.
+- **Fix:** Track failed URLs in a `_failedUrls` Set. Skip re-creation
+    for known-failed URLs.
+- **Status:** ✅ Fixed (network spam eliminated)
+
+### Low — JavaScript (Race Condition)
+
+#### P3-206 · `LayersLightbox.renderViewer` img.onload After close()
+
+- **File:** `resources/ext.layers/viewer/LayersLightbox.js`
+- **Line:** ~290
+- **Issue:** `renderViewer()` guarded against `!this.imageWrapper` at
+    the function start, but `img.onload` fired asynchronously with no
+    guard. If user closed lightbox during image load, `close()` nulled
+    `this.imageWrapper`, then `img.onload` created a LayersViewer with
+    `container: null` — a non-functional instance.
+- **Fix:** Added `!this.imageWrapper || !this.isOpen` guard inside
+    the `img.onload` callback.
+- **Status:** ✅ Fixed (stale callback guarded)
+
+### Low — JavaScript (Math Bug)
+
+#### P3-207 · `DimensionRenderer` auto-reversed Text Normalization
+
+- **File:** `resources/ext.layers.shared/DimensionRenderer.js`
+- **Line:** ~658
+- **Issue:** After adding π for reversal, a single `if` normalization
+    (`>π/2 || <-π/2 → +=π`) could produce a net 2π (identity),
+    making `auto-reversed` identical to `auto` for common angles
+    (all angles in [-π/2, π/2]). The feature was effectively broken
+    for horizontal and diagonal dimension lines.
+- **Fix:** Replaced single `if` with `while` loop normalization for
+    correct angle wrapping across all input ranges.
+- **Status:** ✅ Fixed (auto-reversed now distinct from auto)
+
+### Low — JavaScript (Lifecycle Bug)
+
+#### P3-208 · `ViewerManager` layersPending Not Cleared on Success
+
+- **File:** `resources/ext.layers/viewer/ViewerManager.js`
+- **Line:** ~814
+- **Issue:** In `initializeLargeImages`, `img.layersPending = true`
+    was set before the API call, but only cleared on the failure path.
+    On success, the flag persisted. If the viewer was later destroyed
+    (e.g., via `destroyViewer`), the flag blocked re-initialization:
+    `if ( img.layersViewer || img.layersPending )` skipped it.
+- **Fix:** Unconditionally clear `layersPending` after
+    `initializeViewer()` call.
+- **Status:** ✅ Fixed (re-initialization unblocked)
+
+### Low — JavaScript (Rendering Gap)
+
+#### P3-209 · `CalloutRenderer` richText Gate on `layer.text`
+
+- **File:** `resources/ext.layers.shared/CalloutRenderer.js`
+- **Line:** ~920
+- **Issue:** Text rendering was gated on `layer.text` being truthy.
+    Per the data model, when `richText` is present, `text` is ignored
+    and may be empty. `TextBoxRenderer` correctly checks
+    `(text || richText)`, but `CalloutRenderer` only checked `text`,
+    so callouts with `richText` but empty `text` rendered as empty
+    bubbles.
+- **Fix:** Added `richText` check matching TextBoxRenderer pattern:
+    `(layer.text.length > 0) || (layer.richText && richText.length)`.
+- **Status:** ✅ Fixed (richText callouts render correctly)
+
+---
+
+## v65 Verified Non-Issues (7 Eliminated)
+
+- **LayersViewer image load listener leak** — anonymous listener on
+  `this.imageElement`, but `resizeCanvasAndRender` has `!this.canvas`
+  guard. Narrow timing window, stale callback is safe.
+
+- **LayersLightbox new mw.Api() per-call** — creates new API instance
+  each open. Minor waste but not a functional bug; token caches are
+  reused by jQuery.
+
+- **LayersViewer mw.log in catch** — `cancelAnimationFrame` never
+  throws in browsers. Unreachable catch block.
+
+- **ViewerOverlay config.canEdit integer 0** — no caller passes
+  `canEdit` from API data. Latent footgun only.
+
+- **MarkerRenderer formatValue >702** — max layers per set is 100.
+  Practically unreachable 27+ double-letter column overflow.
+
+- **CalloutRenderer error handler restore** — `ctx.restore()` in
+  catch could pop caller's state if exception occurs before `save()`.
+  Only arithmetic in that window; no realistic throw path.
+
+- **DimensionRenderer/AngleDimensionRenderer factory integer 0** —
+  factory methods called from JS editor, not API deserialization.
+  PHP-serialized integers won't reach these code paths.
 
 ---
 

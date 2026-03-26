@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 26, 2026 — v64 fix pass complete
+**Last updated:** March 26, 2026 — v65 fix pass complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -82,6 +82,17 @@ P2-202 (selectAll locked filter), P2-203 (Space key accessibility),
 P3-204 (ArrowStyleControl null guard). Cherry-picked to REL1_43
 and REL1_39. **0 open code items. 0 open doc items.**
 
+v65 audit found **1 MEDIUM + 4 LOW code issues** (P2-205, P3-206,
+P3-207, P3-208, P3-209). Audit scope: 10 files (4 viewer files +
+ImageLayerRenderer + 5 shared renderers, ~6,245 lines). 7 non-issues
+eliminated.
+
+v65 fix pass (March 26): Fixed P2-205 (ImageLayerRenderer broken
+image retry storm), P3-206 (LayersLightbox race condition), P3-207
+(DimensionRenderer auto-reversed normalization), P3-208 (ViewerManager
+layersPending flag), P3-209 (CalloutRenderer richText gate).
+Cherry-picked to REL1_43 and REL1_39. **0 open code items.**
+
 Use the section below as the authoritative current backlog.
 
 ---
@@ -155,53 +166,52 @@ wiring with marginal benefit.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 26, 2026 — v64)
+## Verified Current Backlog (Authoritative as of March 26, 2026 — v65)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS Medium (Logic/Input/A11y) | 0 (P2-199/200/201/202/203 ✅) | — |
-| JS Low (Defensive) | 0 (P3-204 ✅) | — |
+| JS Medium (Network) | 0 (P2-205 ✅) | — |
+| JS Low (Race/Math/Lifecycle/Render) | 0 (P3-206/207/208/209 ✅) | — |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
 | **Total** | **0 open code** + 0 doc + 2 deferred | — |
 
-### Current Priorities (v64)
+### Current Priorities (v65)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
-| 36.01 | CanvasEvents double-tap measures duration | P2-199 | MED | ✅ Fixed |
-| 36.02 | CanvasManager marquee selection method | P2-200 | MED | ✅ Fixed |
-| 36.03 | CanvasEvents findTextLayer locked check | P2-201 | MED | ✅ Fixed |
-| 36.04 | CanvasManager selectAll locked filter | P2-202 | MED | ✅ Fixed |
-| 36.05 | CanvasEvents Space key toolbar block | P2-203 | MED | ✅ Fixed |
-| 36.06 | ToolbarStyleControls ArrowStyle guard | P3-204 | Low | ✅ Fixed |
-| 36.07 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
-| 36.08 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+| 37.01 | ImageLayerRenderer retry storm | P2-205 | MED | ✅ Fixed |
+| 37.02 | LayersLightbox onload race | P3-206 | Low | ✅ Fixed |
+| 37.03 | DimensionRenderer auto-reversed math | P3-207 | Low | ✅ Fixed |
+| 37.04 | ViewerManager layersPending flag | P3-208 | Low | ✅ Fixed |
+| 37.05 | CalloutRenderer richText gate | P3-209 | Low | ✅ Fixed |
+| 37.06 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
+| 37.07 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
 
-### v64 Notes
+### v65 Notes
 
-- Audit scope: 5 UI god classes (Toolbar, LayerPanel,
-  ToolbarStyleControls, PropertyBuilders, InlineTextEditor — ~8,570
-  lines) + 5 core editor files (CanvasManager, SelectionManager,
-  CanvasRenderer, CanvasEvents, GroupManager — ~7,865 lines). 10 files
-  total, ~16,435 lines.
-- 9 non-issues eliminated: intra-folder reorder (Case 3 handles),
-  color preview leak (abnormal-close-only), EventTracker stale
-  listeners (destroy cleans), fontFamily nesting (visual correct),
-  ToolbarKeyboard unguarded (same all modules), NaN group bounds
-  (server validates), ellipse glow (Canvas limitation), zoom sync
-  (theoretical), nested group position (correct folder, approx index).
-- **v64 fix pass (March 26):**
-  - P2-199: Moved lastTouchTime to touchEnd, measures inter-tap
-    interval instead of tap duration. Reset after double-tap.
-  - P2-200: Changed `getSelectedLayerIds()` (nonexistent method) to
-    `selectedLayerIds` (existing property).
-  - P2-201: Added locked check to findTextLayerAtPoint skip condition.
-  - P2-202: Added locked filter to selectAll, matching SelectionManager.
-  - P2-203: Added BUTTON, SELECT, .oo-ui-widget guards to Space key
-    handler to preserve toolbar keyboard accessibility.
-  - P3-204: Wrapped arrowStyleControl.create() in null guard matching
-    other delegates in same method.
-- Cherry-picked to REL1_43 and REL1_39.
+- Audit scope: 4 viewer files (ViewerManager ~1,320, LayersViewer ~571,
+  LayersLightbox ~560, ViewerOverlay ~510) + ImageLayerRenderer (~278)
+  + 5 shared renderers (EffectsRenderer ~459, MarkerRenderer ~601,
+  DimensionRenderer ~879, CalloutRenderer ~1,000,
+  AngleDimensionRenderer ~1,067). 10 files total, ~6,245 lines.
+- 7 non-issues eliminated: LayersViewer load listener (narrow timing),
+  mw.Api() per-call (waste not bug), mw.log in catch (unreachable),
+  canEdit integer 0 (latent), markers >702 (max layers=100), restore
+  corruption (arithmetic window), factory integer 0 (JS callers).
+- **v65 fix pass (March 26):**
+  - P2-205: Added `_failedUrls` Set to track broken image URLs,
+    skip re-creation in `_getImageElement`. Prevents network spam
+    during resize events.
+  - P3-206: Added `!this.imageWrapper || !this.isOpen` guard inside
+    `img.onload` callback in `renderViewer()`.
+  - P3-207: Replaced single `if` normalization with `while` loop
+    for correct angle wrapping after +π reversal.
+  - P3-208: Unconditionally clear `layersPending` flag after
+    `initializeViewer()` regardless of success/failure.
+  - P3-209: Added `richText` check to text rendering gate matching
+    TextBoxRenderer pattern.
+- Cherry-picked to REL1_43 (merge conflict in ImageLayerRenderer.js
+  resolved) and REL1_39 (same conflict resolved).
 - 11,904 tests pass. All lint checks pass.
 
 ### Current Priorities (v59)

@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 26, 2026 — v1.5.63 (v64 fix pass — all items resolved)
+**Last updated:** March 26, 2026 — v1.5.63 (v65 fix pass — all items resolved)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,14 +13,82 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 158 | 158 | 0 |
-| P3 | 209 | 207 | 2 |
-| **Total** | **433** | **431** | **2** |
+| P2 | 159 | 159 | 0 |
+| P3 | 213 | 211 | 2 |
+| **Total** | **438** | **436** | **2** |
 
-*v64 fix pass (March 26): Fixed P2-199, P2-200, P2-201, P2-202,
-P2-203, P3-204. 9 non-issues eliminated. Audit scope: 10 files
-(5 UI god classes + 5 core editor files). Remaining open: P3-147
-(accepted), P3-148 (deferred).*
+*v65 fix pass (March 26): Fixed P2-205, P3-206, P3-207, P3-208,
+P3-209. 7 non-issues eliminated. Audit scope: 10 files (4 viewer
+files + ImageLayerRenderer + 5 shared renderers). Remaining open:
+P3-147 (accepted), P3-148 (deferred).*
+
+---
+
+## v65 Issues (March 26, 2026; 1 MEDIUM + 4 LOW code)
+
+### JavaScript — Medium (Network Bug)
+
+#### P2-205: `ImageLayerRenderer` Broken Image Retry Storm
+
+- **File:** `resources/ext.layers.shared/ImageLayerRenderer.js`
+- **Issue:** `onerror` deleted cache entry for broken images. Next
+  render created new Image with same URL, causing infinite retry loop
+  during resize events (60fps). Network spam to failing endpoint.
+- **Status:** ✅ Fixed (track failed URLs in Set, skip re-creation)
+
+### JavaScript — Low (Race Condition)
+
+#### P3-206: `LayersLightbox.renderViewer` img.onload After close()
+
+- **File:** `resources/ext.layers/viewer/LayersLightbox.js`
+- **Issue:** No guard in `img.onload` callback. If lightbox closed
+  during image load, created LayersViewer with null container.
+- **Status:** ✅ Fixed (isOpen + imageWrapper guard added)
+
+### JavaScript — Low (Math Bug)
+
+#### P3-207: `DimensionRenderer` auto-reversed Text Normalization
+
+- **File:** `resources/ext.layers.shared/DimensionRenderer.js`
+- **Issue:** Single `if` normalization after +π reversal produced
+  net 2π (identity) for common angles. `auto-reversed` was identical
+  to `auto` for horizontal/diagonal dimension lines.
+- **Status:** ✅ Fixed (while-loop normalization)
+
+### JavaScript — Low (Lifecycle Bug)
+
+#### P3-208: `ViewerManager` layersPending Not Cleared on Success
+
+- **File:** `resources/ext.layers/viewer/ViewerManager.js`
+- **Issue:** `layersPending` flag set before API call, only cleared on
+  failure. Persisted on success, blocking re-initialization after
+  viewer destruction.
+- **Status:** ✅ Fixed (unconditionally cleared)
+
+### JavaScript — Low (Rendering Gap)
+
+#### P3-209: `CalloutRenderer` richText Gate on layer.text
+
+- **File:** `resources/ext.layers.shared/CalloutRenderer.js`
+- **Issue:** Text rendering gated on `layer.text` truthy. Callouts
+  with richText but empty text property rendered as empty bubbles.
+  TextBoxRenderer correctly checks both.
+- **Status:** ✅ Fixed (richText check added)
+
+### Non-Issues Eliminated — 7 Items
+
+- **LayersViewer load listener leak** — narrow timing, guard exists
+- **LayersLightbox new mw.Api() per-call** — waste not bug
+- **LayersViewer mw.log in catch** — unreachable
+- **ViewerOverlay canEdit integer 0** — no caller passes from API
+- **MarkerRenderer formatValue >702** — max layers=100
+- **CalloutRenderer restore corruption** — arithmetic window only
+- **Factory methods integer 0** — JS-only callers
+
+### Carried Forward
+
+- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
+- **P3-148:** Unused `LayerValidatorInterface` — deferred
 
 ---
 
