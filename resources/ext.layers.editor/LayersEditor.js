@@ -1738,29 +1738,41 @@ class LayersEditor {
 
 		managers.forEach( ( name ) => {
 			if ( this[ name ] && typeof this[ name ].destroy === 'function' ) {
-				this[ name ].destroy();
+				try {
+					this[ name ].destroy();
+				} catch ( e ) {
+					mw.log.error( '[LayersEditor] Error destroying ' + name + ':', e );
+				}
 			}
 		} );
 
 		// Clean up canvas manager
 		if ( this.canvasManager ) {
-			if ( this.canvasManager.events && typeof this.canvasManager.events.destroy === 'function' ) {
-				this.canvasManager.events.destroy();
-			}
-			if ( this.canvasManager.selectionSystem && typeof this.canvasManager.selectionSystem.destroy === 'function' ) {
-				this.canvasManager.selectionSystem.destroy();
-			}
-			if ( typeof this.canvasManager.destroy === 'function' ) {
-				this.canvasManager.destroy();
+			try {
+				if ( this.canvasManager.events && typeof this.canvasManager.events.destroy === 'function' ) {
+					this.canvasManager.events.destroy();
+				}
+				if ( this.canvasManager.selectionSystem && typeof this.canvasManager.selectionSystem.destroy === 'function' ) {
+					this.canvasManager.selectionSystem.destroy();
+				}
+				if ( typeof this.canvasManager.destroy === 'function' ) {
+					this.canvasManager.destroy();
+				}
+			} catch ( e ) {
+				mw.log.error( '[LayersEditor] Error destroying canvasManager:', e );
 			}
 		}
 
 		// Clean up toolbar and layer panel
-		if ( this.toolbar && typeof this.toolbar.destroy === 'function' ) {
-			this.toolbar.destroy();
-		}
-		if ( this.layerPanel && typeof this.layerPanel.destroy === 'function' ) {
-			this.layerPanel.destroy();
+		try {
+			if ( this.toolbar && typeof this.toolbar.destroy === 'function' ) {
+				this.toolbar.destroy();
+			}
+			if ( this.layerPanel && typeof this.layerPanel.destroy === 'function' ) {
+				this.layerPanel.destroy();
+			}
+		} catch ( e ) {
+			mw.log.error( '[LayersEditor] Error destroying toolbar/layerPanel:', e );
 		}
 
 		// Clean up help dialog

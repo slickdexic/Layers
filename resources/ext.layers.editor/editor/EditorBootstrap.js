@@ -315,8 +315,11 @@
 		}
 
 		if ( window.layersEditorInstance && typeof window.layersEditorInstance.destroy === 'function' ) {
-			window.layersEditorInstance.destroy();
-			window.layersEditorInstance = null;
+			try {
+				window.layersEditorInstance.destroy();
+			} finally {
+				window.layersEditorInstance = null;
+			}
 		}
 	}
 

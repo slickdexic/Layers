@@ -662,6 +662,12 @@
 								result.warnings.push( `Invalid textStrokeWidth '${ value }' in run ${ i }` );
 							}
 						}
+
+						// Validate color values
+						if ( ( prop === 'color' || prop === 'backgroundColor' || prop === 'textStrokeColor' ) &&
+							value && !this.isValidColor( value ) ) {
+							result.warnings.push( `Invalid ${ prop } '${ value }' in run ${ i }` );
+						}
 					}
 				}
 			}

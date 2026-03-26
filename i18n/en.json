@@ -820,6 +820,7 @@
 	"layers-draft-recover": "Recover",
 	"layers-draft-discard": "Discard",
 	"layers-draft-recovered": "Draft recovered successfully",
+	"layers-draft-save-failed": "Auto-save failed. Your changes may not be preserved if you leave the page.",
 	"layers-draft-images-lost": "$1 image {{PLURAL:$1|layer was|layers were}} too large to save in the draft and could not be recovered. Please re-add {{PLURAL:$1|it|them}} manually.",
 	"layers-search-placeholder": "Search layers...",
 	"layers-search-clear": "Clear search",
