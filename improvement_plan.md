@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 26, 2026 — v63 fix pass complete
+**Last updated:** March 26, 2026 — v64 fix pass complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -70,6 +70,17 @@ v63 fix pass (March 26): Fixed P2-195 (SmartGuides snap tautology),
 P2-196 (reflex angle arc hit test), P2-197 (rotation rAF layer
 check), P3-198 (untracked dimension text rAF IDs). Cherry-picked to
 REL1_43 and REL1_39. **0 open code items. 0 open doc items.**
+
+v64 audit found **5 MEDIUM + 1 LOW code issues** (P2-199, P2-200,
+P2-201, P2-202, P2-203, P3-204). Audit scope: 10 files (5 UI god
+classes + 5 core editor files, ~16,435 lines). 9 non-issues
+eliminated.
+
+v64 fix pass (March 26): Fixed P2-199 (touch double-tap duration),
+P2-200 (marquee selection method), P2-201 (locked text editing),
+P2-202 (selectAll locked filter), P2-203 (Space key accessibility),
+P3-204 (ArrowStyleControl null guard). Cherry-picked to REL1_43
+and REL1_39. **0 open code items. 0 open doc items.**
 
 Use the section below as the authoritative current backlog.
 
@@ -144,45 +155,52 @@ wiring with marginal benefit.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 26, 2026 — v63)
+## Verified Current Backlog (Authoritative as of March 26, 2026 — v64)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS Medium (Logic Bug) | 0 (P2-195/196/197 ✅) | — |
-| JS Low (Resource Leak) | 0 (P3-198 ✅) | — |
+| JS Medium (Logic/Input/A11y) | 0 (P2-199/200/201/202/203 ✅) | — |
+| JS Low (Defensive) | 0 (P3-204 ✅) | — |
 | Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
 | **Total** | **0 open code** + 0 doc + 2 deferred | — |
 
-### Current Priorities (v63)
+### Current Priorities (v64)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
-| 35.01 | SmartGuides right-edge snap tautology | P2-195 | MED | ✅ Fixed |
-| 35.02 | HitTestController reflex angle arc | P2-196 | MED | ✅ Fixed |
-| 35.03 | TransformController rotation rAF guard | P2-197 | MED | ✅ Fixed |
-| 35.04 | TransformController untracked rAF IDs | P3-198 | Low | ✅ Fixed |
-| 35.05 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
-| 35.06 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+| 36.01 | CanvasEvents double-tap measures duration | P2-199 | MED | ✅ Fixed |
+| 36.02 | CanvasManager marquee selection method | P2-200 | MED | ✅ Fixed |
+| 36.03 | CanvasEvents findTextLayer locked check | P2-201 | MED | ✅ Fixed |
+| 36.04 | CanvasManager selectAll locked filter | P2-202 | MED | ✅ Fixed |
+| 36.05 | CanvasEvents Space key toolbar block | P2-203 | MED | ✅ Fixed |
+| 36.06 | ToolbarStyleControls ArrowStyle guard | P3-204 | Low | ✅ Fixed |
+| 36.07 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
+| 36.08 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
 
-### v63 Notes
+### v64 Notes
 
-- Audit scope: 5 shared renderers (TextBoxRenderer, ArrowRenderer,
-  ShapeRenderer, LayerRenderer, ShadowRenderer) + 5 canvas controllers
-  (TransformController, DrawingController, SmartGuidesController,
-  ResizeCalculator, HitTestController). ~8,300 lines total.
-- 7 non-issues eliminated: negative radii (server validates), zero-width
-  stroke shadow (perf only), ArrowRenderer '1' fallback (minimal),
-  uncached lookup (once per render), visible===false (normalizer handles),
-  dead code in angleDim finalization, ShadowRenderer blur bounds.
-- **v63 fix pass (March 26):**
-  - P2-195: Changed `|a-b| < |b-a|` (always false) to compare
-    against `verticalOffset` in SmartGuidesController.
-  - P2-196: Replaced 3-step self-canceling reflex sweep with
-    `2π - sweep` complement in HitTestController.
-  - P2-197: Added `editor.layers.find()` guard in rotation rAF
-    callback matching the existing P2.20 resize pattern.
-  - P3-198: Stored rAF IDs for `_angleDimRafId`/`_dimTextRafId`,
-    added cancellation + flag resets in `destroy()`.
+- Audit scope: 5 UI god classes (Toolbar, LayerPanel,
+  ToolbarStyleControls, PropertyBuilders, InlineTextEditor — ~8,570
+  lines) + 5 core editor files (CanvasManager, SelectionManager,
+  CanvasRenderer, CanvasEvents, GroupManager — ~7,865 lines). 10 files
+  total, ~16,435 lines.
+- 9 non-issues eliminated: intra-folder reorder (Case 3 handles),
+  color preview leak (abnormal-close-only), EventTracker stale
+  listeners (destroy cleans), fontFamily nesting (visual correct),
+  ToolbarKeyboard unguarded (same all modules), NaN group bounds
+  (server validates), ellipse glow (Canvas limitation), zoom sync
+  (theoretical), nested group position (correct folder, approx index).
+- **v64 fix pass (March 26):**
+  - P2-199: Moved lastTouchTime to touchEnd, measures inter-tap
+    interval instead of tap duration. Reset after double-tap.
+  - P2-200: Changed `getSelectedLayerIds()` (nonexistent method) to
+    `selectedLayerIds` (existing property).
+  - P2-201: Added locked check to findTextLayerAtPoint skip condition.
+  - P2-202: Added locked filter to selectAll, matching SelectionManager.
+  - P2-203: Added BUTTON, SELECT, .oo-ui-widget guards to Space key
+    handler to preserve toolbar keyboard accessibility.
+  - P3-204: Wrapped arrowStyleControl.create() in null guard matching
+    other delegates in same method.
 - Cherry-picked to REL1_43 and REL1_39.
 - 11,904 tests pass. All lint checks pass.
 

@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 26, 2026 — v1.5.63 (v63 fix pass — all items resolved)
+**Last updated:** March 26, 2026 — v1.5.63 (v64 fix pass — all items resolved)
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,14 +13,92 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 153 | 153 | 0 |
-| P3 | 208 | 206 | 2 |
-| **Total** | **427** | **425** | **2** |
+| P2 | 158 | 158 | 0 |
+| P3 | 209 | 207 | 2 |
+| **Total** | **433** | **431** | **2** |
 
-*v63 fix pass (March 26): Fixed P2-195, P2-196, P2-197, P3-198.
-7 non-issues eliminated. Audit scope: 10 files (5 shared renderers +
-5 canvas controllers). Remaining open: P3-147 (accepted), P3-148
-(deferred).*
+*v64 fix pass (March 26): Fixed P2-199, P2-200, P2-201, P2-202,
+P2-203, P3-204. 9 non-issues eliminated. Audit scope: 10 files
+(5 UI god classes + 5 core editor files). Remaining open: P3-147
+(accepted), P3-148 (deferred).*
+
+---
+
+## v64 Issues (March 26, 2026; 5 MEDIUM + 1 LOW code)
+
+### JavaScript — Medium (Touch Input)
+
+#### P2-199: `CanvasEvents` Double-Tap Measures Tap Duration
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js`
+- **Issue:** `lastTouchTime` set in `handleTouchStart`, checked in
+  `handleTouchEnd` — measures single tap duration (~50-200ms), always
+  <300ms. Every tap fires `handleDoubleTap`, skipping `handleMouseUp`
+  and corrupting transform state.
+- **Status:** ✅ Fixed (time tracked between consecutive touchEnds)
+
+### JavaScript — Medium (Logic Bug)
+
+#### P2-200: `CanvasManager.finishMarqueeSelection` Nonexistent Method
+
+- **File:** `resources/ext.layers.editor/CanvasManager.js`
+- **Issue:** Called `getSelectedLayerIds()` method that doesn't exist
+  on SelectionManager (it's a property). Conditional always evaluated
+  to undefined → fallback `[]` → `deselectAll()` on every mouseUp.
+  Marquee selection appeared during drag but was cleared on release.
+- **Status:** ✅ Fixed (property access instead of method call)
+
+#### P2-201: `CanvasEvents.findTextLayerAtPoint` Missing Locked Check
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js`
+- **Issue:** Comment said "Skip hidden or locked" but only checked
+  `visible`. Locked text layers could be double-click edited.
+- **Status:** ✅ Fixed (locked check added)
+
+#### P2-202: `CanvasManager.selectAll` Includes Locked Layers
+
+- **File:** `resources/ext.layers.editor/CanvasManager.js`
+- **Issue:** `selectAll()` filtered only by visibility, not locked
+  status. Ctrl+A selected locked layers, allowing transform/delete.
+  `SelectionManager.selectAll()` correctly filtered both.
+- **Status:** ✅ Fixed (locked filter added, matches SelectionManager)
+
+### JavaScript — Medium (Accessibility)
+
+#### P2-203: `CanvasEvents` Space Key Blocks Toolbar Buttons
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js`
+- **Issue:** Document-level keydown for Space called `preventDefault()`
+  without checking if a BUTTON, SELECT, or OOUI widget had focus.
+  Keyboard-only toolbar navigation (Tab+Space) was blocked.
+- **Status:** ✅ Fixed (element type guard added)
+
+### JavaScript — Low (Defensive Coding)
+
+#### P3-204: `ToolbarStyleControls` Missing ArrowStyleControl Guard
+
+- **File:** `resources/ext.layers.editor/ToolbarStyleControls.js`
+- **Issue:** `arrowStyleControl.create()` had no null guard, unlike
+  other delegates (textEffectsControls, presetStyleManager) in the
+  same `create()` method.
+- **Status:** ✅ Fixed (null guard added)
+
+### Non-Issues Eliminated — 9 Items
+
+- **Intra-folder reorder rejection** — LayerDragDrop uses Case 3
+- **Color preview originals leak** — requires abnormal dialog close
+- **EventTracker stale listeners** — cleaned on destroy()
+- **fontFamily nesting** — visually correct, HTML bloat bounded
+- **ToolbarKeyboard unguarded** — same pattern all modules
+- **NaN group bounds** — server validates geometry
+- **Ellipse glow distortion** — Canvas limitation, visual only
+- **renderLayersToContext zoom** — theoretical, low confidence
+- **moveToFolder nested groups** — approximate position, correct folder
+
+### Carried Forward
+
+- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
+- **P3-148:** Unused `LayerValidatorInterface` — deferred
 
 ---
 

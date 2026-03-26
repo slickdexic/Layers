@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 26, 2026 (v63 audit + fix pass)
-**Previous Review:** March 26, 2026 (v62 audit + fix pass)
+**Review Date:** March 26, 2026 (v64 audit + fix pass)
+**Previous Review:** March 26, 2026 (v63 audit + fix pass)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -37,26 +37,186 @@
 
 ## Executive Summary
 
-The v63 audit focused on two major areas: shared renderer code (5 files:
-TextBoxRenderer, ArrowRenderer, ShapeRenderer, LayerRenderer,
-ShadowRenderer) and canvas controller code (5 files:
-TransformController, DrawingController, SmartGuidesController,
-ResizeCalculator, HitTestController). Two specialized subagent sweeps
-identified 4+7=11 candidate issues. Manual verification confirmed 4 real
-findings (3 P2, 1 P3) plus 7 non-issues.
+The v64 audit covered two major areas: UI god classes (5 files:
+Toolbar, LayerPanel, ToolbarStyleControls, PropertyBuilders,
+InlineTextEditor — ~8,570 lines) and core editor logic (5 files:
+CanvasManager, SelectionManager, CanvasRenderer, CanvasEvents,
+GroupManager — ~7,865 lines). Two specialized subagent sweeps
+identified 5+10=15 candidate issues. Manual verification confirmed 6
+real findings (5 P2, 1 P3) and eliminated 9 non-issues.
 
-**v63 findings:** 0 CRITICAL, 0 HIGH, 3 MEDIUM, 1 LOW code items.
+**v64 findings:** 0 CRITICAL, 0 HIGH, 5 MEDIUM, 1 LOW code items.
 
-**v63 fix pass (March 26):** P2-195 fixed (SmartGuides right-edge snap
-tautological condition), P2-196 fixed (reflex angle arc hit test sweep
-logic), P2-197 fixed (rotation rAF missing layer-existence check),
-P3-198 fixed (untracked rAF IDs in destroy). All cherry-picked to
-REL1_43 and REL1_39.
+**v64 fix pass (March 26):** P2-199 fixed (touch double-tap measured
+tap duration not interval), P2-200 fixed (finishMarqueeSelection
+called nonexistent method), P2-201 fixed (locked text layers editable
+via double-click), P2-202 fixed (selectAll included locked layers),
+P2-203 fixed (Space key blocked toolbar button activation), P3-204
+fixed (ArrowStyleControl null guard). All cherry-picked to REL1_43
+and REL1_39.
 **0 open code items. 0 open doc items.** 11,904 tests passing.
 
 The codebase retains strong architecture, comprehensive test coverage
 (94.24% statements, 11,904 tests in 168 suites), and robust security
 controls. P3-147 (accepted) and P3-148 (deferred) carried forward.
+
+---
+
+## Confirmed Findings (v64 — March 26, 2026) — 6 Code Items
+
+### v63 Quick-Reference Table
+
+| ID | Status | Notes |
+|----|--------|-------|
+| P2-195 | ✅ Fixed | SmartGuides snap tautology |
+| P2-196 | ✅ Fixed | Reflex angle arc hit test |
+| P2-197 | ✅ Fixed | Rotation rAF layer guard |
+| P3-198 | ✅ Fixed | Untracked dimension text rAFs |
+| P3-147 | ✅ Accepted | Redundant SQL variants |
+| P3-148 | 🔲 Deferred | Unused interface |
+
+---
+
+### New Findings (v64) — 6 Items
+
+**Audit scope:** 5 UI god classes (Toolbar, LayerPanel,
+ToolbarStyleControls, PropertyBuilders, InlineTextEditor — ~8,570
+lines) and 5 core editor files (CanvasManager, SelectionManager,
+CanvasRenderer, CanvasEvents, GroupManager — ~7,865 lines). 10 files
+total, ~16,435 lines on main branch.
+
+**Methodology:** 2 specialized subagent sweeps identified 15 candidate
+issues. Manual verification confirmed 6 real findings (5 P2, 1 P3)
+and eliminated 9 non-issues.
+
+### Medium — JavaScript (Touch Input)
+
+#### P2-199 · `CanvasEvents` Double-Tap Measures Tap Duration
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js`
+- **Lines:** ~664, ~706
+- **Issue:** `lastTouchTime` was set in `handleTouchStart`, then
+    `handleTouchEnd` compared `now - lastTouchTime < 300`. This
+    measured single tap duration (~50-200ms), not interval between
+    two consecutive taps. Every quick tap triggered `handleDoubleTap`
+    (zoom toggle), and the early `return` skipped `handleMouseUp`,
+    leaving drag/selection state unreleased.
+- **Fix:** Moved `lastTouchTime` assignment to `handleTouchEnd`
+    (after the double-tap check), reset to 0 after triggering.
+- **Status:** ✅ Fixed (measures inter-tap interval correctly)
+
+### Medium — JavaScript (Logic Bug)
+
+#### P2-200 · `CanvasManager.finishMarqueeSelection` Nonexistent Method
+
+- **File:** `resources/ext.layers.editor/CanvasManager.js`
+- **Line:** ~1315
+- **Issue:** Called `this.selectionManager.getSelectedLayerIds()`
+    which does not exist on SelectionManager (it's a property, not
+    a method). The conditional `getSelectedLayerIds ?` evaluated to
+    `undefined` (falsy), fallback `[]` was always used, and
+    `deselectAll()` was always called — clearing the marquee
+    selection on every mouseUp.
+- **Fix:** Changed to property access
+    `this.selectionManager.selectedLayerIds || []`.
+- **Status:** ✅ Fixed (marquee selection now persists)
+
+#### P2-201 · `CanvasEvents.findTextLayerAtPoint` Skips Locked Check
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js`
+- **Line:** ~161
+- **Issue:** Comment said "Skip hidden or locked layers" but code
+    only checked `visible`. Locked text/textbox/callout layers could
+    be double-clicked to enter inline text editing, bypassing the
+    lock contract.
+- **Fix:** Added `layer.locked === true || layer.locked === 1`
+    to the skip condition.
+- **Status:** ✅ Fixed (locked layers are not double-click editable)
+
+#### P2-202 · `CanvasManager.selectAll` Includes Locked Layers
+
+- **File:** `resources/ext.layers.editor/CanvasManager.js`
+- **Line:** ~1425
+- **Issue:** `selectAll()` filtered only by visibility, not locked
+    status. `SelectionManager.selectAll()` correctly filters both.
+    Ctrl+A selected locked layers, allowing them to be
+    drag-moved, resized, or deleted — bypassing lock protection.
+- **Fix:** Added `layer.locked !== true && layer.locked !== 1`
+    to the filter, matching SelectionManager.
+- **Status:** ✅ Fixed (Ctrl+A respects locked status)
+
+### Medium — JavaScript (Accessibility)
+
+#### P2-203 · `CanvasEvents` Space Key Blocks Toolbar Buttons
+
+- **File:** `resources/ext.layers.editor/CanvasEvents.js`
+- **Line:** ~620
+- **Issue:** Document-level `keydown` handler called
+    `e.preventDefault()` for Space key to enter pan mode. The guard
+    only checked INPUT, TEXTAREA, and contentEditable. When toolbar
+    buttons/selects had focus, Space activation was blocked — users
+    navigating toolbar with keyboard (Tab + Space) could not activate
+    controls.
+- **Fix:** Added check for BUTTON, SELECT, and `.oo-ui-widget`
+    ancestor before capturing Space key.
+- **Status:** ✅ Fixed (toolbar buttons activatable via keyboard)
+
+### Low — JavaScript (Defensive Coding)
+
+#### P3-204 · `ToolbarStyleControls` Missing ArrowStyleControl Guard
+
+- **File:** `resources/ext.layers.editor/ToolbarStyleControls.js`
+- **Line:** ~183
+- **Issue:** `this.arrowStyleControl.create()` was called without a
+    null guard, while all other delegates (textEffectsControls,
+    presetStyleManager) had null guards. If `ArrowStyleControl`
+    failed to load via `getClass()`, the entire style group creation
+    would crash.
+- **Fix:** Added `if ( this.arrowStyleControl )` guard matching
+    the pattern used by other delegates.
+- **Status:** ✅ Fixed (consistent null checking)
+
+---
+
+## v64 Verified Non-Issues (9 Eliminated)
+
+- **Intra-folder reorder rejection (C4-B2):**
+  `addToFolderAtPosition` returns false for same-folder moves, but
+  `LayerDragDrop` handles same-folder reordering via Case 3
+  (standard reorder through `stateManager.reorderLayer`).
+
+- **Color preview originals leak (C3-B1):**
+  Would require abnormal dialog close without triggering cancel or
+  commit callbacks. Edge case; cleanup happens in both normal paths.
+
+- **EventTracker stale name listeners (C4-B1):**
+  Old elements' listeners accumulate in EventTracker on re-render,
+  but are all cleaned up in `destroy()`. Long-session-only.
+
+- **fontFamily nesting without cleanup (C5-B1):**
+  Repeated font family changes produce nested spans, but innermost
+  CSS wins — visually correct. HTML bloat is bounded by session.
+
+- **ToolbarKeyboard unguarded instantiation (C2-B1):**
+  Same pattern used by many modules. If getClass fails, the module
+  failed to load at all — not a runtime concern.
+
+- **NaN group bounds (C8-B2):**
+  Server validates all layer geometry. Malformed values from API
+  are normalized by LayerDataNormalizer. Theoretical only.
+
+- **Ellipse glow stroke distortion (C9-B2):**
+  Non-uniform scale on stroke is a known Canvas limitation. Visual
+  only, no data impact. Standard workaround would add complexity.
+
+- **renderLayersToContext zoom sync (C10-B2):**
+  LayerRenderer zoom sync gap — low confidence, needs deeper
+  analysis of rendering pipeline. Theoretical concern only.
+
+- **moveToFolder nested group positioning (C5-B2):**
+  Edge case for deeply nested folder hierarchies. The early break
+  at non-direct children means insert position is approximate,
+  but functionally layers still end up in the correct folder.
 
 ---
 
