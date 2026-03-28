@@ -30,6 +30,21 @@
 				}
 				return fallback || key;
 			} );
+
+			// S-002: HTML-escaped messages for template literals injected via innerHTML.
+			// mw.message().escaped() prevents stored XSS from compromised i18n values.
+			this.getMessageEscaped = config.getMessageEscaped || ( ( key, fallback ) => {
+				if ( typeof mw !== 'undefined' && mw.message ) {
+					const msg = mw.message( key );
+					if ( msg.exists() ) {
+						return msg.escaped();
+					}
+				}
+				const div = document.createElement( 'div' );
+				div.textContent = fallback || key;
+				return div.innerHTML;
+			} );
+
 			this.activeTab = 'overview';
 			this.dialog = null;
 			this.overlay = null;
@@ -260,7 +275,8 @@
 		 * @private
 		 */
 		renderOverview( panel ) {
-			const msg = this.getMessage.bind( this );
+			// S-002: Use escaped messages for innerHTML to prevent XSS via i18n
+			const msg = this.getMessageEscaped.bind( this );
 
 			const content = `
 				<h3>${msg( 'layers-help-overview-title', 'Getting Started' )}</h3>
@@ -432,7 +448,14 @@
 
 				const nameRow = document.createElement( 'div' );
 				nameRow.className = 'layers-help-tool-name';
-				nameRow.innerHTML = `<strong>${tool.name}</strong> <kbd>${tool.key}</kbd>`;
+				// S-002: Build via DOM to avoid innerHTML with i18n values
+				const strong = document.createElement( 'strong' );
+				strong.textContent = tool.name;
+				const kbd = document.createElement( 'kbd' );
+				kbd.textContent = tool.key;
+				nameRow.appendChild( strong );
+				nameRow.appendChild( document.createTextNode( ' ' ) );
+				nameRow.appendChild( kbd );
 
 				const desc = document.createElement( 'div' );
 				desc.className = 'layers-help-tool-desc';
@@ -554,7 +577,8 @@
 		 * @private
 		 */
 		renderTips( panel ) {
-			const msg = this.getMessage.bind( this );
+			// S-002: Use escaped messages for innerHTML to prevent XSS via i18n
+			const msg = this.getMessageEscaped.bind( this );
 
 			const content = `
 				<h3>${msg( 'layers-help-tips-title', 'Tips & Best Practices' )}</h3>

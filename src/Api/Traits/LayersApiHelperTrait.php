@@ -102,7 +102,9 @@ trait LayersApiHelperTrait {
 	): bool {
 		$ownerId = $db->getNamedSetOwner( $imgName, $sha1, $setName );
 		$userId = $user->getId();
-		$isOwner = ( $ownerId !== null && $ownerId === $userId );
+		// S-003: All anonymous users share userId 0 — never treat them as owners
+		// to prevent one anon from deleting/renaming another anon's sets.
+		$isOwner = ( $ownerId !== null && $ownerId === $userId && $userId !== 0 );
 		$isAdmin = $user->isAllowed( 'layers-admin' );
 
 		return $isOwner || $isAdmin;

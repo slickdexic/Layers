@@ -31,7 +31,8 @@ class SpecialSlides extends SpecialPage {
 	 * Constructor.
 	 */
 	public function __construct() {
-		parent::__construct( 'Slides' );
+		// S-005: Require 'read' right so private wikis don't leak slide names
+		parent::__construct( 'Slides', 'read' );
 	}
 
 	/**
