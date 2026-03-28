@@ -69,6 +69,14 @@ class SpecialEditSlide extends SpecialPage {
 			throw new \PermissionsError( 'editlayers' );
 		}
 
+		// S-001: Blocked users retain rights but must not access the editor.
+		// The save API independently enforces blocks, but loading the full
+		// editor page wastes server resources and may confuse the user.
+		$block = $user->getBlock();
+		if ( $block ) {
+			throw new \UserBlockedError( $block );
+		}
+
 		// Get optional parameters - must get setname BEFORE database query
 		$setName = $request->getText( 'setname', LayersConstants::DEFAULT_SET_NAME );
 

@@ -62,7 +62,8 @@
 			// but KEEP parentheses for valid CSS functions like rgb(), rgba(), hsl()
 			let safe = String( value ).replace( /["'<>&;{}\\]/g, '' );
 			// Block CSS injection keywords (url, expression, javascript)
-			safe = safe.replace( /\b(?:url|expression|javascript)\s*\(/gi, '(' );
+			// S-004: Block CSS injection keywords including legacy vendor-specific vectors
+			safe = safe.replace( /\b(?:url|expression|javascript|behavior|-moz-binding)\s*\(/gi, '(' );
 			return safe;
 		}
 
