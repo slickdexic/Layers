@@ -1235,4 +1235,200 @@ describe( 'ShapeRenderer', () => {
 			expect( ctx.lineWidth ).toBe( 1 );
 		} );
 	} );
+
+	describe( 'branch coverage gaps', () => {
+		describe( 'shadow delegation with null shadowRenderer', () => {
+			it( 'should no-op drawSpreadShadow when shadowRenderer is null', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( () => {
+					shapeRenderer.drawSpreadShadow( {}, {}, 5, jest.fn(), 1 );
+				} ).not.toThrow();
+			} );
+
+			it( 'should no-op drawSpreadShadowStroke when shadowRenderer is null', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( () => {
+					shapeRenderer.drawSpreadShadowStroke( {}, {}, 2, jest.fn(), 1 );
+				} ).not.toThrow();
+			} );
+
+			it( 'should no-op applyShadow when shadowRenderer is null', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( () => {
+					shapeRenderer.applyShadow( { shadow: true }, {} );
+				} ).not.toThrow();
+			} );
+		} );
+
+		describe( 'hasShadowEnabled fallback without shadowRenderer', () => {
+			it( 'should detect shadow with string "true"', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( shapeRenderer.hasShadowEnabled( { shadow: 'true' } ) ).toBe( true );
+			} );
+
+			it( 'should detect shadow with integer 1', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( shapeRenderer.hasShadowEnabled( { shadow: 1 } ) ).toBe( true );
+			} );
+
+			it( 'should detect shadow with string "1"', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( shapeRenderer.hasShadowEnabled( { shadow: '1' } ) ).toBe( true );
+			} );
+
+			it( 'should detect shadow with truthy object', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( shapeRenderer.hasShadowEnabled( { shadow: { blur: 5 } } ) ).toBeTruthy();
+			} );
+
+			it( 'should return false for shadow false', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( shapeRenderer.hasShadowEnabled( { shadow: false } ) ).toBe( false );
+			} );
+		} );
+
+		describe( 'getShadowSpread fallback without shadowRenderer', () => {
+			it( 'should return 0 when shadow not enabled', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( shapeRenderer.getShadowSpread( { shadow: false }, {} ) ).toBe( 0 );
+			} );
+
+			it( 'should use scale.avg for spread calculation', () => {
+				shapeRenderer.setShadowRenderer( null );
+				const result = shapeRenderer.getShadowSpread(
+					{ shadow: true, shadowSpread: 10 },
+					{ avg: 2 }
+				);
+				expect( result ).toBe( 20 );
+			} );
+
+			it( 'should return 0 for non-positive shadowSpread', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( shapeRenderer.getShadowSpread( { shadow: true, shadowSpread: -5 }, {} ) ).toBe( 0 );
+			} );
+
+			it( 'should return 0 for non-number shadowSpread', () => {
+				shapeRenderer.setShadowRenderer( null );
+				expect( shapeRenderer.getShadowSpread( { shadow: true, shadowSpread: 'big' }, {} ) ).toBe( 0 );
+			} );
+
+			it( 'should default scale.avg to 1 when scale is null', () => {
+				shapeRenderer.setShadowRenderer( null );
+				const result = shapeRenderer.getShadowSpread(
+					{ shadow: true, shadowSpread: 5 },
+					null
+				);
+				expect( result ).toBe( 5 );
+			} );
+		} );
+
+		describe( 'polygon/star delegation with null renderer', () => {
+			it( 'should no-op drawPolygon when polygonStarRenderer is null', () => {
+				const sr = new ShapeRenderer( ctx, { polygonStarRenderer: null } );
+				expect( () => {
+					sr.drawPolygon( { sides: 6, radius: 50, x: 100, y: 100 } );
+				} ).not.toThrow();
+			} );
+
+			it( 'should no-op drawStar when polygonStarRenderer is null', () => {
+				const sr = new ShapeRenderer( ctx, { polygonStarRenderer: null } );
+				expect( () => {
+					sr.drawStar( { points: 5, outerRadius: 50, innerRadius: 25, x: 100, y: 100 } );
+				} ).not.toThrow();
+			} );
+
+			it( 'should no-op drawRoundedPolygonPath when polygonStarRenderer is null', () => {
+				const sr = new ShapeRenderer( ctx, { polygonStarRenderer: null } );
+				expect( () => {
+					sr.drawRoundedPolygonPath( [ { x: 0, y: 0 } ], 5 );
+				} ).not.toThrow();
+			} );
+
+			it( 'should no-op drawRoundedStarPath when polygonStarRenderer is null', () => {
+				const sr = new ShapeRenderer( ctx, { polygonStarRenderer: null } );
+				expect( () => {
+					sr.drawRoundedStarPath( [ { x: 0, y: 0 } ], 50, 25 );
+				} ).not.toThrow();
+			} );
+		} );
+
+		describe( 'drawPath early returns', () => {
+			it( 'should return early when points is null', () => {
+				shapeRenderer.drawPath( { points: null } );
+				expect( ctx.beginPath ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should return early when points is undefined', () => {
+				shapeRenderer.drawPath( {} );
+				expect( ctx.beginPath ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should return early when points is not an array', () => {
+				shapeRenderer.drawPath( { points: 'not-array' } );
+				expect( ctx.beginPath ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should return early when points has fewer than 2 items', () => {
+				shapeRenderer.drawPath( { points: [ { x: 0, y: 0 } ] } );
+				expect( ctx.beginPath ).not.toHaveBeenCalled();
+			} );
+		} );
+
+		describe( '_getGradientRendererClass caching', () => {
+			it( 'should cache null gradient renderer class', () => {
+				const sr = new ShapeRenderer( ctx );
+				const saved = window.Layers && window.Layers.Renderers;
+				if ( window.Layers ) {
+					delete window.Layers.Renderers;
+				}
+				const result1 = sr._getGradientRendererClass();
+				expect( result1 ).toBeNull();
+				// Second call should return cached null
+				const result2 = sr._getGradientRendererClass();
+				expect( result2 ).toBeNull();
+				if ( window.Layers && saved ) {
+					window.Layers.Renderers = saved;
+				}
+			} );
+
+			it( 'should cache the renderer class when available', () => {
+				const sr = new ShapeRenderer( ctx );
+				window.Layers = window.Layers || {};
+				window.Layers.Renderers = window.Layers.Renderers || {};
+				const mockGRC = { hasGradient: jest.fn( () => false ) };
+				window.Layers.Renderers.GradientRenderer = mockGRC;
+				const result1 = sr._getGradientRendererClass();
+				expect( result1 ).toBe( mockGRC );
+				const result2 = sr._getGradientRendererClass();
+				expect( result2 ).toBe( mockGRC );
+			} );
+		} );
+
+		describe( 'drawRectangle without ctx.roundRect', () => {
+			it( 'should use drawRoundedRectPath fallback when roundRect unavailable', () => {
+				delete ctx.roundRect;
+				const layer = {
+					x: 10, y: 10, width: 100, height: 50,
+					fill: '#ff0000', stroke: '#000000',
+					cornerRadius: 10, opacity: 1
+				};
+				shapeRenderer.drawRectangle( layer );
+				// Should use our manual rounded rect path (arcTo calls)
+				expect( ctx.arcTo ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'drawEllipse without ctx.ellipse', () => {
+			it( 'should use scale+arc fallback when ellipse unavailable', () => {
+				delete ctx.ellipse;
+				const layer = {
+					x: 100, y: 100, radiusX: 60, radiusY: 40,
+					fill: '#ff0000', stroke: '#000000', opacity: 1
+				};
+				shapeRenderer.drawEllipse( layer );
+				expect( ctx.scale ).toHaveBeenCalled();
+				expect( ctx.arc ).toHaveBeenCalled();
+			} );
+		} );
+	} );
 } );

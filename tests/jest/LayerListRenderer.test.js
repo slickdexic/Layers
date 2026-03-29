@@ -2,14 +2,6 @@
  * Tests for LayerListRenderer
  */
 
-const fs = require( 'fs' );
-const path = require( 'path' );
-
-// Load the source file
-const sourceFile = path.join( __dirname, '../../resources/ext.layers.editor/ui/LayerListRenderer.js' );
-const sourceCode = fs.readFileSync( sourceFile, 'utf8' );
-
-// Execute in a controlled environment
 const mockIconFactory = {
 	createEyeIcon: jest.fn( ( visible ) => {
 		const span = document.createElement( 'span' );
@@ -28,33 +20,27 @@ const mockIconFactory = {
 	} )
 };
 
-const mockWindow = {
-	Layers: {
-		UI: {
-			IconFactory: mockIconFactory
-		}
-	},
-	LayerListRenderer: null,
-	// Legacy fallback for backwards compatibility
-	IconFactory: mockIconFactory,
-	LayersConstants: {
-		LAYER_TYPES: {
-			TEXT: 'text',
-			RECTANGLE: 'rectangle',
-			CIRCLE: 'circle',
-			ELLIPSE: 'ellipse',
-			POLYGON: 'polygon',
-			STAR: 'star',
-			ARROW: 'arrow',
-			LINE: 'line',
-			PATH: 'path'
-		}
+// Set up window.Layers namespace before requiring the module
+window.Layers = window.Layers || {};
+window.Layers.UI = window.Layers.UI || {};
+window.Layers.UI.IconFactory = mockIconFactory;
+window.IconFactory = mockIconFactory;
+window.LayersConstants = {
+	LAYER_TYPES: {
+		TEXT: 'text',
+		RECTANGLE: 'rectangle',
+		CIRCLE: 'circle',
+		ELLIPSE: 'ellipse',
+		POLYGON: 'polygon',
+		STAR: 'star',
+		ARROW: 'arrow',
+		LINE: 'line',
+		PATH: 'path'
 	}
 };
 
-// eslint-disable-next-line no-new-func
-const initModule = new Function( 'window', 'document', 'module', sourceCode + '\nreturn window.Layers.UI.LayerListRenderer;' );
-const LayerListRenderer = initModule( mockWindow, document, { exports: {} } );
+// Load via require() so Jest instruments the code for coverage tracking
+const LayerListRenderer = require( '../../resources/ext.layers.editor/ui/LayerListRenderer.js' );
 
 describe( 'LayerListRenderer', () => {
 	let renderer;
@@ -77,9 +63,9 @@ describe( 'LayerListRenderer', () => {
 		mockOnMoveLayer = jest.fn();
 
 		// Reset IconFactory mocks
-		mockWindow.IconFactory.createEyeIcon.mockClear();
-		mockWindow.IconFactory.createLockIcon.mockClear();
-		mockWindow.IconFactory.createDeleteIcon.mockClear();
+		mockIconFactory.createEyeIcon.mockClear();
+		mockIconFactory.createLockIcon.mockClear();
+		mockIconFactory.createDeleteIcon.mockClear();
 	} );
 
 	describe( 'constructor', () => {
@@ -365,24 +351,24 @@ describe( 'LayerListRenderer', () => {
 			const layer = { id: 'layer_1', type: 'text', visible: true };
 			const item = renderer.createLayerItem( layer, 0 );
 
-			mockWindow.IconFactory.createEyeIcon.mockClear();
+			mockIconFactory.createEyeIcon.mockClear();
 
 			const updatedLayer = { id: 'layer_1', type: 'text', visible: false };
 			renderer.updateLayerItem( item, updatedLayer, 0 );
 
-			expect( mockWindow.IconFactory.createEyeIcon ).toHaveBeenCalledWith( false );
+			expect( mockIconFactory.createEyeIcon ).toHaveBeenCalledWith( false );
 		} );
 
 		test( 'should update lock icon', () => {
 			const layer = { id: 'layer_1', type: 'text', locked: false };
 			const item = renderer.createLayerItem( layer, 0 );
 
-			mockWindow.IconFactory.createLockIcon.mockClear();
+			mockIconFactory.createLockIcon.mockClear();
 
 			const updatedLayer = { id: 'layer_1', type: 'text', locked: true };
 			renderer.updateLayerItem( item, updatedLayer, 0 );
 
-			expect( mockWindow.IconFactory.createLockIcon ).toHaveBeenCalledWith( true );
+			expect( mockIconFactory.createLockIcon ).toHaveBeenCalledWith( true );
 		} );
 
 		test( 'should check activeElement before updating name', () => {
@@ -472,17 +458,17 @@ describe( 'LayerListRenderer', () => {
 
 		test( '_createEyeIcon should delegate to IconFactory', () => {
 			renderer._createEyeIcon( true );
-			expect( mockWindow.IconFactory.createEyeIcon ).toHaveBeenCalledWith( true );
+			expect( mockIconFactory.createEyeIcon ).toHaveBeenCalledWith( true );
 		} );
 
 		test( '_createLockIcon should delegate to IconFactory', () => {
 			renderer._createLockIcon( true );
-			expect( mockWindow.IconFactory.createLockIcon ).toHaveBeenCalledWith( true );
+			expect( mockIconFactory.createLockIcon ).toHaveBeenCalledWith( true );
 		} );
 
 		test( '_createDeleteIcon should delegate to IconFactory', () => {
 			renderer._createDeleteIcon();
-			expect( mockWindow.IconFactory.createDeleteIcon ).toHaveBeenCalled();
+			expect( mockIconFactory.createDeleteIcon ).toHaveBeenCalled();
 		} );
 	} );
 } );

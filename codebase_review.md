@@ -17,14 +17,14 @@
     performed. All subagent-reported issues individually confirmed
     before inclusion. 14 false positives from subagent analysis
     rigorously eliminated (see Verified Non-Issues).
-- **Coverage:** 94.24% statements, 84.17% branches, 93.27% functions,
-    94.34% lines (freshly verified `npm run test:coverage` March 25, 2026)
+- **Coverage:** 95.82% statements, 87.00% branches, 93.98% functions,
+    95.94% lines (freshly verified `npm run test:coverage` March 28, 2026)
 - **JS source files:** 157 in `resources/` excluding dist
-    (~113,902 lines)
-- **PHP production files:** 42 in `src/` (~15,339 lines)
-- **Jest test suites:** 168
-- **Jest test cases:** 11,907 (`npm run test:js --silent` —
-    verified March 26, 2026)
+    (~114,000 lines)
+- **PHP production files:** 42 in `src/` (~15,364 lines)
+- **Jest test suites:** 172
+- **Jest test cases:** 13,880 (`npm run test:js --silent` —
+    verified March 28, 2026)
 - **PHPUnit test files:** 34 in `tests/phpunit`
 - **i18n message keys:** 842 in `i18n/en.json` (excluding @metadata;
     verified via direct count March 26, 2026)
@@ -58,10 +58,10 @@ spaces), P3-213 fixed (smoothZoomTo permanently overwrote animation
 duration), P3-214 fixed (ShapeFactory createText missing shadow
 application), P3-215 fixed (APIManager spinner stuck on request abort).
 All cherry-picked to REL1_43 and REL1_39.
-**0 open code items. 0 open doc items.** 11,907 tests passing.
+**0 open code items. 0 open doc items.** 13,880 tests passing.
 
 The codebase retains strong architecture, comprehensive test coverage
-(94.24% statements, 11,904 tests in 168 suites), and robust security
+(95.82% statements, 13,880 tests in 172 suites), and robust security
 controls. P3-147 (accepted) and P3-148 (deferred) carried forward.
 
 ---
@@ -3904,19 +3904,19 @@ but verified as non-issues:
 | MediaWiki requirement | >= 1.44.0 |
 | PHP requirement | 8.1+ |
 | JS source files (excluding `resources/dist`) | 157 |
-| JS source lines (excluding `resources/dist`) | ~113,922 |
+| JS source lines (excluding `resources/dist`) | ~114,000 |
 | PHP production files (`src/`) | 42 |
-| PHP production lines (`src/`) | ~15,339 |
-| Jest test suites | 168 |
-| Jest tests | 11,894 |
-| Statement coverage | 94.28% |
-| Branch coverage | 84.18% |
+| PHP production lines (`src/`) | ~15,364 |
+| Jest test suites | 172 |
+| Jest tests | 13,880 |
+| Statement coverage | 95.82% |
+| Branch coverage | 87.00% |
 | i18n keys (`en.json`, `qqq.json`) | 841 |
 | PHPUnit test files | 34 |
 | Files > 1,000 lines | 26 total |
 | ESLint disable comments | 18 (all legitimate) |
 
-## God Class Status (26 files >= 1,000 lines — Verified March 25, 2026)
+## God Class Status (26 files >= 1,000 lines — Verified March 28, 2026)
 
 ### Generated Data (Exempt — 5 files)
 
@@ -3932,34 +3932,34 @@ but verified as non-issues:
 
 | File | Lines | Change from v59 |
 |------|-------|-----------------|
-| LayerPanel.js | 2,167 | ↑2 |
-| CanvasManager.js | 2,111 | ↑23 |
-| Toolbar.js | 1,934 | ↑1 |
-| InlineTextEditor.js | 1,849 | ↑1 |
-| PropertyBuilders.js | 1,815 | ↓11 |
-| LayersEditor.js | 1,814 | ↑1 |
-| APIManager.js | 1,641 | ↑1 |
-| SelectionManager.js | 1,421 | ↑2 |
-| ViewerManager.js | 1,267 | ↑1 |
-| CanvasRenderer.js | 1,257 | ↑1 |
-| TransformController.js | 1,202 | ↑12 |
-| ToolbarStyleControls.js | 1,140 | ↑1 |
-| SlideController.js | 1,127 | ↑1 |
-| TextBoxRenderer.js | 1,121 | ↑1 |
-| ResizeCalculator.js | 1,071 | ↑1 |
-| AngleDimensionRenderer.js | 1,068 | ↑1 |
-| DrawingController.js | 1,055 | ↑1 |
-| CanvasEvents.js | 1,032 | ↓1 |
-| CalloutRenderer.js | 1,001 | ↑1 |
+| LayerPanel.js | 2,166 | — |
+| CanvasManager.js | 2,110 | — |
+| Toolbar.js | 1,933 | — |
+| InlineTextEditor.js | 1,848 | — |
+| LayersEditor.js | 1,888 | ↑74 |
+| PropertyBuilders.js | 1,814 | — |
+| APIManager.js | 1,650 | ↑9 |
+| SelectionManager.js | 1,467 | ↑46 |
+| ViewerManager.js | 1,266 | — |
+| CanvasRenderer.js | 1,256 | — |
+| TransformController.js | 1,221 | ↑19 |
+| ToolbarStyleControls.js | 1,141 | ↑1 |
+| SlideController.js | 1,127 | — |
+| TextBoxRenderer.js | 1,120 | — |
+| ResizeCalculator.js | 1,070 | — |
+| AngleDimensionRenderer.js | 1,067 | — |
+| DrawingController.js | 1,054 | — |
+| CanvasEvents.js | 1,038 | ↑6 |
+| CalloutRenderer.js | 1,003 | ↑2 |
 
 ### PHP (2 files)
 
 | File | Lines | Change from v59 |
 |------|-------|-----------------|
-| ServerSideLayerValidator.php | 1,434 | — |
-| LayersDatabase.php | 1,399 | ↑23 |
+| ServerSideLayerValidator.php | 1,444 | ↑10 |
+| LayersDatabase.php | 1,403 | ↑4 |
 
-### Near-Threshold (900–999 lines — 8 files)
+### Near-Threshold (900–999 lines — 9 files)
 
 | File | Lines |
 |------|-------|
@@ -3968,9 +3968,10 @@ but verified as non-issues:
 | GroupManager.js | 987 |
 | SelectionRenderer.js | 985 |
 | StateManager.js | 967 |
+| LayersValidator.js | 962 |
 | ShapeRenderer.js | 959 |
-| LayersValidator.js | 956 |
 | ArrowRenderer.js | 932 |
+| DimensionRenderer.js | 930 |
 
 ## Issue Summary (v60 — March 25, 2026)
 
@@ -4073,9 +4074,9 @@ P3-148 (unused interface) deferred.*
 ## Overall Assessment
 
 The codebase maintains strong architecture, comprehensive test coverage
-(92.88% statements, 11,847 tests in 168 suites), 100% ES6 class migration,
+(95.82% statements, 13,880 tests in 172 suites), 100% ES6 class migration,
 and robust security controls (CSRF, rate limiting, input validation). All
-v49–v56 code fixes confirmed intact (369 total historical issues resolved).
+v49–v66 code fixes confirmed intact (369+ total historical issues resolved).
 
 The v57 review (HEAD `6f6b8c8f`, v1.5.62) found **3 MEDIUM** (deleteNamedSet
 missing transaction, ApiLayersRename wrong error constant, ApiLayersSave

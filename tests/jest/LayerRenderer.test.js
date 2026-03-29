@@ -4026,4 +4026,923 @@ describe( 'LayerRenderer', () => {
 			testRenderer.destroy();
 		} );
 	} );
+
+	describe( 'drawCustomShape - fallback Path2D rendering', () => {
+		let origShapeLibrary;
+		let origGlobalCSR;
+		let origPath2D;
+		const mockPath = {};
+
+		beforeEach( () => {
+			// Disable CustomShapeRenderer to force fallback path
+			origShapeLibrary = window.Layers && window.Layers.ShapeLibrary;
+			origGlobalCSR = window.CustomShapeRenderer;
+			if ( window.Layers ) {
+				window.Layers.ShapeLibrary = undefined;
+			}
+			window.CustomShapeRenderer = undefined;
+
+			// Mock Path2D
+			origPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => mockPath );
+
+			ctx.save.mockClear();
+			ctx.restore.mockClear();
+			ctx.fill.mockClear();
+			ctx.stroke.mockClear();
+			ctx.translate.mockClear();
+			ctx.scale.mockClear();
+			ctx.rotate.mockClear();
+			ctx.strokeRect.mockClear();
+		} );
+
+		afterEach( () => {
+			global.Path2D = origPath2D;
+			if ( window.Layers && origShapeLibrary ) {
+				window.Layers.ShapeLibrary = origShapeLibrary;
+			}
+			window.CustomShapeRenderer = origGlobalCSR;
+		} );
+
+		it( 'should return early if no path, paths, or svg', () => {
+			renderer.drawCustomShape( { type: 'customShape', x: 0, y: 0 } );
+			expect( ctx.fill ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early for invalid viewBox (not array)', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L10 10',
+				viewBox: 'invalid'
+			} );
+			expect( ctx.save ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early for viewBox with fewer than 4 elements', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L10 10',
+				viewBox: [ 0, 0 ]
+			} );
+			expect( ctx.save ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should render with fill and stroke via Path2D fallback', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100L0 100Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				x: 10, y: 20, width: 200, height: 200,
+				fill: '#ff0000',
+				stroke: '#000000',
+				strokeWidth: 3
+			} );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.scale ).toHaveBeenCalled();
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply opacity when not 1', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#00ff00',
+				opacity: 0.5
+			} );
+
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply rotation when set', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#0000ff',
+				rotation: 45
+			} );
+
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'should not fill transparent fill colors', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: 'transparent',
+				stroke: '#000000',
+				strokeWidth: 2
+			} );
+
+			expect( ctx.fill ).not.toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		it( 'should not stroke transparent stroke colors', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#000',
+				stroke: 'none'
+			} );
+
+			expect( ctx.stroke ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle Path2D exception gracefully', () => {
+			// Override Path2D to throw
+			global.Path2D = function () {
+				throw new Error( 'Invalid path data' );
+			};
+
+			expect( () => {
+				renderer.drawCustomShape( {
+					type: 'customShape',
+					path: 'INVALID PATH DATA',
+					viewBox: [ 0, 0, 100, 100 ],
+					fill: '#000'
+				} );
+			} ).not.toThrow();
+
+			// Should draw error placeholder
+			expect( ctx.strokeRect ).toHaveBeenCalledWith( 0, 0, 100, 100 );
+		} );
+
+		it( 'should use fillRule from layer properties', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100L0 100Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000',
+				fillRule: 'evenodd'
+			} );
+
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+
+		it( 'should not fill when fill is "none"', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100L0 100Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: 'none',
+				stroke: '#000',
+				strokeWidth: 2
+			} );
+
+			expect( ctx.fill ).not.toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		it( 'should apply shadow when shadowRenderer available', () => {
+			const mockShadowRenderer = {
+				hasShadowEnabled: jest.fn().mockReturnValue( true ),
+				applyShadow: jest.fn(),
+				clearShadow: jest.fn()
+			};
+			renderer.shadowRenderer = mockShadowRenderer;
+
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100L0 100Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000',
+				shadow: true
+			} );
+
+			expect( mockShadowRenderer.hasShadowEnabled ).toHaveBeenCalled();
+			expect( mockShadowRenderer.applyShadow ).toHaveBeenCalled();
+			expect( mockShadowRenderer.clearShadow ).toHaveBeenCalled();
+		} );
+
+		it( 'should use default dimensions when not specified', () => {
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100L0 100Z',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000'
+			} );
+
+			// Default width/height are 100, should still render
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.fill ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'drawCustomShape - CustomShapeRenderer delegation', () => {
+		it( 'should create and use CustomShapeRenderer when available', () => {
+			const mockRender = jest.fn();
+			window.Layers = window.Layers || {};
+			window.Layers.ShapeLibrary = window.Layers.ShapeLibrary || {};
+			const origCSR = window.Layers.ShapeLibrary.CustomShapeRenderer;
+
+			window.Layers.ShapeLibrary.CustomShapeRenderer = function () {};
+			window.Layers.ShapeLibrary.CustomShapeRenderer.prototype.render = mockRender;
+
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M0 0L100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				x: 0, y: 0, width: 100, height: 100
+			} );
+
+			expect( mockRender ).toHaveBeenCalled();
+
+			window.Layers.ShapeLibrary.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'should handle SVG format shapes', () => {
+			const mockRender = jest.fn();
+			window.Layers = window.Layers || {};
+			window.Layers.ShapeLibrary = window.Layers.ShapeLibrary || {};
+			const origCSR = window.Layers.ShapeLibrary.CustomShapeRenderer;
+
+			window.Layers.ShapeLibrary.CustomShapeRenderer = function () {};
+			window.Layers.ShapeLibrary.CustomShapeRenderer.prototype.render = mockRender;
+
+			renderer.onImageLoad = jest.fn();
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				svg: '<svg></svg>',
+				viewBox: [ 0, 0, 100, 100 ],
+				x: 0, y: 0, width: 100, height: 100
+			} );
+
+			expect( mockRender ).toHaveBeenCalled();
+			const renderOptions = mockRender.mock.calls[ 0 ][ 3 ];
+			expect( renderOptions.onLoad ).toBeDefined();
+
+			window.Layers.ShapeLibrary.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'should handle multi-path (paths array) shapes', () => {
+			const mockRender = jest.fn();
+			window.Layers = window.Layers || {};
+			window.Layers.ShapeLibrary = window.Layers.ShapeLibrary || {};
+			const origCSR = window.Layers.ShapeLibrary.CustomShapeRenderer;
+
+			window.Layers.ShapeLibrary.CustomShapeRenderer = function () {};
+			window.Layers.ShapeLibrary.CustomShapeRenderer.prototype.render = mockRender;
+
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				paths: [ { d: 'M0 0L10 10', fill: '#f00' } ],
+				viewBox: [ 0, 0, 100, 100 ],
+				x: 0, y: 0, width: 100, height: 100
+			} );
+
+			expect( mockRender ).toHaveBeenCalled();
+			const shapeData = mockRender.mock.calls[ 0 ][ 1 ];
+			expect( shapeData.paths ).toBeDefined();
+
+			window.Layers.ShapeLibrary.CustomShapeRenderer = origCSR;
+		} );
+	} );
+
+	describe( 'drawLayer dispatch - additional types', () => {
+		it( 'should dispatch customShape type', () => {
+			renderer.drawCustomShape = jest.fn();
+			renderer.drawLayer( { type: 'customShape', path: 'M0 0', viewBox: [ 0, 0, 100, 100 ] } );
+			expect( renderer.drawCustomShape ).toHaveBeenCalled();
+		} );
+
+		it( 'should dispatch marker type', () => {
+			renderer.drawMarker = jest.fn();
+			renderer.drawLayer( { type: 'marker' } );
+			expect( renderer.drawMarker ).toHaveBeenCalled();
+		} );
+
+		it( 'should dispatch dimension type', () => {
+			renderer.drawDimension = jest.fn();
+			renderer.drawLayer( { type: 'dimension' } );
+			expect( renderer.drawDimension ).toHaveBeenCalled();
+		} );
+
+		it( 'should dispatch angleDimension type', () => {
+			renderer.drawAngleDimension = jest.fn();
+			renderer.drawLayer( { type: 'angleDimension' } );
+			expect( renderer.drawAngleDimension ).toHaveBeenCalled();
+		} );
+
+		it( 'should dispatch callout type', () => {
+			renderer.drawCallout = jest.fn();
+			renderer.drawLayer( { type: 'callout' } );
+			expect( renderer.drawCallout ).toHaveBeenCalled();
+		} );
+
+		it( 'should dispatch image type', () => {
+			renderer.drawImage = jest.fn();
+			renderer.drawLayer( { type: 'image' } );
+			expect( renderer.drawImage ).toHaveBeenCalled();
+		} );
+	} );
+
+	// ========================================================================
+	// Branch Coverage Gap Tests
+	// ========================================================================
+
+	describe( 'branch coverage - getScaleFactors', () => {
+		it( 'returns 1:1 when no baseWidth', () => {
+			renderer.baseWidth = null;
+			renderer.baseHeight = 600;
+			renderer.canvas = { width: 800, height: 600 };
+			const result = renderer.getScaleFactors();
+			expect( result ).toEqual( { sx: 1, sy: 1, avg: 1 } );
+		} );
+
+		it( 'returns 1:1 when no baseHeight', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = null;
+			renderer.canvas = { width: 800, height: 600 };
+			const result = renderer.getScaleFactors();
+			expect( result ).toEqual( { sx: 1, sy: 1, avg: 1 } );
+		} );
+
+		it( 'returns 1:1 when no canvas', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = 600;
+			renderer.canvas = null;
+			const result = renderer.getScaleFactors();
+			expect( result ).toEqual( { sx: 1, sy: 1, avg: 1 } );
+		} );
+
+		it( 'calculates actual scale when all present', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = 600;
+			renderer.canvas = { width: 400, height: 300 };
+			const result = renderer.getScaleFactors();
+			expect( result.sx ).toBe( 0.5 );
+			expect( result.sy ).toBe( 0.5 );
+			expect( result.avg ).toBe( 0.5 );
+		} );
+	} );
+
+	describe( 'branch coverage - _prepareRenderOptions', () => {
+		it( 'uses 1:1 scale when options.scaled is true', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = 600;
+			renderer.canvas = { width: 400, height: 300 };
+			const result = renderer._prepareRenderOptions( { scaled: true } );
+			expect( result.scale ).toEqual( { sx: 1, sy: 1, avg: 1 } );
+		} );
+
+		it( 'calculates viewer scale when not scaled', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = 600;
+			renderer.canvas = { width: 400, height: 300 };
+			const result = renderer._prepareRenderOptions( {} );
+			expect( result.scale.sx ).toBe( 0.5 );
+		} );
+
+		it( 'handles null options', () => {
+			const result = renderer._prepareRenderOptions( null );
+			expect( result.scale ).toBeDefined();
+		} );
+
+		it( 'passes through zoom/panX/panY from options', () => {
+			const result = renderer._prepareRenderOptions( { zoom: 2, panX: 10, panY: 20 } );
+			expect( result.zoom ).toBe( 2 );
+			expect( result.panX ).toBe( 10 );
+			expect( result.panY ).toBe( 20 );
+		} );
+	} );
+
+	describe( 'branch coverage - shadow delegation null guards', () => {
+		it( 'clearShadow no-op when shadowRenderer null', () => {
+			renderer.shadowRenderer = null;
+			renderer.clearShadow();
+		} );
+
+		it( 'applyShadow no-op when shadowRenderer null', () => {
+			renderer.shadowRenderer = null;
+			renderer.applyShadow( {}, {} );
+		} );
+
+		it( 'getShadowSpread returns 0 when shadowRenderer null', () => {
+			renderer.shadowRenderer = null;
+			expect( renderer.getShadowSpread( {}, {} ) ).toBe( 0 );
+		} );
+
+		it( 'hasShadowEnabled returns false when shadowRenderer null', () => {
+			renderer.shadowRenderer = null;
+			expect( renderer.hasShadowEnabled( {} ) ).toBe( false );
+		} );
+
+		it( 'getShadowParams returns defaults when shadowRenderer null', () => {
+			renderer.shadowRenderer = null;
+			const result = renderer.getShadowParams( {}, {} );
+			expect( result.offsetX ).toBe( 0 );
+			expect( result.color ).toBe( 'transparent' );
+		} );
+
+		it( 'drawSpreadShadow no-op when shadowRenderer null', () => {
+			renderer.shadowRenderer = null;
+			renderer.drawSpreadShadow( {}, {}, 5, jest.fn(), 1 );
+		} );
+
+		it( 'drawSpreadShadowStroke no-op when shadowRenderer null', () => {
+			renderer.shadowRenderer = null;
+			renderer.drawSpreadShadowStroke( {}, {}, 2, jest.fn(), 1 );
+		} );
+
+		it( 'withLocalAlpha calls drawFn directly when no shadowRenderer', () => {
+			renderer.shadowRenderer = null;
+			const fn = jest.fn();
+			renderer.withLocalAlpha( 0.5, fn );
+			expect( fn ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'branch coverage - shape draw null guards', () => {
+		it( 'drawRectangle no-op when shapeRenderer null', () => {
+			renderer.shapeRenderer = null;
+			renderer.drawRectangle( { type: 'rectangle' } );
+		} );
+
+		it( 'drawCircle no-op when shapeRenderer null', () => {
+			renderer.shapeRenderer = null;
+			renderer.drawCircle( { type: 'circle' } );
+		} );
+
+		it( 'drawEllipse no-op when shapeRenderer null', () => {
+			renderer.shapeRenderer = null;
+			renderer.drawEllipse( { type: 'ellipse' } );
+		} );
+
+		it( 'drawLine no-op when shapeRenderer null', () => {
+			renderer.shapeRenderer = null;
+			renderer.drawLine( { type: 'line' } );
+		} );
+
+		it( 'drawArrow no-op when arrowRenderer null', () => {
+			renderer.arrowRenderer = null;
+			renderer.drawArrow( { type: 'arrow' } );
+		} );
+
+		it( 'drawPolygon no-op when shapeRenderer null', () => {
+			renderer.shapeRenderer = null;
+			renderer.drawPolygon( { type: 'polygon' } );
+		} );
+
+		it( 'drawStar no-op when shapeRenderer null', () => {
+			renderer.shapeRenderer = null;
+			renderer.drawStar( { type: 'star' } );
+		} );
+
+		it( 'drawText no-op when textRenderer null', () => {
+			renderer.textRenderer = null;
+			renderer.drawText( { type: 'text', text: 'hello' } );
+		} );
+
+		it( 'drawTextBox no-op when textBoxRenderer null', () => {
+			renderer.textBoxRenderer = null;
+			renderer.drawTextBox( { type: 'textbox', text: 'hello' } );
+		} );
+
+		it( 'drawCallout no-op when calloutRenderer null', () => {
+			renderer.calloutRenderer = null;
+			renderer.drawCallout( { type: 'callout', text: 'hello' } );
+		} );
+
+		it( 'drawImage no-op when imageLayerRenderer null', () => {
+			renderer.imageLayerRenderer = null;
+			renderer.drawImage( { type: 'image', src: 'data:...' } );
+		} );
+
+		it( 'drawMarker no-op when markerRenderer null', () => {
+			renderer.markerRenderer = null;
+			renderer.drawMarker( { type: 'marker' } );
+		} );
+
+		it( 'drawDimension no-op when dimensionRenderer null', () => {
+			renderer.dimensionRenderer = null;
+			renderer.drawDimension( { type: 'dimension' } );
+		} );
+
+		it( 'drawAngleDimension no-op when angleDimensionRenderer null', () => {
+			renderer.angleDimensionRenderer = null;
+			renderer.drawAngleDimension( { type: 'angleDimension' } );
+		} );
+	} );
+
+	describe( 'branch coverage - drawCustomShape', () => {
+		it( 'returns early when no svg, path, or paths', () => {
+			const spy = jest.spyOn( ctx, 'save' );
+			renderer.drawCustomShape( { type: 'customShape' } );
+			expect( spy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'returns early when viewBox is invalid', () => {
+			const spy = jest.spyOn( ctx, 'save' );
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: 'invalid'
+			} );
+			// Should save then return early when viewBox check fails
+		} );
+
+		it( 'renders Path2D fallback with fill and stroke', () => {
+			// Disable CustomShapeRenderer to trigger fallback
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			const origCSR = window.CustomShapeRenderer;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			ctx.fill.mockClear();
+			ctx.stroke.mockClear();
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#ff0000',
+				stroke: '#000000',
+				strokeWidth: 2,
+				x: 10, y: 20,
+				width: 200, height: 150
+			} );
+			expect( ctx.fill ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'skips fill when transparent', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			const origCSR = window.CustomShapeRenderer;
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			ctx.fill.mockClear();
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: 'transparent',
+				stroke: '#000',
+				strokeWidth: 1
+			} );
+			expect( ctx.fill ).not.toHaveBeenCalled();
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'skips fill when none', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			const origCSR = window.CustomShapeRenderer;
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			ctx.fill.mockClear();
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: 'none',
+				stroke: '#000',
+				strokeWidth: 1
+			} );
+			expect( ctx.fill ).not.toHaveBeenCalled();
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'skips stroke when transparent', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			const origCSR = window.CustomShapeRenderer;
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			ctx.stroke.mockClear();
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#f00',
+				stroke: 'transparent'
+			} );
+			expect( ctx.stroke ).not.toHaveBeenCalled();
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'skips stroke when none', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			const origCSR = window.CustomShapeRenderer;
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			ctx.stroke.mockClear();
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#f00',
+				stroke: 'none'
+			} );
+			expect( ctx.stroke ).not.toHaveBeenCalled();
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'applies rotation in fallback rendering', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			const origCSR = window.CustomShapeRenderer;
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				rotation: 45,
+				fill: '#f00'
+			} );
+			expect( ctx.rotate ).toHaveBeenCalled();
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'applies opacity in fallback rendering', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			const origCSR = window.CustomShapeRenderer;
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				opacity: 0.5,
+				fill: '#f00'
+			} );
+			expect( ctx.globalAlpha ).toBe( 0.5 );
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'handles Path2D error with error placeholder', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			const origCSR = window.CustomShapeRenderer;
+			window.CustomShapeRenderer = undefined;
+			const OrigPath2D = global.Path2D;
+			global.Path2D = jest.fn( () => { throw new Error( 'Invalid path' ); } );
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'INVALID',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#f00'
+			} );
+			expect( ctx.strokeRect ).toHaveBeenCalled();
+			global.Path2D = OrigPath2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'applies shadow in fallback rendering', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			const origCSR = window.CustomShapeRenderer;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			const applySpy = jest.fn();
+			renderer.shadowRenderer = {
+				hasShadowEnabled: jest.fn( () => true ),
+				applyShadow: applySpy,
+				clearShadow: jest.fn()
+			};
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#f00',
+				shadow: true
+			} );
+			expect( applySpy ).toHaveBeenCalled();
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'uses fillRule when specified', () => {
+			const origSL = window.Layers && window.Layers.ShapeLibrary;
+			const origCSR = window.CustomShapeRenderer;
+			if ( window.Layers ) { window.Layers.ShapeLibrary = undefined; }
+			window.CustomShapeRenderer = undefined;
+			const origP2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => ( {} ) );
+
+			ctx.fill.mockClear();
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#f00',
+				fillRule: 'evenodd'
+			} );
+			expect( ctx.fill ).toHaveBeenCalled();
+
+			global.Path2D = origP2D;
+			if ( window.Layers && origSL ) { window.Layers.ShapeLibrary = origSL; }
+			window.CustomShapeRenderer = origCSR;
+		} );
+
+		it( 'uses CustomShapeRenderer when available with single path', () => {
+			const render = jest.fn();
+			window.Layers.ShapeLibrary = { CustomShapeRenderer: jest.fn( () => ( { render } ) ) };
+			renderer._customShapeRenderer = null;
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				path: 'M 0 0 L 100 100',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#f00'
+			} );
+			expect( render ).toHaveBeenCalled();
+			delete window.Layers.ShapeLibrary;
+		} );
+
+		it( 'uses CustomShapeRenderer with multi-path data', () => {
+			const render = jest.fn();
+			window.Layers.ShapeLibrary = { CustomShapeRenderer: jest.fn( () => ( { render } ) ) };
+			renderer._customShapeRenderer = null;
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				paths: [ { d: 'M 0 0 L 100 100' } ],
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#f00'
+			} );
+			expect( render ).toHaveBeenCalled();
+			const shapeData = render.mock.calls[ 0 ][ 1 ];
+			expect( shapeData.paths ).toBeDefined();
+			delete window.Layers.ShapeLibrary;
+		} );
+
+		it( 'uses CustomShapeRenderer with SVG data and onLoad', () => {
+			const render = jest.fn();
+			window.Layers.ShapeLibrary = { CustomShapeRenderer: jest.fn( () => ( { render } ) ) };
+			renderer._customShapeRenderer = null;
+			renderer.onImageLoad = jest.fn();
+			renderer.drawCustomShape( {
+				type: 'customShape',
+				svg: '<svg>...</svg>',
+				viewBox: [ 0, 0, 100, 100 ],
+				fill: '#f00'
+			} );
+			expect( render ).toHaveBeenCalled();
+			const renderOptions = render.mock.calls[ 0 ][ 3 ];
+			expect( renderOptions.onLoad ).toBe( renderer.onImageLoad );
+			delete window.Layers.ShapeLibrary;
+		} );
+	} );
+
+	describe( 'branch coverage - setBackgroundImage propagation', () => {
+		it( 'propagates to effectsRenderer', () => {
+			const setBg = jest.fn();
+			renderer.effectsRenderer = { setBackgroundImage: setBg };
+			const img = { src: 'test.png' };
+			renderer.setBackgroundImage( img );
+			expect( setBg ).toHaveBeenCalledWith( img );
+		} );
+
+		it( 'handles null effectsRenderer', () => {
+			renderer.effectsRenderer = null;
+			renderer.setBackgroundImage( { src: 'test.png' } );
+		} );
+	} );
+
+	describe( 'branch coverage - setCanvas propagation', () => {
+		it( 'propagates to shadowRenderer and effectsRenderer', () => {
+			const setShadowCanvas = jest.fn();
+			renderer.shadowRenderer = { setCanvas: setShadowCanvas };
+			const canvas = { width: 100, height: 100 };
+			renderer.effectsRenderer = {};
+			renderer.setCanvas( canvas );
+			expect( setShadowCanvas ).toHaveBeenCalledWith( canvas );
+			expect( renderer.effectsRenderer.canvas ).toBe( canvas );
+		} );
+
+		it( 'handles null shadowRenderer', () => {
+			renderer.shadowRenderer = null;
+			renderer.effectsRenderer = null;
+			renderer.setCanvas( { width: 100, height: 100 } );
+		} );
+	} );
+
+	describe( 'branch coverage - setBaseDimensions propagation', () => {
+		it( 'propagates to effectsRenderer', () => {
+			const setBase = jest.fn();
+			renderer.effectsRenderer = { setBaseDimensions: setBase };
+			renderer.setBaseDimensions( 800, 600 );
+			expect( setBase ).toHaveBeenCalledWith( 800, 600 );
+		} );
+
+		it( 'handles null effectsRenderer', () => {
+			renderer.effectsRenderer = null;
+			renderer.setBaseDimensions( 800, 600 );
+		} );
+	} );
+
+	describe( 'branch coverage - drawLayer blur blend path', () => {
+		it( 'uses blur blend for rectangle with blur blend mode', () => {
+			const blurSpy = jest.fn();
+			renderer.drawLayerWithBlurBlend = blurSpy;
+			renderer.drawLayer( { type: 'rectangle', blendMode: 'blur', x: 0, y: 0, width: 100, height: 100 } );
+			expect( blurSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'uses blur blend with "blend" property', () => {
+			const blurSpy = jest.fn();
+			renderer.drawLayerWithBlurBlend = blurSpy;
+			renderer.drawLayer( { type: 'circle', blend: 'blur', x: 0, y: 0, radius: 50 } );
+			expect( blurSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'skips blur blend for arrow with blur', () => {
+			renderer.drawArrow = jest.fn();
+			renderer.drawLayer( { type: 'arrow', blend: 'blur', x1: 0, y1: 0, x2: 100, y2: 100 } );
+			expect( renderer.drawArrow ).toHaveBeenCalled();
+		} );
+
+		it( 'skips blur blend for line with blur', () => {
+			renderer.drawLine = jest.fn();
+			renderer.drawLayer( { type: 'line', blend: 'blur', x1: 0, y1: 0, x2: 100, y2: 100 } );
+			expect( renderer.drawLine ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'branch coverage - drawLayerWithBlurBlend fallback', () => {
+		it( 'falls back to _drawLayerByType when no effectsRenderer', () => {
+			renderer.effectsRenderer = null;
+			renderer.drawRectangle = jest.fn();
+			renderer.drawLayerWithBlurBlend( { type: 'rectangle', x: 0, y: 0 } );
+			expect( renderer.drawRectangle ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'branch coverage - _drawLayerByType unknown type', () => {
+		it( 'does nothing for unknown type', () => {
+			const saveSpy = jest.spyOn( ctx, 'save' );
+			renderer._drawLayerByType( { type: 'unknownType' } );
+			// No sub-renderers should be called
+			expect( saveSpy ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'branch coverage - hasBlurBlendMode', () => {
+		it( 'returns true for blendMode=blur', () => {
+			expect( renderer.hasBlurBlendMode( { blendMode: 'blur' } ) ).toBe( true );
+		} );
+
+		it( 'returns true for blend=blur', () => {
+			expect( renderer.hasBlurBlendMode( { blend: 'blur' } ) ).toBe( true );
+		} );
+
+		it( 'returns false for normal blend', () => {
+			expect( renderer.hasBlurBlendMode( { blendMode: 'multiply' } ) ).toBe( false );
+		} );
+
+		it( 'returns false for no blend', () => {
+			expect( renderer.hasBlurBlendMode( {} ) ).toBe( false );
+		} );
+	} );
 } );

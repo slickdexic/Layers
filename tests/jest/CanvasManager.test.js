@@ -2664,4 +2664,727 @@ describe( 'CanvasManager', () => {
 			window.requestAnimationFrame = originalRaf;
 		} );
 	} );
+
+	describe( 'branch coverage - delegation null guards', () => {
+		it( 'should return defaults when hitTestController is null', () => {
+			canvasManager.hitTestController = null;
+
+			expect( canvasManager.getLayerAtPoint( { x: 50, y: 50 } ) ).toBeNull();
+			expect( canvasManager.isPointInLayer( { x: 50, y: 50 }, {} ) ).toBe( false );
+			expect( canvasManager.isPointNearLine( { x: 0, y: 0 }, 0, 0, 100, 100, 5 ) ).toBe( false );
+			expect( canvasManager.pointToSegmentDistance( 0, 0, 0, 0, 100, 100 ) ).toBe( Infinity );
+			expect( canvasManager.isPointInPolygon( { x: 0, y: 0 }, [] ) ).toBe( false );
+		} );
+
+		it( 'should no-op when zoomPanController is null', () => {
+			canvasManager.zoomPanController = null;
+
+			expect( () => canvasManager.zoomIn() ).not.toThrow();
+			expect( () => canvasManager.zoomOut() ).not.toThrow();
+			expect( () => canvasManager.setZoom( 2 ) ).not.toThrow();
+			expect( () => canvasManager.resetZoom() ).not.toThrow();
+			expect( () => canvasManager.fitToWindow() ).not.toThrow();
+			expect( () => canvasManager.zoomToFitLayers() ).not.toThrow();
+			expect( () => canvasManager.smoothZoomTo( 2, 300 ) ).not.toThrow();
+			expect( () => canvasManager.animateZoom() ).not.toThrow();
+			expect( () => canvasManager.setZoomDirect( 1.5 ) ).not.toThrow();
+			expect( () => canvasManager.updateCanvasTransform() ).not.toThrow();
+		} );
+
+		it( 'should no-op when transformController is null or not in correct state', () => {
+			canvasManager.transformController = null;
+
+			expect( () => canvasManager.handleRotation( { x: 0, y: 0 } ) ).not.toThrow();
+			expect( () => canvasManager.handleDrag( { x: 0, y: 0 } ) ).not.toThrow();
+			expect( () => canvasManager.finishResize() ).not.toThrow();
+			expect( () => canvasManager.finishRotation() ).not.toThrow();
+			expect( () => canvasManager.finishDrag() ).not.toThrow();
+			expect( () => canvasManager.updateLayerPosition( {}, {}, 5, 5 ) ).not.toThrow();
+		} );
+
+		it( 'should no-op when transformController exists but is not in operation', () => {
+			canvasManager.transformController.isResizing = false;
+			canvasManager.transformController.isRotating = false;
+			canvasManager.transformController.isDragging = false;
+
+			expect( () => canvasManager.finishResize() ).not.toThrow();
+			expect( () => canvasManager.finishRotation() ).not.toThrow();
+			expect( () => canvasManager.finishDrag() ).not.toThrow();
+		} );
+
+		it( 'should return null from calculateResize when ResizeCalculator unavailable', () => {
+			const origRC = global.ResizeCalculator;
+			delete global.ResizeCalculator;
+			// Also clear namespace cache if present
+			if ( window.Layers && window.Layers.Canvas ) {
+				delete window.Layers.Canvas.ResizeCalculator;
+			}
+
+			// mw.log.error needs to be a real function
+			const origMw = global.mw;
+			const logFn = jest.fn();
+			logFn.error = jest.fn();
+			logFn.warn = jest.fn();
+			global.mw = { log: logFn };
+
+			const result = canvasManager.calculateResize( {}, 'se', 10, 10, {} );
+			expect( result ).toBeNull();
+
+			global.ResizeCalculator = origRC;
+			global.mw = origMw;
+		} );
+	} );
+
+	describe( 'branch coverage - state management guards', () => {
+		it( 'should return empty array when stateManager is null for getSelectedLayerIds', () => {
+			canvasManager.editor.stateManager = null;
+			expect( canvasManager.getSelectedLayerIds() ).toEqual( [] );
+		} );
+
+		it( 'should return null for getSelectedLayerId when nothing selected', () => {
+			canvasManager.editor.stateManager.get.mockReturnValue( [] );
+			expect( canvasManager.getSelectedLayerId() ).toBeNull();
+		} );
+
+		it( 'should no-op setSelectedLayerIds when stateManager is null', () => {
+			canvasManager.editor.stateManager = null;
+			expect( () => canvasManager.setSelectedLayerIds( [ 'l1' ] ) ).not.toThrow();
+		} );
+
+		it( 'should no-op subscribeToState when no stateManager', () => {
+			canvasManager.editor.stateManager = null;
+			expect( () => canvasManager.subscribeToState() ).not.toThrow();
+		} );
+
+		it( 'should no-op notifyToolbarOfSelection with no toolbar', () => {
+			canvasManager.editor.toolbar = null;
+			expect( () => canvasManager.notifyToolbarOfSelection( [ 'l1' ] ) ).not.toThrow();
+		} );
+
+		it( 'should no-op notifyToolbarOfSelection with no styleControls', () => {
+			canvasManager.editor.toolbar = {};
+			expect( () => canvasManager.notifyToolbarOfSelection( [ 'l1' ] ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'branch coverage - handleImageLoaded', () => {
+		it( 'should return early when destroyed', () => {
+			const origBg = canvasManager.backgroundImage;
+			canvasManager.isDestroyed = true;
+			canvasManager.handleImageLoaded( { width: 999, height: 888 }, {} );
+			// backgroundImage should not have changed to the new image
+			expect( canvasManager.backgroundImage ).toBe( origBg );
+		} );
+
+		it( 'should use baseWidth/baseHeight when available', () => {
+			// mw.log is used as a direct function call: mw.log('...')
+			const origMw = global.mw;
+			const logFn = jest.fn();
+			logFn.error = jest.fn();
+			logFn.warn = jest.fn();
+			global.mw = { log: logFn };
+
+			canvasManager.baseWidth = 1920;
+			canvasManager.baseHeight = 1080;
+			const newImg = { width: 640, height: 480, complete: true };
+			canvasManager.handleImageLoaded( newImg, { width: 640, height: 480 } );
+			expect( canvasManager.backgroundImage ).toBe( newImg );
+			expect( canvasManager.canvas.width ).toBe( 1920 );
+			expect( canvasManager.canvas.height ).toBe( 1080 );
+
+			global.mw = origMw;
+		} );
+
+		it( 'should fall back to image dimensions when no baseWidth', () => {
+			canvasManager.baseWidth = 0;
+			canvasManager.baseHeight = 0;
+			canvasManager.handleImageLoaded(
+				{ width: 640, height: 480, complete: true },
+				{ width: 640, height: 480 }
+			);
+			expect( canvasManager.canvas.width ).toBe( 640 );
+			expect( canvasManager.canvas.height ).toBe( 480 );
+		} );
+
+		it( 'should fall back to default canvas size when no image dimensions', () => {
+			canvasManager.baseWidth = 0;
+			canvasManager.baseHeight = 0;
+			canvasManager.handleImageLoaded(
+				{ width: 0, height: 0, complete: true },
+				{}
+			);
+			expect( canvasManager.canvas.width ).toBe( 800 );
+			expect( canvasManager.canvas.height ).toBe( 600 );
+		} );
+	} );
+
+	describe( 'branch coverage - handleImageLoadError', () => {
+		it( 'should return early when destroyed', () => {
+			const origBg = canvasManager.backgroundImage;
+			canvasManager.isDestroyed = true;
+			canvasManager.handleImageLoadError();
+			// backgroundImage should not have changed
+			expect( canvasManager.backgroundImage ).toBe( origBg );
+		} );
+
+		it( 'should set default canvas size and clear background', () => {
+			canvasManager.handleImageLoadError();
+			expect( canvasManager.backgroundImage ).toBeNull();
+			expect( canvasManager.canvas.width ).toBe( 800 );
+			expect( canvasManager.canvas.height ).toBe( 600 );
+		} );
+	} );
+
+	describe( 'branch coverage - updateStyleOptions', () => {
+		it( 'should return early when styleController is null', () => {
+			canvasManager.styleController = null;
+			expect( () => canvasManager.updateStyleOptions( { color: 'red' } ) ).not.toThrow();
+		} );
+
+		it( 'should return early when styleController.updateStyleOptions is not a function', () => {
+			canvasManager.styleController = { updateStyleOptions: 'notAFunction' };
+			expect( () => canvasManager.updateStyleOptions( { color: 'red' } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'branch coverage - drawLayer', () => {
+		it( 'should skip invisible layers', () => {
+			canvasManager.drawLayer( { id: 'l1', visible: false, type: 'rectangle' } );
+			expect( canvasManager.renderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when renderer is null', () => {
+			canvasManager.renderer = null;
+			expect( () => canvasManager.drawLayer( { id: 'l1', visible: true } ) ).not.toThrow();
+		} );
+
+		it( 'should draw error placeholder on renderer error', () => {
+			canvasManager.renderer.drawLayer.mockImplementation( () => {
+				throw new Error( 'render fail' );
+			} );
+			canvasManager.drawLayer( { id: 'l1', visible: true, type: 'rectangle' } );
+			expect( canvasManager.renderer.drawErrorPlaceholder ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle error placeholder also throwing', () => {
+			canvasManager.renderer.drawLayer.mockImplementation( () => {
+				throw new Error( 'render fail' );
+			} );
+			canvasManager.renderer.drawErrorPlaceholder.mockImplementation( () => {
+				throw new Error( 'recovery fail' );
+			} );
+			expect( () => canvasManager.drawLayer( { id: 'l1', visible: true, type: 'rectangle' } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'branch coverage - isLayerInViewport', () => {
+		it( 'should return false for null layer', () => {
+			expect( canvasManager.isLayerInViewport( null ) ).toBe( false );
+		} );
+
+		it( 'should return true when viewport bounds not initialized', () => {
+			canvasManager.viewportBounds = { x: 0, y: 0, width: 0, height: 0 };
+			expect( canvasManager.isLayerInViewport( { id: 'l1', type: 'rectangle', x: 5000, y: 5000 } ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'branch coverage - emitTransforming', () => {
+		it( 'should return early for null layer', () => {
+			expect( () => canvasManager.emitTransforming( null ) ).not.toThrow();
+			expect( canvasManager.lastTransformPayload ).toBeNull();
+		} );
+
+		it( 'should throttle successive calls', () => {
+			canvasManager.emitTransforming( { id: 'l1', x: 10 } );
+			expect( canvasManager.transformEventScheduled ).toBe( true );
+
+			// Second call should be ignored
+			canvasManager.emitTransforming( { id: 'l1', x: 20 } );
+			expect( canvasManager.lastTransformPayload.x ).toBe( 20 );
+		} );
+
+		it( 'should copy arrays and objects in emitTransforming payload', () => {
+			const rafCallback = [];
+			const originalRaf = window.requestAnimationFrame;
+			window.requestAnimationFrame = jest.fn( ( cb ) => {
+				rafCallback.push( cb );
+				return 99;
+			} );
+
+			canvasManager.container = document.createElement( 'div' );
+			canvasManager.editor.container = canvasManager.container;
+			const dispatchSpy = jest.spyOn( canvasManager.container, 'dispatchEvent' );
+
+			canvasManager.emitTransforming( {
+				id: 'l1',
+				x: 10,
+				points: [ { x: 1, y: 2 } ],
+				gradient: { type: 'linear' },
+				src: 'data:image/png;base64,abc'
+			} );
+
+			// Execute the RAF callback
+			if ( rafCallback.length > 0 ) {
+				rafCallback[ 0 ]();
+			}
+
+			expect( dispatchSpy ).toHaveBeenCalled();
+			const event = dispatchSpy.mock.calls[ 0 ][ 0 ];
+			// 'src' should be omitted from the lightweight copy
+			expect( event.detail.layer.src ).toBeUndefined();
+
+			window.requestAnimationFrame = originalRaf;
+		} );
+	} );
+
+	describe( 'branch coverage - updateCursor', () => {
+		it( 'should set tool cursor when currentTool is not pointer', () => {
+			canvasManager.currentTool = 'rectangle';
+			canvasManager.updateCursor( { x: 100, y: 100 } );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'crosshair' );
+		} );
+
+		it( 'should show rotate cursor on rotate handle', () => {
+			canvasManager.currentTool = 'pointer';
+			canvasManager.editor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.hitTestController.hitTestSelectionHandles = jest.fn( () => ( { type: 'rotate' } ) );
+			canvasManager.updateCursor( { x: 100, y: 100 } );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'grab' );
+		} );
+
+		it( 'should show move cursor on angleDimensionText handle', () => {
+			canvasManager.currentTool = 'pointer';
+			canvasManager.editor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.hitTestController.hitTestSelectionHandles = jest.fn( () => ( { type: 'angleDimensionText' } ) );
+			canvasManager.updateCursor( { x: 100, y: 100 } );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'move' );
+		} );
+
+		it( 'should show default cursor when no layer under mouse', () => {
+			canvasManager.currentTool = 'pointer';
+			canvasManager.editor.stateManager.get.mockReturnValue( [] );
+			canvasManager.hitTestController.getLayerAtPoint = jest.fn( () => null );
+			canvasManager.updateCursor( { x: 100, y: 100 } );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'default' );
+		} );
+
+		it( 'should show pointer cursor for non-selected layer under mouse', () => {
+			canvasManager.currentTool = 'pointer';
+			canvasManager.editor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.hitTestController.hitTestSelectionHandles = jest.fn( () => null );
+			canvasManager.hitTestController.getLayerAtPoint = jest.fn( () => ( { id: 'otherLayer' } ) );
+			canvasManager.updateCursor( { x: 100, y: 100 } );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'pointer' );
+		} );
+
+		it( 'should show move cursor for selected layer under mouse', () => {
+			canvasManager.currentTool = 'pointer';
+			canvasManager.editor.stateManager.get.mockReturnValue( [ 'layer1' ] );
+			canvasManager.hitTestController.hitTestSelectionHandles = jest.fn( () => null );
+			canvasManager.hitTestController.getLayerAtPoint = jest.fn( () => ( { id: 'layer1' } ) );
+			canvasManager.updateCursor( { x: 100, y: 100 } );
+			expect( canvasManager.canvas.style.cursor ).toBe( 'move' );
+		} );
+	} );
+
+	describe( 'branch coverage - renderLayers scheduling', () => {
+		it( 'should delegate renderLayers to redraw', () => {
+			const redrawSpy = jest.spyOn( canvasManager, 'redraw' );
+			canvasManager.renderLayers( [ { id: 'l1' } ] );
+			expect( redrawSpy ).toHaveBeenCalledWith( [ { id: 'l1' } ] );
+		} );
+
+		it( 'should use renderCoordinator when available in redrawOptimized', () => {
+			canvasManager.renderCoordinator = { scheduleRedraw: jest.fn() };
+			canvasManager.redrawOptimized();
+			expect( canvasManager.renderCoordinator.scheduleRedraw ).toHaveBeenCalled();
+		} );
+
+		it( 'should use fallback setTimeout when no rAF in redrawOptimized', () => {
+			canvasManager.renderCoordinator = null;
+			const origRAF = window.requestAnimationFrame;
+			window.requestAnimationFrame = undefined;
+
+			canvasManager.redrawOptimized();
+			expect( canvasManager.redrawScheduled ).toBe( true );
+			expect( canvasManager.fallbackTimeoutId ).not.toBeNull();
+
+			clearTimeout( canvasManager.fallbackTimeoutId );
+			window.requestAnimationFrame = origRAF;
+		} );
+
+		it( 'should coalesce multiple redrawOptimized calls', () => {
+			canvasManager.renderCoordinator = null;
+			canvasManager.redrawOptimized();
+			expect( canvasManager.redrawScheduled ).toBe( true );
+
+			// Second call should be no-op (already scheduled)
+			const firstId = canvasManager.animationFrameId;
+			canvasManager.redrawOptimized();
+			expect( canvasManager.animationFrameId ).toBe( firstId );
+		} );
+	} );
+
+	describe( 'branch coverage - destroy cleanup', () => {
+		it( 'should cancel fallback timeout in destroy', () => {
+			canvasManager.fallbackTimeoutId = setTimeout( () => {}, 10000 );
+			canvasManager.destroy();
+			expect( canvasManager.fallbackTimeoutId ).toBeNull();
+		} );
+
+		it( 'should cancel transform RAF in destroy', () => {
+			canvasManager._transformRafId = 999;
+			canvasManager.destroy();
+			expect( canvasManager._transformRafId ).toBeNull();
+		} );
+
+		it( 'should cancel drawing RAF in destroy', () => {
+			canvasManager._drawingRafId = 888;
+			canvasManager.destroy();
+			expect( canvasManager._drawingRafId ).toBeNull();
+		} );
+
+		it( 'should handle destroy error in controller gracefully', () => {
+			canvasManager.renderer.destroy.mockImplementation( () => {
+				throw new Error( 'destroy error' );
+			} );
+			expect( () => canvasManager.destroy() ).not.toThrow();
+		} );
+
+		it( 'should unsubscribe state subscriptions on destroy', () => {
+			const unsub = jest.fn();
+			canvasManager.stateUnsubscribers = [ unsub ];
+			canvasManager.destroy();
+			expect( unsub ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'branch coverage - loadBackgroundImage', () => {
+		it( 'should handle missing ImageLoader class', () => {
+			const origIL = global.ImageLoader;
+			delete global.ImageLoader;
+
+			expect( () => canvasManager.loadBackgroundImage() ).not.toThrow();
+
+			global.ImageLoader = origIL;
+		} );
+	} );
+
+	describe( 'branch coverage - getLayerBounds', () => {
+		it( 'should return null for null layer', () => {
+			expect( canvasManager.getLayerBounds( null ) ).toBeNull();
+		} );
+
+		it( 'should include rotation in bounds calculation', () => {
+			const bounds = canvasManager.getLayerBounds(
+				{ id: 'l1', type: 'rectangle', x: 100, y: 100, width: 200, height: 150, rotation: 45 }
+			);
+			expect( bounds ).not.toBeNull();
+			expect( bounds.rotation ).toBe( 45 );
+		} );
+	} );
+
+	describe( 'branch coverage - init without LayersConstants', () => {
+		it( 'should use hardcoded defaults when LayersConstants is undefined', () => {
+			const origLC = global.LayersConstants;
+			delete global.LayersConstants;
+
+			const cm = new CanvasManager( {
+				editor: mockEditor,
+				canvas: mockCanvas
+			} );
+
+			expect( cm.defaultCanvasWidth ).toBe( 800 );
+			expect( cm.defaultCanvasHeight ).toBe( 600 );
+			expect( cm.currentStyle.color ).toBe( '#000000' );
+			expect( cm.minZoom ).toBe( 0.1 );
+			expect( cm.maxZoom ).toBe( 5.0 );
+
+			cm.destroy();
+			global.LayersConstants = origLC;
+		} );
+	} );
+
+	describe( 'branch coverage - canvas context failure', () => {
+		it( 'should continue when getContext returns null', () => {
+			// Need to mock mw.log.error as a real function
+			const origMwLog = global.mw.log;
+			global.mw.log = { error: jest.fn(), warn: jest.fn() };
+
+			const nullCtxCanvas = {
+				getContext: jest.fn( () => null ),
+				getBoundingClientRect: jest.fn( () => ( { left: 0, top: 0, width: 800, height: 600 } ) ),
+				addEventListener: jest.fn(),
+				removeEventListener: jest.fn(),
+				width: 800,
+				height: 600,
+				style: {},
+				className: '',
+				parentNode: null
+			};
+
+			const cm = new CanvasManager( {
+				editor: mockEditor,
+				canvas: nullCtxCanvas
+			} );
+
+			expect( cm.ctx ).toBeNull();
+			expect( global.mw.log.error ).toHaveBeenCalled();
+			cm.destroy();
+
+			global.mw.log = origMwLog;
+		} );
+	} );
+} );
+
+describe( 'CanvasManager - branch coverage gaps', () => {
+	let canvasManager;
+	let mockCanvas;
+	let mockContext;
+	let mockEditor;
+	let mockContainer;
+
+	beforeEach( () => {
+		mockContext = {
+			clearRect: jest.fn(), save: jest.fn(), restore: jest.fn(),
+			translate: jest.fn(), scale: jest.fn(), rotate: jest.fn(),
+			setTransform: jest.fn(), beginPath: jest.fn(), closePath: jest.fn(),
+			moveTo: jest.fn(), lineTo: jest.fn(), stroke: jest.fn(), fill: jest.fn(),
+			arc: jest.fn(), rect: jest.fn(), fillRect: jest.fn(),
+			strokeRect: jest.fn(), drawImage: jest.fn(),
+			fillText: jest.fn(), strokeText: jest.fn(),
+			measureText: jest.fn( () => ( { width: 100 } ) ),
+			globalAlpha: 1, globalCompositeOperation: 'source-over',
+			fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, font: '16px Arial'
+		};
+		mockCanvas = {
+			getContext: jest.fn( () => mockContext ),
+			getBoundingClientRect: jest.fn( () => ( { left: 0, top: 0, width: 800, height: 600 } ) ),
+			addEventListener: jest.fn(), removeEventListener: jest.fn(),
+			width: 800, height: 600, style: {}, className: '', parentNode: null
+		};
+		mockContainer = {
+			querySelector: jest.fn( () => null ), appendChild: jest.fn(),
+			clientWidth: 1000, clientHeight: 800
+		};
+		mockEditor = {
+			layers: [],
+			filename: 'Test.png',
+			getLayerById: jest.fn( ( id ) => mockEditor.layers.find( ( l ) => l.id === id ) ),
+			addLayer: jest.fn(), updateLayer: jest.fn(), removeLayer: jest.fn(),
+			updateStatus: jest.fn(), errorLog: jest.fn(),
+			stateManager: {
+				get: jest.fn( () => [] ), set: jest.fn(), subscribe: jest.fn()
+			},
+			historyManager: { saveState: jest.fn() },
+			undo: jest.fn( () => true ), redo: jest.fn( () => true ),
+			setCurrentTool: jest.fn()
+		};
+
+		canvasManager = new CanvasManager( {
+			editor: mockEditor,
+			canvas: mockCanvas,
+			container: mockContainer
+		} );
+	} );
+
+	afterEach( () => {
+		if ( canvasManager ) {
+			canvasManager.destroy();
+		}
+	} );
+
+	describe( 'subscribeToState', () => {
+		test( 'should return early when editor is null', () => {
+			canvasManager.editor = null;
+			expect( () => canvasManager.subscribeToState() ).not.toThrow();
+		} );
+
+		test( 'should return early when stateManager is null', () => {
+			canvasManager.editor = { stateManager: null };
+			expect( () => canvasManager.subscribeToState() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'notifyToolbarOfSelection', () => {
+		test( 'should return early when editor is null', () => {
+			canvasManager.editor = null;
+			expect( () => canvasManager.notifyToolbarOfSelection( [] ) ).not.toThrow();
+		} );
+
+		test( 'should return early when toolbar is null', () => {
+			canvasManager.editor.toolbar = null;
+			expect( () => canvasManager.notifyToolbarOfSelection( [] ) ).not.toThrow();
+		} );
+
+		test( 'should return early when styleControls is null', () => {
+			canvasManager.editor.toolbar = { styleControls: null };
+			expect( () => canvasManager.notifyToolbarOfSelection( [] ) ).not.toThrow();
+		} );
+
+		test( 'should call updateForSelection when available', () => {
+			const mockUpdate = jest.fn();
+			canvasManager.editor.toolbar = { styleControls: { updateForSelection: mockUpdate } };
+			canvasManager.editor.layers = [ { id: 'l1', type: 'rect' } ];
+			canvasManager.notifyToolbarOfSelection( [ 'l1' ] );
+			expect( mockUpdate ).toHaveBeenCalledWith( [ { id: 'l1', type: 'rect' } ] );
+		} );
+
+		test( 'should handle null selectedIds', () => {
+			const mockUpdate = jest.fn();
+			canvasManager.editor.toolbar = { styleControls: { updateForSelection: mockUpdate } };
+			canvasManager.notifyToolbarOfSelection( null );
+			expect( mockUpdate ).toHaveBeenCalledWith( [] );
+		} );
+	} );
+
+	describe( 'updateStyleOptions', () => {
+		test( 'should return early when styleController is null', () => {
+			canvasManager.styleController = null;
+			expect( () => canvasManager.updateStyleOptions( { fill: 'red' } ) ).not.toThrow();
+		} );
+
+		test( 'should return early when updateStyleOptions is not a function', () => {
+			canvasManager.styleController = { updateStyleOptions: 'not-fn' };
+			expect( () => canvasManager.updateStyleOptions( { fill: 'red' } ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateDimensionDefaults', () => {
+		test( 'should return early for null props', () => {
+			canvasManager.dimensionDefaults = {};
+			canvasManager.updateDimensionDefaults( null );
+			expect( Object.keys( canvasManager.dimensionDefaults ).length ).toBe( 0 );
+		} );
+
+		test( 'should update known dimension properties', () => {
+			canvasManager.dimensionDefaults = {};
+			canvasManager.updateDimensionDefaults( { endStyle: 'arrow', stroke: '#ff0000', unknownProp: true } );
+			expect( canvasManager.dimensionDefaults.endStyle ).toBe( 'arrow' );
+			expect( canvasManager.dimensionDefaults.stroke ).toBe( '#ff0000' );
+		} );
+
+		test( 'should ignore undefined property values', () => {
+			canvasManager.dimensionDefaults = {};
+			canvasManager.updateDimensionDefaults( { endStyle: undefined } );
+			expect( canvasManager.dimensionDefaults.endStyle ).toBeUndefined();
+		} );
+	} );
+
+	describe( 'updateAngleDimensionDefaults', () => {
+		test( 'should return early for null props', () => {
+			expect( () => canvasManager.updateAngleDimensionDefaults( null ) ).not.toThrow();
+		} );
+
+		test( 'should create angleDimensionDefaults if not set', () => {
+			canvasManager.angleDimensionDefaults = undefined;
+			canvasManager.updateAngleDimensionDefaults( { arrowSize: 12 } );
+			expect( canvasManager.angleDimensionDefaults ).toBeDefined();
+			expect( canvasManager.angleDimensionDefaults.arrowSize ).toBe( 12 );
+		} );
+
+		test( 'should update existing angle dimension defaults', () => {
+			canvasManager.angleDimensionDefaults = { precision: 1 };
+			canvasManager.updateAngleDimensionDefaults( { precision: 2, stroke: 'blue' } );
+			expect( canvasManager.angleDimensionDefaults.precision ).toBe( 2 );
+			expect( canvasManager.angleDimensionDefaults.stroke ).toBe( 'blue' );
+		} );
+	} );
+
+	describe( 'updateMarkerDefaults', () => {
+		test( 'should return early for null props', () => {
+			expect( () => canvasManager.updateMarkerDefaults( null ) ).not.toThrow();
+		} );
+
+		test( 'should update known marker properties', () => {
+			canvasManager.markerDefaults = {};
+			canvasManager.updateMarkerDefaults( { style: 'numbered', fill: '#ff0000' } );
+			expect( canvasManager.markerDefaults.style ).toBe( 'numbered' );
+			expect( canvasManager.markerDefaults.fill ).toBe( '#ff0000' );
+		} );
+	} );
+
+	describe( 'emitTransforming', () => {
+		test( 'should return early for null layer', () => {
+			expect( () => canvasManager.emitTransforming( null ) ).not.toThrow();
+		} );
+
+		test( 'should skip when already scheduled', () => {
+			canvasManager.transformEventScheduled = true;
+			canvasManager.emitTransforming( { id: '1', type: 'rect' } );
+			expect( canvasManager.lastTransformPayload ).toEqual( { id: '1', type: 'rect' } );
+		} );
+	} );
+
+	describe( 'updateLayerPosition delegation', () => {
+		test( 'should delegate to transformController when available', () => {
+			const mockUpdate = jest.fn();
+			canvasManager.transformController = { updateLayerPosition: mockUpdate };
+			canvasManager.updateLayerPosition( { id: '1' }, { x: 0 }, 10, 20 );
+			expect( mockUpdate ).toHaveBeenCalledWith( { id: '1' }, { x: 0 }, 10, 20 );
+		} );
+
+		test( 'should handle null transformController', () => {
+			canvasManager.transformController = null;
+			expect( () => canvasManager.updateLayerPosition( { id: '1' }, {}, 0, 0 ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'getLayerBounds', () => {
+		test( 'should return null for null layer', () => {
+			expect( canvasManager.getLayerBounds( null ) ).toBeNull();
+		} );
+
+		test( 'should return null for undefined layer', () => {
+			expect( canvasManager.getLayerBounds( undefined ) ).toBeNull();
+		} );
+	} );
+
+	describe( 'isDestroyed guards', () => {
+		test( 'handleImageLoaded should return early when destroyed', () => {
+			canvasManager.destroy();
+			canvasManager.isDestroyed = true;
+			expect( () => canvasManager.handleImageLoaded( {}, { width: 100, height: 100 } ) ).not.toThrow();
+		} );
+
+		test( 'handleImageLoadError should return early when destroyed', () => {
+			canvasManager.destroy();
+			canvasManager.isDestroyed = true;
+			expect( () => canvasManager.handleImageLoadError( new Error( 'test' ) ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateMarqueeSelection', () => {
+		test( 'should return early when not marquee selecting', () => {
+			canvasManager.isMarqueeSelecting = false;
+			expect( () => canvasManager.updateMarqueeSelection( 10, 20 ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'finishMarqueeSelection', () => {
+		test( 'should return early when not marquee selecting', () => {
+			canvasManager.isMarqueeSelecting = false;
+			expect( () => canvasManager.finishMarqueeSelection() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'redraw with null renderer', () => {
+		test( 'should return early when renderer is null', () => {
+			canvasManager.renderer = null;
+			expect( () => canvasManager.redraw() ).not.toThrow();
+		} );
+	} );
+
+	describe( 'setTextEditingMode', () => {
+		test( 'should set isTextEditing flag', () => {
+			canvasManager.setTextEditingMode( true );
+			expect( canvasManager.isTextEditing ).toBe( true );
+		} );
+
+		test( 'should clear flag when false', () => {
+			canvasManager.isTextEditing = true;
+			canvasManager.setTextEditingMode( false );
+			expect( canvasManager.isTextEditing ).toBe( false );
+		} );
+	} );
 } );

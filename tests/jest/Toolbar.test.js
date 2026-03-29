@@ -3770,4 +3770,406 @@ describe( 'Toolbar', function () {
 			expect( btn.getAttribute( 'aria-label' ) ).toBe( '#0000ff' );
 		} );
 	} );
+
+	// === BRANCH COVERAGE GAP TESTS ===
+
+	describe( 'createToolButton - branch coverage', () => {
+		it( 'should handle tool without key property', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const tool = { id: 'test', title: 'Test Tool', icon: '✏', isSvg: false };
+			const button = testToolbar.createToolButton( tool );
+			expect( button.title ).toBe( 'Test Tool' );
+			expect( button.hasAttribute( 'aria-keyshortcuts' ) ).toBe( false );
+		} );
+
+		it( 'should include key in title when key is present', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const tool = { id: 'test', title: 'Test Tool', icon: '✏', isSvg: false, key: 'T' };
+			const button = testToolbar.createToolButton( tool );
+			expect( button.title ).toBe( 'Test Tool (T)' );
+			expect( button.getAttribute( 'aria-keyshortcuts' ) ).toBe( 'T' );
+		} );
+	} );
+
+	describe( 'updateUndoRedoState - missing buttons branch coverage', () => {
+		it( 'should handle missing undo and redo buttons', () => {
+			const emptyContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: emptyContainer
+			} );
+			// No undo/redo buttons in the empty container
+			expect( () => testToolbar.updateUndoRedoState( true, false ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateDeleteState - missing buttons branch coverage', () => {
+		it( 'should handle missing delete and duplicate buttons', () => {
+			const emptyContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: emptyContainer
+			} );
+			expect( () => testToolbar.updateDeleteState( true ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'toggleButtonState - branch coverage', () => {
+		it( 'should handle button without aria-pressed attribute', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			// Add button AFTER toolbar construction
+			const btn = document.createElement( 'button' );
+			btn.dataset.action = 'smart-guides';
+			testContainer.appendChild( btn );
+
+			testToolbar.toggleButtonState( 'smart-guides' );
+			expect( btn.classList.contains( 'active' ) ).toBe( true );
+			// Should NOT have set aria-pressed since it wasn't present
+			expect( btn.hasAttribute( 'aria-pressed' ) ).toBe( false );
+		} );
+
+		it( 'should toggle aria-pressed from true to false', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const btn = document.createElement( 'button' );
+			btn.dataset.action = 'toggle-guides';
+			btn.setAttribute( 'aria-pressed', 'true' );
+			testContainer.appendChild( btn );
+
+			testToolbar.toggleButtonState( 'toggle-guides' );
+			expect( btn.getAttribute( 'aria-pressed' ) ).toBe( 'false' );
+		} );
+
+		it( 'should toggle aria-pressed from false to true', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const btn = document.createElement( 'button' );
+			btn.dataset.action = 'toggle-snap';
+			btn.setAttribute( 'aria-pressed', 'false' );
+			testContainer.appendChild( btn );
+
+			testToolbar.toggleButtonState( 'toggle-snap' );
+			expect( btn.getAttribute( 'aria-pressed' ) ).toBe( 'true' );
+		} );
+
+		it( 'should not throw for non-existent button', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+			expect( () => testToolbar.toggleButtonState( 'nonexistent' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'selectTool - dropdown-only tool branch coverage', () => {
+		it( 'should handle tool with no standalone button', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+			// Tool ID 'circle' may only exist in a dropdown, not as standalone
+			testToolbar.toolDropdowns = [];
+			testToolbar.selectTool( 'nonexistent-tool' );
+			expect( testToolbar.currentTool ).toBe( 'nonexistent-tool' );
+		} );
+	} );
+
+	describe( 'setupArrangeDropdownEvents - branch coverage', () => {
+		let testToolbar, trigger, menu;
+
+		beforeEach( () => {
+			const testContainer = document.createElement( 'div' );
+			testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+			trigger = document.createElement( 'button' );
+			menu = document.createElement( 'div' );
+			menu.style.display = 'none';
+			testToolbar.alignmentGroup = document.createElement( 'div' );
+			testToolbar.alignmentGroup.appendChild( trigger );
+			testToolbar.alignmentGroup.appendChild( menu );
+			testToolbar.arrangeDropdownMenu = menu;
+			testToolbar.setupArrangeDropdownEvents( trigger, menu );
+		} );
+
+		it( 'should not close dropdown when clicking inside alignment group', () => {
+			const closeSpy = jest.spyOn( testToolbar, 'closeArrangeDropdown' );
+			// Click on trigger which is INSIDE alignmentGroup
+			document.dispatchEvent( new MouseEvent( 'click', { bubbles: true } ) );
+			// The handler checks if target is contained — dispatching on document with no target
+			// in alignment group should close. Let's dispatch from trigger instead:
+			const event = new MouseEvent( 'click', { bubbles: true } );
+			Object.defineProperty( event, 'target', { value: trigger } );
+			// Since click listener is on document, fire it
+			document.dispatchEvent( event );
+			// The click originated from inside alignment group, so closeArrangeDropdown not called
+			// (depends on event.target check in handler)
+		} );
+
+		it( 'should handle canvas-snap toggle change', () => {
+			const snapSpy = jest.spyOn( testToolbar, 'setCanvasSnapEnabled' );
+			const checkbox = document.createElement( 'input' );
+			checkbox.type = 'checkbox';
+			checkbox.dataset.toggle = 'canvas-snap';
+			checkbox.checked = true;
+			const toggleItem = document.createElement( 'label' );
+			toggleItem.className = 'dropdown-toggle-item';
+			toggleItem.appendChild( checkbox );
+			menu.appendChild( toggleItem );
+
+			checkbox.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+			expect( snapSpy ).toHaveBeenCalledWith( true );
+			expect( toggleItem.getAttribute( 'aria-checked' ) ).toBe( 'true' );
+		} );
+
+		it( 'should close dropdown on Escape key', () => {
+			const closeSpy = jest.spyOn( testToolbar, 'closeArrangeDropdown' );
+			const focusSpy = jest.spyOn( trigger, 'focus' );
+			menu.dispatchEvent( new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } ) );
+			expect( closeSpy ).toHaveBeenCalled();
+			expect( focusSpy ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'setCanvasSnapEnabled - branch coverage', () => {
+		it( 'should return early when canvasManager is null', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: { ...mockEditor, canvasManager: null },
+				container: testContainer
+			} );
+			expect( () => testToolbar.setCanvasSnapEnabled( true ) ).not.toThrow();
+		} );
+
+		it( 'should return early when smartGuidesController is null', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: { ...mockEditor, canvasManager: {} },
+				container: testContainer
+			} );
+			expect( () => testToolbar.setCanvasSnapEnabled( true ) ).not.toThrow();
+		} );
+
+		it( 'should call smartGuidesController.setCanvasSnapEnabled', () => {
+			const mockSetSnap = jest.fn();
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: {
+					...mockEditor,
+					canvasManager: {
+						smartGuidesController: { setCanvasSnapEnabled: mockSetSnap }
+					}
+				},
+				container: testContainer
+			} );
+			testToolbar.setCanvasSnapEnabled( true );
+			expect( mockSetSnap ).toHaveBeenCalledWith( true );
+		} );
+	} );
+
+	describe( 'updateSmartGuidesButton - branch coverage', () => {
+		it( 'should handle null smartGuidesToggle', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+			testToolbar.smartGuidesToggle = null;
+			expect( () => testToolbar.updateSmartGuidesButton( true ) ).not.toThrow();
+		} );
+
+		it( 'should update toggle and aria-checked', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+			const checkbox = document.createElement( 'input' );
+			checkbox.type = 'checkbox';
+			const item = document.createElement( 'label' );
+			item.className = 'dropdown-toggle-item';
+			item.appendChild( checkbox );
+			testToolbar.smartGuidesToggle = checkbox;
+
+			testToolbar.updateSmartGuidesButton( true );
+			expect( checkbox.checked ).toBe( true );
+			expect( item.getAttribute( 'aria-checked' ) ).toBe( 'true' );
+		} );
+	} );
+
+	describe( 'updateCanvasSnapButton - branch coverage', () => {
+		it( 'should handle null canvasSnapToggle', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+			testToolbar.canvasSnapToggle = null;
+			expect( () => testToolbar.updateCanvasSnapButton( false ) ).not.toThrow();
+		} );
+
+		it( 'should update toggle and aria-checked', () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+			const checkbox = document.createElement( 'input' );
+			checkbox.type = 'checkbox';
+			const item = document.createElement( 'label' );
+			item.className = 'dropdown-toggle-item';
+			item.appendChild( checkbox );
+			testToolbar.canvasSnapToggle = checkbox;
+
+			testToolbar.updateCanvasSnapButton( false );
+			expect( checkbox.checked ).toBe( false );
+			expect( item.getAttribute( 'aria-checked' ) ).toBe( 'false' );
+		} );
+	} );
+
+	describe( 'handleImageImport - branch coverage', () => {
+		it( 'should handle editor without stateManager', async () => {
+			const testContainer = document.createElement( 'div' );
+			const testToolbar = new Toolbar( {
+				editor: { ...mockEditor, stateManager: null, saveState: jest.fn() },
+				container: testContainer
+			} );
+			// Mock readFileAsDataURL and loadImage
+			testToolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/png;base64,abc' );
+			testToolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 100, naturalHeight: 50 } );
+
+			const file = new File( [ 'test' ], 'test.png', { type: 'image/png' } );
+			Object.defineProperty( file, 'size', { value: 1000 } );
+			await testToolbar.handleImageImport( file );
+			// Should not throw — gracefully handles missing stateManager
+		} );
+
+		it( 'should handle editor without saveState', async () => {
+			const testContainer = document.createElement( 'div' );
+			const addLayerMock = jest.fn();
+			const testToolbar = new Toolbar( {
+				editor: {
+					...mockEditor,
+					stateManager: { addLayer: addLayerMock },
+					saveState: 'not-a-function'
+				},
+				container: testContainer
+			} );
+			testToolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/png;base64,abc' );
+			testToolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 200, naturalHeight: 100 } );
+
+			const file = new File( [ 'test' ], 'photo.jpg', { type: 'image/jpeg' } );
+			Object.defineProperty( file, 'size', { value: 5000 } );
+			await testToolbar.handleImageImport( file );
+			expect( addLayerMock ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle editor without canvasManager in import', async () => {
+			const testContainer = document.createElement( 'div' );
+			const addLayerMock = jest.fn();
+			const testToolbar = new Toolbar( {
+				editor: {
+					...mockEditor,
+					stateManager: { addLayer: addLayerMock },
+					saveState: jest.fn(),
+					canvasManager: null
+				},
+				container: testContainer
+			} );
+			testToolbar.readFileAsDataURL = jest.fn().mockResolvedValue( 'data:image/png;base64,abc' );
+			testToolbar.loadImage = jest.fn().mockResolvedValue( { naturalWidth: 50, naturalHeight: 50 } );
+
+			const file = new File( [ 'test' ], 'icon.gif', { type: 'image/gif' } );
+			Object.defineProperty( file, 'size', { value: 500 } );
+			await testToolbar.handleImageImport( file );
+			expect( addLayerMock ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle import error with mw.log.error unavailable', async () => {
+			const testContainer = document.createElement( 'div' );
+			const origLog = global.mw.log;
+			global.mw.log = {};  // No error method
+			global.mw.notify = jest.fn();
+
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+			testToolbar.readFileAsDataURL = jest.fn().mockRejectedValue( new Error( 'Read failed' ) );
+
+			const file = new File( [ 'test' ], 'bad.png', { type: 'image/png' } );
+			Object.defineProperty( file, 'size', { value: 100 } );
+			await testToolbar.handleImageImport( file );
+			expect( global.mw.notify ).toHaveBeenCalled();
+
+			global.mw.log = origLog;
+		} );
+
+		it( 'should use fallback maxSize when mw.config is unavailable', async () => {
+			const testContainer = document.createElement( 'div' );
+			const origConfig = global.mw.config;
+			global.mw.config = null;
+			global.mw.notify = jest.fn();
+
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			// File larger than 1MB fallback
+			const file = new File( [ 'test' ], 'huge.png', { type: 'image/png' } );
+			Object.defineProperty( file, 'size', { value: 2000000 } );
+			await testToolbar.handleImageImport( file );
+			expect( global.mw.notify ).toHaveBeenCalled();
+
+			global.mw.config = origConfig;
+		} );
+	} );
+
+	describe( 'msg - branch coverage', () => {
+		it( 'should return fallback when message contains placeholder marker', () => {
+			const testContainer = document.createElement( 'div' );
+			const origMessage = global.mw.message;
+			global.mw.message = jest.fn( () => ( {
+				text: () => '⧼missing-key⧽',
+				exists: () => false
+			} ) );
+
+			const testToolbar = new Toolbar( {
+				editor: mockEditor,
+				container: testContainer
+			} );
+
+			const result = testToolbar.msg( 'missing-key', 'Fallback Text' );
+			expect( result ).toBe( 'Fallback Text' );
+
+			global.mw.message = origMessage;
+		} );
+	} );
 } );

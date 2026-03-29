@@ -2792,4 +2792,1217 @@ describe( 'ViewerManager', () => {
 			expect( result ).toBe( false );
 		} );
 	} );
+
+	// ============ BRANCH COVERAGE GAP TESTS ============
+
+	describe( 'ensurePositionedContainer - branch gaps', () => {
+		it( 'should handle null getComputedStyle return', () => {
+			const manager = new ViewerManager();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			parent.appendChild( img );
+
+			const origGetComputedStyle = window.getComputedStyle;
+			window.getComputedStyle = jest.fn( () => null );
+
+			const result = manager.ensurePositionedContainer( img );
+			expect( result ).toBeTruthy();
+			// Should have wrapped the image since style is null
+			expect( result.style.position ).toBe( 'relative' );
+
+			window.getComputedStyle = origGetComputedStyle;
+		} );
+
+		it( 'should track wrapper in _createdWrappers when available', () => {
+			const manager = new ViewerManager();
+			manager._createdWrappers = new Map();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			parent.appendChild( img );
+
+			const origGetComputedStyle = window.getComputedStyle;
+			window.getComputedStyle = jest.fn( () => ( { position: 'static' } ) );
+
+			manager.ensurePositionedContainer( img );
+			expect( manager._createdWrappers.has( img ) ).toBe( true );
+
+			window.getComputedStyle = origGetComputedStyle;
+		} );
+
+		it( 'should not track wrapper when _createdWrappers is null', () => {
+			const manager = new ViewerManager();
+			manager._createdWrappers = null;
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			parent.appendChild( img );
+
+			const origGetComputedStyle = window.getComputedStyle;
+			window.getComputedStyle = jest.fn( () => ( { position: 'static' } ) );
+
+			expect( () => {
+				manager.ensurePositionedContainer( img );
+			} ).not.toThrow();
+
+			window.getComputedStyle = origGetComputedStyle;
+		} );
+	} );
+
+	describe( '_initializeOverlay - setname normalization', () => {
+		it( 'should use default when intent is generic "on"', () => {
+			const manager = new ViewerManager();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			parent.appendChild( img );
+
+			// No data-layer-setname, intent is 'on'
+			img.setAttribute( 'data-layers-intent', 'on' );
+
+			let capturedSetname = null;
+			const MockViewerOverlay = jest.fn( function ( opts ) {
+				capturedSetname = opts.setname;
+			} );
+
+			window.layersGetClass.mockImplementation( ( namespacePath ) => {
+				if ( namespacePath === 'Viewer.Overlay' ) {
+					return MockViewerOverlay;
+				}
+				if ( namespacePath === 'Utils.UrlParser' ) {
+					return function () {
+						return mockUrlParser;
+					};
+				}
+				return null;
+			} );
+
+			manager._initializeOverlay( img, parent );
+			expect( capturedSetname ).toBe( 'default' );
+		} );
+
+		it( 'should use default when intent is "true" (case-insensitive)', () => {
+			const manager = new ViewerManager();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			parent.appendChild( img );
+
+			img.setAttribute( 'data-layers-intent', 'TRUE' );
+
+			let capturedSetname = null;
+			const MockViewerOverlay = jest.fn( function ( opts ) {
+				capturedSetname = opts.setname;
+			} );
+
+			window.layersGetClass.mockImplementation( ( namespacePath ) => {
+				if ( namespacePath === 'Viewer.Overlay' ) {
+					return MockViewerOverlay;
+				}
+				if ( namespacePath === 'Utils.UrlParser' ) {
+					return function () {
+						return mockUrlParser;
+					};
+				}
+				return null;
+			} );
+
+			manager._initializeOverlay( img, parent );
+			expect( capturedSetname ).toBe( 'default' );
+		} );
+
+		it( 'should pass through specific set name', () => {
+			const manager = new ViewerManager();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			parent.appendChild( img );
+
+			img.setAttribute( 'data-layers-intent', 'anatomy-labels' );
+
+			let capturedSetname = null;
+			const MockViewerOverlay = jest.fn( function ( opts ) {
+				capturedSetname = opts.setname;
+			} );
+
+			window.layersGetClass.mockImplementation( ( namespacePath ) => {
+				if ( namespacePath === 'Viewer.Overlay' ) {
+					return MockViewerOverlay;
+				}
+				if ( namespacePath === 'Utils.UrlParser' ) {
+					return function () {
+						return mockUrlParser;
+					};
+				}
+				return null;
+			} );
+
+			manager._initializeOverlay( img, parent );
+			expect( capturedSetname ).toBe( 'anatomy-labels' );
+		} );
+
+		it( 'should use default when intent is empty string', () => {
+			const manager = new ViewerManager();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			parent.appendChild( img );
+
+			img.setAttribute( 'data-layers-intent', '' );
+
+			let capturedSetname = null;
+			const MockViewerOverlay = jest.fn( function ( opts ) {
+				capturedSetname = opts.setname;
+			} );
+
+			window.layersGetClass.mockImplementation( ( namespacePath ) => {
+				if ( namespacePath === 'Viewer.Overlay' ) {
+					return MockViewerOverlay;
+				}
+				if ( namespacePath === 'Utils.UrlParser' ) {
+					return function () {
+						return mockUrlParser;
+					};
+				}
+				return null;
+			} );
+
+			manager._initializeOverlay( img, parent );
+			expect( capturedSetname ).toBe( 'default' );
+		} );
+
+		it( 'should use explicit data-layer-setname over intent', () => {
+			const manager = new ViewerManager();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			parent.appendChild( img );
+
+			img.setAttribute( 'data-layer-setname', 'my-set' );
+			img.setAttribute( 'data-layers-intent', 'on' );
+
+			let capturedSetname = null;
+			const MockViewerOverlay = jest.fn( function ( opts ) {
+				capturedSetname = opts.setname;
+			} );
+
+			window.layersGetClass.mockImplementation( ( namespacePath ) => {
+				if ( namespacePath === 'Viewer.Overlay' ) {
+					return MockViewerOverlay;
+				}
+				if ( namespacePath === 'Utils.UrlParser' ) {
+					return function () {
+						return mockUrlParser;
+					};
+				}
+				return null;
+			} );
+
+			manager._initializeOverlay( img, parent );
+			expect( capturedSetname ).toBe( 'my-set' );
+		} );
+
+		it( 'should skip when overlay already exists', () => {
+			const manager = new ViewerManager();
+			const img = document.createElement( 'img' );
+			img.layersOverlay = {};
+			const container = document.createElement( 'div' );
+
+			manager._initializeOverlay( img, container );
+			// Should return early without error
+			expect( window.layersGetClass ).not.toHaveBeenCalledWith( 'Viewer.Overlay', expect.anything() );
+		} );
+
+		it( 'should skip when ViewerOverlay class not available', () => {
+			const manager = new ViewerManager();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			img.src = '/images/a/ab/Test.jpg';
+			parent.appendChild( img );
+
+			window.layersGetClass.mockImplementation( () => null );
+
+			manager._initializeOverlay( img, parent );
+			expect( img.layersOverlay ).toBeFalsy();
+		} );
+
+		it( 'should use "all" as generic value mapping to default', () => {
+			const manager = new ViewerManager();
+			const parent = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			parent.appendChild( img );
+
+			img.setAttribute( 'data-layers-intent', 'all' );
+
+			let capturedSetname = null;
+			const MockViewerOverlay = jest.fn( function ( opts ) {
+				capturedSetname = opts.setname;
+			} );
+
+			window.layersGetClass.mockImplementation( ( namespacePath ) => {
+				if ( namespacePath === 'Viewer.Overlay' ) {
+					return MockViewerOverlay;
+				}
+				if ( namespacePath === 'Utils.UrlParser' ) {
+					return function () {
+						return mockUrlParser;
+					};
+				}
+				return null;
+			} );
+
+			manager._initializeOverlay( img, parent );
+			expect( capturedSetname ).toBe( 'default' );
+		} );
+	} );
+
+	describe( 'extractFilenameFromImg - branch gaps', () => {
+		it( 'should extract from src URL without thumbnail prefix', () => {
+			const manager = new ViewerManager();
+			const img = document.createElement( 'img' );
+			Object.defineProperty( img, 'src', {
+				get: () => 'https://wiki.example.org/images/a/ab/MyFile.png',
+				configurable: true
+			} );
+
+			const result = manager.extractFilenameFromImg( img );
+			expect( result ).toBe( 'MyFile.png' );
+		} );
+
+		it( 'should strip thumbnail prefix from src URL', () => {
+			const manager = new ViewerManager();
+			const img = document.createElement( 'img' );
+			Object.defineProperty( img, 'src', {
+				get: () => 'https://wiki.example.org/images/thumb/a/ab/MyFile.png/800px-MyFile.png',
+				configurable: true
+			} );
+
+			const result = manager.extractFilenameFromImg( img );
+			expect( result ).toBe( 'MyFile.png' );
+		} );
+
+		it( 'should extract from parent link href', () => {
+			const manager = new ViewerManager();
+			const a = document.createElement( 'a' );
+			a.setAttribute( 'href', '/wiki/File:My_Image.jpg' );
+			const img = document.createElement( 'img' );
+			a.appendChild( img );
+
+			const result = manager.extractFilenameFromImg( img );
+			expect( result ).toBe( 'My Image.jpg' );
+		} );
+
+		it( 'should return null for non-link parent', () => {
+			const manager = new ViewerManager();
+			const div = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			div.appendChild( img );
+
+			const result = manager.extractFilenameFromImg( img );
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should return null when parent link has no /File: in href', () => {
+			const manager = new ViewerManager();
+			const a = document.createElement( 'a' );
+			a.setAttribute( 'href', '/wiki/Category:SomeCategory' );
+			const img = document.createElement( 'img' );
+			a.appendChild( img );
+
+			const result = manager.extractFilenameFromImg( img );
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should handle parent link with empty href', () => {
+			const manager = new ViewerManager();
+			const a = document.createElement( 'a' );
+			const img = document.createElement( 'img' );
+			a.appendChild( img );
+
+			const result = manager.extractFilenameFromImg( img );
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should strip wikitext brackets from filename', () => {
+			const manager = new ViewerManager();
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', '[[Test File.jpg]]' );
+
+			const result = manager.extractFilenameFromImg( img );
+			expect( result ).toBe( 'Test File.jpg' );
+		} );
+
+		it( 'should return null when src has no extension', () => {
+			const manager = new ViewerManager();
+			const div = document.createElement( 'div' );
+			const img = document.createElement( 'img' );
+			div.appendChild( img );
+			// src with no extension won't match SRC_URL pattern
+			Object.defineProperty( img, 'src', {
+				get: () => 'https://wiki.example.org/images/a/ab/noext',
+				configurable: true
+			} );
+
+			const result = manager.extractFilenameFromImg( img );
+			expect( result ).toBeNull();
+		} );
+	} );
+
+	describe( 'initializeFilePageFallback - branch gaps', () => {
+		it( 'should return when mw is undefined', () => {
+			const origMw = global.mw;
+			global.mw = undefined;
+
+			const manager = new ViewerManager();
+			const result = manager.initializeFilePageFallback();
+			expect( result ).toBeUndefined();
+
+			global.mw = origMw;
+		} );
+
+		it( 'should return when not on File namespace', () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 0 );
+
+			const manager = new ViewerManager();
+			const result = manager.initializeFilePageFallback();
+			expect( result ).toBeUndefined();
+		} );
+
+		it( 'should return when no layers param in URL', () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( null );
+
+			const manager = new ViewerManager();
+			const result = manager.initializeFilePageFallback();
+			expect( result ).toBeUndefined();
+		} );
+
+		it( 'should return when no image found', () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+
+			const manager = new ViewerManager();
+			const result = manager.initializeFilePageFallback();
+			expect( result ).toBeUndefined();
+		} );
+
+		it( 'should return when image already has layersViewer', () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			const manager = new ViewerManager();
+			const result = manager.initializeFilePageFallback();
+			expect( result ).toBeUndefined();
+		} );
+
+		it( 'should return when image has data-layer-data attribute', () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layer-data', '[]' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			const manager = new ViewerManager();
+			const result = manager.initializeFilePageFallback();
+			expect( result ).toBeUndefined();
+		} );
+
+		it( 'should handle layerset.data as direct array', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:Test.jpg';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: [ { id: '1', type: 'text', text: 'Hello' } ],
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.initializeViewer = jest.fn();
+			await manager.initializeFilePageFallback();
+
+			expect( manager.initializeViewer ).toHaveBeenCalled();
+			const payload = manager.initializeViewer.mock.calls[ 0 ][ 1 ];
+			expect( payload.layers ).toEqual( [ { id: '1', type: 'text', text: 'Hello' } ] );
+		} );
+
+		it( 'should handle null layerset data', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:Test.jpg';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: null,
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.initializeViewer = jest.fn();
+			await manager.initializeFilePageFallback();
+
+			expect( manager.initializeViewer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle empty layers array', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:Test.jpg';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [] },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.initializeViewer = jest.fn();
+			await manager.initializeFilePageFallback();
+
+			// Empty layers should not initialize viewer
+			expect( manager.initializeViewer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle inner processing error (catch e2)', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:Test.jpg';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			// Return data that will cause error in processing
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [ { id: '1' } ] },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.initializeViewer = jest.fn( () => {
+				throw new Error( 'init error' );
+			} );
+
+			// Should not throw, caught by inner catch
+			await expect( manager.initializeFilePageFallback() ).resolves.not.toThrow();
+		} );
+
+		it( 'should handle API error', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:Test.jpg';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			mockApi.get.mockRejectedValue( new Error( 'API failure' ) );
+
+			const manager = new ViewerManager();
+			await expect( manager.initializeFilePageFallback() ).resolves.not.toThrow();
+		} );
+
+		it( 'should strip namespace prefix from page name', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:My_Test_File.jpg';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [ { id: '1', type: 'text' } ] },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.initializeViewer = jest.fn();
+			await manager.initializeFilePageFallback();
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( { filename: 'My Test File.jpg' } )
+			);
+		} );
+
+		it( 'should handle page name without namespace prefix', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'Image_Without_Prefix.png';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			const manager = new ViewerManager();
+			await manager.initializeFilePageFallback();
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( { filename: 'Image Without Prefix.png' } )
+			);
+		} );
+
+		it( 'should handle decode error in filename', async () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:%E0%A4%A';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			const manager = new ViewerManager();
+			// Should not throw despite decode error
+			await expect( manager.initializeFilePageFallback() ).resolves.not.toThrow();
+		} );
+
+		it( 'should resolve when api not available', () => {
+			mockUrlParser.getNamespaceNumber.mockReturnValue( 6 );
+			mockUrlParser.getPageLayersParam.mockReturnValue( 'on' );
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgPageName' ) {
+					return 'File:Test.jpg';
+				}
+				if ( key === 'wgCanonicalNamespace' ) {
+					return 'File';
+				}
+				return null;
+			} );
+
+			const img = document.createElement( 'img' );
+			const fileDiv = document.createElement( 'div' );
+			fileDiv.id = 'file';
+			fileDiv.appendChild( img );
+			document.body.appendChild( fileDiv );
+
+			const manager = new ViewerManager();
+			manager._getApi = jest.fn( () => null );
+
+			const result = manager.initializeFilePageFallback();
+			expect( result ).toEqual( Promise.resolve() );
+		} );
+	} );
+
+	describe( '_processWithConcurrency - branch gaps', () => {
+		it( 'should handle fewer items than concurrency limit', async () => {
+			const manager = new ViewerManager();
+			const items = [ 'a', 'b' ];
+			const processor = jest.fn( ( item ) => Promise.resolve( item.toUpperCase() ) );
+
+			const results = await manager._processWithConcurrency( items, processor, 10 );
+			expect( results ).toEqual( [ 'A', 'B' ] );
+			expect( processor ).toHaveBeenCalledTimes( 2 );
+		} );
+
+		it( 'should handle single concurrency (serial processing)', async () => {
+			const manager = new ViewerManager();
+			const order = [];
+			const items = [ 1, 2, 3 ];
+			const processor = jest.fn( ( item ) => {
+				order.push( item );
+				return Promise.resolve( item * 2 );
+			} );
+
+			const results = await manager._processWithConcurrency( items, processor, 1 );
+			expect( results ).toEqual( [ 2, 4, 6 ] );
+			expect( order ).toEqual( [ 1, 2, 3 ] );
+		} );
+
+		it( 'should handle empty array', async () => {
+			const manager = new ViewerManager();
+			const processor = jest.fn();
+
+			const results = await manager._processWithConcurrency( [], processor );
+			expect( results ).toEqual( [] );
+			expect( processor ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should default to MAX_CONCURRENT_REQUESTS when no concurrency specified', async () => {
+			const manager = new ViewerManager();
+			const items = Array.from( { length: 3 }, ( _, i ) => i );
+			const processor = jest.fn( ( item ) => Promise.resolve( item ) );
+
+			await manager._processWithConcurrency( items, processor );
+			expect( processor ).toHaveBeenCalledTimes( 3 );
+		} );
+	} );
+
+	describe( 'refreshAllViewers - branch gaps', () => {
+		it( 'should handle layerset.data as direct array', async () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			document.body.appendChild( img );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: [ { id: '1', type: 'text' } ],
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.reinitializeViewer = jest.fn( () => true );
+			manager.refreshAllSlides = jest.fn( () => Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: []
+			} ) );
+
+			const result = await manager.refreshAllViewers();
+			const payload = manager.reinitializeViewer.mock.calls[ 0 ][ 1 ];
+			expect( Array.isArray( payload.layers ) ).toBe( true );
+			expect( result.refreshed ).toBe( 1 );
+		} );
+
+		it( 'should fallback bgVisible to true when LayerDataNormalizer not available', async () => {
+			const origNormalizer = window.Layers && window.Layers.LayerDataNormalizer;
+			if ( window.Layers ) {
+				window.Layers.LayerDataNormalizer = undefined;
+			}
+
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			document.body.appendChild( img );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [ { id: '1' } ], backgroundVisible: 0 },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.reinitializeViewer = jest.fn( () => true );
+			manager.refreshAllSlides = jest.fn( () => Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: []
+			} ) );
+
+			const result = await manager.refreshAllViewers();
+			const payload = manager.reinitializeViewer.mock.calls[ 0 ][ 1 ];
+			expect( payload.backgroundVisible ).toBe( true );
+
+			if ( window.Layers ) {
+				window.Layers.LayerDataNormalizer = origNormalizer;
+			}
+		} );
+
+		it( 'should parse backgroundOpacity as float', async () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			document.body.appendChild( img );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [ { id: '1' } ], backgroundOpacity: '0.5' },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.reinitializeViewer = jest.fn( () => true );
+			manager.refreshAllSlides = jest.fn( () => Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: []
+			} ) );
+
+			const result = await manager.refreshAllViewers();
+			const payload = manager.reinitializeViewer.mock.calls[ 0 ][ 1 ];
+			expect( payload.backgroundOpacity ).toBe( 0.5 );
+		} );
+
+		it( 'should default backgroundOpacity to 1.0 when undefined', async () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			document.body.appendChild( img );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [ { id: '1' } ] },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.reinitializeViewer = jest.fn( () => true );
+			manager.refreshAllSlides = jest.fn( () => Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: []
+			} ) );
+
+			const result = await manager.refreshAllViewers();
+			const payload = manager.reinitializeViewer.mock.calls[ 0 ][ 1 ];
+			expect( payload.backgroundOpacity ).toBe( 1.0 );
+		} );
+
+		it( 'should handle processing error in try/catch', async () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			document.body.appendChild( img );
+
+			// Return data that will cause error when accessed
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [ { id: '1' } ] },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.reinitializeViewer = jest.fn( () => {
+				throw new Error( 'reinit failed' );
+			} );
+			manager.refreshAllSlides = jest.fn( () => Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: []
+			} ) );
+
+			const result = await manager.refreshAllViewers();
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+		} );
+
+		it( 'should handle API error for viewer', async () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			document.body.appendChild( img );
+
+			mockApi.get.mockRejectedValue( { error: { info: 'Server error' } } );
+
+			const manager = new ViewerManager();
+			manager.refreshAllSlides = jest.fn( () => Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: []
+			} ) );
+
+			const result = await manager.refreshAllViewers();
+			expect( result.errors.length ).toBeGreaterThan( 0 );
+			expect( result.errors[ 0 ].error ).toContain( 'Server error' );
+		} );
+
+		it( 'should handle no layerset in response', async () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			document.body.appendChild( img );
+
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			const manager = new ViewerManager();
+			manager.refreshAllSlides = jest.fn( () => Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: []
+			} ) );
+
+			const result = await manager.refreshAllViewers();
+			expect( result.refreshed ).toBe( 0 );
+		} );
+
+		it( 'should pass specific setname to API when not generic', async () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			img.setAttribute( 'data-layer-setname', 'anatomy' );
+			document.body.appendChild( img );
+
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			const manager = new ViewerManager();
+			manager.refreshAllSlides = jest.fn( () => Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: []
+			} ) );
+
+			await manager.refreshAllViewers();
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( { setname: 'anatomy' } )
+			);
+		} );
+	} );
+
+	describe( 'initializeLargeImages - branch gaps', () => {
+		it( 'should handle layerset.data as direct array', async () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Large.jpg' );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: [ { id: '1', type: 'rect' } ],
+						baseWidth: 1200,
+						baseHeight: 900
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.initializeViewer = jest.fn();
+			manager.initializeLargeImages( [ img ] );
+
+			// Wait for async
+			await new Promise( ( r ) => setTimeout( r, 10 ) );
+
+			expect( manager.initializeViewer ).toHaveBeenCalled();
+			const payload = manager.initializeViewer.mock.calls[ 0 ][ 1 ];
+			expect( Array.isArray( payload.layers ) ).toBe( true );
+			expect( img.layersPending ).toBe( false );
+		} );
+
+		it( 'should skip already pending images', () => {
+			const img = document.createElement( 'img' );
+			img.layersPending = true;
+
+			const manager = new ViewerManager();
+			manager.initializeLargeImages( [ img ] );
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should skip images without extractable filename', () => {
+			const img = document.createElement( 'img' );
+			const div = document.createElement( 'div' );
+			div.appendChild( img );
+
+			const manager = new ViewerManager();
+			manager.initializeLargeImages( [ img ] );
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle empty layers in response', async () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Large.jpg' );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [] },
+						baseWidth: 1200,
+						baseHeight: 900
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.initializeViewer = jest.fn();
+			manager.initializeLargeImages( [ img ] );
+
+			await new Promise( ( r ) => setTimeout( r, 10 ) );
+
+			expect( manager.initializeViewer ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle processing error (catch e2)', async () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Large.jpg' );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: {
+						data: { layers: [ { id: '1' } ] },
+						baseWidth: 800,
+						baseHeight: 600
+					}
+				}
+			} );
+
+			const manager = new ViewerManager();
+			manager.initializeViewer = jest.fn( () => {
+				throw new Error( 'init error' );
+			} );
+			manager.initializeLargeImages( [ img ] );
+
+			await new Promise( ( r ) => setTimeout( r, 10 ) );
+
+			expect( img.layersPending ).toBe( false );
+		} );
+
+		it( 'should handle API error', async () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Large.jpg' );
+
+			mockApi.get.mockRejectedValue( new Error( 'network error' ) );
+
+			const manager = new ViewerManager();
+			manager.initializeLargeImages( [ img ] );
+
+			await new Promise( ( r ) => setTimeout( r, 10 ) );
+
+			expect( img.layersPending ).toBe( false );
+		} );
+
+		it( 'should pass specific setname to API', () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Large.jpg' );
+			img.setAttribute( 'data-layers-intent', 'my-set' );
+
+			mockApi.get.mockResolvedValue( { layersinfo: {} } );
+
+			const manager = new ViewerManager();
+			manager.initializeLargeImages( [ img ] );
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( { setname: 'my-set' } )
+			);
+		} );
+
+		it( 'should not pass setname for default/on intent', () => {
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-file-name', 'Large.jpg' );
+			img.setAttribute( 'data-layers-intent', 'on' );
+
+			mockApi.get.mockResolvedValue( { layersinfo: {} } );
+
+			const manager = new ViewerManager();
+			manager.initializeLargeImages( [ img ] );
+
+			const call = mockApi.get.mock.calls[ 0 ][ 0 ];
+			expect( call.setname ).toBeUndefined();
+		} );
+	} );
+
+	describe( '_msg - branch gaps', () => {
+		it( 'should return message text when mw.message exists', () => {
+			mockMw.message = jest.fn( () => ( {
+				exists: () => true,
+				text: () => 'Localized text'
+			} ) );
+
+			const manager = new ViewerManager();
+			const result = manager._msg( 'some-key', 'fallback' );
+			expect( result ).toBe( 'Localized text' );
+		} );
+
+		it( 'should return fallback when message does not exist', () => {
+			mockMw.message = jest.fn( () => ( {
+				exists: () => false,
+				text: () => ''
+			} ) );
+
+			const manager = new ViewerManager();
+			const result = manager._msg( 'some-key', 'my fallback' );
+			expect( result ).toBe( 'my fallback' );
+		} );
+
+		it( 'should return fallback when mw.message is not available', () => {
+			delete mockMw.message;
+
+			const manager = new ViewerManager();
+			const result = manager._msg( 'some-key', 'fallback text' );
+			expect( result ).toBe( 'fallback text' );
+		} );
+	} );
+
+	describe( '_createPencilIcon - branch gaps', () => {
+		it( 'should use ViewerIcons when available', () => {
+			const mockSvg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+			window.Layers = window.Layers || {};
+			window.Layers.ViewerIcons = {
+				createPencilIcon: jest.fn( () => mockSvg )
+			};
+
+			const manager = new ViewerManager();
+			const result = manager._createPencilIcon();
+			expect( result ).toBe( mockSvg );
+			expect( window.Layers.ViewerIcons.createPencilIcon ).toHaveBeenCalledWith( { size: 16, color: '#fff' } );
+		} );
+
+		it( 'should return basic SVG when ViewerIcons not available', () => {
+			window.Layers.ViewerIcons = undefined;
+
+			const manager = new ViewerManager();
+			const result = manager._createPencilIcon();
+			expect( result.tagName ).toBe( 'svg' );
+		} );
+	} );
+
+	describe( 'SlideController delegations - null guard branches', () => {
+		it( 'openSlideEditor should warn when no SlideController', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+			manager.openSlideEditor( {} );
+			// Should not throw
+		} );
+
+		it( '_shouldUseModalForSlide should return false when no SlideController', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+			expect( manager._shouldUseModalForSlide() ).toBe( false );
+		} );
+
+		it( 'buildSlideEditorUrl should return empty when no SlideController', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+			expect( manager.buildSlideEditorUrl( {} ) ).toBe( '' );
+		} );
+
+		it( 'getEmptyStateMessage should return default when no SlideController', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+			expect( manager.getEmptyStateMessage() ).toBe( 'Empty Slide' );
+		} );
+
+		it( 'getEmptyStateHint should return default when no SlideController', () => {
+			const manager = new ViewerManager();
+			manager._slideController = null;
+			expect( manager.getEmptyStateHint() ).toBe( 'Use the Edit button to add content' );
+		} );
+	} );
+
+	describe( 'initializeLayerViewers - JSON parse error', () => {
+		it( 'should handle malformed JSON in data-layer-data', () => {
+			const manager = new ViewerManager();
+			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layer-data', '{invalid json}' );
+			img.classList.add( 'layers-thumbnail' );
+			document.body.appendChild( img );
+
+			mockUrlParser.decodeHtmlEntities.mockReturnValue( '{invalid json}' );
+
+			// Should not throw
+			expect( () => {
+				manager.initializeLayerViewers();
+			} ).not.toThrow();
+		} );
+	} );
 } );

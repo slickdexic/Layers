@@ -1132,4 +1132,600 @@ describe( 'DraftManager', function () {
 			dm.destroy();
 		} );
 	} );
+
+	describe( 'scheduleAutoSave - save failure notification', function () {
+		it( 'should notify once when saveDraft fails', function () {
+			jest.useFakeTimers();
+			// Re-install mw.notify since clearAllMocks resets it
+			global.mw.notify = jest.fn();
+			
+			jest.spyOn( draftManager, 'saveDraft' ).mockReturnValue( false );
+			draftManager._saveFailNotified = false;
+			
+			draftManager.scheduleAutoSave();
+			jest.advanceTimersByTime( 6000 );
+			
+			expect( global.mw.notify ).toHaveBeenCalled();
+			expect( draftManager._saveFailNotified ).toBe( true );
+			
+			jest.useRealTimers();
+		} );
+
+		it( 'should not notify again when _saveFailNotified is true', function () {
+			jest.useFakeTimers();
+			global.mw.notify = jest.fn();
+			
+			jest.spyOn( draftManager, 'saveDraft' ).mockReturnValue( false );
+			draftManager._saveFailNotified = true;
+			
+			draftManager.scheduleAutoSave();
+			jest.advanceTimersByTime( 6000 );
+			
+			expect( global.mw.notify ).not.toHaveBeenCalled();
+			
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'startAutoSaveTimer - isRecoveryMode guard', function () {
+		it( 'should skip saving during recovery mode in interval', function () {
+			jest.useFakeTimers();
+			
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+			
+			draftManager.stopAutoSaveTimer();
+			const saveSpy = jest.spyOn( draftManager, 'saveDraft' );
+			draftManager.isRecoveryMode = true;
+			draftManager.startAutoSaveTimer();
+			
+			jest.advanceTimersByTime( 31000 );
+			
+			expect( saveSpy ).not.toHaveBeenCalled();
+			
+			jest.useRealTimers();
+		} );
+
+		it( 'should notify when save fails in interval timer', function () {
+			jest.useFakeTimers();
+			global.mw.notify = jest.fn();
+			
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+			
+			draftManager.stopAutoSaveTimer();
+			jest.spyOn( draftManager, 'saveDraft' ).mockReturnValue( false );
+			draftManager._saveFailNotified = false;
+			draftManager.startAutoSaveTimer();
+			
+			jest.advanceTimersByTime( 31000 );
+			
+			expect( global.mw.notify ).toHaveBeenCalled();
+			expect( draftManager._saveFailNotified ).toBe( true );
+			
+			jest.useRealTimers();
+		} );
+
+		it( 'should not notify twice from interval timer', function () {
+			jest.useFakeTimers();
+			global.mw.notify = jest.fn();
+			
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+			
+			draftManager.stopAutoSaveTimer();
+			jest.spyOn( draftManager, 'saveDraft' ).mockReturnValue( false );
+			draftManager._saveFailNotified = true;
+			draftManager.startAutoSaveTimer();
+			
+			jest.advanceTimersByTime( 31000 );
+			
+			expect( global.mw.notify ).not.toHaveBeenCalled();
+			
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'recoverDraft - missing editor subsystems', function () {
+		it( 'should succeed without canvasManager', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1', type: 'rectangle' } ]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			mockEditor.canvasManager = null;
+			
+			const result = draftManager.recoverDraft();
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should succeed without layerPanel', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1', type: 'rectangle' } ]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			mockEditor.layerPanel = null;
+			
+			const result = draftManager.recoverDraft();
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should succeed without stateManager', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1', type: 'circle' } ]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			mockEditor.stateManager = null;
+			
+			const result = draftManager.recoverDraft();
+			expect( result ).toBe( true );
+		} );
+
+		it( 'should use default backgroundVisible when undefined in draft', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1', type: 'rectangle' } ]
+				// No backgroundVisible or backgroundOpacity
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			draftManager.recoverDraft();
+			
+			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					backgroundVisible: true,
+					backgroundOpacity: 1.0
+				} )
+			);
+		} );
+
+		it( 'should preserve explicit false backgroundVisible', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1', type: 'rectangle' } ],
+				backgroundVisible: false,
+				backgroundOpacity: 0.5
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			draftManager.recoverDraft();
+			
+			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					backgroundVisible: false,
+					backgroundOpacity: 0.5
+				} )
+			);
+		} );
+
+		it( 'should handle layerPanel without updateLayers method', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1', type: 'rectangle' } ]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			mockEditor.layerPanel = { someOtherMethod: jest.fn() };
+			
+			const result = draftManager.recoverDraft();
+			expect( result ).toBe( true );
+		} );
+	} );
+
+	describe( 'recoverDraft - stripped images with mw unavailable', function () {
+		it( 'should handle stripped images when mw.notify is unavailable', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [
+					{ id: 'img1', type: 'image', _srcStripped: true }
+				]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			const originalMw = global.mw;
+			global.mw = undefined;
+			
+			const result = draftManager.recoverDraft();
+			expect( result ).toBe( true );
+			
+			global.mw = originalMw;
+		} );
+	} );
+
+	describe( 'clearDraft - storage unavailable', function () {
+		it( 'should return early when storage is unavailable', function () {
+			jest.spyOn( draftManager, 'isStorageAvailable' ).mockReturnValue( false );
+			
+			draftManager.clearDraft();
+			
+			// removeItem should not be called
+			expect( global.localStorage.removeItem ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'saveDraft - mw unavailable for logging', function () {
+		it( 'should save successfully when mw is undefined', function () {
+			const originalMw = global.mw;
+			global.mw = undefined;
+			
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+			
+			const result = draftManager.saveDraft();
+			expect( result ).toBe( true );
+			
+			global.mw = originalMw;
+		} );
+
+		it( 'should handle save failure when mw is undefined', function () {
+			const originalMw = global.mw;
+			global.mw = undefined;
+			
+			global.localStorage.setItem = jest.fn( function () {
+				throw new Error( 'Storage full' );
+			} );
+			
+			const result = draftManager.saveDraft();
+			expect( result ).toBe( false );
+			
+			global.mw = originalMw;
+		} );
+	} );
+
+	describe( 'checkAndRecoverDraft - recovery failure', function () {
+		it( 'should return false when recoverDraft fails', async function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			global.OO.ui.confirm = jest.fn( function () {
+				return Promise.resolve( true );
+			} );
+			
+			// Make recoverDraft fail
+			jest.spyOn( draftManager, 'recoverDraft' ).mockReturnValue( false );
+			
+			const result = await draftManager.checkAndRecoverDraft();
+			
+			expect( result ).toBe( false );
+		} );
+
+		it( 'should show success notification when recovery succeeds', async function () {
+			global.mw.notify = jest.fn();
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			global.OO.ui.confirm = jest.fn( function () {
+				return Promise.resolve( true );
+			} );
+			
+			await draftManager.checkAndRecoverDraft();
+			
+			// mw.notify should be called for successful recovery
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { type: 'success' } )
+			);
+		} );
+	} );
+
+	describe( 'checkAndRecoverDraft - mw.message edge cases', function () {
+		it( 'should use fallback text when mw.message exists returns false', async function () {
+			global.mw.notify = jest.fn();
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			global.OO.ui.confirm = jest.fn( function () {
+				return Promise.resolve( true );
+			} );
+			
+			// Override mw.message to return exists: false
+			const originalMessage = global.mw.message;
+			global.mw.message = jest.fn( function () {
+				return {
+					exists: function () {
+						return false;
+					},
+					text: function () {
+						return 'key-not-found';
+					}
+				};
+			} );
+			
+			const result = await draftManager.checkAndRecoverDraft();
+			expect( result ).toBe( true );
+			
+			// Should use the fallback message
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				'Draft recovered successfully',
+				expect.any( Object )
+			);
+			
+			global.mw.message = originalMessage;
+		} );
+	} );
+
+	describe( 'loadDraft - non-array layers', function () {
+		it( 'should return null when layers is a string', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: 'not-an-array'
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			expect( draftManager.loadDraft() ).toBeNull();
+		} );
+
+		it( 'should return null when layers is an object', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: { id: 'layer1' }
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			expect( draftManager.loadDraft() ).toBeNull();
+		} );
+
+		it( 'should return null when layers is a number', function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: 42
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			expect( draftManager.loadDraft() ).toBeNull();
+		} );
+	} );
+
+	describe( 'showRecoveryDialog - mw unavailable', function () {
+		it( 'should use fallback messages when mw is undefined', async function () {
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: 'layer1' } ]
+			};
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+			
+			const originalMw = global.mw;
+			global.mw = undefined;
+			
+			// Without mw and OO, should fall back to window.confirm
+			const originalOO = global.OO;
+			global.OO = undefined;
+			
+			global.window.confirm = jest.fn( function () {
+				return false;
+			} );
+			
+			const result = await draftManager.showRecoveryDialog();
+			
+			expect( result ).toBe( false );
+			expect( global.window.confirm ).toHaveBeenCalled();
+			
+			global.mw = originalMw;
+			global.OO = originalOO;
+		} );
+	} );
+
+	describe( 'getStorageKey - setName sanitization', function () {
+		it( 'should sanitize special characters in set name', function () {
+			mockEditor.stateManager.get = jest.fn( function ( key ) {
+				if ( key === 'currentSetName' ) {
+					return 'my/set name!@#';
+				}
+				return null;
+			} );
+			
+			const key = draftManager.getStorageKey();
+			
+			// Special chars should be replaced with underscores
+			expect( key ).not.toContain( '/' );
+			expect( key ).not.toContain( '!' );
+			expect( key ).not.toContain( '@' );
+			expect( key ).not.toContain( '#' );
+			expect( key ).not.toContain( ' ' );
+		} );
+	} );
+
+	describe( 'constructor - FNV hash appended', function () {
+		it( 'should append FNV hash suffix to storage key', function () {
+			const dm = new DraftManager( mockEditor );
+			
+			// Key format: STORAGE_KEY_PREFIX + sanitized_filename + _ + fnv_hash
+			// The fnv hash is 4 chars at the end
+			const keyParts = dm.storageKey.split( '_' );
+			const lastPart = keyParts[ keyParts.length - 1 ];
+			
+			// FNV hash should be a short alphanumeric string
+			expect( lastPart ).toMatch( /^[a-z0-9]+$/ );
+			expect( lastPart.length ).toBeLessThanOrEqual( 4 );
+			
+			dm.destroy();
+		} );
+
+		it( 'should produce different hashes for different filenames', function () {
+			const editor1 = { ...mockEditor, filename: 'Foo/bar.jpg' };
+			const editor2 = { ...mockEditor, filename: 'Foo_bar.jpg' };
+			
+			const dm1 = new DraftManager( editor1 );
+			const dm2 = new DraftManager( editor2 );
+			
+			// Both sanitize to Foo_bar.jpg but hashes should differ
+			expect( dm1.storageKey ).not.toBe( dm2.storageKey );
+			
+			dm1.destroy();
+			dm2.destroy();
+		} );
+	} );
+
+	describe( 'branch coverage gaps', function () {
+		it( 'should handle stateSubscription that is not a function during initialize', function () {
+			mockEditor.stateManager = null;
+			const dm = new DraftManager( mockEditor );
+			// Set stateSubscription to non-function
+			dm.stateSubscription = 'not-a-function';
+			dm.initialize();
+			// Should not throw, subscription should remain as-is since typeof check fails
+			expect( dm.stateSubscription ).toBe( 'not-a-function' );
+			dm.destroy();
+		} );
+
+		it( 'should initialize without stateManager', function () {
+			mockEditor.stateManager = null;
+			const dm = new DraftManager( mockEditor );
+			// initialize() still starts the auto-save timer
+			expect( dm.autoSaveTimer ).not.toBeNull();
+			dm.destroy();
+		} );
+
+		it( 'should use defaults for backgroundVisible/Opacity when stateManager is missing during saveDraft', function () {
+			// Create with stateManager that has layers but no background state
+			mockEditor.stateManager = {
+				subscribe: jest.fn( function () { return jest.fn(); } ),
+				get: jest.fn( function ( key ) {
+					if ( key === 'layers' ) {
+						return [ { id: '1', type: 'text', text: 'test' } ];
+					}
+					if ( key === 'currentSetName' ) {
+						return 'default';
+					}
+					return undefined;
+				} )
+			};
+			const dm = new DraftManager( mockEditor );
+
+			// Now remove stateManager to trigger defaults path
+			dm.editor = { ...mockEditor, stateManager: null };
+			const result = dm.saveDraft();
+			// Without stateManager, layers is [] so saveDraft returns false
+			expect( result ).toBe( false );
+			dm.destroy();
+		} );
+
+		it( 'should recover draft with undefined backgroundVisible/Opacity using defaults', function () {
+			const dm = new DraftManager( mockEditor );
+			// Store a draft without backgroundVisible/Opacity
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: '1', type: 'text', text: 'test' } ],
+				filename: 'test.jpg'
+				// backgroundVisible and backgroundOpacity intentionally missing
+			};
+			mockLocalStorage[ dm.getStorageKey() ] = JSON.stringify( draft );
+
+			const result = dm.recoverDraft();
+			expect( result ).toBe( true );
+			// stateManager.update should have been called with defaults
+			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					backgroundVisible: true,
+					backgroundOpacity: 1.0
+				} )
+			);
+			dm.destroy();
+		} );
+
+		it( 'should skip canvasManager.renderLayers when canvasManager is null during recovery', function () {
+			const dm = new DraftManager( mockEditor );
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: '1', type: 'text', text: 'test' } ],
+				filename: 'test.jpg',
+				backgroundVisible: true,
+				backgroundOpacity: 1
+			};
+			mockLocalStorage[ dm.getStorageKey() ] = JSON.stringify( draft );
+			dm.editor.canvasManager = null;
+
+			const result = dm.recoverDraft();
+			expect( result ).toBe( true );
+			dm.destroy();
+		} );
+
+		it( 'should skip layerPanel.updateLayers when layerPanel is missing during recovery', function () {
+			const dm = new DraftManager( mockEditor );
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: '1', type: 'text', text: 'test' } ],
+				filename: 'test.jpg'
+			};
+			mockLocalStorage[ dm.getStorageKey() ] = JSON.stringify( draft );
+			dm.editor.layerPanel = null;
+
+			const result = dm.recoverDraft();
+			expect( result ).toBe( true );
+			dm.destroy();
+		} );
+
+		it( 'should load draft without timestamp (skip age check)', function () {
+			const dm = new DraftManager( mockEditor );
+			const draft = {
+				version: 1,
+				layers: [ { id: '1', type: 'text', text: 'test' } ],
+				filename: 'test.jpg'
+				// no timestamp field
+			};
+			mockLocalStorage[ dm.getStorageKey() ] = JSON.stringify( draft );
+
+			const loaded = dm.loadDraft();
+			expect( loaded ).not.toBeNull();
+			expect( loaded.layers ).toHaveLength( 1 );
+			dm.destroy();
+		} );
+
+		it( 'should fallback to window.confirm when OO.ui is unavailable', function () {
+			const dm = new DraftManager( mockEditor );
+			// Store a valid draft so getDraftInfo returns data
+			const draft = {
+				version: 1,
+				timestamp: Date.now(),
+				layers: [ { id: '1', type: 'text' } ],
+				filename: 'test.jpg'
+			};
+			mockLocalStorage[ dm.getStorageKey() ] = JSON.stringify( draft );
+
+			// Ensure OO is not defined
+			delete global.OO;
+			window.confirm = jest.fn( function () { return true; } );
+
+			return dm.showRecoveryDialog().then( function ( result ) {
+				expect( result ).toBe( true );
+				expect( window.confirm ).toHaveBeenCalled();
+				dm.destroy();
+			} );
+		} );
+	} );
 } );

@@ -2170,4 +2170,235 @@ describe( 'CalloutRenderer', () => {
 			expect( blurBounds.height ).toBeGreaterThan( layer.height );
 		} );
 	} );
+
+	describe( 'branch coverage gaps', () => {
+		describe( 'tailCalculator null fallbacks', () => {
+			it( 'should use fallback getClosestPerimeterPoint when tailCalculator is null', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {
+					shadowRenderer: mockShadowRenderer,
+					effectsRenderer: mockEffectsRenderer,
+					textBoxRenderer: mockTextBoxRenderer
+				} );
+				renderer.tailCalculator = null;
+				const result = renderer.getClosestPerimeterPoint( 150, 200, 100, 100, 200, 100, 10 );
+				expect( result.edge ).toBe( 'bottom' );
+				expect( result.baseX ).toBe( 200 ); // centerX = x + width/2
+			} );
+
+			it( 'should use fallback getTailFromTipPosition when tailCalculator is null', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				renderer.tailCalculator = null;
+				const result = renderer.getTailFromTipPosition( 100, 100, 200, 100, 200, 250, 10 );
+				expect( result.edge ).toBe( 'bottom' );
+				expect( result.tip.x ).toBe( 200 );
+				expect( result.tip.y ).toBe( 250 );
+			} );
+
+			it( 'should use fallback _getEdgeBeforeCorner when tailCalculator is null', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				renderer.tailCalculator = null;
+				expect( renderer._getEdgeBeforeCorner( 'tr' ) ).toBe( 'top' );
+				expect( renderer._getEdgeBeforeCorner( 'br' ) ).toBe( 'right' );
+				expect( renderer._getEdgeBeforeCorner( 'bl' ) ).toBe( 'bottom' );
+				expect( renderer._getEdgeBeforeCorner( 'tl' ) ).toBe( 'left' );
+				expect( renderer._getEdgeBeforeCorner( 'unknown' ) ).toBe( 'top' );
+			} );
+
+			it( 'should use fallback _getEdgeAfterCorner when tailCalculator is null', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				renderer.tailCalculator = null;
+				expect( renderer._getEdgeAfterCorner( 'tr' ) ).toBe( 'right' );
+				expect( renderer._getEdgeAfterCorner( 'br' ) ).toBe( 'bottom' );
+				expect( renderer._getEdgeAfterCorner( 'bl' ) ).toBe( 'left' );
+				expect( renderer._getEdgeAfterCorner( 'tl' ) ).toBe( 'top' );
+				expect( renderer._getEdgeAfterCorner( 'xx' ) ).toBe( 'bottom' );
+			} );
+
+			it( 'should use fallback getTailCoordinates when tailCalculator is null', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				renderer.tailCalculator = null;
+				const result = renderer.getTailCoordinates( 50, 50, 200, 100, 'bottom', 0.5, 30, 10 );
+				expect( result.base1 ).toBeDefined();
+				expect( result.base2 ).toBeDefined();
+				expect( result.tip.y ).toBe( 180 ); // y + height + tailSize
+			} );
+		} );
+
+		describe( 'shadow delegation without shadowRenderer', () => {
+			it( 'should clear shadow via ctx when shadowRenderer is null', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				renderer.clearShadow();
+				expect( ctx.shadowColor ).toBe( 'transparent' );
+				expect( ctx.shadowBlur ).toBe( 0 );
+			} );
+
+			it( 'should detect shadow with string "true" in fallback hasShadowEnabled', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				expect( renderer.hasShadowEnabled( { shadow: 'true' } ) ).toBe( true );
+			} );
+
+			it( 'should detect shadow with integer 1 in fallback', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				expect( renderer.hasShadowEnabled( { shadow: 1 } ) ).toBe( true );
+			} );
+
+			it( 'should return 0 spread when shadow not enabled in fallback', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				expect( renderer.getShadowSpread( { shadow: false }, {} ) ).toBe( 0 );
+			} );
+
+			it( 'should calculate spread with scale in fallback', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				const spread = renderer.getShadowSpread( { shadow: true, shadowSpread: 5 }, { avg: 2 } );
+				expect( spread ).toBe( 10 );
+			} );
+
+			it( 'should no-op drawSpreadShadow when shadowRenderer is null', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				expect( () => renderer.drawSpreadShadow( {}, {}, 5, jest.fn(), 1 ) ).not.toThrow();
+			} );
+		} );
+
+		describe( 'drawSimpleText alignment branches', () => {
+			it( 'should handle center text alignment', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				const layer = {
+					text: 'Hello',
+					textAlign: 'center',
+					verticalAlign: 'top',
+					fontSize: 16,
+					color: '#000'
+				};
+				renderer.drawSimpleText( layer, 10, 10, 200, 100, 8, 1, { avg: 1 } );
+				expect( ctx.textAlign ).toBe( 'center' );
+				expect( ctx.fillText ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle right text alignment', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				const layer = {
+					text: 'Hello',
+					textAlign: 'right',
+					verticalAlign: 'top',
+					fontSize: 16,
+					color: '#000'
+				};
+				renderer.drawSimpleText( layer, 10, 10, 200, 100, 8, 1, { avg: 1 } );
+				expect( ctx.textAlign ).toBe( 'right' );
+			} );
+
+			it( 'should default to left text alignment', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				const layer = {
+					text: 'Hello',
+					fontSize: 16,
+					color: '#000'
+				};
+				renderer.drawSimpleText( layer, 10, 10, 200, 100, 8, 1, { avg: 1 } );
+				expect( ctx.textAlign ).toBe( 'left' );
+			} );
+
+			it( 'should handle middle vertical alignment', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				const layer = {
+					text: 'Hello',
+					verticalAlign: 'middle',
+					fontSize: 16,
+					color: '#000'
+				};
+				renderer.drawSimpleText( layer, 10, 10, 200, 100, 8, 1, { avg: 1 } );
+				expect( ctx.fillText ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle bottom vertical alignment', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				const layer = {
+					text: 'Hello',
+					verticalAlign: 'bottom',
+					fontSize: 16,
+					color: '#000'
+				};
+				renderer.drawSimpleText( layer, 10, 10, 200, 100, 8, 1, { avg: 1 } );
+				expect( ctx.fillText ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'draw with text but no textBoxRenderer', () => {
+			it( 'should fall back to drawSimpleText when textBoxRenderer is null', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {
+					shadowRenderer: mockShadowRenderer
+				} );
+				const layer = {
+					type: 'callout',
+					x: 50, y: 50, width: 200, height: 100,
+					cornerRadius: 10,
+					tailSize: 20,
+					tailDirection: 'bottom',
+					tailPosition: 50,
+					fill: '#ffffff',
+					stroke: '#000000',
+					text: 'Fallback text',
+					fontSize: 14,
+					opacity: 1
+				};
+				renderer.draw( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+				expect( ctx.fillText ).toHaveBeenCalledWith( 'Fallback text', expect.any( Number ), expect.any( Number ) );
+			} );
+		} );
+
+		describe( 'draw error handling', () => {
+			it( 'should catch internal draw errors and log via mw', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {} );
+				// Force an error by making ctx.save throw
+				ctx.save = jest.fn( () => {
+					throw new Error( 'canvas corrupt' );
+				} );
+				global.mw = { log: { error: jest.fn() } };
+				// Should not throw
+				renderer.draw( { x: 0, y: 0, width: 100, height: 100 }, {} );
+				expect( global.mw.log.error ).toHaveBeenCalled();
+				delete global.mw;
+			} );
+		} );
+
+		describe( 'zero/minimal corner radius', () => {
+			it( 'should draw simple rectangle path when corner radius < 0.5', () => {
+				const ctx = createMockContext();
+				const renderer = new window.Layers.CalloutRenderer( ctx, {
+					shadowRenderer: mockShadowRenderer
+				} );
+				const layer = {
+					type: 'callout',
+					x: 50, y: 50, width: 200, height: 100,
+					cornerRadius: 0,
+					tailSize: 0,
+					tailDirection: 'none',
+					fill: '#ffffff',
+					stroke: '#000000',
+					opacity: 1
+				};
+				renderer.draw( layer, { scale: { sx: 1, sy: 1, avg: 1 } } );
+				// With r < 0.5, should use lineTo paths, not arcTo
+				expect( ctx.fill ).toHaveBeenCalled();
+			} );
+		} );
+	} );
 } );

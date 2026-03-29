@@ -1078,4 +1078,564 @@ describe( 'ResizeCalculator', () => {
 			expect( result.y2 ).toBe( 10 );
 		} );
 	} );
+
+	// ====================================================================
+	// Branch coverage gap tests
+	// ====================================================================
+
+	describe( 'calculateResize - type dispatch coverage', () => {
+		it( 'should dispatch to calculateRectangleResize for blur type', () => {
+			const layer = { type: 'blur', x: 0, y: 0, width: 100, height: 100 };
+			const result = ResizeCalculator.calculateResize( layer, 'se', 10, 10, {} );
+			expect( result ).not.toBeNull();
+			expect( result.width ).toBe( 110 );
+			expect( result.height ).toBe( 110 );
+		} );
+
+		it( 'should dispatch to calculateRectangleResize for image type', () => {
+			const layer = { type: 'image', x: 0, y: 0, width: 200, height: 150 };
+			const result = ResizeCalculator.calculateResize( layer, 'se', 20, 10, {} );
+			expect( result ).not.toBeNull();
+			expect( result.width ).toBe( 220 );
+			expect( result.height ).toBe( 160 );
+		} );
+
+		it( 'should dispatch to calculateRectangleResize for customShape type', () => {
+			const layer = { type: 'customShape', x: 10, y: 10, width: 80, height: 60 };
+			const result = ResizeCalculator.calculateResize( layer, 'nw', -10, -10, {} );
+			expect( result ).not.toBeNull();
+			expect( result.width ).toBe( 90 );
+			expect( result.height ).toBe( 70 );
+		} );
+
+		it( 'should dispatch to calculateRectangleResize for callout with normal handle', () => {
+			const layer = {
+				type: 'callout', x: 0, y: 0, width: 100, height: 80,
+				tailTipX: 20, tailTipY: 50
+			};
+			const result = ResizeCalculator.calculateResize( layer, 'se', 20, 20, {} );
+			expect( result ).not.toBeNull();
+			expect( result.width ).toBe( 120 );
+			expect( result.height ).toBe( 100 );
+		} );
+
+		it( 'should dispatch to calculateAngleDimensionResize for angleDimension', () => {
+			const layer = {
+				type: 'angleDimension',
+				cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50
+			};
+			const result = ResizeCalculator.calculateResize( layer, 'nw', -10, -10, {} );
+			expect( result ).not.toBeNull();
+			expect( result.cx ).toBeDefined();
+			expect( result.cy ).toBeDefined();
+		} );
+
+		it( 'should return null for unknown type', () => {
+			const layer = { type: 'unknownType', x: 0, y: 0 };
+			const result = ResizeCalculator.calculateResize( layer, 'se', 10, 10, {} );
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should handle callout tailTip via calculateCalloutTailResize', () => {
+			const layer = {
+				type: 'callout', x: 0, y: 0, width: 100, height: 80,
+				tailTipX: 10, tailTipY: 60
+			};
+			const result = ResizeCalculator.calculateResize( layer, 'tailTip', 15, 10, {} );
+			expect( result ).not.toBeNull();
+			expect( result.tailTipX ).toBeDefined();
+			expect( result.tailTipY ).toBeDefined();
+		} );
+
+		it( 'should handle modifiers=undefined gracefully', () => {
+			const layer = { type: 'rectangle', x: 0, y: 0, width: 100, height: 100 };
+			const result = ResizeCalculator.calculateResize( layer, 'se', 10, 10 );
+			expect( result ).not.toBeNull();
+			expect( result.width ).toBe( 110 );
+		} );
+	} );
+
+	describe( 'calculateCircleResize - unknown handle', () => {
+		it( 'should return null for unknown handle type', () => {
+			const layer = { type: 'circle', x: 50, y: 50, radius: 50 };
+			const result = ResizeCalculator.calculateCircleResize( layer, 'unknown', 10, 10 );
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should return null for tailTip handle on circle', () => {
+			const layer = { type: 'circle', x: 50, y: 50, radius: 50 };
+			const result = ResizeCalculator.calculateCircleResize( layer, 'tailTip', 10, 10 );
+			expect( result ).toBeNull();
+		} );
+	} );
+
+	describe( 'calculateEllipseResize - edge cases', () => {
+		it( 'should return updates with no axis change for unknown handle', () => {
+			const layer = { type: 'ellipse', x: 50, y: 50, radiusX: 50, radiusY: 30 };
+			const result = ResizeCalculator.calculateEllipseResize( layer, 'unknown', 10, 10 );
+			expect( result ).toBeDefined();
+			// No axis-specific keys should be set for unknown handles
+			expect( result.radiusX ).toBeUndefined();
+			expect( result.radiusY ).toBeUndefined();
+		} );
+	} );
+
+	describe( 'calculateRectangleResize - proportional edge cases', () => {
+		it( 'should handle Infinity aspect ratio when height=0', () => {
+			const layer = { type: 'rectangle', x: 0, y: 0, width: 100, height: 0 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'se', 20, 10, { proportional: true }
+			);
+			expect( result ).not.toBeNull();
+			expect( result.width ).toBeDefined();
+		} );
+
+		it( 'should handle zero aspect ratio when width=0', () => {
+			const layer = { type: 'rectangle', x: 0, y: 0, width: 0, height: 100 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'se', 20, 10, { proportional: true }
+			);
+			expect( result ).not.toBeNull();
+		} );
+
+		it( 'should handle NaN aspect ratio when both width and height are 0', () => {
+			const layer = { type: 'rectangle', x: 0, y: 0, width: 0, height: 0 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'se', 20, 10, { proportional: true }
+			);
+			expect( result ).not.toBeNull();
+		} );
+
+		it( 'should scale Y when X delta is larger in proportional mode with negative deltas', () => {
+			const layer = { type: 'rectangle', x: 0, y: 0, width: 100, height: 50 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'nw', -30, -10, { proportional: true }
+			);
+			// absDeltaX (30) > absDeltaY (10), so deltaY is recalculated
+			expect( result.width ).toBeGreaterThan( 100 );
+			expect( result.height ).toBeGreaterThan( 50 );
+		} );
+
+		it( 'should scale X when Y delta is larger in proportional mode', () => {
+			const layer = { type: 'rectangle', x: 0, y: 0, width: 100, height: 50 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'se', 5, 30, { proportional: true }
+			);
+			// absDeltaY (30) > absDeltaX (5), so deltaX is recalculated
+			expect( result.width ).toBeGreaterThan( 100 );
+			expect( result.height ).toBe( 80 );
+		} );
+
+		it( 'should handle proportional scaling with positive Y larger than X', () => {
+			const layer = { type: 'rectangle', x: 0, y: 0, width: 200, height: 100 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'se', 10, 40, { proportional: true }
+			);
+			// absDeltaY (40) > absDeltaX (10)
+			// deltaX recalculated: positive → absDeltaY * aspectRatio = 40 * 2 = 80
+			expect( result.width ).toBe( 280 );
+			expect( result.height ).toBe( 140 );
+		} );
+
+		it( 'should handle proportional scaling with negative X larger than Y', () => {
+			const layer = { type: 'rectangle', x: 50, y: 50, width: 100, height: 50 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'nw', -20, -5, { proportional: true }
+			);
+			// absDeltaX (20) > absDeltaY (5)
+			// deltaY recalculated: negative → -absDeltaX / aspectRatio = -20 / 2 = -10
+			expect( result.width ).toBe( 120 );
+			expect( result.height ).toBe( 60 );
+		} );
+	} );
+
+	describe( 'calculateRectangleResize - fromCenter for all handles', () => {
+		const base = { type: 'rectangle', x: 50, y: 50, width: 100, height: 80 };
+
+		it( 'should resize nw from center', () => {
+			const result = ResizeCalculator.calculateRectangleResize( base, 'nw', -10, -10, { fromCenter: true } );
+			expect( result.width ).toBe( 110 );
+			expect( result.height ).toBe( 90 );
+			expect( result.x ).toBeDefined();
+			expect( result.y ).toBeDefined();
+		} );
+
+		it( 'should resize ne from center', () => {
+			const result = ResizeCalculator.calculateRectangleResize( base, 'ne', 10, -10, { fromCenter: true } );
+			expect( result.width ).toBe( 110 );
+			expect( result.height ).toBe( 90 );
+		} );
+
+		it( 'should resize sw from center', () => {
+			const result = ResizeCalculator.calculateRectangleResize( base, 'sw', -10, 10, { fromCenter: true } );
+			expect( result.width ).toBe( 110 );
+			expect( result.height ).toBe( 90 );
+		} );
+
+		it( 'should resize se from center', () => {
+			const result = ResizeCalculator.calculateRectangleResize( base, 'se', 10, 10, { fromCenter: true } );
+			expect( result.width ).toBe( 110 );
+			expect( result.height ).toBe( 90 );
+		} );
+
+		it( 'should resize n from center', () => {
+			const result = ResizeCalculator.calculateRectangleResize( base, 'n', 0, -10, { fromCenter: true } );
+			expect( result.height ).toBe( 90 );
+			expect( result.y ).toBeDefined();
+		} );
+
+		it( 'should resize s from center', () => {
+			const result = ResizeCalculator.calculateRectangleResize( base, 's', 0, 10, { fromCenter: true } );
+			expect( result.height ).toBe( 90 );
+		} );
+
+		it( 'should resize w from center', () => {
+			const result = ResizeCalculator.calculateRectangleResize( base, 'w', -10, 0, { fromCenter: true } );
+			expect( result.width ).toBe( 110 );
+		} );
+
+		it( 'should resize e from center', () => {
+			const result = ResizeCalculator.calculateRectangleResize( base, 'e', 10, 0, { fromCenter: true } );
+			expect( result.width ).toBe( 110 );
+		} );
+	} );
+
+	describe( 'calculateRectangleResize - rotated resize correction', () => {
+		it( 'should apply correction for N handle with rotation', () => {
+			const layer = { x: 100, y: 100, width: 100, height: 100, rotation: 45 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'n', 0, -20, { fromCenter: false }
+			);
+			expect( result.y ).toBeDefined();
+			expect( result.x ).toBeDefined();
+			expect( result.height ).toBe( 120 );
+		} );
+
+		it( 'should apply correction for S handle with rotation', () => {
+			const layer = { x: 100, y: 100, width: 100, height: 100, rotation: 90 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 's', 0, 20, { fromCenter: false }
+			);
+			expect( result.x ).toBeDefined();
+			expect( result.y ).toBeDefined();
+			expect( result.height ).toBe( 120 );
+		} );
+
+		it( 'should apply correction for E handle with rotation', () => {
+			const layer = { x: 50, y: 50, width: 200, height: 80, rotation: 30 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'e', 20, 0, { fromCenter: false }
+			);
+			expect( result.x ).toBeDefined();
+			expect( result.y ).toBeDefined();
+			expect( result.width ).toBe( 220 );
+		} );
+
+		it( 'should apply correction for W handle with rotation', () => {
+			const layer = { x: 50, y: 50, width: 200, height: 80, rotation: 60 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'w', -20, 0, { fromCenter: false }
+			);
+			expect( result.x ).toBeDefined();
+			expect( result.y ).toBeDefined();
+			expect( result.width ).toBe( 220 );
+		} );
+
+		it( 'should apply correction for NW corner handle with rotation', () => {
+			const layer = { x: 100, y: 100, width: 100, height: 100, rotation: 45 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'nw', -10, -10, { fromCenter: false }
+			);
+			expect( result.x ).toBeDefined();
+			expect( result.y ).toBeDefined();
+			expect( result.width ).toBe( 110 );
+			expect( result.height ).toBe( 110 );
+		} );
+
+		it( 'should apply correction for SE corner handle with rotation', () => {
+			const layer = { x: 100, y: 100, width: 100, height: 100, rotation: 180 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'se', 10, 10, { fromCenter: false }
+			);
+			expect( result.x ).toBeDefined();
+			expect( result.y ).toBeDefined();
+		} );
+
+		it( 'should NOT apply correction when fromCenter is true', () => {
+			const layer = { x: 100, y: 100, width: 100, height: 100, rotation: 45 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'n', 0, -20, { fromCenter: true }
+			);
+			// fromCenter: correction is skipped, center-based calculation applies
+			expect( result.height ).toBe( 120 );
+		} );
+
+		it( 'should NOT apply correction when rotation is 0', () => {
+			const layer = { x: 100, y: 100, width: 100, height: 100, rotation: 0 };
+			const result = ResizeCalculator.calculateRectangleResize(
+				layer, 'n', 0, -20, { fromCenter: false }
+			);
+			expect( result.y ).toBe( 80 );
+			expect( result.height ).toBe( 120 );
+		} );
+	} );
+
+	describe( 'calculatePathResize - zero dimension scale fallback', () => {
+		it( 'should handle zero width (vertical line path)', () => {
+			const layer = {
+				type: 'path',
+				points: [ { x: 50, y: 0 }, { x: 50, y: 100 } ]
+			};
+			// Width is 0, height is 100
+			const result = ResizeCalculator.calculatePathResize( layer, 's', 0, 20 );
+			expect( result ).not.toBeNull();
+			expect( result.points ).toHaveLength( 2 );
+			// scaleX = 1 (fallback for 0 width), scaleY should change
+			expect( result.points[ 0 ].x ).toBe( 50 );
+		} );
+
+		it( 'should handle zero height (horizontal line path)', () => {
+			const layer = {
+				type: 'path',
+				points: [ { x: 0, y: 50 }, { x: 100, y: 50 } ]
+			};
+			// Width is 100, height is 0
+			const result = ResizeCalculator.calculatePathResize( layer, 'e', 20, 0 );
+			expect( result ).not.toBeNull();
+			expect( result.points ).toHaveLength( 2 );
+			// scaleY = 1 (fallback for 0 height)
+			expect( result.points[ 0 ].y ).toBe( 50 );
+		} );
+
+		it( 'should return null for unknown handle on path', () => {
+			const layer = {
+				type: 'path',
+				points: [ { x: 0, y: 0 }, { x: 100, y: 100 } ]
+			};
+			const result = ResizeCalculator.calculatePathResize( layer, 'unknown', 10, 10 );
+			expect( result ).toBeNull();
+		} );
+
+		it( 'should return null when both width and height are < 1', () => {
+			const layer = {
+				type: 'path',
+				points: [ { x: 50, y: 50 }, { x: 50.5, y: 50.5 } ]
+			};
+			const result = ResizeCalculator.calculatePathResize( layer, 'se', 10, 10 );
+			expect( result ).toBeNull();
+		} );
+	} );
+
+	describe( 'calculateAngleDimensionResize - anchorIndex from handle', () => {
+		it( 'should use anchorIndex=0 from handle to move vertex', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const handle = { anchorIndex: 0 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'e', 20, 10, handle );
+			expect( result.cx ).toBe( 120 );
+			expect( result.cy ).toBe( 110 );
+			expect( result.ax ).toBeUndefined();
+			expect( result.bx ).toBeUndefined();
+		} );
+
+		it( 'should use anchorIndex=1 from handle to move arm1', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const handle = { anchorIndex: 1 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'e', -10, -5, handle );
+			expect( result.ax ).toBe( 40 );
+			expect( result.ay ).toBe( 45 );
+			expect( result.cx ).toBeUndefined();
+		} );
+
+		it( 'should use anchorIndex=2 from handle to move arm2', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const handle = { anchorIndex: 2 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'w', 15, 0, handle );
+			expect( result.bx ).toBe( 165 );
+			expect( result.by ).toBe( 50 );
+			expect( result.cx ).toBeUndefined();
+		} );
+
+		it( 'should fallback to handleType when handle has no anchorIndex', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const handle = { someOtherProp: true };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'nw', 10, 5, handle );
+			// nw → anchorIndex=0 → vertex
+			expect( result.cx ).toBe( 110 );
+			expect( result.cy ).toBe( 105 );
+		} );
+
+		it( 'should fallback to handleType when handle is undefined', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'w', -10, 0 );
+			// w → anchorIndex=1 → arm1
+			expect( result.ax ).toBe( 40 );
+			expect( result.ay ).toBe( 50 );
+		} );
+
+		it( 'should map sw handle to arm1 (anchorIndex=1)', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'sw', -5, 5 );
+			expect( result.ax ).toBe( 45 );
+			expect( result.ay ).toBe( 55 );
+		} );
+
+		it( 'should map e handle to arm2 (anchorIndex=2)', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'e', 10, 0 );
+			expect( result.bx ).toBe( 160 );
+			expect( result.by ).toBe( 50 );
+		} );
+
+		it( 'should map se handle to arm2 (anchorIndex=2)', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'se', 5, -5 );
+			expect( result.bx ).toBe( 155 );
+			expect( result.by ).toBe( 45 );
+		} );
+
+		it( 'should map n handle to vertex (anchorIndex=0)', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'n', 0, -20 );
+			expect( result.cx ).toBe( 100 );
+			expect( result.cy ).toBe( 80 );
+		} );
+
+		it( 'should map ne handle to vertex (anchorIndex=0)', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'ne', 10, -10 );
+			expect( result.cx ).toBe( 110 );
+			expect( result.cy ).toBe( 90 );
+		} );
+
+		it( 'should use default anchorIndex=0 for unknown handleType', () => {
+			const layer = { cx: 100, cy: 100, ax: 50, ay: 50, bx: 150, by: 50 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 's', 0, 10 );
+			// default → anchorIndex=0 → vertex
+			expect( result.cx ).toBe( 100 );
+			expect( result.cy ).toBe( 110 );
+		} );
+
+		it( 'should handle missing coordinates with defaults', () => {
+			const layer = { type: 'angleDimension' };
+			const handle = { anchorIndex: 0 };
+			const result = ResizeCalculator.calculateAngleDimensionResize( layer, 'n', 10, 20, handle );
+			expect( result.cx ).toBe( 10 );
+			expect( result.cy ).toBe( 20 );
+		} );
+	} );
+
+	describe( 'getResizeCursor - edge cases', () => {
+		it( 'should return default cursor for unknown handle type', () => {
+			const result = ResizeCalculator.getResizeCursor( 'unknown', 0 );
+			expect( result ).toBe( 'default' );
+		} );
+
+		it( 'should return default cursor for null handle type', () => {
+			const result = ResizeCalculator.getResizeCursor( null, 0 );
+			expect( result ).toBe( 'default' );
+		} );
+
+		it( 'should handle undefined rotation parameter', () => {
+			const result = ResizeCalculator.getResizeCursor( 'n' );
+			expect( result ).toBe( 'ns-resize' );
+		} );
+
+		it( 'should handle rotation=0 for all compass handles', () => {
+			expect( ResizeCalculator.getResizeCursor( 'n', 0 ) ).toBe( 'ns-resize' );
+			expect( ResizeCalculator.getResizeCursor( 'ne', 0 ) ).toBe( 'nesw-resize' );
+			expect( ResizeCalculator.getResizeCursor( 'e', 0 ) ).toBe( 'ew-resize' );
+			expect( ResizeCalculator.getResizeCursor( 'se', 0 ) ).toBe( 'nwse-resize' );
+			expect( ResizeCalculator.getResizeCursor( 's', 0 ) ).toBe( 'ns-resize' );
+			expect( ResizeCalculator.getResizeCursor( 'sw', 0 ) ).toBe( 'nesw-resize' );
+			expect( ResizeCalculator.getResizeCursor( 'w', 0 ) ).toBe( 'ew-resize' );
+			expect( ResizeCalculator.getResizeCursor( 'nw', 0 ) ).toBe( 'nwse-resize' );
+		} );
+
+		it( 'should rotate cursor for 90-degree rotation', () => {
+			// At 90 degrees, N handle cursor should become E cursor
+			expect( ResizeCalculator.getResizeCursor( 'n', 90 ) ).toBe( 'ew-resize' );
+		} );
+
+		it( 'should handle negative rotation', () => {
+			const result = ResizeCalculator.getResizeCursor( 'n', -90 );
+			expect( typeof result ).toBe( 'string' );
+			expect( result ).not.toBe( 'default' );
+		} );
+	} );
+
+	describe( 'calculateLineResize - perpendicular movement with rotation', () => {
+		it( 'should apply perpendicular offset for N handle on arrow', () => {
+			const layer = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 0, rotation: 0 };
+			const result = ResizeCalculator.calculateLineResize( layer, 'n', 0, -20 );
+			expect( result.x1 ).toBeDefined();
+			expect( result.y1 ).toBeDefined();
+			expect( result.x2 ).toBeDefined();
+			expect( result.y2 ).toBeDefined();
+		} );
+
+		it( 'should apply perpendicular offset for S handle on arrow', () => {
+			const layer = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 0, rotation: 0 };
+			const result = ResizeCalculator.calculateLineResize( layer, 's', 0, 20 );
+			expect( result.x1 ).toBeDefined();
+			expect( result.y1 ).toBeDefined();
+		} );
+
+		it( 'should handle control point movement', () => {
+			const layer = {
+				type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 0,
+				controlX: 50, controlY: -30
+			};
+			const result = ResizeCalculator.calculateLineResize( layer, 'control', 10, 15 );
+			expect( result.controlX ).toBe( 60 );
+			expect( result.controlY ).toBe( -15 );
+		} );
+
+		it( 'should use midpoint as default control point when not specified', () => {
+			const layer = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 0 };
+			const result = ResizeCalculator.calculateLineResize( layer, 'control', 10, 10 );
+			expect( result.controlX ).toBe( 60 ); // midpoint 50 + 10
+			expect( result.controlY ).toBe( 10 ); // midpoint 0 + 10
+		} );
+
+		it( 'should fall back to endpoint movement for unrecognized handle', () => {
+			const layer = { type: 'arrow', x1: 0, y1: 0, x2: 100, y2: 50 };
+			const result = ResizeCalculator.calculateLineResize( layer, 'unknown', 10, 10 );
+			expect( result.x2 ).toBe( 110 );
+			expect( result.y2 ).toBe( 60 );
+		} );
+	} );
+
+	describe( 'calculateCalloutTailResize - edge cases', () => {
+		it( 'should calculate from legacy tail properties when tailTipX/Y not set', () => {
+			const layer = {
+				type: 'callout', x: 50, y: 50, width: 100, height: 80,
+				tailDirection: 'bottom', tailPosition: 0.5, tailSize: 20
+			};
+			const result = ResizeCalculator.calculateCalloutTailResize( layer, 10, 5 );
+			expect( result.tailTipX ).toBeDefined();
+			expect( result.tailTipY ).toBeDefined();
+		} );
+
+		it( 'should handle rotated callout tail resize', () => {
+			const layer = {
+				type: 'callout', x: 50, y: 50, width: 100, height: 80,
+				tailTipX: 10, tailTipY: 60, rotation: 45
+			};
+			const result = ResizeCalculator.calculateCalloutTailResize( layer, 10, 10 );
+			expect( result.tailTipX ).toBeDefined();
+			expect( result.tailTipY ).toBeDefined();
+			// With rotation, the local delta differs from world delta
+			expect( result.tailTipX ).not.toBe( 20 );
+		} );
+
+		it( 'should handle zero rotation', () => {
+			const layer = {
+				type: 'callout', x: 0, y: 0, width: 100, height: 80,
+				tailTipX: 10, tailTipY: 60, rotation: 0
+			};
+			const result = ResizeCalculator.calculateCalloutTailResize( layer, 15, 10 );
+			expect( result.tailTipX ).toBe( 25 );
+			expect( result.tailTipY ).toBe( 70 );
+		} );
+	} );
 } );

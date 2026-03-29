@@ -492,6 +492,384 @@ describe( 'P1.9 regression: _computeLayersHash includes all layers', () => {
 	} );
 } );
 
+// ===== BRANCH COVERAGE GAP TESTS =====
+
+describe( 'invalidateRenderCache', () => {
+	let coordinator;
+
+	beforeEach( () => {
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: jest.fn() }
+		} );
+	} );
+
+	afterEach( () => {
+		if ( coordinator && !coordinator.isDestroyed ) {
+			coordinator.destroy();
+		}
+	} );
+
+	it( 'should clear lastLayersHash', () => {
+		coordinator.lastLayersHash = 'some-hash-value';
+		const result = coordinator.invalidateRenderCache();
+		expect( coordinator.lastLayersHash ).toBeNull();
+		expect( result ).toBe( coordinator ); // fluent API
+	} );
+} );
+
+describe( 'hash skip optimization', () => {
+	let mockRedraw;
+	let coordinator;
+
+	beforeEach( () => {
+		mockRedraw = jest.fn();
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: mockRedraw },
+			editor: { layers: [ { id: 'l1', x: 10, y: 20 } ] }
+		} );
+	} );
+
+	afterEach( () => {
+		if ( coordinator && !coordinator.isDestroyed ) {
+			coordinator.destroy();
+		}
+	} );
+
+	it( 'should skip redraw when layers hash is unchanged', () => {
+		// First redraw is full (constructor sets fullRedrawRequired=true),
+		// so hash block is skipped entirely and hash is never stored.
+		coordinator.scheduleRedraw();
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+
+		// Second redraw with region — hash block executes,
+		// currentHash !== null (lastLayersHash), so it redraws and stores hash
+		mockRedraw.mockClear();
+		coordinator.scheduleRedraw( { region: { x: 0, y: 0, width: 10, height: 10 } } );
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+
+		// Third redraw with region — hash matches stored hash → skip
+		mockRedraw.mockClear();
+		coordinator.scheduleRedraw( { region: { x: 0, y: 0, width: 10, height: 10 } } );
+		flushAnimationFrames();
+		expect( mockRedraw ).not.toHaveBeenCalled();
+	} );
+
+	it( 'should redraw when layers change between frames', () => {
+		const layers = [ { id: 'l1', x: 10, y: 20 } ];
+		coordinator.canvasManager.editor = { layers };
+
+		coordinator.scheduleRedraw();
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+
+		// Change a layer
+		layers[ 0 ].x = 99;
+		coordinator.invalidateRenderCache();
+
+		mockRedraw.mockClear();
+		coordinator.scheduleRedraw();
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+	} );
+} );
+
+describe( 'forceRedraw', () => {
+	let mockRedraw;
+	let coordinator;
+
+	beforeEach( () => {
+		mockRedraw = jest.fn();
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: mockRedraw },
+			editor: { layers: [ { id: 'l1', x: 10, y: 20 } ] }
+		} );
+	} );
+
+	afterEach( () => {
+		if ( coordinator && !coordinator.isDestroyed ) {
+			coordinator.destroy();
+		}
+	} );
+
+	it( 'should force redraw even when hash matches', () => {
+		// First redraw
+		coordinator.scheduleRedraw();
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+
+		// Force next redraw
+		mockRedraw.mockClear();
+		coordinator.forceRedraw();
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	it( 'should reset forceNextRedraw after use', () => {
+		coordinator.forceRedraw();
+		expect( coordinator.forceNextRedraw ).toBe( true );
+
+		flushAnimationFrames();
+		expect( coordinator.forceNextRedraw ).toBe( false );
+	} );
+} );
+
+describe( '_cachedStringify', () => {
+	let coordinator;
+
+	beforeEach( () => {
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: jest.fn() }
+		} );
+	} );
+
+	afterEach( () => {
+		if ( coordinator && !coordinator.isDestroyed ) {
+			coordinator.destroy();
+		}
+	} );
+
+	it( 'should return empty string for null', () => {
+		expect( coordinator._cachedStringify( null ) ).toBe( '' );
+	} );
+
+	it( 'should return empty string for undefined', () => {
+		expect( coordinator._cachedStringify( undefined ) ).toBe( '' );
+	} );
+
+	it( 'should return empty string for non-objects', () => {
+		expect( coordinator._cachedStringify( 'string' ) ).toBe( '' );
+		expect( coordinator._cachedStringify( 42 ) ).toBe( '' );
+		expect( coordinator._cachedStringify( true ) ).toBe( '' );
+	} );
+
+	it( 'should stringify objects', () => {
+		const obj = { a: 1, b: 2 };
+		expect( coordinator._cachedStringify( obj ) ).toBe( '{"a":1,"b":2}' );
+	} );
+
+	it( 'should cache results for same reference', () => {
+		const obj = { x: 1 };
+		const first = coordinator._cachedStringify( obj );
+		const second = coordinator._cachedStringify( obj );
+		expect( first ).toBe( second );
+		// Verify cache is used (same reference should hit cache)
+		expect( coordinator._jsonCache.has( obj ) ).toBe( true );
+	} );
+
+	it( 'should stringify arrays', () => {
+		const arr = [ { x: 1, y: 2 }, { x: 3, y: 4 } ];
+		expect( coordinator._cachedStringify( arr ) ).toBe( '[{"x":1,"y":2},{"x":3,"y":4}]' );
+	} );
+} );
+
+describe( '_computeLayersHash - renderer state', () => {
+	let coordinator;
+	const testLayers = [ { id: 'l1', x: 10, y: 20 } ];
+
+	beforeEach( () => {
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: {
+				redraw: jest.fn(),
+				zoom: 2,
+				panX: 100,
+				panY: 200,
+				selectedLayerIds: [ 'l1', 'l2' ]
+			}
+		} );
+	} );
+
+	afterEach( () => {
+		if ( coordinator && !coordinator.isDestroyed ) {
+			coordinator.destroy();
+		}
+	} );
+
+	it( 'should include renderer zoom/pan/selection in hash', () => {
+		// Use non-empty layers so hash includes renderer state (empty returns early)
+		const hash1 = coordinator._computeLayersHash( testLayers );
+		coordinator.canvasManager.renderer.zoom = 3;
+		const hash2 = coordinator._computeLayersHash( testLayers );
+		expect( hash1 ).not.toBe( hash2 );
+	} );
+
+	it( 'should include selected layer IDs in hash', () => {
+		const hash1 = coordinator._computeLayersHash( testLayers );
+		coordinator.canvasManager.renderer.selectedLayerIds = [ 'l3' ];
+		const hash2 = coordinator._computeLayersHash( testLayers );
+		expect( hash1 ).not.toBe( hash2 );
+	} );
+} );
+
+describe( '_recordFrameTime - buffer overflow', () => {
+	let coordinator;
+
+	beforeEach( () => {
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: jest.fn() }
+		} );
+		coordinator.enableMetrics = true;
+	} );
+
+	afterEach( () => {
+		if ( coordinator && !coordinator.isDestroyed ) {
+			coordinator.destroy();
+		}
+	} );
+
+	it( 'should cap frameTimes at maxFrameTimesSample', () => {
+		// Fill beyond max
+		for ( let i = 0; i < 70; i++ ) {
+			coordinator._recordFrameTime( 16 + i );
+		}
+		expect( coordinator.frameTimes.length ).toBeLessThanOrEqual( coordinator.maxFrameTimesSample );
+		expect( coordinator.frameCount ).toBe( 70 );
+	} );
+} );
+
+describe( '_recordRenderTime - slow render', () => {
+	let coordinator;
+
+	beforeEach( () => {
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: jest.fn() }
+		} );
+	} );
+
+	afterEach( () => {
+		if ( coordinator && !coordinator.isDestroyed ) {
+			coordinator.destroy();
+		}
+	} );
+
+	it( 'should log error for slow renders', () => {
+		const logSpy = jest.spyOn( coordinator, '_logError' ).mockImplementation( () => {} );
+
+		coordinator._recordRenderTime( 50 ); // 50ms > 16.67ms target
+
+		expect( logSpy ).toHaveBeenCalledWith( 'Slow render detected:', expect.any( Error ) );
+	} );
+
+	it( 'should not log for fast renders', () => {
+		const logSpy = jest.spyOn( coordinator, '_logError' ).mockImplementation( () => {} );
+
+		coordinator._recordRenderTime( 5 ); // 5ms < 16.67ms target
+
+		expect( logSpy ).not.toHaveBeenCalled();
+	} );
+} );
+
+describe( '_renderFrame - destroyed guard', () => {
+	let coordinator;
+
+	beforeEach( () => {
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: jest.fn() }
+		} );
+	} );
+
+	afterEach( () => {
+		// Already destroyed in test
+	} );
+
+	it( 'should return early if destroyed during RAF', () => {
+		const performSpy = jest.spyOn( coordinator, '_performRedraw' );
+
+		coordinator.scheduleRedraw();
+		coordinator.isDestroyed = true;
+		flushAnimationFrames();
+
+		expect( performSpy ).not.toHaveBeenCalled();
+	} );
+} );
+
+describe( 'scheduleRedraw - fallback timeout', () => {
+	it( 'should use setTimeout when requestAnimationFrame is unavailable', () => {
+		const origRAF = window.requestAnimationFrame;
+		window.requestAnimationFrame = undefined;
+
+		const mockRedraw = jest.fn();
+		const coord = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: mockRedraw },
+			editor: { layers: [] }
+		} );
+
+		coord.scheduleRedraw();
+		expect( coord.fallbackTimeoutId ).not.toBeNull();
+		expect( coord.pendingRedraw ).toBe( true );
+
+		window.requestAnimationFrame = origRAF;
+		coord.destroy();
+	} );
+} );
+
+describe( 'cancelPendingRedraw - fallback timeout', () => {
+	it( 'should cancel fallback timeout', () => {
+		const coord = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: jest.fn() }
+		} );
+
+		coord.fallbackTimeoutId = setTimeout( () => {}, 1000 );
+		coord.pendingRedraw = true;
+
+		coord.cancelPendingRedraw();
+		expect( coord.fallbackTimeoutId ).toBeNull();
+		expect( coord.pendingRedraw ).toBe( false );
+	} );
+} );
+
+describe( 'markFullRedraw', () => {
+	let coordinator;
+
+	beforeEach( () => {
+		coordinator = new window.Layers.Canvas.RenderCoordinator( {
+			renderer: { redraw: jest.fn() },
+			editor: { layers: [] }
+		} );
+	} );
+
+	afterEach( () => {
+		if ( coordinator && !coordinator.isDestroyed ) {
+			coordinator.destroy();
+		}
+	} );
+
+	it( 'should set fullRedrawRequired and schedule redraw', () => {
+		coordinator.markFullRedraw();
+		expect( coordinator.fullRedrawRequired ).toBe( true );
+		expect( coordinator.pendingRedraw ).toBe( true );
+	} );
+
+	it( 'should bypass hash check when fullRedrawRequired is true', () => {
+		const mockRedraw = coordinator.canvasManager.renderer.redraw;
+		coordinator.canvasManager.editor = { layers: [ { id: 'l1', x: 5 } ] };
+
+		// First redraw — full redraw (constructor default), skips hash block
+		coordinator.scheduleRedraw();
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+
+		// Region-based redraw — enters hash block, stores hash, redraws
+		mockRedraw.mockClear();
+		coordinator.scheduleRedraw( { region: { x: 0, y: 0, width: 10, height: 10 } } );
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+
+		// Another region-based redraw — hash matches, SKIPS redraw
+		mockRedraw.mockClear();
+		coordinator.scheduleRedraw( { region: { x: 0, y: 0, width: 10, height: 10 } } );
+		flushAnimationFrames();
+		expect( mockRedraw ).not.toHaveBeenCalled();
+
+		// markFullRedraw should bypass hash check and force the redraw
+		mockRedraw.mockClear();
+		coordinator.markFullRedraw();
+		flushAnimationFrames();
+		expect( mockRedraw ).toHaveBeenCalledTimes( 1 );
+	} );
+} );
+
 // Add matcher for call order
 expect.extend( {
 	toHaveBeenCalledBefore( received, other ) {

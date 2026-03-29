@@ -3364,4 +3364,523 @@ describe( 'PropertyBuilders', () => {
 			window.Layers.Constants = original;
 		} );
 	} );
+
+	// ========================================================================
+	// Branch coverage gap tests
+	// ========================================================================
+
+	describe( 'msg() fallback - branch coverage', () => {
+		test( 'should use fallback text when layersMessages is null', () => {
+			const origMessages = window.layersMessages;
+			window.layersMessages = null;
+
+			const ctx = createMockContext( { type: 'rectangle' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			// addDimensionProperties calls msg() internally; should not throw
+			expect( () => Builders.addDimensionProperties( ctx ) ).not.toThrow();
+			// Labels should use fallback text
+			expect( ctx.addInput ).toHaveBeenCalled();
+
+			window.layersMessages = origMessages;
+		} );
+
+		test( 'should use fallback when layersMessages.get is not a function', () => {
+			const origMessages = window.layersMessages;
+			window.layersMessages = { get: 'not-a-function' };
+
+			const ctx = createMockContext( { type: 'rectangle' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			expect( () => Builders.addDimensionProperties( ctx ) ).not.toThrow();
+
+			window.layersMessages = origMessages;
+		} );
+	} );
+
+	describe( 'getConstants() fallback branches', () => {
+		test( 'should use fallback defaults when Constants is null', () => {
+			const original = window.Layers.Constants;
+			window.Layers.Constants = null;
+
+			const ctx = createMockContext( { type: 'rectangle', fill: 'blur', blurRadius: 12 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			// addBlurProperties uses getConstants() for BLUR_RADIUS defaults
+			expect( () => Builders.addBlurProperties( ctx ) ).not.toThrow();
+
+			window.Layers.Constants = original;
+		} );
+
+		test( 'should use fallback when EFFECTS is missing from DEFAULTS', () => {
+			const original = window.Layers.Constants;
+			window.Layers.Constants = { LAYER_TYPES: {}, DEFAULTS: {}, LIMITS: {} };
+
+			const ctx = createMockContext( { type: 'rectangle', fill: 'blur', blurRadius: 12 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			expect( () => Builders.addBlurProperties( ctx ) ).not.toThrow();
+
+			window.Layers.Constants = original;
+		} );
+	} );
+
+	describe( 'addTextProperties - branch coverage', () => {
+		test( 'should skip textarea when skipTextarea option is true', () => {
+			const ctx = createMockContext( { type: 'textbox', text: 'Hello' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx, { skipTextarea: true } );
+
+			// Should NOT have a textarea/text input as first call
+			// But should still have font, size, bold, italic, color inputs
+			const textInputCalls = ctx.addInput.mock.calls.filter(
+				( call ) => call[ 0 ].label === 'Text'
+			);
+			expect( textInputCalls ).toHaveLength( 0 );
+			// Font size should still be present
+			const fontSizeCalls = ctx.addInput.mock.calls.filter(
+				( call ) => call[ 0 ].label === 'Font Size'
+			);
+			expect( fontSizeCalls ).toHaveLength( 1 );
+		} );
+
+		test( 'should use single-line input when useTextarea is false', () => {
+			const ctx = createMockContext( { type: 'text', text: 'Hello' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx, { useTextarea: false } );
+
+			const textInputCalls = ctx.addInput.mock.calls.filter(
+				( call ) => call[ 0 ].label === 'Text'
+			);
+			expect( textInputCalls ).toHaveLength( 1 );
+			expect( textInputCalls[ 0 ][ 0 ].type ).toBe( 'text' );
+			// Max length should use single-line default (1000)
+			expect( textInputCalls[ 0 ][ 0 ].maxLength ).toBe( 1000 );
+		} );
+
+		test( 'should use fallback font options when FontConfig is missing', () => {
+			const originalFontConfig = window.Layers.FontConfig;
+			delete window.Layers.FontConfig;
+
+			const ctx = createMockContext( { type: 'text', fontFamily: 'Times New Roman' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+
+			// addSelect should have been called with fallback fonts
+			expect( ctx.addSelect ).toHaveBeenCalled();
+			const selectCall = ctx.addSelect.mock.calls[ 0 ][ 0 ];
+			const fontValues = selectCall.options.map( ( o ) => o.value );
+			expect( fontValues ).toContain( 'Arial' );
+			expect( fontValues ).toContain( 'Times New Roman' );
+
+			window.Layers.FontConfig = originalFontConfig;
+		} );
+
+		test( 'should use FontConfig.findMatchingFont when available', () => {
+			window.Layers.FontConfig = {
+				getFontOptions: jest.fn().mockReturnValue( [
+					{ value: 'Custom Font', text: 'Custom Font' }
+				] ),
+				findMatchingFont: jest.fn().mockReturnValue( 'Custom Font' )
+			};
+
+			const ctx = createMockContext( { type: 'text', fontFamily: 'Some Font' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+
+			expect( window.Layers.FontConfig.findMatchingFont ).toHaveBeenCalledWith( 'Some Font' );
+
+			delete window.Layers.FontConfig;
+		} );
+
+		test( 'should default fontFamily to Arial when layer has no fontFamily', () => {
+			const originalFontConfig = window.Layers.FontConfig;
+			delete window.Layers.FontConfig;
+
+			const ctx = createMockContext( { type: 'text' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+
+			// The select value should be 'Arial' (default)
+			expect( ctx.addSelect ).toHaveBeenCalled();
+			const selectCall = ctx.addSelect.mock.calls[ 0 ][ 0 ];
+			expect( selectCall.value ).toBe( 'Arial' );
+
+			window.Layers.FontConfig = originalFontConfig;
+		} );
+
+		test( 'should handle custom maxLength and maxFontSize options', () => {
+			const ctx = createMockContext( { type: 'text', text: 'Hello' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx, { maxLength: 200, maxFontSize: 500 } );
+
+			const textInputCalls = ctx.addInput.mock.calls.filter(
+				( call ) => call[ 0 ].label === 'Text'
+			);
+			expect( textInputCalls[ 0 ][ 0 ].maxLength ).toBe( 200 );
+
+			const fontSizeCalls = ctx.addInput.mock.calls.filter(
+				( call ) => call[ 0 ].label === 'Font Size'
+			);
+			expect( fontSizeCalls[ 0 ][ 0 ].max ).toBe( 500 );
+		} );
+	} );
+
+	describe( 'addTextShadowSection - branch coverage', () => {
+		test( 'should not show shadow controls when textShadow is false', () => {
+			const ctx = createMockContext( { type: 'text', textShadow: false } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			// Should have checkbox only, no color picker or blur/offset inputs
+			expect( ctx.addCheckbox ).toHaveBeenCalledTimes( 1 );
+			expect( ctx.addColorPicker ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should set default values when enabling shadow without existing values', () => {
+			const ctx = createMockContext( { type: 'text', textShadow: false } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			// Trigger the checkbox onChange with checked=true
+			const checkboxCall = ctx.addCheckbox.mock.calls[ 0 ][ 0 ];
+			checkboxCall.onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', expect.objectContaining( {
+				textShadow: true,
+				textShadowColor: 'rgba(0,0,0,0.5)',
+				textShadowBlur: 4,
+				textShadowOffsetX: 2,
+				textShadowOffsetY: 2
+			} ) );
+		} );
+
+		test( 'should preserve existing shadow values when enabling', () => {
+			const ctx = createMockContext( {
+				type: 'text',
+				textShadow: false,
+				textShadowColor: '#ff0000',
+				textShadowBlur: 8,
+				textShadowOffsetX: 5,
+				textShadowOffsetY: 3
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			const checkboxCall = ctx.addCheckbox.mock.calls[ 0 ][ 0 ];
+			checkboxCall.onChange( true );
+
+			// Should only set textShadow: true, not override existing values
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', { textShadow: true } );
+		} );
+
+		test( 'should show shadow controls when textShadow is true', () => {
+			const ctx = createMockContext( { type: 'text', textShadow: true } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			// Should have color picker and blur/offset inputs when shadow enabled
+			expect( ctx.addColorPicker ).toHaveBeenCalled();
+			// Blur and two offset inputs
+			const numberInputs = ctx.addInput.mock.calls.filter(
+				( call ) => call[ 0 ].type === 'number'
+			);
+			expect( numberInputs.length ).toBe( 3 ); // blur, offsetX, offsetY
+		} );
+
+		test( 'should clamp shadow offset values', () => {
+			const ctx = createMockContext( { type: 'text', textShadow: true } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			// Find offset X and Y input onChange handlers
+			const offsetXCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'textShadowOffsetX'
+			);
+			const offsetYCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'textShadowOffsetY'
+			);
+
+			// Test clamping to -100
+			offsetXCall[ 0 ].onChange( '-200' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', {
+				textShadowOffsetX: -100
+			} );
+
+			ctx.editor.updateLayer.mockClear();
+
+			// Test clamping to 100
+			offsetYCall[ 0 ].onChange( '200' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', {
+				textShadowOffsetY: 100
+			} );
+		} );
+
+		test( 'should use numeric value for offsetX when defined', () => {
+			const ctx = createMockContext( {
+				type: 'text',
+				textShadow: true,
+				textShadowOffsetX: -5,
+				textShadowOffsetY: 7
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			const offsetXCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'textShadowOffsetX'
+			);
+			const offsetYCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'textShadowOffsetY'
+			);
+
+			expect( offsetXCall[ 0 ].value ).toBe( -5 );
+			expect( offsetYCall[ 0 ].value ).toBe( 7 );
+		} );
+	} );
+
+	describe( 'addRichTextFormatting - branch coverage', () => {
+		test( 'should handle empty richText array', () => {
+			const ctx = createMockContext( { type: 'textbox', richText: [] } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// Underline should be unchecked when richText is empty
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			expect( underlineCall[ 0 ].value ).toBe( false );
+		} );
+
+		test( 'should handle richText run without style property', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [ { text: 'Hello' } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			expect( underlineCall[ 0 ].value ).toBe( false );
+		} );
+
+		test( 'should detect space-separated decoration values', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [ { text: 'Hi', style: { textDecoration: 'underline line-through' } } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			const strikeCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Strikethrough'
+			);
+			expect( underlineCall[ 0 ].value ).toBe( true );
+			expect( strikeCall[ 0 ].value ).toBe( true );
+		} );
+
+		test( 'should not create richText when text property is empty', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				text: '',
+				richText: undefined
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// Trigger underline onChange
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			underlineCall[ 0 ].onChange( true );
+
+			// Should not call updateLayer since there's no text to format
+			expect( ctx.editor.updateLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should remove decoration and set to none when last keyword removed', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [ { text: 'Hi', style: { textDecoration: 'underline' } } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// Toggle underline OFF
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			underlineCall[ 0 ].onChange( false );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', {
+				richText: [ { text: 'Hi', style: { textDecoration: 'none' } } ]
+			} );
+		} );
+
+		test( 'should preserve other decoration when removing one', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [ { text: 'Hi', style: { textDecoration: 'underline line-through' } } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// Toggle underline OFF but keep strikethrough
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			underlineCall[ 0 ].onChange( false );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', {
+				richText: [ { text: 'Hi', style: { textDecoration: 'line-through' } } ]
+			} );
+		} );
+
+		test( 'should create richText from text property when richText missing', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				text: 'Some text',
+				richText: undefined
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// Trigger underline onChange
+			const underlineCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Underline'
+			);
+			underlineCall[ 0 ].onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', {
+				richText: [ { text: 'Some text', style: { textDecoration: 'underline' } } ]
+			} );
+		} );
+
+		test( 'should show highlight color picker when highlight is active', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [ { text: 'Hi', style: { backgroundColor: 'rgba(255,255,0,0.5)' } } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// Color picker should be present for highlight color
+			expect( ctx.addColorPicker ).toHaveBeenCalled();
+		} );
+
+		test( 'should not show highlight color picker when no highlight', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [ { text: 'Hi', style: {} } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// No color picker for highlight
+			expect( ctx.addColorPicker ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should toggle highlight on with default color', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [ { text: 'Hi', style: {} } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			// Find highlight checkbox
+			const highlightCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Highlight'
+			);
+			highlightCall[ 0 ].onChange( true );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', {
+				richText: [ { text: 'Hi', style: { backgroundColor: 'rgba(255, 255, 0, 0.5)' } } ]
+			} );
+		} );
+
+		test( 'should remove highlight on toggle off', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [ { text: 'Hi', style: { backgroundColor: 'yellow' } } ]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addRichTextFormatting( ctx );
+
+			const highlightCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Highlight'
+			);
+			highlightCall[ 0 ].onChange( false );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith( 'test-layer-1', {
+				richText: [ { text: 'Hi', style: { backgroundColor: null } } ]
+			} );
+		} );
+	} );
+
+	describe( 'deferPanelRefresh - branch coverage', () => {
+		test( 'should not throw when editor has no layerPanel', () => {
+			jest.useFakeTimers();
+			const ctx = createMockContext( { type: 'text', textShadow: false } );
+			// Remove layerPanel from editor
+			ctx.editor.layerPanel = null;
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			// Trigger checkbox onChange to invoke deferPanelRefresh
+			const checkboxCall = ctx.addCheckbox.mock.calls[ 0 ][ 0 ];
+			expect( () => {
+				checkboxCall.onChange( true );
+				jest.runAllTimers();
+			} ).not.toThrow();
+
+			jest.useRealTimers();
+		} );
+
+		test( 'should call updatePropertiesPanel when layerPanel is available', () => {
+			jest.useFakeTimers();
+			const ctx = createMockContext( { type: 'text', textShadow: false } );
+			const mockUpdatePanel = jest.fn();
+			ctx.editor.layerPanel = { updatePropertiesPanel: mockUpdatePanel };
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextShadowSection( ctx );
+
+			const checkboxCall = ctx.addCheckbox.mock.calls[ 0 ][ 0 ];
+			checkboxCall.onChange( true );
+			jest.runAllTimers();
+
+			expect( mockUpdatePanel ).toHaveBeenCalledWith( 'test-layer-1' );
+
+			jest.useRealTimers();
+		} );
+	} );
 } );

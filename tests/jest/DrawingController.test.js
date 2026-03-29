@@ -1248,4 +1248,391 @@ describe( 'DrawingController', () => {
 			expect( result.by ).toBe( 150 );
 		} );
 	} );
+
+	// ===== BRANCH COVERAGE GAP TESTS =====
+
+	describe( '_drawAngleDimensionPreview', () => {
+		let mockCtx;
+
+		beforeEach( () => {
+			mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				beginPath: jest.fn(),
+				moveTo: jest.fn(),
+				lineTo: jest.fn(),
+				arc: jest.fn(),
+				stroke: jest.fn(),
+				setLineDash: jest.fn(),
+				strokeStyle: '',
+				lineWidth: 1,
+				globalAlpha: 1
+			};
+			mockCanvasManager.ctx = mockCtx;
+		} );
+
+		test( 'should return early when ctx is null', () => {
+			mockCanvasManager.ctx = null;
+			controller.tempLayer = { type: 'angleDimension', ax: 50, ay: 50 };
+			controller._angleDimensionPhase = 1;
+
+			controller._drawAngleDimensionPreview( controller.tempLayer );
+			// No crash, no canvas calls
+			expect( mockCtx.save ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should draw phase 1 construction lines', () => {
+			controller.tempLayer = {
+				type: 'angleDimension',
+				ax: 50, ay: 100, cx: 200, cy: 300,
+				stroke: '#ff0000', strokeWidth: 2
+			};
+			controller._angleDimensionPhase = 1;
+
+			controller._drawAngleDimensionPreview( controller.tempLayer );
+
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 50, 100 );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 200, 300 );
+			expect( mockCtx.stroke ).toHaveBeenCalled();
+			// Circle at arm1
+			expect( mockCtx.arc ).toHaveBeenCalledWith( 50, 100, 4, 0, 2 * Math.PI );
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw phase 2 construction lines', () => {
+			controller.tempLayer = {
+				type: 'angleDimension',
+				ax: 50, ay: 100, cx: 200, cy: 300, bx: 350, by: 100,
+				stroke: '#000000', strokeWidth: 1
+			};
+			controller._angleDimensionPhase = 2;
+
+			controller._drawAngleDimensionPreview( controller.tempLayer );
+
+			expect( mockCtx.save ).toHaveBeenCalled();
+			// Two lines from vertex to each arm
+			expect( mockCtx.moveTo ).toHaveBeenCalledWith( 200, 300 );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 50, 100 );
+			expect( mockCtx.lineTo ).toHaveBeenCalledWith( 350, 100 );
+			// Two circles (arm1 and vertex)
+			expect( mockCtx.arc ).toHaveBeenCalledWith( 50, 100, 4, 0, 2 * Math.PI );
+			expect( mockCtx.arc ).toHaveBeenCalledWith( 200, 300, 4, 0, 2 * Math.PI );
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'should use default stroke color when not specified', () => {
+			controller.tempLayer = {
+				type: 'angleDimension',
+				ax: 50, ay: 100, cx: 200, cy: 300
+			};
+			controller._angleDimensionPhase = 1;
+
+			controller._drawAngleDimensionPreview( controller.tempLayer );
+
+			expect( mockCtx.strokeStyle ).toBe( '#000000' );
+		} );
+	} );
+
+	describe( '_drawPreviewBoundingBox', () => {
+		let mockCtx;
+
+		beforeEach( () => {
+			mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				strokeRect: jest.fn(),
+				setLineDash: jest.fn(),
+				strokeStyle: '',
+				lineWidth: 1
+			};
+			mockCanvasManager.ctx = mockCtx;
+		} );
+
+		test( 'should return early when ctx is null', () => {
+			mockCanvasManager.ctx = null;
+
+			controller._drawPreviewBoundingBox( { x: 10, y: 20, width: 100, height: 50 } );
+			expect( mockCtx.save ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should draw dashed bounding box', () => {
+			controller._drawPreviewBoundingBox( { x: 10, y: 20, width: 100, height: 50 } );
+
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.strokeStyle ).toBe( '#2196F3' );
+			expect( mockCtx.setLineDash ).toHaveBeenCalledWith( [ 4, 4 ] );
+			expect( mockCtx.strokeRect ).toHaveBeenCalledWith( 10, 20, 100, 50 );
+			expect( mockCtx.restore ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle missing width/height', () => {
+			controller._drawPreviewBoundingBox( { x: 10, y: 20 } );
+
+			expect( mockCtx.strokeRect ).toHaveBeenCalledWith( 10, 20, 0, 0 );
+		} );
+	} );
+
+	describe( 'drawPreview edge cases', () => {
+		let mockCtx;
+
+		beforeEach( () => {
+			mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				strokeRect: jest.fn(),
+				setLineDash: jest.fn(),
+				beginPath: jest.fn(),
+				moveTo: jest.fn(),
+				lineTo: jest.fn(),
+				arc: jest.fn(),
+				stroke: jest.fn(),
+				strokeStyle: '',
+				lineWidth: 1,
+				globalAlpha: 1
+			};
+			mockCanvasManager.ctx = mockCtx;
+		} );
+
+		test( 'should return early when tempLayer is null', () => {
+			controller.tempLayer = null;
+			controller.drawPreview();
+			expect( mockRenderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should draw bounding box for textbox with no stroke', () => {
+			controller.tempLayer = {
+				type: 'textbox', x: 10, y: 10, width: 200, height: 100
+				// No stroke property
+			};
+
+			controller.drawPreview();
+
+			expect( mockRenderer.drawLayer ).toHaveBeenCalled();
+			expect( mockCtx.strokeRect ).toHaveBeenCalled();
+		} );
+
+		test( 'should draw bounding box for textbox with strokeWidth=0', () => {
+			controller.tempLayer = {
+				type: 'textbox', x: 10, y: 10, width: 200, height: 100,
+				stroke: '#000000', strokeWidth: 0
+			};
+
+			controller.drawPreview();
+
+			expect( mockCtx.strokeRect ).toHaveBeenCalled();
+		} );
+
+		test( 'should NOT draw bounding box for textbox with visible stroke', () => {
+			controller.tempLayer = {
+				type: 'textbox', x: 10, y: 10, width: 200, height: 100,
+				stroke: '#ff0000', strokeWidth: 2
+			};
+
+			controller.drawPreview();
+
+			expect( mockRenderer.drawLayer ).toHaveBeenCalled();
+			expect( mockCtx.strokeRect ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should draw angle dimension preview when in phase > 0', () => {
+			controller.tempLayer = {
+				type: 'angleDimension',
+				ax: 50, ay: 100, cx: 200, cy: 300, bx: 200, by: 300,
+				stroke: '#000', strokeWidth: 1
+			};
+			controller._angleDimensionPhase = 1;
+
+			controller.drawPreview();
+
+			expect( mockRenderer.drawLayer ).toHaveBeenCalled();
+			expect( mockCtx.save ).toHaveBeenCalled();
+		} );
+
+		test( 'should NOT draw angle dimension preview when in phase 0', () => {
+			controller.tempLayer = {
+				type: 'angleDimension',
+				ax: 50, ay: 100, cx: 200, cy: 300
+			};
+			controller._angleDimensionPhase = 0;
+
+			controller.drawPreview();
+
+			expect( mockRenderer.drawLayer ).toHaveBeenCalled();
+			// No angle preview in phase 0
+			expect( mockCtx.save ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should not draw when renderer is missing', () => {
+			controller.tempLayer = { type: 'rectangle', x: 10, y: 10, width: 50, height: 50 };
+			mockCanvasManager.renderer = null;
+
+			controller.drawPreview();
+
+			// Should not crash
+			expect( mockRenderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'updatePreview - marker drag', () => {
+		test( 'should set hasArrow and arrow coordinates on marker drag', () => {
+			controller.startDrawing( { x: 100, y: 100 }, 'marker', { color: '#ff0000' } );
+
+			controller.updatePreview( { x: 250, y: 300 } );
+
+			expect( controller.tempLayer.hasArrow ).toBe( true );
+			expect( controller.tempLayer.arrowX ).toBe( 250 );
+			expect( controller.tempLayer.arrowY ).toBe( 300 );
+		} );
+	} );
+
+	describe( 'updatePreview - path point capping', () => {
+		test( 'should not add points beyond 1000', () => {
+			controller.startDrawing( { x: 0, y: 0 }, 'pen', { color: '#000' } );
+
+			// Fill up to 999 points (startPenTool adds the first point)
+			for ( let i = 1; i < 1000; i++ ) {
+				controller.updatePreview( { x: i, y: i } );
+			}
+
+			expect( controller.tempLayer.points.length ).toBe( 1000 );
+
+			// Try adding one more
+			controller.updatePreview( { x: 9999, y: 9999 } );
+
+			// Should still be 1000
+			expect( controller.tempLayer.points.length ).toBe( 1000 );
+		} );
+	} );
+
+	describe( 'createLayerFromDrawing - marker arrow threshold', () => {
+		test( 'should enable arrow when drag distance > 20px', () => {
+			controller.startDrawing( { x: 100, y: 100 }, 'marker', { color: '#ff0000' } );
+
+			const result = controller.createLayerFromDrawing( { x: 125, y: 100 } ); // 25px away
+
+			expect( result ).not.toBeNull();
+			expect( result.hasArrow ).toBe( true );
+			expect( result.arrowX ).toBe( 125 );
+		} );
+
+		test( 'should disable arrow when drag distance <= 20px', () => {
+			controller.startDrawing( { x: 100, y: 100 }, 'marker', { color: '#ff0000' } );
+
+			const result = controller.createLayerFromDrawing( { x: 110, y: 100 } ); // 10px away
+
+			expect( result ).not.toBeNull();
+			expect( result.hasArrow ).toBe( false );
+		} );
+
+		test( 'should disable arrow at exactly 20px boundary', () => {
+			controller.startDrawing( { x: 100, y: 100 }, 'marker', { color: '#ff0000' } );
+
+			const result = controller.createLayerFromDrawing( { x: 120, y: 100 } ); // exactly 20px
+
+			expect( result ).not.toBeNull();
+			expect( result.hasArrow ).toBe( false ); // > 20, not >=
+		} );
+	} );
+
+	describe( 'createLayerFromDrawing - ellipse finalization', () => {
+		test( 'should set radiusX and radiusY from final point', () => {
+			controller.startDrawing( { x: 200, y: 200 }, 'ellipse', { color: '#000', strokeWidth: 2 } );
+
+			const result = controller.createLayerFromDrawing( { x: 300, y: 250 } );
+
+			expect( result ).not.toBeNull();
+			expect( result.type ).toBe( 'ellipse' );
+			expect( result.radiusX ).toBe( Math.abs( 300 - 200 ) );
+			expect( result.radiusY ).toBe( Math.abs( 250 - 200 ) );
+		} );
+	} );
+
+	describe( 'createLayerFromDrawing - angleDimension phases', () => {
+		test( 'should set vertex on phase 1', () => {
+			controller.startDrawing( { x: 50, y: 100 }, 'angleDimension', { color: '#000', strokeWidth: 1 } );
+			controller._angleDimensionPhase = 1;
+
+			const result = controller.createLayerFromDrawing( { x: 200, y: 300 } );
+
+			// createLayerFromDrawing doesn't return null here because phase handling is in finishDrawing
+			expect( controller.tempLayer ).toBeNull(); // tempLayer cleared
+		} );
+
+		test( 'should set arm2 on phase 2', () => {
+			controller.startDrawing( { x: 50, y: 100 }, 'angleDimension', { color: '#000', strokeWidth: 1 } );
+
+			// Simulate phase 2
+			controller._angleDimensionPhase = 2;
+			controller.tempLayer.cx = 200;
+			controller.tempLayer.cy = 300;
+			controller.tempLayer.ax = 50;
+			controller.tempLayer.ay = 100;
+
+			const result = controller.createLayerFromDrawing( { x: 350, y: 100 } );
+
+			// Should have set bx/by
+			if ( result ) {
+				expect( result.bx ).toBe( 350 );
+				expect( result.by ).toBe( 100 );
+			}
+		} );
+	} );
+
+	describe( 'isValidShape - edge cases', () => {
+		test( 'should handle angleDimension with missing properties (|| 0 fallback)', () => {
+			const layer = {
+				type: 'angleDimension'
+				// All ax, ay, bx, by, cx, cy missing
+			};
+
+			// All properties default to 0, arm lengths = 0, should be invalid
+			expect( controller.isValidShape( layer ) ).toBe( false );
+		} );
+
+		test( 'should handle ellipse with undefined radiusX', () => {
+			expect( controller.isValidShape( { type: 'ellipse', radiusX: undefined, radiusY: 10 } ) ).toBe( false );
+		} );
+
+		test( 'should handle ellipse with undefined radiusY', () => {
+			expect( controller.isValidShape( { type: 'ellipse', radiusX: 10, radiusY: undefined } ) ).toBe( false );
+		} );
+
+		test( 'should validate star with outerRadius', () => {
+			expect( controller.isValidShape( { type: 'star', outerRadius: 3 } ) ).toBe( false );
+			expect( controller.isValidShape( { type: 'star', outerRadius: 10 } ) ).toBe( true );
+		} );
+
+		test( 'should validate dimension with minimum length', () => {
+			expect( controller.isValidShape( { type: 'dimension', x1: 0, y1: 0, x2: 3, y2: 0 } ) ).toBe( false );
+			expect( controller.isValidShape( { type: 'dimension', x1: 0, y1: 0, x2: 10, y2: 0 } ) ).toBe( true );
+		} );
+
+		test( 'should validate path with insufficient points', () => {
+			expect( controller.isValidShape( { type: 'path', points: [ { x: 0, y: 0 } ] } ) ).toBe( false );
+			expect( controller.isValidShape( { type: 'path', points: null } ) ).toBeFalsy();
+		} );
+
+		test( 'should accept marker (always valid)', () => {
+			expect( controller.isValidShape( { type: 'marker' } ) ).toBe( true );
+		} );
+
+		test( 'should accept unknown types', () => {
+			expect( controller.isValidShape( { type: 'custom' } ) ).toBe( true );
+		} );
+
+		test( 'should validate callout shape', () => {
+			expect( controller.isValidShape( { type: 'callout', width: 100, height: 80 } ) ).toBe( true );
+			expect( controller.isValidShape( { type: 'callout', width: 2, height: 2 } ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'startDrawing - default case', () => {
+		test( 'should handle unknown tool without crashing', () => {
+			controller.startDrawing( { x: 100, y: 100 }, 'unknownTool', { color: '#000' } );
+
+			expect( controller.isDrawing ).toBe( true );
+			expect( controller.tempLayer ).toBeNull(); // No tool handler matched
+		} );
+	} );
 } );

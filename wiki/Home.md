@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C904%20passing-brightgreen" alt="11,904 Tests">
-  <img src="https://img.shields.io/badge/Coverage-94.24%25-brightgreen" alt="94.24% Coverage">
+  <img src="https://img.shields.io/badge/Tests-13%2C880%20passing-brightgreen" alt="13,880 Tests">
+  <img src="https://img.shields.io/badge/Coverage-95.82%25-brightgreen" alt="95.82% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -24,12 +24,12 @@
 
 - **APICacheManager Extracted** — Cache logic separated from APIManager into standalone module
 - **P3-146 Dead Table Removed** — `layer_set_usage` table fully cleaned up
-- **63 New Tests** — 11,904 tests (168 suites), 94.24% stmts, 84.17% branches
+- **1,976 New Tests** — 13,880 tests (172 suites), 95.82% stmts, 87.00% branches
 
 ### Previous v1.5.62 Highlights
 
 - **16 Bug Fixes** — Zoom-to-pointer anchor drift, 15 P3 code-quality fixes
-- **Test Suite** — 11,445 tests passing (168 suites)
+- **Test Suite** — 13,880 tests passing (172 suites)
 
 ### Previous v1.5.59 Highlights
 
@@ -320,14 +320,14 @@ See [[Changelog]] for full details.
 | **Version (main)** | 1.5.63 |
 | **Version (REL1_43)** | 1.5.60 |
 | **Version (REL1_39)** | 1.5.60 |
-| **Release Date** | March 23, 2026 |
-| **Test Suites** | 168 |
-| **Total Tests** | 11,904 |
+| **Release Date** | March 28, 2026 |
+| **Test Suites** | 172 |
+| **Total Tests** | 13,880 |
 | **PHPUnit Test Files** | 34 |
-| **Statement Coverage** | 94.24% |
-| **Branch Coverage** | 84.17% |
-| **Function Coverage** | 93.27% |
-| **Line Coverage** | 94.34% |
+| **Statement Coverage** | 95.82% |
+| **Branch Coverage** | 87.00% |
+| **Function Coverage** | 93.98% |
+| **Line Coverage** | 95.94% |
 | **JavaScript Files** | 157 |
 | **ES6 Classes** | 140 |
 | **God Classes** | 26 (5 generated, 19 JS, 2 PHP) |

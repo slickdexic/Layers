@@ -2087,4 +2087,1460 @@ describe( 'LayersViewer', () => {
 			expect( imageElement.style.opacity ).toBe( '0.5' );
 		} );
 	} );
+
+	// ===== BRANCH COVERAGE GAP TESTS =====
+
+	describe( 'ResizeObserver setup and error handling', () => {
+		const createImageWithStyle = () => ( {
+			complete: true,
+			offsetWidth: 800,
+			offsetHeight: 600,
+			naturalWidth: 800,
+			naturalHeight: 600,
+			addEventListener: jest.fn(),
+			style: { visibility: '', opacity: '' }
+		} );
+
+		test( 'should handle ResizeObserver constructor throwing', () => {
+			const origRO = window.ResizeObserver;
+			window.ResizeObserver = jest.fn( () => {
+				throw new Error( 'ResizeObserver not supported' );
+			} );
+
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			// Should not throw, viewer should still work
+			expect( viewer.canvas ).not.toBeNull();
+			// resizeObserver stays null (its constructor init value) when setup fails
+			expect( viewer.resizeObserver ).toBeNull();
+
+			window.ResizeObserver = origRO;
+		} );
+
+		test( 'should handle ResizeObserver being unavailable', () => {
+			const origRO = window.ResizeObserver;
+			delete window.ResizeObserver;
+
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			expect( viewer.canvas ).not.toBeNull();
+			expect( viewer.resizeObserver ).toBeNull();
+
+			window.ResizeObserver = origRO;
+		} );
+	} );
+
+	describe( 'destroy edge cases', () => {
+		const createImageWithStyle = () => ( {
+			complete: true,
+			offsetWidth: 800,
+			offsetHeight: 600,
+			naturalWidth: 800,
+			naturalHeight: 600,
+			addEventListener: jest.fn(),
+			style: { visibility: '', opacity: '' }
+		} );
+
+		test( 'should handle ResizeObserver disconnect throwing', () => {
+			const origRO = window.ResizeObserver;
+			const mockDisconnect = jest.fn( () => {
+				throw new Error( 'disconnect failed' );
+			} );
+			window.ResizeObserver = jest.fn( () => ( {
+				observe: jest.fn(),
+				disconnect: mockDisconnect,
+				unobserve: jest.fn()
+			} ) );
+
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			// Should not throw on destroy
+			expect( () => viewer.destroy() ).not.toThrow();
+
+			window.ResizeObserver = origRO;
+		} );
+
+		test( 'should handle cancelAnimationFrame throwing', () => {
+			const origCAF = window.cancelAnimationFrame;
+			window.cancelAnimationFrame = jest.fn( () => {
+				throw new Error( 'cancel failed' );
+			} );
+
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			// Set a pending rAFId to trigger cancelAnimationFrame
+			viewer.rAFId = 42;
+
+			expect( () => viewer.destroy() ).not.toThrow();
+			expect( viewer.rAFId ).toBeNull();
+
+			window.cancelAnimationFrame = origCAF;
+		} );
+
+		test( 'should remove canvas from DOM on destroy', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			const canvas = viewer.canvas;
+			expect( canvas ).not.toBeNull();
+			// Canvas should be appended to container
+			expect( canvas.parentNode ).toBe( container );
+
+			viewer.destroy();
+			expect( viewer.canvas ).toBeNull();
+			expect( viewer.ctx ).toBeNull();
+		} );
+
+		test( 'should handle destroy when imageElement has no style', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			// Remove style before destroy
+			viewer.imageElement = { style: null };
+			viewer.originalImageVisibility = 'visible';
+
+			expect( () => viewer.destroy() ).not.toThrow();
+		} );
+
+		test( 'should handle destroy when canvas has no parentNode', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			// Simulate canvas already removed from DOM
+			if ( viewer.canvas && viewer.canvas.parentNode ) {
+				viewer.canvas.parentNode.removeChild( viewer.canvas );
+			}
+
+			expect( () => viewer.destroy() ).not.toThrow();
+		} );
+
+		test( 'should clean up renderer on destroy', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			viewer.destroy();
+			expect( viewer.renderer ).toBeNull();
+			expect( mockLayerRenderer.destroy ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'renderLayers edge cases', () => {
+		const createImageWithStyle = () => ( {
+			complete: true,
+			offsetWidth: 800,
+			offsetHeight: 600,
+			naturalWidth: 800,
+			naturalHeight: 600,
+			addEventListener: jest.fn(),
+			style: { visibility: '', opacity: '' }
+		} );
+
+		test( 'should return early when layerData is null', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			viewer.layerData = null;
+			mockLayerRenderer.drawLayer.mockClear();
+
+			viewer.renderLayers();
+			expect( mockLayerRenderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should return early when layerData has no layers property', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			viewer.layerData = {};
+			mockLayerRenderer.drawLayer.mockClear();
+
+			viewer.renderLayers();
+			expect( mockLayerRenderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should return early when ctx is null (after destroy)', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [ { id: 'l1', type: 'text' } ] }
+			} );
+
+			viewer.ctx = null;
+			mockLayerRenderer.drawLayer.mockClear();
+
+			viewer.renderLayers();
+			expect( mockLayerRenderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should detect blend mode and draw background on canvas', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				baseWidth: 800,
+				baseHeight: 600,
+				layers: [
+					{ id: 'l1', type: 'rectangle', blend: 'multiply', x: 10, y: 10, width: 50, height: 50 }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// After rendering with blend mode, image should be hidden
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+		} );
+
+		test( 'should detect blendMode property (server alias)', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				baseWidth: 800,
+				baseHeight: 600,
+				layers: [
+					{ id: 'l1', type: 'rectangle', blendMode: 'overlay', x: 10, y: 10, width: 50, height: 50 }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+		} );
+
+		test( 'should NOT hide image when blend is normal', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				baseWidth: 800,
+				baseHeight: 600,
+				layers: [
+					{ id: 'l1', type: 'rectangle', blend: 'normal', x: 10, y: 10, width: 50, height: 50 }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// normal blend ≠ hasBlendMode, so DOM image should stay visible
+			expect( imageElement.style.visibility ).not.toBe( 'hidden' );
+		} );
+
+		test( 'should NOT hide image when blend is source-over', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const layerData = {
+				baseWidth: 800,
+				baseHeight: 600,
+				layers: [
+					{ id: 'l1', type: 'rectangle', blend: 'source-over', x: 10, y: 10, width: 50, height: 50 }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			expect( imageElement.style.visibility ).not.toBe( 'hidden' );
+		} );
+
+		test( 'should not hide image when image is not ready for blend mode', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: false,  // Image not loaded yet
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 0,  // Not loaded
+				naturalHeight: 0,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const layerData = {
+				baseWidth: 800,
+				baseHeight: 600,
+				layers: [
+					{ id: 'l1', type: 'rectangle', blend: 'multiply', x: 10, y: 10, width: 50, height: 50 }
+				]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			// Image not ready → backgroundDrawn=false → should NOT hide
+			expect( imageElement.style.visibility ).not.toBe( 'hidden' );
+		} );
+
+		test( 'should handle non-array layers gracefully in renderLayers', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			// Create viewer with valid array first, then swap to non-array
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			// Override layers with a non-array after init to test renderLayers guard
+			viewer.layerData.layers = 'not-an-array';
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			// Non-Array layers should become empty array, no drawLayer calls
+			expect( mockLayerRenderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'drawBackgroundOnCanvas edge cases', () => {
+		const createImageWithStyle = () => ( {
+			complete: true,
+			offsetWidth: 800,
+			offsetHeight: 600,
+			naturalWidth: 800,
+			naturalHeight: 600,
+			addEventListener: jest.fn(),
+			style: { visibility: '', opacity: '' }
+		} );
+
+		test( 'should return early when imageElement is null', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			viewer.imageElement = null;
+			// clearRect was already called during construction; clear spy after
+			const ctxSpy = jest.spyOn( viewer.ctx, 'clearRect' );
+			ctxSpy.mockClear();
+
+			viewer.drawBackgroundOnCanvas();
+			// Should return early without touching ctx
+			expect( ctxSpy ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should clear canvas when background is hidden', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [], backgroundVisible: false }
+			} );
+
+			const ctxSpy = jest.spyOn( viewer.ctx, 'clearRect' );
+			viewer.drawBackgroundOnCanvas();
+			expect( ctxSpy ).toHaveBeenCalled();
+		} );
+
+		test( 'should handle bgVisible === 0 as hidden', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [], backgroundVisible: 0 }
+			} );
+
+			const ctxSpy = jest.spyOn( viewer.ctx, 'clearRect' );
+			viewer.drawBackgroundOnCanvas();
+			expect( ctxSpy ).toHaveBeenCalled();
+		} );
+
+		test( 'should parse string backgroundOpacity in drawBackgroundOnCanvas', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [ { id: 'l1', type: 'rectangle', blend: 'multiply', x: 10, y: 10, width: 50, height: 50 } ],
+					backgroundVisible: true,
+					backgroundOpacity: '0.7'
+				}
+			} );
+
+			const saveSpy = jest.spyOn( viewer.ctx, 'save' );
+			viewer.drawBackgroundOnCanvas();
+			expect( saveSpy ).toHaveBeenCalled();
+		} );
+
+		test( 'should clamp invalid string opacity', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: 'invalid'
+				}
+			} );
+
+			// invalid string should fall through, bgOpacity stays 1.0
+			const drawImageSpy = jest.spyOn( viewer.ctx, 'drawImage' ).mockImplementation( () => {} );
+			viewer.drawBackgroundOnCanvas();
+			expect( drawImageSpy ).toHaveBeenCalled();
+		} );
+
+		test( 'should reject out-of-range numeric opacity', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [],
+					backgroundVisible: true,
+					backgroundOpacity: 5.0
+				}
+			} );
+
+			// Out of range (>1) should keep default 1.0
+			const drawImageSpy = jest.spyOn( viewer.ctx, 'drawImage' ).mockImplementation( () => {} );
+			viewer.drawBackgroundOnCanvas();
+			expect( viewer.ctx.globalAlpha ).toBe( 1 );
+		} );
+	} );
+
+	describe( 'renderLayer edge cases', () => {
+		const createImageWithStyle = () => ( {
+			complete: true,
+			offsetWidth: 800,
+			offsetHeight: 600,
+			naturalWidth: 800,
+			naturalHeight: 600,
+			addEventListener: jest.fn(),
+			style: { visibility: '', opacity: '' }
+		} );
+
+		test( 'should skip invisible layers (visible=false)', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 800,
+					baseHeight: 600,
+					layers: [ { id: 'l1', type: 'rectangle', visible: false, x: 10, y: 10, width: 50, height: 50 } ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			expect( mockLayerRenderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should skip layers with visible=0 (integer)', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 800,
+					baseHeight: 600,
+					layers: [ { id: 'l1', type: 'rectangle', visible: 0, x: 10, y: 10, width: 50, height: 50 } ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			expect( mockLayerRenderer.drawLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should render without scaling when no baseWidth/baseHeight', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					layers: [ { id: 'l1', type: 'rectangle', visible: true, x: 100, y: 100, width: 200, height: 150 } ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			// Layer should be passed without scaling
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalledTimes( 1 );
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.x ).toBe( 100 ); // No scaling applied
+		} );
+
+		test( 'should apply layer opacity to ctx', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 800,
+					baseHeight: 600,
+					layers: [ { id: 'l1', type: 'rectangle', opacity: 0.5, visible: true, x: 10, y: 10, width: 50, height: 50 } ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		test( 'should apply blend mode to ctx', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 800,
+					baseHeight: 600,
+					layers: [ { id: 'l1', type: 'rectangle', blend: 'screen', visible: true, x: 10, y: 10, width: 50, height: 50 } ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		test( 'should handle blend mode set error gracefully', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 800,
+					baseHeight: 600,
+					layers: [ { id: 'l1', type: 'rectangle', visible: true, x: 10, y: 10, width: 50, height: 50 } ]
+				}
+			} );
+
+			// Make globalCompositeOperation throw
+			Object.defineProperty( viewer.ctx, 'globalCompositeOperation', {
+				set() {
+					throw new Error( 'unsupported' );
+				},
+				get() {
+					return 'source-over';
+				},
+				configurable: true
+			} );
+
+			// Render a layer with blend mode - should catch error
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayer( { id: 'l2', type: 'rectangle', blend: 'invalid-mode', visible: true, x: 0, y: 0, width: 10, height: 10 } );
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'scaleLayerCoordinates edge cases', () => {
+		const createImageWithStyle = () => ( {
+			complete: true,
+			offsetWidth: 800,
+			offsetHeight: 600,
+			naturalWidth: 800,
+			naturalHeight: 600,
+			addEventListener: jest.fn(),
+			style: { visibility: '', opacity: '' }
+		} );
+
+		test( 'should deep copy gradient object', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const gradient = { type: 'linear', colors: [ { offset: 0, color: '#000' }, { offset: 1, color: '#fff' } ] };
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 800,
+					baseHeight: 600,
+					layers: [ { id: 'l1', type: 'rectangle', x: 10, y: 10, width: 100, height: 100, gradient } ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			// Gradient should be deep copied (not same reference)
+			expect( passedLayer.gradient ).not.toBe( gradient );
+			expect( passedLayer.gradient.type ).toBe( 'linear' );
+		} );
+
+		test( 'should deep copy richText and scale per-run fontSize', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const richText = [
+				{ text: 'Hello', style: { fontSize: 20 } },
+				{ text: ' World' }
+			];
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 800,
+					baseHeight: 600,
+					layers: [ { id: 'l1', type: 'textbox', x: 10, y: 10, width: 200, height: 100, richText } ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			// richText should be deep copied
+			expect( passedLayer.richText ).not.toBe( richText );
+			// fontSize should be scaled by scaleAvg
+			expect( passedLayer.richText[ 0 ].style.fontSize ).toBeCloseTo( 20 );
+		} );
+
+		test( 'should scale controlX and controlY for curved arrows', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'arrow', x1: 100, y1: 100, x2: 400, y2: 300,
+						controlX: 250, controlY: 200
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			// controlX should be scaled by sx (800/1600 = 0.5)
+			expect( passedLayer.controlX ).toBe( 125 );
+			// controlY should be scaled by sy (600/1200 = 0.5)
+			expect( passedLayer.controlY ).toBe( 100 );
+		} );
+
+		test( 'should scale outerRadius and innerRadius', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'star', x: 400, y: 300,
+						outerRadius: 100, innerRadius: 50
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			// Scaled by scaleAvg = (0.5 + 0.5) / 2 = 0.5
+			expect( passedLayer.outerRadius ).toBe( 50 );
+			expect( passedLayer.innerRadius ).toBe( 25 );
+		} );
+
+		test( 'should scale dimension-specific properties', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'dimension', x1: 100, y1: 100, x2: 500, y2: 100,
+						extensionLength: 40, extensionGap: 10, tickSize: 8
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.extensionLength ).toBe( 20 );
+			expect( passedLayer.extensionGap ).toBe( 5 );
+			expect( passedLayer.tickSize ).toBe( 4 );
+		} );
+
+		test( 'should scale angle dimension properties (cx, cy, ax, ay, bx, by, arcRadius)', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'angleDimension',
+						cx: 400, cy: 300, ax: 600, ay: 300, bx: 400, by: 100, arcRadius: 80
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.cx ).toBe( 200 );
+			expect( passedLayer.cy ).toBe( 150 );
+			expect( passedLayer.ax ).toBe( 300 );
+			expect( passedLayer.ay ).toBe( 150 );
+			expect( passedLayer.bx ).toBe( 200 );
+			expect( passedLayer.by ).toBe( 50 );
+			expect( passedLayer.arcRadius ).toBe( 40 );
+		} );
+
+		test( 'should scale marker-specific properties (size, arrowX, arrowY)', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'marker', x: 800, y: 600,
+						size: 40, arrowX: 900, arrowY: 700
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.size ).toBe( 20 );
+			expect( passedLayer.arrowX ).toBe( 450 );
+			expect( passedLayer.arrowY ).toBe( 350 );
+		} );
+
+		test( 'should scale callout properties (tailTipX, tailTipY, tailSize)', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'callout', x: 100, y: 100, width: 300, height: 200,
+						tailTipX: 500, tailTipY: 400, tailSize: 30
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.tailTipX ).toBe( 250 );
+			expect( passedLayer.tailTipY ).toBe( 200 );
+			expect( passedLayer.tailSize ).toBe( 15 );
+		} );
+
+		test( 'should scale fontSizeAdjust', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'text', x: 100, y: 100, text: 'Test',
+						fontSizeAdjust: 12
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.fontSizeAdjust ).toBe( 6 );
+		} );
+
+		test( 'should scale blurRadius', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'rectangle', x: 100, y: 100, width: 200, height: 200,
+						fill: 'blur', blurRadius: 24
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.blurRadius ).toBe( 12 );
+		} );
+
+		test( 'should scale corner radii (cornerRadius, pointRadius, valleyRadius)', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'star', x: 400, y: 300,
+						outerRadius: 100, cornerRadius: 20, pointRadius: 10, valleyRadius: 8
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.cornerRadius ).toBe( 10 );
+			expect( passedLayer.pointRadius ).toBe( 5 );
+			expect( passedLayer.valleyRadius ).toBe( 4 );
+		} );
+
+		test( 'should scale textStrokeWidth and padding', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'textbox', x: 100, y: 100, width: 300, height: 200,
+						textStrokeWidth: 4, padding: 16
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.textStrokeWidth ).toBe( 2 );
+			expect( passedLayer.padding ).toBe( 8 );
+		} );
+
+		test( 'should scale tailWidth', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'arrow', x1: 100, y1: 100, x2: 400, y2: 300,
+						tailWidth: 20
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.tailWidth ).toBe( 10 );
+		} );
+
+		test( 'should scale points array', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 1600,
+					baseHeight: 1200,
+					layers: [ {
+						id: 'l1', type: 'polygon',
+						points: [ { x: 100, y: 200 }, { x: 300, y: 400 }, { x: 500, y: 200 } ]
+					} ]
+				}
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			viewer.renderLayers();
+			const passedLayer = mockLayerRenderer.drawLayer.mock.calls[ 0 ][ 0 ];
+			expect( passedLayer.points ).toEqual( [
+				{ x: 50, y: 100 },
+				{ x: 150, y: 200 },
+				{ x: 250, y: 100 }
+			] );
+		} );
+	} );
+
+	describe( 'scheduleResize debouncing', () => {
+		const createImageWithStyle = () => ( {
+			complete: true,
+			offsetWidth: 800,
+			offsetHeight: 600,
+			naturalWidth: 800,
+			naturalHeight: 600,
+			addEventListener: jest.fn(),
+			style: { visibility: '', opacity: '' }
+		} );
+
+		test( 'should debounce multiple resize calls', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			window.requestAnimationFrame.mockClear();
+
+			viewer.scheduleResize();
+			viewer.scheduleResize();
+			viewer.scheduleResize();
+
+			// Only one rAF should have been requested
+			expect( window.requestAnimationFrame ).toHaveBeenCalledTimes( 1 );
+		} );
+	} );
+
+	describe( 'resizeCanvasAndRender edge cases', () => {
+		const createImageWithStyle = () => ( {
+			complete: true,
+			offsetWidth: 800,
+			offsetHeight: 600,
+			naturalWidth: 800,
+			naturalHeight: 600,
+			addEventListener: jest.fn(),
+			style: { visibility: '', opacity: '' }
+		} );
+
+		test( 'should return early when canvas is null', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			viewer.canvas = null;
+
+			// Should not throw
+			expect( () => viewer.resizeCanvasAndRender() ).not.toThrow();
+		} );
+
+		test( 'should return early when imageElement is null', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			viewer.imageElement = null;
+
+			expect( () => viewer.resizeCanvasAndRender() ).not.toThrow();
+		} );
+
+		test( 'should fall back to naturalWidth when offsetWidth is 0', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			// Simulate hidden image (0 offset dimensions)
+			viewer.imageElement.offsetWidth = 0;
+			viewer.imageElement.offsetHeight = 0;
+			viewer.imageElement.naturalWidth = 1600;
+			viewer.imageElement.naturalHeight = 1200;
+
+			viewer.resizeCanvasAndRender();
+			expect( viewer.canvas.width ).toBe( 1600 );
+			expect( viewer.canvas.height ).toBe( 1200 );
+		} );
+
+		test( 'should fall back to .width when both offset and naturalWidth are 0', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = createImageWithStyle();
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			viewer.imageElement.offsetWidth = 0;
+			viewer.imageElement.offsetHeight = 0;
+			viewer.imageElement.naturalWidth = 0;
+			viewer.imageElement.naturalHeight = 0;
+			viewer.imageElement.width = 640;
+			viewer.imageElement.height = 480;
+
+			viewer.resizeCanvasAndRender();
+			expect( viewer.canvas.width ).toBe( 640 );
+			expect( viewer.canvas.height ).toBe( 480 );
+		} );
+	} );
+
+	describe( 'applyBackgroundSettings edge cases', () => {
+		test( 'should return early when imageElement has no style', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn()
+				// No style property
+			};
+
+			// Should not throw
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			expect( viewer.canvas ).not.toBeNull();
+		} );
+
+		test( 'should only store original styles once', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: 'visible', opacity: '0.9' }
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [], backgroundVisible: true }
+			} );
+
+			// First call already stored original styles
+			expect( viewer.originalImageOpacity ).toBe( '0.9' );
+
+			// Second apply should NOT overwrite original with current modified ones
+			imageElement.style.opacity = '0.5'; // Modified by first apply
+			viewer.applyBackgroundSettings();
+			expect( viewer.originalImageOpacity ).toBe( '0.9' ); // Still original
+		} );
+
+		test( 'should handle bgVisible=false with string representation', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [], backgroundVisible: 'false' }
+			} );
+
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+			expect( imageElement.style.opacity ).toBe( '0' );
+		} );
+
+		test( 'should handle bgVisible=\'0\' string', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [], backgroundVisible: '0' }
+			} );
+
+			expect( imageElement.style.visibility ).toBe( 'hidden' );
+		} );
+	} );
+
+	describe( 'fallbackNormalize edge cases', () => {
+		test( 'should copy blendMode to blend when blend is undefined', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const origNorm = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const layerData = {
+				layers: [ { id: 'l1', type: 'rectangle', blendMode: 'multiply' } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			window.Layers.LayerDataNormalizer = origNorm;
+
+			expect( viewer.layerData.layers[ 0 ].blend ).toBe( 'multiply' );
+		} );
+
+		test( 'should copy blend to blendMode when blendMode is undefined', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const origNorm = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const layerData = {
+				layers: [ { id: 'l1', type: 'rectangle', blend: 'screen' } ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			window.Layers.LayerDataNormalizer = origNorm;
+
+			expect( viewer.layerData.layers[ 0 ].blendMode ).toBe( 'screen' );
+		} );
+
+		test( 'should normalize boolean string properties in layers', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const origNorm = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const layerData = {
+				layers: [ {
+					id: 'l1', type: 'rectangle',
+					shadow: '1',
+					textShadow: '0',
+					glow: 'true',
+					locked: 'false',
+					visible: 1,
+					preserveAspectRatio: 0
+				} ]
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData
+			} );
+
+			window.Layers.LayerDataNormalizer = origNorm;
+
+			const layer = viewer.layerData.layers[ 0 ];
+			expect( layer.shadow ).toBe( true );
+			expect( layer.textShadow ).toBe( false );
+			expect( layer.glow ).toBe( true );
+			expect( layer.locked ).toBe( false );
+			expect( layer.visible ).toBe( true );
+			expect( layer.preserveAspectRatio ).toBe( false );
+		} );
+
+		test( 'should return early when layerData is null', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const origNorm = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: null
+			} );
+
+			window.Layers.LayerDataNormalizer = origNorm;
+
+			// Constructor defaults null layerData to []
+			expect( viewer.layerData ).toEqual( [] );
+		} );
+
+		test( 'should handle layerData with no layers array', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const origNorm = window.Layers.LayerDataNormalizer;
+			window.Layers.LayerDataNormalizer = null;
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { backgroundVisible: '1' }
+			} );
+
+			window.Layers.LayerDataNormalizer = origNorm;
+
+			expect( viewer.layerData.backgroundVisible ).toBe( true );
+		} );
+	} );
+
+	describe( 'loadImageAndRender - image not yet loaded', () => {
+		test( 'should add load listener when image is not complete', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: false,
+				offsetWidth: 0,
+				offsetHeight: 0,
+				naturalWidth: 0,
+				naturalHeight: 0,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: {
+					baseWidth: 800,
+					baseHeight: 600,
+					layers: [ { id: 'l1', type: 'text', text: 'Test' } ]
+				}
+			} );
+
+			// Should have registered a load listener
+			expect( imageElement.addEventListener ).toHaveBeenCalledWith( 'load', expect.any( Function ) );
+		} );
+	} );
+
+	describe( 'createCanvas with position detection', () => {
+		test( 'should set container to relative when position is static', () => {
+			const container = document.createElement( 'div' );
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			window.getComputedStyle = jest.fn( () => ( { position: 'static' } ) );
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			expect( container.style.position ).toBe( 'relative' );
+		} );
+
+		test( 'should NOT change container position when already positioned', () => {
+			const container = document.createElement( 'div' );
+			container.style.position = 'absolute';
+			const imageElement = {
+				complete: true,
+				offsetWidth: 800,
+				offsetHeight: 600,
+				naturalWidth: 800,
+				naturalHeight: 600,
+				addEventListener: jest.fn(),
+				style: { visibility: '', opacity: '' }
+			};
+
+			window.getComputedStyle = jest.fn( () => ( { position: 'absolute' } ) );
+
+			const viewer = new window.LayersViewer( {
+				container,
+				imageElement,
+				layerData: { layers: [] }
+			} );
+
+			expect( container.style.position ).toBe( 'absolute' );
+		} );
+	} );
 } );

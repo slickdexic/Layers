@@ -1526,4 +1526,252 @@ describe( 'SmartGuidesController', () => {
 			} );
 		} );
 	} );
+
+	// ========================================================================
+	// Branch coverage gap tests
+	// ========================================================================
+
+	describe( 'calculateBounds - branch coverage', () => {
+		it( 'should return null for null layer', () => {
+			expect( controller.calculateBounds( null ) ).toBeNull();
+		} );
+
+		it( 'should return null for layer without type', () => {
+			expect( controller.calculateBounds( { x: 10 } ) ).toBeNull();
+		} );
+
+		it( 'should calculate ellipse bounds with only radius', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'ellipse', x: 50, y: 50, radius: 30
+			} );
+			expect( bounds ).toEqual( { x: 20, y: 20, width: 60, height: 60 } );
+		} );
+
+		it( 'should calculate ellipse bounds with radiusX and radiusY', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'ellipse', x: 100, y: 100, radiusX: 40, radiusY: 20
+			} );
+			expect( bounds ).toEqual( { x: 60, y: 80, width: 80, height: 40 } );
+		} );
+
+		it( 'should return null for path with empty points array', () => {
+			expect( controller.calculateBounds( { type: 'path', points: [] } ) ).toBeNull();
+		} );
+
+		it( 'should calculate path bounds from points', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'path',
+				points: [
+					{ x: 10, y: 20 },
+					{ x: 50, y: 80 },
+					{ x: 30, y: 40 }
+				]
+			} );
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 40, height: 60 } );
+		} );
+
+		it( 'should calculate marker bounds with default size', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'marker', x: 50, y: 50
+			} );
+			// Default size is 24, halfSize = 12
+			expect( bounds ).toEqual( { x: 38, y: 38, width: 24, height: 24 } );
+		} );
+
+		it( 'should calculate marker bounds with custom size', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'marker', x: 50, y: 50, size: 40
+			} );
+			expect( bounds ).toEqual( { x: 30, y: 30, width: 40, height: 40 } );
+		} );
+
+		it( 'should calculate dimension bounds with extensionLength', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'dimension', x1: 10, y1: 20, x2: 100, y2: 20, extensionLength: 30
+			} );
+			// padding = 30 + 10 = 40
+			expect( bounds.x ).toBe( 10 - 40 );
+			expect( bounds.y ).toBe( 20 - 40 );
+			expect( bounds.width ).toBe( 90 + 80 );
+			expect( bounds.height ).toBe( 0 + 80 );
+		} );
+
+		it( 'should calculate dimension bounds with default extensionLength', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 50
+			} );
+			// padding = 10 + 10 = 20
+			expect( bounds.x ).toBe( -20 );
+			expect( bounds.y ).toBe( -20 );
+		} );
+
+		it( 'should calculate angleDimension bounds', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'angleDimension',
+				cx: 100, cy: 100,
+				ax: 50, ay: 200,
+				bx: 150, by: 50,
+				arcRadius: 40
+			} );
+			// padding = 40 + 20 = 60
+			expect( bounds.x ).toBe( 50 - 60 ); // min(100,50,150) - 60
+			expect( bounds.y ).toBe( 50 - 60 ); // min(100,200,50) - 60
+		} );
+
+		it( 'should calculate text bounds with fontSize', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'text', x: 10, y: 20, fontSize: 24
+			} );
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 24 } );
+		} );
+
+		it( 'should calculate polygon bounds from outerRadius', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'polygon', x: 50, y: 50, outerRadius: 30
+			} );
+			expect( bounds ).toEqual( { x: 20, y: 20, width: 60, height: 60 } );
+		} );
+
+		it( 'should calculate star bounds from radius fallback', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'star', x: 50, y: 50, radius: 25
+			} );
+			expect( bounds ).toEqual( { x: 25, y: 25, width: 50, height: 50 } );
+		} );
+
+		it( 'should return null for unknown type', () => {
+			expect( controller.calculateBounds( { type: 'unknown' } ) ).toBeNull();
+		} );
+
+		it( 'should handle textbox type', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'textbox', x: 10, y: 20, width: 200, height: 100
+			} );
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 200, height: 100 } );
+		} );
+
+		it( 'should handle image type', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'image', x: 0, y: 0, width: 300, height: 200
+			} );
+			expect( bounds ).toEqual( { x: 0, y: 0, width: 300, height: 200 } );
+		} );
+
+		it( 'should handle arrow type', () => {
+			const bounds = controller.calculateBounds( {
+				type: 'arrow', x1: 10, y1: 20, x2: 50, y2: 80
+			} );
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 40, height: 60 } );
+		} );
+	} );
+
+	describe( 'getVisualBounds - shadow branch coverage', () => {
+		it( 'should detect boolean shadow (true)', () => {
+			mockCanvasManager.getLayerBounds = jest.fn().mockReturnValue( {
+				x: 10, y: 10, width: 100, height: 100
+			} );
+			const bounds = controller.getVisualBounds( {
+				type: 'rectangle', x: 10, y: 10, width: 100, height: 100,
+				shadow: true
+			} );
+			// Shadow should expand bounds
+			expect( bounds.width ).toBeGreaterThan( 100 );
+			expect( bounds.height ).toBeGreaterThan( 100 );
+		} );
+
+		it( 'should detect object shadow with enabled property', () => {
+			mockCanvasManager.getLayerBounds = jest.fn().mockReturnValue( {
+				x: 10, y: 10, width: 100, height: 100
+			} );
+			const bounds = controller.getVisualBounds( {
+				type: 'rectangle', x: 10, y: 10, width: 100, height: 100,
+				shadow: { enabled: true, blur: 10 }
+			} );
+			expect( bounds.width ).toBeGreaterThan( 100 );
+		} );
+
+		it( 'should handle zero shadow offset values', () => {
+			mockCanvasManager.getLayerBounds = jest.fn().mockReturnValue( {
+				x: 10, y: 10, width: 100, height: 100
+			} );
+			const bounds = controller.getVisualBounds( {
+				type: 'rectangle', x: 10, y: 10, width: 100, height: 100,
+				shadow: true,
+				shadowBlur: 5,
+				shadowOffsetX: 0,
+				shadowOffsetY: 0
+			} );
+			// With zero offsets, expansion should be symmetric
+			expect( bounds.expandLeft ).toBe( bounds.expandRight );
+			expect( bounds.expandTop ).toBe( bounds.expandBottom );
+		} );
+
+		it( 'should include shadow spread in expansion', () => {
+			mockCanvasManager.getLayerBounds = jest.fn().mockReturnValue( {
+				x: 10, y: 10, width: 100, height: 100
+			} );
+			const boundsNoSpread = controller.getVisualBounds( {
+				type: 'rectangle', x: 10, y: 10, width: 100, height: 100,
+				shadow: true, shadowBlur: 5, shadowOffsetX: 0, shadowOffsetY: 0
+			} );
+			const boundsWithSpread = controller.getVisualBounds( {
+				type: 'rectangle', x: 10, y: 10, width: 100, height: 100,
+				shadow: true, shadowBlur: 5, shadowOffsetX: 0, shadowOffsetY: 0,
+				shadowSpread: 10
+			} );
+			expect( boundsWithSpread.width ).toBeGreaterThan( boundsNoSpread.width );
+		} );
+
+		it( 'should handle stroke expansion', () => {
+			mockCanvasManager.getLayerBounds = jest.fn().mockReturnValue( {
+				x: 10, y: 10, width: 100, height: 100
+			} );
+			const bounds = controller.getVisualBounds( {
+				type: 'rectangle', x: 10, y: 10, width: 100, height: 100,
+				strokeWidth: 10, stroke: '#000000'
+			} );
+			// Stroke of 10 → 5px expansion each side
+			expect( bounds.expandLeft ).toBe( 5 );
+			expect( bounds.expandRight ).toBe( 5 );
+		} );
+
+		it( 'should not expand for transparent stroke', () => {
+			mockCanvasManager.getLayerBounds = jest.fn().mockReturnValue( {
+				x: 10, y: 10, width: 100, height: 100
+			} );
+			const bounds = controller.getVisualBounds( {
+				type: 'rectangle', x: 10, y: 10, width: 100, height: 100,
+				strokeWidth: 10, stroke: 'transparent'
+			} );
+			expect( bounds.expandLeft ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'getLayerBounds - branch coverage', () => {
+		it( 'should use calculateBounds as fallback when manager.getLayerBounds is not available', () => {
+			controller.manager = {};
+			const bounds = controller.getLayerBounds( {
+				type: 'rectangle', x: 10, y: 20, width: 100, height: 50
+			} );
+			expect( bounds ).toEqual( { x: 10, y: 20, width: 100, height: 50 } );
+		} );
+
+		it( 'should return null for null layer', () => {
+			expect( controller.getLayerBounds( null ) ).toBeNull();
+		} );
+	} );
+
+	describe( 'buildSnapPoints - branch coverage', () => {
+		it( 'should handle empty layers array', () => {
+			const snap = controller.buildSnapPoints( [], [] );
+			expect( snap.horizontal ).toEqual( [] );
+			expect( snap.vertical ).toEqual( [] );
+		} );
+
+		it( 'should handle null layers', () => {
+			const snap = controller.buildSnapPoints( null, [] );
+			expect( snap.horizontal ).toEqual( [] );
+			expect( snap.vertical ).toEqual( [] );
+		} );
+	} );
 } );

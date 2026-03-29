@@ -46,8 +46,8 @@ keys, 42 PHP files.
 v61 audit found **2 MEDIUM + 2 LOW code issues** (P2-188, P2-189,
 P3-190, P3-191) plus **5 documentation drift items** (D-061-01 to
 D-061-05). 14 false positives eliminated during verification. All v60
-code and doc fixes verified intact. Metrics: 11,904 tests (168 suites),
-94.24%/84.17% coverage, 841 i18n keys. P3-147 (accepted), P3-148
+code and doc fixes verified intact. Metrics: 13,880 tests (172 suites),
+95.82%/87.00% coverage, 842 i18n keys. P3-147 (accepted), P3-148
 (deferred) carried forward.
 
 v61 fix pass (March 26): Fixed P2-188, P2-189, P3-190. Reclassified

@@ -2419,4 +2419,505 @@ describe( 'TransformController', () => {
 			expect( controller.isRotating ).toBe( true );
 		} );
 	} );
+
+	// ===== Gap coverage tests =====
+
+	describe( 'isTransforming - additional flags', () => {
+		it( 'should return true when isArrowTipDragging is true', () => {
+			controller.isArrowTipDragging = true;
+			expect( controller.isTransforming() ).toBe( true );
+		} );
+
+		it( 'should return false when all flags are false', () => {
+			controller.isResizing = false;
+			controller.isRotating = false;
+			controller.isDragging = false;
+			controller.isArrowTipDragging = false;
+			expect( controller.isTransforming() ).toBe( false );
+		} );
+	} );
+
+	describe( 'getState - fields', () => {
+		it( 'should include all transform state fields', () => {
+			controller.isResizing = true;
+			controller.isRotating = false;
+			controller.isDragging = true;
+			controller.isArrowTipDragging = false;
+			controller.resizeHandle = { type: 'se' };
+			controller.showDragPreview = true;
+
+			const state = controller.getState();
+			expect( state.isResizing ).toBe( true );
+			expect( state.isRotating ).toBe( false );
+			expect( state.isDragging ).toBe( true );
+			expect( state.isArrowTipDragging ).toBe( false );
+			expect( state.resizeHandle ).toEqual( { type: 'se' } );
+			expect( state.showDragPreview ).toBe( true );
+		} );
+	} );
+
+	describe( 'startResize - ResizeCalculator null', () => {
+		it( 'should use default cursor when ResizeCalculator is unavailable', () => {
+			const savedRC = global.window.Layers.Canvas.ResizeCalculator;
+			global.window.Layers.Canvas.ResizeCalculator = undefined;
+
+			controller.startResize( { type: 'se' }, { x: 300, y: 250 } );
+			expect( mockCanvas.style.cursor ).toBe( 'default' );
+
+			global.window.Layers.Canvas.ResizeCalculator = savedRC;
+		} );
+	} );
+
+	describe( 'handleResize - null ResizeCalculator', () => {
+		it( 'should not crash when ResizeCalculator returns null updates', () => {
+			controller.startResize( { type: 'se' }, { x: 300, y: 250 } );
+
+			const savedRC = global.window.Layers.Canvas.ResizeCalculator;
+			global.window.Layers.Canvas.ResizeCalculator = undefined;
+
+			// Should not throw - updates will be null
+			expect( () => {
+				controller.handleResize( { x: 350, y: 300 }, {} );
+			} ).not.toThrow();
+
+			global.window.Layers.Canvas.ResizeCalculator = savedRC;
+		} );
+	} );
+
+	describe( 'handleResize - rotation skip for control handle', () => {
+		it( 'should skip rotation delta transform for control handle', () => {
+			const arrowLayer = {
+				id: 'arrow1',
+				type: 'arrow',
+				x1: 50, y1: 50,
+				x2: 200, y2: 200,
+				controlX: 125, controlY: 50,
+				rotation: 45
+			};
+			mockEditor.layers = [ arrowLayer ];
+			mockManager.selectedLayerId = 'arrow1';
+			mockEditor.getLayerById.mockImplementation( ( id ) =>
+				mockEditor.layers.find( ( l ) => l.id === id )
+			);
+
+			controller.startResize( { type: 'control' }, { x: 125, y: 50 } );
+			// Should not throw and should skip the rotation transform
+			expect( () => {
+				controller.handleResize( { x: 150, y: 75 }, {} );
+			} ).not.toThrow();
+		} );
+
+		it( 'should skip rotation delta transform for tailTip handle', () => {
+			const calloutLayer = {
+				id: 'callout1',
+				type: 'callout',
+				x: 100, y: 100,
+				width: 200, height: 100,
+				tailTipX: 50, tailTipY: 250,
+				rotation: 30
+			};
+			mockEditor.layers = [ calloutLayer ];
+			mockManager.selectedLayerId = 'callout1';
+			mockEditor.getLayerById.mockImplementation( ( id ) =>
+				mockEditor.layers.find( ( l ) => l.id === id )
+			);
+
+			controller.startResize( { type: 'tailTip' }, { x: 50, y: 250 } );
+			expect( () => {
+				controller.handleResize( { x: 80, y: 260 }, {} );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'handleResize - star layer special handling', () => {
+		it( 'should update radius, outerRadius, and innerRadius for star layers', () => {
+			const starLayer = {
+				id: 'star1',
+				type: 'star',
+				x: 100, y: 100,
+				radius: 50,
+				outerRadius: 50,
+				innerRadius: 25,
+				rotation: 0
+			};
+			mockEditor.layers = [ starLayer ];
+			mockManager.selectedLayerId = 'star1';
+			mockEditor.getLayerById.mockImplementation( ( id ) =>
+				mockEditor.layers.find( ( l ) => l.id === id )
+			);
+
+			controller.startResize( { type: 'se' }, { x: 150, y: 150 } );
+			controller.handleResize( { x: 180, y: 180 }, {} );
+
+			expect( starLayer.radius ).toBeGreaterThanOrEqual( 5 );
+			expect( starLayer.outerRadius ).toBe( starLayer.radius );
+			expect( starLayer.innerRadius ).toBe( starLayer.radius * 0.5 );
+		} );
+	} );
+
+	describe( 'handleDrag - smart guides branch', () => {
+		it( 'should use smart guides when grid snap is disabled', () => {
+			const mockSmartGuides = {
+				enabled: true,
+				canvasSnapEnabled: false,
+				calculateSnappedPosition: jest.fn( ( _layer, x, y ) => ( { x, y } ) )
+			};
+			mockManager.smartGuidesController = mockSmartGuides;
+			mockManager.snapToGrid = false;
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 120, y: 115 } );
+
+			expect( mockSmartGuides.calculateSnappedPosition ).toHaveBeenCalled();
+		} );
+
+		it( 'should use smart guides when canvasSnapEnabled is true', () => {
+			const mockSmartGuides = {
+				enabled: false,
+				canvasSnapEnabled: true,
+				calculateSnappedPosition: jest.fn( ( _layer, x, y ) => ( { x, y } ) )
+			};
+			mockManager.smartGuidesController = mockSmartGuides;
+			mockManager.snapToGrid = false;
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 120, y: 115 } );
+
+			expect( mockSmartGuides.calculateSnappedPosition ).toHaveBeenCalled();
+		} );
+
+		it( 'should not use smart guides when controller is null', () => {
+			mockManager.smartGuidesController = null;
+			mockManager.snapToGrid = false;
+
+			controller.startDrag( { x: 100, y: 100 } );
+			// Should not throw
+			expect( () => {
+				controller.handleDrag( { x: 120, y: 110 } );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'updateLayerPosition - all layer types', () => {
+		it( 'should update marker x/y but NOT arrowX/arrowY', () => {
+			const markerLayer = {
+				id: 'marker1', type: 'marker',
+				x: 50, y: 50, arrowX: 100, arrowY: 200
+			};
+			const originalState = { x: 50, y: 50, arrowX: 100, arrowY: 200 };
+			controller.updateLayerPosition( markerLayer, originalState, 20, 30 );
+			expect( markerLayer.x ).toBe( 70 );
+			expect( markerLayer.y ).toBe( 80 );
+			expect( markerLayer.arrowX ).toBe( 100 ); // unchanged
+			expect( markerLayer.arrowY ).toBe( 200 ); // unchanged
+		} );
+
+		it( 'should update dimension endpoints and control points', () => {
+			const dimLayer = {
+				id: 'dim1', type: 'dimension',
+				x1: 0, y1: 0, x2: 100, y2: 0,
+				controlX: 50, controlY: -20
+			};
+			const originalState = { ...dimLayer };
+			controller.updateLayerPosition( dimLayer, originalState, 10, 20 );
+			expect( dimLayer.x1 ).toBe( 10 );
+			expect( dimLayer.y1 ).toBe( 20 );
+			expect( dimLayer.x2 ).toBe( 110 );
+			expect( dimLayer.y2 ).toBe( 20 );
+			expect( dimLayer.controlX ).toBe( 60 );
+			expect( dimLayer.controlY ).toBe( 0 );
+		} );
+
+		it( 'should update angleDimension cx/cy/ax/ay/bx/by', () => {
+			const adLayer = {
+				id: 'ad1', type: 'angleDimension',
+				cx: 50, cy: 50, ax: 100, ay: 50, bx: 50, by: 0
+			};
+			const originalState = { ...adLayer };
+			controller.updateLayerPosition( adLayer, originalState, 15, -10 );
+			expect( adLayer.cx ).toBe( 65 );
+			expect( adLayer.cy ).toBe( 40 );
+			expect( adLayer.ax ).toBe( 115 );
+			expect( adLayer.ay ).toBe( 40 );
+			expect( adLayer.bx ).toBe( 65 );
+			expect( adLayer.by ).toBe( -10 );
+		} );
+
+		it( 'should update path points', () => {
+			const pathLayer = {
+				id: 'path1', type: 'path',
+				points: [ { x: 0, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 0 } ]
+			};
+			const originalState = {
+				points: [ { x: 0, y: 0 }, { x: 50, y: 50 }, { x: 100, y: 0 } ]
+			};
+			controller.updateLayerPosition( pathLayer, originalState, 10, -5 );
+			expect( pathLayer.points ).toEqual( [
+				{ x: 10, y: -5 }, { x: 60, y: 45 }, { x: 110, y: -5 }
+			] );
+		} );
+
+		it( 'should not update path without points', () => {
+			const pathLayer = { id: 'path2', type: 'path' };
+			const originalState = {};
+			controller.updateLayerPosition( pathLayer, originalState, 10, 10 );
+			expect( pathLayer.points ).toBeUndefined();
+		} );
+	} );
+
+	describe( 'emitTransforming - error handling', () => {
+		it( 'should handle dispatchEvent error with layersErrorHandler', () => {
+			const handleError = jest.fn();
+			window.layersErrorHandler = { handleError };
+
+			const originalDispatch = HTMLElement.prototype.dispatchEvent;
+			HTMLElement.prototype.dispatchEvent = () => { throw new Error( 'dispatch fail' ); };
+
+			controller.emitTransforming( {
+				id: 'l1', type: 'rectangle', x: 0, y: 0, width: 10, height: 10
+			} );
+
+			expect( handleError ).toHaveBeenCalledWith(
+				expect.any( Error ),
+				'TransformController.emitTransformEvent',
+				'canvas'
+			);
+
+			HTMLElement.prototype.dispatchEvent = originalDispatch;
+			delete window.layersErrorHandler;
+		} );
+
+		it( 'should not throw when dispatchEvent fails and no error handler', () => {
+			delete window.layersErrorHandler;
+
+			const originalDispatch = HTMLElement.prototype.dispatchEvent;
+			HTMLElement.prototype.dispatchEvent = () => { throw new Error( 'dispatch fail' ); };
+
+			expect( () => {
+				controller.emitTransforming( {
+					id: 'l1', type: 'rectangle', x: 0, y: 0, width: 10, height: 10
+				} );
+			} ).not.toThrow();
+
+			HTMLElement.prototype.dispatchEvent = originalDispatch;
+		} );
+
+		it( 'should return early when layer is null', () => {
+			expect( () => controller.emitTransforming( null ) ).not.toThrow();
+		} );
+
+		it( 'should skip src and path in lightweight copy', () => {
+			let emitted = null;
+			const originalDispatch = mockEditor.container.dispatchEvent;
+			mockEditor.container.dispatchEvent = ( evt ) => {
+				emitted = evt.detail;
+			};
+
+			controller.emitTransforming( {
+				id: 'l1', type: 'image',
+				x: 0, y: 0, width: 100, height: 50,
+				src: 'data:image/png;base64,xxxxxxxxxx',
+				path: 'M0 0 L100 100'
+			} );
+
+			expect( emitted.layer ).toBeDefined();
+			expect( emitted.layer.src ).toBeUndefined();
+			expect( emitted.layer.path ).toBeUndefined();
+			expect( emitted.layer.x ).toBe( 0 );
+			expect( emitted.layer.width ).toBe( 100 );
+
+			mockEditor.container.dispatchEvent = originalDispatch;
+		} );
+
+		it( 'should shallow-clone arrays in emitTransforming', () => {
+			let emitted = null;
+			const originalDispatch = mockEditor.container.dispatchEvent;
+			mockEditor.container.dispatchEvent = ( evt ) => {
+				emitted = evt.detail;
+			};
+
+			const origPoints = [ { x: 0, y: 0 }, { x: 50, y: 50 } ];
+			controller.emitTransforming( {
+				id: 'l1', type: 'path',
+				points: origPoints
+			} );
+
+			expect( emitted.layer.points ).toEqual( origPoints );
+			expect( emitted.layer.points ).not.toBe( origPoints ); // shallow copy
+
+			mockEditor.container.dispatchEvent = originalDispatch;
+		} );
+	} );
+
+	describe( 'destroy - RAF cleanup', () => {
+		it( 'should cancel all pending RAF IDs', () => {
+			const cancelRAF = jest.fn();
+			window.cancelAnimationFrame = cancelRAF;
+
+			controller._resizeRafId = 1;
+			controller._rotationRafId = 2;
+			controller._dragRafId = 3;
+			controller._arrowTipRafId = 4;
+			controller._angleDimRafId = 5;
+			controller._dimTextRafId = 6;
+
+			controller.destroy();
+
+			expect( cancelRAF ).toHaveBeenCalledWith( 1 );
+			expect( cancelRAF ).toHaveBeenCalledWith( 2 );
+			expect( cancelRAF ).toHaveBeenCalledWith( 3 );
+			expect( cancelRAF ).toHaveBeenCalledWith( 4 );
+			expect( cancelRAF ).toHaveBeenCalledWith( 5 );
+			expect( cancelRAF ).toHaveBeenCalledWith( 6 );
+		} );
+
+		it( 'should not call cancelAnimationFrame when RAF IDs are null', () => {
+			const cancelRAF = jest.fn();
+			window.cancelAnimationFrame = cancelRAF;
+
+			controller._resizeRafId = null;
+			controller._rotationRafId = null;
+			controller._dragRafId = null;
+			controller._arrowTipRafId = null;
+			controller._angleDimRafId = null;
+			controller._dimTextRafId = null;
+
+			controller.destroy();
+
+			expect( cancelRAF ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should clear all transform state', () => {
+			controller.isResizing = true;
+			controller.isRotating = true;
+			controller.isDragging = true;
+			controller.isArrowTipDragging = true;
+			controller.resizeHandle = { type: 'se' };
+			controller.dragStartPoint = { x: 0, y: 0 };
+			controller.originalLayerState = {};
+			controller.originalMultiLayerStates = {};
+			controller.showDragPreview = true;
+
+			controller.destroy();
+
+			expect( controller.isResizing ).toBe( false );
+			expect( controller.isRotating ).toBe( false );
+			expect( controller.isDragging ).toBe( false );
+			expect( controller.isArrowTipDragging ).toBe( false );
+			expect( controller.resizeHandle ).toBeNull();
+			expect( controller.dragStartPoint ).toBeNull();
+			expect( controller.originalLayerState ).toBeNull();
+			expect( controller.originalMultiLayerStates ).toBeNull();
+			expect( controller.showDragPreview ).toBe( false );
+			expect( controller.manager ).toBeNull();
+		} );
+	} );
+
+	describe( 'handleDrag - ref point for geometric layer types', () => {
+		it( 'should compute ref point for arrow type (min of x1,x2)', () => {
+			const arrowLayer = {
+				id: 'arrow2', type: 'arrow',
+				x1: 200, y1: 100, x2: 50, y2: 300
+			};
+			mockEditor.layers = [ arrowLayer ];
+			mockManager.selectedLayerId = 'arrow2';
+			mockEditor.getLayerById.mockImplementation( ( id ) =>
+				mockEditor.layers.find( ( l ) => l.id === id )
+			);
+
+			mockManager.snapToGrid = true;
+			mockManager.gridSize = 10;
+			mockManager.snapPointToGrid = jest.fn( ( pt ) => ( {
+				x: Math.round( pt.x / 10 ) * 10,
+				y: Math.round( pt.y / 10 ) * 10
+			} ) );
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 113, y: 107 } );
+
+			// Should have used snapPointToGrid with ref point from min(x1,x2), min(y1,y2)
+			expect( mockManager.snapPointToGrid ).toHaveBeenCalled();
+		} );
+
+		it( 'should compute ref point for angleDimension type', () => {
+			const adLayer = {
+				id: 'ad2', type: 'angleDimension',
+				cx: 100, cy: 100, ax: 200, ay: 100, bx: 100, by: 50
+			};
+			mockEditor.layers = [ adLayer ];
+			mockManager.selectedLayerId = 'ad2';
+			mockEditor.getLayerById.mockImplementation( ( id ) =>
+				mockEditor.layers.find( ( l ) => l.id === id )
+			);
+
+			mockManager.snapToGrid = true;
+			mockManager.gridSize = 10;
+			mockManager.snapPointToGrid = jest.fn( ( pt ) => ( {
+				x: Math.round( pt.x / 10 ) * 10,
+				y: Math.round( pt.y / 10 ) * 10
+			} ) );
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 115, y: 108 } );
+
+			expect( mockManager.snapPointToGrid ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'handleResize - image/customShape shift inversion', () => {
+		it( 'should invert shift behavior for image layers', () => {
+			const imgLayer = {
+				id: 'img1', type: 'image',
+				x: 0, y: 0, width: 200, height: 100, rotation: 0
+			};
+			mockEditor.layers = [ imgLayer ];
+			mockManager.selectedLayerId = 'img1';
+			mockEditor.getLayerById.mockImplementation( ( id ) =>
+				mockEditor.layers.find( ( l ) => l.id === id )
+			);
+
+			controller.startResize( { type: 'se' }, { x: 200, y: 100 } );
+			// Without shift → proportional for images (inverted)
+			controller.handleResize( { x: 250, y: 150 }, { shiftKey: false } );
+			// Should apply proportional resize
+			expect( mockManager.renderLayers ).toHaveBeenCalled();
+		} );
+
+		it( 'should invert shift behavior for customShape layers', () => {
+			const csLayer = {
+				id: 'cs1', type: 'customShape',
+				x: 0, y: 0, width: 200, height: 100, rotation: 0
+			};
+			mockEditor.layers = [ csLayer ];
+			mockManager.selectedLayerId = 'cs1';
+			mockEditor.getLayerById.mockImplementation( ( id ) =>
+				mockEditor.layers.find( ( l ) => l.id === id )
+			);
+
+			controller.startResize( { type: 'se' }, { x: 200, y: 100 } );
+			// With shift → free resize for images/customShape (inverted)
+			controller.handleResize( { x: 250, y: 150 }, { shiftKey: true } );
+			expect( mockManager.renderLayers ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'finishDrag - smart guides cleanup', () => {
+		it( 'should clear smart guides on finish', () => {
+			const clearGuides = jest.fn();
+			mockManager.smartGuidesController = { clearGuides };
+
+			controller.startDrag( { x: 100, y: 100 } );
+			controller.handleDrag( { x: 120, y: 110 } );
+			controller.finishDrag();
+
+			expect( clearGuides ).toHaveBeenCalled();
+		} );
+
+		it( 'should not throw if smart guides controller is null', () => {
+			mockManager.smartGuidesController = null;
+
+			controller.startDrag( { x: 100, y: 100 } );
+			expect( () => controller.finishDrag() ).not.toThrow();
+		} );
+	} );
 } );

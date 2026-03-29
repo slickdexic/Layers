@@ -2264,3 +2264,739 @@ describe('LayersEditor slide mode configuration', () => {
         expect(mockSetBackgroundColor).toHaveBeenCalledWith('transparent'); // default
     });
 });
+
+describe( 'LayersEditor - branch coverage gaps', () => {
+	let LayersEditor;
+
+	beforeEach( () => {
+		jest.resetModules();
+		window.StateManager = StateManager;
+		window.HistoryManager = HistoryManager;
+		global.mw = {
+			config: { get: jest.fn( () => null ) },
+			log: Object.assign( jest.fn(), { warn: jest.fn(), error: jest.fn() } ),
+			notify: jest.fn(),
+			message: jest.fn( () => ( { text: () => 'mock message', parse: () => 'mock' } ) ),
+			util: { getUrl: jest.fn( () => '/wiki/File:Test.png' ) }
+		};
+		require( '../../resources/ext.layers.editor/LayersEditor.js' );
+		LayersEditor = window.Layers.Core.Editor;
+	} );
+
+	afterEach( () => {
+		delete global.mw;
+		jest.clearAllMocks();
+	} );
+
+	function createEditorInstance( overrides ) {
+		const inst = Object.create( LayersEditor.prototype );
+		inst.debug = false;
+		inst.isDestroyed = false;
+		inst.debugLog = jest.fn();
+		inst.errorLog = jest.fn();
+		inst.config = {};
+		inst.layers = [];
+		inst.stateManager = {
+			get: jest.fn( ( key ) => {
+				if ( key === 'layers' ) return inst.layers;
+				if ( key === 'isDirty' ) return false;
+				if ( key === 'selectedLayerIds' ) return [];
+				return null;
+			} ),
+			set: jest.fn(),
+			getLayers: jest.fn( () => inst.layers ),
+			isDirty: jest.fn( () => false ),
+			setDirty: jest.fn()
+		};
+		inst.validationManager = {
+			sanitizeLayerData: jest.fn( d => d ),
+			checkBrowserCompatibility: jest.fn( () => true ),
+			validateLayers: jest.fn( () => true )
+		};
+		inst.apiManager = {
+			generateLayerId: jest.fn( () => 'layer-' + Date.now() ),
+			saveLayers: jest.fn( () => Promise.resolve( {} ) )
+		};
+		inst.historyManager = {
+			saveState: jest.fn(),
+			canUndo: jest.fn( () => false ),
+			canRedo: jest.fn( () => false ),
+			undo: jest.fn( () => true ),
+			redo: jest.fn( () => true )
+		};
+		inst.canvasManager = null;
+		inst.layerPanel = null;
+		inst.toolbar = null;
+		inst.uiManager = { destroy: jest.fn() };
+		inst.eventManager = { destroy: jest.fn() };
+		inst.draftManager = null;
+		inst.dialogManager = null;
+		inst.revisionManager = null;
+		inst.updateUIState = jest.fn();
+		inst.markDirty = jest.fn();
+		inst.markClean = jest.fn();
+		inst.selectLayer = jest.fn();
+		inst.saveState = jest.fn();
+		Object.assign( inst, overrides || {} );
+		return inst;
+	}
+
+	describe( 'getMessage', () => {
+		test( 'should return message from layersMessages when available', () => {
+			window.layersMessages = { get: jest.fn( () => 'Translated' ) };
+			const inst = createEditorInstance();
+			expect( inst.getMessage( 'layers-test', 'fallback' ) ).toBe( 'Translated' );
+			delete window.layersMessages;
+		} );
+
+		test( 'should return fallback when layersMessages unavailable', () => {
+			delete window.layersMessages;
+			const inst = createEditorInstance();
+			expect( inst.getMessage( 'layers-test', 'fallback' ) ).toBe( 'fallback' );
+		} );
+
+		test( 'should return empty string default fallback', () => {
+			delete window.layersMessages;
+			const inst = createEditorInstance();
+			expect( inst.getMessage( 'layers-test' ) ).toBe( '' );
+		} );
+	} );
+
+	describe( 'normalizeLayers', () => {
+		test( 'should return null for null input', () => {
+			const inst = createEditorInstance();
+			expect( inst.normalizeLayers( null ) ).toBeNull();
+		} );
+
+		test( 'should return non-array input as-is', () => {
+			const inst = createEditorInstance();
+			expect( inst.normalizeLayers( 'not-array' ) ).toBe( 'not-array' );
+		} );
+
+		test( 'should add visible:true when layer has undefined visible', () => {
+			const inst = createEditorInstance();
+			const result = inst.normalizeLayers( [ { id: '1', type: 'text' } ] );
+			expect( result[ 0 ].visible ).toBe( true );
+		} );
+
+		test( 'should preserve existing visible value', () => {
+			const inst = createEditorInstance();
+			const result = inst.normalizeLayers( [ { id: '1', visible: false } ] );
+			expect( result[ 0 ].visible ).toBe( false );
+		} );
+	} );
+
+	describe( 'isLayerEffectivelyLocked', () => {
+		test( 'should return false for null layer', () => {
+			const inst = createEditorInstance();
+			expect( inst.isLayerEffectivelyLocked( null ) ).toBe( false );
+		} );
+
+		test( 'should return true for directly locked layer', () => {
+			const inst = createEditorInstance();
+			expect( inst.isLayerEffectivelyLocked( { id: '1', locked: true } ) ).toBe( true );
+		} );
+
+		test( 'should return false for unlocked layer without parent', () => {
+			const inst = createEditorInstance();
+			expect( inst.isLayerEffectivelyLocked( { id: '1', locked: false } ) ).toBe( false );
+		} );
+
+		test( 'should return true when parent folder is locked', () => {
+			const inst = createEditorInstance();
+			inst.layers = [
+				{ id: 'folder1', type: 'group', locked: true },
+				{ id: 'child1', type: 'text', parentGroup: 'folder1' }
+			];
+			expect( inst.isLayerEffectivelyLocked( inst.layers[ 1 ] ) ).toBe( true );
+		} );
+
+		test( 'should handle missing parent gracefully', () => {
+			const inst = createEditorInstance();
+			inst.layers = [
+				{ id: 'child1', type: 'text', parentGroup: 'nonexistent' }
+			];
+			expect( inst.isLayerEffectivelyLocked( inst.layers[ 0 ] ) ).toBe( false );
+		} );
+
+		test( 'should prevent infinite loop with circular parent references', () => {
+			const inst = createEditorInstance();
+			inst.layers = [
+				{ id: 'a', type: 'group', parentGroup: 'b' },
+				{ id: 'b', type: 'group', parentGroup: 'a' }
+			];
+			// Should not infinite loop - visited Set prevents it
+			expect( inst.isLayerEffectivelyLocked( inst.layers[ 0 ] ) ).toBe( false );
+		} );
+
+		test( 'should check deeply nested folder chain', () => {
+			const inst = createEditorInstance();
+			inst.layers = [
+				{ id: 'root', type: 'group', locked: true },
+				{ id: 'mid', type: 'group', parentGroup: 'root' },
+				{ id: 'child', type: 'text', parentGroup: 'mid' }
+			];
+			expect( inst.isLayerEffectivelyLocked( inst.layers[ 2 ] ) ).toBe( true );
+		} );
+	} );
+
+	describe( 'undo/redo', () => {
+		test( 'undo should return false when historyManager is null', () => {
+			const inst = createEditorInstance( { historyManager: null } );
+			expect( inst.undo() ).toBe( false );
+		} );
+
+		test( 'undo should delegate to historyManager', () => {
+			const inst = createEditorInstance();
+			expect( inst.undo() ).toBe( true );
+			expect( inst.historyManager.undo ).toHaveBeenCalled();
+		} );
+
+		test( 'redo should return false when historyManager is null', () => {
+			const inst = createEditorInstance( { historyManager: null } );
+			expect( inst.redo() ).toBe( false );
+		} );
+
+		test( 'redo should delegate to historyManager', () => {
+			const inst = createEditorInstance();
+			expect( inst.redo() ).toBe( true );
+			expect( inst.historyManager.redo ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'renderLayers', () => {
+		test( 'should skip when canvasManager is null', () => {
+			const inst = createEditorInstance();
+			expect( () => inst.renderLayers( [] ) ).not.toThrow();
+		} );
+
+		test( 'should skip when canvasManager.renderLayers is not a function', () => {
+			const inst = createEditorInstance( { canvasManager: { renderLayers: 'not-fn' } } );
+			expect( () => inst.renderLayers( [] ) ).not.toThrow();
+		} );
+
+		test( 'should call canvasManager.renderLayers with provided layers', () => {
+			const mockRender = jest.fn();
+			const inst = createEditorInstance( { canvasManager: { renderLayers: mockRender } } );
+			const layers = [ { id: '1' } ];
+			inst.renderLayers( layers );
+			expect( mockRender ).toHaveBeenCalledWith( layers );
+		} );
+
+		test( 'should use stateManager getLayers when no layers provided', () => {
+			const mockRender = jest.fn();
+			const mockGetLayers = jest.fn( () => [ { id: '2' } ] );
+			const inst = createEditorInstance( { canvasManager: { renderLayers: mockRender } } );
+			inst.stateManager.getLayers = mockGetLayers;
+			inst.renderLayers( null );
+			expect( mockRender ).toHaveBeenCalledWith( [ { id: '2' } ] );
+		} );
+	} );
+
+	describe( 'selectLayer', () => {
+		test( 'should delegate to canvasManager when available', () => {
+			const mockSelect = jest.fn();
+			const inst = createEditorInstance( { canvasManager: { selectLayer: mockSelect } } );
+			inst.selectLayer = LayersEditor.prototype.selectLayer;
+			inst.selectLayer( 'layer1' );
+			expect( mockSelect ).toHaveBeenCalledWith( 'layer1' );
+		} );
+
+		test( 'should fallback to stateManager when canvasManager is null', () => {
+			const inst = createEditorInstance();
+			inst.selectLayer = LayersEditor.prototype.selectLayer;
+			inst.selectLayer( 'layer1' );
+			expect( inst.stateManager.set ).toHaveBeenCalledWith( 'selectedLayerIds', [ 'layer1' ] );
+		} );
+
+		test( 'should set empty array when layerId is null', () => {
+			const inst = createEditorInstance();
+			inst.selectLayer = LayersEditor.prototype.selectLayer;
+			inst.selectLayer( null );
+			expect( inst.stateManager.set ).toHaveBeenCalledWith( 'selectedLayerIds', [] );
+		} );
+
+		test( 'should also update layerPanel when available', () => {
+			const mockPanelSelect = jest.fn();
+			const inst = createEditorInstance( { layerPanel: { selectLayer: mockPanelSelect } } );
+			inst.selectLayer = LayersEditor.prototype.selectLayer;
+			inst.selectLayer( 'layer1' );
+			expect( mockPanelSelect ).toHaveBeenCalledWith( 'layer1' );
+		} );
+
+		test( 'should handle error in debug mode', () => {
+			const inst = createEditorInstance( { debug: true } );
+			inst.selectLayer = LayersEditor.prototype.selectLayer;
+			inst.stateManager.set = jest.fn( () => { throw new Error( 'test' ); } );
+			// Should not throw, error is caught
+			expect( () => inst.selectLayer( 'layer1' ) ).not.toThrow();
+			expect( inst.errorLog ).toHaveBeenCalled();
+		} );
+
+		test( 'should silently catch error when not in debug mode', () => {
+			const inst = createEditorInstance();
+			inst.selectLayer = LayersEditor.prototype.selectLayer;
+			inst.stateManager.set = jest.fn( () => { throw new Error( 'test' ); } );
+			expect( () => inst.selectLayer( 'layer1' ) ).not.toThrow();
+			expect( inst.errorLog ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'deleteSelected', () => {
+		test( 'should do nothing when no layers selected', () => {
+			const inst = createEditorInstance();
+			inst.getSelectedLayerIds = jest.fn( () => [] );
+			inst.deleteSelected = LayersEditor.prototype.deleteSelected.bind( inst );
+			inst.deleteSelected();
+			// No error, no state changes
+		} );
+
+		test( 'should warn when all selected layers are locked', () => {
+			const inst = createEditorInstance();
+			inst.layers = [ { id: '1', locked: true } ];
+			inst.getSelectedLayerIds = jest.fn( () => [ '1' ] );
+			inst.getLayerById = jest.fn( () => ( { id: '1', locked: true } ) );
+			inst.deleteSelected = LayersEditor.prototype.deleteSelected.bind( inst );
+			inst.deleteSelected();
+			expect( global.mw.notify ).toHaveBeenCalled();
+		} );
+
+		test( 'should delete only unlocked layers from selection', () => {
+			const removedIds = [];
+			const inst = createEditorInstance();
+			inst.layers = [
+				{ id: '1', locked: true },
+				{ id: '2', locked: false }
+			];
+			inst.getSelectedLayerIds = jest.fn( () => [ '1', '2' ] );
+			inst.getLayerById = jest.fn( ( id ) => inst.layers.find( l => l.id === id ) );
+			inst.removeLayer = jest.fn( ( id ) => removedIds.push( id ) );
+			inst.canvasManager = { deselectAll: jest.fn() };
+			inst.deleteSelected = LayersEditor.prototype.deleteSelected.bind( inst );
+			inst.deleteSelected();
+			expect( removedIds ).toEqual( [ '2' ] );
+			expect( inst.canvasManager.deselectAll ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'updateLayer', () => {
+		test( 'should map outerRadius to radius when radius not present', () => {
+			const inst = createEditorInstance();
+			inst.updateLayer = LayersEditor.prototype.updateLayer.bind( inst );
+			inst.layers = [ { id: '1', type: 'star', radius: 50 } ];
+			inst.stateManager.get = jest.fn( () => inst.layers );
+			inst.updateLayer( '1', { outerRadius: 75 } );
+			expect( inst.validationManager.sanitizeLayerData ).toHaveBeenCalledWith(
+				expect.objectContaining( { outerRadius: 75, radius: 75 } )
+			);
+		} );
+
+		test( 'should not overwrite radius when both provided', () => {
+			const inst = createEditorInstance();
+			inst.updateLayer = LayersEditor.prototype.updateLayer.bind( inst );
+			inst.layers = [ { id: '1', type: 'star', radius: 50 } ];
+			inst.stateManager.get = jest.fn( () => inst.layers );
+			inst.updateLayer( '1', { outerRadius: 75, radius: 100 } );
+			expect( inst.validationManager.sanitizeLayerData ).toHaveBeenCalledWith(
+				expect.objectContaining( { radius: 100 } )
+			);
+		} );
+
+		test( 'should handle layer not found gracefully', () => {
+			const inst = createEditorInstance();
+			inst.updateLayer = LayersEditor.prototype.updateLayer.bind( inst );
+			inst.stateManager.get = jest.fn( () => [] );
+			inst.updateLayer( 'nonexistent', { x: 10 } );
+			// Should not crash, just skip
+			expect( inst.markDirty ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should catch error and notify in debug mode', () => {
+			const inst = createEditorInstance( { debug: true } );
+			inst.updateLayer = LayersEditor.prototype.updateLayer.bind( inst );
+			inst.validationManager.sanitizeLayerData = jest.fn( () => { throw new Error( 'sanitize fail' ); } );
+			inst.updateLayer( '1', { x: 10 } );
+			expect( inst.errorLog ).toHaveBeenCalled();
+		} );
+
+		test( 'should notify user on error when mw.notify available', () => {
+			const inst = createEditorInstance();
+			inst.updateLayer = LayersEditor.prototype.updateLayer.bind( inst );
+			inst.validationManager.sanitizeLayerData = jest.fn( () => { throw new Error( 'fail' ); } );
+			inst.updateLayer( '1', { x: 10 } );
+			expect( global.mw.notify ).toHaveBeenCalledWith( 'Error updating layer', { type: 'error' } );
+		} );
+	} );
+
+	describe( 'duplicateSelected', () => {
+		test( 'should delegate to selectionManager when available', () => {
+			const mockDup = jest.fn();
+			const inst = createEditorInstance( {
+				canvasManager: { selectionManager: { duplicateSelected: mockDup } }
+			} );
+			inst.duplicateSelected = LayersEditor.prototype.duplicateSelected.bind( inst );
+			inst.duplicateSelected();
+			expect( mockDup ).toHaveBeenCalled();
+		} );
+
+		test( 'should use fallback when no selectionManager', () => {
+			const inst = createEditorInstance();
+			inst.duplicateSelected = LayersEditor.prototype.duplicateSelected.bind( inst );
+			inst.getSelectedLayerIds = jest.fn( () => [ '1' ] );
+			inst.getLayerById = jest.fn( () => ( { id: '1', type: 'rect', x: 10, y: 20 } ) );
+			inst.addLayer = jest.fn();
+			inst.duplicateSelected();
+			expect( inst.addLayer ).toHaveBeenCalledWith(
+				expect.objectContaining( { x: 30, y: 40 } )
+			);
+		} );
+
+		test( 'should skip null layers in fallback', () => {
+			const inst = createEditorInstance();
+			inst.duplicateSelected = LayersEditor.prototype.duplicateSelected.bind( inst );
+			inst.getSelectedLayerIds = jest.fn( () => [ 'nonexistent' ] );
+			inst.getLayerById = jest.fn( () => undefined );
+			inst.addLayer = jest.fn();
+			inst.duplicateSelected();
+			expect( inst.addLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should offset line/arrow endpoints in fallback', () => {
+			const inst = createEditorInstance();
+			inst.duplicateSelected = LayersEditor.prototype.duplicateSelected.bind( inst );
+			inst.getSelectedLayerIds = jest.fn( () => [ '1' ] );
+			inst.getLayerById = jest.fn( () => ( {
+				id: '1', type: 'arrow', x: 0, y: 0,
+				x1: 10, y1: 20, x2: 100, y2: 200,
+				controlX: 50, controlY: 100
+			} ) );
+			inst.addLayer = jest.fn();
+			inst.duplicateSelected();
+			expect( inst.addLayer ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					x1: 30, y1: 40, x2: 120, y2: 220,
+					controlX: 70, controlY: 120
+				} )
+			);
+		} );
+	} );
+
+	describe( 'setCurrentTool', () => {
+		test( 'should set tool in stateManager', () => {
+			const inst = createEditorInstance();
+			inst.setCurrentTool = LayersEditor.prototype.setCurrentTool.bind( inst );
+			inst.setCurrentTool( 'rectangle' );
+			expect( inst.stateManager.set ).toHaveBeenCalledWith( 'currentTool', 'rectangle' );
+		} );
+
+		test( 'should delegate to canvasManager when available', () => {
+			const mockSetTool = jest.fn();
+			const inst = createEditorInstance( { canvasManager: { setTool: mockSetTool } } );
+			inst.setCurrentTool = LayersEditor.prototype.setCurrentTool.bind( inst );
+			inst.setCurrentTool( 'text' );
+			expect( mockSetTool ).toHaveBeenCalledWith( 'text' );
+		} );
+
+		test( 'should update toolbar when not skipped', () => {
+			const mockSetActive = jest.fn();
+			const inst = createEditorInstance( { toolbar: { setActiveTool: mockSetActive } } );
+			inst.setCurrentTool = LayersEditor.prototype.setCurrentTool.bind( inst );
+			inst.setCurrentTool( 'circle' );
+			expect( mockSetActive ).toHaveBeenCalledWith( 'circle' );
+		} );
+
+		test( 'should skip toolbar sync when option set', () => {
+			const mockSetActive = jest.fn();
+			const inst = createEditorInstance( { toolbar: { setActiveTool: mockSetActive } } );
+			inst.setCurrentTool = LayersEditor.prototype.setCurrentTool.bind( inst );
+			inst.setCurrentTool( 'circle', { skipToolbarSync: true } );
+			expect( mockSetActive ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should handle null toolbar gracefully', () => {
+			const inst = createEditorInstance();
+			inst.setCurrentTool = LayersEditor.prototype.setCurrentTool.bind( inst );
+			expect( () => inst.setCurrentTool( 'pointer' ) ).not.toThrow();
+		} );
+
+		test( 'should handle null canvasManager gracefully', () => {
+			const inst = createEditorInstance();
+			inst.setCurrentTool = LayersEditor.prototype.setCurrentTool.bind( inst );
+			expect( () => inst.setCurrentTool( 'pointer' ) ).not.toThrow();
+		} );
+	} );
+
+	describe( 'revision delegation', () => {
+		test( 'parseMWTimestamp should delegate to revisionManager', () => {
+			const mockParse = jest.fn( () => new Date( 2025, 0, 1 ) );
+			const inst = createEditorInstance( { revisionManager: { parseMWTimestamp: mockParse } } );
+			const result = inst.parseMWTimestamp( '20250101120000' );
+			expect( mockParse ).toHaveBeenCalledWith( '20250101120000' );
+			expect( result.getFullYear() ).toBe( 2025 );
+		} );
+
+		test( 'buildRevisionSelector should delegate when revisionManager available', () => {
+			const mockBuild = jest.fn();
+			const inst = createEditorInstance( { revisionManager: { buildRevisionSelector: mockBuild } } );
+			inst.buildRevisionSelector = LayersEditor.prototype.buildRevisionSelector.bind( inst );
+			inst.buildRevisionSelector();
+			expect( mockBuild ).toHaveBeenCalled();
+		} );
+
+		test( 'buildRevisionSelector should be safe when revisionManager is null', () => {
+			const inst = createEditorInstance();
+			inst.buildRevisionSelector = LayersEditor.prototype.buildRevisionSelector.bind( inst );
+			expect( () => inst.buildRevisionSelector() ).not.toThrow();
+		} );
+
+		test( 'updateRevisionLoadButton should delegate', () => {
+			const mockUpdate = jest.fn();
+			const inst = createEditorInstance( { revisionManager: { updateRevisionLoadButton: mockUpdate } } );
+			inst.updateRevisionLoadButton = LayersEditor.prototype.updateRevisionLoadButton.bind( inst );
+			inst.updateRevisionLoadButton();
+			expect( mockUpdate ).toHaveBeenCalled();
+		} );
+
+		test( 'buildSetSelector should delegate', () => {
+			const mockBuild = jest.fn();
+			const inst = createEditorInstance( { revisionManager: { buildSetSelector: mockBuild } } );
+			inst.buildSetSelector = LayersEditor.prototype.buildSetSelector.bind( inst );
+			inst.buildSetSelector();
+			expect( mockBuild ).toHaveBeenCalled();
+		} );
+
+		test( 'updateNewSetButtonState should delegate', () => {
+			const mockUpdate = jest.fn();
+			const inst = createEditorInstance( { revisionManager: { updateNewSetButtonState: mockUpdate } } );
+			inst.updateNewSetButtonState = LayersEditor.prototype.updateNewSetButtonState.bind( inst );
+			inst.updateNewSetButtonState();
+			expect( mockUpdate ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'cancel', () => {
+		test( 'should close immediately when not dirty', () => {
+			const inst = createEditorInstance();
+			inst.cancel = LayersEditor.prototype.cancel.bind( inst );
+			inst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isDirty' ) return false;
+				return null;
+			} );
+			inst.cancel( false );
+			expect( inst.uiManager.destroy ).toHaveBeenCalled();
+		} );
+
+		test( 'should clear draft when closing without dirty', () => {
+			const mockClear = jest.fn();
+			const inst = createEditorInstance( { draftManager: { clearDraft: mockClear } } );
+			inst.cancel = LayersEditor.prototype.cancel.bind( inst );
+			inst.stateManager.get = jest.fn( () => false );
+			inst.cancel( false );
+			expect( mockClear ).toHaveBeenCalled();
+		} );
+
+		test( 'should use dialogManager when dirty and available', () => {
+			const mockShow = jest.fn();
+			const inst = createEditorInstance( { dialogManager: { showCancelConfirmDialog: mockShow } } );
+			inst.cancel = LayersEditor.prototype.cancel.bind( inst );
+			inst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isDirty' ) return true;
+				return null;
+			} );
+			inst.cancel( false );
+			expect( mockShow ).toHaveBeenCalledWith( expect.any( Function ) );
+		} );
+
+		test( 'should fallback to window.confirm when dirty and no dialogManager', () => {
+			const inst = createEditorInstance();
+			inst.cancel = LayersEditor.prototype.cancel.bind( inst );
+			inst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isDirty' ) return true;
+				return null;
+			} );
+			window.confirm = jest.fn( () => true );
+			inst.cancel( false );
+			expect( window.confirm ).toHaveBeenCalled();
+			expect( inst.uiManager.destroy ).toHaveBeenCalled();
+		} );
+
+		test( 'should not close when user declines confirm', () => {
+			const inst = createEditorInstance();
+			inst.cancel = LayersEditor.prototype.cancel.bind( inst );
+			inst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isDirty' ) return true;
+				return null;
+			} );
+			window.confirm = jest.fn( () => false );
+			inst.cancel( false );
+			expect( inst.uiManager.destroy ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'addLayer', () => {
+		test( 'should normalize visible=false', () => {
+			const inst = createEditorInstance();
+			inst.addLayer = LayersEditor.prototype.addLayer.bind( inst );
+			inst.stateManager.get = jest.fn( () => [] );
+			inst.addLayer( { type: 'text', visible: false } );
+			expect( inst.stateManager.set ).toHaveBeenCalledWith( 'layers',
+				expect.arrayContaining( [ expect.objectContaining( { visible: false } ) ] )
+			);
+		} );
+
+		test( 'should normalize visible=0 to false', () => {
+			const inst = createEditorInstance();
+			inst.addLayer = LayersEditor.prototype.addLayer.bind( inst );
+			inst.stateManager.get = jest.fn( () => [] );
+			inst.addLayer( { type: 'text', visible: 0 } );
+			expect( inst.stateManager.set ).toHaveBeenCalledWith( 'layers',
+				expect.arrayContaining( [ expect.objectContaining( { visible: false } ) ] )
+			);
+		} );
+
+		test( 'should set visible=true by default', () => {
+			const inst = createEditorInstance();
+			inst.addLayer = LayersEditor.prototype.addLayer.bind( inst );
+			inst.stateManager.get = jest.fn( () => [] );
+			inst.addLayer( { type: 'text' } );
+			expect( inst.stateManager.set ).toHaveBeenCalledWith( 'layers',
+				expect.arrayContaining( [ expect.objectContaining( { visible: true } ) ] )
+			);
+		} );
+
+		test( 'should prepend layer to existing layers', () => {
+			const inst = createEditorInstance();
+			inst.addLayer = LayersEditor.prototype.addLayer.bind( inst );
+			inst.stateManager.get = jest.fn( () => [ { id: 'existing' } ] );
+			inst.addLayer( { type: 'rect' } );
+			const setCall = inst.stateManager.set.mock.calls[ 0 ];
+			expect( setCall[ 1 ].length ).toBe( 2 );
+			expect( setCall[ 1 ][ 1 ].id ).toBe( 'existing' );
+		} );
+
+		test( 'should render when canvasManager available', () => {
+			const mockRender = jest.fn();
+			const inst = createEditorInstance( { canvasManager: { renderLayers: mockRender } } );
+			inst.addLayer = LayersEditor.prototype.addLayer.bind( inst );
+			inst.stateManager.get = jest.fn( () => [] );
+			inst.addLayer( { type: 'text' } );
+			expect( mockRender ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'addLayerWithoutSelection', () => {
+		test( 'should not call selectLayer', () => {
+			const inst = createEditorInstance();
+			inst.addLayerWithoutSelection = LayersEditor.prototype.addLayerWithoutSelection.bind( inst );
+			inst.stateManager.get = jest.fn( () => [] );
+			inst.addLayerWithoutSelection( { type: 'marker' } );
+			expect( inst.selectLayer ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should update layerPanel when available', () => {
+			const mockUpdate = jest.fn();
+			const inst = createEditorInstance( { layerPanel: { updateLayerList: mockUpdate } } );
+			inst.addLayerWithoutSelection = LayersEditor.prototype.addLayerWithoutSelection.bind( inst );
+			inst.stateManager.get = jest.fn( () => [] );
+			inst.addLayerWithoutSelection( { type: 'marker' } );
+			expect( mockUpdate ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'removeLayer', () => {
+		test( 'should filter out layer and update state', () => {
+			const inst = createEditorInstance();
+			inst.removeLayer = LayersEditor.prototype.removeLayer.bind( inst );
+			inst.stateManager.get = jest.fn( () => [ { id: '1' }, { id: '2' } ] );
+			inst.removeLayer( '1' );
+			expect( inst.stateManager.set ).toHaveBeenCalledWith( 'layers', [ { id: '2' } ] );
+		} );
+
+		test( 'should redraw canvasManager when available', () => {
+			const mockRedraw = jest.fn();
+			const inst = createEditorInstance( { canvasManager: { redraw: mockRedraw } } );
+			inst.removeLayer = LayersEditor.prototype.removeLayer.bind( inst );
+			inst.stateManager.get = jest.fn( () => [ { id: '1' } ] );
+			inst.removeLayer( '1' );
+			expect( mockRedraw ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'getLayerById', () => {
+		test( 'should find layer by id', () => {
+			const inst = createEditorInstance();
+			inst.stateManager.get = jest.fn( () => [ { id: 'a', type: 'text' } ] );
+			const result = inst.getLayerById( 'a' );
+			expect( result ).toEqual( { id: 'a', type: 'text' } );
+		} );
+
+		test( 'should return undefined for missing id', () => {
+			const inst = createEditorInstance();
+			inst.stateManager.get = jest.fn( () => [ { id: 'a' } ] );
+			expect( inst.getLayerById( 'missing' ) ).toBeUndefined();
+		} );
+
+		test( 'should handle null layers from stateManager', () => {
+			const inst = createEditorInstance();
+			inst.stateManager.get = jest.fn( () => null );
+			expect( inst.getLayerById( 'x' ) ).toBeUndefined();
+		} );
+	} );
+
+	describe( 'createFallbackRegistry', () => {
+		test( 'should create registry with get method', () => {
+			const inst = createEditorInstance();
+			inst.createFallbackRegistry = LayersEditor.prototype.createFallbackRegistry.bind( inst );
+			const registry = inst.createFallbackRegistry();
+			expect( typeof registry.get ).toBe( 'function' );
+		} );
+
+		test( 'should throw for unknown module', () => {
+			const inst = createEditorInstance();
+			inst.createFallbackRegistry = LayersEditor.prototype.createFallbackRegistry.bind( inst );
+			const registry = inst.createFallbackRegistry();
+			expect( () => registry.get( 'UnknownModule' ) ).toThrow( 'Module UnknownModule not found' );
+		} );
+
+		test( 'should cache instances on repeated get calls', () => {
+			const inst = createEditorInstance();
+			inst.createFallbackRegistry = LayersEditor.prototype.createFallbackRegistry.bind( inst );
+			const registry = inst.createFallbackRegistry();
+			const first = registry.get( 'ValidationManager' );
+			const second = registry.get( 'ValidationManager' );
+			expect( first ).toBe( second );
+		} );
+	} );
+
+	describe( 'createStubUIManager', () => {
+		test( 'should return object with required containers', () => {
+			const inst = createEditorInstance();
+			inst.createStubUIManager = LayersEditor.prototype.createStubUIManager.bind( inst );
+			const stub = inst.createStubUIManager();
+			expect( stub.container ).toBeInstanceOf( HTMLElement );
+			expect( stub.toolbarContainer ).toBeInstanceOf( HTMLElement );
+			expect( stub.layerPanelContainer ).toBeInstanceOf( HTMLElement );
+			expect( stub.canvasContainer ).toBeInstanceOf( HTMLElement );
+			expect( typeof stub.destroy ).toBe( 'function' );
+		} );
+	} );
+
+	describe( 'createStubStateManager', () => {
+		test( 'should return object with get/set/subscribe', () => {
+			const inst = createEditorInstance();
+			inst.createStubStateManager = LayersEditor.prototype.createStubStateManager.bind( inst );
+			const stub = inst.createStubStateManager();
+			expect( typeof stub.get ).toBe( 'function' );
+			expect( typeof stub.set ).toBe( 'function' );
+			expect( typeof stub.subscribe ).toBe( 'function' );
+		} );
+
+		test( 'should store and retrieve values', () => {
+			const inst = createEditorInstance();
+			inst.createStubStateManager = LayersEditor.prototype.createStubStateManager.bind( inst );
+			const stub = inst.createStubStateManager();
+			stub.set( 'testKey', 'testValue' );
+			expect( stub.get( 'testKey' ) ).toBe( 'testValue' );
+		} );
+	} );
+} );

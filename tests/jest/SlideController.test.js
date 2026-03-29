@@ -1714,4 +1714,905 @@ describe( 'SlideController', () => {
 			expect( editBtn.style.display ).toBe( 'none' );
 		} );
 	} );
+
+	describe( 'canUserEdit - edge cases', () => {
+		it( 'should fall through to rights when wgLayersCanEdit is null', () => {
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgLayersCanEdit' ) {
+					return null;
+				}
+				if ( key === 'wgUserRights' ) {
+					return [ 'editlayers', 'read' ];
+				}
+				return null;
+			} );
+
+			const controller = new SlideController();
+			expect( controller.canUserEdit() ).toBe( true );
+		} );
+
+		it( 'should fall through to rights when wgLayersCanEdit is undefined', () => {
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgLayersCanEdit' ) {
+					return undefined;
+				}
+				if ( key === 'wgUserRights' ) {
+					return [ 'read', 'edit' ];
+				}
+				return null;
+			} );
+
+			const controller = new SlideController();
+			expect( controller.canUserEdit() ).toBe( false );
+		} );
+
+		it( 'should return false when wgUserRights is not an array', () => {
+			mockMw.config.get.mockImplementation( ( key ) => {
+				if ( key === 'wgLayersCanEdit' ) {
+					return null;
+				}
+				if ( key === 'wgUserRights' ) {
+					return 'not-an-array';
+				}
+				return null;
+			} );
+
+			const controller = new SlideController();
+			expect( controller.canUserEdit() ).toBe( false );
+		} );
+
+		it( 'should return false when mw is undefined', () => {
+			delete global.mw;
+			jest.resetModules();
+			const SC = require( '../../resources/ext.layers/viewer/SlideController.js' );
+			global.mw = mockMw;
+
+			const controller = new SC();
+			// Temporarily remove mw during execution
+			const savedMw = global.mw;
+			delete global.mw;
+			expect( controller.canUserEdit() ).toBe( false );
+			global.mw = savedMw;
+		} );
+	} );
+
+	describe( 'buildSlideEditorUrl - branches', () => {
+		it( 'should use fallback URL when mw.util is unavailable', () => {
+			const controller = new SlideController();
+
+			const savedUtil = mockMw.util;
+			delete mockMw.util;
+
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'annotations'
+			} );
+
+			expect( url ).toContain( 'Special:EditSlide/TestSlide' );
+			expect( url ).toContain( 'setname=annotations' );
+
+			mockMw.util = savedUtil;
+		} );
+
+		it( 'should include lockMode in fallback URL when not none', () => {
+			const controller = new SlideController();
+			const savedUtil = mockMw.util;
+			delete mockMw.util;
+
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'default',
+				lockMode: 'locked'
+			} );
+
+			expect( url ).toContain( 'lockmode=locked' );
+
+			mockMw.util = savedUtil;
+		} );
+
+		it( 'should not include lockMode in fallback URL when none', () => {
+			const controller = new SlideController();
+			const savedUtil = mockMw.util;
+			delete mockMw.util;
+
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'default',
+				lockMode: 'none'
+			} );
+
+			expect( url ).not.toContain( 'lockmode' );
+
+			mockMw.util = savedUtil;
+		} );
+
+		it( 'should include canvas dimensions in fallback when non-default', () => {
+			const controller = new SlideController();
+			const savedUtil = mockMw.util;
+			delete mockMw.util;
+
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'default',
+				canvasWidth: 1024,
+				canvasHeight: 768
+			} );
+
+			expect( url ).toContain( 'canvaswidth=1024' );
+			expect( url ).toContain( 'canvasheight=768' );
+
+			mockMw.util = savedUtil;
+		} );
+
+		it( 'should not include canvas dimensions in fallback at default 800x600', () => {
+			const controller = new SlideController();
+			const savedUtil = mockMw.util;
+			delete mockMw.util;
+
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'default',
+				canvasWidth: 800,
+				canvasHeight: 600
+			} );
+
+			expect( url ).not.toContain( 'canvaswidth' );
+
+			mockMw.util = savedUtil;
+		} );
+
+		it( 'should omit setname param when layerSetName is default (mw.util path)', () => {
+			const controller = new SlideController();
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'default'
+			} );
+
+			expect( url ).not.toContain( 'setname=' );
+		} );
+
+		it( 'should include setname param for non-default set (mw.util path)', () => {
+			const controller = new SlideController();
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'anatomy'
+			} );
+
+			expect( url ).toContain( 'setname=anatomy' );
+		} );
+
+		it( 'should include lockMode in mw.util URL when not none', () => {
+			const controller = new SlideController();
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'default',
+				lockMode: 'locked'
+			} );
+
+			expect( url ).toContain( 'lockmode=locked' );
+		} );
+
+		it( 'should not include lockMode in mw.util URL when none', () => {
+			const controller = new SlideController();
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'default',
+				lockMode: 'none'
+			} );
+
+			expect( url ).not.toContain( 'lockmode' );
+		} );
+
+		it( 'should include canvas dimensions in mw.util path when non-default', () => {
+			const controller = new SlideController();
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'TestSlide',
+				layerSetName: 'default',
+				canvasWidth: 1920,
+				canvasHeight: 1080
+			} );
+
+			expect( url ).toContain( 'canvaswidth=1920' );
+			expect( url ).toContain( 'canvasheight=1080' );
+		} );
+
+		it( 'should use & separator when baseUrl already has ?', () => {
+			mockMw.util.getUrl.mockReturnValue( '/w/index.php?title=Special:EditSlide/Test' );
+			const controller = new SlideController();
+			const url = controller.buildSlideEditorUrl( {
+				slideName: 'Test',
+				layerSetName: 'default'
+			} );
+
+			expect( url ).toContain( '?title=' );
+			expect( url ).not.toMatch( /\?.*\?/ ); // No double question marks
+		} );
+	} );
+
+	describe( '_shouldUseModalForSlide', () => {
+		it( 'should return false when window.Layers is not set', () => {
+			delete window.Layers;
+			const controller = new SlideController();
+			expect( controller._shouldUseModalForSlide() ).toBe( false );
+		} );
+
+		it( 'should return false when window.Layers.Modal is not set', () => {
+			window.Layers = {};
+			const controller = new SlideController();
+			expect( controller._shouldUseModalForSlide() ).toBe( false );
+		} );
+
+		it( 'should return false when LayersEditorModal is not set', () => {
+			window.Layers = { Modal: {} };
+			const controller = new SlideController();
+			expect( controller._shouldUseModalForSlide() ).toBe( false );
+		} );
+
+		it( 'should return true when LayersEditorModal is available', () => {
+			window.Layers = { Modal: { LayersEditorModal: function () {} } };
+			const controller = new SlideController();
+			expect( controller._shouldUseModalForSlide() ).toBe( true );
+		} );
+
+		it( 'should return false when mw is undefined', () => {
+			const savedMw = global.mw;
+			delete global.mw;
+			const controller = new SlideController();
+			expect( controller._shouldUseModalForSlide() ).toBe( false );
+			global.mw = savedMw;
+		} );
+	} );
+
+	describe( 'reinitializeSlideViewer - branch coverage', () => {
+		let mockCtx;
+		let MockLayerRenderer;
+
+		beforeEach( () => {
+			mockCtx = {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillText: jest.fn(),
+				strokeRect: jest.fn(),
+				save: jest.fn(),
+				restore: jest.fn(),
+				fillStyle: '',
+				strokeStyle: '',
+				lineWidth: 1,
+				globalAlpha: 1,
+				font: '',
+				textAlign: '',
+				textBaseline: ''
+			};
+
+			MockLayerRenderer = jest.fn( () => ( {
+				drawLayer: jest.fn()
+			} ) );
+			window.Layers = window.Layers || {};
+			window.Layers.LayerRenderer = MockLayerRenderer;
+		} );
+
+		function createSlideContainer( attrs = {} ) {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			const defaults = {
+				'data-slide-name': 'TestSlide',
+				'data-canvas-width': '800',
+				'data-canvas-height': '600',
+				'data-display-width': '800',
+				'data-display-height': '600'
+			};
+			Object.assign( defaults, attrs );
+			for ( const [ key, val ] of Object.entries( defaults ) ) {
+				container.setAttribute( key, val );
+			}
+
+			const canvas = document.createElement( 'canvas' );
+			canvas.width = 800;
+			canvas.height = 600;
+			canvas.getContext = jest.fn( () => mockCtx );
+			container.appendChild( canvas );
+
+			document.body.appendChild( container );
+			return container;
+		}
+
+		it( 'should return false when no canvas found', () => {
+			const container = document.createElement( 'div' );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			expect( controller.reinitializeSlideViewer( container, {} ) ).toBe( false );
+		} );
+
+		it( 'should return false when context not available', () => {
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => null );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			expect( controller.reinitializeSlideViewer( container, {} ) ).toBe( false );
+		} );
+
+		it( 'should handle unconstrained slide resize', () => {
+			const container = createSlideContainer( {
+				'data-canvas-width': '800',
+				'data-canvas-height': '600',
+				'data-display-width': '800',
+				'data-display-height': '600'
+			} );
+
+			const controller = new SlideController( { debug: true } );
+			const result = controller.reinitializeSlideViewer( container, {
+				baseWidth: 1024,
+				baseHeight: 768,
+				layers: []
+			} );
+
+			expect( result ).toBe( true );
+			expect( container.getAttribute( 'data-canvas-width' ) ).toBe( '1024' );
+			expect( container.getAttribute( 'data-display-scale' ) ).toBe( '1' );
+		} );
+
+		it( 'should handle constrained slide with wider aspect', () => {
+			const container = createSlideContainer( {
+				'data-canvas-width': '800',
+				'data-canvas-height': '600',
+				'data-display-width': '400',
+				'data-display-height': '300'
+			} );
+
+			// Ensure LayerRenderer is available via fallback
+			window.LayerRenderer = MockLayerRenderer;
+
+			const controller = new SlideController( { debug: true } );
+			const result = controller.reinitializeSlideViewer( container, {
+				baseWidth: 1920,
+				baseHeight: 1080,
+				layers: []
+			} );
+
+			expect( result ).toBe( true );
+			// Wider aspect: width stays, height adjusts
+			expect( container.getAttribute( 'data-display-width' ) ).toBe( '400' );
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should handle constrained slide with taller aspect', () => {
+			const container = createSlideContainer( {
+				'data-canvas-width': '800',
+				'data-canvas-height': '600',
+				'data-display-width': '400',
+				'data-display-height': '300'
+			} );
+
+			// Ensure LayerRenderer is available for the reinitialize
+			window.LayerRenderer = MockLayerRenderer;
+
+			const controller = new SlideController( { debug: true } );
+			const result = controller.reinitializeSlideViewer( container, {
+				baseWidth: 600,
+				baseHeight: 1200,
+				layers: []
+			} );
+
+			expect( result ).toBe( true );
+			// Taller aspect: height stays at 300, width adjusts down
+			expect( container.getAttribute( 'data-display-height' ) ).toBe( '300' );
+
+			delete window.LayerRenderer;
+		} );
+
+		it( 'should handle transparent background with checkerboard', () => {
+			const container = createSlideContainer();
+
+			const controller = new SlideController( { debug: true } );
+			controller.reinitializeSlideViewer( container, {
+				backgroundColor: 'transparent',
+				layers: []
+			} );
+
+			expect( container.style.backgroundImage ).toContain( 'url(' );
+		} );
+
+		it( 'should handle non-transparent background', () => {
+			const container = createSlideContainer();
+
+			const controller = new SlideController( { debug: true } );
+			controller.reinitializeSlideViewer( container, {
+				backgroundColor: '#ff0000',
+				layers: []
+			} );
+
+			expect( container.style.backgroundImage ).toBe( '' );
+		} );
+
+		it( 'should handle background color none as transparent', () => {
+			const container = createSlideContainer();
+
+			const controller = new SlideController( { debug: true } );
+			controller.reinitializeSlideViewer( container, {
+				backgroundColor: 'none',
+				layers: []
+			} );
+
+			expect( container.style.backgroundImage ).toContain( 'url(' );
+		} );
+
+		it( 'should render layers and remove empty class', () => {
+			const container = createSlideContainer();
+			container.classList.add( 'layers-slide-is-empty' );
+
+			const controller = new SlideController( { debug: true } );
+			controller.reinitializeSlideViewer( container, {
+				layers: [
+					{ type: 'rectangle', x: 0, y: 0, width: 100, height: 100, visible: true }
+				]
+			} );
+
+			expect( container.classList.contains( 'layers-slide-is-empty' ) ).toBe( false );
+		} );
+
+		it( 'should add empty class and draw empty state when no layers', () => {
+			const container = createSlideContainer();
+
+			const controller = new SlideController( { debug: true } );
+			controller.drawEmptyStateContent = jest.fn();
+			controller.reinitializeSlideViewer( container, {
+				layers: []
+			} );
+
+			expect( container.classList.contains( 'layers-slide-is-empty' ) ).toBe( true );
+			expect( controller.drawEmptyStateContent ).toHaveBeenCalled();
+		} );
+
+		it( 'should return false when LayerRenderer is not available', () => {
+			delete window.Layers.LayerRenderer;
+			delete window.LayerRenderer;
+
+			const container = createSlideContainer();
+			const controller = new SlideController( { debug: true } );
+			expect( controller.reinitializeSlideViewer( container, { layers: [] } ) ).toBe( false );
+		} );
+
+		it( 'should return false on exception', () => {
+			const container = createSlideContainer();
+			// Make canvas.getContext throw
+			const canvas = container.querySelector( 'canvas' );
+			canvas.getContext = jest.fn( () => {
+				throw new Error( 'Context error' );
+			} );
+
+			const controller = new SlideController( { debug: true } );
+			expect( controller.reinitializeSlideViewer( container, {} ) ).toBe( false );
+		} );
+
+		it( 'should handle backgroundVisible false', () => {
+			const container = createSlideContainer();
+
+			const controller = new SlideController( { debug: true } );
+			// Track fill calls by checking fillStyle never set to bg color before fillRect
+			const fillRectCalls = [];
+			const origFillRect = mockCtx.fillRect;
+			mockCtx.fillRect = jest.fn( ( ...args ) => {
+				fillRectCalls.push( { fillStyle: mockCtx.fillStyle, args } );
+			} );
+
+			controller.reinitializeSlideViewer( container, {
+				backgroundVisible: false,
+				backgroundColor: '#ffffff',
+				layers: []
+			} );
+
+			// Background fillRect with #ffffff should not occur
+			const bgFills = fillRectCalls.filter( ( c ) => c.fillStyle === '#ffffff' );
+			expect( bgFills.length ).toBe( 0 );
+
+			mockCtx.fillRect = origFillRect;
+		} );
+
+		it( 'should handle backgroundVisible 0 (integer from API)', () => {
+			const container = createSlideContainer();
+
+			const controller = new SlideController( { debug: true } );
+			const fillRectCalls = [];
+			mockCtx.fillRect = jest.fn( ( ...args ) => {
+				fillRectCalls.push( { fillStyle: mockCtx.fillStyle, args } );
+			} );
+
+			controller.reinitializeSlideViewer( container, {
+				backgroundVisible: 0,
+				backgroundColor: '#ffffff',
+				layers: []
+			} );
+
+			const bgFills = fillRectCalls.filter( ( c ) => c.fillStyle === '#ffffff' );
+			expect( bgFills.length ).toBe( 0 );
+		} );
+
+		it( 'should apply backgroundOpacity', () => {
+			const container = createSlideContainer();
+
+			const controller = new SlideController( { debug: true } );
+			controller.reinitializeSlideViewer( container, {
+				backgroundVisible: true,
+				backgroundOpacity: 0.5,
+				backgroundColor: '#ffffff',
+				layers: []
+			} );
+
+			// Check opacity was applied
+			expect( mockCtx.save ).toHaveBeenCalled();
+		} );
+
+		it( 'should skip invisible layers (visible=false)', () => {
+			const container = createSlideContainer();
+			const mockDrawLayer = jest.fn();
+			MockLayerRenderer.mockImplementation( () => ( {
+				drawLayer: mockDrawLayer
+			} ) );
+
+			const controller = new SlideController( { debug: true } );
+			controller.reinitializeSlideViewer( container, {
+				layers: [
+					{ type: 'rectangle', visible: false },
+					{ type: 'circle', visible: true }
+				]
+			} );
+
+			// Only visible layers should be drawn
+			expect( mockDrawLayer ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'should skip invisible layers (visible=0 from API)', () => {
+			const container = createSlideContainer();
+			const mockDrawLayer = jest.fn();
+			MockLayerRenderer.mockImplementation( () => ( {
+				drawLayer: mockDrawLayer
+			} ) );
+
+			const controller = new SlideController( { debug: true } );
+			controller.reinitializeSlideViewer( container, {
+				layers: [
+					{ type: 'rectangle', visible: 0 },
+					{ type: 'circle', visible: 1 }
+				]
+			} );
+
+			expect( mockDrawLayer ).toHaveBeenCalledTimes( 1 );
+		} );
+	} );
+
+	describe( 'refreshAllSlides - branch coverage', () => {
+		it( 'should resolve immediately when no slides on page', async () => {
+			const controller = new SlideController( { debug: true } );
+			const result = await controller.refreshAllSlides();
+			expect( result.total ).toBe( 0 );
+			expect( result.refreshed ).toBe( 0 );
+		} );
+
+		it( 'should resolve with error when mw.Api is unavailable', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			document.body.appendChild( container );
+
+			const savedApi = mockMw.Api;
+			delete mockMw.Api;
+
+			const controller = new SlideController( { debug: true } );
+			const result = await controller.refreshAllSlides();
+
+			expect( result.failed ).toBe( 1 );
+			expect( result.errors[ 0 ].error ).toContain( 'mw.Api not available' );
+
+			mockMw.Api = savedApi;
+		} );
+
+		it( 'should handle API error for a slide', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'ErrorSlide' );
+			document.body.appendChild( container );
+
+			mockApi.get.mockRejectedValue( { message: 'Network error' } );
+
+			const controller = new SlideController( { debug: true } );
+			const result = await controller.refreshAllSlides();
+
+			expect( result.failed ).toBe( 1 );
+			expect( result.errors.length ).toBe( 1 );
+		} );
+
+		it( 'should handle missing layersinfo in response', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'MissingSlide' );
+			document.body.appendChild( container );
+
+			mockApi.get.mockResolvedValue( {} );
+
+			const controller = new SlideController( { debug: true } );
+			const result = await controller.refreshAllSlides();
+
+			expect( result.failed ).toBe( 1 );
+		} );
+
+		it( 'should skip slides without slide-name attribute value', async () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', '' );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			const result = await controller.refreshAllSlides();
+
+			expect( result.failed ).toBe( 1 );
+		} );
+	} );
+
+	describe( '_processWithConcurrency', () => {
+		it( 'should process items with concurrency limit', async () => {
+			const controller = new SlideController();
+			const items = [ 1, 2, 3, 4, 5, 6, 7 ];
+			const processed = [];
+
+			const result = await controller._processWithConcurrency(
+				items,
+				( item ) => {
+					processed.push( item );
+					return Promise.resolve( item * 2 );
+				},
+				3
+			);
+
+			expect( result ).toEqual( [ 2, 4, 6, 8, 10, 12, 14 ] );
+			expect( processed.length ).toBe( 7 );
+		} );
+
+		it( 'should handle empty items array', async () => {
+			const controller = new SlideController();
+			const result = await controller._processWithConcurrency( [], jest.fn(), 5 );
+			expect( result ).toEqual( [] );
+		} );
+
+		it( 'should use default concurrency when not specified', async () => {
+			const controller = new SlideController();
+			const items = [ 1, 2 ];
+			const result = await controller._processWithConcurrency(
+				items,
+				( item ) => Promise.resolve( item )
+			);
+			expect( result ).toEqual( [ 1, 2 ] );
+		} );
+
+		it( 'should handle items fewer than concurrency limit', async () => {
+			const controller = new SlideController();
+			const result = await controller._processWithConcurrency(
+				[ 'a', 'b' ],
+				( item ) => Promise.resolve( item.toUpperCase() ),
+				10
+			);
+			expect( result ).toEqual( [ 'A', 'B' ] );
+		} );
+	} );
+
+	describe( 'openSlideEditor - branches', () => {
+		it( 'should build correct URL and attempt navigation when modal not available', () => {
+			delete window.Layers;
+
+			const controller = new SlideController( { debug: true } );
+			const spy = jest.fn( () => '/wiki/Special:EditSlide/Test' );
+			controller.buildSlideEditorUrl = spy;
+
+			// Can't easily mock location.href in jsdom, so just verify URL is built
+			try {
+				controller.openSlideEditor( {
+					slideName: 'Test',
+					layerSetName: 'default'
+				} );
+			} catch ( e ) {
+				// jsdom may throw on navigation
+			}
+
+			expect( spy ).toHaveBeenCalledWith( expect.objectContaining( {
+				slideName: 'Test'
+			} ) );
+		} );
+
+		it( 'should open modal when LayersEditorModal is available', async () => {
+			const mockOpen = jest.fn().mockResolvedValue( { saved: true } );
+			const MockModal = jest.fn( () => ( { open: mockOpen } ) );
+
+			window.Layers = {
+				Modal: {
+					LayersEditorModal: MockModal
+				}
+			};
+
+			const controller = new SlideController( { debug: true } );
+			controller.buildSlideEditorUrl = jest.fn( () => '/wiki/Special:EditSlide/Test' );
+			controller.refreshAllSlides = jest.fn().mockResolvedValue( {} );
+
+			controller.openSlideEditor( {
+				slideName: 'Test',
+				layerSetName: 'my-set'
+			} );
+
+			expect( MockModal ).toHaveBeenCalled();
+			expect( mockOpen ).toHaveBeenCalledWith(
+				'Slide:Test',
+				'my-set',
+				expect.stringContaining( 'modal=1' )
+			);
+		} );
+
+		it( 'should fire mw.hook when opening editor', () => {
+			delete window.Layers;
+			const controller = new SlideController( { debug: true } );
+			controller.buildSlideEditorUrl = jest.fn( () => '/test' );
+			delete window.location;
+			window.location = { href: '' };
+
+			controller.openSlideEditor( {
+				slideName: 'Test',
+				layerSetName: 'default'
+			} );
+
+			expect( mockMw.hook ).toHaveBeenCalledWith( 'layers.slide.edit' );
+		} );
+	} );
+
+	describe( 'initializeSlideViewer - branch coverage', () => {
+		let mockCtx;
+		let MockLayerRenderer;
+
+		beforeEach( () => {
+			mockCtx = {
+				clearRect: jest.fn(),
+				fillRect: jest.fn(),
+				fillText: jest.fn(),
+				strokeRect: jest.fn(),
+				save: jest.fn(),
+				restore: jest.fn(),
+				fillStyle: '',
+				strokeStyle: '',
+				lineWidth: 1,
+				globalAlpha: 1,
+				font: '',
+				textAlign: '',
+				textBaseline: ''
+			};
+
+			MockLayerRenderer = jest.fn( () => ( {
+				drawLayer: jest.fn()
+			} ) );
+			window.Layers = window.Layers || {};
+			window.Layers.LayerRenderer = MockLayerRenderer;
+		} );
+
+		it( 'should return early when no canvas found', () => {
+			const container = document.createElement( 'div' );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			controller.setupSlideOverlay = jest.fn();
+			controller.initializeSlideViewer( container, { layers: [] } );
+
+			expect( controller.setupSlideOverlay ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when LayerRenderer unavailable', () => {
+			delete window.Layers.LayerRenderer;
+			delete window.LayerRenderer;
+
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			controller.setupSlideOverlay = jest.fn();
+			controller.initializeSlideViewer( container, { layers: [] } );
+
+			expect( controller.setupSlideOverlay ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should return early when canvas context is null', () => {
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => null );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			controller.setupSlideOverlay = jest.fn();
+			controller.initializeSlideViewer( container, { layers: [] } );
+
+			expect( controller.setupSlideOverlay ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should apply CSS scaling when displayScale !== 1', () => {
+			const container = document.createElement( 'div' );
+			container.setAttribute( 'data-display-width', '400' );
+			container.setAttribute( 'data-display-height', '300' );
+			container.setAttribute( 'data-display-scale', '0.5' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => mockCtx );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			controller.setupSlideOverlay = jest.fn();
+			controller.initializeSlideViewer( container, {
+				baseWidth: 800,
+				baseHeight: 600,
+				layers: []
+			} );
+
+			expect( canvas.style.width ).toBe( '400px' );
+			expect( canvas.style.height ).toBe( '300px' );
+		} );
+
+		it( 'should set transparent background when bgOpacity < 1', () => {
+			const container = document.createElement( 'div' );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => mockCtx );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			controller.setupSlideOverlay = jest.fn();
+			controller.initializeSlideViewer( container, {
+				backgroundOpacity: 0.5,
+				backgroundColor: '#ffffff',
+				layers: []
+			} );
+
+			expect( container.style.backgroundColor ).toBe( 'transparent' );
+		} );
+
+		it( 'should hide loading placeholder', () => {
+			const container = document.createElement( 'div' );
+			const placeholder = document.createElement( 'div' );
+			placeholder.className = 'layers-slide-placeholder';
+			container.appendChild( placeholder );
+			const canvas = document.createElement( 'canvas' );
+			canvas.getContext = jest.fn( () => mockCtx );
+			container.appendChild( canvas );
+			document.body.appendChild( container );
+
+			const controller = new SlideController( { debug: true } );
+			controller.setupSlideOverlay = jest.fn();
+			controller.initializeSlideViewer( container, {
+				layers: []
+			} );
+
+			expect( placeholder.style.display ).toBe( 'none' );
+		} );
+	} );
+
+	describe( '_scheduleRetries', () => {
+		it( 'should not schedule retries twice', () => {
+			jest.useFakeTimers();
+			const controller = new SlideController( { debug: true } );
+			controller._retriesScheduled = false;
+
+			// Stub methods to prevent actual retry work
+			controller._retryUninitialized = jest.fn();
+			controller._retryTimeouts = [];
+
+			controller._scheduleRetries();
+			expect( controller._retriesScheduled ).toBe( true );
+
+			// Second call should be no-op
+			const timeoutCount = controller._retryTimeouts.length;
+			controller._scheduleRetries();
+			expect( controller._retryTimeouts.length ).toBe( timeoutCount );
+
+			jest.useRealTimers();
+		} );
+	} );
 } );

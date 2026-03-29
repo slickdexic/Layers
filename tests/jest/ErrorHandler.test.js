@@ -1061,4 +1061,481 @@ describe( 'ErrorHandler', function () {
 			instance.destroy();
 		} );
 	} );
+
+	describe( 'handleError - recursion guard', function () {
+		it( 'should prevent re-entrant calls via _isHandlingError', function () {
+			const processErrorSpy = jest.spyOn( errorHandler, 'processError' );
+
+			// Simulate recursion: set _isHandlingError before calling handleError
+			errorHandler._isHandlingError = true;
+			errorHandler.handleError( 'Error', 'Context', 'api' );
+
+			// processError should NOT have been called (early return)
+			expect( processErrorSpy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should reset _isHandlingError after normal completion', function () {
+			errorHandler.handleError( 'Error', 'Context', 'api' );
+
+			expect( errorHandler._isHandlingError ).toBe( false );
+		} );
+
+		it( 'should reset _isHandlingError even if processError throws', function () {
+			jest.spyOn( errorHandler, 'processError' ).mockImplementation( function () {
+				throw new Error( 'processError failed' );
+			} );
+
+			expect( function () {
+				errorHandler.handleError( 'Error', 'Context', 'api' );
+			} ).toThrow( 'processError failed' );
+
+			expect( errorHandler._isHandlingError ).toBe( false );
+		} );
+	} );
+
+	describe( 'logError - branch coverage', function () {
+		it( 'should handle when console method does not exist', function () {
+			const originalConsole = window.console;
+			window.console = { log: jest.fn() };
+			// console.error and console.warn don't exist
+
+			const errorInfo = {
+				context: 'Test',
+				message: 'High severity',
+				severity: 'high'
+			};
+
+			// Should not throw - getLogLevel returns 'error' but console.error is undefined
+			expect( function () {
+				errorHandler.logError( errorInfo );
+			} ).not.toThrow();
+
+			window.console = originalConsole;
+		} );
+
+		it( 'should handle when window.console is null', function () {
+			const originalConsole = window.console;
+			window.console = null;
+
+			const errorInfo = {
+				context: 'Test',
+				message: 'Error',
+				severity: 'low'
+			};
+
+			// debugMode is false and console is null, so condition (this.debugMode || window.console) is false
+			expect( function () {
+				errorHandler.logError( errorInfo );
+			} ).not.toThrow();
+
+			window.console = originalConsole;
+		} );
+
+		it( 'should log when debugMode is true and console is null', function () {
+			const originalConsole = window.console;
+			window.console = null;
+			errorHandler.setDebugMode( true );
+
+			const errorInfo = {
+				context: 'Test',
+				message: 'Error',
+				severity: 'low'
+			};
+
+			// debugMode || window.console is true, but console[logLevel] check prevents call
+			expect( function () {
+				errorHandler.logError( errorInfo );
+			} ).not.toThrow();
+
+			window.console = originalConsole;
+		} );
+
+		it( 'should handle when mw.log is not available', function () {
+			const originalMw = window.mw;
+			window.mw = null;
+
+			const errorInfo = {
+				context: 'Test',
+				message: 'Message',
+				severity: 'low'
+			};
+
+			expect( function () {
+				errorHandler.logError( errorInfo );
+			} ).not.toThrow();
+
+			window.mw = originalMw;
+		} );
+
+		it( 'should handle when mw exists but mw.log is undefined', function () {
+			const originalLog = window.mw.log;
+			window.mw.log = undefined;
+
+			const errorInfo = {
+				context: 'Test',
+				message: 'Message',
+				severity: 'medium'
+			};
+
+			expect( function () {
+				errorHandler.logError( errorInfo );
+			} ).not.toThrow();
+
+			window.mw.log = originalLog;
+		} );
+	} );
+
+	describe( 'initErrorContainer - document.body unavailable', function () {
+		it( 'should defer appending when document.body is null', function () {
+			const handler2 = new ErrorHandler();
+			handler2.destroy();
+
+			// Simulate: create handler when body is null
+			const originalBody = document.body;
+			const addEventSpy = jest.spyOn( document, 'addEventListener' );
+
+			// Temporarily remove body
+			Object.defineProperty( document, 'body', {
+				value: null,
+				writable: true,
+				configurable: true
+			} );
+
+			const handler3 = new ErrorHandler();
+
+			// Should have added DOMContentLoaded listener
+			expect( addEventSpy ).toHaveBeenCalledWith(
+				'DOMContentLoaded',
+				expect.any( Function )
+			);
+
+			// Restore body and clean up
+			Object.defineProperty( document, 'body', {
+				value: originalBody,
+				writable: true,
+				configurable: true
+			} );
+			handler3.destroy();
+			addEventSpy.mockRestore();
+		} );
+	} );
+
+	describe( 'getUserFriendlyMessage - layersMessages integration', function () {
+		it( 'should use layersMessages.get() when available and returns non-empty', function () {
+			window.layersMessages = {
+				get: jest.fn( function () {
+					return 'Translated error message';
+				} )
+			};
+
+			const errorInfo = { type: 'api' };
+			const result = errorHandler.getUserFriendlyMessage( errorInfo );
+
+			expect( result ).toBe( 'Translated error message' );
+			expect( window.layersMessages.get ).toHaveBeenCalledWith( 'layers-error-api', '' );
+
+			delete window.layersMessages;
+		} );
+
+		it( 'should fall back when layersMessages.get() returns empty string', function () {
+			window.layersMessages = {
+				get: jest.fn( function () {
+					return '';
+				} )
+			};
+
+			const errorInfo = { type: 'api' };
+			const result = errorHandler.getUserFriendlyMessage( errorInfo );
+
+			// Should return the fallback message, not empty string
+			expect( result ).toContain( 'save' );
+
+			delete window.layersMessages;
+		} );
+
+		it( 'should handle layersMessages without get method', function () {
+			window.layersMessages = {};
+
+			const errorInfo = { type: 'canvas' };
+			const result = errorHandler.getUserFriendlyMessage( errorInfo );
+
+			expect( result ).toContain( 'Drawing error' );
+
+			delete window.layersMessages;
+		} );
+	} );
+
+	describe( '_scheduleTimeout', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should add timeout to activeTimeouts set', function () {
+			const id = errorHandler._scheduleTimeout( function () {}, 1000 );
+
+			expect( errorHandler.activeTimeouts.has( id ) ).toBe( true );
+		} );
+
+		it( 'should remove timeout from activeTimeouts after firing', function () {
+			const id = errorHandler._scheduleTimeout( function () {}, 1000 );
+
+			expect( errorHandler.activeTimeouts.has( id ) ).toBe( true );
+
+			jest.advanceTimersByTime( 1100 );
+
+			expect( errorHandler.activeTimeouts.has( id ) ).toBe( false );
+		} );
+
+		it( 'should execute the callback', function () {
+			const callback = jest.fn();
+			errorHandler._scheduleTimeout( callback, 500 );
+
+			jest.advanceTimersByTime( 600 );
+
+			expect( callback ).toHaveBeenCalledTimes( 1 );
+		} );
+	} );
+
+	describe( 'destroy - activeTimeouts cleanup', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should clear all active timeouts on destroy', function () {
+			const callback1 = jest.fn();
+			const callback2 = jest.fn();
+			errorHandler._scheduleTimeout( callback1, 5000 );
+			errorHandler._scheduleTimeout( callback2, 5000 );
+
+			expect( errorHandler.activeTimeouts.size ).toBe( 2 );
+
+			errorHandler.destroy();
+
+			jest.advanceTimersByTime( 6000 );
+
+			// Callbacks should NOT have fired because timeouts were cleared
+			expect( callback1 ).not.toHaveBeenCalled();
+			expect( callback2 ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle destroy when activeTimeouts is empty', function () {
+			expect( errorHandler.activeTimeouts.size ).toBe( 0 );
+
+			expect( function () {
+				errorHandler.destroy();
+			} ).not.toThrow();
+		} );
+
+		it( 'should not fail when notificationContainer has no parent', function () {
+			// Remove from DOM first
+			if ( errorHandler.notificationContainer.parentNode ) {
+				errorHandler.notificationContainer.parentNode.removeChild( errorHandler.notificationContainer );
+			}
+
+			expect( function () {
+				errorHandler.destroy();
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( '_saveDraftBeforeReload', function () {
+		it( 'should call saveDraft on editor draftManager', function () {
+			const mockSaveDraft = jest.fn();
+			window.layersEditorInstance = {
+				draftManager: { saveDraft: mockSaveDraft }
+			};
+
+			errorHandler._saveDraftBeforeReload();
+
+			expect( mockSaveDraft ).toHaveBeenCalled();
+
+			delete window.layersEditorInstance;
+		} );
+
+		it( 'should handle when editor instance is not available', function () {
+			delete window.layersEditorInstance;
+
+			expect( function () {
+				errorHandler._saveDraftBeforeReload();
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle when draftManager is null', function () {
+			window.layersEditorInstance = { draftManager: null };
+
+			expect( function () {
+				errorHandler._saveDraftBeforeReload();
+			} ).not.toThrow();
+
+			delete window.layersEditorInstance;
+		} );
+
+		it( 'should handle when saveDraft throws', function () {
+			window.layersEditorInstance = {
+				draftManager: {
+					saveDraft: function () {
+						throw new Error( 'Storage full' );
+					}
+				}
+			};
+
+			// Should not throw - error is caught internally
+			expect( function () {
+				errorHandler._saveDraftBeforeReload();
+			} ).not.toThrow();
+
+			delete window.layersEditorInstance;
+		} );
+	} );
+
+	describe( 'reportError - mw.track unavailable', function () {
+		it( 'should not throw when mw is null', function () {
+			const originalMw = window.mw;
+			window.mw = null;
+
+			const errorInfo = {
+				severity: 'critical',
+				id: 'test',
+				type: 'security',
+				context: 'Test',
+				message: 'Test',
+				timestamp: new Date().toISOString()
+			};
+
+			expect( function () {
+				errorHandler.reportError( errorInfo );
+			} ).not.toThrow();
+
+			window.mw = originalMw;
+		} );
+
+		it( 'should not throw when mw.track is undefined', function () {
+			const originalTrack = mw.track;
+			mw.track = undefined;
+
+			const errorInfo = {
+				severity: 'high',
+				id: 'test',
+				type: 'api',
+				context: 'Test',
+				message: 'Test',
+				timestamp: new Date().toISOString()
+			};
+
+			expect( function () {
+				errorHandler.reportError( errorInfo );
+			} ).not.toThrow();
+
+			mw.track = originalTrack;
+		} );
+	} );
+
+	describe( 'determineSeverity - additional keyword branches', function () {
+		it( 'should return critical for unauthorized keyword', function () {
+			expect( errorHandler.determineSeverity( 'unknown', 'Unauthorized access attempt' ) ).toBe( 'critical' );
+		} );
+
+		it( 'should return critical for corrupt keyword', function () {
+			expect( errorHandler.determineSeverity( 'unknown', 'Data corrupt detected' ) ).toBe( 'critical' );
+		} );
+
+		it( 'should return critical for corruption type', function () {
+			expect( errorHandler.determineSeverity( 'corruption', 'normal message' ) ).toBe( 'critical' );
+		} );
+
+		it( 'should return medium for render type', function () {
+			expect( errorHandler.determineSeverity( 'render', 'normal message' ) ).toBe( 'medium' );
+		} );
+
+		it( 'should be case-insensitive for keyword matching', function () {
+			expect( errorHandler.determineSeverity( 'unknown', 'SECURITY VIOLATION' ) ).toBe( 'critical' );
+			expect( errorHandler.determineSeverity( 'unknown', 'XSS detected' ) ).toBe( 'critical' );
+		} );
+	} );
+
+	describe( 'processError - Error without stack', function () {
+		it( 'should handle Error with null stack', function () {
+			const error = new Error( 'Test' );
+			error.stack = null;
+
+			const result = errorHandler.processError( error, 'Context', 'test' );
+
+			expect( result.stack ).toBe( '' );
+		} );
+
+		it( 'should handle undefined error', function () {
+			const result = errorHandler.processError( undefined, 'Context', 'test' );
+
+			expect( result.message ).toBe( 'Unknown error occurred' );
+		} );
+
+		it( 'should handle numeric error value', function () {
+			const result = errorHandler.processError( 404, 'Context', 'test' );
+
+			expect( result.message ).toBe( 'Unknown error occurred' );
+		} );
+
+		it( 'should handle boolean error value', function () {
+			const result = errorHandler.processError( false, 'Context', 'test' );
+
+			expect( result.message ).toBe( 'Unknown error occurred' );
+		} );
+	} );
+
+	describe( 'executeRecoveryStrategy - _saveDraftBeforeReload integration', function () {
+		beforeEach( function () {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( function () {
+			jest.useRealTimers();
+		} );
+
+		it( 'should call _saveDraftBeforeReload on refresh strategy', function () {
+			const saveSpy = jest.spyOn( errorHandler, '_saveDraftBeforeReload' );
+
+			const strategy = { action: 'refresh', message: 'Refreshing...' };
+			errorHandler.executeRecoveryStrategy( strategy, { type: 'canvas' } );
+
+			expect( saveSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should not call _saveDraftBeforeReload on notify strategy', function () {
+			const saveSpy = jest.spyOn( errorHandler, '_saveDraftBeforeReload' );
+
+			const strategy = { action: 'notify', message: 'Check input' };
+			errorHandler.executeRecoveryStrategy( strategy, { type: 'validation' } );
+
+			expect( saveSpy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle unknown strategy action gracefully', function () {
+			const strategy = { action: 'unknown-action', message: 'Test' };
+
+			expect( function () {
+				errorHandler.executeRecoveryStrategy( strategy, { type: 'test' } );
+			} ).not.toThrow();
+		} );
+	} );
+
+	describe( 'showRecoveryNotification - mw unavailable', function () {
+		it( 'should handle when mw is null', function () {
+			const originalMw = window.mw;
+			window.mw = null;
+
+			expect( function () {
+				errorHandler.showRecoveryNotification( 'Test message' );
+			} ).not.toThrow();
+
+			window.mw = originalMw;
+		} );
+	} );
 } );

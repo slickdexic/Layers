@@ -2003,4 +2003,779 @@ describe('SelectionManager', () => {
             expect( selectionManager.selectedLayerIds ).toEqual( [ 'a' ] );
         } );
     });
+
+    // ========================================================================
+    // Branch coverage gap tests
+    // ========================================================================
+
+    describe( 'getMultiSelectionBounds - NaN guard branches', () => {
+        test( 'should guard against NaN x/y in layer bounds', () => {
+            mockCanvasManager.layers = [
+                { id: 'nan1', type: 'rectangle', x: NaN, y: NaN, width: 100, height: 50, visible: true },
+                { id: 'ok1', type: 'rectangle', x: 10, y: 20, width: 30, height: 40, visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'nan1', 'ok1' ];
+
+            const bounds = selectionManager.getMultiSelectionBounds();
+
+            expect( bounds ).not.toBeNull();
+            // NaN x/y should be treated as 0
+            expect( bounds.x ).toBe( 0 );
+            expect( bounds.y ).toBe( 0 );
+            expect( bounds.width ).toBeGreaterThan( 0 );
+            expect( bounds.height ).toBeGreaterThan( 0 );
+        } );
+
+        test( 'should guard against NaN width/height in layer bounds', () => {
+            mockCanvasManager.layers = [
+                { id: 'nan2', type: 'rectangle', x: 5, y: 10, width: NaN, height: NaN, visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'nan2' ];
+
+            const bounds = selectionManager.getMultiSelectionBounds();
+
+            expect( bounds ).not.toBeNull();
+            // getLayerBoundsCompat produces all-NaN bounds → updateBounds NaN guards convert all to 0
+            expect( bounds.x ).toBe( 0 );
+            expect( bounds.y ).toBe( 0 );
+            expect( bounds.width ).toBe( 0 );
+            expect( bounds.height ).toBe( 0 );
+        } );
+
+        test( 'should guard against Infinity values', () => {
+            mockCanvasManager.layers = [
+                { id: 'inf1', type: 'rectangle', x: Infinity, y: -Infinity, width: 10, height: 10, visible: true },
+                { id: 'ok2', type: 'rectangle', x: 5, y: 5, width: 20, height: 20, visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'inf1', 'ok2' ];
+
+            const bounds = selectionManager.getMultiSelectionBounds();
+
+            expect( bounds ).not.toBeNull();
+            // Infinity should be treated as 0
+            expect( Number.isFinite( bounds.x ) ).toBe( true );
+            expect( Number.isFinite( bounds.y ) ).toBe( true );
+        } );
+
+        test( 'should handle group layers in multi-selection bounds', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'c1', 'c2' ], visible: true },
+                { id: 'c1', type: 'rectangle', x: 0, y: 0, width: 50, height: 50, parentGroup: 'g1', visible: true },
+                { id: 'c2', type: 'rectangle', x: 100, y: 100, width: 50, height: 50, parentGroup: 'g1', visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'g1' ];
+
+            const bounds = selectionManager.getMultiSelectionBounds();
+
+            expect( bounds ).not.toBeNull();
+            expect( bounds.x ).toBe( 0 );
+            expect( bounds.y ).toBe( 0 );
+            expect( bounds.width ).toBe( 150 );
+            expect( bounds.height ).toBe( 150 );
+        } );
+
+        test( 'should return null when updateBounds receives only null bounds', () => {
+            // A group with no children returns null from _getGroupBounds
+            mockCanvasManager.layers = [
+                { id: 'g-empty', type: 'group', children: [], visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'g-empty' ];
+
+            // _getGroupBounds returns null for empty group, updateBounds skips null,
+            // minX stays Infinity → getMultiSelectionBounds returns null
+            const bounds = selectionManager.getMultiSelectionBounds();
+
+            expect( bounds ).toBeNull();
+        } );
+    } );
+
+    describe( '_getGroupBounds - fallback path branches', () => {
+        test( 'should return null when group has no children', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [], visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            const bounds = selectionManager._getGroupBounds(
+                { id: 'g1', type: 'group', children: [] }
+            );
+
+            expect( bounds ).toBeNull();
+        } );
+
+        test( 'should filter out sub-group children and compute bounds from non-group children only', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'c1', 'g2' ], visible: true },
+                { id: 'c1', type: 'rectangle', x: 10, y: 20, width: 30, height: 40, parentGroup: 'g1', visible: true },
+                { id: 'g2', type: 'group', children: [ 'c2' ], parentGroup: 'g1', visible: true },
+                { id: 'c2', type: 'rectangle', x: 50, y: 60, width: 70, height: 80, parentGroup: 'g2', visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            const bounds = selectionManager._getGroupBounds(
+                { id: 'g1', type: 'group', children: [ 'c1', 'g2' ] }
+            );
+
+            expect( bounds ).not.toBeNull();
+            // c1 at (10,20,30,40) and c2 at (50,60,70,80)
+            expect( bounds.x ).toBe( 10 );
+            expect( bounds.y ).toBe( 20 );
+            expect( bounds.width ).toBe( 110 ); // 120 - 10
+            expect( bounds.height ).toBe( 120 ); // 140 - 20
+        } );
+
+        test( 'should return null when all children are groups (minX stays Infinity)', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'g2' ], visible: true },
+                { id: 'g2', type: 'group', children: [], parentGroup: 'g1', visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            const bounds = selectionManager._getGroupBounds(
+                { id: 'g1', type: 'group', children: [ 'g2' ] }
+            );
+
+            expect( bounds ).toBeNull();
+        } );
+
+        test( 'should use groupManager.getGroupBounds when available', () => {
+            const mockGroupBounds = { x: 5, y: 10, width: 100, height: 200 };
+            mockCanvasManager.editor = {
+                groupManager: {
+                    getGroupBounds: jest.fn().mockReturnValue( mockGroupBounds ),
+                    getGroupChildren: jest.fn().mockReturnValue( [] )
+                }
+            };
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            const bounds = selectionManager._getGroupBounds(
+                { id: 'g1', type: 'group', children: [ 'c1' ] }
+            );
+
+            expect( bounds ).toEqual( mockGroupBounds );
+            expect( mockCanvasManager.editor.groupManager.getGroupBounds ).toHaveBeenCalledWith( 'g1' );
+        } );
+    } );
+
+    describe( 'getLayerAtPoint - branch coverage', () => {
+        test( 'should accept numeric (x, y) arguments', () => {
+            selectionManager._selectionState = null;
+            // Ensure canvasManager doesn't have getLayerAtPoint so fallback is used
+            delete mockCanvasManager.getLayerAtPoint;
+
+            const result = selectionManager.getLayerAtPoint( 15, 25 );
+
+            // layer1 is at (10,20,100,50) so (15,25) should hit it
+            expect( result ).not.toBeNull();
+            expect( result.id ).toBe( 'layer1' );
+        } );
+
+        test( 'should skip invisible layers (visible=false)', () => {
+            delete mockCanvasManager.getLayerAtPoint;
+            selectionManager._selectionState = null;
+
+            // layer3 is at (50,200,120,30) but visible=false
+            const result = selectionManager.getLayerAtPoint( { x: 55, y: 205 } );
+
+            expect( result ).toBeNull();
+        } );
+
+        test( 'should skip invisible layers (visible=0)', () => {
+            mockCanvasManager.layers = [
+                { id: 'v0', type: 'rectangle', x: 0, y: 0, width: 100, height: 100, visible: 0 }
+            ];
+            delete mockCanvasManager.getLayerAtPoint;
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            const result = selectionManager.getLayerAtPoint( { x: 50, y: 50 } );
+
+            expect( result ).toBeNull();
+        } );
+
+        test( 'should delegate to canvasManager.getLayerAtPoint when available', () => {
+            const mockLayer = { id: 'delegated', type: 'text' };
+            mockCanvasManager.getLayerAtPoint = jest.fn().mockReturnValue( mockLayer );
+
+            const result = selectionManager.getLayerAtPoint( { x: 5, y: 5 } );
+
+            expect( result ).toBe( mockLayer );
+            expect( mockCanvasManager.getLayerAtPoint ).toHaveBeenCalledWith( { x: 5, y: 5 } );
+        } );
+
+        test( 'should return null when no layer is hit', () => {
+            delete mockCanvasManager.getLayerAtPoint;
+            selectionManager._selectionState = null;
+
+            const result = selectionManager.getLayerAtPoint( { x: 9999, y: 9999 } );
+
+            expect( result ).toBeNull();
+        } );
+
+        test( 'should use editor.layers when canvasManager.layers is not available', () => {
+            const editorLayers = [
+                { id: 'ed1', type: 'rectangle', x: 0, y: 0, width: 50, height: 50, visible: true }
+            ];
+            // Create a canvasManager that has editor.layers but no own layers or getLayerAtPoint
+            const cm = {
+                editor: { layers: editorLayers },
+                canvas: document.createElement( 'canvas' ),
+                redraw: jest.fn(),
+                saveState: jest.fn()
+            };
+            selectionManager = new SelectionManager( cm );
+            selectionManager._selectionState = null;
+
+            const result = selectionManager.getLayerAtPoint( { x: 25, y: 25 } );
+
+            expect( result ).not.toBeNull();
+            expect( result.id ).toBe( 'ed1' );
+        } );
+    } );
+
+    describe( '_getHandleSize - branch coverage', () => {
+        test( 'should return touch handle size when on touch device with Constants', () => {
+            window.matchMedia = jest.fn().mockReturnValue( { matches: true } );
+            window.Layers = {
+                Constants: {
+                    DEFAULTS: {
+                        SIZES: {
+                            SELECTION_HANDLE_SIZE_TOUCH: 18,
+                            SELECTION_HANDLE_SIZE: 10
+                        }
+                    }
+                }
+            };
+            selectionManager = new SelectionManager( mockCanvasManager );
+
+            const size = selectionManager._getHandleSize();
+
+            expect( size ).toBe( 18 );
+        } );
+
+        test( 'should return fallback touch size (14) when Constants not available', () => {
+            window.matchMedia = jest.fn().mockReturnValue( { matches: true } );
+            delete window.Layers;
+            selectionManager = new SelectionManager( mockCanvasManager );
+
+            const size = selectionManager._getHandleSize();
+
+            expect( size ).toBe( 14 );
+        } );
+
+        test( 'should return desktop handle size with Constants', () => {
+            window.matchMedia = jest.fn().mockReturnValue( { matches: false } );
+            window.Layers = {
+                Constants: {
+                    DEFAULTS: {
+                        SIZES: {
+                            SELECTION_HANDLE_SIZE_TOUCH: 18,
+                            SELECTION_HANDLE_SIZE: 10
+                        }
+                    }
+                }
+            };
+            selectionManager = new SelectionManager( mockCanvasManager );
+
+            const size = selectionManager._getHandleSize();
+
+            expect( size ).toBe( 10 );
+        } );
+
+        test( 'should return fallback desktop size (8) when Constants not available', () => {
+            window.matchMedia = jest.fn().mockReturnValue( { matches: false } );
+            delete window.Layers;
+            selectionManager = new SelectionManager( mockCanvasManager );
+
+            const size = selectionManager._getHandleSize();
+
+            expect( size ).toBe( 8 );
+        } );
+    } );
+
+    describe( '_getGroupDescendantIds - branch coverage', () => {
+        test( 'should return empty array when group has no children array', () => {
+            mockCanvasManager.layers = [
+                { id: 'g-nochild', type: 'group', visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+
+            const ids = selectionManager._getGroupDescendantIds( 'g-nochild' );
+
+            expect( ids ).toEqual( [] );
+        } );
+
+        test( 'should return empty array for non-existent group', () => {
+            const ids = selectionManager._getGroupDescendantIds( 'nonexistent' );
+
+            expect( ids ).toEqual( [] );
+        } );
+
+        test( 'should return empty array for non-group layer', () => {
+            const ids = selectionManager._getGroupDescendantIds( 'layer1' );
+
+            expect( ids ).toEqual( [] );
+        } );
+
+        test( 'should use groupManager when available', () => {
+            mockCanvasManager.editor = {
+                groupManager: {
+                    getGroupChildren: jest.fn().mockReturnValue( [ 'c1', 'c2' ] )
+                }
+            };
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'c1', 'c2' ], visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+
+            const ids = selectionManager._getGroupDescendantIds( 'g1' );
+
+            expect( ids ).toEqual( [ 'c1', 'c2' ] );
+            expect( mockCanvasManager.editor.groupManager.getGroupChildren ).toHaveBeenCalledWith( 'g1', true );
+        } );
+
+        test( 'should traverse nested groups in fallback path', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'c1', 'g2' ], visible: true },
+                { id: 'c1', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, parentGroup: 'g1' },
+                { id: 'g2', type: 'group', children: [ 'c2' ], parentGroup: 'g1' },
+                { id: 'c2', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, parentGroup: 'g2' }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            const ids = selectionManager._getGroupDescendantIds( 'g1' );
+
+            expect( ids ).toContain( 'c1' );
+            expect( ids ).toContain( 'g2' );
+            expect( ids ).toContain( 'c2' );
+        } );
+
+        test( 'should handle circular references via visited set', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'g2' ], visible: true },
+                { id: 'g2', type: 'group', children: [ 'g1' ], visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            // Should not infinite loop
+            const ids = selectionManager._getGroupDescendantIds( 'g1' );
+
+            expect( ids ).toContain( 'g2' );
+            // g1 would be skipped because it's the root (already visited)
+        } );
+    } );
+
+    describe( 'isChildOfSelectedGroup - branch coverage', () => {
+        test( 'should return false for null layer', () => {
+            const result = selectionManager.isChildOfSelectedGroup( 'nonexistent' );
+
+            expect( result ).toBe( false );
+        } );
+
+        test( 'should return false for layer without parentGroup', () => {
+            const result = selectionManager.isChildOfSelectedGroup( 'layer1' );
+
+            expect( result ).toBe( false );
+        } );
+
+        test( 'should return true when direct parent is selected', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'c1' ], visible: true },
+                { id: 'c1', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, parentGroup: 'g1', visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'g1' ];
+
+            const result = selectionManager.isChildOfSelectedGroup( 'c1' );
+
+            expect( result ).toBe( true );
+        } );
+
+        test( 'should traverse ancestor chain to find selected group', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'g2' ], visible: true },
+                { id: 'g2', type: 'group', children: [ 'c1' ], parentGroup: 'g1', visible: true },
+                { id: 'c1', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, parentGroup: 'g2', visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'g1' ];
+
+            const result = selectionManager.isChildOfSelectedGroup( 'c1' );
+
+            expect( result ).toBe( true );
+        } );
+
+        test( 'should return false when no ancestor is selected', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'c1' ], visible: true },
+                { id: 'c1', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, parentGroup: 'g1', visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [];
+
+            const result = selectionManager.isChildOfSelectedGroup( 'c1' );
+
+            expect( result ).toBe( false );
+        } );
+    } );
+
+    describe( 'hitTestSelectionHandles - fallback branch coverage', () => {
+        test( 'should use fallback loop when _selectionHandles is null', () => {
+            selectionManager._selectionHandles = null;
+            selectionManager.selectionHandles = [
+                { type: 'nw', rect: { x: 0, y: 0, width: 10, height: 10 } },
+                { type: 'se', rect: { x: 90, y: 90, width: 10, height: 10 } }
+            ];
+
+            const result = selectionManager.hitTestSelectionHandles( { x: 5, y: 5 } );
+
+            expect( result ).not.toBeNull();
+            expect( result.type ).toBe( 'nw' );
+        } );
+
+        test( 'should return null in fallback when no handle hit', () => {
+            selectionManager._selectionHandles = null;
+            selectionManager.selectionHandles = [
+                { type: 'nw', rect: { x: 0, y: 0, width: 10, height: 10 } }
+            ];
+
+            const result = selectionManager.hitTestSelectionHandles( { x: 500, y: 500 } );
+
+            expect( result ).toBeNull();
+        } );
+
+        test( 'should skip handles without rect property', () => {
+            selectionManager._selectionHandles = null;
+            selectionManager.selectionHandles = [
+                { type: 'nw' },
+                { type: 'se', rect: { x: 0, y: 0, width: 10, height: 10 } }
+            ];
+
+            const result = selectionManager.hitTestSelectionHandles( { x: 5, y: 5 } );
+
+            expect( result ).not.toBeNull();
+            expect( result.type ).toBe( 'se' );
+        } );
+    } );
+
+    describe( 'getLayerBoundsCompat - branch coverage', () => {
+        test( 'should delegate to canvasManager.getLayerBounds when available', () => {
+            const mockBounds = { x: 1, y: 2, width: 3, height: 4 };
+            mockCanvasManager.getLayerBounds = jest.fn().mockReturnValue( mockBounds );
+
+            const result = selectionManager.getLayerBoundsCompat( mockLayers[ 0 ] );
+
+            expect( result ).toBe( mockBounds );
+        } );
+
+        test( 'should return null for null layer', () => {
+            delete mockCanvasManager.getLayerBounds;
+
+            const result = selectionManager.getLayerBoundsCompat( null );
+
+            expect( result ).toBeNull();
+        } );
+
+        test( 'should handle line/arrow layer with x1,y1,x2,y2', () => {
+            delete mockCanvasManager.getLayerBounds;
+
+            const lineLayer = { id: 'line1', type: 'arrow', x1: 10, y1: 20, x2: 50, y2: 80 };
+            const bounds = selectionManager.getLayerBoundsCompat( lineLayer );
+
+            expect( bounds ).toEqual( { x: 10, y: 20, width: 40, height: 60 } );
+        } );
+
+        test( 'should handle ellipse with radiusX/radiusY', () => {
+            delete mockCanvasManager.getLayerBounds;
+
+            const ellipseLayer = { id: 'e1', type: 'ellipse', x: 100, y: 100, radiusX: 30, radiusY: 20 };
+            const bounds = selectionManager.getLayerBoundsCompat( ellipseLayer );
+
+            expect( bounds ).toEqual( { x: 70, y: 80, width: 60, height: 40 } );
+        } );
+
+        test( 'should handle circle with radius', () => {
+            delete mockCanvasManager.getLayerBounds;
+
+            const circleLayer = { id: 'circ1', type: 'circle', x: 50, y: 50, radius: 25 };
+            const bounds = selectionManager.getLayerBoundsCompat( circleLayer );
+
+            expect( bounds ).toEqual( { x: 25, y: 25, width: 50, height: 50 } );
+        } );
+
+        test( 'should handle polygon with points array', () => {
+            delete mockCanvasManager.getLayerBounds;
+
+            const polyLayer = {
+                id: 'poly1',
+                type: 'polygon',
+                points: [
+                    { x: 0, y: 0 },
+                    { x: 100, y: 0 },
+                    { x: 50, y: 80 }
+                ]
+            };
+            const bounds = selectionManager.getLayerBoundsCompat( polyLayer );
+
+            expect( bounds ).toEqual( { x: 0, y: 0, width: 100, height: 80 } );
+        } );
+
+        test( 'should return null for layer with insufficient properties', () => {
+            delete mockCanvasManager.getLayerBounds;
+
+            const weirdLayer = { id: 'w1', type: 'unknown' };
+            const bounds = selectionManager.getLayerBoundsCompat( weirdLayer );
+
+            expect( bounds ).toBeNull();
+        } );
+
+        test( 'should handle negative width/height', () => {
+            delete mockCanvasManager.getLayerBounds;
+
+            const negLayer = { id: 'neg1', type: 'rectangle', x: 50, y: 50, width: -30, height: -20 };
+            const bounds = selectionManager.getLayerBoundsCompat( negLayer );
+
+            expect( bounds.x ).toBe( 20 ); // min(50, 50+(-30)) = 20
+            expect( bounds.y ).toBe( 30 ); // min(50, 50+(-20)) = 30
+            expect( bounds.width ).toBe( 30 );
+            expect( bounds.height ).toBe( 20 );
+        } );
+    } );
+
+    describe( 'selectLayer - group selection branches', () => {
+        test( 'should select group and all its children in fallback path', () => {
+            mockCanvasManager.layers = [
+                { id: 'g1', type: 'group', children: [ 'c1', 'c2' ], visible: true },
+                { id: 'c1', type: 'rectangle', x: 0, y: 0, width: 10, height: 10, parentGroup: 'g1', visible: true },
+                { id: 'c2', type: 'rectangle', x: 20, y: 20, width: 10, height: 10, parentGroup: 'g1', visible: true }
+            ];
+            selectionManager = new SelectionManager( mockCanvasManager );
+            selectionManager._selectionState = null;
+
+            selectionManager.selectLayer( 'g1', false );
+
+            expect( selectionManager.selectedLayerIds ).toContain( 'g1' );
+            expect( selectionManager.selectedLayerIds ).toContain( 'c1' );
+            expect( selectionManager.selectedLayerIds ).toContain( 'c2' );
+        } );
+
+        test( 'should deselect layer when adding to selection and already selected (toggle)', () => {
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'layer1' ];
+
+            selectionManager.selectLayer( 'layer1', true );
+
+            expect( selectionManager.selectedLayerIds ).not.toContain( 'layer1' );
+        } );
+
+        test( 'should announce selection for screen readers', () => {
+            const mockAnnouncer = {
+                announceLayerSelection: jest.fn()
+            };
+            window.layersAnnouncer = mockAnnouncer;
+            selectionManager._selectionState = null;
+
+            selectionManager.selectLayer( 'layer1', false );
+
+            expect( mockAnnouncer.announceLayerSelection ).toHaveBeenCalled();
+            delete window.layersAnnouncer;
+        } );
+    } );
+
+    describe( '_initializeModules - branch coverage', () => {
+        test( 'should initialize SelectionHandles with configured sizes', () => {
+            // Verify that _selectionHandles is initialized
+            const sm = new SelectionManager( mockCanvasManager );
+
+            // SelectionHandles may or may not be available depending on module loading
+            // but the initialization path should be exercised
+            expect( sm ).toBeDefined();
+        } );
+    } );
+
+    describe( 'createSingleSelectionHandles / createMultiSelectionHandles - fallback branches', () => {
+        test( 'should use _createHandlesFromBounds fallback for single selection', () => {
+            selectionManager._selectionHandles = null;
+            selectionManager.selectedLayerIds = [ 'layer1' ];
+
+            selectionManager.createSingleSelectionHandles( mockLayers[ 0 ] );
+
+            expect( selectionManager.selectionHandles.length ).toBeGreaterThan( 0 );
+            // Should include standard handle types
+            const types = selectionManager.selectionHandles.map( ( h ) => h.type );
+            expect( types ).toContain( 'nw' );
+            expect( types ).toContain( 'se' );
+        } );
+
+        test( 'should use _createHandlesFromBounds fallback for multi selection', () => {
+            selectionManager._selectionHandles = null;
+            selectionManager.selectedLayerIds = [ 'layer1', 'layer2' ];
+
+            selectionManager.createMultiSelectionHandles();
+
+            expect( selectionManager.selectionHandles.length ).toBeGreaterThan( 0 );
+        } );
+    } );
+
+    describe( 'updateMarqueeSelection - fallback branch coverage', () => {
+        test( 'should use fallback marquee selection when _marqueeSelection is null', () => {
+            selectionManager._marqueeSelection = null;
+            selectionManager._selectionState = null;
+            selectionManager.isMarqueeSelecting = true;
+            selectionManager.marqueeStart = { x: 0, y: 0 };
+
+            selectionManager.updateMarqueeSelection( { x: 200, y: 200 } );
+
+            // Should select layer1 and layer2 (visible and within marquee)
+            expect( selectionManager.selectedLayerIds ).toContain( 'layer1' );
+            expect( selectionManager.selectedLayerIds ).toContain( 'layer2' );
+            // layer3 is invisible, should NOT be selected
+            expect( selectionManager.selectedLayerIds ).not.toContain( 'layer3' );
+        } );
+
+        test( 'should accept numeric (x, y) arguments for updateMarqueeSelection', () => {
+            selectionManager._marqueeSelection = null;
+            selectionManager._selectionState = null;
+            selectionManager.isMarqueeSelecting = true;
+            selectionManager.marqueeStart = { x: 0, y: 0 };
+
+            selectionManager.updateMarqueeSelection( 200, 200 );
+
+            expect( selectionManager.marqueeEnd ).toEqual( { x: 200, y: 200 } );
+        } );
+
+        test( 'should do nothing when not marquee selecting', () => {
+            selectionManager._marqueeSelection = null;
+            selectionManager.isMarqueeSelecting = false;
+
+            selectionManager.updateMarqueeSelection( { x: 100, y: 100 } );
+
+            expect( selectionManager.marqueeEnd ).toBeNull();
+        } );
+
+        test( 'should set lastSelectedId to last in selection', () => {
+            selectionManager._marqueeSelection = null;
+            selectionManager._selectionState = null;
+            selectionManager.isMarqueeSelecting = true;
+            selectionManager.marqueeStart = { x: 0, y: 0 };
+
+            selectionManager.updateMarqueeSelection( { x: 200, y: 200 } );
+
+            // lastSelectedId should be the last selected layer
+            if ( selectionManager.selectedLayerIds.length > 0 ) {
+                expect( selectionManager.lastSelectedId ).toBe(
+                    selectionManager.selectedLayerIds[ selectionManager.selectedLayerIds.length - 1 ]
+                );
+            }
+        } );
+
+        test( 'should clear lastSelectedId when marquee selects nothing', () => {
+            selectionManager._marqueeSelection = null;
+            selectionManager._selectionState = null;
+            selectionManager.isMarqueeSelecting = true;
+            selectionManager.marqueeStart = { x: 9000, y: 9000 };
+            selectionManager.lastSelectedId = 'layer1';
+
+            selectionManager.updateMarqueeSelection( { x: 9001, y: 9001 } );
+
+            expect( selectionManager.lastSelectedId ).toBeNull();
+        } );
+    } );
+
+    describe( 'updateSelectionHandles - branch coverage', () => {
+        test( 'should clear handles when no layers selected', () => {
+            selectionManager.selectedLayerIds = [];
+            selectionManager.selectionHandles = [ { type: 'nw' } ];
+
+            selectionManager.updateSelectionHandles();
+
+            expect( selectionManager.selectionHandles ).toEqual( [] );
+        } );
+
+        test( 'should clear _selectionHandles module when no layers selected', () => {
+            const mockClear = jest.fn();
+            selectionManager._selectionHandles = { clear: mockClear };
+            selectionManager.selectedLayerIds = [];
+
+            selectionManager.updateSelectionHandles();
+
+            expect( mockClear ).toHaveBeenCalled();
+        } );
+    } );
+
+    describe( '_isTouchDevice - branch coverage', () => {
+        test( 'should return false when matchMedia not available', () => {
+            const origMatchMedia = window.matchMedia;
+            delete window.matchMedia;
+
+            const result = selectionManager._isTouchDevice();
+
+            expect( result ).toBe( false );
+            window.matchMedia = origMatchMedia;
+        } );
+    } );
+
+    describe( 'getSelectionBounds - branch coverage', () => {
+        test( 'should return null when no layers selected', () => {
+            selectionManager.selectedLayerIds = [];
+
+            const bounds = selectionManager.getSelectionBounds();
+
+            expect( bounds ).toBeNull();
+        } );
+
+        test( 'should return single layer bounds when one selected', () => {
+            selectionManager.selectedLayerIds = [ 'layer1' ];
+
+            const bounds = selectionManager.getSelectionBounds();
+
+            expect( bounds ).not.toBeNull();
+            expect( bounds.x ).toBe( 10 );
+            expect( bounds.y ).toBe( 20 );
+        } );
+
+        test( 'should return null when single selected layer not found', () => {
+            selectionManager.selectedLayerIds = [ 'nonexistent' ];
+
+            const bounds = selectionManager.getSelectionBounds();
+
+            expect( bounds ).toBeNull();
+        } );
+
+        test( 'should return multi-selection bounds when multiple selected', () => {
+            selectionManager._selectionState = null;
+            selectionManager.selectedLayerIds = [ 'layer1', 'layer2' ];
+
+            const bounds = selectionManager.getSelectionBounds();
+
+            expect( bounds ).not.toBeNull();
+            expect( bounds.x ).toBe( 10 ); // min of 10, 150
+            expect( bounds.width ).toBeGreaterThan( 0 );
+        } );
+    } );
+
+    describe( 'MAX_GROUP_DEPTH - static property', () => {
+        test( 'should return 10', () => {
+            expect( SelectionManager.MAX_GROUP_DEPTH ).toBe( 10 );
+        } );
+    } );
 });

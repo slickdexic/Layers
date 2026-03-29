@@ -1661,4 +1661,383 @@ describe( 'TextBoxRenderer', () => {
 			} );
 		} );
 	} );
+
+	// ========================================================================
+	// Branch coverage gap tests
+	// ========================================================================
+	describe( 'branch coverage - rich text rendering', () => {
+		test( 'drawTextContent dispatches to drawRichTextContent for rich text', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 100,
+				fontSize: 16, fontFamily: 'Arial',
+				richText: [
+					{ text: 'Hello ', style: { fontWeight: 'bold' } },
+					{ text: 'World', style: { fontStyle: 'italic' } }
+				]
+			};
+			renderer.drawTextContent( layer, 10, 10, 200, 100, 8, { sx: 1, sy: 1, avg: 1 }, { sx: 1, sy: 1, avg: 1 }, 1 );
+			// Should render the rich text
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'drawRichTextLine skips null/invalid runs', () => {
+			const richText = [
+				null,
+				{ text: 123 },
+				{ text: 'Valid' }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = { hasTextShadow: false, hasTextStroke: false };
+
+			renderer.drawRichTextLine( richText, 0, 5, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			expect( ctx.fillText ).toHaveBeenCalledWith( 'Valid', 10, 50 );
+		} );
+
+		test( 'drawRichTextLine skips runs outside line range', () => {
+			const richText = [
+				{ text: 'Before' },
+				{ text: 'InRange' }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = { hasTextShadow: false, hasTextStroke: false };
+
+			// Only render chars 6-13 (the "InRange" run)
+			renderer.drawRichTextLine( richText, 6, 13, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			expect( ctx.fillText ).toHaveBeenCalledWith( 'InRange', 10, 50 );
+		} );
+
+		test( 'drawRichTextLine renders backgroundColor highlight', () => {
+			const richText = [
+				{ text: 'Highlighted', style: { backgroundColor: '#ff0' } }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = { hasTextShadow: false, hasTextStroke: false };
+
+			renderer.drawRichTextLine( richText, 0, 11, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			expect( ctx.fillRect ).toHaveBeenCalled();
+			expect( ctx.fillText ).toHaveBeenCalledWith( 'Highlighted', 10, 50 );
+		} );
+
+		test( 'drawRichTextLine renders per-run text stroke', () => {
+			const richText = [
+				{ text: 'Stroked', style: { textStrokeWidth: 2, textStrokeColor: '#f00' } }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = { hasTextShadow: false, hasTextStroke: false };
+
+			renderer.drawRichTextLine( richText, 0, 7, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			expect( ctx.strokeText ).toHaveBeenCalledWith( 'Stroked', 10, 50 );
+		} );
+
+		test( 'drawRichTextLine renders per-run text stroke with shadow', () => {
+			const richText = [
+				{ text: 'StrokeShadow', style: { textStrokeWidth: 2, textStrokeColor: '#f00' } }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = {
+				hasTextShadow: true,
+				textShadowColor: 'rgba(0,0,0,0.5)',
+				textShadowBlur: 4,
+				textShadowOffsetX: 2,
+				textShadowOffsetY: 2,
+				hasTextStroke: false
+			};
+
+			renderer.drawRichTextLine( richText, 0, 12, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			expect( ctx.strokeText ).toHaveBeenCalled();
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'drawRichTextLine renders underline decoration', () => {
+			const richText = [
+				{ text: 'Underlined', style: { textDecoration: 'underline' } }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = { hasTextShadow: false, hasTextStroke: false };
+
+			renderer.drawRichTextLine( richText, 0, 10, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.moveTo ).toHaveBeenCalled();
+			expect( ctx.lineTo ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'drawRichTextLine renders line-through decoration', () => {
+			const richText = [
+				{ text: 'Struck', style: { textDecoration: 'line-through' } }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = { hasTextShadow: false, hasTextStroke: false };
+
+			renderer.drawRichTextLine( richText, 0, 6, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'drawRichTextLine renders overline decoration', () => {
+			const richText = [
+				{ text: 'Overlined', style: { textDecoration: 'overline' } }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = { hasTextShadow: false, hasTextStroke: false };
+
+			renderer.drawRichTextLine( richText, 0, 9, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			expect( ctx.beginPath ).toHaveBeenCalled();
+			expect( ctx.stroke ).toHaveBeenCalled();
+		} );
+
+		test( 'drawRichTextLine skips none decoration', () => {
+			const richText = [
+				{ text: 'Normal', style: { textDecoration: 'none' } }
+			];
+			const baseStyle = { fontSize: 16, fontFamily: 'Arial', fontWeight: 'normal', fontStyle: 'normal', color: '#000' };
+			const textStyle = { hasTextShadow: false, hasTextStroke: false };
+
+			ctx.beginPath.mockClear();
+			renderer.drawRichTextLine( richText, 0, 6, 10, 50, baseStyle, textStyle, { avg: 1 } );
+			// No decoration drawing - beginPath only called for background, not decoration
+			expect( ctx.fillText ).toHaveBeenCalledWith( 'Normal', 10, 50 );
+		} );
+
+		test( 'draw renders rich text content in textbox', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 100,
+				fontSize: 16, fontFamily: 'Arial',
+				fill: '#ffffff', stroke: '#000000',
+				richText: [
+					{ text: 'Bold ', style: { fontWeight: 'bold' } },
+					{ text: 'Normal' }
+				]
+			};
+			renderer.draw( layer );
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'branch coverage - hasRichText fallback', () => {
+		test( 'returns true for valid rich text array', () => {
+			const result = renderer.hasRichText( {
+				richText: [ { text: 'Hello' } ]
+			} );
+			expect( result ).toBe( true );
+		} );
+
+		test( 'returns false for empty rich text array', () => {
+			const result = renderer.hasRichText( {
+				richText: []
+			} );
+			expect( result ).toBe( false );
+		} );
+
+		test( 'returns false for rich text with only invalid entries', () => {
+			const result = renderer.hasRichText( {
+				richText: [ null, { text: 123 }, { noText: true } ]
+			} );
+			expect( result ).toBe( false );
+		} );
+
+		test( 'returns false when richText is not array', () => {
+			const result = renderer.hasRichText( {
+				richText: 'not an array'
+			} );
+			expect( result ).toBe( false );
+		} );
+	} );
+
+	describe( 'branch coverage - blur fill in draw', () => {
+		test( 'draw handles blur fill with effectsRenderer', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			const blurRenderer = new TextBoxRenderer( ctx, {
+				shadowRenderer: createMockShadowRenderer(),
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 100,
+				fill: 'blur', blurRadius: 12,
+				fillOpacity: 0.8,
+				text: 'Blurred'
+			};
+			blurRenderer.draw( layer );
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
+			blurRenderer.destroy();
+		} );
+
+		test( 'draw handles blur fill with rotation', () => {
+			const mockEffectsRenderer = {
+				drawBlurFill: jest.fn()
+			};
+			const blurRenderer = new TextBoxRenderer( ctx, {
+				shadowRenderer: createMockShadowRenderer(),
+				effectsRenderer: mockEffectsRenderer
+			} );
+
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 100,
+				fill: 'blur', blurRadius: 12,
+				fillOpacity: 0.8,
+				rotation: 45,
+				text: 'Rotated Blur'
+			};
+			blurRenderer.draw( layer );
+			expect( mockEffectsRenderer.drawBlurFill ).toHaveBeenCalled();
+			blurRenderer.destroy();
+		} );
+
+		test( 'draw skips blur fill when no effectsRenderer', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 100,
+				fill: 'blur', blurRadius: 12,
+				text: 'No Effects'
+			};
+			// Default renderer has no effectsRenderer
+			renderer.draw( layer );
+			// Should still render without error
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'branch coverage - gradient fill', () => {
+		test( 'draw tries gradient renderer when available', () => {
+			const mockGradientRenderer = {
+				applyFill: jest.fn( () => true )
+			};
+			const gradRenderer = new TextBoxRenderer( ctx, {
+				shadowRenderer: createMockShadowRenderer(),
+				gradientRenderer: mockGradientRenderer
+			} );
+
+			// Mock GradientRenderer on window
+			const origLayers = window.Layers;
+			window.Layers = {
+				...( window.Layers || {} ),
+				Renderers: {
+					GradientRenderer: {
+						hasGradient: jest.fn( () => true )
+					}
+				}
+			};
+
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 100,
+				fill: '#ff0000',
+				gradient: { type: 'linear', colors: [ { offset: 0, color: '#f00' }, { offset: 1, color: '#00f' } ] },
+				text: 'Gradient'
+			};
+
+			gradRenderer.draw( layer );
+			gradRenderer.destroy();
+			window.Layers = origLayers;
+		} );
+	} );
+
+	describe( 'branch coverage - drawTextContent vertical align', () => {
+		test( 'middle vertical alignment', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 200,
+				fontSize: 16, fontFamily: 'Arial',
+				verticalAlign: 'middle',
+				text: 'Center'
+			};
+			renderer.drawTextContent( layer, 10, 10, 200, 200, 8, { sx: 1, sy: 1, avg: 1 }, { sx: 1, sy: 1, avg: 1 }, 1 );
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+
+		test( 'bottom vertical alignment', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 200,
+				fontSize: 16, fontFamily: 'Arial',
+				verticalAlign: 'bottom',
+				text: 'Bottom'
+			};
+			renderer.drawTextContent( layer, 10, 10, 200, 200, 8, { sx: 1, sy: 1, avg: 1 }, { sx: 1, sy: 1, avg: 1 }, 1 );
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'branch coverage - _calculateLineMetricsFallback', () => {
+		test( 'calculates line metrics without RichTextUtils', () => {
+			const richText = [
+				{ text: 'Hello ', style: { fontSize: 20 } },
+				{ text: 'World' }
+			];
+			const lines = [ 'Hello World' ];
+			const plainText = 'Hello World';
+			const baseFontSize = 16;
+			const lineHeight = 1.2;
+			const scale = { avg: 1 };
+
+			const result = renderer._calculateLineMetricsFallback(
+				lines, richText, plainText, baseFontSize, lineHeight, scale
+			);
+			expect( result ).toBeInstanceOf( Array );
+			expect( result.length ).toBe( 1 );
+			expect( result[ 0 ] ).toHaveProperty( 'maxFontSize' );
+			expect( result[ 0 ] ).toHaveProperty( 'lineHeight' );
+		} );
+
+		test( 'handles multiple lines', () => {
+			const richText = [
+				{ text: 'Line1\nLine2' }
+			];
+			const lines = [ 'Line1', 'Line2' ];
+			const plainText = 'Line1\nLine2';
+			const baseFontSize = 16;
+
+			const result = renderer._calculateLineMetricsFallback(
+				lines, richText, plainText, baseFontSize, 1.2, { avg: 1 }
+			);
+			expect( result.length ).toBe( 2 );
+		} );
+	} );
+
+	describe( 'branch coverage - getRichTextPlainText fallback', () => {
+		test( 'returns joined text', () => {
+			const result = renderer.getRichTextPlainText( [
+				{ text: 'Hello ' },
+				{ text: 'World' }
+			] );
+			expect( result ).toBe( 'Hello World' );
+		} );
+
+		test( 'returns empty for non-array', () => {
+			const result = renderer.getRichTextPlainText( 'not array' );
+			expect( result ).toBe( '' );
+		} );
+
+		test( 'handles null entries', () => {
+			const result = renderer.getRichTextPlainText( [
+				null,
+				{ text: 'OK' },
+				{ noText: true }
+			] );
+			expect( result ).toBe( 'OK' );
+		} );
+	} );
+
+	describe( 'branch coverage - drawTextOnly with rich text', () => {
+		test( 'drawTextOnly handles rich text layers', () => {
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 10, width: 200, height: 100,
+				fontSize: 16, fontFamily: 'Arial',
+				richText: [
+					{ text: 'Rich ' },
+					{ text: 'Text' }
+				]
+			};
+			renderer.drawTextOnly( layer );
+			expect( ctx.fillText ).toHaveBeenCalled();
+		} );
+	} );
 } );

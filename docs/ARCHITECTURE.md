@@ -17,22 +17,22 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 
 ---
 
-## Codebase Statistics (March 24, 2026)
+## Codebase Statistics (March 28, 2026)
 
 | Metric | Value |
 |--------|-------|
 | Total JS files | **157** |
-| Total JS lines | **~113,900** |
+| Total JS lines | **~114,000** |
 | Total PHP files | **42** |
-| Total PHP lines | **~15,339** |
+| Total PHP lines | **~15,364** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
 | Shape/Emoji data | ~23,500 lines (generated) |
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
-| Test coverage | **94.24% stmt, 84.17% branch** |
-| Jest tests | **11,904** (168 suites) |
+| Test coverage | **95.82% stmt, 87.00% branch** |
+| Jest tests | **13,880** (172 suites) |
 | PHPUnit test files | 34 |
 | God classes (>=1000 lines) | **26** (5 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |
@@ -145,7 +145,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | LayersValidator.js | 956 | Client-side validation |
 | ArrowRenderer.js | 932 | Arrow rendering |
 
-**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 94.24% statement test coverage.
+**Note:** All hand-written god classes use delegation patterns. Code quality is maintained with 95.82% statement test coverage.
 
 See [improvement_plan.md](../improvement_plan.md) for detailed status.
 
@@ -925,7 +925,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **11,904 tests, 94.24% statement coverage, 84.17% branch coverage**
+- **13,880 tests, 95.82% statement coverage, 87.00% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (11,904 tests, 168 suites)
+│   ├── jest/                # Unit tests (13,880 tests, 172 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

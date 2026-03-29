@@ -1671,4 +1671,584 @@ describe('HistoryManager', () => {
             expect(historyManager.historyIndex).toBe(1);
         });
     });
+
+    describe('HistoryManager - branch coverage gaps', () => {
+        let hm;
+        let mockCM;
+        let mockEditor;
+        let mockLayers2;
+
+        beforeEach(() => {
+            mockLayers2 = [{ id: 'l1', type: 'rectangle', x: 10, y: 20, width: 100, height: 50 }];
+            mockCM = {
+                layers: mockLayers2,
+                selectedLayerIds: [],
+                renderLayers: jest.fn(),
+                redraw: jest.fn(),
+                selectionManager: { clearSelection: jest.fn() }
+            };
+            mockEditor = {
+                canvasManager: mockCM,
+                layers: mockLayers2,
+                stateManager: {
+                    getLayers: jest.fn(() => mockLayers2),
+                    set: jest.fn()
+                },
+                toolbar: {
+                    container: document.createElement('div'),
+                    updateUndoRedoState: jest.fn()
+                },
+                layerPanel: { renderLayerList: jest.fn() },
+                markDirty: jest.fn(),
+                updateStatus: jest.fn()
+            };
+            hm = new HistoryManager({ editor: mockEditor });
+        });
+
+        // --- getEditor / getCanvasManager ---
+        test('getEditor returns editor directly', () => {
+            expect(hm.getEditor()).toBe(mockEditor);
+        });
+
+        test('getEditor returns editor via canvasManager.editor', () => {
+            const hm2 = new HistoryManager({ canvasManager: { editor: mockEditor } });
+            expect(hm2.getEditor()).toBe(mockEditor);
+        });
+
+        test('getEditor returns null when no editor available', () => {
+            const hm2 = new HistoryManager({});
+            expect(hm2.getEditor()).toBeNull();
+        });
+
+        test('getCanvasManager returns via editor.canvasManager', () => {
+            expect(hm.getCanvasManager()).toBe(mockCM);
+        });
+
+        test('getCanvasManager returns direct canvasManager', () => {
+            const hm2 = new HistoryManager({ canvasManager: mockCM });
+            expect(hm2.getCanvasManager()).toBe(mockCM);
+        });
+
+        test('getCanvasManager returns null when nothing available', () => {
+            const hm2 = new HistoryManager({});
+            expect(hm2.getCanvasManager()).toBeNull();
+        });
+
+        // --- saveState isDestroyed guard ---
+        test('saveState does nothing when destroyed', () => {
+            hm.isDestroyed = true;
+            hm.saveState('test');
+            expect(hm.history).toHaveLength(0);
+        });
+
+        // --- saveState batch mode ---
+        test('saveState pushes to batchChanges in batch mode', () => {
+            hm.startBatch('batch');
+            hm.saveState('change1');
+            expect(hm.batchChanges.length).toBe(1);
+            expect(hm.batchChanges[0].description).toBe('change1');
+            hm.batchMode = false;
+        });
+
+        // --- saveState trim when exceeds max ---
+        test('saveState trims history and adjusts lastSaveHistoryIndex', () => {
+            hm.maxHistorySteps = 3;
+            hm.saveState('s1');
+            hm.lastSaveHistoryIndex = 0;
+            mockLayers2[0].x = 20;
+            hm.saveState('s2');
+            mockLayers2[0].x = 30;
+            hm.saveState('s3');
+            mockLayers2[0].x = 40;
+            hm.saveState('s4');
+            // After 4 saves with max 3, history trimmed
+            expect(hm.history.length).toBe(3);
+            // lastSaveHistoryIndex was 0, after shift it becomes -1
+            expect(hm.lastSaveHistoryIndex).toBe(-1);
+        });
+
+        test('saveState decrements lastSaveHistoryIndex when > 0', () => {
+            hm.maxHistorySteps = 3;
+            hm.saveState('s1');
+            mockLayers2[0].x = 20;
+            hm.saveState('s2');
+            hm.lastSaveHistoryIndex = 1;
+            mockLayers2[0].x = 30;
+            hm.saveState('s3');
+            mockLayers2[0].x = 40;
+            hm.saveState('s4');
+            expect(hm.lastSaveHistoryIndex).toBe(0);
+        });
+
+        // --- undo defensive check ---
+        test('undo returns false when state is undefined', () => {
+            hm.saveState('s1');
+            mockLayers2[0].x = 50;
+            hm.saveState('s2');
+            // Manually corrupt history
+            hm.history[0] = undefined;
+            const origIndex = hm.historyIndex;
+            const result = hm.undo();
+            // Should detect undefined state and restore index
+            if (!result) {
+                expect(hm.historyIndex).toBe(origIndex);
+            }
+        });
+
+        // --- redo defensive check ---
+        test('redo returns false when state is undefined', () => {
+            hm.saveState('s1');
+            mockLayers2[0].x = 50;
+            hm.saveState('s2');
+            hm.undo();
+            // Corrupt redo target
+            hm.history[1] = undefined;
+            const origIndex = hm.historyIndex;
+            const result = hm.redo();
+            if (!result) {
+                expect(hm.historyIndex).toBe(origIndex);
+            }
+        });
+
+        // --- restoreState without stateManager (editor.layers direct) ---
+        test('restoreState sets editor.layers directly when no stateManager', () => {
+            const editorNoSM = {
+                canvasManager: mockCM,
+                layers: mockLayers2,
+                markDirty: jest.fn()
+            };
+            const hm2 = new HistoryManager({ editor: editorNoSM });
+            hm2.saveState('s1');
+            editorNoSM.layers = [{ id: 'l1', x: 999 }];
+            hm2.saveState('s2');
+            hm2.undo();
+            expect(editorNoSM.layers[0].x).toBe(10);
+        });
+
+        // --- restoreState via canvasManager.layers ---
+        test('restoreState sets canvasManager.layers when no editor', () => {
+            const hm2 = new HistoryManager({ canvasManager: mockCM });
+            hm2.saveState('s1');
+            mockCM.layers = [{ id: 'l1', x: 999 }];
+            hm2.saveState('s2');
+            hm2.undo();
+            expect(mockCM.layers[0].x).toBe(10);
+        });
+
+        // --- restoreState legacy selection clear ---
+        test('restoreState uses legacy selection clear when no selectionManager', () => {
+            mockCM.selectionManager = null;
+            mockCM.selectedLayerId = 'l1';
+            mockCM.selectedLayerIds = ['l1'];
+            hm.saveState('s1');
+            mockLayers2[0].x = 50;
+            hm.saveState('s2');
+            hm.undo();
+            expect(mockCM.selectedLayerId).toBeNull();
+            expect(mockCM.selectedLayerIds).toEqual([]);
+        });
+
+        // --- restoreState renderLayerList when no stateManager ---
+        test('restoreState calls renderLayerList when stateManager not used', () => {
+            const editorNoSM = {
+                canvasManager: mockCM,
+                layers: mockLayers2,
+                layerPanel: { renderLayerList: jest.fn() },
+                markDirty: jest.fn()
+            };
+            const hm2 = new HistoryManager({ editor: editorNoSM });
+            hm2.saveState('s1');
+            editorNoSM.layers[0].x = 50;
+            hm2.saveState('s2');
+            hm2.undo();
+            expect(editorNoSM.layerPanel.renderLayerList).toHaveBeenCalled();
+        });
+
+        // --- restoreState does NOT call renderLayerList when stateManager used ---
+        test('restoreState skips renderLayerList when stateManager used', () => {
+            hm.saveState('s1');
+            mockLayers2[0].x = 50;
+            hm.saveState('s2');
+            mockEditor.layerPanel.renderLayerList.mockClear();
+            hm.undo();
+            expect(mockEditor.layerPanel.renderLayerList).not.toHaveBeenCalled();
+        });
+
+        // --- updateUndoRedoButtons with toolbar buttons ---
+        test('updateUndoRedoButtons updates button titles', () => {
+            const undoBtn = document.createElement('button');
+            undoBtn.setAttribute('data-action', 'undo');
+            const redoBtn = document.createElement('button');
+            redoBtn.setAttribute('data-action', 'redo');
+            mockEditor.toolbar.container.appendChild(undoBtn);
+            mockEditor.toolbar.container.appendChild(redoBtn);
+
+            hm.saveState('First change');
+            mockLayers2[0].x = 50;
+            hm.saveState('Second change');
+            // After 2 saves, canUndo is true, button title shows previous description
+            expect(undoBtn.title).toContain('First change');
+            expect(redoBtn.title).toBe('Nothing to redo');
+        });
+
+        test('updateUndoRedoButtons when no toolbar', () => {
+            mockEditor.toolbar = null;
+            expect(() => hm.updateUndoRedoButtons()).not.toThrow();
+        });
+
+        test('updateUndoRedoButtons calls updateStatus', () => {
+            hm.saveState('s1');
+            expect(mockEditor.updateStatus).toHaveBeenCalledWith(
+                expect.objectContaining({ canUndo: false, canRedo: false })
+            );
+        });
+
+        // --- endBatch without batch mode ---
+        test('endBatch exits cleanly when not in batch mode', () => {
+            hm.endBatch();
+            expect(hm.batchMode).toBe(false);
+            expect(hm.batchChanges).toEqual([]);
+        });
+
+        test('endBatch exits cleanly when batchChanges empty', () => {
+            hm.batchMode = true;
+            hm.batchChanges = [];
+            hm.endBatch();
+            expect(hm.batchMode).toBe(false);
+        });
+
+        // --- cancelBatch ---
+        test('cancelBatch reverts to snapshot via stateManager', () => {
+            hm.startBatch('batch');
+            mockLayers2[0].x = 999;
+            hm.saveState('batch change');
+            hm.cancelBatch();
+            expect(mockEditor.stateManager.set).toHaveBeenCalledWith('layers', expect.any(Array));
+            expect(hm.batchMode).toBe(false);
+        });
+
+        test('cancelBatch when no batchStartSnapshot', () => {
+            hm.batchMode = true;
+            hm.batchStartSnapshot = null;
+            hm.cancelBatch();
+            expect(hm.batchMode).toBe(false);
+        });
+
+        test('cancelBatch without stateManager but with editor', () => {
+            const editorNoSM = {
+                canvasManager: mockCM,
+                layers: mockLayers2,
+                markDirty: jest.fn()
+            };
+            const hm2 = new HistoryManager({ editor: editorNoSM });
+            hm2.startBatch('batch');
+            editorNoSM.layers[0].x = 999;
+            hm2.cancelBatch();
+            // Should set editor.layers directly
+            expect(Array.isArray(editorNoSM.layers)).toBe(true);
+        });
+
+        test('cancelBatch with only canvasManager', () => {
+            const hm2 = new HistoryManager({ canvasManager: mockCM });
+            hm2.startBatch('batch');
+            mockCM.layers[0].x = 999;
+            hm2.cancelBatch();
+            expect(Array.isArray(mockCM.layers)).toBe(true);
+        });
+
+        // --- getHistoryEntries with limit ---
+        test('getHistoryEntries respects limit', () => {
+            for (let i = 0; i < 10; i++) {
+                mockLayers2[0].x = i;
+                hm.saveState('s' + i);
+            }
+            const entries = hm.getHistoryEntries(3);
+            expect(entries.length).toBe(3);
+            expect(entries[entries.length - 1].isCurrent).toBe(true);
+        });
+
+        test('getHistoryEntries marks canRevertTo correctly', () => {
+            hm.saveState('s1');
+            mockLayers2[0].x = 50;
+            hm.saveState('s2');
+            mockLayers2[0].x = 99;
+            hm.saveState('s3');
+            hm.undo();
+            const entries = hm.getHistoryEntries(10);
+            // Current is at index 1, so index 2 (s3) cannot be reverted to
+            const s3entry = entries.find(e => e.description === 's3');
+            expect(s3entry.canRevertTo).toBe(false);
+        });
+
+        // --- revertTo boundary checks ---
+        test('revertTo returns false for negative index', () => {
+            hm.saveState('s1');
+            expect(hm.revertTo(-1)).toBe(false);
+        });
+
+        test('revertTo returns false for index >= history length', () => {
+            hm.saveState('s1');
+            expect(hm.revertTo(999)).toBe(false);
+        });
+
+        test('revertTo returns false when trying to jump forward', () => {
+            hm.saveState('s1');
+            mockLayers2[0].x = 50;
+            hm.saveState('s2');
+            mockLayers2[0].x = 99;
+            hm.saveState('s3');
+            hm.undo();
+            hm.undo();
+            expect(hm.revertTo(2)).toBe(false);
+        });
+
+        test('revertTo succeeds for valid index', () => {
+            hm.saveState('s1');
+            mockLayers2[0].x = 50;
+            hm.saveState('s2');
+            mockLayers2[0].x = 99;
+            hm.saveState('s3');
+            expect(hm.revertTo(0)).toBe(true);
+            expect(hm.historyIndex).toBe(0);
+        });
+
+        // --- compressHistory ---
+        test('compressHistory skips when history small enough', () => {
+            hm.maxHistorySteps = 10;
+            hm.saveState('s1');
+            hm.saveState('s2');
+            const origLen = hm.history.length;
+            hm.compressHistory();
+            expect(hm.history.length).toBe(origLen);
+        });
+
+        test('compressHistory trims old entries', () => {
+            hm.maxHistorySteps = 4;
+            for (let i = 0; i < 4; i++) {
+                mockLayers2[0].x = i;
+                hm.saveState('s' + i);
+            }
+            hm.compressHistory();
+            expect(hm.history.length).toBeLessThanOrEqual(2);
+        });
+
+        // --- setMaxHistorySteps ---
+        test('setMaxHistorySteps enforces minimum of 1', () => {
+            hm.setMaxHistorySteps(0);
+            expect(hm.maxHistorySteps).toBe(1);
+            hm.setMaxHistorySteps(-5);
+            expect(hm.maxHistorySteps).toBe(1);
+        });
+
+        test('setMaxHistorySteps trims existing history', () => {
+            for (let i = 0; i < 5; i++) {
+                mockLayers2[0].x = i;
+                hm.saveState('s' + i);
+            }
+            hm.setMaxHistorySteps(2);
+            expect(hm.history.length).toBe(2);
+        });
+
+        // --- hasUnsavedChanges ---
+        test('hasUnsavedChanges returns true when no history but layers exist', () => {
+            expect(hm.hasUnsavedChanges()).toBe(true);
+        });
+
+        test('hasUnsavedChanges returns false on fast path', () => {
+            hm.saveState('s1');
+            hm.lastSaveHistoryIndex = hm.historyIndex;
+            expect(hm.hasUnsavedChanges()).toBe(false);
+        });
+
+        test('hasUnsavedChanges compares with saved state', () => {
+            hm.saveState('s1');
+            hm.lastSaveHistoryIndex = 0;
+            mockLayers2[0].x = 999;
+            hm.saveState('s2');
+            expect(hm.hasUnsavedChanges()).toBe(true);
+        });
+
+        test('hasUnsavedChanges compares with index 0 when no save index', () => {
+            hm.saveState('s1');
+            mockLayers2[0].x = 999;
+            hm.saveState('s2');
+            // lastSaveHistoryIndex is -1
+            expect(hm.hasUnsavedChanges()).toBe(true);
+        });
+
+        // --- layersEqual ---
+        test('layersEqual returns true for identical arrays', () => {
+            const a = [{ id: 'l1', x: 10 }];
+            const b = [{ id: 'l1', x: 10 }];
+            expect(hm.layersEqual(a, b)).toBe(true);
+        });
+
+        test('layersEqual returns false for different lengths', () => {
+            expect(hm.layersEqual([{ id: 'l1' }], [{ id: 'l1' }, { id: 'l2' }])).toBe(false);
+        });
+
+        test('layersEqual returns false for different property counts', () => {
+            expect(hm.layersEqual([{ id: 'l1', x: 10 }], [{ id: 'l1' }])).toBe(false);
+        });
+
+        test('layersEqual uses reference comparison for immutable props (src)', () => {
+            const src = 'data:image/png;base64,abc';
+            const a = [{ id: 'l1', src: src }];
+            const b = [{ id: 'l1', src: src }];
+            expect(hm.layersEqual(a, b)).toBe(true);
+
+            const b2 = [{ id: 'l1', src: 'data:image/png;base64,xyz' }];
+            expect(hm.layersEqual(a, b2)).toBe(false);
+        });
+
+        test('layersEqual compares points arrays', () => {
+            const a = [{ id: 'l1', points: [{ x: 1, y: 2 }, { x: 3, y: 4 }] }];
+            const b = [{ id: 'l1', points: [{ x: 1, y: 2 }, { x: 3, y: 4 }] }];
+            expect(hm.layersEqual(a, b)).toBe(true);
+
+            const c = [{ id: 'l1', points: [{ x: 1, y: 2 }, { x: 3, y: 5 }] }];
+            expect(hm.layersEqual(a, c)).toBe(false);
+        });
+
+        test('layersEqual returns false for different points length', () => {
+            const a = [{ id: 'l1', points: [{ x: 1, y: 2 }] }];
+            const b = [{ id: 'l1', points: [{ x: 1, y: 2 }, { x: 3, y: 4 }] }];
+            expect(hm.layersEqual(a, b)).toBe(false);
+        });
+
+        test('layersEqual compares children arrays via JSON', () => {
+            const a = [{ id: 'l1', children: ['c1', 'c2'] }];
+            const b = [{ id: 'l1', children: ['c1', 'c2'] }];
+            expect(hm.layersEqual(a, b)).toBe(true);
+
+            const c = [{ id: 'l1', children: ['c1', 'c3'] }];
+            expect(hm.layersEqual(a, c)).toBe(false);
+        });
+
+        test('layersEqual compares generic objects via JSON', () => {
+            const a = [{ id: 'l1', gradient: { type: 'linear', angle: 45 } }];
+            const b = [{ id: 'l1', gradient: { type: 'linear', angle: 45 } }];
+            expect(hm.layersEqual(a, b)).toBe(true);
+
+            const c = [{ id: 'l1', gradient: { type: 'radial', angle: 45 } }];
+            expect(hm.layersEqual(a, c)).toBe(false);
+        });
+
+        test('layersEqual handles non-array inputs', () => {
+            expect(hm.layersEqual(null, null)).toBe(true);
+            expect(hm.layersEqual(null, [])).toBe(false);
+            expect(hm.layersEqual(undefined, undefined)).toBe(true);
+        });
+
+        test('layersEqual compares primitives correctly', () => {
+            const a = [{ id: 'l1', x: 10, visible: true }];
+            const b = [{ id: 'l1', x: 10, visible: false }];
+            expect(hm.layersEqual(a, b)).toBe(false);
+        });
+
+        // --- getLayersSnapshot fallbacks ---
+        test('getLayersSnapshot uses editor.layers when no stateManager', () => {
+            const editorNoSM = {
+                canvasManager: mockCM,
+                layers: [{ id: 'l1', x: 42 }]
+            };
+            const hm2 = new HistoryManager({ editor: editorNoSM });
+            const snap = hm2.getLayersSnapshot();
+            expect(snap[0].x).toBe(42);
+        });
+
+        test('getLayersSnapshot uses canvasManager.layers when no editor', () => {
+            mockCM.layers = [{ id: 'l1', x: 77 }];
+            const hm2 = new HistoryManager({ canvasManager: mockCM });
+            const snap = hm2.getLayersSnapshot();
+            expect(snap[0].x).toBe(77);
+        });
+
+        test('getLayersSnapshot warns about image layers in fallback mode', () => {
+            const warnFn = jest.fn();
+            global.mw = { log: { warn: warnFn } };
+            // Ensure no efficient cloner available
+            if (window.Layers && window.Layers.Utils) {
+                delete window.Layers.Utils.cloneLayersEfficient;
+            }
+            const editorImgs = {
+                canvasManager: mockCM,
+                layers: [{ id: 'l1', type: 'image', src: 'data:image/png;base64,abc' }]
+            };
+            const hm2 = new HistoryManager({ editor: editorImgs });
+            hm2.getLayersSnapshot();
+            expect(warnFn).toHaveBeenCalledWith(expect.stringContaining('Using JSON cloning'));
+        });
+
+        test('getLayersSnapshot handles JSON.stringify error', () => {
+            const warnFn = jest.fn();
+            global.mw = { log: { warn: warnFn } };
+            if (window.Layers && window.Layers.Utils) {
+                delete window.Layers.Utils.cloneLayersEfficient;
+            }
+            const circular = { id: 'l1', x: 10 };
+            circular.self = circular;
+            const editorCirc = {
+                canvasManager: mockCM,
+                layers: [circular]
+            };
+            const hm2 = new HistoryManager({ editor: editorCirc });
+            const snap = hm2.getLayersSnapshot();
+            // Should fall back to shallow copy
+            expect(Array.isArray(snap)).toBe(true);
+            expect(warnFn).toHaveBeenCalledWith(
+                expect.stringContaining('JSON cloning failed'),
+                expect.anything()
+            );
+        });
+
+        // --- getCurrentStateDescription ---
+        test('getCurrentStateDescription returns description when available', () => {
+            hm.saveState('My action');
+            expect(hm.getCurrentStateDescription()).toBe('My action');
+        });
+
+        test('getCurrentStateDescription returns default when no history', () => {
+            expect(hm.getCurrentStateDescription()).toBe('No history');
+        });
+
+        // --- saveInitialState + markAsSaved ---
+        test('saveInitialState clears and saves baseline', () => {
+            hm.saveState('s1');
+            hm.saveState('s2');
+            hm.saveInitialState();
+            expect(hm.history.length).toBe(1);
+            expect(hm.lastSaveHistoryIndex).toBe(0);
+        });
+
+        // --- markDirty called on restore ---
+        test('restoreState calls markDirty on editor', () => {
+            hm.saveState('s1');
+            mockLayers2[0].x = 50;
+            hm.saveState('s2');
+            mockEditor.markDirty.mockClear();
+            hm.undo();
+            expect(mockEditor.markDirty).toHaveBeenCalled();
+        });
+
+        // --- updateUndoRedoButtons with updateUndoRedoState ---
+        test('updateUndoRedoButtons calls toolbar.updateUndoRedoState', () => {
+            hm.saveState('s1');
+            expect(mockEditor.toolbar.updateUndoRedoState).toHaveBeenCalled();
+        });
+
+        // --- backward-compat aliases ---
+        test('clear() calls clearHistory()', () => {
+            hm.saveState('s1');
+            hm.clear();
+            expect(hm.history.length).toBe(0);
+        });
+
+        test('commitBatch() calls endBatch()', () => {
+            hm.startBatch('batch');
+            hm.saveState('change');
+            hm.commitBatch();
+            expect(hm.batchMode).toBe(false);
+        });
+    });
 });

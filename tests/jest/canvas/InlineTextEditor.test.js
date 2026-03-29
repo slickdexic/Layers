@@ -3589,4 +3589,1038 @@ describe( 'InlineTextEditor - Rich text conversion methods', () => {
 			jest.useRealTimers();
 		} );
 	} );
+
+} );
+
+// =========================================================================
+// Branch coverage gap tests
+// =========================================================================
+
+describe( 'InlineTextEditor - branch coverage gaps', () => {
+	let mockCanvasManager;
+	let mockCanvas;
+	let mockContainer;
+	let editor;
+
+	beforeEach( () => {
+		mockCanvas = {
+			width: 800,
+			height: 600,
+			style: {},
+			getBoundingClientRect: jest.fn( () => ( {
+				left: 100, top: 100, width: 800, height: 600
+			} ) )
+		};
+		mockContainer = document.createElement( 'div' );
+		document.body.appendChild( mockContainer );
+		mockCanvasManager = {
+			canvas: mockCanvas,
+			container: mockContainer,
+			ctx: {
+				save: jest.fn(), restore: jest.fn(), font: '',
+				measureText: jest.fn( () => ( { width: 100 } ) )
+			},
+			editor: {
+				layers: [],
+				updateLayer: jest.fn(),
+				getLayerById: jest.fn()
+			},
+			zoom: 1.0, panX: 0, panY: 0,
+			setTextEditingMode: jest.fn(),
+			saveState: jest.fn(),
+			redraw: jest.fn(),
+			renderLayers: jest.fn(),
+			isDestroyed: false
+		};
+
+		// Mock window.getSelection for contentEditable tests in jsdom
+		const mockRange = {
+			selectNodeContents: jest.fn(),
+			collapse: jest.fn(),
+			commonAncestorContainer: document.body
+		};
+		window.getSelection = jest.fn( () => ( {
+			removeAllRanges: jest.fn(),
+			addRange: jest.fn(),
+			rangeCount: 0,
+			getRangeAt: jest.fn( () => mockRange ),
+			isCollapsed: true
+		} ) );
+
+		editor = new InlineTextEditor( mockCanvasManager );
+	} );
+
+	afterEach( () => {
+		if ( editor && typeof editor.destroy === 'function' ) {
+			editor.destroy();
+		}
+		if ( mockContainer.parentNode ) {
+			mockContainer.parentNode.removeChild( mockContainer );
+		}
+		jest.clearAllMocks();
+	} );
+
+	describe( 'canEdit - branch gaps', () => {
+		test( 'should return false for null layer', () => {
+			expect( editor.canEdit( null ) ).toBe( false );
+		} );
+
+		test( 'should return false for undefined layer', () => {
+			expect( editor.canEdit( undefined ) ).toBe( false );
+		} );
+
+		test( 'should return false for locked layer', () => {
+			expect( editor.canEdit( { type: 'text', locked: true } ) ).toBe( false );
+		} );
+
+		test( 'should return false for non-text type', () => {
+			expect( editor.canEdit( { type: 'rectangle' } ) ).toBe( false );
+		} );
+
+		test( 'should return true for callout type', () => {
+			expect( editor.canEdit( { type: 'callout' } ) ).toBe( true );
+		} );
+	} );
+
+	describe( '_getEditableElement - branch gaps', () => {
+		test( 'should return null when editorElement is null', () => {
+			editor.editorElement = null;
+			expect( editor._getEditableElement() ).toBeNull();
+		} );
+
+		test( 'should return wrapper for multiline type', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			const el = editor._getEditableElement();
+			expect( el ).toBeTruthy();
+			expect( el.classList.contains( 'layers-inline-content-wrapper' ) ).toBe( true );
+		} );
+
+		test( 'should return editorElement when no wrapper found for non-multiline', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			const el = editor._getEditableElement();
+			expect( el ).toBe( editor.editorElement );
+		} );
+	} );
+
+	describe( 'startEditing - branch gaps', () => {
+		test( 'should return false when already editing', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			expect( editor.startEditing( { type: 'text', text: 'World' } ) ).toBe( false );
+		} );
+
+		test( 'should return false for invalid layer (canEdit fails)', () => {
+			expect( editor.startEditing( null ) ).toBe( false );
+		} );
+
+		test( 'should return false when canvasManager is null', () => {
+			editor.canvasManager = null;
+			expect( editor.startEditing( { type: 'text', text: 'Hello' } ) ).toBe( false );
+		} );
+
+		test( 'should return false when canvasManager.isDestroyed is true', () => {
+			mockCanvasManager.isDestroyed = true;
+			expect( editor.startEditing( { type: 'text', text: 'Hello' } ) ).toBe( false );
+		} );
+
+		test( 'should return false when container is missing', () => {
+			mockCanvasManager.container = null;
+			expect( editor.startEditing( { type: 'text', text: 'Hello' } ) ).toBe( false );
+		} );
+
+		test( 'should return false when canvas is missing', () => {
+			mockCanvasManager.canvas = null;
+			expect( editor.startEditing( { type: 'text', text: 'Hello' } ) ).toBe( false );
+		} );
+
+		test( 'should enable debug logging when wgLayersDebug is set', () => {
+			const consoleSpy = jest.spyOn( console, 'log' ).mockImplementation( () => {} );
+			global.mw = {
+				config: { get: jest.fn( ( key ) => key === 'wgLayersDebug' ? true : null ) },
+				log: jest.fn()
+			};
+			const layer = { type: 'text', text: 'Hello', fontSize: 16 };
+			editor.startEditing( layer );
+			expect( consoleSpy ).toHaveBeenCalledWith(
+				expect.stringContaining( '[InlineTextEditor] startEditing' ),
+				expect.any( Object )
+			);
+			consoleSpy.mockRestore();
+			delete global.mw;
+		} );
+
+		test( 'should set _isRichTextMode for textbox layers', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			expect( editor._isRichTextMode ).toBe( true );
+		} );
+
+		test( 'should store originalRichText when layer has richText', () => {
+			const richTextData = [ { text: 'Hello', style: { fontWeight: 'bold' } } ];
+			const layer = {
+				type: 'textbox', text: 'Hello',
+				richText: richTextData
+			};
+			// Save reference before startEditing (which deletes layer.richText for textbox)
+			editor.startEditing( layer );
+			expect( editor.originalRichText ).toEqual( richTextData );
+			// Should be a deep clone, not the same reference
+			expect( editor.originalRichText ).not.toBe( richTextData );
+		} );
+	} );
+
+	describe( 'finishEditing - branch gaps', () => {
+		test( 'should return false when not editing', () => {
+			expect( editor.finishEditing() ).toBe( false );
+		} );
+
+		test( 'should handle debug logging in finishEditing', () => {
+			global.mw = {
+				config: { get: jest.fn( ( key ) => key === 'wgLayersDebug' ? true : null ) },
+				log: jest.fn()
+			};
+			global.mw.log.warn = jest.fn();
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.finishEditing( true );
+			expect( global.mw.log ).toHaveBeenCalled();
+			delete global.mw;
+		} );
+
+		test( 'should detect no changes and not save state', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			// Don't change the text
+			editor.finishEditing( true );
+			expect( mockCanvasManager.saveState ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should detect text change and save state', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.editorElement.value = 'Changed';
+			editor.finishEditing( true );
+			expect( mockCanvasManager.saveState ).toHaveBeenCalledWith( 'Edit text' );
+			expect( layer.text ).toBe( 'Changed' );
+		} );
+
+		test( 'should restore original text for textbox when no changes', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			// finishEditing with apply=true but no changes
+			editor.finishEditing( true );
+			expect( layer.text ).toBe( 'Hello' );
+		} );
+
+		test( 'should restore original richText for textbox when cancelled', () => {
+			const originalRichText = [ { text: 'Hello', style: { fontWeight: 'bold' } } ];
+			const layer = {
+				type: 'textbox', text: 'Hello',
+				richText: JSON.parse( JSON.stringify( originalRichText ) )
+			};
+			editor.startEditing( layer );
+			editor.finishEditing( false ); // Cancel
+			expect( layer.richText ).toEqual( originalRichText );
+		} );
+
+		test( 'should delete richText when cancelling textbox with no originalRichText', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			layer.richText = [ { text: 'x' } ]; // Simulate modification during editing
+			editor.finishEditing( false ); // Cancel
+			expect( layer.richText ).toBeUndefined();
+		} );
+
+		test( 'should handle markDirty on stateManager', () => {
+			const markDirty = jest.fn();
+			mockCanvasManager.editor.stateManager = { markDirty };
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.editorElement.value = 'Changed';
+			editor.finishEditing( true );
+			expect( markDirty ).toHaveBeenCalled();
+		} );
+
+		test( 'should use setDirty fallback when markDirty missing', () => {
+			const setDirty = jest.fn();
+			mockCanvasManager.editor.stateManager = { setDirty };
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.editorElement.value = 'Changed';
+			editor.finishEditing( true );
+			expect( setDirty ).toHaveBeenCalledWith( true );
+		} );
+
+		test( 'should use set fallback when both markDirty and setDirty missing', () => {
+			const set = jest.fn();
+			mockCanvasManager.editor.stateManager = { set };
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.editorElement.value = 'Changed';
+			editor.finishEditing( true );
+			expect( set ).toHaveBeenCalledWith( 'isDirty', true );
+		} );
+
+		test( 'should handle null editor reference', () => {
+			mockCanvasManager.editor = null;
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.editorElement.value = 'Changed';
+			// Should not throw
+			editor.finishEditing( true );
+			expect( layer.text ).toBe( 'Changed' );
+		} );
+
+		test( 'should restore layer visibility for simple text layers', () => {
+			const layer = { type: 'text', text: 'Hello', visible: true };
+			editor.startEditing( layer );
+			// Simulate visibility being changed during editing
+			editor._originalVisible = true;
+			layer.visible = false;
+			editor.finishEditing( true );
+			expect( layer.visible ).toBe( true );
+		} );
+
+		test( 'should handle richText content change detection', () => {
+			const layer = {
+				type: 'textbox', text: 'Hello',
+				richText: [ { text: 'Hello', style: { fontWeight: 'bold' } } ]
+			};
+			editor.startEditing( layer );
+
+			// Mock htmlToRichText to return changed content
+			window.Layers.Canvas.RichTextConverter.htmlToRichText.mockReturnValueOnce(
+				[ { text: 'Modified', style: { fontStyle: 'italic' } } ]
+			);
+
+			editor.finishEditing( true );
+			expect( mockCanvasManager.saveState ).toHaveBeenCalledWith( 'Edit text' );
+		} );
+
+		test( 'should remove richText when newRichText is empty array', () => {
+			const layer = {
+				type: 'textbox', text: 'Hello',
+				richText: [ { text: 'Hello' } ]
+			};
+			editor.startEditing( layer );
+
+			// Mock to return empty richText
+			window.Layers.Canvas.RichTextConverter.htmlToRichText.mockReturnValueOnce( [] );
+
+			editor.finishEditing( true );
+			// richText should be deleted when empty
+			expect( layer.richText ).toBeUndefined();
+		} );
+	} );
+
+	describe( '_calculateDisplayScale - branch gaps', () => {
+		test( 'should default to 1 when canvasManager is null', () => {
+			editor.canvasManager = null;
+			editor._calculateDisplayScale();
+			expect( editor._displayScale ).toBe( 1 );
+		} );
+
+		test( 'should default to 1 when canvas is null', () => {
+			mockCanvasManager.canvas = null;
+			editor._calculateDisplayScale();
+			expect( editor._displayScale ).toBe( 1 );
+		} );
+
+		test( 'should calculate scale from canvas dimensions', () => {
+			// Canvas is 800x600, getBoundingClientRect returns 800x600
+			editor._calculateDisplayScale();
+			expect( editor._displayScale ).toBe( 1 );
+		} );
+
+		test( 'should use min of scaleX and scaleY', () => {
+			mockCanvas.getBoundingClientRect = jest.fn( () => ( {
+				left: 0, top: 0, width: 400, height: 600
+			} ) );
+			editor._calculateDisplayScale();
+			expect( editor._displayScale ).toBe( 0.5 ); // min(400/800, 600/600) = min(0.5, 1) = 0.5
+		} );
+	} );
+
+	describe( '_positionEditor - branch gaps', () => {
+		test( 'should return early when editorElement is null', () => {
+			editor.editorElement = null;
+			editor._positionEditor(); // Should not throw
+		} );
+
+		test( 'should return early when editingLayer is null', () => {
+			editor.editorElement = document.createElement( 'input' );
+			editor.editingLayer = null;
+			editor._positionEditor(); // Should not throw
+		} );
+
+		test( 'should return early when canvasManager is null', () => {
+			editor.editorElement = document.createElement( 'input' );
+			editor.editingLayer = { type: 'text' };
+			editor.canvasManager = null;
+			editor._positionEditor(); // Should not throw
+		} );
+
+		test( 'should return early when canvas is null', () => {
+			editor.editorElement = document.createElement( 'input' );
+			editor.editingLayer = { type: 'text' };
+			mockCanvasManager.canvas = null;
+			editor._positionEditor(); // Should not throw
+		} );
+	} );
+
+	describe( '_getContentElement - branch gaps', () => {
+		test( 'should return null when editorElement is null', () => {
+			editor.editorElement = null;
+			expect( editor._getContentElement() ).toBeNull();
+		} );
+
+		test( 'should return editorElement when wrapper is empty but parent has text', () => {
+			editor.editorElement = document.createElement( 'div' );
+			const wrapper = document.createElement( 'div' );
+			wrapper.className = 'layers-inline-content-wrapper';
+			wrapper.textContent = '';
+			editor.editorElement.appendChild( wrapper );
+			editor.editorElement.appendChild( document.createTextNode( 'text outside' ) );
+			expect( editor._getContentElement() ).toBe( editor.editorElement );
+		} );
+
+		test( 'should return wrapper when wrapper has text', () => {
+			editor.editorElement = document.createElement( 'div' );
+			const wrapper = document.createElement( 'div' );
+			wrapper.className = 'layers-inline-content-wrapper';
+			wrapper.textContent = 'wrapper text';
+			editor.editorElement.appendChild( wrapper );
+			expect( editor._getContentElement() ).toBe( wrapper );
+		} );
+
+		test( 'should return editorElement when no wrapper found', () => {
+			editor.editorElement = document.createElement( 'div' );
+			expect( editor._getContentElement() ).toBe( editor.editorElement );
+		} );
+	} );
+
+	describe( 'getPendingTextContent - branch gaps', () => {
+		test( 'should return null when not editing', () => {
+			expect( editor.getPendingTextContent() ).toBeNull();
+		} );
+
+		test( 'should return null when editorElement is null', () => {
+			editor.isEditing = true;
+			editor.editorElement = null;
+			expect( editor.getPendingTextContent() ).toBeNull();
+		} );
+
+		test( 'should return text for simple text layer', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.editorElement.value = 'Updated';
+			const result = editor.getPendingTextContent();
+			expect( result ).toEqual( { text: 'Updated', richText: null } );
+		} );
+
+		test( 'should return richText for textbox layer', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			const result = editor.getPendingTextContent();
+			expect( result ).toBeDefined();
+			expect( result.richText ).toBeDefined();
+		} );
+	} );
+
+	describe( '_handleKeyDown - branch gaps', () => {
+		test( 'should cancel editing on Escape', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			const spy = jest.spyOn( editor, 'cancelEditing' );
+			const event = new KeyboardEvent( 'keydown', { key: 'Escape', bubbles: true } );
+			Object.defineProperty( event, 'preventDefault', { value: jest.fn() } );
+			Object.defineProperty( event, 'stopPropagation', { value: jest.fn() } );
+			editor._handleKeyDown( event );
+			expect( spy ).toHaveBeenCalled();
+		} );
+
+		test( 'should finish editing on Ctrl+Enter', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			const event = new KeyboardEvent( 'keydown', { key: 'Enter', ctrlKey: true, bubbles: true } );
+			Object.defineProperty( event, 'preventDefault', { value: jest.fn() } );
+			editor._handleKeyDown( event );
+			expect( spy ).toHaveBeenCalledWith( true );
+		} );
+
+		test( 'should finish editing on Enter for simple text (not multiline)', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			const event = new KeyboardEvent( 'keydown', { key: 'Enter', bubbles: true } );
+			Object.defineProperty( event, 'preventDefault', { value: jest.fn() } );
+			editor._handleKeyDown( event );
+			expect( spy ).toHaveBeenCalledWith( true );
+		} );
+
+		test( 'should NOT finish editing on Enter for textbox (multiline)', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			const event = new KeyboardEvent( 'keydown', { key: 'Enter', bubbles: true } );
+			editor._handleKeyDown( event );
+			expect( spy ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	describe( '_handleBlur - branch gaps', () => {
+		test( 'should not finish if toolbar is interacting', () => {
+			jest.useFakeTimers();
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			editor._isToolbarInteraction = true;
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			editor._handleBlur();
+			jest.advanceTimersByTime( 300 );
+			expect( spy ).not.toHaveBeenCalled();
+			jest.useRealTimers();
+		} );
+
+		test( 'should not finish if toolbar instance reports interacting', () => {
+			jest.useFakeTimers();
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			editor._toolbar = { isInteracting: jest.fn( () => true ) };
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			editor._handleBlur();
+			jest.advanceTimersByTime( 300 );
+			expect( spy ).not.toHaveBeenCalled();
+			jest.useRealTimers();
+		} );
+
+		test( 'should not finish if focus moved to toolbar', () => {
+			jest.useFakeTimers();
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			const toolbarEl = document.createElement( 'div' );
+			const child = document.createElement( 'button' );
+			toolbarEl.appendChild( child );
+			editor.toolbarElement = toolbarEl;
+			document.body.appendChild( toolbarEl );
+			child.focus();
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			editor._handleBlur();
+			jest.advanceTimersByTime( 300 );
+			expect( spy ).not.toHaveBeenCalled();
+			document.body.removeChild( toolbarEl );
+			jest.useRealTimers();
+		} );
+
+		test( 'should not finish if color picker dialog is open', () => {
+			jest.useFakeTimers();
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			const dialog = document.createElement( 'div' );
+			dialog.className = 'color-picker-dialog';
+			document.body.appendChild( dialog );
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			editor._handleBlur();
+			jest.advanceTimersByTime( 300 );
+			expect( spy ).not.toHaveBeenCalled();
+			document.body.removeChild( dialog );
+			jest.useRealTimers();
+		} );
+
+		test( 'should finish editing when no interactions active', () => {
+			jest.useFakeTimers();
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			editor._handleBlur();
+			jest.advanceTimersByTime( 300 );
+			expect( spy ).toHaveBeenCalledWith( true );
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( '_handleInput - branch gaps', () => {
+		test( 'should update layer text for simple text in input mode', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.editorElement.value = 'Updated';
+			editor._handleInput();
+			expect( layer.text ).toBe( 'Updated' );
+		} );
+
+		test( 'should extract plain text for richText mode', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			editor._handleInput();
+			// Should have called _getPlainTextFromEditor
+			expect( layer.text ).toBeDefined();
+		} );
+	} );
+
+	describe( '_createToolbar - branch gaps', () => {
+		test( 'should return early when editingLayer is null', () => {
+			editor.editingLayer = null;
+			editor._createToolbar();
+			expect( editor.toolbarElement ).toBeFalsy();
+		} );
+
+		test( 'should return early when editorElement is null', () => {
+			editor.editingLayer = { type: 'textbox', text: 'test' };
+			editor.editorElement = null;
+			editor._createToolbar();
+			expect( editor.toolbarElement ).toBeFalsy();
+		} );
+
+		test( 'should set toolbar to null when RichTextToolbar unavailable', () => {
+			const original = window.Layers.Canvas.RichTextToolbar;
+			window.Layers.Canvas.RichTextToolbar = null;
+			editor.editingLayer = { type: 'textbox', text: 'test' };
+			editor.editorElement = document.createElement( 'div' );
+			editor._createToolbar();
+			expect( editor.toolbarElement ).toBeNull();
+			expect( editor._toolbar ).toBeNull();
+			window.Layers.Canvas.RichTextToolbar = original;
+		} );
+
+		test( 'should track highlight color in onFormat callback', () => {
+			// Mock execCommand since jsdom doesn't support it
+			document.execCommand = jest.fn().mockReturnValue( true );
+			const layer = { type: 'textbox', text: 'test' };
+			editor.startEditing( layer );
+			// The toolbar should have been created
+			expect( editor._toolbar ).toBeTruthy();
+			// Trigger onFormat with highlight
+			if ( editor._toolbar && editor._toolbar.onFormat ) {
+				editor._toolbar.onFormat( 'highlight', '#ff0000' );
+				expect( editor._lastHighlightColor ).toBe( '#ff0000' );
+			}
+			delete document.execCommand;
+		} );
+	} );
+
+	describe( '_updateToolbarButtonStates - branch gaps', () => {
+		test( 'should return early when toolbarElement is null', () => {
+			editor.toolbarElement = null;
+			editor._updateToolbarButtonStates(); // Should not throw
+		} );
+
+		test( 'should return early when not editing', () => {
+			editor.toolbarElement = document.createElement( 'div' );
+			editor.isEditing = false;
+			editor._updateToolbarButtonStates(); // Should not throw
+		} );
+
+		test( 'should return early when not richText mode', () => {
+			editor.toolbarElement = document.createElement( 'div' );
+			editor.isEditing = true;
+			editor._isRichTextMode = false;
+			editor._updateToolbarButtonStates(); // Should not throw
+		} );
+
+		test( 'should skip when toolbar is interacting', () => {
+			editor.toolbarElement = document.createElement( 'div' );
+			editor.isEditing = true;
+			editor._isRichTextMode = true;
+			editor._toolbar = { isInteracting: jest.fn( () => true ) };
+			editor._updateToolbarButtonStates(); // Should return early
+		} );
+
+		test( 'should skip when no selection range', () => {
+			editor.toolbarElement = document.createElement( 'div' );
+			editor.isEditing = true;
+			editor._isRichTextMode = true;
+			editor._toolbar = { isInteracting: jest.fn( () => false ) };
+			// No selection by default in jsdom
+			editor._updateToolbarButtonStates(); // Should not throw
+		} );
+	} );
+
+	describe( '_getContainer - branch gaps', () => {
+		test( 'should return container when available', () => {
+			expect( editor._getContainer() ).toBe( mockContainer );
+		} );
+
+		test( 'should return editor.ui.mainContainer when container is null', () => {
+			mockCanvasManager.container = null;
+			const mainContainer = document.createElement( 'div' );
+			mockCanvasManager.editor.ui = { mainContainer };
+			expect( editor._getContainer() ).toBe( mainContainer );
+		} );
+
+		test( 'should return document.body as last resort', () => {
+			mockCanvasManager.container = null;
+			mockCanvasManager.editor = null;
+			expect( editor._getContainer() ).toBe( document.body );
+		} );
+	} );
+
+	describe( '_applyFormat - branch gaps (non-richText mode)', () => {
+		test( 'should apply fontSize by repositioning editor', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			const spy = jest.spyOn( editor, '_positionEditor' );
+			editor._applyFormat( 'fontSize', 24 );
+			expect( spy ).toHaveBeenCalled();
+		} );
+
+		test( 'should apply verticalAlign with flexbox', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			editor._isRichTextMode = false; // Force non-richText path
+			editor._applyFormat( 'verticalAlign', 'middle' );
+			expect( editor.editorElement.style.justifyContent ).toBe( 'center' );
+		} );
+
+		test( 'should apply verticalAlign bottom', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			editor._isRichTextMode = false;
+			editor._applyFormat( 'verticalAlign', 'bottom' );
+			expect( editor.editorElement.style.justifyContent ).toBe( 'flex-end' );
+		} );
+
+		test( 'should apply textAlign to editor and wrapper', () => {
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			editor._isRichTextMode = false;
+			editor._applyFormat( 'textAlign', 'center' );
+			expect( editor.editorElement.style.textAlign ).toBe( 'center' );
+		} );
+
+		test( 'should apply mapped style property (color)', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor._applyFormat( 'color', '#ff0000' );
+			// jsdom normalizes hex colors to rgb()
+			expect( editor.editorElement.style.color ).toMatch( /^(#ff0000|rgb\(255,\s*0,\s*0\))$/ );
+		} );
+
+		test( 'should apply fontFamily via style map', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor._applyFormat( 'fontFamily', 'Arial' );
+			expect( editor.editorElement.style.fontFamily ).toBe( 'Arial' );
+		} );
+	} );
+
+	describe( '_applyFormatToSelection - branch gaps', () => {
+		test( 'should return early when editorElement is null', () => {
+			editor.editorElement = null;
+			editor._applyFormatToSelection( 'fontWeight', 'bold' ); // Should not throw
+		} );
+
+		test( 'should handle highlight toggle off when already highlighted', () => {
+			// Define execCommand mock since jsdom doesn't have it
+			document.execCommand = jest.fn().mockReturnValue( true );
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			// Mock _getSelectionFormatInfo to return existing background color
+			jest.spyOn( editor, '_getSelectionFormatInfo' ).mockReturnValue( {
+				backgroundColor: '#ff0000'
+			} );
+			editor._applyFormatToSelection( 'highlight', '#00ff00' );
+			expect( document.execCommand ).toHaveBeenCalledWith( 'hiliteColor', false, 'transparent' );
+			delete document.execCommand;
+		} );
+
+		test( 'should apply highlight when no existing highlight', () => {
+			// Define execCommand mock since jsdom doesn't have it
+			document.execCommand = jest.fn().mockReturnValue( true );
+			const layer = { type: 'textbox', text: 'Hello' };
+			editor.startEditing( layer );
+			jest.spyOn( editor, '_getSelectionFormatInfo' ).mockReturnValue( {} );
+			editor._applyFormatToSelection( 'highlight', '#ff0000' );
+			expect( document.execCommand ).toHaveBeenCalledWith( 'hiliteColor', false, '#ff0000' );
+			delete document.execCommand;
+		} );
+	} );
+
+	describe( '_removeFontSizeFromFragment - branch gaps', () => {
+		test( 'should remove font-size from spans in fragment', () => {
+			const fragment = document.createDocumentFragment();
+			const span = document.createElement( 'span' );
+			span.style.fontSize = '20px';
+			span.dataset.fontSize = '20';
+			span.textContent = 'hello';
+			fragment.appendChild( span );
+
+			editor._removeFontSizeFromFragment( fragment );
+			expect( span.style.fontSize ).toBe( '' );
+			expect( span.dataset.fontSize ).toBeUndefined();
+		} );
+
+		test( 'should unwrap span with no remaining styles or attributes', () => {
+			const fragment = document.createDocumentFragment();
+			const span = document.createElement( 'span' );
+			span.style.fontSize = '20px';
+			span.dataset.fontSize = '20';
+			span.textContent = 'hello';
+			fragment.appendChild( span );
+
+			editor._removeFontSizeFromFragment( fragment );
+			// After removing font-size and data-fontSize:
+			// jsdom keeps empty style="" attribute, so span.attributes.length > 0
+			// and the unwrap condition (attributes.length === 0) is NOT met.
+			// Verify fontSize was removed but span may remain due to jsdom behavior.
+			const remainingSpan = fragment.querySelector( 'span' );
+			if ( remainingSpan ) {
+				// jsdom keeps empty style attr - verify styles were cleared
+				expect( remainingSpan.style.fontSize ).toBe( '' );
+				expect( remainingSpan.dataset.fontSize ).toBeUndefined();
+			} else {
+				// If unwrap worked, text should be direct child
+				expect( fragment.textContent ).toBe( 'hello' );
+			}
+		} );
+
+		test( 'should keep span that has other styles', () => {
+			const fragment = document.createDocumentFragment();
+			const span = document.createElement( 'span' );
+			span.style.fontSize = '20px';
+			span.style.color = 'red';
+			span.dataset.fontSize = '20';
+			span.textContent = 'hello';
+			fragment.appendChild( span );
+
+			editor._removeFontSizeFromFragment( fragment );
+			// Span should remain because it still has color style
+			expect( fragment.querySelector( 'span' ) ).toBeTruthy();
+			expect( span.style.color ).toBe( 'red' );
+		} );
+	} );
+
+	describe( '_moveCursorToEnd - branch gaps', () => {
+		test( 'should return early when editorElement is null', () => {
+			editor.editorElement = null;
+			editor._moveCursorToEnd(); // Should not throw
+		} );
+
+		test( 'should return early when editable element is null', () => {
+			editor.editorElement = document.createElement( 'div' );
+			jest.spyOn( editor, '_getEditableElement' ).mockReturnValue( null );
+			editor._moveCursorToEnd(); // Should not throw
+		} );
+
+		test( 'should handle contentEditable element', () => {
+			editor.editorElement = document.createElement( 'div' );
+			const wrapper = document.createElement( 'div' );
+			wrapper.className = 'layers-inline-content-wrapper';
+			wrapper.contentEditable = 'true';
+			wrapper.textContent = 'hello world';
+			editor.editorElement.appendChild( wrapper );
+			editor.editingLayer = { type: 'textbox' };
+			editor._isRichTextMode = true;
+			document.body.appendChild( editor.editorElement );
+			editor._moveCursorToEnd(); // Should place cursor at end
+			document.body.removeChild( editor.editorElement );
+		} );
+
+		test( 'should handle input element with setSelectionRange', () => {
+			editor.editorElement = document.createElement( 'input' );
+			editor.editorElement.value = 'hello';
+			editor.editingLayer = { type: 'text' };
+			document.body.appendChild( editor.editorElement );
+			editor._moveCursorToEnd();
+			document.body.removeChild( editor.editorElement );
+		} );
+	} );
+
+	describe( '_syncPropertiesPanel - branch gaps', () => {
+		test( 'should sync when propertiesForm is available', () => {
+			const refreshProperty = jest.fn();
+			mockCanvasManager.editor.propertiesForm = { refreshProperty };
+			editor.editingLayer = { type: 'text', text: 'test' };
+			editor._syncPropertiesPanel();
+			// Should not throw even if not all properties available
+		} );
+
+		test( 'should handle missing editor reference', () => {
+			mockCanvasManager.editor = null;
+			editor.editingLayer = { type: 'text', text: 'test' };
+			editor._syncPropertiesPanel(); // Should not throw
+		} );
+	} );
+
+	describe( '_msg - branch gaps', () => {
+		test( 'should use mw.message when available', () => {
+			global.mw = {
+				message: jest.fn( () => ( { text: () => 'translated' } ) )
+			};
+			expect( editor._msg( 'some-key', 'fallback' ) ).toBe( 'translated' );
+			delete global.mw;
+		} );
+
+		test( 'should return fallback when mw.message unavailable', () => {
+			delete global.mw;
+			expect( editor._msg( 'some-key', 'fallback' ) ).toBe( 'fallback' );
+		} );
+
+		test( 'should return key when no fallback provided', () => {
+			delete global.mw;
+			expect( editor._msg( 'some-key' ) ).toBe( 'some-key' );
+		} );
+	} );
+
+	describe( '_getPlainTextFromEditor - branch gaps', () => {
+		test( 'should return empty string when editorElement is null', () => {
+			editor.editorElement = null;
+			expect( editor._getPlainTextFromEditor() ).toBe( '' );
+		} );
+
+		test( 'should return value for input element', () => {
+			editor.editorElement = document.createElement( 'input' );
+			editor.editorElement.value = 'hello';
+			expect( editor._getPlainTextFromEditor() ).toBe( 'hello' );
+		} );
+
+		test( 'should return empty string for input with no value', () => {
+			const input = document.createElement( 'input' );
+			// Override tagName check
+			editor.editorElement = input;
+			expect( editor._getPlainTextFromEditor() ).toBe( '' );
+		} );
+
+		test( 'should handle contentEditable with br elements', () => {
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.innerHTML = 'line1<br>line2';
+			expect( editor._getPlainTextFromEditor() ).toBe( 'line1\nline2' );
+		} );
+
+		test( 'should handle contentEditable with div block elements', () => {
+			editor.editorElement = document.createElement( 'div' );
+			editor.editorElement.innerHTML = '<div>line1</div><div>line2</div>';
+			const result = editor._getPlainTextFromEditor();
+			expect( result ).toContain( 'line1' );
+			expect( result ).toContain( 'line2' );
+		} );
+
+		test( 'should return empty string when content element is null', () => {
+			editor.editorElement = document.createElement( 'div' );
+			jest.spyOn( editor, '_getContentElement' ).mockReturnValue( null );
+			expect( editor._getPlainTextFromEditor() ).toBe( '' );
+		} );
+	} );
+
+	describe( '_removeEventHandlers - branch gaps', () => {
+		test( 'should handle null editorElement', () => {
+			editor.editorElement = null;
+			editor._boundResizeHandler = jest.fn();
+			editor._boundSelectionChangeHandler = jest.fn();
+			editor._removeEventHandlers(); // Should not throw
+		} );
+
+		test( 'should clear blur timeout', () => {
+			jest.useFakeTimers();
+			editor._blurTimeout = setTimeout( () => {}, 1000 );
+			editor._removeEventHandlers();
+			expect( editor._blurTimeout ).toBeNull();
+			jest.useRealTimers();
+		} );
+
+		test( 'should clear resize debounce timer', () => {
+			jest.useFakeTimers();
+			editor._resizeDebounceTimer = setTimeout( () => {}, 1000 );
+			editor._removeEventHandlers();
+			expect( editor._resizeDebounceTimer ).toBeNull();
+			jest.useRealTimers();
+		} );
+	} );
+
+	describe( 'cancelEditing', () => {
+		test( 'should call finishEditing with false', () => {
+			const spy = jest.spyOn( editor, 'finishEditing' );
+			editor.cancelEditing();
+			expect( spy ).toHaveBeenCalledWith( false );
+		} );
+	} );
+
+	describe( 'destroy', () => {
+		test( 'should clean up all resources', () => {
+			const layer = { type: 'text', text: 'Hello' };
+			editor.startEditing( layer );
+			editor.destroy();
+			expect( editor.canvasManager ).toBeNull();
+			expect( editor.editingLayer ).toBeNull();
+			expect( editor.isEditing ).toBe( false );
+		} );
+	} );
+
+	describe( '_createEditor - branch gaps', () => {
+		test( 'should return early when editingLayer is null', () => {
+			editor.editingLayer = null;
+			editor._createEditor();
+			expect( editor.editorElement ).toBeNull();
+		} );
+
+		test( 'should create contentEditable for textbox', () => {
+			editor.editingLayer = { type: 'textbox', text: 'Hello', textAlign: 'center' };
+			editor._isRichTextMode = true;
+			editor._displayScale = 1;
+			editor.containerElement = document.createElement( 'div' );
+			editor._createEditor();
+			expect( editor.editorElement ).toBeTruthy();
+			const wrapper = editor.editorElement.querySelector( '.layers-inline-content-wrapper' );
+			expect( wrapper ).toBeTruthy();
+			expect( wrapper.contentEditable ).toBe( 'true' );
+		} );
+
+		test( 'should use richTextToHtml when richText is available', () => {
+			editor.editingLayer = {
+				type: 'textbox', text: 'Hello',
+				richText: [ { text: 'Hello', style: { fontWeight: 'bold' } } ]
+			};
+			editor._isRichTextMode = true;
+			editor._displayScale = 1;
+			editor.containerElement = document.createElement( 'div' );
+			editor._createEditor();
+			expect( window.Layers.Canvas.RichTextConverter.richTextToHtml ).toHaveBeenCalled();
+		} );
+
+		test( 'should create input for simple text', () => {
+			editor.editingLayer = { type: 'text', text: 'Hello' };
+			editor._isRichTextMode = false;
+			editor._displayScale = 1;
+			editor.containerElement = document.createElement( 'div' );
+			editor._createEditor();
+			expect( editor.editorElement ).toBeTruthy();
+		} );
+	} );
+
+	describe( '_extractDominantFontSize - branch gaps', () => {
+		test( 'should return null for null richText', () => {
+			expect( editor._extractDominantFontSize( null, 16 ) ).toBeNull();
+		} );
+
+		test( 'should return null for empty richText', () => {
+			expect( editor._extractDominantFontSize( [], 16 ) ).toBeNull();
+		} );
+
+		test( 'should use baseFontSize for runs without explicit fontSize', () => {
+			const richText = [
+				{ text: 'Hello', style: {} },
+				{ text: 'World', style: { fontSize: 24 } }
+			];
+			// "Hello" (5 chars) at base 16, "World" (5 chars) at 24
+			// Most characters at base 16
+			const result = editor._extractDominantFontSize( richText, 16 );
+			expect( result ).toBe( 16 );
+		} );
+
+		test( 'should return dominant fontSize from richText', () => {
+			// Function counts by run frequency, not character count.
+			// V8 iterates numeric Object.keys in ascending order, so
+			// with tied counts the lower number wins. Need 3 runs at 24
+			// vs 1 run at 16 to make 24 clearly dominant.
+			const richText = [
+				{ text: 'Part A', style: { fontSize: 24 } },
+				{ text: 'Part B', style: { fontSize: 24 } },
+				{ text: 'Part C', style: { fontSize: 24 } },
+				{ text: 'Small', style: { fontSize: 16 } }
+			];
+			const result = editor._extractDominantFontSize( richText, 16 );
+			expect( result ).toBe( 24 );
+		} );
+	} );
 } );

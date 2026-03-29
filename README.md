@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-94.24%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C904%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-95.82%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-13%2C880%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
@@ -318,24 +318,24 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,339 lines across 42 files**
-- **Frontend:** HTML5 Canvas editor with **157 JS files (~113,900 lines)**, 140 ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,364 lines across 42 files**
+- **Frontend:** HTML5 Canvas editor with **157 JS files (~114,000 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **26 god classes** (files >=1,000 lines), all use proper delegation patterns
   - 5 generated data files (ShapeLibraryData variants + EmojiLibraryIndex) are exempt from refactoring
   - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
 
-**Test Coverage (Verified March 23, 2026):**
+**Test Coverage (Verified March 28, 2026):**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,904 passing (168 suites) |
+| Jest tests | 13,880 passing (172 suites) |
 | PHPUnit tests | 34 test files |
-| Statement coverage | 94.24% |
-| Branch coverage | 84.17% |
-| Function coverage | 93.27% |
-| Line coverage | 94.53% |
+| Statement coverage | 95.82% |
+| Branch coverage | 87.00% |
+| Function coverage | 93.98% |
+| Line coverage | 95.94% |
 
 **Security:**
 
@@ -387,13 +387,13 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 157 | ✅ |
-| Total JS lines | ~113,900 | ✅ Hand-written + generated data |
+| Total JS lines | ~114,000 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
-| Tests passing | 11,904 | ✅ |
+| Tests passing | 13,880 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 94.24% | ✅ Excellent |
-| Branch coverage | 84.17% | ✅ Target met |
+| Statement coverage | 95.82% | ✅ Excellent |
+| Branch coverage | 87.00% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

@@ -1958,4 +1958,680 @@ describe( 'CanvasEvents', () => {
 			expect( typeof CanvasEvents ).toBe( 'function' );
 		} );
 	} );
+
+	describe( 'branch coverage gaps', () => {
+		describe( 'findTextLayerAtPoint edge cases', () => {
+			it( 'should skip locked layers (locked === true)', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const layers = [
+					{ id: '1', type: 'textbox', x: 0, y: 0, width: 100, height: 50, locked: true, visible: true }
+				];
+				// hitTestLayer will return true for the point within bounds
+				mockCanvasManager.hitTestController = {
+					hitTestLayer: jest.fn( () => true )
+				};
+				const result = ce.findTextLayerAtPoint( { x: 50, y: 25 }, layers );
+				expect( result ).toBeNull();
+			} );
+
+			it( 'should skip locked layers (locked === 1)', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const layers = [
+					{ id: '1', type: 'text', x: 0, y: 0, width: 100, height: 50, locked: 1, visible: true }
+				];
+				const result = ce.findTextLayerAtPoint( { x: 50, y: 25 }, layers );
+				expect( result ).toBeNull();
+			} );
+
+			it( 'should skip non-text/textbox/callout layers', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const layers = [
+					{ id: '1', type: 'rectangle', x: 0, y: 0, width: 100, height: 50, visible: true }
+				];
+				const result = ce.findTextLayerAtPoint( { x: 50, y: 25 }, layers );
+				expect( result ).toBeNull();
+			} );
+
+			it( 'should find callout layer at point', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.hitTestController = {
+					hitTestLayer: jest.fn( () => true )
+				};
+				const layers = [
+					{ id: '1', type: 'callout', x: 0, y: 0, width: 100, height: 50, visible: true }
+				];
+				const result = ce.findTextLayerAtPoint( { x: 50, y: 25 }, layers );
+				expect( result ).toEqual( layers[ 0 ] );
+			} );
+		} );
+
+		describe( 'isPointInLayer fallback paths', () => {
+			it( 'should use bounding box check when hitTestController is missing', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.hitTestController = null;
+				const layer = { x: 10, y: 10, width: 100, height: 50 };
+				expect( ce.isPointInLayer( { x: 50, y: 30 }, layer ) ).toBe( true );
+				expect( ce.isPointInLayer( { x: 200, y: 200 }, layer ) ).toBe( false );
+			} );
+
+			it( 'should use bounding box check when hitTestLayer is not a function', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.hitTestController = { hitTestLayer: 'not-a-function' };
+				const layer = { x: 0, y: 0, width: 100, height: 50 };
+				expect( ce.isPointInLayer( { x: 50, y: 25 }, layer ) ).toBe( true );
+			} );
+
+			it( 'should use defaults when layer has no dimensions', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.hitTestController = null;
+				const layer = {};
+				// Default: x=0, y=0, width=100, height=50
+				expect( ce.isPointInLayer( { x: 50, y: 25 }, layer ) ).toBe( true );
+				expect( ce.isPointInLayer( { x: 101, y: 0 }, layer ) ).toBe( false );
+			} );
+		} );
+
+		describe( 'touch events with empty touches', () => {
+			it( 'should return early from handleTouchStart with empty touches array', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const touchEvent = {
+					touches: [],
+					preventDefault: jest.fn(),
+					stopPropagation: jest.fn()
+				};
+				// Should not throw
+				ce.handleTouchStart( touchEvent );
+				// Should not set lastTouchPoint since touch is undefined
+				expect( mockCanvasManager.lastTouchPoint ).toBeNull();
+			} );
+
+			it( 'should return early from handleTouchMove with empty touches array', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const touchEvent = {
+					touches: [],
+					preventDefault: jest.fn(),
+					stopPropagation: jest.fn()
+				};
+				ce.handleTouchMove( touchEvent );
+				// Should not throw or set lastTouchPoint
+			} );
+
+			it( 'should handle handleTouchEnd with no changedTouches', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.lastTouchPoint = { clientX: 100, clientY: 100 };
+				mockCanvasManager.lastTouchTime = 0;
+				mockCanvasManager.isDrawing = false;
+				const touchEvent = {
+					changedTouches: [],
+					ctrlKey: false,
+					metaKey: false,
+					shiftKey: false,
+					altKey: false,
+					preventDefault: jest.fn(),
+					stopPropagation: jest.fn()
+				};
+				ce.handleTouchEnd( touchEvent );
+				// Should use lastTouchPoint for coordinates
+			} );
+
+			it( 'should handle handleTouchEnd when changedTouches is undefined', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.lastTouchPoint = { clientX: 50, clientY: 50 };
+				mockCanvasManager.lastTouchTime = 0;
+				mockCanvasManager.isDrawing = false;
+				const touchEvent = {
+					ctrlKey: false,
+					metaKey: false,
+					shiftKey: false,
+					altKey: false,
+					preventDefault: jest.fn(),
+					stopPropagation: jest.fn()
+				};
+				ce.handleTouchEnd( touchEvent );
+			} );
+		} );
+
+		describe( 'handleMouseDown with null transformController', () => {
+			it( 'should handle rotate handle hit when tc is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'pointer';
+				mockCanvasManager.getSelectedLayerId = jest.fn( () => 'layer1' );
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => ( { type: 'rotate' } ) );
+				mockCanvasManager.transformController = null;
+				const event = { clientX: 50, clientY: 50, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				// Should not throw even with null tc
+				ce.handleMouseDown( event );
+			} );
+
+			it( 'should handle arrowTip marker handle hit when tc is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'pointer';
+				mockCanvasManager.getSelectedLayerId = jest.fn( () => 'layer1' );
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => ( { type: 'arrowTip', isMarker: true } ) );
+				mockCanvasManager.transformController = null;
+				const event = { clientX: 50, clientY: 50, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+			} );
+
+			it( 'should handle dimensionOffset handle hit when tc is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'pointer';
+				mockCanvasManager.getSelectedLayerId = jest.fn( () => 'layer1' );
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => ( { type: 'dimensionOffset', isDimensionOffset: true } ) );
+				mockCanvasManager.transformController = null;
+				const event = { clientX: 50, clientY: 50, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+			} );
+
+			it( 'should handle angleDimensionText handle hit when tc is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'pointer';
+				mockCanvasManager.getSelectedLayerId = jest.fn( () => 'layer1' );
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => ( { type: 'angleDimensionText', isAngleDimensionText: true } ) );
+				mockCanvasManager.transformController = null;
+				const event = { clientX: 50, clientY: 50, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+			} );
+
+			it( 'should handle resize handle hit when tc is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'pointer';
+				mockCanvasManager.getSelectedLayerId = jest.fn( () => 'layer1' );
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => ( { type: 'nw' } ) );
+				mockCanvasManager.transformController = null;
+				const event = { clientX: 50, clientY: 50, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+			} );
+		} );
+
+		describe( 'handleMouseMove with null dragStartPoint', () => {
+			it( 'should skip arrowTipDrag when dragStartPoint is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.transformController = {
+					isArrowTipDragging: true,
+					dragStartPoint: null,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: false,
+					isResizing: false,
+					isRotating: false,
+					isDragging: false,
+					handleArrowTipDrag: jest.fn()
+				};
+				const event = { clientX: 50, clientY: 50, preventDefault: jest.fn() };
+				ce.handleMouseMove( event );
+				expect( mockCanvasManager.transformController.handleArrowTipDrag ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should skip dimensionTextDrag when dragStartPoint is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.transformController = {
+					isArrowTipDragging: false,
+					isDimensionTextDragging: true,
+					dragStartPoint: null,
+					isAngleDimensionTextDragging: false,
+					isResizing: false,
+					isRotating: false,
+					isDragging: false,
+					handleDimensionTextDrag: jest.fn()
+				};
+				const event = { clientX: 50, clientY: 50, preventDefault: jest.fn() };
+				ce.handleMouseMove( event );
+				expect( mockCanvasManager.transformController.handleDimensionTextDrag ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should skip angleDimensionTextDrag when dragStartPoint is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.transformController = {
+					isArrowTipDragging: false,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: true,
+					dragStartPoint: null,
+					isResizing: false,
+					isRotating: false,
+					isDragging: false,
+					handleAngleDimensionTextDrag: jest.fn()
+				};
+				const event = { clientX: 50, clientY: 50, preventDefault: jest.fn() };
+				ce.handleMouseMove( event );
+				expect( mockCanvasManager.transformController.handleAngleDimensionTextDrag ).not.toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'handleResize error path', () => {
+			it( 'should catch handleResize error and log with mw.log.error', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const mockError = new Error( 'resize failed' );
+				mockCanvasManager.transformController = {
+					isResizing: true,
+					resizeHandle: { type: 'nw' },
+					dragStartPoint: { x: 0, y: 0 },
+					isArrowTipDragging: false,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: false,
+					isRotating: false,
+					isDragging: false,
+					handleResize: jest.fn( () => {
+						throw mockError;
+					} )
+				};
+				global.mw = { log: { error: jest.fn() } };
+				const event = { clientX: 50, clientY: 50, preventDefault: jest.fn() };
+				ce.handleMouseMove( event );
+				expect( global.mw.log.error ).toHaveBeenCalled();
+				delete global.mw;
+			} );
+
+			it( 'should handle resize error without mw available', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.transformController = {
+					isResizing: true,
+					resizeHandle: { type: 'nw' },
+					dragStartPoint: { x: 0, y: 0 },
+					isArrowTipDragging: false,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: false,
+					isRotating: false,
+					isDragging: false,
+					handleResize: jest.fn( () => {
+						throw new Error( 'no mw' );
+					} )
+				};
+				const savedMw = global.mw;
+				delete global.mw;
+				const event = { clientX: 50, clientY: 50, preventDefault: jest.fn() };
+				// Should not throw
+				ce.handleMouseMove( event );
+				global.mw = savedMw;
+			} );
+		} );
+
+		describe( 'isPointInDimensionTextArea edge cases', () => {
+			it( 'should return false for zero-length dimension line', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const layer = { x1: 50, y1: 50, x2: 50, y2: 50 };
+				expect( ce.isPointInDimensionTextArea( { x: 50, y: 50 }, layer ) ).toBe( false );
+			} );
+
+			it( 'should use fallback values when offset properties are missing', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				// No dimensionOffset, no extensionLength, no extensionGap
+				const layer = { x1: 0, y1: 0, x2: 100, y2: 0 };
+				const result = ce.isPointInDimensionTextArea( { x: 50, y: -8 }, layer );
+				expect( typeof result ).toBe( 'boolean' );
+			} );
+
+			it( 'should use fallback when dimensionOffset is NaN', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const layer = { x1: 0, y1: 0, x2: 100, y2: 0, dimensionOffset: NaN };
+				const result = ce.isPointInDimensionTextArea( { x: 50, y: -8 }, layer );
+				expect( typeof result ).toBe( 'boolean' );
+			} );
+
+			it( 'should use extensionLength and extensionGap when provided', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const layer = { x1: 0, y1: 0, x2: 100, y2: 0, extensionLength: 20, extensionGap: 5 };
+				const result = ce.isPointInDimensionTextArea( { x: 50, y: -15 }, layer );
+				expect( typeof result ).toBe( 'boolean' );
+			} );
+		} );
+
+		describe( 'isPointInAngleDimensionTextArea edge cases', () => {
+			it( 'should return false when AngleDimensionRenderer is not available', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				// Clear AngleDimensionRenderer from window
+				const saved = window.Layers && window.Layers.AngleDimensionRenderer;
+				if ( window.Layers ) {
+					window.Layers.AngleDimensionRenderer = null;
+				}
+				const layer = { cx: 100, cy: 100, arcRadius: 40 };
+				expect( ce.isPointInAngleDimensionTextArea( { x: 100, y: 100 }, layer ) ).toBe( false );
+				if ( window.Layers && saved ) {
+					window.Layers.AngleDimensionRenderer = saved;
+				}
+			} );
+
+			it( 'should handle textPosition above', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				window.Layers = window.Layers || {};
+				window.Layers.AngleDimensionRenderer = class {
+					constructor() {}
+					calculateAngles() {
+						return { startAngle: 0, sweepAngle: Math.PI / 2 };
+					}
+				};
+				const layer = { cx: 100, cy: 100, arcRadius: 40, textPosition: 'above', fontSize: 12 };
+				const result = ce.isPointInAngleDimensionTextArea( { x: 140, y: 60 }, layer );
+				expect( typeof result ).toBe( 'boolean' );
+			} );
+
+			it( 'should handle textPosition below', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				window.Layers = window.Layers || {};
+				window.Layers.AngleDimensionRenderer = class {
+					constructor() {}
+					calculateAngles() {
+						return { startAngle: 0, sweepAngle: Math.PI / 2 };
+					}
+				};
+				const layer = { cx: 100, cy: 100, arcRadius: 40, textPosition: 'below', fontSize: 12 };
+				const result = ce.isPointInAngleDimensionTextArea( { x: 140, y: 100 }, layer );
+				expect( typeof result ).toBe( 'boolean' );
+			} );
+
+			it( 'should use default textPosition center when not set', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				window.Layers = window.Layers || {};
+				window.Layers.AngleDimensionRenderer = class {
+					constructor() {}
+					calculateAngles() {
+						return { startAngle: 0, sweepAngle: Math.PI };
+					}
+				};
+				const layer = { cx: 100, cy: 100, arcRadius: 40 };
+				const result = ce.isPointInAngleDimensionTextArea( { x: 60, y: 100 }, layer );
+				expect( typeof result ).toBe( 'boolean' );
+			} );
+		} );
+
+		describe( 'createAngleDimensionTextHandle edge cases', () => {
+			it( 'should use midAngle 0 when AngleDimensionRenderer not available', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const saved = window.Layers && window.Layers.AngleDimensionRenderer;
+				if ( window.Layers ) {
+					window.Layers.AngleDimensionRenderer = null;
+				}
+				const layer = { cx: 100, cy: 100, arcRadius: 40 };
+				const handle = ce.createAngleDimensionTextHandle( layer );
+				expect( handle.midAngle ).toBe( 0 );
+				expect( handle.type ).toBe( 'angleDimensionText' );
+				if ( window.Layers && saved ) {
+					window.Layers.AngleDimensionRenderer = saved;
+				}
+			} );
+		} );
+
+		describe( 'pinch zoom clamping', () => {
+			it( 'should clamp zoom to minimum 0.1', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.isPinching = true;
+				mockCanvasManager.initialPinchDistance = 200;
+				mockCanvasManager.initialZoom = 0.2;
+				// Scale of 0.1 → newZoom = 0.02 → clamped to 0.1
+				const event = {
+					touches: [
+						{ clientX: 100, clientY: 100 },
+						{ clientX: 120, clientY: 100 }
+					]
+				};
+				ce.handlePinchMove( event );
+				expect( mockCanvasManager.setZoom ).toHaveBeenCalledWith( 0.1 );
+			} );
+
+			it( 'should clamp zoom to maximum 5.0', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.isPinching = true;
+				mockCanvasManager.initialPinchDistance = 10;
+				mockCanvasManager.initialZoom = 4;
+				// Scale of 20 → newZoom = 80 → clamped to 5.0
+				const event = {
+					touches: [
+						{ clientX: 0, clientY: 0 },
+						{ clientX: 200, clientY: 0 }
+					]
+				};
+				ce.handlePinchMove( event );
+				expect( mockCanvasManager.setZoom ).toHaveBeenCalledWith( 5.0 );
+			} );
+		} );
+
+		describe( 'handleWheel with null transformController', () => {
+			it( 'should still zoom when transformController is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.transformController = null;
+				mockCanvasManager.isPanning = false;
+				const event = {
+					deltaY: -100,
+					clientX: 400,
+					clientY: 300,
+					preventDefault: jest.fn()
+				};
+				ce.handleWheel( event );
+				expect( mockCanvasManager.zoomBy ).toHaveBeenCalled();
+				expect( event.preventDefault ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'handleKeyDown space key edge cases', () => {
+			it( 'should not capture Space when BUTTON has focus', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const event = {
+					code: 'Space',
+					repeat: false,
+					key: ' ',
+					target: { tagName: 'BUTTON', closest: jest.fn( () => null ) },
+					preventDefault: jest.fn()
+				};
+				ce.handleKeyDown( event );
+				expect( mockCanvasManager.spacePressed ).toBe( false );
+				expect( event.preventDefault ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should not capture Space when SELECT has focus', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const event = {
+					code: 'Space',
+					repeat: false,
+					key: ' ',
+					target: { tagName: 'SELECT', closest: jest.fn( () => null ) },
+					preventDefault: jest.fn()
+				};
+				ce.handleKeyDown( event );
+				expect( mockCanvasManager.spacePressed ).toBe( false );
+			} );
+
+			it( 'should not capture Space inside oo-ui-widget', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				const event = {
+					code: 'Space',
+					repeat: false,
+					key: ' ',
+					target: { tagName: 'DIV', closest: jest.fn( () => document.createElement( 'div' ) ) },
+					preventDefault: jest.fn()
+				};
+				ce.handleKeyDown( event );
+				expect( mockCanvasManager.spacePressed ).toBe( false );
+			} );
+		} );
+
+		describe( 'handleMouseDown dimension layer paths', () => {
+			it( 'should handle dimension layer click in text area with tc', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'pointer';
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => null );
+				const dimLayer = { id: 'd1', type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 0 };
+				mockCanvasManager.handleLayerSelection = jest.fn( () => dimLayer );
+				mockCanvasManager.transformController = {
+					startDimensionTextDrag: jest.fn(),
+					isResizing: false,
+					isRotating: false,
+					isDragging: false,
+					isArrowTipDragging: false,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: false
+				};
+				jest.spyOn( ce, 'isPointInDimensionTextArea' ).mockReturnValue( true );
+				jest.spyOn( ce, 'createDimensionTextHandle' ).mockReturnValue( { type: 'dimensionText' } );
+				const event = { clientX: 50, clientY: 0, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+				expect( mockCanvasManager.transformController.startDimensionTextDrag ).toHaveBeenCalled();
+			} );
+
+			it( 'should handle dimension layer click NOT in text area', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'pointer';
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => null );
+				const dimLayer = { id: 'd1', type: 'dimension', x1: 0, y1: 0, x2: 100, y2: 0 };
+				mockCanvasManager.handleLayerSelection = jest.fn( () => dimLayer );
+				jest.spyOn( ce, 'isPointInDimensionTextArea' ).mockReturnValue( false );
+				const event = { clientX: 50, clientY: 0, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+				// No drag started - dimension layers only move via handles
+			} );
+
+			it( 'should handle angleDimension layer click in text area', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'pointer';
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => null );
+				const adLayer = { id: 'ad1', type: 'angleDimension', cx: 100, cy: 100 };
+				mockCanvasManager.handleLayerSelection = jest.fn( () => adLayer );
+				mockCanvasManager.transformController = {
+					startAngleDimensionTextDrag: jest.fn(),
+					isResizing: false,
+					isRotating: false,
+					isDragging: false,
+					isArrowTipDragging: false,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: false
+				};
+				jest.spyOn( ce, 'isPointInAngleDimensionTextArea' ).mockReturnValue( true );
+				jest.spyOn( ce, 'createAngleDimensionTextHandle' ).mockReturnValue( { type: 'angleDimensionText' } );
+				const event = { clientX: 100, clientY: 100, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+				expect( mockCanvasManager.transformController.startAngleDimensionTextDrag ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'handleMouseUp angleDimension in-progress path', () => {
+			it( 'should not call finishDrawing during angle dimension in progress', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.isDrawing = true;
+				mockCanvasManager.currentTool = 'angleDimension';
+				mockCanvasManager.isMarqueeSelecting = false;
+				mockCanvasManager.isDraggingGuide = false;
+				mockCanvasManager.isPanning = false;
+				mockCanvasManager.drawingController = {
+					isAngleDimensionInProgress: jest.fn( () => true )
+				};
+				mockCanvasManager.transformController = {
+					isArrowTipDragging: false,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: false,
+					isResizing: false,
+					isRotating: false,
+					isDragging: false
+				};
+				const event = { clientX: 50, clientY: 50, button: 0, preventDefault: jest.fn() };
+				ce.handleMouseUp( event );
+				expect( mockCanvasManager.finishDrawing ).not.toHaveBeenCalled();
+			} );
+
+			it( 'should handle angleDimension when drawingController is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.isDrawing = true;
+				mockCanvasManager.currentTool = 'angleDimension';
+				mockCanvasManager.isMarqueeSelecting = false;
+				mockCanvasManager.isDraggingGuide = false;
+				mockCanvasManager.isPanning = false;
+				mockCanvasManager.drawingController = null;
+				mockCanvasManager.transformController = {
+					isArrowTipDragging: false,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: false,
+					isResizing: false,
+					isRotating: false,
+					isDragging: false
+				};
+				const event = { clientX: 50, clientY: 50, button: 0, preventDefault: jest.fn() };
+				ce.handleMouseUp( event );
+				// Should call finishDrawing since dc is null (not in progress)
+				expect( mockCanvasManager.finishDrawing ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'handleDoubleTap edge cases', () => {
+			it( 'should call resetZoom when zoom >= 1.0', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.zoom = 1.5;
+				ce.handleDoubleTap();
+				expect( mockCanvasManager.fitToWindow ).toHaveBeenCalled();
+			} );
+
+			it( 'should call fitToWindow when zoom < 1.0', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.zoom = 0.5;
+				ce.handleDoubleTap();
+				expect( mockCanvasManager.resetZoom ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'handleMouseDown angleDimension in-progress phase', () => {
+			it( 'should advance phase via finishDrawing for angleDimension in progress', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'angleDimension';
+				mockCanvasManager.drawingController = {
+					isAngleDimensionInProgress: jest.fn( () => true )
+				};
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => null );
+				mockCanvasManager.handleLayerSelection = jest.fn( () => null );
+				const event = { clientX: 50, clientY: 50, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+				expect( mockCanvasManager.finishDrawing ).toHaveBeenCalled();
+			} );
+
+			it( 'should fall through to startDrawing when dc is null', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.currentTool = 'angleDimension';
+				mockCanvasManager.drawingController = null;
+				mockCanvasManager.hitTestSelectionHandles = jest.fn( () => null );
+				mockCanvasManager.handleLayerSelection = jest.fn( () => null );
+				const event = { clientX: 50, clientY: 50, button: 0, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: jest.fn() };
+				ce.handleMouseDown( event );
+				expect( mockCanvasManager.startDrawing ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'handleMouseMove angle dimension preview between clicks', () => {
+			it( 'should continue drawing for angleDimension in progress when not isDrawing', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.isDrawing = false;
+				mockCanvasManager.isMarqueeSelecting = false;
+				mockCanvasManager.isDraggingGuide = false;
+				mockCanvasManager.isPanning = false;
+				mockCanvasManager.currentTool = 'angleDimension';
+				mockCanvasManager.drawingController = {
+					isAngleDimensionInProgress: jest.fn( () => true )
+				};
+				mockCanvasManager.transformController = {
+					isResizing: false,
+					isRotating: false,
+					isDragging: false,
+					isArrowTipDragging: false,
+					isDimensionTextDragging: false,
+					isAngleDimensionTextDragging: false
+				};
+				const event = { clientX: 50, clientY: 50, preventDefault: jest.fn() };
+				ce.handleMouseMove( event );
+				expect( mockCanvasManager.continueDrawing ).toHaveBeenCalled();
+			} );
+		} );
+
+		describe( 'handleTouchEnd double-tap detection', () => {
+			it( 'should detect double tap when interval < 300ms', () => {
+				const ce = new CanvasEvents( mockCanvasManager );
+				mockCanvasManager.lastTouchTime = Date.now() - 100;
+				mockCanvasManager.zoom = 0.5;
+				mockCanvasManager.isPinching = false;
+				mockCanvasManager.isDrawing = false;
+				mockCanvasManager.lastTouchPoint = { clientX: 50, clientY: 50 };
+				const event = {
+					changedTouches: [ { clientX: 50, clientY: 50 } ],
+					ctrlKey: false, metaKey: false, shiftKey: false, altKey: false,
+					preventDefault: jest.fn(), stopPropagation: jest.fn()
+				};
+				ce.handleTouchEnd( event );
+				// Double tap detected → resetZoom called (zoom < 1.0)
+				expect( mockCanvasManager.resetZoom ).toHaveBeenCalled();
+			} );
+		} );
+	} );
 } );

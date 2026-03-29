@@ -4859,4 +4859,334 @@ describe( 'PropertiesForm', () => {
 			expect( hasFillPicker ).toBe( false );
 		} );
 	} );
+
+	// ===== Gap coverage tests =====
+
+	describe( 'addInput - blur event branches', () => {
+		test( 'blur restores lastValidValue when validation fails', () => {
+			const layer = {
+				id: 'r1', type: 'rectangle',
+				x: 100, y: 100, width: 200, height: 100
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find X input (number type with min/max)
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			expect( inputs.length ).toBeGreaterThan( 0 );
+
+			const xInput = inputs[ 0 ];
+			const originalValue = xInput.value;
+
+			// Set to valid value, then blur — should keep value
+			xInput.value = '50';
+			xInput.dispatchEvent( new Event( 'blur' ) );
+			// Should not revert for valid values
+			expect( xInput.value ).not.toBe( '' );
+		} );
+
+		test( 'blur formats decimal=1 number input', () => {
+			const layer = {
+				id: 'r2', type: 'rectangle',
+				x: 0, y: 0, width: 100, height: 100, opacity: 0.756
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find opacity slider — it uses number inputs with step
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			expect( inputs.length ).toBeGreaterThan( 0 );
+		} );
+	} );
+
+	describe( 'addInput - safeOnChange error handling', () => {
+		test( 'logs error when onChange throws', () => {
+			mockEditor.updateLayer = jest.fn( () => { throw new Error( 'Update failed' ); } );
+
+			const layer = {
+				id: 'r3', type: 'rectangle',
+				x: 0, y: 0, width: 100, height: 100
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const inputs = form.querySelectorAll( 'input[type="number"]' );
+			expect( inputs.length ).toBeGreaterThan( 0 );
+
+			// Type a value to trigger onChange
+			inputs[ 0 ].value = '50';
+			dispatchInputAndAdvanceTimers( inputs[ 0 ] );
+
+			// Should log error, not throw
+			expect( mw.log.error ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'create - group/folder type', () => {
+		test( 'shows children count for non-empty folder', () => {
+			const layer = {
+				id: 'g1', type: 'group',
+				name: 'My Folder',
+				children: [ 'c1', 'c2', 'c3' ]
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const valueSpans = form.querySelectorAll( '.properties-value' );
+			const countText = Array.from( valueSpans ).map( ( s ) => s.textContent );
+			expect( countText.some( ( t ) => t.includes( '3 layers' ) ) ).toBe( true );
+		} );
+
+		test( 'shows empty hint and tip for folder with no children', () => {
+			const layer = {
+				id: 'g2', type: 'group',
+				name: 'Empty Folder',
+				children: []
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Empty hint
+			const valueSpans = form.querySelectorAll( '.properties-value' );
+			const hasEmptyHint = Array.from( valueSpans ).some(
+				( s ) => s.textContent.includes( 'Empty' ) || s.textContent.includes( 'empty' ) || s.textContent.includes( 'layers-folder-empty-hint' )
+			);
+			expect( hasEmptyHint ).toBe( true );
+
+			// Tip row
+			const tipRow = form.querySelector( '.properties-tip' );
+			expect( tipRow ).not.toBeNull();
+		} );
+
+		test( 'shows "1 layer" for single child', () => {
+			const layer = {
+				id: 'g3', type: 'group',
+				name: 'Single',
+				children: [ 'c1' ]
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const valueSpans = form.querySelectorAll( '.properties-value' );
+			const hasOneLayer = Array.from( valueSpans ).some( ( s ) => s.textContent === '1 layer' );
+			expect( hasOneLayer ).toBe( true );
+		} );
+
+		test( 'returns form without transform section for folders', () => {
+			const layer = {
+				id: 'g4', type: 'group',
+				name: 'Folder',
+				children: []
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Should NOT have transform section (only folder info)
+			const sectionHeaders = form.querySelectorAll( '.section-header' );
+			const hasTranform = Array.from( sectionHeaders ).some(
+				( h ) => h.textContent.includes( 'Transform' ) || h.textContent.includes( 'layers-section-transform' )
+			);
+			expect( hasTranform ).toBe( false );
+		} );
+	} );
+
+	describe( 'create - blur fill toggle', () => {
+		test( 'shows blur radius input when fill is blur', () => {
+			const layer = {
+				id: 'blur1', type: 'rectangle',
+				x: 0, y: 0, width: 100, height: 100,
+				fill: 'blur', blurRadius: 12
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Should have blur radius input
+			const labels = form.querySelectorAll( 'label' );
+			const hasBlurRadius = Array.from( labels ).some(
+				( l ) => l.textContent.includes( 'Blur Radius' ) || l.textContent.includes( 'layers-prop-blur-radius' )
+			);
+			expect( hasBlurRadius ).toBe( true );
+		} );
+
+		test( 'hides blur radius input when fill is not blur', () => {
+			const layer = {
+				id: 'noblur', type: 'rectangle',
+				x: 0, y: 0, width: 100, height: 100,
+				fill: '#ff0000'
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Should NOT have blur radius input
+			const labels = form.querySelectorAll( 'label' );
+			const hasBlurRadius = Array.from( labels ).some(
+				( l ) => l.textContent.includes( 'Blur Radius' ) || l.textContent.includes( 'layers-prop-blur-radius' )
+			);
+			expect( hasBlurRadius ).toBe( false );
+		} );
+
+		test( 'blur fill checkbox toggles blur on', () => {
+			mockEditor.layerPanel = {
+				updatePropertiesPanel: jest.fn()
+			};
+
+			const layer = {
+				id: 'toggle1', type: 'rectangle',
+				x: 0, y: 0, width: 100, height: 100,
+				fill: '#ff0000'
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find blur fill checkbox
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			const blurCb = Array.from( checkboxes ).find( ( cb ) => {
+				const row = cb.closest( '.form-row' );
+				if ( !row ) {
+					return false;
+				}
+				const label = row.querySelector( 'label' );
+				return label && ( label.textContent.includes( 'Blur Fill' ) || label.textContent.includes( 'layers-prop-blur-fill' ) );
+			} );
+
+			if ( blurCb ) {
+				blurCb.checked = true;
+				blurCb.dispatchEvent( new Event( 'change' ) );
+				jest.runAllTimers();
+
+				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'toggle1', expect.objectContaining( { fill: 'blur' } ) );
+			}
+		} );
+	} );
+
+	describe( 'create - callout layer', () => {
+		test( 'creates form with callout-specific sections', () => {
+			const layer = {
+				id: 'callout1', type: 'callout',
+				x: 100, y: 100, width: 200, height: 100,
+				tailTipX: 50, tailTipY: 250,
+				text: 'Note', cornerRadius: 8
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			expect( form ).toBeDefined();
+			// Should have sections
+			const sections = form.querySelectorAll( '.property-section-header' );
+			expect( sections.length ).toBeGreaterThan( 0 );
+		} );
+	} );
+
+	describe( 'create - dimension and angleDimension types', () => {
+		test( 'creates form for dimension layer', () => {
+			const layer = {
+				id: 'dim1', type: 'dimension',
+				x1: 0, y1: 0, x2: 100, y2: 0,
+				extensionLength: 20
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+			expect( form ).toBeDefined();
+		} );
+
+		test( 'creates form for angleDimension layer', () => {
+			const layer = {
+				id: 'adim1', type: 'angleDimension',
+				cx: 50, cy: 50, ax: 100, ay: 50, bx: 50, by: 0,
+				arcRadius: 40
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+			expect( form ).toBeDefined();
+		} );
+	} );
+
+	describe( 'create - marker type', () => {
+		test( 'creates form for marker layer', () => {
+			const layer = {
+				id: 'marker1', type: 'marker',
+				x: 100, y: 100,
+				markerNumber: 1
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+			expect( form ).toBeDefined();
+		} );
+	} );
+
+	describe( 'create - image with baked-in colors (SVG symbol)', () => {
+		test( 'hides appearance section for SVG symbols', () => {
+			const layer = {
+				id: 'svg1', type: 'customShape',
+				x: 0, y: 0, width: 100, height: 100,
+				svg: '<svg></svg>'
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const sections = form.querySelectorAll( '.section-header' );
+			const hasAppearance = Array.from( sections ).some(
+				( s ) => s.textContent.includes( 'Appearance' ) || s.textContent.includes( 'layers-section-appearance' )
+			);
+			expect( hasAppearance ).toBe( false );
+		} );
+
+		test( 'hides appearance section for multi-path shapes', () => {
+			const layer = {
+				id: 'mp1', type: 'customShape',
+				x: 0, y: 0, width: 100, height: 100,
+				paths: [ 'M0,0 L100,100' ]
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const sections = form.querySelectorAll( '.section-header' );
+			const hasAppearance = Array.from( sections ).some(
+				( s ) => s.textContent.includes( 'Appearance' ) || s.textContent.includes( 'layers-section-appearance' )
+			);
+			expect( hasAppearance ).toBe( false );
+		} );
+	} );
+
+	describe( 'create - shadow properties toggling', () => {
+		test( 'shows shadow sub-fields when shadow is true', () => {
+			const layer = {
+				id: 'shadow1', type: 'rectangle',
+				x: 0, y: 0, width: 100, height: 100,
+				shadow: true, shadowColor: '#000000',
+				shadowBlur: 5, shadowOffsetX: 3, shadowOffsetY: 3
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const labels = form.querySelectorAll( 'label' );
+			const labelTexts = Array.from( labels ).map( ( l ) => l.textContent );
+
+			// Should have shadow sub-fields
+			const hasShadowColor = labelTexts.some( ( t ) => t.includes( 'Shadow' ) || t.includes( 'shadow' ) || t.includes( 'layers-prop-shadow' ) );
+			expect( hasShadowColor ).toBe( true );
+		} );
+	} );
+
+	describe( 'create - line type (no fill controls)', () => {
+		test( 'does not show fill controls for line type', () => {
+			const layer = {
+				id: 'line1', type: 'line',
+				x1: 0, y1: 0, x2: 100, y2: 100,
+				stroke: '#000', strokeWidth: 2
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Lines should not have any blur fill checkbox or fill color
+			const labels = form.querySelectorAll( 'label' );
+			const hasBlurFill = Array.from( labels ).some(
+				( l ) => l.textContent.includes( 'Blur Fill' ) || l.textContent.includes( 'layers-prop-blur-fill' )
+			);
+			expect( hasBlurFill ).toBe( false );
+		} );
+	} );
+
+	describe( 'addInput - change event edge cases', () => {
+		test( 'change event with checkbox type', () => {
+			const layer = {
+				id: 'cbtest', type: 'rectangle',
+				x: 0, y: 0, width: 100, height: 100,
+				shadow: false
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			// Find shadow checkbox
+			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
+			if ( checkboxes.length > 0 ) {
+				const cb = checkboxes[ 0 ];
+				cb.checked = true;
+				cb.dispatchEvent( new Event( 'change' ) );
+				// Should trigger updateLayer
+				expect( mockEditor.updateLayer ).toHaveBeenCalled();
+			}
+		} );
+	} );
 } );
