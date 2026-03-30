@@ -311,6 +311,7 @@ class SlideHooksTest extends \MediaWikiUnitTestCase {
 	public static function provideValidColors(): array {
 		return [
 			'hex 3' => [ '#fff' ],
+			'hex 4' => [ '#ffff' ],
 			'hex 6' => [ '#ffffff' ],
 			'hex 8' => [ '#ffffff00' ],
 			'uppercase hex' => [ '#FFFFFF' ],
@@ -344,7 +345,6 @@ class SlideHooksTest extends \MediaWikiUnitTestCase {
 		return [
 			'empty' => [ '' ],
 			'hex without #' => [ 'ffffff' ],
-			'hex wrong length' => [ '#ffff' ],
 			'invalid named color' => [ 'notacolor' ],
 			'javascript' => [ 'javascript:alert(1)' ],
 			'expression' => [ 'expression(alert(1))' ],

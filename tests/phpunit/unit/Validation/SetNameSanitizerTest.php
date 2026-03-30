@@ -228,13 +228,11 @@ class SetNameSanitizerTest extends \MediaWikiUnitTestCase {
 
 	/**
 	 * @covers ::isValid
-	 * Note: isValid() does not check for special characters - it only validates
-	 * that input doesn't contain dangerous characters (control chars, path separators)
+	 * Note: isValid() enforces the same character whitelist as sanitize().
 	 */
 	public function testIsValidAllowsSpecialCharacters() {
-		// isValid() is less strict than sanitize() - it only rejects dangerous chars
-		$this->assertTrue( SetNameSanitizer::isValid( 'test@example' ) );
-		$this->assertTrue( SetNameSanitizer::isValid( 'test#123' ) );
+		$this->assertFalse( SetNameSanitizer::isValid( 'test@example' ) );
+		$this->assertFalse( SetNameSanitizer::isValid( 'test#123' ) );
 	}
 
 	/**

@@ -315,7 +315,7 @@ class SlideHooks {
 	 */
 	private static function parseCanvasDimensions( string $dimensionStr, $config ): ?array {
 		// Match WIDTHxHEIGHT pattern
-		if ( !preg_match( '/^(\d+)\s*[xX×]\s*(\d+)$/', trim( $dimensionStr ), $matches ) ) {
+		if ( !preg_match( '/^(\d+)\s*[xX×]\s*(\d+)$/u', trim( $dimensionStr ), $matches ) ) {
 			return null;
 		}
 

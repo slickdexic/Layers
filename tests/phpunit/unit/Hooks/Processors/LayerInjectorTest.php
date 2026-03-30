@@ -5,6 +5,7 @@ namespace MediaWiki\Extension\Layers\Tests\Unit\Hooks\Processors;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayerInjector;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersHtmlInjector;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -43,16 +44,16 @@ class LayerInjectorTest extends TestCase {
 	 *
 	 * @param string $name File name
 	 * @param string $sha1 SHA1 hash
-	 * @return \stdClass Mock file
+	 * @return MockObject Mock file
 	 */
-	private function createMockFile( string $name = 'Test.jpg', string $sha1 = 'abc123' ): \stdClass {
-		$file = new \stdClass();
-		$file->name = $name;
-		$file->sha1 = $sha1;
+	private function createMockFile( string $name = 'Test.jpg', string $sha1 = 'abc123' ): MockObject {
+		$file = $this->getMockBuilder( \stdClass::class )
+			->addMethods( [ 'getName', 'getSha1', 'getRepo' ] )
+			->getMock();
 
-		// Add methods as closures
-		$file->getName = static fn () => $name;
-		$file->getSha1 = static fn () => $sha1;
+		$file->method( 'getName' )->willReturn( $name );
+		$file->method( 'getSha1' )->willReturn( $sha1 );
+		$file->method( 'getRepo' )->willReturn( null );
 
 		return $file;
 	}
@@ -83,8 +84,8 @@ class LayerInjectorTest extends TestCase {
 		$this->injector->addLatestLayersToImage( $file, $params );
 
 		$this->assertSame( 42, $params['layerSetId'] );
-		$this->assertCount( 1, $params['layerData'] );
-		$this->assertSame( 'layer1', $params['layerData'][0]['id'] );
+		$this->assertCount( 1, $params['layerData']['layers'] );
+		$this->assertSame( 'layer1', $params['layerData']['layers'][0]['id'] );
 	}
 
 	/**
@@ -111,7 +112,7 @@ class LayerInjectorTest extends TestCase {
 		$this->injector->addLatestLayersToImage( $file, $params, 'custom-set' );
 
 		$this->assertSame( 55, $params['layerSetId'] );
-		$this->assertSame( 'namedLayer', $params['layerData'][0]['id'] );
+		$this->assertSame( 'namedLayer', $params['layerData']['layers'][0]['id'] );
 	}
 
 	/**
@@ -176,6 +177,7 @@ class LayerInjectorTest extends TestCase {
 
 		$layerSet = [
 			'id' => 123,
+			'imgName' => 'Test.jpg',
 			'data' => [
 				'layers' => [
 					[ 'id' => 'byId', 'type' => 'text' ]
@@ -266,9 +268,9 @@ class LayerInjectorTest extends TestCase {
 		$this->injector->addSubsetLayersToImage( $file, 'abcd,ijkl', $params );
 
 		$this->assertSame( 99, $params['layerSetId'] );
-		$this->assertCount( 2, $params['layerData'] );
-		$this->assertSame( 'abcd1234', $params['layerData'][0]['id'] );
-		$this->assertSame( 'ijkl9012', $params['layerData'][1]['id'] );
+		$this->assertCount( 2, $params['layerData']['layers'] );
+		$this->assertSame( 'abcd1234', $params['layerData']['layers'][0]['id'] );
+		$this->assertSame( 'ijkl9012', $params['layerData']['layers'][1]['id'] );
 	}
 
 	/**
@@ -346,7 +348,9 @@ class LayerInjectorTest extends TestCase {
 				$this->identicalTo( $attribs ),
 				$this->callback( static fn ( $layers ) => count( $layers ) === 1 && $layers[0]['id'] === 'injected' ),
 				800,
-				600
+				600,
+				true,
+				1.0
 			);
 
 		$result = $this->injector->injectIntoAttributes( $attribs, $file );
@@ -430,7 +434,15 @@ class LayerInjectorTest extends TestCase {
 			->willReturn( [ 'width' => null, 'height' => null ] );
 
 		$this->mockHtmlInjector->expects( $this->once() )
-			->method( 'injectIntoAttributes' );
+			->method( 'injectIntoAttributes' )
+			->with(
+				$this->identicalTo( $attribs ),
+				$this->callback( static fn ( $layers ) => count( $layers ) === 1 && $layers[0]['id'] === 'namedLayer' ),
+				null,
+				null,
+				true,
+				1.0
+			);
 
 		$result = $this->injector->injectIntoAttributes( $attribs, $file, 'custom-set-name' );
 

@@ -1,35 +1,30 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 26, 2026 (v66 audit + fix pass)
-**Previous Review:** March 26, 2026 (v65 audit + fix pass)
+**Review Date:** March 29, 2026 (v67 audit + fix pass)
+**Previous Review:** March 28, 2026 (v67 audit)
 **Version:** 1.5.63
-**Reviewer:** GitHub Copilot (Claude Opus 4.6)
+**Reviewer:** GitHub Copilot (GPT-5.4)
 
 ---
 
 ## Scope & Verification
 
-- **Branch Reviewed:** `main`
-- **Verification Method:** Direct source inspection with 4 specialized
-    subagent sweeps (PHP backend, JS frontend, security/SQL deep dive,
-    documentation accuracy) plus manual verification of every finding
-    against actual source code. Fresh test run and coverage generation
-    performed. All subagent-reported issues individually confirmed
-    before inclusion. 14 false positives from subagent analysis
-    rigorously eliminated (see Verified Non-Issues).
+- **Branch reviewed:** `main`
+- **Verification method:** Direct source inspection across PHP, JS,
+    test harness, and documentation; targeted PHPUnit slices used to
+    collapse stale-test and bootstrap failures into verified root
+    causes; follow-up validation completed with `npm test`,
+    `npm run test:php`, and `php vendor/bin/phpunit --configuration phpunit.xml`.
 - **Coverage:** 95.82% statements, 87.00% branches, 93.98% functions,
-    95.94% lines (freshly verified `npm run test:coverage` March 28, 2026)
-- **JS source files:** 157 in `resources/` excluding dist
-    (~114,000 lines)
-- **PHP production files:** 42 in `src/` (~15,364 lines)
+    95.94% lines (from current repository coverage artifacts)
 - **Jest test suites:** 172
-- **Jest test cases:** 13,880 (`npm run test:js --silent` —
-    verified March 28, 2026)
+- **Jest test cases:** 13,880 (`npm test` / `jest` summary)
 - **PHPUnit test files:** 34 in `tests/phpunit`
-- **i18n message keys:** 842 in `i18n/en.json` (excluding @metadata;
-    verified via direct count March 26, 2026)
-- **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
-  `layersrename`, `layerslist`)
+- **Published i18n metric:** 785 `layers-` keys via
+    `scripts/verify-metrics.js` (`842` total non-`@metadata` keys exist
+    in `i18n/en.json`, but that is not the project’s published metric)
+- **API modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
+    `layersrename`, `layerslist`)
 - **Files ≥1,000 lines:** 26 total (5 generated JS data, 19
     hand-written JS, 2 PHP)
 
@@ -37,32 +32,133 @@
 
 ## Executive Summary
 
-The v66 audit covered two major areas: critical data flow modules
-(APIManager ~1,640 lines, SlideController ~1,126 lines) and canvas
-controllers + tool factory (ZoomPanController ~385 lines,
-InteractionController ~556 lines, RenderCoordinator ~404 lines,
-SelectionRenderer ~793 lines, ShapeFactory ~531 lines) plus shared
-renderers (GradientRenderer ~392 lines, TextRenderer ~345 lines,
-LayerDataNormalizer ~325 lines). Two specialized subagent sweeps
-identified 7+6=13 candidate issues. Manual verification confirmed 6
-real findings (3 P2, 3 P3) and eliminated 7 non-issues.
+This review focused on current repository health rather than re-auditing
+the large backlog of already-fixed issues. No new exploitable security
+vulnerabilities or confirmed production authorization/validation
+regressions were found in the API, database, or rendering paths. The
+v67 findings were concentrated in developer workflow quality and
+documentation accuracy, and the full follow-up fix pass is now complete.
 
-**v66 findings:** 0 CRITICAL, 0 HIGH, 3 MEDIUM, 3 LOW code items.
+**v67 findings:** 0 CRITICAL, 0 HIGH, 2 MEDIUM code/test-infrastructure
+items, 4 LOW documentation drift items. All 6 items are now resolved.
 
-**v66 fix pass (March 26):** P2-210 fixed (APIManager isRetryableError
-shape mismatch — all errors treated as retryable, wasting 3 retries
-before showing real errors), P2-211 fixed (SlideController hardcoded
-backgroundVisible/backgroundOpacity in lightbox), P2-212 fixed
-(ZoomPanController zoomToFitLayers mixed buffer/CSS coordinate
-spaces), P3-213 fixed (smoothZoomTo permanently overwrote animation
-duration), P3-214 fixed (ShapeFactory createText missing shadow
-application), P3-215 fixed (APIManager spinner stuck on request abort).
-All cherry-picked to REL1_43 and REL1_39.
-**0 open code items. 0 open doc items.** 13,880 tests passing.
+The repository is fully green on the validated workflows used in this
+review:
 
-The codebase retains strong architecture, comprehensive test coverage
-(95.82% statements, 13,880 tests in 172 suites), and robust security
-controls. P3-147 (accepted) and P3-148 (deferred) carried forward.
+- `npm test` passes.
+- `npm run test:php` passes cleanly.
+- `php vendor/bin/phpunit --configuration phpunit.xml` passes
+    (`537` tests, `7` skipped).
+
+The follow-up fix pass repaired the standalone bootstrap/autoload path,
+eliminated a namespace collision that shadowed the production
+`RateLimiter` during full-suite runs, aligned stale unit tests with the
+current contracts, and synced the current-state documentation.
+
+P3-147 (accepted) remains carried forward.
+
+---
+
+## Confirmed Findings (v67 — March 28, 2026)
+
+2 code/test items and 4 documentation items were verified.
+
+### Medium — PHP/Test Infrastructure
+
+#### P2-216 · `AuditTrailTraitTest.php` Breaks `npm run test:php`
+
+- **Files:** `tests/phpunit/unit/Api/AuditTrailTraitTest.php`,
+    `package.json`
+- **Issue:** The repository’s PHP QA command fails because this test
+    harness file triggers PHPCS errors: class/interface name mismatch,
+    missing public method documentation on the in-file stub interface,
+    and spacing violations. The current file-level suppressions do not
+    cover the sniffs that are actually firing.
+- **Verification:** `npm run test:php` exited with code `2` and reported
+    6 errors + 1 warning in this file. The only production-file report in
+    the same run was a non-blocking line-length warning in `src/Hooks.php`.
+- **Impact:** Contributors cannot get a clean result from the repo’s own
+    PHP QA script, so the current review docs incorrectly claiming “all
+    lint checks pass” are no longer true.
+- **Status:** ✅ Fixed (March 29, 2026)
+
+#### P2-217 · Standalone PHPUnit Bootstrap Cannot Load Logging Traits
+
+- **Files:** `tests/phpunit/bootstrap.php`,
+    `tests/phpunit/unit/Logging/LoggerAwareTraitTest.php`,
+    `tests/phpunit/unit/Logging/StaticLoggerAwareTraitTest.php`,
+    `composer.json`, `package.json`
+- **Issue:** The package-level PHPUnit script runs from the extension
+    directory, but `composer.json` does not autoload `src/`, the PHPUnit
+    bootstrap only loads `vendor/autoload.php` plus a
+    `MediaWikiUnitTestCase` stub, and the logging trait tests do not
+    `require_once` their source trait files. As a result, PHPUnit aborts
+    before the requested filtered test can run.
+- **Verification:** `npm run test:phpunit -- --filter AuditTrailTraitTest`
+    failed immediately with a missing-trait fatal in
+    `tests/phpunit/unit/Logging/LoggerAwareTraitTest.php`
+    (`LoggerAwareTrait` could not be loaded).
+- **Impact:** The standalone PHPUnit workflow shipped in `package.json`
+    is not usable from this repository as-is, which weakens backend test
+    feedback outside a full MediaWiki-root test run.
+- **Status:** ✅ Fixed (March 29, 2026)
+
+### Low — Documentation Accuracy
+
+#### D-067-01 · `docs/LTS_BRANCH_STRATEGY.md` Stale Current-State Metrics
+
+- **File:** `docs/LTS_BRANCH_STRATEGY.md`
+- **Issue:** The branch table and version-format examples still show
+    `1.5.62`, and the workflow diagram still says `11,847` tests run on
+    `main` first.
+- **Verification:** `extension.json` reports `1.5.63`; current Jest
+    summary is `13,880` tests in `172` suites.
+- **Impact:** The branch strategy doc is no longer a reliable reference
+    for current branch state.
+- **Status:** ✅ Fixed (March 29, 2026)
+
+#### D-067-02 · `docs/ARCHITECTURE.md` Wrong Published i18n Metric
+
+- **File:** `docs/ARCHITECTURE.md`
+- **Issue:** The stats table reports `841` i18n messages even though the
+    repository’s own verifier publishes `785` `layers-` keys, and the
+    namespace example still embeds `VERSION: '1.5.62'`.
+- **Verification:** `scripts/verify-metrics.js` reports `785`; the code
+    snippet near the namespace example still shows `1.5.62`.
+- **Impact:** The architecture document contradicts the project’s own
+    metric-verification workflow and current extension version.
+- **Status:** ✅ Fixed (March 29, 2026)
+
+#### D-067-03 · `docs/SLIDE_MODE.md` Stale “Current Release” Banner
+
+- **File:** `docs/SLIDE_MODE.md`
+- **Issue:** The document header still says `Current Release: v1.5.62`.
+- **Verification:** `extension.json` reports `1.5.63`.
+- **Impact:** A current-facing implementation document presents stale
+    release metadata.
+- **Status:** ✅ Fixed (March 29, 2026)
+
+#### D-067-04 · `docs/SLIDE_MODE_ISSUES.md` Stale Test Totals
+
+- **File:** `docs/SLIDE_MODE_ISSUES.md`
+- **Issue:** The Test Coverage section still states “All 11,847 tests
+    pass”.
+- **Verification:** Current Jest summary is `13,880` tests in `172`
+    suites.
+- **Impact:** The slide-mode issue tracker understates current test
+    coverage by a wide margin and reads as if it reflects today’s tree.
+- **Status:** ✅ Fixed (March 29, 2026)
+
+### v67 Verified Non-Issues
+
+- No new exploitable SQL injection, CSRF, XSS, or permission-bypass
+    issues were confirmed in the API/database/rendering paths.
+- `getNamedSetOwner()` using the primary DB was not recorded as a bug;
+    the code comments make the replication-lag tradeoff explicit for
+    permission checks.
+- Historical release snapshots in `CHANGELOG.md` and `wiki/Changelog.md`
+    were not treated as open doc-drift items unless they claimed current
+    state.
 
 ---
 

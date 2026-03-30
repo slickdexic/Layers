@@ -16,7 +16,7 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 
 | Branch | MediaWiki Version | Current Version | Status |
 |--------|------------------|-----------------|--------|
-| **`main`** | **1.44+** | **1.5.62** | **Primary — all development and testing** |
+| **`main`** | **1.44+** | **1.5.63** | **Primary — all development and testing** |
 | `REL1_43` | 1.43.x | 1.5.62 | LTS support (until Dec 2027) |
 | `REL1_39` | 1.39.x - 1.42.x | 1.5.62 | Legacy LTS support (MW 1.39 EOL Dec 2025) |
 
@@ -26,7 +26,7 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 main (primary)
   │
   ├── All development happens here
-  ├── All tests run here first (11,847 tests)
+  ├── All tests run here first (13,880 tests)
   ├── All code reviews done here
   │
   ├──── cherry-pick ──→ REL1_43 (current LTS)
@@ -85,7 +85,7 @@ Users on MW 1.39-1.42 should plan to upgrade to MW 1.43+ and switch to REL1_43.
 
 | Branch | Version Format | Example |
 |--------|---------------|---------|
-| `main` | X.Y.Z | 1.5.62 |
+| `main` | X.Y.Z | 1.5.63 |
 | `REL1_43` | X.Y.Z-REL1_43 | 1.5.62-REL1_43 |
 | `REL1_39` | X.Y.Z-REL1_39 | 1.5.62-REL1_39 |
 

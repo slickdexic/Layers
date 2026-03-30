@@ -292,7 +292,10 @@ class Hooks {
 
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
 			$imgName = str_replace( ' ', '_', $fileObj->getName() );
-			$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), ForeignFileHelper::getFileSha1( $fileObj, $imgName ) );
+			$layerSets = $db->getLayerSetsForImage(
+				$fileObj->getName(),
+				ForeignFileHelper::getFileSha1( $fileObj, $imgName )
+			);
 
 			$names = [];
 			foreach ( $layerSets as $layerSet ) {

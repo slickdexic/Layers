@@ -3,18 +3,22 @@
 namespace MediaWiki\Extension\Layers\Tests\Unit\Api;
 
 use MediaWiki\Extension\Layers\Api\ApiLayersSave;
+use MediaWiki\Extension\Layers\Validation\ColorValidator;
+use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
+use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
+use MediaWiki\Extension\Layers\Validation\TextSanitizer;
 
 /**
  * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave
+ * @group Layers
  */
 class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 
-	private function createMockApi( array $methods = [] ) {
-		$mockApi = $this->createPartialMock( ApiLayersSave::class, $methods );
-		return $mockApi;
+	private function createApi(): ApiLayersSave {
+		return new ApiLayersSave();
 	}
 
-	private function getValidLayerData() {
+	private function getValidLayerData(): array {
 		return [
 			[
 				'id' => 'layer_123',
@@ -34,361 +38,17 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 				'height' => 50,
 				'stroke' => '#ff0000',
 				'fill' => '#00ff00'
-			],
-			[
-				'id' => 'layer_125',
-				'type' => 'arrow',
-				'x1' => 10,
-				'y1' => 10,
-				'x2' => 100,
-				'y2' => 100,
-				'stroke' => '#0000ff',
-				'strokeWidth' => 2,
-				'arrowhead' => 'arrow'
 			]
 		];
 	}
 
 	/**
-	 * Test basic layer validation with valid data using new validator architecture
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::execute
-	 */
-	public function testExecuteWithValidData() {
-		$api = $this->createMockApi( [
-			'getUser',
-			'extractRequestParams',
-			'checkUserRightsAny',
-			'isSchemaInstalled',
-			'isValidFilename',
-			'getConfig',
-			'dieWithError'
-		] );
-
-		$user = $this->createMock( \stdClass::class );
-		$user->method( 'getId' )->willReturn( 1 );
-
-		$api->method( 'getUser' )->willReturn( $user );
-		$api->method( 'extractRequestParams' )->willReturn( [
-			'filename' => 'Test.jpg',
-			'data' => json_encode( $this->getValidLayerData() ),
-			'setname' => 'test-set',
-			'token' => 'csrf-token'
-		] );
-		$api->method( 'checkUserRightsAny' )->willReturn( null );
-		$api->method( 'isSchemaInstalled' )->willReturn( true );
-		$api->method( 'isValidFilename' )->willReturn( true );
-
-		$config = $this->createMock( \stdClass::class );
-		$config->method( 'get' )->willReturnMap( [
-			[ 'LayersMaxBytes', 2097152 ],
-			[ 'RateLimits', [] ]
-		] );
-		$api->method( 'getConfig' )->willReturn( $config );
-
-		// Mock the database and file operations
-		$dbMock = $this->createMock( \MediaWiki\Extension\Layers\Database\LayersDatabase::class );
-		$dbMock->method( 'saveLayerSet' )->willReturn( 123 );
-
-		$rateLimiterMock = $this->createMock( \MediaWiki\Extension\Layers\Security\RateLimiter::class );
-		$rateLimiterMock->method( 'checkRateLimit' )->willReturn( true );
-
-		// We can't easily mock the constructor dependencies, so we'll test the validation logic separately
-		$validator = new \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator();
-		$result = $validator->validateLayers( $this->getValidLayerData() );
-
-		$this->assertTrue( $result->isValid() );
-		$this->assertCount( 3, $result->getData() );
-	}
-
-	/**
-	 * Test validation with invalid layer types using new validator
-	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayers
-	 */
-	public function testValidateLayersDataInvalidType() {
-		$validator = new \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator();
-
-		// Test invalid type
-		$invalidData = [
-			[
-				'id' => 'layer_123',
-				'type' => 'invalid_type',
-				'x' => 100,
-				'y' => 50
-			]
-		];
-
-		$result = $validator->validateLayers( $invalidData );
-		$this->assertFalse( $result->isValid() );
-		$this->assertContains( 'Unsupported layer type', $result->getErrors() );
-	}
-
-	/**
-	 * Test validation with missing required fields
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::validateAndSanitizeLayersData
-	 */
-	public function testValidateLayersDataMissingFields() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'validateAndSanitizeLayersData' );
-		$method->setAccessible( true );
-
-		// Test missing required fields
-		$invalidData = [
-			[
-				'x' => 100,
-				'y' => 50
-				// Missing 'id' and 'type'
-			]
-		];
-
-		$result = $method->invoke( $api, $invalidData );
-		$this->assertIsArray( $result );
-		$this->assertCount( 0, $result, 'Layers without required fields should be filtered out' );
-	}
-
-	/**
-	 * Test validation with too many layers
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::validateAndSanitizeLayersData
-	 */
-	public function testValidateLayersDataTooManyLayers() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'validateAndSanitizeLayersData' );
-		$method->setAccessible( true );
-
-		// Create array with 101 layers (exceeds default limit of 100)
-		$tooManyLayers = [];
-		for ( $i = 0; $i < 101; $i++ ) {
-			$tooManyLayers[] = [
-				'id' => "layer_$i",
-				'type' => 'text',
-				'x' => 10,
-				'y' => 10,
-				'text' => "Layer $i"
-			];
-		}
-
-		$result = $method->invoke( $api, $tooManyLayers );
-		$this->assertIsArray( $result );
-		$this->assertLessThanOrEqual( 100, count( $result ), 'Should not exceed maximum layer count' );
-	}
-
-	/**
-	 * Test color sanitization
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::sanitizeColor
-	 */
-	public function testSanitizeColor() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'sanitizeColor' );
-		$method->setAccessible( true );
-
-		// Valid hex colors
-		$this->assertEquals( '#ff0000', $method->invoke( $api, '#ff0000' ) );
-		$this->assertEquals( '#FF0000', $method->invoke( $api, '#FF0000' ) );
-		$this->assertEquals( '#f00', $method->invoke( $api, '#f00' ) );
-
-		// Valid RGB colors
-		$this->assertEquals( 'rgb(255, 0, 0)', $method->invoke( $api, 'rgb(255, 0, 0)' ) );
-		$this->assertEquals( 'rgba(255, 0, 0, 0.5)', $method->invoke( $api, 'rgba(255, 0, 0, 0.5)' ) );
-
-		// Valid named colors
-		$this->assertEquals( 'red', $method->invoke( $api, 'red' ) );
-		$this->assertEquals( 'blue', $method->invoke( $api, 'blue' ) );
-
-		// Invalid colors should default to black
-		$this->assertEquals( '#000000', $method->invoke( $api, 'invalid' ) );
-		$this->assertEquals( '#000000', $method->invoke( $api, 'javascript:alert(1)' ) );
-		$this->assertEquals( '#000000', $method->invoke( $api, 123 ) );
-	}
-
-	/**
-	 * Test text sanitization
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::sanitizeTextInput
-	 */
-	public function testSanitizeTextInput() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'sanitizeTextInput' );
-		$method->setAccessible( true );
-
-		// Clean text should pass through
-		$this->assertEquals( 'Hello World', $method->invoke( $api, 'Hello World' ) );
-		$this->assertEquals( 'Test 123', $method->invoke( $api, 'Test 123' ) );
-
-		// HTML tags should be stripped
-		$this->assertEquals( 'Hello World', $method->invoke( $api, '<b>Hello World</b>' ) );
-		$this->assertEquals( 'alert(1)', $method->invoke( $api, '<script>alert(1)</script>' ) );
-
-		// Event handlers should be removed
-		$cleanText = $method->invoke( $api, 'Hello onclick="alert(1)" world' );
-		$this->assertStringNotContainsString( 'onclick', $cleanText );
-		$this->assertStringNotContainsString( 'alert', $cleanText );
-	}
-
-	/**
-	 * Test filename validation
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::isValidFilename
-	 */
-	public function testIsValidFilename() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'isValidFilename' );
-		$method->setAccessible( true );
-
-		// Valid filenames
-		$this->assertTrue( $method->invoke( $api, 'File:Test.jpg' ) );
-		$this->assertTrue( $method->invoke( $api, 'File:Image.png' ) );
-		$this->assertTrue( $method->invoke( $api, 'File:Document.pdf' ) );
-
-		// Invalid filenames
-		// Missing File: prefix
-		$this->assertFalse( $method->invoke( $api, 'test.jpg' ) );
-		// Empty
-		$this->assertFalse( $method->invoke( $api, '' ) );
-		// No filename
-		$this->assertFalse( $method->invoke( $api, 'File:' ) );
-		// Path traversal
-		$this->assertFalse( $method->invoke( $api, 'File:../../../etc/passwd' ) );
-	}
-
-	/**
-	 * Test XSS protection in text validation
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::validateAndSanitizeLayersData
-	 */
-	public function testValidateLayersDataXSSProtection() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'validateAndSanitizeLayersData' );
-		$method->setAccessible( true );
-
-		// Test script injection attempts
-		$maliciousData = [
-			[
-				'id' => 'layer_123',
-				'type' => 'text',
-				'x' => 100,
-				'y' => 50,
-				'text' => '<script>alert("xss")</script>'
-			]
-		];
-
-		$result = $method->invoke( $api, $maliciousData );
-		$this->assertIsArray( $result );
-
-		if ( count( $result ) > 0 ) {
-			$layer = $result[0];
-			$this->assertArrayHasKey( 'text', $layer );
-			$this->assertStringNotContainsString( '<script>', $layer['text'] );
-			$this->assertStringNotContainsString( 'alert', $layer['text'] );
-		}
-	}
-
-	/**
-	 * Test coordinate validation bounds
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::validateAndSanitizeLayersData
-	 */
-	public function testValidateLayersDataCoordinateBounds() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'validateAndSanitizeLayersData' );
-		$method->setAccessible( true );
-
-		// Test coordinates beyond allowed bounds
-		$outOfBoundsData = [
-			[
-				'id' => 'layer_123',
-				'type' => 'rectangle',
-				// Beyond typical reasonable limits
-				'x' => 99999,
-				'y' => 50,
-				'width' => 100,
-				'height' => 50
-			]
-		];
-
-		$result = $method->invoke( $api, $outOfBoundsData );
-		$this->assertIsArray( $result );
-
-		if ( count( $result ) > 0 ) {
-			$layer = $result[0];
-			// Coordinates should be clamped or the layer should be filtered
-			$this->assertArrayHasKey( 'x', $layer );
-			$this->assertLessThan( 50000, $layer['x'], 'X coordinate should be within reasonable bounds' );
-		}
-	}
-
-	/**
-	 * Test layer complexity validation
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::validateAndSanitizeLayersData
-	 */
-	public function testValidateLayersDataComplexity() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'validateAndSanitizeLayersData' );
-		$method->setAccessible( true );
-
-		// Test path with too many points (potential DoS)
-		$complexPath = [
-			[
-				'id' => 'layer_complex',
-				'type' => 'path',
-				// Too many points
-				'points' => array_fill( 0, 2000, [ 'x' => 10, 'y' => 10 ] )
-			]
-		];
-
-		$result = $method->invoke( $api, $complexPath );
-		$this->assertIsArray( $result );
-
-		if ( count( $result ) > 0 ) {
-			$layer = $result[0];
-			if ( isset( $layer['points'] ) ) {
-				$this->assertLessThanOrEqual( 1000, count( $layer['points'] ),
-					'Points array should be limited to prevent DoS' );
-			}
-		}
-	}
-
-	/**
-	 * Test JSON bomb protection
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::isJsonBomb
-	 */
-	public function testJsonBombDetection() {
-		$api = $this->createMockApi();
-
-		$method = new \ReflectionMethod( $api, 'isJsonBomb' );
-		$method->setAccessible( true );
-
-		// Normal JSON should pass
-		$normalJson = json_encode( $this->getValidLayerData() );
-		$this->assertFalse( $method->invoke( $api, $normalJson ), 'Normal JSON should not be detected as bomb' );
-
-		// Very large JSON should be detected
-		$largeJson = json_encode( array_fill( 0, 10000, 'test' ) );
-		// This might be detected as a JSON bomb depending on implementation
-		$result = $method->invoke( $api, $largeJson );
-		$this->assertIsBool( $result );
-
-		// Deeply nested JSON should be detected
-		$deepNested = [ 'a' => [ 'b' => [ 'c' => [ 'd' => [ 'e' => 'value' ] ] ] ] ];
-		for ( $i = 0; $i < 100; $i++ ) {
-			$deepNested = [ 'level' => $deepNested ];
-		}
-		$deepJson = json_encode( $deepNested );
-		// This should likely be detected as a JSON bomb
-		$result = $method->invoke( $api, $deepJson );
-		$this->assertIsBool( $result );
-	}
-
-	/**
-	 * Test write-mode security contract
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::needsToken
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::isWriteMode
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::mustBePosted
+	 * @covers ::needsToken
+	 * @covers ::isWriteMode
+	 * @covers ::mustBePosted
 	 */
 	public function testWriteModeSecurityContract(): void {
-		$api = $this->createMockApi();
+		$api = $this->createApi();
 
 		$this->assertSame( 'csrf', $api->needsToken() );
 		$this->assertTrue( $api->isWriteMode() );
@@ -396,11 +56,10 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * Test API parameter contract
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::getAllowedParams
+	 * @covers ::getAllowedParams
 	 */
 	public function testGetAllowedParamsContract(): void {
-		$api = $this->createMockApi();
+		$api = $this->createApi();
 		$params = $api->getAllowedParams();
 
 		$this->assertArrayHasKey( 'filename', $params );
@@ -418,22 +77,86 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $params['setname'][ApiLayersSave::PARAM_REQUIRED] );
 	}
 
-	/**
-	 * Ensure set names retain international characters while remaining safe
-	 * @covers \MediaWiki\Extension\Layers\Api\ApiLayersSave::sanitizeSetName
-	 */
-	public function testSanitizeSetNameAllowsUnicodeScripts() {
-		$api = $this->createMockApi();
-		$method = new \ReflectionMethod( $api, 'sanitizeSetName' );
-		$method->setAccessible( true );
+	public function testServerSideLayerValidatorAcceptsValidLayers(): void {
+		$validator = new ServerSideLayerValidator();
+		$result = $validator->validateLayers( $this->getValidLayerData() );
 
-		$result = $method->invoke( $api, "  Пример-набор 层 集  " );
-		$this->assertSame( 'Пример-набор 层 集', $result );
+		$this->assertTrue( $result->isValid() );
+		$this->assertCount( 2, $result->getData() );
+	}
 
-		$fallback = $method->invoke( $api, "悪い/../name\x00試験!" );
-		$this->assertSame( '悪いname試験', $fallback );
+	public function testServerSideLayerValidatorRejectsInvalidType(): void {
+		$validator = new ServerSideLayerValidator();
+		$result = $validator->validateLayers( [
+			[
+				'id' => 'layer_123',
+				'type' => 'invalid_type',
+				'x' => 100,
+				'y' => 50
+			]
+		] );
 
-		$empty = $method->invoke( $api, "\x00" );
-		$this->assertSame( 'default', $empty );
+		$this->assertFalse( $result->isValid() );
+		$this->assertNotEmpty( $result->getErrors() );
+	}
+
+	public function testServerSideLayerValidatorFiltersLayersMissingRequiredFields(): void {
+		$validator = new ServerSideLayerValidator();
+		$result = $validator->validateLayers( [
+			[
+				'x' => 100,
+				'y' => 50
+			]
+		] );
+
+		$this->assertFalse( $result->isValid() );
+		$this->assertSame( [], $result->getData() );
+	}
+
+	public function testServerSideLayerValidatorLimitsLayerCount(): void {
+		$validator = new ServerSideLayerValidator();
+		$tooManyLayers = [];
+
+		for ( $index = 0; $index < 101; $index++ ) {
+			$tooManyLayers[] = [
+				'id' => 'layer_' . $index,
+				'type' => 'text',
+				'x' => 10,
+				'y' => 10,
+				'text' => 'Layer ' . $index
+			];
+		}
+
+		$result = $validator->validateLayers( $tooManyLayers );
+
+		$this->assertFalse( $result->isValid() );
+		$this->assertNotEmpty( $result->getErrors() );
+	}
+
+	public function testColorSanitizerHandlesValidAndInvalidValues(): void {
+		$validator = new ColorValidator();
+
+		$this->assertSame( '#ff0000', $validator->sanitizeColor( '#ff0000' ) );
+		$this->assertSame( '#ff0000', $validator->sanitizeColor( '#FF0000' ) );
+		$this->assertSame( '#ff0000ff', $validator->sanitizeColor( '#f00f' ) );
+		$this->assertSame( 'rgb(255, 0, 0)', $validator->sanitizeColor( 'rgb(255, 0, 0)' ) );
+		$this->assertSame( 'red', $validator->sanitizeColor( 'red' ) );
+		$this->assertSame( '#000000', $validator->sanitizeColor( 'javascript:alert(1)' ) );
+		$this->assertSame( '#000000', $validator->sanitizeColor( 123 ) );
+	}
+
+	public function testTextSanitizerRemovesScriptsProtocolsAndHandlers(): void {
+		$sanitizer = new TextSanitizer();
+
+		$this->assertSame( 'Hello World', $sanitizer->sanitizeText( '<b>Hello World</b>' ) );
+		$this->assertSame( 'Hello  world', $sanitizer->sanitizeText( 'Hello onclick="alert(1)" world' ) );
+		$this->assertStringNotContainsString( 'javascript:', $sanitizer->sanitizeText( 'javascript:alert(1)' ) );
+		$this->assertSame( 'Hello', $sanitizer->sanitizeText( '<script>alert(1)</script>Hello' ) );
+	}
+
+	public function testSetNameSanitizerAllowsUnicodeScripts(): void {
+		$this->assertSame( 'Пример-набор 层 集', SetNameSanitizer::sanitize( '  Пример-набор 层 集  ' ) );
+		$this->assertSame( '悪いname試験', SetNameSanitizer::sanitize( "悪い/../name\x00試験!" ) );
+		$this->assertSame( 'default', SetNameSanitizer::sanitize( "\x00" ) );
 	}
 }

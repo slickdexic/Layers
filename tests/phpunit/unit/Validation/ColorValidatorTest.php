@@ -21,7 +21,7 @@ class ColorValidatorTest extends \MediaWikiUnitTestCase {
 
 		// Valid hex colors
 		$this->assertEquals( '#ff0000', $validator->sanitizeColor( '#ff0000' ) );
-		$this->assertEquals( '#FF0000', $validator->sanitizeColor( '#FF0000' ) );
+		$this->assertEquals( '#ff0000', $validator->sanitizeColor( '#FF0000' ) );
 		$this->assertEquals( '#000000', $validator->sanitizeColor( '#000' ) );
 
 		// 3-digit hex should be expanded
@@ -105,13 +105,12 @@ class ColorValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertTrue( $validator->isValidHexColor( '#ff0000' ) );
 		$this->assertTrue( $validator->isValidHexColor( '#FF0000' ) );
 		$this->assertTrue( $validator->isValidHexColor( '#f00' ) );
+		$this->assertTrue( $validator->isValidHexColor( '#ff00' ) );
 		$this->assertTrue( $validator->isValidHexColor( '#000' ) );
 
 		// Invalid hex colors
 		// No #
 		$this->assertFalse( $validator->isValidHexColor( 'ff0000' ) );
-		// Wrong length
-		$this->assertFalse( $validator->isValidHexColor( '#ff00' ) );
 		// Invalid characters
 		$this->assertFalse( $validator->isValidHexColor( '#gggggg' ) );
 		// Too long

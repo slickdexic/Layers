@@ -55,9 +55,16 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 			'LayersMaxRevisionsPerSet' => 25,
 		] );
 
-		$this->loadBalancer->method( 'getConnection' )
-			->willReturnCallback( function ( $mode ) {
-				return $mode === DB_PRIMARY ? $this->dbw : $this->dbr;
+		$this->loadBalancer->method( 'getPrimaryDatabase' )
+			->willReturn( $this->dbw );
+		$this->loadBalancer->method( 'getReplicaDatabase' )
+			->willReturn( $this->dbr );
+		$this->dbr->method( 'anyString' )->willReturn( '%' );
+		$this->dbr->method( 'buildLike' )
+			->willReturnCallback( static function ( ...$args ) {
+				return 'LIKE ' . implode( '', array_map( static function ( $value ) {
+					return is_scalar( $value ) ? (string)$value : '';
+				}, $args ) );
 			} );
 	}
 
@@ -71,14 +78,37 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * @param array $rows
+	 * @return IResultWrapper|MockObject
+	 */
+	private function createResultWrapper( array $rows ): MockObject {
+		$result = $this->createMock( IResultWrapper::class );
+		$iterator = new \ArrayIterator( $rows );
+
+		$result->method( 'rewind' )->willReturnCallback( static function () use ( $iterator ) {
+			$iterator->rewind();
+		} );
+		$result->method( 'valid' )->willReturnCallback( static function () use ( $iterator ) {
+			return $iterator->valid();
+		} );
+		$result->method( 'current' )->willReturnCallback( static function () use ( $iterator ) {
+			return $iterator->current();
+		} );
+		$result->method( 'next' )->willReturnCallback( static function () use ( $iterator ) {
+			$iterator->next();
+		} );
+		$result->method( 'key' )->willReturnCallback( static function () use ( $iterator ) {
+			return $iterator->key();
+		} );
+		$result->method( 'getIterator' )->willReturn( $iterator );
+
+		return $result;
+	}
+
+	/**
 	 * @covers ::countSlides
 	 */
 	public function testCountSlidesReturnsZeroWhenNoSlides(): void {
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
-
 		$this->dbr->expects( $this->once() )
 			->method( 'selectField' )
 			->with(
@@ -101,11 +131,6 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	 * @covers ::countSlides
 	 */
 	public function testCountSlidesReturnsCorrectCount(): void {
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
-
 		$this->dbr->expects( $this->once() )
 			->method( 'selectField' )
 			->willReturn( 42 );
@@ -120,11 +145,6 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	 * @covers ::countSlides
 	 */
 	public function testCountSlidesWithPrefixFilter(): void {
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
-
 		$this->dbr->expects( $this->once() )
 			->method( 'selectField' )
 			->with(
@@ -151,14 +171,7 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	 * @covers ::listSlides
 	 */
 	public function testListSlidesReturnsEmptyArrayWhenNoSlides(): void {
-		$emptyResult = $this->createMock( IResultWrapper::class );
-		$emptyResult->method( 'current' )->willReturn( false );
-		$emptyResult->method( 'valid' )->willReturn( false );
-
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
+		$emptyResult = $this->createResultWrapper( [] );
 
 		$this->dbr->method( 'buildSelectSubquery' )
 			->willReturn( $this->createMock( Subquery::class ) );
@@ -197,30 +210,36 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 			'ls_revision' => 3
 		];
 
+		$revisionCountRow = (object)[
+			'ls_img_name' => 'Slide:TestSlide',
+			'revision_count' => 3
+		];
+
+		$firstTimestampRow = (object)[
+			'ls_img_name' => 'Slide:TestSlide',
+			'first_timestamp' => '20260120100000'
+		];
+
 		$firstRevisionRow = (object)[
+			'ls_img_name' => 'Slide:TestSlide',
 			'ls_user_id' => 1
 		];
 
-		$mockResult = $this->createMock( IResultWrapper::class );
-		$mockResult->method( 'rewind' );
-		$mockResult->method( 'valid' )
-			->willReturnOnConsecutiveCalls( true, false );
-		$mockResult->method( 'current' )
-			->willReturn( $slideRow );
-
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
+		$mockResult = $this->createResultWrapper( [ $slideRow ] );
+		$revisionCountResult = $this->createResultWrapper( [ $revisionCountRow ] );
+		$firstTimestampResult = $this->createResultWrapper( [ $firstTimestampRow ] );
+		$firstRevisionResult = $this->createResultWrapper( [ $firstRevisionRow ] );
 
 		$this->dbr->method( 'buildSelectSubquery' )
 			->willReturn( $this->createMock( Subquery::class ) );
 
 		$this->dbr->method( 'select' )
-			->willReturn( $mockResult );
-
-		$this->dbr->method( 'selectRow' )
-			->willReturn( $firstRevisionRow );
+			->willReturnOnConsecutiveCalls(
+				$mockResult,
+				$revisionCountResult,
+				$firstTimestampResult,
+				$firstRevisionResult
+			);
 
 		$db = $this->createLayersDatabase();
 		$slides = $db->listSlides();
@@ -242,13 +261,7 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	 * @covers ::listSlides
 	 */
 	public function testListSlidesRespectsPagination(): void {
-		$emptyResult = $this->createMock( IResultWrapper::class );
-		$emptyResult->method( 'valid' )->willReturn( false );
-
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
+		$emptyResult = $this->createResultWrapper( [] );
 
 		$this->dbr->method( 'buildSelectSubquery' )
 			->willReturn( $this->createMock( Subquery::class ) );
@@ -275,13 +288,7 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	 * @covers ::listSlides
 	 */
 	public function testListSlidesSortsByName(): void {
-		$emptyResult = $this->createMock( IResultWrapper::class );
-		$emptyResult->method( 'valid' )->willReturn( false );
-
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
+		$emptyResult = $this->createResultWrapper( [] );
 
 		$this->dbr->method( 'buildSelectSubquery' )
 			->willReturn( $this->createMock( Subquery::class ) );
@@ -295,7 +302,7 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 				$this->anything(),
 				$this->callback( static function ( $options ) {
 					return isset( $options['ORDER BY'] ) &&
-						strpos( $options['ORDER BY'], 'ls_img_name' ) !== false;
+						strpos( $options['ORDER BY'], 'slide_name ASC' ) !== false;
 				} )
 			)
 			->willReturn( $emptyResult );
@@ -308,13 +315,7 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	 * @covers ::listSlides
 	 */
 	public function testListSlidesSortsByModified(): void {
-		$emptyResult = $this->createMock( IResultWrapper::class );
-		$emptyResult->method( 'valid' )->willReturn( false );
-
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
+		$emptyResult = $this->createResultWrapper( [] );
 
 		$this->dbr->method( 'buildSelectSubquery' )
 			->willReturn( $this->createMock( Subquery::class ) );
@@ -343,8 +344,6 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	public function testListSlidesHandlesInvalidJson(): void {
 		$slideRow = (object)[
 			'slide_name' => 'Slide:BadJson',
-			'revision_count' => 1,
-			'first_timestamp' => '20260120100000',
 			'latest_timestamp' => '20260120100000',
 			'ls_json_blob' => 'not valid json',
 			'ls_user_id' => 1,
@@ -352,29 +351,36 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 			'ls_revision' => 1
 		];
 
-		$mockResult = $this->createMock( IResultWrapper::class );
-		$mockResult->method( 'valid' )
-			->willReturnOnConsecutiveCalls( true, false );
-		$mockResult->method( 'current' )
-			->willReturn( $slideRow );
+		$revisionCountRow = (object)[
+			'ls_img_name' => 'Slide:BadJson',
+			'revision_count' => 1
+		];
 
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
+		$firstTimestampRow = (object)[
+			'ls_img_name' => 'Slide:BadJson',
+			'first_timestamp' => '20260120100000'
+		];
+
+		$firstRevisionRow = (object)[
+			'ls_img_name' => 'Slide:BadJson',
+			'ls_user_id' => 1
+		];
+
+		$mockResult = $this->createResultWrapper( [ $slideRow ] );
+		$revisionCountResult = $this->createResultWrapper( [ $revisionCountRow ] );
+		$firstTimestampResult = $this->createResultWrapper( [ $firstTimestampRow ] );
+		$firstRevisionResult = $this->createResultWrapper( [ $firstRevisionRow ] );
 
 		$this->dbr->method( 'buildSelectSubquery' )
 			->willReturn( $this->createMock( Subquery::class ) );
 
 		$this->dbr->method( 'select' )
-			->willReturn( $mockResult );
-
-		$this->dbr->method( 'selectRow' )
-			->willReturn( null );
-
-		// Expect error to be logged
-		$this->logger->expects( $this->once() )
-			->method( 'error' );
+			->willReturnOnConsecutiveCalls(
+				$mockResult,
+				$revisionCountResult,
+				$firstTimestampResult,
+				$firstRevisionResult
+			);
 
 		$db = $this->createLayersDatabase();
 		$slides = $db->listSlides();
@@ -390,14 +396,7 @@ class SlideListingTest extends \MediaWikiUnitTestCase {
 	 * @covers ::listSlides
 	 */
 	public function testListSlidesTruncatesVeryLongPrefix(): void {
-		$emptyResult = $this->createMock( IResultWrapper::class );
-		$emptyResult->method( 'current' )->willReturn( false );
-		$emptyResult->method( 'valid' )->willReturn( false );
-
-		$this->dbr->method( 'addQuotes' )
-			->willReturnCallback( static function ( $value ) {
-				return "'" . addslashes( $value ) . "'";
-			} );
+		$emptyResult = $this->createResultWrapper( [] );
 
 		// Create a very long prefix (300 characters)
 		$longPrefix = str_repeat( 'a', 300 );

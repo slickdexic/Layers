@@ -30,13 +30,13 @@ class SpecialSlidesTest extends TestCase {
 	/**
 	 * @covers ::getGroupName
 	 */
-	public function testGroupNameIsMedia(): void {
+	public function testGroupNameIsLayers(): void {
 		$special = new SpecialSlides();
 
 		$reflection = new \ReflectionClass( $special );
 		$method = $reflection->getMethod( 'getGroupName' );
 		$method->setAccessible( true );
 
-		$this->assertSame( 'media', $method->invoke( $special ) );
+		$this->assertSame( 'layers', $method->invoke( $special ) );
 	}
 }

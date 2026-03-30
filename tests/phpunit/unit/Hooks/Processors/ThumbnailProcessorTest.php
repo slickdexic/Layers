@@ -10,6 +10,7 @@ namespace MediaWiki\Extension\Layers\Tests\Unit\Hooks\Processors;
 
 use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -223,12 +224,7 @@ class ThumbnailProcessorTest extends TestCase {
 		$attribs = [];
 		$linkAttribs = [];
 
-		// Callback returns a set name
-		$callback = static function ( $filename ) {
-			return 'anatomy-labels';
-		};
-
-		$this->processor->processThumbnail( $thumbnail, $attribs, $linkAttribs, $callback );
+		$this->processor->processThumbnail( $thumbnail, $attribs, $linkAttribs, 'anatomy-labels' );
 
 		// Should have processed (instance marker added)
 		$this->assertArrayHasKey( 'data-layers-instance', $attribs );
@@ -243,12 +239,7 @@ class ThumbnailProcessorTest extends TestCase {
 		$attribs = [];
 		$linkAttribs = [];
 
-		// Callback returns 'off'
-		$callback = static function ( $filename ) {
-			return 'off';
-		};
-
-		$result = $this->processor->processThumbnail( $thumbnail, $attribs, $linkAttribs, $callback );
+		$result = $this->processor->processThumbnail( $thumbnail, $attribs, $linkAttribs, 'off' );
 
 		$this->assertTrue( $result );
 		$this->assertFalse( $this->processor->pageHasLayers() );
@@ -356,8 +347,12 @@ class ThumbnailProcessorTest extends TestCase {
 
 		$this->processor->processThumbnail( $thumbnail, $attribs, $linkAttribs );
 
-		// Instance marker should always be added
-		$this->assertArrayHasKey( 'data-layers-instance', $attribs );
+		if ( $shouldDisable ) {
+			$this->assertArrayNotHasKey( 'data-layers-instance', $attribs );
+			$this->assertFalse( $this->processor->pageHasLayers() );
+		} else {
+			$this->assertArrayHasKey( 'data-layers-instance', $attribs );
+		}
 	}
 
 	/**
@@ -384,24 +379,22 @@ class ThumbnailProcessorTest extends TestCase {
 	 * @param string $name
 	 * @param int $width
 	 * @param int $height
-	 * @return \stdClass
+	 * @return MockObject
 	 */
 	private function createMockFile(
 		string $name = 'Test.jpg',
 		int $width = 800,
 		int $height = 600
-	): \stdClass {
-		$file = new \stdClass();
-		$file->name = $name;
-		$file->width = $width;
-		$file->height = $height;
-		$file->sha1 = 'abc123';
+	): MockObject {
+		$file = $this->getMockBuilder( \stdClass::class )
+			->addMethods( [ 'getName', 'getWidth', 'getHeight', 'getSha1', 'getTitle' ] )
+			->getMock();
 
-		// Use closure binding for method simulation
-		$file->getName = static fn () => $name;
-		$file->getWidth = static fn () => $width;
-		$file->getHeight = static fn () => $height;
-		$file->getSha1 = static fn () => 'abc123';
+		$file->method( 'getName' )->willReturn( $name );
+		$file->method( 'getWidth' )->willReturn( $width );
+		$file->method( 'getHeight' )->willReturn( $height );
+		$file->method( 'getSha1' )->willReturn( 'abc123' );
+		$file->method( 'getTitle' )->willReturn( null );
 
 		return $file;
 	}
@@ -409,16 +402,17 @@ class ThumbnailProcessorTest extends TestCase {
 	/**
 	 * Create a mock thumbnail object
 	 *
-	 * @param \stdClass|null $file
+	 * @param MockObject|null $file
 	 * @param array $params
-	 * @return \stdClass
+	 * @return MockObject
 	 */
-	private function createMockThumbnail( ?\stdClass $file = null, array $params = [] ): \stdClass {
-		$thumbnail = new \stdClass();
+	private function createMockThumbnail( ?MockObject $file = null, array $params = [] ): MockObject {
+		$thumbnail = $this->getMockBuilder( \stdClass::class )
+			->addMethods( [ 'getFile', 'getParams' ] )
+			->getMock();
 
-		// Add methods as closures
-		$thumbnail->getFile = static fn () => $file;
-		$thumbnail->getParams = static fn () => $params;
+		$thumbnail->method( 'getFile' )->willReturn( $file );
+		$thumbnail->method( 'getParams' )->willReturn( $params );
 
 		return $thumbnail;
 	}

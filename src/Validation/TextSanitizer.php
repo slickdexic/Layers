@@ -31,12 +31,18 @@ class TextSanitizer {
 			$text = mb_substr( $text, 0, self::MAX_TEXT_LENGTH );
 		}
 
+		// Remove script blocks before stripping tags so their contents do not survive.
+		$text = $this->removeScriptBlocks( $text );
+
 		// Strip HTML tags
 		$text = strip_tags( $text );
 
 		// Decode any HTML entities that might have been passed in
 		// (e.g., from copy-paste of HTML content)
 		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// Re-run script removal after entity decoding in case encoded tags were reconstructed.
+		$text = $this->removeScriptBlocks( $text );
 
 		// Re-strip tags: entity decoding can reconstruct HTML tags
 		// from encoded input like &lt;script&gt; → <script>
@@ -92,6 +98,11 @@ class TextSanitizer {
 	 * @return string Sanitized font family name
 	 */
 	public function sanitizeFontFamily( string $fontFamily ): string {
+		// Strip HTML tags first so inputs like "Bad<script> Font" do not leak tag names.
+		$fontFamily = strip_tags( $fontFamily );
+		$fontFamily = html_entity_decode( $fontFamily, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$fontFamily = strip_tags( $fontFamily );
+
 		// Allow alphanumeric, spaces, underscores, hyphens, and dots
 		$fontFamily = preg_replace( '/[^a-zA-Z0-9 _.-]/', '', $fontFamily );
 
@@ -156,6 +167,16 @@ class TextSanitizer {
 	}
 
 	/**
+	 * Remove script tags together with their contents.
+	 *
+	 * @param string $text Input text
+	 * @return string Cleaned text
+	 */
+	private function removeScriptBlocks( string $text ): string {
+		return preg_replace( '/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', '', $text );
+	}
+
+	/**
 	 * Remove event handlers and JavaScript code
 	 *
 	 * @param string $text Input text
@@ -173,9 +194,6 @@ class TextSanitizer {
 		foreach ( $eventHandlers as $handler ) {
 			$text = preg_replace( '/' . preg_quote( $handler, '/' ) . '\s*=\s*["\'][^"\']*["\']?/i', '', $text );
 		}
-
-		// Remove <script> tags and their content
-		$text = preg_replace( '/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/mi', '', $text );
 
 		return $text;
 	}
@@ -196,11 +214,17 @@ class TextSanitizer {
 			$text = mb_substr( $text, 0, self::MAX_TEXT_LENGTH );
 		}
 
+		// Remove script blocks before stripping tags so their contents do not survive.
+		$text = $this->removeScriptBlocks( $text );
+
 		// Strip HTML tags
 		$text = strip_tags( $text );
 
 		// Decode any HTML entities that might have been passed in
 		$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+		// Re-run script removal after entity decoding in case encoded tags were reconstructed.
+		$text = $this->removeScriptBlocks( $text );
 
 		// Re-strip tags: entity decoding can reconstruct HTML tags
 		$text = strip_tags( $text );

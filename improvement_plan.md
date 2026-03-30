@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 26, 2026 — v66 fix pass complete
+**Last updated:** March 30, 2026 — post-v67 cleanup complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -103,7 +103,18 @@ shape mismatch), P2-211 (SlideController lightbox background hardcoded),
 P2-212 (ZoomPanController zoomToFitLayers coordinate mismatch), P3-213
 (smoothZoomTo duration overwrite), P3-214 (ShapeFactory createText
 missing shadow), P3-215 (APIManager spinner stuck on abort).
-Cherry-picked to REL1_43 and REL1_39. **0 open code items.**
+Cherry-picked to REL1_43 and REL1_39.
+
+v67 audit (March 28) found **2 new MEDIUM code/test issues**
+(P2-216, P2-217) plus **4 documentation drift items** (D-067-01 to
+D-067-04). No new exploitable production security issues were
+confirmed.
+
+v67 fix pass (March 29): Fixed P2-216, P2-217, and D-067-01 through
+D-067-04. Validation is green on `npm test`, `npm run test:php`, and
+standalone PHPUnit (`php vendor/bin/phpunit --configuration phpunit.xml`).
+Current verified backlog: 0 open code/test items, 0 open documentation
+items, and 1 carried item (P3-147 accepted).
 
 Use the section below as the authoritative current backlog.
 
@@ -178,58 +189,41 @@ wiring with marginal benefit.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 26, 2026 — v66)
+## Verified Current Backlog (Authoritative as of March 30, 2026 — post-v67 cleanup)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| JS Medium (Error/Render/Coord) | 0 (P2-210/211/212 ✅) | — |
-| JS Low (State/Shadow/UI) | 0 (P3-213/214/215 ✅) | — |
-| Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
-| **Total** | **0 open code** + 0 doc + 2 deferred | — |
+| PHP / Test Infrastructure | 0 | — |
+| Documentation Drift | 0 | — |
+| Deferred | 1 (P3-147 accepted) | — |
+| **Total** | **0 open code/test** + 0 doc + 1 deferred | — |
 
-### Current Priorities (v66)
+### Current Priorities (v67)
 
 | # | Issue | Ref | Priority | Status |
 |---|-------|-----|----------|--------|
-| 38.01 | APIManager isRetryableError shape mismatch | P2-210 | MED | ✅ Fixed |
-| 38.02 | SlideController lightbox background hardcoded | P2-211 | MED | ✅ Fixed |
-| 38.03 | ZoomPanController zoomToFitLayers coordinates | P2-212 | MED | ✅ Fixed |
-| 38.04 | smoothZoomTo duration overwrite | P3-213 | Low | ✅ Fixed |
-| 38.05 | ShapeFactory createText missing shadow | P3-214 | Low | ✅ Fixed |
-| 38.06 | APIManager spinner stuck on abort | P3-215 | Low | ✅ Fixed |
-| 38.07 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
-| 38.08 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
+| 39.01 | AuditTrailTraitTest breaks PHP QA command | P2-216 | MED | ✅ Fixed |
+| 39.02 | Standalone PHPUnit trait autoload broken | P2-217 | MED | ✅ Fixed |
+| 39.03 | LTS branch strategy stale metrics | D-067-01 | Low | ✅ Fixed |
+| 39.04 | Architecture doc stale i18n/version data | D-067-02 | Low | ✅ Fixed |
+| 39.05 | Slide mode doc stale release banner | D-067-03 | Low | ✅ Fixed |
+| 39.06 | Slide mode issues doc stale test count | D-067-04 | Low | ✅ Fixed |
+| 39.07 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
+| 39.08 | LayerValidatorInterface unused | P3-148 | Low | ✅ Removed |
 
-### v66 Notes
+### v67 Notes
 
-- Audit scope: 5 data-flow modules (APIManager ~1,640,
-  SlideController ~1,126, LayerDataNormalizer ~325,
-  GradientRenderer ~392, TextRenderer ~345) + 5 canvas
-  controllers/tools (ZoomPanController ~385,
-  InteractionController ~556, RenderCoordinator ~404,
-  SelectionRenderer ~793, ShapeFactory ~531). 10 files total,
-  ~6,497 lines.
-- 7 non-issues eliminated: RenderCoordinator cache stale (forceRedraw
-  mitigates), APIManager size check (server validates), promise on
-  abort (by design), .then/.catch error loss (fallback works),
-  TextRenderer shadow mismatch (data normalized), visible===undefined
-  (normalizer sets it), pan drift during animation (cosmetic 300ms).
-- **v66 fix pass (March 26):**
-  - P2-210: Check both `error.error.code` and `error.code` shapes;
-    return true only when no code at all (network/timeout).
-  - P2-211: Read `backgroundVisible`/`backgroundOpacity` from
-    `currentPayload` with `!== undefined` fallback defaults.
-  - P2-212: Convert content dimensions from buffer to CSS display
-    pixels using `cssW/canvasWidth` ratio, matching `zoomBy()` pattern.
-  - P3-213: Store per-animation duration in `currentAnimationDuration`;
-    read in `animateZoom()` with fallback to instance default.
-  - P3-214: Store layer in variable, call `this.applyShadow(layer,
-    style)` before returning, matching all 10 other factory methods.
-  - P3-215: Added `this.hideSpinner()` at start of both abort
-    branches in `loadRevisionById` and `loadLayersBySetName`.
-- Cherry-picked cleanly to both REL1_43 and REL1_39 (no conflicts).
-- 11,907 tests pass (3 new test cases for isRetryableError). All lint
-  checks pass.
+- `npm test` passes on `main`: 172 Jest suites, 13,880 tests,
+  95.82% statement coverage, 87.00% branch coverage.
+- `scripts/verify-metrics.js` publishes **785** `layers-` i18n keys;
+  the current-state docs are now aligned to that published metric.
+- `npm run test:php` passes cleanly.
+- `php vendor/bin/phpunit --configuration phpunit.xml` passes with 537
+  tests and 7 skipped.
+- P3-148 is now closed by removing the unused validator interface and
+  its dead `extension.json` autoload entry.
+- No new exploitable SQL injection, CSRF, XSS, or permission-bypass
+  issues were confirmed in the v67 audit.
 
 ### Current Priorities (v59)
 

@@ -10,13 +10,19 @@ use MediaWiki\Extension\Layers\Security\RateLimiter;
 class RateLimiterTest extends \MediaWikiUnitTestCase {
 
 	private function createRateLimiter() {
-		$config = new \HashConfig( [
-			'LayersMaxImageDimensions' => 8192,
-			'LayersMaxImageSize' => 8192,
-			'LayersMaxLayerCount' => 100,
-			'LayersMaxComplexity' => 100,
-			'RateLimits' => []
-		] );
+		$config = $this->createMock( \Config::class );
+		$config->method( 'get' )
+			->willReturnCallback( static function ( string $key ) {
+				$values = [
+					'LayersMaxImageDimensions' => 8192,
+					'LayersMaxImageSize' => 8192,
+					'LayersMaxLayerCount' => 100,
+					'LayersMaxComplexity' => 100,
+					'RateLimits' => []
+				];
+
+				return $values[$key] ?? null;
+			} );
 		return new RateLimiter( $config );
 	}
 
@@ -58,7 +64,7 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $limiter->isLayerCountAllowed( 1000 ) );
 
 		// Test edge cases
-		$this->assertFalse( $limiter->isLayerCountAllowed( 0 ) );
+		$this->assertTrue( $limiter->isLayerCountAllowed( 0 ) );
 		$this->assertFalse( $limiter->isLayerCountAllowed( -1 ) );
 		$this->assertFalse( $limiter->isLayerCountAllowed( -100 ) );
 	}

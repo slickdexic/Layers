@@ -115,6 +115,10 @@ class RateLimiter {
 	 * @return bool
 	 */
 	public function isImageSizeAllowed( int $width, int $height ): bool {
+		if ( $width <= 0 || $height <= 0 ) {
+			return false;
+		}
+
 		$config = $this->getConfig();
 		$maxDimensions = $config->get( 'LayersMaxImageDimensions' );
 
@@ -156,6 +160,10 @@ class RateLimiter {
 	 * @return bool
 	 */
 	public function isLayerCountAllowed( int $layerCount ): bool {
+		if ( $layerCount < 0 ) {
+			return false;
+		}
+
 		// Use configured limit with a safe default
 		$config = $this->getConfig();
 		$maxLayers = (int)( $config->get( 'LayersMaxLayerCount' ) ?? 100 );

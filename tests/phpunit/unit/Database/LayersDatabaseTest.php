@@ -41,7 +41,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$this->dbr = $this->createMock( IDatabase::class );
 		$this->loadBalancer = $this->createMock( LoadBalancer::class );
 		$this->logger = $this->createMock( LoggerInterface::class );
-			$this->schemaManager = $this->createMock( LayersSchemaManager::class );
+		$this->schemaManager = $this->createMock( LayersSchemaManager::class );
 
 		$this->config = new \HashConfig( [
 			'LayersDefaultSetName' => 'default',
@@ -52,11 +52,10 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			'LayersMaxRevisionsPerSet' => 25,
 		] );
 
-		// By default, return the mock databases
-		$this->loadBalancer->method( 'getConnection' )
-			->willReturnCallback( function ( $mode ) {
-				return $mode === DB_PRIMARY ? $this->dbw : $this->dbr;
-			} );
+		$this->loadBalancer->method( 'getPrimaryDatabase' )
+			->willReturn( $this->dbw );
+		$this->loadBalancer->method( 'getReplicaDatabase' )
+			->willReturn( $this->dbr );
 	}
 
 	/**
@@ -80,9 +79,9 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	 * @return LayersDatabase
 	 */
 	private function createLayersDatabaseWithNoDb(): LayersDatabase {
-		$nullLoadBalancer = $this->createMock( ILoadBalancer::class );
-		$nullLoadBalancer->method( 'getConnection' )->willReturn( null );
-		$nullLoadBalancer->method( 'getConnectionRef' )->willReturn( null );
+		$nullLoadBalancer = $this->createMock( LoadBalancer::class );
+		$nullLoadBalancer->method( 'getPrimaryDatabase' )->willReturn( null );
+		$nullLoadBalancer->method( 'getReplicaDatabase' )->willReturn( null );
 
 		return new LayersDatabase(
 			$nullLoadBalancer,
@@ -100,15 +99,15 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	 */
 	private function createResultWrapper( array $rows ): MockObject {
 		$result = $this->createMock( IResultWrapper::class );
-		$result->method( 'current' )->willReturnOnConsecutiveCalls( ...array_merge( $rows, [ false ] ) );
-		$result->method( 'valid' )->willReturnCallback( static function () use ( &$rows ) {
-			return count( $rows ) > 0;
-		} );
-
-		// Make it iterable
 		$iterator = new \ArrayIterator( $rows );
 		$result->method( 'rewind' )->willReturnCallback( static function () use ( $iterator ) {
 			$iterator->rewind();
+		} );
+		$result->method( 'valid' )->willReturnCallback( static function () use ( $iterator ) {
+			return $iterator->valid();
+		} );
+		$result->method( 'current' )->willReturnCallback( static function () use ( $iterator ) {
+			return $iterator->current();
 		} );
 		$result->method( 'next' )->willReturnCallback( static function () use ( $iterator ) {
 			$iterator->next();
@@ -224,7 +223,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$db = $this->createLayersDatabase();
 		$result = $db->getLayerSet( 999 );
 
-		$this->assertFalse( $result );
+		$this->assertNull( $result );
 	}
 
 	/**
@@ -233,8 +232,8 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	public function testGetLayerSetInvalidId(): void {
 		$db = $this->createLayersDatabase();
 
-		$this->assertFalse( $db->getLayerSet( 0 ) );
-		$this->assertFalse( $db->getLayerSet( -1 ) );
+		$this->assertNull( $db->getLayerSet( 0 ) );
+		$this->assertNull( $db->getLayerSet( -1 ) );
 	}
 
 	/**
@@ -274,7 +273,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$db = $this->createLayersDatabase();
 		$result = $db->getLayerSet( 42 );
 
-		$this->assertFalse( $result );
+		$this->assertNull( $result );
 	}
 
 	/**
@@ -292,7 +291,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$db = $this->createLayersDatabase();
 		$result = $db->getLayerSet( 42 );
 
-		$this->assertFalse( $result );
+		$this->assertNull( $result );
 	}
 
 	// =========================================================================
@@ -356,7 +355,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$db = $this->createLayersDatabase();
 		$result = $db->getLatestLayerSet( 'Missing.jpg', 'sha1' );
 
-		$this->assertFalse( $result );
+		$this->assertNull( $result );
 	}
 
 	// =========================================================================
@@ -571,14 +570,15 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	 * @covers ::saveLayerSet
 	 */
 	public function testSaveLayerSetMaxSetsReached(): void {
-		// Return count >= max (15)
-		$this->dbr->method( 'selectField' )
+		$this->dbw->method( 'selectField' )
 			->willReturnOnConsecutiveCalls(
 				// namedSetExists returns false (new set)
 				0,
 				// countNamedSets returns max
 				15
 			);
+		$this->dbw->method( 'startAtomic' )->willReturn( true );
+		$this->dbw->method( 'endAtomic' )->willReturn( true );
 
 		$db = $this->createLayersDatabase();
 
@@ -724,14 +724,24 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			]
 		];
 
-		// User rows from selectRow calls
-		$userRow1 = (object)[ 'ls_user_id' => 1 ];
-		$userRow2 = (object)[ 'ls_user_id' => 2 ];
+		$userRows = [
+			(object)[ 'ls_name' => 'default', 'ls_revision' => 5, 'ls_user_id' => 1 ],
+			(object)[ 'ls_name' => 'annotations', 'ls_revision' => 3, 'ls_user_id' => 2 ]
+		];
 
 		$aggregateResult = $this->createResultWrapper( $aggregateRows );
-		$this->dbr->method( 'select' )->willReturn( $aggregateResult );
-		$this->dbr->method( 'selectRow' )
-			->willReturnOnConsecutiveCalls( $userRow1, $userRow2 );
+		$userResult = $this->createResultWrapper( $userRows );
+		$this->dbr->method( 'select' )
+			->willReturnOnConsecutiveCalls( $aggregateResult, $userResult );
+		$this->dbr->method( 'makeList' )
+			->willReturnCallback( static function ( $values, $mode = null ) {
+				if ( is_array( $values ) ) {
+					return implode( ' ' . (string)( $mode ?? '' ) . ' ', array_map( static function ( $value ) {
+						return is_array( $value ) ? json_encode( $value ) : (string)$value;
+					}, $values ) );
+				}
+				return (string)$values;
+			} );
 
 		$db = $this->createLayersDatabase();
 		$namedSets = $db->getNamedSetsForImage( 'Test.jpg', 'sha1' );

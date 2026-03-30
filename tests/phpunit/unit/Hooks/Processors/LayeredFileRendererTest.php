@@ -222,17 +222,24 @@ class LayeredFileRendererTest extends TestCase {
 	}
 
 	/**
-	 * Test buildImageHtml method via reflection
+	 * Test buildLayeredImageHtml method via reflection
 	 */
-	public function testBuildImageHtml(): void {
+	public function testBuildLayeredImageHtml(): void {
 		$renderer = $this->createRenderer();
 
 		// Use reflection to test private method
 		$reflection = new \ReflectionClass( $renderer );
-		$method = $reflection->getMethod( 'buildImageHtml' );
+		$method = $reflection->getMethod( 'buildLayeredImageHtml' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( $renderer, 'Test.jpg', 'http://example.com/thumb.jpg', 300, 'Test caption' );
+		$result = $method->invoke(
+			$renderer,
+			'Test.jpg',
+			'http://example.com/thumb.jpg',
+			300,
+			'Test caption',
+			'default'
+		);
 
 		// Check required elements
 		$this->assertStringContainsString( '<img', $result );
@@ -241,20 +248,28 @@ class LayeredFileRendererTest extends TestCase {
 		$this->assertStringContainsString( 'alt="Test caption"', $result );
 		$this->assertStringContainsString( 'mw-file-element', $result );
 		$this->assertStringContainsString( '<a href=', $result );
-		$this->assertStringContainsString( 'File:Test.jpg', $result );
+		$this->assertStringContainsString( 'File%3ATest.jpg', $result );
+		$this->assertStringContainsString( 'data-layers-intent="default"', $result );
 	}
 
 	/**
-	 * Test buildImageHtml escapes HTML in filename
+	 * Test buildLayeredImageHtml escapes HTML in filename
 	 */
-	public function testBuildImageHtmlEscapesFilename(): void {
+	public function testBuildLayeredImageHtmlEscapesFilename(): void {
 		$renderer = $this->createRenderer();
 
 		$reflection = new \ReflectionClass( $renderer );
-		$method = $reflection->getMethod( 'buildImageHtml' );
+		$method = $reflection->getMethod( 'buildLayeredImageHtml' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( $renderer, 'Test<script>.jpg', 'http://example.com/thumb.jpg', 300, '' );
+		$result = $method->invoke(
+			$renderer,
+			'Test<script>.jpg',
+			'http://example.com/thumb.jpg',
+			300,
+			'',
+			'default'
+		);
 
 		// Script tag should be escaped
 		$this->assertStringNotContainsString( '<script>', $result );
@@ -262,32 +277,46 @@ class LayeredFileRendererTest extends TestCase {
 	}
 
 	/**
-	 * Test buildImageHtml escapes HTML in caption
+	 * Test buildLayeredImageHtml escapes HTML in caption
 	 */
-	public function testBuildImageHtmlEscapesCaption(): void {
+	public function testBuildLayeredImageHtmlEscapesCaption(): void {
 		$renderer = $this->createRenderer();
 
 		$reflection = new \ReflectionClass( $renderer );
-		$method = $reflection->getMethod( 'buildImageHtml' );
+		$method = $reflection->getMethod( 'buildLayeredImageHtml' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( $renderer, 'Test.jpg', 'http://example.com/thumb.jpg', 300, '<script>xss</script>' );
+		$result = $method->invoke(
+			$renderer,
+			'Test.jpg',
+			'http://example.com/thumb.jpg',
+			300,
+			'<script>xss</script>',
+			'default'
+		);
 
 		// Script tag should be escaped
 		$this->assertStringNotContainsString( '<script>xss</script>', $result );
 	}
 
 	/**
-	 * Test buildImageHtml with empty caption uses filename
+	 * Test buildLayeredImageHtml with empty caption uses filename
 	 */
-	public function testBuildImageHtmlEmptyCaptionUsesFilename(): void {
+	public function testBuildLayeredImageHtmlEmptyCaptionUsesFilename(): void {
 		$renderer = $this->createRenderer();
 
 		$reflection = new \ReflectionClass( $renderer );
-		$method = $reflection->getMethod( 'buildImageHtml' );
+		$method = $reflection->getMethod( 'buildLayeredImageHtml' );
 		$method->setAccessible( true );
 
-		$result = $method->invoke( $renderer, 'Test.jpg', 'http://example.com/thumb.jpg', 300, '' );
+		$result = $method->invoke(
+			$renderer,
+			'Test.jpg',
+			'http://example.com/thumb.jpg',
+			300,
+			'',
+			'default'
+		);
 
 		$this->assertStringContainsString( 'alt="Test.jpg"', $result );
 	}
@@ -330,14 +359,17 @@ class LayeredFileRendererTest extends TestCase {
 	 * @return \PHPUnit\Framework\MockObject\MockObject
 	 */
 	private function createMockFrame( string $expandValue ) {
-		$frame = $this->createMock( \stdClass::class );
-		$frame->method( '__call' )
-			->willReturnCallback( static function ( $name, $args ) use ( $expandValue ) {
-				if ( $name === 'expand' ) {
-					return $expandValue;
-				}
-				return null;
-			} );
-		return $frame;
+		return new class( $expandValue ) {
+			/** @var string */
+			private $expandValue;
+
+			public function __construct( string $expandValue ) {
+				$this->expandValue = $expandValue;
+			}
+
+			public function expand( $value ): string {
+				return $this->expandValue;
+			}
+		};
 	}
 }

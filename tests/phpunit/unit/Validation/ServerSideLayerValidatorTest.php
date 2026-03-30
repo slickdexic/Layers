@@ -788,12 +788,12 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgString
 	 * Tests that entity-encoded script bypass is blocked.
 	 */
 	public function testValidateSvgBlocksEntityEncodedScript() {
 		$validator = $this->createValidator();
-		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method = new \ReflectionMethod( $validator, 'validateSvgString' );
 		$method->setAccessible( true );
 
 		// Entity-encoded <script> tag: &lt;script&gt;
@@ -805,12 +805,12 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgString
 	 * Tests that entity-encoded javascript: URL bypass is blocked.
 	 */
 	public function testValidateSvgBlocksEntityEncodedJavascriptUrl() {
 		$validator = $this->createValidator();
-		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method = new \ReflectionMethod( $validator, 'validateSvgString' );
 		$method->setAccessible( true );
 
 		// Entity-encoded javascript: (java&#115;cript:)
@@ -822,12 +822,12 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgString
 	 * Tests that entity-encoded event handler bypass is blocked.
 	 */
 	public function testValidateSvgBlocksEntityEncodedEventHandler() {
 		$validator = $this->createValidator();
-		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method = new \ReflectionMethod( $validator, 'validateSvgString' );
 		$method->setAccessible( true );
 
 		// Entity-encoded onload (&#111;nload)
@@ -839,12 +839,12 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgString
 	 * Tests that valid SVG still passes validation.
 	 */
 	public function testValidateSvgAcceptsValidSvg() {
 		$validator = $this->createValidator();
-		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method = new \ReflectionMethod( $validator, 'validateSvgString' );
 		$method->setAccessible( true );
 
 		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>';
@@ -854,12 +854,12 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgContent
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateSvgString
 	 * Tests that vbscript: URLs are blocked.
 	 */
 	public function testValidateSvgBlocksVbscriptUrl() {
 		$validator = $this->createValidator();
-		$method = new \ReflectionMethod( $validator, 'validateSvgContent' );
+		$method = new \ReflectionMethod( $validator, 'validateSvgString' );
 		$method->setAccessible( true );
 
 		$svg = '<svg xmlns="http://www.w3.org/2000/svg"><a href="vbscript:msgbox(1)">click</a></svg>';

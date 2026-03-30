@@ -37,7 +37,6 @@
 		"MediaWiki\\Extension\\Layers\\ThumbnailRenderer": "src/ThumbnailRenderer.php",
 		"MediaWiki\\Extension\\Layers\\LayersFileTransform": "src/LayersFileTransform.php",
 		"MediaWiki\\Extension\\Layers\\LayeredThumbnail": "src/LayeredThumbnail.php",
-		"MediaWiki\\Extension\\Layers\\Validation\\LayerValidatorInterface": "src/Validation/LayerValidatorInterface.php",
 		"MediaWiki\\Extension\\Layers\\Validation\\ValidationResult": "src/Validation/ValidationResult.php",
 		"MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator": "src/Validation/ServerSideLayerValidator.php",
 		"MediaWiki\\Extension\\Layers\\Validation\\TextSanitizer": "src/Validation/TextSanitizer.php",

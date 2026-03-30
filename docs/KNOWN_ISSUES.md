@@ -1,6 +1,8 @@
 # Known Issues
 
-**Last updated:** March 26, 2026 — v1.5.63 (v66 fix pass — all items resolved)
+**Last updated:** March 30, 2026 — post-v67 cleanup
+
+Open in v67: 0 new code/test issues and 0 documentation items.
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,14 +15,102 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 162 | 162 | 0 |
-| P3 | 216 | 214 | 2 |
-| **Total** | **444** | **442** | **2** |
+| P2 | 164 | 164 | 0 |
+| P3 | 216 | 215 | 1 |
+| **Total** | **446** | **445** | **1** |
 
-*v66 fix pass (March 26): Fixed P2-210, P2-211, P2-212, P3-213,
-P3-214, P3-215. 7 non-issues eliminated. Audit scope: 10 files
-(5 data-flow modules + 5 canvas controllers/tools). Remaining open:
-P3-147 (accepted), P3-148 (deferred).*
+*No documentation drift items remain open from v67.
+Carried forward: P3-147 (accepted).*
+
+---
+
+## v67 Fix Pass (March 29, 2026; all 6 v67 items resolved)
+
+### PHP / Test Infrastructure — Medium
+
+#### P2-216: `AuditTrailTraitTest.php` Breaks `npm run test:php`
+
+- **Files:** `tests/phpunit/unit/Api/AuditTrailTraitTest.php`, `package.json`
+- **Issue:** The repo’s PHP QA command currently fails on this test
+  harness file. PHPCS reports a class/interface filename mismatch,
+  missing public method documentation on the in-file `UserIdentity`
+  stub, and spacing violations.
+- **Verification:** `npm run test:php` exited with code `2` and reported
+  6 errors + 1 warning in this file. The same run reported only a
+  non-blocking line-length warning in production code.
+- **Status:** ✅ Fixed
+
+#### P2-217: Standalone PHPUnit Package Script Cannot Autoload Logging Traits
+
+- **Files:** `tests/phpunit/bootstrap.php`,
+  `tests/phpunit/unit/Logging/LoggerAwareTraitTest.php`,
+  `tests/phpunit/unit/Logging/StaticLoggerAwareTraitTest.php`,
+  `composer.json`, `package.json`
+- **Issue:** The package-level PHPUnit workflow runs with a bootstrap
+  that loads only `vendor/autoload.php` plus a `MediaWikiUnitTestCase`
+  stub. `src/` is not composer-autoloaded, and the logging trait tests
+  do not `require_once` their source trait files.
+- **Verification:** `npm run test:phpunit -- --filter AuditTrailTraitTest`
+  aborted before executing the requested test, with a fatal trait-load
+  error from `LoggerAwareTraitTest.php`.
+- **Status:** ✅ Fixed
+
+### Documentation Drift
+
+#### D-067-01: `docs/LTS_BRANCH_STRATEGY.md` Still Shows `1.5.62` / `11,847`
+
+- **Issue:** Current branch table, version examples, and workflow text
+  still describe `1.5.62` and `11,847` tests.
+- **Verification:** `extension.json` is `1.5.63`; current Jest summary
+  is `13,880` tests in `172` suites.
+- **Status:** ✅ Fixed
+
+#### D-067-02: `docs/ARCHITECTURE.md` Wrong Published i18n Metric
+
+- **Issue:** Stats table says `841` i18n messages, but the project’s own
+  verifier publishes `785` `layers-` keys; the namespace example still
+  embeds `VERSION: '1.5.62'`.
+- **Verification:** `scripts/verify-metrics.js` reports `785`; the code
+  snippet still shows `1.5.62`.
+- **Status:** ✅ Fixed
+
+#### D-067-03: `docs/SLIDE_MODE.md` Header Still Says `Current Release: v1.5.62`
+
+- **Issue:** Current release banner is stale.
+- **Verification:** `extension.json` is `1.5.63`.
+- **Status:** ✅ Fixed
+
+#### D-067-04: `docs/SLIDE_MODE_ISSUES.md` Still Says “All 11,847 Tests Pass”
+
+- **Issue:** Test-count claim is stale.
+- **Verification:** Current Jest summary is `13,880` tests in `172`
+  suites.
+- **Status:** ✅ Fixed
+
+### Verification
+
+- `npm test` passes: 172 suites, 13,880 tests.
+- `npm run test:php` passes cleanly.
+- `php vendor/bin/phpunit --configuration phpunit.xml` passes:
+  537 tests, 7 skipped.
+
+### Post-v67 Cleanup
+
+- **P3-148** (Unused interface) — ✅ Fixed on March 30, 2026 by
+  removing `LayerValidatorInterface` and its dead autoload entry.
+
+### Carried Forward
+
+- **P3-147** (Redundant SQL variants) — Accepted; no code change needed
+
+### Non-Issues Eliminated (v67)
+
+- No new exploitable SQL injection, CSRF, XSS, or permission-bypass
+  issue was confirmed in the current audit.
+- Historical release snapshots in changelog entries were not treated as
+  doc-drift items unless they claimed current-state metrics.
+- `getNamedSetOwner()` primary-DB reads were treated as an explicit
+  replication-lag tradeoff, not a verified bug.
 
 ---
 

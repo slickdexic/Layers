@@ -1,17 +1,5 @@
 <?php
-// phpcs:disable MediaWiki.Files.OneClassPerFile,Generic.Files.OneObjectStructurePerFile -- Test harness class
-
-namespace MediaWiki\User;
-
-// Stub UserIdentity interface if not available (standalone test environment)
-if ( !interface_exists( '\\MediaWiki\\User\\UserIdentity' ) ) {
-	interface UserIdentity {
-		public function getId();
-		public function getName(): string;
-		public function getWikiId();
-		public function isRegistered(): bool;
-	}
-}
+// phpcs:disable MediaWiki.Files.ClassMatchesFilename,Generic.Files.OneObjectStructurePerFile -- Test harness class
 
 namespace MediaWiki\Extension\Layers\Tests\Api;
 
@@ -36,7 +24,13 @@ class AuditTrailTraitHarness {
 	 * @param string $setName
 	 * @param array $extra
 	 */
-	public function callCreateAuditTrailEntry( $title, UserIdentity $user, string $action, string $setName, array $extra = [] ): void {
+	public function callCreateAuditTrailEntry(
+		$title,
+		UserIdentity $user,
+		string $action,
+		string $setName,
+		array $extra = []
+	): void {
 		$this->createAuditTrailEntry( $title, $user, $action, $setName, $extra );
 	}
 
@@ -48,7 +42,11 @@ class AuditTrailTraitHarness {
 	 * @param array $extra
 	 * @return string
 	 */
-	public function callBuildAuditSummary( string $action, string $setName, array $extra = [] ): string {
+	public function callBuildAuditSummary(
+		string $action,
+		string $setName,
+		array $extra = []
+	): string {
 		$reflection = new \ReflectionMethod( $this, 'buildAuditSummary' );
 		$reflection->setAccessible( true );
 		return $reflection->invoke( $this, $action, $setName, $extra );
@@ -78,13 +76,6 @@ class AuditTrailTraitTest extends TestCase {
 	public function testCreateAuditTrailEntryHandlesNullTitleGracefully(): void {
 		$harness = new AuditTrailTraitHarness();
 
-		// Mock user - use stdClass as lightweight stub
-		$mockUser = $this->getMockBuilder( \stdClass::class )
-			->addMethods( [ 'getId', 'getName' ] )
-			->getMock();
-		$mockUser->method( 'getId' )->willReturn( 1 );
-		$mockUser->method( 'getName' )->willReturn( 'TestUser' );
-
 		// Should not throw when title is null
 		$harness->callCreateAuditTrailEntry( null, $this->createMockUser(), 'save', 'default' );
 		$this->assertTrue( true, 'No exception thrown for null title' );
@@ -105,7 +96,12 @@ class AuditTrailTraitTest extends TestCase {
 
 		// When MediaWikiServices is not available, the method should
 		// catch the exception and return silently (best-effort)
-		$harness->callCreateAuditTrailEntry( $mockTitle, $this->createMockUser(), 'save', 'default' );
+		$harness->callCreateAuditTrailEntry(
+			$mockTitle,
+			$this->createMockUser(),
+			'save',
+			'default'
+		);
 		$this->assertTrue( true, 'No exception thrown when services unavailable' );
 	}
 
@@ -149,7 +145,12 @@ class AuditTrailTraitTest extends TestCase {
 		$mockTitle->method( 'getPrefixedText' )->willReturn( 'File:Missing.jpg' );
 
 		// Non-existent title should cause early return (before touching services)
-		$harness->callCreateAuditTrailEntry( $mockTitle, $this->createMockUser(), 'save', 'default' );
+		$harness->callCreateAuditTrailEntry(
+			$mockTitle,
+			$this->createMockUser(),
+			'save',
+			'default'
+		);
 		$this->assertTrue( true, 'Non-existent title handled gracefully' );
 	}
 

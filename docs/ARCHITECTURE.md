@@ -38,7 +38,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | Drawing tools | **17** |
 | Shape library | **1,385 shapes** |
 | Emoji library | **2,817 emoji** |
-| i18n messages | **841** |
+| i18n messages | **785** |
 | eslint-disable comments | **18** ✅ |
 
 ---
@@ -694,7 +694,7 @@ window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
 ```javascript
 window.Layers = {
-    VERSION: '1.5.62',
+    VERSION: '1.5.63',
     Editor: LayersEditor,
     Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
     UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm, LayerItemFactory },

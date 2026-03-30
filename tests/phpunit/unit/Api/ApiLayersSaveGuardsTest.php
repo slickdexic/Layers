@@ -1,29 +1,5 @@
 <?php
-// phpcs:disable MediaWiki.Files.ClassMatchesFilename,MediaWiki.Files.OneClassPerFile,Generic.Files.OneObjectStructurePerFile
 // phpcs:disable MediaWiki.Commenting.FunctionComment.MissingDocumentationPublic -- Test harness
-// phpcs:disable Generic.Classes.DuplicateClassName.Found -- Test stub class with class_exists guard
-
-namespace MediaWiki\Extension\Layers\Security;
-
-if ( !class_exists( __NAMESPACE__ . '\\RateLimiter', false ) ) {
-	class RateLimiter {
-		public bool $layerCountAllowed = true;
-		public bool $complexityAllowed = true;
-		public bool $imageAllowed = true;
-
-		public function isLayerCountAllowed( int $layerCount ): bool {
-			return $this->layerCountAllowed;
-		}
-
-		public function isComplexityAllowed( array $layers ): bool {
-			return $this->complexityAllowed;
-		}
-
-		public function isImageSizeAllowed( int $width, int $height ): bool {
-			return $this->imageAllowed;
-		}
-	}
-}
 
 namespace MediaWiki\Extension\Layers\Tests\Unit\Api;
 
@@ -78,8 +54,8 @@ class ApiLayersSaveGuardsTest extends \MediaWikiUnitTestCase {
 				$this->arrayHasKey( 'layer_count' )
 			);
 
-		$rateLimiter = new RateLimiter();
-		$rateLimiter->layerCountAllowed = false;
+		$rateLimiter = $this->createMock( RateLimiter::class );
+		$rateLimiter->method( 'isLayerCountAllowed' )->willReturn( false );
 
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'layers-too-many-layers|toomanylayers' );
@@ -96,9 +72,9 @@ class ApiLayersSaveGuardsTest extends \MediaWikiUnitTestCase {
 				$this->arrayHasKey( 'layer_count' )
 			);
 
-		$rateLimiter = new RateLimiter();
-		$rateLimiter->layerCountAllowed = true;
-		$rateLimiter->complexityAllowed = false;
+		$rateLimiter = $this->createMock( RateLimiter::class );
+		$rateLimiter->method( 'isLayerCountAllowed' )->willReturn( true );
+		$rateLimiter->method( 'isComplexityAllowed' )->willReturn( false );
 
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'layers-too-complex|toolayercomplex' );
@@ -115,8 +91,8 @@ class ApiLayersSaveGuardsTest extends \MediaWikiUnitTestCase {
 				$this->arrayHasKey( 'img_width' )
 			);
 
-		$rateLimiter = new RateLimiter();
-		$rateLimiter->imageAllowed = false;
+		$rateLimiter = $this->createMock( RateLimiter::class );
+		$rateLimiter->method( 'isImageSizeAllowed' )->willReturn( false );
 
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'layers-image-too-large|imagetoolarge' );

@@ -144,7 +144,7 @@ class SlideNameValidatorTest extends \MediaWikiUnitTestCase {
 		$validator = $this->createValidator();
 		// After removing special chars, leading/trailing hyphens should be cleaned
 		$result = $validator->sanitize( '--slide--' );
-		$this->assertStringNotMatches( '/^-/', $result );
-		$this->assertStringNotMatches( '/-$/', $result );
+		$this->assertDoesNotMatchRegularExpression( '/^-/', $result );
+		$this->assertDoesNotMatchRegularExpression( '/-$/', $result );
 	}
 }

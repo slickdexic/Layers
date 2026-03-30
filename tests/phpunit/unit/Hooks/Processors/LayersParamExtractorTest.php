@@ -6,7 +6,7 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Unit tests for LayersParamExtractor
+ * Unit tests for LayersParamExtractor.
  *
  * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor
  * @group Layers
@@ -20,333 +20,231 @@ class LayersParamExtractorTest extends TestCase {
 		$this->extractor = new LayersParamExtractor();
 	}
 
-	// ==================== extractFromParams tests ====================
-
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromParams
+	 * @covers ::extractFromParams
 	 */
-	public function testExtractFromParamsWithLayersOn(): void {
-		$params = [ 'alt' => 'Test', 'layers' => 'on', 'thumb' => true ];
+	public function testExtractFromParamsPrefersHandlerParams(): void {
+		$result = $this->extractor->extractFromParams(
+			[ 'layers' => 'On' ],
+			[ 'layers' => 'off' ]
+		);
 
-		$result = $this->extractor->extractFromParams( $params );
-
-		$this->assertEquals( 'on', $result );
+		$this->assertSame( 'on', $result );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromParams
+	 * @covers ::extractFromParams
 	 */
-	public function testExtractFromParamsWithLayersOff(): void {
-		$params = [ 'layers' => 'off' ];
+	public function testExtractFromParamsFallsBackToFrameParams(): void {
+		$result = $this->extractor->extractFromParams(
+			[ 'alt' => 'Test' ],
+			[ 'layers' => 'anatomy-labels' ]
+		);
 
-		$result = $this->extractor->extractFromParams( $params );
-
-		$this->assertEquals( 'off', $result );
+		$this->assertSame( 'anatomy-labels', $result );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromParams
+	 * @covers ::extractFromParams
 	 */
-	public function testExtractFromParamsWithNamedSet(): void {
-		$params = [ 'layers' => 'anatomy-labels' ];
+	public function testExtractFromParamsSupportsLayerAlias(): void {
+		$result = $this->extractor->extractFromParams(
+			[ 'layer' => 'OFF' ],
+			[]
+		);
 
-		$result = $this->extractor->extractFromParams( $params );
-
-		$this->assertEquals( 'anatomy-labels', $result );
+		$this->assertSame( 'off', $result );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromParams
+	 * @covers ::extractFromParams
 	 */
-	public function testExtractFromParamsWithoutLayers(): void {
-		$params = [ 'alt' => 'Test', 'thumb' => true ];
-
-		$result = $this->extractor->extractFromParams( $params );
-
-		$this->assertNull( $result );
+	public function testExtractFromParamsReturnsNullWhenMissing(): void {
+		$this->assertNull( $this->extractor->extractFromParams( [], [] ) );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromParams
-	 */
-	public function testExtractFromEmptyParams(): void {
-		$result = $this->extractor->extractFromParams( [] );
-
-		$this->assertNull( $result );
-	}
-
-	// ==================== extractFromHref tests ====================
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromHref
+	 * @covers ::extractFromHref
 	 */
 	public function testExtractFromHrefWithLayersParam(): void {
-		$href = '/wiki/File:Example.jpg?layers=on';
-
-		$result = $this->extractor->extractFromHref( $href );
-
-		$this->assertEquals( 'on', $result );
+		$this->assertSame(
+			'on',
+			$this->extractor->extractFromHref( '/wiki/File:Example.jpg?layers=on' )
+		);
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromHref
+	 * @covers ::extractFromHref
 	 */
 	public function testExtractFromHrefWithNamedSet(): void {
-		$href = '/wiki/File:Example.jpg?layers=my-annotations&other=param';
-
-		$result = $this->extractor->extractFromHref( $href );
-
-		$this->assertEquals( 'my-annotations', $result );
+		$this->assertSame(
+			'my-annotations',
+			$this->extractor->extractFromHref( '/wiki/File:Example.jpg?layers=my-annotations&other=param' )
+		);
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromHref
+	 * @covers ::extractFromHref
+	 */
+	public function testExtractFromHrefReturnsRawValue(): void {
+		$this->assertSame(
+			'<script>alert(1)</script>',
+			$this->extractor->extractFromHref( '/wiki/File:Example.jpg?layers=%3Cscript%3Ealert(1)%3C%2Fscript%3E' )
+		);
+	}
+
+	/**
+	 * @covers ::extractFromHref
 	 */
 	public function testExtractFromHrefWithoutLayersParam(): void {
-		$href = '/wiki/File:Example.jpg?width=300';
-
-		$result = $this->extractor->extractFromHref( $href );
-
-		$this->assertNull( $result );
+		$this->assertNull( $this->extractor->extractFromHref( '/wiki/File:Example.jpg?width=300' ) );
+		$this->assertNull( $this->extractor->extractFromHref( '/wiki/File:Example.jpg' ) );
+		$this->assertNull( $this->extractor->extractFromHref( '' ) );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromHref
+	 * @covers ::extractFromDataMw
 	 */
-	public function testExtractFromHrefWithoutQueryString(): void {
-		$href = '/wiki/File:Example.jpg';
-
-		$result = $this->extractor->extractFromHref( $href );
-
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromHref
-	 */
-	public function testExtractFromEmptyHref(): void {
-		$result = $this->extractor->extractFromHref( '' );
-
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromHref
-	 */
-	public function testExtractFromHrefSanitizesInput(): void {
-		$href = '/wiki/File:Example.jpg?layers=<script>alert(1)</script>';
-
-		$result = $this->extractor->extractFromHref( $href );
-
-		// Should return null or sanitized value, not the script tag
-		$this->assertNotEquals( '<script>alert(1)</script>', $result );
-	}
-
-	// ==================== extractFromDataMw tests ====================
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromDataMw
-	 */
-	public function testExtractFromDataMwWithLayersAttrib(): void {
-		$dataMw = [
-			'attribs' => [
-				[ 'layers', 'on' ]
+	public function testExtractFromDataMwReadsOriginalArgsArray(): void {
+		$dataMw = htmlspecialchars( json_encode( [
+			'attrs' => [
+				'originalArgs' => [ 'thumb', 'layers=on' ]
 			]
-		];
+		] ), ENT_QUOTES, 'UTF-8' );
 
-		$result = $this->extractor->extractFromDataMw( $dataMw );
+		$html = '<img data-mw="' . $dataMw . '">';
 
-		$this->assertEquals( 'on', $result );
+		$this->assertSame( 'on', $this->extractor->extractFromDataMw( $html ) );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromDataMw
+	 * @covers ::extractFromDataMw
 	 */
-	public function testExtractFromDataMwWithNamedSet(): void {
-		$dataMw = [
-			'attribs' => [
-				[ 'alt', 'Test image' ],
-				[ 'layers', 'anatomy' ],
-				[ 'thumb', '' ]
+	public function testExtractFromDataMwReadsAssociativeOptions(): void {
+		$dataMw = htmlspecialchars( json_encode( [
+			'attrs' => [
+				'options' => [
+					'layers' => 'anatomy'
+				]
 			]
-		];
+		] ), ENT_QUOTES, 'UTF-8' );
 
-		$result = $this->extractor->extractFromDataMw( $dataMw );
+		$html = '<span data-mw="' . $dataMw . '"></span>';
 
-		$this->assertEquals( 'anatomy', $result );
+		$this->assertSame( 'anatomy', $this->extractor->extractFromDataMw( $html ) );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromDataMw
+	 * @covers ::extractFromDataMw
 	 */
-	public function testExtractFromDataMwWithoutLayers(): void {
-		$dataMw = [
-			'attribs' => [
-				[ 'alt', 'Test image' ]
-			]
-		];
-
-		$result = $this->extractor->extractFromDataMw( $dataMw );
-
-		$this->assertNull( $result );
+	public function testExtractFromDataMwReturnsNullWhenMissingOrMalformed(): void {
+		$this->assertNull( $this->extractor->extractFromDataMw( '<img src="test.jpg">' ) );
+		$this->assertNull( $this->extractor->extractFromDataMw( '<img data-mw="not-json">' ) );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromDataMw
-	 */
-	public function testExtractFromEmptyDataMw(): void {
-		$result = $this->extractor->extractFromDataMw( [] );
-
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromDataMw
-	 */
-	public function testExtractFromDataMwWithMalformedAttribs(): void {
-		$dataMw = [
-			'attribs' => [
-				'not-an-array',
-				[ 'single-element' ],
-			]
-		];
-
-		$result = $this->extractor->extractFromDataMw( $dataMw );
-
-		$this->assertNull( $result );
-	}
-
-	// ==================== extractFromAll tests ====================
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromAll
+	 * @covers ::extractFromAll
 	 */
 	public function testExtractFromAllPrioritizesParams(): void {
-		$params = [ 'layers' => 'from-params' ];
-		$href = '?layers=from-href';
-		$dataMw = [ 'attribs' => [ [ 'layers', 'from-datamw' ] ] ];
+		$result = $this->extractor->extractFromAll(
+			[ 'layers' => 'from-handler' ],
+			[],
+			[ 'href' => '?layers=from-link' ],
+			'<img data-mw="{}">'
+		);
 
-		$result = $this->extractor->extractFromAll( $params, $href, $dataMw );
-
-		$this->assertEquals( 'from-params', $result );
+		$this->assertSame( 'from-handler', $result );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromAll
+	 * @covers ::extractFromAll
 	 */
-	public function testExtractFromAllFallsBackToHref(): void {
-		$params = [ 'other' => 'value' ];
-		$href = '?layers=from-href';
-		$dataMw = [ 'attribs' => [ [ 'layers', 'from-datamw' ] ] ];
+	public function testExtractFromAllFallsBackToLinkAttribs(): void {
+		$result = $this->extractor->extractFromAll(
+			[],
+			[],
+			[ 'href' => '?layers=from-link' ]
+		);
 
-		$result = $this->extractor->extractFromAll( $params, $href, $dataMw );
-
-		$this->assertEquals( 'from-href', $result );
+		$this->assertSame( 'from-link', $result );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromAll
+	 * @covers ::extractFromAll
 	 */
-	public function testExtractFromAllFallsBackToDataMw(): void {
-		$params = [];
-		$href = '/wiki/File:Test.jpg';
-		$dataMw = [ 'attribs' => [ [ 'layers', 'from-datamw' ] ] ];
+	public function testExtractFromAllFallsBackToFrameLinkUrl(): void {
+		$result = $this->extractor->extractFromAll(
+			[],
+			[ 'link-url' => '/wiki/File:Test.jpg?layers=from-frame-link' ]
+		);
 
-		$result = $this->extractor->extractFromAll( $params, $href, $dataMw );
-
-		$this->assertEquals( 'from-datamw', $result );
+		$this->assertSame( 'from-frame-link', $result );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::extractFromAll
+	 * @covers ::extractFromAll
 	 */
-	public function testExtractFromAllWithNullInputs(): void {
-		$result = $this->extractor->extractFromAll( null, null, null );
+	public function testExtractFromAllFallsBackToDataMwHtml(): void {
+		$dataMw = htmlspecialchars( json_encode( [
+			'attrs' => [
+				'options' => [ 'layers' => 'from-datamw' ]
+			]
+		] ), ENT_QUOTES, 'UTF-8' );
 
-		$this->assertNull( $result );
-	}
+		$result = $this->extractor->extractFromAll(
+			[],
+			[],
+			[],
+			'<span data-mw="' . $dataMw . '"></span>'
+		);
 
-	// ==================== isLayersEnabled tests ====================
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::isLayersEnabled
-	 */
-	public function testIsLayersEnabledWithOn(): void {
-		$this->assertTrue( $this->extractor->isLayersEnabled( 'on' ) );
-	}
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::isLayersEnabled
-	 */
-	public function testIsLayersEnabledWithNamedSet(): void {
-		$this->assertTrue( $this->extractor->isLayersEnabled( 'anatomy' ) );
+		$this->assertSame( 'from-datamw', $result );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::isLayersEnabled
+	 * @covers ::extractLayersJson
 	 */
-	public function testIsLayersEnabledWithOff(): void {
-		$this->assertFalse( $this->extractor->isLayersEnabled( 'off' ) );
+	public function testExtractLayersJsonSupportsWrappedAndLegacyFormats(): void {
+		$wrapped = $this->extractor->extractLayersJson( [
+			'layersjson' => json_encode( [
+				'layers' => [ [ 'id' => 'one' ] ],
+				'backgroundVisible' => false,
+				'backgroundOpacity' => 0.4
+			] )
+		] );
+
+		$legacy = $this->extractor->extractLayersJson( [
+			'layerData' => [ [ 'id' => 'legacy' ] ]
+		] );
+
+		$this->assertSame( [ [ 'id' => 'one' ] ], $wrapped['layers'] );
+		$this->assertFalse( $wrapped['backgroundVisible'] );
+		$this->assertSame( 0.4, $wrapped['backgroundOpacity'] );
+		$this->assertSame( [ [ 'id' => 'legacy' ] ], $legacy['layers'] );
+		$this->assertTrue( $legacy['backgroundVisible'] );
 	}
 
 	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::isLayersEnabled
+	 * @covers ::isDisabled
+	 * @covers ::isDefaultEnabled
+	 * @covers ::isNamedSet
+	 * @covers ::getSetName
 	 */
-	public function testIsLayersEnabledWithNone(): void {
-		$this->assertFalse( $this->extractor->isLayersEnabled( 'none' ) );
-	}
+	public function testFlagHelpersReflectCurrentContract(): void {
+		$this->assertTrue( $this->extractor->isDisabled( 'off' ) );
+		$this->assertTrue( $this->extractor->isDisabled( 'none' ) );
+		$this->assertFalse( $this->extractor->isDisabled( 'on' ) );
 
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::isLayersEnabled
-	 */
-	public function testIsLayersEnabledWithNull(): void {
-		$this->assertFalse( $this->extractor->isLayersEnabled( null ) );
-	}
+		$this->assertTrue( $this->extractor->isDefaultEnabled( 'on' ) );
+		$this->assertTrue( $this->extractor->isDefaultEnabled( 'all' ) );
+		$this->assertFalse( $this->extractor->isDefaultEnabled( 'annotations' ) );
 
-	// ==================== getSetName tests ====================
+		$this->assertTrue( $this->extractor->isNamedSet( 'annotations' ) );
+		$this->assertFalse( $this->extractor->isNamedSet( 'on' ) );
+		$this->assertFalse( $this->extractor->isNamedSet( 'off' ) );
 
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::getSetName
-	 */
-	public function testGetSetNameWithOn(): void {
-		$result = $this->extractor->getSetName( 'on' );
-
-		$this->assertEquals( 'default', $result );
-	}
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::getSetName
-	 */
-	public function testGetSetNameWithNamedSet(): void {
-		$result = $this->extractor->getSetName( 'my-annotations' );
-
-		$this->assertEquals( 'my-annotations', $result );
-	}
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::getSetName
-	 */
-	public function testGetSetNameWithOff(): void {
-		$result = $this->extractor->getSetName( 'off' );
-
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::getSetName
-	 */
-	public function testGetSetNameWithNull(): void {
-		$result = $this->extractor->getSetName( null );
-
-		$this->assertNull( $result );
-	}
-
-	/**
-	 * @covers \MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor::getSetName
-	 */
-	public function testGetSetNameUsesCustomDefault(): void {
-		$result = $this->extractor->getSetName( 'on', 'primary' );
-
-		$this->assertEquals( 'primary', $result );
+		$this->assertSame( 'annotations', $this->extractor->getSetName( 'annotations' ) );
+		$this->assertNull( $this->extractor->getSetName( 'on' ) );
+		$this->assertNull( $this->extractor->getSetName( null ) );
 	}
 }

@@ -12,7 +12,7 @@ use MediaWiki\MediaWikiServices;
  * This class provides comprehensive validation and sanitization
  * of layer data with security-focused validation rules.
  */
-class ServerSideLayerValidator implements LayerValidatorInterface {
+class ServerSideLayerValidator {
 
 	/** @var TextSanitizer */
 	private $textSanitizer;
@@ -412,8 +412,16 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			if ( $validationResult['valid'] ) {
 				$cleanLayer[$property] = $validationResult['value'];
 			} else {
-				$result->addWarning( "Invalid property '$property': " . $validationResult['error'] );
+				if ( $this->isStrictProperty( $property, $type ) ) {
+					$result->addError( "Invalid property '$property': " . $validationResult['error'] );
+				} else {
+					$result->addWarning( "Invalid property '$property': " . $validationResult['error'] );
+				}
 			}
+		}
+
+		if ( $result->hasErrors() ) {
+			return $result;
 		}
 
 		// Handle blend mode alias (LOW-4: deprecated in favor of blendMode)
@@ -814,6 +822,10 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 			return [ 'valid' => true, 'value' => $validViewBox ];
 		}
 
+		if ( $property === 'paths' ) {
+			return $this->validateCustomShapePaths( $value );
+		}
+
 		if ( $property === 'gradient' ) {
 			return $this->validateGradient( $value );
 		}
@@ -823,6 +835,105 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		}
 
 		return [ 'valid' => true, 'value' => $value ];
+	}
+
+	/**
+	 * Determine whether an invalid property should fail validation instead of being dropped.
+	 *
+	 * @param string $property Property name
+	 * @param string $layerType Layer type
+	 * @return bool
+	 */
+	private function isStrictProperty( string $property, string $layerType ): bool {
+		if ( $property === 'richText' ) {
+			return true;
+		}
+
+		if ( $layerType === 'customShape' ) {
+			return in_array( $property, [ 'path', 'paths', 'svg', 'shapeData', 'viewBox' ], true );
+		}
+
+		return false;
+	}
+
+	/**
+	 * Validate and sanitize multi-path custom shape definitions.
+	 *
+	 * The canonical format is an array of path definition objects:
+	 * [ { path, fill?, stroke?, strokeWidth?, fillRule? } ]
+	 * Older string-only arrays are still accepted and normalized.
+	 *
+	 * @param array $paths Raw paths array
+	 * @return array Validation result
+	 */
+	private function validateCustomShapePaths( array $paths ): array {
+		if ( count( $paths ) > 100 ) {
+			return [ 'valid' => false, 'error' => 'customShape paths array exceeds maximum of 100 paths' ];
+		}
+
+		$validPaths = [];
+
+		foreach ( $paths as $pathIndex => $pathData ) {
+			if ( is_string( $pathData ) ) {
+				$pathValidation = $this->validateSvgPath( $pathData );
+				if ( !$pathValidation['valid'] ) {
+					return [ 'valid' => false, 'error' => "paths[$pathIndex]: " . $pathValidation['error'] ];
+				}
+
+				$validPaths[] = [ 'path' => $pathValidation['value'] ];
+				continue;
+			}
+
+			if ( !is_array( $pathData ) || !isset( $pathData['path'] ) || !is_string( $pathData['path'] ) ) {
+				return [ 'valid' => false, 'error' => "paths[$pathIndex] must be a path object or string" ];
+			}
+
+			$pathValidation = $this->validateSvgPath( $pathData['path'] );
+			if ( !$pathValidation['valid'] ) {
+				return [ 'valid' => false, 'error' => "paths[$pathIndex]: " . $pathValidation['error'] ];
+			}
+
+			$validPath = [ 'path' => $pathValidation['value'] ];
+
+			if ( isset( $pathData['fill'] ) ) {
+				if ( !is_string( $pathData['fill'] ) || !$this->colorValidator->isSafeColor( $pathData['fill'] ) ) {
+					return [ 'valid' => false, 'error' => "paths[$pathIndex].fill must be a safe color" ];
+				}
+				$validPath['fill'] = $this->colorValidator->sanitizeColor( $pathData['fill'] );
+			}
+
+			if ( isset( $pathData['stroke'] ) ) {
+				if ( !is_string( $pathData['stroke'] ) || !$this->colorValidator->isSafeColor( $pathData['stroke'] ) ) {
+					return [ 'valid' => false, 'error' => "paths[$pathIndex].stroke must be a safe color" ];
+				}
+				$validPath['stroke'] = $this->colorValidator->sanitizeColor( $pathData['stroke'] );
+			}
+
+			if ( isset( $pathData['strokeWidth'] ) ) {
+				$strokeWidthValidation = $this->validateNumericProperty( 'strokeWidth', $pathData['strokeWidth'] );
+				if ( !$strokeWidthValidation['valid'] ) {
+					return [
+						'valid' => false,
+						'error' => "paths[$pathIndex].strokeWidth: " . $strokeWidthValidation['error']
+					];
+				}
+				$validPath['strokeWidth'] = $strokeWidthValidation['value'];
+			}
+
+			if ( isset( $pathData['fillRule'] ) ) {
+				if (
+					!is_string( $pathData['fillRule'] ) ||
+					!in_array( $pathData['fillRule'], [ 'nonzero', 'evenodd' ], true )
+				) {
+					return [ 'valid' => false, 'error' => "paths[$pathIndex].fillRule must be nonzero or evenodd" ];
+				}
+				$validPath['fillRule'] = $pathData['fillRule'];
+			}
+
+			$validPaths[] = $validPath;
+		}
+
+		return [ 'valid' => true, 'value' => $validPaths ];
 	}
 
 	/**
@@ -1176,34 +1287,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 						return $svgValidation;
 					}
 				}
-				// Validate paths array if present (multi-path shapes)
-				// SEC-1 FIX: Each path string must be validated to prevent malicious SVG data
-				if ( $hasPaths ) {
-					// P2.10 FIX: Limit paths array length to prevent DoS
-					if ( count( $layer['paths'] ) > 100 ) {
-						return [
-							'valid' => false,
-							'error' => 'customShape paths array exceeds maximum of 100 paths'
-						];
-					}
-					$pathIndex = 0;
-					foreach ( $layer['paths'] as $pathData ) {
-						if ( !is_string( $pathData ) ) {
-							return [
-								'valid' => false,
-								'error' => "paths[$pathIndex] must be a string"
-							];
-						}
-						$pathValidation = $this->validateSvgPath( $pathData );
-						if ( !$pathValidation['valid'] ) {
-							return [
-								'valid' => false,
-								'error' => "paths[$pathIndex]: " . $pathValidation['error']
-							];
-						}
-						$pathIndex++;
-					}
-				}
+				// Paths are already structurally validated and normalized in validateArrayProperty().
 				break;
 		}
 
