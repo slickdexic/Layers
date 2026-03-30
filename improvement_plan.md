@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 17, 2026 — v1.5.62 (v57 audit)
+**Last updated:** March 30, 2026 — REL1_43 maintenance refresh for v1.5.62
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -20,7 +20,8 @@ items fixed**, P3-159/P3-160 verified resolved (coverage >98%),
 7 doc drift items fixed, D-056-08 fixed. **0 open code items from v56.**
 v57 audit found **5 new code issues** (3 MEDIUM, 2 LOW) plus **5
 documentation drift items**. 12 false positives eliminated during
-verification. P3-146, P3-147, P3-148 carried forward.
+verification. REL1_43 maintenance on March 30, 2026 fixed P3-147 and
+cleared the branch PHP QA debt. P3-146 and P3-148 remain carried.
 Use the section below as the authoritative current backlog.
 
 ---
@@ -32,9 +33,9 @@ Use the section below as the authoritative current backlog.
 | PHP Medium | 0 (P2-138, P2-139, P2-140 all fixed) | — |
 | JS Low | 0 (P3-161, P3-162 both fixed) | — |
 | PHP/Schema Low | 1 (P3-146 dead table removal) | 1h |
-| Deferred | 2 (P3-147 accepted, P3-148 deferred) | — |
+| Deferred | 1 (P3-148 deferred) | — |
 | Documentation | 0 (D-057-01 to D-057-05 all fixed) | — |
-| **Total** | **1 open** (+ 2 deferred) | ~1h |
+| **Total** | **1 open** (+ 1 deferred) | ~1h |
 
 ### Current Priorities (v57 — All Fixed)
 
@@ -51,14 +52,15 @@ Use the section below as the authoritative current backlog.
 | 29.09 | SLIDE_MODE.md references v1.5.59 | D-057-04 | Low | ✅ Fixed |
 | 29.10 | NAMED_LAYER_SETS.md version metadata | D-057-05 | Low | ✅ Fixed |
 | 29.11 | layer_set_usage table dead | P3-146 | Low | 📋 Planned |
-| 29.12 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Accepted |
+| 29.12 | buildImageNameLookup redundant SQL | P3-147 | Low | ✅ Fixed |
 | 29.13 | LayerValidatorInterface unused | P3-148 | Low | 🔲 Deferred |
 
 ### v57 Notes
 
 - v56 verification pass: all 11 v56 code fixes confirmed intact. All 8
   doc drift fixes confirmed. P3-159/P3-160 verified resolved (>98%).
-  P3-146/P3-147/P3-148 carried forward (unchanged).
+  P3-146 and P3-148 carried forward; P3-147 fixed during the March 30,
+  2026 REL1_43 maintenance refresh.
 - Full codebase audit (all 41 PHP files, all 158 JS modules, all docs):
   **3 MEDIUM (transaction gap, error constant, validation duplication),
   2 LOW (DOMMatrix feature detection, require() fallback).** Plus

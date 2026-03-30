@@ -5,6 +5,11 @@
 **Version:** 1.5.62
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
+> **March 30, 2026 REL1_43 maintenance update:** Backported the P3-147 image-name
+> normalization fix from `main` and cleared the remaining PHP QA debt on this
+> branch. Current carried items on `REL1_43` are P3-146 (planned schema cleanup)
+> and P3-148 (deferred interface cleanup).
+
 ---
 
 ## Scope & Verification
@@ -78,8 +83,8 @@ The v57 review found **0 CRITICAL, 0 HIGH, 3 MEDIUM, and 5 LOW items**
 
 The codebase retains strong architecture, comprehensive test coverage
 (92.88% statements, 11,847 tests in 168 suites), and robust security
-controls. P3-146 (dead table), P3-147 (accepted), and P3-148 (deferred)
-carried forward.
+controls. On `REL1_43`, P3-147 is now fixed; the remaining carried items
+are P3-146 (dead table) and P3-148 (deferred interface cleanup).
 
 ---
 

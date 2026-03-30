@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 17, 2026 — v1.5.62 (v57 audit — 3 MEDIUM + 2 LOW code + 5 doc drift items found)
+**Last updated:** March 30, 2026 — REL1_43 maintenance refresh for v1.5.62
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -13,15 +13,14 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 141 | 138 | 3 |
-| P3 | 184 | 181 | 3 |
-| **Total** | **391** | **385** | **6** |
+| P2 | 141 | 141 | 0 |
+| P3 | 184 | 182 | 2 |
+| **Total** | **391** | **389** | **2** |
 
-*v57 audit (March 17): Found 3 MEDIUM (P2-138 to P2-140), 2 LOW
-(P3-161, P3-162), and 5 documentation drift items (D-057-01 to
-D-057-05). All v56 fixes confirmed intact. Carried: P3-146 (dead
-table), P3-147 (redundant SQL), P3-148 (deferred interface).
-12 automated-analysis false positives verified and eliminated.*
+*All v57 code and documentation items are fixed on this branch.
+Current carry-forward items are P3-146 (dead table removal) and
+P3-148 (deferred interface cleanup). P3-147 was fixed during the
+March 30, 2026 REL1_43 maintenance refresh.*
 
 ---
 
@@ -95,7 +94,6 @@ table), P3-147 (redundant SQL), P3-148 (deferred interface).
 ### Carried Forward
 
 - **P3-146:** Dead `layer_set_usage` table — removal planned
-- **P3-147:** Redundant SQL variants — accepted per CHANGELOG
 - **P3-148:** Unused `LayerValidatorInterface` — deferred
 
 ---

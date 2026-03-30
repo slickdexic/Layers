@@ -197,7 +197,8 @@ class ApiLayersDelete extends ApiBase {
 				'setname' => $setName
 			] );
 			$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
-			return; // @codeCoverageIgnore
+			// @codeCoverageIgnore
+			return;
 		}
 	}
 
@@ -280,7 +281,8 @@ class ApiLayersDelete extends ApiBase {
 				'setname' => $setName
 			] );
 			$this->dieWithError( LayersConstants::ERROR_DELETE_FAILED, 'deletefailed' );
-			return; // @codeCoverageIgnore
+			// @codeCoverageIgnore
+			return;
 		}
 	}
 
