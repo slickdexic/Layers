@@ -275,7 +275,7 @@ class Hooks {
 
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
-$db->deleteLayerSetsForImage( $file->getName(), self::getFileSha1( $file ) );
+			$db->deleteLayerSetsForImage( $file->getName(), self::getFileSha1( $file ) );
 		} catch ( Exception $e ) {
 			// Log error but don't break deletion
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
@@ -335,7 +335,7 @@ $db->deleteLayerSetsForImage( $file->getName(), self::getFileSha1( $file ) );
 			}
 
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
-$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), self::getFileSha1( $fileObj ) );
+			$layerSets = $db->getLayerSetsForImage( $fileObj->getName(), self::getFileSha1( $fileObj ) );
 
 			$names = [];
 			foreach ( $layerSets as $layerSet ) {

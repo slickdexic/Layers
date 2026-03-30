@@ -17,8 +17,8 @@ use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use Title;
 use Psr\Log\LoggerInterface;
+use Title;
 
 /**
  * API module for saving layer data to a MediaWiki file.
