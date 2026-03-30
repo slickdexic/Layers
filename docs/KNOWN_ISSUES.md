@@ -16,11 +16,11 @@ traceability.
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
 | P2 | 164 | 164 | 0 |
-| P3 | 216 | 215 | 1 |
-| **Total** | **446** | **445** | **1** |
+| P3 | 216 | 216 | 0 |
+| **Total** | **446** | **446** | **0** |
 
 *No documentation drift items remain open from v67.
-Carried forward: P3-147 (accepted).*
+No carried-forward items remain open.*
 
 ---
 
@@ -92,16 +92,19 @@ Carried forward: P3-147 (accepted).*
 - `npm test` passes: 172 suites, 13,880 tests.
 - `npm run test:php` passes cleanly.
 - `php vendor/bin/phpunit --configuration phpunit.xml` passes:
-  537 tests, 7 skipped.
+  539 tests, 7 skipped.
 
 ### Post-v67 Cleanup
 
+- **P3-147** (Redundant SQL variants) — ✅ Fixed on March 30, 2026 by
+  normalizing historical `ls_img_name` rows during schema updates and
+  switching runtime lookups to a single canonical DB key.
 - **P3-148** (Unused interface) — ✅ Fixed on March 30, 2026 by
   removing `LayerValidatorInterface` and its dead autoload entry.
 
 ### Carried Forward
 
-- **P3-147** (Redundant SQL variants) — Accepted; no code change needed
+- None.
 
 ### Non-Issues Eliminated (v67)
 
@@ -1153,7 +1156,9 @@ Carried forward: P3-147 (accepted).*
 
 #### P3-147: `buildImageNameLookup` Generates Redundant SQL Variants
 
-- **Status:** ✅ **Accepted** — defensive pattern per CHANGELOG (MED-12).
+- **Status:** ✅ **Fixed** (March 30, 2026 — schema migration now
+  normalizes legacy `ls_img_name` rows, and runtime lookups use a
+  single canonical DB key.)
 
 #### P3-148: `LayerValidatorInterface` Not Used in DI Container
 
@@ -1203,11 +1208,12 @@ Carried forward: P3-147 (accepted).*
 
 #### P3-147: `buildImageNameLookup` Generates Redundant SQL Variants
 
-- **Status:** **Open** — carried forward to v55
+- **Status:** ✅ **Fixed** (March 30, 2026 — historical data now
+  normalizes during schema update, eliminating redundant SQL variants)
 
 #### P3-148: `LayerValidatorInterface` Not Used in DI Container
 
-- **Status:** **Deferred** — carried forward to v55
+- **Status:** ✅ **Fixed** (March 30, 2026 — unused interface removed)
 
 #### P3-149: `ThumbnailRenderer` Has No Own Color Validation (Defense-in-Depth)
 

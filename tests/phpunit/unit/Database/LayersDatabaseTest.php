@@ -1077,11 +1077,8 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 				'layer_sets',
 				$this->anything(),
 				$this->callback( static function ( $conditions ) {
-					// Should include both underscore and space variants
 					$lookup = $conditions['ls_img_name'];
-					return is_array( $lookup ) &&
-						in_array( 'Test_Image.jpg', $lookup ) &&
-						in_array( 'Test Image.jpg', $lookup );
+					return $lookup === 'Test_Image.jpg';
 				} ),
 				$this->anything(),
 				$this->anything()
@@ -1105,9 +1102,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 				$this->anything(),
 				$this->callback( static function ( $conditions ) {
 					$lookup = $conditions['ls_img_name'];
-					return is_array( $lookup ) &&
-						in_array( 'Test_Image.jpg', $lookup ) &&
-						in_array( 'Test Image.jpg', $lookup );
+					return $lookup === 'Test_Image.jpg';
 				} ),
 				$this->anything(),
 				$this->anything()

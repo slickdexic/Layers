@@ -1139,17 +1139,13 @@ class LayersDatabase {
 		return str_replace( ' ', '_', $trimmed );
 	}
 
-	private function buildImageNameLookup( string $imgName ): array {
+	private function buildImageNameLookup( string $imgName ): string {
 		$normalized = $this->normalizeImageName( $imgName );
 		if ( $normalized === '' ) {
 			$this->logger->warning( 'buildImageNameLookup called with empty image name' );
-			return [ '' ];
+			return '';
 		}
-		$variants = [ $normalized, str_replace( '_', ' ', $normalized ), $imgName, str_replace( '_', ' ', $imgName ) ];
-		$filtered = array_values( array_unique( array_filter( $variants, static function ( $value ) {
-			return $value !== null && $value !== '';
-		} ) ) );
-		return $filtered ?: [ $normalized ];
+		return $normalized;
 	}
 
 	/**

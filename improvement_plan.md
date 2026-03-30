@@ -114,7 +114,7 @@ v67 fix pass (March 29): Fixed P2-216, P2-217, and D-067-01 through
 D-067-04. Validation is green on `npm test`, `npm run test:php`, and
 standalone PHPUnit (`php vendor/bin/phpunit --configuration phpunit.xml`).
 Current verified backlog: 0 open code/test items, 0 open documentation
-items, and 1 carried item (P3-147 accepted).
+items, and 0 carried items.
 
 Use the section below as the authoritative current backlog.
 
@@ -195,8 +195,8 @@ wiring with marginal benefit.
 |------|---------------------|-------------|
 | PHP / Test Infrastructure | 0 | — |
 | Documentation Drift | 0 | — |
-| Deferred | 1 (P3-147 accepted) | — |
-| **Total** | **0 open code/test** + 0 doc + 1 deferred | — |
+| Deferred | 0 | — |
+| **Total** | **0 open code/test** + 0 doc + 0 deferred | — |
 
 ### Current Priorities (v67)
 
@@ -208,7 +208,7 @@ wiring with marginal benefit.
 | 39.04 | Architecture doc stale i18n/version data | D-067-02 | Low | ✅ Fixed |
 | 39.05 | Slide mode doc stale release banner | D-067-03 | Low | ✅ Fixed |
 | 39.06 | Slide mode issues doc stale test count | D-067-04 | Low | ✅ Fixed |
-| 39.07 | Redundant SQL variants | P3-147 | Low | ✅ Accepted |
+| 39.07 | Redundant SQL variants | P3-147 | Low | ✅ Fixed |
 | 39.08 | LayerValidatorInterface unused | P3-148 | Low | ✅ Removed |
 
 ### v67 Notes
@@ -218,8 +218,11 @@ wiring with marginal benefit.
 - `scripts/verify-metrics.js` publishes **785** `layers-` i18n keys;
   the current-state docs are now aligned to that published metric.
 - `npm run test:php` passes cleanly.
-- `php vendor/bin/phpunit --configuration phpunit.xml` passes with 537
+- `php vendor/bin/phpunit --configuration phpunit.xml` passes with 539
   tests and 7 skipped.
+- P3-147 is now closed by normalizing legacy `ls_img_name` rows during
+  schema updates and simplifying runtime database lookups to one
+  canonical DB key.
 - P3-148 is now closed by removing the unused validator interface and
   its dead `extension.json` autoload entry.
 - No new exploitable SQL injection, CSRF, XSS, or permission-bypass

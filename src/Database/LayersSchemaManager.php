@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\Layers\Database;
 use MediaWiki\Installer\DatabaseUpdater;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IConnectionProvider;
+use Wikimedia\Rdbms\IDatabase;
 
 /**
  * Schema management for the Layers extension
@@ -128,6 +129,12 @@ class LayersSchemaManager {
 			// P1-012: Make ls_name NOT NULL DEFAULT 'default' (uses MODIFY COLUMN — MySQL only)
 			$updater->addExtensionUpdate( [
 				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::applyLsNameNotNullPatch'
+			] );
+
+			// P3-147: normalize legacy image names stored with spaces before
+			// read paths switch to a single canonical DB key lookup.
+			$updater->addExtensionUpdate( [
+				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::normalizeLegacyLayerSetImageNames'
 			] );
 
 			// P1-011: Change ON DELETE CASCADE to ON DELETE SET NULL for user FKs
@@ -347,6 +354,205 @@ class LayersSchemaManager {
 		$updater->output( "   Changed ls_name to NOT NULL DEFAULT 'default'.\n" );
 
 		return true;
+	}
+
+	/**
+	 * P3-147: Normalize legacy ls_img_name values stored with spaces.
+	 *
+	 * Historical rows could store both "My Image.jpg" and "My_Image.jpg"
+	 * for the same logical file. New writes already use DB keys, so the
+	 * migration only touches rows that still contain spaces. If merging those
+	 * histories would create duplicate revisions, the group is renumbered in
+	 * timestamp order to preserve a single consistent revision chain.
+	 *
+	 * @param DatabaseUpdater $updater
+	 * @return bool
+	 */
+	public static function normalizeLegacyLayerSetImageNames( DatabaseUpdater $updater ): bool {
+		$dbw = $updater->getDB();
+		$legacyGroups = self::findLegacyImageNameGroups( $dbw );
+
+		if ( $legacyGroups === [] ) {
+			$updater->output( "  ...ls_img_name values already normalized.\n" );
+			return true;
+		}
+
+		$updatedGroups = 0;
+		$renumberedGroups = 0;
+		$updatedRows = 0;
+
+		foreach ( $legacyGroups as $group ) {
+			$result = self::normalizeLegacyImageNameGroup( $dbw, $group );
+			if ( $result['updatedRows'] === 0 ) {
+				continue;
+			}
+
+			$updatedGroups++;
+			$updatedRows += $result['updatedRows'];
+			if ( $result['renumbered'] ) {
+				$renumberedGroups++;
+			}
+		}
+
+		$summary = "   Normalized {$updatedRows} layer_set rows across {$updatedGroups} image groups";
+		if ( $renumberedGroups > 0 ) {
+			$summary .= " ({$renumberedGroups} renumbered).";
+		} else {
+			$summary .= '.';
+		}
+		$updater->output( $summary . "\n" );
+
+		return true;
+	}
+
+	/**
+	 * @param IDatabase $dbw
+	 * @return array<int,array{normalizedName:string,sha1:string,setName:string,legacyNames:array<int,string>}>
+	 */
+	private static function findLegacyImageNameGroups( IDatabase $dbw ): array {
+		$legacyRows = $dbw->select(
+			'layer_sets',
+			[ 'ls_img_name', 'ls_img_sha1', 'ls_name' ],
+			[
+				'ls_img_name ' . $dbw->buildLike(
+					$dbw->anyString(),
+					' ',
+					$dbw->anyString()
+				)
+			],
+			__METHOD__
+		);
+
+		$groups = [];
+		foreach ( $legacyRows as $row ) {
+			$setName = $row->ls_name ?? 'default';
+			if ( $setName === '' ) {
+				$setName = 'default';
+			}
+
+			$normalizedName = self::normalizeStoredImageName( (string)$row->ls_img_name );
+			$key = implode( "\n", [ $normalizedName, (string)$row->ls_img_sha1, $setName ] );
+
+			if ( !isset( $groups[$key] ) ) {
+				$groups[$key] = [
+					'normalizedName' => $normalizedName,
+					'sha1' => (string)$row->ls_img_sha1,
+					'setName' => $setName,
+					'legacyNames' => []
+				];
+			}
+
+			$groups[$key]['legacyNames'][(string)$row->ls_img_name] = true;
+		}
+
+		foreach ( $groups as &$group ) {
+			$group['legacyNames'] = array_keys( $group['legacyNames'] );
+		}
+		unset( $group );
+
+		return array_values( $groups );
+	}
+
+	/**
+	 * @param IDatabase $dbw
+	 * @param array{normalizedName:string,sha1:string,setName:string,legacyNames:array<int,string>} $group
+	 * @return array{updatedRows:int,renumbered:bool}
+	 */
+	private static function normalizeLegacyImageNameGroup( IDatabase $dbw, array $group ): array {
+		$nameCandidates = array_values(
+			array_unique( array_merge( [ $group['normalizedName'] ], $group['legacyNames'] ) )
+		);
+
+		$result = $dbw->select(
+			'layer_sets',
+			[ 'ls_id', 'ls_img_name', 'ls_revision', 'ls_timestamp' ],
+			[
+				'ls_img_name' => $nameCandidates,
+				'ls_img_sha1' => $group['sha1'],
+				'ls_name' => $group['setName']
+			],
+			__METHOD__,
+			[ 'ORDER BY' => 'ls_timestamp ASC, ls_revision ASC, ls_id ASC' ]
+		);
+
+		$rows = [];
+		foreach ( $result as $row ) {
+			$rows[] = $row;
+		}
+
+		if ( $rows === [] ) {
+			return [ 'updatedRows' => 0, 'renumbered' => false ];
+		}
+
+		$seenRevisions = [];
+		$hasRevisionConflict = false;
+		foreach ( $rows as $row ) {
+			$revision = (int)$row->ls_revision;
+			if ( isset( $seenRevisions[$revision] ) ) {
+				$hasRevisionConflict = true;
+				break;
+			}
+			$seenRevisions[$revision] = true;
+		}
+
+		$dbw->startAtomic( __METHOD__ );
+		try {
+			if ( !$hasRevisionConflict ) {
+				$updatedRows = 0;
+				foreach ( $rows as $row ) {
+					if ( $row->ls_img_name === $group['normalizedName'] ) {
+						continue;
+					}
+
+					$dbw->update(
+						'layer_sets',
+						[ 'ls_img_name' => $group['normalizedName'] ],
+						[ 'ls_id' => (int)$row->ls_id ],
+						__METHOD__
+					);
+					$updatedRows++;
+				}
+
+				$dbw->endAtomic( __METHOD__ );
+				return [ 'updatedRows' => $updatedRows, 'renumbered' => false ];
+			}
+
+			$maxRevision = 0;
+			foreach ( $rows as $row ) {
+				$maxRevision = max( $maxRevision, (int)$row->ls_revision );
+			}
+
+			foreach ( $rows as $index => $row ) {
+				$dbw->update(
+					'layer_sets',
+					[
+						'ls_img_name' => $group['normalizedName'],
+						'ls_revision' => $maxRevision + $index + 1
+					],
+					[ 'ls_id' => (int)$row->ls_id ],
+					__METHOD__
+				);
+			}
+
+			foreach ( $rows as $index => $row ) {
+				$dbw->update(
+					'layer_sets',
+					[ 'ls_revision' => $index + 1 ],
+					[ 'ls_id' => (int)$row->ls_id ],
+					__METHOD__
+				);
+			}
+
+			$dbw->endAtomic( __METHOD__ );
+			return [ 'updatedRows' => count( $rows ), 'renumbered' => true ];
+		} catch ( \Throwable $e ) {
+			$dbw->endAtomic( __METHOD__ );
+			throw $e;
+		}
+	}
+
+	private static function normalizeStoredImageName( string $imgName ): string {
+		return str_replace( ' ', '_', trim( $imgName ) );
 	}
 
 	/**

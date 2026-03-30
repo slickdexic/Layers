@@ -395,6 +395,47 @@ namespace MediaWiki\Title {
 	}
 }
 
+namespace MediaWiki\Installer {
+	if ( !class_exists( DatabaseUpdater::class ) ) {
+		class DatabaseUpdater {
+			/** @var mixed */
+			private $db;
+
+			/**
+			 * @param mixed $db
+			 */
+			public function __construct( $db = null ) {
+				$this->db = $db;
+			}
+
+			/**
+			 * @return mixed
+			 */
+			public function getDB() {
+				return $this->db;
+			}
+
+			public function output( string $message ): void {
+			}
+
+			public function addExtensionTable( string $table, string $patch ): void {
+			}
+
+			public function addExtensionField( string $table, string $field, string $patch ): void {
+			}
+
+			public function addExtensionIndex( string $table, string $index, string $patch ): void {
+			}
+
+			/**
+			 * @param array $update
+			 */
+			public function addExtensionUpdate( array $update ): void {
+			}
+		}
+	}
+}
+
 namespace Wikimedia\Rdbms {
 	if ( !interface_exists( IConnectionProvider::class ) ) {
 		interface IConnectionProvider {

@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 29, 2026 (v67 audit + fix pass)
-**Previous Review:** March 28, 2026 (v67 audit)
+**Review Date:** March 30, 2026 (v67 audit + cleanup complete)
+**Previous Review:** March 29, 2026 (v67 audit + fix pass)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (GPT-5.4)
 
@@ -19,7 +19,7 @@
     95.94% lines (from current repository coverage artifacts)
 - **Jest test suites:** 172
 - **Jest test cases:** 13,880 (`npm test` / `jest` summary)
-- **PHPUnit test files:** 34 in `tests/phpunit`
+- **PHPUnit test files:** 35 in `tests/phpunit`
 - **Published i18n metric:** 785 `layers-` keys via
     `scripts/verify-metrics.js` (`842` total non-`@metadata` keys exist
     in `i18n/en.json`, but that is not the project’s published metric)
@@ -48,14 +48,17 @@ review:
 - `npm test` passes.
 - `npm run test:php` passes cleanly.
 - `php vendor/bin/phpunit --configuration phpunit.xml` passes
-    (`537` tests, `7` skipped).
+    (`539` tests, `7` skipped).
 
 The follow-up fix pass repaired the standalone bootstrap/autoload path,
 eliminated a namespace collision that shadowed the production
 `RateLimiter` during full-suite runs, aligned stale unit tests with the
-current contracts, and synced the current-state documentation.
+current contracts, synced the current-state documentation, normalized
+legacy `ls_img_name` rows during schema updates, and simplified runtime
+lookups to a single canonical DB key.
 
-P3-147 (accepted) remains carried forward.
+Post-v67 cleanup is now complete: both carried PHP backlog items
+(P3-147 and P3-148) are closed.
 
 ---
 
@@ -2916,7 +2919,9 @@ targeted verification). 7 false positives eliminated during verification
     necessary index lookups.
 - **Fix:** One-time migration to normalize existing `ls_img_name` data,
     then simplify to single-value lookups.
-- **Status:** 🔲 **Open**
+- **Status:** ✅ **Fixed** (March 30, 2026 — collision-safe `ls_img_name`
+    normalization migration added to `LayersSchemaManager`, then
+    `buildImageNameLookup()` reduced to a single canonical DB key)
 
 #### P3-148 · `LayerValidatorInterface` Unused in DI Container
 
@@ -2927,7 +2932,9 @@ targeted verification). 7 false positives eliminated during verification
     is not wired in `services.php`. It's a design contract with no
     practical effect.
 - **Impact:** Dead abstraction — not harmful, but adds cognitive overhead.
-- **Status:** 🔲 **Deferred** (low priority; validator pattern works as-is)
+- **Status:** ✅ **Fixed** (March 30, 2026 — `LayerValidatorInterface`
+    removed after verifying there were no type-hint, DI, or runtime
+    consumers)
 
 #### P3-149 · `ThumbnailRenderer` Has No Own Color Validation
 
