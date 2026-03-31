@@ -4,6 +4,38 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.63] - 2026-03-31
+
+### Fixed
+
+- **Browser compatibility gate** —
+  `ValidationManager.checkBrowserCompatibility()` now treats
+  `FileReader` and `Blob` as optional APIs so older but otherwise
+  compatible REL1_39 browsers are no longer blocked from opening the
+  editor.
+- **Compatibility warning path** — Added
+  `UIManager.showBrowserCompatibilityWarning()` so pre-bootstrap
+  compatibility warnings no longer fall through a missing UI helper.
+- **RichTextToolbar font-size parity** — Raised the inline rich-text
+  font size ceiling from `200px` to `1000px` so textbox rich text
+  matches the layer-level maximum on REL1_39.
+- **Help dialog bootstrap reliability** — Removed temporary debug DOM
+  probes from `HelpDialog.show()` and restored structured
+  `mw.log.error()` fallback reporting so the help modal always reaches
+  its keyboard-handler setup and degrades cleanly when dialog creation
+  fails.
+
+### Tests
+
+- Restored the CommonJS export in `LayerDefaults.js` so the REL1_39
+  Jest harness loads the shared defaults module consistently.
+- Added regression coverage for optional `FileReader`/`Blob` support
+  and pre-bootstrap compatibility warnings.
+- Synced the `CanvasManager` pooled-canvas cleanup test and the
+  `PresetStorage` gradient round-trip test with the current REL1_39
+  implementation.
+- All 11,496 tests pass (168 test suites) ✅
+
 ## [1.5.62] - 2026-03-12
 
 ### Fixed

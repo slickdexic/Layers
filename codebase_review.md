@@ -1,20 +1,21 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 17, 2026 (v57 audit)
-**Previous Review:** March 16, 2026 (v56 audit)
-**Version:** 1.5.62
+**Review Date:** March 31, 2026 (v1.5.63 release refresh)
+**Previous Review:** March 17, 2026 (v57 audit)
+**Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
-> **March 30, 2026 REL1_39 maintenance update:** Backported the P3-147 image-name
-> normalization fix from `main` and cleared the remaining PHP QA debt on this
-> branch. Current carried items on `REL1_39` are P3-146 (planned schema cleanup)
-> and P3-148 (deferred interface cleanup).
+> **March 31, 2026 REL1_39 v1.5.63 release update:** Relaxed the browser
+> compatibility gate for optional APIs, restored the pre-bootstrap warning
+> dialog path, raised the RichTextToolbar cap to 1,000px, and revalidated
+> the branch at 11,496 passing tests. Current carried items on `REL1_39`
+> remain P3-146 (planned schema cleanup) and P3-148 (deferred interface cleanup).
 
 ---
 
 ## Scope & Verification
 
-- **Branch Reviewed:** `main`
+- **Branch Reviewed:** `REL1_39`
 - **Verification Method:** Direct source inspection with multi-pass
     verification using 4 specialized subagent sweeps (PHP API modules,
     PHP core/database/validation, JS core editor/canvas/renderers, JS
@@ -29,7 +30,9 @@
     149 excluding dist and scripts (~110,491 lines)
 - **PHP production files:** 41 in `src/` (~15,216 lines)
 - **Jest test suites:** 168
-- **Jest test cases:** 11,847 (`npx jest --no-coverage --silent` — verified March 17, 2026 — HEAD 6f6b8c8f)
+- **Jest test cases:** 11,496
+    (`jest --modulePaths=/f/Docker/mediawiki/extensions/Layers/node_modules`
+    — revalidated March 31, 2026)
 - **PHPUnit test files:** 33 in `tests/phpunit`
 - **i18n message keys:** 780 in `i18n/en.json`, 780 in `i18n/qqq.json` (layers- prefix)
 - **API Modules:** 5 (`layersinfo`, `layerssave`, `layersdelete`,
@@ -82,7 +85,7 @@ The v57 review found **0 CRITICAL, 0 HIGH, 3 MEDIUM, and 5 LOW items**
    (ARCHITECTURE.md, SLIDE_MODE.md, NAMED_LAYER_SETS.md).
 
 The codebase retains strong architecture, comprehensive test coverage
-(92.88% statements, 11,847 tests in 168 suites), and robust security
+(92.88% statements, 11,496 tests in 168 suites), and robust security
 controls. On `REL1_39`, P3-147 is now fixed; the remaining carried items
 are P3-146 (dead table) and P3-148 (deferred interface cleanup).
 
@@ -2322,19 +2325,19 @@ but verified as non-issues:
 
 ---
 
-## Current Metrics (Verified March 16, 2026 — v56 audit)
+## Current Metrics (Verified March 31, 2026 — v1.5.63 release refresh)
 
 | Metric | Verified Current Value |
 |--------|------------------------|
-| Extension version | 1.5.62 |
-| MediaWiki requirement | >= 1.44.0 |
+| Extension version | 1.5.63 |
+| MediaWiki requirement | >= 1.39.0 |
 | PHP requirement | 8.1+ |
 | JS source files (excluding `resources/dist`) | 156 |
 | JS source lines (excluding `resources/dist`) | ~113,444 |
 | PHP production files (`src/`) | 41 |
 | PHP production lines (`src/`) | ~15,216 |
 | Jest test suites | 168 |
-| Jest tests | 11,847 |
+| Jest tests | 11,496 |
 | Statement coverage | 92.88% |
 | Branch coverage | 82.58% |
 | i18n keys (`en.json`, `qqq.json`) | 786 |

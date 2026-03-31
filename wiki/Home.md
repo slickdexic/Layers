@@ -1,10 +1,10 @@
 # Layers — Professional Image Annotation for MediaWiki
 
 <p align="center">
-  <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
+  <img src="https://img.shields.io/badge/MediaWiki-1.39%2B-blue" alt="MediaWiki 1.39+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C847%20passing-brightgreen" alt="11,847 Tests">
+  <img src="https://img.shields.io/badge/Tests-11%2C496%20passing-brightgreen" alt="11,496 Tests">
    <img src="https://img.shields.io/badge/Coverage-92.88%25-brightgreen" alt="92.88% Coverage">
 </p>
 
@@ -20,10 +20,11 @@
 
 ---
 
-## 🆕 What's New in v1.5.62
+## 🆕 What's New in v1.5.63
 
-- **v54 Audit** — Security fix (IDOR ownership check), 7 code-quality fixes
-- **Test Suite** — 11,847 tests passing (168 suites), 92.88% statement coverage
+- **Browser compatibility backports** — REL1_39 now treats `FileReader` and `Blob` as optional and routes pre-bootstrap compatibility warnings through `UIManager.showBrowserCompatibilityWarning()`.
+- **RichText font-size parity** — REL1_39 now allows inline rich-text runs up to 1,000px, matching the layer-level textbox limit.
+- **Test Suite** — 11,496 tests passing (168 suites), 92.88% statement coverage
 
 ### Previous v1.5.60 Highlights
 
@@ -316,12 +317,12 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.62 |
-| **Version (REL1_43)** | 1.5.60 |
-| **Version (REL1_39)** | 1.5.60 |
-| **Release Date** | March 10, 2026 |
+| **Version (main)** | 1.5.63 |
+| **Version (REL1_43)** | 1.5.63-REL1_43 |
+| **Version (REL1_39)** | 1.5.63-REL1_39 |
+| **Release Date** | March 31, 2026 |
 | **Test Suites** | 168 |
-| **Total Tests** | 11,847 |
+| **Total Tests** | 11,496 |
 | **PHPUnit Test Files** | 34 |
 | **Statement Coverage** | 92.88% |
 | **Branch Coverage** | 82.58% |

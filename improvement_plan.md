@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 30, 2026 — REL1_39 maintenance refresh for v1.5.62
+**Last updated:** March 31, 2026 — REL1_39 v1.5.63 release refresh
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -21,12 +21,15 @@ items fixed**, P3-159/P3-160 verified resolved (coverage >98%),
 v57 audit found **5 new code issues** (3 MEDIUM, 2 LOW) plus **5
 documentation drift items**. 12 false positives eliminated during
 verification. REL1_39 maintenance on March 30, 2026 fixed P3-147 and
-cleared the branch PHP QA debt. P3-146 and P3-148 remain carried.
+cleared the branch PHP QA debt. The March 31, 2026 v1.5.63 release
+refresh relaxed the browser compatibility gate, restored the warning
+dialog path, raised the RichTextToolbar cap to 1,000px, and revalidated
+the branch Jest suite. P3-146 and P3-148 remain carried.
 Use the section below as the authoritative current backlog.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 17, 2026 — v1.5.62)
+## Verified Current Backlog (Authoritative as of March 31, 2026 — v1.5.63)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
@@ -70,7 +73,7 @@ Use the section below as the authoritative current backlog.
   limiter, lightbox race, DraftManager data loss, cache key collision,
   PropertiesForm input update, WeakMap cleanup, SetNameSanitizer empty,
   renameNamedSet TOCTOU).
-- Metrics verified: 11,847 tests (was 11,606), 92.88% stmt coverage
+- Metrics verified: 11,496 tests (168 suites), 92.88% stmt coverage
   (was 91.32%), 82.58% branch (was 81.69%), ~113,550 JS lines, ~15,216
   PHP lines, 158 JS files.
 
