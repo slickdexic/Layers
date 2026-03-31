@@ -216,7 +216,7 @@ class UIHooks {
 	 * @param string &$html HTML to be added after image links
 	 * @return bool|void
 	 */
-	public function onImagePageAfterImageLinks( $imagePage, &$html ) {
+	public static function onImagePageAfterImageLinks( $imagePage, &$html ) {
 		try {
 			$title = $imagePage->getTitle();
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {

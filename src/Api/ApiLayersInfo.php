@@ -264,8 +264,7 @@ class ApiLayersInfo extends ApiBase {
 						'includeData' => false
 					]
 				);
-				$hasMore = count( $allLayerSets ) > $limit;
-				if ( $hasMore ) {
+				if ( count( $allLayerSets ) > $limit ) {
 					$allLayerSets = array_slice( $allLayerSets, 0, $limit );
 				}
 			} else {
@@ -314,8 +313,7 @@ class ApiLayersInfo extends ApiBase {
 							'includeData' => false
 						]
 					);
-					$hasMore = count( $allLayerSets ) > $limit;
-					if ( $hasMore ) {
+					if ( count( $allLayerSets ) > $limit ) {
 						$allLayerSets = array_slice( $allLayerSets, 0, $limit );
 					}
 				}

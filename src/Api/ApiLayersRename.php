@@ -54,8 +54,8 @@ class ApiLayersRename extends ApiBase {
 		$params = $this->extractRequestParams();
 		$requestedFilename = $params['filename'] ?? null;
 		$slidename = $params['slidename'] ?? null;
-		$oldName = trim( $params['oldname'] );
-		$newName = trim( $params['newname'] );
+		$oldName = SetNameSanitizer::sanitize( $params['oldname'] );
+		$newName = SetNameSanitizer::sanitize( $params['newname'] );
 
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );
@@ -286,12 +286,16 @@ class ApiLayersRename extends ApiBase {
 	 * @param string $newName The new set name
 	 */
 	private function executeSlideRename( $user, string $slidename, string $oldName, string $newName ): void {
-		// Validate old name format using central validator (consistency with file rename path)
+		// Sanitize names using central sanitizer (consistency with file rename path)
+		$oldName = SetNameSanitizer::sanitize( $oldName );
+		$newName = SetNameSanitizer::sanitize( $newName );
+
+		// Validate old name format
 		if ( !SetNameSanitizer::isValid( $oldName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
-		// Validate new name format using central validator
+		// Validate new name format
 		if ( !SetNameSanitizer::isValid( $newName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
