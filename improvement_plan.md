@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 30, 2026 — post-v67 cleanup complete
+**Last updated:** March 31, 2026 — v1.5.63 release refresh complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -46,7 +46,7 @@ keys, 42 PHP files.
 v61 audit found **2 MEDIUM + 2 LOW code issues** (P2-188, P2-189,
 P3-190, P3-191) plus **5 documentation drift items** (D-061-01 to
 D-061-05). 14 false positives eliminated during verification. All v60
-code and doc fixes verified intact. Metrics: 13,880 tests (172 suites),
+code and doc fixes verified intact. Metrics: 13,882 tests (172 suites),
 95.82%/87.00% coverage, 842 i18n keys. P3-147 (accepted), P3-148
 (deferred) carried forward.
 
@@ -213,7 +213,7 @@ wiring with marginal benefit.
 
 ### v67 Notes
 
-- `npm test` passes on `main`: 172 Jest suites, 13,880 tests,
+- `npm test` passes on `main`: 172 Jest suites, 13,882 tests,
   95.82% statement coverage, 87.00% branch coverage.
 - `scripts/verify-metrics.js` publishes **785** `layers-` i18n keys;
   the current-state docs are now aligned to that published metric.

@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 30, 2026 — post-v67 cleanup
+**Last updated:** March 31, 2026 — v1.5.63 release refresh
 
 Open in v67: 0 new code/test issues and 0 documentation items.
 
@@ -62,7 +62,7 @@ No carried-forward items remain open.*
 - **Issue:** Current branch table, version examples, and workflow text
   still describe `1.5.62` and `11,847` tests.
 - **Verification:** `extension.json` is `1.5.63`; current Jest summary
-  is `13,880` tests in `172` suites.
+  is `13,882` tests in `172` suites.
 - **Status:** ✅ Fixed
 
 #### D-067-02: `docs/ARCHITECTURE.md` Wrong Published i18n Metric
@@ -83,13 +83,13 @@ No carried-forward items remain open.*
 #### D-067-04: `docs/SLIDE_MODE_ISSUES.md` Still Says “All 11,847 Tests Pass”
 
 - **Issue:** Test-count claim is stale.
-- **Verification:** Current Jest summary is `13,880` tests in `172`
+- **Verification:** Current Jest summary is `13,882` tests in `172`
   suites.
 - **Status:** ✅ Fixed
 
 ### Verification
 
-- `npm test` passes: 172 suites, 13,880 tests.
+- `npm test` passes: 172 suites, 13,882 tests.
 - `npm run test:php` passes cleanly.
 - `php vendor/bin/phpunit --configuration phpunit.xml` passes:
   539 tests, 7 skipped.

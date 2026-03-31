@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-13%2C880%20passing-brightgreen" alt="13,880 Tests">
+  <img src="https://img.shields.io/badge/Tests-13%2C882%20passing-brightgreen" alt="13,882 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.82%25-brightgreen" alt="95.82% Coverage">
 </p>
 
@@ -22,9 +22,12 @@
 
 ## 🆕 What's New in v1.5.63
 
-- **APICacheManager Extracted** — Cache logic separated from APIManager into standalone module
-- **P3-146 Dead Table Removed** — `layer_set_usage` table fully cleaned up
-- **1,976 New Tests** — 13,880 tests (172 suites), 95.82% stmts, 87.00% branches
+- **APICacheManager Extracted** — Cache logic separated from APIManager
+  into a standalone module
+- **Compatibility Backports** — Browser gating now treats
+  `FileReader`/`Blob` as optional, and pre-bootstrap warnings route
+  through `UIManager.showBrowserCompatibilityWarning()`
+- **Test Suite** — 13,882 tests (172 suites), 95.82% stmts, 87.00% branches
 
 ### Previous v1.5.62 Highlights
 
@@ -318,11 +321,11 @@ See [[Changelog]] for full details.
 | Metric | Value |
 |--------|-------|
 | **Version (main)** | 1.5.63 |
-| **Version (REL1_43)** | 1.5.60 |
-| **Version (REL1_39)** | 1.5.60 |
-| **Release Date** | March 28, 2026 |
+| **Version (REL1_43)** | 1.5.63-REL1_43 |
+| **Version (REL1_39)** | 1.5.63-REL1_39 |
+| **Release Date** | March 31, 2026 |
 | **Test Suites** | 172 |
-| **Total Tests** | 13,880 |
+| **Total Tests** | 13,882 |
 | **PHPUnit Test Files** | 34 |
 | **Statement Coverage** | 95.82% |
 | **Branch Coverage** | 87.00% |

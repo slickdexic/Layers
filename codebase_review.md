@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 30, 2026 (v67 audit + cleanup complete)
-**Previous Review:** March 29, 2026 (v67 audit + fix pass)
+**Review Date:** March 31, 2026 (v1.5.63 release refresh)
+**Previous Review:** March 30, 2026 (v67 audit + cleanup complete)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (GPT-5.4)
 
@@ -18,7 +18,7 @@
 - **Coverage:** 95.82% statements, 87.00% branches, 93.98% functions,
     95.94% lines (from current repository coverage artifacts)
 - **Jest test suites:** 172
-- **Jest test cases:** 13,880 (`npm test` / `jest` summary)
+- **Jest test cases:** 13,882 (`npm test` / `jest` summary)
 - **PHPUnit test files:** 35 in `tests/phpunit`
 - **Published i18n metric:** 785 `layers-` keys via
     `scripts/verify-metrics.js` (`842` total non-`@metadata` keys exist
@@ -3999,7 +3999,7 @@ but verified as non-issues:
 
 ---
 
-## Current Metrics (Verified March 25, 2026 — v60 audit)
+## Current Metrics (Verified March 31, 2026 — v1.5.63 release refresh)
 
 | Metric | Verified Current Value |
 |--------|------------------------|
@@ -4011,10 +4011,10 @@ but verified as non-issues:
 | PHP production files (`src/`) | 42 |
 | PHP production lines (`src/`) | ~15,364 |
 | Jest test suites | 172 |
-| Jest tests | 13,880 |
+| Jest tests | 13,882 |
 | Statement coverage | 95.82% |
 | Branch coverage | 87.00% |
-| i18n keys (`en.json`, `qqq.json`) | 841 |
+| i18n keys (`en.json`, `qqq.json`) | 785 published `layers-` keys |
 | PHPUnit test files | 34 |
 | Files > 1,000 lines | 26 total |
 | ESLint disable comments | 18 (all legitimate) |

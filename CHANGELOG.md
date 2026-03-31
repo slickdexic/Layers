@@ -4,7 +4,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
-## [1.5.63] - 2026-03-23
+## [1.5.63] - 2026-03-31
 
 ### Added
 - **APICacheManager** — Extracted cache logic from APIManager.js into
@@ -16,18 +16,20 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   (dead since creation). Cleaned up references in SchemaManager,
   LayersConstants, layers_tables.sql, and documentation files. Added
   `patch-drop-layer_set_usage.sql` migration.
+- **Browser compatibility gate** — `ValidationManager.checkBrowserCompatibility()`
+  now treats `FileReader` and `Blob` as optional APIs so older but
+  otherwise compatible browsers are no longer blocked from opening the
+  editor.
+- **Compatibility warning path** — Added
+  `UIManager.showBrowserCompatibilityWarning()` so pre-bootstrap
+  compatibility warnings no longer fall through a missing UI helper.
 
 ### Tests
-- 63 new unit tests across 7 test files: GeometryUtils (4), LayerRenderer (7),
-  DraftManager (5), APIManager (19), DialogManager (7), CanvasRenderer (5),
-  APICacheManager (16). Coverage: 94.24% stmts, 84.17% branches
-  (was 92.88% / 82.58%). Total: 11,904 tests in 168 suites.
-- 37 new E2E tests in 2 files: properties.spec.js (24 tests — property panel
-  visibility, per-type property inputs, value changes, undo), transforms.spec.js
-  (13 tests — drag-move, property-based positioning, multi-select, nudge,
-  duplication, z-order). E2E total: 164 tests in 10 files.
-- Enhanced fixtures.js POM with property panel selectors, `getPropertyValue()`,
-  `setPropertyValue()`, `createAndSelectLayer()`, `dragOnCanvas()` helpers.
+- Expanded Jest and E2E coverage throughout the v1.5.63 cycle,
+  including compatibility regressions for missing `FileReader`/`Blob`
+  support and pre-bootstrap warning handling.
+- All 13,882 tests pass (172 test suites) ✅
+- Coverage snapshot: 95.82% statements, 87.00% branches.
 
 ## [1.5.62] - 2026-03-17
 

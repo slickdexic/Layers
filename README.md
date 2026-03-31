@@ -3,12 +3,12 @@
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
 [![Coverage](https://img.shields.io/badge/coverage-95.82%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-13%2C880%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-13%2C882%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.63 (March 23, 2026)  
+> **Version:** 1.5.63 (March 31, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -326,11 +326,11 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
   - 5 generated data files (ShapeLibraryData variants + EmojiLibraryIndex) are exempt from refactoring
   - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
 
-**Test Coverage (Verified March 28, 2026):**
+**Validation Snapshot:**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 13,880 passing (172 suites) |
+| Jest tests | 13,882 passing (172 suites) |
 | PHPUnit tests | 34 test files |
 | Statement coverage | 95.82% |
 | Branch coverage | 87.00% |
@@ -390,7 +390,7 @@ npm run test:js -- --coverage
 | Total JS lines | ~114,000 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
-| Tests passing | 13,880 | ✅ |
+| Tests passing | 13,882 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.82% | ✅ Excellent |
 | Branch coverage | 87.00% | ✅ Target met |
