@@ -179,11 +179,11 @@
 			html += '</div>';
 			html += '</div>';
 			html += '<div class="layers-slide-actions">';
-			html += '<button class="layers-slide-edit-btn cdx-button">' +
+			html += `<button type="button" class="layers-slide-edit-btn cdx-button" aria-label="${ mw.html.escape( mw.message( 'special-slides-edit' ).text() + ': ' + slide.name ) }">` +
 				mw.message( 'special-slides-edit' ).escaped() + '</button>';
 
 			if ( this.config.canDelete ) {
-				html += '<button class="layers-slide-delete-btn cdx-button cdx-button--action-destructive">' +
+				html += `<button type="button" class="layers-slide-delete-btn cdx-button cdx-button--action-destructive" aria-label="${ mw.html.escape( mw.message( 'special-slides-delete' ).text() + ': ' + slide.name ) }">` +
 					mw.message( 'special-slides-delete' ).escaped() + '</button>';
 			}
 
@@ -209,12 +209,12 @@
 			let html = `<span class="layers-pagination-count">${ countMsg }</span>`;
 			html += '<div class="layers-pagination-buttons">';
 
-			const prevDisabled = this.currentOffset === 0 ? 'disabled' : '';
-			html += `<button class="layers-pagination-prev cdx-button" ${ prevDisabled }>` +
+			const prevDisabled = this.currentOffset === 0 ? 'disabled aria-disabled="true"' : '';
+			html += `<button type="button" class="layers-pagination-prev cdx-button" ${ prevDisabled }>` +
 				mw.message( 'special-slides-prev' ).escaped() + '</button>';
 
-			const nextDisabled = this.currentOffset + this.limit >= this.totalSlides ? 'disabled' : '';
-			html += `<button class="layers-pagination-next cdx-button" ${ nextDisabled }>` +
+			const nextDisabled = this.currentOffset + this.limit >= this.totalSlides ? 'disabled aria-disabled="true"' : '';
+			html += `<button type="button" class="layers-pagination-next cdx-button" ${ nextDisabled }>` +
 				mw.message( 'special-slides-next' ).escaped() + '</button>';
 
 			html += '</div>';

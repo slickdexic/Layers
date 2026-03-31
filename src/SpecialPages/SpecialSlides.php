@@ -122,6 +122,7 @@ class SpecialSlides extends SpecialPage {
 		$html .= '<div class="layers-slides-toolbar">';
 		$html .= '<div class="layers-slides-search">';
 		$html .= '<input type="text" class="layers-slides-search-input cdx-text-input__input" ';
+		$html .= 'aria-label="' . $this->msg( 'special-slides-search' )->escaped() . '" ';
 		$html .= 'placeholder="' . $this->msg( 'special-slides-search' )->escaped() . '" />';
 		$html .= '</div>';
 		$html .= '<div class="layers-slides-sort">';
