@@ -27,7 +27,7 @@ This extension is feature-rich by design with **17 drawing tools**, multiple ren
 Separation of concerns is strict: PHP integrates with MediaWiki and storage; JavaScript implements the editor UI/state.
 
 - Backend (PHP, `src/`)
-  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.44.0)
+  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.43.0)
   - Service wiring: `services.php` registers 3 services: LayersLogger, LayersSchemaManager, LayersDatabase (uses DI pattern)
   - Logging: `src/Logging/` provides `LoggerAwareTrait` (for objects with getLogger/setLogger), `StaticLoggerAwareTrait` (for static contexts), and `LayersLogger` (factory via service container)
   - API modules (`src/Api/`)
@@ -442,7 +442,7 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,847 tests in 168 suites — verified March 17, 2026)
+- Test count (11,494 tests in 168 suites — verified March 31, 2026)
 - Coverage (92.88% statement, 82.58% branch — verified March 17, 2026)
 - JavaScript file count (158 files total, ~113,550 lines)
 - PHP file count (41 files, ~15,216 lines)
@@ -452,4 +452,4 @@ Common metrics to keep synchronized:
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.62)
+- Version number (1.5.63)

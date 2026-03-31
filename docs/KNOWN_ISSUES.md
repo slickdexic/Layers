@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last updated:** March 30, 2026 — REL1_43 maintenance refresh for v1.5.62
+**Last updated:** March 31, 2026 — REL1_43 v1.5.63 release refresh
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -18,9 +18,10 @@ traceability.
 | **Total** | **391** | **389** | **2** |
 
 *All v57 code and documentation items are fixed on this branch.
-Current carry-forward items are P3-146 (dead table removal) and
-P3-148 (deferred interface cleanup). P3-147 was fixed during the
-March 30, 2026 REL1_43 maintenance refresh.*
+REL1_43 v1.5.63 revalidated 11,494 passing Jest tests. Current
+carry-forward items are P3-146 (dead table removal) and P3-148
+(deferred interface cleanup). P3-147 was fixed during the March 30,
+2026 REL1_43 maintenance refresh.*
 
 ---
 

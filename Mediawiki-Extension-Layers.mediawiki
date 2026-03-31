@@ -8,14 +8,14 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.62
-|update          = 2026-03-14
+|version         = 1.5.63
+|update          = 2026-03-31
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
 |tags            = {{bulleted list|{{tag|annotation|o}}|{{tag|canvas|o}}|{{tag|drawing|o}}|{{tag|image editor|o}}|{{tag|image markup|o}}|{{tag|non-destructive|o}}}}
-|mediawiki       = >= 1.44.0
+|mediawiki       = >= 1.43.0
 |php             = >= 8.1
 |needs-updatephp = yes
 |table1          = layer_assets
@@ -121,11 +121,11 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.62
+| 1.44+ || <code>main</code> || 1.5.63
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.62
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.63
 |-
-| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.5.62
+| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.5.63
 |}
 {{ExtensionInstall
 |registration=required
@@ -322,7 +322,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~113k lines including generated shape/emoji data).
-* '''Stability:''' 11,847 Jest tests (168 suites) with 92.88% statement coverage and 82.58% branch coverage.
+* '''Stability:''' 11,494 Jest tests (168 suites) with 92.88% statement coverage and 82.58% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

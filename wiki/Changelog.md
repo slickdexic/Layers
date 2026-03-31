@@ -4,6 +4,29 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.63] - 2026-03-31
+
+### Fixed
+
+- **RichTextToolbar font-size parity** — Raised the inline rich-text font
+  size ceiling from `200px` to `1000px` so textbox rich text matches
+  the layer-level maximum and no longer clamps valid large values on
+  REL1_43.
+- **Help dialog bootstrap reliability** — Removed temporary debug DOM
+  probes from `HelpDialog.show()` and restored structured
+  `mw.log.error()` fallback reporting so the help modal always reaches
+  its keyboard-handler setup and degrades cleanly when dialog creation
+  fails.
+
+### Tests
+
+- Restored the CommonJS export in `LayerDefaults.js` so the REL1_43
+  Jest harness loads the shared defaults module consistently.
+- Synced the `CanvasManager` pooled-canvas cleanup test and the
+  `PresetStorage` gradient round-trip test with the current REL1_43
+  implementation.
+- All 11,494 tests pass (168 test suites) ✅
+
 ## [1.5.62] - 2026-03-12
 
 ### Fixed
