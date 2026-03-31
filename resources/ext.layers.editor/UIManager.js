@@ -478,6 +478,24 @@
 		return Promise.resolve( window.prompt( options.message, options.defaultValue || '' ) );
 	}
 
+	/**
+	 * Show a browser compatibility warning before the editor UI is created.
+	 * This path runs before createInterface(), so it must not depend on
+	 * this.container existing yet.
+	 *
+	 * @return {Promise<void>}
+	 */
+	showBrowserCompatibilityWarning() {
+		return this.showAlertDialog( {
+			title: this.getMessage( 'layers-alert-title', 'Notice' ),
+			message: this.getMessage(
+				'layers-browser-compatibility',
+				'Your browser may not support all layer features'
+			),
+			type: 'warning'
+		} );
+	}
+
 	showSpinner( message ) {
 		this.hideSpinner();
 		this.spinnerEl = document.createElement( 'div' );

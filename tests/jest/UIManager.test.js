@@ -1440,6 +1440,40 @@ describe( 'UIManager', () => {
 			expect( mockShowPrompt ).toHaveBeenCalledWith( { message: 'Prompt', placeholder: 'hint' } );
 			expect( result ).toBe( 'dialog input' );
 		} );
+
+		it( 'showBrowserCompatibilityWarning should fallback to window.alert when dialogManager not available', async () => {
+			const editorWithoutDialog = {
+				...mockEditor,
+				dialogManager: null
+			};
+			const uiManager = new UIManager( editorWithoutDialog );
+
+			const mockAlert = jest.fn();
+			window.alert = mockAlert;
+
+			await uiManager.showBrowserCompatibilityWarning();
+
+			expect( mockAlert ).toHaveBeenCalledWith( 'Your browser may not support all layer features' );
+		} );
+
+		it( 'showBrowserCompatibilityWarning should use dialogManager when available', async () => {
+			const mockShowAlert = jest.fn().mockResolvedValue();
+			const editorWithDialog = {
+				...mockEditor,
+				dialogManager: {
+					showAlertDialog: mockShowAlert
+				}
+			};
+			const uiManager = new UIManager( editorWithDialog );
+
+			await uiManager.showBrowserCompatibilityWarning();
+
+			expect( mockShowAlert ).toHaveBeenCalledWith( {
+				title: uiManager.getMessage( 'layers-alert-title', 'Notice' ),
+				message: 'Your browser may not support all layer features',
+				type: 'warning'
+			} );
+		} );
 	} );
 
 	describe( 'namespace fallback getClass', () => {
