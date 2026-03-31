@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 31, 2026 — v1.5.63 release refresh complete
+**Last updated:** March 31, 2026 — v68 fix pass complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -113,7 +113,14 @@ confirmed.
 v67 fix pass (March 29): Fixed P2-216, P2-217, and D-067-01 through
 D-067-04. Validation is green on `npm test`, `npm run test:php`, and
 standalone PHPUnit (`php vendor/bin/phpunit --configuration phpunit.xml`).
-Current verified backlog: 0 open code/test items, 0 open documentation
+
+v68 audit (March 31) found **1 MEDIUM + 5 LOW code issues**
+(P2-218, P3-219 to P3-223) plus **4 documentation drift items**
+(D-068-01 to D-068-04). 40+ false positives eliminated during
+manual source verification. Audit scope: full codebase (PHP + JS).
+No new exploitable security vulnerabilities confirmed.
+
+Current verified backlog: 0 open code items, 0 open documentation
 items, and 0 carried items.
 
 Use the section below as the authoritative current backlog.
@@ -189,14 +196,41 @@ wiring with marginal benefit.
 
 ---
 
-## Verified Current Backlog (Authoritative as of March 30, 2026 — post-v67 cleanup)
+## Verified Current Backlog (Authoritative as of March 31, 2026 — v68 fix pass)
 
 | Area | Verified Open Items | Est. Effort |
 |------|---------------------|-------------|
-| PHP / Test Infrastructure | 0 | — |
+| PHP (Input Sanitization) | 0 | — |
+| PHP (Dead Code / Style) | 0 | — |
+| JS (Accessibility) | 0 | — |
 | Documentation Drift | 0 | — |
-| Deferred | 0 | — |
-| **Total** | **0 open code/test** + 0 doc + 0 deferred | — |
+| **Total** | **0 open code** + 0 doc | — |
+
+### Current Priorities (v68)
+
+| # | Issue | Ref | Priority | Status |
+|---|-------|-----|----------|--------|
+| 40.01 | ApiLayersRename missing sanitize() | P2-218 | MED | ✅ Fixed |
+| 40.02 | ApiLayersInfo unused $hasMore | P3-219 | Low | ✅ Fixed |
+| 40.03 | UIHooks mixed static/instance methods | P3-220 | Low | ✅ Fixed |
+| 40.04 | SpecialSlides buttons missing aria-label | P3-221 | Low | ✅ Fixed |
+| 40.05 | SpecialSlides search input missing label | P3-222 | Low | ✅ Fixed |
+| 40.06 | SpecialSlides pagination a11y gaps | P3-223 | Low | ✅ Fixed |
+| 40.07 | ARCHITECTURE.md test count 13,880→13,882 | D-068-01 | Doc | ✅ Fixed |
+| 40.08 | wiki/Home.md line 35 test count inconsistency | D-068-02 | Doc | ✅ Fixed |
+| 40.09 | ARCHITECTURE.md vs wiki/Home i18n ambiguity | D-068-03 | Doc | ✅ Fixed |
+| 40.10 | DEVELOPER_ONBOARDING.md stale line counts | D-068-04 | Doc | ✅ Fixed |
+
+### v68 Notes
+
+- `npm test` passes on `main`: 172 Jest suites, 13,882 tests,
+  95.82% statement coverage, 87.00% branch coverage.
+- `npm run test:php` passes cleanly.
+- No new exploitable SQL injection, CSRF, XSS, or permission-bypass
+  issues were confirmed in the v68 audit.
+- 40+ candidate issues were verified against source code and
+  eliminated as false positives during this audit.
+- All 6 code items and 4 doc drift items fixed in single pass.
 
 ### Current Priorities (v67)
 
@@ -2063,6 +2097,7 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
+| 2026-03-31 | v68 audit + fix pass: 1 MEDIUM (P2-218) + 5 LOW (P3-219 to P3-223) + 4 doc drift (D-068-01 to D-068-04). All fixed. 40+ FPs eliminated. |
 | 2026-03-04 | v45.6 batch 6: 3 P2 fixes (P2-081 callout blur bounds, P2-083 i18n shortcut descriptions, P2-075 shadow rotation decomposition). All P2 items now resolved. Totals: 262/228/34. |
 | 2026-03-04 | v45.5 batch 5: 3 P2 fixes (P2-088 N+1 batch query, P2-090 request-boundary state reset, P2-091 getLayerBounds delegation). Totals: 254/208/46. |
 | 2026-03-04 | v45.4 batch 4: 5 fixes (P1-037 color preview cancel, P3-080 dead cache code, P3-084 DimensionRenderer defaults, P3-085 opacity clamp, P3-086 blob URL leak). Totals: 254/205/49. |

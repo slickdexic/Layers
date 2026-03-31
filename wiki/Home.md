@@ -32,7 +32,7 @@
 ### Previous v1.5.62 Highlights
 
 - **16 Bug Fixes** — Zoom-to-pointer anchor drift, 15 P3 code-quality fixes
-- **Test Suite** — 13,880 tests passing (172 suites)
+- **Test Suite** — 13,882 tests passing (172 suites)
 
 ### Previous v1.5.59 Highlights
 
@@ -334,7 +334,7 @@ See [[Changelog]] for full details.
 | **JavaScript Files** | 157 |
 | **ES6 Classes** | 140 |
 | **God Classes** | 26 (5 generated, 19 JS, 2 PHP) |
-| **i18n Messages** | 841 |
+| **i18n Messages** | 842 (785 `layers-` prefixed) |
 
 ---
 

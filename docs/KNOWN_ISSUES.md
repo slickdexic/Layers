@@ -1,8 +1,8 @@
 # Known Issues
 
-**Last updated:** March 31, 2026 — v1.5.63 release refresh
+**Last updated:** March 31, 2026 — v68 audit
 
-Open in v67: 0 new code/test issues and 0 documentation items.
+Open in v68: 0 (all 6 code + 4 doc items fixed in v68 fix pass).
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -15,12 +15,44 @@ traceability.
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 61 | 61 | 0 |
-| P2 | 164 | 164 | 0 |
-| P3 | 216 | 216 | 0 |
-| **Total** | **446** | **446** | **0** |
+| P2 | 165 | 165 | 0 |
+| P3 | 221 | 221 | 0 |
+| **Total** | **452** | **452** | **0** |
 
-*No documentation drift items remain open from v67.
-No carried-forward items remain open.*
+*All v68 items (6 code + 4 doc) fixed. 0 open items.*
+
+---
+
+## v68 Fix Pass (March 31, 2026; all 10 v68 items resolved)
+
+Audit v68 found 1 medium code issue, 5 low code issues, and 4
+documentation drift items. 40+ false positives were eliminated through
+manual source verification. All items fixed immediately.
+
+### P2-218: ApiLayersRename Missing `SetNameSanitizer::sanitize()`
+
+- **File:** `src/Api/ApiLayersRename.php` (lines 57–58, 96–103)
+- **Issue:** Uses `trim()` + `isValid()` instead of `sanitize()` for
+  both `oldname` and `newname` parameters. All other write endpoints
+  use `sanitize()` which collapses whitespace, strips control chars,
+  and enforces max length. A name with double spaces passes `isValid()`
+  but won't match the DB-stored sanitized name.
+- **Status:** ✅ Fixed
+
+### Documentation Drift
+
+| ID | File | Issue | Status |
+|----|------|-------|--------|
+| D-068-01 | docs/ARCHITECTURE.md | 13,880→13,882 at lines 35, 928, 1005 | ✅ Fixed |
+| D-068-02 | wiki/Home.md | Line 35 says 13,880; lines 7, 30, 328 say 13,882 | ✅ Fixed |
+| D-068-03 | docs/ARCHITECTURE.md | i18n "785" vs wiki/Home "841" ambiguity | ✅ Fixed |
+| D-068-04 | docs/DEVELOPER_ONBOARDING.md | Module line counts stale | ✅ Fixed |
+
+### Verification
+
+- `npm test` passes: 172 suites, 13,882 tests.
+- `npm run test:php` passes cleanly.
+- No new exploitable security vulnerabilities confirmed.
 
 ---
 

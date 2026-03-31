@@ -1,6 +1,6 @@
 # Layers Extension Developer Onboarding & Architecture Overview
 
-**Last Updated:** February 2026
+**Last Updated:** March 2026
 
 ## Introduction
 This document provides an overview of the Layers extension architecture and onboarding steps for new developers.
@@ -14,20 +14,20 @@ This document provides an overview of the Layers extension architecture and onbo
 
 | Module | Purpose | Lines |
 |--------|---------|-------|
-| `LayersEditor.js` | Main orchestrator | ~1,790 |
-| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,037 |
-| `LayerPanel.js` | Layer list UI component | ~2,195 |
-| `SelectionManager.js` | Selection state management | ~1,418 |
+| `LayersEditor.js` | Main orchestrator | ~1,888 |
+| `CanvasManager.js` | Canvas facade (delegates to controllers) | ~2,110 |
+| `LayerPanel.js` | Layer list UI component | ~2,166 |
+| `SelectionManager.js` | Selection state management | ~1,467 |
 | `ToolManager.js` | Tool state and switching | ~799 |
 | `ArrowRenderer.js` | Arrow rendering (curved support) | ~932 |
 | `ShapeRenderer.js` | Shape rendering (shared) | ~959 |
-| `LayerRenderer.js` | Shared rendering engine | ~973 |
-| `TransformController.js` | Resize, rotate, drag operations | ~990 |
-| `DialogManager.js` | Modal dialogs with ARIA | ~736 |
-| `ShadowRenderer.js` | Shadow effect rendering | ~576 |
-| `RevisionManager.js` | Revision and named set management | ~499 |
-| `EditorBootstrap.js` | Initialization, hooks, cleanup | ~482 |
-| `AccessibilityAnnouncer.js` | Screen reader support | ~241 |
+| `LayerRenderer.js` | Shared rendering engine | ~999 |
+| `TransformController.js` | Resize, rotate, drag operations | ~1,221 |
+| `DialogManager.js` | Modal dialogs with ARIA | ~626 |
+| `ShadowRenderer.js` | Shadow effect rendering | ~635 |
+| `RevisionManager.js` | Revision and named set management | ~500 |
+| `EditorBootstrap.js` | Initialization, hooks, cleanup | ~504 |
+| `AccessibilityAnnouncer.js` | Screen reader support | ~264 |
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full module dependency graph.
 

@@ -1,20 +1,23 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 31, 2026 (v1.5.63 release refresh)
-**Previous Review:** March 30, 2026 (v67 audit + cleanup complete)
+**Review Date:** March 31, 2026 (v68 comprehensive audit)
+**Previous Review:** March 31, 2026 (v1.5.63 release refresh / v67)
 **Version:** 1.5.63
-**Reviewer:** GitHub Copilot (GPT-5.4)
+**Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
 ---
 
 ## Scope & Verification
 
 - **Branch reviewed:** `main`
-- **Verification method:** Direct source inspection across PHP, JS,
-    test harness, and documentation; targeted PHPUnit slices used to
-    collapse stale-test and bootstrap failures into verified root
-    causes; follow-up validation completed with `npm test`,
-    `npm run test:php`, and `php vendor/bin/phpunit --configuration phpunit.xml`.
+- **Verification method:** Full-codebase source inspection across all
+    PHP (API modules, database layer, hooks, validation, security) and JS
+    (editor core, canvas controllers, renderers, viewer, UI, tools,
+    state management, slides). Automated subagent sweeps identified 50+
+    candidate issues; manual source verification against actual code
+    confirmed 1 MEDIUM code item, 5 LOW items, and 4 documentation drift
+    items. 40+ false positives eliminated during verification. Final
+    validation completed with `npm test` and `npm run test:php`.
 - **Coverage:** 95.82% statements, 87.00% branches, 93.98% functions,
     95.94% lines (from current repository coverage artifacts)
 - **Jest test suites:** 172
@@ -32,33 +35,255 @@
 
 ## Executive Summary
 
-This review focused on current repository health rather than re-auditing
-the large backlog of already-fixed issues. No new exploitable security
-vulnerabilities or confirmed production authorization/validation
-regressions were found in the API, database, or rendering paths. The
-v67 findings were concentrated in developer workflow quality and
-documentation accuracy, and the full follow-up fix pass is now complete.
+This review was a comprehensive, full-codebase critical audit covering
+all PHP backend code (API modules, database layer, validation, security,
+hooks, special pages) and all JavaScript frontend code (editor core,
+canvas controllers, shared renderers, viewer modules, UI controllers,
+tools, state management, and slides). Over 50 candidate issues were
+investigated; rigorous manual verification against actual source code
+eliminated 40+ false positives and confirmed 1 MEDIUM code issue, 5 LOW
+items, and 4 documentation drift items.
 
-**v67 findings:** 0 CRITICAL, 0 HIGH, 2 MEDIUM code/test-infrastructure
-items, 4 LOW documentation drift items. All 6 items are now resolved.
+**v68 findings:** 0 CRITICAL, 0 HIGH, 1 MEDIUM code item, 5 LOW
+code/style items, 4 documentation drift items. **10 total.**
 
-The repository is fully green on the validated workflows used in this
-review:
+The repository is fully green on the validated workflows:
 
-- `npm test` passes.
+- `npm test` passes: 172 suites, 13,882 tests.
 - `npm run test:php` passes cleanly.
-- `php vendor/bin/phpunit --configuration phpunit.xml` passes
-    (`539` tests, `7` skipped).
 
-The follow-up fix pass repaired the standalone bootstrap/autoload path,
-eliminated a namespace collision that shadowed the production
-`RateLimiter` during full-suite runs, aligned stale unit tests with the
-current contracts, synced the current-state documentation, normalized
-legacy `ls_img_name` rows during schema updates, and simplified runtime
-lookups to a single canonical DB key.
+### Strengths Identified
 
-Post-v67 cleanup is now complete: both carried PHP backlog items
-(P3-147 and P3-148) are closed.
+- **Security architecture is strong.** All 5 API write endpoints
+    enforce CSRF tokens, permission checks, and rate limiting. SQL
+    injection is prevented by MediaWiki's prepared-statement abstraction.
+    XSS is prevented by proper HTML escaping (RichTextConverter uses the
+    safe `textContent → innerHTML` pattern). SVG validation in
+    ServerSideLayerValidator blocks script injection, event handlers,
+    dangerous protocols, and embedded objects. Input validation uses
+    strict property whitelists with type/range/length checks.
+- **Error handling is consistent.** API modules wrap all operations in
+    try/catch with Throwable, log structured context, and return i18n
+    error keys rather than leaking internals.
+- **Race condition handling is well-implemented.** Database operations
+    use atomic transactions with `FOR UPDATE` locks and exponential
+    backoff retry. Canvas operations use RAF scheduling with boolean
+    guards to prevent double-scheduling. Lightbox open/close uses
+    synchronous cleanup before re-entry.
+- **Test coverage is excellent.** 13,882 tests at 95.82% statement
+    coverage and 87.00% branch coverage is well above industry norms.
+- **Code organization follows strong patterns.** The controller/facade
+    pattern in CanvasManager, the ModuleRegistry for dependency
+    management, and the shared renderer architecture all demonstrate
+    thoughtful design.
+- **Memory management is thorough.** EventTracker prevents listener
+    leaks, destroy() methods properly cancel RAF IDs and clear timeouts,
+    WeakMap tracks viewer DOM references, and LRU caches have bounded
+    eviction.
+
+### Areas for Improvement
+
+- **ApiLayersRename input sanitization gap** — the one confirmed MEDIUM
+    issue, where set names are validated but not sanitized, creating
+    inconsistency with the other 3 write endpoints.
+- **Documentation metric drift** — several files show 13,880 tests
+    instead of the verified 13,882.
+- **Minor code style inconsistency** in UIHooks.php and dead code in
+    ApiLayersInfo.php.
+
+---
+
+## Confirmed Findings (v68 — March 31, 2026)
+
+1 code item, 5 code-style/quality items, and 4 documentation drift
+items were verified. 40+ false positives were eliminated during manual
+source verification.
+
+### v68 Quick-Reference Table
+
+| ID | Sev. | Status | Notes |
+|----|------|--------|-------|
+| P2-218 | Medium | ✅ Fixed | ApiLayersRename missing sanitize() |
+| P3-219 | Low | ✅ Fixed | ApiLayersInfo unused $hasMore variable |
+| P3-220 | Low | ✅ Fixed | UIHooks mixed static/instance methods |
+| P3-221 | Low | ✅ Fixed | SpecialSlides.js buttons missing aria-label |
+| P3-222 | Low | ✅ Fixed | SpecialSlides.js search input missing label |
+| P3-223 | Low | ✅ Fixed | SpecialSlides.js pagination a11y gaps |
+| D-068-01 | Doc | ✅ Fixed | ARCHITECTURE.md test count 13,880→13,882 |
+| D-068-02 | Doc | ✅ Fixed | wiki/Home.md line 35 test count 13,880→13,882 |
+| D-068-03 | Doc | ✅ Fixed | ARCHITECTURE.md i18n count inconsistent with wiki/Home.md |
+| D-068-04 | Doc | ✅ Fixed | DEVELOPER_ONBOARDING.md stale module line counts |
+
+### Medium — PHP (Input Sanitization)
+
+#### P2-218 · `ApiLayersRename` Missing `SetNameSanitizer::sanitize()`
+
+- **File:** `src/Api/ApiLayersRename.php` (lines 57–58, 96–103,
+    268–275)
+- **Issue:** ApiLayersRename uses only `trim()` + `isValid()` for
+    `oldname` and `newname` parameters. All other write endpoints
+    (`ApiLayersSave`, `ApiLayersDelete`, `ApiLayersInfo`) use
+    `SetNameSanitizer::sanitize()` which performs additional
+    normalization: collapsing repeated whitespace, removing control
+    characters and path separators, removing invalid Unicode, and
+    enforcing max length with multibyte safety.
+- **Verification:** Direct comparison of parameter handling:
+    - `ApiLayersSave.php`: `SetNameSanitizer::sanitize( $params['setname'] )`
+    - `ApiLayersDelete.php`: `SetNameSanitizer::sanitize( $params['setname'] )`
+    - `ApiLayersInfo.php`: `SetNameSanitizer::sanitize( $params['setname'] )`
+    - `ApiLayersRename.php`: `trim( $params['oldname'] )` + `isValid()`
+    only
+    - `SetNameSanitizer::isValid()` uses regex `/^[\p{L}\p{N}_\-\s]+$/u`
+    which accepts any sequence of whitespace including double spaces.
+    `sanitize()` collapses them via `preg_replace( '/\s+/u', ' ', ... )`.
+- **Impact:** A set name with double spaces `"my  set"` passes
+    `isValid()` but does not match the DB-stored sanitized name
+    `"my set"`, causing `renameNamedSet()` to silently fail (no rows
+    matched). The same inconsistency affects `executeSlideRename()`.
+- **Fix:** Replace `trim()` + `isValid()` with `sanitize()` for both
+    `$oldName` and `$newName` in `execute()` and `executeSlideRename()`.
+
+### Low — PHP (Dead Code)
+
+#### P3-219 · `ApiLayersInfo` Unused `$hasMore` Pagination Variable
+
+- **File:** `src/Api/ApiLayersInfo.php` (lines ~254, ~294)
+- **Issue:** The `$hasMore` variable is computed (by fetching
+    `limit + 1` results and checking `count() > $limit`) but never
+    returned to the client as a continuation token. The pagination
+    detection logic is dead code.
+- **Verification:** Searched for `hasMore` usage — the variable is
+    assigned in two code paths but never included in the API response.
+    No `$result['continue']` or similar field is set.
+- **Impact:** Minor dead code. If pagination is ever needed,
+    `$hasMore` is available but the client has no way to use it.
+
+### Low — PHP (Code Style)
+
+#### P3-220 · `UIHooks.php` Mixed Static/Instance Method Pattern
+
+- **File:** `src/Hooks/UIHooks.php` (line 224)
+- **Issue:** `onImagePageAfterImageLinks()` is declared as an instance
+    method while all other hook methods in the same class
+    (`onSkinTemplateNavigation`, `onSkinTemplateNavigation__Universal`)
+    are declared `static`. This works because PHP allows calling static
+    methods on instances and MediaWiki's HookHandler instantiates the
+    class, but the inconsistency is confusing for maintenance.
+- **Verification:** All other hook methods in UIHooks use
+    `public static function`. The class is registered as a HookHandler
+    in `extension.json`, so all methods are called on instances.
+- **Impact:** Code style inconsistency. No functional bug.
+
+### Low — JavaScript (Accessibility)
+
+#### P3-221 · `SpecialSlides.js` Edit/Delete Buttons Missing `aria-label`
+
+- **File:** `resources/ext.layers.slides/SpecialSlides.js` (lines
+    174–179)
+- **Issue:** Edit and delete buttons in the slides listing are created
+    without `aria-label` or `type="button"` attributes. The button text
+    content alone may not provide sufficient context for screen readers
+    (e.g., "Edit" without identifying which slide).
+- **Verification:** Confirmed the buttons have only `class` and text
+    content. Compare SlideController.js (lines 824–835) which properly
+    sets ARIA attributes on interactive elements.
+- **Impact:** WCAG 2.1 Level AA accessibility gap.
+
+#### P3-222 · `SpecialSlides.js` Search Input Missing Label Association
+
+- **File:** `resources/ext.layers.slides/SpecialSlides.js` (line 50)
+- **Issue:** The search input and sort select elements lack `aria-label`
+    attributes and have no associated `<label>` elements. The PHP
+    Special page builds the input with `placeholder` text but no
+    programmatic label.
+- **Impact:** Screen readers cannot identify the purpose of these
+    form controls.
+
+#### P3-223 · `SpecialSlides.js` Pagination Buttons Missing `aria-disabled`
+
+- **File:** `resources/ext.layers.slides/SpecialSlides.js` (lines
+    206–211)
+- **Issue:** Pagination previous/next buttons use the HTML `disabled`
+    attribute but lack `aria-disabled` and `type="button"`.
+- **Impact:** Minor accessibility gap; some assistive technologies
+    rely on `aria-disabled` rather than the native attribute.
+
+### Documentation Drift
+
+#### D-068-01 · `docs/ARCHITECTURE.md` Stale Test Count (13,880 → 13,882)
+
+- **File:** `docs/ARCHITECTURE.md` (lines 35, 928, 1005)
+- **Issue:** Three locations show `13,880` tests; verified count is
+    `13,882` (from `npm test` output).
+
+#### D-068-02 · `wiki/Home.md` Internal Test Count Inconsistency
+
+- **File:** `wiki/Home.md` (line 35)
+- **Issue:** Line 35 says "13,880 tests passing" while lines 7, 30,
+    and 328 correctly say "13,882". Internal inconsistency.
+
+#### D-068-03 · `docs/ARCHITECTURE.md` vs `wiki/Home.md` i18n Count Mismatch
+
+- **File:** `docs/ARCHITECTURE.md` vs `wiki/Home.md`
+- **Issue:** ARCHITECTURE.md says "785 i18n messages" while
+    wiki/Home.md says "841 i18n messages". The project publishes the
+    `layers-` prefixed count (785) via `scripts/verify-metrics.js`, while
+    842 is the total non-metadata key count. Both are correct for their
+    definitions but the docs don't clarify which metric is used.
+
+#### D-068-04 · `docs/DEVELOPER_ONBOARDING.md` Module Line Counts Need Refresh
+
+- **File:** `docs/DEVELOPER_ONBOARDING.md` (lines 18–30)
+- **Issue:** Module table shows line counts that may have drifted as
+    files have grown through recent audit fix passes. No "last verified"
+    date is shown to help readers assess freshness.
+
+### v68 Verified Non-Issues (40+ False Positives Eliminated)
+
+The following candidate issues were investigated and confirmed as
+non-issues through manual source verification:
+
+- **pruneOldRevisions() raw SQL in delete()** — The numeric-indexed
+    string in the conditions array (`'ls_id NOT IN (...)'`) is valid
+    MediaWiki IDatabase API usage where numeric keys are treated as raw
+    WHERE clauses.
+- **saveInProgress not cleared on validation failure** — Validation
+    check at line 891 occurs BEFORE `saveInProgress` is set to true at
+    line 898. The flag is never in an incorrect state.
+- **RichTextConverter XSS via innerHTML** — `escapeHtml()` uses the
+    safe `textContent → innerHTML` DOM pattern. User text is properly
+    escaped before insertion.
+- **InlineTextEditor _blurTimeout memory leak** — `_removeEventHandlers()`
+    (called from `destroy()`) properly clears `_blurTimeout` at line 994.
+- **StateManager coalescing loses state** — Intentional design to
+    prevent notification storms. Documented in comments.
+- **reloadRevisions() spinner not cleared** — No spinner is shown
+    before this API call; nothing to clear.
+- **DraftManager _saveFailNotified never reset** — Intentional
+    one-time notification design to prevent spam on repeated auto-save
+    failures.
+- **TransformController RAF ID overwrite** — Protected by
+    `_*RenderScheduled` boolean guards that prevent double-scheduling.
+    `destroy()` properly cancels all 4 RAF IDs.
+- **HistoryManager lastSaveHistoryIndex desync** — The adjustment logic
+    correctly handles each `.shift()` removal: decrement if index > 0,
+    set to -1 if index === 0 (saved entry removed).
+- **SpecialSlides.js XSS in data attribute** — `mw.html.escape()` is
+    called at line 151 before the value is used in both content and
+    attribute contexts.
+- **str_starts_with() PHP compatibility** — MediaWiki 1.44+ requires
+    PHP 8.1+, which has `str_starts_with()` built in.
+- **TransformController getSelectedLayerId() missing** — Method exists
+    on CanvasManager.js (line 460).
+- **DrawingController angle dimension phase reset** — `CanvasManager
+    .setTool()` calls `cancelAngleDimension()` when switching away.
+- **DrawingController isValidShape() NaN handling** — `Math.abs(NaN)`
+    returns NaN, and `NaN >= minSize` correctly evaluates to false,
+    rejecting invalid shapes.
+- **EditorBootstrap timer cascade** — `pendingTimers` array tracks all
+    setTimeout IDs; `cleanupGlobalEditorInstance()` clears them.
+- **CanvasRenderer boolean normalization** — LayerDataNormalizer handles
+    API boolean/integer conversion centrally.
 
 ---
 
