@@ -324,19 +324,21 @@ class ValidationManager {
 	 *
 	 * @return {boolean} True if browser meets requirements
 	 */
-	checkBrowserCompatibility() {
+	checkBrowserCompatibility( browserWindow = window, browserDocument = document ) {
 		const requiredFeatures = [
-			'HTMLCanvasElement' in window,
-			'JSON' in window,
-			'addEventListener' in document,
-			'querySelector' in document,
-			'FileReader' in window,
-			'Blob' in window
+			'HTMLCanvasElement' in browserWindow,
+			'JSON' in browserWindow,
+			'addEventListener' in browserDocument,
+			'querySelector' in browserDocument
 		];
 
-		if ( window.HTMLCanvasElement ) {
+		// FileReader and Blob are used by optional import/export flows.
+		// They should not prevent the editor from opening in otherwise
+		// compatible browsers.
+
+		if ( browserWindow.HTMLCanvasElement ) {
 			try {
-				const testCanvas = document.createElement( 'canvas' );
+				const testCanvas = browserDocument.createElement( 'canvas' );
 				const ctx = testCanvas.getContext( '2d' );
 				requiredFeatures.push( !!ctx );
 			} catch ( e ) {

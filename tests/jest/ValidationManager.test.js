@@ -546,6 +546,23 @@ describe( 'ValidationManager', () => {
 	} );
 
 	describe( 'checkBrowserCompatibility', () => {
+		const createCompatibilityObjects = ( windowOverrides = {}, canvasContext = {} ) => ( {
+			browserWindow: {
+				HTMLCanvasElement: function() {},
+				JSON: originalJSON,
+				FileReader: function() {},
+				Blob: function() {},
+				...windowOverrides
+			},
+			browserDocument: {
+				addEventListener: jest.fn(),
+				querySelector: jest.fn(),
+				createElement: jest.fn( () => ( {
+					getContext: jest.fn( () => canvasContext )
+				} ) )
+			}
+		} );
+
 		test( 'should return true when all features present', () => {
 			// Default setup has all features
 			const result = manager.checkBrowserCompatibility();
@@ -564,16 +581,24 @@ describe( 'ValidationManager', () => {
 			expect( result ).toBe( false );
 		} );
 
-		test( 'should return false when FileReader missing', () => {
-			delete global.window.FileReader;
-			const result = manager.checkBrowserCompatibility();
-			expect( result ).toBe( false );
+		test( 'should return true when FileReader missing', () => {
+			const compatibility = createCompatibilityObjects( { FileReader: undefined } );
+			delete compatibility.browserWindow.FileReader;
+			const result = manager.checkBrowserCompatibility(
+				compatibility.browserWindow,
+				compatibility.browserDocument
+			);
+			expect( result ).toBe( true );
 		} );
 
-		test( 'should return false when Blob missing', () => {
-			delete global.window.Blob;
-			const result = manager.checkBrowserCompatibility();
-			expect( result ).toBe( false );
+		test( 'should return true when Blob missing', () => {
+			const compatibility = createCompatibilityObjects( { Blob: undefined } );
+			delete compatibility.browserWindow.Blob;
+			const result = manager.checkBrowserCompatibility(
+				compatibility.browserWindow,
+				compatibility.browserDocument
+			);
+			expect( result ).toBe( true );
 		} );
 
 		test( 'should handle canvas context creation failure', () => {
