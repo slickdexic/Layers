@@ -1391,4 +1391,324 @@ describe( 'LayersEditor Coverage Extension', () => {
 			expect( setLayers[ 1 ].type ).toBe( 'rectangle' );
 		} );
 	} );
+
+	// ========================================================================
+	// Branch coverage: duplicateSelected fallback with endpoint offsets
+	// ========================================================================
+	describe( 'duplicateSelected fallback - endpoint and control point offsets', () => {
+		let editorInst;
+
+		beforeEach( () => {
+			editorInst = new LayersEditor( {
+				filename: 'Test.jpg',
+				imageUrl: '/test.jpg'
+			} );
+			// Force fallback path: ensure selectionManager doesn't have duplicateSelected
+			editorInst.canvasManager = {
+				getSelectedLayerIds: jest.fn(),
+				setSelectedLayerIds: jest.fn(),
+				renderLayers: jest.fn()
+			};
+		} );
+
+		it( 'should offset arrow/line endpoints (x1,y1,x2,y2)', () => {
+			const arrowLayer = {
+				id: 'arrow1', type: 'arrow',
+				x: 10, y: 20,
+				x1: 10, y1: 20, x2: 100, y2: 80
+			};
+			editorInst.canvasManager.getSelectedLayerIds.mockReturnValue( [ 'arrow1' ] );
+			editorInst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [ arrowLayer ];
+				}
+				return null;
+			} );
+			editorInst.addLayer = jest.fn( ( layer ) => {
+				layer.id = 'dup_arrow';
+			} );
+
+			editorInst.duplicateSelected();
+
+			expect( editorInst.addLayer ).toHaveBeenCalled();
+			const dupLayer = editorInst.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( dupLayer.x1 ).toBe( 30 );
+			expect( dupLayer.y1 ).toBe( 40 );
+			expect( dupLayer.x2 ).toBe( 120 );
+			expect( dupLayer.y2 ).toBe( 100 );
+		} );
+
+		it( 'should offset curved arrow control points (controlX,controlY)', () => {
+			const curvedArrow = {
+				id: 'ca1', type: 'arrow',
+				x: 0, y: 0,
+				controlX: 50, controlY: 60
+			};
+			editorInst.canvasManager.getSelectedLayerIds.mockReturnValue( [ 'ca1' ] );
+			editorInst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [ curvedArrow ];
+				}
+				return null;
+			} );
+			editorInst.addLayer = jest.fn( ( layer ) => {
+				layer.id = 'dup_ca';
+			} );
+
+			editorInst.duplicateSelected();
+
+			const dupLayer = editorInst.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( dupLayer.controlX ).toBe( 70 );
+			expect( dupLayer.controlY ).toBe( 80 );
+		} );
+
+		it( 'should offset marker/callout arrow tip (arrowX,arrowY)', () => {
+			const marker = {
+				id: 'm1', type: 'marker',
+				x: 10, y: 10,
+				arrowX: 40, arrowY: 50
+			};
+			editorInst.canvasManager.getSelectedLayerIds.mockReturnValue( [ 'm1' ] );
+			editorInst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [ marker ];
+				}
+				return null;
+			} );
+			editorInst.addLayer = jest.fn( ( layer ) => {
+				layer.id = 'dup_m';
+			} );
+
+			editorInst.duplicateSelected();
+
+			const dupLayer = editorInst.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( dupLayer.arrowX ).toBe( 60 );
+			expect( dupLayer.arrowY ).toBe( 70 );
+		} );
+
+		it( 'should offset polygon/path points', () => {
+			const polygon = {
+				id: 'p1', type: 'polygon',
+				x: 0, y: 0,
+				points: [ { x: 10, y: 20 }, { x: 30, y: 40 } ]
+			};
+			editorInst.canvasManager.getSelectedLayerIds.mockReturnValue( [ 'p1' ] );
+			editorInst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [ polygon ];
+				}
+				return null;
+			} );
+			editorInst.addLayer = jest.fn( ( layer ) => {
+				layer.id = 'dup_p';
+			} );
+
+			editorInst.duplicateSelected();
+
+			const dupLayer = editorInst.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( dupLayer.points ).toEqual( [ { x: 30, y: 40 }, { x: 50, y: 60 } ] );
+		} );
+
+		it( 'should offset angle dimension anchors (ax,ay,cx,cy,bx,by)', () => {
+			const angleDim = {
+				id: 'ad1', type: 'angleDimension',
+				x: 0, y: 0,
+				ax: 10, ay: 10,
+				cx: 50, cy: 50,
+				bx: 90, by: 10
+			};
+			editorInst.canvasManager.getSelectedLayerIds.mockReturnValue( [ 'ad1' ] );
+			editorInst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [ angleDim ];
+				}
+				return null;
+			} );
+			editorInst.addLayer = jest.fn( ( layer ) => {
+				layer.id = 'dup_ad';
+			} );
+
+			editorInst.duplicateSelected();
+
+			const dupLayer = editorInst.addLayer.mock.calls[ 0 ][ 0 ];
+			expect( dupLayer.ax ).toBe( 30 );
+			expect( dupLayer.ay ).toBe( 30 );
+			expect( dupLayer.cx ).toBe( 70 );
+			expect( dupLayer.cy ).toBe( 70 );
+			expect( dupLayer.bx ).toBe( 110 );
+			expect( dupLayer.by ).toBe( 30 );
+		} );
+
+		it( 'should select new layer IDs after duplication', () => {
+			editorInst.canvasManager.getSelectedLayerIds.mockReturnValue( [ 'l1' ] );
+			editorInst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [ { id: 'l1', type: 'rectangle', x: 0, y: 0 } ];
+				}
+				return null;
+			} );
+			editorInst.addLayer = jest.fn( ( layer ) => {
+				layer.id = 'new_dup';
+			} );
+
+			editorInst.duplicateSelected();
+
+			expect( editorInst.canvasManager.setSelectedLayerIds ).toHaveBeenCalledWith( [ 'new_dup' ] );
+		} );
+
+		it( 'should do nothing when no layers are selected', () => {
+			editorInst.canvasManager.getSelectedLayerIds.mockReturnValue( [] );
+			editorInst.addLayer = jest.fn();
+			editorInst.duplicateSelected();
+			expect( editorInst.addLayer ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	// ========================================================================
+	// Branch coverage: navigateBackToFileWithName edge cases
+	// ========================================================================
+	describe( 'navigateBackToFileWithName - slide and modal branches', () => {
+		let editorInst;
+
+		beforeEach( () => {
+			editorInst = new LayersEditor( {
+				filename: 'Test.jpg',
+				imageUrl: '/test.jpg'
+			} );
+			// Reset mw.config.get for each test
+			window.mw.config.get = jest.fn().mockReturnValue( null );
+		} );
+
+		it( 'should postMessage to parent in modal mode', () => {
+			window.mw.config.get = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'wgLayersIsModalMode' ) {
+					return true;
+				}
+				return null;
+			} );
+			const postMessageMock = jest.fn();
+			Object.defineProperty( window, 'parent', {
+				value: { postMessage: postMessageMock },
+				writable: true,
+				configurable: true
+			} );
+			editorInst.stateManager.get = jest.fn().mockReturnValue( false );
+
+			editorInst.navigateBackToFileWithName( 'Test.jpg' );
+
+			expect( postMessageMock ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					type: 'layers-editor-close',
+					saved: true,
+					filename: 'Test.jpg'
+				} ),
+				expect.any( String )
+			);
+		} );
+
+		it( 'should enter returnToUrl branch when set', () => {
+			window.mw.config.get = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'wgLayersReturnToUrl' ) {
+					return '/wiki/Return_Page';
+				}
+				return null;
+			} );
+
+			// Spy on history.back to verify it's NOT called (returnToUrl should return early)
+			const backSpy = jest.fn();
+			Object.defineProperty( window, 'history', {
+				value: { back: backSpy, length: 5 },
+				writable: true,
+				configurable: true
+			} );
+
+			// navigateBackToFileWithName sets window.location.href then returns
+			// In jsdom, same-origin href assignment works; cross-origin might not
+			try {
+				editorInst.navigateBackToFileWithName( 'Test.jpg' );
+			} catch ( e ) {
+				// jsdom may throw on navigation - that's OK, the branch was still covered
+			}
+			// The returnToUrl branch should return before history.back()
+			expect( backSpy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should use history.back() for slides with history', () => {
+			editorInst.stateManager.get = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				return null;
+			} );
+			const backMock = jest.fn();
+			Object.defineProperty( window, 'history', {
+				value: { back: backMock, length: 5 },
+				writable: true,
+				configurable: true
+			} );
+
+			editorInst.navigateBackToFileWithName( 'Test.jpg' );
+			expect( backMock ).toHaveBeenCalled();
+		} );
+
+		it( 'should use Special:Slides for slides without history', () => {
+			editorInst.stateManager.get = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				return null;
+			} );
+			Object.defineProperty( window, 'history', {
+				value: { back: jest.fn(), length: 1 },
+				writable: true,
+				configurable: true
+			} );
+			window.mw.util = {
+				getUrl: jest.fn( () => '/wiki/Special:Slides' )
+			};
+
+			// href assignment for same-origin relative URL
+			try {
+				editorInst.navigateBackToFileWithName( 'Test.jpg' );
+			} catch ( e ) {
+				// Navigation may throw in jsdom
+			}
+
+			expect( window.mw.util.getUrl ).toHaveBeenCalledWith( 'Special:Slides' );
+		} );
+
+		it( 'should fall back to reload for slides without history or mw.util', () => {
+			editorInst.stateManager.get = jest.fn().mockImplementation( ( key ) => {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				return null;
+			} );
+			Object.defineProperty( window, 'history', {
+				value: { back: jest.fn(), length: 1 },
+				writable: true,
+				configurable: true
+			} );
+			window.mw.util = null;
+
+			// Execute the branch; window.location.reload() is a no-op in jsdom
+			// The try/catch in the method prevents any propagation
+			expect( () => editorInst.navigateBackToFileWithName( 'Test.jpg' ) ).not.toThrow();
+			// Verify the history.back path was NOT taken (confirming fallback was reached)
+			expect( window.history.back ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should use history.back when no filename', () => {
+			editorInst.stateManager.get = jest.fn().mockReturnValue( null );
+			const backMock = jest.fn();
+			Object.defineProperty( window, 'history', {
+				value: { back: backMock, length: 3 },
+				writable: true,
+				configurable: true
+			} );
+
+			editorInst.navigateBackToFileWithName( null );
+			expect( backMock ).toHaveBeenCalled();
+		} );
+	} );
 } );

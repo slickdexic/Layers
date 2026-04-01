@@ -4945,4 +4945,435 @@ describe( 'LayerRenderer', () => {
 			expect( renderer.hasBlurBlendMode( {} ) ).toBe( false );
 		} );
 	} );
+
+	// ========================================================================
+	// Branch coverage: _drawShapePath with minimal/missing properties
+	// Targets binary-expr branch 1 defaults (|| 0, || 50, etc.)
+	// ========================================================================
+	describe( 'branch coverage - _drawShapePath minimal properties', () => {
+		it( 'handles rectangle with all properties missing (defaults to 0)', () => {
+			const mockCtx = createMockContext();
+			mockCtx.beginPath();
+
+			expect( () => {
+				renderer._drawShapePath( { type: 'rectangle' }, { scale: { sx: 1, sy: 1, avg: 1 } }, mockCtx );
+			} ).not.toThrow();
+			// Should call rect with zeros from || 0 defaults
+			expect( mockCtx.rect ).toHaveBeenCalled();
+		} );
+
+		it( 'handles rect type alias with missing properties', () => {
+			const mockCtx = createMockContext();
+			expect( () => {
+				renderer._drawShapePath( { type: 'rect' }, { scale: { sx: 1, sy: 1, avg: 1 } }, mockCtx );
+			} ).not.toThrow();
+		} );
+
+		it( 'handles circle with missing x, y, radius', () => {
+			const mockCtx = createMockContext();
+			expect( () => {
+				renderer._drawShapePath( { type: 'circle' }, { scale: { sx: 1, sy: 1, avg: 1 } }, mockCtx );
+			} ).not.toThrow();
+			expect( mockCtx.arc ).toHaveBeenCalledWith( 0, 0, 0, 0, Math.PI * 2 );
+		} );
+
+		it( 'handles ellipse with missing x, y, radiusX, radiusY, width, height', () => {
+			const mockCtx = createMockContext();
+			expect( () => {
+				renderer._drawShapePath( { type: 'ellipse' }, { scale: { sx: 1, sy: 1, avg: 1 } }, mockCtx );
+			} ).not.toThrow();
+			expect( mockCtx.ellipse ).toHaveBeenCalled();
+		} );
+
+		it( 'handles polygon with missing x, y, radius, sides', () => {
+			const mockCtx = createMockContext();
+			expect( () => {
+				renderer._drawShapePath( { type: 'polygon' }, { scale: { sx: 1, sy: 1, avg: 1 } }, mockCtx );
+			} ).not.toThrow();
+			// Default sides = 6, default radius = 50
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+			expect( mockCtx.lineTo ).toHaveBeenCalled();
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'handles star with missing x, y, radius, innerRadius, points', () => {
+			const mockCtx = createMockContext();
+			expect( () => {
+				renderer._drawShapePath( { type: 'star' }, { scale: { sx: 1, sy: 1, avg: 1 } }, mockCtx );
+			} ).not.toThrow();
+			// Default points = 5, default radius = 50
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+			expect( mockCtx.closePath ).toHaveBeenCalled();
+		} );
+
+		it( 'handles unknown type (falls through to rectangle)', () => {
+			const mockCtx = createMockContext();
+			expect( () => {
+				renderer._drawShapePath( { type: 'unknown_type' }, { scale: { sx: 1, sy: 1, avg: 1 } }, mockCtx );
+			} ).not.toThrow();
+			expect( mockCtx.rect ).toHaveBeenCalled();
+		} );
+
+		it( 'handles rotation with circle type (centerX=x, centerY=y)', () => {
+			const mockCtx = createMockContext();
+			renderer._drawShapePath(
+				{ type: 'circle', rotation: 45 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			expect( mockCtx.translate ).toHaveBeenCalled();
+			expect( mockCtx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'handles rotation with ellipse type (centerX=x, centerY=y)', () => {
+			const mockCtx = createMockContext();
+			renderer._drawShapePath(
+				{ type: 'ellipse', rotation: 90 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			expect( mockCtx.translate ).toHaveBeenCalled();
+			expect( mockCtx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'handles rotation with rectangle (center = x+w/2, y+h/2)', () => {
+			const mockCtx = createMockContext();
+			renderer._drawShapePath(
+				{ type: 'rectangle', rotation: 30 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			expect( mockCtx.translate ).toHaveBeenCalled();
+			expect( mockCtx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'skips rotation when rotation is 0', () => {
+			const mockCtx = createMockContext();
+			renderer._drawShapePath(
+				{ type: 'rectangle', rotation: 0, x: 10, y: 10, width: 50, height: 50 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			expect( mockCtx.rotate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'handles missing scale in opts (defaults to 1,1,1)', () => {
+			const mockCtx = createMockContext();
+			expect( () => {
+				renderer._drawShapePath( { type: 'rectangle' }, {}, mockCtx );
+			} ).not.toThrow();
+		} );
+
+		it( 'handles rectangle with cornerRadius > 0 and roundRect available', () => {
+			const mockCtx = createMockContext();
+			mockCtx.roundRect = jest.fn();
+			renderer._drawShapePath(
+				{ type: 'rectangle', x: 0, y: 0, width: 100, height: 100, cornerRadius: 10 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			expect( mockCtx.roundRect ).toHaveBeenCalled();
+		} );
+
+		it( 'handles rectangle with cornerRadius > 0 but no roundRect', () => {
+			const mockCtx = createMockContext();
+			delete mockCtx.roundRect;
+			renderer._drawShapePath(
+				{ type: 'rectangle', x: 0, y: 0, width: 100, height: 100, cornerRadius: 10 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			expect( mockCtx.rect ).toHaveBeenCalled();
+		} );
+
+		it( 'clamps cornerRadius to half of min dimension', () => {
+			const mockCtx = createMockContext();
+			mockCtx.roundRect = jest.fn();
+			renderer._drawShapePath(
+				{ type: 'rectangle', x: 0, y: 0, width: 40, height: 20, cornerRadius: 100 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			// cornerRadius clamped to min(40,20)/2 = 10
+			expect( mockCtx.roundRect ).toHaveBeenCalledWith( 0, 0, 40, 20, 10 );
+		} );
+
+		it( 'supplies default innerRadius for star (outerRadius * 0.5)', () => {
+			const mockCtx = createMockContext();
+			renderer._drawShapePath(
+				{ type: 'star', x: 50, y: 50, radius: 40, points: 5 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			// Should use innerRadius = 40 * 0.5 = 20
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+		} );
+
+		it( 'uses outerRadius from layer.outerRadius if radius is missing', () => {
+			const mockCtx = createMockContext();
+			renderer._drawShapePath(
+				{ type: 'star', x: 50, y: 50, outerRadius: 60, points: 3 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			expect( mockCtx.moveTo ).toHaveBeenCalled();
+		} );
+
+		it( 'ellipse uses width/2 and height/2 when radiusX/radiusY missing', () => {
+			const mockCtx = createMockContext();
+			renderer._drawShapePath(
+				{ type: 'ellipse', x: 50, y: 50, width: 100, height: 60 },
+				{ scale: { sx: 1, sy: 1, avg: 1 } },
+				mockCtx
+			);
+			expect( mockCtx.ellipse ).toHaveBeenCalledWith( 50, 50, 50, 30, 0, 0, Math.PI * 2 );
+		} );
+	} );
+
+	// ========================================================================
+	// Branch coverage: drawCustomShape fallback Path2D branches
+	// ========================================================================
+	describe( 'branch coverage - drawCustomShape fallback details', () => {
+		beforeEach( () => {
+			// Ensure no CustomShapeRenderer is available so fallback Path2D path is used
+			delete window.Layers.ShapeLibrary;
+			delete window.CustomShapeRenderer;
+		} );
+
+		it( 'handles missing layer.width and layer.height (defaults to 100)', () => {
+			expect( () => {
+				renderer.drawCustomShape( {
+					path: 'M0 0 L10 10',
+					viewBox: [ 0, 0, 10, 10 ],
+					x: 0, y: 0
+				} );
+			} ).not.toThrow();
+		} );
+
+		it( 'handles missing layer.x and layer.y (defaults to 0)', () => {
+			expect( () => {
+				renderer.drawCustomShape( {
+					path: 'M0 0 L10 10',
+					viewBox: [ 0, 0, 10, 10 ],
+					width: 50, height: 50
+				} );
+			} ).not.toThrow();
+		} );
+
+		it( 'applies opacity when not 1', () => {
+			renderer.drawCustomShape( {
+				path: 'M0 0 L10 10',
+				viewBox: [ 0, 0, 10, 10 ],
+				x: 0, y: 0, width: 50, height: 50,
+				opacity: 0.5
+			} );
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'does not set opacity when it equals 1', () => {
+			const origAlpha = ctx.globalAlpha;
+			renderer.drawCustomShape( {
+				path: 'M0 0 L10 10',
+				viewBox: [ 0, 0, 10, 10 ],
+				x: 0, y: 0, width: 50, height: 50,
+				opacity: 1
+			} );
+			// globalAlpha should not have been changed
+			expect( ctx.globalAlpha ).toBe( origAlpha );
+		} );
+
+		it( 'applies rotation when rotation is set', () => {
+			renderer.drawCustomShape( {
+				path: 'M0 0 L10 10',
+				viewBox: [ 0, 0, 10, 10 ],
+				x: 0, y: 0, width: 50, height: 50,
+				rotation: 45
+			} );
+			expect( ctx.translate ).toHaveBeenCalled();
+			expect( ctx.rotate ).toHaveBeenCalled();
+		} );
+
+		it( 'skips transparent fill', () => {
+			renderer.drawCustomShape( {
+				path: 'M0 0 L10 10',
+				viewBox: [ 0, 0, 10, 10 ],
+				x: 0, y: 0, width: 50, height: 50,
+				fill: 'transparent'
+			} );
+			// Fill should NOT be called for transparent
+			// But stroke or other ops may proceed
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+
+		it( 'skips none fill', () => {
+			renderer.drawCustomShape( {
+				path: 'M0 0 L10 10',
+				viewBox: [ 0, 0, 10, 10 ],
+				x: 0, y: 0, width: 50, height: 50,
+				fill: 'none'
+			} );
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+
+		it( 'applies fillRule from layer', () => {
+			expect( () => {
+				renderer.drawCustomShape( {
+					path: 'M0 0 L10 10 L10 0 Z',
+					viewBox: [ 0, 0, 10, 10 ],
+					x: 0, y: 0, width: 50, height: 50,
+					fill: '#ff0000',
+					fillRule: 'evenodd'
+				} );
+			} ).not.toThrow();
+			// Path2D fill is called on the context
+			expect( ctx.save ).toHaveBeenCalled();
+			expect( ctx.restore ).toHaveBeenCalled();
+		} );
+
+		it( 'skips transparent stroke', () => {
+			renderer.drawCustomShape( {
+				path: 'M0 0 L10 10',
+				viewBox: [ 0, 0, 10, 10 ],
+				x: 0, y: 0, width: 50, height: 50,
+				stroke: 'transparent'
+			} );
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+
+		it( 'skips none stroke', () => {
+			renderer.drawCustomShape( {
+				path: 'M0 0 L10 10',
+				viewBox: [ 0, 0, 10, 10 ],
+				x: 0, y: 0, width: 50, height: 50,
+				stroke: 'none'
+			} );
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+
+		it( 'applies stroke with default strokeWidth when missing', () => {
+			expect( () => {
+				renderer.drawCustomShape( {
+					path: 'M0 0 L10 10',
+					viewBox: [ 0, 0, 10, 10 ],
+					x: 0, y: 0, width: 50, height: 50,
+					stroke: '#000'
+				} );
+			} ).not.toThrow();
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+
+		it( 'returns early for invalid viewBox (not array)', () => {
+			expect( () => {
+				renderer.drawCustomShape( {
+					path: 'M0 0 L10 10',
+					viewBox: 'invalid',
+					x: 0, y: 0, width: 50, height: 50
+				} );
+			} ).not.toThrow();
+		} );
+
+		it( 'returns early for viewBox with fewer than 4 elements', () => {
+			expect( () => {
+				renderer.drawCustomShape( {
+					path: 'M0 0 L10 10',
+					viewBox: [ 0, 0, 10 ],
+					x: 0, y: 0, width: 50, height: 50
+				} );
+			} ).not.toThrow();
+		} );
+
+		it( 'handles invalid path data gracefully', () => {
+			// Path2D constructor may throw for invalid path
+			const OrigPath2D = global.Path2D;
+			global.Path2D = jest.fn().mockImplementation( () => {
+				throw new Error( 'Invalid path' );
+			} );
+
+			expect( () => {
+				renderer.drawCustomShape( {
+					path: 'INVALID_PATH!!!',
+					viewBox: [ 0, 0, 10, 10 ],
+					x: 0, y: 0, width: 50, height: 50
+				} );
+			} ).not.toThrow();
+
+			// Should draw error placeholder rectangle
+			expect( ctx.strokeRect ).toHaveBeenCalled();
+
+			global.Path2D = OrigPath2D;
+		} );
+
+		it( 'handles shadow in fallback Path2D path', () => {
+			renderer.drawCustomShape( {
+				path: 'M0 0 L10 10',
+				viewBox: [ 0, 0, 10, 10 ],
+				x: 0, y: 0, width: 50, height: 50,
+				fill: '#ff0000',
+				shadow: true,
+				shadowColor: '#000',
+				shadowBlur: 5
+			} );
+			expect( ctx.save ).toHaveBeenCalled();
+		} );
+	} );
+
+	// ========================================================================
+	// Branch coverage: getScaleFactors edge cases
+	// ========================================================================
+	describe( 'branch coverage - getScaleFactors', () => {
+		it( 'returns default 1,1,1 when baseWidth is null', () => {
+			renderer.baseWidth = null;
+			renderer.baseHeight = 600;
+			renderer.canvas = { width: 800, height: 600 };
+			const result = renderer.getScaleFactors();
+			expect( result ).toEqual( { sx: 1, sy: 1, avg: 1 } );
+		} );
+
+		it( 'returns default 1,1,1 when baseHeight is null', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = null;
+			renderer.canvas = { width: 800, height: 600 };
+			const result = renderer.getScaleFactors();
+			expect( result ).toEqual( { sx: 1, sy: 1, avg: 1 } );
+		} );
+
+		it( 'returns default 1,1,1 when canvas is null', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = 600;
+			renderer.canvas = null;
+			const result = renderer.getScaleFactors();
+			expect( result ).toEqual( { sx: 1, sy: 1, avg: 1 } );
+		} );
+
+		it( 'uses canvas.width || 1 when canvas.width is 0', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = 600;
+			renderer.canvas = { width: 0, height: 600 };
+			const result = renderer.getScaleFactors();
+			// (0 || 1) / 800 = 1/800
+			expect( result.sx ).toBeCloseTo( 1 / 800 );
+			expect( result.sy ).toBe( 1 );
+		} );
+
+		it( 'uses canvas.height || 1 when canvas.height is 0', () => {
+			renderer.baseWidth = 800;
+			renderer.baseHeight = 600;
+			renderer.canvas = { width: 800, height: 0 };
+			const result = renderer.getScaleFactors();
+			expect( result.sx ).toBe( 1 );
+			// (0 || 1) / 600 = 1/600
+			expect( result.sy ).toBeCloseTo( 1 / 600 );
+		} );
+
+		it( 'calculates correct scale factors for scaled canvas', () => {
+			renderer.baseWidth = 1000;
+			renderer.baseHeight = 500;
+			renderer.canvas = { width: 500, height: 250 };
+			const result = renderer.getScaleFactors();
+			expect( result.sx ).toBe( 0.5 );
+			expect( result.sy ).toBe( 0.5 );
+			expect( result.avg ).toBe( 0.5 );
+		} );
+	} );
 } );

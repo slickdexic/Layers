@@ -5262,4 +5262,492 @@ describe( 'APIManager', function () {
 			} ).not.toThrow();
 		} );
 	} );
+
+	// ========================================================================
+	// Branch coverage: extractLayerSetData slide mode edge cases
+	// ========================================================================
+	describe( 'Branch coverage: extractLayerSetData slide edge cases', function () {
+		it( 'should handle slide data with canvasHeight but no canvasWidth', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				if ( key === 'slideCanvasWidth' ) {
+					return 800;
+				}
+				return null;
+			} );
+			mockEditor.canvasManager = {
+				setBaseDimensions: jest.fn(),
+				setBackgroundColor: jest.fn()
+			};
+
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600,
+				data: { layers: [], canvasHeight: 1080 }
+			} );
+
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'slideCanvasHeight', 1080 );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseHeight', 1080 );
+			// setBaseDimensions should be called with fallback width from state
+			expect( mockEditor.canvasManager.setBaseDimensions ).toHaveBeenCalledWith( 800, 1080 );
+		} );
+
+		it( 'should handle slide data with no canvas dimensions or background', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				return null;
+			} );
+			mockEditor.canvasManager = {
+				setBaseDimensions: jest.fn(),
+				setBackgroundColor: jest.fn()
+			};
+
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600,
+				data: { layers: [] }
+			} );
+
+			// No canvas dimension sets should be called
+			expect( mockEditor.stateManager.set ).not.toHaveBeenCalledWith( 'slideCanvasWidth', expect.anything() );
+			expect( mockEditor.stateManager.set ).not.toHaveBeenCalledWith( 'slideCanvasHeight', expect.anything() );
+			expect( mockEditor.canvasManager.setBackgroundColor ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle slide data without setBaseDimensions on canvasManager', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				return null;
+			} );
+			mockEditor.canvasManager = {
+				// No setBaseDimensions method
+				setBackgroundColor: jest.fn()
+			};
+
+			expect( () => {
+				apiManager.extractLayerSetData( {
+					baseWidth: 800, baseHeight: 600,
+					data: { layers: [], canvasWidth: 1920, canvasHeight: 1080 }
+				} );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle slide data without canvasManager', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				return null;
+			} );
+			mockEditor.canvasManager = null;
+
+			expect( () => {
+				apiManager.extractLayerSetData( {
+					baseWidth: 800, baseHeight: 600,
+					data: { layers: [], canvasWidth: 1920, backgroundColor: '#ff0000' }
+				} );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle layerSet.data that is object without layers', function () {
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600,
+				data: { someOtherProp: true }
+			} );
+			// rawLayers should be [] since data.layers is undefined
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', [] );
+		} );
+
+		it( 'should handle layerSet with no data property', function () {
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600
+			} );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'layers', [] );
+		} );
+
+		it( 'should handle backgroundVisible=undefined (defaults to true)', function () {
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600,
+				data: { layers: [] }
+			} );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', true );
+		} );
+
+		it( 'should update layerPanel.updateBackgroundLayerItem if available', function () {
+			mockEditor.layerPanel = {
+				updateLayers: jest.fn(),
+				updateBackgroundLayerItem: jest.fn()
+			};
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600,
+				data: { layers: [] }
+			} );
+			expect( mockEditor.layerPanel.updateBackgroundLayerItem ).toHaveBeenCalled();
+		} );
+
+		it( 'should not throw when layerPanel has no updateBackgroundLayerItem', function () {
+			mockEditor.layerPanel = { updateLayers: jest.fn() };
+			expect( () => {
+				apiManager.extractLayerSetData( {
+					baseWidth: 800, baseHeight: 600,
+					data: { layers: [] }
+				} );
+			} ).not.toThrow();
+		} );
+
+		it( 'should handle backgroundVisible as string "false"', function () {
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600,
+				data: { layers: [], backgroundVisible: 'false' }
+			} );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', false );
+		} );
+
+		it( 'should handle backgroundVisible as string "0"', function () {
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600,
+				data: { layers: [], backgroundVisible: '0' }
+			} );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'backgroundVisible', false );
+		} );
+
+		it( 'should handle layerSet with null baseWidth/baseHeight', function () {
+			apiManager.extractLayerSetData( {
+				data: { layers: [] }
+			} );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseWidth', null );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'baseHeight', null );
+		} );
+
+		it( 'should set currentLayerSetId from layerSet.id', function () {
+			apiManager.extractLayerSetData( {
+				id: 42,
+				baseWidth: 800, baseHeight: 600,
+				data: { layers: [] }
+			} );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentLayerSetId', 42 );
+		} );
+
+		it( 'should set currentLayerSetId to null when id missing', function () {
+			apiManager.extractLayerSetData( {
+				baseWidth: 800, baseHeight: 600,
+				data: { layers: [] }
+			} );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentLayerSetId', null );
+		} );
+	} );
+
+	// ========================================================================
+	// Branch coverage: renameLayerSet error paths
+	// ========================================================================
+	describe( 'Branch coverage: renameLayerSet errors', function () {
+		it( 'should reject when oldName is empty', async function () {
+			await expect( apiManager.renameLayerSet( '', 'newname' ) )
+				.rejects.toThrow( 'Both old and new names are required' );
+		} );
+
+		it( 'should reject when newName is empty', async function () {
+			await expect( apiManager.renameLayerSet( 'oldname', '' ) )
+				.rejects.toThrow( 'Both old and new names are required' );
+		} );
+
+		it( 'should reject when names are identical', async function () {
+			await expect( apiManager.renameLayerSet( 'same', 'same' ) )
+				.rejects.toThrow( 'New name must be different from old name' );
+		} );
+
+		it( 'should reject for invalid name format (special chars)', async function () {
+			await expect( apiManager.renameLayerSet( 'old', 'invalid name!' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should reject when no filename available', async function () {
+			mockEditor.filename = null;
+			mockEditor.config = null;
+			await expect( apiManager.renameLayerSet( 'old', 'newname' ) )
+				.rejects.toThrow( 'No filename available' );
+		} );
+
+		it( 'should handle setnameexists error from API', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				error: { code: 'setnameexists', info: 'Set name already exists' }
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'newname' ) )
+				.rejects.toThrow();
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle permissiondenied error from API response', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				error: { code: 'permissiondenied', info: 'Not allowed' }
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'newname' ) )
+				.rejects.toThrow();
+			expect( mw.notify ).toHaveBeenCalled();
+		} );
+
+		it( 'should handle generic API error in response', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				error: { code: 'internal_api_error', info: 'Internal error' }
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'newname' ) )
+				.rejects.toThrow( 'Internal error' );
+		} );
+
+		it( 'should handle unexpected response (no layersrename)', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'newname' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should handle permissiondenied in catch block', async function () {
+			apiManager.api.postWithToken = jest.fn().mockImplementation( () => {
+				const p = Promise.reject( 'permissiondenied' );
+				// jQuery deferred-style catch passes (code, data)
+				const origCatch = p.catch.bind( p );
+				p.catch = ( handler ) => origCatch( ( code ) => handler( code, null ) );
+				return p;
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'newname' ) )
+				.rejects.toThrow();
+		} );
+
+		it( 'should handle network error in catch block', async function () {
+			apiManager.api.postWithToken = jest.fn().mockImplementation( () => {
+				return {
+					then: function () {
+						return this;
+					},
+					catch: function ( handler ) {
+						handler( 'http', { error: { info: 'Network timeout' } } );
+						return this;
+					}
+				};
+			} );
+
+			await expect( apiManager.renameLayerSet( 'old', 'newname' ) )
+				.rejects.toThrow( 'Network timeout' );
+		} );
+
+		it( 'should handle rename success with reload failure', async function () {
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { success: 1, oldname: 'old', newname: 'newname' }
+			} );
+			// Make loadLayers fail
+			apiManager.loadLayers = jest.fn().mockRejectedValue( new Error( 'reload failed' ) );
+
+			const result = await apiManager.renameLayerSet( 'old', 'newname' );
+			expect( result.success ).toBe( 1 );
+			// Should still notify about reload warning
+			expect( mw.notify ).toHaveBeenCalledTimes( 2 ); // success + reload warning
+		} );
+
+		it( 'should get filename from editor.config.filename', async function () {
+			mockEditor.filename = null;
+			mockEditor.config = { filename: 'Config_File.jpg' };
+
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { success: 1, oldname: 'old', newname: 'newname' }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			const result = await apiManager.renameLayerSet( 'old', 'newname' );
+			expect( result.success ).toBe( 1 );
+		} );
+
+		it( 'should get filename from mw.config wgLayersEditorInit', async function () {
+			mockEditor.filename = null;
+			mockEditor.config = null;
+			global.mw.config.get = jest.fn( ( key ) => {
+				if ( key === 'wgLayersEditorInit' ) {
+					return { filename: 'MwConfig_File.jpg' };
+				}
+				return null;
+			} );
+
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( {
+				layersrename: { success: 1, oldname: 'old', newname: 'newname' }
+			} );
+			apiManager.loadLayers = jest.fn().mockResolvedValue();
+
+			const result = await apiManager.renameLayerSet( 'old', 'newname' );
+			expect( result.success ).toBe( 1 );
+
+			// Restore mw.config.get
+			global.mw.config.get = jest.fn( ( key ) => {
+				if ( key === 'wgLayersDebug' ) {
+					return false;
+				}
+				return null;
+			} );
+		} );
+	} );
+
+	// ========================================================================
+	// Branch coverage: buildSavePayload slide mode
+	// ========================================================================
+	describe( 'Branch coverage: buildSavePayload slide mode', function () {
+		it( 'should include slide dimensions and background in payload', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [ { id: 'l1', type: 'rectangle' } ];
+				}
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				if ( key === 'slideCanvasWidth' ) {
+					return 1920;
+				}
+				if ( key === 'slideCanvasHeight' ) {
+					return 1080;
+				}
+				if ( key === 'slideBackgroundColor' ) {
+					return '#ff0000';
+				}
+				if ( key === 'backgroundVisible' ) {
+					return true;
+				}
+				if ( key === 'backgroundOpacity' ) {
+					return 1.0;
+				}
+				if ( key === 'currentSetName' ) {
+					return 'my-slides';
+				}
+				return null;
+			} );
+
+			const payload = apiManager.buildSavePayload();
+			const data = JSON.parse( payload.data );
+			expect( data.canvasWidth ).toBe( 1920 );
+			expect( data.canvasHeight ).toBe( 1080 );
+			expect( data.backgroundColor ).toBe( '#ff0000' );
+			expect( payload.setname ).toBe( 'my-slides' );
+		} );
+
+		it( 'should use defaults for missing slide dimensions', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [];
+				}
+				if ( key === 'isSlide' ) {
+					return true;
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return null;
+			} );
+
+			const payload = apiManager.buildSavePayload();
+			const data = JSON.parse( payload.data );
+			// Should use defaults: 800x600, #ffffff
+			expect( data.canvasWidth ).toBe( 800 );
+			expect( data.canvasHeight ).toBe( 600 );
+			expect( data.backgroundColor ).toBe( '#ffffff' );
+		} );
+
+		it( 'should not include slide fields when not in slide mode', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [];
+				}
+				if ( key === 'isSlide' ) {
+					return false;
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return null;
+			} );
+
+			const payload = apiManager.buildSavePayload();
+			const data = JSON.parse( payload.data );
+			expect( data.canvasWidth ).toBeUndefined();
+			expect( data.canvasHeight ).toBeUndefined();
+			expect( data.backgroundColor ).toBeUndefined();
+		} );
+
+		it( 'should include backgroundVisible and backgroundOpacity', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [];
+				}
+				if ( key === 'backgroundVisible' ) {
+					return false;
+				}
+				if ( key === 'backgroundOpacity' ) {
+					return 0.5;
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return null;
+			} );
+
+			const payload = apiManager.buildSavePayload();
+			const data = JSON.parse( payload.data );
+			expect( data.backgroundVisible ).toBe( false );
+			expect( data.backgroundOpacity ).toBe( 0.5 );
+		} );
+
+		it( 'should default backgroundVisible to true when undefined', function () {
+			mockEditor.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'layers' ) {
+					return [];
+				}
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				return undefined;
+			} );
+
+			const payload = apiManager.buildSavePayload();
+			const data = JSON.parse( payload.data );
+			expect( data.backgroundVisible ).toBe( true );
+			expect( data.backgroundOpacity ).toBe( 1.0 );
+		} );
+	} );
+
+	// ========================================================================
+	// Branch coverage: saveLayers guard conditions
+	// ========================================================================
+	describe( 'Branch coverage: saveLayers guards', function () {
+		it( 'should reject when save already in progress', async function () {
+			apiManager.saveInProgress = true;
+			await expect( apiManager.saveLayers() )
+				.rejects.toThrow( 'Save already in progress' );
+		} );
+
+		it( 'should reject when payload build throws', async function () {
+			apiManager.buildSavePayload = jest.fn().mockImplementation( () => {
+				throw new Error( 'serialization error' );
+			} );
+
+			await expect( apiManager.saveLayers() )
+				.rejects.toThrow( 'serialization error' );
+			expect( apiManager.saveInProgress ).toBe( false );
+		} );
+
+		it( 'should reject when data exceeds size limit', async function () {
+			apiManager.checkSizeLimit = jest.fn().mockReturnValue( false );
+			apiManager.buildSavePayload = jest.fn().mockReturnValue( {
+				action: 'layerssave',
+				filename: 'Test.jpg',
+				data: '[]'
+			} );
+
+			await expect( apiManager.saveLayers() )
+				.rejects.toThrow( 'Data too large' );
+			expect( apiManager.saveInProgress ).toBe( false );
+		} );
+	} );
 } );
