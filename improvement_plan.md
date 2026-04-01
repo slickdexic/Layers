@@ -172,15 +172,15 @@ Top files by stmt-to-branch gap (focus areas for new tests):
 
 | File | Stmts | Branches | Gap |
 |------|-------|----------|-----|
-| LayerRenderer.js | 93.93% | 77.54% | 16.39% |
-| APIManager.js | 93.96% | 78.87% | 15.09% |
-| DraftManager.js | 95.95% | 80.92% | 15.03% |
-| CanvasRenderer.js | 95.19% | 80.46% | 14.73% |
-| AngleDimensionRenderer.js | 91.66% | 77.29% | 14.37% |
-| GeometryUtils.js | 92.40% | 78.85% | 13.55% |
+| IdGenerator.js | 100.0% | 75.0% | 25.0% |
+| TimeoutTracker.js | 100.0% | 78.6% | 21.4% |
+| LayerDragDrop.js | 94.4% | 78.9% | 15.5% |
+| LayerRenderer.js | 95.2% | 80.8% | 14.4% |
+| ExportController.js | 92.8% | 80.6% | 12.2% |
+| LayerPanel.js | 90.6% | 80.2% | 10.4% |
 
-Sub-75% branch files: SpecialSlides (58.9%), CanvasEvents (62.0%),
-LayerDefaults (62.5%), PropertyBuilders (65.6%), SelectionRenderer (69.8%).
+All previously sub-75% files now above 87%: SpecialSlides (93.2%), CanvasEvents (92.8%),
+LayerDefaults (87.5%), PropertyBuilders (87.7%), SelectionRenderer (95.5%).
 
 ### God Class Extraction: APICacheManager (Completed)
 
@@ -223,7 +223,7 @@ wiring with marginal benefit.
 
 ### v68 Notes
 
-- `npm test` passes on `main`: 172 Jest suites, 13,882 tests,
+- `npm test` passes on `main`: 172 Jest suites, 13,896 tests,
   95.82% statement coverage, 87.00% branch coverage.
 - `npm run test:php` passes cleanly.
 - No new exploitable SQL injection, CSRF, XSS, or permission-bypass

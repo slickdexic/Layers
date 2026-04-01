@@ -991,6 +991,118 @@ describe( 'LayerDragDrop', () => {
 			// Falls through to standard reorder
 			expect( editor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'folder_1', true );
 		} );
+
+		test( 'drop below folder without getLayerById falls through to reorder', () => {
+			const renderFn = jest.fn();
+			const editor = {
+				// No getLayerById — folder lookup returns null
+				stateManager: { reorderLayer: jest.fn( () => true ) },
+				canvasManager: { redraw: jest.fn() }
+			};
+			const { listeners } = createControllerWithHandlers( editor, renderFn );
+
+			const target = mockTargetEl( 'folder_1', { classes: [ 'layer-item-group' ] } );
+			target.classList.add( 'drop-target-below' );
+
+			listeners.drop( {
+				preventDefault: jest.fn(),
+				dataTransfer: { getData: jest.fn( () => 'layer_1' ) },
+				target: { closest: jest.fn( () => target ) }
+			} );
+
+			// Without getLayerById, collapsed-folder shortcut is skipped
+			expect( editor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'folder_1', true );
+		} );
+
+		test( 'drop below collapsed folder with undefined children skips shortcut', () => {
+			const renderFn = jest.fn();
+			const editor = {
+				getLayerById: jest.fn( ( id ) => {
+					if ( id === 'folder_1' ) {
+						// expanded=false but children is undefined (corrupt data)
+						return { id: 'folder_1', expanded: false };
+					}
+					return { id };
+				} ),
+				stateManager: { reorderLayer: jest.fn( () => true ) },
+				canvasManager: { redraw: jest.fn() }
+			};
+			const { listeners } = createControllerWithHandlers( editor, renderFn );
+
+			const target = mockTargetEl( 'folder_1', { classes: [ 'layer-item-group' ] } );
+			target.classList.add( 'drop-target-below' );
+
+			listeners.drop( {
+				preventDefault: jest.fn(),
+				dataTransfer: { getData: jest.fn( () => 'layer_1' ) },
+				target: { closest: jest.fn( () => target ) }
+			} );
+
+			// Falls through to standard reorder since children is undefined
+			expect( editor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'folder_1', true );
+		} );
+
+		test( 'collapsed-folder-below without groupManager still reorders', () => {
+			const renderFn = jest.fn();
+			const editor = {
+				getLayerById: jest.fn( ( id ) => {
+					if ( id === 'folder_1' ) {
+						return { id: 'folder_1', expanded: false, children: [ 'c1' ] };
+					}
+					if ( id === 'layer_1' ) {
+						return { id: 'layer_1', parentGroup: 'folder_1' };
+					}
+					return { id };
+				} ),
+				// No groupManager — removeFromFolder step is skipped
+				stateManager: { reorderLayer: jest.fn( () => true ) },
+				canvasManager: { redraw: jest.fn() }
+			};
+			const { listeners } = createControllerWithHandlers( editor, renderFn );
+
+			const target = mockTargetEl( 'folder_1', { classes: [ 'layer-item-group' ] } );
+			target.classList.add( 'drop-target-below' );
+
+			listeners.drop( {
+				preventDefault: jest.fn(),
+				dataTransfer: { getData: jest.fn( () => 'layer_1' ) },
+				target: { closest: jest.fn( () => target ) }
+			} );
+
+			// Should still reorder after last child
+			expect( editor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'c1', true );
+			expect( renderFn ).toHaveBeenCalled();
+		} );
+
+		test( 'collapsed-folder-below without canvasManager or renderLayerList', () => {
+			const editor = {
+				getLayerById: jest.fn( ( id ) => {
+					if ( id === 'folder_1' ) {
+						return { id: 'folder_1', expanded: false, children: [ 'c1' ] };
+					}
+					return { id };
+				} ),
+				stateManager: { reorderLayer: jest.fn( () => true ) }
+				// No canvasManager
+			};
+			const { ctrl, listeners } = createControllerWithHandlers( editor );
+
+			// Override renderLayerList to a non-function to test that guard
+			ctrl.renderLayerList = null;
+
+			const target = mockTargetEl( 'folder_1', { classes: [ 'layer-item-group' ] } );
+			target.classList.add( 'drop-target-below' );
+
+			expect( () => {
+				listeners.drop( {
+					preventDefault: jest.fn(),
+					dataTransfer: { getData: jest.fn( () => 'layer_1' ) },
+					target: { closest: jest.fn( () => target ) }
+				} );
+			} ).not.toThrow();
+
+			expect( editor.stateManager.reorderLayer ).toHaveBeenCalledWith( 'layer_1', 'c1', true );
+		} );
 	} );
 
 	describe( '_handleDrop - folder drop via highlight class', () => {
@@ -1837,6 +1949,44 @@ describe( 'LayerDragDrop', () => {
 			expect( () => ctrl.moveToFolder( 'layer1', 'folder1' ) ).not.toThrow();
 			expect( global.mw.log.warn ).toHaveBeenCalledWith(
 				expect.stringContaining( 'not available' )
+			);
+		} );
+
+		test( 'moveToFolder success without mw global does not throw', () => {
+			const mockGroupManager = { moveToFolder: jest.fn( () => true ) };
+			const editor = {
+				groupManager: mockGroupManager,
+				canvasManager: { redraw: jest.fn() },
+				stateManager: { get: jest.fn( () => [] ) }
+			};
+			const renderFn = jest.fn();
+			delete global.mw;
+			const { ctrl } = createControllerWithHandlers( editor, renderFn );
+			expect( () => ctrl.moveToFolder( 'layer1', 'folder1' ) ).not.toThrow();
+			expect( editor.canvasManager.redraw ).toHaveBeenCalled();
+			expect( renderFn ).toHaveBeenCalled();
+		} );
+
+		test( 'moveToFolder failure without mw global does not throw', () => {
+			const mockGroupManager = { moveToFolder: jest.fn( () => false ) };
+			const editor = {
+				groupManager: mockGroupManager,
+				stateManager: { get: jest.fn( () => [] ) }
+			};
+			delete global.mw;
+			const { ctrl } = createControllerWithHandlers( editor );
+			expect( () => ctrl.moveToFolder( 'layer1', 'folder1' ) ).not.toThrow();
+		} );
+
+		test( 'moveToFolder missing groupManager without mw.log does not throw', () => {
+			const editor = { stateManager: { get: jest.fn( () => [] ) } };
+			global.mw = { notify: jest.fn() };
+			// mw exists but mw.log is missing
+			const { ctrl } = createControllerWithHandlers( editor );
+			expect( () => ctrl.moveToFolder( 'layer1', 'folder1' ) ).not.toThrow();
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				expect.stringContaining( 'not available' ),
+				expect.objectContaining( { type: 'error' } )
 			);
 		} );
 

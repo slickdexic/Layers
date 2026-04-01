@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-13%2C882%20passing-brightgreen" alt="13,882 Tests">
+  <img src="https://img.shields.io/badge/Tests-13%2C896%20passing-brightgreen" alt="13,896 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.82%25-brightgreen" alt="95.82% Coverage">
 </p>
 
@@ -27,12 +27,12 @@
 - **Compatibility Backports** — Browser gating now treats
   `FileReader`/`Blob` as optional, and pre-bootstrap warnings route
   through `UIManager.showBrowserCompatibilityWarning()`
-- **Test Suite** — 13,882 tests (172 suites), 95.82% stmts, 87.00% branches
+- **Test Suite** — 13,896 tests (172 suites), 95.82% stmts, 87.00% branches
 
 ### Previous v1.5.62 Highlights
 
 - **16 Bug Fixes** — Zoom-to-pointer anchor drift, 15 P3 code-quality fixes
-- **Test Suite** — 13,882 tests passing (172 suites)
+- **Test Suite** — 13,896 tests passing (172 suites)
 
 ### Previous v1.5.59 Highlights
 

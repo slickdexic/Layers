@@ -109,6 +109,18 @@ describe( 'IdGenerator', () => {
 		} );
 	} );
 
+	describe( 'generateId - falsy prefix edge cases', () => {
+		it( 'should default to "id" prefix when prefix is 0', () => {
+			const id = IdGenerator.generateId( 0 );
+			expect( id ).toMatch( /^id_/ );
+		} );
+
+		it( 'should default to "id" prefix when prefix is false', () => {
+			const id = IdGenerator.generateId( false );
+			expect( id ).toMatch( /^id_/ );
+		} );
+	} );
+
 	describe( '_resetForTesting', () => {
 		it( 'should reset counter to 0', () => {
 			IdGenerator.generateLayerId();

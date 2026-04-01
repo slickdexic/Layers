@@ -61,6 +61,17 @@ describe( 'TimeoutTracker', () => {
 			expect( callback ).not.toHaveBeenCalled();
 		} );
 
+		it( 'should not execute callback if destroyed flag is set when timer fires', () => {
+			const callback = jest.fn();
+			tracker.setTimeout( 'test', callback, 1000 );
+
+			// Set destroyed flag WITHOUT clearing timers (simulates race condition)
+			tracker.destroyed = true;
+			jest.advanceTimersByTime( 1000 );
+
+			expect( callback ).not.toHaveBeenCalled();
+		} );
+
 		it( 'should return null if destroyed', () => {
 			tracker.destroy();
 			const id = tracker.setTimeout( 'test', jest.fn(), 1000 );
@@ -127,6 +138,17 @@ describe( 'TimeoutTracker', () => {
 			jest.advanceTimersByTime( 1 );
 			expect( callback ).toHaveBeenCalledTimes( 1 );
 		} );
+
+		it( 'should use default delay of 300ms when delay is 0', () => {
+			const callback = jest.fn();
+			tracker.setDebounce( 'test', callback, 0 );
+
+			jest.advanceTimersByTime( 299 );
+			expect( callback ).not.toHaveBeenCalled();
+
+			jest.advanceTimersByTime( 1 );
+			expect( callback ).toHaveBeenCalledTimes( 1 );
+		} );
 	} );
 
 	describe( 'setInterval', () => {
@@ -167,10 +189,37 @@ describe( 'TimeoutTracker', () => {
 			expect( callback ).not.toHaveBeenCalled();
 		} );
 
+		it( 'should not execute callback if destroyed flag is set without clearing', () => {
+			const callback = jest.fn();
+			tracker.setInterval( 'tick', callback, 100 );
+
+			// Set destroyed flag WITHOUT clearing intervals (simulates race condition)
+			tracker.destroyed = true;
+			jest.advanceTimersByTime( 500 );
+
+			expect( callback ).not.toHaveBeenCalled();
+		} );
+
 		it( 'should return null if destroyed', () => {
 			tracker.destroy();
 			const id = tracker.setInterval( 'tick', jest.fn(), 100 );
 			expect( id ).toBeNull();
+		} );
+
+		it( 'should stop firing after destroy even if one tick already ran', () => {
+			const callback = jest.fn();
+			tracker.setInterval( 'tick', callback, 100 );
+
+			// Let one tick fire
+			jest.advanceTimersByTime( 100 );
+			expect( callback ).toHaveBeenCalledTimes( 1 );
+
+			// Now destroy
+			tracker.destroy();
+
+			// No more ticks should fire
+			jest.advanceTimersByTime( 500 );
+			expect( callback ).toHaveBeenCalledTimes( 1 );
 		} );
 	} );
 
@@ -232,6 +281,17 @@ describe( 'TimeoutTracker', () => {
 			tracker.destroy();
 			const result = tracker.setOnce( 'init', jest.fn(), 1000 );
 			expect( result ).toBe( false );
+		} );
+
+		it( 'should return false if destroyed while timeout is pending', () => {
+			const callback = jest.fn();
+			tracker.setOnce( 'init', callback, 1000 );
+			// Destroy while still pending
+			tracker.destroy();
+			const result = tracker.setOnce( 'init', callback, 1000 );
+			expect( result ).toBe( false );
+			jest.advanceTimersByTime( 1000 );
+			expect( callback ).not.toHaveBeenCalled();
 		} );
 	} );
 
