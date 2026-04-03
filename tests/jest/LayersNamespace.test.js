@@ -939,7 +939,7 @@ describe( 'LayersNamespace', () => {
 		it( 'should warn only on first invocation', () => {
 			jest.resetModules();
 
-			class TestClass {}
+			class _TestClass {}
 
 			// Need to ensure the proxy is created and invoked
 			delete global.window.StateManager;

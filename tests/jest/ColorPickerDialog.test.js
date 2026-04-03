@@ -703,7 +703,7 @@ describe( 'ColorPickerDialog', () => {
 			dialog.open();
 
 			const focusable = dialog.dialog.querySelectorAll( 'button, input' );
-			const first = focusable[ 0 ];
+			const _first = focusable[ 0 ];
 			const last = focusable[ focusable.length - 1 ];
 
 			// Focus last element

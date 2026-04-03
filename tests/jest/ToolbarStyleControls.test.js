@@ -1204,7 +1204,7 @@ describe( 'ToolbarStyleControls', () => {
 
 	describe( 'registerDialogCleanup callback', () => {
 		it( 'should call toolbar.registerDialogCleanup when provided', () => {
-			const controls = new ToolbarStyleControls( { toolbar: mockToolbar } );
+			new ToolbarStyleControls( { toolbar: mockToolbar } );
 			// The colorFactory is created in constructor with registerDialogCleanup callback
 			// Verify the toolbar method exists
 			expect( mockToolbar.registerDialogCleanup ).toBeDefined();
@@ -3546,7 +3546,7 @@ it( 'should show fillControl for arrow tool (arrows support fill)', () => {
 			// We test by verifying the guard logic inline
 			let guardReturned = false;
 			const origOpen = controls.openColorPicker;
-			controls.openColorPicker = function ( anchorButton, initialValue, options ) {
+			controls.openColorPicker = function ( _anchorButton, _initialValue, _options ) {
 				// Simulate: const ColorPickerDialog = null;
 				const ColorPickerDialog = null;
 				if ( !ColorPickerDialog ) {

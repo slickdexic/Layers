@@ -69,8 +69,8 @@ describe( 'NumericValidator', () => {
 			delete window.Layers;
 
 			// Mock require to throw
-			const originalRequire = global.require;
-			const requireCalled = false;
+			const _originalRequire = global.require;
+			const _requireCalled = false;
 
 			// Can't easily mock require in Jest, so test stub behavior directly
 			const stubHelpers = {

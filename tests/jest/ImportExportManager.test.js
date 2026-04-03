@@ -383,7 +383,7 @@ describe( 'ImportExportManager', () => {
 	} );
 
 	describe( 'exportToFile', () => {
-		let originalCreateElement;
+		let _originalCreateElement;
 		let mockAnchor;
 		let mockCreateObjectURL;
 
@@ -592,7 +592,7 @@ describe( 'ImportExportManager', () => {
 			const onError = jest.fn();
 
 			// Create button with callbacks
-			const { button, input } = importManager.createImportButton( { onSuccess, onError } );
+			const { input } = importManager.createImportButton( { onSuccess, onError } );
 
 			// Mock importFromFile to resolve
 			importManager.importFromFile = jest.fn().mockResolvedValue( [ { id: 'layer1', type: 'rectangle' } ] );
@@ -619,7 +619,7 @@ describe( 'ImportExportManager', () => {
 			const onSuccess = jest.fn();
 			const onError = jest.fn();
 
-			const { button, input } = importManager.createImportButton( { onSuccess, onError } );
+			const { input } = importManager.createImportButton( { onSuccess, onError } );
 
 			// Mock importFromFile to reject
 			const testError = new Error( 'Import failed' );

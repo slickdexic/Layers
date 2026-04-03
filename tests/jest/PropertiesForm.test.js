@@ -1964,7 +1964,7 @@ describe( 'PropertiesForm', () => {
 			}, jest.fn(), container );
 
 			const button = container.querySelector( 'button' );
-			const initialBackground = button.style.background;
+			const _initialBackground = button.style.background;
 			button.click();
 
 			const colorInput = document.body.querySelector( 'input[type="color"]' );
@@ -3116,7 +3116,7 @@ describe( 'PropertiesForm', () => {
 			// jsdom may normalize invalid values for type="number" inputs
 			// Verify behavior - if jsdom returns '' for invalid, that's the empty check
 			input.value = 'not-a-number';
-			const actualValue = input.value;
+			const _actualValue = input.value;
 
 			input.dispatchEvent( new Event( 'blur' ) );
 
@@ -3338,7 +3338,7 @@ describe( 'PropertiesForm', () => {
 			}, 'layer-1', container );
 
 			const input = container.querySelector( 'input' );
-			const errorIndicator = container.querySelector( '.property-field-error' );
+			container.querySelector( '.property-field-error' );
 
 			// Enter invalid non-numeric value
 			input.value = 'abc';
@@ -4875,7 +4875,7 @@ describe( 'PropertiesForm', () => {
 			expect( inputs.length ).toBeGreaterThan( 0 );
 
 			const xInput = inputs[ 0 ];
-			const originalValue = xInput.value;
+			const _originalValue = xInput.value;
 
 			// Set to valid value, then blur — should keep value
 			xInput.value = '50';

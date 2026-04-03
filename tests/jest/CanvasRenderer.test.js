@@ -1808,7 +1808,7 @@ describe('CanvasRenderer', () => {
                 false, 50, 50
             );
             // ctx.stroke should NOT have been called (early return)
-            const postCallCount = ctx.stroke.mock.calls.length;
+            const _postCallCount = ctx.stroke.mock.calls.length;
             // Reset and try with rectangle which should draw stroke
             ctx.stroke.mockClear();
             renderer._drawBlurStroke(
@@ -1930,7 +1930,7 @@ describe('CanvasRenderer', () => {
             let throwCount = 0;
             Object.defineProperty(throwCtx, 'globalCompositeOperation', {
                 get() { return 'source-over'; },
-                set(val) {
+                set(_val) {
                     throwCount++;
                     // Only throw on the first set (the invalid blend), allow the fallback set
                     if (throwCount === 1) { throw new Error('Invalid blend'); }
@@ -2457,7 +2457,7 @@ describe('CanvasRenderer', () => {
 
         test('skips blur blend for line type', () => {
             const drawBlurSpy = jest.spyOn(renderer, 'drawLayerWithBlurBlend').mockImplementation(() => {});
-            const drawLayerSpy = jest.spyOn(renderer, 'drawLayer').mockImplementation(() => {});
+            jest.spyOn(renderer, 'drawLayer').mockImplementation(() => {});
             renderer.drawLayerWithEffects({ type: 'line', blendMode: 'blur', x1: 0, y1: 0, x2: 100, y2: 100 });
             expect(drawBlurSpy).not.toHaveBeenCalled();
         });
@@ -2837,7 +2837,7 @@ describe('CanvasRenderer', () => {
 
     describe('branch coverage - _getRawLayerBounds', () => {
         test('measures text layer with TextUtils', () => {
-            const result = renderer._getRawLayerBounds({ type: 'text', text: 'Hello', fontSize: 14, x: 10, y: 20 });
+            renderer._getRawLayerBounds({ type: 'text', text: 'Hello', fontSize: 14, x: 10, y: 20 });
             // Returns something (or null if TextUtils not available)
             // At minimum, should not throw
         });
@@ -2848,7 +2848,7 @@ describe('CanvasRenderer', () => {
             if (window.Layers && window.Layers.Shared) {
                 window.Layers.Shared.TextUtils = undefined;
             }
-            const result = renderer._getRawLayerBounds({ type: 'text', text: 'Hello' });
+            renderer._getRawLayerBounds({ type: 'text', text: 'Hello' });
             // Restore
             if (window.Layers && window.Layers.Shared && origTextUtils) {
                 window.Layers.Shared.TextUtils = origTextUtils;
@@ -2856,7 +2856,7 @@ describe('CanvasRenderer', () => {
         });
 
         test('uses GeometryUtils for non-text layer', () => {
-            const result = renderer._getRawLayerBounds({ type: 'rectangle', x: 10, y: 20, width: 100, height: 80 });
+            renderer._getRawLayerBounds({ type: 'rectangle', x: 10, y: 20, width: 100, height: 80 });
             // Should return something or null
         });
     });

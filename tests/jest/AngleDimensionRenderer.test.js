@@ -608,7 +608,7 @@ describe( 'AngleDimensionRenderer', () => {
 		} );
 
 		it( 'should not set opacity when not a number', () => {
-			const origAlpha = ctx.globalAlpha;
+			const _origAlpha = ctx.globalAlpha;
 			renderer.draw( makeLayer( { opacity: 'invalid' } ) );
 			// Should still draw, opacity just stays at default
 			expect( ctx.save ).toHaveBeenCalled();

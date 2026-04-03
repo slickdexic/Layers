@@ -391,7 +391,7 @@ describe( 'GroupManager', () => {
 
 		it( 'should add layer to empty folder', () => {
 			// Create an empty folder
-			const folder = groupManager.createGroup( [], 'Empty Folder' );
+			groupManager.createGroup( [], 'Empty Folder' );
 			// Note: createGroup returns null for empty array
 			// So we need to create a folder manually or test with a different approach
 			// Let's create a folder with one layer and then remove it
@@ -520,7 +520,7 @@ describe( 'GroupManager', () => {
 		} );
 
 		it( 'should return 1 for layers in a group', () => {
-			const group = groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
+			groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
 			const layers = mockStateManager.get( 'layers' );
 			const layer = layers.find( ( l ) => l.id === 'layer-1' );
 
@@ -529,7 +529,7 @@ describe( 'GroupManager', () => {
 		} );
 
 		it( 'should get layers from stateManager when not provided', () => {
-			const group = groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
+			groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
 			const layer = mockStateManager.get( 'layers' ).find( ( l ) => l.id === 'layer-1' );
 
 			// Call without layers parameter
@@ -544,7 +544,7 @@ describe( 'GroupManager', () => {
 		} );
 
 		it( 'should accept layer ID as string', () => {
-			const group = groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
+			groupManager.createGroup( [ 'layer-1', 'layer-2' ] );
 			const layers = mockStateManager.get( 'layers' );
 
 			// Pass layer ID string instead of layer object
@@ -1903,7 +1903,7 @@ describe( 'GroupManager', () => {
 			];
 
 			groupManager.maxNestingDepth = 2;
-			const result = groupManager.createGroup( [ 'deep' ] );
+			groupManager.createGroup( [ 'deep' ] );
 			// May return null if depth check eliminates only candidate
 		} );
 

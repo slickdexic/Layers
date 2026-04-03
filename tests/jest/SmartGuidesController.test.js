@@ -959,13 +959,13 @@ describe( 'SmartGuidesController', () => {
 	} );
 
 	describe( 'snap priority - closer edge wins', () => {
-		let snapLayers;
+		let _snapLayers;
 
 		beforeEach( () => {
 			controller.setEnabled( true );
 			// Create layers that will generate both left edge and right edge snap points
 			// such that one edge is closer than the other
-			snapLayers = [
+			_snapLayers = [
 				// Layer with left edge at 100
 				{ id: 'left-target', type: 'rectangle', x: 100, y: 50, width: 50, height: 50, visible: true },
 				// Layer with right edge at 207 (202+5)
@@ -1030,7 +1030,7 @@ describe( 'SmartGuidesController', () => {
 
 		it( 'should prefer center when it is closer than edges', () => {
 			// Create a layer with center at x=200
-			const centerSnapLayers = [
+			const _centerSnapLayers = [
 				{ id: 'center-target', type: 'rectangle', x: 150, y: 50, width: 100, height: 50, visible: true }
 				// center-target's center X = 150 + 100/2 = 200
 			];

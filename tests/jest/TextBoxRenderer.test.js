@@ -577,7 +577,7 @@ describe( 'TextBoxRenderer', () => {
 			// Track shadow color history to verify it's set before fillText
 			const shadowColorHistory = [];
 			let shadowColorWhenFillTextCalled = null;
-			const originalFillText = ctx.fillText;
+			const _originalFillText = ctx.fillText;
 
 			Object.defineProperty( ctx, 'shadowColor', {
 				get: function () {

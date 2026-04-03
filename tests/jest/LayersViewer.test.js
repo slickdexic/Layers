@@ -26,7 +26,7 @@ beforeAll( () => {
 	window.Layers.LayerRenderer = MockLayerRenderer;
 
 	// Mock ResizeObserver
-	window.ResizeObserver = jest.fn( ( callback ) => ( {
+	window.ResizeObserver = jest.fn( ( _callback ) => ( {
 		observe: jest.fn(),
 		disconnect: jest.fn(),
 		unobserve: jest.fn()
@@ -227,7 +227,7 @@ describe( 'LayersViewer', () => {
 
 			window.getComputedStyle = jest.fn( () => ( { position: 'static' } ) );
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: createSampleLayerData()
@@ -242,7 +242,7 @@ describe( 'LayersViewer', () => {
 
 			window.getComputedStyle = jest.fn( () => ( { position: 'absolute' } ) );
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: createSampleLayerData()
@@ -299,7 +299,7 @@ describe( 'LayersViewer', () => {
 			const container = createMockContainer();
 			const imageElement = createMockImageElement( { complete: false } );
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: createSampleLayerData()
@@ -385,7 +385,7 @@ describe( 'LayersViewer', () => {
 				return mockLayerRenderer;
 			} );
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: createSampleLayerData()
@@ -569,7 +569,7 @@ describe( 'LayersViewer', () => {
 			const container = createMockContainer();
 			const imageElement = createMockImageElement();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: null
@@ -582,7 +582,7 @@ describe( 'LayersViewer', () => {
 			const container = createMockContainer();
 			const imageElement = createMockImageElement();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: { baseWidth: 100 }
@@ -595,7 +595,7 @@ describe( 'LayersViewer', () => {
 			const container = createMockContainer();
 			const imageElement = createMockImageElement();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: createSampleLayerData()
@@ -618,7 +618,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -643,7 +643,7 @@ describe( 'LayersViewer', () => {
 
 			mockLayerRenderer.drawLayer.mockClear();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -663,7 +663,7 @@ describe( 'LayersViewer', () => {
 
 			mockLayerRenderer.drawLayer.mockClear();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -683,7 +683,7 @@ describe( 'LayersViewer', () => {
 
 			mockLayerRenderer.drawLayer.mockClear();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -701,7 +701,7 @@ describe( 'LayersViewer', () => {
 				layers: [ { id: 'test', type: 'rectangle', x: 100, y: 100, width: 200, height: 100, visible: true } ]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -726,7 +726,7 @@ describe( 'LayersViewer', () => {
 				layers: [ { id: 'test', type: 'rectangle', x: 0, y: 0, visible: true } ]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -1066,7 +1066,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -1162,7 +1162,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -1186,7 +1186,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -1281,7 +1281,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -1302,7 +1302,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -1385,7 +1385,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -1420,7 +1420,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container: container,
 				imageElement: imageElement,
 				layerData: layerData
@@ -1460,7 +1460,7 @@ describe( 'LayersViewer', () => {
 			const container = document.createElement( 'div' );
 			const imageElement = createImageWithStyle();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -1478,7 +1478,7 @@ describe( 'LayersViewer', () => {
 			const imageElement = createImageWithStyle();
 			imageElement.style.visibility = 'hidden'; // Start hidden
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -1495,7 +1495,7 @@ describe( 'LayersViewer', () => {
 			const container = document.createElement( 'div' );
 			const imageElement = createImageWithStyle();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -1512,7 +1512,7 @@ describe( 'LayersViewer', () => {
 			const container = document.createElement( 'div' );
 			const imageElement = createImageWithStyle();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -1529,7 +1529,7 @@ describe( 'LayersViewer', () => {
 			const container = document.createElement( 'div' );
 			const imageElement = createImageWithStyle();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -1546,7 +1546,7 @@ describe( 'LayersViewer', () => {
 			const container = document.createElement( 'div' );
 			const imageElement = createImageWithStyle();
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -1564,7 +1564,7 @@ describe( 'LayersViewer', () => {
 			const imageElement = createImageWithStyle();
 			imageElement.style.opacity = '1'; // Set initial value
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -1607,7 +1607,7 @@ describe( 'LayersViewer', () => {
 			const imageElement = createImageWithStyle();
 			imageElement.style.visibility = 'hidden'; // Start hidden
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -1645,7 +1645,7 @@ describe( 'LayersViewer', () => {
 			const imageElement = createImageWithStyle();
 			imageElement.style.visibility = 'hidden';
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: null
@@ -2056,7 +2056,7 @@ describe( 'LayersViewer', () => {
 			const imageElement = createImageWithStyle();
 			imageElement.style.visibility = 'hidden';
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: null
@@ -2077,7 +2077,7 @@ describe( 'LayersViewer', () => {
 				backgroundOpacity: '0.5'
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData
@@ -2350,7 +2350,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData
@@ -2372,7 +2372,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData
@@ -2393,7 +2393,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData
@@ -2415,7 +2415,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData
@@ -2444,7 +2444,7 @@ describe( 'LayersViewer', () => {
 				]
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData
@@ -2589,7 +2589,7 @@ describe( 'LayersViewer', () => {
 			} );
 
 			// Out of range (>1) should keep default 1.0
-			const drawImageSpy = jest.spyOn( viewer.ctx, 'drawImage' ).mockImplementation( () => {} );
+			jest.spyOn( viewer.ctx, 'drawImage' ).mockImplementation( () => {} );
 			viewer.drawBackgroundOnCanvas();
 			expect( viewer.ctx.globalAlpha ).toBe( 1 );
 		} );
@@ -3276,7 +3276,7 @@ describe( 'LayersViewer', () => {
 				style: { visibility: '', opacity: '' }
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: { layers: [], backgroundVisible: 'false' }
@@ -3298,7 +3298,7 @@ describe( 'LayersViewer', () => {
 				style: { visibility: '', opacity: '' }
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: { layers: [], backgroundVisible: '0' }
@@ -3480,7 +3480,7 @@ describe( 'LayersViewer', () => {
 				style: { visibility: '', opacity: '' }
 			};
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: {
@@ -3510,7 +3510,7 @@ describe( 'LayersViewer', () => {
 
 			window.getComputedStyle = jest.fn( () => ( { position: 'static' } ) );
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: { layers: [] }
@@ -3534,7 +3534,7 @@ describe( 'LayersViewer', () => {
 
 			window.getComputedStyle = jest.fn( () => ( { position: 'absolute' } ) );
 
-			const viewer = new window.LayersViewer( {
+			new window.LayersViewer( {
 				container,
 				imageElement,
 				layerData: { layers: [] }

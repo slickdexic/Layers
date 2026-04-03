@@ -705,7 +705,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 				imageUrl: '/test.jpg'
 			} );
 
-			const setCallsBefore = mockStateManager.set.mock.calls.length;
+			const _setCallsBefore = mockStateManager.set.mock.calls.length;
 			editor.deleteSelected();
 
 			// The function now checks getSelectedLayerIds() which returns empty array
@@ -1182,7 +1182,7 @@ describe( 'LayersEditor Coverage Extension', () => {
 		} );
 
 		test( 'uses nameKey for localized name when provided', () => {
-			editor.getMessage = jest.fn( ( key, fallback ) => 'Localized Star' );
+			editor.getMessage = jest.fn( ( _key, _fallback ) => 'Localized Star' );
 
 			const shapeData = {
 				id: 'shapes/star',

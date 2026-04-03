@@ -475,14 +475,14 @@ describe( 'DeepClone', () => {
 	} );
 
 	describe( 'cloneLayerEfficient', () => {
-		let cloneLayerEfficient, cloneLayersEfficient;
+		let cloneLayerEfficient, _cloneLayersEfficient;
 
 		beforeEach( () => {
 			jest.resetModules();
 			global.window = { Layers: {} };
 			const freshModule = require( '../../resources/ext.layers.shared/DeepClone.js' );
 			cloneLayerEfficient = freshModule.cloneLayerEfficient;
-			cloneLayersEfficient = freshModule.cloneLayersEfficient;
+			_cloneLayersEfficient = freshModule.cloneLayersEfficient;
 		} );
 
 		it( 'should return null for null input', () => {

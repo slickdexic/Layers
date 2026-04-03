@@ -2349,7 +2349,7 @@ describe( 'ViewerManager', () => {
 				return true;
 			} );
 
-			return manager.refreshAllViewers().then( ( result ) => {
+			return manager.refreshAllViewers().then( ( _result ) => {
 				expect( manager.reinitializeViewer ).toHaveBeenCalled();
 			} );
 		} );
@@ -2385,7 +2385,7 @@ describe( 'ViewerManager', () => {
 				return true;
 			} );
 
-			return manager.refreshAllViewers().then( ( result ) => {
+			return manager.refreshAllViewers().then( ( _result ) => {
 				expect( manager.reinitializeViewer ).toHaveBeenCalled();
 			} );
 		} );
@@ -3612,7 +3612,7 @@ describe( 'ViewerManager', () => {
 				refreshed: 0, failed: 0, total: 0, errors: []
 			} ) );
 
-			const result = await manager.refreshAllViewers();
+			await manager.refreshAllViewers();
 			const payload = manager.reinitializeViewer.mock.calls[ 0 ][ 1 ];
 			expect( payload.backgroundVisible ).toBe( true );
 
@@ -3643,7 +3643,7 @@ describe( 'ViewerManager', () => {
 				refreshed: 0, failed: 0, total: 0, errors: []
 			} ) );
 
-			const result = await manager.refreshAllViewers();
+			await manager.refreshAllViewers();
 			const payload = manager.reinitializeViewer.mock.calls[ 0 ][ 1 ];
 			expect( payload.backgroundOpacity ).toBe( 0.5 );
 		} );
@@ -3670,7 +3670,7 @@ describe( 'ViewerManager', () => {
 				refreshed: 0, failed: 0, total: 0, errors: []
 			} ) );
 
-			const result = await manager.refreshAllViewers();
+			await manager.refreshAllViewers();
 			const payload = manager.reinitializeViewer.mock.calls[ 0 ][ 1 ];
 			expect( payload.backgroundOpacity ).toBe( 1.0 );
 		} );

@@ -407,7 +407,7 @@ describe( 'TextInputController', () => {
 			const mockStyle = { fontSize: 16 };
 			const hideSpy = jest.spyOn( controller, 'hideTextInputModal' );
 
-			const modal = controller.createTextInputModal( mockPoint, mockStyle );
+			controller.createTextInputModal( mockPoint, mockStyle );
 
 			// Find the click handler on modal
 			const clickHandler = mockModal.addEventListener.mock.calls.find(

@@ -760,7 +760,7 @@ describe('Integration: Layer Data Integrity', () => {
 
 describe('Integration: Layer Ordering Operations', () => {
     let stateManager;
-    let layer1, layer2, layer3, layer4;
+    let layer1, layer2, _layer3, layer4;
 
     beforeEach(() => {
         stateManager = new (require('../../../resources/ext.layers.editor/StateManager.js'))({
@@ -771,7 +771,7 @@ describe('Integration: Layer Ordering Operations', () => {
         // Add 4 layers: layer1 is at top (index 0), layer4 at bottom (index 3)
         layer1 = stateManager.addLayer({ type: 'rectangle', name: 'Layer 1' });
         layer2 = stateManager.addLayer({ type: 'circle', name: 'Layer 2' });
-        layer3 = stateManager.addLayer({ type: 'text', name: 'Layer 3' });
+        _layer3 = stateManager.addLayer({ type: 'text', name: 'Layer 3' });
         layer4 = stateManager.addLayer({ type: 'polygon', name: 'Layer 4' });
         // After adding: [layer4, layer3, layer2, layer1] (newest at top)
     });

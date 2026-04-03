@@ -102,7 +102,7 @@ describe( 'Integration: Save/Load Workflow', () => {
 
 		// Mock LayersValidator
 		window.LayersValidator = class {
-			validateLayers( layers ) {
+			validateLayers( _layers ) {
 				return { isValid: true, errors: [], warnings: [] };
 			}
 			showValidationErrors() {}

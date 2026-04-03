@@ -1033,7 +1033,7 @@ describe( 'SpecialSlides', () => {
 			it( 'should call super.getActionProcess for non-create actions', () => {
 				// For non-create actions, it falls through to super
 				// The mock parent returns undefined since it has no real implementation
-				const cancelProcess = dialog.getActionProcess( 'cancel' );
+				const _cancelProcess = dialog.getActionProcess( 'cancel' );
 				// Just verifying the branch is reached without error
 				expect( true ).toBe( true );
 			} );

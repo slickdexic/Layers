@@ -1493,7 +1493,7 @@ describe('HitTestController', () => {
         //   Extension line 2: from (100,0) to (100,-8)
 
         test('hits extension line 1 (near x1)', () => {
-            const layer = {
+            const _layer = {
                 id: 'dim6',
                 type: 'dimension',
                 x1: 0,
@@ -1684,8 +1684,8 @@ describe('HitTestController', () => {
             // and arm2 (angle=-π/2 or 270°). Let's try a point at (200+40*cos(-π/4), 200+40*sin(-π/4))
             // = (200+28.28, 200-28.28) = (228, 172)
             // distFromVertex = 40, Math.abs(40-40) = 0 ≤ 10 → checks angle...
-            const arcX = Math.round(200 + 40 * Math.cos(-Math.PI / 4));
-            const arcY = Math.round(200 + 40 * Math.sin(-Math.PI / 4));
+            Math.round(200 + 40 * Math.cos(-Math.PI / 4));
+            Math.round(200 + 40 * Math.sin(-Math.PI / 4));
             // This point is at the arc boundary; it may or may not pass the angle sweep check
             // Let's verify with a simpler known-good point: directly along arm1 at radius=40
             // (240, 200) is exactly on arm1 at distance 40 from vertex

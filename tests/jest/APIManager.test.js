@@ -2282,12 +2282,12 @@ describe( 'APIManager', function () {
 		it( 'should handle aborted request gracefully (not reject)', async function () {
 			// Simulate an aborted request (user switched sets quickly)
 			// The catch block should silently return for aborted requests
-			let catchHandler = null;
+			let _catchHandler = null;
 			apiManager.api.get = jest.fn().mockImplementation( () => {
 				return {
-					then: ( onSuccess ) => ( {
+					then: ( _onSuccess ) => ( {
 						catch: ( onError ) => {
-							catchHandler = onError;
+							_catchHandler = onError;
 							// Simulate abort after a delay
 							onError( 'http', { textStatus: 'abort' } );
 						}
@@ -2397,7 +2397,7 @@ describe( 'APIManager', function () {
 			apiManager.api.get = jest.fn().mockImplementation( () => {
 				// Simulate mw.Api error format
 				return {
-					then: function ( onSuccess ) {
+					then: function ( _onSuccess ) {
 						return {
 							catch: function ( onError ) {
 								onError( 'http', { error: { info: 'Network error' } } );
@@ -3155,7 +3155,7 @@ describe( 'APIManager', function () {
 			// Override the catch handler by directly mocking
 			testApiManager.api.postWithToken = jest.fn( () => {
 				const promise = {
-					then: function ( successCb ) {
+					then: function ( _successCb ) {
 						return {
 							catch: function ( errorCb ) {
 								errorCb( 'permissiondenied', { error: { info: 'Permission denied' } } );
@@ -3180,7 +3180,7 @@ describe( 'APIManager', function () {
 
 			testApiManager.api.postWithToken = jest.fn( () => {
 				const promise = {
-					then: function ( successCb ) {
+					then: function ( _successCb ) {
 						return {
 							catch: function ( errorCb ) {
 								errorCb( 'unknown-error', { error: { info: 'Something went wrong' } } );

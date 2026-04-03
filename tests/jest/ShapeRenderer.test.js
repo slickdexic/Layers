@@ -638,11 +638,11 @@ describe( 'ShapeRenderer', () => {
 				hasShadowEnabled: jest.fn().mockReturnValue( true ),
 				getShadowSpread: jest.fn().mockReturnValue( 0 ),
 				getShadowParams: jest.fn().mockReturnValue( { offsetX: 3, offsetY: 3, blur: 10, color: 'black', offscreenOffset: 15 } ),
-				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, opacity ) => {
+				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, _opacity ) => {
 					// Actually call the draw function to exercise the code paths
 					drawFn( ctx );
 				} ),
-				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, opacity ) => {
+				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, _opacity ) => {
 					drawFn( ctx );
 				} ),
 				withLocalAlpha: jest.fn( ( alpha, drawFn ) => drawFn() ),

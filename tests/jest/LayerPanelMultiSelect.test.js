@@ -33,7 +33,7 @@ const mockIconFactory = {
 };
 
 describe('LayerPanel Multi-Select', () => {
-    let LayerPanel;
+    let _LayerPanel;
     let mockEditor;
     let mockStateManager;
     let panel;
@@ -117,7 +117,7 @@ describe('LayerPanel Multi-Select', () => {
         window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
         // Load LayerPanel
-        LayerPanel = require('../../resources/ext.layers.editor/LayerPanel.js');
+        _LayerPanel = require('../../resources/ext.layers.editor/LayerPanel.js');
         panel = new window.Layers.UI.LayerPanel({
             container: container,
             editor: mockEditor

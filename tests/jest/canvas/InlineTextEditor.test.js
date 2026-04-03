@@ -1459,7 +1459,7 @@ describe( 'InlineTextEditor - Text measurement', () => {
 		mockCanvasManager.ctx.measureText.mockReturnValue( { width: 0 } );
 
 		const layer = { type: 'text', text: '', fontSize: 16 };
-		const width = editor._measureTextWidth( layer );
+		editor._measureTextWidth( layer );
 
 		expect( mockCanvasManager.ctx.measureText ).toHaveBeenCalledWith( '' );
 	} );

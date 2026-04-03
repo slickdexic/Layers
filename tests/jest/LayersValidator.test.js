@@ -1840,7 +1840,7 @@ describe( 'LayersValidator', () => {
 
 		it( 'should run initial validation when input has value', () => {
 			mockInput.value = 'initial value';
-			const inputValidator = validator.createInputValidator( mockInput, 'text' );
+			validator.createInputValidator( mockInput, 'text' );
 
 			// The validate function should have been called during initialization
 			expect( mockInput.parentNode.insertBefore ).not.toHaveBeenCalled(); // No error for valid text

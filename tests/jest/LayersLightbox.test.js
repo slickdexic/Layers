@@ -913,7 +913,7 @@ describe( 'LayersLightbox', () => {
 			document.body.appendChild( trigger );
 
 			const lightbox = new LayersLightbox();
-			const renderSpy = jest.spyOn( lightbox, 'renderViewer' );
+			jest.spyOn( lightbox, 'renderViewer' );
 			lightbox.initializeTriggers();
 
 			trigger.click();

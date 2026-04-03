@@ -524,7 +524,7 @@ describe( 'ViewerOverlay', () => {
 				createExpandIcon: mockCreateExpandIcon
 			};
 
-			const overlay = new ViewerOverlay( {
+			new ViewerOverlay( {
 				container: container,
 				imageElement: img,
 				filename: 'Test_image.jpg'
@@ -691,7 +691,7 @@ describe( 'ViewerOverlay', () => {
 			const buildUrlSpy = jest.spyOn( overlay, '_buildEditUrl' );
 
 			// Replace _handleEditClick to prevent actual navigation but still test logic
-			const originalHandler = overlay._handleEditClick.bind( overlay );
+			const _originalHandler = overlay._handleEditClick.bind( overlay );
 			overlay._handleEditClick = function () {
 				// Test that _shouldUseModal returns false on File page
 				const shouldUseModal = this._shouldUseModal();

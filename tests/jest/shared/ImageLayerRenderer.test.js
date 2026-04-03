@@ -530,7 +530,7 @@ describe( 'ImageLayerRenderer', () => {
 				onImageLoad: onImageLoadCallback
 			} );
 
-			let capturedOnload;
+			let _capturedOnload;
 			global.Image = class {
 				constructor() {
 					this.complete = false;
@@ -542,7 +542,7 @@ describe( 'ImageLayerRenderer', () => {
 					this._src = value;
 					// Trigger onload immediately for testing
 					if ( this.onload ) {
-						capturedOnload = this.onload;
+						_capturedOnload = this.onload;
 						this.onload();
 					}
 				}

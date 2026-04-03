@@ -356,7 +356,7 @@ describe( 'DimensionRenderer', () => {
 
 		test( 'generates unique ID', () => {
 			const layer1 = DimensionRenderer.createDimensionLayer( 0, 0, 100, 0 );
-			const layer2 = DimensionRenderer.createDimensionLayer( 0, 0, 100, 0 );
+			const _layer2 = DimensionRenderer.createDimensionLayer( 0, 0, 100, 0 );
 
 			expect( layer1.id ).toBeDefined();
 			expect( layer1.id ).toContain( 'dimension-' );

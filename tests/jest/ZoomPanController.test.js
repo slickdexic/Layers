@@ -6,7 +6,7 @@ const ZoomPanController = require('../../resources/ext.layers.editor/canvas/Zoom
 
 // Mock performance.now for animation tests
 const originalPerformanceNow = performance.now.bind(performance);
-let mockTime = 0;
+let _mockTime = 0;
 
 describe('ZoomPanController', () => {
     let zoomPanController;
@@ -16,7 +16,7 @@ describe('ZoomPanController', () => {
 
     beforeEach(() => {
         // Reset mock time
-        mockTime = 0;
+        _mockTime = 0;
 
         // Create mock canvas element
         mockCanvas = document.createElement('canvas');
@@ -254,7 +254,7 @@ describe('ZoomPanController', () => {
             mockCanvasManager.zoom = 1.0;
 
             // Stop animation immediately for testing
-            const originalAnimateZoom = zoomPanController.animateZoom.bind(zoomPanController);
+            const _originalAnimateZoom = zoomPanController.animateZoom.bind(zoomPanController);
             zoomPanController.animateZoom = jest.fn();
 
             zoomPanController.smoothZoomTo(2.0);
@@ -347,7 +347,7 @@ describe('ZoomPanController', () => {
         test('should fall back to fitToWindow when no layers', () => {
             mockEditor.layers = [];
 
-            const originalFitToWindow = zoomPanController.fitToWindow.bind(zoomPanController);
+            const _originalFitToWindow = zoomPanController.fitToWindow.bind(zoomPanController);
             zoomPanController.fitToWindow = jest.fn();
 
             zoomPanController.zoomToFitLayers();

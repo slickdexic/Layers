@@ -526,7 +526,7 @@ describe( 'LayerDragDrop', () => {
 			} ) );
 
 			// Create drop event in middle zone (50% of height)
-			const dropEvent = {
+			const _dropEvent = {
 				preventDefault: jest.fn(),
 				stopPropagation: jest.fn(),
 				clientY: 50, // Middle of the target
@@ -641,7 +641,7 @@ describe( 'LayerDragDrop', () => {
 
 	describe( '_handleDragOver - folder zones', () => {
 		test( 'collapsed folder: top half → drop-target-above', () => {
-			const { ctrl, listeners, layerListEl } = createControllerWithHandlers();
+			const { ctrl, listeners } = createControllerWithHandlers();
 			ctrl._draggedId = 'layer_1';
 
 			const target = mockTargetEl( 'folder_1', { classes: [ 'layer-item-group', 'collapsed' ], height: 100 } );
@@ -888,7 +888,7 @@ describe( 'LayerDragDrop', () => {
 				stateManager: { reorderLayer: jest.fn( () => true ) },
 				canvasManager: { redraw: jest.fn() }
 			};
-			const { ctrl, listeners, layerListEl } = createControllerWithHandlers( editor, renderFn );
+			const { listeners } = createControllerWithHandlers( editor, renderFn );
 
 			// Simulate dragover setting drop-target-below on a folder item
 			const target = mockTargetEl( 'folder_1', { classes: [ 'layer-item-group' ] } );
@@ -1687,7 +1687,7 @@ describe( 'LayerDragDrop', () => {
 
 	describe( '_handleDragEnd - edge cases', () => {
 		test( 'handles dragend when no layer item found', () => {
-			const { listeners, layerListEl } = createControllerWithHandlers();
+			const { listeners } = createControllerWithHandlers();
 			listeners.dragend( {
 				target: { closest: jest.fn( () => null ) }
 			} );
@@ -1742,7 +1742,7 @@ describe( 'LayerDragDrop', () => {
 		} );
 
 		test( 'dragover returns early when target is the dragged layer', () => {
-			const { ctrl, listeners, layerListEl } = createControllerWithHandlers();
+			const { ctrl, listeners } = createControllerWithHandlers();
 			ctrl._draggedId = 'layer1';
 			const target = mockTargetEl( 'layer1' );
 			const evt = {
@@ -1758,7 +1758,7 @@ describe( 'LayerDragDrop', () => {
 
 		// --- _handleDragOver: folder via aria-expanded only ---
 		test( 'dragover detects collapsed folder via aria-expanded', () => {
-			const { ctrl, listeners, layerListEl } = createControllerWithHandlers();
+			const { ctrl, listeners } = createControllerWithHandlers();
 			ctrl._draggedId = 'other';
 			// No 'collapsed' class, but aria-expanded='false'
 			const target = mockTargetEl( 'folder1', {

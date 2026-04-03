@@ -348,7 +348,7 @@ describe( 'VirtualLayerList', () => {
 
 			// First render
 			virtualList.render();
-			const initialCreateCalls = createItem.mock.calls.length;
+			const _initialCreateCalls = createItem.mock.calls.length;
 
 			// Simulate scroll
 			container.scrollTop = 500;
@@ -881,7 +881,7 @@ describe( 'VirtualLayerList', () => {
 			// Track requestAnimationFrame calls
 			let rafCallCount = 0;
 			const originalRaf = global.requestAnimationFrame;
-			global.requestAnimationFrame = jest.fn( ( cb ) => {
+			global.requestAnimationFrame = jest.fn( ( _cb ) => {
 				rafCallCount++;
 				return rafCallCount;
 			} );

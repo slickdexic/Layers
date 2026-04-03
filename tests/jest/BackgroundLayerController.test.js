@@ -15,7 +15,7 @@ describe( 'BackgroundLayerController', () => {
 	let mockStateManager;
 	let mockCanvasManager;
 	let mockLayerList;
-	let mockEventTracker;
+	let _mockEventTracker;
 	let controller;
 
 	beforeEach( () => {
@@ -70,7 +70,7 @@ describe( 'BackgroundLayerController', () => {
 		mockLayerList.className = 'layers-list';
 
 		// Create mock event tracker
-		mockEventTracker = {
+		_mockEventTracker = {
 			addEventListener: jest.fn( ( target, type, handler ) => {
 				target.addEventListener( type, handler );
 			} )

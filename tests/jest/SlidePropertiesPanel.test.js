@@ -798,7 +798,7 @@ describe( 'SlidePropertiesPanel', function () {
 		it( 'should use layersMessages if available', function () {
 			const originalMessages = window.layersMessages;
 			window.layersMessages = {
-				get: jest.fn( function ( key, fallback ) {
+				get: jest.fn( function ( key, _fallback ) {
 					return 'Custom: ' + key;
 				} )
 			};

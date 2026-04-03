@@ -18,10 +18,10 @@
     confirmed 1 MEDIUM code item, 5 LOW items, and 4 documentation drift
     items. 40+ false positives eliminated during verification. Final
     validation completed with `npm test` and `npm run test:php`.
-- **Coverage:** 95.82% statements, 87.00% branches, 93.98% functions,
+- **Coverage:** 95.82% statements, 87.20% branches, 93.98% functions,
     95.94% lines (from current repository coverage artifacts)
 - **Jest test suites:** 172
-- **Jest test cases:** 13,896 (`npm test` / `jest` summary)
+- **Jest test cases:** 13,984 (`npm test` / `jest` summary)
 - **PHPUnit test files:** 35 in `tests/phpunit`
 - **Published i18n metric:** 785 `layers-` keys via
     `scripts/verify-metrics.js` (`842` total non-`@metadata` keys exist
@@ -49,7 +49,7 @@ code/style items, 4 documentation drift items. **10 total.**
 
 The repository is fully green on the validated workflows:
 
-- `npm test` passes: 172 suites, 13,896 tests.
+- `npm test` passes: 172 suites, 13,984 tests.
 - `npm run test:php` passes cleanly.
 
 ### Strengths Identified
@@ -70,8 +70,8 @@ The repository is fully green on the validated workflows:
     backoff retry. Canvas operations use RAF scheduling with boolean
     guards to prevent double-scheduling. Lightbox open/close uses
     synchronous cleanup before re-entry.
-- **Test coverage is excellent.** 13,896 tests at 95.82% statement
-    coverage and 87.00% branch coverage is well above industry norms.
+- **Test coverage is excellent.** 13,984 tests at 95.82% statement
+    coverage and 87.20% branch coverage is well above industry norms.
 - **Code organization follows strong patterns.** The controller/facade
     pattern in CanvasManager, the ModuleRegistry for dependency
     management, and the shared renderer architecture all demonstrate
@@ -4236,9 +4236,9 @@ but verified as non-issues:
 | PHP production files (`src/`) | 42 |
 | PHP production lines (`src/`) | ~15,364 |
 | Jest test suites | 172 |
-| Jest tests | 13,896 |
+| Jest tests | 13,984 |
 | Statement coverage | 95.82% |
-| Branch coverage | 87.00% |
+| Branch coverage | 87.20% |
 | i18n keys (`en.json`, `qqq.json`) | 785 published `layers-` keys |
 | PHPUnit test files | 34 |
 | Files > 1,000 lines | 26 total |

@@ -3706,11 +3706,11 @@ describe( 'LayerRenderer', () => {
 	// ========================================================================
 
 	describe( 'constructor renderer fallbacks', () => {
-		let originalRenderers;
+		let _originalRenderers;
 
 		beforeAll( () => {
 			// Store original renderer references for restoration
-			originalRenderers = {};
+			_originalRenderers = {};
 		} );
 
 		test( 'should handle null shadowRenderer gracefully', () => {
@@ -4541,7 +4541,7 @@ describe( 'LayerRenderer', () => {
 		} );
 
 		it( 'returns early when viewBox is invalid', () => {
-			const spy = jest.spyOn( ctx, 'save' );
+			jest.spyOn( ctx, 'save' );
 			renderer.drawCustomShape( {
 				type: 'customShape',
 				path: 'M 0 0 L 100 100',

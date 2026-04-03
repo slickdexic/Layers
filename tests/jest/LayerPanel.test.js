@@ -1098,7 +1098,7 @@ describe('LayerPanel', () => {
     describe('resize divider interactions', () => {
         test('should handle mousedown on resize divider', () => {
             const container = document.getElementById('layers-panel-container');
-            const panel = new LayerPanel({
+            new LayerPanel({
                 container: container,
                 editor: mockEditor
             });
@@ -1148,7 +1148,7 @@ describe('LayerPanel', () => {
 
         test('should handle mouseup after resize', () => {
             const container = document.getElementById('layers-panel-container');
-            const panel = new LayerPanel({
+            new LayerPanel({
                 container: container,
                 editor: mockEditor
             });
@@ -1175,7 +1175,7 @@ describe('LayerPanel', () => {
     describe('touch interactions', () => {
         test('should handle touchstart on resize divider', () => {
             const container = document.getElementById('layers-panel-container');
-            const panel = new LayerPanel({
+            new LayerPanel({
                 container: container,
                 editor: mockEditor
             });
@@ -1224,7 +1224,7 @@ describe('LayerPanel', () => {
 
         test('should handle touchend after resize', () => {
             const container = document.getElementById('layers-panel-container');
-            const panel = new LayerPanel({
+            new LayerPanel({
                 container: container,
                 editor: mockEditor
             });

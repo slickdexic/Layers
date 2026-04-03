@@ -2197,7 +2197,7 @@ describe( 'Toolbar', function () {
 	// ========================================================================
 
 	describe( 'ToolDropdown fallback rendering', () => {
-		let toolbar, mockEditor;
+		let _toolbar, mockEditor;
 
 		beforeEach( () => {
 			mockEditor = {
@@ -2781,7 +2781,7 @@ describe( 'Toolbar', function () {
 	// ========================================================================
 
 	describe( 'setupArrangeDropdownEvents toggle handling', () => {
-		let toolbar, mockEditor;
+		let _toolbar, mockEditor;
 
 		beforeEach( () => {
 			mockEditor = {
@@ -3285,7 +3285,7 @@ describe( 'Toolbar', function () {
 		} );
 
 		it( 'should render text tools as individual buttons when ToolDropdown unavailable', () => {
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3296,7 +3296,7 @@ describe( 'Toolbar', function () {
 		} );
 
 		it( 'should render shape tools as individual buttons when ToolDropdown unavailable', () => {
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3307,7 +3307,7 @@ describe( 'Toolbar', function () {
 		} );
 
 		it( 'should render line tools as individual buttons when ToolDropdown unavailable', () => {
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3349,7 +3349,7 @@ describe( 'Toolbar', function () {
 		} );
 
 		it( 'should create minimal style group when ToolbarStyleControls unavailable', () => {
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3456,7 +3456,7 @@ describe( 'Toolbar', function () {
 		} );
 
 		it( 'should render annotation tools as individual buttons when ToolDropdown unavailable', () => {
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3511,7 +3511,7 @@ describe( 'Toolbar', function () {
 	describe( 'arrange dropdown events', () => {
 		it( 'should handle toggle item click to toggle checkbox via native label behavior', () => {
 			const container = document.createElement( 'div' );
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3541,7 +3541,7 @@ describe( 'Toolbar', function () {
 	describe( 'click handlers for help and alignment buttons', () => {
 		it( 'should handle help button click', () => {
 			const container = document.createElement( 'div' );
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3555,7 +3555,7 @@ describe( 'Toolbar', function () {
 
 		it( 'should not execute alignment action for disabled button', () => {
 			const container = document.createElement( 'div' );
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3645,7 +3645,7 @@ describe( 'Toolbar', function () {
 				};
 			};
 
-			const toolbar = new Toolbar( {
+			new Toolbar( {
 				editor: mockEditor,
 				container: container
 			} );
@@ -3919,7 +3919,7 @@ describe( 'Toolbar', function () {
 		} );
 
 		it( 'should not close dropdown when clicking inside alignment group', () => {
-			const closeSpy = jest.spyOn( testToolbar, 'closeArrangeDropdown' );
+			jest.spyOn( testToolbar, 'closeArrangeDropdown' );
 			// Click on trigger which is INSIDE alignmentGroup
 			document.dispatchEvent( new MouseEvent( 'click', { bubbles: true } ) );
 			// The handler checks if target is contained — dispatching on document with no target

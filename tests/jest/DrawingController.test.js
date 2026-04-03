@@ -481,8 +481,8 @@ describe( 'DrawingController', () => {
 	} );
 
 	describe( 'updatePreview', () => {
-		const point = { x: 50, y: 50 };
-		const style = { color: '#000000', strokeWidth: 2 };
+		const _point = { x: 50, y: 50 };
+		const _style = { color: '#000000', strokeWidth: 2 };
 
 		it( 'should do nothing if no temp layer', () => {
 			// Should not throw
@@ -1553,7 +1553,7 @@ describe( 'DrawingController', () => {
 			controller.startDrawing( { x: 50, y: 100 }, 'angleDimension', { color: '#000', strokeWidth: 1 } );
 			controller._angleDimensionPhase = 1;
 
-			const result = controller.createLayerFromDrawing( { x: 200, y: 300 } );
+			controller.createLayerFromDrawing( { x: 200, y: 300 } );
 
 			// createLayerFromDrawing doesn't return null here because phase handling is in finishDrawing
 			expect( controller.tempLayer ).toBeNull(); // tempLayer cleared

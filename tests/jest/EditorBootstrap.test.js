@@ -16,11 +16,11 @@
 const EditorBootstrap = require( '../../resources/ext.layers.editor/editor/EditorBootstrap.js' );
 
 describe( 'EditorBootstrap', () => {
-	let originalWindow;
+	let _originalWindow;
 
 	beforeEach( () => {
 		// Store original window state
-		originalWindow = { ...window };
+		_originalWindow = { ...window };
 
 		// Clear document body
 		document.body.innerHTML = '';
@@ -668,7 +668,7 @@ describe( 'EditorBootstrap', () => {
 		// We test the behavior by loading a fresh module copy.
 
 		describe( 'with fresh module', () => {
-			let freshModule;
+			let _freshModule;
 			let unhandledRejectionHandlers;
 			let errorHandlers;
 			let originalAddEventListener;
@@ -702,7 +702,7 @@ describe( 'EditorBootstrap', () => {
 				mw.log.error = jest.fn();
 
 				// Load fresh module
-				freshModule = require( '../../resources/ext.layers.editor/editor/EditorBootstrap.js' );
+				_freshModule = require( '../../resources/ext.layers.editor/editor/EditorBootstrap.js' );
 			} );
 
 			afterEach( () => {
@@ -800,9 +800,9 @@ describe( 'EditorBootstrap', () => {
 
 			// This will trigger the fallback path
 			// We need to manually simulate the scenario
-			let addHookCalled = false;
+			let _addHookCalled = false;
 			const mockAdd = jest.fn( () => {
-				addHookCalled = true;
+				_addHookCalled = true;
 			} );
 
 			// After some time, make mw available
@@ -826,7 +826,7 @@ describe( 'EditorBootstrap', () => {
 		// per module load due to handlersInitialized flag. Test with fresh module.
 
 		describe( 'with fresh module', () => {
-			let freshModule;
+			let _freshModule;
 			let beforeUnloadHandlers;
 			let originalAddEventListener;
 			let hookAddHandlers;
@@ -868,7 +868,7 @@ describe( 'EditorBootstrap', () => {
 				mw.log.error = jest.fn();
 
 				// Load fresh module which triggers init()
-				freshModule = require( '../../resources/ext.layers.editor/editor/EditorBootstrap.js' );
+				_freshModule = require( '../../resources/ext.layers.editor/editor/EditorBootstrap.js' );
 			} );
 
 			afterEach( () => {

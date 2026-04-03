@@ -586,10 +586,10 @@ describe( 'EffectsRenderer', () => {
 			const origCreateElement = document.createElement;
 
 			// First call throws (canvas capture), second call succeeds (background image)
-			let callCount = 0;
+			let _callCount = 0;
 			const tempCtxWithError = {
 				drawImage: jest.fn().mockImplementation( ( source ) => {
-					callCount++;
+					_callCount++;
 					if ( source === canvasWithContext ) {
 						throw new Error( 'Canvas tainted' );
 					}

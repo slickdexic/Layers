@@ -703,11 +703,11 @@ describe( 'PolygonStarRenderer', () => {
 				hasShadowEnabled: jest.fn().mockReturnValue( true ),
 				getShadowSpread: jest.fn().mockReturnValue( 0 ),
 				applyShadow: jest.fn(),
-				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, opacity ) => {
+				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, _opacity ) => {
 					// Call drawFn to test path drawing
 					drawFn( ctx );
 				} ),
-				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, opacity ) => {
+				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, _opacity ) => {
 					drawFn( ctx );
 				} )
 			};
@@ -819,10 +819,10 @@ describe( 'PolygonStarRenderer', () => {
 				hasShadowEnabled: jest.fn().mockReturnValue( true ),
 				getShadowSpread: jest.fn().mockReturnValue( 0 ),
 				applyShadow: jest.fn(),
-				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, opacity ) => {
+				drawSpreadShadow: jest.fn( ( layer, scale, spread, drawFn, _opacity ) => {
 					drawFn( ctx );
 				} ),
-				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, opacity ) => {
+				drawSpreadShadowStroke: jest.fn( ( layer, scale, strokeWidth, drawFn, _opacity ) => {
 					drawFn( ctx );
 				} )
 			};

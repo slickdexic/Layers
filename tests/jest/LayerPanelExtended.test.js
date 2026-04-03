@@ -484,7 +484,7 @@ describe( 'LayerPanel Extended', () => {
 
 	describe( 'divider resize', () => {
 		it( 'should setup divider resize handlers', () => {
-			const panel = new LayerPanel( {
+			new LayerPanel( {
 				container: container,
 				editor: mockEditor
 			} );
@@ -495,7 +495,7 @@ describe( 'LayerPanel Extended', () => {
 		} );
 
 		it( 'should add resize cursor class on mousedown', () => {
-			const panel = new LayerPanel( {
+			new LayerPanel( {
 				container: container,
 				editor: mockEditor
 			} );
@@ -510,7 +510,7 @@ describe( 'LayerPanel Extended', () => {
 		} );
 
 		it( 'should remove resize cursor class on mouseup', () => {
-			const panel = new LayerPanel( {
+			new LayerPanel( {
 				container: container,
 				editor: mockEditor
 			} );
@@ -1093,7 +1093,7 @@ describe( 'LayerPanel touch support', () => {
 	} );
 
 	it( 'should handle touchstart on divider', () => {
-		const panel = new LayerPanel( {
+		new LayerPanel( {
 			container: container,
 			editor: mockEditor
 		} );
@@ -1112,7 +1112,7 @@ describe( 'LayerPanel touch support', () => {
 	} );
 
 	it( 'should handle touchend to stop resize', () => {
-		const panel = new LayerPanel( {
+		new LayerPanel( {
 			container: container,
 			editor: mockEditor
 		} );

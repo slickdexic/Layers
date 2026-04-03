@@ -564,7 +564,7 @@ describe( 'ShapeLibraryPanel', () => {
 
 		it( 'should remove overlay click listener', () => {
 			panel = new ShapeLibraryPanel( { container: mockContainer } );
-			const overlayRef = panel.overlay;
+			const _overlayRef = panel.overlay;
 
 			panel.destroy();
 

@@ -414,7 +414,7 @@ global.mw = {
 | Test Files | 172 suites |
 | Test Cases | 13,880 |
 | Statement Coverage | 95.82% |
-| Branch Coverage | 87.00% |
+| Branch Coverage | 87.20% |
 
 ### God Classes (>1,000 lines)
 

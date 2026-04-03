@@ -92,7 +92,7 @@ describe( 'LayerDragDrop', () => {
 		} );
 
 		test( 'should call setup during construction', () => {
-			const dragDrop = new LayerDragDrop( {
+			new LayerDragDrop( {
 				layerList,
 				editor: mockEditor,
 				renderLayerList,
@@ -122,7 +122,7 @@ describe( 'LayerDragDrop', () => {
 	describe( 'setup', () => {
 		test( 'should do nothing when layerList is null', () => {
 			const localAddListener = jest.fn();
-			const dragDrop = new LayerDragDrop( {
+			new LayerDragDrop( {
 				layerList: null,
 				editor: mockEditor,
 				renderLayerList,
