@@ -71,7 +71,7 @@
 			}
 
 			// Skip locked or invisible layers
-			if ( layer.locked === true || layer.visible === false ) {
+			if ( layer.locked === true || layer.visible === false || layer.visible === 0 ) {
 				this.notifySelectionChange();
 				return;
 			}

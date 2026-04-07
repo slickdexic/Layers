@@ -399,7 +399,7 @@
 				}
 
 				// Skip invisible or locked layers
-				if ( layer.visible === false ) {
+				if ( layer.visible === false || layer.visible === 0 ) {
 					continue;
 				}
 

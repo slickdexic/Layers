@@ -478,22 +478,25 @@
 			const origRY = originalLayer.radiusY || 1;
 
 			// Edge handles: adjust only the corresponding axis
-			// Move center by half the delta to keep opposite edge fixed
+			// Move center by half the delta and radius by half the delta
+			// to keep the opposite edge fixed:
+			//   new_edge = (x + delta/2) + (rx + delta/2) = x + rx + delta  ✓
+			//   opp_edge = (x + delta/2) - (rx + delta/2) = x - rx          ✓
 			if ( handleType === 'e' ) {
 				// Dragging east: increase radiusX, shift center east
-				updates.radiusX = Math.max( 5, origRX + deltaX );
+				updates.radiusX = Math.max( 5, origRX + deltaX / 2 );
 				updates.x = origX + deltaX / 2;
 			} else if ( handleType === 'w' ) {
 				// Dragging west: increase radiusX, shift center west
-				updates.radiusX = Math.max( 5, origRX - deltaX );
+				updates.radiusX = Math.max( 5, origRX - deltaX / 2 );
 				updates.x = origX + deltaX / 2;
 			} else if ( handleType === 's' ) {
 				// Dragging south: increase radiusY, shift center south
-				updates.radiusY = Math.max( 5, origRY + deltaY );
+				updates.radiusY = Math.max( 5, origRY + deltaY / 2 );
 				updates.y = origY + deltaY / 2;
 			} else if ( handleType === 'n' ) {
 				// Dragging north: increase radiusY, shift center north
-				updates.radiusY = Math.max( 5, origRY - deltaY );
+				updates.radiusY = Math.max( 5, origRY - deltaY / 2 );
 				updates.y = origY + deltaY / 2;
 			}
 
@@ -506,8 +509,8 @@
 				// Determine direction for Y axis (s = bottom, n = top)
 				const ySign = ( handleType === 'se' || handleType === 'sw' ) ? 1 : -1;
 
-				updates.radiusX = Math.max( 5, origRX + ( xSign * deltaX ) );
-				updates.radiusY = Math.max( 5, origRY + ( ySign * deltaY ) );
+				updates.radiusX = Math.max( 5, origRX + ( xSign * deltaX / 2 ) );
+				updates.radiusY = Math.max( 5, origRY + ( ySign * deltaY / 2 ) );
 				// Shift center to keep opposite corner fixed
 				updates.x = origX + deltaX / 2;
 				updates.y = origY + deltaY / 2;

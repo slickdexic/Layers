@@ -58,11 +58,18 @@
 			const target = e.target;
 			const layerItem = target.closest( '.layer-item' );
 
-			// Get current selection
-			const selectedIds = this.getSelectedLayerIds();
-
 			// Close any existing context menu
 			this.closeLayerContextMenu();
+
+			// Determine clicked layer and select it if not already selected
+			const clickedLayerId = layerItem ? layerItem.dataset.layerId : null;
+			if ( clickedLayerId && !this.getSelectedLayerIds().includes( clickedLayerId ) ) {
+				this.selectLayer( clickedLayerId, false, false );
+			}
+
+			// Get selection state AFTER any selectLayer call so menu reflects
+			// the actual current selection
+			const selectedIds = this.getSelectedLayerIds();
 
 			// Create context menu
 			const menu = document.createElement( 'div' );
@@ -135,14 +142,8 @@
 			// Determine context based on selection
 			const hasMultipleSelected = selectedIds.length >= 2;
 			const hasSingleSelected = selectedIds.length === 1;
-			const clickedLayerId = layerItem ? layerItem.dataset.layerId : null;
 			const clickedLayer = clickedLayerId ? this.editor.getLayerById( clickedLayerId ) : null;
 			const isGroup = clickedLayer && clickedLayer.type === 'group';
-
-			// If clicked on a layer not in selection, select it first
-			if ( clickedLayerId && !selectedIds.includes( clickedLayerId ) ) {
-				this.selectLayer( clickedLayerId, false, false );
-			}
 
 			// Group option (requires 2+ layers selected)
 			addMenuItem(

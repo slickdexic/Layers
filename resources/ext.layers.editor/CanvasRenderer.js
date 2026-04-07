@@ -83,16 +83,6 @@
 			this.isMarqueeSelecting = false;
 			this.marqueeRect = null;
 
-			// Canvas pooling
-			this.canvasPool = [];
-			this.maxPoolSize = 5;
-
-			// Static layer caching for performance optimization
-			// Caches pre-rendered offscreen canvases for layers that haven't changed
-			this.layerCache = new Map();
-			this.layerCacheMaxSize = 50; // Max cached layers
-			this.layerCacheEnabled = true; // Can be disabled for debugging
-
 			// Layer renderer (delegated shape drawing - uses shared LayerRenderer)
 			this.layerRenderer = null;
 
@@ -154,136 +144,6 @@
 				return this.editor.getLayerById( layerId );
 			}
 			return null;
-		}
-
-		/**
-		 * Compute a hash string for a layer to detect changes.
-		 * Used for layer caching - if hash matches, cached version can be used.
-		 *
-		 * @param {Object} layer - Layer object
-		 * @return {string} Hash string representing the layer state
-		 * @private
-		 */
-		_computeLayerHash( layer ) {
-			// Include all properties that affect rendering
-			// Exclude position (x, y) since we handle that via canvas translation
-			const hashParts = [
-				layer.id,
-				layer.type,
-				layer.width,
-				layer.height,
-				layer.rotation,
-				layer.opacity,
-				layer.fill,
-				layer.stroke,
-				layer.strokeWidth,
-				layer.text,
-				layer.fontSize,
-				layer.fontFamily,
-				layer.fontWeight,
-				layer.fontStyle,
-				layer.shadow,
-				layer.shadowBlur,
-				layer.shadowColor,
-				layer.radius,
-				layer.radiusX,
-				layer.radiusY,
-				layer.arrowhead,
-				layer.arrowStyle,
-				layer.blendMode,
-				layer.blend,
-				layer.cornerRadius,
-				layer.visible,
-				layer.preserveAspectRatio,
-				layer.src ? layer.src.substring( 0, 100 ) + ':' + ( layer.src.length || 0 ) : '',
-				layer.richText ? this._hashString( JSON.stringify( layer.richText ) ) : '',
-				layer.gradient ? JSON.stringify( layer.gradient ) : '',
-				// For arrow/line, include endpoints
-				layer.x1,
-				layer.y1,
-				layer.x2,
-				layer.y2,
-				// Points for polygon/path - hash ALL points to detect middle-point edits
-				layer.points ? this._hashString( JSON.stringify( layer.points ) ) : ''
-			];
-			return hashParts.join( '|' );
-		}
-
-		/**
-		 * Compute a simple numeric hash of a string (DJB2 algorithm).
-		 * Used for cache keys where the full string would be too large.
-		 *
-		 * @param {string} str - Input string
-		 * @return {string} Hash as 'length:hash' for uniqueness
-		 * @private
-		 */
-		_hashString( str ) {
-			let hash = 5381;
-			for ( let i = 0; i < str.length; i++ ) {
-				hash = ( ( hash << 5 ) + hash + str.charCodeAt( i ) ) | 0;
-			}
-			return str.length + ':' + hash;
-		}
-
-		/**
-		 * Get a cached layer canvas or create a new one.
-		 *
-		 * @param {Object} layer - Layer to render
-		 * @return {Object|null} Cached data {canvas, hash} or null if not cached
-		 * @private
-		 */
-		_getCachedLayer( layer ) {
-			if ( !this.layerCacheEnabled || !layer.id ) {
-				return null;
-			}
-			const cached = this.layerCache.get( layer.id );
-			if ( !cached ) {
-				return null;
-			}
-			// Verify hash matches current layer state
-			const currentHash = this._computeLayerHash( layer );
-			if ( cached.hash !== currentHash ) {
-				// Layer changed, invalidate cache
-				this.layerCache.delete( layer.id );
-				return null;
-			}
-			return cached;
-		}
-
-		/**
-		 * Cache a rendered layer to an offscreen canvas.
-		 *
-		 * @param {Object} layer - Layer that was rendered
-		 * @param {HTMLCanvasElement} canvas - Offscreen canvas with rendered layer
-		 * @private
-		 */
-		_setCachedLayer( layer, canvas ) {
-			if ( !this.layerCacheEnabled || !layer.id ) {
-				return;
-			}
-			// Enforce max cache size (LRU eviction)
-			while ( this.layerCache.size >= this.layerCacheMaxSize ) {
-				const firstKey = this.layerCache.keys().next().value;
-				this.layerCache.delete( firstKey );
-			}
-			this.layerCache.set( layer.id, {
-				canvas: canvas,
-				hash: this._computeLayerHash( layer ),
-				timestamp: Date.now()
-			} );
-		}
-
-		/**
-		 * Invalidate cache for a specific layer or all layers.
-		 *
-		 * @param {string} [layerId] - Layer ID to invalidate, or omit to clear all
-		 */
-		invalidateLayerCache( layerId ) {
-			if ( layerId ) {
-				this.layerCache.delete( layerId );
-			} else {
-				this.layerCache.clear();
-			}
 		}
 
 		setTransform( zoom, panX, panY ) {
@@ -574,12 +434,14 @@
 
 			// Save original context and state
 			const originalCtx = this.ctx;
+			const originalCanvas = this.canvas;
 			const originalZoom = this.zoom;
 			const originalPanX = this.panX;
 			const originalPanY = this.panY;
 
 			// Temporarily use the target context with export settings
 			this.ctx = targetCtx;
+			this.canvas = targetCtx.canvas;
 			this.zoom = scale;
 			this.panX = 0;
 			this.panY = 0;
@@ -603,6 +465,7 @@
 			} finally {
 				// Restore original context and state even if rendering throws
 				this.ctx = originalCtx;
+				this.canvas = originalCanvas;
 				this.zoom = originalZoom;
 				this.panX = originalPanX;
 				this.panY = originalPanY;
@@ -634,7 +497,7 @@
 					this.ctx.globalCompositeOperation = String( layer.blend );
 				} catch ( blendError ) {
 					// Invalid blend mode - fall back to default 'source-over'
-					mw.log.warn( '[CanvasRenderer] Invalid blend mode "' + layer.blend + '":', blendError.message );
+					mw.log.warn( `[CanvasRenderer] Invalid blend mode "${layer.blend}":`, blendError.message );
 					this.ctx.globalCompositeOperation = 'source-over';
 				}
 			}
@@ -740,7 +603,9 @@
 				}
 			} catch ( e ) {
 				// Error fallback - draw a semi-transparent overlay
-				mw.log.warn( '[CanvasRenderer] Blur blend mode failed:', e.message );
+				if ( typeof mw !== 'undefined' ) {
+					mw.log.warn( '[CanvasRenderer] Blur blend mode failed:', e.message );
+				}
 				this.ctx.fillStyle = 'rgba(128, 128, 128, 0.5)';
 				this.ctx.beginPath();
 				this._drawBlurClipPath( layer );
@@ -1027,7 +892,7 @@
 		}
 
 		supportsGlow( type ) {
-			return [ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'arrow', 'path' ].indexOf( type ) !== -1;
+			return [ 'rectangle', 'circle', 'ellipse', 'polygon', 'star', 'line', 'arrow', 'path' ].includes( type );
 		}
 
 		drawGlow( layer ) {
@@ -1276,15 +1141,15 @@
 		}
 
 		getLayerBounds( layer ) {
-			// Uses TextUtils/GeometryUtils for bounds calculation
 			if ( !layer ) {
 				return null;
 			}
-			const baseBounds = this._getRawLayerBounds( layer );
-			if ( !baseBounds ) {
-				return null;
+			// Delegate to CanvasManager for single source of truth (P2-091 DRY fix)
+			if ( this.editor && this.editor.canvasManager ) {
+				return this.editor.canvasManager.getLayerBounds( layer );
 			}
-			return baseBounds; // Simplified for now, rotation handled in drawSelectionIndicators
+			// Fallback when canvasManager unavailable (e.g., during init)
+			return this._getRawLayerBounds( layer );
 		}
 
 		_getRawLayerBounds( layer ) {
@@ -1331,20 +1196,6 @@
 		 * Clean up resources
 		 */
 		destroy() {
-			// Clear canvas pool
-			if ( this.canvasPool && this.canvasPool.length > 0 ) {
-				this.canvasPool.forEach( function ( pooledCanvas ) {
-					pooledCanvas.width = 0;
-					pooledCanvas.height = 0;
-				} );
-				this.canvasPool = [];
-			}
-
-			// Clear layer cache
-			if ( this.layerCache ) {
-				this.layerCache.clear();
-			}
-
 			// Clear canvas state stack
 			this.canvasStateStack = [];
 
