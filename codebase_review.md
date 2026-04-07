@@ -22,7 +22,7 @@
 - **Coverage:** 95.87% statements, 87.20% branches, 94.00% functions,
     95.98% lines (from `npm test` coverage output, April 7, 2026)
 - **Jest test suites:** 172
-- **Jest test cases:** 13,984 (`npm test` / `jest` summary)
+- **Jest test cases:** 13,981 (`npm test` / `jest` summary)
 - **PHPUnit test files:** 35 in `tests/phpunit`
 - **Published i18n metric:** 785 `layers-` keys via
     `scripts/verify-metrics.js` (`842` total non-`@metadata` keys exist
@@ -51,7 +51,7 @@ drift items.
 
 The repository is fully green on the validated workflows:
 
-- `npm test` passes: 172 suites, 13,984 tests.
+- `npm test` passes: 172 suites, 13,981 tests.
 - `npm run test:php` passes cleanly.
 
 ### Strengths Identified
@@ -4539,8 +4539,8 @@ but verified as non-issues:
 | PHP production files (`src/`) | 42 |
 | PHP production lines (`src/`) | ~15,364 |
 | Jest test suites | 172 |
-| Jest tests | 13,984 |
-| Statement coverage | 95.82% |
+| Jest tests | 13,981 |
+| Statement coverage | 95.87% |
 | Branch coverage | 87.20% |
 | i18n keys (`en.json`, `qqq.json`) | 785 published `layers-` keys |
 | PHPUnit test files | 34 |
@@ -4705,7 +4705,7 @@ P3-148 (unused interface) deferred.*
 ## Overall Assessment
 
 The codebase maintains strong architecture, comprehensive test coverage
-(95.82% statements, 13,880 tests in 172 suites), 100% ES6 class migration,
+(95.87% statements, 13,981 tests in 172 suites), 100% ES6 class migration,
 and robust security controls (CSRF, rate limiting, input validation). All
 v49–v66 code fixes confirmed intact (369+ total historical issues resolved).
 

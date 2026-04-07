@@ -256,8 +256,8 @@ wiring with marginal benefit.
 
 ### v68 Notes
 
-- `npm test` passes on `main`: 172 Jest suites, 13,984 tests,
-  95.82% statement coverage, 87.20% branch coverage.
+- `npm test` passes on `main`: 172 Jest suites, 13,981 tests,
+  95.87% statement coverage, 87.20% branch coverage.
 - `npm run test:php` passes cleanly.
 - No new exploitable SQL injection, CSRF, XSS, or permission-bypass
   issues were confirmed in the v68 audit.
