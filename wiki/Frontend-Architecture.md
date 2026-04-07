@@ -412,8 +412,8 @@ global.mw = {
 | Total Lines | ~114,000 |
 | ES6 Classes | 140 |
 | Test Files | 172 suites |
-| Test Cases | 13,880 |
-| Statement Coverage | 95.82% |
+| Test Cases | 13,981 |
+| Statement Coverage | 95.87% |
 | Branch Coverage | 87.20% |
 
 ### God Classes (>1,000 lines)

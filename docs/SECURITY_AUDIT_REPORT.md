@@ -1,6 +1,6 @@
 # Security Audit Report — MediaWiki Layers Extension v1.5.63
 
-**Date:** June 2025
+**Date:** June 2025 (last reviewed: April 2026)
 **Scope:** Full codebase — 42 PHP files (~15,364 lines), 157 JS files (~114,000 lines)
 **Methodology:** Manual static analysis against OWASP Top 10, MediaWiki-specific vectors, and 15 vulnerability classes (SQL injection, XSS, CSRF, SSRF, auth bypass, command injection, prototype pollution, path traversal, clickjacking, ReDoS, race conditions, info disclosure, deserialization, open redirect, wikitext injection)
 

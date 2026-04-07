@@ -190,7 +190,7 @@ Data includes: { layers: [...], canvasWidth: 600, canvasHeight: 400 }
 
 ## Test Coverage
 
-All 13,880 Jest tests pass.
+All 13,981 Jest tests pass.
 
 Key test file: `tests/jest/LayersEditorCoverage.test.js`
 - Updated `navigateBackToFile` test to mock `isSlide` correctly

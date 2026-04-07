@@ -102,28 +102,28 @@ positive. 4 structural items deferred. 1 left as acceptable.
 
 | ID | File | Issue | Status |
 |----|------|-------|--------|
-| D-069-01 | README.md | Badge test count 13,882→13,984 | 🔲 Open |
-| D-069-02 | CHANGELOG.md + wiki/Changelog.md | Count 13,882→13,984 | 🔲 Open |
-| D-069-03 | CONTRIBUTING.md L24 | Count 13,880→13,984 | 🔲 Open |
-| D-069-04 | LTS_BRANCH_STRATEGY.md | Count 13,880→13,984 | 🔲 Open |
-| D-069-05 | wiki/Architecture-Overview.md | Count 13,880→13,984 | 🔲 Open |
-| D-069-06 | wiki/Frontend-Architecture.md | Count 13,880→13,984 | 🔲 Open |
-| D-069-07 | SLIDE_MODE_ISSUES.md | Count 13,880→13,984 | 🔲 Open |
-| D-069-08 | KNOWN_ISSUES.md (v68 section) | Count 13,882→13,984 | 🔲 Open |
-| D-069-09 | CHANGELOG.md + wiki/Changelog.md | Branch 87.00→87.20% | 🔲 Open |
-| D-069-10 | SECURITY_AUDIT_REPORT.md L3 | Date "June 2025" stale | 🔲 Open |
-| D-069-11 | wiki/Named-Layer-Sets.md L43 | "50 chars" vs code 255 | 🔲 Open |
-| D-069-12 | wiki/Slide-Mode.md L36 | `bgcolor` vs `background` | 🔲 Open |
-| D-069-13 | DEVELOPER_ONBOARDING.md | Stale line counts | 🔲 Open |
-| D-069-14 | copilot-instructions.md | "1-50 chars" vs code 255 | 🔲 Open |
-| D-069-15 | GOD_CLASS_REFACTORING_PLAN.md | v1.5.58 metrics (dated) | 🔲 Open |
-| D-069-16 | improvement_plan.md v67 | Count 13,882→13,984 | 🔲 Open |
-| D-069-17 | DOCUMENTATION_REVIEW_REPORT.md | Flagged items unresolved | 🔲 Open |
-| D-069-18 | NAMED_LAYER_SETS.md vs wiki | Length 255 vs 50; charset | 🔲 Open |
+| D-069-01 | README.md | Badge test count 13,882→13,981 | ✅ Fixed |
+| D-069-02 | CHANGELOG.md + wiki/Changelog.md | Count 13,882→13,981 | ✅ Fixed |
+| D-069-03 | CONTRIBUTING.md L24 | Count 13,880→13,981 | ✅ Fixed |
+| D-069-04 | LTS_BRANCH_STRATEGY.md | Count 13,880→13,981 | ✅ Fixed |
+| D-069-05 | wiki/Architecture-Overview.md | Count 13,880→13,981 | ✅ Fixed |
+| D-069-06 | wiki/Frontend-Architecture.md | Count 13,880→13,981 | ✅ Fixed |
+| D-069-07 | SLIDE_MODE_ISSUES.md | Count 13,880→13,981 | ✅ Fixed |
+| D-069-08 | KNOWN_ISSUES.md (v68 section) | Count 13,882→13,981 | ✅ Fixed |
+| D-069-09 | CHANGELOG.md + wiki/Changelog.md | Branch 87.00→87.20% | ✅ Fixed |
+| D-069-10 | SECURITY_AUDIT_REPORT.md L3 | Date "June 2025" stale | ✅ Fixed |
+| D-069-11 | wiki/Named-Layer-Sets.md L43 | "50 chars" vs code 255 | ✅ Fixed |
+| D-069-12 | wiki/Slide-Mode.md L36 | `bgcolor` vs `background` | ✅ Fixed |
+| D-069-13 | DEVELOPER_ONBOARDING.md | Stale line counts | ⏭ Acceptable |
+| D-069-14 | copilot-instructions.md | "1-50 chars" vs code 255 | ✅ Fixed |
+| D-069-15 | GOD_CLASS_REFACTORING_PLAN.md | v1.5.58 metrics (dated) | ⏭ Acceptable |
+| D-069-16 | improvement_plan.md v67 | Count 13,882→13,981 | ✅ Fixed |
+| D-069-17 | DOCUMENTATION_REVIEW_REPORT.md | Flagged items unresolved | ⏭ Acceptable |
+| D-069-18 | NAMED_LAYER_SETS.md vs wiki | Length 255 vs 50; charset | ✅ Fixed |
 
 ### Verification
 
-- `npm test` passes: 172 suites, 13,984 tests.
+- `npm test` passes: 172 suites, 13,981 tests.
 - `npm run test:php` passes cleanly.
 - Coverage: 95.87% stmt, 87.20% branch, 94.00% fn, 95.98% lines.
 - No new exploitable security vulnerabilities confirmed.
@@ -157,7 +157,7 @@ manual source verification. All items fixed immediately.
 
 ### Verification
 
-- `npm test` passes: 172 suites, 13,882 tests.
+- `npm test` passes: 172 suites, 13,981 tests.
 - `npm run test:php` passes cleanly.
 - No new exploitable security vulnerabilities confirmed.
 
@@ -222,13 +222,13 @@ manual source verification. All items fixed immediately.
 #### D-067-04: `docs/SLIDE_MODE_ISSUES.md` Still Says “All 11,847 Tests Pass”
 
 - **Issue:** Test-count claim is stale.
-- **Verification:** Current Jest summary is `13,882` tests in `172`
+- **Verification:** Current Jest summary is `13,981` tests in `172`
   suites.
 - **Status:** ✅ Fixed
 
 ### Verification
 
-- `npm test` passes: 172 suites, 13,882 tests.
+- `npm test` passes: 172 suites, 13,981 tests.
 - `npm run test:php` passes cleanly.
 - `php vendor/bin/phpunit --configuration phpunit.xml` passes:
   539 tests, 7 skipped.

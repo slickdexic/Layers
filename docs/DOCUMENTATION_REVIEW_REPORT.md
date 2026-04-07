@@ -12,6 +12,14 @@ The Layers extension has extensive documentation, but it suffers from **metric d
 
 **Issues found: 47** (7 critical, 15 outdated, 8 contradictions, 10 quality, 7 missing/incomplete)
 
+> **Resolution note (April 2026):** The majority of metric-drift and accuracy issues
+> identified in this report have been resolved through systematic fix passes in v67, v68,
+> and v69. Test counts, coverage percentages, line counts, and feature descriptions are now
+> synchronized across all documentation files. See `docs/KNOWN_ISSUES.md` for the tracked
+> resolution status of each fix pass. Remaining items in this report are either archived
+> documents left intentionally as historical records or approximate values within acceptable
+> tolerance (~3-5%).
+
 ---
 
 ## 1. Critical Accuracy Issues

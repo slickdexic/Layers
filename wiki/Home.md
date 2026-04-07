@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-13%2C984%20passing-brightgreen" alt="13,984 Tests">
-  <img src="https://img.shields.io/badge/Coverage-95.82%25-brightgreen" alt="95.82% Coverage">
+  <img src="https://img.shields.io/badge/Tests-13%2C981%20passing-brightgreen" alt="13,981 Tests">
+  <img src="https://img.shields.io/badge/Coverage-95.87%25-brightgreen" alt="95.87% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -27,12 +27,12 @@
 - **Compatibility Backports** — Browser gating now treats
   `FileReader`/`Blob` as optional, and pre-bootstrap warnings route
   through `UIManager.showBrowserCompatibilityWarning()`
-- **Test Suite** — 13,984 tests (172 suites), 95.82% stmts, 87.20% branches
+- **Test Suite** — 13,981 tests (172 suites), 95.87% stmts, 87.20% branches
 
 ### Previous v1.5.62 Highlights
 
 - **16 Bug Fixes** — Zoom-to-pointer anchor drift, 15 P3 code-quality fixes
-- **Test Suite** — 13,984 tests passing (172 suites)
+- **Test Suite** — 13,981 tests passing (172 suites)
 
 ### Previous v1.5.59 Highlights
 

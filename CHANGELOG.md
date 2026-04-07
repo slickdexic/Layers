@@ -28,8 +28,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Expanded Jest and E2E coverage throughout the v1.5.63 cycle,
   including compatibility regressions for missing `FileReader`/`Blob`
   support and pre-bootstrap warning handling.
-- All 13,882 tests pass (172 test suites) ✅
-- Coverage snapshot: 95.82% statements, 87.00% branches.
+- All 13,981 tests pass (172 test suites) ✅
+- Coverage snapshot: 95.87% statements, 87.20% branches.
 
 ## [1.5.62] - 2026-03-17
 
@@ -2539,7 +2539,7 @@ This release focuses on improving test coverage for critical components and ensu
 - **Deep Linking to Editor** — URL parameters now allow opening the editor with a specific layer set pre-loaded:
   - `?action=editlayers&setname=anatomy` — Opens editor with "anatomy" layer set
   - Also supports `layerset` and `layers` parameter aliases
-  - Set name validation: alphanumeric characters, hyphens, and underscores only (max 50 chars)
+  - Set name validation: alphanumeric characters, hyphens, and underscores only (max 255 chars)
 
 - **Wikitext Link Options** — New `layerslink` parameter for controlling click behavior on images with layers:
   - `[[File:Example.jpg|layers=setname|layerslink=editor]]` — Opens layer editor for this image

@@ -40,7 +40,7 @@ Named layer sets allow you to maintain **multiple independent annotation sets** 
 ### Naming Rules
 
 - **Allowed characters:** `a-z`, `A-Z`, `0-9`, `-`, `_`
-- **Length:** 1-50 characters
+- **Length:** 1-255 characters
 - **Case-sensitive:** `Labels` and `labels` are different sets
 - **Reserved:** `default` is the default set name
 

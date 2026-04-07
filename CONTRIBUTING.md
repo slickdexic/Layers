@@ -21,7 +21,7 @@ This extension is feature-rich by design—**17 drawing tools**, multiple render
 **There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns
 - ✅ Secure with CSRF protection, rate limiting, validation
-- ✅ Thoroughly tested (95.82% coverage, 13,880 tests)
+- ✅ Thoroughly tested (95.87% coverage, 13,981 tests)
 - ✅ Properly delegated (god classes use controller patterns)
 
 ---

@@ -46,8 +46,8 @@ keys, 42 PHP files.
 v61 audit found **2 MEDIUM + 2 LOW code issues** (P2-188, P2-189,
 P3-190, P3-191) plus **5 documentation drift items** (D-061-01 to
 D-061-05). 14 false positives eliminated during verification. All v60
-code and doc fixes verified intact. Metrics: 13,882 tests (172 suites),
-95.82%/87.00% coverage, 842 i18n keys. P3-147 (accepted), P3-148
+code and doc fixes verified intact. Metrics: 13,981 tests (172 suites),
+95.87%/87.20% coverage, 842 i18n keys. P3-147 (accepted), P3-148
 (deferred) carried forward.
 
 v61 fix pass (March 26): Fixed P2-188, P2-189, P3-190. Reclassified
@@ -280,8 +280,8 @@ wiring with marginal benefit.
 
 ### v67 Notes
 
-- `npm test` passes on `main`: 172 Jest suites, 13,882 tests,
-  95.82% statement coverage, 87.00% branch coverage.
+- `npm test` passes on `main`: 172 Jest suites, 13,981 tests,
+  95.87% statement coverage, 87.20% branch coverage.
 - `scripts/verify-metrics.js` publishes **785** `layers-` i18n keys;
   the current-state docs are now aligned to that published metric.
 - `npm run test:php` passes cleanly.

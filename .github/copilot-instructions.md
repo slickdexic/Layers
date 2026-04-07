@@ -425,7 +425,7 @@ Database
   - Params: filename, oldname, newname, token
   - Returns: { layersrename: { success: 1, oldname, newname } }
   - Permission: owner (first revision creator) or admin ('delete' right)
-  - Validates: new name format (alphanumeric, hyphens, underscores, 1-50 chars), no conflicts, cannot rename to 'default'
+  - Validates: new name format (alphanumeric, hyphens, underscores, 1-255 chars), no conflicts, cannot rename to 'default'
 
 Keep this doc aligned with code. When you change public behavior (API, schema, messages), update this file and add tests where feasible.
 ## 12) Documentation update checklist

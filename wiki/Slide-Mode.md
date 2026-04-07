@@ -29,7 +29,7 @@ Use the `{{#Slide:}}` parser function to embed slides:
 | `layerset` | Named layer set to display (default: "default") | `layerset=anatomy` |
 | `canvas` | Canvas size (width×height) | `canvas=1920x1080` |
 | `size` | Display size on page | `size=800x600` |
-| `bgcolor` | Background color | `bgcolor=#f0f0f0` |
+| `background` | Background color | `background=#f0f0f0` |
 | `noedit` | Hide the edit overlay button | `noedit` |
 | `class` | CSS classes | `class=my-diagram` |
 
@@ -50,7 +50,7 @@ Use the `{{#Slide:}}` parser function to embed slides:
 {{#Slide: Infographic | size=800x600}}
 
 <!-- With background color -->
-{{#Slide: Blueprint | bgcolor=#e8f4fc}}
+{{#Slide: Blueprint | background=#e8f4fc}}
 
 <!-- View-only (no edit overlay) -->
 {{#Slide: Published | noedit}}
@@ -60,7 +60,7 @@ Use the `{{#Slide:}}` parser function to embed slides:
 | layerset=detailed
 | canvas=1200x900 
 | size=600x450 
-| bgcolor=#ffffff
+| background=#ffffff
 }}
 ```
 
