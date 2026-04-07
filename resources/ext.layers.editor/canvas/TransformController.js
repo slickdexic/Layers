@@ -479,6 +479,74 @@ class TransformController {
 			}
 		}
 
+		// Calculate snap-adjusted delta ONCE before the per-layer loop.
+		// Using a uniform delta for all layers preserves their relative positions.
+		let adjustedDeltaX = deltaX;
+		let adjustedDeltaY = deltaY;
+
+		if ( layersToMove.length > 0 ) {
+			// Derive the reference position for snap calculations.
+			// Use the primary (first) layer so that all layers receive the same
+			// adjusted delta, keeping their relative positions intact.
+			const primaryLayer = layersToMove[ 0 ];
+			let primaryState = this.originalLayerState;
+			if ( dragSelectedIds.length > 1 && this.originalMultiLayerStates ) {
+				primaryState = this.originalMultiLayerStates[ primaryLayer.id ];
+			}
+
+			if ( primaryState ) {
+				// Geometric layers (line, arrow, dimension, angleDimension) store
+				// position as endpoint coordinates rather than x/y, so compute the
+				// bounding-box top-left corner as the reference.
+				// Path layers store geometry as a points array.
+				const _getRefPoint = ( state ) => {
+					const t = state.type;
+					if ( t === 'line' || t === 'arrow' || t === 'dimension' ) {
+						return {
+							x: Math.min( state.x1 || 0, state.x2 || 0 ),
+							y: Math.min( state.y1 || 0, state.y2 || 0 )
+						};
+					}
+					if ( t === 'angleDimension' ) {
+						return {
+							x: Math.min( state.cx || 0, state.ax || 0, state.bx || 0 ),
+							y: Math.min( state.cy || 0, state.ay || 0, state.by || 0 )
+						};
+					}
+					if ( t === 'path' && state.points && state.points.length > 0 ) {
+						return {
+							x: Math.min( ...state.points.map( ( p ) => p.x ) ),
+							y: Math.min( ...state.points.map( ( p ) => p.y ) )
+						};
+					}
+					return { x: state.x || 0, y: state.y || 0 };
+				};
+
+				if ( this.manager.snapToGrid && this.manager.gridSize > 0 ) {
+					const ref = _getRefPoint( primaryState );
+					const newX = ref.x + deltaX;
+					const newY = ref.y + deltaY;
+					const snappedPoint = this.manager.snapPointToGrid( { x: newX, y: newY } );
+					adjustedDeltaX = snappedPoint.x - ref.x;
+					adjustedDeltaY = snappedPoint.y - ref.y;
+				} else if ( this.manager.smartGuidesController &&
+					( this.manager.smartGuidesController.enabled || this.manager.smartGuidesController.canvasSnapEnabled ) ) {
+					// Apply smart guides snapping when grid snap is disabled
+					const ref = _getRefPoint( primaryState );
+					const proposedX = ref.x + deltaX;
+					const proposedY = ref.y + deltaY;
+					const snapped = this.manager.smartGuidesController.calculateSnappedPosition(
+						primaryLayer,
+						proposedX,
+						proposedY,
+						this.manager.editor.layers
+					);
+					adjustedDeltaX = snapped.x - ref.x;
+					adjustedDeltaY = snapped.y - ref.y;
+				}
+			}
+		}
+
 		// Move all layers in the selection
 		for ( let j = 0; j < layersToMove.length; j++ ) {
 			const layerToMove = layersToMove[ j ];
@@ -491,61 +559,6 @@ class TransformController {
 
 			if ( !originalState ) {
 				continue;
-			}
-
-			// Apply snap-to-grid if enabled
-			let adjustedDeltaX = deltaX;
-			let adjustedDeltaY = deltaY;
-
-			// Derive the reference position for snap calculations.
-			// Geometric layers (line, arrow, dimension, angleDimension) store position
-			// as endpoint coordinates rather than x/y, so compute the bounding box
-			// top-left corner as the reference instead of using 0/0.
-			// Path layers store geometry as a points array and also need special handling.
-			const _getRefPoint = ( state ) => {
-				const t = state.type;
-				if ( t === 'line' || t === 'arrow' || t === 'dimension' ) {
-					return {
-						x: Math.min( state.x1 || 0, state.x2 || 0 ),
-						y: Math.min( state.y1 || 0, state.y2 || 0 )
-					};
-				}
-				if ( t === 'angleDimension' ) {
-					return {
-						x: Math.min( state.cx || 0, state.ax || 0, state.bx || 0 ),
-						y: Math.min( state.cy || 0, state.ay || 0, state.by || 0 )
-					};
-				}
-				if ( t === 'path' && state.points && state.points.length > 0 ) {
-					return {
-						x: Math.min( ...state.points.map( ( p ) => p.x ) ),
-						y: Math.min( ...state.points.map( ( p ) => p.y ) )
-					};
-				}
-				return { x: state.x || 0, y: state.y || 0 };
-			};
-
-			if ( this.manager.snapToGrid && this.manager.gridSize > 0 ) {
-				const ref = _getRefPoint( originalState );
-				const newX = ref.x + deltaX;
-				const newY = ref.y + deltaY;
-				const snappedPoint = this.manager.snapPointToGrid( { x: newX, y: newY } );
-				adjustedDeltaX = snappedPoint.x - ref.x;
-				adjustedDeltaY = snappedPoint.y - ref.y;
-			} else if ( this.manager.smartGuidesController &&
-				( this.manager.smartGuidesController.enabled || this.manager.smartGuidesController.canvasSnapEnabled ) ) {
-				// Apply smart guides snapping when grid snap is disabled
-				const ref = _getRefPoint( originalState );
-				const proposedX = ref.x + deltaX;
-				const proposedY = ref.y + deltaY;
-				const snapped = this.manager.smartGuidesController.calculateSnappedPosition(
-					layerToMove,
-					proposedX,
-					proposedY,
-					this.manager.editor.layers
-				);
-				adjustedDeltaX = snapped.x - ref.x;
-				adjustedDeltaY = snapped.y - ref.y;
 			}
 
 			// Update layer position based on type

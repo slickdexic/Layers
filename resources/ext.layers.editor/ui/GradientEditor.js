@@ -321,9 +321,11 @@
 
 			const label = document.createElement( 'label' );
 			label.textContent = msg( 'layers-gradient-angle', 'Angle' );
+			label.setAttribute( 'for', 'gradient-angle-input' );
 
 			const input = document.createElement( 'input' );
 			input.type = 'range';
+			input.id = 'gradient-angle-input';
 			input.min = 0;
 			input.max = 360;
 			input.step = 15;
@@ -360,9 +362,11 @@
 
 			const radiusLabel = document.createElement( 'label' );
 			radiusLabel.textContent = msg( 'layers-gradient-radius', 'Radius' );
+			radiusLabel.setAttribute( 'for', 'gradient-radius-input' );
 
 			const radiusInput = document.createElement( 'input' );
 			radiusInput.type = 'range';
+			radiusInput.id = 'gradient-radius-input';
 			radiusInput.min = 0.1;
 			radiusInput.max = 1.5;
 			radiusInput.step = 0.1;
@@ -605,7 +609,18 @@
 		 */
 		_notifyChange() {
 			if ( this.onChange ) {
-				this.onChange( { gradient: this._cloneGradient( this.currentGradient ) } );
+				// Debounce to prevent flooding undo history during slider drags.
+				// Slider 'input' events fire many times per second; we batch them
+				// so only one undo entry is created per interaction.
+				if ( this._notifyTimeout ) {
+					clearTimeout( this._notifyTimeout );
+				}
+				this._notifyTimeout = setTimeout( () => {
+					this._notifyTimeout = null;
+					if ( this.onChange ) {
+						this.onChange( { gradient: this._cloneGradient( this.currentGradient ) } );
+					}
+				}, 150 );
 			}
 		}
 
@@ -613,6 +628,12 @@
 		 * Destroy the editor
 		 */
 		destroy() {
+			// Clear pending debounce timer
+			if ( this._notifyTimeout ) {
+				clearTimeout( this._notifyTimeout );
+				this._notifyTimeout = null;
+			}
+
 			// Clean up event listeners first
 			if ( this.eventTracker ) {
 				this.eventTracker.destroy();

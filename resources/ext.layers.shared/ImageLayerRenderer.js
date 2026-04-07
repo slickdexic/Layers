@@ -49,6 +49,7 @@
 
 			// Track failed image URLs to prevent retry storms (P2-205)
 			this._failedUrls = new Set();
+			this._maxFailedUrls = 200;
 		}
 
 		/**
@@ -229,6 +230,11 @@
 				}
 				// Track failed URL to prevent retry storms (P2-205)
 				if ( this._failedUrls ) {
+					// Evict oldest entries if at capacity
+					if ( this._failedUrls.size >= this._maxFailedUrls ) {
+						const first = this._failedUrls.values().next().value;
+						this._failedUrls.delete( first );
+					}
 					this._failedUrls.add( layer.src );
 				}
 				// Remove failed image from cache

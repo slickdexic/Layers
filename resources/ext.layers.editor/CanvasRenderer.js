@@ -83,10 +83,6 @@
 			this.isMarqueeSelecting = false;
 			this.marqueeRect = null;
 
-			// Canvas pooling
-			this.canvasPool = [];
-			this.maxPoolSize = 5;
-
 			// Layer renderer (delegated shape drawing - uses shared LayerRenderer)
 			this.layerRenderer = null;
 
@@ -438,12 +434,14 @@
 
 			// Save original context and state
 			const originalCtx = this.ctx;
+			const originalCanvas = this.canvas;
 			const originalZoom = this.zoom;
 			const originalPanX = this.panX;
 			const originalPanY = this.panY;
 
 			// Temporarily use the target context with export settings
 			this.ctx = targetCtx;
+			this.canvas = targetCtx.canvas;
 			this.zoom = scale;
 			this.panX = 0;
 			this.panY = 0;
@@ -467,6 +465,7 @@
 			} finally {
 				// Restore original context and state even if rendering throws
 				this.ctx = originalCtx;
+				this.canvas = originalCanvas;
 				this.zoom = originalZoom;
 				this.panX = originalPanX;
 				this.panY = originalPanY;
@@ -1197,15 +1196,6 @@
 		 * Clean up resources
 		 */
 		destroy() {
-			// Clear canvas pool
-			if ( this.canvasPool && this.canvasPool.length > 0 ) {
-				this.canvasPool.forEach( ( pooledCanvas ) => {
-					pooledCanvas.width = 0;
-					pooledCanvas.height = 0;
-				} );
-				this.canvasPool = [];
-			}
-
 			// Clear canvas state stack
 			this.canvasStateStack = [];
 

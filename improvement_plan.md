@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** March 31, 2026 — v68 fix pass complete
+**Last updated:** April 7, 2026 — v69 audit complete
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -120,10 +120,43 @@ v68 audit (March 31) found **1 MEDIUM + 5 LOW code issues**
 manual source verification. Audit scope: full codebase (PHP + JS).
 No new exploitable security vulnerabilities confirmed.
 
-Current verified backlog: 0 open code items, 0 open documentation
-items, and 0 carried items.
+v68 fix pass (March 31): Fixed P2-218, P3-219 through P3-223, and
+D-068-01 through D-068-04. **0 open code items from v68.**
+
+v69 audit (April 7) found **1 HIGH + 4 MEDIUM + 16 LOW code issues**
+(P1-224, P2-225 to P2-228, P3-229 to P3-244) plus **18 documentation
+drift items** (D-069-01 to D-069-18). False positives eliminated
+through manual source verification. Audit scope: full codebase
+(PHP + JS). No new exploitable security vulnerabilities confirmed.
+Coverage: 95.87% stmt, 87.20% branch, 94.00% fn, 95.98% lines.
+
+**Resolution:** 15 of 21 code items fixed (P1-224, P2-225–228,
+P3-229–232, P3-235, P3-237–238, P3-240, P3-242–243). P3-239
+reclassified as false positive. P3-244 acceptable (mitigated).
+4 structural items deferred (P3-233, P3-234, P3-236, P3-241).
+
+Remaining backlog: **4 deferred structural items** and
+**18 documentation drift items**.
 
 Use the section below as the authoritative current backlog.
+
+---
+
+## v69 Current Priorities
+
+| # | Priority | ID | Status | Description |
+|---|----------|-----|--------|-------------|
+| 1 | **HIGH** | P1-224 | ✅ Fixed | TransformController multi-select snap |
+| 2 | **MED** | P2-225 | ✅ Fixed | ResizeCalculator ellipse 2x rate |
+| 3 | **MED** | P2-226 | ✅ Fixed | CanvasRenderer blur blend export |
+| 4 | **MED** | P2-227 | ✅ Fixed | SelectionManager base64 clone perf |
+| 5 | **MED** | P2-228 | ✅ Fixed | ContextMenuController stale state |
+| 6 | Low | P3-229–244 | 15/16 done | 11 fixed, 1 false positive, 4 deferred |
+| 7 | Doc | D-069-01–18 | 🔲 Open | 18 documentation drift items |
+
+**Deferred structural items:** P3-233 (triple getLayerBounds),
+P3-234 (LayerListRenderer duplication), P3-236 (keyboard drag),
+P3-241 (duplicate whitelists). These require careful design work.
 
 ---
 

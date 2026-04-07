@@ -1,8 +1,8 @@
 # Known Issues
 
-**Last updated:** March 31, 2026 — v68 audit
+**Last updated:** April 7, 2026 — v69 audit
 
-Open in v68: 0 (all 6 code + 4 doc items fixed in v68 fix pass).
+Open in v69: 21 code items (1 HIGH, 4 MEDIUM, 16 LOW) + 18 doc drift.
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -14,12 +14,119 @@ traceability.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 61 | 61 | 0 |
-| P2 | 165 | 165 | 0 |
-| P3 | 221 | 221 | 0 |
-| **Total** | **452** | **452** | **0** |
+| P1 | 62 | 61 | 1 |
+| P2 | 169 | 165 | 4 |
+| P3 | 237 | 221 | 16 |
+| **Total** | **473** | **452** | **21** |
 
-*All v68 items (6 code + 4 doc) fixed. 0 open items.*
+*v69 audit added 21 code items. 18 documentation drift items tracked
+separately below.*
+
+---
+
+## v69 Audit (April 7, 2026; 21 code + 18 doc drift items)
+
+Audit v69 found 1 high, 4 medium, and 16 low code items, plus
+18 documentation drift items. False positives eliminated through
+manual source verification. Details in `codebase_review.md`.
+
+**Resolution:** 15 of 21 code items fixed. 1 reclassified as false
+positive. 4 structural items deferred. 1 left as acceptable.
+
+### P1-224: TransformController Multi-Select Snap Breaks Positions
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+- **Issue:** Per-layer grid snap inside multi-selection loop applies
+    different deltas to each layer, destroying relative positions.
+- **Fix:** Hoisted snap calculation out of per-layer loop. Primary
+    layer used as reference; uniform delta applied to all layers.
+- **Status:** ✅ Fixed
+
+### P2-225: ResizeCalculator Ellipse Radius at 2x Rate
+
+- **File:** `resources/ext.layers.editor/canvas/ResizeCalculator.js`
+- **Issue:** Edge/corner handles change radius by full delta but
+    shift center by half, causing 2x resize rate.
+- **Fix:** Changed all radius adjustments from `deltaX` to
+    `deltaX / 2`. Updated 5 test expectations.
+- **Status:** ✅ Fixed
+
+### P2-226: CanvasRenderer Blur Blend Export Wrong Canvas
+
+- **File:** `resources/ext.layers.editor/CanvasRenderer.js`
+- **Issue:** Export swaps `this.ctx` but not `this.canvas`.
+    `drawLayerWithBlurBlend` captures on-screen canvas.
+- **Fix:** Added `this.canvas` swap alongside `this.ctx` swap
+    in `renderLayersToContext`, with restore in `finally` block.
+- **Status:** ✅ Fixed
+
+### P2-227: SelectionManager Base64 Deep-Clone per Interaction
+
+- **File:** `resources/ext.layers.editor/SelectionManager.js`
+- **Issue:** `JSON.parse(JSON.stringify())` on every mousedown
+    serializes full base64 `src` for image layers (~1MB each).
+- **Fix:** Uses `cloneLayerEfficient` when available (preserves
+    immutable `src`/`path` by reference). Falls back to JSON clone.
+- **Status:** ✅ Fixed
+
+### P2-228: ContextMenuController Stale selectedIds
+
+- **File:** `resources/ext.layers.editor/ui/ContextMenuController.js`
+- **Issue:** `selectedIds` captured before `selectLayer()` call.
+    Menu item enabled states derive from stale snapshot.
+- **Fix:** Moved `selectLayer()` call before `selectedIds` capture.
+- **Status:** ✅ Fixed
+
+### Low Code Items (P3-229 through P3-244)
+
+| ID | File/Area | Summary | Status |
+|----|-----------|---------|--------|
+| P3-229 | 6 files | Visibility `=== false` without `=== 0` | ✅ Fixed |
+| P3-230 | ShadowRenderer.js | Temp canvas grow-only (GPU mem) | ✅ Fixed |
+| P3-231 | ImageLayerRenderer.js | `_failedUrls` Set unbounded | ✅ Fixed |
+| P3-232 | CanvasRenderer.js | Dead canvasPool code | ✅ Fixed |
+| P3-233 | 3 files | Triple getLayerBounds impls | 🔲 Deferred |
+| P3-234 | 2 files | LayerListRenderer duplicates factory | 🔲 Deferred |
+| P3-235 | GradientEditor.js | Inputs lack ARIA labels | ✅ Fixed |
+| P3-236 | LayerDragDrop.js | No keyboard drop-into-folder | 🔲 Deferred |
+| P3-237 | InlineTextEditor.js | `_handleBlur` missing clearTimeout | ✅ Fixed |
+| P3-238 | AlignmentController.js | moveLayer skips arrowX/Y | ✅ Fixed |
+| P3-239 | PresetDropdown.js | Document listener leak | ❌ False positive |
+| P3-240 | ConfirmDialog.js | Focus trap queries only button | ✅ Fixed |
+| P3-241 | 2 files | Duplicated style whitelists | 🔲 Deferred |
+| P3-242 | GradientEditor.js | Slider floods undo history | ✅ Fixed |
+| P3-243 | SelectionManager.js | finishDrag null guard missing | ✅ Fixed |
+| P3-244 | ApiLayersInfo.php | Sequential user loading | ⏭ Acceptable |
+
+### Documentation Drift (18 items)
+
+| ID | File | Issue | Status |
+|----|------|-------|--------|
+| D-069-01 | README.md | Badge test count 13,882→13,984 | 🔲 Open |
+| D-069-02 | CHANGELOG.md + wiki/Changelog.md | Count 13,882→13,984 | 🔲 Open |
+| D-069-03 | CONTRIBUTING.md L24 | Count 13,880→13,984 | 🔲 Open |
+| D-069-04 | LTS_BRANCH_STRATEGY.md | Count 13,880→13,984 | 🔲 Open |
+| D-069-05 | wiki/Architecture-Overview.md | Count 13,880→13,984 | 🔲 Open |
+| D-069-06 | wiki/Frontend-Architecture.md | Count 13,880→13,984 | 🔲 Open |
+| D-069-07 | SLIDE_MODE_ISSUES.md | Count 13,880→13,984 | 🔲 Open |
+| D-069-08 | KNOWN_ISSUES.md (v68 section) | Count 13,882→13,984 | 🔲 Open |
+| D-069-09 | CHANGELOG.md + wiki/Changelog.md | Branch 87.00→87.20% | 🔲 Open |
+| D-069-10 | SECURITY_AUDIT_REPORT.md L3 | Date "June 2025" stale | 🔲 Open |
+| D-069-11 | wiki/Named-Layer-Sets.md L43 | "50 chars" vs code 255 | 🔲 Open |
+| D-069-12 | wiki/Slide-Mode.md L36 | `bgcolor` vs `background` | 🔲 Open |
+| D-069-13 | DEVELOPER_ONBOARDING.md | Stale line counts | 🔲 Open |
+| D-069-14 | copilot-instructions.md | "1-50 chars" vs code 255 | 🔲 Open |
+| D-069-15 | GOD_CLASS_REFACTORING_PLAN.md | v1.5.58 metrics (dated) | 🔲 Open |
+| D-069-16 | improvement_plan.md v67 | Count 13,882→13,984 | 🔲 Open |
+| D-069-17 | DOCUMENTATION_REVIEW_REPORT.md | Flagged items unresolved | 🔲 Open |
+| D-069-18 | NAMED_LAYER_SETS.md vs wiki | Length 255 vs 50; charset | 🔲 Open |
+
+### Verification
+
+- `npm test` passes: 172 suites, 13,984 tests.
+- `npm run test:php` passes cleanly.
+- Coverage: 95.87% stmt, 87.20% branch, 94.00% fn, 95.98% lines.
+- No new exploitable security vulnerabilities confirmed.
 
 ---
 

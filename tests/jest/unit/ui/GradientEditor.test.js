@@ -41,6 +41,7 @@ describe( 'GradientEditor', () => {
 	let layer;
 
 	beforeEach( () => {
+		jest.useFakeTimers();
 		container = document.createElement( 'div' );
 		onChange = jest.fn();
 		layer = {
@@ -52,6 +53,8 @@ describe( 'GradientEditor', () => {
 	} );
 
 	afterEach( () => {
+		jest.runOnlyPendingTimers();
+		jest.useRealTimers();
 		container = null;
 		onChange = null;
 		layer = null;
@@ -115,6 +118,7 @@ describe( 'GradientEditor', () => {
 
 			select.value = 'linear';
 			select.dispatchEvent( new Event( 'change' ) );
+			jest.runAllTimers();
 
 			expect( editor.fillType ).toBe( 'linear' );
 			expect( editor.currentGradient ).not.toBeNull();
@@ -129,6 +133,7 @@ describe( 'GradientEditor', () => {
 
 			select.value = 'radial';
 			select.dispatchEvent( new Event( 'change' ) );
+			jest.runAllTimers();
 
 			expect( editor.fillType ).toBe( 'radial' );
 			expect( editor.currentGradient.type ).toBe( 'radial' );
@@ -148,6 +153,7 @@ describe( 'GradientEditor', () => {
 			const select = container.querySelector( '.gradient-type-select' );
 			select.value = 'solid';
 			select.dispatchEvent( new Event( 'change' ) );
+			jest.runAllTimers();
 
 			expect( editor.fillType ).toBe( 'solid' );
 			expect( editor.currentGradient ).toBeNull();
@@ -163,6 +169,7 @@ describe( 'GradientEditor', () => {
 			const select = container.querySelector( '.gradient-type-select' );
 			select.value = 'linear';
 			select.dispatchEvent( new Event( 'change' ) );
+			jest.runAllTimers();
 
 			expect( onFillTypeChange ).toHaveBeenCalledTimes( 1 );
 			editor.destroy();
@@ -181,6 +188,7 @@ describe( 'GradientEditor', () => {
 			const select = container.querySelector( '.gradient-type-select' );
 			select.value = 'radial';
 			select.dispatchEvent( new Event( 'change' ) );
+			jest.runAllTimers();
 
 			expect( onFillTypeChange ).not.toHaveBeenCalled();
 			editor.destroy();
@@ -213,6 +221,7 @@ describe( 'GradientEditor', () => {
 			const angleSlider = container.querySelector( '.gradient-angle-slider' );
 			angleSlider.value = '180';
 			angleSlider.dispatchEvent( new Event( 'input' ) );
+			jest.runAllTimers();
 
 			expect( editor.currentGradient.angle ).toBe( 180 );
 			expect( onChange ).toHaveBeenCalled();
@@ -243,6 +252,7 @@ describe( 'GradientEditor', () => {
 			const radiusSlider = container.querySelector( '.gradient-radius-slider' );
 			radiusSlider.value = '1.2';
 			radiusSlider.dispatchEvent( new Event( 'input' ) );
+			jest.runAllTimers();
 
 			expect( editor.currentGradient.radius ).toBe( 1.2 );
 			expect( onChange ).toHaveBeenCalled();
@@ -279,6 +289,7 @@ describe( 'GradientEditor', () => {
 
 			colorInputs[ 0 ].value = '#00ff00';
 			colorInputs[ 0 ].dispatchEvent( new Event( 'input' ) );
+			jest.runAllTimers();
 
 			expect( editor.currentGradient.colors[ 0 ].color ).toBe( '#00ff00' );
 			expect( onChange ).toHaveBeenCalled();
@@ -291,6 +302,7 @@ describe( 'GradientEditor', () => {
 
 			offsetInputs[ 0 ].value = '25';
 			offsetInputs[ 0 ].dispatchEvent( new Event( 'input' ) );
+			jest.runAllTimers();
 
 			expect( editor.currentGradient.colors[ 0 ].offset ).toBe( 0.25 );
 			expect( onChange ).toHaveBeenCalled();
@@ -302,6 +314,7 @@ describe( 'GradientEditor', () => {
 			const addButton = container.querySelector( '.gradient-add-stop' );
 
 			addButton.click();
+			jest.runAllTimers();
 
 			expect( editor.currentGradient.colors.length ).toBe( 3 );
 			expect( onChange ).toHaveBeenCalled();
@@ -333,6 +346,7 @@ describe( 'GradientEditor', () => {
 			expect( deleteButtons[ 0 ].disabled ).toBe( false );
 
 			deleteButtons[ 0 ].click();
+			jest.runAllTimers();
 
 			expect( editor.currentGradient.colors.length ).toBe( 2 );
 			expect( onChange ).toHaveBeenCalled();
@@ -370,6 +384,7 @@ describe( 'GradientEditor', () => {
 			const swatches = container.querySelectorAll( '.gradient-preset-swatch' );
 
 			swatches[ 0 ].click();
+			jest.runAllTimers();
 
 			expect( editor.currentGradient.colors.length ).toBeGreaterThanOrEqual( 2 );
 			expect( onChange ).toHaveBeenCalled();

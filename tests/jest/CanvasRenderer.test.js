@@ -153,11 +153,6 @@ describe('CanvasRenderer', () => {
         test('should store editor reference from config', () => {
             expect(renderer.editor).toBe(mockEditor);
         });
-
-        test('should initialize canvas pooling', () => {
-            expect(renderer.canvasPool).toEqual([]);
-            expect(renderer.maxPoolSize).toBe(5);
-        });
     });
 
     describe('init', () => {
@@ -900,17 +895,6 @@ describe('CanvasRenderer', () => {
     });
 
     describe('destroy', () => {
-        test('should clear canvas pool', () => {
-            const pooledCanvas = { width: 100, height: 100 };
-            renderer.canvasPool = [pooledCanvas];
-
-            renderer.destroy();
-
-            expect(pooledCanvas.width).toBe(0);
-            expect(pooledCanvas.height).toBe(0);
-            expect(renderer.canvasPool).toEqual([]);
-        });
-
         test('should clear canvas state stack', () => {
             renderer.canvasStateStack = [{ zoom: 1 }, { zoom: 2 }];
 
@@ -3048,19 +3032,9 @@ describe('CanvasRenderer', () => {
             expect(renderer._selectionRenderer).toBeNull();
         });
 
-        test('clears canvas pool', () => {
-            renderer.canvasPool = [
-                { width: 100, height: 100 },
-                { width: 200, height: 200 }
-            ];
-            renderer.destroy();
-            expect(renderer.canvasPool).toEqual([]);
-        });
-
         test('clears state without renderers', () => {
             renderer.layerRenderer = null;
             renderer._selectionRenderer = null;
-            renderer.canvasPool = [];
             renderer.destroy();
             expect(renderer.canvas).toBeNull();
             expect(renderer.ctx).toBeNull();

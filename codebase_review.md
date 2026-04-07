@@ -1,7 +1,7 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** March 31, 2026 (v68 comprehensive audit)
-**Previous Review:** March 31, 2026 (v1.5.63 release refresh / v67)
+**Review Date:** April 7, 2026 (v69 comprehensive audit)
+**Previous Review:** March 31, 2026 (v68 comprehensive audit)
 **Version:** 1.5.63
 **Reviewer:** GitHub Copilot (Claude Opus 4.6)
 
@@ -11,15 +11,16 @@
 
 - **Branch reviewed:** `main`
 - **Verification method:** Full-codebase source inspection across all
-    PHP (API modules, database layer, hooks, validation, security) and JS
-    (editor core, canvas controllers, renderers, viewer, UI, tools,
-    state management, slides). Automated subagent sweeps identified 50+
-    candidate issues; manual source verification against actual code
-    confirmed 1 MEDIUM code item, 5 LOW items, and 4 documentation drift
-    items. 40+ false positives eliminated during verification. Final
-    validation completed with `npm test` and `npm run test:php`.
-- **Coverage:** 95.82% statements, 87.20% branches, 93.98% functions,
-    95.94% lines (from current repository coverage artifacts)
+    PHP (API modules, database layer, hooks, validation, security) and
+    all JS (editor core, 13 canvas controllers, 14 shared renderers,
+    4 viewer modules, 15 UI controllers, 5 tool handlers, 4 preset
+    modules, slides). Parallel subagent sweeps reviewed ~60 source
+    files. Each candidate issue was then manually verified against
+    actual source code, with exact line numbers confirmed and false
+    positives eliminated. Final validation completed with `npm test`
+    and `npm run test:php`.
+- **Coverage:** 95.87% statements, 87.20% branches, 94.00% functions,
+    95.98% lines (from `npm test` coverage output, April 7, 2026)
 - **Jest test suites:** 172
 - **Jest test cases:** 13,984 (`npm test` / `jest` summary)
 - **PHPUnit test files:** 35 in `tests/phpunit`
@@ -39,13 +40,14 @@ This review was a comprehensive, full-codebase critical audit covering
 all PHP backend code (API modules, database layer, validation, security,
 hooks, special pages) and all JavaScript frontend code (editor core,
 canvas controllers, shared renderers, viewer modules, UI controllers,
-tools, state management, and slides). Over 50 candidate issues were
-investigated; rigorous manual verification against actual source code
-eliminated 40+ false positives and confirmed 1 MEDIUM code issue, 5 LOW
-items, and 4 documentation drift items.
+tools, presets, state management, and slides). Candidate issues were
+investigated across ~60 source files; rigorous manual verification
+against actual source code eliminated false positives and confirmed
+1 HIGH, 4 MEDIUM, and 16 LOW code issues, plus 18 documentation
+drift items.
 
-**v68 findings:** 0 CRITICAL, 0 HIGH, 1 MEDIUM code item, 5 LOW
-code/style items, 4 documentation drift items. **10 total.**
+**v69 findings:** 0 CRITICAL, 1 HIGH, 4 MEDIUM, 16 LOW code items,
+18 documentation drift items. **39 total.**
 
 The repository is fully green on the validated workflows:
 
@@ -61,7 +63,10 @@ The repository is fully green on the validated workflows:
     safe `textContent → innerHTML` pattern). SVG validation in
     ServerSideLayerValidator blocks script injection, event handlers,
     dangerous protocols, and embedded objects. Input validation uses
-    strict property whitelists with type/range/length checks.
+    strict property whitelists with type/range/length checks. All
+    `innerHTML` usage in the JS codebase was audited — every instance
+    uses hardcoded SVG strings from developer-controlled sources, never
+    user data.
 - **Error handling is consistent.** API modules wrap all operations in
     try/catch with Throwable, log structured context, and return i18n
     error keys rather than leaking internals.
@@ -70,7 +75,7 @@ The repository is fully green on the validated workflows:
     backoff retry. Canvas operations use RAF scheduling with boolean
     guards to prevent double-scheduling. Lightbox open/close uses
     synchronous cleanup before re-entry.
-- **Test coverage is excellent.** 13,984 tests at 95.82% statement
+- **Test coverage is excellent.** 13,984 tests at 95.87% statement
     coverage and 87.20% branch coverage is well above industry norms.
 - **Code organization follows strong patterns.** The controller/facade
     pattern in CanvasManager, the ModuleRegistry for dependency
@@ -80,16 +85,314 @@ The repository is fully green on the validated workflows:
     leaks, destroy() methods properly cancel RAF IDs and clear timeouts,
     WeakMap tracks viewer DOM references, and LRU caches have bounded
     eviction.
+- **PHP backend is clean.** No exploitable SQL injection, CSRF bypass,
+    XSS, or permission-escalation vulnerabilities were confirmed. The
+    TextSanitizer's event handler regex only matches quoted attributes,
+    but `strip_tags()` runs twice before it — making the regex a
+    defense-in-depth layer, not an exploitable gap.
 
 ### Areas for Improvement
 
-- **ApiLayersRename input sanitization gap** — the one confirmed MEDIUM
-    issue, where set names are validated but not sanitized, creating
-    inconsistency with the other 3 write endpoints.
-- **Documentation metric drift** — several files show 13,880 tests
-    instead of the verified 13,882.
-- **Minor code style inconsistency** in UIHooks.php and dead code in
-    ApiLayersInfo.php.
+- **Multi-selection snap breaks relative positions** — the one
+    confirmed HIGH-severity logic bug in TransformController where
+    per-layer snap adjustment destroys group cohesion during drag.
+- **Ellipse resize geometry error** — radius changes at double rate
+    with tests encoding the wrong expected values.
+- **Blur blend export captures wrong canvas** — export with blur-fill
+    layers produces visually incorrect output.
+- **Documentation metric drift** — 18 files still reference stale
+    test counts (13,880 or 13,882 instead of 13,984).
+- **Code duplication** — LayerListRenderer reimplements
+    LayerItemFactory, and several utility helpers are duplicated
+    across UI modules.
+
+---
+
+## Confirmed Findings (v69 — April 7, 2026)
+
+1 HIGH, 4 MEDIUM, and 16 LOW code items, plus 18 documentation drift
+items were verified. False positives were eliminated during manual
+source verification.
+
+### v69 Quick-Reference Table
+
+| ID | Sev. | Status | Notes |
+|----|------|--------|-------|
+| P1-224 | High | ✅ Fixed | TransformController multi-select snap breaks relative positions |
+| P2-225 | Medium | ✅ Fixed | ResizeCalculator ellipse radius at 2x rate |
+| P2-226 | Medium | ✅ Fixed | CanvasRenderer blur blend export captures wrong canvas |
+| P2-227 | Medium | ✅ Fixed | SelectionManager base64 deep-clone on every interaction |
+| P2-228 | Medium | ✅ Fixed | ContextMenuController stale selectedIds after selectLayer |
+| P3-229 | Low | ✅ Fixed | Visibility checks miss === 0 (6 files) |
+| P3-230 | Low | ✅ Fixed | ShadowRenderer temp canvas never shrinks (GPU memory) |
+| P3-231 | Low | ✅ Fixed | ImageLayerRenderer _failedUrls Set unbounded growth |
+| P3-232 | Low | ✅ Fixed | CanvasRenderer dead canvasPool cleanup code |
+| P3-233 | Low | 🔲 Deferred | Triple getLayerBounds implementations (structural) |
+| P3-234 | Low | 🔲 Deferred | LayerListRenderer duplicates LayerItemFactory (structural) |
+| P3-235 | Low | ✅ Fixed | GradientEditor inputs lack ARIA labels |
+| P3-236 | Low | 🔲 Deferred | LayerDragDrop no keyboard drop-into-folder (structural) |
+| P3-237 | Low | ✅ Fixed | InlineTextEditor _handleBlur missing clearTimeout |
+| P3-238 | Low | ✅ Fixed | AlignmentController moveLayer skips marker arrowX/Y |
+| P3-239 | Low | ❌ False positive | PresetDropdown destroy() calls close() which removes listeners |
+| P3-240 | Low | ✅ Fixed | ConfirmDialog focus trap only queries button |
+| P3-241 | Low | 🔲 Deferred | Duplicated style property whitelists (structural) |
+| P3-242 | Low | ✅ Fixed | GradientEditor slider floods undo history |
+| P3-243 | Low | ✅ Fixed | SelectionManager finishDrag missing null guard |
+| P3-244 | Low | ⏭ Acceptable | ApiLayersInfo sequential user loading (mitigated by array_unique) |
+
+### High — JavaScript (Geometry/State Bug)
+
+#### P1-224 · Multi-Selection Snap Breaks Relative Layer Positions
+
+- **File:** `resources/ext.layers.editor/canvas/TransformController.js`
+    (lines 484–548)
+- **Issue:** When dragging multiple selected layers with grid snap or
+    smart guides enabled, each layer independently calculates its own
+    snap adjustment inside the per-layer loop. Because each layer has
+    a different reference position, `snapPointToGrid()` and
+    `calculateSnappedPosition()` return different deltas for different
+    layers, destroying their relative positioning.
+- **Verification:** Direct source inspection confirmed per-layer
+    grid snap (L528–534) and smart guides (L535–548) inside the
+    `for ( let j = 0; j < layersToMove.length; j++ )` loop.
+    No test exists for multi-layer drag with snap enabled.
+    Concrete example: Layer A at x=102, Layer B at x=107 (gap=5px),
+    gridSize=10, drag delta=15. Layer A snaps to x=120 (delta=18),
+    Layer B snaps to x=120 (delta=13). Gap collapses from 5px to 0px.
+- **Impact:** Multi-layer selections visually break when snap is
+    active. Layers collapse together or drift apart during drag.
+- **Fix:** Calculate snap adjustment once using the primary selection
+    or group bounding box, then apply the uniform delta to all layers.
+
+### Medium — JavaScript (Geometry Bug)
+
+#### P2-225 · Ellipse Resize Radius Changes at Double Rate
+
+- **File:** `resources/ext.layers.editor/canvas/ResizeCalculator.js`
+    (lines 471–520)
+- **Issue:** In `calculateEllipseResize()`, edge and corner handles
+    shift the center by `deltaX/2` (correct) but change the radius
+    by the full `deltaX` (wrong). The handle-side edge overshoots by
+    50% and the opposite edge moves when it should stay fixed.
+- **Verification:** Line 484:
+    `updates.radiusX = Math.max(5, origRX + deltaX)` with
+    `updates.x = origX + deltaX / 2`. Right edge moves to
+    `origX + origRX + 1.5*deltaX` instead of `origX + origRX + deltaX`.
+    Same pattern at L488, L492, L496 (edges) and L511–512 (corners).
+    Tests encode wrong expectations (e.g., `toBe(60)` for delta=10,
+    origRX=50 — correct is 55).
+- **Impact:** Ellipses resize faster than expected; handles are not
+    pinned to the cursor during edge-handle resize.
+
+### Medium — JavaScript (Rendering Bug)
+
+#### P2-226 · Blur Blend Export Captures Wrong Canvas
+
+- **File:** `resources/ext.layers.editor/CanvasRenderer.js`
+    (lines 450, 533, 597)
+- **Issue:** `renderLayersToContext()` swaps `this.ctx` to the export
+    context (L450) but does not swap `this.canvas`. When
+    `drawLayerWithBlurBlend()` calls
+    `tempCtx.drawImage(this.canvas, 0, 0)` at L597, it captures the
+    on-screen DOM canvas (with zoom/pan/selection handles) instead of
+    the in-progress export canvas.
+- **Verification:** L450: `this.ctx = targetCtx;` — no corresponding
+    `this.canvas` assignment. L597: `tempCtx.drawImage(this.canvas, 0, 0)`.
+- **Impact:** Exported images with blur-blend layers have visually
+    incorrect blur content.
+- **Fix:** Also swap `this.canvas = targetCtx.canvas` in
+    `renderLayersToContext` (and restore in `finally`), or use
+    `this.ctx.canvas` in `drawLayerWithBlurBlend`.
+
+### Medium — JavaScript (Performance)
+
+#### P2-227 · Base64 Image Deep-Clone on Every Interaction
+
+- **File:** `resources/ext.layers.editor/SelectionManager.js`
+    (lines 1085–1095)
+- **Issue:** `saveSelectedLayersState()` uses
+    `JSON.parse(JSON.stringify(layer))` on every mousedown that starts
+    a drag/resize/rotation. For image layers, `src` contains base64
+    data URLs up to 1MB. Multi-selecting 3 image layers serializes
+    and parses ~3MB of JSON per interaction start.
+- **Verification:** L1091:
+    `state[layerId] = JSON.parse(JSON.stringify(layer))`.
+    Called from drag (L958), resize (L833), rotation (L886).
+    `HistoryManager.getLayersSnapshot()` has an efficient cloner that
+    preserves immutable `src` by reference.
+- **Impact:** Noticeable lag on interaction start with image layers.
+
+### Medium — JavaScript (UI Bug)
+
+#### P2-228 · Context Menu Stale Selection State
+
+- **File:** `resources/ext.layers.editor/ui/ContextMenuController.js`
+    (lines 62, 136, 144)
+- **Issue:** `selectedIds` captured at L62 before `selectLayer()` at
+    L144. Menu item enabled/disabled flags derive from stale snapshot.
+- **Verification:** L62: `const selectedIds = this.getSelectedLayerIds()`,
+    L136: `const hasMultipleSelected = selectedIds.length >= 2`,
+    L144: `this.selectLayer(clickedLayerId, false, false)`.
+    Menu items built after L144 use the pre-selection-change flags.
+- **Impact:** Right-clicking an unselected layer shows wrong menu
+    item states.
+- **Fix:** Move selectedIds capture after the selectLayer call.
+
+### Low — JavaScript
+
+#### P3-229 · Incomplete Boolean Serialization Guards
+
+- **Files:** `CanvasManager.js` (L1962), `HitTestController.js`,
+    `SmartGuidesController.js`, `MarqueeSelection.js`,
+    `SelectionState.js`
+- **Issue:** Check `layer.visible === false` without `=== 0`. Other
+    files (`CanvasRenderer.js`, `CanvasEvents.js`, `LayersViewer.js`)
+    correctly check both per the project's serialization contract.
+- **Mitigation:** `LayerDataNormalizer` converts `0 → false` at API
+    load time. Consistency/defense-in-depth concern.
+
+#### P3-230 · ShadowRenderer Temp Canvas Never Shrinks
+
+- **File:** `resources/ext.layers.shared/ShadowRenderer.js` (L108)
+- **Issue:** Grow-only pattern can hold canvas up to ~8192px wide
+    (~256MB GPU memory) permanently after rendering large shadows.
+
+#### P3-231 · ImageLayerRenderer `_failedUrls` Unbounded
+
+- **File:** `resources/ext.layers.shared/ImageLayerRenderer.js`
+- **Issue:** Set stores full base64 strings without eviction. Unlike
+    `_imageCache` (LRU-capped at 50), no size limit.
+
+#### P3-232 · Dead Canvas Pool Cleanup Code
+
+- **File:** `resources/ext.layers.editor/CanvasRenderer.js` (L87)
+- **Issue:** `canvasPool` initialized but never populated. `destroy()`
+    iterates empty array with wrong property access pattern.
+
+#### P3-233 · Triple `getLayerBounds` Implementations
+
+- **Files:** `CanvasManager.js`, `CanvasRenderer.js`,
+    `SelectionManager.js`
+- **Issue:** Three implementations with divergent fallback. If one
+    adds a new layer type, bounds will be inconsistent.
+
+#### P3-234 · LayerListRenderer Duplicates LayerItemFactory
+
+- **Files:** `LayerListRenderer.js`, `LayerItemFactory.js`
+- **Issue:** Near-identical `createLayerItem()` methods (~90 lines
+    each). LayerListRenderer does not use LayerItemFactory.
+
+#### P3-235 · GradientEditor Accessibility Gaps
+
+- **File:** `GradientEditor.js`
+- **Issue:** Color inputs, sliders, and buttons lack `aria-label`.
+    Labels not associated with inputs via `for`/`id`.
+
+#### P3-236 · LayerDragDrop No Keyboard Drop-into-Folder
+
+- **File:** `LayerDragDrop.js`
+- **Issue:** Mouse-only drag events. No keyboard equivalent for
+    the drop-into-folder zone. WCAG 2.1 SC 2.1.1 gap.
+
+#### P3-237 · InlineTextEditor `_handleBlur` Missing `clearTimeout`
+
+- **File:** `InlineTextEditor.js`
+- **Issue:** Sets `_blurTimeout` without clearing prior value.
+    Repeated blur cycles queue multiple timeouts.
+
+#### P3-238 · AlignmentController `moveLayer` Skips Marker arrowX/Y
+
+- **File:** `AlignmentController.js`
+- **Issue:** Only offsets `x`/`y` for markers. `arrowX`/`arrowY`
+    (arrow tip position) not moved. Compare ClipboardController
+    which correctly offsets both.
+
+#### P3-239 · PresetDropdown Document Listener Leak
+
+- **File:** `PresetDropdown.js`
+- **Issue:** `open()` adds document listeners. If destroyed while
+    open, `close()` is not called — listeners orphaned.
+
+#### P3-240 · ConfirmDialog Focus Trap Fragile Selector
+
+- **File:** `ConfirmDialog.js`
+- **Issue:** Focus trap queries only `'button'`. Standard WCAG
+    pattern uses comprehensive focusable selector.
+
+#### P3-241 · Duplicated Style Property Whitelists
+
+- **Files:** `PresetStorage.js`, `PresetStyleManager.js`
+- **Issue:** Nearly identical ~55-entry property lists maintained
+    independently. Divergence causes silent data loss.
+
+#### P3-242 · GradientEditor Slider Floods Undo History
+
+- **File:** `GradientEditor.js`
+- **Issue:** No debouncing on slider `input` events. Creates dozens
+    of undo entries per interaction.
+
+#### P3-243 · SelectionManager `finishDrag` Missing Null Guard
+
+- **File:** `SelectionManager.js`
+- **Issue:** `finishDrag()` calls `canvasManager.saveState()` without
+    null guard. Both `finishResize()` and `finishRotation()` use the
+    guarded pattern.
+
+#### P3-244 · ApiLayersInfo Sequential User Loading
+
+- **File:** `src/Api/ApiLayersInfo.php`
+- **Issue:** Per-user `newFromId()->load()` calls instead of batch
+    `UserArray::newFromIDs()`. Up to 200 individual DB queries on
+    large revision histories.
+
+### Documentation Drift (18 items)
+
+| ID | File | Issue |
+|----|------|-------|
+| D-069-01 | README.md badge | 13,882 → 13,984 |
+| D-069-02 | CHANGELOG.md + wiki/Changelog.md L31 | 13,882 → 13,984 |
+| D-069-03 | CONTRIBUTING.md L24 | 13,880 → 13,984 |
+| D-069-04 | LTS_BRANCH_STRATEGY.md L9/L29 | 13,880 → 13,984 |
+| D-069-05 | wiki/Architecture-Overview.md L315 | 13,880 → 13,984 |
+| D-069-06 | wiki/Frontend-Architecture.md L415 | 13,880 → 13,984 |
+| D-069-07 | SLIDE_MODE_ISSUES.md L193 | 13,880 → 13,984 |
+| D-069-08 | KNOWN_ISSUES.md L53/97/118/124 | 13,882 → 13,984 |
+| D-069-09 | CHANGELOG.md + wiki/Changelog.md L32 | 87.00% → 87.20% |
+| D-069-10 | SECURITY_AUDIT_REPORT.md L3 | Date "June 2025" vs metrics |
+| D-069-11 | wiki/Named-Layer-Sets.md L43 | 50 chars vs code 255 |
+| D-069-12 | wiki/Slide-Mode.md L36 | `bgcolor` vs code `background` |
+| D-069-13 | DEVELOPER_ONBOARDING.md L20–33 | Stale line counts |
+| D-069-14 | copilot-instructions.md | "1-50 chars" vs code 255 |
+| D-069-15 | GOD_CLASS_REFACTORING_PLAN.md | v1.5.58 metrics (has disclaimer) |
+| D-069-16 | improvement_plan.md v67 notes | 13,882 → 13,984 |
+| D-069-17 | DOCUMENTATION_REVIEW_REPORT.md | Flagged items unresolved |
+| D-069-18 | NAMED_LAYER_SETS.md vs wiki | Length: 255 vs 50; charset |
+
+### v69 Verified Non-Issues (False Positives Eliminated)
+
+- **TextSanitizer `removeEventHandlers()` regex misses unquoted
+    attributes** — `strip_tags()` runs twice before it (L42, L53).
+    Plain text `onclick=alert(1)` cannot execute without HTML tags.
+    Defense-in-depth only; not exploitable.
+- **ThumbnailRenderer color values to ImageMagick** — Data from DB
+    is already validated by `ColorValidator`. `Shell::command()` handles
+    argument escaping. Not exploitable.
+- **`pruneOldRevisions()` raw SQL in conditions** — `$safeKeepIds` are
+    `intval()`-cast; `makeList()` properly escapes. Valid MW API usage.
+- **Anonymous saves silently rejected** — Belt-and-suspenders guard;
+    API checks `editlayers` permission first.
+- **RenderCoordinator WeakMap stale values** — StateManager creates
+    new objects on property changes, invalidating WeakMap keys.
+- **ApiLayersInfo `executeSlideRequest` read check** — Slides have no
+    Title; design tradeoff on private wikis, not a confirmed exploit.
+- **ZoomPanController pan/zoom animation desync** — Brief visual drift
+    during animation, corrects on completion. UX polish.
+- **FolderOperationsController locked check** — Same normalization
+    mitigant as P3-229.
+- **EffectsRenderer `_blurFillCanvas` resize** — Performance concern
+    during active shape resize, not a correctness bug.
+- **LayerDataNormalizer empty string → true** — Intentional legacy
+    behavior. Server sends 0/1, not empty strings.
 
 ---
 

@@ -1003,7 +1003,9 @@
 			this.originalLayerState = null;
 
 			// Save state for undo
-			this.canvasManager.saveState();
+			if ( this.canvasManager && typeof this.canvasManager.saveState === 'function' ) {
+				this.canvasManager.saveState();
+			}
 		}
 
 		/**
@@ -1084,10 +1086,19 @@
 		 */
 		saveSelectedLayersState() {
 			const state = {};
+			// Use efficient cloning that preserves immutable large data
+			// (image src, SVG path) by reference instead of serializing
+			const cloneLayer = ( typeof window !== 'undefined' &&
+				window.Layers && window.Layers.Utils &&
+				typeof window.Layers.Utils.cloneLayerEfficient === 'function' )
+				? window.Layers.Utils.cloneLayerEfficient
+				: null;
 			this.selectedLayerIds.forEach( ( layerId ) => {
 				const layer = this.getLayerById( layerId );
 				if ( layer ) {
-					state[ layerId ] = JSON.parse( JSON.stringify( layer ) );
+					state[ layerId ] = cloneLayer
+						? cloneLayer( layer )
+						: JSON.parse( JSON.stringify( layer ) );
 				}
 			} );
 			return state;

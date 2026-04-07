@@ -89,7 +89,7 @@
 
 			layers.forEach( ( layer ) => {
 				// Skip invisible or locked layers
-				if ( layer.visible === false || layer.locked === true ) {
+				if ( layer.visible === false || layer.visible === 0 || layer.locked === true ) {
 					return;
 				}
 
@@ -177,7 +177,7 @@
 
 			layers.forEach( ( layer ) => {
 				// Skip invisible or locked layers
-				if ( layer.visible === false || layer.locked === true ) {
+				if ( layer.visible === false || layer.visible === 0 || layer.locked === true ) {
 					return;
 				}
 
