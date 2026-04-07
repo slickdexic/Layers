@@ -655,29 +655,30 @@ describe( 'ResizeCalculator', () => {
 		it( 'should resize both axes for SE corner handle', () => {
 			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'se', 10, 10 );
 			expect( result ).not.toBeNull();
-			expect( result.radiusX ).toBe( 60 );
-			expect( result.radiusY ).toBe( 40 );
+			// radius changes by delta/2 so opposite corner stays fixed
+			expect( result.radiusX ).toBe( 55 );
+			expect( result.radiusY ).toBe( 35 );
 		} );
 
 		it( 'should resize both axes for NW corner handle', () => {
 			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'nw', -10, -10 );
 			expect( result ).not.toBeNull();
-			expect( result.radiusX ).toBe( 60 );
-			expect( result.radiusY ).toBe( 40 );
+			expect( result.radiusX ).toBe( 55 );
+			expect( result.radiusY ).toBe( 35 );
 		} );
 
 		it( 'should resize both axes for NE corner handle', () => {
 			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'ne', 10, -10 );
 			expect( result ).not.toBeNull();
-			expect( result.radiusX ).toBe( 60 );
-			expect( result.radiusY ).toBe( 40 );
+			expect( result.radiusX ).toBe( 55 );
+			expect( result.radiusY ).toBe( 35 );
 		} );
 
 		it( 'should resize both axes for SW corner handle', () => {
 			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'sw', -10, 10 );
 			expect( result ).not.toBeNull();
-			expect( result.radiusX ).toBe( 60 );
-			expect( result.radiusY ).toBe( 40 );
+			expect( result.radiusX ).toBe( 55 );
+			expect( result.radiusY ).toBe( 35 );
 		} );
 
 		it( 'should resize only radiusX for E handle', () => {
@@ -703,8 +704,8 @@ describe( 'ResizeCalculator', () => {
 
 		it( 'should handle shrinking via corner handles', () => {
 			const result = ResizeCalculator.calculateEllipseResize( ellipse, 'se', -10, -10 );
-			expect( result.radiusX ).toBe( 40 );
-			expect( result.radiusY ).toBe( 20 );
+			expect( result.radiusX ).toBe( 45 );
+			expect( result.radiusY ).toBe( 25 );
 		} );
 	} );
 

@@ -115,8 +115,10 @@
 				this.close();
 				this.onCancel();
 			} else if ( e.key === 'Tab' ) {
-				// Focus trap within dialog
-				const focusable = this.dialog.querySelectorAll( 'button' );
+				// Focus trap within dialog (WCAG 2.1 compliant focusable selector)
+				const focusable = this.dialog.querySelectorAll(
+					'button, [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+				);
 				if ( focusable.length ) {
 					const first = focusable[ 0 ];
 					const last = focusable[ focusable.length - 1 ];

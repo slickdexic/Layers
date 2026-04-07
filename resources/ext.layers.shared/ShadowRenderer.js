@@ -109,6 +109,10 @@ class ShadowRenderer {
 			// Grow to accommodate larger size
 			this._tempCanvas.width = Math.max( this._tempCanvas.width, width );
 			this._tempCanvas.height = Math.max( this._tempCanvas.height, height );
+		} else if ( this._tempCanvas.width > width * 4 || this._tempCanvas.height > height * 4 ) {
+			// Shrink if current allocation is >4x the needed size to reclaim GPU memory
+			this._tempCanvas.width = width;
+			this._tempCanvas.height = height;
 		} else {
 			// Same size — clear pixels and reset essential state.
 			// CRITICAL: drawSpreadShadow leaves globalCompositeOperation as 'destination-out'

@@ -341,7 +341,7 @@
 			};
 
 			// Apply background settings
-			if ( layerData.backgroundVisible === false ) {
+			if ( layerData.backgroundVisible === false || layerData.backgroundVisible === 0 ) {
 				img.style.visibility = 'hidden';
 				img.style.opacity = '0';
 			} else {

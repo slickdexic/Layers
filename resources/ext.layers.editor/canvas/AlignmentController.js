@@ -239,6 +239,13 @@
 				default:
 					layer.x = ( layer.x || 0 ) + deltaX;
 					layer.y = ( layer.y || 0 ) + deltaY;
+					// Offset marker/callout arrow tip (world coordinates)
+					if ( layer.arrowX !== undefined ) {
+						layer.arrowX = ( layer.arrowX || 0 ) + deltaX;
+					}
+					if ( layer.arrowY !== undefined ) {
+						layer.arrowY = ( layer.arrowY || 0 ) + deltaY;
+					}
 					break;
 			}
 		}

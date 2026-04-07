@@ -1959,7 +1959,7 @@ class CanvasManager {
 
 	drawLayer ( layer ) {
 		// Skip invisible layers
-		if ( layer.visible === false ) {
+		if ( layer.visible === false || layer.visible === 0 ) {
 			return;
 		}
 
