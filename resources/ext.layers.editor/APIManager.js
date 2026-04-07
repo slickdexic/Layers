@@ -1301,11 +1301,11 @@
 				return;
 			}
 
-			// Validate new name format (alphanumeric, hyphens, underscores, 1-50 chars)
-			if ( !/^[a-zA-Z0-9_-]{1,50}$/.test( newName ) ) {
+			// Validate new name format (alphanumeric, hyphens, underscores, 1-255 chars)
+			if ( !/^[a-zA-Z0-9_-]{1,255}$/.test( newName ) ) {
 				const msg = this.getMessage(
 					'layers-invalid-setname',
-					'Invalid set name. Use only letters, numbers, hyphens, and underscores (1-50 characters).'
+					'Invalid set name. Use only letters, numbers, hyphens, and underscores (1-255 characters).'
 				);
 				mw.notify( msg, { type: 'error' } );
 				reject( new Error( msg ) );
