@@ -405,6 +405,36 @@ describe( 'ContextMenuController', () => {
 
 			expect( document.activeElement ).toBe( items[ items.length - 1 ] );
 		} );
+
+		it( 'should jump to first item with Home key (P3-257)', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const items = document.querySelectorAll( '[role="menuitem"]:not([disabled])' );
+			// Focus last item
+			items[ items.length - 1 ].focus();
+
+			const homeKey = new KeyboardEvent( 'keydown', { key: 'Home' } );
+			document.dispatchEvent( homeKey );
+
+			expect( document.activeElement ).toBe( items[ 0 ] );
+		} );
+
+		it( 'should jump to last item with End key (P3-257)', () => {
+			mockCallbacks.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const mockEvent = createMockEvent( 'layer1' );
+			controller.handleLayerContextMenu( mockEvent );
+
+			const items = document.querySelectorAll( '[role="menuitem"]:not([disabled])' );
+			// Focus first item
+			items[ 0 ].focus();
+
+			const endKey = new KeyboardEvent( 'keydown', { key: 'End' } );
+			document.dispatchEvent( endKey );
+
+			expect( document.activeElement ).toBe( items[ items.length - 1 ] );
+		} );
 	} );
 
 	describe( 'outside click handling', () => {

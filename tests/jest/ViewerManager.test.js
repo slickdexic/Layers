@@ -2521,6 +2521,42 @@ describe( 'ViewerManager', () => {
 				expect( result.errors.length ).toBeGreaterThan( 0 );
 			} );
 		} );
+
+		it( 'should skip concurrent refresh calls while one is in progress (P3-255)', async () => {
+			const img = document.createElement( 'img' );
+			img.layersViewer = {};
+			img.setAttribute( 'data-file-name', 'Test.jpg' );
+			document.body.appendChild( img );
+
+			// Make the API call take time so the first refresh is still in progress
+			let resolveApi;
+			mockApi.get.mockReturnValue( new Promise( ( resolve ) => {
+				resolveApi = resolve;
+			} ) );
+
+			const manager = new ViewerManager();
+			manager.reinitializeViewer = jest.fn();
+
+			// Start first refresh (will be pending)
+			const first = manager.refreshAllViewers();
+
+			// Second call while first is in progress should be skipped
+			const second = manager.refreshAllViewers();
+			const secondResult = await second;
+
+			expect( secondResult.skipped ).toBe( true );
+			expect( secondResult.refreshed ).toBe( 0 );
+
+			// Now resolve the first call to let it complete
+			resolveApi( { layersinfo: { layerset: null } } );
+			await first;
+
+			// After first completes, a new call should NOT be skipped
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+			const third = manager.refreshAllViewers();
+			const thirdResult = await third;
+			expect( thirdResult.skipped ).toBeUndefined();
+		} );
 	} );
 
 	describe( 'handleSlideEditClick', () => {

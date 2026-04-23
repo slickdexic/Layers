@@ -2,15 +2,15 @@
 
 [![CI](https://github.com/slickdexic/Layers/actions/workflows/ci.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/ci.yml)
 [![E2E Tests](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml/badge.svg)](https://github.com/slickdexic/Layers/actions/workflows/e2e.yml)
-[![Coverage](https://img.shields.io/badge/coverage-92.88%25-brightgreen)](coverage/lcov-report/index.html)
-[![Tests](https://img.shields.io/badge/tests-11%2C496%20passing-brightgreen)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-95.87%25-brightgreen)](coverage/lcov-report/index.html)
+[![Tests](https://img.shields.io/badge/tests-14%2C001%20passing-brightgreen)](tests/)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)](COPYING)
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.63 (March 31, 2026)  
+> **Version:** 1.5.64 (April 23, 2026)  
 > **Status:** ✅ Production-ready  
-> **Requires:** MediaWiki 1.39.0+, PHP 8.1+  
+> **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
 >
 > **For MediaWiki 1.43.x (LTS):** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
@@ -318,8 +318,8 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,216 lines across 41 files**
-- **Frontend:** HTML5 Canvas editor with **158 JS files (~113,550 lines)**, 140 ES6 classes
+- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,689 lines across 44 files**
+- **Frontend:** HTML5 Canvas editor with **157 JS files (~114,000 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **26 god classes** (files >=1,000 lines), all use proper delegation patterns
@@ -330,12 +330,12 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 11,496 passing (168 suites) |
+| Jest tests | 14,001 passing (172 suites) |
 | PHPUnit tests | 34 test files |
-| Statement coverage | 92.88% |
-| Branch coverage | 82.58% |
-| Function coverage | 90.62% |
-| Line coverage | 91.39% |
+| Statement coverage | 95.87% |
+| Branch coverage | 87.20% |
+| Function coverage | 93.98% |
+| Line coverage | 95.94% |
 
 **Security:**
 
@@ -386,14 +386,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 158 | ✅ |
-| Total JS lines | ~113,550 | ✅ Hand-written + generated data |
+| Total JS files | 157 | ✅ |
+| Total JS lines | ~114,000 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
-| Tests passing | 11,496 | ✅ |
+| Tests passing | 14,001 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 92.88% | ✅ Excellent |
-| Branch coverage | 82.58% | ✅ Target met |
+| Statement coverage | 95.87% | ✅ Excellent |
+| Branch coverage | 87.20% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

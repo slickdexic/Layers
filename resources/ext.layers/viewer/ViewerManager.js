@@ -413,6 +413,16 @@ class ViewerManager {
 	refreshAllViewers() {
 		this.debugLog( 'refreshAllViewers: starting' );
 
+		// Prevent concurrent invocations from stacking API requests
+		if ( this._refreshInProgress ) {
+			this.debugLog( 'refreshAllViewers: already in progress, skipping' );
+			return Promise.resolve( {
+				refreshed: 0, failed: 0, total: 0, errors: [],
+				skipped: true
+			} );
+		}
+		this._refreshInProgress = true;
+
 		// Find all images with layer viewers
 		const viewerImages = Array.prototype.slice.call(
 			document.querySelectorAll( 'img' )
@@ -421,7 +431,9 @@ class ViewerManager {
 		if ( viewerImages.length === 0 ) {
 			this.debugLog( 'refreshAllViewers: no image viewers found, checking for slides' );
 			// Even if no images, still refresh slides
-			return this.refreshAllSlides();
+			return this.refreshAllSlides().finally( () => {
+				this._refreshInProgress = false;
+			} );
 		}
 
 		this.debugLog( 'refreshAllViewers: found', viewerImages.length, 'viewers' );
@@ -440,6 +452,7 @@ class ViewerManager {
 		// Fetch fresh data for each viewer via API
 		if ( typeof mw === 'undefined' || !mw.Api ) {
 			this.debugWarn( 'refreshAllViewers: mw.Api not available' );
+			this._refreshInProgress = false;
 			return Promise.resolve( {
 				refreshed: 0,
 				failed: viewerImages.length,
@@ -549,6 +562,8 @@ class ViewerManager {
 					errors: errors.concat( slideResults.errors )
 				};
 			} );
+		} ).finally( () => {
+			this._refreshInProgress = false;
 		} );
 	}
 

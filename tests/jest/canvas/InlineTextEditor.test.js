@@ -504,6 +504,36 @@ describe( 'InlineTextEditor', () => {
 			editor.finishEditing( true );
 			expect( mockCanvasManager.setTextEditingMode ).not.toHaveBeenCalled();
 		} );
+
+		test( 'should return false and clean up when editing layer was removed (P2-252)', () => {
+			// Simulate undo removing the layer while editing is in progress
+			mockCanvasManager.editor.layers = [
+				{ id: 'other-layer', type: 'text', text: 'Other' }
+			];
+
+			mockCanvasManager.setTextEditingMode.mockClear();
+			const result = editor.finishEditing( true );
+
+			expect( result ).toBe( false );
+			expect( editor.isEditing ).toBe( false );
+			expect( editor.editingLayer ).toBeNull();
+			expect( editor.editorElement ).toBeNull();
+			// Should NOT proceed to save/render since layer is stale
+			expect( mockCanvasManager.saveState ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should not trigger stale detection when layers array is empty (P2-252)', () => {
+			// Empty layers array (e.g. during teardown) should not trigger stale detection
+			mockCanvasManager.editor.layers = [];
+
+			mockCanvasManager.saveState.mockClear();
+			editor.editorElement.value = 'Modified Text';
+			editor.finishEditing( true );
+
+			// Should proceed normally - not detect as stale
+			expect( editor.isEditing ).toBe( false );
+			expect( mockCanvasManager.saveState ).toHaveBeenCalled();
+		} );
 	} );
 
 	describe( 'cancelEditing', () => {

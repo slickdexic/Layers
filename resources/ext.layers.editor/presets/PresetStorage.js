@@ -56,6 +56,46 @@
 	];
 
 	/**
+	 * Expected types for style properties used during import validation.
+	 * Properties not listed here accept any type from ALLOWED_STYLE_PROPERTIES.
+	 *
+	 * @type {Object<string, string>}
+	 */
+	const PROPERTY_TYPES = {
+		// Number properties
+		strokeWidth: 'number', strokeOpacity: 'number', fillOpacity: 'number',
+		fontSize: 'number', lineHeight: 'number', padding: 'number',
+		textStrokeWidth: 'number', cornerRadius: 'number',
+		arrowSize: 'number', headScale: 'number', tailWidth: 'number',
+		sides: 'number', points: 'number', innerRadius: 'number',
+		outerRadius: 'number', pointRadius: 'number', valleyRadius: 'number',
+		shadowBlur: 'number', shadowOffsetX: 'number', shadowOffsetY: 'number',
+		shadowSpread: 'number', textShadowBlur: 'number',
+		textShadowOffsetX: 'number', textShadowOffsetY: 'number',
+		opacity: 'number', extensionLength: 'number', extensionGap: 'number',
+		tickSize: 'number', scale: 'number', precision: 'number',
+		toleranceValue: 'number', toleranceUpper: 'number', toleranceLower: 'number',
+		size: 'number', fontSizeAdjust: 'number',
+		// Boolean properties
+		shadow: 'boolean', textShadow: 'boolean', glow: 'boolean',
+		showUnit: 'boolean', showBackground: 'boolean', hasArrow: 'boolean',
+		// Object properties
+		gradient: 'object',
+		// String properties (colors, enums, font names) — max 200 chars
+		stroke: 'string', fill: 'string', color: 'string',
+		shadowColor: 'string', textShadowColor: 'string', textStrokeColor: 'string',
+		fontFamily: 'string', fontWeight: 'string', fontStyle: 'string',
+		textAlign: 'string', verticalAlign: 'string',
+		arrowStyle: 'string', arrowhead: 'string', arrowHeadType: 'string',
+		blendMode: 'string', endStyle: 'string', textPosition: 'string',
+		unit: 'string', toleranceType: 'string', backgroundColor: 'string',
+		style: 'string'
+	};
+
+	/** Maximum length for imported string property values */
+	const MAX_STRING_LENGTH = 200;
+
+	/**
 	 * PresetStorage class
 	 *
 	 * Manages localStorage operations for preset data
@@ -363,9 +403,35 @@
 			const sanitized = {};
 
 			ALLOWED_STYLE_PROPERTIES.forEach( ( prop ) => {
-				if ( style[ prop ] !== undefined ) {
-					sanitized[ prop ] = style[ prop ];
+				if ( style[ prop ] === undefined ) {
+					return;
 				}
+
+				const value = style[ prop ];
+				const expectedType = PROPERTY_TYPES[ prop ];
+
+				// Validate value type when a type expectation exists
+				if ( expectedType ) {
+					if ( expectedType === 'number' ) {
+						if ( typeof value !== 'number' || !isFinite( value ) ) {
+							return;
+						}
+					} else if ( expectedType === 'string' ) {
+						if ( typeof value !== 'string' || value.length > MAX_STRING_LENGTH ) {
+							return;
+						}
+					} else if ( expectedType === 'boolean' ) {
+						if ( typeof value !== 'boolean' ) {
+							return;
+						}
+					} else if ( expectedType === 'object' ) {
+						if ( typeof value !== 'object' || value === null || Array.isArray( value ) ) {
+							return;
+						}
+					}
+				}
+
+				sanitized[ prop ] = value;
 			} );
 
 			return sanitized;

@@ -572,12 +572,9 @@
 				verticalSnapType = leftSnap.type;
 			}
 			if ( rightSnap && ( !bestVerticalSnap || Math.abs( right - rightSnap.value ) < Math.abs( verticalOffset ) ) ) {
-				const rightOffset = rightSnap.value - right;
-				if ( !bestVerticalSnap || Math.abs( rightOffset ) < Math.abs( verticalOffset ) ) {
-					bestVerticalSnap = rightSnap;
-					verticalOffset = rightOffset;
-					verticalSnapType = rightSnap.type;
-				}
+				bestVerticalSnap = rightSnap;
+				verticalOffset = rightSnap.value - right;
+				verticalSnapType = rightSnap.type;
 			}
 			if ( centerXSnap && ( !bestVerticalSnap || Math.abs( centerX - centerXSnap.value ) < Math.abs( verticalOffset ) ) ) {
 				const centerOffset = centerXSnap.value - centerX;

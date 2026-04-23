@@ -689,4 +689,215 @@ describe( 'AlignmentController', () => {
 			expect( bounds.width ).toBe( 50 );
 		} );
 	} );
+
+	describe( 'getLayerBounds - marker layers', () => {
+		it( 'should compute bounds for marker with size', () => {
+			const layer = { type: 'marker', x: 100, y: 100, size: 40 };
+			const bounds = controller.getLayerBounds( layer );
+			expect( bounds.left ).toBe( 80 );
+			expect( bounds.top ).toBe( 80 );
+			expect( bounds.right ).toBe( 120 );
+			expect( bounds.bottom ).toBe( 120 );
+			expect( bounds.width ).toBe( 40 );
+			expect( bounds.height ).toBe( 40 );
+		} );
+
+		it( 'should use default size 24 for marker without size', () => {
+			const layer = { type: 'marker', x: 50, y: 50 };
+			const bounds = controller.getLayerBounds( layer );
+			// default size 24, radius 12
+			expect( bounds.left ).toBe( 38 );
+			expect( bounds.top ).toBe( 38 );
+			expect( bounds.right ).toBe( 62 );
+			expect( bounds.bottom ).toBe( 62 );
+		} );
+	} );
+
+	describe( 'getLayerBounds - text with TextUtils', () => {
+		it( 'should use TextUtils when available with valid metrics', () => {
+			const mockMetrics = { originX: 10, originY: 20, width: 200, height: 30 };
+			global.window = global.window || {};
+			global.window.Layers = {
+				Utils: {
+					Text: {
+						measureTextLayer: jest.fn().mockReturnValue( mockMetrics )
+					}
+				}
+			};
+			controller.canvasManager.ctx = {};
+			controller.canvasManager.canvas = { width: 800 };
+
+			const layer = { type: 'text', x: 100, y: 50, text: 'Hello', fontSize: 20 };
+			const bounds = controller.getLayerBounds( layer );
+			expect( bounds.left ).toBe( 10 );
+			expect( bounds.top ).toBe( 20 );
+			expect( bounds.right ).toBe( 210 );
+			expect( bounds.bottom ).toBe( 50 );
+
+			delete global.window.Layers;
+		} );
+
+		it( 'should fall back when TextUtils returns null metrics', () => {
+			global.window = global.window || {};
+			global.window.Layers = {
+				Utils: {
+					Text: {
+						measureTextLayer: jest.fn().mockReturnValue( null )
+					}
+				}
+			};
+			controller.canvasManager.ctx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				measureText: jest.fn( () => ( { width: 80 } ) ),
+				font: ''
+			};
+
+			const layer = { type: 'text', x: 100, y: 50, text: 'Hello', fontSize: 20 };
+			const bounds = controller.getLayerBounds( layer );
+			// Falls back to estimation
+			expect( bounds.left ).toBe( 100 );
+
+			delete global.window.Layers;
+		} );
+	} );
+
+	describe( 'alignBottom - early return', () => {
+		it( 'should return early when fewer than 2 layers selected', () => {
+			mockCanvasManager.getSelectedLayerIds.mockReturnValue( [ 'layer1' ] );
+			const originalY = mockLayers[ 0 ].y;
+
+			controller.alignBottom();
+
+			expect( mockLayers[ 0 ].y ).toBe( originalY );
+		} );
+	} );
+
+	describe( 'getLayerBounds - missing coordinate fallbacks', () => {
+		it( 'should default coordinates for line without properties', () => {
+			const bounds = controller.getLayerBounds( { type: 'line' } );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.top ).toBe( 0 );
+		} );
+
+		it( 'should default coordinates for circle without properties', () => {
+			const bounds = controller.getLayerBounds( { type: 'circle' } );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.width ).toBe( 0 );
+		} );
+
+		it( 'should default coordinates for ellipse without properties', () => {
+			const bounds = controller.getLayerBounds( { type: 'ellipse' } );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.width ).toBe( 0 );
+		} );
+
+		it( 'should default coordinates for polygon without properties', () => {
+			const bounds = controller.getLayerBounds( { type: 'polygon' } );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.width ).toBe( 0 );
+		} );
+
+		it( 'should default coordinates for star without any radius', () => {
+			const bounds = controller.getLayerBounds( { type: 'star' } );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.width ).toBe( 0 );
+		} );
+
+		it( 'should default coordinates for marker without properties', () => {
+			const bounds = controller.getLayerBounds( { type: 'marker' } );
+			// default size 24, radius 12
+			expect( bounds.left ).toBe( -12 );
+			expect( bounds.right ).toBe( 12 );
+		} );
+
+		it( 'should default coordinates for text without properties', () => {
+			const bounds = controller.getLayerBounds( { type: 'text' } );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds ).toBeDefined();
+		} );
+
+		it( 'should use ctx.measureText for text width when context available (P3-250)', () => {
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				measureText: jest.fn( () => ( { width: 250 } ) ),
+				font: ''
+			};
+			mockCanvasManager.ctx = mockCtx;
+			mockCanvasManager.canvas = { width: 800 };
+
+			const layer = {
+				type: 'text',
+				x: 10,
+				y: 50,
+				text: 'Hello World',
+				fontSize: 20,
+				fontFamily: 'Helvetica'
+			};
+
+			const bounds = controller.getLayerBounds( layer );
+
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.restore ).toHaveBeenCalled();
+			expect( mockCtx.font ).toBe( '20px Helvetica' );
+			// Width should come from measureText (250), not 0.6 estimate
+			expect( bounds.width ).toBe( 250 );
+		} );
+
+		it( 'should fall back to 0.6 multiplier when context is null (P3-250)', () => {
+			mockCanvasManager.ctx = null;
+
+			const layer = {
+				type: 'text',
+				x: 10,
+				y: 50,
+				text: 'Hello',
+				fontSize: 20
+			};
+
+			const bounds = controller.getLayerBounds( layer );
+
+			// 0.6 * 5 chars * 20 = 60, which is > fontSize(20), so width = 60
+			expect( bounds.width ).toBe( 60 );
+		} );
+
+		it( 'should handle path without points', () => {
+			const bounds = controller.getLayerBounds( { type: 'path' } );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.right ).toBe( 0 );
+		} );
+
+		it( 'should handle default type without properties', () => {
+			const bounds = controller.getLayerBounds( { type: 'rectangle' } );
+			expect( bounds.left ).toBe( 0 );
+			expect( bounds.top ).toBe( 0 );
+			expect( bounds.width ).toBe( 0 );
+		} );
+	} );
+
+	describe( 'moveLayer - missing coordinate fallbacks', () => {
+		it( 'should handle arrow without coordinates', () => {
+			const layer = { type: 'arrow' };
+			controller.moveLayer( layer, 10, 20 );
+			expect( layer.x1 ).toBe( 10 );
+			expect( layer.y1 ).toBe( 20 );
+			expect( layer.x2 ).toBe( 10 );
+			expect( layer.y2 ).toBe( 20 );
+		} );
+
+		it( 'should handle default type without x/y', () => {
+			const layer = { type: 'rectangle' };
+			controller.moveLayer( layer, 5, 10 );
+			expect( layer.x ).toBe( 5 );
+			expect( layer.y ).toBe( 10 );
+		} );
+
+		it( 'should handle path without points in moveLayer', () => {
+			const layer = { type: 'path' };
+			controller.moveLayer( layer, 5, 10 );
+			// Should not crash, points remain undefined
+			expect( layer.points ).toBeUndefined();
+		} );
+	} );
 } );

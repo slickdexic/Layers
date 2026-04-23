@@ -1,11 +1,11 @@
 # Layers — Professional Image Annotation for MediaWiki
 
 <p align="center">
-  <img src="https://img.shields.io/badge/MediaWiki-1.39%2B-blue" alt="MediaWiki 1.39+">
+  <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-11%2C496%20passing-brightgreen" alt="11,496 Tests">
-   <img src="https://img.shields.io/badge/Coverage-92.88%25-brightgreen" alt="92.88% Coverage">
+  <img src="https://img.shields.io/badge/Tests-14%2C001%20passing-brightgreen" alt="14,001 Tests">
+  <img src="https://img.shields.io/badge/Coverage-95.87%25-brightgreen" alt="95.87% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,16 +20,32 @@
 
 ---
 
-## 🆕 What's New in v1.5.63
+## 🆕 What's New in v1.5.64
 
-- **Browser compatibility backports** — REL1_39 now treats `FileReader` and `Blob` as optional and routes pre-bootstrap compatibility warnings through `UIManager.showBrowserCompatibilityWarning()`.
-- **RichText font-size parity** — REL1_39 now allows inline rich-text runs up to 1,000px, matching the layer-level textbox limit.
-- **Test Suite** — 11,496 tests passing (168 suites), 92.88% statement coverage
+- **v71 Code Quality Fixes** — 6 code issues resolved: InlineTextEditor stale
+  layer guard (P2-252), TextBoxRenderer zero-dimension early return (P2-253),
+  TextSanitizer Unicode hardening/bidi strip (P3-254), ViewerManager concurrent
+  refresh guard (P3-255), SmartGuidesController redundant conditional removed
+  (P3-256), ContextMenuController Home/End keyboard navigation (P3-257)
+- **AlignmentController** — Uses `ctx.measureText` for accurate text-layer
+  width when canvas context is available
+- **DrawingController** — User notification when path point limit (1,000) is reached
+- **PresetStorage** — Type-strict import validation (number/boolean/string/object)
+- **Regression Tests** — 7 targeted tests for v71 fixes (total: 14,001 tests)
+- **Test Suite** — 14,001 tests (172 suites), 95.87% stmts, 87.20% branches
 
-### Previous v1.5.60 Highlights
+### Previous v1.5.63 Highlights
+
+- **APICacheManager Extracted** — Cache logic separated from APIManager
+  into a standalone module
+- **Compatibility Backports** — Browser gating now treats
+  `FileReader`/`Blob` as optional
+- **Test Suite** — 13,994 tests (172 suites)
+
+### Previous v1.5.62 Highlights
 
 - **16 Bug Fixes** — Zoom-to-pointer anchor drift, 15 P3 code-quality fixes
-- **Test Suite** — 11,445 tests passing (168 suites)
+- **Test Suite** — 14,001 tests passing (172 suites)
 
 ### Previous v1.5.59 Highlights
 
@@ -317,21 +333,21 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.63 |
-| **Version (REL1_43)** | 1.5.63-REL1_43 |
-| **Version (REL1_39)** | 1.5.63-REL1_39 |
-| **Release Date** | March 31, 2026 |
-| **Test Suites** | 168 |
-| **Total Tests** | 11,496 |
-| **PHPUnit Test Files** | 34 |
-| **Statement Coverage** | 92.88% |
-| **Branch Coverage** | 82.58% |
-| **Function Coverage** | 90.62% |
-| **Line Coverage** | 91.39% |
-| **JavaScript Files** | 158 |
+| **Version (main)** | 1.5.64 |
+| **Version (REL1_43)** | 1.5.64-REL1_43 |
+| **Version (REL1_39)** | 1.5.64-REL1_39 |
+| **Release Date** | April 23, 2026 |
+| **Test Suites** | 172 |
+| **Total Tests** | 14,001 |
+| **PHPUnit Test Files** | 35 |
+| **Statement Coverage** | 95.87% |
+| **Branch Coverage** | 87.20% |
+| **Function Coverage** | 94.00% |
+| **Line Coverage** | 95.98% |
+| **JavaScript Files** | 157 |
 | **ES6 Classes** | 140 |
 | **God Classes** | 26 (5 generated, 19 JS, 2 PHP) |
-| **i18n Messages** | 780 |
+| **i18n Messages** | 842 (785 `layers-` prefixed) |
 
 ---
 

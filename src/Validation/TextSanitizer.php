@@ -26,6 +26,20 @@ class TextSanitizer {
 	 * @return string Sanitized text
 	 */
 	public function sanitizeText( string $text ): string {
+		// Validate UTF-8 encoding; replace invalid sequences
+		if ( !mb_check_encoding( $text, 'UTF-8' ) ) {
+			$text = mb_convert_encoding( $text, 'UTF-8', 'UTF-8' );
+		}
+
+		// Strip zero-width characters and Unicode directional overrides.
+		// Zero-width chars (U+200B-U+200F, U+FEFF) enable text spoofing;
+		// bidi overrides (U+202A-U+202E) can mask content direction.
+		$text = preg_replace(
+			'/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{FEFF}]/u',
+			'',
+			$text
+		);
+
 		// Basic length check
 		if ( mb_strlen( $text, 'UTF-8' ) > self::MAX_TEXT_LENGTH ) {
 			$text = mb_substr( $text, 0, self::MAX_TEXT_LENGTH );
