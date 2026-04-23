@@ -249,6 +249,22 @@
 
 			const shouldApply = apply !== false;
 			let changesApplied = false;
+
+			// Verify the layer still exists in the editor's layers array.
+			// If undo removed the layer while editing was in progress,
+			// mutating the detached reference would silently lose data.
+			const editorLayers = this.canvasManager && this.canvasManager.editor &&
+				this.canvasManager.editor.layers;
+			if ( editorLayers && editorLayers.length > 0 &&
+				this.editingLayer && this.editingLayer.id &&
+				!editorLayers.some( ( l ) => l.id === this.editingLayer.id ) ) {
+				this._removeEditor();
+				this.editingLayer = null;
+				this.editorElement = null;
+				this.isEditing = false;
+				return false;
+			}
+
 			const wasTextbox = this._isMultilineType( this.editingLayer );
 
 			// Debug logging (controlled by extension config)

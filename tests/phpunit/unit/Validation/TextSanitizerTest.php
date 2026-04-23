@@ -201,4 +201,68 @@ class TextSanitizerTest extends \MediaWikiUnitTestCase {
 		// Leading/trailing whitespace should be trimmed
 		$this->assertEquals( 'Arial', $sanitizer->sanitizeFontFamily( '  Arial  ' ) );
 	}
+
+	/**
+	 * @covers ::sanitizeText
+	 * Regression test for P3-254: invalid UTF-8 should be cleaned, not passed through
+	 */
+	public function testSanitizeTextInvalidUtf8() {
+		$sanitizer = $this->createSanitizer();
+
+		// Invalid UTF-8 byte sequence should not cause errors
+		$invalidUtf8 = "Hello \x80\x81 World";
+		$result = $sanitizer->sanitizeText( $invalidUtf8 );
+		$this->assertTrue( mb_check_encoding( $result, 'UTF-8' ), 'Result must be valid UTF-8' );
+		$this->assertStringContainsString( 'Hello', $result );
+		$this->assertStringContainsString( 'World', $result );
+	}
+
+	/**
+	 * @covers ::sanitizeText
+	 * Regression test for P3-254: zero-width characters must be stripped
+	 */
+	public function testSanitizeTextStripsZeroWidthChars() {
+		$sanitizer = $this->createSanitizer();
+
+		// Zero-width space (U+200B), zero-width non-joiner (U+200C), zero-width joiner (U+200D)
+		$textWithZeroWidth = "Hel\u{200B}lo\u{200C}Wor\u{200D}ld";
+		$result = $sanitizer->sanitizeText( $textWithZeroWidth );
+		$this->assertEquals( 'HelloWorld', $result );
+
+		// BOM (U+FEFF)
+		$textWithBom = "\u{FEFF}Hello";
+		$result = $sanitizer->sanitizeText( $textWithBom );
+		$this->assertEquals( 'Hello', $result );
+	}
+
+	/**
+	 * @covers ::sanitizeText
+	 * Regression test for P3-254: bidi override characters must be stripped
+	 */
+	public function testSanitizeTextStripsBidiOverrides() {
+		$sanitizer = $this->createSanitizer();
+
+		// Left-to-right embedding (U+202A), right-to-left override (U+202E)
+		$textWithBidi = "Hello\u{202A}World\u{202E}Test";
+		$result = $sanitizer->sanitizeText( $textWithBidi );
+		$this->assertEquals( 'HelloWorldTest', $result );
+
+		// Left-to-right mark (U+200E), right-to-left mark (U+200F)
+		$textWithMarks = "AB\u{200E}CD\u{200F}EF";
+		$result = $sanitizer->sanitizeText( $textWithMarks );
+		$this->assertEquals( 'ABCDEF', $result );
+	}
+
+	/**
+	 * @covers ::sanitizeText
+	 * Regression test for P3-254: normal Unicode text should be preserved
+	 */
+	public function testSanitizeTextPreservesValidUnicode() {
+		$sanitizer = $this->createSanitizer();
+
+		// CJK, emoji, accented chars should all survive
+		$this->assertEquals( '日本語テスト', $sanitizer->sanitizeText( '日本語テスト' ) );
+		$this->assertEquals( 'café résumé', $sanitizer->sanitizeText( 'café résumé' ) );
+		$this->assertEquals( 'Ñoño', $sanitizer->sanitizeText( 'Ñoño' ) );
+	}
 }

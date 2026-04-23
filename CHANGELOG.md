@@ -4,6 +4,45 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.64] - 2026-04-23
+
+### Security
+- **P3-254 — TextSanitizer Unicode hardening** — `sanitizeText()` now validates
+  UTF-8 encoding (with `mb_convert_encoding` fallback) and strips zero-width
+  characters (U+200B–U+200F, U+FEFF) and Unicode bidirectional override characters
+  (U+202A–U+202E) that can be used for text spoofing attacks.
+- **PresetStorage import validation** — `_sanitizeStyleForStorage()` now enforces
+  strict per-property type checking (number/string/boolean/object) with a 200-char
+  limit on string values, preventing malformed data from polluting localStorage.
+
+### Fixed
+- **P2-252 — InlineTextEditor stale layer reference** — `finishEditing()` now checks
+  whether the editing layer still exists in `editor.layers` before applying changes.
+  Undo-removed layers during in-progress edits are now cleanly aborted.
+- **P2-253 — TextBoxRenderer zero-dimension guard** — Added early return in `draw()`
+  when `width <= 0 || height <= 0`, preventing negative `maxWidth` reaching
+  `wrapRichText()` and causing unbounded line creation.
+- **P3-255 — ViewerManager concurrent refresh guard** — `refreshAllViewers()` uses
+  `_refreshInProgress` flag to skip duplicate API requests. Flag cleared via `.finally()`
+  on all code paths.
+- **P3-256 — SmartGuidesController redundant conditional** — Removed dead inner `if`
+  block in right-edge snap path.
+- **P3-257 — ContextMenuController Home/End accessibility** — Added `Home` key
+  (jump to first item) and `End` key (jump to last item) to context menu keyboard
+  navigation, completing the WCAG 2.1 menu keyboard pattern.
+- **AlignmentController text width** — `getLayerBounds()` uses `ctx.measureText()`
+  when a canvas context is available instead of the rough character-width estimate.
+- **DrawingController path limit notification** — A `mw.notify()` warning is shown
+  once per stroke when the pen tool reaches the 1,000-point server limit.
+- **i18n duplicate key** — Removed duplicate `layers-prop-marker-size` from `en.json`;
+  merged its two `qqq.json` descriptions into a single unified entry.
+
+### Tests
+- Added 7 regression tests covering v71 code fixes (P2-252, P2-253, P3-255, P3-257)
+- Added 4 PHPUnit regression tests for TextSanitizer Unicode hardening (P3-254)
+- All 14,001 tests pass (172 suites) ✅
+- Coverage: 95.87% statements, 87.20% branches
+
 ## [1.5.63] - 2026-03-31
 
 ### Added
@@ -28,7 +67,7 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Expanded Jest and E2E coverage throughout the v1.5.63 cycle,
   including compatibility regressions for missing `FileReader`/`Blob`
   support and pre-bootstrap warning handling.
-- All 13,981 tests pass (172 test suites) ✅
+- All 14,001 tests pass (172 test suites) ✅
 - Coverage snapshot: 95.87% statements, 87.20% branches.
 
 ## [1.5.62] - 2026-03-17

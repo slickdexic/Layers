@@ -340,6 +340,107 @@ describe( 'PresetStorage', () => {
 			const sanitized = storage.sanitizeStyle( {} );
 			expect( sanitized ).toEqual( {} );
 		} );
+
+		test( 'rejects non-number values for number properties (P3-247)', () => {
+			const style = {
+				strokeWidth: 'abc',
+				fontSize: null,
+				opacity: true,
+				shadowBlur: undefined,
+				fill: '#000',
+				stroke: '#fff'
+			};
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized ).not.toHaveProperty( 'strokeWidth' );
+			expect( sanitized ).not.toHaveProperty( 'fontSize' );
+			expect( sanitized ).not.toHaveProperty( 'opacity' );
+			expect( sanitized ).not.toHaveProperty( 'shadowBlur' );
+			expect( sanitized.fill ).toBe( '#000' );
+			expect( sanitized.stroke ).toBe( '#fff' );
+		} );
+
+		test( 'rejects NaN and Infinity for number properties (P3-247)', () => {
+			const style = {
+				strokeWidth: NaN,
+				opacity: Infinity,
+				fontSize: -Infinity
+			};
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized ).toEqual( {} );
+		} );
+
+		test( 'rejects non-string values for string properties (P3-247)', () => {
+			const style = {
+				stroke: 123,
+				fill: false,
+				fontFamily: { name: 'Arial' },
+				color: '#ff0000'
+			};
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized ).not.toHaveProperty( 'stroke' );
+			expect( sanitized ).not.toHaveProperty( 'fill' );
+			expect( sanitized ).not.toHaveProperty( 'fontFamily' );
+			expect( sanitized.color ).toBe( '#ff0000' );
+		} );
+
+		test( 'rejects strings exceeding 200 chars (P3-247)', () => {
+			const longString = 'a'.repeat( 201 );
+			const style = {
+				fontFamily: longString,
+				stroke: '#000'
+			};
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized ).not.toHaveProperty( 'fontFamily' );
+			expect( sanitized.stroke ).toBe( '#000' );
+		} );
+
+		test( 'accepts strings at exactly 200 chars (P3-247)', () => {
+			const exactString = 'a'.repeat( 200 );
+			const style = { fontFamily: exactString };
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized.fontFamily ).toBe( exactString );
+		} );
+
+		test( 'rejects non-boolean values for boolean properties (P3-247)', () => {
+			const style = {
+				shadow: 1,
+				glow: 'true',
+				textShadow: false
+			};
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized ).not.toHaveProperty( 'shadow' );
+			expect( sanitized ).not.toHaveProperty( 'glow' );
+			expect( sanitized.textShadow ).toBe( false );
+		} );
+
+		test( 'rejects non-object values for gradient (P3-247)', () => {
+			const style = { gradient: 'linear' };
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized ).not.toHaveProperty( 'gradient' );
+		} );
+
+		test( 'rejects null and array for gradient (P3-247)', () => {
+			expect( storage.sanitizeStyle( { gradient: null } ) ).toEqual( {} );
+			expect( storage.sanitizeStyle( { gradient: [ 1, 2 ] } ) ).toEqual( {} );
+		} );
+
+		test( 'accepts valid typed values together (P3-247)', () => {
+			const style = {
+				stroke: '#000000',
+				strokeWidth: 2,
+				shadow: true,
+				gradient: { type: 'linear', angle: 90, colors: [] },
+				opacity: 0.8,
+				fontFamily: 'Arial'
+			};
+			const sanitized = storage.sanitizeStyle( style );
+			expect( sanitized.stroke ).toBe( '#000000' );
+			expect( sanitized.strokeWidth ).toBe( 2 );
+			expect( sanitized.shadow ).toBe( true );
+			expect( sanitized.gradient.type ).toBe( 'linear' );
+			expect( sanitized.opacity ).toBe( 0.8 );
+			expect( sanitized.fontFamily ).toBe( 'Arial' );
+		} );
 	} );
 
 	describe( 'extractStyleFromLayer', () => {

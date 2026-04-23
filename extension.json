@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.63",
+	"version": "1.5.64",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -1151,7 +1151,9 @@
 				"layers-input-min-value",
 				"layers-input-max-value",
 				"layers-input-text-too-long",
-				"layers-input-char-limit-warning"
+				"layers-input-char-limit-warning",
+				"layers-btn-ok",
+				"layers-text-input-placeholder"
 			]
 		},
 		"ext.layers.shapeLibrary": {

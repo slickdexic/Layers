@@ -728,6 +728,38 @@ describe( 'TextBoxRenderer', () => {
 			expect( () => renderer.draw( layer ) ).not.toThrow();
 		} );
 
+		it( 'should skip rendering for zero-width textbox (P2-253)', () => {
+			ctx.fillRect.mockClear();
+			ctx.fillText.mockClear();
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 20,
+				width: 0, height: 100,
+				fill: '#ff0000',
+				text: 'Should not render'
+			};
+			renderer.draw( layer );
+			// Zero width triggers early return — no fill or text drawing
+			expect( ctx.fillRect ).not.toHaveBeenCalled();
+			expect( ctx.fillText ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should skip rendering for negative-height textbox (P2-253)', () => {
+			ctx.fillRect.mockClear();
+			ctx.fillText.mockClear();
+			const layer = {
+				type: 'textbox',
+				x: 10, y: 20,
+				width: 200, height: -10,
+				fill: '#ff0000',
+				text: 'Should not render'
+			};
+			renderer.draw( layer );
+			// Negative height triggers early return — no fill or text drawing
+			expect( ctx.fillRect ).not.toHaveBeenCalled();
+			expect( ctx.fillText ).not.toHaveBeenCalled();
+		} );
+
 		it( 'should handle missing optional properties', () => {
 			const layer = {
 				type: 'textbox',

@@ -746,7 +746,12 @@ describe( 'AlignmentController', () => {
 					}
 				}
 			};
-			controller.canvasManager.ctx = {};
+			controller.canvasManager.ctx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				measureText: jest.fn( () => ( { width: 80 } ) ),
+				font: ''
+			};
 
 			const layer = { type: 'text', x: 100, y: 50, text: 'Hello', fontSize: 20 };
 			const bounds = controller.getLayerBounds( layer );
@@ -810,6 +815,51 @@ describe( 'AlignmentController', () => {
 			const bounds = controller.getLayerBounds( { type: 'text' } );
 			expect( bounds.left ).toBe( 0 );
 			expect( bounds ).toBeDefined();
+		} );
+
+		it( 'should use ctx.measureText for text width when context available (P3-250)', () => {
+			const mockCtx = {
+				save: jest.fn(),
+				restore: jest.fn(),
+				measureText: jest.fn( () => ( { width: 250 } ) ),
+				font: ''
+			};
+			mockCanvasManager.ctx = mockCtx;
+			mockCanvasManager.canvas = { width: 800 };
+
+			const layer = {
+				type: 'text',
+				x: 10,
+				y: 50,
+				text: 'Hello World',
+				fontSize: 20,
+				fontFamily: 'Helvetica'
+			};
+
+			const bounds = controller.getLayerBounds( layer );
+
+			expect( mockCtx.save ).toHaveBeenCalled();
+			expect( mockCtx.restore ).toHaveBeenCalled();
+			expect( mockCtx.font ).toBe( '20px Helvetica' );
+			// Width should come from measureText (250), not 0.6 estimate
+			expect( bounds.width ).toBe( 250 );
+		} );
+
+		it( 'should fall back to 0.6 multiplier when context is null (P3-250)', () => {
+			mockCanvasManager.ctx = null;
+
+			const layer = {
+				type: 'text',
+				x: 10,
+				y: 50,
+				text: 'Hello',
+				fontSize: 20
+			};
+
+			const bounds = controller.getLayerBounds( layer );
+
+			// 0.6 * 5 chars * 20 = 60, which is > fontSize(20), so width = 60
+			expect( bounds.width ).toBe( 60 );
 		} );
 
 		it( 'should handle path without points', () => {

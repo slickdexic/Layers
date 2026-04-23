@@ -194,6 +194,14 @@
 			let y = layer.y || 0;
 			const width = layer.width || 0;
 			const height = layer.height || 0;
+
+			// Zero-dimension textboxes cannot be rendered meaningfully.
+			// Without this guard, negative maxWidth reaches wrapRichText()
+			// causing unbounded line creation.
+			if ( width <= 0 || height <= 0 ) {
+				return;
+			}
+
 			// Use typeof check to allow strokeWidth: 0 (don't default 0 to 1)
 			let strokeW = typeof layer.strokeWidth === 'number' ? layer.strokeWidth : 1;
 			let cornerRadius = layer.cornerRadius || 0;

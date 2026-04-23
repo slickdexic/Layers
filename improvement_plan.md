@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** April 7, 2026 — v69 audit complete
+**Last updated:** April 13, 2026 — v71 audit (fix pass complete)
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.
@@ -41,7 +41,7 @@ documentation drift items** (D-060-01 to D-060-03). 3 false positives
 eliminated during verification. P3-174, P3-175 (open from v59), P3-147
 (accepted), P3-148 (deferred) carried forward. Post-v59 commits shifted
 metrics: 11,894 tests (168 suites), 94.28%/84.18% coverage, 841 i18n
-keys, 42 PHP files.
+keys, 44 PHP files.
 
 v61 audit found **2 MEDIUM + 2 LOW code issues** (P2-188, P2-189,
 P3-190, P3-191) plus **5 documentation drift items** (D-061-01 to
@@ -138,21 +138,69 @@ reclassified as false positive. P3-244 acceptable (mitigated).
 Remaining backlog: **4 deferred structural items** and
 **18 documentation drift items**.
 
+v70 audit (April 8) found **0 HIGH + 1 MEDIUM + 6 LOW code issues**
+(P2-245, P3-246 to P3-251) plus **1 documentation drift item**
+(D-070-01). 10 false positives eliminated through manual source
+verification. Audit scope: full codebase (PHP + JS), ~70 files
+reviewed across parallel subagent sweeps. No new exploitable
+security vulnerabilities confirmed. PHP backend fully clean.
+Coverage: 95.87% stmt, 87.20% branch, 94.00% fn, 95.98% lines.
+
+v71 audit (April 13) found **2 MEDIUM + 4 LOW code issues**
+(P2-252, P2-253, P3-254 to P3-257) plus **2 documentation drift
+items** (D-071-01, D-071-02). 16 false positives eliminated through
+manual source verification. Audit scope: full codebase (PHP + JS),
+~70 files reviewed across 5 parallel subagent sweeps with 3 rounds
+of manual verification. No new exploitable security vulnerabilities
+confirmed. Coverage: 95.87% stmt, 87.20% branch. Tests: 13,994
+in 172 suites.
+
 Use the section below as the authoritative current backlog.
 
 ---
 
-## v69 Current Priorities
+## v71 Current Priorities
 
 | # | Priority | ID | Status | Description |
 |---|----------|-----|--------|-------------|
-| 1 | **HIGH** | P1-224 | ✅ Fixed | TransformController multi-select snap |
-| 2 | **MED** | P2-225 | ✅ Fixed | ResizeCalculator ellipse 2x rate |
-| 3 | **MED** | P2-226 | ✅ Fixed | CanvasRenderer blur blend export |
-| 4 | **MED** | P2-227 | ✅ Fixed | SelectionManager base64 clone perf |
-| 5 | **MED** | P2-228 | ✅ Fixed | ContextMenuController stale state |
-| 6 | Low | P3-229–244 | 15/16 done | 11 fixed, 1 false positive, 4 deferred |
-| 7 | Doc | D-069-01–18 | 🔲 Open | 18 documentation drift items |
+| 1 | **MED** | P2-252 | ✅ Fixed | InlineTextEditor stale layer ref |
+| 2 | **MED** | P2-253 | ✅ Fixed | TextBoxRenderer zero-dimension |
+| 3 | Low | P3-254 | ✅ Fixed | TextSanitizer Unicode hardening |
+| 4 | Low | P3-255 | ✅ Fixed | ViewerManager concurrent refresh |
+| 5 | Low | P3-256 | ✅ Fixed | SmartGuides redundant conditional |
+| 6 | Low | P3-257 | ✅ Fixed | ContextMenu missing Home/End |
+| 7 | Doc | D-071-01 | ✅ Fixed | LTS_BRANCH_STRATEGY.md versions |
+| 8 | Doc | D-071-02 | ✅ Fixed | Test count 13,981→13,994 |
+
+**Carried forward from v69:**
+- P3-233 (triple getLayerBounds) — deferred structural
+- P3-234 (LayerListRenderer duplication) — deferred structural
+- P3-236 (keyboard drag) — deferred structural
+- P3-241 (duplicate whitelists) — deferred structural
+
+**Total open backlog:** 4 deferred structural items.
+
+---
+
+## v70 Audit Results (April 8, 2026)
+
+| # | Priority | ID | Status | Description |
+|---|----------|-----|--------|-------------|
+| 1 | **MED** | P2-245 | ✅ Fixed | i18n duplicate key |
+| 2 | Low | P3-246 | ✅ Fixed | Missing message registrations |
+| 3 | Low | P3-247 | ✅ Fixed | PresetStorage import sanitization |
+| 4 | Low | P3-248 | ❌ FP | EffectsRenderer canvas cached |
+| 5 | Low | P3-249 | ✅ Fixed | Path tool silent point cap |
+| 6 | Low | P3-250 | ✅ Fixed | Text bounds rough estimate |
+| 7 | Low | P3-251 | ✅ Fixed | PHP file count doc drift |
+| 8 | Doc | D-070-01 | ✅ Fixed | PHP metrics stale in docs |
+
+**Carried forward from v69:**
+- P3-233 (triple getLayerBounds) — deferred structural
+- P3-234 (LayerListRenderer duplication) — deferred structural
+- P3-236 (keyboard drag) — deferred structural
+- P3-241 (duplicate whitelists) — deferred structural
+- D-069-01–18 (documentation drift) — 18 items
 
 **Deferred structural items:** P3-233 (triple getLayerBounds),
 P3-234 (LayerListRenderer duplication), P3-236 (keyboard drag),
@@ -2130,6 +2178,7 @@ When an issue is fixed:
 
 | Date | Changes |
 |------|---------|
+| 2026-04-08 | v70 audit: 1 MEDIUM (P2-245) + 6 LOW (P3-246 to P3-251) + 1 doc drift (D-070-01). 10 FPs eliminated. PHP backend fully clean. No security vulnerabilities. |
 | 2026-03-31 | v68 audit + fix pass: 1 MEDIUM (P2-218) + 5 LOW (P3-219 to P3-223) + 4 doc drift (D-068-01 to D-068-04). All fixed. 40+ FPs eliminated. |
 | 2026-03-04 | v45.6 batch 6: 3 P2 fixes (P2-081 callout blur bounds, P2-083 i18n shortcut descriptions, P2-075 shadow rotation decomposition). All P2 items now resolved. Totals: 262/228/34. |
 | 2026-03-04 | v45.5 batch 5: 3 P2 fixes (P2-088 N+1 batch query, P2-090 request-boundary state reset, P2-091 getLayerBounds delegation). Totals: 254/208/46. |

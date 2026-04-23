@@ -1,8 +1,9 @@
 # Known Issues
 
-**Last updated:** April 7, 2026 — v69 audit
+**Last updated:** April 13, 2026 — v71 audit (fix pass complete)
 
-Open in v69: 21 code items (1 HIGH, 4 MEDIUM, 16 LOW) + 18 doc drift.
+v71 audit: 6 code items + 2 doc drift found and fixed.
+4 deferred structural items carried from v69.
 
 This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
@@ -14,13 +15,202 @@ traceability.
 | Priority | Total | Fixed | Open |
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
-| P1 | 62 | 61 | 1 |
-| P2 | 169 | 165 | 4 |
-| P3 | 237 | 221 | 16 |
-| **Total** | **473** | **452** | **21** |
+| P1 | 62 | 62 | 0 |
+| P2 | 172 | 168 | 4 |
+| P3 | 246 | 230 | 16 |
+| **Total** | **485** | **465** | **20** |
 
-*v69 audit added 21 code items. 18 documentation drift items tracked
-separately below.*
+*v71 audit: 6 code items + 2 doc drift — all fixed.
+v70 audit: 7 items found, 6 fixed, 1 retracted as false positive.*
+
+---
+
+## v71 Audit (April 13, 2026; 6 code + 2 doc drift items)
+
+Audit v71 was a comprehensive review covering all PHP backend code
+and all JavaScript frontend code. ~70 source files reviewed across
+5 parallel subagent sweeps with 3 rounds of manual verification.
+16 false positives eliminated during source verification.
+
+### P2-252: InlineTextEditor Stale Layer Reference
+
+- **File:** `resources/ext.layers.editor/canvas/InlineTextEditor.js`
+- **Issue:** `finishEditing()` modifies `this.editingLayer` without
+    verifying the layer still exists in `editor.layers`. If undo
+    fires during inline editing, text mutations go to a stale ref.
+- **Status:** ✅ Fixed — added layer existence check with `editorLayers.some()`
+- **Introduced:** v71 review
+
+### P2-253: TextBoxRenderer Zero-Dimension Rendering
+
+- **File:** `resources/ext.layers.shared/TextBoxRenderer.js`
+- **Issue:** `draw()` does not return early when width or height
+    is 0. Proceeds to pass negative `maxWidth` to `wrapRichText()`,
+    causing unbounded line creation.
+- **Status:** ✅ Fixed — added early return for zero/negative dimensions
+- **Introduced:** v71 review
+
+### P3-254: TextSanitizer Missing Unicode Hardening
+
+- **File:** `src/Validation/TextSanitizer.php`
+- **Issue:** No `mb_check_encoding()` UTF-8 validation. No zero-width
+    character stripping (U+200B–U+200D, U+FEFF). No RTL/LTR override
+    removal (U+202A–U+202E). Defense-in-depth gap.
+- **Status:** ✅ Fixed — added UTF-8 validation and Unicode stripping
+- **Introduced:** v71 review
+
+### P3-255: ViewerManager Concurrent refreshAllViewers
+
+- **File:** `resources/ext.layers/viewer/ViewerManager.js`
+- **Issue:** No guard against concurrent `refreshAllViewers()` calls.
+    Rapid saves launch parallel API batches causing doubled requests
+    and race conditions.
+- **Status:** ✅ Fixed — added `_refreshInProgress` guard with `.finally()` cleanup
+- **Introduced:** v71 review
+
+### P3-256: SmartGuidesController Redundant Snap Conditional
+
+- **File:** `resources/ext.layers.editor/canvas/SmartGuidesController.js`
+- **Issue:** Right edge snap logic has inner `if` condition that is
+    mathematically identical to the outer `if`. Redundant check.
+- **Status:** ✅ Fixed — removed redundant inner conditional
+- **Introduced:** v71 review
+
+### P3-257: ContextMenuController Missing Home/End Keys
+
+- **File:** `resources/ext.layers.editor/ui/ContextMenuController.js`
+- **Issue:** Keyboard nav supports Escape/ArrowUp/ArrowDown but not
+    Home/End. Minor WCAG menu pattern gap.
+- **Status:** ✅ Fixed — added Home/End key handlers
+- **Introduced:** v71 review
+
+### D-071-01: LTS_BRANCH_STRATEGY.md REL Branch Versions
+
+- **File:** `docs/LTS_BRANCH_STRATEGY.md`
+- **Issue:** REL1_43 and REL1_39 versions shown as `1.5.62` but
+    both branches are at `1.5.64` per actual extension.json.
+- **Status:** ✅ Fixed — updated to 1.5.64
+- **Introduced:** v71 review
+
+### D-071-02: Test Count Drift in Documentation
+
+- **Files:** Multiple docs referencing `13,981` tests
+- **Issue:** `npm test` now reports 13,994 tests in 172 suites.
+- **Status:** ✅ Fixed — updated 14 files
+- **Introduced:** v71 review
+
+### v71 False Positives Eliminated (16)
+
+1. PHP race condition in named set limit — FOR UPDATE + atomic txn
+2. Boolean type coercion in LayerInjector.php — viewer handles 0/false
+3. Admin permission 'layers-admin' — properly defined in extension.json
+4. ApiLayersList 'read' check — appropriate; also has rate limiting
+5. Missing rate limit for rename — implemented in RateLimiter.php
+6. LayersDatabase cache eviction — proper LRU with array_shift()
+7. TransformController NaN propagation — getLayerBounds always valid
+8. ZoomPanController incomplete destroy — properly cancels RAF
+9. StateManager reentrant processing — _isProcessingPending guard
+10. TextToolHandler event listener leak — DOM removal handles GC
+11. ErrorHandler destroy incomplete — utility class, no lifecycle
+12. ShadowRenderer missing transform reset — save/restore wraps it
+13. EffectsRenderer blur negative dimensions — Math.max(1,...) guard
+14. DimensionRenderer division by zero — lengthSq===0 early return
+15. BackgroundLayerController state race — deliberately ordered
+16. PresetDropdown listener leak — matched add/remove in open/close
+
+---
+
+## v70 Audit (April 8, 2026; 7 code + 1 doc drift items — 6 fixed, 1 FP)
+
+Audit v70 was a comprehensive full-codebase review covering all PHP
+backend code (API modules, database layer, validation, security, hooks)
+and all JavaScript frontend code (editor core, canvas controllers,
+shared renderers, viewer modules, UI controllers, tools, presets,
+state management). ~70 source files reviewed across parallel subagent
+sweeps. 11 false positives eliminated (10 during review + 1 during fix pass).
+
+### P2-245: Duplicate i18n Key `layers-prop-marker-size`
+
+- **File:** `i18n/en.json` (lines 130 and 177)
+- **Issue:** Key defined twice with same value. JSON retains only
+    the last occurrence; edits to the wrong line will be silently
+    lost. RFC 8259 undefined behavior for duplicate keys.
+- **Status:** ✅ Fixed — removed duplicate from en.json and qqq.json
+- **Introduced:** v70 review
+
+### P3-246: Missing i18n Message Registrations
+
+- **File:** `extension.json` (ext.layers.editor messages array)
+- **Issue:** `layers-btn-ok` and `layers-text-input-placeholder`
+    exist in en.json but are not registered in the ResourceModule
+    messages array. ResourceLoader won't deliver them to the client.
+    TextInputController always shows English fallback strings.
+- **Status:** ✅ Fixed — added both keys to messages array
+- **Introduced:** v70 review
+
+### P3-247: PresetStorage Import Values Lack Sanitization
+
+- **File:** `resources/ext.layers.editor/presets/PresetStorage.js`
+- **Issue:** Imported preset JSON style property values are not
+    sanitized. Self-XSS via localStorage manipulation. No server-side
+    risk. Defense-in-depth improvement.
+- **Status:** ✅ Fixed — added PROPERTY_TYPES map with type/length validation
+- **Introduced:** v70 review
+
+### P3-248: EffectsRenderer Temp Canvas Churn — FALSE POSITIVE
+
+- **File:** `resources/ext.layers.shared/EffectsRenderer.js`
+- **Issue:** Originally reported as temp canvas deallocated per call.
+- **Status:** ❌ False positive — `_blurFillCanvas` (line 286) and
+    `_blurCanvas` (line 37) are both cached with create-once,
+    resize-on-demand patterns. No per-call allocation occurs.
+- **Introduced:** v70 review (retracted during fix pass)
+
+### P3-249: Path Tool Silently Caps at 1000 Points
+
+- **File:** `resources/ext.layers.editor/canvas/DrawingController.js`
+- **Issue:** Points beyond 1000 silently discarded. No user
+    notification when limit is reached.
+- **Status:** ✅ Fixed — added one-time mw.notify() warning via
+    existing `layers-validation-points-too-many` i18n key
+- **Introduced:** v70 review
+
+### P3-250: AlignmentController Text Bounds Rough Estimate
+
+- **File:** `resources/ext.layers.editor/canvas/AlignmentController.js`
+- **Issue:** Fallback text bounds estimation uses 0.6 multiplier,
+    inaccurate for CJK/monospace fonts. Only triggers when TextUtils
+    module unavailable (rare in normal operation).
+- **Status:** ✅ Fixed — replaced 0.6 multiplier with `ctx.measureText()` when canvas context available; 0.6 fallback only for headless/test environments
+- **Introduced:** v70 review
+
+### P3-251: PHP File Count Documentation Drift
+
+- **Files:** `.github/copilot-instructions.md`, `docs/ARCHITECTURE.md`
+- **Issue:** Documentation says 42 PHP files, ~15,364 lines. Actual
+    count is 44 PHP files, ~15,689 lines.
+- **Status:** ✅ Fixed — updated all 6 doc files
+- **Introduced:** v70 review
+
+### D-070-01: PHP Metrics Stale in Documentation
+
+- **Files:** Multiple docs referencing PHP file/line counts
+- **Issue:** PHP file count 42→44, line count ~15,364→~15,689
+- **Status:** ✅ Fixed
+
+### v70 False Positives Eliminated (11)
+
+1. CanvasRenderer blur filter not reset — ctx.save/restore handles it
+2. HitTestController angle sweep error — negative sweep is intentional
+3. CanvasEvents parent group visibility — visibility cascades to children
+4. LayersValidator missing richText — comprehensive validation exists
+5. DraftManager silent data loss — user notified via mw.notify()
+6. HistoryManager memory leak — efficient clone is default path
+7. InteractionController _cloneLayer null — callers supply valid input
+8. TransformController error handling — graceful design for non-critical events
+9. GroupManager.isDescendantOf O(n*d) — negligible with 100-layer/3-depth limits
+10. TextBoxRenderer array bounds — condition prevents out-of-bounds access
+11. P3-248 EffectsRenderer temp canvas churn — already cached
 
 ---
 

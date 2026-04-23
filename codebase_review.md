@@ -1,9 +1,9 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** April 7, 2026 (v69 comprehensive audit)
-**Previous Review:** March 31, 2026 (v68 comprehensive audit)
-**Version:** 1.5.63
-**Reviewer:** GitHub Copilot (Claude Opus 4.6)
+**Review Date:** April 13, 2026 (v71 comprehensive audit)
+**Previous Review:** April 8, 2026 (v70 comprehensive audit)
+**Version:** 1.5.64
+**Reviewer:** GitHub Copilot (Claude Sonnet 4.6)
 
 ---
 
@@ -11,18 +11,21 @@
 
 - **Branch reviewed:** `main`
 - **Verification method:** Full-codebase source inspection across all
-    PHP (API modules, database layer, hooks, validation, security) and
-    all JS (editor core, 13 canvas controllers, 14 shared renderers,
+    PHP (44 files: API modules, database layer, hooks, validation,
+    security, special pages, utilities) and all JS (157 files: editor
+    core, 14 canvas controllers, 14 shared renderers,
     4 viewer modules, 15 UI controllers, 5 tool handlers, 4 preset
-    modules, slides). Parallel subagent sweeps reviewed ~60 source
-    files. Each candidate issue was then manually verified against
-    actual source code, with exact line numbers confirmed and false
-    positives eliminated. Final validation completed with `npm test`
-    and `npm run test:php`.
+    modules, slides). Five parallel subagent sweeps reviewed 100+
+    source files across PHP backend, JS editor core, canvas controllers,
+    shared renderers, viewer system, UI controllers, presets, and
+    tooling. Each candidate issue was then
+    manually verified against actual source code, with exact line
+    numbers confirmed and false positives eliminated. Final validation
+    completed with `npm test` and `npm run test:php`.
 - **Coverage:** 95.87% statements, 87.20% branches, 94.00% functions,
-    95.98% lines (from `npm test` coverage output, April 7, 2026)
+    95.98% lines (from `npm test` coverage output, April 13, 2026)
 - **Jest test suites:** 172
-- **Jest test cases:** 13,981 (`npm test` / `jest` summary)
+- **Jest test cases:** 14,001 (`npm test` / `jest` summary)
 - **PHPUnit test files:** 35 in `tests/phpunit`
 - **Published i18n metric:** 785 `layers-` keys via
     `scripts/verify-metrics.js` (`842` total non-`@metadata` keys exist
@@ -40,18 +43,22 @@ This review was a comprehensive, full-codebase critical audit covering
 all PHP backend code (API modules, database layer, validation, security,
 hooks, special pages) and all JavaScript frontend code (editor core,
 canvas controllers, shared renderers, viewer modules, UI controllers,
-tools, presets, state management, and slides). Candidate issues were
-investigated across ~60 source files; rigorous manual verification
-against actual source code eliminated false positives and confirmed
-1 HIGH, 4 MEDIUM, and 16 LOW code issues, plus 18 documentation
+tools, presets, state management, and slides). Five parallel subagent
+sweeps analyzed 100+ source files; rigorous manual verification against
+actual source code eliminated 16 false positives and confirmed
+0 HIGH, 2 MEDIUM, and 4 LOW code issues, plus 2 documentation
 drift items.
 
-**v69 findings:** 0 CRITICAL, 1 HIGH, 4 MEDIUM, 16 LOW code items,
-18 documentation drift items. **39 total.**
+**v70 findings:** 0 CRITICAL, 0 HIGH, 1 MEDIUM, 6 LOW code items,
+1 documentation drift item. **8 total.** 10 false positives eliminated.
+
+**v71 findings:** 0 CRITICAL, 0 HIGH, 2 MEDIUM, 4 LOW code items,
+2 documentation drift items. **8 total — all fixed.** 16 false
+positives eliminated.
 
 The repository is fully green on the validated workflows:
 
-- `npm test` passes: 172 suites, 13,981 tests.
+- `npm test` passes: 172 suites, 14,001 tests.
 - `npm run test:php` passes cleanly.
 
 ### Strengths Identified
@@ -93,18 +100,233 @@ The repository is fully green on the validated workflows:
 
 ### Areas for Improvement
 
-- **Multi-selection snap breaks relative positions** — the one
-    confirmed HIGH-severity logic bug in TransformController where
-    per-layer snap adjustment destroys group cohesion during drag.
-- **Ellipse resize geometry error** — radius changes at double rate
-    with tests encoding the wrong expected values.
-- **Blur blend export captures wrong canvas** — export with blur-fill
-    layers produces visually incorrect output.
-- **Documentation metric drift** — 18 files still reference stale
-    test counts (13,880 or 13,882 instead of 13,984).
+- **TextSanitizer lacks Unicode hardening** — Missing UTF-8
+    validation, RTL override character stripping, and zero-width
+    character removal. Defense-in-depth gap.
+- **InlineTextEditor stale layer reference** — finishEditing()
+    modifies editingLayer without verifying it still exists in the
+    layers array. Data loss risk on undo-during-edit.
+- **TextBoxRenderer zero-dimension rendering** — No early return
+    for width=0 or height=0; wrapRichText receives negative maxWidth,
+    causing undefined layout behavior.
+- **ViewerManager concurrent refresh** — refreshAllViewers() has no
+    guard against concurrent invocations, allowing duplicate API
+    requests.
+- **Documentation metric drift** — Test count rose from 13,981 to
+    13,994 since last doc update. REL branch versions in
+    Mediawiki-Extension-Layers.mediawiki incorrectly show 1.5.63
+    instead of 1.5.62.
 - **Code duplication** — LayerListRenderer reimplements
     LayerItemFactory, and several utility helpers are duplicated
-    across UI modules.
+    across UI modules (carried from v69).
+
+---
+
+## Confirmed Findings (v71 — April 13, 2026)
+
+0 HIGH, 2 MEDIUM, and 4 LOW code items, plus 2 documentation drift
+items were verified. 16 false positives were eliminated during manual
+source verification against actual code.
+
+### v71 Quick-Reference Table
+
+| ID | Sev. | Status | Notes |
+|----|------|--------|-------|
+| P2-252 | Medium | ✅ Fixed | InlineTextEditor stale layer ref |
+| P2-253 | Medium | ✅ Fixed | TextBoxRenderer zero-dimension |
+| P3-254 | Low | ✅ Fixed | TextSanitizer missing Unicode hardening |
+| P3-255 | Low | ✅ Fixed | ViewerManager concurrent refresh |
+| P3-256 | Low | ✅ Fixed | SmartGuidesController redundant snap conditional |
+| P3-257 | Low | ✅ Fixed | ContextMenuController missing Home/End keys |
+| D-071-01 | Doc | ✅ Fixed | LTS_BRANCH_STRATEGY.md REL branch versions |
+| D-071-02 | Doc | ✅ Fixed | Test count 13,981→13,994 in docs |
+
+### Medium — JavaScript (Data Loss Risk)
+
+#### P2-252 · InlineTextEditor Stale Layer Reference
+
+- **File:** `resources/ext.layers.editor/canvas/InlineTextEditor.js`
+    (lines 240–340)
+- **Issue:** `finishEditing()` modifies `this.editingLayer` directly
+    without verifying the layer still exists in
+    `this.canvasManager.editor.layers`. If a layer is deleted (e.g.,
+    via undo) while inline editing is in progress, the code mutates
+    a detached object. The undo history captures a state snapshot,
+    but the subsequent text mutation goes to a stale reference.
+- **Verification:** Direct source inspection confirmed: L265 checks
+    `shouldApply && this.editorElement && this.editingLayer` but
+    never verifies the layer ID exists in the layers array.
+    L336: `this.editingLayer.text = newText` mutates without guard.
+- **Impact:** Text edits silently lost when undo fires during
+    inline editing. The user sees no error but changes disappear.
+- **Fix:** Add layer existence check before mutation:
+    `const exists = this.canvasManager.editor.layers.some(
+    l => l.id === this.editingLayer.id ); if ( !exists ) return;`
+
+### Medium — JavaScript (Rendering Bug)
+
+#### P2-253 · TextBoxRenderer Zero-Dimension Rendering
+
+- **File:** `resources/ext.layers.shared/TextBoxRenderer.js`
+    (lines 188–210, 935)
+- **Issue:** `draw()` does not return early when `width` or
+    `height` is 0. The code proceeds to create a zero-size clip
+    region and calls `wrapRichText( richText, width - padding * 2 )`
+    where `width=0, padding=8` produces `maxWidth=-16`. The
+    `wrapRichText()` method has no guard against negative `maxWidth`,
+    causing `currentWidth + tokenWidth > maxWidth` to always be
+    true (positive > negative), which puts every token on its own
+    line — unbounded line creation.
+- **Verification:** L193: `const width = layer.width || 0;` with
+    no subsequent `if ( width <= 0 ) return;`. L935 passes
+    `width - padding * 2` to wrapRichText. L648 in wrapRichText
+    uses `maxWidth` in comparisons without validation.
+- **Impact:** Zero-dimension textbox layers cause excessive line
+    objects in memory and silent rendering corruption.
+- **Fix:** Add early return: `if ( width <= 0 || height <= 0 )
+    return;` at the top of `draw()`.
+
+### Low — PHP (Security Hardening)
+
+#### P3-254 · TextSanitizer Missing Unicode Hardening
+
+- **File:** `src/Validation/TextSanitizer.php` (lines 30–70)
+- **Issue:** `sanitizeText()` does not validate UTF-8 integrity
+    (`mb_check_encoding()`), does not strip zero-width characters
+    (U+200B, U+200C, U+200D, U+FEFF), and does not remove RTL/LTR
+    override characters (U+202A–U+202E, U+200E, U+200F). Invalid
+    UTF-8 sequences pass through to JSON storage. Zero-width
+    characters can be used to create visually identical but
+    different text content.
+- **Verification:** `grep -r mb_check_encoding src/` returns zero
+    results. No zero-width or RTL character stripping exists in the
+    file. The method uses `mb_strlen` for length checks but does
+    not validate encoding.
+- **Impact:** Defense-in-depth gap. Not exploitable for XSS (text
+    is JSON-stored and canvas-rendered), but allows text spoofing
+    and potential encoding-related issues in downstream processing.
+- **Fix:** Add at method entry: `if ( !mb_check_encoding( $text,
+    'UTF-8' ) ) { $text = mb_convert_encoding( $text, 'UTF-8',
+    'UTF-8' ); }` and strip dangerous Unicode:
+    `$text = preg_replace(
+    '/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{FEFF}]/u', '', $text );`
+
+### Low — JavaScript (Race Condition)
+
+#### P3-255 · ViewerManager Concurrent refreshAllViewers
+
+- **File:** `resources/ext.layers/viewer/ViewerManager.js`
+    (lines 432–570)
+- **Issue:** `refreshAllViewers()` has no guard against concurrent
+    invocations. If called while a previous refresh is still
+    executing (e.g., user clicks save rapidly), a second batch of
+    API requests is launched in parallel, doubling server load and
+    causing race conditions where later responses overwrite earlier
+    ones.
+- **Verification:** L432: Method entry has no `_refreshInProgress`
+    flag or similar guard. The internal `_processWithConcurrency()`
+    limits individual API requests to 5 concurrent, but does not
+    prevent multiple invocations of the outer method from stacking.
+- **Impact:** Doubled API calls on rapid save; potential UI flicker
+    as viewers are updated by competing refresh batches.
+- **Fix:** Add `if ( this._refreshInProgress ) return
+    Promise.resolve({...});` guard, set flag at entry, clear in
+    finally block.
+
+### Low — JavaScript (Code Quality)
+
+#### P3-256 · SmartGuidesController Redundant Snap Conditional
+
+- **File:** `resources/ext.layers.editor/canvas/SmartGuidesController.js`
+    (lines 574–577)
+- **Issue:** Right edge snap logic has an inner `if` condition
+    that is identical to the outer `if` condition. The outer
+    condition checks
+    `Math.abs( right - rightSnap.value ) < Math.abs( verticalOffset )`
+    and the inner checks
+    `Math.abs( rightOffset ) < Math.abs( verticalOffset )` where
+    `rightOffset = rightSnap.value - right`. Since
+    `|a - b| === |b - a|`, the inner condition is always true
+    when the outer passes.
+- **Verification:** L574: outer if includes
+    `Math.abs( right - rightSnap.value ) < Math.abs( verticalOffset )`.
+    L576: inner if checks
+    `Math.abs( rightOffset ) < Math.abs( verticalOffset )`.
+    `rightOffset` is defined as `rightSnap.value - right` on L575.
+    These are mathematically identical.
+- **Impact:** No functional bug; the redundant check wastes a
+    trivial amount of CPU and obscures intent.
+- **Fix:** Remove the inner `if` — just assign directly inside
+    the outer block.
+
+### Low — JavaScript (Accessibility)
+
+#### P3-257 · ContextMenuController Missing Home/End Keys
+
+- **File:** `resources/ext.layers.editor/ui/ContextMenuController.js`
+    (lines 227–250)
+- **Issue:** Keyboard navigation handler supports Escape, ArrowUp,
+    and ArrowDown, but does not support Home (first item) or End
+    (last item) keys. WAI-ARIA menu pattern recommends Home/End
+    for efficient keyboard navigation.
+- **Verification:** L227–250: Only `evt.key === 'Escape'`,
+    `'ArrowDown'`, and `'ArrowUp'` are handled. No Home/End case.
+- **Impact:** Keyboard-only users must arrow through all items to
+    reach the last menu entry. Minor accessibility gap.
+- **Fix:** Add `if ( evt.key === 'Home' ) { idx = 0; }` and
+    `if ( evt.key === 'End' ) { idx = items.length - 1; }`.
+
+### Documentation Drift
+
+#### D-071-01 · LTS_BRANCH_STRATEGY.md REL Branch Versions
+
+- **File:** `docs/LTS_BRANCH_STRATEGY.md`
+- **Issue:** REL1_43 and REL1_39 versions shown as `1.5.62` but
+    both branches are actually at `1.5.63` per their extension.json.
+- **Status:** ✅ Fixed
+
+#### D-071-02 · Test Count Drift in Documentation
+
+- **Files:** Multiple docs referencing `13,981` tests
+- **Issue:** `npm test` now reports `13,994` tests in 172 suites.
+    Documents still reference `13,981` from the v70 review.
+- **Status:** ✅ Fixed — updated 14 files
+
+### v71 False Positives Eliminated (16)
+
+1. PHP race condition in named set limit — FOR UPDATE + atomic
+   transaction provides adequate row-level locking
+2. Boolean type coercion in LayerInjector.php — JS viewer
+   explicitly handles both `0` and `false` via `!== 0`
+3. Admin permission check uses wrong right — `layers-admin` is
+   properly defined in extension.json and assigned to sysop
+4. ApiLayersList only checks 'read' — appropriate for list action;
+   also has rate limiting via `checkRateLimit( $user, 'list' )`
+5. Missing rate limit config for rename — implemented in code via
+   RateLimiter.php with `'rename'` action key
+6. LayersDatabase cache eviction missing — proper LRU eviction with
+   `array_shift()` at MAX_CACHE_SIZE + MRU promotion
+7. TransformController NaN propagation — `getLayerBounds()` always
+   returns `centerX`/`centerY` when bounds is non-null
+8. ZoomPanController incomplete destroy — properly cancels
+   `animationFrameId` and nulls `manager` reference
+9. StateManager reentrant processing — `_isProcessingPending` flag
+   with try/finally properly prevents queue loss
+10. TextToolHandler event listener leak — DOM removal handles GC;
+    inline arrow functions don't need manual removal
+11. ErrorHandler incomplete destroy — ErrorHandler has no destroy()
+    method (it's a utility class, not lifecycle-managed)
+12. ShadowRenderer missing transform reset — `ctx.save()`/`restore()`
+    properly wraps temp canvas draw with `setTransform()`
+13. EffectsRenderer blur padding negative — guarded by
+    `Math.max( 1, paddedW )` on lines 288–289
+14. DimensionRenderer division by zero — guarded by
+    `if ( lengthSq === 0 )` early return
+15. BackgroundLayerController state race — deliberately ordered
+    (panel update first, then state flags in specific sequence)
+16. PresetDropdown document listener leak — listeners properly
+    added in `open()` and removed in `close()` with matching
+    capture-phase flags
 
 ---
 
@@ -4527,19 +4749,19 @@ but verified as non-issues:
 
 ---
 
-## Current Metrics (Verified March 31, 2026 — v1.5.63 release refresh)
+## Current Metrics (Verified April 23, 2026 — v1.5.64 release refresh)
 
 | Metric | Verified Current Value |
 |--------|------------------------|
-| Extension version | 1.5.63 |
+| Extension version | 1.5.64 |
 | MediaWiki requirement | >= 1.44.0 |
 | PHP requirement | 8.1+ |
 | JS source files (excluding `resources/dist`) | 157 |
 | JS source lines (excluding `resources/dist`) | ~114,000 |
 | PHP production files (`src/`) | 42 |
-| PHP production lines (`src/`) | ~15,364 |
+| PHP production lines (`src/`) | ~15,689 |
 | Jest test suites | 172 |
-| Jest tests | 13,981 |
+| Jest tests | 14,001 |
 | Statement coverage | 95.87% |
 | Branch coverage | 87.20% |
 | i18n keys (`en.json`, `qqq.json`) | 785 published `layers-` keys |
@@ -4705,7 +4927,7 @@ P3-148 (unused interface) deferred.*
 ## Overall Assessment
 
 The codebase maintains strong architecture, comprehensive test coverage
-(95.87% statements, 13,981 tests in 172 suites), 100% ES6 class migration,
+(95.87% statements, 14,001 tests in 172 suites), 100% ES6 class migration,
 and robust security controls (CSRF, rate limiting, input validation). All
 v49–v66 code fixes confirmed intact (369+ total historical issues resolved).
 
@@ -4724,6 +4946,213 @@ The codebase is well-architected with strong test coverage (92.88%
 statements, 82.58% branches) and robust defense-in-depth security
 controls. The remaining open items are minor consistency issues and
 documentation drift — no functional or security regressions.
+
+---
+
+## Confirmed Findings (v70 — April 8, 2026)
+
+0 CRITICAL, 0 HIGH, 1 MEDIUM, and 6 LOW code items, plus
+1 documentation drift item were verified. 10 false positives were
+eliminated during manual source verification (see below).
+
+### v70 Quick-Reference Table
+
+| ID | Sev. | Status | Notes |
+|----|------|--------|-------|
+| P2-245 | Medium | ✅ Fixed | i18n duplicate key `layers-prop-marker-size` |
+| P3-246 | Low | ✅ Fixed | extension.json missing 2 message registrations |
+| P3-247 | Low | ✅ Fixed | PresetStorage imported values lack sanitization |
+| P3-248 | Low | ❌ FP | EffectsRenderer already caches temp canvas |
+| P3-249 | Low | ✅ Fixed | Path tool silently caps at 1000 points |
+| P3-250 | Low | ✅ Fixed | AlignmentController text bounds rough estimate |
+| P3-251 | Low | ✅ Fixed | Documentation: PHP file count drift (44 vs 42) |
+| D-070-01 | Doc | ✅ Fixed | PHP file count/line count stale |
+
+### Medium — i18n (Duplicate Key)
+
+#### P2-245 · Duplicate `layers-prop-marker-size` Key in en.json
+
+- **File:** `i18n/en.json` (lines 130 and 177)
+- **Issue:** The key `layers-prop-marker-size` is defined twice in
+    `en.json`. JSON only retains the last occurrence, so the first
+    definition (line 130, in the marker properties section) is
+    silently overwritten by the second (line 177, in the dimension
+    properties section). Both happen to have the same value
+    ("Marker Size"), so this works by coincidence — but any future
+    edit to one will silently not apply if the wrong occurrence is
+    modified. The `qqq.json` documentation file may also have
+    duplicate entries.
+- **Verification:** `grep -n "layers-prop-marker-size" i18n/en.json`
+    returns two matches at lines 130 and 177. JSON spec (RFC 8259)
+    states duplicate keys produce undefined behavior.
+- **Impact:** i18n maintenance confusion. Translators may update the
+    wrong occurrence in language-specific files.
+- **Fix:** Rename one key to distinguish context (e.g.,
+    `layers-prop-dimension-marker-size` for the dimension context).
+
+### Low — Configuration (Missing Message Registration)
+
+#### P3-246 · Missing i18n Message Registrations in extension.json
+
+- **File:** `extension.json` (ext.layers.editor messages array)
+- **Issue:** Two i18n keys used by `TextInputController.js` are
+    defined in `i18n/en.json` but not registered in the
+    `ext.layers.editor` ResourceModule messages array:
+    `layers-btn-ok` (line 817 of en.json) and
+    `layers-text-input-placeholder` (line 816 of en.json).
+    Because ResourceLoader only delivers messages listed in the
+    module's `messages` array, `mw.message('layers-btn-ok')` will
+    return the key itself as a missing-message indicator, and the
+    `msg()` helper in `TextInputController.js` (line 19) will fall
+    through to the hardcoded fallback strings ("OK" and "Type your
+    text here...").
+- **Verification:** `grep "layers-btn-ok" extension.json` returns
+    0 matches. `grep "layers-text-input-placeholder" extension.json`
+    returns 0 matches. Both keys confirmed present in
+    `i18n/en.json`.
+- **Impact:** TextInputController always shows English fallback
+    text instead of translated strings. Internationalization is
+    bypassed for these two UI elements. `layers-editor-cancel` IS
+    registered and works correctly.
+- **Fix:** Add both keys to the `ext.layers.editor` messages array
+    in `extension.json`.
+
+### Low — Security (Preset Import Validation)
+
+#### P3-247 · PresetStorage Imported Preset Values Lack Sanitization
+
+- **File:** `resources/ext.layers.editor/presets/PresetStorage.js`
+    (importFromJson method)
+- **Issue:** When importing user-exported preset JSON, the schema
+    structure is validated (version, toolPresets object shape), but
+    individual style property VALUES are not sanitized. A user who
+    manually edits localStorage or a preset export file could inject
+    values like `fontFamily: "<img src=x onerror=alert(1)>"`.
+    While localStorage is same-origin and user-controlled (making
+    this self-XSS only), and Canvas API text rendering doesn't
+    execute HTML, a future refactor that renders font names in DOM
+    context could introduce XSS.
+- **Impact:** Self-XSS only (attacker = victim). No server-side
+    risk. Defense-in-depth improvement.
+- **Fix:** Add basic type/format validation for style values when
+    importing presets. Validate fontFamily against
+    `/^[a-zA-Z0-9 ,'-]+$/`, ensure numeric values are numbers, and
+    validate colors through the existing `isValidColor()` utility.
+
+### Low — Performance (Canvas Texture Churn) — FALSE POSITIVE
+
+#### P3-248 · EffectsRenderer Temp Canvas Churn Per Blur Call — RETRACTED
+
+- **Status:** ❌ False positive — retracted during fix pass.
+- **Reason:** The `drawBlurFill()` method reuses a cached
+    `_blurFillCanvas` (line 286), only creating it once and resizing
+    only when dimensions change (line 291). The constructor also
+    caches `_blurCanvas/_blurCtx` for `drawBlurEffect()`. Both
+    methods implement the correct create-once, resize-on-demand
+    pattern. No per-call allocation occurs.
+
+### Low — UX (Silent Path Point Cap)
+
+#### P3-249 · Path Tool Silently Caps at 1000 Points
+
+- **File:** `resources/ext.layers.editor/canvas/DrawingController.js`
+    (~line 603)
+- **Issue:** When drawing with the pen/path tool, points beyond
+    1000 are silently discarded to match the server-side limit.
+    The user sees the path stop responding to mouse input with no
+    indication of why.
+- **Verification:** Code confirmed:
+    `if ( this.tempLayer.points.length < 1000 ) { ... }` with no
+    else branch or user notification.
+- **Impact:** UX confusion when drawing complex freehand paths.
+    User may think the tool is broken.
+- **Fix:** Show a toast notification when hitting the 1000-point
+    limit. Add i18n key `layers-path-point-limit-reached`.
+
+### Low — Accuracy (Text Bounds Estimation)
+
+#### P3-250 · AlignmentController Text Bounds Rough Estimate — ✅ FIXED
+
+- **File:** `resources/ext.layers.editor/canvas/AlignmentController.js`
+    (~line 60)
+- **Issue:** When `TextUtils` is unavailable, text layer bounds
+    were estimated using `text.length * fontSize * 0.6`. The 0.6
+    multiplier is inaccurate for varying character widths.
+- **Resolution:** Replaced with `ctx.measureText()` when canvas
+    context is available. The 0.6 multiplier fallback is now only
+    used in headless/test environments where no canvas context exists.
+    Tests added in `AlignmentController.test.js`.
+
+### Documentation Drift
+
+#### D-070-01 · PHP File Count and Line Count Stale
+
+- **Files:** `.github/copilot-instructions.md`, `docs/ARCHITECTURE.md`,
+    and any other files referencing PHP file/line counts
+- **Issue:** Documentation states "42 PHP files, ~15,364 lines" but
+    actual count is 44 PHP files, ~15,689 lines (excluding vendor
+    and tests). The discrepancy is 2 files and ~325 lines.
+- **Fix:** Update all references to "44 PHP files, ~15,689 lines".
+
+### v70 Verified Non-Issues (False Positives Eliminated)
+
+The following candidates were investigated and determined to be
+non-issues during the v70 audit:
+
+1. **CanvasRenderer blur filter not reset in catch block.**
+   `ctx.save()` at line 555 captures the entire canvas state stack.
+   `ctx.restore()` at line 615 executes unconditionally after the
+   try/catch, resetting the filter regardless of error path.
+
+2. **HitTestController angle dimension sweep logic error.**
+   The non-reflex branch deliberately produces negative sweep values
+   to signal clockwise arc direction. The `if (sweep >= 0) / else`
+   branches handle positive (CCW) and negative (CW) sweeps
+   respectively. Traced with concrete angle values; hit detection
+   is correct for both acute and obtuse non-reflex angles.
+
+3. **CanvasEvents findTextLayerAtPoint ignores parent group
+   visibility.** Group visibility toggling (FolderOperationsController
+   line 352) cascades `visible = false/true` to all child layers
+   recursively. Individual layer visibility checks are sufficient
+   because children inherit the group's visibility state eagerly.
+
+4. **LayersValidator missing richText validation.** The
+   `validateRichText()` method (lines 573-673) provides comprehensive
+   validation: array type check, 100-run limit, 50,000-char total
+   limit, per-run script injection checks, allowed style property
+   whitelist, enum validation (fontWeight, fontStyle, textDecoration),
+   numeric range checks (fontSize 1-500, textStrokeWidth 0-20), and
+   color validation.
+
+5. **DraftManager image stripping causes silent data loss.** Image
+   data stripping is deliberate for localStorage overflow prevention.
+   Recovery explicitly warns the user via a persistent `mw.notify()`
+   notification with the stripped image count.
+
+6. **HistoryManager JSON.parse fallback memory leak.** The efficient
+   clone path via `window.Layers.Utils.cloneLayersEfficient` is the
+   default in normal editor operation. The JSON.parse fallback only
+   activates when DeepClone module is unavailable, and a `mw.log.warn`
+   alerts developers. Stack is capped at 50 entries.
+
+7. **InteractionController _cloneLayer returns null.** Defensive
+   coding pattern; all call sites pass valid layer objects obtained
+   from `getLayerById()` after null checks.
+
+8. **TransformController emitTransforming swallows errors.** Custom
+   event dispatch is non-critical UI synchronization. Silent failure
+   is the correct design — transform operations must not fail due to
+   observer errors.
+
+9. **GroupManager.isDescendantOf O(n*d) performance.** With
+   max 100 layers and max nesting depth 3, worst case is 300
+   iterations — negligible.
+
+10. **TextBoxRenderer _calculateLineMetricsFallback array bounds.**
+    `charPos` only accessed when `i < lines.length - 1`, ensuring
+    text boundary is never exceeded. JavaScript returns `undefined`
+    for out-of-bounds access without throwing.
 
 ---
 

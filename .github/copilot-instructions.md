@@ -443,14 +443,14 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (13,981 tests in 172 suites — verified April 7, 2026)
+- Test count (14,001 tests in 172 suites — verified April 13, 2026)
 - Coverage (95.87% statement, 87.20% branch — verified April 7, 2026)
 - JavaScript file count (157 files total, ~114,000 lines)
-- PHP file count (42 files, ~15,364 lines)
+- PHP file count (44 files, ~15,689 lines)
 - God class count (26 files >=1,000 lines; 5 generated data files, 19 JS, 2 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.63)
+- Version number (1.5.64)

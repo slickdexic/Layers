@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
-**Last Updated:** March 26, 2026
-**Version:** 1.5.63
+**Last Updated:** April 23, 2026
+**Version:** 1.5.64
 
 ---
 
@@ -23,8 +23,8 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 |--------|-------|
 | Total JS files | **157** |
 | Total JS lines | **~114,000** |
-| Total PHP files | **42** |
-| Total PHP lines | **~15,364** |
+| Total PHP files | **44** |
+| Total PHP lines | **~15,689** |
 | Viewer module | ~2,500 lines |
 | Shared module | ~8,000 lines |
 | Editor module | ~64,000 lines |
@@ -32,7 +32,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.87% stmt, 87.20% branch** |
-| Jest tests | **13,981** (172 suites) |
+| Jest tests | **14,001** (172 suites) |
 | PHPUnit test files | 34 |
 | God classes (>=1000 lines) | **26** (5 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |
@@ -694,7 +694,7 @@ window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
 ```javascript
 window.Layers = {
-    VERSION: '1.5.63',
+    VERSION: '1.5.64',
     Editor: LayersEditor,
     Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
     UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm, LayerItemFactory },
@@ -925,7 +925,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **13,981 tests, 95.87% statement coverage, 87.20% branch coverage**
+- **14,001 tests, 95.87% statement coverage, 87.20% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (13,981 tests, 172 suites)
+│   ├── jest/                # Unit tests (14,001 tests, 172 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation
