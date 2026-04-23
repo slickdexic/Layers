@@ -4,43 +4,109 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.64] - 2026-04-23
+
+### Security
+- **P3-254 — TextSanitizer Unicode hardening** — `sanitizeText()` now validates
+  UTF-8 encoding (with `mb_convert_encoding` fallback) and strips zero-width
+  characters (U+200B–U+200F, U+FEFF) and Unicode bidirectional override characters
+  (U+202A–U+202E) that can be used for text spoofing attacks.
+- **PresetStorage import validation** — `_sanitizeStyleForStorage()` now enforces
+  strict per-property type checking (number/string/boolean/object) with a 200-char
+  limit on string values, preventing malformed data from polluting localStorage.
+
+### Fixed
+- **P2-252 — InlineTextEditor stale layer reference** — `finishEditing()` now checks
+  whether the editing layer still exists in `editor.layers` before applying changes.
+  Undo-removed layers during in-progress edits are now cleanly aborted.
+- **P2-253 — TextBoxRenderer zero-dimension guard** — Added early return in `draw()`
+  when `width <= 0 || height <= 0`, preventing negative `maxWidth` reaching
+  `wrapRichText()` and causing unbounded line creation.
+- **P3-255 — ViewerManager concurrent refresh guard** — `refreshAllViewers()` uses
+  `_refreshInProgress` flag to skip duplicate API requests. Flag cleared via `.finally()`
+  on all code paths.
+- **P3-256 — SmartGuidesController redundant conditional** — Removed dead inner `if`
+  block in right-edge snap path.
+- **P3-257 — ContextMenuController Home/End accessibility** — Added `Home` key
+  (jump to first item) and `End` key (jump to last item) to context menu keyboard
+  navigation, completing the WCAG 2.1 menu keyboard pattern.
+- **AlignmentController text width** — `getLayerBounds()` uses `ctx.measureText()`
+  when a canvas context is available instead of the rough character-width estimate.
+- **DrawingController path limit notification** — A `mw.notify()` warning is shown
+  once per stroke when the pen tool reaches the 1,000-point server limit.
+- **i18n duplicate key** — Removed duplicate `layers-prop-marker-size` from `en.json`;
+  merged its two `qqq.json` descriptions into a single unified entry.
+
+### Tests
+- Added 7 regression tests covering v71 code fixes (P2-252, P2-253, P3-255, P3-257)
+- Added 4 PHPUnit regression tests for TextSanitizer Unicode hardening (P3-254)
+- All 14,001 tests pass (172 suites) ✅
+- Coverage: 95.87% statements, 87.20% branches
+
 ## [1.5.63] - 2026-03-31
 
-### Fixed
-
-- **RichTextToolbar font-size parity** — Raised the inline rich-text font
-  size ceiling from `200px` to `1000px` so textbox rich text matches
-  the layer-level maximum and no longer clamps valid large values on
-  REL1_43.
-- **Help dialog bootstrap reliability** — Removed temporary debug DOM
-  probes from `HelpDialog.show()` and restored structured
-  `mw.log.error()` fallback reporting so the help modal always reaches
-  its keyboard-handler setup and degrades cleanly when dialog creation
-  fails.
-
-### Tests
-
-- Restored the CommonJS export in `LayerDefaults.js` so the REL1_43
-  Jest harness loads the shared defaults module consistently.
-- Synced the `CanvasManager` pooled-canvas cleanup test and the
-  `PresetStorage` gradient round-trip test with the current REL1_43
-  implementation.
-- All 11,494 tests pass (168 test suites) ✅
-
-## [1.5.62] - 2026-03-12
+### Added
+- **APICacheManager** — Extracted cache logic from APIManager.js into
+  standalone `APICacheManager.js` module (152 lines, 16 unit tests).
+  APIManager delegates to APICacheManager with inline fallback.
 
 ### Fixed
-- **P3-143 — Angle Dimension Anchor Points Not Offset on Paste** — `ClipboardController.applyPasteOffset()` applied `PASTE_OFFSET` to standard `x/y`, `x1/y1/x2/y2`, and `points[]` coordinates, but angle dimension layers store their geometry exclusively in `ax/ay` (arm1 endpoint), `cx/cy` (vertex), and `bx/by` (arm2 endpoint). Pasting an angle dimension therefore left all six anchor points at their original canvas coordinates while the layer received a new ID, causing the pasted layer to render at the wrong position. Added three conditional offset blocks for `ax/ay`, `cx/cy`, and `bx/by` after the existing `points` block.
-- **P3-144 — DrawingController._angleDimensionPhase Not Initialized in Constructor** — The `_angleDimensionPhase` property was set only inside `startAngleDimensionTool()` and never declared in the constructor. Any code path that checked `_angleDimensionPhase` before the tool was activated received `undefined` rather than `0`, causing phase-comparison guards to behave incorrectly. Added `this._angleDimensionPhase = 0` to the constructor alongside the existing `tempLayer` and `isDrawing` initializations.
+- **P3-146 — Dead table removal** — Removed `layer_set_usage` table
+  (dead since creation). Cleaned up references in SchemaManager,
+  LayersConstants, layers_tables.sql, and documentation files. Added
+  `patch-drop-layer_set_usage.sql` migration.
+- **Browser compatibility gate** — `ValidationManager.checkBrowserCompatibility()`
+  now treats `FileReader` and `Blob` as optional APIs so older but
+  otherwise compatible browsers are no longer blocked from opening the
+  editor.
+- **Compatibility warning path** — Added
+  `UIManager.showBrowserCompatibilityWarning()` so pre-bootstrap
+  compatibility warnings no longer fall through a missing UI helper.
 
 ### Tests
-- Added 2 `ClipboardController` regression tests for P3-143: verify `ax/ay/cx/cy/bx/by` are each incremented by `PASTE_OFFSET` for both non-zero and zero starting coordinates.
-- Added 1 `DrawingController` regression test for P3-144: verify `_angleDimensionPhase` is `0` immediately after construction.
+- Expanded Jest and E2E coverage throughout the v1.5.63 cycle,
+  including compatibility regressions for missing `FileReader`/`Blob`
+  support and pre-bootstrap warning handling.
+- All 14,001 tests pass (172 test suites) ✅
+- Coverage snapshot: 95.87% statements, 87.20% branches.
 
-### Technical Details
-- All 11,474 tests pass (168 test suites) ✅
-- Coverage: 91.32% statements, 81.69% branches (no regression)
-- Cherry-pick targets: `REL1_43`, `REL1_39`
+## [1.5.62] - 2026-03-17
+
+### Security
+- **P1-059 — RichTextConverter CSS escaping hardened** — `escapeCSSValue()` now blocks `url()`, `expression()`, `javascript:` keywords and strips injection-prone characters while preserving valid CSS functions like `rgb()`.
+- **P2-133 — PresetDropdown innerHTML sanitized** — Replaced `innerHTML` with `textContent` for i18n message injection.
+- **P2-134 — PresetStorage schema validation** — Added structure validation after `JSON.parse()` to reject malformed preset data from localStorage.
+- **P2-135 — LayerPanel CSS injection fix** — Color values now set via `style.backgroundColor` instead of `cssText` concatenation.
+
+### Fixed
+- **P1-060 — ErrorHandler recursion guard** — Added `_isHandlingError` flag to prevent infinite loops when error handlers themselves throw (e.g., during page teardown).
+- **P2-136 — init.js hook guard** — Added guard flag to `wikipage.content` handler to prevent duplicate initialization on content re-load.
+- **P2-137 — RenderCoordinator performance** — Replaced per-frame `JSON.stringify()` with `_cachedStringify()` using WeakMap cache for richText, gradient, and points change detection.
+- **P3-157 — GradientEditor preset validation** — Added type/range validation before applying gradient presets.
+- **P3-158 — LayerItemFactory WCAG keyboard** — Added `tabindex="0"` and Enter/Space key handler to `role="button"` elements.
+- **P1-057 — IDOR fix** — `id:` prefix fetch now validates file ownership.
+- **P2-124 — User name enrichment** — Replaced direct user table queries with `UserIdentityLookup`.
+- **P2-125 — Set name regex** — Updated to accept Unicode and spaces.
+- **P2-126 — Arrow key conflict** — Resolved simultaneous nudge + pan.
+- **P2-127 — TextRenderer double shadow** — Fixed stroke+fill shadow duplication.
+- **P3-143 — Angle dimension paste offset** — Added `ax/ay/cx/cy/bx/by` offset handling.
+- **P3-144 — DrawingController phase init** — `_angleDimensionPhase` now initialized in constructor.
+- **ApiLayersDelete** — Added rate limiting and shared `validateAndGetFile()` helper trait.
+- **ApiLayersRename** — Removed unused `Title` import.
+- **RenderCoordinator** — Added `preserveAspectRatio` to dirty-check fingerprint.
+
+### Tests
+- 168 test suites, 11,847 tests — all passing
+- Coverage: 92.88% statements, 82.58% branches, 91.57% functions
+- Comprehensive coverage improvements across 13 test suites (+4,929 lines)
+- HelpDialog: 0% → 99.42% coverage (40 tests)
+- TransformController: improved to 98.16% statements, 83.66% branches
+
+### Documentation
+- Closed all 8 documentation drift items (D-056-01 through D-056-08)
+- Updated docs/README.md index (added 11 missing documents)
+- KNOWN_ISSUES.md: 385/386 items fixed (99.7%)
+- Improvement plan: 1 open item remaining (P3-146 dead table)
 
 ## [1.5.61] - 2026-03-11
 
@@ -116,9 +182,9 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - **AlignmentController Missing Dimension/Marker Types** (P2-078) — `getLayerBounds()` and `moveLayer()` lacked a `dimension` case (uses `x1/y1/x2/y2` not `x/y`) and a `marker` case (centered circle at `x/y/size`). Alignment operations now produce correct results for all layer types.
 
 ### Technical Details
-- All 11,258 tests pass (163 test suites) ✅
-- Coverage: 95.19% statements, 84.96% branches
-- God classes: 17 (13 hand-written JS, 2 generated, 2 PHP)
+- All 11,421 tests pass (167 test suites) ✅
+- Coverage: 92.19% statements, 82.15% branches
+- God classes: 23 (19 hand-written JS, 2 generated, 2 PHP)
 
 ## [1.5.58] - 2026-02-17
 
@@ -2512,7 +2578,7 @@ This release focuses on improving test coverage for critical components and ensu
 - **Deep Linking to Editor** — URL parameters now allow opening the editor with a specific layer set pre-loaded:
   - `?action=editlayers&setname=anatomy` — Opens editor with "anatomy" layer set
   - Also supports `layerset` and `layers` parameter aliases
-  - Set name validation: alphanumeric characters, hyphens, and underscores only (max 50 chars)
+  - Set name validation: alphanumeric characters, hyphens, and underscores only (max 255 chars)
 
 - **Wikitext Link Options** — New `layerslink` parameter for controlling click behavior on images with layers:
   - `[[File:Example.jpg|layers=setname|layerslink=editor]]` — Opens layer editor for this image

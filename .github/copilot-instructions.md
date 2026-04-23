@@ -27,7 +27,7 @@ This extension is feature-rich by design with **17 drawing tools**, multiple ren
 Separation of concerns is strict: PHP integrates with MediaWiki and storage; JavaScript implements the editor UI/state.
 
 - Backend (PHP, `src/`)
-  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.43.0)
+  - Manifest: `extension.json` (hooks, resource modules, API modules, rights, config; requires MediaWiki >= 1.44.0)
   - Service wiring: `services.php` registers 3 services: LayersLogger, LayersSchemaManager, LayersDatabase (uses DI pattern)
   - Logging: `src/Logging/` provides `LoggerAwareTrait` (for objects with getLogger/setLogger), `StaticLoggerAwareTrait` (for static contexts), and `LayersLogger` (factory via service container)
   - API modules (`src/Api/`)
@@ -110,14 +110,15 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `PresetStorage.js` (~426 lines) - localStorage operations, import/export, style sanitization
     - `PresetDropdown.js` (~528 lines) - dropdown UI component for selecting presets
   - Validation/Error handling: `LayersValidator.js`, `ErrorHandler.js`, `APIErrorHandler.js`
+  - Cache: `APICacheManager.js` (~152 lines) - extracted from APIManager, handles LRU response cache with TTL and sessionStorage freshness cache
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
   - **God classes:** 26 files >= 1,000 lines:
     - **Generated data files (5, exempt):** ShapeLibraryData.original.js (~11,293 lines), ShapeLibraryData.iec60417.js (~5,905 lines), EmojiLibraryIndex.js (~3,055 lines), ShapeLibraryData.js (~1,643 lines), ShapeLibraryData.iso7000.js (~1,609 lines)
-    - **Hand-written JS files (19):** LayerPanel (~2,165), CanvasManager (~2,088), Toolbar (~1,933), InlineTextEditor (~1,848), PropertyBuilders (~1,826), LayersEditor (~1,813), APIManager (~1,597), SelectionManager (~1,420), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,189), ToolbarStyleControls (~1,139), SlideController (~1,126), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,054), CanvasEvents (~1,033), CalloutRenderer (~1,000)
-    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,434 lines), LayersDatabase.php (~1,372 lines)
-    - **Near-threshold files (6):** PropertiesForm (~991), GroupManager (~987), LayerRenderer (~973), ShapeRenderer (~959), LayersValidator (~956), ArrowRenderer (~932)
+    - **Hand-written JS files (19):** LayerPanel (~2,166), CanvasManager (~2,110), Toolbar (~1,933), LayersEditor (~1,888), InlineTextEditor (~1,848), PropertyBuilders (~1,814), APIManager (~1,650), SelectionManager (~1,467), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,221), ToolbarStyleControls (~1,141), SlideController (~1,127), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,054), CanvasEvents (~1,038), CalloutRenderer (~1,003)
+    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,444 lines), LayersDatabase.php (~1,403 lines)
+    - **Near-threshold files (9):** LayerRenderer (~999), PropertiesForm (~995), GroupManager (~987), SelectionRenderer (~985), StateManager (~967), LayersValidator (~962), ShapeRenderer (~959), ArrowRenderer (~932), DimensionRenderer (~930)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.editor/shapeLibrary/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
@@ -424,7 +425,7 @@ Database
   - Params: filename, oldname, newname, token
   - Returns: { layersrename: { success: 1, oldname, newname } }
   - Permission: owner (first revision creator) or admin ('delete' right)
-  - Validates: new name format (alphanumeric, hyphens, underscores, 1-50 chars), no conflicts, cannot rename to 'default'
+  - Validates: new name format (alphanumeric, hyphens, underscores, 1-255 chars), no conflicts, cannot rename to 'default'
 
 Keep this doc aligned with code. When you change public behavior (API, schema, messages), update this file and add tests where feasible.
 ## 12) Documentation update checklist
@@ -442,14 +443,14 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (11,494 tests in 168 suites — verified March 31, 2026)
-- Coverage (92.88% statement, 82.58% branch — verified March 17, 2026)
-- JavaScript file count (158 files total, ~113,550 lines)
-- PHP file count (41 files, ~15,216 lines)
+- Test count (14,001 tests in 172 suites — verified April 13, 2026)
+- Coverage (95.87% statement, 87.20% branch — verified April 7, 2026)
+- JavaScript file count (157 files total, ~114,000 lines)
+- PHP file count (44 files, ~15,689 lines)
 - God class count (26 files >=1,000 lines; 5 generated data files, 19 JS, 2 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.63)
+- Version number (1.5.64)

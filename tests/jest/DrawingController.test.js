@@ -1241,4 +1241,78 @@ describe( 'DrawingController', () => {
 			expect( result.by ).toBe( 150 );
 		} );
 	} );
+
+	describe( 'updatePreview - path point capping', () => {
+		test( 'should not add points beyond 1000', () => {
+			controller.startDrawing( { x: 0, y: 0 }, 'pen', { color: '#000' } );
+
+			// Fill up to 999 points (startPenTool adds the first point)
+			for ( let i = 1; i < 1000; i++ ) {
+				controller.updatePreview( { x: i, y: i } );
+			}
+
+			expect( controller.tempLayer.points.length ).toBe( 1000 );
+
+			// Try adding one more
+			controller.updatePreview( { x: 9999, y: 9999 } );
+
+			// Should still be 1000
+			expect( controller.tempLayer.points.length ).toBe( 1000 );
+		} );
+
+		test( 'should show warning notification when hitting 1000 point limit (P3-249)', () => {
+			const mockNotify = jest.fn();
+			global.mw.notify = mockNotify;
+			global.mw.message = jest.fn().mockReturnValue( {
+				text: jest.fn().mockReturnValue( 'Too many points' ),
+				exists: jest.fn().mockReturnValue( true )
+			} );
+
+			controller.startDrawing( { x: 0, y: 0 }, 'pen', { color: '#000' } );
+
+			// Fill up to 999 points
+			for ( let i = 1; i < 1000; i++ ) {
+				controller.updatePreview( { x: i, y: i } );
+			}
+
+			expect( controller.tempLayer.points.length ).toBe( 1000 );
+			expect( mockNotify ).not.toHaveBeenCalled();
+
+			// Trigger the limit
+			controller.updatePreview( { x: 9999, y: 9999 } );
+			expect( mockNotify ).toHaveBeenCalledTimes( 1 );
+			expect( mockNotify ).toHaveBeenCalledWith(
+				'Too many points',
+				expect.objectContaining( { type: 'warn' } )
+			);
+
+			// Second attempt should NOT re-notify (one-time warning)
+			controller.updatePreview( { x: 9998, y: 9998 } );
+			expect( mockNotify ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		test( 'should reset path limit warning on new pen drawing (P3-249)', () => {
+			const mockNotify = jest.fn();
+			global.mw.notify = mockNotify;
+			global.mw.message = jest.fn().mockReturnValue( {
+				text: jest.fn().mockReturnValue( 'Too many points' ),
+				exists: jest.fn().mockReturnValue( true )
+			} );
+
+			controller.startDrawing( { x: 0, y: 0 }, 'pen', { color: '#000' } );
+
+			// Fill to limit and trigger warning
+			for ( let i = 1; i < 1001; i++ ) {
+				controller.updatePreview( { x: i, y: i } );
+			}
+			expect( mockNotify ).toHaveBeenCalledTimes( 1 );
+
+			// Start a new pen drawing — warning flag should reset
+			controller.startDrawing( { x: 0, y: 0 }, 'pen', { color: '#000' } );
+			for ( let i = 1; i < 1001; i++ ) {
+				controller.updatePreview( { x: i, y: i } );
+			}
+			expect( mockNotify ).toHaveBeenCalledTimes( 2 );
+		} );
+	} );
 } );

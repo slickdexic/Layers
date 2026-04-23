@@ -220,7 +220,8 @@
 					this.closeLayerContextMenu();
 					return;
 				}
-				if ( evt.key === 'ArrowDown' || evt.key === 'ArrowUp' ) {
+				if ( evt.key === 'ArrowDown' || evt.key === 'ArrowUp' ||
+					evt.key === 'Home' || evt.key === 'End' ) {
 					evt.preventDefault();
 					const items = Array.from(
 						menu.querySelectorAll( '[role="menuitem"]:not([disabled])' )
@@ -232,8 +233,12 @@
 					let idx = items.indexOf( current );
 					if ( evt.key === 'ArrowDown' ) {
 						idx = idx < items.length - 1 ? idx + 1 : 0;
-					} else {
+					} else if ( evt.key === 'ArrowUp' ) {
 						idx = idx > 0 ? idx - 1 : items.length - 1;
+					} else if ( evt.key === 'Home' ) {
+						idx = 0;
+					} else if ( evt.key === 'End' ) {
+						idx = items.length - 1;
 					}
 					items[ idx ].focus();
 				}

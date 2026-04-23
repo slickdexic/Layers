@@ -30,6 +30,7 @@ class DrawingController {
 		this.tempLayer = null;
 		this.isDrawing = false;
 		this._angleDimensionPhase = 0;
+		this._pathLimitWarned = false;
 
 		// Minimum size thresholds for shape creation
 		this.MIN_SHAPE_SIZE = 5;
@@ -170,6 +171,7 @@ class DrawingController {
 	 * @param {Object} style - Style options
 	 */
 	startPenTool ( point, style ) {
+		this._pathLimitWarned = false;
 		this.tempLayer = {
 			type: 'path',
 			points: [ point ],
@@ -686,8 +688,18 @@ class DrawingController {
 				}
 				break;
 			case 'path':
-				// Add point to path for pen tool
-				this.tempLayer.points.push( point );
+				// Cap at 1000 points to match server-side limit
+				if ( this.tempLayer.points.length < 1000 ) {
+					this.tempLayer.points.push( point );
+				} else if ( !this._pathLimitWarned ) {
+					this._pathLimitWarned = true;
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify(
+							mw.message( 'layers-validation-points-too-many', 1000 ).text(),
+							{ type: 'warn', autoHideSeconds: 5 }
+						);
+					}
+				}
 				break;
 		}
 	}

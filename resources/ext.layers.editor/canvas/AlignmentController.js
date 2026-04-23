@@ -73,10 +73,19 @@
 						}
 					}
 
-					// Fallback: estimate based on fontSize and text length
+					// Fallback: use ctx.measureText when context available
 					const fontSize = layer.fontSize || 16;
 					const text = layer.text || '';
-					const estimatedWidth = Math.max( text.length * fontSize * 0.6, fontSize );
+
+					let estimatedWidth;
+					if ( ctx ) {
+						ctx.save();
+						ctx.font = ( fontSize ) + 'px ' + ( layer.fontFamily || 'Arial' );
+						estimatedWidth = Math.max( ctx.measureText( text ).width, fontSize );
+						ctx.restore();
+					} else {
+						estimatedWidth = Math.max( text.length * fontSize * 0.6, fontSize );
+					}
 					const estimatedHeight = fontSize * 1.2;
 
 					// Text anchor is at baseline, so adjust top position

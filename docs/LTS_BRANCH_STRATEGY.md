@@ -6,7 +6,7 @@ This document outlines the branch strategy and support policy for the Layers ext
 
 ## Primary Branch: `main`
 
-**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (13,880 tests, 172 suites) runs on `main` as the source of truth.
+**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (14,001 tests, 172 suites) runs on `main` as the source of truth.
 
 Changes are **cherry-picked** from `main` to the REL branches after verification. REL branches never receive changes that haven't been tested on `main` first.
 
@@ -16,9 +16,9 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 
 | Branch | MediaWiki Version | Current Version | Status |
 |--------|------------------|-----------------|--------|
-| **`main`** | **1.44+** | **1.5.63** | **Primary — all development and testing** |
-| `REL1_43` | 1.43.x | 1.5.62 | LTS support (until Dec 2027) |
-| `REL1_39` | 1.39.x - 1.42.x | 1.5.62 | Legacy LTS support (MW 1.39 EOL Dec 2025) |
+| **`main`** | **1.44+** | **1.5.64** | **Primary — all development and testing** |
+| `REL1_43` | 1.43.x | 1.5.64 | LTS support (until Dec 2027) |
+| `REL1_39` | 1.39.x - 1.42.x | 1.5.64 | Legacy LTS support (MW 1.39 EOL Dec 2025) |
 
 ### Development Workflow
 
@@ -26,7 +26,7 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 main (primary)
   │
   ├── All development happens here
-  ├── All tests run here first (13,880 tests)
+  ├── All tests run here first (14,001 tests)
   ├── All code reviews done here
   │
   ├──── cherry-pick ──→ REL1_43 (current LTS)
@@ -85,9 +85,9 @@ Users on MW 1.39-1.42 should plan to upgrade to MW 1.43+ and switch to REL1_43.
 
 | Branch | Version Format | Example |
 |--------|---------------|---------|
-| `main` | X.Y.Z | 1.5.63 |
-| `REL1_43` | X.Y.Z-REL1_43 | 1.5.62-REL1_43 |
-| `REL1_39` | X.Y.Z-REL1_39 | 1.5.62-REL1_39 |
+| `main` | X.Y.Z | 1.5.64 |
+| `REL1_43` | X.Y.Z-REL1_43 | 1.5.64-REL1_43 |
+| `REL1_39` | X.Y.Z-REL1_39 | 1.5.64-REL1_39 |
 
 ---
 
