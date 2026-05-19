@@ -326,10 +326,11 @@ class UIHooks {
 		$lastModifiedLabel = $msg( 'layers-filepage-last-modified', 'Last Modified' );
 		$editLabel = $msg( 'layers-filepage-edit', 'Edit' );
 
-		$html = '<div class="layers-filepage-section mw-collapsible mw-collapsed">';
-		$html .= '<h2 class="layers-filepage-header mw-collapsible-toggle">';
-		$html .= \htmlspecialchars( $headerText );
-		$html .= '</h2>';
+		// Use the same structure as native MW file page sections (File history, File usage, etc.):
+		// a plain <h2> that inherits skin styles, followed by a standard mw-collapsible content block.
+		$html = '<div id="mw-imagepage-section-layers">';
+		$html .= '<h2>' . \htmlspecialchars( $headerText ) . '</h2>';
+		$html .= '<div class="mw-collapsible mw-collapsed">';
 		$html .= '<div class="mw-collapsible-content">';
 		$html .= '<table class="wikitable layers-filepage-table">';
 		$html .= '<thead><tr>';
@@ -387,7 +388,7 @@ class UIHooks {
 		$html .= '<p class="layers-filepage-hint"><small>' .
 			\htmlspecialchars( $usageHint ) . '</small></p>';
 
-		$html .= '</div></div>';
+		$html .= '</div></div></div>';
 
 		return $html;
 	}
