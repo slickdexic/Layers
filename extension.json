@@ -271,7 +271,7 @@
 			"localBasePath": "resources/ext.layers",
 			"remoteExtPath": "Layers/resources/ext.layers",
 			"targets": [ "desktop", "mobile" ],
-			"dependencies": [ "jquery", "mediawiki.api", "mediawiki.util", "ext.layers.shared", "ext.layers.modal" ],
+			"dependencies": [ "jquery", "jquery.makeCollapsible", "mediawiki.api", "mediawiki.util", "ext.layers.shared", "ext.layers.modal" ],
 			"styles": [
 				"viewer/LayersLightbox.css",
 				"viewer/SlideViewer.css"
