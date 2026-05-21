@@ -471,7 +471,7 @@
    Only table layout and hint text need extension-specific CSS.
    ========================================================================== */
 
-#mw-imagepage-section-layers {
+.layers-filepage-section {
 	margin-top: 1em;
 }
 

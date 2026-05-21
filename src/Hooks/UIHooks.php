@@ -328,7 +328,7 @@ class UIHooks {
 
 		// Use the same structure as native MW file page sections (File history, File usage, etc.):
 		// a plain <h2> that inherits skin styles, followed by a standard mw-collapsible content block.
-		$html = '<div id="mw-imagepage-section-layers">';
+		$html = '<div id="mw-imagepage-section-layers" class="layers-filepage-section">';
 		$html .= '<h2>' . \htmlspecialchars( $headerText ) . '</h2>';
 		$html .= '<div class="mw-collapsible mw-collapsed">';
 		$html .= '<div class="mw-collapsible-content">';
