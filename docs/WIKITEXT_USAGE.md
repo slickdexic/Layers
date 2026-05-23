@@ -104,6 +104,62 @@ Display base image without any layers:
 [[File:Photo.jpg|600px|layerset=none|Original photo without annotations]]
 ```
 
+## Using layerset= in Templates
+
+`layerset=` works inside MediaWiki templates, including complex structures like
+PageForms multi-instance templates. As of v1.5.65, template-embedded file
+references are fully supported.
+
+### Simple template usage
+
+```wikitext
+{{MyTemplate|image=Example.jpg|caption=Annotated diagram}}
+```
+
+Where the template contains:
+
+```wikitext
+[[File:{{{image|}}}|500px|layerset=on|{{{caption|}}}]]
+```
+
+### PageForms multi-instance template pattern
+
+A common pattern is a manager/row template pair where the row template
+contains the `[[File:...|layerset=...]]` reference:
+
+**Row template** (`Template:MyImageRow`):
+```wikitext
+<includeonly>[[File:{{{image|}}}|x300px|layerset={{{layerset|on}}}]]</includeonly>
+```
+
+**Manager template** (`Template:MyImageTable`):
+```wikitext
+<noinclude>{{{instances|}}}</noinclude>
+```
+
+**Page wikitext:**
+```wikitext
+{{MyImageTable|instances=
+  {{MyImageRow|image=Diagram1.jpg|layerset=default}}
+  {{MyImageRow|image=Diagram2.jpg|layerset=anatomy}}
+}}
+```
+
+> **Note:** The `<noinclude>` wrapper in the manager template prevents double
+> rendering of the row templates (they expand once as argument values; without
+> the wrapper they would expand a second time when the manager template body
+> substitutes the `{{{instances}}}` variable).
+
+### Limitations
+
+- Each `[[File:...|layerset=...]]` call in a template is matched to its layer
+  data by render order per file. If the same image appears multiple times on
+  a page (both inside and outside templates), the overlays are matched by the
+  order in which MediaWiki processes them.
+- Template-embedded files are not visible to the wikitext pre-scan hook
+  (which fires before template expansion). The extension handles this via a
+  fallback registration in `onParserMakeImageParams`.
+
 ## How It Works
 
 The extension automatically:

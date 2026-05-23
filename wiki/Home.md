@@ -20,7 +20,17 @@
 
 ---
 
-## 🆕 What's New in v1.5.64
+## 🆕 What's New in v1.5.65
+
+- **Template-embedded `layerset=` rendering** — Layer overlays now render
+  correctly when `[[File:...|layerset=...]]` is inside a MediaWiki template
+  (e.g. PageForms multi-instance templates). Previously, the wikitext scan
+  hook fired before template expansion, so template-embedded file references
+  were never queued and no overlay was injected. A fallback registration in
+  `onParserMakeImageParams` resolves this transparently; direct `layerset=`
+  in page wikitext is unaffected.
+
+### Previous v1.5.64 Highlights
 
 - **v71 Code Quality Fixes** — 6 code issues resolved: InlineTextEditor stale
   layer guard (P2-252), TextBoxRenderer zero-dimension early return (P2-253),
@@ -31,7 +41,6 @@
   width when canvas context is available
 - **DrawingController** — User notification when path point limit (1,000) is reached
 - **PresetStorage** — Type-strict import validation (number/boolean/string/object)
-- **Regression Tests** — 7 targeted tests for v71 fixes (total: 14,001 tests)
 - **Test Suite** — 14,001 tests (172 suites), 95.87% stmts, 87.20% branches
 
 ### Previous v1.5.63 Highlights
@@ -334,9 +343,9 @@ See [[Changelog]] for full details.
 | Metric | Value |
 |--------|-------|
 | **Version (main)** | 1.5.65 |
-| **Version (REL1_43)** | 1.5.64-REL1_43 |
-| **Version (REL1_39)** | 1.5.64-REL1_39 |
-| **Release Date** | April 23, 2026 |
+| **Version (REL1_43)** | 1.5.65-REL1_43 |
+| **Version (REL1_39)** | 1.5.65-REL1_39 |
+| **Release Date** | May 22, 2026 |
 | **Test Suites** | 172 |
 | **Total Tests** | 14,001 |
 | **PHPUnit Test Files** | 35 |

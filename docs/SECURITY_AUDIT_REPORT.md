@@ -1,4 +1,4 @@
-# Security Audit Report — MediaWiki Layers Extension v1.5.64
+# Security Audit Report — MediaWiki Layers Extension v1.5.65
 
 **Date:** June 2025 (last reviewed: April 2026)
 **Scope:** Full codebase — 44 PHP files (~15,689 lines), 157 JS files (~114,000 lines)
