@@ -333,7 +333,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.64 |
+| **Version (main)** | 1.5.65 |
 | **Version (REL1_43)** | 1.5.64-REL1_43 |
 | **Version (REL1_39)** | 1.5.64-REL1_39 |
 | **Release Date** | April 23, 2026 |
