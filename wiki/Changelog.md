@@ -4,6 +4,19 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.65] - 2026-05-22
+
+### Fixed
+- **Template-embedded `layerset=` rendering** — Layer overlays now render correctly
+  when `[[File:...|layerset=...]]` is inside a template (e.g. PageForms multi-instance
+  templates). Previously, `onParserBeforeInternalParse` builds its render queue from
+  raw wikitext before template expansion, so template-embedded file references were
+  invisible to that hook and `onThumbnailBeforeProduceHTML` had no set name to fetch.
+  `onParserMakeImageParams` now registers a fallback set name in `$fileParamLayerset`
+  keyed by `(filename, render-index)`; `getFileParamsForRender` uses this fallback
+  when the primary queue returns null. Direct `[[File:...|layerset=...]]` in page
+  wikitext is unaffected — the primary queue still takes precedence.
+
 ## [1.5.64] - 2026-04-23
 
 ### Security

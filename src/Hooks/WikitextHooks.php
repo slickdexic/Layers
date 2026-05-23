@@ -163,6 +163,15 @@ class WikitextHooks {
 	private static $fileLinkTypes = [];
 
 	/**
+	 * Fallback set-name queue populated by onParserMakeImageParams (indexed by render position).
+	 * Used for template-embedded [[File:...|layerset=...]] references that onParserBeforeInternalParse
+	 * cannot see because they exist inside templates not yet expanded when that hook fires.
+	 * getFileParamsForRender falls back to this when the primary $fileSetNames queue has no entry.
+	 * @var array<string, array<int, string>>
+	 */
+	private static $fileParamLayerset = [];
+
+	/**
 	 * Timestamp of the last request that triggered a state reset.
 	 * Used to detect request boundaries in PHP-FPM (max_requests > 1).
 	 * @var float
@@ -463,6 +472,23 @@ class WikitextHooks {
 			}
 		}
 
+		// Register set name for template-embedded file fallback.
+		// onParserBeforeInternalParse fires before template expansion and cannot see [[File:...]]
+		// patterns inside templates. We record the set name here so onThumbnailBeforeProduceHTML
+		// can find it via getFileParamsForRender even when the primary $fileSetNames queue has no
+		// entry for this file occurrence (i.e. render index is beyond what the pre-parse hook saw).
+		if ( $fileName !== 'null' ) {
+			$currentIndex = self::$fileRenderCount[$fileName] ?? 0;
+			if ( !isset( self::$fileParamLayerset[$fileName] ) ) {
+				self::$fileParamLayerset[$fileName] = [];
+			}
+			$queueVal = ( $layersRaw === true || $layersRaw === 'on' || $layersRaw === 'all' )
+				? 'on'
+				: (string)$layersRaw;
+			self::$fileParamLayerset[$fileName][$currentIndex] = $queueVal;
+			self::log( "Registered fallback set name '$queueVal' for $fileName at index $currentIndex" );
+		}
+
 		// Finalize params
 		$params['layerset'] = 'on';
 		if ( isset( $params['layerData'] ) && is_array( $params['layerData'] ) ) {
@@ -567,6 +593,14 @@ class WikitextHooks {
 
 		// Get both values at the same index
 		$setName = self::$fileSetNames[$filename][$index] ?? null;
+		// Fallback: use set name captured in onParserMakeImageParams for template-embedded files
+		// that onParserBeforeInternalParse did not see (templates are not yet expanded at that point).
+		if ( $setName === null ) {
+			$setName = self::$fileParamLayerset[$filename][$index] ?? null;
+			if ( $setName !== null ) {
+				self::log( "getFileParamsForRender: using fileParamLayerset fallback for $filename[$index]: $setName" );
+			}
+		}
 		$linkType = self::$fileLinkTypes[$filename][$index] ?? null;
 
 		// Increment counter for next call
@@ -586,6 +620,7 @@ class WikitextHooks {
 		self::$fileSetNames = [];
 		self::$fileRenderCount = [];
 		self::$fileLinkTypes = [];
+		self::$fileParamLayerset = [];
 		self::$lastResetRequestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
 		// Reset processor singletons to prevent stale state in long-running processes
 		self::$imageLinkProcessor = null;
