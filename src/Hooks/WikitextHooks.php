@@ -449,6 +449,37 @@ class WikitextHooks {
 			}
 		}
 
+		// MediaWiki does not recognise 'layerset', 'layers', or 'layer' as image-option keywords,
+		// so it treats them as caption text instead of setting $params['layerset'] directly.
+		// This happens for BOTH inline and template-embedded images, but inline images already
+		// work via onParserBeforeInternalParse which pre-scans raw wikitext.
+		// For template-embedded images (where the pre-scan cannot see the [[File:...]] inside
+		// a template body), we must extract the value from the frame caption here.
+		// Example: [[File:{{{img}}}|x300px|layerset=default]] → caption = 'layerset=default'
+		if ( !isset( $params['layerset'] ) ) {
+			$captionText = isset( $params['frame']['caption'] )
+				? trim( (string)$params['frame']['caption'] )
+				: '';
+			if ( $captionText !== ''
+				&& preg_match( '/^(layerset|layers?)\s*=\s*(.+)$/i', $captionText, $matches )
+			) {
+				$params['layerset'] = trim( $matches[2] );
+				// Clear the caption-derived attributes so 'layerset=default' does not
+				// appear as visible alt text, tooltip, or caption on the rendered image.
+				$params['frame']['caption'] = '';
+				if ( isset( $params['frame']['alt'] )
+					&& (string)$params['frame']['alt'] === $captionText
+				) {
+					unset( $params['frame']['alt'] );
+				}
+				if ( isset( $params['frame']['title'] )
+					&& (string)$params['frame']['title'] === $captionText
+				) {
+					$params['frame']['title'] = '';
+				}
+			}
+		}
+
 		if ( !isset( $params['layerset'] ) ) {
 			return true;
 		}

@@ -4,6 +4,36 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.67] - 2026-05-26
+
+### Fixed
+- **Template-embedded `layerset=` rendering (definitive fix)** — Layer overlays now render
+  correctly when `[[File:...|layerset=...]]` is embedded inside a MediaWiki template (e.g.
+  PageForms multi-instance templates). Versions 1.5.65 and 1.5.66 attempted to fix this via
+  a `$fileParamLayerset` fallback indexed by a parse-phase counter, but the fallback was
+  **never populated** because MediaWiki does not recognise `layerset`, `layers`, or `layer`
+  as image-option keywords. MediaWiki therefore treats them as caption text instead of
+  setting `$params['layerset']` in the `onParserMakeImageParams` hook, which caused the
+  hook to early-return immediately and leave `$fileParamLayerset` empty.
+
+  Root cause: `layerset=default` in `[[File:...|x300px|layerset=default]]` ends up in
+  `$params['frame']['caption']` (not `$params['layerset']`) because MW's image-option
+  parser only recognises built-in options (`thumbnail`, `left`, `right`, `link=`, `alt=`,
+  etc.) and handler options (`width`, `height`). Custom extension parameters are silently
+  demoted to caption text.
+
+  Fix: `onParserMakeImageParams` now inspects `$params['frame']['caption']` when
+  `$params['layerset']` is absent. If the caption matches the pattern
+  `layerset=value`, `layers=value`, or `layer=value` (case-insensitive), the value is
+  extracted and the caption is cleared so it does not appear as alt text or tooltip on
+  the rendered image. This makes template-embedded images behave identically to inline
+  images, where the pre-scan hook (`onParserBeforeInternalParse`) already handles the
+  extraction correctly.
+
+  Additionally, `LayerInjector::addSpecificLayersToImage` was extended to handle plain
+  named-set strings (e.g. `'default'`, `'anatomy'`) without requiring the `name:` prefix,
+  completing the parse-time data-embedding path for named sets.
+
 ## [1.5.66] - 2026-05-25
 
 ### Fixed

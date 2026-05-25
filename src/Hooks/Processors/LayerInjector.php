@@ -148,8 +148,13 @@ class LayerInjector {
 				$layerSetName
 			);
 		} else {
-			// Legacy format or other formats
-			$layerSet = null;
+			// Plain named set (e.g. 'default', 'anatomy-labels').
+			// This is the common case for [[File:...|layerset=default]] and similar.
+			$layerSet = $db->getLayerSetByName(
+				$file->getName(),
+				ForeignFileHelper::getFileSha1( $file ),
+				$layersParam
+			);
 		}
 
 		if ( $layerSet ) {
