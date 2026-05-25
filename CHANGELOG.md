@@ -4,6 +4,22 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.69] - 2026-05-26
+
+### Fixed
+- **Cargo gallery queue desync breaks layer overlays** — When a `{{#cargo_query:...|format=gallery}}`
+  (or any other parser-function-driven thumbnail source) rendered the same image filename that
+  was also referenced directly with `[[File:...|layerset=...]]` on the same page, the Cargo
+  renders fired `ThumbnailBeforeProduceHTML` without going through `ParserMakeImageParams`.
+  Each such render still incremented `$fileRenderCount` (the shared queue index), silently
+  consuming queue slots before the direct-wikitext renders could use them. The direct renders
+  then read the wrong index (or fell off the end of the queue) and lost their layer overlays.
+  Fix: `onParserMakeImageParams` now stamps a `layers_registered = true` marker into the
+  image's handler params. In `onThumbnailBeforeProduceHTML`, the queue is only consulted when
+  that marker is present on the thumbnail object (`$thumbnail->getParams()['layers_registered']`).
+  Non-wikitext renders (Cargo gallery, native `<gallery>`, etc.) carry no marker and are
+  skipped, preserving queue alignment for all direct `[[File:...]]` occurrences.
+
 ## [1.5.68] - 2026-05-25
 
 ### Fixed

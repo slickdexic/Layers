@@ -363,8 +363,20 @@ class WikitextHooks {
 			$filename = $thumbnail->getFile()->getName();
 		}
 
-		// Get both set name and link type from queue
-		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
+		// Only consume queue entries for renders that went through onParserMakeImageParams.
+		// Cargo gallery, native <gallery> tags, and other parser-function-generated thumbnails
+		// do NOT go through that hook, so their thumbnails will not carry the
+		// 'layers_registered' marker in their handler params. Calling getFileParamsForRender
+		// for those unregistered renders would increment $fileRenderCount and desync the
+		// index, causing subsequent direct [[File:...|layerset=...]] renders to read the
+		// wrong queue slot (or find nothing) and lose their layer overlays.
+		$thumbParams = ( method_exists( $thumbnail, 'getParams' ) ) ? $thumbnail->getParams() : [];
+		$isRegisteredRender = !empty( $thumbParams['layers_registered'] );
+
+		// Get both set name and link type from queue (registered renders only)
+		$fileParams = ( $filename && $isRegisteredRender )
+			? self::getFileParamsForRender( $filename )
+			: [ 'setName' => null, 'linkType' => null ];
 
 		// Log queue state for troubleshooting foreign file issues
 		self::logDebug(
@@ -421,6 +433,21 @@ class WikitextHooks {
 			}
 			$parseIndex = self::$fileParseCount[$fileName]++;
 		}
+
+		// Mark this image as registered via onParserMakeImageParams.
+		// This flag is stored in handler params and flows through to $thumbnail->getParams()
+		// in onThumbnailBeforeProduceHTML. Renders that do NOT go through this hook (e.g.
+		// Cargo gallery queries, native <gallery> tags, other parser-function-generated
+		// thumbnails) will not carry the flag. The render hook uses it to skip the
+		// $fileSetNames/$fileParamLayerset queue for non-registered renders, preventing
+		// queue-index desync when Cargo renders the same image filename as a direct
+		// [[File:...|layerset=...]] reference.
+		// Note: placing this BEFORE any early returns ensures ALL [[File:...]] occurrences
+		// are marked, not just those with a layerset= param.
+		if ( !isset( $params['handler'] ) ) {
+			$params['handler'] = [];
+		}
+		$params['handler']['layers_registered'] = true;
 
 		// Handle layerslink parameter - queue it and remove from params to prevent caption leakage
 		if ( isset( $params['layerslink'] ) ) {
