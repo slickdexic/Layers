@@ -4,6 +4,20 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.72] - 2026-05-25
+
+### Added
+- **Layer overlays in Cargo and native gallery renders** — Images rendered via
+  `{{#cargo_query:...|format=gallery}}` or MediaWiki `<gallery>` tags now receive
+  layer overlays, exactly like `[[File:...|layerset=on]]` in wikitext. If the image
+  has a saved layer set, it is embedded directly; if not, `data-layers-intent="on"`
+  is added so the client-side API fallback can fetch and display layers (or show the
+  image in the lightbox when no layers exist yet). Previously, gallery thumbnails
+  always received `setName=null` and were silently skipped by the layer pipeline.
+  Note: gallery renders always use the latest available layer set (`layerset=on`
+  semantics). For per-image named set control, use `format=template` with a template
+  that passes `layerset={{{layerset|}}}` to the `[[File:...]]` syntax.
+
 ## [1.5.71] - 2026-05-25
 
 ### Fixed

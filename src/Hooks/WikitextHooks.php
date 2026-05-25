@@ -392,10 +392,14 @@ class WikitextHooks {
 			self::$pendingRender[$filename] = false;
 		}
 
-		// Get both set name and link type from queue (wikitext renders only)
+		// Get both set name and link type from queue.
+		// For wikitext renders: use the queued set name and link type.
+		// For non-wikitext renders (Cargo gallery, native <gallery>, etc.): use 'on'
+		// so the latest available layer set is shown, or data-layers-intent="on" is
+		// added for client-side deferred loading via ApiFallback.
 		$fileParams = $isWikitextRender
 			? self::getFileParamsForRender( $filename )
-			: [ 'setName' => null, 'linkType' => null ];
+			: [ 'setName' => 'on', 'linkType' => null ];
 
 		// Log queue state for troubleshooting foreign file issues
 		self::logDebug(
