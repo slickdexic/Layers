@@ -4,6 +4,25 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.74] - 2026-05-25
+
+### Added
+- **Automatic per-image layer set support for Cargo galleries** — Cargo
+  `format=gallery` queries now honour a `layerset` field in the result set
+  automatically. If a row contains a non-empty `layerset` value alongside the
+  image filename, the named layer set is shown in the thumbnail overlay
+  instead of always falling back to the latest-set (`layerset=on`) semantics
+  introduced in v1.5.72. No changes required to existing queries that already
+  include `layerset` in their `fields=` list. To use a differently-named
+  field, add `layerset field=yourfield` to the `#cargo_query` call.
+
+  Implementation: the `CargoSetFormatClasses` hook replaces Cargo's built-in
+  `gallery` format class with `CargoLayersGalleryFormat`, a transparent
+  subclass that iterates query rows and pre-registers `filename → setname`
+  hints via `WikitextHooks::registerGalleryHint()` before delegating to the
+  standard renderer. If no `layerset` field is present the class is a
+  no-op pass-through with identical behaviour to the standard format.
+
 ## [1.5.73] - 2026-05-25
 
 ### Added

@@ -379,17 +379,30 @@ class WikitextHooks {
 	 * @return string Empty string
 	 */
 	public static function parserFunctionLayersHint( $parser, string $filename = '', string $setname = '' ): string {
+		self::registerGalleryHint( trim( $filename ), trim( $setname ) );
+		return '';
+	}
+
+	/**
+	 * Register a per-image layer set hint for non-wikitext gallery renders.
+	 *
+	 * Called by {{#layers_hint:}} and by CargoLayersGalleryFormat when it
+	 * iterates Cargo query rows before the gallery renders thumbnails.
+	 *
+	 * @param string $filename File name (with or without "File:"/"Image:" prefix)
+	 * @param string $setname  Layer set name (e.g. 'anatomy', 'default')
+	 */
+	public static function registerGalleryHint( string $filename, string $setname ): void {
 		$filename = trim( $filename );
-		$setname = trim( $setname );
+		$setname  = trim( $setname );
 		if ( $filename === '' || $setname === '' ) {
-			return '';
+			return;
 		}
-		// Normalize: strip "File:" or "Image:" prefix if present
+		// Normalize: strip "File:" or "Image:" prefix if present.
 		$normalized = preg_replace( '/^(?:File|Image):\s*/i', '', $filename );
 		if ( $normalized !== '' ) {
 			self::$galleryHints[$normalized] = $setname;
 		}
-		return '';
 	}
 
 	/**

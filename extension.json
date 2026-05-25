@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.73",
+	"version": "1.5.74",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -186,6 +186,9 @@
 		},
 		"LayersSlideHooks": {
 			"class": "MediaWiki\\Extension\\Layers\\Hooks\\SlideHooks"
+		},
+		"LayersCargoHooks": {
+			"class": "MediaWiki\\Extension\\Layers\\Hooks\\CargoHooks"
 		}
 	},
 	"Hooks": {
@@ -203,7 +206,8 @@
 		"ThumbnailBeforeProduceHTML": "LayersWikitextHooks",
 		"ParserMakeImageParams": "LayersWikitextHooks",
 		"SkinTemplateNavigation::Universal": "LayersUIHooks",
-		"BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform"
+		"BitmapHandlerTransform": "MediaWiki\\Extension\\Layers\\LayersFileTransform::onBitmapHandlerTransform",
+		"CargoSetFormatClasses": "LayersCargoHooks"
 	},
 	"Actions": {
 		"editlayers": "MediaWiki\\Extension\\Layers\\Action\\EditLayersAction"
