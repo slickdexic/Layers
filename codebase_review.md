@@ -2,7 +2,7 @@
 
 **Review Date:** April 13, 2026 (v71 comprehensive audit)
 **Previous Review:** April 8, 2026 (v70 comprehensive audit)
-**Version:** 1.5.65
+**Version:** 1.5.66
 **Reviewer:** GitHub Copilot (Claude Sonnet 4.6)
 
 ---
@@ -4749,11 +4749,11 @@ but verified as non-issues:
 
 ---
 
-## Current Metrics (Verified May 22, 2026 — v1.5.65 release refresh)
+## Current Metrics (Verified May 22, 2026 — v1.5.66 release refresh)
 
 | Metric | Verified Current Value |
 |--------|------------------------|
-| Extension version | 1.5.65 |
+| Extension version | 1.5.66 |
 | MediaWiki requirement | >= 1.44.0 |
 | PHP requirement | 8.1+ |
 | JS source files (excluding `resources/dist`) | 157 |

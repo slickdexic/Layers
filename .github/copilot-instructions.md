@@ -453,4 +453,4 @@ Common metrics to keep synchronized:
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.65)
+- Version number (1.5.66)

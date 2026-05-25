@@ -169,7 +169,19 @@ class WikitextHooks {
 	 * getFileParamsForRender falls back to this when the primary $fileSetNames queue has no entry.
 	 * @var array<string, array<int, string>>
 	 */
-	private static $fileParamLayerset = [];
+	private static array $fileParamLayerset = [];
+
+	/**
+	 * Counter tracking how many times onParserMakeImageParams has fired for each file
+	 * during the current page parse. Used to correctly index into $fileParamLayerset.
+	 *
+	 * This is separate from $fileRenderCount because in PageForms multi-instance templates
+	 * ALL onParserMakeImageParams calls happen during the parse phase, BEFORE any
+	 * onThumbnailBeforeProduceHTML calls in the render phase. Using $fileRenderCount
+	 * as the write index would cause all N instances to overwrite index 0.
+	 * @var array<string, int>
+	 */
+	private static array $fileParseCount = [];
 
 	/**
 	 * Timestamp of the last request that triggered a state reset.
@@ -194,6 +206,8 @@ class WikitextHooks {
 			self::$fileSetNames = [];
 			self::$fileRenderCount = [];
 			self::$fileLinkTypes = [];
+			self::$fileParamLayerset = [];
+			self::$fileParseCount = [];
 		}
 	}
 
@@ -396,6 +410,18 @@ class WikitextHooks {
 		$fileName = $file ? $file->getName() : 'null';
 		self::log( "ParserMakeImageParams for: $fileName" );
 
+		// Always track parse occurrences BEFORE any early returns, so $fileParseCount stays
+		// aligned with $fileRenderCount (both increment once per image occurrence, in the same order).
+		// This ensures the fallback $fileParamLayerset indices are correct even when some
+		// images on the page have no layerset= param.
+		$parseIndex = null;
+		if ( $fileName !== 'null' ) {
+			if ( !isset( self::$fileParseCount[$fileName] ) ) {
+				self::$fileParseCount[$fileName] = 0;
+			}
+			$parseIndex = self::$fileParseCount[$fileName]++;
+		}
+
 		// Handle layerslink parameter - queue it and remove from params to prevent caption leakage
 		if ( isset( $params['layerslink'] ) ) {
 			$linkValue = strtolower( trim( (string)$params['layerslink'] ) );
@@ -477,16 +503,22 @@ class WikitextHooks {
 		// patterns inside templates. We record the set name here so onThumbnailBeforeProduceHTML
 		// can find it via getFileParamsForRender even when the primary $fileSetNames queue has no
 		// entry for this file occurrence (i.e. render index is beyond what the pre-parse hook saw).
-		if ( $fileName !== 'null' ) {
-			$currentIndex = self::$fileRenderCount[$fileName] ?? 0;
+		//
+		// Use $parseIndex (pre-computed at function entry from $fileParseCount) NOT $fileRenderCount.
+		// In PageForms multi-instance templates, ALL onParserMakeImageParams calls happen during
+		// the parse phase, BEFORE any onThumbnailBeforeProduceHTML calls in the render phase.
+		// If we used $fileRenderCount here, every template instance would see render count = 0
+		// and all N instances would overwrite $fileParamLayerset[filename][0], leaving only
+		// the last occurrence's set name. The render phase would then find data at index 0 only.
+		if ( $fileName !== 'null' && $parseIndex !== null ) {
 			if ( !isset( self::$fileParamLayerset[$fileName] ) ) {
 				self::$fileParamLayerset[$fileName] = [];
 			}
 			$queueVal = ( $layersRaw === true || $layersRaw === 'on' || $layersRaw === 'all' )
 				? 'on'
 				: (string)$layersRaw;
-			self::$fileParamLayerset[$fileName][$currentIndex] = $queueVal;
-			self::log( "Registered fallback set name '$queueVal' for $fileName at index $currentIndex" );
+			self::$fileParamLayerset[$fileName][$parseIndex] = $queueVal;
+			self::log( "Registered fallback set name '$queueVal' for $fileName at index $parseIndex" );
 		}
 
 		// Finalize params
@@ -621,6 +653,7 @@ class WikitextHooks {
 		self::$fileRenderCount = [];
 		self::$fileLinkTypes = [];
 		self::$fileParamLayerset = [];
+		self::$fileParseCount = [];
 		self::$lastResetRequestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
 		// Reset processor singletons to prevent stale state in long-running processes
 		self::$imageLinkProcessor = null;

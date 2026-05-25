@@ -4,6 +4,30 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.66] - 2026-05-25
+
+### Fixed
+- **Template-embedded `layerset=` multi-instance rendering (v1.5.65 regression fix)** —
+  The v1.5.65 `$fileParamLayerset` fallback was non-functional for PageForms multi-instance
+  templates. Root cause: `onParserMakeImageParams` used `$fileRenderCount[$filename] ?? 0`
+  as the storage index into `$fileParamLayerset`, but `$fileRenderCount` is only incremented
+  during the render phase (`onThumbnailBeforeProduceHTML`). In PageForms multi-instance
+  templates, ALL `onParserMakeImageParams` calls complete during the parse phase before ANY
+  `onThumbnailBeforeProduceHTML` calls begin. This meant every template instance read a
+  render-count of 0 and overwrote `$fileParamLayerset[filename][0]`, so only one entry
+  survived — only the first rendered instance found data; all subsequent instances found
+  nothing and rendered without any layer overlay.
+
+  Fix: Introduce a separate `$fileParseCount` counter that increments once per
+  `onParserMakeImageParams` call (at function entry, before any early returns).
+  `$fileParamLayerset` is now indexed by `$fileParseCount`, which increments in the same
+  document order as `$fileRenderCount` but during the parse phase rather than the render
+  phase. For N template instances, entries 0…N-1 are each written at distinct indices and
+  correctly retrieved during the render phase.
+
+  `$fileParseCount` is reset alongside the other per-request counters in both
+  `ensureRequestStateReset()` and `resetPageLayersFlag()`.
+
 ## [1.5.65] - 2026-05-22
 
 ### Fixed

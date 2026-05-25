@@ -1,7 +1,7 @@
 # Layers Extension Architecture
 
 **Last Updated:** May 22, 2026
-**Version:** 1.5.65
+**Version:** 1.5.66
 
 ---
 
@@ -694,7 +694,7 @@ window.Layers.UI.LayerItemFactory = LayerItemFactory;
 
 ```javascript
 window.Layers = {
-    VERSION: '1.5.65',
+    VERSION: '1.5.66',
     Editor: LayersEditor,
     Core: { StateManager, HistoryManager, EventManager, ModuleRegistry, Constants },
     UI: { Manager, Toolbar, LayerPanel, ColorPickerDialog, PropertiesForm, LayerItemFactory },

@@ -107,7 +107,7 @@ Display base image without any layers:
 ## Using layerset= in Templates
 
 `layerset=` works inside MediaWiki templates, including complex structures like
-PageForms multi-instance templates. As of v1.5.65, template-embedded file
+PageForms multi-instance templates. As of v1.5.66, template-embedded file
 references are fully supported.
 
 ### Simple template usage

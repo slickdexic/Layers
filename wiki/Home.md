@@ -20,7 +20,7 @@
 
 ---
 
-## 🆕 What's New in v1.5.65
+## 🆕 What's New in v1.5.66
 
 - **Template-embedded `layerset=` rendering** — Layer overlays now render
   correctly when `[[File:...|layerset=...]]` is inside a MediaWiki template
@@ -342,9 +342,9 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.65 |
-| **Version (REL1_43)** | 1.5.65-REL1_43 |
-| **Version (REL1_39)** | 1.5.65-REL1_39 |
+| **Version (main)** | 1.5.66 |
+| **Version (REL1_43)** | 1.5.66-REL1_43 |
+| **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | May 22, 2026 |
 | **Test Suites** | 172 |
 | **Total Tests** | 14,001 |
