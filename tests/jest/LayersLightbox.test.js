@@ -417,11 +417,12 @@ describe( 'LayersLightbox', () => {
 			expect( errorSpy ).toHaveBeenCalledWith( 'No layer data found' );
 		} );
 
-		it( 'should show error when no layerset in response', async () => {
+		it( 'should show image full-size when no layerset in response (no layers saved yet)', async () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
 			lightbox.showLoading();
 			const errorSpy = jest.spyOn( lightbox, 'showError' );
+			const renderSpy = jest.spyOn( lightbox, 'renderViewer' );
 
 			mockApi.get.mockResolvedValue( {
 				layersinfo: { layerset: null }
@@ -429,7 +430,11 @@ describe( 'LayersLightbox', () => {
 
 			await lightbox.fetchAndRender( 'Test.jpg', null );
 
-			expect( errorSpy ).toHaveBeenCalledWith( 'No layer set found' );
+			expect( errorSpy ).not.toHaveBeenCalled();
+			expect( renderSpy ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { layers: [], backgroundVisible: true } )
+			);
 		} );
 
 		it( 'should handle API errors gracefully', async () => {

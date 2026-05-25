@@ -212,8 +212,19 @@
 				}
 
 				const layersInfo = data.layersinfo;
+
+				// No layer set yet — show the image full-size without a layer overlay.
+				// (This happens when layerset= is set on an image but no layers have been
+				// saved to the database yet.)
 				if ( !layersInfo.layerset ) {
-					this.showError( 'No layer set found' );
+					const imageUrl = this.resolveFullImageUrl( filename );
+					this.renderViewer( imageUrl, {
+						layers: [],
+						baseWidth: null,
+						baseHeight: null,
+						backgroundVisible: true,
+						backgroundOpacity: 1.0
+					} );
 					return;
 				}
 

@@ -4,6 +4,15 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.70] - 2026-05-25
+
+### Fixed
+- **"View full size" shows error when no layers saved yet** — Clicking the view-full-size
+  overlay on an image that has `layerset=` set but no layers in the database showed
+  "No layer set found" instead of the image. The lightbox now renders the full-size
+  image without a layer overlay when the API returns a null `layerset`, matching the
+  expected behaviour: show the image, just without annotations.
+
 ## [1.5.69] - 2026-05-26
 
 ### Fixed
