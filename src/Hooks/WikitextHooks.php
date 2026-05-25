@@ -172,6 +172,20 @@ class WikitextHooks {
 	private static array $pendingRender = [];
 
 	/**
+	 * Per-image layer set hints pre-registered by {{#layers_hint:filename|setname}}.
+	 *
+	 * Populated during the parse phase (before thumbnails render) by the
+	 * #layers_hint parser function.  When onThumbnailBeforeProduceHTML fires
+	 * for a non-wikitext render (Cargo gallery, native <gallery>, etc.), it
+	 * consults this map to find the correct named set for the image instead of
+	 * always falling back to the latest set ('on' semantics).
+	 *
+	 * Keys are normalized file names (without "File:" prefix), values are set names.
+	 * @var array<string, string>
+	 */
+	private static array $galleryHints = [];
+
+	/**
 	 * Queue of layerslink values per filename detected from wikitext (in order of appearance)
 	 * e.g. ['ImageTest02.jpg' => ['editor', null, 'viewer']]
 	 * @var array<string, array<string|null>>
@@ -225,6 +239,7 @@ class WikitextHooks {
 			self::$fileParamLayerset = [];
 			self::$fileParseCount = [];
 			self::$pendingRender = [];
+			self::$galleryHints = [];
 		}
 	}
 
@@ -341,7 +356,40 @@ class WikitextHooks {
 		// The extension works through the layerset= parameter in file syntax instead
 		// To enable parser functions, define magic words in i18n and uncomment below:
 		// $parser->setFunctionHook( 'layeredfile', [ self::class, 'renderLayeredFile' ], \Parser::SFH_OBJECT_ARGS );
+
+		// Pre-register per-image layer set hints for gallery renders.
+		// {{#layers_hint:filename|setname}} is called before a gallery renders
+		// (e.g. via Cargo format=template hint pass) so the correct named set
+		// is used when ThumbnailBeforeProduceHTML fires for non-wikitext renders.
+		$parser->setFunctionHook( 'layers_hint', [ self::class, 'parserFunctionLayersHint' ] );
+
 		return true;
+	}
+
+	/**
+	 * Parser function: {{#layers_hint:filename|setname}}
+	 *
+	 * Registers a per-image layer set hint that is consumed by
+	 * onThumbnailBeforeProduceHTML for non-wikitext gallery renders.
+	 * Returns an empty string (no visible output).
+	 *
+	 * @param mixed $parser Unused
+	 * @param string $filename File name (with or without "File:" prefix)
+	 * @param string $setname Layer set name (e.g. 'default', 'anatomy')
+	 * @return string Empty string
+	 */
+	public static function parserFunctionLayersHint( $parser, string $filename = '', string $setname = '' ): string {
+		$filename = trim( $filename );
+		$setname = trim( $setname );
+		if ( $filename === '' || $setname === '' ) {
+			return '';
+		}
+		// Normalize: strip "File:" or "Image:" prefix if present
+		$normalized = preg_replace( '/^(?:File|Image):\s*/i', '', $filename );
+		if ( $normalized !== '' ) {
+			self::$galleryHints[$normalized] = $setname;
+		}
+		return '';
 	}
 
 	/**
@@ -394,12 +442,17 @@ class WikitextHooks {
 
 		// Get both set name and link type from queue.
 		// For wikitext renders: use the queued set name and link type.
-		// For non-wikitext renders (Cargo gallery, native <gallery>, etc.): use 'on'
-		// so the latest available layer set is shown, or data-layers-intent="on" is
-		// added for client-side deferred loading via ApiFallback.
-		$fileParams = $isWikitextRender
-			? self::getFileParamsForRender( $filename )
-			: [ 'setName' => 'on', 'linkType' => null ];
+		// For non-wikitext renders (Cargo gallery, native <gallery>, etc.): check
+		// $galleryHints first (pre-registered by {{#layers_hint:filename|setname}}),
+		// then fall back to 'on' (latest available layer set) if no hint is present.
+		if ( $isWikitextRender ) {
+			$fileParams = self::getFileParamsForRender( $filename );
+		} else {
+			$hintedSetName = ( $filename && isset( self::$galleryHints[$filename] ) )
+				? self::$galleryHints[$filename]
+				: 'on';
+			$fileParams = [ 'setName' => $hintedSetName, 'linkType' => null ];
+		}
 
 		// Log queue state for troubleshooting foreign file issues
 		self::logDebug(
@@ -732,6 +785,7 @@ class WikitextHooks {
 		self::$fileParamLayerset = [];
 		self::$fileParseCount = [];
 		self::$pendingRender = [];
+		self::$galleryHints = [];
 		self::$lastResetRequestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
 		// Reset processor singletons to prevent stale state in long-running processes
 		self::$imageLinkProcessor = null;

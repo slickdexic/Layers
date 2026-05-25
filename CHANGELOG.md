@@ -4,6 +4,34 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.73] - 2026-05-25
+
+### Added
+- **`{{#layers_hint:filename|setname}}` parser function** — Allows per-image
+  layer set selection for Cargo gallery (and any other non-wikitext gallery
+  renderer). Call this function before the gallery renders (e.g. via a silent
+  Cargo `format=template` pre-pass) to tell the extension which named set to
+  show for each image. If a hint is registered for a filename,
+  `onThumbnailBeforeProduceHTML` uses it instead of the `'on'` (latest-set)
+  fallback introduced in v1.5.72.
+
+  **Usage pattern (Cargo example):**
+  ```
+  {{/* Silent hint-registration pass */}}
+  {{#cargo_query:tables=MyTable|fields=Image,layerset
+   |where=...|format=template|template=Template:LayersHint|named args=yes}}
+
+  {{/* Visual gallery */}}
+  {{#cargo_query:tables=MyTable|fields=Image
+   |where=...|format=gallery|mode=packed|image width=200|image height=200}}
+  ```
+  Where `Template:LayersHint` contains:
+  `{{#layers_hint:{{{Image|}}}|{{{layerset|}}}}}`
+
+  The hint-registration pass is silent (outputs nothing visible). The gallery
+  then renders with the correct named set per image. If no hint is registered
+  for an image, the fallback is the latest available set (`layerset=on`).
+
 ## [1.5.72] - 2026-05-25
 
 ### Added
