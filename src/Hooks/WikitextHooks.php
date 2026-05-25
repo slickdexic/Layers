@@ -156,6 +156,22 @@ class WikitextHooks {
 	private static $fileRenderCount = [];
 
 	/**
+	 * Per-filename flag set by onParserMakeImageParams immediately before each [[File:...]]
+	 * render. onThumbnailBeforeProduceHTML consumes (clears) the flag when it fires and,
+	 * if the flag was set, uses the queue to look up the layer set name.
+	 *
+	 * Because onParserMakeImageParams and the subsequent onThumbnailBeforeProduceHTML are
+	 * SYNCHRONOUS paired calls within Parser::makeImage() (the render fires inline before
+	 * the next image is parsed), this flag reliably distinguishes wikitext [[File:...]]
+	 * renders from non-wikitext renders such as Cargo gallery (#cargo_query format=gallery),
+	 * native <gallery> tags, or other parser-function-generated thumbnails that call
+	 * ThumbnailBeforeProduceHTML WITHOUT going through onParserMakeImageParams.
+	 *
+	 * @var array<string, bool>
+	 */
+	private static array $pendingRender = [];
+
+	/**
 	 * Queue of layerslink values per filename detected from wikitext (in order of appearance)
 	 * e.g. ['ImageTest02.jpg' => ['editor', null, 'viewer']]
 	 * @var array<string, array<string|null>>
@@ -208,6 +224,7 @@ class WikitextHooks {
 			self::$fileLinkTypes = [];
 			self::$fileParamLayerset = [];
 			self::$fileParseCount = [];
+			self::$pendingRender = [];
 		}
 	}
 
@@ -363,18 +380,20 @@ class WikitextHooks {
 			$filename = $thumbnail->getFile()->getName();
 		}
 
-		// Only consume queue entries for renders that went through onParserMakeImageParams.
-		// Cargo gallery, native <gallery> tags, and other parser-function-generated thumbnails
-		// do NOT go through that hook, so their thumbnails will not carry the
-		// 'layers_registered' marker in their handler params. Calling getFileParamsForRender
-		// for those unregistered renders would increment $fileRenderCount and desync the
-		// index, causing subsequent direct [[File:...|layerset=...]] renders to read the
-		// wrong queue slot (or find nothing) and lose their layer overlays.
-		$thumbParams = ( method_exists( $thumbnail, 'getParams' ) ) ? $thumbnail->getParams() : [];
-		$isRegisteredRender = !empty( $thumbParams['layers_registered'] );
+		// Only consume queue entries for renders that originated from wikitext [[File:...]].
+		// onParserMakeImageParams sets $pendingRender[$filename] = true immediately before
+		// each such render fires. Cargo gallery (#cargo_query format=gallery), native
+		// <gallery> tags, and other parser-function thumbnails do NOT go through
+		// onParserMakeImageParams, so they never set the flag.
+		// We consume (clear) the flag here so it cannot accidentally match a later
+		// non-wikitext render of the same filename.
+		$isWikitextRender = $filename && !empty( self::$pendingRender[$filename] );
+		if ( $isWikitextRender ) {
+			self::$pendingRender[$filename] = false;
+		}
 
-		// Get both set name and link type from queue (registered renders only)
-		$fileParams = ( $filename && $isRegisteredRender )
+		// Get both set name and link type from queue (wikitext renders only)
+		$fileParams = $isWikitextRender
 			? self::getFileParamsForRender( $filename )
 			: [ 'setName' => null, 'linkType' => null ];
 
@@ -434,20 +453,16 @@ class WikitextHooks {
 			$parseIndex = self::$fileParseCount[$fileName]++;
 		}
 
-		// Mark this image as registered via onParserMakeImageParams.
-		// This flag is stored in handler params and flows through to $thumbnail->getParams()
-		// in onThumbnailBeforeProduceHTML. Renders that do NOT go through this hook (e.g.
-		// Cargo gallery queries, native <gallery> tags, other parser-function-generated
-		// thumbnails) will not carry the flag. The render hook uses it to skip the
-		// $fileSetNames/$fileParamLayerset queue for non-registered renders, preventing
-		// queue-index desync when Cargo renders the same image filename as a direct
-		// [[File:...|layerset=...]] reference.
-		// Note: placing this BEFORE any early returns ensures ALL [[File:...]] occurrences
-		// are marked, not just those with a layerset= param.
-		if ( !isset( $params['handler'] ) ) {
-			$params['handler'] = [];
+		// Signal to onThumbnailBeforeProduceHTML that the NEXT render for this file is a
+		// legitimate wikitext [[File:...]] render and should consume a queue slot.
+		// onParserMakeImageParams and the render are synchronous paired calls within
+		// Parser::makeImage() so no other render can fire between this line and the
+		// corresponding onThumbnailBeforeProduceHTML invocation.
+		// This flag is placed BEFORE any early returns so that ALL [[File:...]] occurrences
+		// (with or without layerset=) signal a pending render.
+		if ( $fileName !== 'null' ) {
+			self::$pendingRender[$fileName] = true;
 		}
-		$params['handler']['layers_registered'] = true;
 
 		// Handle layerslink parameter - queue it and remove from params to prevent caption leakage
 		if ( isset( $params['layerslink'] ) ) {
@@ -712,6 +727,7 @@ class WikitextHooks {
 		self::$fileLinkTypes = [];
 		self::$fileParamLayerset = [];
 		self::$fileParseCount = [];
+		self::$pendingRender = [];
 		self::$lastResetRequestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
 		// Reset processor singletons to prevent stale state in long-running processes
 		self::$imageLinkProcessor = null;

@@ -4,6 +4,24 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.71] - 2026-05-25
+
+### Fixed
+- **v1.5.69 regression: layers not rendering anywhere** — v1.5.69 tried to guard
+  against Cargo gallery queue desync by reading a `layers_registered` flag from
+  `$thumbnail->getParams()`. However, `ThumbnailImage` does not have a `getParams()`
+  method and discards all custom handler params (keeping only width/height/page/lang)
+  in its constructor. So `method_exists($thumbnail, 'getParams')` always returned
+  false, `$isRegisteredRender` was always false, and the queue was never consulted
+  for any thumbnail — causing a complete regression where no overlays appeared.
+  Fix: replaced the broken handler-param approach with a `$pendingRender[$filename]`
+  static flag. `onParserMakeImageParams` sets the flag immediately before each
+  `[[File:...]]` render (before any early returns). `onThumbnailBeforeProduceHTML`
+  checks and clears the flag: if set, the render came from wikitext and the queue is
+  consulted; if not set (Cargo gallery, native `<gallery>`, etc.), the queue is
+  skipped. This works reliably because both hooks are synchronous paired calls within
+  `Parser::makeImage()` — no other render can interleave between them.
+
 ## [1.5.70] - 2026-05-25
 
 ### Fixed
