@@ -4,6 +4,21 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.68] - 2026-05-25
+
+### Fixed
+- **Overlay not shown for images with no layers yet** — When `layerset=` is set on an image
+  (via template or inline wikitext) but no layers have been saved to the database yet,
+  the edit overlay now correctly appears on hover. Previously, `ApiFallback.js` only
+  selected images with `data-layers-intent="on"` and only trusted that exact value in
+  `checkImageAllowed`. Server-side PHP emits `data-layers-intent="default"` (the set name)
+  for named sets — this value was not matched by the CSS attribute selector and was not
+  recognised as a trusted intent, so the candidate was silently rejected and no overlay
+  was shown. Fix: `buildCandidateList` now selects any `img[data-layers-intent]` attribute
+  (regardless of value), and `checkImageAllowed` now trusts any non-empty, non-off server
+  intent value. When the API confirms no layer data exists, `initializeOverlayOnly` fires
+  so users can click Edit to create the first layer set.
+
 ## [1.5.67] - 2026-05-26
 
 ### Fixed

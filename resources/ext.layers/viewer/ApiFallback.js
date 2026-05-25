@@ -99,8 +99,8 @@ class ApiFallback {
 		// Images already marked as layered but missing inline data
 		addAll( 'img.layers-thumbnail:not([data-layer-data])' );
 
-		// Images explicitly marked by server intent
-		addAll( 'img[data-layers-intent="on"]:not([data-layer-data])' );
+		// Images explicitly marked by server intent (any non-empty intent value, including named sets)
+		addAll( 'img[data-layers-intent]:not([data-layer-data])' );
 
 		// Images inside links that explicitly request layers=
 		addAll( 'a[href*="layers="] > img:not([data-layer-data])' );
@@ -196,13 +196,14 @@ class ApiFallback {
 			}
 		}
 
-		// Check data-layers-intent attribute
+		// Check data-layers-intent attribute — server-set, so any non-empty/non-off value is trusted
+		// This includes named sets like 'default', 'anatomy', etc. set by onParserMakeImageParams
 		if ( img.hasAttribute( 'data-layers-intent' ) ) {
 			const intent = ( img.getAttribute( 'data-layers-intent' ) || '' ).toLowerCase();
 			if ( intent === 'none' || intent === 'off' ) {
 				return { allow: false, reason: 'explicit no-layers intent: ' + intent };
 			}
-			if ( this.urlParser.isAllowedLayersValue( intent ) || intent === 'on' ) {
+			if ( intent ) {
 				return { allow: true, reason: 'server-marked intent: ' + intent };
 			}
 		}
