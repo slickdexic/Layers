@@ -985,6 +985,17 @@ class WikitextHooks {
 				}
 			}
 
+			// Pre-process <gallery> blocks: extract per-image layerset= hints and
+			// strip the option so it does not appear as visible caption text.
+			if ( stripos( $text, '<gallery' ) !== false && stripos( $text, 'layerset=' ) !== false ) {
+				$text = preg_replace_callback(
+					'/<gallery\b[^>]*>.*?<\/gallery>/si',
+					[ self::class, 'preprocessGalleryBlock' ],
+					$text
+				);
+				self::log( 'Preprocessed <gallery> blocks for layerset= hints' );
+			}
+
 			// Strip layerset=, layers=, and layer= ONLY from within [[File:...]] or [[Image:...]] links
 			// to prevent caption leakage. We must NOT strip these from {{#slide:...}} parser functions!
 			// Use a callback to selectively strip only within file link contexts.
@@ -1007,6 +1018,45 @@ class WikitextHooks {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Callback for preg_replace_callback over native <gallery> blocks.
+	 *
+	 * For each image line that contains a |layerset=X option, registers a
+	 * gallery hint via registerGalleryHint() and strips the option from the
+	 * line so it does not appear as visible caption text in the rendered
+	 * gallery.
+	 *
+	 * @param array $matches Regex match; $matches[0] is the full <gallery> block
+	 * @return string Gallery block with layerset= stripped from image lines
+	 */
+	private static function preprocessGalleryBlock( array $matches ): string {
+		$block = $matches[0];
+		// Fast-path: skip blocks that contain no layerset= at all.
+		if ( stripos( $block, 'layerset=' ) === false ) {
+			return $block;
+		}
+		return preg_replace_callback(
+			// Match image lines: optional indent + File:/Image: + filename + pipe options
+			'/^([ \t]*(?:File|Image):([^\|\n]+))(\|[^\n]*)$/mi',
+			static function ( $line ) {
+				$prefix   = $line[1]; // "  File:Name.jpg" (with any indent)
+				$filename = trim( $line[2] ); // "Name.jpg"
+				$rest     = $line[3]; // "|opt1|opt2|caption"
+				if ( !preg_match( '/\blayerset\s*=\s*([^\|\n]+)/i', $rest, $lsMatch ) ) {
+					return $line[0]; // No layerset= on this line — leave untouched.
+				}
+				$setname = trim( $lsMatch[1] );
+				self::registerGalleryHint( $filename, $setname );
+				// Strip the layerset= option (and its leading pipe) from the options string.
+				$rest = preg_replace( '/\|?\s*layerset\s*=\s*[^\|\n]*/i', '', $rest );
+				// Re-normalise: ensure remaining options start with a single pipe.
+				$rest = ( $rest !== '' ) ? '|' . ltrim( $rest, '|' ) : '';
+				return $prefix . $rest;
+			},
+			$block
+		);
 	}
 
 	/**

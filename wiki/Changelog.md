@@ -4,6 +4,25 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.75] - 2026-05-25
+
+### Added
+- **`layerset=` support in native `<gallery>` blocks** — Images inside a
+  MediaWiki `<gallery>...</gallery>` tag can now specify a named layer set
+  with a per-image `|layerset=setname` option:
+  ```
+  <gallery mode="packed" widths=200>
+  File:Foo.jpg|layerset=anatomy|Caption text
+  File:Bar.jpg|layerset=default
+  </gallery>
+  ```
+  `ParserBeforeInternalParse` now scans gallery blocks for `layerset=`
+  options, registers per-image hints via `WikitextHooks::registerGalleryHint()`,
+  and strips the option from each line so it does not appear as visible
+  caption text. Galleries without any `layerset=` line are completely
+  unaffected (fast-path exit). Falls back to `layerset=on` semantics
+  (latest set) for gallery images with no hint registered.
+
 ## [1.5.74] - 2026-05-25
 
 ### Added
