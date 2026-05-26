@@ -672,6 +672,20 @@
 			if ( typeof L.tickSize === 'number' ) {
 				L.tickSize = L.tickSize * scaleAvg;
 			}
+			// textOffset: along-axis position of dimension text.
+			// Must scale with scaleAvg — DimensionRenderer compares it against the
+			// scaled distance between endpoints to decide whether to extend the
+			// dimension line.  If left unscaled, the extension logic fires when it
+			// should not, pushing text outside the image at small display sizes.
+			if ( typeof L.textOffset === 'number' ) {
+				L.textOffset = L.textOffset * scaleAvg;
+			}
+			// dimensionOffset: explicit perpendicular distance of the dimension line
+			// from the measurement points.  Without scaling, extension lines appear
+			// disproportionately long at scales below 1:1.
+			if ( typeof L.dimensionOffset === 'number' ) {
+				L.dimensionOffset = L.dimensionOffset * scaleAvg;
+			}
 			// Angle dimension specific properties
 			if ( typeof L.cx === 'number' ) {
 				L.cx = L.cx * sx;
