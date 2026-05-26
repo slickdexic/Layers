@@ -160,6 +160,68 @@ contains the `[[File:...|layerset=...]]` reference:
   (which fires before template expansion). The extension handles this via a
   fallback registration in `onParserMakeImageParams`.
 
+## Gallery Support (v1.5.73–1.5.75)
+
+Named layer sets can be displayed in both native MediaWiki `<gallery>` blocks
+and Cargo `format=gallery` queries using per-image `layerset=` options.
+
+### Native `<gallery>` Blocks (v1.5.75)
+
+Add `|layerset=setname` to any image line inside a `<gallery>` block:
+
+```text
+<gallery mode="packed" widths=200>
+File:Anatomy-Diagram.jpg|layerset=anatomy|Anatomical labels
+File:Physiology-Chart.jpg|layerset=physiology
+File:Plain-Image.jpg|No layerset — shows latest available set
+</gallery>
+```
+
+- Images with `|layerset=setname` show the named set.
+- Images with no `layerset=` fall back to `layerset=on` semantics (latest
+  available set, if any).
+- The `layerset=` option is stripped before rendering so it does not appear
+  as visible caption text.
+
+### Cargo `format=gallery` (v1.5.74)
+
+If your Cargo table has a `layerset` field, include it in your `format=gallery`
+query and the correct named set is shown per image automatically — no template
+changes required:
+
+```text
+{{#cargo_query:tables=MyImages
+ |fields=Image, layerset, Caption
+ |where=_pageName='{{PAGENAME}}'
+ |format=gallery|mode=packed|image width=200|image height=200}}
+```
+
+The extension detects the `layerset` field in the query results and
+pre-registers per-image hints before the gallery renders thumbnails.
+
+**If your set-name field has a different name**, add `layerset field=yourfield`:
+
+```text
+{{#cargo_query:tables=MyImages|fields=Image, setname
+ |format=gallery|layerset field=setname|...}}
+```
+
+### Pre-registering Hints: `{{#layers_hint:}}` (v1.5.73)
+
+For custom gallery sources or other edge cases, you can pre-register a
+per-image hint manually using the `{{#layers_hint:}}` parser function:
+
+```text
+{{#layers_hint:Foo.jpg|anatomy}}
+```
+
+This must appear before the gallery renders. It returns empty string (no
+visible output). This is the low-level building block that v1.5.74 and
+v1.5.75 use internally; in most cases you should prefer the automatic
+detection described above.
+
+---
+
 ## How It Works
 
 The extension automatically:

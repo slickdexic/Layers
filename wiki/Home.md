@@ -20,7 +20,21 @@
 
 ---
 
-## 🆕 What's New in v1.5.66
+## 🆕 What's New in v1.5.75
+
+- **Gallery layer set support** — Named layer sets now work in all gallery
+  contexts, not just inline `[[File:...]]` wikitext:
+  - **Native `<gallery>` blocks (v1.5.75)** — Add `|layerset=setname` to any
+    image line. The option is stripped before rendering (no caption leakage).
+  - **Cargo `format=gallery` (v1.5.74)** — Include `layerset` in your
+    `fields=` list and the correct named set is shown per image automatically.
+    No template changes required. Use `layerset field=name` if your column
+    has a different name.
+  - **`{{#layers_hint:}}` parser function (v1.5.73)** — Low-level building
+    block for custom gallery sources. Call it before the gallery renders to
+    pre-register a filename → setname mapping.
+
+### Previous v1.5.66 Highlights
 
 - **Template-embedded `layerset=` rendering** — Layer overlays now render
   correctly when `[[File:...|layerset=...]]` is inside a MediaWiki template

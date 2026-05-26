@@ -200,6 +200,32 @@ Layer changes are visible on article pages immediately after saving, without nee
 
 > **Note:** As of v1.5.0, `layerset=` is the preferred parameter name. The older `layers=` syntax remains fully supported for backwards compatibility.
 
+### Gallery Support (v1.5.73–1.5.75)
+
+Named layer sets work in galleries as well as inline file links:
+
+**Native `<gallery>` blocks** — add `|layerset=setname` per image line (v1.5.75):
+```wikitext
+<gallery mode="packed" widths=200>
+File:Diagram.jpg|layerset=anatomy|Anatomical labels
+File:Chart.jpg|layerset=physiology
+</gallery>
+```
+
+**Cargo `format=gallery`** — include `layerset` in your fields list (v1.5.74):
+```wikitext
+{{#cargo_query:tables=MyImages|fields=Image,layerset|format=gallery|...}}
+```
+The extension auto-detects the `layerset` field and shows the correct named
+set per image with no template changes required. Use `layerset field=name` if
+your column has a different name.
+
+**Manual hint registration** — for other gallery sources (v1.5.73):
+```wikitext
+{{#layers_hint:Foo.jpg|anatomy}}
+```
+Call this before the gallery renders. Returns empty string (no visible output).
+
 ### Deep Linking (v1.2.0+)
 
 Control what happens when users click on layered images:

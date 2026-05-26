@@ -185,6 +185,11 @@ The named layer sets feature allows multiple named annotation sets per image, ea
   - `[[File:Example.jpg|layerset=setname]]` - Show specific named set (e.g., `layerset=anatomy`)
   - `[[File:Example.jpg|layerset=none]]` or `layerset=off` - Explicitly disable layers
   - If the named set doesn't exist, no layers are displayed (silent failure)
+- **Gallery support** (v1.5.73–1.5.75):
+  - **Native `<gallery>` blocks (v1.5.75)**: Add `|layerset=setname` per image line inside a `<gallery>` block. Implemented via `onParserBeforeInternalParse` regex scanning — `preprocessGalleryBlock()` in `WikitextHooks.php` extracts the param, calls `registerGalleryHint()`, then strips it from the line so it never renders as caption text.
+  - **Cargo `format=gallery` (v1.5.74)**: `CargoLayersGalleryFormat` (in `src/Cargo/`) replaces the built-in `CargoGalleryFormat` via the `CargoSetFormatClasses` hook (registered in `src/Hooks/CargoHooks.php`). Before delegating to `parent::display()`, it iterates Cargo result rows, finds the `layerset` field (or `displayParams['layerset field']` override), and calls `registerGalleryHint()` per row.
+  - **`{{#layers_hint:}}` parser function (v1.5.73)**: Manually pre-registers a filename → setname hint. Thin wrapper around `registerGalleryHint()`. Registered in `onParserFirstCallInit`.
+  - **`$galleryHints` static map**: `WikitextHooks::$galleryHints` stores filename → setname. Read in `onThumbnailBeforeProduceHTML` when the gallery fallback path fires. Cleared in `ensureRequestStateReset()` and `resetPageLayersFlag()`.
 - **File: pages**: Layers are NOT auto-displayed; explicit `layerset=on` or `layerset=setname` is required
 
 See `docs/NAMED_LAYER_SETS.md` for full architecture documentation.
@@ -453,4 +458,4 @@ Common metrics to keep synchronized:
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.66)
+- Version number (1.5.75)

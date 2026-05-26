@@ -8,8 +8,8 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.66
-|update          = 2026-04-23
+|version         = 1.5.75
+|update          = 2026-05-25
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
@@ -120,7 +120,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.66
+| 1.44+ || <code>main</code> || 1.5.75
 |-
 | 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.66
 |-
@@ -227,6 +227,25 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 * '''Export as PNG''': Download the annotated image as a single PNG file.
 * '''InstantCommons Support''': Works seamlessly with files from [[w:Wikimedia Commons|Wikimedia Commons]] and other foreign repositories.
 * '''Vector 2022 Dark Mode''': Full support for MediaWiki's {{ll|Skin:Vector/2022|2=Vector 2022 skin}} night mode.
+
+=== Gallery Support (v1.5.73+) ===
+Named layer sets work in galleries as well as inline file links.
+
+'''Native <code><nowiki><gallery></nowiki></code> blocks (v1.5.75):'''
+<syntaxhighlight lang="wikitext">
+<gallery mode="packed" widths=200>
+File:Anatomy.jpg|layerset=anatomy|Anatomical labels
+File:Physiology.jpg|layerset=physiology
+</gallery>
+</syntaxhighlight>
+
+'''Cargo <code>format=gallery</code> (v1.5.74):''' Include a <code>layerset</code> field in your Cargo query and the correct named set is shown per image automatically — no template changes required:
+<syntaxhighlight lang="wikitext">
+{{#cargo_query:tables=MyImages|fields=Image,layerset|format=gallery|mode=packed|image width=200}}
+</syntaxhighlight>
+If your column has a different name, add <code>layerset field=yourfield</code> to the query.
+
+'''Manual hint registration (v1.5.73):''' For other gallery sources, call <code><nowiki>{{#layers_hint:Filename.jpg|setname}}</nowiki></code> before the gallery renders. Returns empty string (no visible output).
 
 === Deep Linking (v1.2.0+) ===
 Control how users interact with layered images using the <code>layerslink</code> parameter:
