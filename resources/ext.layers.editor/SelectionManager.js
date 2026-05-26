@@ -1192,7 +1192,13 @@
 		 * Delete selected layers
 		 */
 		deleteSelected() {
-			if ( this.selectedLayerIds.length === 0 ) {
+			// CanvasManager.setSelectedLayerIds() writes to StateManager directly
+			// without going through SelectionManager.selectLayer(), so this.selectedLayerIds
+			// may be stale. Read from the authoritative source.
+			const selectedIds = ( this.canvasManager && typeof this.canvasManager.getSelectedLayerIds === 'function' )
+				? this.canvasManager.getSelectedLayerIds()
+				: this.selectedLayerIds;
+			if ( selectedIds.length === 0 ) {
 				return;
 			}
 
@@ -1200,7 +1206,7 @@
 			const stateManager = this.canvasManager.editor && this.canvasManager.editor.stateManager;
 			if ( stateManager ) {
 				// Use atomic operation for batch removal
-				const idsToRemove = this.selectedLayerIds.slice();
+				const idsToRemove = selectedIds.slice();
 				idsToRemove.forEach( ( id ) => {
 					stateManager.removeLayer( id );
 				} );
@@ -1209,7 +1215,7 @@
 				const layers = ( this.canvasManager.editor && this.canvasManager.editor.layers ) ||
 					this.canvasManager.layers || [];
 				const remaining = layers.filter( ( layer ) =>
-					!this.selectedLayerIds.includes( layer.id )
+					!selectedIds.includes( layer.id )
 				);
 				if ( this.canvasManager.editor && this.canvasManager.editor.stateManager ) {
 					this.canvasManager.editor.stateManager.set( 'layers', remaining );
@@ -1236,11 +1242,18 @@
 		 * Duplicate selected layers
 		 */
 		duplicateSelected() {
-			if ( this.selectedLayerIds.length === 0 ) {
+			// CanvasManager.setSelectedLayerIds() writes to StateManager directly
+			// without going through SelectionManager.selectLayer(), so this.selectedLayerIds
+			// and _selectionState may be stale. Read from the authoritative source.
+			const selectedIds = ( this.canvasManager && typeof this.canvasManager.getSelectedLayerIds === 'function' )
+				? this.canvasManager.getSelectedLayerIds()
+				: this.selectedLayerIds;
+			if ( selectedIds.length === 0 ) {
 				return;
 			}
 
-			const selectedLayers = this.getSelectedLayers();
+			const allLayers = this._getLayersArray();
+			const selectedLayers = allLayers.filter( ( layer ) => selectedIds.includes( layer.id ) );
 			const newLayers = [];
 			const newSelection = [];
 
