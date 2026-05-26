@@ -734,6 +734,36 @@ describe('SelectionManager', () => {
             expect(mockLayers.length).toBe(initialLayerCount);
         });
 
+        test('should duplicate when selection comes from canvasManager (stateManager path)', () => {
+            // Simulate selection set via CanvasManager.setSelectedLayerIds() —
+            // this bypasses SelectionManager.selectLayer(), leaving
+            // selectionManager.selectedLayerIds empty (the bug scenario).
+            const mockStateManager = {
+                addLayer: jest.fn(),
+                set: jest.fn()
+            };
+            mockCanvasManager.editor = {
+                stateManager: mockStateManager,
+                layers: mockLayers,
+                markDirty: jest.fn()
+            };
+            // Provide getSelectedLayerIds() without calling selectLayer()
+            mockCanvasManager.getSelectedLayerIds = jest.fn().mockReturnValue(['layer1']);
+
+            // Deliberately do NOT call selectionManager.selectLayer()
+            expect(selectionManager.selectedLayerIds).toHaveLength(0);
+
+            selectionManager.duplicateSelected();
+
+            expect(mockStateManager.addLayer).toHaveBeenCalled();
+            const addedLayer = mockStateManager.addLayer.mock.calls[0][0];
+            expect(addedLayer.id).not.toBe('layer1');
+            expect(addedLayer.x).toBe(mockLayers[0].x + 20);
+
+            // Clean up the extra method
+            delete mockCanvasManager.getSelectedLayerIds;
+        });
+
         test('should duplicate selected layers via StateManager', () => {
             const mockStateManager = {
                 addLayer: jest.fn(),
