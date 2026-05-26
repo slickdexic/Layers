@@ -2858,7 +2858,8 @@ describe( 'LayersViewer', () => {
 					baseHeight: 1200,
 					layers: [ {
 						id: 'l1', type: 'dimension', x1: 100, y1: 100, x2: 500, y2: 100,
-						extensionLength: 40, extensionGap: 10, tickSize: 8
+						extensionLength: 40, extensionGap: 10, tickSize: 8,
+						textOffset: 60, dimensionOffset: 20
 					} ]
 				}
 			} );
@@ -2869,6 +2870,10 @@ describe( 'LayersViewer', () => {
 			expect( passedLayer.extensionLength ).toBe( 20 );
 			expect( passedLayer.extensionGap ).toBe( 5 );
 			expect( passedLayer.tickSize ).toBe( 4 );
+			// textOffset and dimensionOffset must scale with scaleAvg (0.5)
+			// so DimensionRenderer compares them against already-scaled distances
+			expect( passedLayer.textOffset ).toBe( 30 );
+			expect( passedLayer.dimensionOffset ).toBe( 10 );
 		} );
 
 		test( 'should scale angle dimension properties (cx, cy, ax, ay, bx, by, arcRadius)', () => {
