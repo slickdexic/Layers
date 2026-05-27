@@ -1616,12 +1616,12 @@ describe( 'TransformController', () => {
 				expect( updateCall[ 1 ].arcRadius ).toBeGreaterThanOrEqual( 10 );
 			} );
 
-			it( 'should clamp arcRadius to maximum of 500', () => {
-				// Move mouse very far from vertex (600px away)
-				controller.handleAngleDimensionTextDrag( { x: 800, y: 200 } );
+			it( 'should clamp arcRadius to maximum of 2000', () => {
+				// Move mouse very far from vertex (2100px away)
+				controller.handleAngleDimensionTextDrag( { x: 2300, y: 200 } );
 
 				const updateCall = mockManager.editor.updateLayer.mock.calls[ 0 ];
-				expect( updateCall[ 1 ].arcRadius ).toBeLessThanOrEqual( 500 );
+				expect( updateCall[ 1 ].arcRadius ).toBeLessThanOrEqual( 2000 );
 			} );
 
 			it( 'should adjust arcRadius for textPosition "above"', () => {

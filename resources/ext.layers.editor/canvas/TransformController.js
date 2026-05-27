@@ -894,7 +894,7 @@ class TransformController {
 		}
 
 		// Clamp to valid range and round
-		newArcRadius = Math.max( 10, Math.min( 500, Math.round( newArcRadius ) ) );
+		newArcRadius = Math.max( 10, Math.min( 2000, Math.round( newArcRadius ) ) );
 
 		// Update both textOffset and arcRadius
 		this.manager.editor.updateLayer( this.angleDimTextLayerId, {
