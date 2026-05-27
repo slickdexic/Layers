@@ -254,7 +254,7 @@ class ServerSideLayerValidator implements LayerValidatorInterface {
 		'scale' => [ 'min' => 0.001, 'max' => 1000 ],
 		'precision' => [ 'min' => 0, 'max' => 6 ],
 		// Angle dimension constraints
-		'arcRadius' => [ 'min' => 1, 'max' => 1000 ]
+		'arcRadius' => [ 'min' => 1, 'max' => 2000 ]
 	];
 
 	/** @var int Maximum points in a path/polygon */
