@@ -109,8 +109,14 @@
 	opacity: 0;
 	visibility: hidden;
 	transition: opacity 0.2s ease, visibility 0.2s ease;
-	backdrop-filter: blur( 4px );
-	-webkit-backdrop-filter: blur( 4px );
+}
+
+/* backdrop-filter scoped to screen only - prevents white compositing artifact on print */
+@media screen {
+	.layers-viewer-overlay {
+		-webkit-backdrop-filter: blur( 4px );
+		backdrop-filter: blur( 4px );
+	}
 }
 
 /* Visible state */
@@ -236,6 +242,14 @@
 	.layers-viewer-overlay-btn:hover svg path,
 	.layers-viewer-overlay-btn:hover svg line {
 		stroke: HighlightText;
+	}
+}
+
+/* Hide overlay completely when printing - display:none prevents backdrop-filter
+   from creating a white compositing artifact over the image */
+@media print {
+	.layers-viewer-overlay {
+		display: none;
 	}
 }
 
