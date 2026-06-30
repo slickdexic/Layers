@@ -79,8 +79,18 @@ class UIHooks {
 		}
 
 		if ( !$hasEditLayersPermission ) {
-			$userGroups = $user->getEffectiveGroups();
-			$log( 'Skip: user missing editlayers permission - user groups: ' . implode( ',', $userGroups ) );
+			$userGroups = [];
+			try {
+				if ( method_exists( $user, 'getEffectiveGroups' ) ) {
+					$userGroups = $user->getEffectiveGroups();
+				} elseif ( method_exists( $user, 'getGroups' ) ) {
+					$userGroups = $user->getGroups();
+				}
+			} catch ( \Throwable $e ) {
+				$userGroups = [];
+			}
+			$groupText = $userGroups ? implode( ',', $userGroups ) : 'unknown';
+			$log( 'Skip: user missing editlayers permission - user groups: ' . $groupText );
 			if ( !$dbg ) {
 				return;
 			}
