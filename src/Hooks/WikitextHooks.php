@@ -18,6 +18,15 @@ class WikitextHooks {
 	use StaticLoggerAwareTrait;
 
 	/**
+	 * When true (set in LocalSettings.php as $wgLayersDisableWikitextHooks = true),
+	 * wikitext-time hooks are disabled. This allows operators to toggle off the
+	 * parsing/render-time logic while keeping the viewer/editor resources available
+	 * for debugging or progressive rollout.
+	 * @var bool
+	 */
+	private static bool $wikitextHooksDisabled = false;
+
+	/**
 	 * Singleton instance of ImageLinkProcessor
 	 * @var ImageLinkProcessor|null
 	 */
@@ -238,9 +247,21 @@ class WikitextHooks {
 			self::$pendingRender = [];
 			self::$galleryHints = [];
 		}
-	}
+		}
 
-	/**
+		/**
+		 * Check whether wikitext-time hooks are disabled via LocalSettings.
+		 * Use a global variable `\$wgLayersDisableWikitextHooks = true;` to disable.
+		 *
+		 * @return bool
+		 */
+		private static function areWikitextHooksDisabled(): bool {
+			// Prefer explicit LocalSettings flag. Default: enabled (false).
+			return !empty( $GLOBALS['wgLayersDisableWikitextHooks'] );
+			}
+
+
+		/**
 	 * Handle file parameter parsing in wikitext
 	 * Called when MediaWiki processes [[File:...]] syntax
 	 *
@@ -271,6 +292,10 @@ class WikitextHooks {
 		...$rest
 	) {
 		// Add data attributes for full-size images (non-thumbnail) when layers are requested.
+		if ( self::areWikitextHooksDisabled() ) {
+			return true;
+		}
+
 		try {
 			if ( self::isFilePageContext() ) {
 				return true;
@@ -315,6 +340,9 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserAfterTidy( $parser, &$text, $stripState ) {
+		if ( self::areWikitextHooksDisabled() ) {
+			return true;
+		}
 		// This hook can be used for post-processing if needed
 		// Currently, layer processing is handled at the file level
 		return true;
@@ -333,6 +361,10 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onLinkerMakeMediaLinkFile( $title, $file, &$res, &$attribs, $time, ...$rest ): bool {
+		if ( self::areWikitextHooksDisabled() ) {
+			return true;
+		}
+
 		$processor = self::getImageLinkProcessor();
 		$result = $processor->processMediaLink( $file, $res, $attribs );
 
@@ -351,6 +383,10 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserFirstCallInit( $parser ): bool {
+		if ( self::areWikitextHooksDisabled() ) {
+			return true;
+		}
+
 		// Parser functions are currently disabled to avoid magic word conflicts
 		// The extension works through the layerset= parameter in file syntax instead
 		// To enable parser functions, define magic words in i18n and uncomment below:
@@ -429,6 +465,9 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onThumbnailBeforeProduceHTML( $thumbnail, array &$attribs, &$linkAttribs ): bool {
+		if ( self::areWikitextHooksDisabled() ) {
+			return true;
+		}
 		// Handle case where $linkAttribs is false (no link) in older MW versions
 		$linkAttribsIsArray = is_array( $linkAttribs );
 
