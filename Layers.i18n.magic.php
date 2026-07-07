@@ -10,6 +10,7 @@ $magicWords['en'] = [
 	'layeredfile' => [ 0, 'layeredfile' ],
 	'layers' => [ 0, 'layers' ],
 	'layerslink' => [ 0, 'layerslink' ],
+	'layers_hint' => [ 0, 'layers_hint' ],
 	'setlayers' => [ 0, 'setlayers' ],
 	'Slide' => [ 0, 'slide', 'Slide' ],
 ];
