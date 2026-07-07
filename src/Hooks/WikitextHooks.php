@@ -27,6 +27,11 @@ class WikitextHooks {
 	private static bool $wikitextHooksDisabled = false;
 
 	/**
+	 * Whether we've registered a shutdown handler for this request
+	 * @var bool
+	 */
+	private static bool $shutdownRegistered = false;
+	/**
 	 * Singleton instance of ImageLinkProcessor
 	 * @var ImageLinkProcessor|null
 	 */
@@ -246,6 +251,38 @@ class WikitextHooks {
 			self::$fileParseCount = [];
 			self::$pendingRender = [];
 			self::$galleryHints = [];
+		}
+		// Register a shutdown handler once per request to capture fatal errors
+		if ( !self::$shutdownRegistered ) {
+			self::$shutdownRegistered = true;
+			register_shutdown_function( static function () : void {
+				try {
+					$err = error_get_last();
+					if ( $err && isset( $err['type'] ) ) {
+						$fatalTypes = [ E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR ];
+						if ( in_array( $err['type'], $fatalTypes, true ) ) {
+							self::logError( 'Shutdown fatal error detected', [ 'error' => $err ] );
+							// Log declared classes and included files to help locate duplicate declarations
+							try {
+								$decl = get_declared_classes();
+								$files = get_included_files();
+								self::logDebug( 'Shutdown: declared class count=' . count( $decl ) );
+								// If RequestContext exists, log its declaring file
+								if ( class_exists( 'RequestContext', false ) ) {
+									$rc = new \ReflectionClass( 'RequestContext' );
+									self::logDebug( 'Shutdown: RequestContext declared in ' . $rc->getFileName() );
+								}
+								self::logDebug( 'Shutdown: included files count=' . count( $files ) );
+							} catch ( \Throwable $e ) {
+								// Best-effort logging
+								self::logError( 'Shutdown: diagnostic logging failed', [ 'exception' => $e ] );
+							}
+						}
+					}
+				} catch ( \Throwable $e ) {
+					// Avoid failing the shutdown handler
+				}
+			} );
 		}
 		}
 
