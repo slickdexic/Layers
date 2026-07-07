@@ -739,7 +739,11 @@ class LayersEditor {
 				return;
 			}
 			if ( event.data && event.data.type === 'layers-editor-request-close' ) {
-				this.cancel( true );
+				if ( this.stateManager && this.stateManager.get( 'currentTool' ) !== 'pointer' ) {
+					this.setCurrentTool( 'pointer' );
+				} else {
+					this.cancel( true );
+				}
 			}
 		};
 		window.addEventListener( 'message', this._modalCloseHandler );

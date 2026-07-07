@@ -304,6 +304,6 @@ class SpecialSlides extends SpecialPage {
 	 * @inheritDoc
 	 */
 	public function getDescription() {
-		return $this->msg( 'special-slides-desc' );
+		return $this->msg( 'special-slides-desc' )->text();
 	}
 }

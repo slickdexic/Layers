@@ -916,6 +916,23 @@
 				mw.log.error( '[APIManager] saveLayers: data too large' );
 				this.hideSpinner();
 				this.saveInProgress = false;
+				// Re-enable save button so user can retry or reduce payload
+				this.enableSaveButton();
+				// Notify the user with actionable guidance including configured limit
+				try {
+					const maxBytes = ( mw.config && mw.config.get && mw.config.get( 'wgLayersMaxBytes' ) ) || 2097152;
+					let msg = '';
+					if ( window.layersMessages && typeof window.layersMessages.getWithParams === 'function' ) {
+						msg = window.layersMessages.getWithParams( 'layers-data-too-large', maxBytes );
+					} else {
+						msg = this.getMessage( 'layers-data-too-large', 'Layer data exceeds maximum size limit' ) + ' (' + maxBytes + ' bytes)';
+					}
+					if ( typeof mw !== 'undefined' && mw.notify ) {
+						mw.notify( msg, { type: 'error' } );
+					}
+				} catch ( e ) {
+					// Ignore notification errors but keep button enabled
+				}
 				reject( new Error( 'Data too large' ) );
 				return;
 			}

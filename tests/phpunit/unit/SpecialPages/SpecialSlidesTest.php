@@ -39,4 +39,13 @@ class SpecialSlidesTest extends TestCase {
 
 		$this->assertSame( 'layers', $method->invoke( $special ) );
 	}
+
+	/**
+	 * @covers ::getDescription
+	 */
+	public function testDescriptionReturnsString(): void {
+		$special = new SpecialSlides();
+
+		$this->assertSame( 'special-slides-desc', $special->getDescription() );
+	}
 }

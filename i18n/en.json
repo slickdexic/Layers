@@ -85,6 +85,7 @@
 	"layers-prop-text-stroke-color": "Text Stroke Color",
 	"layers-prop-width": "Width",
 	"layers-prop-height": "Height",
+	"layers-prop-preserve-aspect-ratio": "Maintain Aspect Ratio",
 	"layers-prop-stroke-color": "Stroke Color",
 	"layers-prop-fill-color": "Fill Color",
 	"layers-prop-fill-type": "Fill Type",

@@ -137,14 +137,9 @@ class ApiFallback {
 		let allow = false;
 		let allowReason = '';
 
-		// On File pages, page-level intent is sufficient
-		if ( pageNsNum === 6 ) {
-			allow = pageAllow;
-			allowReason = 'File page with pageAllow=' + pageAllow;
-			if ( allow ) {
-				return { allow: allow, reason: allowReason };
-			}
-		}
+		// On File pages, do NOT allow by page context alone.
+		// Require explicit per-image intent (href layers=, data-mw, or data-layers-intent)
+		// to avoid showing overlays where no layerset was requested.
 
 		const anchor = img.closest( 'a' );
 
@@ -206,6 +201,10 @@ class ApiFallback {
 			if ( intent ) {
 				return { allow: true, reason: 'server-marked intent: ' + intent };
 			}
+		}
+
+		if ( pageNsNum === 6 ) {
+			return { allow: false, reason: 'File page requires explicit image intent' };
 		}
 
 		return { allow: false, reason: allowReason || 'no matching criteria' };

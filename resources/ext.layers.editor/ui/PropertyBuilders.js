@@ -81,6 +81,8 @@
 		const layer = ctx.layer;
 		const editor = ctx.editor;
 		const t = msg;
+		const isImageLayer = layer.type === 'image';
+		const aspectRatio = ( layer.width && layer.height ) ? ( layer.width / layer.height ) : null;
 
 		ctx.addInput( {
 			label: t( 'layers-prop-width', 'Width' ),
@@ -89,7 +91,12 @@
 			step: 1,
 			prop: 'width',
 			onChange: function ( v ) {
-				editor.updateLayer( layer.id, { width: Math.round( parseFloat( v ) ) } );
+				const width = Math.round( parseFloat( v ) );
+				const updates = { width };
+				if ( isImageLayer && layer.preserveAspectRatio !== false && aspectRatio > 0 && !isNaN( width ) ) {
+					updates.height = Math.max( 1, Math.round( width / aspectRatio ) );
+				}
+				editor.updateLayer( layer.id, updates );
 			}
 		} );
 
@@ -100,9 +107,24 @@
 			step: 1,
 			prop: 'height',
 			onChange: function ( v ) {
-				editor.updateLayer( layer.id, { height: Math.round( parseFloat( v ) ) } );
+				const height = Math.round( parseFloat( v ) );
+				const updates = { height };
+				if ( isImageLayer && layer.preserveAspectRatio !== false && aspectRatio > 0 && !isNaN( height ) ) {
+					updates.width = Math.max( 1, Math.round( height * aspectRatio ) );
+				}
+				editor.updateLayer( layer.id, updates );
 			}
 		} );
+
+		if ( isImageLayer ) {
+			ctx.addCheckbox( {
+				label: t( 'layers-prop-preserve-aspect-ratio', 'Maintain Aspect Ratio' ),
+				value: layer.preserveAspectRatio !== false,
+				onChange: function ( checked ) {
+					editor.updateLayer( layer.id, { preserveAspectRatio: checked } );
+				}
+			} );
+		}
 
 		if ( opts.cornerRadius ) {
 			const maxRadius = opts.maxCornerRadius || 200;

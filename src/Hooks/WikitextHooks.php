@@ -156,18 +156,15 @@ class WikitextHooks {
 	private static $fileRenderCount = [];
 
 	/**
-	 * Per-filename flag set by onParserMakeImageParams immediately before each [[File:...]]
-	 * render. onThumbnailBeforeProduceHTML consumes (clears) the flag when it fires and,
-	 * if the flag was set, uses the queue to look up the layer set name.
+	 * Per-filename pending render counter set by onParserMakeImageParams for each
+	 * [[File:...]] occurrence. onThumbnailBeforeProduceHTML consumes one count per
+	 * render when it fires and, if consumed, uses the queue to look up the layer set.
 	 *
-	 * Because onParserMakeImageParams and the subsequent onThumbnailBeforeProduceHTML are
-	 * SYNCHRONOUS paired calls within Parser::makeImage() (the render fires inline before
-	 * the next image is parsed), this flag reliably distinguishes wikitext [[File:...]]
-	 * renders from non-wikitext renders such as Cargo gallery (#cargo_query format=gallery),
-	 * native <gallery> tags, or other parser-function-generated thumbnails that call
-	 * ThumbnailBeforeProduceHTML WITHOUT going through onParserMakeImageParams.
+	 * A counter is required instead of a boolean because parse and render phases can
+	 * be decoupled in some code paths; multiple onParserMakeImageParams calls may happen
+	 * before one or more ThumbnailBeforeProduceHTML calls.
 	 *
-	 * @var array<string, bool>
+	 * @var array<string, int>
 	 */
 	private static array $pendingRender = [];
 
@@ -274,8 +271,10 @@ class WikitextHooks {
 		...$rest
 	) {
 		// Add data attributes for full-size images (non-thumbnail) when layers are requested.
-		// Additionally, on file pages we inject overlays unconditionally when layer data exists.
 		try {
+			if ( self::isFilePageContext() ) {
+				return true;
+			}
 			$extractor = self::getParamExtractor();
 
 			// Extract layers parameter from file link href
@@ -442,15 +441,18 @@ class WikitextHooks {
 		}
 
 		// Only consume queue entries for renders that originated from wikitext [[File:...]].
-		// onParserMakeImageParams sets $pendingRender[$filename] = true immediately before
-		// each such render fires. Cargo gallery (#cargo_query format=gallery), native
+		// onParserMakeImageParams increments $pendingRender[$filename] immediately before
+		// each such render. Cargo gallery (#cargo_query format=gallery), native
 		// <gallery> tags, and other parser-function thumbnails do NOT go through
-		// onParserMakeImageParams, so they never set the flag.
-		// We consume (clear) the flag here so it cannot accidentally match a later
+		// onParserMakeImageParams, so they never increment the counter.
+		// We consume one queued count here so it cannot accidentally match a later
 		// non-wikitext render of the same filename.
-		$isWikitextRender = $filename && !empty( self::$pendingRender[$filename] );
+		$isWikitextRender = $filename && ( ( self::$pendingRender[$filename] ?? 0 ) > 0 );
 		if ( $isWikitextRender ) {
-			self::$pendingRender[$filename] = false;
+			self::$pendingRender[$filename]--;
+			if ( self::$pendingRender[$filename] <= 0 ) {
+				unset( self::$pendingRender[$filename] );
+			}
 		}
 
 		// Get both set name and link type from queue.
@@ -461,9 +463,10 @@ class WikitextHooks {
 		if ( $isWikitextRender ) {
 			$fileParams = self::getFileParamsForRender( $filename );
 		} else {
+			$defaultFallback = self::isFilePageContext() ? null : 'on';
 			$hintedSetName = ( $filename && isset( self::$galleryHints[$filename] ) )
 				? self::$galleryHints[$filename]
-				: 'on';
+				: $defaultFallback;
 			$fileParams = [ 'setName' => $hintedSetName, 'linkType' => null ];
 		}
 
@@ -523,15 +526,11 @@ class WikitextHooks {
 			$parseIndex = self::$fileParseCount[$fileName]++;
 		}
 
-		// Signal to onThumbnailBeforeProduceHTML that the NEXT render for this file is a
-		// legitimate wikitext [[File:...]] render and should consume a queue slot.
-		// onParserMakeImageParams and the render are synchronous paired calls within
-		// Parser::makeImage() so no other render can fire between this line and the
-		// corresponding onThumbnailBeforeProduceHTML invocation.
-		// This flag is placed BEFORE any early returns so that ALL [[File:...]] occurrences
-		// (with or without layerset=) signal a pending render.
+		// Signal to onThumbnailBeforeProduceHTML that this file has one more pending
+		// wikitext [[File:...]] render to consume. This is placed BEFORE any early
+		// returns so ALL occurrences (with or without layerset=) are counted.
 		if ( $fileName !== 'null' ) {
-			self::$pendingRender[$fileName] = true;
+			self::$pendingRender[$fileName] = ( self::$pendingRender[$fileName] ?? 0 ) + 1;
 		}
 
 		// Handle layerslink parameter - queue it and remove from params to prevent caption leakage
@@ -610,6 +609,12 @@ class WikitextHooks {
 
 		// Mark page has layers
 		self::$pageHasLayers = true;
+		if ( $parser && method_exists( $parser, 'getOutput' ) ) {
+			$output = $parser->getOutput();
+			if ( $output && method_exists( $output, 'setPageProperty' ) ) {
+				$output->setPageProperty( 'layers-present', '1' );
+			}
+		}
 		// Register viewer module via ParserOutput for reliable cached delivery
 		if ( $parser && method_exists( $parser, 'getOutput' ) ) {
 			$parser->getOutput()->addModules( [ 'ext.layers' ] );
@@ -869,6 +874,15 @@ class WikitextHooks {
 				PREG_SET_ORDER | PREG_OFFSET_CAPTURE
 			);
 			self::log( "Layerset/layers regex matched $matchCount times" );
+			if ( $matchCount > 0 && $parser && method_exists( $parser, 'getOutput' ) ) {
+				$output = $parser->getOutput();
+				if ( $output && method_exists( $output, 'setPageProperty' ) ) {
+					$output->setPageProperty( 'layers-present', '1' );
+				}
+			}
+			if ( $matchCount > 0 && $parser && method_exists( $parser, 'getOutput' ) ) {
+				$parser->getOutput()->addModules( [ 'ext.layers' ] );
+			}
 			if ( $matchCount ) {
 				foreach ( $allMatches as $match ) {
 					// Normalize filename: replace spaces with underscores
