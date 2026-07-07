@@ -657,6 +657,19 @@ class WikitextHooks {
 		// Ensure we have a File object
 		$file = self::ensureFileObject( $file, $title );
 
+		// Log a compact summary of params for diagnostics (avoid dumping large blobs)
+		try {
+			$paramKeys = array_keys( $params );
+			self::logDebug( 'ParserMakeImageParams param keys: ' . implode( ',', $paramKeys ) );
+			if ( isset( $params['layerData'] ) ) {
+				$ldType = gettype( $params['layerData'] );
+				$ldCount = is_array( $params['layerData'] ) ? count( $params['layerData'] ) : 0;
+				self::logDebug( "ParserMakeImageParams: layerData present (type={$ldType}, count={$ldCount})" );
+			}
+		} catch ( \Throwable $e ) {
+			self::logError( 'ParserMakeImageParams logging error', [ 'exception' => $e ] );
+		}
+
 		// Normalize the layerset parameter value
 		$layersRaw = self::normalizeLayersParam( $params['layerset'] );
 
@@ -688,6 +701,7 @@ class WikitextHooks {
 			if ( $file ) {
 				// Use peek to avoid consuming the queue entry (it will be consumed in MakeImageLink2)
 				$setName = self::peekFileSetName( $file->getName() );
+				self::logDebug( "ParserMakeImageParams: addLatestLayersToImage for {$file->getName()} set={$setName}" );
 				$injector->addLatestLayersToImage( $file, $params, $setName );
 			}
 		} elseif (
@@ -701,6 +715,7 @@ class WikitextHooks {
 		} elseif ( is_string( $layersRaw ) ) {
 			// Named set or id: prefix
 			if ( $file ) {
+				self::logDebug( "ParserMakeImageParams: addSpecificLayersToImage for {$file->getName()} set={$layersRaw}" );
 				$injector->addSpecificLayersToImage( $file, $layersRaw, $params );
 			}
 		}
@@ -846,6 +861,21 @@ class WikitextHooks {
 		$linkType = null;
 		if ( isset( self::$fileLinkTypes[$filename] ) && isset( self::$fileLinkTypes[$filename][$index] ) ) {
 			$linkType = self::$fileLinkTypes[$filename][$index];
+		}
+
+		// Diagnostic logging: record computed params and queue/pending state
+		try {
+			self::logDebug( sprintf(
+				"getFileParamsForRender: filename=%s index=%d setName=%s linkType=%s pending=%d renderCount=%d",
+				$filename,
+				$index,
+				(string)($setName ?? 'null'),
+				(string)($linkType ?? 'null'),
+				self::$pendingRender[$filename] ?? 0,
+				self::$fileRenderCount[$filename] ?? 0
+			) );
+		} catch ( \Throwable $e ) {
+			self::logError( 'getFileParamsForRender logging error', [ 'exception' => $e ] );
 		}
 
 		// Increment counter for next call
@@ -1120,19 +1150,26 @@ class WikitextHooks {
 			// Match image lines: optional indent + File:/Image: + filename + pipe options
 			'/^([ \t]*(?:File|Image):([^\|\n]+))(\|[^\n]*)$/mi',
 			static function ( $line ) {
-				$prefix   = $line[1]; // "  File:Name.jpg" (with any indent)
-				$filename = trim( $line[2] ); // "Name.jpg"
-				$rest     = $line[3]; // "|opt1|opt2|caption"
-				if ( !preg_match( '/\blayerset\s*=\s*([^\|\n]+)/i', $rest, $lsMatch ) ) {
-					return $line[0]; // No layerset= on this line — leave untouched.
+				try {
+					$prefix   = $line[1]; // "  File:Name.jpg" (with any indent)
+					$filename = trim( $line[2] ); // "Name.jpg"
+					$rest     = $line[3]; // "|opt1|opt2|caption"
+					if ( !preg_match( '/\blayerset\s*=\s*([^\|\n]+)/i', $rest, $lsMatch ) ) {
+						return $line[0]; // No layerset= on this line — leave untouched.
+					}
+					$setname = trim( $lsMatch[1] );
+					self::logDebug( "preprocessGalleryBlock: registerGalleryHint for {$filename} => {$setname}" );
+					self::registerGalleryHint( $filename, $setname );
+					// Strip the layerset= option (and its leading pipe) from the options string.
+					$rest = preg_replace( '/\|?\s*layerset\s*=\s*[^\|\n]*/i', '', $rest );
+					// Re-normalise: ensure remaining options start with a single pipe.
+					$rest = ( $rest !== '' ) ? '|' . ltrim( $rest, '|' ) : '';
+					return $prefix . $rest;
+				} catch ( \Throwable $e ) {
+					self::logError( 'preprocessGalleryBlock line-callback error', [ 'exception' => $e, 'line' => substr( $line[0], 0, 200 ) ] );
+					// On error, return the original line unchanged so we don't corrupt the block
+					return $line[0];
 				}
-				$setname = trim( $lsMatch[1] );
-				self::registerGalleryHint( $filename, $setname );
-				// Strip the layerset= option (and its leading pipe) from the options string.
-				$rest = preg_replace( '/\|?\s*layerset\s*=\s*[^\|\n]*/i', '', $rest );
-				// Re-normalise: ensure remaining options start with a single pipe.
-				$rest = ( $rest !== '' ) ? '|' . ltrim( $rest, '|' ) : '';
-				return $prefix . $rest;
 			},
 			$block
 		);
