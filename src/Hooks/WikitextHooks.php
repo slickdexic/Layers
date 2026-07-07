@@ -565,12 +565,6 @@ class WikitextHooks {
 			$fileParams = [ 'setName' => $hintedSetName, 'linkType' => null ];
 		}
 
-		// Log queue state for troubleshooting foreign file issues
-		$linkTypeLog = is_array( $fileParams ) && isset( $fileParams['linkType'] ) ? $fileParams['linkType'] : 'null';
-		self::logDebug( "onThumbnailBeforeProduceHTML: filename={$filename}, linkType={$linkTypeLog}" );
-		$queueLog = isset( $filename ) ? ( json_encode( self::$fileLinkTypes[$filename] ?? [] ) ) : '[]';
-		self::logDebug( "Queue state for {$filename}: {$queueLog}" );
-
 		// Convert false to empty array for processor compatibility (MW 1.39-1.43 LTS compat)
 		$linkAttribsForProcessor = $linkAttribsIsArray ? $linkAttribs : [];
 
@@ -608,7 +602,6 @@ class WikitextHooks {
 	 */
 	public static function onParserMakeImageParams( $title, $file, array &$params, $parser ): bool {
 		$fileName = $file ? $file->getName() : 'null';
-		self::log( "ParserMakeImageParams for: $fileName" );
 
 		// Always track parse occurrences BEFORE any early returns, so $fileParseCount stays
 		// aligned with $fileRenderCount (both increment once per image occurrence, in the same order).
@@ -638,7 +631,6 @@ class WikitextHooks {
 					self::$fileLinkTypes[$fileName] = [];
 				}
 				self::$fileLinkTypes[$fileName][] = $linkValue;
-				self::log( "Queued layerslink=$linkValue for $fileName from ParserMakeImageParams" );
 			}
 			// Remove from params to prevent it from becoming caption text
 			unset( $params['layerslink'] );
@@ -694,19 +686,6 @@ class WikitextHooks {
 		// Ensure we have a File object
 		$file = self::ensureFileObject( $file, $title );
 
-		// Log a compact summary of params for diagnostics (avoid dumping large blobs)
-		try {
-			$paramKeys = array_keys( $params );
-			self::logDebug( 'ParserMakeImageParams param keys: ' . implode( ',', $paramKeys ) );
-			if ( isset( $params['layerData'] ) ) {
-				$ldType = gettype( $params['layerData'] );
-				$ldCount = is_array( $params['layerData'] ) ? count( $params['layerData'] ) : 0;
-				self::logDebug( "ParserMakeImageParams: layerData present (type={$ldType}, count={$ldCount})" );
-			}
-		} catch ( \Throwable $e ) {
-			self::logError( 'ParserMakeImageParams logging error', [ 'exception' => $e ] );
-		}
-
 		// Normalize the layerset parameter value
 		$layersRaw = self::normalizeLayersParam( $params['layerset'] );
 
@@ -738,7 +717,6 @@ class WikitextHooks {
 			if ( $file ) {
 				// Use peek to avoid consuming the queue entry (it will be consumed in MakeImageLink2)
 				$setName = self::peekFileSetName( $file->getName() );
-				self::logDebug( "ParserMakeImageParams: addLatestLayersToImage for {$file->getName()} set={$setName}" );
 				$injector->addLatestLayersToImage( $file, $params, $setName );
 			}
 		} elseif (
@@ -752,7 +730,6 @@ class WikitextHooks {
 		} elseif ( is_string( $layersRaw ) ) {
 			// Named set or id: prefix
 			if ( $file ) {
-				self::logDebug( "ParserMakeImageParams: addSpecificLayersToImage for {$file->getName()} set={$layersRaw}" );
 				$injector->addSpecificLayersToImage( $file, $layersRaw, $params );
 			}
 		}
@@ -777,23 +754,9 @@ class WikitextHooks {
 				? 'on'
 				: (string)$layersRaw;
 			self::$fileParamLayerset[$fileName][$parseIndex] = $queueVal;
-			self::log( "Registered fallback set name '$queueVal' for $fileName at index $parseIndex" );
-		}
 
-		// Finalize params
-		$params['layerset'] = 'on';
-		if ( isset( $params['layerData'] ) && is_array( $params['layerData'] ) ) {
-			$params['layersjson'] = json_encode( $params['layerData'], JSON_UNESCAPED_UNICODE );
-		}
-		if ( isset( $params['layerSetId'] ) ) {
 			$params['layersetid'] = (string)$params['layerSetId'];
 		}
-
-		self::log( sprintf(
-			'Processed layerset param: hasData=%s, hasSetId=%s',
-			isset( $params['layerData'] ) ? 'yes' : 'no',
-			isset( $params['layerSetId'] ) ? 'yes' : 'no'
-		) );
 
 		return true;
 	}
@@ -892,7 +855,6 @@ class WikitextHooks {
 		if ( $setName === null ) {
 			if ( isset( self::$fileParamLayerset[$filename] ) && isset( self::$fileParamLayerset[$filename][$index] ) ) {
 				$setName = self::$fileParamLayerset[$filename][$index];
-				self::log( "getFileParamsForRender: using fileParamLayerset fallback for {$filename}[{$index}]: {$setName}" );
 			}
 		}
 		$linkType = null;
@@ -902,15 +864,6 @@ class WikitextHooks {
 
 		// Diagnostic logging: record computed params and queue/pending state
 		try {
-			self::logDebug( sprintf(
-				"getFileParamsForRender: filename=%s index=%d setName=%s linkType=%s pending=%d renderCount=%d",
-				$filename,
-				$index,
-				(string)($setName ?? 'null'),
-				(string)($linkType ?? 'null'),
-				self::$pendingRender[$filename] ?? 0,
-				self::$fileRenderCount[$filename] ?? 0
-			) );
 		} catch ( \Throwable $e ) {
 			self::logError( 'getFileParamsForRender logging error', [ 'exception' => $e ] );
 		}
@@ -966,16 +919,24 @@ class WikitextHooks {
 		}
 
 		try {
+			// Fast-path: if this fragment doesn't contain any file/image/gallery or layers-specific
+			// tokens, skip the expensive regex scanning entirely.
+			if ( stripos( $text, '[[file:' ) === false
+				&& stripos( $text, '[[image:' ) === false
+				&& stripos( $text, '<gallery' ) === false
+				&& stripos( $text, 'layerset=' ) === false
+				&& stripos( $text, 'layerslink=' ) === false
+				&& stripos( $text, 'layers_hint' ) === false
+			) {
+				return true;
+			}
 			$textLen = strlen( $text );
-			$preview = substr( $text, 0, 200 );
-			self::logDebug( "ParserBeforeInternalParse: text length=$textLen, preview: $preview" );
 
-			// First, find ALL File: usages to establish the complete render order
++			// First, find ALL File: usages to establish the complete render order
 			// This captures [[File:name.ext...]] patterns (with or without layerset=)
 			$allFilesPattern = '/\[\[File:([^|\]]+)(?:\|[^\]]*?)?\]\]/i';
 			$allFileMatches = [];
 			$fileMatchCount = preg_match_all( $allFilesPattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
-			self::log( "File pattern matched $fileMatchCount times" );
 			if ( $fileMatchCount ) {
 				foreach ( $matches as $match ) {
 					// Normalize filename: replace spaces with underscores to match MediaWiki internal naming
@@ -998,14 +959,12 @@ class WikitextHooks {
 			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?(?:layerset|layers?)\s*=\s*([^|\]]+)/i';
 			// filename => [offset => value, ...]
 			$layersMap = [];
-			self::logDebug( 'Running layerset/layers regex on text: ' . substr( $text, 0, 200 ) );
 			$matchCount = preg_match_all(
 				$fileLayersPattern,
 				$text,
 				$allMatches,
 				PREG_SET_ORDER | PREG_OFFSET_CAPTURE
 			);
-			self::log( "Layerset/layers regex matched $matchCount times" );
 			if ( $matchCount > 0 && $parser && method_exists( $parser, 'getOutput' ) ) {
 				$output = $parser->getOutput();
 				if ( $output && method_exists( $output, 'setPageProperty' ) ) {
@@ -1056,13 +1015,9 @@ class WikitextHooks {
 					$normalized = strtolower( $layersValue );
 					$isBoolean = in_array( $normalized, [ 'on', 'off', 'none', 'true', 'false', 'all' ], true );
 					self::$fileSetNames[$filename][] = $isBoolean ? $normalized : $layersValue;
-					$queueLen = count( self::$fileSetNames[$filename] );
-					self::log( "Detected layerset=$layersValue for $filename (occurrence #$queueLen)" );
 				} else {
 					// Add null placeholder to keep queue aligned with render order
 					self::$fileSetNames[$filename][] = null;
-									$queueLen = count( self::$fileSetNames[$filename] );
-					self::log( "No layerset/layers param for $filename (occurrence #$queueLen, placeholder added)" );
 				}
 			}
 
@@ -1076,7 +1031,6 @@ class WikitextHooks {
 				$linkMatches,
 				PREG_SET_ORDER | PREG_OFFSET_CAPTURE
 			);
-			self::log( "Layerslink regex matched $linkMatchCount times" );
 			if ( $linkMatchCount ) {
 				foreach ( $linkMatches as $match ) {
 					// Normalize filename: replace spaces with underscores
@@ -1093,7 +1047,6 @@ class WikitextHooks {
 							$layerslinkMap[$filename] = [];
 						}
 						$layerslinkMap[$filename][$offset] = $linkValue;
-						self::log( "Detected layerslink=$linkValue for $filename at offset $offset" );
 					}
 				}
 			}
@@ -1106,7 +1059,6 @@ class WikitextHooks {
 				'',
 				$text
 			);
-			self::log( 'Stripped layerslink parameters from wikitext' );
 
 			// Build fileLinkTypes queues matching file render order
 			foreach ( $allFileMatches as $fileMatch ) {
@@ -1126,9 +1078,6 @@ class WikitextHooks {
 				}
 
 				self::$fileLinkTypes[$filename][] = $linkType;
-				if ( $linkType !== null ) {
-					self::log( "Queued layerslink=$linkType for $filename" );
-				}
 			}
 
 			// Pre-process <gallery> blocks: extract per-image layerset= hints and
@@ -1139,7 +1088,6 @@ class WikitextHooks {
 					[ self::class, 'preprocessGalleryBlock' ],
 					$text
 				);
-				self::log( 'Preprocessed <gallery> blocks for layerset= hints' );
 			}
 
 			// Strip layerset=, layers=, and layer= ONLY from within [[File:...]] or [[Image:...]] links
@@ -1158,7 +1106,6 @@ class WikitextHooks {
 				},
 				$text
 			);
-			self::log( 'Stripped layerset/layers/layer parameters from file links' );
 		} catch ( \Throwable $e ) {
 			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
 		}
@@ -1195,7 +1142,6 @@ class WikitextHooks {
 						return $line[0]; // No layerset= on this line — leave untouched.
 					}
 					$setname = trim( $lsMatch[1] );
-					self::logDebug( "preprocessGalleryBlock: registerGalleryHint for {$filename} => {$setname}" );
 					self::registerGalleryHint( $filename, $setname );
 					// Strip the layerset= option (and its leading pipe) from the options string.
 					$rest = preg_replace( '/\|?\s*layerset\s*=\s*[^\|\n]*/i', '', $rest );
