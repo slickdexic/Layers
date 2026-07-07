@@ -501,6 +501,14 @@ class WikitextHooks {
 		// then fall back to 'on' (latest available layer set) if no hint is present.
 		if ( $isWikitextRender ) {
 			$fileParams = self::getFileParamsForRender( $filename );
+			// Ensure shape of returned array
+			if ( !is_array( $fileParams ) || !array_key_exists( 'setName', $fileParams ) ) {
+				$fileParams = [ 'setName' => null, 'linkType' => null ];
+			} else {
+				if ( !array_key_exists( 'linkType', $fileParams ) ) {
+					$fileParams['linkType'] = null;
+				}
+			}
 		} else {
 			$defaultFallback = self::isFilePageContext() ? null : 'on';
 			$hintedSetName = ( $filename && isset( self::$galleryHints[$filename] ) )
@@ -510,13 +518,10 @@ class WikitextHooks {
 		}
 
 		// Log queue state for troubleshooting foreign file issues
-		self::logDebug(
-			"onThumbnailBeforeProduceHTML: filename=$filename, linkType=" .
-			( $fileParams['linkType'] ?? 'null' )
-		);
-		self::logDebug(
-			"Queue state for $filename: " . json_encode( self::$fileLinkTypes[$filename] ?? [] )
-		);
+		$linkTypeLog = is_array( $fileParams ) && isset( $fileParams['linkType'] ) ? $fileParams['linkType'] : 'null';
+		self::logDebug( "onThumbnailBeforeProduceHTML: filename={$filename}, linkType={$linkTypeLog}" );
+		$queueLog = isset( $filename ) ? ( json_encode( self::$fileLinkTypes[$filename] ?? [] ) ) : '[]';
+		self::logDebug( "Queue state for {$filename}: {$queueLog}" );
 
 		// Convert false to empty array for processor compatibility (MW 1.39-1.43 LTS compat)
 		$linkAttribsForProcessor = $linkAttribsIsArray ? $linkAttribs : [];
@@ -811,16 +816,22 @@ class WikitextHooks {
 		$index = self::$fileRenderCount[$filename];
 
 		// Get both values at the same index
-		$setName = self::$fileSetNames[$filename][$index] ?? null;
+		$setName = null;
+		if ( isset( self::$fileSetNames[$filename] ) && isset( self::$fileSetNames[$filename][$index] ) ) {
+			$setName = self::$fileSetNames[$filename][$index];
+		}
 		// Fallback: use set name captured in onParserMakeImageParams for template-embedded files
 		// that onParserBeforeInternalParse did not see (templates are not yet expanded at that point).
 		if ( $setName === null ) {
-			$setName = self::$fileParamLayerset[$filename][$index] ?? null;
-			if ( $setName !== null ) {
-				self::log( "getFileParamsForRender: using fileParamLayerset fallback for $filename[$index]: $setName" );
+			if ( isset( self::$fileParamLayerset[$filename] ) && isset( self::$fileParamLayerset[$filename][$index] ) ) {
+				$setName = self::$fileParamLayerset[$filename][$index];
+				self::log( "getFileParamsForRender: using fileParamLayerset fallback for {$filename}[{$index}]: {$setName}" );
 			}
 		}
-		$linkType = self::$fileLinkTypes[$filename][$index] ?? null;
+		$linkType = null;
+		if ( isset( self::$fileLinkTypes[$filename] ) && isset( self::$fileLinkTypes[$filename][$index] ) ) {
+			$linkType = self::$fileLinkTypes[$filename][$index];
+		}
 
 		// Increment counter for next call
 		self::$fileRenderCount[$filename]++;
