@@ -4,7 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
-use MediaWiki\Context\RequestContext;
+use RequestContext;
 use MediaWiki\Extension\Layers\Hooks\Processors\ImageLinkProcessor;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayeredFileRenderer;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayerInjector;
