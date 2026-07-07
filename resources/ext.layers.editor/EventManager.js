@@ -111,7 +111,11 @@ class EventManager {
 				break;
 			case e.key === 'Escape':
 				e.preventDefault();
-				this.editor.cancel( true );
+				if ( this.editor.stateManager && this.editor.stateManager.get( 'currentTool' ) !== 'pointer' ) {
+					this.editor.setCurrentTool( 'pointer' );
+				} else {
+					this.editor.cancel( true );
+				}
 				break;
 		}
 	}

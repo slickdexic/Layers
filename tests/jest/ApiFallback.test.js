@@ -406,13 +406,13 @@ describe( 'ApiFallback', () => {
 			} );
 		} );
 
-		it( 'should allow on File page with pageAllow true', () => {
+		it( 'should not allow on File page from pageAllow alone', () => {
 			const img = document.createElement( 'img' );
 
 			const result = fallback.checkImageAllowed( img, true, 6, 'File' );
 
-			expect( result.allow ).toBe( true );
-			expect( result.reason ).toContain( 'File page' );
+			expect( result.allow ).toBe( false );
+			expect( result.reason ).toContain( 'File page requires explicit image intent' );
 		} );
 
 		it( 'should not allow on File page with pageAllow false', () => {
@@ -648,6 +648,7 @@ describe( 'ApiFallback', () => {
 		it( 'should call API for allowed images', () => {
 			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
@@ -673,6 +674,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -766,6 +768,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -786,6 +789,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			Object.defineProperty( img, 'naturalWidth', { value: 1024 } );
 			Object.defineProperty( img, 'naturalHeight', { value: 768 } );
 
@@ -816,6 +820,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -842,6 +847,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -868,6 +874,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -894,6 +901,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -920,6 +928,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -949,6 +958,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -1084,6 +1094,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();
@@ -1126,6 +1137,7 @@ describe( 'ApiFallback', () => {
 			} );
 
 			const img = document.createElement( 'img' );
+			img.setAttribute( 'data-layers-intent', 'on' );
 			fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
 			await jest.runAllTimersAsync();

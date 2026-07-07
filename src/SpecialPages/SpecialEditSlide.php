@@ -188,6 +188,6 @@ class SpecialEditSlide extends SpecialPage {
 	 * @inheritDoc
 	 */
 	public function getDescription() {
-		return $this->msg( 'special-editslide-desc' );
+		return $this->msg( 'special-editslide-desc' )->text();
 	}
 }

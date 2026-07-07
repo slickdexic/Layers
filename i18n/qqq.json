@@ -94,6 +94,7 @@
 	"layers-align-bottom": "Option label for bottom vertical alignment",
 	"layers-prop-width": "Property label for layer width",
 	"layers-prop-height": "Property label for layer height",
+	"layers-prop-preserve-aspect-ratio": "Property label for toggle to preserve image aspect ratio when resizing",
 	"layers-prop-stroke-color": "Property label for stroke/outline color",
 	"layers-prop-fill-color": "Property label for fill color",
 	"layers-prop-fill-type": "Property label for fill type selector (solid color or gradient)",

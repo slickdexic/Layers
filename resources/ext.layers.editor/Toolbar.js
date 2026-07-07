@@ -127,7 +127,7 @@
 		 * @param {File} file - The image file to import
 		 * @return {Promise<void>}
 		 */
-		handleImageImport( file ) {
+		async handleImageImport( file ) {
 			// Validate file size using configurable limit (default 1MB)
 			const maxSize = ( typeof mw !== 'undefined' && mw.config ) ?
 				mw.config.get( 'wgLayersMaxImageBytes', 1048576 ) : 1048576;
@@ -137,7 +137,7 @@
 					this.msg( 'layers-import-image-too-large', 'Image file is too large' ) + ` (max ${maxSizeKB}KB)`,
 					{ type: 'error' }
 				);
-				return Promise.resolve();
+				return;
 			}
 
 			// Validate file type
@@ -147,46 +147,90 @@
 					this.msg( 'layers-import-image-invalid-type', 'Invalid image type. Allowed: PNG, JPEG, GIF, WebP' ),
 					{ type: 'error' }
 				);
-				return Promise.resolve();
+				return;
 			}
 
-			// Read file as base64 data URL
-			return this.readFileAsDataURL( file ).then( ( dataUrl ) => {
-				// Load image to get dimensions
-				return this.loadImage( dataUrl ).then( ( img ) => {
-					// Create a new image layer
-					const layer = {
-						id: 'image-' + Date.now() + '-' + Math.random().toString( 36 ).slice( 2, 9 ),
-						type: 'image',
-						name: file.name.replace( /\.[^.]+$/, '' ),
-						src: dataUrl,
-						x: 50,
-						y: 50,
-						width: img.naturalWidth,
-						height: img.naturalHeight,
-						originalWidth: img.naturalWidth,
-						originalHeight: img.naturalHeight,
-						opacity: 1,
-						rotation: 0,
-						visible: true,
-						locked: false,
-						preserveAspectRatio: true
-					};
+			try {
+				// Read file as base64 data URL
+				let dataUrl = await this.readFileAsDataURL( file );
 
-					// Add the layer via the editor's state management
-					if ( this.editor && this.editor.stateManager ) {
-						this.editor.stateManager.addLayer( layer );
-						// Save to undo/redo history
-						if ( typeof this.editor.saveState === 'function' ) {
-							this.editor.saveState( 'Import image layer' );
-						}
-						// Trigger a redraw
-						if ( this.editor.canvasManager ) {
-							this.editor.canvasManager.redraw();
+				// Load image to get dimensions
+				const img = await this.loadImage( dataUrl );
+
+				// Client-side resize + re-encode for large images to reduce payload
+				try {
+					const TextEnc = typeof TextEncoder !== 'undefined' ? TextEncoder : null;
+					const dataByteLen = TextEnc ? new TextEnc().encode( dataUrl ).length : unescape( encodeURIComponent( dataUrl ) ).length;
+					const maxSide = ( typeof mw !== 'undefined' && mw.config ) ? mw.config.get( 'wgLayersMaxImportSide', 2048 ) : 2048;
+					const jpegQuality = ( typeof mw !== 'undefined' && mw.config ) ? mw.config.get( 'wgLayersImportJpegQuality', 0.8 ) : 0.8;
+
+					// Only attempt to compress if image is larger than maxSide or current data is large
+					if ( Math.max( img.naturalWidth, img.naturalHeight ) > maxSide || dataByteLen > ( ( mw && mw.config && mw.config.get( 'wgLayersMaxImageBytes' ) ) || 1048576 ) ) {
+						const ratio = Math.max( img.naturalWidth, img.naturalHeight ) / maxSide;
+						const newWidth = Math.round( img.naturalWidth / ( ratio > 1 ? ratio : 1 ) );
+						const newHeight = Math.round( img.naturalHeight / ( ratio > 1 ? ratio : 1 ) );
+						const canvas = document.createElement( 'canvas' );
+						canvas.width = newWidth;
+						canvas.height = newHeight;
+						const ctx = canvas.getContext( '2d' );
+						// Fill white background to avoid black background when converting images with alpha to JPEG
+						ctx.fillStyle = '#ffffff';
+						ctx.fillRect( 0, 0, newWidth, newHeight );
+						ctx.drawImage( img, 0, 0, newWidth, newHeight );
+						// Re-encode as JPEG to reduce size (quality configurable)
+						const compressed = canvas.toDataURL( 'image/jpeg', parseFloat( jpegQuality ) );
+						// Use compressed data URL if it's smaller than original
+						const compressedLen = TextEnc ? new TextEnc().encode( compressed ).length : unescape( encodeURIComponent( compressed ) ).length;
+						if ( compressedLen < dataByteLen ) {
+							// Replace dataUrl with compressed version
+							// Keep original dimensions in separate fields
+							dataUrl = compressed;
+							img.compressedWidth = newWidth;
+							img.compressedHeight = newHeight;
+							if ( typeof mw !== 'undefined' && mw.log ) {
+								mw.log( `[Toolbar] Compressed imported image from ${dataByteLen} to ${compressedLen} bytes (maxSide=${maxSide}, q=${jpegQuality})` );
+							}
 						}
 					}
-				} );
-			} ).catch( ( error ) => {
+				} catch ( compressErr ) {
+					// Non-fatal: log and continue with original dataUrl
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+						mw.log.error( '[Toolbar] Image compression failed:', compressErr );
+					}
+				}
+
+				// Create a new image layer
+				const layer = {
+					id: 'image-' + Date.now() + '-' + Math.random().toString( 36 ).slice( 2, 9 ),
+					type: 'image',
+					name: file.name.replace( /\.[^.]+$/, '' ),
+					src: dataUrl,
+					x: 50,
+					y: 50,
+					width: img.naturalWidth,
+					height: img.naturalHeight,
+					originalWidth: img.naturalWidth,
+					originalHeight: img.naturalHeight,
+					opacity: 1,
+					rotation: 0,
+					visible: true,
+					locked: false,
+					preserveAspectRatio: true
+				};
+
+				// Add the layer via the editor's state management
+				if ( this.editor && this.editor.stateManager ) {
+					this.editor.stateManager.addLayer( layer );
+					// Save to undo/redo history
+					if ( typeof this.editor.saveState === 'function' ) {
+						this.editor.saveState( 'Import image layer' );
+					}
+					// Trigger a redraw
+					if ( this.editor.canvasManager ) {
+						this.editor.canvasManager.redraw();
+					}
+				}
+			} catch ( error ) {
 				if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
 					mw.log.error( '[Toolbar] Failed to import image:', error );
 				}
@@ -194,7 +238,7 @@
 					this.msg( 'layers-import-image-failed', 'Failed to import image' ),
 					{ type: 'error' }
 				);
-			} );
+			}
 		}
 
 		/**
@@ -236,6 +280,16 @@
 			if ( this.styleControls ) {
 				this.styleControls.destroy();
 				this.styleControls = null;
+			}
+			if ( this._shapeLibraryButton && this._shapeLibraryClickHandler ) {
+				this._shapeLibraryButton.removeEventListener( 'click', this._shapeLibraryClickHandler );
+				this._shapeLibraryButton = null;
+				this._shapeLibraryClickHandler = null;
+			}
+			if ( this._emojiPickerButton && this._emojiPickerClickHandler ) {
+				this._emojiPickerButton.removeEventListener( 'click', this._emojiPickerClickHandler );
+				this._emojiPickerButton = null;
+				this._emojiPickerClickHandler = null;
 			}
 		}
 
@@ -299,7 +353,7 @@
 					btn.title = color;
 				}
 				if ( previewTemplate ) {
-					const previewText = previewTemplate.indexOf( '$1' ) !== -1 ?
+					const previewText = previewTemplate.includes( '$1' ) ?
 						previewTemplate.replace( '$1', labelValue ) :
 						previewTemplate + ' ' + labelValue;
 					btn.setAttribute( 'aria-label', previewText );
@@ -769,9 +823,11 @@
 				'<rect x="14" y="14" width="7" height="7" rx="1"/>' +
 				'</svg>';
 
-			button.addEventListener( 'click', () => {
+			this._shapeLibraryClickHandler = () => {
 				this.openShapeLibrary();
-			} );
+			};
+			button.addEventListener( 'click', this._shapeLibraryClickHandler );
+			this._shapeLibraryButton = button;
 
 			return button;
 		}
@@ -840,9 +896,11 @@
 				'<path d="M8 14c1.5 2 6.5 2 8 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
 				'</svg>';
 
-			button.addEventListener( 'click', () => {
+			this._emojiPickerClickHandler = () => {
 				this.openEmojiPicker();
-			} );
+			};
+			button.addEventListener( 'click', this._emojiPickerClickHandler );
+			this._emojiPickerButton = button;
 
 			return button;
 		}
@@ -1703,7 +1761,7 @@
 
 	selectTool( toolId ) {
 		// Update UI - clear active state from all standalone tool buttons
-		Array.prototype.forEach.call( this.container.querySelectorAll( '.tool-button:not(.tool-dropdown-trigger)' ), ( button ) => {
+		this.container.querySelectorAll( '.tool-button:not(.tool-dropdown-trigger)' ).forEach( ( button ) => {
 			button.classList.remove( 'active' );
 			button.setAttribute( 'aria-pressed', 'false' );
 		} );

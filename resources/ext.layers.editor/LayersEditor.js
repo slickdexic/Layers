@@ -750,6 +750,35 @@ class LayersEditor {
 	}
 
 	/**
+	 * Set up postMessage listener for modal close requests.
+	 * When the editor runs inside an iframe modal, the parent page sends
+	 * 'layers-editor-request-close' when the user presses Escape. This
+	 * triggers the editor's own cancel flow which checks for unsaved changes.
+	 * @private
+	 */
+	setupModalCloseListener () {
+		const isModalMode = typeof mw !== 'undefined' && mw.config &&
+			mw.config.get( 'wgLayersIsModalMode' );
+		if ( !isModalMode || window.parent === window ) {
+			return;
+		}
+
+		this._modalCloseHandler = ( event ) => {
+			if ( event.origin !== window.location.origin ) {
+				return;
+			}
+			if ( event.data && event.data.type === 'layers-editor-request-close' ) {
+				if ( this.stateManager && this.stateManager.get( 'currentTool' ) !== 'pointer' ) {
+					this.setCurrentTool( 'pointer' );
+				} else {
+					this.cancel( true );
+				}
+			}
+		};
+		window.addEventListener( 'message', this._modalCloseHandler );
+	}
+
+	/**
 	 * Add a new layer to the editor
 	 * @param {Object} layerData - Layer data object
 	 */

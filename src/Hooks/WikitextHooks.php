@@ -4,6 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Hooks\Processors\ImageLinkProcessor;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayeredFileRenderer;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayerInjector;
@@ -12,7 +13,6 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
-use RequestContext;
 
 class WikitextHooks {
 	use StaticLoggerAwareTrait;
@@ -156,6 +156,33 @@ class WikitextHooks {
 	private static $fileRenderCount = [];
 
 	/**
+	 * Per-filename pending render counter set by onParserMakeImageParams for each
+	 * [[File:...]] occurrence. onThumbnailBeforeProduceHTML consumes one count per
+	 * render when it fires and, if consumed, uses the queue to look up the layer set.
+	 *
+	 * A counter is required instead of a boolean because parse and render phases can
+	 * be decoupled in some code paths; multiple onParserMakeImageParams calls may happen
+	 * before one or more ThumbnailBeforeProduceHTML calls.
+	 *
+	 * @var array<string, int>
+	 */
+	private static array $pendingRender = [];
+
+	/**
+	 * Per-image layer set hints pre-registered by {{#layers_hint:filename|setname}}.
+	 *
+	 * Populated during the parse phase (before thumbnails render) by the
+	 * #layers_hint parser function.  When onThumbnailBeforeProduceHTML fires
+	 * for a non-wikitext render (Cargo gallery, native <gallery>, etc.), it
+	 * consults this map to find the correct named set for the image instead of
+	 * always falling back to the latest set ('on' semantics).
+	 *
+	 * Keys are normalized file names (without "File:" prefix), values are set names.
+	 * @var array<string, string>
+	 */
+	private static array $galleryHints = [];
+
+	/**
 	 * Queue of layerslink values per filename detected from wikitext (in order of appearance)
 	 * e.g. ['ImageTest02.jpg' => ['editor', null, 'viewer']]
 	 * @var array<string, array<string|null>>
@@ -169,7 +196,19 @@ class WikitextHooks {
 	 * getFileParamsForRender falls back to this when the primary $fileSetNames queue has no entry.
 	 * @var array<string, array<int, string>>
 	 */
-	private static $fileParamLayerset = [];
+	private static array $fileParamLayerset = [];
+
+	/**
+	 * Counter tracking how many times onParserMakeImageParams has fired for each file
+	 * during the current page parse. Used to correctly index into $fileParamLayerset.
+	 *
+	 * This is separate from $fileRenderCount because in PageForms multi-instance templates
+	 * ALL onParserMakeImageParams calls happen during the parse phase, BEFORE any
+	 * onThumbnailBeforeProduceHTML calls in the render phase. Using $fileRenderCount
+	 * as the write index would cause all N instances to overwrite index 0.
+	 * @var array<string, int>
+	 */
+	private static array $fileParseCount = [];
 
 	/**
 	 * Timestamp of the last request that triggered a state reset.
@@ -194,6 +233,10 @@ class WikitextHooks {
 			self::$fileSetNames = [];
 			self::$fileRenderCount = [];
 			self::$fileLinkTypes = [];
+			self::$fileParamLayerset = [];
+			self::$fileParseCount = [];
+			self::$pendingRender = [];
+			self::$galleryHints = [];
 		}
 	}
 
@@ -228,8 +271,10 @@ class WikitextHooks {
 		...$rest
 	) {
 		// Add data attributes for full-size images (non-thumbnail) when layers are requested.
-		// Additionally, on file pages we inject overlays unconditionally when layer data exists.
 		try {
+			if ( self::isFilePageContext() ) {
+				return true;
+			}
 			$extractor = self::getParamExtractor();
 
 			// Extract layers parameter from file link href
@@ -310,7 +355,53 @@ class WikitextHooks {
 		// The extension works through the layerset= parameter in file syntax instead
 		// To enable parser functions, define magic words in i18n and uncomment below:
 		// $parser->setFunctionHook( 'layeredfile', [ self::class, 'renderLayeredFile' ], \Parser::SFH_OBJECT_ARGS );
+
+		// Pre-register per-image layer set hints for gallery renders.
+		// {{#layers_hint:filename|setname}} is called before a gallery renders
+		// (e.g. via Cargo format=template hint pass) so the correct named set
+		// is used when ThumbnailBeforeProduceHTML fires for non-wikitext renders.
+		$parser->setFunctionHook( 'layers_hint', [ self::class, 'parserFunctionLayersHint' ] );
+
 		return true;
+	}
+
+	/**
+	 * Parser function: {{#layers_hint:filename|setname}}
+	 *
+	 * Registers a per-image layer set hint that is consumed by
+	 * onThumbnailBeforeProduceHTML for non-wikitext gallery renders.
+	 * Returns an empty string (no visible output).
+	 *
+	 * @param mixed $parser Unused
+	 * @param string $filename File name (with or without "File:" prefix)
+	 * @param string $setname Layer set name (e.g. 'default', 'anatomy')
+	 * @return string Empty string
+	 */
+	public static function parserFunctionLayersHint( $parser, string $filename = '', string $setname = '' ): string {
+		self::registerGalleryHint( trim( $filename ), trim( $setname ) );
+		return '';
+	}
+
+	/**
+	 * Register a per-image layer set hint for non-wikitext gallery renders.
+	 *
+	 * Called by {{#layers_hint:}} and by CargoLayersGalleryFormat when it
+	 * iterates Cargo query rows before the gallery renders thumbnails.
+	 *
+	 * @param string $filename File name (with or without "File:"/"Image:" prefix)
+	 * @param string $setname  Layer set name (e.g. 'anatomy', 'default')
+	 */
+	public static function registerGalleryHint( string $filename, string $setname ): void {
+		$filename = trim( $filename );
+		$setname  = trim( $setname );
+		if ( $filename === '' || $setname === '' ) {
+			return;
+		}
+		// Normalize: strip "File:" or "Image:" prefix if present.
+		$normalized = preg_replace( '/^(?:File|Image):\s*/i', '', $filename );
+		if ( $normalized !== '' ) {
+			self::$galleryHints[$normalized] = $setname;
+		}
 	}
 
 	/**
@@ -349,8 +440,35 @@ class WikitextHooks {
 			$filename = $thumbnail->getFile()->getName();
 		}
 
-		// Get both set name and link type from queue
-		$fileParams = $filename ? self::getFileParamsForRender( $filename ) : [ 'setName' => null, 'linkType' => null ];
+		// Only consume queue entries for renders that originated from wikitext [[File:...]].
+		// onParserMakeImageParams increments $pendingRender[$filename] immediately before
+		// each such render. Cargo gallery (#cargo_query format=gallery), native
+		// <gallery> tags, and other parser-function thumbnails do NOT go through
+		// onParserMakeImageParams, so they never increment the counter.
+		// We consume one queued count here so it cannot accidentally match a later
+		// non-wikitext render of the same filename.
+		$isWikitextRender = $filename && ( ( self::$pendingRender[$filename] ?? 0 ) > 0 );
+		if ( $isWikitextRender ) {
+			self::$pendingRender[$filename]--;
+			if ( self::$pendingRender[$filename] <= 0 ) {
+				unset( self::$pendingRender[$filename] );
+			}
+		}
+
+		// Get both set name and link type from queue.
+		// For wikitext renders: use the queued set name and link type.
+		// For non-wikitext renders (Cargo gallery, native <gallery>, etc.): check
+		// $galleryHints first (pre-registered by {{#layers_hint:filename|setname}}),
+		// then fall back to 'on' (latest available layer set) if no hint is present.
+		if ( $isWikitextRender ) {
+			$fileParams = self::getFileParamsForRender( $filename );
+		} else {
+			$defaultFallback = self::isFilePageContext() ? null : 'on';
+			$hintedSetName = ( $filename && isset( self::$galleryHints[$filename] ) )
+				? self::$galleryHints[$filename]
+				: $defaultFallback;
+			$fileParams = [ 'setName' => $hintedSetName, 'linkType' => null ];
+		}
 
 		// Log queue state for troubleshooting foreign file issues
 		self::logDebug(
@@ -396,6 +514,25 @@ class WikitextHooks {
 		$fileName = $file ? $file->getName() : 'null';
 		self::log( "ParserMakeImageParams for: $fileName" );
 
+		// Always track parse occurrences BEFORE any early returns, so $fileParseCount stays
+		// aligned with $fileRenderCount (both increment once per image occurrence, in the same order).
+		// This ensures the fallback $fileParamLayerset indices are correct even when some
+		// images on the page have no layerset= param.
+		$parseIndex = null;
+		if ( $fileName !== 'null' ) {
+			if ( !isset( self::$fileParseCount[$fileName] ) ) {
+				self::$fileParseCount[$fileName] = 0;
+			}
+			$parseIndex = self::$fileParseCount[$fileName]++;
+		}
+
+		// Signal to onThumbnailBeforeProduceHTML that this file has one more pending
+		// wikitext [[File:...]] render to consume. This is placed BEFORE any early
+		// returns so ALL occurrences (with or without layerset=) are counted.
+		if ( $fileName !== 'null' ) {
+			self::$pendingRender[$fileName] = ( self::$pendingRender[$fileName] ?? 0 ) + 1;
+		}
+
 		// Handle layerslink parameter - queue it and remove from params to prevent caption leakage
 		if ( isset( $params['layerslink'] ) ) {
 			$linkValue = strtolower( trim( (string)$params['layerslink'] ) );
@@ -423,6 +560,37 @@ class WikitextHooks {
 			}
 		}
 
+		// MediaWiki does not recognise 'layerset', 'layers', or 'layer' as image-option keywords,
+		// so it treats them as caption text instead of setting $params['layerset'] directly.
+		// This happens for BOTH inline and template-embedded images, but inline images already
+		// work via onParserBeforeInternalParse which pre-scans raw wikitext.
+		// For template-embedded images (where the pre-scan cannot see the [[File:...]] inside
+		// a template body), we must extract the value from the frame caption here.
+		// Example: [[File:{{{img}}}|x300px|layerset=default]] → caption = 'layerset=default'
+		if ( !isset( $params['layerset'] ) ) {
+			$captionText = isset( $params['frame']['caption'] )
+				? trim( (string)$params['frame']['caption'] )
+				: '';
+			if ( $captionText !== ''
+				&& preg_match( '/^(layerset|layers?)\s*=\s*(.+)$/i', $captionText, $matches )
+			) {
+				$params['layerset'] = trim( $matches[2] );
+				// Clear the caption-derived attributes so 'layerset=default' does not
+				// appear as visible alt text, tooltip, or caption on the rendered image.
+				$params['frame']['caption'] = '';
+				if ( isset( $params['frame']['alt'] )
+					&& (string)$params['frame']['alt'] === $captionText
+				) {
+					unset( $params['frame']['alt'] );
+				}
+				if ( isset( $params['frame']['title'] )
+					&& (string)$params['frame']['title'] === $captionText
+				) {
+					$params['frame']['title'] = '';
+				}
+			}
+		}
+
 		if ( !isset( $params['layerset'] ) ) {
 			return true;
 		}
@@ -441,6 +609,12 @@ class WikitextHooks {
 
 		// Mark page has layers
 		self::$pageHasLayers = true;
+		if ( $parser && method_exists( $parser, 'getOutput' ) ) {
+			$output = $parser->getOutput();
+			if ( $output && method_exists( $output, 'setPageProperty' ) ) {
+				$output->setPageProperty( 'layers-present', '1' );
+			}
+		}
 		// Register viewer module via ParserOutput for reliable cached delivery
 		if ( $parser && method_exists( $parser, 'getOutput' ) ) {
 			$parser->getOutput()->addModules( [ 'ext.layers' ] );
@@ -477,16 +651,22 @@ class WikitextHooks {
 		// patterns inside templates. We record the set name here so onThumbnailBeforeProduceHTML
 		// can find it via getFileParamsForRender even when the primary $fileSetNames queue has no
 		// entry for this file occurrence (i.e. render index is beyond what the pre-parse hook saw).
-		if ( $fileName !== 'null' ) {
-			$currentIndex = self::$fileRenderCount[$fileName] ?? 0;
+		//
+		// Use $parseIndex (pre-computed at function entry from $fileParseCount) NOT $fileRenderCount.
+		// In PageForms multi-instance templates, ALL onParserMakeImageParams calls happen during
+		// the parse phase, BEFORE any onThumbnailBeforeProduceHTML calls in the render phase.
+		// If we used $fileRenderCount here, every template instance would see render count = 0
+		// and all N instances would overwrite $fileParamLayerset[filename][0], leaving only
+		// the last occurrence's set name. The render phase would then find data at index 0 only.
+		if ( $fileName !== 'null' && $parseIndex !== null ) {
 			if ( !isset( self::$fileParamLayerset[$fileName] ) ) {
 				self::$fileParamLayerset[$fileName] = [];
 			}
 			$queueVal = ( $layersRaw === true || $layersRaw === 'on' || $layersRaw === 'all' )
 				? 'on'
 				: (string)$layersRaw;
-			self::$fileParamLayerset[$fileName][$currentIndex] = $queueVal;
-			self::log( "Registered fallback set name '$queueVal' for $fileName at index $currentIndex" );
+			self::$fileParamLayerset[$fileName][$parseIndex] = $queueVal;
+			self::log( "Registered fallback set name '$queueVal' for $fileName at index $parseIndex" );
 		}
 
 		// Finalize params
@@ -621,6 +801,9 @@ class WikitextHooks {
 		self::$fileRenderCount = [];
 		self::$fileLinkTypes = [];
 		self::$fileParamLayerset = [];
+		self::$fileParseCount = [];
+		self::$pendingRender = [];
+		self::$galleryHints = [];
 		self::$lastResetRequestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
 		// Reset processor singletons to prevent stale state in long-running processes
 		self::$imageLinkProcessor = null;
@@ -642,6 +825,9 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserBeforeInternalParse( $parser, &$text, $stripState ): bool {
+		// Ensure stale state from previous requests is cleared (PHP-FPM reuse)
+		self::ensureRequestStateReset();
+
 		// Handle null or non-string text (PHP 8.1+ strict)
 		if ( $text === null || !is_string( $text ) ) {
 			return true;
@@ -688,6 +874,15 @@ class WikitextHooks {
 				PREG_SET_ORDER | PREG_OFFSET_CAPTURE
 			);
 			self::log( "Layerset/layers regex matched $matchCount times" );
+			if ( $matchCount > 0 && $parser && method_exists( $parser, 'getOutput' ) ) {
+				$output = $parser->getOutput();
+				if ( $output && method_exists( $output, 'setPageProperty' ) ) {
+					$output->setPageProperty( 'layers-present', '1' );
+				}
+			}
+			if ( $matchCount > 0 && $parser && method_exists( $parser, 'getOutput' ) ) {
+				$parser->getOutput()->addModules( [ 'ext.layers' ] );
+			}
 			if ( $matchCount ) {
 				foreach ( $allMatches as $match ) {
 					// Normalize filename: replace spaces with underscores
@@ -804,6 +999,17 @@ class WikitextHooks {
 				}
 			}
 
+			// Pre-process <gallery> blocks: extract per-image layerset= hints and
+			// strip the option so it does not appear as visible caption text.
+			if ( stripos( $text, '<gallery' ) !== false && stripos( $text, 'layerset=' ) !== false ) {
+				$text = preg_replace_callback(
+					'/<gallery\b[^>]*>.*?<\/gallery>/si',
+					[ self::class, 'preprocessGalleryBlock' ],
+					$text
+				);
+				self::log( 'Preprocessed <gallery> blocks for layerset= hints' );
+			}
+
 			// Strip layerset=, layers=, and layer= ONLY from within [[File:...]] or [[Image:...]] links
 			// to prevent caption leakage. We must NOT strip these from {{#slide:...}} parser functions!
 			// Use a callback to selectively strip only within file link contexts.
@@ -826,6 +1032,45 @@ class WikitextHooks {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Callback for preg_replace_callback over native <gallery> blocks.
+	 *
+	 * For each image line that contains a |layerset=X option, registers a
+	 * gallery hint via registerGalleryHint() and strips the option from the
+	 * line so it does not appear as visible caption text in the rendered
+	 * gallery.
+	 *
+	 * @param array $matches Regex match; $matches[0] is the full <gallery> block
+	 * @return string Gallery block with layerset= stripped from image lines
+	 */
+	private static function preprocessGalleryBlock( array $matches ): string {
+		$block = $matches[0];
+		// Fast-path: skip blocks that contain no layerset= at all.
+		if ( stripos( $block, 'layerset=' ) === false ) {
+			return $block;
+		}
+		return preg_replace_callback(
+			// Match image lines: optional indent + File:/Image: + filename + pipe options
+			'/^([ \t]*(?:File|Image):([^\|\n]+))(\|[^\n]*)$/mi',
+			static function ( $line ) {
+				$prefix   = $line[1]; // "  File:Name.jpg" (with any indent)
+				$filename = trim( $line[2] ); // "Name.jpg"
+				$rest     = $line[3]; // "|opt1|opt2|caption"
+				if ( !preg_match( '/\blayerset\s*=\s*([^\|\n]+)/i', $rest, $lsMatch ) ) {
+					return $line[0]; // No layerset= on this line — leave untouched.
+				}
+				$setname = trim( $lsMatch[1] );
+				self::registerGalleryHint( $filename, $setname );
+				// Strip the layerset= option (and its leading pipe) from the options string.
+				$rest = preg_replace( '/\|?\s*layerset\s*=\s*[^\|\n]*/i', '', $rest );
+				// Re-normalise: ensure remaining options start with a single pipe.
+				$rest = ( $rest !== '' ) ? '|' . ltrim( $rest, '|' ) : '';
+				return $prefix . $rest;
+			},
+			$block
+		);
 	}
 
 	/**

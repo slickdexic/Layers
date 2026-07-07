@@ -106,9 +106,13 @@ class Hooks {
 			// 2. Parser flag set during current request ($pageHasLayers)
 			// 3. Parser cache: ext.layers module already added to OutputPage
 			//    by cached ParserOutput (parser hooks don't re-run on cached views)
+			// 4. Persisted page property set during parsing for cached article views
 			$parserDetected = WikitextHooks::pageHasLayers();
 			$fromParserCache = in_array( 'ext.layers', $out->getModules() );
-			$needsLayers = $isFilePage || $parserDetected || $fromParserCache;
+			$fromPageProperty = method_exists( $out, 'getProperty' )
+				? (bool)$out->getProperty( 'layers-present' )
+				: false;
+			$needsLayers = $isFilePage || $parserDetected || $fromParserCache || $fromPageProperty;
 
 			// Reset the parser flag now that we've captured its value.
 			// This prevents stale state in long-running processes.
