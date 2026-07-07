@@ -365,15 +365,20 @@ class WikitextHooks {
 			return true;
 		}
 
-		$processor = self::getImageLinkProcessor();
-		$result = $processor->processMediaLink( $file, $res, $attribs );
+		try {
+			$processor = self::getImageLinkProcessor();
+			$result = $processor->processMediaLink( $file, $res, $attribs );
 
-		// Sync page-level flag
-		if ( $processor->pageHasLayers() ) {
-			self::$pageHasLayers = true;
+			// Sync page-level flag
+			if ( $processor->pageHasLayers() ) {
+				self::$pageHasLayers = true;
+			}
+
+			return $result;
+		} catch ( \Throwable $e ) {
+			self::logError( 'onLinkerMakeMediaLinkFile error', [ 'exception' => $e ] );
+			return true;
 		}
-
-		return $result;
 	}
 
 	/**
@@ -450,7 +455,12 @@ class WikitextHooks {
 	 * @return string
 	 */
 	public static function renderLayeredFile( $parser, $frame, $args ) {
-		return self::getLayeredFileRenderer()->render( $parser, $frame, $args );
+		try {
+			return self::getLayeredFileRenderer()->render( $parser, $frame, $args );
+		} catch ( \Throwable $e ) {
+			self::logError( 'renderLayeredFile error', [ 'exception' => $e ] );
+			return '';
+		}
 	}
 
 	/**
@@ -468,8 +478,9 @@ class WikitextHooks {
 		if ( self::areWikitextHooksDisabled() ) {
 			return true;
 		}
-		// Handle case where $linkAttribs is false (no link) in older MW versions
-		$linkAttribsIsArray = is_array( $linkAttribs );
+		try {
+			// Handle case where $linkAttribs is false (no link) in older MW versions
+			$linkAttribsIsArray = is_array( $linkAttribs );
 
 		$processor = self::getThumbnailProcessor();
 
@@ -539,10 +550,14 @@ class WikitextHooks {
 			$linkAttribs = $linkAttribsForProcessor;
 		}
 
-		if ( $processor->pageHasLayers() ) {
-			self::$pageHasLayers = true;
+			if ( $processor->pageHasLayers() ) {
+				self::$pageHasLayers = true;
+			}
+			return $result;
+		} catch ( \Throwable $e ) {
+			self::logError( 'onThumbnailBeforeProduceHTML error', [ 'exception' => $e ] );
+			return true;
 		}
-		return $result;
 	}
 
 	/**
