@@ -228,11 +228,17 @@ class LayerInjectorTest extends TestCase {
 		$file = $this->createMockFile();
 		$params = [];
 
-		// Unknown format should not make any DB calls
+		// A value without an id:/name: prefix is treated as a plain named set
+		// (e.g. [[File:...|layerset=default]]). It must never trigger a
+		// getLayerSet() lookup by ID; instead getLayerSetByName() is queried,
+		// and a value that matches no set (here 'unknown:format') returns null
+		// so no layerSetId is added.
 		$this->mockDb->expects( $this->never() )
 			->method( 'getLayerSet' );
-		$this->mockDb->expects( $this->never() )
-			->method( 'getLayerSetByName' );
+		$this->mockDb->expects( $this->once() )
+			->method( 'getLayerSetByName' )
+			->with( 'Test.jpg', 'abc123', 'unknown:format' )
+			->willReturn( null );
 
 		$this->injector->addSpecificLayersToImage( $file, 'unknown:format', $params );
 

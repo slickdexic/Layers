@@ -50,6 +50,9 @@ jobs:
       - name: PHP checks
         run: npm run test:php
 
+      - name: PHP unit tests (PHPUnit)
+        run: npm run test:phpunit
+
       - name: JS unit tests (Jest)
         run: npm run test:js
 
