@@ -1,6 +1,53 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** April 13, 2026 — v71 audit (fix pass complete)
+**Last updated:** July 9, 2026 — v72 audit (fix pass complete)
+
+> ## 🔴 v72 Audit — Active Item (P0): `main` shipped with a RED build
+>
+> Commit `3523c2e8` (unpushed local work, 1 commit ahead of
+> `origin/main`) added image-layer aspect-ratio linking in
+> `PropertyBuilders.addDimensions` but did **not** update the two
+> `PropertiesForm.test.js` tests that asserted isolated width/height
+> update payloads. `npm run test:js` failed **2 tests** on `main`.
+> The prior review record claimed the repo was "fully green"; that claim
+> was false.
+>
+> | # | Issue | Ref | Priority | Status |
+> |---|-------|-----|----------|--------|
+> | 72.01 | Red build: 2 stale image-dimension tests | P0-258 | **P0** | ✅ Fixed |
+> | 72.02 | `preserveAspectRatio: false` path had zero test coverage | P1-259 | High | ✅ Fixed (regression test added) |
+> | 72.03 | Import config vars read client-side but never registered/exported | P1-260 | High | ✅ Fixed |
+> | 72.04 | Review docs asserted "fully green" while build was red | D-072-01 | Doc | ✅ Fixed |
+>
+> **Fixes applied this pass (shipped as v1.5.76):**
+>
+> - **P0-258 / P1-259** — updated both stale assertions to the linked
+>   payloads and added a new test for the unlocked (`preserveAspectRatio:
+>   false`) branch. `tests/jest/PropertiesForm.test.js` now passes 285/285.
+> - **P1-260** — `Toolbar.js` read `wgLayersMaxImportSide`,
+>   `wgLayersImportJpegQuality`, and `wgLayersMaxImageBytes` from
+>   `mw.config`, but these were never registered in `extension.json` nor
+>   exported via `MakeGlobalVariablesScript`, so admin overrides were
+>   silently ignored (client always used hardcoded defaults). Registered
+>   the two new settings and exported all three (with safe fallbacks) in
+>   `Hooks.php::onMakeGlobalVariablesScript`.
+> - Bumped version 1.5.75 → 1.5.76; CHANGELOG, README, wiki, and the
+>   MediaWiki.org page updated; `update-version.js --check` consistent.
+>   Full suite green: 172 suites / 14,007 tests; `npm test` (eslint /
+>   stylelint / banana) clean.
+>
+> **Process lesson (do not repeat):** never commit a behavior change to
+> `main` without updating its own tests, and never assert "green" in the
+> review record without re-running the suite. Run `npm run test:js`
+> **before** committing to `main`.
+>
+> **Everything else in v72 was verified clean** — ~30 security/
+> correctness candidates from deep sweeps were all confirmed FALSE
+> POSITIVES against actual source (see `codebase_review.md` v72 section).
+> Zero TODO/FIXME/HACK markers exist in JS or PHP. Note: the PHP suite
+> could **not** be executed in this environment (`php` emits
+> `stdout is not a tty` under MINGW64); PHP was verified by source
+> inspection only and should be re-validated by CI.
 
 This plan now distinguishes between the **verified current backlog** and the
 historical phase log retained below. All v49 issues were resolved in v1.5.60.

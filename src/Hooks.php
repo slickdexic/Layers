@@ -183,9 +183,20 @@ class Hooks {
 				$config = $out->getConfig();
 				$vars['wgLayersDebug'] = (bool)$config->get( 'LayersDebug' );
 				$vars['wgLayersMaxBytes'] = (int)$config->get( 'LayersMaxBytes' );
+				// Import tuning: surfaced so the client-side downscale/compression
+				// in Toolbar.js honours the administrator's configured limits
+				// instead of silently falling back to hardcoded defaults.
+				$vars['wgLayersMaxImageBytes'] = (int)$config->get( 'LayersMaxImageBytes' );
+				$vars['wgLayersMaxImportSide'] = (int)$config->get( 'LayersMaxImportSide' );
+				$vars['wgLayersImportJpegQuality'] = (float)$config->get( 'LayersImportJpegQuality' );
 			} catch ( \Throwable $e2 ) {
 				$vars['wgLayersDebug'] = false;
 				$vars['wgLayersMaxBytes'] = 0;
+				// Use the same safe defaults as the extension.json config so the
+				// client never receives a zero that would break compression math.
+				$vars['wgLayersMaxImageBytes'] = 1048576;
+				$vars['wgLayersMaxImportSide'] = 2048;
+				$vars['wgLayersImportJpegQuality'] = 0.8;
 			}
 			// Expose editlayers permission for viewer overlay UI
 			try {

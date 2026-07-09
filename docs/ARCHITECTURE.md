@@ -32,7 +32,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | ES6 classes | **140** |
 | Prototype patterns | 0 (100% ES6) |
 | Test coverage | **95.87% stmt, 87.20% branch** |
-| Jest tests | **14,001** (172 suites) |
+| Jest tests | **14,007** (172 suites) |
 | PHPUnit test files | 34 |
 | God classes (>=1000 lines) | **26** (5 generated, 19 JS, 2 PHP) |
 | Drawing tools | **17** |
@@ -925,7 +925,7 @@ tests/jest/
 - Mock MediaWiki globals in `__mocks__/mw.js`
 - Mock canvas context for DOM-free testing
 - Integration tests verify multi-module workflows
-- **14,001 tests, 95.87% statement coverage, 87.20% branch coverage**
+- **14,007 tests, 95.87% statement coverage, 87.20% branch coverage**
 
 ### E2E Tests (Playwright)
 
@@ -1002,7 +1002,7 @@ extensions/Layers/
 │       ├── LayersEditorModal.js
 │       └── modal.css
 ├── tests/
-│   ├── jest/                # Unit tests (14,001 tests, 172 suites)
+│   ├── jest/                # Unit tests (14,007 tests, 172 suites)
 │   ├── e2e/                 # End-to-end tests
 │   └── phpunit/             # PHP tests (24 files)
 └── docs/                    # Documentation

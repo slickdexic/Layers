@@ -6,7 +6,7 @@ This document outlines the branch strategy and support policy for the Layers ext
 
 ## Primary Branch: `main`
 
-**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (14,001 tests, 172 suites) runs on `main` as the source of truth.
+**`main` is the primary development and testing branch.** All new features, bug fixes, and improvements are developed and tested on `main` first. The full test suite (14,007 tests, 172 suites) runs on `main` as the source of truth.
 
 Changes are **cherry-picked** from `main` to the REL branches after verification. REL branches never receive changes that haven't been tested on `main` first.
 
@@ -16,7 +16,7 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 
 | Branch | MediaWiki Version | Current Version | Status |
 |--------|------------------|-----------------|--------|
-| **`main`** | **1.44+** | **1.5.66** | **Primary — all development and testing** |
+| **`main`** | **1.44+** | **1.5.76** | **Primary — all development and testing** |
 | `REL1_43` | 1.43.x | 1.5.66 | LTS support (until Dec 2027) |
 | `REL1_39` | 1.39.x - 1.42.x | 1.5.66 | Legacy LTS support (MW 1.39 EOL Dec 2025) |
 
@@ -26,7 +26,7 @@ Changes are **cherry-picked** from `main` to the REL branches after verification
 main (primary)
   │
   ├── All development happens here
-  ├── All tests run here first (14,001 tests)
+  ├── All tests run here first (14,007 tests)
   ├── All code reviews done here
   │
   ├──── cherry-pick ──→ REL1_43 (current LTS)

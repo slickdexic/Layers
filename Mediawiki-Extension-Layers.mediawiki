@@ -8,7 +8,7 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.75
+|version         = 1.5.76
 |update          = 2026-05-25
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -21,7 +21,7 @@
 |table1          = layer_assets
 |table2          = layer_sets
 |rights          = {{bulleted list|editlayers|managelayerlibrary}}
-|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersUseBinaryOverlays|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersThumbnailCache|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions|$wgLayersSlidesEnable|$wgLayersSlideDefaultWidth|$wgLayersSlideDefaultHeight|$wgLayersSlideMaxWidth|$wgLayersSlideMaxHeight|$wgLayersSlideDefaultBackground}}
+|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxImportSide|$wgLayersImportJpegQuality|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersUseBinaryOverlays|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersThumbnailCache|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions|$wgLayersSlidesEnable|$wgLayersSlideDefaultWidth|$wgLayersSlideDefaultHeight|$wgLayersSlideMaxWidth|$wgLayersSlideMaxHeight|$wgLayersSlideDefaultBackground}}
 |hook1           = BeforePageDisplay
 |hook2           = BitmapHandlerTransform
 |hook3           = FileDeleteComplete
@@ -120,7 +120,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.75
+| 1.44+ || <code>main</code> || 1.5.76
 |-
 | 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.66
 |-
@@ -150,6 +150,10 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 | <code>$wgLayersMaxRevisionsPerSet</code> || integer || <code>50</code> || Historical revisions to keep.
 |-
 | <code>$wgLayersMaxImageBytes</code> || integer || <code>1048576</code> || Max size for imported image layers.
+|-
+| <code>$wgLayersMaxImportSide</code> || integer || <code>2048</code> || Max width/height (px) before client-side downscaling of imported images.
+|-
+| <code>$wgLayersImportJpegQuality</code> || float || <code>0.8</code> || JPEG quality used when re-encoding downscaled imported images.
 |-
 | <code>$wgLayersMaxBytes</code> || integer || <code>2097152</code> || Max JSON size for a single layer set.
 |-
@@ -340,7 +344,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~114k lines including generated shape/emoji data).
-* '''Stability:''' 14,001 Jest tests (172 suites) with 95.87% statement coverage and 87.20% branch coverage.
+* '''Stability:''' 14,007 Jest tests (172 suites) with 95.87% statement coverage and 87.20% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

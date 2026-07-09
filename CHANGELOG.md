@@ -4,6 +4,51 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.76] - 2026-07-09
+
+### Added
+- **Image layer aspect-ratio locking** — Image layers now display a
+  "Maintain Aspect Ratio" checkbox in the properties panel (enabled by
+  default). While enabled, editing an image's width recomputes its height
+  from the original ratio (and vice-versa), so images no longer distort
+  when resized via the numeric inputs. New i18n key
+  `layers-prop-preserve-aspect-ratio`.
+- **Client-side downscaling of imported images** — Large image imports are
+  now downscaled and re-encoded as JPEG in the browser before upload,
+  substantially reducing payload size. The compressed result is only used
+  when it is actually smaller than the original, and images with alpha are
+  flattened onto a white background to avoid black fills.
+- **Two new configuration settings** for tuning image import:
+  - `$wgLayersMaxImportSide` (default `2048`) — maximum width/height in
+    pixels before a client-side downscale is applied.
+  - `$wgLayersImportJpegQuality` (default `0.8`) — JPEG quality used when
+    re-encoding downscaled imports.
+
+### Fixed
+- **Import tuning settings were not honoured by the client** — `Toolbar.js`
+  read `wgLayersMaxImportSide`, `wgLayersImportJpegQuality`, and
+  `wgLayersMaxImageBytes` from `mw.config`, but these were never registered
+  in `extension.json` nor exported to the client via
+  `MakeGlobalVariablesScript`. As a result, administrator overrides were
+  silently ignored and the client always used hardcoded defaults. All three
+  are now registered and exported (with safe fallbacks), so the client-side
+  downscale/compression honours the configured limits.
+- **"Data too large" save failures now recover gracefully** — When a save
+  is rejected client-side for exceeding `$wgLayersMaxBytes`, the Save button
+  is re-enabled and the user is notified with the configured byte limit,
+  instead of leaving the editor in a stuck "saving" state.
+- **Broken build on `main`** — Image aspect-ratio linking shipped without
+  updating the parallel `PropertiesForm.test.js` image-dimension tests,
+  leaving the Jest suite red. Updated the stale assertions to the linked
+  payloads and added a regression test covering the
+  `preserveAspectRatio: false` (unlocked) path, which previously had zero
+  coverage.
+
+### Changed
+- **REL1_39 compatibility hardening** — Additional `method_exists()` /
+  version guards in `Hooks.php`, `WikitextHooks.php`, `SpecialEditSlide.php`,
+  and `SpecialSlides.php` for cross-version MediaWiki support.
+
 ## [1.5.75] - 2026-05-25
 
 ### Added

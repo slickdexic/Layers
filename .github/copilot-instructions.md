@@ -289,6 +289,8 @@ Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersMaxBytes (LayersMaxBytes): max JSON size per set (default 2MB)
 - $wgLayersMaxLayerCount (LayersMaxLayerCount): max layers per set (default 100)
 - $wgLayersMaxImageBytes (LayersMaxImageBytes): max size for imported image layers (default 1MB, see recommendations below)
+- $wgLayersMaxImportSide (LayersMaxImportSide): max width/height (px) before client-side downscaling of imported images (default 2048); exported to JS via MakeGlobalVariablesScript
+- $wgLayersImportJpegQuality (LayersImportJpegQuality): JPEG quality (0.1-1.0) for re-encoding downscaled imports (default 0.8); exported to JS via MakeGlobalVariablesScript
 - $wgLayersMaxNamedSets (LayersMaxNamedSets): max named sets per image (default 15)
 - $wgLayersMaxRevisionsPerSet (LayersMaxRevisionsPerSet): max revisions kept per named set (default 50)
 - $wgLayersDefaultSetName (LayersDefaultSetName): default name for layer sets (default 'default')
@@ -448,7 +450,7 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (14,001 tests in 172 suites — verified April 13, 2026)
+- Test count (14,007 tests in 172 suites — verified July 9, 2026)
 - Coverage (95.87% statement, 87.20% branch — verified April 7, 2026)
 - JavaScript file count (157 files total, ~114,000 lines)
 - PHP file count (44 files, ~15,689 lines)
@@ -458,4 +460,4 @@ Common metrics to keep synchronized:
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.75)
+- Version number (1.5.76)

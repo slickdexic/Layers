@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-14%2C001%20passing-brightgreen" alt="14,001 Tests">
+  <img src="https://img.shields.io/badge/Tests-14%2C007%20passing-brightgreen" alt="14,007 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.87%25-brightgreen" alt="95.87% Coverage">
 </p>
 
@@ -20,9 +20,25 @@
 
 ---
 
-## 🆕 What's New in v1.5.75
+## 🆕 What's New in v1.5.76
 
-- **Gallery layer set support** — Named layer sets now work in all gallery
+- **Image aspect-ratio locking** — Image layers now have a "Maintain Aspect
+  Ratio" checkbox (on by default). Editing width recomputes height from the
+  original ratio (and vice-versa), so images no longer distort when resized
+  via the numeric inputs.
+- **Smaller image imports** — Large imported images are downscaled and
+  re-encoded as JPEG in the browser before upload (only when the result is
+  actually smaller), controlled by two new settings, `$wgLayersMaxImportSide`
+  and `$wgLayersImportJpegQuality`.
+- **Graceful "data too large" handling** — When a save is rejected client-side
+  for exceeding `$wgLayersMaxBytes`, the Save button is re-enabled and the
+  user is notified with the configured limit instead of getting stuck.
+- **REL1_39 compatibility hardening** and a build/test fix for the
+  aspect-ratio change.
+
+### Previous v1.5.75 Highlights
+
+- **Gallery layer set support** — Named layer sets work in all gallery
   contexts, not just inline `[[File:...]]` wikitext:
   - **Native `<gallery>` blocks (v1.5.75)** — Add `|layerset=setname` to any
     image line. The option is stripped before rendering (no caption leakage).
@@ -356,7 +372,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.75 |
+| **Version (main)** | 1.5.76 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | May 22, 2026 |

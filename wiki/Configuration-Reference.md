@@ -163,6 +163,41 @@ $wgLayersMaxImageBytes = 2097152;
 
 > **Note:** Base64 encoding adds ~33% overhead.
 
+### $wgLayersMaxImportSide
+
+Maximum width/height (in pixels) an imported image may have before the editor
+downscales it client-side prior to upload. Images larger than this on their
+longest side are resized to fit, reducing payload size.
+
+| Property | Value |
+|----------|-------|
+| Type | `integer` |
+| Default | `2048` |
+
+```php
+// Allow larger imports before downscaling (e.g. 4K assets)
+$wgLayersMaxImportSide = 4096;
+```
+
+### $wgLayersImportJpegQuality
+
+JPEG quality (0.1–1.0) used when re-encoding a downscaled imported image. The
+re-encoded result is only kept when it is actually smaller than the original.
+
+| Property | Value |
+|----------|-------|
+| Type | `float` |
+| Default | `0.8` |
+
+```php
+// Higher quality, larger payloads
+$wgLayersImportJpegQuality = 0.92;
+```
+
+> **Note:** Both settings are exported to the client via
+> `MakeGlobalVariablesScript`, so administrator overrides take effect in the
+> browser-side import pipeline.
+
 ---
 
 ## User Interface

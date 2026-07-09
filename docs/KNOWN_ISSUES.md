@@ -1,7 +1,10 @@
 # Known Issues
 
-**Last updated:** April 13, 2026 — v71 audit (fix pass complete)
+**Last updated:** July 9, 2026 — v72 audit (fix pass complete)
 
+v72 audit: build was red on `main` (image aspect-ratio linking shipped
+without updating its tests) and the two new image-import config settings
+were read client-side but never registered/exported. Both fixed in v1.5.76.
 v71 audit: 6 code items + 2 doc drift found and fixed.
 4 deferred structural items carried from v69.
 
