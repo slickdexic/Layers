@@ -26,6 +26,13 @@ Backport of the image-import improvements from `main` v1.5.76.
   client via `MakeGlobalVariablesScript` so administrator overrides take
   effect (alongside `$wgLayersMaxImageBytes`).
 
+### Fixed
+- **TransformController arrow-tip RAF cleanup** — Synced
+  `TransformController.js` with `main` to add the requestAnimationFrame
+  throttling and destroy-time cancellation for arrow-tip dragging,
+  resolving 4 pre-existing test failures (the test file already expected
+  this behaviour).
+
 ## [1.5.65] - 2026-05-22
 
 ### Fixed

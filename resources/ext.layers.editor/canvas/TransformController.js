@@ -210,7 +210,7 @@ class TransformController {
 
 		// Apply updates to layer
 		if ( updates ) {
-			Object.keys( updates ).forEach( function ( key ) {
+			Object.keys( updates ).forEach( ( key ) => {
 				layer[ key ] = updates[ key ];
 			} );
 
@@ -647,9 +647,7 @@ class TransformController {
 				break;
 			case 'path':
 				if ( originalState.points && originalState.points.length > 0 ) {
-					layer.points = originalState.points.map( function ( pt ) {
-						return { x: pt.x + deltaX, y: pt.y + deltaY };
-					} );
+					layer.points = originalState.points.map( ( pt ) => ( { x: pt.x + deltaX, y: pt.y + deltaY } ) );
 				}
 				break;
 		}
@@ -749,8 +747,16 @@ class TransformController {
 		// Emit transform event for live properties panel update
 		this.emitTransforming( layer );
 
-		// Render layers
-		this.manager.renderLayers( this.manager.editor.layers );
+		// Throttle rendering to animation frames to avoid excessive repaints
+		if ( !this._arrowTipRafId ) {
+			this._arrowTipRafId = requestAnimationFrame( () => {
+				this._arrowTipRafId = null;
+				if ( !this.manager || this.manager.isDestroyed || !this.manager.editor ) {
+					return;
+				}
+				this.manager.renderLayers( this.manager.editor.layers );
+			} );
+		}
 	}
 
 	/**
@@ -758,6 +764,14 @@ class TransformController {
 	 */
 	finishArrowTipDrag() {
 		const hadMovement = this.showDragPreview;
+
+		// Cancel any pending rAF from arrow tip drag
+		if ( this._arrowTipRafId ) {
+			cancelAnimationFrame( this._arrowTipRafId );
+			this._arrowTipRafId = null;
+			// Ensure final state is rendered
+			this.manager.renderLayers( this.manager.editor.layers );
+		}
 
 		// Emit final transform event
 		if ( hadMovement && this.arrowTipLayerId ) {
@@ -1105,7 +1119,7 @@ class TransformController {
 						lightweightLayer[ key ] = value.slice();
 					} else if ( typeof value === 'object' && value !== null ) {
 						// For nested objects, do a shallow clone
-						lightweightLayer[ key ] = Object.assign( {}, value );
+						lightweightLayer[ key ] = { ...value };
 					} else {
 						lightweightLayer[ key ] = value;
 					}
@@ -1163,6 +1177,10 @@ class TransformController {
 			window.cancelAnimationFrame( this._dragRafId );
 			this._dragRafId = null;
 		}
+		if ( this._arrowTipRafId !== null ) {
+			window.cancelAnimationFrame( this._arrowTipRafId );
+			this._arrowTipRafId = null;
+		}
 		if ( this._angleDimRafId !== null ) {
 			window.cancelAnimationFrame( this._angleDimRafId );
 			this._angleDimRafId = null;
@@ -1188,10 +1206,13 @@ class TransformController {
 		this.isResizing = false;
 		this.isRotating = false;
 		this.isDragging = false;
+		this.isArrowTipDragging = false;
+		this.arrowTipLayerId = null;
 		this.resizeHandle = null;
 		this.dragStartPoint = null;
 		this.originalLayerState = null;
 		this.originalMultiLayerStates = null;
+		this.showDragPreview = false;
 
 		// Clear reference
 		this.manager = null;
