@@ -21,6 +21,15 @@ this release makes its tuning settings actually configurable.
 - **Stale image-dimension tests** — Updated `PropertiesForm.test.js` image
   width/height tests to expect aspect-ratio linking and added an unlocked
   (`preserveAspectRatio: false`) regression test.
+- **TransformController arrow-tip RAF cleanup** — Synced
+  `TransformController.js` with `main` to add the requestAnimationFrame
+  throttling and destroy-time cancellation for arrow-tip dragging,
+  resolving 4 pre-existing test failures.
+- **Viewer overlay for named-set intent** — Ported main's
+  `data-layers-intent` handling so the API-fallback viewer recognises any
+  non-empty server intent (including named sets like `default`/`anatomy`),
+  not just `on`, keeping this branch's ES5-compatible style. Resolves 1
+  pre-existing `ApiFallback` test failure.
 
 ### Added
 - **Two new configuration settings**, `$wgLayersMaxImportSide` (default
