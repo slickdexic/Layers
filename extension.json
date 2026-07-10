@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.65",
+	"version": "1.5.66-REL1_39",
 	"requires": {
 		"MediaWiki": ">= 1.39.0"
 	},
@@ -72,6 +72,14 @@
 		"LayersMaxImageBytes": {
 			"description": "Maximum size in bytes for imported image layers (base64 encoded). Default 1MB. Recommended: 512KB-2MB depending on storage capacity.",
 			"value": 1048576
+		},
+		"LayersMaxImportSide": {
+			"description": "Maximum width/height in pixels for client-side downscaling of imported image layers before upload. Images larger than this on their longest side are resized to fit. Default 2048.",
+			"value": 2048
+		},
+		"LayersImportJpegQuality": {
+			"description": "JPEG quality (0.1-1.0) used when re-encoding downscaled imported images to reduce payload size. Only applied when the re-encoded result is smaller than the original. Default 0.8.",
+			"value": 0.8
 		},
 		"LayersMaxNamedSets": {
 			"description": "Maximum number of named layer sets per image",

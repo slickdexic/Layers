@@ -4,6 +4,29 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.66-REL1_39] - 2026-07-09
+
+Backport of the image-import config wiring from `main` v1.5.76. The
+image-import/aspect-ratio JS feature was already present on this branch;
+this release makes its tuning settings actually configurable.
+
+### Fixed
+- **Import tuning settings are now honoured by the client** — `Toolbar.js`
+  read `wgLayersMaxImportSide`, `wgLayersImportJpegQuality`, and
+  `wgLayersMaxImageBytes` from `mw.config`, but these were never registered
+  in `extension.json` nor exported via `MakeGlobalVariablesScript`, so
+  administrator overrides were silently ignored and the client always used
+  hardcoded defaults. All three are now registered and exported (with safe
+  fallbacks).
+- **Stale image-dimension tests** — Updated `PropertiesForm.test.js` image
+  width/height tests to expect aspect-ratio linking and added an unlocked
+  (`preserveAspectRatio: false`) regression test.
+
+### Added
+- **Two new configuration settings**, `$wgLayersMaxImportSide` (default
+  `2048`) and `$wgLayersImportJpegQuality` (default `0.8`), for tuning
+  client-side image-import downscaling/compression.
+
 ## [1.5.65] - 2026-05-22
 
 ### Fixed

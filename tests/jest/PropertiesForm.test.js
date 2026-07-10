@@ -2327,7 +2327,9 @@ describe( 'PropertiesForm', () => {
 	} );
 
 	describe( 'image layer form', () => {
-		test( 'should update image width', () => {
+		test( 'should update image width and link height to preserve aspect ratio', () => {
+			// Image layers default to preserveAspectRatio (undefined !== false), so
+			// changing width also recomputes height from the original 300x200 ratio (1.5).
 			const layer = { id: 'test-layer', type: 'image', width: 300, height: 200 };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
@@ -2335,10 +2337,10 @@ describe( 'PropertiesForm', () => {
 			widthInput.value = '400';
 			dispatchInputAndAdvanceTimers( widthInput );
 
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 400 } );
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 400, height: 267 } );
 		} );
 
-		test( 'should update image height', () => {
+		test( 'should update image height and link width to preserve aspect ratio', () => {
 			const layer = { id: 'test-layer', type: 'image', width: 300, height: 200 };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
@@ -2346,7 +2348,20 @@ describe( 'PropertiesForm', () => {
 			heightInput.value = '300';
 			dispatchInputAndAdvanceTimers( heightInput );
 
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 300 } );
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { height: 300, width: 450 } );
+		} );
+
+		test( 'should update image width without linking when aspect ratio unlocked', () => {
+			const layer = {
+				id: 'test-layer', type: 'image', width: 300, height: 200, preserveAspectRatio: false
+			};
+			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
+
+			const widthInput = form.querySelector( 'input[data-prop="width"]' );
+			widthInput.value = '400';
+			dispatchInputAndAdvanceTimers( widthInput );
+
+			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { width: 400 } );
 		} );
 	} );
 
