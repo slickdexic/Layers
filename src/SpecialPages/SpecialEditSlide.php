@@ -184,14 +184,7 @@ class SpecialEditSlide extends SpecialPage {
 	/**
 	 * @inheritDoc
 	 */
-	protected function getGroupName() {
-		return 'layers';
-	}
-
-	/**
-	 * @inheritDoc
-	 */
 	public function getDescription() {
-		return $this->msg( 'special-editslide-desc' )->text();
+		return $this->msg( 'special-editslide-desc' );
 	}
 }

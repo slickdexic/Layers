@@ -224,6 +224,10 @@
 		"Slides": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides",
 		"EditSlide": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide"
 	},
+	"SpecialPageGroups": {
+		"Slides": "layers",
+		"EditSlide": "layers"
+	},
 	"APIModules": {
 		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
 		"layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo",
