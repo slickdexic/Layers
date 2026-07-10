@@ -110,12 +110,30 @@ confirmed to be a FALSE POSITIVE.** Representative examples:
 - CSRF, rate limiting, permission checks, prepared statements, and input
     whitelisting remain intact and correct across all 5 API modules.
 
-**Caveat — PHP tests were not executed in this environment.** The local
-`php` binary emits `stdout is not a tty` under MINGW64 and cannot run
-PHPUnit here. PHP correctness was verified by source inspection only;
-the passing PHP baseline (537 tests, 7 skipped) is carried from the prior
-recorded run and CI. **Do not treat the PHP suite as re-validated by
-this pass.**
+**PHP tests are now validated (root cause of the earlier blocker found
+and fixed).** The local `php` command is aliased to `winpty php.exe`;
+`winpty` requires a real TTY, so any non-interactive/piped/agent run
+aborts with `stdout is not a tty`. Invoking `php.exe` directly bypasses
+the alias and runs the suite normally. Running it surfaced two further
+real issues, both now fixed:
+
+- **CI never ran PHPUnit.** The CI "PHP checks" step only ran
+    `npm run test:php` (parallel-lint + phpcs + minus-x = linting);
+    `npm run test:phpunit` was never wired in. A `PHP unit tests
+    (PHPUnit)` step has been added to `.github/workflows/ci.yml`.
+- **A stale test was red since v1.5.67.**
+    `LayerInjectorTest::testAddSpecificLayersWithUnknownFormat` still
+    expected zero DB calls, but v1.5.67 (`2833f22a`) added plain-named-set
+    support (`layerset=default`) so a prefix-less value now does a
+    `getLayerSetByName` lookup. Test updated to match. Additionally, 6
+    dead `RateLimiterTest` methods that referenced never-implemented
+    methods and always skipped were removed.
+
+Current PHP status: **539 tests, 1172 assertions, 1 skipped, 0 failures**
+(`php.exe vendor/bin/phpunit --configuration phpunit.xml`); phpcs reports
+**0 errors** project-wide (2 residual warnings are duplicate shim-class
+names inherent to the standalone-test bootstrap and are tolerated by
+`ignore_warnings_on_exit`).
 
 ---
 

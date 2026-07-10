@@ -32,10 +32,10 @@ class CargoLayersGalleryFormat extends CargoGalleryFormat {
 	/**
 	 * Pre-register layer set hints then delegate to the standard gallery renderer.
 	 *
-	 * @param array $valuesTable    Raw row values keyed by field name
+	 * @param array $valuesTable Raw row values keyed by field name
 	 * @param array $formattedValuesTable HTML-formatted values (unused here)
-	 * @param array $fieldDescriptions  CargoFieldDescription objects keyed by field name
-	 * @param array $displayParams  Display parameters from the #cargo_query call
+	 * @param array $fieldDescriptions CargoFieldDescription objects keyed by field name
+	 * @param array $displayParams Display parameters from the #cargo_query call
 	 * @return string Gallery HTML
 	 */
 	public function display( $valuesTable, $formattedValuesTable, $fieldDescriptions, $displayParams ) {

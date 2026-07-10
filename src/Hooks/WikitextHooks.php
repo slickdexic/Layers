@@ -389,7 +389,7 @@ class WikitextHooks {
 	 * iterates Cargo query rows before the gallery renders thumbnails.
 	 *
 	 * @param string $filename File name (with or without "File:"/"Image:" prefix)
-	 * @param string $setname  Layer set name (e.g. 'anatomy', 'default')
+	 * @param string $setname Layer set name (e.g. 'anatomy', 'default')
 	 */
 	public static function registerGalleryHint( string $filename, string $setname ): void {
 		$filename = trim( $filename );
@@ -1055,11 +1055,15 @@ class WikitextHooks {
 			// Match image lines: optional indent + File:/Image: + filename + pipe options
 			'/^([ \t]*(?:File|Image):([^\|\n]+))(\|[^\n]*)$/mi',
 			static function ( $line ) {
-				$prefix   = $line[1]; // "  File:Name.jpg" (with any indent)
-				$filename = trim( $line[2] ); // "Name.jpg"
-				$rest     = $line[3]; // "|opt1|opt2|caption"
+				// "  File:Name.jpg" (with any indent)
+				$prefix = $line[1];
+				// "Name.jpg"
+				$filename = trim( $line[2] );
+				// "|opt1|opt2|caption"
+				$rest = $line[3];
 				if ( !preg_match( '/\blayerset\s*=\s*([^\|\n]+)/i', $rest, $lsMatch ) ) {
-					return $line[0]; // No layerset= on this line — leave untouched.
+					// No layerset= on this line — leave untouched.
+					return $line[0];
 				}
 				$setname = trim( $lsMatch[1] );
 				self::registerGalleryHint( $filename, $setname );
