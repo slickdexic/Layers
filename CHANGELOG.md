@@ -4,6 +4,28 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.66-REL1_43] - 2026-07-09
+
+Backport of the image-import improvements from `main` v1.5.76.
+
+### Added
+- **Image layer aspect-ratio locking** — Image layers now display a
+  "Maintain Aspect Ratio" checkbox in the properties panel (enabled by
+  default). While enabled, editing an image's width recomputes its height
+  from the original ratio (and vice-versa), so images no longer distort
+  when resized via the numeric inputs. New i18n key
+  `layers-prop-preserve-aspect-ratio`.
+- **Client-side downscaling of imported images** — Large image imports are
+  now downscaled and re-encoded as JPEG in the browser before upload,
+  reducing payload size. The compressed result is only used when it is
+  actually smaller than the original, and images with alpha are flattened
+  onto a white background to avoid black fills.
+- **Two new configuration settings** for tuning image import,
+  `$wgLayersMaxImportSide` (default `2048`) and `$wgLayersImportJpegQuality`
+  (default `0.8`), registered in `extension.json` and exported to the
+  client via `MakeGlobalVariablesScript` so administrator overrides take
+  effect (alongside `$wgLayersMaxImageBytes`).
+
 ## [1.5.65] - 2026-05-22
 
 ### Fixed

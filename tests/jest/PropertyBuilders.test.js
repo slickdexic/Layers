@@ -183,6 +183,77 @@ describe( 'PropertyBuilders', () => {
 			);
 		} );
 
+		test( 'image width change preserves height when aspect lock is enabled', () => {
+			const ctx = createMockContext( { type: 'image', width: 200, height: 100, preserveAspectRatio: true } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensions( ctx );
+
+			const widthCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Width'
+			);
+			const onChange = widthCall[ 0 ].onChange;
+
+			onChange( '300' );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ width: 300, height: 150 }
+			);
+		} );
+
+		test( 'image height change preserves width when aspect lock is enabled', () => {
+			const ctx = createMockContext( { type: 'image', width: 200, height: 100, preserveAspectRatio: true } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensions( ctx );
+
+			const heightCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Height'
+			);
+			const onChange = heightCall[ 0 ].onChange;
+
+			onChange( '150' );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ height: 150, width: 300 }
+			);
+		} );
+
+		test( 'should add preserve aspect ratio checkbox for image layers', () => {
+			const ctx = createMockContext( { type: 'image', width: 200, height: 100, preserveAspectRatio: true } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensions( ctx );
+
+			expect( ctx.addCheckbox ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					label: 'Maintain Aspect Ratio',
+					value: true
+				} )
+			);
+		} );
+
+		test( 'preserve aspect ratio checkbox onChange should update layer', () => {
+			const ctx = createMockContext( { type: 'image', width: 200, height: 100, preserveAspectRatio: true } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addDimensions( ctx );
+
+			const checkboxCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Maintain Aspect Ratio'
+			);
+			const onChange = checkboxCall[ 0 ].onChange;
+
+			onChange( false );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ preserveAspectRatio: false }
+			);
+		} );
+
 		test( 'corner radius onChange should clamp to min zero', () => {
 			const ctx = createMockContext( { width: 200, height: 100, cornerRadius: 10 } );
 			const Builders = window.Layers.UI.PropertyBuilders;

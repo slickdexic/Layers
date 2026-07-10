@@ -152,10 +152,52 @@
 
 			try {
 				// Read file as base64 data URL
-				const dataUrl = await this.readFileAsDataURL( file );
+				let dataUrl = await this.readFileAsDataURL( file );
 
 				// Load image to get dimensions
 				const img = await this.loadImage( dataUrl );
+
+				// Client-side resize + re-encode for large images to reduce payload
+				try {
+					const TextEnc = typeof TextEncoder !== 'undefined' ? TextEncoder : null;
+					const dataByteLen = TextEnc ? new TextEnc().encode( dataUrl ).length : unescape( encodeURIComponent( dataUrl ) ).length;
+					const maxSide = ( typeof mw !== 'undefined' && mw.config ) ? mw.config.get( 'wgLayersMaxImportSide', 2048 ) : 2048;
+					const jpegQuality = ( typeof mw !== 'undefined' && mw.config ) ? mw.config.get( 'wgLayersImportJpegQuality', 0.8 ) : 0.8;
+
+					// Only attempt to compress if image is larger than maxSide or current data is large
+					if ( Math.max( img.naturalWidth, img.naturalHeight ) > maxSide || dataByteLen > ( ( mw && mw.config && mw.config.get( 'wgLayersMaxImageBytes' ) ) || 1048576 ) ) {
+						const ratio = Math.max( img.naturalWidth, img.naturalHeight ) / maxSide;
+						const newWidth = Math.round( img.naturalWidth / ( ratio > 1 ? ratio : 1 ) );
+						const newHeight = Math.round( img.naturalHeight / ( ratio > 1 ? ratio : 1 ) );
+						const canvas = document.createElement( 'canvas' );
+						canvas.width = newWidth;
+						canvas.height = newHeight;
+						const ctx = canvas.getContext( '2d' );
+						// Fill white background to avoid black background when converting images with alpha to JPEG
+						ctx.fillStyle = '#ffffff';
+						ctx.fillRect( 0, 0, newWidth, newHeight );
+						ctx.drawImage( img, 0, 0, newWidth, newHeight );
+						// Re-encode as JPEG to reduce size (quality configurable)
+						const compressed = canvas.toDataURL( 'image/jpeg', parseFloat( jpegQuality ) );
+						// Use compressed data URL if it's smaller than original
+						const compressedLen = TextEnc ? new TextEnc().encode( compressed ).length : unescape( encodeURIComponent( compressed ) ).length;
+						if ( compressedLen < dataByteLen ) {
+							// Replace dataUrl with compressed version
+							// Keep original dimensions in separate fields
+							dataUrl = compressed;
+							img.compressedWidth = newWidth;
+							img.compressedHeight = newHeight;
+							if ( typeof mw !== 'undefined' && mw.log ) {
+								mw.log( `[Toolbar] Compressed imported image from ${dataByteLen} to ${compressedLen} bytes (maxSide=${maxSide}, q=${jpegQuality})` );
+							}
+						}
+					}
+				} catch ( compressErr ) {
+					// Non-fatal: log and continue with original dataUrl
+					if ( typeof mw !== 'undefined' && mw.log && mw.log.error ) {
+						mw.log.error( '[Toolbar] Image compression failed:', compressErr );
+					}
+				}
 
 				// Create a new image layer
 				const layer = {
