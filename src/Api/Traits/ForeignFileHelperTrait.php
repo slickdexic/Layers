@@ -46,4 +46,25 @@ trait ForeignFileHelperTrait {
 	protected function getFileSha1( $file, string $imgName ): string {
 		return ForeignFileHelper::getFileSha1( $file, $imgName );
 	}
+
+	/**
+	 * Get the number of pages a file has (1 for images/single-page files).
+	 *
+	 * @param mixed $file File object
+	 * @return int Page count (>= 1)
+	 */
+	protected function getPageCount( $file ): int {
+		return ForeignFileHelper::getPageCount( $file );
+	}
+
+	/**
+	 * Clamp a requested 1-based page number to the file's valid page range.
+	 *
+	 * @param mixed $file File object
+	 * @param int $page Requested page number
+	 * @return int Clamped page number (>= 1)
+	 */
+	protected function resolvePageParam( $file, int $page ): int {
+		return ForeignFileHelper::clampPage( $file, $page );
+	}
 }

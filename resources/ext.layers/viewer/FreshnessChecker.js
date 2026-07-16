@@ -211,6 +211,10 @@
 				if ( setName && setName !== 'default' && setName !== 'on' ) {
 					params.setname = setName;
 				}
+				const freshPage = parseInt( img.getAttribute( 'data-page' ), 10 );
+				if ( freshPage > 1 ) {
+					params.page = freshPage;
+				}
 
 				this.debugLog( 'Querying API for freshness:', filename, setName );
 

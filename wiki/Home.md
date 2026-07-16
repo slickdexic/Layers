@@ -20,7 +20,16 @@
 
 ---
 
-## 🆕 What's New in v1.5.76
+## 🆕 What's New in v1.5.77
+
+- **PDF markup support (multi-page)** — Annotate PDF files exactly like
+  images, with the PDF page acting as the canvas. Multi-page PDFs are fully
+  supported: each page keeps its own named layer sets and revision history.
+  The editor gains a page navigator (previous / next + "Page X / N"), and
+  wikitext embeds respect the standard `page=` parameter
+  (`[[File:Doc.pdf|page=2|layerset=on]]`). Requires the PdfHandler extension.
+
+### Previous v1.5.76 Highlights
 
 - **Image aspect-ratio locking** — Image layers now have a "Maintain Aspect
   Ratio" checkbox (on by default). Editing width recomputes height from the
@@ -372,7 +381,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.76 |
+| **Version (main)** | 1.5.77 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | May 22, 2026 |

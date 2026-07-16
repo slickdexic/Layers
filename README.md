@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.76 (May 25, 2026)  
+> **Version:** 1.5.77 (July 10, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -31,6 +31,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 - ✅ Modern, intuitive editor UI
 - ✅ **17 drawing tools** with customizable properties
 - ✅ Multiple named layer sets per image with version history
+- ✅ **PDF markup** — annotate PDF files page-by-page (multi-page supported)
 - ✅ **Slide Mode** — Create standalone canvas graphics without a base image
 - ✅ Industry-standard UX (familiar to Figma, Photoshop, Canva users)
 
@@ -199,6 +200,25 @@ Layer changes are visible on article pages immediately after saving, without nee
 ```
 
 > **Note:** As of v1.5.0, `layerset=` is the preferred parameter name. The older `layers=` syntax remains fully supported for backwards compatibility.
+
+### PDF Markup (v1.5.77+)
+
+PDF files can be annotated exactly like images — the PDF page is the canvas.
+For multi-page PDFs, each page has its own independent named layer sets and
+revision history. Use the standard MediaWiki `page` parameter to target a page:
+
+```wikitext
+[[File:Manual.pdf|500px|page=2|layerset=on]]        <!-- Layers for page 2 -->
+[[File:Manual.pdf|500px|page=3|layerset=anatomy]]   <!-- Named set on page 3 -->
+```
+
+In the editor, multi-page files show a **page navigator** (previous / next and
+a "Page X / N" indicator) in the toolbar. Switching pages loads that page's
+background, dimensions, and layer set.
+
+> **Requires the [PdfHandler](https://www.mediawiki.org/wiki/Extension:PdfHandler)
+> extension** (with Ghostscript/ImageMagick) for PDF rasterization and page
+> dimensions. Without it, PDFs are treated as single-page files.
 
 ### Gallery Support (v1.5.73–1.5.75)
 

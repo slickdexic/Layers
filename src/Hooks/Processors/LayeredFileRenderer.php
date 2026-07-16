@@ -73,6 +73,9 @@ class LayeredFileRenderer {
 			// Parse the layers parameter
 			$layersParam = $this->parseLayersArg( $layersArg );
 
+			// Determine target page for multi-page (PDF) files
+			$page = $this->parsePageArg( $frame, $args );
+
 			// Get the file
 			$file = $this->findFile( $filename );
 			if ( !$file ) {
@@ -90,7 +93,9 @@ class LayeredFileRenderer {
 				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
 			}
 
-			$layerSets = $db->getLayerSetsForImage( $file->getName(), ForeignFileHelper::getFileSha1( $file ) );
+			$layerSets = $db->getLayerSetsForImage(
+				$file->getName(), ForeignFileHelper::getFileSha1( $file ), $page
+			);
 			if ( empty( $layerSets ) ) {
 				return $parser->recursiveTagParse( "[[File:$filename|$size|$caption]]", $frame );
 			}
@@ -100,10 +105,14 @@ class LayeredFileRenderer {
 			$setName = $this->resolveSetName( $file, $layersParam );
 
 			// Generate a standard thumbnail and annotate it for the client-side viewer
-			$thumb = $file->transform( [ 'width' => $width ] );
+			$transformParams = [ 'width' => $width ];
+			if ( $page > 1 ) {
+				$transformParams['page'] = $page;
+			}
+			$thumb = $file->transform( $transformParams );
 			if ( $thumb ) {
 				return $this->buildLayeredImageHtml(
-					$filename, $thumb->getUrl(), $width, $caption, $setName
+					$filename, $thumb->getUrl(), $width, $caption, $setName, $page
 				);
 			}
 
@@ -245,12 +254,13 @@ class LayeredFileRenderer {
 	 * @return string HTML
 	 */
 	private function buildLayeredImageHtml(
-		string $filename, string $src, int $width, string $caption, string $setName
+		string $filename, string $src, int $width, string $caption, string $setName, int $page = 1
 	): string {
 		$alt = !empty( $caption ) ? htmlspecialchars( $caption ) : htmlspecialchars( $filename );
 		$title = !empty( $caption ) ? htmlspecialchars( $caption ) : '';
 		$href = Title::makeTitle( NS_FILE, $filename )->getLocalURL();
 		$intentValue = htmlspecialchars( $setName );
+		$pageAttr = $page > 1 ? ' data-page="' . (int)$page . '"' : '';
 
 		return '<span class="mw-default-size" typeof="mw:File">' .
 			'<a href="' . htmlspecialchars( $href ) . '" class="mw-file-description"' .
@@ -258,8 +268,31 @@ class LayeredFileRenderer {
 			'<img alt="' . $alt . '" src="' . htmlspecialchars( $src ) . '" ' .
 			'decoding="async" width="' . $width . '" class="mw-file-element" ' .
 			'data-layers-intent="' . $intentValue . '" ' .
-			'data-layer-setname="' . $intentValue . '" />' .
+			'data-layer-setname="' . $intentValue . '"' . $pageAttr . ' />' .
 			'</a></span>';
+	}
+
+	/**
+	 * Parse an optional page=N argument for multi-page (PDF) files.
+	 *
+	 * Scans all parser-function args for a `page=` token so the parser
+	 * function can target a specific PDF page. Defaults to page 1.
+	 *
+	 * @param mixed $frame Parser frame for expansion
+	 * @param array $args Raw parser function args
+	 * @return int Page number (>= 1)
+	 */
+	private function parsePageArg( $frame, array $args ): int {
+		foreach ( $args as $arg ) {
+			$expanded = trim( $frame->expand( $arg ) );
+			if ( preg_match( '/^page\s*=\s*(\d+)$/i', $expanded, $m ) ) {
+				$page = (int)$m[1];
+				if ( $page > 0 ) {
+					return $page;
+				}
+			}
+		}
+		return 1;
 	}
 
 	/**

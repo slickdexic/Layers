@@ -225,6 +225,7 @@ class ViewerManager {
 				imageElement: img,
 				filename: filename,
 				setname: setname,
+				page: parseInt( img.getAttribute( 'data-page' ), 10 ) || 1,
 				debug: this.debug
 			} );
 			this.debugLog( 'Overlay initialized for', filename );
@@ -502,6 +503,10 @@ class ViewerManager {
 			};
 			if ( setName && setName !== 'on' && setName !== 'default' ) {
 				params.setname = setName;
+			}
+			const refreshPage = parseInt( img.getAttribute( 'data-page' ), 10 );
+			if ( refreshPage > 1 ) {
+				params.page = refreshPage;
 			}
 
 			return api.get( params ).then( ( data ) => {
@@ -785,6 +790,10 @@ class ViewerManager {
 			};
 			if ( setName && setName !== 'on' && setName !== 'default' ) {
 				params.setname = setName;
+			}
+			const largePage = parseInt( img.getAttribute( 'data-page' ), 10 );
+			if ( largePage > 1 ) {
+				params.page = largePage;
 			}
 
 			api.get( params ).then( ( data ) => {
@@ -1211,11 +1220,27 @@ class ViewerManager {
 				this.debugWarn( 'mw.Api not available for layer data fetch' );
 				return Promise.resolve();
 			}
-			return api.get( {
-				action: 'layersinfo',
-				format: 'json',
-				filename: filename
-			} ).then( ( data ) => {
+			return api.get( ( () => {
+				const fileParams = {
+					action: 'layersinfo',
+					format: 'json',
+					filename: filename
+				};
+				let filePage = parseInt( img.getAttribute( 'data-page' ), 10 );
+				if ( !( filePage > 1 ) ) {
+					try {
+						filePage = parseInt(
+							new URL( window.location.href ).searchParams.get( 'page' ), 10
+						);
+					} catch ( e ) {
+						filePage = NaN;
+					}
+				}
+				if ( filePage > 1 ) {
+					fileParams.page = filePage;
+				}
+				return fileParams;
+			} )() ).then( ( data ) => {
 				try {
 					if ( !data || !data.layersinfo || !data.layersinfo.layerset ) {
 						return;

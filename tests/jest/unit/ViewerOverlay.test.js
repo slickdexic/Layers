@@ -764,6 +764,7 @@ describe( 'ViewerOverlay', () => {
 			expect( mockLightboxOpen ).toHaveBeenCalledWith( {
 				filename: 'Test_image.jpg',
 				setName: 'my-set',
+				page: 1,
 				imageUrl: img.src
 			} );
 

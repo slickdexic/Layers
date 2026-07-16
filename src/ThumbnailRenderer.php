@@ -101,9 +101,15 @@ class ThumbnailRenderer {
 				return null;
 			}
 
-			// Determine scale from original to target dimensions
-			$origW = (int)$file->getWidth();
-			$origH = (int)$file->getHeight();
+			// Determine scale from original to target dimensions. For multi-page
+			// files (PDFs) getWidth/getHeight are page-specific, so pass the page
+			// through — otherwise the overlay is scaled against page 1's size.
+			$page = isset( $params['page'] ) ? (int)$params['page'] : 1;
+			if ( $page < 1 ) {
+				$page = 1;
+			}
+			$origW = (int)$file->getWidth( $page );
+			$origH = (int)$file->getHeight( $page );
 			$targetW = isset( $baseParams['width'] ) ? (int)$baseParams['width'] : $origW;
 			$targetH = isset( $baseParams['height'] )
 				? (int)$baseParams['height']

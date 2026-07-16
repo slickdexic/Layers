@@ -436,6 +436,33 @@ body.layers-editor-open .mw-body-content {
 	border-right: 1px solid #eee;
 }
 
+/* Page navigation group for multi-page files (PDF) */
+.page-nav-group {
+	white-space: nowrap;
+}
+
+.toolbar-page-display {
+	min-width: 72px;
+	padding: 0 6px;
+	text-align: center;
+	font-size: 0.85em;
+	color: #54595d;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	user-select: none;
+}
+
+.page-nav-button {
+	min-width: 28px;
+	font-size: 1.25em;
+	line-height: 1;
+}
+
+.page-nav-button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
 /* Style controls row - horizontal layout with labels */
 .style-controls-row {
 	display: flex;

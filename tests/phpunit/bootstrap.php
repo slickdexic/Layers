@@ -107,6 +107,12 @@ namespace {
 				return $this->text;
 			}
 
+			public function getDBkey(): string {
+				// Mirror MediaWiki's default normalization ($wgCapitalLinks = true):
+				// trim, spaces -> underscores, and upper-case the first letter.
+				return str_replace( ' ', '_', ucfirst( trim( $this->text ) ) );
+			}
+
 			public function getLocalURL(): string {
 				$prefix = $this->namespace === NS_FILE ? 'File:' : '';
 				return '/wiki/' . str_replace( '%2F', '/', rawurlencode( $prefix . $this->text ) );
@@ -174,6 +180,8 @@ namespace {
 			public const PARAM_REQUIRED = 'required';
 			public const PARAM_DFLT = 'default';
 			public const PARAM_ISMULTI = 'multi';
+			public const PARAM_MIN = 'min';
+			public const PARAM_MAX = 'max';
 			public const PARAM_HELP_MSG = 'help';
 
 			public function __construct( ...$args ) {

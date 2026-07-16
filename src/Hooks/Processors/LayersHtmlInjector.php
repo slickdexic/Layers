@@ -255,15 +255,16 @@ class LayersHtmlInjector {
 	 * Get file dimensions safely
 	 *
 	 * @param mixed $file File object (MediaWiki File or similar)
+	 * @param int $page 1-based page number for multi-page (PDF) files
 	 * @return array Associative array with 'width' and 'height' keys (nullable ints)
 	 */
-	public function getFileDimensions( $file ): array {
+	public function getFileDimensions( $file, int $page = 1 ): array {
 		$width = null;
 		$height = null;
 
 		if ( $file !== null && method_exists( $file, 'getWidth' ) && method_exists( $file, 'getHeight' ) ) {
-			$width = (int)$file->getWidth();
-			$height = (int)$file->getHeight();
+			$width = (int)$file->getWidth( $page );
+			$height = (int)$file->getHeight( $page );
 		}
 
 		return [ 'width' => $width, 'height' => $height ];

@@ -91,6 +91,10 @@ class ThumbnailProcessor {
 		// Extract layer data and flag from transform params
 		[ $layerData, $layersFlag ] = $this->extractLayerDataFromThumbnail( $thumbnail );
 
+		// Determine the page for multi-page files (PDF). MediaWiki sets 'page'
+		// in the thumbnail transform params. Images/single-page files use 1.
+		$page = $this->extractPageFromThumbnail( $thumbnail );
+
 		// Use set name from queue if not in params
 		if ( $layersFlag === null && $setNameFromQueue !== null ) {
 			$layersFlag = $setNameFromQueue;
@@ -115,12 +119,13 @@ class ThumbnailProcessor {
 			$layerData = $this->fetchLayerDataForThumbnailDirect(
 				$thumbnail,
 				$layersFlag,
-				$linkAttribs
+				$linkAttribs,
+				$page
 			);
 		}
 
 		// Inject layer data into attributes
-		$this->injectThumbnailLayerData( $attribs, $layerData, $layersFlag, $thumbnail );
+		$this->injectThumbnailLayerData( $attribs, $layerData, $layersFlag, $thumbnail, $page );
 
 		// Apply layerslink deep linking if specified
 		if ( $linkTypeFromQueue !== null && $thumbnail !== null && method_exists( $thumbnail, 'getFile' ) ) {
@@ -131,6 +136,29 @@ class ThumbnailProcessor {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Extract the 1-based page number from a thumbnail's transform params.
+	 *
+	 * Multi-page files (PDF) carry a 'page' transform param. Images and
+	 * single-page files default to page 1.
+	 *
+	 * @param mixed $thumbnail
+	 * @return int Page number (>= 1)
+	 */
+	private function extractPageFromThumbnail( $thumbnail ): int {
+		if ( $thumbnail === null || !method_exists( $thumbnail, 'getParams' ) ) {
+			return 1;
+		}
+		$params = $thumbnail->getParams();
+		if ( is_array( $params ) && isset( $params['page'] ) ) {
+			$page = (int)$params['page'];
+			if ( $page > 0 ) {
+				return $page;
+			}
+		}
+		return 1;
 	}
 
 	/**
@@ -272,7 +300,11 @@ class ThumbnailProcessor {
 		}
 
 		// Fetch from database
-		return $this->fetchLayersFromDatabase( $file, $layersFlag );
+		return $this->fetchLayersFromDatabase(
+			$file,
+			$layersFlag,
+			$this->extractPageFromThumbnail( $thumbnail )
+		);
 	}
 
 	/**
@@ -280,10 +312,11 @@ class ThumbnailProcessor {
 	 *
 	 * @param mixed $file File object
 	 * @param string|null $layersFlag Layer set identifier
+	 * @param int $page 1-based page number for multi-page (PDF) files
 	 * @return array|null Layer data with 'layers', 'backgroundVisible', 'backgroundOpacity',
 	 *                    'revision', 'setName' for freshness checking
 	 */
-	private function fetchLayersFromDatabase( $file, ?string $layersFlag ): ?array {
+	private function fetchLayersFromDatabase( $file, ?string $layersFlag, int $page = 1 ): ?array {
 		try {
 			$db = $this->getLayersDatabase();
 			if ( !$db ) {
@@ -301,15 +334,16 @@ class ThumbnailProcessor {
 
 			$isDefaultSet = $layersFlag === null || in_array( $layersFlag, [ 'on', 'all', 'true' ], true );
 			$this->log( sprintf(
-				'fetchLayersFromDatabase: filename=%s, layersFlag=%s, isDefaultSet=%s',
+				'fetchLayersFromDatabase: filename=%s, layersFlag=%s, isDefaultSet=%s, page=%d',
 				$filename,
 				$layersFlag ?? 'null',
-				$isDefaultSet ? 'true' : 'false'
+				$isDefaultSet ? 'true' : 'false',
+				$page
 			) );
 
 			$layerSet = $isDefaultSet
-				? $db->getLatestLayerSet( $filename, $sha1 )
-				: $db->getLayerSetByName( $filename, $sha1, $layersFlag );
+				? $db->getLatestLayerSet( $filename, $sha1, null, $page )
+				: $db->getLayerSetByName( $filename, $sha1, $layersFlag, $page );
 
 			$this->log( 'fetchLayersFromDatabase: layerSet returned = ' . ( $layerSet ? 'yes' : 'no' ) );
 
@@ -346,16 +380,23 @@ class ThumbnailProcessor {
 	 * @param array|null $layerData Layer data (array with 'layers' key or raw layers array)
 	 * @param string|null $layersFlag
 	 * @param mixed $thumbnail
+	 * @param int $page 1-based page number for multi-page (PDF) files
 	 */
 	private function injectThumbnailLayerData(
 		array &$attribs,
 		?array $layerData,
 		?string $layersFlag,
-		$thumbnail
+		$thumbnail,
+		int $page = 1
 	): void {
 		// Always add instance marker
 		$instanceId = 'layers-' . substr( md5( uniqid( (string)mt_rand(), true ) ), 0, 8 );
 		$attribs['data-layers-instance'] = $instanceId;
+
+		// Expose page for multi-page (PDF) so client-side API fallbacks target it
+		if ( $page > 1 ) {
+			$attribs['data-page'] = (string)$page;
+		}
 
 		// Get file reference for base dimensions and filename lookup
 		$file = ( $thumbnail !== null && method_exists( $thumbnail, 'getFile' ) )
@@ -389,8 +430,8 @@ class ThumbnailProcessor {
 			];
 
 			if ( $file ) {
-				$payload['baseWidth'] = (int)$file->getWidth();
-				$payload['baseHeight'] = (int)$file->getHeight();
+				$payload['baseWidth'] = (int)$file->getWidth( $page );
+				$payload['baseHeight'] = (int)$file->getHeight( $page );
 			}
 
 			$attribs['class'] = trim( ( $attribs['class'] ?? '' ) . ' layers-thumbnail' );
@@ -504,12 +545,14 @@ class ThumbnailProcessor {
 	 * @param mixed $thumbnail
 	 * @param string|null $layersFlag
 	 * @param array $linkAttribs
+	 * @param int $page 1-based page number for multi-page (PDF) files
 	 * @return array|null
 	 */
 	private function fetchLayerDataForThumbnailDirect(
 		$thumbnail,
 		?string $layersFlag,
-		array $linkAttribs
+		array $linkAttribs,
+		int $page = 1
 	): ?array {
 		$file = $thumbnail->getFile();
 		if ( !$file ) {
@@ -543,7 +586,7 @@ class ThumbnailProcessor {
 		}
 
 		// Fetch from database
-		return $this->fetchLayersFromDatabase( $file, $layersFlag );
+		return $this->fetchLayersFromDatabase( $file, $layersFlag, $page );
 	}
 
 	/**

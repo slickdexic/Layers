@@ -93,6 +93,28 @@ class ImageLinkProcessor {
 	}
 
 	/**
+	 * Extract the 1-based page number from handler/frame params.
+	 *
+	 * Multi-page files (PDF) carry a 'page' param. Images and single-page
+	 * files default to page 1.
+	 *
+	 * @param array $handlerParams
+	 * @param array $frameParams
+	 * @return int Page number (>= 1)
+	 */
+	private function extractPageFromParams( array $handlerParams, array $frameParams = [] ): int {
+		foreach ( [ $handlerParams, $frameParams ] as $params ) {
+			if ( isset( $params['page'] ) ) {
+				$page = (int)$params['page'];
+				if ( $page > 0 ) {
+					return $page;
+				}
+			}
+		}
+		return 1;
+	}
+
+	/**
 	 * Process an image link for layer data injection.
 	 * This is the core method used by all image link hooks.
 	 *
@@ -122,6 +144,9 @@ class ImageLinkProcessor {
 				[],
 				$res
 			);
+
+			// Determine target page for multi-page (PDF) files
+			$page = $this->extractPageFromParams( $handlerParams, $frameParams );
 
 			// Respect explicit off/none
 			if ( $this->paramExtractor->isDisabled( $layersFlag ) ) {
@@ -167,7 +192,8 @@ class ImageLinkProcessor {
 						$res,
 						$file,
 						$setName,
-						$context
+						$context,
+						$page
 					);
 				} else {
 					// Direct injection with provided layer data
@@ -278,13 +304,15 @@ class ImageLinkProcessor {
 	 * @param mixed $file The File object
 	 * @param string|null $setName The layer set name to load
 	 * @param string $context Logging context
+	 * @param int $page 1-based page number for multi-page (PDF) files
 	 * @return string Modified HTML
 	 */
 	private function injectLayersFromDatabase(
 		string $html,
 		$file,
 		?string $setName,
-		string $context
+		string $context,
+		int $page = 1
 	): string {
 		$db = $this->getDatabase();
 		if ( !$db ) {
@@ -298,9 +326,9 @@ class ImageLinkProcessor {
 		// Use getLatestLayerSet with optional setName filter
 		$layerSet = null;
 		if ( $setName !== null && $setName !== '' && $setName !== LayersConstants::DEFAULT_SET_NAME ) {
-			$layerSet = $db->getLatestLayerSet( $filename, $sha1, $setName );
+			$layerSet = $db->getLatestLayerSet( $filename, $sha1, $setName, $page );
 		} else {
-			$layerSet = $db->getLatestLayerSet( $filename, $sha1 );
+			$layerSet = $db->getLatestLayerSet( $filename, $sha1, null, $page );
 		}
 
 		if ( !$layerSet ) {
@@ -314,7 +342,7 @@ class ImageLinkProcessor {
 		}
 
 		// Use injector for HTML modification with background settings
-		$dimensions = $this->htmlInjector->getFileDimensions( $file );
+		$dimensions = $this->htmlInjector->getFileDimensions( $file, $page );
 		$result = $this->htmlInjector->injectIntoHtml(
 			$html,
 			$layerData['layers'],

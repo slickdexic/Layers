@@ -80,6 +80,13 @@ class LayersSchemaManager {
 				"$base/patches/patch-add-ls-name.sql"
 			);
 
+			// Add ls_page column for multi-page file (PDF) support
+			$updater->addExtensionField(
+				'layer_sets',
+				'ls_page',
+				"$base/patches/patch-layer_sets-add-ls_page.sql"
+			);
+
 			// --- Index additions (compatible SQL: CREATE INDEX) ---
 
 			$updater->addExtensionIndex(
@@ -119,6 +126,12 @@ class LayersSchemaManager {
 			// Must run after ls_name column is added
 			$updater->addExtensionUpdate( [
 				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::updateUniqueKeyForNamedSets'
+			] );
+
+			// Unique key update for multi-page files: fold ls_page into the unique key
+			// Must run after both ls_name and ls_page columns are added
+			$updater->addExtensionUpdate( [
+				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::updateUniqueKeyForPages'
 			] );
 
 			// Widen ls_layer_count from TINYINT to SMALLINT (uses MODIFY COLUMN — MySQL only)
@@ -240,6 +253,17 @@ class LayersSchemaManager {
 		$tableName = $dbw->tableName( 'layer_sets' );
 		$isSQLite = ( $dbw->getType() === 'sqlite' );
 
+		// The page-inclusive unique key (ls_img_name_set_page_revision) supersedes
+		// this named-sets-only key. Once it exists we must never (re)create the
+		// page-less key, or it would wrongly reject independent per-page revisions.
+		$pageIndexInfo = $dbw->indexInfo( 'layer_sets', 'ls_img_name_set_page_revision', __METHOD__ );
+		if ( $pageIndexInfo ) {
+			$updater->output(
+				"   ...unique key superseded by ls_img_name_set_page_revision; skipping.\n"
+			);
+			return true;
+		}
+
 		// Check if the new key already exists
 		$indexInfo = $dbw->indexInfo( 'layer_sets', 'ls_img_name_set_revision', __METHOD__ );
 		if ( $indexInfo ) {
@@ -288,6 +312,87 @@ class LayersSchemaManager {
 				$updater->output( "   ...unique key already exists.\n" );
 			} else {
 				$updater->output( "   Warning: Failed to update unique key: {$message}\n" );
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Fold ls_page into the unique key so the same file can hold independent
+	 * layer sets per page (multi-page PDF support).
+	 *
+	 * Replaces UNIQUE KEY ls_img_name_set_revision (ls_img_name, ls_img_sha1,
+	 * ls_name, ls_revision) with ls_img_name_set_page_revision that also
+	 * includes ls_page. Idempotent and SQLite-compatible.
+	 *
+	 * @param DatabaseUpdater $updater
+	 * @return bool
+	 */
+	public static function updateUniqueKeyForPages( DatabaseUpdater $updater ): bool {
+		$dbw = $updater->getDB();
+		$tableName = $dbw->tableName( 'layer_sets' );
+		$isSQLite = ( $dbw->getType() === 'sqlite' );
+
+		// The ls_page column must exist before we can index it
+		if ( !$dbw->fieldExists( 'layer_sets', 'ls_page', __METHOD__ ) ) {
+			$updater->output( "   ...skipping page unique key: ls_page column not present yet.\n" );
+			return true;
+		}
+
+		$newIndexInfo = $dbw->indexInfo( 'layer_sets', 'ls_img_name_set_page_revision', __METHOD__ );
+		$oldIndexInfo = $dbw->indexInfo( 'layer_sets', 'ls_img_name_set_revision', __METHOD__ );
+
+		// Nothing to do only when the new key exists AND the stale key is gone.
+		// The stale key (which omits ls_page) must always be dropped even if the
+		// new key already exists, otherwise it wrongly rejects independent
+		// per-page revisions (e.g. page 2 of a PDF sharing a set name/revision
+		// with page 1) and every such save fails with a duplicate-key error.
+		if ( $newIndexInfo && !$oldIndexInfo ) {
+			$updater->output( "   ...unique key ls_img_name_set_page_revision already exists.\n" );
+			return true;
+		}
+
+		$updater->output( "Updating unique key for multi-page layer sets...\n" );
+
+		try {
+			// Drop the previous named-sets unique key if present.
+			if ( $oldIndexInfo ) {
+				if ( $isSQLite ) {
+					$dbw->query( "DROP INDEX IF EXISTS ls_img_name_set_revision", __METHOD__ );
+				} else {
+					$dbw->query(
+						"ALTER TABLE {$tableName} DROP INDEX ls_img_name_set_revision",
+						__METHOD__
+					);
+				}
+				$updater->output( "   Dropped old unique key ls_img_name_set_revision.\n" );
+			}
+
+			// Create the new unique key that includes ls_page (only if missing).
+			if ( !$newIndexInfo ) {
+				if ( $isSQLite ) {
+					$dbw->query(
+						"CREATE UNIQUE INDEX ls_img_name_set_page_revision ON {$tableName}" .
+						" (ls_img_name, ls_img_sha1, ls_name, ls_page, ls_revision)",
+						__METHOD__
+					);
+				} else {
+					$dbw->query(
+						"ALTER TABLE {$tableName} ADD UNIQUE KEY ls_img_name_set_page_revision" .
+						" (ls_img_name, ls_img_sha1, ls_name, ls_page, ls_revision)",
+						__METHOD__
+					);
+				}
+				$updater->output( "   Created new unique key ls_img_name_set_page_revision.\n" );
+			}
+		} catch ( \Wikimedia\Rdbms\DBQueryError $e ) {
+			$message = $e->getMessage();
+			if ( strpos( $message, 'Duplicate key name' ) !== false ||
+				 strpos( $message, 'already exists' ) !== false ) {
+				$updater->output( "   ...unique key already exists.\n" );
+			} else {
+				$updater->output( "   Warning: Failed to update page unique key: {$message}\n" );
 			}
 		}
 
@@ -747,7 +852,7 @@ class LayersSchemaManager {
 			'required_columns' => [
 				'ls_id', 'ls_img_name', 'ls_img_major_mime', 'ls_img_minor_mime',
 				'ls_img_sha1', 'ls_json_blob', 'ls_user_id', 'ls_timestamp',
-				'ls_revision', 'ls_name', 'ls_size', 'ls_layer_count'
+				'ls_revision', 'ls_name', 'ls_page', 'ls_size', 'ls_layer_count'
 			],
 			'optional_columns' => [
 				// All columns are now required in current schema

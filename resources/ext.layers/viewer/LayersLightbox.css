@@ -67,6 +67,80 @@
 	outline-offset: 2px;
 }
 
+/* Toolbar - page navigation (multi-page PDFs) + print */
+.layers-lightbox-toolbar {
+	position: absolute;
+	top: -44px;
+	left: 50%;
+	transform: translateX( -50% );
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 8px;
+	background: rgba( 255, 255, 255, 0.1 );
+	border: 1px solid rgba( 255, 255, 255, 0.3 );
+	border-radius: 6px;
+	z-index: 1002;
+}
+
+.layers-lightbox-toolbar button {
+	min-width: 32px;
+	height: 30px;
+	padding: 0 10px;
+	background: rgba( 255, 255, 255, 0.12 );
+	border: 1px solid rgba( 255, 255, 255, 0.4 );
+	border-radius: 4px;
+	color: #fff;
+	font-size: 1em;
+	line-height: 1;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.layers-lightbox-toolbar button:hover {
+	background: rgba( 255, 255, 255, 0.25 );
+}
+
+.layers-lightbox-toolbar button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.layers-lightbox-toolbar button:focus {
+	outline: 2px solid #36c;
+	outline-offset: 2px;
+}
+
+.layers-lightbox-page-indicator {
+	color: #fff;
+	font-size: 0.9em;
+	min-width: 80px;
+	text-align: center;
+	white-space: nowrap;
+}
+
+.layers-lightbox-zoom-indicator {
+	min-width: 56px;
+	font-variant-numeric: tabular-nums;
+}
+
+.layers-lightbox-toolbar-sep {
+	width: 1px;
+	height: 20px;
+	margin: 0 2px;
+	background: rgba( 255, 255, 255, 0.3 );
+}
+
+.layers-lightbox-toolbar button.layers-lightbox-export-pdf {
+	background: rgba( 51, 102, 204, 0.55 );
+	border-color: rgba( 120, 160, 240, 0.7 );
+	font-weight: bold;
+}
+
+.layers-lightbox-toolbar button.layers-lightbox-export-pdf:hover {
+	background: rgba( 51, 102, 204, 0.8 );
+}
+
 /* Image wrapper - contains both img and canvas overlay */
 .layers-lightbox-image-wrapper {
 	position: relative;
@@ -523,5 +597,44 @@
 @media screen and ( prefers-color-scheme: dark ) {
 	html.skin-theme-clientpref-os .layers-filepage-hint {
 		color: #a2a9b1;
+	}
+}
+
+/* ==========================================================================
+   Print - isolate the marked-up page (image + layer overlay)
+   Activated by the lightbox Print button, which adds .layers-lightbox-printing
+   to <body>. Everything except the lightbox image wrapper is hidden so the
+   annotated page prints on its own with a white background.
+   ========================================================================== */
+@media print {
+	body.layers-lightbox-printing * {
+		visibility: hidden;
+	}
+
+	body.layers-lightbox-printing .layers-lightbox-overlay,
+	body.layers-lightbox-printing .layers-lightbox-overlay * {
+		visibility: visible;
+	}
+
+	body.layers-lightbox-printing .layers-lightbox-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: #fff;
+		opacity: 1;
+	}
+
+	body.layers-lightbox-printing .layers-lightbox-toolbar,
+	body.layers-lightbox-printing .layers-lightbox-close {
+		display: none;
+	}
+
+	/* Let the image size to the page rather than the viewport. */
+	body.layers-lightbox-printing .layers-lightbox-image-wrapper,
+	body.layers-lightbox-printing .layers-lightbox-image {
+		max-width: 100%;
+		max-height: none;
 	}
 }

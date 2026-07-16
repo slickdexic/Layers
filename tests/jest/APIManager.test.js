@@ -1913,7 +1913,8 @@ describe( 'APIManager', function () {
 			expect( apiManager.api.postWithToken ).toHaveBeenCalledWith( 'csrf', {
 				action: 'layersdelete',
 				filename: 'Test_Image.jpg',
-				setname: 'my-set'
+				setname: 'my-set',
+				page: 1
 			} );
 		} );
 
@@ -2045,7 +2046,8 @@ describe( 'APIManager', function () {
 			expect( apiManager.api.postWithToken ).toHaveBeenCalledWith( 'csrf', {
 				action: 'layersdelete',
 				filename: 'Config_Image.jpg',
-				setname: 'test-set'
+				setname: 'test-set',
+				page: 1
 			} );
 		} );
 	} );
@@ -2118,7 +2120,8 @@ describe( 'APIManager', function () {
 				action: 'layersrename',
 				filename: 'Test_Image.jpg',
 				oldname: 'old-set',
-				newname: 'new-set'
+				newname: 'new-set',
+				page: 1
 			} );
 		} );
 

@@ -401,6 +401,12 @@
 					initialSetName: init.initialSetName || null,
 					autoCreate: init.autoCreate || false,
 					container: container || document.body,
+					// Multi-page (PDF) context
+					page: init.page || 1,
+					pageCount: init.pageCount || 1,
+					// Native page/base dimensions so layers use a stable coordinate space
+					baseWidth: init.baseWidth || null,
+					baseHeight: init.baseHeight || null,
 					// Slide-specific properties
 					isSlide: init.isSlide || false,
 					slideName: init.slideName || null,
@@ -432,6 +438,12 @@
 						initialSetName: init.initialSetName || null,
 						autoCreate: init.autoCreate || false,
 						container: container || document.body,
+						// Multi-page (PDF) context
+						page: init.page || 1,
+						pageCount: init.pageCount || 1,
+						// Native page/base dimensions so layers use a stable coordinate space
+						baseWidth: init.baseWidth || null,
+						baseHeight: init.baseHeight || null,
 						// Slide-specific properties
 						isSlide: init.isSlide || false,
 						slideName: init.slideName || null,

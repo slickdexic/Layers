@@ -85,4 +85,44 @@ class ForeignFileHelper {
 
 		return $sha1 ?? '';
 	}
+
+	/**
+	 * Get the number of pages a file has.
+	 *
+	 * Multi-page files (e.g. PDFs handled by the PdfHandler extension) report
+	 * more than one page via isMultipage()/pageCount(). Images and single-page
+	 * files always return 1.
+	 *
+	 * @param mixed $file File object
+	 * @return int Page count (>= 1)
+	 */
+	public static function getPageCount( $file ): int {
+		if ( $file && method_exists( $file, 'isMultipage' ) && $file->isMultipage()
+			&& method_exists( $file, 'pageCount' )
+		) {
+			$count = (int)$file->pageCount();
+			if ( $count > 0 ) {
+				return $count;
+			}
+		}
+		return 1;
+	}
+
+	/**
+	 * Clamp a requested page number to the valid range [1, pageCount] for a file.
+	 *
+	 * @param mixed $file File object
+	 * @param int $page Requested 1-based page number
+	 * @return int Clamped page number (>= 1)
+	 */
+	public static function clampPage( $file, int $page ): int {
+		if ( $page < 1 ) {
+			$page = 1;
+		}
+		$count = self::getPageCount( $file );
+		if ( $page > $count ) {
+			$page = $count;
+		}
+		return $page;
+	}
 }

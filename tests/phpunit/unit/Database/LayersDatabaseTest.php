@@ -143,6 +143,7 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$row->ls_timestamp = $data['timestamp'] ?? '20231209120000';
 		$row->ls_revision = $data['revision'] ?? 1;
 		$row->ls_name = $data['name'] ?? 'default';
+		$row->ls_page = $data['page'] ?? 1;
 		$row->ls_size = $data['size'] ?? strlen( $row->ls_json_blob );
 		$row->ls_layer_count = $data['layerCount'] ?? 0;
 		return $row;
@@ -344,6 +345,62 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$result = $db->getLatestLayerSet( 'Test.jpg', 'sha1', 'custom-set' );
 
 		$this->assertEquals( 'custom-set', $result['name'] );
+	}
+
+	/**
+	 * @covers ::getLatestLayerSet
+	 */
+	public function testGetLatestLayerSetWithPage(): void {
+		$row = $this->createLayerSetRow( [
+			'id' => 21,
+			'imgName' => 'Doc.pdf',
+			'revision' => 2,
+			'page' => 3
+		] );
+
+		$this->dbr->expects( $this->once() )
+			->method( 'selectRow' )
+			->with(
+				'layer_sets',
+				$this->anything(),
+				$this->callback( static function ( $conditions ) {
+					return isset( $conditions['ls_page'] ) && (int)$conditions['ls_page'] === 3;
+				} ),
+				$this->anything(),
+				$this->anything()
+			)
+			->willReturn( $row );
+
+		$db = $this->createLayersDatabase();
+		$result = $db->getLatestLayerSet( 'Doc.pdf', 'sha1', null, 3 );
+
+		$this->assertIsArray( $result );
+		$this->assertEquals( 21, $result['id'] );
+	}
+
+	/**
+	 * @covers ::getLatestLayerSet
+	 */
+	public function testGetLatestLayerSetDefaultsToPageOne(): void {
+		$row = $this->createLayerSetRow( [ 'id' => 22, 'imgName' => 'Photo.jpg' ] );
+
+		$this->dbr->expects( $this->once() )
+			->method( 'selectRow' )
+			->with(
+				'layer_sets',
+				$this->anything(),
+				$this->callback( static function ( $conditions ) {
+					return isset( $conditions['ls_page'] ) && (int)$conditions['ls_page'] === 1;
+				} ),
+				$this->anything(),
+				$this->anything()
+			)
+			->willReturn( $row );
+
+		$db = $this->createLayersDatabase();
+		$result = $db->getLatestLayerSet( 'Photo.jpg', 'sha1' );
+
+		$this->assertEquals( 22, $result['id'] );
 	}
 
 	/**
