@@ -213,13 +213,20 @@
 	 * @private
 	 */
 	_buildCacheKey( filename, options = {} ) {
+		// Qualify by page so multi-page (PDF) files never share cache entries
+		// between pages. Single-page files/images are page 1.
+		const page = ( this.editor && this.editor.page ) || 1;
+		const pageSuffix = page > 1 ? `:p${ page }` : '';
+		if ( this.cacheManager ) {
+			return this.cacheManager.buildCacheKey( filename, options ) + pageSuffix;
+		}
 		if ( options.layersetid ) {
-			return `${ filename }:id:${ options.layersetid }`;
+			return `${ filename }:id:${ options.layersetid }${ pageSuffix }`;
 		}
 		if ( options.setname ) {
-			return `${ filename }:set:${ options.setname }`;
+			return `${ filename }:set:${ options.setname }${ pageSuffix }`;
 		}
-		return `${ filename }:default`;
+		return `${ filename }:default${ pageSuffix }`;
 	}
 
 	/**
@@ -296,6 +303,7 @@
 			this.api.get( {
 				action: 'layersinfo',
 				filename: this.editor.filename,
+				page: ( this.editor && this.editor.page ) || 1,
 				format: 'json',
 				formatversion: 2
 			} ).then( ( data ) => {
@@ -812,6 +820,7 @@
 				action: 'layersinfo',
 				filename: this.editor.filename,
 				setname: setName,
+				page: ( this.editor && this.editor.page ) || 1,
 				format: 'json',
 				formatversion: 2
 			} );
@@ -977,6 +986,7 @@
 			filename: this.editor.filename,
 			data: layersJson,
 			setname: currentSetName,
+			page: ( this.editor && this.editor.page ) || 1,
 			format: 'json',
 			formatversion: 2
 		};
@@ -1110,6 +1120,7 @@
 			action: 'layersinfo',
 			filename: this.editor.filename,
 			setname: currentSetName,
+			page: ( this.editor && this.editor.page ) || 1,
 			format: 'json',
 			formatversion: 2
 		} ).then( ( data ) => {
@@ -1199,7 +1210,8 @@
 			this.api.postWithToken( 'csrf', {
 				action: 'layersdelete',
 				filename: filename,
-				setname: setName
+				setname: setName,
+				page: ( this.editor && this.editor.page ) || 1
 			} ).then( ( data ) => {
 				this.hideSpinner();
 
@@ -1332,7 +1344,8 @@
 				action: 'layersrename',
 				filename: filename,
 				oldname: oldName,
-				newname: newName
+				newname: newName,
+				page: ( this.editor && this.editor.page ) || 1
 			} ).then( ( data ) => {
 				this.hideSpinner();
 

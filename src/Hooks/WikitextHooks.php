@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 class WikitextHooks {
 	use StaticLoggerAwareTrait;
@@ -577,6 +578,29 @@ class WikitextHooks {
 	}
 
 	/**
+	 * Normalize a raw filename captured from wikitext to MediaWiki's canonical
+	 * file DB key, so queue keys match the name later reported by
+	 * File::getName() in onParserMakeImageParams / onThumbnailBeforeProduceHTML.
+	 *
+	 * Without this, a lower-case first letter in wikitext (e.g. [[File:somepdf.pdf]])
+	 * would be keyed as "somepdf.pdf" while the render side looks it up as the
+	 * canonical "Somepdf.pdf", so the layerset queue never matches and overlays
+	 * silently fail to appear. Respects $wgCapitalLinks via Title normalization.
+	 *
+	 * @param string $raw Raw filename captured from the [[File:...]] regex
+	 * @return string Canonical file DB key (underscores, wiki-cased)
+	 */
+	private static function normalizeFileKey( string $raw ): string {
+		$raw = trim( $raw );
+		$title = Title::makeTitleSafe( NS_FILE, $raw );
+		if ( $title ) {
+			return $title->getDBkey();
+		}
+		// Fallback: mimic default MediaWiki normalization ($wgCapitalLinks = true)
+		return str_replace( ' ', '_', ucfirst( $raw ) );
+	}
+
+	/**
 	 * Get both set name and link type for the next occurrence of a file
 	 * This method ensures both values come from the same queue index
 	 *
@@ -660,9 +684,10 @@ class WikitextHooks {
 			self::log( "File pattern matched $fileMatchCount times" );
 			if ( $fileMatchCount ) {
 				foreach ( $matches as $match ) {
-					// Normalize filename: replace spaces with underscores to match MediaWiki internal naming
+					// Normalize to MediaWiki's canonical file DB key so queue lookups
+					// match the name reported by File::getName() at render time.
 					// This ensures queue lookups work correctly when ThumbnailBeforeProduceHTML is called
-					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
+					$filename = self::normalizeFileKey( $match[1][0] );
 					// Use full match offset ($match[0][1]) not filename offset ($match[1][1])
 					// This ensures consistent offset comparison with layersMap
 					$offset = $match[0][1];
@@ -690,8 +715,8 @@ class WikitextHooks {
 			self::log( "Layerset/layers regex matched $matchCount times" );
 			if ( $matchCount ) {
 				foreach ( $allMatches as $match ) {
-					// Normalize filename: replace spaces with underscores
-					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
+					// Normalize to canonical file DB key (see normalizeFileKey)
+					$filename = self::normalizeFileKey( $match[1][0] );
 					$offset = $match[0][1];
 					$layersValue = trim( $match[2][0] );
 
@@ -752,8 +777,8 @@ class WikitextHooks {
 			self::log( "Layerslink regex matched $linkMatchCount times" );
 			if ( $linkMatchCount ) {
 				foreach ( $linkMatches as $match ) {
-					// Normalize filename: replace spaces with underscores
-					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
+					// Normalize to canonical file DB key (see normalizeFileKey)
+					$filename = self::normalizeFileKey( $match[1][0] );
 					$offset = $match[0][1];
 					$linkValue = strtolower( trim( $match[2][0] ) );
 					// Validate against allowed values

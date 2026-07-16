@@ -91,6 +91,7 @@ trait LayersApiHelperTrait {
 	 * @param string $imgName Image name (DB key form)
 	 * @param string $sha1 File SHA1 hash
 	 * @param string $setName Name of the layer set
+	 * @param int $page 1-based page number for multi-page (PDF) files
 	 * @return bool True if user has permission (is owner or admin)
 	 */
 	protected function isOwnerOrAdmin(
@@ -98,9 +99,10 @@ trait LayersApiHelperTrait {
 		$user,
 		string $imgName,
 		string $sha1,
-		string $setName
+		string $setName,
+		int $page = 1
 	): bool {
-		$ownerId = $db->getNamedSetOwner( $imgName, $sha1, $setName );
+		$ownerId = $db->getNamedSetOwner( $imgName, $sha1, $setName, $page );
 		$userId = $user->getId();
 		// S-003: All anonymous users share userId 0 — never treat them as owners
 		// to prevent one anon from deleting/renaming another anon's sets.
@@ -127,18 +129,19 @@ trait LayersApiHelperTrait {
 		LayersDatabase $db,
 		string $imgName,
 		string &$sha1,
-		string $setName
+		string $setName,
+		int $page = 1
 	): ?array {
-		$layerSet = $db->getLayerSetByName( $imgName, $sha1, $setName );
+		$layerSet = $db->getLayerSetByName( $imgName, $sha1, $setName, $page );
 
 		if ( !$layerSet ) {
 			// SHA1 mismatch fallback: for foreign files, the SHA1 may have been
 			// saved before InstantCommons support was added.
-			$storedSha1 = $db->findSetSha1( $imgName, $setName );
+			$storedSha1 = $db->findSetSha1( $imgName, $setName, $page );
 			if ( $storedSha1 !== null && $storedSha1 !== $sha1 ) {
 				// Caller can use this to log the fallback via getLogger()
 				$sha1 = $storedSha1;
-				$layerSet = $db->getLayerSetByName( $imgName, $sha1, $setName );
+				$layerSet = $db->getLayerSetByName( $imgName, $sha1, $setName, $page );
 			}
 		}
 

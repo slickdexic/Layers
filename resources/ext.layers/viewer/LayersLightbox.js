@@ -89,14 +89,37 @@
 		 * @param {Object} [config.layerData] Pre-loaded layer data (if available)
 		 */
 		open( config ) {
-			if ( this.isOpen ) {
-				this.close();
+			// Cancel any pending close animation timeout to prevent it from
+			// destroying the overlay we're about to create (P3-111 race fix)
+			if ( this.closeTimeoutId ) {
+				clearTimeout( this.closeTimeoutId );
+				this.closeTimeoutId = null;
+			}
+
+			if ( this.isOpen || ( this.overlay && this.overlay.parentNode ) ) {
+				// Force synchronous close to prevent duplicate overlays
+				this.close( true );
 			}
 
 			this.debugLog( 'Opening lightbox for:', config.filename );
 
+			// Track viewing context so multi-page (PDF) navigation can reload
+			// the correct page image + that page's layer set.
+			this.filename = config.filename;
+			this.setName = config.setName || null;
+			this.currentPage = parseInt( config.page, 10 ) > 1 ? parseInt( config.page, 10 ) : 1;
+			this.pageCount = 1;
+
+			// Reset zoom/pan for a fresh view.
+			this.zoom = 1;
+			this.panX = 0;
+			this.panY = 0;
+
 			// Create overlay structure
 			this.createOverlay();
+
+			// Hide paging until the server reports the real page count.
+			this.updateToolbar();
 
 			// Show loading state
 			this.showLoading();
@@ -106,7 +129,7 @@
 				this.renderViewer( config.imageUrl, config.layerData );
 			} else {
 				// Fetch via API
-				this.fetchAndRender( config.filename, config.setName );
+				this.fetchAndRender( config.filename, config.setName, this.currentPage );
 			}
 
 			this.isOpen = true;
@@ -140,8 +163,110 @@
 			this.imageWrapper = document.createElement( 'div' );
 			this.imageWrapper.className = 'layers-lightbox-image-wrapper';
 
+			// Create toolbar (page navigation for multi-page files + print).
+			// Hidden until we know there is something to show (pageCount > 1
+			// enables paging; the print button is always available once loaded).
+			this.toolbar = document.createElement( 'div' );
+			this.toolbar.className = 'layers-lightbox-toolbar';
+
+			// --- Zoom controls (always available) ---
+			this.zoomOutBtn = document.createElement( 'button' );
+			this.zoomOutBtn.type = 'button';
+			this.zoomOutBtn.className = 'layers-lightbox-zoom-out';
+			this.zoomOutBtn.innerHTML = '&#8722;';
+			this.zoomOutBtn.setAttribute( 'aria-label', this.getMessage( 'layers-zoom-out', 'Zoom out' ) );
+			this.zoomOutBtn.title = this.getMessage( 'layers-zoom-out', 'Zoom out' );
+			this.zoomOutBtn.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.zoomBy( 1 / 1.25 );
+			} );
+
+			this.zoomIndicator = document.createElement( 'button' );
+			this.zoomIndicator.type = 'button';
+			this.zoomIndicator.className = 'layers-lightbox-zoom-indicator';
+			this.zoomIndicator.title = this.getMessage( 'layers-zoom-reset', 'Reset zoom' );
+			this.zoomIndicator.setAttribute( 'aria-label', this.getMessage( 'layers-zoom-reset', 'Reset zoom' ) );
+			this.zoomIndicator.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.resetZoom();
+			} );
+
+			this.zoomInBtn = document.createElement( 'button' );
+			this.zoomInBtn.type = 'button';
+			this.zoomInBtn.className = 'layers-lightbox-zoom-in';
+			this.zoomInBtn.innerHTML = '&#43;';
+			this.zoomInBtn.setAttribute( 'aria-label', this.getMessage( 'layers-zoom-in', 'Zoom in' ) );
+			this.zoomInBtn.title = this.getMessage( 'layers-zoom-in', 'Zoom in' );
+			this.zoomInBtn.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.zoomBy( 1.25 );
+			} );
+
+			const zoomSep = document.createElement( 'span' );
+			zoomSep.className = 'layers-lightbox-toolbar-sep';
+
+			this.prevBtn = document.createElement( 'button' );
+			this.prevBtn.type = 'button';
+			this.prevBtn.className = 'layers-lightbox-page-prev';
+			this.prevBtn.innerHTML = '&#8249;';
+			this.prevBtn.setAttribute( 'aria-label', this.getMessage( 'layers-page-prev', 'Previous page' ) );
+			this.prevBtn.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.goToPage( this.currentPage - 1 );
+			} );
+
+			this.pageIndicator = document.createElement( 'span' );
+			this.pageIndicator.className = 'layers-lightbox-page-indicator';
+
+			this.nextBtn = document.createElement( 'button' );
+			this.nextBtn.type = 'button';
+			this.nextBtn.className = 'layers-lightbox-page-next';
+			this.nextBtn.innerHTML = '&#8250;';
+			this.nextBtn.setAttribute( 'aria-label', this.getMessage( 'layers-page-next', 'Next page' ) );
+			this.nextBtn.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.goToPage( this.currentPage + 1 );
+			} );
+
+			this.printBtn = document.createElement( 'button' );
+			this.printBtn.type = 'button';
+			this.printBtn.className = 'layers-lightbox-print';
+			this.printBtn.textContent = this.getMessage( 'layers-lightbox-print', 'Print' );
+			this.printBtn.title = this.getMessage( 'layers-lightbox-print-tooltip', 'Print the marked-up page' );
+			this.printBtn.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.printCurrentPage();
+			} );
+
+			// Export the full annotated document as a PDF (server-side). Shown
+			// only for multi-page files (see updateToolbar).
+			this.exportPdfBtn = document.createElement( 'button' );
+			this.exportPdfBtn.type = 'button';
+			this.exportPdfBtn.className = 'layers-lightbox-export-pdf';
+			this.exportPdfBtn.textContent = this.getMessage( 'layers-lightbox-export-pdf', 'Print PDF' );
+			this.exportPdfBtn.title = this.getMessage(
+				'layers-lightbox-export-pdf-tooltip',
+				'Generate and open the full marked-up PDF for printing or download'
+			);
+			this.exportPdfBtn.style.display = 'none';
+			this.exportPdfBtn.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.exportPdf();
+			} );
+
+			this.toolbar.appendChild( this.zoomOutBtn );
+			this.toolbar.appendChild( this.zoomIndicator );
+			this.toolbar.appendChild( this.zoomInBtn );
+			this.toolbar.appendChild( zoomSep );
+			this.toolbar.appendChild( this.prevBtn );
+			this.toolbar.appendChild( this.pageIndicator );
+			this.toolbar.appendChild( this.nextBtn );
+			this.toolbar.appendChild( this.printBtn );
+			this.toolbar.appendChild( this.exportPdfBtn );
+
 			// Assemble structure
 			this.container.appendChild( closeBtn );
+			this.container.appendChild( this.toolbar );
 			this.container.appendChild( this.imageWrapper );
 			this.overlay.appendChild( this.container );
 			document.body.appendChild( this.overlay );
@@ -154,8 +279,21 @@
 			this.overlay.addEventListener( 'click', this.boundClickHandler );
 			closeBtn.addEventListener( 'click', () => this.close() );
 
+			// Zoom + pan interaction on the image stage.
+			this.boundWheelHandler = ( e ) => this.handleWheel( e );
+			this.boundPanStart = ( e ) => this.startPan( e );
+			this.boundPanMove = ( e ) => this.movePan( e );
+			this.boundPanEnd = () => this.endPan();
+			this.imageWrapper.addEventListener( 'wheel', this.boundWheelHandler, { passive: false } );
+			this.imageWrapper.addEventListener( 'mousedown', this.boundPanStart );
+			document.addEventListener( 'mousemove', this.boundPanMove );
+			document.addEventListener( 'mouseup', this.boundPanEnd );
+
 			// Prevent body scroll
 			document.body.style.overflow = 'hidden';
+
+			// Reflect the initial (unzoomed) transform + indicator.
+			this.applyTransform();
 
 			// Force reflow and add visible class for animation
 			this.overlay.offsetHeight;
@@ -167,6 +305,10 @@
 		 * @private
 		 */
 		showLoading() {
+			if ( !this.imageWrapper ) {
+				return;
+			}
+			this.imageWrapper.innerHTML = '';
 			const loading = document.createElement( 'div' );
 			loading.className = 'layers-lightbox-loading';
 			loading.textContent = this.getMessage( 'layers-lightbox-loading', 'Loading layers...' );
@@ -180,13 +322,14 @@
 		 * @param {string} [setName] Optional layer set name
 		 * @private
 		 */
-		fetchAndRender( filename, setName ) {
+		fetchAndRender( filename, setName, page ) {
 			if ( typeof mw === 'undefined' || !mw.Api ) {
 				this.showError( 'API not available' );
 				return;
 			}
 
 			const api = new mw.Api();
+			const requestedPage = parseInt( page, 10 ) > 1 ? parseInt( page, 10 ) : 1;
 			const params = {
 				action: 'layersinfo',
 				filename: filename,
@@ -196,6 +339,9 @@
 			if ( setName && setName !== 'on' && setName !== 'default' ) {
 				params.setname = setName;
 			}
+			if ( requestedPage > 1 ) {
+				params.page = requestedPage;
+			}
 
 			api.get( params ).then( ( data ) => {
 				if ( !data || !data.layersinfo ) {
@@ -204,8 +350,27 @@
 				}
 
 				const layersInfo = data.layersinfo;
+
+				// Track multi-page context reported by the server so the paging
+				// controls know the total page count and which page we are on.
+				this.pageCount = parseInt( layersInfo.pageCount, 10 ) || 1;
+				this.currentPage = parseInt( layersInfo.page, 10 ) || requestedPage;
+
+				// Prefer the server-provided, page-aware image URL. For PDFs and
+				// other non-web formats this is a rasterized page thumbnail; the
+				// raw file URL cannot be shown in an <img>.
+				const imageUrl = layersInfo.imageUrl || this.resolveFullImageUrl( filename );
+
+				// No layer set yet — show the page image without an overlay.
 				if ( !layersInfo.layerset ) {
-					this.showError( 'No layer set found' );
+					this.renderViewer( imageUrl, {
+						layers: [],
+						baseWidth: null,
+						baseHeight: null,
+						backgroundVisible: true,
+						backgroundOpacity: 1.0
+					} );
+					this.updateToolbar();
 					return;
 				}
 
@@ -231,16 +396,540 @@
 					}
 				}
 
-				// Get full-size image URL
-				// Try to construct from known patterns
-				const imageUrl = this.resolveFullImageUrl( filename );
-
 				this.renderViewer( imageUrl, layerData );
+				this.updateToolbar();
 
 			} ).catch( ( error ) => {
 				this.debugLog( 'API error:', error );
 				this.showError( 'Failed to load layer data' );
 			} );
+		}
+
+		/**
+		 * Navigate to a specific page of a multi-page file and reload its image
+		 * and page-scoped layer set.
+		 *
+		 * @param {number} targetPage 1-based page number
+		 * @private
+		 */
+		goToPage( targetPage ) {
+			const p = parseInt( targetPage, 10 );
+			if ( !p || p < 1 || p > this.pageCount || p === this.currentPage ) {
+				return;
+			}
+			this.currentPage = p;
+			// A new page is a fresh view: reset zoom/pan.
+			this.resetZoom();
+			this.showLoading();
+			this.fetchAndRender( this.filename, this.setName, p );
+		}
+
+		/**
+		 * Update the toolbar (page indicator + prev/next enabled state). Paging
+		 * controls are only shown for multi-page files.
+		 *
+		 * @private
+		 */
+		updateToolbar() {
+			if ( !this.toolbar ) {
+				return;
+			}
+			const multiPage = this.pageCount > 1;
+			this.prevBtn.style.display = multiPage ? '' : 'none';
+			this.nextBtn.style.display = multiPage ? '' : 'none';
+			this.pageIndicator.style.display = multiPage ? '' : 'none';
+			if ( this.exportPdfBtn ) {
+				this.exportPdfBtn.style.display = multiPage ? '' : 'none';
+			}
+			if ( multiPage ) {
+				this.pageIndicator.textContent = this.getMessage( 'layers-page-indicator', 'Page $1 / $2' )
+					.replace( '$1', String( this.currentPage ) )
+					.replace( '$2', String( this.pageCount ) );
+				this.prevBtn.disabled = this.currentPage <= 1;
+				this.nextBtn.disabled = this.currentPage >= this.pageCount;
+			}
+		}
+
+		/**
+		 * Minimum and maximum zoom factors for the full-screen viewer.
+		 *
+		 * @return {Object} { min, max }
+		 * @private
+		 */
+		getZoomLimits() {
+			return { min: 0.25, max: 8 };
+		}
+
+		/**
+		 * Apply the current zoom + pan as a CSS transform on the image stage.
+		 * Both the background image and the layer canvas live inside the wrapper,
+		 * so a single transform scales them together and keeps them aligned.
+		 *
+		 * @private
+		 */
+		applyTransform() {
+			if ( !this.imageWrapper ) {
+				return;
+			}
+			const z = this.zoom || 1;
+			const px = this.panX || 0;
+			const py = this.panY || 0;
+			this.imageWrapper.style.transformOrigin = 'center center';
+			this.imageWrapper.style.transform =
+				'translate(' + px + 'px, ' + py + 'px) scale(' + z + ')';
+			this.imageWrapper.style.cursor = z > 1 ? 'grab' : '';
+			this.updateZoomIndicator();
+		}
+
+		/**
+		 * Update the zoom percentage label in the toolbar.
+		 *
+		 * @private
+		 */
+		updateZoomIndicator() {
+			if ( this.zoomIndicator ) {
+				this.zoomIndicator.textContent = Math.round( ( this.zoom || 1 ) * 100 ) + '%';
+			}
+		}
+
+		/**
+		 * Set an absolute zoom factor (clamped) and re-render the transform.
+		 *
+		 * @param {number} z Target zoom factor
+		 * @private
+		 */
+		setZoom( z ) {
+			const limits = this.getZoomLimits();
+			this.zoom = Math.min( limits.max, Math.max( limits.min, z ) );
+			if ( this.zoom === 1 ) {
+				this.panX = 0;
+				this.panY = 0;
+			}
+			this.applyTransform();
+		}
+
+		/**
+		 * Multiply the current zoom by a factor (used by +/- buttons and wheel).
+		 *
+		 * @param {number} factor Multiplier ( >1 zooms in, <1 zooms out )
+		 * @private
+		 */
+		zoomBy( factor ) {
+			this.setZoom( ( this.zoom || 1 ) * factor );
+		}
+
+		/**
+		 * Reset zoom to 100% and clear any pan offset.
+		 *
+		 * @private
+		 */
+		resetZoom() {
+			this.zoom = 1;
+			this.panX = 0;
+			this.panY = 0;
+			this.applyTransform();
+		}
+
+		/**
+		 * Handle mouse-wheel zoom over the image stage.
+		 *
+		 * @param {WheelEvent} e Wheel event
+		 * @private
+		 */
+		handleWheel( e ) {
+			e.preventDefault();
+			this.zoomBy( e.deltaY < 0 ? 1.1 : 1 / 1.1 );
+		}
+
+		/**
+		 * Begin a drag-to-pan gesture (only meaningful when zoomed in).
+		 *
+		 * @param {MouseEvent} e Mouse event
+		 * @private
+		 */
+		startPan( e ) {
+			if ( ( this.zoom || 1 ) <= 1 ) {
+				return;
+			}
+			e.preventDefault();
+			e.stopPropagation();
+			this.isPanning = true;
+			this.panStartX = e.clientX;
+			this.panStartY = e.clientY;
+			this.panOriginX = this.panX || 0;
+			this.panOriginY = this.panY || 0;
+			if ( this.imageWrapper ) {
+				this.imageWrapper.style.cursor = 'grabbing';
+			}
+		}
+
+		/**
+		 * Update pan offset while dragging.
+		 *
+		 * @param {MouseEvent} e Mouse event
+		 * @private
+		 */
+		movePan( e ) {
+			if ( !this.isPanning ) {
+				return;
+			}
+			this.panX = this.panOriginX + ( e.clientX - this.panStartX );
+			this.panY = this.panOriginY + ( e.clientY - this.panStartY );
+			this.applyTransform();
+		}
+
+		/**
+		 * End a drag-to-pan gesture.
+		 *
+		 * @private
+		 */
+		endPan() {
+			if ( !this.isPanning ) {
+				return;
+			}
+			this.isPanning = false;
+			if ( this.imageWrapper ) {
+				this.imageWrapper.style.cursor = ( this.zoom || 1 ) > 1 ? 'grab' : '';
+			}
+		}
+
+		/**
+		 * Print the currently displayed marked-up page. Adds a body class so the
+		 * print stylesheet isolates the lightbox image + layer overlay, then
+		 * invokes the browser print dialog.
+		 *
+		 * @private
+		 */
+		printCurrentPage() {
+			if ( !this.overlay ) {
+				return;
+			}
+			document.body.classList.add( 'layers-lightbox-printing' );
+			const cleanup = () => {
+				document.body.classList.remove( 'layers-lightbox-printing' );
+				window.removeEventListener( 'afterprint', cleanup );
+			};
+			window.addEventListener( 'afterprint', cleanup );
+			// Fallback cleanup in case afterprint does not fire.
+			setTimeout( cleanup, 60000 );
+			window.print();
+		}
+
+		/**
+		 * Print the full marked-up document. For multi-page files this renders
+		 * every page client-side (background raster + layer overlay flattened onto
+		 * one canvas via the shared renderer, so all layer types render correctly)
+		 * and opens a print-ready window with one page per sheet. If client-side
+		 * compositing is not possible (e.g. a cross-origin/tainted canvas), it
+		 * falls back to the server-side PDF export.
+		 *
+		 * @private
+		 */
+		exportPdf() {
+			if ( !this.filename ) {
+				return;
+			}
+			const btn = this.exportPdfBtn;
+			const original = btn ? btn.textContent : '';
+			const restore = () => {
+				if ( btn ) {
+					btn.disabled = false;
+					btn.textContent = original;
+				}
+			};
+			if ( btn ) {
+				btn.disabled = true;
+				btn.textContent = this.getMessage(
+					'layers-lightbox-export-generating', 'Preparing pages…'
+				);
+			}
+
+			const pageCount = Math.max( 1, parseInt( this.pageCount, 10 ) || 1 );
+			const tasks = [];
+			for ( let p = 1; p <= pageCount; p++ ) {
+				tasks.push( this.composePageDataUrl( p ) );
+			}
+
+			return Promise.all( tasks ).then( ( images ) => {
+				const valid = images.filter( ( src ) => !!src );
+				if ( valid.length === 0 ) {
+					// Client compositing produced nothing usable; try the server.
+					restore();
+					return this.exportPdfViaServer();
+				}
+				restore();
+				this.openPrintDocument( valid );
+			} ).catch( () => {
+				restore();
+				// Any failure (tainted canvas, missing renderer) → server fallback.
+				return this.exportPdfViaServer();
+			} );
+		}
+
+		/**
+		 * Render a single page as a flattened composite image (background raster
+		 * with its layer set drawn on top) and return it as a PNG data URL.
+		 *
+		 * @param {number} page 1-based page number
+		 * @return {Promise<string|null>} Data URL, or null if the page cannot be
+		 *   composited client-side.
+		 * @private
+		 */
+		composePageDataUrl( page ) {
+			if ( typeof mw === 'undefined' || !mw.Api ) {
+				return Promise.resolve( null );
+			}
+			const api = new mw.Api();
+			const params = {
+				action: 'layersinfo',
+				filename: this.filename,
+				format: 'json'
+			};
+			if ( this.setName && this.setName !== 'on' && this.setName !== 'default' ) {
+				params.setname = this.setName;
+			}
+			if ( page > 1 ) {
+				params.page = page;
+			}
+
+			return api.get( params ).then( ( data ) => {
+				const info = data && data.layersinfo;
+				if ( !info ) {
+					return null;
+				}
+				const imageUrl = info.imageUrl || this.resolveFullImageUrl( this.filename );
+				const layerData = {
+					layers: [],
+					baseWidth: info.baseWidth || null,
+					baseHeight: info.baseHeight || null,
+					backgroundVisible: true,
+					backgroundOpacity: 1.0
+				};
+				const set = info.layerset;
+				if ( set && set.data ) {
+					if ( Array.isArray( set.data ) ) {
+						layerData.layers = set.data;
+					} else if ( set.data.layers ) {
+						layerData.layers = set.data.layers;
+						layerData.backgroundVisible = set.data.backgroundVisible !== false &&
+							set.data.backgroundVisible !== 0;
+						layerData.backgroundOpacity = set.data.backgroundOpacity !== undefined ?
+							set.data.backgroundOpacity : 1.0;
+					}
+					if ( set.baseWidth ) {
+						layerData.baseWidth = set.baseWidth;
+					}
+					if ( set.baseHeight ) {
+						layerData.baseHeight = set.baseHeight;
+					}
+				}
+				return this.flattenPage( imageUrl, layerData );
+			} ).catch( () => null );
+		}
+
+		/**
+		 * Load a page image and flatten it together with its layers onto an
+		 * offscreen canvas, returning a PNG data URL.
+		 *
+		 * @param {string} imageUrl Page background image URL (same-origin thumb)
+		 * @param {Object} layerData Layer data for the page
+		 * @return {Promise<string|null>} Data URL, or null on failure
+		 * @private
+		 */
+		flattenPage( imageUrl, layerData ) {
+			const LayersViewer = getClass( 'Viewer.LayersViewer', 'LayersViewer' ) ||
+				( window.Layers && window.Layers.Viewer );
+			if ( typeof LayersViewer !== 'function' ) {
+				return Promise.resolve( null );
+			}
+			return new Promise( ( resolve ) => {
+				const img = new Image();
+				let settled = false;
+				const done = ( result ) => {
+					if ( settled ) {
+						return;
+					}
+					settled = true;
+					resolve( result );
+				};
+				img.onload = () => {
+					// Hidden offscreen host so the viewer can build its canvas.
+					const host = document.createElement( 'div' );
+					host.style.position = 'absolute';
+					host.style.left = '-99999px';
+					host.style.top = '0';
+					host.style.width = ( img.naturalWidth || 1 ) + 'px';
+					host.style.height = ( img.naturalHeight || 1 ) + 'px';
+					document.body.appendChild( host );
+					let viewer = null;
+					try {
+						viewer = new LayersViewer( {
+							container: host,
+							imageElement: img,
+							layerData: layerData
+						} );
+						// Wait for asynchronous layer images (SVG custom shapes,
+						// image layers, emoji) to load and draw before capturing,
+						// otherwise the composite would be missing that markup.
+						viewer.renderFlattenedAsync().then( ( canvas ) => {
+							let url = null;
+							try {
+								url = canvas ? canvas.toDataURL( 'image/png' ) : null;
+							} catch ( e ) {
+								url = null;
+							}
+							if ( viewer && typeof viewer.destroy === 'function' ) {
+								viewer.destroy();
+							}
+							if ( host.parentNode ) {
+								host.parentNode.removeChild( host );
+							}
+							done( url );
+						} );
+					} catch ( e ) {
+						if ( viewer && typeof viewer.destroy === 'function' ) {
+							viewer.destroy();
+						}
+						if ( host.parentNode ) {
+							host.parentNode.removeChild( host );
+						}
+						done( null );
+					}
+				};
+				img.onerror = () => done( null );
+				img.src = imageUrl;
+			} );
+		}
+
+		/**
+		 * Open a print-ready window containing the composited page images, one per
+		 * printed sheet, and trigger the browser print dialog (which also offers
+		 * "Save as PDF"). This keeps the marked-up overlay intact because each
+		 * image already has its layers baked in.
+		 *
+		 * @param {string[]} images Ordered page image data URLs
+		 * @private
+		 */
+		openPrintDocument( images ) {
+			const win = window.open( '', '_blank' );
+			if ( !win ) {
+				this.showExportError();
+				return;
+			}
+			const title = this.getMessage( 'layers-lightbox-print', 'Print' ) +
+				' – ' + this.filename;
+			const parts = [
+				'<!DOCTYPE html><html><head><meta charset="utf-8">',
+				'<title>', this.escapeHtml( title ), '</title><style>',
+				// Remove the browser's default page margins so the marked-up page
+				// fills the selected media instead of getting an extra white border.
+				'@page{margin:0;}',
+				'html,body{margin:0;padding:0;background:#fff;}',
+				'.layers-print-page{page-break-after:always;break-after:page;',
+				'break-inside:avoid;page-break-inside:avoid;}',
+				'.layers-print-page:last-child{page-break-after:auto;break-after:auto;}',
+				// Fill the page width edge-to-edge; height follows the aspect ratio.
+				'.layers-print-page img{display:block;width:100%;height:auto;}',
+				'</style></head><body>'
+			];
+			for ( let i = 0; i < images.length; i++ ) {
+				parts.push(
+					'<div class="layers-print-page"><img src="',
+					images[ i ], '" alt=""></div>'
+				);
+			}
+			parts.push( '</body></html>' );
+			win.document.open();
+			win.document.write( parts.join( '' ) );
+			win.document.close();
+			// Give the images a tick to lay out before printing.
+			const triggerPrint = () => {
+				try {
+					win.focus();
+					win.print();
+				} catch ( e ) {
+					// Printing is best-effort; the tab remains open for the user.
+				}
+			};
+			if ( win.document.readyState === 'complete' ) {
+				win.setTimeout( triggerPrint, 250 );
+			} else {
+				win.addEventListener( 'load', () => win.setTimeout( triggerPrint, 250 ) );
+			}
+		}
+
+		/**
+		 * Escape a string for safe insertion into the generated print document.
+		 *
+		 * @param {string} str Input string
+		 * @return {string} Escaped string
+		 * @private
+		 */
+		escapeHtml( str ) {
+			return String( str ).replace( /[&<>"']/g, ( c ) => ( {
+				'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+			} )[ c ] );
+		}
+
+		/**
+		 * Generate the full annotated document as a PDF on the server and open
+		 * it in a new tab (browser PDF viewer) for printing or download. Used as a
+		 * fallback when client-side compositing is not possible.
+		 *
+		 * @private
+		 */
+		exportPdfViaServer() {
+			if ( !this.filename || typeof mw === 'undefined' || !mw.Api ) {
+				return;
+			}
+			const btn = this.exportPdfBtn;
+			const original = btn ? btn.textContent : '';
+			if ( btn ) {
+				btn.disabled = true;
+				btn.textContent = this.getMessage(
+					'layers-lightbox-export-generating', 'Generating annotated PDF…'
+				);
+			}
+			const restore = () => {
+				if ( btn ) {
+					btn.disabled = false;
+					btn.textContent = original;
+				}
+			};
+			const params = {
+				action: 'layerspdfexport',
+				format: 'json',
+				filename: this.filename
+			};
+			if ( this.setName ) {
+				params.setname = this.setName;
+			}
+			return new mw.Api().get( params ).then( ( data ) => {
+				restore();
+				const result = data && data.layerspdfexport;
+				if ( result && result.url ) {
+					window.open( result.url, '_blank', 'noopener' );
+				} else {
+					this.showExportError();
+				}
+			} ).catch( () => {
+				restore();
+				this.showExportError();
+			} );
+		}
+
+		/**
+		 * Show a non-blocking error notification if PDF export fails.
+		 *
+		 * @private
+		 */
+		showExportError() {
+			const msg = this.getMessage(
+				'layers-export-pdf-failed', 'Failed to export the marked-up file as a PDF.'
+			);
+			if ( typeof mw !== 'undefined' && mw.notify ) {
+				mw.notify( msg, { type: 'error' } );
+			}
 		}
 
 		/**
@@ -251,34 +940,9 @@
 		 * @private
 		 */
 		resolveFullImageUrl( filename ) {
-			// Try to get from MediaWiki config
-			if ( typeof mw !== 'undefined' && mw.config ) {
-				const uploadPath = mw.config.get( 'wgUploadPath' );
-				if ( uploadPath ) {
-					// Build hash path for MediaWiki uploads
-					const hash1 = this.md5First2( filename );
-					return uploadPath + '/' + hash1.charAt( 0 ) + '/' + hash1 + '/' +
-						encodeURIComponent( filename );
-				}
-			}
-
-			// Fallback: use Special:Redirect
+			// Use MediaWiki's Special:Redirect which always resolves correctly
+			// regardless of hash path configuration or InstantCommons setup
 			return mw.util.getUrl( 'Special:Redirect/file/' + encodeURIComponent( filename ) );
-		}
-
-		/**
-		 * Simple hash function for MediaWiki's file path structure
-		 * Returns first two characters of MD5 hash
-		 *
-		 * @param {string} filename The filename
-		 * @return {string} First two hex characters
-		 * @private
-		 */
-		md5First2( filename ) {
-			// Simple approach: use first two chars of filename
-			// This is a fallback; in production MediaWiki calculates actual MD5
-			const clean = filename.replace( /[^a-zA-Z0-9]/g, '' ).toLowerCase();
-			return clean.substring( 0, 2 ) || 'aa';
 		}
 
 		/**
@@ -377,9 +1041,39 @@
 		 * @private
 		 */
 		handleKeyDown( e ) {
-			if ( e.key === 'Escape' ) {
-				e.preventDefault();
-				this.close();
+			switch ( e.key ) {
+				case 'Escape':
+					e.preventDefault();
+					this.close();
+					break;
+				case '+':
+				case '=':
+					e.preventDefault();
+					this.zoomBy( 1.25 );
+					break;
+				case '-':
+				case '_':
+					e.preventDefault();
+					this.zoomBy( 1 / 1.25 );
+					break;
+				case '0':
+					e.preventDefault();
+					this.resetZoom();
+					break;
+				case 'ArrowLeft':
+					if ( this.pageCount > 1 ) {
+						e.preventDefault();
+						this.goToPage( this.currentPage - 1 );
+					}
+					break;
+				case 'ArrowRight':
+					if ( this.pageCount > 1 ) {
+						e.preventDefault();
+						this.goToPage( this.currentPage + 1 );
+					}
+					break;
+				default:
+					break;
 			}
 		}
 
@@ -398,8 +1092,9 @@
 
 		/**
 		 * Close the lightbox
+		 * @param {boolean} [immediate=false] Skip animation and remove immediately
 		 */
-		close() {
+		close( immediate ) {
 			if ( !this.isOpen || !this.overlay ) {
 				return;
 			}
@@ -424,27 +1119,60 @@
 				this.boundClickHandler = null;
 			}
 
-			// Animate out
-			this.overlay.classList.remove( 'layers-lightbox-visible' );
+			// Remove zoom/pan listeners
+			if ( this.boundWheelHandler && this.imageWrapper ) {
+				this.imageWrapper.removeEventListener( 'wheel', this.boundWheelHandler );
+				this.boundWheelHandler = null;
+			}
+			if ( this.boundPanStart && this.imageWrapper ) {
+				this.imageWrapper.removeEventListener( 'mousedown', this.boundPanStart );
+				this.boundPanStart = null;
+			}
+			if ( this.boundPanMove ) {
+				document.removeEventListener( 'mousemove', this.boundPanMove );
+				this.boundPanMove = null;
+			}
+			if ( this.boundPanEnd ) {
+				document.removeEventListener( 'mouseup', this.boundPanEnd );
+				this.boundPanEnd = null;
+			}
+			this.isPanning = false;
 
 			// Cancel any pending close timeout
 			if ( this.closeTimeoutId ) {
 				clearTimeout( this.closeTimeoutId );
+				this.closeTimeoutId = null;
 			}
 
-			// Remove after animation
-			this.closeTimeoutId = setTimeout( () => {
-				this.closeTimeoutId = null;
+			if ( immediate ) {
+				// Synchronous removal (used when re-opening to prevent duplicates)
 				if ( this.overlay && this.overlay.parentNode ) {
 					this.overlay.parentNode.removeChild( this.overlay );
 				}
 				this.overlay = null;
 				this.container = null;
 				this.imageWrapper = null;
-
-				// Restore body scroll
+				this.toolbar = null;
+				document.body.classList.remove( 'layers-lightbox-printing' );
 				document.body.style.overflow = '';
-			}, 300 );
+			} else {
+				// Animate out
+				this.overlay.classList.remove( 'layers-lightbox-visible' );
+
+				// Remove after animation
+				this.closeTimeoutId = setTimeout( () => {
+					this.closeTimeoutId = null;
+					if ( this.overlay && this.overlay.parentNode ) {
+						this.overlay.parentNode.removeChild( this.overlay );
+					}
+					this.overlay = null;
+					this.container = null;
+					this.imageWrapper = null;
+					this.toolbar = null;
+					document.body.classList.remove( 'layers-lightbox-printing' );
+					document.body.style.overflow = '';
+				}, 300 );
+			}
 
 			this.isOpen = false;
 		}
@@ -482,10 +1210,17 @@
 						}
 					}
 
+					// Multi-page (PDF) support
+					const triggerImg = trigger.querySelector( 'img' );
+					const triggerPage = triggerImg
+						? parseInt( triggerImg.getAttribute( 'data-page' ), 10 )
+						: NaN;
+
 					if ( filename ) {
 						this.open( {
 							filename: filename,
 							setName: setName,
+							page: triggerPage > 1 ? triggerPage : 1,
 							layerData: layerData
 						} );
 					}

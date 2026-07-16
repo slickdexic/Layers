@@ -92,6 +92,8 @@ class LayersDatabase {
 
 		$mime = $imgMetadata['mime'] ?? '';
 		$sha1 = $imgMetadata['sha1'] ?? '';
+		// Page number for multi-page files (PDF). 1-based; single-page files use 1.
+		$page = max( 1, (int)( $imgMetadata['page'] ?? 1 ) );
 		$normalizedImgName = $this->normalizeImageName( $imgName );
 
 		// Default to configured default set name
@@ -148,7 +150,8 @@ class LayersDatabase {
 					[
 						'ls_img_name' => $imgNameLookup,
 						'ls_img_sha1' => $sha1,
-						'ls_name' => $setName
+						'ls_name' => $setName,
+						'ls_page' => $page
 					],
 					__METHOD__,
 					[ 'FOR UPDATE' ]
@@ -161,7 +164,8 @@ class LayersDatabase {
 						'COUNT(DISTINCT ls_name)',
 						[
 							'ls_img_name' => $imgNameLookup,
-							'ls_img_sha1' => $sha1
+							'ls_img_sha1' => $sha1,
+							'ls_page' => $page
 						],
 						__METHOD__,
 						[ 'FOR UPDATE' ]
@@ -176,7 +180,7 @@ class LayersDatabase {
 					}
 				}
 
-				$revision = $this->getNextRevisionForSet( $normalizedImgName, $sha1, $setName, $dbw );
+				$revision = $this->getNextRevisionForSet( $normalizedImgName, $sha1, $setName, $dbw, $page );
 				$timestamp = $dbw->timestamp();
 
 				$dataStructure = [
@@ -217,6 +221,7 @@ class LayersDatabase {
 					'ls_timestamp' => $timestamp,
 					'ls_revision' => $revision,
 					'ls_name' => $setName,
+					'ls_page' => $page,
 					'ls_size' => strlen( $jsonBlob ),
 					'ls_layer_count' => count( $layersData )
 				];
@@ -228,7 +233,7 @@ class LayersDatabase {
 
 				// Prune old revisions for this named set (inside atomic transaction)
 				$maxRevisions = (int)$this->config->get( 'LayersMaxRevisionsPerSet' );
-				$this->pruneOldRevisions( $normalizedImgName, $sha1, $setName, $maxRevisions );
+				$this->pruneOldRevisions( $normalizedImgName, $sha1, $setName, $maxRevisions, $page );
 
 				$dbw->endAtomic( __METHOD__ );
 
@@ -240,7 +245,7 @@ class LayersDatabase {
 				if ( $e instanceof \OverflowException ) {
 					throw $e;
 				}
-				if ( $dbw->isDuplicateKeyError( $e ) ) {
+				if ( $this->isDuplicateKeyError( $e ) ) {
 					$this->logError( "Race condition in saveLayerSet, retrying." );
 					continue;
 				}
@@ -251,6 +256,34 @@ class LayersDatabase {
 
 		$this->logError( 'Failed to save layer set after multiple retries.' );
 		return null;
+	}
+
+	/**
+	 * Determine whether a caught exception represents a duplicate/unique-key
+	 * violation, in a database-agnostic way.
+	 *
+	 * MediaWiki's rdbms library does not expose a public duplicate-key helper on
+	 * the connection object (an earlier `IDatabase::isDuplicateKeyError()` never
+	 * existed in supported releases), so we inspect the DBQueryError error code
+	 * and message. Known duplicate/unique-constraint codes: MySQL/MariaDB 1062,
+	 * SQLite 19 (SQLITE_CONSTRAINT) / 2067 (SQLITE_CONSTRAINT_UNIQUE),
+	 * PostgreSQL 23505.
+	 *
+	 * @param \Throwable $e
+	 * @return bool
+	 */
+	private function isDuplicateKeyError( \Throwable $e ): bool {
+		if ( !( $e instanceof \Wikimedia\Rdbms\DBQueryError ) ) {
+			return false;
+		}
+		$errno = (int)( $e->errno ?? 0 );
+		if ( in_array( $errno, [ 1062, 19, 2067, 23505 ], true ) ) {
+			return true;
+		}
+		$message = strtolower( $e->getMessage() );
+		return strpos( $message, 'duplicate entry' ) !== false
+			|| strpos( $message, 'duplicate key' ) !== false
+			|| strpos( $message, 'unique constraint' ) !== false;
 	}
 
 	/**
@@ -280,7 +313,10 @@ class LayersDatabase {
 
 		$row = $dbr->selectRow(
 			'layer_sets',
-			[ 'ls_id', 'ls_img_name', 'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name' ],
+			[
+				'ls_id', 'ls_img_name', 'ls_json_blob', 'ls_user_id',
+				'ls_timestamp', 'ls_revision', 'ls_name', 'ls_page'
+			],
 			[ 'ls_id' => $layerSetId ],
 			__METHOD__
 		);
@@ -311,6 +347,7 @@ class LayersDatabase {
 			'timestamp' => $row->ls_timestamp,
 			'revision' => (int)$row->ls_revision,
 			'name' => $row->ls_name,
+			'page' => (int)$row->ls_page,
 			'data' => $jsonData
 		];
 
@@ -323,9 +360,10 @@ class LayersDatabase {
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string|null $setName Optional set name to filter by (e.g., 'Paul', 'default')
+	 * @param int $page Page number for multi-page files (1-based)
 	 * @return array|false Layer set data or false if not found
 	 */
-	public function getLatestLayerSet( string $imgName, string $sha1, ?string $setName = null ) {
+	public function getLatestLayerSet( string $imgName, string $sha1, ?string $setName = null, int $page = 1 ) {
 		$this->logDebug( "getLatestLayerSet called: imgName=$imgName, setName=" . ( $setName ?? 'null' ) );
 
 		$dbr = $this->getReadDb();
@@ -335,7 +373,8 @@ class LayersDatabase {
 
 		$conditions = [
 			'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-			'ls_img_sha1' => $sha1
+			'ls_img_sha1' => $sha1,
+			'ls_page' => max( 1, $page )
 		];
 
 		// If a specific set name is requested, filter by it
@@ -345,7 +384,7 @@ class LayersDatabase {
 
 		$row = $dbr->selectRow(
 			'layer_sets',
-			[ 'ls_id', 'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name' ],
+			[ 'ls_id', 'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name', 'ls_page' ],
 			$conditions,
 			__METHOD__,
 			[ 'ORDER BY' => 'ls_revision DESC' ]
@@ -380,6 +419,7 @@ class LayersDatabase {
 			'timestamp' => $row->ls_timestamp,
 			'revision' => (int)$row->ls_revision,
 			'name' => $row->ls_name,
+			'page' => (int)$row->ls_page,
 			'data' => $jsonData
 		];
 	}
@@ -391,16 +431,18 @@ class LayersDatabase {
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string $setName Named set name
 	 * @param \Wikimedia\Rdbms\IDatabase $dbw Database connection
+	 * @param int $page Page number (1-based)
 	 * @return int Next revision number
 	 */
-	private function getNextRevisionForSet( string $imgName, string $sha1, string $setName, $dbw ): int {
+	private function getNextRevisionForSet( string $imgName, string $sha1, string $setName, $dbw, int $page = 1 ): int {
 		$maxRevision = $dbw->selectField(
 			'layer_sets',
 			'MAX(ls_revision)',
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName
+				'ls_name' => $setName,
+				'ls_page' => max( 1, $page )
 			],
 			__METHOD__,
 			[ 'FOR UPDATE' ]
@@ -414,9 +456,10 @@ class LayersDatabase {
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string $setName Named set name
+	 * @param int $page Page number (1-based)
 	 * @return bool|null True if exists, false if not found, null on DB error
 	 */
-	public function namedSetExists( string $imgName, string $sha1, string $setName ): ?bool {
+	public function namedSetExists( string $imgName, string $sha1, string $setName, int $page = 1 ): ?bool {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			$this->logError( 'namedSetExists: Database connection unavailable' );
@@ -429,7 +472,8 @@ class LayersDatabase {
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName
+				'ls_name' => $setName,
+				'ls_page' => max( 1, $page )
 			],
 			__METHOD__
 		);
@@ -442,9 +486,10 @@ class LayersDatabase {
 	 *
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
+	 * @param int $page Page number (1-based)
 	 * @return int Number of distinct named sets, or -1 on database error
 	 */
-	public function countNamedSets( string $imgName, string $sha1 ): int {
+	public function countNamedSets( string $imgName, string $sha1, int $page = 1 ): int {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return -1;
@@ -455,7 +500,8 @@ class LayersDatabase {
 			'COUNT(DISTINCT ls_name)',
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-				'ls_img_sha1' => $sha1
+				'ls_img_sha1' => $sha1,
+				'ls_page' => max( 1, $page )
 			],
 			__METHOD__
 		);
@@ -469,9 +515,10 @@ class LayersDatabase {
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string $setName Named set name
+	 * @param int $page Page number (1-based)
 	 * @return int Number of revisions, or -1 on database error
 	 */
-	public function countSetRevisions( string $imgName, string $sha1, string $setName ): int {
+	public function countSetRevisions( string $imgName, string $sha1, string $setName, int $page = 1 ): int {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return -1;
@@ -483,7 +530,8 @@ class LayersDatabase {
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName
+				'ls_name' => $setName,
+				'ls_page' => max( 1, $page )
 			],
 			__METHOD__
 		);
@@ -503,15 +551,17 @@ class LayersDatabase {
 	 *
 	 * @param string $imgName Image name
 	 * @param string $sha1 Image SHA1 hash
+	 * @param int $page Page number (1-based)
 	 * @return array Array of named set summaries
 	 */
-	public function getNamedSetsForImage( string $imgName, string $sha1 ): array {
+	public function getNamedSetsForImage( string $imgName, string $sha1, int $page = 1 ): array {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return [];
 		}
 
 		$imgNameLookup = $this->buildImageNameLookup( $imgName );
+		$page = max( 1, $page );
 
 		// Query 1: Get aggregates per named set
 		$aggregates = $dbr->select(
@@ -524,7 +574,8 @@ class LayersDatabase {
 			],
 			[
 				'ls_img_name' => $imgNameLookup,
-				'ls_img_sha1' => $sha1
+				'ls_img_sha1' => $sha1,
+				'ls_page' => $page
 			],
 			__METHOD__,
 			[
@@ -543,6 +594,7 @@ class LayersDatabase {
 				'ls_img_name' => $imgNameLookup,
 				'ls_img_sha1' => $sha1,
 				'ls_name' => $setName,
+				'ls_page' => $page,
 				'ls_revision' => $latestRevision
 			];
 			$aggregateData[$setName] = [
@@ -588,9 +640,12 @@ class LayersDatabase {
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string $setName Named set name
 	 * @param int $limit Maximum number of revisions to return
+	 * @param int $page Page number (1-based)
 	 * @return array Array of revision summaries
 	 */
-	public function getSetRevisions( string $imgName, string $sha1, string $setName, int $limit = 50 ): array {
+	public function getSetRevisions(
+		string $imgName, string $sha1, string $setName, int $limit = 50, int $page = 1
+	): array {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return [];
@@ -604,7 +659,8 @@ class LayersDatabase {
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName
+				'ls_name' => $setName,
+				'ls_page' => max( 1, $page )
 			],
 			__METHOD__,
 			[
@@ -634,15 +690,19 @@ class LayersDatabase {
 	 * @param string $sha1 Image SHA1 hash
 	 * @param string $setName Named set name
 	 * @param int $keepCount Number of revisions to keep
+	 * @param int $page Page number (1-based)
 	 * @return int Number of revisions deleted
 	 */
-	public function pruneOldRevisions( string $imgName, string $sha1, string $setName, int $keepCount ): int {
+	public function pruneOldRevisions(
+		string $imgName, string $sha1, string $setName, int $keepCount, int $page = 1
+	): int {
 		$dbw = $this->getWriteDb();
 		if ( !$dbw ) {
 			return 0;
 		}
 
 		$keepCount = max( 1, $keepCount );
+		$page = max( 1, $page );
 
 		// Get IDs of revisions to keep (most recent N)
 		$keepIds = $dbw->selectFieldValues(
@@ -651,7 +711,8 @@ class LayersDatabase {
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName
+				'ls_name' => $setName,
+				'ls_page' => $page
 			],
 			__METHOD__,
 			[
@@ -680,6 +741,7 @@ class LayersDatabase {
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
 				'ls_name' => $setName,
+				'ls_page' => $page,
 				'ls_id NOT IN (' . $dbw->makeList( $safeKeepIds ) . ')'
 			],
 			__METHOD__
@@ -706,8 +768,9 @@ class LayersDatabase {
 
 		$queryOptions = $this->buildSafeQueryOptions( $options );
 		$includeData = !empty( $options['includeData'] );
+		$page = max( 1, (int)( $options['page'] ?? 1 ) );
 
-		$fields = [ 'ls_id', 'ls_revision', 'ls_name', 'ls_user_id', 'ls_timestamp' ];
+		$fields = [ 'ls_id', 'ls_revision', 'ls_name', 'ls_page', 'ls_user_id', 'ls_timestamp' ];
 		if ( $includeData ) {
 			$fields[] = 'ls_json_blob';
 		}
@@ -717,7 +780,8 @@ class LayersDatabase {
 			$fields,
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-				'ls_img_sha1' => $sha1
+				'ls_img_sha1' => $sha1,
+				'ls_page' => $page
 			],
 			__METHOD__,
 			$queryOptions
@@ -729,6 +793,7 @@ class LayersDatabase {
 				'ls_id' => (int)$row->ls_id,
 				'ls_revision' => (int)$row->ls_revision,
 				'ls_name' => $row->ls_name,
+				'ls_page' => (int)$row->ls_page,
 				'ls_user_id' => (int)$row->ls_user_id,
 				'ls_timestamp' => $row->ls_timestamp
 			];
@@ -740,11 +805,12 @@ class LayersDatabase {
 		return $layerSets;
 	}
 
-	public function getLayerSetsForImage( string $imgName, string $sha1 ): array {
+	public function getLayerSetsForImage( string $imgName, string $sha1, int $page = 1 ): array {
 		return $this->getLayerSetsForImageWithOptions( $imgName, $sha1, [
 			'sort' => 'ls_revision',
 			'direction' => 'DESC',
-			'includeData' => true
+			'includeData' => true,
+			'page' => max( 1, $page )
 		] );
 	}
 
@@ -778,9 +844,10 @@ class LayersDatabase {
 	 * @param string $imgName The image name
 	 * @param string $sha1 The SHA1 hash of the image
 	 * @param string $setName The name of the layer set to delete
+	 * @param int $page Page number (1-based)
 	 * @return int|null Number of rows deleted, or null on error
 	 */
-	public function deleteNamedSet( string $imgName, string $sha1, string $setName ): ?int {
+	public function deleteNamedSet( string $imgName, string $sha1, string $setName, int $page = 1 ): ?int {
 		try {
 			$dbw = $this->getWriteDb();
 			if ( !$dbw ) {
@@ -794,6 +861,7 @@ class LayersDatabase {
 				] );
 				return null;
 			}
+			$page = max( 1, $page );
 
 			// Use atomic transaction to prevent race conditions with concurrent
 			// rename/delete operations on the same set (mirrors renameNamedSet pattern)
@@ -807,7 +875,8 @@ class LayersDatabase {
 					[
 						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 						'ls_img_sha1' => $sha1,
-						'ls_name' => $setName
+						'ls_name' => $setName,
+						'ls_page' => $page
 					],
 					__METHOD__,
 					[ 'FOR UPDATE' ]
@@ -818,7 +887,8 @@ class LayersDatabase {
 					[
 						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 						'ls_img_sha1' => $sha1,
-						'ls_name' => $setName
+						'ls_name' => $setName,
+						'ls_page' => $page
 					],
 					__METHOD__
 				);
@@ -857,9 +927,10 @@ class LayersDatabase {
 	 * @param string $imgName The image name
 	 * @param string $sha1 The SHA1 hash of the image
 	 * @param string $setName The name of the layer set
+	 * @param int $page Page number (1-based)
 	 * @return int|null User ID of the owner, or null if not found
 	 */
-	public function getNamedSetOwner( string $imgName, string $sha1, string $setName ): ?int {
+	public function getNamedSetOwner( string $imgName, string $sha1, string $setName, int $page = 1 ): ?int {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return null;
@@ -872,7 +943,8 @@ class LayersDatabase {
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName
+				'ls_name' => $setName,
+				'ls_page' => max( 1, $page )
 			],
 			__METHOD__,
 			[ 'ORDER BY' => 'ls_revision ASC', 'LIMIT' => 1 ]
@@ -888,9 +960,12 @@ class LayersDatabase {
 	 * @param string $sha1 The SHA1 hash of the image
 	 * @param string $oldName The current name of the layer set
 	 * @param string $newName The new name for the layer set
+	 * @param int $page Page number (1-based)
 	 * @return bool True on success, false on failure
 	 */
-	public function renameNamedSet( string $imgName, string $sha1, string $oldName, string $newName ): bool {
+	public function renameNamedSet(
+		string $imgName, string $sha1, string $oldName, string $newName, int $page = 1
+	): bool {
 		try {
 			$dbw = $this->getWriteDb();
 			if ( !$dbw ) {
@@ -904,6 +979,7 @@ class LayersDatabase {
 				] );
 				return false;
 			}
+			$page = max( 1, $page );
 
 			// Use atomic transaction to prevent race conditions
 			// Two concurrent renames could otherwise both pass the existence check
@@ -917,7 +993,8 @@ class LayersDatabase {
 					[
 						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 						'ls_img_sha1' => $sha1,
-						'ls_name' => $newName
+						'ls_name' => $newName,
+						'ls_page' => $page
 					],
 					__METHOD__,
 					[ 'FOR UPDATE' ]
@@ -937,7 +1014,8 @@ class LayersDatabase {
 					[
 						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 						'ls_img_sha1' => $sha1,
-						'ls_name' => $oldName
+						'ls_name' => $oldName,
+						'ls_page' => $page
 					],
 					__METHOD__
 				);
@@ -978,7 +1056,7 @@ class LayersDatabase {
 		}
 	}
 
-	public function getLayerSetByName( string $imgName, string $sha1, string $setName ): ?array {
+	public function getLayerSetByName( string $imgName, string $sha1, string $setName, int $page = 1 ): ?array {
 		$this->logDebug( "getLayerSetByName called: imgName=$imgName, sha1=$sha1, setName=$setName" );
 
 		$dbr = $this->getReadDb();
@@ -989,11 +1067,12 @@ class LayersDatabase {
 		$row = $dbr->selectRow(
 			'layer_sets',
 			[ 'ls_id', 'ls_img_name', 'ls_img_sha1', 'ls_img_major_mime', 'ls_img_minor_mime',
-				'ls_revision', 'ls_json_blob', 'ls_timestamp', 'ls_user_id', 'ls_name' ],
+				'ls_revision', 'ls_json_blob', 'ls_timestamp', 'ls_user_id', 'ls_name', 'ls_page' ],
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName
+				'ls_name' => $setName,
+				'ls_page' => max( 1, $page )
 			],
 			__METHOD__,
 			[ 'ORDER BY' => 'ls_revision DESC' ]
@@ -1030,7 +1109,8 @@ class LayersDatabase {
 			'data' => $jsonData,
 			'timestamp' => $row->ls_timestamp,
 			'userId' => (int)$row->ls_user_id,
-			'setName' => $row->ls_name
+			'setName' => $row->ls_name,
+			'page' => (int)$row->ls_page
 		];
 	}
 
@@ -1152,9 +1232,10 @@ class LayersDatabase {
 	 *
 	 * @param string $imgName Image name
 	 * @param string $setName Named set name
+	 * @param int $page Page number (1-based)
 	 * @return string|null The SHA1 hash used in the database, or null if not found
 	 */
-	public function findSetSha1( string $imgName, string $setName ): ?string {
+	public function findSetSha1( string $imgName, string $setName, int $page = 1 ): ?string {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			return null;
@@ -1165,7 +1246,8 @@ class LayersDatabase {
 			[ 'ls_img_sha1' ],
 			[
 				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-				'ls_name' => $setName
+				'ls_name' => $setName,
+				'ls_page' => max( 1, $page )
 			],
 			__METHOD__,
 			[ 'LIMIT' => 1 ]

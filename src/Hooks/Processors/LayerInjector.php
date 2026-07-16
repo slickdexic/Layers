@@ -73,6 +73,25 @@ class LayerInjector {
 	}
 
 	/**
+	 * Extract the 1-based page number from image frame params.
+	 *
+	 * Multi-page files (PDF) carry a 'page' param in the image handler params.
+	 * Images and single-page files default to page 1.
+	 *
+	 * @param array $params Image frame params
+	 * @return int Page number (>= 1)
+	 */
+	private function extractPageFromParams( array $params ): int {
+		if ( isset( $params['page'] ) ) {
+			$page = (int)$params['page'];
+			if ( $page > 0 ) {
+				return $page;
+			}
+		}
+		return 1;
+	}
+
+	/**
 	 * Add latest layer set to image parameters
 	 *
 	 * @param mixed $file File object
@@ -88,6 +107,9 @@ class LayerInjector {
 
 		$filename = $file->getName();
 
+		// Determine which page (multi-page/PDF) this frame targets
+		$page = $this->extractPageFromParams( $params );
+
 		// Determine which layer set to fetch
 		$sha1 = $this->getFileSha1( $file );
 		$layerSet = null;
@@ -96,13 +118,13 @@ class LayerInjector {
 			|| $setNameFromQueue === 'all'
 			|| $setNameFromQueue === 'true' ) {
 			// Default behavior - get the default/latest set
-			$layerSet = $db->getLatestLayerSet( $filename, $sha1 );
+			$layerSet = $db->getLatestLayerSet( $filename, $sha1, null, $page );
 		} elseif ( $setNameFromQueue === 'off' || $setNameFromQueue === 'none' || $setNameFromQueue === 'false' ) {
 			// Explicitly disabled - don't fetch any layer set
 			return;
 		} else {
 			// Named set
-			$layerSet = $db->getLayerSetByName( $filename, $sha1, $setNameFromQueue );
+			$layerSet = $db->getLayerSetByName( $filename, $sha1, $setNameFromQueue, $page );
 		}
 
 		if ( $layerSet ) {
@@ -131,6 +153,8 @@ class LayerInjector {
 			return;
 		}
 
+		$page = $this->extractPageFromParams( $params );
+
 		if ( strpos( $layersParam, 'id:' ) === 0 ) {
 			// Layer set by ID — verify it belongs to this file
 			$layerSetId = (int)substr( $layersParam, 3 );
@@ -141,10 +165,21 @@ class LayerInjector {
 		} elseif ( strpos( $layersParam, 'name:' ) === 0 ) {
 			// Layer set by name
 			$layerSetName = substr( $layersParam, 5 );
-			$layerSet = $db->getLayerSetByName( $file->getName(), $this->getFileSha1( $file ), $layerSetName );
+			$layerSet = $db->getLayerSetByName(
+				$file->getName(),
+				$this->getFileSha1( $file ),
+				$layerSetName,
+				$page
+			);
 		} else {
-			// Legacy format or other formats
-			$layerSet = null;
+			// Plain named set (e.g. 'default', 'anatomy-labels').
+			// This is the common case for [[File:...|layerset=default]] and similar.
+			$layerSet = $db->getLayerSetByName(
+				$file->getName(),
+				$this->getFileSha1( $file ),
+				$layersParam,
+				$page
+			);
 		}
 
 		if ( $layerSet ) {
@@ -173,7 +208,7 @@ class LayerInjector {
 			return;
 		}
 		$sha1 = $this->getFileSha1( $file );
-		$latest = $db->getLatestLayerSet( $file->getName(), $sha1 );
+		$latest = $db->getLatestLayerSet( $file->getName(), $sha1, null, $this->extractPageFromParams( $params ) );
 		if ( !$latest || !isset( $latest['data']['layers'] ) ) {
 			return;
 		}

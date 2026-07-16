@@ -4,6 +4,338 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+### Added
+- **Full-screen viewer support for PDFs and multi-page files** — Clicking the
+  "view full screen" overlay on a marked-up PDF now works. Previously the
+  lightbox tried to load the raw `.pdf` into an `<img>` (which browsers cannot
+  render) and failed with "Failed to load image". The `layersinfo` API now
+  returns a page-aware, browser-renderable `imageUrl` (a rasterized page
+  thumbnail for PDFs and other non-web formats), and the lightbox uses it.
+- **Multi-page paging in the full-screen viewer** — For multi-page PDFs the
+  lightbox now shows a toolbar with previous/next page controls and a
+  "Page N / M" indicator. Navigating pages reloads that page's rasterized
+  image together with the layer set saved for that page.
+- **Print the marked-up page** — The full-screen viewer has a Print button that
+  isolates the annotated page (background image + layer overlay) via a print
+  stylesheet and opens the browser print dialog. Prints the current page.
+- **Zoom and pan in the full-screen viewer** — The lightbox now supports zooming
+  (toolbar −/+ buttons, mouse wheel, and `+`/`-`/`0` keyboard shortcuts, range
+  25%–800%) and drag-to-pan when zoomed in. A live zoom indicator shows the
+  current level, and zoom resets when changing pages. Arrow keys page through
+  multi-page documents.
+- **Export/print the full marked-up PDF** — A new server-side `layerspdfexport`
+  API composites each page's saved layer set onto the rasterized page and
+  stitches the pages into a single flattened PDF (via ImageMagick), cached under
+  the upload thumb directory. The full-screen viewer shows a "Print PDF" button
+  for multi-page files that generates this PDF and opens it in a new tab for
+  printing or download. Configurable via `$wgLayersPdfExportWidth` (per-page
+  render width, default 1600px) and `$wgLayersPdfExportMaxPages` (default 100).
+
+### Fixed
+- **Saving layers on PDF pages other than page 1 silently failed** — Adding
+  annotations to page 2+ of a multi-page PDF and clicking Save returned
+  `savefailed` with nothing persisted. Two causes: (1) a stale unique index
+  (`ls_img_name_set_revision`, missing the page column) survived on installations
+  upgraded before the multi-page schema landed, causing a cross-page revision
+  collision; and (2) the collision was caught by a call to
+  `IDatabase::isDuplicateKeyError()`, which does not exist in MediaWiki 1.44+, so
+  the handler itself fatalled. The schema updater now always drops the stale index
+  and no longer resurrects it on later `update.php` runs, and `LayersDatabase` uses
+  a DB-agnostic duplicate-key detector (checks `DBQueryError` errno + message).
+- **Layers drawn at the wrong scale after switching PDF pages** — Creating layers
+  on a fresh PDF page and returning to it (or reloading) re-rendered them at a
+  different size. A brand-new page had no saved base dimensions, so the editor fell
+  back to the rasterized thumbnail width (2048px) as its coordinate space, while a
+  reloaded page used the native page width (e.g. 1275px) — a ~1.6× drift. The
+  editor now threads the native page dimensions (`getWidth($page)`/`getHeight($page)`)
+  as the canonical base size from init through to the canvas, and `layersinfo`
+  always returns top-level `baseWidth`/`baseHeight`, so a page's coordinate space is
+  identical whether the set is new or reloaded.
+- **"Print PDF" produced a PDF with no annotations** — The server-side ImageMagick
+  compositor used by the PDF export can only reproduce a handful of basic layer
+  primitives, so pages containing `customShape`, markers, images, emoji, callouts,
+  or dimensions exported with a blank overlay. The full-screen viewer's "Print PDF"
+  button now composites every page **client-side** using the shared layer renderer
+  (the same one that draws the on-screen overlay, so all layer types render
+  identically), then opens a print-ready window with one page per sheet. The
+  composite now waits for asynchronously-loaded layer artwork (SVG custom shapes,
+  image layers, emoji — which render through an off-DOM `<img>`) to finish loading
+  before capturing, so that markup is no longer dropped from the output. The
+  print stylesheet also drops the browser's default page margins (`@page{margin:0}`)
+  and sizes each page image to the sheet width, so the marked-up page fits the
+  selected media without extra whitespace. If client-side compositing is not
+  possible (e.g. a cross-origin/tainted canvas) it falls back to the previous
+  server-side export. The multi-page latent bug in the server compositor — scaling
+  every page against page 1's dimensions — was also fixed by making it page-aware.
+- **Layer overlays not appearing for lower-case file references** — A
+  `[[File:...]]` embed whose filename began with a lower-case letter in the
+  wikitext (e.g. `[[File:somepdf.pdf|layerset=001]]`) silently rendered no
+  overlays. The wikitext scanner keyed its layerset queue on the raw captured
+  filename (only normalizing spaces to underscores), while the render path
+  looks the file up by its canonical DB key (`File::getName()`, which
+  upper-cases the first letter per `$wgCapitalLinks`). The mismatch meant the
+  saved layer set was never matched. The scanner now normalizes captured
+  filenames to the canonical DB key via `Title::makeTitleSafe()`, so
+  lower-case references resolve correctly. This was a pre-existing bug
+  affecting all file types; it surfaced most visibly with PDFs.
+
+## [1.5.77] - 2026-07-10
+
+### Added
+- **PDF markup support (multi-page)** — PDF files can now be annotated the
+  same way as images, with the PDF page acting as the canvas. Multi-page
+  PDFs are fully supported: each page has its own independent set of named
+  layer sets and revision history, scoped to a `(file, page)` pair.
+  - New `ls_page` column on the `layer_sets` table (defaults to `1`, so all
+    existing images and single-page files are unaffected). A schema patch
+    (`patch-add-ls_page.sql`) migrates existing installations.
+  - The editor toolbar shows a **page navigator** (previous / next plus a
+    "Page X / N" indicator) for multi-page files.
+  - Wikitext embeds respect the standard PDF `page` parameter, e.g.
+    `[[File:Doc.pdf|page=2|layerset=on]]`. The `{{#layeredfile:}}` parser
+    function accepts an optional `page=N` argument.
+  - The `layersinfo`, `layerssave`, `layersdelete`, and `layersrename` API
+    modules accept an optional `page` parameter; `layersinfo` returns `page`
+    and `pageCount`.
+  - Requires the **PdfHandler** extension for PDF rasterization. Without it,
+    PDFs are treated as single-page files.
+  - New i18n keys: `layers-page-nav-label`, `layers-page-prev`,
+    `layers-page-next`, `layers-page-indicator`, `layers-page-unsaved-confirm`.
+
+## [1.5.76] - 2026-07-09
+
+### Added
+- **Image layer aspect-ratio locking** — Image layers now display a
+  "Maintain Aspect Ratio" checkbox in the properties panel (enabled by
+  default). While enabled, editing an image's width recomputes its height
+  from the original ratio (and vice-versa), so images no longer distort
+  when resized via the numeric inputs. New i18n key
+  `layers-prop-preserve-aspect-ratio`.
+- **Client-side downscaling of imported images** — Large image imports are
+  now downscaled and re-encoded as JPEG in the browser before upload,
+  substantially reducing payload size. The compressed result is only used
+  when it is actually smaller than the original, and images with alpha are
+  flattened onto a white background to avoid black fills.
+- **Two new configuration settings** for tuning image import:
+  - `$wgLayersMaxImportSide` (default `2048`) — maximum width/height in
+    pixels before a client-side downscale is applied.
+  - `$wgLayersImportJpegQuality` (default `0.8`) — JPEG quality used when
+    re-encoding downscaled imports.
+
+### Fixed
+- **Import tuning settings were not honoured by the client** — `Toolbar.js`
+  read `wgLayersMaxImportSide`, `wgLayersImportJpegQuality`, and
+  `wgLayersMaxImageBytes` from `mw.config`, but these were never registered
+  in `extension.json` nor exported to the client via
+  `MakeGlobalVariablesScript`. As a result, administrator overrides were
+  silently ignored and the client always used hardcoded defaults. All three
+  are now registered and exported (with safe fallbacks).
+- **"Data too large" save failures now recover gracefully** — When a save
+  is rejected client-side for exceeding `$wgLayersMaxBytes`, the Save button
+  is re-enabled and the user is notified with the configured byte limit,
+  instead of leaving the editor in a stuck "saving" state.
+- **Broken build on `main`** — Image aspect-ratio linking shipped without
+  updating the parallel `PropertiesForm.test.js` image-dimension tests,
+  leaving the Jest suite red. Updated the stale assertions and added a
+  regression test covering the `preserveAspectRatio: false` path.
+
+### Changed
+- **REL1_39 compatibility hardening** — Additional `method_exists()` /
+  version guards in `Hooks.php`, `WikitextHooks.php`, `SpecialEditSlide.php`,
+  and `SpecialSlides.php` for cross-version MediaWiki support.
+
+## [1.5.75] - 2026-05-25
+
+### Added
+- **`layerset=` support in native `<gallery>` blocks** — Images inside a
+  MediaWiki `<gallery>...</gallery>` tag can now specify a named layer set
+  with a per-image `|layerset=setname` option:
+  ```
+  <gallery mode="packed" widths=200>
+  File:Foo.jpg|layerset=anatomy|Caption text
+  File:Bar.jpg|layerset=default
+  </gallery>
+  ```
+  `ParserBeforeInternalParse` now scans gallery blocks for `layerset=`
+  options, registers per-image hints via `WikitextHooks::registerGalleryHint()`,
+  and strips the option from each line so it does not appear as visible
+  caption text. Galleries without any `layerset=` line are completely
+  unaffected (fast-path exit). Falls back to `layerset=on` semantics
+  (latest set) for gallery images with no hint registered.
+
+## [1.5.74] - 2026-05-25
+
+### Added
+- **Automatic per-image layer set support for Cargo galleries** — Cargo
+  `format=gallery` queries now honour a `layerset` field in the result set
+  automatically. If a row contains a non-empty `layerset` value alongside the
+  image filename, the named layer set is shown in the thumbnail overlay
+  instead of always falling back to the latest-set (`layerset=on`) semantics
+  introduced in v1.5.72. No changes required to existing queries that already
+  include `layerset` in their `fields=` list. To use a differently-named
+  field, add `layerset field=yourfield` to the `#cargo_query` call.
+
+  Implementation: the `CargoSetFormatClasses` hook replaces Cargo's built-in
+  `gallery` format class with `CargoLayersGalleryFormat`, a transparent
+  subclass that iterates query rows and pre-registers `filename → setname`
+  hints via `WikitextHooks::registerGalleryHint()` before delegating to the
+  standard renderer. If no `layerset` field is present the class is a
+  no-op pass-through with identical behaviour to the standard format.
+
+## [1.5.73] - 2026-05-25
+
+### Added
+- **`{{#layers_hint:filename|setname}}` parser function** — Allows per-image
+  layer set selection for Cargo gallery (and any other non-wikitext gallery
+  renderer). Call this function before the gallery renders (e.g. via a silent
+  Cargo `format=template` pre-pass) to tell the extension which named set to
+  show for each image. If a hint is registered for a filename,
+  `onThumbnailBeforeProduceHTML` uses it instead of the `'on'` (latest-set)
+  fallback introduced in v1.5.72.
+
+  **Usage pattern (Cargo example):**
+  ```
+  {{/* Silent hint-registration pass */}}
+  {{#cargo_query:tables=MyTable|fields=Image,layerset
+   |where=...|format=template|template=Template:LayersHint|named args=yes}}
+
+  {{/* Visual gallery */}}
+  {{#cargo_query:tables=MyTable|fields=Image
+   |where=...|format=gallery|mode=packed|image width=200|image height=200}}
+  ```
+  Where `Template:LayersHint` contains:
+  `{{#layers_hint:{{{Image|}}}|{{{layerset|}}}}}`
+
+  The hint-registration pass is silent (outputs nothing visible). The gallery
+  then renders with the correct named set per image. If no hint is registered
+  for an image, the fallback is the latest available set (`layerset=on`).
+
+## [1.5.72] - 2026-05-25
+
+### Added
+- **Layer overlays in Cargo and native gallery renders** — Images rendered via
+  `{{#cargo_query:...|format=gallery}}` or MediaWiki `<gallery>` tags now receive
+  layer overlays, exactly like `[[File:...|layerset=on]]` in wikitext. If the image
+  has a saved layer set, it is embedded directly; if not, `data-layers-intent="on"`
+  is added so the client-side API fallback can fetch and display layers (or show the
+  image in the lightbox when no layers exist yet). Previously, gallery thumbnails
+  always received `setName=null` and were silently skipped by the layer pipeline.
+  Note: gallery renders always use the latest available layer set (`layerset=on`
+  semantics). For per-image named set control, use `format=template` with a template
+  that passes `layerset={{{layerset|}}}` to the `[[File:...]]` syntax.
+
+## [1.5.71] - 2026-05-25
+
+### Fixed
+- **v1.5.69 regression: layers not rendering anywhere** — v1.5.69 tried to guard
+  against Cargo gallery queue desync by reading a `layers_registered` flag from
+  `$thumbnail->getParams()`. However, `ThumbnailImage` does not have a `getParams()`
+  method and discards all custom handler params (keeping only width/height/page/lang)
+  in its constructor. So `method_exists($thumbnail, 'getParams')` always returned
+  false, `$isRegisteredRender` was always false, and the queue was never consulted
+  for any thumbnail — causing a complete regression where no overlays appeared.
+  Fix: replaced the broken handler-param approach with a `$pendingRender[$filename]`
+  static flag. `onParserMakeImageParams` sets the flag immediately before each
+  `[[File:...]]` render (before any early returns). `onThumbnailBeforeProduceHTML`
+  checks and clears the flag: if set, the render came from wikitext and the queue is
+  consulted; if not set (Cargo gallery, native `<gallery>`, etc.), the queue is
+  skipped. This works reliably because both hooks are synchronous paired calls within
+  `Parser::makeImage()` — no other render can interleave between them.
+
+## [1.5.70] - 2026-05-25
+
+### Fixed
+- **"View full size" shows error when no layers saved yet** — Clicking the view-full-size
+  overlay on an image that has `layerset=` set but no layers in the database showed
+  "No layer set found" instead of the image. The lightbox now renders the full-size
+  image without a layer overlay when the API returns a null `layerset`, matching the
+  expected behaviour: show the image, just without annotations.
+
+## [1.5.69] - 2026-05-26
+
+### Fixed
+- **Cargo gallery queue desync breaks layer overlays** — When a `{{#cargo_query:...|format=gallery}}`
+  (or any other parser-function-driven thumbnail source) rendered the same image filename that
+  was also referenced directly with `[[File:...|layerset=...]]` on the same page, the Cargo
+  renders fired `ThumbnailBeforeProduceHTML` without going through `ParserMakeImageParams`.
+  Each such render still incremented `$fileRenderCount` (the shared queue index), silently
+  consuming queue slots before the direct-wikitext renders could use them. The direct renders
+  then read the wrong index (or fell off the end of the queue) and lost their layer overlays.
+  Fix: `onParserMakeImageParams` now stamps a `layers_registered = true` marker into the
+  image's handler params. In `onThumbnailBeforeProduceHTML`, the queue is only consulted when
+  that marker is present on the thumbnail object (`$thumbnail->getParams()['layers_registered']`).
+  Non-wikitext renders (Cargo gallery, native `<gallery>`, etc.) carry no marker and are
+  skipped, preserving queue alignment for all direct `[[File:...]]` occurrences.
+
+## [1.5.68] - 2026-05-25
+
+### Fixed
+- **Overlay not shown for images with no layers yet** — When `layerset=` is set on an image
+  (via template or inline wikitext) but no layers have been saved to the database yet,
+  the edit overlay now correctly appears on hover. Previously, `ApiFallback.js` only
+  selected images with `data-layers-intent="on"` and only trusted that exact value in
+  `checkImageAllowed`. Server-side PHP emits `data-layers-intent="default"` (the set name)
+  for named sets — this value was not matched by the CSS attribute selector and was not
+  recognised as a trusted intent, so the candidate was silently rejected and no overlay
+  was shown. Fix: `buildCandidateList` now selects any `img[data-layers-intent]` attribute
+  (regardless of value), and `checkImageAllowed` now trusts any non-empty, non-off server
+  intent value. When the API confirms no layer data exists, `initializeOverlayOnly` fires
+  so users can click Edit to create the first layer set.
+
+## [1.5.67] - 2026-05-26
+
+### Fixed
+- **Template-embedded `layerset=` rendering (definitive fix)** — Layer overlays now render
+  correctly when `[[File:...|layerset=...]]` is embedded inside a MediaWiki template (e.g.
+  PageForms multi-instance templates). Versions 1.5.65 and 1.5.66 attempted to fix this via
+  a `$fileParamLayerset` fallback indexed by a parse-phase counter, but the fallback was
+  **never populated** because MediaWiki does not recognise `layerset`, `layers`, or `layer`
+  as image-option keywords. MediaWiki therefore treats them as caption text instead of
+  setting `$params['layerset']` in the `onParserMakeImageParams` hook, which caused the
+  hook to early-return immediately and leave `$fileParamLayerset` empty.
+
+  Root cause: `layerset=default` in `[[File:...|x300px|layerset=default]]` ends up in
+  `$params['frame']['caption']` (not `$params['layerset']`) because MW's image-option
+  parser only recognises built-in options (`thumbnail`, `left`, `right`, `link=`, `alt=`,
+  etc.) and handler options (`width`, `height`). Custom extension parameters are silently
+  demoted to caption text.
+
+  Fix: `onParserMakeImageParams` now inspects `$params['frame']['caption']` when
+  `$params['layerset']` is absent. If the caption matches the pattern
+  `layerset=value`, `layers=value`, or `layer=value` (case-insensitive), the value is
+  extracted and the caption is cleared so it does not appear as alt text or tooltip on
+  the rendered image. This makes template-embedded images behave identically to inline
+  images, where the pre-scan hook (`onParserBeforeInternalParse`) already handles the
+  extraction correctly.
+
+  Additionally, `LayerInjector::addSpecificLayersToImage` was extended to handle plain
+  named-set strings (e.g. `'default'`, `'anatomy'`) without requiring the `name:` prefix,
+  completing the parse-time data-embedding path for named sets.
+
+## [1.5.66] - 2026-05-25
+
+### Fixed
+- **Template-embedded `layerset=` multi-instance rendering (v1.5.65 regression fix)** —
+  The v1.5.65 `$fileParamLayerset` fallback was non-functional for PageForms multi-instance
+  templates. Root cause: `onParserMakeImageParams` used `$fileRenderCount[$filename] ?? 0`
+  as the storage index into `$fileParamLayerset`, but `$fileRenderCount` is only incremented
+  during the render phase (`onThumbnailBeforeProduceHTML`). In PageForms multi-instance
+  templates, ALL `onParserMakeImageParams` calls complete during the parse phase before ANY
+  `onThumbnailBeforeProduceHTML` calls begin. This meant every template instance read a
+  render-count of 0 and overwrote `$fileParamLayerset[filename][0]`, so only one entry
+  survived — only the first rendered instance found data; all subsequent instances found
+  nothing and rendered without any layer overlay.
+
+  Fix: Introduce a separate `$fileParseCount` counter that increments once per
+  `onParserMakeImageParams` call (at function entry, before any early returns).
+  `$fileParamLayerset` is now indexed by `$fileParseCount`, which increments in the same
+  document order as `$fileRenderCount` but during the parse phase rather than the render
+  phase. For N template instances, entries 0…N-1 are each written at distinct indices and
+  correctly retrieved during the render phase.
+
+  `$fileParseCount` is reset alongside the other per-request counters in both
+  `ensureRequestStateReset()` and `resetPageLayersFlag()`.
+
 ## [1.5.65] - 2026-05-22
 
 ### Fixed

@@ -544,6 +544,7 @@
 			this.createStyleGroup();
 			this.createAlignmentGroup();
 			this.createZoomGroup();
+			this.createPageNavGroup();
 			this.createActionGroup();
 		}
 
@@ -1509,6 +1510,71 @@
 
 			// Store references
 			this.zoomDisplay = zoomDisplay;
+		}
+
+		/**
+		 * Create the page navigation group for multi-page files (PDF).
+		 *
+		 * Only rendered when the file has more than one page. Prev/next buttons
+		 * navigate the editor to the adjacent page (guarding unsaved changes).
+		 */
+		createPageNavGroup() {
+			const editor = this.editor;
+			const pageCount = ( editor && editor.pageCount ) || 1;
+			if ( pageCount <= 1 ) {
+				return;
+			}
+			const currentPage = ( editor && editor.page ) || 1;
+			const t = this.msg.bind( this );
+
+			const navGroup = document.createElement( 'div' );
+			navGroup.className = 'toolbar-group page-nav-group';
+			navGroup.setAttribute( 'role', 'group' );
+			navGroup.setAttribute( 'aria-label', t( 'layers-page-nav-label', 'Page navigation' ) );
+
+			const prevBtn = document.createElement( 'button' );
+			prevBtn.className = 'toolbar-button page-nav-button page-prev-button';
+			prevBtn.textContent = '‹';
+			prevBtn.title = t( 'layers-page-prev', 'Previous page' );
+			prevBtn.setAttribute( 'aria-label', t( 'layers-page-prev', 'Previous page' ) );
+			prevBtn.disabled = currentPage <= 1;
+
+			const label = document.createElement( 'span' );
+			label.className = 'toolbar-page-display';
+			label.setAttribute( 'aria-live', 'polite' );
+			label.textContent = t( 'layers-page-indicator', 'Page $1 / $2' )
+				.replace( '$1', String( currentPage ) )
+				.replace( '$2', String( pageCount ) );
+
+			const nextBtn = document.createElement( 'button' );
+			nextBtn.className = 'toolbar-button page-nav-button page-next-button';
+			nextBtn.textContent = '›';
+			nextBtn.title = t( 'layers-page-next', 'Next page' );
+			nextBtn.setAttribute( 'aria-label', t( 'layers-page-next', 'Next page' ) );
+			nextBtn.disabled = currentPage >= pageCount;
+
+			const track = ( el, handler ) => {
+				if ( editor && editor.eventTracker && editor.eventTracker.addEventListener ) {
+					editor.eventTracker.addEventListener( el, 'click', handler );
+				} else {
+					el.addEventListener( 'click', handler );
+				}
+			};
+			track( prevBtn, () => {
+				if ( editor && typeof editor.navigateToPage === 'function' ) {
+					editor.navigateToPage( currentPage - 1 );
+				}
+			} );
+			track( nextBtn, () => {
+				if ( editor && typeof editor.navigateToPage === 'function' ) {
+					editor.navigateToPage( currentPage + 1 );
+				}
+			} );
+
+			navGroup.appendChild( prevBtn );
+			navGroup.appendChild( label );
+			navGroup.appendChild( nextBtn );
+			this.container.appendChild( navGroup );
 		}
 
 		createActionGroup() {

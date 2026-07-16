@@ -35,6 +35,14 @@
 			// Sanitize filename - strip any wikitext brackets that might have leaked through
 			this.filename = ( config.filename || '' ).replace( /[\x5B\x5D]/g, '' );
 			this.setname = config.setname || 'default';
+			// Multi-page (PDF) support: which page this overlay's image represents
+			this.page = parseInt( config.page, 10 );
+			if ( !( this.page > 1 ) && this.imageElement ) {
+				this.page = parseInt( this.imageElement.getAttribute( 'data-page' ), 10 );
+			}
+			if ( !( this.page > 1 ) ) {
+				this.page = 1;
+			}
 			this.canEdit = config.canEdit !== false && this._checkEditPermission();
 			this.debug = config.debug || false;
 			// Check if this is for a non-existent set that needs auto-creation
@@ -416,6 +424,9 @@
 				// Fallback URL construction
 				let url = '/wiki/File:' + encodeURIComponent( this.filename ) +
 					'?action=editlayers&setname=' + encodeURIComponent( this.setname );
+				if ( this.page > 1 ) {
+					url += '&page=' + encodeURIComponent( this.page );
+				}
 				if ( this.autoCreate ) {
 					url += '&autocreate=1';
 				}
@@ -427,6 +438,9 @@
 			} );
 			if ( this.setname && this.setname !== 'default' ) {
 				params.set( 'setname', this.setname );
+			}
+			if ( this.page > 1 ) {
+				params.set( 'page', String( this.page ) );
 			}
 			// Include autocreate flag for non-existent sets
 			if ( this.autoCreate ) {
@@ -453,6 +467,7 @@
 				window.Layers.lightbox.open( {
 					filename: this.filename,
 					setName: this.setname,
+					page: this.page,
 					imageUrl: this.imageElement.src
 				} );
 				return;

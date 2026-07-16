@@ -24,6 +24,7 @@
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo": "src/Api/ApiLayersInfo.php",
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersDelete": "src/Api/ApiLayersDelete.php",
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersRename": "src/Api/ApiLayersRename.php",
+		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersExport": "src/Api/ApiLayersExport.php",
 		"MediaWiki\\Extension\\Layers\\Hooks": "src/Hooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\WikitextHooks": "src/Hooks/WikitextHooks.php",
 		"MediaWiki\\Extension\\Layers\\Hooks\\UIHooks": "src/Hooks/UIHooks.php",
@@ -154,6 +155,14 @@
 			"description": "Maximum width/height for layer processing",
 			"value": 8192
 		},
+		"LayersPdfExportWidth": {
+			"description": "Render width in pixels for each page when exporting a marked-up file to PDF",
+			"value": 1600
+		},
+		"LayersPdfExportMaxPages": {
+			"description": "Maximum number of pages allowed when exporting a marked-up file to PDF (0 = unlimited)",
+			"value": 100
+		},
 		"LayersSlidesEnable": {
 			"description": "Enable Slide Mode for creating canvas-based layers without a parent image",
 			"value": true
@@ -226,7 +235,8 @@
 		"layersinfo": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersInfo",
 		"layersdelete": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersDelete",
 		"layersrename": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersRename",
-		"layerslist": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersList"
+		"layerslist": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersList",
+		"layerspdfexport": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersExport"
 	},
 	"MessagesDirs": {
 		"Layers": [
@@ -306,6 +316,17 @@
 				"layers-lightbox-close-tooltip",
 				"layers-lightbox-loading",
 				"layers-lightbox-alt",
+				"layers-lightbox-print",
+				"layers-lightbox-print-tooltip",
+				"layers-lightbox-export-pdf",
+				"layers-lightbox-export-pdf-tooltip",
+				"layers-lightbox-export-generating",
+				"layers-zoom-in",
+				"layers-zoom-out",
+				"layers-zoom-reset",
+				"layers-page-prev",
+				"layers-page-next",
+				"layers-page-indicator",
 				"layers-viewer-overlay-label",
 				"layers-viewer-edit",
 				"layers-viewer-view",
@@ -448,6 +469,11 @@
 				"layers-editor-save",
 				"layers-editor-cancel",
 				"layers-editor-close",
+				"layers-page-nav-label",
+				"layers-page-prev",
+				"layers-page-next",
+				"layers-page-indicator",
+				"layers-page-unsaved-confirm",
 				"layers-tool-select",
 				"layers-tool-text",
 				"layers-tool-textbox",

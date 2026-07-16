@@ -330,6 +330,12 @@ class ApiFallback {
 			filename: filename
 		};
 
+		// Multi-page (PDF) support: target the specific page if present
+		const pageAttr = parseInt( img.getAttribute( 'data-page' ), 10 );
+		if ( pageAttr > 1 ) {
+			apiParams.page = pageAttr;
+		}
+
 		// Only add setname if it's a specific named set (not default)
 		if ( setName ) {
 			apiParams.setname = setName;

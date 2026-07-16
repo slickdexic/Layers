@@ -94,6 +94,7 @@ class ApiLayersInfo extends ApiBase {
 		$limit = max( 1, min( $limit, 200 ) );
 		$offset = isset( $params['offset'] ) ? (int)$params['offset'] : 0;
 		$offset = max( 0, $offset );
+		$requestedPage = isset( $params['page'] ) ? (int)$params['page'] : 1;
 		if ( isset( $params['continue'] ) && $params['continue'] !== '' ) {
 			$offset = max( $offset, $this->parseContinueParameter( (string)$params['continue'] ) );
 		}
@@ -152,9 +153,13 @@ class ApiLayersInfo extends ApiBase {
 		// This ensures layers saved on foreign files can be loaded correctly
 		$normalizedName = $title->getDBkey();
 
-		// Capture original image dimensions for client-side scaling
-		$origWidth = (int)$file->getWidth();
-		$origHeight = (int)$file->getHeight();
+		// Capture original image dimensions for client-side scaling.
+		// For multi-page files (PDF) each page can have distinct dimensions,
+		// so resolve the requested page and read page-specific dimensions.
+		$page = $this->resolvePageParam( $file, $requestedPage );
+		$pageCount = $this->getPageCount( $file );
+		$origWidth = (int)$file->getWidth( $page );
+		$origHeight = (int)$file->getHeight( $page );
 
 		$db = $this->getLayersDatabase();
 
@@ -172,7 +177,7 @@ class ApiLayersInfo extends ApiBase {
 		// saved before InstantCommons support was added. Try to find the
 		// actual SHA1 used in the database.
 		if ( $setName && $this->isForeignFile( $file ) ) {
-			$storedSha1 = $db->findSetSha1( $normalizedName, $setName );
+			$storedSha1 = $db->findSetSha1( $normalizedName, $setName, $page );
 			if ( $storedSha1 !== null && $storedSha1 !== $fileSha1 ) {
 				$this->getLogger()->info( 'Layers info: SHA1 mismatch, using stored value', [
 					'imgName' => $normalizedName,
@@ -206,7 +211,7 @@ class ApiLayersInfo extends ApiBase {
 			];
 		} elseif ( $setName ) {
 			// Get specific named set
-			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName );
+			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName, $page );
 
 			if ( !$layerSet ) {
 				$result = [
@@ -232,18 +237,18 @@ class ApiLayersInfo extends ApiBase {
 			}
 
 			// Get revision history for this specific named set
-			$setRevisions = $db->getSetRevisions( $normalizedName, $fileSha1, $setName, $limit );
+			$setRevisions = $db->getSetRevisions( $normalizedName, $fileSha1, $setName, $limit, $page );
 			$setRevisions = $this->enrichWithUserNames( $setRevisions );
 			$result['set_revisions'] = $setRevisions;
 		} else {
 			// Get latest layer set for this file (default behavior)
 			// Try default set first, then fall back to any latest
 			$defaultSetName = $this->getConfig()->get( 'LayersDefaultSetName' );
-			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $defaultSetName );
+			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $defaultSetName, $page );
 
 			if ( !$layerSet ) {
 				// Fall back to latest of any set
-				$layerSet = $db->getLatestLayerSet( $normalizedName, $fileSha1 );
+				$layerSet = $db->getLatestLayerSet( $normalizedName, $fileSha1, '', $page );
 			}
 
 			if ( !$layerSet ) {
@@ -261,7 +266,8 @@ class ApiLayersInfo extends ApiBase {
 						'direction' => 'DESC',
 						'limit' => $fetchLimit,
 						'offset' => $offset,
-						'includeData' => false
+						'includeData' => false,
+						'page' => $page
 					]
 				);
 				if ( count( $allLayerSets ) > $limit ) {
@@ -298,7 +304,7 @@ class ApiLayersInfo extends ApiBase {
 				}
 				if ( $currentSetName ) {
 					// Use set-specific revisions
-					$allLayerSets = $db->getSetRevisions( $normalizedName, $fileSha1, $currentSetName, $limit );
+					$allLayerSets = $db->getSetRevisions( $normalizedName, $fileSha1, $currentSetName, $limit, $page );
 				} else {
 					// Fallback for backwards compatibility - get all revisions
 					$fetchLimit = min( $limit + 1, 201 );
@@ -310,7 +316,8 @@ class ApiLayersInfo extends ApiBase {
 							'direction' => 'DESC',
 							'limit' => $fetchLimit,
 							'offset' => $offset,
-							'includeData' => false
+							'includeData' => false,
+							'page' => $page
 						]
 					);
 					if ( count( $allLayerSets ) > $limit ) {
@@ -324,10 +331,28 @@ class ApiLayersInfo extends ApiBase {
 
 		// Always include named_sets summary (except for specific layersetid lookup)
 		if ( !$layerSetId ) {
-			$namedSets = $db->getNamedSetsForImage( $normalizedName, $fileSha1 );
+			$namedSets = $db->getNamedSetsForImage( $normalizedName, $fileSha1, $page );
 			$namedSets = $this->enrichNamedSetsWithUserNames( $namedSets );
 			$result['named_sets'] = $namedSets;
 		}
+
+		// Expose page context so multi-page (PDF) clients can render a navigator.
+		$result['page'] = $page;
+		$result['pageCount'] = $pageCount;
+
+		// Always expose the native page dimensions as the canonical base
+		// coordinate space. Clients (editor, viewer, lightbox) scale overlays to
+		// these dimensions so a layer keeps the same scale on every load,
+		// regardless of the rasterized background thumbnail's pixel size. These
+		// are provided even when there is no layer set yet, so a freshly drawn
+		// layer is created in the same space it will later be reloaded in.
+		$result['baseWidth'] = $origWidth;
+		$result['baseHeight'] = $origHeight;
+
+		// Provide a browser-renderable, page-aware image URL for the full-screen
+		// viewer/lightbox. For PDFs and other non-web formats this is a rasterized
+		// thumbnail of the requested page; a raw .pdf URL cannot be shown in <img>.
+		$result['imageUrl'] = $this->getPageImageUrl( $file, $page, $pageCount );
 
 		// Preserve boolean values in layer data (MediaWiki API drops false values)
 		$result = $this->preserveLayerBooleans( $result );
@@ -469,6 +494,61 @@ class ApiLayersInfo extends ApiBase {
 	}
 
 	/**
+	 * Build a browser-renderable, page-aware image URL for the full-screen viewer.
+	 *
+	 * For normal web-native images this returns the full-size original URL. For
+	 * PDFs and other non-web-native formats (which browsers cannot display in an
+	 * <img> element) it returns a rasterized thumbnail of the requested page via
+	 * the media handler (e.g. PdfHandler). Returns an empty string if no URL can
+	 * be resolved, letting the client fall back to Special:Redirect/file.
+	 *
+	 * @param mixed $file File object
+	 * @param int $page 1-based page number
+	 * @param int $pageCount Total pages (1 for single-page files/images)
+	 * @return string Image URL, or empty string on failure
+	 */
+	private function getPageImageUrl( $file, int $page, int $pageCount ): string {
+		if ( !$file ) {
+			return '';
+		}
+		$name = method_exists( $file, 'getName' ) ? (string)$file->getName() : '';
+		$ext = strtolower( pathinfo( $name, PATHINFO_EXTENSION ) );
+		$nonWebFormats = [ 'tif', 'tiff', 'xcf', 'psd', 'ai', 'eps', 'pdf' ];
+		$needsRaster = in_array( $ext, $nonWebFormats, true ) || $pageCount > 1;
+
+		// Web-native single-page images: the full-size original renders directly.
+		if ( !$needsRaster ) {
+			try {
+				$url = method_exists( $file, 'getUrl' ) ? (string)$file->getUrl() : '';
+				if ( $url !== '' ) {
+					return $url;
+				}
+			} catch ( \Throwable $e ) {
+				// fall through to transform
+			}
+		}
+
+		// Rasterize the requested page to a large thumbnail the browser can show.
+		try {
+			if ( method_exists( $file, 'transform' ) ) {
+				$thumb = $file->transform( [ 'width' => 2048, 'page' => max( 1, $page ) ] );
+				if ( $thumb && method_exists( $thumb, 'isError' ) && !$thumb->isError()
+					&& method_exists( $thumb, 'getUrl' )
+				) {
+					$url = (string)$thumb->getUrl();
+					if ( $url !== '' ) {
+						return $url;
+					}
+				}
+			}
+		} catch ( \Throwable $e ) {
+			$this->getLogger()->debug( 'getPageImageUrl transform failed: {msg}', [ 'msg' => $e->getMessage() ] );
+		}
+
+		return '';
+	}
+
+	/**
 	 * Enrich layer set rows with user names (delegates to generic helper)
 	 *
 	 * @param array $rows Array of layer set rows
@@ -582,6 +662,12 @@ class ApiLayersInfo extends ApiBase {
 			'continue' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false,
+			],
+			'page' => [
+				ApiBase::PARAM_TYPE => 'integer',
+				ApiBase::PARAM_REQUIRED => false,
+				ApiBase::PARAM_DFLT => 1,
+				ApiBase::PARAM_MIN => 1,
 			],
 		];
 	}
