@@ -22,6 +22,7 @@
 
 ## 🆕 What's New in v1.5.64
 
+
 - **v71 Code Quality Fixes** — 6 code issues resolved: InlineTextEditor stale
   layer guard (P2-252), TextBoxRenderer zero-dimension early return (P2-253),
   TextSanitizer Unicode hardening/bidi strip (P3-254), ViewerManager concurrent

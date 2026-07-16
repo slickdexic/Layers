@@ -97,6 +97,7 @@ class ApiLayersDelete extends ApiBase {
 			$file = $fileInfo['file'];
 			$imgName = $fileInfo['imgName'];
 			$sha1 = $this->getFileSha1( $file, $imgName );
+			$page = $this->resolvePageParam( $file, (int)( $params['page'] ?? 1 ) );
 
 			// Debug logging for SHA1 lookup
 			$this->getLogger()->info( 'Layers delete: looking for layer set', [
@@ -110,7 +111,7 @@ class ApiLayersDelete extends ApiBase {
 
 			// Find layer set with SHA1 fallback (via LayersApiHelperTrait)
 			$originalSha1 = $sha1;
-			$layerSet = $this->getLayerSetWithFallback( $db, $imgName, $sha1, $setName );
+			$layerSet = $this->getLayerSetWithFallback( $db, $imgName, $sha1, $setName, $page );
 
 			if ( $sha1 !== $originalSha1 ) {
 				$this->getLogger()->info( 'Layers delete: SHA1 mismatch, using stored value', [
@@ -133,7 +134,7 @@ class ApiLayersDelete extends ApiBase {
 			}
 
 			// PERMISSION CHECK: Only owner or admin can delete (via LayersApiHelperTrait)
-			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName ) ) {
+			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $setName, $page ) ) {
 				$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
@@ -148,7 +149,7 @@ class ApiLayersDelete extends ApiBase {
 			}
 
 			// Perform the delete
-			$rowsDeleted = $db->deleteNamedSet( $imgName, $sha1, $setName );
+			$rowsDeleted = $db->deleteNamedSet( $imgName, $sha1, $setName, $page );
 
 			if ( $rowsDeleted === null ) {
 				$this->getLogger()->error( 'Failed to delete layer set', [
@@ -304,6 +305,12 @@ class ApiLayersDelete extends ApiBase {
 			'setname' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true,
+			],
+			'page' => [
+				ApiBase::PARAM_TYPE => 'integer',
+				ApiBase::PARAM_REQUIRED => false,
+				ApiBase::PARAM_DFLT => 1,
+				ApiBase::PARAM_MIN => 1,
 			],
 		];
 	}

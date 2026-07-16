@@ -282,8 +282,13 @@ class ApiLayersSave extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_FILE_NOT_FOUND, 'filenotfound' );
 			}
 
-			$imgWidth = (int)$file->getWidth();
-			$imgHeight = (int)$file->getHeight();
+			// Resolve the target page (1-based). For multi-page files (e.g. PDFs)
+			// each page has its own layer sets and its own canvas dimensions.
+			// For images and single-page files this is always 1.
+			$page = $this->resolvePageParam( $file, (int)( $params['page'] ?? 1 ) );
+
+			$imgWidth = (int)$file->getWidth( $page );
+			$imgHeight = (int)$file->getHeight( $page );
 			$this->enforceImageSizeLimit( $rateLimiter, $imgWidth, $imgHeight );
 
 			// Extract file metadata for database association
@@ -308,6 +313,7 @@ class ApiLayersSave extends ApiBase {
 			$imgMetadata = [
 				'mime' => $mimeType,
 				'sha1' => $sha1,
+				'page' => $page,
 			];
 
 			// DATABASE SAVE: Persist layer set with automatic versioning
@@ -526,6 +532,12 @@ class ApiLayersSave extends ApiBase {
 			'setname' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => false,
+			],
+			'page' => [
+				ApiBase::PARAM_TYPE => 'integer',
+				ApiBase::PARAM_REQUIRED => false,
+				ApiBase::PARAM_DFLT => 1,
+				ApiBase::PARAM_MIN => 1,
 			],
 		];
 	}

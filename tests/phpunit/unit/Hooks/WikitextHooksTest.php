@@ -232,4 +232,45 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 			],
 		];
 	}
+
+	/**
+	 * Regression test for the filename-case bug: a [[File:...]] reference whose
+	 * first letter is lower-cased in wikitext (e.g. [[File:somepdf.pdf|layerset=001]])
+	 * must be keyed under MediaWiki's canonical DB key ("Somepdf.pdf") so the
+	 * layerset queue matches the name reported by File::getName() at render time.
+	 * Previously only spaces were normalized to underscores, so lower-case
+	 * filenames silently produced no overlays (especially visible with PDFs).
+	 *
+	 * @dataProvider provideFileKeyNormalization
+	 */
+	public function testNormalizeFileKey( string $raw, string $expected, string $description ): void {
+		$method = new \ReflectionMethod(
+			\MediaWiki\Extension\Layers\Hooks\WikitextHooks::class,
+			'normalizeFileKey'
+		);
+		$method->setAccessible( true );
+		$result = $method->invoke( null, $raw );
+		$this->assertSame( $expected, $result, $description );
+	}
+
+	public static function provideFileKeyNormalization(): array {
+		return [
+			'lowercase first letter is capitalized' => [
+				'somepdf.pdf', 'Somepdf.pdf',
+				'Lower-case first letter must map to canonical capitalized key',
+			],
+			'already-canonical name is unchanged' => [
+				'Somepdf.pdf', 'Somepdf.pdf',
+				'Already-capitalized name must remain the same',
+			],
+			'spaces become underscores' => [
+				'my file.png', 'My_file.png',
+				'Spaces must become underscores and first letter capitalized',
+			],
+			'surrounding whitespace is trimmed' => [
+				'  photo.jpg  ', 'Photo.jpg',
+				'Leading/trailing whitespace must be trimmed',
+			],
+		];
+	}
 }

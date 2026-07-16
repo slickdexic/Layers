@@ -4,6 +4,109 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+### Added
+- **Full-screen viewer support for PDFs and multi-page files** — Clicking the
+  "view full screen" overlay on a marked-up PDF now works. Previously the
+  lightbox tried to load the raw `.pdf` into an `<img>` (which browsers cannot
+  render) and failed with "Failed to load image". The `layersinfo` API now
+  returns a page-aware, browser-renderable `imageUrl` (a rasterized page
+  thumbnail for PDFs and other non-web formats), and the lightbox uses it.
+- **Multi-page paging in the full-screen viewer** — For multi-page PDFs the
+  lightbox now shows a toolbar with previous/next page controls and a
+  "Page N / M" indicator. Navigating pages reloads that page's rasterized
+  image together with the layer set saved for that page.
+- **Print the marked-up page** — The full-screen viewer has a Print button that
+  isolates the annotated page (background image + layer overlay) via a print
+  stylesheet and opens the browser print dialog. Prints the current page.
+- **Zoom and pan in the full-screen viewer** — The lightbox now supports zooming
+  (toolbar −/+ buttons, mouse wheel, and `+`/`-`/`0` keyboard shortcuts, range
+  25%–800%) and drag-to-pan when zoomed in. A live zoom indicator shows the
+  current level, and zoom resets when changing pages. Arrow keys page through
+  multi-page documents.
+- **Export/print the full marked-up PDF** — A new server-side `layerspdfexport`
+  API composites each page's saved layer set onto the rasterized page and
+  stitches the pages into a single flattened PDF (via ImageMagick), cached under
+  the upload thumb directory. The full-screen viewer shows a "Print PDF" button
+  for multi-page files that generates this PDF and opens it in a new tab for
+  printing or download. Configurable via `$wgLayersPdfExportWidth` (per-page
+  render width, default 1600px) and `$wgLayersPdfExportMaxPages` (default 100).
+
+### Fixed
+- **Saving layers on PDF pages other than page 1 silently failed** — Adding
+  annotations to page 2+ of a multi-page PDF and clicking Save returned
+  `savefailed` with nothing persisted. Two causes: (1) a stale unique index
+  (`ls_img_name_set_revision`, missing the page column) survived on installations
+  upgraded before the multi-page schema landed, causing a cross-page revision
+  collision; and (2) the collision was caught by a call to
+  `IDatabase::isDuplicateKeyError()`, which does not exist in MediaWiki 1.44+, so
+  the handler itself fatalled. The schema updater now always drops the stale index
+  and no longer resurrects it on later `update.php` runs, and `LayersDatabase` uses
+  a DB-agnostic duplicate-key detector (checks `DBQueryError` errno + message).
+- **Layers drawn at the wrong scale after switching PDF pages** — Creating layers
+  on a fresh PDF page and returning to it (or reloading) re-rendered them at a
+  different size. A brand-new page had no saved base dimensions, so the editor fell
+  back to the rasterized thumbnail width (2048px) as its coordinate space, while a
+  reloaded page used the native page width (e.g. 1275px) — a ~1.6× drift. The
+  editor now threads the native page dimensions (`getWidth($page)`/`getHeight($page)`)
+  as the canonical base size from init through to the canvas, and `layersinfo`
+  always returns top-level `baseWidth`/`baseHeight`, so a page's coordinate space is
+  identical whether the set is new or reloaded.
+- **"Print PDF" produced a PDF with no annotations** — The server-side ImageMagick
+  compositor used by the PDF export can only reproduce a handful of basic layer
+  primitives, so pages containing `customShape`, markers, images, emoji, callouts,
+  or dimensions exported with a blank overlay. The full-screen viewer's "Print PDF"
+  button now composites every page **client-side** using the shared layer renderer
+  (the same one that draws the on-screen overlay, so all layer types render
+  identically), then opens a print-ready window with one page per sheet. The
+  composite now waits for asynchronously-loaded layer artwork (SVG custom shapes,
+  image layers, emoji — which render through an off-DOM `<img>`) to finish loading
+  before capturing, so that markup is no longer dropped from the output. The
+  print stylesheet also drops the browser's default page margins (`@page{margin:0}`)
+  and sizes each page image to the sheet width, so the marked-up page fits the
+  selected media without extra whitespace. If client-side compositing is not
+  possible (e.g. a cross-origin/tainted canvas) it falls back to the previous
+  server-side export. The multi-page latent bug in the server compositor — scaling
+  every page against page 1's dimensions — was also fixed by making it page-aware.
+  `[[File:...]]` embed whose filename began with a lower-case letter in the
+  wikitext (e.g. `[[File:somepdf.pdf|layerset=001]]`) silently rendered no
+  overlays. The wikitext scanner keyed its layerset queue on the raw captured
+  filename (only normalizing spaces to underscores), while the render path
+  looks the file up by its canonical DB key (`File::getName()`, which
+  upper-cases the first letter per `$wgCapitalLinks`). The mismatch meant the
+  saved layer set was never matched. The scanner now normalizes captured
+  filenames to the canonical DB key via `Title::makeTitleSafe()`, so
+  lower-case references resolve correctly. This was a pre-existing bug
+  affecting all file types; it surfaced most visibly with PDFs.
+
+## [1.5.77] - 2026-07-10
+
+### Added
+- **PDF markup support (multi-page)** — PDF files can now be annotated the
+  same way as images, with the PDF page acting as the canvas. Multi-page
+  PDFs are fully supported: each page has its own independent set of named
+  layer sets and revision history, scoped to a `(file, page)` pair.
+  - New `ls_page` column on the `layer_sets` table (defaults to `1`, so all
+    existing images and single-page files are unaffected). A schema patch
+    (`patch-add-ls_page.sql`) migrates existing installations and rebuilds
+    the unique key to include the page.
+  - The editor toolbar shows a **page navigator** (previous / next plus a
+    "Page X / N" indicator) for multi-page files. Switching pages reloads
+    the editor with the correct rasterized page, dimensions, and page-scoped
+    layer set. Unsaved changes are guarded before navigating.
+  - Wikitext embeds respect the standard PDF `page` parameter, e.g.
+    `[[File:Doc.pdf|page=2|layerset=on]]` shows the layer set saved for page
+    2. The `{{#layeredfile:}}` parser function accepts an optional `page=N`
+    argument. Viewer, lightbox, and freshness-check code paths propagate the
+    page via a `data-page` attribute.
+  - The `layersinfo`, `layerssave`, `layersdelete`, and `layersrename` API
+    modules accept an optional `page` parameter (1-based, clamped to the
+    file's page count). `layersinfo` returns `page` and `pageCount`.
+  - Requires the **PdfHandler** extension (plus Ghostscript/ImageMagick) for
+    PDF rasterization and page dimensions. Without it, PDFs are treated as
+    single-page files and behave exactly as before.
+  - New i18n keys: `layers-page-nav-label`, `layers-page-prev`,
+    `layers-page-next`, `layers-page-indicator`, `layers-page-unsaved-confirm`.
+
 ## [1.5.66-REL1_39] - 2026-07-09
 
 Backport of the image-import config wiring from `main` v1.5.76. The

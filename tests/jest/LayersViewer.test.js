@@ -631,6 +631,149 @@ describe( 'LayersViewer', () => {
 		} );
 	} );
 
+	describe( 'renderFlattened', () => {
+		test( 'should return null when imageElement is missing', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			viewer.imageElement = null;
+			expect( viewer.renderFlattened() ).toBe( null );
+		} );
+
+		test( 'should draw background and all visible layers onto the canvas', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			mockLayerRenderer.drawLayer.mockClear();
+			const result = viewer.renderFlattened();
+
+			expect( result ).toBe( viewer.canvas );
+			// 2 visible layers (layer-3 is invisible)
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalledTimes( 2 );
+		} );
+
+		test( 'should size the canvas to the natural image size by default', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement( { naturalWidth: 1275, naturalHeight: 1650 } );
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			const result = viewer.renderFlattened();
+			expect( result.width ).toBe( 1275 );
+			expect( result.height ).toBe( 1650 );
+		} );
+
+		test( 'should honor an explicit targetWidth and keep aspect ratio', () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement( { naturalWidth: 1000, naturalHeight: 500 } );
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			const result = viewer.renderFlattened( 500 );
+			expect( result.width ).toBe( 500 );
+			expect( result.height ).toBe( 250 );
+		} );
+	} );
+
+	describe( 'renderFlattenedAsync', () => {
+		beforeEach( () => {
+			jest.useFakeTimers();
+		} );
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
+		test( 'should resolve to null when imageElement is missing', async () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+			viewer.imageElement = null;
+
+			const result = await viewer.renderFlattenedAsync();
+			expect( result ).toBe( null );
+		} );
+
+		test( 'should resolve to the composited canvas after the settle delay', async () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			const promise = viewer.renderFlattenedAsync();
+			jest.advanceTimersByTime( 200 );
+			const result = await promise;
+
+			expect( result ).toBe( viewer.canvas );
+			// Visible layers drawn at least once (initial pass + final pass).
+			expect( mockLayerRenderer.drawLayer ).toHaveBeenCalled();
+		} );
+
+		test( 'should redraw when an async layer image loads and clear the handler', async () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			const promise = viewer.renderFlattenedAsync();
+			// Simulate an async SVG/image layer finishing loading before settle.
+			expect( typeof viewer._onFlattenImageLoad ).toBe( 'function' );
+			viewer._onFlattenImageLoad();
+			jest.advanceTimersByTime( 200 );
+			const result = await promise;
+
+			expect( result ).toBe( viewer.canvas );
+			// Handler is cleared once resolved so late loads do not redraw.
+			expect( viewer._onFlattenImageLoad ).toBe( null );
+		} );
+
+		test( 'should resolve via the hard timeout even if loads never settle', async () => {
+			const container = createMockContainer();
+			const imageElement = createMockImageElement();
+			const viewer = new window.LayersViewer( {
+				container: container,
+				imageElement: imageElement,
+				layerData: createSampleLayerData()
+			} );
+
+			const promise = viewer.renderFlattenedAsync( undefined, 1000 );
+			// Keep reporting loads so the settle timer keeps resetting.
+			for ( let i = 0; i < 20; i++ ) {
+				if ( typeof viewer._onFlattenImageLoad === 'function' ) {
+					viewer._onFlattenImageLoad();
+				}
+				jest.advanceTimersByTime( 100 );
+			}
+			const result = await promise;
+			expect( result ).toBe( viewer.canvas );
+		} );
+	} );
+
 	describe( 'renderLayer', () => {
 		test( 'should skip invisible layers (boolean false)', () => {
 			const container = createMockContainer();

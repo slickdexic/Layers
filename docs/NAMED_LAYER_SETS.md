@@ -43,12 +43,21 @@ CREATE TABLE /*_*/layer_sets (
     ls_timestamp binary(14) NOT NULL,
     ls_revision int unsigned NOT NULL DEFAULT 1,
     ls_name varchar(255) NOT NULL DEFAULT 'default',
+    ls_page smallint unsigned NOT NULL DEFAULT 1,
     ls_size int unsigned NOT NULL DEFAULT 0,
     ls_layer_count smallint unsigned NOT NULL DEFAULT 0,
-    UNIQUE KEY ls_img_name_set_revision
-        (ls_img_name, ls_img_sha1, ls_name, ls_revision)
+    UNIQUE KEY ls_img_name_set_page_revision
+        (ls_img_name, ls_img_sha1, ls_name, ls_page, ls_revision)
 ) ENGINE=InnoDB DEFAULT CHARSET=binary;
 ```
+
+> **Multi-page (PDF) support (v1.5.77+):** The `ls_page` column scopes named
+> sets and their revision history to a specific 1-based page. Images and
+> single-page files always use page 1, so existing data is unaffected. The
+> named-set limit and revision pruning are enforced **per (image, page)**.
+> The unique key includes `ls_page` so the same file can hold independent
+> sets on different pages. Every read/write DB method accepts a trailing
+> optional `int $page = 1` argument.
 
 Additional indexes:
 - `ls_img_lookup (ls_img_name, ls_img_sha1)`
@@ -125,8 +134,13 @@ Key methods:
 
 **Parameters relevant to named sets:**
 - `setname` (string, optional): Return specific named set and `set_revisions`
+- `page` (integer, optional, default 1): Target page for multi-page (PDF) files
 - `limit` (integer, optional, default 50, max 200)
 - `offset` / `continue` (pagination for fallback revision listing)
+
+> **Multi-page note:** `layersinfo` also returns `page` and `pageCount` in its
+> response. `layerssave`, `layersdelete`, and `layersrename` accept the same
+> optional `page` parameter (1-based, clamped to the file's page count).
 
 **Response Structure (current):**
 

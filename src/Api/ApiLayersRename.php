@@ -125,10 +125,11 @@ class ApiLayersRename extends ApiBase {
 			$file = $fileInfo['file'];
 			$imgName = $fileInfo['imgName'];
 			$sha1 = $this->getFileSha1( $file, $imgName );
+			$page = $this->resolvePageParam( $file, (int)( $params['page'] ?? 1 ) );
 
 			// Find source layer set with SHA1 fallback (via LayersApiHelperTrait)
 			$originalSha1 = $sha1;
-			$layerSet = $this->getLayerSetWithFallback( $db, $imgName, $sha1, $oldName );
+			$layerSet = $this->getLayerSetWithFallback( $db, $imgName, $sha1, $oldName, $page );
 
 			if ( $sha1 !== $originalSha1 ) {
 				$this->getLogger()->info( 'Layers rename: SHA1 mismatch, using stored value', [
@@ -144,17 +145,17 @@ class ApiLayersRename extends ApiBase {
 			}
 
 			// Check if new name already exists
-			if ( $db->namedSetExists( $imgName, $sha1, $newName ) ) {
+			if ( $db->namedSetExists( $imgName, $sha1, $newName, $page ) ) {
 				$this->dieWithError( LayersConstants::ERROR_SETNAME_EXISTS, 'setnameexists' );
 			}
 
 			// PERMISSION CHECK: Only owner or admin can rename (via LayersApiHelperTrait)
-			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $oldName ) ) {
+			if ( !$this->isOwnerOrAdmin( $db, $user, $imgName, $sha1, $oldName, $page ) ) {
 				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
 			// Perform the rename
-			$success = $db->renameNamedSet( $imgName, $sha1, $oldName, $newName );
+			$success = $db->renameNamedSet( $imgName, $sha1, $oldName, $newName, $page );
 
 			if ( !$success ) {
 				$this->getLogger()->error( 'Failed to rename layer set', [
@@ -227,6 +228,12 @@ class ApiLayersRename extends ApiBase {
 			'newname' => [
 				ApiBase::PARAM_TYPE => 'string',
 				ApiBase::PARAM_REQUIRED => true,
+			],
+			'page' => [
+				ApiBase::PARAM_TYPE => 'integer',
+				ApiBase::PARAM_REQUIRED => false,
+				ApiBase::PARAM_DFLT => 1,
+				ApiBase::PARAM_MIN => 1,
 			],
 		];
 	}

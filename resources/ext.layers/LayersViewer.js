@@ -228,7 +228,15 @@
 				baseWidth: this.baseWidth,
 				baseHeight: this.baseHeight,
 				onImageLoad: () => {
-					this.renderLayers();
+					// When flattening for export/print, async layer images (SVG
+					// custom shapes, image layers, emoji) must trigger a redraw of
+					// the full composite — not the transparent overlay — so the
+					// captured canvas contains them.
+					if ( this._onFlattenImageLoad ) {
+						this._onFlattenImageLoad();
+					} else {
+						this.renderLayers();
+					}
 				}
 			} );
 
@@ -488,6 +496,121 @@
 
 			// Note: DOM image hiding is now done in renderLayers() AFTER all layers
 			// are rendered to prevent the flash where image disappears before canvas is ready
+		}
+
+		/**
+		 * Render a fully flattened composite (background image + all layers) onto
+		 * this viewer's own canvas and return it. The live overlay is a
+		 * transparent canvas layered above the DOM &lt;img&gt;; this instead draws
+		 * the background image first so a single canvas contains the complete
+		 * marked-up page. Used to export/print a page as one image, so every
+		 * layer type (customShape, markers, images, emoji, text, shapes) renders
+		 * identically to the on-screen viewer — unlike the limited server-side
+		 * ImageMagick compositor which only supports basic primitives.
+		 *
+		 * @param {number} [targetWidth] Optional output width in px (defaults to
+		 *   the image's natural width). Height is derived to preserve aspect ratio.
+		 * @return {HTMLCanvasElement|null} The composited canvas, or null if the
+		 *   image/canvas is not ready.
+		 */
+		renderFlattened( targetWidth ) {
+			if ( !this.canvas || !this.ctx || !this.imageElement ) {
+				return null;
+			}
+			const natW = this.imageElement.naturalWidth || this.canvas.width || 0;
+			const natH = this.imageElement.naturalHeight || this.canvas.height || 0;
+			if ( natW <= 0 || natH <= 0 ) {
+				return null;
+			}
+			let w = natW;
+			let h = natH;
+			if ( targetWidth && targetWidth > 0 ) {
+				w = Math.round( targetWidth );
+				h = Math.round( natH * ( w / natW ) );
+			}
+			this.canvas.width = w;
+			this.canvas.height = h;
+			if ( this.renderer && this.renderer.setCanvas ) {
+				this.renderer.setCanvas( this.canvas );
+			}
+			if ( this.renderer && this.renderer.setBaseDimensions ) {
+				this.renderer.setBaseDimensions( this.baseWidth, this.baseHeight );
+			}
+			// Draw the background image first so the single canvas is a complete
+			// composite (the live view relies on the DOM image behind a
+			// transparent overlay, which cannot be captured via toDataURL).
+			this.drawBackgroundOnCanvas();
+			const layers = Array.isArray( this.layerData.layers ) ? this.layerData.layers : [];
+			for ( let i = layers.length - 1; i >= 0; i-- ) {
+				this.renderLayer( layers[ i ] );
+			}
+			return this.canvas;
+		}
+
+		/**
+		 * Render a fully flattened composite and resolve only once asynchronous
+		 * layer images have finished loading and been drawn.
+		 *
+		 * Several layer types render their artwork through an off-DOM
+		 * &lt;img&gt; that loads asynchronously — SVG custom shapes, image layers
+		 * and emoji. A single synchronous {@link renderFlattened} pass draws the
+		 * background and kicks those loads off, but the images are not yet on the
+		 * canvas, so capturing immediately (e.g. via toDataURL for print/export)
+		 * would drop that markup. This method redraws the composite each time an
+		 * async image reports in and resolves after the loads go quiet (or a hard
+		 * timeout), guaranteeing the returned canvas is complete.
+		 *
+		 * @param {number} [targetWidth] Optional output width in px (see
+		 *   {@link renderFlattened}).
+		 * @param {number} [timeoutMs=4000] Hard cap before resolving regardless of
+		 *   outstanding loads, so a stuck image can never hang the export.
+		 * @return {Promise<HTMLCanvasElement|null>} The composited canvas, or null
+		 *   if the image/canvas is not ready.
+		 */
+		renderFlattenedAsync( targetWidth, timeoutMs ) {
+			return new Promise( ( resolve ) => {
+				if ( !this.canvas || !this.ctx || !this.imageElement ) {
+					resolve( null );
+					return;
+				}
+				let resolved = false;
+				let settleTimer = null;
+				const settleDelay = 150;
+				const finish = () => {
+					if ( resolved ) {
+						return;
+					}
+					resolved = true;
+					this._onFlattenImageLoad = null;
+					if ( settleTimer ) {
+						clearTimeout( settleTimer );
+						settleTimer = null;
+					}
+					// Final authoritative draw with every async image now cached.
+					const canvas = this.renderFlattened( targetWidth );
+					resolve( canvas );
+				};
+				// Each time an async layer image loads, redraw the composite and
+				// restart the quiet-period timer; when no more loads arrive we
+				// treat the canvas as complete.
+				this._onFlattenImageLoad = () => {
+					if ( resolved ) {
+						return;
+					}
+					this.renderFlattened( targetWidth );
+					if ( settleTimer ) {
+						clearTimeout( settleTimer );
+					}
+					settleTimer = setTimeout( finish, settleDelay );
+				};
+				// Initial pass draws the background + primitives and triggers the
+				// asynchronous image loads.
+				this.renderFlattened( targetWidth );
+				// If nothing loads asynchronously, resolve after a short settle.
+				settleTimer = setTimeout( finish, settleDelay );
+				// Absolute safety cap.
+				setTimeout( finish, ( typeof timeoutMs === 'number' && timeoutMs > 0 ) ? timeoutMs : 4000 );
+			} );
 		}
 
 		/**

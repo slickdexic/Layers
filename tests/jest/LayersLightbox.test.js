@@ -278,7 +278,7 @@ describe( 'LayersLightbox', () => {
 
 			lightbox.open( { filename: 'Test.jpg' } );
 
-			expect( fetchSpy ).toHaveBeenCalledWith( 'Test.jpg', undefined );
+			expect( fetchSpy ).toHaveBeenCalledWith( 'Test.jpg', undefined, 1 );
 		} );
 
 		it( 'should pass setName to API fetch', () => {
@@ -291,7 +291,7 @@ describe( 'LayersLightbox', () => {
 
 			lightbox.open( { filename: 'Test.jpg', setName: 'anatomy' } );
 
-			expect( fetchSpy ).toHaveBeenCalledWith( 'Test.jpg', 'anatomy' );
+			expect( fetchSpy ).toHaveBeenCalledWith( 'Test.jpg', 'anatomy', 1 );
 		} );
 	} );
 
@@ -417,11 +417,12 @@ describe( 'LayersLightbox', () => {
 			expect( errorSpy ).toHaveBeenCalledWith( 'No layer data found' );
 		} );
 
-		it( 'should show error when no layerset in response', async () => {
+		it( 'should show image full-size when no layerset in response (no layers saved yet)', async () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
 			lightbox.showLoading();
 			const errorSpy = jest.spyOn( lightbox, 'showError' );
+			const renderSpy = jest.spyOn( lightbox, 'renderViewer' );
 
 			mockApi.get.mockResolvedValue( {
 				layersinfo: { layerset: null }
@@ -429,7 +430,11 @@ describe( 'LayersLightbox', () => {
 
 			await lightbox.fetchAndRender( 'Test.jpg', null );
 
-			expect( errorSpy ).toHaveBeenCalledWith( 'No layer set found' );
+			expect( errorSpy ).not.toHaveBeenCalled();
+			expect( renderSpy ).toHaveBeenCalledWith(
+				expect.any( String ),
+				expect.objectContaining( { layers: [], backgroundVisible: true } )
+			);
 		} );
 
 		it( 'should handle API errors gracefully', async () => {
@@ -535,55 +540,617 @@ describe( 'LayersLightbox', () => {
 		} );
 	} );
 
+	describe( 'multi-page (PDF) support', () => {
+		it( 'should default currentPage to 1 and pageCount to 1 on open', () => {
+			const lightbox = new LayersLightbox();
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			lightbox.open( { filename: 'Doc.pdf' } );
+
+			expect( lightbox.currentPage ).toBe( 1 );
+			expect( lightbox.pageCount ).toBe( 1 );
+		} );
+
+		it( 'should store the requested page from open config', () => {
+			const lightbox = new LayersLightbox();
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			lightbox.open( { filename: 'Doc.pdf', page: 3 } );
+
+			expect( lightbox.currentPage ).toBe( 3 );
+		} );
+
+		it( 'should include page in API params when page > 1', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.showLoading();
+
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			await lightbox.fetchAndRender( 'Doc.pdf', null, 2 );
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( { page: 2 } )
+			);
+		} );
+
+		it( 'should not include page in API params for page 1', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.showLoading();
+
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			await lightbox.fetchAndRender( 'Doc.pdf', null, 1 );
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.not.objectContaining( { page: expect.anything() } )
+			);
+		} );
+
+		it( 'should prefer server-provided imageUrl over Special:Redirect', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.showLoading();
+			const renderSpy = jest.spyOn( lightbox, 'renderViewer' );
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: null,
+					imageUrl: '/images/thumb/Doc.pdf/page2-2048px.jpg'
+				}
+			} );
+
+			await lightbox.fetchAndRender( 'Doc.pdf', null, 2 );
+
+			expect( renderSpy ).toHaveBeenCalledWith(
+				'/images/thumb/Doc.pdf/page2-2048px.jpg',
+				expect.any( Object )
+			);
+		} );
+
+		it( 'should track pageCount and page reported by the server', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.showLoading();
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: { data: { layers: [] } },
+					page: 2,
+					pageCount: 4
+				}
+			} );
+
+			await lightbox.fetchAndRender( 'Doc.pdf', null, 2 );
+
+			expect( lightbox.pageCount ).toBe( 4 );
+			expect( lightbox.currentPage ).toBe( 2 );
+		} );
+
+		it( 'updateToolbar should show paging controls only for multi-page files', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.showLoading();
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: { data: { layers: [] } },
+					page: 1,
+					pageCount: 3
+				}
+			} );
+
+			await lightbox.fetchAndRender( 'Doc.pdf', null, 1 );
+
+			expect( lightbox.prevBtn.style.display ).toBe( '' );
+			expect( lightbox.nextBtn.style.display ).toBe( '' );
+			expect( lightbox.pageIndicator.style.display ).toBe( '' );
+			expect( lightbox.prevBtn.disabled ).toBe( true );
+			expect( lightbox.nextBtn.disabled ).toBe( false );
+		} );
+
+		it( 'updateToolbar should hide paging controls for single-page files', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.showLoading();
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					layerset: { data: { layers: [] } },
+					page: 1,
+					pageCount: 1
+				}
+			} );
+
+			await lightbox.fetchAndRender( 'Doc.pdf', null, 1 );
+
+			expect( lightbox.prevBtn.style.display ).toBe( 'none' );
+			expect( lightbox.nextBtn.style.display ).toBe( 'none' );
+			expect( lightbox.pageIndicator.style.display ).toBe( 'none' );
+		} );
+
+		it( 'goToPage should refetch with the target page', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.pageCount = 4;
+			lightbox.currentPage = 1;
+			lightbox.filename = 'Doc.pdf';
+			lightbox.setName = null;
+			const fetchSpy = jest.spyOn( lightbox, 'fetchAndRender' ).mockImplementation( () => {} );
+
+			lightbox.goToPage( 3 );
+
+			expect( lightbox.currentPage ).toBe( 3 );
+			expect( fetchSpy ).toHaveBeenCalledWith( 'Doc.pdf', null, 3 );
+		} );
+
+		it( 'goToPage should ignore out-of-range or unchanged pages', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.pageCount = 4;
+			lightbox.currentPage = 2;
+			lightbox.filename = 'Doc.pdf';
+			const fetchSpy = jest.spyOn( lightbox, 'fetchAndRender' ).mockImplementation( () => {} );
+
+			lightbox.goToPage( 0 );
+			lightbox.goToPage( 5 );
+			lightbox.goToPage( 2 );
+
+			expect( fetchSpy ).not.toHaveBeenCalled();
+			expect( lightbox.currentPage ).toBe( 2 );
+		} );
+
+		it( 'printCurrentPage should toggle the printing body class and call window.print', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			const printSpy = jest.fn();
+			const originalPrint = window.print;
+			window.print = printSpy;
+
+			lightbox.printCurrentPage();
+
+			expect( printSpy ).toHaveBeenCalled();
+			expect( document.body.classList.contains( 'layers-lightbox-printing' ) ).toBe( true );
+
+			// afterprint cleanup removes the class
+			window.dispatchEvent( new Event( 'afterprint' ) );
+			expect( document.body.classList.contains( 'layers-lightbox-printing' ) ).toBe( false );
+
+			window.print = originalPrint;
+		} );
+
+		it( 'close should remove the printing body class', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Doc.pdf' } );
+			document.body.classList.add( 'layers-lightbox-printing' );
+
+			lightbox.close( true );
+
+			expect( document.body.classList.contains( 'layers-lightbox-printing' ) ).toBe( false );
+		} );
+	} );
+
+	describe( 'zoom and pan', () => {
+		it( 'zoomBy should multiply the zoom factor', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.zoom = 1;
+
+			lightbox.zoomBy( 1.25 );
+
+			expect( lightbox.zoom ).toBeCloseTo( 1.25 );
+		} );
+
+		it( 'setZoom should clamp to the max zoom limit', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+
+			lightbox.setZoom( 100 );
+
+			expect( lightbox.zoom ).toBe( 8 );
+		} );
+
+		it( 'setZoom should clamp to the min zoom limit', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+
+			lightbox.setZoom( 0.01 );
+
+			expect( lightbox.zoom ).toBe( 0.25 );
+		} );
+
+		it( 'setZoom to 1 should clear any pan offset', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.panX = 40;
+			lightbox.panY = -20;
+
+			lightbox.setZoom( 1 );
+
+			expect( lightbox.panX ).toBe( 0 );
+			expect( lightbox.panY ).toBe( 0 );
+		} );
+
+		it( 'resetZoom should restore 100% and clear pan', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.zoom = 3;
+			lightbox.panX = 50;
+			lightbox.panY = 50;
+
+			lightbox.resetZoom();
+
+			expect( lightbox.zoom ).toBe( 1 );
+			expect( lightbox.panX ).toBe( 0 );
+			expect( lightbox.panY ).toBe( 0 );
+		} );
+
+		it( 'applyTransform should write a CSS transform and update the indicator', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.zoom = 2;
+			lightbox.panX = 10;
+			lightbox.panY = 20;
+
+			lightbox.applyTransform();
+
+			expect( lightbox.imageWrapper.style.transform ).toContain( 'scale(2)' );
+			expect( lightbox.imageWrapper.style.transform ).toContain( 'translate(10px, 20px)' );
+			expect( lightbox.zoomIndicator.textContent ).toBe( '200%' );
+		} );
+
+		it( 'handleWheel should zoom in on upward scroll and prevent default', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.zoom = 1;
+			const preventDefault = jest.fn();
+
+			lightbox.handleWheel( { deltaY: -100, preventDefault } );
+
+			expect( preventDefault ).toHaveBeenCalled();
+			expect( lightbox.zoom ).toBeGreaterThan( 1 );
+		} );
+
+		it( 'handleWheel should zoom out on downward scroll', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.zoom = 2;
+
+			lightbox.handleWheel( { deltaY: 100, preventDefault: jest.fn() } );
+
+			expect( lightbox.zoom ).toBeLessThan( 2 );
+		} );
+
+		it( 'panning should be ignored when not zoomed', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.zoom = 1;
+
+			lightbox.startPan( { clientX: 0, clientY: 0, preventDefault: jest.fn(), stopPropagation: jest.fn() } );
+
+			expect( lightbox.isPanning ).toBeFalsy();
+		} );
+
+		it( 'panning should update the pan offset when zoomed in', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.zoom = 2;
+
+			lightbox.startPan( { clientX: 100, clientY: 100, preventDefault: jest.fn(), stopPropagation: jest.fn() } );
+			lightbox.movePan( { clientX: 130, clientY: 90 } );
+
+			expect( lightbox.isPanning ).toBe( true );
+			expect( lightbox.panX ).toBe( 30 );
+			expect( lightbox.panY ).toBe( -10 );
+
+			lightbox.endPan();
+			expect( lightbox.isPanning ).toBe( false );
+		} );
+
+		it( 'open should reset zoom and pan to defaults', () => {
+			const lightbox = new LayersLightbox();
+			mockApi.get.mockResolvedValue( { layersinfo: { layerset: null } } );
+
+			lightbox.open( { filename: 'Doc.pdf' } );
+
+			expect( lightbox.zoom ).toBe( 1 );
+			expect( lightbox.panX ).toBe( 0 );
+			expect( lightbox.panY ).toBe( 0 );
+		} );
+
+		it( 'Escape / +/- / 0 keys should control zoom and closing', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.isOpen = true;
+			lightbox.zoom = 1;
+
+			lightbox.handleKeyDown( { key: '+', preventDefault: jest.fn() } );
+			expect( lightbox.zoom ).toBeGreaterThan( 1 );
+
+			lightbox.handleKeyDown( { key: '0', preventDefault: jest.fn() } );
+			expect( lightbox.zoom ).toBe( 1 );
+
+			lightbox.handleKeyDown( { key: '-', preventDefault: jest.fn() } );
+			expect( lightbox.zoom ).toBeLessThan( 1 );
+		} );
+	} );
+
+	describe( 'PDF export button', () => {
+		it( 'should hide the export button for single-page files', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.pageCount = 1;
+			lightbox.updateToolbar();
+
+			expect( lightbox.exportPdfBtn.style.display ).toBe( 'none' );
+		} );
+
+		it( 'should show the export button for multi-page files', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.pageCount = 4;
+			lightbox.updateToolbar();
+
+			expect( lightbox.exportPdfBtn.style.display ).not.toBe( 'none' );
+		} );
+
+		it( 'should do nothing when no filename is set', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = null;
+			const composeSpy = jest.spyOn( lightbox, 'composePageDataUrl' );
+
+			await lightbox.exportPdf();
+
+			expect( composeSpy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should composite every page client-side and open a print document', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			lightbox.pageCount = 3;
+
+			jest.spyOn( lightbox, 'composePageDataUrl' ).mockImplementation(
+				( page ) => Promise.resolve( 'data:image/png;base64,page' + page )
+			);
+			const printSpy = jest.spyOn( lightbox, 'openPrintDocument' )
+				.mockImplementation( () => {} );
+			const serverSpy = jest.spyOn( lightbox, 'exportPdfViaServer' )
+				.mockImplementation( () => {} );
+
+			await lightbox.exportPdf();
+
+			expect( lightbox.composePageDataUrl ).toHaveBeenCalledTimes( 3 );
+			expect( printSpy ).toHaveBeenCalledWith( [
+				'data:image/png;base64,page1',
+				'data:image/png;base64,page2',
+				'data:image/png;base64,page3'
+			] );
+			expect( serverSpy ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should fall back to the server export when no page composites', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			lightbox.pageCount = 2;
+
+			jest.spyOn( lightbox, 'composePageDataUrl' )
+				.mockImplementation( () => Promise.resolve( null ) );
+			const printSpy = jest.spyOn( lightbox, 'openPrintDocument' )
+				.mockImplementation( () => {} );
+			const serverSpy = jest.spyOn( lightbox, 'exportPdfViaServer' )
+				.mockImplementation( () => {} );
+
+			await lightbox.exportPdf();
+
+			expect( printSpy ).not.toHaveBeenCalled();
+			expect( serverSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'should fall back to the server export on client-side error', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			lightbox.pageCount = 1;
+
+			jest.spyOn( lightbox, 'composePageDataUrl' )
+				.mockImplementation( () => Promise.reject( new Error( 'tainted' ) ) );
+			const serverSpy = jest.spyOn( lightbox, 'exportPdfViaServer' )
+				.mockImplementation( () => {} );
+
+			await lightbox.exportPdf();
+
+			expect( serverSpy ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'composePageDataUrl', () => {
+		it( 'should request layersinfo for the given page and flatten it', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.filename = 'Doc.pdf';
+			lightbox.setName = '001';
+
+			mockApi.get.mockResolvedValue( {
+				layersinfo: {
+					imageUrl: '/images/thumb/Doc.pdf/page2.jpg',
+					baseWidth: 1275,
+					baseHeight: 1650,
+					layerset: { data: { layers: [ { id: 'a', type: 'rectangle' } ] } }
+				}
+			} );
+			const flattenSpy = jest.spyOn( lightbox, 'flattenPage' )
+				.mockResolvedValue( 'data:image/png;base64,ok' );
+
+			const result = await lightbox.composePageDataUrl( 2 );
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					action: 'layersinfo',
+					filename: 'Doc.pdf',
+					setname: '001',
+					page: 2
+				} )
+			);
+			expect( flattenSpy ).toHaveBeenCalledWith(
+				'/images/thumb/Doc.pdf/page2.jpg',
+				expect.objectContaining( { layers: [ { id: 'a', type: 'rectangle' } ] } )
+			);
+			expect( result ).toBe( 'data:image/png;base64,ok' );
+		} );
+
+		it( 'should not send a page param for page 1', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.filename = 'Doc.pdf';
+			lightbox.setName = null;
+
+			mockApi.get.mockResolvedValue( { layersinfo: { imageUrl: '/x.jpg', layerset: null } } );
+			jest.spyOn( lightbox, 'flattenPage' ).mockResolvedValue( 'data:img' );
+
+			await lightbox.composePageDataUrl( 1 );
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.not.objectContaining( { page: expect.anything() } )
+			);
+		} );
+
+		it( 'should resolve null when the API rejects', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.filename = 'Doc.pdf';
+			mockApi.get.mockRejectedValue( new Error( 'boom' ) );
+
+			const result = await lightbox.composePageDataUrl( 1 );
+			expect( result ).toBe( null );
+		} );
+	} );
+
+	describe( 'openPrintDocument', () => {
+		it( 'should open a window and write an img tag per page', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.filename = 'Doc.pdf';
+			const doc = {
+				open: jest.fn(),
+				write: jest.fn(),
+				close: jest.fn(),
+				readyState: 'complete'
+			};
+			const win = {
+				document: doc,
+				focus: jest.fn(),
+				print: jest.fn(),
+				setTimeout: jest.fn(),
+				addEventListener: jest.fn()
+			};
+			const openSpy = jest.spyOn( window, 'open' ).mockReturnValue( win );
+
+			lightbox.openPrintDocument( [ 'data:img1', 'data:img2' ] );
+
+			expect( doc.write ).toHaveBeenCalled();
+			const html = doc.write.mock.calls[ 0 ][ 0 ];
+			expect( html ).toContain( 'data:img1' );
+			expect( html ).toContain( 'data:img2' );
+			expect( ( html.match( /layers-print-page/g ) || [] ).length ).toBeGreaterThanOrEqual( 2 );
+			openSpy.mockRestore();
+		} );
+
+		it( 'should show an error when the print window is blocked', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.filename = 'Doc.pdf';
+			const openSpy = jest.spyOn( window, 'open' ).mockReturnValue( null );
+			const errorSpy = jest.spyOn( lightbox, 'showExportError' )
+				.mockImplementation( () => {} );
+
+			lightbox.openPrintDocument( [ 'data:img1' ] );
+
+			expect( errorSpy ).toHaveBeenCalled();
+			openSpy.mockRestore();
+		} );
+	} );
+
+	describe( 'escapeHtml', () => {
+		it( 'should escape HTML-significant characters', () => {
+			const lightbox = new LayersLightbox();
+			expect( lightbox.escapeHtml( '<a href="x">&\'' ) )
+				.toBe( '&lt;a href=&quot;x&quot;&gt;&amp;&#39;' );
+		} );
+	} );
+
+	describe( 'exportPdfViaServer (fallback)', () => {
+		it( 'should call the layerspdfexport API with filename and setname', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			lightbox.setName = '001';
+
+			mockApi.get.mockResolvedValue( {
+				layerspdfexport: { success: 1, url: '/images/thumb/layers/export/abc.pdf' }
+			} );
+
+			await lightbox.exportPdfViaServer();
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					action: 'layerspdfexport',
+					filename: 'Doc.pdf',
+					setname: '001'
+				} )
+			);
+		} );
+
+		it( 'should open the returned PDF URL in a new tab', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			const openSpy = jest.spyOn( window, 'open' ).mockImplementation( () => {} );
+
+			mockApi.get.mockResolvedValue( {
+				layerspdfexport: { success: 1, url: '/images/thumb/layers/export/abc.pdf' }
+			} );
+
+			await lightbox.exportPdfViaServer();
+
+			expect( openSpy ).toHaveBeenCalledWith(
+				'/images/thumb/layers/export/abc.pdf', '_blank', 'noopener'
+			);
+			openSpy.mockRestore();
+		} );
+
+		it( 'should notify on export failure', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			mw.notify = jest.fn();
+
+			mockApi.get.mockRejectedValue( new Error( 'boom' ) );
+
+			await lightbox.exportPdfViaServer();
+
+			expect( mw.notify ).toHaveBeenCalled();
+			delete mw.notify;
+		} );
+	} );
+
 	describe( 'resolveFullImageUrl', () => {
-		it( 'should use upload path when available', () => {
+		it( 'should use Special:Redirect path', () => {
 			const lightbox = new LayersLightbox();
 
-			const url = lightbox.resolveFullImageUrl( 'TestImage.jpg' );
+			lightbox.resolveFullImageUrl( 'TestImage.jpg' );
 
-			expect( url ).toContain( '/w/images/' );
-			expect( url ).toContain( 'TestImage.jpg' );
+			expect( mw.util.getUrl ).toHaveBeenCalledWith(
+				'Special:Redirect/file/TestImage.jpg'
+			);
 		} );
 
 		it( 'should encode filename in URL', () => {
 			const lightbox = new LayersLightbox();
 
-			const url = lightbox.resolveFullImageUrl( 'Test Image.jpg' );
-
-			expect( url ).toContain( 'Test%20Image.jpg' );
-		} );
-
-		it( 'should fallback to Special:Redirect when no upload path', () => {
-			mw.config.get.mockReturnValueOnce( null );
-
-			const lightbox = new LayersLightbox();
-			const url = lightbox.resolveFullImageUrl( 'Test.jpg' );
+			lightbox.resolveFullImageUrl( 'Test Image.jpg' );
 
 			expect( mw.util.getUrl ).toHaveBeenCalledWith(
-				expect.stringContaining( 'Special:Redirect/file/' )
+				'Special:Redirect/file/Test%20Image.jpg'
 			);
-		} );
-	} );
-
-	describe( 'md5First2', () => {
-		it( 'should return first two alphanumeric characters', () => {
-			const lightbox = new LayersLightbox();
-
-			expect( lightbox.md5First2( 'TestImage.jpg' ) ).toBe( 'te' );
-			expect( lightbox.md5First2( 'UPPERCASE.PNG' ) ).toBe( 'up' );
-		} );
-
-		it( 'should strip special characters', () => {
-			const lightbox = new LayersLightbox();
-
-			expect( lightbox.md5First2( '!@#$Image.jpg' ) ).toBe( 'im' );
-		} );
-
-		it( 'should return "aa" for empty or short strings', () => {
-			const lightbox = new LayersLightbox();
-
-			expect( lightbox.md5First2( '' ) ).toBe( 'aa' );
-			expect( lightbox.md5First2( '!' ) ).toBe( 'aa' );
 		} );
 	} );
 

@@ -1,0 +1,439 @@
+<?php
+
+declare( strict_types=1 );
+
+/**
+ * API module for exporting a marked-up file as a flattened PDF.
+ *
+ * For a (multi-page) file this renders each page's background raster with its
+ * saved layer set composited on top (via ThumbnailRenderer), then stitches the
+ * per-page images into a single PDF using ImageMagick. The generated PDF is
+ * cached under the upload thumb directory and its URL is returned so the client
+ * can open it for printing or download.
+ *
+ * This is a read-only operation (no CSRF token): it never mutates layer data.
+ * It is rate limited under the 'render' key because rasterisation + compositing
+ * is expensive.
+ *
+ * @file
+ * @ingroup Extensions
+ * @license GPL-2.0-or-later
+ */
+
+namespace MediaWiki\Extension\Layers\Api;
+
+use ApiBase;
+use ApiMain;
+use ApiResult;
+use ApiUsageException;
+use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
+use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
+use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\ThumbnailRenderer;
+use MediaWiki\MediaWikiServices;
+use MediaWiki\Shell\Shell;
+use Wikimedia\ParamValidator\ParamValidator;
+
+class ApiLayersExport extends ApiBase {
+	use ForeignFileHelperTrait;
+	use LayersApiHelperTrait;
+
+	/**
+	 * @param ApiMain $main
+	 * @param string $action
+	 */
+	public function __construct( ApiMain $main, $action ) {
+		parent::__construct( $main, $action );
+	}
+
+	/**
+	 * Execute the API request.
+	 *
+	 * @throws ApiUsageException
+	 */
+	public function execute() {
+		try {
+			$this->executeInternal();
+		} catch ( ApiUsageException $e ) {
+			throw $e;
+		} catch ( \Throwable $e ) {
+			$this->getLogger()->error(
+				'Layers export failed: {message}',
+				[ 'message' => $e->getMessage(), 'exception' => $e ]
+			);
+			$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
+		}
+	}
+
+	/**
+	 * Internal execution logic.
+	 *
+	 * @throws ApiUsageException
+	 */
+	private function executeInternal(): void {
+		$user = $this->getUser();
+
+		// Rate limit: rasterisation + compositing is expensive.
+		$rateLimiter = $this->createRateLimiter();
+		if ( !$rateLimiter->checkRateLimit( $user, 'render' ) ) {
+			$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+		}
+
+		$params = $this->extractRequestParams();
+		$filename = (string)( $params['filename'] ?? '' );
+		if ( $filename === '' ) {
+			$this->dieWithError( [ 'apierror-missingparam', 'filename' ], 'missingparam' );
+		}
+
+		$setName = isset( $params['setname'] ) && $params['setname'] !== ''
+			? (string)$params['setname']
+			: (string)$this->getConfig()->get( 'LayersDefaultSetName' );
+
+		// Validate file + read permission.
+		$fileInfo = $this->validateAndGetFile( $filename );
+		$title = $fileInfo['title'];
+		$file = $fileInfo['file'];
+		$imgName = $fileInfo['imgName'];
+
+		$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
+		if ( !$permissionManager->userCan( 'read', $user, $title ) ) {
+			$this->dieWithError( 'badaccess-group0', 'permissiondenied' );
+		}
+
+		$db = $this->getLayersDatabase();
+		$this->requireSchemaReady( $db );
+
+		$sha1 = $this->getFileSha1( $file, $imgName );
+		$pageCount = $this->getPageCount( $file );
+
+		$maxPages = (int)$this->getConfig()->get( 'LayersPdfExportMaxPages' );
+		if ( $maxPages > 0 && $pageCount > $maxPages ) {
+			$this->dieWithError(
+				[ 'layers-export-too-many-pages', (string)$pageCount, (string)$maxPages ],
+				'toomanypages'
+			);
+		}
+
+		$width = (int)$this->getConfig()->get( 'LayersPdfExportWidth' );
+		if ( isset( $params['width'] ) && (int)$params['width'] > 0 ) {
+			$width = (int)$params['width'];
+		}
+		$width = max( 200, min( $width, 4096 ) );
+
+		// Build a cache key that changes whenever any page's layer set changes.
+		$pageMeta = [];
+		for ( $page = 1; $page <= $pageCount; $page++ ) {
+			$set = $db->getLayerSetByName( $imgName, $sha1, $setName, $page );
+			$pageMeta[$page] = $set
+				? ( (string)( $set['id'] ?? '' ) . ':' . (string)( $set['revision'] ?? '' ) .
+					':' . (string)( $set['timestamp'] ?? '' ) )
+				: 'none';
+		}
+
+		$cacheKey = md5( implode( '|', [
+			$sha1, $setName, (string)$width, (string)$pageCount, implode( ',', $pageMeta ),
+		] ) );
+
+		$outputDir = $this->getExportDir();
+		if ( $outputDir === null ) {
+			$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
+		}
+		$outputPath = $outputDir . '/' . $sha1 . '_' . $cacheKey . '.pdf';
+
+		$cached = false;
+		if ( file_exists( $outputPath ) ) {
+			$cached = true;
+		} else {
+			$pageImages = [];
+			$renderedPages = 0;
+			for ( $page = 1; $page <= $pageCount; $page++ ) {
+				$imgPath = $this->renderPageImage(
+					$file, $db, $imgName, $sha1, $setName, $page, $width, ( $pageMeta[$page] !== 'none' )
+				);
+				if ( $imgPath === null ) {
+					continue;
+				}
+				$pageImages[] = $imgPath;
+				if ( $pageMeta[$page] !== 'none' ) {
+					$renderedPages++;
+				}
+			}
+
+			if ( count( $pageImages ) === 0 ) {
+				$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
+			}
+
+			if ( !$this->stitchPdf( $pageImages, $outputPath ) ) {
+				$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
+			}
+		}
+
+		$url = $this->pathToUrl( $outputPath );
+
+		$this->getResult()->addValue( null, $this->getModuleName(), [
+			'success' => 1,
+			'url' => $url,
+			'pageCount' => $pageCount,
+			'setname' => $setName,
+			'cached' => $cached ? 1 : 0,
+		], ApiResult::NO_SIZE_CHECK );
+	}
+
+	/**
+	 * Render a single page as an image: the rasterised page background with its
+	 * layer set composited on top (if any layers are saved for the page).
+	 *
+	 * @param mixed $file File object
+	 * @param mixed $db LayersDatabase
+	 * @param string $imgName Image DB key
+	 * @param string $sha1 File SHA1
+	 * @param string $setName Layer set name
+	 * @param int $page 1-based page number
+	 * @param int $width Render width in px
+	 * @param bool $hasLayers Whether a layer set exists for this page
+	 * @return string|null Filesystem path to the page image, or null on failure
+	 */
+	private function renderPageImage(
+		$file, $db, string $imgName, string $sha1, string $setName, int $page, int $width, bool $hasLayers
+	): ?string {
+		if ( $hasLayers ) {
+			$set = $db->getLayerSetByName( $imgName, $sha1, $setName, $page );
+			$layers = $this->extractLayers( $set );
+			if ( $layers ) {
+				$renderer = $this->createThumbnailRenderer();
+				$path = $renderer->generateLayeredThumbnail( $file, [
+					'width' => $width,
+					'page' => $page,
+					'layers' => true,
+					'layerData' => $layers,
+				] );
+				if ( $path && file_exists( $path ) ) {
+					return $path;
+				}
+			}
+		}
+
+		// No layers (or compositing failed): use the plain rasterised page.
+		return $this->basePageImage( $file, $width, $page );
+	}
+
+	/**
+	 * Extract a flat layers array from a stored layer set structure.
+	 *
+	 * @param array|null $set Layer set row (with 'data')
+	 * @return array Layers array (possibly empty)
+	 */
+	private function extractLayers( ?array $set ): array {
+		if ( !$set || !isset( $set['data'] ) ) {
+			return [];
+		}
+		$data = $set['data'];
+		if ( is_array( $data ) ) {
+			if ( isset( $data['layers'] ) && is_array( $data['layers'] ) ) {
+				return $data['layers'];
+			}
+			// Data may itself be the layers array.
+			if ( array_key_exists( 0, $data ) ) {
+				return $data;
+			}
+		}
+		return [];
+	}
+
+	/**
+	 * Transform a file page to a plain background image and return its local path.
+	 *
+	 * @param mixed $file File object
+	 * @param int $width Render width in px
+	 * @param int $page 1-based page number
+	 * @return string|null Local filesystem path, or null on failure
+	 */
+	private function basePageImage( $file, int $width, int $page ): ?string {
+		try {
+			$thumb = $file->transform( [ 'width' => $width, 'page' => max( 1, $page ) ] );
+			if ( !$thumb || ( method_exists( $thumb, 'isError' ) && $thumb->isError() ) ) {
+				return null;
+			}
+			if ( method_exists( $thumb, 'getLocalCopyPath' ) ) {
+				$path = $thumb->getLocalCopyPath();
+				if ( $path && file_exists( $path ) ) {
+					return $path;
+				}
+			}
+			if ( method_exists( $thumb, 'getFile' ) && $thumb->getFile() ) {
+				$path = $thumb->getFile()->getLocalRefPath();
+				if ( $path && file_exists( $path ) ) {
+					return $path;
+				}
+			}
+		} catch ( \Throwable $e ) {
+			$this->getLogger()->debug(
+				'Layers export: base page transform failed: {msg}',
+				[ 'msg' => $e->getMessage() ]
+			);
+		}
+		return null;
+	}
+
+	/**
+	 * Stitch an ordered list of page images into a single PDF via ImageMagick.
+	 *
+	 * @param string[] $pageImages Ordered filesystem paths
+	 * @param string $outputPath Destination PDF path
+	 * @return bool True on success
+	 */
+	private function stitchPdf( array $pageImages, string $outputPath ): bool {
+		$convert = $this->getConfig()->get( 'ImageMagickConvertCommand' );
+		if ( !$convert ) {
+			return false;
+		}
+
+		// convert page1 page2 ... -density 150 output.pdf
+		$args = array_merge( [ $convert ], $pageImages, [ '-density', '150', $outputPath ] );
+
+		$limits = [ 'time' => 60 ];
+		try {
+			$limits = [
+				'memory' => $this->getConfig()->get( 'MaxShellMemory' ),
+				'time' => max(
+					60,
+					(int)$this->getConfig()->get( 'LayersImageMagickTimeout' )
+				),
+				'filesize' => $this->getConfig()->get( 'MaxShellFileSize' ),
+			];
+		} catch ( \Throwable $e ) {
+			// Use default limits.
+		}
+
+		try {
+			$result = Shell::command( ...$args )
+				->limits( $limits )
+				->includeStderr()
+				->execute();
+			$exit = method_exists( $result, 'getExitCode' ) ? $result->getExitCode() : 0;
+			if ( $exit !== 0 ) {
+				$this->getLogger()->warning(
+					'Layers export: convert failed: {out}',
+					[ 'out' => method_exists( $result, 'getStdout' ) ? $result->getStdout() : '' ]
+				);
+				return false;
+			}
+		} catch ( \Throwable $e ) {
+			$this->getLogger()->warning(
+				'Layers export: convert threw: {msg}',
+				[ 'msg' => $e->getMessage() ]
+			);
+			return false;
+		}
+
+		return file_exists( $outputPath );
+	}
+
+	/**
+	 * Resolve (and create) the export cache directory under the upload thumb dir.
+	 *
+	 * @return string|null Directory path, or null if it cannot be created
+	 */
+	private function getExportDir(): ?string {
+		$uploadDir = $this->getConfig()->get( 'UploadDirectory' );
+		if ( !$uploadDir ) {
+			$uploadDir = sys_get_temp_dir();
+		}
+		$dir = rtrim( (string)$uploadDir, '/\\' ) . '/thumb/layers/export';
+		if ( !is_dir( $dir ) ) {
+			$ok = mkdir( $dir, 0755, true );
+			if ( !$ok && !is_dir( $dir ) ) {
+				$this->getLogger()->error( 'Layers export: cannot create dir', [ 'dir' => $dir ] );
+				return null;
+			}
+		}
+		return $dir;
+	}
+
+	/**
+	 * Convert an upload-directory filesystem path to a web-accessible URL.
+	 *
+	 * @param string $path Filesystem path under the upload directory
+	 * @return string Public URL
+	 */
+	private function pathToUrl( string $path ): string {
+		$uploadDir = (string)$this->getConfig()->get( 'UploadDirectory' );
+		$uploadPath = (string)$this->getConfig()->get( 'UploadPath' );
+
+		$normPath = str_replace( '\\', '/', $path );
+		$normUploadDir = rtrim( str_replace( '\\', '/', $uploadDir ), '/' );
+		if ( $normUploadDir !== '' && strpos( $normPath, $normUploadDir ) === 0 ) {
+			$relative = substr( $normPath, strlen( $normUploadDir ) );
+			return rtrim( $uploadPath, '/' ) . $relative;
+		}
+		return rtrim( $uploadPath, '/' ) . '/thumb/layers/export/' . basename( $path );
+	}
+
+	/**
+	 * Create a ThumbnailRenderer. Extracted for testability.
+	 *
+	 * @return ThumbnailRenderer
+	 */
+	protected function createThumbnailRenderer(): ThumbnailRenderer {
+		return new ThumbnailRenderer( $this->getConfig() );
+	}
+
+	/**
+	 * Resolve the LayersDatabase service.
+	 *
+	 * @return mixed LayersDatabase service instance
+	 */
+	protected function getLayersDatabase() {
+		return MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+	}
+
+	/**
+	 * Resolve the Layers-specific logger.
+	 *
+	 * @return \Psr\Log\LoggerInterface
+	 */
+	protected function getLogger(): \Psr\Log\LoggerInterface {
+		return MediaWikiServices::getInstance()->get( 'LayersLogger' );
+	}
+
+	/** @inheritDoc */
+	public function getAllowedParams() {
+		return [
+			'filename' => [
+				ParamValidator::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_REQUIRED => true,
+			],
+			'setname' => [
+				ParamValidator::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_REQUIRED => false,
+			],
+			'width' => [
+				ParamValidator::PARAM_TYPE => 'integer',
+				ParamValidator::PARAM_REQUIRED => false,
+			],
+		];
+	}
+
+	/** @inheritDoc */
+	public function isReadMode() {
+		return true;
+	}
+
+	/** @inheritDoc */
+	public function isWriteMode() {
+		return false;
+	}
+
+	/** @inheritDoc */
+	public function needsToken() {
+		return false;
+	}
+
+	/** @inheritDoc */
+	protected function getExamplesMessages() {
+		return [
+			'action=layerspdfexport&filename=Example.pdf&setname=default'
+				=> 'apihelp-layerspdfexport-example-1',
+		];
+	}
+}

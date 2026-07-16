@@ -8,6 +8,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Action;
 
+use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 
 class EditLayersAction extends \Action {
@@ -94,6 +95,10 @@ class EditLayersAction extends \Action {
 			$out->allowClickjacking();
 		}
 
+		// Determine page context for multi-page files (PDF). Images are page 1.
+		$pageCount = ForeignFileHelper::getPageCount( $file );
+		$page = ForeignFileHelper::clampPage( $file, $request->getInt( 'page', 1 ) );
+
 		// Page title
 		$out->setPageTitle(
 			wfMessage( 'layers-editor-title' )->text()
@@ -103,9 +108,19 @@ class EditLayersAction extends \Action {
 		// Load editor module
 		$out->addModules( 'ext.layers.editor' );
 
-		// Init config via JS config vars; module will bootstrap itself
-		$fileUrl = $this->getPublicImageUrl( $file );
-		$isForeign = $this->isForeignFile( $file );
+		// Init config via JS config vars; module will bootstrap itself.
+		// For multi-page files, request the rasterized thumbnail of the
+		// specific page; Special:Redirect/file cannot target a page, so use
+		// a direct page-aware transform instead.
+		if ( $pageCount > 1 ) {
+			$fileUrl = $this->getPageThumbnailUrl( $file, $page );
+			if ( $fileUrl === '' ) {
+				$fileUrl = $this->getPublicImageUrl( $file );
+			}
+		} else {
+			$fileUrl = $this->getPublicImageUrl( $file );
+		}
+		$isForeign = ForeignFileHelper::isForeignFile( $file );
 
 		// Log URL generation for troubleshooting foreign file issues
 		$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
@@ -128,6 +143,14 @@ class EditLayersAction extends \Action {
 				'autoCreate' => $autoCreate,
 				'returnToUrl' => $returnToUrl,
 				'isModalMode' => $isModalMode,
+				// Multi-page (PDF) context
+				'page' => $page,
+				'pageCount' => $pageCount,
+				// Native page dimensions define the canonical base coordinate
+				// space so layers are drawn/reloaded consistently regardless of
+				// the rasterized background thumbnail's pixel size.
+				'baseWidth' => (int)$file->getWidth( $page ),
+				'baseHeight' => (int)$file->getHeight( $page ),
 			],
 			'wgLayersReturnToUrl' => $returnToUrl,
 			'wgLayersIsModalMode' => $isModalMode,
@@ -282,6 +305,43 @@ class EditLayersAction extends \Action {
 		$nonWebFormats = [ 'tif', 'tiff', 'xcf', 'psd', 'ai', 'eps', 'pdf' ];
 		$ext = strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) );
 		return in_array( $ext, $nonWebFormats, true );
+	}
+
+	/**
+	 * Get a page-specific rasterized thumbnail URL for a multi-page file (PDF).
+	 *
+	 * Special:Redirect/file cannot target a specific page, so we transform the
+	 * file directly with the page parameter. Requires a multipage-capable media
+	 * handler (e.g. PdfHandler). Returns an empty string on failure so callers
+	 * can fall back to the default single-page URL.
+	 *
+	 * @param mixed $file File object
+	 * @param int $page 1-based page number
+	 * @return string Thumbnail URL, or empty string if unavailable
+	 */
+	private function getPageThumbnailUrl( $file, int $page ): string {
+		try {
+			if ( !method_exists( $file, 'transform' ) ) {
+				return '';
+			}
+			$thumb = $file->transform( [ 'width' => 2048, 'page' => $page ] );
+			if ( $thumb && method_exists( $thumb, 'getUrl' ) ) {
+				$url = $thumb->getUrl();
+				if ( is_string( $url ) && $url !== '' ) {
+					$logger = \MediaWiki\Logger\LoggerFactory::getInstance( 'Layers' );
+					$logger->debug( sprintf(
+						'getPageThumbnailUrl: file=%s, page=%d, url=%s',
+						method_exists( $file, 'getName' ) ? $file->getName() : '',
+						$page,
+						$url
+					) );
+					return $url;
+				}
+			}
+		} catch ( \Throwable $e ) {
+			// Fall through to empty string; caller falls back to default URL
+		}
+		return '';
 	}
 
 	/**

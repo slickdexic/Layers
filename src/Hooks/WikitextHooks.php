@@ -4,7 +4,6 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Hooks;
 
-use RequestContext;
 use MediaWiki\Extension\Layers\Hooks\Processors\ImageLinkProcessor;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayeredFileRenderer;
 use MediaWiki\Extension\Layers\Hooks\Processors\LayerInjector;
@@ -13,6 +12,8 @@ use MediaWiki\Extension\Layers\Hooks\Processors\LayersParamExtractor;
 use MediaWiki\Extension\Layers\Hooks\Processors\ThumbnailProcessor;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
+use RequestContext;
 
 class WikitextHooks {
 	use StaticLoggerAwareTrait;
@@ -255,7 +256,7 @@ class WikitextHooks {
 		// Register a shutdown handler once per request to capture fatal errors
 		if ( !self::$shutdownRegistered ) {
 			self::$shutdownRegistered = true;
-			register_shutdown_function( static function () : void {
+			register_shutdown_function( static function (): void {
 				try {
 					$err = error_get_last();
 					if ( $err && isset( $err['type'] ) ) {
@@ -284,7 +285,7 @@ class WikitextHooks {
 				}
 			} );
 		}
-		}
+	}
 
 		/**
 		 * Check whether wikitext-time hooks are disabled via LocalSettings.
@@ -292,29 +293,28 @@ class WikitextHooks {
 		 *
 		 * @return bool
 		 */
-		private static function areWikitextHooksDisabled(): bool {
-			// Prefer explicit LocalSettings flag. Default: enabled (false).
-			return !empty( $GLOBALS['wgLayersDisableWikitextHooks'] );
-			}
-
+	private static function areWikitextHooksDisabled(): bool {
+		// Prefer explicit LocalSettings flag. Default: enabled (false).
+		return !empty( $GLOBALS['wgLayersDisableWikitextHooks'] );
+	}
 
 		/**
-	 * Handle file parameter parsing in wikitext
-	 * Called when MediaWiki processes [[File:...]] syntax
-	 *
-	 * @param mixed &$dummy Kept for signature compatibility
-	 * @param mixed $title Title object
-	 * @param mixed $file File object
-	 * @param array &$attribs Image attributes
-	 * @param array &$linkAttribs Link attributes
-	 * @param bool $isLinked Link flag
-	 * @param mixed $thumb Thumbnail
-	 * @param mixed $parser Parser
-	 * @param mixed $time Timestamp or time param (core-provided)
-	 * @param int|null $page Page number
-	 * @param mixed ...$rest Additional parameters provided by core for forward-compat
-	 * @return bool
-	 */
+		 * Handle file parameter parsing in wikitext
+		 * Called when MediaWiki processes [[File:...]] syntax
+		 *
+		 * @param mixed &$dummy Kept for signature compatibility
+		 * @param mixed $title Title object
+		 * @param mixed $file File object
+		 * @param array &$attribs Image attributes
+		 * @param array &$linkAttribs Link attributes
+		 * @param bool $isLinked Link flag
+		 * @param mixed $thumb Thumbnail
+		 * @param mixed $parser Parser
+		 * @param mixed $time Timestamp or time param (core-provided)
+		 * @param int|null $page Page number
+		 * @param mixed ...$rest Additional parameters provided by core for forward-compat
+		 * @return bool
+		 */
 	public static function onImageBeforeProduceHTML(
 		&$dummy,
 		$title,
@@ -467,7 +467,7 @@ class WikitextHooks {
 	 * iterates Cargo query rows before the gallery renders thumbnails.
 	 *
 	 * @param string $filename File name (with or without "File:"/"Image:" prefix)
-	 * @param string $setname  Layer set name (e.g. 'anatomy', 'default')
+	 * @param string $setname Layer set name (e.g. 'anatomy', 'default')
 	 */
 	public static function registerGalleryHint( string $filename, string $setname ): void {
 		$filename = trim( $filename );
@@ -519,13 +519,13 @@ class WikitextHooks {
 			// Handle case where $linkAttribs is false (no link) in older MW versions
 			$linkAttribsIsArray = is_array( $linkAttribs );
 
-		$processor = self::getThumbnailProcessor();
+			$processor = self::getThumbnailProcessor();
 
 		// Get filename for queue lookup
-		$filename = null;
-		if ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() ) {
-			$filename = $thumbnail->getFile()->getName();
-		}
+			$filename = null;
+			if ( method_exists( $thumbnail, 'getFile' ) && $thumbnail->getFile() ) {
+				$filename = $thumbnail->getFile()->getName();
+			}
 
 		// Only consume queue entries for renders that originated from wikitext [[File:...]].
 		// onParserMakeImageParams increments $pendingRender[$filename] immediately before
@@ -534,52 +534,52 @@ class WikitextHooks {
 		// onParserMakeImageParams, so they never increment the counter.
 		// We consume one queued count here so it cannot accidentally match a later
 		// non-wikitext render of the same filename.
-		$isWikitextRender = $filename && ( ( self::$pendingRender[$filename] ?? 0 ) > 0 );
-		if ( $isWikitextRender ) {
-			self::$pendingRender[$filename]--;
-			if ( self::$pendingRender[$filename] <= 0 ) {
-				unset( self::$pendingRender[$filename] );
+			$isWikitextRender = $filename && ( ( self::$pendingRender[$filename] ?? 0 ) > 0 );
+			if ( $isWikitextRender ) {
+				self::$pendingRender[$filename]--;
+				if ( self::$pendingRender[$filename] <= 0 ) {
+					unset( self::$pendingRender[$filename] );
+				}
 			}
-		}
 
 		// Get both set name and link type from queue.
 		// For wikitext renders: use the queued set name and link type.
 		// For non-wikitext renders (Cargo gallery, native <gallery>, etc.): check
 		// $galleryHints first (pre-registered by {{#layers_hint:filename|setname}}),
 		// then fall back to 'on' (latest available layer set) if no hint is present.
-		if ( $isWikitextRender ) {
-			$fileParams = self::getFileParamsForRender( $filename );
-			// Ensure shape of returned array
-			if ( !is_array( $fileParams ) || !array_key_exists( 'setName', $fileParams ) ) {
-				$fileParams = [ 'setName' => null, 'linkType' => null ];
-			} else {
-				if ( !array_key_exists( 'linkType', $fileParams ) ) {
-					$fileParams['linkType'] = null;
+			if ( $isWikitextRender ) {
+				$fileParams = self::getFileParamsForRender( $filename );
+				// Ensure shape of returned array
+				if ( !is_array( $fileParams ) || !array_key_exists( 'setName', $fileParams ) ) {
+					$fileParams = [ 'setName' => null, 'linkType' => null ];
+				} else {
+					if ( !array_key_exists( 'linkType', $fileParams ) ) {
+						$fileParams['linkType'] = null;
+					}
 				}
-			}
-		} else {
-			$defaultFallback = self::isFilePageContext() ? null : 'on';
-			$hintedSetName = ( $filename && isset( self::$galleryHints[$filename] ) )
+			} else {
+				$defaultFallback = self::isFilePageContext() ? null : 'on';
+				$hintedSetName = ( $filename && isset( self::$galleryHints[$filename] ) )
 				? self::$galleryHints[$filename]
 				: $defaultFallback;
-			$fileParams = [ 'setName' => $hintedSetName, 'linkType' => null ];
-		}
+				$fileParams = [ 'setName' => $hintedSetName, 'linkType' => null ];
+			}
 
 		// Convert false to empty array for processor compatibility (MW 1.39-1.43 LTS compat)
-		$linkAttribsForProcessor = $linkAttribsIsArray ? $linkAttribs : [];
+			$linkAttribsForProcessor = $linkAttribsIsArray ? $linkAttribs : [];
 
-		$result = $processor->processThumbnail(
+			$result = $processor->processThumbnail(
 			$thumbnail,
 			$attribs,
 			$linkAttribsForProcessor,
 			$fileParams['setName'],
 			$fileParams['linkType']
-		);
+			);
 
 		// Write back any changes if linkAttribs was originally an array
-		if ( $linkAttribsIsArray ) {
-			$linkAttribs = $linkAttribsForProcessor;
-		}
+			if ( $linkAttribsIsArray ) {
+				$linkAttribs = $linkAttribsForProcessor;
+			}
 
 			if ( $processor->pageHasLayers() ) {
 				self::$pageHasLayers = true;
@@ -831,6 +831,29 @@ class WikitextHooks {
 	}
 
 	/**
+	 * Normalize a raw filename captured from wikitext to MediaWiki's canonical
+	 * file DB key, so queue keys match the name later reported by
+	 * File::getName() in onParserMakeImageParams / onThumbnailBeforeProduceHTML.
+	 *
+	 * Without this, a lower-case first letter in wikitext (e.g. [[File:somepdf.pdf]])
+	 * would be keyed as "somepdf.pdf" while the render side looks it up as the
+	 * canonical "Somepdf.pdf", so the layerset queue never matches and overlays
+	 * silently fail to appear. Respects $wgCapitalLinks via Title normalization.
+	 *
+	 * @param string $raw Raw filename captured from the [[File:...]] regex
+	 * @return string Canonical file DB key (underscores, wiki-cased)
+	 */
+	private static function normalizeFileKey( string $raw ): string {
+		$raw = trim( $raw );
+		$title = Title::makeTitleSafe( NS_FILE, $raw );
+		if ( $title ) {
+			return $title->getDBkey();
+		}
+		// Fallback: mimic default MediaWiki normalization ($wgCapitalLinks = true)
+		return str_replace( ' ', '_', ucfirst( $raw ) );
+	}
+
+	/**
 	 * Get both set name and link type for the next occurrence of a file
 	 * This method ensures both values come from the same queue index
 	 *
@@ -932,16 +955,17 @@ class WikitextHooks {
 			}
 			$textLen = strlen( $text );
 
-+			// First, find ALL File: usages to establish the complete render order
+			+ // First, find ALL File: usages to establish the complete render order
 			// This captures [[File:name.ext...]] patterns (with or without layerset=)
 			$allFilesPattern = '/\[\[File:([^|\]]+)(?:\|[^\]]*?)?\]\]/i';
 			$allFileMatches = [];
 			$fileMatchCount = preg_match_all( $allFilesPattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
 			if ( $fileMatchCount ) {
 				foreach ( $matches as $match ) {
-					// Normalize filename: replace spaces with underscores to match MediaWiki internal naming
+					// Normalize to MediaWiki's canonical file DB key so queue lookups
+					// match the name reported by File::getName() at render time.
 					// This ensures queue lookups work correctly when ThumbnailBeforeProduceHTML is called
-					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
+					$filename = self::normalizeFileKey( $match[1][0] );
 					// Use full match offset ($match[0][1]) not filename offset ($match[1][1])
 					// This ensures consistent offset comparison with layersMap
 					$offset = $match[0][1];
@@ -976,8 +1000,8 @@ class WikitextHooks {
 			}
 			if ( $matchCount ) {
 				foreach ( $allMatches as $match ) {
-					// Normalize filename: replace spaces with underscores
-					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
+					// Normalize to canonical file DB key (see normalizeFileKey)
+					$filename = self::normalizeFileKey( $match[1][0] );
 					$offset = $match[0][1];
 					$layersValue = trim( $match[2][0] );
 
@@ -1033,8 +1057,8 @@ class WikitextHooks {
 			);
 			if ( $linkMatchCount ) {
 				foreach ( $linkMatches as $match ) {
-					// Normalize filename: replace spaces with underscores
-					$filename = str_replace( ' ', '_', trim( $match[1][0] ) );
+					// Normalize to canonical file DB key (see normalizeFileKey)
+					$filename = self::normalizeFileKey( $match[1][0] );
 					$offset = $match[0][1];
 					$linkValue = strtolower( trim( $match[2][0] ) );
 					// Validate against allowed values

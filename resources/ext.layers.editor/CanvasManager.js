@@ -157,6 +157,16 @@ class CanvasManager {
 		this.defaultCanvasHeight = ( limits && limits.DEFAULT_CANVAS_HEIGHT ) ?
 			limits.DEFAULT_CANVAS_HEIGHT : 600;
 
+		// Canonical base coordinate space. For images and multi-page files (PDF)
+		// the server supplies the native page dimensions so layers are always
+		// drawn and reloaded in the same coordinate space, independent of the
+		// rasterized background thumbnail's pixel size (which can differ, e.g. a
+		// 2048px-wide PDF page render vs. 1275px native). Without seeding this,
+		// a freshly-drawn layer would adopt the thumbnail size and then drift in
+		// scale when the page is reloaded and the server's native base dims apply.
+		this.baseWidth = ( this.config.baseWidth > 0 ) ? this.config.baseWidth : null;
+		this.baseHeight = ( this.config.baseHeight > 0 ) ? this.config.baseHeight : null;
+
 		this.currentStyle = {
 			color: ( defaults && defaults.COLORS ) ? defaults.COLORS.STROKE : '#000000',
 			strokeWidth: ( defaults && defaults.LAYER ) ? defaults.LAYER.STROKE_WIDTH : 2,

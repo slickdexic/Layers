@@ -53,6 +53,9 @@ class LayersEditor {
 		this.config = config || {};
 		this.filename = this.config.filename;
 		this.containerElement = this.config.container;
+		// Multi-page (PDF) context. Single-page files and images use page 1.
+		this.page = Math.max( 1, parseInt( this.config.page, 10 ) || 1 );
+		this.pageCount = Math.max( 1, parseInt( this.config.pageCount, 10 ) || 1 );
 		this.canvasManager = null;
 		this.layerPanel = null;
 		this.toolbar = null;
@@ -161,7 +164,7 @@ class LayersEditor {
 					HistoryManager: () => ( typeof HistoryManager === 'function' ) ? new HistoryManager( { editor: this } ) : { saveState: function () {}, updateUndoRedoButtons: function () {}, undo: function () { return true; }, redo: function () { return true; }, canUndo: function () { return false; }, canRedo: function () { return false; }, destroy: function () {} },
 					Toolbar: () => ( typeof Toolbar === 'function' ) ? new Toolbar( { container: ( this.uiManager && this.uiManager.toolbarContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, setActiveTool: function () {}, updateUndoRedoState: function () {}, updateDeleteState: function () {}, updateAlignmentButtons: function () {} },
 					LayerPanel: () => ( typeof LayerPanel === 'function' ) ? new LayerPanel( { container: ( this.uiManager && this.uiManager.layerPanelContainer ) || document.createElement( 'div' ), editor: this } ) : { destroy: function () {}, selectLayer: function () {}, updateLayerList: function () {} },
-					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl, isSlide: this.stateManager && this.stateManager.get( 'isSlide' ) || false } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
+					CanvasManager: () => ( typeof CanvasManager === 'function' ) ? new CanvasManager( { container: ( this.uiManager && this.uiManager.canvasContainer ) || document.createElement( 'div' ), editor: this, backgroundImageUrl: this.imageUrl, baseWidth: this.config.baseWidth || null, baseHeight: this.config.baseHeight || null, isSlide: this.stateManager && this.stateManager.get( 'isSlide' ) || false } ) : { destroy: function () {}, renderLayers: function () {}, events: { destroy: function () {} } }
 				};
 				if ( constructors[ name ] ) {
 					instances[ name ] = constructors[ name ]();
@@ -513,6 +516,8 @@ class LayersEditor {
 				container: this.uiManager.canvasContainer,
 				editor: this,
 				backgroundImageUrl: this.imageUrl,
+				baseWidth: this.config.baseWidth || null,
+				baseHeight: this.config.baseHeight || null,
 				isSlide: this.stateManager.get( 'isSlide' ) || false
 			} ), [] );
 		}
@@ -1493,6 +1498,48 @@ class LayersEditor {
 	 */
 	navigateBackToFile () {
 		this.navigateBackToFileWithName( this.filename );
+	}
+
+	/**
+	 * Navigate the editor to a different page of a multi-page file (PDF).
+	 *
+	 * Performs a full reload so the server produces the correct rasterized page
+	 * thumbnail, canvas dimensions, and page-scoped layer set. Guards against
+	 * losing unsaved changes.
+	 *
+	 * @param {number} targetPage 1-based page number to navigate to
+	 */
+	navigateToPage ( targetPage ) {
+		const pageCount = this.pageCount || 1;
+		const page = Math.max( 1, Math.min( parseInt( targetPage, 10 ) || 1, pageCount ) );
+		if ( page === this.page ) {
+			return;
+		}
+
+		// Guard unsaved changes before discarding the current page's edits
+		if ( this.hasUnsavedChanges && this.hasUnsavedChanges() ) {
+			const confirmMsg = ( mw && mw.msg ) ?
+				mw.msg( 'layers-page-unsaved-confirm' ) :
+				'You have unsaved changes. Leave this page anyway?';
+			// eslint-disable-next-line no-alert
+			if ( typeof window !== 'undefined' && window.confirm && !window.confirm( confirmMsg ) ) {
+				return;
+			}
+		}
+
+		try {
+			const url = new URL( window.location.href );
+			url.searchParams.set( 'page', String( page ) );
+			// Preserve the currently active named set across the reload
+			const currentSetName = this.stateManager && this.stateManager.get( 'currentSetName' );
+			if ( currentSetName && currentSetName !== 'default' ) {
+				url.searchParams.set( 'setname', currentSetName );
+			}
+			window.location.href = url.toString();
+		} catch ( e ) {
+			// Fallback: simple query rewrite
+			window.location.href = window.location.pathname + '?action=editlayers&page=' + page;
+		}
 	}
 
 	/**
