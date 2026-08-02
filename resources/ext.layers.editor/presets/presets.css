@@ -110,12 +110,13 @@
 	background: #eaecf0;
 }
 
-/* Color swatch */
+/* Style preview swatch (SVG depicting fill, stroke and shape) */
 .layers-preset-swatch {
-	width: 16px;
-	height: 16px;
+	width: 28px;
+	height: 18px;
 	border: 1px solid rgba( 0, 0, 0, 0.2 );
 	border-radius: 2px;
+	background: #fff;
 	flex-shrink: 0;
 }
 

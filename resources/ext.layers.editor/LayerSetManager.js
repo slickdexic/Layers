@@ -185,7 +185,8 @@
 				// Add revision options
 				allLayerSets.forEach( ( layerSet ) => {
 					const option = document.createElement( 'option' );
-					option.value = layerSet.ls_id || layerSet.id;
+					const revId = layerSet.ls_id || layerSet.id;
+					option.value = String( revId );
 					const timestamp = layerSet.ls_timestamp || layerSet.timestamp;
 					const userName = layerSet.ls_user_name || layerSet.userName || 'Unknown';
 					const name = layerSet.ls_name || layerSet.name || '';
@@ -203,7 +204,10 @@
 					}
 
 					option.textContent = displayText;
-					option.selected = ( layerSet.ls_id || layerSet.id ) === currentLayerSetId;
+					// Coerce both sides: revision ids may arrive as strings or numbers
+					// depending on the API path, and a type mismatch would leave the
+					// loaded revision unmarked (selector shows "Latest" instead).
+					option.selected = Number( revId ) === Number( currentLayerSetId );
 					selectEl.appendChild( option );
 				} );
 

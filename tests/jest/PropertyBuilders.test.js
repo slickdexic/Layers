@@ -89,6 +89,7 @@ describe( 'PropertyBuilders', () => {
 			const Builders = window.Layers.UI.PropertyBuilders;
 			expect( typeof Builders.addDimensions ).toBe( 'function' );
 			expect( typeof Builders.addTextProperties ).toBe( 'function' );
+			expect( typeof Builders.addTextEffects ).toBe( 'function' );
 			expect( typeof Builders.addTextShadowSection ).toBe( 'function' );
 			expect( typeof Builders.addRichTextFormatting ).toBe( 'function' );
 			expect( typeof Builders.addAlignmentSection ).toBe( 'function' );
@@ -274,6 +275,53 @@ describe( 'PropertyBuilders', () => {
 		} );
 	} );
 
+	describe( 'addTextEffects', () => {
+		test( 'should add text stroke width and colour controls', () => {
+			const ctx = createMockContext( { type: 'textbox', textStrokeWidth: 0 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextEffects( ctx );
+
+			expect( ctx.addInput ).toHaveBeenCalledWith(
+				expect.objectContaining( { prop: 'textStrokeWidth' } )
+			);
+			expect( ctx.addColorPicker ).toHaveBeenCalledWith(
+				expect.objectContaining( { property: 'textStrokeColor' } )
+			);
+		} );
+
+		test( 'should not add any per-character controls', () => {
+			const ctx = createMockContext( { type: 'textbox' } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextEffects( ctx );
+
+			// No font size, bold or italic — those live on the floating toolbar.
+			const fontSizeCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].prop === 'fontSize'
+			);
+			expect( fontSizeCall ).toBeUndefined();
+			expect( ctx.addCheckbox ).not.toHaveBeenCalled();
+			expect( ctx.addSelect ).not.toHaveBeenCalled();
+		} );
+
+		test( 'stroke width onChange should clamp and update layer', () => {
+			const ctx = createMockContext( { type: 'textbox', textStrokeWidth: 0 } );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextEffects( ctx );
+			const call = ctx.addInput.mock.calls.find(
+				( c ) => c[ 0 ].prop === 'textStrokeWidth'
+			);
+			call[ 0 ].onChange( '50' );
+
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				{ textStrokeWidth: 20 }
+			);
+		} );
+	} );
+
 	describe( 'addTextProperties', () => {
 		test( 'should add text content and styling inputs', () => {
 			const ctx = createMockContext( {
@@ -308,6 +356,90 @@ describe( 'PropertyBuilders', () => {
 			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
 				'test-layer-1',
 				{ text: 'New Text' }
+			);
+		} );
+
+		test( 'font size onChange should also update all richText runs', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				fontSize: 16,
+				richText: [
+					{ text: 'a', style: { fontSize: 16, fontWeight: 'bold' } },
+					{ text: 'b', style: { fontSize: 16 } }
+				]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+
+			const fsCall = ctx.addInput.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Font Size'
+			);
+			fsCall[ 0 ].onChange( '32' );
+
+			const change = ctx.editor.updateLayer.mock.calls[ 0 ][ 1 ];
+			expect( change.fontSize ).toBe( 32 );
+			// Per-run sizes must be updated too, otherwise the base change has no
+			// visible effect for richText layers and the size appears to revert.
+			expect( change.richText ).toHaveLength( 2 );
+			expect( change.richText[ 0 ].style.fontSize ).toBe( 32 );
+			expect( change.richText[ 1 ].style.fontSize ).toBe( 32 );
+			// Other run styles must be preserved.
+			expect( change.richText[ 0 ].style.fontWeight ).toBe( 'bold' );
+		} );
+
+		test( 'bold onChange should apply to all richText runs', () => {
+			const ctx = createMockContext( {
+				type: 'textbox',
+				richText: [
+					{ text: 'a', style: { fontSize: 20 } },
+					{ text: 'b', style: {} }
+				]
+			} );
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+
+			const boldCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Bold'
+			);
+			boldCall[ 0 ].onChange( true );
+
+			const change = ctx.editor.updateLayer.mock.calls[ 0 ][ 1 ];
+			expect( change.fontWeight ).toBe( 'bold' );
+			expect( change.richText[ 0 ].style.fontWeight ).toBe( 'bold' );
+			expect( change.richText[ 1 ].style.fontWeight ).toBe( 'bold' );
+			// Existing per-run styling preserved.
+			expect( change.richText[ 0 ].style.fontSize ).toBe( 20 );
+		} );
+
+		test( 'format control commits an active inline edit before applying', () => {
+			const ctx = createMockContext( { type: 'textbox', fontSize: 16 } );
+			const finishEditing = jest.fn();
+			const liveLayer = { id: 'test-layer-1', type: 'textbox', fontSize: 16 };
+			ctx.editor.getLayerById = jest.fn( () => liveLayer );
+			ctx.editor.canvasManager = {
+				inlineTextEditor: {
+					isActive: () => true,
+					editingLayer: { id: 'test-layer-1' },
+					finishEditing: finishEditing
+				}
+			};
+			const Builders = window.Layers.UI.PropertyBuilders;
+
+			Builders.addTextProperties( ctx );
+			const boldCall = ctx.addCheckbox.mock.calls.find(
+				( call ) => call[ 0 ].label === 'Bold'
+			);
+			boldCall[ 0 ].onChange( true );
+
+			// The inline edit must be committed first so the typed text / toolbar
+			// resize is not lost, then the change applies to the live layer.
+			expect( finishEditing ).toHaveBeenCalledWith( true );
+			expect( ctx.editor.getLayerById ).toHaveBeenCalledWith( 'test-layer-1' );
+			expect( ctx.editor.updateLayer ).toHaveBeenCalledWith(
+				'test-layer-1',
+				expect.objectContaining( { fontWeight: 'bold' } )
 			);
 		} );
 

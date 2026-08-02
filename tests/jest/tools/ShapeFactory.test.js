@@ -648,7 +648,7 @@ describe( 'ShapeFactory', () => {
 
 			const callout = factory.createCallout( { x: 50, y: 75 } );
 
-			expect( callout.fontSize ).toBe( 16 );
+					expect( callout.fontSize ).toBe( 24 );
 			expect( callout.fontFamily ).toBe( 'Arial, sans-serif' );
 			expect( callout.color ).toBe( '#000000' );
 			expect( callout.stroke ).toBe( '#000000' );

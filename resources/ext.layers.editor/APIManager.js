@@ -569,6 +569,13 @@
 	 */
 	_processRevisionData( data, fromCache = false ) {
 		this.extractLayerSetData( data.layersinfo.layerset );
+		// Keep the active set name in sync with the loaded revision. Without this,
+		// loading a historical revision that belongs to a different named set
+		// leaves currentSetName stale, so a subsequent Save writes to the wrong
+		// set (data-integrity bug).
+		if ( data.layersinfo.layerset && data.layersinfo.layerset.name ) {
+			this.editor.stateManager.set( 'currentSetName', data.layersinfo.layerset.name );
+		}
 		// Only update allLayerSets if response contains data (preserve existing list)
 		if ( data.layersinfo.all_layersets && data.layersinfo.all_layersets.length > 0 ) {
 			this.editor.stateManager.set( 'allLayerSets', data.layersinfo.all_layersets );

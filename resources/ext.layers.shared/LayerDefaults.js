@@ -25,7 +25,7 @@
 		 *
 		 * @type {number}
 		 */
-		FONT_SIZE: 16,
+		FONT_SIZE: 24,
 
 		/**
 		 * Maximum font size in pixels
