@@ -312,6 +312,147 @@
 		}
 
 		/**
+		 * Build a small SVG preview of a preset's style.
+		 *
+		 * Draws a tool-appropriate shape using the preset's fill (solid or
+		 * gradient), stroke colour and stroke width so the icon actually depicts
+		 * the style instead of showing a single flat colour swatch.
+		 *
+		 * @private
+		 * @param {Object} preset Preset object
+		 * @return {SVGElement} SVG swatch element
+		 */
+		_buildSwatch( preset ) {
+			const NS = 'http://www.w3.org/2000/svg';
+			const style = preset.style || {};
+			const svg = document.createElementNS( NS, 'svg' );
+			svg.setAttribute( 'class', 'layers-preset-swatch' );
+			svg.setAttribute( 'viewBox', '0 0 28 18' );
+			svg.setAttribute( 'aria-hidden', 'true' );
+
+			const rawFill = style.fill;
+			const isBlurFill = rawFill === 'blur';
+			const hasSolidFill = rawFill && rawFill !== 'none' &&
+				rawFill !== 'transparent' && !isBlurFill;
+			const stroke = ( style.stroke && style.stroke !== 'none' &&
+				style.stroke !== 'transparent' ) ? style.stroke : null;
+			const strokeWidth = Math.max( 0, Math.min( 6, Number( style.strokeWidth ) || 0 ) );
+
+			// Resolve the fill: gradient definition, solid colour, blur hint, or none.
+			let fillValue = hasSolidFill ? rawFill : ( isBlurFill ? '#dfe3e8' : 'none' );
+			const grad = style.gradient;
+			if ( grad && Array.isArray( grad.colors ) && grad.colors.length >= 2 ) {
+				this._swatchSeq = ( this._swatchSeq || 0 ) + 1;
+				const gradId = 'layers-preset-grad-' +
+					String( preset.id || '' ).replace( /[^a-zA-Z0-9_-]/g, '' ) +
+					'-' + this._swatchSeq;
+				const defs = document.createElementNS( NS, 'defs' );
+				const lg = document.createElementNS( NS, 'linearGradient' );
+				lg.setAttribute( 'id', gradId );
+				lg.setAttribute( 'x1', '0' );
+				lg.setAttribute( 'y1', '0' );
+				lg.setAttribute( 'x2', '1' );
+				lg.setAttribute( 'y2', '0' );
+				grad.colors.forEach( ( c ) => {
+					const stop = document.createElementNS( NS, 'stop' );
+					const off = Math.max( 0, Math.min( 1, Number( c.offset ) || 0 ) );
+					stop.setAttribute( 'offset', String( off ) );
+					stop.setAttribute( 'stop-color', ( c && c.color ) || '#000000' );
+					lg.appendChild( stop );
+				} );
+				defs.appendChild( lg );
+				svg.appendChild( defs );
+				fillValue = 'url(#' + gradId + ')';
+			}
+
+			const tool = String( this.currentTool || preset.tool || '' ).toLowerCase();
+			const strokeColor = stroke || ( hasSolidFill ? null : '#202122' );
+
+			// Text-style presets: show a representative glyph.
+			const looksLikeText = tool === 'text' ||
+				( !hasSolidFill && !stroke && style.color );
+			if ( looksLikeText ) {
+				const text = document.createElementNS( NS, 'text' );
+				text.setAttribute( 'x', '14' );
+				text.setAttribute( 'y', '14' );
+				text.setAttribute( 'text-anchor', 'middle' );
+				text.setAttribute( 'font-size', '14' );
+				text.setAttribute( 'font-family', style.fontFamily || 'Arial, sans-serif' );
+				text.setAttribute( 'font-weight', style.fontWeight || 'bold' );
+				if ( style.fontStyle ) {
+					text.setAttribute( 'font-style', style.fontStyle );
+				}
+				text.setAttribute( 'fill', style.color || strokeColor || '#202122' );
+				text.textContent = 'A';
+				svg.appendChild( text );
+				return svg;
+			}
+
+			if ( tool === 'arrow' || tool === 'line' ) {
+				// A horizontal arrow/line reads far more clearly at swatch size than
+				// a diagonal one. Arrows render as filled shapes, so prefer the fill
+				// colour, falling back to stroke.
+				const arrowColor = ( hasSolidFill ? rawFill : null ) ||
+					stroke || style.color || '#202122';
+				const shaft = document.createElementNS( NS, 'line' );
+				shaft.setAttribute( 'x1', '4' );
+				shaft.setAttribute( 'y1', '9' );
+				shaft.setAttribute( 'x2', tool === 'arrow' ? '18' : '24' );
+				shaft.setAttribute( 'y2', '9' );
+				shaft.setAttribute( 'stroke', arrowColor );
+				shaft.setAttribute( 'stroke-width', String( Math.max( 1.5, strokeWidth || 2 ) ) );
+				shaft.setAttribute( 'stroke-linecap', 'round' );
+				svg.appendChild( shaft );
+				if ( tool === 'arrow' ) {
+					const head = document.createElementNS( NS, 'path' );
+					head.setAttribute( 'd', 'M17 4 L25 9 L17 14 Z' );
+					head.setAttribute( 'fill', arrowColor );
+					svg.appendChild( head );
+				}
+				return svg;
+			}
+
+			let shape;
+			if ( tool === 'ellipse' || tool === 'circle' ) {
+				shape = document.createElementNS( NS, 'ellipse' );
+				shape.setAttribute( 'cx', '14' );
+				shape.setAttribute( 'cy', '9' );
+				shape.setAttribute( 'rx', '11' );
+				shape.setAttribute( 'ry', '6' );
+			} else if ( tool === 'star' ) {
+				shape = document.createElementNS( NS, 'path' );
+				shape.setAttribute( 'd',
+					'M14 2 L16 7 L21 7 L17 10 L19 15 L14 12 L9 15 L11 10 L7 7 L12 7 Z' );
+			} else if ( tool === 'polygon' ) {
+				shape = document.createElementNS( NS, 'path' );
+				shape.setAttribute( 'd', 'M14 2 L24 8 L20 16 L8 16 L4 8 Z' );
+			} else {
+				// Rounded rectangle for rectangle/textbox/callout and any default.
+				shape = document.createElementNS( NS, 'rect' );
+				shape.setAttribute( 'x', '2.5' );
+				shape.setAttribute( 'y', '2.5' );
+				shape.setAttribute( 'width', '23' );
+				shape.setAttribute( 'height', '13' );
+				shape.setAttribute( 'rx',
+					String( Math.max( 0, Math.min( 6, Number( style.cornerRadius ) || 2 ) ) ) );
+			}
+			shape.setAttribute( 'fill', fillValue );
+			if ( strokeColor ) {
+				// Depict the stroke colour even when no explicit width is stored
+				// (a bare stroke colour still implies an outline).
+				shape.setAttribute( 'stroke', strokeColor );
+				shape.setAttribute( 'stroke-width',
+					String( strokeWidth > 0 ? strokeWidth : 2 ) );
+			} else if ( fillValue === 'none' ) {
+				// Ensure an otherwise-invisible shape still reads as a swatch.
+				shape.setAttribute( 'stroke', '#c8ccd1' );
+				shape.setAttribute( 'stroke-width', '1' );
+			}
+			svg.appendChild( shape );
+			return svg;
+		}
+
+		/**
 		 * Create a preset item element
 		 *
 		 * @param {Object} preset Preset object
@@ -331,14 +472,9 @@
 				item.classList.add( 'layers-preset-item--builtin' );
 			}
 
-			// Color swatch preview
-			const swatch = document.createElement( 'span' );
-			swatch.className = 'layers-preset-swatch';
-			swatch.style.backgroundColor = preset.style.stroke ||
-				preset.style.fill ||
-				preset.style.color ||
-				'#000000';
-			item.appendChild( swatch );
+			// Style preview swatch (depicts fill, stroke colour/width, gradient
+			// and a tool-appropriate shape rather than a single flat colour).
+			item.appendChild( this._buildSwatch( preset ) );
 
 			// Name
 			const name = document.createElement( 'span' );

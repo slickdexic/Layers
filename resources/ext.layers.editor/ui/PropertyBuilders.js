@@ -54,6 +54,92 @@
 	const PropertyBuilders = {};
 
 	/**
+	 * Build the updateLayer change set for a text-style change.
+	 *
+	 * For richText layers (textbox/callout) the per-run `style` overrides the
+	 * base layer properties, so setting only the base (e.g. `fontSize`,
+	 * `fontWeight`) has no visible effect and appears to revert. In that case
+	 * apply the same run-applicable style keys to every run as well. For
+	 * non-richText layers this is a plain base update.
+	 *
+	 * @param {Object} layer - The layer being edited
+	 * @param {Object} changes - Run-applicable style keys (fontSize, fontWeight,
+	 *   fontStyle, fontFamily, color, textDecoration)
+	 * @return {Object} Change set for editor.updateLayer
+	 */
+	PropertyBuilders._textStyleChange = function ( layer, changes ) {
+		const out = Object.assign( {}, changes );
+		if ( layer && Array.isArray( layer.richText ) && layer.richText.length > 0 ) {
+			out.richText = layer.richText.map( function ( run ) {
+				return Object.assign( {}, run, {
+					style: Object.assign( {}, run.style || {}, changes )
+				} );
+			} );
+		}
+		return out;
+	};
+
+	/**
+	 * Build the updateLayer change set for a font-size change.
+	 *
+	 * @param {Object} layer - The layer being edited
+	 * @param {number} fs - New font size
+	 * @return {Object} Change set for editor.updateLayer
+	 */
+	PropertyBuilders._fontSizeChange = function ( layer, fs ) {
+		return PropertyBuilders._textStyleChange( layer, { fontSize: fs } );
+	};
+
+	/**
+	 * Commit any inline text edit currently active for this layer and return the
+	 * live layer object.
+	 *
+	 * The inline text editor holds the authoritative content in the DOM while
+	 * editing and only writes it back to the layer on finish. A property-panel
+	 * format change must therefore commit that edit first, otherwise it would
+	 * operate on the emptied/stale layer and the typed text (or a toolbar resize)
+	 * would be lost. After committing we re-read the current layer object because
+	 * updates are immutable (the captured closure reference goes stale).
+	 *
+	 * @param {Object} editor - The LayersEditor instance
+	 * @param {Object} layer - The (possibly stale) captured layer
+	 * @return {Object} The live layer object
+	 */
+	PropertyBuilders._commitInlineAndGetLive = function ( editor, layer ) {
+		try {
+			const ite = editor && editor.canvasManager && editor.canvasManager.inlineTextEditor;
+			if ( ite && typeof ite.isActive === 'function' && ite.isActive() &&
+				ite.editingLayer && ite.editingLayer.id === layer.id ) {
+				ite.finishEditing( true );
+			}
+		} catch ( e ) {
+			// Best-effort; fall through to the live-layer lookup.
+		}
+		const live = ( editor && typeof editor.getLayerById === 'function' ) ?
+			editor.getLayerById( layer.id ) : null;
+		return live || layer;
+	};
+
+	/**
+	 * Apply a run-aware text-style change from a property-panel control, first
+	 * committing any active inline edit so nothing is lost.
+	 *
+	 * @param {Object} editor - The LayersEditor instance
+	 * @param {Object} layer - The captured layer
+	 * @param {Object} changes - Run-applicable style keys
+	 */
+	PropertyBuilders._applyTextStyle = function ( editor, layer, changes ) {
+		const live = PropertyBuilders._commitInlineAndGetLive( editor, layer );
+		editor.updateLayer( live.id, PropertyBuilders._textStyleChange( live, changes ) );
+		// Remember the last-used text font size so new text/textbox/callout layers
+		// adopt it instead of always resetting to the default.
+		if ( changes.fontSize && editor.canvasManager &&
+			typeof editor.canvasManager.updateStyleOptions === 'function' ) {
+			editor.canvasManager.updateStyleOptions( { fontSize: changes.fontSize } );
+		}
+	};
+
+	/**
 	 * Add dimension properties (width, height, optional corner radius)
 	 * @param {Object} ctx - Context with addInput, layer, editor
 	 * @param {Object} [options] - Options for dimension inputs
@@ -130,7 +216,14 @@
 	};
 
 	/**
-	 * Add text content properties (text area, font family, font size, bold, italic, color, stroke)
+	 * Add text content properties (text area, font family, font size, bold, italic, color, stroke).
+	 *
+	 * NOTE: No longer wired into the default text box/callout panel — per-character
+	 * formatting for rich-text layers now lives exclusively on the floating
+	 * toolbar (the panel uses {@link PropertyBuilders.addTextEffects}). Retained
+	 * as a generic builder (and it still exercises the shared `_applyTextStyle`
+	 * helper used by simple text). Slated for removal once that coverage moves.
+	 *
 	 * @param {Object} ctx - Context with addInput, addSelect, addCheckbox, addColorPicker, layer, editor
 	 * @param {Object} [options] - Options
 	 * @param {boolean} [options.useTextarea=true] - Use textarea (true) or single-line input (false)
@@ -185,7 +278,7 @@
 			value: currentFontValue,
 			options: fontOptions,
 			onChange: function ( v ) {
-				editor.updateLayer( layer.id, { fontFamily: v } );
+				PropertyBuilders._applyTextStyle( editor, layer, { fontFamily: v } );
 			}
 		} );
 
@@ -200,7 +293,7 @@
 			prop: 'fontSize',
 			onChange: function ( v ) {
 				const fs = Math.max( 6, Math.min( maxFontSize, parseInt( v, 10 ) ) );
-				editor.updateLayer( layer.id, { fontSize: fs } );
+				PropertyBuilders._applyTextStyle( editor, layer, { fontSize: fs } );
 			}
 		} );
 
@@ -209,7 +302,8 @@
 			label: t( 'layers-prop-bold', 'Bold' ),
 			value: layer.fontWeight === 'bold',
 			onChange: function ( checked ) {
-				editor.updateLayer( layer.id, { fontWeight: checked ? 'bold' : 'normal' } );
+				PropertyBuilders._applyTextStyle( editor, layer,
+					{ fontWeight: checked ? 'bold' : 'normal' } );
 			}
 		} );
 
@@ -217,7 +311,8 @@
 			label: t( 'layers-prop-italic', 'Italic' ),
 			value: layer.fontStyle === 'italic',
 			onChange: function ( checked ) {
-				editor.updateLayer( layer.id, { fontStyle: checked ? 'italic' : 'normal' } );
+				PropertyBuilders._applyTextStyle( editor, layer,
+					{ fontStyle: checked ? 'italic' : 'normal' } );
 			}
 		} );
 
@@ -227,11 +322,52 @@
 			value: layer.color || '#000000',
 			property: 'color',
 			onChange: function ( newColor ) {
-				editor.updateLayer( layer.id, { color: newColor } );
+				PropertyBuilders._applyTextStyle( editor, layer, { color: newColor } );
 			}
 		} );
 
 		// Text stroke
+		ctx.addInput( {
+			label: t( 'layers-prop-text-stroke-width', 'Text Stroke Width' ),
+			type: 'number',
+			value: layer.textStrokeWidth || 0,
+			min: 0,
+			max: 20,
+			step: 0.5,
+			prop: 'textStrokeWidth',
+			onChange: function ( v ) {
+				editor.updateLayer( layer.id, {
+					textStrokeWidth: Math.max( 0, Math.min( 20, parseFloat( v ) ) )
+				} );
+			}
+		} );
+
+		ctx.addColorPicker( {
+			label: t( 'layers-prop-text-stroke-color', 'Text Stroke Color' ),
+			value: layer.textStrokeColor || '#000000',
+			property: 'textStrokeColor',
+			onChange: function ( newColor ) {
+				editor.updateLayer( layer.id, { textStrokeColor: newColor } );
+			}
+		} );
+	};
+
+	/**
+	 * Add whole-object text effects (outline/stroke) for rich-text layers.
+	 *
+	 * Per-character formatting (font, size, bold, italic, colour, underline…)
+	 * lives exclusively on the floating toolbar for text boxes and callouts; the
+	 * left panel keeps only effects that apply to the text object as a whole.
+	 *
+	 * @param {Object} ctx - Context with addSection, addInput, addColorPicker, layer, editor
+	 */
+	PropertyBuilders.addTextEffects = function ( ctx ) {
+		const layer = ctx.layer;
+		const editor = ctx.editor;
+		const t = msg;
+
+		ctx.addSection( t( 'layers-section-text-effects', 'Text Effects' ), 'text-effects' );
+
 		ctx.addInput( {
 			label: t( 'layers-prop-text-stroke-width', 'Text Stroke Width' ),
 			type: 'number',
@@ -359,8 +495,12 @@
 
 	/**
 	 * Add rich text formatting properties section
-	 * Underline, strikethrough, and highlight controls for textbox/callout layers
-	 * These controls apply to the entire richText array (all runs)
+	 * Underline, strikethrough, and highlight controls for textbox/callout layers.
+	 *
+	 * NOTE: No longer wired into the default panel — these per-run controls now
+	 * live exclusively on the floating toolbar. Retained as a generic builder;
+	 * slated for removal.
+	 *
 	 * @param {Object} ctx - Context with addSection, addCheckbox, addColorPicker, layer, editor
 	 */
 	PropertyBuilders.addRichTextFormatting = function ( ctx ) {
@@ -1015,7 +1155,7 @@
 			prop: 'fontSize',
 			onChange: function ( v ) {
 				const fs = Math.max( 6, Math.min( 1000, parseInt( v, 10 ) ) );
-				editor.updateLayer( layer.id, { fontSize: fs } );
+				PropertyBuilders._applyTextStyle( editor, layer, { fontSize: fs } );
 			}
 		} );
 

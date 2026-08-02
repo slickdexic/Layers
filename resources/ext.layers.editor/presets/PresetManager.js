@@ -207,6 +207,23 @@
 		}
 
 		/**
+		 * Get the user-set default preset for a tool WITHOUT the built-in
+		 * fallback. Returns null unless the user explicitly set a default via
+		 * setDefaultPreset(). Used to decide whether to auto-seed a tool's style
+		 * on activation (built-in fallbacks must not clobber the current style).
+		 *
+		 * @param {string} tool Tool type
+		 * @return {Object|null} Explicit default preset, or null
+		 */
+		getExplicitDefaultPreset( tool ) {
+			if ( !this.cache ) {
+				return null;
+			}
+			const defaultId = this.cache.defaultPresets[ tool ];
+			return defaultId ? this.getPreset( tool, defaultId ) : null;
+		}
+
+		/**
 		 * Set the default preset for a tool
 		 *
 		 * @param {string} tool Tool type

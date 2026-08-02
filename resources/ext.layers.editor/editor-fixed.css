@@ -4592,12 +4592,45 @@ html.skin-theme-clientpref-night .layers-inline-text-hint {
 }
 
 .layers-text-toolbar-size {
-	width: 45px;
-	padding: 4px 6px;
+	box-sizing: border-box;
+	width: 40px;
+	height: 26px;
+	padding: 0 4px;
 	border: 1px solid #ccc;
 	border-radius: 4px;
 	font-size: 0.75em;
 	text-align: center;
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+/* Hide the native number spinner; a custom −/+ stepper is used instead so the
+   controls are fully visible and consistent across browsers. */
+.layers-text-toolbar-size::-webkit-outer-spin-button,
+.layers-text-toolbar-size::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.layers-text-toolbar-size-step {
+	box-sizing: border-box;
+	width: 22px;
+	height: 26px;
+	padding: 0;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	background: #f8f9fa;
+	color: #202122;
+	font-size: 1em;
+	line-height: 1;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.layers-text-toolbar-size-step:hover {
+	background: #eaecf0;
 }
 
 .layers-text-toolbar-size:focus {
@@ -4707,6 +4740,16 @@ html.skin-theme-clientpref-night .layers-text-toolbar-size:focus {
 
 html.skin-theme-clientpref-night .layers-text-toolbar-size-label {
 	color: #999;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-size-step {
+	background: #333;
+	border-color: #555;
+	color: #eee;
+}
+
+html.skin-theme-clientpref-night .layers-text-toolbar-size-step:hover {
+	background: #444;
 }
 
 html.skin-theme-clientpref-night .layers-text-toolbar-btn {

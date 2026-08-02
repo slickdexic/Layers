@@ -4,6 +4,29 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.67-REL1_43] - 2026-08-02
+
+### Changed
+- **Text box & callout: per-character formatting moved to the floating toolbar
+  only.** The left panel keeps whole-object properties plus a new **Text
+  Effects** section (text outline/stroke). Removes the panel/inline conflict
+  class. Simple single-line `text` layers are unchanged.
+
+### Fixed
+- **Text could disappear when using left-panel controls mid-edit** (data-loss
+  bug) — the panel now commits the inline edit first and `finishEditing` writes
+  to the live layer.
+- Panel font/size/bold/italic/colour now apply to all rich-text runs; font
+  size no longer reverts on text boxes / callouts.
+- New text boxes remember your last font size (default raised 16 → 24).
+- Accessible custom −/+ font-size stepper (native spinner was clipped).
+- Arrows no longer render as a malformed outline when scaled down.
+- Preselected inline font size is honoured when typing.
+- Preset icons depict the full style; gradient presets no longer dropped;
+  "Set as default" now seeds the tool style.
+- Revision history: no wrong-set saves; the selector reliably highlights the
+  loaded revision.
+
 ### Added
 - **Full-screen viewer support for PDFs and multi-page files** — Clicking the
   "view full screen" overlay on a marked-up PDF now works. Previously the

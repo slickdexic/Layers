@@ -25,7 +25,7 @@ describe('StyleController', () => {
 			const defaults = StyleController.getDefaultStyle();
 			expect(defaults.color).toBe('#000000');
 			expect(defaults.strokeWidth).toBe(2);
-			expect(defaults.fontSize).toBe(16);
+			expect(defaults.fontSize).toBe(24);
 		});
 
 		test('should return a copy, not reference', () => {

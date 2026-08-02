@@ -28,7 +28,8 @@
 
 	/**
 	 * All style properties that can be applied from presets.
-	 * This list matches PresetManager.extractStyleFromLayer() and sanitizeStyle().
+	 * This list must stay in sync with PresetStorage.ALLOWED_STYLE_PROPERTIES so
+	 * that saving a preset from a selected layer captures every persisted style.
 	 *
 	 * @type {string[]}
 	 */
@@ -37,6 +38,8 @@
 		'stroke', 'strokeWidth', 'strokeOpacity',
 		// Fill
 		'fill', 'fillOpacity',
+		// Gradient fill
+		'gradient',
 		// Text
 		'color', 'fontSize', 'fontFamily', 'fontWeight', 'fontStyle',
 		'textAlign', 'verticalAlign', 'lineHeight', 'padding',
@@ -178,6 +181,29 @@
 			// Layer selection takes precedence over tool selection
 			if ( this.presetDropdown && ( !this.selectedLayers || this.selectedLayers.length === 0 ) ) {
 				this.presetDropdown.setTool( tool );
+				this._applyDefaultPresetForTool( tool );
+			}
+		}
+
+		/**
+		 * Apply the user-set default preset when the active tool changes, so that
+		 * "Set as default" actually seeds new drawings with that style. Only an
+		 * explicit user default is applied — built-in fallbacks are ignored so a
+		 * plain tool switch never clobbers the user's current style. Fires at most
+		 * once per change to a given tool.
+		 *
+		 * @private
+		 * @param {string} tool Current tool name
+		 */
+		_applyDefaultPresetForTool( tool ) {
+			if ( tool === this._lastDefaultTool || !this.presetManager ||
+				typeof this.presetManager.getExplicitDefaultPreset !== 'function' ) {
+				return;
+			}
+			this._lastDefaultTool = tool;
+			const preset = this.presetManager.getExplicitDefaultPreset( tool );
+			if ( preset && preset.style ) {
+				this.applyPresetToSelection( preset.style );
 			}
 		}
 

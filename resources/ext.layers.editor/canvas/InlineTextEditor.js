@@ -159,20 +159,6 @@
 			// Calculate display scale FIRST so richTextToHtml uses correct scaling
 			this._calculateDisplayScale();
 
-			// Debug: Track fontSize at edit start
-			const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
-			if ( debug ) {
-				// eslint-disable-next-line no-console
-				console.log( '[InlineTextEditor] startEditing - fontSize tracking', {
-					layerId: layer.id,
-					layerFontSize: layer.fontSize,
-					hasRichText: !!layer.richText,
-					richTextFontSizes: layer.richText ? layer.richText.map( ( r ) =>
-						r.style && r.style.fontSize ).filter( Boolean ) : [],
-					displayScale: this._displayScale
-				} );
-			}
-
 			// Create and position the editor FIRST (before modifying layer)
 			this._createEditor();
 			this._positionEditor();
@@ -282,6 +268,18 @@
 			if ( shouldApply && this.editorElement && this.editingLayer ) {
 				let newText, newRichText = null;
 
+				// Re-point to the live layer object. A property-panel change made
+				// during editing replaces the layer via an immutable update, so the
+				// captured reference goes stale; committing the DOM content to that
+				// detached object would silently lose the text.
+				const _editorRef = this.canvasManager && this.canvasManager.editor;
+				if ( _editorRef && typeof _editorRef.getLayerById === 'function' ) {
+					const liveLayer = _editorRef.getLayerById( this.editingLayer.id );
+					if ( liveLayer ) {
+						this.editingLayer = liveLayer;
+					}
+				}
+
 				// Extract content based on editor type
 				// For multiline types, contentEditable is on the wrapper, not editorElement
 				if ( this._isRichTextMode && this._isMultilineType( this.editingLayer ) ) {
@@ -300,24 +298,6 @@
 					const dominantFontSize = this._extractDominantFontSize( newRichText, baseFontSize );
 					if ( dominantFontSize !== null ) {
 						this.editingLayer.fontSize = dominantFontSize;
-					}
-
-					if ( debug ) {
-						// Enhanced logging to trace fontSize bug
-						const richTextFontSizes = newRichText ?
-							newRichText.map( ( r ) => ( {
-								text: r.text ? r.text.substring( 0, 20 ) : '',
-								fontSize: r.style ? r.style.fontSize : undefined
-							} ) ) : [];
-						// eslint-disable-next-line no-console
-						console.log( '[InlineTextEditor] finishEditing - fontSize tracking', {
-							html: html.substring( 0, 500 ),
-							displayScale: this._displayScale,
-							richTextFontSizes: richTextFontSizes,
-							dominantFontSize: dominantFontSize,
-							layerFontSizeAfter: this.editingLayer.fontSize,
-							layerId: this.editingLayer.id
-						} );
 					}
 				} else {
 					// Input/textarea mode - just get value
@@ -399,6 +379,15 @@
 				} else {
 					delete this.editingLayer.richText;
 				}
+			}
+
+			// Remember the last-used text size so newly created text/textbox/
+			// callout layers adopt it instead of always resetting to the default.
+			if ( shouldApply && this.editingLayer && this.canvasManager &&
+				typeof this.canvasManager.updateStyleOptions === 'function' &&
+				typeof this.editingLayer.fontSize === 'number' &&
+				this.editingLayer.fontSize > 0 ) {
+				this.canvasManager.updateStyleOptions( { fontSize: this.editingLayer.fontSize } );
 			}
 
 			// Cleanup
@@ -1356,16 +1345,19 @@
 
 					// No selection (cursor only) - for toggle formats, still call
 					// _applyFormatToSelection. execCommand will set the typing state
-					// for future characters. For fontSize/fontFamily, do nothing
-					// since we can't wrap non-existent text.
+					// for future characters.
 					if ( toggleFormats.includes( property ) ) {
 						this._applyFormatToSelection( property, value );
 						this._clearSavedSelection();
 						return;
 					}
 
-					// fontSize/fontFamily with no selection - just return, don't apply to layer
-					return;
+					// fontSize/fontFamily with no selection: we cannot wrap
+					// non-existent text, so apply the value to the whole layer as the
+					// new base. This makes a preselected size/font honour the next
+					// typed characters instead of silently reverting to the default.
+					this._clearSavedSelection();
+					// Fall through to the layer-level application below.
 				}
 			}
 
@@ -1507,18 +1499,6 @@
 						// Ensure _displayScale is valid (default to 1 if not)
 						const scale = ( this._displayScale && this._displayScale > 0 ) ? this._displayScale : 1;
 						const scaledValue = value * scale;
-
-						// Debug logging for fontSize application
-						const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
-						if ( debug ) {
-							// eslint-disable-next-line no-console
-							console.log( '[InlineTextEditor] _applyFormatToSelection fontSize:', {
-								unscaledValue: value,
-								displayScale: this._displayScale,
-								usedScale: scale,
-								scaledValue: scaledValue
-							} );
-						}
 
 						// Use setProperty with important to override inherited styles
 						span.style.setProperty( 'font-size', scaledValue + 'px', 'important' );

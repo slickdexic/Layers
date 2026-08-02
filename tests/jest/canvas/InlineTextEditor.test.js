@@ -865,7 +865,7 @@ describe( 'InlineTextEditor', () => {
 				expect( mockCanvasManager.editor.updateLayer ).not.toHaveBeenCalled();
 			} );
 
-			test( 'should not apply fontSize with cursor only (no selection)', () => {
+			test( 'should apply fontSize to whole layer with cursor only (no selection)', () => {
 				const layer = {
 					id: 'layer-1',
 					type: 'textbox',
@@ -896,11 +896,16 @@ describe( 'InlineTextEditor', () => {
 				// Clear any previous updateLayer calls from startEditing
 				mockCanvasManager.editor.updateLayer.mockClear();
 
-				// Apply fontSize with cursor only - should do nothing
+				// Apply fontSize with cursor only - a preselected size cannot wrap
+				// non-existent text, so it is applied to the whole layer as the new
+				// base so the next typed characters honour it.
 				editor._applyFormat( 'fontSize', 24 );
 
-				// Should NOT call updateLayer
-				expect( mockCanvasManager.editor.updateLayer ).not.toHaveBeenCalled();
+				// Should call updateLayer with the new base fontSize
+				expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith(
+					'layer-1',
+					expect.objectContaining( { fontSize: 24 } )
+				);
 			} );
 		} );
 	} );

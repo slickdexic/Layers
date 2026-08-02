@@ -37,7 +37,7 @@
 				color: '#000000',
 				strokeWidth: 2,
 				fill: 'transparent',
-				fontSize: 16,
+				fontSize: 24,
 				fontFamily: 'Arial, sans-serif',
 				arrowStyle: 'single',
 				shadow: false,
@@ -278,7 +278,7 @@
 				height: 0,
 				// Text properties
 				text: '',
-				fontSize: style.fontSize || 16,
+				fontSize: style.fontSize || 24,
 				fontFamily: style.fontFamily || 'Arial, sans-serif',
 				fontWeight: 'normal',
 				fontStyle: 'normal',
@@ -322,7 +322,7 @@
 				height: 0,
 				// Text properties
 				text: '',
-				fontSize: style.fontSize || 16,
+				fontSize: style.fontSize || 24,
 				fontFamily: style.fontFamily || 'Arial, sans-serif',
 				fontWeight: 'normal',
 				fontStyle: 'normal',

@@ -50,7 +50,7 @@
 			}
 			// Fallback defaults
 			return {
-				fontSize: 16,
+				fontSize: 24,
 				fontFamily: 'Arial, sans-serif',
 				color: '#000000'
 			};
