@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-14%2C007%20passing-brightgreen" alt="14,007 Tests">
+  <img src="https://img.shields.io/badge/Tests-14%2C054%20passing-brightgreen" alt="14,054 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.87%25-brightgreen" alt="95.87% Coverage">
 </p>
 
@@ -22,6 +22,16 @@
 
 ## 🆕 What's New in v1.5.77
 
+- **Text editing overhaul (text box & callout)** — Per-character formatting
+  (font, size, bold/italic/underline, colour, alignment) now lives exclusively
+  on the floating toolbar, and the left panel keeps whole-object properties
+  (a new **Text Effects** section, shadow, box fill/border, alignment). This
+  matches mainstream editors and removes a class of panel/inline conflicts,
+  including a data-loss bug where text could disappear when using panel
+  controls mid-edit. New text now remembers your last font size (default
+  raised to 24), the toolbar font-size stepper is fully accessible, arrows no
+  longer degrade when scaled down, preset icons depict their style, and the
+  revision-history selector reliably highlights the loaded revision.
 - **PDF markup support (multi-page)** — Annotate PDF files exactly like
   images, with the PDF page acting as the canvas. Multi-page PDFs are fully
   supported: each page keeps its own named layer sets and revision history.
@@ -384,9 +394,9 @@ See [[Changelog]] for full details.
 | **Version (main)** | 1.5.77 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
-| **Release Date** | May 22, 2026 |
+| **Release Date** | August 2, 2026 |
 | **Test Suites** | 172 |
-| **Total Tests** | 14,001 |
+| **Total Tests** | 14,054 |
 | **PHPUnit Test Files** | 35 |
 | **Statement Coverage** | 95.87% |
 | **Branch Coverage** | 87.20% |

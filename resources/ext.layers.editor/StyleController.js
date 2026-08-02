@@ -17,7 +17,7 @@
 		color: '#000000',
 		fill: null,
 		strokeWidth: 2,
-		fontSize: 16,
+		fontSize: 24,
 		fontFamily: 'Arial, sans-serif'
 	};
 

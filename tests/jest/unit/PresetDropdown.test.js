@@ -415,12 +415,13 @@ describe( 'PresetDropdown', () => {
 			expect( item.classList.contains( 'layers-preset-item--builtin' ) ).toBe( true );
 		} );
 
-		it( 'should create color swatch', () => {
+		it( 'should create style swatch depicting stroke colour', () => {
 			const preset = { id: '1', name: 'Test', style: { stroke: '#ff0000' } };
 			const item = dropdown.createPresetItem( preset, false );
 			const swatch = item.querySelector( '.layers-preset-swatch' );
 			expect( swatch ).not.toBeNull();
-			expect( swatch.style.backgroundColor ).toBe( 'rgb(255, 0, 0)' );
+			expect( swatch.tagName.toLowerCase() ).toBe( 'svg' );
+			expect( swatch.querySelector( '[stroke="#ff0000"]' ) ).not.toBeNull();
 		} );
 
 		it( 'should display preset name', () => {
@@ -458,14 +459,16 @@ describe( 'PresetDropdown', () => {
 			const preset = { id: '1', name: 'Test', style: { fill: '#00ff00' } };
 			const item = dropdown.createPresetItem( preset, false );
 			const swatch = item.querySelector( '.layers-preset-swatch' );
-			expect( swatch.style.backgroundColor ).toBe( 'rgb(0, 255, 0)' );
+			expect( swatch.querySelector( '[fill="#00ff00"]' ) ).not.toBeNull();
 		} );
 
 		it( 'should use color for swatch as last resort', () => {
 			const preset = { id: '1', name: 'Test', style: { color: '#0000ff' } };
 			const item = dropdown.createPresetItem( preset, false );
 			const swatch = item.querySelector( '.layers-preset-swatch' );
-			expect( swatch.style.backgroundColor ).toBe( 'rgb(0, 0, 255)' );
+			const glyph = swatch.querySelector( 'text' );
+			expect( glyph ).not.toBeNull();
+			expect( glyph.getAttribute( 'fill' ) ).toBe( '#0000ff' );
 		} );
 	} );
 

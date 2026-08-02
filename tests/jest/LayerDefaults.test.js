@@ -22,7 +22,7 @@ describe( 'LayerDefaults', () => {
 	describe( 'Text Defaults', () => {
 		it( 'should have FONT_SIZE as a number', () => {
 			expect( typeof LayerDefaults.FONT_SIZE ).toBe( 'number' );
-			expect( LayerDefaults.FONT_SIZE ).toBe( 16 );
+			expect( LayerDefaults.FONT_SIZE ).toBe( 24 );
 		} );
 
 		it( 'should have MAX_FONT_SIZE', () => {
@@ -118,7 +118,7 @@ describe( 'LayerDefaults', () => {
 
 		it( 'should not allow modifying existing properties', () => {
 			LayerDefaults.FONT_SIZE = 999;
-			expect( LayerDefaults.FONT_SIZE ).toBe( 16 );
+			expect( LayerDefaults.FONT_SIZE ).toBe( 24 );
 		} );
 	} );
 

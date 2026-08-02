@@ -461,6 +461,24 @@ describe( 'InlineTextEditor', () => {
 			expect( editor.editingLayer ).toBeNull();
 		} );
 
+		test( 'commits typed text to the live layer if the panel replaced it mid-edit', () => {
+			// Simulate a property-panel immutable update replacing the layer object
+			// (same id, new reference) while editing is in progress.
+			const replacement = {
+				id: 'layer-1', type: 'text', text: 'Original',
+				x: 100, y: 100, fontSize: 16, fontWeight: 'bold'
+			};
+			mockCanvasManager.editor.layers = [ replacement ];
+			editor.editorElement.value = 'New content';
+
+			editor.finishEditing( true );
+
+			// The DOM content must land on the live object, not the detached one,
+			// otherwise the text is silently lost.
+			expect( replacement.text ).toBe( 'New content' );
+			expect( textLayer.text ).toBe( 'Original' );
+		} );
+
 		test( 'should remove editor element from DOM', () => {
 			editor.finishEditing( true );
 			// _removeEditor nulls out editorElement after removing
@@ -865,7 +883,7 @@ describe( 'InlineTextEditor', () => {
 				expect( mockCanvasManager.editor.updateLayer ).not.toHaveBeenCalled();
 			} );
 
-			test( 'should not apply fontSize with cursor only (no selection)', () => {
+			test( 'should apply fontSize to whole layer with cursor only (no selection)', () => {
 				const layer = {
 					id: 'layer-1',
 					type: 'textbox',
@@ -896,11 +914,16 @@ describe( 'InlineTextEditor', () => {
 				// Clear any previous updateLayer calls from startEditing
 				mockCanvasManager.editor.updateLayer.mockClear();
 
-				// Apply fontSize with cursor only - should do nothing
+				// Apply fontSize with cursor only - a preselected size cannot wrap
+				// non-existent text, so it is applied to the whole layer as the new
+				// base so the next typed characters honour it.
 				editor._applyFormat( 'fontSize', 24 );
 
-				// Should NOT call updateLayer
-				expect( mockCanvasManager.editor.updateLayer ).not.toHaveBeenCalled();
+				// Should call updateLayer with the new base fontSize
+				expect( mockCanvasManager.editor.updateLayer ).toHaveBeenCalledWith(
+					'layer-1',
+					expect.objectContaining( { fontSize: 24 } )
+				);
 			} );
 		} );
 	} );
@@ -3763,22 +3786,6 @@ describe( 'InlineTextEditor - branch coverage gaps', () => {
 		test( 'should return false when canvas is missing', () => {
 			mockCanvasManager.canvas = null;
 			expect( editor.startEditing( { type: 'text', text: 'Hello' } ) ).toBe( false );
-		} );
-
-		test( 'should enable debug logging when wgLayersDebug is set', () => {
-			const consoleSpy = jest.spyOn( console, 'log' ).mockImplementation( () => {} );
-			global.mw = {
-				config: { get: jest.fn( ( key ) => key === 'wgLayersDebug' ? true : null ) },
-				log: jest.fn()
-			};
-			const layer = { type: 'text', text: 'Hello', fontSize: 16 };
-			editor.startEditing( layer );
-			expect( consoleSpy ).toHaveBeenCalledWith(
-				expect.stringContaining( '[InlineTextEditor] startEditing' ),
-				expect.any( Object )
-			);
-			consoleSpy.mockRestore();
-			delete global.mw;
 		} );
 
 		test( 'should set _isRichTextMode for textbox layers', () => {

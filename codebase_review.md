@@ -1,9 +1,304 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** July 9, 2026 (v72 comprehensive audit)
-**Previous Review:** April 13, 2026 (v71 comprehensive audit)
-**Version:** 1.5.76
+**Review Date:** August 2, 2026 (v76 — text formatting → floating toolbar only)
+**Previous Review:** August 2, 2026 (v75 — text/textbox/callout deep fixes)
+**Version:** 1.5.77
 **Reviewer:** GitHub Copilot (Claude Opus 4.8)
+
+---
+
+## v76 — Character formatting moved to the floating toolbar (text box / callout)
+
+An owner-approved architecture change that addresses the *root* of the
+inline-text bugs patched in v74/v75 rather than continuing to defend against
+them. Full suite green (172 suites / 14,054 Jest tests; `npm test` gate exit
+0; i18n 801 messages, 0 undocumented).
+
+### The change
+
+For rich-text layers (text box, callout) the left properties panel duplicated
+the floating toolbar's per-character controls (font, size, bold, italic,
+underline, strikethrough, highlight, text colour, alignment) and applied them
+to the whole layer. That duplication was the source of the panel/inline
+reconciliation problems. Those controls are now **only** on the floating
+toolbar; the panel keeps whole-object properties:
+
+- Removed from the panel: `addTextProperties` + `addRichTextFormatting` calls
+  for `textbox`/`callout` in `PropertiesForm`.
+- Added: `PropertyBuilders.addTextEffects` — a focused **Text Effects** section
+  (text outline/stroke width + colour), the one text property that is a
+  whole-object effect rather than per-character. New i18n key
+  `layers-section-text-effects`.
+- The floating toolbar (`RichTextToolbar`) was verified to already cover the
+  full character set, so this was a panel-side *removal*, not new toolbar work.
+- Simple single-line `text` layers are unchanged (single uniform style).
+
+### Why it's the right model
+
+This is the object-vs-character split used by Figma/Canva/PowerPoint, and it
+**structurally eliminates** the class of panel/inline conflict bugs (data
+loss, double-render) instead of relying on the v75 commit-first plumbing. The
+accepted tradeoff is that character formatting now requires entering edit mode
+(double-click) — standard behaviour.
+
+### Follow-up tracked (not a regression)
+
+- `addTextProperties` and `addRichTextFormatting` are now unused by the app
+  (annotated "slated for removal"). They were intentionally **not** deleted in
+  this pass: removal means dropping ~1,000 lines of tests across ~6 describe
+  blocks, which is high-risk to do blind alongside a behaviour change, and they
+  still exercise the shared `_applyTextStyle` helper the simple-text path uses.
+  Tracked as improvement-plan item **76.05**. The v75 helpers
+  (`_commitInlineAndGetLive`, `_applyTextStyle`, `_textStyleChange`) and the
+  `finishEditing` live-layer re-fetch are **retained** (still used by simple
+  text and as anti-data-loss defence).
+
+---
+
+## v75 — Text / text box / callout deep fix pass
+
+The owner retested v74 and found several fixes were incomplete and masked a
+**serious data-loss bug**. This pass root-caused the whole inline-text ⇄
+properties-panel interaction. Full suite green (172 suites / 14,057 Jest
+tests; `npm test` gate exit 0; eslint/stylelint clean on touched files).
+
+### Root cause (the important one)
+
+The inline text editor treats the contenteditable DOM as the source of truth
+during editing and **clears the layer's `text`/`richText` on the live object**
+to avoid double-rendering. But the left properties panel mutates via an
+immutable `updateLayer` (new object), so:
+
+- After a panel change, `InlineTextEditor.editingLayer` pointed at a **stale,
+  detached** object; `finishEditing` then wrote the DOM content to that
+  detached object → the text was silently lost (the "text just disappeared"
+  report).
+- Panel base properties (`fontWeight`, `fontSize`, …) are overridden by each
+  rich-text run's own style, so the panel controls appeared to do nothing, and
+  a floating-toolbar resize was discarded when toggling Bold from the panel.
+- The blur handler had a guard for the floating toolbar but **none for the
+  properties panel**, so panel clicks committed the edit at the wrong moment
+  (the "two versions of the text" report).
+
+### Fixes
+
+- **`PropertyBuilders`**: new `_commitInlineAndGetLive()`, `_applyTextStyle()`
+  and `_textStyleChange()`. Text controls (font family, size, bold, italic,
+  colour) now (1) commit any active inline edit first, (2) re-read the live
+  layer, (3) apply the change to **every** rich-text run while preserving other
+  per-run styling. Regression tests added.
+- **`InlineTextEditor.finishEditing()`** re-points to the live layer by id
+  before committing — content can no longer be written to a detached object.
+  Regression test added ("commits typed text to the live layer if the panel
+  replaced it mid-edit").
+- **Remember last text size**: `_applyTextStyle` and `finishEditing` push the
+  effective size to `canvasManager.updateStyleOptions`; the default was raised
+  16 → 24 across `StyleController`, `LayerDefaults`, `ShapeFactory` and
+  `TextToolHandler`.
+- **Font-size stepper**: `RichTextToolbar` renders custom −/+ buttons; the
+  native number spinner (whose up arrow was clipped in the compact toolbar) is
+  hidden via CSS. New i18n keys added and documented.
+- **Preset arrow swatch**: drawn horizontally (was a cramped diagonal) using
+  the arrow's actual fill/stroke colour.
+- **Revision selector**: id comparison is coerced to `Number` in both
+  `LayerSetManager` and `RevisionManager`, so a string/number id mismatch no
+  longer leaves the loaded revision unmarked as selected.
+
+### Still open
+
+- **Revision *loading* intermittency** — the owner reports occasional
+  inconsistency beyond the two concrete bugs fixed in v74 and the selector
+  highlight fixed here. Needs specific reproduction steps (which set/revision,
+  single vs multi-page) to pin down.
+- **v74.10** preset style-property whitelist duplication (structural) and
+  **v74.11** the left-panel redesign remain as previously planned.
+
+---
+
+## v74 — Editor UX fix pass (owner-reported issues)
+
+The repository owner reported a set of editor UX problems. Each was
+investigated to root cause and fixed with tests; the full suite stayed
+green throughout (172 suites / 14,054 Jest tests; eslint + stylelint clean
+on touched files; `php -l` + `phpcs` clean; `ApiLayersInfo`/`ApiLayersExport`
+PHPUnit pass).
+
+### Real bugs found and fixed
+
+- **HIGH — loading an old revision could save into the wrong set.**
+  `APIManager._processRevisionData()` never synced `currentSetName` from the
+  loaded revision, so opening a historical revision from a *different* named
+  set left the active set name stale; a subsequent Save wrote the edit into
+  the previously-viewed set. Fixed client-side (sync `currentSetName` from
+  `layerset.name`) and server-side (`ApiLayersInfo` `layersetid` branch now
+  returns that set's `all_layersets` so the revision selector is correct).
+  Regression test added.
+- **MEDIUM — font size reverting on text boxes / callouts.** The left
+  properties-panel font-size control only set the base `fontSize`, which is
+  overridden by each rich-text run's own `style.fontSize`, so the change had
+  no visible/persistent effect. `PropertyBuilders._fontSizeChange()` now also
+  applies the new size to every run (preserving other per-run styling).
+- **MEDIUM — presets dropped the gradient fill.** The capture whitelist in
+  `PresetStyleManager` had drifted out of sync with `PresetStorage`'s
+  `ALLOWED_STYLE_PROPERTIES` and lost `gradient`, so saving a preset from a
+  gradient-filled shape silently discarded it. Added `gradient`.
+- **MEDIUM — "Set as default" preset did nothing.** `getDefaultPreset()` was
+  only consumed to render the star in the list; nothing applied the default
+  on tool activation. Added `PresetManager.getExplicitDefaultPreset()` (no
+  built-in fallback) and wired `PresetStyleManager.setCurrentTool()` to seed
+  the tool's style from the user's explicit default on tool change.
+- **MEDIUM — arrows rendered as a "weird outline" when scaled down.** In
+  `ArrowRenderer` both draw paths used `Math.max( arrowSize*0.4,
+  strokeWidth*1.5, 4 )` for the shaft width. The absolute `4px` floor does
+  not scale, so a downscaled arrow (e.g. an image shown at ~300px, with
+  `arrowSize`/`strokeWidth` correctly scaled to ~4.5/0.6px) got a shaft
+  wider than its shrunken head, degenerating the unified arrow polygon.
+  Lowered the floor to a sub-pixel `1` so shaft/head stay proportional at
+  any display size.
+- **LOW — preselected inline font size ignored.** `InlineTextEditor._applyFormat`
+  returned early for `fontSize`/`fontFamily` when there was no selection, so
+  choosing a size before typing was discarded (text fell back to 16). It now
+  falls through to apply the value as the layer's base.
+- **LOW — inline text-toolbar size spinner.** `.layers-text-toolbar-size` had
+  no explicit height, so the two native number-spinner arrows were cramped
+  and one was only partly clickable. Set `box-sizing:border-box; height:28px`
+  to match the other 28px controls.
+
+### Better representations / hygiene
+
+- **Preset icons now depict the whole style.** `PresetDropdown` swatches are
+  now a small SVG (`_buildSwatch`) drawing a tool-appropriate shape with the
+  preset's fill (solid *or* gradient), stroke colour and stroke width,
+  instead of a single flat colour chip.
+- Removed leftover raw `console.log` debug blocks from the rich-text/font-size
+  path (`InlineTextEditor`, `RichTextConverter`, `RichTextToolbar`); the
+  codebase standard `mw.log` logging is retained. This debug residue was
+  itself evidence of an unfinished font-size bug hunt.
+
+### Structural note surfaced (not a bug, tracked in the plan)
+
+- The preset style-property whitelist is **duplicated** in three places
+  (`PresetStorage.ALLOWED_STYLE_PROPERTIES`,
+  `PresetStyleManager.PRESET_STYLE_PROPERTIES`, and the
+  `PresetManager`→storage delegation). The `gradient` drift above is a direct
+  symptom. Recommend collapsing to a single source of truth.
+
+### Deliberately deferred — Issue 4 (left properties panel redesign)
+
+The owner asked for a more consistent, grouped, modern left properties
+panel. This is a broad, subjective, visual redesign spanning `LayerPanel`
+(~2,166 lines), `PropertiesForm`, and `PropertyBuilders` (~1,800 lines). It
+cannot be done responsibly "blind" (no visual feedback loop) without a high
+risk of regressions across a 14k-test suite. It is **not** attempted in this
+pass; a concrete, staged plan is recorded in `improvement_plan.md` (v74)
+instead, to be executed as a dedicated effort with UI validation.
+
+---
+
+## ⚠️ v73 Audit — Focus: the unreviewed multi-page PDF feature (commit `abaf1030`)
+
+**Branch:** `main` at `abaf1030` ("feat(pdf): multi-page PDF markup
+support with viewer, export and fixes"), **1 commit ahead of
+`origin/main`** (unpushed). This single commit is large: **+3,604 / −155
+lines across 52 files**, adding a whole new write-path-adjacent API
+(`ApiLayersExport`), a schema column (`ls_page`), a multi-page unique-key
+migration, and ~750 new lines in `LayersLightbox.js`. It is the least-
+reviewed code in the tree, so this audit concentrates there.
+
+**Build state at audit start: GREEN.** `npm run test:js` = **172 suites /
+14,054 tests, all passing**. (Up from 14,007 at v72; the PDF feature added
+~47 tests.) PHP `-l` and `phpcs` clean on the touched files. So — unlike
+v72 — the primary branch is *not* red. Good.
+
+### 🔴 v73 Headline Finding (HIGH) — `ApiLayersExport` is an un-throttled, cache-bustable resource sink
+
+`ApiLayersExport` (`action=layerspdfexport`) rasterises up to
+`$wgLayersPdfExportMaxPages` (default **100**) pages via `File::transform`,
+composites each with `ThumbnailRenderer`, then shells out to ImageMagick
+`convert` to stitch a PDF. It is gated **only** by the `read` permission on
+the file — no dedicated right, no `$wgLayersEnable` check. Three problems
+compound into a real CPU + disk-exhaustion vector:
+
+1. **No effective default rate limit.** The module calls the `render`
+   limiter, but `RateLimiter::checkRateLimit` delegates to
+   `User::pingLimiter('editlayers-render')`, which returns "not limited"
+   whenever `$wgRateLimits['editlayers-render']` is unset — and it is
+   **unset by default** and **not documented as required** for export. Out
+   of the box the endpoint is unthrottled for every reader.
+2. **Attacker-controlled `width` was part of the on-disk cache key.** The
+   `width` param (clamped only to 200–4096) fed directly into the md5
+   `cacheKey`, so a single reader could issue ~3,900 distinct widths, each
+   a cache miss forcing a fresh 100-page rasterise + `convert` stitch and
+   writing a **new PDF that is never pruned**.
+3. **Unbounded cache growth.** PDFs land in
+   `<upload>/thumb/layers/export/` with **no GC, no TTL, and no purge hook**
+   on file re-upload or layer edit. Core purges stale thumbnails; these
+   exports are orphaned forever. Even legitimate use leaks one file per
+   distinct layer revision.
+
+**Partial fix applied this pass:** `width` is now snapped to 200px buckets
+before entering the cache key (`round($width/200)*200`), collapsing the
+cache-bust surface from ~3,900 values to ~20. **Still open (documented in
+the plan, not yet fixed):** (a) ship a sane *default* rate limit / require
+it in install docs, (b) add a GC/TTL sweep or a purge hook for the export
+dir, and (c) consider gating behind a `$wgLayersPdfExportEnable` toggle and
+a dedicated right rather than bare `read`.
+
+### v73 Second Finding (MEDIUM) — server export ignored generic `layerset` intents → silently un-annotated PDFs
+
+The client's own `composePageDataUrl()` deliberately strips the generic
+intents (`if ( this.setName !== 'on' && this.setName !== 'default' )`)
+before calling `layersinfo`, but the **server fallback**
+`exportPdfViaServer()` forwards `this.setName` verbatim, and
+`ApiLayersExport` treated `'on'`/`'off'`/`'none'` as literal set names.
+Result: whenever the lightbox was opened with `layerset=on`, the *server*
+PDF path looked up a non-existent set named `on`, found nothing, and
+exported the bare document **with none of the annotations** — the exact
+opposite of the user's intent, and a silent failure. **Fixed:**
+`ApiLayersExport` now normalises `on`/`off`/`none` to the default set name,
+matching the client and viewer normalisation used everywhere else.
+
+### v73 Third Finding (LOW) — dead `$renderedPages` counter
+
+`executeInternal()` incremented a `$renderedPages` local inside the page
+loop that was never read afterwards — leftover from an earlier draft.
+**Fixed** (removed).
+
+### v73 — Verified Clean / Notable Positives
+
+Real inspection (not pattern-matching) of the new surface confirmed the
+security-sensitive parts are sound:
+
+- **No shell injection.** `stitchPdf()` builds its argv as a PHP array and
+  runs `Shell::command( ...$args )`, which escapes every argument; page
+  paths and the output path derive from `sha1` + md5 `cacheKey`, so no
+  path traversal or metacharacter reaches the shell.
+- **No XSS in the print window.** `openPrintDocument()` injects only
+  canvas `toDataURL('image/png')` data URLs into `<img src>` and escapes
+  the document title via `escapeHtml()`; there is no user string placed
+  into the generated HTML unescaped.
+- **Schema migration is correct.** `updateUniqueKeyForPages()` is
+  idempotent and SQLite-aware: it always drops the stale
+  `ls_img_name_set_revision` key (whose omission of `ls_page` would reject
+  legitimate independent per-page revisions) and adds
+  `ls_img_name_set_page_revision`, guarding on `fieldExists('ls_page')`
+  first. The `page` param is threaded consistently through every
+  `LayersDatabase` method with `max(1, $page)` clamping.
+- **`renderFlattenedAsync` 150ms settle "race" is theoretical, not a
+  practical bug.** It resolves after a 150ms quiet period once async layer
+  images report in. In practice those images are **blob URLs** (custom
+  SVG shapes) and **base64 data URLs** (image layers, emoji), which resolve
+  in a few milliseconds — comfortably inside 150ms — and a 4000ms hard cap
+  bounds the worst case. Deliberately **not** changed: forcing a longer
+  initial settle would add latency to every export for a scenario that
+  effectively never fires with data/blob URLs.
+
+### v73 — Pre-existing gap re-confirmed (not PDF-specific)
+
+- **No API module checks `$wgLayersEnable`.** The master switch only gates
+  hooks/UI; all six API modules (now including `layerspdfexport`) remain
+  callable when the extension is nominally "disabled." Low priority, but
+  worth a consistency pass — carried in the plan.
 
 ---
 

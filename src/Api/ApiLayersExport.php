@@ -88,6 +88,12 @@ class ApiLayersExport extends ApiBase {
 		$setName = isset( $params['setname'] ) && $params['setname'] !== ''
 			? (string)$params['setname']
 			: (string)$this->getConfig()->get( 'LayersDefaultSetName' );
+		// Normalise generic viewer intents ('on'/'off'/'none') to the default set
+		// so a server-side export still composites the saved annotations instead of
+		// looking up a non-existent set named 'on' and exporting a bare document.
+		if ( in_array( strtolower( $setName ), [ 'on', 'off', 'none' ], true ) ) {
+			$setName = (string)$this->getConfig()->get( 'LayersDefaultSetName' );
+		}
 
 		// Validate file + read permission.
 		$fileInfo = $this->validateAndGetFile( $filename );
@@ -119,6 +125,11 @@ class ApiLayersExport extends ApiBase {
 			$width = (int)$params['width'];
 		}
 		$width = max( 200, min( $width, 4096 ) );
+		// Snap to 200px buckets. The width is part of the on-disk cache key, so an
+		// unbounded attacker-controlled width would let a single reader cache-bust
+		// with thousands of distinct values, each forcing a fresh (expensive)
+		// rasterise + multi-page ImageMagick stitch and a new orphaned PDF on disk.
+		$width = max( 200, min( (int)( round( $width / 200 ) * 200 ), 4096 ) );
 
 		// Build a cache key that changes whenever any page's layer set changes.
 		$pageMeta = [];
@@ -145,7 +156,6 @@ class ApiLayersExport extends ApiBase {
 			$cached = true;
 		} else {
 			$pageImages = [];
-			$renderedPages = 0;
 			for ( $page = 1; $page <= $pageCount; $page++ ) {
 				$imgPath = $this->renderPageImage(
 					$file, $db, $imgName, $sha1, $setName, $page, $width, ( $pageMeta[$page] !== 'none' )
@@ -154,9 +164,6 @@ class ApiLayersExport extends ApiBase {
 					continue;
 				}
 				$pageImages[] = $imgPath;
-				if ( $pageMeta[$page] !== 'none' ) {
-					$renderedPages++;
-				}
 			}
 
 			if ( count( $pageImages ) === 0 ) {

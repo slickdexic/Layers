@@ -4589,6 +4589,24 @@ describe( 'APIManager', function () {
 	} );
 
 	describe( 'Branch coverage: _processRevisionData', function () {
+		it( 'should sync currentSetName from the loaded revision', function () {
+			mockEditor.renderLayers = jest.fn();
+			mockEditor.historyManager = { saveInitialState: jest.fn() };
+			apiManager.extractLayerSetData = jest.fn();
+
+			const data = {
+				layersinfo: {
+					layerset: { id: 7, name: 'anatomy', data: { layers: [] } },
+					all_layersets: [ { ls_id: 7 } ]
+				}
+			};
+
+			apiManager._processRevisionData( data );
+			// Loading a historical revision must move the active set to the
+			// revision's own set so a subsequent save targets the correct set.
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'anatomy' );
+		} );
+
 		it( 'should clear selection when selectionManager exists', function () {
 			mockEditor.canvasManager.selectionManager = {
 				clearSelection: jest.fn()

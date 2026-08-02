@@ -1112,27 +1112,6 @@ describe( 'RichTextToolbar', () => {
 		} );
 	} );
 
-	describe( 'constructor debug logging', () => {
-		it( 'should log when debug mode is enabled', () => {
-			const consoleSpy = jest.spyOn( console, 'log' ).mockImplementation( () => {} );
-			global.mw = { config: { get: jest.fn( () => true ) } };
-
-			toolbar = new RichTextToolbar( {
-				layer: mockLayer,
-				editorElement: mockEditorElement,
-				containerElement: mockContainerElement,
-				onFormat: mockOnFormat,
-				msg: mockMsg
-			} );
-
-			expect( consoleSpy ).toHaveBeenCalledWith(
-				'[RichTextToolbar] constructor - fontSize tracking',
-				expect.objectContaining( { layerId: 'layer-1', layerFontSize: 16 } )
-			);
-			consoleSpy.mockRestore();
-		} );
-	} );
-
 	describe( 'position() edge cases', () => {
 		it( 'should clamp toolbar to container width when near right edge', () => {
 			// Editor positioned near right edge

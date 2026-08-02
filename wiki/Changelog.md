@@ -4,6 +4,39 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.77] - 2026-08-02
+
+### Changed
+- **Text box & callout: character formatting is now on the floating toolbar
+  only.** Per-character controls (font, size, bold, italic, underline,
+  strikethrough, highlight, text colour, alignment) were duplicated on the
+  left properties panel where they conflicted with the inline editor. They now
+  live exclusively on the floating toolbar; the left panel keeps whole-object
+  properties (a new **Text Effects** section for text outline/stroke, text
+  shadow, box fill/border, size, alignment, callout tail). Simple single-line
+  `text` layers are unchanged.
+
+### Fixed
+- **Text could disappear when using left-panel controls mid-edit** — a
+  data-loss bug caused by the panel and inline editor both mutating the layer;
+  the panel now commits the inline edit first and `finishEditing` always writes
+  to the live layer.
+- **Panel font/size/bold/italic/colour now take effect on rich text** (applied
+  to every run, not just the overridden base) and **font size no longer
+  reverts** on text boxes / callouts.
+- **New text boxes remember your last font size**; the default was raised from
+  16 to 24.
+- **Inline text-toolbar font-size stepper** — replaced the clipped native
+  spinner with accessible custom −/+ buttons.
+- **Arrows no longer render as a malformed outline when scaled down.**
+- **Preselected inline font size is honoured when typing.**
+- **Preset icons** depict the full style (fill/gradient, stroke, tool shape);
+  saving a preset no longer drops a gradient fill; and **"Set as default"**
+  now actually seeds the tool's style.
+- **Revision history** — loading an old revision no longer risks saving into
+  the wrong named set, the history list reflects the loaded revision's set,
+  and the selector reliably highlights the loaded revision.
+
 ### Added
 - **Full-screen viewer support for PDFs and multi-page files** — Clicking the
   "view full screen" overlay on a marked-up PDF now works. Previously the

@@ -42,17 +42,6 @@
 			// Initial highlight color (persisted from previous edit sessions)
 			this._initialHighlightColor = options.highlightColor || '#ffff00';
 
-			// Debug: Track fontSize when toolbar is created
-			const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
-			if ( debug && this.layer ) {
-				// eslint-disable-next-line no-console
-				console.log( '[RichTextToolbar] constructor - fontSize tracking', {
-					layerId: this.layer.id,
-					layerFontSize: this.layer.fontSize,
-					hasRichText: !!this.layer.richText
-				} );
-			}
-
 			// Callbacks
 			this.onFormat = options.onFormat || ( () => {} );
 			this.onSaveSelection = options.onSaveSelection || ( () => {} );
@@ -364,6 +353,49 @@
 			input.max = 1000;
 			input.title = this.msg( 'layers-text-toolbar-size', 'Font size' );
 
+			// Apply the current input value as a font-size format change.
+			const applySize = () => {
+				const size = Math.max( 8, Math.min( 1000, parseInt( input.value, 10 ) || 16 ) );
+				input.value = size;
+				this._isInteracting = true; // Keep interacting during format apply
+				this.onFormat( 'fontSize', size );
+				// Delay clearing isInteracting to allow DOM update
+				setTimeout( () => {
+					this._isInteracting = false;
+					this.onFocusEditor();
+				}, 50 );
+			};
+
+			// Custom stepper buttons. The native number-input spinner renders
+			// inconsistently (its up arrow is clipped in the compact toolbar), so
+			// we hide it (see CSS) and provide our own accessible −/+ controls.
+			const makeStep = ( label, delta, title ) => {
+				const btn = document.createElement( 'button' );
+				btn.type = 'button';
+				btn.className = 'layers-text-toolbar-size-step';
+				btn.textContent = label;
+				btn.tabIndex = -1;
+				btn.title = title;
+				// Prevent the button from stealing focus / blurring the editor.
+				btn.addEventListener( 'mousedown', ( e ) => {
+					e.preventDefault();
+					this._isInteracting = true;
+					this.onSaveSelection();
+				} );
+				btn.addEventListener( 'click', ( e ) => {
+					e.preventDefault();
+					const current = Math.max( 8, Math.min( 1000, parseInt( input.value, 10 ) || 16 ) );
+					input.value = Math.max( 8, Math.min( 1000, current + delta ) );
+					applySize();
+				} );
+				return btn;
+			};
+
+			const decBtn = makeStep( '\u2212', -1,
+				this.msg( 'layers-text-toolbar-size-decrease', 'Decrease font size' ) );
+			const incBtn = makeStep( '+', 1,
+				this.msg( 'layers-text-toolbar-size-increase', 'Increase font size' ) );
+
 			input.addEventListener( 'mousedown', () => {
 				this._isInteracting = true;
 				this.onSaveSelection();
@@ -374,17 +406,7 @@
 				this._isInteracting = true;
 			} );
 
-			input.addEventListener( 'change', () => {
-				const size = Math.max( 8, Math.min( 1000, parseInt( input.value, 10 ) || 16 ) );
-				input.value = size;
-				this._isInteracting = true; // Keep interacting during format apply
-				this.onFormat( 'fontSize', size );
-				// Delay clearing isInteracting to allow DOM update
-				setTimeout( () => {
-					this._isInteracting = false;
-					this.onFocusEditor();
-				}, 50 );
-			} );
+			input.addEventListener( 'change', applySize );
 
 			input.addEventListener( 'focus', () => {
 				this._isInteracting = true;
@@ -401,7 +423,9 @@
 			label.className = 'layers-text-toolbar-size-label';
 			label.textContent = 'px';
 
+			group.appendChild( decBtn );
 			group.appendChild( input );
+			group.appendChild( incBtn );
 			group.appendChild( label );
 
 			return group;

@@ -209,6 +209,17 @@ class ApiLayersInfo extends ApiBase {
 			$result = [
 				'layerset' => $layerSet
 			];
+
+			// Include the revision history for the set this revision belongs to so
+			// the client's revision selector reflects the loaded revision's set
+			// rather than a stale list from a previously-viewed set.
+			$loadedSetName = (string)( $layerSet['name']
+				?? $this->getConfig()->get( 'LayersDefaultSetName' ) );
+			$loadedPage = (int)( $layerSet['page'] ?? $page );
+			$setRevisions = $db->getSetRevisions(
+				$normalizedName, $fileSha1, $loadedSetName, $limit, $loadedPage
+			);
+			$result['all_layersets'] = $this->enrichWithUserNames( $setRevisions );
 		} elseif ( $setName ) {
 			// Get specific named set
 			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName, $page );

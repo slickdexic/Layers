@@ -4,7 +4,60 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.77] - 2026-08-02
+
+### Changed
+- **Text box & callout: character formatting is now on the floating toolbar
+  only** — Per-character controls (font, size, bold, italic, underline,
+  strikethrough, highlight, text colour, alignment) were duplicated on the left
+  properties panel, where they applied to the whole layer and conflicted with
+  the inline editor. They now live exclusively on the floating toolbar (shown
+  while editing the text). The left panel keeps only whole-object properties: a
+  new **Text Effects** section (text outline/stroke), text shadow, box
+  fill/border, size, alignment and the callout tail. This matches the
+  object-vs-character split used by mainstream editors and removes the class of
+  panel/inline conflicts entirely. (Simple single-line `text` layers are
+  unchanged — they have a single uniform style.)
+
+### Fixed
+- **Text boxes / callouts: property-panel controls could wipe the text** — While
+  a text box was being edited inline, clicking a left-panel format control
+  (Bold, font size, colour, …) operated on the temporarily-emptied layer and
+  committed the typed text to a stale object, so the text could vanish on the
+  next action or on clicking away. Panel format changes now commit the inline
+  edit first, re-read the current layer, and apply to every rich-text run; and
+  `finishEditing` always writes to the live layer so content can no longer be
+  lost.
+- **Text boxes: font/size/bold/italic/colour from the left panel now take
+  effect** — For rich-text layers these controls previously set only the base
+  property, which each run's own style overrides, so they appeared to do
+  nothing (or a toolbar resize was lost when toggling bold). They now apply to
+  all runs, preserving other per-run styling.
+- **New text boxes remember your last font size** — Creating a text/text
+  box/callout now adopts the font size you last used instead of always
+  resetting, and the default size was raised from 16 to 24 (16 was too small
+  for most annotations).
+- **Inline text toolbar font-size stepper** — Replaced the clipped native
+  number-spinner (its up arrow was cut off) with clear, fully-accessible custom
+  −/+ buttons.
+- **Preset arrow icons** — Arrow/line preset swatches are drawn horizontally
+  (previously a cramped diagonal) and use the preset's actual colour, so they
+  read clearly at icon size.
+- **Revision history: correct revision highlighted** — The revision dropdown now
+  compares ids numerically, so a loaded revision is reliably shown as selected
+  even when the API returns the id as a string.
+
 ### Added
+- **Preset icons now depict the full style** — Style-preset dropdown swatches
+  are drawn as a small SVG that reflects the preset's fill (solid *or*
+  gradient), stroke colour and stroke width, using a tool-appropriate shape
+  (glyph for text, arrow/line, ellipse, star, polygon, rounded rectangle)
+  instead of a single flat colour chip.
+- **"Set as default" preset now takes effect** — Setting a user preset as the
+  default for a tool now actually seeds that tool's style when the tool is
+  activated (previously the star only marked the default in the list but never
+  applied it). Built-in presets are never auto-applied, so a plain tool switch
+  never clobbers your current style.
 - **Full-screen viewer support for PDFs and multi-page files** — Clicking the
   "view full screen" overlay on a marked-up PDF now works. Previously the
   lightbox tried to load the raw `.pdf` into an `<img>` (which browsers cannot
@@ -32,7 +85,34 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
   render width, default 1600px) and `$wgLayersPdfExportMaxPages` (default 100).
 
 ### Fixed
-- **Saving layers on PDF pages other than page 1 silently failed** — Adding
+- **Loading an old revision could save into the wrong layer set** — When a
+  historical revision belonging to a different named set was loaded from the
+  revision-history dropdown, the editor left the active set name stale, so a
+  subsequent Save wrote the edit into the previously-viewed set instead of the
+  loaded revision's set. The client now syncs the active set name from the
+  loaded revision, and the `layersinfo` API's `layersetid` lookup now returns
+  that set's revision list so the history dropdown reflects the correct set.
+- **Font-size changes reverting on text boxes / callouts** — Changing the font
+  size from the left properties panel only updated the layer's base size, which
+  is overridden by each rich-text run's own size, so the change appeared to
+  revert. The control now also applies the new size to every rich-text run
+  (preserving other per-run styling).
+- **Preset styles not fully saved** — Saving a preset from a selected shape
+  dropped the gradient fill because the capture whitelist had drifted out of
+  sync with the storage whitelist; `gradient` is now captured.
+- **Preselected font size ignored when typing** — Choosing a font size in the
+  inline text toolbar before typing (with no selection) no longer reverts to the
+  default; the chosen size is applied as the layer's base so new text honours it.
+- **Arrows rendered as a malformed outline when scaled down** — A non-scaling
+  hard-coded minimum shaft width made heavily downscaled arrows (e.g. an image
+  shown at ~300px) render the shaft wider than the shrunken head, degenerating
+  the arrow polygon. The shaft floor is now sub-pixel so the shaft/head stay
+  proportional at any display size.
+- **Inline text-toolbar font-size spinner** — The size input now has an explicit
+  height so both native up/down spinner arrows are fully visible and centred.
+- Removed leftover debug `console.log` statements from the rich-text/font-size
+  code paths (approved `mw.log` logging retained).
+
   annotations to page 2+ of a multi-page PDF and clicking Save returned
   `savefailed` with nothing persisted. Two causes: (1) a stale unique index
   (`ls_img_name_set_revision`, missing the page column) survived on installations

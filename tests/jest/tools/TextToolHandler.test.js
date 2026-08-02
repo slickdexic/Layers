@@ -272,7 +272,7 @@ describe( 'TextToolHandler', () => {
 		it( 'should use defaults when no style manager', () => {
 			handler.styleManager = null;
 			const style = handler._getCurrentStyle();
-			expect( style.fontSize ).toBe( 16 );
+			expect( style.fontSize ).toBe( 24 );
 			expect( style.fontFamily ).toBe( 'Arial, sans-serif' );
 			expect( style.color ).toBe( '#000000' );
 		} );

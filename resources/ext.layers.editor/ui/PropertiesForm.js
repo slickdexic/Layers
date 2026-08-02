@@ -753,10 +753,9 @@
 
 			case 'textbox':
 				Builders.addDimensions( ctx, { cornerRadius: true } );
-				// Textbox-specific: text properties (skipTextarea - use inline canvas editing)
-				addSection( t( 'layers-section-text', 'Text' ), 'text' );
-				Builders.addTextProperties( ctx, { skipTextarea: true } );
-				Builders.addRichTextFormatting( ctx );
+				// Per-character formatting lives on the floating toolbar only; the
+				// panel keeps whole-object text effects.
+				Builders.addTextEffects( ctx );
 				Builders.addTextShadowSection( ctx );
 				Builders.addAlignmentSection( ctx );
 				break;
@@ -764,10 +763,9 @@
 			case 'callout':
 				// Callout dimensions (like textbox)
 				Builders.addDimensions( ctx, { cornerRadius: true, maxCornerRadius: 100 } );
-				// Text properties (skipTextarea - use inline canvas editing, same as textbox)
-				addSection( t( 'layers-section-text', 'Text' ), 'text' );
-				Builders.addTextProperties( ctx, { skipTextarea: true } );
-				Builders.addRichTextFormatting( ctx );
+				// Per-character formatting lives on the floating toolbar only; the
+				// panel keeps whole-object text effects.
+				Builders.addTextEffects( ctx );
 				Builders.addTextShadowSection( ctx );
 				Builders.addAlignmentSection( ctx );
 				Builders.addCalloutTailSection( ctx );

@@ -363,7 +363,11 @@
 			const arrowStyle = layer.arrowStyle || 'single';
 			const headType = layer.arrowHeadType || 'pointed';
 			const headScale = typeof layer.headScale === 'number' ? layer.headScale : 1.0;
-			const shaftWidth = Math.max( arrowSize * 0.4, strokeWidth * 1.5, 4 );
+			// Keep the shaft proportional to the (already scale-adjusted) arrow head.
+			// An absolute floor here does not scale, so at small display sizes it would
+			// make the shaft wider than the shrunken head, degenerating the polygon into
+			// a "weird outline"; use a sub-pixel floor only to avoid a zero-width shaft.
+			const shaftWidth = Math.max( arrowSize * 0.4, strokeWidth * 1.5, 1 );
 			const halfShaft = shaftWidth / 2;
 
 			this.ctx.save();
@@ -765,7 +769,9 @@
 			const arrowStyle = layer.arrowStyle || 'single';
 			const headType = layer.arrowHeadType || 'pointed';
 			const headScale = typeof layer.headScale === 'number' ? layer.headScale : 1.0;
-			const shaftWidth = Math.max( arrowSize * 0.4, strokeWidth * 1.5, 4 );
+			// See drawCurved(): a non-scaling absolute floor breaks the shaft/head
+			// proportion at small display sizes, so use a sub-pixel floor only.
+			const shaftWidth = Math.max( arrowSize * 0.4, strokeWidth * 1.5, 1 );
 
 			this.ctx.save();
 

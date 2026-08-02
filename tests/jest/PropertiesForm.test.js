@@ -289,33 +289,21 @@ describe( 'PropertiesForm', () => {
 			expect( textarea ).toBeNull();
 		} );
 
-		test( 'should create textbox font controls', () => {
-			const layer = { id: 'test-1', type: 'textbox', fontFamily: 'Arial', fontSize: 18, fontWeight: 'bold', fontStyle: 'italic' };
+		test( 'should not create per-character font controls (toolbar only)', () => {
+			const layer = { id: 'test-1', type: 'textbox', fontFamily: 'Arial', fontSize: 18, fontWeight: 'bold', fontStyle: 'italic', textStrokeWidth: 0 };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
-			// Font family select
-			const selects = form.querySelectorAll( 'select' );
-			expect( selects.length ).toBeGreaterThan( 0 );
-
-			// Font size input
-			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
-			expect( fontSizeInput ).not.toBeNull();
-			expect( fontSizeInput.value ).toBe( '18' );
-
-			// Bold and italic checkboxes
+			// Font size, bold and italic now live exclusively on the floating toolbar.
+			expect( form.querySelector( 'input[data-prop="fontSize"]' ) ).toBeNull();
 			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
 			const boldCheckbox = Array.from( checkboxes ).find( ( cb ) => {
 				const label = cb.parentElement.querySelector( 'label' );
 				return label && label.textContent.includes( 'Bold' );
 			} );
-			const italicCheckbox = Array.from( checkboxes ).find( ( cb ) => {
-				const label = cb.parentElement.querySelector( 'label' );
-				return label && label.textContent.includes( 'Italic' );
-			} );
-			expect( boldCheckbox ).not.toBeNull();
-			expect( boldCheckbox.checked ).toBe( true );
-			expect( italicCheckbox ).not.toBeNull();
-			expect( italicCheckbox.checked ).toBe( true );
+			expect( boldCheckbox ).toBeUndefined();
+
+			// Whole-object text effects remain on the panel.
+			expect( form.querySelector( 'input[data-prop="textStrokeWidth"]' ) ).not.toBeNull();
 		} );
 
 		test( 'should create textbox alignment controls', () => {
@@ -1594,38 +1582,6 @@ describe( 'PropertiesForm', () => {
 			expect( mockEditor.updateLayer ).toHaveBeenCalled();
 		} );
 
-		test( 'should toggle bold fontWeight on checkbox change', () => {
-			const layer = { id: 'test-layer', type: 'textbox', fontWeight: 'normal' };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
-			const boldCheckbox = Array.from( checkboxes ).find( ( cb ) => {
-				const label = cb.parentElement.querySelector( 'label' );
-				return label && label.textContent.includes( 'Bold' );
-			} );
-
-			boldCheckbox.checked = true;
-			boldCheckbox.dispatchEvent( new Event( 'change' ) );
-
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { fontWeight: 'bold' } );
-		} );
-
-		test( 'should toggle italic fontStyle on checkbox change', () => {
-			const layer = { id: 'test-layer', type: 'textbox', fontStyle: 'normal' };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
-			const italicCheckbox = Array.from( checkboxes ).find( ( cb ) => {
-				const label = cb.parentElement.querySelector( 'label' );
-				return label && label.textContent.includes( 'Italic' );
-			} );
-
-			italicCheckbox.checked = true;
-			italicCheckbox.dispatchEvent( new Event( 'change' ) );
-
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'test-layer', { fontStyle: 'italic' } );
-		} );
-
 		test( 'should enable shadow with default values when checkbox checked', () => {
 			const layer = { id: 'test-layer', type: 'rectangle' };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
@@ -2262,19 +2218,14 @@ describe( 'PropertiesForm', () => {
 	} );
 
 	describe( 'textbox text content', () => {
-		test( 'should update text via textarea change', () => {
-			// Note: textbox layers no longer have textarea - text is edited inline on canvas
-			// This test now verifies that font styling controls still work
+		test( 'should not show text or font-size inputs (edited via toolbar)', () => {
 			const layer = { id: 'test-layer', type: 'textbox', fontSize: 16 };
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
-			// Verify no textarea exists (text edited inline on canvas)
-			const textarea = form.querySelector( 'textarea' );
-			expect( textarea ).toBeNull();
-
-			// Font size input should still work
-			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
-			expect( fontSizeInput ).not.toBeNull();
+			// Text is edited inline on canvas; per-character font size lives on the
+			// floating toolbar, so neither appears on the properties panel.
+			expect( form.querySelector( 'textarea' ) ).toBeNull();
+			expect( form.querySelector( 'input[data-prop="fontSize"]' ) ).toBeNull();
 		} );
 	} );
 
@@ -3787,7 +3738,7 @@ describe( 'PropertiesForm', () => {
 			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'callout-1', { cornerRadius: 16 } );
 		} );
 
-		test( 'should create callout text section', () => {
+		test( 'should show text effects, not per-character controls', () => {
 			const layer = {
 				id: 'callout-1',
 				type: 'callout',
@@ -3797,78 +3748,20 @@ describe( 'PropertiesForm', () => {
 			};
 			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
 
-			// Should NOT have textarea - callout uses inline canvas editing with richText
-			const textarea = form.querySelector( 'textarea' );
-			expect( textarea ).toBeNull();
-
-			// Should have font size input
-			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
-			expect( fontSizeInput ).not.toBeNull();
-		} );
-
-		test( 'should update callout text', () => {
-			// Note: callout layers no longer have textarea - text is edited inline on canvas
-			// This test now verifies that the text section header exists
-			const layer = { id: 'callout-1', type: 'callout', width: 200, height: 100, fontSize: 16 };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			// Verify no textarea exists
-			const textarea = form.querySelector( 'textarea' );
-			expect( textarea ).toBeNull();
-
-			// Font controls should still exist and work
-			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
-			fontSizeInput.value = '20';
-			dispatchInputAndAdvanceTimers( fontSizeInput );
-
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'callout-1', { fontSize: 20 } );
-		} );
-
-		test( 'should update callout fontSize', () => {
-			const layer = { id: 'callout-1', type: 'callout', width: 200, height: 100, fontSize: 16 };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const fontSizeInput = form.querySelector( 'input[data-prop="fontSize"]' );
-			fontSizeInput.value = '24';
-			dispatchInputAndAdvanceTimers( fontSizeInput );
-
-			expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'callout-1', { fontSize: 24 } );
-		} );
-
-		test( 'should toggle callout bold', () => {
-			const layer = { id: 'callout-1', type: 'callout', width: 200, height: 100, fontWeight: 'normal' };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
-			const boldCheckbox = Array.from( checkboxes ).find( ( cb ) => {
+			// No textarea and no per-character font size / bold / italic (handled by
+			// inline canvas editing + the floating toolbar).
+			expect( form.querySelector( 'textarea' ) ).toBeNull();
+			expect( form.querySelector( 'input[data-prop="fontSize"]' ) ).toBeNull();
+			const boldCheckbox = Array.from(
+				form.querySelectorAll( 'input[type="checkbox"]' )
+			).find( ( cb ) => {
 				const label = cb.parentElement.querySelector( 'label' );
 				return label && label.textContent.includes( 'Bold' );
 			} );
+			expect( boldCheckbox ).toBeUndefined();
 
-			if ( boldCheckbox ) {
-				boldCheckbox.checked = true;
-				boldCheckbox.dispatchEvent( new Event( 'change' ) );
-
-				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'callout-1', { fontWeight: 'bold' } );
-			}
-		} );
-
-		test( 'should toggle callout italic', () => {
-			const layer = { id: 'callout-1', type: 'callout', width: 200, height: 100, fontStyle: 'normal' };
-			const form = PropertiesForm.create( layer, mockEditor, registerCleanup );
-
-			const checkboxes = form.querySelectorAll( 'input[type="checkbox"]' );
-			const italicCheckbox = Array.from( checkboxes ).find( ( cb ) => {
-				const label = cb.parentElement.querySelector( 'label' );
-				return label && label.textContent.includes( 'Italic' );
-			} );
-
-			if ( italicCheckbox ) {
-				italicCheckbox.checked = true;
-				italicCheckbox.dispatchEvent( new Event( 'change' ) );
-
-				expect( mockEditor.updateLayer ).toHaveBeenCalledWith( 'callout-1', { fontStyle: 'italic' } );
-			}
+			// Whole-object text stroke effect remains on the panel.
+			expect( form.querySelector( 'input[data-prop="textStrokeWidth"]' ) ).not.toBeNull();
 		} );
 
 		test( 'should update callout textStrokeWidth', () => {
