@@ -110,6 +110,14 @@
 			this.currentPage = parseInt( config.page, 10 ) > 1 ? parseInt( config.page, 10 ) : 1;
 			this.pageCount = 1;
 
+			// Whether this file is a PDF. Client-side pdf.js rendering (crisp,
+			// native, in-wiki) is only attempted for PDFs; all other files use
+			// the server-provided page image.
+			this.isPdf = /\.pdf$/i.test( String( config.filename || '' ) );
+			// Rebuild the pdf.js renderer (and its per-document cache) for this
+			// open() so switching files does not reuse a stale document.
+			this._pdfRendererResolved = false;
+
 			// Reset zoom/pan for a fresh view.
 			this.zoom = 1;
 			this.panX = 0;
@@ -343,10 +351,10 @@
 				params.page = requestedPage;
 			}
 
-			api.get( params ).then( ( data ) => {
+			return api.get( params ).then( ( data ) => {
 				if ( !data || !data.layersinfo ) {
 					this.showError( 'No layer data found' );
-					return;
+					return undefined;
 				}
 
 				const layersInfo = data.layersinfo;
@@ -363,15 +371,13 @@
 
 				// No layer set yet — show the page image without an overlay.
 				if ( !layersInfo.layerset ) {
-					this.renderViewer( imageUrl, {
+					return this.renderPageImage( filename, imageUrl, {
 						layers: [],
 						baseWidth: null,
 						baseHeight: null,
 						backgroundVisible: true,
 						backgroundOpacity: 1.0
 					} );
-					this.updateToolbar();
-					return;
 				}
 
 				// Extract layer data
@@ -396,13 +402,96 @@
 					}
 				}
 
-				this.renderViewer( imageUrl, layerData );
-				this.updateToolbar();
+				return this.renderPageImage( filename, imageUrl, layerData );
 
 			} ).catch( ( error ) => {
 				this.debugLog( 'API error:', error );
 				this.showError( 'Failed to load layer data' );
 			} );
+		}
+
+		/**
+		 * Render a page's background image + layer overlay. For PDFs this first
+		 * attempts a crisp client-side pdf.js render of the page and uses that as
+		 * the background; on any failure it falls back to the supplied
+		 * server-rasterized page image. Non-PDF files always use the server image.
+		 *
+		 * @param {string} filename The filename being viewed
+		 * @param {string} fallbackUrl Server-provided page image URL
+		 * @param {Object} layerData Layer data for the page
+		 * @private
+		 */
+		renderPageImage( filename, fallbackUrl, layerData ) {
+			return this.preparePageImageUrl( filename, this.currentPage, fallbackUrl )
+				.then( ( finalUrl ) => {
+					this.renderViewer( finalUrl, layerData );
+					this.updateToolbar();
+				} );
+		}
+
+		/**
+		 * Resolve the background image URL to display for a page. For PDFs this
+		 * renders the page with pdf.js and returns a data URL; otherwise (or on
+		 * failure) it returns the server-provided fallback URL.
+		 *
+		 * @param {string} filename The filename being viewed
+		 * @param {number} page 1-based page number
+		 * @param {string} fallbackUrl Server-provided page image URL
+		 * @return {Promise<string>} Resolves to the image URL to display
+		 * @private
+		 */
+		preparePageImageUrl( filename, page, fallbackUrl ) {
+			const renderer = this._getPdfRenderer();
+			if ( !this.isPdf || !renderer || !renderer.isAvailable() ) {
+				return Promise.resolve( fallbackUrl );
+			}
+			const pdfUrl = this.resolvePdfSourceUrl( filename );
+			return renderer.renderPage( pdfUrl, page, {} ).then( ( result ) => {
+				if ( result && result.dataUrl ) {
+					// pdf.js reports the authoritative page count.
+					if ( result.pageCount > this.pageCount ) {
+						this.pageCount = result.pageCount;
+					}
+					return result.dataUrl;
+				}
+				return fallbackUrl;
+			} ).catch( ( err ) => {
+				this.debugLog(
+					'pdf.js render failed, using server image:',
+					err && err.message
+				);
+				return fallbackUrl;
+			} );
+		}
+
+		/**
+		 * Resolve the URL of the raw PDF file for pdf.js to fetch.
+		 *
+		 * @param {string} filename The filename
+		 * @return {string} URL of the PDF file
+		 * @private
+		 */
+		resolvePdfSourceUrl( filename ) {
+			// Special:Redirect/file resolves to the raw uploaded PDF regardless
+			// of hashed-path or InstantCommons configuration; pdf.js follows the
+			// redirect when fetching.
+			return this.resolveFullImageUrl( filename );
+		}
+
+		/**
+		 * Lazily construct the shared pdf.js renderer for this lightbox session.
+		 *
+		 * @return {Object|null} A PdfRenderer instance, or null if unavailable
+		 * @private
+		 */
+		_getPdfRenderer() {
+			if ( !this._pdfRendererResolved ) {
+				this._pdfRendererResolved = true;
+				const PdfRenderer = getClass( 'Viewer.PdfRenderer', 'LayersPdfRenderer' );
+				this.pdfRenderer = ( typeof PdfRenderer === 'function' ) ?
+					new PdfRenderer( { debug: this.debug } ) : null;
+			}
+			return this.pdfRenderer;
 		}
 
 		/**
@@ -1106,6 +1195,13 @@
 				this.viewer.destroy();
 				this.viewer = null;
 			}
+
+			// Release pdf.js documents/resources for this session.
+			if ( this.pdfRenderer && typeof this.pdfRenderer.destroy === 'function' ) {
+				this.pdfRenderer.destroy();
+			}
+			this.pdfRenderer = null;
+			this._pdfRendererResolved = false;
 
 			// Remove event listeners
 			if ( this.boundKeyHandler ) {

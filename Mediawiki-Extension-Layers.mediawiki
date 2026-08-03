@@ -8,7 +8,7 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.77
+|version         = 1.5.78
 |update          = 2026-07-10
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -120,7 +120,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.77
+| 1.44+ || <code>main</code> || 1.5.78
 |-
 | 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.66
 |-
@@ -227,7 +227,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 * '''Hover Overlay Actions''': Edit/View icons appear on hover over layered images—respects <code>editlayers</code> permission for edit button visibility.
 
 === Integration ===
-* '''PDF Markup (v1.5.77+)''': Annotate PDF files exactly like images—the PDF page is the canvas. Multi-page PDFs are supported, with independent named layer sets and revision history per page. Use the standard <code>page=</code> parameter (e.g. <code><nowiki>[[File:Manual.pdf|page=2|layerset=on]]</nowiki></code>) and the editor's page navigator to switch pages. Requires the {{ll|Extension:PdfHandler|PdfHandler}} extension.
+* '''PDF Markup (v1.5.77+)''': Annotate PDF files exactly like images—the PDF page is the canvas. Multi-page PDFs are supported, with independent named layer sets and revision history per page. Use the standard <code>page=</code> parameter (e.g. <code><nowiki>[[File:Manual.pdf|page=2|layerset=on]]</nowiki></code>) and the editor's page navigator to switch pages. Clicking a layered PDF opens an '''in-wiki PDF viewer (v1.5.78+)''' that renders the page client-side with a bundled copy of Mozilla's [https://mozilla.github.io/pdf.js/ pdf.js] (Apache-2.0, loaded on demand) and displays the layer overlay with paging, zoom, print and export—instead of navigating to the browser's native PDF view where the overlay would be lost. Requires the {{ll|Extension:PdfHandler|PdfHandler}} extension.
 * '''Import Images''': Add external images as layers (PNG, JPG, GIF, WebP).
 * '''Export as PNG''': Download the annotated image as a single PNG file.
 * '''InstantCommons Support''': Works seamlessly with files from [[w:Wikimedia Commons|Wikimedia Commons]] and other foreign repositories.

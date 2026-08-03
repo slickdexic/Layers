@@ -4,6 +4,22 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.78] - 2026-08-09
+
+### Added
+- **In-wiki PDF viewer (pdf.js)** — Clicking a layered PDF thumbnail now opens
+  the page inside the existing full-screen lightbox with its layer overlay,
+  instead of navigating away to the browser's native PDF view where the overlay
+  does not exist. The PDF page is rendered client-side with a vendored copy of
+  Mozilla's [pdf.js](https://mozilla.github.io/pdf.js/) (Apache-2.0), giving a
+  crisp, resolution-independent background that the overlay scales onto exactly
+  as it does for images. Multi-page PDFs use the lightbox's existing prev/next
+  paging, zoom, print and export controls. pdf.js is shipped as an on-demand
+  ResourceLoader module (`ext.layers.pdfjs`) that only loads the first time a
+  PDF is actually opened, so ordinary article page loads are unaffected. If
+  pdf.js cannot load or the file cannot be fetched, the viewer transparently
+  falls back to the server-rasterized page thumbnail.
+
 ## [1.5.77] - 2026-08-02
 
 ### Changed

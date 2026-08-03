@@ -130,8 +130,54 @@
 
 			this.createOverlay();
 			this.attachEventListeners();
+			this._attachPdfClickInterception();
 
 			this.debugLog( 'Overlay initialized for', this.filename, 'canEdit:', this.canEdit );
+		}
+
+		/**
+		 * For PDF files, intercept clicks on the thumbnail (or its wrapping
+		 * anchor) so the marked-up page opens in the in-wiki lightbox viewer
+		 * instead of navigating away to the browser's PDF view, where the layer
+		 * overlay would not exist.
+		 * @private
+		 */
+		_attachPdfClickInterception() {
+			if ( !/\.pdf$/i.test( this.filename ) ) {
+				return;
+			}
+			this._pdfClickTarget = this._findClickTarget();
+			if ( !this._pdfClickTarget ) {
+				return;
+			}
+			this._boundPdfClick = ( e ) => {
+				// Respect modified clicks (open in new tab, etc.) and any handler
+				// that already acted on the event.
+				if ( e.defaultPrevented || e.button !== 0 || e.ctrlKey ||
+					e.metaKey || e.shiftKey || e.altKey ) {
+					return;
+				}
+				e.preventDefault();
+				e.stopPropagation();
+				this._handleViewClick();
+			};
+			this._pdfClickTarget.addEventListener( 'click', this._boundPdfClick );
+		}
+
+		/**
+		 * Resolve the element whose clicks should open the viewer: the anchor
+		 * MediaWiki wraps around the thumbnail if present, else the image itself.
+		 * @private
+		 * @return {HTMLElement|null} Click target
+		 */
+		_findClickTarget() {
+			if ( this.imageElement && typeof this.imageElement.closest === 'function' ) {
+				const anchor = this.imageElement.closest( 'a' );
+				if ( anchor ) {
+					return anchor;
+				}
+			}
+			return this.imageElement || null;
 		}
 
 		/**
@@ -434,6 +480,12 @@
 			if ( this.overlay && this.overlay.parentNode ) {
 				this.overlay.parentNode.removeChild( this.overlay );
 			}
+
+			if ( this._pdfClickTarget && this._boundPdfClick ) {
+				this._pdfClickTarget.removeEventListener( 'click', this._boundPdfClick );
+			}
+			this._pdfClickTarget = null;
+			this._boundPdfClick = null;
 
 			this.overlay = null;
 			this.boundMouseEnter = null;

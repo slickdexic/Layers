@@ -1800,4 +1800,78 @@ describe( 'LayersLightbox edge cases', () => {
 			expect( mw.message ).toHaveBeenCalledWith( 'layers-lightbox-alt' );
 		} );
 	} );
+
+	describe( 'PDF rendering path', () => {
+		it( 'flags PDF filenames on open()', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Doc.pdf' } );
+			expect( lightbox.isPdf ).toBe( true );
+		} );
+
+		it( 'does not flag image filenames on open()', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Photo.JPG' } );
+			expect( lightbox.isPdf ).toBe( false );
+		} );
+
+		it( 'preparePageImageUrl returns the fallback for non-PDF files', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.isPdf = false;
+			const url = await lightbox.preparePageImageUrl( 'x.jpg', 1, 'server.jpg' );
+			expect( url ).toBe( 'server.jpg' );
+		} );
+
+		it( 'preparePageImageUrl returns the fallback when no renderer is available', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.isPdf = true;
+			lightbox._pdfRendererResolved = true;
+			lightbox.pdfRenderer = null;
+			const url = await lightbox.preparePageImageUrl( 'x.pdf', 1, 'server.jpg' );
+			expect( url ).toBe( 'server.jpg' );
+		} );
+
+		it( 'preparePageImageUrl uses the pdf.js data URL and updates pageCount', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.isPdf = true;
+			lightbox.pageCount = 1;
+			lightbox._pdfRendererResolved = true;
+			lightbox.pdfRenderer = {
+				isAvailable: () => true,
+				renderPage: jest.fn( () => Promise.resolve( {
+					dataUrl: 'data:image/png;base64,pdf',
+					width: 1600,
+					height: 1200,
+					pageCount: 5
+				} ) )
+			};
+			const url = await lightbox.preparePageImageUrl( 'x.pdf', 2, 'server.jpg' );
+			expect( url ).toBe( 'data:image/png;base64,pdf' );
+			expect( lightbox.pageCount ).toBe( 5 );
+			expect( lightbox.pdfRenderer.renderPage ).toHaveBeenCalled();
+		} );
+
+		it( 'preparePageImageUrl falls back to the server image on render failure', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.isPdf = true;
+			lightbox._pdfRendererResolved = true;
+			lightbox.pdfRenderer = {
+				isAvailable: () => true,
+				renderPage: jest.fn( () => Promise.reject( new Error( 'boom' ) ) )
+			};
+			const url = await lightbox.preparePageImageUrl( 'x.pdf', 1, 'server.jpg' );
+			expect( url ).toBe( 'server.jpg' );
+		} );
+
+		it( 'close() destroys the pdf renderer and clears resolution state', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Doc.pdf' } );
+			const destroy = jest.fn();
+			lightbox.pdfRenderer = { destroy: destroy };
+			lightbox._pdfRendererResolved = true;
+			lightbox.close();
+			expect( destroy ).toHaveBeenCalled();
+			expect( lightbox.pdfRenderer ).toBeNull();
+			expect( lightbox._pdfRendererResolved ).toBe( false );
+		} );
+	} );
 } );

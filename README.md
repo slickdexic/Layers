@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.77 (August 2, 2026)  
+> **Version:** 1.5.78 (August 9, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -215,6 +215,15 @@ revision history. Use the standard MediaWiki `page` parameter to target a page:
 In the editor, multi-page files show a **page navigator** (previous / next and
 a "Page X / N" indicator) in the toolbar. Switching pages loads that page's
 background, dimensions, and layer set.
+
+**In-wiki PDF viewer (v1.5.78+).** Clicking a layered PDF thumbnail opens the
+page inside the full-screen viewer with its overlay, rather than sending the
+reader to the browser's native PDF view (where the overlay does not exist). The
+page is rendered client-side with a bundled copy of Mozilla's
+[pdf.js](https://mozilla.github.io/pdf.js/) (Apache-2.0), loaded on demand only
+when a PDF is first opened. The viewer supports paging, zoom, print and export
+of the marked-up page. If pdf.js cannot load, it falls back to the
+server-rasterized page image automatically.
 
 > **Requires the [PdfHandler](https://www.mediawiki.org/wiki/Extension:PdfHandler)
 > extension** (with Ghostscript/ImageMagick) for PDF rasterization and page

@@ -17,6 +17,7 @@ module.exports = function ( grunt ) {
 				'!node_modules/**',
 				'!vendor/**',
 				'!resources/dist/**',
+				'!resources/lib/**',
 				'!resources/ext.layers.editor/shapeLibrary/scripts/**',
 				'!scripts/**',
 				'!TempToolIcons/**',

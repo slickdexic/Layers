@@ -20,6 +20,17 @@
 
 ---
 
+## 🆕 What's New in v1.5.78
+
+- **In-wiki PDF viewer (pdf.js)** — Clicking a layered PDF now opens the page
+  inside the full-screen viewer *with its overlay*, instead of navigating to
+  the browser's native PDF view where the overlay would vanish. Pages are
+  rendered client-side with a bundled copy of Mozilla's
+  [pdf.js](https://mozilla.github.io/pdf.js/) (Apache-2.0), loaded on demand
+  only when a PDF is first opened, and the viewer keeps its paging, zoom, print
+  and export controls. Falls back to the server-rasterized page image if pdf.js
+  cannot load.
+
 ## 🆕 What's New in v1.5.77
 
 - **Text editing overhaul (text box & callout)** — Per-character formatting
@@ -391,7 +402,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.77 |
+| **Version (main)** | 1.5.78 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | August 2, 2026 |

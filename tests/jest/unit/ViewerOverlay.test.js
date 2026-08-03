@@ -1108,4 +1108,87 @@ describe( 'ViewerOverlay', () => {
 			// Should still be visible since focus is within container
 			expect( overlay.overlay.classList.contains( 'layers-viewer-overlay--visible' ) ).toBe( true );
 		} );
-	} );} );
+	} );
+
+	describe( 'PDF click interception', () => {
+		it( 'intercepts a plain left-click on a PDF thumbnail and opens the lightbox', () => {
+			const open = jest.fn();
+			window.Layers.lightbox = { open: open };
+			const overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Doc.pdf'
+			} );
+
+			const event = new MouseEvent( 'click', { bubbles: true, cancelable: true, button: 0 } );
+			img.dispatchEvent( event );
+
+			expect( open ).toHaveBeenCalled();
+			expect( event.defaultPrevented ).toBe( true );
+			overlay.destroy();
+			delete window.Layers.lightbox;
+		} );
+
+		it( 'prefers the wrapping anchor as the click target', () => {
+			const anchor = document.createElement( 'a' );
+			anchor.href = '/wiki/File:Doc.pdf';
+			container.appendChild( anchor );
+			anchor.appendChild( img );
+
+			const overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Doc.pdf'
+			} );
+
+			expect( overlay._pdfClickTarget ).toBe( anchor );
+			overlay.destroy();
+		} );
+
+		it( 'does not intercept modified clicks (e.g. ctrl/meta)', () => {
+			const open = jest.fn();
+			window.Layers.lightbox = { open: open };
+			const overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Doc.pdf'
+			} );
+
+			const event = new MouseEvent( 'click', {
+				bubbles: true, cancelable: true, button: 0, ctrlKey: true
+			} );
+			img.dispatchEvent( event );
+
+			expect( open ).not.toHaveBeenCalled();
+			expect( event.defaultPrevented ).toBe( false );
+			overlay.destroy();
+			delete window.Layers.lightbox;
+		} );
+
+		it( 'does not attach interception for non-PDF files', () => {
+			const overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Photo.jpg'
+			} );
+			expect( overlay._boundPdfClick ).toBeFalsy();
+			overlay.destroy();
+		} );
+
+		it( 'removes the click listener on destroy', () => {
+			const open = jest.fn();
+			window.Layers.lightbox = { open: open };
+			const overlay = new ViewerOverlay( {
+				container: container,
+				imageElement: img,
+				filename: 'Doc.pdf'
+			} );
+			overlay.destroy();
+
+			const event = new MouseEvent( 'click', { bubbles: true, cancelable: true, button: 0 } );
+			img.dispatchEvent( event );
+			expect( open ).not.toHaveBeenCalled();
+			delete window.Layers.lightbox;
+		} );
+	} );
+} );
