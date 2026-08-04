@@ -4,6 +4,21 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.79] - 2026-08-09
+
+### Security
+- **Harden the in-wiki PDF viewer against CVE-2024-4367** — The vendored pdf.js
+  build (3.11.174) predates the 4.2.67 fix for CVE-2024-4367, in which a
+  maliciously crafted PDF could execute arbitrary JavaScript in the viewer's
+  browser. Because viewer PDFs are user-uploaded and therefore untrusted, the
+  `PdfRenderer` now passes `isEvalSupported: false` to `pdf.js`'s
+  `getDocument()`, which is Mozilla's documented mitigation for the exploit on
+  builds older than 4.2.67. Added a regression test asserting the flag is set.
+
+### Fixed
+- Removed a dead `allowReason` variable in the viewer API fallback that never
+  held a value, clearing the last remaining ESLint warning.
+
 ## [1.5.78] - 2026-08-09
 
 ### Added

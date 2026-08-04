@@ -142,6 +142,15 @@ describe( 'PdfRenderer', () => {
 			expect( mock.getDocument ).toHaveBeenCalledTimes( 1 );
 		} );
 
+		it( 'passes isEvalSupported:false (CVE-2024-4367 mitigation)', async () => {
+			const mock = makeMockPdfjs();
+			const r = new PdfRenderer( { pdfjsLib: mock.lib } );
+			await r.getDocument( 'a.pdf' );
+			expect( mock.getDocument ).toHaveBeenCalledWith(
+				expect.objectContaining( { isEvalSupported: false } )
+			);
+		} );
+
 		it( 'does not cache a failed fetch (allows retry)', async () => {
 			const mock = makeMockPdfjs( { failGetDocument: true } );
 			const r = new PdfRenderer( { pdfjsLib: mock.lib } );

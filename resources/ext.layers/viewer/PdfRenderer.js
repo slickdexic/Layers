@@ -200,7 +200,10 @@
 				return this._docCache.get( url );
 			}
 			const promise = this.ensureLibrary().then( ( lib ) => {
-				const task = lib.getDocument( { url: url } );
+				// isEvalSupported:false mitigates CVE-2024-4367 (arbitrary JS
+				// execution from a crafted PDF) on pdf.js < 4.2.67; the vendored
+				// build is 3.11.174, and viewer PDFs are user-uploaded/untrusted.
+				const task = lib.getDocument( { url: url, isEvalSupported: false } );
 				return task.promise;
 			} ).catch( ( err ) => {
 				this._docCache.delete( url );

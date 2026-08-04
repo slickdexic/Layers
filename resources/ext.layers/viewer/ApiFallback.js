@@ -135,7 +135,6 @@ class ApiFallback {
 	 */
 	checkImageAllowed ( img, pageAllow, pageNsNum, fileNs ) {
 		let allow = false;
-		let allowReason = '';
 
 		// On File pages, do NOT allow by page context alone.
 		// Require explicit per-image intent (href layers=, data-mw, or data-layers-intent)
@@ -207,7 +206,7 @@ class ApiFallback {
 			return { allow: false, reason: 'File page requires explicit image intent' };
 		}
 
-		return { allow: false, reason: allowReason || 'no matching criteria' };
+		return { allow: false, reason: 'no matching criteria' };
 	}
 
 	/**

@@ -1,9 +1,30 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** August 2, 2026 (v76 — text formatting → floating toolbar only)
-**Previous Review:** August 2, 2026 (v75 — text/textbox/callout deep fixes)
-**Version:** 1.5.77
+**Review Date:** August 9, 2026 (v79 — pdf.js viewer security review)
+**Previous Review:** August 2, 2026 (v76 — text formatting → floating toolbar only)
+**Version:** 1.5.79
 **Reviewer:** GitHub Copilot (Claude Opus 4.8)
+
+---
+
+## 🔴 v79 — pdf.js in-wiki viewer exposed CVE-2024-4367 (HIGH)
+
+The v1.5.78 in-wiki PDF viewer rasterizes **user-uploaded** PDFs client-side
+with a vendored **pdf.js 3.11.174**. That build predates pdf.js **4.2.67**, the
+release that fixed **CVE-2024-4367** — a crafted PDF can execute arbitrary
+JavaScript in the viewer's browser (effectively a stored XSS: an attacker
+uploads a malicious PDF, a victim opens it in the lightbox).
+
+`PdfRenderer.getDocument()` called `pdf.js`'s `getDocument({ url })` **without**
+`isEvalSupported: false`, so the vulnerable font-eval path was reachable.
+
+**Fix:** pass `isEvalSupported: false` to `getDocument()` — Mozilla's documented
+mitigation for builds older than 4.2.67 — plus a regression test asserting the
+flag. A future upgrade to pdf.js ≥ 4.2.67 remains the preferred long-term path
+(tracked for when a UMD/legacy build compatible with our loader is available).
+
+Also cleared the last standing ESLint warning (dead `allowReason` in
+`ApiFallback.js`). Full gate green: 173 suites / 14,090 tests.
 
 ---
 
