@@ -14,9 +14,9 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
-use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
@@ -323,10 +323,9 @@ class ImageLinkProcessor {
 		$filename = $file->getName();
 		$sha1 = ForeignFileHelper::getFileSha1( $file );
 
-		// Get the layer set from database
-		// Use getLatestLayerSet with optional setName filter
-		$layerSet = null;
-		if ( $setName !== null && $setName !== '' && $setName !== LayersConstants::DEFAULT_SET_NAME ) {
+		// Set names are user-defined, so an explicit name is always honoured
+		// verbatim; only an absent name falls back to the image's newest set.
+		if ( SetNameResolver::isSpecificName( $setName ) ) {
 			$layerSet = $db->getLatestLayerSet( $filename, $sha1, $setName, $page );
 		} else {
 			$layerSet = $db->getLatestLayerSet( $filename, $sha1, null, $page );
@@ -601,9 +600,9 @@ class ImageLinkProcessor {
 			];
 
 			// Add autocreate flag when linking to a specific named set
-			// This allows auto-creation of the set if it doesn't exist
-			// (only for named sets, not for generic 'on' or 'default')
-			if ( $setName !== null && $setName !== '' && $setName !== LayersConstants::DEFAULT_SET_NAME ) {
+			// This allows auto-creation of the set if it doesn't exist. Generic
+			// intents such as 'on' name no set, so there is nothing to create.
+			if ( SetNameResolver::isSpecificName( $setName ) ) {
 				$urlParams['autocreate'] = '1';
 			}
 

@@ -49,7 +49,7 @@ All annotations are stored as validated JSON and rendered client-side using HTML
 ### Slide Wikitext Syntax
 
 ```wikitext
-{{#Slide: MySlide}}                              <!-- Render slide "MySlide" (default layer set) -->
+{{#Slide: MySlide}}                              <!-- Render slide "MySlide" (its current layer set) -->
 {{#Slide: MySlide | layerset=annotations}}       <!-- Render specific named layer set -->
 {{#Slide: MySlide | size=800x600}}               <!-- Render at specific display size -->
 {{#Slide: MySlide | canvas=1920x1080}}           <!-- Create with specific canvas size -->
@@ -194,7 +194,7 @@ Layer changes are visible on article pages immediately after saving, without nee
 ## Wikitext Integration
 
 ```wikitext
-[[File:MyImage.jpg|500px|layerset=on|Annotated image]]     <!-- Default layer set -->
+[[File:MyImage.jpg|500px|layerset=on|Annotated image]]     <!-- The image's current layer set -->
 [[File:MyImage.jpg|500px|layerset=anatomy|Anatomy labels]] <!-- Named set -->
 [[File:MyImage.jpg|500px|layerset=none]]                   <!-- No layers -->
 ```
@@ -340,7 +340,8 @@ $wgLayersMaxImageBytes = 1048576;      // 1 MB for imported images
 $wgLayersMaxImportSide = 2048;         // Max px before client-side downscale
 $wgLayersImportJpegQuality = 0.8;      // JPEG quality for downscaled imports
 
-// Default set name
+// Seed name for an image's first layer set when the user did not name one.
+// Set names are user-defined and nothing is reserved.
 $wgLayersDefaultSetName = 'default';
 
 // Image and rendering limits
@@ -403,8 +404,8 @@ against re-render cost.
 
 **Architecture:**
 
-- **Backend:** PHP with 6 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`, `layerspdfexport`), **~17,170 lines across 47 files**
-- **Frontend:** HTML5 Canvas editor with **158 JS files (~105,000 lines)**, 140 ES6 classes
+- **Backend:** PHP with 6 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`, `layerspdfexport`), **~17,300 lines across 48 files**
+- **Frontend:** HTML5 Canvas editor with **159 JS files (~105,000 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
 - **Technical Debt:** **28 god classes** (files >=1,000 lines), all use proper delegation patterns
@@ -415,8 +416,8 @@ against re-render cost.
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 14,167 passing (176 suites) |
-| PHPUnit tests | 613 passing (34 test files) |
+| Jest tests | 14,167 passing (177 suites) |
+| PHPUnit tests | 624 passing (37 test files) |
 | Statement coverage | 95.87% |
 | Branch coverage | 87.20% |
 | Function coverage | 93.98% |

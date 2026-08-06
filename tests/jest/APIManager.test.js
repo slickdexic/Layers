@@ -1407,7 +1407,7 @@ describe( 'APIManager', function () {
 			expect( parsedData.layers ).toEqual( [] );
 		} );
 
-		it( 'should default to "default" set name if not specified', function () {
+		it( 'should send an empty set name when none is specified', function () {
 			mockEditor.stateManager.get = jest.fn( function ( key ) {
 				if ( key === 'layers' ) {
 					return [];
@@ -1417,7 +1417,8 @@ describe( 'APIManager', function () {
 
 			const payload = apiManager.buildSavePayload();
 
-			expect( payload.setname ).toBe( 'default' );
+			// The server resolves the image's current set; no name is assumed
+			expect( payload.setname ).toBe( '' );
 		} );
 	} );
 
@@ -1772,7 +1773,7 @@ describe( 'APIManager', function () {
 
 			apiManager.clearFreshnessCache();
 
-			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:default' );
+			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:' );
 			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:set1' );
 			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:set2' );
 		} );
@@ -4484,7 +4485,7 @@ describe( 'APIManager', function () {
 			apiManager.editor = null;
 
 			apiManager.clearFreshnessCache();
-			expect( mockClearFreshness ).toHaveBeenCalledWith( null, [], 'default' );
+			expect( mockClearFreshness ).toHaveBeenCalledWith( null, [], '' );
 		} );
 
 		describe( 'fallback (no cacheManager)', function () {
@@ -4500,10 +4501,10 @@ describe( 'APIManager', function () {
 				} );
 			} );
 
-			it( 'should clear sessionStorage keys for default and current set', function () {
+			it( 'should clear the sessionStorage key for the unnamed set', function () {
 				apiManager.clearFreshnessCache();
 				expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-					'layers-fresh-Test_Image.jpg:default'
+					'layers-fresh-Test_Image.jpg:'
 				);
 			} );
 
@@ -4520,7 +4521,7 @@ describe( 'APIManager', function () {
 
 				apiManager.clearFreshnessCache();
 				expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-					'layers-fresh-Test_Image.jpg:default'
+					'layers-fresh-Test_Image.jpg:'
 				);
 				expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
 					'layers-fresh-Test_Image.jpg:anatomy'

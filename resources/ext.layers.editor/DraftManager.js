@@ -98,8 +98,8 @@
 		 */
 		getStorageKey() {
 			const setName = this.editor.stateManager ?
-				this.editor.stateManager.get( 'currentSetName' ) || 'default' :
-				'default';
+				this.editor.stateManager.get( 'currentSetName' ) || '' :
+				'';
 			return this.storageKey + '-' + setName.replace( /[^a-zA-Z0-9_.-]/g, '_' );
 		}
 
@@ -215,8 +215,8 @@
 					timestamp: Date.now(),
 					filename: this.filename,
 					setName: this.editor.stateManager ?
-						this.editor.stateManager.get( 'currentSetName' ) || 'default' :
-						'default',
+						this.editor.stateManager.get( 'currentSetName' ) || '' :
+						'',
 					// Strip base64 image src data to avoid localStorage overflow
 					layers: layers.map( ( l ) => {
 						if ( l.type === 'image' && l.src && l.src.length > 1024 ) {

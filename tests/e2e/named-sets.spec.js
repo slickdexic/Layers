@@ -36,15 +36,16 @@ describeNamedSets( 'Named Layer Sets', () => {
 			expect( setSelector ).not.toBeNull();
 		} );
 
-		test( 'default set is selected initially', async ( { page } ) => {
-			const testFile = process.env.TEST_FILE || 'Test.png';
-			await editorPage.openEditor( testFile );
+test( 'a set is selected initially', async ( { page } ) => {
+		const testFile = process.env.TEST_FILE || 'Test.png';
+		await editorPage.openEditor( testFile );
 
-			// Check that 'default' set is shown as selected
-			const selectedText = await page.textContent(
-				'.layers-set-selector .selected-set, .set-selector-label, [data-current-set]'
-			);
-			expect( selectedText.toLowerCase() ).toContain( 'default' );
+		// Some set is always shown as selected; its name is user-defined,
+		// so only require that the label is non-empty.
+		const selectedText = await page.textContent(
+			'.layers-set-selector .selected-set, .set-selector-label, [data-current-set]'
+		);
+		expect( selectedText.trim().length ).toBeGreaterThan( 0 );
 		} );
 
 		test( 'can create a new named set', async ( { page } ) => {

@@ -12,7 +12,7 @@ This document describes the Named Layer Sets feature, which restructures the lay
 
 ### Key Concepts
 
-- **Named Layer Set**: A logical grouping of layer annotations identified by a human-readable name (e.g., "default", "anatomy-labels", "tourist-highlights")
+- **Named Layer Set**: A logical grouping of layer annotations identified by a human-readable name (e.g., "001", "anatomy-labels", "tourist-highlights"). Names are entirely user-defined and **no name is reserved** — an image whose only set is called "001" behaves exactly like one whose only set is called "default".
 - **Revision**: A specific saved state of a named layer set, identified by timestamp
 - **Version History**: Up to 50 most recent revisions stored per named set
 - **Layer Set Slot**: Each image can have up to 15 named layer sets (configurable via `$wgLayersMaxNamedSets`)
@@ -23,7 +23,7 @@ This document describes the Named Layer Sets feature, which restructures the lay
 2. **Version History**: Undo to previous saves, compare revisions
 3. **Direct Linking**: Use `[[File:Example.jpg|layerset=anatomy-labels]]` to embed specific annotation sets
 4. **Collaboration**: Different users can work on different named sets
-5. **Migration Path**: Existing anonymous revisions become "default" set
+5. **Migration Path**: Existing anonymous revisions are backfilled under a placeholder name so they remain addressable
 
 ---
 
@@ -83,8 +83,8 @@ These limitations motivated the named sets feature.
 
 ```
 Image (File:Example.jpg)
-├── Named Set: "default" (auto-created for existing/new users)
-│   ├── Revision 25 (latest) ← loaded by default
+├── Named Set: "default" (seeded when the user did not name the first set)
+│   ├── Revision 25 (latest) ← loaded when no set is requested
 │   ├── Revision 24
 │   ├── ... (up to 50 revisions kept)
 │   └── Revision 1 (oldest kept)
@@ -102,13 +102,23 @@ Image (File:Example.jpg)
 |---------|-------|-------------|
 | `$wgLayersMaxNamedSets` | 15 | Maximum named sets per image |
 | `$wgLayersMaxRevisionsPerSet` | 50 | Maximum revisions kept per named set |
-| `$wgLayersDefaultSetName` | "default" | Name for auto-created sets |
+| `$wgLayersDefaultSetName` | "default" | Seed name for the *first* set created for an image when the user did not name one. Never used as a lookup key. |
+
+### Set Name Resolution
+
+Nothing is reserved. When a caller supplies no set name — or a generic wikitext
+intent such as `on` / `true` / `all` / `1` — the extension operates on the
+**most recently saved set for that image and page, whatever it is called**.
+The rules live in one place per side and every call site routes through them:
+
+- Server: `src/Utility/SetNameResolver.php`
+- Client: `resources/ext.layers.shared/SetNameUtil.js`
 
 **Set Name Validation** (in `SetNameSanitizer`):
 - Max length: 255 characters (matches DB column, multibyte-aware truncation)
 - Allowed characters: Unicode letters, numbers, underscores, dashes, spaces
 - Regex: `/^[\p{L}\p{N}_\-\s]+$/u`
-- Empty names sanitize to "default"
+- Names that sanitize to nothing usable return an empty string; no name is substituted, and callers decide what that means
 - Consecutive whitespace collapsed to single space
 - Control chars and path separators (`/`, `\\`) removed before whitelist filtering
 
@@ -204,7 +214,7 @@ When `setname` is explicitly requested, the module returns
 ### layerssave API
 
 **Changed Behavior:**
-1. `setname` becomes meaningful (default: "default")
+1. `setname` is optional. When omitted, the image's most recently saved set is reused; if the image has none, a first set is seeded from `$wgLayersDefaultSetName`
 2. Check if named set exists and count revisions
 3. If revisions exceed limit, prune oldest after successful save
 4. Check named set count per image, reject if limit exceeded
@@ -222,14 +232,14 @@ When `setname` is explicitly requested, the module returns
 Named layer sets use the standard MediaWiki file syntax with the `layerset=` parameter:
 
 ```wikitext
-[[File:Example.jpg|layerset=on]]              <!-- Show default layer set -->
+[[File:Example.jpg|layerset=on]]              <!-- Show the image's current layer set -->
 [[File:Example.jpg|layerset=anatomy-labels]]  <!-- Show specific named set -->
 [[File:Example.jpg|layerset=none]]            <!-- Explicitly disable layers -->
 ```
 
 **Parameters:**
-- `layerset=on`: Load the default layer set
-- `layerset=<setname>`: Load a specific named set (e.g., `anatomy-labels`, `french-labels`)
+- `layerset=on`: Load the image's most recently saved set, whatever it is named
+- `layerset=<setname>`: Load a specific named set (e.g., `anatomy-labels`, `french-labels`, `001`)
 - `layerset=none` or `layerset=off`: Explicitly hide layers
 - Omitting `layerset=` means no layers are displayed (opt-in model)
 
@@ -386,7 +396,7 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 ## Open Questions
 
 1. ~~**Set Deletion**: Should users be able to delete entire named sets?~~ **Implemented** via `ApiLayersDelete` — set owner or admin can delete.
-2. ~~**Set Renaming**: Allow renaming named sets?~~ **Implemented** via `ApiLayersRename` — set owner or admin can rename (cannot rename to "default").
+2. ~~**Set Renaming**: Allow renaming named sets?~~ **Implemented** via `ApiLayersRename` — set owner or admin can rename any set to any valid name.
 3. **Cross-Image Sets**: Should a named set be able to apply to multiple related images? (Future consideration)
 4. **Revision Comparison**: Visual diff between revisions? (Future enhancement)
 
@@ -400,7 +410,7 @@ ON layer_sets (ls_img_name, ls_img_sha1, ls_name, ls_timestamp DESC);
 // Named Layer Sets Configuration
 $wgLayersMaxNamedSets = 15;           // Max named sets per image
 $wgLayersMaxRevisionsPerSet = 50;     // Max revisions kept per set
-$wgLayersDefaultSetName = 'default';  // Auto-created set name
+$wgLayersDefaultSetName = 'default';  // Seed name for an image's first set
 
 // Existing settings remain unchanged
 $wgLayersMaxBytes = 2 * 1024 * 1024;
@@ -410,7 +420,7 @@ $wgLayersMaxLayerCount = 100;
 ### Example API Calls
 
 ```javascript
-// Load default set
+// Load the image's current set (whatever it is named)
 mw.Api().get({
     action: 'layersinfo',
     filename: 'Example.jpg'

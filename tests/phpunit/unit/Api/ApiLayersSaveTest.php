@@ -157,6 +157,7 @@ class ApiLayersSaveTest extends \MediaWikiUnitTestCase {
 	public function testSetNameSanitizerAllowsUnicodeScripts(): void {
 		$this->assertSame( 'Пример-набор 层 集', SetNameSanitizer::sanitize( '  Пример-набор 层 集  ' ) );
 		$this->assertSame( '悪いname試験', SetNameSanitizer::sanitize( "悪い/../name\x00試験!" ) );
-		$this->assertSame( 'default', SetNameSanitizer::sanitize( "\x00" ) );
+		// Nothing usable survives, and no name is invented in its place.
+		$this->assertSame( '', SetNameSanitizer::sanitize( "\x00" ) );
 	}
 }

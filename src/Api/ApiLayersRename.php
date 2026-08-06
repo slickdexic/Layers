@@ -101,12 +101,6 @@ class ApiLayersRename extends ApiBase {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
-		// Prevent renaming to 'default'
-		$defaultName = strtolower( LayersConstants::DEFAULT_SET_NAME );
-		if ( strtolower( $newName ) === $defaultName && strtolower( $oldName ) !== $defaultName ) {
-			$this->dieWithError( LayersConstants::ERROR_CANNOT_RENAME_DEFAULT, 'invalidsetname' );
-		}
-
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
 
@@ -310,12 +304,6 @@ class ApiLayersRename extends ApiBase {
 		// Validate new name format
 		if ( !SetNameSanitizer::isValid( $newName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
-		}
-
-		// Prevent renaming to 'default'
-		$defaultName = strtolower( LayersConstants::DEFAULT_SET_NAME );
-		if ( strtolower( $newName ) === $defaultName && strtolower( $oldName ) !== $defaultName ) {
-			$this->dieWithError( LayersConstants::ERROR_CANNOT_RENAME_DEFAULT, 'invalidsetname' );
 		}
 
 		try {

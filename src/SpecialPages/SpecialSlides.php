@@ -175,10 +175,9 @@ class SpecialSlides extends SpecialPage {
 		// Check if slide exists
 		$db = $services->get( 'LayersDatabase' );
 		$normalizedName = LayersConstants::SLIDE_PREFIX . $slideName;
-		$layerSet = $db->getLayerSetByName(
+		$layerSet = $db->getLatestLayerSet(
 			$normalizedName,
-			LayersConstants::TYPE_SLIDE,
-			LayersConstants::DEFAULT_SET_NAME
+			LayersConstants::TYPE_SLIDE
 		);
 
 		if ( !$layerSet ) {

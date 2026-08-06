@@ -885,126 +885,30 @@ describe( 'UIManager', () => {
 			expect( uiManager.showConfirmDialog ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should show info message when default set has no layers', async () => {
+		it( 'should treat a set named "default" like any other set', async () => {
 			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'currentSetName' ) return 'default';
-				if ( key === 'layers' ) return [];
-				return null;
-			} );
-
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-			await uiManager.deleteCurrentSet();
-
-			expect( global.mw.notify ).toHaveBeenCalledWith(
-				'No layers to clear',
-				{ type: 'info' }
-			);
-		} );
-
-		it( 'should prompt to clear layers for default set', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'currentSetName' ) return 'default';
-				if ( key === 'layers' ) return [ { id: 'layer1' } ];
-				return null;
-			} );
-
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-			// Mock the confirm dialog helper to reject
-			uiManager.showConfirmDialog = jest.fn().mockResolvedValue( false );
-
-			await uiManager.deleteCurrentSet();
-
-			expect( uiManager.showConfirmDialog ).toHaveBeenCalledWith(
-				expect.objectContaining( {
-					message: 'Clear all layers from the default set? This will remove all annotations.',
-					isDanger: true
-				} )
-			);
-		} );
-
-		it( 'should clear layers when user confirms default set clear', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'currentSetName' ) return 'default';
-				if ( key === 'layers' ) return [ { id: 'layer1' } ];
-				return null;
-			} );
-
-			const mockCanvasManager = { renderLayers: jest.fn() };
-			const mockLayerPanel = { renderLayerList: jest.fn() };
-			const mockSelectionManager = { clearSelection: jest.fn() };
-			const mockApiManager = { saveLayers: jest.fn().mockResolvedValue( {} ) };
-
-			mockEditor.canvasManager = mockCanvasManager;
-			mockEditor.layerPanel = mockLayerPanel;
-			mockEditor.selectionManager = mockSelectionManager;
-			mockEditor.apiManager = mockApiManager;
-
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-			// Mock the confirm dialog helper to confirm
-			uiManager.showConfirmDialog = jest.fn().mockResolvedValue( true );
-
-			await uiManager.deleteCurrentSet();
-
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
-			expect( mockCanvasManager.renderLayers ).toHaveBeenCalledWith( [] );
-			expect( mockLayerPanel.renderLayerList ).toHaveBeenCalled();
-			expect( mockSelectionManager.clearSelection ).toHaveBeenCalled();
-			expect( mockApiManager.saveLayers ).toHaveBeenCalledWith( [], 'default' );
-		} );
-
-		it( 'should show success notification after clearing default set', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'currentSetName' ) return 'default';
-				if ( key === 'layers' ) return [ { id: 'layer1' } ];
-				return null;
-			} );
-
-			const mockApiManager = { saveLayers: jest.fn().mockResolvedValue( {} ) };
-			mockEditor.apiManager = mockApiManager;
-
-			const uiManager = new UIManager( mockEditor );
-			uiManager.createInterface();
-			// Mock the confirm dialog helper to confirm
-			uiManager.showConfirmDialog = jest.fn().mockResolvedValue( true );
-
-			await uiManager.deleteCurrentSet();
-
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'isDirty', false );
-			expect( global.mw.notify ).toHaveBeenCalledWith(
-				'All layers cleared from default set.',
-				{ type: 'success' }
-			);
-		} );
-
-		it( 'should show error notification when clearing default set fails', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'currentSetName' ) return 'default';
-				if ( key === 'layers' ) return [ { id: 'layer1' } ];
+				if ( key === 'currentSetName' ) {
+					return 'default';
+				}
+				if ( key === 'namedSets' ) {
+					return [ { name: 'default', revision_count: 2 } ];
+				}
 				return null;
 			} );
 
 			const mockApiManager = {
-				saveLayers: jest.fn().mockRejectedValue( new Error( 'Save failed' ) )
+				deleteLayerSet: jest.fn().mockResolvedValue( {} )
 			};
 			mockEditor.apiManager = mockApiManager;
+			mockEditor.revisionManager = { buildSetSelector: jest.fn() };
 
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
-			// Mock the confirm dialog helper to confirm
 			uiManager.showConfirmDialog = jest.fn().mockResolvedValue( true );
 
 			await uiManager.deleteCurrentSet();
 
-			// Wait for the internal .then().catch() chain to complete
-			await new Promise( process.nextTick );
-
-			expect( global.mw.notify ).toHaveBeenCalledWith(
-				'Failed to save changes',
-				{ type: 'error' }
-			);
+			expect( mockApiManager.deleteLayerSet ).toHaveBeenCalledWith( 'default' );
 		} );
 
 		it( 'should confirm and delete non-default set', async () => {
@@ -1118,17 +1022,17 @@ describe( 'UIManager', () => {
 	} );
 
 	describe( 'renameCurrentSet', () => {
-		it( 'should not allow renaming default set', async () => {
+		it( 'should allow renaming a set named "default"', async () => {
 			mockStateManager.get.mockReturnValue( 'default' );
 
 			const uiManager = new UIManager( mockEditor );
 			uiManager.createInterface();
+			uiManager.showPromptDialog = jest.fn().mockResolvedValue( null );
+
 			await uiManager.renameCurrentSet();
 
-			expect( global.mw.notify ).toHaveBeenCalledWith(
-				'The default layer set cannot be renamed',
-				{ type: 'warn' }
-			);
+			// No name is reserved, so the rename prompt is offered as usual
+			expect( uiManager.showPromptDialog ).toHaveBeenCalled();
 		} );
 
 		it( 'should do nothing when user cancels prompt', async () => {

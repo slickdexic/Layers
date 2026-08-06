@@ -31,6 +31,7 @@ use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
 use MediaWiki\Extension\Layers\Utility\RenderCache;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
 use MediaWiki\SpecialPage\SpecialPage;
@@ -87,16 +88,6 @@ class ApiLayersExport extends ApiBase {
 			$this->dieWithError( [ 'apierror-missingparam', 'filename' ], 'missingparam' );
 		}
 
-		$setName = isset( $params['setname'] ) && $params['setname'] !== ''
-			? (string)$params['setname']
-			: (string)$this->getConfig()->get( 'LayersDefaultSetName' );
-		// Normalise generic viewer intents ('on'/'off'/'none') to the default set
-		// so a server-side export still composites the saved annotations instead of
-		// looking up a non-existent set named 'on' and exporting a bare document.
-		if ( in_array( strtolower( $setName ), [ 'on', 'off', 'none' ], true ) ) {
-			$setName = (string)$this->getConfig()->get( 'LayersDefaultSetName' );
-		}
-
 		// Validate file + read permission.
 		$fileInfo = $this->validateAndGetFile( $filename );
 		$title = $fileInfo['title'];
@@ -113,6 +104,12 @@ class ApiLayersExport extends ApiBase {
 
 		$sha1 = $this->getFileSha1( $file, $imgName );
 		$pageCount = $this->getPageCount( $file );
+
+		// Set names are user-defined, so an unnamed request resolves to whatever
+		// this file's most recent set is called rather than to a fixed name.
+		$setName = (string)( SetNameResolver::resolve(
+			$db, $imgName, $sha1, $params['setname'] ?? null
+		) ?? '' );
 
 		$maxPages = (int)$this->getConfig()->get( 'LayersPdfExportMaxPages' );
 		if ( $maxPages > 0 && $pageCount > $maxPages ) {
@@ -434,7 +431,7 @@ class ApiLayersExport extends ApiBase {
 	/** @inheritDoc */
 	protected function getExamplesMessages() {
 		return [
-			'action=layerspdfexport&filename=Example.pdf&setname=default'
+			'action=layerspdfexport&filename=Example.pdf&setname=anatomy-labels'
 				=> 'apihelp-layerspdfexport-example-1',
 		];
 	}

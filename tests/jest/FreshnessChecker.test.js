@@ -86,14 +86,14 @@ describe( 'FreshnessChecker', () => {
 			expect( key ).toBe( 'layers-fresh-My_Test_Image.jpg:annotations' );
 		} );
 
-		it( 'should use default for empty setname', () => {
+		it( 'should use an empty set segment for empty setname', () => {
 			const key = freshnessChecker.getStorageKey( 'image.jpg', '' );
-			expect( key ).toBe( 'layers-fresh-image.jpg:default' );
+			expect( key ).toBe( 'layers-fresh-image.jpg:' );
 		} );
 
-		it( 'should use default for null setname', () => {
+		it( 'should use an empty set segment for null setname', () => {
 			const key = freshnessChecker.getStorageKey( 'image.jpg', null );
-			expect( key ).toBe( 'layers-fresh-image.jpg:default' );
+			expect( key ).toBe( 'layers-fresh-image.jpg:' );
 		} );
 
 		it( 'should handle empty filename', () => {
@@ -179,10 +179,10 @@ describe( 'FreshnessChecker', () => {
 			expect( mockSessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-image.jpg:default' );
 		} );
 
-		it( 'should use default setname when not provided', () => {
+		it( 'should use an empty set segment when setname is not provided', () => {
 			freshnessChecker.clearCache( 'image.jpg' );
 
-			expect( mockSessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-image.jpg:default' );
+			expect( mockSessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-image.jpg:' );
 		} );
 
 		it( 'should handle sessionStorage errors gracefully', () => {
@@ -340,7 +340,7 @@ describe( 'FreshnessChecker', () => {
 			);
 		} );
 
-		it( 'should not include setname for default set', async () => {
+		it( 'should include setname for a set literally named "default"', async () => {
 			mockImg.setAttribute( 'data-layer-revision', '3' );
 			mockImg.setAttribute( 'data-file-name', 'test.jpg' );
 			mockImg.setAttribute( 'data-layer-setname', 'default' );
@@ -357,7 +357,7 @@ describe( 'FreshnessChecker', () => {
 			await freshnessChecker.checkFreshness( mockImg );
 
 			const apiCall = mockApiGet.mock.calls[ 0 ][ 0 ];
-			expect( apiCall.setname ).toBeUndefined();
+			expect( apiCall.setname ).toBe( 'default' );
 		} );
 
 		it( 'should cache API result', async () => {

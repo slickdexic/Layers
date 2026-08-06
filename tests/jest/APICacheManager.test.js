@@ -217,8 +217,9 @@ describe( 'APICacheManager', () => {
 			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
 				'layers-fresh-File.jpg:labels'
 			);
+			// The viewer stores unnamed sets under an empty key
 			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:default'
+				'layers-fresh-File.jpg:'
 			);
 		} );
 
@@ -245,9 +246,9 @@ describe( 'APICacheManager', () => {
 
 		it( 'should handle null currentSetName', () => {
 			cache.clearFreshnessCache( 'File.jpg', [], null );
-			// Should use 'default' as fallback
+			// No name is assumed; the unnamed key is cleared
 			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:default'
+				'layers-fresh-File.jpg:'
 			);
 		} );
 

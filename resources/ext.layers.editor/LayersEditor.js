@@ -250,9 +250,10 @@ class LayersEditor {
 			this.stateManager.set( 'baseHeight', null );
 			this.stateManager.set( 'allLayerSets', [] );
 			this.stateManager.set( 'currentLayerSetId', null );
-			// Named Layer Sets state - use initialSetName from config if provided
+			// Named Layer Sets state - use initialSetName from config if provided.
+			// Empty means the server resolves the image's current set on load/save.
 			this.stateManager.set( 'namedSets', [] );
-			this.stateManager.set( 'currentSetName', this.config.initialSetName || 'default' );
+			this.stateManager.set( 'currentSetName', this.config.initialSetName || '' );
 
 			// Slide mode state - initialized from config
 			this.stateManager.set( 'isSlide', this.config.isSlide || false );
@@ -1510,7 +1511,7 @@ class LayersEditor {
 			url.searchParams.set( 'page', String( page ) );
 			// Preserve the currently active named set across the reload
 			const currentSetName = this.stateManager && this.stateManager.get( 'currentSetName' );
-			if ( currentSetName && currentSetName !== 'default' ) {
+			if ( currentSetName ) {
 				url.searchParams.set( 'setname', currentSetName );
 			}
 			window.location.href = url.toString();

@@ -42,7 +42,7 @@ Named layer sets allow you to maintain **multiple independent annotation sets** 
 - **Allowed characters:** `a-z`, `A-Z`, `0-9`, `-`, `_`
 - **Length:** 1-255 characters
 - **Case-sensitive:** `Labels` and `labels` are different sets
-- **Reserved:** `default` is the default set name
+- **Nothing is reserved:** any name is allowed, including `001`, `default`, or `Whatever-I-Want`. A few generic wikitext values (`on`, `off`, `true`, `false`, `all`, `none`, `0`, `1`) are read as show/hide intents rather than names, so avoid naming a set after one of those.
 
 ### Examples
 
@@ -85,14 +85,14 @@ Each named set maintains its own revision history:
 ### Examples
 
 ```wikitext
-<!-- Default set -->
+<!-- The image's current set, whatever it is named -->
 [[File:Heart.png|layerset=on]]
-[[File:Heart.png|layerset=default]]
 
 <!-- Named sets -->
 [[File:Heart.png|layerset=anatomy]]
 [[File:Heart.png|layerset=blood-flow]]
 [[File:Heart.png|layerset=quiz]]
+[[File:Heart.png|layerset=001]]
 
 <!-- Disable layers -->
 [[File:Heart.png|layerset=off]]
@@ -125,8 +125,6 @@ In the editor, click the layer set dropdown to see:
 3. Enter the new name
 4. Click **Rename**
 
-> **Note:** You cannot rename the `default` set.
-
 ### Deleting a Set
 
 1. Click the layer set dropdown
@@ -134,8 +132,6 @@ In the editor, click the layer set dropdown to see:
 3. Confirm deletion
 
 > **Warning:** Deleting a set removes ALL revisions permanently. This cannot be undone.
-
-> **Note:** You cannot delete the `default` set from the UI.
 
 ### Permissions
 
@@ -148,14 +144,19 @@ In the editor, click the layer set dropdown to see:
 
 ---
 
-## The Default Set
+## Sets With No Name Given
 
-Every image has a `default` set:
+No set name is ever assumed to exist:
 
-- Created automatically on first save
-- Cannot be deleted from the UI
-- Used when `layerset=on` is specified
-- Always available as a fallback
+- When you save without choosing a name, the image's most recently saved set is
+  reused — whatever it is called
+- If the image has no sets at all, a first one is seeded from
+  `$wgLayersDefaultSetName` (`default` out of the box), because a row has to be
+  stored under some name
+- `layerset=on` loads the image's most recently saved set, so an image whose
+  only set is called `001` works exactly like one whose only set is called
+  `default`
+- Any set can be renamed or deleted, including one named `default`
 
 ---
 
@@ -240,7 +241,7 @@ See [[API Reference]] for complete documentation.
 ### Existing Layer Sets
 
 When upgrading from a version without named sets:
-- Existing layers are automatically migrated to the `default` set
+- Existing layers are backfilled under a placeholder name so they stay addressable
 - No data is lost
 - Existing wikitext using `layers=on` continues to work
 
@@ -270,7 +271,7 @@ Consider adding a note on the File: page describing available sets:
 
 ```wikitext
 == Available Layer Sets ==
-* '''default''' — General annotations
+* '''overview''' — General annotations
 * '''anatomy''' — Anatomical labels
 * '''circulation''' — Blood flow diagram
 ```

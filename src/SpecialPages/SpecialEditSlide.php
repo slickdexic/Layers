@@ -6,7 +6,9 @@ namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Utility\FramingHeaders;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
+use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\SpecialPage\SpecialPage;
@@ -79,12 +81,22 @@ class SpecialEditSlide extends SpecialPage {
 		}
 
 		// Get optional parameters - must get setname BEFORE database query
-		$setName = $request->getText( 'setname', LayersConstants::DEFAULT_SET_NAME );
+		$setName = $request->getText( 'setname', '' );
 
 		// Get slide info to determine canvas dimensions
 		$db = $services->get( 'LayersDatabase' );
 		$normalizedName = LayersConstants::SLIDE_PREFIX . $slideName;
-		$layerSet = $db->getLayerSetByName( $normalizedName, LayersConstants::TYPE_SLIDE, $setName );
+		// Slide set names are user-defined; an unnamed request opens whichever set
+		// was saved most recently rather than assuming one called 'default'.
+		$layerSet = SetNameResolver::isSpecificName( $setName )
+			? $db->getLayerSetByName( $normalizedName, LayersConstants::TYPE_SLIDE, $setName )
+			: $db->getLatestLayerSet( $normalizedName, LayersConstants::TYPE_SLIDE );
+		if ( $setName === '' && $layerSet ) {
+			$setName = (string)( $layerSet['name'] ?? $layerSet['setName'] ?? '' );
+		}
+		if ( $setName === '' ) {
+			$setName = SetNameSanitizer::getDefaultName();
+		}
 		// Support both 'canvaswidth'/'canvasheight' (from JS) and 'width'/'height' (legacy)
 		$canvasWidth = $request->getInt( 'canvaswidth', 0 ) ?: $request->getInt( 'width', 0 );
 		$canvasHeight = $request->getInt( 'canvasheight', 0 ) ?: $request->getInt( 'height', 0 );

@@ -191,7 +191,7 @@ class ApiFallback {
 		}
 
 		// Check data-layers-intent attribute — server-set, so any non-empty/non-off value is trusted
-		// This includes named sets like 'default', 'anatomy', etc. set by onParserMakeImageParams
+			// This includes named sets like '001', 'anatomy', etc. set by onParserMakeImageParams
 		if ( img.hasAttribute( 'data-layers-intent' ) ) {
 			const intent = ( img.getAttribute( 'data-layers-intent' ) || '' ).toLowerCase();
 			if ( intent === 'none' || intent === 'off' ) {
@@ -315,8 +315,8 @@ class ApiFallback {
 					// Layer set doesn't exist, but if intent was specified,
 					// still show the overlay so users can create the set
 					if ( intent && intent !== 'off' && intent !== 'none' ) {
-						this.viewerManager.initializeOverlayOnly( img, setName || 'default' );
-						this.debugLog( 'Layer set not found, showing overlay-only for:', setName || 'default' );
+						this.viewerManager.initializeOverlayOnly( img, setName || '' );
+						this.debugLog( 'Layer set not found, showing overlay-only for:', setName || '(unnamed)' );
 					}
 					return;
 				}

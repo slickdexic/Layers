@@ -362,23 +362,6 @@ describe( 'SetSelectorController', () => {
 			expect( mockUiManager.showConfirmDialog ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should call clearDefaultSet for default set', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				if ( key === 'layers' ) {
-					return [ { id: 'layer1' } ];
-				}
-				return null;
-			} );
-
-			await controller.deleteCurrentSet();
-
-			// Should prompt for clearing, not deleting
-			expect( mockUiManager.showConfirmDialog ).toHaveBeenCalled();
-		} );
-
 		it( 'should call API to delete non-default set', async () => {
 			mockStateManager.get.mockImplementation( ( key ) => {
 				if ( key === 'currentSetName' ) {
@@ -459,107 +442,19 @@ describe( 'SetSelectorController', () => {
 		} );
 	} );
 
-	describe( 'clearDefaultSet', () => {
-		beforeEach( () => {
-			controller.createSetSelector();
-		} );
-
-		it( 'should show info message if no layers to clear', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [];
-				}
-				return null;
-			} );
-
-			await controller.clearDefaultSet();
-
-			expect( mw.notify ).toHaveBeenCalledWith(
-				expect.any( String ),
-				{ type: 'info' }
-			);
-		} );
-
-		it( 'should do nothing if user cancels', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [ { id: 'layer1' } ];
-				}
-				return null;
-			} );
-			mockUiManager.showConfirmDialog.mockResolvedValue( false );
-
-			await controller.clearDefaultSet();
-
-			expect( mockStateManager.set ).not.toHaveBeenCalled();
-		} );
-
-		it( 'should clear layers and save on confirmation', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [ { id: 'layer1' } ];
-				}
-				return null;
-			} );
-
-			await controller.clearDefaultSet();
-
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
-			expect( mockApiManager.saveLayers ).toHaveBeenCalledWith( [], 'default' );
-		} );
-
-		it( 'should show error on save failure', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [ { id: 'layer1' } ];
-				}
-				return null;
-			} );
-			mockApiManager.saveLayers.mockRejectedValue( new Error( 'Save failed' ) );
-
-			await controller.clearDefaultSet();
-
-			// Wait for promise rejection
-			await jest.runAllTimersAsync();
-			expect( mw.log.error ).toHaveBeenCalled();
-			expect( mw.notify ).toHaveBeenCalledWith(
-				expect.any( String ),
-				{ type: 'error' }
-			);
-		} );
-
-		it( 'should show success when apiManager not available', async () => {
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [ { id: 'layer1' } ];
-				}
-				return null;
-			} );
-			mockEditor.apiManager = null;
-
-			await controller.clearDefaultSet();
-
-			expect( mw.notify ).toHaveBeenCalledWith(
-				expect.any( String ),
-				{ type: 'success' }
-			);
-		} );
-	} );
-
 	describe( 'renameCurrentSet', () => {
 		beforeEach( () => {
 			controller.createSetSelector();
 		} );
 
-		it( 'should show warning for default set', async () => {
+		it( 'should prompt when renaming a set named "default"', async () => {
 			mockStateManager.get.mockReturnValue( 'default' );
+			mockUiManager.showPromptDialog.mockResolvedValue( null );
 
 			await controller.renameCurrentSet();
 
-			expect( mw.notify ).toHaveBeenCalledWith(
-				expect.any( String ),
-				{ type: 'warn' }
-			);
+			// No name is reserved, so the rename prompt is offered as usual
+			expect( mockUiManager.showPromptDialog ).toHaveBeenCalled();
 		} );
 
 		it( 'should do nothing if user cancels prompt', async () => {
@@ -709,22 +604,6 @@ describe( 'SetSelectorController', () => {
 			await controller.renameCurrentSet();
 
 			expect( mockUiManager.showPromptDialog ).not.toHaveBeenCalled();
-		} );
-
-		it( 'should prevent clearDefaultSet when operation is pending', async () => {
-			mockStateManager.get = jest.fn( ( key ) => {
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				if ( key === 'layers' ) {
-					return [ { id: 'layer1' } ];
-				}
-				return null;
-			} );
-			controller.setPendingState( true );
-			await controller.clearDefaultSet();
-
-			expect( mockUiManager.showConfirmDialog ).not.toHaveBeenCalled();
 		} );
 
 		it( 'should set pending state during delete operation', async () => {
@@ -898,12 +777,12 @@ describe( 'SetSelectorController', () => {
 			expect( controller.setSelectEl.value ).toBe( 'current-set' );
 		} );
 
-		it( 'should fall back to default when stateManager missing during pending', () => {
+		it( 'should fall back to no selection when stateManager missing during pending', () => {
 			controller.isPendingOperation = true;
 			controller.editor.stateManager = null;
 
 			const opt1 = document.createElement( 'option' );
-			opt1.value = 'default';
+			opt1.value = '';
 			controller.setSelectEl.appendChild( opt1 );
 			const opt2 = document.createElement( 'option' );
 			opt2.value = 'other-set';
@@ -913,7 +792,7 @@ describe( 'SetSelectorController', () => {
 			const event = new Event( 'change' );
 			controller.setSelectEl.dispatchEvent( event );
 
-			expect( controller.setSelectEl.value ).toBe( 'default' );
+			expect( controller.setSelectEl.value ).toBe( '' );
 		} );
 	} );
 
@@ -996,90 +875,6 @@ describe( 'SetSelectorController', () => {
 			controller.createNewSet();
 
 			expect( global.mw.notify ).toHaveBeenCalled();
-		} );
-	} );
-
-	describe( 'clearDefaultSet - missing managers', () => {
-		it( 'should clear without stateManager', async () => {
-			global.mw.notify = jest.fn();
-			// Create controller with some layers via stateManager first
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [ { id: 'l1' } ];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				return null;
-			} );
-			mockUiManager.showConfirmDialog.mockResolvedValue( true );
-
-			controller.editor.stateManager = null;
-			controller.editor.apiManager = null;
-
-			// Can't easily test this because stateManager is needed to get layers
-			// but we can verify it doesn't crash
-		} );
-
-		it( 'should clear without canvasManager', async () => {
-			global.mw.notify = jest.fn();
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [ { id: 'l1' } ];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				return null;
-			} );
-			mockUiManager.showConfirmDialog.mockResolvedValue( true );
-			controller.editor.canvasManager = null;
-			controller.editor.apiManager = null;
-
-			await controller.clearDefaultSet();
-
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
-			expect( global.mw.notify ).toHaveBeenCalled();
-		} );
-
-		it( 'should clear without layerPanel', async () => {
-			global.mw.notify = jest.fn();
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [ { id: 'l1' } ];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				return null;
-			} );
-			mockUiManager.showConfirmDialog.mockResolvedValue( true );
-			controller.editor.layerPanel = null;
-			controller.editor.apiManager = null;
-
-			await controller.clearDefaultSet();
-
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
-		} );
-
-		it( 'should clear without selectionManager', async () => {
-			global.mw.notify = jest.fn();
-			mockStateManager.get.mockImplementation( ( key ) => {
-				if ( key === 'layers' ) {
-					return [ { id: 'l1' } ];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				return null;
-			} );
-			mockUiManager.showConfirmDialog.mockResolvedValue( true );
-			controller.editor.selectionManager = null;
-			controller.editor.apiManager = null;
-
-			await controller.clearDefaultSet();
-
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
 		} );
 	} );
 

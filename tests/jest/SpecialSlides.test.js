@@ -542,16 +542,25 @@ describe( 'SpecialSlides', () => {
 		} );
 
 		it( 'calls postWithToken with correct parameters', async () => {
-			await manager.deleteSlide( 'TestSlide' );
+			await manager.deleteSlide( 'TestSlide', 'my-set' );
 			expect( mockApi.postWithToken ).toHaveBeenCalledWith( 'csrf', {
 				action: 'layersdelete',
 				slidename: 'TestSlide',
-				setname: 'default'
+				setname: 'my-set'
 			} );
 		} );
 
+		it( 'refuses to delete without a set name', async () => {
+			await manager.deleteSlide( 'TestSlide', '' );
+			expect( mockApi.postWithToken ).not.toHaveBeenCalled();
+			expect( global.mw.notify ).toHaveBeenCalledWith(
+				expect.any( String ),
+				{ type: 'error' }
+			);
+		} );
+
 		it( 'shows success notification after delete', async () => {
-			await manager.deleteSlide( 'TestSlide' );
+			await manager.deleteSlide( 'TestSlide', 'my-set' );
 			expect( global.mw.notify ).toHaveBeenCalledWith(
 				expect.any( String ),
 				{ type: 'success' }
@@ -559,13 +568,13 @@ describe( 'SpecialSlides', () => {
 		} );
 
 		it( 'reloads slides after successful delete', async () => {
-			await manager.deleteSlide( 'TestSlide' );
+			await manager.deleteSlide( 'TestSlide', 'my-set' );
 			expect( manager.loadSlides ).toHaveBeenCalled();
 		} );
 
 		it( 'shows error notification on API failure', async () => {
 			mockApi.postWithToken.mockRejectedValue( new Error( 'Delete failed' ) );
-			manager.deleteSlide( 'TestSlide' );
+			manager.deleteSlide( 'TestSlide', 'my-set' );
 			await flushPromises();
 			expect( global.mw.notify ).toHaveBeenCalledWith(
 				expect.any( String ),
@@ -575,7 +584,7 @@ describe( 'SpecialSlides', () => {
 
 		it( 'logs error on API failure', async () => {
 			mockApi.postWithToken.mockRejectedValue( new Error( 'Delete failed' ) );
-			manager.deleteSlide( 'TestSlide' );
+			manager.deleteSlide( 'TestSlide', 'my-set' );
 			await flushPromises();
 			expect( global.mw.log.error ).toHaveBeenCalled();
 		} );
@@ -599,8 +608,8 @@ describe( 'SpecialSlides', () => {
 
 		it( 'calls deleteSlide when user confirms', async () => {
 			global.OO.ui.confirm.mockResolvedValue( true );
-			await manager.confirmDeleteSlide( 'TestSlide' );
-			expect( manager.deleteSlide ).toHaveBeenCalledWith( 'TestSlide' );
+			await manager.confirmDeleteSlide( 'TestSlide', 'my-set' );
+			expect( manager.deleteSlide ).toHaveBeenCalledWith( 'TestSlide', 'my-set' );
 		} );
 
 		it( 'does not call deleteSlide when user cancels', async () => {
@@ -785,15 +794,15 @@ describe( 'SpecialSlides', () => {
 			expect( editSpy ).toHaveBeenCalledWith( 'my-slide' );
 		} );
 
-		it( 'delete button callback should confirm delete by name', () => {
+		it( 'delete button callback should confirm delete by name and set', () => {
 			const confirmSpy = jest.spyOn( manager, 'confirmDeleteSlide' ).mockImplementation( () => {} );
-			mockEl.data.mockReturnValue( 'my-slide' );
+			mockEl.data.mockImplementation( ( key ) => ( key === 'setname' ? 'my-set' : 'my-slide' ) );
 			manager.bindEvents();
 
 			const deleteCb = getCallback( 'click', '.layers-slide-delete-btn' );
 			deleteCb( { currentTarget: mockEl } );
 
-			expect( confirmSpy ).toHaveBeenCalledWith( 'my-slide' );
+			expect( confirmSpy ).toHaveBeenCalledWith( 'my-slide', 'my-set' );
 		} );
 
 		it( 'pagination prev callback should go back if offset allows', () => {

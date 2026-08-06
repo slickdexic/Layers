@@ -26,7 +26,10 @@ namespace MediaWiki\Extension\Layers;
 class LayersConstants {
 
 	/**
-	 * Default layer set name used when no set name is specified.
+	 * Name given to the first layer set created for an image when the caller did
+	 * not supply one. Set names are user-defined and nothing is reserved; this is
+	 * only a seed for a brand-new row, never a name that is looked up or assumed
+	 * to exist. Use Utility\SetNameResolver to resolve a set to operate on.
 	 */
 	public const DEFAULT_SET_NAME = 'default';
 
@@ -145,11 +148,6 @@ class LayersConstants {
 	 * Error: Image too large
 	 */
 	public const ERROR_IMAGE_TOO_LARGE = 'layers-image-too-large';
-
-	/**
-	 * Error: Cannot rename to 'default'
-	 */
-	public const ERROR_CANNOT_RENAME_DEFAULT = 'layers-cannot-rename-to-default';
 
 	/**
 	 * Error: Set name already exists

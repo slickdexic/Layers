@@ -9,6 +9,9 @@ CREATE TABLE /*_*/layer_sets (
     ls_user_id int unsigned DEFAULT NULL,
     ls_timestamp binary(14) NOT NULL,
     ls_revision int unsigned NOT NULL DEFAULT 1,
+    -- Set names are user-defined and nothing is reserved. This column DEFAULT
+    -- only exists so a row can never store an empty name; it is never used as
+    -- a lookup key.
     ls_name varchar(255) NOT NULL DEFAULT 'default',
     ls_page smallint unsigned NOT NULL DEFAULT 1,
     ls_size int unsigned NOT NULL DEFAULT 0,

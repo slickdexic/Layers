@@ -110,7 +110,7 @@
 
 		/**
 		 * Create the Named Set selector UI
-		 * Allows users to switch between different annotation sets (e.g., "default", "anatomy-labels")
+		 * Allows users to switch between different annotation sets (e.g., "001", "anatomy-labels")
 		 * @return {HTMLElement} The set selector wrapper element
 		 */
 		createSetSelector() {
@@ -195,7 +195,7 @@
 				if ( this.isPendingOperation ) {
 					// Restore previous selection
 					const currentSet = this.editor.stateManager ?
-						this.editor.stateManager.get( 'currentSetName' ) : 'default';
+						this.editor.stateManager.get( 'currentSetName' ) : '';
 					this.setSelectEl.value = currentSet;
 					return;
 				}
@@ -225,7 +225,7 @@
 							if ( !confirmed ) {
 								// Restore previous selection
 								const currentSet = this.editor.stateManager ?
-									this.editor.stateManager.get( 'currentSetName' ) : 'default';
+									this.editor.stateManager.get( 'currentSetName' ) : '';
 								this.setSelectEl.value = currentSet;
 								return;
 							}
@@ -267,7 +267,7 @@
 						this.showNewSetInput( false );
 						// Restore previous selection
 						const currentSet = this.editor.stateManager ?
-							this.editor.stateManager.get( 'currentSetName' ) : 'default';
+							this.editor.stateManager.get( 'currentSetName' ) : '';
 						this.setSelectEl.value = currentSet;
 					}
 				} );
@@ -380,15 +380,9 @@
 			}
 
 			const currentSet = this.editor.stateManager ?
-				this.editor.stateManager.get( 'currentSetName' ) : 'default';
+				this.editor.stateManager.get( 'currentSetName' ) : '';
 
 			if ( !currentSet ) {
-				return;
-			}
-
-			// For the default set, offer to clear all layers instead of deleting
-			if ( currentSet === 'default' ) {
-				await this.clearDefaultSet();
 				return;
 			}
 
@@ -438,81 +432,6 @@
 		}
 
 		/**
-		 * Clear all layers from the default set (cannot delete default)
-		 * @private
-		 */
-		async clearDefaultSet() {
-			// Prevent concurrent operations
-			if ( this.isPendingOperation ) {
-				return;
-			}
-
-			const layers = this.editor.stateManager ?
-				this.editor.stateManager.get( 'layers' ) : [];
-			if ( !layers || layers.length === 0 ) {
-				mw.notify( this.getMessage( 'layers-no-layers-to-clear', 'No layers to clear' ), { type: 'info' } );
-				return;
-			}
-
-			// Confirm clearing all layers from default set using DialogManager
-			const clearMsg = this.getMessage(
-				'layers-clear-default-set-confirm',
-				'Clear all layers from the default set? This will remove all annotations.'
-			);
-
-			const confirmed = await this.showConfirmDialog( {
-				message: clearMsg,
-				title: this.getMessage( 'layers-confirm-clear-title', 'Clear Layers' ),
-				confirmText: this.getMessage( 'layers-clear', 'Clear' ),
-				isDanger: true
-			} );
-
-			if ( !confirmed ) {
-				return;
-			}
-
-			// Clear all layers and save immediately
-			if ( this.editor.stateManager ) {
-				this.editor.stateManager.set( 'layers', [] );
-			}
-			if ( this.editor.canvasManager ) {
-				this.editor.canvasManager.renderLayers( [] );
-			}
-			if ( this.editor.layerPanel ) {
-				this.editor.layerPanel.renderLayerList();
-			}
-			if ( this.editor.selectionManager ) {
-				this.editor.selectionManager.clearSelection();
-			}
-
-			// Save the empty layer set immediately via API
-			if ( this.editor.apiManager && typeof this.editor.apiManager.saveLayers === 'function' ) {
-				this.setPendingState( true );
-				this.editor.apiManager.saveLayers( [], 'default' ).then( () => {
-					if ( this.editor.stateManager ) {
-						this.editor.stateManager.set( 'isDirty', false );
-					}
-					mw.notify(
-						this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
-						{ type: 'success' }
-					);
-				} ).catch( ( error ) => {
-					if ( mw.log && mw.log.error ) {
-						mw.log.error( '[SetSelectorController] Failed to save cleared layers:', error );
-					}
-					mw.notify( this.getMessage( 'layers-save-failed', 'Failed to save changes' ), { type: 'error' } );
-				} ).finally( () => {
-					this.setPendingState( false );
-				} );
-			} else {
-				mw.notify(
-					this.getMessage( 'layers-default-set-cleared', 'All layers cleared from default set.' ),
-					{ type: 'success' }
-				);
-			}
-		}
-
-		/**
 		 * Rename the current layer set
 		 * Uses a prompt dialog to get the new name, then calls API to rename
 		 */
@@ -523,14 +442,9 @@
 			}
 
 			const currentSet = this.editor.stateManager ?
-				this.editor.stateManager.get( 'currentSetName' ) : 'default';
+				this.editor.stateManager.get( 'currentSetName' ) : '';
 
-			// For default set, don't allow rename
-			if ( currentSet === 'default' ) {
-				mw.notify(
-					this.getMessage( 'layers-cannot-rename-default', 'The default layer set cannot be renamed' ),
-					{ type: 'warn' }
-				);
+			if ( !currentSet ) {
 				return;
 			}
 

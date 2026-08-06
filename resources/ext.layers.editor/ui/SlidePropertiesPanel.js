@@ -576,11 +576,11 @@
 			}
 
 			const slideName = this.editor.stateManager.get( 'slideName' ) || '';
-			const setName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+			const setName = this.editor.stateManager.get( 'currentSetName' ) || '';
 
 			// Build the wikitext
 			let embedCode = '{{#Slide: ' + slideName;
-			if ( setName && setName !== 'default' ) {
+			if ( setName ) {
 				embedCode += ' | layerset=' + setName;
 			}
 			embedCode += ' }}';

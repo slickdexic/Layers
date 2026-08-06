@@ -723,20 +723,20 @@ describe( 'ApiFallback', () => {
 			);
 		} );
 
-		it( 'should initialize overlay-only with default when intent is "on"', async () => {
-			mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
-			mockApi.get.mockResolvedValue( { layersinfo: {} } );
+it( 'should initialize overlay-only with no set name when intent is "on"', async () => {
+				mockUrlParser.inferFilename.mockReturnValue( 'Test.jpg' );
+				mockApi.get.mockResolvedValue( { layersinfo: {} } );
 
-			const img = document.createElement( 'img' );
-			img.setAttribute( 'data-layers-intent', 'on' );
-			fallback.processCandidate( img, mockApi, true, 6, 'File' );
+				const img = document.createElement( 'img' );
+				img.setAttribute( 'data-layers-intent', 'on' );
+				fallback.processCandidate( img, mockApi, true, 6, 'File' );
 
-			await jest.runAllTimersAsync();
+				await jest.runAllTimersAsync();
 
-			expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
-			expect( mockViewerManager.initializeOverlayOnly ).toHaveBeenCalledWith(
-				img,
-				'default'
+				expect( mockViewerManager.initializeViewer ).not.toHaveBeenCalled();
+				expect( mockViewerManager.initializeOverlayOnly ).toHaveBeenCalledWith(
+					img,
+					''
 			);
 		} );
 

@@ -1346,11 +1346,11 @@ describe( 'SlidePropertiesPanel', function () {
 			expect( writeTextMock ).toHaveBeenCalledWith( expect.stringContaining( 'layerset=custom-set' ) );
 		} );
 
-		it( 'should not include layerset when default', function () {
-			mockEditor.stateManager.get = jest.fn( function ( key ) {
-				const state = {
-					slideName: 'MySlide',
-					currentSetName: 'default'
+it( 'should not include layerset when there is no set name', function () {
+				mockEditor.stateManager.get = jest.fn( function ( key ) {
+					const state = {
+						slideName: 'MySlide',
+						currentSetName: ''
 				};
 				return state[ key ];
 			} );

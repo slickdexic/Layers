@@ -1003,8 +1003,9 @@
 		
 		const layersJson = JSON.stringify( dataObject );
 		
-		// Get current set name from state, fallback to 'default'
-		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+		// Set name from state. Empty means "whichever set this image currently
+		// has" - the server resolves it, since no name is ever assumed to exist.
+		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || '';
 		
 		// Debug logging controlled by extension config
 		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
@@ -1147,7 +1148,7 @@
 
 	reloadRevisions() {
 		// Get the current set name to reload the correct set's data
-		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || '';
 		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 			mw.log( '[APIManager] reloadRevisions for set:', currentSetName );
 		}
@@ -1596,7 +1597,7 @@
 			const namedSets = this.editor && this.editor.stateManager ?
 				this.editor.stateManager.get( 'namedSets' ) || [] : [];
 			const currentSetName = this.editor && this.editor.stateManager ?
-				this.editor.stateManager.get( 'currentSetName' ) || 'default' : 'default';
+				this.editor.stateManager.get( 'currentSetName' ) || '' : '';
 			this.cacheManager.clearFreshnessCache( filename, namedSets, currentSetName );
 			return;
 		}
@@ -1612,10 +1613,10 @@
 
 			// Clear cache for all known set names
 			const namedSets = this.editor.stateManager.get( 'namedSets' ) || [];
-			const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+			const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || '';
 
-			// Build list of set names to clear
-			const setNames = new Set( [ 'default', currentSetName ] );
+			// Build list of set names to clear; the viewer keys unnamed sets as ''
+			const setNames = new Set( [ '', currentSetName ] );
 			namedSets.forEach( ( set ) => {
 				if ( set && set.name ) {
 					setNames.add( set.name );

@@ -1126,7 +1126,7 @@ describe( 'SlideController', () => {
 					slideName: 'MinimalSlide',
 					canvasWidth: 800,
 					canvasHeight: 600,
-					layerSetName: 'default'
+					layerSetName: ''
 				} )
 			);
 		} );
@@ -1861,14 +1861,14 @@ describe( 'SlideController', () => {
 			mockMw.util = savedUtil;
 		} );
 
-		it( 'should omit setname param when layerSetName is default (mw.util path)', () => {
-			const controller = new SlideController();
-			const url = controller.buildSlideEditorUrl( {
-				slideName: 'TestSlide',
-				layerSetName: 'default'
-			} );
+it( 'should include setname param for a set named "default" (mw.util path)', () => {
+				const controller = new SlideController();
+				const url = controller.buildSlideEditorUrl( {
+					slideName: 'TestSlide',
+					layerSetName: 'default'
+				} );
 
-			expect( url ).not.toContain( 'setname=' );
+				expect( url ).toContain( 'setname=default' );
 		} );
 
 		it( 'should include setname param for non-default set (mw.util path)', () => {

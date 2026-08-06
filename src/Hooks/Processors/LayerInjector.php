@@ -12,8 +12,8 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
-use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
 use Psr\Log\LoggerInterface;
 
@@ -114,18 +114,14 @@ class LayerInjector {
 		// Determine which layer set to fetch
 		$sha1 = ForeignFileHelper::getFileSha1( $file );
 		$layerSet = null;
-		if ( $setNameFromQueue === null
-			|| $setNameFromQueue === 'on'
-			|| $setNameFromQueue === 'all'
-			|| $setNameFromQueue === 'true' ) {
-			// Default behavior - get the default/latest set
-			$layerSet = $db->getLatestLayerSet( $filename, $sha1, null, $page );
-		} elseif ( $setNameFromQueue === 'off' || $setNameFromQueue === 'none' || $setNameFromQueue === 'false' ) {
+		if ( SetNameResolver::isHideIntent( $setNameFromQueue ) ) {
 			// Explicitly disabled - don't fetch any layer set
 			return;
-		} else {
-			// Named set
+		}
+		if ( SetNameResolver::isSpecificName( $setNameFromQueue ) ) {
 			$layerSet = $db->getLayerSetByName( $filename, $sha1, $setNameFromQueue, $page );
+		} else {
+			$layerSet = $db->getLatestLayerSet( $filename, $sha1, null, $page );
 		}
 
 		if ( $layerSet ) {
@@ -173,8 +169,8 @@ class LayerInjector {
 				$page
 			);
 		} else {
-			// Plain named set (e.g. 'default', 'anatomy-labels').
-			// This is the common case for [[File:...|layerset=default]] and similar.
+			// Plain named set (e.g. '001', 'anatomy-labels').
+			// This is the common case for [[File:...|layerset=001]] and similar.
 			$layerSet = $db->getLayerSetByName(
 				$file->getName(),
 				ForeignFileHelper::getFileSha1( $file ),
@@ -239,7 +235,8 @@ class LayerInjector {
 	 *
 	 * @param array &$attribs Reference to image attributes array
 	 * @param mixed $file The File object
-	 * @param string|null $setName Optional named set (defaults to 'default')
+	 * @param string|null $setName Optional named set; when absent or a generic
+	 *        wikitext intent, the image's most recent set is used
 	 * @param string $context Description of calling context for logging
 	 * @return bool True if layers were injected, false otherwise
 	 */
@@ -261,11 +258,7 @@ class LayerInjector {
 		// Get layer data from database
 		// Use getLatestLayerSet with optional setName filter (sha1 required for DB lookup)
 		$sha1 = ForeignFileHelper::getFileSha1( $file );
-		$isNamedSet = $setName !== null
-			&& $setName !== LayersConstants::DEFAULT_SET_NAME
-			&& $setName !== 'on'
-			&& $setName !== 'all';
-		if ( $isNamedSet ) {
+		if ( SetNameResolver::isSpecificName( $setName ) ) {
 			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1, $setName );
 		} else {
 			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1 );

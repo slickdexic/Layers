@@ -6,6 +6,31 @@
 ( function () {
 	'use strict';
 
+	/**
+	 * Whether a set reference names a specific layer set rather than a generic
+	 * wikitext intent such as 'on'. Prefers the shared rules in
+	 * ext.layers.shared/SetNameUtil.js and falls back to an equivalent local
+	 * check. Set names are user-defined and nothing is reserved.
+	 *
+	 * @param {*} value Raw set reference
+	 * @return {boolean}
+	 */
+	function isSpecificSetName( value ) {
+		const util = window.Layers && window.Layers.SetNameUtil;
+		if ( util && typeof util.isSpecificName === 'function' ) {
+			return util.isSpecificName( value );
+		}
+		// Equivalent local rules, so a load-order surprise can never silently
+		// drop a user-defined set name from a request.
+		if ( typeof value !== 'string' ) {
+			return false;
+		}
+		const normalized = value.trim().toLowerCase();
+		return normalized !== '' && [
+			'on', 'true', 'all', '1', 'off', 'none', 'false', '0'
+		].indexOf( normalized ) === -1;
+	}
+
 	/** SlideController class - manages slide rendering and interactions */
 	class SlideController {
 		/** Creates a new SlideController instance */
@@ -89,7 +114,7 @@
 				const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
 				const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
 				// Slides use data-layerset (from SlideHooks.php)
-				const setName = container.getAttribute( 'data-layerset' ) || 'default';
+				const setName = container.getAttribute( 'data-layerset' ) || '';
 
 				// Mark as pending - but will be reset to false on failure so retry is possible
 				container.layersSlideInitialized = true;
@@ -536,7 +561,7 @@
 				slideContainers,
 				( container ) => {
 				const slideName = container.getAttribute( 'data-slide-name' );
-				const setName = container.getAttribute( 'data-layerset' ) || 'default';
+				const setName = container.getAttribute( 'data-layerset' ) || '';
 				const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
 				const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
 
@@ -703,7 +728,7 @@
 				const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
 				const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
 				const backgroundColor = container.getAttribute( 'data-background' ) || '#ffffff';
-				const layerSetName = container.getAttribute( 'data-layerset' ) || 'default';
+				const layerSetName = container.getAttribute( 'data-layerset' ) || '';
 
 				this.debugLog( 'Slide edit clicked:', slideName, 'lockMode:', lockMode );
 
@@ -794,7 +819,7 @@
 			const canvasWidth = parseInt( container.getAttribute( 'data-canvas-width' ), 10 ) || 800;
 			const canvasHeight = parseInt( container.getAttribute( 'data-canvas-height' ), 10 ) || 600;
 			const backgroundColor = container.getAttribute( 'data-background' ) || '#ffffff';
-			const layerSetName = container.getAttribute( 'data-layerset' ) || 'default';
+			const layerSetName = container.getAttribute( 'data-layerset' ) || '';
 
 			this.debugLog( 'Slide edit clicked:', slideName, 'layerset:', layerSetName );
 
@@ -880,7 +905,7 @@
 				const modal = new window.Layers.Modal.LayersEditorModal();
 				const editorUrl = this.buildSlideEditorUrl( slideData ) + '&modal=1';
 				const slideFilename = 'Slide:' + slideData.slideName;
-				const setName = slideData.layerSetName || 'default';
+				const setName = slideData.layerSetName || '';
 
 				modal.open( slideFilename, setName, editorUrl ).then( ( result ) => {
 					if ( result && result.saved ) {
@@ -942,7 +967,7 @@
 			const params = new URLSearchParams();
 			params.set( 'action', 'editslide' );
 			params.set( 'slidename', slideData.slideName );
-			if ( slideData.layerSetName && slideData.layerSetName !== 'default' ) {
+			if ( isSpecificSetName( slideData.layerSetName ) ) {
 				params.set( 'setname', slideData.layerSetName );
 			}
 			if ( slideData.lockMode && slideData.lockMode !== 'none' ) {

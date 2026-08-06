@@ -125,11 +125,12 @@ class SetNameSanitizerTest extends \MediaWikiUnitTestCase {
 	/**
 	 * @covers ::sanitize
 	 */
-	public function testSanitizeReturnsDefaultForEmpty() {
-		$this->assertEquals( 'default', SetNameSanitizer::sanitize( '' ) );
-		$this->assertEquals( 'default', SetNameSanitizer::sanitize( '   ' ) );
+	public function testSanitizeReturnsEmptyWhenNothingUsableRemains() {
+		// No name is reserved, so sanitize() never substitutes one.
+		$this->assertSame( '', SetNameSanitizer::sanitize( '' ) );
+		$this->assertSame( '', SetNameSanitizer::sanitize( '   ' ) );
 		// String that becomes empty after sanitization
-		$this->assertEquals( 'default', SetNameSanitizer::sanitize( '@#$%^&*()' ) );
+		$this->assertSame( '', SetNameSanitizer::sanitize( '@#$%^&*()' ) );
 	}
 
 	/**
@@ -259,8 +260,8 @@ class SetNameSanitizerTest extends \MediaWikiUnitTestCase {
 	public static function provideConsistencyTestCases(): array {
 		return [
 			'normal text' => [ 'my-set', 'my-set', true ],
-			'empty string' => [ '', 'default', false ],
-			'whitespace only' => [ '   ', 'default', false ],
+			'empty string' => [ '', '', false ],
+			'whitespace only' => [ '   ', '', false ],
 			'with control char' => [ "te\x00st", 'test', false ],
 			'with path separator' => [ 'parent/child', 'parentchild', false ],
 			'unicode text' => [ '日本語セット', '日本語セット', true ],
@@ -300,7 +301,7 @@ class SetNameSanitizerTest extends \MediaWikiUnitTestCase {
 
 	/**
 	 * @covers ::sanitize
-	 * Tests that output from sanitize always passes isValid
+	 * Tests that any non-empty output from sanitize passes isValid
 	 */
 	public function testSanitizedOutputIsAlwaysValid() {
 		$inputs = [
@@ -315,6 +316,11 @@ class SetNameSanitizerTest extends \MediaWikiUnitTestCase {
 
 		foreach ( $inputs as $input ) {
 			$sanitized = SetNameSanitizer::sanitize( $input );
+			if ( $sanitized === '' ) {
+				// Nothing usable survived; callers decide what that means.
+				$this->assertFalse( SetNameSanitizer::isValid( $sanitized ) );
+				continue;
+			}
 			$this->assertTrue(
 				SetNameSanitizer::isValid( $sanitized ),
 				"sanitize() output should always be valid, but failed for input: " . json_encode( $input )

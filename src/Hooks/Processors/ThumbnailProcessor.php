@@ -6,7 +6,6 @@ namespace MediaWiki\Extension\Layers\Hooks\Processors;
 
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
-use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\MediaWikiServices;
@@ -350,7 +349,7 @@ class ThumbnailProcessor {
 			if ( $layerSet && isset( $layerSet['data']['layers'] ) && is_array( $layerSet['data']['layers'] ) ) {
 				$data = $layerSet['data'];
 				$layers = $data['layers'];
-				$setLabel = $layersFlag ?? LayersConstants::DEFAULT_SET_NAME;
+				$setLabel = $layerSet['name'] ?? $layersFlag ?? '(latest)';
 				$this->log( sprintf( 'DB fallback: %d layers (set: %s)', count( $layers ), $setLabel ) );
 				return [
 					'layers' => $layers,
@@ -358,7 +357,7 @@ class ThumbnailProcessor {
 					'backgroundOpacity' => $data['backgroundOpacity'] ?? 1.0,
 					// Include revision and set name for client-side freshness checking (FR-10)
 					'revision' => $layerSet['revision'] ?? null,
-					'setName' => $layerSet['name'] ?? $layerSet['setName'] ?? LayersConstants::DEFAULT_SET_NAME
+					'setName' => $layerSet['name'] ?? $layerSet['setName'] ?? ''
 				];
 			} else {
 				$this->log( 'fetchLayersFromDatabase: layerSet has no valid layers array' );
@@ -413,14 +412,14 @@ class ThumbnailProcessor {
 				$backgroundOpacity = $layerData['backgroundOpacity'] ?? 1.0;
 				// Extract revision and setName for freshness checking (FR-10)
 				$revision = $layerData['revision'] ?? null;
-				$setName = $layerData['setName'] ?? LayersConstants::DEFAULT_SET_NAME;
+				$setName = $layerData['setName'] ?? '';
 			} else {
 				// Old format: raw layers array
 				$layers = $layerData;
 				$backgroundVisible = true;
 				$backgroundOpacity = 1.0;
 				$revision = null;
-				$setName = LayersConstants::DEFAULT_SET_NAME;
+				$setName = '';
 			}
 
 			$payload = [
@@ -637,9 +636,9 @@ class ThumbnailProcessor {
 			];
 
 			// Add autocreate flag when linking to a specific named set
-			// This allows auto-creation of the set if it doesn't exist
-			// (only for named sets, not for generic 'on' or 'default')
-			if ( $setName !== null && $setName !== '' && $setName !== LayersConstants::DEFAULT_SET_NAME ) {
+			// This allows auto-creation of the set if it doesn't exist. Generic
+			// intents such as 'on' name no set, so there is nothing to create.
+			if ( SetNameResolver::isSpecificName( $setName ) ) {
 				$urlParams['autocreate'] = '1';
 			}
 

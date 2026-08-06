@@ -181,7 +181,7 @@
 		 */
 		downloadAsImage( options = {} ) {
 			const filename = this.editor.stateManager.get( 'filename' ) || 'image';
-			const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+			const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || '';
 
 			// Remove File: prefix and extension from filename
 			const baseName = filename
@@ -190,8 +190,9 @@
 			const format = options.format || 'png';
 			const ext = format === 'jpeg' ? '.jpg' : '.png';
 
-			// Format: ImageName-LayerSetName.ext (omit -default for default set)
-			const setNamePart = currentSetName === 'default' ? '' : `-${ currentSetName }`;
+			// Format: ImageName-LayerSetName.ext. Set names are user-defined, so the
+			// name is always included when there is one - no name is special.
+			const setNamePart = currentSetName ? `-${ currentSetName }` : '';
 
 			// Sanitize the final filename to prevent filesystem issues
 			let downloadName;

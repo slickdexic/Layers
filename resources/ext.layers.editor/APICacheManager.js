@@ -107,7 +107,8 @@
 				const STORAGE_KEY_PREFIX = 'layers-fresh-';
 				const normalizedFilename = ( filename || '' ).replace( /\s+/g, '_' );
 
-				const setNames = new Set( [ 'default', currentSetName || 'default' ] );
+				// The viewer stores unnamed sets under an empty key, so clear that too
+				const setNames = new Set( [ '', currentSetName || '' ] );
 				( namedSets || [] ).forEach( ( set ) => {
 					if ( set && set.name ) {
 						setNames.add( set.name );

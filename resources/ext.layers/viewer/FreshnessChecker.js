@@ -20,6 +20,31 @@
 	'use strict';
 
 	/**
+	 * Whether a set reference names a specific layer set rather than a generic
+	 * wikitext intent such as 'on'. Prefers the shared rules in
+	 * ext.layers.shared/SetNameUtil.js and falls back to an equivalent local
+	 * check. Set names are user-defined and nothing is reserved.
+	 *
+	 * @param {*} value Raw set reference
+	 * @return {boolean}
+	 */
+	function isSpecificSetName( value ) {
+		const util = window.Layers && window.Layers.SetNameUtil;
+		if ( util && typeof util.isSpecificName === 'function' ) {
+			return util.isSpecificName( value );
+		}
+		// Equivalent local rules, so a load-order surprise can never silently
+		// drop a user-defined set name from a request.
+		if ( typeof value !== 'string' ) {
+			return false;
+		}
+		const normalized = value.trim().toLowerCase();
+		return normalized !== '' && [
+			'on', 'true', 'all', '1', 'off', 'none', 'false', '0'
+		].indexOf( normalized ) === -1;
+	}
+
+	/**
 	 * Cache duration for freshness checks in milliseconds.
 	 * After this time, a new API call will be made to check for updates.
 	 * @type {number}
@@ -81,7 +106,7 @@
 		getStorageKey( filename, setName ) {
 			// Normalize filename to handle spaces and special chars
 			const normalizedFilename = ( filename || '' ).replace( /\s+/g, '_' );
-			const normalizedSetName = setName || 'default';
+			const normalizedSetName = setName || '';
 			return STORAGE_KEY_PREFIX + normalizedFilename + ':' + normalizedSetName;
 		}
 
@@ -141,11 +166,11 @@
 		 * Clear the freshness cache for a specific file/set.
 		 *
 		 * @param {string} filename The image filename
-		 * @param {string} [setName='default'] The layer set name
+		 * @param {string} [setName] The layer set name; omit for an unnamed set
 		 */
 		clearCache( filename, setName ) {
 			try {
-				const key = this.getStorageKey( filename, setName || 'default' );
+				const key = this.getStorageKey( filename, setName || '' );
 				sessionStorage.removeItem( key );
 				this.debugLog( 'Cleared freshness cache for', filename, ':', setName );
 			} catch ( e ) {
@@ -163,7 +188,7 @@
 			return new Promise( ( resolve ) => {
 				// Extract metadata from image attributes
 				const inlineRevision = parseInt( img.getAttribute( 'data-layer-revision' ), 10 );
-				const setName = img.getAttribute( 'data-layer-setname' ) || 'default';
+				const setName = img.getAttribute( 'data-layer-setname' ) || '';
 				const filename = img.getAttribute( 'data-file-name' );
 
 				// If no revision attribute, we can't check freshness - assume fresh
@@ -207,8 +232,9 @@
 					limit: 1 // We only need the latest revision
 				};
 
-				// If specific set name (not default), request it
-				if ( setName && setName !== 'default' && setName !== 'on' ) {
+				// Only a specific set name narrows the query; a generic intent lets
+				// the server resolve whichever set this image actually has.
+				if ( isSpecificSetName( setName ) ) {
 					params.setname = setName;
 				}
 				const freshPage = parseInt( img.getAttribute( 'data-page' ), 10 );

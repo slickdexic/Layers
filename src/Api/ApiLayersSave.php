@@ -13,6 +13,7 @@ use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
@@ -110,8 +111,13 @@ class ApiLayersSave extends ApiBase {
 		}
 
 		$data = $params['data'];
-		$rawSetName = $params['setname'] ?? LayersConstants::DEFAULT_SET_NAME;
-		$setName = SetNameSanitizer::sanitize( $rawSetName );
+		// A generic viewer intent is not a set name; treat it as "unnamed" so the
+		// save resolves to the image's current set instead of creating one called
+		// "on". Set names are user-defined and nothing is reserved.
+		$rawSetName = (string)( $params['setname'] ?? '' );
+		$setName = SetNameResolver::isSpecificName( $rawSetName )
+			? SetNameSanitizer::sanitize( $rawSetName )
+			: '';
 
 		// Size limit check
 		$maxBytes = (int)$this->getConfig()->get( 'LayersMaxBytes' );
@@ -322,6 +328,14 @@ class ApiLayersSave extends ApiBase {
 				'page' => $page,
 			];
 
+			// An unnamed save targets whatever set this page currently has, so a file
+			// whose only set is called "001" keeps saving into "001" instead of
+			// silently sprouting a second set under the configured seed name.
+			if ( $setName === '' ) {
+				$setName = SetNameResolver::latestName( $db, $fileDbKey, $sha1, $page )
+					?? SetNameSanitizer::getDefaultName();
+			}
+
 			// DATABASE SAVE: Persist layer set with automatic versioning
 			// LayersDatabase::saveLayerSet() performs:
 			// - Automatic revision number incrementing (per-image counter)
@@ -455,6 +469,12 @@ class ApiLayersSave extends ApiBase {
 				'sha1' => LayersConstants::TYPE_SLIDE,
 			];
 
+			if ( $setName === '' ) {
+				$setName = SetNameResolver::latestName(
+					$db, $normalizedName, LayersConstants::TYPE_SLIDE
+				) ?? SetNameSanitizer::getDefaultName();
+			}
+
 			// Merge slide settings into background settings for storage
 			$backgroundSettings = array_merge( $backgroundSettings, $slideSettings );
 
@@ -514,7 +534,9 @@ class ApiLayersSave extends ApiBase {
 	 *             Format: '[{"id":"01","type":"text","x":100,"y":50,...}, ...]'
 	 *             Server wraps this in structure with revision, schema, created timestamp
 	 * - setname:  Optional human-readable label for this layer set revision
-	 *             Defaults to "default" if not provided
+	 *             Set names are user-defined; nothing is reserved. When omitted,
+	 *             the image's most recently saved set is reused, or a first set
+	 *             is seeded from $wgLayersDefaultSetName
 	 *             Sanitized to prevent XSS and path traversal
 	 * - token:    CSRF token (automatically validated by needsToken())
 	 *             Client obtains via mw.Api().postWithToken('csrf', ...)

@@ -80,6 +80,19 @@
 		}
 
 		/**
+		 * Name the first set for this image will be saved under when the user has
+		 * not chosen one. Set names are user-defined and nothing is reserved, so
+		 * this is only ever a seed for a brand-new set - never a lookup key.
+		 *
+		 * @return {string}
+		 */
+		getSeedSetName() {
+			const configured = window.mw && window.mw.config &&
+				window.mw.config.get( 'wgLayersDefaultSetName' );
+			return configured || 'default';
+		}
+
+		/**
 		 * Get localized message with parameter substitution
 		 * Delegates to centralized MessageHelper for consistent i18n handling.
 		 * @param {string} key Message key
@@ -246,7 +259,7 @@
 		buildSetSelector() {
 			try {
 				const namedSets = this.stateManager.get( 'namedSets' ) || [];
-				const currentSetName = this.stateManager.get( 'currentSetName' ) || 'default';
+				const currentSetName = this.stateManager.get( 'currentSetName' ) || this.getSeedSetName();
 				const selectEl = this.uiManager && this.uiManager.setSelectEl;
 
 				if ( !selectEl ) {
@@ -260,21 +273,16 @@
 				const currentSetExists = namedSets.some( ( s ) => s.name === currentSetName );
 
 				if ( namedSets.length === 0 ) {
-					// No sets exist yet - show current set name (may be 'default' or a new set name)
+					// No sets exist yet - show the name this set will be saved under
 					const option = document.createElement( 'option' );
 					option.value = currentSetName;
-					if ( currentSetName === 'default' ) {
-						option.textContent = this.getMessage( 'layers-set-default', 'Default' );
-					} else {
-						// New set that doesn't exist yet - show as "(new)"
-						option.textContent = currentSetName + ' (' +
-							this.getMessage( 'layers-set-new-unsaved', 'new' ) + ')';
-					}
+					option.textContent = currentSetName + ' (' +
+						this.getMessage( 'layers-set-new-unsaved', 'new' ) + ')';
 					option.selected = true;
 					selectEl.appendChild( option );
 				} else {
 					// If currentSetName is not in the named sets list (new unsaved set), add it first
-					if ( !currentSetExists && currentSetName !== 'default' ) {
+					if ( !currentSetExists ) {
 						const newSetOption = document.createElement( 'option' );
 						newSetOption.value = currentSetName;
 						newSetOption.textContent = currentSetName + ' (' +
@@ -586,7 +594,9 @@
 		 * @return {string}
 		 */
 		getCurrentSetName() {
-			return this.stateManager ? ( this.stateManager.get( 'currentSetName' ) || 'default' ) : 'default';
+			return this.stateManager ?
+				( this.stateManager.get( 'currentSetName' ) || this.getSeedSetName() ) :
+				this.getSeedSetName();
 		}
 
 		/**

@@ -367,5 +367,15 @@ global.createMockEditor = function () {
         } catch ( e ) {
             // ViewerIcons not found, tests will use fallback
         }
+
+        // Load SetNameUtil so the shared layer-set-name rules are available the
+        // same way ResourceLoader guarantees them at runtime (ext.layers and
+        // ext.layers.editor both depend on ext.layers.shared).
+        try {
+            const SetNameUtil = require( '../../resources/ext.layers.shared/SetNameUtil.js' );
+            window.Layers.SetNameUtil = SetNameUtil;
+        } catch ( e ) {
+            // SetNameUtil not found, callers will use their inline fallback
+        }
     }
 }() );

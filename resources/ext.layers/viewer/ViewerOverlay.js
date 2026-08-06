@@ -10,6 +10,31 @@
 	'use strict';
 
 	/**
+	 * Whether a set reference names a specific layer set rather than a generic
+	 * wikitext intent such as 'on'. Prefers the shared rules in
+	 * ext.layers.shared/SetNameUtil.js and falls back to an equivalent local
+	 * check. Set names are user-defined and nothing is reserved.
+	 *
+	 * @param {*} value Raw set reference
+	 * @return {boolean}
+	 */
+	function isSpecificSetName( value ) {
+		const util = window.Layers && window.Layers.SetNameUtil;
+		if ( util && typeof util.isSpecificName === 'function' ) {
+			return util.isSpecificName( value );
+		}
+		// Equivalent local rules, so a load-order surprise can never silently
+		// drop a user-defined set name from a request.
+		if ( typeof value !== 'string' ) {
+			return false;
+		}
+		const normalized = value.trim().toLowerCase();
+		return normalized !== '' && [
+			'on', 'true', 'all', '1', 'off', 'none', 'false', '0'
+		].indexOf( normalized ) === -1;
+	}
+
+	/**
 	 * SVG namespace for creating icons inline (fallback when IconFactory not available)
 	 * @constant {string}
 	 */
@@ -25,7 +50,7 @@
 		 * @param {HTMLElement} config.container The container element (positioned wrapper around image)
 		 * @param {HTMLImageElement} config.imageElement The image element
 		 * @param {string} config.filename The file name (for edit URL)
-		 * @param {string} [config.setname='default'] The layer set name
+		 * @param {string} [config.setname] The layer set name; omit for an unnamed set
 		 * @param {boolean} [config.canEdit=false] Whether user has edit permission
 		 * @param {boolean} [config.debug=false] Enable debug logging
 		 */
@@ -34,7 +59,7 @@
 			this.imageElement = config.imageElement;
 			// Sanitize filename - strip any wikitext brackets that might have leaked through
 			this.filename = ( config.filename || '' ).replace( /[\x5B\x5D]/g, '' );
-			this.setname = config.setname || 'default';
+			this.setname = config.setname || '';
 			// Multi-page (PDF) support: which page this overlay's image represents
 			this.page = parseInt( config.page, 10 );
 			if ( !( this.page > 1 ) && this.imageElement ) {
@@ -413,7 +438,7 @@
 			const params = new URLSearchParams( {
 				action: 'editlayers'
 			} );
-			if ( this.setname && this.setname !== 'default' ) {
+			if ( isSpecificSetName( this.setname ) ) {
 				params.set( 'setname', this.setname );
 			}
 			if ( this.page > 1 ) {

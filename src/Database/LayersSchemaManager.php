@@ -512,6 +512,9 @@ class LayersSchemaManager {
 
 		$groups = [];
 		foreach ( $legacyRows as $row ) {
+			// Legacy rows predate named sets and have no name of their own. They
+			// are backfilled under a placeholder so they remain addressable; no
+			// name is reserved, and lookups never assume this one exists.
 			$setName = $row->ls_name ?? 'default';
 			if ( $setName === '' ) {
 				$setName = 'default';

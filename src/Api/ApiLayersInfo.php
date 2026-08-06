@@ -19,6 +19,7 @@ use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
@@ -213,8 +214,7 @@ class ApiLayersInfo extends ApiBase {
 			// Include the revision history for the set this revision belongs to so
 			// the client's revision selector reflects the loaded revision's set
 			// rather than a stale list from a previously-viewed set.
-			$loadedSetName = (string)( $layerSet['name']
-				?? $this->getConfig()->get( 'LayersDefaultSetName' ) );
+			$loadedSetName = (string)( $layerSet['name'] ?? '' );
 			$loadedPage = (int)( $layerSet['page'] ?? $page );
 			$setRevisions = $db->getSetRevisions(
 				$normalizedName, $fileSha1, $loadedSetName, $limit, $loadedPage
@@ -252,15 +252,9 @@ class ApiLayersInfo extends ApiBase {
 			$setRevisions = $this->enrichWithUserNames( $setRevisions );
 			$result['set_revisions'] = $setRevisions;
 		} else {
-			// Get latest layer set for this file (default behavior)
-			// Try default set first, then fall back to any latest
-			$defaultSetName = $this->getConfig()->get( 'LayersDefaultSetName' );
-			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $defaultSetName, $page );
-
-			if ( !$layerSet ) {
-				// Fall back to latest of any set
-				$layerSet = $db->getLatestLayerSet( $normalizedName, $fileSha1, '', $page );
-			}
+			// No set requested: use whatever this image's most recent set is called.
+			// No particular name is assumed to exist.
+			$layerSet = $db->getLatestLayerSet( $normalizedName, $fileSha1, null, $page );
 
 			if ( !$layerSet ) {
 				$result = [
@@ -391,7 +385,6 @@ class ApiLayersInfo extends ApiBase {
 		// Slides use 'Slide:' prefix for imgName and fixed 'slide' sha1
 		$normalizedName = LayersConstants::SLIDE_PREFIX . $slidename;
 		$fileSha1 = LayersConstants::TYPE_SLIDE;
-		$setName = $setName ?? LayersConstants::DEFAULT_SET_NAME;
 
 		$db = $this->getLayersDatabase();
 
@@ -416,8 +409,14 @@ class ApiLayersInfo extends ApiBase {
 				$setName = $layerSet['setName'];
 			}
 		} else {
-			// Fetch by name (latest revision of the set)
-			$layerSet = $db->getLayerSetByName( $normalizedName, $fileSha1, $setName );
+			// Fetch by name, or by recency when the caller named no set. Slide set
+			// names are user-defined, so no particular name is assumed to exist.
+			$layerSet = SetNameResolver::isSpecificName( $setName )
+				? $db->getLayerSetByName( $normalizedName, $fileSha1, (string)$setName )
+				: $db->getLatestLayerSet( $normalizedName, $fileSha1 );
+			if ( $layerSet ) {
+				$setName = (string)( $layerSet['setName'] ?? $layerSet['name'] ?? $setName );
+			}
 		}
 
 		if ( !$layerSet ) {

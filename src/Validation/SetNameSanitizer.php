@@ -45,7 +45,7 @@ class SetNameSanitizer {
 	 * - Log safety (no control characters)
 	 *
 	 * @param string $rawSetName The raw user input
-	 * @return string Sanitized set name, defaults to 'default' if empty
+	 * @return string Sanitized set name, empty when nothing usable remains
 	 */
 	public static function sanitize( string $rawSetName ): string {
 		$setName = trim( $rawSetName );
@@ -72,7 +72,9 @@ class SetNameSanitizer {
 			$setName = substr( $setName, 0, self::MAX_LENGTH );
 		}
 
-		return $setName === '' ? LayersConstants::DEFAULT_SET_NAME : $setName;
+		// Callers decide what an unusable name means; there is no name this
+		// extension requires a set to have.
+		return $setName;
 	}
 
 	/**
@@ -84,7 +86,7 @@ class SetNameSanitizer {
 	 * @return bool True if valid, false otherwise
 	 */
 	public static function isValid( string $setName ): bool {
-		// Empty is invalid (though sanitize() would return 'default')
+		// Empty is invalid; sanitize() returns empty rather than inventing a name
 		if ( trim( $setName ) === '' ) {
 			return false;
 		}
@@ -115,9 +117,11 @@ class SetNameSanitizer {
 	}
 
 	/**
-	 * Get the default set name constant.
+	 * Name used for the first set created for an image when the caller supplied
+	 * none. This is a seed for a brand-new row, not a name that is looked up or
+	 * assumed to exist.
 	 *
-	 * @return string The default set name ('default')
+	 * @return string The configured seed name
 	 */
 	public static function getDefaultName(): string {
 		return LayersConstants::DEFAULT_SET_NAME;

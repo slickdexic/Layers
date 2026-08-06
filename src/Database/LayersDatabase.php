@@ -96,7 +96,8 @@ class LayersDatabase {
 		$page = max( 1, (int)( $imgMetadata['page'] ?? 1 ) );
 		$normalizedImgName = $this->normalizeImageName( $imgName );
 
-		// Default to configured default set name
+		// A row has to be stored under some name. Only reached when the caller
+		// could not resolve one, i.e. this is the first set for the image.
 		if ( $setName === null || $setName === '' ) {
 			$setName = $this->config->get( 'LayersDefaultSetName' );
 		}
@@ -394,7 +395,10 @@ class LayersDatabase {
 			[ 'ls_id', 'ls_json_blob', 'ls_user_id', 'ls_timestamp', 'ls_revision', 'ls_name', 'ls_page' ],
 			$conditions,
 			__METHOD__,
-			[ 'ORDER BY' => 'ls_revision DESC' ]
+			// Timestamp first because revision numbers restart per set, so ordering
+			// by revision alone would pick the most-edited set rather than the newest
+			// one when no set name narrows the query.
+			[ 'ORDER BY' => 'ls_timestamp DESC, ls_revision DESC' ]
 		);
 
 		if ( !$row ) {
@@ -1373,7 +1377,8 @@ class LayersDatabase {
 				'ls_json_blob' => 'ls.ls_json_blob',
 				'ls_user_id' => 'ls.ls_user_id',
 				'ls_layer_count' => 'ls.ls_layer_count',
-				'ls_revision' => 'ls.ls_revision'
+				'ls_revision' => 'ls.ls_revision',
+				'ls_name' => 'ls.ls_name'
 			],
 			[
 				'ls.ls_img_sha1' => LayersConstants::TYPE_SLIDE,
@@ -1470,6 +1475,9 @@ class LayersDatabase {
 
 			$slides[] = [
 				'name' => $displayName,
+				// Actual stored set name, so callers can act on a slide without
+				// assuming any particular set name exists
+				'setName' => (string)( $row->ls_name ?? '' ),
 				'canvasWidth' => $jsonData['canvasWidth'] ?? 800,
 				'canvasHeight' => $jsonData['canvasHeight'] ?? 600,
 				'backgroundColor' => $jsonData['backgroundColor'] ?? '#ffffff',

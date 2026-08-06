@@ -329,7 +329,11 @@ php maintenance/run.php \
 
 ### $wgLayersDefaultSetName
 
-Default name for layer sets when none is specified.
+Name given to the *first* layer set created for an image when the user did not
+name one. Set names are entirely user-defined and nothing is reserved; this
+value is only a seed for a brand-new set, never a name that is looked up or
+assumed to exist. When a caller supplies no set name, the extension operates on
+the image's most recently saved set, whatever it is called.
 
 | Property | Value |
 |----------|-------|
@@ -337,7 +341,7 @@ Default name for layer sets when none is specified.
 | Default | `'default'` |
 
 ```php
-// Change default set name
+// Seed new images' first set with a different name
 $wgLayersDefaultSetName = 'main';
 ```
 

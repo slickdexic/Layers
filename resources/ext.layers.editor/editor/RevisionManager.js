@@ -75,6 +75,19 @@
 		}
 
 		/**
+		 * Name the first set for this image will be saved under when the user has
+		 * not chosen one. Set names are user-defined and nothing is reserved, so
+		 * this is only ever a seed for a brand-new set - never a lookup key.
+		 *
+		 * @return {string}
+		 */
+		getSeedSetName() {
+			const configured = window.mw && window.mw.config &&
+				window.mw.config.get( 'wgLayersDefaultSetName' );
+			return configured || 'default';
+		}
+
+		/**
 		 * Build the revision selector dropdown
 		 * @return {void}
 		 */
@@ -178,7 +191,7 @@
 
 			try {
 				const namedSets = this.stateManager.get( 'namedSets' ) || [];
-				const currentSetName = this.stateManager.get( 'currentSetName' ) || 'default';
+				const currentSetName = this.stateManager.get( 'currentSetName' ) || this.getSeedSetName();
 				const selectEl = this.uiManager && this.uiManager.setSelectEl;
 
 				if ( !selectEl ) {
@@ -189,10 +202,11 @@
 				selectEl.innerHTML = '';
 
 				if ( namedSets.length === 0 ) {
-					// No sets exist yet - show default placeholder
+					// No sets exist yet - show the name this set will be saved under
 					const option = document.createElement( 'option' );
-					option.value = 'default';
-					option.textContent = this.getMessage( 'layers-set-default', 'Default' );
+					option.value = currentSetName;
+					option.textContent = currentSetName + ' (' +
+						this.getMessage( 'layers-set-new-unsaved', 'new' ) + ')';
 					option.selected = true;
 					selectEl.appendChild( option );
 				} else {

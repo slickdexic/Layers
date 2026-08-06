@@ -4,6 +4,47 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+### Fixed
+- **No layer set name is reserved or assumed to exist any more** — Layer set
+  names are entirely user-defined, but a great deal of the codebase assumed
+  every image had a set literally called `default`. An image whose only set was
+  called `001` or `Whatever-I-Want` therefore hit a range of silent failures:
+  `action=layerspdfexport` with no `setname` looked up `default`, found
+  nothing, and exported a blank document; `Special:Slides` sent a hardcoded
+  `setname: 'default'` when deleting, so deleting any other slide set quietly
+  did nothing; the editor could not rename or delete a set called `default`;
+  and `layerset=on` resolved through a `default`-first fallback rather than
+  through the image's actual set.
+
+  The resolution rules now live in exactly one place per side —
+  `src/Utility/SetNameResolver.php` and
+  `resources/ext.layers.shared/SetNameUtil.js` — and every call site routes
+  through them. When a caller supplies no set name, or a generic wikitext
+  intent such as `on`/`true`/`all`/`1`, the extension operates on the image's
+  **most recently saved set, whatever it is called**.
+  `$wgLayersDefaultSetName` is now used for one thing only: naming the *first*
+  set created for an image when the user did not name one. It is never a
+  lookup key.
+- **Cross-set "latest" lookups ordered by the wrong column** —
+  `LayersDatabase::getLatestLayerSet()` ordered by `ls_revision DESC`. Revision
+  numbers restart at 1 for each named set, so asking for an image's newest set
+  returned the most-*edited* set rather than the most-recently-saved one. Now
+  ordered by `ls_timestamp DESC, ls_revision DESC`.
+- **`action=layersdelete` accepted an unusable set name** — An empty or fully
+  sanitised-away `setname` previously fell through to a substituted name.
+  Because deletion is irreversible, the module now rejects the request with
+  `layers-invalid-setname` instead.
+
+### Changed
+- `SetNameSanitizer::sanitize()` returns an empty string when nothing usable
+  survives, rather than substituting a name. Callers decide what an unusable
+  name means.
+- `action=layerslist` now returns each slide's actual stored `setName`, so
+  `Special:Slides` can act on a slide without assuming a name.
+- Removed the editor's "clear default set" special case and the rename/delete
+  guards that treated a set called `default` differently from any other set,
+  along with nine now-unused interface messages.
+
 ## [1.5.80] - 2026-08-05
 
 ### Security

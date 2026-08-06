@@ -69,7 +69,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 === Slide Syntax ===
 <syntaxhighlight lang="wikitext">
 {{#Slide: MySlide}}
-<!-- Render slide "MySlide" (default layer set) -->
+<!-- Render slide "MySlide" (its current layer set) -->
 
 {{#Slide: MySlide | layerset=annotations}}
 <!-- Render specific named layer set -->
@@ -156,7 +156,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 |-
 | <code>$wgLayersMaxBytes</code> || integer || <code>2097152</code> || Max JSON size for a single layer set.
 |-
-| <code>$wgLayersDefaultSetName</code> || string || <code>"default"</code> || Default named set when none is specified.
+| <code>$wgLayersDefaultSetName</code> || string || <code>"default"</code> || Name given to an image's first layer set when the user did not name one. Set names are user-defined and nothing is reserved; this is only a seed for a brand-new set, never a lookup key.
 |-
 | <code>$wgLayersDefaultFonts</code> || array || (see extension.json) || Allowed fonts list for the editor.
 |-
@@ -371,7 +371,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~114k lines including generated shape/emoji data).
-* '''Stability:''' 14,167 Jest tests (176 suites) with 95.87% statement coverage and 87.20% branch coverage.
+* '''Stability:''' 14,167 Jest tests (177 suites) with 95.87% statement coverage and 87.20% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

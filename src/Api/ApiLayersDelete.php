@@ -55,6 +55,12 @@ class ApiLayersDelete extends ApiBase {
 		$slidename = $params['slidename'] ?? null;
 		$setName = SetNameSanitizer::sanitize( $params['setname'] );
 
+		// Deleting is destructive, so the caller must identify a real set rather
+		// than relying on any assumed name.
+		if ( !SetNameSanitizer::isValid( $setName ) ) {
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
+		}
+
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );
 

@@ -40,6 +40,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ForeignFileHelperTrait`: delegates to `ForeignFileHelper` static utility; used by API modules for convenient instance-method access
   - Utility classes (`src/Utility/`)
     - `ForeignFileHelper`: canonical static utility for `isForeignFile()` (3-step detection: instanceof, class name, repo isLocal) and `getFileSha1()` (deterministic fallback hash). Used by all API modules (via trait), Hooks, Processors, Actions, and ThumbnailRenderer.
+    - `SetNameResolver`: canonical owner of layer-set-name resolution. `isShowIntent()`/`isHideIntent()`/`isGenericIntent()`/`isSpecificName()` classify a caller-supplied reference; `resolve()` and `latestName()` turn "no name" or a generic intent into the image's most recently saved set. **Never hardcode a set name and never assume one exists** — route new call sites through this class. Mirrored client-side by `resources/ext.layers.shared/SetNameUtil.js`.
     - `RenderCache`: canonical owner of the generated-render directories — composited thumbnails at `<upload>/thumb/layers` and PDF exports at `$wgLayersExportDirectory` (default `$wgTmpDirectory/layers-export`, deliberately **outside** the document root). Provides `getThumbDir()`, `getExportDir()`, `ensureDir()` (honours `$wgDirectoryMode`), `purgeBySha1()` (called from `Hooks::onFileDeleteComplete()`) and `purgeOlderThan()` (called from the reaper script; skips anything not matching the `<sha1>_<key>.<ext>` artefact pattern, since the export dir is admin-configurable). **Never re-derive these paths inline** — they were duplicated across three classes before v1.5.80. Uses `AtEase::quietCall()` rather than `@` so phpcs stays clean.
     - `SpecialPages\SpecialLayersExport`: unlisted delivery endpoint for generated PDFs (`Special:LayersExport?file=…&key=…`). Re-resolves the `File:` title, re-checks `read`, then streams from `RenderCache::getExportDir()`. Returns one generic `layers-export-not-found` for every failure mode.
   - Maintenance (`maintenance/`)
@@ -70,6 +71,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ToolStyles.js` (~508 lines) - style management for tools
   - Shared modules (`resources/ext.layers.shared/`): Used by both editor and viewer for consistent behavior:
     - `LayerDefaults.js` (~210 lines) - **NEW**: Centralized constants for layer property defaults (FONT_SIZE, STROKE_WIDTH, OPACITY, shadow limits, slide dimensions, cache sizes, text lengths). Access via `mw.ext.layers.LayerDefaults`. Object.freeze() applied to prevent modification.
+    - `SetNameUtil.js` (~120 lines) - Shared rules for interpreting a layer set reference. Mirrors `src/Utility/SetNameResolver.php`. `isSpecificName()` decides whether a value is a real user-defined name or a generic wikitext intent (`on`/`off`/…); `applyToParams()` adds `setname` to an API request only when a specific name was given, so the server resolves the image's current set otherwise. Access via `window.Layers.SetNameUtil` or `mw.ext.layers.SetNameUtil`.
     - `DeepClone.js` - Object cloning utilities including `omitProperty(obj, propName)` for creating copies without specific properties (avoids eslint-disable for destructuring)
     - `LayerDataNormalizer.js` (~325 lines) - **CRITICAL**: Normalizes layer data types (string→boolean, string→number). Both editor and viewer use this to ensure consistent rendering. Add new boolean properties here.
     - `GradientRenderer.js` (~392 lines) - Gradient fill utility for creating linear/radial Canvas gradients from layer definitions. Static `hasGradient()` check, `createGradient()` method, 6 built-in presets (sunset, ocean, forest, fire, steel, rainbow), validation and cloning utilities.
@@ -154,7 +156,7 @@ Base route: MediaWiki Action API. Client uses `new mw.Api()`.
 - layerssave (write)
   - Rights: user must have 'editlayers' AND ordinary 'edit' permission on the file's page (page/namespace/cascading protection and blocks apply)
   - Token: needs CSRF token (client calls `api.postWithToken('csrf', ...)`)
-  - Params: filename (string), data (stringified JSON, see data model), setname (optional, defaults to 'default' - CHANGED), token (csrf)
+  - Params: filename (string), data (stringified JSON, see data model), setname (optional — when omitted the image's most recently saved set is reused; a first set is seeded from `$wgLayersDefaultSetName`), token (csrf)
   - Validation/limits (server-side; see also client validator):
     - Max payload bytes: `$wgLayersMaxBytes` (default 2MB)
     - Max layers per set: `$wgLayersMaxLayerCount` (default 100)
@@ -181,13 +183,13 @@ Contract note: The server persists a wrapped structure `{ revision, schema, crea
 
 The named layer sets feature allows multiple named annotation sets per image, each with version history:
 
-- **Named Set**: A logical grouping identified by a unique name (e.g., "default", "anatomy-labels")
+- **Named Set**: A logical grouping identified by a unique name (e.g., "001", "anatomy-labels"). **Names are entirely user-defined and nothing is reserved** — an image whose only set is called "001" must behave exactly like one whose only set is called "default".
 - **Revision**: Each save creates a new revision within the named set
 - **Limits**: Up to 15 named sets per image, 50 revisions per set (configurable)
-- **Default Behavior**: If setname not provided, defaults to 'default' set
-- **Migration**: Existing layer sets were migrated to ls_name='default'
+- **Default Behavior**: If setname is not provided (or a generic wikitext intent such as `on`/`true`/`all`/`1` is used), the extension operates on the image's **most recently saved set, whatever it is called**. No set name is ever assumed to exist. Resolution rules live in `src/Utility/SetNameResolver.php` (server) and `resources/ext.layers.shared/SetNameUtil.js` (client) — route every new call site through them rather than hardcoding a name.
+- **Migration**: Layer sets that predate named sets are backfilled under a placeholder name so they stay addressable
 - **Wikitext Syntax** (use `layerset=` as primary; `layers=` supported for backwards compatibility):
-  - `[[File:Example.jpg|layerset=on]]` - Show default layer set
+  - `[[File:Example.jpg|layerset=on]]` - Show the image's current layer set
   - `[[File:Example.jpg|layerset=setname]]` - Show specific named set (e.g., `layerset=anatomy`)
   - `[[File:Example.jpg|layerset=none]]` or `layerset=off` - Explicitly disable layers
   - If the named set doesn't exist, no layers are displayed (silent failure)
@@ -299,7 +301,7 @@ Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersImportJpegQuality (LayersImportJpegQuality): JPEG quality (0.1-1.0) for re-encoding downscaled imports (default 0.8); exported to JS via MakeGlobalVariablesScript
 - $wgLayersMaxNamedSets (LayersMaxNamedSets): max named sets per image (default 15)
 - $wgLayersMaxRevisionsPerSet (LayersMaxRevisionsPerSet): max revisions kept per named set (default 50)
-- $wgLayersDefaultSetName (LayersDefaultSetName): default name for layer sets (default 'default')
+- $wgLayersDefaultSetName (LayersDefaultSetName): seed name for an image's *first* layer set when the user did not name one (default 'default'). Never used as a lookup key.
 - $wgLayersDefaultFonts (LayersDefaultFonts): allowed fonts list used by the editor
 - $wgLayersMaxImageSize (LayersMaxImageSize): max image size for editing (px)
 - $wgLayersImageMagickTimeout (LayersImageMagickTimeout): seconds for IM ops
@@ -495,10 +497,10 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (14,167 Jest tests in 176 suites; 614 PHPUnit tests — verified August 5, 2026)
+- Test count (14,167 Jest tests in 177 suites; 624 PHPUnit tests)
 - Coverage (95.87% statement, 87.20% branch — verified April 7, 2026)
-- JavaScript file count (159 files total, ~105,000 lines)
-- PHP file count (47 files, ~17,170 lines)
+- JavaScript file count (160 files total, ~105,000 lines)
+- PHP file count (48 files, ~17,300 lines)
 - God class count (28 files >=1,000 lines; 4 generated data files, 20 JS, 4 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)

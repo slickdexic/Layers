@@ -1506,7 +1506,8 @@ describe( 'ViewerManager', () => {
 
 				manager.initializeOverlayOnly( img, 'default' );
 
-				expect( img.hasAttribute( 'data-layer-setname' ) ).toBe( false );
+				// 'default' is an ordinary user-chosen name, so it is recorded
+				expect( img.getAttribute( 'data-layer-setname' ) ).toBe( 'default' );
 			} );
 
 			it( 'should not set data attribute when setname is undefined', () => {
@@ -2876,7 +2877,7 @@ describe( 'ViewerManager', () => {
 			} );
 
 			manager._initializeOverlay( img, parent );
-			expect( capturedSetname ).toBe( 'default' );
+			expect( capturedSetname ).toBe( '' );
 		} );
 
 		it( 'should use default when intent is "true" (case-insensitive)', () => {
@@ -2906,7 +2907,7 @@ describe( 'ViewerManager', () => {
 			} );
 
 			manager._initializeOverlay( img, parent );
-			expect( capturedSetname ).toBe( 'default' );
+			expect( capturedSetname ).toBe( '' );
 		} );
 
 		it( 'should pass through specific set name', () => {
@@ -2966,7 +2967,7 @@ describe( 'ViewerManager', () => {
 			} );
 
 			manager._initializeOverlay( img, parent );
-			expect( capturedSetname ).toBe( 'default' );
+			expect( capturedSetname ).toBe( '' );
 		} );
 
 		it( 'should use explicit data-layer-setname over intent', () => {
@@ -3051,7 +3052,7 @@ describe( 'ViewerManager', () => {
 			} );
 
 			manager._initializeOverlay( img, parent );
-			expect( capturedSetname ).toBe( 'default' );
+			expect( capturedSetname ).toBe( '' );
 		} );
 	} );
 

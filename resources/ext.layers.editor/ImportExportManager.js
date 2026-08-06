@@ -287,13 +287,13 @@
 				baseName = baseName || 'layers';
 
 				// Get the current layer set name
-				let setName = 'default';
+				let setName = '';
 				if ( this.editor && this.editor.stateManager ) {
-					setName = this.editor.stateManager.get( 'currentSetName' ) || 'default';
+					setName = this.editor.stateManager.get( 'currentSetName' ) || '';
 				}
 
 				// Format: imagename-layers-setname.json
-				const filename = baseName + '-layers-' + setName + '.json';
+				const filename = baseName + '-layers' + ( setName ? '-' + setName : '' ) + '.json';
 
 				// Create and trigger download
 				this.triggerDownload( json, filename, 'application/json' );

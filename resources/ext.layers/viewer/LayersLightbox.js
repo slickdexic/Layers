@@ -10,6 +10,31 @@
 	'use strict';
 
 	/**
+	 * Whether a set reference names a specific layer set rather than a generic
+	 * wikitext intent such as 'on'. Prefers the shared rules in
+	 * ext.layers.shared/SetNameUtil.js and falls back to an equivalent local
+	 * check. Set names are user-defined and nothing is reserved.
+	 *
+	 * @param {*} value Raw set reference
+	 * @return {boolean}
+	 */
+	function isSpecificSetName( value ) {
+		const util = window.Layers && window.Layers.SetNameUtil;
+		if ( util && typeof util.isSpecificName === 'function' ) {
+			return util.isSpecificName( value );
+		}
+		// Equivalent local rules, so a load-order surprise can never silently
+		// drop a user-defined set name from a request.
+		if ( typeof value !== 'string' ) {
+			return false;
+		}
+		const normalized = value.trim().toLowerCase();
+		return normalized !== '' && [
+			'on', 'true', 'all', '1', 'off', 'none', 'false', '0'
+		].indexOf( normalized ) === -1;
+	}
+
+	/**
 	 * How long to wait for the composited page images to decode inside the print
 	 * document before opening the print dialog anyway. Bounded so one image that
 	 * never settles cannot strand the user on a dead Print button.
@@ -354,7 +379,7 @@
 				format: 'json'
 			};
 
-			if ( setName && setName !== 'on' && setName !== 'default' ) {
+			if ( isSpecificSetName( setName ) ) {
 				params.setname = setName;
 			}
 			if ( requestedPage > 1 ) {
@@ -911,7 +936,7 @@
 				filename: this.filename,
 				format: 'json'
 			};
-			if ( this.setName && this.setName !== 'on' && this.setName !== 'default' ) {
+			if ( isSpecificSetName( this.setName ) ) {
 				params.setname = this.setName;
 			}
 			if ( page > 1 ) {

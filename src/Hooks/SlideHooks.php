@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\Layers\Hooks;
 
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
@@ -157,8 +158,12 @@ class SlideHooks {
 			return self::errorHtml( 'layers-slide-invalid-name' );
 		}
 
-		// Determine layer set name early (needed for fetching saved dimensions)
-		$layerSetName = $params['layerset'] ?? LayersConstants::DEFAULT_SET_NAME;
+		// Determine layer set name early (needed for fetching saved dimensions).
+		// Empty means "whichever set this slide saved most recently"; slide set
+		// names are user-defined and no particular name is assumed to exist.
+		$layerSetName = SetNameResolver::isSpecificName( $params['layerset'] ?? null )
+			? (string)$params['layerset']
+			: '';
 
 		// Parse canvas dimensions
 		// Priority: explicit canvas= param > saved dimensions from DB > config defaults
@@ -356,7 +361,7 @@ class SlideHooks {
 	 * Get saved canvas dimensions for a slide from the database.
 	 *
 	 * @param string $slideName The slide name
-	 * @param string $layerSetName The layer set name (default: 'default')
+	 * @param string $layerSetName The layer set name, or '' for the most recent set
 	 * @return array|null Array with 'width' and 'height' keys, or null if not found
 	 */
 	private static function getSavedSlideDimensions( string $slideName, string $layerSetName ): ?array {
@@ -379,7 +384,9 @@ class SlideHooks {
 			$imgName = LayersConstants::SLIDE_PREFIX . $slideName;
 
 			// Use TYPE_SLIDE as sha1 for slides (consistent with save logic)
-			$layerSet = $db->getLayerSetByName( $imgName, LayersConstants::TYPE_SLIDE, $layerSetName );
+			$layerSet = $layerSetName !== ''
+				? $db->getLayerSetByName( $imgName, LayersConstants::TYPE_SLIDE, $layerSetName )
+				: $db->getLatestLayerSet( $imgName, LayersConstants::TYPE_SLIDE );
 
 			if ( $layerSet && isset( $layerSet['data'] ) ) {
 				$data = $layerSet['data'];

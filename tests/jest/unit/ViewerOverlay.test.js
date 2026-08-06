@@ -271,8 +271,8 @@ describe( 'ViewerOverlay', () => {
 
 			const editUrl = overlay._buildEditUrl();
 
-			// Default setname should not be included in URL
-			expect( editUrl ).not.toContain( 'setname=' );
+			// 'default' is an ordinary user-chosen name, so it is passed through
+			expect( editUrl ).toContain( 'setname=default' );
 		} );
 	} );
 
@@ -418,14 +418,14 @@ describe( 'ViewerOverlay', () => {
 	} );
 
 	describe( 'setname handling', () => {
-		it( 'should default to "default" setname', () => {
+		it( 'should fall back to no set name', () => {
 			const overlay = new ViewerOverlay( {
 				container: container,
 				imageElement: img,
 				filename: 'Test_image.jpg'
 			} );
 
-			expect( overlay.setname ).toBe( 'default' );
+			expect( overlay.setname ).toBe( '' );
 		} );
 
 		it( 'should use provided setname', () => {
@@ -613,7 +613,7 @@ describe( 'ViewerOverlay', () => {
 			// Modal receives filename, setname, and the built URL
 			expect( mockOpen ).toHaveBeenCalledWith(
 				'Test_image.jpg',
-				'default',
+				'',
 				expect.stringContaining( 'action=editlayers' )
 			);
 

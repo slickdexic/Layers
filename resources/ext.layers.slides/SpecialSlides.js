@@ -86,8 +86,8 @@
 			} );
 
 			this.$list.on( 'click', '.layers-slide-delete-btn', ( e ) => {
-				const name = $( e.currentTarget ).closest( '.layers-slide-item' ).data( 'name' );
-				this.confirmDeleteSlide( name );
+				const $item = $( e.currentTarget ).closest( '.layers-slide-item' );
+				this.confirmDeleteSlide( $item.data( 'name' ), $item.data( 'setname' ) );
 			} );
 
 			// Pagination
@@ -162,7 +162,9 @@
 			const modifiedBy = slide.modifiedBy ? mw.html.escape( slide.modifiedBy ) : '?';
 			const modifiedDate = this.formatRelativeTime( slide.modified );
 
-			let html = `<div class="layers-slide-item" data-name="${ name }" role="listitem">`;
+			const setName = mw.html.escape( slide.setName || '' );
+
+			let html = `<div class="layers-slide-item" data-name="${ name }" data-setname="${ setName }" role="listitem">`;
 			// Layers-style stacked diamond icon (matches Layers branding)
 			html += '<div class="layers-slide-icon" aria-hidden="true">' +
 				'<svg viewBox="0 0 32 32" width="32" height="32">' +
@@ -267,13 +269,14 @@
 		 * Show delete confirmation dialog.
 		 *
 		 * @param {string} name Slide name
+		 * @param {string} setName Name of the slide's layer set
 		 */
-		confirmDeleteSlide( name ) {
+		confirmDeleteSlide( name, setName ) {
 			OO.ui.confirm(
 				mw.message( 'special-slides-delete-confirm', name ).text()
 			).then( ( confirmed ) => {
 				if ( confirmed ) {
-					this.deleteSlide( name );
+					this.deleteSlide( name, setName );
 				}
 			} ).catch( ( error ) => {
 				mw.log.error( 'Failed to show delete confirmation dialog:', error );
@@ -284,12 +287,18 @@
 		 * Delete a slide.
 		 *
 		 * @param {string} name Slide name
+		 * @param {string} setName Name of the slide's layer set. Set names are
+		 *   user-defined, so this comes from the listing rather than a fixed name.
 		 */
-		deleteSlide( name ) {
+		deleteSlide( name, setName ) {
+			if ( !setName ) {
+				mw.notify( mw.message( 'special-slides-delete-failed' ).text(), { type: 'error' } );
+				return;
+			}
 			this.api.postWithToken( 'csrf', {
 				action: 'layersdelete',
 				slidename: name,
-				setname: 'default'
+				setname: setName
 			} ).then( () => {
 				mw.notify( mw.message( 'special-slides-deleted', name ).text(), { type: 'success' } );
 				this.loadSlides();

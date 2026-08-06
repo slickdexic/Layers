@@ -8,6 +8,31 @@
 ( function () {
 	'use strict';
 
+	/**
+	 * Whether a set reference names a specific layer set rather than a generic
+	 * wikitext intent such as 'on'. Prefers the shared rules in
+	 * ext.layers.shared/SetNameUtil.js and falls back to an equivalent local
+	 * check. Set names are user-defined and nothing is reserved.
+	 *
+	 * @param {*} value Raw set reference
+	 * @return {boolean}
+	 */
+	function isSpecificSetName( value ) {
+		const util = window.Layers && window.Layers.SetNameUtil;
+		if ( util && typeof util.isSpecificName === 'function' ) {
+			return util.isSpecificName( value );
+		}
+		// Equivalent local rules, so a load-order surprise can never silently
+		// drop a user-defined set name from a request.
+		if ( typeof value !== 'string' ) {
+			return false;
+		}
+		const normalized = value.trim().toLowerCase();
+		return normalized !== '' && [
+			'on', 'true', 'all', '1', 'off', 'none', 'false', '0'
+		].indexOf( normalized ) === -1;
+	}
+
 	// Helper to resolve classes from namespace with global fallback
 	const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
 		if ( window.Layers ) {
@@ -207,9 +232,11 @@ class ViewerManager {
 		let setname = img.getAttribute( 'data-layer-setname' );
 		if ( !setname ) {
 			const intent = img.getAttribute( 'data-layers-intent' ) || '';
-			// Generic enable values should use 'default', specific names pass through
+			// Generic enable values name no set; leave it empty so the server
+			// resolves whichever set this image actually has. Set names are
+			// user-defined, so no name can be assumed to exist.
 			const genericValues = [ 'on', 'true', 'all', '1' ];
-			setname = genericValues.includes( intent.toLowerCase() ) ? 'default' : ( intent || 'default' );
+			setname = genericValues.includes( intent.toLowerCase() ) ? '' : intent;
 		}
 
 		// Get ViewerOverlay class
@@ -296,7 +323,7 @@ class ViewerManager {
 	 * allowing users to click the edit button to create the new set.
 	 *
 	 * @param {HTMLImageElement} img Image element
-	 * @param {string} [setname='default'] The layer set name
+	 * @param {string} [setname] The layer set name; omit for an unnamed set
 	 * @return {boolean} True if overlay was initialized
 	 */
 	initializeOverlayOnly( img, setname ) {
@@ -314,7 +341,7 @@ class ViewerManager {
 			const container = this.ensurePositionedContainer( img );
 
 			// Store the intended setname for overlay use
-			if ( setname && setname !== 'default' ) {
+			if ( isSpecificSetName( setname ) ) {
 				img.setAttribute( 'data-layer-setname', setname );
 			}
 
@@ -322,7 +349,7 @@ class ViewerManager {
 			img.setAttribute( 'data-layer-autocreate', '1' );
 
 			this._initializeOverlay( img, container );
-			this.debugLog( 'Overlay-only initialized for non-existent set:', setname || 'default' );
+			this.debugLog( 'Overlay-only initialized for non-existent set:', setname || '(unnamed)' );
 			return true;
 		} catch ( e ) {
 			this.debugWarn( 'Overlay-only init error:', e );
@@ -462,7 +489,7 @@ class ViewerManager {
 		if ( this.freshnessChecker ) {
 			viewerImages.forEach( ( img ) => {
 				const filename = img.getAttribute( 'data-file-name' );
-				const setName = img.getAttribute( 'data-layer-setname' ) || 'default';
+				const setName = img.getAttribute( 'data-layer-setname' ) || '';
 				if ( filename ) {
 					this.freshnessChecker.clearCache( filename, setName );
 				}
@@ -488,7 +515,7 @@ class ViewerManager {
 		// P3.5 FIX: Limit to 5 concurrent requests
 		const processViewer = ( img ) => {
 			const filename = this.extractFilenameFromImg( img );
-			const setName = img.getAttribute( 'data-layer-setname' ) || img.getAttribute( 'data-layers-intent' ) || 'default';
+			const setName = img.getAttribute( 'data-layer-setname' ) || img.getAttribute( 'data-layers-intent' ) || '';
 
 			if ( !filename ) {
 				return Promise.resolve( { success: false, filename: null } );
@@ -501,7 +528,7 @@ class ViewerManager {
 				// Cache buster to ensure fresh data after save
 				_: Date.now()
 			};
-			if ( setName && setName !== 'on' && setName !== 'default' ) {
+			if ( isSpecificSetName( setName ) ) {
 				params.setname = setName;
 			}
 			const refreshPage = parseInt( img.getAttribute( 'data-page' ), 10 );
@@ -772,7 +799,7 @@ class ViewerManager {
 			img.layersPending = true;
 
 			// Get the layer set name from intent attribute
-			const setName = img.getAttribute( 'data-layers-intent' ) || 'default';
+			const setName = img.getAttribute( 'data-layers-intent' ) || '';
 
 			// Get filename from the image source
 			const filename = this.extractFilenameFromImg( img );
@@ -788,7 +815,7 @@ class ViewerManager {
 				format: 'json',
 				filename: filename
 			};
-			if ( setName && setName !== 'on' && setName !== 'default' ) {
+			if ( isSpecificSetName( setName ) ) {
 				params.setname = setName;
 			}
 			const largePage = parseInt( img.getAttribute( 'data-page' ), 10 );

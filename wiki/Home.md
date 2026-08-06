@@ -437,7 +437,7 @@ See [[Changelog]] for full details.
 | **Release Date** | August 2, 2026 |
 | **Test Suites** | 172 |
 | **Total Tests** | 14,167 |
-| **PHPUnit Test Files** | 35 |
+| **PHPUnit Test Files** | 37 |
 | **Statement Coverage** | 95.87% |
 | **Branch Coverage** | 87.20% |
 | **Function Coverage** | 94.00% |

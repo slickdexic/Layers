@@ -882,8 +882,8 @@ describe( 'DraftManager', function () {
 			const dm = new DraftManager( editorWithoutStateManager );
 			const key = dm.getStorageKey();
 
-			// Should use default set name
-			expect( key ).toContain( 'default' );
+			// No set name is invented, so the set segment is empty
+			expect( key.endsWith( '-' ) ).toBe( true );
 			expect( key ).toContain( 'Test_Image.jpg' );
 		} );
 	} );
@@ -1264,10 +1264,10 @@ describe( 'DraftManager', function () {
 				timestamp: Date.now(),
 				layers: [ { id: 'layer1', type: 'circle' } ]
 			};
-			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
-			
+
 			mockEditor.stateManager = null;
-			
+			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
+
 			const result = draftManager.recoverDraft();
 			expect( result ).toBe( true );
 		} );
