@@ -4,6 +4,40 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.82] - 2026-08-06
+
+### Fixed
+- **Fatal error on every page showing a layered image.** `ThumbnailProcessor`
+  referenced `SetNameResolver` without importing it, so PHP looked for the class
+  in `MediaWiki\Extension\Layers\Hooks\Processors\` and every affected page
+  returned HTTP 500. Nothing in the gate could see it: `parallel-lint` checks
+  syntax, `phpcs` checks style, and no unit test covered that branch.
+- **Print and Download in the lightbox did nothing for slides.** A slide is
+  identified by its own name, not by a `File:` title, so the compositing step's
+  `action=layersinfo&filename=<slide name>` lookup returned nothing, every page
+  came back empty, and the server-export fallback failed for the same reason —
+  leaving both buttons apparently inert. The lightbox now composites from the
+  layer data the slide viewer already passed it, so no lookup is needed. If
+  compositing genuinely fails there is no server fallback for a slide, and the
+  buttons now say so instead of failing silently.
+- **Slide layers were drawn twice in the lightbox.** The slide viewer handed the
+  lightbox its on-screen canvas — which already has the layers painted into it —
+  as the *background* image, and then supplied the same layers again. It now
+  passes a background-only raster, so layers are drawn once and the background
+  visibility and opacity settings act on the background alone.
+- `LayersViewer` registered itself as `window.Layers.Viewer`, overwriting the
+  namespace object that every other viewer module extends. It worked only
+  because that file happens to load first. The class is now also registered as
+  `window.Layers.Viewer.LayersViewer`, so lookups resolve regardless of load
+  order; the previous alias is retained.
+
+### Added
+- `scripts/check-php-class-refs.js`, wired into `npm test` and available as
+  `npm run check:phprefs`. It flags any unqualified use of a Layers class that
+  the file has not imported and cannot resolve in its own namespace, and any
+  `use MediaWiki\Extension\Layers\…` import pointing at a class that does not
+  exist. It reproduces the fatal above from a clean checkout.
+
 ## [1.5.81] - 2026-08-06
 
 ### Fixed

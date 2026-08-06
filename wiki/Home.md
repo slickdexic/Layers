@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-14%2C171%20passing-brightgreen" alt="14,171 Tests">
+  <img src="https://img.shields.io/badge/Tests-14%2C178%20passing-brightgreen" alt="14,178 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.87%25-brightgreen" alt="95.87% Coverage">
 </p>
 
@@ -431,12 +431,12 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.81 |
+| **Version (main)** | 1.5.82 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | August 2, 2026 |
 | **Test Suites** | 172 |
-| **Total Tests** | 14,171 |
+| **Total Tests** | 14,178 |
 | **PHPUnit Test Files** | 37 |
 | **Statement Coverage** | 95.87% |
 | **Branch Coverage** | 87.20% |

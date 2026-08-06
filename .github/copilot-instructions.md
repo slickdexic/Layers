@@ -364,9 +364,10 @@ Install
 - composer install (PHP Composer; ensure it’s the PHP tool, not a Python package with the same name)
 
 Lint & tests
-- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana, then jest, `verify-metrics.js`, `verify-i18n-wiring.js`, `check-mw-compatibility.js` and `check-bundle-size.js`; use `--force` to continue on warnings)
+- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana, then jest, `verify-metrics.js`, `verify-i18n-wiring.js`, `check-mw-compatibility.js`, `check-php-class-refs.js` and `check-bundle-size.js`; use `--force` to continue on warnings)
 - i18n wiring check alone: `npm run check:i18n` (see §6)
 - MediaWiki API-drift check alone: `npm run check:mw-compat` (scans `src/` and `maintenance/`)
+- PHP class-reference check alone: `npm run check:phprefs`. Flags any unqualified use of a Layers class the file has not imported (PHP would silently resolve it into the file's own namespace and fatal at runtime), and any `use MediaWiki\Extension\Layers\…` import pointing at a class that does not exist. `parallel-lint` and `phpcs` are both blind to this, and it took the wiki down in 1.5.81.
 - ResourceLoader size budgets alone: `npm run check:bundlesize` (budgets in `bundlesize.config.json`, measured in raw source bytes; add `--report` to print sizes without failing)
 - Emoji shard integrity alone: `npm run check:emoji` (verifies `emoji/*.json` matches `EmojiLibraryIndex.js`)
 - JS unit tests (Jest): `npm run test:js` (optional `:watch` or `:coverage`)
@@ -497,7 +498,7 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (14,171 Jest tests in 177 suites; 624 PHPUnit tests)
+- Test count (14,178 Jest tests in 177 suites; 624 PHPUnit tests)
 - Coverage (95.87% statement, 87.20% branch — verified April 7, 2026)
 - JavaScript file count (160 files total, ~105,000 lines)
 - PHP file count (48 files, ~17,300 lines)
@@ -507,4 +508,4 @@ Common metrics to keep synchronized:
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.80)
+- Version number (1.5.82)

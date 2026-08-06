@@ -1543,6 +1543,103 @@ describe( 'SlideController', () => {
 				controller.handleSlideViewClick( container, payload );
 			} ).not.toThrow();
 		} );
+
+		it( 'should open the lightbox with the slide flag and a background-only image', () => {
+			const container = document.createElement( 'div' );
+			container.className = 'layers-slide-container';
+			container.setAttribute( 'data-slide-name', 'TestSlide' );
+			container.innerHTML = '<canvas></canvas>';
+			document.body.appendChild( container );
+
+			const open = jest.fn();
+			window.LayersLightbox = jest.fn( () => ( { open: open } ) );
+
+			const controller = new SlideController( { debug: false } );
+			const payload = {
+				layers: [ { id: 'a', type: 'text' } ],
+				baseWidth: 800,
+				baseHeight: 600,
+				backgroundColor: '#123456'
+			};
+			// The on-screen canvas already has layers painted into it, so passing
+			// it through would draw them twice and break Print/Download.
+			const composited = 'data:image/png;base64,COMPOSITED';
+			container.querySelector( 'canvas' ).toDataURL = () => composited;
+
+			controller.handleSlideViewClick( container, payload );
+
+			expect( open ).toHaveBeenCalledTimes( 1 );
+			const config = open.mock.calls[ 0 ][ 0 ];
+			expect( config.filename ).toBe( 'TestSlide' );
+			expect( config.isSlide ).toBe( true );
+			expect( config.imageUrl ).not.toBe( composited );
+			expect( config.layerData.layers ).toEqual( payload.layers );
+
+			delete window.LayersLightbox;
+		} );
+	} );
+
+	describe( 'renderSlideBackground', () => {
+		it( 'should produce a canvas sized to the slide and filled with its colour', () => {
+			const controller = new SlideController();
+			let fillStyle = null;
+			let filled = null;
+			const created = [];
+			const realCreate = document.createElement.bind( document );
+			jest.spyOn( document, 'createElement' ).mockImplementation( ( tag ) => {
+				const el = realCreate( tag );
+				if ( tag === 'canvas' ) {
+					created.push( el );
+					el.getContext = () => ( {
+						set fillStyle( v ) {
+							fillStyle = v;
+						},
+						fillRect: ( x, y, w, h ) => {
+							filled = [ x, y, w, h ];
+						}
+					} );
+					el.toDataURL = () => 'data:image/png;base64,BG';
+				}
+				return el;
+			} );
+
+			const url = controller.renderSlideBackground(
+				{ baseWidth: 1000, baseHeight: 800, backgroundColor: '#abcdef' },
+				{ width: 10, height: 10 }
+			);
+
+			expect( url ).toBe( 'data:image/png;base64,BG' );
+			expect( created[ 0 ].width ).toBe( 1000 );
+			expect( created[ 0 ].height ).toBe( 800 );
+			expect( fillStyle ).toBe( '#abcdef' );
+			expect( filled ).toEqual( [ 0, 0, 1000, 800 ] );
+
+			document.createElement.mockRestore();
+		} );
+
+		it( 'should fall back to the on-screen canvas size and white', () => {
+			const controller = new SlideController();
+			let fillStyle = null;
+			const realCreate = document.createElement.bind( document );
+			jest.spyOn( document, 'createElement' ).mockImplementation( ( tag ) => {
+				const el = realCreate( tag );
+				if ( tag === 'canvas' ) {
+					el.getContext = () => ( {
+						set fillStyle( v ) {
+							fillStyle = v;
+						},
+						fillRect: () => {}
+					} );
+					el.toDataURL = () => 'data:image/png;base64,BG';
+				}
+				return el;
+			} );
+
+			controller.renderSlideBackground( {}, { width: 640, height: 480 } );
+
+			expect( fillStyle ).toBe( '#ffffff' );
+			document.createElement.mockRestore();
+		} );
 	} );
 
 	describe( '_createPencilIcon', () => {

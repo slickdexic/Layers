@@ -121,6 +121,10 @@
 		 * @param {string} [config.setName] Optional layer set name
 		 * @param {string} [config.imageUrl] Full-size image URL (if known)
 		 * @param {Object} [config.layerData] Pre-loaded layer data (if available)
+		 * @param {boolean} [config.isSlide] True when `filename` names a slide
+		 *   rather than an uploaded file. Slides have no `File:` page, so neither
+		 *   the layersinfo lookup nor the server PDF exporter can resolve them;
+		 *   Print and Download must work purely from the supplied layer data.
 		 */
 		open( config ) {
 			// Cancel any pending close animation timeout to prevent it from
@@ -143,6 +147,14 @@
 			this.setName = config.setName || null;
 			this.currentPage = parseInt( config.page, 10 ) > 1 ? parseInt( config.page, 10 ) : 1;
 			this.pageCount = 1;
+			this.isSlide = config.isSlide === true;
+
+			// Keep whatever the caller already resolved. Print and Download
+			// composite from this instead of re-fetching, which is what makes them
+			// work for slides — and, for anything else, guarantees the exported
+			// pages match what is on screen.
+			this.presetImageUrl = config.imageUrl || null;
+			this.presetLayerData = config.layerData || null;
 
 			// Whether this file is a PDF. Client-side pdf.js rendering (crisp,
 			// native, in-wiki) is only attempted for PDFs; all other files use
@@ -927,6 +939,15 @@
 		 * @private
 		 */
 		composePage( page, type, quality ) {
+			// Single-page sources opened with their layer data already in hand —
+			// slides above all — are composited straight from it. A slide is
+			// identified by name, not by a File: title, so asking layersinfo for
+			// it would return nothing and every page would come back null.
+			if ( page <= 1 && this.presetImageUrl && this.presetLayerData ) {
+				return this.flattenPage(
+					this.presetImageUrl, this.presetLayerData, type, quality
+				);
+			}
 			if ( typeof mw === 'undefined' || !mw.Api ) {
 				return Promise.resolve( null );
 			}
@@ -1209,7 +1230,15 @@
 		 * @private
 		 */
 		requestServerPdf( btn, onUrl ) {
+			if ( this.isSlide ) {
+				// A slide is only layer data; there is no uploaded file for the
+				// server exporter to render, so there is no fallback to take.
+				// Say so rather than leaving the button looking inert.
+				this.showExportError();
+				return;
+			}
 			if ( !this.filename || typeof mw === 'undefined' || !mw.Api ) {
+				this.showExportError();
 				return;
 			}
 			const original = btn ? btn.textContent : '';

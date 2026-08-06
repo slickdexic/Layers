@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"test:e2e": "npx playwright test --workers=1",
-		"test": "grunt test && jest --passWithNoTests && node scripts/verify-metrics.js && node scripts/verify-i18n-wiring.js && node scripts/check-mw-compatibility.js && node scripts/check-bundle-size.js && node scripts/shard-emoji-bundle.js --check",
+		"test": "grunt test && jest --passWithNoTests && node scripts/verify-metrics.js && node scripts/verify-i18n-wiring.js && node scripts/check-mw-compatibility.js && node scripts/check-php-class-refs.js && node scripts/check-bundle-size.js && node scripts/shard-emoji-bundle.js --check",
 		"test:js": "jest",
 		"test:watch": "jest --watch",
 		"test:coverage": "jest --coverage",
@@ -24,6 +24,7 @@
 		"check:docs": "bash scripts/verify-docs.sh",
 		"check:version": "node scripts/update-version.js --check",
 		"check:mw-compat": "node scripts/check-mw-compatibility.js",
+		"check:phprefs": "node scripts/check-php-class-refs.js",
 		"check:bundlesize": "node scripts/check-bundle-size.js",
 		"check:emoji": "node scripts/shard-emoji-bundle.js --check",
 		"check:metrics": "node scripts/verify-metrics.js",

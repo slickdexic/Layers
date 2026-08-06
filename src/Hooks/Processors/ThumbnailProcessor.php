@@ -8,6 +8,7 @@ use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Extension\Layers\Utility\SetNameResolver;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 

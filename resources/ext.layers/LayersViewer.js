@@ -873,7 +873,17 @@
 	}
 
 	// Export for manual initialization; bootstrap handled in ext.layers/init.js
+	//
+	// `window.Layers.Viewer` is also the namespace object every other viewer
+	// module hangs itself off (`window.Layers.Viewer.Lightbox` and friends).
+	// Assigning the class to it works only because this file happens to load
+	// first, so the later `= window.Layers.Viewer || {}` guards preserve the
+	// function object and decorate it. Register the class under its own name
+	// as well, so lookups resolve regardless of load order, and keep the bare
+	// alias for callers that already depend on it.
 	window.Layers = window.Layers || {};
-	window.Layers.Viewer = LayersViewer;
+	window.Layers.Viewer = window.Layers.Viewer || LayersViewer;
+	window.Layers.Viewer.LayersViewer = LayersViewer;
+	window.Layers.LayersViewer = LayersViewer;
 
 }() );

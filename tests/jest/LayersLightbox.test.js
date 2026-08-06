@@ -1123,6 +1123,74 @@ describe( 'LayersLightbox', () => {
 		} );
 	} );
 
+	describe( 'composePage with pre-loaded layer data (slides)', () => {
+		it( 'should composite from the supplied data without calling the API', async () => {
+			const lightbox = new LayersLightbox();
+			const layerData = { layers: [ { id: 'a', type: 'text' } ], baseWidth: 800, baseHeight: 600 };
+			lightbox.open( {
+				filename: 'MySlide',
+				isSlide: true,
+				imageUrl: 'data:image/png;base64,bg',
+				layerData: layerData
+			} );
+			mockApi.get.mockClear();
+			const flattenSpy = jest.spyOn( lightbox, 'flattenPage' )
+				.mockResolvedValue( { src: 'data:image/jpeg;base64,ok', width: 800, height: 600 } );
+
+			const result = await lightbox.composePage( 1, 'image/jpeg', 0.92 );
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
+			expect( flattenSpy ).toHaveBeenCalledWith(
+				'data:image/png;base64,bg', layerData, 'image/jpeg', 0.92
+			);
+			expect( result.src ).toBe( 'data:image/jpeg;base64,ok' );
+			lightbox.close( true );
+		} );
+
+		it( 'should still use the API for later pages of a multi-page file', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( {
+				filename: 'Doc.pdf',
+				imageUrl: 'data:image/png;base64,bg',
+				layerData: { layers: [] }
+			} );
+			mockApi.get.mockClear();
+			mockApi.get.mockResolvedValue( { layersinfo: { imageUrl: '/p2.jpg', layerset: null } } );
+			jest.spyOn( lightbox, 'flattenPage' )
+				.mockResolvedValue( { src: 'data:img', width: 1, height: 1 } );
+
+			await lightbox.composePage( 2 );
+
+			expect( mockApi.get ).toHaveBeenCalledWith(
+				expect.objectContaining( { action: 'layersinfo', page: 2 } )
+			);
+			lightbox.close( true );
+		} );
+
+		it( 'downloadPdf should produce a PDF for a slide', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( {
+				filename: 'MySlide',
+				isSlide: true,
+				imageUrl: 'data:image/png;base64,bg',
+				layerData: { layers: [], baseWidth: 800, baseHeight: 600 }
+			} );
+			jest.spyOn( lightbox, 'composePage' ).mockResolvedValue( {
+				src: 'data:image/jpeg;base64,/9j/ok', width: 800, height: 600
+			} );
+			jest.spyOn( lightbox, 'buildPdfBlob' ).mockReturnValue( { size: 1 } );
+			const saveSpy = jest.spyOn( lightbox, 'saveBlob' ).mockImplementation( () => {} );
+			const serverSpy = jest.spyOn( lightbox, 'downloadViaServer' )
+				.mockImplementation( () => {} );
+
+			await lightbox.downloadPdf();
+
+			expect( serverSpy ).not.toHaveBeenCalled();
+			expect( saveSpy ).toHaveBeenCalledWith( expect.anything(), 'MySlide.pdf' );
+			lightbox.close( true );
+		} );
+	} );
+
 	describe( 'printImages', () => {
 		it( 'should write a hidden frame with an img tag per page and print it', async () => {
 			const lightbox = new LayersLightbox();
@@ -1249,6 +1317,21 @@ describe( 'LayersLightbox', () => {
 
 			await lightbox.printViaServer();
 
+			expect( mw.notify ).toHaveBeenCalled();
+			delete mw.notify;
+		} );
+
+		it( 'should report an error for slides instead of failing silently', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'MySlide';
+			lightbox.isSlide = true;
+			mw.notify = jest.fn();
+			mockApi.get.mockClear();
+
+			await lightbox.printViaServer();
+
+			expect( mockApi.get ).not.toHaveBeenCalled();
 			expect( mw.notify ).toHaveBeenCalled();
 			delete mw.notify;
 		} );

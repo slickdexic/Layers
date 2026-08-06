@@ -861,11 +861,12 @@
 			// Fall back to original payload from initialization
 			const currentPayload = container._layersPayload || payload;
 
-			const dataUrl = canvas.toDataURL( 'image/png' );
+			const dataUrl = this.renderSlideBackground( currentPayload, canvas );
 			const lightbox = new LightboxClass( { debug: this.debug } );
 			// P2-211 FIX: Use actual background visibility/opacity from payload
 			lightbox.open( {
 				filename: slideName,
+				isSlide: true,
 				imageUrl: dataUrl,
 				layerData: {
 					layers: currentPayload.layers || [],
@@ -876,6 +877,36 @@
 					backgroundColor: currentPayload.backgroundColor
 				}
 			} );
+		}
+
+		/**
+		 * Produce a background-only raster for a slide, sized to its canvas.
+		 *
+		 * The on-screen slide canvas already has the layers painted into it, so
+		 * handing that to the lightbox as the "image" would draw every layer a
+		 * second time, and would make the background opacity/visibility settings
+		 * act on the layers as well. The lightbox expects a background raster
+		 * with the layers supplied separately — which for a slide is simply its
+		 * background colour.
+		 *
+		 * @private
+		 * @param {Object} payload Slide layer payload
+		 * @param {HTMLCanvasElement} slideCanvas On-screen slide canvas, used for
+		 *   dimensions when the payload does not carry them
+		 * @return {string} PNG data URL
+		 */
+		renderSlideBackground( payload, slideCanvas ) {
+			const width = parseInt( payload.baseWidth, 10 ) || slideCanvas.width || 800;
+			const height = parseInt( payload.baseHeight, 10 ) || slideCanvas.height || 600;
+			const background = document.createElement( 'canvas' );
+			background.width = width;
+			background.height = height;
+			const ctx = background.getContext( '2d' );
+			if ( ctx ) {
+				ctx.fillStyle = payload.backgroundColor || '#ffffff';
+				ctx.fillRect( 0, 0, width, height );
+			}
+			return background.toDataURL( 'image/png' );
 		}
 
 		/**
