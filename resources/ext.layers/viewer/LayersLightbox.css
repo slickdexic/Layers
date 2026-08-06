@@ -131,13 +131,15 @@
 	background: rgba( 255, 255, 255, 0.3 );
 }
 
-.layers-lightbox-toolbar button.layers-lightbox-export-pdf {
+.layers-lightbox-toolbar button.layers-lightbox-print,
+.layers-lightbox-toolbar button.layers-lightbox-download {
 	background: rgba( 51, 102, 204, 0.55 );
 	border-color: rgba( 120, 160, 240, 0.7 );
 	font-weight: bold;
 }
 
-.layers-lightbox-toolbar button.layers-lightbox-export-pdf:hover {
+.layers-lightbox-toolbar button.layers-lightbox-print:hover,
+.layers-lightbox-toolbar button.layers-lightbox-download:hover {
 	background: rgba( 51, 102, 204, 0.8 );
 }
 
@@ -601,40 +603,29 @@
 }
 
 /* ==========================================================================
-   Print - isolate the marked-up page (image + layer overlay)
-   Activated by the lightbox Print button, which adds .layers-lightbox-printing
-   to <body>. Everything except the lightbox image wrapper is hidden so the
-   annotated page prints on its own with a white background.
+   Print
+   The Print button does not print this document. It composites the marked-up
+   pages and prints a purpose-built document from .layers-print-frame, because
+   only a document of our own can declare `@page { margin: 0 }` — which is what
+   removes the extra page border and the browser's own URL/date/"page x of y"
+   furniture (both live in the page margin box). Declaring that rule here would
+   zero the margins of every ordinary article print as well.
+
+   The frame must not be `display: none`: browsers cannot print a frame that
+   has no layout box, so it is collapsed to zero size instead.
    ========================================================================== */
+.layers-print-frame {
+	position: fixed;
+	right: 0;
+	bottom: 0;
+	width: 0;
+	height: 0;
+	border: 0;
+	visibility: hidden;
+}
+
 @media print {
-	body.layers-lightbox-printing * {
-		visibility: hidden;
-	}
-
-	body.layers-lightbox-printing .layers-lightbox-overlay,
-	body.layers-lightbox-printing .layers-lightbox-overlay * {
-		visibility: visible;
-	}
-
-	body.layers-lightbox-printing .layers-lightbox-overlay {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: #fff;
-		opacity: 1;
-	}
-
-	body.layers-lightbox-printing .layers-lightbox-toolbar,
-	body.layers-lightbox-printing .layers-lightbox-close {
+	.layers-lightbox-overlay {
 		display: none;
-	}
-
-	/* Let the image size to the page rather than the viewport. */
-	body.layers-lightbox-printing .layers-lightbox-image-wrapper,
-	body.layers-lightbox-printing .layers-lightbox-image {
-		max-width: 100%;
-		max-height: none;
 	}
 }

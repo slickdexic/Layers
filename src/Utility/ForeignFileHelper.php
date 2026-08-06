@@ -15,8 +15,8 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Utility;
 
-use ForeignAPIFile;
-use ForeignDBFile;
+use MediaWiki\FileRepo\File\ForeignAPIFile;
+use MediaWiki\FileRepo\File\ForeignDBFile;
 
 /**
  * Provides static helpers for detecting foreign files and calculating SHA1 hashes.

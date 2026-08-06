@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.79 (August 9, 2026)  
+> **Version:** 1.5.80 (August 9, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -343,14 +343,17 @@ $wgLayersImportJpegQuality = 0.8;      // JPEG quality for downscaled imports
 // Default set name
 $wgLayersDefaultSetName = 'default';
 
-// Editor behavior
-$wgLayersUseBinaryOverlays = false;    // Legacy binary overlay files
-
 // Image and rendering limits
 $wgLayersMaxImageSize = 4096;          // Max image size for editing (px)
-$wgLayersThumbnailCache = true;        // Cache composite thumbnails
 $wgLayersImageMagickTimeout = 30;      // ImageMagick timeout (seconds)
 $wgLayersMaxImageDimensions = 8192;    // Max width/height for processing
+
+// PDF export
+$wgLayersPdfExportWidth = 1600;        // Render width per page (px)
+$wgLayersPdfExportMaxPages = 100;      // Max pages per export (0 = unlimited)
+$wgLayersExportDirectory = '';         // Export cache dir; MUST be outside the
+                                       // document root. Empty uses
+                                       // $wgTmpDirectory/layers-export.
 
 // Slide Mode
 $wgLayersSlidesEnable = true;            // Enable Slide Mode
@@ -362,12 +365,37 @@ $wgLayersSlideDefaultBackground = '#ffffff'; // Default slide background
 
 // Permissions
 $wgGroupPermissions['user']['editlayers'] = true;
-$wgGroupPermissions['sysop']['managelayerlibrary'] = true;
+$wgGroupPermissions['sysop']['layers-admin'] = true;   // Delete/rename any set
 
 // Rate limits (optional)
 $wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];
 $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 ```
+
+> **Permissions note:** saving, renaming or deleting a layer set requires both
+> the `editlayers` right **and** ordinary `edit` permission on the file's page.
+> Layer data changes what a File page renders, so page protection, namespace
+> protection, cascading protection and blocks all apply. If a group can draw
+> layers on some pages but not others, check `edit` permission first.
+
+### Maintenance
+
+The extension writes composited thumbnails to `<upload>/thumb/layers/` and
+exported PDFs to `<upload>/thumb/layers/export/`. Renders belonging to a deleted
+file are purged automatically. Export filenames incorporate the layer set
+revision, so each save orphans the previous export; run the reaper periodically
+(for example from cron) to reclaim that space:
+
+```bash
+# Delete generated renders not touched in the last 30 days
+php extensions/Layers/maintenance/purgeLayersRenderCache.php
+
+# Preview what a 7-day cutoff would remove
+php extensions/Layers/maintenance/purgeLayersRenderCache.php --max-age-days=7 --dry-run
+```
+
+Purged files are regenerated on demand, so the cutoff only trades disk space
+against re-render cost.
 
 ---
 
@@ -375,20 +403,20 @@ $wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
 
 **Architecture:**
 
-- **Backend:** PHP with 5 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`), **~15,689 lines across 44 files**
-- **Frontend:** HTML5 Canvas editor with **157 JS files (~114,000 lines)**, 140 ES6 classes
+- **Backend:** PHP with 6 API endpoints (`layersinfo`, `layerssave`, `layersdelete`, `layersrename`, `layerslist`, `layerspdfexport`), **~17,170 lines across 47 files**
+- **Frontend:** HTML5 Canvas editor with **158 JS files (~105,000 lines)**, 140 ES6 classes
 - **Code Splitting:** Viewer module loads separately from Editor for performance
 - **Shared Rendering:** LayerRenderer used by both editor and viewer for consistency
-- **Technical Debt:** **26 god classes** (files >=1,000 lines), all use proper delegation patterns
-  - 5 generated data files (ShapeLibraryData variants + EmojiLibraryIndex) are exempt from refactoring
-  - All other god classes (19 JS + 2 PHP) have proper facade/delegation patterns
+- **Technical Debt:** **28 god classes** (files >=1,000 lines), all use proper delegation patterns
+  - 4 generated data files (ShapeLibraryData variants + EmojiLibraryIndex) are exempt from refactoring
+  - All other god classes (20 JS + 4 PHP) have proper facade/delegation patterns
 
 **Validation Snapshot:**
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 14,054 passing (172 suites) |
-| PHPUnit tests | 34 test files |
+| Jest tests | 14,167 passing (176 suites) |
+| PHPUnit tests | 613 passing (34 test files) |
 | Statement coverage | 95.87% |
 | Branch coverage | 87.20% |
 | Function coverage | 93.98% |
@@ -415,7 +443,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for full tracking.
 - ⚠️ **Large images** - performance may degrade with images >4096px
 
 **Resolved Issues:**
-- ✅ **God class monitoring** - 26 god classes (5 generated, 19 JS, 2 PHP) with proper delegation patterns
+- ✅ **God class monitoring** - 28 god classes (4 generated, 20 JS, 4 PHP) with proper delegation patterns
 - ✅ **Rate limiting** - now applied to save, delete, AND rename endpoints  
 - ✅ **Background image load failure** - user now notified via mw.notify()
 - ✅ **Memory leaks fixed** - all animation frames and event listeners properly cleaned up
@@ -444,10 +472,10 @@ npm run test:js -- --coverage
 | Metric | Value | Status |
 |--------|-------|--------|
 | Total JS files | 157 | ✅ |
-| Total JS lines | ~114,000 | ✅ Hand-written + generated data |
+| Total JS lines | ~105,000 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
-| God classes (>=1000 lines) | 26 | ✅ Well-delegated facades |
-| Tests passing | 14,054 | ✅ |
+| God classes (>=1000 lines) | 28 | ✅ Well-delegated facades |
+| Tests passing | 14,167 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.87% | ✅ Excellent |
 | Branch coverage | 87.20% | ✅ Target met |

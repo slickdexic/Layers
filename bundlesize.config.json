@@ -1,17 +1,26 @@
 [
 	{
 		"resourceModule": "ext.layers",
-		"maxSize": "100 KB",
-		"note": "Viewer module: ~93 KB source, ~35 KB minified+gzipped by ResourceLoader"
+		"maxSize": "285 KB",
+		"note": "Viewer module, raw source bytes of every scripts/styles entry. ResourceLoader minifies and gzips at request time; raw size is what this repo can reproduce offline and what grows when code is added."
 	},
 	{
 		"resourceModule": "ext.layers.editor",
-		"maxSize": "1400 KB",
-		"note": "Editor module: ~1340 KB source, ~280 KB minified+gzipped by ResourceLoader"
+		"maxSize": "2150 KB",
+		"note": "Full editor, raw source bytes. Includes the generated ShapeLibraryData/EmojiLibraryIndex files, which dominate the total."
 	},
 	{
 		"resourceModule": "ext.layers.shared",
-		"maxSize": "75 KB",
-		"note": "Shared renderers: loaded by both viewer and editor"
+		"maxSize": "540 KB",
+		"note": "Shared renderers, raw source bytes. Loaded by both viewer and editor, so growth here is paid for twice."
+	},
+	{
+		"name": "pdf.js (static)",
+		"files": [
+			"resources/lib/pdfjs/pdf.min.js",
+			"resources/lib/pdfjs/pdf.worker.min.js"
+		],
+		"maxSize": "1900 KB",
+		"note": "Vendored pdf.js library and worker, loaded on demand only for PDF slides. Both are fetched by URL as static assets rather than through ResourceLoader, whose minifier corrupts the bundle."
 	}
 ]

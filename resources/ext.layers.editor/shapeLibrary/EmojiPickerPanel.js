@@ -99,10 +99,8 @@
 				return;
 			}
 
-			// Start loading the emoji bundle in background for faster emoji loading
-			if ( library.loadBundle ) {
-				library.loadBundle();
-			}
+			// SVG data is fetched per category, so nothing useful can be warmed
+			// up until a category is selected. selectCategory() does that.
 
 			// Inject CSS keyframes for loading animation if not already present
 			if ( !document.getElementById( 'layers-emoji-picker-styles' ) ) {
@@ -415,6 +413,14 @@
 			} );
 
 			this.currentCategory = categoryId;
+
+			// Warm the category's SVG shard. The grid renders placeholders and
+			// resolves each thumbnail through loadSVG(), which would otherwise
+			// trigger the same fetch on first paint anyway; starting it here
+			// just removes a round trip from the critical path.
+			if ( library.preloadCategory ) {
+				library.preloadCategory( categoryId ).catch( () => {} );
+			}
 
 			// Get emoji for this category
 			const emoji = library.getByCategory( categoryId );

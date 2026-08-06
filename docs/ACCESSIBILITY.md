@@ -154,6 +154,14 @@ The extension uses MediaWiki's internationalization system (`mw.message()`) for 
 2. ~~**No Skip Links**~~ ✅ RESOLVED (December 2025)
    - ~~Users cannot quickly skip to main content areas~~
    - **Resolution**: Added skip links to toolbar, canvas, and layers panel
+   - ⚠️ **Regression, fixed in v1.5.80**: the skip-link and landmark labels
+     (`layers-skip-to-toolbar`, `layers-skip-to-canvas`, `layers-skip-to-layers`,
+     `layers-toolbar-region`, `layers-canvas-region`, `layers-main-region`,
+     `layers-panel-region`) existed in `en.json` and `qqq.json` but were never
+     declared in the ResourceLoader module's `messages[]` array, so they never
+     reached the browser. Screen-reader labels fell back to the inline English
+     strings in every language. `scripts/verify-i18n-wiring.js` now blocks this
+     class of defect.
 
 3. ~~**Color Contrast Not Verified**~~ ✅ RESOLVED (December 2025)
    - ~~CSS colors have not been audited for WCAG 2.1 AA contrast ratios~~
@@ -170,6 +178,8 @@ The extension uses MediaWiki's internationalization system (`mw.message()`) for 
      - Canvas: `role="region"`
      - Layers panel: `role="complementary"`
      - Status bar: `role="contentinfo"`
+   - ⚠️ The `aria-label` values on these landmarks were affected by the same
+     v1.5.80 i18n wiring regression described under item 2.
 
 ### Medium Priority
 

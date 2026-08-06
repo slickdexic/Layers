@@ -9,7 +9,9 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Action;
 
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Extension\Layers\Utility\FramingHeaders;
 use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
+use MediaWiki\SpecialPage\SpecialPage;
 
 class EditLayersAction extends \Action {
 
@@ -105,18 +107,11 @@ class EditLayersAction extends \Action {
 		// Check if editor is in modal mode
 		$isModalMode = $request->getBool( 'modal' );
 
-		// In modal mode, allow same-origin framing (loaded in iframe from this wiki)
-		// Replace the default DENY with SAMEORIGIN to allow our own iframe
-		// while blocking cross-origin embedding (clickjacking protection)
+		// In modal mode the editor is loaded in a same-origin iframe, so MediaWiki's
+		// default X-Frame-Options: DENY has to be relaxed. Cross-origin framing stays
+		// blocked by both X-Frame-Options and CSP frame-ancestors.
 		if ( $isModalMode ) {
-			// Suppress MediaWiki's default X-Frame-Options: DENY
-			if ( method_exists( $out, 'setPreventClickjacking' ) ) {
-				$out->setPreventClickjacking( false );
-			} elseif ( method_exists( $out, 'allowClickjacking' ) ) {
-				$out->allowClickjacking();
-			}
-			// Set SAMEORIGIN instead — allows same-wiki iframes, blocks cross-origin
-			$request->response()->header( 'X-Frame-Options: SAMEORIGIN' );
+			FramingHeaders::allowSameOriginFraming( $out, $request->response() );
 		}
 
 		// Determine page context for multi-page files (PDF). Images are page 1.
@@ -261,7 +256,7 @@ class EditLayersAction extends \Action {
 			$filename = method_exists( $file, 'getName' ) ? $file->getName() : null;
 			if ( $filename ) {
 				$param = 'file/' . $filename;
-				$spTitle = \SpecialPage::getTitleFor( 'Redirect', $param );
+					$spTitle = SpecialPage::getTitleFor( 'Redirect', $param );
 				if ( $spTitle ) {
 					// For TIFF and other non-web formats, request a large thumbnail
 					// MediaWiki will generate a PNG/JPEG that browsers can render

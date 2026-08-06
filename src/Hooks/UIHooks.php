@@ -319,7 +319,7 @@ class UIHooks {
 	/**
 	 * Build HTML for the layer sets section
 	 *
-	 * @param \Title $title The file page title
+	 * @param \MediaWiki\Title\Title $title The file page title
 	 * @param array $namedSets Array of named sets
 	 * @return string HTML
 	 */

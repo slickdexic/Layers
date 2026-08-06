@@ -7,7 +7,7 @@ namespace MediaWiki\Extension\Layers\SpecialPages;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use SpecialPage;
+use MediaWiki\SpecialPage\SpecialPage;
 
 /**
  * Special:Slides - Management interface for Layers slides.
@@ -289,7 +289,7 @@ class SpecialSlides extends SpecialPage {
 	 */
 	private function getSlideEditorUrl( string $slideName ): string {
 		// Use Special:EditSlide or a query parameter
-		$title = \SpecialPage::getTitleFor( 'EditSlide', $slideName );
+		$title = SpecialPage::getTitleFor( 'EditSlide', $slideName );
 		return $title->getLocalURL();
 	}
 
@@ -298,5 +298,14 @@ class SpecialSlides extends SpecialPage {
 	 */
 	public function getDescription() {
 		return $this->msg( 'special-slides-desc' );
+	}
+
+	/**
+	 * Group this page under "Layers" on Special:SpecialPages.
+	 *
+	 * @return string
+	 */
+	protected function getGroupName() {
+		return 'layers';
 	}
 }

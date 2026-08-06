@@ -18,6 +18,7 @@ use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Logging\LoggerAwareTrait;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 /**
  * Processes image links to inject layer data attributes.
@@ -577,11 +578,11 @@ class ImageLinkProcessor {
 		// For foreign files, $file->getTitle() might not work correctly for local URLs.
 		// Ensure we have a valid local File: title for building the editor URL.
 		if ( !$title ) {
-			$title = \Title::makeTitleSafe( NS_FILE, $filename );
+			$title = Title::makeTitleSafe( NS_FILE, $filename );
 		} elseif ( ForeignFileHelper::isForeignFile( $file ) ) {
 			// Foreign files may have a title that doesn't produce correct local URLs
 			// Create a local File: title for the editor link
-			$localTitle = \Title::makeTitleSafe( NS_FILE, $filename );
+			$localTitle = Title::makeTitleSafe( NS_FILE, $filename );
 			if ( $localTitle ) {
 				$title = $localTitle;
 			}

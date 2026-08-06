@@ -233,11 +233,6 @@ class LayersConstants {
 	 */
 	public const TABLE_LAYER_SETS = 'layer_sets';
 
-	/**
-	 * Layer assets table
-	 */
-	public const TABLE_LAYER_ASSETS = 'layer_assets';
-
 	// ========================================================================
 	// Config keys (matches extension.json)
 	// ========================================================================

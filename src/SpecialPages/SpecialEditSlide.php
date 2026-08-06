@@ -5,10 +5,11 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\SpecialPages;
 
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Utility\FramingHeaders;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use SpecialPage;
+use MediaWiki\SpecialPage\SpecialPage;
 
 /**
  * Special:EditSlide - Direct slide editor access.
@@ -97,18 +98,11 @@ class SpecialEditSlide extends SpecialPage {
 		// Check if editor is in modal mode (opened as popup/iframe from article page)
 		$isModalMode = $request->getBool( 'modal' );
 
-		// In modal mode, allow same-origin framing (loaded in iframe from this wiki)
-		// Replace the default DENY with SAMEORIGIN to allow our own iframe
-		// while blocking cross-origin embedding (clickjacking protection)
+		// In modal mode the editor is loaded in a same-origin iframe, so MediaWiki's
+		// default X-Frame-Options: DENY has to be relaxed. Cross-origin framing stays
+		// blocked by both X-Frame-Options and CSP frame-ancestors.
 		if ( $isModalMode ) {
-			// Suppress MediaWiki's default X-Frame-Options: DENY
-			if ( method_exists( $out, 'setPreventClickjacking' ) ) {
-				$out->setPreventClickjacking( false );
-			} elseif ( method_exists( $out, 'allowClickjacking' ) ) {
-				$out->allowClickjacking();
-			}
-			// Set SAMEORIGIN instead — allows same-wiki iframes, blocks cross-origin
-			$request->response()->header( 'X-Frame-Options: SAMEORIGIN' );
+			FramingHeaders::allowSameOriginFraming( $out, $request->response() );
 		}
 
 		// Extract dimensions from existing slide or use defaults
@@ -186,5 +180,14 @@ class SpecialEditSlide extends SpecialPage {
 	 */
 	public function getDescription() {
 		return $this->msg( 'special-editslide-desc' );
+	}
+
+	/**
+	 * Group this page under "Layers" on Special:SpecialPages.
+	 *
+	 * @return string
+	 */
+	protected function getGroupName() {
+		return 'layers';
 	}
 }

@@ -9,8 +9,8 @@ use MediaWiki\Extension\Layers\Logging\StaticLoggerAwareTrait;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use MediaWiki\Extension\Layers\Validation\SlideNameValidator;
 use MediaWiki\MediaWikiServices;
-use Parser;
-use PPFrame;
+use MediaWiki\Parser\Parser;
+use MediaWiki\Parser\PPFrame;
 
 /**
  * Parser hooks for Slide Mode functionality.
@@ -310,7 +310,7 @@ class SlideHooks {
 	 * Parse canvas dimension string into width and height.
 	 *
 	 * @param string $dimensionStr Dimension string (e.g., "800x600")
-	 * @param \Config $config MediaWiki config
+	 * @param \MediaWiki\Config\Config $config MediaWiki config
 	 * @return array|null Array with 'width' and 'height', or null if invalid
 	 */
 	private static function parseCanvasDimensions( string $dimensionStr, $config ): ?array {

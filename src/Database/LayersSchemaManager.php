@@ -33,17 +33,11 @@ class LayersSchemaManager {
 
 		// Prefer per-table files to avoid re-running a monolithic schema multiple times
 		$tablesDir = "$base/tables";
-		if (
-			is_dir( $tablesDir )
-			&& file_exists( "$tablesDir/layer_sets.sql" )
-			&& file_exists( "$tablesDir/layer_assets.sql" )
-		) {
+		if ( is_dir( $tablesDir ) && file_exists( "$tablesDir/layer_sets.sql" ) ) {
 			$updater->addExtensionTable( 'layer_sets', "$tablesDir/layer_sets.sql" );
-			$updater->addExtensionTable( 'layer_assets', "$tablesDir/layer_assets.sql" );
 		} else {
 			// Fallback: run the monolithic schema once, anchored on layer_sets
 			$updater->addExtensionTable( 'layer_sets', "$base/layers_tables.sql" );
-			$updater->addExtensionTable( 'layer_assets', "$base/layers_tables.sql" );
 		}
 
 		// Patches for existing installations.
@@ -64,13 +58,6 @@ class LayersSchemaManager {
 				'layer_sets',
 				'ls_layer_count',
 				"$base/patches/patch-layer_sets-add-ls_layer_count.sql"
-			);
-
-			// Add la_size column for existing installations
-			$updater->addExtensionField(
-				'layer_assets',
-				'la_size',
-				"$base/patches/patch-layer_assets-add-la_size.sql"
 			);
 
 			// Add ls_name column for named layer sets (for upgrades from older versions)
@@ -98,11 +85,6 @@ class LayersSchemaManager {
 				'layer_sets',
 				'idx_layer_sets_setname_revision',
 				"$base/patches/patch-idx-layer-sets-setname-revision.sql"
-			);
-			$updater->addExtensionIndex(
-				'layer_assets',
-				'la_size',
-				"$base/patches/patch-idx-layer_assets-la_size.sql"
 			);
 
 			// --- Data migrations (compatible SQL: UPDATE) ---
@@ -162,15 +144,18 @@ class LayersSchemaManager {
 				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::applyDropForeignKeysPatch'
 			] );
 
-			// la_size CHECK constraints (uses ALTER TABLE ADD CONSTRAINT — MySQL only)
-			$updater->addExtensionUpdate( [
-				'MediaWiki\Extension\Layers\Database\LayersSchemaManager::applyLaSizeConstraintsPatch'
-			] );
-
 			// P3-146: Drop the dead layer_set_usage table (zero reads/writes since creation)
 			$updater->addExtensionUpdate( [
 				'applyPatch',
 				"$base/patches/patch-drop-layer_set_usage.sql",
+				true
+			] );
+
+			// R1.25: Drop the dead layer_assets table (zero reads/writes since creation).
+			// Must stay last: it supersedes every layer_assets patch above.
+			$updater->addExtensionUpdate( [
+				'applyPatch',
+				"$base/patches/patch-drop-layer_assets.sql",
 				true
 			] );
 		}
@@ -204,9 +189,6 @@ class LayersSchemaManager {
 				'chk_ls_revision_positive' => 'CHECK (ls_revision >= 1)',
 				'chk_ls_img_name_not_empty' => "CHECK (ls_img_name != '')",
 				'chk_ls_img_sha1_format' => 'CHECK (ls_img_sha1 IS NULL OR LENGTH(ls_img_sha1) <= 40)',
-			],
-			'layer_assets' => [
-				'chk_la_title_not_empty' => "CHECK (la_title != '')",
 			],
 		];
 
@@ -679,7 +661,6 @@ class LayersSchemaManager {
 		}
 
 		$layerSets = $dbw->tableName( 'layer_sets' );
-		$layerAssets = $dbw->tableName( 'layer_assets' );
 
 		// layer_sets: make ls_user_id nullable, then change FK action
 		try {
@@ -703,33 +684,6 @@ class LayersSchemaManager {
 			if ( strpos( $message, 'check that it exists' ) !== false ||
 				 strpos( $message, 'FOREIGN KEY' ) !== false ) {
 				$updater->output( "   ...layer_sets FK already dropped or changed.\n" );
-			} else {
-				throw $e;
-			}
-		}
-
-		// layer_assets: make la_user_id nullable, then change FK action
-		try {
-			$dbw->query(
-				"ALTER TABLE {$layerAssets} MODIFY COLUMN la_user_id int unsigned DEFAULT NULL",
-				__METHOD__
-			);
-			$dbw->query(
-				"ALTER TABLE {$layerAssets} DROP FOREIGN KEY fk_layer_assets_user_id",
-				__METHOD__
-			);
-			$dbw->query(
-				"ALTER TABLE {$layerAssets} ADD CONSTRAINT fk_layer_assets_user_id" .
-				" FOREIGN KEY (la_user_id) REFERENCES {$dbw->tableName( 'user' )} (user_id)" .
-				" ON DELETE SET NULL",
-				__METHOD__
-			);
-			$updater->output( "   Changed layer_assets FK to SET NULL.\n" );
-		} catch ( \Wikimedia\Rdbms\DBQueryError $e ) {
-			$message = $e->getMessage();
-			if ( strpos( $message, 'check that it exists' ) !== false ||
-				 strpos( $message, 'FOREIGN KEY' ) !== false ) {
-				$updater->output( "   ...layer_assets FK already dropped or changed.\n" );
 			} else {
 				throw $e;
 			}
@@ -761,7 +715,6 @@ class LayersSchemaManager {
 
 		$fksToDrop = [
 			'layer_sets' => [ 'fk_layer_sets_user_id' ],
-			'layer_assets' => [ 'fk_layer_assets_user_id' ],
 		];
 
 		foreach ( $fksToDrop as $table => $fks ) {
@@ -788,58 +741,6 @@ class LayersSchemaManager {
 		return true;
 	}
 
-	/**
-	 * Apply la_size CHECK constraints for layer_assets table.
-	 *
-	 * SQLite does not support ALTER TABLE ADD CONSTRAINT. CHECK constraints
-	 * are a safety net; PHP validation is the primary defense.
-	 *
-	 * @param DatabaseUpdater $updater
-	 * @return bool
-	 */
-	public static function applyLaSizeConstraintsPatch( DatabaseUpdater $updater ): bool {
-		$dbw = $updater->getDB();
-
-		if ( $dbw->getType() === 'sqlite' ) {
-			$updater->output( "  ...skipping la_size constraints (SQLite: not supported via ALTER TABLE).\n" );
-			return true;
-		}
-
-		$tableName = $dbw->tableName( 'layer_assets' );
-
-		// Clean up invalid data first
-		$dbw->query(
-			"UPDATE {$tableName} SET la_size = 0 WHERE la_size < 0",
-			__METHOD__
-		);
-
-		$constraints = [
-			'chk_la_size_positive' => 'CHECK (la_size >= 0)',
-			// 50MB hard safety ceiling; actual limit enforced by PHP ($wgLayersMaxImageBytes)
-			'chk_la_size_reasonable' => 'CHECK (la_size <= 52428800)',
-		];
-
-		foreach ( $constraints as $constraintName => $checkClause ) {
-			try {
-				$dbw->query(
-					"ALTER TABLE {$tableName} ADD CONSTRAINT {$constraintName} {$checkClause}",
-					__METHOD__
-				);
-				$updater->output( "   Added constraint {$constraintName}.\n" );
-			} catch ( \Wikimedia\Rdbms\DBQueryError $e ) {
-				$message = $e->getMessage();
-				if ( preg_match( '/^Error\s+(\d+):/i', $message, $matches ) &&
-					 in_array( (int)$matches[1], [ 3822, 1826 ] ) ) {
-					$updater->output( "   ...constraint {$constraintName} already exists.\n" );
-				} else {
-					throw $e;
-				}
-			}
-		}
-
-		return true;
-	}
-
 	/** @var LoggerInterface|null */
 	private ?LoggerInterface $logger;
 
@@ -857,13 +758,6 @@ class LayersSchemaManager {
 			'optional_columns' => [
 				// All columns are now required in current schema
 			]
-		],
-		'layer_assets' => [
-			'required_columns' => [
-				'la_id', 'la_title', 'la_json_blob', 'la_preview_sha1',
-				'la_user_id', 'la_timestamp', 'la_size'
-			],
-			'optional_columns' => []
 		]
 	];
 

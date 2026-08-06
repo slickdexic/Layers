@@ -14,8 +14,10 @@ namespace MediaWiki\Extension\Layers;
 use Exception;
 use MediaWiki\Extension\Layers\Hooks\WikitextHooks;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Extension\Layers\Utility\RenderCache;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 
 class Hooks {
 	/**
@@ -154,6 +156,36 @@ class Hooks {
 	}
 
 	/**
+	 * Get the installed Layers extension version.
+	 *
+	 * Read from the extension registry so it tracks extension.json without a
+	 * second place to update. Falls back to a stable placeholder when the
+	 * registry is unavailable (unit tests, or a partially bootstrapped
+	 * environment) so callers always receive a usable string.
+	 *
+	 * @return string Extension version, or 'unknown'
+	 */
+	private static function getExtensionVersion() {
+		static $version = null;
+		if ( $version !== null ) {
+			return $version;
+		}
+		$version = 'unknown';
+		try {
+			if ( class_exists( \ExtensionRegistry::class ) ) {
+				$credits = \ExtensionRegistry::getInstance()->getAllThings();
+				if ( isset( $credits['Layers']['version'] ) ) {
+					$version = (string)$credits['Layers']['version'];
+				}
+			}
+		} catch ( \Throwable $e ) {
+			// Keep the placeholder; a missing version must never break page
+			// rendering.
+		}
+		return $version;
+	}
+
+	/**
 	 * Ensure the viewer module is considered in the startup payload on every page.
 	 * This can help skins/environments that defer module loads.
 	 *
@@ -178,6 +210,11 @@ class Hooks {
 			}
 
 			$vars['wgLayersEnabled'] = true;
+			// Extension version, used by the emoji picker to cache-bust the
+			// per-category SVG shards. Those are fetched directly rather than
+			// through ResourceLoader, so without a version in the URL a browser
+			// would keep serving the previous release's data indefinitely.
+			$vars['wgLayersVersion'] = self::getExtensionVersion();
 			// Surface server config toggle for client-side debug logging
 			try {
 				$config = $out->getConfig();
@@ -251,14 +288,33 @@ class Hooks {
 			return;
 		}
 
+		$imgName = str_replace( ' ', '_', $file->getName() );
+		$sha1 = ForeignFileHelper::getFileSha1( $file, $imgName );
+
 		try {
 			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
-			$imgName = str_replace( ' ', '_', $file->getName() );
-			$db->deleteLayerSetsForImage( $file->getName(), ForeignFileHelper::getFileSha1( $file, $imgName ) );
+			$db->deleteLayerSetsForImage( $file->getName(), $sha1 );
 		} catch ( Exception $e ) {
 			// Log error but don't break deletion
 			LoggerFactory::getInstance( 'Layers' )
 				->error( 'Layers: Error cleaning up layer sets', [ 'exception' => $e ] );
+		}
+
+		// Generated renders live outside MediaWiki's file management, so deleting
+		// the source file would otherwise leave composited thumbnails and exported
+		// PDFs permanently retrievable at stable public URLs.
+		try {
+			$config = MediaWikiServices::getInstance()->getMainConfig();
+			$purged = RenderCache::purgeBySha1( $config, $sha1 );
+			if ( $purged > 0 ) {
+				LoggerFactory::getInstance( 'Layers' )->info(
+					'Layers: purged {count} generated renders for deleted file {file}',
+					[ 'count' => $purged, 'file' => $imgName ]
+				);
+			}
+		} catch ( Exception $e ) {
+			LoggerFactory::getInstance( 'Layers' )
+				->error( 'Layers: Error purging render cache', [ 'exception' => $e ] );
 		}
 	}
 
@@ -347,7 +403,7 @@ class Hooks {
 				return '';
 			}
 
-			$fileTitle = \Title::makeTitle( NS_FILE, $file );
+				$fileTitle = Title::makeTitle( NS_FILE, $file );
 			if ( !$fileTitle ) {
 				return '';
 			}

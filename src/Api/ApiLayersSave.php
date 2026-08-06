@@ -4,11 +4,12 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Api;
 
-use ApiBase;
-use ApiUsageException;
+use MediaWiki\Api\ApiBase;
+use MediaWiki\Api\ApiUsageException;
 use MediaWiki\Extension\Layers\Api\Traits\AuditTrailTrait;
 use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
+use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
@@ -68,6 +69,7 @@ class ApiLayersSave extends ApiBase {
 	use AuditTrailTrait;
 	use CacheInvalidationTrait;
 	use ForeignFileHelperTrait;
+	use LayersApiHelperTrait;
 	use LayerSaveGuardsTrait;
 
 	/**
@@ -85,7 +87,7 @@ class ApiLayersSave extends ApiBase {
 	 * schema check, size limit, JSON parse, layer validation, rate limiting.
 	 * This method extracts that shared logic to ensure consistency.
 	 *
-	 * @param \User $user Current authenticated user
+	 * @param \MediaWiki\User\User $user Current authenticated user
 	 * @param array $params Extracted API request parameters
 	 * @return array{
 	 *     db: \MediaWiki\Extension\Layers\Database\LayersDatabase,
@@ -195,7 +197,7 @@ class ApiLayersSave extends ApiBase {
 	 * - Clients receive generic 'layers-save-failed' on unexpected errors
 	 * - This prevents information disclosure attacks
 	 *
-	 * @throws \ApiUsageException When user lacks permission or data is invalid
+	 * @throws \MediaWiki\Api\ApiUsageException When user lacks permission or data is invalid
 	 */
 	public function execute() {
 		// Get authenticated user and request parameters
@@ -259,6 +261,10 @@ class ApiLayersSave extends ApiBase {
 			if ( $fileDbKey === '' ) {
 				$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 			}
+
+			// SECURITY: 'editlayers' is a global right; also gate on the per-title
+			// 'edit' permission so protection and read restrictions are honoured.
+			$this->requireTitleEditPermission( $title );
 
 			// Shared validation: schema check, size limit, JSON parse, layer validation, rate limiting
 			$validated = $this->validateAndParseLayers( $user, $params );
@@ -364,6 +370,9 @@ class ApiLayersSave extends ApiBase {
 			// Named set limit reached - return specific error for user feedback
 			// The exception message contains the i18n key
 			$this->dieWithError( $e->getMessage(), 'maxsetsreached' );
+		} catch ( \LengthException $e ) {
+			// Serialized payload exceeded $wgLayersMaxBytes once wrapped
+			$this->dieWithError( $e->getMessage(), 'datatoolarge' );
 		} catch ( \Throwable $e ) {
 			// GLOBAL EXCEPTION HANDLER: Catch any unexpected errors
 			// This catch block is the last line of defense for:
@@ -405,7 +414,7 @@ class ApiLayersSave extends ApiBase {
 	 *
 	 * Slides are stored with imgName='Slide:{name}' and sha1='slide'.
 	 *
-	 * @param \User $user The current user
+	 * @param \MediaWiki\User\User $user The current user
 	 * @param array $params API request parameters
 	 * @param string $slidename The slide name (without 'Slide:' prefix)
 	 */
@@ -473,6 +482,8 @@ class ApiLayersSave extends ApiBase {
 			throw $e;
 		} catch ( \OverflowException $e ) {
 			$this->dieWithError( $e->getMessage(), 'maxsetsreached' );
+		} catch ( \LengthException $e ) {
+			$this->dieWithError( $e->getMessage(), 'datatoolarge' );
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Slide save failed: {message}', [
 				'message' => $e->getMessage(),

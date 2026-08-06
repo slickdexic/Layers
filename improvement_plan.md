@@ -1,6 +1,173 @@
 # Layers Extension — Improvement Plan
 
-**Last updated:** August 2, 2026 — v76 (text formatting → floating toolbar only)
+**Version:** 1.5.80
+**Last updated:** August 3, 2026 — v1.5.80 remediation pass (see `codebase_review.md`)
+
+> ## 🔴 R1 — Findings from the August 3, 2026 full critical review
+>
+> Every item below was reproduced against source with a file path and line
+> number. All existing gates were green when these were found — see item
+> **R1.20**, which is the root cause of why.
+>
+> **Status as of v1.5.80:** all of Priority 1 and all of Priority 2 are done,
+> and R1.20 is done and wired into `npm test`.
+>
+> ### Priority 1 — HIGH (security / data integrity)
+>
+> | # | Item | Where | Status |
+> |---|------|-------|--------|
+> | R1.01 | Add per-title `edit` permission check to `layerssave` | `ApiLayersSave.php` | ✅ Done (v1.5.80) |
+> | R1.02 | Same for `layersdelete` | `ApiLayersDelete.php` | ✅ Done (v1.5.80) |
+> | R1.03 | Same for `layersrename` | `ApiLayersRename.php` | ✅ Done (v1.5.80) |
+> | R1.04 | Purge `thumb/layers/` and `thumb/layers/export/` on file deletion | `Hooks::onFileDeleteComplete()` | ✅ Done (v1.5.80) |
+> | R1.05 | Stop serving exported PDFs from a public, permanent, guessable upload URL | `ApiLayersExport.php`, `SpecialPages/SpecialLayersExport.php` | ✅ Done (v1.5.80) |
+> | R1.06 | Add TTL + reaper maintenance script for orphaned exports | `maintenance/purgeLayersRenderCache.php` | ✅ Done (v1.5.80) |
+> | R1.07 | Register `LayersWikitextHooks` on `ParserClearState`; move the 8-array reset there | `extension.json`, `WikitextHooks.php` | ✅ Done (v1.5.80) |
+> | R1.08 | Delete the unsound `REQUEST_TIME_FLOAT` reset heuristic | `WikitextHooks.php` | ✅ Done (v1.5.80) |
+> | R1.09 | `startAtomic( …, ATOMIC_CANCELABLE )` + `cancelAtomic()` in catch | `LayersDatabase.php` | ✅ Done (v1.5.80) |
+> | R1.10 | Return a typed error for the size-limit branch so users see `layers-data-too-large` | `LayersDatabase.php`, `ApiLayersSave.php` | ✅ Done (v1.5.80) |
+>
+> **R1.01–R1.03** were one change repeated three times: the write endpoints
+> checked only the global `editlayers` right, while `ApiLayersInfo.php:141` and
+> `ApiLayersExport.php:105` correctly called `userCan()`. Consequence: read
+> restrictions and **page protection** were bypassed on write. Fixed by
+> `LayersApiHelperTrait::requireTitleEditPermission()`, which uses
+> `Authority::definitelyCan()` — not `authorizeWrite()`, which would consume the
+> core `edit` rate-limit bucket that Layers does not use.
+>
+> **R1.04** was the compliance-relevant one — deleting a file for copyright or
+> privacy left a full-content annotated PDF permanently retrievable. Fixed via
+> the new `Utility\RenderCache`, which also owns the paths that were previously
+> duplicated across three classes.
+>
+> **R1.05** was the same class of bug as R1.04 but with no window at all:
+> exports were written under `$wgUploadPath` and handed to the client as a
+> public URL, readable by anyone who guessed or was given it, indefinitely,
+> regardless of page permissions or `$wgGroupPermissions['*']['read']`. Fixed
+> by moving the cache out of the document root (`$wgLayersExportDirectory`,
+> defaulting to `$wgTmpDirectory/layers-export`) and delivering through the new
+> unlisted `Special:LayersExport`, which re-resolves the `File:` title and
+> re-checks `read` on every request. The on-disk name is `<sha1>_<key>.pdf` and
+> the SHA1 half is derived from the file the caller has just proven they may
+> read, so a borrowed `key` cannot reach another file's export. Every failure
+> mode returns the same generic error, so the endpoint cannot be used to probe
+> for files. The client contract is unchanged — `LayersLightbox.js` still just
+> opens `result.url`.
+>
+> **R1.07/R1.08**: in CLI and job-queue parses `$_SERVER['REQUEST_TIME_FLOAT']`
+> is unset (`0.0`), which equalled the initial `$lastResetRequestTime`, so the
+> reset **never fired** and wrong layer sets got written into the parser cache.
+> `SlideHooks::onParserClearState()` already demonstrated the correct pattern.
+> Covered by two new tests in `WikitextHooksTest`.
+>
+> **R1.09**: `endAtomic()` in a catch block marks the section *successful*, so
+> partial writes committed. The `continue` retry also only works on MySQL — on
+> PostgreSQL the transaction is already aborted; `ATOMIC_CANCELABLE` gives the
+> savepoint that makes `cancelAtomic()` correct on both.
+>
+> ### Priority 2 — i18n / ResourceLoader wiring (152 defects) — ✅ Done (v1.5.80)
+>
+> | # | Item | Count | Status |
+> |---|------|-------|--------|
+> | R1.11 | Add the live keys declared in RL but missing from `en.json` | 11 | ✅ Done |
+> | R1.12 | Fix `layers-slide-size-custom` — rendered as `⧼layers-slide-size-custom⧽` in `Special:Slides` | 1 | ✅ Done |
+> | R1.13 | Remove the dead RL message declarations (stale Shape Library / slide keys) | 72 | ✅ Done |
+> | R1.14 | Add the keys used in JS but absent from `en.json` | 23 | ✅ Done |
+> | R1.15 | Ship the `en.json` keys missing from `messages[]` — includes **all skip-links and ARIA landmarks** | 45 | ✅ Done |
+> | R1.16 | Remove `echo-badge-count` and `templatedata-doc-subpage` from `en.json` (cross-extension override) | 2 | ✅ Done |
+>
+> The original review counted 137; the checker built for **R1.20** found 152
+> once its reference detection covered `window.layersMessages.get()` and
+> module-level `t()`/`msg()` wrappers. All are now fixed and the checker is a
+> blocking gate, so the class cannot recur.
+>
+> One warning-level category remains and is deliberately not enforced: 71 keys
+> are declared in `messages[]` and translated but referenced by neither JS nor
+> PHP. They are almost certainly dead, but removing a shipped message is a
+> user-visible change and each needs individual confirmation. Run
+> `npm run check:i18n -- --strict` to fail on them once triaged.
+>
+> ### Priority 3 — MEDIUM
+>
+> | # | Item | Where | Status |
+> |---|------|-------|--------|
+> | R1.17 | Enforce `bundlesize.config.json` in CI, or delete it — all 3 budgets already blown (viewer 2.2×, shared 6.3×, editor 1.3×) | `bundlesize.config.json` | ✅ Done (v1.5.80) — `scripts/check-bundle-size.js` runs in `npm test`; budgets rebased on raw source bytes |
+> | R1.18 | Shard the 30.28 MB `emoji-bundle.json`; add cache-busting; stop hardcoding `/Layers/` in the path | `EmojiLibraryIndex.js:2924` | ✅ Done (v1.5.80) — 19 per-category shards, 9.3 MB of unreferenced entries dropped, `?version=` cache-busting, loader split into `EmojiLibraryLoader.js`. The `/Layers/` prefix is retained deliberately: `remoteExtPath` in `extension.json` already requires the directory to be named `Layers`. |
+> | R1.19 | Untrack `coverage.json` (9.53 MB) and delete `ShapeLibraryData.original.js` (4.07 MB, referenced by nothing) | repo root, `shapeLibrary/` | ✅ Done (v1.5.80) |
+> | R1.20 | **Add `scripts/verify-i18n-wiring.js`** validating `extension.json messages[] ↔ en.json ↔ JS usage`; wire into `npm test` | `scripts/verify-i18n-wiring.js` | ✅ Done (v1.5.80) |
+> | R1.21 | Replace the 24 deprecated global class aliases with MW 1.44 namespaces on `main` | `src/` (14 distinct classes) | ✅ Done (v1.5.80) — 12 classes, 32 imports + 6 inline refs + docblocks |
+> | R1.22 | Teach `check-mw-compatibility.js` to detect deprecated-alias drift (it reports 0/0 today) | `scripts/` | ✅ Done (v1.5.80) — 24 new rules; also scans `maintenance/` and runs in `npm test` |
+> | R1.23 | Implement or remove `LayersThumbnailCache` — documented as a working toggle, never read | `extension.json` | ✅ Done (v1.5.80) — removed |
+> | R1.24 | Remove `LayersUseBinaryOverlays` (never read) | `extension.json` | ✅ Done (v1.5.80) |
+> | R1.25 | Drop the dead `layer_assets` table, as was done for `layer_set_usage` | `LayersSchemaManager.php`, `sql/` | ✅ Done (v1.5.80) |
+> | R1.26 | Remove or implement the `managelayerlibrary` right (declared, granted, never checked) | `extension.json` | ✅ Done (v1.5.80) — removed |
+> | R1.27 | Add PHPUnit coverage for `ApiLayersDelete`, `LayerSaveGuardsTrait`, `EditLayersAction` | `tests/phpunit/` | 🔲 Open |
+> | R1.28 | Save/restore `document.activeElement` around dialog open/close (focus trap itself is correct) | `editor/DialogManager.js` | ✅ Done (v1.5.80) — all 5 dialogs now share `registerDialog()`/`makeDialogCleanup()` |
+>
+> `CHANGELOG.md` and `wiki/Changelog.md` were checked for divergence during the
+> v1.5.80 pass: both cover exactly the same set of release headings. The ~39
+> lines that differ are editorial — the wiki copy is a deliberately condensed
+> rewrite of the same entries. No action needed, but keep adding new releases to
+> **both**.
+>
+> **R1.20 was the highest-leverage item in this entire plan** and is now done.
+> `grunt banana` and `verify-metrics.js` both validate only `en.json ↔
+> qqq.json`. The three-way relationship that determines whether a message
+> actually reaches a user was unvalidated, and every defect in Priority 2 lived
+> in that gap. `npm test` and `npm run check:i18n` now close it.
+>
+> ### Priority 4 — LOW
+>
+> | # | Item | Where | Status |
+> |---|------|-------|--------|
+> | R1.29 | Upgrade pdf.js to ≥ 4.2.67 (the `isEvalSupported:false` mitigation is correct but the dep is >2 yrs stale) | `resources/lib/pdfjs/` | ✅ Done (v1.5.80) — 4.10.38, re-wrapped as UMD by `npm run vendor:pdfjs` |
+> | R1.30 | Cap/LRU the unbounded `_docCache`; add `cMapUrl`/`standardFontDataUrl` and `maxImageSize` | `viewer/PdfRenderer.js:69` | ✅ Done (v1.5.80) — LRU cap + `maxImageSize`; `cMapUrl`/`standardFontDataUrl` deliberately **not** set, see note |
+> | R1.31 | Emit CSP `frame-ancestors 'self'` alongside `X-Frame-Options` in modal mode | `EditLayersAction.php:106-119` | ✅ Done (v1.5.80) |
+> | R1.32 | Verify image data-URL **magic bytes**, not just the declared MIME | `ServerSideLayerValidator.php:600` | ✅ Done (v1.5.80) |
+> | R1.33 | Replace the one unescaped `innerHTML` interpolation with `style.backgroundColor` | `canvas/RichTextToolbar.js:494` | ✅ Done (v1.5.80) |
+> | R1.34 | Surface user-visible errors for import/layer-set parse failure and `localStorage` preset loss | `ImportExportManager.js:47`, `LayerSetManager.js:75,100`, `presets/PresetStorage.js` | 🔲 Open |
+> | R1.35 | Add `$wgLayersDebug`-gated logging to the silent wikitext early-returns | `WikitextHooks.php:277,286` | 🔲 Open |
+> | R1.36 | Extract the `!== false && !== 0` boolean idiom into one shared helper (copy-pasted 3×, regressed 3×) | `LayersLightbox.js`, `LayerDataNormalizer.js` | 🔲 Open |
+> | R1.37 | Use `layers-editor-modal-title` instead of the hardcoded English iframe title | `LayersEditorModal.js:107` | 🔲 Open |
+> | R1.38 | Delete `nul`, untrack `codebase_review.md.bak2/.bak3` and `coverage_output.txt`, remove `Mediawiki-layer_set_usage-table.mediawiki` | repo root | ✅ Done (v1.5.80) — the `layer_set_usage` and `layer_assets` doc pages were removed alongside R1.25 |
+> | R1.39 | Fix `.github/copilot-instructions.md` drift (claims v1.5.77; claims "~21 phpcs doc errors" vs actual 0 errors/2 warnings; file counts stale) | `.github/` | ✅ Done (v1.5.80) |
+> | R1.40 | Fix the two `PATTERN NOT FOUND` targets in `update-version.js --check` (`wiki/Installation.md`, `improvement_plan.md`) | `scripts/` | ✅ Done (v1.5.80) |
+>
+> **R1.30 note on `cMapUrl` / `standardFontDataUrl`.** These were deliberately
+> not added. `resources/lib/pdfjs/` vendors only `pdf.min.js` and
+> `pdf.worker.min.js` — no `cmaps/` and no `standard_fonts/` directory ships
+> with the extension. Pointing pdf.js at paths that do not exist would replace
+> its current silent fallback with a stream of 404s on every CJK or
+> non-embedded-font PDF. If those assets are ever vendored (a ~2 MB addition),
+> set both options at the same time.
+>
+> ### Not a defect — recorded so it is not "re-found"
+>
+> The following were checked and are **correct**: no SQL injection (query
+> builder throughout); no command injection (both shell sites use
+> `Shell::command( ...$args )` with `->limits()`); no SSRF surface; no `eval` /
+> `new Function`; `postMessage` origin validated (`LayersEditorModal.js:150`);
+> `RichTextConverter` escaping and CSS sanitisation; `validateSvgPath()`
+> whitelist; the boolean `0`-vs-`false` fix from the postmortem is present and
+> working; CSRF/POST/write-mode on all write endpoints; all 13
+> `eslint-disable` comments legitimate; all RL file references resolve;
+> `DialogManager` **does** have a working focus trap; toolbar controls **are**
+> real `<button>` elements; 0 empty catch blocks; 0 TODO/FIXME/HACK; 0 real
+> `console.*` in shipping JS; documented counts (17 tools, 1,385 shapes, 2,817
+> emoji, 106 WOFF2 files in `resources/ext.layers.shared/fonts/`) all accurate;
+> Slide Mode complete and reachable; `LayersDatabaseTest.php` exists.
+>
+> ### Structural recommendation
+>
+> 14,090 tests run in ~10.7 s (≈0.75 ms/test) at 95.87% statement coverage, and
+> caught none of the above — not a literal `⧼…⧽` in shipped UI, not 83
+> undefined message keys, not a missing hook registration, not `endAtomic()` in
+> a catch block. The recommendation is **not** "write more tests". It is to stop
+> treating test count and coverage as quality signals, and to add a small number
+> of integration assertions on the paths where defects actually occur: message
+> resolution, parser state across multiple parses in one process, and DB
+> rollback behaviour. `ServerSideLayerValidatorTest.php` and
+> `WikitextHooksTest.php` already show the team can write tests of that calibre.
 
 > ## ✅ v76 — Character formatting moved to the floating toolbar (text box / callout)
 >

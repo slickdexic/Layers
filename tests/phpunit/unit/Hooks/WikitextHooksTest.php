@@ -273,4 +273,76 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 			],
 		];
 	}
+
+	// =========================================================================
+	// Per-parse static state reset
+	// =========================================================================
+
+	/**
+	 * Read a private static property of WikitextHooks.
+	 *
+	 * @param string $name
+	 * @return mixed
+	 */
+	private function getStaticState( string $name ) {
+		$reflection = new \ReflectionClass( \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class );
+		$property = $reflection->getProperty( $name );
+		$property->setAccessible( true );
+		return $property->getValue();
+	}
+
+	/**
+	 * WikitextHooks accumulates per-parse state in static properties. If it is
+	 * not cleared between parses, layer sets bleed from one page into the next
+	 * within the same request (job queue, API multi-parse, CLI maintenance).
+	 *
+	 * @covers \MediaWiki\Extension\Layers\Hooks\WikitextHooks::onParserClearState
+	 */
+	public function testOnParserClearStateResetsGalleryHints(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+
+		$hooks::registerGalleryHint( 'Example.jpg', 'anatomy' );
+		$this->assertNotSame( [], $this->getStaticState( 'galleryHints' ) );
+
+		$this->assertTrue( $hooks::onParserClearState( null ) );
+
+		$this->assertSame( [], $this->getStaticState( 'galleryHints' ) );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Hooks\WikitextHooks::onParserClearState
+	 */
+	public function testOnParserClearStateResetsEveryPerParseProperty(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$reflection = new \ReflectionClass( $hooks );
+
+		$arrayProperties = [
+			'fileSetNames',
+			'fileRenderCount',
+			'fileLinkTypes',
+			'fileParamLayerset',
+			'fileParseCount',
+			'pendingRender',
+			'galleryHints',
+		];
+
+		// Dirty every tracked property so a partial reset would be detected.
+		foreach ( $arrayProperties as $name ) {
+			$property = $reflection->getProperty( $name );
+			$property->setAccessible( true );
+			$property->setValue( null, [ 'Example.jpg' => 'stale' ] );
+		}
+		$flag = $reflection->getProperty( 'pageHasLayers' );
+		$flag->setAccessible( true );
+		$flag->setValue( null, true );
+
+		$hooks::onParserClearState( null );
+
+		foreach ( $arrayProperties as $name ) {
+			$property = $reflection->getProperty( $name );
+			$property->setAccessible( true );
+			$this->assertSame( [], $property->getValue(), "$name must be cleared between parses" );
+		}
+		$this->assertFalse( $flag->getValue(), 'pageHasLayers must be cleared between parses' );
+	}
 }

@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.79",
+	"version": "1.5.80",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -46,7 +46,8 @@
 		"MediaWiki\\Extension\\Layers\\Hooks\\SlideHooks": "src/Hooks/SlideHooks.php",
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersList": "src/Api/ApiLayersList.php",
 		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides": "src/SpecialPages/SpecialSlides.php",
-		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide": "src/SpecialPages/SpecialEditSlide.php"
+		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide": "src/SpecialPages/SpecialEditSlide.php",
+		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialLayersExport": "src/SpecialPages/SpecialLayersExport.php"
 	},
 	"config": {
 		"LayersEnable": {
@@ -93,10 +94,6 @@
 			"description": "Default name for layer sets when none is specified",
 			"value": "default"
 		},
-		"LayersUseBinaryOverlays": {
-			"description": "Enable legacy binary overlay files (.l01, .l02, etc)",
-			"value": false
-		},
 		"LayersDefaultFonts": {
 			"description": "Available fonts in the layer editor. 32 fonts self-hosted as WOFF2 files (OFL) plus 4 system fonts.",
 			"value": [
@@ -142,10 +139,6 @@
 			"description": "Maximum image size for layer editing in pixels",
 			"value": 4096
 		},
-		"LayersThumbnailCache": {
-			"description": "Enable caching of composite thumbnails",
-			"value": true
-		},
 		"LayersImageMagickTimeout": {
 			"description": "Timeout in seconds for ImageMagick operations",
 			"value": 30
@@ -161,6 +154,10 @@
 		"LayersPdfExportMaxPages": {
 			"description": "Maximum number of pages allowed when exporting a marked-up file to PDF (0 = unlimited)",
 			"value": 100
+		},
+		"LayersExportDirectory": {
+			"description": "Directory for cached PDF exports. Must be outside the document root; exports are served through Special:LayersExport after a permission check. Empty uses $wgTmpDirectory/layers-export.",
+			"value": ""
 		},
 		"LayersSlidesEnable": {
 			"description": "Enable Slide Mode for creating canvas-based layers without a parent image",
@@ -216,7 +213,7 @@
 		"LoadExtensionSchemaUpdates": "MediaWiki\\Extension\\Layers\\Database\\LayersSchemaManager::onLoadExtensionSchemaUpdates",
 		"MakeGlobalVariablesScript": "LayersHooks",
 		"ParserFirstCallInit": [ "LayersWikitextHooks", "LayersSlideHooks" ],
-		"ParserClearState": "LayersSlideHooks",
+		"ParserClearState": [ "LayersWikitextHooks", "LayersSlideHooks" ],
 		"ParserBeforeInternalParse": "LayersWikitextHooks",
 		"LinkerMakeMediaLinkFile": "LayersWikitextHooks",
 		"ImageBeforeProduceHTML": "LayersWikitextHooks",
@@ -231,7 +228,8 @@
 	},
 	"SpecialPages": {
 		"Slides": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides",
-		"EditSlide": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide"
+		"EditSlide": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide",
+		"LayersExport": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialLayersExport"
 	},
 	"SpecialPageGroups": {
 		"Slides": "layers",
@@ -310,6 +308,7 @@
 				"viewer/ViewerManager.js",
 				"viewer/ApiFallback.js",
 				"viewer/PdfRenderer.js",
+				"viewer/PdfBuilder.js",
 				"viewer/LayersLightbox.js",
 				"init.js"
 			],
@@ -326,8 +325,9 @@
 				"layers-lightbox-alt",
 				"layers-lightbox-print",
 				"layers-lightbox-print-tooltip",
-				"layers-lightbox-export-pdf",
-				"layers-lightbox-export-pdf-tooltip",
+				"layers-lightbox-print-preparing",
+				"layers-lightbox-download",
+				"layers-lightbox-download-tooltip",
 				"layers-lightbox-export-generating",
 				"layers-zoom-in",
 				"layers-zoom-out",
@@ -339,7 +339,9 @@
 				"layers-viewer-edit",
 				"layers-viewer-view",
 				"layers-slide-empty",
-				"layers-slide-empty-hint"
+				"layers-slide-empty-hint",
+				"layers-link-viewer-title",
+				"layers-export-pdf-failed"
 			]
 		},
 		"ext.layers.modal": {
@@ -357,15 +359,6 @@
 				"layers-editor-modal-title",
 				"layers-editor-modal-close",
 				"layers-editor-modal-saved"
-			]
-		},
-		"ext.layers.pdfjs": {
-			"localBasePath": "resources/lib/pdfjs",
-			"remoteExtPath": "Layers/resources/lib/pdfjs",
-			"targets": [ "desktop", "mobile" ],
-			"packageFiles": [
-				"pdfjs.js",
-				"pdf.min.js"
 			]
 		},
 		"ext.layers.editor": {
@@ -895,22 +888,7 @@
 				"layers-slide-disabled",
 				"layers-slide-name-required",
 				"layers-slide-invalid-name",
-				"layers-slide-not-found",
 				"layers-slide-empty",
-				"layers-slide-locked",
-				"layers-slide-size-locked",
-				"layers-slide-edit-button",
-				"layers-slide-placeholder",
-				"layers-slide-canvas",
-				"layers-slide-loading",
-				"layers-slide-save-success",
-				"layers-slide-save-error",
-				"layers-slide-invalid-dimensions",
-				"layers-slide-invalid-background",
-				"layers-slide-invalid-lock",
-				"layers-editor-slide-mode",
-				"layers-editor-slide-canvas-size",
-				"layers-editor-slide-background",
 				"layers-slide-canvas-layer",
 				"layers-slide-canvas-size",
 				"layers-slide-canvas-width",
@@ -1121,63 +1099,6 @@
 				"layers-prop-angle-value-placeholder",
 
 				"layers-shape-library",
-				"layers-shape-search-placeholder",
-				"layers-shape-search-aria",
-				"layers-shape-grid-aria",
-				"layers-shape-recent",
-				"layers-shape-toggle-favorite",
-				"layers-shape-favorites",
-				"layers-shape-no-results",
-				"layers-shape-loading",
-				"layers-tool-custom-shape",
-				"layers-shape-category-arrows",
-				"layers-shape-category-flowchart",
-				"layers-shape-category-callouts",
-				"layers-shape-category-geometric",
-				"layers-shape-category-symbols",
-				"layers-shape-category-decorative",
-				"layers-shape-arrow-right",
-				"layers-shape-arrow-left",
-				"layers-shape-arrow-up",
-				"layers-shape-arrow-down",
-				"layers-shape-arrow-double-h",
-				"layers-shape-chevron-right",
-				"layers-shape-arrow-curved",
-				"layers-shape-process",
-				"layers-shape-process-rounded",
-				"layers-shape-decision",
-				"layers-shape-terminator",
-				"layers-shape-data",
-				"layers-shape-document",
-				"layers-shape-database",
-				"layers-shape-connector",
-				"layers-shape-speech-rect",
-				"layers-shape-speech-round",
-				"layers-shape-thought",
-				"layers-shape-callout-left",
-				"layers-shape-callout-right",
-				"layers-shape-triangle",
-				"layers-shape-triangle-right",
-				"layers-shape-pentagon",
-				"layers-shape-hexagon",
-				"layers-shape-octagon",
-				"layers-shape-cross",
-				"layers-shape-trapezoid",
-				"layers-shape-parallelogram",
-				"layers-shape-checkmark",
-				"layers-shape-xmark",
-				"layers-shape-warning",
-				"layers-shape-info",
-				"layers-shape-question",
-				"layers-shape-star-5",
-				"layers-shape-heart",
-				"layers-shape-lightning",
-				"layers-shape-banner",
-				"layers-shape-shield",
-				"layers-shape-seal",
-				"layers-shape-bracket-left",
-				"layers-shape-bracket-right",
-				"layers-shape-flag",
 				"layers-shape-library-title",
 				"layers-shape-library-search",
 				"layers-shape-library-count",
@@ -1205,7 +1126,62 @@
 				"layers-input-text-too-long",
 				"layers-input-char-limit-warning",
 				"layers-btn-ok",
-				"layers-text-input-placeholder"
+				"layers-text-input-placeholder",
+				"layers-revision-reload-failed",
+				"layers-reload-warning",
+				"layers-text-toolbar-size-decrease",
+				"layers-text-toolbar-size-increase",
+				"layers-text-toolbar-highlight-color",
+				"layers-aria-layer-added",
+				"layers-aria-layer-count",
+				"layers-aria-layer-removed",
+				"layers-set-auto-created",
+				"layers-validation-star-points-invalid",
+				"layers-validation-star-points-range",
+				"layers-validation-richtext-not-array",
+				"layers-validation-richtext-too-many-runs",
+				"layers-validation-richtext-too-long",
+				"layers-emoji-picker-tooltip",
+				"layers-emoji-picker-button",
+				"layers-background-visibility",
+				"layers-background-opacity",
+				"layers-background-locked",
+				"layers-prop-fill-type",
+				"layers-fill-solid",
+				"layers-fill-linear",
+				"layers-fill-radial",
+				"layers-gradient-preset",
+				"layers-gradient-angle",
+				"layers-gradient-radius",
+				"layers-gradient-colors",
+				"layers-gradient-add-stop",
+				"layers-gradient-remove-stop",
+				"layers-layer-name",
+				"layers-folder-empty-tip",
+				"layers-prop-preserve-aspect-ratio",
+				"layers-section-text-effects",
+				"layers-save-failed",
+				"layers-skip-to-toolbar",
+				"layers-skip-to-canvas",
+				"layers-skip-to-layers",
+				"layers-toolbar-region",
+				"layers-main-region",
+				"layers-panel-region",
+				"layers-canvas-region",
+				"layers-validation-dimension-offset-invalid",
+				"layers-validation-dimension-offset-range",
+				"layers-prompt-title",
+				"layers-discard",
+				"layers-import-anyway",
+				"layers-panel-divider",
+				"layers-properties-unavailable",
+				"layers-presets-delete-title",
+				"layers-canvas-color-preview",
+				"layers-type-blur",
+				"layers-folder-collapse",
+				"layers-folder-expand",
+				"layers-clear",
+				"layers-rename"
 			]
 		},
 		"ext.layers.shapeLibrary": {
@@ -1316,6 +1292,7 @@
 			],
 			"scripts": [
 				"EmojiLibraryIndex.js",
+				"EmojiLibraryLoader.js",
 				"EmojiPickerPanel.js"
 			],
 			"styles": [
@@ -1394,7 +1371,6 @@
 	},
 	"AvailableRights": [
 		"editlayers",
-		"managelayerlibrary",
 		"layers-admin"
 	],
 	"GroupPermissions": {
@@ -1406,7 +1382,6 @@
 		},
 		"sysop": {
 			"editlayers": true,
-			"managelayerlibrary": true,
 			"layers-admin": true
 		}
 	}

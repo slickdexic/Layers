@@ -491,7 +491,14 @@
 			// Main highlight button
 			const btn = document.createElement( 'button' );
 			btn.className = 'layers-text-toolbar-btn layers-text-toolbar-highlight-main';
-			btn.innerHTML = `<span style="background:${ currentColor };padding:0 2px;">H</span>`;
+			// SECURITY: currentColor is persisted user input. Build the swatch with
+			// the DOM API and assign through CSSOM (which silently drops invalid
+			// values) rather than interpolating it into an innerHTML string.
+			const swatch = document.createElement( 'span' );
+			swatch.style.backgroundColor = currentColor;
+			swatch.style.padding = '0 2px';
+			swatch.textContent = 'H';
+			btn.appendChild( swatch );
 			btn.title = this.msg( 'layers-text-toolbar-highlight', 'Highlight' );
 			btn.setAttribute( 'data-format', 'highlight' );
 

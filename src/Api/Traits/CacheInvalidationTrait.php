@@ -27,7 +27,7 @@ trait CacheInvalidationTrait {
 	 * This ensures that pages using [[File:X.jpg|layerset=on]] or similar
 	 * wikitext will re-render with current layer data after a save/delete/rename.
 	 *
-	 * @param \Title|\MediaWiki\Title\Title $title The file page title
+	 * @param \MediaWiki\Title\Title $title The file page title
 	 */
 	protected function invalidateCachesForFile( $title ): void {
 		if ( !$title || !$title->exists() ) {

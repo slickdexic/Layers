@@ -8,8 +8,8 @@ declare( strict_types=1 );
  * For a (multi-page) file this renders each page's background raster with its
  * saved layer set composited on top (via ThumbnailRenderer), then stitches the
  * per-page images into a single PDF using ImageMagick. The generated PDF is
- * cached under the upload thumb directory and its URL is returned so the client
- * can open it for printing or download.
+ * cached outside the document root and a Special:LayersExport URL is returned,
+ * so delivery re-checks the caller's `read` permission on the source file.
  *
  * This is a read-only operation (no CSRF token): it never mutates layer data.
  * It is rate limited under the 'render' key because rasterisation + compositing
@@ -22,16 +22,18 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Api;
 
-use ApiBase;
-use ApiMain;
-use ApiResult;
-use ApiUsageException;
+use MediaWiki\Api\ApiBase;
+use MediaWiki\Api\ApiMain;
+use MediaWiki\Api\ApiResult;
+use MediaWiki\Api\ApiUsageException;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
+use MediaWiki\Extension\Layers\Utility\RenderCache;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
+use MediaWiki\SpecialPage\SpecialPage;
 use Wikimedia\ParamValidator\ParamValidator;
 
 class ApiLayersExport extends ApiBase {
@@ -175,7 +177,7 @@ class ApiLayersExport extends ApiBase {
 			}
 		}
 
-		$url = $this->pathToUrl( $outputPath );
+		$url = $this->getExportUrl( $title, $cacheKey );
 
 		$this->getResult()->addValue( null, $this->getModuleName(), [
 			'success' => 1,
@@ -342,38 +344,31 @@ class ApiLayersExport extends ApiBase {
 	 * @return string|null Directory path, or null if it cannot be created
 	 */
 	private function getExportDir(): ?string {
-		$uploadDir = $this->getConfig()->get( 'UploadDirectory' );
-		if ( !$uploadDir ) {
-			$uploadDir = sys_get_temp_dir();
-		}
-		$dir = rtrim( (string)$uploadDir, '/\\' ) . '/thumb/layers/export';
-		if ( !is_dir( $dir ) ) {
-			$ok = mkdir( $dir, 0755, true );
-			if ( !$ok && !is_dir( $dir ) ) {
-				$this->getLogger()->error( 'Layers export: cannot create dir', [ 'dir' => $dir ] );
-				return null;
-			}
+		$dir = RenderCache::getExportDir( $this->getConfig() );
+		if ( !RenderCache::ensureDir( $this->getConfig(), $dir ) ) {
+			$this->getLogger()->error( 'Layers export: cannot create dir', [ 'dir' => $dir ] );
+			return null;
 		}
 		return $dir;
 	}
 
 	/**
-	 * Convert an upload-directory filesystem path to a web-accessible URL.
+	 * Build the URL the client should open to retrieve the export.
 	 *
-	 * @param string $path Filesystem path under the upload directory
-	 * @return string Public URL
+	 * Exports are served through Special:LayersExport rather than as a direct
+	 * upload-path URL: they are full-content flattened documents, so delivery has
+	 * to re-check `read` on the source file instead of relying on the URL being
+	 * hard to guess.
+	 *
+	 * @param Title $title File title the export belongs to
+	 * @param string $cacheKey Export cache key
+	 * @return string Local URL
 	 */
-	private function pathToUrl( string $path ): string {
-		$uploadDir = (string)$this->getConfig()->get( 'UploadDirectory' );
-		$uploadPath = (string)$this->getConfig()->get( 'UploadPath' );
-
-		$normPath = str_replace( '\\', '/', $path );
-		$normUploadDir = rtrim( str_replace( '\\', '/', $uploadDir ), '/' );
-		if ( $normUploadDir !== '' && strpos( $normPath, $normUploadDir ) === 0 ) {
-			$relative = substr( $normPath, strlen( $normUploadDir ) );
-			return rtrim( $uploadPath, '/' ) . $relative;
-		}
-		return rtrim( $uploadPath, '/' ) . '/thumb/layers/export/' . basename( $path );
+	private function getExportUrl( $title, string $cacheKey ): string {
+		return SpecialPage::getTitleFor( 'LayersExport' )->getLocalURL( [
+			'file' => $title->getDBkey(),
+			'key' => $cacheKey,
+		] );
 	}
 
 	/**

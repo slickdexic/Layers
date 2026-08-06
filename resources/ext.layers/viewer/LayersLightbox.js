@@ -9,6 +9,15 @@
 ( function () {
 	'use strict';
 
+	/**
+	 * How long to wait for the composited page images to decode inside the print
+	 * document before opening the print dialog anyway. Bounded so one image that
+	 * never settles cannot strand the user on a dead Print button.
+	 *
+	 * @type {number}
+	 */
+	const IMAGE_DECODE_TIMEOUT_MS = 5000;
+
 	// Helper to resolve classes from namespace with global fallback
 	const getClass = window.layersGetClass || function ( namespacePath, globalName ) {
 		if ( window.Layers ) {
@@ -240,26 +249,27 @@
 			this.printBtn.type = 'button';
 			this.printBtn.className = 'layers-lightbox-print';
 			this.printBtn.textContent = this.getMessage( 'layers-lightbox-print', 'Print' );
-			this.printBtn.title = this.getMessage( 'layers-lightbox-print-tooltip', 'Print the marked-up page' );
+			this.printBtn.title = this.getMessage(
+				'layers-lightbox-print-tooltip', 'Print the marked-up document'
+			);
 			this.printBtn.addEventListener( 'click', ( e ) => {
 				e.stopPropagation();
-				this.printCurrentPage();
+				this.printDocument();
 			} );
 
-			// Export the full annotated document as a PDF (server-side). Shown
-			// only for multi-page files (see updateToolbar).
-			this.exportPdfBtn = document.createElement( 'button' );
-			this.exportPdfBtn.type = 'button';
-			this.exportPdfBtn.className = 'layers-lightbox-export-pdf';
-			this.exportPdfBtn.textContent = this.getMessage( 'layers-lightbox-export-pdf', 'Print PDF' );
-			this.exportPdfBtn.title = this.getMessage(
-				'layers-lightbox-export-pdf-tooltip',
-				'Generate and open the full marked-up PDF for printing or download'
+			this.downloadBtn = document.createElement( 'button' );
+			this.downloadBtn.type = 'button';
+			this.downloadBtn.className = 'layers-lightbox-download';
+			this.downloadBtn.textContent = this.getMessage(
+				'layers-lightbox-download', 'Download'
 			);
-			this.exportPdfBtn.style.display = 'none';
-			this.exportPdfBtn.addEventListener( 'click', ( e ) => {
+			this.downloadBtn.title = this.getMessage(
+				'layers-lightbox-download-tooltip',
+				'Download the marked-up document as a PDF'
+			);
+			this.downloadBtn.addEventListener( 'click', ( e ) => {
 				e.stopPropagation();
-				this.exportPdf();
+				this.downloadPdf();
 			} );
 
 			this.toolbar.appendChild( this.zoomOutBtn );
@@ -270,7 +280,7 @@
 			this.toolbar.appendChild( this.pageIndicator );
 			this.toolbar.appendChild( this.nextBtn );
 			this.toolbar.appendChild( this.printBtn );
-			this.toolbar.appendChild( this.exportPdfBtn );
+			this.toolbar.appendChild( this.downloadBtn );
 
 			// Assemble structure
 			this.container.appendChild( closeBtn );
@@ -456,10 +466,14 @@
 				}
 				return fallbackUrl;
 			} ).catch( ( err ) => {
-				this.debugLog(
-					'pdf.js render failed, using server image:',
-					err && err.message
-				);
+				// Warn unconditionally: the reader still gets the page, but a
+				// silent downgrade to the server raster is worth surfacing.
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+					mw.log.warn(
+						'[Layers] pdf.js render failed, using server image: ' +
+						( err && err.message )
+					);
+				}
 				return fallbackUrl;
 			} );
 		}
@@ -527,9 +541,6 @@
 			this.prevBtn.style.display = multiPage ? '' : 'none';
 			this.nextBtn.style.display = multiPage ? '' : 'none';
 			this.pageIndicator.style.display = multiPage ? '' : 'none';
-			if ( this.exportPdfBtn ) {
-				this.exportPdfBtn.style.display = multiPage ? '' : 'none';
-			}
 			if ( multiPage ) {
 				this.pageIndicator.textContent = this.getMessage( 'layers-page-indicator', 'Page $1 / $2' )
 					.replace( '$1', String( this.currentPage ) )
@@ -683,42 +694,28 @@
 		}
 
 		/**
-		 * Print the currently displayed marked-up page. Adds a body class so the
-		 * print stylesheet isolates the lightbox image + layer overlay, then
-		 * invokes the browser print dialog.
+		 * Print the full marked-up document.
 		 *
+		 * Every page is composited client-side (background raster + layer overlay
+		 * flattened onto one canvas via the shared renderer, so all layer types
+		 * render correctly) and printed from a self-contained hidden document.
+		 *
+		 * Printing a purpose-built document rather than the wiki page is what
+		 * keeps the output clean: browsers draw their URL/date/"page x of y"
+		 * furniture in the page margin box, so only a document that can declare
+		 * `@page { margin: 0 }` can suppress them — and this stylesheet cannot
+		 * declare that globally without also zeroing the margins of every normal
+		 * article print. If client-side compositing is not possible (e.g. a
+		 * cross-origin, tainted canvas) it falls back to the server-side PDF.
+		 *
+		 * @return {Promise|undefined} Resolves once printing has been triggered.
 		 * @private
 		 */
-		printCurrentPage() {
-			if ( !this.overlay ) {
-				return;
-			}
-			document.body.classList.add( 'layers-lightbox-printing' );
-			const cleanup = () => {
-				document.body.classList.remove( 'layers-lightbox-printing' );
-				window.removeEventListener( 'afterprint', cleanup );
-			};
-			window.addEventListener( 'afterprint', cleanup );
-			// Fallback cleanup in case afterprint does not fire.
-			setTimeout( cleanup, 60000 );
-			window.print();
-		}
-
-		/**
-		 * Print the full marked-up document. For multi-page files this renders
-		 * every page client-side (background raster + layer overlay flattened onto
-		 * one canvas via the shared renderer, so all layer types render correctly)
-		 * and opens a print-ready window with one page per sheet. If client-side
-		 * compositing is not possible (e.g. a cross-origin/tainted canvas), it
-		 * falls back to the server-side PDF export.
-		 *
-		 * @private
-		 */
-		exportPdf() {
+		printDocument() {
 			if ( !this.filename ) {
 				return;
 			}
-			const btn = this.exportPdfBtn;
+			const btn = this.printBtn;
 			const original = btn ? btn.textContent : '';
 			const restore = () => {
 				if ( btn ) {
@@ -729,7 +726,7 @@
 			if ( btn ) {
 				btn.disabled = true;
 				btn.textContent = this.getMessage(
-					'layers-lightbox-export-generating', 'Preparing pages…'
+					'layers-lightbox-print-preparing', 'Preparing pages…'
 				);
 			}
 
@@ -741,17 +738,141 @@
 
 			return Promise.all( tasks ).then( ( images ) => {
 				const valid = images.filter( ( src ) => !!src );
-				if ( valid.length === 0 ) {
-					// Client compositing produced nothing usable; try the server.
-					restore();
-					return this.exportPdfViaServer();
-				}
 				restore();
-				this.openPrintDocument( valid );
+				if ( valid.length === 0 ) {
+					return this.printViaServer();
+				}
+				this.printImages( valid );
 			} ).catch( () => {
 				restore();
-				// Any failure (tainted canvas, missing renderer) → server fallback.
-				return this.exportPdfViaServer();
+				return this.printViaServer();
+			} );
+		}
+
+		/**
+		 * Download the full marked-up document as a PDF.
+		 *
+		 * The pages are composited client-side and wrapped in a PDF here rather
+		 * than taken from the server export, so that Download and Print produce
+		 * the same output. The server draws layers with ImageMagick primitives
+		 * and silently omits every layer type without one — custom shapes, emoji,
+		 * image layers, gradients, rich text — so its PDF can be missing exactly
+		 * the annotations the user came for. It remains the fallback for when
+		 * client-side compositing is impossible (e.g. a tainted canvas).
+		 *
+		 * @return {Promise|undefined} Resolves once the download has started.
+		 * @private
+		 */
+		downloadPdf() {
+			if ( !this.filename ) {
+				return;
+			}
+			const btn = this.downloadBtn;
+			const original = btn ? btn.textContent : '';
+			const restore = () => {
+				if ( btn ) {
+					btn.disabled = false;
+					btn.textContent = original;
+				}
+			};
+			if ( btn ) {
+				btn.disabled = true;
+				btn.textContent = this.getMessage(
+					'layers-lightbox-print-preparing', 'Preparing pages…'
+				);
+			}
+
+			const pageCount = Math.max( 1, parseInt( this.pageCount, 10 ) || 1 );
+			const tasks = [];
+			for ( let p = 1; p <= pageCount; p++ ) {
+				// JPEG because PDF can embed it verbatim via /DCTDecode; PNG would
+				// need a deflate pass that not every supported browser can do.
+				tasks.push( this.composePage( p, 'image/jpeg', 0.92 ) );
+			}
+
+			return Promise.all( tasks ).then( ( composited ) => {
+				restore();
+				const blob = this.buildPdfBlob( composited );
+				if ( !blob ) {
+					return this.downloadViaServer();
+				}
+				this.saveBlob( blob, this.exportFileName() );
+			} ).catch( () => {
+				restore();
+				return this.downloadViaServer();
+			} );
+		}
+
+		/**
+		 * Wrap composited pages in a PDF.
+		 *
+		 * @param {Array<Object|null>} composited Results from composePage
+		 * @return {Blob|null} PDF blob, or null if no page could be encoded
+		 * @private
+		 */
+		buildPdfBlob( composited ) {
+			const PdfBuilder = getClass( 'Viewer.PdfBuilder', 'LayersPdfBuilder' );
+			if ( typeof PdfBuilder !== 'function' ) {
+				return null;
+			}
+			const pages = [];
+			composited.forEach( ( entry ) => {
+				if ( !entry ) {
+					return;
+				}
+				const data = PdfBuilder.decodeJpegDataUrl( entry.src );
+				if ( data ) {
+					pages.push( { data: data, width: entry.width, height: entry.height } );
+				}
+			} );
+			return pages.length ? PdfBuilder.build( pages ) : null;
+		}
+
+		/**
+		 * Save a blob to disk under a given name.
+		 *
+		 * @param {Blob} blob Blob to save
+		 * @param {string} name Suggested file name
+		 * @private
+		 */
+		saveBlob( blob, name ) {
+			const url = URL.createObjectURL( blob );
+			const link = document.createElement( 'a' );
+			link.href = url;
+			link.download = name;
+			link.style.display = 'none';
+			document.body.appendChild( link );
+			link.click();
+			if ( link.parentNode ) {
+				link.parentNode.removeChild( link );
+			}
+			// Revoking immediately can cancel the download in some browsers.
+			setTimeout( () => URL.revokeObjectURL( url ), 60000 );
+		}
+
+		/**
+		 * Suggested name for the downloaded PDF, derived from the source file.
+		 *
+		 * @return {string} File name ending in .pdf
+		 * @private
+		 */
+		exportFileName() {
+			const base = String( this.filename || 'export' )
+				.replace( /\.[^.]+$/, '' )
+				.replace( /[\\/:*?"<>|]/g, '_' );
+			return ( base || 'export' ) + '.pdf';
+		}
+
+		/**
+		 * Fallback download path: save the server-generated PDF. `download=1`
+		 * makes Special:LayersExport send `Content-Disposition: attachment`.
+		 *
+		 * @return {Promise|undefined} Resolves once the export has been handled
+		 * @private
+		 */
+		downloadViaServer() {
+			return this.requestServerPdf( this.downloadBtn, ( url ) => {
+				this.triggerDownload( url );
 			} );
 		}
 
@@ -765,6 +886,22 @@
 		 * @private
 		 */
 		composePageDataUrl( page ) {
+			return this.composePage( page ).then(
+				( result ) => ( result ? result.src : null )
+			);
+		}
+
+		/**
+		 * Render a single page as a flattened composite image.
+		 *
+		 * @param {number} page 1-based page number
+		 * @param {string} [type='image/png'] Canvas encoding MIME type
+		 * @param {number} [quality] Encoder quality for lossy types
+		 * @return {Promise<Object|null>} `{ src, width, height }`, or null if the
+		 *   page cannot be composited client-side.
+		 * @private
+		 */
+		composePage( page, type, quality ) {
 			if ( typeof mw === 'undefined' || !mw.Api ) {
 				return Promise.resolve( null );
 			}
@@ -812,20 +949,22 @@
 						layerData.baseHeight = set.baseHeight;
 					}
 				}
-				return this.flattenPage( imageUrl, layerData );
+				return this.flattenPage( imageUrl, layerData, type, quality );
 			} ).catch( () => null );
 		}
 
 		/**
 		 * Load a page image and flatten it together with its layers onto an
-		 * offscreen canvas, returning a PNG data URL.
+		 * offscreen canvas.
 		 *
 		 * @param {string} imageUrl Page background image URL (same-origin thumb)
 		 * @param {Object} layerData Layer data for the page
-		 * @return {Promise<string|null>} Data URL, or null on failure
+		 * @param {string} [type='image/png'] Canvas encoding MIME type
+		 * @param {number} [quality] Encoder quality for lossy types
+		 * @return {Promise<Object|null>} `{ src, width, height }`, or null on failure
 		 * @private
 		 */
-		flattenPage( imageUrl, layerData ) {
+		flattenPage( imageUrl, layerData, type, quality ) {
 			const LayersViewer = getClass( 'Viewer.LayersViewer', 'LayersViewer' ) ||
 				( window.Layers && window.Layers.Viewer );
 			if ( typeof LayersViewer !== 'function' ) {
@@ -861,11 +1000,17 @@
 						// image layers, emoji) to load and draw before capturing,
 						// otherwise the composite would be missing that markup.
 						viewer.renderFlattenedAsync().then( ( canvas ) => {
-							let url = null;
+							let result = null;
 							try {
-								url = canvas ? canvas.toDataURL( 'image/png' ) : null;
+								if ( canvas ) {
+									result = {
+										src: canvas.toDataURL( type || 'image/png', quality ),
+										width: canvas.width,
+										height: canvas.height
+									};
+								}
 							} catch ( e ) {
-								url = null;
+								result = null;
 							}
 							if ( viewer && typeof viewer.destroy === 'function' ) {
 								viewer.destroy();
@@ -873,7 +1018,7 @@
 							if ( host.parentNode ) {
 								host.parentNode.removeChild( host );
 							}
-							done( url );
+							done( result );
 						} );
 					} catch ( e ) {
 						if ( viewer && typeof viewer.destroy === 'function' ) {
@@ -891,28 +1036,100 @@
 		}
 
 		/**
-		 * Open a print-ready window containing the composited page images, one per
-		 * printed sheet, and trigger the browser print dialog (which also offers
-		 * "Save as PDF"). This keeps the marked-up overlay intact because each
-		 * image already has its layers baked in.
+		 * Print the composited page images, one per printed sheet, from a hidden
+		 * same-origin iframe. The iframe keeps the user in the lightbox — no new
+		 * tab — and, because it is a document of our own, it can declare
+		 * `@page { margin: 0 }`, which removes both the extra white border and the
+		 * browser's own URL/date/"page x of y" furniture (that furniture is drawn
+		 * inside the page margin box).
 		 *
 		 * @param {string[]} images Ordered page image data URLs
 		 * @private
 		 */
-		openPrintDocument( images ) {
-			const win = window.open( '', '_blank' );
+		printImages( images ) {
+			this.destroyPrintFrame();
+
+			const frame = document.createElement( 'iframe' );
+			frame.className = 'layers-print-frame';
+			frame.setAttribute( 'aria-hidden', 'true' );
+			frame.setAttribute( 'title', 'print' );
+			document.body.appendChild( frame );
+			this.printFrame = frame;
+
+			const win = frame.contentWindow;
 			if ( !win ) {
+				this.destroyPrintFrame();
 				this.showExportError();
 				return;
 			}
+			const doc = win.document;
+			doc.open();
+			doc.write( this.buildPrintHtml( images ) );
+			doc.close();
+
+			const triggerPrint = () => {
+				try {
+					win.focus();
+					win.print();
+				} catch ( e ) {
+					// Printing is best-effort; a blocked dialog must not throw.
+				}
+				// The frame has to outlive the (modal, but asynchronous in some
+				// browsers) print dialog, so tear it down on afterprint with a
+				// generous timer as a backstop.
+				const cleanup = () => this.destroyPrintFrame();
+				if ( typeof win.addEventListener === 'function' ) {
+					win.addEventListener( 'afterprint', cleanup );
+				}
+				setTimeout( cleanup, 60000 );
+			};
+
+			this.whenImagesReady( doc ).then( triggerPrint );
+		}
+
+		/**
+		 * Resolve once every image in a document has finished decoding, so the
+		 * print dialog never captures blank sheets. Bounded, so a single image
+		 * that never settles cannot leave the user staring at a dead button.
+		 *
+		 * @param {Document} doc Document to wait on
+		 * @return {Promise} Resolves when all images have settled or the wait
+		 *   times out
+		 * @private
+		 */
+		whenImagesReady( doc ) {
+			const images = Array.prototype.slice.call( doc.images || [] );
+			const settled = Promise.all( images.map( ( img ) => {
+				if ( img.complete ) {
+					return Promise.resolve();
+				}
+				return new Promise( ( resolve ) => {
+					img.addEventListener( 'load', resolve );
+					img.addEventListener( 'error', resolve );
+				} );
+			} ) );
+			const deadline = new Promise( ( resolve ) => {
+				setTimeout( resolve, IMAGE_DECODE_TIMEOUT_MS );
+			} );
+			return Promise.race( [ settled, deadline ] );
+		}
+
+		/**
+		 * Build the standalone print document for a set of composited pages.
+		 *
+		 * @param {string[]} images Ordered page image data URLs
+		 * @return {string} Complete HTML document
+		 * @private
+		 */
+		buildPrintHtml( images ) {
 			const title = this.getMessage( 'layers-lightbox-print', 'Print' ) +
 				' – ' + this.filename;
 			const parts = [
 				'<!DOCTYPE html><html><head><meta charset="utf-8">',
 				'<title>', this.escapeHtml( title ), '</title><style>',
-				// Remove the browser's default page margins so the marked-up page
-				// fills the selected media instead of getting an extra white border.
-				'@page{margin:0;}',
+				// Zero margins remove the default white border *and* the browser's
+				// header/footer, which is painted in the margin box.
+				'@page{size:auto;margin:0;}',
 				'html,body{margin:0;padding:0;background:#fff;}',
 				'.layers-print-page{page-break-after:always;break-after:page;',
 				'break-inside:avoid;page-break-inside:avoid;}',
@@ -924,27 +1141,23 @@
 			for ( let i = 0; i < images.length; i++ ) {
 				parts.push(
 					'<div class="layers-print-page"><img src="',
-					images[ i ], '" alt=""></div>'
+					this.escapeHtml( images[ i ] ), '" alt=""></div>'
 				);
 			}
 			parts.push( '</body></html>' );
-			win.document.open();
-			win.document.write( parts.join( '' ) );
-			win.document.close();
-			// Give the images a tick to lay out before printing.
-			const triggerPrint = () => {
-				try {
-					win.focus();
-					win.print();
-				} catch ( e ) {
-					// Printing is best-effort; the tab remains open for the user.
-				}
-			};
-			if ( win.document.readyState === 'complete' ) {
-				win.setTimeout( triggerPrint, 250 );
-			} else {
-				win.addEventListener( 'load', () => win.setTimeout( triggerPrint, 250 ) );
+			return parts.join( '' );
+		}
+
+		/**
+		 * Remove the hidden print iframe, if one is currently attached.
+		 *
+		 * @private
+		 */
+		destroyPrintFrame() {
+			if ( this.printFrame && this.printFrame.parentNode ) {
+				this.printFrame.parentNode.removeChild( this.printFrame );
 			}
+			this.printFrame = null;
 		}
 
 		/**
@@ -961,17 +1174,19 @@
 		}
 
 		/**
-		 * Generate the full annotated document as a PDF on the server and open
-		 * it in a new tab (browser PDF viewer) for printing or download. Used as a
-		 * fallback when client-side compositing is not possible.
+		 * Generate the full annotated document as a PDF on the server and hand the
+		 * resulting URL to a consumer. Shared by the Download button and by the
+		 * Print fallback used when client-side compositing is impossible.
 		 *
+		 * @param {HTMLElement|null} btn Button to show progress on, if any
+		 * @param {Function} onUrl Receives the export URL on success
+		 * @return {Promise|undefined} Resolves once the export has been handled
 		 * @private
 		 */
-		exportPdfViaServer() {
+		requestServerPdf( btn, onUrl ) {
 			if ( !this.filename || typeof mw === 'undefined' || !mw.Api ) {
 				return;
 			}
-			const btn = this.exportPdfBtn;
 			const original = btn ? btn.textContent : '';
 			if ( btn ) {
 				btn.disabled = true;
@@ -997,7 +1212,7 @@
 				restore();
 				const result = data && data.layerspdfexport;
 				if ( result && result.url ) {
-					window.open( result.url, '_blank', 'noopener' );
+					onUrl( result.url );
 				} else {
 					this.showExportError();
 				}
@@ -1005,6 +1220,41 @@
 				restore();
 				this.showExportError();
 			} );
+		}
+
+		/**
+		 * Fallback print path: open the server-generated PDF in a new tab so the
+		 * user can print it from the browser's PDF viewer, which — like our own
+		 * print document — adds no margins or header/footer.
+		 *
+		 * @return {Promise|undefined} Resolves once the export has been handled
+		 * @private
+		 */
+		printViaServer() {
+			return this.requestServerPdf( this.printBtn, ( url ) => {
+				window.open( url, '_blank', 'noopener' );
+			} );
+		}
+
+		/**
+		 * Save an export URL to disk. `download=1` makes Special:LayersExport send
+		 * `Content-Disposition: attachment`, so the browser stores the PDF under
+		 * the source file's name instead of opening a viewer tab.
+		 *
+		 * @param {string} url Export URL from the API
+		 * @private
+		 */
+		triggerDownload( url ) {
+			const href = url + ( url.indexOf( '?' ) === -1 ? '?' : '&' ) + 'download=1';
+			const link = document.createElement( 'a' );
+			link.href = href;
+			link.rel = 'noopener';
+			link.style.display = 'none';
+			document.body.appendChild( link );
+			link.click();
+			if ( link.parentNode ) {
+				link.parentNode.removeChild( link );
+			}
 		}
 
 		/**
@@ -1203,6 +1453,9 @@
 			this.pdfRenderer = null;
 			this._pdfRendererResolved = false;
 
+			// Drop any hidden print document still attached to the page.
+			this.destroyPrintFrame();
+
 			// Remove event listeners
 			if ( this.boundKeyHandler ) {
 				document.removeEventListener( 'keydown', this.boundKeyHandler );
@@ -1249,7 +1502,6 @@
 				this.container = null;
 				this.imageWrapper = null;
 				this.toolbar = null;
-				document.body.classList.remove( 'layers-lightbox-printing' );
 				document.body.style.overflow = '';
 			} else {
 				// Animate out
@@ -1265,7 +1517,6 @@
 					this.container = null;
 					this.imageWrapper = null;
 					this.toolbar = null;
-					document.body.classList.remove( 'layers-lightbox-printing' );
 					document.body.style.overflow = '';
 				}, 300 );
 			}

@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-14%2C054%20passing-brightgreen" alt="14,054 Tests">
+  <img src="https://img.shields.io/badge/Tests-14%2C167%20passing-brightgreen" alt="14,167 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.87%25-brightgreen" alt="95.87% Coverage">
 </p>
 
@@ -20,7 +20,36 @@
 
 ---
 
-## 🆕 What's New in v1.5.78
+## 🆕 What's New in v1.5.80
+
+- **Layer writes now respect page protection** — Saving, renaming and deleting
+  a layer set additionally require ordinary `edit` permission on the file's
+  page. Previously only the global `editlayers` right was checked, so page,
+  namespace and cascading protection — and blocks — were bypassed on write.
+  ⚠️ On wikis that restrict editing in the File namespace this will reject
+  saves that used to succeed; see [[Permissions]].
+- **Generated renders are cleaned up** — Composited thumbnails and exported
+  PDFs belonging to a deleted file are now purged with the file, closing a
+  compliance gap where a deleted image's annotated PDF stayed retrievable. A
+  new `maintenance/purgeLayersRenderCache.php` reaps stale renders by age.
+- **150+ broken interface messages fixed** — Skip links, ARIA landmark labels,
+  several validation errors and `Special:Slides`' custom-size option were
+  declared and translated but never shipped to the browser, so they silently
+  fell back to English (or, in one case, rendered as
+  `⧼layers-slide-size-custom⧽`). A new `scripts/verify-i18n-wiring.js` gate
+  validates `extension.json ↔ en.json ↔ JS usage` and blocks the whole class.
+- **Correct rollback on failed saves** — Layer set writes now use a cancelable
+  atomic section, so a mid-write failure no longer commits partial data. Saves
+  that exceed `$wgLayersMaxBytes` server-side return `layers-data-too-large`
+  instead of a generic failure.
+- **Stale parser state fixed** — Per-parse caches are reset via
+  `ParserClearState` instead of a request-time heuristic that never fired in
+  CLI or job-queue parses, where it could write the wrong layer set into the
+  parser cache.
+- `Special:Slides` and `Special:EditSlide` are now grouped under "Layers" on
+  `Special:SpecialPages`.
+
+### Previous v1.5.78 Highlights
 
 - **In-wiki PDF viewer (pdf.js)** — Clicking a layered PDF now opens the page
   inside the full-screen viewer *with its overlay*, instead of navigating to
@@ -31,7 +60,7 @@
   and export controls. Falls back to the server-rasterized page image if pdf.js
   cannot load.
 
-## 🆕 What's New in v1.5.77
+### Previous v1.5.77 Highlights
 
 - **Text editing overhaul (text box & callout)** — Per-character formatting
   (font, size, bold/italic/underline, colour, alignment) now lives exclusively
@@ -402,12 +431,12 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.79 |
+| **Version (main)** | 1.5.80 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | August 2, 2026 |
 | **Test Suites** | 172 |
-| **Total Tests** | 14,054 |
+| **Total Tests** | 14,167 |
 | **PHPUnit Test Files** | 35 |
 | **Statement Coverage** | 95.87% |
 | **Branch Coverage** | 87.20% |

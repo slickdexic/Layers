@@ -8,6 +8,7 @@ The Layers extension includes the following third-party assets:
 
 | Asset Category | Count | License | Source |
 |----------------|-------|---------|--------|
+| Mozilla pdf.js (`pdfjs-dist` 4.10.38) | 2 JS files | Apache License 2.0 | Mozilla / npm |
 | Google Fonts (WOFF2) | 106 files | SIL Open Font License 1.1 | Google Fonts |
 | Google Noto Color Emoji | 2,817 SVGs | SIL Open Font License 1.1 | GitHub |
 | IEC 60417 Symbols | ~500 SVGs | Public Domain / CC0 | Wikimedia Commons |
@@ -275,13 +276,45 @@ European hazard symbols (formerly required under EU Directive 67/548/EEC) from W
 
 ---
 
+## Mozilla pdf.js
+
+**Location:** `resources/lib/pdfjs/`
+
+**Source:** https://github.com/mozilla/pdf.js (npm package `pdfjs-dist`)
+
+**Version:** 4.10.38
+
+**License:** Apache License 2.0 — the full text ships alongside the code as
+`resources/lib/pdfjs/LICENSE`.
+
+**Files:**
+
+- `pdf.min.js` — the pdf.js API library. Upstream ships ESM only from 4.0
+  onwards, so this file is `legacy/build/pdf.min.mjs` re-wrapped as UMD by
+  `scripts/webpack.pdfjs.config.js`; it is not re-minified and is otherwise
+  unmodified apart from one `webpackIgnore` comment restored by
+  `scripts/pdfjs-worker-import-loader.js`.
+- `pdf.worker.min.js` — `legacy/build/pdf.worker.min.mjs`, copied verbatim and
+  renamed so web servers serve it with a JavaScript MIME type.
+
+See `resources/lib/pdfjs/README.md` for the full provenance and re-vendoring
+procedure. Apache-2.0 is compatible with this extension's `GPL-2.0-or-later`
+licence via the "or later" upgrade path to GPL-3.0.
+
+---
+
 ## Attribution Summary
 
 This extension bundles third-party assets in compliance with their respective licenses:
 
-1. **Google Noto Color Emoji** - Used under SIL OFL 1.1, which permits bundling with software. This license file serves as the required attribution.
+1. **Mozilla pdf.js** - Used under Apache-2.0. The upstream `LICENSE` file is
+   redistributed unmodified in `resources/lib/pdfjs/`, and the modifications made
+   while vendoring are documented above and in that directory's `README.md`, as
+   Apache-2.0 §4(b) requires.
 
-2. **Wikimedia Commons symbols** - All symbol files sourced from Wikimedia Commons are either:
+2. **Google Noto Color Emoji** - Used under SIL OFL 1.1, which permits bundling with software. This license file serves as the required attribution.
+
+3. **Wikimedia Commons symbols** - All symbol files sourced from Wikimedia Commons are either:
    - Released to the **Public Domain** by their creators
    - Licensed under **CC0** (Creative Commons Zero)
    - Simple geometric representations of internationally standardized symbols

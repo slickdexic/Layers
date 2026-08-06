@@ -94,7 +94,7 @@ The <code>ls_json_blob</code> column contains a JSON structure:
 
 == Related Tables ==
 
-* [[Extension:Layers/layer_assets table|layer_assets]] — Stores shared layer assets (images, patterns)
+<code>layer_sets</code> is the only table the extension creates.
 
 == See Also ==
 

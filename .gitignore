@@ -77,3 +77,13 @@ images/
 
 # But allow extension images
 !resources/**/images/
+
+# Coverage summary emitted by scripts/coverage-gaps.js
+coverage.json
+
+# Review document backups
+*.bak2
+*.bak3
+
+# Backup written by shapeLibrary/scripts/split-library.js; regenerate, never commit
+resources/ext.layers.editor/shapeLibrary/ShapeLibraryData.original.js

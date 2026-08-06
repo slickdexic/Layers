@@ -664,6 +664,9 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		$this->dbw->method( 'startAtomic' )->willReturn( true );
 		$this->dbw->method( 'endAtomic' )->willReturn( true );
 
+		// The oversized blob must roll the atomic section back, not commit it.
+		$this->dbw->expects( $this->once() )->method( 'cancelAtomic' );
+
 		$this->logger->expects( $this->once() )
 			->method( 'error' )
 			->with( $this->stringContains( 'JSON blob size exceeds' ) );
@@ -680,14 +683,17 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 			];
 		}
 
-		$result = $db->saveLayerSet(
+		// Surfaced as LengthException so ApiLayersSave can report
+		// 'layers-data-too-large' instead of a generic save failure.
+		$this->expectException( \LengthException::class );
+		$this->expectExceptionMessage( 'layers-data-too-large' );
+
+		$db->saveLayerSet(
 			'Test.jpg',
 			[ 'mime' => 'image/jpeg', 'sha1' => 'abc123' ],
 			$largeLayers,
 			1
 		);
-
-		$this->assertNull( $result );
 	}
 
 	// =========================================================================

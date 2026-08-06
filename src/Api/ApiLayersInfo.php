@@ -11,10 +11,10 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Api;
 
-use ApiBase;
-use ApiMain;
-use ApiResult;
-use ApiUsageException;
+use MediaWiki\Api\ApiBase;
+use MediaWiki\Api\ApiMain;
+use MediaWiki\Api\ApiResult;
+use MediaWiki\Api\ApiUsageException;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
@@ -47,7 +47,7 @@ class ApiLayersInfo extends ApiBase {
 	 * 3. Input Validation: Validates filename and parameters
 	 * 4. Error Handling: Generic errors to prevent information disclosure
 	 *
-	 * @throws \ApiUsageException When file is not found or other errors occur
+	 * @throws \MediaWiki\Api\ApiUsageException When file is not found or other errors occur
 	 */
 	public function execute() {
 		try {
@@ -73,7 +73,7 @@ class ApiLayersInfo extends ApiBase {
 	/**
 	 * Internal execution logic for the API request.
 	 *
-	 * @throws \ApiUsageException When file is not found or other errors occur
+	 * @throws \MediaWiki\Api\ApiUsageException When file is not found or other errors occur
 	 */
 	private function executeInternal(): void {
 		// RATE LIMITING: Prevent abuse via excessive API calls

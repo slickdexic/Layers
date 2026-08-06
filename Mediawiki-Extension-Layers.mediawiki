@@ -8,7 +8,7 @@
 |type4           = page action
 |type5           = api
 |author          = [[User:Pvodrazka|Paul Vodrazka]]
-|version         = 1.5.79
+|version         = 1.5.80
 |update          = 2026-07-10
 |download        = {{GithubDownload|slickdexic|Layers}}
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
@@ -18,10 +18,9 @@
 |mediawiki       = >= 1.44.0
 |php             = >= 8.1
 |needs-updatephp = yes
-|table1          = layer_assets
-|table2          = layer_sets
-|rights          = {{bulleted list|editlayers|managelayerlibrary}}
-|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxImportSide|$wgLayersImportJpegQuality|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersUseBinaryOverlays|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersThumbnailCache|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions|$wgLayersSlidesEnable|$wgLayersSlideDefaultWidth|$wgLayersSlideDefaultHeight|$wgLayersSlideMaxWidth|$wgLayersSlideMaxHeight|$wgLayersSlideDefaultBackground}}
+|table1          = layer_sets
+|rights          = {{bulleted list|editlayers|layers-admin}}
+|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxImportSide|$wgLayersImportJpegQuality|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions|$wgLayersPdfExportWidth|$wgLayersPdfExportMaxPages|$wgLayersExportDirectory|$wgLayersSlidesEnable|$wgLayersSlideDefaultWidth|$wgLayersSlideDefaultHeight|$wgLayersSlideMaxWidth|$wgLayersSlideMaxHeight|$wgLayersSlideDefaultBackground}}
 |hook1           = BeforePageDisplay
 |hook2           = BitmapHandlerTransform
 |hook3           = FileDeleteComplete
@@ -159,17 +158,19 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 |-
 | <code>$wgLayersDefaultSetName</code> || string || <code>"default"</code> || Default named set when none is specified.
 |-
-| <code>$wgLayersUseBinaryOverlays</code> || boolean || <code>false</code> || Enable legacy binary overlay files.
-|-
 | <code>$wgLayersDefaultFonts</code> || array || (see extension.json) || Allowed fonts list for the editor.
 |-
 | <code>$wgLayersMaxImageSize</code> || integer || <code>4096</code> || Max image size for editing (px).
 |-
-| <code>$wgLayersThumbnailCache</code> || boolean || <code>true</code> || Cache composite thumbnails.
-|-
 | <code>$wgLayersImageMagickTimeout</code> || integer || <code>30</code> || ImageMagick timeout (seconds).
 |-
 | <code>$wgLayersMaxImageDimensions</code> || integer || <code>8192</code> || Max width/height for processing.
+|-
+| <code>$wgLayersPdfExportWidth</code> || integer || <code>1600</code> || Render width in pixels for each page of a PDF export.
+|-
+| <code>$wgLayersPdfExportMaxPages</code> || integer || <code>100</code> || Maximum pages allowed in a PDF export (0 = unlimited).
+|-
+| <code>$wgLayersExportDirectory</code> || string || <code>''</code> || Filesystem directory for cached PDF exports. '''Must be outside the document root''' — exports are delivered through <code>Special:LayersExport</code>, which re-checks read permission on the source file. Empty uses <code>$wgTmpDirectory/layers-export</code>.
 |-
 | <code>$wgLayersSlidesEnable</code> || boolean || <code>true</code> || Enable Slide Mode for standalone graphics.
 |-
@@ -190,8 +191,33 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 |-
 | <code>editlayers</code> || Create and edit layer sets || <code>user</code>
 |-
-| <code>managelayerlibrary</code> || Manage global layer library || <code>sysop</code>
+| <code>layers-admin</code> || Delete or rename any layer set or slide, regardless of who created it || <code>sysop</code>
 |}
+
+Saving, renaming or deleting a layer set requires the <code>editlayers</code>
+right '''and''' ordinary <code>edit</code> permission on the file's page. Layer
+data changes what a File page renders, so page protection, namespace
+protection, cascading protection and blocks all apply.
+
+{{Note|1='''Behaviour change in 1.5.80.''' Earlier versions checked only the
+<code>editlayers</code> right. On wikis that restrict editing in the File
+namespace—for example via <code>$wgNamespaceProtection[NS_FILE]</code> or
+cascading protection—layer saves that previously succeeded will now be
+rejected. Grant the affected group <code>edit</code> on the File namespace if
+you want it to keep annotating those files.}}
+
+=== Maintenance ===
+Composited thumbnails are written to <code>&lt;upload&gt;/thumb/layers/</code>
+and exported PDFs to <code>&lt;upload&gt;/thumb/layers/export/</code>. Renders
+belonging to a deleted file are purged automatically. Because export filenames
+include the layer set revision, each save orphans the previous export; run the
+reaper periodically to reclaim that space:
+
+<syntaxhighlight lang="bash">
+php extensions/Layers/maintenance/purgeLayersRenderCache.php --max-age-days=30
+</syntaxhighlight>
+
+Add <code>--dry-run</code> to preview. Purged files are regenerated on demand.
 
 == Key Features ==
 
@@ -345,7 +371,7 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~114k lines including generated shape/emoji data).
-* '''Stability:''' 14,054 Jest tests (172 suites) with 95.87% statement coverage and 87.20% branch coverage.
+* '''Stability:''' 14,167 Jest tests (176 suites) with 95.87% statement coverage and 87.20% branch coverage.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
 * '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
 

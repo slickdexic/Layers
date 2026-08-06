@@ -4,7 +4,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Api;
 
-use ApiBase;
+use MediaWiki\Api\ApiBase;
 use MediaWiki\Extension\Layers\Api\Traits\AuditTrailTrait;
 use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
@@ -124,6 +124,11 @@ class ApiLayersRename extends ApiBase {
 			$title = $fileInfo['title'];
 			$file = $fileInfo['file'];
 			$imgName = $fileInfo['imgName'];
+
+			// SECURITY: 'editlayers' is a global right; also gate on the per-title
+			// 'edit' permission so protection and read restrictions are honoured.
+			$this->requireTitleEditPermission( $title );
+
 			$sha1 = $this->getFileSha1( $file, $imgName );
 			$page = $this->resolvePageParam( $file, (int)( $params['page'] ?? 1 ) );
 
@@ -287,7 +292,7 @@ class ApiLayersRename extends ApiBase {
 	 * Slides are standalone layer sets not tied to a file. They use a synthetic
 	 * imgName of 'Slide:{name}' and a fixed sha1 of 'slide'.
 	 *
-	 * @param \User $user The current user
+	 * @param \MediaWiki\User\User $user The current user
 	 * @param string $slidename The slide name (without 'Slide:' prefix)
 	 * @param string $oldName The old set name
 	 * @param string $newName The new set name

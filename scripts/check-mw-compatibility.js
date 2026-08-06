@@ -64,6 +64,54 @@ const COMPATIBILITY_RULES = [
 ];
 
 /**
+ * Classes MediaWiki moved into namespaces between 1.41 and 1.44.
+ *
+ * The old root-namespace names survive only as deprecated `class_alias()`
+ * entries and are scheduled for removal, so referencing them is a latent fatal
+ * error rather than a style nit. Keys are the deprecated global names, values
+ * are the current fully-qualified names.
+ *
+ * REL branches invert this: MW 1.39 predates most of these moves, so a
+ * cherry-pick onto REL1_39 has to translate them back.
+ */
+const NAMESPACED_CLASSES = {
+	ApiBase: 'MediaWiki\\Api\\ApiBase',
+	ApiMain: 'MediaWiki\\Api\\ApiMain',
+	ApiResult: 'MediaWiki\\Api\\ApiResult',
+	ApiUsageException: 'MediaWiki\\Api\\ApiUsageException',
+	Config: 'MediaWiki\\Config\\Config',
+	ForeignAPIFile: 'MediaWiki\\FileRepo\\File\\ForeignAPIFile',
+	ForeignDBFile: 'MediaWiki\\FileRepo\\File\\ForeignDBFile',
+	PPFrame: 'MediaWiki\\Parser\\PPFrame',
+	Parser: 'MediaWiki\\Parser\\Parser',
+	SpecialPage: 'MediaWiki\\SpecialPage\\SpecialPage',
+	Title: 'MediaWiki\\Title\\Title',
+	User: 'MediaWiki\\User\\User'
+};
+
+for (const [globalName, fqcn] of Object.entries(NAMESPACED_CLASSES)) {
+	COMPATIBILITY_RULES.push({
+		id: `deprecated-alias-import-${globalName}`,
+		description: `Importing the deprecated global alias ${globalName}`,
+		severity: 'error',
+		pattern: new RegExp(`^use ${globalName};`),
+		fix: `use ${fqcn};`,
+		explanation: `${globalName} is now ${fqcn}; the global alias is deprecated and will be removed`,
+		affectedVersions: ['1.44']
+	});
+	COMPATIBILITY_RULES.push({
+		id: `deprecated-alias-reference-${globalName}`,
+		description: `Root-namespace reference to the deprecated alias \\${globalName}`,
+		severity: 'error',
+		// The lookbehind stops \MediaWiki\Api\ApiBase matching as \ApiBase.
+		pattern: new RegExp(`(?<![A-Za-z0-9_])\\\\${globalName}\\b`),
+		fix: `\\${fqcn}`,
+		explanation: `${globalName} is now ${fqcn}; the global alias is deprecated and will be removed`,
+		affectedVersions: ['1.44']
+	});
+}
+
+/**
  * Get all PHP files in src/ directory
  */
 function getPhpFiles(dir) {
@@ -128,7 +176,9 @@ function getCurrentBranch() {
  */
 function main() {
 	const projectRoot = path.resolve(__dirname, '..');
-	const srcDir = path.join(projectRoot, 'src');
+	const scanDirs = ['src', 'maintenance']
+		.map((dir) => path.join(projectRoot, dir))
+		.filter((dir) => fs.existsSync(dir));
 	const branch = getCurrentBranch();
 	
 	console.log('\n🔍 MediaWiki Compatibility Checker');
@@ -141,7 +191,7 @@ function main() {
 		}
 	}
 	
-	const phpFiles = getPhpFiles(srcDir);
+	const phpFiles = scanDirs.flatMap((dir) => getPhpFiles(dir));
 	console.log(`Scanning ${phpFiles.length} PHP files...\n`);
 	
 	let errorCount = 0;

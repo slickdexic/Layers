@@ -84,12 +84,26 @@ describe( 'PdfRenderer', () => {
 			expect( r.isAvailable() ).toBe( true );
 		} );
 
-		it( 'is false without a library, loader, or mw.loader', () => {
+		it( 'is true in a DOM environment even without MediaWiki present', () => {
+			// pdf.js is fetched as a static script now, so ResourceLoader is not
+			// required — only somewhere to inject the tag.
 			const prev = global.mw;
 			global.mw = undefined;
 			const r = new PdfRenderer();
-			expect( r.isAvailable() ).toBe( false );
+			expect( r.isAvailable() ).toBe( true );
 			global.mw = prev;
+		} );
+
+		it( 'is false without a library, loader, or a usable DOM', () => {
+			const spy = jest.spyOn( document, 'createElement' );
+			// Simulate an environment where document exists but cannot build nodes.
+			Object.defineProperty( document, 'createElement', {
+				value: undefined,
+				configurable: true
+			} );
+			const r = new PdfRenderer();
+			expect( r.isAvailable() ).toBe( false );
+			spy.mockRestore();
 		} );
 	} );
 
@@ -157,6 +171,43 @@ describe( 'PdfRenderer', () => {
 			await expect( r.getDocument( 'bad.pdf' ) ).rejects.toThrow();
 			await expect( r.getDocument( 'bad.pdf' ) ).rejects.toThrow();
 			expect( mock.getDocument ).toHaveBeenCalledTimes( 2 );
+		} );
+
+		it( 'caps pdf.js image decoding (maxImageSize)', async () => {
+			const mock = makeMockPdfjs();
+			const r = new PdfRenderer( { pdfjsLib: mock.lib } );
+			await r.getDocument( 'a.pdf' );
+			const arg = mock.getDocument.mock.calls[ 0 ][ 0 ];
+			expect( typeof arg.maxImageSize ).toBe( 'number' );
+			expect( arg.maxImageSize ).toBeGreaterThan( 0 );
+		} );
+
+		it( 'evicts and destroys least-recently-used documents beyond the cap', async () => {
+			const mock = makeMockPdfjs();
+			const r = new PdfRenderer( { pdfjsLib: mock.lib } );
+			for ( let i = 0; i < 9; i++ ) {
+				await r.getDocument( 'doc' + i + '.pdf' );
+			}
+			// Let the async destroy of the evicted entry settle.
+			await Promise.resolve();
+			expect( r._docCache.size ).toBe( 8 );
+			expect( r._docCache.has( 'doc0.pdf' ) ).toBe( false );
+			expect( r._docCache.has( 'doc8.pdf' ) ).toBe( true );
+			expect( mock.docDestroy ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'a cache hit refreshes the entry so it is not evicted next', async () => {
+			const mock = makeMockPdfjs();
+			const r = new PdfRenderer( { pdfjsLib: mock.lib } );
+			for ( let i = 0; i < 8; i++ ) {
+				await r.getDocument( 'doc' + i + '.pdf' );
+			}
+			// Touch the oldest entry, then push the cache over the cap.
+			await r.getDocument( 'doc0.pdf' );
+			await r.getDocument( 'new.pdf' );
+			await Promise.resolve();
+			expect( r._docCache.has( 'doc0.pdf' ) ).toBe( true );
+			expect( r._docCache.has( 'doc1.pdf' ) ).toBe( false );
 		} );
 	} );
 
@@ -247,57 +298,92 @@ describe( 'PdfRenderer', () => {
 		} );
 	} );
 
-	describe( 'ResourceLoader loading path', () => {
+	describe( 'static script loading path', () => {
 		let prevMw;
 		let prevPdfjsGlobal;
+		let appended;
+
+		// ensureLibrary() defers the loader by a microtask, so the script tag does
+		// not exist until the queue drains.
+		const flush = () => new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
 
 		beforeEach( () => {
 			prevMw = global.mw;
 			prevPdfjsGlobal = window.pdfjsLib;
+			PdfRenderer._scriptPromise = null;
+			appended = [];
+			jest.spyOn( document.head, 'appendChild' ).mockImplementation( ( node ) => {
+				appended.push( node );
+				return node;
+			} );
 		} );
 
 		afterEach( () => {
+			jest.restoreAllMocks();
 			global.mw = prevMw;
 			window.pdfjsLib = prevPdfjsGlobal;
+			PdfRenderer._scriptPromise = null;
 		} );
 
-		it( 'loads pdf.js via mw.loader.using require()', async () => {
+		it( 'injects a cache-busted script tag and resolves the global', async () => {
 			const { lib } = makeMockPdfjs();
-			const req = jest.fn( () => lib );
 			global.mw = {
-				loader: { using: jest.fn( () => Promise.resolve( req ) ) },
 				config: { get: jest.fn( () => '/w/extensions' ) },
 				log: jest.fn()
 			};
+			delete window.pdfjsLib;
 			const r = new PdfRenderer();
-			const out = await r.ensureLibrary();
-			expect( out ).toBe( lib );
-			expect( global.mw.loader.using ).toHaveBeenCalledWith( 'ext.layers.pdfjs' );
-			expect( req ).toHaveBeenCalledWith( 'ext.layers.pdfjs' );
-			// Worker configured from wgExtensionAssetsPath (trailing slash added).
-			expect( lib.GlobalWorkerOptions.workerSrc ).toBe(
-				'/w/extensions/Layers/resources/lib/pdfjs/pdf.worker.min.js'
+			const promise = r.ensureLibrary();
+			await flush();
+
+			expect( appended ).toHaveLength( 1 );
+			expect( appended[ 0 ].src ).toContain(
+				'/w/extensions/Layers/resources/lib/pdfjs/pdf.min.js?version='
+			);
+			// The bundle assigns the global as it executes.
+			window.pdfjsLib = lib;
+			appended[ 0 ].onload();
+
+			await expect( promise ).resolves.toBe( lib );
+			expect( lib.GlobalWorkerOptions.workerSrc ).toContain(
+				'/w/extensions/Layers/resources/lib/pdfjs/pdf.worker.min.js?version='
 			);
 		} );
 
-		it( 'falls back to the window.pdfjsLib global when require() throws', async () => {
+		it( 'reuses an already-present global without injecting a script', async () => {
 			const { lib } = makeMockPdfjs();
-			const req = jest.fn( () => {
-				throw new Error( 'no module' );
-			} );
 			window.pdfjsLib = lib;
-			global.mw = {
-				loader: { using: jest.fn( () => Promise.resolve( req ) ) },
-				config: { get: jest.fn( () => '' ) }
-			};
+			global.mw = { config: { get: jest.fn( () => '' ) } };
 			const r = new PdfRenderer();
 			await expect( r.ensureLibrary() ).resolves.toBe( lib );
+			expect( appended ).toHaveLength( 0 );
 		} );
 
-		it( 'rejects when ResourceLoader is unavailable', async () => {
-			global.mw = undefined;
+		it( 'shares one download across renderer instances', async () => {
+			const { lib } = makeMockPdfjs();
+			global.mw = { config: { get: jest.fn( () => '' ) } };
+			delete window.pdfjsLib;
+			const first = new PdfRenderer().ensureLibrary();
+			const second = new PdfRenderer().ensureLibrary();
+			await flush();
+
+			expect( appended ).toHaveLength( 1 );
+			window.pdfjsLib = lib;
+			appended[ 0 ].onload();
+			await expect( first ).resolves.toBe( lib );
+			await expect( second ).resolves.toBe( lib );
+		} );
+
+		it( 'rejects and allows a retry when the script fails to load', async () => {
+			global.mw = { config: { get: jest.fn( () => '' ) } };
+			delete window.pdfjsLib;
 			const r = new PdfRenderer();
-			await expect( r.ensureLibrary() ).rejects.toThrow();
+			const promise = r.ensureLibrary();
+			await flush();
+			appended[ 0 ].onerror();
+			await expect( promise ).rejects.toThrow( /Failed to load pdf\.js/ );
+			// The cached promise is cleared, so a later attempt re-injects.
+			expect( PdfRenderer._scriptPromise ).toBeNull();
 		} );
 
 		it( 'debugLog forwards to mw.log when debug is enabled', () => {
@@ -305,6 +391,76 @@ describe( 'PdfRenderer', () => {
 			const r = new PdfRenderer( { debug: true } );
 			r.debugLog( 'hello', 1 );
 			expect( global.mw.log ).toHaveBeenCalledWith( '[PdfRenderer]', 'hello', 1 );
+		} );
+	} );
+
+	describe( 'stall protection', () => {
+		beforeEach( () => {
+			jest.useFakeTimers();
+		} );
+
+		afterEach( () => {
+			jest.useRealTimers();
+		} );
+
+		it( 'rejects renderPage when pdf.js never settles', async () => {
+			const { lib } = makeMockPdfjs();
+			// A worker that never completes its handshake leaves getDocument()
+			// pending forever; pdf.js applies no timeout of its own.
+			lib.getDocument = jest.fn( () => ( { promise: new Promise( () => {} ) } ) );
+			const r = new PdfRenderer( { pdfjsLib: lib } );
+
+			const rendering = r.renderPage( 'stalled.pdf', 1 );
+			const assertion = expect( rendering ).rejects.toThrow( /timed out/ );
+			jest.advanceTimersByTime( 30000 );
+			await assertion;
+		} );
+
+		it( 'honours an explicit timeoutMs option', async () => {
+			const { lib } = makeMockPdfjs();
+			lib.getDocument = jest.fn( () => ( { promise: new Promise( () => {} ) } ) );
+			const r = new PdfRenderer( { pdfjsLib: lib } );
+
+			const rendering = r.renderPage( 'stalled.pdf', 1, { timeoutMs: 500 } );
+			const assertion = expect( rendering ).rejects.toThrow( /timed out/ );
+			jest.advanceTimersByTime( 500 );
+			await assertion;
+		} );
+
+		it( 'evicts the stalled document so a retry is not queued behind it', async () => {
+			const { lib } = makeMockPdfjs();
+			lib.getDocument = jest.fn( () => ( { promise: new Promise( () => {} ) } ) );
+			const r = new PdfRenderer( { pdfjsLib: lib } );
+
+			const rendering = r.renderPage( 'stalled.pdf', 1, { timeoutMs: 100 } );
+			const assertion = expect( rendering ).rejects.toThrow( /timed out/ );
+			jest.advanceTimersByTime( 100 );
+			await assertion;
+
+			expect( r._docCache.has( 'stalled.pdf' ) ).toBe( false );
+		} );
+
+		it( 'rejects ensureLibrary when the loader never settles', async () => {
+			const r = new PdfRenderer( { loadLibrary: () => new Promise( () => {} ) } );
+
+			const loading = r.ensureLibrary();
+			const assertion = expect( loading ).rejects.toThrow( /failed to load/ );
+			jest.advanceTimersByTime( 15000 );
+			await assertion;
+
+			// The failed attempt must not be cached, so a retry can succeed.
+			expect( r._libPromise ).toBeNull();
+		} );
+
+		it( 'does not reject when the render resolves before the timeout', async () => {
+			const { lib } = makeMockPdfjs();
+			const r = new PdfRenderer( { pdfjsLib: lib } );
+
+			const result = await r.renderPage( 'ok.pdf', 1 );
+			expect( result.pageCount ).toBe( 3 );
+
+			// The timeout timer must be cleared, not left armed.
+			expect( jest.getTimerCount() ).toBe( 0 );
 		} );
 	} );
 } );

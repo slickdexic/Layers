@@ -30,7 +30,7 @@ trait AuditTrailTrait {
 	 * This performs a null edit (re-saves current content unchanged) with a
 	 * descriptive edit summary and the 'layers-data-change' change tag.
 	 *
-	 * @param \Title|\MediaWiki\Title\Title $title The file page title
+	 * @param \MediaWiki\Title\Title $title The file page title
 	 * @param UserIdentity $user The user performing the action
 	 * @param string $action One of 'save', 'delete', 'rename'
 	 * @param string $setName The layer set name

@@ -4,8 +4,8 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Api;
 
-use ApiBase;
-use ApiResult;
+use MediaWiki\Api\ApiBase;
+use MediaWiki\Api\ApiResult;
 use MediaWiki\Extension\Layers\Api\Traits\LayersContinuationTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;

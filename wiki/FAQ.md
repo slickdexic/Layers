@@ -193,7 +193,6 @@ Slightly. The viewer JavaScript must load, and layer data must be fetched. For t
 
 - Reduce layer count where possible
 - Use appropriately sized images (not 8K for thumbnails)
-- Enable caching: `$wgLayersThumbnailCache = true;`
 
 ---
 

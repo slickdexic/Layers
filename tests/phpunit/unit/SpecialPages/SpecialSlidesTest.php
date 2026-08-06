@@ -46,6 +46,7 @@ class SpecialSlidesTest extends TestCase {
 	public function testDescriptionReturnsString(): void {
 		$special = new SpecialSlides();
 
-		$this->assertSame( 'special-slides-desc', $special->getDescription() );
+		// getDescription() returns a Message object on modern MediaWiki.
+		$this->assertSame( 'special-slides-desc', $special->getDescription()->getKey() );
 	}
 }

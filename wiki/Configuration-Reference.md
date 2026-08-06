@@ -275,6 +275,56 @@ $wgLayersImageMagickTimeout = 60;
 
 ---
 
+## PDF export
+
+### $wgLayersPdfExportWidth
+
+Render width in pixels for each page when exporting a marked-up file to PDF.
+
+| Property | Value |
+|----------|-------|
+| Type | `integer` |
+| Default | `1600` |
+
+### $wgLayersPdfExportMaxPages
+
+Maximum number of pages allowed in a single PDF export. `0` means unlimited.
+
+| Property | Value |
+|----------|-------|
+| Type | `integer` |
+| Default | `100` |
+
+### $wgLayersExportDirectory
+
+Filesystem directory used to cache generated PDF exports.
+
+| Property | Value |
+|----------|-------|
+| Type | `string` |
+| Default | `''` (uses `$wgTmpDirectory/layers-export`) |
+
+**This directory must not be web-accessible.** A generated export contains the
+full annotated document. Exports are never linked directly; the API returns a
+`Special:LayersExport` URL, and that page re-resolves the source `File:` title
+and re-checks the requesting user's `read` permission before streaming any
+bytes. Placing the cache under `$wgUploadDirectory` would defeat that check.
+
+```php
+// Explicit location outside the document root
+$wgLayersExportDirectory = '/var/cache/mediawiki/layers-export';
+```
+
+Exports accumulate — the filename embeds the layer set revision, so every save
+orphans the previous PDF. Reap them on a schedule:
+
+```bash
+php maintenance/run.php \
+    extensions/Layers/maintenance/purgeLayersRenderCache.php --max-age-days=30
+```
+
+---
+
 ## Naming
 
 ### $wgLayersDefaultSetName
@@ -309,24 +359,6 @@ $wgLayersDefaultFonts = [
     'Verdana',
     'Comic Sans MS'
 ];
-```
-
----
-
-## Caching
-
-### $wgLayersThumbnailCache
-
-Enable caching of composite thumbnails.
-
-| Property | Value |
-|----------|-------|
-| Type | `boolean` |
-| Default | `true` |
-
-```php
-// Disable thumbnail caching
-$wgLayersThumbnailCache = false;
 ```
 
 ---
@@ -379,7 +411,7 @@ $wgRateLimits['key']['group'] = [ $count, $seconds ];
 | Right | Description |
 |-------|-------------|
 | `editlayers` | Create and edit layer sets |
-| `managelayerlibrary` | Manage the layer library (future feature) |
+| `layers-admin` | Delete or rename any layer set or slide, regardless of owner |
 
 ### Default Configuration
 
@@ -387,7 +419,7 @@ $wgRateLimits['key']['group'] = [ $count, $seconds ];
 // From extension.json defaults
 $wgGroupPermissions['*']['editlayers'] = false;        // Anonymous: no
 $wgGroupPermissions['user']['editlayers'] = true;      // Logged in: yes
-$wgGroupPermissions['sysop']['managelayerlibrary'] = true;
+$wgGroupPermissions['sysop']['layers-admin'] = true;   // Admins: manage any set
 ```
 
 ### Custom Configuration Examples
@@ -442,7 +474,7 @@ $wgLayersDefaultFonts = [
 
 // Permissions
 $wgGroupPermissions['user']['editlayers'] = true;
-$wgGroupPermissions['sysop']['managelayerlibrary'] = true;
+$wgGroupPermissions['sysop']['layers-admin'] = true;
 
 // Rate limiting
 $wgRateLimits['editlayers-save']['user'] = [ 60, 3600 ];

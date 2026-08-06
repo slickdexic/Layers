@@ -701,33 +701,50 @@ describe( 'LayersLightbox', () => {
 			expect( lightbox.currentPage ).toBe( 2 );
 		} );
 
-		it( 'printCurrentPage should toggle the printing body class and call window.print', () => {
+		it( 'printDocument should composite pages and print them from a hidden frame', async () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
-			const printSpy = jest.fn();
-			const originalPrint = window.print;
-			window.print = printSpy;
+			lightbox.filename = 'Doc.pdf';
+			lightbox.pageCount = 2;
+			jest.spyOn( lightbox, 'composePageDataUrl' )
+				.mockImplementation( ( p ) => Promise.resolve( 'data:img' + p ) );
+			const printSpy = jest.spyOn( lightbox, 'printImages' ).mockImplementation( () => {} );
+			const serverSpy = jest.spyOn( lightbox, 'printViaServer' ).mockImplementation( () => {} );
 
-			lightbox.printCurrentPage();
+			await lightbox.printDocument();
 
-			expect( printSpy ).toHaveBeenCalled();
-			expect( document.body.classList.contains( 'layers-lightbox-printing' ) ).toBe( true );
-
-			// afterprint cleanup removes the class
-			window.dispatchEvent( new Event( 'afterprint' ) );
-			expect( document.body.classList.contains( 'layers-lightbox-printing' ) ).toBe( false );
-
-			window.print = originalPrint;
+			expect( printSpy ).toHaveBeenCalledWith( [ 'data:img1', 'data:img2' ] );
+			expect( serverSpy ).not.toHaveBeenCalled();
+			expect( lightbox.printBtn.disabled ).toBe( false );
 		} );
 
-		it( 'close should remove the printing body class', () => {
+		it( 'printDocument should fall back to the server when compositing fails', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			lightbox.pageCount = 1;
+			jest.spyOn( lightbox, 'composePageDataUrl' )
+				.mockImplementation( () => Promise.resolve( null ) );
+			const printSpy = jest.spyOn( lightbox, 'printImages' ).mockImplementation( () => {} );
+			const serverSpy = jest.spyOn( lightbox, 'printViaServer' ).mockImplementation( () => {} );
+
+			await lightbox.printDocument();
+
+			expect( printSpy ).not.toHaveBeenCalled();
+			expect( serverSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'close should tear down any hidden print frame', () => {
 			const lightbox = new LayersLightbox();
 			lightbox.open( { filename: 'Doc.pdf' } );
-			document.body.classList.add( 'layers-lightbox-printing' );
+			const frame = document.createElement( 'iframe' );
+			document.body.appendChild( frame );
+			lightbox.printFrame = frame;
 
 			lightbox.close( true );
 
-			expect( document.body.classList.contains( 'layers-lightbox-printing' ) ).toBe( false );
+			expect( lightbox.printFrame ).toBeNull();
+			expect( frame.parentNode ).toBeNull();
 		} );
 	} );
 
@@ -876,23 +893,25 @@ describe( 'LayersLightbox', () => {
 		} );
 	} );
 
-	describe( 'PDF export button', () => {
-		it( 'should hide the export button for single-page files', () => {
+	describe( 'print and download buttons', () => {
+		it( 'should show both buttons for single-page files', () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
 			lightbox.pageCount = 1;
 			lightbox.updateToolbar();
 
-			expect( lightbox.exportPdfBtn.style.display ).toBe( 'none' );
+			expect( lightbox.printBtn.style.display ).not.toBe( 'none' );
+			expect( lightbox.downloadBtn.style.display ).not.toBe( 'none' );
 		} );
 
-		it( 'should show the export button for multi-page files', () => {
+		it( 'should show both buttons for multi-page files', () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
 			lightbox.pageCount = 4;
 			lightbox.updateToolbar();
 
-			expect( lightbox.exportPdfBtn.style.display ).not.toBe( 'none' );
+			expect( lightbox.printBtn.style.display ).not.toBe( 'none' );
+			expect( lightbox.downloadBtn.style.display ).not.toBe( 'none' );
 		} );
 
 		it( 'should do nothing when no filename is set', async () => {
@@ -901,12 +920,12 @@ describe( 'LayersLightbox', () => {
 			lightbox.filename = null;
 			const composeSpy = jest.spyOn( lightbox, 'composePageDataUrl' );
 
-			await lightbox.exportPdf();
+			await lightbox.printDocument();
 
 			expect( composeSpy ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should composite every page client-side and open a print document', async () => {
+		it( 'should composite every page client-side and print them', async () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
 			lightbox.filename = 'Doc.pdf';
@@ -915,12 +934,12 @@ describe( 'LayersLightbox', () => {
 			jest.spyOn( lightbox, 'composePageDataUrl' ).mockImplementation(
 				( page ) => Promise.resolve( 'data:image/png;base64,page' + page )
 			);
-			const printSpy = jest.spyOn( lightbox, 'openPrintDocument' )
+			const printSpy = jest.spyOn( lightbox, 'printImages' )
 				.mockImplementation( () => {} );
-			const serverSpy = jest.spyOn( lightbox, 'exportPdfViaServer' )
+			const serverSpy = jest.spyOn( lightbox, 'printViaServer' )
 				.mockImplementation( () => {} );
 
-			await lightbox.exportPdf();
+			await lightbox.printDocument();
 
 			expect( lightbox.composePageDataUrl ).toHaveBeenCalledTimes( 3 );
 			expect( printSpy ).toHaveBeenCalledWith( [
@@ -939,12 +958,12 @@ describe( 'LayersLightbox', () => {
 
 			jest.spyOn( lightbox, 'composePageDataUrl' )
 				.mockImplementation( () => Promise.resolve( null ) );
-			const printSpy = jest.spyOn( lightbox, 'openPrintDocument' )
+			const printSpy = jest.spyOn( lightbox, 'printImages' )
 				.mockImplementation( () => {} );
-			const serverSpy = jest.spyOn( lightbox, 'exportPdfViaServer' )
+			const serverSpy = jest.spyOn( lightbox, 'printViaServer' )
 				.mockImplementation( () => {} );
 
-			await lightbox.exportPdf();
+			await lightbox.printDocument();
 
 			expect( printSpy ).not.toHaveBeenCalled();
 			expect( serverSpy ).toHaveBeenCalled();
@@ -958,12 +977,85 @@ describe( 'LayersLightbox', () => {
 
 			jest.spyOn( lightbox, 'composePageDataUrl' )
 				.mockImplementation( () => Promise.reject( new Error( 'tainted' ) ) );
-			const serverSpy = jest.spyOn( lightbox, 'exportPdfViaServer' )
+			const serverSpy = jest.spyOn( lightbox, 'printViaServer' )
 				.mockImplementation( () => {} );
 
-			await lightbox.exportPdf();
+			await lightbox.printDocument();
 
 			expect( serverSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'downloadPdf should build the PDF from client-composited pages', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Somepdf.pdf';
+			lightbox.pageCount = 2;
+			jest.spyOn( lightbox, 'composePage' ).mockImplementation(
+				() => Promise.resolve( {
+					src: 'data:image/jpeg;base64,/9j/', width: 800, height: 1000
+				} )
+			);
+			const blob = { size: 1 };
+			jest.spyOn( lightbox, 'buildPdfBlob' ).mockReturnValue( blob );
+			const saveSpy = jest.spyOn( lightbox, 'saveBlob' ).mockImplementation( () => {} );
+			const serverSpy = jest.spyOn( lightbox, 'downloadViaServer' )
+				.mockImplementation( () => {} );
+
+			await lightbox.downloadPdf();
+
+			expect( lightbox.composePage ).toHaveBeenCalledTimes( 2 );
+			expect( lightbox.composePage ).toHaveBeenCalledWith( 1, 'image/jpeg', 0.92 );
+			expect( saveSpy ).toHaveBeenCalledWith( blob, 'Somepdf.pdf' );
+			expect( serverSpy ).not.toHaveBeenCalled();
+			expect( lightbox.downloadBtn.disabled ).toBe( false );
+		} );
+
+		it( 'downloadPdf should fall back to the server when nothing composites', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Somepdf.pdf';
+			lightbox.pageCount = 1;
+			jest.spyOn( lightbox, 'composePage' ).mockResolvedValue( null );
+			const serverSpy = jest.spyOn( lightbox, 'downloadViaServer' )
+				.mockImplementation( () => {} );
+
+			await lightbox.downloadPdf();
+
+			expect( serverSpy ).toHaveBeenCalled();
+		} );
+
+		it( 'downloadViaServer should save the export as an attachment', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			mockApi.get.mockResolvedValue( {
+				layerspdfexport: { url: '/index.php?title=Special:LayersExport&key=abc' }
+			} );
+			const clickSpy = jest.fn();
+			const created = [];
+			const realCreate = document.createElement.bind( document );
+			jest.spyOn( document, 'createElement' ).mockImplementation( ( tag ) => {
+				const el = realCreate( tag );
+				if ( tag === 'a' ) {
+					el.click = clickSpy;
+					created.push( el );
+				}
+				return el;
+			} );
+
+			await lightbox.downloadViaServer();
+
+			document.createElement.mockRestore();
+			expect( clickSpy ).toHaveBeenCalled();
+			expect( created[ 0 ].href ).toContain( 'download=1' );
+			expect( created[ 0 ].parentNode ).toBeNull();
+		} );
+
+		it( 'exportFileName should swap the extension and strip separators', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.filename = 'My/Doc:2.pdf';
+
+			expect( lightbox.exportFileName() ).toBe( 'My_Doc_2.pdf' );
 		} );
 	} );
 
@@ -982,7 +1074,9 @@ describe( 'LayersLightbox', () => {
 				}
 			} );
 			const flattenSpy = jest.spyOn( lightbox, 'flattenPage' )
-				.mockResolvedValue( 'data:image/png;base64,ok' );
+				.mockResolvedValue( {
+					src: 'data:image/png;base64,ok', width: 100, height: 200
+				} );
 
 			const result = await lightbox.composePageDataUrl( 2 );
 
@@ -996,7 +1090,9 @@ describe( 'LayersLightbox', () => {
 			);
 			expect( flattenSpy ).toHaveBeenCalledWith(
 				'/images/thumb/Doc.pdf/page2.jpg',
-				expect.objectContaining( { layers: [ { id: 'a', type: 'rectangle' } ] } )
+				expect.objectContaining( { layers: [ { id: 'a', type: 'rectangle' } ] } ),
+				undefined,
+				undefined
 			);
 			expect( result ).toBe( 'data:image/png;base64,ok' );
 		} );
@@ -1007,7 +1103,8 @@ describe( 'LayersLightbox', () => {
 			lightbox.setName = null;
 
 			mockApi.get.mockResolvedValue( { layersinfo: { imageUrl: '/x.jpg', layerset: null } } );
-			jest.spyOn( lightbox, 'flattenPage' ).mockResolvedValue( 'data:img' );
+			jest.spyOn( lightbox, 'flattenPage' )
+				.mockResolvedValue( { src: 'data:img', width: 1, height: 1 } );
 
 			await lightbox.composePageDataUrl( 1 );
 
@@ -1026,46 +1123,71 @@ describe( 'LayersLightbox', () => {
 		} );
 	} );
 
-	describe( 'openPrintDocument', () => {
-		it( 'should open a window and write an img tag per page', () => {
+	describe( 'printImages', () => {
+		it( 'should write a hidden frame with an img tag per page and print it', async () => {
 			const lightbox = new LayersLightbox();
 			lightbox.filename = 'Doc.pdf';
-			const doc = {
-				open: jest.fn(),
-				write: jest.fn(),
-				close: jest.fn(),
-				readyState: 'complete'
-			};
-			const win = {
-				document: doc,
-				focus: jest.fn(),
-				print: jest.fn(),
-				setTimeout: jest.fn(),
-				addEventListener: jest.fn()
-			};
-			const openSpy = jest.spyOn( window, 'open' ).mockReturnValue( win );
+			jest.spyOn( lightbox, 'whenImagesReady' ).mockResolvedValue( [] );
 
-			lightbox.openPrintDocument( [ 'data:img1', 'data:img2' ] );
+			lightbox.printImages( [ 'data:img1', 'data:img2' ] );
 
-			expect( doc.write ).toHaveBeenCalled();
-			const html = doc.write.mock.calls[ 0 ][ 0 ];
+			const frame = lightbox.printFrame;
+			expect( frame ).not.toBeNull();
+			expect( frame.tagName ).toBe( 'IFRAME' );
+			expect( frame.parentNode ).toBe( document.body );
+			const html = frame.contentWindow.document.documentElement.innerHTML;
 			expect( html ).toContain( 'data:img1' );
 			expect( html ).toContain( 'data:img2' );
-			expect( ( html.match( /layers-print-page/g ) || [] ).length ).toBeGreaterThanOrEqual( 2 );
-			openSpy.mockRestore();
+			expect( ( html.match( /layers-print-page/g ) || [] ).length )
+				.toBeGreaterThanOrEqual( 2 );
+
+			const printSpy = jest.fn();
+			frame.contentWindow.print = printSpy;
+			await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+			expect( printSpy ).toHaveBeenCalled();
+
+			lightbox.destroyPrintFrame();
 		} );
 
-		it( 'should show an error when the print window is blocked', () => {
+		it( 'should replace an existing frame rather than stacking them', () => {
 			const lightbox = new LayersLightbox();
 			lightbox.filename = 'Doc.pdf';
-			const openSpy = jest.spyOn( window, 'open' ).mockReturnValue( null );
-			const errorSpy = jest.spyOn( lightbox, 'showExportError' )
-				.mockImplementation( () => {} );
+			jest.spyOn( lightbox, 'whenImagesReady' ).mockResolvedValue( [] );
 
-			lightbox.openPrintDocument( [ 'data:img1' ] );
+			lightbox.printImages( [ 'data:img1' ] );
+			const first = lightbox.printFrame;
+			lightbox.printImages( [ 'data:img2' ] );
 
-			expect( errorSpy ).toHaveBeenCalled();
-			openSpy.mockRestore();
+			expect( first.parentNode ).toBeNull();
+			expect( lightbox.printFrame ).not.toBe( first );
+			expect( document.querySelectorAll( '.layers-print-frame' ).length ).toBe( 1 );
+
+			lightbox.destroyPrintFrame();
+		} );
+
+		it( 'whenImagesReady should resolve even if an image never settles', async () => {
+			jest.useFakeTimers();
+			const lightbox = new LayersLightbox();
+			const pending = { complete: false, addEventListener: jest.fn() };
+			const promise = lightbox.whenImagesReady( { images: [ pending ] } );
+			jest.advanceTimersByTime( 5000 );
+			await expect( promise ).resolves.toBeUndefined();
+			jest.useRealTimers();
+		} );
+
+		it( 'buildPrintHtml should zero the page margins', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.filename = 'Doc.pdf';
+
+			// Zero margins are what suppress the browser's own header/footer.
+			expect( lightbox.buildPrintHtml( [ 'data:img1' ] ) )
+				.toContain( '@page{size:auto;margin:0;}' );
+		} );
+
+		it( 'destroyPrintFrame should be safe with no frame attached', () => {
+			const lightbox = new LayersLightbox();
+			expect( () => lightbox.destroyPrintFrame() ).not.toThrow();
+			expect( lightbox.printFrame ).toBeNull();
 		} );
 	} );
 
@@ -1077,7 +1199,7 @@ describe( 'LayersLightbox', () => {
 		} );
 	} );
 
-	describe( 'exportPdfViaServer (fallback)', () => {
+	describe( 'requestServerPdf (fallback)', () => {
 		it( 'should call the layerspdfexport API with filename and setname', async () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
@@ -1088,7 +1210,7 @@ describe( 'LayersLightbox', () => {
 				layerspdfexport: { success: 1, url: '/images/thumb/layers/export/abc.pdf' }
 			} );
 
-			await lightbox.exportPdfViaServer();
+			await lightbox.printViaServer();
 
 			expect( mockApi.get ).toHaveBeenCalledWith(
 				expect.objectContaining( {
@@ -1109,7 +1231,7 @@ describe( 'LayersLightbox', () => {
 				layerspdfexport: { success: 1, url: '/images/thumb/layers/export/abc.pdf' }
 			} );
 
-			await lightbox.exportPdfViaServer();
+			await lightbox.printViaServer();
 
 			expect( openSpy ).toHaveBeenCalledWith(
 				'/images/thumb/layers/export/abc.pdf', '_blank', 'noopener'
@@ -1125,7 +1247,7 @@ describe( 'LayersLightbox', () => {
 
 			mockApi.get.mockRejectedValue( new Error( 'boom' ) );
 
-			await lightbox.exportPdfViaServer();
+			await lightbox.printViaServer();
 
 			expect( mw.notify ).toHaveBeenCalled();
 			delete mw.notify;

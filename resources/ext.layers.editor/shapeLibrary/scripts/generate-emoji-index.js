@@ -750,108 +750,17 @@ for ( const [ catId ] of sortedCats ) {
 
 console.log( `Emoji with names: ${ withNames }, without names: ${ withoutNames }` );
 
+
 output += `\t};
 
-	// SVG cache
-	const svgCache = {};
-
-	/**
-	 * Emoji Library API (lightweight, on-demand loading)
-	 */
+	// Data-only module. The runtime API (shard loading, caching, search) lives
+	// in EmojiLibraryLoader.js so that regenerating this file cannot clobber
+	// hand-maintained logic.
 	window.Layers = window.Layers || {};
-	window.Layers.EmojiLibrary = {
-		/**
-		 * Base path for emoji SVG files
-		 */
-		basePath: mw.config.get( 'wgExtensionAssetsPath' ) + '/Layers/resources/ext.layers.editor/shapeLibrary/assets/noto_emoji/',
-
-		/**
-		 * Get all categories
-		 *
-		 * @return {Object[]}
-		 */
-		getCategories() {
-			return CATEGORIES;
-		},
-
-		/**
-		 * Get emoji list for a category (metadata only, no SVG)
-		 *
-		 * @param {string} categoryId
-		 * @return {Object[]} Array of { f: filename, c: char }
-		 */
-		getByCategory( categoryId ) {
-			return EMOJI_INDEX[ categoryId ] || [];
-		},
-
-		/**
-		 * Load SVG for an emoji (async)
-		 *
-		 * @param {string} filename - e.g., "emoji_u1f600.svg"
-		 * @return {Promise<string>} SVG content
-		 */
-		loadSVG( filename ) {
-			if ( svgCache[ filename ] ) {
-				return Promise.resolve( svgCache[ filename ] );
-			}
-
-			return fetch( this.basePath + filename )
-				.then( ( response ) => {
-					if ( !response.ok ) {
-						throw new Error( 'Failed to load emoji: ' + filename );
-					}
-					return response.text();
-				} )
-				.then( ( svg ) => {
-					svgCache[ filename ] = svg;
-					return svg;
-				} );
-		},
-
-		/**
-		 * Get cached SVG (sync, returns null if not loaded)
-		 *
-		 * @param {string} filename
-		 * @return {string|null}
-		 */
-		getCachedSVG( filename ) {
-			return svgCache[ filename ] || null;
-		},
-
-		/**
-		 * Preload SVGs for a category
-		 *
-		 * @param {string} categoryId
-		 * @return {Promise}
-		 */
-		preloadCategory( categoryId ) {
-			const emoji = EMOJI_INDEX[ categoryId ] || [];
-
-			// Load in batches of 20
-			const batchSize = 20;
-			const batches = [];
-
-			for ( let i = 0; i < emoji.length; i += batchSize ) {
-				batches.push( emoji.slice( i, i + batchSize ) );
-			}
-
-			return batches.reduce( ( promise, batch ) => {
-				return promise.then( () => {
-					return Promise.all( batch.map( ( e ) => {
-						return this.loadSVG( e.f ).catch( () => null );
-					} ) );
-				} );
-			}, Promise.resolve() );
-		},
-
-		/**
-		 * Get total emoji count
-		 *
-		 * @return {number}
-		 */
-		getTotalCount() {
-			return ${ allEmoji.length };
-		}
+	window.Layers.EmojiLibraryData = {
+		categories: CATEGORIES,
+		byCategory: EMOJI_INDEX,
+		total: ${ allEmoji.length }
 	};
 }() );
 `;

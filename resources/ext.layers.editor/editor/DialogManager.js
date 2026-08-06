@@ -76,6 +76,94 @@
 		}
 
 		/**
+		 * Remember which element had focus before a dialog took it.
+		 *
+		 * Every dialog moves focus into itself on open. Without capturing the
+		 * origin, closing the dialog drops focus back onto `document.body`,
+		 * which strands keyboard and screen-reader users at the top of the
+		 * document instead of on the control they activated.
+		 *
+		 * @return {HTMLElement|null} The previously focused element, if any
+		 * @private
+		 */
+		captureFocusOrigin() {
+			const active = document.activeElement;
+			if ( active && active !== document.body && typeof active.focus === 'function' ) {
+				return active;
+			}
+			return null;
+		}
+
+		/**
+		 * Return focus to the element a dialog took it from.
+		 *
+		 * The trigger may have been removed from the DOM while the dialog was
+		 * open (deleting a layer from its own context menu, for example), so
+		 * the element is only focused while it is still connected.
+		 *
+		 * @param {HTMLElement|null} element The element to refocus
+		 * @return {void}
+		 * @private
+		 */
+		restoreFocusOrigin( element ) {
+			if ( !element || typeof element.focus !== 'function' ) {
+				return;
+			}
+			if ( !document.body || !document.body.contains( element ) ) {
+				return;
+			}
+			element.focus();
+		}
+
+		/**
+		 * Track a newly opened dialog and capture the focus origin.
+		 *
+		 * @param {HTMLElement} overlay The modal overlay element
+		 * @param {HTMLElement} dialog The dialog element
+		 * @return {Object} The tracking entry; assign `handleKey` once it exists
+		 * @private
+		 */
+		registerDialog( overlay, dialog ) {
+			const entry = {
+				overlay,
+				dialog,
+				handleKey: null,
+				previousFocus: this.captureFocusOrigin()
+			};
+			this.activeDialogs.push( entry );
+			return entry;
+		}
+
+		/**
+		 * Build the teardown function for a tracked dialog.
+		 *
+		 * Removes the nodes, detaches the keydown listener, untracks the entry
+		 * and restores focus to whatever opened the dialog. Safe to call twice.
+		 *
+		 * @param {Object} entry The entry returned by {@link registerDialog}
+		 * @return {Function} The cleanup callback
+		 * @private
+		 */
+		makeDialogCleanup( entry ) {
+			return () => {
+				if ( entry.overlay.parentNode ) {
+					entry.overlay.parentNode.removeChild( entry.overlay );
+				}
+				if ( entry.dialog.parentNode ) {
+					entry.dialog.parentNode.removeChild( entry.dialog );
+				}
+				if ( entry.handleKey ) {
+					document.removeEventListener( 'keydown', entry.handleKey );
+				}
+				const index = this.activeDialogs.indexOf( entry );
+				if ( index !== -1 ) {
+					this.activeDialogs.splice( index, 1 );
+				}
+				this.restoreFocusOrigin( entry.previousFocus );
+			};
+		}
+
+		/**
 		 * Set up keyboard handling for a dialog
 		 * @param {HTMLElement} dialog The dialog element
 		 * @param {Function} onEscape Callback when Escape is pressed
@@ -143,23 +231,8 @@
 			document.body.appendChild( dialog );
 
 			// Track active dialog (handleKey added after definition)
-			const dialogEntry = { overlay, dialog, handleKey: null };
-			this.activeDialogs.push( dialogEntry );
-
-			const cleanup = () => {
-				if ( overlay.parentNode ) {
-					overlay.parentNode.removeChild( overlay );
-				}
-				if ( dialog.parentNode ) {
-					dialog.parentNode.removeChild( dialog );
-				}
-				document.removeEventListener( 'keydown', handleKey );
-				// Remove from active dialogs
-				const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
-				if ( index !== -1 ) {
-					this.activeDialogs.splice( index, 1 );
-				}
-			};
+			const dialogEntry = this.registerDialog( overlay, dialog );
+			const cleanup = this.makeDialogCleanup( dialogEntry );
 
 			const handleKey = this.setupKeyboardHandler( dialog, cleanup );
 			dialogEntry.handleKey = handleKey;
@@ -228,22 +301,8 @@
 				document.body.appendChild( dialog );
 
 				// Track active dialog (handleKey added after definition)
-				const dialogEntry = { overlay, dialog, handleKey: null };
-				this.activeDialogs.push( dialogEntry );
-
-				const cleanup = () => {
-					if ( overlay.parentNode ) {
-						overlay.parentNode.removeChild( overlay );
-					}
-					if ( dialog.parentNode ) {
-						dialog.parentNode.removeChild( dialog );
-					}
-					document.removeEventListener( 'keydown', handleKey );
-					const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
-					if ( index !== -1 ) {
-						this.activeDialogs.splice( index, 1 );
-					}
-				};
+				const dialogEntry = this.registerDialog( overlay, dialog );
+				const cleanup = this.makeDialogCleanup( dialogEntry );
 
 				const handleKey = this.setupKeyboardHandler( dialog, () => {
 					cleanup();
@@ -314,22 +373,8 @@
 				document.body.appendChild( dialog );
 
 				// Track active dialog (handleKey added after definition)
-				const dialogEntry = { overlay, dialog, handleKey: null };
-				this.activeDialogs.push( dialogEntry );
-
-				const cleanup = () => {
-					if ( overlay.parentNode ) {
-						overlay.parentNode.removeChild( overlay );
-					}
-					if ( dialog.parentNode ) {
-						dialog.parentNode.removeChild( dialog );
-					}
-					document.removeEventListener( 'keydown', handleKey );
-					const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
-					if ( index !== -1 ) {
-						this.activeDialogs.splice( index, 1 );
-					}
-				};
+				const dialogEntry = this.registerDialog( overlay, dialog );
+				const cleanup = this.makeDialogCleanup( dialogEntry );
 
 				const handleKey = this.setupKeyboardHandler( dialog, () => {
 					cleanup();
@@ -408,22 +453,8 @@
 				document.body.appendChild( dialog );
 
 				// Track active dialog (handleKey added after definition)
-				const dialogEntry = { overlay, dialog, handleKey: null };
-				this.activeDialogs.push( dialogEntry );
-
-				const cleanup = () => {
-					if ( overlay.parentNode ) {
-						overlay.parentNode.removeChild( overlay );
-					}
-					if ( dialog.parentNode ) {
-						dialog.parentNode.removeChild( dialog );
-					}
-					document.removeEventListener( 'keydown', handleKey );
-					const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
-					if ( index !== -1 ) {
-						this.activeDialogs.splice( index, 1 );
-					}
-				};
+				const dialogEntry = this.registerDialog( overlay, dialog );
+				const cleanup = this.makeDialogCleanup( dialogEntry );
 
 				const handleKey = ( e ) => {
 					if ( e.key === 'Escape' ) {
@@ -553,22 +584,8 @@
 			document.body.appendChild( dialog );
 
 			// Track active dialog (handleKey added after definition)
-			const dialogEntry6 = { overlay, dialog, handleKey: null };
-			this.activeDialogs.push( dialogEntry6 );
-
-			const cleanup = () => {
-				if ( overlay.parentNode ) {
-					overlay.parentNode.removeChild( overlay );
-				}
-				if ( dialog.parentNode ) {
-					dialog.parentNode.removeChild( dialog );
-				}
-				document.removeEventListener( 'keydown', handleKey );
-				const index = this.activeDialogs.findIndex( ( d ) => d.dialog === dialog );
-				if ( index !== -1 ) {
-					this.activeDialogs.splice( index, 1 );
-				}
-			};
+			const dialogEntry6 = this.registerDialog( overlay, dialog );
+			const cleanup = this.makeDialogCleanup( dialogEntry6 );
 
 			const handleKey = this.setupKeyboardHandler( dialog, cleanup );
 			dialogEntry6.handleKey = handleKey;
@@ -600,6 +617,12 @@
 				}
 			} );
 			this.activeDialogs = [];
+			// Restore focus to whatever opened the outermost dialog. Iterating in
+			// reverse means the earliest (bottom-most) origin wins, which is the
+			// element the user actually came from.
+			for ( let i = dialogs.length - 1; i >= 0; i-- ) {
+				this.restoreFocusOrigin( dialogs[ i ].previousFocus );
+			}
 		}
 
 		/**

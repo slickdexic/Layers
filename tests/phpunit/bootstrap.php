@@ -62,6 +62,10 @@ namespace {
 			public function get( string $name ) {
 				return $this->settings[$name] ?? null;
 			}
+
+			public function has( string $name ): bool {
+				return array_key_exists( $name, $this->settings );
+			}
 		}
 	}
 
@@ -341,6 +345,18 @@ namespace {
 				public function escaped(): string {
 					return htmlspecialchars( $this->text(), ENT_QUOTES, 'UTF-8' );
 				}
+
+				public function getKey(): string {
+					return $this->key;
+				}
+
+				public function getParams(): array {
+					return $this->params;
+				}
+
+				public function __toString(): string {
+					return $this->text();
+				}
 			};
 		}
 	}
@@ -396,9 +412,28 @@ namespace MediaWiki\User {
 	}
 }
 
-namespace MediaWiki\Title {
-	if ( !class_exists( Title::class ) ) {
-		class Title extends \Title {
+namespace Wikimedia\AtEase {
+	if ( !class_exists( AtEase::class ) ) {
+		/**
+		 * Minimal stand-in for the wikimedia/at-ease library, which ships with
+		 * MediaWiki core but is not a direct dependency of this extension.
+		 */
+		class AtEase {
+			/**
+			 * @param callable|string $callback
+			 * @param mixed ...$args
+			 * @return mixed
+			 */
+			public static function quietCall( $callback, ...$args ) {
+				// phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
+				return @$callback( ...$args );
+			}
+
+			public static function suppressWarnings(): void {
+			}
+
+			public static function restoreWarnings(): void {
+			}
 		}
 	}
 }
@@ -473,6 +508,10 @@ namespace Wikimedia\Rdbms {
 		interface IDatabase {
 			public const LIST_AND = 'AND';
 			public const LIST_OR = 'OR';
+			// Atomic section flags. ATOMIC_CANCELABLE makes cancelAtomic() able to
+			// roll the section back via a savepoint.
+			public const ATOMIC_NOT_CANCELABLE = '';
+			public const ATOMIC_CANCELABLE = 'cancelable';
 
 			public function selectField( $table, $field, $conds, $fname = __METHOD__, $options = [] );
 
@@ -489,6 +528,8 @@ namespace Wikimedia\Rdbms {
 			public function startAtomic( $fname = __METHOD__ );
 
 			public function endAtomic( $fname = __METHOD__ );
+
+			public function cancelAtomic( $fname = __METHOD__ );
 
 			public function isDuplicateKeyError( \Throwable $e ): bool;
 
@@ -561,6 +602,48 @@ namespace Wikimedia\Rdbms {
 
 	if ( !class_exists( DBQueryError::class ) ) {
 		class DBQueryError extends \RuntimeException {
+		}
+	}
+}
+
+namespace {
+	/**
+	 * Namespaced aliases for the global stubs declared above.
+	 *
+	 * MediaWiki 1.41-1.44 moved these classes into namespaces and kept the old
+	 * global names only as deprecated `class_alias` entries. Production code in
+	 * this extension imports the namespaced names, so the standalone harness has
+	 * to expose them too. `class_alias` (rather than a subclass) is used so that
+	 * `instanceof` keeps working in both directions.
+	 *
+	 * Under a real MediaWiki test run the namespaced class already exists and
+	 * every branch below is skipped.
+	 */
+	$layersStubAliases = [
+		'Title' => 'MediaWiki\\Title\\Title',
+		'Config' => 'MediaWiki\\Config\\Config',
+		'ApiBase' => 'MediaWiki\\Api\\ApiBase',
+		'ApiResult' => 'MediaWiki\\Api\\ApiResult',
+		'ApiUsageException' => 'MediaWiki\\Api\\ApiUsageException',
+		'SpecialPage' => 'MediaWiki\\SpecialPage\\SpecialPage',
+		'User' => 'MediaWiki\\User\\User',
+		'Parser' => 'MediaWiki\\Parser\\Parser',
+		'PPFrame' => 'MediaWiki\\Parser\\PPFrame',
+		'ForeignAPIFile' => 'MediaWiki\\FileRepo\\File\\ForeignAPIFile',
+		'ForeignDBFile' => 'MediaWiki\\FileRepo\\File\\ForeignDBFile',
+	];
+
+	foreach ( $layersStubAliases as $globalName => $namespacedName ) {
+		if ( class_exists( $globalName ) && !class_exists( $namespacedName ) ) {
+			class_alias( $globalName, $namespacedName );
+		}
+	}
+	unset( $layersStubAliases, $globalName, $namespacedName );
+}
+
+namespace MediaWiki\Api {
+	if ( !class_exists( ApiMain::class ) ) {
+		class ApiMain {
 		}
 	}
 }

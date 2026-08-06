@@ -212,33 +212,38 @@ class WikitextHooks {
 	private static array $fileParseCount = [];
 
 	/**
-	 * Timestamp of the last request that triggered a state reset.
-	 * Used to detect request boundaries in PHP-FPM (max_requests > 1).
-	 * @var float
+	 * Hook: ParserClearState
+	 *
+	 * Fires at the start of every Parser::parse(), which is the only reliable
+	 * per-parse boundary. The previous REQUEST_TIME_FLOAT heuristic could not
+	 * detect one: under CLI and the job queue REQUEST_TIME_FLOAT is unset, so it
+	 * compared 0.0 against an initial 0.0 and never fired at all, letting one
+	 * page's queued set names leak into the next page the process parsed — and
+	 * that wrong overlay was then written to the parser cache.
+	 *
+	 * @param mixed $parser Parser instance (unused; required by the hook signature)
+	 * @return bool
 	 */
-	private static float $lastResetRequestTime = 0.0;
+	public static function onParserClearState( $parser ): bool {
+		self::resetParseState();
+		return true;
+	}
 
 	/**
-	 * Ensure per-page static state is reset between HTTP requests.
+	 * Clear all per-parse queues and counters.
 	 *
-	 * In PHP-FPM with max_requests > 1, static properties persist across
-	 * requests. This method detects request boundaries using
-	 * REQUEST_TIME_FLOAT and resets page-specific state (but NOT the
-	 * stateless processor singletons, which are safe to reuse).
+	 * Deliberately does not touch the processor singletons, which are stateless
+	 * and safe to reuse across parses.
 	 */
-	private static function ensureRequestStateReset(): void {
-		$requestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
-		if ( $requestTime !== self::$lastResetRequestTime ) {
-			self::$lastResetRequestTime = $requestTime;
-			self::$pageHasLayers = false;
-			self::$fileSetNames = [];
-			self::$fileRenderCount = [];
-			self::$fileLinkTypes = [];
-			self::$fileParamLayerset = [];
-			self::$fileParseCount = [];
-			self::$pendingRender = [];
-			self::$galleryHints = [];
-		}
+	private static function resetParseState(): void {
+		self::$pageHasLayers = false;
+		self::$fileSetNames = [];
+		self::$fileRenderCount = [];
+		self::$fileLinkTypes = [];
+		self::$fileParamLayerset = [];
+		self::$fileParseCount = [];
+		self::$pendingRender = [];
+		self::$galleryHints = [];
 	}
 
 	/**
@@ -355,7 +360,8 @@ class WikitextHooks {
 		// Parser functions are currently disabled to avoid magic word conflicts
 		// The extension works through the layerset= parameter in file syntax instead
 		// To enable parser functions, define magic words in i18n and uncomment below:
-		// $parser->setFunctionHook( 'layeredfile', [ self::class, 'renderLayeredFile' ], \Parser::SFH_OBJECT_ARGS );
+		// $parser->setFunctionHook( 'layeredfile', [ self::class, 'renderLayeredFile' ],
+		//     \MediaWiki\Parser\Parser::SFH_OBJECT_ARGS );
 
 		// Pre-register per-image layer set hints for gallery renders.
 		// {{#layers_hint:filename|setname}} is called before a gallery renders
@@ -820,15 +826,7 @@ class WikitextHooks {
 	 * Reset the page layers flag (useful for testing)
 	 */
 	public static function resetPageLayersFlag(): void {
-		self::$pageHasLayers = false;
-		self::$fileSetNames = [];
-		self::$fileRenderCount = [];
-		self::$fileLinkTypes = [];
-		self::$fileParamLayerset = [];
-		self::$fileParseCount = [];
-		self::$pendingRender = [];
-		self::$galleryHints = [];
-		self::$lastResetRequestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
+		self::resetParseState();
 		// Reset processor singletons to prevent stale state in long-running processes
 		self::$imageLinkProcessor = null;
 		self::$thumbnailProcessor = null;
@@ -849,9 +847,6 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserBeforeInternalParse( $parser, &$text, $stripState ): bool {
-		// Ensure stale state from previous requests is cleared (PHP-FPM reuse)
-		self::ensureRequestStateReset();
-
 		// Handle null or non-string text (PHP 8.1+ strict)
 		if ( $text === null || !is_string( $text ) ) {
 			return true;

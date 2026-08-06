@@ -40,6 +40,10 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `ForeignFileHelperTrait`: delegates to `ForeignFileHelper` static utility; used by API modules for convenient instance-method access
   - Utility classes (`src/Utility/`)
     - `ForeignFileHelper`: canonical static utility for `isForeignFile()` (3-step detection: instanceof, class name, repo isLocal) and `getFileSha1()` (deterministic fallback hash). Used by all API modules (via trait), Hooks, Processors, Actions, and ThumbnailRenderer.
+    - `RenderCache`: canonical owner of the generated-render directories — composited thumbnails at `<upload>/thumb/layers` and PDF exports at `$wgLayersExportDirectory` (default `$wgTmpDirectory/layers-export`, deliberately **outside** the document root). Provides `getThumbDir()`, `getExportDir()`, `ensureDir()` (honours `$wgDirectoryMode`), `purgeBySha1()` (called from `Hooks::onFileDeleteComplete()`) and `purgeOlderThan()` (called from the reaper script; skips anything not matching the `<sha1>_<key>.<ext>` artefact pattern, since the export dir is admin-configurable). **Never re-derive these paths inline** — they were duplicated across three classes before v1.5.80. Uses `AtEase::quietCall()` rather than `@` so phpcs stays clean.
+    - `SpecialPages\SpecialLayersExport`: unlisted delivery endpoint for generated PDFs (`Special:LayersExport?file=…&key=…`). Re-resolves the `File:` title, re-checks `read`, then streams from `RenderCache::getExportDir()`. Returns one generic `layers-export-not-found` for every failure mode.
+  - Maintenance (`maintenance/`)
+    - `purgeLayersRenderCache.php`: reaps generated renders older than `--max-age-days` (default 30). Supports `--dry-run`. Needed because export filenames embed the layer set revision, so every save orphans the previous export.
   - Database access: `src/Database/LayersDatabase.php` (CRUD and JSON validation; schema in `sql/` + `sql/patches/`)
     - Uses LoadBalancer for DB connections (lazy init pattern with getWriteDb/getReadDb)
     - Implements retry logic with exponential backoff (3 retries, 100ms base delay) for transaction conflicts
@@ -55,6 +59,7 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
     - `LayersViewer.js` (~571 lines) - canvas-based layer rendering for thumbnails
     - `LayersLightbox.js` (~560 lines) - full-screen lightbox viewer
     - `ViewerOverlay.js` (~510 lines) - hover action buttons (edit/view) with permission checking
+    - `PdfBuilder.js` (~170 lines) - dependency-free PDF 1.4 writer used by the lightbox Download button; wraps client-composited JPEG pages via `/DCTDecode` at 150 dpi so Download matches Print exactly (the server export silently omits layer types with no ImageMagick primitive)
   - Module system: LayersEditor uses ModuleRegistry for dependency management (UIManager, EventManager, APIManager, ValidationManager, StateManager, HistoryManager, DraftManager)
   - Core editor modules: `CanvasManager.js` (~2,037 lines - facade coordinating controllers), `ToolManager.js` (~799 lines - delegates to tool handlers), `CanvasRenderer.js` (~1,390 lines - delegates to SelectionRenderer), `SelectionManager.js` (~1,418 lines - delegates to SelectionState, MarqueeSelection, SelectionHandles), `HistoryManager.js`, `GroupManager.js` (~987 lines), `DraftManager.js` (~476 lines - auto-save/draft recovery)
   - Tool handlers (`resources/ext.layers.editor/tools/`): Extracted from ToolManager for tool-specific logic:
@@ -114,16 +119,17 @@ Separation of concerns is strict: PHP integrates with MediaWiki and storage; Jav
   - Data flow: the editor keeps an in-memory `layers` array and uses `mw.Api` to GET `layersinfo` and POST `layerssave` with a JSON string of that state
   - ES6 rules: prefer const/let over var; no-unused-vars enforced except in Manager files (see .eslintrc.json overrides)
   - ES6 classes: All 83 modules with constructors use ES6 class pattern; ES6 migration is 100% complete (0 prototype patterns remaining)
-  - **God classes:** 26 files >= 1,000 lines:
-    - **Generated data files (5, exempt):** ShapeLibraryData.original.js (~11,293 lines), ShapeLibraryData.iec60417.js (~5,905 lines), EmojiLibraryIndex.js (~3,055 lines), ShapeLibraryData.js (~1,643 lines), ShapeLibraryData.iso7000.js (~1,609 lines)
-    - **Hand-written JS files (19):** LayerPanel (~2,166), CanvasManager (~2,110), Toolbar (~1,933), LayersEditor (~1,888), InlineTextEditor (~1,848), PropertyBuilders (~1,814), APIManager (~1,650), SelectionManager (~1,467), ViewerManager (~1,266), CanvasRenderer (~1,256), TransformController (~1,221), ToolbarStyleControls (~1,141), SlideController (~1,127), TextBoxRenderer (~1,120), ResizeCalculator (~1,070), AngleDimensionRenderer (~1,067), DrawingController (~1,054), CanvasEvents (~1,038), CalloutRenderer (~1,003)
-    - **PHP god classes (2):** ServerSideLayerValidator.php (~1,444 lines), LayersDatabase.php (~1,403 lines)
-    - **Near-threshold files (9):** LayerRenderer (~999), PropertiesForm (~995), GroupManager (~987), SelectionRenderer (~985), StateManager (~967), LayersValidator (~962), ShapeRenderer (~959), ArrowRenderer (~932), DimensionRenderer (~930)
+  - **God classes:** 28 files >= 1,000 lines:
+    - **Generated data files (4, exempt):** ShapeLibraryData.iec60417.js (~5,905 lines), EmojiLibraryIndex.js (~2,911 lines), ShapeLibraryData.js (~1,643 lines), ShapeLibraryData.iso7000.js (~1,609 lines)
+    - **Hand-written JS files (20):** LayerPanel (~2,166), CanvasManager (~2,120), Toolbar (~2,041), PropertyBuilders (~1,976), LayersEditor (~1,939), InlineTextEditor (~1,847), APIManager (~1,684), SelectionManager (~1,491), LayersLightbox (~1,402), ViewerManager (~1,306), CanvasRenderer (~1,246), TransformController (~1,234), ToolbarStyleControls (~1,141), TextBoxRenderer (~1,128), SlideController (~1,127), ResizeCalculator (~1,073), AngleDimensionRenderer (~1,067), DrawingController (~1,064), CanvasEvents (~1,038), CalloutRenderer (~1,003)
+    - **PHP god classes (4):** ServerSideLayerValidator.php (~1,569 lines), LayersDatabase.php (~1,487 lines), WikitextHooks.php (~1,114 lines), LayersSchemaManager.php (~1,018 lines)
+    - **Near-threshold files (9):** LayerRenderer (~999), PropertiesForm (~993), GroupManager (~987), SelectionRenderer (~985), StateManager (~967), LayersValidator (~962), ShapeRenderer (~959), ArrowRenderer (~938), DimensionRenderer (~930)
     - All files use proper delegation patterns; see docs/PROJECT_GOD_CLASS_REDUCTION.md
   - Controller pattern: CanvasManager acts as a facade, delegating to specialized controllers. Each controller accepts a `canvasManager` reference and exposes methods callable via delegation. See `resources/ext.layers.editor/canvas/README.md` for architecture details.
   - **Emoji Picker module (`resources/ext.layers.editor/shapeLibrary/`)**: v1.5.12 feature adding 2,817 Noto Color Emoji SVGs
-    - `EmojiLibraryIndex.js` (~3,055 lines) - Generated search index for fast emoji lookup
-    - `emoji-bundle.json` - Bundled SVG data (all 2,817 emoji in single JSON file, loaded on-demand)
+    - `EmojiLibraryIndex.js` (~2,911 lines) - Generated, **data only**: exposes `window.Layers.EmojiLibraryData` and nothing else. Never put logic here; the generator will overwrite it.
+    - `EmojiLibraryLoader.js` (~215 lines) - Hand-written runtime API (`window.Layers.EmojiLibrary`): shard fetching, caching, cache-busting, `preloadCategory()`
+    - `emoji/<category>.json` - 19 per-category SVG shards (20.7 MB total). Only the category the user is viewing is fetched. Regenerate/verify with `node scripts/shard-emoji-bundle.js [--check]`; `--check` runs as part of `npm test`.
     - `EmojiPickerPanel.js` (~500 lines) - OOUI PopupWidget-based emoji picker UI
     - `emoji-picker.css` (~300 lines) - Styles for the emoji picker panel
     - Architecture: Lazy-loaded SVG thumbnails using IntersectionObserver; 19 categories; full-text search
@@ -146,7 +152,7 @@ Base route: MediaWiki Action API. Client uses `new mw.Api()`.
   - When setname is provided, returns that specific named set's latest revision and its revision history
 
 - layerssave (write)
-  - Rights: user must have 'editlayers'
+  - Rights: user must have 'editlayers' AND ordinary 'edit' permission on the file's page (page/namespace/cascading protection and blocks apply)
   - Token: needs CSRF token (client calls `api.postWithToken('csrf', ...)`)
   - Params: filename (string), data (stringified JSON, see data model), setname (optional, defaults to 'default' - CHANGED), token (csrf)
   - Validation/limits (server-side; see also client validator):
@@ -163,7 +169,7 @@ Base route: MediaWiki Action API. Client uses `new mw.Api()`.
 Contract note: The server persists a wrapped structure `{ revision, schema, created, layers }`. The client sends only the layers array as JSON string; the server performs validation/sanitization and constructs the full structure.
 
 - layersdelete (write)
-  - Rights: user must have 'editlayers' AND be either the set owner (creator of first revision) or have 'delete' right (admin)
+  - Rights: user must have 'editlayers', ordinary 'edit' permission on the file's page, AND be either the set owner (creator of first revision) or have 'delete' right (admin)
   - Token: needs CSRF token
   - Params: filename (string, required), setname (string, required), token (csrf)
   - Success payload (keyed by module name `layersdelete`): { success: 1, revisionsDeleted: N }
@@ -296,9 +302,11 @@ Set in `LocalSettings.php` (see `extension.json` for defaults):
 - $wgLayersDefaultSetName (LayersDefaultSetName): default name for layer sets (default 'default')
 - $wgLayersDefaultFonts (LayersDefaultFonts): allowed fonts list used by the editor
 - $wgLayersMaxImageSize (LayersMaxImageSize): max image size for editing (px)
-- $wgLayersThumbnailCache (LayersThumbnailCache): cache composite thumbs
 - $wgLayersImageMagickTimeout (LayersImageMagickTimeout): seconds for IM ops
 - $wgLayersMaxImageDimensions (LayersMaxImageDimensions): max width/height for processing
+- $wgLayersPdfExportWidth (LayersPdfExportWidth): render width per page for PDF export (default 1600)
+- $wgLayersPdfExportMaxPages (LayersPdfExportMaxPages): max pages per PDF export (default 100, 0 = unlimited)
+- $wgLayersExportDirectory (LayersExportDirectory): filesystem cache dir for generated PDFs. **Must be outside the document root.** Empty (default) uses `$wgTmpDirectory/layers-export`, falling back to `sys_get_temp_dir()`
 - $wgLayersSlidesEnable (LayersSlidesEnable): enable Slide Mode (default true)
 - $wgLayersSlideDefaultWidth (LayersSlideDefaultWidth): default slide canvas width in px (default 800)
 - $wgLayersSlideDefaultHeight (LayersSlideDefaultHeight): default slide canvas height in px (default 600)
@@ -334,7 +342,7 @@ $wgLayersMaxBytes = 4 * 1024 * 1024;  // 4MB
 ```
 
 Permissions (see `extension.json`):
-- Rights: 'editlayers', 'managelayerlibrary'
+- Rights: 'editlayers', 'layers-admin'
 - Defaults: anonymous: editlayers=false; user: editlayers=true; sysop: all true
 
 Rate limits (MediaWiki core RateLimits; used by `RateLimiter` via pingLimiter):
@@ -354,7 +362,11 @@ Install
 - composer install (PHP Composer; ensure it’s the PHP tool, not a Python package with the same name)
 
 Lint & tests
-- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana; use `--force` to continue on warnings)
+- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana, then jest, `verify-metrics.js`, `verify-i18n-wiring.js`, `check-mw-compatibility.js` and `check-bundle-size.js`; use `--force` to continue on warnings)
+- i18n wiring check alone: `npm run check:i18n` (see §6)
+- MediaWiki API-drift check alone: `npm run check:mw-compat` (scans `src/` and `maintenance/`)
+- ResourceLoader size budgets alone: `npm run check:bundlesize` (budgets in `bundlesize.config.json`, measured in raw source bytes; add `--report` to print sizes without failing)
+- Emoji shard integrity alone: `npm run check:emoji` (verifies `emoji/*.json` matches `EmojiLibraryIndex.js`)
 - JS unit tests (Jest): `npm run test:js` (optional `:watch` or `:coverage`)
 - PHP style/lint: `composer test` or `npm run test:php` (parallel-lint, phpcs, minus-x)
 - PHP unit tests: `npm run test:phpunit` (requires MediaWiki test env; use `:phpunit-coverage` for HTML report)
@@ -379,14 +391,47 @@ Database
 - Define keys in `i18n/en.json` and document in `i18n/qqq.json`
 - Grunt Banana checker validates message usage; add new keys to ResourceModules messages arrays where needed in `extension.json`
 
+### The three-way i18n contract
+
+A message only reaches the browser when **all three** of these agree:
+
+1. the key exists in `i18n/en.json` (and is documented in `qqq.json`),
+2. it is declared in the `messages[]` array of the ResourceLoader module that
+   loads the JS file using it (`extension.json`),
+3. the JS actually references it.
+
+`grunt banana` and `verify-metrics.js` validate only (1) — `en.json ↔ qqq.json`.
+Before v1.5.80, 152 defects had accumulated in the (2)↔(3) gap with every gate
+green, because almost every call site had an inline English fallback that
+masked the breakage. `scripts/verify-i18n-wiring.js` now validates all three
+and runs as part of `npm test`; run it alone with `npm run check:i18n`.
+
+It reports four blocking categories — UNDEFINED (declared but not in `en.json`),
+MISSING (used in JS but not in `en.json`), UNSHIPPED (in `en.json` and used in
+JS but not declared by the loading module), FOREIGN (keys owned by core or
+another extension) — and one warning category, UNUSED_DECL, which is blocking
+only under `--strict`.
+
+**When you add a message you must edit three files**: `i18n/en.json`,
+`i18n/qqq.json`, and the right `messages[]` array in `extension.json`. Do not
+rely on an inline fallback to tell you whether it worked; run the checker.
+
+**Never reformat `extension.json`, `i18n/en.json` or `i18n/qqq.json` with
+`JSON.stringify`.** They are hand-formatted (tab-indented, LF, short arrays
+inline, blank lines grouping related keys). Edit them textually.
+
 ## 7) Security and robustness checklist
 
 - Always require CSRF token for writes (server already enforces; use `api.postWithToken('csrf', ...)` on the client)
+- Gate every new write endpoint on the per-title `edit` permission via `LayersApiHelperTrait::requireTitleEditPermission()`, not just the global `editlayers` right. Layer data changes what a File page renders, so page/namespace/cascading protection and blocks must apply. Use `Authority::definitelyCan()` — **not** `authorizeWrite()`, which would consume core's `edit` rate-limit bucket that Layers does not use, and **not** the deprecated `PermissionManager::getPermissionErrors()`.
 - Respect size limits and layer counts from config; give users clear errors using i18n keys (see `LayersEditor.js`)
 - Do not add new layer fields without updating server whitelist/validation (or they will be discarded)
 - Validate and sanitize text, colors, and identifiers; follow patterns in `ApiLayersSave`
 - Consider rate limits for new operations; reuse pingLimiter keys pattern ('editlayers-<action>')
 - Avoid N+1 DB calls; batch where possible (see user name enrichment in `ApiLayersInfo`)
+- In `LayersDatabase`, open atomic sections with `IDatabase::ATOMIC_CANCELABLE` and roll back with `cancelAtomic()`. `endAtomic()` in a catch block marks the section *successful* and commits partial writes; the retry-on-conflict loop also only works on MySQL without a savepoint.
+- Anything written under `<upload>/thumb/layers/` must be purgeable. Derive the path from `Utility\RenderCache` and make sure `purgeBySha1()` covers it, otherwise deleting a file for copyright or privacy will leave the content retrievable.
+- **Never hand the client a `$wgUploadPath` URL for generated content that reproduces file contents.** Upload-path URLs are served by the web server, not MediaWiki, so they bypass `read` permission entirely and stay valid forever. PDF exports are written to `RenderCache::getExportDir()` (outside the document root) and delivered by `SpecialPages\SpecialLayersExport`, which re-resolves the `File:` title and re-checks `read` on every request. New export/render formats must follow the same pattern, and their delivery endpoint must return one indistinguishable error for "missing", "expired" and "not permitted" so it cannot be used to probe for files.
 
 ## 8) Editor UX notes
 
@@ -402,7 +447,7 @@ Database
   - Ignores: `resources/dist/**`, `tests/**`, backup files (`*-backup.js`, `*.backup.js`), `.stylelintrc.json`
   - Special overrides: init.js (indent/console off), Manager files (no-unused-vars off)
 - Stylelint: extends wikimedia config; disables @stylistic/linebreaks (Windows line endings allowed)
-- PHP: MediaWiki coding standards via phpcs; current codebase has ~21 doc errors, ~50 style warnings (mostly minor)
+- PHP: MediaWiki coding standards via phpcs; the codebase is clean — 0 errors and 2 warnings, both in `tests/phpunit/unit/stubs/`. Keep it that way; run `php vendor/squizlabs/php_codesniffer/bin/phpcs -sp --report=summary` (`composer test` currently fails at the phpcs step on Windows) and `npm run fix:php` to auto-format.
 - If you refactor ignored files, update the ignore list or conform to the code style before re-enabling linting
 - Backup files: ESLint ignores patterns like `*-backup.js` and `*.backup.js` for WIP code
 
@@ -450,14 +495,14 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (14,007 tests in 172 suites — verified July 9, 2026)
+- Test count (14,167 Jest tests in 176 suites; 614 PHPUnit tests — verified August 5, 2026)
 - Coverage (95.87% statement, 87.20% branch — verified April 7, 2026)
-- JavaScript file count (157 files total, ~114,000 lines)
-- PHP file count (44 files, ~15,689 lines)
-- God class count (26 files >=1,000 lines; 5 generated data files, 19 JS, 2 PHP)
+- JavaScript file count (159 files total, ~105,000 lines)
+- PHP file count (47 files, ~17,170 lines)
+- God class count (28 files >=1,000 lines; 4 generated data files, 20 JS, 4 PHP)
 - ESLint disable count (18 - all legitimate)
 - Drawing tool count (17 tools)
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.77)
+- Version number (1.5.80)

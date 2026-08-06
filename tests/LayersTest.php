@@ -83,11 +83,6 @@ class LayersTest extends Maintenance {
 			"layer_sets table exists",
 			$dbr->tableExists( 'layer_sets' )
 		);
-
-		$this->test(
-			"layer_assets table exists",
-			$dbr->tableExists( 'layer_assets' )
-		);
 	}
 
 	/**
@@ -176,11 +171,6 @@ class LayersTest extends Maintenance {
 			"createlayers permission defined",
 			isset( $wgGroupPermissions['autoconfirmed']['createlayers'] ) ||
 			isset( $wgGroupPermissions['user']['createlayers'] )
-		);
-
-		$this->test(
-			"managelayerlibrary permission defined",
-			isset( $wgGroupPermissions['sysop']['managelayerlibrary'] )
 		);
 	}
 

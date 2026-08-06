@@ -281,6 +281,12 @@ action=layerssave
 | `setname` | string | No | Named set (default: `default`) |
 | `token` | string | Yes | CSRF token |
 
+### Permissions
+
+- `editlayers` right
+- `edit` permission on the file's page (since v1.5.80) — page protection,
+  namespace protection, cascading protection and blocks all apply
+
 ### Response
 
 ```json
@@ -313,6 +319,7 @@ The server validates all incoming data:
 | `layers-invalid-filename` | Invalid filename | Bad filename format |
 | `layers-file-not-found` | File not found | File doesn't exist |
 | `layers-data-too-large` | Data too large | Exceeds `$wgLayersMaxBytes` |
+| `datatoolarge` | Data too large | Serialized set exceeded `$wgLayersMaxBytes` once wrapped for storage (since v1.5.80; previously surfaced as a generic save failure) |
 | `layers-json-parse-error` | JSON parse error | Invalid JSON |
 | `layers-invalid-data` | Invalid data | Validation failed |
 | `layers-rate-limited` | Rate limited | Too many saves |
@@ -381,7 +388,7 @@ action=layersdelete
 
 ### Permissions
 
-User must be:
+User must have `edit` permission on the file's page (since v1.5.80), and be:
 - **Owner** — Created the first revision of the set, OR
 - **Admin** — Has the `delete` right
 
@@ -448,7 +455,7 @@ New name must:
 
 ### Permissions
 
-User must be:
+User must have `edit` permission on the file's page (since v1.5.80), and be:
 - **Owner** — Created the first revision of the set, OR
 - **Admin** — Has the `delete` right
 

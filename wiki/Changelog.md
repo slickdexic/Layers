@@ -4,6 +4,322 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.80] - 2026-08-05
+
+### Security
+- **Imported images are validated by magic bytes, not by their declared type** —
+  `ServerSideLayerValidator::validateImageSrc()` accepted any `data:` URL whose
+  media type was in the allow-list, without ever looking at the payload. A
+  document labelled `data:image/png;base64,` could contain SVG or HTML and be
+  stored verbatim in the layer set. Percent-encoded payloads skipped the base64
+  check entirely. The validator now requires base64 and verifies the decoded
+  bytes against the PNG, JPEG, GIF and WEBP signatures. As a side effect the
+  `$wgLayersMaxImageBytes` lookup moved into the existing guarded
+  `loadConfig()`, so the validator no longer fatals outside a MediaWiki request.
+- **Modal editor mode now sends CSP `frame-ancestors 'self'`** — It relaxed
+  MediaWiki's `X-Frame-Options: DENY` to `SAMEORIGIN` but sent no
+  `frame-ancestors` directive. Every current browser ignores
+  `X-Frame-Options` when a CSP policy with `frame-ancestors` applies, so on
+  wikis that send their own CSP the editor's framing rule could be overridden.
+  Both headers are now emitted from the new `Utility\FramingHeaders` helper,
+  shared by `EditLayersAction` and `Special:EditSlide` (which had duplicated
+  the logic). The CSP header is appended rather than replacing, so it can only
+  tighten an existing policy.
+- **Removed an unescaped `innerHTML` interpolation** — The rich-text toolbar's
+  highlight button built its colour swatch by interpolating a persisted colour
+  value into an `innerHTML` string. Now built with the DOM API and assigned
+  through CSSOM, which drops invalid values.
+- **Exported PDFs are no longer served from a public, permanent URL** —
+  `action=layerspdfexport` wrote the rendered PDF into
+  `<upload>/thumb/layers/export/` and returned a direct `$wgUploadPath` URL.
+  That URL bypassed MediaWiki entirely: it was readable by anyone who obtained
+  or guessed it, it survived after read permission on the source file was
+  revoked, and on private wikis it leaked the full annotated document past
+  `$wgWhitelistRead`/`$wgGroupPermissions['*']['read'] = false`. Exports are
+  now written outside the document root and delivered through the new unlisted
+  `Special:LayersExport`, which re-resolves the source `File:` title and
+  re-checks the caller's `read` permission on every request before streaming
+  the bytes. All failure modes return the same generic error so the endpoint
+  cannot be used to probe for files.
+  **Upgrade note:** any PDFs already sitting in `<upload>/thumb/layers/export/`
+  are now orphaned and still publicly readable. Delete that directory after
+  upgrading.
+- **Layer writes now require per-title `edit` permission** — `layerssave`,
+  `layersdelete` and `layersrename` previously checked only the global
+  `editlayers` right. Because layer data materially changes what a File page
+  renders, that let any user with `editlayers` modify annotations on pages they
+  could not otherwise edit — bypassing page protection, cascading protection,
+  namespace protection and blocks. All three write endpoints now additionally
+  gate on `Authority::definitelyCan( 'edit', $title )`.
+  **Behaviour change:** wikis that restrict editing of `NS_FILE` (for example
+  via `$wgNamespaceProtection[NS_FILE]`, protected file pages, or an extension
+  such as Lockdown) will now reject layer saves that previously succeeded.
+  Grant those users `edit` on the affected titles to restore access.
+  `definitelyCan()` is used rather than `authorizeWrite()` so the core `edit`
+  rate-limit bucket is not consumed; Layers keeps its own per-action limits.
+- **Generated renders are purged when their source file is deleted** —
+  Composited thumbnails (`<upload>/thumb/layers/`) and exported PDFs live
+  outside MediaWiki's file management, so
+  nothing removed them when a file was deleted. A file deleted for copyright or
+  privacy reasons left a full-content render permanently retrievable at a
+  stable, public URL. `onFileDeleteComplete` now purges both directories by
+  SHA1. The purge refuses to run on a malformed SHA1 so a bad value cannot glob
+  an entire cache directory.
+
+### Removed
+- **`managelayerlibrary` right** — Declared in `extension.json` and granted to
+  sysops since the first release, but never checked anywhere in the codebase.
+  It conferred nothing and gave a misleading impression that a shared asset
+  library was access-controlled. `layers-admin`, which *is* enforced (owner-or-
+  admin on delete/rename), is unaffected.
+- **`$wgLayersThumbnailCache`** — Documented in the README, on MediaWiki.org and
+  in the wiki as a working toggle. It was never read; composite thumbnails were
+  cached unconditionally. Setting it did nothing.
+- **`$wgLayersUseBinaryOverlays`** — Never read. Referred to a `.l01`/`.l02`
+  binary overlay storage format that does not exist in this codebase.
+
+### Added
+- **`$wgLayersExportDirectory`** — Filesystem directory for cached PDF
+  exports. Must be outside the document root. Defaults to
+  `$wgTmpDirectory/layers-export`, falling back to the system temp directory.
+- **`Special:LayersExport`** — Unlisted delivery endpoint for generated PDF
+  exports. Returns `layers-export-not-found` for a missing, expired or
+  unreadable export without distinguishing the cases.
+- **`maintenance/purgeLayersRenderCache.php`** — Reaper for orphaned render
+  artefacts. Export filenames incorporate the layer set revision, so every save
+  orphans the previous PDF and the directory grew without bound. Supports
+  `--max-age-days` (default 30) and `--dry-run`.
+- **`scripts/verify-i18n-wiring.js`** — New quality gate, wired into `npm test`
+  and available as `npm run check:i18n`. `grunt banana` and
+  `scripts/verify-metrics.js` only validate `en.json` against `qqq.json`;
+  neither checks the relationship that decides whether a message actually
+  reaches a user: `extension.json messages[] ↔ i18n/en.json ↔ mw.message()`
+  calls in JS. The new checker validates all three and fails on undefined,
+  missing, unshipped or foreign message keys. It found 152 defects on first run.
+- `Special:Slides` and `Special:EditSlide` now implement `getGroupName()`, so
+  they are listed under the existing "Layers" heading on `Special:SpecialPages`
+  instead of falling into "Other special pages". The
+  `specialpages-group-layers` message had existed unused since the pages were
+  added.
+
+### Fixed
+- **The lightbox Download button saved a PDF with no annotations.** Print
+  composites each page in the browser with the same renderer the viewer uses,
+  but Download handed back the server export, and the server draws layers by
+  translating them into ImageMagick `convert` primitives. Any layer type
+  without a primitive — custom shapes from the shape library, emoji, image
+  layers, gradient fills, rich text — is simply not drawn, and
+  `ApiLayersExport::renderPageImage()` falls back to the plain rasterised page
+  without reporting anything, so the download looked successful and arrived
+  missing exactly the markup the user wanted. Download now builds the PDF in
+  the browser from the same composited pages Print uses, via a small
+  dependency-free PDF 1.4 writer (`viewer/PdfBuilder.js`) that embeds each page
+  as a JPEG through `/DCTDecode` at the server's 150 dpi page scale. Print and
+  Download are now guaranteed to produce the same document. The server export
+  is retained as the fallback for the cases where client-side compositing
+  cannot work, such as a canvas tainted by a cross-origin thumbnail.
+- **PDFs never rendered in the lightbox** — ResourceLoader pipes module content
+  through `Wikimedia\Minify\JavaScriptMinifier`, which is token-based rather
+  than a real parser, and it corrupts the vendored pdf.js 4.x bundle: it loses
+  string-boundary sync partway through (`getContext("2d")` came back as
+  `getContext("2 d")`) and truncates the remainder, so the 403 KB module was
+  served as 68 KB of unparseable JavaScript. The script died with `Uncaught
+  SyntaxError: Invalid or unexpected token` before executing, which left
+  `mw.loader.using()` pending forever instead of rejecting — so the viewer's
+  "fall back to the server-rendered image" path, which only triggers on
+  rejection, never ran. MediaWiki 1.44 offers a `ResourceLoader::FILTER_NOMIN`
+  (`/*@nomin*/`) opt-out but 1.45.3 does not, and neither do the 1.43/1.39
+  branches this extension is cherry-picked to. The `ext.layers.pdfjs` module has
+  therefore been removed: `PdfRenderer` now injects a plain `<script>` tag
+  pointing at `$wgExtensionAssetsPath`, exactly as it already did for the pdf.js
+  worker, with a `?version=` cache buster pinned to the vendored pdf.js release.
+  `tests/jest/pdfjsBundle.test.js` fails if the bundle is ever added back to
+  `extension.json` or if that version constant drifts from `pdfjs-dist`.
+- **PDF lightbox could spin forever instead of showing the page** — pdf.js puts
+  no timeout on its worker handshake, so if the worker fails to start in a way
+  that never reaches `onerror` (a restrictive CSP, a proxy serving the module
+  with the wrong MIME type, a stalled fetch), `getDocument().promise` stays
+  pending rather than rejecting. `PdfRenderer` bounded neither that call nor the
+  page render, and `LayersLightbox.preparePageImageUrl()` only falls back to the
+  server-rasterized thumbnail on *rejection* — a promise that never settles gave
+  it nothing to fall back from, leaving the loading indicator on screen
+  indefinitely. Library loading is now capped at 15s and page rendering at 30s
+  (overridable via `renderPage( url, page, { timeoutMs } )`); a timeout evicts
+  the stalled document from the cache so a retry is not queued behind it, and
+  the viewer logs the reason via `mw.log.warn` before degrading to the server
+  image.
+- **150+ broken or dead interface messages** — 23 keys referenced by JavaScript
+  were missing from `i18n/en.json`; 45 keys existed and were used but were not
+  declared in the `messages[]` of the module that loads them, so ResourceLoader
+  never shipped them; 72 keys were declared but had never been translated.
+  Visible effects included `Special:Slides` rendering the raw key
+  `layers-slide-size-custom`, and untranslatable editor strings such as the
+  skip-links and ARIA landmark labels (`layers-skip-to-toolbar`,
+  `layers-canvas-region` and five others), the gradient fill editor, the emoji
+  picker, background layer controls and the rich-text toolbar. Every affected
+  string now resolves and is translatable.
+- **`echo-badge-count` and `templatedata-doc-subpage` removed from
+  `i18n/en.json`** — These keys belong to the Echo and TemplateData extensions.
+  Defining them here overrode those extensions' own messages wiki-wide on any
+  installation running Layers.
+- **Per-parse state is now cleared via the `ParserClearState` hook** —
+  `WikitextHooks` accumulates per-parse state (layer set names, render counts,
+  gallery hints) in static properties. Reset relied on comparing
+  `$_SERVER['REQUEST_TIME_FLOAT']` against a stored value, but that key is unset
+  under CLI, so the comparison was `0.0 !== 0.0` and the reset never fired.
+  Layer sets could therefore bleed from one page into the next within a single
+  request — job queue runs, multi-page API parses and maintenance scripts.
+  `LayersWikitextHooks` is now registered for `ParserClearState` and the
+  time-based heuristic has been deleted.
+- **Failed layer saves no longer commit partial writes** — `saveLayerSet()`
+  opened its atomic section without `ATOMIC_CANCELABLE` and called
+  `endAtomic()` from the error path. `endAtomic()` marks a section
+  *successfully completed*, so a mid-transaction failure committed whatever had
+  already been written. The section is now cancelable and the error path calls
+  `cancelAtomic()`, which rolls back to the savepoint.
+- **Oversized layer sets report the correct error** — Exceeding
+  `$wgLayersMaxBytes` returned a generic "save failed" because the size check
+  returned `null` and the API could not distinguish it from a database error.
+  It now raises `LengthException`, which `ApiLayersSave` surfaces as
+  `layers-data-too-large`.
+- Fixed four failing PHPUnit tests that had been red on `main`: the standalone
+  test bootstrap now provides `IDatabase::ATOMIC_CANCELABLE`,
+  `IDatabase::cancelAtomic()`, `Config::has()`, `Message::getKey()` and a
+  `Wikimedia\AtEase\AtEase` stand-in.
+
+### Changed
+- **Lightbox print/download: one "Print" and one "Download" instead of two print
+  buttons.** "Print" printed the wiki page itself with a stylesheet that hid
+  everything except the lightbox, so the browser applied its default page
+  margins and stamped the URL, date and "page x of y" onto every sheet. That
+  furniture is drawn inside the page margin box and can only be suppressed by
+  `@page { margin: 0 }` — which this stylesheet cannot declare, because it loads
+  on every article and would zero the margins of ordinary wiki printing too.
+  "Print" now composites the marked-up pages and prints them from a hidden
+  same-origin iframe whose own document declares zero margins, so the output has
+  no extra border and no browser header/footer, and the user stays in the
+  lightbox instead of getting a new tab. The old "Print PDF" button is now
+  "Download": it takes the same server-generated PDF and passes `download=1` to
+  `Special:LayersExport`, which switches `Content-Disposition` from `inline` to
+  `attachment` so the file is saved rather than opened in a viewer tab. Both
+  buttons are now shown for single-page files as well; "Print PDF" had been
+  hidden unless the file had more than one page. The wait for the composited
+  pages to decode is bounded at 5 s so one undecodable page cannot strand the
+  button.
+- **Emoji picker no longer downloads 30 MB to draw one glyph.** `emoji-bundle.json`
+  was a single 30.3 MB file fetched in full the first time any emoji was needed,
+  with no cache-busting — so an upgrade could not invalidate it. 9.3 MB of that
+  payload was unreachable: the bundle held 3,731 entries while the index only
+  references 2,817. The SVG data is now split into 19 per-category shards under
+  `shapeLibrary/emoji/`, the unreferenced entries are gone, and only the category
+  the user is actually looking at is fetched (most are under 2 MB; the default
+  Smileys tab is 1.6 MB). Shard URLs carry the extension version, so upgrades
+  invalidate cleanly. `scripts/shard-emoji-bundle.js --check` runs in `npm test`
+  and fails if a shard drifts from the index in either direction.
+- **Emoji runtime logic moved out of the generated index.** `EmojiLibraryIndex.js`
+  is machine-generated but had accumulated hand-edited loading code that the
+  generator no longer emitted — regenerating it would have silently reverted the
+  loader. It is now data only (`window.Layers.EmojiLibraryData`); the
+  `window.Layers.EmojiLibrary` API lives in the new, hand-written and unit-tested
+  `EmojiLibraryLoader.js`, and the generator emits the data-only shape to match.
+- **`bundlesize.config.json` is now actually enforced.** Nothing in the repo read
+  it, so every one of its three budgets had quietly been exceeded — the shared
+  renderers by 6.6×. `scripts/check-bundle-size.js` resolves each module's
+  `scripts`/`styles`/`packageFiles` from `extension.json`, sums the on-disk bytes
+  and fails the build when a module is over; it runs as the last stage of
+  `npm test` and standalone as `npm run check:bundlesize`. Budgets are rebased on
+  raw source bytes (the only figure reproducible offline, since ResourceLoader
+  minifies and gzips at request time) with ~10% headroom, and `ext.layers.pdfjs`
+  was added so the vendored PDF engine cannot grow unnoticed. The checker also
+  fails when a module references a file that no longer exists.
+- **pdf.js upgraded from 3.11.174 to 4.10.38.** The old pin existed because
+  `pdfjs-dist` stopped shipping a UMD build in 4.0 and ResourceLoader cannot load
+  an ES module, which left the viewer on a release carrying a public advisory
+  (GHSA-wgrm-67xf-hhpq / CVE-2024-4367) for over two years. The main library is
+  now re-wrapped as UMD at vendor time by `scripts/webpack.pdfjs.config.js`
+  (`npm run vendor:pdfjs`) without re-minifying, and the worker is copied verbatim
+  and started as an ES module worker. `scripts/pdfjs-worker-import-loader.js`
+  restores the `webpackIgnore` comment on pdf.js's `await import( workerSrc )`
+  fallback — webpack would otherwise rewrite it into a context module and silently
+  break main-thread rendering under a strict CSP — and throws if that call ever
+  stops matching, so the next upgrade cannot regress it quietly. `isEvalSupported:
+  false` stays on as defence in depth and for `script-src` without `unsafe-eval`.
+  pdf.js was also missing from `THIRD_PARTY_LICENSES.md` entirely despite being
+  bundled; it now has a full Apache-2.0 attribution entry recording the vendoring
+  modifications, as §4(b) requires.
+- **Closing an editor dialog now returns keyboard focus to the control that
+  opened it.** All five `DialogManager` dialogs (cancel-confirm, confirm, alert,
+  prompt, keyboard-shortcuts) moved focus into themselves on open but dropped it
+  on `document.body` on close, stranding keyboard and screen-reader users at the
+  top of the document. Each dialog had its own hand-copied `cleanup()` closure;
+  they now share `registerDialog()` and `makeDialogCleanup()`, which capture the
+  focus origin on open and restore it on close — skipping the restore when the
+  trigger was removed while the dialog was open. `closeAllDialogs()` restores the
+  outermost origin. (`ConfirmDialog.js` already did this correctly.)
+- **The dead `layer_assets` table is dropped on upgrade.** It was created on
+  every install, carried two migrations, a CHECK-constraint patch and foreign-key
+  maintenance — and had zero reads and zero writes in the entire codebase. The
+  `updatephp` run now applies `patch-drop-layer_assets.sql`, and the table, its
+  DDL, its patches, `LayersConstants::TABLE_LAYER_ASSETS`, the
+  `applyLaSizeConstraintsPatch()` updater and the two mediawiki.org table pages
+  for it and for the previously-retired `layer_set_usage` are all gone.
+  `layer_sets` is now the only table the extension creates.
+- **PHP now imports MediaWiki's namespaced class names instead of the deprecated
+  global aliases.** 32 `use` statements plus a handful of inline `\Title::` /
+  `\SpecialPage::` calls still referenced `ApiBase`, `ApiMain`, `ApiResult`,
+  `ApiUsageException`, `Config`, `ForeignAPIFile`, `ForeignDBFile`, `Parser`,
+  `PPFrame`, `SpecialPage`, `Title` and `User` at the root namespace. Those names
+  survive in MW 1.44 only as `class_alias()` shims that core has scheduled for
+  removal, so this was a fatal error waiting on a core release — and
+  `ForeignFileHelper::isForeignFile()` was silently degrading already, because
+  `instanceof` against a missing class returns `false` rather than raising.
+  `scripts/check-mw-compatibility.js` now has a rule per moved class so the drift
+  cannot come back, it scans `maintenance/` as well as `src/`, and it runs as part
+  of `npm test` rather than only when someone remembers `npm run check:mw-compat`.
+- `PdfRenderer`'s document cache is now bounded. It held every `PDFDocumentProxy`
+  a viewer session ever opened, and each proxy pins its decoded page data and a
+  dedicated worker, so browsing a category of PDFs grew memory without limit
+  until the page was closed. The cache is now an LRU capped at 8 documents; a
+  cache hit refreshes the entry's position and evicted documents are
+  `destroy()`ed. `getDocument()` also passes `maxImageSize` (64 megapixels) so a
+  crafted upload cannot force pdf.js to allocate an arbitrarily large bitmap.
+- Render artefact paths and lifecycle are centralized in the new
+  `MediaWiki\Extension\Layers\Utility\RenderCache`, replacing three separate
+  inline `$wgUploadDirectory` lookups with differing `mkdir` behaviour in
+  `ThumbnailRenderer`, `ApiLayersExport` and `Hooks`.
+- `coverage.json` (9.5 MB), `coverage_output.txt` and two `codebase_review.md`
+  backups are no longer tracked; `.gitignore` was extended so they cannot be
+  re-added.
+- `scripts/update-version.js` no longer silently skips `wiki/Installation.md`
+  and `improvement_plan.md`, which is why `--check` passed while
+  `wiki/Installation.md` still advertised 1.5.76.
+
+### Documentation
+- The `edit` permission requirement and the behaviour change it implies are
+  documented in the README, the mediawiki.org page, [[Permissions]] and
+  [[API-Reference]].
+- `maintenance/purgeLayersRenderCache.php` is documented in the README and the
+  mediawiki.org page.
+- `docs/ACCESSIBILITY.md` records that the skip-link and ARIA landmark labels it
+  claimed as resolved were in fact never shipped to the browser until now.
+- [[Permissions]] previously asserted that cascading protection blocked layer
+  edits. That was aspirational; it is true as of this release.
+
+## [1.5.79] - 2026-08-09
+
+### Security
+- **Harden the in-wiki PDF viewer against CVE-2024-4367** — The vendored pdf.js
+  build (3.11.174) predates the 4.2.67 fix for CVE-2024-4367, in which a
+  maliciously crafted PDF could execute arbitrary JavaScript in the viewer's
+  browser. Because viewer PDFs are user-uploaded and therefore untrusted, the
+  `PdfRenderer` now passes `isEvalSupported: false` to `pdf.js`'s
+  `getDocument()`, which is Mozilla's documented mitigation for the exploit on
+  builds older than 4.2.67. Added a regression test asserting the flag is set.
+
+### Fixed
+- Removed a dead `allowReason` variable in the viewer API fallback that never
+  held a value, clearing the last remaining ESLint warning.
+
 ## [1.5.78] - 2026-08-09
 
 ### Added

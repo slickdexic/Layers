@@ -267,6 +267,9 @@ class ServerSideLayerValidator {
 	private const MIN_STAR_POINTS = 3;
 	private const MAX_STAR_POINTS = 20;
 
+	/** @var int Fallback for $wgLayersMaxImageBytes when config is unavailable */
+	private const DEFAULT_MAX_IMAGE_BYTES = 1048576;
+
 	public function __construct() {
 		$this->textSanitizer = new TextSanitizer();
 		$this->colorValidator = new ColorValidator();
@@ -284,11 +287,13 @@ class ServerSideLayerValidator {
 					// Explicit (int) cast required for strict_types compatibility
 					// Config values may be strings in some MediaWiki configurations
 					'maxLayers' => (int)( $config->get( 'LayersMaxLayerCount' ) ?? 100 ),
+					'maxImageBytes' => (int)( $config->get( 'LayersMaxImageBytes' ) ?? self::DEFAULT_MAX_IMAGE_BYTES ),
 					'defaultFonts' => $config->get( 'LayersDefaultFonts' ) ?? [ 'Arial', 'sans-serif' ]
 				];
 			} else {
 				$this->config = [
 					'maxLayers' => 100,
+					'maxImageBytes' => self::DEFAULT_MAX_IMAGE_BYTES,
 					'defaultFonts' => [ 'Arial', 'sans-serif' ]
 				];
 			}
@@ -296,6 +301,7 @@ class ServerSideLayerValidator {
 			// Fallback configuration
 			$this->config = [
 				'maxLayers' => 100,
+				'maxImageBytes' => self::DEFAULT_MAX_IMAGE_BYTES,
 				'defaultFonts' => [ 'Arial', 'sans-serif' ]
 			];
 		}
@@ -599,8 +605,7 @@ class ServerSideLayerValidator {
 	 */
 	private function validateImageSrc( string $value ): array {
 		// Max size configurable via $wgLayersMaxImageBytes (default 1MB)
-		$config = \MediaWiki\MediaWikiServices::getInstance()->getMainConfig();
-		$maxSize = (int)$config->get( 'LayersMaxImageBytes' );
+		$maxSize = (int)( $this->config['maxImageBytes'] ?? self::DEFAULT_MAX_IMAGE_BYTES );
 		if ( strlen( $value ) > $maxSize ) {
 			$maxSizeKB = round( $maxSize / 1024 );
 			return [ 'valid' => false, 'error' => "Image data too large (max {$maxSizeKB}KB)" ];
@@ -625,18 +630,54 @@ class ServerSideLayerValidator {
 			return [ 'valid' => false, 'error' => 'Unsupported image type: ' . $mimeType ];
 		}
 
-		// Validate base64 payload if present
-		if ( isset( $matches[2] ) ) {
-			$commaPos = strpos( $value, ',' );
-			if ( $commaPos !== false ) {
-				$payload = substr( $value, $commaPos + 1 );
-				if ( $payload === '' || base64_decode( $payload, true ) === false ) {
-					return [ 'valid' => false, 'error' => 'Invalid base64 image data' ];
-				}
-			}
+		// SECURITY: the declared media type is attacker-controlled, so it proves
+		// nothing on its own. Require base64 (percent-encoded payloads cannot be
+		// checked cheaply and no client produces them) and verify that the decoded
+		// bytes actually start with the signature of the declared format. Without
+		// this, an SVG or HTML document labelled "data:image/png;base64," would be
+		// stored and later re-served to a browser that sniffs it as active content.
+		if ( !isset( $matches[2] ) ) {
+			return [ 'valid' => false, 'error' => 'Image data must be base64-encoded' ];
+		}
+		$commaPos = strpos( $value, ',' );
+		$payload = $commaPos === false ? '' : substr( $value, $commaPos + 1 );
+		if ( $payload === '' ) {
+			return [ 'valid' => false, 'error' => 'Invalid base64 image data' ];
+		}
+		$decoded = base64_decode( $payload, true );
+		if ( $decoded === false ) {
+			return [ 'valid' => false, 'error' => 'Invalid base64 image data' ];
+		}
+		if ( !$this->matchesImageSignature( $mimeType, $decoded ) ) {
+			return [ 'valid' => false, 'error' => 'Image content does not match declared type: ' . $mimeType ];
 		}
 
 		return [ 'valid' => true, 'value' => $value ];
+	}
+
+	/**
+	 * Check that decoded image bytes carry the magic number of the declared type.
+	 *
+	 * @param string $mimeType One of the allowed image MIME types
+	 * @param string $bytes Decoded image payload
+	 * @return bool
+	 */
+	private function matchesImageSignature( string $mimeType, string $bytes ): bool {
+		switch ( $mimeType ) {
+			case 'image/png':
+				return strncmp( $bytes, "\x89PNG\r\n\x1a\n", 8 ) === 0;
+			case 'image/jpeg':
+				return strncmp( $bytes, "\xFF\xD8\xFF", 3 ) === 0;
+			case 'image/gif':
+				return strncmp( $bytes, 'GIF87a', 6 ) === 0 || strncmp( $bytes, 'GIF89a', 6 ) === 0;
+			case 'image/webp':
+				// RIFF container: "RIFF" <uint32 size> "WEBP"
+				return strlen( $bytes ) >= 12
+					&& strncmp( $bytes, 'RIFF', 4 ) === 0
+					&& strncmp( substr( $bytes, 8, 4 ), 'WEBP', 4 ) === 0;
+			default:
+				return false;
+		}
 	}
 
 	/**

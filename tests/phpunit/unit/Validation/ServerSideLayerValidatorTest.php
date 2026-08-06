@@ -907,4 +907,64 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 		$this->assertFalse( $result->isValid(), '101 paths should exceed limit' );
 		$this->assertNotEmpty( $result->getErrors() );
 	}
+
+	/**
+	 * A data URL's declared media type is attacker-controlled. Only the decoded
+	 * bytes prove what the payload really is.
+	 *
+	 * @dataProvider provideImageSrc
+	 * @covers \\MediaWiki\\Extension\\Layers\\Validation\\ServerSideLayerValidator::validateImageSrc
+	 * @param string $src
+	 * @param bool $expectedKept
+	 */
+	public function testImageSrcRequiresMatchingMagicBytes( string $src, bool $expectedKept ) {
+		$validator = $this->createValidator();
+
+		$result = $validator->validateLayers( [ [
+			'id' => 'img_1',
+			'type' => 'image',
+			'x' => 0,
+			'y' => 0,
+			'src' => $src,
+		] ] );
+
+		$data = $result->getData();
+		$this->assertSame( $expectedKept, isset( $data[0]['src'] ) );
+	}
+
+	public static function provideImageSrc(): array {
+		$pad = str_repeat( 'x', 24 );
+		return [
+			'png' => [ 'data:image/png;base64,' . base64_encode( "\x89PNG\r\n\x1a\n" . $pad ), true ],
+			'jpeg' => [ 'data:image/jpeg;base64,' . base64_encode( "\xFF\xD8\xFF\xE0" . $pad ), true ],
+			'gif87a' => [ 'data:image/gif;base64,' . base64_encode( 'GIF87a' . $pad ), true ],
+			'gif89a' => [ 'data:image/gif;base64,' . base64_encode( 'GIF89a' . $pad ), true ],
+			'webp' => [
+				'data:image/webp;base64,' . base64_encode( 'RIFF' . "\x00\x00\x00\x00" . 'WEBP' . $pad ),
+				true,
+			],
+			'svg smuggled as png' => [
+				'data:image/png;base64,' . base64_encode( '<svg xmlns="x"><script>alert(1)</script></svg>' ),
+				false,
+			],
+			'html smuggled as gif' => [
+				'data:image/gif;base64,' . base64_encode( '<html><script>alert(1)</script></html>' ),
+				false,
+			],
+			'jpeg bytes declared png' => [
+				'data:image/png;base64,' . base64_encode( "\xFF\xD8\xFF\xE0" . $pad ),
+				false,
+			],
+			'riff that is not webp' => [
+				'data:image/webp;base64,' . base64_encode( 'RIFF' . "\x00\x00\x00\x00" . 'WAVE' . $pad ),
+				false,
+			],
+			'truncated webp header' => [ 'data:image/webp;base64,' . base64_encode( 'RIFF' ), false ],
+			'svg media type' => [ 'data:image/svg+xml;base64,' . base64_encode( '<svg/>' ), false ],
+			'percent encoded payload' => [ 'data:image/png,%89PNG%0D%0A', false ],
+			'empty payload' => [ 'data:image/png;base64,', false ],
+			'not base64' => [ 'data:image/png;base64,!!!!not base64!!!!', false ],
+			'not a data url' => [ 'https://example.com/evil.png', false ],
+		];
+	}
 }

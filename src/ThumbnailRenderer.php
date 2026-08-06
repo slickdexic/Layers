@@ -11,8 +11,9 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers;
 
-use Config;
+use MediaWiki\Config\Config;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
+use MediaWiki\Extension\Layers\Utility\RenderCache;
 use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
@@ -72,19 +73,12 @@ class ThumbnailRenderer {
 				return null;
 			}
 
-			$uploadDir = $this->config->get( 'UploadDirectory' );
-			if ( !$uploadDir ) {
-				$uploadDir = sys_get_temp_dir();
-			}
-			$thumbDir = rtrim( $uploadDir, '/\\' ) . '/thumb/layers';
-			if ( !is_dir( $thumbDir ) ) {
-				$ok = mkdir( $thumbDir, 0755, true );
-				if ( !$ok && !is_dir( $thumbDir ) ) {
-					if ( $this->logger ) {
-						$this->logger->error( 'Layers: failed to create thumb directory', [ 'dir' => $thumbDir ] );
-					}
-					return null;
+			$thumbDir = RenderCache::getThumbDir( $this->config );
+			if ( !RenderCache::ensureDir( $this->config, $thumbDir ) ) {
+				if ( $this->logger ) {
+					$this->logger->error( 'Layers: failed to create thumb directory', [ 'dir' => $thumbDir ] );
 				}
+				return null;
 			}
 
 			$outputPath = $thumbDir . '/' .

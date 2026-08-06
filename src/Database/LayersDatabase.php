@@ -11,7 +11,7 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Database;
 
-use Config;
+use MediaWiki\Config\Config;
 use MediaWiki\Extension\Layers\LayersConstants;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IConnectionProvider;
@@ -136,7 +136,10 @@ class LayersDatabase {
 			if ( $retryCount > 0 ) {
 				usleep( $retryCount * 10000 );
 			}
-			$dbw->startAtomic( __METHOD__ );
+			// ATOMIC_CANCELABLE establishes a savepoint so cancelAtomic() below can
+			// actually roll back. Without it an error leaves the transaction aborted
+			// on PostgreSQL, which also broke the duplicate-key retry below.
+			$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 			try {
 				// P1.1 FIX: Check named set limit INSIDE transaction with FOR UPDATE lock
 				// This prevents race conditions where concurrent requests bypass the limit
@@ -205,8 +208,9 @@ class LayersDatabase {
 				$maxAllowedSize = (int)$this->config->get( 'LayersMaxBytes' );
 				if ( strlen( $jsonBlob ) > $maxAllowedSize ) {
 					$this->logError( "JSON blob size exceeds maximum allowed size" );
-					$dbw->endAtomic( __METHOD__ );
-					return null;
+					// Let the catch block roll back, then re-throw so the API can
+					// report the size limit instead of a generic save failure.
+					throw new \LengthException( LayersConstants::ERROR_DATA_TOO_LARGE );
 				}
 
 				[ $majorMime, $minorMime ] = explode( '/', $mime, 2 ) + [ '', '' ];
@@ -240,10 +244,12 @@ class LayersDatabase {
 
 				return $layerSetId;
 			} catch ( \Throwable $e ) {
-				$dbw->endAtomic( __METHOD__ );
+				// cancelAtomic(), not endAtomic() — endAtomic() marks the section
+				// *successfully completed* and commits whatever was already written.
+				$dbw->cancelAtomic( __METHOD__ );
 				// Re-throw OverflowException so ApiLayersSave can return
 				// the correct 'layers-max-sets-reached' error to the client
-				if ( $e instanceof \OverflowException ) {
+				if ( $e instanceof \OverflowException || $e instanceof \LengthException ) {
 					throw $e;
 				}
 				if ( $this->isDuplicateKeyError( $e ) ) {

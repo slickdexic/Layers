@@ -926,4 +926,100 @@ describe( 'DialogManager', () => {
 			expect( dialogManager.activeDialogs.length ).toBe( 0 );
 		} );
 	} );
+
+	describe( 'focus restoration (R1.28)', () => {
+		let trigger;
+
+		beforeEach( () => {
+			trigger = document.createElement( 'button' );
+			trigger.id = 'layers-test-trigger';
+			document.body.appendChild( trigger );
+			trigger.focus();
+		} );
+
+		it( 'captureFocusOrigin returns the focused element', () => {
+			expect( dialogManager.captureFocusOrigin() ).toBe( trigger );
+		} );
+
+		it( 'captureFocusOrigin returns null when focus is on the body', () => {
+			trigger.blur();
+			expect( dialogManager.captureFocusOrigin() ).toBeNull();
+		} );
+
+		it( 'restoreFocusOrigin ignores null', () => {
+			expect( () => dialogManager.restoreFocusOrigin( null ) ).not.toThrow();
+		} );
+
+		it( 'restoreFocusOrigin ignores a detached element', () => {
+			const detached = document.createElement( 'button' );
+			detached.focus = jest.fn();
+			dialogManager.restoreFocusOrigin( detached );
+			expect( detached.focus ).not.toHaveBeenCalled();
+		} );
+
+		it( 'restores focus to the trigger after showCancelConfirmDialog closes', () => {
+			dialogManager.showCancelConfirmDialog( jest.fn() );
+			expect( document.activeElement ).not.toBe( trigger );
+
+			const buttons = document.querySelectorAll( '.layers-modal-buttons button' );
+			buttons[ 0 ].click();
+
+			expect( document.activeElement ).toBe( trigger );
+		} );
+
+		it( 'restores focus to the trigger after showConfirmDialog resolves', async () => {
+			const promise = dialogManager.showConfirmDialog( { message: 'Sure?' } );
+			const buttons = document.querySelectorAll( '.layers-modal-buttons button' );
+			buttons[ 1 ].click();
+
+			await expect( promise ).resolves.toBe( true );
+			expect( document.activeElement ).toBe( trigger );
+		} );
+
+		it( 'restores focus to the trigger after showAlertDialog resolves', async () => {
+			const promise = dialogManager.showAlertDialog( { message: 'Heads up' } );
+			document.querySelector( '.layers-modal-buttons button' ).click();
+
+			await promise;
+			expect( document.activeElement ).toBe( trigger );
+		} );
+
+		it( 'restores focus to the trigger after showPromptDialogAsync resolves', async () => {
+			const promise = dialogManager.showPromptDialogAsync( { message: 'Name?' } );
+			const buttons = document.querySelectorAll( '.layers-modal-buttons button' );
+			buttons[ 1 ].click();
+
+			await promise;
+			expect( document.activeElement ).toBe( trigger );
+		} );
+
+		it( 'restores focus to the trigger after the shortcuts dialog closes', () => {
+			dialogManager.showKeyboardShortcutsDialog();
+			document.querySelector( '.layers-modal-buttons button' ).click();
+
+			expect( document.activeElement ).toBe( trigger );
+		} );
+
+		it( 'restores focus to the outermost origin from closeAllDialogs', () => {
+			dialogManager.showKeyboardShortcutsDialog();
+			// The second dialog's origin is inside the first, which closeAllDialogs
+			// removes; the outermost origin must still win.
+			dialogManager.showCancelConfirmDialog( jest.fn() );
+
+			dialogManager.closeAllDialogs();
+
+			expect( document.activeElement ).toBe( trigger );
+		} );
+
+		it( 'closeAllDialogs tolerates entries without a captured origin', () => {
+			const overlay = document.createElement( 'div' );
+			const dialog = document.createElement( 'div' );
+			document.body.appendChild( overlay );
+			document.body.appendChild( dialog );
+			dialogManager.activeDialogs.push( { overlay, dialog, handleKey: null } );
+
+			expect( () => dialogManager.closeAllDialogs() ).not.toThrow();
+			expect( dialogManager.activeDialogs.length ).toBe( 0 );
+		} );
+	} );
 } );

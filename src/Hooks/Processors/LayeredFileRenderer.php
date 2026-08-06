@@ -17,8 +17,8 @@ use Exception;
 use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\Utility\ForeignFileHelper;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 use Psr\Log\LoggerInterface;
-use Title;
 
 /**
  * Handles rendering of layered files from parser functions

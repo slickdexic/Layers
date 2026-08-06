@@ -65,8 +65,8 @@ const VERSION_FILES = [
 	},
 	{
 		file: 'wiki/Installation.md',
-		pattern: /\| 1\.44\+ \| `main` \| (\d+\.\d+\.\d+)/,
-		replacement: ( version ) => `| 1.44+ | \`main\` | ${ version }`
+		pattern: /\| 1\.44\+ \| \*\*`main`\*\* \| (\d+\.\d+\.\d+)/,
+		replacement: ( version ) => `| 1.44+ | **\`main\`** | ${ version }`
 	},
 	{
 		file: 'improvement_plan.md',

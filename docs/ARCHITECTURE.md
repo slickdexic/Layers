@@ -104,7 +104,7 @@ The architecture follows strict separation of concerns: PHP handles storage and 
 | File | Lines | Notes |
 |------|-------|-------|
 | ShapeLibraryData.js | ~11,293 | Generated shape definitions |
-| EmojiLibraryIndex.js | ~3,055 | Generated search index |
+| EmojiLibraryIndex.js | ~2,911 | Generated emoji metadata (data only) |
 
 **Hand-Written JavaScript Files with Delegation Patterns:**
 
@@ -993,8 +993,9 @@ extensions/Layers/
 │   │   │   └── PropertiesForm.js (993 lines)
 │   │   ├── shapeLibrary/    # Shape & Emoji libraries (~14,000 lines)
 │   │   │   ├── ShapeLibraryData.js (~11,299 lines, generated)
-│   │   │   ├── EmojiLibraryIndex.js (~3,055 lines, generated)
-│   │   │   ├── emoji-bundle.json (bundled emoji SVG data)
+│   │   │   ├── EmojiLibraryIndex.js (~2,911 lines, generated, data only)
+│   │   │   ├── EmojiLibraryLoader.js (emoji runtime API, shard loading)
+│   │   │   ├── emoji/ (19 per-category SVG shards)
 │   │   │   ├── ShapeLibraryPanel.js
 │   │   │   └── EmojiPickerPanel.js
 │   │   └── *.js             # Other modules
@@ -1032,7 +1033,7 @@ $wgRateLimits['editlayers-save']['newbie'] = [5, 3600];
 | Right | Default | Description |
 |-------|---------|-------------|
 | editlayers | users | Edit and create layers |
-| managelayerlibrary | sysop | Library management |
+| layers-admin | sysop | Delete or rename any layer set or slide |
 
 ---
 

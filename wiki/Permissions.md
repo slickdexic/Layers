@@ -9,7 +9,7 @@ Configure user permissions for the Layers extension.
 | Right | Description | Actions Enabled |
 |-------|-------------|-----------------|
 | `editlayers` | Create and edit layer sets | Open editor, create sets, modify layers, save revisions |
-| `managelayerlibrary` | Manage layer library | Administrative functions (future feature) |
+| `layers-admin` | Administer layer data | Delete or rename any layer set or slide, regardless of who created it |
 
 ---
 
@@ -26,7 +26,7 @@ $wgGroupPermissions['user']['editlayers'] = true;
 
 // Administrators
 $wgGroupPermissions['sysop']['editlayers'] = true;
-$wgGroupPermissions['sysop']['managelayerlibrary'] = true;
+$wgGroupPermissions['sysop']['layers-admin'] = true;
 ```
 
 ---
@@ -82,19 +82,41 @@ $wgGroupPermissions['sysop']['editlayers'] = true;
 To create or edit layer sets:
 - User must have `editlayers` right
 - User must have read access to the file
+- **User must have `edit` permission on the file's page** (since v1.5.80)
 - User must not be rate-limited
 
 ### Deleting Layer Sets
 
 To delete a named layer set:
+- User must have `edit` permission on the file's page
 - User must be the **owner** (created the first revision), OR
 - User must have the `delete` right (typically sysop)
 
 ### Renaming Layer Sets
 
 To rename a named layer set:
+- User must have `edit` permission on the file's page
 - User must be the **owner** (created the first revision), OR
 - User must have the `delete` right (typically sysop)
+
+### Why the `edit` permission is required
+
+Layer data changes what a File page renders, so it is content. Before v1.5.80
+the write endpoints (`layerssave`, `layersdelete`, `layersrename`) checked only
+the global `editlayers` right, which meant page protection, namespace
+protection, cascading protection and blocks were all bypassed: a blocked user,
+or any user with `editlayers`, could alter the rendered output of a fully
+protected File page.
+
+All three endpoints now additionally require ordinary `edit` permission on the
+file's title.
+
+⚠️ **This is a behaviour change.** On wikis that restrict editing in `NS_FILE` —
+for example via `$wgNamespaceProtection[NS_FILE]`, cascading protection from a
+transcluding page, or individual page protection — layer saves that previously
+succeeded will now be rejected with a normal MediaWiki permission error. If you
+want a group to annotate files it cannot otherwise edit, grant that group the
+`edit` right on the File namespace.
 
 ---
 
@@ -182,15 +204,19 @@ Ownership cannot be directly transferred. Workaround:
 
 ## Integration with MediaWiki
 
-Layers respects MediaWiki's permission system:
+Layers respects MediaWiki's permission system. Every statement in this section
+became true in **v1.5.80**; on earlier versions the write endpoints checked only
+the `editlayers` right and none of these restrictions were enforced.
 
 ### Cascading Permissions
 
-If a file is on a protected page with cascading protection, `editlayers` is effectively blocked.
+If a file is on a protected page with cascading protection, layer writes are
+blocked, because cascading protection removes `edit` on the file's title.
 
 ### Namespace Restrictions
 
-Layers only works in the File namespace. The extension doesn't add restrictions beyond file read access.
+Layers only works in the File namespace. Layer writes require `edit` permission
+on the file's page, so `$wgNamespaceProtection[NS_FILE]` restricts them too.
 
 ### Blocked Users
 

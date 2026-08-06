@@ -1,10 +1,799 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** August 9, 2026 (v79 — pdf.js viewer security review)
-**Previous Review:** August 2, 2026 (v76 — text formatting → floating toolbar only)
-**Version:** 1.5.79
-**Reviewer:** GitHub Copilot (Claude Opus 4.8)
+**Review Date:** August 3, 2026 (v79 — full critical review: security, correctness, dead code, i18n wiring)
+**Remediation:** August 3, 2026 (v1.5.80 — see "Remediation status" below)
+**Previous Review:** v79 pdf.js viewer security review (dated "August 9, 2026" in this file; HEAD commit `c9c529fd` is actually dated August 3, 2026 — see §5.4)
+**Version:** 1.5.80
+**Reviewer:** GitHub Copilot (Claude Opus 5)
 
+---
+
+## ✅ Remediation status — v1.5.80
+
+The findings below were written against v1.5.79. Most of the HIGH-severity and
+all of the i18n findings have since been fixed. Read each section together with
+this table.
+
+| Finding | Status in v1.5.80 |
+|---|---|
+| §1.1 Write endpoints ignore per-title `edit` permission | **Fixed.** `LayersApiHelperTrait::requireTitleEditPermission()` gates `layerssave`, `layersdelete` and `layersrename` on `Authority::definitelyCan( 'edit', $title )`. |
+| §1.2 Exports never deleted; survive file deletion | **Fixed.** New `Utility\RenderCache` purges by SHA1 on `FileDeleteComplete`, and `maintenance/purgeLayersRenderCache.php` reaps by age. Exports also moved out of the document root and are delivered through `Special:LayersExport`, which re-checks `read` permission on the source file per request. |
+| §1.3 `WikitextHooks` static state never reset | **Fixed.** `LayersWikitextHooks` is registered for `ParserClearState`; the `REQUEST_TIME_FLOAT` heuristic is deleted. Two regression tests added. |
+| §1.4 `endAtomic()` in the failure path commits partial writes | **Fixed.** `ATOMIC_CANCELABLE` + `cancelAtomic()`; the size-limit branch now raises `LengthException` so the API returns `layers-data-too-large`. |
+| §2 i18n wiring (137 reported, 152 actual) | **Fixed.** All undefined, missing, unshipped and foreign keys resolved. |
+| §5 Gate blindness | **Fixed.** `scripts/verify-i18n-wiring.js` is a blocking gate in `npm test`. It is what raised the count from 137 to 152. |
+
+Everything else in this document remains open and is tracked in
+`improvement_plan.md` under R1.
+
+Two defects not in the original review were found and fixed while remediating:
+
+- Four PHPUnit tests were **red on `main`** and had gone unnoticed because the
+  standalone bootstrap lacked `Config::has()`, `Message::getKey()` and
+  `IDatabase::ATOMIC_CANCELABLE`/`cancelAtomic()`.
+- `Special:Slides` and `Special:EditSlide` never implemented `getGroupName()`,
+  so they were listed under "Other special pages" despite the
+  `specialpages-group-layers` message existing for them since they were added.
+
+---
+
+## 🔎 Full Critical Review — August 3, 2026
+
+**Scope:** every `src/*.php` file, every `resources/**/*.js` module outside
+`dist/` and `lib/`, `extension.json`, `sql/`, `i18n/`, the CI workflows, and
+the build/verification scripts. Every finding below was reproduced against
+source with a file path and line number. Claims I could not reproduce are
+either omitted or explicitly labelled.
+
+**Gate status at review time — all green:**
+
+| Gate | Result |
+|---|---|
+| `npm run test:js` (Jest) | 173 suites / 14,090 tests pass in ~11 s |
+| `npx grunt` (eslint + stylelint + banana) | clean |
+| `phpcs` | 0 errors, 2 warnings (both in `tests/phpunit/unit/stubs/`) |
+| `parallel-lint` | 84 files, 0 syntax errors |
+| `scripts/verify-metrics.js` | 801 i18n messages, 0 orphaned, 0 undocumented |
+| `scripts/check-mw-compatibility.js` | 0 errors, 0 warnings |
+| `scripts/update-version.js --check` | consistent (1.5.79) |
+
+**The headline of this review is that all of those gates are green and the
+codebase still contains four HIGH-severity defects and 137 broken i18n
+wirings.** The gates measure the things that are easy to measure. §5 explains
+exactly which classes of defect they are structurally blind to.
+
+---
+
+## 1. HIGH severity
+
+### 1.1 🔴 All three write endpoints skip per-title permission checks
+
+`ApiLayersSave.php`, `ApiLayersDelete.php` and `ApiLayersRename.php` contain
+**zero** occurrences of `userCan`, `quickUserCan`, `PermissionManager`,
+`getPermissionManager` or `->isAllowed`. Their entire authorisation model is a
+single global right check:
+
+- `ApiLayersSave.php:211` — `$this->checkUserRightsAny( 'editlayers' );`
+- `ApiLayersDelete.php:59` — same
+- `ApiLayersRename.php:61` — same
+
+The two **read** endpoints in the same directory do it correctly:
+
+- `ApiLayersInfo.php:141` — `$permissionManager->userCan( 'read', $user, $title )`
+- `ApiLayersExport.php:105` — same
+
+That inconsistency inside one extension is the proof this is an oversight
+rather than a design decision.
+
+**Consequences**
+
+1. **Read restrictions are bypassed on write.** On a wiki using Lockdown,
+   `$wgWhitelistRead`, or private namespaces, a user who holds `editlayers`
+   but cannot *read* `File:Secret.png` can still create, overwrite, rename and
+   delete annotation sets on it — and `layerssave` returns the resulting
+   `layersetid`.
+2. **Page protection is bypassed.** Layer data materially changes the rendered
+   output of a File page. A fully-protected File page can still have its
+   annotations rewritten by any `editlayers` holder, because no `edit` check
+   and no `Title::getRestrictions()` consultation happens anywhere in the write
+   path.
+3. **Cascading protection and title blacklists are likewise ignored.**
+
+**Not affected:** blocks and CSRF are handled correctly by core, because
+`isWriteMode()` returns `true` (`ApiLayersSave.php:590`), `needsToken()`
+returns `'csrf'` (line 568) and `mustBePosted()` returns `true` (line 603).
+
+**Fix:** add to each write module, immediately after the file is resolved:
+
+```php
+$permissionManager = MediaWikiServices::getInstance()->getPermissionManager();
+$errors = $permissionManager->getPermissionErrors( 'edit', $user, $title );
+if ( $errors ) {
+    $this->dieStatus( $this->errorArrayToStatus( $errors, $user ) );
+}
+```
+
+`'edit'` (not `'read'`) is the correct action, since it subsumes read and
+covers protection, cascading protection and blocks in one call.
+
+---
+
+### 1.2 🔴 Exported PDFs are world-readable, never expire, and survive file deletion
+
+`ApiLayersExport::getExportDir()` (line 344) writes to
+`$wgUploadDirectory . '/thumb/layers/export'` (mkdir `0755`, ignoring
+`$wgDirectoryMode`), and `pathToUrl()` (line 361) converts that to a public
+`$wgUploadPath` URL which the API hands straight back to the client as
+`'url' => $url`.
+
+Three separate problems compound:
+
+1. **The `userCan( 'read', … )` check at line 105 gates who may *trigger* an
+   export, not who may *fetch the result*.** Once written, the PDF is served
+   directly by the webserver with no MediaWiki involvement. On any wiki using
+   `img_auth.php` or restricted uploads, this is a straightforward access
+   control bypass: one authorised export permanently publishes the full
+   annotated document to anyone who can guess or obtain the URL.
+2. **The filename is deterministic and permanent.** It is
+   `$sha1 . '_' . $cacheKey . '.pdf'` where `$cacheKey` is
+   `md5( sha1 | setName | width | pageCount | pageMeta )`. Stable input →
+   stable URL. There is no random token, no expiry, and **no `unlink` anywhere
+   in `ApiLayersExport.php`**. Because `$pageMeta` incorporates the layer set's
+   revision/timestamp, *every save of a layer set orphans the previous PDF
+   permanently* → unbounded disk growth with no reaper, no maintenance script
+   and no TTL.
+3. **File deletion does not clean them up.** `Hooks::onFileDeleteComplete()`
+   calls only `$db->deleteLayerSetsForImage( … )`. It does not remove exported
+   PDFs, and it does not remove the composited renders that
+   `ThumbnailRenderer.php:79` writes to `$uploadDir/thumb/layers`. Deleting a
+   file for copyright, privacy or DMCA reasons therefore leaves a full-content
+   PDF of it permanently retrievable at a stable URL.
+
+**Fix (in priority order):** (a) extend `onFileDeleteComplete()` to purge
+`thumb/layers/` and `thumb/layers/export/` for the deleted sha1 — this is the
+one that is a compliance problem, not just a disk problem; (b) serve exports
+through an authenticated action rather than a raw upload-path URL, or at
+minimum include a per-user HMAC in the filename; (c) add a maintenance script
+and TTL so orphaned exports are reaped.
+
+---
+
+### 1.3 🔴 `WikitextHooks` static state is never reset in CLI/job-queue parses
+
+`WikitextHooks` carries **eight** static arrays of per-request parse state
+(`$pageHasLayers`, `$fileSetNames`, `$fileRenderCount`, `$pendingRender`,
+`$galleryHints`, `$fileLinkTypes`, `$fileParamLayerset`, `$fileParseCount`).
+They are cleared from exactly two places:
+
+1. `Hooks::onBeforePageDisplay()` → `WikitextHooks::resetPageLayersFlag()`
+   (`src/Hooks.php:92` and `:114`)
+2. the heuristic in `ensureRequestStateReset()` (`WikitextHooks.php:229`):
+
+```php
+$requestTime = $_SERVER['REQUEST_TIME_FLOAT'] ?? 0.0;
+if ( $requestTime !== self::$lastResetRequestTime ) {
+    // …reset the eight arrays…
+}
+```
+
+**Failure mode 1 — CLI and the job queue.** Under `runJobs.php`,
+`refreshLinks.php`, `rebuildall.php` or any maintenance script,
+`$_SERVER['REQUEST_TIME_FLOAT']` is unset, so `$requestTime` is `0.0`. The
+static `$lastResetRequestTime` also initialises to `0.0`. The equality test is
+therefore **true on the very first parse and on every parse thereafter**, so
+the reset never fires for the entire process lifetime, and
+`BeforePageDisplay` never fires in CLI either. State accumulates across every
+page the runner parses. Because `getFileParamsForRender()` pops from a
+per-filename queue by index, the **second** page in the run that embeds the
+same image receives the **first** page's set name — and that wrong overlay is
+then written into the parser cache, where it persists until the next edit.
+
+**Failure mode 2 — one web request, many parses.** `action=parse`, edit
+previews, `Special:Search` snippets and `Special:ExpandTemplates` all parse
+multiple pages inside a single request with a single `REQUEST_TIME_FLOAT`,
+producing the same cross-contamination without `BeforePageDisplay` ever
+running.
+
+**The correct hook is already used elsewhere in this codebase.**
+`extension.json:219` registers `ParserClearState` — but only for
+`LayersSlideHooks`. `SlideHooks::onParserClearState()` (line 75) does exactly
+the right thing for its own caches. `LayersWikitextHooks` is simply missing
+from that registration.
+
+**Fix:** register `LayersWikitextHooks` on `ParserClearState` and move the
+eight-array reset into `onParserClearState()`. Keep the existing paths as
+belt-and-braces, but delete the `REQUEST_TIME_FLOAT` heuristic — it is
+unsound (it cannot distinguish "same request" from "no request").
+
+---
+
+### 1.4 🔴 `saveLayerSet()` commits partial writes on error, and its retry is MySQL-only
+
+`LayersDatabase.php:139` opens the section with:
+
+```php
+$dbw->startAtomic( __METHOD__ );
+```
+
+— **without `IDatabase::ATOMIC_CANCELABLE`**, so no savepoint is established.
+The catch block (~line 242) then does:
+
+```php
+} catch ( \Throwable $e ) {
+    $dbw->endAtomic( __METHOD__ );
+    if ( $e instanceof \OverflowException ) { throw $e; }
+    if ( $this->isDuplicateKeyError( $e ) ) {
+        $this->logError( "Race condition in saveLayerSet, retrying." );
+        continue;
+    }
+    $this->logError( 'Failed to save layer set: ' . $e->getMessage() );
+    return null;
+}
+```
+
+`endAtomic()` declares the atomic section **successfully completed**. Calling
+it from a catch block is the opposite of the intent: partial writes are
+committed rather than rolled back. `cancelAtomic()` is the correct call, and
+it is not even *available* here because the section was not opened
+`ATOMIC_CANCELABLE`.
+
+This directly falsifies the method's own comment — *"Prune old revisions
+inside the transaction so failure rolls back the entire save"*. If
+`pruneOldRevisions()` throws after the INSERT has succeeded, the new revision
+is committed and the prune is silently skipped, so the per-set revision cap
+(`$wgLayersMaxRevisionsPerSet`) is quietly exceeded.
+
+**Second defect in the same block:** the `continue` re-enters `startAtomic()`
+on a connection whose transaction PostgreSQL has already aborted — in PG, any
+error aborts the entire transaction unless a savepoint exists. **The
+duplicate-key retry path only works on MySQL/MariaDB.** On PostgreSQL every
+retry raises `current transaction is aborted`.
+
+**Third, minor:** the size-limit branch (`strlen( $jsonBlob ) > $maxAllowedSize`)
+does `endAtomic(); return null;`, and `null` surfaces to the user as the
+generic `layers-save-failed` rather than the specific `layers-data-too-large`.
+Users hitting the size cap get no actionable message.
+
+**Fix:** `startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE )`, and
+`cancelAtomic( __METHOD__ )` in the catch. Return a `StatusValue` (or throw a
+typed exception) so the size-limit case can be distinguished from a generic
+failure.
+
+---
+
+## 2. i18n / ResourceLoader wiring — 137 real defects
+
+This is the largest single cluster of defects in the codebase, and it is
+invisible to every existing gate (see §5.1). Three distinct classes:
+
+### 2.1 🟠 83 message keys declared in `extension.json` but absent from `en.json`
+
+Of these, **11 are live** — actually referenced by shipping JS — and are
+therefore permanently untranslatable, because the code always falls through to
+a hardcoded English fallback:
+
+| Key | Referenced at |
+|---|---|
+| `layers-slide-canvas-width`, `layers-slide-canvas-height` | `resources/ext.layers.editor/LayerPanel.js:237-238` |
+| `layers-slide-embed-copied` | `resources/ext.layers.editor/ui/SlidePropertiesPanel.js:593,625` |
+| `layers-validation-fillopacity-invalid` / `-range`, `layers-validation-strokeopacity-invalid` / `-range` | `resources/ext.layers.editor/validation/NumericValidator.js:219` (fallbacks in `validation/ValidationHelpers.js:39`) |
+| `layers-prop-name` | `resources/ext.layers.editor/ui/PropertiesForm.js:696` |
+| `layers-tool-group-annotation` | `resources/ext.layers.editor/Toolbar.js:769` |
+| `layers-shape-library` | `resources/ext.layers.editor/editor/HelpDialog.js:385,494` |
+| **`layers-slide-size-custom`** | **`resources/ext.layers.slides/SpecialSlides.js:409`** |
+
+**`layers-slide-size-custom` has no fallback:**
+
+```javascript
+new OO.ui.MenuOptionWidget( {
+    data: 'custom',
+    label: mw.message( 'layers-slide-size-custom' ).text()
+} )
+```
+
+so `Special:Slides` renders the literal string `⧼layers-slide-size-custom⧽` in
+its size dropdown. **This is a visibly broken string in shipped UI**, on a
+special page, in the default language, and 14,090 tests did not catch it.
+
+The remaining **72 are dead**: declared in ResourceLoader, missing from
+`en.json`, and referenced by no JS at all — 15 `layers-slide-*` /
+`layers-editor-slide-*` keys and ~57 `layers-shape-*` keys
+(`layers-shape-category-arrows`, `layers-shape-heart`, `layers-shape-flag`,
+`layers-tool-custom-shape`, …), left over from a superseded Shape Library
+implementation. They are pure payload waste on every module load.
+
+### 2.2 🟠 21 keys used in JS but absent from `en.json` entirely
+
+Verified individually:
+
+| Key | Used at |
+|---|---|
+| `layers-prompt-title` | `editor/DialogManager.js:364` |
+| `layers-discard` | `editor/RevisionManager.js:298` |
+| `layers-import-anyway` | `ImportExportManager.js:109` |
+| `layers-panel-divider` | `LayerPanel.js:1040` |
+| `layers-properties-unavailable` | `LayerPanel.js:2024` |
+| `layers-presets-delete-title` | `presets/PresetDropdown.js:620` |
+| `layers-clear` | `ui/SetSelectorController.js:466` |
+| `layers-rename` | `ui/SetSelectorController.js:546` |
+
+(Excluded as genuine false positives: the dynamically-assembled prefixes
+`layers-text-toolbar-align-` / `-valign-` in `RichTextToolbar.js`, the bare
+`layers-` prefix in `TextInputController.js`, and `cancel`, which is a core
+message and *is* correctly declared in `ext.layers.slides`.)
+
+### 2.3 🟠 33 keys exist in `en.json` but are not shipped in any `messages[]` array
+
+These are translated, documented in `qqq.json`, counted by
+`verify-metrics.js` as healthy — and never reach the browser, because
+ResourceLoader only delivers keys a module declares. `mw.message( key )`
+silently returns the key. Notably this includes **the entire accessibility
+skip-link and ARIA landmark set**:
+
+- `layers-skip-to-toolbar` (`UIManager.js:143`), `layers-skip-to-canvas`,
+  `layers-skip-to-layers`
+- `layers-toolbar-region` (`UIManager.js:274`), `layers-canvas-region`
+  (`UIManager.js:303`), `layers-main-region`, `layers-panel-region`
+
+Confirmed directly: `layers-skip-to-toolbar` is present in `en.json` as
+`"Skip to toolbar"` but `declared: false` in `ext.layers.editor.messages`.
+**The extension's screen-reader landmark labels and skip links are
+non-functional in every language including English.** Given `docs/ACCESSIBILITY.md`
+claims this support, that is a documentation-vs-reality gap as well as a bug.
+
+Also in this class: `layers-aria-layer-added` / `-count` / `-removed`
+(`LayerPanel.js`), `layers-set-auto-created` (`LayersEditor.js`),
+`layers-text-toolbar-size-decrease` / `-increase` /
+`layers-text-toolbar-highlight-color` (`RichTextToolbar.js` — added in v75 and
+never registered), `layers-link-viewer-title` / `layers-export-pdf-failed`
+(`LayersLightbox.js`, module `ext.layers`), `layers-revision-reload-failed` /
+`layers-reload-warning` (`APIManager.js`), `layers-save-failed`
+(`SetSelectorController.js`), `layers-validation-star-points-invalid` /
+`-range` / `-richtext-not-array` / `-richtext-too-many-runs` /
+`-richtext-too-long` (`LayersValidator.js`),
+`layers-validation-dimension-offset-invalid` / `-range` (`NumericValidator.js`).
+
+### 2.4 Potential cross-extension message override — **needs owner confirmation**
+
+`i18n/en.json` contains 67 keys with no literal occurrence in `src/`,
+`resources/` or `extension.json`. Most are legitimate (MediaWiki resolves
+`right-editlayers`, `action-editlayers`, `apihelp-*` implicitly). But the list
+also contains **`echo-badge-count`** and **`templatedata-doc-subpage`** —
+message keys owned by the Echo and TemplateData extensions respectively.
+Defining them here means this extension **overrides those messages wiki-wide**
+if it loads after them. I could not determine whether this was deliberate.
+It almost certainly was not. Verify and remove.
+
+---
+
+## 3. MEDIUM severity
+
+### 3.1 🟠 `bundlesize.config.json` is decorative, and every budget is already blown
+
+The file declares per-module size budgets. It is referenced by **no npm
+script, no Grunt task and no CI workflow** — it has never run. Measured
+against actual source:
+
+| Module | Budget | Actual (uncompressed source) | Over by |
+|---|---|---|---|
+| `ext.layers` (viewer) | 100 KB | **216 KB** (10 scripts) | 2.2× |
+| `ext.layers.shared` | 75 KB | **474 KB** (28 scripts) | 6.3× |
+| `ext.layers.editor` | 1400 KB | **1839 KB** (95 scripts, 717 messages) | 1.3× |
+
+The `ext.layers.shared` note in the file claims "~75 KB … loaded by both
+viewer and editor" — it is now 474 KB, and it *is* loaded by the viewer, which
+means **every page view that shows a layered thumbnail pulls ~690 KB of
+uncompressed JS**. Either enforce the budgets in CI or delete the file; a
+budget nobody runs is worse than none, because it creates false assurance.
+
+### 3.2 🟠 The emoji picker downloads a 30 MB JSON file to show one emoji
+
+`EmojiLibraryIndex.js:2924` fetches
+`…/shapeLibrary/emoji-bundle.json` in a single `fetch()`. That file is
+**30.28 MB** on disk and tracked in git. The generator's own header comment
+(`scripts/generate-emoji-bundle.js:15`) predicts *"~8-10MB uncompressed, ~2MB
+gzipped"* — the real artefact is roughly 3× the design target, and nothing
+checks.
+
+Consequences:
+
+- `docs`/`copilot-instructions` describe the picker as *"Lazy-loaded SVG
+  thumbnails using IntersectionObserver"*. The lazy loading is illusory: the
+  **first** thumbnail that scrolls into view calls `loadSVG()` → `loadBundle()`
+  → the entire 30 MB transfer.
+- The whole bundle is parsed into a JS object held in `svgBundle` for the page
+  lifetime, and each retrieved emoji is then **duplicated** into `svgCache`.
+- The fetch bypasses ResourceLoader, so there is **no `version` query
+  parameter** — no cache-busting when the bundle is regenerated, and whatever
+  default cache headers the webserver applies to `/extensions/` apply here.
+- The URL hardcodes the directory name: `wgExtensionAssetsPath + '/Layers/…'`.
+  Renaming the extension directory silently breaks the emoji picker.
+
+**Fix:** shard the bundle by category (19 files, ~1.6 MB each) or serve
+per-emoji SVGs, and route through ResourceLoader (or at least append
+`?version=`) for cache-busting.
+
+### 3.3 🟠 4 MB of dead build artefacts committed to the repository
+
+Largest tracked files:
+
+| Size | File | Status |
+|---|---|---|
+| 30.28 MB | `resources/…/shapeLibrary/emoji-bundle.json` | needed, but see §3.2 |
+| **9.53 MB** | `coverage.json` | **build artefact — should not be tracked** |
+| **4.07 MB** | `resources/…/shapeLibrary/ShapeLibraryData.original.js` | **backup written by `split-library.js:342`; referenced by nothing else** |
+
+`ShapeLibraryData.original.js` is a *backup file the split script writes for
+its own convenience*. It is not loaded by any ResourceLoader module. Worse,
+`.github/copilot-instructions.md` lists it as an exempt "generated data file"
+god class (~11,293 lines), which launders 4 MB of dead weight into the
+project's official metrics.
+
+Also still tracked despite matching `.gitignore` entries (gitignore does not
+untrack): `codebase_review.md.bak2` (30 KB), `codebase_review.md.bak3` (29 KB),
+`coverage_output.txt` (344 KB). Also present: `nul` — a 0-byte artefact of a
+botched Windows shell redirect — and `Mediawiki-layer_set_usage-table.mediawiki`,
+which documents a table that was deliberately dropped.
+
+Total pack size is 42.77 MiB, of which ~14 MB is removable.
+
+### 3.4 🟠 24 deprecated global-namespace class aliases
+
+`extension.json` requires MediaWiki `>= 1.44.0`, but `src/` still imports the
+deprecated global aliases:
+
+`ApiBase` ×6, `Exception` ×3, `Config` ×3, `ApiUsageException` ×3, `ApiResult`
+×3, `SpecialPage` ×2, `ApiMain` ×2, and one each of `User`, `Title`, `PPFrame`,
+`Parser`, `ForeignDBFile`, `ForeignAPIFile`, `CargoGalleryFormat`.
+
+All have moved (`MediaWiki\Api\*`, `MediaWiki\Config\Config`,
+`MediaWiki\SpecialPage\SpecialPage`, `MediaWiki\User\User`,
+`MediaWiki\Title\Title`, `MediaWiki\Parser\*`, `MediaWiki\FileRepo\File\*`).
+Since `main` targets 1.44+, it should use the modern namespaces; the REL
+branches can keep the aliases.
+
+Note that `scripts/check-mw-compatibility.js` reports **0 errors, 0 warnings** —
+it does not detect this class of drift at all. Repo memory already records a
+related MW 1.45 breakage (`User::getEffectiveGroups()` in `UIHooks`), which is
+the same failure mode surfacing a second time.
+
+### 3.5 🟠 Two dead config settings, one of them documented as a feature
+
+Verified by scanning all of `src/` and `resources/` for `'Key'`, `"Key"` and
+`wgKey`: **2 of 26** declared settings are never read.
+
+| Setting | Declared | Documented as |
+|---|---|---|
+| `LayersUseBinaryOverlays` | `extension.json:131` (default `false`) | — |
+| `LayersThumbnailCache` | `extension.json:126` (default `true`) | *"cache composite thumbs"* in `copilot-instructions.md` and the README |
+
+`LayersThumbnailCache` is the worse of the two: it is presented to
+administrators as a working performance toggle. Setting
+`$wgLayersThumbnailCache = false;` does nothing — composite thumbnails are
+cached unconditionally. Either implement it or remove it and the docs.
+
+### 3.6 🟠 Dead schema and a dead right
+
+- **`layer_assets` table.** Created and FK-managed in
+  `LayersSchemaManager.php` (lines 39-46, 71-73, 103-105, 208, 682, 711), with
+  two committed migrations (`patch-layer_assets-add-la_size.sql`,
+  `patch-idx-layer_assets-la_size.sql`). It has **zero reads and zero writes**
+  anywhere outside schema management; the only other reference is the constant
+  `LayersConstants::TABLE_LAYER_ASSETS` (`src/LayersConstants.php:239`). This
+  is precisely the pattern for which `layer_set_usage` was already dropped —
+  see `LayersSchemaManager.php:170`: *"P3-146: Drop the dead layer_set_usage
+  table (zero reads/writes since creation)."* The same judgement applies here.
+- **`managelayerlibrary` right.** Declared in `extension.json:1397` and granted
+  to sysop at `:1409`, but never checked in `src/` or `resources/`. Its
+  `right-` and `action-` messages are correspondingly unused. Misleading to
+  anyone configuring `$wgGroupPermissions`.
+
+### 3.7 🟠 PHP test coverage has structural holes on the security-critical paths
+
+33 PHPUnit files cover 44 source classes. **13 classes have no dedicated
+test** — and the list is unfortunate:
+
+```
+EditLayersAction, ApiLayersDelete, ApiLayersList, CacheInvalidationTrait,
+LayersApiHelperTrait, LayerSaveGuardsTrait, CargoLayersGalleryFormat,
+CargoHooks, UIHooks, LayeredThumbnail, LayersConstants,
+LayersFileTransform, LayersLogger
+```
+
+`ApiLayersDelete` is the endpoint carrying the owner-or-admin authorisation
+logic — the single most security-sensitive branch in the extension — and it
+has no unit test. `LayerSaveGuardsTrait` is, by name, the save-path guard
+logic. `EditLayersAction` contains the clickjacking/`method_exists` handling
+that already caused an HTTP 500 postmortem (`docs/POSTMORTEM_IFRAME_MODAL_500_ERROR.md`).
+
+(For the record: the claim that `LayersDatabase.php` is untested is **false** —
+`LayersDatabaseTest.php` exists.)
+
+### 3.8 🟠 No focus restoration when dialogs close
+
+`DialogManager.js` **does** implement a proper focus trap (lines 89-99 and
+435-445 cycle Tab/Shift-Tab within the dialog) and does set `aria-modal`
+(line 59) and initial focus (lines 174, 265, 345, 464, 580). What it does not
+do is **save and restore the previously focused element**: there is no
+`document.activeElement` capture on open and no `.focus()` restoration on
+close. Keyboard and screen-reader users are dumped back to the top of the
+document every time a dialog closes (WCAG 2.4.3). Same gap in `HelpDialog.js`
+and the shape-library panels.
+
+(For the record: the toolbar uses 18 real `<button>` elements, so the claim
+that toolbar tools are unfocusable `div`s is **false**.)
+
+---
+
+## 4. LOW severity
+
+### 4.1 🟡 pdf.js 3.11.174 is mitigated but not fixed
+
+The v79 `isEvalSupported: false` mitigation for CVE-2024-4367 is correctly
+applied at the only `getDocument()` call site
+(`resources/ext.layers/viewer/PdfRenderer.js:206`) — verified. But the
+dependency is still >2 years stale and is used to parse **untrusted,
+user-uploaded** PDFs. Three further gaps in the same file:
+
+- `_docCache` (line 69) is an unbounded `Map` of `PDFDocumentProxy` objects.
+  Each holds a fully parsed PDF in memory. There is a `.delete()` but no size
+  cap and no LRU — browsing a gallery of large PDFs will exhaust memory.
+- No `cMapUrl` / `standardFontDataUrl` is configured, so PDFs using CJK or
+  other non-Latin encodings render with missing glyphs.
+- No `maxImageSize` cap, so a crafted PDF with an enormous embedded image can
+  hang the tab.
+
+Real fix remains upgrading to pdf.js ≥ 4.2.67.
+
+### 4.2 🟡 `?modal=1` lets any visitor disable clickjacking protection
+
+`EditLayersAction.php:106-119`: `$isModalMode = $request->getBool( 'modal' )` is
+entirely user-controlled, and on that path the code unconditionally calls
+`setPreventClickjacking( false )` / `allowClickjacking()` and then sets
+`X-Frame-Options: SAMEORIGIN` manually via `$request->response()->header()`.
+Risk is genuinely low — SAMEORIGIN still blocks cross-origin framing — but no
+CSP `frame-ancestors 'self'` is emitted, and modern browsers prefer CSP over
+`X-Frame-Options`. (The `method_exists()` guards for the MW 1.44 removal of
+`allowClickjacking()` are correctly present here, in both orderings.)
+
+Related: `LayersEditorModal.js:107` hardcodes
+`this.iframe.setAttribute( 'title', 'Layers Editor' )` in English even though
+`layers-editor-modal-title` is declared in the `ext.layers.modal` messages.
+
+### 4.3 🟡 `validateImageSrc()` trusts the declared MIME type, never the bytes
+
+`ServerSideLayerValidator.php:600-640` parses `/^data:([^;,]+)(;base64)?,/`,
+checks the *declared* type against
+`['image/png','image/jpeg','image/gif','image/webp']` (SVG correctly excluded),
+and base64-decodes only to confirm the encoding is valid. **There is no
+magic-byte check.** A payload of `data:image/png;base64,<SVG bytes>` passes
+validation intact.
+
+Not currently exploitable for XSS — browsers honour the declared MIME for data
+URLs, and the value is only consumed via `img.src` / `drawImage` — but it is
+the kind of gap that becomes exploitable the moment someone adds a
+"download original" or server-side re-encode path. Additionally, non-base64
+data URLs (`data:image/png,<raw>`) skip payload validation entirely, because
+`$matches[2]` is unset.
+
+**Fix:** verify the decoded prefix against the magic bytes for each accepted
+type (`\x89PNG`, `\xFF\xD8\xFF`, `GIF8`, `RIFF`…`WEBP`).
+
+### 4.4 🟡 One unescaped `innerHTML` interpolation
+
+`resources/ext.layers.editor/canvas/RichTextToolbar.js:494`:
+
+```javascript
+btn.innerHTML = `<span style="background:${ currentColor };padding:0 2px;">H</span>`;
+```
+
+`currentColor` traces back to `this._initialHighlightColor` ←
+`options.highlightColor` ← `InlineTextEditor._lastHighlightColor`, which
+initialises to `'#ffff00'` (`InlineTextEditor.js:74`) and is only ever
+reassigned from `<input type="color">` values (lines 539, 565), which browsers
+constrain to `#rrggbb`. So it is **not currently exploitable**. It is,
+however, the *only* unescaped template-literal → `innerHTML` sink in the
+codebase, and lines 549/566 in the same file already use
+`style.backgroundColor` correctly. Make it consistent and remove the sink.
+
+### 4.5 🟡 Silent-failure catch blocks: fewer and better than expected, with exceptions
+
+I audited every `catch` block in shipping JS. Result: **0 completely empty
+catch blocks**, and 36 comment-only ones. Reading all 36, the large majority
+are legitimately annotated best-effort fallbacks with a documented reason
+(`// Element may have been removed from DOM` in `EventTracker.js:127,154`;
+`// Ignore sessionStorage errors` in `APICacheManager.js:121`;
+`// Non-fatal.` in `PdfRenderer.js:269,303`;
+`// Don't let error reporting break the application` in `APIErrorHandler.js:287`).
+This is **good** practice, not lazy programming, and I want to be explicit
+that the "widespread error swallowing" narrative is not supported by the code.
+
+The ones genuinely worth revisiting, because the user is left with degraded
+functionality and no signal:
+
+- `ImportExportManager.js:47` — import parse failure falls through to a
+  fallback with no user-visible message.
+- `LayerSetManager.js:75` and `:100` — layer-set JSON parse failure is
+  swallowed; the user sees an empty set rather than "this set is corrupt".
+- `PresetStorage.js` — a `localStorage` read failure returns `[]`, which is
+  indistinguishable from "you have no presets", so a user with a quota or
+  privacy-mode problem silently loses their saved presets with no explanation.
+
+### 4.6 🟡 Silent early returns in the wikitext path
+
+`WikitextHooks.php` returns `true` without logging at line 277 (File-page
+context) and line 286 (`layerslink` disabled). Line 302 does log a warning
+before returning. The first two are intentional control flow; the concern is
+only that when a user reports "my `layerset=` parameter does nothing", there
+is no debug trace to distinguish "deliberately skipped" from "failed". Adding
+a `$wgLayersDebug`-gated log line at each would materially reduce support
+cost.
+
+---
+
+## 5. Why the gates did not catch any of this
+
+This section matters more than any individual finding.
+
+### 5.1 The i18n gate validates the wrong pair
+
+`grunt banana` validates `en.json ↔ qqq.json`. `scripts/verify-metrics.js`
+validates the same pair (801/801, 0 orphaned, 0 undocumented) plus the README
+coverage numbers. **Neither validates the three-way relationship that actually
+determines whether a message reaches a user:**
+
+```
+extension.json  messages[]  ←→  i18n/en.json  ←→  actual mw.message() calls in JS
+```
+
+Every one of the 137 defects in §2 lives in exactly that unvalidated gap.
+This is a one-afternoon fix: promote the audit into a permanent
+`scripts/verify-i18n-wiring.js`, assert all three directions, and wire it into
+`npm test`.
+
+### 5.2 The compatibility gate does not detect namespace drift
+
+`check-mw-compatibility.js` reports 0/0 while 24 deprecated aliases sit in
+`src/` (§3.4) and while a known MW 1.45 breakage has already been recorded in
+repo memory. It is checking something, but not the thing that has actually
+broken twice.
+
+### 5.3 The test suite optimises for coverage percentage, not for defect detection
+
+14,090 tests across 173 suites execute in **~10.7 seconds** — roughly
+**0.75 ms per test**. That is only achievable with overwhelmingly shallow,
+fully-mocked unit assertions. Combined with 95.87% statement coverage, these
+are largely vanity metrics. Concretely, this suite did **not** catch:
+
+- a literal `⧼layers-slide-size-custom⧽` rendering in `Special:Slides`
+- 83 undefined ResourceLoader message keys
+- 33 accessibility strings that never reach the browser
+- the missing `ParserClearState` registration
+- `endAtomic()` in a catch block
+- three ResourceLoader budgets blown by up to 6×
+
+Representative of the problem: `DeepClone.test.js:31-45` asserts
+`deepClone( null ) === null` and `deepClone( undefined ) === undefined` — that
+is testing JavaScript's semantics, not the implementation. `APIManager.test.js`
+mocks `mw.Api` to return `Promise.resolve( {} )`, so it exercises the mock, not
+the contract. `CanvasManager.test.js` mocks ~20 canvas context methods, so no
+rendering is tested at all.
+
+The counter-examples show the team knows how to do this well:
+`ServerSideLayerValidatorTest.php` uses real config objects and tests boundary
+conditions across all 40+ rules; `WikitextHooksTest.php` exercises real parsing
+logic. **The recommendation is not "write more tests" — it is to stop counting
+tests and coverage as quality signals, and to add a small number of
+integration/e2e assertions on the paths where defects actually occur** (message
+resolution, parser state across multiple parses, DB rollback).
+
+### 5.4 Documentation drift the version checker does not see
+
+`scripts/update-version.js --check` passes and correctly reports 1.5.79 across
+`README.md`, `wiki/Home.md`, `Mediawiki-Extension-Layers.mediawiki` and
+`LayersNamespace.js`. Outside its file list, drift persists:
+
+- `.github/copilot-instructions.md` claims version **1.5.77**, claims PHP
+  file counts and "~21 doc errors, ~50 style warnings" for phpcs when the
+  actual result is **0 errors / 2 warnings**, and claims 157 JS files /
+  ~114,000 lines against an actual 158 / ~116,212.
+- `package.json` has **no `version` field** at all.
+- The previous review entry in this file is dated **August 9, 2026** while the
+  commit it describes (`c9c529fd`) is dated **August 3, 2026**.
+- `wiki/Installation.md` and `improvement_plan.md` are in the checker's list
+  but report `PATTERN NOT FOUND`, i.e. two of its six targets are silently
+  unchecked.
+
+---
+
+## 6. Verified correct — what this codebase gets right
+
+Stated explicitly, because a review that only lists defects is not an honest
+assessment. Each of the following was checked against source, not assumed.
+
+- **No SQL injection.** All database access uses the MediaWiki query builder.
+  The unique key `ls_img_name_set_page_revision (ls_img_name, ls_img_sha1,
+  ls_name, ls_page, ls_revision)` (`sql/layers_tables.sql:21`) is correct, and
+  `getNextRevisionForSet()` uses `MAX(ls_revision)` under `FOR UPDATE`.
+- **No command injection.** Only two shell call sites exist
+  (`ApiLayersExport.php:316`, `ThumbnailRenderer.php:195`); both use
+  `Shell::command( ...$args )` with array arguments and `->limits()`.
+- **No SSRF surface.** Zero occurrences of `file_get_contents`, `fopen`,
+  `curl_*` or `file_put_contents` on remote input anywhere in `src/`.
+- **No dynamic code execution.** Zero `eval`, `new Function`, or
+  `setTimeout('string')` in any shipping JS.
+- **`postMessage` origin is validated** — `LayersEditorModal.js:150`:
+  `if ( event.origin !== window.location.origin ) { return; }`.
+- **`RichTextConverter` sanitises correctly** — `escapeHtml` (line 39) round-trips
+  through a cached div's `textContent`→`innerHTML`; `escapeCSSValue` (line 60)
+  strips `["'<>&;{}\\]` and neuters `url|expression|javascript|behavior|-moz-binding`.
+- **`validateSvgPath()`** uses a strict whitelist
+  (`/^[MmLlHhVvCcSsQqTtAaZz0-9\s,.\-+eE]+$/`), requires an `M`/`m` start, and
+  caps length at 10,000 and command count at 1,000.
+- **The boolean `0`-vs-`false` regression is genuinely fixed.**
+  `LayersLightbox.js:398-399` and `:803-804` both use `!== false && !== 0`, and
+  `LayerDataNormalizer.js` has a `BOOLEAN_PROPERTIES` list (line 26, including
+  `preserveAspectRatio` at line 32) applied at line 186. The three-times-regressed
+  bug documented in `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md` is not
+  present. *Caveat:* the `!== false && !== 0` idiom is copy-pasted in at least
+  three places — given its history, it should be a single shared helper.
+- **CSRF, POST-only and write-mode flags are correct on all write endpoints**,
+  with per-action rate limiting (`save`, `render`, `create`, `delete`,
+  `rename`, `info`, `list`) via `RateLimiter`.
+- **Zero `TODO`/`FIXME`/`HACK`/`XXX`** in `src/` or `resources/`.
+- **Zero real `console.*` calls in shipping JS.** The five grep hits are all
+  comments reading *"SECURITY FIX: Use mw.log instead of console.*"*; the other
+  97 are confined to `shapeLibrary/scripts/` build tooling.
+- **All 13 `eslint-disable` comments are legitimate** — 9 × `no-alert` guarding
+  genuine `DialogManager` fallbacks (`UIManager.showConfirmDialog` /
+  `showAlertDialog` / `showPromptDialog` at lines 427/447/469 each delegate to
+  `this.editor.dialogManager` first), 2 × `no-undef`, 1 × `no-control-regex`.
+- **Every ResourceLoader `scripts` / `styles` / `packageFiles` entry exists on
+  disk** — 0 missing.
+- **`DialogManager` implements a real focus trap** (§3.8) — only restoration is
+  missing.
+- **Toolbar controls are real `<button>` elements** (18 of them), not `div`s.
+- **`SlideHooks::onParserClearState()` (line 75) is exemplary** — it is the
+  correct pattern that §1.3 asks `WikitextHooks` to adopt.
+- **Documented feature counts are accurate:** 17 tools, 1,385 shapes, 2,817
+  emoji, 801 i18n messages, 106 WOFF2 font files (in
+  `resources/ext.layers.shared/fonts/`, not `resources/lib/fonts/`), 36 entries
+  in `LayersDefaultFonts` (4 system + 32 self-hosted).
+- **Slide Mode is complete and reachable** — both special pages gate on
+  `LayersSlidesEnable`, and every slide canvas config value is read and used
+  (`SlideHooks.php:165-219`, `SpecialSlides.php:87-91`).
+
+---
+
+## 7. Honest summary
+
+The security fundamentals that are usually wrong in a MediaWiki extension —
+SQL injection, command injection, SSRF, XSS sinks, CSRF, rate limiting — are
+**right here**, and demonstrably so. The input validation layer is genuinely
+strong. The architecture (facade + controllers, shared renderers, module
+registry) is sound and the delegation discipline is real.
+
+The failures are of a different kind, and they cluster:
+
+1. **Authorisation is checked at the wrong granularity** (§1.1) — a global
+   right stands in for a per-title check on three write endpoints.
+2. **Resources with a lifecycle are treated as fire-and-forget** — exported
+   PDFs are never deleted (§1.2), static parse state is never reset (§1.3), an
+   atomic section is never rolled back (§1.4). Each is the same underlying
+   habit: the happy path is implemented, the teardown path is not.
+3. **Wiring between declaration and use is unverified** — 137 i18n defects
+   (§2), 2 dead configs (§3.5), a dead table and a dead right (§3.6), a dead
+   4 MB artefact (§3.3), three unenforced size budgets (§3.1).
+4. **The measurement apparatus measures the wrong things** (§5) and reports
+   green while all of the above is true.
+
+There is no single dramatic vulnerability here. There is a consistent pattern
+of *declaring* things — a right, a config toggle, a size budget, a message key,
+a table, a transaction boundary — and never closing the loop to verify they do
+what they claim. That is the thing to fix, and §5.1 is the cheapest, highest-
+leverage place to start.
+
+---
 ---
 
 ## 🔴 v79 — pdf.js in-wiki viewer exposed CVE-2024-4367 (HIGH)
