@@ -52,6 +52,25 @@
 	}
 
 	/**
+	 * Safe debug logging helper, silent unless $wgLayersDebug is on.
+	 *
+	 * Used for expected-but-noteworthy code paths. mw.log.warn() would emit a
+	 * stack trace for something working as designed.
+	 *
+	 * @param {string} message - Message to log
+	 * @private
+	 */
+	function safeLogDebug( message ) {
+		if ( typeof mw === 'undefined' || typeof mw.log !== 'function' ) {
+			return;
+		}
+		if ( mw.config && typeof mw.config.get === 'function' &&
+			mw.config.get( 'wgLayersDebug' ) ) {
+			mw.log( message );
+		}
+	}
+
+	/**
 	 * Check if a filename has a non-web-native format extension
 	 *
 	 * @param {string} filename - Filename to check
@@ -121,9 +140,10 @@
 			const currentOrigin = window.location.origin;
 			const needsThumbnail = isNonWebFormat( filename );
 
-			// For TIFF/non-web formats, log that we're using special handling
+			// Routing PDFs/TIFFs through the thumbnail API is the only way to get
+			// something a browser can draw, so this is expected, not a problem.
 			if ( needsThumbnail && filename ) {
-				safeLogWarn( '[ImageLoader] Using thumbnail for non-web format: ' + filename );
+				safeLogDebug( '[ImageLoader] Using thumbnail for non-web format: ' + filename );
 			}
 
 			// Priority 1: Use the specific background image URL from config

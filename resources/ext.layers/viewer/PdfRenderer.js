@@ -325,7 +325,8 @@
 				const task = lib.getDocument( {
 					url: url,
 					isEvalSupported: false,
-					maxImageSize: MAX_DECODED_IMAGE_PIXELS
+					maxImageSize: MAX_DECODED_IMAGE_PIXELS,
+					verbosity: this._verbosity( lib )
 				} );
 				return task.promise;
 			} ).catch( ( err ) => {
@@ -335,6 +336,28 @@
 			this._docCache.set( url, promise );
 			this._evictOldestDocuments();
 			return promise;
+		}
+
+		/**
+		 * pdf.js verbosity level for document parsing.
+		 *
+		 * pdf.js defaults to WARNINGS, which makes every PDF containing a
+		 * sloppily-subsetted embedded font (very common) spray messages like
+		 * `TT: undefined function: 32` and `Required "glyf" table is not found`
+		 * into the console on each render. pdf.js recovers from all of them, the
+		 * defects belong to the uploaded file rather than the wiki, and nothing
+		 * an admin can do resolves them — so they only bury real errors. Errors
+		 * are always reported; warnings return under $wgLayersDebug.
+		 *
+		 * @param {Object} lib The pdf.js library.
+		 * @return {number} A pdf.js VerbosityLevel value.
+		 * @private
+		 */
+		_verbosity( lib ) {
+			const levels = ( lib && lib.VerbosityLevel ) || {};
+			const errors = typeof levels.ERRORS === 'number' ? levels.ERRORS : 0;
+			const warnings = typeof levels.WARNINGS === 'number' ? levels.WARNINGS : 1;
+			return this.debug ? warnings : errors;
 		}
 
 		/**

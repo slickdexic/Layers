@@ -16,7 +16,7 @@
 	'use strict';
 
 	// Extension version - must match extension.json
-	const VERSION = '1.5.80';
+	const VERSION = '1.5.81';
 
 	// Skip in non-browser environments
 	if ( typeof window === 'undefined' ) {

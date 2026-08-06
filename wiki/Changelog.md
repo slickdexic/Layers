@@ -4,6 +4,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.81] - 2026-08-06
+
 ### Fixed
 - **No layer set name is reserved or assumed to exist any more** — Layer set
   names are entirely user-defined, but a great deal of the codebase assumed
@@ -44,6 +46,23 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Removed the editor's "clear default set" special case and the rename/delete
   guards that treated a set called `default` differently from any other set,
   along with nine now-unused interface messages.
+- **pdf.js no longer floods the console with font-recovery warnings** — pdf.js
+  defaults to its `WARNINGS` verbosity level, so any PDF containing a
+  sloppily-subsetted embedded font (very common, and produced by most office
+  suites) sprayed messages such as `TT: undefined function: 32` and
+  `Required "glyf" table is not found -- trying to recover.` into the console
+  on every render. pdf.js recovers from all of them, the defects belong to the
+  uploaded file rather than to the wiki, and nothing a wiki admin can do
+  resolves them — so they only served to bury real errors. `PdfRenderer` now
+  passes `verbosity: ERRORS` to `getDocument()`, raising it back to `WARNINGS`
+  when `$wgLayersDebug` is enabled.
+- **Opening a PDF or TIFF in the editor no longer logs a warning with a stack
+  trace** — Routing non-web-native formats through MediaWiki's thumbnail API is
+  the only way to obtain something a browser can draw, so `ImageLoader`'s
+  `Using thumbnail for non-web format` notice described expected behaviour. It
+  was emitted through `mw.log.warn()`, which attaches a full stack trace, and
+  fired on every PDF, TIFF, PSD, XCF, AI and EPS editor open. It is now a
+  debug-level message, silent unless `$wgLayersDebug` is on.
 
 ## [1.5.80] - 2026-08-05
 

@@ -57,7 +57,8 @@ function makeMockPdfjs( opts = {} ) {
 
 	const lib = {
 		getDocument: getDocument,
-		GlobalWorkerOptions: {}
+		GlobalWorkerOptions: {},
+		VerbosityLevel: { ERRORS: 0, WARNINGS: 1, INFOS: 5 }
 	};
 
 	return {
@@ -180,6 +181,34 @@ describe( 'PdfRenderer', () => {
 			const arg = mock.getDocument.mock.calls[ 0 ][ 0 ];
 			expect( typeof arg.maxImageSize ).toBe( 'number' );
 			expect( arg.maxImageSize ).toBeGreaterThan( 0 );
+		} );
+
+		it( 'silences pdf.js font-recovery warnings by default', async () => {
+			const mock = makeMockPdfjs();
+			const r = new PdfRenderer( { pdfjsLib: mock.lib } );
+			await r.getDocument( 'a.pdf' );
+			expect( mock.getDocument ).toHaveBeenCalledWith(
+				expect.objectContaining( { verbosity: mock.lib.VerbosityLevel.ERRORS } )
+			);
+		} );
+
+		it( 'restores pdf.js warnings when debug is enabled', async () => {
+			const mock = makeMockPdfjs();
+			const r = new PdfRenderer( { pdfjsLib: mock.lib, debug: true } );
+			await r.getDocument( 'a.pdf' );
+			expect( mock.getDocument ).toHaveBeenCalledWith(
+				expect.objectContaining( { verbosity: mock.lib.VerbosityLevel.WARNINGS } )
+			);
+		} );
+
+		it( 'falls back to numeric verbosity when VerbosityLevel is absent', async () => {
+			const mock = makeMockPdfjs();
+			delete mock.lib.VerbosityLevel;
+			const r = new PdfRenderer( { pdfjsLib: mock.lib } );
+			await r.getDocument( 'a.pdf' );
+			expect( mock.getDocument ).toHaveBeenCalledWith(
+				expect.objectContaining( { verbosity: 0 } )
+			);
 		} );
 
 		it( 'evicts and destroys least-recently-used documents beyond the cap', async () => {

@@ -38,14 +38,13 @@ describe( 'ImageLoader', () => {
 					const config = {
 						wgServer: 'https://wiki.example.com',
 						wgScriptPath: '/w',
-						wgArticlePath: '/wiki/$1'
+						wgArticlePath: '/wiki/$1',
+						wgLayersDebug: true
 					};
 					return config[ key ];
 				} )
 			},
-			log: {
-				warn: jest.fn()
-			}
+			log: Object.assign( jest.fn(), { warn: jest.fn() } )
 		};
 
 		// Mock Layers namespace with constants
@@ -240,9 +239,28 @@ describe( 'ImageLoader', () => {
 
 			loader.buildUrlList();
 
-			expect( window.mw.log.warn ).toHaveBeenCalledWith(
+			expect( window.mw.log ).toHaveBeenCalledWith(
 				'[ImageLoader] Using thumbnail for non-web format: Diagram.tif'
 			);
+			// Expected behaviour, so it must not surface as a console warning.
+			expect( window.mw.log.warn ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should not log the non-web format notice when debug is off', () => {
+			window.mw.config.get = jest.fn( ( key ) => {
+				const config = {
+					wgServer: 'https://wiki.example.com',
+					wgScriptPath: '/w',
+					wgArticlePath: '/wiki/$1',
+					wgLayersDebug: false
+				};
+				return config[ key ];
+			} );
+			const loader = new ImageLoader( { filename: 'Diagram.tif' } );
+
+			loader.buildUrlList();
+
+			expect( window.mw.log ).not.toHaveBeenCalled();
 		} );
 	} );
 

@@ -62,6 +62,13 @@ Logs are written to MediaWiki's logging system. View with:
 tail -f /var/log/mediawiki/debug.log | grep Layers
 ```
 
+It also controls browser-console verbosity. With it off, the extension
+suppresses messages that describe expected behaviour or defects in an uploaded
+file that a wiki admin cannot act on — notably pdf.js font-recovery warnings
+such as `TT: undefined function: 32` and
+`Required "glyf" table is not found`, and the editor's notice that a PDF or
+TIFF is being loaded through MediaWiki's thumbnail API. Turn it on to see them.
+
 ### $wgLayersRejectAbortedRequests
 
 Surface aborted API requests as rejections for debugging. When false (default), aborted requests are silently swallowed to match legacy behavior.

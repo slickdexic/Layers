@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.80
+**Version:** 1.5.81
 **Last updated:** August 3, 2026 — v1.5.80 remediation pass (see `codebase_review.md`)
 
 > ## 🔴 R1 — Findings from the August 3, 2026 full critical review
