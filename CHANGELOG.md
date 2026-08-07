@@ -4,6 +4,119 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.83] - 2026-08-06
+
+Remediation of the R2 critical review (see `codebase_review.md` §R2). Three of
+the five HIGH findings were the *same* failure mode: a v1.5.80 fix written
+correctly in one place and never applied to the other structurally identical
+call sites, with no gate to catch it. Two new gates close that class.
+
+### Security
+
+- **`action=layerspdfexport` now requires POST and a CSRF token.** It was a
+  token-less GET that rasterises up to `$wgLayersPdfExportMaxPages` pages with
+  ImageMagick, composites a layer set onto each, and writes a PDF to disk — so
+  any third-party page could embed
+  `<img src="…/api.php?action=layerspdfexport&filename=Big.pdf">` and turn every
+  logged-in visitor's browser into an amplifier against the wiki.
+- **Ships `$wgRateLimits` defaults.** `RateLimiter::checkRateLimit()` resolves to
+  `User::pingLimiter()`, which returns "not limited" for an unconfigured bucket.
+  `extension.json` declared no limits, so *all three* Layers rate-limit keys
+  (`editlayers-save`, `-render`, `-list`) were decorative on every default
+  install. Defaults are merged with `array_plus_2d`, so existing
+  `$wgRateLimits` overrides in `LocalSettings.php` still win.
+
+### Fixed
+
+- **Generated renders for foreign (InstantCommons/ForeignDB) files could never
+  be purged, and their PDF exports could never be delivered.**
+  `ForeignFileHelper::getFileSha1()` falls back to `foreign_<sha1>` — 48
+  characters containing an underscore — and three separate guards rejected that
+  shape: `RenderCache::purgeBySha1()`, `RenderCache::ARTEFACT_PATTERN` and
+  `SpecialLayersExport`. Consequences: deleting a Commons-backed file left its
+  composited thumbnails and exported PDFs on disk permanently (the v1.5.80
+  privacy fix did not apply to them at all), the reaper walked past them
+  forever, and every PDF export of a Commons image did the full render and then
+  404'd at delivery. There is now one canonical `RenderCache::artefactKey()`
+  used by every producer and consumer.
+- **`endAtomic()` in a catch block committed partial writes in three more
+  places.** v1.5.80 fixed `saveLayerSet()` only. `deleteNamedSet()`,
+  `renameNamedSet()` and `LayersSchemaManager`'s revision-renumbering migration
+  still marked the section *successful* on failure — so a failed delete or
+  rename destroyed a subset of revisions while reporting failure to the user.
+  All now use `ATOMIC_CANCELABLE` + `cancelAtomic()`.
+- **Pages embedding a file were never purged after a layer set changed.**
+  `CacheInvalidationTrait`'s docblock claimed backlink invalidation; the body
+  only ever touched the `File:` page, so an article containing
+  `[[File:X|layerset=on]]` kept serving parser-cached HTML with the old layer
+  set. An `HTMLCacheUpdateJob` over the `imagelinks` backlinks is now queued.
+- **`[[Image:…|layerset=…]]` silently rendered no layers.** The three scan
+  regexes matched `File:` only while the strip regex matched `File:` and
+  `Image:`, so the parameter was destroyed before anything could queue it. All
+  four now share one alternation built from the wiki's actual File-namespace
+  name and aliases, so localised prefixes (`Datei:`, `Fichier:`, `Bild:`) work
+  too.
+- **`layerslink=` was stripped from the entire page**, not just from file links,
+  so a page documenting the syntax had its example silently deleted. It is now
+  removed inside the file-link callback alongside `layerset=`.
+- **`arrowsInside` and `reflexAngle` reverted to on after a reload.** They are in
+  the validator's boolean whitelist and in the client normalizer, but were
+  missing from `ApiLayersInfo::preserveLayerBooleans()`, so MediaWiki's API
+  dropped them when `false`. Fourth recurrence of the bug class in
+  `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md`; now covered by a gate.
+- **PDF export silently omitted seven of the seventeen layer types.**
+  `ThumbnailRenderer` had a bare `default: return []`, so callouts, markers,
+  dimensions, angle dimensions, imported images, groups and every
+  shape-library/emoji shape vanished from exports with no warning. The gap is
+  now declared in `ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE`, enforced by a
+  gate, reported as `incomplete`/`droppedtypes` in the API result, and surfaced
+  to the user as a notice pointing at the (complete) client-side Download.
+- **Validation silently discarded user content.** Malformed gradient stops,
+  rich-text runs and polygon points were skipped one-by-one while the save
+  still returned `success: 1` — so a ten-stop gradient with typos became a
+  two-stop one and formatting disappeared with no error. These are now strict
+  properties that fail the layer instead of being dropped.
+- Point coordinates are bounded to ±100000 like every other geometry field;
+  `1e308` was previously stored verbatim.
+- `originalWidth`/`originalHeight` now require 1–16384; negative "original"
+  image dimensions were accepted.
+- Slide `backgroundColor` is validated through `ColorValidator`. It reached
+  storage via `LayersDatabase::saveLayerSet()` and was the only colour in the
+  system that bypassed validation.
+- `RateLimiter::isComplexityAllowed()` no longer claims to "multiply complexity
+  by contained layers" for groups — children live in the same flat array and
+  are already costed individually. `angleDimension` was missing and fell to the
+  expensive default; the `blur` case was dead (blur is a fill, not a type).
+- **Drafts are scoped to the current user.** Keyed by filename alone, a shared
+  browser profile offered the next person the previous person's unsaved
+  annotations.
+- **`localStorage` quota exhaustion is now recoverable.** Nothing evicted drafts
+  for files the user would never reopen, so the origin quota filled up and every
+  consumer on the wiki started failing. Expired drafts are swept on editor open,
+  and a failed write triggers an aggressive sweep and one retry. `saveDraft()`
+  no longer gates on a write-probe, which failed for the same reason the real
+  write did.
+- The editor modal registered a `message` listener on every iframe `load`, so
+  any internal navigation (session expiry → login redirect) leaked a listener
+  and duplicated close handling. It is registered once per modal.
+- `SlideHooks` now warns once per parse when the 50-query cap is hit. Slides
+  past the cap render at configured defaults, which was previously undiagnosable
+  from the logs.
+
+### Added
+
+- `scripts/check-parallel-lists.js` (`npm run check:parallel`) — asserts
+  set-equality of the hand-maintained lists that must agree across PHP and JS:
+  boolean properties across `ServerSideLayerValidator` ↔ `ApiLayersInfo` ↔
+  `LayerDataNormalizer`, and layer types across the validator ↔
+  `ThumbnailRenderer` (handled + explicitly declared unsupported) ↔
+  `RateLimiter`. Wired into `npm test`.
+- `scripts/check-atomicity.js` (`npm run check:atomicity`) — fails on any
+  `endAtomic()` inside a `catch` block, and on `cancelAtomic()` used without a
+  cancelable section. It found a fourth occurrence in `LayersSchemaManager`
+  that the review had missed. Wired into `npm test`.
+- `layers-export-incomplete` message.
+
 ## [1.5.82] - 2026-08-06
 
 ### Fixed

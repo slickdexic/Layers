@@ -376,29 +376,37 @@ $wgLayersDefaultFonts = [
 
 ## Rate Limiting
 
-Configure rate limits using MediaWiki's built-in rate limiter.
+Since v1.5.83 the extension **ships defaults** for its own buckets, so it is
+protected out of the box. This is not cosmetic: `User::pingLimiter()` reports
+"not limited" for a bucket nobody configured, so before v1.5.83 every Layers
+rate limit was inert unless an admin had added one by hand.
 
 ### Available Limit Keys
 
-| Key | Action |
-|-----|--------|
-| `editlayers-save` | Saving layer sets |
-| `editlayers-create` | Creating new layer sets |
-| `editlayers-delete` | Deleting layer sets |
-| `editlayers-rename` | Renaming layer sets |
-| `editlayers-render` | Rendering operations |
+There are exactly three. Earlier versions of this page listed
+`editlayers-create`, `editlayers-delete` and `editlayers-rename`; those keys are
+not used anywhere in the code and setting them does nothing.
 
-### Configuration
+| Key | Action | Shipped default (per 60s) |
+|-----|--------|---------------------------|
+| `editlayers-save` | `layerssave` | 60 user / 20 anon / 15 newbie |
+| `editlayers-render` | `layerspdfexport` (ImageMagick) | 15 user / 5 anon / 5 newbie |
+| `editlayers-list` | `layerslist` (Special:Slides) | 120 user / 30 anon / 30 newbie |
+
+`ip` and `subnet` limits ship for each key as well.
+
+### Overriding the defaults
+
+Defaults are merged with `array_plus_2d`, so anything set in
+`LocalSettings.php` takes precedence per group:
 
 ```php
-// Limit saves to 30 per hour for regular users
-$wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];
+// Tighten the expensive one on a public wiki
+$wgRateLimits['editlayers-render']['user'] = [ 5, 60 ];
+$wgRateLimits['editlayers-render']['anon'] = [ 1, 60 ];
 
-// Limit saves to 5 per hour for new users
-$wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
-
-// Limit to 10 per hour for anonymous users (if allowed)
-$wgRateLimits['editlayers-save']['anon'] = [ 10, 3600 ];
+// Relax saves on a trusted internal wiki
+$wgRateLimits['editlayers-save']['user'] = [ 300, 60 ];
 
 // No limit for bots
 $wgRateLimits['editlayers-save']['bot'] = [ 0, 0 ];

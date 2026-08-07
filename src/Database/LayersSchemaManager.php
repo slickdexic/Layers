@@ -585,7 +585,7 @@ class LayersSchemaManager {
 			$seenRevisions[$revision] = true;
 		}
 
-		$dbw->startAtomic( __METHOD__ );
+		$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 		try {
 			if ( !$hasRevisionConflict ) {
 				$updatedRows = 0;
@@ -636,7 +636,10 @@ class LayersSchemaManager {
 			$dbw->endAtomic( __METHOD__ );
 			return [ 'updatedRows' => count( $rows ), 'renumbered' => true ];
 		} catch ( \Throwable $e ) {
-			$dbw->endAtomic( __METHOD__ );
+			// cancelAtomic(), not endAtomic(): this method renumbers revisions in
+			// two passes, so committing a partial run leaves duplicate ls_revision
+			// values behind and the migration cannot be re-run cleanly.
+			$dbw->cancelAtomic( __METHOD__ );
 			throw $e;
 		}
 	}

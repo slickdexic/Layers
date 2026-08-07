@@ -6,7 +6,7 @@ Complete reference for the Layers extension API endpoints.
 
 ## Overview
 
-Layers provides five API endpoints through MediaWiki's Action API:
+Layers provides six API endpoints through MediaWiki's Action API:
 
 | Action | Method | Purpose | Auth Required |
 |--------|--------|---------|---------------|
@@ -15,6 +15,14 @@ Layers provides five API endpoints through MediaWiki's Action API:
 | `layerssave` | POST | Save layer data | `editlayers` + CSRF |
 | `layersdelete` | POST | Delete layer set | Owner or admin + CSRF |
 | `layersrename` | POST | Rename layer set | Owner or admin + CSRF |
+| `layerspdfexport` | POST | Export an annotated PDF | Read access + CSRF |
+
+> **Why `layerspdfexport` needs a token even though it changes no layer data.**
+> It rasterises up to `$wgLayersPdfExportMaxPages` pages with ImageMagick and
+> writes a file to disk. As a token-less GET (which is what it was before
+> v1.5.83) any third-party page could drive it from every logged-in visitor's
+> browser via `<img src="…">`. A request that spends unbounded server CPU is
+> not a read.
 
 ---
 
@@ -471,6 +479,107 @@ User must have `edit` permission on the file's page (since v1.5.80), and be:
 
 ---
 
+## layerspdfexport
+
+Render a file's pages with their layer set composited on top and stitch the
+result into a single PDF. The PDF is cached outside the document root and a
+`Special:LayersExport` URL is returned, so delivery re-checks `read` on the
+source file for every request.
+
+### Request
+
+```
+POST /api.php
+Content-Type: application/x-www-form-urlencoded
+
+action=layerspdfexport
+&filename=Manual.pdf
+&setname=anatomy
+&token=CSRF_TOKEN
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filename` | string | Yes | File title |
+| `setname` | string | No | Named layer set. Omitted resolves to the image's most recently saved set |
+| `width` | integer | No | Render width per page. Clamped to 200–4096 and snapped to 200px buckets |
+| `token` | string | Yes | CSRF token |
+
+> `width` is snapped to buckets deliberately: it forms part of the on-disk
+> cache key, so an unbounded value would let one caller force thousands of
+> distinct expensive renders.
+
+### Response
+
+```json
+{
+    "layerspdfexport": {
+        "success": 1,
+        "url": "/index.php?title=Special:LayersExport&file=Manual.pdf&key=…",
+        "pageCount": 12,
+        "setname": "anatomy",
+        "cached": 0
+    }
+}
+```
+
+### Incomplete exports
+
+The server compositor uses ImageMagick and has no primitive for some layer
+types. When any layer was skipped, the result carries:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `incomplete` | integer | `1` when at least one layer could not be drawn |
+| `droppedtypes` | array | The distinct layer types that were omitted |
+
+An API warning (`layers-export-incomplete`) is emitted alongside it, and the
+lightbox surfaces this to the user. Types currently omitted server-side:
+`callout`, `image`, `group`, `customShape`, `marker`, `dimension`,
+`angleDimension`, plus `blur` fills. The lightbox **Download** button
+composites client-side instead and is always complete — prefer it when
+fidelity matters.
+
+`incomplete` is not reported on a cache hit (`cached: 1`), because nothing was
+rendered on that request.
+
+### Permissions
+
+`read` on the file's page, plus a CSRF token and POST. Rate limited under the
+`editlayers-render` bucket.
+
+### Errors
+
+| Code | Message | Cause |
+|------|---------|-------|
+| `layers-file-not-found` | File not found | Invalid filename |
+| `layers-export-too-many-pages` | Too many pages | Exceeds `$wgLayersPdfExportMaxPages` |
+| `layers-export-pdf-failed` | Export failed | ImageMagick or filesystem failure |
+| `layers-rate-limited` | Rate limited | `editlayers-render` bucket exhausted |
+| `badaccess-group0` | Permission denied | No `read` on the file page |
+
+### JavaScript Example
+
+```javascript
+const api = new mw.Api();
+const data = await api.postWithToken( 'csrf', {
+    action: 'layerspdfexport',
+    format: 'json',
+    filename: 'Manual.pdf',
+    setname: 'anatomy'
+} );
+
+const result = data.layerspdfexport;
+if ( result.incomplete ) {
+    mw.notify( 'Omitted: ' + result.droppedtypes.join( ', ' ) );
+}
+window.open( result.url, '_blank', 'noopener' );
+```
+
+---
+
 ## Layer Data Format
 
 ### Common Properties
@@ -545,19 +654,27 @@ All layer types share these properties:
 
 ## Rate Limiting
 
-API endpoints respect MediaWiki's rate limiting:
+Since v1.5.83 the extension **ships defaults** for its own rate-limit buckets.
+This matters: `User::pingLimiter()` reports "not limited" for a bucket nobody
+has configured, so before v1.5.83 every Layers rate limit was inert on a
+default install.
 
-| Action | Default Limit |
-|--------|---------------|
-| `editlayers-save` | 30/hour (users), 5/hour (newbies) |
-| `editlayers-create` | 10/hour (users), 2/hour (newbies) |
-| `editlayers-delete` | 20/hour (users), 3/hour (newbies) |
-| `editlayers-rename` | 20/hour (users), 3/hour (newbies) |
-| `editlayers-render` | 100/hour (users), 20/hour (newbies) |
+Only three buckets exist — there is no `editlayers-create`, `-delete` or
+`-rename` key in the code:
 
-Configure in `LocalSettings.php`:
+| Action | Used by | Shipped default (per 60s) |
+|--------|---------|---------------------------|
+| `editlayers-save` | `layerssave` | 60 user / 20 anon / 15 newbie |
+| `editlayers-render` | `layerspdfexport` | 15 user / 5 anon / 5 newbie |
+| `editlayers-list` | `layerslist` | 120 user / 30 anon / 30 newbie |
+
+`ip` and `subnet` limits are also shipped for each. Defaults are merged with
+`array_plus_2d`, so anything you set in `LocalSettings.php` wins:
+
 ```php
-$wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];
+// Tighten the expensive one on a public wiki
+$wgRateLimits['editlayers-render']['user'] = [ 5, 60 ];
+$wgRateLimits['editlayers-render']['anon'] = [ 1, 60 ];
 ```
 
 ---

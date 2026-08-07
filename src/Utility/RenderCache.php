@@ -41,10 +41,37 @@ class RenderCache {
 	private const EXPORT_DIR_NAME = 'layers-export';
 
 	/**
-	 * Artefact filenames are "<sha1>_<hash>.<ext>". Bulk deletion is restricted to
+	 * Artefact filenames are "<key>_<hash>.<ext>". Bulk deletion is restricted to
 	 * names matching this so a misconfigured directory cannot be emptied.
 	 */
 	private const ARTEFACT_PATTERN = '/^[0-9a-z]{4,40}_[0-9a-z]+\.[a-z0-9]{2,5}$/i';
+
+	/** Shape an artefact key must have to be safe in a filename and a glob. */
+	private const KEY_PATTERN = '/^[0-9a-z]{4,40}$/';
+
+	/**
+	 * Canonical filename key for a file version.
+	 *
+	 * File::getSha1() returns base-36 and already has the right shape, but
+	 * ForeignFileHelper::getFileSha1() falls back to "foreign_<sha1>" for foreign
+	 * repos, which is 48 characters and contains an underscore. That shape was
+	 * rejected by every guard in this class and by Special:LayersExport, so
+	 * foreign-file renders could never be purged and foreign-file exports could
+	 * never be delivered. Everything that builds or reads an artefact path must
+	 * go through here so producer and consumer cannot disagree again.
+	 *
+	 * @param string $sha1 File SHA1, or the foreign fallback identifier
+	 * @return string Key matching KEY_PATTERN, or '' if there was no input
+	 */
+	public static function artefactKey( string $sha1 ): string {
+		if ( $sha1 === '' ) {
+			return '';
+		}
+		if ( preg_match( self::KEY_PATTERN, $sha1 ) ) {
+			return $sha1;
+		}
+		return sha1( $sha1 );
+	}
 
 	/**
 	 * Resolve the base upload directory, falling back to the system temp dir.
@@ -117,16 +144,17 @@ class RenderCache {
 	/**
 	 * Delete every generated artefact belonging to a file version.
 	 *
-	 * Both artefact families are named "<sha1>_<hash>.<ext>", so a prefix glob is
+	 * Both artefact families are named "<key>_<hash>.<ext>", so a prefix glob is
 	 * exact: it cannot match another file's renders.
 	 *
 	 * @param Config $config
-	 * @param string $sha1 Base-36 SHA1 of the file version being purged
+	 * @param string $sha1 SHA1 (or foreign fallback id) of the file version being purged
 	 * @return int Number of files deleted
 	 */
 	public static function purgeBySha1( Config $config, string $sha1 ): int {
-		// Guard against an empty or malformed SHA1 globbing the whole directory.
-		if ( !preg_match( '/^[0-9a-z]{4,40}$/', $sha1 ) ) {
+		// Guard against an empty SHA1 globbing the whole directory.
+		$key = self::artefactKey( $sha1 );
+		if ( $key === '' ) {
 			return 0;
 		}
 
@@ -135,7 +163,7 @@ class RenderCache {
 			if ( !is_dir( $dir ) ) {
 				continue;
 			}
-			$matches = glob( $dir . '/' . $sha1 . '_*' );
+			$matches = glob( $dir . '/' . $key . '_*' );
 			if ( !$matches ) {
 				continue;
 			}

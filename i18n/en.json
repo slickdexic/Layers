@@ -544,6 +544,7 @@
 	"layers-export-too-many-pages": "This file has $1 pages, which exceeds the export limit of $2 pages.",
 	"layers-export-page-title": "Annotated PDF export",
 	"layers-export-not-found": "That annotated PDF export is no longer available. Generated exports expire; please export the file again.",
+	"layers-export-incomplete": "Some annotations could not be included in the PDF: $1. Use Download instead for a complete copy.",
 	"layers-info-failed": "Failed to retrieve layer information",
 	"layers-layerset-not-found": "Requested layer set was not found",
 	"layers-max-sets-reached": "Maximum number of named layer sets reached for this image. Please delete or reuse an existing set.",

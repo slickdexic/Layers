@@ -18,7 +18,7 @@ This guide covers downloading, configuring, and setting up the Layers extension 
 
 | MediaWiki Version | Branch | Current Version | Notes |
 |-------------------|--------|-----------------|-------|
-| 1.44+ | **`main`** | 1.5.82 | Primary branch |
+| 1.44+ | **`main`** | 1.5.83 | Primary branch |
 | 1.43.x (LTS) | `REL1_43` | 1.5.66-REL1_43 | Current LTS |
 | 1.39.x - 1.42.x | `REL1_39` | 1.5.66-REL1_39 | Previous LTS |
 
@@ -121,9 +121,10 @@ $wgLayersMaxNamedSets = 25;
 // Enable debug logging (default: false)
 $wgLayersDebug = true;
 
-// Rate limiting for saves
-$wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];     // 30 per hour
-$wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];    // 5 per hour for new users
+// Rate limiting. Sensible defaults ship with the extension since v1.5.83;
+// anything set here overrides them per group.
+$wgRateLimits['editlayers-save']['user'] = [ 60, 60 ];
+$wgRateLimits['editlayers-render']['user'] = [ 5, 60 ];      // PDF export is expensive
 ```
 
 ---

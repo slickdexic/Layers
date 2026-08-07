@@ -28,7 +28,7 @@ This extension is feature-rich by design—**17 drawing tools**, multiple render
 
 ## ⚠️ MANDATORY: God Class Rules
 
-**We have 26 "god classes" (files >=1,000 lines) that represent technical debt. 5 are generated data files (exempt), 19 are hand-written JS + 2 PHP. These rules are enforced by CI:**
+**We have 28 "god classes" (files >=1,000 lines) that represent technical debt. 4 are generated data files (exempt), 20 are hand-written JS + 4 PHP. These rules are enforced by CI:**
 
 ### Rule 1: No God Class Growth
 - **CI will BLOCK your PR** if you increase the size of any hand-written god class
@@ -102,10 +102,25 @@ These are development dependencies for testing and linting. **Not required** to 
 
 ## Run checks locally
 
-- JS lint/style/i18n: npm test
+- JS lint/style/i18n + all gates: npm test
 - JS unit tests: npm run test:js
 - PHP QA (lint/style/minus-x): composer test
+- PHP unit tests: npm run test:phpunit
 - God class check: npm run check:godclass
+
+`npm test` runs eslint, stylelint, banana, Jest, and these blocking gates.
+Each exists because the class of defect it catches shipped at least once with
+every other gate green:
+
+| Gate | Catches |
+|------|---------|
+| `npm run check:i18n` | messages declared/used/defined but not all three |
+| `npm run check:mw-compat` | use of removed/deprecated MediaWiki API |
+| `npm run check:phprefs` | unimported class refs that fatal at runtime |
+| `npm run check:parallel` | boolean-property and layer-type lists drifting apart across PHP and JS |
+| `npm run check:atomicity` | `endAtomic()` in a catch block committing partial writes |
+| `npm run check:bundlesize` | ResourceLoader modules exceeding budget |
+| `npm run check:emoji` | emoji shards out of step with the index |
 
 ### Optional: Git Pre-commit Hook
 

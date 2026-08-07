@@ -11,9 +11,14 @@ declare( strict_types=1 );
  * cached outside the document root and a Special:LayersExport URL is returned,
  * so delivery re-checks the caller's `read` permission on the source file.
  *
- * This is a read-only operation (no CSRF token): it never mutates layer data.
- * It is rate limited under the 'render' key because rasterisation + compositing
- * is expensive.
+ * It never mutates layer data, but it does spend an unbounded amount of server
+ * CPU (one ImageMagick rasterise + one composite per page, up to
+ * $wgLayersPdfExportMaxPages) and it writes a file to disk. That makes it a
+ * state-changing, expensive request rather than a read, so it requires POST and
+ * a CSRF token: as a token-less GET it could be triggered from any third-party
+ * page via <img src="…api.php?action=layerspdfexport…">, turning every logged-in
+ * visitor's browser into an amplifier. It is additionally rate limited under the
+ * 'render' key.
  *
  * @file
  * @ingroup Extensions
@@ -40,6 +45,13 @@ use Wikimedia\ParamValidator\ParamValidator;
 class ApiLayersExport extends ApiBase {
 	use ForeignFileHelperTrait;
 	use LayersApiHelperTrait;
+
+	/**
+	 * Layer types the server renderer could not draw, accumulated across pages.
+	 * Used as a set (type => true) so repeats across pages collapse.
+	 * @var array<string,bool>
+	 */
+	private array $droppedTypes = [];
 
 	/**
 	 * @param ApiMain $main
@@ -148,7 +160,7 @@ class ApiLayersExport extends ApiBase {
 		if ( $outputDir === null ) {
 			$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
 		}
-		$outputPath = $outputDir . '/' . $sha1 . '_' . $cacheKey . '.pdf';
+		$outputPath = $outputDir . '/' . RenderCache::artefactKey( $sha1 ) . '_' . $cacheKey . '.pdf';
 
 		$cached = false;
 		if ( file_exists( $outputPath ) ) {
@@ -176,13 +188,30 @@ class ApiLayersExport extends ApiBase {
 
 		$url = $this->getExportUrl( $title, $cacheKey );
 
-		$this->getResult()->addValue( null, $this->getModuleName(), [
+		$payload = [
 			'success' => 1,
 			'url' => $url,
 			'pageCount' => $pageCount,
 			'setname' => $setName,
 			'cached' => $cached ? 1 : 0,
-		], ApiResult::NO_SIZE_CHECK );
+		];
+
+		// The ImageMagick compositor has no primitive for several layer types
+		// (see ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE). Say so instead of
+		// handing back a PDF that silently omits the user's annotations. Not
+		// reported for a cache hit, because nothing was rendered on this request.
+		if ( !$cached && $this->droppedTypes ) {
+			$dropped = array_keys( $this->droppedTypes );
+			sort( $dropped );
+			$payload['incomplete'] = 1;
+			$payload['droppedtypes'] = $dropped;
+			ApiResult::setIndexedTagName( $payload['droppedtypes'], 'type' );
+			$this->addWarning( [ 'layers-export-incomplete', implode( ', ', $dropped ) ] );
+		}
+
+		$this->getResult()->addValue(
+			null, $this->getModuleName(), $payload, ApiResult::NO_SIZE_CHECK
+		);
 	}
 
 	/**
@@ -213,6 +242,9 @@ class ApiLayersExport extends ApiBase {
 					'layers' => true,
 					'layerData' => $layers,
 				] );
+				foreach ( $renderer->getDroppedLayerTypes() as $type ) {
+					$this->droppedTypes[$type] = true;
+				}
 				if ( $path && file_exists( $path ) ) {
 					return $path;
 				}
@@ -418,14 +450,26 @@ class ApiLayersExport extends ApiBase {
 		return true;
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @inheritDoc
+	 * No layer data is mutated, so this is not a write in the wiki-content sense.
+	 */
 	public function isWriteMode() {
 		return false;
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @inheritDoc
+	 * Required despite isWriteMode() being false: see the class docblock. The
+	 * token is what stops a third-party page from spending this wiki's CPU.
+	 */
 	public function needsToken() {
-		return false;
+		return 'csrf';
+	}
+
+	/** @inheritDoc */
+	public function mustBePosted() {
+		return true;
 	}
 
 	/** @inheritDoc */

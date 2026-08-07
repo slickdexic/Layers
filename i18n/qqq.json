@@ -433,6 +433,7 @@
 	"layers-export-pdf-failed": "Error shown when generating an annotated PDF export fails on the server",
 	"layers-export-page-title": "Title of [[Special:LayersExport]], the unlisted page that delivers a generated annotated PDF after re-checking read permission on the source file",
 	"layers-export-not-found": "Error body shown by [[Special:LayersExport]] when the requested export does not exist, has expired, or the user may not read the source file. Deliberately does not distinguish these cases.",
+	"layers-export-incomplete": "API warning and client notice shown when the server-side PDF export could not draw some layer types. Parameters:\n* $1 - comma-separated list of layer type names that were omitted (e.g. \"callout, marker\").",
 	"layers-export-too-many-pages": "Error shown when a file has more pages than the export limit. $1 is the page count, $2 is the configured maximum.",
 	"layers-info-failed": "Generic info retrieval failure message shown when an unexpected error occurs in the layersinfo API",
 	"layers-layerset-not-found": "Error shown when a requested layer set id does not exist",

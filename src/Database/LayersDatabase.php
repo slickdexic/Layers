@@ -13,6 +13,7 @@ namespace MediaWiki\Extension\Layers\Database;
 
 use MediaWiki\Config\Config;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\Extension\Layers\Validation\ColorValidator;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDatabase;
@@ -201,7 +202,12 @@ class LayersDatabase {
 					$dataStructure['isSlide'] = true;
 					$dataStructure['canvasWidth'] = $backgroundSettings['canvasWidth'] ?? 800;
 					$dataStructure['canvasHeight'] = $backgroundSettings['canvasHeight'] ?? 600;
-					$dataStructure['backgroundColor'] = $backgroundSettings['backgroundColor'] ?? '#ffffff';
+					// This arrives from the API alongside the layer array but bypasses
+					// ServerSideLayerValidator, so it is the one colour in the system that
+					// would otherwise reach storage unvalidated.
+					$dataStructure['backgroundColor'] = ( new ColorValidator() )->sanitizeColor(
+						(string)( $backgroundSettings['backgroundColor'] ?? '#ffffff' )
+					);
 				}
 
 				$jsonBlob = json_encode( $dataStructure, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR );
@@ -875,8 +881,9 @@ class LayersDatabase {
 			$page = max( 1, $page );
 
 			// Use atomic transaction to prevent race conditions with concurrent
-			// rename/delete operations on the same set (mirrors renameNamedSet pattern)
-			$dbw->startAtomic( __METHOD__ );
+			// rename/delete operations on the same set (mirrors renameNamedSet pattern).
+			// ATOMIC_CANCELABLE establishes a savepoint so cancelAtomic() can roll back.
+			$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 
 			try {
 				// Lock rows before deleting to prevent race with concurrent rename
@@ -907,7 +914,9 @@ class LayersDatabase {
 				$rowsDeleted = $dbw->affectedRows();
 				$dbw->endAtomic( __METHOD__ );
 			} catch ( \Throwable $e ) {
-				$dbw->endAtomic( __METHOD__ );
+				// cancelAtomic(), not endAtomic() — endAtomic() marks the section
+				// *successfully completed* and commits the partial delete.
+				$dbw->cancelAtomic( __METHOD__ );
 				throw $e;
 			}
 
@@ -993,9 +1002,10 @@ class LayersDatabase {
 			}
 			$page = max( 1, $page );
 
-			// Use atomic transaction to prevent race conditions
-			// Two concurrent renames could otherwise both pass the existence check
-			$dbw->startAtomic( __METHOD__ );
+			// Use atomic transaction to prevent race conditions.
+			// Two concurrent renames could otherwise both pass the existence check.
+			// ATOMIC_CANCELABLE establishes a savepoint so cancelAtomic() can roll back.
+			$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 
 			try {
 				// Check if target name already exists (within transaction for consistency)
@@ -1035,7 +1045,9 @@ class LayersDatabase {
 				$rowsUpdated = $dbw->affectedRows();
 				$dbw->endAtomic( __METHOD__ );
 			} catch ( \Throwable $e ) {
-				$dbw->endAtomic( __METHOD__ );
+				// cancelAtomic(), not endAtomic() — endAtomic() marks the section
+				// *successfully completed* and commits the partial rename.
+				$dbw->cancelAtomic( __METHOD__ );
 				throw $e;
 			}
 

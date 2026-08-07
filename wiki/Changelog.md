@@ -4,6 +4,58 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.83] - 2026-08-06
+
+Remediation of the R2 critical review. Three of the five HIGH findings were the
+same failure mode: a v1.5.80 fix applied in one place and never propagated to
+the other structurally identical call sites. Two new gates close that class.
+
+### Security
+
+- `action=layerspdfexport` now requires POST and a CSRF token. As a token-less
+  GET it rasterised up to 100 pages with ImageMagick and wrote a PDF to disk,
+  so any third-party page could drive it from every logged-in visitor's browser.
+- Ships `$wgRateLimits` defaults. Without them `pingLimiter()` treats an
+  unconfigured bucket as unlimited, so all three Layers rate-limit keys were
+  decorative on a default install. Merged with `array_plus_2d`, so local
+  overrides still win.
+
+### Fixed
+
+- Generated renders for foreign (InstantCommons) files could never be purged
+  and their PDF exports could never be delivered: the `foreign_<sha1>` fallback
+  identifier was rejected by three separate guards. One canonical
+  `RenderCache::artefactKey()` is now used by every producer and consumer.
+- `endAtomic()` in a catch block committed partial writes in three more places
+  (`deleteNamedSet`, `renameNamedSet`, and the schema revision-renumbering
+  migration). All now use `ATOMIC_CANCELABLE` + `cancelAtomic()`.
+- Pages embedding a file are now purged when its layer set changes; previously
+  only the `File:` page was, so articles served stale layer data.
+- `[[Image:…|layerset=…]]` and localised File-namespace aliases now work — the
+  scan and strip regexes disagreed, so the parameter was destroyed before it
+  could be queued.
+- `layerslink=` is no longer stripped from the whole page, only from file links.
+- `arrowsInside` and `reflexAngle` no longer revert to on after a reload.
+- PDF export no longer silently omits callouts, markers, dimensions, imported
+  images, groups and shape-library shapes: the gap is declared, gated, reported
+  in the API result and surfaced to the user.
+- Malformed gradient stops, rich-text runs and polygon points are rejected
+  instead of being silently discarded from an otherwise "successful" save.
+- Point coordinates, `originalWidth`/`originalHeight` and slide
+  `backgroundColor` are now validated.
+- Drafts are scoped per user, expired drafts are swept, and a full
+  `localStorage` quota is recovered from instead of permanently disabling
+  autosave.
+- The editor modal no longer leaks a `message` listener per iframe navigation.
+- `SlideHooks` warns once per parse when its query cap is reached.
+
+### Added
+
+- `npm run check:parallel` — asserts the hand-maintained boolean-property and
+  layer-type lists agree across PHP and JS.
+- `npm run check:atomicity` — fails on `endAtomic()` inside a `catch`. It found
+  a fourth occurrence the review had missed.
+
 ## [1.5.82] - 2026-08-06
 
 ### Fixed

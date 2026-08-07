@@ -35,7 +35,12 @@ We will respond within 48 hours and work with you to understand and resolve the 
 - Never log secrets; use sanitized debug logs guarded by `$wgLayersDebug`.
 
 ### Rate Limiting
-- Use MediaWiki pingLimiter keys: `editlayers-save`, `editlayers-render`, `editlayers-create`.
+- Three pingLimiter keys exist: `editlayers-save`, `editlayers-render`,
+  `editlayers-list`. There is no `editlayers-create`.
+- Defaults ship in `extension.json` since v1.5.83. This is load-bearing:
+  `pingLimiter()` reports "not limited" for a bucket nobody configured, so a
+  key with no default is not a control at all. Any new `editlayers-<action>`
+  key must be added there.
 
 ### CSP (Content Security Policy)
 - Avoid inline scripts/styles to support strict CSP. ResourceLoader modules should provide scripts and styles.

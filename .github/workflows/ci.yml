@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, "**" ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, REL1_43, REL1_39 ]
 
 jobs:
   build-test:
@@ -56,10 +56,23 @@ jobs:
       - name: JS unit tests (Jest)
         run: npm run test:js
 
-      - name: npm audit (security scan)
-        run: |
-          npm audit --audit-level=moderate || true
+      # Runtime dependencies are what ships to a wiki, so a high/critical
+      # advisory there fails the build. Dev-only advisories are reported into the
+      # job summary instead of being discarded — the previous `|| true` on both
+      # meant a new vulnerability was scanned for and then thrown away.
+      - name: npm audit (shipped dependencies)
+        run: npm audit --omit=dev --audit-level=high
 
-      - name: composer audit (security scan)
+      - name: npm audit (dev dependencies, advisory)
+        if: always()
         run: |
-          if [ -f composer.json ]; then composer audit || true; fi
+          echo '### npm audit (dev, advisory)' >> "$GITHUB_STEP_SUMMARY"
+          npm audit --audit-level=moderate >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+
+      - name: composer audit (advisory)
+        if: always()
+        run: |
+          echo '### composer audit (advisory)' >> "$GITHUB_STEP_SUMMARY"
+          if [ -f composer.json ]; then
+            composer audit >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+          fi

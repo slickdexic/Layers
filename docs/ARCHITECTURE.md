@@ -1023,9 +1023,9 @@ $wgLayersMaxLayerCount = 100;        // Max layers per set
 $wgLayersMaxNamedSets = 15;          // Max named sets per image
 $wgLayersMaxRevisionsPerSet = 50;    // Max revisions kept
 
-// Rate limits
-$wgRateLimits['editlayers-save']['user'] = [30, 3600];
-$wgRateLimits['editlayers-save']['newbie'] = [5, 3600];
+// Rate limits — defaults ship in extension.json since v1.5.83 (merge strategy
+// array_plus_2d). Only three keys exist: editlayers-save, -render, -list.
+$wgRateLimits['editlayers-render']['user'] = [5, 60];
 ```
 
 ### Permissions

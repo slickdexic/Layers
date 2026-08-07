@@ -158,7 +158,10 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * Data provider for all 15 layer types with their complexity scores.
+	 * Data provider for every supported layer type with its complexity score.
+	 *
+	 * Must stay in step with ServerSideLayerValidator::SUPPORTED_LAYER_TYPES;
+	 * scripts/check-parallel-lists.js enforces that the switch itself does.
 	 *
 	 * @return array<string, array{0: string, 1: int}>
 	 */
@@ -174,9 +177,12 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 			'image' => [ 'image', 3 ],
 			'path' => [ 'path', 3 ],
 
-			// Arrows and groups are moderately complex (+2)
+			// Arrows are moderately complex (+2)
 			'arrow' => [ 'arrow', 2 ],
-			'group' => [ 'group', 2 ],
+
+			// A group only holds child ids; the children are costed on their own
+			// iteration of the same flat array, so there is nothing to multiply.
+			'group' => [ 'group', 1 ],
 
 			// Simple shapes (+1)
 			'rectangle' => [ 'rectangle', 1 ],
@@ -185,9 +191,9 @@ class RateLimiterTest extends \MediaWikiUnitTestCase {
 			'line' => [ 'line', 1 ],
 			'polygon' => [ 'polygon', 1 ],
 			'star' => [ 'star', 1 ],
-			'blur' => [ 'blur', 1 ],
 			'marker' => [ 'marker', 1 ],
 			'dimension' => [ 'dimension', 1 ],
+			'angleDimension' => [ 'angleDimension', 1 ],
 		];
 	}
 

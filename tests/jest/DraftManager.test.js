@@ -922,6 +922,7 @@ describe( 'DraftManager', function () {
 				text: jest.fn().mockReturnValue( 'Localized Text' )
 			};
 
+			const originalMw = global.mw;
 			global.mw = {
 				log: jest.fn(),
 				message: jest.fn().mockReturnValue( mockMessage )
@@ -936,6 +937,11 @@ describe( 'DraftManager', function () {
 
 			// mw.message exists, so this validates the path
 			expect( global.mw ).toBeDefined();
+
+			// Restore: leaving a log stub without .warn here leaked into every
+			// later test in this file.
+			global.mw = originalMw;
+			dm.destroy();
 		} );
 	} );
 
@@ -1726,6 +1732,197 @@ describe( 'DraftManager', function () {
 				expect( window.confirm ).toHaveBeenCalled();
 				dm.destroy();
 			} );
+		} );
+	} );
+
+	describe( 'storage key scoping', function () {
+		/**
+		 * @param {number|null} id User id to report via mw.config
+		 */
+		function setUserId( id ) {
+			global.mw = global.mw || {};
+			global.mw.config = {
+				get: jest.fn( function ( key ) {
+					return key === 'wgUserId' ? id : false;
+				} )
+			};
+		}
+
+		it( 'should scope the key to the current user', function () {
+			setUserId( 42 );
+
+			const dm = new DraftManager( mockEditor );
+
+			expect( dm.getStorageKey() ).toContain( 'u42' );
+			dm.destroy();
+		} );
+
+		it( 'should give two users different keys for the same file', function () {
+			setUserId( 1 );
+			const first = new DraftManager( mockEditor ).getStorageKey();
+
+			setUserId( 2 );
+			const second = new DraftManager( mockEditor ).getStorageKey();
+
+			expect( first ).not.toBe( second );
+		} );
+
+		it( 'should fall back to anon when logged out', function () {
+			setUserId( null );
+
+			const dm = new DraftManager( mockEditor );
+
+			expect( dm.getStorageKey() ).toContain( 'anon' );
+			dm.destroy();
+		} );
+	} );
+
+	describe( 'sweepExpiredDrafts', function () {
+		/**
+		 * The shared mock lacks length/key(), which real localStorage has.
+		 *
+		 * @param {Object} store Backing object for the fake storage
+		 */
+		function makeEnumerableStorage( store ) {
+			global.localStorage = {
+				get length() {
+					return Object.keys( store ).length;
+				},
+				key: jest.fn( function ( i ) {
+					return Object.keys( store )[ i ] || null;
+				} ),
+				getItem: jest.fn( function ( k ) {
+					return store[ k ] || null;
+				} ),
+				setItem: jest.fn( function ( k, v ) {
+					store[ k ] = v;
+				} ),
+				removeItem: jest.fn( function ( k ) {
+					delete store[ k ];
+				} )
+			};
+		}
+
+		it( 'should remove drafts past the expiry and keep fresh ones', function () {
+			const dm = new DraftManager( mockEditor );
+			const store = {
+				'layers-draft-anon-Old_jpg_aaaa-': JSON.stringify( {
+					timestamp: Date.now() - ( 48 * 60 * 60 * 1000 )
+				} ),
+				'layers-draft-anon-Fresh_jpg_bbbb-': JSON.stringify( { timestamp: Date.now() } ),
+				'unrelated-key': 'keep me'
+			};
+			makeEnumerableStorage( store );
+
+			expect( dm.sweepExpiredDrafts() ).toBe( 1 );
+			expect( store[ 'layers-draft-anon-Old_jpg_aaaa-' ] ).toBeUndefined();
+			expect( store[ 'layers-draft-anon-Fresh_jpg_bbbb-' ] ).toBeDefined();
+			expect( store[ 'unrelated-key' ] ).toBe( 'keep me' );
+			dm.destroy();
+		} );
+
+		it( 'should drop unparseable drafts', function () {
+			const dm = new DraftManager( mockEditor );
+			const store = { 'layers-draft-anon-Broken_jpg_cccc-': 'not json' };
+			makeEnumerableStorage( store );
+
+			dm.sweepExpiredDrafts();
+
+			expect( store[ 'layers-draft-anon-Broken_jpg_cccc-' ] ).toBeUndefined();
+			dm.destroy();
+		} );
+
+		it( 'should also drop the oldest survivors when aggressive', function () {
+			const dm = new DraftManager( mockEditor );
+			const now = Date.now();
+			const store = {
+				'layers-draft-anon-A_jpg_1111-': JSON.stringify( { timestamp: now - 1000 } ),
+				'layers-draft-anon-B_jpg_2222-': JSON.stringify( { timestamp: now - 500 } )
+			};
+			makeEnumerableStorage( store );
+
+			expect( dm.sweepExpiredDrafts( true ) ).toBe( 1 );
+			expect( store[ 'layers-draft-anon-A_jpg_1111-' ] ).toBeUndefined();
+			expect( store[ 'layers-draft-anon-B_jpg_2222-' ] ).toBeDefined();
+			dm.destroy();
+		} );
+
+		it( 'should be a no-op when storage cannot be enumerated', function () {
+			const dm = new DraftManager( mockEditor );
+			expect( dm.sweepExpiredDrafts() ).toBe( 0 );
+			dm.destroy();
+		} );
+	} );
+
+	describe( 'quota recovery', function () {
+		it( 'should retry once after freeing space', function () {
+			const dm = new DraftManager( mockEditor );
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+
+			const quotaError = new Error( 'full' );
+			quotaError.name = 'QuotaExceededError';
+			let firstCall = true;
+			global.localStorage.setItem = jest.fn( function () {
+				if ( firstCall ) {
+					firstCall = false;
+					throw quotaError;
+				}
+			} );
+			jest.spyOn( dm, 'sweepExpiredDrafts' ).mockReturnValue( 3 );
+
+			expect( dm.saveDraft() ).toBe( true );
+			expect( dm.sweepExpiredDrafts ).toHaveBeenCalledWith( true );
+			dm.destroy();
+		} );
+
+		it( 'should give up when nothing could be freed', function () {
+			const dm = new DraftManager( mockEditor );
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+
+			const quotaError = new Error( 'full' );
+			quotaError.name = 'QuotaExceededError';
+			global.localStorage.setItem = jest.fn( function () {
+				throw quotaError;
+			} );
+			jest.spyOn( dm, 'sweepExpiredDrafts' ).mockReturnValue( 0 );
+
+			expect( dm.saveDraft() ).toBe( false );
+			dm.destroy();
+		} );
+
+		it( 'should not retry for a non-quota error', function () {
+			const dm = new DraftManager( mockEditor );
+			mockEditor.isDirty = jest.fn( function () {
+				return true;
+			} );
+
+			global.localStorage.setItem = jest.fn( function () {
+				throw new Error( 'something else' );
+			} );
+			jest.spyOn( dm, 'sweepExpiredDrafts' ).mockReturnValue( 5 );
+
+			expect( dm.saveDraft() ).toBe( false );
+			expect( dm.sweepExpiredDrafts ).not.toHaveBeenCalled();
+			dm.destroy();
+		} );
+
+		it( 'should recognise the browser-specific quota error shapes', function () {
+			const firefox = new Error( 'x' );
+			firefox.name = 'NS_ERROR_DOM_QUOTA_REACHED';
+			const safari = new Error( 'x' );
+			safari.code = 22;
+			const oldWebkit = new Error( 'x' );
+			oldWebkit.code = 1014;
+
+			expect( DraftManager.isQuotaError( firefox ) ).toBe( true );
+			expect( DraftManager.isQuotaError( safari ) ).toBe( true );
+			expect( DraftManager.isQuotaError( oldWebkit ) ).toBe( true );
+			expect( DraftManager.isQuotaError( new Error( 'x' ) ) ).toBe( false );
+			expect( DraftManager.isQuotaError( null ) ).toBe( false );
 		} );
 	} );
 } );

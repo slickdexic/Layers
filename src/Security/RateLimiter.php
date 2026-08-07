@@ -204,9 +204,11 @@ class RateLimiter {
 					$complexity += 2;
 					break;
 
-				// Groups multiply complexity by contained layers
+				// A group is metadata: it holds an array of child *ids* while the
+				// children themselves stay in this same flat array and are costed
+				// on their own iteration. Nothing to multiply.
 				case 'group':
-					$complexity += 2;
+					$complexity += 1;
 					break;
 
 				// Simple shapes and other known types
@@ -216,9 +218,9 @@ class RateLimiter {
 				case 'line':
 				case 'polygon':
 				case 'star':
-				case 'blur':
 				case 'marker':
 				case 'dimension':
+				case 'angleDimension':
 					$complexity += 1;
 					break;
 

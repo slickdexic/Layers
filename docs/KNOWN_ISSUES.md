@@ -1,6 +1,12 @@
 # Known Issues
 
-**Last updated:** July 9, 2026 — v72 audit (fix pass complete)
+**Last updated:** August 6, 2026 — v1.5.83 (R2 critical review remediation)
+
+R2 review (Aug 6, 2026): 5 HIGH + 12 MEDIUM + 7 LOW found; all HIGH and all but
+two MEDIUM fixed in v1.5.83. Four items are deliberately carried forward and are
+listed first, below. Two new blocking gates (`check:parallel`,
+`check:atomicity`) were added; the atomicity gate found a fourth instance of its
+target defect on its first run.
 
 v72 audit: build was red on `main` (image aspect-ratio linking shipped
 without updating its tests) and the two new image-import config settings
@@ -12,6 +18,104 @@ This document tracks known issues in the Layers extension, prioritized
 as P0 (critical/data loss), P1 (high/significant bugs), P2 (medium),
 and P3 (low/cosmetic). Historical fixed items are retained for audit
 traceability.
+
+---
+
+## � P0 — The LTS branches ship known, already-fixed vulnerabilities
+
+**Status:** 🔲 Open. Needs a maintainer decision (see `improvement_plan.md` R3.01).
+
+`README.md` and `wiki/Installation.md` tell MediaWiki 1.43 users to install
+`REL1_43` and 1.39–1.42 users to install `REL1_39`. Both branches are at
+**v1.5.67** while `main` is at v1.5.83 — **201 commits** of drift. Verified
+against `origin/REL1_43` on August 6, 2026:
+
+| Defect | Fixed on `main` in | State on REL1_43 / REL1_39 |
+|---|---|---|
+| Layer writes bypass page protection, namespace protection, cascading protection and blocks | v1.5.80 | **Present.** `ApiLayersSave.php:211` checks only `checkUserRightsAny( 'editlayers' )`; `requireTitleEditPermission` does not exist on the branch (grep: 0 hits). |
+| Exported PDFs of full document content served from a public, permanent, guessable `$wgUploadPath` URL that bypasses `read` entirely | v1.5.80 | **Present.** `ApiLayersExport.php:368` reads `$wgUploadPath`. |
+| Deleted files' composited renders and exports stay retrievable | v1.5.80 | **Present.** No `RenderCache`, no purge on `FileDeleteComplete`. |
+| Failed delete/rename commits partial writes | v1.5.83 | **Present.** No `ATOMIC_CANCELABLE` anywhere (grep: 0 hits). |
+| All rate limits inert (no shipped defaults) | v1.5.83 | **Present.** No `RateLimits` block in `extension.json`. |
+| PDF export triggerable cross-site as a token-less GET | v1.5.83 | **Present.** |
+
+The pdf.js CVE-2024-4367 mitigation (v1.5.79) does **not** apply: the in-wiki
+PDF viewer does not exist on these branches.
+
+**Why this outranks everything else in this document:** every other open item is
+a fidelity, correctness or hygiene issue on a branch used by developers. This is
+a set of *already-diagnosed, already-fixed* security defects sitting on the
+branch we actively recommend to production wikis. The fix is known; only the
+backport is missing.
+
+**Recommended action:** a security-only backport series to both REL branches
+(the six rows above), released as `1.5.68-REL1_43` / `1.5.68-REL1_39`, rather
+than attempting to replay all 201 commits. See `improvement_plan.md` R3.01.
+
+---
+
+## �🔴 Currently open — carried forward from the R2 review (v1.5.83)
+
+These are known, understood and deliberately not fixed in v1.5.83. Tracked in
+`improvement_plan.md`.
+
+### R2.60: Server-side PDF export omits seven layer types
+
+- **File:** `src/ThumbnailRenderer.php`
+- **Issue:** The ImageMagick compositor has no primitive for `callout`,
+    `image`, `group`, `customShape`, `marker`, `dimension`, `angleDimension`
+    or `blur` fills, so they are absent from server-composited thumbnails and
+    from the PDF produced by the lightbox **Print** button.
+- **Severity:** P2 — fidelity loss, no data loss (the stored layer set is
+    intact and the browser renders it correctly).
+- **Mitigation shipped in v1.5.83:** the gap is declared in
+    `ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE`, enforced by
+    `npm run check:parallel`, returned as `incomplete`/`droppedtypes` in the
+    `layerspdfexport` result, and shown to the user as a notice. It is no
+    longer silent.
+- **Workaround:** use the lightbox **Download** button, which composites
+    client-side and is always complete.
+- **Status:** 🔲 Open — likely fix is to route export through
+    `viewer/PdfBuilder.js` rather than implement seven ImageMagick paths.
+
+### R2.12: Template-emitted images can receive the wrong layer set
+
+- **File:** `src/Hooks/WikitextHooks.php`
+- **Issue:** `onParserBeforeInternalParse()` scans raw, pre-expansion wikitext
+    and builds a positional queue that is consumed in render order. A file
+    emitted by a template is rendered but never scanned, so one templated image
+    before a manual one shifts every subsequent layer set onto the wrong image.
+- **Severity:** P2 — wrong annotations shown, only on pages that mix templated
+    and directly-written file links for the same filename.
+- **Status:** 🔲 Open — architectural. The fix is to treat
+    `onParserMakeImageParams` as authoritative and key state by
+    `(title, params)` instead of scan position.
+
+### R2.20: `window.alert()` / `window.confirm()` fallbacks
+
+- **Files:** 8 editor modules (`UIManager.js`, `LayersEditor.js`,
+    `PresetDropdown.js`, `LayerSetManager.js`, `ImportExportManager.js`,
+    `RevisionManager.js`)
+- **Issue:** These fire only when OOUI fails to load, but they block the main
+    thread, cannot be themed, and are inconsistently exposed to assistive
+    technology. They account for 11 of the 13 `eslint-disable` comments in the
+    codebase.
+- **Severity:** P3 — accessibility, fallback path only.
+- **Status:** 🔲 Open.
+
+### R2.23–R2.26: Minor hardening and hygiene
+
+- SVG validation is substring-based rather than a well-formedness parse
+    (`ServerSideLayerValidator.php`). P3.
+- `SetNameSanitizer` allows spaces in set names, but `layerset=` in wikitext is
+    pipe/space-delimited, so `my labels` is unaddressable from wikitext. Needs
+    a decision: forbid, or document escaping. P3.
+- Something in the toolchain creates a `nul` file in the repo root on Windows.
+    It is untracked, but keeps reappearing. P3.
+- `ext.layers.editor` is ~1,965 KB of unminified JS loaded from article pages.
+    Within its declared budget, but the budget is generous. P3.
+
+---
 
 ## Summary
 

@@ -787,6 +787,59 @@ class WikitextHooks {
 	}
 
 	/**
+	 * Cached regex alternation matching every prefix that opens a File link.
+	 * @var string|null
+	 */
+	private static ?string $fileNsPattern = null;
+
+	/**
+	 * Regex fragment matching any accepted File-namespace prefix.
+	 *
+	 * The scan and strip regexes below must agree on this. When they did not,
+	 * `[[Image:X|layerset=y]]` had its parameter stripped by the strip pass but
+	 * was never seen by the scan pass, so the parameter was destroyed and no
+	 * layers rendered — and every localised alias (Datei:, Fichier:, Bild:)
+	 * failed the same way on non-English wikis.
+	 *
+	 * @return string Non-capturing alternation, e.g. "(?:File|Image|Datei)"
+	 */
+	private static function fileNsPattern(): string {
+		if ( self::$fileNsPattern !== null ) {
+			return self::$fileNsPattern;
+		}
+
+		$names = [ 'File', 'Image' ];
+		try {
+			$lang = MediaWikiServices::getInstance()->getContentLanguage();
+			$localised = $lang->getNsText( NS_FILE );
+			if ( is_string( $localised ) && $localised !== '' ) {
+				$names[] = $localised;
+			}
+			foreach ( $lang->getNamespaceAliases() as $alias => $ns ) {
+				if ( (int)$ns === NS_FILE ) {
+					$names[] = (string)$alias;
+				}
+			}
+		} catch ( \Throwable $e ) {
+			// Content language unavailable (e.g. unit tests): English defaults stand.
+		}
+
+		$escaped = [];
+		foreach ( array_unique( $names ) as $name ) {
+			// Wikitext treats '_' and ' ' interchangeably in a namespace prefix.
+			$normalized = str_replace( '_', ' ', $name );
+			$escaped[$normalized] = str_replace( ' ', '[ _]', preg_quote( $normalized, '/' ) );
+		}
+		// Longest first so "Image" cannot win over a longer alias sharing its prefix.
+		uksort( $escaped, static function ( $a, $b ) {
+			return strlen( $b ) <=> strlen( $a );
+		} );
+
+		self::$fileNsPattern = '(?:' . implode( '|', $escaped ) . ')';
+		return self::$fileNsPattern;
+	}
+
+	/**
 	 * Get both set name and link type for the next occurrence of a file
 	 * This method ensures both values come from the same queue index
 	 *
@@ -859,7 +912,8 @@ class WikitextHooks {
 
 			// First, find ALL File: usages to establish the complete render order
 			// This captures [[File:name.ext...]] patterns (with or without layerset=)
-			$allFilesPattern = '/\[\[File:([^|\]]+)(?:\|[^\]]*?)?\]\]/i';
+			$ns = self::fileNsPattern();
+			$allFilesPattern = '/\[\[' . $ns . ':([^|\]]+)(?:\|[^\]]*?)?\]\]/i';
 			$allFileMatches = [];
 			$fileMatchCount = preg_match_all( $allFilesPattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE );
 			self::log( "File pattern matched $fileMatchCount times" );
@@ -883,7 +937,7 @@ class WikitextHooks {
 
 				// Now extract layerset=/layers= values with their offsets
 			// Matches: layerset=, layers=, layer= (backwards compatibility)
-			$fileLayersPattern = '/\[\[File:([^|\]]+)\|[^\]]*?(?:layerset|layers?)\s*=\s*([^|\]]+)/i';
+			$fileLayersPattern = '/\[\[' . $ns . ':([^|\]]+)\|[^\]]*?(?:layerset|layers?)\s*=\s*([^|\]]+)/i';
 			// filename => [offset => value, ...]
 			$layersMap = [];
 			self::logDebug( 'Running layerset/layers regex on text: ' . substr( $text, 0, 200 ) );
@@ -954,9 +1008,10 @@ class WikitextHooks {
 				}
 			}
 
-			// Extract layerslink= values (editor, viewer, lightbox) and REMOVE from text
-			// to prevent them from appearing as caption text in thumbnails
-			$layerslinkPattern = '/\[\[File:([^|\]]+)\|[^\]]*?layerslink\s*=\s*([^|\]]+)/i';
+			// Extract layerslink= values (editor, viewer, lightbox). They are removed
+			// from the text further down, inside the file-link callback, so that a page
+			// documenting the syntax inside <nowiki> keeps its example intact.
+			$layerslinkPattern = '/\[\[' . $ns . ':([^|\]]+)\|[^\]]*?layerslink\s*=\s*([^|\]]+)/i';
 			$layerslinkMap = [];
 			$linkMatchCount = preg_match_all(
 				$layerslinkPattern,
@@ -985,16 +1040,6 @@ class WikitextHooks {
 					}
 				}
 			}
-
-			// Strip layerslink=value from wikitext to prevent caption leakage
-			// Pattern matches: |layerslink=value (with optional whitespace)
-			// We remove just the parameter, keeping surrounding pipe delimiters intact
-			$text = preg_replace(
-				'/\|layerslink\s*=\s*[^|\]]+/i',
-				'',
-				$text
-			);
-			self::log( 'Stripped layerslink parameters from wikitext' );
 
 			// Build fileLinkTypes queues matching file render order
 			foreach ( $allFileMatches as $fileMatch ) {
@@ -1030,23 +1075,21 @@ class WikitextHooks {
 				self::log( 'Preprocessed <gallery> blocks for layerset= hints' );
 			}
 
-			// Strip layerset=, layers=, and layer= ONLY from within [[File:...]] or [[Image:...]] links
-			// to prevent caption leakage. We must NOT strip these from {{#slide:...}} parser functions!
-			// Use a callback to selectively strip only within file link contexts.
+			// Strip our parameters ONLY from within file links, so that they do not
+			// leak into captions. Scoping to the link is what keeps {{#slide:...}}
+			// parser functions and <nowiki>-quoted documentation intact.
 			$text = preg_replace_callback(
-				'/\[\[(File|Image):([^\]]+)\]\]/i',
+				'/\[\[' . $ns . ':([^\]]+)\]\]/i',
 				static function ( $match ) {
-					// Strip layerset=, layers=, layer= parameters from within the file link
-					$inner = preg_replace(
-						'/\|(?:layerset|layers?)\s*=\s*[^|\]]+/i',
+					return preg_replace(
+						'/\|(?:layerset|layers?|layerslink)\s*=\s*[^|\]]+/i',
 						'',
 						$match[0]
 					);
-					return $inner;
 				},
 				$text
 			);
-			self::log( 'Stripped layerset/layers/layer parameters from file links' );
+			self::log( 'Stripped layers parameters from file links' );
 		} catch ( \Throwable $e ) {
 			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
 		}
@@ -1073,7 +1116,7 @@ class WikitextHooks {
 		}
 		return preg_replace_callback(
 			// Match image lines: optional indent + File:/Image: + filename + pipe options
-			'/^([ \t]*(?:File|Image):([^\|\n]+))(\|[^\n]*)$/mi',
+			'/^([ \t]*' . self::fileNsPattern() . ':([^\|\n]+))(\|[^\n]*)$/mi',
 			static function ( $line ) {
 				// "  File:Name.jpg" (with any indent)
 				$prefix = $line[1];

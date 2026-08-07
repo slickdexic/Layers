@@ -254,11 +254,19 @@ class ServerSideLayerValidator {
 		'scale' => [ 'min' => 0.001, 'max' => 1000 ],
 		'precision' => [ 'min' => 0, 'max' => 6 ],
 		// Angle dimension constraints
-		'arcRadius' => [ 'min' => 1, 'max' => 2000 ]
+		'arcRadius' => [ 'min' => 1, 'max' => 2000 ],
+		// Imported image intrinsic size. Without these these fell under the
+		// generic +/-100000 numeric range, so a negative "original size" was
+		// accepted and stored.
+		'originalWidth' => [ 'min' => 1, 'max' => 16384 ],
+		'originalHeight' => [ 'min' => 1, 'max' => 16384 ]
 	];
 
 	/** @var int Maximum points in a path/polygon */
 	private const MAX_POINTS = 1000;
+
+	/** Bound applied to every coordinate, matching the generic numeric range. */
+	private const MAX_COORDINATE = 100000;
 
 	/** @var int Maximum total points across ALL layers in a set (defense in depth) */
 	private const MAX_TOTAL_POINTS = 10000;
@@ -807,15 +815,21 @@ class ServerSideLayerValidator {
 			$validPoints = [];
 			foreach ( $value as $point ) {
 				if ( !is_array( $point ) || !isset( $point['x'] ) || !isset( $point['y'] ) ) {
-					continue;
+					return [ 'valid' => false, 'error' => 'Each point must have numeric x and y' ];
 				}
 				if ( !is_numeric( $point['x'] ) || !is_numeric( $point['y'] ) ) {
-					continue;
+					return [ 'valid' => false, 'error' => 'Each point must have numeric x and y' ];
 				}
-				$validPoints[] = [
-					'x' => (float)$point['x'],
-					'y' => (float)$point['y']
-				];
+				$x = (float)$point['x'];
+				$y = (float)$point['y'];
+				// Same bound every other geometry property gets. Without it 1e308 was
+				// stored verbatim and shipped to every renderer.
+				if ( !is_finite( $x ) || !is_finite( $y ) ||
+					abs( $x ) > self::MAX_COORDINATE || abs( $y ) > self::MAX_COORDINATE
+				) {
+					return [ 'valid' => false, 'error' => 'Point coordinate out of range' ];
+				}
+				$validPoints[] = [ 'x' => $x, 'y' => $y ];
 			}
 
 			return [ 'valid' => true, 'value' => $validPoints ];
@@ -879,6 +893,22 @@ class ServerSideLayerValidator {
 	}
 
 	/**
+	 * Properties whose failure must fail the whole layer rather than be dropped.
+	 *
+	 * The default behaviour for an invalid property is to drop it and record a
+	 * warning, which is right for cosmetic hints but wrong for anything that
+	 * carries the user's actual content or geometry: dropping those loses work
+	 * while the API still reports `success: 1`.
+	 */
+	private const STRICT_PROPERTIES = [
+		'richText',
+		'gradient',
+		'points',
+		'originalWidth',
+		'originalHeight',
+	];
+
+	/**
 	 * Determine whether an invalid property should fail validation instead of being dropped.
 	 *
 	 * @param string $property Property name
@@ -886,7 +916,7 @@ class ServerSideLayerValidator {
 	 * @return bool
 	 */
 	private function isStrictProperty( string $property, string $layerType ): bool {
-		if ( $property === 'richText' ) {
+		if ( in_array( $property, self::STRICT_PROPERTIES, true ) ) {
 			return true;
 		}
 
@@ -1004,14 +1034,19 @@ class ServerSideLayerValidator {
 
 		$validColors = [];
 		foreach ( $gradient['colors'] as $stop ) {
-			if ( !is_array( $stop ) ) {
-				continue;
-			}
-			if ( !isset( $stop['offset'] ) || !isset( $stop['color'] ) ) {
-				continue;
-			}
-			if ( !is_numeric( $stop['offset'] ) || !is_string( $stop['color'] ) ) {
-				continue;
+			// Reject rather than skip. Silently dropping malformed stops turned a
+			// 10-stop gradient with typos into a 2-stop one and still reported
+			// success, so the user lost their gradient with no error anywhere.
+			if ( !is_array( $stop ) ||
+				!isset( $stop['offset'] ) ||
+				!isset( $stop['color'] ) ||
+				!is_numeric( $stop['offset'] ) ||
+				!is_string( $stop['color'] )
+			) {
+				return [
+					'valid' => false,
+					'error' => 'Each gradient stop must have a numeric offset and a colour string'
+				];
 			}
 
 			$offset = (float)$stop['offset'];
@@ -1019,6 +1054,9 @@ class ServerSideLayerValidator {
 			$offset = max( 0, min( 1, $offset ) );
 
 			// Use ColorValidator for proper color validation and sanitization
+			if ( !$this->colorValidator->isSafeColor( $stop['color'] ) ) {
+				return [ 'valid' => false, 'error' => 'Gradient stop colour is not a valid colour' ];
+			}
 			$color = $this->colorValidator->sanitizeColor( $stop['color'] );
 
 			$validColors[] = [
@@ -1027,9 +1065,6 @@ class ServerSideLayerValidator {
 			];
 		}
 
-		if ( count( $validColors ) < 2 ) {
-			return [ 'valid' => false, 'error' => 'Gradient must have at least 2 valid color stops' ];
-		}
 		$validGradient['colors'] = $validColors;
 
 		// Validate angle for linear gradients (optional, 0-360)
@@ -1104,15 +1139,15 @@ class ServerSideLayerValidator {
 		];
 
 		foreach ( $richText as $run ) {
+			// Reject rather than skip: dropping a malformed run silently deletes a
+			// span of the user's text while still reporting the save as successful.
 			if ( !is_array( $run ) ) {
-				// Skip invalid runs
-				continue;
+				return [ 'valid' => false, 'error' => 'Each rich text run must be an object' ];
 			}
 
 			// Each run must have a 'text' property
 			if ( !isset( $run['text'] ) || !is_string( $run['text'] ) ) {
-				// Skip runs without text
-				continue;
+				return [ 'valid' => false, 'error' => 'Each rich text run must have text' ];
 			}
 
 			$text = $run['text'];

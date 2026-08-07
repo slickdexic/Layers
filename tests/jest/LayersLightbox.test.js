@@ -14,7 +14,10 @@ let lightboxSingleton;
 
 // Mock dependencies
 const mockApi = {
-	get: jest.fn()
+	get: jest.fn(),
+	// layerspdfexport is a token-protected POST: it spends server CPU and writes
+	// a file, so it must not be triggerable cross-site.
+	postWithToken: jest.fn()
 };
 
 const mockViewer = {
@@ -81,6 +84,10 @@ beforeEach( () => {
 	// Reset mocks
 	jest.clearAllMocks();
 	mockApi.get.mockReset();
+	mockApi.postWithToken.mockReset();
+	mockApi.postWithToken.mockResolvedValue( {} );
+	mockApi.postWithToken.mockReset();
+	mockApi.postWithToken.mockResolvedValue( {} );
 	MockLayersViewer.mockClear();
 	mockViewer.destroy.mockClear();
 
@@ -1028,7 +1035,7 @@ describe( 'LayersLightbox', () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
 			lightbox.filename = 'Doc.pdf';
-			mockApi.get.mockResolvedValue( {
+			mockApi.postWithToken.mockResolvedValue( {
 				layerspdfexport: { url: '/index.php?title=Special:LayersExport&key=abc' }
 			} );
 			const clickSpy = jest.fn();
@@ -1274,13 +1281,14 @@ describe( 'LayersLightbox', () => {
 			lightbox.filename = 'Doc.pdf';
 			lightbox.setName = '001';
 
-			mockApi.get.mockResolvedValue( {
+			mockApi.postWithToken.mockResolvedValue( {
 				layerspdfexport: { success: 1, url: '/images/thumb/layers/export/abc.pdf' }
 			} );
 
 			await lightbox.printViaServer();
 
-			expect( mockApi.get ).toHaveBeenCalledWith(
+			expect( mockApi.postWithToken ).toHaveBeenCalledWith(
+				'csrf',
 				expect.objectContaining( {
 					action: 'layerspdfexport',
 					filename: 'Doc.pdf',
@@ -1295,7 +1303,7 @@ describe( 'LayersLightbox', () => {
 			lightbox.filename = 'Doc.pdf';
 			const openSpy = jest.spyOn( window, 'open' ).mockImplementation( () => {} );
 
-			mockApi.get.mockResolvedValue( {
+			mockApi.postWithToken.mockResolvedValue( {
 				layerspdfexport: { success: 1, url: '/images/thumb/layers/export/abc.pdf' }
 			} );
 
@@ -1313,11 +1321,52 @@ describe( 'LayersLightbox', () => {
 			lightbox.filename = 'Doc.pdf';
 			mw.notify = jest.fn();
 
-			mockApi.get.mockRejectedValue( new Error( 'boom' ) );
+			mockApi.postWithToken.mockRejectedValue( new Error( 'boom' ) );
 
 			await lightbox.printViaServer();
 
 			expect( mw.notify ).toHaveBeenCalled();
+			delete mw.notify;
+		} );
+
+		it( 'should warn the user when the server dropped layer types', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			mw.notify = jest.fn();
+			const openSpy = jest.spyOn( window, 'open' ).mockImplementation( () => {} );
+
+			mockApi.postWithToken.mockResolvedValue( {
+				layerspdfexport: {
+					success: 1,
+					url: '/x.pdf',
+					incomplete: 1,
+					droppedtypes: [ 'callout', 'marker' ]
+				}
+			} );
+
+			await lightbox.printViaServer();
+
+			expect( mw.notify ).toHaveBeenCalled();
+			openSpy.mockRestore();
+			delete mw.notify;
+		} );
+
+		it( 'should not warn when the export was complete', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.filename = 'Doc.pdf';
+			mw.notify = jest.fn();
+			const openSpy = jest.spyOn( window, 'open' ).mockImplementation( () => {} );
+
+			mockApi.postWithToken.mockResolvedValue( {
+				layerspdfexport: { success: 1, url: '/x.pdf' }
+			} );
+
+			await lightbox.printViaServer();
+
+			expect( mw.notify ).not.toHaveBeenCalled();
+			openSpy.mockRestore();
 			delete mw.notify;
 		} );
 
@@ -1327,11 +1376,11 @@ describe( 'LayersLightbox', () => {
 			lightbox.filename = 'MySlide';
 			lightbox.isSlide = true;
 			mw.notify = jest.fn();
-			mockApi.get.mockClear();
+			mockApi.postWithToken.mockClear();
 
 			await lightbox.printViaServer();
 
-			expect( mockApi.get ).not.toHaveBeenCalled();
+			expect( mockApi.postWithToken ).not.toHaveBeenCalled();
 			expect( mw.notify ).toHaveBeenCalled();
 			delete mw.notify;
 		} );

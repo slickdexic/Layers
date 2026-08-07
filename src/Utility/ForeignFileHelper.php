@@ -77,9 +77,12 @@ class ForeignFileHelper {
 			return $sha1;
 		}
 
-		// Foreign files may not have SHA1 - use deterministic fallback
+		// Foreign files may not have SHA1 - use deterministic fallback.
+		// Callers pass the name in three different forms (Title::getDBkey(),
+		// File::getName(), and a str_replace'd display name), so normalise here
+		// rather than trusting every call site to agree.
 		if ( self::isForeignFile( $file ) ) {
-			$name = $imgName ?? $file->getName();
+			$name = str_replace( ' ', '_', (string)( $imgName ?? $file->getName() ) );
 			return 'foreign_' . sha1( $name );
 		}
 

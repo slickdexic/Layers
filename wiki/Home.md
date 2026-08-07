@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-14%2C178%20passing-brightgreen" alt="14,178 Tests">
-  <img src="https://img.shields.io/badge/Coverage-95.87%25-brightgreen" alt="95.87% Coverage">
+  <img src="https://img.shields.io/badge/Tests-14%2C191%20passing-brightgreen" alt="14,191 Tests">
+  <img src="https://img.shields.io/badge/Coverage-95.23%25-brightgreen" alt="95.23% Coverage">
 </p>
 
 **Layers** is a professional-grade, non-destructive image annotation system for MediaWiki. Add captions, callouts, highlights, shapes, and drawings to images **without modifying the original files**.
@@ -20,7 +20,39 @@
 
 ---
 
-## 🆕 What's New in v1.5.80
+## 🆕 What's New in v1.5.83
+
+- **PDF export is no longer triggerable from other websites** — `layerspdfexport`
+  now requires POST and a CSRF token. As a token-less GET it rasterised up to
+  100 pages with ImageMagick and wrote a file to disk, so any third-party page
+  could drive it from every logged-in visitor's browser.
+- **Rate limits actually apply now** — The extension ships `$wgRateLimits`
+  defaults. MediaWiki treats an unconfigured bucket as unlimited, so on a
+  default install none of the Layers limits had any effect. Anything you set in
+  `LocalSettings.php` still wins; see [[Configuration Reference]].
+- **Commons/InstantCommons files work properly** — Their generated renders
+  could never be purged (so a deleted file's annotated render stayed on disk)
+  and their PDF exports could never be downloaded. Both fixed.
+- **Layer changes now appear on pages that embed the image** — Previously only
+  the `File:` page was purged, so an article using
+  `[[File:X|layerset=on]]` kept showing the old annotations until something
+  else happened to invalidate it.
+- **`[[Image:…|layerset=…]]` works, and so do localised prefixes** — `Datei:`,
+  `Fichier:`, `Bild:` and friends were silently dropping their layer set.
+- **PDF export tells you when it is incomplete** — The server compositor cannot
+  draw callouts, markers, dimensions, imported images, groups or shape-library
+  shapes. It used to omit them without a word; it now reports exactly what was
+  left out and points you at the (complete) **Download** button.
+- **Failed deletes and renames no longer destroy data** — Three more code paths
+  were committing partial writes while reporting failure.
+- **Your unsaved drafts are private again** — Draft recovery was keyed by
+  filename only, so on a shared computer the next person was offered your
+  unsaved annotations. Drafts are now per-user, expire properly, and no longer
+  fill up browser storage.
+- **Settings that silently reverted now stick** — "Arrows inside" and "reflex
+  angle" on angle dimensions were lost on reload.
+
+## What's New in v1.5.80
 
 - **Layer writes now respect page protection** — Saving, renaming and deleting
   a layer set additionally require ordinary `edit` permission on the file's
@@ -431,21 +463,21 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.82 |
+| **Version (main)** | 1.5.83 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
-| **Release Date** | August 2, 2026 |
-| **Test Suites** | 172 |
-| **Total Tests** | 14,178 |
-| **PHPUnit Test Files** | 37 |
-| **Statement Coverage** | 95.87% |
-| **Branch Coverage** | 87.20% |
-| **Function Coverage** | 94.00% |
-| **Line Coverage** | 95.98% |
-| **JavaScript Files** | 157 |
+| **Release Date** | August 6, 2026 |
+| **Test Suites** | 177 |
+| **Total Tests** | 14,191 |
+| **PHPUnit Test Files** | 37 (646 tests) |
+| **Statement Coverage** | 95.23% |
+| **Branch Coverage** | 86.60% |
+| **Function Coverage** | 93.72% |
+| **Line Coverage** | 95.34% |
+| **JavaScript Files** | 160 |
 | **ES6 Classes** | 140 |
-| **God Classes** | 26 (5 generated, 19 JS, 2 PHP) |
-| **i18n Messages** | 842 (785 `layers-` prefixed) |
+| **God Classes** | 28 (4 generated, 20 JS, 4 PHP) |
+| **i18n Messages** | 874 (819 `layers-` prefixed) |
 
 ---
 

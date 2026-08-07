@@ -1262,10 +1262,13 @@
 			if ( this.setName ) {
 				params.setname = this.setName;
 			}
-			return new mw.Api().get( params ).then( ( data ) => {
+			// POST + CSRF token: the export burns server CPU and writes a file,
+			// so it must not be triggerable cross-site.
+			return new mw.Api().postWithToken( 'csrf', params ).then( ( data ) => {
 				restore();
 				const result = data && data.layerspdfexport;
 				if ( result && result.url ) {
+					this.warnIfExportIncomplete( result );
 					onUrl( result.url );
 				} else {
 					this.showExportError();
@@ -1274,6 +1277,33 @@
 				restore();
 				this.showExportError();
 			} );
+		}
+
+		/**
+		 * Tell the user when the server compositor could not draw every layer.
+		 *
+		 * The client-side Download path composites the same canvas the viewer
+		 * shows, so it is always complete; only this server path can be lossy.
+		 *
+		 * @param {Object} result The layerspdfexport API result
+		 * @private
+		 */
+		warnIfExportIncomplete( result ) {
+			if ( !result.incomplete || typeof mw === 'undefined' || !mw.notify ) {
+				return;
+			}
+			const types = Array.isArray( result.droppedtypes ) ?
+				result.droppedtypes.join( ', ' ) :
+				'';
+			let text = 'Some annotations could not be included in the PDF: ' + types +
+				'. Use Download instead for a complete copy.';
+			if ( mw.message ) {
+				const msg = mw.message( 'layers-export-incomplete', types );
+				if ( msg.exists() ) {
+					text = msg.text();
+				}
+			}
+			mw.notify( text, { type: 'warn', autoHideSeconds: 10 } );
 		}
 
 		/**

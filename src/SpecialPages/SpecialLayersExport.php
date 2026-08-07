@@ -95,11 +95,12 @@ class SpecialLayersExport extends SpecialPage {
 		}
 
 		$sha1 = ForeignFileHelper::getFileSha1( $file, $title->getDBkey() );
-		if ( !preg_match( '/^[0-9a-z]{4,40}$/', $sha1 ) ) {
+		$fileKey = RenderCache::artefactKey( $sha1 );
+		if ( $fileKey === '' ) {
 			return null;
 		}
 
-		$path = RenderCache::getExportDir( $this->getConfig() ) . '/' . $sha1 . '_' . $key . '.pdf';
+		$path = RenderCache::getExportDir( $this->getConfig() ) . '/' . $fileKey . '_' . $key . '.pdf';
 		return is_file( $path ) ? $path : null;
 	}
 

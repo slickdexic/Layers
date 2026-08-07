@@ -2,9 +2,9 @@ name: Lint and Style Checks
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, REL1_43, REL1_39 ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, REL1_43, REL1_39 ]
 
 jobs:
   php-lint:
@@ -19,8 +19,12 @@ jobs:
         run: composer install --no-interaction --prefer-dist
       - name: Run PHP lint
         run: vendor/bin/parallel-lint . --exclude vendor --exclude node_modules
-      - name: Run PHPCS (warnings allowed)
-        run: vendor/bin/phpcs -sp --cache -n || true
+      # Errors fail the build. Warnings do not: the codebase sits at 0 errors and
+      # 2 known warnings in test stubs, so `|| true` here (which this step used to
+      # have) meant a regression to any number of phpcs errors would still go
+      # green. A check that cannot fail is not a check.
+      - name: Run PHPCS (errors fail, warnings allowed)
+        run: vendor/bin/phpcs -sp --cache --warning-severity=0
 
   js-lint:
     runs-on: ubuntu-latest

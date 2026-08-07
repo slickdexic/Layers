@@ -108,7 +108,6 @@
 
 				// Handle iframe load - hide modal header since editor has its own
 				this.iframe.addEventListener( 'load', () => {
-					this.setupMessageListener();
 					// Hide the modal's header bar - the editor has its own close button
 					// This avoids the confusing "two X buttons" UX
 					if ( header && header.parentNode ) {
@@ -117,6 +116,12 @@
 					// Focus the iframe for keyboard accessibility
 					this.iframe.focus();
 				} );
+
+				// Registered once, not per load: the iframe fires 'load' again on any
+				// internal navigation (session expiry -> login redirect, editor
+				// reload), which used to add a second listener and overwrite the
+				// handle close() needs to remove the first.
+				this.setupMessageListener();
 
 				this.overlay.appendChild( this.iframe );
 
@@ -149,6 +154,9 @@
 		 * @private
 		 */
 		setupMessageListener() {
+			if ( this.messageHandler ) {
+				return;
+			}
 			this.messageHandler = ( event ) => {
 				// Security: verify origin
 				if ( event.origin !== window.location.origin ) {

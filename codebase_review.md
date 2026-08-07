@@ -1,12 +1,688 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** August 3, 2026 (v79 — full critical review: security, correctness, dead code, i18n wiring)
-**Remediation:** August 3, 2026 (v1.5.80 — see "Remediation status" below)
-**Previous Review:** v79 pdf.js viewer security review (dated "August 9, 2026" in this file; HEAD commit `c9c529fd` is actually dated August 3, 2026 — see §5.4)
-**Version:** 1.5.80
+**Review Date:** August 6, 2026
+**Version reviewed:** 1.5.82 (`main` @ `9eb08223`, clean tree)
+**Remediation:** August 6, 2026 (v1.5.83 — see "Remediation status" below)
 **Reviewer:** GitHub Copilot (Claude Opus 5)
+**Previous review:** v1.5.80, August 3, 2026 — see Appendix A
 
 ---
+
+## ✅ Remediation status — v1.5.83
+
+Everything below was written against v1.5.82. All of Priority 1, all of
+Priority 2 except R2.2.2's template case and the `alert()` cleanup, and both
+proposed gates are now fixed. Read each finding together with this table.
+
+| Finding | Status in v1.5.83 |
+|---|---|
+| R2.1.1 `layerspdfexport` CSRF/DoS | **Fixed.** POST + `needsToken() === 'csrf'`, and `extension.json` now ships `RateLimits` defaults so the three `pingLimiter` buckets are no longer no-ops. |
+| R2.1.2 `endAtomic()` in catch | **Fixed — in four places, not three.** `check-atomicity.js` found `LayersSchemaManager::…:639` (the revision-renumbering migration) on its first run, which this review had missed. |
+| R2.1.3 Foreign-file artefacts | **Fixed.** One canonical `RenderCache::artefactKey()` maps `foreign_<sha1>` into the safe token shape and is used by every producer and consumer. Six regression tests. |
+| R2.1.4 Embedding pages never purged | **Fixed.** `HTMLCacheUpdateJob::newForBacklinks( $title, 'imagelinks' )` is queued; the docblock now matches the body. |
+| R2.1.5 7 of 17 layer types dropped | **Partially fixed.** The gap is now *declared* (`ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE`), gated, returned as `incomplete`/`droppedtypes`, and shown to the user. Actually drawing the seven types is carried forward as R2.60. |
+| R2.2.1 `arrowsInside`/`reflexAngle` dropped | **Fixed**, and the class is now gated by `check-parallel-lists.js`. |
+| R2.2.2 Wikitext regexes | **Partially fixed.** Namespace disagreement and the page-wide `layerslink=` strip are fixed. The template/queue-alignment case (R2.12) is architectural and carried forward. |
+| R2.2.3–2.2.5, 2.2.7–2.2.9 | **Fixed.** See the per-finding corrections below for R2.2.5. |
+| R2.2.6 Silent validation discards | **Fixed**, at the root cause rather than per-site — see the correction below. |
+| R2.2.10 `alert()`/`confirm()` | Open. UI work, no correctness risk. |
+| R2.3 hygiene | R2.21/R2.22 fixed; the rest open. |
+| R2.6 proposed gates | **Both built and wired into `npm test`.** |
+
+**Corrections found while remediating.** Two findings were right about the
+symptom and wrong about the cause. Recorded here rather than quietly edited,
+because "the review was wrong about this" is information:
+
+- **R2.2.5** claimed `isComplexityAllowed()` fails to recurse into groups. It
+  does not need to: `GroupManager` stores `children` as an array of layer
+  *ids* and leaves the child layers in the same flat array, so they are already
+  costed on their own iteration. The defect was the *comment* ("Groups multiply
+  complexity by contained layers"), which described behaviour that neither
+  exists nor is needed. Comment corrected; `angleDimension` added; the dead
+  `blur` case removed.
+- **R2.2.6** listed three sub-validators that `continue` past malformed input.
+  Fixing those three would not have fixed the bug: the real cause is one level
+  up, in `validateLayer()`, which drops *any* failing property with a warning
+  unless `isStrictProperty()` says otherwise — and that returned true only for
+  `richText`. There is now a declared `STRICT_PROPERTIES` list, so gradients,
+  points and image dimensions fail the layer instead of vanishing from a
+  "successful" save.
+- **R2.1.3** also asserted three disagreeing inputs to `getFileSha1()`. They
+  happen to agree, because `File::getName()` already returns the DB key. The
+  normalisation added inside `getFileSha1()` makes that guaranteed rather than
+  incidental, but no live bug existed there.
+
+**Gate status after remediation:** 177 Jest suites / 14,191 tests, 646 PHPUnit
+tests, `check:i18n`, `check:mw-compat`, `check:phprefs`, `check:parallel`,
+`check:atomicity`, `check:bundlesize` — all green; phpcs 0 errors / 2 warnings
+(both pre-existing, in test stubs). Coverage 95.23% statement / 86.60% branch.
+
+---
+
+## R2 — Full critical review, August 6, 2026
+
+**Scope:** all 48 `src/**/*.php` + `maintenance/`, `extension.json`, `sql/`,
+`i18n/`, and the JavaScript under `resources/` excluding `dist/` and `lib/`.
+
+**Method:** every finding below was reproduced by reading the source. Claims
+that could not be reproduced are listed in §R2.7 as *checked and not a defect*,
+because "we looked and it was fine" is as useful as a finding.
+
+### R2.0 Gate status at review time — all green
+
+| Gate | Result |
+|---|---|
+| `npm run test:js` (Jest) | 177 suites / 14,178 tests pass in 13.1 s |
+| `npm run check:i18n` | passed |
+| `npm run check:mw-compat` | 49 files, 0 errors, 0 warnings |
+| `npm run check:phprefs` | 49 files, 49 classes, OK |
+| `npm run check:bundlesize` | 4/4 modules within budget (91–94% used) |
+
+**Every gate is green and the findings below are all still present.** This is
+the second review in a row where that sentence is true. §R2.6 explains what the
+gates are structurally unable to see, and R2 adds two proposed gates for the
+specific classes of defect that recurred.
+
+**Headline:** five HIGH-severity defects. Two of them (R2.1.2, R2.1.3) are
+*incomplete remediations of v1.5.80 findings* — the fix was written once and
+not applied to every call site, and nothing checks for that. One (R2.1.5) is a
+shipped feature that silently produces wrong output. One (R2.1.4) is a docblock
+that describes behaviour the function does not have.
+
+---
+
+### R2.1 HIGH severity
+
+#### R2.1.1 🔴 `layerspdfexport` is a CSRF-triggerable, unthrottled ImageMagick amplifier
+
+`src/Api/ApiLayersExport.php:417-429`:
+
+```php
+public function isReadMode()  { return true; }
+public function isWriteMode() { return false; }
+public function needsToken()  { return false; }
+```
+
+So `action=layerspdfexport` is a plain **GET with no CSRF token**. What that GET
+does (`ApiLayersExport::executeInternal()`):
+
+1. rasterises up to `$wgLayersPdfExportMaxPages` pages (**default 100**) via
+   ImageMagick,
+2. composites a layer set onto each one (another ImageMagick invocation per
+   page, `ThumbnailRenderer::generateLayeredThumbnail()`),
+3. stitches them into a PDF and **writes it to disk** in
+   `RenderCache::getExportDir()`.
+
+The only brake is:
+
+```php
+if ( !$rateLimiter->checkRateLimit( $user, 'render' ) ) { … }
+```
+
+which resolves to `$user->pingLimiter( 'editlayers-render' )`.
+**`extension.json` ships no `RateLimits` defaults** — grep for `RateLimits`
+returns nothing outside `AvailableRights`/`GroupPermissions`. `pingLimiter()`
+returns `false` for an unconfigured bucket, so on every default install
+`checkRateLimit()` is a no-op and *all three* Layers rate-limit keys
+(`editlayers-save`, `editlayers-render`, `editlayers-list`) are decorative.
+`README`/`extension.json` documentation telling admins to configure
+`$wgRateLimits` is not a control; it is a suggestion.
+
+Combined: any page anywhere on the internet can embed
+
+```html
+<img src="https://wiki.example/api.php?action=layerspdfexport&filename=Manual.pdf&format=json">
+```
+
+and every logged-in visitor's browser will make an authenticated request that
+costs the wiki up to 200 ImageMagick invocations and one file write. Repeat with
+20 `<img>` tags. No token is needed, no POST is needed, and nothing throttles it.
+
+The `width` parameter *is* correctly hardened (snapped to 200px buckets to stop
+cache-key busting) — which shows the DoS surface was considered and then the
+much larger one next to it was missed.
+
+**Fix**
+1. Ship rate-limit defaults in `extension.json`:
+   `"RateLimits": { "value": { "editlayers-save": …, "editlayers-render": …, "editlayers-list": … }, "merge_strategy": "array_plus_2d" }`.
+2. Make export `mustBePosted()` + `needsToken() === 'csrf'`. It writes to disk;
+   it is not a read.
+3. Consider a PoolCounter around the rasterise so concurrent identical requests
+   collapse.
+
+---
+
+#### R2.1.2 🔴 The v1.5.80 `endAtomic()` fix was applied to one of three call sites
+
+`improvement_plan.md` R1.09 is marked ✅ Done and the project's own
+`copilot-instructions.md` §7 states the rule:
+
+> open atomic sections with `IDatabase::ATOMIC_CANCELABLE` and roll back with
+> `cancelAtomic()`. `endAtomic()` in a catch block marks the section
+> *successful* and commits partial writes.
+
+`LayersDatabase::saveLayerSet()` obeys it (`:143` `ATOMIC_CANCELABLE`, `:250`
+`cancelAtomic()`). The other two atomic sections do not:
+
+`src/Database/LayersDatabase.php:879, 908-911` (`deleteNamedSet`):
+
+```php
+$dbw->startAtomic( __METHOD__ );          // not ATOMIC_CANCELABLE
+…
+    $rowsDeleted = $dbw->affectedRows();
+    $dbw->endAtomic( __METHOD__ );
+} catch ( \Throwable $e ) {
+    $dbw->endAtomic( __METHOD__ );        // ← commits the partial delete
+    throw $e;
+}
+```
+
+`src/Database/LayersDatabase.php:998, 1036-1039` (`renameNamedSet`) — identical.
+
+**Consequence:** a failure part-way through `DELETE FROM layer_sets …` or
+`UPDATE … SET ls_name = …` is *committed*, not rolled back. The outer catch then
+returns `null`/`false` and `ApiLayersDelete`/`ApiLayersRename` report failure to
+the user, so the user believes nothing happened while a subset of revisions has
+been destroyed or renamed. That is the worst possible combination.
+
+Note the two are not even interchangeable fixes: because these sections use the
+default (non-cancelable) mode, simply swapping in `cancelAtomic()` would throw.
+Both `startAtomic()` calls need `IDatabase::ATOMIC_CANCELABLE` as well.
+
+**Fix:** apply the R1.09 change to `deleteNamedSet()` and `renameNamedSet()`.
+Add a lint/grep gate: any `endAtomic` inside a `catch` block is an error.
+
+---
+
+#### R2.1.3 🔴 Every generated render for a foreign (Commons) file is unpurgeable, and its PDF export is undeliverable
+
+`Utility/ForeignFileHelper.php:74-85` — a foreign file with no SHA1 gets:
+
+```php
+return 'foreign_' . sha1( $name );   // 8 + 40 = 48 chars, contains '_'
+```
+
+Three separate guards reject exactly that shape:
+
+| Location | Guard | Effect on `foreign_…` |
+|---|---|---|
+| `RenderCache.php:129` (`purgeBySha1`) | `/^[0-9a-z]{4,40}$/` | returns `0` |
+| `RenderCache.php:45` (`ARTEFACT_PATTERN`) | `/^[0-9a-z]{4,40}_[0-9a-z]+\.[a-z0-9]{2,5}$/i` | never matches `foreign_<40>_<32>.pdf` (the first `_` is consumed by the pattern, the second cannot be) |
+| `SpecialLayersExport.php:98` | `/^[0-9a-z]{4,40}$/` | returns `null` |
+
+Consequences, in order of seriousness:
+
+1. **The R1.04/R1.05 privacy remediation does not apply to foreign files at
+   all.** `Hooks::onFileDeleteComplete()` *does* call
+   `RenderCache::purgeBySha1()` (`Hooks.php:308`) — it just silently returns 0.
+   Composited thumbnails under `<upload>/thumb/layers/` and exported PDFs for
+   InstantCommons/ForeignDB images survive deletion permanently. The thumbnails
+   sit in the public upload tree.
+2. **The reaper cannot clean them either** — `purgeOlderThan()` skips anything
+   not matching `ARTEFACT_PATTERN`, so `maintenance/purgeLayersRenderCache.php`
+   walks past them forever and the export directory grows without bound.
+3. **PDF export is 100% broken for every Commons image.** `ApiLayersExport`
+   does all the work, writes `foreign_<sha1>_<key>.pdf`, and returns a
+   `Special:LayersExport` URL. `SpecialLayersExport::resolveExportPath()` then
+   recomputes the same SHA1, fails its own regex, and returns `null` → the user
+   gets the generic "not found" error page. Worst case: the expensive work
+   happens on every attempt because the delivery, not the generation, is what
+   fails.
+
+There is a second, independent mismatch waiting behind this one:
+`ApiLayersExport` derives the fallback name from `$fileInfo['imgName']`
+(`= $title->getDBkey()`), while `SpecialLayersExport` passes
+`$title->getDBkey()` too — those agree today, but `Hooks.php:292` uses
+`str_replace( ' ', '_', $file->getName() )` and `ImageLinkProcessor`/
+`LayerInjector` call `getFileSha1( $file )` with **no** name at all, falling
+back to `$file->getName()` (spaces, not underscores). Three different inputs to
+a "deterministic" hash.
+
+**Fix:** make the artefact identifier a single, always-safe token — e.g.
+`$key = preg_match('/^[0-9a-z]{4,40}$/', $sha1) ? $sha1 : substr(sha1($sha1), 0, 40)`
+in one place in `RenderCache`, used by every producer and consumer. Then delete
+the ad-hoc regexes from `SpecialLayersExport`. Also collapse the four different
+`getFileSha1()` call conventions onto one.
+
+---
+
+#### R2.1.4 🔴 Pages that embed a file are never purged — and the docblock says they are
+
+`src/Api/Traits/CacheInvalidationTrait.php:14-21`:
+
+```
+ * Cache invalidation targets:
+ * 1. The file description page itself (parser cache)
+ * 2. Pages embedding the file via [[File:...]] wikitext (backlinks)
+ * 3. CDN/Squid caches for the file page URL
+```
+
+The implementation (`:40-57`) does:
+
+```php
+$title->invalidateCache();                       // the File page
+$wikiPage->doPurge();                            // the File page
+$htmlCacheUpdater->purgeTitleUrls( [ $title ], …ary );  // the File page's URLs
+```
+
+Target 2 does not exist in the code. There is no `BacklinkCache`, no
+`HTMLCacheUpdateJob`, no `imagelinks` traversal anywhere in `src/` (grep for
+`HTMLCacheUpdate|BacklinkCache|ImageLinks` returns only this trait and an
+unrelated hook name).
+
+**Consequence:** the primary documented use case —
+`[[File:Anatomy.jpg|layerset=labels]]` on an article — keeps serving the
+previously parser-cached HTML with the old layer set after a save, delete or
+rename, until something unrelated invalidates that article. On a wiki with a
+long `$wgParserCacheExpireTime` that is up to 30 days. Users experience this as
+"my edits didn't save"; the extension's own troubleshooting guidance
+(`copilot-instructions.md` §10) tells contributors that a stale render means the
+bug is in the code and not in caching, which in this one case is wrong.
+
+**Fix:** enqueue an `HTMLCacheUpdateJob` over the `imagelinks` backlinks of the
+File title (`$title->getBacklinkCache()->getLinks('imagelinks')`, or
+`HTMLCacheUpdateJob::newForBacklinks( $title, 'imagelinks' )`). Then correct or
+delete the docblock. A docblock that overstates a security- or
+correctness-relevant behaviour is worse than no docblock, because the next
+reviewer trusts it.
+
+---
+
+#### R2.1.5 🔴 Server-side compositing silently drops 7 of the 17 layer types
+
+`src/ThumbnailRenderer.php:230-253`:
+
+```php
+switch ( $layer['type'] ) {
+    case 'text': … case 'textbox': … case 'rectangle': … case 'circle':
+    case 'ellipse': … case 'polygon': … case 'star': … case 'path':
+    case 'arrow': … case 'line': …
+    default:
+        return [];          // ← silently drops the layer
+}
+```
+
+`ServerSideLayerValidator.php:28-30` accepts seventeen:
+
+```php
+'text', 'textbox', 'callout', 'arrow', 'rectangle', 'circle', 'ellipse',
+'polygon', 'star', 'line', 'path', 'image', 'group', 'customShape', 'marker',
+'dimension', 'angleDimension'
+```
+
+So `callout`, `image`, `group`, `customShape`, `marker`, `dimension` and
+`angleDimension` are accepted, stored, rendered correctly in the browser — and
+**dropped without a warning** by both consumers of `generateLayeredThumbnail()`:
+
+- `ApiLayersExport.php:210` — the "Export to PDF" feature
+- `LayersFileTransform.php:39` — server-composited thumbnails
+
+That means the shipped PDF export of a typical annotated diagram loses every
+numbered marker, every callout, every measurement, every imported image and
+every one of the 1,385 shape-library shapes and 2,817 emoji. The user gets a
+PDF that looks like a subset of what they drew, with no indication that anything
+was omitted. `blur` fills are also unimplemented server-side.
+
+This is acknowledged in a parenthetical in `copilot-instructions.md` ("the
+server export silently omits layer types with no ImageMagick primitive"). A
+known silent-data-loss bug in a user-facing feature is not a footnote; it is
+either a P1 or the feature should refuse to export rather than lie.
+
+**Fix, in order of preference:**
+1. Use the client-side compositor for export (the lightbox already produces a
+   pixel-accurate PDF via `PdfBuilder.js` — that path is the *correct* one and
+   the server path is the divergent one), or
+2. implement the missing types in `ThumbnailRenderer`, or
+3. at minimum, count dropped layers in `buildLayerArguments()` and return a
+   `layers-export-incomplete` warning in the API result so the UI can tell the
+   user what is missing.
+
+---
+
+### R2.2 MEDIUM severity
+
+#### R2.2.1 The boolean-serialisation bug class has recurred for a fourth time
+
+`docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md` documents this bug three times.
+It is present again, in two properties:
+
+| List | Contents |
+|---|---|
+| `ServerSideLayerValidator::ALLOWED_PROPERTIES` (`=> 'boolean'`) | **14**: visible, locked, textShadow, shadow, glow, preserveAspectRatio, expanded, isMultiPath, strokeOnly, hasArrow, **arrowsInside**, showUnit, showBackground, **reflexAngle** |
+| `ApiLayersInfo::preserveLayerBooleans()` `$booleanProps` (`:489-492`) | **12** — `arrowsInside` and `reflexAngle` missing |
+| `LayerDataNormalizer.BOOLEAN_PROPERTIES` (`:26-45`) | **14** — correct |
+
+Because `preserveLayerBooleans()` does not convert them, MediaWiki's API result
+serialiser **drops** `arrowsInside: false` and `reflexAngle: false` entirely.
+The client then reads `undefined`, and
+`AngleDimensionRenderer.js:1007,1010` / `DimensionRenderer.js:875` do:
+
+```js
+arrowsInside: options.arrowsInside !== false,   // undefined !== false → true
+```
+
+**Reproducible user-visible bug:** on an `angleDimension` layer, turn off
+"arrows inside" or "reflex angle", save, reload — the setting is back on.
+
+The deeper problem is that three hand-maintained lists in three languages must
+agree and nothing checks that they do. The postmortem was written, the lesson
+was recorded in `copilot-instructions.md`, and the same defect shipped again,
+because the remedy was documentation rather than a gate.
+
+**Fix:** add `arrowsInside`/`reflexAngle` to `preserveLayerBooleans()`, then add
+a check to `npm test` that parses the boolean entries out of
+`ALLOWED_PROPERTIES`, `preserveLayerBooleans()` and `BOOLEAN_PROPERTIES` and
+fails if the three sets differ.
+
+---
+
+#### R2.2.2 Wikitext scanning is regex-over-raw-wikitext, and it is wrong in at least four ways
+
+`WikitextHooks::onParserBeforeInternalParse()` (`:849-1055`) scans the **raw,
+pre-expansion** wikitext with regexes and builds positional queues that are
+later popped in render order by `getFileParamsForRender()`.
+
+1. **`[[Image:…]]` loses its parameter and renders nothing.** All three scan
+   patterns match `File:` only (`:862`, `:885`, `:955`), but the stripper at
+   `:1036` matches `'/\[\[(File|Image):([^\]]+)\]\]/i'` and removes
+   `|layerset=…`. So `[[Image:Foo.jpg|layerset=x]]` is stripped without ever
+   being queued: the parameter is destroyed and no layers appear. The same holds
+   for every localised File-namespace alias (`Datei:`, `Fichier:`, `Bild:`) —
+   which MediaWiki accepts and this extension does not.
+2. **Templates desynchronise the queue.** Files emitted by template expansion
+   are invisible to this hook but are still rendered, and the queue is consumed
+   positionally. One templated image before a manual one shifts every subsequent
+   layer set onto the wrong image.
+3. **The stripper runs over the whole page, including `<nowiki>`/`<pre>`.**
+   `$text = preg_replace( '/\|layerslink\s*=\s*[^|\]]+/i', '', $text );`
+   (`:992`) is unconditional. A documentation page that *shows* the syntax has
+   it silently deleted from the rendered output — including this extension's own
+   `LayersGuide.mediawiki` if it is ever pasted into a wiki page.
+4. **Captions containing links are not matched.** `[^|\]]+` and `[^\]]*?` both
+   stop at the first `]`, so `[[File:X|thumb|see [[Foo]]]]` falls out of the
+   scan and out of the stripper.
+
+`onParserMakeImageParams` (`:520`) exists and is the *supported* way to read
+image parameters. The regex path is described in its own docblock as "a fallback
+when parameter registration hooks don't work properly" — it has become the
+primary mechanism, with the correctness properties of a fallback.
+
+**Fix:** treat `onParserMakeImageParams` as authoritative and key state by
+`(title, params)` rather than by scan position. If the regex path must stay,
+restrict it to `[[(File|Image|<localised aliases>):` consistently in *all four*
+regexes, and skip strip-marker regions rather than raw text.
+
+---
+
+#### R2.2.3 No `QuotaExceededError` handling anywhere; drafts accumulate forever
+
+Grep for `QuotaExceededError` across `resources/` (excluding `lib/`): zero hits.
+
+- `DraftManager.js:238` — `localStorage.setItem(...)` in a `try`, catch does
+  `mw.log.warn` and returns `false`. The user gets one
+  `layers-draft-save-failed` notification and then autosave is silently dead for
+  the rest of the session (`_saveFailNotified` latches).
+- `PresetStorage.js:196`, `ColorPickerDialog.js:149`, `ToolDropdown.js:102` —
+  same pattern, some with no notification at all.
+
+There is also **no eviction**: `DraftManager` only ever removes *its own current*
+key (`:331`). Drafts for every other file/set the user has ever opened stay in
+`localStorage` indefinitely. With `AUTO_SAVE_INTERVAL_MS` autosave and a
+per-`filename+setName` key, a moderately active editor fills the 5 MB origin
+quota, at which point **every** localStorage consumer on the wiki starts
+failing, not just Layers.
+
+The base64 `src` stripping at `:220` mitigates size per draft but not count.
+
+**Fix:** on a failed write, sweep drafts older than the existing expiry and
+retry once; add a periodic sweep on `initialize()`; cap total draft count.
+
+#### R2.2.4 Drafts are not scoped to a user
+
+`DraftManager.js:60-64` builds the key from the filename only:
+
+```js
+this.storageKey = STORAGE_KEY_PREFIX + this.filename.replace(…) + '_' + _fnv( this.filename );
+```
+
+No user id. On a shared browser profile (library, lab, kiosk — common for the
+institutional wikis this extension targets), user B opening the same file is
+offered user A's unsaved annotations for recovery. Add
+`mw.config.get('wgUserId')` to the key and clear on user change.
+
+#### R2.2.5 `isComplexityAllowed()` does not do what its own comment says
+
+`src/Security/RateLimiter.php:207-210`:
+
+```php
+// Groups multiply complexity by contained layers
+case 'group':
+    $complexity += 2;
+    break;
+```
+
+There is no recursion and no multiplication. A group containing 90 paths scores
+2 instead of 270, so the complexity guard — the only defence against a
+pathologically expensive layer set — is trivially bypassed by wrapping
+everything in a group.
+
+Also in the same switch: `angleDimension` is absent and falls through to
+`default: += 3` while its sibling `dimension` is `+= 1`; and `case 'blur':`
+(`:218`) is dead — `blur` is a *fill* value, not a layer type, and
+`ServerSideLayerValidator` would reject a layer of that type.
+
+#### R2.2.6 Validation silently discards malformed sub-objects instead of rejecting
+
+`ServerSideLayerValidator` `continue`s past bad entries rather than failing:
+
+- gradient stops (`:1069-1081`) — a 10-stop gradient with 8 malformed stops is
+  accepted as a 2-stop gradient;
+- gradient stop colours that fail `sanitizeColor()` become `#000000`;
+- `richText` runs (`:1193-1197`) — runs without a `text` string vanish;
+- `points` (`:806-822`) — non-numeric points vanish.
+
+The API returns `success: 1`. The user's formatting is destroyed with no error.
+Silent lossy repair is the wrong default for a validator: reject the payload and
+let the client tell the user what is wrong.
+
+#### R2.2.7 `points` coordinates are unbounded
+
+Every other geometry field is clamped to ±100000, but `validatePoints()`
+range-checks nothing — `{x: 1e308, y: -1e308}` is stored verbatim and shipped to
+every renderer. Canvas tolerates it; the ImageMagick path and any future
+consumer may not.
+
+#### R2.2.8 `LayersEditorModal` leaks a `message` listener on every iframe navigation
+
+`resources/ext.layers.modal/LayersEditorModal.js:105-110` calls
+`this.setupMessageListener()` from the iframe's `load` handler, and
+`setupMessageListener()` (`:145-168`) unconditionally does
+`window.addEventListener( 'message', this.messageHandler )` after overwriting
+`this.messageHandler`. `close()` can only remove the most recent one. Any
+re-navigation inside the iframe (session expiry → login redirect, editor reload)
+leaks a listener and causes `layers-editor-close` to be handled N times.
+
+The origin check itself (`event.origin !== window.location.origin`) is correct.
+
+#### R2.2.9 `SlideHooks` degrades silently past 50 slide queries
+
+`getSavedSlideDimensions()` returns `null` once
+`MAX_SLIDE_QUERIES_PER_PARSE` is reached, with no log and no user-visible
+warning. Slides 51+ on a page render at config defaults instead of their saved
+dimensions. The cap is the right instinct; the silence is not. Either log at
+`warning`, or fetch all of the page's slides in one query and drop the cap.
+
+#### R2.2.10 Eight `window.alert()` / `window.confirm()` call sites
+
+11 of the 13 `eslint-disable` comments in the whole codebase are `no-alert`
+(`UIManager.js:432,452,474`, `LayersEditor.js:1503,1722`,
+`PresetDropdown.js:563,628`, `LayerSetManager.js:171`,
+`ImportExportManager.js:83`, `RevisionManager.js:317`). They are documented as
+OOUI-failure fallbacks, but they block the main thread, cannot be styled or
+themed, and are inconsistently exposed to assistive technology — in an extension
+that otherwise invests heavily in ARIA. A single non-blocking fallback dialog
+built on plain DOM would remove all of them.
+
+---
+
+### R2.3 LOW severity / hygiene
+
+- `LayersDatabase::saveLayerSet()` (`:155`) writes
+  `$backgroundSettings['backgroundColor']` straight into the stored JSON blob
+  without passing it through `ColorValidator` — the only layer-adjacent colour
+  in the system that skips validation.
+- `originalWidth`/`originalHeight` fall under the generic ±100000 numeric range,
+  so a negative "original image size" is accepted and stored.
+- SVG validation (`:1481-1499`) is substring-based (`strpos($lowerSvg,'<svg')`,
+  `strpos(…,'</svg>')`). It rejects the obvious attacks but does not establish
+  well-formedness, so malformed markup reaches the renderer.
+- `SetNameSanitizer` allows spaces in set names. Set names appear in `layerset=`
+  wikitext parameters, which are pipe/space-delimited — a set named `my labels`
+  is unaddressable from wikitext. Either forbid spaces or document the quoting.
+- `ext.layers.editor` is **1,961 KB of unminified JavaScript** (91% of its own
+  budget), plus 495 KB shared and 263 KB viewer. The budget file makes the size
+  visible, which is good; it does not make it acceptable. This is a drawing
+  editor loaded from article pages.
+- 28 files ≥ 1,000 lines (20 hand-written JS, 4 PHP, 4 generated).
+- Repo root still holds `codebase_review.md.bak2`, `codebase_review.md.bak3`,
+  `nul`, `coverage_output.txt` and `coverage.json` on disk. R1.38 correctly
+  **untracked** them (`git ls-files` returns none), so this is local-workspace
+  litter rather than a repo defect — but `nul` in particular is a Windows
+  redirection accident that will keep reappearing until someone works out which
+  script creates it.
+
+---
+
+### R2.4 Severity summary
+
+| # | Finding | Severity | Class |
+|---|---|---|---|
+| R2.1.1 | `layerspdfexport`: GET, no CSRF, no effective rate limit, 100-page ImageMagick job | HIGH | Security / DoS |
+| R2.1.2 | `endAtomic()` in catch in `deleteNamedSet` + `renameNamedSet` | HIGH | Data integrity — *incomplete R1.09* |
+| R2.1.3 | Foreign-file renders unpurgeable; foreign PDF export undeliverable | HIGH | Privacy + broken feature — *incomplete R1.04/R1.05* |
+| R2.1.4 | Embedding pages never purged; docblock claims otherwise | HIGH | Correctness / misleading docs |
+| R2.1.5 | Server compositing drops 7 of 17 layer types silently | HIGH | Silent data loss |
+| R2.2.1 | `arrowsInside`/`reflexAngle` dropped by API serialiser | MEDIUM | Bug class recurrence #4 |
+| R2.2.2 | Regex wikitext scanning: `Image:`, templates, `<nowiki>`, nested links | MEDIUM | Correctness |
+| R2.2.3 | No localStorage quota recovery; drafts never evicted | MEDIUM | Reliability |
+| R2.2.4 | Drafts not scoped to a user | MEDIUM | Privacy |
+| R2.2.5 | `isComplexityAllowed()` ignores group contents | MEDIUM | Bypassable guard |
+| R2.2.6 | Validator silently discards malformed sub-objects | MEDIUM | Data loss |
+| R2.2.7 | `points` coordinates unbounded | MEDIUM | Robustness |
+| R2.2.8 | Modal leaks `message` listener per iframe navigation | MEDIUM | Leak |
+| R2.2.9 | `SlideHooks` 50-query cap fails silently | MEDIUM | Silent degradation |
+| R2.2.10 | 8 `alert()`/`confirm()` call sites | MEDIUM | Accessibility |
+| R2.3.x | 7 hygiene items | LOW | — |
+
+---
+
+### R2.5 The pattern behind the HIGH findings
+
+Three of the five HIGH findings are the same failure mode, not three unrelated
+bugs:
+
+> **A fix was written correctly, in one place, and the other call sites were
+> never audited — and no gate was added to find them.**
+
+- R1.09 fixed `saveLayerSet`; `deleteNamedSet` and `renameNamedSet` are
+  identical code that was not touched (R2.1.2).
+- R1.04/R1.05 built `RenderCache` and `Special:LayersExport` correctly for the
+  local-SHA1 shape and never tested the foreign-file shape that
+  `ForeignFileHelper` had been producing since InstantCommons support was added
+  (R2.1.3).
+- The boolean-postmortem lesson was written into `copilot-instructions.md` three
+  times and the fourth instance still shipped (R2.2.1).
+
+The repeated remedy in this repo is *documentation*. Documentation does not
+survive contact with a 105k-line codebase. Every one of these would have been
+caught by a ten-line script in `npm test`. §R2.6 lists them.
+
+---
+
+### R2.6 What the gates cannot see (and two that would fix it)
+
+The five gates verify: JS unit behaviour, message wiring, MediaWiki API drift,
+PHP class-reference resolution, bundle size. None of them can see:
+
+| Blind spot | Finding it let through |
+|---|---|
+| Consistency between parallel hand-maintained lists in PHP and JS | R2.2.1 |
+| Whether a fix was applied to every structurally identical site | R2.1.2 |
+| Whether two regexes that must agree actually agree | R2.1.3, R2.2.2 |
+| Whether a docblock's claims match the function body | R2.1.4 |
+| Whether the server and client renderers support the same feature set | R2.1.5 |
+| Whether shipped config defaults make a documented control effective | R2.1.1 |
+
+**Proposed gate A — `check:parallel-lists.js`.** Parse three source-of-truth
+lists out of source and assert set equality:
+1. boolean properties: `ServerSideLayerValidator::ALLOWED_PROPERTIES` ↔
+   `ApiLayersInfo::preserveLayerBooleans()` ↔
+   `LayerDataNormalizer.BOOLEAN_PROPERTIES`;
+2. layer types: `ServerSideLayerValidator::ALLOWED_TYPES` ↔
+   `ThumbnailRenderer::buildLayerArguments()` cases ↔
+   `RateLimiter::isComplexityAllowed()` cases. Types missing from the renderer
+   must be listed in an explicit `UNSUPPORTED_SERVER_SIDE` constant, so the gap
+   is declared rather than silent.
+
+**Proposed gate B — `check:atomicity.js`.** Fail on any `endAtomic(` appearing
+inside a `catch` block, and on any `startAtomic(` without `ATOMIC_CANCELABLE`
+whose method also contains a `catch`. Ten lines of regex; catches R2.1.2 and
+every future recurrence.
+
+---
+
+### R2.7 Checked and *not* a defect
+
+Recorded so the next reviewer does not spend time here.
+
+- **DOM XSS via `richText`.** `InlineTextEditor.js:553` does
+  `contentWrapper.innerHTML = RichTextConverter.richTextToHtml(…)`, but
+  `richTextToHtml()` (`RichTextConverter.js:78`) escapes text with
+  `escapeHtml()` and every style value through `escapeCSSValue()`, which strips
+  `"'<>&;{}\` and neutralises `url(`/`expression(`/`javascript(`/`behavior(`/
+  `-moz-binding(`. Numeric values go through `parseFloat`. Not exploitable.
+- **`postMessage` origin validation.** `LayersEditorModal.js:154` checks
+  `event.origin !== window.location.origin` before touching `event.data`, and
+  outbound messages target `window.location.origin` rather than `*`. Correct.
+  (The listener *leak* is R2.2.8; the origin check is fine.)
+- **ImageMagick command injection.** `ThumbnailRenderer.php:189` uses
+  `Shell::command( ...$args )` — argv array, no shell string — with
+  `->limits()` bound to `$wgMaxShellMemory`/`$wgMaxShellTime`/
+  `$wgMaxShellFileSize` and `$wgLayersImageMagickTimeout`. The `@`-stripping at
+  `:253` is belt-and-braces. No injection path found.
+- **IDOR on `layersetid`.** `ApiLayersInfo.php:179-193` re-checks that the
+  fetched set's `imgName` equals the requested file before returning it.
+- **Anonymous ownership.** `LayersApiHelperTrait::isOwnerOrAdmin()` explicitly
+  requires `$userId !== 0`, so anons cannot own (or delete) each other's sets.
+- **CSRF on the three write endpoints.** `layerssave`, `layersdelete` and
+  `layersrename` all return `'csrf'` from `needsToken()`, `true` from
+  `isWriteMode()` and `true` from `mustBePosted()`, and all three call
+  `requireTitleEditPermission()`. This is correct and complete — the gap is
+  `layerspdfexport` (R2.1.1), which is not in that family.
+- **`Special:LayersExport` error uniformity.** Every failure mode returns the
+  same `layers-export-not-found`; it cannot be used to probe for files.
+- **Clickjacking headers.** `FramingHeaders` emits both
+  `X-Frame-Options: SAMEORIGIN` and a *separate*
+  `Content-Security-Policy: frame-ancestors 'self'` header (appended, not
+  replacing), and guards `setPreventClickjacking`/`allowClickjacking` with
+  `method_exists`. Correct for MW 1.39 → 1.44.
+- **Remaining `x !== false` comparisons.** All 25 hits either operate on
+  client-constructed option objects or on layer properties that
+  `LayerDataNormalizer` has already coerced. The only genuine gap is R2.2.1,
+  which is upstream of the comparison.
+- **`ApiLayersList` authorisation.** Checks `read` (`:65`) and rate-limits
+  (`:70`) before enumerating slides.
+- **`ForeignFileHelper::isForeignFile()`** three-step detection is sound.
+- **PHP TODO/FIXME/HACK debt:** zero occurrences across all 48 files. Empty
+  catch blocks: zero. This part of the codebase is genuinely disciplined.
+
+---
+
+## Appendix A — Previous review (v1.5.80, August 3, 2026)
+
+> Retained verbatim. Items marked ✅ in the table below were verified as fixed
+> during R2 **except** R1.04/R1.05 (foreign-file case — see R2.1.3) and R1.09
+> (two of three call sites — see R2.1.2).
 
 ## ✅ Remediation status — v1.5.80
 

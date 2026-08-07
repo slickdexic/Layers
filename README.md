@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.82 (August 9, 2026)  
+> **Version:** 1.5.83 (August 9, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -368,9 +368,9 @@ $wgLayersSlideDefaultBackground = '#ffffff'; // Default slide background
 $wgGroupPermissions['user']['editlayers'] = true;
 $wgGroupPermissions['sysop']['layers-admin'] = true;   // Delete/rename any set
 
-// Rate limits (optional)
-$wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];
-$wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ];
+// Rate limits. Sensible defaults ship with the extension since v1.5.83 — set
+// these only to override. Keys: editlayers-save, -render, -list.
+$wgRateLimits['editlayers-render']['user'] = [ 5, 60 ];   // PDF export is expensive
 ```
 
 > **Permissions note:** saving, renaming or deleting a layer set requires both
@@ -416,12 +416,12 @@ against re-render cost.
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 14,178 passing (177 suites) |
-| PHPUnit tests | 624 passing (37 test files) |
-| Statement coverage | 95.87% |
-| Branch coverage | 87.20% |
-| Function coverage | 93.98% |
-| Line coverage | 95.94% |
+| Jest tests | 14,191 passing (177 suites) |
+| PHPUnit tests | 646 passing (37 test files) |
+| Statement coverage | 95.23% |
+| Branch coverage | 86.60% |
+| Function coverage | 93.72% |
+| Line coverage | 95.34% |
 
 **Security:**
 
@@ -472,14 +472,14 @@ npm run test:js -- --coverage
 
 | Metric | Value | Status |
 |--------|-------|--------|
-| Total JS files | 157 | ✅ |
+| Total JS files | 160 | ✅ |
 | Total JS lines | ~105,000 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>=1000 lines) | 28 | ✅ Well-delegated facades |
-| Tests passing | 14,178 | ✅ |
+| Tests passing | 14,191 | ✅ |
 | Tests failing | 0 | ✅ |
-| Statement coverage | 95.87% | ✅ Excellent |
-| Branch coverage | 87.20% | ✅ Target met |
+| Statement coverage | 95.23% | ✅ Excellent |
+| Branch coverage | 86.60% | ✅ Target met |
 
 For detailed technical assessment, see [codebase_review.md](codebase_review.md).
 

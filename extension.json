@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.82",
+	"version": "1.5.83",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -330,6 +330,7 @@
 				"layers-lightbox-download",
 				"layers-lightbox-download-tooltip",
 				"layers-lightbox-export-generating",
+				"layers-export-incomplete",
 				"layers-zoom-in",
 				"layers-zoom-out",
 				"layers-zoom-reset",
@@ -1365,6 +1366,29 @@
 		"editlayers",
 		"layers-admin"
 	],
+	"RateLimits": {
+		"editlayers-save": {
+			"anon": [ 20, 60 ],
+			"user": [ 60, 60 ],
+			"newbie": [ 15, 60 ],
+			"ip": [ 60, 60 ],
+			"subnet": [ 120, 60 ]
+		},
+		"editlayers-render": {
+			"anon": [ 5, 60 ],
+			"user": [ 15, 60 ],
+			"newbie": [ 5, 60 ],
+			"ip": [ 15, 60 ],
+			"subnet": [ 30, 60 ]
+		},
+		"editlayers-list": {
+			"anon": [ 30, 60 ],
+			"user": [ 120, 60 ],
+			"newbie": [ 30, 60 ],
+			"ip": [ 60, 60 ],
+			"subnet": [ 120, 60 ]
+		}
+	},
 	"GroupPermissions": {
 		"*": {
 			"editlayers": false

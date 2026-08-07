@@ -57,9 +57,9 @@
 				for ( let i = 0; i < s.length; i++ ) {
 					h = Math.imul( h ^ s.charCodeAt( i ), 16777619 ) >>> 0;
 				}
-				return ( h >>> 0 ).toString( 36 ).slice( 0, 4 );
-			};
+				return ( h >>> 0 ).toString( 36 ).slice( 0, 4 );			};
 			this.storageKey = STORAGE_KEY_PREFIX +
+				DraftManager.getUserScope() + '-' +
 				this.filename.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
 				'_' + _fnv( this.filename );
 			this.autoSaveTimer = null;
@@ -68,6 +68,23 @@
 			this.stateSubscription = null;
 
 			this.initialize();
+		}
+
+		/**
+		 * Identify the current user for draft key scoping.
+		 *
+		 * Drafts used to be keyed by filename alone, so on a shared browser profile
+		 * the next person to open the same file was offered the previous person's
+		 * unsaved annotations.
+		 *
+		 * @return {string} Stable per-user token ('anon' when logged out)
+		 */
+		static getUserScope() {
+			if ( typeof mw === 'undefined' || !mw.config || !mw.config.get ) {
+				return 'anon';
+			}
+			const id = mw.config.get( 'wgUserId' );
+			return id ? 'u' + id : 'anon';
 		}
 
 		/**
@@ -80,6 +97,11 @@
 				this.stateSubscription = null;
 			}
 
+			// Nothing else ever removes a draft for a file the user will not reopen,
+			// so without this sweep localStorage fills up and every consumer on the
+			// wiki starts failing, not just the editor.
+			this.sweepExpiredDrafts();
+
 			// Subscribe to layer changes to trigger auto-save
 			if ( this.editor.stateManager ) {
 				this.stateSubscription = this.editor.stateManager.subscribe( 'layers', () => {
@@ -89,6 +111,61 @@
 
 			// Start periodic auto-save check
 			this.startAutoSaveTimer();
+		}
+
+		/**
+		 * Remove every Layers draft past MAX_DRAFT_AGE_MS, for any file or user.
+		 *
+		 * @param {boolean} [aggressive] Also drop the oldest surviving drafts, used
+		 *   to free space after a quota failure
+		 * @return {number} Number of keys removed
+		 */
+		sweepExpiredDrafts( aggressive ) {
+			// Deliberately not isStorageAvailable(): that probes with a write, and
+			// the sweep runs on every editor open. The try/catch below covers a
+			// storage-denied environment just as well.
+			if ( typeof localStorage === 'undefined' || !localStorage ||
+				typeof localStorage.key !== 'function'
+			) {
+				return 0;
+			}
+			const currentKey = this.getStorageKey();
+			const survivors = [];
+			let removed = 0;
+			try {
+				for ( let i = localStorage.length - 1; i >= 0; i-- ) {
+					const key = localStorage.key( i );
+					if ( !key || key.indexOf( STORAGE_KEY_PREFIX ) !== 0 || key === currentKey ) {
+						continue;
+					}
+					let timestamp = 0;
+					try {
+						timestamp = ( JSON.parse( localStorage.getItem( key ) ) || {} ).timestamp || 0;
+					} catch ( parseError ) {
+						// Unparseable draft is dead weight regardless of age.
+					}
+					if ( !timestamp || ( Date.now() - timestamp ) > MAX_DRAFT_AGE_MS ) {
+						localStorage.removeItem( key );
+						removed++;
+					} else {
+						survivors.push( { key: key, timestamp: timestamp } );
+					}
+				}
+
+				if ( aggressive ) {
+					survivors.sort( ( a, b ) => a.timestamp - b.timestamp );
+					const drop = survivors.slice( 0, Math.ceil( survivors.length / 2 ) );
+					drop.forEach( ( entry ) => {
+						localStorage.removeItem( entry.key );
+						removed++;
+					} );
+				}
+			} catch ( e ) {
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
+					mw.log.warn( '[DraftManager] Draft sweep failed:', e.message );
+				}
+			}
+			return removed;
 		}
 
 		/**
@@ -191,15 +268,15 @@
 		 * @return {boolean} True if save was successful
 		 */
 		saveDraft() {
-			if ( !this.isStorageAvailable() ) {
-				return false;
-			}
-
+			// Deliberately no isStorageAvailable() gate: it probes with a write, so
+			// when the quota is actually full it fails too and short-circuits the
+			// recovery below. The try/catch covers a denied or missing store.
 			// Only save drafts when there are unsaved changes
 			if ( this.editor.isDirty && !this.editor.isDirty() ) {
 				return false;
 			}
 
+			let serialized;
 			try {
 				const layers = this.editor.stateManager ?
 					this.editor.stateManager.get( 'layers' ) || [] :
@@ -210,7 +287,7 @@
 					return false;
 				}
 
-				const draft = {
+				serialized = JSON.stringify( {
 					version: 1,
 					timestamp: Date.now(),
 					filename: this.filename,
@@ -233,9 +310,9 @@
 					backgroundOpacity: this.editor.stateManager ?
 						this.editor.stateManager.get( 'backgroundOpacity' ) :
 						1.0
-				};
+				} );
 
-				localStorage.setItem( this.getStorageKey(), JSON.stringify( draft ) );
+				localStorage.setItem( this.getStorageKey(), serialized );
 
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log( '[DraftManager] Draft saved:', layers.length, 'layers' );
@@ -243,12 +320,43 @@
 
 				return true;
 			} catch ( e ) {
-				// localStorage might be full or unavailable
-				if ( typeof mw !== 'undefined' && mw.log ) {
+				// A full origin quota is recoverable: expired and stale drafts for
+				// other files are dead weight, so drop them and try once more.
+				// Previously this just gave up, and autosave stayed dead for the
+				// rest of the session.
+				if ( serialized && DraftManager.isQuotaError( e ) &&
+					this.sweepExpiredDrafts( true ) > 0
+				) {
+					try {
+						localStorage.setItem( this.getStorageKey(), serialized );
+						return true;
+					} catch ( retryError ) {
+						// Genuinely out of space; fall through to the warning.
+					}
+				}
+				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
 					mw.log.warn( '[DraftManager] Failed to save draft:', e.message );
 				}
 				return false;
 			}
+		}
+
+		/**
+		 * Recognise a storage-quota failure across browsers.
+		 *
+		 * Firefox reports NS_ERROR_DOM_QUOTA_REACHED, Safari a bare
+		 * QuotaExceededError with code 22, older WebKit code 1014.
+		 *
+		 * @param {Error} e The caught error
+		 * @return {boolean} True when the write failed for lack of space
+		 */
+		static isQuotaError( e ) {
+			if ( !e ) {
+				return false;
+			}
+			return e.name === 'QuotaExceededError' ||
+				e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+				e.code === 22 || e.code === 1014;
 		}
 
 		/**

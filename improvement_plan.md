@@ -1,7 +1,151 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.82
-**Last updated:** August 3, 2026 — v1.5.80 remediation pass (see `codebase_review.md`)
+**Version:** 1.5.83
+**Last updated:** August 6, 2026 — R2 full critical review (see `codebase_review.md` §R2)
+
+> ## � R3.01 — P0: the LTS branches ship already-fixed vulnerabilities
+>
+> **This outranks every other item in this document, including everything in R2.**
+>
+> `README.md` and `wiki/Installation.md` direct MediaWiki 1.43 users to
+> `REL1_43` and 1.39–1.42 users to `REL1_39`. Both sit at **v1.5.67** against
+> `main`'s v1.5.83 — **201 commits** of drift. Verified against `origin/REL1_43`
+> on August 6, 2026 (full evidence table in `docs/KNOWN_ISSUES.md`):
+>
+> - Layer writes check only the global `editlayers` right, so **page
+>   protection, namespace protection, cascading protection and blocks are
+>   bypassed**. `requireTitleEditPermission` does not exist on the branch.
+> - Exported PDFs are served from a **public, permanent, guessable
+>   `$wgUploadPath` URL** that bypasses `read` entirely
+>   (`ApiLayersExport.php:368`).
+> - Deleted files' composited renders and exports stay retrievable.
+> - Failed delete/rename **commit partial writes** (no `ATOMIC_CANCELABLE`).
+> - All rate limits are inert (no shipped defaults).
+> - PDF export is triggerable cross-site as a token-less GET.
+>
+> Everything else open in this plan is a fidelity, correctness or hygiene issue
+> on a branch used by developers. This is a set of *already-diagnosed,
+> already-fixed* security defects on the branch we recommend to production
+> wikis. The engineering is done; only the delivery is missing.
+>
+> **Recommended action — needs a maintainer decision, so nothing has been
+> pushed:**
+>
+> 1. Cut a **security-only** backport series rather than replaying 201 commits.
+>    The six items above touch a small, well-bounded set of files:
+>    `LayersApiHelperTrait`, `ApiLayersSave/Delete/Rename/Export`,
+>    `SpecialLayersExport`, `RenderCache`, `ForeignFileHelper`,
+>    `LayersDatabase`, `extension.json`.
+> 2. Release as `1.5.68-REL1_43` / `1.5.68-REL1_39`.
+> 3. If a backport is judged too costly, the honest alternative is to **stop
+>    recommending those branches** in `README.md` and `wiki/Installation.md`
+>    and say plainly that they are unmaintained. What is not defensible is
+>    leaving the current recommendation in place.
+> 4. Either way, add a release-checklist item: a security fix on `main` is not
+>    done until it is backported or explicitly declined in writing.
+>
+> ### R3.02–R3.04 — smaller items fixed alongside this review (v1.5.83)
+>
+> | # | Item | Status |
+> |---|------|--------|
+> | R3.02 | `lint.yml` ran `phpcs … \|\| true`, so the style gate could never fail the build. Now fails on errors, still tolerates the 2 known stub warnings. | ✅ Done |
+> | R3.03 | `npm audit`/`composer audit` results were discarded with `\|\| true` — scanned for and then thrown away. Shipped (non-dev) dependencies now fail on high/critical; dev advisories are written to the job summary instead of `/dev/null`. | ✅ Done |
+> | R3.04 | `WikitextHooksTest` asserted against a **local copy** of the production regex, so it kept passing while production drifted (it had gained localised namespace support and `layerslink` stripping that the copy did not have). It now calls `onParserBeforeInternalParse()` directly, with two cases that would have passed vacuously before. | ✅ Done |
+> | R3.05 | CI ran only against `main`. Now also runs on PRs targeting `REL1_43`/`REL1_39`, which is a precondition for R3.01. | ✅ Done |
+
+> ## �🔴 R2 — Findings from the August 6, 2026 full critical review
+>
+> Reviewed `main` @ `9eb08223` (v1.5.82, clean tree). Every item was reproduced
+> against source with a file path and line number; see `codebase_review.md` §R2
+> for the evidence. **All five gates were green** (177 Jest suites / 14,178
+> tests, `check:i18n`, `check:mw-compat`, `check:phprefs`, `check:bundlesize`)
+> and every item below was still present.
+>
+> **Status as of v1.5.83: all of Priority 1, all of Priority 2 except R2.12 and
+> R2.20, three of Priority 3, and both gates (R2.50/R2.51) are done.**
+>
+> **Read R2.50 first.** Three of the five HIGH findings are *the same failure
+> mode*: a v1.5.80 fix that was written correctly once and never applied to the
+> other structurally identical call sites, with no gate added to catch that.
+> Fixing R2.01–R2.05 without adding R2.50/R2.51 guarantees a third review that
+> opens with this same paragraph. Both gates are now in `npm test`, and
+> `check:atomicity` immediately found a **fourth** `endAtomic()`-in-catch that
+> this review had missed (`LayersSchemaManager.php:639`) — which is the whole
+> argument for gates over documentation in one data point.
+>
+> ### Priority 1 — HIGH (security / data integrity / silent data loss)
+>
+> | # | Item | Where | Status |
+> |---|------|-------|--------|
+> | R2.01 | Ship `$wgRateLimits` defaults in `extension.json` (`"RateLimits"` + `"merge_strategy": "array_plus_2d"`) for `editlayers-save`, `-render`, `-list`. Without them **all three** `RateLimiter::checkRateLimit()` call sites are no-ops on a default install. | `extension.json` | ✅ Done (v1.5.83) |
+> | R2.02 | Make `layerspdfexport` `mustBePosted()` + `needsToken() === 'csrf'`. It is currently a token-less GET that runs up to 200 ImageMagick invocations and writes a PDF to disk — CSRF-triggerable from any external page via `<img src=…>`. | `Api/ApiLayersExport.php:417-429` | ✅ Done (v1.5.83) |
+> | R2.03 | Apply the R1.09 atomicity fix to the two call sites it missed: `startAtomic( …, ATOMIC_CANCELABLE )` + `cancelAtomic()` in the catch. Both currently commit partial writes while reporting failure to the user. | `LayersDatabase.php:879,908-911` (`deleteNamedSet`), `:998,1036-1039` (`renameNamedSet`) | ✅ Done (v1.5.83) — **three** sites, not two; `LayersSchemaManager.php:639` was found by R2.51 |
+> | R2.04 | Normalise the render-artefact key so foreign (`foreign_<sha1>`) files pass every guard. Today `purgeBySha1()`, `ARTEFACT_PATTERN` and `SpecialLayersExport` all reject that shape, so R1.04/R1.05 **do not apply to Commons files at all** and PDF export of any Commons image 404s after doing the work. | `Utility/RenderCache.php:45,129`, `SpecialPages/SpecialLayersExport.php:98`, `Utility/ForeignFileHelper.php:74` | ✅ Done (v1.5.83) — `RenderCache::artefactKey()` |
+> | R2.05 | Collapse the four different `getFileSha1()` call conventions onto one. | `Utility/ForeignFileHelper.php` | ✅ Done (v1.5.83) — normalised inside `getFileSha1()`. Note: the three inputs happened to agree already, because `File::getName()` returns the DB key; the fix makes that guaranteed rather than incidental. |
+> | R2.06 | Purge pages that **embed** the file, not just the File page. `CacheInvalidationTrait`'s docblock claims backlink invalidation; the body does none. Enqueue `HTMLCacheUpdateJob` over `imagelinks`. Then fix the docblock. | `Api/Traits/CacheInvalidationTrait.php:14-21,40-57` | ✅ Done (v1.5.83) |
+> | R2.07 | Stop silently dropping 7 of 17 layer types in server-side compositing. | `ThumbnailRenderer.php:230-253` | ⚠️ Partially done (v1.5.83) — the gap is now **declared** (`UNSUPPORTED_SERVER_SIDE`), gated and reported, but the seven types are still not drawn server-side. See R2.60. |
+> | R2.08 | Until R2.07 lands, return a `layers-export-incomplete` warning listing the dropped layer types so the UI stops presenting a lossy PDF as a complete one. | `ThumbnailRenderer.php`, `ApiLayersExport.php` | ✅ Done (v1.5.83) |
+>
+> ### Priority 2 — MEDIUM (correctness / reliability / privacy)
+>
+> | # | Item | Where | Status |
+> |---|------|-------|--------|
+> | R2.09 | Add `arrowsInside` and `reflexAngle` to `preserveLayerBooleans()`. | `Api/ApiLayersInfo.php:489-492` | ✅ Done (v1.5.83) |
+> | R2.10 | Make all four wikitext-scan regexes agree on the namespace set. | `WikitextHooks.php:862,885,955,1036` | ✅ Done (v1.5.83) — one `fileNsPattern()` built from the wiki's real File-namespace name and aliases |
+> | R2.11 | Stop the unconditional `layerslink=` strip from running over `<nowiki>`/`<pre>`/comment content. | `WikitextHooks.php:992` | ✅ Done (v1.5.83) |
+> | R2.12 | Key layer-set state by `(title, params)` from `onParserMakeImageParams` instead of by scan position. The positional queue desynchronises whenever a template emits a file, putting layer sets on the wrong images. | `WikitextHooks.php:849-1055`, `:796` | 🔲 Open — architectural; needs its own change with integration tests |
+> | R2.13 | Handle `QuotaExceededError`; sweep stale drafts. | `DraftManager.js` | ✅ Done (v1.5.83) |
+> | R2.14 | Scope draft storage keys to `wgUserId`. | `DraftManager.js:60-64` | ✅ Done (v1.5.83) |
+> | R2.15 | Fix `isComplexityAllowed()`. | `Security/RateLimiter.php:186-230` | ✅ Done (v1.5.83) — the comment was wrong, not the code: group children live in the same flat array and are already costed. Comment corrected, `angleDimension` added, dead `blur` case removed. |
+> | R2.16 | Reject payloads with malformed gradient stops / `richText` runs / `points` instead of silently dropping them. | `ServerSideLayerValidator.php` | ✅ Done (v1.5.83) — root cause was `isStrictProperty()`, which dropped-with-a-warning everything except `richText`; now a declared `STRICT_PROPERTIES` list |
+> | R2.17 | Range-check `points` coordinates. | `ServerSideLayerValidator.php:806-822` | ✅ Done (v1.5.83) |
+> | R2.18 | Register the `message` listener once in `open()`, not from the iframe `load` handler. | `ext.layers.modal/LayersEditorModal.js` | ✅ Done (v1.5.83) |
+> | R2.19 | Warn when `MAX_SLIDE_QUERIES_PER_PARSE` is hit. | `Hooks/SlideHooks.php` | ✅ Done (v1.5.83) |
+> | R2.20 | Replace the 8 `window.alert()`/`window.confirm()` fallbacks with one non-blocking DOM dialog. | 8 files | 🔲 Open — UI work, no correctness risk |
+>
+> ### Priority 3 — LOW
+>
+> | # | Item | Where | Status |
+> |---|------|-------|--------|
+> | R2.21 | Validate slide `backgroundColor` through `ColorValidator`. | `LayersDatabase.php:151-158` | ✅ Done (v1.5.83) |
+> | R2.22 | Give `originalWidth`/`originalHeight` a positive range. | `ServerSideLayerValidator.php` | ✅ Done (v1.5.83) |
+> | R2.23 | Replace substring-based SVG checks with a well-formedness parse. | `ServerSideLayerValidator.php:1481-1499` | 🔲 Open |
+> | R2.24 | Decide what a space in a set name means: `SetNameSanitizer` allows spaces, but `layerset=` in wikitext is pipe/space-delimited, so `my labels` is unaddressable from wikitext. | `Validation/SetNameSanitizer.php` | 🔲 Open |
+> | R2.25 | Find and fix whatever creates `nul` in the repo root on Windows. | `scripts/`, `Gruntfile.js` | 🔲 Open |
+> | R2.26 | `ext.layers.editor` is ~1,965 KB of unminified JS loaded from article pages. Split the editor out of the article-page critical path. | `extension.json` | 🔲 Open |
+>
+> ### Priority 4 — Gates
+>
+> | # | Item | Where | Status |
+> |---|------|-------|--------|
+> | R2.50 | **`scripts/check-parallel-lists.js`** — set-equality of the hand-maintained lists that must agree across languages: (a) boolean props across `ServerSideLayerValidator` ↔ `ApiLayersInfo` ↔ `LayerDataNormalizer`; (b) layer types across the validator ↔ `ThumbnailRenderer` (handled + `UNSUPPORTED_SERVER_SIDE`) ↔ `RateLimiter`. | `scripts/`, `package.json` | ✅ Done (v1.5.83) |
+> | R2.51 | **`scripts/check-atomicity.js`** — fail on `endAtomic(` inside a `catch`, and on `cancelAtomic()` without a cancelable section. | `scripts/`, `package.json` | ✅ Done (v1.5.83) — found a 4th occurrence on its first run |
+> | R2.52 | Integration test that a save changes an *embedding* page's rendered HTML, and a boolean round-trip test through `layerssave` → `layersinfo` → `LayerDataNormalizer`. | `tests/` | 🔲 Open — needs a real MediaWiki test env; R2.50 covers the boolean half structurally |
+>
+> ### R2.60 — Remaining work carried forward
+>
+> | # | Item | Why it is not done |
+> |---|------|--------------------|
+> | R2.60 | Make server-side export lossless: either route PDF export through the client compositor (`viewer/PdfBuilder.js`, which is already pixel-accurate), or implement `callout`, `image`, `group`, `customShape`, `marker`, `dimension`, `angleDimension` and `blur` fills in `ThumbnailRenderer`. | Large. The declared gap + API warning (R2.07/R2.08) makes the loss visible and honest in the meantime; routing export through the client is probably the right answer and deletes code rather than adding it. |
+>
+> ### R2 — checked and *not* a defect
+>
+> Recorded so they are not re-investigated. Full reasoning in
+> `codebase_review.md` §R2.7.
+>
+> No DOM XSS via `richText` (`RichTextConverter` escapes text **and** CSS
+> values); `postMessage` origin validation correct; no ImageMagick command
+> injection (`Shell::command( ...$args )` + `->limits()`); no IDOR on
+> `layersetid` (`ApiLayersInfo.php:179-193` re-checks file ownership of the
+> set); anonymous users can never be treated as set owners; CSRF + POST +
+> per-title `edit` permission complete and correct on `layerssave`,
+> `layersdelete`, `layersrename`; `Special:LayersExport` returns one
+> indistinguishable error for every failure mode; `FramingHeaders` emits both
+> `X-Frame-Options` and a separate appended `frame-ancestors 'self'` CSP header
+> with correct `method_exists` guards; `ApiLayersList` checks `read` and
+> rate-limits; the remaining 25 `x !== false` comparisons are all safe (the one
+> real gap is R2.09, upstream of them); **zero** TODO/FIXME/HACK and **zero**
+> empty catch blocks across all 48 PHP files.
 
 > ## 🔴 R1 — Findings from the August 3, 2026 full critical review
 >

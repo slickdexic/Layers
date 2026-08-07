@@ -12,12 +12,33 @@ are properly tracked and can be removed during cleanup.</p>
   // Later, clean up all listeners:
   tracker.destroy();</p>
 </dd>
+<dt><a href="#module_editor/ExportController">editor/ExportController</a></dt>
+<dd><p>Export Controller for Layers Editor</p>
+<p>Handles image export operations - extracting and downloading
+canvas content as PNG or JPEG images.</p>
+</dd>
 <dt><a href="#module_GeometryUtils">GeometryUtils</a></dt>
 <dd><p>GeometryUtils.js - Coordinate transformation and geometric utility functions</p>
 <p>Extracted from CanvasManager.js as proof-of-concept for modular refactoring.
 This module handles coordinate conversions, hit testing, and geometric calculations.</p>
 <p>Part of the MediaWiki Layers extension modularization effort.
 See CANVAS_MANAGER_REFACTOR_PLAN.md for the complete refactoring strategy.</p>
+</dd>
+<dt><a href="#module_GroupHierarchyHelper">GroupHierarchyHelper</a></dt>
+<dd><p>GroupHierarchyHelper - Pure static utility functions for layer group hierarchy operations</p>
+<p>Extracted from GroupManager to reduce god-class size. These are all read-only
+tree traversal and query methods that operate on a layers array without mutating state.</p>
+</dd>
+<dt><a href="#module_GroupManager">GroupManager</a></dt>
+<dd><p>GroupManager - Manages layer grouping operations for the Layers editor</p>
+<p>Provides functionality for:</p>
+<ul>
+<li>Creating and deleting groups</li>
+<li>Adding/removing layers from groups</li>
+<li>Expanding/collapsing groups</li>
+<li>Getting group children and calculating group bounds</li>
+<li>Keyboard shortcuts (Ctrl+G to group, Ctrl+Shift+G to ungroup)</li>
+</ul>
 </dd>
 <dt><a href="#module_MessageHelper">MessageHelper</a></dt>
 <dd><p>MessageHelper - Centralized i18n message handling for the Layers extension</p>
@@ -44,6 +65,39 @@ Handles stroke/fill colors, stroke width, font size, text effects, and arrow sty
 <li>PresetStyleManager: Style preset dropdown and application</li>
 </ul>
 </dd>
+<dt><a href="#module_AngleDimensionRenderer">AngleDimensionRenderer</a></dt>
+<dd><p>AngleDimensionRenderer - Renders angle measurement annotations</p>
+<p>This module handles rendering of angle dimensions for technical illustrations:</p>
+<ul>
+<li>Three-point angle measurement (vertex + two arm endpoints)</li>
+<li>Arc drawn between the two arms at configurable radius</li>
+<li>Extension lines along each arm from vertex through arm endpoints</li>
+<li>Auto-calculated angle value in degrees (with optional override)</li>
+<li>Arrow/tick/dot end markers at arc endpoints</li>
+<li>Configurable text positioning (above, below, center on arc)</li>
+<li>Support for reflex angles (&gt;180°)</li>
+<li>Tolerance annotations (symmetric, deviation, limits, basic)</li>
+</ul>
+<p>Industry standards followed:</p>
+<ul>
+<li>ISO 129-1: Technical drawings - Dimensioning</li>
+<li>ASME Y14.5: Geometric Dimensioning and Tolerancing</li>
+<li>Angle measured counterclockwise from arm1 to arm2 (standard convention)</li>
+<li>Arc radius adjustable independently of arm length</li>
+</ul>
+</dd>
+<dt><a href="#module_ArrowGeometry">ArrowGeometry</a></dt>
+<dd><p>ArrowGeometry - Pure geometry calculations for arrow shapes</p>
+<p>Extracted from ArrowRenderer.js to reduce file size and improve maintainability.
+This module handles all arrow vertex calculation including:</p>
+<ul>
+<li>Vertex building for straight arrows (single, double, no head)</li>
+<li>Head vertex building for different head types (pointed, chevron, standard)</li>
+<li>Bézier curve tangent calculation for curved arrows</li>
+<li>Arrow curve detection</li>
+</ul>
+<p>All methods are pure geometry calculations with no canvas dependencies.</p>
+</dd>
 <dt><a href="#module_ArrowRenderer">ArrowRenderer</a></dt>
 <dd><p>ArrowRenderer - Specialized arrow shape rendering</p>
 <p>Extracted from LayerRenderer.js to reduce file size and improve maintainability.
@@ -60,6 +114,17 @@ This module handles all arrow-related rendering including:</p>
 Extracted from SelectionManager.getLayerBoundsCompat() to reduce code duplication
 and provide a reusable utility.</p>
 </dd>
+<dt><a href="#module_CalloutRenderer">CalloutRenderer</a></dt>
+<dd><p>CalloutRenderer - Specialized callout/chat bubble rendering</p>
+<p>This module handles rendering of callout (speech bubble) shapes:</p>
+<ul>
+<li>Rounded rectangle container with a triangular tail/pointer</li>
+<li>Multi-line text with word wrapping</li>
+<li>Text alignment (horizontal and vertical)</li>
+<li>Configurable tail direction and position</li>
+<li>Text stroke and shadow effects</li>
+</ul>
+</dd>
 <dt><a href="#module_DeepClone">DeepClone</a></dt>
 <dd><p>DeepClone - Utility for deep cloning objects safely</p>
 <p>Uses structuredClone when available (modern browsers), with fallback
@@ -72,11 +137,65 @@ to JSON.parse(JSON.stringify()) for older environments.</p>
 <li>Cleaner, more semantic API</li>
 </ul>
 </dd>
+<dt><a href="#module_DimensionRenderer">DimensionRenderer</a></dt>
+<dd><p>DimensionRenderer - Renders dimension/measurement annotations</p>
+<p>This module handles rendering of dimension lines for technical illustrations:</p>
+<ul>
+<li>Horizontal and vertical dimension lines with extension lines</li>
+<li>Auto-calculated measurement values (with optional scale)</li>
+<li>Arrow/tick mark styles at endpoints</li>
+<li>Configurable text positioning (above, below, inline)</li>
+</ul>
+</dd>
 <dt><a href="#module_EffectsRenderer">EffectsRenderer</a></dt>
 <dd><p>EffectsRenderer - Handles special effect layers (blur)</p>
 <p>This module provides rendering for effect-type layers that apply
 visual modifications to image regions rather than drawing shapes.</p>
 <p>Extracted from LayerRenderer to separate concerns and reduce god class size.</p>
+</dd>
+<dt><a href="#module_FontConfig">FontConfig</a></dt>
+<dd><p>Centralized Font Configuration for Layers Extension</p>
+<p>This module provides a single source of truth for available fonts
+across both the floating toolbar (InlineTextEditor) and the properties
+panel (PropertyBuilders).</p>
+<p>Fonts are loaded from MediaWiki config ($wgLayersDefaultFonts) with
+sensible fallbacks. All font-related UI should use this module to
+ensure consistency.</p>
+<p>As of v1.5.47, fonts are self-hosted WOFF2 files bundled with the extension.
+This ensures privacy (no Google Fonts tracking), reliability (no external
+dependencies), and consistency (fonts always available).</p>
+</dd>
+<dt><a href="#module_GradientRenderer">GradientRenderer</a></dt>
+<dd><p>GradientRenderer - Creates canvas gradient objects from layer gradient definitions</p>
+<p>Gradient definition format:
+{
+  type: &#39;linear&#39; | &#39;radial&#39;,
+  angle: number (0-360, for linear gradients),
+  colors: [
+    { offset: 0, color: &#39;#ff0000&#39; },
+    { offset: 1, color: &#39;#0000ff&#39; }
+  ],
+  // For radial gradients:
+  centerX: number (0-1, relative position),
+  centerY: number (0-1, relative position),
+  radius: number (0-1, relative to smallest dimension)
+}</p>
+</dd>
+<dt><a href="#module_IdGenerator">IdGenerator</a></dt>
+<dd><p>IdGenerator - Utility for generating unique layer IDs</p>
+<p>Uses a combination of timestamp, session counter, and random suffix
+to guarantee uniqueness even when multiple IDs are generated in
+the same millisecond.</p>
+</dd>
+<dt><a href="#module_ImageLayerRenderer">ImageLayerRenderer</a></dt>
+<dd><p>ImageLayerRenderer - Renders image layers with caching and placeholder support</p>
+<p>Extracted from LayerRenderer.js to prevent that file from exceeding 1,000 lines.
+This module handles:</p>
+<ul>
+<li>Image layer rendering with opacity, rotation, and shadow support</li>
+<li>LRU caching of loaded images (max defined by LayerDefaults)</li>
+<li>Placeholder display while images are loading</li>
+</ul>
 </dd>
 <dt><a href="#module_LayerDataNormalizer">LayerDataNormalizer</a></dt>
 <dd><p>LayerDataNormalizer - Shared utility for normalizing layer data</p>
@@ -92,6 +211,12 @@ rendering of boolean-dependent features like shadows and visibility.</p>
 <li>Without normalization, features like text shadows fail to render</li>
 </ul>
 </dd>
+<dt><a href="#module_LayerDefaults">LayerDefaults</a></dt>
+<dd><p>Layer Defaults - Central constants for default layer values</p>
+<p>This module provides a single source of truth for commonly used
+default values across the Layers extension. Using these constants
+instead of magic numbers improves maintainability and consistency.</p>
+</dd>
 <dt><a href="#module_LayerRenderer">LayerRenderer</a></dt>
 <dd><p>LayerRenderer - Shared rendering engine for Layers extension</p>
 <p>This module provides a unified rendering implementation used by both:</p>
@@ -106,6 +231,22 @@ rendering of boolean-dependent features like shadows and visibility.</p>
 <li>Reduced code duplication (~1,000 lines eliminated)</li>
 </ol>
 <p>Shadow rendering is delegated to ShadowRenderer for clean separation of concerns.</p>
+</dd>
+<dt><a href="#module_MarkerRenderer">MarkerRenderer</a></dt>
+<dd><p>MarkerRenderer - Renders number/letter sequence markers with optional arrows</p>
+<p>This module handles rendering of marker annotations:</p>
+<ul>
+<li>Circled numbers: ①②③④⑤</li>
+<li>Parenthesized: (1)(2)(3)</li>
+<li>Plain: 1. 2. 3.</li>
+<li>Letters: A B C</li>
+<li>Optional arrow/leader line pointing to target</li>
+</ul>
+</dd>
+<dt><a href="#module_MathUtils">MathUtils</a></dt>
+<dd><p>MathUtils - Shared mathematical utility functions for the Layers extension.</p>
+<p>This module provides commonly used math operations to avoid code duplication
+across renderers and other modules.</p>
 </dd>
 <dt><a href="#module_PolygonStarRenderer">PolygonStarRenderer</a></dt>
 <dd><p>PolygonStarRenderer - Specialized polygon and star shape rendering</p>
@@ -123,6 +264,28 @@ This module handles rendering of complex polygon shapes:</p>
 <li>Scaling</li>
 <li>Rounded corners (via PolygonGeometry)</li>
 </ul>
+</dd>
+<dt><a href="#module_RichTextUtils">RichTextUtils</a></dt>
+<dd><p>RichTextUtils - Pure utility functions for rich text processing</p>
+<p>Extracted from TextBoxRenderer.js to reduce file size and improve reusability.
+This module provides stateless utility functions for rich text operations:</p>
+<ul>
+<li>Rich text validation and detection</li>
+<li>Plain text extraction</li>
+<li>Character-to-run mapping</li>
+<li>Line metrics calculation</li>
+</ul>
+</dd>
+<dt><a href="#module_SetNameUtil">SetNameUtil</a></dt>
+<dd><p>Set Name Utilities - shared rules for interpreting layer set references</p>
+<p>Layer set names are entirely user-defined. There is no reserved name and no
+name the extension requires to exist: an image whose only set is called
+&quot;001&quot; behaves exactly like one whose only set is called &quot;default&quot;.</p>
+<p>A set reference is either a concrete name, or a generic wikitext intent such
+as <code>on</code> / <code>off</code> that asks for annotations without naming a set. Only concrete
+names may be sent to the API as <code>setname</code>; a generic intent is omitted so the
+server resolves whichever set the image actually has.</p>
+<p>Mirrors src/Utility/SetNameResolver.php.</p>
 </dd>
 <dt><a href="#module_ShadowRenderer">ShadowRenderer</a></dt>
 <dd><p>ShadowRenderer - Shadow rendering engine for Layers extension</p>
@@ -154,6 +317,16 @@ This module handles rendering of basic geometric shapes:</p>
 <li>Scaling</li>
 </ul>
 </dd>
+<dt><a href="#module_TailCalculator">TailCalculator</a></dt>
+<dd><p>TailCalculator - Geometric calculations for callout tails</p>
+<p>Extraced from CalloutRenderer.js to reduce file size and improve maintainability.
+Contains pure geometric calculations for determining tail positions:</p>
+<ul>
+<li>Perimeter point calculations for draggable tails</li>
+<li>Tail base and tip coordinate calculations</li>
+<li>Edge/corner detection and mapping</li>
+</ul>
+</dd>
 <dt><a href="#module_TextBoxRenderer">TextBoxRenderer</a></dt>
 <dd><p>TextBoxRenderer - Specialized text box rendering</p>
 <p>Extracted from ShapeRenderer.js to reduce file size and improve maintainability.
@@ -177,6 +350,18 @@ This module handles all text-related rendering including:</p>
 <li>Rotation around text center</li>
 </ul>
 </dd>
+<dt><a href="#module_TimeoutTracker">TimeoutTracker</a></dt>
+<dd><p>TimeoutTracker - Utility for tracking and cleaning up setTimeout/setInterval calls</p>
+<p>Prevents memory leaks by ensuring all timeouts and intervals are properly
+cleared when a component is destroyed. Provides a consistent API for
+debouncing, throttling, and delayed execution.</p>
+<p>Usage:
+  const tracker = new TimeoutTracker();
+  tracker.setTimeout(&#39;update&#39;, () =&gt; this.update(), 300);
+  tracker.setDebounce(&#39;search&#39;, () =&gt; this.search(), 300);
+  // On destroy:
+  tracker.destroy();</p>
+</dd>
 </dl>
 
 ## Classes
@@ -187,6 +372,10 @@ This module handles all text-related rendering including:</p>
 <dt><a href="#AccessibilityAnnouncer">AccessibilityAnnouncer</a></dt>
 <dd><p>AccessibilityAnnouncer class</p>
 </dd>
+<dt><a href="#APICacheManager">APICacheManager</a></dt>
+<dd></dd>
+<dt><a href="#APICacheManager">APICacheManager</a></dt>
+<dd></dd>
 <dt><a href="#APIErrorHandler">APIErrorHandler</a></dt>
 <dd></dd>
 <dt><a href="#CanvasEvents">CanvasEvents</a></dt>
@@ -205,13 +394,16 @@ This module handles all text-related rendering including:</p>
 <dt><a href="#CanvasUtilities">CanvasUtilities</a></dt>
 <dd><p>CanvasUtilities - Collection of pure static utility functions</p>
 </dd>
+<dt><a href="#DraftManager">DraftManager</a></dt>
+<dd><p>DraftManager class</p>
+</dd>
 <dt><a href="#ErrorHandler">ErrorHandler</a></dt>
 <dd><p>ErrorHandler class for centralized error management</p>
 </dd>
 <dt><a href="#EventManager">EventManager</a></dt>
-<dd><p>Event Manager for Layers Editor
-Centralized event handling and management</p>
-</dd>
+<dd></dd>
+<dt><a href="#EventManager">EventManager</a></dt>
+<dd></dd>
 <dt><a href="#HistoryManager">HistoryManager</a></dt>
 <dd><p>HistoryManager class</p>
 </dd>
@@ -248,10 +440,6 @@ Provides validation methods and user feedback for layer data</p>
 <dd><p>SelectionManager class
 Manages layer selection, manipulation, and transformation operations</p>
 </dd>
-<dt><a href="#StateManager">StateManager</a></dt>
-<dd><p>State Manager for Layers Editor
-Centralized state management with race condition prevention</p>
-</dd>
 <dt><a href="#StyleController">StyleController</a></dt>
 <dd></dd>
 <dt><a href="#StyleController">StyleController</a></dt>
@@ -271,8 +459,16 @@ Centralized state management with race condition prevention</p>
 <dd><p>TransformationEngine - Manages canvas transformations and viewport</p>
 </dd>
 <dt><a href="#ValidationManager">ValidationManager</a></dt>
-<dd><p>Validation Manager for Layers Editor
-Handles data validation and sanitization</p>
+<dd></dd>
+<dt><a href="#ValidationManager">ValidationManager</a></dt>
+<dd></dd>
+<dt><a href="#CustomShapeRenderer">CustomShapeRenderer</a></dt>
+<dd><p>CustomShapeRenderer - Renders SVG shapes to canvas</p>
+<p>Supports two rendering modes:</p>
+<ol>
+<li>Complete SVG markup (new format) - renders via Image for pixel-perfect quality</li>
+<li>Path2D API (legacy format) - for shapes defined with just path data</li>
+</ol>
 </dd>
 <dt><a href="#PolygonGeometry">PolygonGeometry</a></dt>
 <dd><p>Static utility class for polygon and star geometry calculations</p>
@@ -296,7 +492,17 @@ Handles data validation and sanitization</p>
 <a name="module_EventTracker"></a>
 
 ## EventTracker
-EventTracker - Utility for tracking and cleaning up event listenersThis utility helps prevent memory leaks by ensuring all event listenersare properly tracked and can be removed during cleanup.Usage:  const tracker = new EventTracker();  tracker.add( element, 'click', handler );  tracker.add( window, 'resize', resizeHandler );  // Later, clean up all listeners:  tracker.destroy();
+EventTracker - Utility for tracking and cleaning up event listeners
+
+This utility helps prevent memory leaks by ensuring all event listeners
+are properly tracked and can be removed during cleanup.
+
+Usage:
+  const tracker = new EventTracker();
+  tracker.add( element, 'click', handler );
+  tracker.add( window, 'resize', resizeHandler );
+  // Later, clean up all listeners:
+  tracker.destroy();
 
 
 * [EventTracker](#module_EventTracker)
@@ -421,7 +627,8 @@ Check if there are any tracked listeners
 <a name="module_EventTracker..EventTracker+destroy"></a>
 
 #### eventTracker.destroy()
-Destroy all tracked listeners and clean upAfter calling destroy(), this tracker should not be used
+Destroy all tracked listeners and clean up
+After calling destroy(), this tracker should not be used
 
 **Kind**: instance method of [<code>EventTracker</code>](#module_EventTracker..EventTracker)  
 <a name="module_EventTracker..EventTracker"></a>
@@ -524,13 +731,99 @@ Check if there are any tracked listeners
 <a name="module_EventTracker..EventTracker+destroy"></a>
 
 #### eventTracker.destroy()
-Destroy all tracked listeners and clean upAfter calling destroy(), this tracker should not be used
+Destroy all tracked listeners and clean up
+After calling destroy(), this tracker should not be used
 
 **Kind**: instance method of [<code>EventTracker</code>](#module_EventTracker..EventTracker)  
+<a name="module_editor/ExportController"></a>
+
+## editor/ExportController
+Export Controller for Layers Editor
+
+Handles image export operations - extracting and downloading
+canvas content as PNG or JPEG images.
+
+
+* [editor/ExportController](#module_editor/ExportController)
+    * [~ExportController](#module_editor/ExportController..ExportController)
+        * [new ExportController(editor)](#new_module_editor/ExportController..ExportController_new)
+        * [.sanitizeFilename(name)](#module_editor/ExportController..ExportController+sanitizeFilename) ⇒ <code>string</code>
+        * [.exportAsImage(options)](#module_editor/ExportController..ExportController+exportAsImage) ⇒ <code>Promise.&lt;Blob&gt;</code>
+        * [.downloadAsImage(options)](#module_editor/ExportController..ExportController+downloadAsImage)
+
+<a name="module_editor/ExportController..ExportController"></a>
+
+### editor/ExportController~ExportController
+ExportController class - manages canvas export to images
+
+**Kind**: inner class of [<code>editor/ExportController</code>](#module_editor/ExportController)  
+
+* [~ExportController](#module_editor/ExportController..ExportController)
+    * [new ExportController(editor)](#new_module_editor/ExportController..ExportController_new)
+    * [.sanitizeFilename(name)](#module_editor/ExportController..ExportController+sanitizeFilename) ⇒ <code>string</code>
+    * [.exportAsImage(options)](#module_editor/ExportController..ExportController+exportAsImage) ⇒ <code>Promise.&lt;Blob&gt;</code>
+    * [.downloadAsImage(options)](#module_editor/ExportController..ExportController+downloadAsImage)
+
+<a name="new_module_editor/ExportController..ExportController_new"></a>
+
+#### new ExportController(editor)
+Create an ExportController instance.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| editor | <code>Object</code> | The LayersEditor instance |
+
+<a name="module_editor/ExportController..ExportController+sanitizeFilename"></a>
+
+#### exportController.sanitizeFilename(name) ⇒ <code>string</code>
+Sanitize a filename by removing/replacing characters that are problematic for filesystems.
+
+**Kind**: instance method of [<code>ExportController</code>](#module_editor/ExportController..ExportController)  
+**Returns**: <code>string</code> - Sanitized filename  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Filename to sanitize |
+
+<a name="module_editor/ExportController..ExportController+exportAsImage"></a>
+
+#### exportController.exportAsImage(options) ⇒ <code>Promise.&lt;Blob&gt;</code>
+Export the current canvas content as an image blob.
+
+**Kind**: instance method of [<code>ExportController</code>](#module_editor/ExportController..ExportController)  
+**Returns**: <code>Promise.&lt;Blob&gt;</code> - Resolves with image blob  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| options | <code>Object</code> |  | Export options |
+| [options.includeBackground] | <code>boolean</code> | <code>true</code> | Include background image |
+| [options.scale] | <code>number</code> | <code>1</code> | Export scale factor |
+| [options.format] | <code>string</code> | <code>&quot;&#x27;png&#x27;&quot;</code> | Export format (png|jpeg) |
+| [options.quality] | <code>number</code> | <code>0.92</code> | JPEG quality 0-1 |
+
+<a name="module_editor/ExportController..ExportController+downloadAsImage"></a>
+
+#### exportController.downloadAsImage(options)
+Export and download the current canvas as an image file.
+
+**Kind**: instance method of [<code>ExportController</code>](#module_editor/ExportController..ExportController)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| options | <code>Object</code> | Export options (see exportAsImage) |
+| [options.filename] | <code>string</code> | Custom filename (optional) |
+
 <a name="module_GeometryUtils"></a>
 
 ## GeometryUtils
-GeometryUtils.js - Coordinate transformation and geometric utility functionsExtracted from CanvasManager.js as proof-of-concept for modular refactoring.This module handles coordinate conversions, hit testing, and geometric calculations.Part of the MediaWiki Layers extension modularization effort.See CANVAS_MANAGER_REFACTOR_PLAN.md for the complete refactoring strategy.
+GeometryUtils.js - Coordinate transformation and geometric utility functions
+
+Extracted from CanvasManager.js as proof-of-concept for modular refactoring.
+This module handles coordinate conversions, hit testing, and geometric calculations.
+
+Part of the MediaWiki Layers extension modularization effort.
+See CANVAS_MANAGER_REFACTOR_PLAN.md for the complete refactoring strategy.
 
 
 * [GeometryUtils](#module_GeometryUtils)
@@ -579,7 +872,8 @@ Static utility class for geometric calculations
 <a name="module_GeometryUtils..GeometryUtils.clientToCanvas"></a>
 
 #### GeometryUtils.clientToCanvas(canvas, clientX, clientY, [options]) ⇒ <code>Object</code>
-Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
+Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.
+Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
 
 **Kind**: static method of [<code>GeometryUtils</code>](#module_GeometryUtils..GeometryUtils)  
 **Returns**: <code>Object</code> - Canvas coordinates  
@@ -758,10 +1052,607 @@ Compute axis-aligned bounding box for a rotated rectangle
 | rect | <code>Object</code> | The rectangle |
 | rotationDegrees | <code>number</code> | Rotation in degrees |
 
+<a name="module_GroupHierarchyHelper"></a>
+
+## GroupHierarchyHelper
+GroupHierarchyHelper - Pure static utility functions for layer group hierarchy operations
+
+Extracted from GroupManager to reduce god-class size. These are all read-only
+tree traversal and query methods that operate on a layers array without mutating state.
+
+
+* [GroupHierarchyHelper](#module_GroupHierarchyHelper)
+    * [~GroupHierarchyHelper](#module_GroupHierarchyHelper..GroupHierarchyHelper)
+        * [.generateGroupId()](#module_GroupHierarchyHelper..GroupHierarchyHelper.generateGroupId) ⇒ <code>string</code>
+        * [.generateDefaultFolderName(layers)](#module_GroupHierarchyHelper..GroupHierarchyHelper.generateDefaultFolderName) ⇒ <code>string</code>
+        * [.generateDefaultGroupName(layers)](#module_GroupHierarchyHelper..GroupHierarchyHelper.generateDefaultGroupName) ⇒ <code>string</code>
+        * [.isDescendantOf(potentialDescendantId, ancestorId, layers, maxNestingDepth, [depth])](#module_GroupHierarchyHelper..GroupHierarchyHelper.isDescendantOf) ⇒ <code>boolean</code>
+        * [.getGroupChildren(groupId, layers, maxNestingDepth, [recursive], [depth])](#module_GroupHierarchyHelper..GroupHierarchyHelper.getGroupChildren) ⇒ <code>Array</code>
+        * [.getLayerDepth(layerOrId, layers, maxNestingDepth)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getLayerDepth) ⇒ <code>number</code>
+        * [.getMaxChildDepth(group, layers, maxNestingDepth, [depth])](#module_GroupHierarchyHelper..GroupHierarchyHelper.getMaxChildDepth) ⇒ <code>number</code>
+        * [.getGroupBounds(groupId, layers, maxNestingDepth)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getGroupBounds) ⇒ <code>Object</code> \| <code>null</code>
+        * [.getLayerBounds(layer)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getLayerBounds) ⇒ <code>Object</code> \| <code>null</code>
+        * [.getTopLevelLayers(layers)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getTopLevelLayers) ⇒ <code>Array</code>
+        * [.isGroup(layerOrId, [layers])](#module_GroupHierarchyHelper..GroupHierarchyHelper.isGroup) ⇒ <code>boolean</code>
+        * [.getParentGroup(layerId, layers)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getParentGroup) ⇒ <code>Object</code> \| <code>null</code>
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper"></a>
+
+### GroupHierarchyHelper~GroupHierarchyHelper
+GroupHierarchyHelper class - all methods are static
+
+**Kind**: inner class of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper)  
+
+* [~GroupHierarchyHelper](#module_GroupHierarchyHelper..GroupHierarchyHelper)
+    * [.generateGroupId()](#module_GroupHierarchyHelper..GroupHierarchyHelper.generateGroupId) ⇒ <code>string</code>
+    * [.generateDefaultFolderName(layers)](#module_GroupHierarchyHelper..GroupHierarchyHelper.generateDefaultFolderName) ⇒ <code>string</code>
+    * [.generateDefaultGroupName(layers)](#module_GroupHierarchyHelper..GroupHierarchyHelper.generateDefaultGroupName) ⇒ <code>string</code>
+    * [.isDescendantOf(potentialDescendantId, ancestorId, layers, maxNestingDepth, [depth])](#module_GroupHierarchyHelper..GroupHierarchyHelper.isDescendantOf) ⇒ <code>boolean</code>
+    * [.getGroupChildren(groupId, layers, maxNestingDepth, [recursive], [depth])](#module_GroupHierarchyHelper..GroupHierarchyHelper.getGroupChildren) ⇒ <code>Array</code>
+    * [.getLayerDepth(layerOrId, layers, maxNestingDepth)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getLayerDepth) ⇒ <code>number</code>
+    * [.getMaxChildDepth(group, layers, maxNestingDepth, [depth])](#module_GroupHierarchyHelper..GroupHierarchyHelper.getMaxChildDepth) ⇒ <code>number</code>
+    * [.getGroupBounds(groupId, layers, maxNestingDepth)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getGroupBounds) ⇒ <code>Object</code> \| <code>null</code>
+    * [.getLayerBounds(layer)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getLayerBounds) ⇒ <code>Object</code> \| <code>null</code>
+    * [.getTopLevelLayers(layers)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getTopLevelLayers) ⇒ <code>Array</code>
+    * [.isGroup(layerOrId, [layers])](#module_GroupHierarchyHelper..GroupHierarchyHelper.isGroup) ⇒ <code>boolean</code>
+    * [.getParentGroup(layerId, layers)](#module_GroupHierarchyHelper..GroupHierarchyHelper.getParentGroup) ⇒ <code>Object</code> \| <code>null</code>
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.generateGroupId"></a>
+
+#### GroupHierarchyHelper.generateGroupId() ⇒ <code>string</code>
+Generate a unique group ID
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>string</code> - Unique group ID  
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.generateDefaultFolderName"></a>
+
+#### GroupHierarchyHelper.generateDefaultFolderName(layers) ⇒ <code>string</code>
+Generate a default name for a new folder
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>string</code> - Default folder name  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layers | <code>Array</code> | Current layers array |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.generateDefaultGroupName"></a>
+
+#### GroupHierarchyHelper.generateDefaultGroupName(layers) ⇒ <code>string</code>
+Generate a default name for a new group
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>string</code> - Default group name  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layers | <code>Array</code> | Current layers array |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.isDescendantOf"></a>
+
+#### GroupHierarchyHelper.isDescendantOf(potentialDescendantId, ancestorId, layers, maxNestingDepth, [depth]) ⇒ <code>boolean</code>
+Check if a layer is a descendant of another layer (folder).
+Used to prevent circular references when moving folders.
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>boolean</code> - True if potentialDescendantId is inside ancestorId's tree  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| potentialDescendantId | <code>string</code> |  | ID of the layer to check |
+| ancestorId | <code>string</code> |  | ID of the potential ancestor |
+| layers | <code>Array</code> |  | Current layers array |
+| maxNestingDepth | <code>number</code> |  | Maximum allowed nesting depth |
+| [depth] | <code>number</code> | <code>0</code> | Current recursion depth (for guard) |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.getGroupChildren"></a>
+
+#### GroupHierarchyHelper.getGroupChildren(groupId, layers, maxNestingDepth, [recursive], [depth]) ⇒ <code>Array</code>
+Get all children of a group (including nested children)
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>Array</code> - Array of child layer objects  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| groupId | <code>string</code> |  | ID of the group |
+| layers | <code>Array</code> |  | All layers array |
+| maxNestingDepth | <code>number</code> |  | Maximum allowed nesting depth |
+| [recursive] | <code>boolean</code> | <code>true</code> | Whether to include nested children |
+| [depth] | <code>number</code> | <code>0</code> | Current recursion depth (for guard) |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.getLayerDepth"></a>
+
+#### GroupHierarchyHelper.getLayerDepth(layerOrId, layers, maxNestingDepth) ⇒ <code>number</code>
+Get the nesting depth of a layer
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>number</code> - Nesting depth (0 = root level)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerOrId | <code>string</code> \| <code>Object</code> | Layer object or layer ID |
+| layers | <code>Array</code> | All layers array |
+| maxNestingDepth | <code>number</code> | Maximum allowed nesting depth |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.getMaxChildDepth"></a>
+
+#### GroupHierarchyHelper.getMaxChildDepth(group, layers, maxNestingDepth, [depth]) ⇒ <code>number</code>
+Get the maximum depth of children within a group
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>number</code> - Maximum child depth  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| group | <code>Object</code> |  | Group layer object |
+| layers | <code>Array</code> |  | All layers array |
+| maxNestingDepth | <code>number</code> |  | Maximum allowed nesting depth |
+| [depth] | <code>number</code> | <code>0</code> | Current recursion depth (for guard) |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.getGroupBounds"></a>
+
+#### GroupHierarchyHelper.getGroupBounds(groupId, layers, maxNestingDepth) ⇒ <code>Object</code> \| <code>null</code>
+Calculate the bounding box of a group (union of all children bounds)
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>Object</code> \| <code>null</code> - Bounding box { x, y, width, height } or null  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupId | <code>string</code> | ID of the group |
+| layers | <code>Array</code> | All layers array |
+| maxNestingDepth | <code>number</code> | Maximum allowed nesting depth |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.getLayerBounds"></a>
+
+#### GroupHierarchyHelper.getLayerBounds(layer) ⇒ <code>Object</code> \| <code>null</code>
+Get bounds for a single layer
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>Object</code> \| <code>null</code> - Bounding box { x, y, width, height }  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer object |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.getTopLevelLayers"></a>
+
+#### GroupHierarchyHelper.getTopLevelLayers(layers) ⇒ <code>Array</code>
+Get all top-level layers (not inside any group)
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>Array</code> - Array of top-level layer objects  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layers | <code>Array</code> | All layers array |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.isGroup"></a>
+
+#### GroupHierarchyHelper.isGroup(layerOrId, [layers]) ⇒ <code>boolean</code>
+Check if a layer is a group
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>boolean</code> - True if layer is a group  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerOrId | <code>Object</code> \| <code>string</code> | Layer object or ID |
+| [layers] | <code>Array</code> | Layers array (required if layerOrId is a string) |
+
+<a name="module_GroupHierarchyHelper..GroupHierarchyHelper.getParentGroup"></a>
+
+#### GroupHierarchyHelper.getParentGroup(layerId, layers) ⇒ <code>Object</code> \| <code>null</code>
+Get the parent group of a layer
+
+**Kind**: static method of [<code>GroupHierarchyHelper</code>](#module_GroupHierarchyHelper..GroupHierarchyHelper)  
+**Returns**: <code>Object</code> \| <code>null</code> - Parent group layer or null  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | ID of the layer |
+| layers | <code>Array</code> | All layers array |
+
+<a name="module_GroupManager"></a>
+
+## GroupManager
+GroupManager - Manages layer grouping operations for the Layers editor
+
+Provides functionality for:
+- Creating and deleting groups
+- Adding/removing layers from groups
+- Expanding/collapsing groups
+- Getting group children and calculating group bounds
+- Keyboard shortcuts (Ctrl+G to group, Ctrl+Shift+G to ungroup)
+
+
+* [GroupManager](#module_GroupManager)
+    * [~GroupManager](#module_GroupManager..GroupManager)
+        * [new GroupManager(config)](#new_module_GroupManager..GroupManager_new)
+        * [.stateManager](#module_GroupManager..GroupManager+stateManager) ⇒ <code>Object</code> \| <code>null</code>
+        * [.historyManager](#module_GroupManager..GroupManager+historyManager) ⇒ <code>Object</code> \| <code>null</code>
+        * [.selectionManager](#module_GroupManager..GroupManager+selectionManager) ⇒ <code>Object</code> \| <code>null</code>
+        * [.initialize(options)](#module_GroupManager..GroupManager+initialize)
+        * [.generateGroupId()](#module_GroupManager..GroupManager+generateGroupId)
+        * [.createGroup(layerIds, [name])](#module_GroupManager..GroupManager+createGroup) ⇒ <code>Object</code> \| <code>null</code>
+        * [.createFolder([layerIds], [name])](#module_GroupManager..GroupManager+createFolder) ⇒ <code>Object</code> \| <code>null</code>
+        * [.generateDefaultFolderName()](#module_GroupManager..GroupManager+generateDefaultFolderName)
+        * [.generateDefaultGroupName()](#module_GroupManager..GroupManager+generateDefaultGroupName)
+        * [.isDescendantOf()](#module_GroupManager..GroupManager+isDescendantOf)
+        * [.moveToFolder(layerId, folderId)](#module_GroupManager..GroupManager+moveToFolder) ⇒ <code>boolean</code>
+        * [.addToFolderAtPosition(layerId, folderId, beforeSiblingId)](#module_GroupManager..GroupManager+addToFolderAtPosition) ⇒ <code>boolean</code>
+        * [.removeFromFolder(layerId)](#module_GroupManager..GroupManager+removeFromFolder) ⇒ <code>boolean</code>
+        * [.ungroup(groupId)](#module_GroupManager..GroupManager+ungroup) ⇒ <code>boolean</code>
+        * [.addToGroup(layerId, groupId)](#module_GroupManager..GroupManager+addToGroup) ⇒ <code>boolean</code>
+        * [.removeFromCurrentGroup(layerId, [layers])](#module_GroupManager..GroupManager+removeFromCurrentGroup) ⇒ <code>Array</code>
+        * [.removeFromGroup(layerId, groupId)](#module_GroupManager..GroupManager+removeFromGroup) ⇒ <code>boolean</code>
+        * [.toggleExpanded(groupId)](#module_GroupManager..GroupManager+toggleExpanded) ⇒ <code>boolean</code>
+        * [.setExpanded(groupId, expanded)](#module_GroupManager..GroupManager+setExpanded)
+        * [.getGroupChildren()](#module_GroupManager..GroupManager+getGroupChildren)
+        * [.getLayerDepth()](#module_GroupManager..GroupManager+getLayerDepth)
+        * [.getMaxChildDepth()](#module_GroupManager..GroupManager+getMaxChildDepth)
+        * [.getGroupBounds()](#module_GroupManager..GroupManager+getGroupBounds)
+        * [.getLayerBounds()](#module_GroupManager..GroupManager+getLayerBounds)
+        * [.getTopLevelLayers()](#module_GroupManager..GroupManager+getTopLevelLayers)
+        * [.isGroup()](#module_GroupManager..GroupManager+isGroup)
+        * [.getParentGroup()](#module_GroupManager..GroupManager+getParentGroup)
+        * [.renameGroup(groupId, newName)](#module_GroupManager..GroupManager+renameGroup) ⇒ <code>boolean</code>
+        * [.deleteGroup(groupId, [deleteChildren])](#module_GroupManager..GroupManager+deleteGroup) ⇒ <code>boolean</code>
+        * [.groupSelected()](#module_GroupManager..GroupManager+groupSelected) ⇒ <code>Object</code> \| <code>null</code>
+        * [.ungroupSelected()](#module_GroupManager..GroupManager+ungroupSelected) ⇒ <code>boolean</code>
+        * [.destroy()](#module_GroupManager..GroupManager+destroy)
+
+<a name="module_GroupManager..GroupManager"></a>
+
+### GroupManager~GroupManager
+GroupManager class
+
+**Kind**: inner class of [<code>GroupManager</code>](#module_GroupManager)  
+
+* [~GroupManager](#module_GroupManager..GroupManager)
+    * [new GroupManager(config)](#new_module_GroupManager..GroupManager_new)
+    * [.stateManager](#module_GroupManager..GroupManager+stateManager) ⇒ <code>Object</code> \| <code>null</code>
+    * [.historyManager](#module_GroupManager..GroupManager+historyManager) ⇒ <code>Object</code> \| <code>null</code>
+    * [.selectionManager](#module_GroupManager..GroupManager+selectionManager) ⇒ <code>Object</code> \| <code>null</code>
+    * [.initialize(options)](#module_GroupManager..GroupManager+initialize)
+    * [.generateGroupId()](#module_GroupManager..GroupManager+generateGroupId)
+    * [.createGroup(layerIds, [name])](#module_GroupManager..GroupManager+createGroup) ⇒ <code>Object</code> \| <code>null</code>
+    * [.createFolder([layerIds], [name])](#module_GroupManager..GroupManager+createFolder) ⇒ <code>Object</code> \| <code>null</code>
+    * [.generateDefaultFolderName()](#module_GroupManager..GroupManager+generateDefaultFolderName)
+    * [.generateDefaultGroupName()](#module_GroupManager..GroupManager+generateDefaultGroupName)
+    * [.isDescendantOf()](#module_GroupManager..GroupManager+isDescendantOf)
+    * [.moveToFolder(layerId, folderId)](#module_GroupManager..GroupManager+moveToFolder) ⇒ <code>boolean</code>
+    * [.addToFolderAtPosition(layerId, folderId, beforeSiblingId)](#module_GroupManager..GroupManager+addToFolderAtPosition) ⇒ <code>boolean</code>
+    * [.removeFromFolder(layerId)](#module_GroupManager..GroupManager+removeFromFolder) ⇒ <code>boolean</code>
+    * [.ungroup(groupId)](#module_GroupManager..GroupManager+ungroup) ⇒ <code>boolean</code>
+    * [.addToGroup(layerId, groupId)](#module_GroupManager..GroupManager+addToGroup) ⇒ <code>boolean</code>
+    * [.removeFromCurrentGroup(layerId, [layers])](#module_GroupManager..GroupManager+removeFromCurrentGroup) ⇒ <code>Array</code>
+    * [.removeFromGroup(layerId, groupId)](#module_GroupManager..GroupManager+removeFromGroup) ⇒ <code>boolean</code>
+    * [.toggleExpanded(groupId)](#module_GroupManager..GroupManager+toggleExpanded) ⇒ <code>boolean</code>
+    * [.setExpanded(groupId, expanded)](#module_GroupManager..GroupManager+setExpanded)
+    * [.getGroupChildren()](#module_GroupManager..GroupManager+getGroupChildren)
+    * [.getLayerDepth()](#module_GroupManager..GroupManager+getLayerDepth)
+    * [.getMaxChildDepth()](#module_GroupManager..GroupManager+getMaxChildDepth)
+    * [.getGroupBounds()](#module_GroupManager..GroupManager+getGroupBounds)
+    * [.getLayerBounds()](#module_GroupManager..GroupManager+getLayerBounds)
+    * [.getTopLevelLayers()](#module_GroupManager..GroupManager+getTopLevelLayers)
+    * [.isGroup()](#module_GroupManager..GroupManager+isGroup)
+    * [.getParentGroup()](#module_GroupManager..GroupManager+getParentGroup)
+    * [.renameGroup(groupId, newName)](#module_GroupManager..GroupManager+renameGroup) ⇒ <code>boolean</code>
+    * [.deleteGroup(groupId, [deleteChildren])](#module_GroupManager..GroupManager+deleteGroup) ⇒ <code>boolean</code>
+    * [.groupSelected()](#module_GroupManager..GroupManager+groupSelected) ⇒ <code>Object</code> \| <code>null</code>
+    * [.ungroupSelected()](#module_GroupManager..GroupManager+ungroupSelected) ⇒ <code>boolean</code>
+    * [.destroy()](#module_GroupManager..GroupManager+destroy)
+
+<a name="new_module_GroupManager..GroupManager_new"></a>
+
+#### new GroupManager(config)
+Create a new GroupManager instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| config | <code>Object</code> | Configuration object |
+| config.editor | <code>Object</code> | Reference to LayersEditor instance |
+
+<a name="module_GroupManager..GroupManager+stateManager"></a>
+
+#### groupManager.stateManager ⇒ <code>Object</code> \| <code>null</code>
+State manager getter - resolves lazily from editor if needed
+
+**Kind**: instance property of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - StateManager instance  
+<a name="module_GroupManager..GroupManager+historyManager"></a>
+
+#### groupManager.historyManager ⇒ <code>Object</code> \| <code>null</code>
+History manager getter - resolves lazily from editor if needed
+
+**Kind**: instance property of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - HistoryManager instance  
+<a name="module_GroupManager..GroupManager+selectionManager"></a>
+
+#### groupManager.selectionManager ⇒ <code>Object</code> \| <code>null</code>
+Selection manager getter - resolves lazily from editor if needed
+
+**Kind**: instance property of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - SelectionManager instance  
+<a name="module_GroupManager..GroupManager+initialize"></a>
+
+#### groupManager.initialize(options)
+Initialize the GroupManager with required dependencies
+Can be called later if dependencies weren't available at construction time
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| options | <code>Object</code> | Configuration options |
+| options.stateManager | <code>Object</code> | StateManager instance |
+| options.selectionManager | <code>Object</code> | SelectionManager instance |
+| options.historyManager | <code>Object</code> | HistoryManager instance |
+
+<a name="module_GroupManager..GroupManager+generateGroupId"></a>
+
+#### groupManager.generateGroupId()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.generateGroupId  
+<a name="module_GroupManager..GroupManager+createGroup"></a>
+
+#### groupManager.createGroup(layerIds, [name]) ⇒ <code>Object</code> \| <code>null</code>
+Create a new group from selected layers
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - The created group layer, or null if failed  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerIds | <code>Array</code> | Array of layer IDs to group |
+| [name] | <code>string</code> | Optional group name |
+
+<a name="module_GroupManager..GroupManager+createFolder"></a>
+
+#### groupManager.createFolder([layerIds], [name]) ⇒ <code>Object</code> \| <code>null</code>
+Create a folder (group) - can be empty or include specified layers
+This is the primary method for the "Add Folder" button
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - The created folder layer, or null if failed  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| [layerIds] | <code>Array</code> | Optional array of layer IDs to include in the folder |
+| [name] | <code>string</code> | Optional folder name |
+
+<a name="module_GroupManager..GroupManager+generateDefaultFolderName"></a>
+
+#### groupManager.generateDefaultFolderName()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.generateDefaultFolderName  
+<a name="module_GroupManager..GroupManager+generateDefaultGroupName"></a>
+
+#### groupManager.generateDefaultGroupName()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.generateDefaultGroupName  
+<a name="module_GroupManager..GroupManager+isDescendantOf"></a>
+
+#### groupManager.isDescendantOf()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.isDescendantOf  
+<a name="module_GroupManager..GroupManager+moveToFolder"></a>
+
+#### groupManager.moveToFolder(layerId, folderId) ⇒ <code>boolean</code>
+Move a layer into a folder
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | ID of the layer to move |
+| folderId | <code>string</code> | ID of the target folder |
+
+<a name="module_GroupManager..GroupManager+addToFolderAtPosition"></a>
+
+#### groupManager.addToFolderAtPosition(layerId, folderId, beforeSiblingId) ⇒ <code>boolean</code>
+Add a layer to a folder at a specific position (before a sibling)
+Used when dragging a layer between items inside an expanded folder
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | ID of the layer to add |
+| folderId | <code>string</code> | ID of the target folder |
+| beforeSiblingId | <code>string</code> | ID of the sibling to insert before |
+
+<a name="module_GroupManager..GroupManager+removeFromFolder"></a>
+
+#### groupManager.removeFromFolder(layerId) ⇒ <code>boolean</code>
+Remove a layer from its parent folder (move to root level)
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | ID of the layer to remove from folder |
+
+<a name="module_GroupManager..GroupManager+ungroup"></a>
+
+#### groupManager.ungroup(groupId) ⇒ <code>boolean</code>
+Ungroup a group layer, moving its children to the root level
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupId | <code>string</code> | ID of the group to ungroup |
+
+<a name="module_GroupManager..GroupManager+addToGroup"></a>
+
+#### groupManager.addToGroup(layerId, groupId) ⇒ <code>boolean</code>
+Add a layer to an existing group
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | ID of the layer to add |
+| groupId | <code>string</code> | ID of the target group |
+
+<a name="module_GroupManager..GroupManager+removeFromCurrentGroup"></a>
+
+#### groupManager.removeFromCurrentGroup(layerId, [layers]) ⇒ <code>Array</code>
+Remove a layer from its current group
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>Array</code> - Updated layers array  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | ID of the layer to remove |
+| [layers] | <code>Array</code> | Optional layers array (uses state if not provided) |
+
+<a name="module_GroupManager..GroupManager+removeFromGroup"></a>
+
+#### groupManager.removeFromGroup(layerId, groupId) ⇒ <code>boolean</code>
+Remove a layer from a specific group
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | ID of the layer to remove |
+| groupId | <code>string</code> | ID of the group to remove from |
+
+<a name="module_GroupManager..GroupManager+toggleExpanded"></a>
+
+#### groupManager.toggleExpanded(groupId) ⇒ <code>boolean</code>
+Toggle the expanded state of a group
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - New expanded state  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupId | <code>string</code> | ID of the group |
+
+<a name="module_GroupManager..GroupManager+setExpanded"></a>
+
+#### groupManager.setExpanded(groupId, expanded)
+Set the expanded state of a group
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupId | <code>string</code> | ID of the group |
+| expanded | <code>boolean</code> | Whether to expand or collapse |
+
+<a name="module_GroupManager..GroupManager+getGroupChildren"></a>
+
+#### groupManager.getGroupChildren()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.getGroupChildren  
+<a name="module_GroupManager..GroupManager+getLayerDepth"></a>
+
+#### groupManager.getLayerDepth()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.getLayerDepth  
+<a name="module_GroupManager..GroupManager+getMaxChildDepth"></a>
+
+#### groupManager.getMaxChildDepth()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.getMaxChildDepth  
+<a name="module_GroupManager..GroupManager+getGroupBounds"></a>
+
+#### groupManager.getGroupBounds()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.getGroupBounds  
+<a name="module_GroupManager..GroupManager+getLayerBounds"></a>
+
+#### groupManager.getLayerBounds()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.getLayerBounds  
+<a name="module_GroupManager..GroupManager+getTopLevelLayers"></a>
+
+#### groupManager.getTopLevelLayers()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.getTopLevelLayers  
+<a name="module_GroupManager..GroupManager+isGroup"></a>
+
+#### groupManager.isGroup()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.isGroup  
+<a name="module_GroupManager..GroupManager+getParentGroup"></a>
+
+#### groupManager.getParentGroup()
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**See**: GroupHierarchyHelper.getParentGroup  
+<a name="module_GroupManager..GroupManager+renameGroup"></a>
+
+#### groupManager.renameGroup(groupId, newName) ⇒ <code>boolean</code>
+Rename a group
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupId | <code>string</code> | ID of the group |
+| newName | <code>string</code> | New name for the group |
+
+<a name="module_GroupManager..GroupManager+deleteGroup"></a>
+
+#### groupManager.deleteGroup(groupId, [deleteChildren]) ⇒ <code>boolean</code>
+Delete a group and optionally its children
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| groupId | <code>string</code> |  | ID of the group to delete |
+| [deleteChildren] | <code>boolean</code> | <code>false</code> | Whether to delete children too |
+
+<a name="module_GroupManager..GroupManager+groupSelected"></a>
+
+#### groupManager.groupSelected() ⇒ <code>Object</code> \| <code>null</code>
+Group currently selected layers
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - Created group or null  
+<a name="module_GroupManager..GroupManager+ungroupSelected"></a>
+
+#### groupManager.ungroupSelected() ⇒ <code>boolean</code>
+Ungroup currently selected group
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
+**Returns**: <code>boolean</code> - True if successful  
+<a name="module_GroupManager..GroupManager+destroy"></a>
+
+#### groupManager.destroy()
+Clean up resources
+
+**Kind**: instance method of [<code>GroupManager</code>](#module_GroupManager..GroupManager)  
 <a name="module_MessageHelper"></a>
 
 ## MessageHelper
-MessageHelper - Centralized i18n message handling for the Layers extensionProvides a consistent interface for retrieving localized messages from MediaWiki'smessage system with proper fallback handling.Usage:  const msg = window.LayersMessageHelper.get( 'layers-save-success', 'Saved!' );  // Or via singleton:  const helper = window.layersMessages;  helper.get( 'layers-tool-select' );
+MessageHelper - Centralized i18n message handling for the Layers extension
+
+Provides a consistent interface for retrieving localized messages from MediaWiki's
+message system with proper fallback handling.
+
+Usage:
+  const msg = window.LayersMessageHelper.get( 'layers-save-success', 'Saved!' );
+  // Or via singleton:
+  const helper = window.layersMessages;
+  helper.get( 'layers-tool-select' );
 
 **Since**: 0.9.0  
 
@@ -772,6 +1663,7 @@ MessageHelper - Centralized i18n message handling for the Layers extensionProv
         * [.get(key, [fallback])](#module_MessageHelper..MessageHelper+get) ⇒ <code>string</code>
         * [.getWithParams(key, ...params)](#module_MessageHelper..MessageHelper+getWithParams) ⇒ <code>string</code>
         * [.exists(key)](#module_MessageHelper..MessageHelper+exists) ⇒ <code>boolean</code>
+        * [.getColorPickerStrings()](#module_MessageHelper..MessageHelper+getColorPickerStrings) ⇒ <code>Object</code>
         * [.clearCache()](#module_MessageHelper..MessageHelper+clearCache)
         * [.setCacheEnabled(enabled)](#module_MessageHelper..MessageHelper+setCacheEnabled)
     * [~MessageHelper](#module_MessageHelper..MessageHelper)
@@ -780,6 +1672,7 @@ MessageHelper - Centralized i18n message handling for the Layers extensionProv
         * [.get(key, [fallback])](#module_MessageHelper..MessageHelper+get) ⇒ <code>string</code>
         * [.getWithParams(key, ...params)](#module_MessageHelper..MessageHelper+getWithParams) ⇒ <code>string</code>
         * [.exists(key)](#module_MessageHelper..MessageHelper+exists) ⇒ <code>boolean</code>
+        * [.getColorPickerStrings()](#module_MessageHelper..MessageHelper+getColorPickerStrings) ⇒ <code>Object</code>
         * [.clearCache()](#module_MessageHelper..MessageHelper+clearCache)
         * [.setCacheEnabled(enabled)](#module_MessageHelper..MessageHelper+setCacheEnabled)
 
@@ -794,6 +1687,7 @@ MessageHelper - Centralized i18n message handling for the Layers extensionProv
     * [.get(key, [fallback])](#module_MessageHelper..MessageHelper+get) ⇒ <code>string</code>
     * [.getWithParams(key, ...params)](#module_MessageHelper..MessageHelper+getWithParams) ⇒ <code>string</code>
     * [.exists(key)](#module_MessageHelper..MessageHelper+exists) ⇒ <code>boolean</code>
+    * [.getColorPickerStrings()](#module_MessageHelper..MessageHelper+getColorPickerStrings) ⇒ <code>Object</code>
     * [.clearCache()](#module_MessageHelper..MessageHelper+clearCache)
     * [.setCacheEnabled(enabled)](#module_MessageHelper..MessageHelper+setCacheEnabled)
 
@@ -810,7 +1704,12 @@ Create a new MessageHelper instance
 <a name="module_MessageHelper..MessageHelper+get"></a>
 
 #### messageHelper.get(key, [fallback]) ⇒ <code>string</code>
-Get a localized message with fallback supportTries the following in order:1. mw.message( key ).text() - standard MediaWiki message API2. mw.msg( key ) - legacy shorthand3. fallback parameter - provided default text
+Get a localized message with fallback support
+
+Tries the following in order:
+1. mw.message( key ).text() - standard MediaWiki message API
+2. mw.msg( key ) - legacy shorthand
+3. fallback parameter - provided default text
 
 **Kind**: instance method of [<code>MessageHelper</code>](#module_MessageHelper..MessageHelper)  
 **Returns**: <code>string</code> - The localized message or fallback  
@@ -845,10 +1744,22 @@ Check if a message key exists
 | --- | --- | --- |
 | key | <code>string</code> | Message key to check |
 
+<a name="module_MessageHelper..MessageHelper+getColorPickerStrings"></a>
+
+#### messageHelper.getColorPickerStrings() ⇒ <code>Object</code>
+Get color picker dialog strings (shared by Toolbar, ToolbarStyleControls, ColorControlFactory)
+
+This eliminates code duplication by providing a single source for color picker i18n strings.
+
+**Kind**: instance method of [<code>MessageHelper</code>](#module_MessageHelper..MessageHelper)  
+**Returns**: <code>Object</code> - Color picker string map with keys: title, standard, saved, customSection,
+                 none, emptySlot, cancel, apply, transparent, swatchTemplate, previewTemplate  
 <a name="module_MessageHelper..MessageHelper+clearCache"></a>
 
 #### messageHelper.clearCache()
-Clear the message cacheUseful when language settings change or for testing
+Clear the message cache
+
+Useful when language settings change or for testing
 
 **Kind**: instance method of [<code>MessageHelper</code>](#module_MessageHelper..MessageHelper)  
 <a name="module_MessageHelper..MessageHelper+setCacheEnabled"></a>
@@ -873,6 +1784,7 @@ Enable or disable caching
     * [.get(key, [fallback])](#module_MessageHelper..MessageHelper+get) ⇒ <code>string</code>
     * [.getWithParams(key, ...params)](#module_MessageHelper..MessageHelper+getWithParams) ⇒ <code>string</code>
     * [.exists(key)](#module_MessageHelper..MessageHelper+exists) ⇒ <code>boolean</code>
+    * [.getColorPickerStrings()](#module_MessageHelper..MessageHelper+getColorPickerStrings) ⇒ <code>Object</code>
     * [.clearCache()](#module_MessageHelper..MessageHelper+clearCache)
     * [.setCacheEnabled(enabled)](#module_MessageHelper..MessageHelper+setCacheEnabled)
 
@@ -889,7 +1801,12 @@ Create a new MessageHelper instance
 <a name="module_MessageHelper..MessageHelper+get"></a>
 
 #### messageHelper.get(key, [fallback]) ⇒ <code>string</code>
-Get a localized message with fallback supportTries the following in order:1. mw.message( key ).text() - standard MediaWiki message API2. mw.msg( key ) - legacy shorthand3. fallback parameter - provided default text
+Get a localized message with fallback support
+
+Tries the following in order:
+1. mw.message( key ).text() - standard MediaWiki message API
+2. mw.msg( key ) - legacy shorthand
+3. fallback parameter - provided default text
 
 **Kind**: instance method of [<code>MessageHelper</code>](#module_MessageHelper..MessageHelper)  
 **Returns**: <code>string</code> - The localized message or fallback  
@@ -924,10 +1841,22 @@ Check if a message key exists
 | --- | --- | --- |
 | key | <code>string</code> | Message key to check |
 
+<a name="module_MessageHelper..MessageHelper+getColorPickerStrings"></a>
+
+#### messageHelper.getColorPickerStrings() ⇒ <code>Object</code>
+Get color picker dialog strings (shared by Toolbar, ToolbarStyleControls, ColorControlFactory)
+
+This eliminates code duplication by providing a single source for color picker i18n strings.
+
+**Kind**: instance method of [<code>MessageHelper</code>](#module_MessageHelper..MessageHelper)  
+**Returns**: <code>Object</code> - Color picker string map with keys: title, standard, saved, customSection,
+                 none, emptySlot, cancel, apply, transparent, swatchTemplate, previewTemplate  
 <a name="module_MessageHelper..MessageHelper+clearCache"></a>
 
 #### messageHelper.clearCache()
-Clear the message cacheUseful when language settings change or for testing
+Clear the message cache
+
+Useful when language settings change or for testing
 
 **Kind**: instance method of [<code>MessageHelper</code>](#module_MessageHelper..MessageHelper)  
 <a name="module_MessageHelper..MessageHelper+setCacheEnabled"></a>
@@ -944,7 +1873,12 @@ Enable or disable caching
 <a name="module_TextUtils"></a>
 
 ## TextUtils
-TextUtils.js - Text measurement and sanitization utilitiesProvides shared text handling functions used by CanvasManager and CanvasRenderer.Consolidates duplicate implementations to ensure consistent behavior.Part of the MediaWiki Layers extension modularization effort.
+TextUtils.js - Text measurement and sanitization utilities
+
+Provides shared text handling functions used by CanvasManager and CanvasRenderer.
+Consolidates duplicate implementations to ensure consistent behavior.
+
+Part of the MediaWiki Layers extension modularization effort.
 
 
 * [TextUtils](#module_TextUtils)
@@ -1013,30 +1947,37 @@ Measure a text layer to get dimensions and positioning info
 <a name="module_ToolbarStyleControls"></a>
 
 ## ToolbarStyleControls
-ToolbarStyleControls - Manages style controls UI for Layers Editor ToolbarHandles stroke/fill colors, stroke width, font size, text effects, and arrow stylesDelegates to:- ColorControlFactory: Color picker button creation- PresetStyleManager: Style preset dropdown and application
+ToolbarStyleControls - Manages style controls UI for Layers Editor Toolbar
+Handles stroke/fill colors, stroke width, font size, text effects, and arrow styles
+
+Delegates to:
+- ColorControlFactory: Color picker button creation
+- PresetStyleManager: Style preset dropdown and application
 
 
 * [ToolbarStyleControls](#module_ToolbarStyleControls)
     * [~ToolbarStyleControls](#module_ToolbarStyleControls..ToolbarStyleControls)
         * [new ToolbarStyleControls(config)](#new_module_ToolbarStyleControls..ToolbarStyleControls_new)
-        * [.addListener(element, event, handler, [options])](#module_ToolbarStyleControls..ToolbarStyleControls+addListener)
-        * [.msg(key, fallback)](#module_ToolbarStyleControls..ToolbarStyleControls+msg) ⇒ <code>string</code>
-        * [.create()](#module_ToolbarStyleControls..ToolbarStyleControls+create) ⇒ <code>HTMLElement</code>
-        * [.createMainStyleRow()](#module_ToolbarStyleControls..ToolbarStyleControls+createMainStyleRow) ⇒ <code>HTMLElement</code>
-        * [.createColorControlFallback(options)](#module_ToolbarStyleControls..ToolbarStyleControls+createColorControlFallback) ⇒ <code>Object</code>
-        * [.createStrokeWidthControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createStrokeWidthControl) ⇒ <code>Object</code>
-        * [.handleStrokeWidthInput(input)](#module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthInput)
-        * [.handleStrokeWidthBlur(input)](#module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthBlur)
-        * [.createFontSizeControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createFontSizeControl) ⇒ <code>HTMLElement</code>
-        * [.createTextStrokeControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createTextStrokeControl) ⇒ <code>HTMLElement</code>
-        * [.createShadowControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createShadowControl) ⇒ <code>HTMLElement</code>
-        * [.createArrowStyleControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createArrowStyleControl) ⇒ <code>HTMLElement</code>
-        * [.getColorPickerStrings()](#module_ToolbarStyleControls..ToolbarStyleControls+getColorPickerStrings) ⇒ <code>Object</code>
-        * [.openColorPicker(anchorButton, initialValue, options)](#module_ToolbarStyleControls..ToolbarStyleControls+openColorPicker)
-        * [.updateColorButtonDisplay(btn, color)](#module_ToolbarStyleControls..ToolbarStyleControls+updateColorButtonDisplay)
+        * [.addListener()](#module_ToolbarStyleControls..ToolbarStyleControls+addListener)
+        * [.msg()](#module_ToolbarStyleControls..ToolbarStyleControls+msg)
+        * [.create()](#module_ToolbarStyleControls..ToolbarStyleControls+create)
+        * [.createMarkerControls()](#module_ToolbarStyleControls..ToolbarStyleControls+createMarkerControls)
+        * [.createMainStyleRow()](#module_ToolbarStyleControls..ToolbarStyleControls+createMainStyleRow)
+        * [.createColorControlFallback()](#module_ToolbarStyleControls..ToolbarStyleControls+createColorControlFallback)
+        * [.createStrokeWidthControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createStrokeWidthControl)
+        * [.handleStrokeWidthInput()](#module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthInput)
+        * [.handleStrokeWidthBlur()](#module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthBlur)
+        * [.getColorPickerStrings()](#module_ToolbarStyleControls..ToolbarStyleControls+getColorPickerStrings)
+        * [.openColorPicker()](#module_ToolbarStyleControls..ToolbarStyleControls+openColorPicker)
+        * [.updateColorButtonDisplay()](#module_ToolbarStyleControls..ToolbarStyleControls+updateColorButtonDisplay)
         * [.notifyStyleChange()](#module_ToolbarStyleControls..ToolbarStyleControls+notifyStyleChange)
-        * [.getStyleOptions()](#module_ToolbarStyleControls..ToolbarStyleControls+getStyleOptions) ⇒ <code>Object</code>
-        * [.updateForTool(toolId)](#module_ToolbarStyleControls..ToolbarStyleControls+updateForTool)
+        * [.applyColorPreview(colorType, color)](#module_ToolbarStyleControls..ToolbarStyleControls+applyColorPreview)
+        * [.cancelColorPreview()](#module_ToolbarStyleControls..ToolbarStyleControls+cancelColorPreview)
+        * [.commitColorChange(colorType, color)](#module_ToolbarStyleControls..ToolbarStyleControls+commitColorChange)
+        * [.getStyleOptions()](#module_ToolbarStyleControls..ToolbarStyleControls+getStyleOptions)
+        * [.updateForTool()](#module_ToolbarStyleControls..ToolbarStyleControls+updateForTool)
+        * [.updateContextVisibility()](#module_ToolbarStyleControls..ToolbarStyleControls+updateContextVisibility)
+        * ~~[.showAllControls()](#module_ToolbarStyleControls..ToolbarStyleControls+showAllControls)~~
         * [.setStrokeColor(color)](#module_ToolbarStyleControls..ToolbarStyleControls+setStrokeColor)
         * [.setFillColor(color)](#module_ToolbarStyleControls..ToolbarStyleControls+setFillColor)
         * [.setStrokeWidth(width)](#module_ToolbarStyleControls..ToolbarStyleControls+setStrokeWidth)
@@ -1045,6 +1986,8 @@ ToolbarStyleControls - Manages style controls UI for Layers Editor ToolbarHandl
         * [.getCurrentStyle()](#module_ToolbarStyleControls..ToolbarStyleControls+getCurrentStyle) ⇒ <code>Object</code>
         * [.setCurrentTool(tool)](#module_ToolbarStyleControls..ToolbarStyleControls+setCurrentTool)
         * [.updateForSelection(selectedLayers)](#module_ToolbarStyleControls..ToolbarStyleControls+updateForSelection)
+        * [.hideControlsForSelectedLayers(_selectedLayers)](#module_ToolbarStyleControls..ToolbarStyleControls+hideControlsForSelectedLayers)
+        * ~~[.updateContextForSelectedLayers(selectedLayers)](#module_ToolbarStyleControls..ToolbarStyleControls+updateContextForSelectedLayers)~~
         * [.destroy()](#module_ToolbarStyleControls..ToolbarStyleControls+destroy)
 
 <a name="module_ToolbarStyleControls..ToolbarStyleControls"></a>
@@ -1056,24 +1999,26 @@ ToolbarStyleControls class
 
 * [~ToolbarStyleControls](#module_ToolbarStyleControls..ToolbarStyleControls)
     * [new ToolbarStyleControls(config)](#new_module_ToolbarStyleControls..ToolbarStyleControls_new)
-    * [.addListener(element, event, handler, [options])](#module_ToolbarStyleControls..ToolbarStyleControls+addListener)
-    * [.msg(key, fallback)](#module_ToolbarStyleControls..ToolbarStyleControls+msg) ⇒ <code>string</code>
-    * [.create()](#module_ToolbarStyleControls..ToolbarStyleControls+create) ⇒ <code>HTMLElement</code>
-    * [.createMainStyleRow()](#module_ToolbarStyleControls..ToolbarStyleControls+createMainStyleRow) ⇒ <code>HTMLElement</code>
-    * [.createColorControlFallback(options)](#module_ToolbarStyleControls..ToolbarStyleControls+createColorControlFallback) ⇒ <code>Object</code>
-    * [.createStrokeWidthControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createStrokeWidthControl) ⇒ <code>Object</code>
-    * [.handleStrokeWidthInput(input)](#module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthInput)
-    * [.handleStrokeWidthBlur(input)](#module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthBlur)
-    * [.createFontSizeControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createFontSizeControl) ⇒ <code>HTMLElement</code>
-    * [.createTextStrokeControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createTextStrokeControl) ⇒ <code>HTMLElement</code>
-    * [.createShadowControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createShadowControl) ⇒ <code>HTMLElement</code>
-    * [.createArrowStyleControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createArrowStyleControl) ⇒ <code>HTMLElement</code>
-    * [.getColorPickerStrings()](#module_ToolbarStyleControls..ToolbarStyleControls+getColorPickerStrings) ⇒ <code>Object</code>
-    * [.openColorPicker(anchorButton, initialValue, options)](#module_ToolbarStyleControls..ToolbarStyleControls+openColorPicker)
-    * [.updateColorButtonDisplay(btn, color)](#module_ToolbarStyleControls..ToolbarStyleControls+updateColorButtonDisplay)
+    * [.addListener()](#module_ToolbarStyleControls..ToolbarStyleControls+addListener)
+    * [.msg()](#module_ToolbarStyleControls..ToolbarStyleControls+msg)
+    * [.create()](#module_ToolbarStyleControls..ToolbarStyleControls+create)
+    * [.createMarkerControls()](#module_ToolbarStyleControls..ToolbarStyleControls+createMarkerControls)
+    * [.createMainStyleRow()](#module_ToolbarStyleControls..ToolbarStyleControls+createMainStyleRow)
+    * [.createColorControlFallback()](#module_ToolbarStyleControls..ToolbarStyleControls+createColorControlFallback)
+    * [.createStrokeWidthControl()](#module_ToolbarStyleControls..ToolbarStyleControls+createStrokeWidthControl)
+    * [.handleStrokeWidthInput()](#module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthInput)
+    * [.handleStrokeWidthBlur()](#module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthBlur)
+    * [.getColorPickerStrings()](#module_ToolbarStyleControls..ToolbarStyleControls+getColorPickerStrings)
+    * [.openColorPicker()](#module_ToolbarStyleControls..ToolbarStyleControls+openColorPicker)
+    * [.updateColorButtonDisplay()](#module_ToolbarStyleControls..ToolbarStyleControls+updateColorButtonDisplay)
     * [.notifyStyleChange()](#module_ToolbarStyleControls..ToolbarStyleControls+notifyStyleChange)
-    * [.getStyleOptions()](#module_ToolbarStyleControls..ToolbarStyleControls+getStyleOptions) ⇒ <code>Object</code>
-    * [.updateForTool(toolId)](#module_ToolbarStyleControls..ToolbarStyleControls+updateForTool)
+    * [.applyColorPreview(colorType, color)](#module_ToolbarStyleControls..ToolbarStyleControls+applyColorPreview)
+    * [.cancelColorPreview()](#module_ToolbarStyleControls..ToolbarStyleControls+cancelColorPreview)
+    * [.commitColorChange(colorType, color)](#module_ToolbarStyleControls..ToolbarStyleControls+commitColorChange)
+    * [.getStyleOptions()](#module_ToolbarStyleControls..ToolbarStyleControls+getStyleOptions)
+    * [.updateForTool()](#module_ToolbarStyleControls..ToolbarStyleControls+updateForTool)
+    * [.updateContextVisibility()](#module_ToolbarStyleControls..ToolbarStyleControls+updateContextVisibility)
+    * ~~[.showAllControls()](#module_ToolbarStyleControls..ToolbarStyleControls+showAllControls)~~
     * [.setStrokeColor(color)](#module_ToolbarStyleControls..ToolbarStyleControls+setStrokeColor)
     * [.setFillColor(color)](#module_ToolbarStyleControls..ToolbarStyleControls+setFillColor)
     * [.setStrokeWidth(width)](#module_ToolbarStyleControls..ToolbarStyleControls+setStrokeWidth)
@@ -1082,6 +2027,8 @@ ToolbarStyleControls class
     * [.getCurrentStyle()](#module_ToolbarStyleControls..ToolbarStyleControls+getCurrentStyle) ⇒ <code>Object</code>
     * [.setCurrentTool(tool)](#module_ToolbarStyleControls..ToolbarStyleControls+setCurrentTool)
     * [.updateForSelection(selectedLayers)](#module_ToolbarStyleControls..ToolbarStyleControls+updateForSelection)
+    * [.hideControlsForSelectedLayers(_selectedLayers)](#module_ToolbarStyleControls..ToolbarStyleControls+hideControlsForSelectedLayers)
+    * ~~[.updateContextForSelectedLayers(selectedLayers)](#module_ToolbarStyleControls..ToolbarStyleControls+updateContextForSelectedLayers)~~
     * [.destroy()](#module_ToolbarStyleControls..ToolbarStyleControls+destroy)
 
 <a name="new_module_ToolbarStyleControls..ToolbarStyleControls_new"></a>
@@ -1096,170 +2043,143 @@ ToolbarStyleControls class
 
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+addListener"></a>
 
-#### toolbarStyleControls.addListener(element, event, handler, [options])
+#### toolbarStyleControls.addListener()
 Add event listener to an element with automatic tracking
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| element | <code>Element</code> | Target element |
-| event | <code>string</code> | Event type |
-| handler | <code>function</code> | Event handler |
-| [options] | <code>Object</code> | Event listener options |
-
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+msg"></a>
 
-#### toolbarStyleControls.msg(key, fallback) ⇒ <code>string</code>
-Get localized message
+#### toolbarStyleControls.msg()
+Get localized message @return {string}
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>string</code> - Localized message  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| key | <code>string</code> | Message key |
-| fallback | <code>string</code> | Fallback text |
-
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+create"></a>
 
-#### toolbarStyleControls.create() ⇒ <code>HTMLElement</code>
-Create the style controls group
+#### toolbarStyleControls.create()
+Create the style controls group @return {HTMLElement}
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>HTMLElement</code> - The style group container element  
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+createMarkerControls"></a>
+
+#### toolbarStyleControls.createMarkerControls()
+Create marker-specific controls (autonumber checkbox) @return {HTMLElement}
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+createMainStyleRow"></a>
 
-#### toolbarStyleControls.createMainStyleRow() ⇒ <code>HTMLElement</code>
-Create the main style controls row (stroke color, fill color, stroke width)
+#### toolbarStyleControls.createMainStyleRow()
+Create the main style controls row (stroke color, fill color, stroke width) @return {HTMLElement}
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>HTMLElement</code> - The row container  
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+createColorControlFallback"></a>
 
-#### toolbarStyleControls.createColorControlFallback(options) ⇒ <code>Object</code>
-Fallback color control creation (when ColorControlFactory not available)
+#### toolbarStyleControls.createColorControlFallback()
+Fallback color control creation (when ColorControlFactory not available) @return {Object}
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>Object</code> - Object with container and button elements  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| options | <code>Object</code> | Control options |
-
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+createStrokeWidthControl"></a>
 
-#### toolbarStyleControls.createStrokeWidthControl() ⇒ <code>Object</code>
-Create the stroke width control
+#### toolbarStyleControls.createStrokeWidthControl()
+Create the stroke width control @return {Object}
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>Object</code> - Object with container and input elements  
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthInput"></a>
 
-#### toolbarStyleControls.handleStrokeWidthInput(input)
+#### toolbarStyleControls.handleStrokeWidthInput()
 Handle stroke width input changes
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| input | <code>HTMLInputElement</code> | The input element |
-
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+handleStrokeWidthBlur"></a>
 
-#### toolbarStyleControls.handleStrokeWidthBlur(input)
+#### toolbarStyleControls.handleStrokeWidthBlur()
 Handle stroke width blur event (reset invalid values)
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| input | <code>HTMLInputElement</code> | The input element |
-
-<a name="module_ToolbarStyleControls..ToolbarStyleControls+createFontSizeControl"></a>
-
-#### toolbarStyleControls.createFontSizeControl() ⇒ <code>HTMLElement</code>
-Create the font size control (for text tool)
-
-**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>HTMLElement</code> - The font size container  
-<a name="module_ToolbarStyleControls..ToolbarStyleControls+createTextStrokeControl"></a>
-
-#### toolbarStyleControls.createTextStrokeControl() ⇒ <code>HTMLElement</code>
-Create the text stroke control
-
-**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>HTMLElement</code> - The text stroke container  
-<a name="module_ToolbarStyleControls..ToolbarStyleControls+createShadowControl"></a>
-
-#### toolbarStyleControls.createShadowControl() ⇒ <code>HTMLElement</code>
-Create the shadow control
-
-**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>HTMLElement</code> - The shadow container  
-<a name="module_ToolbarStyleControls..ToolbarStyleControls+createArrowStyleControl"></a>
-
-#### toolbarStyleControls.createArrowStyleControl() ⇒ <code>HTMLElement</code>
-Create the arrow style control
-
-**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>HTMLElement</code> - The arrow style container  
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+getColorPickerStrings"></a>
 
-#### toolbarStyleControls.getColorPickerStrings() ⇒ <code>Object</code>
-Get color picker strings for i18n
+#### toolbarStyleControls.getColorPickerStrings()
+Get color picker strings for i18n @return {Object}
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>Object</code> - Color picker string map  
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+openColorPicker"></a>
 
-#### toolbarStyleControls.openColorPicker(anchorButton, initialValue, options)
+#### toolbarStyleControls.openColorPicker()
 Open the color picker dialog
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| anchorButton | <code>HTMLElement</code> | The button that triggered the picker |
-| initialValue | <code>string</code> | Current color value |
-| options | <code>Object</code> | Options including onApply callback |
-
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+updateColorButtonDisplay"></a>
 
-#### toolbarStyleControls.updateColorButtonDisplay(btn, color)
+#### toolbarStyleControls.updateColorButtonDisplay()
 Update a color button's display
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| btn | <code>HTMLElement</code> | The button element |
-| color | <code>string</code> | The color value or 'none' |
-
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+notifyStyleChange"></a>
 
 #### toolbarStyleControls.notifyStyleChange()
 Notify toolbar of style changes
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-<a name="module_ToolbarStyleControls..ToolbarStyleControls+getStyleOptions"></a>
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+applyColorPreview"></a>
 
-#### toolbarStyleControls.getStyleOptions() ⇒ <code>Object</code>
-Get current style options
-
-**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
-**Returns**: <code>Object</code> - Style options object  
-<a name="module_ToolbarStyleControls..ToolbarStyleControls+updateForTool"></a>
-
-#### toolbarStyleControls.updateForTool(toolId)
-Update visibility of tool-specific options
+#### toolbarStyleControls.applyColorPreview(colorType, color)
+Apply color preview to selected layers without committing to history.
+Used for live preview in color picker dialog.
+Saves original per-layer colors on first call so cancelColorPreview()
+can restore each layer individually.
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| toolId | <code>string</code> | The currently selected tool |
+| colorType | <code>string</code> | 'stroke' or 'fill' |
+| color | <code>string</code> | The preview color value |
 
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+cancelColorPreview"></a>
+
+#### toolbarStyleControls.cancelColorPreview()
+Cancel color preview and restore each layer's original colors.
+Called when user cancels the color picker dialog.
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+commitColorChange"></a>
+
+#### toolbarStyleControls.commitColorChange(colorType, color)
+Commit color changes via StateManager for proper undo/redo tracking.
+Called when user confirms the color in the picker dialog.
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| colorType | <code>string</code> | 'stroke' or 'fill' |
+| color | <code>string</code> | The confirmed color value |
+
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+getStyleOptions"></a>
+
+#### toolbarStyleControls.getStyleOptions()
+Get current style options @return {Object}
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+updateForTool"></a>
+
+#### toolbarStyleControls.updateForTool()
+Update visibility of tool-specific options
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+updateContextVisibility"></a>
+
+#### toolbarStyleControls.updateContextVisibility()
+Update visibility of controls based on tool context
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+showAllControls"></a>
+
+#### ~~toolbarStyleControls.showAllControls()~~
+***Context-aware toolbar is always enabled as of v1.5.36***
+
+Show all controls
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
 <a name="module_ToolbarStyleControls..ToolbarStyleControls+setStrokeColor"></a>
 
 #### toolbarStyleControls.setStrokeColor(color)
@@ -1337,6 +2257,39 @@ Update preset dropdown when tool changes (delegates to PresetStyleManager)
 
 #### toolbarStyleControls.updateForSelection(selectedLayers)
 Update preset dropdown when layer selection changes (delegates to PresetStyleManager)
+Also updates control visibility in context-aware mode
+
+When a layer is selected, toolbar style controls are HIDDEN because
+they are redundant with the Properties panel in the Layer Manager.
+Style controls only show when a drawing tool is active for creating new layers.
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| selectedLayers | <code>Array</code> | Array of selected layer objects |
+
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+hideControlsForSelectedLayers"></a>
+
+#### toolbarStyleControls.hideControlsForSelectedLayers(_selectedLayers)
+Hide control visibility when layers are selected
+Controls are redundant because the Properties panel in the Layer Manager
+provides all the same controls for editing selected layers.
+
+NOTE: Preset dropdown stays visible to allow saving selected layer style as preset
+
+**Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| _selectedLayers | <code>Array</code> | Array of selected layer objects (unused) |
+
+<a name="module_ToolbarStyleControls..ToolbarStyleControls+updateContextForSelectedLayers"></a>
+
+#### ~~toolbarStyleControls.updateContextForSelectedLayers(selectedLayers)~~
+***since 1.5.0 - Use hideControlsForSelectedLayers instead. Will be removed in v2.0.***
+
+Legacy method name for backward compatibility
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
 
@@ -1350,10 +2303,388 @@ Update preset dropdown when layer selection changes (delegates to PresetStyleMan
 Destroy and cleanup
 
 **Kind**: instance method of [<code>ToolbarStyleControls</code>](#module_ToolbarStyleControls..ToolbarStyleControls)  
+<a name="module_AngleDimensionRenderer"></a>
+
+## AngleDimensionRenderer
+AngleDimensionRenderer - Renders angle measurement annotations
+
+This module handles rendering of angle dimensions for technical illustrations:
+- Three-point angle measurement (vertex + two arm endpoints)
+- Arc drawn between the two arms at configurable radius
+- Extension lines along each arm from vertex through arm endpoints
+- Auto-calculated angle value in degrees (with optional override)
+- Arrow/tick/dot end markers at arc endpoints
+- Configurable text positioning (above, below, center on arc)
+- Support for reflex angles (>180°)
+- Tolerance annotations (symmetric, deviation, limits, basic)
+
+Industry standards followed:
+- ISO 129-1: Technical drawings - Dimensioning
+- ASME Y14.5: Geometric Dimensioning and Tolerancing
+- Angle measured counterclockwise from arm1 to arm2 (standard convention)
+- Arc radius adjustable independently of arm length
+
+**Since**: 1.5.59  
+
+* [AngleDimensionRenderer](#module_AngleDimensionRenderer)
+    * [~AngleDimensionRenderer](#module_AngleDimensionRenderer..AngleDimensionRenderer)
+        * [new AngleDimensionRenderer(ctx, [config])](#new_module_AngleDimensionRenderer..AngleDimensionRenderer_new)
+        * _instance_
+            * [.setContext(ctx)](#module_AngleDimensionRenderer..AngleDimensionRenderer+setContext)
+            * [.calculateAngles(layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+calculateAngles) ⇒ <code>Object</code>
+            * [.calculateDegrees(layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+calculateDegrees) ⇒ <code>number</code>
+            * [.formatMeasurement(degrees, layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+formatMeasurement) ⇒ <code>string</code>
+            * [.formatWithTolerance(value, unitSuffix, toleranceType, layer, precision)](#module_AngleDimensionRenderer..AngleDimensionRenderer+formatWithTolerance) ⇒ <code>string</code>
+            * [.buildDisplayText(autoDegrees, layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+buildDisplayText) ⇒ <code>string</code>
+            * [.formatUserTextWithTolerance(text, layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+formatUserTextWithTolerance) ⇒ <code>string</code>
+            * [.draw(layer, [_options])](#module_AngleDimensionRenderer..AngleDimensionRenderer+draw)
+            * [.getBounds(layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+getBounds) ⇒ <code>Object</code>
+            * [.hitTest(layer, px, py)](#module_AngleDimensionRenderer..AngleDimensionRenderer+hitTest) ⇒ <code>boolean</code>
+        * _static_
+            * [.END_STYLES](#module_AngleDimensionRenderer..AngleDimensionRenderer.END_STYLES) ⇒ <code>Object</code>
+            * [.TEXT_POSITIONS](#module_AngleDimensionRenderer..AngleDimensionRenderer.TEXT_POSITIONS) ⇒ <code>Object</code>
+            * [.DEFAULTS](#module_AngleDimensionRenderer..AngleDimensionRenderer.DEFAULTS) ⇒ <code>Object</code>
+            * [.createAngleDimensionLayer(cx, cy, ax, ay, bx, by, [options])](#module_AngleDimensionRenderer..AngleDimensionRenderer.createAngleDimensionLayer) ⇒ <code>Object</code>
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer"></a>
+
+### AngleDimensionRenderer~AngleDimensionRenderer
+AngleDimensionRenderer class - Renders angle annotations on canvas
+
+**Kind**: inner class of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer)  
+
+* [~AngleDimensionRenderer](#module_AngleDimensionRenderer..AngleDimensionRenderer)
+    * [new AngleDimensionRenderer(ctx, [config])](#new_module_AngleDimensionRenderer..AngleDimensionRenderer_new)
+    * _instance_
+        * [.setContext(ctx)](#module_AngleDimensionRenderer..AngleDimensionRenderer+setContext)
+        * [.calculateAngles(layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+calculateAngles) ⇒ <code>Object</code>
+        * [.calculateDegrees(layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+calculateDegrees) ⇒ <code>number</code>
+        * [.formatMeasurement(degrees, layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+formatMeasurement) ⇒ <code>string</code>
+        * [.formatWithTolerance(value, unitSuffix, toleranceType, layer, precision)](#module_AngleDimensionRenderer..AngleDimensionRenderer+formatWithTolerance) ⇒ <code>string</code>
+        * [.buildDisplayText(autoDegrees, layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+buildDisplayText) ⇒ <code>string</code>
+        * [.formatUserTextWithTolerance(text, layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+formatUserTextWithTolerance) ⇒ <code>string</code>
+        * [.draw(layer, [_options])](#module_AngleDimensionRenderer..AngleDimensionRenderer+draw)
+        * [.getBounds(layer)](#module_AngleDimensionRenderer..AngleDimensionRenderer+getBounds) ⇒ <code>Object</code>
+        * [.hitTest(layer, px, py)](#module_AngleDimensionRenderer..AngleDimensionRenderer+hitTest) ⇒ <code>boolean</code>
+    * _static_
+        * [.END_STYLES](#module_AngleDimensionRenderer..AngleDimensionRenderer.END_STYLES) ⇒ <code>Object</code>
+        * [.TEXT_POSITIONS](#module_AngleDimensionRenderer..AngleDimensionRenderer.TEXT_POSITIONS) ⇒ <code>Object</code>
+        * [.DEFAULTS](#module_AngleDimensionRenderer..AngleDimensionRenderer.DEFAULTS) ⇒ <code>Object</code>
+        * [.createAngleDimensionLayer(cx, cy, ax, ay, bx, by, [options])](#module_AngleDimensionRenderer..AngleDimensionRenderer.createAngleDimensionLayer) ⇒ <code>Object</code>
+
+<a name="new_module_AngleDimensionRenderer..AngleDimensionRenderer_new"></a>
+
+#### new AngleDimensionRenderer(ctx, [config])
+Creates a new AngleDimensionRenderer instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
+| [config] | <code>Object</code> | Configuration options |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+setContext"></a>
+
+#### angleDimensionRenderer.setContext(ctx)
+Set the canvas context
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+calculateAngles"></a>
+
+#### angleDimensionRenderer.calculateAngles(layer) ⇒ <code>Object</code>
+Calculate the angle between two arms from a vertex
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>Object</code> - Object with startAngle, endAngle, sweepAngle (all in radians)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Angle dimension layer |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+calculateDegrees"></a>
+
+#### angleDimensionRenderer.calculateDegrees(layer) ⇒ <code>number</code>
+Calculate angle in degrees
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>number</code> - Angle in degrees  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Angle dimension layer |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+formatMeasurement"></a>
+
+#### angleDimensionRenderer.formatMeasurement(degrees, layer) ⇒ <code>string</code>
+Format angle measurement value for display
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>string</code> - Formatted value string  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| degrees | <code>number</code> | Angle in degrees |
+| layer | <code>Object</code> | Layer with precision/tolerance settings |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+formatWithTolerance"></a>
+
+#### angleDimensionRenderer.formatWithTolerance(value, unitSuffix, toleranceType, layer, precision) ⇒ <code>string</code>
+Format value with tolerance annotation
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>string</code> - Formatted string with tolerance  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| value | <code>string</code> | Formatted main value |
+| unitSuffix | <code>string</code> | Unit suffix (e.g., "°") |
+| toleranceType | <code>string</code> | Type of tolerance |
+| layer | <code>Object</code> | Layer with tolerance settings |
+| precision | <code>number</code> | Decimal precision |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+buildDisplayText"></a>
+
+#### angleDimensionRenderer.buildDisplayText(autoDegrees, layer) ⇒ <code>string</code>
+Build the full display text including value and tolerance
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>string</code> - Full display text  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| autoDegrees | <code>number</code> | Auto-calculated angle in degrees |
+| layer | <code>Object</code> | Layer object with text/tolerance settings |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+formatUserTextWithTolerance"></a>
+
+#### angleDimensionRenderer.formatUserTextWithTolerance(text, layer) ⇒ <code>string</code>
+Format user-entered text with tolerance annotation
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>string</code> - Text with tolerance appended  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| text | <code>string</code> | User-entered angle value |
+| layer | <code>Object</code> | Layer with tolerance settings |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+draw"></a>
+
+#### angleDimensionRenderer.draw(layer, [_options])
+Draw an angle dimension layer
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Angle dimension layer object |
+| [_options] | <code>Object</code> | Rendering options (reserved for future use) |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+getBounds"></a>
+
+#### angleDimensionRenderer.getBounds(layer) ⇒ <code>Object</code>
+Get the bounding box for an angle dimension layer
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>Object</code> - Bounding box {x, y, width, height}  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Angle dimension layer |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer+hitTest"></a>
+
+#### angleDimensionRenderer.hitTest(layer, px, py) ⇒ <code>boolean</code>
+Hit test for angle dimension layer
+
+**Kind**: instance method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>boolean</code> - True if point is near the angle dimension  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Angle dimension layer |
+| px | <code>number</code> | Test point X |
+| py | <code>number</code> | Test point Y |
+
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer.END_STYLES"></a>
+
+#### AngleDimensionRenderer.END\_STYLES ⇒ <code>Object</code>
+Get available end styles
+
+**Kind**: static property of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>Object</code> - End style constants  
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer.TEXT_POSITIONS"></a>
+
+#### AngleDimensionRenderer.TEXT\_POSITIONS ⇒ <code>Object</code>
+Get available text positions
+
+**Kind**: static property of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>Object</code> - Text position constants  
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer.DEFAULTS"></a>
+
+#### AngleDimensionRenderer.DEFAULTS ⇒ <code>Object</code>
+Get default configuration
+
+**Kind**: static property of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>Object</code> - Default values  
+<a name="module_AngleDimensionRenderer..AngleDimensionRenderer.createAngleDimensionLayer"></a>
+
+#### AngleDimensionRenderer.createAngleDimensionLayer(cx, cy, ax, ay, bx, by, [options]) ⇒ <code>Object</code>
+Create a default angle dimension layer object
+
+**Kind**: static method of [<code>AngleDimensionRenderer</code>](#module_AngleDimensionRenderer..AngleDimensionRenderer)  
+**Returns**: <code>Object</code> - Angle dimension layer object  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| cx | <code>number</code> | Vertex X |
+| cy | <code>number</code> | Vertex Y |
+| ax | <code>number</code> | Arm1 endpoint X |
+| ay | <code>number</code> | Arm1 endpoint Y |
+| bx | <code>number</code> | Arm2 endpoint X |
+| by | <code>number</code> | Arm2 endpoint Y |
+| [options] | <code>Object</code> | Additional options |
+
+<a name="module_ArrowGeometry"></a>
+
+## ArrowGeometry
+ArrowGeometry - Pure geometry calculations for arrow shapes
+
+Extracted from ArrowRenderer.js to reduce file size and improve maintainability.
+This module handles all arrow vertex calculation including:
+- Vertex building for straight arrows (single, double, no head)
+- Head vertex building for different head types (pointed, chevron, standard)
+- Bézier curve tangent calculation for curved arrows
+- Arrow curve detection
+
+All methods are pure geometry calculations with no canvas dependencies.
+
+**Since**: 1.5.38  
+
+* [ArrowGeometry](#module_ArrowGeometry)
+    * [~ArrowGeometry](#module_ArrowGeometry..ArrowGeometry)
+        * [new ArrowGeometry()](#new_module_ArrowGeometry..ArrowGeometry_new)
+        * [.getConstants()](#module_ArrowGeometry..ArrowGeometry+getConstants) ⇒ <code>Object</code>
+        * [.isCurved(layer)](#module_ArrowGeometry..ArrowGeometry+isCurved) ⇒ <code>boolean</code>
+        * [.getBezierTangent(t, x1, y1, cx, cy, x2, y2)](#module_ArrowGeometry..ArrowGeometry+getBezierTangent) ⇒ <code>number</code>
+        * [.buildArrowVertices(x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth)](#module_ArrowGeometry..ArrowGeometry+buildArrowVertices) ⇒ <code>Array</code>
+        * [.buildHeadVertices(tipX, tipY, angle, halfShaft, arrowSize, headScale, headType, isLeftToRight)](#module_ArrowGeometry..ArrowGeometry+buildHeadVertices) ⇒ <code>Array</code>
+
+<a name="module_ArrowGeometry..ArrowGeometry"></a>
+
+### ArrowGeometry~ArrowGeometry
+ArrowGeometry class - Pure geometry calculations for arrow shapes
+
+**Kind**: inner class of [<code>ArrowGeometry</code>](#module_ArrowGeometry)  
+
+* [~ArrowGeometry](#module_ArrowGeometry..ArrowGeometry)
+    * [new ArrowGeometry()](#new_module_ArrowGeometry..ArrowGeometry_new)
+    * [.getConstants()](#module_ArrowGeometry..ArrowGeometry+getConstants) ⇒ <code>Object</code>
+    * [.isCurved(layer)](#module_ArrowGeometry..ArrowGeometry+isCurved) ⇒ <code>boolean</code>
+    * [.getBezierTangent(t, x1, y1, cx, cy, x2, y2)](#module_ArrowGeometry..ArrowGeometry+getBezierTangent) ⇒ <code>number</code>
+    * [.buildArrowVertices(x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth)](#module_ArrowGeometry..ArrowGeometry+buildArrowVertices) ⇒ <code>Array</code>
+    * [.buildHeadVertices(tipX, tipY, angle, halfShaft, arrowSize, headScale, headType, isLeftToRight)](#module_ArrowGeometry..ArrowGeometry+buildHeadVertices) ⇒ <code>Array</code>
+
+<a name="new_module_ArrowGeometry..ArrowGeometry_new"></a>
+
+#### new ArrowGeometry()
+Creates a new ArrowGeometry instance
+
+<a name="module_ArrowGeometry..ArrowGeometry+getConstants"></a>
+
+#### arrowGeometry.getConstants() ⇒ <code>Object</code>
+Get the arrow geometry constants
+
+**Kind**: instance method of [<code>ArrowGeometry</code>](#module_ArrowGeometry..ArrowGeometry)  
+**Returns**: <code>Object</code> - Arrow geometry constants  
+<a name="module_ArrowGeometry..ArrowGeometry+isCurved"></a>
+
+#### arrowGeometry.isCurved(layer) ⇒ <code>boolean</code>
+Check if an arrow layer has a curve (non-default control point)
+
+**Kind**: instance method of [<code>ArrowGeometry</code>](#module_ArrowGeometry..ArrowGeometry)  
+**Returns**: <code>boolean</code> - True if the arrow is curved  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Arrow layer to check |
+
+<a name="module_ArrowGeometry..ArrowGeometry+getBezierTangent"></a>
+
+#### arrowGeometry.getBezierTangent(t, x1, y1, cx, cy, x2, y2) ⇒ <code>number</code>
+Get the tangent angle at a point on a quadratic Bézier curve
+
+**Kind**: instance method of [<code>ArrowGeometry</code>](#module_ArrowGeometry..ArrowGeometry)  
+**Returns**: <code>number</code> - Angle in radians  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| t | <code>number</code> | Parameter 0 to 1 (0 = start, 1 = end) |
+| x1 | <code>number</code> | Start X |
+| y1 | <code>number</code> | Start Y |
+| cx | <code>number</code> | Control X |
+| cy | <code>number</code> | Control Y |
+| x2 | <code>number</code> | End X |
+| y2 | <code>number</code> | End Y |
+
+<a name="module_ArrowGeometry..ArrowGeometry+buildArrowVertices"></a>
+
+#### arrowGeometry.buildArrowVertices(x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth) ⇒ <code>Array</code>
+Build the vertices for an arrow polygon
+
+**Kind**: instance method of [<code>ArrowGeometry</code>](#module_ArrowGeometry..ArrowGeometry)  
+**Returns**: <code>Array</code> - Array of {x, y} vertex objects  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| x1 | <code>number</code> | Start X |
+| y1 | <code>number</code> | Start Y |
+| x2 | <code>number</code> | End X (tip direction) |
+| y2 | <code>number</code> | End Y |
+| angle | <code>number</code> | Angle of arrow direction |
+| perpAngle | <code>number</code> | Perpendicular angle |
+| halfShaft | <code>number</code> | Half of shaft width |
+| arrowSize | <code>number</code> | Size of arrowhead |
+| arrowStyle | <code>string</code> | 'single', 'double', or 'none' |
+| headType | <code>string</code> | 'pointed', 'chevron', or 'standard' |
+| headScale | <code>number</code> | Scale factor for arrow head size |
+| tailWidth | <code>number</code> | Extra width at tail end |
+
+<a name="module_ArrowGeometry..ArrowGeometry+buildHeadVertices"></a>
+
+#### arrowGeometry.buildHeadVertices(tipX, tipY, angle, halfShaft, arrowSize, headScale, headType, isLeftToRight) ⇒ <code>Array</code>
+Build head vertices for an arrow head at a given position/angle.
+This is the same logic used by _buildSingleHeadVertices for consistent heads.
+
+**Kind**: instance method of [<code>ArrowGeometry</code>](#module_ArrowGeometry..ArrowGeometry)  
+**Returns**: <code>Array</code> - Array of vertex objects {x, y}  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| tipX | <code>number</code> | X coordinate of arrow tip |
+| tipY | <code>number</code> | Y coordinate of arrow tip |
+| angle | <code>number</code> | Direction angle (radians) |
+| halfShaft | <code>number</code> | Half of shaft width |
+| arrowSize | <code>number</code> | Arrow size |
+| headScale | <code>number</code> | Head scale factor |
+| headType | <code>string</code> | 'pointed', 'chevron', or 'standard' |
+| isLeftToRight | <code>boolean</code> | True if traversing left-to-right (affects vertex order) |
+
 <a name="module_ArrowRenderer"></a>
 
 ## ArrowRenderer
-ArrowRenderer - Specialized arrow shape renderingExtracted from LayerRenderer.js to reduce file size and improve maintainability.This module handles all arrow-related rendering including:- Arrow vertex calculation (single, double, no head)- Arrow head types (pointed, chevron, standard)- Shadow rendering with spread support
+ArrowRenderer - Specialized arrow shape rendering
+
+Extracted from LayerRenderer.js to reduce file size and improve maintainability.
+This module handles all arrow-related rendering including:
+- Arrow vertex calculation (single, double, no head)
+- Arrow head types (pointed, chevron, standard)
+- Shadow rendering with spread support
 
 **Since**: 0.9.1  
 
@@ -1361,6 +2692,7 @@ ArrowRenderer - Specialized arrow shape renderingExtracted from LayerRenderer.
     * [~ArrowRenderer](#module_ArrowRenderer..ArrowRenderer)
         * [new ArrowRenderer(ctx, [config])](#new_module_ArrowRenderer..ArrowRenderer_new)
         * [.setShadowRenderer(shadowRenderer)](#module_ArrowRenderer..ArrowRenderer+setShadowRenderer)
+        * [.setEffectsRenderer(effectsRenderer)](#module_ArrowRenderer..ArrowRenderer+setEffectsRenderer)
         * [.setContext(ctx)](#module_ArrowRenderer..ArrowRenderer+setContext)
         * [.clearShadow()](#module_ArrowRenderer..ArrowRenderer+clearShadow)
         * [.applyShadow(layer, scale)](#module_ArrowRenderer..ArrowRenderer+applyShadow)
@@ -1369,6 +2701,10 @@ ArrowRenderer - Specialized arrow shape renderingExtracted from LayerRenderer.
         * [.drawSpreadShadow(layer, scale, spread, drawFn, [opacity])](#module_ArrowRenderer..ArrowRenderer+drawSpreadShadow)
         * [.drawSpreadShadowStroke(layer, scale, strokeWidth, drawFn, [opacity])](#module_ArrowRenderer..ArrowRenderer+drawSpreadShadowStroke)
         * [.buildArrowVertices(x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth)](#module_ArrowRenderer..ArrowRenderer+buildArrowVertices) ⇒ <code>Array</code>
+        * [.isCurved(layer)](#module_ArrowRenderer..ArrowRenderer+isCurved) ⇒ <code>boolean</code>
+        * [.getBezierTangent(t, x1, y1, cx, cy, x2, y2)](#module_ArrowRenderer..ArrowRenderer+getBezierTangent) ⇒ <code>number</code>
+        * [.drawCurved(layer, [options])](#module_ArrowRenderer..ArrowRenderer+drawCurved)
+        * [.drawArrowHead(tipX, tipY, angle, size, headScale, headType, color, opacity, [strokeColor], [strokeWidth], [strokeOpacity])](#module_ArrowRenderer..ArrowRenderer+drawArrowHead)
         * [.draw(layer, [options])](#module_ArrowRenderer..ArrowRenderer+draw)
         * [.destroy()](#module_ArrowRenderer..ArrowRenderer+destroy)
 
@@ -1382,6 +2718,7 @@ ArrowRenderer class - Renders arrow shapes on canvas
 * [~ArrowRenderer](#module_ArrowRenderer..ArrowRenderer)
     * [new ArrowRenderer(ctx, [config])](#new_module_ArrowRenderer..ArrowRenderer_new)
     * [.setShadowRenderer(shadowRenderer)](#module_ArrowRenderer..ArrowRenderer+setShadowRenderer)
+    * [.setEffectsRenderer(effectsRenderer)](#module_ArrowRenderer..ArrowRenderer+setEffectsRenderer)
     * [.setContext(ctx)](#module_ArrowRenderer..ArrowRenderer+setContext)
     * [.clearShadow()](#module_ArrowRenderer..ArrowRenderer+clearShadow)
     * [.applyShadow(layer, scale)](#module_ArrowRenderer..ArrowRenderer+applyShadow)
@@ -1390,6 +2727,10 @@ ArrowRenderer class - Renders arrow shapes on canvas
     * [.drawSpreadShadow(layer, scale, spread, drawFn, [opacity])](#module_ArrowRenderer..ArrowRenderer+drawSpreadShadow)
     * [.drawSpreadShadowStroke(layer, scale, strokeWidth, drawFn, [opacity])](#module_ArrowRenderer..ArrowRenderer+drawSpreadShadowStroke)
     * [.buildArrowVertices(x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth)](#module_ArrowRenderer..ArrowRenderer+buildArrowVertices) ⇒ <code>Array</code>
+    * [.isCurved(layer)](#module_ArrowRenderer..ArrowRenderer+isCurved) ⇒ <code>boolean</code>
+    * [.getBezierTangent(t, x1, y1, cx, cy, x2, y2)](#module_ArrowRenderer..ArrowRenderer+getBezierTangent) ⇒ <code>number</code>
+    * [.drawCurved(layer, [options])](#module_ArrowRenderer..ArrowRenderer+drawCurved)
+    * [.drawArrowHead(tipX, tipY, angle, size, headScale, headType, color, opacity, [strokeColor], [strokeWidth], [strokeOpacity])](#module_ArrowRenderer..ArrowRenderer+drawArrowHead)
     * [.draw(layer, [options])](#module_ArrowRenderer..ArrowRenderer+draw)
     * [.destroy()](#module_ArrowRenderer..ArrowRenderer+destroy)
 
@@ -1404,6 +2745,7 @@ Creates a new ArrowRenderer instance
 | ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
 | [config] | <code>Object</code> | Configuration options |
 | [config.shadowRenderer] | <code>Object</code> | ShadowRenderer instance for shadow operations |
+| [config.effectsRenderer] | <code>Object</code> | EffectsRenderer instance for blur fill |
 
 <a name="module_ArrowRenderer..ArrowRenderer+setShadowRenderer"></a>
 
@@ -1415,6 +2757,17 @@ Set the shadow renderer instance
 | Param | Type | Description |
 | --- | --- | --- |
 | shadowRenderer | <code>Object</code> | ShadowRenderer instance |
+
+<a name="module_ArrowRenderer..ArrowRenderer+setEffectsRenderer"></a>
+
+#### arrowRenderer.setEffectsRenderer(effectsRenderer)
+Set the effects renderer instance for blur fill
+
+**Kind**: instance method of [<code>ArrowRenderer</code>](#module_ArrowRenderer..ArrowRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| effectsRenderer | <code>Object</code> | EffectsRenderer instance |
 
 <a name="module_ArrowRenderer..ArrowRenderer+setContext"></a>
 
@@ -1503,7 +2856,8 @@ Draw a spread shadow stroke
 <a name="module_ArrowRenderer..ArrowRenderer+buildArrowVertices"></a>
 
 #### arrowRenderer.buildArrowVertices(x1, y1, x2, y2, angle, perpAngle, halfShaft, arrowSize, arrowStyle, headType, headScale, tailWidth) ⇒ <code>Array</code>
-Build the vertices for an arrow polygon
+Build the vertices for an arrow polygon.
+Delegates to ArrowGeometry for pure geometry calculations.
 
 **Kind**: instance method of [<code>ArrowRenderer</code>](#module_ArrowRenderer..ArrowRenderer)  
 **Returns**: <code>Array</code> - Array of {x, y} vertex objects  
@@ -1522,6 +2876,73 @@ Build the vertices for an arrow polygon
 | headType | <code>string</code> | 'pointed', 'chevron', or 'standard' |
 | headScale | <code>number</code> | Scale factor for arrow head size |
 | tailWidth | <code>number</code> | Extra width at tail end |
+
+<a name="module_ArrowRenderer..ArrowRenderer+isCurved"></a>
+
+#### arrowRenderer.isCurved(layer) ⇒ <code>boolean</code>
+Check if an arrow layer has a curve (non-default control point)
+Delegates to ArrowGeometry for pure geometry calculations.
+
+**Kind**: instance method of [<code>ArrowRenderer</code>](#module_ArrowRenderer..ArrowRenderer)  
+**Returns**: <code>boolean</code> - True if the arrow is curved  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Arrow layer to check |
+
+<a name="module_ArrowRenderer..ArrowRenderer+getBezierTangent"></a>
+
+#### arrowRenderer.getBezierTangent(t, x1, y1, cx, cy, x2, y2) ⇒ <code>number</code>
+Get the tangent angle at a point on a quadratic Bézier curve
+Delegates to ArrowGeometry for pure geometry calculations.
+
+**Kind**: instance method of [<code>ArrowRenderer</code>](#module_ArrowRenderer..ArrowRenderer)  
+**Returns**: <code>number</code> - Angle in radians  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| t | <code>number</code> | Parameter 0 to 1 (0 = start, 1 = end) |
+| x1 | <code>number</code> | Start X |
+| y1 | <code>number</code> | Start Y |
+| cx | <code>number</code> | Control X |
+| cy | <code>number</code> | Control Y |
+| x2 | <code>number</code> | End X |
+| y2 | <code>number</code> | End Y |
+
+<a name="module_ArrowRenderer..ArrowRenderer+drawCurved"></a>
+
+#### arrowRenderer.drawCurved(layer, [options])
+Draw a curved arrow using quadratic Bézier
+Draws the entire arrow (shaft + head) as one unified polygon path.
+Uses the same head vertex logic as straight arrows for consistent appearance.
+
+**Kind**: instance method of [<code>ArrowRenderer</code>](#module_ArrowRenderer..ArrowRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with arrow properties |
+| [options] | <code>Object</code> | Rendering options |
+
+<a name="module_ArrowRenderer..ArrowRenderer+drawArrowHead"></a>
+
+#### arrowRenderer.drawArrowHead(tipX, tipY, angle, size, headScale, headType, color, opacity, [strokeColor], [strokeWidth], [strokeOpacity])
+Draw an arrow head at the specified position and angle
+
+**Kind**: instance method of [<code>ArrowRenderer</code>](#module_ArrowRenderer..ArrowRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| tipX | <code>number</code> | X coordinate of arrow tip |
+| tipY | <code>number</code> | Y coordinate of arrow tip |
+| angle | <code>number</code> | Angle the arrow is pointing (radians) |
+| size | <code>number</code> | Arrow head size |
+| headScale | <code>number</code> | Scale factor for head |
+| headType | <code>string</code> | Head type: 'pointed', 'chevron', 'standard' |
+| color | <code>string</code> | Fill color for head |
+| opacity | <code>number</code> | Opacity |
+| [strokeColor] | <code>string</code> | Stroke color for head outline |
+| [strokeWidth] | <code>number</code> | Stroke width for head outline |
+| [strokeOpacity] | <code>number</code> | Stroke opacity for head outline |
 
 <a name="module_ArrowRenderer..ArrowRenderer+draw"></a>
 
@@ -1547,7 +2968,11 @@ Clean up resources
 <a name="module_BoundsCalculator"></a>
 
 ## BoundsCalculator
-BoundsCalculator - Utility for calculating layer boundsProvides centralized bounds calculation for all layer types.Extracted from SelectionManager.getLayerBoundsCompat() to reduce code duplicationand provide a reusable utility.
+BoundsCalculator - Utility for calculating layer bounds
+
+Provides centralized bounds calculation for all layer types.
+Extracted from SelectionManager.getLayerBoundsCompat() to reduce code duplication
+and provide a reusable utility.
 
 **Since**: 0.9.2  
 
@@ -1734,15 +3159,442 @@ Get the center point of bounds
 | --- | --- | --- |
 | bounds | <code>Object</code> | Bounds object |
 
+<a name="module_CalloutRenderer"></a>
+
+## CalloutRenderer
+CalloutRenderer - Specialized callout/chat bubble rendering
+
+This module handles rendering of callout (speech bubble) shapes:
+- Rounded rectangle container with a triangular tail/pointer
+- Multi-line text with word wrapping
+- Text alignment (horizontal and vertical)
+- Configurable tail direction and position
+- Text stroke and shadow effects
+
+**Since**: 1.5.0  
+
+* [CalloutRenderer](#module_CalloutRenderer)
+    * [~CalloutRenderer](#module_CalloutRenderer..CalloutRenderer)
+        * [new CalloutRenderer(ctx, [config])](#new_module_CalloutRenderer..CalloutRenderer_new)
+        * [.setShadowRenderer(shadowRenderer)](#module_CalloutRenderer..CalloutRenderer+setShadowRenderer)
+        * [.setEffectsRenderer(effectsRenderer)](#module_CalloutRenderer..CalloutRenderer+setEffectsRenderer)
+        * [.setTextBoxRenderer(textBoxRenderer)](#module_CalloutRenderer..CalloutRenderer+setTextBoxRenderer)
+        * [.setContext(ctx)](#module_CalloutRenderer..CalloutRenderer+setContext)
+        * [.clearShadow()](#module_CalloutRenderer..CalloutRenderer+clearShadow)
+        * [.hasShadowEnabled(layer)](#module_CalloutRenderer..CalloutRenderer+hasShadowEnabled) ⇒ <code>boolean</code>
+        * [.getShadowSpread(layer, scale)](#module_CalloutRenderer..CalloutRenderer+getShadowSpread) ⇒ <code>number</code>
+        * [.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)](#module_CalloutRenderer..CalloutRenderer+drawSpreadShadow)
+        * [.drawCalloutPath(x, y, width, height, cornerRadius, tailDirection, tailPosition, tailSize, [context], [tailStyle], [tailTipX], [tailTipY])](#module_CalloutRenderer..CalloutRenderer+drawCalloutPath)
+        * [.draw(layer, [options])](#module_CalloutRenderer..CalloutRenderer+draw)
+
+<a name="module_CalloutRenderer..CalloutRenderer"></a>
+
+### CalloutRenderer~CalloutRenderer
+CalloutRenderer class - Renders callout/chat bubble shapes on canvas
+
+**Kind**: inner class of [<code>CalloutRenderer</code>](#module_CalloutRenderer)  
+
+* [~CalloutRenderer](#module_CalloutRenderer..CalloutRenderer)
+    * [new CalloutRenderer(ctx, [config])](#new_module_CalloutRenderer..CalloutRenderer_new)
+    * [.setShadowRenderer(shadowRenderer)](#module_CalloutRenderer..CalloutRenderer+setShadowRenderer)
+    * [.setEffectsRenderer(effectsRenderer)](#module_CalloutRenderer..CalloutRenderer+setEffectsRenderer)
+    * [.setTextBoxRenderer(textBoxRenderer)](#module_CalloutRenderer..CalloutRenderer+setTextBoxRenderer)
+    * [.setContext(ctx)](#module_CalloutRenderer..CalloutRenderer+setContext)
+    * [.clearShadow()](#module_CalloutRenderer..CalloutRenderer+clearShadow)
+    * [.hasShadowEnabled(layer)](#module_CalloutRenderer..CalloutRenderer+hasShadowEnabled) ⇒ <code>boolean</code>
+    * [.getShadowSpread(layer, scale)](#module_CalloutRenderer..CalloutRenderer+getShadowSpread) ⇒ <code>number</code>
+    * [.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)](#module_CalloutRenderer..CalloutRenderer+drawSpreadShadow)
+    * [.drawCalloutPath(x, y, width, height, cornerRadius, tailDirection, tailPosition, tailSize, [context], [tailStyle], [tailTipX], [tailTipY])](#module_CalloutRenderer..CalloutRenderer+drawCalloutPath)
+    * [.draw(layer, [options])](#module_CalloutRenderer..CalloutRenderer+draw)
+
+<a name="new_module_CalloutRenderer..CalloutRenderer_new"></a>
+
+#### new CalloutRenderer(ctx, [config])
+Creates a new CalloutRenderer instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
+| [config] | <code>Object</code> | Configuration options |
+| [config.shadowRenderer] | <code>Object</code> | ShadowRenderer instance for shadow operations |
+| [config.effectsRenderer] | <code>Object</code> | EffectsRenderer instance for blur fill |
+| [config.textBoxRenderer] | <code>Object</code> | TextBoxRenderer instance for text rendering |
+
+<a name="module_CalloutRenderer..CalloutRenderer+setShadowRenderer"></a>
+
+#### calloutRenderer.setShadowRenderer(shadowRenderer)
+Set the shadow renderer instance
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| shadowRenderer | <code>Object</code> | ShadowRenderer instance |
+
+<a name="module_CalloutRenderer..CalloutRenderer+setEffectsRenderer"></a>
+
+#### calloutRenderer.setEffectsRenderer(effectsRenderer)
+Set the effects renderer instance (for blur fill)
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| effectsRenderer | <code>Object</code> | EffectsRenderer instance |
+
+<a name="module_CalloutRenderer..CalloutRenderer+setTextBoxRenderer"></a>
+
+#### calloutRenderer.setTextBoxRenderer(textBoxRenderer)
+Set the text box renderer instance (for text rendering)
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| textBoxRenderer | <code>Object</code> | TextBoxRenderer instance |
+
+<a name="module_CalloutRenderer..CalloutRenderer+setContext"></a>
+
+#### calloutRenderer.setContext(ctx)
+Set the context
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas context |
+
+<a name="module_CalloutRenderer..CalloutRenderer+clearShadow"></a>
+
+#### calloutRenderer.clearShadow()
+Clear shadow settings from context
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+<a name="module_CalloutRenderer..CalloutRenderer+hasShadowEnabled"></a>
+
+#### calloutRenderer.hasShadowEnabled(layer) ⇒ <code>boolean</code>
+Check if shadow is enabled on a layer
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+**Returns**: <code>boolean</code> - True if shadow is enabled  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer to check |
+
+<a name="module_CalloutRenderer..CalloutRenderer+getShadowSpread"></a>
+
+#### calloutRenderer.getShadowSpread(layer, scale) ⇒ <code>number</code>
+Get shadow spread value from layer
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+**Returns**: <code>number</code> - Spread value in pixels  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with shadow properties |
+| scale | <code>Object</code> | Scale factors |
+
+<a name="module_CalloutRenderer..CalloutRenderer+drawSpreadShadow"></a>
+
+#### calloutRenderer.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)
+Draw spread shadow for a filled shape
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with shadow properties |
+| scale | <code>Object</code> | Scale factors |
+| spread | <code>number</code> | Spread amount |
+| drawPathFn | <code>function</code> | Function to draw the path |
+| opacity | <code>number</code> | Opacity for the shadow |
+
+<a name="module_CalloutRenderer..CalloutRenderer+drawCalloutPath"></a>
+
+#### calloutRenderer.drawCalloutPath(x, y, width, height, cornerRadius, tailDirection, tailPosition, tailSize, [context], [tailStyle], [tailTipX], [tailTipY])
+Draw the callout path (rounded rectangle with tail)
+Supports two modes:
+1. Legacy mode: uses tailDirection, tailPosition, tailSize
+2. Draggable mode: uses tailTipX, tailTipY for direct positioning
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| x | <code>number</code> |  | X position |
+| y | <code>number</code> |  | Y position |
+| width | <code>number</code> |  | Width |
+| height | <code>number</code> |  | Height |
+| cornerRadius | <code>number</code> |  | Corner radius |
+| tailDirection | <code>string</code> |  | Direction of the tail (legacy mode) |
+| tailPosition | <code>number</code> |  | Position along edge (0-1) (legacy mode) |
+| tailSize | <code>number</code> |  | Size of the tail (legacy mode) |
+| [context] | <code>CanvasRenderingContext2D</code> |  | Optional context |
+| [tailStyle] | <code>string</code> | <code>&quot;&#x27;triangle&#x27;&quot;</code> | Style of the tail (triangle, curved, line) |
+| [tailTipX] | <code>number</code> |  | Tail tip X for draggable mode |
+| [tailTipY] | <code>number</code> |  | Tail tip Y for draggable mode |
+
+<a name="module_CalloutRenderer..CalloutRenderer+draw"></a>
+
+#### calloutRenderer.draw(layer, [options])
+Draw a callout shape (rounded rectangle with tail and multi-line text)
+
+**Kind**: instance method of [<code>CalloutRenderer</code>](#module_CalloutRenderer..CalloutRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with callout properties |
+| [options] | <code>Object</code> | Rendering options |
+| [options.scale] | <code>Object</code> | Scale factors {sx, sy, avg} |
+| [options.shadowScale] | <code>Object</code> | Shadow scale factors |
+| [options.scaled] | <code>boolean</code> | Whether coords are pre-scaled |
+
 <a name="module_DeepClone"></a>
 
 ## DeepClone
-DeepClone - Utility for deep cloning objects safelyUses structuredClone when available (modern browsers), with fallbackto JSON.parse(JSON.stringify()) for older environments.Benefits over JSON.parse(JSON.stringify()):- Handles circular references (structuredClone)- Preserves undefined values in some cases- Better performance in modern browsers- Cleaner, more semantic API
+DeepClone - Utility for deep cloning objects safely
+
+Uses structuredClone when available (modern browsers), with fallback
+to JSON.parse(JSON.stringify()) for older environments.
+
+Benefits over JSON.parse(JSON.stringify()):
+- Handles circular references (structuredClone)
+- Preserves undefined values in some cases
+- Better performance in modern browsers
+- Cleaner, more semantic API
+
+<a name="module_DimensionRenderer"></a>
+
+## DimensionRenderer
+DimensionRenderer - Renders dimension/measurement annotations
+
+This module handles rendering of dimension lines for technical illustrations:
+- Horizontal and vertical dimension lines with extension lines
+- Auto-calculated measurement values (with optional scale)
+- Arrow/tick mark styles at endpoints
+- Configurable text positioning (above, below, inline)
+
+**Since**: 1.5.4  
+
+* [DimensionRenderer](#module_DimensionRenderer)
+    * [~DimensionRenderer](#module_DimensionRenderer..DimensionRenderer)
+        * [new DimensionRenderer(ctx, [config])](#new_module_DimensionRenderer..DimensionRenderer_new)
+        * _instance_
+            * [.setContext(ctx)](#module_DimensionRenderer..DimensionRenderer+setContext)
+            * [.formatMeasurement(value, layer)](#module_DimensionRenderer..DimensionRenderer+formatMeasurement) ⇒ <code>string</code>
+            * [.formatWithTolerance(value, unitSuffix, toleranceType, layer, precision)](#module_DimensionRenderer..DimensionRenderer+formatWithTolerance) ⇒ <code>string</code>
+            * [.calculateDistance(layer)](#module_DimensionRenderer..DimensionRenderer+calculateDistance) ⇒ <code>number</code>
+            * [.draw(layer, [_options])](#module_DimensionRenderer..DimensionRenderer+draw)
+            * [.buildDisplayText(autoDistance, layer)](#module_DimensionRenderer..DimensionRenderer+buildDisplayText) ⇒ <code>string</code>
+            * [.formatUserTextWithTolerance(text, layer)](#module_DimensionRenderer..DimensionRenderer+formatUserTextWithTolerance) ⇒ <code>string</code>
+            * [.getBounds(layer)](#module_DimensionRenderer..DimensionRenderer+getBounds) ⇒ <code>Object</code>
+            * [.hitTest(layer, px, py)](#module_DimensionRenderer..DimensionRenderer+hitTest) ⇒ <code>boolean</code>
+        * _static_
+            * [.END_STYLES](#module_DimensionRenderer..DimensionRenderer.END_STYLES) ⇒ <code>Object</code>
+            * [.TEXT_POSITIONS](#module_DimensionRenderer..DimensionRenderer.TEXT_POSITIONS) ⇒ <code>Object</code>
+            * [.DEFAULTS](#module_DimensionRenderer..DimensionRenderer.DEFAULTS) ⇒ <code>Object</code>
+            * [.createDimensionLayer(x1, y1, x2, y2, [options])](#module_DimensionRenderer..DimensionRenderer.createDimensionLayer) ⇒ <code>Object</code>
+
+<a name="module_DimensionRenderer..DimensionRenderer"></a>
+
+### DimensionRenderer~DimensionRenderer
+DimensionRenderer class - Renders dimension annotations on canvas
+
+**Kind**: inner class of [<code>DimensionRenderer</code>](#module_DimensionRenderer)  
+
+* [~DimensionRenderer](#module_DimensionRenderer..DimensionRenderer)
+    * [new DimensionRenderer(ctx, [config])](#new_module_DimensionRenderer..DimensionRenderer_new)
+    * _instance_
+        * [.setContext(ctx)](#module_DimensionRenderer..DimensionRenderer+setContext)
+        * [.formatMeasurement(value, layer)](#module_DimensionRenderer..DimensionRenderer+formatMeasurement) ⇒ <code>string</code>
+        * [.formatWithTolerance(value, unitSuffix, toleranceType, layer, precision)](#module_DimensionRenderer..DimensionRenderer+formatWithTolerance) ⇒ <code>string</code>
+        * [.calculateDistance(layer)](#module_DimensionRenderer..DimensionRenderer+calculateDistance) ⇒ <code>number</code>
+        * [.draw(layer, [_options])](#module_DimensionRenderer..DimensionRenderer+draw)
+        * [.buildDisplayText(autoDistance, layer)](#module_DimensionRenderer..DimensionRenderer+buildDisplayText) ⇒ <code>string</code>
+        * [.formatUserTextWithTolerance(text, layer)](#module_DimensionRenderer..DimensionRenderer+formatUserTextWithTolerance) ⇒ <code>string</code>
+        * [.getBounds(layer)](#module_DimensionRenderer..DimensionRenderer+getBounds) ⇒ <code>Object</code>
+        * [.hitTest(layer, px, py)](#module_DimensionRenderer..DimensionRenderer+hitTest) ⇒ <code>boolean</code>
+    * _static_
+        * [.END_STYLES](#module_DimensionRenderer..DimensionRenderer.END_STYLES) ⇒ <code>Object</code>
+        * [.TEXT_POSITIONS](#module_DimensionRenderer..DimensionRenderer.TEXT_POSITIONS) ⇒ <code>Object</code>
+        * [.DEFAULTS](#module_DimensionRenderer..DimensionRenderer.DEFAULTS) ⇒ <code>Object</code>
+        * [.createDimensionLayer(x1, y1, x2, y2, [options])](#module_DimensionRenderer..DimensionRenderer.createDimensionLayer) ⇒ <code>Object</code>
+
+<a name="new_module_DimensionRenderer..DimensionRenderer_new"></a>
+
+#### new DimensionRenderer(ctx, [config])
+Creates a new DimensionRenderer instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
+| [config] | <code>Object</code> | Configuration options |
+
+<a name="module_DimensionRenderer..DimensionRenderer+setContext"></a>
+
+#### dimensionRenderer.setContext(ctx)
+Set the canvas context
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
+
+<a name="module_DimensionRenderer..DimensionRenderer+formatMeasurement"></a>
+
+#### dimensionRenderer.formatMeasurement(value, layer) ⇒ <code>string</code>
+Format measurement value for display
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>string</code> - Formatted value string  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| value | <code>number</code> | Raw pixel value |
+| layer | <code>Object</code> | Layer with scale/unit/precision settings |
+
+<a name="module_DimensionRenderer..DimensionRenderer+formatWithTolerance"></a>
+
+#### dimensionRenderer.formatWithTolerance(value, unitSuffix, toleranceType, layer, precision) ⇒ <code>string</code>
+Format value with tolerance annotation
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>string</code> - Formatted string with tolerance  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| value | <code>string</code> | Formatted main value |
+| unitSuffix | <code>string</code> | Unit suffix (e.g., " mm") |
+| toleranceType | <code>string</code> | Type of tolerance |
+| layer | <code>Object</code> | Layer with tolerance settings |
+| precision | <code>number</code> | Decimal precision |
+
+<a name="module_DimensionRenderer..DimensionRenderer+calculateDistance"></a>
+
+#### dimensionRenderer.calculateDistance(layer) ⇒ <code>number</code>
+Calculate the measurement distance
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>number</code> - Distance in pixels  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Dimension layer |
+
+<a name="module_DimensionRenderer..DimensionRenderer+draw"></a>
+
+#### dimensionRenderer.draw(layer, [_options])
+Draw a dimension layer
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Dimension layer object |
+| [_options] | <code>Object</code> | Rendering options (reserved for future use) |
+
+<a name="module_DimensionRenderer..DimensionRenderer+buildDisplayText"></a>
+
+#### dimensionRenderer.buildDisplayText(autoDistance, layer) ⇒ <code>string</code>
+Build the full display text including value and tolerance
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>string</code> - Full display text  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| autoDistance | <code>number</code> | Auto-calculated distance in pixels |
+| layer | <code>Object</code> | Layer object with text/tolerance settings |
+
+<a name="module_DimensionRenderer..DimensionRenderer+formatUserTextWithTolerance"></a>
+
+#### dimensionRenderer.formatUserTextWithTolerance(text, layer) ⇒ <code>string</code>
+Format user-entered text with tolerance annotation
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>string</code> - Text with tolerance appended  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| text | <code>string</code> | User-entered dimension value |
+| layer | <code>Object</code> | Layer with tolerance settings |
+
+<a name="module_DimensionRenderer..DimensionRenderer+getBounds"></a>
+
+#### dimensionRenderer.getBounds(layer) ⇒ <code>Object</code>
+Get the bounding box for a dimension layer
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>Object</code> - Bounding box {x, y, width, height}  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Dimension layer |
+
+<a name="module_DimensionRenderer..DimensionRenderer+hitTest"></a>
+
+#### dimensionRenderer.hitTest(layer, px, py) ⇒ <code>boolean</code>
+Hit test for dimension layer
+
+**Kind**: instance method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>boolean</code> - True if point is near dimension line  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Dimension layer |
+| px | <code>number</code> | Test point X |
+| py | <code>number</code> | Test point Y |
+
+<a name="module_DimensionRenderer..DimensionRenderer.END_STYLES"></a>
+
+#### DimensionRenderer.END\_STYLES ⇒ <code>Object</code>
+Get available end styles
+
+**Kind**: static property of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>Object</code> - End style constants  
+<a name="module_DimensionRenderer..DimensionRenderer.TEXT_POSITIONS"></a>
+
+#### DimensionRenderer.TEXT\_POSITIONS ⇒ <code>Object</code>
+Get available text positions
+
+**Kind**: static property of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>Object</code> - Text position constants  
+<a name="module_DimensionRenderer..DimensionRenderer.DEFAULTS"></a>
+
+#### DimensionRenderer.DEFAULTS ⇒ <code>Object</code>
+Get default configuration
+
+**Kind**: static property of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>Object</code> - Default values  
+<a name="module_DimensionRenderer..DimensionRenderer.createDimensionLayer"></a>
+
+#### DimensionRenderer.createDimensionLayer(x1, y1, x2, y2, [options]) ⇒ <code>Object</code>
+Create a default dimension layer object
+
+**Kind**: static method of [<code>DimensionRenderer</code>](#module_DimensionRenderer..DimensionRenderer)  
+**Returns**: <code>Object</code> - Dimension layer object  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| x1 | <code>number</code> | Start X position |
+| y1 | <code>number</code> | Start Y position |
+| x2 | <code>number</code> | End X position |
+| y2 | <code>number</code> | End Y position |
+| [options] | <code>Object</code> | Additional options |
 
 <a name="module_EffectsRenderer"></a>
 
 ## EffectsRenderer
-EffectsRenderer - Handles special effect layers (blur)This module provides rendering for effect-type layers that applyvisual modifications to image regions rather than drawing shapes.Extracted from LayerRenderer to separate concerns and reduce god class size.
+EffectsRenderer - Handles special effect layers (blur)
+
+This module provides rendering for effect-type layers that apply
+visual modifications to image regions rather than drawing shapes.
+
+Extracted from LayerRenderer to separate concerns and reduce god class size.
 
 **Since**: 0.9.0  
 
@@ -1753,7 +3605,9 @@ EffectsRenderer - Handles special effect layers (blur)This module provides ren
         * [.setBackgroundImage(image)](#module_EffectsRenderer..EffectsRenderer+setBackgroundImage)
         * [.setBaseDimensions(width, height)](#module_EffectsRenderer..EffectsRenderer+setBaseDimensions)
         * [.getScaleFactors()](#module_EffectsRenderer..EffectsRenderer+getScaleFactors) ⇒ <code>Object</code>
-        * [.drawBlur(layer, [options])](#module_EffectsRenderer..EffectsRenderer+drawBlur)
+        * [.drawBlurWithShape(layer, drawPathFn, [options])](#module_EffectsRenderer..EffectsRenderer+drawBlurWithShape)
+        * [.hasBlurBlendMode(layer)](#module_EffectsRenderer..EffectsRenderer+hasBlurBlendMode) ⇒ <code>boolean</code>
+        * [.drawBlurFill(layer, drawPathFn, bounds, [options])](#module_EffectsRenderer..EffectsRenderer+drawBlurFill)
 
 <a name="module_EffectsRenderer..EffectsRenderer"></a>
 
@@ -1768,7 +3622,9 @@ EffectsRenderer class - Renders blur effect layers
     * [.setBackgroundImage(image)](#module_EffectsRenderer..EffectsRenderer+setBackgroundImage)
     * [.setBaseDimensions(width, height)](#module_EffectsRenderer..EffectsRenderer+setBaseDimensions)
     * [.getScaleFactors()](#module_EffectsRenderer..EffectsRenderer+getScaleFactors) ⇒ <code>Object</code>
-    * [.drawBlur(layer, [options])](#module_EffectsRenderer..EffectsRenderer+drawBlur)
+    * [.drawBlurWithShape(layer, drawPathFn, [options])](#module_EffectsRenderer..EffectsRenderer+drawBlurWithShape)
+    * [.hasBlurBlendMode(layer)](#module_EffectsRenderer..EffectsRenderer+hasBlurBlendMode) ⇒ <code>boolean</code>
+    * [.drawBlurFill(layer, drawPathFn, bounds, [options])](#module_EffectsRenderer..EffectsRenderer+drawBlurFill)
 
 <a name="new_module_EffectsRenderer..EffectsRenderer_new"></a>
 
@@ -1826,35 +3682,578 @@ Get scale factors for coordinate transformation
 
 **Kind**: instance method of [<code>EffectsRenderer</code>](#module_EffectsRenderer..EffectsRenderer)  
 **Returns**: <code>Object</code> - Scale factors { sx, sy, avg }  
-<a name="module_EffectsRenderer..EffectsRenderer+drawBlur"></a>
+<a name="module_EffectsRenderer..EffectsRenderer+drawBlurWithShape"></a>
 
-#### effectsRenderer.drawBlur(layer, [options])
-Draw a blur effect regionBlur effects obscure portions of an image, useful forredacting sensitive information or focusing attention elsewhere.
+#### effectsRenderer.drawBlurWithShape(layer, drawPathFn, [options])
+Draw a blur effect using a shape as the clipping region
+
+This enables blur as a "blend mode" for any shape type.
+The shape's geometry defines the blurred region.
+Blur acts as a fill effect - stroke should be drawn separately after calling this.
 
 **Kind**: instance method of [<code>EffectsRenderer</code>](#module_EffectsRenderer..EffectsRenderer)  
 
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with shape properties and blurRadius |
+| drawPathFn | <code>function</code> | Function that draws the shape path (ctx) => void |
+| [options] | <code>Object</code> | Rendering options |
+| [options.scaled] | <code>boolean</code> | Whether coordinates are pre-scaled |
+| [options.scale] | <code>Object</code> | Scale factors {sx, sy, avg} for stroke drawing |
+
+<a name="module_EffectsRenderer..EffectsRenderer+hasBlurBlendMode"></a>
+
+#### effectsRenderer.hasBlurBlendMode(layer) ⇒ <code>boolean</code>
+Check if a layer has blur as its blend mode
+
+**Kind**: instance method of [<code>EffectsRenderer</code>](#module_EffectsRenderer..EffectsRenderer)  
+**Returns**: <code>boolean</code> - True if layer uses blur blend mode  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer to check |
+
+<a name="module_EffectsRenderer..EffectsRenderer+drawBlurFill"></a>
+
+#### effectsRenderer.drawBlurFill(layer, drawPathFn, bounds, [options])
+Draw a blur fill within a clipping path
+
+This is used when shapes have fill='blur' to blur content
+within the shape's bounds (respecting corner radii, rotation, etc).
+
+The blur captures everything currently on the canvas (including other layers)
+for a true "frosted glass" effect. Falls back to background image if needed.
+
+**Kind**: instance method of [<code>EffectsRenderer</code>](#module_EffectsRenderer..EffectsRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with blur properties |
+| drawPathFn | <code>function</code> | Function that draws the clipping path (receives ctx) |
+| bounds | <code>Object</code> | Bounding box { x, y, width, height } |
+| [options] | <code>Object</code> | Rendering options |
+| [options.scaled] | <code>boolean</code> | Whether coordinates are pre-scaled (viewer mode) |
+| [options.imageElement] | <code>HTMLImageElement</code> | Image for blur source (viewer mode) |
+
+<a name="module_FontConfig"></a>
+
+## FontConfig
+Centralized Font Configuration for Layers Extension
+
+This module provides a single source of truth for available fonts
+across both the floating toolbar (InlineTextEditor) and the properties
+panel (PropertyBuilders).
+
+Fonts are loaded from MediaWiki config ($wgLayersDefaultFonts) with
+sensible fallbacks. All font-related UI should use this module to
+ensure consistency.
+
+As of v1.5.47, fonts are self-hosted WOFF2 files bundled with the extension.
+This ensures privacy (no Google Fonts tracking), reliability (no external
+dependencies), and consistency (fonts always available).
+
+
+* [FontConfig](#module_FontConfig)
+    * [~cachedFonts](#module_FontConfig..cachedFonts) : <code>Array.&lt;string&gt;</code> \| <code>null</code>
+    * [~DEFAULT_FONTS](#module_FontConfig..DEFAULT_FONTS) : <code>Array.&lt;string&gt;</code>
+    * [~DEFAULT_FONT_FAMILY](#module_FontConfig..DEFAULT_FONT_FAMILY) : <code>string</code>
+    * [~getFonts()](#module_FontConfig..getFonts) ⇒ <code>Array.&lt;string&gt;</code>
+    * [~getFontOptions()](#module_FontConfig..getFontOptions) ⇒ <code>Array.&lt;{value: string, text: string}&gt;</code>
+    * [~getDefaultFontFamily()](#module_FontConfig..getDefaultFontFamily) ⇒ <code>string</code>
+    * [~normalizeFontFamily(fontFamily)](#module_FontConfig..normalizeFontFamily) ⇒ <code>string</code>
+    * [~isFontAvailable(fontFamily)](#module_FontConfig..isFontAvailable) ⇒ <code>boolean</code>
+    * [~getValidFont(fontFamily)](#module_FontConfig..getValidFont) ⇒ <code>string</code>
+    * [~findMatchingFont(fontFamily)](#module_FontConfig..findMatchingFont) ⇒ <code>string</code>
+    * [~clearCache()](#module_FontConfig..clearCache)
+
+<a name="module_FontConfig..cachedFonts"></a>
+
+### FontConfig~cachedFonts : <code>Array.&lt;string&gt;</code> \| <code>null</code>
+Cache for the fonts list (loaded once from config)
+
+**Kind**: inner property of [<code>FontConfig</code>](#module_FontConfig)  
+<a name="module_FontConfig..DEFAULT_FONTS"></a>
+
+### FontConfig~DEFAULT\_FONTS : <code>Array.&lt;string&gt;</code>
+Default fonts used when MediaWiki config is not available.
+This list should match $wgLayersDefaultFonts in extension.json.
+
+Fonts are organized by category (32 self-hosted fonts + 4 system fonts):
+- System fonts (Arial, Verdana, Times New Roman, Courier New)
+- Sans-serif (14): Roboto, Open Sans, Lato, Montserrat, Noto Sans, etc.
+- Serif (6): Merriweather, Playfair Display, Lora, Libre Baskerville, etc.
+- Display (4): Bebas Neue, Oswald, Archivo Black, Fredoka One
+- Handwriting (4): Caveat, Dancing Script, Pacifico, Indie Flower
+- Monospace (4): Source Code Pro, Fira Code, JetBrains Mono, IBM Plex Mono
+
+All Google Fonts are self-hosted WOFF2 files under OFL license.
+
+**Kind**: inner constant of [<code>FontConfig</code>](#module_FontConfig)  
+<a name="module_FontConfig..DEFAULT_FONT_FAMILY"></a>
+
+### FontConfig~DEFAULT\_FONT\_FAMILY : <code>string</code>
+Default font family for new text layers
+
+**Kind**: inner constant of [<code>FontConfig</code>](#module_FontConfig)  
+<a name="module_FontConfig..getFonts"></a>
+
+### FontConfig~getFonts() ⇒ <code>Array.&lt;string&gt;</code>
+Get the list of available fonts.
+
+Attempts to load from MediaWiki config ($wgLayersDefaultFonts).
+Falls back to DEFAULT_FONTS if config is unavailable.
+
+**Kind**: inner method of [<code>FontConfig</code>](#module_FontConfig)  
+**Returns**: <code>Array.&lt;string&gt;</code> - Array of font family names  
+<a name="module_FontConfig..getFontOptions"></a>
+
+### FontConfig~getFontOptions() ⇒ <code>Array.&lt;{value: string, text: string}&gt;</code>
+Get font options formatted for dropdown/select elements.
+
+**Kind**: inner method of [<code>FontConfig</code>](#module_FontConfig)  
+**Returns**: <code>Array.&lt;{value: string, text: string}&gt;</code> - Array of option objects  
+<a name="module_FontConfig..getDefaultFontFamily"></a>
+
+### FontConfig~getDefaultFontFamily() ⇒ <code>string</code>
+Get the default font family for new text layers.
+
+**Kind**: inner method of [<code>FontConfig</code>](#module_FontConfig)  
+**Returns**: <code>string</code> - Default font family with fallback  
+<a name="module_FontConfig..normalizeFontFamily"></a>
+
+### FontConfig~normalizeFontFamily(fontFamily) ⇒ <code>string</code>
+Normalize a font family value.
+
+Handles values like "Arial, sans-serif" by extracting the primary font,
+and validates against the available fonts list.
+
+**Kind**: inner method of [<code>FontConfig</code>](#module_FontConfig)  
+**Returns**: <code>string</code> - Normalized font family (primary font name)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| fontFamily | <code>string</code> | Font family value to normalize |
+
+<a name="module_FontConfig..isFontAvailable"></a>
+
+### FontConfig~isFontAvailable(fontFamily) ⇒ <code>boolean</code>
+Check if a font is in the available fonts list.
+
+**Kind**: inner method of [<code>FontConfig</code>](#module_FontConfig)  
+**Returns**: <code>boolean</code> - True if font is available  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| fontFamily | <code>string</code> | Font family to check |
+
+<a name="module_FontConfig..getValidFont"></a>
+
+### FontConfig~getValidFont(fontFamily) ⇒ <code>string</code>
+Get a valid font from the list, or the first available font.
+
+**Kind**: inner method of [<code>FontConfig</code>](#module_FontConfig)  
+**Returns**: <code>string</code> - A valid font from the available list  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| fontFamily | <code>string</code> | Preferred font family |
+
+<a name="module_FontConfig..findMatchingFont"></a>
+
+### FontConfig~findMatchingFont(fontFamily) ⇒ <code>string</code>
+Find the matching font in the available list for selection purposes.
+
+Useful for determining which option to select in a dropdown.
+
+**Kind**: inner method of [<code>FontConfig</code>](#module_FontConfig)  
+**Returns**: <code>string</code> - The matching font from the list, or first font  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| fontFamily | <code>string</code> | Current layer font family |
+
+<a name="module_FontConfig..clearCache"></a>
+
+### FontConfig~clearCache()
+Clear the cached fonts (for testing purposes)
+
+**Kind**: inner method of [<code>FontConfig</code>](#module_FontConfig)  
+<a name="module_GradientRenderer"></a>
+
+## GradientRenderer
+GradientRenderer - Creates canvas gradient objects from layer gradient definitions
+
+Gradient definition format:
+{
+  type: 'linear' | 'radial',
+  angle: number (0-360, for linear gradients),
+  colors: [
+    { offset: 0, color: '#ff0000' },
+    { offset: 1, color: '#0000ff' }
+  ],
+  // For radial gradients:
+  centerX: number (0-1, relative position),
+  centerY: number (0-1, relative position),
+  radius: number (0-1, relative to smallest dimension)
+}
+
+
+* [GradientRenderer](#module_GradientRenderer)
+    * [~GradientRenderer](#module_GradientRenderer..GradientRenderer)
+        * [new GradientRenderer(ctx)](#new_module_GradientRenderer..GradientRenderer_new)
+        * _instance_
+            * [.setContext(ctx)](#module_GradientRenderer..GradientRenderer+setContext)
+            * [.createGradient(layer, bounds, [options])](#module_GradientRenderer..GradientRenderer+createGradient) ⇒ <code>CanvasGradient</code> \| <code>null</code>
+            * [.applyFill(layer, bounds, [options])](#module_GradientRenderer..GradientRenderer+applyFill) ⇒ <code>boolean</code>
+            * [.destroy()](#module_GradientRenderer..GradientRenderer+destroy)
+        * _static_
+            * [.hasGradient(layer)](#module_GradientRenderer..GradientRenderer.hasGradient) ⇒ <code>boolean</code>
+            * [.createDefaultGradient(type, startColor, endColor)](#module_GradientRenderer..GradientRenderer.createDefaultGradient) ⇒ <code>Object</code>
+            * [.getPresets()](#module_GradientRenderer..GradientRenderer.getPresets) ⇒ <code>Object</code>
+            * [.validate(gradient)](#module_GradientRenderer..GradientRenderer.validate) ⇒ <code>Object</code>
+            * [.clone(gradient)](#module_GradientRenderer..GradientRenderer.clone) ⇒ <code>Object</code>
+
+<a name="module_GradientRenderer..GradientRenderer"></a>
+
+### GradientRenderer~GradientRenderer
+GradientRenderer class
+
+**Kind**: inner class of [<code>GradientRenderer</code>](#module_GradientRenderer)  
+
+* [~GradientRenderer](#module_GradientRenderer..GradientRenderer)
+    * [new GradientRenderer(ctx)](#new_module_GradientRenderer..GradientRenderer_new)
+    * _instance_
+        * [.setContext(ctx)](#module_GradientRenderer..GradientRenderer+setContext)
+        * [.createGradient(layer, bounds, [options])](#module_GradientRenderer..GradientRenderer+createGradient) ⇒ <code>CanvasGradient</code> \| <code>null</code>
+        * [.applyFill(layer, bounds, [options])](#module_GradientRenderer..GradientRenderer+applyFill) ⇒ <code>boolean</code>
+        * [.destroy()](#module_GradientRenderer..GradientRenderer+destroy)
+    * _static_
+        * [.hasGradient(layer)](#module_GradientRenderer..GradientRenderer.hasGradient) ⇒ <code>boolean</code>
+        * [.createDefaultGradient(type, startColor, endColor)](#module_GradientRenderer..GradientRenderer.createDefaultGradient) ⇒ <code>Object</code>
+        * [.getPresets()](#module_GradientRenderer..GradientRenderer.getPresets) ⇒ <code>Object</code>
+        * [.validate(gradient)](#module_GradientRenderer..GradientRenderer.validate) ⇒ <code>Object</code>
+        * [.clone(gradient)](#module_GradientRenderer..GradientRenderer.clone) ⇒ <code>Object</code>
+
+<a name="new_module_GradientRenderer..GradientRenderer_new"></a>
+
+#### new GradientRenderer(ctx)
+Create a GradientRenderer
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas context |
+
+<a name="module_GradientRenderer..GradientRenderer+setContext"></a>
+
+#### gradientRenderer.setContext(ctx)
+Set the canvas context
+
+**Kind**: instance method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas context |
+
+<a name="module_GradientRenderer..GradientRenderer+createGradient"></a>
+
+#### gradientRenderer.createGradient(layer, bounds, [options]) ⇒ <code>CanvasGradient</code> \| <code>null</code>
+Create a canvas gradient from a layer's gradient definition
+
+**Kind**: instance method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+**Returns**: <code>CanvasGradient</code> \| <code>null</code> - Canvas gradient or null if invalid  
+
 | Param | Type | Default | Description |
 | --- | --- | --- | --- |
-| layer | <code>Object</code> |  | Layer with blur properties |
-| [layer.x] | <code>number</code> | <code>0</code> | X position |
-| [layer.y] | <code>number</code> | <code>0</code> | Y position |
-| [layer.width] | <code>number</code> | <code>0</code> | Width |
-| [layer.height] | <code>number</code> | <code>0</code> | Height |
-| [layer.blurRadius] | <code>number</code> | <code>12</code> | Blur radius (1-64) |
-| [options] | <code>Object</code> |  | Rendering options |
-| [options.scaled] | <code>boolean</code> |  | Whether coordinates are pre-scaled |
-| [options.imageElement] | <code>HTMLImageElement</code> |  | Image for blur source (viewer mode) |
+| layer | <code>Object</code> |  | Layer with gradient property |
+| bounds | <code>Object</code> |  | Bounding box { x, y, width, height } |
+| [options] | <code>Object</code> |  | Additional options |
+| [options.scale] | <code>number</code> | <code>1</code> | Scale factor |
 
+<a name="module_GradientRenderer..GradientRenderer+applyFill"></a>
+
+#### gradientRenderer.applyFill(layer, bounds, [options]) ⇒ <code>boolean</code>
+Apply gradient or solid fill to the current path
+
+**Kind**: instance method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+**Returns**: <code>boolean</code> - True if gradient was applied, false if solid fill used  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer object |
+| bounds | <code>Object</code> | Bounding box { x, y, width, height } |
+| [options] | <code>Object</code> | Additional options |
+
+<a name="module_GradientRenderer..GradientRenderer+destroy"></a>
+
+#### gradientRenderer.destroy()
+Clean up resources
+
+**Kind**: instance method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+<a name="module_GradientRenderer..GradientRenderer.hasGradient"></a>
+
+#### GradientRenderer.hasGradient(layer) ⇒ <code>boolean</code>
+Check if a layer has a gradient fill
+
+**Kind**: static method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+**Returns**: <code>boolean</code> - True if layer has gradient  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer object |
+
+<a name="module_GradientRenderer..GradientRenderer.createDefaultGradient"></a>
+
+#### GradientRenderer.createDefaultGradient(type, startColor, endColor) ⇒ <code>Object</code>
+Create a default gradient definition
+
+**Kind**: static method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+**Returns**: <code>Object</code> - Gradient definition  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| type | <code>string</code> |  | 'linear' or 'radial' |
+| startColor | <code>string</code> | <code>&quot;#ffffff&quot;</code> | Start color |
+| endColor | <code>string</code> | <code>&quot;#000000&quot;</code> | End color |
+
+<a name="module_GradientRenderer..GradientRenderer.getPresets"></a>
+
+#### GradientRenderer.getPresets() ⇒ <code>Object</code>
+Get preset gradient definitions
+
+**Kind**: static method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+**Returns**: <code>Object</code> - Map of preset names to gradient definitions  
+<a name="module_GradientRenderer..GradientRenderer.validate"></a>
+
+#### GradientRenderer.validate(gradient) ⇒ <code>Object</code>
+Validate a gradient definition
+
+**Kind**: static method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+**Returns**: <code>Object</code> - Validation result { valid: boolean, errors: string[] }  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| gradient | <code>Object</code> | Gradient to validate |
+
+<a name="module_GradientRenderer..GradientRenderer.clone"></a>
+
+#### GradientRenderer.clone(gradient) ⇒ <code>Object</code>
+Clone a gradient definition
+
+**Kind**: static method of [<code>GradientRenderer</code>](#module_GradientRenderer..GradientRenderer)  
+**Returns**: <code>Object</code> - Cloned gradient  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| gradient | <code>Object</code> | Gradient to clone |
+
+<a name="module_IdGenerator"></a>
+
+## IdGenerator
+IdGenerator - Utility for generating unique layer IDs
+
+Uses a combination of timestamp, session counter, and random suffix
+to guarantee uniqueness even when multiple IDs are generated in
+the same millisecond.
+
+<a name="module_ImageLayerRenderer"></a>
+
+## ImageLayerRenderer
+ImageLayerRenderer - Renders image layers with caching and placeholder support
+
+Extracted from LayerRenderer.js to prevent that file from exceeding 1,000 lines.
+This module handles:
+- Image layer rendering with opacity, rotation, and shadow support
+- LRU caching of loaded images (max defined by LayerDefaults)
+- Placeholder display while images are loading
+
+**Since**: 1.5.0  
+
+* [ImageLayerRenderer](#module_ImageLayerRenderer)
+    * [~ImageLayerRenderer](#module_ImageLayerRenderer..ImageLayerRenderer)
+        * [new ImageLayerRenderer(ctx, [config])](#new_module_ImageLayerRenderer..ImageLayerRenderer_new)
+        * _instance_
+            * [.setShadowRenderer(shadowRenderer)](#module_ImageLayerRenderer..ImageLayerRenderer+setShadowRenderer)
+            * [.setOnImageLoad(callback)](#module_ImageLayerRenderer..ImageLayerRenderer+setOnImageLoad)
+            * [.setContext(ctx)](#module_ImageLayerRenderer..ImageLayerRenderer+setContext)
+            * [.draw(layer, [options])](#module_ImageLayerRenderer..ImageLayerRenderer+draw)
+            * [._getImageElement(layer)](#module_ImageLayerRenderer..ImageLayerRenderer+_getImageElement) ⇒ <code>HTMLImageElement</code> \| <code>null</code>
+            * [._drawPlaceholder(layer, scale)](#module_ImageLayerRenderer..ImageLayerRenderer+_drawPlaceholder)
+            * [.clearCache()](#module_ImageLayerRenderer..ImageLayerRenderer+clearCache)
+            * [.getCacheSize()](#module_ImageLayerRenderer..ImageLayerRenderer+getCacheSize) ⇒ <code>number</code>
+            * [.isCached(layerId)](#module_ImageLayerRenderer..ImageLayerRenderer+isCached) ⇒ <code>boolean</code>
+            * [.destroy()](#module_ImageLayerRenderer..ImageLayerRenderer+destroy)
+        * _static_
+            * [.MAX_CACHE_SIZE](#module_ImageLayerRenderer..ImageLayerRenderer.MAX_CACHE_SIZE) ⇒ <code>number</code>
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer"></a>
+
+### ImageLayerRenderer~ImageLayerRenderer
+ImageLayerRenderer class - Renders image layers on a canvas
+
+**Kind**: inner class of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer)  
+
+* [~ImageLayerRenderer](#module_ImageLayerRenderer..ImageLayerRenderer)
+    * [new ImageLayerRenderer(ctx, [config])](#new_module_ImageLayerRenderer..ImageLayerRenderer_new)
+    * _instance_
+        * [.setShadowRenderer(shadowRenderer)](#module_ImageLayerRenderer..ImageLayerRenderer+setShadowRenderer)
+        * [.setOnImageLoad(callback)](#module_ImageLayerRenderer..ImageLayerRenderer+setOnImageLoad)
+        * [.setContext(ctx)](#module_ImageLayerRenderer..ImageLayerRenderer+setContext)
+        * [.draw(layer, [options])](#module_ImageLayerRenderer..ImageLayerRenderer+draw)
+        * [._getImageElement(layer)](#module_ImageLayerRenderer..ImageLayerRenderer+_getImageElement) ⇒ <code>HTMLImageElement</code> \| <code>null</code>
+        * [._drawPlaceholder(layer, scale)](#module_ImageLayerRenderer..ImageLayerRenderer+_drawPlaceholder)
+        * [.clearCache()](#module_ImageLayerRenderer..ImageLayerRenderer+clearCache)
+        * [.getCacheSize()](#module_ImageLayerRenderer..ImageLayerRenderer+getCacheSize) ⇒ <code>number</code>
+        * [.isCached(layerId)](#module_ImageLayerRenderer..ImageLayerRenderer+isCached) ⇒ <code>boolean</code>
+        * [.destroy()](#module_ImageLayerRenderer..ImageLayerRenderer+destroy)
+    * _static_
+        * [.MAX_CACHE_SIZE](#module_ImageLayerRenderer..ImageLayerRenderer.MAX_CACHE_SIZE) ⇒ <code>number</code>
+
+<a name="new_module_ImageLayerRenderer..ImageLayerRenderer_new"></a>
+
+#### new ImageLayerRenderer(ctx, [config])
+Creates a new ImageLayerRenderer instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
+| [config] | <code>Object</code> | Configuration options |
+| [config.shadowRenderer] | <code>Object</code> | ShadowRenderer instance for shadow effects |
+| [config.onImageLoad] | <code>function</code> | Callback when an image finishes loading |
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+setShadowRenderer"></a>
+
+#### imageLayerRenderer.setShadowRenderer(shadowRenderer)
+Set or update the shadow renderer
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| shadowRenderer | <code>Object</code> | ShadowRenderer instance |
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+setOnImageLoad"></a>
+
+#### imageLayerRenderer.setOnImageLoad(callback)
+Set or update the image load callback
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| callback | <code>function</code> | Callback function |
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+setContext"></a>
+
+#### imageLayerRenderer.setContext(ctx)
+Set the canvas context (for context switching, e.g., export)
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | New canvas context |
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+draw"></a>
+
+#### imageLayerRenderer.draw(layer, [options])
+Draw an image layer
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Image layer with src, x, y, width, height properties |
+| [options] | <code>Object</code> | Rendering options |
+| [options.scale] | <code>Object</code> | Scale factors { sx, sy } |
+| [options.shadowScale] | <code>Object</code> | Shadow scale factors for viewer mode |
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+_getImageElement"></a>
+
+#### imageLayerRenderer.\_getImageElement(layer) ⇒ <code>HTMLImageElement</code> \| <code>null</code>
+Get or create cached image element for a layer
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+**Returns**: <code>HTMLImageElement</code> \| <code>null</code> - - Image element or null if not available  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Image layer |
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+_drawPlaceholder"></a>
+
+#### imageLayerRenderer.\_drawPlaceholder(layer, scale)
+Draw a placeholder while image is loading
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Image layer |
+| scale | <code>Object</code> | Scale factors { sx, sy } |
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+clearCache"></a>
+
+#### imageLayerRenderer.clearCache()
+Clear the image cache
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+getCacheSize"></a>
+
+#### imageLayerRenderer.getCacheSize() ⇒ <code>number</code>
+Get the current cache size
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+**Returns**: <code>number</code> - Number of cached images  
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+isCached"></a>
+
+#### imageLayerRenderer.isCached(layerId) ⇒ <code>boolean</code>
+Check if an image is cached
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+**Returns**: <code>boolean</code> - True if cached  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | Layer ID or cache key |
+
+<a name="module_ImageLayerRenderer..ImageLayerRenderer+destroy"></a>
+
+#### imageLayerRenderer.destroy()
+Clean up resources
+
+**Kind**: instance method of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+<a name="module_ImageLayerRenderer..ImageLayerRenderer.MAX_CACHE_SIZE"></a>
+
+#### ImageLayerRenderer.MAX\_CACHE\_SIZE ⇒ <code>number</code>
+Get the maximum cache size
+
+**Kind**: static property of [<code>ImageLayerRenderer</code>](#module_ImageLayerRenderer..ImageLayerRenderer)  
+**Returns**: <code>number</code> - Maximum number of cached images  
 <a name="module_LayerDataNormalizer"></a>
 
 ## LayerDataNormalizer
-LayerDataNormalizer - Shared utility for normalizing layer dataThis module ensures consistent data types across the editor and viewer.It handles the conversion of string/numeric representations of booleanvalues to actual JavaScript booleans, which is critical for correctrendering of boolean-dependent features like shadows and visibility.Why this exists:- JSON data from the server may have string representations ("true", "1")- Database storage or legacy data may use numeric values (1, 0)- Canvas rendering code uses strict equality checks (=== true)- Without normalization, features like text shadows fail to render
+LayerDataNormalizer - Shared utility for normalizing layer data
+
+This module ensures consistent data types across the editor and viewer.
+It handles the conversion of string/numeric representations of boolean
+values to actual JavaScript booleans, which is critical for correct
+rendering of boolean-dependent features like shadows and visibility.
+
+Why this exists:
+- JSON data from the server may have string representations ("true", "1")
+- Database storage or legacy data may use numeric values (1, 0)
+- Canvas rendering code uses strict equality checks (=== true)
+- Without normalization, features like text shadows fail to render
 
 **Since**: 1.1.2  
 
 * [LayerDataNormalizer](#module_LayerDataNormalizer)
     * [~LayerDataNormalizer](#module_LayerDataNormalizer..LayerDataNormalizer)
         * [.normalizeLayer(layer)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeLayer) ⇒ <code>Object</code>
+        * [.normalizeRichText(richText)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeRichText)
+        * [.normalizeAliases(layer)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeAliases)
         * [.normalizeBooleans(layer)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeBooleans)
         * [.normalizeNumbers(layer)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeNumbers)
         * [.normalizeLayers(layers)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeLayers) ⇒ <code>Array</code>
@@ -1862,6 +4261,7 @@ LayerDataNormalizer - Shared utility for normalizing layer dataThis module ens
         * [.getBooleanProperties()](#module_LayerDataNormalizer..LayerDataNormalizer.getBooleanProperties) ⇒ <code>Array.&lt;string&gt;</code>
         * [.getNumericProperties()](#module_LayerDataNormalizer..LayerDataNormalizer.getNumericProperties) ⇒ <code>Array.&lt;string&gt;</code>
         * [.toBoolean(val)](#module_LayerDataNormalizer..LayerDataNormalizer.toBoolean) ⇒ <code>boolean</code> \| <code>undefined</code>
+        * [.normalizeBackgroundVisible(val)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeBackgroundVisible) ⇒ <code>boolean</code>
 
 <a name="module_LayerDataNormalizer..LayerDataNormalizer"></a>
 
@@ -1872,6 +4272,8 @@ LayerDataNormalizer class - Provides static methods for normalizing layer data
 
 * [~LayerDataNormalizer](#module_LayerDataNormalizer..LayerDataNormalizer)
     * [.normalizeLayer(layer)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeLayer) ⇒ <code>Object</code>
+    * [.normalizeRichText(richText)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeRichText)
+    * [.normalizeAliases(layer)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeAliases)
     * [.normalizeBooleans(layer)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeBooleans)
     * [.normalizeNumbers(layer)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeNumbers)
     * [.normalizeLayers(layers)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeLayers) ⇒ <code>Array</code>
@@ -1879,11 +4281,15 @@ LayerDataNormalizer class - Provides static methods for normalizing layer data
     * [.getBooleanProperties()](#module_LayerDataNormalizer..LayerDataNormalizer.getBooleanProperties) ⇒ <code>Array.&lt;string&gt;</code>
     * [.getNumericProperties()](#module_LayerDataNormalizer..LayerDataNormalizer.getNumericProperties) ⇒ <code>Array.&lt;string&gt;</code>
     * [.toBoolean(val)](#module_LayerDataNormalizer..LayerDataNormalizer.toBoolean) ⇒ <code>boolean</code> \| <code>undefined</code>
+    * [.normalizeBackgroundVisible(val)](#module_LayerDataNormalizer..LayerDataNormalizer.normalizeBackgroundVisible) ⇒ <code>boolean</code>
 
 <a name="module_LayerDataNormalizer..LayerDataNormalizer.normalizeLayer"></a>
 
 #### LayerDataNormalizer.normalizeLayer(layer) ⇒ <code>Object</code>
-Normalize a single layer's propertiesConverts string/numeric representations to proper JavaScript types.Modifies the layer object in place for performance.
+Normalize a single layer's properties
+
+Converts string/numeric representations to proper JavaScript types.
+Modifies the layer object in place for performance.
 
 **Kind**: static method of [<code>LayerDataNormalizer</code>](#module_LayerDataNormalizer..LayerDataNormalizer)  
 **Returns**: <code>Object</code> - The same layer object (for chaining)  
@@ -1891,6 +4297,35 @@ Normalize a single layer's propertiesConverts string/numeric representations t
 | Param | Type | Description |
 | --- | --- | --- |
 | layer | <code>Object</code> | The layer object to normalize |
+
+<a name="module_LayerDataNormalizer..LayerDataNormalizer.normalizeRichText"></a>
+
+#### LayerDataNormalizer.normalizeRichText(richText)
+Normalize rich text runs array
+
+Ensures consistent data types in rich text style properties.
+Handles edge cases like missing text or invalid style objects.
+
+**Kind**: static method of [<code>LayerDataNormalizer</code>](#module_LayerDataNormalizer..LayerDataNormalizer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| richText | <code>Array</code> | Array of text runs |
+
+<a name="module_LayerDataNormalizer..LayerDataNormalizer.normalizeAliases"></a>
+
+#### LayerDataNormalizer.normalizeAliases(layer)
+Normalize property aliases
+
+The server normalizes 'blend' to 'blendMode' and removes 'blend'.
+This ensures both properties are available for client code that
+may use either property name.
+
+**Kind**: static method of [<code>LayerDataNormalizer</code>](#module_LayerDataNormalizer..LayerDataNormalizer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | The layer object |
 
 <a name="module_LayerDataNormalizer..LayerDataNormalizer.normalizeBooleans"></a>
 
@@ -1929,7 +4364,13 @@ Normalize an array of layers
 <a name="module_LayerDataNormalizer..LayerDataNormalizer.normalizeLayerData"></a>
 
 #### LayerDataNormalizer.normalizeLayerData(layerData) ⇒ <code>Object</code>
-Normalize a layer data structure (with layers array inside)Handles the common case where layer data is wrapped:{ layers: [...], baseWidth: N, baseHeight: N }
+Normalize a layer data structure (with layers array inside)
+
+Handles the common case where layer data is wrapped:
+{ layers: [...], baseWidth: N, baseHeight: N, backgroundVisible: bool }
+
+Also normalizes top-level properties like backgroundVisible which
+come from the API as integers (0/1) due to PHP serialization.
 
 **Kind**: static method of [<code>LayerDataNormalizer</code>](#module_LayerDataNormalizer..LayerDataNormalizer)  
 **Returns**: <code>Object</code> - The same object (for chaining)  
@@ -1941,21 +4382,24 @@ Normalize a layer data structure (with layers array inside)Handles the common 
 <a name="module_LayerDataNormalizer..LayerDataNormalizer.getBooleanProperties"></a>
 
 #### LayerDataNormalizer.getBooleanProperties() ⇒ <code>Array.&lt;string&gt;</code>
-Get the list of boolean properties that are normalizedUseful for testing and documentation
+Get the list of boolean properties that are normalized
+Useful for testing and documentation
 
 **Kind**: static method of [<code>LayerDataNormalizer</code>](#module_LayerDataNormalizer..LayerDataNormalizer)  
 **Returns**: <code>Array.&lt;string&gt;</code> - Array of property names  
 <a name="module_LayerDataNormalizer..LayerDataNormalizer.getNumericProperties"></a>
 
 #### LayerDataNormalizer.getNumericProperties() ⇒ <code>Array.&lt;string&gt;</code>
-Get the list of numeric properties that are normalizedUseful for testing and documentation
+Get the list of numeric properties that are normalized
+Useful for testing and documentation
 
 **Kind**: static method of [<code>LayerDataNormalizer</code>](#module_LayerDataNormalizer..LayerDataNormalizer)  
 **Returns**: <code>Array.&lt;string&gt;</code> - Array of property names  
 <a name="module_LayerDataNormalizer..LayerDataNormalizer.toBoolean"></a>
 
 #### LayerDataNormalizer.toBoolean(val) ⇒ <code>boolean</code> \| <code>undefined</code>
-Convert a value to boolean using the same logic as normalizationUseful for checking values without modifying objects
+Convert a value to boolean using the same logic as normalization
+Useful for checking values without modifying objects
 
 **Kind**: static method of [<code>LayerDataNormalizer</code>](#module_LayerDataNormalizer..LayerDataNormalizer)  
 **Returns**: <code>boolean</code> \| <code>undefined</code> - Boolean value, or undefined if not a boolean representation  
@@ -1964,10 +4408,52 @@ Convert a value to boolean using the same logic as normalizationUseful for chec
 | --- | --- | --- |
 | val | <code>\*</code> | Value to convert |
 
+<a name="module_LayerDataNormalizer..LayerDataNormalizer.normalizeBackgroundVisible"></a>
+
+#### LayerDataNormalizer.normalizeBackgroundVisible(val) ⇒ <code>boolean</code>
+Normalize backgroundVisible from API data to boolean.
+
+The API returns 0/1 integers (due to PHP boolean serialization).
+Legacy data may store strings ('0', 'false') or booleans.
+Returns true when the value is undefined or any truthy representation.
+
+**Kind**: static method of [<code>LayerDataNormalizer</code>](#module_LayerDataNormalizer..LayerDataNormalizer)  
+**Returns**: <code>boolean</code> - true if background should be visible  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| val | <code>\*</code> | The backgroundVisible value from API data |
+
+<a name="module_LayerDefaults"></a>
+
+## LayerDefaults
+Layer Defaults - Central constants for default layer values
+
+This module provides a single source of truth for commonly used
+default values across the Layers extension. Using these constants
+instead of magic numbers improves maintainability and consistency.
+
+<a name="module_LayerDefaults..LayerDefaults"></a>
+
+### LayerDefaults~LayerDefaults : <code>object</code>
+Default values for layer properties
+
+**Kind**: inner namespace of [<code>LayerDefaults</code>](#module_LayerDefaults)  
 <a name="module_LayerRenderer"></a>
 
 ## LayerRenderer
-LayerRenderer - Shared rendering engine for Layers extensionThis module provides a unified rendering implementation used by both:- LayersViewer (read-only article display)- CanvasRenderer/ShapeRenderer (editor)By centralizing rendering logic here, we ensure:1. Visual consistency between viewer and editor2. Single source of truth for bug fixes3. Reduced code duplication (~1,000 lines eliminated)Shadow rendering is delegated to ShadowRenderer for clean separation of concerns.
+LayerRenderer - Shared rendering engine for Layers extension
+
+This module provides a unified rendering implementation used by both:
+- LayersViewer (read-only article display)
+- CanvasRenderer/ShapeRenderer (editor)
+
+By centralizing rendering logic here, we ensure:
+1. Visual consistency between viewer and editor
+2. Single source of truth for bug fixes
+3. Reduced code duplication (~1,000 lines eliminated)
+
+Shadow rendering is delegated to ShadowRenderer for clean separation of concerns.
 
 **Since**: 0.9.0  
 
@@ -1990,6 +4476,7 @@ LayerRenderer - Shared rendering engine for Layers extensionThis module provid
         * [._prepareRenderOptions()](#module_LayerRenderer..LayerRenderer+_prepareRenderOptions)
         * [.drawRectangle()](#module_LayerRenderer..LayerRenderer+drawRectangle)
         * [.drawTextBox()](#module_LayerRenderer..LayerRenderer+drawTextBox)
+        * [.drawCallout()](#module_LayerRenderer..LayerRenderer+drawCallout)
         * [.drawCircle()](#module_LayerRenderer..LayerRenderer+drawCircle)
         * [.drawEllipse()](#module_LayerRenderer..LayerRenderer+drawEllipse)
         * [.drawLine()](#module_LayerRenderer..LayerRenderer+drawLine)
@@ -1997,11 +4484,15 @@ LayerRenderer - Shared rendering engine for Layers extensionThis module provid
         * [.drawPolygon()](#module_LayerRenderer..LayerRenderer+drawPolygon)
         * [.drawStar()](#module_LayerRenderer..LayerRenderer+drawStar)
         * [.drawPath()](#module_LayerRenderer..LayerRenderer+drawPath)
-        * [.drawBlur()](#module_LayerRenderer..LayerRenderer+drawBlur)
         * [.drawImage(layer, [options])](#module_LayerRenderer..LayerRenderer+drawImage)
-        * [._getImageElement(layer)](#module_LayerRenderer..LayerRenderer+_getImageElement) ⇒ <code>HTMLImageElement</code> \| <code>null</code>
-        * [._drawImagePlaceholder(layer, scale)](#module_LayerRenderer..LayerRenderer+_drawImagePlaceholder)
+        * [.drawCustomShape(layer, [options])](#module_LayerRenderer..LayerRenderer+drawCustomShape)
         * [.drawText()](#module_LayerRenderer..LayerRenderer+drawText)
+        * [.drawMarker()](#module_LayerRenderer..LayerRenderer+drawMarker)
+        * [.drawDimension()](#module_LayerRenderer..LayerRenderer+drawDimension)
+        * [.drawAngleDimension()](#module_LayerRenderer..LayerRenderer+drawAngleDimension)
+        * [.hasBlurBlendMode(layer)](#module_LayerRenderer..LayerRenderer+hasBlurBlendMode) ⇒ <code>boolean</code>
+        * [.drawLayerWithBlurBlend(layer, [options])](#module_LayerRenderer..LayerRenderer+drawLayerWithBlurBlend)
+        * [._drawShapePath(layer, opts, ctx)](#module_LayerRenderer..LayerRenderer+_drawShapePath)
         * [.drawLayer(layer, [options])](#module_LayerRenderer..LayerRenderer+drawLayer)
         * [.destroy()](#module_LayerRenderer..LayerRenderer+destroy)
 
@@ -2030,6 +4521,7 @@ LayerRenderer class - Renders individual layer shapes on a canvas
     * [._prepareRenderOptions()](#module_LayerRenderer..LayerRenderer+_prepareRenderOptions)
     * [.drawRectangle()](#module_LayerRenderer..LayerRenderer+drawRectangle)
     * [.drawTextBox()](#module_LayerRenderer..LayerRenderer+drawTextBox)
+    * [.drawCallout()](#module_LayerRenderer..LayerRenderer+drawCallout)
     * [.drawCircle()](#module_LayerRenderer..LayerRenderer+drawCircle)
     * [.drawEllipse()](#module_LayerRenderer..LayerRenderer+drawEllipse)
     * [.drawLine()](#module_LayerRenderer..LayerRenderer+drawLine)
@@ -2037,11 +4529,15 @@ LayerRenderer class - Renders individual layer shapes on a canvas
     * [.drawPolygon()](#module_LayerRenderer..LayerRenderer+drawPolygon)
     * [.drawStar()](#module_LayerRenderer..LayerRenderer+drawStar)
     * [.drawPath()](#module_LayerRenderer..LayerRenderer+drawPath)
-    * [.drawBlur()](#module_LayerRenderer..LayerRenderer+drawBlur)
     * [.drawImage(layer, [options])](#module_LayerRenderer..LayerRenderer+drawImage)
-    * [._getImageElement(layer)](#module_LayerRenderer..LayerRenderer+_getImageElement) ⇒ <code>HTMLImageElement</code> \| <code>null</code>
-    * [._drawImagePlaceholder(layer, scale)](#module_LayerRenderer..LayerRenderer+_drawImagePlaceholder)
+    * [.drawCustomShape(layer, [options])](#module_LayerRenderer..LayerRenderer+drawCustomShape)
     * [.drawText()](#module_LayerRenderer..LayerRenderer+drawText)
+    * [.drawMarker()](#module_LayerRenderer..LayerRenderer+drawMarker)
+    * [.drawDimension()](#module_LayerRenderer..LayerRenderer+drawDimension)
+    * [.drawAngleDimension()](#module_LayerRenderer..LayerRenderer+drawAngleDimension)
+    * [.hasBlurBlendMode(layer)](#module_LayerRenderer..LayerRenderer+hasBlurBlendMode) ⇒ <code>boolean</code>
+    * [.drawLayerWithBlurBlend(layer, [options])](#module_LayerRenderer..LayerRenderer+drawLayerWithBlurBlend)
+    * [._drawShapePath(layer, opts, ctx)](#module_LayerRenderer..LayerRenderer+_drawShapePath)
     * [.drawLayer(layer, [options])](#module_LayerRenderer..LayerRenderer+drawLayer)
     * [.destroy()](#module_LayerRenderer..LayerRenderer+destroy)
 
@@ -2065,7 +4561,8 @@ Creates a new LayerRenderer instance
 <a name="module_LayerRenderer..LayerRenderer+setContext"></a>
 
 #### layerRenderer.setContext(ctx)
-Update the rendering contextUsed when rendering to a different context (e.g., export canvas)
+Update the rendering context
+Used when rendering to a different context (e.g., export canvas)
 
 **Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
 
@@ -2184,6 +4681,12 @@ Draw a rectangle shape
 Draw a text box shape (rectangle with multi-line text)
 
 **Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+<a name="module_LayerRenderer..LayerRenderer+drawCallout"></a>
+
+#### layerRenderer.drawCallout()
+Draw a callout shape (speech bubble with tail and text)
+
+**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
 <a name="module_LayerRenderer..LayerRenderer+drawCircle"></a>
 
 #### layerRenderer.drawCircle()
@@ -2226,16 +4729,11 @@ Draw a star shape
 Draw a freehand path
 
 **Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
-<a name="module_LayerRenderer..LayerRenderer+drawBlur"></a>
-
-#### layerRenderer.drawBlur()
-Draw a blur effect region
-
-**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
 <a name="module_LayerRenderer..LayerRenderer+drawImage"></a>
 
 #### layerRenderer.drawImage(layer, [options])
 Draw an image layer
+Delegates to ImageLayerRenderer for caching and rendering
 
 **Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
 
@@ -2244,29 +4742,17 @@ Draw an image layer
 | layer | <code>Object</code> | Image layer with src, x, y, width, height properties |
 | [options] | <code>Object</code> | Rendering options |
 
-<a name="module_LayerRenderer..LayerRenderer+_getImageElement"></a>
+<a name="module_LayerRenderer..LayerRenderer+drawCustomShape"></a>
 
-#### layerRenderer.\_getImageElement(layer) ⇒ <code>HTMLImageElement</code> \| <code>null</code>
-Get or create cached image element for a layer
-
-**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
-**Returns**: <code>HTMLImageElement</code> \| <code>null</code> - - Image element or null if not available  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Image layer |
-
-<a name="module_LayerRenderer..LayerRenderer+_drawImagePlaceholder"></a>
-
-#### layerRenderer.\_drawImagePlaceholder(layer, scale)
-Draw a placeholder while image is loading
+#### layerRenderer.drawCustomShape(layer, [options])
+Draw a custom shape layer using SVG path data
 
 **Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| layer | <code>Object</code> | Image layer |
-| scale | <code>Object</code> | Scale factors |
+| layer | <code>Object</code> | Custom shape layer with path, viewBox, x, y, width, height |
+| [options] | <code>Object</code> | Rendering options |
 
 <a name="module_LayerRenderer..LayerRenderer+drawText"></a>
 
@@ -2274,6 +4760,61 @@ Draw a placeholder while image is loading
 Draw a text layer
 
 **Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+<a name="module_LayerRenderer..LayerRenderer+drawMarker"></a>
+
+#### layerRenderer.drawMarker()
+Draw a marker layer (numbered/lettered annotation with optional arrow)
+
+**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+<a name="module_LayerRenderer..LayerRenderer+drawDimension"></a>
+
+#### layerRenderer.drawDimension()
+Draw a dimension layer (measurement annotation with extension lines)
+
+**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+<a name="module_LayerRenderer..LayerRenderer+drawAngleDimension"></a>
+
+#### layerRenderer.drawAngleDimension()
+Draw an angle dimension layer (angle measurement annotation with arc)
+
+**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+<a name="module_LayerRenderer..LayerRenderer+hasBlurBlendMode"></a>
+
+#### layerRenderer.hasBlurBlendMode(layer) ⇒ <code>boolean</code>
+Check if a layer uses blur as its blend mode
+
+**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+**Returns**: <code>boolean</code> - True if layer uses blur blend mode  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer to check |
+
+<a name="module_LayerRenderer..LayerRenderer+drawLayerWithBlurBlend"></a>
+
+#### layerRenderer.drawLayerWithBlurBlend(layer, [options])
+Draw a layer with blur blend mode (uses shape as clip region for blur effect)
+
+**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with blur blend mode |
+| [options] | <code>Object</code> | Rendering options |
+
+<a name="module_LayerRenderer..LayerRenderer+_drawShapePath"></a>
+
+#### layerRenderer.\_drawShapePath(layer, opts, ctx)
+Draw just the shape path (for clipping in blur blend mode)
+
+**Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with shape properties |
+| opts | <code>Object</code> | Render options with scale |
+| ctx | <code>CanvasRenderingContext2D</code> | Context to draw on |
+
 <a name="module_LayerRenderer..LayerRenderer+drawLayer"></a>
 
 #### layerRenderer.drawLayer(layer, [options])
@@ -2292,10 +4833,215 @@ Draw a layer by type (dispatcher method)
 Clean up resources
 
 **Kind**: instance method of [<code>LayerRenderer</code>](#module_LayerRenderer..LayerRenderer)  
+<a name="module_MarkerRenderer"></a>
+
+## MarkerRenderer
+MarkerRenderer - Renders number/letter sequence markers with optional arrows
+
+This module handles rendering of marker annotations:
+- Circled numbers: ①②③④⑤
+- Parenthesized: (1)(2)(3)
+- Plain: 1. 2. 3.
+- Letters: A B C
+- Optional arrow/leader line pointing to target
+
+**Since**: 1.5.4  
+
+* [MarkerRenderer](#module_MarkerRenderer)
+    * [~MarkerRenderer](#module_MarkerRenderer..MarkerRenderer)
+        * [new MarkerRenderer(ctx, [config])](#new_module_MarkerRenderer..MarkerRenderer_new)
+        * _instance_
+            * [.setContext(ctx)](#module_MarkerRenderer..MarkerRenderer+setContext)
+            * [.setShadowRenderer(shadowRenderer)](#module_MarkerRenderer..MarkerRenderer+setShadowRenderer)
+            * [.formatValue(value, style)](#module_MarkerRenderer..MarkerRenderer+formatValue) ⇒ <code>string</code>
+            * [.draw(layer, [options])](#module_MarkerRenderer..MarkerRenderer+draw)
+            * [.getBounds(layer)](#module_MarkerRenderer..MarkerRenderer+getBounds) ⇒ <code>Object</code>
+            * [.hitTest(layer, px, py)](#module_MarkerRenderer..MarkerRenderer+hitTest) ⇒ <code>boolean</code>
+        * _static_
+            * [.STYLES](#module_MarkerRenderer..MarkerRenderer.STYLES) ⇒ <code>Object</code>
+            * [.DEFAULTS](#module_MarkerRenderer..MarkerRenderer.DEFAULTS) ⇒ <code>Object</code>
+            * [.getNextValue(layers, [style])](#module_MarkerRenderer..MarkerRenderer.getNextValue) ⇒ <code>number</code>
+            * [.createMarkerLayer(x, y, [options])](#module_MarkerRenderer..MarkerRenderer.createMarkerLayer) ⇒ <code>Object</code>
+
+<a name="module_MarkerRenderer..MarkerRenderer"></a>
+
+### MarkerRenderer~MarkerRenderer
+MarkerRenderer class - Renders number sequence markers on canvas
+
+**Kind**: inner class of [<code>MarkerRenderer</code>](#module_MarkerRenderer)  
+
+* [~MarkerRenderer](#module_MarkerRenderer..MarkerRenderer)
+    * [new MarkerRenderer(ctx, [config])](#new_module_MarkerRenderer..MarkerRenderer_new)
+    * _instance_
+        * [.setContext(ctx)](#module_MarkerRenderer..MarkerRenderer+setContext)
+        * [.setShadowRenderer(shadowRenderer)](#module_MarkerRenderer..MarkerRenderer+setShadowRenderer)
+        * [.formatValue(value, style)](#module_MarkerRenderer..MarkerRenderer+formatValue) ⇒ <code>string</code>
+        * [.draw(layer, [options])](#module_MarkerRenderer..MarkerRenderer+draw)
+        * [.getBounds(layer)](#module_MarkerRenderer..MarkerRenderer+getBounds) ⇒ <code>Object</code>
+        * [.hitTest(layer, px, py)](#module_MarkerRenderer..MarkerRenderer+hitTest) ⇒ <code>boolean</code>
+    * _static_
+        * [.STYLES](#module_MarkerRenderer..MarkerRenderer.STYLES) ⇒ <code>Object</code>
+        * [.DEFAULTS](#module_MarkerRenderer..MarkerRenderer.DEFAULTS) ⇒ <code>Object</code>
+        * [.getNextValue(layers, [style])](#module_MarkerRenderer..MarkerRenderer.getNextValue) ⇒ <code>number</code>
+        * [.createMarkerLayer(x, y, [options])](#module_MarkerRenderer..MarkerRenderer.createMarkerLayer) ⇒ <code>Object</code>
+
+<a name="new_module_MarkerRenderer..MarkerRenderer_new"></a>
+
+#### new MarkerRenderer(ctx, [config])
+Creates a new MarkerRenderer instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
+| [config] | <code>Object</code> | Configuration options |
+| [config.shadowRenderer] | <code>Object</code> | ShadowRenderer instance for shadow operations |
+
+<a name="module_MarkerRenderer..MarkerRenderer+setContext"></a>
+
+#### markerRenderer.setContext(ctx)
+Set the canvas context
+
+**Kind**: instance method of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
+
+<a name="module_MarkerRenderer..MarkerRenderer+setShadowRenderer"></a>
+
+#### markerRenderer.setShadowRenderer(shadowRenderer)
+Set the shadow renderer
+
+**Kind**: instance method of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| shadowRenderer | <code>Object</code> | ShadowRenderer instance |
+
+<a name="module_MarkerRenderer..MarkerRenderer+formatValue"></a>
+
+#### markerRenderer.formatValue(value, style) ⇒ <code>string</code>
+Convert value to display text based on style
+
+**Kind**: instance method of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+**Returns**: <code>string</code> - Formatted display value  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| value | <code>number</code> \| <code>string</code> | Value (numeric or custom text) |
+| style | <code>string</code> | Marker style |
+
+<a name="module_MarkerRenderer..MarkerRenderer+draw"></a>
+
+#### markerRenderer.draw(layer, [options])
+Draw a marker layer
+
+**Kind**: instance method of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Marker layer object |
+| [options] | <code>Object</code> | Rendering options |
+| [options.shadowScale] | <code>Object</code> | Scale factors for shadow rendering |
+
+<a name="module_MarkerRenderer..MarkerRenderer+getBounds"></a>
+
+#### markerRenderer.getBounds(layer) ⇒ <code>Object</code>
+Get the bounding box for a marker layer
+
+**Kind**: instance method of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+**Returns**: <code>Object</code> - Bounding box {x, y, width, height}  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Marker layer |
+
+<a name="module_MarkerRenderer..MarkerRenderer+hitTest"></a>
+
+#### markerRenderer.hitTest(layer, px, py) ⇒ <code>boolean</code>
+Hit test for marker layer
+
+**Kind**: instance method of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+**Returns**: <code>boolean</code> - True if point is within marker  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Marker layer |
+| px | <code>number</code> | Test point X |
+| py | <code>number</code> | Test point Y |
+
+<a name="module_MarkerRenderer..MarkerRenderer.STYLES"></a>
+
+#### MarkerRenderer.STYLES ⇒ <code>Object</code>
+Get available marker styles
+
+**Kind**: static property of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+**Returns**: <code>Object</code> - Marker style constants  
+<a name="module_MarkerRenderer..MarkerRenderer.DEFAULTS"></a>
+
+#### MarkerRenderer.DEFAULTS ⇒ <code>Object</code>
+Get default configuration
+
+**Kind**: static property of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+**Returns**: <code>Object</code> - Default values  
+<a name="module_MarkerRenderer..MarkerRenderer.getNextValue"></a>
+
+#### MarkerRenderer.getNextValue(layers, [style]) ⇒ <code>number</code>
+Get the next marker value based on existing markers
+
+**Kind**: static method of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+**Returns**: <code>number</code> - Next value to use  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layers | <code>Array</code> | Array of all layers |
+| [style] | <code>string</code> | Marker style to match |
+
+<a name="module_MarkerRenderer..MarkerRenderer.createMarkerLayer"></a>
+
+#### MarkerRenderer.createMarkerLayer(x, y, [options]) ⇒ <code>Object</code>
+Create a default marker layer object
+
+**Kind**: static method of [<code>MarkerRenderer</code>](#module_MarkerRenderer..MarkerRenderer)  
+**Returns**: <code>Object</code> - Marker layer object  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| x | <code>number</code> | Center X position |
+| y | <code>number</code> | Center Y position |
+| [options] | <code>Object</code> | Additional options |
+
+<a name="module_MathUtils"></a>
+
+## MathUtils
+MathUtils - Shared mathematical utility functions for the Layers extension.
+
+This module provides commonly used math operations to avoid code duplication
+across renderers and other modules.
+
+<a name="module_MathUtils..MATH"></a>
+
+### MathUtils~MATH : <code>object</code>
+Mathematical constants used across the Layers extension.
+
+**Kind**: inner namespace of [<code>MathUtils</code>](#module_MathUtils)  
 <a name="module_PolygonStarRenderer"></a>
 
 ## PolygonStarRenderer
-PolygonStarRenderer - Specialized polygon and star shape renderingExtracted from ShapeRenderer.js to reduce file size and improve maintainability.This module handles rendering of complex polygon shapes:- Polygon (regular n-gons with optional rounded corners)- Star (with customizable points and valley radii)All shapes support:- Fill and stroke with separate opacities- Shadow rendering with spread support- Rotation- Scaling- Rounded corners (via PolygonGeometry)
+PolygonStarRenderer - Specialized polygon and star shape rendering
+
+Extracted from ShapeRenderer.js to reduce file size and improve maintainability.
+This module handles rendering of complex polygon shapes:
+- Polygon (regular n-gons with optional rounded corners)
+- Star (with customizable points and valley radii)
+
+All shapes support:
+- Fill and stroke with separate opacities
+- Shadow rendering with spread support
+- Rotation
+- Scaling
+- Rounded corners (via PolygonGeometry)
 
 **Since**: 1.1.7  
 
@@ -2309,8 +5055,8 @@ PolygonStarRenderer - Specialized polygon and star shape renderingExtracted fr
         * [.getShadowSpread(layer, scale)](#module_PolygonStarRenderer..PolygonStarRenderer+getShadowSpread) ⇒ <code>number</code>
         * [.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)](#module_PolygonStarRenderer..PolygonStarRenderer+drawSpreadShadow)
         * [.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, opacity)](#module_PolygonStarRenderer..PolygonStarRenderer+drawSpreadShadowStroke)
-        * [.drawRoundedPolygonPath(vertices, cornerRadius)](#module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedPolygonPath)
-        * [.drawRoundedStarPath(vertices, pointRadius, valleyRadius)](#module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedStarPath)
+        * [.drawRoundedPolygonPath(vertices, cornerRadius, [context])](#module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedPolygonPath)
+        * [.drawRoundedStarPath(vertices, pointRadius, valleyRadius, [context])](#module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedStarPath)
         * [.drawPolygon(layer, [options])](#module_PolygonStarRenderer..PolygonStarRenderer+drawPolygon)
         * [.drawStar(layer, [options])](#module_PolygonStarRenderer..PolygonStarRenderer+drawStar)
         * [.destroy()](#module_PolygonStarRenderer..PolygonStarRenderer+destroy)
@@ -2331,8 +5077,8 @@ PolygonStarRenderer class - Renders polygon and star shapes on canvas
     * [.getShadowSpread(layer, scale)](#module_PolygonStarRenderer..PolygonStarRenderer+getShadowSpread) ⇒ <code>number</code>
     * [.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)](#module_PolygonStarRenderer..PolygonStarRenderer+drawSpreadShadow)
     * [.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, opacity)](#module_PolygonStarRenderer..PolygonStarRenderer+drawSpreadShadowStroke)
-    * [.drawRoundedPolygonPath(vertices, cornerRadius)](#module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedPolygonPath)
-    * [.drawRoundedStarPath(vertices, pointRadius, valleyRadius)](#module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedStarPath)
+    * [.drawRoundedPolygonPath(vertices, cornerRadius, [context])](#module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedPolygonPath)
+    * [.drawRoundedStarPath(vertices, pointRadius, valleyRadius, [context])](#module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedStarPath)
     * [.drawPolygon(layer, [options])](#module_PolygonStarRenderer..PolygonStarRenderer+drawPolygon)
     * [.drawStar(layer, [options])](#module_PolygonStarRenderer..PolygonStarRenderer+drawStar)
     * [.destroy()](#module_PolygonStarRenderer..PolygonStarRenderer+destroy)
@@ -2434,8 +5180,10 @@ Draw shadow with spread effect for strokes
 
 <a name="module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedPolygonPath"></a>
 
-#### polygonStarRenderer.drawRoundedPolygonPath(vertices, cornerRadius)
-Draw a rounded polygon path on the contextUses arcTo for smooth rounded corners at each vertex.
+#### polygonStarRenderer.drawRoundedPolygonPath(vertices, cornerRadius, [context])
+Draw a rounded polygon path on the context
+
+Uses arcTo for smooth rounded corners at each vertex.
 
 **Kind**: instance method of [<code>PolygonStarRenderer</code>](#module_PolygonStarRenderer..PolygonStarRenderer)  
 
@@ -2443,10 +5191,11 @@ Draw a rounded polygon path on the contextUses arcTo for smooth rounded corner
 | --- | --- | --- |
 | vertices | <code>Array.&lt;{x: number, y: number}&gt;</code> | Array of vertex points |
 | cornerRadius | <code>number</code> | Radius for rounded corners |
+| [context] | <code>CanvasRenderingContext2D</code> | Optional context (defaults to this.ctx) |
 
 <a name="module_PolygonStarRenderer..PolygonStarRenderer+drawRoundedStarPath"></a>
 
-#### polygonStarRenderer.drawRoundedStarPath(vertices, pointRadius, valleyRadius)
+#### polygonStarRenderer.drawRoundedStarPath(vertices, pointRadius, valleyRadius, [context])
 Draw a rounded star path on the context with different radii for points and valleys
 
 **Kind**: instance method of [<code>PolygonStarRenderer</code>](#module_PolygonStarRenderer..PolygonStarRenderer)  
@@ -2456,6 +5205,7 @@ Draw a rounded star path on the context with different radii for points and vall
 | vertices | <code>Array.&lt;{x: number, y: number}&gt;</code> | Array of vertex points (alternating outer/inner) |
 | pointRadius | <code>number</code> | Radius for outer point corners |
 | valleyRadius | <code>number</code> | Radius for inner valley corners |
+| [context] | <code>CanvasRenderingContext2D</code> | Optional context (defaults to this.ctx) |
 
 <a name="module_PolygonStarRenderer..PolygonStarRenderer+drawPolygon"></a>
 
@@ -2493,10 +5243,212 @@ Draw a star shape
 Clean up resources
 
 **Kind**: instance method of [<code>PolygonStarRenderer</code>](#module_PolygonStarRenderer..PolygonStarRenderer)  
+<a name="module_RichTextUtils"></a>
+
+## RichTextUtils
+RichTextUtils - Pure utility functions for rich text processing
+
+Extracted from TextBoxRenderer.js to reduce file size and improve reusability.
+This module provides stateless utility functions for rich text operations:
+- Rich text validation and detection
+- Plain text extraction
+- Character-to-run mapping
+- Line metrics calculation
+
+**Since**: 1.5.39  
+
+* [RichTextUtils](#module_RichTextUtils)
+    * [~RichTextUtils](#module_RichTextUtils..RichTextUtils)
+        * [.hasRichText(layer)](#module_RichTextUtils..RichTextUtils.hasRichText) ⇒ <code>boolean</code>
+        * [.getRichTextPlainText(richText)](#module_RichTextUtils..RichTextUtils.getRichTextPlainText) ⇒ <code>string</code>
+        * [.buildCharToRunMap(richText)](#module_RichTextUtils..RichTextUtils.buildCharToRunMap) ⇒ <code>Array</code>
+        * [.findMaxFontSizeForLine(richText, lineStart, lineEnd, baseFontSize, scale)](#module_RichTextUtils..RichTextUtils.findMaxFontSizeForLine) ⇒ <code>number</code>
+        * [.calculateLineMetrics(lines, richText, plainText, baseFontSize, lineHeightMultiplier, scale)](#module_RichTextUtils..RichTextUtils.calculateLineMetrics) ⇒ <code>Array</code>
+        * [.calculateTotalTextHeight(lineMetrics)](#module_RichTextUtils..RichTextUtils.calculateTotalTextHeight) ⇒ <code>number</code>
+        * [.calculateTextStartY(verticalAlign, boxY, padding, availableHeight, totalTextHeight)](#module_RichTextUtils..RichTextUtils.calculateTextStartY) ⇒ <code>number</code>
+        * [.calculateLineX(textAlign, boxX, boxWidth, lineWidth, padding)](#module_RichTextUtils..RichTextUtils.calculateLineX) ⇒ <code>number</code>
+        * [.buildTextStyle(layer, shadowScale, scale)](#module_RichTextUtils..RichTextUtils.buildTextStyle) ⇒ <code>Object</code>
+        * [.buildBaseStyle(layer)](#module_RichTextUtils..RichTextUtils.buildBaseStyle) ⇒ <code>Object</code>
+
+<a name="module_RichTextUtils..RichTextUtils"></a>
+
+### RichTextUtils~RichTextUtils
+RichTextUtils class - Stateless utility functions for rich text
+
+**Kind**: inner class of [<code>RichTextUtils</code>](#module_RichTextUtils)  
+
+* [~RichTextUtils](#module_RichTextUtils..RichTextUtils)
+    * [.hasRichText(layer)](#module_RichTextUtils..RichTextUtils.hasRichText) ⇒ <code>boolean</code>
+    * [.getRichTextPlainText(richText)](#module_RichTextUtils..RichTextUtils.getRichTextPlainText) ⇒ <code>string</code>
+    * [.buildCharToRunMap(richText)](#module_RichTextUtils..RichTextUtils.buildCharToRunMap) ⇒ <code>Array</code>
+    * [.findMaxFontSizeForLine(richText, lineStart, lineEnd, baseFontSize, scale)](#module_RichTextUtils..RichTextUtils.findMaxFontSizeForLine) ⇒ <code>number</code>
+    * [.calculateLineMetrics(lines, richText, plainText, baseFontSize, lineHeightMultiplier, scale)](#module_RichTextUtils..RichTextUtils.calculateLineMetrics) ⇒ <code>Array</code>
+    * [.calculateTotalTextHeight(lineMetrics)](#module_RichTextUtils..RichTextUtils.calculateTotalTextHeight) ⇒ <code>number</code>
+    * [.calculateTextStartY(verticalAlign, boxY, padding, availableHeight, totalTextHeight)](#module_RichTextUtils..RichTextUtils.calculateTextStartY) ⇒ <code>number</code>
+    * [.calculateLineX(textAlign, boxX, boxWidth, lineWidth, padding)](#module_RichTextUtils..RichTextUtils.calculateLineX) ⇒ <code>number</code>
+    * [.buildTextStyle(layer, shadowScale, scale)](#module_RichTextUtils..RichTextUtils.buildTextStyle) ⇒ <code>Object</code>
+    * [.buildBaseStyle(layer)](#module_RichTextUtils..RichTextUtils.buildBaseStyle) ⇒ <code>Object</code>
+
+<a name="module_RichTextUtils..RichTextUtils.hasRichText"></a>
+
+#### RichTextUtils.hasRichText(layer) ⇒ <code>boolean</code>
+Check if layer has valid rich text content
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>boolean</code> - True if layer has rich text  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer object |
+
+<a name="module_RichTextUtils..RichTextUtils.getRichTextPlainText"></a>
+
+#### RichTextUtils.getRichTextPlainText(richText) ⇒ <code>string</code>
+Get plain text from rich text array for wrapping calculations
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>string</code> - Combined plain text  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| richText | <code>Array</code> | Rich text runs array |
+
+<a name="module_RichTextUtils..RichTextUtils.buildCharToRunMap"></a>
+
+#### RichTextUtils.buildCharToRunMap(richText) ⇒ <code>Array</code>
+Build a map of character positions to runs for efficient lookup
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>Array</code> - Array where index is char position, value is {runIndex, localIndex}  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| richText | <code>Array</code> | Rich text runs array |
+
+<a name="module_RichTextUtils..RichTextUtils.findMaxFontSizeForLine"></a>
+
+#### RichTextUtils.findMaxFontSizeForLine(richText, lineStart, lineEnd, baseFontSize, scale) ⇒ <code>number</code>
+Find the maximum font size used in a specific line range
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>number</code> - Maximum font size in pixels  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| richText | <code>Array</code> | Rich text runs array |
+| lineStart | <code>number</code> | Starting character index |
+| lineEnd | <code>number</code> | Ending character index |
+| baseFontSize | <code>number</code> | Base font size (scaled) |
+| scale | <code>Object</code> | Scale factors { avg } |
+
+<a name="module_RichTextUtils..RichTextUtils.calculateLineMetrics"></a>
+
+#### RichTextUtils.calculateLineMetrics(lines, richText, plainText, baseFontSize, lineHeightMultiplier, scale) ⇒ <code>Array</code>
+Calculate line metrics for all wrapped lines
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>Array</code> - Array of line metrics { text, start, end, maxFontSize, lineHeight }  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| lines | <code>Array</code> | Array of wrapped line strings |
+| richText | <code>Array</code> | Rich text runs array |
+| plainText | <code>string</code> | Full plain text |
+| baseFontSize | <code>number</code> | Base font size (scaled) |
+| lineHeightMultiplier | <code>number</code> | Line height multiplier |
+| scale | <code>Object</code> | Scale factors { avg } |
+
+<a name="module_RichTextUtils..RichTextUtils.calculateTotalTextHeight"></a>
+
+#### RichTextUtils.calculateTotalTextHeight(lineMetrics) ⇒ <code>number</code>
+Calculate total text height from line metrics
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>number</code> - Total height in pixels  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| lineMetrics | <code>Array</code> | Array of line metrics |
+
+<a name="module_RichTextUtils..RichTextUtils.calculateTextStartY"></a>
+
+#### RichTextUtils.calculateTextStartY(verticalAlign, boxY, padding, availableHeight, totalTextHeight) ⇒ <code>number</code>
+Calculate starting Y position based on vertical alignment
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>number</code> - Starting Y position  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| verticalAlign | <code>string</code> | 'top', 'middle', or 'bottom' |
+| boxY | <code>number</code> | Box Y position |
+| padding | <code>number</code> | Padding in pixels |
+| availableHeight | <code>number</code> | Available height for text |
+| totalTextHeight | <code>number</code> | Total height of text |
+
+<a name="module_RichTextUtils..RichTextUtils.calculateLineX"></a>
+
+#### RichTextUtils.calculateLineX(textAlign, boxX, boxWidth, lineWidth, padding) ⇒ <code>number</code>
+Calculate line X position based on text alignment
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>number</code> - Line X position  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| textAlign | <code>string</code> | 'left', 'center', or 'right' |
+| boxX | <code>number</code> | Box X position |
+| boxWidth | <code>number</code> | Box width |
+| lineWidth | <code>number</code> | Width of the line |
+| padding | <code>number</code> | Padding in pixels |
+
+<a name="module_RichTextUtils..RichTextUtils.buildTextStyle"></a>
+
+#### RichTextUtils.buildTextStyle(layer, shadowScale, scale) ⇒ <code>Object</code>
+Build text style object from layer properties
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>Object</code> - Text style object  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with text style properties |
+| shadowScale | <code>Object</code> | Shadow scale factors |
+| scale | <code>Object</code> | Scale factors |
+
+<a name="module_RichTextUtils..RichTextUtils.buildBaseStyle"></a>
+
+#### RichTextUtils.buildBaseStyle(layer) ⇒ <code>Object</code>
+Build base style object from layer properties
+
+**Kind**: static method of [<code>RichTextUtils</code>](#module_RichTextUtils..RichTextUtils)  
+**Returns**: <code>Object</code> - Base style object  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with text properties |
+
+<a name="module_SetNameUtil"></a>
+
+## SetNameUtil
+Set Name Utilities - shared rules for interpreting layer set referencesLayer set names are entirely user-defined. There is no reserved name and noname the extension requires to exist: an image whose only set is called"001" behaves exactly like one whose only set is called "default".A set reference is either a concrete name, or a generic wikitext intent suchas `on` / `off` that asks for annotations without naming a set. Only concretenames may be sent to the API as `setname`; a generic intent is omitted so theserver resolves whichever set the image actually has.Mirrors src/Utility/SetNameResolver.php.
+
+<a name="module_SetNameUtil..SetNameUtil"></a>
+
+### SetNameUtil~SetNameUtil : <code>object</code>
+**Kind**: inner namespace of [<code>SetNameUtil</code>](#module_SetNameUtil)  
 <a name="module_ShadowRenderer"></a>
 
 ## ShadowRenderer
-ShadowRenderer - Shadow rendering engine for Layers extensionExtracted from LayerRenderer to handle all shadow-related rendering logic:- Standard canvas shadows- Shadow spread via offscreen canvas technique- Rotation-aware shadow renderingThis module is used by LayerRenderer for consistent shadow handling acrossall shape types.
+ShadowRenderer - Shadow rendering engine for Layers extension
+
+Extracted from LayerRenderer to handle all shadow-related rendering logic:
+- Standard canvas shadows
+- Shadow spread via offscreen canvas technique
+- Rotation-aware shadow rendering
+
+This module is used by LayerRenderer for consistent shadow handling across
+all shape types.
 
 **Since**: 0.9.1  
 
@@ -2629,7 +5581,16 @@ Get shadow parameters for offscreen rendering technique
 <a name="module_ShadowRenderer..ShadowRenderer+drawSpreadShadow"></a>
 
 #### shadowRenderer.drawSpreadShadow(layer, scale, spread, drawExpandedPathFn, [opacity])
-Draw a spread shadow using offscreen canvas technique.This renders ONLY the shadow (not the shape) with the spread expansion.The technique: We need to draw an expanded shape to cast a larger shadow, then removethe shape while keeping the shadow. The challenge is that when we erase the shape,we might also erase part of the shadow that overlaps with it.Solution: Draw the shape offset horizontally by a large amount (FAR_OFFSET), thenadjust the shadow offset to compensate. This puts the shadow at the correct positionwhile keeping the shape far away, so erasing the shape doesn't affect the shadow.
+Draw a spread shadow using offscreen canvas technique.
+This renders ONLY the shadow (not the shape) with the spread expansion.
+
+The technique: We need to draw an expanded shape to cast a larger shadow, then remove
+the shape while keeping the shadow. The challenge is that when we erase the shape,
+we might also erase part of the shadow that overlaps with it.
+
+Solution: Draw the shape offset horizontally by a large amount (FAR_OFFSET), then
+adjust the shadow offset to compensate. This puts the shadow at the correct position
+while keeping the shape far away, so erasing the shape doesn't affect the shadow.
 
 **Kind**: instance method of [<code>ShadowRenderer</code>](#module_ShadowRenderer..ShadowRenderer)  
 
@@ -2644,7 +5605,10 @@ Draw a spread shadow using offscreen canvas technique.This renders ONLY the sha
 <a name="module_ShadowRenderer..ShadowRenderer+drawSpreadShadowStroke"></a>
 
 #### shadowRenderer.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, [opacity])
-Draw a spread shadow for stroked shapes (lines, paths) using offscreen canvas.Similar to drawSpreadShadow but uses stroke() instead of fill().Uses the same FAR_OFFSET technique to separate the stroke from its shadow.
+Draw a spread shadow for stroked shapes (lines, paths) using offscreen canvas.
+Similar to drawSpreadShadow but uses stroke() instead of fill().
+
+Uses the same FAR_OFFSET technique to separate the stroke from its shadow.
 
 **Kind**: instance method of [<code>ShadowRenderer</code>](#module_ShadowRenderer..ShadowRenderer)  
 
@@ -2677,7 +5641,21 @@ Clean up resources
 <a name="module_ShapeRenderer"></a>
 
 ## ShapeRenderer
-ShapeRenderer - Specialized basic shape renderingExtracted from LayerRenderer.js to reduce file size and improve maintainability.This module handles rendering of basic geometric shapes:- Rectangle (with rounded corners)- Circle- Ellipse- Polygon (regular n-gons)- StarAll shapes support:- Fill and stroke with separate opacities- Shadow rendering with spread support- Rotation- Scaling
+ShapeRenderer - Specialized basic shape rendering
+
+Extracted from LayerRenderer.js to reduce file size and improve maintainability.
+This module handles rendering of basic geometric shapes:
+- Rectangle (with rounded corners)
+- Circle
+- Ellipse
+- Polygon (regular n-gons)
+- Star
+
+All shapes support:
+- Fill and stroke with separate opacities
+- Shadow rendering with spread support
+- Rotation
+- Scaling
 
 **Since**: 0.9.1  
 
@@ -2685,16 +5663,20 @@ ShapeRenderer - Specialized basic shape renderingExtracted from LayerRenderer.
     * [~ShapeRenderer](#module_ShapeRenderer..ShapeRenderer)
         * [new ShapeRenderer(ctx, [config])](#new_module_ShapeRenderer..ShapeRenderer_new)
         * [.setShadowRenderer(shadowRenderer)](#module_ShapeRenderer..ShapeRenderer+setShadowRenderer)
+        * [.setEffectsRenderer(effectsRenderer)](#module_ShapeRenderer..ShapeRenderer+setEffectsRenderer)
+        * [.setGradientRenderer(gradientRenderer)](#module_ShapeRenderer..ShapeRenderer+setGradientRenderer)
+        * [._getGradientRendererClass()](#module_ShapeRenderer..ShapeRenderer+_getGradientRendererClass) ⇒ <code>function</code> \| <code>null</code>
         * [.setPolygonStarRenderer(polygonStarRenderer)](#module_ShapeRenderer..ShapeRenderer+setPolygonStarRenderer)
         * [.setContext(ctx)](#module_ShapeRenderer..ShapeRenderer+setContext)
+        * [.applyFillStyle(layer, bounds, [opts])](#module_ShapeRenderer..ShapeRenderer+applyFillStyle) ⇒ <code>boolean</code>
         * [.clearShadow()](#module_ShapeRenderer..ShapeRenderer+clearShadow)
-        * [.applyShadow(layer, scale)](#module_ShapeRenderer..ShapeRenderer+applyShadow)
-        * [.hasShadowEnabled(layer)](#module_ShapeRenderer..ShapeRenderer+hasShadowEnabled) ⇒ <code>boolean</code>
-        * [.getShadowSpread(layer, scale)](#module_ShapeRenderer..ShapeRenderer+getShadowSpread) ⇒ <code>number</code>
-        * [.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)](#module_ShapeRenderer..ShapeRenderer+drawSpreadShadow)
-        * [.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, opacity)](#module_ShapeRenderer..ShapeRenderer+drawSpreadShadowStroke)
-        * [.drawRoundedPolygonPath(vertices, cornerRadius)](#module_ShapeRenderer..ShapeRenderer+drawRoundedPolygonPath)
-        * [.drawRoundedStarPath(vertices, pointRadius, valleyRadius)](#module_ShapeRenderer..ShapeRenderer+drawRoundedStarPath)
+        * [.applyShadow()](#module_ShapeRenderer..ShapeRenderer+applyShadow)
+        * [.hasShadowEnabled()](#module_ShapeRenderer..ShapeRenderer+hasShadowEnabled)
+        * [.getShadowSpread()](#module_ShapeRenderer..ShapeRenderer+getShadowSpread)
+        * [.drawSpreadShadow()](#module_ShapeRenderer..ShapeRenderer+drawSpreadShadow)
+        * [.drawSpreadShadowStroke()](#module_ShapeRenderer..ShapeRenderer+drawSpreadShadowStroke)
+        * [.drawRoundedPolygonPath()](#module_ShapeRenderer..ShapeRenderer+drawRoundedPolygonPath)
+        * [.drawRoundedStarPath()](#module_ShapeRenderer..ShapeRenderer+drawRoundedStarPath)
         * [.drawRectangle(layer, [options])](#module_ShapeRenderer..ShapeRenderer+drawRectangle)
         * [.drawRoundedRectPath(x, y, width, height, radius, [context])](#module_ShapeRenderer..ShapeRenderer+drawRoundedRectPath)
         * [.drawCircle(layer, [options])](#module_ShapeRenderer..ShapeRenderer+drawCircle)
@@ -2715,16 +5697,20 @@ ShapeRenderer class - Renders basic geometric shapes on canvas
 * [~ShapeRenderer](#module_ShapeRenderer..ShapeRenderer)
     * [new ShapeRenderer(ctx, [config])](#new_module_ShapeRenderer..ShapeRenderer_new)
     * [.setShadowRenderer(shadowRenderer)](#module_ShapeRenderer..ShapeRenderer+setShadowRenderer)
+    * [.setEffectsRenderer(effectsRenderer)](#module_ShapeRenderer..ShapeRenderer+setEffectsRenderer)
+    * [.setGradientRenderer(gradientRenderer)](#module_ShapeRenderer..ShapeRenderer+setGradientRenderer)
+    * [._getGradientRendererClass()](#module_ShapeRenderer..ShapeRenderer+_getGradientRendererClass) ⇒ <code>function</code> \| <code>null</code>
     * [.setPolygonStarRenderer(polygonStarRenderer)](#module_ShapeRenderer..ShapeRenderer+setPolygonStarRenderer)
     * [.setContext(ctx)](#module_ShapeRenderer..ShapeRenderer+setContext)
+    * [.applyFillStyle(layer, bounds, [opts])](#module_ShapeRenderer..ShapeRenderer+applyFillStyle) ⇒ <code>boolean</code>
     * [.clearShadow()](#module_ShapeRenderer..ShapeRenderer+clearShadow)
-    * [.applyShadow(layer, scale)](#module_ShapeRenderer..ShapeRenderer+applyShadow)
-    * [.hasShadowEnabled(layer)](#module_ShapeRenderer..ShapeRenderer+hasShadowEnabled) ⇒ <code>boolean</code>
-    * [.getShadowSpread(layer, scale)](#module_ShapeRenderer..ShapeRenderer+getShadowSpread) ⇒ <code>number</code>
-    * [.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)](#module_ShapeRenderer..ShapeRenderer+drawSpreadShadow)
-    * [.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, opacity)](#module_ShapeRenderer..ShapeRenderer+drawSpreadShadowStroke)
-    * [.drawRoundedPolygonPath(vertices, cornerRadius)](#module_ShapeRenderer..ShapeRenderer+drawRoundedPolygonPath)
-    * [.drawRoundedStarPath(vertices, pointRadius, valleyRadius)](#module_ShapeRenderer..ShapeRenderer+drawRoundedStarPath)
+    * [.applyShadow()](#module_ShapeRenderer..ShapeRenderer+applyShadow)
+    * [.hasShadowEnabled()](#module_ShapeRenderer..ShapeRenderer+hasShadowEnabled)
+    * [.getShadowSpread()](#module_ShapeRenderer..ShapeRenderer+getShadowSpread)
+    * [.drawSpreadShadow()](#module_ShapeRenderer..ShapeRenderer+drawSpreadShadow)
+    * [.drawSpreadShadowStroke()](#module_ShapeRenderer..ShapeRenderer+drawSpreadShadowStroke)
+    * [.drawRoundedPolygonPath()](#module_ShapeRenderer..ShapeRenderer+drawRoundedPolygonPath)
+    * [.drawRoundedStarPath()](#module_ShapeRenderer..ShapeRenderer+drawRoundedStarPath)
     * [.drawRectangle(layer, [options])](#module_ShapeRenderer..ShapeRenderer+drawRectangle)
     * [.drawRoundedRectPath(x, y, width, height, radius, [context])](#module_ShapeRenderer..ShapeRenderer+drawRoundedRectPath)
     * [.drawCircle(layer, [options])](#module_ShapeRenderer..ShapeRenderer+drawCircle)
@@ -2747,6 +5733,8 @@ Creates a new ShapeRenderer instance
 | [config] | <code>Object</code> | Configuration options |
 | [config.shadowRenderer] | <code>Object</code> | ShadowRenderer instance for shadow operations |
 | [config.polygonStarRenderer] | <code>Object</code> | PolygonStarRenderer instance for polygon/star shapes |
+| [config.effectsRenderer] | <code>Object</code> | EffectsRenderer instance for blur fill |
+| [config.gradientRenderer] | <code>Object</code> | GradientRenderer instance for gradient fills |
 
 <a name="module_ShapeRenderer..ShapeRenderer+setShadowRenderer"></a>
 
@@ -2759,6 +5747,36 @@ Set the shadow renderer instance
 | --- | --- | --- |
 | shadowRenderer | <code>Object</code> | ShadowRenderer instance |
 
+<a name="module_ShapeRenderer..ShapeRenderer+setEffectsRenderer"></a>
+
+#### shapeRenderer.setEffectsRenderer(effectsRenderer)
+Set the effects renderer instance (for blur fill)
+
+**Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| effectsRenderer | <code>Object</code> | EffectsRenderer instance |
+
+<a name="module_ShapeRenderer..ShapeRenderer+setGradientRenderer"></a>
+
+#### shapeRenderer.setGradientRenderer(gradientRenderer)
+Set the gradient renderer instance
+
+**Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| gradientRenderer | <code>Object</code> | GradientRenderer instance |
+
+<a name="module_ShapeRenderer..ShapeRenderer+_getGradientRendererClass"></a>
+
+#### shapeRenderer.\_getGradientRendererClass() ⇒ <code>function</code> \| <code>null</code>
+Get the GradientRenderer class (cached lookup from global namespace).
+Used for static hasGradient() checks without repeating the global chain.
+
+**Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
+**Returns**: <code>function</code> \| <code>null</code> - GradientRenderer class or null  
 <a name="module_ShapeRenderer..ShapeRenderer+setPolygonStarRenderer"></a>
 
 #### shapeRenderer.setPolygonStarRenderer(polygonStarRenderer)
@@ -2781,6 +5799,23 @@ Set the context
 | --- | --- | --- |
 | ctx | <code>CanvasRenderingContext2D</code> | Canvas context |
 
+<a name="module_ShapeRenderer..ShapeRenderer+applyFillStyle"></a>
+
+#### shapeRenderer.applyFillStyle(layer, bounds, [opts]) ⇒ <code>boolean</code>
+Apply fill style to context (gradient or solid color)
+
+Checks if the layer has a gradient definition and applies it if available,
+otherwise falls back to solid fill color.
+
+**Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
+**Returns**: <code>boolean</code> - True if gradient was applied, false for solid fill  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with fill and optional gradient properties |
+| bounds | <code>Object</code> | Bounding box for gradient calculation { x, y, width, height } |
+| [opts] | <code>Object</code> | Options including scale |
+
 <a name="module_ShapeRenderer..ShapeRenderer+clearShadow"></a>
 
 #### shapeRenderer.clearShadow()
@@ -2789,96 +5824,46 @@ Clear shadow settings from context
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
 <a name="module_ShapeRenderer..ShapeRenderer+applyShadow"></a>
 
-#### shapeRenderer.applyShadow(layer, scale)
-Apply shadow settings to context
+#### shapeRenderer.applyShadow()
+Apply shadow settings to context @see ShadowRenderer#applyShadow
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer with shadow properties |
-| scale | <code>Object</code> | Scale factors |
-
 <a name="module_ShapeRenderer..ShapeRenderer+hasShadowEnabled"></a>
 
-#### shapeRenderer.hasShadowEnabled(layer) ⇒ <code>boolean</code>
-Check if shadow is enabled on a layer
+#### shapeRenderer.hasShadowEnabled()
+Check if shadow is enabled on a layer @return {boolean}
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
-**Returns**: <code>boolean</code> - True if shadow is enabled  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer to check |
-
 <a name="module_ShapeRenderer..ShapeRenderer+getShadowSpread"></a>
 
-#### shapeRenderer.getShadowSpread(layer, scale) ⇒ <code>number</code>
-Get shadow spread value from layer
+#### shapeRenderer.getShadowSpread()
+Get shadow spread value @return {number} Spread in pixels
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
-**Returns**: <code>number</code> - Spread value in pixels  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer with shadow properties |
-| scale | <code>Object</code> | Scale factors |
-
 <a name="module_ShapeRenderer..ShapeRenderer+drawSpreadShadow"></a>
 
-#### shapeRenderer.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)
-Draw spread shadow for a filled shape
+#### shapeRenderer.drawSpreadShadow()
+Draw spread shadow for a filled shape @see ShadowRenderer#drawSpreadShadow
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer with shadow properties |
-| scale | <code>Object</code> | Scale factors |
-| spread | <code>number</code> | Spread amount |
-| drawPathFn | <code>function</code> | Function to draw the path |
-| opacity | <code>number</code> | Opacity for the shadow |
-
 <a name="module_ShapeRenderer..ShapeRenderer+drawSpreadShadowStroke"></a>
 
-#### shapeRenderer.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, opacity)
-Draw spread shadow for a stroked shape
+#### shapeRenderer.drawSpreadShadowStroke()
+Draw spread shadow for a stroked shape @see ShadowRenderer#drawSpreadShadowStroke
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer with shadow properties |
-| scale | <code>Object</code> | Scale factors |
-| strokeWidth | <code>number</code> | Stroke width |
-| drawPathFn | <code>function</code> | Function to draw the path |
-| opacity | <code>number</code> | Opacity for the shadow |
-
 <a name="module_ShapeRenderer..ShapeRenderer+drawRoundedPolygonPath"></a>
 
-#### shapeRenderer.drawRoundedPolygonPath(vertices, cornerRadius)
-Draw a rounded polygon path on the contextDelegates to PolygonStarRenderer if available
+#### shapeRenderer.drawRoundedPolygonPath()
+Draw a rounded polygon path @see PolygonStarRenderer#drawRoundedPolygonPath
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| vertices | <code>Array.&lt;{x: number, y: number}&gt;</code> | Array of vertex points |
-| cornerRadius | <code>number</code> | Radius for rounded corners |
-
 <a name="module_ShapeRenderer..ShapeRenderer+drawRoundedStarPath"></a>
 
-#### shapeRenderer.drawRoundedStarPath(vertices, pointRadius, valleyRadius)
-Draw a rounded star path on the context with different radii for points and valleysDelegates to PolygonStarRenderer if available
+#### shapeRenderer.drawRoundedStarPath()
+Draw a rounded star path @see PolygonStarRenderer#drawRoundedStarPath
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| vertices | <code>Array.&lt;{x: number, y: number}&gt;</code> | Array of vertex points (alternating outer/inner) |
-| pointRadius | <code>number</code> | Radius for outer point corners |
-| valleyRadius | <code>number</code> | Radius for inner valley corners |
-
 <a name="module_ShapeRenderer..ShapeRenderer+drawRectangle"></a>
 
 #### shapeRenderer.drawRectangle(layer, [options])
@@ -2937,7 +5922,8 @@ Draw an ellipse shape
 <a name="module_ShapeRenderer..ShapeRenderer+drawPolygon"></a>
 
 #### shapeRenderer.drawPolygon(layer, [options])
-Draw a regular polygon shapeDelegates to PolygonStarRenderer if available
+Draw a regular polygon shape
+Delegates to PolygonStarRenderer if available
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
 
@@ -2949,7 +5935,8 @@ Draw a regular polygon shapeDelegates to PolygonStarRenderer if available
 <a name="module_ShapeRenderer..ShapeRenderer+drawStar"></a>
 
 #### shapeRenderer.drawStar(layer, [options])
-Draw a star shapeDelegates to PolygonStarRenderer if available
+Draw a star shape
+Delegates to PolygonStarRenderer if available
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
 
@@ -2988,10 +5975,107 @@ Draw a freehand path
 Clean up resources
 
 **Kind**: instance method of [<code>ShapeRenderer</code>](#module_ShapeRenderer..ShapeRenderer)  
+<a name="module_TailCalculator"></a>
+
+## TailCalculator
+TailCalculator - Geometric calculations for callout tails
+
+Extraced from CalloutRenderer.js to reduce file size and improve maintainability.
+Contains pure geometric calculations for determining tail positions:
+- Perimeter point calculations for draggable tails
+- Tail base and tip coordinate calculations
+- Edge/corner detection and mapping
+
+**Since**: 1.5.39  
+
+* [TailCalculator](#module_TailCalculator)
+    * [~TailCalculator](#module_TailCalculator..TailCalculator)
+        * [.getClosestPerimeterPoint(px, py, x, y, width, height, cornerRadius)](#module_TailCalculator..TailCalculator+getClosestPerimeterPoint) ⇒ <code>Object</code>
+        * [.getTailFromTipPosition(x, y, width, height, tipX, tipY, cornerRadius)](#module_TailCalculator..TailCalculator+getTailFromTipPosition) ⇒ <code>Object</code> \| <code>null</code>
+        * [.getTailCoordinates(x, y, width, height, direction, position, tailSize, cornerRadius)](#module_TailCalculator..TailCalculator+getTailCoordinates) ⇒ <code>Object</code>
+
+<a name="module_TailCalculator..TailCalculator"></a>
+
+### TailCalculator~TailCalculator
+TailCalculator class - Pure geometric calculations for callout tails
+
+**Kind**: inner class of [<code>TailCalculator</code>](#module_TailCalculator)  
+
+* [~TailCalculator](#module_TailCalculator..TailCalculator)
+    * [.getClosestPerimeterPoint(px, py, x, y, width, height, cornerRadius)](#module_TailCalculator..TailCalculator+getClosestPerimeterPoint) ⇒ <code>Object</code>
+    * [.getTailFromTipPosition(x, y, width, height, tipX, tipY, cornerRadius)](#module_TailCalculator..TailCalculator+getTailFromTipPosition) ⇒ <code>Object</code> \| <code>null</code>
+    * [.getTailCoordinates(x, y, width, height, direction, position, tailSize, cornerRadius)](#module_TailCalculator..TailCalculator+getTailCoordinates) ⇒ <code>Object</code>
+
+<a name="module_TailCalculator..TailCalculator+getClosestPerimeterPoint"></a>
+
+#### tailCalculator.getClosestPerimeterPoint(px, py, x, y, width, height, cornerRadius) ⇒ <code>Object</code>
+Get the closest point on a rounded rectangle perimeter to an external point.
+This is used when dragging a tail tip to find where the base should attach.
+
+**Kind**: instance method of [<code>TailCalculator</code>](#module_TailCalculator..TailCalculator)  
+**Returns**: <code>Object</code> - Object with edge ('top', 'bottom', 'left', 'right'), baseX, baseY  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| px | <code>number</code> | External point X |
+| py | <code>number</code> | External point Y |
+| x | <code>number</code> | Rectangle x |
+| y | <code>number</code> | Rectangle y |
+| width | <code>number</code> | Rectangle width |
+| height | <code>number</code> | Rectangle height |
+| cornerRadius | <code>number</code> | Corner radius to avoid |
+
+<a name="module_TailCalculator..TailCalculator+getTailFromTipPosition"></a>
+
+#### tailCalculator.getTailFromTipPosition(x, y, width, height, tipX, tipY, cornerRadius) ⇒ <code>Object</code> \| <code>null</code>
+Get tail coordinates from a draggable tip position.
+Calculates the base attachment point on the perimeter and tail width.
+Uses tangent-aware placement for smooth blending with corners.
+
+**Kind**: instance method of [<code>TailCalculator</code>](#module_TailCalculator..TailCalculator)  
+**Returns**: <code>Object</code> \| <code>null</code> - Object with base1, base2, tip, edge, or null if tip is inside rectangle  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| x | <code>number</code> | Rectangle x |
+| y | <code>number</code> | Rectangle y |
+| width | <code>number</code> | Rectangle width |
+| height | <code>number</code> | Rectangle height |
+| tipX | <code>number</code> | Tail tip X position (relative to layer origin) |
+| tipY | <code>number</code> | Tail tip Y position (relative to layer origin) |
+| cornerRadius | <code>number</code> | Corner radius to avoid |
+
+<a name="module_TailCalculator..TailCalculator+getTailCoordinates"></a>
+
+#### tailCalculator.getTailCoordinates(x, y, width, height, direction, position, tailSize, cornerRadius) ⇒ <code>Object</code>
+Get tail position coordinates based on direction and position.
+Uses tangent-aware calculations to ensure tail blends smoothly with corners.
+
+**Kind**: instance method of [<code>TailCalculator</code>](#module_TailCalculator..TailCalculator)  
+**Returns**: <code>Object</code> - Object with base1, base2, tip, and optional curve control points  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| x | <code>number</code> | Rectangle x |
+| y | <code>number</code> | Rectangle y |
+| width | <code>number</code> | Rectangle width |
+| height | <code>number</code> | Rectangle height |
+| direction | <code>string</code> | Tail direction (bottom, top, left, right, corners) |
+| position | <code>number</code> | Position along edge (0-1) |
+| tailSize | <code>number</code> | Size of the tail |
+| cornerRadius | <code>number</code> | Corner radius to avoid |
+
 <a name="module_TextBoxRenderer"></a>
 
 ## TextBoxRenderer
-TextBoxRenderer - Specialized text box renderingExtracted from ShapeRenderer.js to reduce file size and improve maintainability.This module handles rendering of text box shapes:- Rectangle container with rounded corners- Multi-line text with word wrapping- Text alignment (horizontal and vertical)- Text stroke and shadow effects
+TextBoxRenderer - Specialized text box rendering
+
+Extracted from ShapeRenderer.js to reduce file size and improve maintainability.
+This module handles rendering of text box shapes:
+- Rectangle container with rounded corners
+- Multi-line text with word wrapping
+- Text alignment (horizontal and vertical)
+- Text stroke and shadow effects
 
 **Since**: 1.1.1  
 
@@ -2999,16 +6083,25 @@ TextBoxRenderer - Specialized text box renderingExtracted from ShapeRenderer.j
     * [~TextBoxRenderer](#module_TextBoxRenderer..TextBoxRenderer)
         * [new TextBoxRenderer(ctx, [config])](#new_module_TextBoxRenderer..TextBoxRenderer_new)
         * [.setShadowRenderer(shadowRenderer)](#module_TextBoxRenderer..TextBoxRenderer+setShadowRenderer)
+        * [.setEffectsRenderer(effectsRenderer)](#module_TextBoxRenderer..TextBoxRenderer+setEffectsRenderer)
+        * [.setGradientRenderer(gradientRenderer)](#module_TextBoxRenderer..TextBoxRenderer+setGradientRenderer)
         * [.setContext(ctx)](#module_TextBoxRenderer..TextBoxRenderer+setContext)
         * [.clearShadow()](#module_TextBoxRenderer..TextBoxRenderer+clearShadow)
-        * [.hasShadowEnabled(layer)](#module_TextBoxRenderer..TextBoxRenderer+hasShadowEnabled) ⇒ <code>boolean</code>
-        * [.getShadowSpread(layer, scale)](#module_TextBoxRenderer..TextBoxRenderer+getShadowSpread) ⇒ <code>number</code>
-        * [.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)](#module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadow)
-        * [.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, opacity)](#module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadowStroke)
+        * [.hasShadowEnabled()](#module_TextBoxRenderer..TextBoxRenderer+hasShadowEnabled)
+        * [.getShadowSpread()](#module_TextBoxRenderer..TextBoxRenderer+getShadowSpread)
+        * [.drawSpreadShadow()](#module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadow)
+        * [.drawSpreadShadowStroke()](#module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadowStroke)
         * [.drawRoundedRectPath(x, y, width, height, radius, [context])](#module_TextBoxRenderer..TextBoxRenderer+drawRoundedRectPath)
         * [.draw(layer, [options])](#module_TextBoxRenderer..TextBoxRenderer+draw)
-        * [.wrapText(text, maxWidth, fontSize, fontFamily, [fontWeight], [fontStyle])](#module_TextBoxRenderer..TextBoxRenderer+wrapText) ⇒ <code>Array.&lt;string&gt;</code>
+        * [.wrapText()](#module_TextBoxRenderer..TextBoxRenderer+wrapText)
+        * [.wrapRichText(richText, maxWidth, baseStyle, scale)](#module_TextBoxRenderer..TextBoxRenderer+wrapRichText) ⇒ <code>Array.&lt;string&gt;</code>
+        * [.hasRichText()](#module_TextBoxRenderer..TextBoxRenderer+hasRichText)
+        * [.getRichTextPlainText()](#module_TextBoxRenderer..TextBoxRenderer+getRichTextPlainText)
+        * [.buildCharToRunMap()](#module_TextBoxRenderer..TextBoxRenderer+buildCharToRunMap)
+        * [.drawRichTextLine(richText, lineStart, lineEnd, lineX, lineY, baseStyle, textStyle, scale)](#module_TextBoxRenderer..TextBoxRenderer+drawRichTextLine)
+        * [.drawRichTextContent(layer, x, y, width, height, padding, scale, shadowScale, baseOpacity)](#module_TextBoxRenderer..TextBoxRenderer+drawRichTextContent)
         * [.destroy()](#module_TextBoxRenderer..TextBoxRenderer+destroy)
+        * [.drawTextOnly(layer, [options])](#module_TextBoxRenderer..TextBoxRenderer+drawTextOnly)
 
 <a name="module_TextBoxRenderer..TextBoxRenderer"></a>
 
@@ -3020,16 +6113,25 @@ TextBoxRenderer class - Renders text box shapes on canvas
 * [~TextBoxRenderer](#module_TextBoxRenderer..TextBoxRenderer)
     * [new TextBoxRenderer(ctx, [config])](#new_module_TextBoxRenderer..TextBoxRenderer_new)
     * [.setShadowRenderer(shadowRenderer)](#module_TextBoxRenderer..TextBoxRenderer+setShadowRenderer)
+    * [.setEffectsRenderer(effectsRenderer)](#module_TextBoxRenderer..TextBoxRenderer+setEffectsRenderer)
+    * [.setGradientRenderer(gradientRenderer)](#module_TextBoxRenderer..TextBoxRenderer+setGradientRenderer)
     * [.setContext(ctx)](#module_TextBoxRenderer..TextBoxRenderer+setContext)
     * [.clearShadow()](#module_TextBoxRenderer..TextBoxRenderer+clearShadow)
-    * [.hasShadowEnabled(layer)](#module_TextBoxRenderer..TextBoxRenderer+hasShadowEnabled) ⇒ <code>boolean</code>
-    * [.getShadowSpread(layer, scale)](#module_TextBoxRenderer..TextBoxRenderer+getShadowSpread) ⇒ <code>number</code>
-    * [.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)](#module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadow)
-    * [.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, opacity)](#module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadowStroke)
+    * [.hasShadowEnabled()](#module_TextBoxRenderer..TextBoxRenderer+hasShadowEnabled)
+    * [.getShadowSpread()](#module_TextBoxRenderer..TextBoxRenderer+getShadowSpread)
+    * [.drawSpreadShadow()](#module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadow)
+    * [.drawSpreadShadowStroke()](#module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadowStroke)
     * [.drawRoundedRectPath(x, y, width, height, radius, [context])](#module_TextBoxRenderer..TextBoxRenderer+drawRoundedRectPath)
     * [.draw(layer, [options])](#module_TextBoxRenderer..TextBoxRenderer+draw)
-    * [.wrapText(text, maxWidth, fontSize, fontFamily, [fontWeight], [fontStyle])](#module_TextBoxRenderer..TextBoxRenderer+wrapText) ⇒ <code>Array.&lt;string&gt;</code>
+    * [.wrapText()](#module_TextBoxRenderer..TextBoxRenderer+wrapText)
+    * [.wrapRichText(richText, maxWidth, baseStyle, scale)](#module_TextBoxRenderer..TextBoxRenderer+wrapRichText) ⇒ <code>Array.&lt;string&gt;</code>
+    * [.hasRichText()](#module_TextBoxRenderer..TextBoxRenderer+hasRichText)
+    * [.getRichTextPlainText()](#module_TextBoxRenderer..TextBoxRenderer+getRichTextPlainText)
+    * [.buildCharToRunMap()](#module_TextBoxRenderer..TextBoxRenderer+buildCharToRunMap)
+    * [.drawRichTextLine(richText, lineStart, lineEnd, lineX, lineY, baseStyle, textStyle, scale)](#module_TextBoxRenderer..TextBoxRenderer+drawRichTextLine)
+    * [.drawRichTextContent(layer, x, y, width, height, padding, scale, shadowScale, baseOpacity)](#module_TextBoxRenderer..TextBoxRenderer+drawRichTextContent)
     * [.destroy()](#module_TextBoxRenderer..TextBoxRenderer+destroy)
+    * [.drawTextOnly(layer, [options])](#module_TextBoxRenderer..TextBoxRenderer+drawTextOnly)
 
 <a name="new_module_TextBoxRenderer..TextBoxRenderer_new"></a>
 
@@ -3042,6 +6144,7 @@ Creates a new TextBoxRenderer instance
 | ctx | <code>CanvasRenderingContext2D</code> | Canvas 2D rendering context |
 | [config] | <code>Object</code> | Configuration options |
 | [config.shadowRenderer] | <code>Object</code> | ShadowRenderer instance for shadow operations |
+| [config.effectsRenderer] | <code>Object</code> | EffectsRenderer instance for blur fill |
 
 <a name="module_TextBoxRenderer..TextBoxRenderer+setShadowRenderer"></a>
 
@@ -3053,6 +6156,28 @@ Set the shadow renderer instance
 | Param | Type | Description |
 | --- | --- | --- |
 | shadowRenderer | <code>Object</code> | ShadowRenderer instance |
+
+<a name="module_TextBoxRenderer..TextBoxRenderer+setEffectsRenderer"></a>
+
+#### textBoxRenderer.setEffectsRenderer(effectsRenderer)
+Set the effects renderer instance (for blur fill)
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| effectsRenderer | <code>Object</code> | EffectsRenderer instance |
+
+<a name="module_TextBoxRenderer..TextBoxRenderer+setGradientRenderer"></a>
+
+#### textBoxRenderer.setGradientRenderer(gradientRenderer)
+Set the gradient renderer instance
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| gradientRenderer | <code>Object</code> | GradientRenderer instance |
 
 <a name="module_TextBoxRenderer..TextBoxRenderer+setContext"></a>
 
@@ -3073,59 +6198,28 @@ Clear shadow settings from context
 **Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
 <a name="module_TextBoxRenderer..TextBoxRenderer+hasShadowEnabled"></a>
 
-#### textBoxRenderer.hasShadowEnabled(layer) ⇒ <code>boolean</code>
-Check if shadow is enabled on a layer
+#### textBoxRenderer.hasShadowEnabled()
+Check if shadow is enabled @param {Object} layer @return {boolean}
 
 **Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
-**Returns**: <code>boolean</code> - True if shadow is enabled  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer to check |
-
 <a name="module_TextBoxRenderer..TextBoxRenderer+getShadowSpread"></a>
 
-#### textBoxRenderer.getShadowSpread(layer, scale) ⇒ <code>number</code>
-Get shadow spread value from layer
+#### textBoxRenderer.getShadowSpread()
+Get shadow spread value @param {Object} layer @param {Object} scale @return {number}
 
 **Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
-**Returns**: <code>number</code> - Spread value in pixels  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer with shadow properties |
-| scale | <code>Object</code> | Scale factors |
-
 <a name="module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadow"></a>
 
-#### textBoxRenderer.drawSpreadShadow(layer, scale, spread, drawPathFn, opacity)
+#### textBoxRenderer.drawSpreadShadow()
 Draw spread shadow for a filled shape
 
 **Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer with shadow properties |
-| scale | <code>Object</code> | Scale factors |
-| spread | <code>number</code> | Spread amount |
-| drawPathFn | <code>function</code> | Function to draw the path |
-| opacity | <code>number</code> | Opacity for the shadow |
-
 <a name="module_TextBoxRenderer..TextBoxRenderer+drawSpreadShadowStroke"></a>
 
-#### textBoxRenderer.drawSpreadShadowStroke(layer, scale, strokeWidth, drawPathFn, opacity)
+#### textBoxRenderer.drawSpreadShadowStroke()
 Draw spread shadow for a stroked shape
 
 **Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| layer | <code>Object</code> | Layer with shadow properties |
-| scale | <code>Object</code> | Scale factors |
-| strokeWidth | <code>number</code> | Stroke width |
-| drawPathFn | <code>function</code> | Function to draw the path |
-| opacity | <code>number</code> | Opacity for the shadow |
-
 <a name="module_TextBoxRenderer..TextBoxRenderer+drawRoundedRectPath"></a>
 
 #### textBoxRenderer.drawRoundedRectPath(x, y, width, height, radius, [context])
@@ -3145,7 +6239,8 @@ Draw a rounded rectangle path (fallback for browsers without roundRect)
 <a name="module_TextBoxRenderer..TextBoxRenderer+draw"></a>
 
 #### textBoxRenderer.draw(layer, [options])
-Draw a text box shape (rectangle with multi-line text)Text is clipped to the box boundaries
+Draw a text box shape (rectangle with multi-line text)
+Text is clipped to the box boundaries
 
 **Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
 
@@ -3159,20 +6254,83 @@ Draw a text box shape (rectangle with multi-line text)Text is clipped to the bo
 
 <a name="module_TextBoxRenderer..TextBoxRenderer+wrapText"></a>
 
-#### textBoxRenderer.wrapText(text, maxWidth, fontSize, fontFamily, [fontWeight], [fontStyle]) ⇒ <code>Array.&lt;string&gt;</code>
-Wrap text to fit within a given width
+#### textBoxRenderer.wrapText()
+Wrap text to fit within a width @return {Array<string>}
 
 **Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
-**Returns**: <code>Array.&lt;string&gt;</code> - Array of wrapped lines  
+<a name="module_TextBoxRenderer..TextBoxRenderer+wrapRichText"></a>
 
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| text | <code>string</code> |  | Text to wrap |
-| maxWidth | <code>number</code> |  | Maximum width for each line |
-| fontSize | <code>number</code> |  | Font size in pixels |
-| fontFamily | <code>string</code> |  | Font family |
-| [fontWeight] | <code>string</code> | <code>&quot;&#x27;normal&#x27;&quot;</code> | Font weight (normal or bold) |
-| [fontStyle] | <code>string</code> | <code>&quot;&#x27;normal&#x27;&quot;</code> | Font style (normal or italic) |
+#### textBoxRenderer.wrapRichText(richText, maxWidth, baseStyle, scale) ⇒ <code>Array.&lt;string&gt;</code>
+Wrap rich text with per-run font metrics for accurate line breaking.
+Unlike wrapText(), this sets ctx.font per-run to measure each segment
+at its actual rendered font size, avoiding incorrect line breaks when
+runs have different font sizes. Falls back to wrapText() for
+non-rich-text or when runs lack style overrides.
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+**Returns**: <code>Array.&lt;string&gt;</code> - Wrapped lines  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| richText | <code>Array</code> | Rich text runs [{text, style?}, ...] |
+| maxWidth | <code>number</code> | Maximum line width in pixels |
+| baseStyle | <code>Object</code> | Base style {fontSize, fontFamily, fontWeight, fontStyle} |
+| scale | <code>Object</code> | Scale factors {avg} |
+
+<a name="module_TextBoxRenderer..TextBoxRenderer+hasRichText"></a>
+
+#### textBoxRenderer.hasRichText()
+Check if layer has valid rich text content @param {Object} layer @return {boolean}
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+<a name="module_TextBoxRenderer..TextBoxRenderer+getRichTextPlainText"></a>
+
+#### textBoxRenderer.getRichTextPlainText()
+Get plain text from rich text array @param {Array} richText @return {string}
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+<a name="module_TextBoxRenderer..TextBoxRenderer+buildCharToRunMap"></a>
+
+#### textBoxRenderer.buildCharToRunMap()
+Build character position to run map @param {Array} richText @return {Array}
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+<a name="module_TextBoxRenderer..TextBoxRenderer+drawRichTextLine"></a>
+
+#### textBoxRenderer.drawRichTextLine(richText, lineStart, lineEnd, lineX, lineY, baseStyle, textStyle, scale)
+Draw a line of rich text with mixed formatting
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| richText | <code>Array</code> | Rich text runs array |
+| lineStart | <code>number</code> | Starting character index for this line |
+| lineEnd | <code>number</code> | Ending character index (exclusive) |
+| lineX | <code>number</code> | X position to start drawing |
+| lineY | <code>number</code> | Y position for the line |
+| baseStyle | <code>Object</code> | Base style from layer (fontSize, fontFamily, color, etc.) |
+| textStyle | <code>Object</code> | Text effects (shadow, stroke) |
+| scale | <code>Object</code> | Scale factors |
+
+<a name="module_TextBoxRenderer..TextBoxRenderer+drawRichTextContent"></a>
+
+#### textBoxRenderer.drawRichTextContent(layer, x, y, width, height, padding, scale, shadowScale, baseOpacity)
+Draw rich text content with word wrapping and mixed formatting
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with richText property |
+| x | <code>number</code> | Box x position |
+| y | <code>number</code> | Box y position |
+| width | <code>number</code> | Box width |
+| height | <code>number</code> | Box height |
+| padding | <code>number</code> | Padding in scaled pixels |
+| scale | <code>Object</code> | Scale factors |
+| shadowScale | <code>Object</code> | Shadow scale factors |
+| baseOpacity | <code>number</code> | Base opacity |
 
 <a name="module_TextBoxRenderer..TextBoxRenderer+destroy"></a>
 
@@ -3180,10 +6338,33 @@ Wrap text to fit within a given width
 Clean up resources
 
 **Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+<a name="module_TextBoxRenderer..TextBoxRenderer+drawTextOnly"></a>
+
+#### textBoxRenderer.drawTextOnly(layer, [options])
+Draw only the text content of a textbox (no background fill/stroke)
+Used by blur blend mode to render text on top of blur effect
+
+**Kind**: instance method of [<code>TextBoxRenderer</code>](#module_TextBoxRenderer..TextBoxRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer with text properties |
+| [options] | <code>Object</code> | Rendering options |
+| [options.scale] | <code>Object</code> | Scale factors {sx, sy, avg} |
+| [options.offset] | <code>Object</code> | Offset {x, y} for position adjustment |
+
 <a name="module_TextRenderer"></a>
 
 ## TextRenderer
-TextRenderer - Specialized text shape renderingExtracted from LayerRenderer.js to reduce file size and improve maintainability.This module handles all text-related rendering including:- Font sizing and family- Text alignment- Text stroke (outline)- Shadow rendering with spread support- Rotation around text center
+TextRenderer - Specialized text shape rendering
+
+Extracted from LayerRenderer.js to reduce file size and improve maintainability.
+This module handles all text-related rendering including:
+- Font sizing and family
+- Text alignment
+- Text stroke (outline)
+- Shadow rendering with spread support
+- Rotation around text center
 
 **Since**: 0.9.1  
 
@@ -3346,6 +6527,210 @@ Measure text dimensions
 Clean up resources
 
 **Kind**: instance method of [<code>TextRenderer</code>](#module_TextRenderer..TextRenderer)  
+<a name="module_TimeoutTracker"></a>
+
+## TimeoutTracker
+TimeoutTracker - Utility for tracking and cleaning up setTimeout/setInterval calls
+
+Prevents memory leaks by ensuring all timeouts and intervals are properly
+cleared when a component is destroyed. Provides a consistent API for
+debouncing, throttling, and delayed execution.
+
+Usage:
+  const tracker = new TimeoutTracker();
+  tracker.setTimeout('update', () => this.update(), 300);
+  tracker.setDebounce('search', () => this.search(), 300);
+  // On destroy:
+  tracker.destroy();
+
+
+* [TimeoutTracker](#module_TimeoutTracker)
+    * [~TimeoutTracker](#module_TimeoutTracker..TimeoutTracker)
+        * [.timeouts](#module_TimeoutTracker..TimeoutTracker+timeouts) : <code>Map.&lt;string, number&gt;</code>
+        * [.intervals](#module_TimeoutTracker..TimeoutTracker+intervals) : <code>Map.&lt;string, number&gt;</code>
+        * [.destroyed](#module_TimeoutTracker..TimeoutTracker+destroyed) : <code>boolean</code>
+        * [.setTimeout(name, callback, delay)](#module_TimeoutTracker..TimeoutTracker+setTimeout) ⇒ <code>number</code> \| <code>null</code>
+        * [.clearTimeout(name)](#module_TimeoutTracker..TimeoutTracker+clearTimeout) ⇒ <code>boolean</code>
+        * [.setDebounce(name, callback, delay)](#module_TimeoutTracker..TimeoutTracker+setDebounce) ⇒ <code>number</code> \| <code>null</code>
+        * [.setInterval(name, callback, delay)](#module_TimeoutTracker..TimeoutTracker+setInterval) ⇒ <code>number</code> \| <code>null</code>
+        * [.clearInterval(name)](#module_TimeoutTracker..TimeoutTracker+clearInterval) ⇒ <code>boolean</code>
+        * [.setOnce(name, callback, delay)](#module_TimeoutTracker..TimeoutTracker+setOnce) ⇒ <code>boolean</code>
+        * [.isPending(name)](#module_TimeoutTracker..TimeoutTracker+isPending) ⇒ <code>boolean</code>
+        * [.clearAllTimeouts()](#module_TimeoutTracker..TimeoutTracker+clearAllTimeouts)
+        * [.clearAllIntervals()](#module_TimeoutTracker..TimeoutTracker+clearAllIntervals)
+        * [.getTimeoutCount()](#module_TimeoutTracker..TimeoutTracker+getTimeoutCount) ⇒ <code>number</code>
+        * [.getIntervalCount()](#module_TimeoutTracker..TimeoutTracker+getIntervalCount) ⇒ <code>number</code>
+        * [.destroy()](#module_TimeoutTracker..TimeoutTracker+destroy)
+
+<a name="module_TimeoutTracker..TimeoutTracker"></a>
+
+### TimeoutTracker~TimeoutTracker
+TimeoutTracker class
+
+**Kind**: inner class of [<code>TimeoutTracker</code>](#module_TimeoutTracker)  
+
+* [~TimeoutTracker](#module_TimeoutTracker..TimeoutTracker)
+    * [.timeouts](#module_TimeoutTracker..TimeoutTracker+timeouts) : <code>Map.&lt;string, number&gt;</code>
+    * [.intervals](#module_TimeoutTracker..TimeoutTracker+intervals) : <code>Map.&lt;string, number&gt;</code>
+    * [.destroyed](#module_TimeoutTracker..TimeoutTracker+destroyed) : <code>boolean</code>
+    * [.setTimeout(name, callback, delay)](#module_TimeoutTracker..TimeoutTracker+setTimeout) ⇒ <code>number</code> \| <code>null</code>
+    * [.clearTimeout(name)](#module_TimeoutTracker..TimeoutTracker+clearTimeout) ⇒ <code>boolean</code>
+    * [.setDebounce(name, callback, delay)](#module_TimeoutTracker..TimeoutTracker+setDebounce) ⇒ <code>number</code> \| <code>null</code>
+    * [.setInterval(name, callback, delay)](#module_TimeoutTracker..TimeoutTracker+setInterval) ⇒ <code>number</code> \| <code>null</code>
+    * [.clearInterval(name)](#module_TimeoutTracker..TimeoutTracker+clearInterval) ⇒ <code>boolean</code>
+    * [.setOnce(name, callback, delay)](#module_TimeoutTracker..TimeoutTracker+setOnce) ⇒ <code>boolean</code>
+    * [.isPending(name)](#module_TimeoutTracker..TimeoutTracker+isPending) ⇒ <code>boolean</code>
+    * [.clearAllTimeouts()](#module_TimeoutTracker..TimeoutTracker+clearAllTimeouts)
+    * [.clearAllIntervals()](#module_TimeoutTracker..TimeoutTracker+clearAllIntervals)
+    * [.getTimeoutCount()](#module_TimeoutTracker..TimeoutTracker+getTimeoutCount) ⇒ <code>number</code>
+    * [.getIntervalCount()](#module_TimeoutTracker..TimeoutTracker+getIntervalCount) ⇒ <code>number</code>
+    * [.destroy()](#module_TimeoutTracker..TimeoutTracker+destroy)
+
+<a name="module_TimeoutTracker..TimeoutTracker+timeouts"></a>
+
+#### timeoutTracker.timeouts : <code>Map.&lt;string, number&gt;</code>
+Map of named timeouts
+
+**Kind**: instance property of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+<a name="module_TimeoutTracker..TimeoutTracker+intervals"></a>
+
+#### timeoutTracker.intervals : <code>Map.&lt;string, number&gt;</code>
+Map of named intervals
+
+**Kind**: instance property of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+<a name="module_TimeoutTracker..TimeoutTracker+destroyed"></a>
+
+#### timeoutTracker.destroyed : <code>boolean</code>
+Whether the tracker has been destroyed
+
+**Kind**: instance property of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+<a name="module_TimeoutTracker..TimeoutTracker+setTimeout"></a>
+
+#### timeoutTracker.setTimeout(name, callback, delay) ⇒ <code>number</code> \| <code>null</code>
+Set a named timeout. Automatically clears any existing timeout with the same name.
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>number</code> \| <code>null</code> - The timeout ID, or null if destroyed  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Unique name for this timeout |
+| callback | <code>function</code> | Function to execute after delay |
+| delay | <code>number</code> | Delay in milliseconds |
+
+<a name="module_TimeoutTracker..TimeoutTracker+clearTimeout"></a>
+
+#### timeoutTracker.clearTimeout(name) ⇒ <code>boolean</code>
+Clear a named timeout
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>boolean</code> - True if a timeout was cleared  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Name of the timeout to clear |
+
+<a name="module_TimeoutTracker..TimeoutTracker+setDebounce"></a>
+
+#### timeoutTracker.setDebounce(name, callback, delay) ⇒ <code>number</code> \| <code>null</code>
+Set a debounced callback. Each call resets the timer.
+Alias for setTimeout with the same name.
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>number</code> \| <code>null</code> - The timeout ID, or null if destroyed  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Unique name for this debounce |
+| callback | <code>function</code> | Function to execute after delay |
+| delay | <code>number</code> | Delay in milliseconds (default 300) |
+
+<a name="module_TimeoutTracker..TimeoutTracker+setInterval"></a>
+
+#### timeoutTracker.setInterval(name, callback, delay) ⇒ <code>number</code> \| <code>null</code>
+Set a named interval. Automatically clears any existing interval with the same name.
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>number</code> \| <code>null</code> - The interval ID, or null if destroyed  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Unique name for this interval |
+| callback | <code>function</code> | Function to execute on each interval |
+| delay | <code>number</code> | Interval in milliseconds |
+
+<a name="module_TimeoutTracker..TimeoutTracker+clearInterval"></a>
+
+#### timeoutTracker.clearInterval(name) ⇒ <code>boolean</code>
+Clear a named interval
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>boolean</code> - True if an interval was cleared  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Name of the interval to clear |
+
+<a name="module_TimeoutTracker..TimeoutTracker+setOnce"></a>
+
+#### timeoutTracker.setOnce(name, callback, delay) ⇒ <code>boolean</code>
+Execute a callback after a delay, only if not already pending.
+Unlike setTimeout, this won't reset the timer on subsequent calls.
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>boolean</code> - True if a new timeout was set, false if one was already pending  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Unique name for this delayed execution |
+| callback | <code>function</code> | Function to execute after delay |
+| delay | <code>number</code> | Delay in milliseconds |
+
+<a name="module_TimeoutTracker..TimeoutTracker+isPending"></a>
+
+#### timeoutTracker.isPending(name) ⇒ <code>boolean</code>
+Check if a named timeout is currently pending
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>boolean</code> - True if the timeout is pending  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Name of the timeout |
+
+<a name="module_TimeoutTracker..TimeoutTracker+clearAllTimeouts"></a>
+
+#### timeoutTracker.clearAllTimeouts()
+Clear all timeouts
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+<a name="module_TimeoutTracker..TimeoutTracker+clearAllIntervals"></a>
+
+#### timeoutTracker.clearAllIntervals()
+Clear all intervals
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+<a name="module_TimeoutTracker..TimeoutTracker+getTimeoutCount"></a>
+
+#### timeoutTracker.getTimeoutCount() ⇒ <code>number</code>
+Get count of active timeouts
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>number</code> - Number of active timeouts  
+<a name="module_TimeoutTracker..TimeoutTracker+getIntervalCount"></a>
+
+#### timeoutTracker.getIntervalCount() ⇒ <code>number</code>
+Get count of active intervals
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
+**Returns**: <code>number</code> - Number of active intervals  
+<a name="module_TimeoutTracker..TimeoutTracker+destroy"></a>
+
+#### timeoutTracker.destroy()
+Destroy the tracker and clear all timeouts/intervals.
+After calling destroy, no new timeouts/intervals can be set.
+
+**Kind**: instance method of [<code>TimeoutTracker</code>](#module_TimeoutTracker..TimeoutTracker)  
 <a name="AccessibilityAnnouncer"></a>
 
 ## AccessibilityAnnouncer
@@ -3358,7 +6743,9 @@ Clean up resources
     * [.announceError(message)](#AccessibilityAnnouncer+announceError)
     * [.announceSuccess(message)](#AccessibilityAnnouncer+announceSuccess)
     * [.announceTool(toolName)](#AccessibilityAnnouncer+announceTool)
+    * [.announceZoom(zoomPercent)](#AccessibilityAnnouncer+announceZoom)
     * [.announceLayerSelection(layerName)](#AccessibilityAnnouncer+announceLayerSelection)
+    * [.announceLayerSummary(layerCount, selectedCount)](#AccessibilityAnnouncer+announceLayerSummary)
     * [.announceLayerAction(action, [layerName])](#AccessibilityAnnouncer+announceLayerAction)
     * [.clear()](#AccessibilityAnnouncer+clear)
     * [.destroy()](#AccessibilityAnnouncer+destroy)
@@ -3366,12 +6753,21 @@ Clean up resources
 <a name="new_AccessibilityAnnouncer_new"></a>
 
 ### new AccessibilityAnnouncer()
-AccessibilityAnnouncer - ARIA live region announcements for screen readersThis module provides a centralized way to announce status changes to screen readers.It creates hidden ARIA live regions that automatically announce changes.Usage:  window.layersAnnouncer.announce( 'Layers saved successfully' );  window.layersAnnouncer.announce( 'Tool changed to Rectangle', 'polite' );  window.layersAnnouncer.announceError( 'Failed to save layers' );
+AccessibilityAnnouncer - ARIA live region announcements for screen readers
+
+This module provides a centralized way to announce status changes to screen readers.
+It creates hidden ARIA live regions that automatically announce changes.
+
+Usage:
+  window.layersAnnouncer.announce( 'Layers saved successfully' );
+  window.layersAnnouncer.announce( 'Tool changed to Rectangle', 'polite' );
+  window.layersAnnouncer.announceError( 'Failed to save layers' );
 
 <a name="AccessibilityAnnouncer+init"></a>
 
 ### accessibilityAnnouncer.init()
-Initialize the ARIA live regionsCalled automatically on first announcement
+Initialize the ARIA live regions
+Called automatically on first announcement
 
 **Kind**: instance method of [<code>AccessibilityAnnouncer</code>](#AccessibilityAnnouncer)  
 <a name="AccessibilityAnnouncer+announce"></a>
@@ -3419,6 +6815,17 @@ Announce tool change
 | --- | --- | --- |
 | toolName | <code>string</code> | The name of the selected tool |
 
+<a name="AccessibilityAnnouncer+announceZoom"></a>
+
+### accessibilityAnnouncer.announceZoom(zoomPercent)
+Announce zoom level change
+
+**Kind**: instance method of [<code>AccessibilityAnnouncer</code>](#AccessibilityAnnouncer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| zoomPercent | <code>number</code> | The current zoom percentage |
+
 <a name="AccessibilityAnnouncer+announceLayerSelection"></a>
 
 ### accessibilityAnnouncer.announceLayerSelection(layerName)
@@ -3429,6 +6836,18 @@ Announce layer selection
 | Param | Type | Description |
 | --- | --- | --- |
 | layerName | <code>string</code> | The name of the selected layer |
+
+<a name="AccessibilityAnnouncer+announceLayerSummary"></a>
+
+### accessibilityAnnouncer.announceLayerSummary(layerCount, selectedCount)
+Announce layer count and selection summary
+
+**Kind**: instance method of [<code>AccessibilityAnnouncer</code>](#AccessibilityAnnouncer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerCount | <code>number</code> | Total number of layers |
+| selectedCount | <code>number</code> | Number of selected layers |
 
 <a name="AccessibilityAnnouncer+announceLayerAction"></a>
 
@@ -3468,7 +6887,9 @@ AccessibilityAnnouncer class
     * [.announceError(message)](#AccessibilityAnnouncer+announceError)
     * [.announceSuccess(message)](#AccessibilityAnnouncer+announceSuccess)
     * [.announceTool(toolName)](#AccessibilityAnnouncer+announceTool)
+    * [.announceZoom(zoomPercent)](#AccessibilityAnnouncer+announceZoom)
     * [.announceLayerSelection(layerName)](#AccessibilityAnnouncer+announceLayerSelection)
+    * [.announceLayerSummary(layerCount, selectedCount)](#AccessibilityAnnouncer+announceLayerSummary)
     * [.announceLayerAction(action, [layerName])](#AccessibilityAnnouncer+announceLayerAction)
     * [.clear()](#AccessibilityAnnouncer+clear)
     * [.destroy()](#AccessibilityAnnouncer+destroy)
@@ -3476,12 +6897,21 @@ AccessibilityAnnouncer class
 <a name="new_AccessibilityAnnouncer_new"></a>
 
 ### new AccessibilityAnnouncer()
-AccessibilityAnnouncer - ARIA live region announcements for screen readersThis module provides a centralized way to announce status changes to screen readers.It creates hidden ARIA live regions that automatically announce changes.Usage:  window.layersAnnouncer.announce( 'Layers saved successfully' );  window.layersAnnouncer.announce( 'Tool changed to Rectangle', 'polite' );  window.layersAnnouncer.announceError( 'Failed to save layers' );
+AccessibilityAnnouncer - ARIA live region announcements for screen readers
+
+This module provides a centralized way to announce status changes to screen readers.
+It creates hidden ARIA live regions that automatically announce changes.
+
+Usage:
+  window.layersAnnouncer.announce( 'Layers saved successfully' );
+  window.layersAnnouncer.announce( 'Tool changed to Rectangle', 'polite' );
+  window.layersAnnouncer.announceError( 'Failed to save layers' );
 
 <a name="AccessibilityAnnouncer+init"></a>
 
 ### accessibilityAnnouncer.init()
-Initialize the ARIA live regionsCalled automatically on first announcement
+Initialize the ARIA live regions
+Called automatically on first announcement
 
 **Kind**: instance method of [<code>AccessibilityAnnouncer</code>](#AccessibilityAnnouncer)  
 <a name="AccessibilityAnnouncer+announce"></a>
@@ -3529,6 +6959,17 @@ Announce tool change
 | --- | --- | --- |
 | toolName | <code>string</code> | The name of the selected tool |
 
+<a name="AccessibilityAnnouncer+announceZoom"></a>
+
+### accessibilityAnnouncer.announceZoom(zoomPercent)
+Announce zoom level change
+
+**Kind**: instance method of [<code>AccessibilityAnnouncer</code>](#AccessibilityAnnouncer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| zoomPercent | <code>number</code> | The current zoom percentage |
+
 <a name="AccessibilityAnnouncer+announceLayerSelection"></a>
 
 ### accessibilityAnnouncer.announceLayerSelection(layerName)
@@ -3539,6 +6980,18 @@ Announce layer selection
 | Param | Type | Description |
 | --- | --- | --- |
 | layerName | <code>string</code> | The name of the selected layer |
+
+<a name="AccessibilityAnnouncer+announceLayerSummary"></a>
+
+### accessibilityAnnouncer.announceLayerSummary(layerCount, selectedCount)
+Announce layer count and selection summary
+
+**Kind**: instance method of [<code>AccessibilityAnnouncer</code>](#AccessibilityAnnouncer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerCount | <code>number</code> | Total number of layers |
+| selectedCount | <code>number</code> | Number of selected layers |
 
 <a name="AccessibilityAnnouncer+announceLayerAction"></a>
 
@@ -3564,6 +7017,202 @@ Clear announcements
 Clean up and remove live regions
 
 **Kind**: instance method of [<code>AccessibilityAnnouncer</code>](#AccessibilityAnnouncer)  
+<a name="APICacheManager"></a>
+
+## APICacheManager
+**Kind**: global class  
+
+* [APICacheManager](#APICacheManager)
+    * [new APICacheManager()](#new_APICacheManager_new)
+    * [new APICacheManager([options])](#new_APICacheManager_new)
+    * [.getCached(key)](#APICacheManager+getCached) ⇒ <code>Object</code> \| <code>null</code>
+    * [.setCache(key, data)](#APICacheManager+setCache)
+    * [.invalidateCache([filename])](#APICacheManager+invalidateCache)
+    * [.buildCacheKey(filename, [options])](#APICacheManager+buildCacheKey) ⇒ <code>string</code>
+    * [.clearFreshnessCache(filename, namedSets, currentSetName)](#APICacheManager+clearFreshnessCache)
+    * [.destroy()](#APICacheManager+destroy)
+
+<a name="new_APICacheManager_new"></a>
+
+### new APICacheManager()
+APICacheManager - Extracted from APIManager for god class reduction.
+Manages LRU response cache and FreshnessChecker session cache.
+
+<a name="new_APICacheManager_new"></a>
+
+### new APICacheManager([options])
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [options] | <code>Object</code> |  |  |
+| [options.maxSize] | <code>number</code> | <code>20</code> | Maximum number of cache entries |
+| [options.ttl] | <code>number</code> | <code>300000</code> | Cache TTL in milliseconds (default 5 min) |
+
+<a name="APICacheManager+getCached"></a>
+
+### apiCacheManager.getCached(key) ⇒ <code>Object</code> \| <code>null</code>
+Get a cached API response if available and not expired.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - Cached data or null if not found/expired  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| key | <code>string</code> | Cache key |
+
+<a name="APICacheManager+setCache"></a>
+
+### apiCacheManager.setCache(key, data)
+Store data in the response cache.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| key | <code>string</code> | Cache key |
+| data | <code>Object</code> | Data to cache |
+
+<a name="APICacheManager+invalidateCache"></a>
+
+### apiCacheManager.invalidateCache([filename])
+Invalidate cache entries for a specific file or all entries.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| [filename] | <code>string</code> | Filename to invalidate, or omit to clear all |
+
+<a name="APICacheManager+buildCacheKey"></a>
+
+### apiCacheManager.buildCacheKey(filename, [options]) ⇒ <code>string</code>
+Build a cache key for layersinfo requests.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+**Returns**: <code>string</code> - Cache key  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| filename | <code>string</code> | File name |
+| [options] | <code>Object</code> | Options: setname or layersetid |
+
+<a name="APICacheManager+clearFreshnessCache"></a>
+
+### apiCacheManager.clearFreshnessCache(filename, namedSets, currentSetName)
+Clear the FreshnessChecker sessionStorage cache for a file.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| filename | <code>string</code> | File name |
+| namedSets | <code>Array</code> | Array of named set objects with .name property |
+| currentSetName | <code>string</code> | Current set name |
+
+<a name="APICacheManager+destroy"></a>
+
+### apiCacheManager.destroy()
+Clear all cached data.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+<a name="APICacheManager"></a>
+
+## APICacheManager
+**Kind**: global class  
+
+* [APICacheManager](#APICacheManager)
+    * [new APICacheManager()](#new_APICacheManager_new)
+    * [new APICacheManager([options])](#new_APICacheManager_new)
+    * [.getCached(key)](#APICacheManager+getCached) ⇒ <code>Object</code> \| <code>null</code>
+    * [.setCache(key, data)](#APICacheManager+setCache)
+    * [.invalidateCache([filename])](#APICacheManager+invalidateCache)
+    * [.buildCacheKey(filename, [options])](#APICacheManager+buildCacheKey) ⇒ <code>string</code>
+    * [.clearFreshnessCache(filename, namedSets, currentSetName)](#APICacheManager+clearFreshnessCache)
+    * [.destroy()](#APICacheManager+destroy)
+
+<a name="new_APICacheManager_new"></a>
+
+### new APICacheManager()
+APICacheManager - Extracted from APIManager for god class reduction.
+Manages LRU response cache and FreshnessChecker session cache.
+
+<a name="new_APICacheManager_new"></a>
+
+### new APICacheManager([options])
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [options] | <code>Object</code> |  |  |
+| [options.maxSize] | <code>number</code> | <code>20</code> | Maximum number of cache entries |
+| [options.ttl] | <code>number</code> | <code>300000</code> | Cache TTL in milliseconds (default 5 min) |
+
+<a name="APICacheManager+getCached"></a>
+
+### apiCacheManager.getCached(key) ⇒ <code>Object</code> \| <code>null</code>
+Get a cached API response if available and not expired.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - Cached data or null if not found/expired  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| key | <code>string</code> | Cache key |
+
+<a name="APICacheManager+setCache"></a>
+
+### apiCacheManager.setCache(key, data)
+Store data in the response cache.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| key | <code>string</code> | Cache key |
+| data | <code>Object</code> | Data to cache |
+
+<a name="APICacheManager+invalidateCache"></a>
+
+### apiCacheManager.invalidateCache([filename])
+Invalidate cache entries for a specific file or all entries.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| [filename] | <code>string</code> | Filename to invalidate, or omit to clear all |
+
+<a name="APICacheManager+buildCacheKey"></a>
+
+### apiCacheManager.buildCacheKey(filename, [options]) ⇒ <code>string</code>
+Build a cache key for layersinfo requests.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+**Returns**: <code>string</code> - Cache key  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| filename | <code>string</code> | File name |
+| [options] | <code>Object</code> | Options: setname or layersetid |
+
+<a name="APICacheManager+clearFreshnessCache"></a>
+
+### apiCacheManager.clearFreshnessCache(filename, namedSets, currentSetName)
+Clear the FreshnessChecker sessionStorage cache for a file.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| filename | <code>string</code> | File name |
+| namedSets | <code>Array</code> | Array of named set objects with .name property |
+| currentSetName | <code>string</code> | Current set name |
+
+<a name="APICacheManager+destroy"></a>
+
+### apiCacheManager.destroy()
+Clear all cached data.
+
+**Kind**: instance method of [<code>APICacheManager</code>](#APICacheManager)  
 <a name="APIErrorHandler"></a>
 
 ## APIErrorHandler
@@ -3577,7 +7226,7 @@ Clean up and remove live regions
     * [.normalizeError(error)](#APIErrorHandler+normalizeError) ⇒ <code>Object</code>
     * [.getUserMessage(normalizedError, operation)](#APIErrorHandler+getUserMessage) ⇒ <code>string</code>
     * [.logError(normalizedError, operation, context)](#APIErrorHandler+logError)
-    * [.sanitizeLogMessage(message)](#APIErrorHandler+sanitizeLogMessage) ⇒ <code>string</code>
+    * [.sanitizeLogMessage(message)](#APIErrorHandler+sanitizeLogMessage) ⇒ <code>\*</code>
     * [.sanitizeContext(context)](#APIErrorHandler+sanitizeContext) ⇒ <code>Object</code>
     * [.showUserNotification(message, type)](#APIErrorHandler+showUserNotification)
     * [.reportToErrorHandler(normalizedError, operation, context)](#APIErrorHandler+reportToErrorHandler)
@@ -3645,7 +7294,8 @@ Normalize error object to consistent structure
 <a name="APIErrorHandler+getUserMessage"></a>
 
 ### apiErrorHandler.getUserMessage(normalizedError, operation) ⇒ <code>string</code>
-Get user-friendly message for errorDelegates to centralized MessageHelper for consistent i18n handling.
+Get user-friendly message for error
+Delegates to centralized MessageHelper for consistent i18n handling.
 
 **Kind**: instance method of [<code>APIErrorHandler</code>](#APIErrorHandler)  
 **Returns**: <code>string</code> - User-friendly error message  
@@ -3670,15 +7320,16 @@ Log error securely without exposing sensitive information
 
 <a name="APIErrorHandler+sanitizeLogMessage"></a>
 
-### apiErrorHandler.sanitizeLogMessage(message) ⇒ <code>string</code>
-Sanitize log message to prevent information disclosure
+### apiErrorHandler.sanitizeLogMessage(message) ⇒ <code>\*</code>
+Sanitize log message to prevent information disclosure.
+Delegates to shared LogSanitizer utility.
 
 **Kind**: instance method of [<code>APIErrorHandler</code>](#APIErrorHandler)  
-**Returns**: <code>string</code> - Sanitized message  
+**Returns**: <code>\*</code> - Sanitized message  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| message | <code>string</code> | Raw error message |
+| message | <code>\*</code> | Raw error message |
 
 <a name="APIErrorHandler+sanitizeContext"></a>
 
@@ -3742,11 +7393,21 @@ Clean up resources
 * [CanvasEvents](#CanvasEvents)
     * [new CanvasEvents()](#new_CanvasEvents_new)
     * [new CanvasEvents(canvasManager)](#new_CanvasEvents_new)
+    * [.handleContainerMouseDown(e)](#CanvasEvents+handleContainerMouseDown)
+    * [.handleDoubleClick(e)](#CanvasEvents+handleDoubleClick)
+    * [.findTextLayerAtPoint(point, layers)](#CanvasEvents+findTextLayerAtPoint) ⇒ <code>Object</code> \| <code>null</code>
+    * [.isPointInLayer(point, layer)](#CanvasEvents+isPointInLayer) ⇒ <code>boolean</code>
+    * [.isPointInDimensionTextArea(point, layer)](#CanvasEvents+isPointInDimensionTextArea) ⇒ <code>boolean</code>
+    * [.createDimensionOffsetHandle(layer)](#CanvasEvents+createDimensionOffsetHandle) ⇒ <code>Object</code>
+    * [.createDimensionTextHandle(layer)](#CanvasEvents+createDimensionTextHandle) ⇒ <code>Object</code>
+    * [.isPointInAngleDimensionTextArea(point, layer)](#CanvasEvents+isPointInAngleDimensionTextArea) ⇒ <code>boolean</code>
+    * [.createAngleDimensionTextHandle(layer)](#CanvasEvents+createAngleDimensionTextHandle) ⇒ <code>Object</code>
 
 <a name="new_CanvasEvents_new"></a>
 
 ### new CanvasEvents()
-CanvasEventsHandles DOM events for the CanvasManager
+CanvasEvents
+Handles DOM events for the CanvasManager
 
 <a name="new_CanvasEvents_new"></a>
 
@@ -3757,6 +7418,122 @@ Create a new CanvasEvents instance
 | Param | Type |
 | --- | --- |
 | canvasManager | [<code>CanvasManager</code>](#CanvasManager) | 
+
+<a name="CanvasEvents+handleContainerMouseDown"></a>
+
+### canvasEvents.handleContainerMouseDown(e)
+Handle clicks on the container (outside the canvas) to deselect layers
+This enables the expected UX behavior where clicking outside the canvas
+clears the current selection.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+
+| Param | Type |
+| --- | --- |
+| e | <code>MouseEvent</code> | 
+
+<a name="CanvasEvents+handleDoubleClick"></a>
+
+### canvasEvents.handleDoubleClick(e)
+Handle double-click for inline text editing
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+
+| Param | Type |
+| --- | --- |
+| e | <code>MouseEvent</code> | 
+
+<a name="CanvasEvents+findTextLayerAtPoint"></a>
+
+### canvasEvents.findTextLayerAtPoint(point, layers) ⇒ <code>Object</code> \| <code>null</code>
+Find the topmost text or textbox layer at the given point
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+
+| Param | Type |
+| --- | --- |
+| point | <code>Object</code> | 
+| layers | <code>Array</code> | 
+
+<a name="CanvasEvents+isPointInLayer"></a>
+
+### canvasEvents.isPointInLayer(point, layer) ⇒ <code>boolean</code>
+Check if a point is within a layer's bounding box
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+
+| Param | Type |
+| --- | --- |
+| point | <code>Object</code> | 
+| layer | <code>Object</code> | 
+
+<a name="CanvasEvents+isPointInDimensionTextArea"></a>
+
+### canvasEvents.isPointInDimensionTextArea(point, layer) ⇒ <code>boolean</code>
+Check if a point is in the text area of a dimension layer.
+The text area is a region around the current text position (accounting for textOffset).
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>boolean</code> - True if point is in text area  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| point | <code>Object</code> | Point with x, y |
+| layer | <code>Object</code> | Dimension layer |
+
+<a name="CanvasEvents+createDimensionOffsetHandle"></a>
+
+### canvasEvents.createDimensionOffsetHandle(layer) ⇒ <code>Object</code>
+Create a synthetic handle object for dimension offset dragging.
+This mimics the handle that would be registered by SelectionRenderer.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>Object</code> - Handle object compatible with startDimensionOffsetDrag  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Dimension layer |
+
+<a name="CanvasEvents+createDimensionTextHandle"></a>
+
+### canvasEvents.createDimensionTextHandle(layer) ⇒ <code>Object</code>
+Create a handle for unified dimension text dragging.
+Supports both perpendicular (dimensionOffset) and parallel (textOffset) movement.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>Object</code> - Handle object with both direction vectors  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | The dimension layer |
+
+<a name="CanvasEvents+isPointInAngleDimensionTextArea"></a>
+
+### canvasEvents.isPointInAngleDimensionTextArea(point, layer) ⇒ <code>boolean</code>
+Check if a point is in the text area of an angle dimension layer.
+The text area is a region around the text position on/near the arc.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>boolean</code> - True if point is in text area  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| point | <code>Object</code> | Point with x, y |
+| layer | <code>Object</code> | Angle dimension layer |
+
+<a name="CanvasEvents+createAngleDimensionTextHandle"></a>
+
+### canvasEvents.createAngleDimensionTextHandle(layer) ⇒ <code>Object</code>
+Create a handle for angle dimension text dragging.
+The handle stores vertex position and arc midpoint angle for computing
+textOffset from mouse position during drag.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>Object</code> - Handle object for startAngleDimensionTextDrag  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | The angle dimension layer |
 
 <a name="CanvasEvents"></a>
 
@@ -3766,11 +7543,21 @@ Create a new CanvasEvents instance
 * [CanvasEvents](#CanvasEvents)
     * [new CanvasEvents()](#new_CanvasEvents_new)
     * [new CanvasEvents(canvasManager)](#new_CanvasEvents_new)
+    * [.handleContainerMouseDown(e)](#CanvasEvents+handleContainerMouseDown)
+    * [.handleDoubleClick(e)](#CanvasEvents+handleDoubleClick)
+    * [.findTextLayerAtPoint(point, layers)](#CanvasEvents+findTextLayerAtPoint) ⇒ <code>Object</code> \| <code>null</code>
+    * [.isPointInLayer(point, layer)](#CanvasEvents+isPointInLayer) ⇒ <code>boolean</code>
+    * [.isPointInDimensionTextArea(point, layer)](#CanvasEvents+isPointInDimensionTextArea) ⇒ <code>boolean</code>
+    * [.createDimensionOffsetHandle(layer)](#CanvasEvents+createDimensionOffsetHandle) ⇒ <code>Object</code>
+    * [.createDimensionTextHandle(layer)](#CanvasEvents+createDimensionTextHandle) ⇒ <code>Object</code>
+    * [.isPointInAngleDimensionTextArea(point, layer)](#CanvasEvents+isPointInAngleDimensionTextArea) ⇒ <code>boolean</code>
+    * [.createAngleDimensionTextHandle(layer)](#CanvasEvents+createAngleDimensionTextHandle) ⇒ <code>Object</code>
 
 <a name="new_CanvasEvents_new"></a>
 
 ### new CanvasEvents()
-CanvasEventsHandles DOM events for the CanvasManager
+CanvasEvents
+Handles DOM events for the CanvasManager
 
 <a name="new_CanvasEvents_new"></a>
 
@@ -3781,6 +7568,122 @@ Create a new CanvasEvents instance
 | Param | Type |
 | --- | --- |
 | canvasManager | [<code>CanvasManager</code>](#CanvasManager) | 
+
+<a name="CanvasEvents+handleContainerMouseDown"></a>
+
+### canvasEvents.handleContainerMouseDown(e)
+Handle clicks on the container (outside the canvas) to deselect layers
+This enables the expected UX behavior where clicking outside the canvas
+clears the current selection.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+
+| Param | Type |
+| --- | --- |
+| e | <code>MouseEvent</code> | 
+
+<a name="CanvasEvents+handleDoubleClick"></a>
+
+### canvasEvents.handleDoubleClick(e)
+Handle double-click for inline text editing
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+
+| Param | Type |
+| --- | --- |
+| e | <code>MouseEvent</code> | 
+
+<a name="CanvasEvents+findTextLayerAtPoint"></a>
+
+### canvasEvents.findTextLayerAtPoint(point, layers) ⇒ <code>Object</code> \| <code>null</code>
+Find the topmost text or textbox layer at the given point
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+
+| Param | Type |
+| --- | --- |
+| point | <code>Object</code> | 
+| layers | <code>Array</code> | 
+
+<a name="CanvasEvents+isPointInLayer"></a>
+
+### canvasEvents.isPointInLayer(point, layer) ⇒ <code>boolean</code>
+Check if a point is within a layer's bounding box
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+
+| Param | Type |
+| --- | --- |
+| point | <code>Object</code> | 
+| layer | <code>Object</code> | 
+
+<a name="CanvasEvents+isPointInDimensionTextArea"></a>
+
+### canvasEvents.isPointInDimensionTextArea(point, layer) ⇒ <code>boolean</code>
+Check if a point is in the text area of a dimension layer.
+The text area is a region around the current text position (accounting for textOffset).
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>boolean</code> - True if point is in text area  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| point | <code>Object</code> | Point with x, y |
+| layer | <code>Object</code> | Dimension layer |
+
+<a name="CanvasEvents+createDimensionOffsetHandle"></a>
+
+### canvasEvents.createDimensionOffsetHandle(layer) ⇒ <code>Object</code>
+Create a synthetic handle object for dimension offset dragging.
+This mimics the handle that would be registered by SelectionRenderer.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>Object</code> - Handle object compatible with startDimensionOffsetDrag  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Dimension layer |
+
+<a name="CanvasEvents+createDimensionTextHandle"></a>
+
+### canvasEvents.createDimensionTextHandle(layer) ⇒ <code>Object</code>
+Create a handle for unified dimension text dragging.
+Supports both perpendicular (dimensionOffset) and parallel (textOffset) movement.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>Object</code> - Handle object with both direction vectors  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | The dimension layer |
+
+<a name="CanvasEvents+isPointInAngleDimensionTextArea"></a>
+
+### canvasEvents.isPointInAngleDimensionTextArea(point, layer) ⇒ <code>boolean</code>
+Check if a point is in the text area of an angle dimension layer.
+The text area is a region around the text position on/near the arc.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>boolean</code> - True if point is in text area  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| point | <code>Object</code> | Point with x, y |
+| layer | <code>Object</code> | Angle dimension layer |
+
+<a name="CanvasEvents+createAngleDimensionTextHandle"></a>
+
+### canvasEvents.createAngleDimensionTextHandle(layer) ⇒ <code>Object</code>
+Create a handle for angle dimension text dragging.
+The handle stores vertex position and arc midpoint angle for computing
+textOffset from mouse position during drag.
+
+**Kind**: instance method of [<code>CanvasEvents</code>](#CanvasEvents)  
+**Returns**: <code>Object</code> - Handle object for startAngleDimensionTextDrag  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | The angle dimension layer |
 
 <a name="CanvasManager"></a>
 
@@ -3800,8 +7703,10 @@ CanvasManager class
     * [.loadBackgroundImage()](#CanvasManager+loadBackgroundImage)
     * [.handleImageLoaded(image, info)](#CanvasManager+handleImageLoaded)
     * [.handleImageLoadError()](#CanvasManager+handleImageLoadError)
-    * [.tryLoadImageFallback(urls, index)](#CanvasManager+tryLoadImageFallback)
     * [.updateStyleOptions(options)](#CanvasManager+updateStyleOptions)
+    * [.updateDimensionDefaults(props)](#CanvasManager+updateDimensionDefaults)
+    * [.updateAngleDimensionDefaults(props)](#CanvasManager+updateAngleDimensionDefaults)
+    * [.updateMarkerDefaults(props)](#CanvasManager+updateMarkerDefaults)
     * [.calculateResize(originalLayer, handleType, deltaX, deltaY, modifiers)](#CanvasManager+calculateResize) ⇒ <code>Object</code> \| <code>null</code>
     * [.emitTransforming(layer)](#CanvasManager+emitTransforming)
     * [.updateLayerPosition(layer, originalState, deltaX, deltaY)](#CanvasManager+updateLayerPosition)
@@ -3819,8 +7724,11 @@ CanvasManager class
     * [.saveState(action)](#CanvasManager+saveState)
     * [.drawMultiSelectionIndicators()](#CanvasManager+drawMultiSelectionIndicators)
     * [.setBaseDimensions(width, height)](#CanvasManager+setBaseDimensions)
+    * [.setSlideMode(isSlide)](#CanvasManager+setSlideMode)
+    * [.setBackgroundColor(color)](#CanvasManager+setBackgroundColor)
     * [.resizeCanvas()](#CanvasManager+resizeCanvas)
     * [.getMousePointFromClient(clientX, clientY)](#CanvasManager+getMousePointFromClient) ⇒ <code>Object</code>
+    * [.setTextEditingMode(isEditing)](#CanvasManager+setTextEditingMode)
 
 <a name="new_CanvasManager_new"></a>
 
@@ -3835,7 +7743,9 @@ Creates a new CanvasManager instance
 <a name="CanvasManager+setupEventHandlers"></a>
 
 ### canvasManager.setupEventHandlers()
-Initialize the event handling layer for CanvasManager.This will construct CanvasEvents controller if available, otherwiseinstall basic fallback handlers for test environments.
+Initialize the event handling layer for CanvasManager.
+This will construct CanvasEvents controller if available, otherwise
+install basic fallback handlers for test environments.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+getSelectedLayerIds"></a>
@@ -3883,10 +7793,12 @@ Notify toolbar style controls of selection change for preset dropdown
 <a name="CanvasManager+loadBackgroundImage"></a>
 
 ### canvasManager.loadBackgroundImage()
-Load background image using ImageLoader moduleDelegates to ImageLoader for URL detection and loading with fallbacks
+Load background image using ImageLoader module
+Delegates to ImageLoader for URL detection and loading with fallbacks
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-**Note**: ImageLoader is guaranteed to load first via extension.json in production,      but fallback is kept for test environments and backward compatibility.  
+**Note**: ImageLoader is guaranteed to load first via extension.json in production,
+      but fallback is kept for test environments and backward compatibility.  
 <a name="CanvasManager+handleImageLoaded"></a>
 
 ### canvasManager.handleImageLoaded(image, info)
@@ -3905,22 +7817,11 @@ Handle successful image load from ImageLoader
 Handle image load error from ImageLoader
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-<a name="CanvasManager+tryLoadImageFallback"></a>
-
-### canvasManager.tryLoadImageFallback(urls, index)
-Try to load images from a list of URLs sequentially.
-
-**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-
-| Param | Type |
-| --- | --- |
-| urls | <code>Array.&lt;string&gt;</code> | 
-| index | <code>number</code> | 
-
 <a name="CanvasManager+updateStyleOptions"></a>
 
 ### canvasManager.updateStyleOptions(options)
-Update current style options and apply to selected layers.Delegates to StyleController when available.
+Update current style options and apply to selected layers.
+Delegates to StyleController.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -3928,10 +7829,47 @@ Update current style options and apply to selected layers.Delegates to StyleCon
 | --- | --- | --- |
 | options | <code>Object</code> | Style options to update |
 
+<a name="CanvasManager+updateDimensionDefaults"></a>
+
+### canvasManager.updateDimensionDefaults(props)
+Update dimension tool defaults from a layer's properties.
+Call this when dimension layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Dimension properties to persist |
+
+<a name="CanvasManager+updateAngleDimensionDefaults"></a>
+
+### canvasManager.updateAngleDimensionDefaults(props)
+Update angle dimension tool defaults from a layer's properties.
+Call this when angle dimension layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Angle dimension properties to persist |
+
+<a name="CanvasManager+updateMarkerDefaults"></a>
+
+### canvasManager.updateMarkerDefaults(props)
+Update marker tool defaults from a layer's properties.
+Call this when marker layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Marker properties to persist |
+
 <a name="CanvasManager+calculateResize"></a>
 
 ### canvasManager.calculateResize(originalLayer, handleType, deltaX, deltaY, modifiers) ⇒ <code>Object</code> \| <code>null</code>
-Calculate resize updates based on layer typeDelegates to TransformController for actual calculations
+Calculate resize updates based on layer type
+Delegates to TransformController for actual calculations
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 **Returns**: <code>Object</code> \| <code>null</code> - Updates object with new dimensions  
@@ -3947,7 +7885,8 @@ Calculate resize updates based on layer typeDelegates to TransformController fo
 <a name="CanvasManager+emitTransforming"></a>
 
 ### canvasManager.emitTransforming(layer)
-Emit a throttled custom event with current transform valuesto allow the properties panel to live-sync during manipulation.
+Emit a throttled custom event with current transform values
+to allow the properties panel to live-sync during manipulation.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -3958,7 +7897,8 @@ Emit a throttled custom event with current transform valuesto allow the propert
 <a name="CanvasManager+updateLayerPosition"></a>
 
 ### canvasManager.updateLayerPosition(layer, originalState, deltaX, deltaY)
-Update layer position during drag operation
+Update layer position during drag operation.
+Delegates to TransformController which handles all layer types.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -4025,7 +7965,8 @@ Get bounding box of a layer
 <a name="CanvasManager+getTempCanvas"></a>
 
 ### canvasManager.getTempCanvas(width, height) ⇒ <code>Object</code>
-Get a temporary canvas from the pool or create a new oneThis prevents memory leaks from constantly creating new canvas elements
+Get a temporary canvas from the pool or create a new one
+This prevents memory leaks from constantly creating new canvas elements
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 **Returns**: <code>Object</code> - Object with canvas and context properties  
@@ -4084,7 +8025,8 @@ Public zoom helper used by external handlers (wheel/pinch)
 <a name="CanvasManager+saveState"></a>
 
 ### canvasManager.saveState(action)
-Save current state to history for undo/redoDelegates to HistoryManager for single source of truth
+Save current state to history for undo/redo
+Delegates to HistoryManager for single source of truth
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -4095,13 +8037,21 @@ Save current state to history for undo/redoDelegates to HistoryManager for sing
 <a name="CanvasManager+drawMultiSelectionIndicators"></a>
 
 ### canvasManager.drawMultiSelectionIndicators()
-Draw selection indicators for multiple selected layersThe key object (last selected) is visually distinguished with an orange border
+Draw selection indicators for multiple selected layers
+The key object (last selected) is visually distinguished with an orange border
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+setBaseDimensions"></a>
 
 ### canvasManager.setBaseDimensions(width, height)
-Set the base dimensions that layers were created against.Used for scaling layers when the canvas size differs from the original.
+Set the base dimensions that layers were created against.
+Used for scaling layers when the canvas size differs from the original.
+
+IMPORTANT: This also resizes the canvas logical dimensions to match.
+This ensures layers are created at coordinates that match the original
+image dimensions, regardless of what thumbnail size was loaded.
+This is critical for formats like TIFF where we load a thumbnail but
+need to store layers at the original file's coordinate space.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -4110,16 +8060,42 @@ Set the base dimensions that layers were created against.Used for scaling layer
 | width | <code>number</code> | Original image width |
 | height | <code>number</code> | Original image height |
 
+<a name="CanvasManager+setSlideMode"></a>
+
+### canvasManager.setSlideMode(isSlide)
+Set slide mode (no background image, custom dimensions and color)
+Called when editing a slide instead of a file image.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isSlide | <code>boolean</code> | Whether editor is in slide mode |
+
+<a name="CanvasManager+setBackgroundColor"></a>
+
+### canvasManager.setBackgroundColor(color)
+Set slide background color
+Only used in slide mode (setSlideMode must be called first)
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| color | <code>string</code> | Background color (e.g. '#ffffff', 'transparent') |
+
 <a name="CanvasManager+resizeCanvas"></a>
 
 ### canvasManager.resizeCanvas()
-Resize canvas to match container size while maintaining aspect ratio.Updates viewport bounds for layer culling.
+Resize canvas to match container size while maintaining aspect ratio.
+Updates viewport bounds for layer culling.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+getMousePointFromClient"></a>
 
 ### canvasManager.getMousePointFromClient(clientX, clientY) ⇒ <code>Object</code>
-Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
+Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.
+Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -4127,6 +8103,18 @@ Convert a DOM client coordinate to canvas coordinate, robust against CSS transfo
 | --- | --- |
 | clientX | <code>number</code> | 
 | clientY | <code>number</code> | 
+
+<a name="CanvasManager+setTextEditingMode"></a>
+
+### canvasManager.setTextEditingMode(isEditing)
+Set text editing mode (used by InlineTextEditor)
+When active, suppresses selection handles and drag operations
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isEditing | <code>boolean</code> | Whether inline text editing is active |
 
 <a name="CanvasRenderer"></a>
 
@@ -4138,14 +8126,16 @@ Convert a DOM client coordinate to canvas coordinate, robust against CSS transfo
     * [new CanvasRenderer(canvas, config)](#new_CanvasRenderer_new)
     * [._initSelectionRenderer()](#CanvasRenderer+_initSelectionRenderer)
     * [._getLayerById(layerId)](#CanvasRenderer+_getLayerById) ⇒ <code>Object</code> \| <code>null</code>
+    * [.setSlideMode(isSlide)](#CanvasRenderer+setSlideMode)
+    * [.setSlideBackgroundColor(color)](#CanvasRenderer+setSlideBackgroundColor)
     * [.getBackgroundVisible()](#CanvasRenderer+getBackgroundVisible) ⇒ <code>boolean</code>
     * [.getBackgroundOpacity()](#CanvasRenderer+getBackgroundOpacity) ⇒ <code>number</code>
     * [.drawSmartGuides()](#CanvasRenderer+drawSmartGuides)
+    * [.drawSlideBackground()](#CanvasRenderer+drawSlideBackground)
     * [.drawCheckerPattern()](#CanvasRenderer+drawCheckerPattern)
     * [.drawCheckerPatternToContext()](#CanvasRenderer+drawCheckerPatternToContext)
     * [.renderLayersToContext(targetCtx, layers, scale)](#CanvasRenderer+renderLayersToContext)
-    * [.drawBlurEffectToContext(targetCtx, layer, scale)](#CanvasRenderer+drawBlurEffectToContext)
-    * [.drawBlurEffect(layer)](#CanvasRenderer+drawBlurEffect)
+    * [.drawLayerWithBlurBlend(layer)](#CanvasRenderer+drawLayerWithBlurBlend)
     * [.drawLayer(layer)](#CanvasRenderer+drawLayer)
     * [.drawMultiSelectionIndicators([keyObjectId])](#CanvasRenderer+drawMultiSelectionIndicators)
     * [.drawSelectionIndicators(layerId, [isKeyObject])](#CanvasRenderer+drawSelectionIndicators)
@@ -4189,6 +8179,28 @@ Get layer by ID (helper for SelectionRenderer)
 | --- | --- | --- |
 | layerId | <code>string</code> | Layer ID |
 
+<a name="CanvasRenderer+setSlideMode"></a>
+
+### canvasRenderer.setSlideMode(isSlide)
+Set slide mode (no background image, use slide dimensions and color)
+
+**Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isSlide | <code>boolean</code> | Whether editor is in slide mode |
+
+<a name="CanvasRenderer+setSlideBackgroundColor"></a>
+
+### canvasRenderer.setSlideBackgroundColor(color)
+Set slide background color
+
+**Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| color | <code>string</code> | Background color (e.g. '#ffffff', 'transparent') |
+
 <a name="CanvasRenderer+getBackgroundVisible"></a>
 
 ### canvasRenderer.getBackgroundVisible() ⇒ <code>boolean</code>
@@ -4209,6 +8221,13 @@ Get background opacity state from editor
 Draw smart guides overlay (called after other overlays)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
+<a name="CanvasRenderer+drawSlideBackground"></a>
+
+### canvasRenderer.drawSlideBackground()
+Draw slide background (solid color or transparent checkerboard)
+Used in slide mode when there is no background image
+
+**Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 <a name="CanvasRenderer+drawCheckerPattern"></a>
 
 ### canvasRenderer.drawCheckerPattern()
@@ -4224,7 +8243,8 @@ Draw checker pattern directly to context (without save/restore)
 <a name="CanvasRenderer+renderLayersToContext"></a>
 
 ### canvasRenderer.renderLayersToContext(targetCtx, layers, scale)
-Render layers to an external context (used for export).Does NOT include background image or checker pattern.
+Render layers to an external context (used for export).
+Does NOT include background image or checker pattern.
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4234,34 +8254,24 @@ Render layers to an external context (used for export).Does NOT include backgro
 | layers | <code>Array</code> |  | Array of layer objects to render |
 | scale | <code>number</code> | <code>1</code> | Scale factor for rendering (default: 1) |
 
-<a name="CanvasRenderer+drawBlurEffectToContext"></a>
+<a name="CanvasRenderer+drawLayerWithBlurBlend"></a>
 
-### canvasRenderer.drawBlurEffectToContext(targetCtx, layer, scale)
-Draw a blur effect to an external context for export
-
-**Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| targetCtx | <code>CanvasRenderingContext2D</code> | Target context |
-| layer | <code>Object</code> | Blur layer |
-| scale | <code>number</code> | Scale factor |
-
-<a name="CanvasRenderer+drawBlurEffect"></a>
-
-### canvasRenderer.drawBlurEffect(layer)
-Draw a blur effect that blurs everything below it (background + layers)
+### canvasRenderer.drawLayerWithBlurBlend(layer)
+Draw a layer with blur blend mode
+Uses the shape as a clipping region for a blur effect on everything below.
+Blur acts as a fill - stroke and content (text, arrows) are drawn on top.
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| layer | <code>Object</code> | Blur layer with x, y, width, height, blurRadius |
+| layer | <code>Object</code> | Layer with blur blend mode |
 
 <a name="CanvasRenderer+drawLayer"></a>
 
 ### canvasRenderer.drawLayer(layer)
-Draw a layer using the shared LayerRendererLayerRenderer is a required dependency (ext.layers.shared)
+Draw a layer using the shared LayerRenderer
+LayerRenderer is a required dependency (ext.layers.shared)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4272,7 +8282,8 @@ Draw a layer using the shared LayerRendererLayerRenderer is a required dependen
 <a name="CanvasRenderer+drawMultiSelectionIndicators"></a>
 
 ### canvasRenderer.drawMultiSelectionIndicators([keyObjectId])
-Draw selection indicators for all selected layersDelegates to SelectionRenderer (required module)
+Draw selection indicators for all selected layers
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4283,7 +8294,8 @@ Draw selection indicators for all selected layersDelegates to SelectionRenderer
 <a name="CanvasRenderer+drawSelectionIndicators"></a>
 
 ### canvasRenderer.drawSelectionIndicators(layerId, [isKeyObject])
-Draw selection indicators for a single layerDelegates to SelectionRenderer (required module)
+Draw selection indicators for a single layer
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4295,7 +8307,8 @@ Draw selection indicators for a single layerDelegates to SelectionRenderer (req
 <a name="CanvasRenderer+drawSelectionHandles"></a>
 
 ### canvasRenderer.drawSelectionHandles(bounds, layer, isRotated, worldBounds)
-Draw selection handlesDelegates to SelectionRenderer (required module)
+Draw selection handles
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4309,7 +8322,8 @@ Draw selection handlesDelegates to SelectionRenderer (required module)
 <a name="CanvasRenderer+drawLineSelectionIndicators"></a>
 
 ### canvasRenderer.drawLineSelectionIndicators(layer)
-Draw line selection indicatorsDelegates to SelectionRenderer (required module)
+Draw line selection indicators
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4320,7 +8334,8 @@ Draw line selection indicatorsDelegates to SelectionRenderer (required module)
 <a name="CanvasRenderer+drawRotationHandle"></a>
 
 ### canvasRenderer.drawRotationHandle(bounds, layer, isRotated, worldBounds)
-Draw rotation handleDelegates to SelectionRenderer (required module)
+Draw rotation handle
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4334,7 +8349,8 @@ Draw rotation handleDelegates to SelectionRenderer (required module)
 <a name="CanvasRenderer+drawMarqueeBox"></a>
 
 ### canvasRenderer.drawMarqueeBox()
-Draw marquee selection boxDelegates to SelectionRenderer (required module)
+Draw marquee selection box
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 <a name="CanvasRenderer+destroy"></a>
@@ -4353,14 +8369,16 @@ Clean up resources
     * [new CanvasRenderer(canvas, config)](#new_CanvasRenderer_new)
     * [._initSelectionRenderer()](#CanvasRenderer+_initSelectionRenderer)
     * [._getLayerById(layerId)](#CanvasRenderer+_getLayerById) ⇒ <code>Object</code> \| <code>null</code>
+    * [.setSlideMode(isSlide)](#CanvasRenderer+setSlideMode)
+    * [.setSlideBackgroundColor(color)](#CanvasRenderer+setSlideBackgroundColor)
     * [.getBackgroundVisible()](#CanvasRenderer+getBackgroundVisible) ⇒ <code>boolean</code>
     * [.getBackgroundOpacity()](#CanvasRenderer+getBackgroundOpacity) ⇒ <code>number</code>
     * [.drawSmartGuides()](#CanvasRenderer+drawSmartGuides)
+    * [.drawSlideBackground()](#CanvasRenderer+drawSlideBackground)
     * [.drawCheckerPattern()](#CanvasRenderer+drawCheckerPattern)
     * [.drawCheckerPatternToContext()](#CanvasRenderer+drawCheckerPatternToContext)
     * [.renderLayersToContext(targetCtx, layers, scale)](#CanvasRenderer+renderLayersToContext)
-    * [.drawBlurEffectToContext(targetCtx, layer, scale)](#CanvasRenderer+drawBlurEffectToContext)
-    * [.drawBlurEffect(layer)](#CanvasRenderer+drawBlurEffect)
+    * [.drawLayerWithBlurBlend(layer)](#CanvasRenderer+drawLayerWithBlurBlend)
     * [.drawLayer(layer)](#CanvasRenderer+drawLayer)
     * [.drawMultiSelectionIndicators([keyObjectId])](#CanvasRenderer+drawMultiSelectionIndicators)
     * [.drawSelectionIndicators(layerId, [isKeyObject])](#CanvasRenderer+drawSelectionIndicators)
@@ -4404,6 +8422,28 @@ Get layer by ID (helper for SelectionRenderer)
 | --- | --- | --- |
 | layerId | <code>string</code> | Layer ID |
 
+<a name="CanvasRenderer+setSlideMode"></a>
+
+### canvasRenderer.setSlideMode(isSlide)
+Set slide mode (no background image, use slide dimensions and color)
+
+**Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isSlide | <code>boolean</code> | Whether editor is in slide mode |
+
+<a name="CanvasRenderer+setSlideBackgroundColor"></a>
+
+### canvasRenderer.setSlideBackgroundColor(color)
+Set slide background color
+
+**Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| color | <code>string</code> | Background color (e.g. '#ffffff', 'transparent') |
+
 <a name="CanvasRenderer+getBackgroundVisible"></a>
 
 ### canvasRenderer.getBackgroundVisible() ⇒ <code>boolean</code>
@@ -4424,6 +8464,13 @@ Get background opacity state from editor
 Draw smart guides overlay (called after other overlays)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
+<a name="CanvasRenderer+drawSlideBackground"></a>
+
+### canvasRenderer.drawSlideBackground()
+Draw slide background (solid color or transparent checkerboard)
+Used in slide mode when there is no background image
+
+**Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 <a name="CanvasRenderer+drawCheckerPattern"></a>
 
 ### canvasRenderer.drawCheckerPattern()
@@ -4439,7 +8486,8 @@ Draw checker pattern directly to context (without save/restore)
 <a name="CanvasRenderer+renderLayersToContext"></a>
 
 ### canvasRenderer.renderLayersToContext(targetCtx, layers, scale)
-Render layers to an external context (used for export).Does NOT include background image or checker pattern.
+Render layers to an external context (used for export).
+Does NOT include background image or checker pattern.
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4449,34 +8497,24 @@ Render layers to an external context (used for export).Does NOT include backgro
 | layers | <code>Array</code> |  | Array of layer objects to render |
 | scale | <code>number</code> | <code>1</code> | Scale factor for rendering (default: 1) |
 
-<a name="CanvasRenderer+drawBlurEffectToContext"></a>
+<a name="CanvasRenderer+drawLayerWithBlurBlend"></a>
 
-### canvasRenderer.drawBlurEffectToContext(targetCtx, layer, scale)
-Draw a blur effect to an external context for export
-
-**Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| targetCtx | <code>CanvasRenderingContext2D</code> | Target context |
-| layer | <code>Object</code> | Blur layer |
-| scale | <code>number</code> | Scale factor |
-
-<a name="CanvasRenderer+drawBlurEffect"></a>
-
-### canvasRenderer.drawBlurEffect(layer)
-Draw a blur effect that blurs everything below it (background + layers)
+### canvasRenderer.drawLayerWithBlurBlend(layer)
+Draw a layer with blur blend mode
+Uses the shape as a clipping region for a blur effect on everything below.
+Blur acts as a fill - stroke and content (text, arrows) are drawn on top.
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| layer | <code>Object</code> | Blur layer with x, y, width, height, blurRadius |
+| layer | <code>Object</code> | Layer with blur blend mode |
 
 <a name="CanvasRenderer+drawLayer"></a>
 
 ### canvasRenderer.drawLayer(layer)
-Draw a layer using the shared LayerRendererLayerRenderer is a required dependency (ext.layers.shared)
+Draw a layer using the shared LayerRenderer
+LayerRenderer is a required dependency (ext.layers.shared)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4487,7 +8525,8 @@ Draw a layer using the shared LayerRendererLayerRenderer is a required dependen
 <a name="CanvasRenderer+drawMultiSelectionIndicators"></a>
 
 ### canvasRenderer.drawMultiSelectionIndicators([keyObjectId])
-Draw selection indicators for all selected layersDelegates to SelectionRenderer (required module)
+Draw selection indicators for all selected layers
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4498,7 +8537,8 @@ Draw selection indicators for all selected layersDelegates to SelectionRenderer
 <a name="CanvasRenderer+drawSelectionIndicators"></a>
 
 ### canvasRenderer.drawSelectionIndicators(layerId, [isKeyObject])
-Draw selection indicators for a single layerDelegates to SelectionRenderer (required module)
+Draw selection indicators for a single layer
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4510,7 +8550,8 @@ Draw selection indicators for a single layerDelegates to SelectionRenderer (req
 <a name="CanvasRenderer+drawSelectionHandles"></a>
 
 ### canvasRenderer.drawSelectionHandles(bounds, layer, isRotated, worldBounds)
-Draw selection handlesDelegates to SelectionRenderer (required module)
+Draw selection handles
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4524,7 +8565,8 @@ Draw selection handlesDelegates to SelectionRenderer (required module)
 <a name="CanvasRenderer+drawLineSelectionIndicators"></a>
 
 ### canvasRenderer.drawLineSelectionIndicators(layer)
-Draw line selection indicatorsDelegates to SelectionRenderer (required module)
+Draw line selection indicators
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4535,7 +8577,8 @@ Draw line selection indicatorsDelegates to SelectionRenderer (required module)
 <a name="CanvasRenderer+drawRotationHandle"></a>
 
 ### canvasRenderer.drawRotationHandle(bounds, layer, isRotated, worldBounds)
-Draw rotation handleDelegates to SelectionRenderer (required module)
+Draw rotation handle
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 
@@ -4549,7 +8592,8 @@ Draw rotation handleDelegates to SelectionRenderer (required module)
 <a name="CanvasRenderer+drawMarqueeBox"></a>
 
 ### canvasRenderer.drawMarqueeBox()
-Draw marquee selection boxDelegates to SelectionRenderer (required module)
+Draw marquee selection box
+Delegates to SelectionRenderer (required module)
 
 **Kind**: instance method of [<code>CanvasRenderer</code>](#CanvasRenderer)  
 <a name="CanvasRenderer+destroy"></a>
@@ -4579,7 +8623,9 @@ Clean up resources
 <a name="new_CanvasUtilities_new"></a>
 
 ### new CanvasUtilities()
-Canvas Utilities ModulePure utility functions extracted from CanvasManager for reusabilityThese are stateless helpers that can be used independently
+Canvas Utilities Module
+Pure utility functions extracted from CanvasManager for reusability
+These are stateless helpers that can be used independently
 
 <a name="CanvasUtilities.sanitizeNumber"></a>
 
@@ -4734,7 +8780,9 @@ CanvasUtilities - Collection of pure static utility functions
 <a name="new_CanvasUtilities_new"></a>
 
 ### new CanvasUtilities()
-Canvas Utilities ModulePure utility functions extracted from CanvasManager for reusabilityThese are stateless helpers that can be used independently
+Canvas Utilities Module
+Pure utility functions extracted from CanvasManager for reusability
+These are stateless helpers that can be used independently
 
 <a name="CanvasUtilities.sanitizeNumber"></a>
 
@@ -4866,6 +8914,192 @@ Deep clone an object (simple implementation for layer data)
 | --- | --- | --- |
 | obj | <code>\*</code> | Object to clone |
 
+<a name="DraftManager"></a>
+
+## DraftManager
+DraftManager class
+
+**Kind**: global class  
+
+* [DraftManager](#DraftManager)
+    * [new DraftManager(editor)](#new_DraftManager_new)
+    * _instance_
+        * [.initialize()](#DraftManager+initialize)
+        * [.sweepExpiredDrafts([aggressive])](#DraftManager+sweepExpiredDrafts) ⇒ <code>number</code>
+        * [.getStorageKey()](#DraftManager+getStorageKey) ⇒ <code>string</code>
+        * [.isStorageAvailable()](#DraftManager+isStorageAvailable) ⇒ <code>boolean</code>
+        * [.scheduleAutoSave()](#DraftManager+scheduleAutoSave)
+        * [.startAutoSaveTimer()](#DraftManager+startAutoSaveTimer)
+        * [.stopAutoSaveTimer()](#DraftManager+stopAutoSaveTimer)
+        * [.saveDraft()](#DraftManager+saveDraft) ⇒ <code>boolean</code>
+        * [.loadDraft()](#DraftManager+loadDraft) ⇒ <code>Object</code> \| <code>null</code>
+        * [.hasDraft()](#DraftManager+hasDraft) ⇒ <code>boolean</code>
+        * [.getDraftInfo()](#DraftManager+getDraftInfo) ⇒ <code>Object</code> \| <code>null</code>
+        * [.clearDraft()](#DraftManager+clearDraft)
+        * [.recoverDraft()](#DraftManager+recoverDraft) ⇒ <code>boolean</code>
+        * [.showRecoveryDialog()](#DraftManager+showRecoveryDialog) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.checkAndRecoverDraft()](#DraftManager+checkAndRecoverDraft) ⇒ <code>Promise.&lt;boolean&gt;</code>
+        * [.onSaveSuccess()](#DraftManager+onSaveSuccess)
+        * [.destroy()](#DraftManager+destroy)
+    * _static_
+        * [.getUserScope()](#DraftManager.getUserScope) ⇒ <code>string</code>
+        * [.isQuotaError(e)](#DraftManager.isQuotaError) ⇒ <code>boolean</code>
+
+<a name="new_DraftManager_new"></a>
+
+### new DraftManager(editor)
+Create a DraftManager instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| editor | <code>Object</code> | The LayersEditor instance |
+
+<a name="DraftManager+initialize"></a>
+
+### draftManager.initialize()
+Initialize the draft manager
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+<a name="DraftManager+sweepExpiredDrafts"></a>
+
+### draftManager.sweepExpiredDrafts([aggressive]) ⇒ <code>number</code>
+Remove every Layers draft past MAX_DRAFT_AGE_MS, for any file or user.
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>number</code> - Number of keys removed  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| [aggressive] | <code>boolean</code> | Also drop the oldest surviving drafts, used   to free space after a quota failure |
+
+<a name="DraftManager+getStorageKey"></a>
+
+### draftManager.getStorageKey() ⇒ <code>string</code>
+Generate a unique storage key for the current context
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>string</code> - Storage key  
+<a name="DraftManager+isStorageAvailable"></a>
+
+### draftManager.isStorageAvailable() ⇒ <code>boolean</code>
+Check if localStorage is available
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>boolean</code> - True if localStorage is available  
+<a name="DraftManager+scheduleAutoSave"></a>
+
+### draftManager.scheduleAutoSave()
+Schedule an auto-save with debouncing
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+<a name="DraftManager+startAutoSaveTimer"></a>
+
+### draftManager.startAutoSaveTimer()
+Start the periodic auto-save timer
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+<a name="DraftManager+stopAutoSaveTimer"></a>
+
+### draftManager.stopAutoSaveTimer()
+Stop the auto-save timer
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+<a name="DraftManager+saveDraft"></a>
+
+### draftManager.saveDraft() ⇒ <code>boolean</code>
+Save current layers to localStorage as a draft
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>boolean</code> - True if save was successful  
+<a name="DraftManager+loadDraft"></a>
+
+### draftManager.loadDraft() ⇒ <code>Object</code> \| <code>null</code>
+Load a draft from localStorage
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - The draft object or null if not found/expired  
+<a name="DraftManager+hasDraft"></a>
+
+### draftManager.hasDraft() ⇒ <code>boolean</code>
+Check if a recoverable draft exists
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>boolean</code> - True if a valid draft exists  
+<a name="DraftManager+getDraftInfo"></a>
+
+### draftManager.getDraftInfo() ⇒ <code>Object</code> \| <code>null</code>
+Get draft info for display
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - Draft info or null  
+<a name="DraftManager+clearDraft"></a>
+
+### draftManager.clearDraft()
+Clear the stored draft
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+<a name="DraftManager+recoverDraft"></a>
+
+### draftManager.recoverDraft() ⇒ <code>boolean</code>
+Recover layers from draft
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>boolean</code> - True if recovery was successful  
+<a name="DraftManager+showRecoveryDialog"></a>
+
+### draftManager.showRecoveryDialog() ⇒ <code>Promise.&lt;boolean&gt;</code>
+Show the recovery dialog
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>Promise.&lt;boolean&gt;</code> - Resolves to true if user chose to recover  
+<a name="DraftManager+checkAndRecoverDraft"></a>
+
+### draftManager.checkAndRecoverDraft() ⇒ <code>Promise.&lt;boolean&gt;</code>
+Check for drafts and prompt user to recover
+Should be called after initial layer load
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>Promise.&lt;boolean&gt;</code> - Resolves to true if draft was recovered  
+<a name="DraftManager+onSaveSuccess"></a>
+
+### draftManager.onSaveSuccess()
+Called when a successful save occurs
+Clears the draft since changes are now persisted
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+<a name="DraftManager+destroy"></a>
+
+### draftManager.destroy()
+Clean up resources
+
+**Kind**: instance method of [<code>DraftManager</code>](#DraftManager)  
+<a name="DraftManager.getUserScope"></a>
+
+### DraftManager.getUserScope() ⇒ <code>string</code>
+Identify the current user for draft key scoping.
+
+Drafts used to be keyed by filename alone, so on a shared browser profile
+the next person to open the same file was offered the previous person's
+unsaved annotations.
+
+**Kind**: static method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>string</code> - Stable per-user token ('anon' when logged out)  
+<a name="DraftManager.isQuotaError"></a>
+
+### DraftManager.isQuotaError(e) ⇒ <code>boolean</code>
+Recognise a storage-quota failure across browsers.
+
+Firefox reports NS_ERROR_DOM_QUOTA_REACHED, Safari a bare
+QuotaExceededError with code 22, older WebKit code 1014.
+
+**Kind**: static method of [<code>DraftManager</code>](#DraftManager)  
+**Returns**: <code>boolean</code> - True when the write failed for lack of space  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>Error</code> | The caught error |
+
 <a name="ErrorHandler"></a>
 
 ## ErrorHandler
@@ -4875,6 +9109,8 @@ ErrorHandler class for centralized error management
 
 * [ErrorHandler](#ErrorHandler)
     * [new ErrorHandler()](#new_ErrorHandler_new)
+    * [._isHandlingError](#ErrorHandler+_isHandlingError) : <code>boolean</code>
+    * [.activeTimeouts](#ErrorHandler+activeTimeouts) : <code>Set.&lt;number&gt;</code>
     * [.initErrorContainer()](#ErrorHandler+initErrorContainer)
     * [.registerWindowListener()](#ErrorHandler+registerWindowListener)
     * [.handleError(error, context, type, metadata)](#ErrorHandler+handleError)
@@ -4893,7 +9129,6 @@ ErrorHandler class for centralized error management
     * [.getRecoveryStrategy(errorInfo)](#ErrorHandler+getRecoveryStrategy) ⇒ <code>Object</code> \| <code>null</code>
     * [.executeRecoveryStrategy(strategy, errorInfo)](#ErrorHandler+executeRecoveryStrategy)
     * [.showRecoveryNotification(message)](#ErrorHandler+showRecoveryNotification)
-    * [.retryOperation(errorInfo)](#ErrorHandler+retryOperation)
     * [.getRecentErrors(limit)](#ErrorHandler+getRecentErrors) ⇒ <code>Array</code>
     * [.clearErrors()](#ErrorHandler+clearErrors)
     * [.setDebugMode(enabled)](#ErrorHandler+setDebugMode)
@@ -4904,6 +9139,18 @@ ErrorHandler class for centralized error management
 ### new ErrorHandler()
 Create an ErrorHandler instance
 
+<a name="ErrorHandler+_isHandlingError"></a>
+
+### errorHandler.\_isHandlingError : <code>boolean</code>
+Recursion guard for handleError
+
+**Kind**: instance property of [<code>ErrorHandler</code>](#ErrorHandler)  
+<a name="ErrorHandler+activeTimeouts"></a>
+
+### errorHandler.activeTimeouts : <code>Set.&lt;number&gt;</code>
+Tracked timeout IDs for cleanup
+
+**Kind**: instance property of [<code>ErrorHandler</code>](#ErrorHandler)  
 <a name="ErrorHandler+initErrorContainer"></a>
 
 ### errorHandler.initErrorContainer()
@@ -5102,17 +9349,6 @@ Show recovery notification to user
 | --- | --- | --- |
 | message | <code>string</code> | Recovery message |
 
-<a name="ErrorHandler+retryOperation"></a>
-
-### errorHandler.retryOperation(errorInfo)
-Retry failed operation
-
-**Kind**: instance method of [<code>ErrorHandler</code>](#ErrorHandler)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| errorInfo | <code>Object</code> | Error information |
-
 <a name="ErrorHandler+getRecentErrors"></a>
 
 ### errorHandler.getRecentErrors(limit) ⇒ <code>Array</code>
@@ -5151,9 +9387,307 @@ Destroy error handler and clean up
 <a name="EventManager"></a>
 
 ## EventManager
-Event Manager for Layers EditorCentralized event handling and management
-
 **Kind**: global class  
+
+* [EventManager](#EventManager)
+    * [new EventManager()](#new_EventManager_new)
+    * [new EventManager(editor)](#new_EventManager_new)
+    * [.registerListener(target, type, handler, [options])](#EventManager+registerListener)
+    * [.setupGlobalHandlers()](#EventManager+setupGlobalHandlers)
+    * [.handleResize()](#EventManager+handleResize)
+    * [.handleBeforeUnload(e)](#EventManager+handleBeforeUnload)
+    * [.handleKeyDown(e)](#EventManager+handleKeyDown)
+    * [.handleArrowKeyNudge(e)](#EventManager+handleArrowKeyNudge) ⇒ <code>boolean</code>
+    * [.nudgeSelectedLayers(dx, dy)](#EventManager+nudgeSelectedLayers)
+    * [.isInputElement(element)](#EventManager+isInputElement) ⇒ <code>boolean</code>
+    * [.handleUndo()](#EventManager+handleUndo)
+    * [.handleRedo()](#EventManager+handleRedo)
+    * [.destroy()](#EventManager+destroy)
+
+<a name="new_EventManager_new"></a>
+
+### new EventManager()
+Event Manager for Layers Editor
+Centralized event handling and management
+
+<a name="new_EventManager_new"></a>
+
+### new EventManager(editor)
+Create an EventManager instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| editor | <code>Object</code> | Reference to the LayersEditor instance |
+
+<a name="EventManager+registerListener"></a>
+
+### eventManager.registerListener(target, type, handler, [options])
+Register an event listener and track it for cleanup
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| target | <code>EventTarget</code> | The event target (window, document, or element) |
+| type | <code>string</code> | The event type (e.g., 'click', 'keydown') |
+| handler | <code>function</code> | The event handler function |
+| [options] | <code>Object</code> | Event listener options |
+
+<a name="EventManager+setupGlobalHandlers"></a>
+
+### eventManager.setupGlobalHandlers()
+Set up global event handlers for window and document
+Guarded against double-registration
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager+handleResize"></a>
+
+### eventManager.handleResize()
+Handle window resize events
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager+handleBeforeUnload"></a>
+
+### eventManager.handleBeforeUnload(e)
+Handle beforeunload event to warn about unsaved changes
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>BeforeUnloadEvent</code> | The beforeunload event |
+
+<a name="EventManager+handleKeyDown"></a>
+
+### eventManager.handleKeyDown(e)
+Handle global keyboard shortcuts
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>KeyboardEvent</code> | The keydown event |
+
+<a name="EventManager+handleArrowKeyNudge"></a>
+
+### eventManager.handleArrowKeyNudge(e) ⇒ <code>boolean</code>
+Handle arrow key nudging of selected layers
+
+When layers are selected, arrow keys nudge them by 1px (10px with Shift).
+This follows standard UX conventions from Figma, Photoshop, etc.
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+**Returns**: <code>boolean</code> - True if event was handled (layers were nudged)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>KeyboardEvent</code> | The keydown event |
+
+<a name="EventManager+nudgeSelectedLayers"></a>
+
+### eventManager.nudgeSelectedLayers(dx, dy)
+Nudge selected layers by the given offset
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| dx | <code>number</code> | Horizontal offset in pixels |
+| dy | <code>number</code> | Vertical offset in pixels |
+
+<a name="EventManager+isInputElement"></a>
+
+### eventManager.isInputElement(element) ⇒ <code>boolean</code>
+Check if an element is an input element (input, textarea, select,
+contentEditable, or OOUI text input widget)
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+**Returns**: <code>boolean</code> - True if the element is an input element  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| element | <code>Element</code> | The DOM element to check |
+
+<a name="EventManager+handleUndo"></a>
+
+### eventManager.handleUndo()
+Handle undo keyboard shortcut (Ctrl+Z)
+
+Note: editor.undo() calls HistoryManager.undo() which calls restoreState(),
+and restoreState() already calls renderLayers() and markDirty().
+We intentionally don't call them again to avoid redundant re-renders.
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager+handleRedo"></a>
+
+### eventManager.handleRedo()
+Handle redo keyboard shortcut (Ctrl+Y or Ctrl+Shift+Z)
+
+Note: editor.redo() calls HistoryManager.redo() which calls restoreState(),
+and restoreState() already calls renderLayers() and markDirty().
+We intentionally don't call them again to avoid redundant re-renders.
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager+destroy"></a>
+
+### eventManager.destroy()
+Clean up all registered event listeners
+Called when the editor is destroyed to prevent memory leaks
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager"></a>
+
+## EventManager
+**Kind**: global class  
+
+* [EventManager](#EventManager)
+    * [new EventManager()](#new_EventManager_new)
+    * [new EventManager(editor)](#new_EventManager_new)
+    * [.registerListener(target, type, handler, [options])](#EventManager+registerListener)
+    * [.setupGlobalHandlers()](#EventManager+setupGlobalHandlers)
+    * [.handleResize()](#EventManager+handleResize)
+    * [.handleBeforeUnload(e)](#EventManager+handleBeforeUnload)
+    * [.handleKeyDown(e)](#EventManager+handleKeyDown)
+    * [.handleArrowKeyNudge(e)](#EventManager+handleArrowKeyNudge) ⇒ <code>boolean</code>
+    * [.nudgeSelectedLayers(dx, dy)](#EventManager+nudgeSelectedLayers)
+    * [.isInputElement(element)](#EventManager+isInputElement) ⇒ <code>boolean</code>
+    * [.handleUndo()](#EventManager+handleUndo)
+    * [.handleRedo()](#EventManager+handleRedo)
+    * [.destroy()](#EventManager+destroy)
+
+<a name="new_EventManager_new"></a>
+
+### new EventManager()
+Event Manager for Layers Editor
+Centralized event handling and management
+
+<a name="new_EventManager_new"></a>
+
+### new EventManager(editor)
+Create an EventManager instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| editor | <code>Object</code> | Reference to the LayersEditor instance |
+
+<a name="EventManager+registerListener"></a>
+
+### eventManager.registerListener(target, type, handler, [options])
+Register an event listener and track it for cleanup
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| target | <code>EventTarget</code> | The event target (window, document, or element) |
+| type | <code>string</code> | The event type (e.g., 'click', 'keydown') |
+| handler | <code>function</code> | The event handler function |
+| [options] | <code>Object</code> | Event listener options |
+
+<a name="EventManager+setupGlobalHandlers"></a>
+
+### eventManager.setupGlobalHandlers()
+Set up global event handlers for window and document
+Guarded against double-registration
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager+handleResize"></a>
+
+### eventManager.handleResize()
+Handle window resize events
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager+handleBeforeUnload"></a>
+
+### eventManager.handleBeforeUnload(e)
+Handle beforeunload event to warn about unsaved changes
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>BeforeUnloadEvent</code> | The beforeunload event |
+
+<a name="EventManager+handleKeyDown"></a>
+
+### eventManager.handleKeyDown(e)
+Handle global keyboard shortcuts
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>KeyboardEvent</code> | The keydown event |
+
+<a name="EventManager+handleArrowKeyNudge"></a>
+
+### eventManager.handleArrowKeyNudge(e) ⇒ <code>boolean</code>
+Handle arrow key nudging of selected layers
+
+When layers are selected, arrow keys nudge them by 1px (10px with Shift).
+This follows standard UX conventions from Figma, Photoshop, etc.
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+**Returns**: <code>boolean</code> - True if event was handled (layers were nudged)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>KeyboardEvent</code> | The keydown event |
+
+<a name="EventManager+nudgeSelectedLayers"></a>
+
+### eventManager.nudgeSelectedLayers(dx, dy)
+Nudge selected layers by the given offset
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| dx | <code>number</code> | Horizontal offset in pixels |
+| dy | <code>number</code> | Vertical offset in pixels |
+
+<a name="EventManager+isInputElement"></a>
+
+### eventManager.isInputElement(element) ⇒ <code>boolean</code>
+Check if an element is an input element (input, textarea, select,
+contentEditable, or OOUI text input widget)
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+**Returns**: <code>boolean</code> - True if the element is an input element  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| element | <code>Element</code> | The DOM element to check |
+
+<a name="EventManager+handleUndo"></a>
+
+### eventManager.handleUndo()
+Handle undo keyboard shortcut (Ctrl+Z)
+
+Note: editor.undo() calls HistoryManager.undo() which calls restoreState(),
+and restoreState() already calls renderLayers() and markDirty().
+We intentionally don't call them again to avoid redundant re-renders.
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager+handleRedo"></a>
+
+### eventManager.handleRedo()
+Handle redo keyboard shortcut (Ctrl+Y or Ctrl+Shift+Z)
+
+Note: editor.redo() calls HistoryManager.redo() which calls restoreState(),
+and restoreState() already calls renderLayers() and markDirty().
+We intentionally don't call them again to avoid redundant re-renders.
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
+<a name="EventManager+destroy"></a>
+
+### eventManager.destroy()
+Clean up all registered event listeners
+Called when the editor is destroyed to prevent memory leaks
+
+**Kind**: instance method of [<code>EventManager</code>](#EventManager)  
 <a name="HistoryManager"></a>
 
 ## HistoryManager
@@ -5162,7 +9696,7 @@ HistoryManager class
 **Kind**: global class  
 
 * [HistoryManager](#HistoryManager)
-    * [new HistoryManager(config, canvasManager)](#new_HistoryManager_new)
+    * [new HistoryManager([options])](#new_HistoryManager_new)
     * [.saveState(description)](#HistoryManager+saveState)
     * [.getLayersSnapshot()](#HistoryManager+getLayersSnapshot) ⇒ <code>Array</code>
     * [.undo()](#HistoryManager+undo) ⇒ <code>boolean</code>
@@ -5181,19 +9715,23 @@ HistoryManager class
     * [.compressHistory()](#HistoryManager+compressHistory)
     * [.setMaxHistorySteps(maxSteps)](#HistoryManager+setMaxHistorySteps)
     * [.hasUnsavedChanges()](#HistoryManager+hasUnsavedChanges) ⇒ <code>boolean</code>
+    * [.layersEqual(layers1, layers2)](#HistoryManager+layersEqual) ⇒ <code>boolean</code>
     * [.saveInitialState()](#HistoryManager+saveInitialState)
+    * [.markAsSaved()](#HistoryManager+markAsSaved)
     * [.exportHistory()](#HistoryManager+exportHistory) ⇒ <code>Object</code>
     * [.getMemoryUsage()](#HistoryManager+getMemoryUsage) ⇒ <code>Object</code>
     * [.destroy()](#HistoryManager+destroy)
 
 <a name="new_HistoryManager_new"></a>
 
-### new HistoryManager(config, canvasManager)
+### new HistoryManager([options])
 
-| Param | Type | Description |
-| --- | --- | --- |
-| config | <code>Object</code> | Configuration object or editor/canvasManager reference |
-| canvasManager | [<code>CanvasManager</code>](#CanvasManager) | Reference to the canvas manager (optional) |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [options] | <code>Object</code> | <code>{}</code> | Configuration options |
+| [options.editor] | <code>Object</code> |  | Editor reference |
+| [options.canvasManager] | [<code>CanvasManager</code>](#CanvasManager) |  | Canvas manager reference |
+| [options.maxHistorySteps] | <code>number</code> | <code>50</code> | Maximum history steps |
 
 <a name="HistoryManager+saveState"></a>
 
@@ -5211,8 +9749,11 @@ Save current state to history
 ### historyManager.getLayersSnapshot() ⇒ <code>Array</code>
 Get snapshot of current layers
 
+Uses efficient cloning that preserves references to immutable large data
+(image src, SVG path) to avoid expensive JSON serialization of 500KB+ strings.
+
 **Kind**: instance method of [<code>HistoryManager</code>](#HistoryManager)  
-**Returns**: <code>Array</code> - Deep copy of layers array  
+**Returns**: <code>Array</code> - Deep copy of layers array (with immutable data by reference)  
 <a name="HistoryManager+undo"></a>
 
 ### historyManager.undo() ⇒ <code>boolean</code>
@@ -5338,14 +9879,44 @@ Set maximum history steps
 <a name="HistoryManager+hasUnsavedChanges"></a>
 
 ### historyManager.hasUnsavedChanges() ⇒ <code>boolean</code>
-Check if current state differs from last saved state
+Check if current state differs from last saved state.
+
+CORE-2 FIX: Uses efficient comparison that avoids serializing large
+base64 image data (500KB+ per image). Falls back to layersEqual()
+which compares properties individually.
 
 **Kind**: instance method of [<code>HistoryManager</code>](#HistoryManager)  
 **Returns**: <code>boolean</code> - True if state has changed  
+<a name="HistoryManager+layersEqual"></a>
+
+### historyManager.layersEqual(layers1, layers2) ⇒ <code>boolean</code>
+Compare two layer arrays for equality efficiently.
+
+CORE-2 FIX: For large immutable properties (src, path), uses reference
+comparison instead of value comparison since cloneLayersEfficient
+preserves these references.
+
+**Kind**: instance method of [<code>HistoryManager</code>](#HistoryManager)  
+**Returns**: <code>boolean</code> - True if layers are equal  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layers1 | <code>Array</code> | First layers array |
+| layers2 | <code>Array</code> | Second layers array |
+
 <a name="HistoryManager+saveInitialState"></a>
 
 ### historyManager.saveInitialState()
-Save initial state - clears history and saves current layers as baseline.Called after layers are loaded from API to establish undo baseline.
+Save initial state - clears history and saves current layers as baseline.
+Called after layers are loaded from API to establish undo baseline.
+
+**Kind**: instance method of [<code>HistoryManager</code>](#HistoryManager)  
+<a name="HistoryManager+markAsSaved"></a>
+
+### historyManager.markAsSaved()
+Mark current history state as saved.
+Called by APIManager after successful save to API.
+CORE-2 FIX: Enables efficient hasUnsavedChanges() check.
 
 **Kind**: instance method of [<code>HistoryManager</code>](#HistoryManager)  
 <a name="HistoryManager+exportHistory"></a>
@@ -5390,7 +9961,13 @@ Clean up resources and clear state
 <a name="new_ImageLoader_new"></a>
 
 ### new ImageLoader()
-ImageLoader - Handles background image loading for the Layers editorThis module is responsible for:- Loading background images from multiple sources (config, page, MediaWiki API)- Fallback to test images when actual image unavailable- Cross-origin handling
+ImageLoader - Handles background image loading for the Layers editor
+
+This module is responsible for:
+- Loading background images from multiple sources (config, page, MediaWiki API)
+- Fallback to test images when actual image unavailable
+- Cross-origin handling
+- TIFF/non-web-format handling via MediaWiki thumbnails
 
 <a name="new_ImageLoader_new"></a>
 
@@ -5409,7 +9986,8 @@ Creates a new ImageLoader instance
 <a name="ImageLoader+load"></a>
 
 ### imageLoader.load()
-Start loading the background imageTries multiple sources in priority order
+Start loading the background image
+Tries multiple sources in priority order
 
 **Kind**: instance method of [<code>ImageLoader</code>](#ImageLoader)  
 <a name="ImageLoader+buildUrlList"></a>
@@ -5512,7 +10090,13 @@ ImageLoader class - handles background image loading with fallbacks
 <a name="new_ImageLoader_new"></a>
 
 ### new ImageLoader()
-ImageLoader - Handles background image loading for the Layers editorThis module is responsible for:- Loading background images from multiple sources (config, page, MediaWiki API)- Fallback to test images when actual image unavailable- Cross-origin handling
+ImageLoader - Handles background image loading for the Layers editor
+
+This module is responsible for:
+- Loading background images from multiple sources (config, page, MediaWiki API)
+- Fallback to test images when actual image unavailable
+- Cross-origin handling
+- TIFF/non-web-format handling via MediaWiki thumbnails
 
 <a name="new_ImageLoader_new"></a>
 
@@ -5531,7 +10115,8 @@ Creates a new ImageLoader instance
 <a name="ImageLoader+load"></a>
 
 ### imageLoader.load()
-Start loading the background imageTries multiple sources in priority order
+Start loading the background image
+Tries multiple sources in priority order
 
 **Kind**: instance method of [<code>ImageLoader</code>](#ImageLoader)  
 <a name="ImageLoader+buildUrlList"></a>
@@ -5629,7 +10214,10 @@ Clean up resources
 <a name="new_ImportExportManager_new"></a>
 
 ### new ImportExportManager()
-ImportExportManager - Handles layer import/export functionalityThis module provides JSON import and export capabilities for layer data,supporting both modern and legacy browsers.
+ImportExportManager - Handles layer import/export functionality
+
+This module provides JSON import and export capabilities for layer data,
+supporting both modern and legacy browsers.
 
 <a name="new_ImportExportManager_new"></a>
 
@@ -5726,7 +10314,9 @@ Create an export button
 <a name="ImportExportManager"></a>
 
 ## ImportExportManager
-ImportExportManager classHandles import/export of layer data as JSON files.
+ImportExportManager class
+
+Handles import/export of layer data as JSON files.
 
 **Kind**: global class  
 
@@ -5743,7 +10333,10 @@ ImportExportManager classHandles import/export of layer data as JSON files.
 <a name="new_ImportExportManager_new"></a>
 
 ### new ImportExportManager()
-ImportExportManager - Handles layer import/export functionalityThis module provides JSON import and export capabilities for layer data,supporting both modern and legacy browsers.
+ImportExportManager - Handles layer import/export functionality
+
+This module provides JSON import and export capabilities for layer data,
+supporting both modern and legacy browsers.
 
 <a name="new_ImportExportManager_new"></a>
 
@@ -5840,17 +10433,32 @@ Create an export button
 <a name="LayerPanel"></a>
 
 ## LayerPanel
-LayerPanel classManages the layer list, visibility, ordering, and layer properties
+LayerPanel class
+Manages the layer list, visibility, ordering, and layer properties
 
 **Kind**: global class  
 
 * [LayerPanel](#LayerPanel)
     * [new LayerPanel(config)](#new_LayerPanel_new)
+    * [.initFolderOperationsController()](#LayerPanel+initFolderOperationsController)
+    * [.initContextMenuController()](#LayerPanel+initContextMenuController)
+    * [.showCanvasProperties()](#LayerPanel+showCanvasProperties)
+    * [.createCanvasSizeInput(dimension, t)](#LayerPanel+createCanvasSizeInput) ⇒ <code>HTMLElement</code>
+    * [.createCanvasColorSwatch(t)](#LayerPanel+createCanvasColorSwatch) ⇒ <code>HTMLElement</code>
+    * [.updateSwatchColor(swatch, color)](#LayerPanel+updateSwatchColor)
+    * [.updateCanvasColorSwatch(color)](#LayerPanel+updateCanvasColorSwatch)
     * [.initLayerItemFactory()](#LayerPanel+initLayerItemFactory)
+    * [.getLayerDepth(layerId)](#LayerPanel+getLayerDepth) ⇒ <code>number</code>
+    * [.toggleGroupExpand(groupId)](#LayerPanel+toggleGroupExpand)
     * [.getLayers()](#LayerPanel+getLayers) ⇒ <code>Array</code>
+    * [.getVisibleLayers()](#LayerPanel+getVisibleLayers) ⇒ <code>Array</code>
+    * [.updateSearchResultCount()](#LayerPanel+updateSearchResultCount)
     * [.getSelectedLayerId()](#LayerPanel+getSelectedLayerId) ⇒ <code>string</code> \| <code>null</code>
     * [.getSelectedLayerIds()](#LayerPanel+getSelectedLayerIds) ⇒ <code>Array</code>
+    * [.createFolder()](#LayerPanel+createFolder)
+    * ~~[.createGroupFromSelection()](#LayerPanel+createGroupFromSelection)~~
     * [.subscribeToState()](#LayerPanel+subscribeToState)
+    * [.announceToScreenReader(message)](#LayerPanel+announceToScreenReader)
     * [.isDebugEnabled()](#LayerPanel+isDebugEnabled) ⇒ <code>boolean</code>
     * [.logDebug(...args)](#LayerPanel+logDebug)
     * [.logWarn(...args)](#LayerPanel+logWarn)
@@ -5864,19 +10472,19 @@ LayerPanel classManages the layer list, visibility, ordering, and layer propert
     * [.runDialogCleanups()](#LayerPanel+runDialogCleanups)
     * [.destroy()](#LayerPanel+destroy)
     * [.msg(key, fallback)](#LayerPanel+msg) ⇒ <code>string</code>
+    * [.toggleMobileCollapse()](#LayerPanel+toggleMobileCollapse)
     * [.setAttributes(element, attributes)](#LayerPanel+setAttributes)
     * [.createSVGElement(tag, attributes)](#LayerPanel+createSVGElement) ⇒ <code>Element</code> \| <code>null</code>
     * [.createEyeIcon(visible)](#LayerPanel+createEyeIcon) ⇒ <code>Element</code>
     * [.createLockIcon(locked)](#LayerPanel+createLockIcon) ⇒ <code>Element</code>
     * [.createDeleteIcon()](#LayerPanel+createDeleteIcon) ⇒ <code>Element</code>
-    * [.updateCodePanel()](#LayerPanel+updateCodePanel)
+    * ~~[.updateCodePanel()](#LayerPanel+updateCodePanel) ⇒ <code>void</code>~~
     * [.createInterface()](#LayerPanel+createInterface)
     * [.setupEventHandlers()](#LayerPanel+setupEventHandlers)
     * [.updateLayers(layers)](#LayerPanel+updateLayers)
+    * [.updateLayerList(layers)](#LayerPanel+updateLayerList)
     * [.renderLayerList()](#LayerPanel+renderLayerList)
     * [.renderBackgroundLayerItem()](#LayerPanel+renderBackgroundLayerItem)
-    * [.createBackgroundLayerItem()](#LayerPanel+createBackgroundLayerItem) ⇒ <code>HTMLElement</code>
-    * [.updateBackgroundLayerItem([item])](#LayerPanel+updateBackgroundLayerItem)
     * [.getBackgroundVisible()](#LayerPanel+getBackgroundVisible) ⇒ <code>boolean</code>
     * [.getBackgroundOpacity()](#LayerPanel+getBackgroundOpacity) ⇒ <code>number</code>
     * [.toggleBackgroundVisibility()](#LayerPanel+toggleBackgroundVisibility)
@@ -5886,6 +10494,11 @@ LayerPanel classManages the layer list, visibility, ordering, and layer propert
     * [.updateLayerItem(item, layer, index)](#LayerPanel+updateLayerItem)
     * [.getDefaultLayerName(layer)](#LayerPanel+getDefaultLayerName) ⇒ <code>string</code>
     * [.handleLayerListClick(e)](#LayerPanel+handleLayerListClick)
+    * [.handleNameClick(layerId, nameEl)](#LayerPanel+handleNameClick)
+    * [.handleLayerListDblClick(e)](#LayerPanel+handleLayerListDblClick)
+    * [.handleLayerContextMenu(e)](#LayerPanel+handleLayerContextMenu)
+    * [.closeLayerContextMenu()](#LayerPanel+closeLayerContextMenu)
+    * [.ungroupLayer(groupId)](#LayerPanel+ungroupLayer)
     * [.handleLayerListKeydown(e)](#LayerPanel+handleLayerListKeydown)
     * [.focusLayerAtIndex(index)](#LayerPanel+focusLayerAtIndex)
     * [.selectLayer(layerId, [fromCanvas], [addToSelection])](#LayerPanel+selectLayer)
@@ -5901,7 +10514,6 @@ LayerPanel classManages the layer list, visibility, ordering, and layer propert
     * [.reorderLayers(draggedId, targetId)](#LayerPanel+reorderLayers)
     * [.createConfirmDialog(message, onConfirm)](#LayerPanel+createConfirmDialog)
     * [.simpleConfirm(message)](#LayerPanel+simpleConfirm) ⇒ <code>boolean</code>
-    * [.renderCodeSnippet([layers])](#LayerPanel+renderCodeSnippet) ⇒ <code>string</code>
 
 <a name="new_LayerPanel_new"></a>
 
@@ -5916,12 +10528,103 @@ Create a LayerPanel instance
 | config.editor | <code>window.LayersEditor</code> | A reference to the main editor instance |
 | [config.inspectorContainer] | <code>HTMLElement</code> | Optional inspector container |
 
+<a name="LayerPanel+initFolderOperationsController"></a>
+
+### layerPanel.initFolderOperationsController()
+Initialize the FolderOperationsController for folder/group operations
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+<a name="LayerPanel+initContextMenuController"></a>
+
+### layerPanel.initContextMenuController()
+Initialize the ContextMenuController for right-click context menus
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+<a name="LayerPanel+showCanvasProperties"></a>
+
+### layerPanel.showCanvasProperties()
+Show canvas properties in the properties panel (for slides)
+Called when the Canvas layer is selected
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+<a name="LayerPanel+createCanvasSizeInput"></a>
+
+### layerPanel.createCanvasSizeInput(dimension, t) ⇒ <code>HTMLElement</code>
+Create a size input for canvas properties
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+**Returns**: <code>HTMLElement</code> - Input element  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| dimension | <code>string</code> | 'width' or 'height' |
+| t | <code>function</code> | Translation function |
+
+<a name="LayerPanel+createCanvasColorSwatch"></a>
+
+### layerPanel.createCanvasColorSwatch(t) ⇒ <code>HTMLElement</code>
+Create a color swatch button for canvas background
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+**Returns**: <code>HTMLElement</code> - Color swatch button  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| t | <code>function</code> | Translation function |
+
+<a name="LayerPanel+updateSwatchColor"></a>
+
+### layerPanel.updateSwatchColor(swatch, color)
+Update a color swatch's appearance
+Uses consistent transparency pattern matching ColorPickerDialog
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| swatch | <code>HTMLElement</code> | The swatch element |
+| color | <code>string</code> | The color value |
+
+<a name="LayerPanel+updateCanvasColorSwatch"></a>
+
+### layerPanel.updateCanvasColorSwatch(color)
+Update canvas color swatch when background color changes
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| color | <code>string</code> | The new background color |
+
 <a name="LayerPanel+initLayerItemFactory"></a>
 
 ### layerPanel.initLayerItemFactory()
 Initialize the LayerItemFactory with appropriate callbacks
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+<a name="LayerPanel+getLayerDepth"></a>
+
+### layerPanel.getLayerDepth(layerId) ⇒ <code>number</code>
+Get the nesting depth of a layer
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+**Returns**: <code>number</code> - Nesting depth (0 for top-level)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | Layer ID |
+
+<a name="LayerPanel+toggleGroupExpand"></a>
+
+### layerPanel.toggleGroupExpand(groupId)
+Toggle expand/collapse state of a group layer
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupId | <code>string</code> | Group layer ID |
+
 <a name="LayerPanel+getLayers"></a>
 
 ### layerPanel.getLayers() ⇒ <code>Array</code>
@@ -5929,6 +10632,19 @@ Get layers from StateManager (single source of truth)
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 **Returns**: <code>Array</code> - Current layers array  
+<a name="LayerPanel+getVisibleLayers"></a>
+
+### layerPanel.getVisibleLayers() ⇒ <code>Array</code>
+Get layers visible in the layer panel (excludes children of collapsed groups)
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+**Returns**: <code>Array</code> - Layers that should be displayed in the layer panel  
+<a name="LayerPanel+updateSearchResultCount"></a>
+
+### layerPanel.updateSearchResultCount()
+Update the search result count display
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 <a name="LayerPanel+getSelectedLayerId"></a>
 
 ### layerPanel.getSelectedLayerId() ⇒ <code>string</code> \| <code>null</code>
@@ -5943,12 +10659,38 @@ Get all selected layer IDs from StateManager
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 **Returns**: <code>Array</code> - Array of selected layer IDs  
+<a name="LayerPanel+createFolder"></a>
+
+### layerPanel.createFolder()
+Create a folder (group) - can be empty or include selected layers
+Delegates to FolderOperationsController
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+<a name="LayerPanel+createGroupFromSelection"></a>
+
+### ~~layerPanel.createGroupFromSelection()~~
+***since 1.4.0 - Use createFolder() instead. Will be removed in v2.0.
+Create a group from currently selected layers (legacy method)***
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 <a name="LayerPanel+subscribeToState"></a>
 
 ### layerPanel.subscribeToState()
 Subscribe to StateManager changes for reactive updates
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+<a name="LayerPanel+announceToScreenReader"></a>
+
+### layerPanel.announceToScreenReader(message)
+Announce a message to screen readers via aria-live region
+LOW-8 FIX: Accessibility improvement for layer list updates
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| message | <code>string</code> | The message to announce |
+
 <a name="LayerPanel+isDebugEnabled"></a>
 
 ### layerPanel.isDebugEnabled() ⇒ <code>boolean</code>
@@ -6060,7 +10802,8 @@ Clean up resources and destroy the panel
 <a name="LayerPanel+msg"></a>
 
 ### layerPanel.msg(key, fallback) ⇒ <code>string</code>
-Get localized message with fallbackDelegates to centralized MessageHelper for consistent i18n handling.
+Get localized message with fallback
+Delegates to centralized MessageHelper for consistent i18n handling.
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 
@@ -6069,6 +10812,13 @@ Get localized message with fallbackDelegates to centralized MessageHelper for c
 | key | <code>string</code> | Message key |
 | fallback | <code>string</code> | Fallback text |
 
+<a name="LayerPanel+toggleMobileCollapse"></a>
+
+### layerPanel.toggleMobileCollapse()
+Toggle the mobile collapsed state of the panel
+Only effective when viewport is at mobile width (768px or less)
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 <a name="LayerPanel+setAttributes"></a>
 
 ### layerPanel.setAttributes(element, attributes)
@@ -6127,8 +10877,11 @@ Create delete icon
 **Returns**: <code>Element</code> - Delete icon element  
 <a name="LayerPanel+updateCodePanel"></a>
 
-### layerPanel.updateCodePanel()
-No-op kept for backward compatibility
+### ~~layerPanel.updateCodePanel() ⇒ <code>void</code>~~
+***since 1.5.0 - Code panel moved to UIManager. Will be removed in v2.0.***
+
+No-op kept for backward compatibility.
+Code panel functionality was removed; this stub prevents errors from old callers.
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 <a name="LayerPanel+createInterface"></a>
@@ -6154,6 +10907,17 @@ Update layers (triggers re-render via StateManager)
 | --- | --- | --- |
 | layers | <code>Array</code> | New layers array |
 
+<a name="LayerPanel+updateLayerList"></a>
+
+### layerPanel.updateLayerList(layers)
+Alias for updateLayers for backwards compatibility
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layers | <code>Array</code> | New layers array |
+
 <a name="LayerPanel+renderLayerList"></a>
 
 ### layerPanel.renderLayerList()
@@ -6163,27 +10927,11 @@ Render the layer list
 <a name="LayerPanel+renderBackgroundLayerItem"></a>
 
 ### layerPanel.renderBackgroundLayerItem()
-Render or update the background layer item at the bottom of the layer list.The background layer cannot be moved, deleted, or unlocked - it justprovides controls for background visibility and opacity.
+Render or update the background layer item at the bottom of the layer list.
+The background layer cannot be moved, deleted, or unlocked - it just
+provides controls for background visibility and opacity.
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
-<a name="LayerPanel+createBackgroundLayerItem"></a>
-
-### layerPanel.createBackgroundLayerItem() ⇒ <code>HTMLElement</code>
-Create the background layer item DOM element
-
-**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
-**Returns**: <code>HTMLElement</code> - Background layer item element  
-<a name="LayerPanel+updateBackgroundLayerItem"></a>
-
-### layerPanel.updateBackgroundLayerItem([item])
-Update the background layer item to reflect current state
-
-**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| [item] | <code>HTMLElement</code> | The background layer item element (optional - will be found if not provided) |
-
 <a name="LayerPanel+getBackgroundVisible"></a>
 
 ### layerPanel.getBackgroundVisible() ⇒ <code>boolean</code>
@@ -6276,6 +11024,60 @@ Handle click events in the layer list
 | --- | --- | --- |
 | e | <code>Event</code> | Click event |
 
+<a name="LayerPanel+handleNameClick"></a>
+
+### layerPanel.handleNameClick(layerId, nameEl)
+Handle click on a layer name - decides whether to select or enter edit mode
+Industry standard: first click selects, click on already-selected layer enters edit mode
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | Layer ID |
+| nameEl | <code>HTMLElement</code> | Name element |
+
+<a name="LayerPanel+handleLayerListDblClick"></a>
+
+### layerPanel.handleLayerListDblClick(e)
+Handle double-click on the layer list (for editing layer names)
+Industry standard: double-click to edit name, single click to select
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>MouseEvent</code> | Mouse event |
+
+<a name="LayerPanel+handleLayerContextMenu"></a>
+
+### layerPanel.handleLayerContextMenu(e)
+Handle right-click context menu on the layer list
+Provides quick access to layer actions like Group, Ungroup, etc.
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| e | <code>MouseEvent</code> | Mouse event |
+
+<a name="LayerPanel+closeLayerContextMenu"></a>
+
+### layerPanel.closeLayerContextMenu()
+Close the active layer context menu if open
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+<a name="LayerPanel+ungroupLayer"></a>
+
+### layerPanel.ungroupLayer(groupId)
+Ungroup a group layer, moving its children to the parent level
+
+**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupId | <code>string</code> | The ID of the group layer to ungroup |
+
 <a name="LayerPanel+handleLayerListKeydown"></a>
 
 ### layerPanel.handleLayerListKeydown(e)
@@ -6314,7 +11116,8 @@ Select a layer by ID
 <a name="LayerPanel+selectLayerRange"></a>
 
 ### layerPanel.selectLayerRange(layerId)
-Select a range of layers (Shift+click behavior)Selects all layers between the last selected layer and the clicked layer
+Select a range of layers (Shift+click behavior)
+Selects all layers between the last selected layer and the clicked layer
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 
@@ -6337,6 +11140,9 @@ Toggle layer visibility
 
 ### layerPanel.toggleLayerLock(layerId)
 Toggle layer lock
+
+Uses immutable update pattern through StateManager to ensure
+all subscribers are notified of the change.
 
 **Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
 
@@ -6443,18 +11249,6 @@ Simple confirmation dialog fallback
 | --- | --- | --- |
 | message | <code>string</code> | The confirmation message |
 
-<a name="LayerPanel+renderCodeSnippet"></a>
-
-### layerPanel.renderCodeSnippet([layers]) ⇒ <code>string</code>
-Pure renderer for Wikitext code so LayersEditor can embed it in the footer
-
-**Kind**: instance method of [<code>LayerPanel</code>](#LayerPanel)  
-**Returns**: <code>string</code> - HTML string for the code snippet  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| [layers] | <code>Array</code> | Layer array (defaults to current layers) |
-
 <a name="LayersEditor"></a>
 
 ## LayersEditor
@@ -6475,6 +11269,8 @@ LayersEditor class - Main editor for MediaWiki Layers extension
     * [.redo()](#LayersEditor+redo) ⇒ <code>boolean</code>
     * [.init()](#LayersEditor+init)
     * [.addLayer(layerData)](#LayersEditor+addLayer)
+    * [.addLayerWithoutSelection(layerData)](#LayersEditor+addLayerWithoutSelection)
+    * [.createCustomShapeLayer(shapeData)](#LayersEditor+createCustomShapeLayer)
     * [.updateLayer(layerId, changes)](#LayersEditor+updateLayer)
     * [.removeLayer(layerId)](#LayersEditor+removeLayer)
     * [.getLayerById(layerId)](#LayersEditor+getLayerById) ⇒ <code>Object</code> \| <code>undefined</code>
@@ -6487,6 +11283,7 @@ LayersEditor class - Main editor for MediaWiki Layers extension
     * [.createNewLayerSet(setName)](#LayersEditor+createNewLayerSet) ⇒ <code>Promise.&lt;boolean&gt;</code>
     * [.loadRevisionById(revisionId)](#LayersEditor+loadRevisionById)
     * [.showKeyboardShortcutsDialog()](#LayersEditor+showKeyboardShortcutsDialog)
+    * [.showHelpDialog()](#LayersEditor+showHelpDialog)
     * [.hasUnsavedChanges()](#LayersEditor+hasUnsavedChanges) ⇒ <code>boolean</code>
     * [.updateSaveButtonState()](#LayersEditor+updateSaveButtonState)
     * [.getMessage(key, fallback)](#LayersEditor+getMessage) ⇒ <code>string</code>
@@ -6494,11 +11291,13 @@ LayersEditor class - Main editor for MediaWiki Layers extension
     * [.saveState(action)](#LayersEditor+saveState)
     * [.selectLayer(layerId)](#LayersEditor+selectLayer)
     * [.deleteSelected()](#LayersEditor+deleteSelected)
+    * [.isLayerEffectivelyLocked(layer)](#LayersEditor+isLayerEffectivelyLocked) ⇒ <code>boolean</code>
     * [.duplicateSelected()](#LayersEditor+duplicateSelected)
     * [.updateUIState()](#LayersEditor+updateUIState)
     * [.applyToSelection(mutator)](#LayersEditor+applyToSelection)
     * [.getSelectedLayerIds()](#LayersEditor+getSelectedLayerIds) ⇒ <code>Array.&lt;string&gt;</code>
     * [.navigateBackToFile()](#LayersEditor+navigateBackToFile)
+    * [.navigateToPage(targetPage)](#LayersEditor+navigateToPage)
     * [.save()](#LayersEditor+save)
     * [.reloadRevisions()](#LayersEditor+reloadRevisions)
     * [.normalizeLayers(layers)](#LayersEditor+normalizeLayers) ⇒ <code>Array</code>
@@ -6546,7 +11345,8 @@ Error logging utility
 <a name="LayersEditor+sanitizeLogMessage"></a>
 
 ### layersEditor.sanitizeLogMessage(message) ⇒ <code>\*</code>
-Sanitize log messages to prevent sensitive information disclosure
+Sanitize log messages to prevent sensitive information disclosure.
+Delegates to shared LogSanitizer utility.
 
 **Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
 **Returns**: <code>\*</code> - Sanitized message  
@@ -6615,6 +11415,38 @@ Add a new layer to the editor
 | Param | Type | Description |
 | --- | --- | --- |
 | layerData | <code>Object</code> | Layer data object |
+
+<a name="LayersEditor+addLayerWithoutSelection"></a>
+
+### layersEditor.addLayerWithoutSelection(layerData)
+Add a new layer without selecting it
+Used for marker auto-number mode where the tool should stay active
+
+**Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerData | <code>Object</code> | Layer data object |
+
+<a name="LayersEditor+createCustomShapeLayer"></a>
+
+### layersEditor.createCustomShapeLayer(shapeData)
+Create a custom shape layer from shape library data
+
+Supports both single-path shapes (legacy) and multi-path compound shapes.
+Multi-path shapes (like safety signs) have colors baked into the path data.
+
+**Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| shapeData | <code>Object</code> | Shape data from the shape library |
+| shapeData.id | <code>string</code> | Shape ID (e.g., 'arrows/right') |
+| [shapeData.svg] | <code>string</code> | Complete SVG markup string (new format) |
+| [shapeData.path] | <code>string</code> | SVG path data (single-path shapes) |
+| [shapeData.paths] | <code>Array</code> | Multi-path array [{path, fill, stroke}] |
+| shapeData.viewBox | <code>Array.&lt;number&gt;</code> | ViewBox [x, y, width, height] |
+| [shapeData.nameKey] | <code>string</code> | i18n key for shape name |
 
 <a name="LayersEditor+updateLayer"></a>
 
@@ -6726,6 +11558,12 @@ Load a specific revision by ID
 Show the keyboard shortcuts help dialog
 
 **Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
+<a name="LayersEditor+showHelpDialog"></a>
+
+### layersEditor.showHelpDialog()
+Show the built-in help dialog
+
+**Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
 <a name="LayersEditor+hasUnsavedChanges"></a>
 
 ### layersEditor.hasUnsavedChanges() ⇒ <code>boolean</code>
@@ -6791,10 +11629,23 @@ Select a layer by ID
 Delete the selected layer
 
 **Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
+<a name="LayersEditor+isLayerEffectivelyLocked"></a>
+
+### layersEditor.isLayerEffectivelyLocked(layer) ⇒ <code>boolean</code>
+Check if a layer is effectively locked (directly or via parent folder)
+
+**Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
+**Returns**: <code>boolean</code> - True if layer is locked or in a locked folder  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer to check |
+
 <a name="LayersEditor+duplicateSelected"></a>
 
 ### layersEditor.duplicateSelected()
-Duplicate the selected layer
+Duplicate the selected layer(s).
+Delegates to SelectionManager if available.
 
 **Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
 <a name="LayersEditor+updateUIState"></a>
@@ -6827,6 +11678,21 @@ Get selected layer IDs
 Navigate back to file page
 
 **Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
+<a name="LayersEditor+navigateToPage"></a>
+
+### layersEditor.navigateToPage(targetPage)
+Navigate the editor to a different page of a multi-page file (PDF).
+
+Performs a full reload so the server produces the correct rasterized page
+thumbnail, canvas dimensions, and page-scoped layer set. Guards against
+losing unsaved changes.
+
+**Kind**: instance method of [<code>LayersEditor</code>](#LayersEditor)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| targetPage | <code>number</code> | 1-based page number to navigate to |
+
 <a name="LayersEditor+save"></a>
 
 ### layersEditor.save()
@@ -6919,6 +11785,7 @@ Track document event listeners
     * [.debugLog(...args)](#LayerSetManager+debugLog)
     * [.errorLog(...args)](#LayerSetManager+errorLog)
     * [.getMessage(key, [fallback])](#LayerSetManager+getMessage) ⇒ <code>string</code>
+    * [.getSeedSetName()](#LayerSetManager+getSeedSetName) ⇒ <code>string</code>
     * [.getMessageWithParams(key, params, [fallback])](#LayerSetManager+getMessageWithParams) ⇒ <code>string</code>
     * [.parseMWTimestamp(mwTimestamp)](#LayerSetManager+parseMWTimestamp) ⇒ <code>Date</code>
     * [.buildRevisionSelector()](#LayerSetManager+buildRevisionSelector)
@@ -6937,7 +11804,13 @@ Track document event listeners
 <a name="new_LayerSetManager_new"></a>
 
 ### new LayerSetManager()
-LayerSetManager - Manages named layer sets and revisions for the Layers editorHandles:- Named layer set creation, loading, and switching- Revision selector UI building- Layer set dropdown UI building- Timestamp parsing for MediaWiki format
+LayerSetManager - Manages named layer sets and revisions for the Layers editor
+
+Handles:
+- Named layer set creation, loading, and switching
+- Revision selector UI building
+- Layer set dropdown UI building
+- Timestamp parsing for MediaWiki format
 
 <a name="new_LayerSetManager_new"></a>
 
@@ -6978,7 +11851,8 @@ Log error message
 <a name="LayerSetManager+getMessage"></a>
 
 ### layerSetManager.getMessage(key, [fallback]) ⇒ <code>string</code>
-Get localized messageDelegates to centralized MessageHelper for consistent i18n handling.
+Get localized message
+Delegates to centralized MessageHelper for consistent i18n handling.
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 
@@ -6987,10 +11861,19 @@ Get localized messageDelegates to centralized MessageHelper for consistent i18n
 | key | <code>string</code> |  | Message key |
 | [fallback] | <code>string</code> | <code>&quot;&#x27;&#x27;&quot;</code> | Fallback text |
 
+<a name="LayerSetManager+getSeedSetName"></a>
+
+### layerSetManager.getSeedSetName() ⇒ <code>string</code>
+Name the first set for this image will be saved under when the user has
+not chosen one. Set names are user-defined and nothing is reserved, so
+this is only ever a seed for a brand-new set - never a lookup key.
+
+**Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 <a name="LayerSetManager+getMessageWithParams"></a>
 
 ### layerSetManager.getMessageWithParams(key, params, [fallback]) ⇒ <code>string</code>
-Get localized message with parameter substitutionDelegates to centralized MessageHelper for consistent i18n handling.
+Get localized message with parameter substitution
+Delegates to centralized MessageHelper for consistent i18n handling.
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 
@@ -7004,9 +11887,10 @@ Get localized message with parameter substitutionDelegates to centralized Messa
 
 ### layerSetManager.parseMWTimestamp(mwTimestamp) ⇒ <code>Date</code>
 Parse MediaWiki binary(14) timestamp format (YYYYMMDDHHmmss)
+MediaWiki timestamps are in UTC, so we parse them as UTC dates.
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
-**Returns**: <code>Date</code> - Parsed date object  
+**Returns**: <code>Date</code> - Parsed date object (UTC)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -7015,13 +11899,15 @@ Parse MediaWiki binary(14) timestamp format (YYYYMMDDHHmmss)
 <a name="LayerSetManager+buildRevisionSelector"></a>
 
 ### layerSetManager.buildRevisionSelector()
-Build the revision selector dropdownPopulates the revision dropdown with available layer set revisions
+Build the revision selector dropdown
+Populates the revision dropdown with available layer set revisions
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 <a name="LayerSetManager+updateRevisionLoadButton"></a>
 
 ### layerSetManager.updateRevisionLoadButton()
-Update the revision load button stateDisables button if no revision selected or if current revision is selected
+Update the revision load button state
+Disables button if no revision selected or if current revision is selected
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 <a name="LayerSetManager+buildSetSelector"></a>
@@ -7113,6 +11999,7 @@ LayerSetManager class
     * [.debugLog(...args)](#LayerSetManager+debugLog)
     * [.errorLog(...args)](#LayerSetManager+errorLog)
     * [.getMessage(key, [fallback])](#LayerSetManager+getMessage) ⇒ <code>string</code>
+    * [.getSeedSetName()](#LayerSetManager+getSeedSetName) ⇒ <code>string</code>
     * [.getMessageWithParams(key, params, [fallback])](#LayerSetManager+getMessageWithParams) ⇒ <code>string</code>
     * [.parseMWTimestamp(mwTimestamp)](#LayerSetManager+parseMWTimestamp) ⇒ <code>Date</code>
     * [.buildRevisionSelector()](#LayerSetManager+buildRevisionSelector)
@@ -7131,7 +12018,13 @@ LayerSetManager class
 <a name="new_LayerSetManager_new"></a>
 
 ### new LayerSetManager()
-LayerSetManager - Manages named layer sets and revisions for the Layers editorHandles:- Named layer set creation, loading, and switching- Revision selector UI building- Layer set dropdown UI building- Timestamp parsing for MediaWiki format
+LayerSetManager - Manages named layer sets and revisions for the Layers editor
+
+Handles:
+- Named layer set creation, loading, and switching
+- Revision selector UI building
+- Layer set dropdown UI building
+- Timestamp parsing for MediaWiki format
 
 <a name="new_LayerSetManager_new"></a>
 
@@ -7172,7 +12065,8 @@ Log error message
 <a name="LayerSetManager+getMessage"></a>
 
 ### layerSetManager.getMessage(key, [fallback]) ⇒ <code>string</code>
-Get localized messageDelegates to centralized MessageHelper for consistent i18n handling.
+Get localized message
+Delegates to centralized MessageHelper for consistent i18n handling.
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 
@@ -7181,10 +12075,19 @@ Get localized messageDelegates to centralized MessageHelper for consistent i18n
 | key | <code>string</code> |  | Message key |
 | [fallback] | <code>string</code> | <code>&quot;&#x27;&#x27;&quot;</code> | Fallback text |
 
+<a name="LayerSetManager+getSeedSetName"></a>
+
+### layerSetManager.getSeedSetName() ⇒ <code>string</code>
+Name the first set for this image will be saved under when the user has
+not chosen one. Set names are user-defined and nothing is reserved, so
+this is only ever a seed for a brand-new set - never a lookup key.
+
+**Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 <a name="LayerSetManager+getMessageWithParams"></a>
 
 ### layerSetManager.getMessageWithParams(key, params, [fallback]) ⇒ <code>string</code>
-Get localized message with parameter substitutionDelegates to centralized MessageHelper for consistent i18n handling.
+Get localized message with parameter substitution
+Delegates to centralized MessageHelper for consistent i18n handling.
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 
@@ -7198,9 +12101,10 @@ Get localized message with parameter substitutionDelegates to centralized Messa
 
 ### layerSetManager.parseMWTimestamp(mwTimestamp) ⇒ <code>Date</code>
 Parse MediaWiki binary(14) timestamp format (YYYYMMDDHHmmss)
+MediaWiki timestamps are in UTC, so we parse them as UTC dates.
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
-**Returns**: <code>Date</code> - Parsed date object  
+**Returns**: <code>Date</code> - Parsed date object (UTC)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -7209,13 +12113,15 @@ Parse MediaWiki binary(14) timestamp format (YYYYMMDDHHmmss)
 <a name="LayerSetManager+buildRevisionSelector"></a>
 
 ### layerSetManager.buildRevisionSelector()
-Build the revision selector dropdownPopulates the revision dropdown with available layer set revisions
+Build the revision selector dropdown
+Populates the revision dropdown with available layer set revisions
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 <a name="LayerSetManager+updateRevisionLoadButton"></a>
 
 ### layerSetManager.updateRevisionLoadButton()
-Update the revision load button stateDisables button if no revision selected or if current revision is selected
+Update the revision load button state
+Disables button if no revision selected or if current revision is selected
 
 **Kind**: instance method of [<code>LayerSetManager</code>](#LayerSetManager)  
 <a name="LayerSetManager+buildSetSelector"></a>
@@ -7310,20 +12216,25 @@ Destroy and clean up
     * [.validateNumericProperties(layer, result)](#LayersValidator+validateNumericProperties)
     * [.validateTextContent(layer, result)](#LayersValidator+validateTextContent)
     * [.validateColors(layer, result)](#LayersValidator+validateColors)
+    * [.validateGradient(layer, result)](#LayersValidator+validateGradient)
     * [.validatePoints(layer, result)](#LayersValidator+validatePoints)
     * [.validateTypeSpecificProperties(layer, result)](#LayersValidator+validateTypeSpecificProperties)
+    * [.validateRichText(richText, result)](#LayersValidator+validateRichText)
     * [.validateLayers(layers, maxLayers)](#LayersValidator+validateLayers) ⇒ <code>Object</code>
     * [.isValidNumber(value)](#LayersValidator+isValidNumber) ⇒ <code>boolean</code>
     * [.isValidColor(color)](#LayersValidator+isValidColor) ⇒ <code>boolean</code>
     * [.containsScriptInjection(text)](#LayersValidator+containsScriptInjection) ⇒ <code>boolean</code>
     * [.getMessage(key, ...args)](#LayersValidator+getMessage) ⇒ <code>string</code>
-    * [.showValidationErrors(errors, [context])](#LayersValidator+showValidationErrors)
+    * [.showValidationErrors(errors, [_context])](#LayersValidator+showValidationErrors)
     * [.createInputValidator(input, validationType, options)](#LayersValidator+createInputValidator) ⇒ <code>Object</code>
 
 <a name="new_LayersValidator_new"></a>
 
 ### new LayersValidator()
-Client-side validation for the Layers editorProvides immediate feedback to users about invalid input
+Client-side validation for the Layers editor
+Provides immediate feedback to users about invalid input
+
+Delegates to ValidationHelpers and NumericValidator for shared utilities.
 
 <a name="new_LayersValidator_new"></a>
 
@@ -7393,7 +12304,8 @@ Validate coordinate fields
 <a name="LayersValidator+validateNumericProperties"></a>
 
 ### layersValidator.validateNumericProperties(layer, result)
-Validate numeric properties with specific ranges
+Validate numeric properties with specific ranges.
+Delegates to NumericValidator for centralized validation logic.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 
@@ -7426,6 +12338,19 @@ Validate color values
 | layer | <code>Object</code> | 
 | result | <code>Object</code> | 
 
+<a name="LayersValidator+validateGradient"></a>
+
+### layersValidator.validateGradient(layer, result)
+Validate gradient fill object
+Synced with server-side validation in ServerSideLayerValidator.php
+
+**Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
+
+| Param | Type |
+| --- | --- |
+| layer | <code>Object</code> | 
+| result | <code>Object</code> | 
+
 <a name="LayersValidator+validatePoints"></a>
 
 ### layersValidator.validatePoints(layer, result)
@@ -7450,6 +12375,21 @@ Validate type-specific properties
 | layer | <code>Object</code> | 
 | result | <code>Object</code> | 
 
+<a name="LayersValidator+validateRichText"></a>
+
+### layersValidator.validateRichText(richText, result)
+Validate rich text formatting array
+
+Rich text enables mixed formatting within a single text layer.
+Each "run" contains text and optional style overrides.
+
+**Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| richText | <code>Array</code> | Array of text runs |
+| result | <code>Object</code> | Validation result object |
+
 <a name="LayersValidator+validateLayers"></a>
 
 ### layersValidator.validateLayers(layers, maxLayers) ⇒ <code>Object</code>
@@ -7467,6 +12407,7 @@ Validate a complete layers array (multiple layers)
 
 ### layersValidator.isValidNumber(value) ⇒ <code>boolean</code>
 Helper function to check if a value is a valid number
+Delegates to ValidationHelpers when available.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 **Returns**: <code>boolean</code> - True if value is a valid number  
@@ -7479,6 +12420,7 @@ Helper function to check if a value is a valid number
 
 ### layersValidator.isValidColor(color) ⇒ <code>boolean</code>
 Helper function to validate color values
+Delegates to ValidationHelpers when available.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 **Returns**: <code>boolean</code> - True if color is valid  
@@ -7491,6 +12433,7 @@ Helper function to validate color values
 
 ### layersValidator.containsScriptInjection(text) ⇒ <code>boolean</code>
 Check for potential script injection in text content
+Delegates to ValidationHelpers when available.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 **Returns**: <code>boolean</code> - True if text contains potential script injection  
@@ -7502,7 +12445,10 @@ Check for potential script injection in text content
 <a name="LayersValidator+getMessage"></a>
 
 ### layersValidator.getMessage(key, ...args) ⇒ <code>string</code>
-Get internationalized message with parameter supportDelegates to MessageHelper for consistent i18n handling.Falls back to built-in English messages if MediaWiki i18n unavailable.
+Get internationalized message with parameter support
+
+Delegates to ValidationHelpers for consistent i18n handling.
+Falls back to built-in English messages if MediaWiki i18n unavailable.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 **Returns**: <code>string</code> - Localized message  
@@ -7514,7 +12460,7 @@ Get internationalized message with parameter supportDelegates to MessageHelper
 
 <a name="LayersValidator+showValidationErrors"></a>
 
-### layersValidator.showValidationErrors(errors, [context])
+### layersValidator.showValidationErrors(errors, [_context])
 Show validation errors to the user
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
@@ -7522,7 +12468,7 @@ Show validation errors to the user
 | Param | Type | Description |
 | --- | --- | --- |
 | errors | <code>Array.&lt;string&gt;</code> | Array of error messages |
-| [context] | <code>Object</code> | Context information (unused) |
+| [_context] | <code>Object</code> | Context information (unused) |
 
 <a name="LayersValidator+createInputValidator"></a>
 
@@ -7541,7 +12487,8 @@ Create input validation helper for real-time validation
 <a name="LayersValidator"></a>
 
 ## LayersValidator
-LayersValidator classProvides validation methods and user feedback for layer data
+LayersValidator class
+Provides validation methods and user feedback for layer data
 
 **Kind**: global class  
 
@@ -7556,20 +12503,25 @@ LayersValidator classProvides validation methods and user feedback for layer da
     * [.validateNumericProperties(layer, result)](#LayersValidator+validateNumericProperties)
     * [.validateTextContent(layer, result)](#LayersValidator+validateTextContent)
     * [.validateColors(layer, result)](#LayersValidator+validateColors)
+    * [.validateGradient(layer, result)](#LayersValidator+validateGradient)
     * [.validatePoints(layer, result)](#LayersValidator+validatePoints)
     * [.validateTypeSpecificProperties(layer, result)](#LayersValidator+validateTypeSpecificProperties)
+    * [.validateRichText(richText, result)](#LayersValidator+validateRichText)
     * [.validateLayers(layers, maxLayers)](#LayersValidator+validateLayers) ⇒ <code>Object</code>
     * [.isValidNumber(value)](#LayersValidator+isValidNumber) ⇒ <code>boolean</code>
     * [.isValidColor(color)](#LayersValidator+isValidColor) ⇒ <code>boolean</code>
     * [.containsScriptInjection(text)](#LayersValidator+containsScriptInjection) ⇒ <code>boolean</code>
     * [.getMessage(key, ...args)](#LayersValidator+getMessage) ⇒ <code>string</code>
-    * [.showValidationErrors(errors, [context])](#LayersValidator+showValidationErrors)
+    * [.showValidationErrors(errors, [_context])](#LayersValidator+showValidationErrors)
     * [.createInputValidator(input, validationType, options)](#LayersValidator+createInputValidator) ⇒ <code>Object</code>
 
 <a name="new_LayersValidator_new"></a>
 
 ### new LayersValidator()
-Client-side validation for the Layers editorProvides immediate feedback to users about invalid input
+Client-side validation for the Layers editor
+Provides immediate feedback to users about invalid input
+
+Delegates to ValidationHelpers and NumericValidator for shared utilities.
 
 <a name="new_LayersValidator_new"></a>
 
@@ -7639,7 +12591,8 @@ Validate coordinate fields
 <a name="LayersValidator+validateNumericProperties"></a>
 
 ### layersValidator.validateNumericProperties(layer, result)
-Validate numeric properties with specific ranges
+Validate numeric properties with specific ranges.
+Delegates to NumericValidator for centralized validation logic.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 
@@ -7672,6 +12625,19 @@ Validate color values
 | layer | <code>Object</code> | 
 | result | <code>Object</code> | 
 
+<a name="LayersValidator+validateGradient"></a>
+
+### layersValidator.validateGradient(layer, result)
+Validate gradient fill object
+Synced with server-side validation in ServerSideLayerValidator.php
+
+**Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
+
+| Param | Type |
+| --- | --- |
+| layer | <code>Object</code> | 
+| result | <code>Object</code> | 
+
 <a name="LayersValidator+validatePoints"></a>
 
 ### layersValidator.validatePoints(layer, result)
@@ -7696,6 +12662,21 @@ Validate type-specific properties
 | layer | <code>Object</code> | 
 | result | <code>Object</code> | 
 
+<a name="LayersValidator+validateRichText"></a>
+
+### layersValidator.validateRichText(richText, result)
+Validate rich text formatting array
+
+Rich text enables mixed formatting within a single text layer.
+Each "run" contains text and optional style overrides.
+
+**Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| richText | <code>Array</code> | Array of text runs |
+| result | <code>Object</code> | Validation result object |
+
 <a name="LayersValidator+validateLayers"></a>
 
 ### layersValidator.validateLayers(layers, maxLayers) ⇒ <code>Object</code>
@@ -7713,6 +12694,7 @@ Validate a complete layers array (multiple layers)
 
 ### layersValidator.isValidNumber(value) ⇒ <code>boolean</code>
 Helper function to check if a value is a valid number
+Delegates to ValidationHelpers when available.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 **Returns**: <code>boolean</code> - True if value is a valid number  
@@ -7725,6 +12707,7 @@ Helper function to check if a value is a valid number
 
 ### layersValidator.isValidColor(color) ⇒ <code>boolean</code>
 Helper function to validate color values
+Delegates to ValidationHelpers when available.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 **Returns**: <code>boolean</code> - True if color is valid  
@@ -7737,6 +12720,7 @@ Helper function to validate color values
 
 ### layersValidator.containsScriptInjection(text) ⇒ <code>boolean</code>
 Check for potential script injection in text content
+Delegates to ValidationHelpers when available.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 **Returns**: <code>boolean</code> - True if text contains potential script injection  
@@ -7748,7 +12732,10 @@ Check for potential script injection in text content
 <a name="LayersValidator+getMessage"></a>
 
 ### layersValidator.getMessage(key, ...args) ⇒ <code>string</code>
-Get internationalized message with parameter supportDelegates to MessageHelper for consistent i18n handling.Falls back to built-in English messages if MediaWiki i18n unavailable.
+Get internationalized message with parameter support
+
+Delegates to ValidationHelpers for consistent i18n handling.
+Falls back to built-in English messages if MediaWiki i18n unavailable.
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
 **Returns**: <code>string</code> - Localized message  
@@ -7760,7 +12747,7 @@ Get internationalized message with parameter supportDelegates to MessageHelper
 
 <a name="LayersValidator+showValidationErrors"></a>
 
-### layersValidator.showValidationErrors(errors, [context])
+### layersValidator.showValidationErrors(errors, [_context])
 Show validation errors to the user
 
 **Kind**: instance method of [<code>LayersValidator</code>](#LayersValidator)  
@@ -7768,7 +12755,7 @@ Show validation errors to the user
 | Param | Type | Description |
 | --- | --- | --- |
 | errors | <code>Array.&lt;string&gt;</code> | Array of error messages |
-| [context] | <code>Object</code> | Context information (unused) |
+| [_context] | <code>Object</code> | Context information (unused) |
 
 <a name="LayersValidator+createInputValidator"></a>
 
@@ -7787,57 +12774,63 @@ Create input validation helper for real-time validation
 <a name="SelectionManager"></a>
 
 ## SelectionManager
-SelectionManager classManages layer selection, manipulation, and transformation operations
+SelectionManager class
+Manages layer selection, manipulation, and transformation operations
 
 **Kind**: global class  
 
 * [SelectionManager](#SelectionManager)
     * [new SelectionManager(config, canvasManager)](#new_SelectionManager_new)
-    * [._initializeModules()](#SelectionManager+_initializeModules)
-    * [._getLayersArray()](#SelectionManager+_getLayersArray) ⇒ <code>Array</code>
-    * [._handleSelectionChange(ids)](#SelectionManager+_handleSelectionChange)
-    * [.selectLayer(layerId, addToSelection)](#SelectionManager+selectLayer)
-    * [.getDefaultLayerName(layer)](#SelectionManager+getDefaultLayerName) ⇒ <code>string</code>
-    * [.deselectLayer(layerId)](#SelectionManager+deselectLayer)
-    * [.clearSelection()](#SelectionManager+clearSelection)
-    * [.selectAll()](#SelectionManager+selectAll)
-    * [.isSelected(layerId)](#SelectionManager+isSelected) ⇒ <code>boolean</code>
-    * [.getSelectionCount()](#SelectionManager+getSelectionCount) ⇒ <code>number</code>
-    * [.getSelectedLayers()](#SelectionManager+getSelectedLayers) ⇒ <code>Array</code>
-    * [.startMarqueeSelection(xOrPoint, [y])](#SelectionManager+startMarqueeSelection)
-    * [.updateMarqueeSelection(xOrPoint, [y])](#SelectionManager+updateMarqueeSelection)
-    * [.finishMarqueeSelection()](#SelectionManager+finishMarqueeSelection)
-    * [.getMarqueeRect()](#SelectionManager+getMarqueeRect) ⇒ <code>Object</code>
-    * [.rectIntersects(rect1, rect2)](#SelectionManager+rectIntersects) ⇒ <code>boolean</code>
-    * [.updateSelectionHandles()](#SelectionManager+updateSelectionHandles)
-    * [._createHandlesFromBounds(bounds, isSingle)](#SelectionManager+_createHandlesFromBounds) ⇒ <code>Array</code>
-    * [.createSingleSelectionHandles(layer)](#SelectionManager+createSingleSelectionHandles)
-    * [.createMultiSelectionHandles()](#SelectionManager+createMultiSelectionHandles)
-    * [.getMultiSelectionBounds()](#SelectionManager+getMultiSelectionBounds) ⇒ <code>Object</code> \| <code>null</code>
-    * [.hitTestSelectionHandles(point)](#SelectionManager+hitTestSelectionHandles) ⇒ <code>Object</code> \| <code>null</code>
-    * [.getLayerAtPoint(xOrPoint, [y])](#SelectionManager+getLayerAtPoint) ⇒ <code>Object</code> \| <code>null</code>
-    * [.pointInRect(point, rect)](#SelectionManager+pointInRect) ⇒ <code>boolean</code>
-    * [.startResize(handle, point)](#SelectionManager+startResize)
-    * [.updateResize(point, modifiers)](#SelectionManager+updateResize)
-    * [.finishResize()](#SelectionManager+finishResize)
-    * [.startRotation(point)](#SelectionManager+startRotation)
-    * [.updateRotation(point)](#SelectionManager+updateRotation)
-    * [.finishRotation()](#SelectionManager+finishRotation)
-    * [.startDrag(xOrPoint, [y])](#SelectionManager+startDrag)
-    * [.updateDrag(xOrPoint, [y])](#SelectionManager+updateDrag)
-    * [.finishDrag()](#SelectionManager+finishDrag)
-    * [.applyResize(layer, originalLayer, deltaX, deltaY, modifiers)](#SelectionManager+applyResize)
-    * [.applyDrag(layer, originalLayer, deltaX, deltaY)](#SelectionManager+applyDrag)
-    * [.saveSelectedLayersState()](#SelectionManager+saveSelectedLayersState) ⇒ <code>Object</code>
-    * [.getLayerById(layerId)](#SelectionManager+getLayerById) ⇒ <code>Object</code> \| <code>null</code>
-    * [.notifySelectionChange()](#SelectionManager+notifySelectionChange)
-    * [.notifyToolbarOfSelection()](#SelectionManager+notifyToolbarOfSelection)
-    * [.deleteSelected()](#SelectionManager+deleteSelected)
-    * [.duplicateSelected()](#SelectionManager+duplicateSelected)
-    * [.generateLayerId()](#SelectionManager+generateLayerId) ⇒ <code>string</code>
-    * [.getSelectionBounds()](#SelectionManager+getSelectionBounds) ⇒ <code>Object</code> \| <code>null</code>
-    * [.getLayerBoundsCompat(layer)](#SelectionManager+getLayerBoundsCompat) ⇒ <code>Object</code> \| <code>null</code>
-    * [.destroy()](#SelectionManager+destroy)
+    * _instance_
+        * [._initializeModules()](#SelectionManager+_initializeModules)
+        * [._getLayersArray()](#SelectionManager+_getLayersArray) ⇒ <code>Array</code>
+        * [._handleSelectionChange(ids)](#SelectionManager+_handleSelectionChange)
+        * [.selectLayer(layerId, addToSelection)](#SelectionManager+selectLayer)
+        * [._getGroupDescendantIds(groupId)](#SelectionManager+_getGroupDescendantIds) ⇒ <code>Array.&lt;string&gt;</code>
+        * [.getDefaultLayerName(layer)](#SelectionManager+getDefaultLayerName) ⇒ <code>string</code>
+        * [.deselectLayer(layerId)](#SelectionManager+deselectLayer)
+        * [.clearSelection()](#SelectionManager+clearSelection)
+        * [.selectAll()](#SelectionManager+selectAll)
+        * [.isSelected(layerId)](#SelectionManager+isSelected) ⇒ <code>boolean</code>
+        * [.getSelectionCount()](#SelectionManager+getSelectionCount) ⇒ <code>number</code>
+        * [.getSelectedLayers()](#SelectionManager+getSelectedLayers) ⇒ <code>Array</code>
+        * [.startMarqueeSelection(xOrPoint, [y])](#SelectionManager+startMarqueeSelection)
+        * [.updateMarqueeSelection(xOrPoint, [y])](#SelectionManager+updateMarqueeSelection)
+        * [.finishMarqueeSelection()](#SelectionManager+finishMarqueeSelection)
+        * [.getMarqueeRect()](#SelectionManager+getMarqueeRect) ⇒ <code>Object</code>
+        * [.rectIntersects(rect1, rect2)](#SelectionManager+rectIntersects) ⇒ <code>boolean</code>
+        * [.updateSelectionHandles()](#SelectionManager+updateSelectionHandles)
+        * [._createHandlesFromBounds(bounds, isSingle)](#SelectionManager+_createHandlesFromBounds) ⇒ <code>Array</code>
+        * [.createSingleSelectionHandles(layer)](#SelectionManager+createSingleSelectionHandles)
+        * [.createMultiSelectionHandles()](#SelectionManager+createMultiSelectionHandles)
+        * [.getMultiSelectionBounds()](#SelectionManager+getMultiSelectionBounds) ⇒ <code>Object</code> \| <code>null</code>
+        * [._getGroupBounds(groupLayer)](#SelectionManager+_getGroupBounds) ⇒ <code>Object</code> \| <code>null</code>
+        * [.isChildOfSelectedGroup(layerId)](#SelectionManager+isChildOfSelectedGroup) ⇒ <code>boolean</code>
+        * [.hitTestSelectionHandles(point)](#SelectionManager+hitTestSelectionHandles) ⇒ <code>Object</code> \| <code>null</code>
+        * [.getLayerAtPoint(xOrPoint, [y])](#SelectionManager+getLayerAtPoint) ⇒ <code>Object</code> \| <code>null</code>
+        * [.pointInRect(point, rect)](#SelectionManager+pointInRect) ⇒ <code>boolean</code>
+        * [.startResize(handle, point)](#SelectionManager+startResize)
+        * [.updateResize(point, modifiers)](#SelectionManager+updateResize)
+        * [.finishResize()](#SelectionManager+finishResize)
+        * [.startRotation(point)](#SelectionManager+startRotation)
+        * [.updateRotation(point)](#SelectionManager+updateRotation)
+        * [.finishRotation()](#SelectionManager+finishRotation)
+        * [.startDrag(xOrPoint, [y])](#SelectionManager+startDrag)
+        * [.updateDrag(xOrPoint, [y])](#SelectionManager+updateDrag)
+        * [.finishDrag()](#SelectionManager+finishDrag)
+        * [.applyResize(layer, originalLayer, deltaX, deltaY, modifiers)](#SelectionManager+applyResize)
+        * [.applyDrag(layer, originalLayer, deltaX, deltaY)](#SelectionManager+applyDrag)
+        * [.saveSelectedLayersState()](#SelectionManager+saveSelectedLayersState) ⇒ <code>Object</code>
+        * [.getLayerById(layerId)](#SelectionManager+getLayerById) ⇒ <code>Object</code> \| <code>null</code>
+        * [.notifySelectionChange()](#SelectionManager+notifySelectionChange)
+        * [.notifyToolbarOfSelection()](#SelectionManager+notifyToolbarOfSelection)
+        * [.deleteSelected()](#SelectionManager+deleteSelected)
+        * [.duplicateSelected()](#SelectionManager+duplicateSelected)
+        * [.getSelectionBounds()](#SelectionManager+getSelectionBounds) ⇒ <code>Object</code> \| <code>null</code>
+        * [.getLayerBoundsCompat(layer)](#SelectionManager+getLayerBoundsCompat) ⇒ <code>Object</code> \| <code>null</code>
+        * [.destroy()](#SelectionManager+destroy)
+    * _static_
+        * [.MAX_GROUP_DEPTH](#SelectionManager.MAX_GROUP_DEPTH) : <code>number</code>
 
 <a name="new_SelectionManager_new"></a>
 
@@ -7885,6 +12878,18 @@ Select a layer by ID
 | --- | --- | --- |
 | layerId | <code>string</code> \| <code>null</code> | Layer ID to select, or null to clear |
 | addToSelection | <code>boolean</code> | Whether to add to existing selection |
+
+<a name="SelectionManager+_getGroupDescendantIds"></a>
+
+### selectionManager.\_getGroupDescendantIds(groupId) ⇒ <code>Array.&lt;string&gt;</code>
+Get all descendant IDs of a group (recursive)
+
+**Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
+**Returns**: <code>Array.&lt;string&gt;</code> - Array of all descendant layer IDs  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupId | <code>string</code> | Group layer ID |
 
 <a name="SelectionManager+getDefaultLayerName"></a>
 
@@ -8040,6 +13045,30 @@ Get bounds for multi-selection
 
 **Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
 **Returns**: <code>Object</code> \| <code>null</code> - Bounds object or null  
+<a name="SelectionManager+_getGroupBounds"></a>
+
+### selectionManager.\_getGroupBounds(groupLayer) ⇒ <code>Object</code> \| <code>null</code>
+Get combined bounds of a group layer (includes all children)
+
+**Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
+**Returns**: <code>Object</code> \| <code>null</code> - Bounds object or null  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| groupLayer | <code>Object</code> | Group layer object |
+
+<a name="SelectionManager+isChildOfSelectedGroup"></a>
+
+### selectionManager.isChildOfSelectedGroup(layerId) ⇒ <code>boolean</code>
+Check if a layer is a descendant of any selected group
+
+**Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
+**Returns**: <code>boolean</code> - True if layer is a child of a selected group  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerId | <code>string</code> | Layer ID to check |
+
 <a name="SelectionManager+hitTestSelectionHandles"></a>
 
 ### selectionManager.hitTestSelectionHandles(point) ⇒ <code>Object</code> \| <code>null</code>
@@ -8055,7 +13084,8 @@ Hit test selection handles
 <a name="SelectionManager+getLayerAtPoint"></a>
 
 ### selectionManager.getLayerAtPoint(xOrPoint, [y]) ⇒ <code>Object</code> \| <code>null</code>
-Convenience: get layer at point, preferring CanvasManager implementation.Accepts (x, y) or {x, y}.
+Convenience: get layer at point, preferring CanvasManager implementation.
+Accepts (x, y) or {x, y}.
 
 **Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
 **Returns**: <code>Object</code> \| <code>null</code> - Layer object if hit, otherwise null  
@@ -8238,13 +13268,6 @@ Delete selected layers
 Duplicate selected layers
 
 **Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
-<a name="SelectionManager+generateLayerId"></a>
-
-### selectionManager.generateLayerId() ⇒ <code>string</code>
-Generate unique layer ID
-
-**Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
-**Returns**: <code>string</code> - Unique layer ID  
 <a name="SelectionManager+getSelectionBounds"></a>
 
 ### selectionManager.getSelectionBounds() ⇒ <code>Object</code> \| <code>null</code>
@@ -8255,7 +13278,8 @@ Bounds for current selection; null if none.
 <a name="SelectionManager+getLayerBoundsCompat"></a>
 
 ### selectionManager.getLayerBoundsCompat(layer) ⇒ <code>Object</code> \| <code>null</code>
-Compute layer bounds with graceful fallback when CanvasManager.getLayerBoundsis unavailable in tests.
+Compute layer bounds with graceful fallback when CanvasManager.getLayerBounds
+is unavailable in tests.
 
 **Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
 **Returns**: <code>Object</code> \| <code>null</code> - Bounds {x,y,width,height} or null  
@@ -8270,142 +13294,12 @@ Compute layer bounds with graceful fallback when CanvasManager.getLayerBoundsis
 Clean up resources and clear state
 
 **Kind**: instance method of [<code>SelectionManager</code>](#SelectionManager)  
-<a name="StateManager"></a>
+<a name="SelectionManager.MAX_GROUP_DEPTH"></a>
 
-## StateManager
-State Manager for Layers EditorCentralized state management with race condition prevention
+### SelectionManager.MAX\_GROUP\_DEPTH : <code>number</code>
+Maximum recursion depth for group traversal (prevents infinite loops on corrupted data)
 
-**Kind**: global class  
-
-* [StateManager](#StateManager)
-    * [.getState()](#StateManager+getState)
-    * [.get()](#StateManager+get)
-    * [.set()](#StateManager+set)
-    * [.update()](#StateManager+update)
-    * [.atomic()](#StateManager+atomic)
-    * [.lockState()](#StateManager+lockState)
-    * [.unlockState()](#StateManager+unlockState)
-    * [.subscribe()](#StateManager+subscribe)
-    * [.notifyListeners()](#StateManager+notifyListeners)
-    * [.addLayer()](#StateManager+addLayer)
-    * [.reorderLayer()](#StateManager+reorderLayer)
-    * [.selectLayer()](#StateManager+selectLayer)
-    * [.saveToHistory()](#StateManager+saveToHistory)
-    * [.setDirty()](#StateManager+setDirty)
-    * [.loadState()](#StateManager+loadState)
-    * [.exportState()](#StateManager+exportState)
-    * [.reset()](#StateManager+reset)
-    * [.destroy()](#StateManager+destroy)
-
-<a name="StateManager+getState"></a>
-
-### stateManager.getState()
-Get current state
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+get"></a>
-
-### stateManager.get()
-Get specific state property
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+set"></a>
-
-### stateManager.set()
-Set state property and notify listeners (with race condition protection)
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+update"></a>
-
-### stateManager.update()
-Update multiple state properties at once (with race condition protection)
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+atomic"></a>
-
-### stateManager.atomic()
-Atomically update state with a function to prevent race conditions
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+lockState"></a>
-
-### stateManager.lockState()
-Lock the state to prevent concurrent modifications
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+unlockState"></a>
-
-### stateManager.unlockState()
-Unlock the state and process any pending operations
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+subscribe"></a>
-
-### stateManager.subscribe()
-Subscribe to state changes
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+notifyListeners"></a>
-
-### stateManager.notifyListeners()
-Notify listeners of state changes
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+addLayer"></a>
-
-### stateManager.addLayer()
-Layer management methods with atomic operations
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+reorderLayer"></a>
-
-### stateManager.reorderLayer()
-Layer ordering methods
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+selectLayer"></a>
-
-### stateManager.selectLayer()
-Selection management with atomic operations
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+saveToHistory"></a>
-
-### stateManager.saveToHistory()
-History management
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+setDirty"></a>
-
-### stateManager.setDirty()
-Utility methods
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+loadState"></a>
-
-### stateManager.loadState()
-Load state from external source
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+exportState"></a>
-
-### stateManager.exportState()
-Export current state
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+reset"></a>
-
-### stateManager.reset()
-Reset state to initial values
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
-<a name="StateManager+destroy"></a>
-
-### stateManager.destroy()
-Clean up state manager resources
-	/**Destroy state manager and clean up resources
-
-**Kind**: instance method of [<code>StateManager</code>](#StateManager)  
+**Kind**: static property of [<code>SelectionManager</code>](#SelectionManager)  
 <a name="StyleController"></a>
 
 ## StyleController
@@ -8425,7 +13319,9 @@ Clean up state manager resources
 <a name="new_StyleController_new"></a>
 
 ### new StyleController()
-StyleController - Manages style state for the Layers editorTracks current style settings (colors, fonts, effects) and applies them to layers.
+StyleController - Manages style state for the Layers editor
+
+Tracks current style settings (colors, fonts, effects) and applies them to layers.
 
 <a name="new_StyleController_new"></a>
 
@@ -8507,7 +13403,9 @@ StyleController class - manages editor style state
 <a name="new_StyleController_new"></a>
 
 ### new StyleController()
-StyleController - Manages style state for the Layers editorTracks current style settings (colors, fonts, effects) and applies them to layers.
+StyleController - Manages style state for the Layers editor
+
+Tracks current style settings (colors, fonts, effects) and applies them to layers.
 
 <a name="new_StyleController_new"></a>
 
@@ -8580,9 +13478,15 @@ Get the default style settings
     * [.handleImageImport(file)](#Toolbar+handleImageImport) ⇒ <code>Promise.&lt;void&gt;</code>
     * [.readFileAsDataURL(file)](#Toolbar+readFileAsDataURL) ⇒ <code>Promise.&lt;string&gt;</code>
     * [.loadImage(src)](#Toolbar+loadImage) ⇒ <code>Promise.&lt;HTMLImageElement&gt;</code>
+    * [.getColorPickerStrings()](#Toolbar+getColorPickerStrings) ⇒ <code>Object</code>
     * [.msg(key, fallback)](#Toolbar+msg) ⇒ <code>string</code>
     * [.getToolIcons()](#Toolbar+getToolIcons) ⇒ <code>Object</code>
     * [.getActionIcons()](#Toolbar+getActionIcons) ⇒ <code>Object</code>
+    * [.createShapeLibraryButton()](#Toolbar+createShapeLibraryButton) ⇒ <code>HTMLElement</code> \| <code>null</code>
+    * [.openShapeLibrary()](#Toolbar+openShapeLibrary)
+    * [.insertShape(shape)](#Toolbar+insertShape)
+    * [.createEmojiPickerButton()](#Toolbar+createEmojiPickerButton) ⇒ <code>HTMLElement</code> \| <code>null</code>
+    * [.openEmojiPicker()](#Toolbar+openEmojiPicker)
     * [.onStyleChange(styleOptions)](#Toolbar+onStyleChange)
     * [.getAlignmentIcons()](#Toolbar+getAlignmentIcons) ⇒ <code>Object</code>
     * [.createAlignmentGroup()](#Toolbar+createAlignmentGroup)
@@ -8595,11 +13499,13 @@ Get the default style settings
     * [.openArrangeDropdown()](#Toolbar+openArrangeDropdown)
     * [.closeArrangeDropdown()](#Toolbar+closeArrangeDropdown)
     * [.setSmartGuidesEnabled(enabled)](#Toolbar+setSmartGuidesEnabled)
+    * [.setCanvasSnapEnabled(enabled)](#Toolbar+setCanvasSnapEnabled)
     * [.updateSmartGuidesButton(enabled)](#Toolbar+updateSmartGuidesButton)
+    * [.updateCanvasSnapButton(enabled)](#Toolbar+updateCanvasSnapButton)
     * [.updateAlignmentButtons(selectedCount)](#Toolbar+updateAlignmentButtons)
+    * [.createPageNavGroup()](#Toolbar+createPageNavGroup)
     * [.setActiveTool(toolId)](#Toolbar+setActiveTool)
     * [.executeAlignmentAction(actionId)](#Toolbar+executeAlignmentAction)
-    * ~~[.handleKeyboardShortcuts(e)](#Toolbar+handleKeyboardShortcuts)~~
 
 <a name="new_Toolbar_new"></a>
 
@@ -8667,6 +13573,14 @@ Load an image from a source URL
 | --- | --- | --- |
 | src | <code>string</code> | Image source (data URL or regular URL) |
 
+<a name="Toolbar+getColorPickerStrings"></a>
+
+### toolbar.getColorPickerStrings() ⇒ <code>Object</code>
+Get color picker strings for i18n
+Delegates to MessageHelper singleton for shared i18n strings
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+**Returns**: <code>Object</code> - Color picker string map  
 <a name="Toolbar+msg"></a>
 
 ### toolbar.msg(key, fallback) ⇒ <code>string</code>
@@ -8683,7 +13597,8 @@ Resolve i18n text safely, delegating to MessageHelper
 <a name="Toolbar+getToolIcons"></a>
 
 ### toolbar.getToolIcons() ⇒ <code>Object</code>
-Get SVG icons for toolbar toolsIcons follow industry standards (Figma, Adobe, etc.)
+Get SVG icons for toolbar tools
+Icons follow industry standards (Figma, Adobe, etc.)
 
 **Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 **Returns**: <code>Object</code> - Object containing SVG icon strings for each tool  
@@ -8694,6 +13609,43 @@ Get SVG icons for zoom and action buttons
 
 **Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 **Returns**: <code>Object</code> - Object containing SVG icon strings  
+<a name="Toolbar+createShapeLibraryButton"></a>
+
+### toolbar.createShapeLibraryButton() ⇒ <code>HTMLElement</code> \| <code>null</code>
+Create the shape library button
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+**Returns**: <code>HTMLElement</code> \| <code>null</code> - The button element or null if library not available  
+<a name="Toolbar+openShapeLibrary"></a>
+
+### toolbar.openShapeLibrary()
+Open the shape library panel
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+<a name="Toolbar+insertShape"></a>
+
+### toolbar.insertShape(shape)
+Insert a shape from the library
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| shape | <code>Object</code> | Shape data from the library |
+
+<a name="Toolbar+createEmojiPickerButton"></a>
+
+### toolbar.createEmojiPickerButton() ⇒ <code>HTMLElement</code> \| <code>null</code>
+Create the emoji picker button
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+**Returns**: <code>HTMLElement</code> \| <code>null</code> - The button element  
+<a name="Toolbar+openEmojiPicker"></a>
+
+### toolbar.openEmojiPicker()
+Open the emoji picker panel
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 <a name="Toolbar+onStyleChange"></a>
 
 ### toolbar.onStyleChange(styleOptions)
@@ -8715,7 +13667,8 @@ Get SVG icons for alignment buttons
 <a name="Toolbar+createAlignmentGroup"></a>
 
 ### toolbar.createAlignmentGroup()
-Create the alignment toolbar group as a dropdown menuConsolidates 8 buttons into a single dropdown to save toolbar space
+Create the alignment toolbar group as a dropdown menu
+Consolidates 8 buttons into a single dropdown to save toolbar space
 
 **Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 <a name="Toolbar+getArrangeIcon"></a>
@@ -8805,10 +13758,32 @@ Enable or disable smart guides
 | --- | --- | --- |
 | enabled | <code>boolean</code> | Whether smart guides should be enabled |
 
+<a name="Toolbar+setCanvasSnapEnabled"></a>
+
+### toolbar.setCanvasSnapEnabled(enabled)
+Enable or disable canvas snap
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| enabled | <code>boolean</code> | Whether canvas snap should be enabled |
+
 <a name="Toolbar+updateSmartGuidesButton"></a>
 
 ### toolbar.updateSmartGuidesButton(enabled)
 Update smart guides button/toggle state (called from keyboard handler)
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| enabled | <code>boolean</code> | Current enabled state |
+
+<a name="Toolbar+updateCanvasSnapButton"></a>
+
+### toolbar.updateCanvasSnapButton(enabled)
+Update canvas snap button/toggle state (called from keyboard handler)
 
 **Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 
@@ -8827,6 +13802,15 @@ Update alignment button states based on selection
 | --- | --- | --- |
 | selectedCount | <code>number</code> | Number of selected layers |
 
+<a name="Toolbar+createPageNavGroup"></a>
+
+### toolbar.createPageNavGroup()
+Create the page navigation group for multi-page files (PDF).
+
+Only rendered when the file has more than one page. Prev/next buttons
+navigate the editor to the adjacent page (guarding unsaved changes).
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 <a name="Toolbar+setActiveTool"></a>
 
 ### toolbar.setActiveTool(toolId)
@@ -8848,17 +13832,6 @@ Execute an alignment action on selected layers
 | Param | Type | Description |
 | --- | --- | --- |
 | actionId | <code>string</code> | The alignment action identifier |
-
-<a name="Toolbar+handleKeyboardShortcuts"></a>
-
-### ~~toolbar.handleKeyboardShortcuts(e)~~
-***Use ToolbarKeyboard.handleKeyboardShortcuts instead.Kept for backward compatibility - delegates to ToolbarKeyboard module.***
-
-**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| e | <code>Event</code> | The keyboard event |
 
 <a name="Toolbar"></a>
 
@@ -8872,9 +13845,15 @@ Execute an alignment action on selected layers
     * [.handleImageImport(file)](#Toolbar+handleImageImport) ⇒ <code>Promise.&lt;void&gt;</code>
     * [.readFileAsDataURL(file)](#Toolbar+readFileAsDataURL) ⇒ <code>Promise.&lt;string&gt;</code>
     * [.loadImage(src)](#Toolbar+loadImage) ⇒ <code>Promise.&lt;HTMLImageElement&gt;</code>
+    * [.getColorPickerStrings()](#Toolbar+getColorPickerStrings) ⇒ <code>Object</code>
     * [.msg(key, fallback)](#Toolbar+msg) ⇒ <code>string</code>
     * [.getToolIcons()](#Toolbar+getToolIcons) ⇒ <code>Object</code>
     * [.getActionIcons()](#Toolbar+getActionIcons) ⇒ <code>Object</code>
+    * [.createShapeLibraryButton()](#Toolbar+createShapeLibraryButton) ⇒ <code>HTMLElement</code> \| <code>null</code>
+    * [.openShapeLibrary()](#Toolbar+openShapeLibrary)
+    * [.insertShape(shape)](#Toolbar+insertShape)
+    * [.createEmojiPickerButton()](#Toolbar+createEmojiPickerButton) ⇒ <code>HTMLElement</code> \| <code>null</code>
+    * [.openEmojiPicker()](#Toolbar+openEmojiPicker)
     * [.onStyleChange(styleOptions)](#Toolbar+onStyleChange)
     * [.getAlignmentIcons()](#Toolbar+getAlignmentIcons) ⇒ <code>Object</code>
     * [.createAlignmentGroup()](#Toolbar+createAlignmentGroup)
@@ -8887,11 +13866,13 @@ Execute an alignment action on selected layers
     * [.openArrangeDropdown()](#Toolbar+openArrangeDropdown)
     * [.closeArrangeDropdown()](#Toolbar+closeArrangeDropdown)
     * [.setSmartGuidesEnabled(enabled)](#Toolbar+setSmartGuidesEnabled)
+    * [.setCanvasSnapEnabled(enabled)](#Toolbar+setCanvasSnapEnabled)
     * [.updateSmartGuidesButton(enabled)](#Toolbar+updateSmartGuidesButton)
+    * [.updateCanvasSnapButton(enabled)](#Toolbar+updateCanvasSnapButton)
     * [.updateAlignmentButtons(selectedCount)](#Toolbar+updateAlignmentButtons)
+    * [.createPageNavGroup()](#Toolbar+createPageNavGroup)
     * [.setActiveTool(toolId)](#Toolbar+setActiveTool)
     * [.executeAlignmentAction(actionId)](#Toolbar+executeAlignmentAction)
-    * ~~[.handleKeyboardShortcuts(e)](#Toolbar+handleKeyboardShortcuts)~~
 
 <a name="new_Toolbar_new"></a>
 
@@ -8959,6 +13940,14 @@ Load an image from a source URL
 | --- | --- | --- |
 | src | <code>string</code> | Image source (data URL or regular URL) |
 
+<a name="Toolbar+getColorPickerStrings"></a>
+
+### toolbar.getColorPickerStrings() ⇒ <code>Object</code>
+Get color picker strings for i18n
+Delegates to MessageHelper singleton for shared i18n strings
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+**Returns**: <code>Object</code> - Color picker string map  
 <a name="Toolbar+msg"></a>
 
 ### toolbar.msg(key, fallback) ⇒ <code>string</code>
@@ -8975,7 +13964,8 @@ Resolve i18n text safely, delegating to MessageHelper
 <a name="Toolbar+getToolIcons"></a>
 
 ### toolbar.getToolIcons() ⇒ <code>Object</code>
-Get SVG icons for toolbar toolsIcons follow industry standards (Figma, Adobe, etc.)
+Get SVG icons for toolbar tools
+Icons follow industry standards (Figma, Adobe, etc.)
 
 **Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 **Returns**: <code>Object</code> - Object containing SVG icon strings for each tool  
@@ -8986,6 +13976,43 @@ Get SVG icons for zoom and action buttons
 
 **Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 **Returns**: <code>Object</code> - Object containing SVG icon strings  
+<a name="Toolbar+createShapeLibraryButton"></a>
+
+### toolbar.createShapeLibraryButton() ⇒ <code>HTMLElement</code> \| <code>null</code>
+Create the shape library button
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+**Returns**: <code>HTMLElement</code> \| <code>null</code> - The button element or null if library not available  
+<a name="Toolbar+openShapeLibrary"></a>
+
+### toolbar.openShapeLibrary()
+Open the shape library panel
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+<a name="Toolbar+insertShape"></a>
+
+### toolbar.insertShape(shape)
+Insert a shape from the library
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| shape | <code>Object</code> | Shape data from the library |
+
+<a name="Toolbar+createEmojiPickerButton"></a>
+
+### toolbar.createEmojiPickerButton() ⇒ <code>HTMLElement</code> \| <code>null</code>
+Create the emoji picker button
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+**Returns**: <code>HTMLElement</code> \| <code>null</code> - The button element  
+<a name="Toolbar+openEmojiPicker"></a>
+
+### toolbar.openEmojiPicker()
+Open the emoji picker panel
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 <a name="Toolbar+onStyleChange"></a>
 
 ### toolbar.onStyleChange(styleOptions)
@@ -9007,7 +14034,8 @@ Get SVG icons for alignment buttons
 <a name="Toolbar+createAlignmentGroup"></a>
 
 ### toolbar.createAlignmentGroup()
-Create the alignment toolbar group as a dropdown menuConsolidates 8 buttons into a single dropdown to save toolbar space
+Create the alignment toolbar group as a dropdown menu
+Consolidates 8 buttons into a single dropdown to save toolbar space
 
 **Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 <a name="Toolbar+getArrangeIcon"></a>
@@ -9097,10 +14125,32 @@ Enable or disable smart guides
 | --- | --- | --- |
 | enabled | <code>boolean</code> | Whether smart guides should be enabled |
 
+<a name="Toolbar+setCanvasSnapEnabled"></a>
+
+### toolbar.setCanvasSnapEnabled(enabled)
+Enable or disable canvas snap
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| enabled | <code>boolean</code> | Whether canvas snap should be enabled |
+
 <a name="Toolbar+updateSmartGuidesButton"></a>
 
 ### toolbar.updateSmartGuidesButton(enabled)
 Update smart guides button/toggle state (called from keyboard handler)
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| enabled | <code>boolean</code> | Current enabled state |
+
+<a name="Toolbar+updateCanvasSnapButton"></a>
+
+### toolbar.updateCanvasSnapButton(enabled)
+Update canvas snap button/toggle state (called from keyboard handler)
 
 **Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 
@@ -9119,6 +14169,15 @@ Update alignment button states based on selection
 | --- | --- | --- |
 | selectedCount | <code>number</code> | Number of selected layers |
 
+<a name="Toolbar+createPageNavGroup"></a>
+
+### toolbar.createPageNavGroup()
+Create the page navigation group for multi-page files (PDF).
+
+Only rendered when the file has more than one page. Prev/next buttons
+navigate the editor to the adjacent page (guarding unsaved changes).
+
+**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
 <a name="Toolbar+setActiveTool"></a>
 
 ### toolbar.setActiveTool(toolId)
@@ -9141,17 +14200,6 @@ Execute an alignment action on selected layers
 | --- | --- | --- |
 | actionId | <code>string</code> | The alignment action identifier |
 
-<a name="Toolbar+handleKeyboardShortcuts"></a>
-
-### ~~toolbar.handleKeyboardShortcuts(e)~~
-***Use ToolbarKeyboard.handleKeyboardShortcuts instead.Kept for backward compatibility - delegates to ToolbarKeyboard module.***
-
-**Kind**: instance method of [<code>Toolbar</code>](#Toolbar)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| e | <code>Event</code> | The keyboard event |
-
 <a name="ToolbarKeyboard"></a>
 
 ## ToolbarKeyboard
@@ -9163,8 +14211,11 @@ ToolbarKeyboard - Manages keyboard shortcuts for the toolbar
     * [new ToolbarKeyboard(toolbar)](#new_ToolbarKeyboard_new)
     * [.handleKeyboardShortcuts(e)](#ToolbarKeyboard+handleKeyboardShortcuts)
     * [.handleCtrlShortcuts(e, key)](#ToolbarKeyboard+handleCtrlShortcuts)
+    * [.groupSelected()](#ToolbarKeyboard+groupSelected)
+    * [.ungroupSelected()](#ToolbarKeyboard+ungroupSelected)
     * [.handleToolShortcuts(e, key)](#ToolbarKeyboard+handleToolShortcuts)
     * [.toggleSmartGuides()](#ToolbarKeyboard+toggleSmartGuides)
+    * [.toggleCanvasSnap()](#ToolbarKeyboard+toggleCanvasSnap)
     * [.toggleBackgroundVisibility()](#ToolbarKeyboard+toggleBackgroundVisibility)
     * [.handleZoom(action)](#ToolbarKeyboard+handleZoom)
     * [.getShortcutsConfig()](#ToolbarKeyboard+getShortcutsConfig) ⇒ <code>Array.&lt;Object&gt;</code>
@@ -9203,6 +14254,20 @@ Handle Ctrl/Cmd shortcuts
 | e | <code>KeyboardEvent</code> | The keyboard event |
 | key | <code>string</code> | The lowercase key |
 
+<a name="ToolbarKeyboard+groupSelected"></a>
+
+### toolbarKeyboard.groupSelected()
+Group currently selected layers
+Delegates to GroupManager if available
+
+**Kind**: instance method of [<code>ToolbarKeyboard</code>](#ToolbarKeyboard)  
+<a name="ToolbarKeyboard+ungroupSelected"></a>
+
+### toolbarKeyboard.ungroupSelected()
+Ungroup currently selected group
+Delegates to GroupManager if available
+
+**Kind**: instance method of [<code>ToolbarKeyboard</code>](#ToolbarKeyboard)  
 <a name="ToolbarKeyboard+handleToolShortcuts"></a>
 
 ### toolbarKeyboard.handleToolShortcuts(e, key)
@@ -9218,13 +14283,22 @@ Handle tool selection shortcuts (no modifier)
 <a name="ToolbarKeyboard+toggleSmartGuides"></a>
 
 ### toolbarKeyboard.toggleSmartGuides()
-Toggle smart guides on/offUses CanvasManager's SmartGuidesController
+Toggle smart guides on/off
+Uses CanvasManager's SmartGuidesController
+
+**Kind**: instance method of [<code>ToolbarKeyboard</code>](#ToolbarKeyboard)  
+<a name="ToolbarKeyboard+toggleCanvasSnap"></a>
+
+### toolbarKeyboard.toggleCanvasSnap()
+Toggle canvas snap on/off
+Uses CanvasManager's SmartGuidesController
 
 **Kind**: instance method of [<code>ToolbarKeyboard</code>](#ToolbarKeyboard)  
 <a name="ToolbarKeyboard+toggleBackgroundVisibility"></a>
 
 ### toolbarKeyboard.toggleBackgroundVisibility()
-Toggle background visibilityUses LayerPanel if available, otherwise directly updates StateManager
+Toggle background visibility
+Uses LayerPanel if available, otherwise directly updates StateManager
 
 **Kind**: instance method of [<code>ToolbarKeyboard</code>](#ToolbarKeyboard)  
 <a name="ToolbarKeyboard+handleZoom"></a>
@@ -9248,7 +14322,8 @@ Get keyboard shortcuts configuration for documentation/help
 <a name="ToolbarKeyboard+showKeyboardShortcutsHelp"></a>
 
 ### toolbarKeyboard.showKeyboardShortcutsHelp()
-Show the keyboard shortcuts help dialogDelegates to DialogManager if available, falls back to editor method
+Show the keyboard shortcuts help dialog
+Delegates to DialogManager if available, falls back to editor method
 
 **Kind**: instance method of [<code>ToolbarKeyboard</code>](#ToolbarKeyboard)  
 <a name="ToolManager"></a>
@@ -9272,7 +14347,7 @@ ToolManager class
     * [.finishTool(point)](#ToolManager+finishTool)
     * [.startPenDrawing(point)](#ToolManager+startPenDrawing)
     * [.updatePenDrawing(point)](#ToolManager+updatePenDrawing)
-    * [.finishPenDrawing(point)](#ToolManager+finishPenDrawing)
+    * [.finishPenDrawing(_point)](#ToolManager+finishPenDrawing)
     * [.startRectangleTool(point)](#ToolManager+startRectangleTool)
     * [.startTextBoxTool(point)](#ToolManager+startTextBoxTool)
     * [.updateRectangleTool(point)](#ToolManager+updateRectangleTool)
@@ -9290,9 +14365,7 @@ ToolManager class
     * [.updatePolygonTool(point)](#ToolManager+updatePolygonTool)
     * [.startStarTool(point)](#ToolManager+startStarTool)
     * [.updateStarTool(point)](#ToolManager+updateStarTool)
-    * [.startBlurTool(point)](#ToolManager+startBlurTool)
-    * [.updateBlurTool(point)](#ToolManager+updateBlurTool)
-    * [.finishShapeDrawing(point)](#ToolManager+finishShapeDrawing)
+    * [.finishShapeDrawing(_point)](#ToolManager+finishShapeDrawing)
     * [.hasValidSize(layer)](#ToolManager+hasValidSize) ⇒ <code>boolean</code>
     * [.renderTempLayer()](#ToolManager+renderTempLayer)
     * [.renderPathPreview()](#ToolManager+renderPathPreview)
@@ -9304,7 +14377,6 @@ ToolManager class
     * [.finishCurrentDrawing()](#ToolManager+finishCurrentDrawing)
     * [.updateStyle(style)](#ToolManager+updateStyle)
     * [.getStyle()](#ToolManager+getStyle) ⇒ <code>Object</code>
-    * [.generateLayerId()](#ToolManager+generateLayerId) ⇒ <code>string</code>
     * [.destroy()](#ToolManager+destroy)
 
 <a name="new_ToolManager_new"></a>
@@ -9438,14 +14510,14 @@ Update pen drawing
 
 <a name="ToolManager+finishPenDrawing"></a>
 
-### toolManager.finishPenDrawing(point)
+### toolManager.finishPenDrawing(_point)
 Finish pen drawing
 
 **Kind**: instance method of [<code>ToolManager</code>](#ToolManager)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| point | <code>Object</code> | End point(unused) |
+| _point | <code>Object</code> | End point (unused) |
 
 <a name="ToolManager+startRectangleTool"></a>
 
@@ -9629,38 +14701,16 @@ Update star tool
 | --- | --- | --- |
 | point | <code>Object</code> | Current point |
 
-<a name="ToolManager+startBlurTool"></a>
-
-### toolManager.startBlurTool(point)
-Start blur tool
-
-**Kind**: instance method of [<code>ToolManager</code>](#ToolManager)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| point | <code>Object</code> | Starting point |
-
-<a name="ToolManager+updateBlurTool"></a>
-
-### toolManager.updateBlurTool(point)
-Update blur tool
-
-**Kind**: instance method of [<code>ToolManager</code>](#ToolManager)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| point | <code>Object</code> | Current point |
-
 <a name="ToolManager+finishShapeDrawing"></a>
 
-### toolManager.finishShapeDrawing(point)
+### toolManager.finishShapeDrawing(_point)
 Finish shape drawing
 
 **Kind**: instance method of [<code>ToolManager</code>](#ToolManager)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| point | <code>Object</code> | End point(unused) |
+| _point | <code>Object</code> | End point (unused) |
 
 <a name="ToolManager+hasValidSize"></a>
 
@@ -9762,13 +14812,6 @@ Get current style
 
 **Kind**: instance method of [<code>ToolManager</code>](#ToolManager)  
 **Returns**: <code>Object</code> - Current style object  
-<a name="ToolManager+generateLayerId"></a>
-
-### toolManager.generateLayerId() ⇒ <code>string</code>
-Generate unique layer ID
-
-**Kind**: instance method of [<code>ToolManager</code>](#ToolManager)  
-**Returns**: <code>string</code> - Unique layer ID  
 <a name="ToolManager+destroy"></a>
 
 ### toolManager.destroy()
@@ -9801,10 +14844,10 @@ TransformationEngine - Manages canvas transformations and viewport
     * [.isPanningActive()](#TransformationEngine+isPanningActive) ⇒ <code>boolean</code>
     * [.smoothZoomTo(targetZoom, duration)](#TransformationEngine+smoothZoomTo)
     * [.animateZoom()](#TransformationEngine+animateZoom)
-    * [.updateCanvasTransform()](#TransformationEngine+updateCanvasTransform)
+    * ~~[.updateCanvasTransform()](#TransformationEngine+updateCanvasTransform)~~
     * [.updateViewportBounds()](#TransformationEngine+updateViewportBounds)
     * [.getViewportBounds()](#TransformationEngine+getViewportBounds) ⇒ <code>Object</code>
-    * [.fitToWindow(backgroundImage)](#TransformationEngine+fitToWindow)
+    * [.fitToWindow(_backgroundImage)](#TransformationEngine+fitToWindow)
     * [.zoomToFitBounds(bounds, padding)](#TransformationEngine+zoomToFitBounds)
     * [.clientToCanvas(clientX, clientY)](#TransformationEngine+clientToCanvas) ⇒ <code>Object</code>
     * [.canvasToClient(canvasX, canvasY)](#TransformationEngine+canvasToClient) ⇒ <code>Object</code>
@@ -9979,8 +15022,10 @@ Animation frame function for smooth zooming
 **Kind**: instance method of [<code>TransformationEngine</code>](#TransformationEngine)  
 <a name="TransformationEngine+updateCanvasTransform"></a>
 
-### transformationEngine.updateCanvasTransform()
-Update the canvas CSS transform from current pan/zoom stateDEPRECATED: Using canvas context transforms only to avoid coordinate confusion
+### ~~transformationEngine.updateCanvasTransform()~~
+***since 1.3.0 - Using canvas context transforms only. Will be removed in v2.0.***
+
+Update the canvas CSS transform from current pan/zoom state
 
 **Kind**: instance method of [<code>TransformationEngine</code>](#TransformationEngine)  
 <a name="TransformationEngine+updateViewportBounds"></a>
@@ -9998,14 +15043,14 @@ Get current viewport bounds
 **Returns**: <code>Object</code> - Viewport bounds {x, y, width, height}  
 <a name="TransformationEngine+fitToWindow"></a>
 
-### transformationEngine.fitToWindow(backgroundImage)
+### transformationEngine.fitToWindow(_backgroundImage)
 Fit canvas to window dimensions
 
 **Kind**: instance method of [<code>TransformationEngine</code>](#TransformationEngine)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| backgroundImage | <code>Object</code> | Background image for size reference |
+| _backgroundImage | <code>Object</code> | Background image for size reference |
 
 <a name="TransformationEngine+zoomToFitBounds"></a>
 
@@ -10125,68 +15170,425 @@ Clean up resources
 <a name="ValidationManager"></a>
 
 ## ValidationManager
-Validation Manager for Layers EditorHandles data validation and sanitization
-
 **Kind**: global class  
 
 * [ValidationManager](#ValidationManager)
-    * [.sanitizeLayerData()](#ValidationManager+sanitizeLayerData)
-    * [.sanitizeString()](#ValidationManager+sanitizeString)
-    * [.sanitizeInput()](#ValidationManager+sanitizeInput)
-    * [.validateLayer()](#ValidationManager+validateLayer)
-    * [.validateLayers()](#ValidationManager+validateLayers)
-    * [.checkBrowserCompatibility()](#ValidationManager+checkBrowserCompatibility)
-    * [.sanitizeLogMessage()](#ValidationManager+sanitizeLogMessage)
+    * [new ValidationManager()](#new_ValidationManager_new)
+    * [new ValidationManager(editor)](#new_ValidationManager_new)
+    * [.sanitizeLayerData(layerData)](#ValidationManager+sanitizeLayerData) ⇒ <code>Object</code> \| <code>Array</code> \| <code>\*</code>
+    * [.sanitizeSvgString(input)](#ValidationManager+sanitizeSvgString) ⇒ <code>string</code>
+    * [.sanitizeString(input)](#ValidationManager+sanitizeString) ⇒ <code>string</code>
+    * [.sanitizeInput(input)](#ValidationManager+sanitizeInput) ⇒ <code>string</code>
+    * [.validateLayer(layer)](#ValidationManager+validateLayer) ⇒ <code>Object</code>
+    * [.validateLayers(layers, [maxCount])](#ValidationManager+validateLayers) ⇒ <code>Object</code>
+    * [.checkBrowserCompatibility()](#ValidationManager+checkBrowserCompatibility) ⇒ <code>boolean</code>
+    * [.sanitizeLogMessage(message)](#ValidationManager+sanitizeLogMessage) ⇒ <code>\*</code>
+    * [.getMessage(key, [fallback])](#ValidationManager+getMessage) ⇒ <code>string</code>
     * [.destroy()](#ValidationManager+destroy)
+
+<a name="new_ValidationManager_new"></a>
+
+### new ValidationManager()
+Validation Manager for Layers Editor
+Handles data validation and sanitization
+
+<a name="new_ValidationManager_new"></a>
+
+### new ValidationManager(editor)
+Creates a new ValidationManager instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| editor | <code>Object</code> | Reference to the LayersEditor instance |
 
 <a name="ValidationManager+sanitizeLayerData"></a>
 
-### validationManager.sanitizeLayerData()
+### validationManager.sanitizeLayerData(layerData) ⇒ <code>Object</code> \| <code>Array</code> \| <code>\*</code>
 Sanitize layer data before processing
+Recursively sanitizes all string properties to remove dangerous content
 
 **Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>Object</code> \| <code>Array</code> \| <code>\*</code> - Sanitized layer data  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerData | <code>Object</code> \| <code>Array</code> \| <code>\*</code> | Layer data to sanitize |
+
+<a name="ValidationManager+sanitizeSvgString"></a>
+
+### validationManager.sanitizeSvgString(input) ⇒ <code>string</code>
+Sanitize SVG string input using DOM parser for robust defense-in-depth.
+Removes dangerous elements (script, style, foreignObject, etc.),
+dangerous attributes (event handlers, javascript:/vbscript: URLs),
+and dangerous CSS patterns. Falls back to regex stripping if DOM
+parsing is unavailable.
+
+Note: Server-side validation in ServerSideLayerValidator::validateSvgString()
+is the primary security boundary. This is defense-in-depth.
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>string</code> - Sanitized SVG string  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| input | <code>string</code> | SVG string to sanitize |
+
 <a name="ValidationManager+sanitizeString"></a>
 
-### validationManager.sanitizeString()
+### validationManager.sanitizeString(input) ⇒ <code>string</code>
 Sanitize string input
+Removes HTML tags and dangerous content
 
 **Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>string</code> - Sanitized string  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| input | <code>string</code> | String to sanitize |
+
 <a name="ValidationManager+sanitizeInput"></a>
 
-### validationManager.sanitizeInput()
+### validationManager.sanitizeInput(input) ⇒ <code>string</code>
 Sanitize input for general use
+Alias for sanitizeString for compatibility
 
 **Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>string</code> - Sanitized string  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| input | <code>string</code> | Input string to sanitize |
+
 <a name="ValidationManager+validateLayer"></a>
 
-### validationManager.validateLayer()
+### validationManager.validateLayer(layer) ⇒ <code>Object</code>
 Validate layer data structure
+Checks required fields, types, and value ranges
 
 **Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>Object</code> - Validation result  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer object to validate |
+
 <a name="ValidationManager+validateLayers"></a>
 
-### validationManager.validateLayers()
+### validationManager.validateLayers(layers, [maxCount]) ⇒ <code>Object</code>
 Validate all layers
+Checks layer count limits, individual layer validity, and duplicate IDs
 
 **Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>Object</code> - Validation result  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| layers | <code>Array</code> |  | Array of layer objects to validate |
+| [maxCount] | <code>number</code> | <code>100</code> | Maximum allowed number of layers |
+
 <a name="ValidationManager+checkBrowserCompatibility"></a>
 
-### validationManager.checkBrowserCompatibility()
+### validationManager.checkBrowserCompatibility() ⇒ <code>boolean</code>
 Check browser compatibility
+Verifies required browser APIs are available
 
 **Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>boolean</code> - True if browser meets requirements  
 <a name="ValidationManager+sanitizeLogMessage"></a>
 
-### validationManager.sanitizeLogMessage()
-Sanitize log messages for security
+### validationManager.sanitizeLogMessage(message) ⇒ <code>\*</code>
+Sanitize log messages for security.
+Delegates to shared LogSanitizer utility.
 
 **Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>\*</code> - Sanitized message safe for logging  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| message | <code>\*</code> | Message to sanitize |
+
+<a name="ValidationManager+getMessage"></a>
+
+### validationManager.getMessage(key, [fallback]) ⇒ <code>string</code>
+Get an i18n message by key
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>string</code> - Localized message or fallback  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| key | <code>string</code> |  | Message key |
+| [fallback] | <code>string</code> | <code>&quot;&#x27;&#x27;&quot;</code> | Fallback if message not found |
+
 <a name="ValidationManager+destroy"></a>
 
 ### validationManager.destroy()
 Clean up resources
+Should be called when the editor is destroyed
 
 **Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+<a name="ValidationManager"></a>
+
+## ValidationManager
+**Kind**: global class  
+
+* [ValidationManager](#ValidationManager)
+    * [new ValidationManager()](#new_ValidationManager_new)
+    * [new ValidationManager(editor)](#new_ValidationManager_new)
+    * [.sanitizeLayerData(layerData)](#ValidationManager+sanitizeLayerData) ⇒ <code>Object</code> \| <code>Array</code> \| <code>\*</code>
+    * [.sanitizeSvgString(input)](#ValidationManager+sanitizeSvgString) ⇒ <code>string</code>
+    * [.sanitizeString(input)](#ValidationManager+sanitizeString) ⇒ <code>string</code>
+    * [.sanitizeInput(input)](#ValidationManager+sanitizeInput) ⇒ <code>string</code>
+    * [.validateLayer(layer)](#ValidationManager+validateLayer) ⇒ <code>Object</code>
+    * [.validateLayers(layers, [maxCount])](#ValidationManager+validateLayers) ⇒ <code>Object</code>
+    * [.checkBrowserCompatibility()](#ValidationManager+checkBrowserCompatibility) ⇒ <code>boolean</code>
+    * [.sanitizeLogMessage(message)](#ValidationManager+sanitizeLogMessage) ⇒ <code>\*</code>
+    * [.getMessage(key, [fallback])](#ValidationManager+getMessage) ⇒ <code>string</code>
+    * [.destroy()](#ValidationManager+destroy)
+
+<a name="new_ValidationManager_new"></a>
+
+### new ValidationManager()
+Validation Manager for Layers Editor
+Handles data validation and sanitization
+
+<a name="new_ValidationManager_new"></a>
+
+### new ValidationManager(editor)
+Creates a new ValidationManager instance
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| editor | <code>Object</code> | Reference to the LayersEditor instance |
+
+<a name="ValidationManager+sanitizeLayerData"></a>
+
+### validationManager.sanitizeLayerData(layerData) ⇒ <code>Object</code> \| <code>Array</code> \| <code>\*</code>
+Sanitize layer data before processing
+Recursively sanitizes all string properties to remove dangerous content
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>Object</code> \| <code>Array</code> \| <code>\*</code> - Sanitized layer data  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layerData | <code>Object</code> \| <code>Array</code> \| <code>\*</code> | Layer data to sanitize |
+
+<a name="ValidationManager+sanitizeSvgString"></a>
+
+### validationManager.sanitizeSvgString(input) ⇒ <code>string</code>
+Sanitize SVG string input using DOM parser for robust defense-in-depth.
+Removes dangerous elements (script, style, foreignObject, etc.),
+dangerous attributes (event handlers, javascript:/vbscript: URLs),
+and dangerous CSS patterns. Falls back to regex stripping if DOM
+parsing is unavailable.
+
+Note: Server-side validation in ServerSideLayerValidator::validateSvgString()
+is the primary security boundary. This is defense-in-depth.
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>string</code> - Sanitized SVG string  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| input | <code>string</code> | SVG string to sanitize |
+
+<a name="ValidationManager+sanitizeString"></a>
+
+### validationManager.sanitizeString(input) ⇒ <code>string</code>
+Sanitize string input
+Removes HTML tags and dangerous content
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>string</code> - Sanitized string  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| input | <code>string</code> | String to sanitize |
+
+<a name="ValidationManager+sanitizeInput"></a>
+
+### validationManager.sanitizeInput(input) ⇒ <code>string</code>
+Sanitize input for general use
+Alias for sanitizeString for compatibility
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>string</code> - Sanitized string  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| input | <code>string</code> | Input string to sanitize |
+
+<a name="ValidationManager+validateLayer"></a>
+
+### validationManager.validateLayer(layer) ⇒ <code>Object</code>
+Validate layer data structure
+Checks required fields, types, and value ranges
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>Object</code> - Validation result  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer object to validate |
+
+<a name="ValidationManager+validateLayers"></a>
+
+### validationManager.validateLayers(layers, [maxCount]) ⇒ <code>Object</code>
+Validate all layers
+Checks layer count limits, individual layer validity, and duplicate IDs
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>Object</code> - Validation result  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| layers | <code>Array</code> |  | Array of layer objects to validate |
+| [maxCount] | <code>number</code> | <code>100</code> | Maximum allowed number of layers |
+
+<a name="ValidationManager+checkBrowserCompatibility"></a>
+
+### validationManager.checkBrowserCompatibility() ⇒ <code>boolean</code>
+Check browser compatibility
+Verifies required browser APIs are available
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>boolean</code> - True if browser meets requirements  
+<a name="ValidationManager+sanitizeLogMessage"></a>
+
+### validationManager.sanitizeLogMessage(message) ⇒ <code>\*</code>
+Sanitize log messages for security.
+Delegates to shared LogSanitizer utility.
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>\*</code> - Sanitized message safe for logging  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| message | <code>\*</code> | Message to sanitize |
+
+<a name="ValidationManager+getMessage"></a>
+
+### validationManager.getMessage(key, [fallback]) ⇒ <code>string</code>
+Get an i18n message by key
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+**Returns**: <code>string</code> - Localized message or fallback  
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| key | <code>string</code> |  | Message key |
+| [fallback] | <code>string</code> | <code>&quot;&#x27;&#x27;&quot;</code> | Fallback if message not found |
+
+<a name="ValidationManager+destroy"></a>
+
+### validationManager.destroy()
+Clean up resources
+Should be called when the editor is destroyed
+
+**Kind**: instance method of [<code>ValidationManager</code>](#ValidationManager)  
+<a name="CustomShapeRenderer"></a>
+
+## CustomShapeRenderer
+CustomShapeRenderer - Renders SVG shapes to canvas
+
+Supports two rendering modes:
+1. Complete SVG markup (new format) - renders via Image for pixel-perfect quality
+2. Path2D API (legacy format) - for shapes defined with just path data
+
+**Kind**: global class  
+
+* [CustomShapeRenderer](#CustomShapeRenderer)
+    * [new CustomShapeRenderer([options])](#new_CustomShapeRenderer_new)
+    * [.render(ctx, shapeData, layer, [_options])](#CustomShapeRenderer+render)
+    * [.renderWithEffects(ctx, shapeData, layer, [options])](#CustomShapeRenderer+renderWithEffects)
+    * [.hitTest(layer, shapeData, x, y)](#CustomShapeRenderer+hitTest) ⇒ <code>boolean</code>
+    * [.clearCache()](#CustomShapeRenderer+clearCache)
+    * [.getCacheSize()](#CustomShapeRenderer+getCacheSize) ⇒ <code>number</code>
+
+<a name="new_CustomShapeRenderer_new"></a>
+
+### new CustomShapeRenderer([options])
+Create a CustomShapeRenderer
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| [options] | <code>Object</code> |  | Renderer options |
+| [options.cacheSize] | <code>number</code> | <code>100</code> | Maximum cached Path2D objects |
+
+<a name="CustomShapeRenderer+render"></a>
+
+### customShapeRenderer.render(ctx, shapeData, layer, [_options])
+Render a custom shape layer to the canvas
+
+Supports three formats:
+1. Complete SVG string (new format) - rendered via Image for native quality
+2. Multi-path shapes (legacy compound) - uses paths array
+3. Single-path shapes (legacy) - uses Path2D
+
+**Kind**: instance method of [<code>CustomShapeRenderer</code>](#CustomShapeRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas context |
+| shapeData | <code>Object</code> | Shape definition from library |
+| [shapeData.svg] | <code>string</code> | Complete SVG markup string (new format) |
+| [shapeData.path] | <code>string</code> | Single path (legacy format) |
+| [shapeData.paths] | <code>Array</code> | Multi-path array [{path, fill, stroke, strokeWidth, fillRule}] |
+| shapeData.viewBox | <code>Array.&lt;number&gt;</code> | ViewBox [x, y, width, height] |
+| layer | <code>Object</code> | Layer data (position, size, styling) |
+| [_options] | <code>Object</code> | Render options (reserved for future use) |
+| [_options.isSelected] | <code>boolean</code> | Whether layer is selected |
+| [_options.scale] | <code>number</code> | Canvas scale factor |
+
+<a name="CustomShapeRenderer+renderWithEffects"></a>
+
+### customShapeRenderer.renderWithEffects(ctx, shapeData, layer, [options])
+Render with shadow effects
+
+Note: Shadows are now handled directly in drawSVGImage() with proper spread support.
+This method is kept for backwards compatibility with any code that calls it directly.
+
+**Kind**: instance method of [<code>CustomShapeRenderer</code>](#CustomShapeRenderer)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| ctx | <code>CanvasRenderingContext2D</code> | Canvas context |
+| shapeData | <code>Object</code> | Shape definition from library |
+| layer | <code>Object</code> | Layer data |
+| [options] | <code>Object</code> | Render options |
+
+<a name="CustomShapeRenderer+hitTest"></a>
+
+### customShapeRenderer.hitTest(layer, shapeData, x, y) ⇒ <code>boolean</code>
+Test if a point is inside the shape
+
+**Kind**: instance method of [<code>CustomShapeRenderer</code>](#CustomShapeRenderer)  
+**Returns**: <code>boolean</code> - True if point is inside shape  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| layer | <code>Object</code> | Layer data |
+| shapeData | <code>Object</code> | Shape definition from library |
+| x | <code>number</code> | Point X coordinate |
+| y | <code>number</code> | Point Y coordinate |
+
+<a name="CustomShapeRenderer+clearCache"></a>
+
+### customShapeRenderer.clearCache()
+Clear the path cache
+
+**Kind**: instance method of [<code>CustomShapeRenderer</code>](#CustomShapeRenderer)  
+<a name="CustomShapeRenderer+getCacheSize"></a>
+
+### customShapeRenderer.getCacheSize() ⇒ <code>number</code>
+Get current cache size
+
+**Kind**: instance method of [<code>CustomShapeRenderer</code>](#CustomShapeRenderer)  
+**Returns**: <code>number</code> - Number of cached paths  
 <a name="PolygonGeometry"></a>
 
 ## PolygonGeometry
@@ -10394,8 +15796,10 @@ Minimal typedef for CanvasManager used for JSDoc references in this file.
     * [.loadBackgroundImage()](#CanvasManager+loadBackgroundImage)
     * [.handleImageLoaded(image, info)](#CanvasManager+handleImageLoaded)
     * [.handleImageLoadError()](#CanvasManager+handleImageLoadError)
-    * [.tryLoadImageFallback(urls, index)](#CanvasManager+tryLoadImageFallback)
     * [.updateStyleOptions(options)](#CanvasManager+updateStyleOptions)
+    * [.updateDimensionDefaults(props)](#CanvasManager+updateDimensionDefaults)
+    * [.updateAngleDimensionDefaults(props)](#CanvasManager+updateAngleDimensionDefaults)
+    * [.updateMarkerDefaults(props)](#CanvasManager+updateMarkerDefaults)
     * [.calculateResize(originalLayer, handleType, deltaX, deltaY, modifiers)](#CanvasManager+calculateResize) ⇒ <code>Object</code> \| <code>null</code>
     * [.emitTransforming(layer)](#CanvasManager+emitTransforming)
     * [.updateLayerPosition(layer, originalState, deltaX, deltaY)](#CanvasManager+updateLayerPosition)
@@ -10413,8 +15817,11 @@ Minimal typedef for CanvasManager used for JSDoc references in this file.
     * [.saveState(action)](#CanvasManager+saveState)
     * [.drawMultiSelectionIndicators()](#CanvasManager+drawMultiSelectionIndicators)
     * [.setBaseDimensions(width, height)](#CanvasManager+setBaseDimensions)
+    * [.setSlideMode(isSlide)](#CanvasManager+setSlideMode)
+    * [.setBackgroundColor(color)](#CanvasManager+setBackgroundColor)
     * [.resizeCanvas()](#CanvasManager+resizeCanvas)
     * [.getMousePointFromClient(clientX, clientY)](#CanvasManager+getMousePointFromClient) ⇒ <code>Object</code>
+    * [.setTextEditingMode(isEditing)](#CanvasManager+setTextEditingMode)
 
 <a name="new_CanvasManager_new"></a>
 
@@ -10429,7 +15836,9 @@ Creates a new CanvasManager instance
 <a name="CanvasManager+setupEventHandlers"></a>
 
 ### canvasManager.setupEventHandlers()
-Initialize the event handling layer for CanvasManager.This will construct CanvasEvents controller if available, otherwiseinstall basic fallback handlers for test environments.
+Initialize the event handling layer for CanvasManager.
+This will construct CanvasEvents controller if available, otherwise
+install basic fallback handlers for test environments.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+getSelectedLayerIds"></a>
@@ -10477,10 +15886,12 @@ Notify toolbar style controls of selection change for preset dropdown
 <a name="CanvasManager+loadBackgroundImage"></a>
 
 ### canvasManager.loadBackgroundImage()
-Load background image using ImageLoader moduleDelegates to ImageLoader for URL detection and loading with fallbacks
+Load background image using ImageLoader module
+Delegates to ImageLoader for URL detection and loading with fallbacks
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-**Note**: ImageLoader is guaranteed to load first via extension.json in production,      but fallback is kept for test environments and backward compatibility.  
+**Note**: ImageLoader is guaranteed to load first via extension.json in production,
+      but fallback is kept for test environments and backward compatibility.  
 <a name="CanvasManager+handleImageLoaded"></a>
 
 ### canvasManager.handleImageLoaded(image, info)
@@ -10499,22 +15910,11 @@ Handle successful image load from ImageLoader
 Handle image load error from ImageLoader
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-<a name="CanvasManager+tryLoadImageFallback"></a>
-
-### canvasManager.tryLoadImageFallback(urls, index)
-Try to load images from a list of URLs sequentially.
-
-**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-
-| Param | Type |
-| --- | --- |
-| urls | <code>Array.&lt;string&gt;</code> | 
-| index | <code>number</code> | 
-
 <a name="CanvasManager+updateStyleOptions"></a>
 
 ### canvasManager.updateStyleOptions(options)
-Update current style options and apply to selected layers.Delegates to StyleController when available.
+Update current style options and apply to selected layers.
+Delegates to StyleController.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10522,10 +15922,47 @@ Update current style options and apply to selected layers.Delegates to StyleCon
 | --- | --- | --- |
 | options | <code>Object</code> | Style options to update |
 
+<a name="CanvasManager+updateDimensionDefaults"></a>
+
+### canvasManager.updateDimensionDefaults(props)
+Update dimension tool defaults from a layer's properties.
+Call this when dimension layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Dimension properties to persist |
+
+<a name="CanvasManager+updateAngleDimensionDefaults"></a>
+
+### canvasManager.updateAngleDimensionDefaults(props)
+Update angle dimension tool defaults from a layer's properties.
+Call this when angle dimension layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Angle dimension properties to persist |
+
+<a name="CanvasManager+updateMarkerDefaults"></a>
+
+### canvasManager.updateMarkerDefaults(props)
+Update marker tool defaults from a layer's properties.
+Call this when marker layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Marker properties to persist |
+
 <a name="CanvasManager+calculateResize"></a>
 
 ### canvasManager.calculateResize(originalLayer, handleType, deltaX, deltaY, modifiers) ⇒ <code>Object</code> \| <code>null</code>
-Calculate resize updates based on layer typeDelegates to TransformController for actual calculations
+Calculate resize updates based on layer type
+Delegates to TransformController for actual calculations
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 **Returns**: <code>Object</code> \| <code>null</code> - Updates object with new dimensions  
@@ -10541,7 +15978,8 @@ Calculate resize updates based on layer typeDelegates to TransformController fo
 <a name="CanvasManager+emitTransforming"></a>
 
 ### canvasManager.emitTransforming(layer)
-Emit a throttled custom event with current transform valuesto allow the properties panel to live-sync during manipulation.
+Emit a throttled custom event with current transform values
+to allow the properties panel to live-sync during manipulation.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10552,7 +15990,8 @@ Emit a throttled custom event with current transform valuesto allow the propert
 <a name="CanvasManager+updateLayerPosition"></a>
 
 ### canvasManager.updateLayerPosition(layer, originalState, deltaX, deltaY)
-Update layer position during drag operation
+Update layer position during drag operation.
+Delegates to TransformController which handles all layer types.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10619,7 +16058,8 @@ Get bounding box of a layer
 <a name="CanvasManager+getTempCanvas"></a>
 
 ### canvasManager.getTempCanvas(width, height) ⇒ <code>Object</code>
-Get a temporary canvas from the pool or create a new oneThis prevents memory leaks from constantly creating new canvas elements
+Get a temporary canvas from the pool or create a new one
+This prevents memory leaks from constantly creating new canvas elements
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 **Returns**: <code>Object</code> - Object with canvas and context properties  
@@ -10678,7 +16118,8 @@ Public zoom helper used by external handlers (wheel/pinch)
 <a name="CanvasManager+saveState"></a>
 
 ### canvasManager.saveState(action)
-Save current state to history for undo/redoDelegates to HistoryManager for single source of truth
+Save current state to history for undo/redo
+Delegates to HistoryManager for single source of truth
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10689,13 +16130,21 @@ Save current state to history for undo/redoDelegates to HistoryManager for sing
 <a name="CanvasManager+drawMultiSelectionIndicators"></a>
 
 ### canvasManager.drawMultiSelectionIndicators()
-Draw selection indicators for multiple selected layersThe key object (last selected) is visually distinguished with an orange border
+Draw selection indicators for multiple selected layers
+The key object (last selected) is visually distinguished with an orange border
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+setBaseDimensions"></a>
 
 ### canvasManager.setBaseDimensions(width, height)
-Set the base dimensions that layers were created against.Used for scaling layers when the canvas size differs from the original.
+Set the base dimensions that layers were created against.
+Used for scaling layers when the canvas size differs from the original.
+
+IMPORTANT: This also resizes the canvas logical dimensions to match.
+This ensures layers are created at coordinates that match the original
+image dimensions, regardless of what thumbnail size was loaded.
+This is critical for formats like TIFF where we load a thumbnail but
+need to store layers at the original file's coordinate space.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10704,16 +16153,42 @@ Set the base dimensions that layers were created against.Used for scaling layer
 | width | <code>number</code> | Original image width |
 | height | <code>number</code> | Original image height |
 
+<a name="CanvasManager+setSlideMode"></a>
+
+### canvasManager.setSlideMode(isSlide)
+Set slide mode (no background image, custom dimensions and color)
+Called when editing a slide instead of a file image.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isSlide | <code>boolean</code> | Whether editor is in slide mode |
+
+<a name="CanvasManager+setBackgroundColor"></a>
+
+### canvasManager.setBackgroundColor(color)
+Set slide background color
+Only used in slide mode (setSlideMode must be called first)
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| color | <code>string</code> | Background color (e.g. '#ffffff', 'transparent') |
+
 <a name="CanvasManager+resizeCanvas"></a>
 
 ### canvasManager.resizeCanvas()
-Resize canvas to match container size while maintaining aspect ratio.Updates viewport bounds for layer culling.
+Resize canvas to match container size while maintaining aspect ratio.
+Updates viewport bounds for layer culling.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+getMousePointFromClient"></a>
 
 ### canvasManager.getMousePointFromClient(clientX, clientY) ⇒ <code>Object</code>
-Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
+Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.
+Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10721,6 +16196,18 @@ Convert a DOM client coordinate to canvas coordinate, robust against CSS transfo
 | --- | --- |
 | clientX | <code>number</code> | 
 | clientY | <code>number</code> | 
+
+<a name="CanvasManager+setTextEditingMode"></a>
+
+### canvasManager.setTextEditingMode(isEditing)
+Set text editing mode (used by InlineTextEditor)
+When active, suppresses selection handles and drag operations
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isEditing | <code>boolean</code> | Whether inline text editing is active |
 
 <a name="CanvasManager"></a>
 
@@ -10747,8 +16234,10 @@ Minimal typedef for CanvasManager used for JSDoc references in this file.
     * [.loadBackgroundImage()](#CanvasManager+loadBackgroundImage)
     * [.handleImageLoaded(image, info)](#CanvasManager+handleImageLoaded)
     * [.handleImageLoadError()](#CanvasManager+handleImageLoadError)
-    * [.tryLoadImageFallback(urls, index)](#CanvasManager+tryLoadImageFallback)
     * [.updateStyleOptions(options)](#CanvasManager+updateStyleOptions)
+    * [.updateDimensionDefaults(props)](#CanvasManager+updateDimensionDefaults)
+    * [.updateAngleDimensionDefaults(props)](#CanvasManager+updateAngleDimensionDefaults)
+    * [.updateMarkerDefaults(props)](#CanvasManager+updateMarkerDefaults)
     * [.calculateResize(originalLayer, handleType, deltaX, deltaY, modifiers)](#CanvasManager+calculateResize) ⇒ <code>Object</code> \| <code>null</code>
     * [.emitTransforming(layer)](#CanvasManager+emitTransforming)
     * [.updateLayerPosition(layer, originalState, deltaX, deltaY)](#CanvasManager+updateLayerPosition)
@@ -10766,8 +16255,11 @@ Minimal typedef for CanvasManager used for JSDoc references in this file.
     * [.saveState(action)](#CanvasManager+saveState)
     * [.drawMultiSelectionIndicators()](#CanvasManager+drawMultiSelectionIndicators)
     * [.setBaseDimensions(width, height)](#CanvasManager+setBaseDimensions)
+    * [.setSlideMode(isSlide)](#CanvasManager+setSlideMode)
+    * [.setBackgroundColor(color)](#CanvasManager+setBackgroundColor)
     * [.resizeCanvas()](#CanvasManager+resizeCanvas)
     * [.getMousePointFromClient(clientX, clientY)](#CanvasManager+getMousePointFromClient) ⇒ <code>Object</code>
+    * [.setTextEditingMode(isEditing)](#CanvasManager+setTextEditingMode)
 
 <a name="new_CanvasManager_new"></a>
 
@@ -10782,7 +16274,9 @@ Creates a new CanvasManager instance
 <a name="CanvasManager+setupEventHandlers"></a>
 
 ### canvasManager.setupEventHandlers()
-Initialize the event handling layer for CanvasManager.This will construct CanvasEvents controller if available, otherwiseinstall basic fallback handlers for test environments.
+Initialize the event handling layer for CanvasManager.
+This will construct CanvasEvents controller if available, otherwise
+install basic fallback handlers for test environments.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+getSelectedLayerIds"></a>
@@ -10830,10 +16324,12 @@ Notify toolbar style controls of selection change for preset dropdown
 <a name="CanvasManager+loadBackgroundImage"></a>
 
 ### canvasManager.loadBackgroundImage()
-Load background image using ImageLoader moduleDelegates to ImageLoader for URL detection and loading with fallbacks
+Load background image using ImageLoader module
+Delegates to ImageLoader for URL detection and loading with fallbacks
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-**Note**: ImageLoader is guaranteed to load first via extension.json in production,      but fallback is kept for test environments and backward compatibility.  
+**Note**: ImageLoader is guaranteed to load first via extension.json in production,
+      but fallback is kept for test environments and backward compatibility.  
 <a name="CanvasManager+handleImageLoaded"></a>
 
 ### canvasManager.handleImageLoaded(image, info)
@@ -10852,22 +16348,11 @@ Handle successful image load from ImageLoader
 Handle image load error from ImageLoader
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-<a name="CanvasManager+tryLoadImageFallback"></a>
-
-### canvasManager.tryLoadImageFallback(urls, index)
-Try to load images from a list of URLs sequentially.
-
-**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-
-| Param | Type |
-| --- | --- |
-| urls | <code>Array.&lt;string&gt;</code> | 
-| index | <code>number</code> | 
-
 <a name="CanvasManager+updateStyleOptions"></a>
 
 ### canvasManager.updateStyleOptions(options)
-Update current style options and apply to selected layers.Delegates to StyleController when available.
+Update current style options and apply to selected layers.
+Delegates to StyleController.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10875,10 +16360,47 @@ Update current style options and apply to selected layers.Delegates to StyleCon
 | --- | --- | --- |
 | options | <code>Object</code> | Style options to update |
 
+<a name="CanvasManager+updateDimensionDefaults"></a>
+
+### canvasManager.updateDimensionDefaults(props)
+Update dimension tool defaults from a layer's properties.
+Call this when dimension layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Dimension properties to persist |
+
+<a name="CanvasManager+updateAngleDimensionDefaults"></a>
+
+### canvasManager.updateAngleDimensionDefaults(props)
+Update angle dimension tool defaults from a layer's properties.
+Call this when angle dimension layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Angle dimension properties to persist |
+
+<a name="CanvasManager+updateMarkerDefaults"></a>
+
+### canvasManager.updateMarkerDefaults(props)
+Update marker tool defaults from a layer's properties.
+Call this when marker layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Marker properties to persist |
+
 <a name="CanvasManager+calculateResize"></a>
 
 ### canvasManager.calculateResize(originalLayer, handleType, deltaX, deltaY, modifiers) ⇒ <code>Object</code> \| <code>null</code>
-Calculate resize updates based on layer typeDelegates to TransformController for actual calculations
+Calculate resize updates based on layer type
+Delegates to TransformController for actual calculations
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 **Returns**: <code>Object</code> \| <code>null</code> - Updates object with new dimensions  
@@ -10894,7 +16416,8 @@ Calculate resize updates based on layer typeDelegates to TransformController fo
 <a name="CanvasManager+emitTransforming"></a>
 
 ### canvasManager.emitTransforming(layer)
-Emit a throttled custom event with current transform valuesto allow the properties panel to live-sync during manipulation.
+Emit a throttled custom event with current transform values
+to allow the properties panel to live-sync during manipulation.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10905,7 +16428,8 @@ Emit a throttled custom event with current transform valuesto allow the propert
 <a name="CanvasManager+updateLayerPosition"></a>
 
 ### canvasManager.updateLayerPosition(layer, originalState, deltaX, deltaY)
-Update layer position during drag operation
+Update layer position during drag operation.
+Delegates to TransformController which handles all layer types.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -10972,7 +16496,8 @@ Get bounding box of a layer
 <a name="CanvasManager+getTempCanvas"></a>
 
 ### canvasManager.getTempCanvas(width, height) ⇒ <code>Object</code>
-Get a temporary canvas from the pool or create a new oneThis prevents memory leaks from constantly creating new canvas elements
+Get a temporary canvas from the pool or create a new one
+This prevents memory leaks from constantly creating new canvas elements
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 **Returns**: <code>Object</code> - Object with canvas and context properties  
@@ -11031,7 +16556,8 @@ Public zoom helper used by external handlers (wheel/pinch)
 <a name="CanvasManager+saveState"></a>
 
 ### canvasManager.saveState(action)
-Save current state to history for undo/redoDelegates to HistoryManager for single source of truth
+Save current state to history for undo/redo
+Delegates to HistoryManager for single source of truth
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11042,13 +16568,21 @@ Save current state to history for undo/redoDelegates to HistoryManager for sing
 <a name="CanvasManager+drawMultiSelectionIndicators"></a>
 
 ### canvasManager.drawMultiSelectionIndicators()
-Draw selection indicators for multiple selected layersThe key object (last selected) is visually distinguished with an orange border
+Draw selection indicators for multiple selected layers
+The key object (last selected) is visually distinguished with an orange border
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+setBaseDimensions"></a>
 
 ### canvasManager.setBaseDimensions(width, height)
-Set the base dimensions that layers were created against.Used for scaling layers when the canvas size differs from the original.
+Set the base dimensions that layers were created against.
+Used for scaling layers when the canvas size differs from the original.
+
+IMPORTANT: This also resizes the canvas logical dimensions to match.
+This ensures layers are created at coordinates that match the original
+image dimensions, regardless of what thumbnail size was loaded.
+This is critical for formats like TIFF where we load a thumbnail but
+need to store layers at the original file's coordinate space.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11057,16 +16591,42 @@ Set the base dimensions that layers were created against.Used for scaling layer
 | width | <code>number</code> | Original image width |
 | height | <code>number</code> | Original image height |
 
+<a name="CanvasManager+setSlideMode"></a>
+
+### canvasManager.setSlideMode(isSlide)
+Set slide mode (no background image, custom dimensions and color)
+Called when editing a slide instead of a file image.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isSlide | <code>boolean</code> | Whether editor is in slide mode |
+
+<a name="CanvasManager+setBackgroundColor"></a>
+
+### canvasManager.setBackgroundColor(color)
+Set slide background color
+Only used in slide mode (setSlideMode must be called first)
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| color | <code>string</code> | Background color (e.g. '#ffffff', 'transparent') |
+
 <a name="CanvasManager+resizeCanvas"></a>
 
 ### canvasManager.resizeCanvas()
-Resize canvas to match container size while maintaining aspect ratio.Updates viewport bounds for layer culling.
+Resize canvas to match container size while maintaining aspect ratio.
+Updates viewport bounds for layer culling.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+getMousePointFromClient"></a>
 
 ### canvasManager.getMousePointFromClient(clientX, clientY) ⇒ <code>Object</code>
-Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
+Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.
+Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11074,6 +16634,18 @@ Convert a DOM client coordinate to canvas coordinate, robust against CSS transfo
 | --- | --- |
 | clientX | <code>number</code> | 
 | clientY | <code>number</code> | 
+
+<a name="CanvasManager+setTextEditingMode"></a>
+
+### canvasManager.setTextEditingMode(isEditing)
+Set text editing mode (used by InlineTextEditor)
+When active, suppresses selection handles and drag operations
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isEditing | <code>boolean</code> | Whether inline text editing is active |
 
 <a name="CanvasManager"></a>
 
@@ -11100,8 +16672,10 @@ Minimal typedef for CanvasManager used for JSDoc references in this file.
     * [.loadBackgroundImage()](#CanvasManager+loadBackgroundImage)
     * [.handleImageLoaded(image, info)](#CanvasManager+handleImageLoaded)
     * [.handleImageLoadError()](#CanvasManager+handleImageLoadError)
-    * [.tryLoadImageFallback(urls, index)](#CanvasManager+tryLoadImageFallback)
     * [.updateStyleOptions(options)](#CanvasManager+updateStyleOptions)
+    * [.updateDimensionDefaults(props)](#CanvasManager+updateDimensionDefaults)
+    * [.updateAngleDimensionDefaults(props)](#CanvasManager+updateAngleDimensionDefaults)
+    * [.updateMarkerDefaults(props)](#CanvasManager+updateMarkerDefaults)
     * [.calculateResize(originalLayer, handleType, deltaX, deltaY, modifiers)](#CanvasManager+calculateResize) ⇒ <code>Object</code> \| <code>null</code>
     * [.emitTransforming(layer)](#CanvasManager+emitTransforming)
     * [.updateLayerPosition(layer, originalState, deltaX, deltaY)](#CanvasManager+updateLayerPosition)
@@ -11119,8 +16693,11 @@ Minimal typedef for CanvasManager used for JSDoc references in this file.
     * [.saveState(action)](#CanvasManager+saveState)
     * [.drawMultiSelectionIndicators()](#CanvasManager+drawMultiSelectionIndicators)
     * [.setBaseDimensions(width, height)](#CanvasManager+setBaseDimensions)
+    * [.setSlideMode(isSlide)](#CanvasManager+setSlideMode)
+    * [.setBackgroundColor(color)](#CanvasManager+setBackgroundColor)
     * [.resizeCanvas()](#CanvasManager+resizeCanvas)
     * [.getMousePointFromClient(clientX, clientY)](#CanvasManager+getMousePointFromClient) ⇒ <code>Object</code>
+    * [.setTextEditingMode(isEditing)](#CanvasManager+setTextEditingMode)
 
 <a name="new_CanvasManager_new"></a>
 
@@ -11135,7 +16712,9 @@ Creates a new CanvasManager instance
 <a name="CanvasManager+setupEventHandlers"></a>
 
 ### canvasManager.setupEventHandlers()
-Initialize the event handling layer for CanvasManager.This will construct CanvasEvents controller if available, otherwiseinstall basic fallback handlers for test environments.
+Initialize the event handling layer for CanvasManager.
+This will construct CanvasEvents controller if available, otherwise
+install basic fallback handlers for test environments.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+getSelectedLayerIds"></a>
@@ -11183,10 +16762,12 @@ Notify toolbar style controls of selection change for preset dropdown
 <a name="CanvasManager+loadBackgroundImage"></a>
 
 ### canvasManager.loadBackgroundImage()
-Load background image using ImageLoader moduleDelegates to ImageLoader for URL detection and loading with fallbacks
+Load background image using ImageLoader module
+Delegates to ImageLoader for URL detection and loading with fallbacks
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-**Note**: ImageLoader is guaranteed to load first via extension.json in production,      but fallback is kept for test environments and backward compatibility.  
+**Note**: ImageLoader is guaranteed to load first via extension.json in production,
+      but fallback is kept for test environments and backward compatibility.  
 <a name="CanvasManager+handleImageLoaded"></a>
 
 ### canvasManager.handleImageLoaded(image, info)
@@ -11205,22 +16786,11 @@ Handle successful image load from ImageLoader
 Handle image load error from ImageLoader
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-<a name="CanvasManager+tryLoadImageFallback"></a>
-
-### canvasManager.tryLoadImageFallback(urls, index)
-Try to load images from a list of URLs sequentially.
-
-**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
-
-| Param | Type |
-| --- | --- |
-| urls | <code>Array.&lt;string&gt;</code> | 
-| index | <code>number</code> | 
-
 <a name="CanvasManager+updateStyleOptions"></a>
 
 ### canvasManager.updateStyleOptions(options)
-Update current style options and apply to selected layers.Delegates to StyleController when available.
+Update current style options and apply to selected layers.
+Delegates to StyleController.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11228,10 +16798,47 @@ Update current style options and apply to selected layers.Delegates to StyleCon
 | --- | --- | --- |
 | options | <code>Object</code> | Style options to update |
 
+<a name="CanvasManager+updateDimensionDefaults"></a>
+
+### canvasManager.updateDimensionDefaults(props)
+Update dimension tool defaults from a layer's properties.
+Call this when dimension layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Dimension properties to persist |
+
+<a name="CanvasManager+updateAngleDimensionDefaults"></a>
+
+### canvasManager.updateAngleDimensionDefaults(props)
+Update angle dimension tool defaults from a layer's properties.
+Call this when angle dimension layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Angle dimension properties to persist |
+
+<a name="CanvasManager+updateMarkerDefaults"></a>
+
+### canvasManager.updateMarkerDefaults(props)
+Update marker tool defaults from a layer's properties.
+Call this when marker layer properties are modified to persist settings.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| props | <code>Object</code> | Marker properties to persist |
+
 <a name="CanvasManager+calculateResize"></a>
 
 ### canvasManager.calculateResize(originalLayer, handleType, deltaX, deltaY, modifiers) ⇒ <code>Object</code> \| <code>null</code>
-Calculate resize updates based on layer typeDelegates to TransformController for actual calculations
+Calculate resize updates based on layer type
+Delegates to TransformController for actual calculations
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 **Returns**: <code>Object</code> \| <code>null</code> - Updates object with new dimensions  
@@ -11247,7 +16854,8 @@ Calculate resize updates based on layer typeDelegates to TransformController fo
 <a name="CanvasManager+emitTransforming"></a>
 
 ### canvasManager.emitTransforming(layer)
-Emit a throttled custom event with current transform valuesto allow the properties panel to live-sync during manipulation.
+Emit a throttled custom event with current transform values
+to allow the properties panel to live-sync during manipulation.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11258,7 +16866,8 @@ Emit a throttled custom event with current transform valuesto allow the propert
 <a name="CanvasManager+updateLayerPosition"></a>
 
 ### canvasManager.updateLayerPosition(layer, originalState, deltaX, deltaY)
-Update layer position during drag operation
+Update layer position during drag operation.
+Delegates to TransformController which handles all layer types.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11325,7 +16934,8 @@ Get bounding box of a layer
 <a name="CanvasManager+getTempCanvas"></a>
 
 ### canvasManager.getTempCanvas(width, height) ⇒ <code>Object</code>
-Get a temporary canvas from the pool or create a new oneThis prevents memory leaks from constantly creating new canvas elements
+Get a temporary canvas from the pool or create a new one
+This prevents memory leaks from constantly creating new canvas elements
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 **Returns**: <code>Object</code> - Object with canvas and context properties  
@@ -11384,7 +16994,8 @@ Public zoom helper used by external handlers (wheel/pinch)
 <a name="CanvasManager+saveState"></a>
 
 ### canvasManager.saveState(action)
-Save current state to history for undo/redoDelegates to HistoryManager for single source of truth
+Save current state to history for undo/redo
+Delegates to HistoryManager for single source of truth
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11395,13 +17006,21 @@ Save current state to history for undo/redoDelegates to HistoryManager for sing
 <a name="CanvasManager+drawMultiSelectionIndicators"></a>
 
 ### canvasManager.drawMultiSelectionIndicators()
-Draw selection indicators for multiple selected layersThe key object (last selected) is visually distinguished with an orange border
+Draw selection indicators for multiple selected layers
+The key object (last selected) is visually distinguished with an orange border
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+setBaseDimensions"></a>
 
 ### canvasManager.setBaseDimensions(width, height)
-Set the base dimensions that layers were created against.Used for scaling layers when the canvas size differs from the original.
+Set the base dimensions that layers were created against.
+Used for scaling layers when the canvas size differs from the original.
+
+IMPORTANT: This also resizes the canvas logical dimensions to match.
+This ensures layers are created at coordinates that match the original
+image dimensions, regardless of what thumbnail size was loaded.
+This is critical for formats like TIFF where we load a thumbnail but
+need to store layers at the original file's coordinate space.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11410,16 +17029,42 @@ Set the base dimensions that layers were created against.Used for scaling layer
 | width | <code>number</code> | Original image width |
 | height | <code>number</code> | Original image height |
 
+<a name="CanvasManager+setSlideMode"></a>
+
+### canvasManager.setSlideMode(isSlide)
+Set slide mode (no background image, custom dimensions and color)
+Called when editing a slide instead of a file image.
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isSlide | <code>boolean</code> | Whether editor is in slide mode |
+
+<a name="CanvasManager+setBackgroundColor"></a>
+
+### canvasManager.setBackgroundColor(color)
+Set slide background color
+Only used in slide mode (setSlideMode must be called first)
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| color | <code>string</code> | Background color (e.g. '#ffffff', 'transparent') |
+
 <a name="CanvasManager+resizeCanvas"></a>
 
 ### canvasManager.resizeCanvas()
-Resize canvas to match container size while maintaining aspect ratio.Updates viewport bounds for layer culling.
+Resize canvas to match container size while maintaining aspect ratio.
+Updates viewport bounds for layer culling.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 <a name="CanvasManager+getMousePointFromClient"></a>
 
 ### canvasManager.getMousePointFromClient(clientX, clientY) ⇒ <code>Object</code>
-Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
+Convert a DOM client coordinate to canvas coordinate, robust against CSS transforms.
+Uses element's bounding rect to derive the pixel ratio instead of manual pan/zoom math.
 
 **Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
 
@@ -11427,4 +17072,16 @@ Convert a DOM client coordinate to canvas coordinate, robust against CSS transfo
 | --- | --- |
 | clientX | <code>number</code> | 
 | clientY | <code>number</code> | 
+
+<a name="CanvasManager+setTextEditingMode"></a>
+
+### canvasManager.setTextEditingMode(isEditing)
+Set text editing mode (used by InlineTextEditor)
+When active, suppresses selection handles and drag operations
+
+**Kind**: instance method of [<code>CanvasManager</code>](#CanvasManager)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| isEditing | <code>boolean</code> | Whether inline text editing is active |
 

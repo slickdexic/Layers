@@ -64,6 +64,12 @@ class SlideHooks {
 	private const MAX_SLIDE_QUERIES_PER_PARSE = 50;
 
 	/**
+	 * Whether the query-limit warning has already been emitted this parse.
+	 * @var bool
+	 */
+	private static $slideQueryLimitWarned = false;
+
+	/**
 	 * Reset per-parse static state.
 	 *
 	 * Called via ParserClearState hook to ensure static caches and counters
@@ -76,6 +82,7 @@ class SlideHooks {
 	public static function onParserClearState( Parser $parser ): bool {
 		self::$slideDimensionCache = [];
 		self::$slideQueryCount = 0;
+		self::$slideQueryLimitWarned = false;
 		return true;
 	}
 
@@ -371,10 +378,19 @@ class SlideHooks {
 			return self::$slideDimensionCache[$cacheKey];
 		}
 
-		// Enforce per-parse query limit to prevent DoS via many {{#Slide:}} calls
+		// Enforce per-parse query limit to prevent DoS via many {{#Slide:}} calls.
+		// Past the cap slides render at config defaults instead of their saved size,
+		// so this warns rather than logging at info: it is a visible correctness
+		// degradation, and at info level nobody could tell why the page looked wrong.
 		if ( self::$slideQueryCount >= self::MAX_SLIDE_QUERIES_PER_PARSE ) {
-			self::log( 'Slide dimension query limit reached (' .
-				self::MAX_SLIDE_QUERIES_PER_PARSE . ')' );
+			if ( !self::$slideQueryLimitWarned ) {
+				self::$slideQueryLimitWarned = true;
+				self::logWarning(
+					'Slide dimension query limit reached; further slides on this page ' .
+						'will render at configured default dimensions',
+					[ 'limit' => self::MAX_SLIDE_QUERIES_PER_PARSE, 'slide' => $slideName ]
+				);
+			}
 			return null;
 		}
 

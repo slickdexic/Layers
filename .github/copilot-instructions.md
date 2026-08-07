@@ -209,7 +209,6 @@ See `docs/NAMED_LAYER_SETS.md` for full architecture documentation.
 - `false` → `0` (integer)
 
 **ALL JavaScript code that reads boolean flags from the API MUST handle both types:**
-
 ```javascript
 // ❌ WRONG - will fail for integer 0 (0 !== false is TRUE in JavaScript!)
 return visible !== false;
@@ -226,6 +225,8 @@ if ( bgVal === false || bgVal === 0 || bgVal === '0' || bgVal === 'false' ) {
 **Why this matters:** JavaScript's strict equality (`!==`) does NOT convert types. `0 !== false` evaluates to `true` because they are different types (number vs boolean), even though they both represent "falsy" values.
 
 **See:** `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md` for the full story of how this bug resurfaced three times.
+
+**It resurfaced a fourth time in 1.5.82** (`arrowsInside`, `reflexAngle`), because the remedy each time was documentation. As of 1.5.83 the three lists are checked by `scripts/check-parallel-lists.js` in `npm test`. Adding a boolean property means editing all three: the validator whitelist, `ApiLayersInfo::preserveLayerBooleans()`, and `LayerDataNormalizer.BOOLEAN_PROPERTIES`.
 
 ### ⚠️ CRITICAL: OutputPage Methods Change Between MW Versions
 
@@ -288,6 +289,10 @@ Layer objects are a sanitized subset of the client model. Common fields (whiteli
 - Blur fill: When fill='blur', shapes display a "frosted glass" effect that blurs content beneath. blurRadius controls intensity (default 12px).
 
 Important: Unknown or invalid fields are dropped server-side. Keep editor state within these fields to avoid data loss.
+
+**Validation rejects rather than repairs for anything carrying user content.** `ServerSideLayerValidator::validateLayer()` drops a failing property with a warning by default, which is right for cosmetic hints and wrong for content: a ten-stop gradient with two typos used to become a two-stop gradient and still return `success: 1`. Properties listed in `STRICT_PROPERTIES` (`richText`, `gradient`, `points`, `originalWidth`, `originalHeight`) fail the whole layer instead. Add new content-bearing properties there.
+
+**`ThumbnailRenderer` cannot draw every layer type.** `callout`, `image`, `group`, `customShape`, `marker`, `dimension`, `angleDimension` and `blur` fills have no ImageMagick primitive, so they are omitted from server-composited thumbnails and PDF exports. This is *declared* in `ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE`, enforced by `check-parallel-lists.js`, reported as `incomplete`/`droppedtypes` in the `layerspdfexport` result, and surfaced to the user. Never add a `default:` arm that drops a type silently. The client-side `viewer/PdfBuilder.js` path *is* complete; prefer it where possible.
 
 ## 4) Configuration and permissions
 
@@ -364,10 +369,15 @@ Install
 - composer install (PHP Composer; ensure it’s the PHP tool, not a Python package with the same name)
 
 Lint & tests
-- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana, then jest, `verify-metrics.js`, `verify-i18n-wiring.js`, `check-mw-compatibility.js`, `check-php-class-refs.js` and `check-bundle-size.js`; use `--force` to continue on warnings)
+- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana, then jest, `verify-metrics.js`, `verify-i18n-wiring.js`, `check-mw-compatibility.js`, `check-php-class-refs.js`, `check-parallel-lists.js`, `check-atomicity.js`, `check-bundle-size.js` and the emoji shard check; use `--force` to continue on warnings)
 - i18n wiring check alone: `npm run check:i18n` (see §6)
 - MediaWiki API-drift check alone: `npm run check:mw-compat` (scans `src/` and `maintenance/`)
 - PHP class-reference check alone: `npm run check:phprefs`. Flags any unqualified use of a Layers class the file has not imported (PHP would silently resolve it into the file's own namespace and fatal at runtime), and any `use MediaWiki\Extension\Layers\…` import pointing at a class that does not exist. `parallel-lint` and `phpcs` are both blind to this, and it took the wiki down in 1.5.81.
+- **Parallel-list check alone: `npm run check:parallel`.** Several lists must agree across PHP and JS but live in different files, and every time one drifted it shipped a silent user-visible defect. This asserts set-equality of:
+  1. boolean properties — `ServerSideLayerValidator::ALLOWED_PROPERTIES` (the `=> 'boolean'` entries) ↔ `ApiLayersInfo::preserveLayerBooleans()` ↔ `LayerDataNormalizer.BOOLEAN_PROPERTIES`;
+  2. layer types — `ServerSideLayerValidator::SUPPORTED_LAYER_TYPES` ↔ `ThumbnailRenderer` (`buildLayerArguments()` cases **plus** `UNSUPPORTED_SERVER_SIDE`) ↔ `RateLimiter::isComplexityAllowed()` cases.
+  If you add a boolean layer property or a layer type, you must edit every member of its group. The gate will tell you which one you missed.
+- **Atomicity check alone: `npm run check:atomicity`.** Fails on any `endAtomic()` inside a `catch` block, and on `cancelAtomic()` in a file with no `ATOMIC_CANCELABLE` section. Added in 1.5.83 after the same defect was found in four places; it caught the fourth on its first run.
 - ResourceLoader size budgets alone: `npm run check:bundlesize` (budgets in `bundlesize.config.json`, measured in raw source bytes; add `--report` to print sizes without failing)
 - Emoji shard integrity alone: `npm run check:emoji` (verifies `emoji/*.json` matches `EmojiLibraryIndex.js`)
 - JS unit tests (Jest): `npm run test:js` (optional `:watch` or `:coverage`)
@@ -426,14 +436,18 @@ inline, blank lines grouping related keys). Edit them textually.
 ## 7) Security and robustness checklist
 
 - Always require CSRF token for writes (server already enforces; use `api.postWithToken('csrf', ...)` on the client)
+- **A "read" that spends unbounded server CPU or writes to disk is not a read.** `action=layerspdfexport` returns `isWriteMode() === false` because it mutates no layer data, but it still requires `mustBePosted()` and `needsToken() === 'csrf'`: as a token-less GET it rasterised up to `$wgLayersPdfExportMaxPages` pages with ImageMagick and wrote a PDF, so any third-party page could drive it from every logged-in visitor's browser via `<img src>`. Apply the same rule to any new expensive endpoint.
+- **Rate limits must ship defaults.** `RateLimiter::checkRateLimit()` resolves to `User::pingLimiter()`, which reports "not limited" for a bucket nobody configured. Before 1.5.83 `extension.json` declared none, so all three Layers limits were decorative on every default install. New `editlayers-<action>` keys must be added to the `RateLimits` block in `extension.json` (merge strategy `array_plus_2d`, so admin overrides still win).
 - Gate every new write endpoint on the per-title `edit` permission via `LayersApiHelperTrait::requireTitleEditPermission()`, not just the global `editlayers` right. Layer data changes what a File page renders, so page/namespace/cascading protection and blocks must apply. Use `Authority::definitelyCan()` — **not** `authorizeWrite()`, which would consume core's `edit` rate-limit bucket that Layers does not use, and **not** the deprecated `PermissionManager::getPermissionErrors()`.
 - Respect size limits and layer counts from config; give users clear errors using i18n keys (see `LayersEditor.js`)
 - Do not add new layer fields without updating server whitelist/validation (or they will be discarded)
 - Validate and sanitize text, colors, and identifiers; follow patterns in `ApiLayersSave`
 - Consider rate limits for new operations; reuse pingLimiter keys pattern ('editlayers-<action>')
 - Avoid N+1 DB calls; batch where possible (see user name enrichment in `ApiLayersInfo`)
-- In `LayersDatabase`, open atomic sections with `IDatabase::ATOMIC_CANCELABLE` and roll back with `cancelAtomic()`. `endAtomic()` in a catch block marks the section *successful* and commits partial writes; the retry-on-conflict loop also only works on MySQL without a savepoint.
+- In `LayersDatabase`, open atomic sections with `IDatabase::ATOMIC_CANCELABLE` and roll back with `cancelAtomic()`. `endAtomic()` in a catch block marks the section *successful* and commits partial writes; the retry-on-conflict loop also only works on MySQL without a savepoint. Enforced by `npm run check:atomicity` — this rule was written once and then violated in three more places, which is why it is now a gate.
 - Anything written under `<upload>/thumb/layers/` must be purgeable. Derive the path from `Utility\RenderCache` and make sure `purgeBySha1()` covers it, otherwise deleting a file for copyright or privacy will leave the content retrievable.
+- **Never build an artefact filename from a raw SHA1.** `ForeignFileHelper::getFileSha1()` falls back to `foreign_<sha1>` for foreign repos, which is 48 characters and contains an underscore. Three separate guards rejected that shape, so foreign-file renders were unpurgeable and foreign-file exports undeliverable. Every producer and consumer must go through `RenderCache::artefactKey()`.
+- **Invalidating the `File:` page is not enough.** Layer data lives outside the wikitext, so pages that *embed* the file keep serving parser-cached HTML with the old set. `CacheInvalidationTrait` queues an `HTMLCacheUpdateJob` over the `imagelinks` backlinks; any new write path must call it.
 - **Never hand the client a `$wgUploadPath` URL for generated content that reproduces file contents.** Upload-path URLs are served by the web server, not MediaWiki, so they bypass `read` permission entirely and stay valid forever. PDF exports are written to `RenderCache::getExportDir()` (outside the document root) and delivered by `SpecialPages\SpecialLayersExport`, which re-resolves the `File:` title and re-checks `read` on every request. New export/render formats must follow the same pattern, and their delivery endpoint must return one indistinguishable error for "missing", "expired" and "not permitted" so it cannot be used to probe for files.
 
 ## 8) Editor UX notes
@@ -481,6 +495,11 @@ inline, blank lines grouping related keys). Edit them textually.
   - Returns: { layersrename: { success: 1, oldname, newname } }
   - Permission: owner (first revision creator) or admin ('delete' right)
   - Validates: new name format (alphanumeric, hyphens, underscores, 1-255 chars), no conflicts, cannot rename to 'default'
+- POST action=layerspdfexport (CSRF) — **POST + token despite `isWriteMode() === false`**
+  - Params: filename, setname?, width? (clamped 200-4096, snapped to 200px buckets), token
+  - Returns: { layerspdfexport: { success: 1, url, pageCount, setname, cached, incomplete?, droppedtypes?[] } }
+  - Permission: `read` on the file page. Rate limited under `editlayers-render`.
+  - `incomplete`/`droppedtypes` report layer types the ImageMagick compositor could not draw (see §3). Not set on a cache hit.
 
 Keep this doc aligned with code. When you change public behavior (API, schema, messages), update this file and add tests where feasible.
 ## 12) Documentation update checklist
@@ -498,8 +517,8 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (14,178 Jest tests in 177 suites; 624 PHPUnit tests)
-- Coverage (95.87% statement, 87.20% branch — verified April 7, 2026)
+- Test count (14,191 Jest tests in 177 suites; 646 PHPUnit tests)
+- Coverage (95.23% statement, 86.60% branch — verified August 6, 2026)
 - JavaScript file count (160 files total, ~105,000 lines)
 - PHP file count (48 files, ~17,300 lines)
 - God class count (28 files >=1,000 lines; 4 generated data files, 20 JS, 4 PHP)
@@ -508,4 +527,4 @@ Common metrics to keep synchronized:
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.82)
+- Version number (1.5.83)

@@ -298,6 +298,123 @@ class ServerSideLayerValidatorTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * Malformed points used to be silently skipped, so a polygon could lose
+	 * vertices while the save still reported success.
+	 *
+	 * @dataProvider provideMalformedPoints
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 * @param array $points
+	 */
+	public function testMalformedPointsAreRejectedNotDropped( array $points ) {
+		$validator = $this->createValidator();
+
+		$result = $validator->validateLayer( [ 'type' => 'polygon', 'points' => $points ] );
+
+		$this->assertFalse( $result->isValid() );
+	}
+
+	public static function provideMalformedPoints(): array {
+		return [
+			'missing y' => [ [ [ 'x' => 1, 'y' => 1 ], [ 'x' => 2 ] ] ],
+			'non numeric' => [ [ [ 'x' => 1, 'y' => 1 ], [ 'x' => 'a', 'y' => 'b' ] ] ],
+			'not an object' => [ [ [ 'x' => 1, 'y' => 1 ], 'nope' ] ],
+			'out of range' => [ [ [ 'x' => 1, 'y' => 1 ], [ 'x' => 1e12, 'y' => 0 ] ] ],
+			'negative out of range' => [ [ [ 'x' => -1e12, 'y' => 0 ] ] ],
+		];
+	}
+
+	/**
+	 * A gradient with malformed stops used to be silently degraded to whatever
+	 * stops happened to parse, and the API still returned success.
+	 *
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testMalformedGradientStopIsRejectedNotDropped() {
+		$validator = $this->createValidator();
+
+		$result = $validator->validateLayer( [
+			'type' => 'rectangle',
+			'width' => 10,
+			'height' => 10,
+			'gradient' => [
+				'type' => 'linear',
+				'colors' => [
+					[ 'offset' => 0, 'color' => '#ff0000' ],
+					[ 'offset' => 0.5 ],
+					[ 'offset' => 1, 'color' => '#0000ff' ],
+				],
+			],
+		] );
+
+		$this->assertFalse( $result->isValid() );
+	}
+
+	/**
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testWellFormedGradientStillValidates() {
+		$validator = $this->createValidator();
+
+		$result = $validator->validateLayer( [
+			'type' => 'rectangle',
+			'width' => 10,
+			'height' => 10,
+			'gradient' => [
+				'type' => 'linear',
+				'colors' => [
+					[ 'offset' => 0, 'color' => '#ff0000' ],
+					[ 'offset' => 1, 'color' => '#0000ff' ],
+				],
+			],
+		] );
+
+		$this->assertTrue( $result->isValid() );
+		$this->assertCount( 2, $result->getData()['gradient']['colors'] );
+	}
+
+	/**
+	 * A run without text used to vanish, deleting a span of the user's text
+	 * without any error.
+	 *
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testRichTextRunWithoutTextIsRejectedNotDropped() {
+		$validator = $this->createValidator();
+
+		$result = $validator->validateLayer( [
+			'type' => 'textbox',
+			'width' => 100,
+			'height' => 50,
+			'richText' => [
+				[ 'text' => 'kept' ],
+				[ 'style' => [ 'fontWeight' => 'bold' ] ],
+			],
+		] );
+
+		$this->assertFalse( $result->isValid() );
+	}
+
+	/**
+	 * Image intrinsic dimensions used to fall under the generic +/-100000
+	 * numeric range, so a negative "original size" was accepted.
+	 *
+	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
+	 */
+	public function testNegativeOriginalImageDimensionsAreRejected() {
+		$validator = $this->createValidator();
+
+		$result = $validator->validateLayer( [
+			'type' => 'rectangle',
+			'width' => 10,
+			'height' => 10,
+			'originalWidth' => -500,
+			'originalHeight' => -500,
+		] );
+
+		$this->assertFalse( $result->isValid() );
+	}
+
+	/**
 	 * @covers \MediaWiki\Extension\Layers\Validation\ServerSideLayerValidator::validateLayer
 	 */
 	public function testValidateLayerPolygonParametricDefinition() {

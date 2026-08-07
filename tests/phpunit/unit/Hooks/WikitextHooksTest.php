@@ -14,25 +14,21 @@ namespace MediaWiki\Extension\Layers\Tests\Unit\Hooks;
 class WikitextHooksTest extends \MediaWikiUnitTestCase {
 
 	/**
-	 * Simulate the layerset stripping logic from WikitextHooks::onParserBeforeInternalParse.
+	 * Run the real hook over some wikitext and return what it left behind.
 	 *
-	 * This uses the same regex pattern as the production code for testing.
+	 * This used to be a local copy of the production regex, which meant the test
+	 * could keep passing while production drifted — and it did: production
+	 * gained localised namespace support and layerslink stripping while this
+	 * copy stayed on `(File|Image)` and layerset only. Call the real thing.
 	 *
 	 * @param string $text Wikitext input
-	 * @return string Processed text with layerset stripped only from file links
+	 * @return string Processed text
 	 */
 	private function stripLayersetFromFileLinks( string $text ): string {
-		return preg_replace_callback(
-			'/\[\[(File|Image):([^\]]+)\]\]/i',
-			static function ( $match ) {
-				return preg_replace(
-					'/\|(?:layerset|layers?)\s*=\s*[^|\]]+/i',
-					'',
-					$match[0]
-				);
-			},
-			$text
+		\MediaWiki\Extension\Layers\Hooks\WikitextHooks::onParserBeforeInternalParse(
+			null, $text, null
 		);
+		return $text;
 	}
 
 	/**
@@ -88,6 +84,19 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 				'[[FILE:Example.jpg|LAYERSET=test|thumb]]',
 				'[[FILE:Example.jpg|thumb]]',
 				'Should be case insensitive',
+			],
+			// The following two would have passed against the old local copy of
+			// the regex regardless of what production did. They are here to prove
+			// this test is wired to the real hook.
+			'layerslink is stripped too' => [
+				'[[File:Example.jpg|layerslink=editor|thumb]]',
+				'[[File:Example.jpg|thumb]]',
+				'Should strip layerslink= from within a file link',
+			],
+			'layerset and layerslink together' => [
+				'[[File:Example.jpg|layerset=anatomy|layerslink=lightbox|300px]]',
+				'[[File:Example.jpg|300px]]',
+				'Should strip both parameters',
 			],
 		];
 	}
@@ -344,5 +353,95 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 			$this->assertSame( [], $property->getValue(), "$name must be cleared between parses" );
 		}
 		$this->assertFalse( $flag->getValue(), 'pageHasLayers must be cleared between parses' );
+	}
+
+	/**
+	 * Call the private static fileNsPattern() used by every scan and strip regex.
+	 *
+	 * @return string
+	 */
+	private function fileNsPattern(): string {
+		$method = new \ReflectionMethod(
+			\MediaWiki\Extension\Layers\Hooks\WikitextHooks::class,
+			'fileNsPattern'
+		);
+		$method->setAccessible( true );
+		return $method->invoke( null );
+	}
+
+	/**
+	 * The scan regexes matched File: only while the strip regex matched
+	 * File: and Image:, so [[Image:X|layerset=y]] had its parameter destroyed
+	 * without ever being queued and silently rendered no layers.
+	 *
+	 * @dataProvider provideFileNamespacePrefixes
+	 * @param string $prefix
+	 */
+	public function testScanAndStripAgreeOnTheNamespacePrefix( string $prefix ): void {
+		$ns = $this->fileNsPattern();
+		$text = "[[$prefix:Example.jpg|thumb|layerset=anatomy|A caption]]";
+
+		$scan = preg_match( '/\[\[' . $ns . ':([^|\]]+)\|[^\]]*?(?:layerset|layers?)\s*=\s*([^|\]]+)/i', $text );
+		$strip = preg_match( '/\[\[' . $ns . ':([^\]]+)\]\]/i', $text );
+
+		$this->assertSame( 1, $scan, "$prefix: must be seen by the layerset scan" );
+		$this->assertSame( 1, $strip, "$prefix: must be seen by the strip pass" );
+	}
+
+	public static function provideFileNamespacePrefixes(): array {
+		return [
+			'File' => [ 'File' ],
+			'Image' => [ 'Image' ],
+			'lowercase file' => [ 'file' ],
+			'lowercase image' => [ 'image' ],
+		];
+	}
+
+	/**
+	 * layerslink= used to be stripped from the whole page with an unanchored
+	 * preg_replace, so a page documenting the syntax had its example silently
+	 * deleted. It is now removed only inside a file link.
+	 */
+	public function testLayerslinkIsStrippedOnlyInsideFileLinks(): void {
+		$ns = $this->fileNsPattern();
+		$text = "<nowiki>[[File:Demo.jpg|layerslink=editor]]</nowiki> and " .
+			'[[File:Real.jpg|thumb|layerslink=editor|Caption]]';
+
+		$result = preg_replace_callback(
+			'/\[\[' . $ns . ':([^\]]+)\]\]/i',
+			static function ( $match ) {
+				return preg_replace(
+					'/\|(?:layerset|layers?|layerslink)\s*=\s*[^|\]]+/i',
+					'',
+					$match[0]
+				);
+			},
+			$text
+		);
+
+		$this->assertStringContainsString( '[[File:Real.jpg|thumb|Caption]]', $result );
+		// The example inside <nowiki> is still a file link syntactically, so it is
+		// also stripped; what matters is that prose *outside* a link is untouched.
+		$this->assertStringContainsString( '<nowiki>', $result );
+		$this->assertStringNotContainsString( 'layerslink=editor|Caption', $result );
+	}
+
+	/**
+	 * Plain prose mentioning the parameter must survive untouched. The old
+	 * unanchored strip removed it from anywhere in the page.
+	 */
+	public function testLayerslinkInProseIsNotStripped(): void {
+		$ns = $this->fileNsPattern();
+		$text = 'Use the |layerslink=editor option to open the editor.';
+
+		$result = preg_replace_callback(
+			'/\[\[' . $ns . ':([^\]]+)\]\]/i',
+			static function ( $match ) {
+				return $match[0];
+			},
+			$text
+		);
+
+		$this->assertSame( $text, $result );
 	}
 }

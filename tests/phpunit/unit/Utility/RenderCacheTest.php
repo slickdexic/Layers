@@ -188,6 +188,70 @@ class RenderCacheTest extends MediaWikiUnitTestCase {
 		$this->assertSame( 0, RenderCache::purgeBySha1( $this->makeConfig(), 'abc123' ) );
 	}
 
+	/**
+	 * A well-formed base-36 SHA1 is already a usable filename token.
+	 */
+	public function testArtefactKeyPassesThroughRealSha1(): void {
+		$sha1 = 'q1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p';
+		$this->assertSame( $sha1, RenderCache::artefactKey( $sha1 ) );
+	}
+
+	/**
+	 * ForeignFileHelper returns "foreign_<sha1>" for repos with no SHA1. That is
+	 * 48 characters and contains an underscore, so it used to be rejected by
+	 * every guard here and by Special:LayersExport: foreign-file renders could
+	 * never be purged and foreign-file exports could never be delivered.
+	 */
+	public function testArtefactKeyNormalisesForeignFallbackIdentifier(): void {
+		$foreign = 'foreign_' . sha1( 'Example.jpg' );
+		$key = RenderCache::artefactKey( $foreign );
+
+		$this->assertMatchesRegularExpression( '/^[0-9a-z]{4,40}$/', $key );
+		$this->assertNotSame( $foreign, $key );
+	}
+
+	public function testArtefactKeyIsDeterministic(): void {
+		$foreign = 'foreign_' . sha1( 'Example.jpg' );
+		$this->assertSame(
+			RenderCache::artefactKey( $foreign ),
+			RenderCache::artefactKey( $foreign )
+		);
+	}
+
+	public function testArtefactKeyOfEmptyInputIsEmpty(): void {
+		$this->assertSame( '', RenderCache::artefactKey( '' ) );
+	}
+
+	/**
+	 * The whole point of the key: a foreign file's artefacts must be purgeable
+	 * when the file is deleted, and reapable when they go stale.
+	 */
+	public function testForeignFileArtefactsArePurgeableAndReapable(): void {
+		$config = $this->makeConfig();
+		$thumbDir = RenderCache::getThumbDir( $config );
+		$foreign = 'foreign_' . sha1( 'Example.jpg' );
+		$key = RenderCache::artefactKey( $foreign );
+
+		$mine = $this->writeArtefact( $thumbDir, $key . '_800px.png' );
+		$other = $this->writeArtefact( $thumbDir, 'zzz999_800px.png' );
+
+		$this->assertSame( 1, RenderCache::purgeBySha1( $config, $foreign ) );
+		$this->assertFileDoesNotExist( $mine );
+		$this->assertFileExists( $other );
+	}
+
+	public function testForeignFileArtefactsMatchTheReaperPattern(): void {
+		$config = $this->makeConfig();
+		$thumbDir = RenderCache::getThumbDir( $config );
+		$key = RenderCache::artefactKey( 'foreign_' . sha1( 'Example.jpg' ) );
+		$path = $this->writeArtefact( $thumbDir, $key . '_800px.png', time() - 7200 );
+
+		$result = RenderCache::purgeOlderThan( $config, 3600 );
+
+		$this->assertSame( 1, $result['deleted'] );
+		$this->assertFileDoesNotExist( $path );
+	}
+
 	public function testPurgeOlderThanRemovesOnlyStaleArtefacts(): void {
 		$config = $this->makeConfig();
 		$thumbDir = RenderCache::getThumbDir( $config );

@@ -20,11 +20,39 @@ use MediaWiki\Shell\Shell;
 use Psr\Log\LoggerInterface;
 
 class ThumbnailRenderer {
+	/**
+	 * Layer types this renderer has no ImageMagick primitive for.
+	 *
+	 * These are accepted by ServerSideLayerValidator, stored, and drawn correctly
+	 * by the browser renderers, but cannot currently be composited server-side.
+	 * They are listed here rather than falling silently through a `default:` arm
+	 * so the gap is declared, testable, and reportable to the user -- a PDF export
+	 * that quietly omits every marker and callout is worse than one that says so.
+	 *
+	 * Keep in sync with ServerSideLayerValidator::ALLOWED_TYPES; enforced by
+	 * scripts/check-parallel-lists.js.
+	 */
+	public const UNSUPPORTED_SERVER_SIDE = [
+		'callout',
+		'image',
+		'group',
+		'customShape',
+		'marker',
+		'dimension',
+		'angleDimension',
+	];
+
 	/** @var Config */
 	private $config;
 
 	/** @var LoggerInterface|null */
 	private $logger;
+
+	/**
+	 * Layer types skipped during the most recent overlayLayers() call.
+	 * @var string[]
+	 */
+	private array $droppedTypes = [];
 
 	/**
 	 * Render dimensions of the current canvas (set during overlayLayers).
@@ -82,7 +110,7 @@ class ThumbnailRenderer {
 			}
 
 			$outputPath = $thumbDir . '/' .
-				ForeignFileHelper::getFileSha1( $file ) . '_' .
+				RenderCache::artefactKey( ForeignFileHelper::getFileSha1( $file ) ) . '_' .
 				md5( json_encode( $params ) ) . '.png';
 			if ( file_exists( $outputPath ) ) {
 				return $outputPath;
@@ -153,6 +181,7 @@ class ThumbnailRenderer {
 		// Store canvas dimensions for shadow sub-image isolation
 		$this->renderWidth = $targetW;
 		$this->renderHeight = $targetH;
+		$this->droppedTypes = [];
 
 		$args = [ $convert, $basePath ];
 
@@ -249,8 +278,24 @@ class ThumbnailRenderer {
 			case 'line':
 				return $this->buildLineArguments( $layer, $scaleX, $scaleY );
 			default:
+				$type = (string)( $layer['type'] ?? 'unknown' );
+				if ( !in_array( $type, $this->droppedTypes, true ) ) {
+					$this->droppedTypes[] = $type;
+				}
 				return [];
 		}
+	}
+
+	/**
+	 * Layer types that the most recent render could not draw.
+	 *
+	 * Callers that present the render to a user (PDF export) should surface this
+	 * so the omission is visible rather than silent.
+	 *
+	 * @return string[] Distinct layer types skipped, in first-seen order
+	 */
+	public function getDroppedLayerTypes(): array {
+		return $this->droppedTypes;
 	}
 
 	/**
