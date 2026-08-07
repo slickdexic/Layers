@@ -444,4 +444,88 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 
 		$this->assertSame( $text, $result );
 	}
+
+	/**
+	 * Overwrite the per-parse static state directly, simulating what the two
+	 * registration hooks would have left behind.
+	 *
+	 * @param array $state Property name => value
+	 */
+	private function setStaticState( array $state ): void {
+		$reflection = new \ReflectionClass( \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class );
+		foreach ( $state as $name => $value ) {
+			$property = $reflection->getProperty( $name );
+			$property->setAccessible( true );
+			$property->setValue( null, $value );
+		}
+	}
+
+	/**
+	 * With every occurrence written directly in the page wikitext, the scan queue
+	 * and the render order agree and the scan queue is authoritative.
+	 */
+	public function testScanQueueIsUsedWhenEveryOccurrenceWasScanned(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$hooks::onParserClearState( null );
+		$this->setStaticState( [
+			'fileSetNames' => [ 'X.jpg' => [ 'anatomy', null ] ],
+			'fileParseCount' => [ 'X.jpg' => 2 ],
+			'fileParamLayerset' => [],
+		] );
+
+		$this->assertSame( 'anatomy', $hooks::getFileParamsForRender( 'X.jpg' )['setName'] );
+		$this->assertNull( $hooks::getFileParamsForRender( 'X.jpg' )['setName'] );
+	}
+
+	/**
+	 * Regression: a template emitting the same file adds render occurrences the
+	 * pre-parse scan never saw, so scan index N stops meaning render occurrence N.
+	 *
+	 * Page: {{SomeTemplate}} (emits [[File:X.jpg]], no layerset) followed by
+	 *       [[File:X.jpg|layerset=anatomy]]
+	 *
+	 * The scan only sees the second one, so its queue is ['anatomy'] at index 0 —
+	 * but index 0 is consumed by the *template's* image, which had no layerset at
+	 * all. That image used to be rendered with someone else's annotations.
+	 */
+	public function testScanQueueIsIgnoredWhenTemplatesAddUnscannedOccurrences(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$hooks::onParserClearState( null );
+		$this->setStaticState( [
+			// Raw wikitext scan saw one occurrence: the inline one, with layerset=anatomy.
+			'fileSetNames' => [ 'X.jpg' => [ 'anatomy' ] ],
+			// Two occurrences actually parsed/rendered: template first, then inline.
+			'fileParseCount' => [ 'X.jpg' => 2 ],
+			// Parse-order source: the inline occurrence is index 1. The template's
+			// image (index 0) genuinely had no layerset.
+			'fileParamLayerset' => [ 'X.jpg' => [ 1 => 'anatomy' ] ],
+		] );
+
+		$this->assertNull(
+			$hooks::getFileParamsForRender( 'X.jpg' )['setName'],
+			'Template-emitted image must not inherit the inline image\'s layer set'
+		);
+		$this->assertSame(
+			'anatomy',
+			$hooks::getFileParamsForRender( 'X.jpg' )['setName'],
+			'Inline image must still get its own layer set'
+		);
+	}
+
+	/**
+	 * A file that appears only inside templates has no scan entries at all; the
+	 * parse-order source must carry it.
+	 */
+	public function testTemplateOnlyOccurrencesUseParseOrderSource(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$hooks::onParserClearState( null );
+		$this->setStaticState( [
+			'fileSetNames' => [],
+			'fileParseCount' => [ 'X.jpg' => 2 ],
+			'fileParamLayerset' => [ 'X.jpg' => [ 0 => 'first', 1 => 'second' ] ],
+		] );
+
+		$this->assertSame( 'first', $hooks::getFileParamsForRender( 'X.jpg' )['setName'] );
+		$this->assertSame( 'second', $hooks::getFileParamsForRender( 'X.jpg' )['setName'] );
+	}
 }

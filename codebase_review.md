@@ -52,7 +52,7 @@ because "the review was wrong about this" is information:
   normalisation added inside `getFileSha1()` makes that guaranteed rather than
   incidental, but no live bug existed there.
 
-**Gate status after remediation:** 177 Jest suites / 14,191 tests, 646 PHPUnit
+**Gate status after remediation:** 177 Jest suites / 14,191 tests, 651 PHPUnit
 tests, `check:i18n`, `check:mw-compat`, `check:phprefs`, `check:parallel`,
 `check:atomicity`, `check:bundlesize` — all green; phpcs 0 errors / 2 warnings
 (both pre-existing, in test stubs). Coverage 95.23% statement / 86.60% branch.

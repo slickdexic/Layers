@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.83
+**Version:** 1.5.84
 **Last updated:** August 6, 2026 — R2 full critical review (see `codebase_review.md` §R2)
 
 > ## ✅ R3.01 — P0 resolved: LTS security backport (August 6, 2026)
@@ -55,7 +55,7 @@
 > tests, `check:i18n`, `check:mw-compat`, `check:phprefs`, `check:bundlesize`)
 > and every item below was still present.
 >
-> **Status as of v1.5.83: all of Priority 1, all of Priority 2 except R2.12 and
+> **Status as of v1.5.84: all of Priority 1, all of Priority 2 except
 > R2.20, three of Priority 3, and both gates (R2.50/R2.51) are done.**
 >
 > **Read R2.50 first.** Three of the five HIGH findings are *the same failure
@@ -87,7 +87,7 @@
 > | R2.09 | Add `arrowsInside` and `reflexAngle` to `preserveLayerBooleans()`. | `Api/ApiLayersInfo.php:489-492` | ✅ Done (v1.5.83) |
 > | R2.10 | Make all four wikitext-scan regexes agree on the namespace set. | `WikitextHooks.php:862,885,955,1036` | ✅ Done (v1.5.83) — one `fileNsPattern()` built from the wiki's real File-namespace name and aliases |
 > | R2.11 | Stop the unconditional `layerslink=` strip from running over `<nowiki>`/`<pre>`/comment content. | `WikitextHooks.php:992` | ✅ Done (v1.5.83) |
-> | R2.12 | Key layer-set state by `(title, params)` from `onParserMakeImageParams` instead of by scan position. The positional queue desynchronises whenever a template emits a file, putting layer sets on the wrong images. | `WikitextHooks.php:849-1055`, `:796` | 🔲 Open — architectural; needs its own change with integration tests |
+> | R2.12 | Template-emitted images could receive another occurrence's layer set. **The original diagnosis was wrong**: templates *are* handled, via a parse-order source (`fileParamLayerset`) that the render side falls back to. The real defect was narrower — the document-order scan queue (`fileSetNames`) is consulted *first*, and once a template emits the same file its indices no longer line up with render order, so occurrence A’s set name is handed to occurrence B. Fixed by detecting the mismatch (`fileParseCount` counts every occurrence; the scan only sees inline ones) and ignoring the scan queue when it is provably misaligned. Three regression tests, one of which fails against the pre-fix behaviour. | `WikitextHooks.php` `getFileParamsForRender()` | ✅ Done (v1.5.84) |
 > | R2.13 | Handle `QuotaExceededError`; sweep stale drafts. | `DraftManager.js` | ✅ Done (v1.5.83) |
 > | R2.14 | Scope draft storage keys to `wgUserId`. | `DraftManager.js:60-64` | ✅ Done (v1.5.83) |
 > | R2.15 | Fix `isComplexityAllowed()`. | `Security/RateLimiter.php:186-230` | ✅ Done (v1.5.83) — the comment was wrong, not the code: group children live in the same flat array and are already costed. Comment corrected, `angleDimension` added, dead `blur` case removed. |

@@ -854,15 +854,38 @@ class WikitextHooks {
 
 		$index = self::$fileRenderCount[$filename];
 
-		// Get both values at the same index
-		$setName = self::$fileSetNames[$filename][$index] ?? null;
-		// Fallback: use set name captured in onParserMakeImageParams for template-embedded files
-		// that onParserBeforeInternalParse did not see (templates are not yet expanded at that point).
+		// Two sources, indexed differently:
+		//   $fileSetNames      - document-scan order, from onParserBeforeInternalParse
+		//   $fileParamLayerset - parse order (== render order), from onParserMakeImageParams
+		// They agree only while every occurrence of this file is written directly in the
+		// page wikitext. A template that emits the same file adds render occurrences the
+		// scan never saw, so scan index N stops meaning render occurrence N and the scan
+		// queue would hand one occurrence's set name to a different image.
+		// $fileParseCount counts every occurrence, so comparing it to what the scan saw
+		// detects exactly that case.
+		$scanSaw = isset( self::$fileSetNames[$filename] ) ? count( self::$fileSetNames[$filename] ) : 0;
+		$parsedOccurrences = self::$fileParseCount[$filename] ?? 0;
+		$scanQueueIsAligned = ( $parsedOccurrences <= $scanSaw );
+
+		$setName = null;
+		if ( $scanQueueIsAligned ) {
+			$setName = self::$fileSetNames[$filename][$index] ?? null;
+		}
+		// Fallback: set name captured in onParserMakeImageParams. This is the only source
+		// for template-embedded files, and the only trustworthy one once the scan queue is
+		// known to be misaligned.
 		if ( $setName === null ) {
 			$setName = self::$fileParamLayerset[$filename][$index] ?? null;
 			if ( $setName !== null ) {
 				self::log( "getFileParamsForRender: using fileParamLayerset fallback for $filename[$index]: $setName" );
 			}
+		}
+		if ( !$scanQueueIsAligned ) {
+			self::logDebug(
+				"getFileParamsForRender: scan queue for $filename ignored " .
+				"($parsedOccurrences occurrences rendered, $scanSaw seen in raw wikitext); " .
+				'template-emitted images are not visible to the pre-parse scan'
+			);
 		}
 		$linkType = self::$fileLinkTypes[$filename][$index] ?? null;
 

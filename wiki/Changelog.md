@@ -4,6 +4,23 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.84] - 2026-08-06
+
+### Fixed
+
+- **A template that embeds the same image as the page could steal its layer
+  set.** The pre-parse wikitext scan cannot see images emitted by templates, but
+  its positional queue was consulted first — so once a template contributed an
+  occurrence, one image could be rendered with another's annotations. The render
+  side now detects that misalignment and falls back to the parse-order source,
+  which sees every occurrence. Pages where every image is written directly in the
+  wikitext are unaffected.
+
+### Notes
+
+- `REL1_43` received a security-only backport as **1.5.68-REL1_43**. `REL1_39` is
+  end-of-life and is now documented as unmaintained rather than recommended.
+
 ## [1.5.83] - 2026-08-06
 
 Remediation of the R2 critical review. Three of the five HIGH findings were the

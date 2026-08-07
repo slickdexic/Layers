@@ -4,6 +4,35 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.84] - 2026-08-06
+
+### Fixed
+
+- **A template that embeds the same image as the page could steal its layer
+  set.** Two sources feed the render side: `fileSetNames`, built by scanning raw
+  wikitext, and `fileParamLayerset`, recorded per occurrence during parsing. The
+  scan runs before template expansion, so it cannot see images emitted by
+  templates — but its queue was consulted *first* and indexed positionally. Once
+  a template contributed an occurrence, scan index N stopped meaning render
+  occurrence N, and one image was rendered with another's annotations.
+  `getFileParamsForRender()` now compares `fileParseCount` (which counts every
+  occurrence) against what the scan saw, and ignores the scan queue when it is
+  provably misaligned, falling back to the parse-order source that sees
+  everything. Behaviour is unchanged for pages where every occurrence is written
+  directly in the wikitext.
+
+  Note for the record: the original review entry (R2.12) diagnosed this as
+  "templates desynchronise the queue" and claimed template images were unhandled.
+  That was wrong — there is a designed fallback for them. The actual defect was
+  narrower and is what is fixed here.
+
+### Notes
+
+- `REL1_43` received a security-only backport as **1.5.68-REL1_43** covering the
+  six defects fixed on `main` between v1.5.68 and v1.5.83 that had never been
+  carried over. `REL1_39` is end-of-life and is now documented as unmaintained
+  rather than recommended.
+
 ## [1.5.83] - 2026-08-06
 
 Remediation of the R2 critical review (see `codebase_review.md` §R2). Three of

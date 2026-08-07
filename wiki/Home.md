@@ -463,13 +463,13 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.83 |
+| **Version (main)** | 1.5.84 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | August 6, 2026 |
 | **Test Suites** | 177 |
 | **Total Tests** | 14,191 |
-| **PHPUnit Test Files** | 37 (646 tests) |
+| **PHPUnit Test Files** | 37 (651 tests) |
 | **Statement Coverage** | 95.23% |
 | **Branch Coverage** | 86.60% |
 | **Function Coverage** | 93.72% |
