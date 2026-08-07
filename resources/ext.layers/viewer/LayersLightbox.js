@@ -1019,6 +1019,17 @@
 			return new Promise( ( resolve ) => {
 				const img = new Image();
 				let settled = false;
+				// A cross-origin image loaded without CORS taints the canvas, and a
+				// tainted canvas makes toDataURL() throw — which used to send Print
+				// and Download to the server exporter, and that silently omits seven
+				// layer types. Ask for CORS first so the composite stays usable; if
+				// the remote sends no CORS headers the load fails and we retry
+				// without it, which is exactly the old behaviour.
+				const crossOriginNeeded = !this.isSameOriginUrl( imageUrl );
+				let corsAttempted = crossOriginNeeded;
+				if ( crossOriginNeeded ) {
+					img.crossOrigin = 'anonymous';
+				}
 				const done = ( result ) => {
 					if ( settled ) {
 						return;
@@ -1076,9 +1087,33 @@
 						done( null );
 					}
 				};
-				img.onerror = () => done( null );
+				img.onerror = () => {
+					if ( corsAttempted ) {
+						corsAttempted = false;
+						img.removeAttribute( 'crossorigin' );
+						img.src = imageUrl;
+						return;
+					}
+					done( null );
+				};
 				img.src = imageUrl;
 			} );
+		}
+
+		/**
+		 * Whether a URL resolves to this wiki's own origin.
+		 *
+		 * @param {string} url URL to test
+		 * @return {boolean} True for same-origin or relative URLs
+		 * @private
+		 */
+		isSameOriginUrl( url ) {
+			try {
+				return new URL( url, window.location.href ).origin === window.location.origin;
+			} catch ( e ) {
+				// Unparseable: treat as same-origin so we do not add a pointless CORS request.
+				return true;
+			}
 		}
 
 		/**

@@ -2128,4 +2128,118 @@ describe( 'LayersLightbox edge cases', () => {
 			expect( lightbox._pdfRendererResolved ).toBe( false );
 		} );
 	} );
+
+	describe( 'isSameOriginUrl', () => {
+		it( 'should treat relative URLs as same-origin', () => {
+			const lightbox = new LayersLightbox();
+			expect( lightbox.isSameOriginUrl( '/images/a.jpg' ) ).toBe( true );
+		} );
+
+		it( 'should treat an absolute URL on this origin as same-origin', () => {
+			const lightbox = new LayersLightbox();
+			expect( lightbox.isSameOriginUrl( window.location.origin + '/x.jpg' ) ).toBe( true );
+		} );
+
+		it( 'should detect a cross-origin URL', () => {
+			const lightbox = new LayersLightbox();
+			expect( lightbox.isSameOriginUrl( 'https://upload.wikimedia.org/x.jpg' ) ).toBe( false );
+		} );
+
+		it( 'should fall back to same-origin for an unparseable URL', () => {
+			const lightbox = new LayersLightbox();
+			const originalUrl = global.URL;
+			global.URL = function () {
+				throw new Error( 'nope' );
+			};
+			expect( lightbox.isSameOriginUrl( ':::' ) ).toBe( true );
+			global.URL = originalUrl;
+		} );
+	} );
+
+	describe( 'flattenPage cross-origin handling', () => {
+		/**
+		 * Capture the Image instances flattenPage creates.
+		 *
+		 * @return {Object[]} Created fake images
+		 */
+		function captureImages() {
+			const created = [];
+			global.Image = function () {
+				const img = {
+					onload: null,
+					onerror: null,
+					naturalWidth: 10,
+					naturalHeight: 10,
+					removeAttribute: jest.fn( function () {
+						delete this.crossOrigin;
+					} )
+				};
+				let src = '';
+				Object.defineProperty( img, 'src', {
+					get: () => src,
+					set: ( v ) => {
+						src = v;
+						created.push( { crossOrigin: img.crossOrigin, src: v } );
+					}
+				} );
+				created.img = img;
+				return img;
+			};
+			return created;
+		}
+
+		let originalImage;
+
+		beforeEach( () => {
+			originalImage = global.Image;
+			// flattenPage returns early unless a viewer class is resolvable.
+			window.Layers.Viewer.LayersViewer = MockLayersViewer;
+		} );
+
+		afterEach( () => {
+			global.Image = originalImage;
+		} );
+
+		it( 'should request CORS for a cross-origin image so the canvas is not tainted', () => {
+			const created = captureImages();
+			const lightbox = new LayersLightbox();
+
+			lightbox.flattenPage( 'https://upload.wikimedia.org/x.jpg', { layers: [] } );
+
+			expect( created[ 0 ].crossOrigin ).toBe( 'anonymous' );
+		} );
+
+		it( 'should not request CORS for a same-origin image', () => {
+			const created = captureImages();
+			const lightbox = new LayersLightbox();
+
+			lightbox.flattenPage( '/images/x.jpg', { layers: [] } );
+
+			expect( created[ 0 ].crossOrigin ).toBeUndefined();
+		} );
+
+		it( 'should retry without CORS when the remote sends no CORS headers', () => {
+			const created = captureImages();
+			const lightbox = new LayersLightbox();
+
+			lightbox.flattenPage( 'https://upload.wikimedia.org/x.jpg', { layers: [] } );
+			created.img.onerror();
+
+			expect( created ).toHaveLength( 2 );
+			expect( created[ 1 ].crossOrigin ).toBeUndefined();
+		} );
+
+		it( 'should give up after the retry also fails', () => {
+			const created = captureImages();
+			const lightbox = new LayersLightbox();
+
+			const result = lightbox.flattenPage( 'https://upload.wikimedia.org/x.jpg', { layers: [] } );
+			created.img.onerror();
+			created.img.onerror();
+
+			return result.then( ( value ) => {
+				expect( value ).toBeNull();
+			} );
+		} );
+	} );
 } );

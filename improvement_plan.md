@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.84
+**Version:** 1.5.85
 **Last updated:** August 6, 2026 — R2 full critical review (see `codebase_review.md` §R2)
 
 > ## ✅ R3.01 — P0 resolved: LTS security backport (August 6, 2026)
@@ -120,7 +120,8 @@
 >
 > | # | Item | Why it is not done |
 > |---|------|--------------------|
-> | R2.60 | Make server-side export lossless: either route PDF export through the client compositor (`viewer/PdfBuilder.js`, which is already pixel-accurate), or implement `callout`, `image`, `group`, `customShape`, `marker`, `dimension`, `angleDimension` and `blur` fills in `ThumbnailRenderer`. | Large. The declared gap + API warning (R2.07/R2.08) makes the loss visible and honest in the meantime; routing export through the client is probably the right answer and deletes code rather than adding it. |
+> | R2.60 | Make the server-side export lossless for `callout`, `image`, `group`, `customShape`, `marker`, `dimension`, `angleDimension` and `blur` fills. | **Downgraded to LOW after tracing the architecture (v1.5.85).** The server compositor is *not* used in normal page rendering — pages inject layer data as HTML attributes and the browser draws it. Its only remaining caller is the PDF export, which itself only reaches the server after the **client** compositor has failed (canvas tainting from a cross-origin image, an image that would not load, or a browser missing the APIs). So this affects a fallback of a fallback, and since v1.5.83 it tells the user exactly what it omitted. Implementing seven ImageMagick renderers for that is poor value; the cheaper win is reducing how often the client path fails. |
+> | R2.61 | Reduce how often the client compositor fails and hands off to the lossy server fallback — principally canvas tainting on cross-origin (InstantCommons) images. Investigate `crossOrigin` handling in the viewer. | 🔲 Open — this is the useful half of R2.60. |
 >
 > ### R2 — checked and *not* a defect
 >

@@ -52,7 +52,7 @@ because "the review was wrong about this" is information:
   normalisation added inside `getFileSha1()` makes that guaranteed rather than
   incidental, but no live bug existed there.
 
-**Gate status after remediation:** 177 Jest suites / 14,191 tests, 651 PHPUnit
+**Gate status after remediation:** 177 Jest suites / 14,199 tests, 651 PHPUnit
 tests, `check:i18n`, `check:mw-compat`, `check:phprefs`, `check:parallel`,
 `check:atomicity`, `check:bundlesize` — all green; phpcs 0 errors / 2 warnings
 (both pre-existing, in test stubs). Coverage 95.23% statement / 86.60% branch.
@@ -312,10 +312,21 @@ switch ( $layer['type'] ) {
 
 So `callout`, `image`, `group`, `customShape`, `marker`, `dimension` and
 `angleDimension` are accepted, stored, rendered correctly in the browser — and
-**dropped without a warning** by both consumers of `generateLayeredThumbnail()`:
+**dropped without a warning** by the consumers of `generateLayeredThumbnail()`:
 
 - `ApiLayersExport.php:210` — the "Export to PDF" feature
 - `LayersFileTransform.php:39` — server-composited thumbnails
+
+> **Corrected in v1.5.85.** The second consumer was **unreachable**. The hook it
+> hangs off (`BitmapHandlerTransform`) only fires when `$params['layers']` and
+> `$params['layerData']` are both set, but `WikitextHooks.php:562-563` *unsets*
+> `layers` while normalising it to `layerset`, and no call site anywhere passes
+> both. Normal page rendering never produced a server-composited thumbnail: it
+> injects layer data as HTML attributes and the browser draws it.
+> `LayersFileTransform` and `LayeredThumbnail` have been deleted. The practical
+> consequence is that this finding is **narrower than written**: the dropped
+> layer types affect only the PDF export, and only when the client-side
+> compositor has already failed and handed off to the server fallback.
 
 That means the shipped PDF export of a typical annotated diagram loses every
 numbered marker, every callout, every measurement, every imported image and

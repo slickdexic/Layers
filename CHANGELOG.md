@@ -4,6 +4,32 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.85] - 2026-08-07
+
+### Fixed
+
+- **Remote images (like Wikimedia Commons) no longer trigger lossy PDF exports.**
+  The lightbox PDF export prefers a lossless client-side compositor, but falls
+  back to the server-side compositor (which drops 7 of the 17 layer types) if
+  the client canvas becomes "tainted" by a cross-origin image. The viewer now
+  explicitly requests CORS (`crossorigin="anonymous"`) when loading images from
+  other domains, and falls back to a non-CORS request if the remote server
+  refuses. This prevents canvas tainting for properly configured remotes like
+  InstantCommons and drastically reduces how often the lossy server fallback
+  is used.
+
+### Removed
+
+- **Dead server-side thumbnail compositing path.** `LayersFileTransform` and
+  `LayeredThumbnail` have been removed. This code was intended to hook into
+  MediaWiki's `BitmapHandlerTransform` to bake layers into the thumbnail PNG
+  itself, but it was provably unreachable: the hook requires `layers` and
+  `layerData` in the params array, but `WikitextHooks` explicitly `unset`s
+  the `layers` param while normalizing it to `layerset`. Normal page rendering
+  has always injected layer data as HTML attributes for the browser to draw.
+  The server-side compositor (`ThumbnailRenderer`) remains, but its only
+  consumer is now the PDF export fallback.
+
 ## [1.5.84] - 2026-08-06
 
 ### Fixed

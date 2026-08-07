@@ -4,6 +4,21 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.85] - 2026-08-07
+
+### Fixed
+
+- **Remote images (like Wikimedia Commons) no longer trigger lossy PDF exports.**
+  The client-side PDF export now requests CORS for remote images to avoid canvas
+  tainting, significantly reducing how often it falls back to the lossy
+  server-side export.
+
+### Removed
+
+- **Dead server-side thumbnail compositing path.** `LayersFileTransform` and
+  `LayeredThumbnail` were removed as they were completely unreachable during
+  normal page rendering (which relies entirely on the browser to draw layers).
+
 ## [1.5.84] - 2026-08-06
 
 ### Fixed

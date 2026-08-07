@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/MediaWiki-1.44%2B-blue" alt="MediaWiki 1.44+">
   <img src="https://img.shields.io/badge/PHP-8.1%2B-purple" alt="PHP 8.1+">
   <img src="https://img.shields.io/badge/License-GPL--2.0-green" alt="GPL-2.0">
-  <img src="https://img.shields.io/badge/Tests-14%2C191%20passing-brightgreen" alt="14,191 Tests">
+  <img src="https://img.shields.io/badge/Tests-14%2C199%20passing-brightgreen" alt="14,199 Tests">
   <img src="https://img.shields.io/badge/Coverage-95.23%25-brightgreen" alt="95.23% Coverage">
 </p>
 
@@ -463,18 +463,18 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.84 |
+| **Version (main)** | 1.5.85 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | August 6, 2026 |
 | **Test Suites** | 177 |
-| **Total Tests** | 14,191 |
+| **Total Tests** | 14,199 |
 | **PHPUnit Test Files** | 37 (651 tests) |
 | **Statement Coverage** | 95.23% |
 | **Branch Coverage** | 86.60% |
 | **Function Coverage** | 93.72% |
 | **Line Coverage** | 95.34% |
-| **JavaScript Files** | 160 |
+| **JavaScript Files** | 158 |
 | **ES6 Classes** | 140 |
 | **God Classes** | 28 (4 generated, 20 JS, 4 PHP) |
 | **i18n Messages** | 874 (819 `layers-` prefixed) |
