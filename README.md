@@ -13,9 +13,9 @@
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
 >
-> **For MediaWiki 1.43.x (LTS):** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43).  
-> **For MediaWiki 1.39.x - 1.42.x:** Use the [`REL1_39` branch](https://github.com/slickdexic/Layers/tree/REL1_39) (previous LTS, still supported).  
-> Changes are developed/tested on `main` first, then cherry-picked to REL branches.
+> **For MediaWiki 1.43.x (LTS):** Use the [`REL1_43` branch](https://github.com/slickdexic/Layers/tree/REL1_43). Receives security backports.  
+> **For MediaWiki 1.39.x - 1.42.x:** [`REL1_39`](https://github.com/slickdexic/Layers/tree/REL1_39) is **no longer maintained**. MediaWiki 1.39 reached end-of-life on December 31, 2025; the branch is left in place for existing installs but receives no fixes, including security fixes. Upgrade to MediaWiki 1.43+ and switch to `REL1_43`.  
+> Changes are developed/tested on `main` first, then cherry-picked to `REL1_43`.
 
 ---
 

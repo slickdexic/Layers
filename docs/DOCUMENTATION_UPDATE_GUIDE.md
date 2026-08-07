@@ -10,6 +10,23 @@ This guide ensures all documentation stays synchronized when making changes to t
 
 ## 🔴 MANDATORY Release Checklist
 
+> ### ⚠️ Security fixes are not done when they land on `main`
+>
+> **A security fix is complete only when it has been backported to the supported
+> LTS branch (`REL1_43`) or the decision not to backport is written down in
+> `improvement_plan.md`.**
+>
+> This rule exists because it was not followed. Between v1.5.68 and v1.5.83 six
+> security defects were fixed on `main` and none reached `REL1_43` — the branch
+> `README.md` tells MediaWiki 1.43 users to install. They included a page
+> protection bypass on writes and exported PDFs served from a public, permanent
+> URL that ignored `read` permission. Nothing flagged it for 201 commits.
+>
+> When a release contains anything under a **Security** heading in
+> `CHANGELOG.md`, the release is not finished until this line has an answer:
+>
+> - [ ] Backported to `REL1_43` as `X.Y.Z-REL1_43`, **or** declined in writing.
+
 Before EVERY release, run this verification script to identify stale documentation:
 
 ```bash

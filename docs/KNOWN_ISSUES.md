@@ -21,40 +21,35 @@ traceability.
 
 ---
 
-## � P0 — The LTS branches ship known, already-fixed vulnerabilities
+## ✅ P0 resolved — LTS security backport (v1.5.68-REL1_43)
 
-**Status:** 🔲 Open. Needs a maintainer decision (see `improvement_plan.md` R3.01).
+**Status:** ✅ Done for `REL1_43`. `REL1_39` deliberately declined.
 
-`README.md` and `wiki/Installation.md` tell MediaWiki 1.43 users to install
-`REL1_43` and 1.39–1.42 users to install `REL1_39`. Both branches are at
-**v1.5.67** while `main` is at v1.5.83 — **201 commits** of drift. Verified
-against `origin/REL1_43` on August 6, 2026:
+`REL1_43` was at v1.5.67 against `main`’s v1.5.83 — 201 commits of drift — and
+was still shipping six security defects already fixed on `main`. All six are now
+backported as **1.5.68-REL1_43**: the page-protection bypass on layer writes,
+exported PDFs served from a public permanent `$wgUploadPath` URL, the token-less
+GET driving ImageMagick, inert rate limits, unpurged renders after file deletion,
+and `endAtomic()`-in-catch committing partial writes at four sites. A seventh was
+found during the backport: `TextSanitizer` left `<script>` bodies as literal text.
 
-| Defect | Fixed on `main` in | State on REL1_43 / REL1_39 |
-|---|---|---|
-| Layer writes bypass page protection, namespace protection, cascading protection and blocks | v1.5.80 | **Present.** `ApiLayersSave.php:211` checks only `checkUserRightsAny( 'editlayers' )`; `requireTitleEditPermission` does not exist on the branch (grep: 0 hits). |
-| Exported PDFs of full document content served from a public, permanent, guessable `$wgUploadPath` URL that bypasses `read` entirely | v1.5.80 | **Present.** `ApiLayersExport.php:368` reads `$wgUploadPath`. |
-| Deleted files' composited renders and exports stay retrievable | v1.5.80 | **Present.** No `RenderCache`, no purge on `FileDeleteComplete`. |
-| Failed delete/rename commits partial writes | v1.5.83 | **Present.** No `ATOMIC_CANCELABLE` anywhere (grep: 0 hits). |
-| All rate limits inert (no shipped defaults) | v1.5.83 | **Present.** No `RateLimits` block in `extension.json`. |
-| PDF export triggerable cross-site as a token-less GET | v1.5.83 | **Present.** |
+`REL1_39` is **not** being backported — MediaWiki 1.39 is end-of-life. `README.md`
+and `wiki/Installation.md` now state that the branch is unmaintained and receives
+no fixes, including security fixes, rather than continuing to recommend it.
 
-The pdf.js CVE-2024-4367 mitigation (v1.5.79) does **not** apply: the in-wiki
-PDF viewer does not exist on these branches.
+### R3.06 — `REL1_43` unit suite has 110 pre-existing failures
 
-**Why this outranks everything else in this document:** every other open item is
-a fidelity, correctness or hygiene issue on a branch used by developers. This is
-a set of *already-diagnosed, already-fixed* security defects sitting on the
-branch we actively recommend to production wikis. The fix is known; only the
-backport is missing.
-
-**Recommended action:** a security-only backport series to both REL branches
-(the six rows above), released as `1.5.68-REL1_43` / `1.5.68-REL1_39`, rather
-than attempting to replay all 201 commits. See `improvement_plan.md` R3.01.
+- **Where:** `tests/phpunit/unit` on `REL1_43` (75 errors, 35 failures).
+- **Issue:** Unrelated to the security backport — the failure set was captured
+    before and after and is identical, minus one repaired by the `TextSanitizer`
+    fix. Mostly stale test-harness stubs (e.g. the `IDatabase` stub lacked
+    `ATOMIC_CANCELABLE` until this release) rather than product defects.
+- **Why it went unnoticed:** CI never ran on REL branches. It does now.
+- **Status:** 🔲 Open — needs triage.
 
 ---
 
-## �🔴 Currently open — carried forward from the R2 review (v1.5.83)
+## 🔴 Currently open — carried forward from the R2 review (v1.5.83)
 
 These are known, understood and deliberately not fixed in v1.5.83. Tracked in
 `improvement_plan.md`.

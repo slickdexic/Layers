@@ -3,57 +3,51 @@
 **Version:** 1.5.83
 **Last updated:** August 6, 2026 — R2 full critical review (see `codebase_review.md` §R2)
 
-> ## � R3.01 — P0: the LTS branches ship already-fixed vulnerabilities
+> ## ✅ R3.01 — P0 resolved: LTS security backport (August 6, 2026)
 >
-> **This outranks every other item in this document, including everything in R2.**
+> **`REL1_43` → `1.5.68-REL1_43`.** Security-only backport of the six defects
+> below, all fixed on `main` between v1.5.68 and v1.5.83 and never carried over,
+> so the branch `README.md` recommends for MediaWiki 1.43 was still shipping
+> them. Verified against `origin/REL1_43` before the work started.
 >
-> `README.md` and `wiki/Installation.md` direct MediaWiki 1.43 users to
-> `REL1_43` and 1.39–1.42 users to `REL1_39`. Both sit at **v1.5.67** against
-> `main`'s v1.5.83 — **201 commits** of drift. Verified against `origin/REL1_43`
-> on August 6, 2026 (full evidence table in `docs/KNOWN_ISSUES.md`):
+> | Defect | Backported |
+> |---|---|
+> | Layer writes bypassed page/namespace/cascading protection and blocks | ✅ `requireTitleEditPermission()` on save, rename, delete |
+> | Exported PDFs world-readable at a permanent `$wgUploadPath` URL, bypassing `read` | ✅ `RenderCache` + unlisted `Special:LayersExport` |
+> | `layerspdfexport` a token-less GET driving ImageMagick | ✅ POST + CSRF |
+> | All rate limits inert (no shipped defaults) | ✅ `RateLimits` in `extension.json` |
+> | Deleted files' renders stayed retrievable | ✅ purge on `FileDeleteComplete` |
+> | `endAtomic()` in catch committing partial writes (4 sites) | ✅ `ATOMIC_CANCELABLE` + `cancelAtomic()` |
 >
-> - Layer writes check only the global `editlayers` right, so **page
->   protection, namespace protection, cascading protection and blocks are
->   bypassed**. `requireTitleEditPermission` does not exist on the branch.
-> - Exported PDFs are served from a **public, permanent, guessable
->   `$wgUploadPath` URL** that bypasses `read` entirely
->   (`ApiLayersExport.php:368`).
-> - Deleted files' composited renders and exports stay retrievable.
-> - Failed delete/rename **commit partial writes** (no `ATOMIC_CANCELABLE`).
-> - All rate limits are inert (no shipped defaults).
-> - PDF export is triggerable cross-site as a token-less GET.
+> One extra defect was found and fixed during the backport:
+> `TextSanitizer::sanitizeText()` used `strip_tags()`, which removes `<script>`
+> tags but leaves the script *body* as literal text. `main` had gained
+> `removeScriptBlocks()`; `REL1_43` had not.
 >
-> Everything else open in this plan is a fidelity, correctness or hygiene issue
-> on a branch used by developers. This is a set of *already-diagnosed,
-> already-fixed* security defects on the branch we recommend to production
-> wikis. The engineering is done; only the delivery is missing.
+> **Verification:** 11,893 Jest tests pass; eslint/stylelint/banana clean; phpcs
+> 0 errors. The branch's unit suite has **110 pre-existing failures** which this
+> work did not change — the failure set was captured before and after and is
+> identical, minus one that the `TextSanitizer` fix repaired. Those 110 are a
+> separate problem (R3.06) caused by CI never having run on this branch.
 >
-> **Recommended action — needs a maintainer decision, so nothing has been
-> pushed:**
+> **`REL1_39`: deliberately not backported.** MediaWiki 1.39 reached end-of-life
+> on December 31, 2025 and the maintainer's call is that it no longer warrants
+> engineering effort. Rather than leave a recommendation we cannot stand behind,
+> `README.md` and `wiki/Installation.md` now state plainly that the branch is
+> **unmaintained and receives no fixes, including security fixes**.
 >
-> 1. Cut a **security-only** backport series rather than replaying 201 commits.
->    The six items above touch a small, well-bounded set of files:
->    `LayersApiHelperTrait`, `ApiLayersSave/Delete/Rename/Export`,
->    `SpecialLayersExport`, `RenderCache`, `ForeignFileHelper`,
->    `LayersDatabase`, `extension.json`.
-> 2. Release as `1.5.68-REL1_43` / `1.5.68-REL1_39`.
-> 3. If a backport is judged too costly, the honest alternative is to **stop
->    recommending those branches** in `README.md` and `wiki/Installation.md`
->    and say plainly that they are unmaintained. What is not defensible is
->    leaving the current recommendation in place.
-> 4. Either way, add a release-checklist item: a security fix on `main` is not
->    done until it is backported or explicitly declined in writing.
->
-> ### R3.02–R3.04 — smaller items fixed alongside this review (v1.5.83)
+> ### R3.02–R3.07
 >
 > | # | Item | Status |
 > |---|------|--------|
-> | R3.02 | `lint.yml` ran `phpcs … \|\| true`, so the style gate could never fail the build. Now fails on errors, still tolerates the 2 known stub warnings. | ✅ Done |
-> | R3.03 | `npm audit`/`composer audit` results were discarded with `\|\| true` — scanned for and then thrown away. Shipped (non-dev) dependencies now fail on high/critical; dev advisories are written to the job summary instead of `/dev/null`. | ✅ Done |
-> | R3.04 | `WikitextHooksTest` asserted against a **local copy** of the production regex, so it kept passing while production drifted (it had gained localised namespace support and `layerslink` stripping that the copy did not have). It now calls `onParserBeforeInternalParse()` directly, with two cases that would have passed vacuously before. | ✅ Done |
-> | R3.05 | CI ran only against `main`. Now also runs on PRs targeting `REL1_43`/`REL1_39`, which is a precondition for R3.01. | ✅ Done |
+> | R3.02 | `lint.yml` ran `phpcs … \|\| true`, so the style gate could never fail the build. Now fails on errors, still tolerates the 2 known stub warnings. Applied to `main` and `REL1_43`. | ✅ Done |
+> | R3.03 | `npm audit`/`composer audit` results were discarded with `\|\| true` — scanned for and then thrown away. Shipped (non-dev) dependencies now fail on high/critical; dev advisories go to the job summary. | ✅ Done |
+> | R3.04 | `WikitextHooksTest` asserted against a **local copy** of the production regex, so it kept passing while production drifted. It now calls `onParserBeforeInternalParse()` directly, with two cases that would have passed vacuously before. | ✅ Done |
+> | R3.05 | CI ran only against `main`. Now also runs on PRs targeting `REL1_43`/`REL1_39`, on both branches' workflow files. This is why R3.06 was invisible. | ✅ Done |
+> | R3.06 | **`REL1_43`'s PHPUnit suite has 110 pre-existing failures** (75 errors, 35 failures), untouched by the security backport. Largely stale test-harness stubs rather than product defects, but they need triage now that CI will surface them. | 🔲 Open |
+> | R3.07 | Added to `docs/DOCUMENTATION_UPDATE_GUIDE.md`: a security fix on `main` is not done until it is backported to the supported LTS branch or the decision not to is written down. R3.01 existed because nothing enforced this. | ✅ Done |
 
-> ## �🔴 R2 — Findings from the August 6, 2026 full critical review
+> ## 🔴 R2 — Findings from the August 6, 2026 full critical review
 >
 > Reviewed `main` @ `9eb08223` (v1.5.82, clean tree). Every item was reproduced
 > against source with a file path and line number; see `codebase_review.md` §R2
