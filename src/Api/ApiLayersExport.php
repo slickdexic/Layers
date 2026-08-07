@@ -30,8 +30,10 @@ use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\ThumbnailRenderer;
+use MediaWiki\Extension\Layers\Utility\RenderCache;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
+use SpecialPage;
 use Wikimedia\ParamValidator\ParamValidator;
 
 class ApiLayersExport extends ApiBase {
@@ -149,7 +151,7 @@ class ApiLayersExport extends ApiBase {
 		if ( $outputDir === null ) {
 			$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
 		}
-		$outputPath = $outputDir . '/' . $sha1 . '_' . $cacheKey . '.pdf';
+		$outputPath = $outputDir . '/' . RenderCache::artefactKey( $sha1 ) . '_' . $cacheKey . '.pdf';
 
 		$cached = false;
 		if ( file_exists( $outputPath ) ) {
@@ -175,7 +177,7 @@ class ApiLayersExport extends ApiBase {
 			}
 		}
 
-		$url = $this->pathToUrl( $outputPath );
+		$url = $this->getExportUrl( $title, $cacheKey );
 
 		$this->getResult()->addValue( null, $this->getModuleName(), [
 			'success' => 1,
@@ -337,43 +339,41 @@ class ApiLayersExport extends ApiBase {
 	}
 
 	/**
-	 * Resolve (and create) the export cache directory under the upload thumb dir.
+	 * Resolve (and create) the export cache directory.
+	 *
+	 * Deliberately outside the document root: a flattened PDF of an entire
+	 * multi-page document is not a thumbnail. Exports used to be written under
+	 * $wgUploadDirectory and handed to the client as a $wgUploadPath URL, which
+	 * the web server serves directly — so it bypassed `read` entirely and stayed
+	 * valid forever for anyone who had or guessed the URL.
 	 *
 	 * @return string|null Directory path, or null if it cannot be created
 	 */
 	private function getExportDir(): ?string {
-		$uploadDir = $this->getConfig()->get( 'UploadDirectory' );
-		if ( !$uploadDir ) {
-			$uploadDir = sys_get_temp_dir();
-		}
-		$dir = rtrim( (string)$uploadDir, '/\\' ) . '/thumb/layers/export';
-		if ( !is_dir( $dir ) ) {
-			$ok = mkdir( $dir, 0755, true );
-			if ( !$ok && !is_dir( $dir ) ) {
-				$this->getLogger()->error( 'Layers export: cannot create dir', [ 'dir' => $dir ] );
-				return null;
-			}
+		$dir = RenderCache::getExportDir( $this->getConfig() );
+		if ( !RenderCache::ensureDir( $this->getConfig(), $dir ) ) {
+			$this->getLogger()->error( 'Layers export: cannot create dir', [ 'dir' => $dir ] );
+			return null;
 		}
 		return $dir;
 	}
 
 	/**
-	 * Convert an upload-directory filesystem path to a web-accessible URL.
+	 * Build the delivery URL for a generated export.
 	 *
-	 * @param string $path Filesystem path under the upload directory
-	 * @return string Public URL
+	 * Special:LayersExport re-resolves the File: title and re-checks `read` on
+	 * every request, so permission is enforced at delivery rather than assumed
+	 * at generation time.
+	 *
+	 * @param mixed $title File page title
+	 * @param string $cacheKey Export cache key
+	 * @return string Local URL
 	 */
-	private function pathToUrl( string $path ): string {
-		$uploadDir = (string)$this->getConfig()->get( 'UploadDirectory' );
-		$uploadPath = (string)$this->getConfig()->get( 'UploadPath' );
-
-		$normPath = str_replace( '\\', '/', $path );
-		$normUploadDir = rtrim( str_replace( '\\', '/', $uploadDir ), '/' );
-		if ( $normUploadDir !== '' && strpos( $normPath, $normUploadDir ) === 0 ) {
-			$relative = substr( $normPath, strlen( $normUploadDir ) );
-			return rtrim( $uploadPath, '/' ) . $relative;
-		}
-		return rtrim( $uploadPath, '/' ) . '/thumb/layers/export/' . basename( $path );
+	private function getExportUrl( $title, string $cacheKey ): string {
+		return SpecialPage::getTitleFor( 'LayersExport' )->getLocalURL( [
+			'file' => $title->getDBkey(),
+			'key' => $cacheKey,
+		] );
 	}
 
 	/**
@@ -426,14 +426,28 @@ class ApiLayersExport extends ApiBase {
 		return true;
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @inheritDoc
+	 * No layer data is mutated, so this is not a write in the wiki-content sense.
+	 */
 	public function isWriteMode() {
 		return false;
 	}
 
-	/** @inheritDoc */
+	/**
+	 * @inheritDoc
+	 * Required despite isWriteMode() being false: this endpoint rasterises up to
+	 * $wgLayersPdfExportMaxPages pages with ImageMagick and writes a PDF to disk.
+	 * As a token-less GET it could be driven from any third-party page via
+	 * <img src="...">, using every logged-in visitor's browser as an amplifier.
+	 */
 	public function needsToken() {
-		return false;
+		return 'csrf';
+	}
+
+	/** @inheritDoc */
+	public function mustBePosted() {
+		return true;
 	}
 
 	/** @inheritDoc */

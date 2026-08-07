@@ -82,7 +82,17 @@ class ApiLayersExportTest extends TestCase {
 	public function testIsReadModeTrueAndWriteModeFalse(): void {
 		$module = $this->newModule();
 		$this->assertTrue( $module->isReadMode() );
+		// No layer data is mutated...
 		$this->assertFalse( $module->isWriteMode() );
-		$this->assertFalse( $module->needsToken() );
+	}
+
+	/**
+	 * ...but the export spends unbounded server CPU and writes a PDF to disk, so
+	 * it must not be reachable as a token-less GET from a third-party page.
+	 */
+	public function testExportRequiresPostAndCsrfToken(): void {
+		$module = $this->newModule();
+		$this->assertSame( 'csrf', $module->needsToken() );
+		$this->assertTrue( $module->mustBePosted() );
 	}
 }

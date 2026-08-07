@@ -13,6 +13,7 @@ namespace MediaWiki\Extension\Layers;
 
 use Exception;
 use MediaWiki\Extension\Layers\Hooks\WikitextHooks;
+use MediaWiki\Extension\Layers\Utility\RenderCache;
 use MediaWiki\MediaWikiServices;
 
 // Avoid direct hard dependency on MediaWiki classes for static analysis
@@ -292,6 +293,19 @@ class Hooks {
 			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
 				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
 				$logger->error( 'Layers: Error cleaning up layer sets', [ 'exception' => $e ] );
+			}
+		}
+
+		// Generated renders live outside MediaWiki's file management, so deleting
+		// the source file would otherwise leave composited thumbnails and exported
+		// PDFs permanently retrievable.
+		try {
+			$config = MediaWikiServices::getInstance()->getMainConfig();
+			RenderCache::purgeBySha1( $config, self::getFileSha1( $file ) );
+		} catch ( Exception $e ) {
+			if ( \class_exists( '\\MediaWiki\\Logger\\LoggerFactory' ) ) {
+				$logger = \call_user_func( [ '\\MediaWiki\\Logger\\LoggerFactory', 'getInstance' ], 'Layers' );
+				$logger->error( 'Layers: Error purging render cache', [ 'exception' => $e ] );
 			}
 		}
 	}

@@ -2,9 +2,9 @@ name: Lint and Style Checks
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, REL1_43, REL1_39 ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, REL1_43, REL1_39 ]
 
 jobs:
   php-lint:
@@ -20,7 +20,7 @@ jobs:
       - name: Run PHP lint
         run: vendor/bin/parallel-lint . --exclude vendor --exclude node_modules
       - name: Run PHPCS (warnings allowed)
-        run: vendor/bin/phpcs -sp --cache -n || true
+        run: vendor/bin/phpcs -sp --cache --warning-severity=0
 
   js-lint:
     runs-on: ubuntu-latest

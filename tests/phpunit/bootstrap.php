@@ -473,6 +473,8 @@ namespace Wikimedia\Rdbms {
 		interface IDatabase {
 			public const LIST_AND = 'AND';
 			public const LIST_OR = 'OR';
+			public const ATOMIC_NOT_CANCELABLE = '';
+			public const ATOMIC_CANCELABLE = 'cancelable';
 
 			public function selectField( $table, $field, $conds, $fname = __METHOD__, $options = [] );
 
@@ -486,9 +488,11 @@ namespace Wikimedia\Rdbms {
 
 			public function insertId();
 
-			public function startAtomic( $fname = __METHOD__ );
+			public function startAtomic( $fname = __METHOD__, $cancelable = self::ATOMIC_NOT_CANCELABLE );
 
 			public function endAtomic( $fname = __METHOD__ );
+
+			public function cancelAtomic( $fname = __METHOD__, $sectionId = null );
 
 			public function isDuplicateKeyError( \Throwable $e ): bool;
 

@@ -14,7 +14,10 @@ let lightboxSingleton;
 
 // Mock dependencies
 const mockApi = {
-	get: jest.fn()
+	get: jest.fn(),
+	// layerspdfexport is a token-protected POST: it spends server CPU and writes
+	// a file, so it must not be triggerable cross-site.
+	postWithToken: jest.fn()
 };
 
 const mockViewer = {
@@ -81,6 +84,8 @@ beforeEach( () => {
 	// Reset mocks
 	jest.clearAllMocks();
 	mockApi.get.mockReset();
+	mockApi.postWithToken.mockReset();
+	mockApi.postWithToken.mockResolvedValue( {} );
 	MockLayersViewer.mockClear();
 	mockViewer.destroy.mockClear();
 
@@ -1084,13 +1089,14 @@ describe( 'LayersLightbox', () => {
 			lightbox.filename = 'Doc.pdf';
 			lightbox.setName = '001';
 
-			mockApi.get.mockResolvedValue( {
+			mockApi.postWithToken.mockResolvedValue( {
 				layerspdfexport: { success: 1, url: '/images/thumb/layers/export/abc.pdf' }
 			} );
 
 			await lightbox.exportPdfViaServer();
 
-			expect( mockApi.get ).toHaveBeenCalledWith(
+			expect( mockApi.postWithToken ).toHaveBeenCalledWith(
+				'csrf',
 				expect.objectContaining( {
 					action: 'layerspdfexport',
 					filename: 'Doc.pdf',
@@ -1105,7 +1111,7 @@ describe( 'LayersLightbox', () => {
 			lightbox.filename = 'Doc.pdf';
 			const openSpy = jest.spyOn( window, 'open' ).mockImplementation( () => {} );
 
-			mockApi.get.mockResolvedValue( {
+			mockApi.postWithToken.mockResolvedValue( {
 				layerspdfexport: { success: 1, url: '/images/thumb/layers/export/abc.pdf' }
 			} );
 
@@ -1123,7 +1129,7 @@ describe( 'LayersLightbox', () => {
 			lightbox.filename = 'Doc.pdf';
 			mw.notify = jest.fn();
 
-			mockApi.get.mockRejectedValue( new Error( 'boom' ) );
+			mockApi.postWithToken.mockRejectedValue( new Error( 'boom' ) );
 
 			await lightbox.exportPdfViaServer();
 

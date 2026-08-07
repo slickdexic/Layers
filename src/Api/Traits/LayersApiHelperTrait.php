@@ -18,6 +18,7 @@ use MediaWiki\Extension\Layers\Database\LayersDatabase;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Permissions\PermissionStatus;
 use MediaWiki\Title\Title;
 
 /**
@@ -45,6 +46,28 @@ trait LayersApiHelperTrait {
 				[ LayersConstants::ERROR_DB, 'Layer tables missing. Please run maintenance/update.php' ],
 				'dbschema-missing'
 			);
+		}
+	}
+
+	/**
+	 * Require that the current user may edit the given title, or die.
+	 *
+	 * Layer data materially changes the rendered output of a File page, so every
+	 * write endpoint must gate on the per-title 'edit' permission and not only on
+	 * the global 'editlayers' right. This covers read restrictions (Lockdown,
+	 * private namespaces), page protection, cascading protection and blocks.
+	 *
+	 * Uses definitelyCan() rather than authorizeWrite() so the core 'edit' rate
+	 * limit bucket is not consumed — Layers applies its own per-action limits.
+	 *
+	 * @param Title $title Title being written to
+	 */
+	protected function requireTitleEditPermission( Title $title ): void {
+		$status = PermissionStatus::newEmpty();
+		// @phan-suppress-next-line PhanUndeclaredMethod - getAuthority from ApiBase
+		if ( !$this->getAuthority()->definitelyCan( 'edit', $title, $status ) ) {
+			// @phan-suppress-next-line PhanUndeclaredMethod - dieStatus from ApiBase
+			$this->dieStatus( $status );
 		}
 	}
 

@@ -4,6 +4,67 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.68-REL1_43] - 2026-08-06
+
+**Security release.** These defects were found and fixed on `main` between
+v1.5.68 and v1.5.83 but had never been backported, so this branch — the one
+`README.md` recommends for MediaWiki 1.43 — was still shipping them. This is a
+security-only backport; it deliberately does not bring across the feature work
+from those releases.
+
+### Security
+
+- **Layer writes bypassed page protection.** Saving, renaming and deleting a
+  layer set checked only the global `editlayers` right, so page protection,
+  namespace protection, cascading protection and blocks did not apply — a user
+  who could not edit a protected File page could still change what it renders.
+  All three endpoints now also require the per-title `edit` permission via
+  `LayersApiHelperTrait::requireTitleEditPermission()`.
+- **Exported PDFs were world-readable at a permanent URL.** Exports were written
+  under `$wgUploadDirectory` and handed to the client as a `$wgUploadPath` URL.
+  Those are served by the web server, not MediaWiki, so the URL bypassed `read`
+  entirely, ignored page and namespace restrictions, and stayed valid forever
+  for anyone who had or guessed it — for a flattened PDF of an entire document.
+  Exports now live outside the document root (`$wgLayersExportDirectory`,
+  defaulting to `$wgTmpDirectory/layers-export`) and are delivered by the new
+  unlisted `Special:LayersExport`, which re-resolves the `File:` title and
+  re-checks `read` on every request. Every failure mode returns the same generic
+  error so the endpoint cannot be used to probe for files.
+- **`action=layerspdfexport` was a token-less GET** that rasterises up to
+  `$wgLayersPdfExportMaxPages` pages with ImageMagick and writes a PDF to disk.
+  Any third-party page could drive it from every logged-in visitor's browser via
+  `<img src="…">`. It now requires POST and a CSRF token.
+- **Rate limits were inert.** `User::pingLimiter()` reports "not limited" for a
+  bucket nobody configured and `extension.json` shipped no defaults, so all
+  three Layers limits did nothing on a default install. Defaults now ship,
+  merged with `array_plus_2d` so `LocalSettings.php` overrides still win.
+- **Deleted files left their renders behind.** Composited thumbnails and
+  exported PDFs survived deletion of the source file, so an image deleted for
+  copyright or privacy reasons stayed retrievable in annotated form.
+  `FileDeleteComplete` now purges them via the new `Utility\RenderCache`.
+- **`<script>` bodies survived sanitisation.** `TextSanitizer::sanitizeText()`
+  called `strip_tags()`, which removes the tags but leaves the script body as
+  literal text (`<script>alert("xss")</script>` → `alert("xss")`). Whole script
+  blocks are now removed before and after entity decoding.
+
+### Fixed
+
+- **Failed deletes and renames committed partial writes.** All four atomic
+  sections called `endAtomic()` from their catch block, which marks the section
+  *successfully completed*. A mid-operation failure destroyed or renamed a
+  subset of revisions while reporting failure to the user. All now use
+  `IDatabase::ATOMIC_CANCELABLE` with `cancelAtomic()`.
+- The standalone PHPUnit bootstrap's `IDatabase` stub lacked
+  `ATOMIC_CANCELABLE`/`cancelAtomic()`; added so the above is testable.
+
+### Known
+
+This branch's unit suite has **110 pre-existing failures** unrelated to this
+release (75 errors, 35 failures). They are not caused by these changes — the
+failure set was captured before and after and is otherwise identical. CI has
+never run against this branch, which is why they accumulated unnoticed; the
+workflows now trigger on `REL1_43` so this is visible from here on.
+
 ## [1.5.67-REL1_43] - 2026-08-02
 
 ### Changed

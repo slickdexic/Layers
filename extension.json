@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.67-REL1_43",
+	"version": "1.5.68-REL1_43",
 	"requires": {
 		"MediaWiki": ">= 1.43.0"
 	},
@@ -47,7 +47,9 @@
 		"MediaWiki\\Extension\\Layers\\Hooks\\SlideHooks": "src/Hooks/SlideHooks.php",
 		"MediaWiki\\Extension\\Layers\\Api\\ApiLayersList": "src/Api/ApiLayersList.php",
 		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides": "src/SpecialPages/SpecialSlides.php",
-		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide": "src/SpecialPages/SpecialEditSlide.php"
+		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide": "src/SpecialPages/SpecialEditSlide.php",
+		"MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialLayersExport": "src/SpecialPages/SpecialLayersExport.php",
+		"MediaWiki\\Extension\\Layers\\Utility\\RenderCache": "src/Utility/RenderCache.php"
 	},
 	"config": {
 		"LayersEnable": {
@@ -163,6 +165,10 @@
 			"description": "Maximum number of pages allowed when exporting a marked-up file to PDF (0 = unlimited)",
 			"value": 100
 		},
+		"LayersExportDirectory": {
+			"description": "Filesystem directory for generated PDF exports. Must be outside the document root. Empty uses $wgTmpDirectory/layers-export.",
+			"value": ""
+		},
 		"LayersSlidesEnable": {
 			"description": "Enable Slide Mode for creating canvas-based layers without a parent image",
 			"value": true
@@ -228,7 +234,8 @@
 	},
 	"SpecialPages": {
 		"Slides": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialSlides",
-		"EditSlide": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide"
+		"EditSlide": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialEditSlide",
+		"LayersExport": "MediaWiki\\Extension\\Layers\\SpecialPages\\SpecialLayersExport"
 	},
 	"APIModules": {
 		"layerssave": "MediaWiki\\Extension\\Layers\\Api\\ApiLayersSave",
@@ -1379,6 +1386,29 @@
 		"managelayerlibrary",
 		"layers-admin"
 	],
+	"RateLimits": {
+		"editlayers-save": {
+			"anon": [ 20, 60 ],
+			"user": [ 60, 60 ],
+			"newbie": [ 15, 60 ],
+			"ip": [ 60, 60 ],
+			"subnet": [ 120, 60 ]
+		},
+		"editlayers-render": {
+			"anon": [ 5, 60 ],
+			"user": [ 15, 60 ],
+			"newbie": [ 5, 60 ],
+			"ip": [ 15, 60 ],
+			"subnet": [ 30, 60 ]
+		},
+		"editlayers-list": {
+			"anon": [ 30, 60 ],
+			"user": [ 120, 60 ],
+			"newbie": [ 30, 60 ],
+			"ip": [ 60, 60 ],
+			"subnet": [ 120, 60 ]
+		}
+	},
 	"GroupPermissions": {
 		"*": {
 			"editlayers": false

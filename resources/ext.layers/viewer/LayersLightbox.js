@@ -904,7 +904,9 @@
 			if ( this.setName ) {
 				params.setname = this.setName;
 			}
-			return new mw.Api().get( params ).then( ( data ) => {
+			// POST + CSRF token: the export burns server CPU and writes a file,
+			// so it must not be triggerable cross-site.
+			return new mw.Api().postWithToken( 'csrf', params ).then( ( data ) => {
 				restore();
 				const result = data && data.layerspdfexport;
 				if ( result && result.url ) {

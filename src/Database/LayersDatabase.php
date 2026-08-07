@@ -136,7 +136,10 @@ class LayersDatabase {
 			if ( $retryCount > 0 ) {
 				usleep( $retryCount * 10000 );
 			}
-			$dbw->startAtomic( __METHOD__ );
+			// ATOMIC_CANCELABLE establishes a savepoint so cancelAtomic() below can
+			// actually roll back. Without it an error leaves the transaction aborted
+			// on PostgreSQL, which also broke the duplicate-key retry below.
+			$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 			try {
 				// P1.1 FIX: Check named set limit INSIDE transaction with FOR UPDATE lock
 				// This prevents race conditions where concurrent requests bypass the limit
@@ -239,7 +242,9 @@ class LayersDatabase {
 
 				return $layerSetId;
 			} catch ( \Throwable $e ) {
-				$dbw->endAtomic( __METHOD__ );
+				// cancelAtomic(), not endAtomic() — endAtomic() marks the section
+				// *successfully completed* and commits whatever was already written.
+				$dbw->cancelAtomic( __METHOD__ );
 				// Re-throw OverflowException so ApiLayersSave can return
 				// the correct 'layers-max-sets-reached' error to the client
 				if ( $e instanceof \OverflowException ) {
@@ -864,8 +869,9 @@ class LayersDatabase {
 			$page = max( 1, $page );
 
 			// Use atomic transaction to prevent race conditions with concurrent
-			// rename/delete operations on the same set (mirrors renameNamedSet pattern)
-			$dbw->startAtomic( __METHOD__ );
+			// rename/delete operations on the same set (mirrors renameNamedSet pattern).
+			// ATOMIC_CANCELABLE establishes a savepoint so cancelAtomic() can roll back.
+			$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 
 			try {
 				// Lock rows before deleting to prevent race with concurrent rename
@@ -896,7 +902,9 @@ class LayersDatabase {
 				$rowsDeleted = $dbw->affectedRows();
 				$dbw->endAtomic( __METHOD__ );
 			} catch ( \Throwable $e ) {
-				$dbw->endAtomic( __METHOD__ );
+				// cancelAtomic(), not endAtomic() — endAtomic() marks the section
+				// *successfully completed* and commits the partial delete.
+				$dbw->cancelAtomic( __METHOD__ );
 				throw $e;
 			}
 
@@ -981,9 +989,10 @@ class LayersDatabase {
 			}
 			$page = max( 1, $page );
 
-			// Use atomic transaction to prevent race conditions
-			// Two concurrent renames could otherwise both pass the existence check
-			$dbw->startAtomic( __METHOD__ );
+			// Use atomic transaction to prevent race conditions.
+			// Two concurrent renames could otherwise both pass the existence check.
+			// ATOMIC_CANCELABLE establishes a savepoint so cancelAtomic() can roll back.
+			$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 
 			try {
 				// Check if target name already exists (within transaction for consistency)
@@ -1023,7 +1032,9 @@ class LayersDatabase {
 				$rowsUpdated = $dbw->affectedRows();
 				$dbw->endAtomic( __METHOD__ );
 			} catch ( \Throwable $e ) {
-				$dbw->endAtomic( __METHOD__ );
+				// cancelAtomic(), not endAtomic() — endAtomic() marks the section
+				// *successfully completed* and commits the partial rename.
+				$dbw->cancelAtomic( __METHOD__ );
 				throw $e;
 			}
 

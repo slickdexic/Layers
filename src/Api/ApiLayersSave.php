@@ -10,6 +10,7 @@ use MediaWiki\Extension\Layers\Api\Traits\AuditTrailTrait;
 use MediaWiki\Extension\Layers\Api\Traits\CacheInvalidationTrait;
 use MediaWiki\Extension\Layers\Api\Traits\ForeignFileHelperTrait;
 use MediaWiki\Extension\Layers\Api\Traits\LayerSaveGuardsTrait;
+use MediaWiki\Extension\Layers\Api\Traits\LayersApiHelperTrait;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Security\RateLimiter;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
@@ -69,6 +70,7 @@ class ApiLayersSave extends ApiBase {
 	use CacheInvalidationTrait;
 	use ForeignFileHelperTrait;
 	use LayerSaveGuardsTrait;
+	use LayersApiHelperTrait;
 
 	/**
 	 * Maximum recursion depth for JSON decoding to prevent stack overflow
@@ -252,6 +254,10 @@ class ApiLayersSave extends ApiBase {
 			if ( !$title || $title->getNamespace() !== NS_FILE ) {
 				$this->dieWithError( LayersConstants::ERROR_INVALID_FILENAME, 'invalidfilename' );
 			}
+
+			// Global 'editlayers' is not enough: layer data changes what the File
+			// page renders, so page/namespace/cascading protection and blocks apply.
+			$this->requireTitleEditPermission( $title );
 
 			// Use DB key form for database operations
 			// This ensures consistency (spaces -> underscores) across save/load paths

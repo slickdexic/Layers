@@ -94,6 +94,9 @@ class ApiLayersDelete extends ApiBase {
 			// Validate filename and get file info (via LayersApiHelperTrait)
 			$fileInfo = $this->validateAndGetFile( $requestedFilename );
 			$title = $fileInfo['title'];
+			// Global 'editlayers' is not enough: layer data changes what the File
+			// page renders, so page/namespace/cascading protection and blocks apply.
+			$this->requireTitleEditPermission( $title );
 			$file = $fileInfo['file'];
 			$imgName = $fileInfo['imgName'];
 			$sha1 = $this->getFileSha1( $file, $imgName );
