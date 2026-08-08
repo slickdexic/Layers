@@ -1221,11 +1221,16 @@
 		 */
 		updateLayers( layers ) {
 			// State is managed by StateManager - just trigger a re-render
-			// The actual layers array is stored in editor.stateManager
-			if ( layers && this.editor && this.editor.stateManager ) {
+			if ( this.editor && this.editor.stateManager ) {
 				this.editor.stateManager.set( 'layers', layers );
 			}
-			// renderLayerList will be called by the state subscription
+
+			// Force the canvas manager to redraw immediately after setting the layer state,
+			// ensuring that any newly loaded/updated layer data (including font metrics)
+			// is passed to the renderer before the user interacts with it.
+			if ( this.editor && this.editor.canvasManager ) {
+				this.editor.canvasManager.renderLayers( layers );
+			}
 		}
 
 		/**

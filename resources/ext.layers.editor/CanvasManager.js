@@ -599,7 +599,10 @@ class CanvasManager {
 
 		// Draw the image and all layers in one call (renderLayers calls redraw internally)
 		if ( this.editor && this.editor.layers ) {
-			this.renderLayers( this.editor.layers );
+			// CRITICAL FIX: Explicitly calling renderLayers here ensures that when the background
+			// image is loaded, the layer state is immediately drawn with correct context/fonts,
+			// preventing the initial visual glitch seen before user interaction.
+			this.renderLayers( this.editor.layers ); 
 		} else {
 			this.redraw();
 		}
