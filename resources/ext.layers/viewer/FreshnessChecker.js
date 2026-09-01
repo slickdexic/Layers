@@ -96,18 +96,26 @@
 		}
 
 		/**
-		 * Get the storage key for a filename/setname combination.
+		 * Get the storage key for a filename/setname/page combination.
 		 *
 		 * @private
 		 * @param {string} filename The image filename
 		 * @param {string} setName The layer set name
+		 * @param {number} [page] 1-based page for multi-page files
 		 * @return {string} Storage key
 		 */
-		getStorageKey( filename, setName ) {
-			// Normalize filename to handle spaces and special chars
-			const normalizedFilename = ( filename || '' ).replace( /\s+/g, '_' );
-			const normalizedSetName = setName || '';
-			return STORAGE_KEY_PREFIX + normalizedFilename + ':' + normalizedSetName;
+		getStorageKey( filename, setName, page ) {
+			const builder = ( typeof window !== 'undefined' && window.Layers &&
+				window.Layers.FreshnessCacheKey ) || null;
+			if ( builder ) {
+				return builder.build( filename, setName, page );
+			}
+			// ext.layers depends on ext.layers.shared, so this is unreachable in
+			// ResourceLoader; it only covers a bare unit-test context.
+			const normalizedFilename = String( filename || '' ).replace( /\s+/g, '_' );
+			const normalizedPage = Math.max( 1, parseInt( page, 10 ) || 1 );
+			return STORAGE_KEY_PREFIX + normalizedFilename + ':' + ( setName || '' ) +
+				( normalizedPage > 1 ? ':p' + normalizedPage : '' );
 		}
 
 		/**
@@ -118,9 +126,9 @@
 		 * @param {string} setName The layer set name
 		 * @return {Object|null} Cached data with { revision, timestamp } or null
 		 */
-		getCachedFreshness( filename, setName ) {
+		getCachedFreshness( filename, setName, page ) {
 			try {
-				const key = this.getStorageKey( filename, setName );
+				const key = this.getStorageKey( filename, setName, page );
 				const cached = sessionStorage.getItem( key );
 				if ( !cached ) {
 					return null;
@@ -148,9 +156,9 @@
 		 * @param {string} setName The layer set name
 		 * @param {number} revision The latest revision number
 		 */
-		setCachedFreshness( filename, setName, revision ) {
+		setCachedFreshness( filename, setName, revision, page ) {
 			try {
-				const key = this.getStorageKey( filename, setName );
+				const key = this.getStorageKey( filename, setName, page );
 				const data = {
 					revision: revision,
 					timestamp: Date.now()
@@ -168,9 +176,9 @@
 		 * @param {string} filename The image filename
 		 * @param {string} [setName] The layer set name; omit for an unnamed set
 		 */
-		clearCache( filename, setName ) {
+		clearCache( filename, setName, page ) {
 			try {
-				const key = this.getStorageKey( filename, setName || '' );
+				const key = this.getStorageKey( filename, setName || '', page );
 				sessionStorage.removeItem( key );
 				this.debugLog( 'Cleared freshness cache for', filename, ':', setName );
 			} catch ( e ) {
@@ -190,6 +198,7 @@
 				const inlineRevision = parseInt( img.getAttribute( 'data-layer-revision' ), 10 );
 				const setName = img.getAttribute( 'data-layer-setname' ) || '';
 				const filename = img.getAttribute( 'data-file-name' );
+				const page = Math.max( 1, parseInt( img.getAttribute( 'data-page' ), 10 ) || 1 );
 
 				// If no revision attribute, we can't check freshness - assume fresh
 				if ( isNaN( inlineRevision ) || !filename ) {
@@ -199,7 +208,7 @@
 				}
 
 				// Check cache first
-				const cached = this.getCachedFreshness( filename, setName );
+				const cached = this.getCachedFreshness( filename, setName, page );
 				if ( cached && cached.revision !== undefined ) {
 					const isFresh = inlineRevision >= cached.revision;
 					this.debugLog(
@@ -237,7 +246,7 @@
 				if ( isSpecificSetName( setName ) ) {
 					params.setname = setName;
 				}
-				const freshPage = parseInt( img.getAttribute( 'data-page' ), 10 );
+				const freshPage = page;
 				if ( freshPage > 1 ) {
 					params.page = freshPage;
 				}
@@ -274,7 +283,7 @@
 
 						// Cache the result
 						if ( latestRevision !== null ) {
-							this.setCachedFreshness( filename, setName, latestRevision );
+							this.setCachedFreshness( filename, setName, latestRevision, page );
 						}
 
 						const isFresh = latestRevision === null || inlineRevision >= latestRevision;

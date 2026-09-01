@@ -79,6 +79,9 @@ GET /api.php?action=layersinfo&filename=File:Example.jpg
             "baseWidth": 1920,
             "baseHeight": 1080
         },
+        "page": 1,
+        "pageCount": 11,
+        "pagesWithLayers": [ 1, 2, 7 ],
         "all_layersets": [
             {
                 "ls_id": 123,
@@ -381,7 +384,14 @@ action=layersdelete
 |-----------|------|----------|-------------|
 | `filename` | string | Yes | File title |
 | `setname` | string | Yes | Named set to delete |
+| `page` | integer | No | 1-based page of a multi-page file (default 1) |
+| `allpages` | boolean | No | Delete the set from every page of the document |
 | `token` | string | Yes | CSRF token |
+
+> **Multi-page files:** layer sets are stored per page. The editor sends
+> `allpages` for PDFs and DjVu files, because a set is one thing the user
+> named once — deleting it from only the page in view leaves copies behind
+> that the user believes are gone. (Since v1.5.86.)
 
 ### Response
 
@@ -439,7 +449,13 @@ action=layersrename
 | `filename` | string | Yes | File title |
 | `oldname` | string | Yes | Current set name |
 | `newname` | string | Yes | New set name |
+| `page` | integer | No | 1-based page of a multi-page file (default 1) |
+| `allpages` | boolean | No | Rename the set on every page of the document |
 | `token` | string | Yes | CSRF token |
+
+> **Multi-page files:** the editor sends `allpages` for PDFs and DjVu files.
+> Renaming one page at a time leaves the document with two names for the same
+> set depending on which page the reader is on. (Since v1.5.86.)
 
 ### Response
 

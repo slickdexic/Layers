@@ -392,10 +392,18 @@
 			const setInfo = namedSets.find( set => set.name === currentSet );
 			const revisionCount = setInfo ? ( setInfo.revision_count || 1 ) : 1;
 
-			// Build confirmation message with set name and revision count
-			const confirmMsg = this.getMessage( 'layers-delete-set-confirm' )
-				.replace( '$1', currentSet )
-				.replace( '$2', revisionCount );
+			// A set in a multi-page document is one logical thing the user named
+			// once, so delete covers every page. Deleting only the page in view left
+			// copies behind that the user believed were gone.
+			const pageCount = ( this.editor && this.editor.pageCount ) || 1;
+			const allPages = pageCount > 1;
+			const confirmMsg = allPages ?
+				this.getMessage( 'layers-delete-set-confirm-document' )
+					.replace( '$1', currentSet )
+					.replace( '$2', String( pageCount ) ) :
+				this.getMessage( 'layers-delete-set-confirm' )
+					.replace( '$1', currentSet )
+					.replace( '$2', revisionCount );
 
 			const confirmed = await this.showConfirmDialog( {
 				message: confirmMsg,
@@ -411,7 +419,7 @@
 			// Call API to delete the set
 			if ( this.editor.apiManager && typeof this.editor.apiManager.deleteLayerSet === 'function' ) {
 				this.setPendingState( true );
-				this.editor.apiManager.deleteLayerSet( currentSet ).then( () => {
+				this.editor.apiManager.deleteLayerSet( currentSet, allPages ).then( () => {
 					// The APIManager reloads layers after delete, so we just update the selector
 					if ( this.editor.buildSetSelector ) {
 						this.editor.buildSetSelector();
@@ -487,21 +495,25 @@
 			// Call API to rename the set
 			if ( this.editor.apiManager && typeof this.editor.apiManager.renameLayerSet === 'function' ) {
 				this.setPendingState( true );
-				this.editor.apiManager.renameLayerSet( currentSet, trimmedName ).then( () => {
-					// The APIManager reloads layers after rename, so we just update the selector
-					if ( this.editor.buildSetSelector ) {
-						this.editor.buildSetSelector();
-					} else if ( this.editor.revisionManager ) {
-						this.editor.revisionManager.buildSetSelector();
-					}
-				} ).catch( ( error ) => {
-					// Error notification is handled by APIManager
-					if ( mw.log && mw.log.error ) {
-						mw.log.error( '[SetSelectorController] renameCurrentSet error:', error );
-					}
-				} ).finally( () => {
-					this.setPendingState( false );
-				} );
+				// Renaming one page at a time would leave the document with two names
+				// for the same set depending on which page is being viewed.
+				const renameAllPages = ( ( this.editor && this.editor.pageCount ) || 1 ) > 1;
+				this.editor.apiManager.renameLayerSet( currentSet, trimmedName, renameAllPages )
+					.then( () => {
+						// The APIManager reloads layers after rename, so we just update the selector
+						if ( this.editor.buildSetSelector ) {
+							this.editor.buildSetSelector();
+						} else if ( this.editor.revisionManager ) {
+							this.editor.revisionManager.buildSetSelector();
+						}
+					} ).catch( ( error ) => {
+						// Error notification is handled by APIManager
+						if ( mw.log && mw.log.error ) {
+							mw.log.error( '[SetSelectorController] renameCurrentSet error:', error );
+						}
+					} ).finally( () => {
+						this.setPendingState( false );
+					} );
 			} else {
 				mw.notify( this.getMessage( 'layers-rename-failed', 'Failed to rename layer set' ), { type: 'error' } );
 			}

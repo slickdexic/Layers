@@ -439,7 +439,7 @@
 				this.buildSetSelector();
 
 				// Mark as having unsaved changes
-				this.stateManager.set( 'hasUnsavedChanges', true );
+				this.stateManager.set( 'isDirty', true );
 				this.editor.updateSaveButtonState();
 
 				mw.notify(
@@ -488,7 +488,7 @@
 		 * @return {boolean}
 		 */
 		hasUnsavedChanges() {
-			return this.stateManager.get( 'hasUnsavedChanges' ) || false;
+			return !!( this.stateManager && this.stateManager.get( 'isDirty' ) );
 		}
 
 		/**

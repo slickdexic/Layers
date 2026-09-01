@@ -192,9 +192,16 @@ if ( unsupportedBody === null ) {
 	errors.push( 'Could not find `const UNSUPPORTED_SERVER_SIDE = [ ... ];` in ' + RENDERER );
 }
 
-if ( allowedTypesBody !== null && unsupportedBody !== null ) {
+// Types that draw nothing anywhere, so "not handled" is correct rather than a gap.
+const nonVisualBody = phpConstBody( rendererSrc, 'NON_VISUAL_TYPES' );
+if ( nonVisualBody === null ) {
+	errors.push( 'Could not find `const NON_VISUAL_TYPES = [ ... ];` in ' + RENDERER );
+}
+
+if ( allowedTypesBody !== null && unsupportedBody !== null && nonVisualBody !== null ) {
 	const allowedTypes = captureAll( allowedTypesBody, /'([A-Za-z0-9_]+)'/g );
 	const unsupported = captureAll( unsupportedBody, /'([A-Za-z0-9_]+)'/g );
+	const nonVisual = captureAll( nonVisualBody, /'([A-Za-z0-9_]+)'/g );
 
 	// The renderer's switch cases are the types it can actually draw.
 	const switchBody = ( () => {
@@ -213,7 +220,8 @@ if ( allowedTypesBody !== null && unsupportedBody !== null ) {
 				'  listed in UNSUPPORTED_SERVER_SIDE. Anything else is silently dropped\n' +
 				'  from PDF exports and server-composited thumbnails.',
 			VALIDATOR + ' (SUPPORTED_LAYER_TYPES)', allowedTypes,
-			RENDERER + ' (handled + declared-unsupported)', handled.concat( unsupported )
+			RENDERER + ' (handled + declared-unsupported + non-visual)',
+			handled.concat( unsupported, nonVisual )
 		);
 
 		const bothWays = handled.filter( ( t ) => unsupported.includes( t ) );

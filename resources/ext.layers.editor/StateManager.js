@@ -56,6 +56,13 @@ class StateManager {
 			// Canvas/slide layer selection state
 			canvasLayerSelected: false,
 
+			// Slide mode: canvas geometry and identity, populated from config
+			// or the API before first render.
+			slideName: null,
+			slideCanvasWidth: null,
+			slideCanvasHeight: null,
+			slideBackgroundColor: null,
+
 			// History state
 			history: [],
 			historyIndex: -1,

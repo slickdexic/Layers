@@ -377,5 +377,14 @@ global.createMockEditor = function () {
         } catch ( e ) {
             // SetNameUtil not found, callers will use their inline fallback
         }
+
+        // Same reasoning for the freshness-cache key format, which the viewer and
+        // the editor both build and must agree on byte for byte.
+        try {
+            const FreshnessCacheKey = require( '../../resources/ext.layers.shared/FreshnessCacheKey.js' );
+            window.Layers.FreshnessCacheKey = FreshnessCacheKey;
+        } catch ( e ) {
+            // Not found; callers fall back to their inline format
+        }
     }
 }() );

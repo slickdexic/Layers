@@ -148,6 +148,26 @@ class EventManager {
 			return false;
 		}
 
+		// Resize, rotation and z-order were reachable only by dragging handles with
+		// a mouse, so keyboard-only users could position a layer but never size or
+		// turn it.
+		if ( e.ctrlKey || e.metaKey ) {
+			e.preventDefault();
+			this.resizeSelectedLayers( e.key, e.shiftKey ? 10 : 1 );
+			return true;
+		}
+		if ( e.altKey ) {
+			e.preventDefault();
+			if ( e.key === 'ArrowLeft' || e.key === 'ArrowRight' ) {
+				this.rotateSelectedLayers(
+					( e.key === 'ArrowRight' ? 1 : -1 ) * ( e.shiftKey ? 15 : 1 )
+				);
+			} else {
+				this.restackSelectedLayers( e.key === 'ArrowUp' );
+			}
+			return true;
+		}
+
 		// Determine nudge amount: 10px with Shift, 1px otherwise
 		const step = e.shiftKey ? 10 : 1;
 
@@ -237,6 +257,181 @@ class EventManager {
 		if ( selectedLayers.length === 1 && this.editor.updateStatusBar ) {
 			this.editor.updateStatusBar();
 		}
+	}
+
+	/**
+	 * Apply an update to every unlocked selected layer, then commit once.
+	 *
+	 * @param {Function} buildUpdates Receives a layer, returns an updates object
+	 *   or null to skip that layer
+	 * @param {string} historyLabel Label recorded in the undo stack
+	 * @return {number} Number of layers changed
+	 * @private
+	 */
+	applyToSelection( buildUpdates, historyLabel ) {
+		const selectionManager = this.editor.canvasManager?.selectionManager;
+		const stateManager = this.editor.stateManager;
+		if ( !selectionManager || !stateManager ) {
+			return 0;
+		}
+
+		const selectedLayers = selectionManager.getSelectedLayers?.() || [];
+		let changed = 0;
+
+		selectedLayers.forEach( ( layer ) => {
+			if ( !layer || layer.locked ) {
+				return;
+			}
+			const updates = buildUpdates( layer );
+			if ( !updates ) {
+				return;
+			}
+			changed++;
+			if ( typeof stateManager.updateLayer === 'function' ) {
+				stateManager.updateLayer( layer.id, updates );
+			} else {
+				Object.assign( layer, updates );
+			}
+		} );
+
+		if ( changed === 0 ) {
+			return 0;
+		}
+
+		if ( this.editor.historyManager && typeof this.editor.historyManager.saveState === 'function' ) {
+			this.editor.historyManager.saveState( historyLabel );
+		}
+		if ( typeof this.editor.markDirty === 'function' ) {
+			this.editor.markDirty();
+		}
+		if ( typeof this.editor.renderLayers === 'function' ) {
+			this.editor.renderLayers();
+		}
+		if ( this.editor.updateStatusBar ) {
+			this.editor.updateStatusBar();
+		}
+		return changed;
+	}
+
+	/**
+	 * Grow or shrink the selection with the keyboard.
+	 *
+	 * @param {string} key Arrow key name
+	 * @param {number} step Pixels per press
+	 */
+	resizeSelectedLayers( key, step ) {
+		const horizontal = key === 'ArrowLeft' || key === 'ArrowRight';
+		const delta = ( key === 'ArrowRight' || key === 'ArrowDown' ) ? step : -step;
+		const MIN = 1;
+
+		const changed = this.applyToSelection( ( layer ) => {
+			// Layer types keep their size in three different shapes.
+			if ( [ 'dimension', 'line', 'arrow' ].includes( layer.type ) ) {
+				return horizontal ?
+					{ x2: ( layer.x2 || 0 ) + delta } :
+					{ y2: ( layer.y2 || 0 ) + delta };
+			}
+			if ( layer.radiusX !== undefined || layer.radiusY !== undefined ) {
+				return horizontal ?
+					{ radiusX: Math.max( MIN, ( layer.radiusX || 0 ) + delta ) } :
+					{ radiusY: Math.max( MIN, ( layer.radiusY || 0 ) + delta ) };
+			}
+			if ( layer.radius !== undefined ) {
+				return { radius: Math.max( MIN, ( layer.radius || 0 ) + delta ) };
+			}
+			if ( layer.width !== undefined || layer.height !== undefined ) {
+				return horizontal ?
+					{ width: Math.max( MIN, ( layer.width || 0 ) + delta ) } :
+					{ height: Math.max( MIN, ( layer.height || 0 ) + delta ) };
+			}
+			// Text has no box; its size is the font size.
+			if ( layer.type === 'text' ) {
+				return { fontSize: Math.max( MIN, ( layer.fontSize || 16 ) + delta ) };
+			}
+			return null;
+		}, 'resize' );
+
+		this.announceTransform( changed, 'layers-aria-resized', 'Resized' );
+	}
+
+	/**
+	 * Rotate the selection with the keyboard.
+	 *
+	 * @param {number} degrees Signed degrees per press
+	 */
+	rotateSelectedLayers( degrees ) {
+		const changed = this.applyToSelection( ( layer ) => {
+			const next = ( ( ( layer.rotation || 0 ) + degrees ) % 360 + 360 ) % 360;
+			return { rotation: next };
+		}, 'rotate' );
+
+		this.announceTransform( changed, 'layers-aria-rotated', 'Rotated' );
+	}
+
+	/**
+	 * Move the selection up or down the layer stack.
+	 *
+	 * @param {boolean} up True to raise, false to lower
+	 */
+	restackSelectedLayers( up ) {
+		const selectionManager = this.editor.canvasManager?.selectionManager;
+		const stateManager = this.editor.stateManager;
+		if ( !selectionManager || !stateManager ) {
+			return;
+		}
+		const move = up ? stateManager.moveLayerUp : stateManager.moveLayerDown;
+		if ( typeof move !== 'function' ) {
+			return;
+		}
+
+		const selectedLayers = selectionManager.getSelectedLayers?.() || [];
+		let changed = 0;
+		selectedLayers.forEach( ( layer ) => {
+			if ( layer && !layer.locked ) {
+				move.call( stateManager, layer.id );
+				changed++;
+			}
+		} );
+		if ( changed === 0 ) {
+			return;
+		}
+
+		if ( this.editor.historyManager && typeof this.editor.historyManager.saveState === 'function' ) {
+			this.editor.historyManager.saveState( 'restack' );
+		}
+		if ( typeof this.editor.markDirty === 'function' ) {
+			this.editor.markDirty();
+		}
+		if ( typeof this.editor.renderLayers === 'function' ) {
+			this.editor.renderLayers();
+		}
+		this.announceTransform(
+			changed,
+			up ? 'layers-aria-moved-up' : 'layers-aria-moved-down',
+			up ? 'Moved up' : 'Moved down'
+		);
+	}
+
+	/**
+	 * Announce a keyboard transform, which produces no visible focus change.
+	 *
+	 * @param {number} changed Number of layers affected
+	 * @param {string} key Message key
+	 * @param {string} fallback English fallback
+	 * @private
+	 */
+	announceTransform( changed, key, fallback ) {
+		if ( !changed || !window.layersAnnouncer ) {
+			return;
+		}
+		let text = fallback;
+		if ( typeof mw !== 'undefined' && mw.message ) {
+			const msg = mw.message( key );
+			if ( msg.exists() ) {
+				text = msg.text();
+			}
+		}
+		window.layersAnnouncer.announce( text );
 	}
 
 	/**

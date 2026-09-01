@@ -18,28 +18,37 @@ use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Shell\Shell;
 use Psr\Log\LoggerInterface;
+use Wikimedia\AtEase\AtEase;
 
 class ThumbnailRenderer {
 	/**
 	 * Layer types this renderer has no ImageMagick primitive for.
 	 *
-	 * These are accepted by ServerSideLayerValidator, stored, and drawn correctly
-	 * by the browser renderers, but cannot currently be composited server-side.
-	 * They are listed here rather than falling silently through a `default:` arm
-	 * so the gap is declared, testable, and reportable to the user -- a PDF export
-	 * that quietly omits every marker and callout is worse than one that says so.
+	 * Empty as of 1.5.87: every type the validator accepts is now drawn
+	 * server-side. The list and its gate are kept because the failure mode it
+	 * guards against — a new layer type silently vanishing from PDF exports and
+	 * server-composited thumbnails — is invisible until a user compares the two.
+	 * A type added here must also be reported through getDroppedLayerTypes().
+	 *
+	 * Note that a *runtime* drop is still possible and still reported: an image
+	 * layer whose data URL will not decode, or a custom shape carrying only a
+	 * raw `svg` blob, is added to droppedTypes when it is encountered.
 	 *
 	 * Keep in sync with ServerSideLayerValidator::ALLOWED_TYPES; enforced by
 	 * scripts/check-parallel-lists.js.
 	 */
-	public const UNSUPPORTED_SERVER_SIDE = [
-		'callout',
-		'image',
+	public const UNSUPPORTED_SERVER_SIDE = [];
+
+	/**
+	 * Layer types that draw nothing anywhere, including in the browser.
+	 *
+	 * `group` is a pure container: GroupManager stores child ids and leaves the
+	 * children in the same flat array, so they are drawn on their own iteration.
+	 * Reporting it as "dropped" told users an export was incomplete when nothing
+	 * had been lost.
+	 */
+	private const NON_VISUAL_TYPES = [
 		'group',
-		'customShape',
-		'marker',
-		'dimension',
-		'angleDimension',
 	];
 
 	/** @var Config */
@@ -53,6 +62,12 @@ class ThumbnailRenderer {
 	 * @var string[]
 	 */
 	private array $droppedTypes = [];
+
+	/**
+	 * Temp files written for image layers during the current render.
+	 * @var string[]
+	 */
+	private array $tempFiles = [];
 
 	/**
 	 * Render dimensions of the current canvas (set during overlayLayers).
@@ -242,6 +257,10 @@ class ThumbnailRenderer {
 				);
 			}
 			return false;
+		} finally {
+			// Image layers are staged on disk for ImageMagick to read; every exit
+			// from here must remove them.
+			$this->cleanupTempFiles();
 		}
 
 		return file_exists( $outputPath );
@@ -277,8 +296,23 @@ class ThumbnailRenderer {
 				return $this->buildArrowArguments( $layer, $scaleX, $scaleY );
 			case 'line':
 				return $this->buildLineArguments( $layer, $scaleX, $scaleY );
+			case 'marker':
+				return $this->buildMarkerArguments( $layer, $scaleX, $scaleY );
+			case 'callout':
+				return $this->buildCalloutArguments( $layer, $scaleX, $scaleY );
+			case 'dimension':
+				return $this->buildDimensionArguments( $layer, $scaleX, $scaleY );
+			case 'angleDimension':
+				return $this->buildAngleDimensionArguments( $layer, $scaleX, $scaleY );
+			case 'image':
+				return $this->buildImageArguments( $layer, $scaleX, $scaleY );
+			case 'customShape':
+				return $this->buildCustomShapeArguments( $layer, $scaleX, $scaleY );
 			default:
 				$type = (string)( $layer['type'] ?? 'unknown' );
+				if ( in_array( $type, self::NON_VISUAL_TYPES, true ) ) {
+					return [];
+				}
 				if ( !in_array( $type, $this->droppedTypes, true ) ) {
 					$this->droppedTypes[] = $type;
 				}
@@ -750,6 +784,741 @@ class ThumbnailRenderer {
 			'-strokewidth', (string)$strokeWidth,
 			'-draw', 'line ' . (int)$x1 . ',' . (int)$y1 . ' ' . (int)$x2 . ',' . (int)$y2
 		];
+	}
+
+	/**
+	 * Resolve a layer's font to one the wiki allows, defaulting safely.
+	 *
+	 * @param array $layer Layer data
+	 * @return string Font name accepted by ImageMagick
+	 */
+	private function resolveFont( array $layer ): string {
+		$font = (string)( $layer['fontFamily'] ?? 'DejaVu-Sans' );
+		$allowed = $this->config->get( 'LayersDefaultFonts' );
+		return in_array( $font, (array)$allowed, true ) ? $font : 'DejaVu-Sans';
+	}
+
+	/**
+	 * Strip characters ImageMagick would interpret rather than draw.
+	 *
+	 * A leading '@' makes -annotate read the rest as a filename.
+	 *
+	 * @param mixed $text Raw text
+	 * @return string Text safe to pass to -annotate
+	 */
+	private function safeText( $text ): string {
+		return ltrim( (string)$text, '@' );
+	}
+
+	/**
+	 * Format a marker's value the same way MarkerRenderer.js does.
+	 *
+	 * @param mixed $value Numeric or custom value
+	 * @param string $style Marker style
+	 * @return string Display text
+	 */
+	private function formatMarkerValue( $value, string $style ): string {
+		if ( is_string( $value ) && !preg_match( '/^\d+$/', $value ) ) {
+			switch ( $style ) {
+				case 'parentheses':
+					return '(' . $value . ')';
+				case 'plain':
+					return $value . '.';
+				default:
+					return $value;
+			}
+		}
+		$num = (int)$value ?: 1;
+		switch ( $style ) {
+			case 'letter':
+			case 'letterCircled':
+				if ( $num <= 26 ) {
+					return chr( 64 + $num );
+				}
+				return chr( 64 + (int)floor( ( $num - 1 ) / 26 ) )
+					. chr( 64 + ( ( $num - 1 ) % 26 ) + 1 );
+			case 'parentheses':
+				return '(' . $num . ')';
+			case 'plain':
+				return $num . '.';
+			default:
+				return (string)$num;
+		}
+	}
+
+	/**
+	 * Numbered or lettered marker: a filled disc with centred text.
+	 *
+	 * @param array $layer Layer data
+	 * @param float $scaleX Horizontal scale
+	 * @param float $scaleY Vertical scale
+	 * @return array ImageMagick arguments
+	 */
+	private function buildMarkerArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$avgScale = ( $scaleX + $scaleY ) / 2;
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$radius = ( ( $layer['size'] ?? 32 ) / 2 ) * $avgScale;
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( (string)( $layer['fill'] ?? '#ffffff' ), $opacity );
+		$stroke = $this->withOpacity( (string)( $layer['stroke'] ?? '#000000' ), $opacity );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 2 ) * $avgScale );
+		$textColor = $this->withOpacity( (string)( $layer['color'] ?? '#000000' ), $opacity );
+
+		$text = $this->safeText( $this->formatMarkerValue(
+			$layer['value'] ?? 1,
+			(string)( $layer['style'] ?? 'circled' )
+		) );
+		// MarkerRenderer.js uses 58% of the marker size, then applies the adjustment.
+		$fontSize = max( 6, (int)round( ( $layer['size'] ?? 32 ) * 0.58 )
+			+ (int)( $layer['fontSizeAdjust'] ?? 0 ) );
+		$fontSize = max( 6, (int)round( $fontSize * $avgScale ) );
+
+		$args = [];
+		$shadow = $this->extractShadowParams( $layer, $scaleX, $scaleY );
+		if ( $shadow !== null ) {
+			$args = array_merge( $args, $this->buildShadowSubImage( [
+				'-fill', $shadow['color'],
+				'-stroke', 'none',
+				'-draw', 'circle ' . (int)( $x + $shadow['offsetX'] ) . ','
+					. (int)( $y + $shadow['offsetY'] ) . ' '
+					. (int)( $x + $radius + $shadow['offsetX'] ) . ','
+					. (int)( $y + $shadow['offsetY'] ),
+			], $shadow['blur'] ) );
+		}
+
+		$args = array_merge( $args, [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', 'circle ' . (int)$x . ',' . (int)$y . ' '
+				. (int)( $x + $radius ) . ',' . (int)$y,
+		] );
+
+		if ( $text !== '' ) {
+			// -gravity none keeps +x+y absolute; the text is centred by measuring
+			// it with -annotate's own box, which IM does when gravity is Center on
+			// a sub-region, so place it by offset instead.
+			$args = array_merge( $args, [
+				'-stroke', 'none',
+				'-fill', $textColor,
+				'-font', $this->resolveFont( $layer ),
+				'-pointsize', (string)$fontSize,
+				'-gravity', 'Center',
+				'-annotate', $this->centredOffset( $x, $y ),
+				$text,
+				'-gravity', 'None',
+			] );
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Offset used to centre text on a point when -gravity Center is active.
+	 *
+	 * Gravity Center measures from the canvas centre, so the offset is the
+	 * distance from that centre rather than an absolute coordinate.
+	 *
+	 * @param float $x Target centre x
+	 * @param float $y Target centre y
+	 * @return string ImageMagick geometry string
+	 */
+	private function centredOffset( float $x, float $y ): string {
+		$dx = (int)round( $x - ( $this->renderWidth / 2 ) );
+		$dy = (int)round( $y - ( $this->renderHeight / 2 ) );
+		return sprintf( '%+d%+d', $dx, $dy );
+	}
+
+	/**
+	 * Callout: a rounded box with a tail pointing at the annotated spot.
+	 *
+	 * @param array $layer Layer data
+	 * @param float $scaleX Horizontal scale
+	 * @param float $scaleY Vertical scale
+	 * @return array ImageMagick arguments
+	 */
+	private function buildCalloutArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$avgScale = ( $scaleX + $scaleY ) / 2;
+		$x = ( $layer['x'] ?? 0 ) * $scaleX;
+		$y = ( $layer['y'] ?? 0 ) * $scaleY;
+		$w = ( $layer['width'] ?? 120 ) * $scaleX;
+		$h = ( $layer['height'] ?? 60 ) * $scaleY;
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$fill = $this->withOpacity( (string)( $layer['fill'] ?? '#ffffff' ), $opacity );
+		$stroke = $this->withOpacity( (string)( $layer['stroke'] ?? '#000000' ), $opacity );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * $avgScale );
+		$corner = (int)round( ( $layer['cornerRadius'] ?? 4 ) * $avgScale );
+
+		$args = [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', $fill,
+			'-draw', 'roundrectangle ' . (int)$x . ',' . (int)$y . ' '
+				. (int)( $x + $w ) . ',' . (int)( $y + $h ) . ' '
+				. $corner . ',' . $corner,
+		];
+
+		// The tail is a triangle from the nearest box edge to the target point.
+		if ( isset( $layer['tailX'] ) && isset( $layer['tailY'] ) ) {
+			$tx = (float)$layer['tailX'] * $scaleX;
+			$ty = (float)$layer['tailY'] * $scaleY;
+			$baseX = max( $x, min( $tx, $x + $w ) );
+			$baseY = max( $y, min( $ty, $y + $h ) );
+			$spread = max( 4, $w * 0.1 );
+			$args = array_merge( $args, [
+				'-draw', 'polygon '
+					. (int)( $baseX - $spread / 2 ) . ',' . (int)$baseY . ' '
+					. (int)( $baseX + $spread / 2 ) . ',' . (int)$baseY . ' '
+					. (int)$tx . ',' . (int)$ty,
+			] );
+		}
+
+		$text = $this->safeText( $layer['text'] ?? '' );
+		if ( $text !== '' ) {
+			$fontSize = max( 6, (int)round( ( $layer['fontSize'] ?? 14 ) * $avgScale ) );
+			$padding = (int)round( ( $layer['padding'] ?? 8 ) * $avgScale );
+			$args = array_merge( $args, [
+				'-stroke', 'none',
+				'-fill', $this->withOpacity( (string)( $layer['color'] ?? '#000000' ), $opacity ),
+				'-font', $this->resolveFont( $layer ),
+				'-pointsize', (string)$fontSize,
+				'-annotate', '+' . (int)( $x + $padding ) . '+' . (int)( $y + $padding + $fontSize ),
+				$text,
+			] );
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Linear dimension: a measured line with end ticks and a label.
+	 *
+	 * @param array $layer Layer data
+	 * @param float $scaleX Horizontal scale
+	 * @param float $scaleY Vertical scale
+	 * @return array ImageMagick arguments
+	 */
+	private function buildDimensionArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$avgScale = ( $scaleX + $scaleY ) / 2;
+		$x1 = ( $layer['x1'] ?? 0 ) * $scaleX;
+		$y1 = ( $layer['y1'] ?? 0 ) * $scaleY;
+		$x2 = ( $layer['x2'] ?? 100 ) * $scaleX;
+		$y2 = ( $layer['y2'] ?? 0 ) * $scaleY;
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$stroke = $this->withOpacity( (string)( $layer['stroke'] ?? '#000000' ), $opacity );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * $avgScale );
+
+		// End ticks perpendicular to the measured line.
+		$dx = $x2 - $x1;
+		$dy = $y2 - $y1;
+		$len = sqrt( $dx * $dx + $dy * $dy );
+		$tick = 6 * $avgScale;
+		$nx = $len > 0 ? ( -$dy / $len ) * $tick : 0;
+		$ny = $len > 0 ? ( $dx / $len ) * $tick : 0;
+
+		$args = [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', 'none',
+			'-draw', 'line ' . (int)$x1 . ',' . (int)$y1 . ' ' . (int)$x2 . ',' . (int)$y2,
+			'-draw', 'line ' . (int)( $x1 - $nx ) . ',' . (int)( $y1 - $ny ) . ' '
+				. (int)( $x1 + $nx ) . ',' . (int)( $y1 + $ny ),
+			'-draw', 'line ' . (int)( $x2 - $nx ) . ',' . (int)( $y2 - $ny ) . ' '
+				. (int)( $x2 + $nx ) . ',' . (int)( $y2 + $ny ),
+		];
+
+		$label = $this->dimensionLabel( $layer, $len / max( $avgScale, 0.0001 ) );
+		if ( $label !== '' ) {
+			$fontSize = max( 6, (int)round( ( $layer['fontSize'] ?? 12 ) * $avgScale ) );
+			$args = array_merge( $args, [
+				'-stroke', 'none',
+				'-fill', $this->withOpacity( (string)( $layer['color'] ?? $layer['stroke'] ?? '#000000' ), $opacity ),
+				'-font', $this->resolveFont( $layer ),
+				'-pointsize', (string)$fontSize,
+				'-gravity', 'Center',
+				'-annotate', $this->centredOffset(
+					( $x1 + $x2 ) / 2 + $nx, ( $y1 + $y2 ) / 2 + $ny - $fontSize
+				),
+				$label,
+				'-gravity', 'None',
+			] );
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Build the text shown against a dimension.
+	 *
+	 * @param array $layer Layer data
+	 * @param float $pixelLength Measured length in unscaled pixels
+	 * @return string Label text
+	 */
+	private function dimensionLabel( array $layer, float $pixelLength ): string {
+		if ( isset( $layer['text'] ) && (string)$layer['text'] !== '' ) {
+			return $this->safeText( $layer['text'] );
+		}
+		$scaleFactor = (float)( $layer['scale'] ?? 1 );
+		$value = round( $pixelLength * ( $scaleFactor ?: 1 ), 1 );
+		$unit = ( $layer['showUnit'] ?? true ) ? (string)( $layer['unit'] ?? 'px' ) : '';
+		return $this->safeText( $value . ( $unit !== '' ? ' ' . $unit : '' ) );
+	}
+
+	/**
+	 * Angle dimension: two legs from a vertex with a label.
+	 *
+	 * @param array $layer Layer data
+	 * @param float $scaleX Horizontal scale
+	 * @param float $scaleY Vertical scale
+	 * @return array ImageMagick arguments
+	 */
+	private function buildAngleDimensionArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$avgScale = ( $scaleX + $scaleY ) / 2;
+		$ax = ( $layer['ax'] ?? 0 ) * $scaleX;
+		$ay = ( $layer['ay'] ?? 0 ) * $scaleY;
+		$cx = ( $layer['cx'] ?? 0 ) * $scaleX;
+		$cy = ( $layer['cy'] ?? 0 ) * $scaleY;
+		$bx = ( $layer['bx'] ?? 0 ) * $scaleX;
+		$by = ( $layer['by'] ?? 0 ) * $scaleY;
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$stroke = $this->withOpacity( (string)( $layer['stroke'] ?? '#000000' ), $opacity );
+		$strokeWidth = (int)round( ( $layer['strokeWidth'] ?? 1 ) * $avgScale );
+
+		$args = [
+			'-stroke', $stroke,
+			'-strokewidth', (string)$strokeWidth,
+			'-fill', 'none',
+			'-draw', 'line ' . (int)$cx . ',' . (int)$cy . ' ' . (int)$ax . ',' . (int)$ay,
+			'-draw', 'line ' . (int)$cx . ',' . (int)$cy . ' ' . (int)$bx . ',' . (int)$by,
+		];
+
+		$angle = $this->angleBetween( $ax - $cx, $ay - $cy, $bx - $cx, $by - $cy );
+		if ( !empty( $layer['reflexAngle'] ) ) {
+			$angle = 360 - $angle;
+		}
+		$label = isset( $layer['text'] ) && (string)$layer['text'] !== ''
+			? $this->safeText( $layer['text'] )
+			: round( $angle, 1 ) . '°';
+
+		$fontSize = max( 6, (int)round( ( $layer['fontSize'] ?? 12 ) * $avgScale ) );
+		$args = array_merge( $args, [
+			'-stroke', 'none',
+			'-fill', $this->withOpacity( (string)( $layer['color'] ?? $layer['stroke'] ?? '#000000' ), $opacity ),
+			'-font', $this->resolveFont( $layer ),
+			'-pointsize', (string)$fontSize,
+			'-gravity', 'Center',
+			'-annotate', $this->centredOffset( $cx, $cy - $fontSize * 1.5 ),
+			$label,
+			'-gravity', 'None',
+		] );
+
+		return $args;
+	}
+
+	/**
+	 * Interior angle in degrees between two vectors sharing a vertex.
+	 *
+	 * @param float $ux First vector x
+	 * @param float $uy First vector y
+	 * @param float $vx Second vector x
+	 * @param float $vy Second vector y
+	 * @return float Angle in degrees, 0-180
+	 */
+	private function angleBetween( float $ux, float $uy, float $vx, float $vy ): float {
+		$magU = sqrt( $ux * $ux + $uy * $uy );
+		$magV = sqrt( $vx * $vx + $vy * $vy );
+		if ( $magU <= 0.0 || $magV <= 0.0 ) {
+			return 0.0;
+		}
+		$cos = max( -1.0, min( 1.0, ( $ux * $vx + $uy * $vy ) / ( $magU * $magV ) ) );
+		return rad2deg( acos( $cos ) );
+	}
+
+	/**
+	 * Imported image layer, composited from its embedded data URL.
+	 *
+	 * @param array $layer Layer data
+	 * @param float $scaleX Horizontal scale
+	 * @param float $scaleY Vertical scale
+	 * @return array ImageMagick arguments
+	 */
+	private function buildImageArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$path = $this->materializeImageLayer( (string)( $layer['src'] ?? '' ) );
+		if ( $path === null ) {
+			if ( !in_array( 'image', $this->droppedTypes, true ) ) {
+				$this->droppedTypes[] = 'image';
+			}
+			return [];
+		}
+
+		$x = (int)round( ( $layer['x'] ?? 0 ) * $scaleX );
+		$y = (int)round( ( $layer['y'] ?? 0 ) * $scaleY );
+		$w = (int)round( ( $layer['width'] ?? 0 ) * $scaleX );
+		$h = (int)round( ( $layer['height'] ?? 0 ) * $scaleY );
+
+		$args = [ '(', $path ];
+		if ( $w > 0 && $h > 0 ) {
+			$args[] = '-resize';
+			$args[] = $w . 'x' . $h . '!';
+		}
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		if ( $opacity < 1.0 ) {
+			$args[] = '-alpha';
+			$args[] = 'set';
+			$args[] = '-channel';
+			$args[] = 'A';
+			$args[] = '-evaluate';
+			$args[] = 'multiply';
+			$args[] = (string)max( 0.0, min( 1.0, $opacity ) );
+			$args[] = '+channel';
+		}
+		$args[] = ')';
+		$args[] = '-geometry';
+		$args[] = sprintf( '%+d%+d', $x, $y );
+		$args[] = '-composite';
+
+		return $args;
+	}
+
+	/**
+	 * Write an image layer's data URL to a temp file ImageMagick can read.
+	 *
+	 * @param string $src data: URL from the layer
+	 * @return string|null Temp file path, or null when the source is unusable
+	 */
+	private function materializeImageLayer( string $src ): ?string {
+		if ( !preg_match( '#^data:image/(png|jpe?g|gif|webp);base64,#i', $src, $m ) ) {
+			return null;
+		}
+		$payload = substr( $src, strpos( $src, ',' ) + 1 );
+		$binary = base64_decode( $payload, true );
+		if ( $binary === false || $binary === '' ) {
+			return null;
+		}
+		$maxBytes = (int)$this->config->get( 'LayersMaxImageBytes' );
+		if ( $maxBytes > 0 && strlen( $binary ) > $maxBytes ) {
+			return null;
+		}
+		$ext = strtolower( $m[1] ) === 'jpg' ? 'jpeg' : strtolower( $m[1] );
+		$path = tempnam( sys_get_temp_dir(), 'layers-img-' );
+		if ( $path === false ) {
+			return null;
+		}
+		// ImageMagick picks the decoder from the extension, so the format must be
+		// stated rather than guessed from content.
+		$typed = $path . '.' . $ext;
+		if ( file_put_contents( $typed, $binary ) === false ) {
+			unlink( $path );
+			return null;
+		}
+		unlink( $path );
+		$this->tempFiles[] = $typed;
+		return $typed;
+	}
+
+	/**
+	 * Delete temp files created for image layers during this render.
+	 */
+	private function cleanupTempFiles(): void {
+		foreach ( $this->tempFiles as $path ) {
+			if ( is_file( $path ) ) {
+				AtEase::quietCall( 'unlink', $path );
+			}
+		}
+		$this->tempFiles = [];
+	}
+
+	/**
+	 * Shape-library shape, drawn from its SVG path data.
+	 *
+	 * ImageMagick's `-draw path` takes the same path grammar as SVG, so no SVG
+	 * delegate is required. Only `path`/`paths` are drawn: those are character-
+	 * whitelisted by ServerSideLayerValidator::validateSvgPath(), which is a
+	 * provable safety property. A raw `svg` blob is sanitised by blacklist
+	 * instead, so it is still reported as dropped rather than handed to a
+	 * server-side renderer.
+	 *
+	 * @param array $layer Layer data
+	 * @param float $scaleX Horizontal scale
+	 * @param float $scaleY Vertical scale
+	 * @return array ImageMagick arguments
+	 */
+	private function buildCustomShapeArguments( array $layer, float $scaleX, float $scaleY ): array {
+		$x = (int)round( ( $layer['x'] ?? 0 ) * $scaleX );
+		$y = (int)round( ( $layer['y'] ?? 0 ) * $scaleY );
+
+		$viewBox = $layer['viewBox'] ?? null;
+		if ( !is_array( $viewBox ) || count( $viewBox ) !== 4 ) {
+			$viewBox = [ 0, 0, 24, 24 ];
+		}
+		[ $vbX, $vbY, $vbW, $vbH ] = array_map( 'floatval', $viewBox );
+		if ( $vbW <= 0 || $vbH <= 0 ) {
+			return $this->dropCustomShape();
+		}
+
+		$w = max( 1, (int)round( ( $layer['width'] ?? $vbW ) * $scaleX ) );
+		$h = max( 1, (int)round( ( $layer['height'] ?? $vbH ) * $scaleY ) );
+
+		$paths = $this->collectShapePaths( $layer );
+		if ( $paths !== [] ) {
+			return $this->drawShapePaths( $layer, $paths, $x, $y, $w, $h, $vbX, $vbY, $vbW, $vbH, $scaleX, $scaleY );
+		}
+
+		// The bundled library stores whole SVG documents, and 92% of them use
+		// groups, transforms or basic shapes that a path extractor would place
+		// wrongly. Rendering a shape in the wrong spot is worse than declaring it
+		// missing, so those go to a real SVG rasteriser or nowhere.
+		$png = $this->rasterizeShapeSvg( (string)( $layer['svg'] ?? '' ), $w, $h );
+		if ( $png === null ) {
+			return $this->dropCustomShape();
+		}
+
+		$args = [ '(', $png ];
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		if ( $opacity < 1.0 ) {
+			$args = array_merge( $args, [
+				'-alpha', 'set', '-channel', 'A',
+				'-evaluate', 'multiply', (string)max( 0.0, min( 1.0, $opacity ) ), '+channel',
+			] );
+		}
+		$args[] = ')';
+		$args[] = '-geometry';
+		$args[] = sprintf( '%+d%+d', $x, $y );
+		$args[] = '-composite';
+
+		return $args;
+	}
+
+	/**
+	 * Record a custom shape this render could not draw.
+	 *
+	 * @return array Always empty, for use as a return value
+	 */
+	private function dropCustomShape(): array {
+		if ( !in_array( 'customShape', $this->droppedTypes, true ) ) {
+			$this->droppedTypes[] = 'customShape';
+		}
+		return [];
+	}
+
+	/**
+	 * Draw a shape supplied as raw path data.
+	 *
+	 * ImageMagick's `-draw path` takes the same grammar as SVG, so this route
+	 * needs no SVG converter. It is preferred when available because the path
+	 * data is character-whitelisted, which is a provable safety property.
+	 *
+	 * @param array $layer Layer data
+	 * @param array $paths Normalised path entries
+	 * @param int $x Target x in output pixels
+	 * @param int $y Target y in output pixels
+	 * @param int $w Target width in output pixels
+	 * @param int $h Target height in output pixels
+	 * @param float $vbX ViewBox origin x
+	 * @param float $vbY ViewBox origin y
+	 * @param float $vbW ViewBox width
+	 * @param float $vbH ViewBox height
+	 * @param float $scaleX Horizontal scale
+	 * @param float $scaleY Vertical scale
+	 * @return array ImageMagick arguments
+	 */
+	private function drawShapePaths(
+		array $layer, array $paths, int $x, int $y, int $w, int $h,
+		float $vbX, float $vbY, float $vbW, float $vbH, float $scaleX, float $scaleY
+	): array {
+		$sx = $w / $vbW;
+		$sy = $h / $vbH;
+		$opacity = isset( $layer['opacity'] ) ? (float)$layer['opacity'] : 1.0;
+		$layerFill = (string)( $layer['fill'] ?? '#000000' );
+		$layerStroke = (string)( $layer['stroke'] ?? 'none' );
+		$strokeWidth = (float)( $layer['strokeWidth'] ?? 0 );
+		$fillRule = ( $layer['fillRule'] ?? 'nonzero' ) === 'evenodd' ? 'evenodd' : 'nonzero';
+
+		$transform = sprintf(
+			'translate %s,%s scale %s,%s translate %s,%s ',
+			$this->num( $x ), $this->num( $y ),
+			$this->num( $sx ), $this->num( $sy ),
+			$this->num( -$vbX ), $this->num( -$vbY )
+		);
+
+		$args = [ '-fill-rule', $fillRule ];
+		foreach ( $paths as $entry ) {
+			$fill = $this->withOpacity( (string)( $entry['fill'] ?? $layerFill ), $opacity );
+			$stroke = $this->withOpacity( (string)( $entry['stroke'] ?? $layerStroke ), $opacity );
+			// Stroke width is authored in viewBox units, so it scales with the shape.
+			$width = (float)( $entry['strokeWidth'] ?? $strokeWidth );
+			$args = array_merge( $args, [
+				'-fill', $fill,
+				'-stroke', $stroke,
+				'-strokewidth', $this->num( $width * ( ( $sx + $sy ) / 2 ) ),
+				'-draw', $transform . "path '" . $entry['path'] . "'",
+			] );
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Rasterise a shape's SVG document to a temp PNG.
+	 *
+	 * Uses the wiki's own $wgSVGConverter rather than a hardcoded binary: any
+	 * wiki that accepts SVG uploads already runs that converter over untrusted
+	 * SVG, so this introduces no new class of exposure and honours whatever the
+	 * administrator has hardened. Returns null when no converter is configured,
+	 * which leaves the shape declared as dropped exactly as before.
+	 *
+	 * @param string $svg SVG document from the layer
+	 * @param int $width Target width in px
+	 * @param int $height Target height in px
+	 * @return string|null Temp PNG path, or null when it could not be rendered
+	 */
+	private function rasterizeShapeSvg( string $svg, int $width, int $height ): ?string {
+		if ( $svg === '' || stripos( ltrim( $svg ), '<svg' ) !== 0 ) {
+			return null;
+		}
+		// Entity and DOCTYPE declarations are the XXE vector; the shape library
+		// never emits them, so refuse rather than try to clean them.
+		if ( preg_match( '/<!DOCTYPE|<!ENTITY/i', $svg ) ) {
+			return null;
+		}
+		$maxSize = (int)$this->configValue( 'SVGMaxSize', 5120 );
+		if ( $width > $maxSize || $height > $maxSize ) {
+			return null;
+		}
+
+		$command = $this->svgConverterCommand();
+		if ( $command === null ) {
+			return null;
+		}
+
+		$base = tempnam( sys_get_temp_dir(), 'layers-shape-' );
+		if ( $base === false ) {
+			return null;
+		}
+		$input = $base . '.svg';
+		$output = $base . '.png';
+		AtEase::quietCall( 'unlink', $base );
+		if ( file_put_contents( $input, $svg ) === false ) {
+			return null;
+		}
+		$this->tempFiles[] = $input;
+		$this->tempFiles[] = $output;
+
+		$converterPath = (string)$this->configValue( 'SVGConverterPath', '' );
+		$prefix = $converterPath !== '' ? rtrim( $converterPath, '/' ) . '/' : '';
+		$cmd = str_replace(
+			[ '$path/', '$width', '$height', '$input', '$output' ],
+			[
+				$prefix,
+				(string)$width,
+				(string)$height,
+				Shell::escape( $input ),
+				Shell::escape( $output ),
+			],
+			$command
+		);
+
+		try {
+			Shell::command( [] )
+				->unsafeParams( $cmd )
+				->limits( [ 'time' => (int)$this->configValue( 'LayersImageMagickTimeout', 30 ) ] )
+				->includeStderr()
+				->execute();
+		} catch ( \Throwable $e ) {
+			if ( $this->logger ) {
+				$this->logger->warning( 'Layers: SVG shape rasterise failed', [ 'exception' => $e ] );
+			}
+			return null;
+		}
+
+		return ( is_file( $output ) && filesize( $output ) > 0 ) ? $output : null;
+	}
+
+	/**
+	 * Resolve the configured SVG converter command template.
+	 *
+	 * @return string|null Command template, or null when none is usable
+	 */
+	private function svgConverterCommand(): ?string {
+		$name = (string)$this->configValue( 'SVGConverter', '' );
+		$converters = $this->configValue( 'SVGConverters', [] );
+		if ( $name === '' || !is_array( $converters ) || !isset( $converters[$name] ) ) {
+			return null;
+		}
+		$command = $converters[$name];
+		// The ImagickExt entry is a PHP callable, not a shell command.
+		return is_string( $command ) ? $command : null;
+	}
+
+	/**
+	 * Read a config value, tolerating keys the wiki does not define.
+	 *
+	 * @param string $key Config key
+	 * @param mixed $default Value to use when the key is absent
+	 * @return mixed Config value or default
+	 */
+	private function configValue( string $key, $default ) {
+		try {
+			if ( $this->config->has( $key ) ) {
+				return $this->config->get( $key );
+			}
+		} catch ( \Throwable $e ) {
+			// Fall through to the default.
+		}
+		return $default;
+	}
+
+	/**
+	 * Normalise the path entries of a custom shape into one list.
+	 *
+	 * @param array $layer Layer data
+	 * @return array List of [ 'path' => string, ... ] entries
+	 */
+	private function collectShapePaths( array $layer ): array {
+		$out = [];
+		if ( isset( $layer['paths'] ) && is_array( $layer['paths'] ) ) {
+			foreach ( $layer['paths'] as $entry ) {
+				if ( is_string( $entry ) && $this->isDrawablePath( $entry ) ) {
+					$out[] = [ 'path' => $entry ];
+				} elseif ( is_array( $entry ) && isset( $entry['path'] )
+					&& $this->isDrawablePath( (string)$entry['path'] )
+				) {
+					$out[] = $entry;
+				}
+			}
+		}
+		if ( $out === [] && isset( $layer['path'] ) && $this->isDrawablePath( (string)$layer['path'] ) ) {
+			$out[] = [ 'path' => (string)$layer['path'] ];
+		}
+		return $out;
+	}
+
+	/**
+	 * Re-check path data against the same whitelist the validator applied.
+	 *
+	 * Stored rows predate the current validator and the string is interpolated
+	 * into a shell argument, so this is checked again at render time rather than
+	 * trusted.
+	 *
+	 * @param string $path SVG path data
+	 * @return bool True when safe to draw
+	 */
+	private function isDrawablePath( string $path ): bool {
+		return $path !== ''
+			&& strlen( $path ) <= 10000
+			&& preg_match( '/^\s*[Mm]/', $path ) === 1
+			&& preg_match( '/^[MmLlHhVvCcSsQqTtAaZz0-9\s,.\-+eE]+$/', $path ) === 1;
+	}
+
+	/**
+	 * Format a float for an ImageMagick draw string without locale surprises.
+	 *
+	 * @param float $value Value to format
+	 * @return string Formatted number
+	 */
+	private function num( float $value ): string {
+		return rtrim( rtrim( number_format( $value, 4, '.', '' ), '0' ), '.' ) ?: '0';
 	}
 
 	/**

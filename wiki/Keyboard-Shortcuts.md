@@ -49,6 +49,30 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 
 ---
 
+## Transform Shortcuts
+
+Keyboard equivalents for the selection handles, so resizing and rotating do
+not require a mouse. All require at least one selected, unlocked layer.
+
+| Shortcut | Action |
+|----------|--------|
+| `←` `↑` `→` `↓` | Move selection by 1 px |
+| `Shift` + arrows | Move selection by 10 px |
+| `Ctrl` + arrows | Resize selection by 1 px |
+| `Ctrl+Shift` + arrows | Resize selection by 10 px |
+| `Alt+←` / `Alt+→` | Rotate selection by 1° |
+| `Alt+Shift+←` / `Alt+Shift+→` | Rotate selection by 15° |
+| `Alt+↑` / `Alt+↓` | Move layer up / down the stack |
+
+> **Resize adapts to the layer type:** boxes change width/height, circles and
+> stars change radius, ellipses change the matching radius, lines and arrows
+> move their end point, and plain text changes font size.
+
+> Each transform is announced to screen readers, since a keyboard transform
+> moves no focus and would otherwise give no feedback.
+
+---
+
 ## View Shortcuts
 
 | Shortcut | Action |

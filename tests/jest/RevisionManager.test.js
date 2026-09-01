@@ -453,7 +453,7 @@ describe( 'RevisionManager', () => {
 			expect( result ).toBe( true );
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'my-new-set' );
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'hasUnsavedChanges', true );
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'isDirty', true );
 		} );
 
 		it( 'should reject empty name', async () => {
@@ -561,7 +561,7 @@ describe( 'RevisionManager', () => {
 		} );
 
 		it( 'should return true when has unsaved changes', () => {
-			mockStateManager.state.hasUnsavedChanges = true;
+			mockStateManager.state.isDirty = true;
 
 			expect( revisionManager.hasUnsavedChanges() ).toBe( true );
 		} );

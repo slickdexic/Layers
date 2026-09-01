@@ -54,6 +54,18 @@ class ApiLayersExport extends ApiBase {
 	private array $droppedTypes = [];
 
 	/**
+	 * Live references to the transformed page images.
+	 *
+	 * MediaWiki hands back a TempFSFile whose destructor deletes the file, so
+	 * returning only the path let PHP reclaim every page raster before the stitch
+	 * ran -- convert then failed with "unable to open image /tmp/transform_*" and
+	 * the whole export died. Hold the objects until the PDF exists.
+	 *
+	 * @var array
+	 */
+	private array $pageImageRefs = [];
+
+	/**
 	 * @param ApiMain $main
 	 * @param string $action
 	 */
@@ -118,9 +130,11 @@ class ApiLayersExport extends ApiBase {
 		$pageCount = $this->getPageCount( $file );
 
 		// Set names are user-defined, so an unnamed request resolves to whatever
-		// this file's most recent set is called rather than to a fixed name.
-		$setName = (string)( SetNameResolver::resolve(
-			$db, $imgName, $sha1, $params['setname'] ?? null
+		// this document's most recent set is called rather than to a fixed name.
+		// Resolution spans every page: sets are stored per page, so anchoring on
+		// page 1 exported an unannotated PDF whenever the cover page had no layers.
+		$setName = (string)( SetNameResolver::resolveAcrossPages(
+			$db, $imgName, $sha1, $params['setname'] ?? null, $pageCount
 		) ?? '' );
 
 		$maxPages = (int)$this->getConfig()->get( 'LayersPdfExportMaxPages' );
@@ -184,6 +198,9 @@ class ApiLayersExport extends ApiBase {
 			if ( !$this->stitchPdf( $pageImages, $outputPath ) ) {
 				$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
 			}
+
+			// The PDF is written; the page rasters can go now.
+			$this->pageImageRefs = [];
 		}
 
 		$url = $this->getExportUrl( $title, $cacheKey );
@@ -292,6 +309,7 @@ class ApiLayersExport extends ApiBase {
 			if ( !$thumb || ( method_exists( $thumb, 'isError' ) && $thumb->isError() ) ) {
 				return null;
 			}
+			$this->pageImageRefs[] = $thumb;
 			if ( method_exists( $thumb, 'getLocalCopyPath' ) ) {
 				$path = $thumb->getLocalCopyPath();
 				if ( $path && file_exists( $path ) ) {
@@ -299,9 +317,10 @@ class ApiLayersExport extends ApiBase {
 				}
 			}
 			if ( method_exists( $thumb, 'getFile' ) && $thumb->getFile() ) {
-				$path = $thumb->getFile()->getLocalRefPath();
-				if ( $path && file_exists( $path ) ) {
-					return $path;
+				$local = $thumb->getFile()->getLocalRefPath();
+				$this->pageImageRefs[] = $thumb->getFile();
+				if ( $local && file_exists( $local ) ) {
+					return $local;
 				}
 			}
 		} catch ( \Throwable $e ) {

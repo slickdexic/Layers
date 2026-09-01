@@ -437,17 +437,17 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		it( 'should return false when no changes', () => {
-			editor.stateManager.set( 'hasUnsavedChanges', false );
+			editor.stateManager.set( 'isDirty', false );
 			expect( editor.hasUnsavedChanges() ).toBe( false );
 		} );
 
 		it( 'should return true when changes exist', () => {
-			editor.stateManager.set( 'hasUnsavedChanges', true );
+			editor.stateManager.set( 'isDirty', true );
 			expect( editor.hasUnsavedChanges() ).toBe( true );
 		} );
 
 		it( 'should return false when state is undefined', () => {
-			editor.stateManager.set( 'hasUnsavedChanges', undefined );
+			editor.stateManager.set( 'isDirty', undefined );
 			expect( editor.hasUnsavedChanges() ).toBe( false );
 		} );
 	} );
@@ -459,14 +459,14 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		it( 'should add has-changes class when unsaved changes exist', () => {
-			editor.stateManager.set( 'hasUnsavedChanges', true );
+			editor.stateManager.set( 'isDirty', true );
 			editor.updateSaveButtonState();
 			expect( mockToolbar.saveBtnEl.classList.contains( 'has-changes' ) ).toBe( true );
 		} );
 
 		it( 'should remove has-changes class when no unsaved changes', () => {
 			mockToolbar.saveBtnEl.classList.add( 'has-changes' );
-			editor.stateManager.set( 'hasUnsavedChanges', false );
+			editor.stateManager.set( 'isDirty', false );
 			editor.updateSaveButtonState();
 			expect( mockToolbar.saveBtnEl.classList.contains( 'has-changes' ) ).toBe( false );
 		} );
@@ -899,13 +899,13 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		it( 'should call apiManager.loadLayersBySetName with set name', async () => {
-			editor.stateManager.set( 'hasUnsavedChanges', false );
+			editor.stateManager.set( 'isDirty', false );
 			await editor.loadLayerSetByName( 'my-set' );
 			expect( mockAPIManager.loadLayersBySetName ).toHaveBeenCalledWith( 'my-set' );
 		} );
 
 		it( 'should update current set name state', async () => {
-			editor.stateManager.set( 'hasUnsavedChanges', false );
+			editor.stateManager.set( 'isDirty', false );
 			await editor.loadLayerSetByName( 'custom-set' );
 			expect( editor.stateManager.get( 'currentSetName' ) ).toBe( 'custom-set' );
 		} );
@@ -916,7 +916,7 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		it( 'should show success notification on load', async () => {
-			editor.stateManager.set( 'hasUnsavedChanges', false );
+			editor.stateManager.set( 'isDirty', false );
 			await editor.loadLayerSetByName( 'test-set' );
 			expect( window.mw.notify ).toHaveBeenCalledWith(
 				expect.any( String ),
@@ -925,7 +925,7 @@ describe( 'LayersEditor Extended', () => {
 		} );
 
 		it( 'should handle API errors gracefully', async () => {
-			editor.stateManager.set( 'hasUnsavedChanges', false );
+			editor.stateManager.set( 'isDirty', false );
 			mockAPIManager.loadLayersBySetName.mockRejectedValue( new Error( 'API error' ) );
 			await editor.loadLayerSetByName( 'failing-set' );
 			expect( window.mw.notify ).toHaveBeenCalledWith(

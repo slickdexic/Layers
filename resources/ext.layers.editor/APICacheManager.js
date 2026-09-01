@@ -94,29 +94,25 @@
 		/**
 		 * Clear the FreshnessChecker sessionStorage cache for a file.
 		 *
+		 * Scans the store rather than reconstructing keys: the viewer may hold
+		 * entries for sets and pages the editor never loaded, and the previous
+		 * hand-built key format silently omitted the page.
+		 *
 		 * @param {string} filename File name
-		 * @param {Array} namedSets Array of named set objects with .name property
-		 * @param {string} currentSetName Current set name
 		 */
-		clearFreshnessCache( filename, namedSets, currentSetName ) {
+		clearFreshnessCache( filename ) {
 			try {
 				if ( !filename ) {
 					return;
 				}
 
-				const STORAGE_KEY_PREFIX = 'layers-fresh-';
-				const normalizedFilename = ( filename || '' ).replace( /\s+/g, '_' );
+				const keyUtil = ( typeof window !== 'undefined' && window.Layers &&
+					window.Layers.FreshnessCacheKey ) || null;
+				if ( !keyUtil ) {
+					return;
+				}
 
-				// The viewer stores unnamed sets under an empty key, so clear that too
-				const setNames = new Set( [ '', currentSetName || '' ] );
-				( namedSets || [] ).forEach( ( set ) => {
-					if ( set && set.name ) {
-						setNames.add( set.name );
-					}
-				} );
-
-				setNames.forEach( ( setName ) => {
-					const key = STORAGE_KEY_PREFIX + normalizedFilename + ':' + setName;
+				keyUtil.findAllForFile( filename ).forEach( ( key ) => {
 					try {
 						sessionStorage.removeItem( key );
 					} catch ( e ) {

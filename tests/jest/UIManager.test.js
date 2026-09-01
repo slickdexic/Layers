@@ -908,7 +908,7 @@ describe( 'UIManager', () => {
 
 			await uiManager.deleteCurrentSet();
 
-			expect( mockApiManager.deleteLayerSet ).toHaveBeenCalledWith( 'default' );
+			expect( mockApiManager.deleteLayerSet ).toHaveBeenCalledWith( 'default', false );
 		} );
 
 		it( 'should confirm and delete non-default set', async () => {
@@ -960,7 +960,7 @@ describe( 'UIManager', () => {
 
 			await uiManager.deleteCurrentSet();
 
-			expect( mockApiManager.deleteLayerSet ).toHaveBeenCalledWith( 'annotations' );
+			expect( mockApiManager.deleteLayerSet ).toHaveBeenCalledWith( 'annotations', false );
 			expect( mockRevisionManager.buildSetSelector ).toHaveBeenCalled();
 		} );
 
@@ -1130,7 +1130,7 @@ describe( 'UIManager', () => {
 
 			await uiManager.renameCurrentSet();
 
-			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith( 'annotations', 'new-name' );
+			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith( 'annotations', 'new-name', false );
 			expect( mockRevisionManager.buildSetSelector ).toHaveBeenCalled();
 		} );
 
@@ -1151,7 +1151,7 @@ describe( 'UIManager', () => {
 
 			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith(
 				'annotations',
-				'trimmed-name'
+				'trimmed-name', false
 			);
 		} );
 
@@ -1215,7 +1215,7 @@ describe( 'UIManager', () => {
 
 			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith(
 				'old-set',
-				'my_new-Set123'
+				'my_new-Set123', false
 			);
 		} );
 

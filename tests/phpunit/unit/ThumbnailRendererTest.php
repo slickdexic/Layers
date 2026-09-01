@@ -324,6 +324,245 @@ namespace MediaWiki\Extension\Layers\Tests {
 			$this->assertContains( '-composite', $result );
 			$this->assertGreaterThanOrEqual( 2, count( array_keys( $result, '-draw' ) ) );
 		}
+
+		/**
+		 * @covers ::buildMarkerArguments
+		 */
+		public function testMarkerDrawsDiscAndCentredValue() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildMarkerArguments' );
+
+			$args = $method->invoke( $renderer, [
+				'type' => 'marker', 'x' => 100, 'y' => 200, 'size' => 32,
+				'value' => 3, 'style' => 'circled',
+				'fill' => '#ffff00', 'stroke' => '#ff0000', 'color' => '#000000'
+			], 1.0, 1.0 );
+
+			$this->assertContains( '-draw', $args );
+			$this->assertContains( 'circle 100,200 116,200', $args );
+			$this->assertContains( '3', $args );
+			$this->assertContains( '-annotate', $args );
+		}
+
+		/**
+		 * @covers ::formatMarkerValue
+		 */
+		public function testMarkerValueFormattingMatchesClient() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'formatMarkerValue' );
+
+			$this->assertSame( '5', $method->invoke( $renderer, 5, 'circled' ) );
+			$this->assertSame( 'E', $method->invoke( $renderer, 5, 'letter' ) );
+			$this->assertSame( 'AB', $method->invoke( $renderer, 28, 'letter' ) );
+			$this->assertSame( '(5)', $method->invoke( $renderer, 5, 'parentheses' ) );
+			$this->assertSame( '5.', $method->invoke( $renderer, 5, 'plain' ) );
+			$this->assertSame( 'custom', $method->invoke( $renderer, 'custom', 'circled' ) );
+		}
+
+		/**
+		 * @covers ::buildCalloutArguments
+		 */
+		public function testCalloutDrawsBoxTailAndText() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildCalloutArguments' );
+
+			$args = $method->invoke( $renderer, [
+				'type' => 'callout', 'x' => 10, 'y' => 20, 'width' => 100, 'height' => 50,
+				'tailX' => 5, 'tailY' => 90, 'text' => 'note', 'cornerRadius' => 4
+			], 1.0, 1.0 );
+
+			$joined = implode( ' ', $args );
+			$this->assertStringContainsString( 'roundrectangle 10,20 110,70', $joined );
+			$this->assertStringContainsString( 'polygon', $joined );
+			$this->assertContains( 'note', $args );
+		}
+
+		/**
+		 * @covers ::buildDimensionArguments
+		 */
+		public function testDimensionDrawsLineWithEndTicks() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildDimensionArguments' );
+
+			$args = $method->invoke( $renderer, [
+				'type' => 'dimension', 'x1' => 0, 'y1' => 0, 'x2' => 100, 'y2' => 0,
+				'unit' => 'mm', 'showUnit' => true
+			], 1.0, 1.0 );
+
+			// One measured line plus a tick at each end.
+			$this->assertCount( 3, array_keys( $args, '-draw' ) );
+			$this->assertContains( '100 mm', $args );
+		}
+
+		/**
+		 * @covers ::buildAngleDimensionArguments
+		 * @covers ::angleBetween
+		 */
+		public function testAngleDimensionComputesAndLabelsAngle() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildAngleDimensionArguments' );
+
+			$args = $method->invoke( $renderer, [
+				'type' => 'angleDimension',
+				'cx' => 0, 'cy' => 0, 'ax' => 10, 'ay' => 0, 'bx' => 0, 'by' => 10
+			], 1.0, 1.0 );
+
+			$this->assertCount( 2, array_keys( $args, '-draw' ) );
+			$this->assertContains( '90°', $args );
+		}
+
+		/**
+		 * @covers ::buildImageArguments
+		 * @covers ::materializeImageLayer
+		 */
+		public function testImageLayerCompositesDataUrl() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildImageArguments' );
+
+			// 1x1 transparent PNG.
+			$png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk' .
+				'YPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+			$args = $method->invoke( $renderer, [
+				'type' => 'image', 'src' => 'data:image/png;base64,' . $png,
+				'x' => 5, 'y' => 7, 'width' => 20, 'height' => 20
+			], 1.0, 1.0 );
+
+			$this->assertContains( '-composite', $args );
+			$this->assertContains( '+5+7', $args );
+			$this->assertContains( '20x20!', $args );
+
+			$cleanup = $this->getPrivateMethod( 'cleanupTempFiles' );
+			$cleanup->invoke( $renderer );
+		}
+
+		/**
+		 * @covers ::materializeImageLayer
+		 */
+		public function testImageLayerRejectsNonDataUrl() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'materializeImageLayer' );
+
+			$this->assertNull( $method->invoke( $renderer, 'https://example.com/x.png' ) );
+			$this->assertNull( $method->invoke( $renderer, 'data:text/html;base64,PGI+' ) );
+		}
+
+		/**
+		 * @covers ::buildLayerArguments
+		 */
+		public function testGroupDrawsNothingAndIsNotReportedAsDropped() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildLayerArguments' );
+
+			$this->assertSame( [], $method->invoke( $renderer, [ 'type' => 'group' ], 1.0, 1.0 ) );
+			$this->assertSame( [], $renderer->getDroppedLayerTypes() );
+		}
+
+		/**
+		 * @covers ::buildLayerArguments
+		 */
+		public function testUnknownTypeIsStillReportedAsDropped() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildLayerArguments' );
+
+			$method->invoke( $renderer, [ 'type' => 'customShape' ], 1.0, 1.0 );
+			$this->assertSame( [ 'customShape' ], $renderer->getDroppedLayerTypes() );
+		}
+
+		/**
+		 * @covers ::buildCustomShapeArguments
+		 * @covers ::drawShapePaths
+		 */
+		public function testCustomShapeDrawsPathDataWithViewBoxTransform() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildCustomShapeArguments' );
+
+			$args = $method->invoke( $renderer, [
+				'type' => 'customShape',
+				'x' => 10, 'y' => 20, 'width' => 48, 'height' => 48,
+				'viewBox' => [ 0, 0, 24, 24 ],
+				'path' => 'M 2,2 L 22,2 L 12,22 Z',
+				'fill' => '#ff0000'
+			], 1.0, 1.0 );
+
+			$joined = implode( ' ', $args );
+			$this->assertStringContainsString( 'translate 10,20', $joined );
+			// 48px drawn from a 24-unit viewBox is a 2x scale.
+			$this->assertStringContainsString( 'scale 2,2', $joined );
+			$this->assertStringContainsString( "path 'M 2,2 L 22,2 L 12,22 Z'", $joined );
+			$this->assertSame( [], $renderer->getDroppedLayerTypes() );
+		}
+
+		/**
+		 * @covers ::isDrawablePath
+		 */
+		public function testCustomShapeRejectsPathDataOutsideTheWhitelist() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'isDrawablePath' );
+
+			$this->assertTrue( $method->invoke( $renderer, 'M 0,0 L 10,10 Z' ) );
+			// Must start with a move command.
+			$this->assertFalse( $method->invoke( $renderer, 'L 10,10' ) );
+			// Quotes would break out of the -draw argument.
+			$this->assertFalse( $method->invoke( $renderer, "M 0,0' -write /tmp/x '" ) );
+			$this->assertFalse( $method->invoke( $renderer, 'M 0,0 <script>' ) );
+			$this->assertFalse( $method->invoke( $renderer, '' ) );
+		}
+
+		/**
+		 * @covers ::rasterizeShapeSvg
+		 */
+		public function testShapeSvgRefusesDoctypeAndEntityDeclarations() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'rasterizeShapeSvg' );
+
+			$xxe = '<svg xmlns="http://www.w3.org/2000/svg"><!DOCTYPE foo [' .
+				'<!ENTITY xxe SYSTEM "file:///etc/passwd">]><path d="M0,0"/></svg>';
+			$this->assertNull( $method->invoke( $renderer, $xxe, 32, 32 ) );
+
+			$entity = '<svg><!ENTITY a SYSTEM "file:///etc/passwd"></svg>';
+			$this->assertNull( $method->invoke( $renderer, $entity, 32, 32 ) );
+		}
+
+		/**
+		 * @covers ::rasterizeShapeSvg
+		 */
+		public function testShapeSvgRefusesNonSvgInput() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'rasterizeShapeSvg' );
+
+			$this->assertNull( $method->invoke( $renderer, '', 32, 32 ) );
+			$this->assertNull( $method->invoke( $renderer, 'not svg at all', 32, 32 ) );
+		}
+
+		/**
+		 * @covers ::buildCustomShapeArguments
+		 */
+		public function testCustomShapeWithoutPathsOrConverterIsReportedDropped() {
+			// newRenderer() configures no SVGConverter, so the SVG route is closed.
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'buildCustomShapeArguments' );
+
+			$args = $method->invoke( $renderer, [
+				'type' => 'customShape',
+				'x' => 0, 'y' => 0, 'width' => 24, 'height' => 24,
+				'viewBox' => [ 0, 0, 24, 24 ],
+				'svg' => '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0,0"/></svg>'
+			], 1.0, 1.0 );
+
+			$this->assertSame( [], $args );
+			$this->assertSame( [ 'customShape' ], $renderer->getDroppedLayerTypes() );
+		}
+
+		/**
+		 * @covers ::svgConverterCommand
+		 */
+		public function testSvgConverterIgnoresNonShellEntries() {
+			$renderer = $this->newRenderer();
+			$method = $this->getPrivateMethod( 'svgConverterCommand' );
+
+			// The default config in newRenderer() declares no converter at all.
+			$this->assertNull( $method->invoke( $renderer ) );
+		}
 	}
 
 }

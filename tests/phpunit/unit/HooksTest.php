@@ -42,7 +42,7 @@ class HooksTest extends \MediaWikiUnitTestCase {
 			->willReturn( $userMock );
 
 		$addedModules = [];
-		$outputPageMock->expects( $this->exactly( 2 ) )
+		$outputPageMock->expects( $this->once() )
 			->method( 'addModules' )
 			->willReturnCallback( static function ( $module ) use ( &$addedModules ) {
 				$addedModules[] = $module;
@@ -55,7 +55,10 @@ class HooksTest extends \MediaWikiUnitTestCase {
 		( new Hooks() )->onBeforePageDisplay( $outputPageMock, $skinMock );
 
 		$this->assertContains( 'ext.layers', $addedModules );
-		$this->assertContains( 'ext.layers.editor', $addedModules );
+		// The editor runs only in its own document (action=editlayers), which loads
+		// the module itself. Adding it here shipped 1 MB of unused JS to every
+		// logged-in visitor of every File: page.
+		$this->assertNotContains( 'ext.layers.editor', $addedModules );
 	}
 
 	/**

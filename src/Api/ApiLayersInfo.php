@@ -345,6 +345,13 @@ class ApiLayersInfo extends ApiBase {
 		$result['page'] = $page;
 		$result['pageCount'] = $pageCount;
 
+		// Which pages of the document already carry annotations. Without this the
+		// navigator can only say "page 3 of 40" and the user has to open all 40 to
+		// find their work.
+		if ( $pageCount > 1 ) {
+			$result['pagesWithLayers'] = $db->getPagesWithLayers( $normalizedName, $fileSha1 );
+		}
+
 		// Always expose the native page dimensions as the canonical base
 		// coordinate space. Clients (editor, viewer, lightbox) scale overlays to
 		// these dimensions so a layer keeps the same scale on every load,

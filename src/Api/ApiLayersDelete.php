@@ -160,8 +160,13 @@ class ApiLayersDelete extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
-			// Perform the delete
-			$rowsDeleted = $db->deleteNamedSet( $imgName, $sha1, $setName, $page );
+// Perform the delete. `allpages` covers every page of a multi-page
+					// document; without it a delete only clears the page the user
+					// happened to be viewing and silently left the rest behind.
+					$allPages = !empty( $params['allpages'] );
+					$rowsDeleted = $db->deleteNamedSet(
+						$imgName, $sha1, $setName, $allPages ? null : $page
+					);
 
 			if ( $rowsDeleted === null ) {
 				$this->getLogger()->error( 'Failed to delete layer set', [
@@ -315,6 +320,10 @@ class ApiLayersDelete extends ApiBase {
 				ApiBase::PARAM_REQUIRED => false,
 				ApiBase::PARAM_DFLT => 1,
 				ApiBase::PARAM_MIN => 1,
+			],
+			'allpages' => [
+				ApiBase::PARAM_TYPE => 'boolean',
+				ApiBase::PARAM_REQUIRED => false,
 			],
 		];
 	}

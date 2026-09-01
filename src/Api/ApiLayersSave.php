@@ -336,12 +336,14 @@ class ApiLayersSave extends ApiBase {
 					?? SetNameSanitizer::getDefaultName();
 			}
 
-			// DATABASE SAVE: Persist layer set with automatic versioning
-			// LayersDatabase::saveLayerSet() performs:
-			// - Automatic revision number incrementing (per-image counter)
-			// - Transaction with retry logic (3 attempts with exponential backoff)
-			// - Wraps data in structure: {revision, schema: 1, created, layers: [...],
-			//   backgroundVisible, backgroundOpacity}
+					// Creating a set is a different cost from updating one: each new set is
+					// a new revision series counting against $wgLayersMaxNamedSets, so it
+					// gets its own bucket rather than sharing the much looser save budget.
+			if ( !$db->namedSetExists( $fileDbKey, $sha1, $setName, $page )
+						&& !$rateLimiter->checkRateLimit( $user, 'create' )
+					) {
+				$this->dieWithError( LayersConstants::ERROR_RATE_LIMITED, 'ratelimited' );
+			}
 			// - Calculates and stores size for monitoring/limits
 			// Returns: new layer set ID (ls_id) or null on failure
 			$layerSetId = $db->saveLayerSet(

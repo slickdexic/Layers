@@ -8,14 +8,13 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.85",
+	"version": "1.5.89",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
 	"AutoloadNamespaces": {
 		"MediaWiki\\Extension\\Layers\\": "src/"
 	},
-	"callback": "MediaWiki\\Extension\\Layers\\Hooks::onRegistration",
 	"ServiceWiringFiles": [
 		"services.php"
 	],
@@ -259,6 +258,7 @@
 			"scripts": [
 				"LayerDefaults.js",
 				"SetNameUtil.js",
+				"FreshnessCacheKey.js",
 				"FontConfig.js",
 				"MathUtils.js",
 				"IdGenerator.js",
@@ -483,7 +483,10 @@
 				"layers-page-prev",
 				"layers-page-next",
 				"layers-page-indicator",
+				"layers-page-annotated-list",
+				"layers-page-none-annotated",
 				"layers-page-unsaved-confirm",
+				"layers-save-and-continue",
 				"layers-tool-select",
 				"layers-tool-text",
 				"layers-tool-textbox",
@@ -906,6 +909,7 @@
 				"layers-delete-set",
 				"layers-delete-set-tooltip",
 				"layers-delete-set-confirm",
+				"layers-delete-set-confirm-document",
 				"layers-delete-set-success",
 				"layers-confirm-delete-title",
 				"layers-delete-failed",
@@ -1124,6 +1128,14 @@
 				"layers-text-toolbar-size-increase",
 				"layers-text-toolbar-highlight-color",
 				"layers-aria-layer-added",
+				"layers-aria-resized",
+				"layers-aria-rotated",
+				"layers-aria-moved-up",
+				"layers-aria-moved-down",
+				"layers-shortcut-move",
+				"layers-shortcut-resize",
+				"layers-shortcut-rotate",
+				"layers-shortcut-restack",
 				"layers-aria-layer-count",
 				"layers-aria-layer-removed",
 				"layers-set-auto-created",
@@ -1384,6 +1396,34 @@
 			"newbie": [ 30, 60 ],
 			"ip": [ 60, 60 ],
 			"subnet": [ 120, 60 ]
+		},
+		"editlayers-info": {
+			"anon": [ 60, 60 ],
+			"user": [ 240, 60 ],
+			"newbie": [ 60, 60 ],
+			"ip": [ 120, 60 ],
+			"subnet": [ 240, 60 ]
+		},
+		"editlayers-delete": {
+			"anon": [ 5, 60 ],
+			"user": [ 20, 60 ],
+			"newbie": [ 5, 60 ],
+			"ip": [ 20, 60 ],
+			"subnet": [ 40, 60 ]
+		},
+		"editlayers-rename": {
+			"anon": [ 5, 60 ],
+			"user": [ 20, 60 ],
+			"newbie": [ 5, 60 ],
+			"ip": [ 20, 60 ],
+			"subnet": [ 40, 60 ]
+		},
+		"editlayers-create": {
+			"anon": [ 10, 60 ],
+			"user": [ 40, 60 ],
+			"newbie": [ 10, 60 ],
+			"ip": [ 40, 60 ],
+			"subnet": [ 80, 60 ]
 		}
 	},
 	"GroupPermissions": {

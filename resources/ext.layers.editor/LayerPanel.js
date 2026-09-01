@@ -783,20 +783,26 @@
 		 * @param {string} fallback Fallback text
 		 * @return {string}
 		 */
-		msg( key, fallback ) {
+		msg( key, fallback, ...params ) {
+			let text;
 			// Try centralized MessageHelper first
 			if ( window.layersMessages && typeof window.layersMessages.get === 'function' ) {
-				return window.layersMessages.get( key, fallback );
-			}
-			// Fall back to direct mw.message if MessageHelper unavailable
-			if ( window.mw && window.mw.message ) {
+				text = window.layersMessages.get( key, fallback );
+			} else if ( window.mw && window.mw.message ) {
 				try {
-					return mw.message( key ).text();
+					text = mw.message( key ).text();
 				} catch ( e ) {
-					// Fall through to return fallback
+					text = fallback || '';
 				}
+			} else {
+				text = fallback || '';
 			}
-			return fallback || '';
+			// Callers were already passing parameters that this dropped on the floor,
+			// so screen readers announced a literal "$1 layers total".
+			params.forEach( ( value, i ) => {
+				text = text.replace( '$' + ( i + 1 ), String( value ) );
+			} );
+			return text;
 		}
 
 		/**

@@ -486,6 +486,11 @@ class CanvasManager {
 
 		// Subscribe to selection changes to trigger re-render and toolbar update
 		const unsubscribe = this.editor.stateManager.subscribe( 'selectedLayerIds', ( selectedIds ) => {
+			// SelectionManager keeps its own copy and only ever pushed outward, so a
+			// selection made from the layer panel or programmatically left it empty —
+			// and everything reading getSelectedLayers(), including arrow-key nudge,
+			// silently did nothing.
+			this.syncSelectionManager( selectedIds );
 			this.selectionHandles = [];
 			this.renderLayers( this.editor.layers );
 
@@ -496,6 +501,23 @@ class CanvasManager {
 		// Track unsubscriber for cleanup in destroy()
 		if ( unsubscribe && typeof unsubscribe === 'function' ) {
 			this.stateUnsubscribers.push( unsubscribe );
+		}
+	}
+
+	/**
+	 * Mirror StateManager's selection into SelectionManager without re-notifying.
+	 *
+	 * @param {Array} selectedIds Authoritative selected layer IDs
+	 */
+	syncSelectionManager( selectedIds ) {
+		const sm = this.selectionManager;
+		if ( !sm ) {
+			return;
+		}
+		const ids = ( selectedIds || [] ).slice();
+		sm.selectedLayerIds = ids;
+		if ( sm._selectionState && typeof sm._selectionState.setSelectedIds === 'function' ) {
+			sm._selectionState.setSelectedIds( ids, false );
 		}
 	}
 

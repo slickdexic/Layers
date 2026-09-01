@@ -238,13 +238,16 @@ class LayerInjector {
 	 * @param string|null $setName Optional named set; when absent or a generic
 	 *        wikitext intent, the image's most recent set is used
 	 * @param string $context Description of calling context for logging
+	 * @param int $page 1-based page for multi-page files (PDF); layer sets are
+	 *        stored per page, so omitting this silently rendered page 1's layers
 	 * @return bool True if layers were injected, false otherwise
 	 */
 	public function injectIntoAttributes(
 		array &$attribs,
 		$file,
 		?string $setName = null,
-		string $context = 'unknown'
+		string $context = 'unknown',
+		int $page = 1
 	): bool {
 		if ( !$file ) {
 			return false;
@@ -258,10 +261,11 @@ class LayerInjector {
 		// Get layer data from database
 		// Use getLatestLayerSet with optional setName filter (sha1 required for DB lookup)
 		$sha1 = ForeignFileHelper::getFileSha1( $file );
+		$page = ForeignFileHelper::clampPage( $file, $page );
 		if ( SetNameResolver::isSpecificName( $setName ) ) {
-			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1, $setName );
+			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1, $setName, $page );
 		} else {
-			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1 );
+			$layerSet = $db->getLatestLayerSet( $file->getName(), $sha1, null, $page );
 		}
 
 		if ( !$layerSet || !isset( $layerSet['data'] ) ) {

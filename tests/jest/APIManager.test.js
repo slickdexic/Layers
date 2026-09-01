@@ -1330,7 +1330,7 @@ describe( 'APIManager', function () {
 			await apiManager.loadLayersBySetName( 'default' );
 
 			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'default' );
-			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'hasUnsavedChanges', false );
+			expect( mockEditor.stateManager.set ).toHaveBeenCalledWith( 'isDirty', false );
 		} );
 
 		it( 'should handle missing layerset gracefully', async function () {
@@ -1729,153 +1729,132 @@ describe( 'APIManager', function () {
 	} );
 
 	describe( 'clearFreshnessCache', function () {
-		beforeEach( function () {
-			// Mock sessionStorage
-			global.sessionStorage = {
-				removeItem: jest.fn(),
-				getItem: jest.fn(),
-				setItem: jest.fn()
+		// The production code enumerates the store instead of reconstructing
+		// keys, so the mock has to expose length/key like a real Storage.
+		function mockStore( keys ) {
+			const data = new Map( keys.map( ( k ) => [ k, '{}' ] ) );
+			const store = {
+				removeItem: jest.fn( ( k ) => data.delete( k ) ),
+				getItem: jest.fn( ( k ) => ( data.has( k ) ? data.get( k ) : null ) ),
+				setItem: jest.fn( ( k, v ) => data.set( k, v ) ),
+				key: jest.fn( ( i ) => Array.from( data.keys() )[ i ] || null )
 			};
+			Object.defineProperty( store, 'length', { get: () => data.size } );
+			Object.defineProperty( window, 'sessionStorage', {
+				value: store, writable: true, configurable: true
+			} );
+			global.sessionStorage = store;
+			return store;
+		}
+
+		beforeEach( function () {
+			apiManager.cacheManager = null;
 		} );
 
 		afterEach( function () {
 			delete global.sessionStorage;
 		} );
 
-		it( 'should clear cache for default set name', function () {
+		it( 'should clear cache for the current set name', function () {
 			mockEditor.filename = 'Test_Image.jpg';
-			mockEditor.stateManager.get = jest.fn( ( key ) => {
-				if ( key === 'namedSets' ) {
-					return [];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				return null;
-			} );
+			const store = mockStore( [ 'layers-fresh-Test_Image.jpg:default' ] );
 
 			apiManager.clearFreshnessCache();
 
-			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:default' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:default' );
 		} );
 
 		it( 'should clear cache for all named sets', function () {
 			mockEditor.filename = 'Test_Image.jpg';
-			mockEditor.stateManager.get = jest.fn( ( key ) => {
-				if ( key === 'namedSets' ) {
-					return [ { name: 'set1' }, { name: 'set2' } ];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'set1';
-				}
-				return null;
-			} );
+			const store = mockStore( [
+				'layers-fresh-Test_Image.jpg:',
+				'layers-fresh-Test_Image.jpg:set1',
+				'layers-fresh-Test_Image.jpg:set2'
+			] );
 
 			apiManager.clearFreshnessCache();
 
-			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:' );
-			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:set1' );
-			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:set2' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:set1' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:set2' );
+		} );
+
+		it( 'should clear per-page keys for a multi-page file', function () {
+			mockEditor.filename = 'Doc.pdf';
+			const store = mockStore( [
+				'layers-fresh-Doc.pdf:notes',
+				'layers-fresh-Doc.pdf:notes:p2',
+				'layers-fresh-Doc.pdf:notes:p12'
+			] );
+
+			apiManager.clearFreshnessCache();
+
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Doc.pdf:notes:p2' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Doc.pdf:notes:p12' );
 		} );
 
 		it( 'should handle missing filename gracefully', function () {
 			mockEditor.filename = null;
+			const store = mockStore( [ 'layers-fresh-Test_Image.jpg:' ] );
 
 			expect( () => apiManager.clearFreshnessCache() ).not.toThrow();
-			expect( sessionStorage.removeItem ).not.toHaveBeenCalled();
+			expect( store.removeItem ).not.toHaveBeenCalled();
 		} );
 
 		it( 'should handle sessionStorage errors gracefully', function () {
 			mockEditor.filename = 'Test_Image.jpg';
-			mockEditor.stateManager.get = jest.fn().mockReturnValue( [] );
-			global.sessionStorage.removeItem = jest.fn().mockImplementation( () => {
+			const store = mockStore( [ 'layers-fresh-Test_Image.jpg:' ] );
+			store.removeItem.mockImplementation( () => {
 				throw new Error( 'QuotaExceeded' );
 			} );
 
-			// Should not throw
 			expect( () => apiManager.clearFreshnessCache() ).not.toThrow();
 		} );
 
 		it( 'should normalize filename by replacing spaces with underscores', function () {
 			mockEditor.filename = 'Test Image With Spaces.jpg';
-			mockEditor.stateManager.get = jest.fn( ( key ) => {
-				if ( key === 'namedSets' ) {
-					return [];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				return null;
-			} );
+			const store = mockStore( [ 'layers-fresh-Test_Image_With_Spaces.jpg:default' ] );
 
 			apiManager.clearFreshnessCache();
 
-			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image_With_Spaces.jpg:default' );
+			expect( store.removeItem ).toHaveBeenCalledWith(
+				'layers-fresh-Test_Image_With_Spaces.jpg:default'
+			);
 		} );
 
-		it( 'should handle null set in namedSets array', function () {
+		it( 'should not touch keys belonging to another file', function () {
 			mockEditor.filename = 'Test.jpg';
-			mockEditor.stateManager.get = jest.fn( ( key ) => {
-				if ( key === 'namedSets' ) {
-					return [ null, { name: 'valid-set' }, { noName: true } ];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				return null;
-			} );
+			const store = mockStore( [
+				'layers-fresh-Test.jpg:valid-set',
+				'layers-fresh-Other.jpg:valid-set'
+			] );
 
-			// Should not throw
-			expect( () => apiManager.clearFreshnessCache() ).not.toThrow();
-			expect( sessionStorage.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test.jpg:valid-set' );
+			apiManager.clearFreshnessCache();
+
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test.jpg:valid-set' );
+			expect( store.removeItem ).not.toHaveBeenCalledWith( 'layers-fresh-Other.jpg:valid-set' );
 		} );
 
 		it( 'should log debug message when wgLayersDebug is enabled', function () {
 			mockEditor.filename = 'Test.jpg';
-			mockEditor.stateManager.get = jest.fn( ( key ) => {
-				if ( key === 'namedSets' ) {
-					return [];
-				}
-				if ( key === 'currentSetName' ) {
-					return 'default';
-				}
-				return null;
-			} );
-			// Save original mw.log and mw.config.get and create mocks
+			mockStore( [ 'layers-fresh-Test.jpg:' ] );
+
 			const originalLog = mw.log;
 			const originalConfigGet = mw.config.get;
 			const mockLogFn = jest.fn();
 			mockLogFn.warn = jest.fn();
 			mockLogFn.error = jest.fn();
 			mw.log = mockLogFn;
-			mw.config.get = jest.fn( ( key ) => {
-				if ( key === 'wgLayersDebug' ) {
-					return true;
-				}
-				return null;
-			} );
+			mw.config.get = jest.fn( ( key ) => ( key === 'wgLayersDebug' ? true : null ) );
 
 			apiManager.clearFreshnessCache();
 
-			expect( mockLogFn ).toHaveBeenCalledWith( '[APIManager] Cleared freshness cache for:', 'Test.jpg' );
-			
-			// Restore
+			expect( mockLogFn ).toHaveBeenCalledWith(
+				'[APIManager] Cleared freshness cache for:', 'Test.jpg'
+			);
+
 			mw.log = originalLog;
 			mw.config.get = originalConfigGet;
-		} );
-
-		it( 'should log warning when clearing cache throws an error', function () {
-			mockEditor.filename = 'Test.jpg';
-			// Force an error by making stateManager.get throw
-			mockEditor.stateManager.get = jest.fn().mockImplementation( () => {
-				throw new Error( 'State error' );
-			} );
-
-			expect( () => apiManager.clearFreshnessCache() ).not.toThrow();
-			expect( mw.log.warn ).toHaveBeenCalledWith(
-				'[APIManager] Failed to clear freshness cache:',
-				'State error'
-			);
 		} );
 	} );
 
@@ -4452,6 +4431,21 @@ describe( 'APIManager', function () {
 	} );
 
 	describe( 'Branch coverage: clearFreshnessCache', function () {
+		function mockStore( keys ) {
+			const data = new Map( keys.map( ( k ) => [ k, '{}' ] ) );
+			const store = {
+				removeItem: jest.fn( ( k ) => data.delete( k ) ),
+				getItem: jest.fn( ( k ) => ( data.has( k ) ? data.get( k ) : null ) ),
+				setItem: jest.fn( ( k, v ) => data.set( k, v ) ),
+				key: jest.fn( ( i ) => Array.from( data.keys() )[ i ] || null )
+			};
+			Object.defineProperty( store, 'length', { get: () => data.size } );
+			Object.defineProperty( window, 'sessionStorage', {
+				value: store, writable: true, configurable: true
+			} );
+			return store;
+		}
+
 		it( 'should delegate to cacheManager when available', function () {
 			const mockClearFreshness = jest.fn();
 			apiManager.cacheManager = { clearFreshnessCache: mockClearFreshness };
@@ -4460,84 +4454,56 @@ describe( 'APIManager', function () {
 			expect( mockClearFreshness ).toHaveBeenCalled();
 		} );
 
-		it( 'should pass filename, namedSets, and currentSetName to cacheManager', function () {
+		it( 'should pass the filename to cacheManager', function () {
 			const mockClearFreshness = jest.fn();
 			apiManager.cacheManager = { clearFreshnessCache: mockClearFreshness };
 
-			const namedSets = [ { name: 'set1' }, { name: 'set2' } ];
-			mockEditor.stateManager.get.mockImplementation( function ( key ) {
-				if ( key === 'namedSets' ) {
-					return namedSets;
-				}
-				if ( key === 'currentSetName' ) {
-					return 'set1';
-				}
-				return null;
-			} );
-
 			apiManager.clearFreshnessCache();
-			expect( mockClearFreshness ).toHaveBeenCalledWith( 'Test_Image.jpg', namedSets, 'set1' );
+			expect( mockClearFreshness ).toHaveBeenCalledWith( 'Test_Image.jpg' );
 		} );
 
-		it( 'should handle null editor for cacheManager delegation', function () {
+		it( 'should not delegate when there is no editor', function () {
 			const mockClearFreshness = jest.fn();
 			apiManager.cacheManager = { clearFreshnessCache: mockClearFreshness };
 			apiManager.editor = null;
 
-			apiManager.clearFreshnessCache();
-			expect( mockClearFreshness ).toHaveBeenCalledWith( null, [], '' );
+			expect( () => apiManager.clearFreshnessCache() ).not.toThrow();
+			expect( mockClearFreshness ).not.toHaveBeenCalled();
 		} );
 
 		describe( 'fallback (no cacheManager)', function () {
 			beforeEach( function () {
 				apiManager.cacheManager = null;
-				// Mock sessionStorage
-				Object.defineProperty( window, 'sessionStorage', {
-					value: {
-						removeItem: jest.fn()
-					},
-					writable: true,
-					configurable: true
-				} );
 			} );
 
 			it( 'should clear the sessionStorage key for the unnamed set', function () {
+				const store = mockStore( [ 'layers-fresh-Test_Image.jpg:' ] );
 				apiManager.clearFreshnessCache();
-				expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-					'layers-fresh-Test_Image.jpg:'
-				);
+				expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:' );
 			} );
 
 			it( 'should clear sessionStorage for named sets', function () {
-				mockEditor.stateManager.get.mockImplementation( function ( key ) {
-					if ( key === 'namedSets' ) {
-						return [ { name: 'anatomy' }, { name: 'labels' } ];
-					}
-					if ( key === 'currentSetName' ) {
-						return 'anatomy';
-					}
-					return null;
-				} );
+				const store = mockStore( [
+					'layers-fresh-Test_Image.jpg:',
+					'layers-fresh-Test_Image.jpg:anatomy',
+					'layers-fresh-Test_Image.jpg:labels'
+				] );
 
 				apiManager.clearFreshnessCache();
-				expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-					'layers-fresh-Test_Image.jpg:'
-				);
-				expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-					'layers-fresh-Test_Image.jpg:anatomy'
-				);
-				expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-					'layers-fresh-Test_Image.jpg:labels'
-				);
+				expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:' );
+				expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:anatomy' );
+				expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Test_Image.jpg:labels' );
 			} );
 
 			it( 'should return early if filename is empty', function () {
+				const store = mockStore( [ 'layers-fresh-Test_Image.jpg:' ] );
 				apiManager.editor.filename = '';
 				apiManager.clearFreshnessCache();
-				expect( window.sessionStorage.removeItem ).not.toHaveBeenCalled();
+				expect( store.removeItem ).not.toHaveBeenCalled();
 			} );
 
 			it( 'should log on debug mode', function () {
+				mockStore( [ 'layers-fresh-Test_Image.jpg:' ] );
 				mw.config.get.mockImplementation( function ( key ) {
 					if ( key === 'wgLayersDebug' ) {
 						return true;
@@ -4555,36 +4521,14 @@ describe( 'APIManager', function () {
 			} );
 
 			it( 'should catch and log sessionStorage errors', function () {
-				Object.defineProperty( window, 'sessionStorage', {
-					value: {
-						removeItem: jest.fn( function () {
-							throw new Error( 'Storage full' );
-						} )
-					},
-					writable: true,
-					configurable: true
+				const store = mockStore( [ 'layers-fresh-Test_Image.jpg:' ] );
+				store.removeItem.mockImplementation( function () {
+					throw new Error( 'Storage full' );
 				} );
-
-				// Should not throw
-				expect( function () {
-					apiManager.clearFreshnessCache();
-				} ).not.toThrow();
-			} );
-
-			it( 'should catch outer errors gracefully', function () {
-				// Make editor.filename throw
-				Object.defineProperty( apiManager.editor, 'filename', {
-					get: function () {
-						throw new Error( 'access error' );
-					},
-					configurable: true
-				} );
-				apiManager.cacheManager = null;
 
 				expect( function () {
 					apiManager.clearFreshnessCache();
 				} ).not.toThrow();
-				expect( mw.log.warn ).toHaveBeenCalled();
 			} );
 		} );
 	} );

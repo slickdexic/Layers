@@ -410,7 +410,7 @@ describe( 'DraftManager', function () {
 				version: 1,
 				timestamp: Date.now() - 1000,
 				layers: [ { id: 'l1' }, { id: 'l2' } ],
-				setName: 'annotations'
+				setName: 'default'
 			};
 			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
 
@@ -418,7 +418,7 @@ describe( 'DraftManager', function () {
 
 			expect( info ).not.toBeNull();
 			expect( info.layerCount ).toBe( 2 );
-			expect( info.setName ).toBe( 'annotations' );
+			expect( info.setName ).toBe( 'default' );
 			expect( info.age ).toBeGreaterThanOrEqual( 1000 );
 		} );
 	} );
@@ -757,7 +757,7 @@ describe( 'DraftManager', function () {
 			expect( global.localStorage.removeItem ).toHaveBeenCalled();
 		} );
 
-		it( 'should recover draft from a different set name', async function () {
+		it( 'should refuse a draft belonging to a different set name', async function () {
 			const draft = {
 				version: 1,
 				timestamp: Date.now(),
@@ -765,20 +765,15 @@ describe( 'DraftManager', function () {
 				setName: 'anatomy-labels' // Different from 'default'
 			};
 			mockLocalStorage[ draftManager.getStorageKey() ] = JSON.stringify( draft );
-			
+
 			global.OO.ui.confirm = jest.fn( function () {
 				return Promise.resolve( true );
 			} );
-			
+
 			const result = await draftManager.checkAndRecoverDraft();
-			
-			expect( result ).toBe( true );
-			// Verify the set name is restored
-			expect( mockEditor.stateManager.update ).toHaveBeenCalledWith(
-				expect.objectContaining( {
-					layers: [ { id: 'layer1' } ]
-				} )
-			);
+
+			expect( result ).toBe( false );
+			expect( mockEditor.stateManager.update ).not.toHaveBeenCalled();
 		} );
 	} );
 
@@ -1145,7 +1140,10 @@ describe( 'DraftManager', function () {
 			// Re-install mw.notify since clearAllMocks resets it
 			global.mw.notify = jest.fn();
 			
-			jest.spyOn( draftManager, 'saveDraft' ).mockReturnValue( false );
+			jest.spyOn( draftManager, 'saveDraft' ).mockImplementation( function () {
+					draftManager.lastWriteFailed = true;
+					return false;
+				} );
 			draftManager._saveFailNotified = false;
 			
 			draftManager.scheduleAutoSave();
@@ -1161,7 +1159,10 @@ describe( 'DraftManager', function () {
 			jest.useFakeTimers();
 			global.mw.notify = jest.fn();
 			
-			jest.spyOn( draftManager, 'saveDraft' ).mockReturnValue( false );
+			jest.spyOn( draftManager, 'saveDraft' ).mockImplementation( function () {
+					draftManager.lastWriteFailed = true;
+					return false;
+				} );
 			draftManager._saveFailNotified = true;
 			
 			draftManager.scheduleAutoSave();
@@ -1202,7 +1203,10 @@ describe( 'DraftManager', function () {
 			} );
 			
 			draftManager.stopAutoSaveTimer();
-			jest.spyOn( draftManager, 'saveDraft' ).mockReturnValue( false );
+			jest.spyOn( draftManager, 'saveDraft' ).mockImplementation( function () {
+					draftManager.lastWriteFailed = true;
+					return false;
+				} );
 			draftManager._saveFailNotified = false;
 			draftManager.startAutoSaveTimer();
 			
@@ -1223,7 +1227,10 @@ describe( 'DraftManager', function () {
 			} );
 			
 			draftManager.stopAutoSaveTimer();
-			jest.spyOn( draftManager, 'saveDraft' ).mockReturnValue( false );
+			jest.spyOn( draftManager, 'saveDraft' ).mockImplementation( function () {
+					draftManager.lastWriteFailed = true;
+					return false;
+				} );
 			draftManager._saveFailNotified = true;
 			draftManager.startAutoSaveTimer();
 			

@@ -444,6 +444,23 @@
 		}
 
 		/**
+		 * Re-anchor the editor and its toolbar over the layer.
+		 *
+		 * Zoom and pan are a CSS transform on the canvas, which slides the canvas
+		 * out from under this absolutely-positioned overlay; without this the edit
+		 * frame stays put while the image moves away.
+		 */
+		reposition() {
+			if ( !this.isEditing ) {
+				return;
+			}
+			this._positionEditor();
+			if ( this._toolbar && typeof this._toolbar.position === 'function' ) {
+				this._toolbar.position();
+			}
+		}
+
+		/**
 		 * Get the layer being edited
 		 *
 		 * @return {Object|null} The layer being edited, or null

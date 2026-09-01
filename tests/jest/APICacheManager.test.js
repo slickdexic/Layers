@@ -181,181 +181,107 @@ describe( 'APICacheManager', () => {
 	} );
 
 	describe( 'clearFreshnessCache', () => {
-		beforeEach( () => {
-			// Mock sessionStorage
+		// A store that only answers removeItem cannot be scanned. The production
+		// code enumerates real keys, so the mock has to behave like a real store.
+		function mockStore( keys ) {
+			const data = new Map( keys.map( ( k ) => [ k, '{}' ] ) );
+			const store = {
+				removeItem: jest.fn( ( k ) => data.delete( k ) ),
+				getItem: jest.fn( ( k ) => ( data.has( k ) ? data.get( k ) : null ) ),
+				setItem: jest.fn( ( k, v ) => data.set( k, v ) ),
+				clear: jest.fn( () => data.clear() ),
+				key: jest.fn( ( i ) => Array.from( data.keys() )[ i ] || null )
+			};
+			Object.defineProperty( store, 'length', { get: () => data.size } );
 			Object.defineProperty( window, 'sessionStorage', {
-				value: {
-					removeItem: jest.fn(),
-					getItem: jest.fn(),
-					setItem: jest.fn(),
-					clear: jest.fn()
-				},
-				writable: true,
-				configurable: true
+				value: store, writable: true, configurable: true
 			} );
-		} );
+			return store;
+		}
 
 		it( 'should return early when filename is falsy', () => {
-			cache.clearFreshnessCache( null, [], 'default' );
-			expect( window.sessionStorage.removeItem ).not.toHaveBeenCalled();
+			const store = mockStore( [ 'layers-fresh-File.jpg:' ] );
+			cache.clearFreshnessCache( null );
+			expect( store.removeItem ).not.toHaveBeenCalled();
 		} );
 
 		it( 'should return early when filename is empty string', () => {
-			cache.clearFreshnessCache( '', [], 'default' );
-			expect( window.sessionStorage.removeItem ).not.toHaveBeenCalled();
+			const store = mockStore( [ 'layers-fresh-File.jpg:' ] );
+			cache.clearFreshnessCache( '' );
+			expect( store.removeItem ).not.toHaveBeenCalled();
 		} );
 
-		it( 'should clear default set freshness', () => {
-			cache.clearFreshnessCache( 'File.jpg', [], 'default' );
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:default'
-			);
-		} );
-
-		it( 'should clear freshness for current set name', () => {
-			cache.clearFreshnessCache( 'File.jpg', [], 'labels' );
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:labels'
-			);
-			// The viewer stores unnamed sets under an empty key
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:'
-			);
-		} );
-
-		it( 'should clear freshness for named sets', () => {
-			const namedSets = [
-				{ name: 'anatomy' },
-				{ name: 'labels' }
-			];
-			cache.clearFreshnessCache( 'File.jpg', namedSets, 'default' );
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
+		it( 'should clear the unnamed and named set keys for the file', () => {
+			const store = mockStore( [
+				'layers-fresh-File.jpg:',
+				'layers-fresh-File.jpg:labels',
 				'layers-fresh-File.jpg:anatomy'
-			);
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:labels'
-			);
+			] );
+			cache.clearFreshnessCache( 'File.jpg' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-File.jpg:' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-File.jpg:labels' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-File.jpg:anatomy' );
 		} );
 
-		it( 'should handle null namedSets', () => {
-			cache.clearFreshnessCache( 'File.jpg', null, 'default' );
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:default'
-			);
+		it( 'should clear per-page keys the editor never loaded', () => {
+			const store = mockStore( [
+				'layers-fresh-Doc.pdf:notes',
+				'layers-fresh-Doc.pdf:notes:p2',
+				'layers-fresh-Doc.pdf:notes:p7'
+			] );
+			cache.clearFreshnessCache( 'Doc.pdf' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Doc.pdf:notes:p2' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-Doc.pdf:notes:p7' );
 		} );
 
-		it( 'should handle null currentSetName', () => {
-			cache.clearFreshnessCache( 'File.jpg', [], null );
-			// No name is assumed; the unnamed key is cleared
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:'
-			);
-		} );
-
-		it( 'should skip named sets with no name property', () => {
-			const namedSets = [
-				{ name: 'valid' },
-				{},
-				null,
-				{ name: '' }
-			];
-			cache.clearFreshnessCache( 'File.jpg', namedSets, 'default' );
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-File.jpg:valid'
-			);
+		it( 'should not clear keys belonging to other files', () => {
+			const store = mockStore( [
+				'layers-fresh-File.jpg:labels',
+				'layers-fresh-Other.jpg:labels'
+			] );
+			cache.clearFreshnessCache( 'File.jpg' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-File.jpg:labels' );
+			expect( store.removeItem ).not.toHaveBeenCalledWith( 'layers-fresh-Other.jpg:labels' );
 		} );
 
 		it( 'should normalize filename spaces to underscores', () => {
-			cache.clearFreshnessCache( 'My File.jpg', [], 'default' );
-			expect( window.sessionStorage.removeItem ).toHaveBeenCalledWith(
-				'layers-fresh-My_File.jpg:default'
-			);
+			const store = mockStore( [ 'layers-fresh-My_File.jpg:default' ] );
+			cache.clearFreshnessCache( 'My File.jpg' );
+			expect( store.removeItem ).toHaveBeenCalledWith( 'layers-fresh-My_File.jpg:default' );
 		} );
 
 		it( 'should log debug message when wgLayersDebug is enabled', () => {
+			mockStore( [ 'layers-fresh-File.jpg:' ] );
 			window.mw = {
 				config: { get: jest.fn().mockReturnValue( true ) },
 				log: jest.fn()
 			};
-			cache.clearFreshnessCache( 'File.jpg', [], 'default' );
-			expect( window.mw.log ).toHaveBeenCalledWith(
-				'[APICacheManager] Cleared freshness cache for:', 'File.jpg'
-			);
-			delete window.mw;
-		} );
-
-		it( 'should not log when wgLayersDebug is disabled', () => {
-			window.mw = {
-				config: { get: jest.fn().mockReturnValue( false ) },
-				log: jest.fn()
-			};
-			cache.clearFreshnessCache( 'File.jpg', [], 'default' );
-			expect( window.mw.log ).not.toHaveBeenCalled();
-			delete window.mw;
+			cache.clearFreshnessCache( 'File.jpg' );
+			expect( window.mw.log ).toHaveBeenCalled();
 		} );
 
 		it( 'should handle sessionStorage errors gracefully', () => {
-			window.sessionStorage.removeItem = jest.fn().mockImplementation( () => {
+			const store = mockStore( [ 'layers-fresh-File.jpg:' ] );
+			store.removeItem.mockImplementation( () => {
 				throw new Error( 'Storage quota exceeded' );
 			} );
-			// Should not throw
 			expect( () => {
-				cache.clearFreshnessCache( 'File.jpg', [], 'default' );
+				cache.clearFreshnessCache( 'File.jpg' );
 			} ).not.toThrow();
 		} );
 
-		it( 'should handle outer exception and log warning', () => {
-			// Force an exception in the outer try by making filename.replace throw
-			window.mw = {
-				log: { warn: jest.fn() }
-			};
-			// Create a scenario where the code throws in the outer try
-			// by making sessionStorage throw before the inner try/catch
-			Object.defineProperty( window, 'sessionStorage', {
-				get() {
-					throw new Error( 'sessionStorage unavailable' );
-				},
-				configurable: true
-			} );
-			cache.clearFreshnessCache( 'File.jpg', [], 'default' );
-			// Restore sessionStorage
-			Object.defineProperty( window, 'sessionStorage', {
-				value: { removeItem: jest.fn() },
-				writable: true,
-				configurable: true
-			} );
-			delete window.mw;
-		} );
-
-		it( 'should handle outer exception without mw.log', () => {
-			// Force an outer exception with no mw available
-			Object.defineProperty( window, 'sessionStorage', {
-				get() {
-					throw new Error( 'not available' );
-				},
-				configurable: true
+		it( 'should not throw when the store cannot be enumerated', () => {
+			const store = mockStore( [ 'layers-fresh-File.jpg:' ] );
+			store.key.mockImplementation( () => {
+				throw new Error( 'denied' );
 			} );
 			expect( () => {
-				cache.clearFreshnessCache( 'File.jpg', [], 'default' );
+				cache.clearFreshnessCache( 'File.jpg' );
 			} ).not.toThrow();
-			// Restore
-			Object.defineProperty( window, 'sessionStorage', {
-				value: { removeItem: jest.fn() },
-				writable: true,
-				configurable: true
-			} );
-		} );
-
-		it( 'should deduplicate set names', () => {
-			const namedSets = [ { name: 'default' } ];
-			cache.clearFreshnessCache( 'File.jpg', namedSets, 'default' );
-			// 'default' appears in Set constructor AND from namedSets, but should only
-			// result in one removeItem call for 'default'
-			const calls = window.sessionStorage.removeItem.mock.calls
-				.filter( ( c ) => c[ 0 ] === 'layers-fresh-File.jpg:default' );
-			expect( calls.length ).toBe( 1 );
+			expect( store.removeItem ).not.toHaveBeenCalled();
 		} );
 	} );
+
 
 	describe( 'destroy', () => {
 		it( 'should clear the response cache', () => {

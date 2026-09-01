@@ -180,7 +180,11 @@
 		 * @param {string} [options.filename] Custom filename (optional)
 		 */
 		downloadAsImage( options = {} ) {
-			const filename = this.editor.stateManager.get( 'filename' ) || 'image';
+			// The filename lives on the editor, not in StateManager. Reading it
+			// from state returned undefined, so every export was named "image".
+			const filename = this.editor.filename ||
+				this.editor.stateManager.get( 'slideName' ) ||
+				'image';
 			const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || '';
 
 			// Remove File: prefix and extension from filename

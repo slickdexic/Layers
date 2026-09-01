@@ -699,12 +699,12 @@ describe('LayersEditor UI Methods', () => {
         });
 
         it('should return false when no unsaved changes', () => {
-            editor.stateManager.set('hasUnsavedChanges', false);
+            editor.stateManager.set('isDirty', false);
             expect(editor.hasUnsavedChanges()).toBe(false);
         });
 
         it('should return true when has unsaved changes', () => {
-            editor.stateManager.set('hasUnsavedChanges', true);
+            editor.stateManager.set('isDirty', true);
             expect(editor.hasUnsavedChanges()).toBe(true);
         });
     });
@@ -980,7 +980,7 @@ describe('LayersEditor Save/Cancel Workflows', () => {
 
         it('should call uiManager.destroy when no unsaved changes', () => {
             editor.stateManager.set('isDirty', false);
-            editor.stateManager.set('hasUnsavedChanges', false);
+            editor.stateManager.set('isDirty', false);
             const destroySpy = jest.spyOn(editor.uiManager, 'destroy');
             
             // Mock navigation to prevent jsdom errors

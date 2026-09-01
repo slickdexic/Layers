@@ -122,6 +122,13 @@
 			this.manager.canvas.style.transform = 'translate(' + this.manager.panX + 'px, ' +
 				this.manager.panY + 'px) scale(' + this.manager.zoom + ')';
 			this.manager.canvas.style.transformOrigin = '0 0';
+
+			// The inline text editor is a DOM overlay anchored to the canvas rect,
+			// so it has to be re-anchored whenever that rect moves.
+			const inlineEditor = this.manager.inlineTextEditor;
+			if ( inlineEditor && typeof inlineEditor.reposition === 'function' ) {
+				inlineEditor.reposition();
+			}
 		}
 
 		/**

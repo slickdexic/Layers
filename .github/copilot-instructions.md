@@ -292,7 +292,7 @@ Important: Unknown or invalid fields are dropped server-side. Keep editor state 
 
 **Validation rejects rather than repairs for anything carrying user content.** `ServerSideLayerValidator::validateLayer()` drops a failing property with a warning by default, which is right for cosmetic hints and wrong for content: a ten-stop gradient with two typos used to become a two-stop gradient and still return `success: 1`. Properties listed in `STRICT_PROPERTIES` (`richText`, `gradient`, `points`, `originalWidth`, `originalHeight`) fail the whole layer instead. Add new content-bearing properties there.
 
-**`ThumbnailRenderer` cannot draw every layer type.** `callout`, `image`, `group`, `customShape`, `marker`, `dimension`, `angleDimension` and `blur` fills have no ImageMagick primitive, so they are omitted from server-composited thumbnails and PDF exports. This is *declared* in `ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE`, enforced by `check-parallel-lists.js`, reported as `incomplete`/`droppedtypes` in the `layerspdfexport` result, and surfaced to the user. Never add a `default:` arm that drops a type silently. The client-side `viewer/PdfBuilder.js` path *is* complete; prefer it where possible.
+**`ThumbnailRenderer` draws every layer type as of 1.5.88** and `UNSUPPORTED_SERVER_SIDE` is empty. Keep it and its gate: a new layer type that falls through to the `default:` arm vanishes from server-composited thumbnails and PDF exports, and nobody notices until they compare the editor with an export. A type that cannot be drawn must be added to `UNSUPPORTED_SERVER_SIDE` (declared, gated, reported), never dropped by a silent `default:`. Types that draw nothing anywhere — currently only `group` — go in `NON_VISUAL_TYPES` instead, so they are not reported as lost. Runtime drops (undecodable image data, an SVG shape on a wiki with no `$wgSVGConverter`) are still detected per render and returned as `incomplete`/`droppedtypes`.
 
 ## 4) Configuration and permissions
 
@@ -369,7 +369,7 @@ Install
 - composer install (PHP Composer; ensure it’s the PHP tool, not a Python package with the same name)
 
 Lint & tests
-- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana, then jest, `verify-metrics.js`, `verify-i18n-wiring.js`, `check-mw-compatibility.js`, `check-php-class-refs.js`, `check-parallel-lists.js`, `check-atomicity.js`, `check-bundle-size.js` and the emoji shard check; use `--force` to continue on warnings)
+- JS lint/style/i18n check: `npm test` (grunt runs eslint, stylelint, banana, then jest, `verify-metrics.js`, `verify-i18n-wiring.js`, `check-mw-compatibility.js`, `check-php-class-refs.js`, `check-parallel-lists.js`, `check-atomicity.js`, `check-rate-limits.js`, `check-state-keys.js`, `check-bundle-size.js` and the emoji shard check; use `--force` to continue on warnings)
 - i18n wiring check alone: `npm run check:i18n` (see §6)
 - MediaWiki API-drift check alone: `npm run check:mw-compat` (scans `src/` and `maintenance/`)
 - PHP class-reference check alone: `npm run check:phprefs`. Flags any unqualified use of a Layers class the file has not imported (PHP would silently resolve it into the file's own namespace and fatal at runtime), and any `use MediaWiki\Extension\Layers\…` import pointing at a class that does not exist. `parallel-lint` and `phpcs` are both blind to this, and it took the wiki down in 1.5.81.
@@ -377,6 +377,8 @@ Lint & tests
   1. boolean properties — `ServerSideLayerValidator::ALLOWED_PROPERTIES` (the `=> 'boolean'` entries) ↔ `ApiLayersInfo::preserveLayerBooleans()` ↔ `LayerDataNormalizer.BOOLEAN_PROPERTIES`;
   2. layer types — `ServerSideLayerValidator::SUPPORTED_LAYER_TYPES` ↔ `ThumbnailRenderer` (`buildLayerArguments()` cases **plus** `UNSUPPORTED_SERVER_SIDE`) ↔ `RateLimiter::isComplexityAllowed()` cases.
   If you add a boolean layer property or a layer type, you must edit every member of its group. The gate will tell you which one you missed.
+- **Rate-limit check alone: `npm run check:ratelimits`.** `RateLimiter::checkRateLimit()` resolves to `User::pingLimiter()`, which reports "not limited" for a bucket nobody configured, so a limiter enforced in code but absent from `extension.json`'s `RateLimits` block does nothing. Defaults live in `extension.json` **only** — a second copy in `Hooks::onRegistration()` used different numbers and a different time window, so the effective limit depended on which list mentioned the bucket. That duplicate is gone; this gate keeps the single list honest in both directions (enforced-but-undeclared, and declared-but-unenforced).
+- **State-key check alone: `npm run check:statekeys`.** `StateManager.get()` is a bare property read, so an undeclared key returns `undefined` forever, and the usual `|| false` turns that into a plausible permanent `false`. That is how `hasUnsavedChanges` shipped: read by four navigation guards, written by nothing, inert through 14,199 passing tests because the tests stubbed the getter. Every `stateManager.get()/set()` key must be declared in `StateManager`'s initial state.
 - **Atomicity check alone: `npm run check:atomicity`.** Fails on any `endAtomic()` inside a `catch` block, and on `cancelAtomic()` in a file with no `ATOMIC_CANCELABLE` section. Added in 1.5.83 after the same defect was found in four places; it caught the fourth on its first run.
 - ResourceLoader size budgets alone: `npm run check:bundlesize` (budgets in `bundlesize.config.json`, measured in raw source bytes; add `--report` to print sizes without failing)
 - Emoji shard integrity alone: `npm run check:emoji` (verifies `emoji/*.json` matches `EmojiLibraryIndex.js`)
@@ -517,8 +519,8 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (14,199 Jest tests in 177 suites; 651 PHPUnit tests)
-- Coverage (95.23% statement, 86.60% branch — verified August 6, 2026)
+- Test count (14,227 Jest tests in 178 suites; 666 PHPUnit tests)
+- Coverage (95.87% statement, 87.20% branch — verified August 31, 2026)
 - JavaScript file count (160 files total, ~105,000 lines)
 - PHP file count (48 files, ~17,300 lines)
 - God class count (28 files >=1,000 lines; 4 generated data files, 20 JS, 4 PHP)
@@ -527,4 +529,4 @@ Common metrics to keep synchronized:
 - Shape library count (1,385 shapes in 12 categories)
 - Emoji library count (2,817 emoji in 19 categories)
 - Font library count (32 self-hosted fonts in 5 categories, 106 WOFF2 files)
-- Version number (1.5.83)
+- Version number (1.5.89)

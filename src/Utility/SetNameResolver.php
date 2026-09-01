@@ -116,6 +116,44 @@ class SetNameResolver {
 	}
 
 	/**
+	 * Resolve a set name for a whole multi-page document.
+	 *
+	 * Sets are stored per page, so resolving against page 1 alone produced an
+	 * empty name — and therefore an unannotated export — whenever page 1 had no
+	 * layers, which is the normal state of a cover page. Scans forward to the
+	 * first page that actually has a set.
+	 *
+	 * @param LayersDatabase $db Database access
+	 * @param string $imgName Image name
+	 * @param string $sha1 File SHA-1
+	 * @param string|null $requested Caller-supplied set reference
+	 * @param int $pageCount Total pages in the file
+	 * @return string|null Set name, or null when no page has one
+	 */
+	public static function resolveAcrossPages(
+		LayersDatabase $db,
+		string $imgName,
+		string $sha1,
+		?string $requested,
+		int $pageCount
+	): ?string {
+		if ( self::isHideIntent( $requested ) ) {
+			return null;
+		}
+		if ( self::isSpecificName( $requested ) ) {
+			return trim( (string)$requested );
+		}
+		$pageCount = max( 1, $pageCount );
+		for ( $page = 1; $page <= $pageCount; $page++ ) {
+			$name = self::latestName( $db, $imgName, $sha1, $page );
+			if ( $name !== null ) {
+				return $name;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Name of the most recently saved set for an image and page.
 	 *
 	 * @param LayersDatabase $db Database access

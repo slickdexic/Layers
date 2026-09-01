@@ -1,7 +1,74 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.85
-**Last updated:** August 6, 2026 — R2 full critical review (see `codebase_review.md` §R2)
+**Version:** 1.5.89
+**Last updated:** August 31, 2026 — R4 full critical review (see `codebase_review.md` §R4)
+
+> ## 🔴 R4 — Findings from the August 31, 2026 full critical review
+>
+> **Remediated in v1.5.86.** All of Priority 1, both design items carrying
+> user-visible defects, and both proposed gates are done; see
+> `codebase_review.md` §"Remediation status — v1.5.86" for the evidence,
+> including a correction to R4.10 (the finding was right that the limits were
+> a mess and wrong about why) and four further defects found by running the
+> editor rather than reading it. Remaining work is R4.11 and R4.60 below.
+>
+> | # | Item | Effort | Status |
+> |---|------|--------|--------|
+> | **R4.60** | **In-place page switching.** v1.5.86 gave page navigation a Save/Discard/Cancel dialog and a navigator that marks annotated and dirty pages, but a page turn is still `window.location.href` — a full reload that destroys the undo stack. Target: fetch the page raster and that page's set, swap the canvas, keep a per-page dirty map, and offer "Save all". | L | 🔲 Open |
+> | **R4.61** | **`customShape` server-side rendering.** Closed in v1.5.88, completing R2.1.5 — all 17 layer types now draw server-side. Two routes: raw `path`/`paths` data via ImageMagick `-draw path` (preferred; the data is character-whitelisted, a provable safety property), and whole `svg` documents via the wiki's own `$wgSVGConverter` (no new exposure class — every wiki accepting SVG uploads already runs it over untrusted input; `<!DOCTYPE>`/`<!ENTITY>` refused). Path *extraction* was designed and then rejected on measurement: only 8% of the 1,385 shapes are plain paths, so it would have misplaced 92% of them. | M | ✅ Done (v1.5.88) |
+> | **R4.62** | **Editor lazy-loading, second stage.** v1.5.87 stopped shipping `ext.layers.editor` on File: pages entirely. Within the editor document itself the bundle is still ~1 MB parsed; the shape library and emoji picker are already separate modules, but the preset system, slide controller and PDF viewer could also be deferred until first use. | M | 🔲 Open |
+>
+> Reviewed `main` @ `6d34f8c9` (v1.5.85, clean tree). **All fast gates were
+> green** (`check:i18n`, `check:parallel`, `check:mw-compat`,
+> `check:bundlesize`) and every item below was still present. Hygiene metrics
+> were also clean (0 TODO/FIXME/HACK, 0 empty `catch` blocks, phpcs clean).
+>
+> Triggered by an owner report about multi-page PDF editing. The report was
+> accurate and turned out to sit on top of a structural gap: `ls_page` was
+> added to the schema and threaded through the API, but the **editor** was
+> never given a document concept. Items R4.01–R4.08 are that one story.
+>
+> ### Priority 1 — Correctness / data loss (do these first, in this order)
+>
+> | # | Item | Effort | Status |
+> |---|------|--------|--------|
+> | **R4.01** | **`LayersEditor.hasUnsavedChanges()` reads `stateManager.get('hasUnsavedChanges')`, a key `StateManager` never declares and `markDirty()` never writes — so it has always returned `false` during normal editing.** Four guards are dead: PDF page navigation, both named-set switch paths, and the Save button's `has-changes` indicator. Fix by collapsing onto the single live `isDirty` flag (`cancel()` and `beforeunload` already use it) and deleting the phantom key everywhere. Add a test that *drives* an edit and then asserts the guard, rather than stubbing the getter. | S | ✅ Done |
+> | **R4.02** | **`DraftManager.getStorageKey()` is scoped by user + filename + set name but not by `page`**, so PDF pages share one autosave slot. Editing page 2 destroys page 1's draft; navigating to page 2 restores page 1's layers onto it. This is the owner-reported bug. `APIManager` already does this correctly (`:p${page}` suffix) — mirror it. Also make `navigateToPage()` call `clearDraft()` when the user chooses to discard. | S | ✅ Done |
+> | **R4.03** | **`FreshnessChecker.getStorageKey()` omits `page` as well**, and unlike the in-memory cache its `sessionStorage` entries survive the reload that page navigation performs. Additionally, `APIManager.clearFreshnessCache()` re-implements the key format by hand (`'layers-fresh-'` hardcoded) instead of calling `getStorageKey()`. Add `page`, and delete the duplicate by exporting the key builder. | S | ✅ Done |
+> | **R4.05** | **`layersdelete` / `layersrename` silently operate on the current page only.** Deleting set `notes` from page 1 of a 40-page PDF leaves 39 copies; renaming leaves the document with two different names for the same set depending on which page you are viewing. Add an explicit `allpages` parameter (default off, so the wire contract does not change) and make the editor UI ask "this page / whole document" for both operations. | M | ✅ Done |
+> | **R4.06** | **`ApiLayersExport` omits the `$page` argument to `SetNameResolver::resolve()`**, which defaults to 1, so an unnamed export of a PDF whose page 1 has no layers produces an unannotated PDF with `success: 1`. Resolve the name from the first page that *has* a set, or across all pages. | S | ✅ Done |
+> | **R4.10** | **Three of six rate-limit buckets ship no defaults.** `editlayers-delete`, `editlayers-rename` and `editlayers-info` are enforced in code but absent from `extension.json`, so `pingLimiter` reports "not limited" on every default install. `editlayers-info` is the exposed one: `read`-only, enumerates every layer set on a file, and does a user-name join. R2.1.1 fixed this for three buckets and left three behind. | S | ✅ Done |
+>
+> ### Priority 2 — Design: give the editor a document model
+>
+> | # | Item | Effort | Status |
+> |---|------|--------|--------|
+> | **R4.04** | **Page navigation is a full document reload (`window.location.href`), and "Save" silently means "save this page".** Consequences: no document-level save, the undo stack is destroyed at every page boundary, the page navigator shows no per-page dirty or has-layers state, and each page turn re-downloads ~2 MB of editor source. Target state: navigate in-place (fetch the page raster + that page's set, swap the canvas), keep a per-page dirty map, offer "Save page" and "Save all", and mark annotated/dirty pages in the navigator. Prerequisite: R4.01 and R4.02. | L | 🟡 Partial |
+> | **R4.07** | `navigateToPage()` carries `setname` to the target page, where that page-scoped set usually does not exist. Result is a blank canvas with the selector still naming a missing set — which is the blank that R4.02 then fills with the previous page's layers. Decide the intended semantics (a document-level set name that materialises per page vs. strictly page-local sets) and make the selector reflect reality. | M | 🟡 Partial |
+> | **R4.12** | Replace `window.confirm`/`alert`/`prompt` in the destructive paths (22 sites across 10 modules). This is now blocking rather than cosmetic: R4.04 needs a three-action **Save / Discard / Cancel** dialog on page navigation, and a native `confirm()` cannot express it. `DialogManager.showConfirmDialog()` already exists and is used elsewhere in the same files. Carried over from R2.2.10. | M | 🟡 Partial |
+>
+> ### Priority 3 — Smaller correctness and hygiene
+>
+> | # | Item | Effort | Status |
+> |---|------|--------|--------|
+> | **R4.08** | `WikitextHooks::onImageBeforeProduceHTML()` declares `$page` and discards it; `LayerInjector::injectIntoAttributes()` has no `$page` parameter, so the full-size/linked-image path always renders page 1's layers. The **thumbnail** path is correct (`ThumbnailProcessor` passes `$page`), which makes this an inconsistency rather than a uniform failure — and therefore harder to diagnose. Same blindness at `LayerInjector.php:262-264` and four sites in `ImageLinkProcessor.php`. | M | ✅ Done |
+> | **R4.11** | `APIManager._setCache()` evicts the oldest *inserted* entry (`Map` insertion order, no re-insert on read), i.e. FIFO, while the code and docs call it LRU. In the editor's real access pattern this preferentially evicts the hot entry. Either re-insert on read or rename it honestly. | S | 🔲 Open |
+> | **R4.13** | `DraftManager.recoverDraft()` stores `draft.setName` but never checks it against the currently-loaded set before applying the draft. The field was clearly written as a safety check; wire it up. | S | ✅ Done |
+>
+> ### Priority 4 — New gates (this review's findings are all "missing dimension" defects)
+>
+> | # | Item | Rationale | Status |
+> |---|------|-----------|--------|
+> | **R4.50** | Extend `check-parallel-lists.js` with a **"must be page-scoped"** group: `DraftManager.getStorageKey()`, `FreshnessChecker.getStorageKey()`, `APIManager.buildCacheKey()`, `LayerInjector::injectIntoAttributes()`, and every `SetNameResolver::resolve()`/`latestName()` call site. Four of this review's findings are one missing parameter each; nothing can catch that today because there is no declared list to compare against. | Would have caught R4.02, R4.03, R4.06, R4.08 | ✅ Done |
+> | **R4.51** | Gate `RateLimiter::checkRateLimit( $user, '<action>' )` call sites in `src/` against the `RateLimits` keys in `extension.json`, failing on any bucket enforced in code but not shipped with a default. | Would have caught R4.10, and R2.1.1 before it | ✅ Done |
+> | **R4.52** | Gate against reads of `stateManager.get('<key>')` for keys absent from `StateManager`'s initial state. R4.01 is a typo-class defect that survived 14,199 tests and 95% coverage because the tests stub the getter. | Would have caught R4.01 | ✅ Done |
+>
+> **Gate blind spot, recorded for the next reviewer.** Every existing gate
+> compares a declared list to a declared list, and is very good at catching
+> drift between two things that both exist. Every R4.A finding is instead a
+> *missing dimension* — `page` absent from a key, a signature, or a UI
+> concept — for which there is no second list to compare against. R4.50 is the
+> direct remedy.
 
 > ## ✅ R3.01 — P0 resolved: LTS security backport (August 6, 2026)
 >

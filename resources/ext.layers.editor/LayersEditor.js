@@ -307,6 +307,14 @@ class LayersEditor {
 		this.selectionUnsubscribe = this.stateManager.subscribe( 'selectedLayerIds', () => {
 			this.updateUIState();
 		} );
+		// Drive the save indicator from state rather than from ~40 manual call sites,
+		// several of which never fired.
+		this.dirtyUnsubscribe = this.stateManager.subscribe( 'isDirty', () => {
+			this.updateSaveButtonState();
+			if ( this.toolbar && typeof this.toolbar.updatePageNavState === 'function' ) {
+				this.toolbar.updatePageNavState();
+			}
+		} );
 	}
 
 	/**
@@ -657,7 +665,7 @@ class LayersEditor {
 		this.stateManager.set( 'layers', [] );
 		this.stateManager.set( 'currentSetName', setName );
 		this.stateManager.set( 'currentLayerSetId', null );
-		this.stateManager.set( 'hasUnsavedChanges', true );
+		this.stateManager.set( 'isDirty', true );
 
 		// Add to named sets list (use immutable pattern for state tracking)
 		const existingNamedSets = this.stateManager.get( 'namedSets' ) || [];
@@ -1165,10 +1173,15 @@ class LayersEditor {
 
 	/**
 	 * Check if there are unsaved changes
+	 *
+	 * `isDirty` is the single source of truth. This used to read a separate
+	 * `hasUnsavedChanges` key that StateManager never declared and markDirty()
+	 * never wrote, so every guard built on it was inert.
+	 *
 	 * @return {boolean}
 	 */
 	hasUnsavedChanges () {
-		return this.stateManager.get( 'hasUnsavedChanges' ) || false;
+		return !!( this.stateManager && this.stateManager.isDirty() );
 	}
 
 	/**
@@ -1176,9 +1189,11 @@ class LayersEditor {
 	 */
 	updateSaveButtonState () {
 		try {
-			if ( this.toolbar && this.toolbar.saveBtnEl ) {
-				const hasChanges = this.hasUnsavedChanges();
-				this.toolbar.saveBtnEl.classList.toggle( 'has-changes', hasChanges );
+			// Toolbar exposes this as `saveButton`; the old `saveBtnEl` name matched
+			// nothing, so the indicator never appeared.
+			const btn = this.toolbar && ( this.toolbar.saveButton || this.toolbar.saveBtnEl );
+			if ( btn && btn.classList ) {
+				btn.classList.toggle( 'has-changes', this.hasUnsavedChanges() );
 			}
 		} catch ( error ) {
 			this.errorLog( 'Error updating save button state:', error );
@@ -1483,29 +1498,83 @@ class LayersEditor {
 	 * Navigate the editor to a different page of a multi-page file (PDF).
 	 *
 	 * Performs a full reload so the server produces the correct rasterized page
-	 * thumbnail, canvas dimensions, and page-scoped layer set. Guards against
-	 * losing unsaved changes.
+	 * thumbnail, canvas dimensions, and page-scoped layer set.
 	 *
 	 * @param {number} targetPage 1-based page number to navigate to
+	 * @return {Promise<boolean>} Resolves true when navigation was started
 	 */
 	navigateToPage ( targetPage ) {
 		const pageCount = this.pageCount || 1;
 		const page = Math.max( 1, Math.min( parseInt( targetPage, 10 ) || 1, pageCount ) );
 		if ( page === this.page ) {
-			return;
+			return Promise.resolve( false );
 		}
 
-		// Guard unsaved changes before discarding the current page's edits
-		if ( this.hasUnsavedChanges && this.hasUnsavedChanges() ) {
-			const confirmMsg = ( mw && mw.msg ) ?
-				mw.msg( 'layers-page-unsaved-confirm' ) :
-				'You have unsaved changes. Leave this page anyway?';
+		if ( !this.hasUnsavedChanges() ) {
+			this.performPageNavigation( page );
+			return Promise.resolve( true );
+		}
+
+		const message = this.getMessage(
+			'layers-page-unsaved-confirm',
+			'You have unsaved changes on this page. Save them before moving on?'
+		);
+
+		if ( !this.dialogManager ||
+			typeof this.dialogManager.showSaveDiscardDialog !== 'function'
+		) {
 			// eslint-disable-next-line no-alert
-			if ( typeof window !== 'undefined' && window.confirm && !window.confirm( confirmMsg ) ) {
-				return;
+			if ( typeof window !== 'undefined' && window.confirm && !window.confirm( message ) ) {
+				return Promise.resolve( false );
 			}
+			this.discardPageChanges();
+			this.performPageNavigation( page );
+			return Promise.resolve( true );
 		}
 
+		return this.dialogManager.showSaveDiscardDialog( { message: message } )
+			.then( ( choice ) => {
+				if ( choice === 'cancel' ) {
+					return false;
+				}
+				if ( choice === 'discard' ) {
+					this.discardPageChanges();
+					this.performPageNavigation( page );
+					return true;
+				}
+				return Promise.resolve( this.save() )
+					.then( () => {
+						this.performPageNavigation( page );
+						return true;
+					} )
+					.catch( () => false );
+			} );
+	}
+
+	/**
+	 * Drop this page's unsaved work so it cannot resurface on the next page.
+	 *
+	 * Clearing the draft is the important half: the autosaved copy used to
+	 * survive a "discard" and was then recovered onto whatever page loaded next.
+	 *
+	 * @private
+	 */
+	discardPageChanges () {
+		if ( this.draftManager && typeof this.draftManager.clearDraft === 'function' ) {
+			this.draftManager.clearDraft();
+		}
+		if ( this.stateManager ) {
+			this.stateManager.set( 'isDirty', false );
+		}
+	}
+
+	/**
+	 * Reload the editor at a different page of the current file.
+	 *
+	 * @param {number} page 1-based page number
+	 * @private
+	 */
+	performPageNavigation ( page ) {
 		try {
 			const url = new URL( window.location.href );
 			url.searchParams.set( 'page', String( page ) );
@@ -1770,6 +1839,11 @@ class LayersEditor {
 		if ( this.selectionUnsubscribe && typeof this.selectionUnsubscribe === 'function' ) {
 			this.selectionUnsubscribe();
 			this.selectionUnsubscribe = null;
+		}
+
+		if ( this.dirtyUnsubscribe && typeof this.dirtyUnsubscribe === 'function' ) {
+			this.dirtyUnsubscribe();
+			this.dirtyUnsubscribe = null;
 		}
 
 		// Clean up event listeners

@@ -450,7 +450,7 @@ describe( 'LayerSetManager', () => {
 			expect( result ).toBe( true );
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'currentSetName', 'new-set' );
 			expect( mockStateManager.set ).toHaveBeenCalledWith( 'layers', [] );
-			expect( mockStateManager.set ).toHaveBeenCalledWith( 'hasUnsavedChanges', true );
+			expect( mockStateManager.set ).toHaveBeenCalledWith( 'isDirty', true );
 		} );
 
 		it( 'should reject empty name', async () => {

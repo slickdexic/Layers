@@ -4,6 +4,198 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.89] - 2026-09-01
+
+### Fixed
+
+- **The inline text editor no longer detaches from the image when you zoom or
+  pan.** Double-clicking a text layer opens a DOM overlay — a contentEditable
+  frame plus its floating format toolbar — positioned from the canvas's bounding
+  rect. Zoom and pan are a CSS transform on the canvas, so the canvas slid out
+  from under the overlay while the overlay stayed exactly where it was: the edit
+  frame ended up the wrong size, in the wrong place, with the wrong text scale,
+  visibly disconnected from the text it was editing.
+
+  The overlay was only ever re-anchored on `window.resize`, which no amount of
+  zooming or panning fires. `InlineTextEditor.reposition()` now re-runs the
+  existing positioning pass — which already derives position, size, font size
+  and padding from the canvas rect — and `ZoomPanController.updateCanvasTransform()`
+  calls it. That is the single place the canvas transform is written, so scroll
+  zoom, the zoom buttons, fit-to-window, keyboard pan and drag pan are all
+  covered. Verified at 2× zoom: frame offset, width, font size and the toolbar
+  all scale exactly with the canvas.
+
+## [1.5.88] - 2026-08-31
+
+### Added
+
+- **Server-side rendering is now complete: all 17 layer types draw.**
+  `customShape` was the last gap, and it covers the 1,385-shape library, so a
+  wikitext-embedded thumbnail or exported PDF containing a standards pictogram
+  previously showed nothing where the shape should be.
+  - Shapes carrying raw `path`/`paths` data are drawn with ImageMagick's
+    `-draw path`, which takes the same grammar as SVG and needs no converter.
+    This route is preferred because that data is character-whitelisted by
+    `ServerSideLayerValidator::validateSvgPath()` — a provable safety property.
+  - Shapes carrying a whole `svg` document are rasterised with the wiki's own
+    `$wgSVGConverter`. Any wiki accepting SVG uploads already runs that
+    converter over untrusted SVG, so this adds no new class of exposure and
+    honours whatever the administrator has configured. `<!DOCTYPE>` and
+    `<!ENTITY>` are refused outright rather than cleaned, closing XXE.
+  - With no converter configured the shape is still reported as dropped, so the
+    change is a strict improvement on every deployment.
+  - `ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE` is now empty. The constant and
+    its gate are kept: the failure it guards — a new layer type silently
+    vanishing from exports — is invisible until someone compares editor and PDF.
+    Runtime drops (an undecodable image, an SVG shape with no converter) are
+    still detected and reported per render.
+
+### Notes
+
+An earlier attempt at this used path extraction from the stored SVG. Measuring
+the library first showed why that was wrong: only **8%** of the 1,385 shapes are
+plain paths — 1,232 use `<g>`, 402 use transforms and 499 use basic shapes — so
+extraction would have placed 92% of them incorrectly. Drawing a shape in the
+wrong position is worse than declaring it missing, which is why the real
+rasteriser is used instead.
+
+## [1.5.87] - 2026-08-31
+
+Performance, accessibility, and closing the server-side rendering gap. Two
+defects found while testing this work turned out to predate it and to be
+larger than anything they were found alongside.
+
+### Fixed
+
+- **Server-side PDF export was completely broken and had been for some time.**
+  `basePageImage()` returned the *path* of a MediaWiki `TempFSFile` while
+  dropping the object, so PHP's refcounting deleted every rasterised page before
+  ImageMagick stitched them; `convert` failed with *"unable to open image
+  /tmp/transform_….jpg"* and the whole export died. The references are now held
+  until the PDF exists. This was invisible to the test suite because nothing
+  exercised a real transform.
+- **Arrow-key nudge did nothing after selecting a layer from the layer panel.**
+  `SelectionManager` keeps its own copy of the selection and only ever pushed
+  outward, so a selection made anywhere other than a canvas click left it empty
+  and everything reading `getSelectedLayers()` silently no-opped. `StateManager`
+  is now the single source and `CanvasManager` mirrors it inward — the same
+  two-parallel-stores defect as the dirty flags in 1.5.86.
+- **`group` layers were reported as dropped from exports.** They draw nothing
+  anywhere, including in the browser, so an export containing one claimed to be
+  incomplete when nothing had been lost. Declared as `NON_VISUAL_TYPES` and
+  gated by `check-parallel-lists.js`.
+
+### Added
+
+- **Server-side rendering for six of the seven previously-unsupported layer
+  types**: `marker`, `callout`, `dimension`, `angleDimension`, `image` and
+  `group`. Wikitext-embedded thumbnails and PDF exports previously omitted every
+  one of them. `customShape` remains unsupported (it needs a path renderer) and
+  is still declared, gated and reported. Marker numbering mirrors
+  `MarkerRenderer.js` exactly, including letter and parenthesised styles.
+- **Keyboard equivalents for the mouse-only transform handles.** Resize, rotate
+  and restack had no keyboard path at all, which is a WCAG 2.1 SC 2.1.1 failure
+  in an editor that is otherwise carefully keyboard- and ARIA-aware.
+  - `Ctrl`/`Cmd` + arrows — resize (Shift for 10px). Handles boxes, radii,
+    ellipse radii, line end points, and text font size.
+  - `Alt` + `←`/`→` — rotate (Shift for 15°).
+  - `Alt` + `↑`/`↓` — move up/down the layer stack.
+  - Each announces itself to screen readers, since a keyboard transform moves no
+    focus and would otherwise be silent. All four are listed in the shortcuts
+    dialog.
+
+### Changed
+
+- **The editor bundle is no longer loaded on File: pages.** It was added on
+  every `File:` page for every user holding `editlayers` — 214 KB gzipped,
+  1.02 MB parsed — and never ran there: the tab links to `action=editlayers` and
+  the modal loads that URL in an iframe, both of which load the module
+  themselves. Measured on a test wiki, this removes ~59% of the `load.php` bytes
+  on a file page view.
+
+## [1.5.86] - 2026-08-31
+
+Remediation of the R4 critical review. The headline is multi-page (PDF)
+editing: `ls_page` had reached the schema and the API but never the editor's
+client-side state, so one page's work leaked onto the next.
+
+### Fixed
+
+- **Editing one page of a PDF no longer leaks onto another page.** The autosave
+  draft key was scoped by user, filename and set name but not by page, so every
+  page of a document shared one slot. Navigating to page 2 restored page 1's
+  layers onto it, and editing page 2 destroyed page 1's draft. Draft keys are
+  now page-scoped (page 1 keeps the legacy key so existing drafts survive), the
+  page and set are recorded on the payload, and a draft from a different page or
+  set is refused rather than applied.
+- **"Discard" now discards.** Page navigation never cleared the draft or the
+  dirty flag, so the discarded work was recovered onto the next page.
+- **`hasUnsavedChanges()` had never returned `true` during normal editing.** It
+  read a `hasUnsavedChanges` state key that `StateManager` does not declare and
+  `markDirty()` does not write, so four guards were inert: PDF page navigation,
+  both named-set switch paths, and the Save button indicator. All now read the
+  live `isDirty` flag, and the indicator is driven by a state subscription.
+- **The Save button indicator never appeared**, independently of the above:
+  `updateSaveButtonState()` looked for `toolbar.saveBtnEl`, but the Toolbar
+  exposes `saveButton`.
+- **Autosave cried wolf.** `saveDraft()` returned `false` for "not dirty",
+  "nothing to save" and "the write failed" alike, and the caller reported all
+  three as *"Auto-save failed. Your changes may not be preserved"*. A genuine
+  write failure is now distinguished from having nothing to do.
+- **Two messages reached users with their placeholders intact**: the draft
+  recovery dialog substituted `{time}`/`{count}` against a message that uses
+  `$1`/`$2`, and `LayerPanel.msg()` silently dropped the parameter passed to
+  `layers-aria-layer-count`, so screen readers announced "$1 layers total".
+- **Exported images were always named `image`.** `ExportController` read the
+  filename from `StateManager`, which never held it.
+- **PDF export could silently produce an unannotated document.**
+  `ApiLayersExport` resolved the set name against page 1 only, so a cover page
+  with no layers produced a clean PDF with `success: 1`. Resolution now scans
+  for the first page that actually has a set.
+- **Deleting or renaming a layer set silently affected one page.** On a
+  multi-page document a set is one logical thing the user named once, so both
+  operations now default to the whole document (`allpages` on the API), and the
+  delete confirmation says how many pages it covers. Renaming per page used to
+  leave the document with two names for the same set depending on the page.
+- **Full-size (non-thumbnail) PDF links always rendered page 1's layers.**
+  `onImageBeforeProduceHTML()` received the page number and discarded it, and
+  `LayerInjector::injectIntoAttributes()` had no page parameter. Thumbnails were
+  already correct, which made the inconsistency harder to spot.
+- The freshness cache was page-blind and its key format was written out by hand
+  in three places. There is now one `FreshnessCacheKey` utility in
+  `ext.layers.shared`, and invalidation enumerates the store rather than
+  guessing which keys exist.
+- `enableSaveButton()`/`disableSaveButton()` no longer throw when a save promise
+  settles after the editor has been torn down by navigation.
+
+### Added
+
+- **Page navigator state.** The editor's page control now marks whether the
+  current page has layers or unsaved work, and its tooltip lists every page of
+  the document that carries annotations — previously the only way to find your
+  three annotated pages in a 40-page PDF was to open all forty. Backed by a new
+  `pagesWithLayers` field on `action=layersinfo`.
+- **A Save / Discard / Cancel dialog on page navigation.** The old prompt was
+  the browser's native "Leave site?", which cannot offer a Save action.
+- `scripts/check-rate-limits.js` — fails when a `checkRateLimit()` bucket has no
+  default in `extension.json`. `editlayers-delete`, `-rename` and `-info` were
+  enforced in code but undeclared there; they happened to be covered by a second
+  list in `Hooks::onRegistration()` with different numbers and a different time
+  window, so the effective limit depended on which list mentioned the bucket.
+  `extension.json` is now the single source and the duplicate is gone.
+- `scripts/check-state-keys.js` — fails on any `stateManager` key not declared
+  in `StateManager`'s initial state. This is the defect class behind
+  `hasUnsavedChanges`; on its first run it also found `filename` (the export bug
+  above) and three undeclared slide keys.
+- `editlayers-create` is now enforced on the first save of a new named set,
+  rather than being a declared limit that nothing checked.
+- `tests/jest/MultiPageEditing.test.js` — regression tests for the above.
+
+### Changed
+
+- `Hooks::onRegistration()` and the `callback` entry in `extension.json` were
+  removed; their only job was the duplicated rate-limit table.
+
 ## [1.5.85] - 2026-08-07
 
 ### Fixed

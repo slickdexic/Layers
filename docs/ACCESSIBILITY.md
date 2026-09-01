@@ -87,6 +87,21 @@ The editor implements ARIA (Accessible Rich Internet Applications) attributes th
 | `Escape` | Cancel current operation / deselect |
 | `Shift + ?` | Show keyboard shortcuts help dialog |
 
+#### Transform Shortcuts (v1.5.87)
+
+Keyboard equivalents for the selection handles. Before these, resize and
+rotation were reachable only by dragging with a mouse.
+
+| Shortcut | Action |
+|----------|--------|
+| `Arrow` keys | Move selection 1 px (`Shift` for 10 px) |
+| `Ctrl` + arrows | Resize selection 1 px (`Shift` for 10 px) |
+| `Alt + ←` / `Alt + →` | Rotate 1° (`Shift` for 15°) |
+| `Alt + ↑` / `Alt + ↓` | Move layer up / down the stack |
+
+Each transform is announced through the ARIA live region, because a
+keyboard transform moves no focus and would otherwise be silent.
+
 #### Layer Panel Navigation (NEW)
 
 | Shortcut | Action |
@@ -187,10 +202,14 @@ The extension uses MediaWiki's internationalization system (`mw.message()`) for 
    - ~~Some operations only provide visual feedback~~
    - **Resolution**: Added `AccessibilityAnnouncer` with ARIA live regions for tool changes, layer selection, save success, and errors
 
-6. **Mouse-Dependent Interactions**
-   - Drawing tools require mouse/touch interaction
-   - Some resize/rotate handles are only mouse-accessible
-   - **Recommendation**: Add keyboard alternatives for common operations
+6. **Mouse-Dependent Interactions** (partially resolved v1.5.87)
+   - ~~Resize and rotate handles are only mouse-accessible~~
+   - **Resolution**: `Ctrl`+arrows resize, `Alt`+`←`/`→` rotate and
+     `Alt`+`↑`/`↓` restack, all announced to screen readers. Resize adapts
+     to the layer type (box, radius, ellipse radii, line end point, or font
+     size for plain text).
+   - **Still open**: freehand drawing tools require mouse or touch. There is
+     no keyboard path to *create* a shape, only to transform one.
 
 7. ~~**Color Picker Accessibility**~~ ✅ RESOLVED (January 2026)
    - ~~Color picker relies heavily on mouse interaction~~
@@ -303,7 +322,7 @@ Document messages in `i18n/qqq.json`:
 | 1.3.1 Info and Relationships | A | ✅ Pass | Landmark roles added (December 2025) |
 | 1.4.3 Contrast (Minimum) | AA | ✅ Pass | Audited December 2025 - all text meets 4.5:1 ratio |
 | 1.4.11 Non-text Contrast | AA | ✅ Pass | High contrast mode support added (January 2026) |
-| 2.1.1 Keyboard | A | ✅ Pass | Most features keyboard accessible |
+| 2.1.1 Keyboard | A | ⚠️ Partial | Transform, selection, navigation and all commands are keyboard accessible (resize/rotate added v1.5.87). Creating a shape still requires a pointer. |
 | 2.1.2 No Keyboard Trap | A | ✅ Pass | Focus trapping properly implemented |
 | 2.3.3 Animation from Interactions | AAA | ✅ Pass | prefers-reduced-motion support |
 | 2.4.1 Bypass Blocks | A | ✅ Pass | Skip links added (December 2025) |

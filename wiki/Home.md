@@ -463,7 +463,7 @@ See [[Changelog]] for full details.
 
 | Metric | Value |
 |--------|-------|
-| **Version (main)** | 1.5.85 |
+| **Version (main)** | 1.5.89 |
 | **Version (REL1_43)** | 1.5.66-REL1_43 |
 | **Version (REL1_39)** | 1.5.66-REL1_39 |
 | **Release Date** | August 6, 2026 |

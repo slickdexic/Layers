@@ -393,6 +393,11 @@
 				this.editor.buildSetSelector();
 			}
 
+			// Which pages of a multi-page document already have annotations. Sent
+			// whenever the file has more than one page, including pages with no set
+			// of their own, so the navigator stays accurate everywhere.
+			this.applyPageContext( layersInfo );
+
 			// Build the revision selector UI
 			this.editor.buildRevisionSelector();
 
@@ -706,6 +711,30 @@
 	}
 
 	/**
+	 * Record which pages of a multi-page document carry annotations.
+	 *
+	 * Called from every layersinfo response path; the named-set path used to skip
+	 * it, so the page navigator went blank whenever a set was deep-linked.
+	 *
+	 * @param {Object} layersInfo The layersinfo payload
+	 * @private
+	 */
+	applyPageContext( layersInfo ) {
+		if ( !this.editor || !this.editor.stateManager ) {
+			return;
+		}
+		this.editor.stateManager.set(
+			'pagesWithLayers',
+			Array.isArray( layersInfo.pagesWithLayers ) ? layersInfo.pagesWithLayers : []
+		);
+		if ( this.editor.toolbar &&
+			typeof this.editor.toolbar.updatePageNavState === 'function'
+		) {
+			this.editor.toolbar.updatePageNavState();
+		}
+	}
+
+	/**
 	 * Process layer set data loaded by name (shared by cache hit and API response).
 	 * @param {Object} data - API response data
 	 * @param {string} setName - Name of the layer set
@@ -715,6 +744,8 @@
 	 */
 	_processSetNameData( data, setName, fromCache = false ) {
 		const layersInfo = data.layersinfo;
+
+		this.applyPageContext( layersInfo );
 
 		// Process the current layer set
 		if ( layersInfo.layerset ) {
@@ -771,7 +802,6 @@
 		}
 
 		// Mark as clean (no unsaved changes)
-		this.editor.stateManager.set( 'hasUnsavedChanges', false );
 		this.editor.stateManager.set( 'isDirty', false );
 
 		// Clear loading state after successful load
@@ -1079,13 +1109,14 @@
 	}
 
 	disableSaveButton() {
-		if ( this.editor.toolbar && this.editor.toolbar.saveButton ) {
+		// The save promise can settle after navigation has torn the editor down.
+		if ( this.editor && this.editor.toolbar && this.editor.toolbar.saveButton ) {
 			this.editor.toolbar.saveButton.disabled = true;
 		}
 	}
 
 	enableSaveButton() {
-		if ( this.editor.toolbar && this.editor.toolbar.saveButton ) {
+		if ( this.editor && this.editor.toolbar && this.editor.toolbar.saveButton ) {
 			this.editor.toolbar.saveButton.disabled = false;
 		}
 	}
@@ -1219,9 +1250,10 @@
 	 * Only the original creator or an admin can delete a set.
 	 *
 	 * @param {string} setName - Name of the layer set to delete
+	 * @param {boolean} [allPages] - Delete from every page of a multi-page document
 	 * @return {Promise} Resolves with result or rejects with error
 	 */
-	deleteLayerSet( setName ) {
+	deleteLayerSet( setName, allPages ) {
 		return new Promise( ( resolve, reject ) => {
 			if ( !setName ) {
 				reject( new Error( 'Set name is required' ) );
@@ -1248,7 +1280,8 @@
 				action: 'layersdelete',
 				filename: filename,
 				setname: setName,
-				page: ( this.editor && this.editor.page ) || 1
+				page: ( this.editor && this.editor.page ) || 1,
+				allpages: allPages ? 1 : undefined
 			} ).then( ( data ) => {
 				this.hideSpinner();
 
@@ -1338,7 +1371,7 @@
 	 * @param {string} newName - New name for the layer set
 	 * @return {Promise} Resolves with result or rejects with error
 	 */
-	renameLayerSet( oldName, newName ) {
+	renameLayerSet( oldName, newName, allPages ) {
 		return new Promise( ( resolve, reject ) => {
 			if ( !oldName || !newName ) {
 				reject( new Error( 'Both old and new names are required' ) );
@@ -1382,7 +1415,8 @@
 				filename: filename,
 				oldname: oldName,
 				newname: newName,
-				page: ( this.editor && this.editor.page ) || 1
+				page: ( this.editor && this.editor.page ) || 1,
+				allpages: allPages ? 1 : undefined
 			} ).then( ( data ) => {
 				this.hideSpinner();
 
@@ -1592,40 +1626,23 @@
 	 * @private
 	 */
 	clearFreshnessCache() {
-		if ( this.cacheManager ) {
-			const filename = this.editor ? this.editor.filename : null;
-			const namedSets = this.editor && this.editor.stateManager ?
-				this.editor.stateManager.get( 'namedSets' ) || [] : [];
-			const currentSetName = this.editor && this.editor.stateManager ?
-				this.editor.stateManager.get( 'currentSetName' ) || '' : '';
-			this.cacheManager.clearFreshnessCache( filename, namedSets, currentSetName );
-			return;
-		}
 		try {
-			const filename = this.editor.filename;
+			const filename = this.editor ? this.editor.filename : null;
 			if ( !filename ) {
 				return;
 			}
 
-			// FreshnessChecker uses keys like: "layers-fresh-Filename:setname"
-			const STORAGE_KEY_PREFIX = 'layers-fresh-';
-			const normalizedFilename = ( filename || '' ).replace( /\s+/g, '_' );
+			if ( this.cacheManager ) {
+				this.cacheManager.clearFreshnessCache( filename );
+				return;
+			}
 
-			// Clear cache for all known set names
-			const namedSets = this.editor.stateManager.get( 'namedSets' ) || [];
-			const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || '';
-
-			// Build list of set names to clear; the viewer keys unnamed sets as ''
-			const setNames = new Set( [ '', currentSetName ] );
-			namedSets.forEach( ( set ) => {
-				if ( set && set.name ) {
-					setNames.add( set.name );
-				}
-			} );
-
-			// Clear cache for each set name
-			setNames.forEach( ( setName ) => {
-				const key = STORAGE_KEY_PREFIX + normalizedFilename + ':' + setName;
+			const keyUtil = ( typeof window !== 'undefined' && window.Layers &&
+				window.Layers.FreshnessCacheKey ) || null;
+			if ( !keyUtil ) {
+				return;
+			}
+			keyUtil.findAllForFile( filename ).forEach( ( key ) => {
 				try {
 					sessionStorage.removeItem( key );
 				} catch ( e ) {

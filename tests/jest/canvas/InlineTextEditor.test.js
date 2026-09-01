@@ -4660,4 +4660,35 @@ describe( 'InlineTextEditor - branch coverage gaps', () => {
 			expect( result ).toBe( 24 );
 		} );
 	} );
+
+	describe( 'reposition', () => {
+		test( 'should do nothing when not editing', () => {
+			editor._positionEditor = jest.fn();
+			editor.isEditing = false;
+
+			editor.reposition();
+
+			expect( editor._positionEditor ).not.toHaveBeenCalled();
+		} );
+
+		test( 'should re-anchor the editor and its toolbar while editing', () => {
+			editor._positionEditor = jest.fn();
+			editor.isEditing = true;
+			editor._toolbar = { position: jest.fn() };
+
+			editor.reposition();
+
+			expect( editor._positionEditor ).toHaveBeenCalled();
+			expect( editor._toolbar.position ).toHaveBeenCalled();
+		} );
+
+		test( 'should re-anchor even when no toolbar was created', () => {
+			editor._positionEditor = jest.fn();
+			editor.isEditing = true;
+			editor._toolbar = null;
+
+			expect( () => editor.reposition() ).not.toThrow();
+			expect( editor._positionEditor ).toHaveBeenCalled();
+		} );
+	} );
 } );

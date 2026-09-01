@@ -231,6 +231,41 @@ describe('ZoomPanController', () => {
 
             expect(mockEditor.toolbar.updateZoomDisplay).toHaveBeenCalledWith(175);
         });
+
+        test('should re-anchor an active inline text editor', () => {
+            // The editor is a DOM overlay positioned from the canvas rect, so a
+            // zoom or pan that moves the canvas must move it too.
+            const reposition = jest.fn();
+            mockCanvasManager.inlineTextEditor = { reposition };
+
+            zoomPanController.updateCanvasTransform();
+
+            expect(reposition).toHaveBeenCalled();
+        });
+
+        test('should not throw when no inline text editor exists', () => {
+            mockCanvasManager.inlineTextEditor = null;
+
+            expect(() => zoomPanController.updateCanvasTransform()).not.toThrow();
+        });
+
+        test('should tolerate an inline editor without reposition()', () => {
+            mockCanvasManager.inlineTextEditor = {};
+
+            expect(() => zoomPanController.updateCanvasTransform()).not.toThrow();
+        });
+
+        test('should re-anchor on pan as well as zoom', () => {
+            const reposition = jest.fn();
+            mockCanvasManager.inlineTextEditor = { reposition };
+
+            mockCanvasManager.panX = 200;
+            zoomPanController.updateCanvasTransform();
+            expect(reposition).toHaveBeenCalledTimes(1);
+
+            zoomPanController.setZoom(2);
+            expect(reposition).toHaveBeenCalledTimes(2);
+        });
     });
 
     describe('smoothZoomTo', () => {

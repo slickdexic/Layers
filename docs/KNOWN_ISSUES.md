@@ -1,6 +1,38 @@
 # Known Issues
 
-**Last updated:** August 6, 2026 — v1.5.83 (R2 critical review remediation)
+**Last updated:** September 1, 2026 — v1.5.89
+
+v1.5.89: the inline text editor (double-click a text layer) no longer
+detaches from the image on zoom or pan. It is a DOM overlay anchored to the
+canvas rect and was only re-anchored on `window.resize`, which zooming never
+fires.
+
+v1.5.88: **server-side rendering is complete** — `customShape` was the last
+of the seven originally-unsupported types, and it covers the whole 1,385-shape
+library. Shapes with raw path data draw via ImageMagick primitives; shapes
+stored as SVG documents rasterise through the wiki's own `$wgSVGConverter`.
+With no converter configured they are still reported as dropped, so this is a
+strict improvement everywhere. **Still open: R4.60** (a PDF page turn is still
+a full reload, so the undo stack does not survive it).
+
+v1.5.87 follow-up: the editor bundle no longer loads on File: pages (214 KB
+gzipped saved per view); resize/rotate/restack gained keyboard equivalents;
+six of the seven server-side-unsupported layer types now render. Two
+pre-existing defects surfaced during that work — server PDF export was
+entirely broken (temp page rasters deleted before stitching) and arrow-key
+nudge did nothing after a layer-panel selection. Both fixed. **Still open:
+`customShape` has no server-side renderer**, and R4.60 (in-place PDF page
+switching) remains.
+
+R4 review (Aug 31, 2026): triggered by an owner report that editing a PDF leaked
+one page's layers onto the next. Root cause was two defects compounding — the
+autosave draft key was not page-scoped, and `hasUnsavedChanges()` read a state
+key nothing ever wrote, so four navigation guards were inert. Both fixed in
+v1.5.86 along with per-page delete/rename, page-1-anchored PDF export, and a
+page-blind wikitext path. Two new gates (`check:ratelimits`, `check:statekeys`);
+the state-key gate found a further live bug (every exported image was named
+`image`) on its first run. **Carried forward: R4.60** — a PDF page turn is still
+a full document reload, so the undo stack does not survive it.
 
 R2 review (Aug 6, 2026): 5 HIGH + 12 MEDIUM + 7 LOW found; all HIGH and all but
 two MEDIUM fixed in v1.5.83. Four items are deliberately carried forward and are

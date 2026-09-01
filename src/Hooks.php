@@ -21,50 +21,6 @@ use MediaWiki\Title\Title;
 
 class Hooks {
 	/**
-	 * Extension registration callback.
-	 * Registers default rate limits into $wgRateLimits so that
-	 * User::pingLimiter() enforces them out of the box.
-	 */
-	public static function onRegistration(): void {
-		global $wgRateLimits;
-		$defaults = [
-			'editlayers-save' => [
-				'user' => [ 30, 3600 ],
-				'newbie' => [ 5, 3600 ],
-			],
-			'editlayers-delete' => [
-				'user' => [ 20, 3600 ],
-				'newbie' => [ 3, 3600 ],
-			],
-			'editlayers-render' => [
-				'user' => [ 100, 3600 ],
-				'newbie' => [ 20, 3600 ],
-			],
-			'editlayers-create' => [
-				'user' => [ 10, 3600 ],
-				'newbie' => [ 2, 3600 ],
-			],
-			'editlayers-rename' => [
-				'user' => [ 20, 3600 ],
-				'newbie' => [ 3, 3600 ],
-			],
-			'editlayers-info' => [
-				'user' => [ 200, 3600 ],
-				'newbie' => [ 50, 3600 ],
-			],
-			'editlayers-list' => [
-				'user' => [ 100, 3600 ],
-				'newbie' => [ 30, 3600 ],
-			],
-		];
-		foreach ( $defaults as $key => $limits ) {
-			if ( !isset( $wgRateLimits[$key] ) ) {
-				$wgRateLimits[$key] = $limits;
-			}
-		}
-	}
-
-	/**
 	 * ChangeTagsAllowedAdd hook handler.
 	 * Registers the 'layers-data-change' tag so it can be applied to edits
 	 * created by the audit trail feature.
@@ -120,13 +76,11 @@ class Hooks {
 				$logger->info( 'Layers: Added viewer module' );
 			}
 
-			// Add editor resources on file pages when the user can edit layers
-			if ( $isFilePage ) {
-				if ( $out->getUser()->isAllowed( 'editlayers' ) ) {
-					$logger->info( 'Layers: Adding editor module for file page' );
-					$out->addModules( 'ext.layers.editor' );
-				}
-			}
+			// The editor module is deliberately NOT added here. It only ever runs in
+			// its own document — the tab links to action=editlayers and the modal
+			// loads that same URL in an iframe — and EditLayersAction adds it there.
+			// Loading it on every File: page cost every logged-in visitor 214 KB
+			// gzipped (1 MB parsed) for code that never ran.
 		} catch ( \Throwable $e ) {
 			// Log error but don't break page rendering
 			self::getLogger()->error( 'Layers: Error in BeforePageDisplay hook', [

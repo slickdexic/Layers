@@ -375,7 +375,7 @@ describe( 'SetSelectorController', () => {
 
 			await controller.deleteCurrentSet();
 
-			expect( mockApiManager.deleteLayerSet ).toHaveBeenCalledWith( 'test-set' );
+			expect( mockApiManager.deleteLayerSet ).toHaveBeenCalledWith( 'test-set', false );
 		} );
 
 		it( 'should do nothing if user cancels confirmation', async () => {
@@ -493,7 +493,7 @@ describe( 'SetSelectorController', () => {
 
 			await controller.renameCurrentSet();
 
-			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith( 'test-set', 'new-valid-name' );
+			expect( mockApiManager.renameLayerSet ).toHaveBeenCalledWith( 'test-set', 'new-valid-name', false );
 		} );
 
 		it( 'should log error on API failure', async () => {

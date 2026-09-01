@@ -476,22 +476,28 @@ class LayersDatabase {
 	 * @param int $page Page number (1-based)
 	 * @return bool|null True if exists, false if not found, null on DB error
 	 */
-	public function namedSetExists( string $imgName, string $sha1, string $setName, int $page = 1 ): ?bool {
+	public function namedSetExists( string $imgName, string $sha1, string $setName, ?int $page = 1 ): ?bool {
 		$dbr = $this->getReadDb();
 		if ( !$dbr ) {
 			$this->logError( 'namedSetExists: Database connection unavailable' );
 			return null;
 		}
 
+		// A null page asks about the whole document, so a document-wide rename
+		// cannot collide with the target name on some other page.
+		$conds = [
+			'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+			'ls_img_sha1' => $sha1,
+			'ls_name' => $setName
+		];
+		if ( $page !== null ) {
+			$conds['ls_page'] = max( 1, $page );
+		}
+
 		$count = $dbr->selectField(
 			'layer_sets',
 			'COUNT(*)',
-			[
-				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName,
-				'ls_page' => max( 1, $page )
-			],
+			$conds,
 			__METHOD__
 		);
 
@@ -524,6 +530,41 @@ class LayersDatabase {
 		);
 
 		return (int)$count;
+	}
+
+	/**
+	 * List the pages of a multi-page file that have at least one layer set.
+	 *
+	 * Lets the editor mark annotated pages in the page navigator, so a user does
+	 * not have to open all 40 pages of a PDF to find the three they annotated.
+	 *
+	 * @param string $imgName Image name
+	 * @param string $sha1 Image SHA1 hash
+	 * @return int[] Sorted, unique 1-based page numbers
+	 */
+	public function getPagesWithLayers( string $imgName, string $sha1 ): array {
+		$dbr = $this->getReadDb();
+		if ( !$dbr ) {
+			return [];
+		}
+
+		$res = $dbr->select(
+			'layer_sets',
+			'DISTINCT ls_page',
+			[
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1
+			],
+			__METHOD__,
+			[ 'ORDER BY' => 'ls_page ASC' ]
+		);
+
+		$pages = [];
+		foreach ( $res as $row ) {
+			$pages[] = (int)$row->ls_page;
+		}
+
+		return $pages;
 	}
 
 	/**
@@ -861,10 +902,11 @@ class LayersDatabase {
 	 * @param string $imgName The image name
 	 * @param string $sha1 The SHA1 hash of the image
 	 * @param string $setName The name of the layer set to delete
-	 * @param int $page Page number (1-based)
+	 * @param int|null $page Page number (1-based), or null for every page of a
+	 *        multi-page document
 	 * @return int|null Number of rows deleted, or null on error
 	 */
-	public function deleteNamedSet( string $imgName, string $sha1, string $setName, int $page = 1 ): ?int {
+	public function deleteNamedSet( string $imgName, string $sha1, string $setName, ?int $page = 1 ): ?int {
 		try {
 			$dbw = $this->getWriteDb();
 			if ( !$dbw ) {
@@ -878,7 +920,16 @@ class LayersDatabase {
 				] );
 				return null;
 			}
-			$page = max( 1, $page );
+			// A null page means the whole document: sets are stored per page, so a
+			// per-page delete left the other pages' copies behind.
+			$conds = [
+				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+				'ls_img_sha1' => $sha1,
+				'ls_name' => $setName
+			];
+			if ( $page !== null ) {
+				$conds['ls_page'] = max( 1, $page );
+			}
 
 			// Use atomic transaction to prevent race conditions with concurrent
 			// rename/delete operations on the same set (mirrors renameNamedSet pattern).
@@ -890,26 +941,12 @@ class LayersDatabase {
 				$dbw->selectField(
 					'layer_sets',
 					'COUNT(*)',
-					[
-						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-						'ls_img_sha1' => $sha1,
-						'ls_name' => $setName,
-						'ls_page' => $page
-					],
+					$conds,
 					__METHOD__,
 					[ 'FOR UPDATE' ]
 				);
 
-				$dbw->delete(
-					'layer_sets',
-					[
-						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-						'ls_img_sha1' => $sha1,
-						'ls_name' => $setName,
-						'ls_page' => $page
-					],
-					__METHOD__
-				);
+				$dbw->delete( 'layer_sets', $conds, __METHOD__ );
 
 				$rowsDeleted = $dbw->affectedRows();
 				$dbw->endAtomic( __METHOD__ );
@@ -981,11 +1018,12 @@ class LayersDatabase {
 	 * @param string $sha1 The SHA1 hash of the image
 	 * @param string $oldName The current name of the layer set
 	 * @param string $newName The new name for the layer set
-	 * @param int $page Page number (1-based)
+	 * @param int|null $page Page number (1-based), or null for every page of a
+	 *        multi-page document
 	 * @return bool True on success, false on failure
 	 */
 	public function renameNamedSet(
-		string $imgName, string $sha1, string $oldName, string $newName, int $page = 1
+		string $imgName, string $sha1, string $oldName, string $newName, ?int $page = 1
 	): bool {
 		try {
 			$dbw = $this->getWriteDb();
@@ -1000,7 +1038,9 @@ class LayersDatabase {
 				] );
 				return false;
 			}
-			$page = max( 1, $page );
+			// A null page renames across the whole document; renaming one page at a
+			// time left the same set under two names depending on the page viewed.
+			$pageCond = $page === null ? [] : [ 'ls_page' => max( 1, $page ) ];
 
 			// Use atomic transaction to prevent race conditions.
 			// Two concurrent renames could otherwise both pass the existence check.
@@ -1015,9 +1055,8 @@ class LayersDatabase {
 					[
 						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 						'ls_img_sha1' => $sha1,
-						'ls_name' => $newName,
-						'ls_page' => $page
-					],
+						'ls_name' => $newName
+					] + $pageCond,
 					__METHOD__,
 					[ 'FOR UPDATE' ]
 				);
@@ -1036,9 +1075,8 @@ class LayersDatabase {
 					[
 						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
 						'ls_img_sha1' => $sha1,
-						'ls_name' => $oldName,
-						'ls_page' => $page
-					],
+						'ls_name' => $oldName
+					] + $pageCond,
 					__METHOD__
 				);
 

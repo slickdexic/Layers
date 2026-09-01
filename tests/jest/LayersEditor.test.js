@@ -780,7 +780,7 @@ describe('Auto-create layer set functionality', () => {
 
             expect(mockStateManager.set).toHaveBeenCalledWith('layers', []);
             expect(mockStateManager.set).toHaveBeenCalledWith('currentSetName', 'fallback-set');
-            expect(mockStateManager.set).toHaveBeenCalledWith('hasUnsavedChanges', true);
+            expect(mockStateManager.set).toHaveBeenCalledWith('isDirty', true);
         });
     });
 
@@ -1627,12 +1627,18 @@ describe('LayersEditor updateSaveButtonState', () => {
         const editorInstance = Object.create(LayersEditor.prototype);
         editorInstance.toolbar = { saveBtnEl: mockSaveBtn };
         editorInstance.stateManager = {
-            get: jest.fn().mockReturnValue(true)
+            get: jest.fn().mockReturnValue(true),
+            isDirty: jest.fn().mockReturnValue(true)
         };
         
         editorInstance.updateSaveButtonState();
         
         expect(mockSaveBtn.classList.contains('has-changes')).toBe(true);
+
+        editorInstance.stateManager.isDirty.mockReturnValue(false);
+        editorInstance.updateSaveButtonState();
+
+        expect(mockSaveBtn.classList.contains('has-changes')).toBe(false);
     });
 
     test('should catch and log errors', () => {

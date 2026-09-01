@@ -296,7 +296,11 @@ class WikitextHooks {
 				// Use injector for clean injection
 				$setName = $extractor->getSetName( $layersFlag );
 				$injector = self::getLayerInjector();
-				if ( $injector->injectIntoAttributes( $attribs, $file, $setName, 'ImageBeforeProduceHTML' ) ) {
+				// Core hands us the page for multi-page files; it used to be discarded,
+				// so a full-size PDF link always rendered page 1's layers.
+				if ( $injector->injectIntoAttributes(
+					$attribs, $file, $setName, 'ImageBeforeProduceHTML', max( 1, (int)$page )
+				) ) {
 					self::$pageHasLayers = true;
 					// Register viewer module via ParserOutput for reliable cached delivery
 					if ( $parser && method_exists( $parser, 'getOutput' ) ) {

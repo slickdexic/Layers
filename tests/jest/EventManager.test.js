@@ -17,6 +17,7 @@ describe( 'EventManager', () => {
 		ctrlKey: options.ctrlKey || false,
 		metaKey: options.metaKey || false,
 		shiftKey: options.shiftKey || false,
+		altKey: options.altKey || false,
 		target: options.target || document.createElement( 'div' ),
 		preventDefault: jest.fn()
 	} );
@@ -616,6 +617,115 @@ describe( 'EventManager', () => {
 			eventManager.destroy();
 
 			expect( eventManager.listeners ).toEqual( [] );
+		} );
+	} );
+
+
+	describe( 'keyboard transforms', () => {
+		let mockSelectionManager;
+		let mockLayer;
+		let updates;
+
+		beforeEach( () => {
+			updates = [];
+			mockLayer = { id: 'layer1', x: 100, y: 100, width: 50, height: 40, rotation: 0, locked: false };
+			mockSelectionManager = {
+				getSelectedLayers: jest.fn( () => [ mockLayer ] )
+			};
+			mockEditor.canvasManager.selectionManager = mockSelectionManager;
+			mockEditor.stateManager = {
+				updateLayer: jest.fn( ( id, u ) => {
+					updates.push( u );
+					Object.assign( mockLayer, u );
+				} ),
+				moveLayerUp: jest.fn(),
+				moveLayerDown: jest.fn()
+			};
+			mockEditor.historyManager = { saveState: jest.fn() };
+			mockEditor.updateStatusBar = jest.fn();
+		} );
+
+		const key = ( k, mods ) => createKeyEvent( k, mods );
+
+		it( 'resizes width with Ctrl+arrow instead of nudging', () => {
+			const e = key( 'ArrowRight', { ctrlKey: true } );
+			expect( eventManager.handleArrowKeyNudge( e ) ).toBe( true );
+			expect( e.preventDefault ).toHaveBeenCalled();
+			expect( mockLayer.width ).toBe( 51 );
+			expect( mockLayer.x ).toBe( 100 );
+		} );
+
+		it( 'resizes height with Ctrl+vertical arrow, 10px with Shift', () => {
+			eventManager.handleArrowKeyNudge( key( 'ArrowDown', { ctrlKey: true, shiftKey: true } ) );
+			expect( mockLayer.height ).toBe( 50 );
+		} );
+
+		it( 'never resizes below 1px', () => {
+			mockLayer.width = 1;
+			eventManager.handleArrowKeyNudge( key( 'ArrowLeft', { ctrlKey: true, shiftKey: true } ) );
+			expect( mockLayer.width ).toBe( 1 );
+		} );
+
+		it( 'resizes an ellipse on its radii', () => {
+			mockLayer = { id: 'e1', radiusX: 20, radiusY: 10, locked: false };
+			mockSelectionManager.getSelectedLayers.mockReturnValue( [ mockLayer ] );
+			eventManager.handleArrowKeyNudge( key( 'ArrowRight', { ctrlKey: true } ) );
+			expect( mockLayer.radiusX ).toBe( 21 );
+			eventManager.handleArrowKeyNudge( key( 'ArrowDown', { ctrlKey: true } ) );
+			expect( mockLayer.radiusY ).toBe( 11 );
+		} );
+
+		it( 'resizes a line by moving its end point', () => {
+			mockLayer = { id: 'l1', type: 'line', x1: 0, y1: 0, x2: 10, y2: 10, locked: false };
+			mockSelectionManager.getSelectedLayers.mockReturnValue( [ mockLayer ] );
+			eventManager.handleArrowKeyNudge( key( 'ArrowRight', { ctrlKey: true } ) );
+			expect( mockLayer.x2 ).toBe( 11 );
+			expect( mockLayer.x1 ).toBe( 0 );
+		} );
+
+		it( 'resizes plain text by font size', () => {
+			mockLayer = { id: 't1', type: 'text', fontSize: 16, locked: false };
+			mockSelectionManager.getSelectedLayers.mockReturnValue( [ mockLayer ] );
+			eventManager.handleArrowKeyNudge( key( 'ArrowRight', { ctrlKey: true } ) );
+			expect( mockLayer.fontSize ).toBe( 17 );
+		} );
+
+		it( 'rotates with Alt+horizontal arrow, 15 degrees with Shift', () => {
+			eventManager.handleArrowKeyNudge( key( 'ArrowRight', { altKey: true, shiftKey: true } ) );
+			expect( mockLayer.rotation ).toBe( 15 );
+			eventManager.handleArrowKeyNudge( key( 'ArrowLeft', { altKey: true } ) );
+			expect( mockLayer.rotation ).toBe( 14 );
+		} );
+
+		it( 'wraps rotation into 0-359 rather than going negative', () => {
+			eventManager.handleArrowKeyNudge( key( 'ArrowLeft', { altKey: true } ) );
+			expect( mockLayer.rotation ).toBe( 359 );
+		} );
+
+		it( 'restacks with Alt+vertical arrow', () => {
+			eventManager.handleArrowKeyNudge( key( 'ArrowUp', { altKey: true } ) );
+			expect( mockEditor.stateManager.moveLayerUp ).toHaveBeenCalledWith( 'layer1' );
+			eventManager.handleArrowKeyNudge( key( 'ArrowDown', { altKey: true } ) );
+			expect( mockEditor.stateManager.moveLayerDown ).toHaveBeenCalledWith( 'layer1' );
+		} );
+
+		it( 'leaves locked layers alone', () => {
+			mockLayer.locked = true;
+			eventManager.handleArrowKeyNudge( key( 'ArrowRight', { ctrlKey: true } ) );
+			expect( mockLayer.width ).toBe( 50 );
+			expect( mockEditor.historyManager.saveState ).not.toHaveBeenCalled();
+		} );
+
+		it( 'records one history entry per transform', () => {
+			eventManager.handleArrowKeyNudge( key( 'ArrowRight', { ctrlKey: true } ) );
+			expect( mockEditor.historyManager.saveState ).toHaveBeenCalledWith( 'resize' );
+			eventManager.handleArrowKeyNudge( key( 'ArrowRight', { altKey: true } ) );
+			expect( mockEditor.historyManager.saveState ).toHaveBeenCalledWith( 'rotate' );
+		} );
+
+		it( 'marks the editor dirty so the change can be saved', () => {
+			eventManager.handleArrowKeyNudge( key( 'ArrowRight', { ctrlKey: true } ) );
+			expect( mockEditor.markDirty ).toHaveBeenCalled();
 		} );
 	} );
 

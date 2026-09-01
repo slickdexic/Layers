@@ -65,6 +65,7 @@
 			this.autoSaveTimer = null;
 			this.debounceTimer = null;
 			this.isRecoveryMode = false;
+			this.lastWriteFailed = false;
 			this.stateSubscription = null;
 
 			this.initialize();
@@ -173,11 +174,24 @@
 		 *
 		 * @return {string} Storage key
 		 */
-		getStorageKey() {
-			const setName = this.editor.stateManager ?
-				this.editor.stateManager.get( 'currentSetName' ) || '' :
-				'';
-			return this.storageKey + '-' + setName.replace( /[^a-zA-Z0-9_.-]/g, '_' );
+/**
+			 * Build the storage key for the current set and page.
+			 *
+			 * Multi-page files (PDF) keep a separate draft per page. Without the
+			 * page qualifier every page of a document shared one slot, so paging
+			 * through a PDF restored the previous page's layers onto the next one
+			 * and editing page 2 destroyed page 1's draft.
+			 *
+			 * @return {string} Storage key
+			 */
+			getStorageKey() {
+				const setName = this.editor.stateManager ?
+					this.editor.stateManager.get( 'currentSetName' ) || '' :
+					'';
+				const page = Math.max( 1, parseInt( this.editor.page, 10 ) || 1 );
+				const pageSuffix = page > 1 ? '-p' + page : '';
+				return this.storageKey + '-' + setName.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
+					pageSuffix;
 		}
 
 		/**
@@ -212,7 +226,8 @@
 
 			// Debounce the save
 			this.debounceTimer = setTimeout( () => {
-				if ( !this.saveDraft() && !this._saveFailNotified ) {
+				this.saveDraft();
+				if ( this.lastWriteFailed && !this._saveFailNotified ) {
 					this._saveFailNotified = true;
 					mw.notify(
 						mw.message( 'layers-draft-save-failed' ).text(),
@@ -237,7 +252,8 @@
 					return;
 				}
 				if ( this.editor.isDirty && this.editor.isDirty() ) {
-					if ( !this.saveDraft() && !this._saveFailNotified ) {
+					this.saveDraft();
+					if ( this.lastWriteFailed && !this._saveFailNotified ) {
 						this._saveFailNotified = true;
 						mw.notify(
 							mw.message( 'layers-draft-save-failed' ).text(),
@@ -268,6 +284,10 @@
 		 * @return {boolean} True if save was successful
 		 */
 		saveDraft() {
+			// Distinguish "nothing to save" from "the write failed". Both used to
+			// return false, so a clean, freshly-loaded editor told the user their
+			// changes might be lost.
+			this.lastWriteFailed = false;
 			// Deliberately no isStorageAvailable() gate: it probes with a write, so
 			// when the quota is actually full it fails too and short-circuits the
 			// recovery below. The try/catch covers a denied or missing store.
@@ -294,6 +314,7 @@
 					setName: this.editor.stateManager ?
 						this.editor.stateManager.get( 'currentSetName' ) || '' :
 						'',
+					page: Math.max( 1, parseInt( this.editor.page, 10 ) || 1 ),
 					// Strip base64 image src data to avoid localStorage overflow
 					layers: layers.map( ( l ) => {
 						if ( l.type === 'image' && l.src && l.src.length > 1024 ) {
@@ -337,6 +358,7 @@
 				if ( typeof mw !== 'undefined' && mw.log && mw.log.warn ) {
 					mw.log.warn( '[DraftManager] Failed to save draft:', e.message );
 				}
+				this.lastWriteFailed = true;
 				return false;
 			}
 		}
@@ -389,6 +411,12 @@
 					return null;
 				}
 
+				// The key encodes set and page, but a stale key format or a
+				// hand-edited store must never splice one page's layers onto another.
+				if ( !this.matchesCurrentContext( draft ) ) {
+					return null;
+				}
+
 				return draft;
 			} catch ( e ) {
 				if ( typeof mw !== 'undefined' && mw.log ) {
@@ -396,6 +424,29 @@
 				}
 				return null;
 			}
+		}
+
+		/**
+		 * Check that a stored draft belongs to the set and page now being edited.
+		 *
+		 * Drafts written before these fields existed omit them; those are accepted
+		 * because their key already constrained them to the filename and set.
+		 *
+		 * @param {Object} draft The parsed draft
+		 * @return {boolean} True when the draft is safe to apply
+		 */
+		matchesCurrentContext( draft ) {
+			const currentPage = Math.max( 1, parseInt( this.editor.page, 10 ) || 1 );
+			if ( draft.page !== undefined && Number( draft.page ) !== currentPage ) {
+				return false;
+			}
+			const currentSet = this.editor.stateManager ?
+				this.editor.stateManager.get( 'currentSetName' ) || '' :
+				'';
+			if ( draft.setName !== undefined && String( draft.setName ) !== currentSet ) {
+				return false;
+			}
+			return true;
 		}
 
 		/**
@@ -540,10 +591,12 @@
 				};
 
 				const title = getMessage( 'layers-draft-recovery-title', 'Recover Unsaved Changes?' );
-				const message = getMessage( 'layers-draft-recovery-message', 
-					'Found unsaved changes from {time} with {count} layer(s). Would you like to recover them?' )
-					.replace( '{time}', timeStr )
-					.replace( '{count}', String( draftInfo.layerCount ) );
+				// en.json uses $1/$2; the code substituted {time}/{count}, so the real
+				// message reached the user with its placeholders intact.
+				const message = getMessage( 'layers-draft-recovery-message',
+					'Found unsaved changes from $1 with $2 layer(s). Would you like to recover them?' )
+					.replace( '$1', timeStr )
+					.replace( '$2', String( draftInfo.layerCount ) );
 				const recoverBtn = getMessage( 'layers-draft-recover', 'Recover' );
 				const discardBtn = getMessage( 'layers-draft-discard', 'Discard' );
 

@@ -143,8 +143,10 @@ class ApiLayersRename extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
 			}
 
-			// Check if new name already exists
-			if ( $db->namedSetExists( $imgName, $sha1, $newName, $page ) ) {
+// Check if new name already exists. A document-wide rename must
+					// not collide on any page, not just the current one.
+					$allPages = !empty( $params['allpages'] );
+			if ( $db->namedSetExists( $imgName, $sha1, $newName, $allPages ? null : $page ) ) {
 				$this->dieWithError( LayersConstants::ERROR_SETNAME_EXISTS, 'setnameexists' );
 			}
 
@@ -153,8 +155,9 @@ class ApiLayersRename extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
-			// Perform the rename
-			$success = $db->renameNamedSet( $imgName, $sha1, $oldName, $newName, $page );
+// Perform the rename. `allpages` renames across the whole document;
+					// a per-page rename left the same set under two different names
+					// depending on which page the reader was on.
 
 			if ( !$success ) {
 				$this->getLogger()->error( 'Failed to rename layer set', [
@@ -233,6 +236,10 @@ class ApiLayersRename extends ApiBase {
 				ApiBase::PARAM_REQUIRED => false,
 				ApiBase::PARAM_DFLT => 1,
 				ApiBase::PARAM_MIN => 1,
+			],
+			'allpages' => [
+				ApiBase::PARAM_TYPE => 'boolean',
+				ApiBase::PARAM_REQUIRED => false,
 			],
 		];
 	}

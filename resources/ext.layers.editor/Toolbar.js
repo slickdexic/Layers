@@ -1589,6 +1589,56 @@
 			navGroup.appendChild( label );
 			navGroup.appendChild( nextBtn );
 			this.container.appendChild( navGroup );
+
+			this.pageNavEls = {
+				group: navGroup,
+				prev: prevBtn,
+				next: nextBtn,
+				label: label
+			};
+			this.updatePageNavState();
+		}
+
+		/**
+		 * Reflect current page state in the navigator.
+		 *
+		 * Marks the page as annotated and/or having unsaved work. Without this the
+		 * navigator reads "Page 3 / 40" and gives no way to tell which pages carry
+		 * annotations short of opening all forty.
+		 */
+		updatePageNavState() {
+			const els = this.pageNavEls;
+			if ( !els || !els.group || !els.group.isConnected ) {
+				return;
+			}
+			const editor = this.editor;
+			const state = editor && editor.stateManager;
+			const currentPage = ( editor && editor.page ) || 1;
+			const pageCount = ( editor && editor.pageCount ) || 1;
+			const annotated = ( state && state.get( 'pagesWithLayers' ) ) || [];
+			const isDirty = !!( state && state.get( 'isDirty' ) );
+			const isAnnotated = annotated.indexOf( currentPage ) !== -1;
+			const t = this.msg.bind( this );
+
+			els.group.classList.toggle( 'page-has-layers', isAnnotated );
+			els.group.classList.toggle( 'page-is-dirty', isDirty );
+
+			let text = t( 'layers-page-indicator', 'Page $1 / $2' )
+				.replace( '$1', String( currentPage ) )
+				.replace( '$2', String( pageCount ) );
+			if ( isDirty ) {
+				text += ' •';
+			}
+			els.label.textContent = text;
+
+			const annotatedList = annotated.length ?
+				annotated.join( ', ' ) :
+				t( 'layers-page-none-annotated', 'none' );
+			els.label.title = t( 'layers-page-annotated-list', 'Pages with layers: $1' )
+				.replace( '$1', annotatedList );
+
+			els.prev.disabled = currentPage <= 1;
+			els.next.disabled = currentPage >= pageCount;
 		}
 
 		createActionGroup() {

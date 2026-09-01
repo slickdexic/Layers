@@ -1,10 +1,682 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** August 6, 2026
-**Version reviewed:** 1.5.82 (`main` @ `9eb08223`, clean tree)
-**Remediation:** August 6, 2026 (v1.5.83 — see "Remediation status" below)
+**Review Date:** August 31, 2026
+**Version reviewed:** 1.5.85 (`main` @ `6d34f8c9`, clean tree)
+**Remediation:** August 31, 2026 (v1.5.86–1.5.88 — see below)
 **Reviewer:** GitHub Copilot (Claude Opus 5)
-**Previous review:** v1.5.80, August 3, 2026 — see Appendix A
+**Previous review:** v1.5.82, August 6, 2026 — see "R2" below
+
+---
+
+## ✅ Inline text editor follows zoom/pan — v1.5.89
+
+Owner-reported: with a text layer in edit mode, scrolling to zoom left the
+edit frame and its floating toolbar behind while the image moved and rescaled.
+
+The overlay derives its position, size, font size and padding from
+`canvas.getBoundingClientRect()`, which does reflect the CSS transform — so
+`_positionEditor()` was already correct, it simply was never called again.
+The only listener was `window.resize`, which zoom and pan do not fire.
+`ZoomPanController.updateCanvasTransform()` is the single place the canvas
+transform is written, so hooking the re-anchor there covers scroll zoom, the
+zoom buttons, fit-to-window, keyboard pan and drag pan at once.
+
+Verified at 2× zoom: frame offset 219→437 px, width 319→639 px, font
+37.29→74.58 px, toolbar tracking — all exactly 2×, no console errors.
+
+---
+
+## ✅ Server-side rendering completed — v1.5.88
+
+R2.1.5 / R2.60 is closed. Every one of the 17 layer types now draws
+server-side, so wikitext-embedded thumbnails and PDF exports match the editor.
+`UNSUPPORTED_SERVER_SIDE` is empty; the constant and its gate are retained
+because the defect they guard against is invisible until someone compares an
+export with the canvas.
+
+`customShape` was the last and hardest, because it covers the whole 1,385-shape
+library. **The first attempt was wrong and measuring stopped it shipping.** The
+plan was to extract `<path>` elements from the stored SVG and draw them with
+ImageMagick primitives — safe, because path data is character-whitelisted by
+the validator. Counting the library first showed why that fails:
+
+| | shapes |
+|---|---|
+| plain paths only | **116 (8%)** |
+| contain `<g>` | 1,232 |
+| contain `transform=` | 402 |
+| contain basic shapes (`circle`/`rect`/…) | 499 |
+
+Extraction would have rendered 8% correctly and placed the other 92% wrongly.
+A shape drawn in the wrong position is worse than one declared missing, so the
+approach was abandoned rather than shipped and measured later.
+
+What shipped instead is two routes, preferring the safer one:
+
+- `path`/`paths` layers → ImageMagick `-draw path`, which takes the same
+  grammar as SVG and needs no converter. Preferred because the data is
+  character-whitelisted, which is a *provable* safety property.
+- `svg` layers → rasterised with the wiki's own `$wgSVGConverter`. That blob is
+  sanitised by blacklist, which is not provable, so it is deliberately not fed
+  to a bespoke renderer; instead it goes through the same converter every wiki
+  accepting SVG uploads already runs over untrusted input. `<!DOCTYPE>` and
+  `<!ENTITY>` are refused outright rather than cleaned.
+- No converter configured → still reported as dropped, so the change cannot
+  regress any deployment.
+
+Verified by exporting a real 11-page PDF: `incomplete: 0`, `droppedtypes: []`,
+and the ISO pictogram visibly present in the rasterised page alongside the
+numbered markers.
+
+**Gate status:** 178 Jest suites / 14,220 tests, 666 PHPUnit tests, all nine
+gates green, phpcs 0 errors / 2 pre-existing stub warnings.
+
+---
+
+## ✅ Follow-up work — v1.5.87
+
+After the R4 remediation, three further items were judged worth doing. Two
+of them uncovered defects larger than the improvement they were found
+alongside — both of which this review had missed by reading code rather
+than running it.
+
+| Item | Outcome |
+|---|---|
+| **Editor bundle on every File: page** | **Fixed.** `Hooks.php` added `ext.layers.editor` to every `File:` page for every user with `editlayers` — 214 KB gzipped / 1.02 MB parsed — and it never ran there. Both entry points (tab and modal iframe) load it in their own document. Measured: ~59% fewer `load.php` bytes per file page view. |
+| **Keyboard transforms (R4 a11y gap)** | **Fixed.** Resize (`Ctrl`+arrows), rotate (`Alt`+`←`/`→`) and restack (`Alt`+`↑`/`↓`), each announced to screen readers and listed in the shortcuts dialog. Previously resize and rotation were reachable only by dragging handles with a mouse — a WCAG 2.1 SC 2.1.1 failure. |
+| **7 layer types dropped server-side (R2.1.5 / R2.60)** | **Six of seven fixed.** `marker`, `callout`, `dimension`, `angleDimension` and `image` now render via ImageMagick primitives; `group` draws nothing anywhere and is declared `NON_VISUAL_TYPES` rather than reported as lost. Only `customShape` remains, still declared and gated. Verified by exporting a real PDF and inspecting the raster. |
+
+**Two pre-existing defects found while testing the above:**
+
+- **Server-side PDF export was entirely broken.** `ApiLayersExport::basePageImage()`
+  returned the path of a MediaWiki `TempFSFile` while letting the object go out
+  of scope, so refcounting deleted every rasterised page before the stitch;
+  `convert` reported *"unable to open image /tmp/transform_….jpg"* and the export
+  failed outright. No test caught it because none performs a real transform. This
+  is why the "7 dropped types" finding had never been felt as acutely as it should
+  have been — the feature it degraded did not work at all.
+- **Arrow-key nudge did nothing after a layer-panel selection.** `SelectionManager`
+  holds its own selection copy and only ever pushed outward, so `getSelectedLayers()`
+  returned empty unless the selection came from a canvas click. Identical in shape to
+  the dual dirty flags of R4.01: two stores, one authoritative, no inward sync.
+
+**Gate status:** 178 Jest suites / 14,220 tests, 660 PHPUnit tests, all nine
+gates green, phpcs 0 errors / 2 pre-existing stub warnings.
+
+---
+
+## ✅ Remediation status — v1.5.86
+
+Everything in §R4 was written against v1.5.85. All of Priority 1, both design
+items that carried user-visible defects, and both proposed gates are now fixed.
+Read each finding together with this table.
+
+| Finding | Status in v1.5.86 |
+|---|---|
+| R4.01 dead `hasUnsavedChanges()` | **Fixed.** All readers and writers collapsed onto the live `isDirty` flag; the phantom key is gone and `check-state-keys.js` makes it unrepeatable. The Save indicator is now driven by a state subscription rather than ~40 manual call sites. |
+| R4.02 page-blind draft key | **Fixed.** Keys are page-scoped (page 1 keeps the legacy key so existing drafts survive), page and set are recorded on the payload, and `navigateToPage()` clears the draft on discard. |
+| R4.03 page-blind freshness cache | **Fixed.** One `FreshnessCacheKey` utility in `ext.layers.shared`; invalidation enumerates the store instead of reconstructing keys, so it also clears pages and sets the editor never loaded. Two hand-written copies deleted. |
+| R4.04 no document model | **Partially fixed.** Navigation now offers **Save / Discard / Cancel**, and the page navigator marks annotated and dirty pages and lists every annotated page in its tooltip (new `pagesWithLayers` API field). In-place page switching without a reload is carried forward as R4.60. |
+| R4.05 per-page delete/rename | **Fixed.** Both default to the whole document on multi-page files (`allpages` on the API), and the delete confirmation states the page count. |
+| R4.06 export anchored on page 1 | **Fixed.** `SetNameResolver::resolveAcrossPages()` scans for the first page that has a set. |
+| R4.07 set name carried to pages without it | **Fixed in effect.** The blank canvas is no longer filled by another page's draft (R4.02), and the navigator now shows which pages actually have sets. |
+| R4.08 `$page` discarded in the non-thumbnail path | **Fixed.** `injectIntoAttributes()` takes a page; `onImageBeforeProduceHTML()` passes it. |
+| R4.10 rate limits | **Fixed, but the finding was wrong about the cause — see the correction below.** |
+| R4.11 FIFO-not-LRU cache | Open. Cosmetic; recorded honestly rather than quietly reworded. |
+| R4.12 native dialogs | **Partially fixed.** The path that needed a third action has one. The other 21 sites remain. |
+| R4.13 draft context unchecked | **Fixed.** `matchesCurrentContext()` refuses a draft from another page or set. |
+| R4.50/R4.52 proposed gates | **Both built and wired into `npm test`.** |
+
+**Correction: R4.10 was wrong about the cause.** The finding said
+`editlayers-delete`, `-rename` and `-info` were inert because `extension.json`
+did not declare them. They were not inert: `Hooks::onRegistration()` — wired as
+the extension `callback` — registered defaults for all seven buckets. The review
+found the `extension.json` list, did not look for a second one, and asserted a
+security hole that did not exist.
+
+The real defect was adjacent and less obvious: **two lists of defaults that
+disagreed.** `extension.json` declared three buckets in per-minute windows;
+`Hooks.php` declared seven in per-hour windows and skipped any already set. So
+the effective limit for a bucket depended on which list happened to mention it —
+`save` got 60/minute from one file while `delete` got 20/hour from the other,
+with nothing saying so. `extension.json` is now the single source, the duplicate
+is deleted, and `check-rate-limits.js` gates the list against the
+`checkRateLimit()` call sites. That gate immediately found `editlayers-create`
+declared but never enforced; it is now enforced on the first save of a new set.
+
+**Four defects were found during remediation that the review missed**, all by
+running the editor rather than reading it:
+
+- **The Save button indicator never appeared** — a second, independent bug from
+  R4.01. `updateSaveButtonState()` read `toolbar.saveBtnEl`; the Toolbar exposes
+  `saveButton`. Fixing R4.01 alone would have left the indicator dead and looked
+  like an incomplete fix.
+- **Autosave cried wolf on every clean session.** `saveDraft()` returned `false`
+  for "not dirty", "nothing to save" and "the write failed" alike, and the
+  caller reported all three as *"Auto-save failed. Your changes may not be
+  preserved if you leave the page."* A freshly-loaded editor warned the user
+  their work was at risk. That trains people to ignore the one warning that
+  matters.
+- **Two messages reached users with placeholders intact.** The recovery dialog
+  substituted `{time}`/`{count}` against a message using `$1`/`$2`, so it read
+  *"Found unsaved changes from $1 with $2 layer(s)"*. And `LayerPanel.msg()`
+  accepted only `(key, fallback)` while two call sites passed a third argument,
+  so screen readers announced *"$1 layers total"*.
+- **Every exported image was named `image`.** `ExportController` read the
+  filename from `StateManager`, which never held it. Found by
+  `check-state-keys.js` on its first run — the gate written for R4.01 paid for
+  itself immediately.
+
+**Verified against a running wiki**, not just the test suite: an 11-page PDF on
+a local MediaWiki 1.45.3 instance. Editing page 1, choosing **Discard**, and
+landing on page 2 now yields page 2's own layers (`circle, marker, marker,
+marker, customShape`, matching the database) with the draft cleared, no recovery
+prompt and no console errors. Before the fix this is precisely the sequence that
+put page 1's layers on page 2.
+
+**Gate status after remediation:** 178 Jest suites / 14,208 tests, 651 PHPUnit
+tests, `check:i18n`, `check:mw-compat`, `check:phprefs`, `check:parallel`,
+`check:atomicity`, `check:ratelimits`, `check:statekeys`, `check:bundlesize` —
+all green; phpcs 0 errors / 2 warnings (both pre-existing, in test stubs).
+
+---
+
+## R4 — Full critical review, August 31, 2026
+
+Reviewed `main` @ `6d34f8c9` (v1.5.85, clean tree). **Every fast gate was
+green when these findings were written**: `check:i18n` passed, `check:parallel`
+reported "Parallel lists agree", `check:mw-compat` reported 0 errors / 0
+warnings across 47 PHP files, and `check:bundlesize` showed all four modules
+inside budget (91–94%). Code hygiene is genuinely good — **0** TODO/FIXME/HACK
+markers and **0** empty `catch` blocks in hand-written code. None of that
+caught anything below.
+
+The review was triggered by an owner-reported defect in multi-page PDF
+editing. That report turned out to be the visible tip of a structural problem,
+so §R4.A treats multi-page editing as one connected story rather than as
+isolated bugs. §R4.B covers everything else.
+
+---
+
+### R4.A — Multi-page (PDF) editing: the model is wrong, and one dead line makes it worse
+
+**The owner's report, verbatim:** *"When editing a pdf, saves have to be
+performed at each page, rather than at document level. When a change is made,
+then page navigation, the save/discard changes dialog pops up, if the user
+selects discard, the next page has the layers of the previous."*
+
+Both halves are correct. The second half is a genuine bug with a precise
+cause. The first half is a design complaint, and it is justified.
+
+---
+
+#### R4.01 — CRITICAL: `hasUnsavedChanges()` has never returned `true` during normal editing
+
+This is the root cause that makes several other defects reachable, and it is
+one line.
+
+The editor has **two** dirty flags. Only one of them is real.
+
+`StateManager`'s initial state declares `isDirty` and does **not** declare
+`hasUnsavedChanges`:
+
+```js
+// resources/ext.layers.editor/StateManager.js:29-31
+this.state = {
+    // Core editor state
+    isDirty: false,
+```
+
+`get()` is a bare property read, so an undeclared key yields `undefined`:
+
+```js
+// resources/ext.layers.editor/StateManager.js:100-102
+get( key ) {
+    return this.state[ key ];
+}
+```
+
+And the accessor the whole editor uses for navigation guards reads the key
+that does not exist:
+
+```js
+// resources/ext.layers.editor/LayersEditor.js:1170-1172
+hasUnsavedChanges () {
+    return this.stateManager.get( 'hasUnsavedChanges' ) || false;
+}
+```
+
+Every ordinary edit routes through `markDirty()`, which sets the **other**
+flag:
+
+```js
+// resources/ext.layers.editor/LayersEditor.js:397-399
+markDirty () {
+    this.stateManager.setDirty( true );   // -> set( 'isDirty', true )
+}
+```
+
+`hasUnsavedChanges: true` is written in exactly three places — the auto-create
+fallback ([LayersEditor.js](resources/ext.layers.editor/LayersEditor.js#L660)),
+[RevisionManager.js](resources/ext.layers.editor/editor/RevisionManager.js#L442)
+and [LayerSetManager.js](resources/ext.layers.editor/LayerSetManager.js#L518).
+**None of them runs when a user draws, moves, restyles or deletes a layer.**
+
+So `hasUnsavedChanges()` is `false` for the entire duration of a normal editing
+session. Blast radius:
+
+| Call site | Guard that silently never fires |
+|---|---|
+| [LayersEditor.js](resources/ext.layers.editor/LayersEditor.js#L1499) | PDF page navigation — abandons the page's edits without asking |
+| [RevisionManager.js](resources/ext.layers.editor/editor/RevisionManager.js#L304) | Switching named layer sets — discards work silently |
+| [LayerSetManager.js](resources/ext.layers.editor/LayerSetManager.js#L372) | Same, via the other set-management path |
+| [LayersEditor.js](resources/ext.layers.editor/LayersEditor.js#L1180) | `updateSaveButtonState()` — the Save button's `has-changes` class is never applied, so the toolbar never indicates unsaved work |
+
+What makes this hard to notice is that the *other* two guards read the live
+flag and work correctly: `cancel()`
+([LayersEditor.js](resources/ext.layers.editor/LayersEditor.js#L1700)) reads
+`isDirty`, and so does the `beforeunload` handler
+([EventManager.js](resources/ext.layers.editor/EventManager.js#L65)). The
+guards were split across two flags apparently at random, half of them landing
+on the dead one. Closing the editor warns you; changing page or set does not.
+
+**This is also why the owner sees a browser-chrome dialog rather than the
+extension's own dialog.** The in-app `window.confirm()` in `navigateToPage()`
+is unreachable; the prompt that actually appears is the browser's native
+"Leave site? Changes you made may not be saved", fired by `beforeunload`. That
+dialog offers Leave/Cancel and **has no Save option** — which is precisely the
+experience being complained about.
+
+**Why no test caught it:** the Jest suite asserts `hasUnsavedChanges()`
+against a stubbed `stateManager` whose `get()` returns whatever the test
+seeded, so it verifies the getter reads a key, never that anything writes it.
+14,199 passing tests and 95% statement coverage did not help, because coverage
+measures whether a line executed, not whether the value it read was ever
+produced.
+
+---
+
+#### R4.02 — CRITICAL: the autosave draft key is not page-scoped, so PDF pages overwrite and contaminate each other
+
+**This is the reported bug.**
+
+```js
+// resources/ext.layers.editor/DraftManager.js:176-181
+getStorageKey() {
+    const setName = this.editor.stateManager ?
+        this.editor.stateManager.get( 'currentSetName' ) || '' : '';
+    return this.storageKey + '-' + setName.replace( /[^a-zA-Z0-9_.-]/g, '_' );
+}
+```
+
+`this.storageKey` is `prefix + userScope + filename + fnvHash`
+([DraftManager.js](resources/ext.layers.editor/DraftManager.js#L61-L64)). The
+key is scoped by **user, filename and set name — and not by page.**
+
+The API layer got this right and the draft layer did not:
+
+```js
+// resources/ext.layers.editor/APIManager.js:226-229
+// Qualify by page so multi-page (PDF) files never share cache entries
+// between pages. Single-page files/images are page 1.
+const page = ( this.editor && this.editor.page ) || 1;
+const pageSuffix = page > 1 ? `:p${ page }` : '';
+```
+
+`DraftManager` predates `ls_page` and was never revisited.
+
+**The exact chain that produces the reported symptom:**
+
+1. User edits page 1. `stateManager.subscribe('layers')` fires
+   `scheduleAutoSave()`; after the 5 s debounce, `saveDraft()` writes page 1's
+   layers to `layers-draft-u<id>-Doc.pdf_<hash>-<set>`.
+2. User clicks `›`. `navigateToPage(2)` runs. Its unsaved-changes guard is dead
+   (**R4.01**), so no in-app prompt appears.
+3. `window.location.href = …&page=2` triggers `beforeunload`. That handler
+   reads the *live* flag, so the browser shows "Leave site?".
+4. User chooses to leave — i.e. "discard". **`navigateToPage()` never calls
+   `draftManager.clearDraft()` and never clears `isDirty`**, so the page-1
+   draft survives the discard entirely.
+5. Page 2 loads, fetches its own (usually empty) layer set, then
+   [LayersEditor.js](resources/ext.layers.editor/LayersEditor.js#L591) calls
+   `checkAndRecoverDraft()`. That reads the same page-less key, finds page 1's
+   draft, and restores page 1's layers onto page 2.
+
+There is a second, quieter data-loss path in the same defect that needs no
+navigation dialog at all: edit page 1, move to page 2, edit page 2 — page 2's
+autosave **overwrites** page 1's draft under the identical key. Page 1's
+recovery data is destroyed with no warning. Recovering a draft is also
+one-shot (`clearDraft()` after recovery), so there is no way back.
+
+Note that "discard" in step 4 is a lie in both directions: it discards nothing
+(the draft persists) and it protects nothing (the in-memory edits are gone).
+
+---
+
+#### R4.03 — HIGH: the viewer's `sessionStorage` freshness cache is page-blind too, and its key format is hand-duplicated
+
+```js
+// resources/ext.layers/viewer/FreshnessChecker.js:106-111
+getStorageKey( filename, setName ) {
+    const normalizedFilename = ( filename || '' ).replace( /\s+/g, '_' );
+    const normalizedSetName = setName || '';
+    return STORAGE_KEY_PREFIX + normalizedFilename + ':' + normalizedSetName;
+}
+```
+
+No page. This matters more than the in-memory cache because `sessionStorage`
+**survives the full document reload that `navigateToPage()` performs**, so a
+revision number recorded for page 1 is consulted when deciding whether page 2's
+layers are stale.
+
+Worse, a second file re-implements the same key by hand instead of calling
+the method:
+
+```js
+// resources/ext.layers.editor/APIManager.js:1629-1634
+// FreshnessChecker uses keys like: "layers-fresh-Filename:setname"
+const STORAGE_KEY_PREFIX = 'layers-fresh-';
+const normalizedFilename = ( filename || '' ).replace( /\s+/g, '_' );
+```
+
+Two copies of one key format in two modules, with a comment where a function
+call belongs. If either changes, cache invalidation silently stops working and
+nothing fails. This repository already built `check-parallel-lists.js`
+specifically because this failure mode kept recurring; this pair is not in it.
+
+---
+
+#### R4.04 — HIGH (design): "Save" silently means "save this page", and the UI never says so
+
+This is the owner's "feels lazy" complaint, and the code substantiates it.
+
+`navigateToPage()` does not switch pages — it **reloads the document**:
+
+```js
+// resources/ext.layers.editor/LayersEditor.js:1509-1517
+const url = new URL( window.location.href );
+url.searchParams.set( 'page', String( page ) );
+…
+window.location.href = url.toString();
+```
+
+Consequences that follow directly from that choice:
+
+- **No document-level save.** There is no "save all pages" and no concept of a
+  document-wide dirty state. A 40-page PDF requires 40 explicit saves.
+- **The undo stack dies at every page boundary.** `HistoryManager` is
+  reconstructed by the reload; you cannot undo across a page turn, and there
+  is no indication that your history was thrown away.
+- **The page navigator shows no state.**
+  [Toolbar.js](resources/ext.layers.editor/Toolbar.js#L1531-L1590) renders
+  `‹ Page N / M ›` and nothing else. There is no dirty marker, no "this page
+  has layers" marker, and no way to see which of 40 pages you have annotated
+  without visiting all 40.
+- **Every page turn is a full round trip** — HTML, all of `ext.layers.editor`
+  (1.97 MB of source per `check:bundlesize`), the page raster, and a fresh
+  `layersinfo` request.
+
+The honest summary: `ls_page` was added to the storage schema and threaded
+through the API, but the *editor* was never given a document concept. Each page
+is treated as an unrelated image that happens to share a filename. The
+storage model is per-page; the user's mental model is per-document; nothing
+bridges them.
+
+---
+
+#### R4.05 — HIGH: deleting or renaming a layer set silently affects one page of the document
+
+The API is page-scoped, and the client correctly sends the current page:
+
+```php
+// src/Api/ApiLayersDelete.php:122,164
+$page = $this->resolvePageParam( $file, (int)( $params['page'] ?? 1 ) );
+$rowsDeleted = $db->deleteNamedSet( $imgName, $sha1, $setName, $page );
+```
+
+```js
+// resources/ext.layers.editor/APIManager.js:1248-1251
+action: 'layersdelete',
+filename: filename,
+setname: setName,
+page: ( this.editor && this.editor.page ) || 1
+```
+
+So "Delete layer set *notes*" issued from page 1 of a 40-page PDF deletes
+1/40 of it, reports success with a revision count for that page alone, and
+leaves 39 orphaned copies the user believes are gone.
+
+Rename ([ApiLayersRename.php](src/Api/ApiLayersRename.php#L157)) is worse than
+delete: the set becomes `brief` on page 1 and stays `notes` on pages 2–40, so
+the set-selector contents **change as you page through a single document**.
+The user has no way to see this and no operation to repair it — there is no
+document-wide delete or rename in the API or the UI.
+
+Note this also means a "delete" that the user thinks removed sensitive
+annotations from a document has removed them from one page.
+
+---
+
+#### R4.06 — HIGH: PDF export resolves the set name from page 1 only
+
+```php
+// src/Api/ApiLayersExport.php:123-125
+$setName = (string)( SetNameResolver::resolve(
+    $db, $imgName, $sha1, $params['setname'] ?? null
+) ?? '' );
+```
+
+The fifth parameter is omitted, and it defaults to page 1:
+
+```php
+// src/Utility/SetNameResolver.php:102-108
+public static function resolve(
+    LayersDatabase $db, string $imgName, string $sha1,
+    ?string $requested, int $page = 1
+): ?string {
+```
+
+The resolved name is then applied to every page in the export loop
+([ApiLayersExport.php](src/Api/ApiLayersExport.php#L148)). If page 1 has no
+layer set — an entirely normal state for a cover page — an unnamed export
+resolves to nothing and produces a **PDF with none of the annotations**, with
+`success: 1` and no warning. This is the same class of silent-wrong-output
+defect as the v73 finding about generic `layerset` intents, in the same file,
+reintroduced through a defaulted parameter instead of a string comparison.
+
+---
+
+#### R4.07 — MEDIUM: page navigation carries a set name to pages where it does not exist
+
+```js
+// resources/ext.layers.editor/LayersEditor.js:1511-1515
+url.searchParams.set( 'page', String( page ) );
+const currentSetName = this.stateManager && this.stateManager.get( 'currentSetName' );
+if ( currentSetName ) {
+    url.searchParams.set( 'setname', currentSetName );
+}
+```
+
+Named sets are page-scoped rows
+([`getNamedSetsForImage( … , $page )`](src/Api/ApiLayersInfo.php#L339)), so
+carrying `setname=notes` to page 2 asks for a row that usually is not there.
+The load resolves to nothing and the canvas comes up blank while the selector
+still displays `notes` — a set that does not exist on this page. That blank
+canvas is what **R4.02** then fills with the previous page's layers, which is
+why the symptom reads as "the next page has the layers of the previous" rather
+than as a recovery prompt.
+
+---
+
+#### R4.08 — MEDIUM: `onImageBeforeProduceHTML()` is handed the page number and discards it
+
+```php
+// src/Hooks/WikitextHooks.php:268-278
+public static function onImageBeforeProduceHTML(
+    …, $time = null, $page = null, ...$rest
+) {
+```
+
+`$page` is declared and never used. The call it makes has nowhere to put it:
+
+```php
+// src/Hooks/WikitextHooks.php:298
+if ( $injector->injectIntoAttributes( $attribs, $file, $setName, 'ImageBeforeProduceHTML' ) ) {
+```
+
+```php
+// src/Hooks/Processors/LayerInjector.php:243-248,262-264
+public function injectIntoAttributes(
+    array &$attribs, $file, ?string $setName = null, string $context = 'unknown'
+): bool {
+    …
+    $layerSet = $db->getLatestLayerSet( $file->getName(), $sha1, $setName );
+```
+
+`injectIntoAttributes()` has no `$page` parameter at all, so it always reads
+page 1. To be precise about the scope: the **thumbnail** path *is* page-aware
+([ThumbnailProcessor.php](src/Hooks/Processors/ThumbnailProcessor.php#L345-L346)
+passes `$page`), so `[[File:Doc.pdf|page=3|thumb|layerset=notes]]` renders
+correctly. It is the full-size / linked-image path that silently falls back to
+page 1. That inconsistency is harder to diagnose than a uniform failure would
+be.
+
+The same page-blindness appears at
+[LayerInjector.php](src/Hooks/Processors/LayerInjector.php#L262-L264) and at
+four call sites in
+[ImageLinkProcessor.php](src/Hooks/Processors/ImageLinkProcessor.php#L452).
+
+---
+
+### R4.B — Findings outside the multi-page story
+
+#### R4.10 — HIGH: three of six rate-limit buckets still ship no defaults
+
+`extension.json` defines three buckets:
+
+```json
+// extension.json:1366-1388
+"RateLimits": {
+    "editlayers-save":   { … },
+    "editlayers-render": { … },
+    "editlayers-list":   { … }
+}
+```
+
+The code enforces six:
+
+| Bucket | Enforced at | Default shipped |
+|---|---|---|
+| `editlayers-save` | [ApiLayersSave.php](src/Api/ApiLayersSave.php#L174) | ✅ |
+| `editlayers-render` | [ApiLayersExport.php](src/Api/ApiLayersExport.php#L93) | ✅ |
+| `editlayers-list` | [ApiLayersList.php](src/Api/ApiLayersList.php#L70) | ✅ |
+| `editlayers-delete` | [ApiLayersDelete.php](src/Api/ApiLayersDelete.php#L107) | ❌ |
+| `editlayers-rename` | [ApiLayersRename.php](src/Api/ApiLayersRename.php#L112) | ❌ |
+| `editlayers-info` | [ApiLayersInfo.php](src/Api/ApiLayersInfo.php#L84) | ❌ |
+
+By this repository's own rule — written into
+`.github/copilot-instructions.md` §7 during the v1.5.83 remediation —
+"`User::pingLimiter()` … reports 'not limited' for a bucket nobody
+configured", so **the delete, rename and `layersinfo` limiters are decorative
+on every default install.**
+
+`layersinfo` is the one that matters most: it is the set-enumeration endpoint,
+it is reachable with only `read`, and each call performs several indexed
+lookups plus a user-name enrichment join. Unthrottled, it is a cheap way to
+enumerate every layer set on every file and to generate sustained DB load.
+
+R2.1.1 fixed exactly this defect for three buckets in v1.5.83 and left three
+behind. Nothing gates it, so the same regression is available again the next
+time a `checkRateLimit()` call is added.
+
+#### R4.11 — MEDIUM: the API cache evicts FIFO while calling itself LRU
+
+```js
+// resources/ext.layers.editor/APIManager.js:187-189
+while ( this.responseCache.size >= this.cacheMaxSize ) {
+    const firstKey = this.responseCache.keys().next().value;
+    this.responseCache.delete( firstKey );
+}
+```
+
+`Map` iterates in insertion order and reads do not re-insert, so this evicts
+the **oldest inserted** entry, not the least recently used. In the editor's
+actual access pattern — repeatedly re-reading the set you are working on while
+briefly touching others — this preferentially evicts the hot entry. Low
+severity, but the name in the docs and comments is wrong, which is how it
+survived review.
+
+#### R4.12 — MEDIUM: native browser dialogs remain in destructive paths
+
+22 `window.confirm` / `window.alert` / `window.prompt` call sites across 10
+production modules (`DraftManager`, `RevisionManager`, `LayerSetManager`,
+`ImportExportManager`, `LayerPanel`, `LayersEditor`, `UIManager`,
+`PresetDropdown`, `DialogManager`, `ConfirmDialog`). Carried over unfixed from
+R2.2.10.
+
+The specific problem is not the aesthetics — it is that a fully-featured,
+focus-trapped, ARIA-correct `DialogManager.showConfirmDialog()` **already
+exists and is used elsewhere in the same files**. `navigateToPage()` reaches
+for `window.confirm` while `cancel()`, twenty lines away, uses
+`DialogManager`. Native dialogs cannot be styled, cannot offer a third
+("Save") action — which is exactly what R4.04 needs — and are suppressible by
+the browser after repeated use.
+
+#### R4.13 — LOW: `DraftManager` autosave is scoped per user but recovery is not gated on set match
+
+`recoverDraft()`
+([DraftManager.js](resources/ext.layers.editor/DraftManager.js#L448)) applies
+`draft.layers` without checking that `draft.setName` still equals the
+currently-loaded set. The key includes the set name, so this is normally
+consistent — but combined with **R4.07** (a set name carried to a page where
+it does not exist) the stored `setName` field is never used as the safety
+check it was clearly written to be.
+
+---
+
+### R4.C — What this codebase gets right
+
+Stating this plainly because the findings above are heavily weighted toward
+one subsystem, and the rest of the extension does not deserve to be tarred
+with it:
+
+- **The custom gates are real engineering.** `check-parallel-lists.js`,
+  `check-atomicity.js`, `check-php-class-refs.js`, `verify-i18n-wiring.js` and
+  `check-mw-compatibility.js` each encode a defect class that actually shipped,
+  and each now fails the build. This is materially better than most extensions.
+- **Hygiene is excellent**: 0 TODO/FIXME/HACK markers, 0 empty `catch` blocks,
+  phpcs clean, 100% ES6 class migration.
+- **`postMessage` handling is correct.** Both the modal
+  ([LayersEditorModal.js](resources/ext.layers.modal/LayersEditorModal.js#L158))
+  and the editor
+  ([LayersEditor.js](resources/ext.layers.editor/LayersEditor.js#L744)) verify
+  `event.origin` before acting. (Flagged as a possible issue during review and
+  confirmed sound.)
+- **`StateManager`'s locking is not vestigial** — `isLocked` is honoured in
+  `set()`, in the batch path, and in the queue drain. (Also flagged, also
+  confirmed sound.)
+- **The security posture of the v1.5.83 work holds up**: CSRF on writes,
+  `requireTitleEditPermission()`, `ATOMIC_CANCELABLE`, exports outside the
+  document root behind a permission-checking special page. Re-read this pass;
+  no regressions found.
+
+### R4.D — Why the gates missed all of this
+
+Worth recording, because the repository's gate-writing habit is its main
+defence:
+
+1. **Every gate checks a list against a list.** They are excellent at
+   catching *drift between two declared things*. Every R4.A finding is instead
+   a **missing dimension** — `page` absent from a key, from a signature, from a
+   UI concept. There is nothing for a set-equality check to compare against.
+2. **Coverage measures execution, not meaning.** `hasUnsavedChanges()`
+   (R4.01) is covered by tests that stub the value it reads.
+3. **`check-parallel-lists.js` covers three groups and not the fourth.** The
+   "things that must be scoped by `page`" group — draft key, freshness key,
+   `injectIntoAttributes()` signature, `SetNameResolver::resolve()` call sites —
+   is exactly the shape it was built for.
+4. **Nothing gates `checkRateLimit()` call sites against `extension.json`**
+   (R4.10), even though v1.5.83 fixed that precise defect.
 
 ---
 

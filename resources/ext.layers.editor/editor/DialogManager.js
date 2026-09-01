@@ -326,6 +326,74 @@
 		}
 
 		/**
+		 * Show a Save / Discard / Cancel dialog for leaving unsaved work.
+		 *
+		 * A native confirm() can only express two outcomes, so page navigation
+		 * used to offer "leave and lose everything" or "stay" and nothing else.
+		 *
+		 * @param {Object} options Dialog options
+		 * @param {string} options.message The message to display
+		 * @param {string} [options.title] Optional title
+		 * @return {Promise<string>} Resolves to 'save', 'discard' or 'cancel'
+		 */
+		showSaveDiscardDialog( options ) {
+			return new Promise( ( resolve ) => {
+				const overlay = this.createOverlay();
+				const title = options.title ||
+					this.getMessage( 'layers-unsaved-changes-title', 'Unsaved changes' );
+				const dialog = this.createDialog( title );
+
+				const titleEl = document.createElement( 'h3' );
+				titleEl.className = 'layers-modal-title';
+				titleEl.textContent = title;
+				dialog.appendChild( titleEl );
+
+				const message = document.createElement( 'p' );
+				message.textContent = options.message;
+				dialog.appendChild( message );
+
+				const buttons = document.createElement( 'div' );
+				buttons.className = 'layers-modal-buttons';
+
+				const cancelBtn = this.createButton(
+					this.getMessage( 'layers-cancel', 'Cancel' ),
+					'layers-btn layers-btn-secondary'
+				);
+				const discardBtn = this.createButton(
+					this.getMessage( 'layers-discard', 'Discard' ),
+					'layers-btn layers-btn-secondary layers-btn-danger'
+				);
+				const saveBtn = this.createButton(
+					this.getMessage( 'layers-save-and-continue', 'Save and continue' ),
+					'layers-btn layers-btn-primary'
+				);
+
+				buttons.appendChild( cancelBtn );
+				buttons.appendChild( discardBtn );
+				buttons.appendChild( saveBtn );
+				dialog.appendChild( buttons );
+
+				document.body.appendChild( overlay );
+				document.body.appendChild( dialog );
+
+				const dialogEntry = this.registerDialog( overlay, dialog );
+				const cleanup = this.makeDialogCleanup( dialogEntry );
+				const finish = ( result ) => {
+					cleanup();
+					resolve( result );
+				};
+
+				dialogEntry.handleKey = this.setupKeyboardHandler( dialog, () => finish( 'cancel' ) );
+
+				cancelBtn.addEventListener( 'click', () => finish( 'cancel' ) );
+				discardBtn.addEventListener( 'click', () => finish( 'discard' ) );
+				saveBtn.addEventListener( 'click', () => finish( 'save' ) );
+
+				saveBtn.focus();
+			} );
+		}
+
+		/**
 		 * Show an alert dialog (Promise-based replacement for window.alert)
 		 *
 		 * @param {Object} options Dialog options
@@ -528,6 +596,11 @@
 				// Layer organization
 				{ key: 'Ctrl+G', action: this.getMessage( 'layers-shortcut-group', 'Group Layers' ) },
 				{ key: 'Ctrl+Shift+G', action: this.getMessage( 'layers-shortcut-ungroup', 'Ungroup' ) },
+				// Transform (keyboard equivalents for the mouse-only drag handles)
+				{ key: '\u2190\u2191\u2192\u2193', action: this.getMessage( 'layers-shortcut-move', 'Move selection (Shift for 10px)' ) },
+				{ key: 'Ctrl+\u2190\u2191\u2192\u2193', action: this.getMessage( 'layers-shortcut-resize', 'Resize selection (Shift for 10px)' ) },
+				{ key: 'Alt+\u2190\u2192', action: this.getMessage( 'layers-shortcut-rotate', 'Rotate selection (Shift for 15\u00b0)' ) },
+				{ key: 'Alt+\u2191\u2193', action: this.getMessage( 'layers-shortcut-restack', 'Move layer up / down the stack' ) },
 				// Tools
 				{ key: 'V', action: this.getMessage( 'layers-tool-select', 'Select Tool' ) },
 				{ key: 'T', action: this.getMessage( 'layers-tool-text', 'Text' ) },
