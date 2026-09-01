@@ -33,6 +33,7 @@
     "check:ratelimits": "node scripts/check-rate-limits.js",
     "check:statekeys": "node scripts/check-state-keys.js",
 		"check:i18n": "node scripts/verify-i18n-wiring.js",
+		"git:add": "node scripts/git-stage.js",
 		"update:version": "node scripts/update-version.js",
 		"generate:emoji-names": "node resources/ext.layers.editor/shapeLibrary/scripts/import-cldr-emoji-names.js",
 		"generate:emoji-index": "node resources/ext.layers.editor/shapeLibrary/scripts/generate-emoji-index.js",

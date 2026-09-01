@@ -50,6 +50,43 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full module dependency graph.
 - The host filesystem copy remains convenient for editing, but the running MediaWiki instance and database only see changes through the container mount, so keep Docker up while developing and testing.
 
 
+### Windows: `git add` fails with "Permission denied" / "unable to index file"
+
+On Windows hosts with a real-time antivirus scanner (Norton, Defender, Sophos,
+CrowdStrike…), commits that touch many files fail intermittently:
+
+```
+error: open(".git/objects/xx/yyyy…"): Permission denied
+error: unable to index file 'resources/…'
+fatal: adding files failed
+```
+
+This is **not** a git bug, not a Docker bind-mount bug, and not repository
+corruption. Git writes each loose object, `chmod`s it to read-only, then renames
+it. The scanner opens the new file the instant it appears, so the rename hits a
+sharing violation that Windows surfaces as `Permission denied`. It scales with
+the number of new objects, which is why small commits look fine and large ones
+fail. The same cause explains `git stash` failing on this repo.
+
+**Permanent fix — add a scanner exclusion for the repository directory.** In
+Norton 360: *Settings → Antivirus → Scans and Risks → Items to Exclude from
+Auto-Protect, SONAR and Download Intelligence Detection → Add Folders*, and add
+the checkout (and ideally the whole `Docker` tree). Other products have an
+equivalent "exclusions" or "allow list" page.
+
+**Workaround when you cannot change scanner settings** — use the bundled
+retry wrapper instead of `git add`:
+
+```
+npm run git:add -- -A
+npm run git:add -- path/to/file.js
+```
+
+It runs the normal bulk `git add` first and only falls back to per-file retries
+with backoff when the scanner interferes. Measured on this repo, staging 250 new
+files: plain `git add -A` failed 5/5 runs, the wrapper failed 0/5.
+
+
 ## Key Conventions
 
 - **i18n:** All user-facing strings must use `mw.message()` or `window.layersMessages.get()`.
