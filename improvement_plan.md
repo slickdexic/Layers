@@ -1,10 +1,42 @@
 # Layers Extension — Improvement Plan
 
 **Version:** 1.5.92
-**Last updated:** August 31, 2026 — R4 full critical review (see `codebase_review.md` §R4)
+**Last updated:** September 2, 2026 — post-1.5.92 reprioritisation
 
-> ## 🔴 R4 — Findings from the August 31, 2026 full critical review
+> ## 🎯 What is actually worth doing next (September 2, 2026)
 >
+> Ordered by value, not by how long the item has been sitting in this file.
+> Everything here has been re-verified against the current tree; two entries
+> that had been carried as open for weeks turned out to be already fixed or
+> simply wrong, so treat the older sections below with the same suspicion.
+>
+> | Rank | Item | Effort | Why it earns the slot |
+> |------|------|--------|----------------------|
+> | 1 | **R4.60 — in-place PDF page switching** | L | The owner reported this personally. v1.5.86 fixed the data-loss half; the architectural half is untouched. Every page turn is still `window.location.href`: the undo stack is destroyed, ~1 MB of editor source is re-fetched, and "Save" silently means "save this page". This is the largest remaining gap between what the extension claims and what it does. |
+> | 2 | **R4.12 / R2.20 — replace 21 native dialogs** | M | Blocks rank 1: in-place navigation needs a three-action Save / Discard / Cancel, which `window.confirm()` cannot express. Also the only remaining WCAG gap of substance — native dialogs block the main thread, cannot be themed, and are announced inconsistently. `DialogManager.showConfirmDialog()` already exists and is used in the same files. |
+> | 3 | **R5.01 — consolidate file-name extraction** | S | Three implementations, two still wrong; one was fixed in v1.5.92, which is the worst state for a triplicated function. Fold into `UrlParser`, teach it paged/lossy thumbnail prefixes, delegate from the other two, and gate against a fourth copy appearing. |
+> | 4 | **R3.06 — `REL1_43` unit suite has 110 failures** | M | A maintained LTS branch that real wikis run has a red suite, so nothing on it is verified. Either repair the harness stubs (the failures look like stale stubs, not product defects) or stop describing the branch as supported. Leaving it red while claiming support is the dishonest option. |
+> | 5 | **R4.62 — editor lazy-loading, stage 2** | M | `ext.layers.editor` sits at 92% of its ResourceLoader budget (1,983 KB of 2,150 KB). The shape library and emoji picker are already split; the preset system, slide controller and PDF viewer could follow. Deferred rather than urgent — v1.5.87 already removed the bundle from every File: page view, which was the expensive part. |
+> | 6 | **Metric drift gating** | S | v1.5.92 made release *dates* build-breaking (`update-version.js --check`, run in CI). Test counts and coverage in the four current-state docs are still ungated, and they had drifted by 24 PHPUnit tests and two coverage figures before September 2. A cross-document consistency check would catch the exact shape that drift took. |
+>
+> **Not recommended.** R2.23 (SVG validation is a blacklist rather than a
+> well-formedness parse) stays open deliberately: `validateSvgString()` requires
+> the value to begin with `<svg`, which makes `<!DOCTYPE>` and `<!ENTITY>`
+> unreachable, so there is no XXE surface. Replacing it with `DOMDocument`
+> trades a known, narrow limitation for that parser's own XXE footguns.
+>
+> **Method note, because it earned its place.** Every defect found on
+> September 2 — R2.12, the gallery prefix bug, the lightbox PDF failure, the
+> toolbar contrast failure — came from *exercising* the product against a live
+> wiki, not from reading it, and three of them were invisible to a suite of
+> 14,233 passing tests. Two of the four were found only because a change was
+> A/B'd before and after rather than merely verified after. Budget review time
+> for driving the thing.
+
+---
+
+## 🔴 R4 — Findings from the August 31, 2026 full critical review
+
 > **Remediated in v1.5.86.** All of Priority 1, both design items carrying
 > user-visible defects, and both proposed gates are done; see
 > `codebase_review.md` §"Remediation status — v1.5.86" for the evidence,
@@ -52,7 +84,7 @@
 > | # | Item | Effort | Status |
 > |---|------|--------|--------|
 > | **R4.08** | `WikitextHooks::onImageBeforeProduceHTML()` declares `$page` and discards it; `LayerInjector::injectIntoAttributes()` has no `$page` parameter, so the full-size/linked-image path always renders page 1's layers. The **thumbnail** path is correct (`ThumbnailProcessor` passes `$page`), which makes this an inconsistency rather than a uniform failure — and therefore harder to diagnose. Same blindness at `LayerInjector.php:262-264` and four sites in `ImageLinkProcessor.php`. | M | ✅ Done |
-> | **R4.11** | `APIManager._setCache()` evicts the oldest *inserted* entry (`Map` insertion order, no re-insert on read), i.e. FIFO, while the code and docs call it LRU. In the editor's real access pattern this preferentially evicts the hot entry. Either re-insert on read or rename it honestly. | S | 🔲 Open |
+> | **R4.11** | `APIManager._setCache()` was reported as evicting FIFO while the code and docs call it LRU. **Re-checked September 2, 2026: not a defect.** Both `_getCached()` and `APICacheManager.getCached()` delete and re-insert on read, so evicting `keys().next().value` removes the least *recently used* entry, exactly as documented. The original finding was wrong; no change made. | S | ❌ Retracted |
 > | **R4.13** | `DraftManager.recoverDraft()` stores `draft.setName` but never checks it against the currently-loaded set before applying the draft. The field was clearly written as a safety check; wire it up. | S | ✅ Done |
 >
 > ### Priority 4 — New gates (this review's findings are all "missing dimension" defects)

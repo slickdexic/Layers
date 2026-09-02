@@ -1,10 +1,152 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** August 31, 2026
-**Version reviewed:** 1.5.85 (`main` @ `6d34f8c9`, clean tree)
-**Remediation:** August 31, 2026 (v1.5.86–1.5.88 — see below)
+**Review Date:** September 2, 2026
+**Version reviewed:** 1.5.92 (`main` @ `ab3ab6dd`, clean tree, all CI green)
+**Previous full review:** 1.5.85, August 31, 2026 — see "R4" below
 **Reviewer:** GitHub Copilot (Claude Opus 5)
-**Previous review:** v1.5.82, August 6, 2026 — see "R2" below
+
+---
+
+## 🔴 R5 — Open finding: file-name extraction exists three times, and two
+copies are wrong
+
+**Found September 2, 2026 while fixing the third copy.** Deriving a file name
+from a thumbnail or a link is implemented independently in three places, at
+three different capability levels:
+
+| Implementation | Query href | Localised `File:` | Paged thumbs |
+|----------------|------------|-------------------|--------------|
+| `UrlParser.inferFilename()` | ✅ | ✅ | ❌ |
+| `ViewerManager.extractFilenameFromImg()` | ❌ | ❌ English only | ❌ |
+| `LayersLightbox` (fixed v1.5.92) | ✅ | ✅ | ✅ |
+
+`UrlParser` is the good one and nothing else calls it. `ViewerManager` still
+matches only `/\/File:([^/?#]+)/` — a pretty path with an English namespace —
+and strips only a `\d+px-` thumbnail prefix, so it mis-derives the name for a
+PDF or DjVu page (`page1-500px-Doc.pdf.jpg`) and on any non-English wiki.
+
+**Severity: P3, not P2.** `extractFilenameFromImg()` reads the server-set
+`data-file-name` attribute first and only falls through to URL parsing when that
+attribute is absent, so the common path is unaffected. It is the client-only
+fallback that is wrong.
+
+This is the same defect the lightbox carried until v1.5.92, where it *was* P1
+because no attribute was consulted first: layered PDFs could not be opened at
+all. One of three copies has now been fixed, which is the worst possible state
+for a triplicated function.
+
+**Recommended fix:** make `UrlParser` the single implementation, teach it
+MediaWiki's paged and lossy thumbnail prefixes
+(`(?:lossy-|lossless-)?(?:page\d+-)?\d+px-`), and have the other two delegate.
+Then add a gate asserting no other module defines its own `File:` or
+thumbnail-prefix regex, because this is precisely the shape of drift the
+existing parallel-list gates were created for.
+
+---
+
+## ✅ Full-screen viewer — v1.5.92
+
+Three owner-reported cosmetic issues; one of them uncovered a functional bug.
+
+**The viewer could not open a layered PDF at all.** The file name came from the
+trigger link via a pattern matching only `/wiki/File:X.jpg`. Every link the
+overlay builds for a named set carries query parameters, and a wiki not serving
+pretty URLs emits `/index.php?title=File:X.jpg`; neither matched, so extraction
+fell through to the thumbnail name. For a raster image that coincidentally
+returned the right answer — which is why it was never noticed — but for a PDF it
+yielded `page1-500px-Doc.pdf.jpg`, the API answered `filenotfound`, and the
+viewer showed "Failed to load layer data".
+
+**The toolbar drifted away from the image on zoom.** It was positioned against
+the image's layout box; zoom is a CSS transform, which does not change that box,
+so the image grew and moved while the controls stayed where the unzoomed image
+had been. Toolbar and close button are now viewport chrome, which is what every
+mainstream full-screen viewer does (Google Photos, PhotoSwipe, Acrobat, Preview)
+and the only arrangement that stays correct at every zoom level.
+
+**That move exposed a contrast defect.** Once chrome floats over the stage, a
+zoomed image passes underneath it, and white text on `rgba(255,255,255,0.1)`
+disappears completely against a white PDF page — at 240% the close button was
+invisible. Caught by looking at a screenshot rather than at the DOM. Both
+controls now sit on a dark scrim holding roughly 9:1 contrast either way.
+
+Added fit-to-screen (button and `F`), which is not a synonym for reset because
+the stage is CSS-capped, and moved the wheel listener to the whole overlay so
+zoom works over the dark surround. Verified live at 100/156/172/240/381%.
+
+---
+
+## ✅ Gallery lines without a `File:` prefix — v1.5.91
+
+A `<gallery>` image line may be written `File:X.jpg|layerset=anatomy` or bare as
+`X.jpg|layerset=anatomy`; MediaWiki resolves both in NS_FILE.
+`preprocessGalleryBlock()` matched only the prefixed form, so on a bare line the
+option was never stripped — it rendered as the visible caption and as the `alt`
+and link `title`, so a screen reader announced the image as "layerset=anatomy" —
+and no hint was registered, so the image fell back to the most recently saved set
+instead of the one requested. With one set on a file that looks correct, which is
+what kept it hidden.
+
+`registerGalleryHint()` had a second, independent defect: it hand-stripped an
+English prefix and used the remainder as the key, while the lookup side reads
+`File::getName()` — wiki-cased with underscores. Now normalised through the same
+`normalizeFileKey()` as the wikitext scan, which also fixes `{{#layers_hint:}}`.
+
+**Found by a live sweep of the wikitext surface after the v1.5.90 hook change,
+not by the unit suite**, which covered only the prefixed form.
+
+---
+
+## ✅ R2.12 closed — the file scan now runs after template expansion — v1.5.90
+
+On a page using both a template-emitted `[[File:X]]` and a hand-written
+`[[File:X|layerset=…]]`, the template's image rendered with the hand-written
+image's layer set and the hand-written one rendered with none.
+
+The scan builds a positional queue consumed in render order, and it ran on
+`ParserBeforeInternalParse` — which fires *before* template expansion, since
+`Parser::internalParse()` calls `replaceVariables()` immediately afterwards
+(1502 → 1519 → 1534 in MW 1.45). A template-emitted file therefore rendered
+without ever having been scanned, so slot N stopped meaning occurrence N.
+
+The scan and its paired strip moved to `InternalParseBeforeLinks`. `<gallery>`
+preprocessing deliberately stayed behind, because gallery is an extension tag
+and its body is a strip marker after expansion.
+
+The read was also unsound: a mid-parse "is the queue aligned?" heuristic
+compared a running counter against a total not yet known, so an early render got
+a false "aligned" verdict and read someone else's slot. A present-but-null slot
+is now authoritative; only a genuinely missing slot falls back.
+
+**Verified by live A/B**, before and after: template image `setname=001` /
+inline none → template none / inline `001`. A parser function is not a valid
+stand-in for a template here — `{{#if:1|[[File:X]]}}` keeps the link in the page
+source, so the pre-expansion scan sees it and the bug does not reproduce. The
+first probe did exactly that and had to be redone.
+
+---
+
+## 📝 Backlog corrections — September 2, 2026
+
+Two long-standing entries were wrong, both found by testing rather than reading:
+
+- **R2.24 retracted.** The claim was that `SetNameSanitizer` permits spaces
+  while `layerset=` is "pipe/space delimited", making a set named `my labels`
+  unaddressable from wikitext. It is addressable. Verified end-to-end on a live
+  wiki by renaming a real set: it renders with `data-layer-setname="my labels"`
+  and full layer data. Image parameters are delimited by `|` alone and every JS
+  consumer uses `getAttribute()` or a presence selector, so no `~=` selector
+  exists for a space to break. A regression test now pins it, because the
+  plausible "fix" for a defect that does not exist is to forbid spaces — which
+  would silently break every set already named with one.
+- **R4.11 was already fixed.** The finding said `APIManager._setCache()` evicts
+  FIFO while calling itself LRU. Both `_getCached()` and
+  `APICacheManager.getCached()` re-insert on read, so eviction of
+  `keys().next().value` is genuine LRU. No code change needed; the entry was
+  stale.
+
+Also closed as stale: R2.60 (fixed in v1.5.88), R2.25 (`nul` is gitignored),
+R2.26 (fixed in v1.5.87).
 
 ---
 
@@ -122,7 +264,7 @@ Read each finding together with this table.
 | R4.07 set name carried to pages without it | **Fixed in effect.** The blank canvas is no longer filled by another page's draft (R4.02), and the navigator now shows which pages actually have sets. |
 | R4.08 `$page` discarded in the non-thumbnail path | **Fixed.** `injectIntoAttributes()` takes a page; `onImageBeforeProduceHTML()` passes it. |
 | R4.10 rate limits | **Fixed, but the finding was wrong about the cause — see the correction below.** |
-| R4.11 FIFO-not-LRU cache | Open. Cosmetic; recorded honestly rather than quietly reworded. |
+| R4.11 FIFO-not-LRU cache | **Not a defect.** Re-checked September 2, 2026: both `_getCached()` and `APICacheManager.getCached()` re-insert on read, so evicting `keys().next().value` is genuine LRU. The original finding was wrong. |
 | R4.12 native dialogs | **Partially fixed.** The path that needed a third action has one. The other 21 sites remain. |
 | R4.13 draft context unchecked | **Fixed.** `matchesCurrentContext()` refuses a draft from another page or set. |
 | R4.50/R4.52 proposed gates | **Both built and wired into `npm test`.** |
