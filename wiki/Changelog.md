@@ -4,6 +4,36 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.93] - 2026-09-02
+
+### Fixed
+
+- **Opening a PDF in the full-screen viewer no longer makes you wait for
+  pdf.js.** On a PDF where the client-side render stalls, the viewer showed a
+  spinner for a full 30 seconds before falling back — while the
+  server-rasterized page image it needed had already been fetched and was
+  sitting unused.
+
+  The server image is now shown immediately and the pdf.js render is treated as
+  an upgrade, swapped in only if and when it arrives. On the PDF that
+  reproduced the stall: **32 seconds to 0.8 seconds** for a fully rendered page
+  with its layer overlay.
+
+  The upgrade is guarded by a render token and the current page number, so a
+  slow render cannot land on a page the reader has since turned to. The
+  30-second render timeout is unchanged — it is simply no longer something a
+  reader ever sees.
+
+  For the record, the stall itself is in pdf.js and not in this extension:
+  reproduced in an isolated harness with the library loaded, `workerSrc` set
+  and the document fetched successfully, `getDocument().promise` never settled.
+  Showing the page first makes that outcome irrelevant to the reader.
+
+- **The viewer no longer orphans a layer overlay when a page is re-rendered.**
+  `renderViewer()` never destroyed the previous `LayersViewer` before building
+  a new one. That was harmless while a page was only ever rendered once; it is
+  not, now that a page can be rendered twice.
+
 ## [1.5.92] - 2026-09-02
 
 ### Fixed

@@ -7,6 +7,54 @@
 
 ---
 
+## ✅ R5.02 closed — the viewer no longer waits on pdf.js — v1.5.93
+
+**The finding as first written was wrong, and the correction matters more than
+the fix.** It claimed the per-page render had no timeout and could hang
+indefinitely. `PdfRenderer` does bound the render — `RENDER_TIMEOUT_MS` is 30
+seconds and is applied through `_withTimeout()` at the end of `renderPage()`,
+which then evicts the cached document and rethrows into the lightbox's existing
+fallback. The guard was there and working. My probe had polled for exactly 30
+seconds and stopped one second short of the recovery.
+
+What actually happens, measured:
+
+```
+ 0s  Opening lightbox for: Somepdf.pdf
+30s  [PdfRenderer] renderPage failed: pdf.js render timed out after 30000ms
+32s  using server image → Viewer initialized with 4 layers → rendered
+```
+
+So not an indefinite hang: a 30-second spinner followed by a correct fallback.
+
+**The underlying stall is pdf.js, not this extension.** Reproduced in an
+isolated harness on the same page — library loaded from the vendored bundle,
+`workerSrc` set, document fetched successfully (200, then a 206 range request)
+— and `getDocument().promise` still never settled, over two minutes. The worker
+script itself serves in 25 ms with HTTP 200, so it is not a delivery problem.
+Nothing in Layers can fix that from the outside.
+
+**What Layers was doing wrong was making the reader wait for it.** The
+server-rasterized page image had already been fetched and was sitting unused
+while the spinner ran. `renderPageImage()` now shows that image immediately and
+treats the pdf.js render as an upgrade applied only if and when it arrives:
+
+- 32s → **0.8s** to a fully rendered page with its layer overlay, on the same
+  PDF that previously stalled.
+- The upgrade is guarded by a render token and the current page, so a slow
+  render cannot land on a page the reader has since turned to.
+- `renderViewer()` now destroys the previous viewer before building a new one.
+  It never did, and a page can now legitimately be rendered twice.
+
+The 30-second timeout stays. It is no longer user-visible, but it still stops a
+stalled render holding a document and a canvas forever.
+
+**Method note.** This is the second time in one session that a finding survived
+only until it was measured (see R4.11 and R2.24). Both were written from
+reading the code. The correction came from instrumenting the running product.
+
+---
+
 ## 🔴 R5.02 — Open: the full-screen viewer can sit on "Loading layers…"
 forever
 

@@ -486,19 +486,42 @@
 		}
 
 		/**
-		 * Render a page's background image + layer overlay. For PDFs this first
-		 * attempts a crisp client-side pdf.js render of the page and uses that as
-		 * the background; on any failure it falls back to the supplied
-		 * server-rasterized page image. Non-PDF files always use the server image.
+		 * Render a page's background image plus its layer overlay.
+		 *
+		 * The server-rasterized page image is shown straight away, and for a PDF a
+		 * crisper pdf.js render is started alongside it and swapped in if and when
+		 * it arrives. This used to be sequential - wait for pdf.js, fall back on
+		 * failure - which meant a stalled render held the reader on a spinner for
+		 * the full 30-second timeout while a perfectly good image sat unused. pdf.js
+		 * stalling is not hypothetical: it reproduces on an 11-page PDF here, in an
+		 * isolated harness with the library loaded and workerSrc set, so it is not
+		 * something this extension can fix from the outside. Showing the page first
+		 * makes the outcome irrelevant to the reader.
 		 *
 		 * @param {string} filename The filename being viewed
 		 * @param {string} fallbackUrl Server-provided page image URL
 		 * @param {Object} layerData Layer data for the page
+		 * @return {Promise} Resolves once the upgrade attempt has settled
 		 * @private
 		 */
 		renderPageImage( filename, fallbackUrl, layerData ) {
-			return this.preparePageImageUrl( filename, this.currentPage, fallbackUrl )
+			this.renderViewer( fallbackUrl, layerData );
+			this.updateToolbar();
+
+			// Identifies this render, so a slow upgrade cannot land on a page the
+			// reader has since navigated away from.
+			this._renderToken = ( this._renderToken || 0 ) + 1;
+			const token = this._renderToken;
+			const page = this.currentPage;
+
+			return this.preparePageImageUrl( filename, page, fallbackUrl )
 				.then( ( finalUrl ) => {
+					const superseded = token !== this._renderToken ||
+						page !== this.currentPage ||
+						!this.isOpen;
+					if ( superseded || !finalUrl || finalUrl === fallbackUrl ) {
+						return;
+					}
 					this.renderViewer( finalUrl, layerData );
 					this.updateToolbar();
 				} );
@@ -1479,6 +1502,14 @@
 			if ( !this.imageWrapper ) {
 				return;
 			}
+
+			// A page may be rendered twice - server raster first, pdf.js upgrade
+			// second - so release the previous viewer rather than orphaning it with
+			// its listeners and canvas still attached.
+			if ( this.viewer && typeof this.viewer.destroy === 'function' ) {
+				this.viewer.destroy();
+			}
+			this.viewer = null;
 
 			// Clear loading indicator
 			this.imageWrapper.innerHTML = '';

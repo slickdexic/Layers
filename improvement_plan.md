@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.92
+**Version:** 1.5.93
 **Last updated:** September 2, 2026 — post-1.5.92 reprioritisation
 
 > ## 🎯 What is actually worth doing next (September 2, 2026)
@@ -12,15 +12,23 @@
 >
 > | Rank | Item | Effort | Why it earns the slot |
 > |------|------|--------|----------------------|
-> | 1 | **R5.02 — the full-screen viewer can hang on "Loading layers…" forever** | S | Found September 2 while A/B-testing R5.01, and confirmed not to be a regression — the pre-change code hangs identically. Opening a layered PDF sometimes never completes: no image, no error, no log beyond pdf.js font warnings. `PdfRenderer` bounds the pdf.js *handshake* with `_withTimeout()` but not the per-page *render*, so a stall has no deadline and no fallback. Bounding the render and degrading to the server raster converts an indefinite hang into a visible, usable degradation without needing to diagnose the stall first. Small, and it is the worst thing a user can currently hit. |
-> | 2 | **R4.60 — in-place PDF page switching** | L | The owner reported this personally. v1.5.86 fixed the data-loss half; the architectural half is untouched. Every page turn is still `window.location.href`: the undo stack is destroyed, ~1 MB of editor source is re-fetched, and "Save" silently means "save this page". This is the largest remaining gap between what the extension claims and what it does. |
-> | 3 | **R4.12 / R2.20 — replace 21 native dialogs** | M | Needed by rank 2: in-place navigation wants a three-action Save / Discard / Cancel, which `window.confirm()` cannot express. Also the only remaining WCAG gap of substance — native dialogs block the main thread, cannot be themed, and are announced inconsistently. `DialogManager.showConfirmDialog()` already exists and is used in the same files. |
-> | 4 | **R3.06 — `REL1_43` unit suite has 110 failures** | M | A maintained LTS branch that real wikis run has a red suite, so nothing on it is verified. Either repair the harness stubs (the failures look like stale stubs, not product defects) or stop describing the branch as supported. Leaving it red while claiming support is the dishonest option. |
-> | 5 | **R4.62 — editor lazy-loading, stage 2** | M | `ext.layers.editor` sits at 92% of its ResourceLoader budget. Separately, `ext.layers` reached **96%** (272.8 KB of 285.0 KB) after R5.01, so the viewer module now has little headroom either — the next feature there will need the budget raised or the module split. |
-> | 6 | **Metric drift gating** | S | v1.5.92 made release *dates* build-breaking (`update-version.js --check`, run in CI). Test counts and coverage in the four current-state docs are still ungated, and they had drifted by 24 PHPUnit tests and two coverage figures before September 2. A cross-document consistency check would catch the exact shape that drift took. |
+> | 1 | **R4.60 — in-place PDF page switching** | L | The owner reported this personally. v1.5.86 fixed the data-loss half; the architectural half is untouched. Every page turn is still `window.location.href`: the undo stack is destroyed, ~1 MB of editor source is re-fetched, and "Save" silently means "save this page". This is the largest remaining gap between what the extension claims and what it does. |
+> | 2 | **R4.12 / R2.20 — replace 21 native dialogs** | M | Needed by rank 1: in-place navigation wants a three-action Save / Discard / Cancel, which `window.confirm()` cannot express. Also the only remaining WCAG gap of substance — native dialogs block the main thread, cannot be themed, and are announced inconsistently. `DialogManager.showConfirmDialog()` already exists and is used in the same files. |
+> | 3 | **R3.06 — `REL1_43` unit suite has 110 failures** | M | A maintained LTS branch that real wikis run has a red suite, so nothing on it is verified. Either repair the harness stubs (the failures look like stale stubs, not product defects) or stop describing the branch as supported. Leaving it red while claiming support is the dishonest option. |
+> | 4 | **R4.62 — editor lazy-loading, stage 2** | M | `ext.layers.editor` sits at 92% of its ResourceLoader budget. Separately, `ext.layers` reached **96%** (272.8 KB of 285.0 KB) after R5.01, so the viewer module now has little headroom either — the next feature there will need the budget raised or the module split. |
+> | 5 | **Metric drift gating** | S | v1.5.92 made release *dates* build-breaking (`update-version.js --check`, run in CI). Test counts and coverage in the four current-state docs are still ungated, and they had drifted by 24 PHPUnit tests and two coverage figures before September 2. A cross-document consistency check would catch the exact shape that drift took. |
 >
 > **Done since this list was written.** R5.01 (file-name extraction consolidated
-> into `UrlParser`, with `check:filenames` gating a fourth copy).
+> into `UrlParser`, with `check:filenames` gating a fourth copy) and R5.02 (the
+> viewer shows the server raster immediately instead of waiting up to 30 seconds
+> for a pdf.js render that may never arrive — 32s to 0.8s on the PDF that
+> reproduced it).
+>
+> **R5.02 is also a caution about this file.** As first written it claimed the
+> per-page render had no timeout. It has one, and the guard works; the probe had
+> simply stopped one second short of the recovery. That is the third entry in
+> two days to survive only until it was measured, after R4.11 and R2.24. All
+> three were written from reading the code.
 >
 > **Not recommended.** R2.23 (SVG validation is a blacklist rather than a
 > well-formedness parse) stays open deliberately: `validateSvgString()` requires

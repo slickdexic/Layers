@@ -2158,6 +2158,97 @@ describe( 'LayersLightbox edge cases', () => {
 			expect( url ).toBe( 'server.jpg' );
 		} );
 
+		// The reader must never wait on pdf.js. A stalled render used to hold the
+		// spinner for the full 30-second timeout while the server raster - already
+		// fetched, already good enough - sat unused.
+		//
+		// open() kicks off its own API chain and renders once; these cases care
+		// only about what renderPageImage does, so let that settle before spying.
+		const settled = () => new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+		it( 'renderPageImage shows the server image before pdf.js is consulted', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Doc.pdf' } );
+			await settled();
+			lightbox.renderViewer = jest.fn();
+			lightbox.updateToolbar = jest.fn();
+			// A render that never settles, i.e. the stall being defended against.
+			lightbox.preparePageImageUrl = jest.fn( () => new Promise( () => {} ) );
+
+			lightbox.renderPageImage( 'Doc.pdf', 'server.jpg', { layers: [] } );
+
+			expect( lightbox.renderViewer ).toHaveBeenCalledWith(
+				'server.jpg', expect.anything()
+			);
+		} );
+
+		it( 'renderPageImage upgrades to the pdf.js render when it arrives', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Doc.pdf' } );
+			await settled();
+			lightbox.renderViewer = jest.fn();
+			lightbox.updateToolbar = jest.fn();
+			lightbox.preparePageImageUrl = jest.fn(
+				() => Promise.resolve( 'data:image/png;base64,CRISP' )
+			);
+
+			await lightbox.renderPageImage( 'Doc.pdf', 'server.jpg', { layers: [] } );
+
+			expect( lightbox.renderViewer ).toHaveBeenNthCalledWith(
+				1, 'server.jpg', expect.anything()
+			);
+			expect( lightbox.renderViewer ).toHaveBeenNthCalledWith(
+				2, 'data:image/png;base64,CRISP', expect.anything()
+			);
+		} );
+
+		it( 'renderPageImage does not re-render when pdf.js returns the fallback', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Doc.pdf' } );
+			await settled();
+			lightbox.renderViewer = jest.fn();
+			lightbox.updateToolbar = jest.fn();
+			lightbox.preparePageImageUrl = jest.fn( () => Promise.resolve( 'server.jpg' ) );
+
+			await lightbox.renderPageImage( 'Doc.pdf', 'server.jpg', { layers: [] } );
+
+			expect( lightbox.renderViewer ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		it( 'renderPageImage discards an upgrade for a page already navigated away from', async () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Doc.pdf' } );
+			await settled();
+			lightbox.currentPage = 1;
+			lightbox.renderViewer = jest.fn();
+			lightbox.updateToolbar = jest.fn();
+			lightbox.preparePageImageUrl = jest.fn( () => {
+				// The reader turns the page while pdf.js is still working.
+				lightbox.currentPage = 2;
+				return Promise.resolve( 'data:image/png;base64,STALE' );
+			} );
+
+			await lightbox.renderPageImage( 'Doc.pdf', 'server.jpg', { layers: [] } );
+
+			expect( lightbox.renderViewer ).toHaveBeenCalledTimes( 1 );
+			expect( lightbox.renderViewer ).not.toHaveBeenCalledWith(
+				'data:image/png;base64,STALE', expect.anything()
+			);
+		} );
+
+		it( 'renderViewer releases the previous viewer before building a new one', () => {
+			const lightbox = new LayersLightbox();
+			lightbox.open( { filename: 'Doc.pdf' } );
+			const destroy = jest.fn();
+			lightbox.viewer = { destroy };
+
+			lightbox.renderViewer( 'server.jpg', {
+				layers: [], backgroundVisible: true, backgroundOpacity: 1
+			} );
+
+			expect( destroy ).toHaveBeenCalled();
+		} );
+
 		it( 'preparePageImageUrl returns the fallback when no renderer is available', async () => {
 			const lightbox = new LayersLightbox();
 			lightbox.isPdf = true;
