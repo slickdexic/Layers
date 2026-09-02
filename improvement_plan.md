@@ -12,17 +12,33 @@
 >
 > | Rank | Item | Effort | Why it earns the slot |
 > |------|------|--------|----------------------|
-> | 1 | **R4.60 — in-place PDF page switching** | L | The owner reported this personally. v1.5.86 fixed the data-loss half; the architectural half is untouched. Every page turn is still `window.location.href`: the undo stack is destroyed, ~1 MB of editor source is re-fetched, and "Save" silently means "save this page". This is the largest remaining gap between what the extension claims and what it does. |
-> | 2 | **R4.12 / R2.20 — replace 21 native dialogs** | M | Needed by rank 1: in-place navigation wants a three-action Save / Discard / Cancel, which `window.confirm()` cannot express. Also the only remaining WCAG gap of substance — native dialogs block the main thread, cannot be themed, and are announced inconsistently. `DialogManager.showConfirmDialog()` already exists and is used in the same files. |
+> | 1 | **R4.60 stage 2 — per-page dirty map and "Save all"** | M | Stage 1 shipped in v1.5.94: a page turn no longer reloads the document. What remains is the save model. Navigation still asks Save / Discard / Cancel, which keeps at most one page dirty and is honest, but it means a ten-page review is ten save round trips. |
+> | 2 | **R4.12 / R2.20 — replace 21 native dialogs** | M | The only remaining WCAG gap of substance — native dialogs block the main thread, cannot be themed, and are announced inconsistently. `DialogManager.showConfirmDialog()` already exists and is used in the same files. Rank 1 needs it too: "Save all / Discard all / Cancel" is three actions, and `window.confirm()` offers two. |
 > | 3 | **R3.06 — `REL1_43` unit suite has 110 failures** | M | A maintained LTS branch that real wikis run has a red suite, so nothing on it is verified. Either repair the harness stubs (the failures look like stale stubs, not product defects) or stop describing the branch as supported. Leaving it red while claiming support is the dishonest option. |
 > | 4 | **R4.62 — editor lazy-loading, stage 2** | M | `ext.layers.editor` sits at 92% of its ResourceLoader budget. Separately, `ext.layers` reached **96%** (272.8 KB of 285.0 KB) after R5.01, so the viewer module now has little headroom either — the next feature there will need the budget raised or the module split. |
 > | 5 | **Metric drift gating** | S | v1.5.92 made release *dates* build-breaking (`update-version.js --check`, run in CI). Test counts and coverage in the four current-state docs are still ungated, and they had drifted by 24 PHPUnit tests and two coverage figures before September 2. A cross-document consistency check would catch the exact shape that drift took. |
 >
 > **Done since this list was written.** R5.01 (file-name extraction consolidated
-> into `UrlParser`, with `check:filenames` gating a fourth copy) and R5.02 (the
+> into `UrlParser`, with `check:filenames` gating a fourth copy), R5.02 (the
 > viewer shows the server raster immediately instead of waiting up to 30 seconds
 > for a pdf.js render that may never arrive — 32s to 0.8s on the PDF that
-> reproduced it).
+> reproduced it), and **R4.60 stage 1** (page turns happen in place; see below).
+>
+> **R4.60 stage 1 also produced the sharpest lesson of the week, and the suite
+> did not produce it.** Removing the reload immediately exposed a bug that had
+> been in the Next/Previous buttons since they were written: both handlers
+> closed over the page number captured when the toolbar was built, so Next
+> always meant "page 1 + 1". Nobody could see it while every page turn rebuilt
+> the toolbar with a fresh value. The owner found it in the first minutes of
+> using the faster build; 14,270 tests did not, because none of them touched
+> the page navigation group.
+>
+> Two things generalise. Making something faster can delete an accidental
+> state reset that a latent bug was relying on, so the risk of a
+> reload-removal is not only in the new code path. And the diagnosis came from
+> measurement, not reading: the API returned `pageCount=11` on every page and
+> driving `navigateToPage()` directly walked the pages correctly, which
+> isolated the fault to the click path in one step.
 >
 > **R5.02 is also a caution about this file.** As first written it claimed the
 > per-page render had no timeout. It has one, and the guard works; the probe had
@@ -57,7 +73,7 @@
 >
 > | # | Item | Effort | Status |
 > |---|------|--------|--------|
-> | **R4.60** | **In-place page switching.** v1.5.86 gave page navigation a Save/Discard/Cancel dialog and a navigator that marks annotated and dirty pages, but a page turn is still `window.location.href` — a full reload that destroys the undo stack. Target: fetch the page raster and that page's set, swap the canvas, keep a per-page dirty map, and offer "Save all". | L | 🔲 Open |
+> | **R4.60** | **In-place page switching.** **Stage 1 done (v1.5.94).** A page turn no longer reloads: `performPageNavigation()` re-runs the `layersinfo` call, swaps the canvas background to the new page's raster and renders that page's set, with the full reload retained as a fallback if anything fails. The raster URL was already in the response and the editor was discarding it, so this cost no new server work. Fixing it exposed a stale closure that had capped the Next button at page 2 since it was written. **Stage 2 open:** the save model is unchanged — navigation still asks Save/Discard/Cancel, so at most one page is dirty at a time. A per-page dirty map and "Save all" remain. | L | 🟡 Stage 1 done |
 > | **R4.61** | **`customShape` server-side rendering.** Closed in v1.5.88, completing R2.1.5 — all 17 layer types now draw server-side. Two routes: raw `path`/`paths` data via ImageMagick `-draw path` (preferred; the data is character-whitelisted, a provable safety property), and whole `svg` documents via the wiki's own `$wgSVGConverter` (no new exposure class — every wiki accepting SVG uploads already runs it over untrusted input; `<!DOCTYPE>`/`<!ENTITY>` refused). Path *extraction* was designed and then rejected on measurement: only 8% of the 1,385 shapes are plain paths, so it would have misplaced 92% of them. | M | ✅ Done (v1.5.88) |
 > | **R4.62** | **Editor lazy-loading, second stage.** v1.5.87 stopped shipping `ext.layers.editor` on File: pages entirely. Within the editor document itself the bundle is still ~1 MB parsed; the shape library and emoji picker are already separate modules, but the preset system, slide controller and PDF viewer could also be deferred until first use. | M | 🔲 Open |
 >
