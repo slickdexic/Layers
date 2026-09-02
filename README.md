@@ -8,7 +8,7 @@
 
 *A modern, non-destructive image annotation and markup system for MediaWiki, designed to match the power and usability of today's most popular image editors.*
 
-> **Version:** 1.5.91 (August 9, 2026)  
+> **Version:** 1.5.91 (September 2, 2026)  
 > **Status:** ✅ Production-ready  
 > **Requires:** MediaWiki 1.44.0+, PHP 8.1+  
 > **Primary branch:** `main` — all development and testing happens here
@@ -417,7 +417,7 @@ against re-render cost.
 | Metric | Value |
 |--------|-------|
 | Jest tests | 14,227 passing (178 suites) |
-| PHPUnit tests | 666 passing (33 test files) |
+| PHPUnit tests | 675 passing (37 test files) |
 | Statement coverage | 95.87% |
 | Branch coverage | 87.20% |
 | Function coverage | 94.00% |

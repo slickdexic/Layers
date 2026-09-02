@@ -35,6 +35,34 @@ const MW_VERSION_REQUIREMENTS = {
 	REL1_39: '>= 1.39.0'
 };
 
+/**
+ * Release-date references, keyed off the CHANGELOG entry for the current
+ * version. These sit next to the version strings above and used to be edited by
+ * hand, so they drifted: README announced 1.5.91 "(August 9, 2026)" and the
+ * MediaWiki.org infobox still read 2026-07-10, because --set only ever rewrote
+ * the number beside them.
+ */
+const DATE_FILES = [
+	{
+		file: 'README.md',
+		pattern: /(> \*\*Version:\*\* \d+\.\d+\.\d+ \()([^)]+)(\))/,
+		format: 'long',
+		replacement: ( date ) => `$1${ date }$3`
+	},
+	{
+		file: 'Mediawiki-Extension-Layers.mediawiki',
+		pattern: /(\|update\s*=\s*)(\d{4}-\d{2}-\d{2})/,
+		format: 'iso',
+		replacement: ( date ) => `$1${ date }`
+	},
+	{
+		file: 'wiki/Home.md',
+		pattern: /(\| \*\*Release Date\*\* \| )([^|]+?)( \|)/,
+		format: 'long',
+		replacement: ( date ) => `$1${ date }$3`
+	}
+];
+
 // Configuration: files and their version patterns
 const VERSION_FILES = [
 	{
@@ -230,6 +258,94 @@ function updateFileVersion( config, newVersion ) {
 }
 
 /**
+ * Read the release date for a version from CHANGELOG.md, which is the only
+ * place it is authored: `## [1.5.91] - 2026-09-02`.
+ *
+ * @param {string} version Version to look up
+ * @return {string|null} ISO date, or null when the version has no entry yet
+ */
+function getReleaseDate( version ) {
+	const changelogPath = path.join( getProjectRoot(), 'CHANGELOG.md' );
+	if ( !fs.existsSync( changelogPath ) ) {
+		return null;
+	}
+	const content = fs.readFileSync( changelogPath, 'utf8' );
+	const escaped = version.replace( /\./g, '\\.' );
+	const match = content.match(
+		new RegExp( '^## \\[' + escaped + '\\]\\s*-\\s*(\\d{4}-\\d{2}-\\d{2})', 'm' )
+	);
+	return match ? match[ 1 ] : null;
+}
+
+const MONTHS = [
+	'January', 'February', 'March', 'April', 'May', 'June',
+	'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+/**
+ * Render an ISO date in the form a given file uses.
+ *
+ * @param {string} iso Date as YYYY-MM-DD
+ * @param {string} format Either 'iso' or 'long'
+ * @return {string} Formatted date
+ */
+function formatDate( iso, format ) {
+	if ( format === 'iso' ) {
+		return iso;
+	}
+	const [ y, m, d ] = iso.split( '-' ).map( Number );
+	return `${ MONTHS[ m - 1 ] } ${ d }, ${ y }`;
+}
+
+/**
+ * Check or update every release-date reference.
+ *
+ * @param {string} version Version whose CHANGELOG date is authoritative
+ * @param {boolean} write True to rewrite files, false to report only
+ * @return {boolean} True when every reference already matched (or was written)
+ */
+function syncDates( version, write ) {
+	const iso = getReleaseDate( version );
+	if ( !iso ) {
+		console.log( `  \u26a0\ufe0f  No CHANGELOG.md entry for ${ version } - skipping date check` );
+		return true;
+	}
+
+	let allMatch = true;
+	for ( const config of DATE_FILES ) {
+		const filePath = path.join( getProjectRoot(), config.file );
+		if ( !fs.existsSync( filePath ) ) {
+			console.log( `  \u26a0\ufe0f  ${ config.file } - FILE NOT FOUND` );
+			continue;
+		}
+		const content = fs.readFileSync( filePath, 'utf8' );
+		const match = content.match( config.pattern );
+		if ( !match ) {
+			console.log( `  \u26a0\ufe0f  ${ config.file } - DATE PATTERN NOT FOUND` );
+			continue;
+		}
+
+		const expected = formatDate( iso, config.format );
+		const found = match[ 2 ].trim();
+		if ( found === expected ) {
+			console.log( `  \u2713  ${ config.file } - ${ found }` );
+			continue;
+		}
+
+		if ( write ) {
+			fs.writeFileSync(
+				filePath, content.replace( config.pattern, config.replacement( expected ) ), 'utf8'
+			);
+			console.log( `  \u2713  ${ config.file } - updated ${ found } \u2192 ${ expected }` );
+		} else {
+			console.log( `  \u2717  ${ config.file } - ${ found } (expected ${ expected })` );
+			allMatch = false;
+		}
+	}
+	return allMatch;
+}
+
+/**
  * Check all files for version consistency
  * @return {boolean} True if all versions match
  */
@@ -293,7 +409,10 @@ function checkVersions() {
 					break;
 			}
 		}
-	}
+		console.log( '\nChecking release date against CHANGELOG...\n' );
+		if ( !syncDates( sourceVersion, false ) ) {
+			allMatch = false;
+		}	}
 
 	console.log( '' );
 
@@ -337,7 +456,8 @@ function updateVersions( newVersion = null ) {
 		}
 		updateFileVersion( config, targetVersion );
 	}
-
+	console.log( '' );
+	syncDates( targetVersion, true );
 	console.log( '\n✅ Version update complete!' );
 }
 
