@@ -858,38 +858,24 @@ class WikitextHooks {
 
 		$index = self::$fileRenderCount[$filename];
 
-		// Two sources, indexed differently:
-		//   $fileSetNames      - document-scan order, from onParserBeforeInternalParse
-		//   $fileParamLayerset - parse order (== render order), from onParserMakeImageParams
-		// They agree only while every occurrence of this file is written directly in the
-		// page wikitext. A template that emits the same file adds render occurrences the
-		// scan never saw, so scan index N stops meaning render occurrence N and the scan
-		// queue would hand one occurrence's set name to a different image.
-		// $fileParseCount counts every occurrence, so comparing it to what the scan saw
-		// detects exactly that case.
-		$scanSaw = isset( self::$fileSetNames[$filename] ) ? count( self::$fileSetNames[$filename] ) : 0;
-		$parsedOccurrences = self::$fileParseCount[$filename] ?? 0;
-		$scanQueueIsAligned = ( $parsedOccurrences <= $scanSaw );
-
-		$setName = null;
-		if ( $scanQueueIsAligned ) {
-			$setName = self::$fileSetNames[$filename][$index] ?? null;
-		}
-		// Fallback: set name captured in onParserMakeImageParams. This is the only source
-		// for template-embedded files, and the only trustworthy one once the scan queue is
-		// known to be misaligned.
-		if ( $setName === null ) {
+		// The scan in onInternalParseBeforeLinks runs after template expansion, so
+		// it sees every [[File:...]] that will render - templated or hand-written -
+		// and records one slot per occurrence in document order, using a null slot
+		// for occurrences that carry no layerset=. Document order is render order,
+		// so slot N belongs to render N.
+		//
+		// A present-but-null slot is meaningful: it says "this occurrence exists and
+		// asked for no layers". Only a *missing* slot means the scan never saw this
+		// occurrence, and only then is the parameter queue captured in
+		// onParserMakeImageParams consulted instead.
+		$scanQueue = self::$fileSetNames[$filename] ?? [];
+		if ( array_key_exists( $index, $scanQueue ) ) {
+			$setName = $scanQueue[$index];
+		} else {
 			$setName = self::$fileParamLayerset[$filename][$index] ?? null;
 			if ( $setName !== null ) {
 				self::log( "getFileParamsForRender: using fileParamLayerset fallback for $filename[$index]: $setName" );
 			}
-		}
-		if ( !$scanQueueIsAligned ) {
-			self::logDebug(
-				"getFileParamsForRender: scan queue for $filename ignored " .
-				"($parsedOccurrences occurrences rendered, $scanSaw seen in raw wikitext); " .
-				'template-emitted images are not visible to the pre-parse scan'
-			);
 		}
 		$linkType = self::$fileLinkTypes[$filename][$index] ?? null;
 
@@ -918,8 +904,13 @@ class WikitextHooks {
 
 	/**
 	 * Hook: ParserBeforeInternalParse
-	 * Scan the raw wikitext for layerset= (or layers= for backwards compatibility)
-	 * parameters as a fallback when parameter registration hooks don't work properly.
+	 *
+	 * Fires before template expansion. Only `<gallery>` handling belongs here:
+	 * gallery is an extension tag, so by the time templates have been expanded its
+	 * body has been replaced by a strip marker and is no longer reachable.
+	 *
+	 * The `[[File:...]]` scan deliberately does NOT run here - see
+	 * onInternalParseBeforeLinks().
 	 *
 	 * @param mixed $parser Parser instance
 	 * @param string &$text Wikitext being parsed (by reference)
@@ -927,6 +918,53 @@ class WikitextHooks {
 	 * @return bool
 	 */
 	public static function onParserBeforeInternalParse( $parser, &$text, $stripState ): bool {
+		if ( $text === null || !is_string( $text ) ) {
+			return true;
+		}
+
+		try {
+			// Pre-process <gallery> blocks: extract per-image layerset= hints and
+			// strip the option so it does not appear as visible caption text.
+			if ( stripos( $text, '<gallery' ) !== false && stripos( $text, 'layerset=' ) !== false ) {
+				$text = preg_replace_callback(
+					'/<gallery\b[^>]*>.*?<\/gallery>/si',
+					[ self::class, 'preprocessGalleryBlock' ],
+					$text
+				);
+				self::log( 'Preprocessed <gallery> blocks for layerset= hints' );
+			}
+		} catch ( \Throwable $e ) {
+			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Hook: InternalParseBeforeLinks
+	 *
+	 * Scans wikitext for layerset= / layers= / layerslink= parameters and strips
+	 * them so they cannot leak into captions.
+	 *
+	 * This runs *after* template expansion and before links and images are
+	 * processed (Parser::internalParse calls replaceVariables() between
+	 * ParserBeforeInternalParse and this hook). That ordering is the whole point:
+	 * the scan builds a positional queue that is consumed in render order, so it
+	 * has to see every [[File:...]] that will actually render. When it ran before
+	 * expansion it could not see files emitted by a template, so a single
+	 * templated image ahead of a hand-written one shifted every subsequent entry
+	 * onto the wrong image and the wrong annotations were displayed.
+	 *
+	 * The strip has to move with the scan, not stay behind: stripping before
+	 * expansion would remove the parameter from hand-written links before this
+	 * scan could see it.
+	 *
+	 * @param mixed $parser Parser instance
+	 * @param string &$text Wikitext being parsed (by reference)
+	 * @param mixed $stripState Strip state object from core
+	 * @return bool
+	 */
+	public static function onInternalParseBeforeLinks( $parser, &$text, $stripState ): bool {
 		// Handle null or non-string text (PHP 8.1+ strict)
 		if ( $text === null || !is_string( $text ) ) {
 			return true;
@@ -1091,17 +1129,6 @@ class WikitextHooks {
 				}
 			}
 
-			// Pre-process <gallery> blocks: extract per-image layerset= hints and
-			// strip the option so it does not appear as visible caption text.
-			if ( stripos( $text, '<gallery' ) !== false && stripos( $text, 'layerset=' ) !== false ) {
-				$text = preg_replace_callback(
-					'/<gallery\b[^>]*>.*?<\/gallery>/si',
-					[ self::class, 'preprocessGalleryBlock' ],
-					$text
-				);
-				self::log( 'Preprocessed <gallery> blocks for layerset= hints' );
-			}
-
 			// Strip our parameters ONLY from within file links, so that they do not
 			// leak into captions. Scoping to the link is what keeps {{#slide:...}}
 			// parser functions and <nowiki>-quoted documentation intact.
@@ -1118,7 +1145,7 @@ class WikitextHooks {
 			);
 			self::log( 'Stripped layers parameters from file links' );
 		} catch ( \Throwable $e ) {
-			self::logError( 'ParserBeforeInternalParse error: ' . $e->getMessage() );
+			self::logError( 'InternalParseBeforeLinks error: ' . $e->getMessage() );
 		}
 
 		return true;

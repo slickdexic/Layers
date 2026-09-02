@@ -81,42 +81,50 @@ no fixes, including security fixes, rather than continuing to recommend it.
 
 ---
 
-## 🔴 Currently open — carried forward from the R2 review (v1.5.83)
+## ✅ R2 items resolved
 
-These are known, understood and deliberately not fixed in v1.5.83. Tracked in
-`improvement_plan.md`.
-
-### R2.60: Server-side PDF export omits seven layer types
+### R2.60: Server-side PDF export omitted seven layer types — fixed in v1.5.88
 
 - **File:** `src/ThumbnailRenderer.php`
-- **Issue:** The ImageMagick compositor has no primitive for `callout`,
-    `image`, `group`, `customShape`, `marker`, `dimension`, `angleDimension`
-    or `blur` fills, so they are absent from server-composited thumbnails and
-    from the PDF produced by the lightbox **Print** button.
-- **Severity:** P2 — fidelity loss, no data loss (the stored layer set is
-    intact and the browser renders it correctly).
-- **Mitigation shipped in v1.5.83:** the gap is declared in
-    `ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE`, enforced by
-    `npm run check:parallel`, returned as `incomplete`/`droppedtypes` in the
-    `layerspdfexport` result, and shown to the user as a notice. It is no
-    longer silent.
-- **Workaround:** use the lightbox **Download** button, which composites
-    client-side and is always complete.
-- **Status:** 🔲 Open — likely fix is to route export through
-    `viewer/PdfBuilder.js` rather than implement seven ImageMagick paths.
+- **Was:** the ImageMagick compositor had no primitive for `callout`, `image`,
+    `group`, `customShape`, `marker`, `dimension`, `angleDimension` or `blur`
+    fills, so they were absent from server-composited thumbnails and from the
+    PDF produced by the lightbox **Print** button.
+- **Fixed:** every layer type now draws. `UNSUPPORTED_SERVER_SIDE` is `[]`,
+    `customShape` renders via `-draw path` or by rasterising through the wiki's
+    `$wgSVGConverter`, and `group` moved to `NON_VISUAL_TYPES` because it draws
+    nothing anywhere. Runtime drops (undecodable image data, SVG on a wiki with
+    no converter) are still reported per render as `incomplete`/`droppedtypes`.
+- **Note:** `UNSUPPORTED_SERVER_SIDE` must be kept even while empty — it and
+    `NON_VISUAL_TYPES` are both parsed by `npm run check:parallel`.
 
-### R2.12: Template-emitted images can receive the wrong layer set
+### R2.12: Template-emitted images received the wrong layer set — fixed in v1.5.90
 
 - **File:** `src/Hooks/WikitextHooks.php`
-- **Issue:** `onParserBeforeInternalParse()` scans raw, pre-expansion wikitext
-    and builds a positional queue that is consumed in render order. A file
-    emitted by a template is rendered but never scanned, so one templated image
-    before a manual one shifts every subsequent layer set onto the wrong image.
-- **Severity:** P2 — wrong annotations shown, only on pages that mix templated
-    and directly-written file links for the same filename.
-- **Status:** 🔲 Open — architectural. The fix is to treat
-    `onParserMakeImageParams` as authoritative and key state by
-    `(title, params)` instead of scan position.
+- **Was:** the `[[File:...]]` scan ran on `ParserBeforeInternalParse`, which
+    fires *before* template expansion (`Parser::internalParse()` calls
+    `replaceVariables()` afterwards). The scan builds a positional queue that is
+    consumed in render order, so a file emitted by a template rendered without
+    ever having been scanned and every subsequent entry shifted onto the wrong
+    image.
+- **Fixed:** the scan and its paired strip moved to `InternalParseBeforeLinks`,
+    which fires after expansion and before images are processed, so the queue
+    now contains one slot per occurrence that will actually render. A
+    present-but-null slot means "this occurrence asked for no layers" and is
+    authoritative; only a *missing* slot falls back to the parameter queue
+    captured in `onParserMakeImageParams`.
+- **Verified** against a live wiki: with a template emitting the file followed
+    by an inline `layerset=` reference, the template's image previously took the
+    inline image's set and the inline image got none. Both are now correct.
+- `<gallery>` preprocessing stays on `ParserBeforeInternalParse`: gallery is an
+    extension tag, so after expansion its body is a strip marker.
+
+---
+
+## 🔴 Currently open — carried forward from the R2 review (v1.5.83)
+
+These are known, understood and deliberately not fixed. Tracked in
+`improvement_plan.md`.
 
 ### R2.20: `window.alert()` / `window.confirm()` fallbacks
 
@@ -150,9 +158,9 @@ These are known, understood and deliberately not fixed in v1.5.83. Tracked in
 |----------|-------|-------|------|
 | P0 | 5 | 5 | 0 |
 | P1 | 62 | 62 | 0 |
-| P2 | 172 | 168 | 4 |
+| P2 | 172 | 170 | 2 |
 | P3 | 246 | 230 | 16 |
-| **Total** | **485** | **465** | **20** |
+| **Total** | **485** | **467** | **18** |
 
 *v71 audit: 6 code items + 2 doc drift — all fixed.
 v70 audit: 7 items found, 6 fixed, 1 retracted as false positive.*

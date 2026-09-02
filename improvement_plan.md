@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.89
+**Version:** 1.5.90
 **Last updated:** August 31, 2026 — R4 full critical review (see `codebase_review.md` §R4)
 
 > ## 🔴 R4 — Findings from the August 31, 2026 full critical review

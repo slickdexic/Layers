@@ -4,6 +4,58 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.90] - 2026-09-02
+
+### Fixed
+
+- **A template that emits an image no longer steals another image's
+  annotations.** On a page that used both a template-emitted `[[File:X]]` and a
+  hand-written `[[File:X|layerset=…]]`, the template's image was rendered with
+  the hand-written image's layer set and the hand-written one was rendered with
+  none. Anyone building pages from infoboxes or Cargo templates could see
+  confidently-drawn annotations sitting on the wrong picture.
+
+  The `[[File:...]]` scan builds a positional queue that is consumed in render
+  order, and it ran on `ParserBeforeInternalParse` — which fires *before*
+  template expansion, since `Parser::internalParse()` calls `replaceVariables()`
+  immediately afterwards. A template-emitted file therefore rendered without
+  ever having been scanned, so scan slot N stopped corresponding to render
+  occurrence N and every following entry shifted onto the wrong image.
+
+  The scan, and the parameter strip that has to travel with it, moved to
+  `InternalParseBeforeLinks`, which fires after expansion and before images are
+  processed. The queue now holds exactly one slot per occurrence that will
+  actually render. A present-but-null slot now means "this occurrence asked for
+  no layers" and is authoritative; only a genuinely missing slot falls back to
+  the parameter queue captured in `onParserMakeImageParams`. That replaces a
+  mid-parse "is the queue aligned?" heuristic that could not be correct, because
+  it compared a running counter against a total that was not yet known.
+
+  `<gallery>` preprocessing deliberately stays on `ParserBeforeInternalParse`:
+  gallery is an extension tag, so once templates have been expanded its body has
+  been replaced by a strip marker and is no longer reachable.
+
+  Verified end-to-end against a live wiki, before and after, with a real
+  template rather than a parser function — `{{#if:…|[[File:…]]}}` keeps the file
+  link in the page source, so it does not reproduce the bug.
+
+### Changed
+
+- **Both CI workflows are green again.** `composer install` had failed on every
+  push for roughly four weeks: `mediawiki/mediawiki-codesniffer` 49.0.0 pins
+  `squizlabs/php_codesniffer` 3.13.5, which Composer refuses to install because
+  of advisory `PKSA-rdkp-vv9z-mjkg` — CVE-2026-67434, an OS command injection,
+  fixed in 3.13.6. Because `composer.lock` is gitignored, CI resolves from
+  scratch and hit the block, while developer machines kept working with the
+  vulnerable version already installed. Raised to `51.0.1`, the lowest release
+  carrying the patched sniffer that still supports the PHP 8.2 both workflows
+  pin.
+- **`god-class-check.yml` can pass again.** It blocked at 50,000 JavaScript
+  lines against an actual 106,818 and carried December 2025 baselines that had
+  all been exceeded, so it failed 100% of pull requests. Thresholds now follow
+  the documented <110,000 policy, baselines are refreshed, and generated shape
+  and emoji data files are exempted per that policy.
+
 ## [1.5.89] - 2026-09-01
 
 ### Fixed

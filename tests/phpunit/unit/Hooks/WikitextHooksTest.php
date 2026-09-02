@@ -25,7 +25,7 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 	 * @return string Processed text
 	 */
 	private function stripLayersetFromFileLinks( string $text ): string {
-		\MediaWiki\Extension\Layers\Hooks\WikitextHooks::onParserBeforeInternalParse(
+		\MediaWiki\Extension\Layers\Hooks\WikitextHooks::onInternalParseBeforeLinks(
 			null, $text, null
 		);
 		return $text;
@@ -478,28 +478,35 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
-	 * Regression: a template emitting the same file adds render occurrences the
-	 * pre-parse scan never saw, so scan index N stops meaning render occurrence N.
+	 * Regression (R2.12): a template emitting the same file used to be invisible
+	 * to the scan, because the scan ran before template expansion. Scan index N
+	 * then stopped meaning render occurrence N, and the template's image was
+	 * rendered with the inline image's annotations.
 	 *
-	 * Page: {{SomeTemplate}} (emits [[File:X.jpg]], no layerset) followed by
-	 *       [[File:X.jpg|layerset=anatomy]]
-	 *
-	 * The scan only sees the second one, so its queue is ['anatomy'] at index 0 —
-	 * but index 0 is consumed by the *template's* image, which had no layerset at
-	 * all. That image used to be rendered with someone else's annotations.
+	 * The scan now runs on InternalParseBeforeLinks, which fires after
+	 * replaceVariables(), so the text it sees already contains the template's
+	 * output. This drives the real hook with post-expansion text and asserts each
+	 * occurrence keeps its own layer set.
 	 */
-	public function testScanQueueIsIgnoredWhenTemplatesAddUnscannedOccurrences(): void {
+	public function testPostExpansionScanKeepsTemplateAndInlineImagesSeparate(): void {
 		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
 		$hooks::onParserClearState( null );
-		$this->setStaticState( [
-			// Raw wikitext scan saw one occurrence: the inline one, with layerset=anatomy.
-			'fileSetNames' => [ 'X.jpg' => [ 'anatomy' ] ],
-			// Two occurrences actually parsed/rendered: template first, then inline.
-			'fileParseCount' => [ 'X.jpg' => 2 ],
-			// Parse-order source: the inline occurrence is index 1. The template's
-			// image (index 0) genuinely had no layerset.
-			'fileParamLayerset' => [ 'X.jpg' => [ 1 => 'anatomy' ] ],
-		] );
+
+		// What Parser::internalParse() holds after the template has been expanded:
+		// the template contributed the first link, the page body the second.
+		$text = "[[File:X.jpg|thumb]]\n[[File:X.jpg|thumb|layerset=anatomy]]";
+		$hooks::onInternalParseBeforeLinks( null, $text, null );
+
+		$this->assertSame(
+			[ null, 'anatomy' ],
+			$this->getStaticState( 'fileSetNames' )['X.jpg'] ?? null,
+			'Scan must record one slot per rendered occurrence, in document order'
+		);
+		$this->assertStringNotContainsString(
+			'layerset=',
+			$text,
+			'Parameter must still be stripped so it cannot leak into the caption'
+		);
 
 		$this->assertNull(
 			$hooks::getFileParamsForRender( 'X.jpg' )['setName'],
@@ -510,6 +517,22 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 			$hooks::getFileParamsForRender( 'X.jpg' )['setName'],
 			'Inline image must still get its own layer set'
 		);
+	}
+
+	/**
+	 * A present-but-null scan slot means "this occurrence rendered and asked for
+	 * no layers", and must not fall through to the parameter queue. Only a
+	 * missing slot may.
+	 */
+	public function testNullScanSlotIsAuthoritativeOverParameterQueue(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$hooks::onParserClearState( null );
+		$this->setStaticState( [
+			'fileSetNames' => [ 'X.jpg' => [ null ] ],
+			'fileParamLayerset' => [ 'X.jpg' => [ 0 => 'anatomy' ] ],
+		] );
+
+		$this->assertNull( $hooks::getFileParamsForRender( 'X.jpg' )['setName'] );
 	}
 
 	/**

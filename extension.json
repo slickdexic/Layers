@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.89",
+	"version": "1.5.90",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -212,6 +212,7 @@
 		"ParserFirstCallInit": [ "LayersWikitextHooks", "LayersSlideHooks" ],
 		"ParserClearState": [ "LayersWikitextHooks", "LayersSlideHooks" ],
 		"ParserBeforeInternalParse": "LayersWikitextHooks",
+		"InternalParseBeforeLinks": "LayersWikitextHooks",
 		"LinkerMakeMediaLinkFile": "LayersWikitextHooks",
 		"ImageBeforeProduceHTML": "LayersWikitextHooks",
 		"ThumbnailBeforeProduceHTML": "LayersWikitextHooks",
