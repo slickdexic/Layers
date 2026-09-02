@@ -3005,4 +3005,123 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 			expect( stub.get( 'testKey' ) ).toBe( 'testValue' );
 		} );
 	} );
+
+	// A page turn used to be window.location.href: a full document reload that
+	// discarded the undo stack and re-downloaded the editor bundle every time.
+	describe( 'in-place page navigation', () => {
+		function navInstance( loadResult ) {
+			const inst = createEditorInstance();
+			inst.page = 1;
+			inst.pageCount = 11;
+			inst.imageUrl = '/thumb/page1.jpg';
+			inst.apiManager = {
+				loadLayers: jest.fn( () => ( loadResult instanceof Error ?
+					Promise.reject( loadResult ) :
+					Promise.resolve( loadResult ) ) )
+			};
+			inst.canvasManager = {
+				setBackgroundImageUrl: jest.fn(),
+				setBaseDimensions: jest.fn(),
+				renderLayers: jest.fn()
+			};
+			inst.historyManager = { clearHistory: jest.fn(), saveInitialState: jest.fn() };
+			inst.selectionManager = { clearSelection: jest.fn() };
+			inst.toolbar = { updatePageNavState: jest.fn() };
+			inst.draftManager = { checkAndRecoverDraft: jest.fn( () => Promise.resolve() ) };
+			inst.syncPageInUrl = jest.fn();
+			inst.reloadAtPage = jest.fn();
+			[
+				'performPageNavigation', 'applyPageData',
+				'resetPerPageState', 'refreshPageControls'
+			].forEach( ( m ) => {
+				inst[ m ] = LayersEditor.prototype[ m ].bind( inst );
+			} );
+			return inst;
+		}
+
+		test( 'requests the target page, not the page being left', async () => {
+			const inst = navInstance( { layers: [], imageUrl: '/thumb/page4.jpg' } );
+
+			// APIManager, DraftManager and FreshnessChecker all key off editor.page,
+			// so it has to be updated before the request goes out.
+			const seen = [];
+			inst.apiManager.loadLayers = jest.fn( () => {
+				seen.push( inst.page );
+				return Promise.resolve( { layers: [], imageUrl: '/thumb/page4.jpg' } );
+			} );
+
+			await inst.performPageNavigation( 4 );
+
+			expect( seen ).toEqual( [ 4 ] );
+		} );
+
+		test( 'swaps the background raster to the new page', async () => {
+			const inst = navInstance( { layers: [], imageUrl: '/thumb/page4.jpg' } );
+
+			await inst.performPageNavigation( 4 );
+
+			expect( inst.canvasManager.setBackgroundImageUrl )
+				.toHaveBeenCalledWith( '/thumb/page4.jpg' );
+			expect( inst.imageUrl ).toBe( '/thumb/page4.jpg' );
+		} );
+
+		test( 'starts the new page with a clean undo timeline and no selection', async () => {
+			const inst = navInstance( { layers: [], imageUrl: '/thumb/page4.jpg' } );
+
+			await inst.performPageNavigation( 4 );
+
+			expect( inst.historyManager.clearHistory ).toHaveBeenCalled();
+			expect( inst.selectionManager.clearSelection ).toHaveBeenCalled();
+			expect( inst.stateManager.set ).toHaveBeenCalledWith( 'isDirty', false );
+			expect( inst.historyManager.saveInitialState ).toHaveBeenCalled();
+		} );
+
+		test( 'does not reload the document on success', async () => {
+			const inst = navInstance( { layers: [], imageUrl: '/thumb/page4.jpg' } );
+
+			await inst.performPageNavigation( 4 );
+
+			expect( inst.reloadAtPage ).not.toHaveBeenCalled();
+			expect( inst.toolbar.updatePageNavState ).toHaveBeenCalled();
+		} );
+
+		test( 'falls back to a full reload when the page cannot be loaded', async () => {
+			const inst = navInstance( new Error( 'network' ) );
+
+			await inst.performPageNavigation( 4 );
+
+			expect( inst.reloadAtPage ).toHaveBeenCalledWith( 4 );
+			// The model is put back first, so the reload URL and any draft key
+			// written in between still describe the page we were actually on.
+			expect( inst.page ).toBe( 1 );
+		} );
+
+		test( 'reloads when there is no APIManager to load through', () => {
+			const inst = navInstance( { layers: [] } );
+			inst.apiManager = null;
+
+			inst.performPageNavigation( 4 );
+
+			expect( inst.reloadAtPage ).toHaveBeenCalledWith( 4 );
+		} );
+
+		test( 'syncPageInUrl replaces the entry rather than pushing one', () => {
+			const inst = createEditorInstance();
+			inst.syncPageInUrl = LayersEditor.prototype.syncPageInUrl.bind( inst );
+			const replaceState = jest.fn();
+			const pushState = jest.fn();
+			Object.defineProperty( window, 'history', {
+				value: { replaceState, pushState },
+				writable: true,
+				configurable: true
+			} );
+
+			inst.syncPageInUrl( 7 );
+
+			expect( replaceState ).toHaveBeenCalled();
+			// Back should leave the editor, not walk back through pages.
+			expect( pushState ).not.toHaveBeenCalled();
+			expect( String( replaceState.mock.calls[ 0 ][ 2 ] ) ).toContain( 'page=7' );
+		} );
+	} );
 } );

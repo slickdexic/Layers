@@ -323,12 +323,19 @@
 				if ( this.editor.stateManager ) {
 					this.editor.stateManager.set( 'isLoading', false );
 				}
+				// imageUrl/page/pageCount are passed through rather than stored:
+				// in-place page navigation needs the new page's raster URL, and
+				// the server is the only thing that knows how to build it.
+				const info = ( data && data.layersinfo ) || {};
 				resolve( {
 					layers: this.editor.stateManager.get( 'layers' ) || [],
 					baseWidth: this.editor.stateManager.get( 'baseWidth' ),
 					baseHeight: this.editor.stateManager.get( 'baseHeight' ),
 					allLayerSets: this.editor.stateManager.get( 'allLayerSets' ) || [],
-					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' )
+					currentLayerSetId: this.editor.stateManager.get( 'currentLayerSetId' ),
+					imageUrl: info.imageUrl || null,
+					page: parseInt( info.page, 10 ) || null,
+					pageCount: parseInt( info.pageCount, 10 ) || null
 				} );
 			}, ( code, result ) => {
 				this.hideSpinner();

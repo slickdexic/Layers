@@ -544,6 +544,28 @@ class CanvasManager {
 	}
 
 	/**
+	 * Point the canvas at a different background image and reload it.
+	 *
+	 * Used when moving between pages of a multi-page file without reloading the
+	 * document. The old image is dropped first so a slow fetch cannot leave the
+	 * previous page visible underneath the new page's layers.
+	 *
+	 * @param {string} url URL of the new background image
+	 */
+	setBackgroundImageUrl ( url ) {
+		this.config.backgroundImageUrl = url;
+		this.backgroundImage = null;
+		if ( this.renderer ) {
+			this.renderer.setBackgroundImage( null );
+		}
+		if ( this.imageLoader && typeof this.imageLoader.destroy === 'function' ) {
+			this.imageLoader.destroy();
+			this.imageLoader = null;
+		}
+		this.loadBackgroundImage();
+	}
+
+	/**
 	 * Load background image using ImageLoader module
 	 * Delegates to ImageLoader for URL detection and loading with fallbacks
 	 * @note ImageLoader is guaranteed to load first via extension.json in production,

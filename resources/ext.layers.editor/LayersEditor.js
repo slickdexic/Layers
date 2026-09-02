@@ -1569,12 +1569,161 @@ class LayersEditor {
 	}
 
 	/**
-	 * Reload the editor at a different page of the current file.
+	 * Move the editor to a different page of a multi-page file, in place.
+	 *
+	 * This used to be `window.location.href`, which reloaded the whole document:
+	 * every page turn threw away the undo stack, re-downloaded the editor
+	 * bundle, and cost a full round trip before anything was visible. Everything
+	 * a page turn actually needs - that page's raster and that page's layer set -
+	 * comes from the same `layersinfo` call the editor already makes on load.
+	 *
+	 * `this.page` is updated first because APIManager, DraftManager and
+	 * FreshnessChecker all key off it; the request must be made as the new page.
+	 * If the load fails the old full reload is used as a fallback, so a page turn
+	 * can degrade but never strand the user on the wrong page's canvas.
+	 *
+	 * @param {number} page 1-based page number
+	 * @return {Promise} Resolves when the new page is displayed
+	 * @private
+	 */
+	performPageNavigation ( page ) {
+		if ( !this.apiManager || typeof this.apiManager.loadLayers !== 'function' ) {
+			return Promise.resolve( this.reloadAtPage( page ) );
+		}
+
+		const previousPage = this.page;
+		this.page = page;
+		this.syncPageInUrl( page );
+		this.resetPerPageState();
+
+		return this.apiManager.loadLayers()
+			.then( ( data ) => {
+				if ( this.isDestroyed ) {
+					return;
+				}
+				this.applyPageData( data );
+			} )
+			.catch( ( error ) => {
+				this.debugLog( '[LayersEditor] In-place page navigation failed:', error );
+				// Put the model back before reloading, so the fallback URL and
+				// any draft key written in between refer to the page we were on.
+				this.page = previousPage;
+				this.reloadAtPage( page );
+			} );
+	}
+
+	/**
+	 * Apply a freshly loaded page's layer set and background raster.
+	 *
+	 * @param {Object} data Result of APIManager.loadLayers()
+	 * @private
+	 */
+	applyPageData ( data ) {
+		if ( data && data.pageCount ) {
+			this.pageCount = data.pageCount;
+		}
+
+		if ( data && data.imageUrl ) {
+			this.imageUrl = data.imageUrl;
+			this.config.imageUrl = data.imageUrl;
+			if ( this.canvasManager &&
+				typeof this.canvasManager.setBackgroundImageUrl === 'function'
+			) {
+				this.canvasManager.setBackgroundImageUrl( data.imageUrl );
+			}
+		}
+
+		if ( data && data.baseWidth && data.baseHeight &&
+			this.canvasManager && this.canvasManager.setBaseDimensions
+		) {
+			this.canvasManager.setBaseDimensions( data.baseWidth, data.baseHeight );
+		}
+
+		const layers = this.stateManager ? ( this.stateManager.get( 'layers' ) || [] ) : [];
+		if ( this.canvasManager ) {
+			this.canvasManager.renderLayers( layers );
+		}
+
+		// A page has its own autosaved draft; offer it now that the page is live.
+		if ( this.draftManager &&
+			typeof this.draftManager.checkAndRecoverDraft === 'function'
+		) {
+			this.draftManager.checkAndRecoverDraft().catch( () => {} );
+		}
+
+		// The new page starts a fresh undo timeline. Its predecessor's history
+		// describes layers that are no longer on the canvas.
+		if ( this.historyManager &&
+			typeof this.historyManager.saveInitialState === 'function'
+		) {
+			this.historyManager.saveInitialState();
+		}
+
+		this.refreshPageControls();
+	}
+
+	/**
+	 * Clear editing state that belongs to the page being left.
+	 *
+	 * @private
+	 */
+	resetPerPageState () {
+		if ( this.selectionManager && typeof this.selectionManager.clearSelection === 'function' ) {
+			this.selectionManager.clearSelection();
+		}
+		if ( this.stateManager ) {
+			this.stateManager.set( 'selectedLayerIds', [] );
+			this.stateManager.set( 'layers', [] );
+			this.stateManager.set( 'isDirty', false );
+		}
+		if ( this.historyManager && typeof this.historyManager.clearHistory === 'function' ) {
+			this.historyManager.clearHistory();
+		}
+	}
+
+	/**
+	 * Re-render the toolbar's page indicator and paging buttons.
+	 *
+	 * @private
+	 */
+	refreshPageControls () {
+		if ( this.toolbar && typeof this.toolbar.updatePageNavState === 'function' ) {
+			this.toolbar.updatePageNavState();
+		}
+	}
+
+	/**
+	 * Keep the address bar in step with the page being edited, without adding a
+	 * history entry per page turn - the browser Back button should leave the
+	 * editor, not walk back through pages.
 	 *
 	 * @param {number} page 1-based page number
 	 * @private
 	 */
-	performPageNavigation ( page ) {
+	syncPageInUrl ( page ) {
+		try {
+			const url = new URL( window.location.href );
+			url.searchParams.set( 'page', String( page ) );
+			const currentSetName = this.stateManager && this.stateManager.get( 'currentSetName' );
+			if ( currentSetName ) {
+				url.searchParams.set( 'setname', currentSetName );
+			}
+			if ( window.history && typeof window.history.replaceState === 'function' ) {
+				window.history.replaceState( null, '', url.toString() );
+			}
+		} catch ( e ) {
+			// A URL the browser will not parse is not worth failing navigation for.
+		}
+	}
+
+	/**
+	 * Full-document reload at a given page. Retained as the fallback for when an
+	 * in-place navigation cannot complete.
+	 *
+	 * @param {number} page 1-based page number
+	 * @private
+	 */
+	reloadAtPage ( page ) {
 		try {
 			const url = new URL( window.location.href );
 			url.searchParams.set( 'page', String( page ) );
