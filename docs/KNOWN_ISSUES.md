@@ -140,15 +140,31 @@ These are known, understood and deliberately not fixed. Tracked in
 
 ### R2.23–R2.26: Minor hardening and hygiene
 
-- SVG validation is substring-based rather than a well-formedness parse
-    (`ServerSideLayerValidator.php`). P3.
-- `SetNameSanitizer` allows spaces in set names, but `layerset=` in wikitext is
-    pipe/space-delimited, so `my labels` is unaddressable from wikitext. Needs
-    a decision: forbid, or document escaping. P3.
-- Something in the toolchain creates a `nul` file in the repo root on Windows.
-    It is untracked, but keeps reappearing. P3.
-- `ext.layers.editor` is ~1,965 KB of unminified JS loaded from article pages.
-    Within its declared budget, but the budget is generous. P3.
+- **R2.23 — 🔲 Open (P3).** SVG validation in `ServerSideLayerValidator.php`
+    is a blacklist of substring and regex checks rather than a well-formedness
+    parse. Narrower than it first looks: `validateSvgString()` requires the
+    value to *begin* with `<svg`, which makes `<!DOCTYPE>` and `<!ENTITY>`
+    unreachable, so there is no XXE surface — an entity declaration has to
+    precede the root element. What remains is that a blacklist can only reject
+    what it enumerates. Any replacement must be weighed against the XXE
+    footguns of `DOMDocument` itself, so this is deliberately left alone.
+- **R2.24 — ❌ Retracted, not a defect.** The claim was that
+    `SetNameSanitizer` permits spaces while `layerset=` is "pipe/space
+    delimited", making `my labels` unaddressable from wikitext. Tested
+    end-to-end against a live wiki: a set renamed to `my labels` renders from
+    `[[File:X|layerset=my labels]]` with `data-layer-setname="my labels"` and
+    full layer data. Image parameters are delimited by `|` only, the scan
+    captures `[^|\]]+`, and every JS consumer reads the attribute with
+    `getAttribute()` or a presence selector — there is no `~=` selector to break
+    on a space. Control characters, which *would* break the line-based gallery
+    parser, are already rejected separately (`/[\x00-\x1F\x7F]/`).
+- **R2.25 — ✅ Non-issue.** The stray `nul` file Windows tooling leaves in the
+    repo root is listed in `.gitignore`, so it is never committed. Harmless.
+- **R2.26 — ✅ Fixed in v1.5.87.** `ext.layers.editor` is no longer loaded from
+    article or File pages; `src/Hooks.php` does not add it. The editor only
+    loads in its own document (`action=editlayers`, including the modal iframe),
+    where `EditLayersAction` adds it. This removed 214 KB gzipped / 1.02 MB
+    parsed per page view of code that never ran.
 
 ---
 
@@ -159,8 +175,11 @@ These are known, understood and deliberately not fixed. Tracked in
 | P0 | 5 | 5 | 0 |
 | P1 | 62 | 62 | 0 |
 | P2 | 172 | 170 | 2 |
-| P3 | 246 | 230 | 16 |
-| **Total** | **485** | **467** | **18** |
+| P3 | 246 | 232 | 13 |
+| **Total** | **485** | **469** | **15** |
+
+*One further P3 (R2.24) was retracted after testing rather than fixed, so it is
+counted in neither column.*
 
 *v71 audit: 6 code items + 2 doc drift — all fixed.
 v70 audit: 7 items found, 6 fixed, 1 retracted as false positive.*

@@ -536,6 +536,30 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * `SetNameSanitizer` permits spaces in set names, and image parameters are
+	 * delimited by `|` alone, so a name like "my labels" survives the scan whole.
+	 *
+	 * This was once filed as a defect - that set names with spaces were
+	 * unaddressable from wikitext - and retracted after testing end-to-end
+	 * against a live wiki. Pinned here so that nobody "fixes" it later by
+	 * forbidding spaces in set names and silently breaking existing sets.
+	 */
+	public function testScanPreservesSpacesInSetNames(): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$hooks::onParserClearState( null );
+
+		$text = '[[File:X.jpg|thumb|layerset=my labels]]';
+		$hooks::onInternalParseBeforeLinks( null, $text, null );
+
+		$this->assertSame(
+			'my labels',
+			$hooks::getFileParamsForRender( 'X.jpg' )['setName'],
+			'A set name containing a space must survive the scan intact'
+		);
+		$this->assertStringNotContainsString( 'layerset=', $text );
+	}
+
+	/**
 	 * A file that appears only inside templates has no scan entries at all; the
 	 * parse-order source must carry it.
 	 */
