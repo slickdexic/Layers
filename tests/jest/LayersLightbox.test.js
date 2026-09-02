@@ -38,11 +38,18 @@ beforeAll( () => {
 		}
 	} );
 
-	// Mock window.Layers namespace
+	// Mock window.Layers namespace.
+	//
+	// UrlParser is loaded for real rather than stubbed: it ships in the same
+	// ResourceLoader module as the lightbox and owns every rule for turning a
+	// link or a thumbnail URL into a file name. Stubbing it would let the
+	// lightbox's delegation silently return null - which is exactly the failure
+	// that made a layered PDF unopenable before v1.5.92.
 	window.Layers = window.Layers || {};
 	window.Layers.Viewer = {
 		LayersViewer: MockLayersViewer
 	};
+	require( '../../resources/ext.layers/viewer/UrlParser.js' );
 
 	// Mock MediaWiki API - return our mock API instance
 	window.mw = {

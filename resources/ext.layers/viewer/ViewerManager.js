@@ -1136,13 +1136,6 @@ class ViewerManager {
 		// Captures the filename including extension
 		SRC_URL: /\/(?:images\/.*?\/)?([^/]+\.[a-zA-Z]+)(?:[?]|$)/,
 
-		// Matches: /File:Filename in href links
-		// Captures the filename after "File:"
-		FILE_HREF: /\/File:([^/?#]+)/,
-
-		// Matches: MediaWiki thumbnail prefix like "123px-" or "800px-"
-		THUMBNAIL_PREFIX: /^\d+px-/,
-
 		// Matches: Wikitext bracket characters that should be stripped
 		WIKITEXT_BRACKETS: /[\x5B\x5D]/g
 	};
@@ -1166,18 +1159,19 @@ class ViewerManager {
 			const src = img.src || '';
 			const srcMatch = src.match( patterns.SRC_URL );
 			if ( srcMatch && srcMatch[ 1 ] ) {
-				filename = decodeURIComponent( srcMatch[ 1 ] );
-				// Remove any thumbnail prefix like "123px-"
-				filename = filename.replace( patterns.THUMBNAIL_PREFIX, '' );
+				filename = this.urlParser.stripThumbnailPrefix(
+					decodeURIComponent( srcMatch[ 1 ] )
+				);
 			} else {
-				// Try extracting from parent link href
+				// Try extracting from parent link href. Delegated so the query-string
+				// form and localised namespaces are handled the same way everywhere;
+				// the local pattern here used to accept only /File: with an English
+				// prefix.
 				const parent = img.parentNode;
 				if ( parent && parent.tagName === 'A' ) {
-					const href = parent.getAttribute( 'href' ) || '';
-					const hrefMatch = href.match( patterns.FILE_HREF );
-					if ( hrefMatch && hrefMatch[ 1 ] ) {
-						filename = decodeURIComponent( hrefMatch[ 1 ].replace( /_/g, ' ' ) );
-					}
+					filename = this.urlParser.fileNameFromHref(
+						parent.getAttribute( 'href' ) || ''
+					);
 				}
 			}
 		}

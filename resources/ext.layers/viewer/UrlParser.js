@@ -76,6 +76,78 @@ class UrlParser {
 	}
 
 	/**
+	 * Strip MediaWiki's thumbnail prefix from a name taken out of a thumb URL.
+	 *
+	 * Beyond the familiar `220px-`, paged and layered source formats (PDF, DjVu,
+	 * TIFF) add `page3-`, optionally behind a `lossy-`/`lossless-` qualifier.
+	 * Handling only the width meant a PDF page thumbnail kept its prefix and the
+	 * derived name matched no file at all.
+	 *
+	 * This is the one place that knows the prefix shape. Anything else deriving a
+	 * name from a thumbnail URL must call this rather than carry its own copy;
+	 * `scripts/check-filename-extraction.js` enforces that.
+	 *
+	 * @param {string} name File name taken from a thumbnail URL
+	 * @return {string} Name without the thumbnail prefix
+	 */
+	stripThumbnailPrefix ( name ) {
+		return String( name || '' ).replace(
+			/^(?:lossy-|lossless-)?(?:page\d+-)?\d+px-/i, ''
+		);
+	}
+
+	/**
+	 * Extract a file name from a File: page link.
+	 *
+	 * Accepts both the pretty path (`/wiki/File:X.jpg`) and the query form
+	 * (`/index.php?title=File:X.jpg&layerset=…`). The query form matters more
+	 * than it looks: every link the viewer overlay builds for a named layer set
+	 * carries parameters, and a wiki that does not serve pretty URLs uses it for
+	 * everything. The localised namespace is preferred when known, falling back
+	 * to "whatever precedes the first colon" so aliases such as `Image:` work.
+	 *
+	 * @param {string} href Link target
+	 * @param {string} [fileNamespace] Localised File namespace, if known
+	 * @return {string|null} File name, or null when the href names no file
+	 */
+	fileNameFromHref ( href, fileNamespace ) {
+		if ( !href || typeof href !== 'string' ) {
+			return null;
+		}
+
+		const queryMatch = href.match( /[?&]title=([^&#]+)/ );
+		let raw;
+		if ( queryMatch ) {
+			raw = queryMatch[ 1 ];
+		} else {
+			const path = href.split( /[?#]/ )[ 0 ];
+			raw = path.slice( path.lastIndexOf( '/' ) + 1 );
+		}
+
+		let decoded;
+		try {
+			decoded = decodeURIComponent( raw );
+		} catch ( e ) {
+			// Malformed percent-encoding: fall back to the raw segment.
+			decoded = raw;
+		}
+
+		const ns = fileNamespace || this.getFileNamespace();
+		const nsMatch = decoded.match(
+			new RegExp( '^(?:' + this.escapeRegExp( ns ) + '|File|Image):(.+)$', 'i' )
+		);
+		const name = ( nsMatch ? nsMatch[ 1 ] : decoded.slice( decoded.indexOf( ':' ) + 1 ) );
+		if ( !nsMatch && decoded.indexOf( ':' ) === -1 ) {
+			return null;
+		}
+
+		const cleaned = name.replace( /_/g, ' ' ).trim();
+		// Require something file-shaped, so an ordinary article link in an
+		// unrecognised namespace cannot be mistaken for a file.
+		return /\.[A-Za-z0-9]{2,5}$/.test( cleaned ) ? cleaned : null;
+	}
+
+	/**
 	 * Determine whether a layers value denotes explicit enabling.
 	 *
 	 * @param {string} v Value to check
@@ -292,29 +364,8 @@ class UrlParser {
 
 		// Try href patterns
 		if ( a && a.getAttribute( 'href' ) ) {
-			const href = a.getAttribute( 'href' );
 			try {
-				const decodedHref = href;
-				// Query param title=<FileNs>:
-				const reTitle = new RegExp(
-					'[?&]title=' + this.escapeRegExp( fileNamespace ) + ':([^&#]+)',
-					'i'
-				);
-				const mTitle = decodedHref.match( reTitle );
-				if ( mTitle && mTitle[ 1 ] ) {
-					filename = decodeURIComponent( mTitle[ 1 ] ).replace( /_/g, ' ' );
-				} else {
-					// Path-style: /wiki/<FileNs>:...
-					const rePath = new RegExp(
-						'\\/(?:wiki\\/|index\\.php\\/)?' +
-							this.escapeRegExp( fileNamespace ) + ':([^?#]+)',
-						'i'
-					);
-					const mPath = decodedHref.match( rePath );
-					if ( mPath && mPath[ 1 ] ) {
-						filename = decodeURIComponent( mPath[ 1 ] ).replace( /_/g, ' ' );
-					}
-				}
+				filename = this.fileNameFromHref( a.getAttribute( 'href' ), fileNamespace );
 			} catch ( e ) {
 				// Filename extraction from href failed
 			}
@@ -364,7 +415,9 @@ class UrlParser {
 				const rx = /\/([-A-Za-z0-9%_. ]+?\.(?:png|jpe?g|gif|svg|webp|tiff?))(?:[/?#]|$)/i;
 				const mSrc = src.match( rx );
 				if ( mSrc && mSrc[ 1 ] ) {
-					filename = decodeURIComponent( mSrc[ 1 ] ).replace( /_/g, ' ' );
+					filename = this.stripThumbnailPrefix(
+						decodeURIComponent( mSrc[ 1 ] )
+					).replace( /_/g, ' ' );
 				}
 			} catch ( eS ) {
 				// Image src parsing failed

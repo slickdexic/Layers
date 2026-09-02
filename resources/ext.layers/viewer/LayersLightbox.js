@@ -1775,8 +1775,9 @@
 		extractFilenameFromTrigger( trigger ) {
 			// Prefer the link target: it names the file exactly, where a
 			// thumbnail URL only encodes a derived name.
+			const parser = this.getUrlParser();
 			const href = trigger.getAttribute( 'href' ) || '';
-			const fromHref = this.fileNameFromHref( href );
+			const fromHref = parser && parser.fileNameFromHref( href );
 			if ( fromHref ) {
 				return fromHref;
 			}
@@ -1792,12 +1793,8 @@
 				const src = img.src || '';
 				const srcMatch = src.match( /\/([^/]+\.[a-zA-Z]+)(?:\?|$)/ );
 				if ( srcMatch ) {
-					let name = decodeURIComponent( srcMatch[ 1 ] );
-					// MediaWiki thumbnail prefixes: "220px-", and for paged or
-					// layered source formats (PDF, DjVu, TIFF) also "page3-" and
-					// a "lossy-"/"lossless-" qualifier ahead of it.
-					name = name.replace( /^(?:lossy-|lossless-)?(?:page\d+-)?\d+px-/, '' );
-					return name;
+					const name = decodeURIComponent( srcMatch[ 1 ] );
+					return parser ? parser.stripThumbnailPrefix( name ) : name;
 				}
 			}
 
@@ -1805,56 +1802,20 @@
 		}
 
 		/**
-		 * Pull the file name out of a File: page link.
+		 * Lazily obtain a UrlParser, which owns every rule for turning a link or a
+		 * thumbnail URL into a file name. This class used to carry its own copies,
+		 * and they were a strict subset: only a pretty `/File:` path was matched, so
+		 * a layered PDF could not be opened at all.
 		 *
-		 * Handles both the pretty form (`/wiki/File:X.jpg`) and the query form
-		 * (`/index.php?title=File:X.jpg&layerset=…`). Only the pretty form used
-		 * to be recognised, so on any wiki that does not serve pretty URLs -
-		 * and on links that carry query parameters, which is every link the
-		 * viewer overlay builds for a named layer set - extraction fell through
-		 * to the thumbnail file name instead. For a raster image that happened
-		 * to give the right answer; for a PDF it produced
-		 * "page1-500px-Doc.pdf.jpg" and the API answered filenotfound, so the
-		 * lightbox could not open a layered PDF at all.
-		 *
-		 * The namespace prefix is not matched against "File", because it is
-		 * localised on non-English wikis. Anything before the first colon is
-		 * treated as the namespace.
-		 *
-		 * @param {string} href Link target
-		 * @return {string|null} File name, or null when the href names no file
+		 * @return {Object|null} Parser instance, or null if the class is unavailable
 		 * @private
 		 */
-		fileNameFromHref( href ) {
-			if ( !href ) {
-				return null;
+		getUrlParser() {
+			if ( !this._urlParser ) {
+				const UrlParser = getClass( 'Viewer.UrlParser', 'LayersUrlParser' );
+				this._urlParser = UrlParser ? new UrlParser( { debug: this.debug } ) : null;
 			}
-
-			const queryMatch = href.match( /[?&]title=([^&#]+)/ );
-			let raw;
-			if ( queryMatch ) {
-				raw = queryMatch[ 1 ];
-			} else {
-				const path = href.split( /[?#]/ )[ 0 ];
-				raw = path.slice( path.lastIndexOf( '/' ) + 1 );
-			}
-
-			let decoded;
-			try {
-				decoded = decodeURIComponent( raw );
-			} catch ( e ) {
-				// Malformed percent-encoding: fall back to the raw segment.
-				decoded = raw;
-			}
-
-			const colon = decoded.indexOf( ':' );
-			if ( colon === -1 ) {
-				return null;
-			}
-			const name = decoded.slice( colon + 1 ).replace( /_/g, ' ' ).trim();
-			// Require something that looks like a file, so an ordinary article
-			// link cannot be mistaken for one.
-			return /\.[A-Za-z0-9]{2,5}$/.test( name ) ? name : null;
+			return this._urlParser;
 		}
 	}
 

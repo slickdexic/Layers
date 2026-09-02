@@ -35,11 +35,31 @@ describe( 'ViewerManager', () => {
 		window.Layers.Viewer = window.Layers.Viewer || {};
 		window.Layers.Viewer.SlideController = SlideController;
 
-		// Create mock URL parser
+		// Create mock URL parser. UrlParser owns every rule for turning a link or
+		// a thumbnail URL into a file name, so the stub has to behave like the
+		// real thing for the extraction tests below to mean anything.
 		mockUrlParser = {
 			decodeHtmlEntities: jest.fn( ( str ) => str ),
 			getPageLayersParam: jest.fn( () => null ),
-			getNamespaceNumber: jest.fn( () => 0 )
+			getNamespaceNumber: jest.fn( () => 0 ),
+			stripThumbnailPrefix: jest.fn( ( name ) => String( name || '' ).replace(
+				/^(?:lossy-|lossless-)?(?:page\d+-)?\d+px-/i, ''
+			) ),
+			fileNameFromHref: jest.fn( ( href ) => {
+				if ( !href ) {
+					return null;
+				}
+				const q = href.match( /[?&]title=([^&#]+)/ );
+				const path = href.split( /[?#]/ )[ 0 ];
+				const raw = q ? q[ 1 ] : path.slice( path.lastIndexOf( '/' ) + 1 );
+				const decoded = decodeURIComponent( raw );
+				if ( decoded.indexOf( ':' ) === -1 ) {
+					return null;
+				}
+				const name = decoded.slice( decoded.indexOf( ':' ) + 1 )
+					.replace( /_/g, ' ' ).trim();
+				return /\.[A-Za-z0-9]{2,5}$/.test( name ) ? name : null;
+			} )
 		};
 
 		// Create mock LayersViewer constructor

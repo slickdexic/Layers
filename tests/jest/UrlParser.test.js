@@ -494,4 +494,57 @@ describe( 'UrlParser', () => {
 			expect( window.Layers.Viewer.UrlParser ).toBe( UrlParser );
 		} );
 	} );
+
+	// This class is the single owner of "turn a link or a thumbnail URL into a
+	// file name". The rules previously existed in three places at three
+	// capability levels, and the weakest copy made layered PDFs unopenable in
+	// the full-screen viewer.
+	describe( 'stripThumbnailPrefix', () => {
+		it.each( [
+			[ '220px-Test.jpg', 'Test.jpg' ],
+			[ '1024px-Test.jpg', 'Test.jpg' ],
+			[ 'page1-500px-Somepdf.pdf.jpg', 'Somepdf.pdf.jpg' ],
+			[ 'page12-80px-Doc.djvu.jpg', 'Doc.djvu.jpg' ],
+			[ 'lossy-page3-800px-Scan.tiff.jpg', 'Scan.tiff.jpg' ],
+			[ 'lossless-page2-120px-Scan.tiff.png', 'Scan.tiff.png' ],
+			[ 'Test.jpg', 'Test.jpg' ],
+			[ 'my-200px-photo.jpg', 'my-200px-photo.jpg' ]
+		] )( 'strips %s to %s', ( input, expected ) => {
+			expect( urlParser.stripThumbnailPrefix( input ) ).toBe( expected );
+		} );
+
+		it( 'tolerates empty and nullish input', () => {
+			expect( urlParser.stripThumbnailPrefix( '' ) ).toBe( '' );
+			expect( urlParser.stripThumbnailPrefix( null ) ).toBe( '' );
+			expect( urlParser.stripThumbnailPrefix( undefined ) ).toBe( '' );
+		} );
+	} );
+
+	describe( 'fileNameFromHref', () => {
+		it.each( [
+			[ '/wiki/File:Test_Image.jpg', 'Test Image.jpg' ],
+			[ '/index.php/File:Test_Image.jpg', 'Test Image.jpg' ],
+			[ '/index.php?title=File:Somepdf.pdf&layerset=001', 'Somepdf.pdf' ],
+			[ '/index.php?title=File:Test%20Image.jpg', 'Test Image.jpg' ],
+			[ '/wiki/Image:Legacy.png', 'Legacy.png' ],
+			[ '/index.php?title=Datei:Beispiel_Bild.jpg&layerset=on', 'Beispiel Bild.jpg' ]
+		] )( 'reads %s as %s', ( href, expected ) => {
+			expect( urlParser.fileNameFromHref( href ) ).toBe( expected );
+		} );
+
+		it.each( [
+			[ '', 'empty href' ],
+			[ null, 'nullish href' ],
+			[ '/wiki/Main_Page', 'article with no namespace' ],
+			[ '/index.php?title=Help:Contents', 'article in another namespace' ],
+			[ '/wiki/File:NoExtension', 'file-looking link with no extension' ]
+		] )( 'returns null for %s (%s)', ( href ) => {
+			expect( urlParser.fileNameFromHref( href ) ).toBeNull();
+		} );
+
+		it( 'does not throw on malformed percent-encoding', () => {
+			expect( () => urlParser.fileNameFromHref( '/wiki/File:%E0%A4%A.jpg' ) )
+				.not.toThrow();
+		} );
+	} );
 } );
