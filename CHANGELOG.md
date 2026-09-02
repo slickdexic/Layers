@@ -4,6 +4,40 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.91] - 2026-09-02
+
+### Fixed
+
+- **`<gallery>` lines written without a `File:` prefix now work.** A gallery
+  image line may be written either `File:X.jpg|layerset=anatomy` or bare as
+  `X.jpg|layerset=anatomy` — MediaWiki resolves both in the File namespace. The
+  preprocessor only recognised the prefixed form, so on a bare line:
+
+  - `layerset=anatomy` was never stripped and rendered as the image's **visible
+    caption**, and as its `alt` text and link `title`. A screen reader announced
+    the image as "layerset=anatomy".
+  - no hint was registered, so the image silently fell back to the most recently
+    saved set instead of the one that was asked for. With one set on the file
+    that looks correct, which is what kept it hidden.
+
+  The namespace prefix is now optional in the line pattern.
+
+- **Gallery hints are keyed by the canonical file DB key.**
+  `registerGalleryHint()` stripped an English `File:`/`Image:` prefix by hand and
+  used the remainder as-is, but the lookup side reads `File::getName()`, which is
+  wiki-cased with underscores. A line reading `somepdf.pdf` or `Some pdf.pdf`
+  therefore registered under a key the render side never asks for, and localised
+  prefixes (`Datei:`, `Fichier:`) were not stripped at all. It now normalises
+  through the same `normalizeFileKey()` the wikitext scan uses. This also fixes
+  `{{#layers_hint:}}`, which shares the method.
+
+### Notes
+
+- Both defects were found by a live regression sweep over the wikitext surface
+  after the parser-hook change in 1.5.90, not by the unit suite — the suite
+  covered the prefixed gallery form only. The seven line forms are now in
+  `WikitextHooksTest`.
+
 ## [1.5.90] - 2026-09-02
 
 ### Fixed

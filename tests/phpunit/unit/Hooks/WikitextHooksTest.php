@@ -560,6 +560,53 @@ class WikitextHooksTest extends \MediaWikiUnitTestCase {
 	}
 
 	/**
+	 * A `<gallery>` image line may be written with or without the namespace
+	 * prefix - MediaWiki resolves both in NS_FILE.
+	 *
+	 * Requiring the prefix meant a bare line kept its layerset= option, which
+	 * then rendered as the visible caption *and* as the img alt and link title,
+	 * and registered no hint at all, so the image silently fell back to the most
+	 * recently saved set instead of the one that was asked for.
+	 *
+	 * @dataProvider provideGalleryLines
+	 */
+	public function testGalleryHintIsRegisteredForEveryLineForm(
+		string $line, string $expectedCaption, string $description
+	): void {
+		$hooks = \MediaWiki\Extension\Layers\Hooks\WikitextHooks::class;
+		$hooks::onParserClearState( null );
+
+		$text = "<gallery>\n" . $line . "\n</gallery>";
+		$hooks::onParserBeforeInternalParse( null, $text, null );
+
+		$this->assertSame(
+			[ 'X.jpg' => 'anatomy' ],
+			$this->getStaticState( 'galleryHints' ),
+			$description . ': hint must be keyed by the canonical file DB key'
+		);
+		$this->assertStringNotContainsString(
+			'layerset=', $text, $description . ': option must be stripped'
+		);
+		$this->assertStringContainsString(
+			$expectedCaption === '' ? '</gallery>' : $expectedCaption,
+			$text,
+			$description . ': caption must survive'
+		);
+	}
+
+	public static function provideGalleryLines(): array {
+		return [
+			[ 'File:X.jpg|layerset=anatomy', '', 'File: prefix' ],
+			[ 'Image:X.jpg|layerset=anatomy', '', 'Image: alias' ],
+			[ 'X.jpg|layerset=anatomy', '', 'bare filename' ],
+			[ 'x.jpg|layerset=anatomy', '', 'bare, lower-case first letter' ],
+			[ ' X.jpg|layerset=anatomy', '', 'indented bare filename' ],
+			[ 'X.jpg|layerset=anatomy|A caption', 'A caption', 'bare with caption' ],
+			[ 'File:X.jpg|layerset=anatomy|A caption', 'A caption', 'prefixed with caption' ],
+		];
+	}
+
+	/**
 	 * A file that appears only inside templates has no scan entries at all; the
 	 * parse-order source must carry it.
 	 */

@@ -119,6 +119,27 @@ no fixes, including security fixes, rather than continuing to recommend it.
 - `<gallery>` preprocessing stays on `ParserBeforeInternalParse`: gallery is an
     extension tag, so after expansion its body is a strip marker.
 
+### R2.27: `<gallery>` lines without a `File:` prefix — fixed in v1.5.91
+
+- **File:** `src/Hooks/WikitextHooks.php`
+- **Was:** a gallery image line may be written `File:X.jpg|layerset=anatomy` or
+    bare as `X.jpg|layerset=anatomy`; MediaWiki resolves both in NS_FILE, but
+    `preprocessGalleryBlock()` matched only the prefixed form. On a bare line the
+    option was never stripped, so it rendered as the image's visible caption and
+    as its `alt` and link `title` — a screen reader announced the image as
+    "layerset=anatomy" — and no hint was registered, so the image silently fell
+    back to the most recently saved set rather than the one requested.
+- **Also:** `registerGalleryHint()` stripped an English `File:`/`Image:` prefix
+    by hand and used the remainder as-is, while the lookup side reads
+    `File::getName()` — wiki-cased, underscored. `somepdf.pdf` or `Some pdf.pdf`
+    registered under a key the render side never asks for, and localised
+    prefixes were not stripped at all. Now normalised through the same
+    `normalizeFileKey()` the wikitext scan uses, which also fixes
+    `{{#layers_hint:}}`.
+- **Found by** a live regression sweep of the wikitext surface after the
+    v1.5.90 hook change, not by the unit suite, which covered only the prefixed
+    form. All seven line forms are now in `WikitextHooksTest`.
+
 ---
 
 ## 🔴 Currently open — carried forward from the R2 review (v1.5.83)

@@ -408,8 +408,14 @@ class WikitextHooks {
 		if ( $filename === '' || $setname === '' ) {
 			return;
 		}
-		// Normalize: strip "File:" or "Image:" prefix if present.
-		$normalized = preg_replace( '/^(?:File|Image):\s*/i', '', $filename );
+		// Key by the canonical file DB key, because the lookup side reads
+		// File::getName(). Stripping an English "File:"/"Image:" prefix by hand was
+		// not enough: it left the wiki-casing and the space/underscore difference
+		// alone, so "somepdf.pdf" or "Some pdf.pdf" registered under a key the
+		// render side never asks for, and localised prefixes were not stripped at all.
+		$normalized = self::normalizeFileKey(
+			preg_replace( '/^' . self::fileNsPattern() . ':\s*/i', '', $filename ) ?? $filename
+		);
 		if ( $normalized !== '' ) {
 			self::$galleryHints[$normalized] = $setname;
 		}
@@ -1169,8 +1175,14 @@ class WikitextHooks {
 			return $block;
 		}
 		return preg_replace_callback(
-			// Match image lines: optional indent + File:/Image: + filename + pipe options
-			'/^([ \t]*' . self::fileNsPattern() . ':([^\|\n]+))(\|[^\n]*)$/mi',
+			// Match image lines: optional indent, optional namespace prefix, filename,
+			// then pipe options. The prefix is optional because a gallery line may be
+			// written either "File:X.jpg|..." or bare "X.jpg|..." - MediaWiki resolves
+			// both in NS_FILE. Requiring it meant a bare line kept its layerset=
+			// option, which then rendered as the visible caption and as alt/title text,
+			// and registered no hint at all so the image silently fell back to the
+			// most recent set instead of the one asked for.
+			'/^([ \t]*(?:' . self::fileNsPattern() . ':)?([^\|\n]+))(\|[^\n]*)$/mi',
 			static function ( $line ) {
 				// "  File:Name.jpg" (with any indent)
 				$prefix = $line[1];
