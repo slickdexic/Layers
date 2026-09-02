@@ -56,6 +56,9 @@ class LayersEditor {
 		// Multi-page (PDF) context. Single-page files and images use page 1.
 		this.page = Math.max( 1, parseInt( this.config.page, 10 ) || 1 );
 		this.pageCount = Math.max( 1, parseInt( this.config.pageCount, 10 ) || 1 );
+		// Carries unsaved work across page turns so navigation need not ask.
+		const PageBufferClass = getClass( 'Editor.PageBuffer', 'PageBuffer' );
+		this.pageBuffer = PageBufferClass ? new PageBufferClass() : null;
 		this.canvasManager = null;
 		this.layerPanel = null;
 		this.toolbar = null;
@@ -1172,16 +1175,53 @@ class LayersEditor {
 	}
 
 	/**
-	 * Check if there are unsaved changes
+	 * Check if there are unsaved changes anywhere in the document.
 	 *
-	 * `isDirty` is the single source of truth. This used to read a separate
-	 * `hasUnsavedChanges` key that StateManager never declared and markDirty()
-	 * never wrote, so every guard built on it was inert.
+	 * Document-level, not page-level: pages the reader edited and then turned
+	 * away from are still unsaved, and the guards that call this - leaving the
+	 * editor, closing the tab - are asking about the whole document.
+	 *
+	 * `isDirty` is the single source of truth for the page on screen. This used
+	 * to read a separate `hasUnsavedChanges` key that StateManager never declared
+	 * and markDirty() never wrote, so every guard built on it was inert.
 	 *
 	 * @return {boolean}
 	 */
 	hasUnsavedChanges () {
-		return !!( this.stateManager && this.stateManager.isDirty() );
+		if ( this.stateManager && this.stateManager.get( 'isDirty' ) ) {
+			return true;
+		}
+		return !!( this.pageBuffer && !this.pageBuffer.isEmpty() );
+	}
+
+	/**
+	 * Pages carrying unsaved work, in reading order, including this one.
+	 *
+	 * @return {number[]}
+	 */
+	unsavedPages () {
+		const pages = this.pageBuffer ? this.pageBuffer.dirtyPages() : [];
+		if ( this.stateManager && this.stateManager.get( 'isDirty' ) &&
+			pages.indexOf( this.page ) === -1
+		) {
+			pages.push( this.page );
+		}
+		return pages.sort( ( a, b ) => a - b );
+	}
+
+	/**
+	 * @param {string} message Text to show
+	 * @param {string} [type] mw.notify type
+	 * @private
+	 */
+	notifyUser ( message, type ) {
+		try {
+			if ( typeof mw !== 'undefined' && mw.notify ) {
+				mw.notify( message, { type: type || 'info' } );
+			}
+		} catch ( e ) {
+			this.debugLog( '[LayersEditor] notify failed:', e );
+		}
 	}
 
 	/**
@@ -1497,8 +1537,11 @@ class LayersEditor {
 	/**
 	 * Navigate the editor to a different page of a multi-page file (PDF).
 	 *
-	 * Performs a full reload so the server produces the correct rasterized page
-	 * thumbnail, canvas dimensions, and page-scoped layer set.
+	 * This no longer asks anything. It used to open a Save / Discard / Cancel
+	 * dialog whenever the page was dirty, which turned every page boundary into
+	 * a save round trip and a decision - and answered a question the reader had
+	 * not asked, since they wanted to turn a page, not to publish. Unsaved work
+	 * is now carried in `pageBuffer` until the reader saves or leaves.
 	 *
 	 * @param {number} targetPage 1-based page number to navigate to
 	 * @return {Promise<boolean>} Resolves true when navigation was started
@@ -1510,45 +1553,8 @@ class LayersEditor {
 			return Promise.resolve( false );
 		}
 
-		if ( !this.hasUnsavedChanges() ) {
-			this.performPageNavigation( page );
-			return Promise.resolve( true );
-		}
-
-		const message = this.getMessage(
-			'layers-page-unsaved-confirm',
-			'You have unsaved changes on this page. Save them before moving on?'
-		);
-
-		if ( !this.dialogManager ||
-			typeof this.dialogManager.showSaveDiscardDialog !== 'function'
-		) {
-			// eslint-disable-next-line no-alert
-			if ( typeof window !== 'undefined' && window.confirm && !window.confirm( message ) ) {
-				return Promise.resolve( false );
-			}
-			this.discardPageChanges();
-			this.performPageNavigation( page );
-			return Promise.resolve( true );
-		}
-
-		return this.dialogManager.showSaveDiscardDialog( { message: message } )
-			.then( ( choice ) => {
-				if ( choice === 'cancel' ) {
-					return false;
-				}
-				if ( choice === 'discard' ) {
-					this.discardPageChanges();
-					this.performPageNavigation( page );
-					return true;
-				}
-				return Promise.resolve( this.save() )
-					.then( () => {
-						this.performPageNavigation( page );
-						return true;
-					} )
-					.catch( () => false );
-			} );
+		this.performPageNavigation( page );
+		return Promise.resolve( true );
 	}
 
 	/**
@@ -1563,9 +1569,75 @@ class LayersEditor {
 		if ( this.draftManager && typeof this.draftManager.clearDraft === 'function' ) {
 			this.draftManager.clearDraft();
 		}
+		if ( this.pageBuffer ) {
+			this.pageBuffer.forget( this.page );
+		}
 		if ( this.stateManager ) {
 			this.stateManager.set( 'isDirty', false );
 		}
+	}
+
+	/**
+	 * Set the current page's unsaved work aside so the reader can move on.
+	 *
+	 * The draft is written at the same moment: the buffer lives in memory only,
+	 * and a page the reader has moved away from is exactly the work they would
+	 * be most surprised to lose to a crashed tab.
+	 *
+	 * @private
+	 */
+	stashCurrentPage () {
+		if ( !this.pageBuffer || !this.stateManager ) {
+			return;
+		}
+		if ( !this.stateManager.get( 'isDirty' ) ) {
+			return;
+		}
+
+		if ( this.draftManager && typeof this.draftManager.saveDraft === 'function' ) {
+			// Still on the old page, so this writes under the old page's key.
+			try {
+				this.draftManager.saveDraft();
+			} catch ( e ) {
+				this.debugLog( '[LayersEditor] Could not draft page before leaving it:', e );
+			}
+		}
+
+		this.pageBuffer.stash( this.page, {
+			page: this.page,
+			layers: this.stateManager.get( 'layers' ) || [],
+			setName: this.stateManager.get( 'currentSetName' ) || '',
+			backgroundVisible: this.stateManager.get( 'backgroundVisible' ),
+			backgroundOpacity: this.stateManager.get( 'backgroundOpacity' ),
+			imageUrl: this.imageUrl,
+			baseWidth: this.stateManager.get( 'baseWidth' ),
+			baseHeight: this.stateManager.get( 'baseHeight' )
+		} );
+	}
+
+	/**
+	 * Put a page the reader edited earlier back on the canvas, from memory.
+	 *
+	 * @param {Object} entry Buffered page state
+	 * @private
+	 */
+	restoreBufferedPage ( entry ) {
+		if ( !entry ) {
+			return;
+		}
+
+		this.applyPageData( {
+			imageUrl: entry.imageUrl,
+			baseWidth: entry.baseWidth,
+			baseHeight: entry.baseHeight,
+			layers: entry.layers
+		}, entry );
+
+		if ( this.stateManager ) {
+			// It was dirty when it was set aside, and nothing has saved it since.
+			this.stateManager.set( 'isDirty', true );
+		}
+		this.refreshPageControls();
 	}
 
 	/**
@@ -1579,8 +1651,6 @@ class LayersEditor {
 	 *
 	 * `this.page` is updated first because APIManager, DraftManager and
 	 * FreshnessChecker all key off it; the request must be made as the new page.
-	 * If the load fails the old full reload is used as a fallback, so a page turn
-	 * can degrade but never strand the user on the wrong page's canvas.
 	 *
 	 * @param {number} page 1-based page number
 	 * @return {Promise} Resolves when the new page is displayed
@@ -1592,9 +1662,22 @@ class LayersEditor {
 		}
 
 		const previousPage = this.page;
+		this.stashCurrentPage();
+
 		this.page = page;
 		this.syncPageInUrl( page );
 		this.resetPerPageState();
+
+		const buffered = this.pageBuffer && this.pageBuffer.get( page );
+		if ( buffered ) {
+			// Edited earlier in this session; the server copy would be staler.
+			// Taken rather than copied: the buffer holds pages that are *not* on
+			// screen. Leaving it in would save this page twice, and the buffered
+			// copy would go stale the moment the reader touched anything.
+			this.pageBuffer.forget( page );
+			this.restoreBufferedPage( buffered );
+			return Promise.resolve();
+		}
 
 		return this.apiManager.loadLayers()
 			.then( ( data ) => {
@@ -1605,20 +1688,60 @@ class LayersEditor {
 			} )
 			.catch( ( error ) => {
 				this.debugLog( '[LayersEditor] In-place page navigation failed:', error );
-				// Put the model back before reloading, so the fallback URL and
-				// any draft key written in between refer to the page we were on.
-				this.page = previousPage;
-				this.reloadAtPage( page );
+				this.recoverFromFailedNavigation( previousPage, page );
 			} );
+	}
+
+	/**
+	 * Return to the page the reader was on when the next one would not load.
+	 *
+	 * The old fallback was a full reload, which was safe when a page turn could
+	 * not carry unsaved work across it. It no longer is: the buffer is memory
+	 * only, so reloading would discard every edited page to recover from a
+	 * single failed fetch. Reload only when there is nothing to lose.
+	 *
+	 * @param {number} previousPage Page the reader was on
+	 * @param {number} attemptedPage Page that failed to load
+	 * @private
+	 */
+	recoverFromFailedNavigation ( previousPage, attemptedPage ) {
+		this.page = previousPage;
+
+		if ( !this.pageBuffer || this.pageBuffer.isEmpty() ) {
+			this.reloadAtPage( attemptedPage );
+			return;
+		}
+
+		this.syncPageInUrl( previousPage );
+
+		const held = this.pageBuffer.get( previousPage );
+		if ( held ) {
+			this.pageBuffer.forget( previousPage );
+			this.restoreBufferedPage( held );
+		} else if ( this.apiManager ) {
+			this.apiManager.loadLayers()
+				.then( ( data ) => this.applyPageData( data ) )
+				.catch( () => {} );
+		}
+
+		this.notifyUser(
+			this.getMessage(
+				'layers-page-load-failed',
+				'Could not open page $1. You are still on page $2, and your unsaved work is safe.'
+			).replace( '$1', String( attemptedPage ) ).replace( '$2', String( previousPage ) ),
+			'error'
+		);
+		this.refreshPageControls();
 	}
 
 	/**
 	 * Apply a freshly loaded page's layer set and background raster.
 	 *
 	 * @param {Object} data Result of APIManager.loadLayers()
+	 * @param {Object} [buffered] Buffered page state, when restoring from memory
 	 * @private
 	 */
-	applyPageData ( data ) {
+	applyPageData ( data, buffered ) {
 		if ( data && data.pageCount ) {
 			this.pageCount = data.pageCount;
 		}
@@ -1639,13 +1762,20 @@ class LayersEditor {
 			this.canvasManager.setBaseDimensions( data.baseWidth, data.baseHeight );
 		}
 
+		if ( buffered && this.stateManager ) {
+			this.stateManager.set( 'layers', buffered.layers || [] );
+			this.stateManager.set( 'baseWidth', buffered.baseWidth );
+			this.stateManager.set( 'baseHeight', buffered.baseHeight );
+		}
+
 		const layers = this.stateManager ? ( this.stateManager.get( 'layers' ) || [] ) : [];
 		if ( this.canvasManager ) {
 			this.canvasManager.renderLayers( layers );
 		}
 
-		// A page has its own autosaved draft; offer it now that the page is live.
-		if ( this.draftManager &&
+		// A page restored from the buffer already carries the newest work; the
+		// draft it was written from would only offer the reader the same thing.
+		if ( !buffered && this.draftManager &&
 			typeof this.draftManager.checkAndRecoverDraft === 'function'
 		) {
 			this.draftManager.checkAndRecoverDraft().catch( () => {} );
@@ -1749,7 +1879,7 @@ class LayersEditor {
 			// Check if we're in modal mode - use postMessage to close
 			const isModalMode = mw && mw.config && mw.config.get( 'wgLayersIsModalMode' );
 			if ( isModalMode && window.parent !== window ) {
-				const hasSaved = !this.stateManager.get( 'isDirty' );
+				const hasSaved = !this.hasUnsavedChanges();
 				window.parent.postMessage( {
 					type: 'layers-editor-close',
 					saved: hasSaved,
@@ -1805,9 +1935,82 @@ class LayersEditor {
 	}
 
 	/**
-	 * Save the current layers to the server
+	 * Save every page that has unsaved work, not only the one on screen.
+	 *
+	 * Pages the reader edited and turned away from are written first, one at a
+	 * time - the API rejects concurrent saves, and sequential writes mean a
+	 * failure halfway through leaves the pages that did succeed saved and the
+	 * rest still buffered. The page on screen is saved last, through the normal
+	 * path, so the spinner, notification and revision reload all describe the
+	 * page the reader is looking at.
 	 */
 	save () {
+		const buffered = this.pageBuffer ? this.pageBuffer.dirtyPages() : [];
+		if ( !buffered.length ) {
+			return this.saveCurrentPage();
+		}
+		return this.saveBufferedPages( buffered ).then( () => this.saveCurrentPage() );
+	}
+
+	/**
+	 * Write the pages held in the buffer, keeping any that fail.
+	 *
+	 * @param {number[]} pages Page numbers to write, in reading order
+	 * @return {Promise} Resolves once every page has been attempted
+	 * @private
+	 */
+	saveBufferedPages ( pages ) {
+		const failed = [];
+
+		const writeNext = ( index ) => {
+			if ( index >= pages.length ) {
+				return Promise.resolve();
+			}
+			const page = pages[ index ];
+			const entry = this.pageBuffer.get( page );
+			if ( !entry ) {
+				return writeNext( index + 1 );
+			}
+			return this.apiManager.savePageLayers( entry )
+				.then( () => {
+					this.pageBuffer.forget( page );
+				} )
+				.catch( ( error ) => {
+					// Left in the buffer deliberately: the work still exists
+					// nowhere else, so dropping it would be the worse failure.
+					this.errorLog( 'Could not save page ' + page + ':', error );
+					failed.push( page );
+				} )
+				.then( () => writeNext( index + 1 ) );
+		};
+
+		return writeNext( 0 ).then( () => {
+			const saved = pages.length - failed.length;
+			if ( failed.length ) {
+				this.notifyUser(
+					this.getMessage(
+						'layers-save-pages-failed',
+						'Could not save page(s) $1. Their changes are still open in this editor.'
+					).replace( '$1', failed.join( ', ' ) ),
+					'error'
+				);
+			} else if ( saved > 0 ) {
+				this.notifyUser(
+					this.getMessage( 'layers-save-pages-success', 'Saved $1 other page(s).' )
+						.replace( '$1', String( saved ) ),
+					'success'
+				);
+			}
+			this.refreshPageControls();
+		} );
+	}
+
+	/**
+	 * Save the page currently on the canvas.
+	 *
+	 * @private
+	 */
+	saveCurrentPage () {
 		// Debug logging (controlled by extension config)
 		const debug = typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' );
 
@@ -1846,7 +2049,7 @@ class LayersEditor {
 				window.layersMessages.get( 'layers-save-validation-error', 'Layer validation failed' ) :
 				'Layer validation failed';
 			mw.notify( validationMsg + ': ' + ( validationResult.errors || [] ).join( '; ' ), { type: 'error' } );
-			return;
+			return Promise.resolve( false );
 		}
 
 		const savingMsg = window.layersMessages ?
@@ -1856,9 +2059,12 @@ class LayersEditor {
 			this.uiManager.showSpinner( savingMsg );
 		}
 
-		this.apiManager.saveLayers()
+		// Resolves false rather than rejecting: callers use it to decide whether
+		// it is safe to leave, and an unhandled rejection is not an answer.
+		return this.apiManager.saveLayers()
 			.then( ( result ) => {
 				this.stateManager.set( 'currentLayerSetId', result.layersetid );
+				return true;
 			} )
 			.catch( ( error ) => {
 				// APIManager hides the spinner and shows error in production;
@@ -1875,6 +2081,7 @@ class LayersEditor {
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log.error( '[LayersEditor] saveLayers rejected:', error );
 				}
+				return false;
 			} );
 	}
 
@@ -1910,52 +2117,18 @@ class LayersEditor {
 
 	/**
 	 * Cancel editing and return to the file page
+	 *
+	 * The guard is document-level. It used to read `isDirty`, which describes
+	 * only the page on screen: after page turns began carrying unsaved work,
+	 * that would have let someone who edited pages 2 and 5, then turned to a
+	 * clean page 7, close the editor without being asked anything at all.
+	 *
 	 * @param {boolean} navigateBack Whether to navigate back
 	 */
 	cancel ( navigateBack ) {
 		const savedFilename = this.filename;
-		const isDirty = this.stateManager.get( 'isDirty' );
 
-		if ( isDirty ) {
-			// Use DialogManager if available
-			if ( this.dialogManager ) {
-				this.dialogManager.showCancelConfirmDialog( () => {
-					if ( this.stateManager ) {
-						this.stateManager.set( 'isDirty', false );
-					}
-					// Clear draft when user confirms discarding changes
-					if ( this.draftManager ) {
-						this.draftManager.clearDraft();
-					}
-					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
-						this.eventManager.destroy();
-					}
-					this.uiManager.destroy();
-					if ( navigateBack ) {
-						this.navigateBackToFileWithName( savedFilename );
-					}
-				} );
-			} else {
-				// Fallback to window.confirm when DialogManager unavailable
-				// eslint-disable-next-line no-alert
-				if ( window.confirm( mw.message( 'layers-cancel-confirm' ).text() ) ) {
-					if ( this.stateManager ) {
-						this.stateManager.set( 'isDirty', false );
-					}
-					if ( this.draftManager ) {
-						this.draftManager.clearDraft();
-					}
-					if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
-						this.eventManager.destroy();
-					}
-					this.uiManager.destroy();
-					if ( navigateBack ) {
-						this.navigateBackToFileWithName( savedFilename );
-					}
-				}
-			}
-		} else {
-			// No unsaved changes - clear any stale draft and close
+		const close = () => {
 			if ( this.draftManager ) {
 				this.draftManager.clearDraft();
 			}
@@ -1963,7 +2136,82 @@ class LayersEditor {
 			if ( navigateBack ) {
 				this.navigateBackToFileWithName( savedFilename );
 			}
+		};
+
+		const discardAndClose = () => {
+			if ( this.stateManager ) {
+				this.stateManager.set( 'isDirty', false );
+			}
+			if ( this.pageBuffer ) {
+				this.pageBuffer.clear();
+			}
+			if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
+				this.eventManager.destroy();
+			}
+			close();
+		};
+
+		if ( !this.hasUnsavedChanges() ) {
+			// No unsaved changes - clear any stale draft and close
+			close();
+			return;
 		}
+
+		const message = this.unsavedChangesMessage();
+
+		// Offer Save as well as Discard: with several pages of work behind the
+		// reader, "lose it or stay here" is not an adequate pair of choices.
+		if ( this.dialogManager &&
+			typeof this.dialogManager.showSaveDiscardDialog === 'function'
+		) {
+			this.dialogManager.showSaveDiscardDialog( { message: message } )
+				.then( ( choice ) => {
+					if ( choice === 'discard' ) {
+						discardAndClose();
+						return;
+					}
+					if ( choice === 'save' ) {
+						Promise.resolve( this.save() ).then( ( ok ) => {
+							if ( ok !== false ) {
+								discardAndClose();
+							}
+						} );
+					}
+				} );
+			return;
+		}
+
+		if ( this.dialogManager &&
+			typeof this.dialogManager.showCancelConfirmDialog === 'function'
+		) {
+			this.dialogManager.showCancelConfirmDialog( discardAndClose );
+			return;
+		}
+
+		// eslint-disable-next-line no-alert
+		if ( window.confirm( message ) ) {
+			discardAndClose();
+		}
+	}
+
+	/**
+	 * Describe the unsaved work, naming the pages when there is more than one.
+	 *
+	 * @return {string}
+	 * @private
+	 */
+	unsavedChangesMessage () {
+		const pages = this.unsavedPages();
+		if ( pages.length > 1 ) {
+			return this.getMessage(
+				'layers-unsaved-pages-confirm',
+				'You have unsaved changes on pages $1. Save them before leaving?'
+			).replace( '$1', pages.join( ', ' ) );
+		}
+		return this.getMessage(
+			'layers-cancel-confirm',
+			'You have unsaved changes. Are you sure you want to leave?'
+		);
 	}
 
 	/**

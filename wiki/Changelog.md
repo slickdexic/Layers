@@ -4,6 +4,54 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.95] - 2026-09-02
+
+### Changed
+
+- **Turning a page no longer asks you to save.** Every page turn with unsaved
+  work used to open a Save / Discard / Cancel dialog, so annotating ten pages of
+  a PDF meant ten modal decisions and ten save round trips. It was also
+  answering a question nobody had asked: the reader wanted to turn a page, not
+  to publish.
+
+  Unsaved work is now carried in memory for pages you have left, and a single
+  **Save** writes every page that changed. Navigation is silent.
+
+  Only edited pages are held, so paging through a document to look at it never
+  accumulates anything, and returning to a page you edited restores it from
+  memory with no request at all. Leaving a page also writes its draft, because
+  the buffer is memory only and a page you have moved away from is exactly the
+  work you would least expect a crashed tab to take with it.
+
+  Pages are written one at a time, so a failure partway through leaves the pages
+  that succeeded saved and the rest still open in the editor rather than
+  discarding them. The page indicator's tooltip gained a second line listing
+  which pages are unsaved — with navigation no longer prompting, that is the
+  only place a single Save says what it is about to do.
+
+### Fixed
+
+- **Closing the editor could discard unsaved pages without asking.** The exit
+  guard and the tab-close warning both read the dirty flag for the page on
+  screen. Once page turns began carrying work across them, someone who edited
+  pages 2 and 5 and then turned to a clean page 7 would have been let out in
+  silence. Both are now document-level, and the prompt names the pages. It also
+  offers **Save** rather than only "discard or stay", which is a poor pair of
+  choices for someone with several pages of work behind them.
+
+- **A failed page turn no longer reloads away unsaved work.** Falling back to a
+  full document reload was safe while a page turn could not carry work across
+  it. It is not safe now: reloading to recover from one failed fetch would
+  discard every edited page. The editor stays put, restores the page you were
+  on, and says so. The reload remains for the case where there is nothing to
+  lose.
+
+- **A page could be saved twice in one Save.** Returning to a page you had
+  edited left a copy in the buffer as well as putting it on the canvas, so Save
+  wrote it once from the buffer and again as the current page — two revisions
+  for one page, the first of them stale. Found by driving the editor against a
+  live wiki, not by the suite. A page put back on screen now leaves the buffer.
+
 ## [1.5.94] - 2026-09-02
 
 ### Changed

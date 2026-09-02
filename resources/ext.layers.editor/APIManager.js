@@ -991,8 +991,8 @@
 		} );
 	}
 
-	validateBeforeSave() {
-		const layers = this.editor.stateManager.get( 'layers' ) || [];
+	validateBeforeSave( layersOverride ) {
+		const layers = layersOverride || this.editor.stateManager.get( 'layers' ) || [];
 		
 		const LayersValidator = getClass( 'Validation.LayersValidator', 'LayersValidator' );
 		if ( !LayersValidator ) {
@@ -1016,13 +1016,50 @@
 		return true;
 	}
 
-	buildSavePayload() {
-		const layers = this.editor.stateManager.get( 'layers' ) || [];
-		const isSlide = this.editor.stateManager.get( 'isSlide' );
-		
+	/**
+	 * Write one buffered page without disturbing the page on screen.
+	 *
+	 * The normal save path is entangled with current-page UI - spinner, save
+	 * button, `isDirty`, draft clearing, revision reload - all of which would be
+	 * wrong when the page being written is not the one being looked at.
+	 *
+	 * @param {Object} entry Held page state: page, setName, layers, background
+	 * @return {Promise} Resolves with the API response
+	 */
+	savePageLayers( entry ) {
+		if ( !entry || !Array.isArray( entry.layers ) ) {
+			return Promise.reject( new Error( 'Nothing to save for page' ) );
+		}
+		if ( !this.validateBeforeSave( entry.layers ) ) {
+			return Promise.reject( new Error( 'Validation failed' ) );
+		}
+
+		let payload;
+		try {
+			payload = this.buildSavePayload( entry );
+		} catch ( buildError ) {
+			return Promise.reject( buildError );
+		}
+
+		if ( !this.checkSizeLimit( payload.data ) ) {
+			return Promise.reject( new Error( 'Data too large' ) );
+		}
+
+		return new Promise( ( resolve, reject ) => {
+			this.performSaveWithRetry( payload, 0, resolve, reject, { silent: true } );
+		} );
+	}
+
+	buildSavePayload( entry ) {
+		const state = this.editor.stateManager;
+		const layers = entry ? entry.layers : ( state.get( 'layers' ) || [] );
+		const isSlide = state.get( 'isSlide' );
+
 		// Include background settings in the saved data
-		const backgroundVisible = this.editor.stateManager.get( 'backgroundVisible' );
-		const backgroundOpacity = this.editor.stateManager.get( 'backgroundOpacity' );
+		const backgroundVisible = entry ?
+			entry.backgroundVisible : state.get( 'backgroundVisible' );
+		const backgroundOpacity = entry ?
+			entry.backgroundOpacity : state.get( 'backgroundOpacity' );
 		
 		// Build data object with layers and background settings
 		const dataObject = {
@@ -1033,22 +1070,26 @@
 
 		// For slides, include canvas dimensions and background color
 		if ( isSlide ) {
-			dataObject.canvasWidth = this.editor.stateManager.get( 'slideCanvasWidth' ) || 800;
-			dataObject.canvasHeight = this.editor.stateManager.get( 'slideCanvasHeight' ) || 600;
-			dataObject.backgroundColor = this.editor.stateManager.get( 'slideBackgroundColor' ) || '#ffffff';
+			dataObject.canvasWidth = state.get( 'slideCanvasWidth' ) || 800;
+			dataObject.canvasHeight = state.get( 'slideCanvasHeight' ) || 600;
+			dataObject.backgroundColor = state.get( 'slideBackgroundColor' ) || '#ffffff';
 		}
 		
 		const layersJson = JSON.stringify( dataObject );
 		
 		// Set name from state. Empty means "whichever set this image currently
 		// has" - the server resolves it, since no name is ever assumed to exist.
-		const currentSetName = this.editor.stateManager.get( 'currentSetName' ) || '';
+		const currentSetName = entry ?
+			( entry.setName || '' ) : ( state.get( 'currentSetName' ) || '' );
+		const page = entry ?
+			entry.page : ( ( this.editor && this.editor.page ) || 1 );
 		
 		// Debug logging controlled by extension config
 		if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 			mw.log( '[APIManager] Building save payload:', {
 				filename: this.editor.filename,
 				setname: currentSetName,
+				page: page,
 				layerCount: layers.length,
 				dataSize: layersJson.length,
 				dataSample: layersJson.substring( 0, 200 )
@@ -1060,7 +1101,7 @@
 			filename: this.editor.filename,
 			data: layersJson,
 			setname: currentSetName,
-			page: ( this.editor && this.editor.page ) || 1,
+			page: page,
 			format: 'json',
 			formatversion: 2
 		};
@@ -1068,17 +1109,29 @@
 		return payload;
 	}
 
-	performSaveWithRetry( payload, attempt, resolve, reject ) {
+	/**
+	 * @param {Object} payload layerssave parameters
+	 * @param {number} attempt 0-based retry counter
+	 * @param {Function} resolve
+	 * @param {Function} reject
+	 * @param {Object} [options] `silent: true` suppresses the spinner, the save
+	 *   button, `isDirty` and the success notice - all of which describe the
+	 *   page on screen, and so are wrong when writing a page that is not.
+	 */
+	performSaveWithRetry( payload, attempt, resolve, reject, options ) {
+		const silent = !!( options && options.silent );
 		this.api.postWithToken( 'csrf', payload ).then( ( data ) => {
 			// Debug logging controlled by extension config
 			if ( typeof mw !== 'undefined' && mw.config && mw.config.get( 'wgLayersDebug' ) && mw.log ) {
 				mw.log( '[APIManager] Save response received:', JSON.stringify( data ) );
 			}
-			
-			this.saveInProgress = false; // Clear save-in-progress flag
-			this.hideSpinner();
-			this.enableSaveButton();
-			this.handleSaveSuccess( data );
+
+			if ( !silent ) {
+				this.saveInProgress = false; // Clear save-in-progress flag
+				this.hideSpinner();
+				this.enableSaveButton();
+				this.handleSaveSuccess( data );
+			}
 			resolve( data );
 		}, ( code, result ) => {
 			// Log errors for debugging (controlled by extension config)
@@ -1100,16 +1153,18 @@
 					mw.log( `[APIManager] Retrying save after delay: ${delay}ms` );
 				}
 				this._scheduleTimeout( () => {
-					this.performSaveWithRetry( payload, attempt + 1, resolve, reject );
+					this.performSaveWithRetry( payload, attempt + 1, resolve, reject, options );
 				}, delay );
 			} else {
 				if ( typeof mw !== 'undefined' && mw.log ) {
 					mw.log.error( `[APIManager] Save failed after ${attempt + 1} attempts` );
 				}
-				this.saveInProgress = false; // Clear save-in-progress flag on final failure
-				this.hideSpinner();
-				this.enableSaveButton();
-				this.handleSaveError( error );
+				if ( !silent ) {
+					this.saveInProgress = false; // Clear save-in-progress flag on final failure
+					this.hideSpinner();
+					this.enableSaveButton();
+					this.handleSaveError( error );
+				}
 				reject( error );
 			}
 		} );

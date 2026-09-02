@@ -1620,6 +1620,8 @@
 			const currentPage = ( editor && editor.page ) || 1;
 			const pageCount = ( editor && editor.pageCount ) || 1;
 			const annotated = ( state && state.get( 'pagesWithLayers' ) ) || [];
+			const unsaved = ( editor && typeof editor.unsavedPages === 'function' ) ?
+				editor.unsavedPages() : [];
 			const isDirty = !!( state && state.get( 'isDirty' ) );
 			const isAnnotated = annotated.indexOf( currentPage ) !== -1;
 			const t = this.msg.bind( this );
@@ -1630,7 +1632,7 @@
 			let text = t( 'layers-page-indicator', 'Page $1 / $2' )
 				.replace( '$1', String( currentPage ) )
 				.replace( '$2', String( pageCount ) );
-			if ( isDirty ) {
+			if ( unsaved.length ) {
 				text += ' •';
 			}
 			els.label.textContent = text;
@@ -1638,8 +1640,15 @@
 			const annotatedList = annotated.length ?
 				annotated.join( ', ' ) :
 				t( 'layers-page-none-annotated', 'none' );
-			els.label.title = t( 'layers-page-annotated-list', 'Pages with layers: $1' )
+			let title = t( 'layers-page-annotated-list', 'Pages with layers: $1' )
 				.replace( '$1', annotatedList );
+			if ( unsaved.length ) {
+				// Navigation no longer prompts, so this is the only place the
+				// reader can see what a single Save is about to write.
+				title += '\n' + t( 'layers-page-unsaved-list', 'Unsaved changes on: $1' )
+					.replace( '$1', unsaved.join( ', ' ) );
+			}
+			els.label.title = title;
 
 			els.prev.disabled = currentPage <= 1;
 			els.next.disabled = currentPage >= pageCount;

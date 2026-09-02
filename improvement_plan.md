@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.94
+**Version:** 1.5.95
 **Last updated:** September 2, 2026 — post-1.5.92 reprioritisation
 
 > ## 🎯 What is actually worth doing next (September 2, 2026)
@@ -12,10 +12,10 @@
 >
 > | Rank | Item | Effort | Why it earns the slot |
 > |------|------|--------|----------------------|
-> | 1 | **R4.60 stage 2 — per-page dirty map and "Save all"** | M | Stage 1 shipped in v1.5.94: a page turn no longer reloads the document. What remains is the save model. Navigation still asks Save / Discard / Cancel, which keeps at most one page dirty and is honest, but it means a ten-page review is ten save round trips. |
-> | 2 | **R4.12 / R2.20 — replace 21 native dialogs** | M | The only remaining WCAG gap of substance — native dialogs block the main thread, cannot be themed, and are announced inconsistently. `DialogManager.showConfirmDialog()` already exists and is used in the same files. Rank 1 needs it too: "Save all / Discard all / Cancel" is three actions, and `window.confirm()` offers two. |
-> | 3 | **R3.06 — `REL1_43` unit suite has 110 failures** | M | A maintained LTS branch that real wikis run has a red suite, so nothing on it is verified. Either repair the harness stubs (the failures look like stale stubs, not product defects) or stop describing the branch as supported. Leaving it red while claiming support is the dishonest option. |
-> | 4 | **R4.62 — editor lazy-loading, stage 2** | M | `ext.layers.editor` sits at 92% of its ResourceLoader budget. Separately, `ext.layers` reached **96%** (272.8 KB of 285.0 KB) after R5.01, so the viewer module now has little headroom either — the next feature there will need the budget raised or the module split. |
+> | 1 | **R4.12 / R2.20 — replace 21 native dialogs** | M | Now the largest remaining UX and WCAG gap. Native dialogs block the main thread, cannot be themed, and are announced inconsistently. Verifying R4.60 stage 2 walked straight into one: draft recovery is a `window.confirm()`, which stopped a scripted browser session dead. `DialogManager.showConfirmDialog()` already exists and is used in the same files. |
+> | 2 | **R3.06 — `REL1_43` unit suite has 110 failures** | M | A maintained LTS branch that real wikis run has a red suite, so nothing on it is verified. Either repair the harness stubs (the failures look like stale stubs, not product defects) or stop describing the branch as supported. Leaving it red while claiming support is the dishonest option. |
+> | 3 | **R4.62 — editor lazy-loading, stage 2** | M | `ext.layers.editor` sits at 93% of its ResourceLoader budget. Separately, `ext.layers` reached **96%** (274.1 KB of 285.0 KB) after R5.01, so the viewer module now has little headroom either — the next feature there will need the budget raised or the module split. |
+> | 4 | **R4.63 — `getPagesWithLayers()` counts empty sets** | S | It selects any page with a row in `layer_sets`, so a page whose layers are all deleted and saved is flagged as annotated forever, and the navigator tooltip lies about where the annotations are. Pre-existing; surfaced while verifying R4.60 stage 2. The cheap correct fix is probably a layer-count column, since decoding one JSON blob per annotated page on every editor load is not cheap for a long PDF. |
 > | 5 | **Metric drift gating** | S | v1.5.92 made release *dates* build-breaking (`update-version.js --check`, run in CI). Test counts and coverage in the four current-state docs are still ungated, and they had drifted by 24 PHPUnit tests and two coverage figures before September 2. A cross-document consistency check would catch the exact shape that drift took. |
 >
 > **Done since this list was written.** R5.01 (file-name extraction consolidated
@@ -39,6 +39,17 @@
 > measurement, not reading: the API returned `pageCount=11` on every page and
 > driving `navigateToPage()` directly walked the pages correctly, which
 > isolated the fault to the click path in one step.
+>
+> **Stage 2 then did it again, and this time the suite was written first.**
+> 14,283 tests passed, including twelve new ones written specifically for the
+> buffer, and driving the editor against a live wiki still found that returning
+> to an edited page left a copy in the buffer *and* put it on the canvas, so
+> Save wrote that page twice — two revisions, the older one stale. Every unit
+> test had exercised "edit page A, leave, save"; none had exercised "edit page
+> A, leave, come back, save", because the round trip is the thing a person does
+> and not the thing an invariant suggests. That is now the third defect in a row
+> found by driving rather than reading, and the second found *after* a green
+> suite. Budget the browser time; it is not optional.
 >
 > **R5.02 is also a caution about this file.** As first written it claimed the
 > per-page render had no timeout. It has one, and the guard works; the probe had
@@ -73,7 +84,8 @@
 >
 > | # | Item | Effort | Status |
 > |---|------|--------|--------|
-> | **R4.60** | **In-place page switching.** **Stage 1 done (v1.5.94).** A page turn no longer reloads: `performPageNavigation()` re-runs the `layersinfo` call, swaps the canvas background to the new page's raster and renders that page's set, with the full reload retained as a fallback if anything fails. The raster URL was already in the response and the editor was discarding it, so this cost no new server work. Fixing it exposed a stale closure that had capped the Next button at page 2 since it was written. **Stage 2 open:** the save model is unchanged — navigation still asks Save/Discard/Cancel, so at most one page is dirty at a time. A per-page dirty map and "Save all" remain. | L | 🟡 Stage 1 done |
+> | **R4.60** | **In-place page switching.** **Done.** Stage 1 (v1.5.94) stopped reloading the document on a page turn; the raster URL was already in the `layersinfo` response and the editor was discarding it. Stage 2 (v1.5.95) removed the Save/Discard/Cancel prompt from navigation entirely: unsaved work for pages the reader has left is held in `PageBuffer`, one Save writes every changed page sequentially, and the exit and tab-close guards became document-level so pages edited earlier cannot be discarded in silence. Between them the two stages exposed three defects invisible to the suite — the Next-button stale closure, the double save on a revisited page, and the page-level exit guard. | L | ✅ Done (v1.5.95) |
+> | **R4.63** | **`getPagesWithLayers()` counts pages with empty layer sets.** The query selects any page with a row in `layer_sets`, so a page whose layers are all deleted and saved stays marked as annotated, and the navigator tooltip points at pages with nothing on them. Pre-existing; found while verifying R4.60 stage 2. Decoding the latest blob per annotated page on every editor load is too expensive for a long PDF, so this probably wants a stored layer count. | S | 🔲 Open |
 > | **R4.61** | **`customShape` server-side rendering.** Closed in v1.5.88, completing R2.1.5 — all 17 layer types now draw server-side. Two routes: raw `path`/`paths` data via ImageMagick `-draw path` (preferred; the data is character-whitelisted, a provable safety property), and whole `svg` documents via the wiki's own `$wgSVGConverter` (no new exposure class — every wiki accepting SVG uploads already runs it over untrusted input; `<!DOCTYPE>`/`<!ENTITY>` refused). Path *extraction* was designed and then rejected on measurement: only 8% of the 1,385 shapes are plain paths, so it would have misplaced 92% of them. | M | ✅ Done (v1.5.88) |
 > | **R4.62** | **Editor lazy-loading, second stage.** v1.5.87 stopped shipping `ext.layers.editor` on File: pages entirely. Within the editor document itself the bundle is still ~1 MB parsed; the shape library and emoji picker are already separate modules, but the preset system, slide controller and PDF viewer could also be deferred until first use. | M | 🔲 Open |
 >

@@ -62,8 +62,15 @@ class EventManager {
 	 * @param {BeforeUnloadEvent} e - The beforeunload event
 	 */
 	handleBeforeUnload( e ) {
-		// Check isDirty using the method, not property
-		if ( this.editor && typeof this.editor.isDirty === 'function' && this.editor.isDirty() ) {
+		// Document-level, not page-level: pages edited earlier in the session are
+		// held in memory only, so closing the tab is exactly when they are lost.
+		const editor = this.editor;
+		const unsaved = editor && (
+			( typeof editor.hasUnsavedChanges === 'function' && editor.hasUnsavedChanges() ) ||
+			( typeof editor.hasUnsavedChanges !== 'function' &&
+				typeof editor.isDirty === 'function' && editor.isDirty() )
+		);
+		if ( unsaved ) {
 			e.preventDefault();
 			e.returnValue = '';
 		}

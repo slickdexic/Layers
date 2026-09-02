@@ -11,6 +11,8 @@
 
 const StateManager = require('../../resources/ext.layers.editor/StateManager.js');
 const HistoryManager = require('../../resources/ext.layers.editor/HistoryManager.js');
+require('../../resources/ext.layers.editor/PageBuffer.js');
+const PageBuffer = window.Layers.Editor.PageBuffer;
 
 describe('LayersEditor utility methods', () => {
     let LayersEditor;
@@ -1626,19 +1628,40 @@ describe('LayersEditor updateSaveButtonState', () => {
         
         const editorInstance = Object.create(LayersEditor.prototype);
         editorInstance.toolbar = { saveBtnEl: mockSaveBtn };
+        // get() and isDirty() are the same value in the real StateManager, so
+        // the fake moves them together; flipping only one is an impossible state.
+        let dirty = true;
         editorInstance.stateManager = {
-            get: jest.fn().mockReturnValue(true),
-            isDirty: jest.fn().mockReturnValue(true)
+            get: jest.fn(() => dirty),
+            isDirty: jest.fn(() => dirty)
         };
         
         editorInstance.updateSaveButtonState();
         
         expect(mockSaveBtn.classList.contains('has-changes')).toBe(true);
 
-        editorInstance.stateManager.isDirty.mockReturnValue(false);
+        dirty = false;
         editorInstance.updateSaveButtonState();
 
         expect(mockSaveBtn.classList.contains('has-changes')).toBe(false);
+    });
+
+    test('a clean page still counts as unsaved when another page is buffered', () => {
+        const mockSaveBtn = document.createElement('button');
+
+        const editorInstance = Object.create(LayersEditor.prototype);
+        editorInstance.toolbar = { saveBtnEl: mockSaveBtn };
+        editorInstance.stateManager = {
+            get: jest.fn().mockReturnValue(false),
+            isDirty: jest.fn().mockReturnValue(false)
+        };
+        editorInstance.pageBuffer = {
+            isEmpty: jest.fn().mockReturnValue(false)
+        };
+
+        editorInstance.updateSaveButtonState();
+
+        expect(mockSaveBtn.classList.contains('has-changes')).toBe(true);
     });
 
     test('should catch and log errors', () => {
@@ -3030,9 +3053,14 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 			inst.draftManager = { checkAndRecoverDraft: jest.fn( () => Promise.resolve() ) };
 			inst.syncPageInUrl = jest.fn();
 			inst.reloadAtPage = jest.fn();
+			inst.notifyUser = jest.fn();
+			inst.getMessage = jest.fn( ( key, fallback ) => fallback );
+			inst.pageBuffer = new PageBuffer();
 			[
-				'performPageNavigation', 'applyPageData',
-				'resetPerPageState', 'refreshPageControls'
+				'performPageNavigation', 'applyPageData', 'stashCurrentPage',
+				'restoreBufferedPage', 'recoverFromFailedNavigation',
+				'resetPerPageState', 'refreshPageControls', 'unsavedPages',
+				'hasUnsavedChanges'
 			].forEach( ( m ) => {
 				inst[ m ] = LayersEditor.prototype[ m ].bind( inst );
 			} );
@@ -3096,6 +3124,35 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 			expect( inst.page ).toBe( 1 );
 		} );
 
+		test( 'does not reload away unsaved work when a page fails to load', async () => {
+			const inst = navInstance( new Error( 'network' ) );
+			let dirty = true;
+			inst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isDirty' ) {
+					return dirty;
+				}
+				if ( key === 'layers' ) {
+					return [ { id: 'a' } ];
+				}
+				return null;
+			} );
+			inst.stateManager.set = jest.fn( ( key, value ) => {
+				if ( key === 'isDirty' ) {
+					dirty = value;
+				}
+			} );
+
+			await inst.performPageNavigation( 4 );
+
+			// The buffer lives in memory only. Reloading to recover from one
+			// failed fetch would take every edited page down with it.
+			expect( inst.reloadAtPage ).not.toHaveBeenCalled();
+			expect( inst.page ).toBe( 1 );
+			// Back on screen, so tracked by isDirty rather than by the buffer.
+			expect( inst.hasUnsavedChanges() ).toBe( true );
+			expect( inst.notifyUser ).toHaveBeenCalled();
+		} );
+
 		test( 'reloads when there is no APIManager to load through', () => {
 			const inst = navInstance( { layers: [] } );
 			inst.apiManager = null;
@@ -3122,6 +3179,212 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 			// Back should leave the editor, not walk back through pages.
 			expect( pushState ).not.toHaveBeenCalled();
 			expect( String( replaceState.mock.calls[ 0 ][ 2 ] ) ).toContain( 'page=7' );
+		} );
+	} );
+
+	describe( 'unsaved work across pages', () => {
+		function pagedInstance( dirty ) {
+			const inst = createEditorInstance();
+			inst.page = 1;
+			inst.pageCount = 11;
+			inst.imageUrl = '/thumb/page1.jpg';
+			inst.layers = [ { id: 'a' } ];
+			inst.isDirtyFlag = !!dirty;
+			inst.stateManager.get = jest.fn( ( key ) => {
+				if ( key === 'isDirty' ) {
+					return inst.isDirtyFlag;
+				}
+				if ( key === 'layers' ) {
+					return inst.layers;
+				}
+				if ( key === 'currentSetName' ) {
+					return '001';
+				}
+				return null;
+			} );
+			inst.stateManager.set = jest.fn( ( key, value ) => {
+				if ( key === 'isDirty' ) {
+					inst.isDirtyFlag = value;
+				}
+				if ( key === 'layers' ) {
+					inst.layers = value;
+				}
+			} );
+			inst.pageBuffer = new PageBuffer();
+			inst.canvasManager = {
+				setBackgroundImageUrl: jest.fn(),
+				setBaseDimensions: jest.fn(),
+				renderLayers: jest.fn()
+			};
+			inst.historyManager = { clearHistory: jest.fn(), saveInitialState: jest.fn() };
+			inst.selectionManager = { clearSelection: jest.fn() };
+			inst.toolbar = { updatePageNavState: jest.fn() };
+			inst.draftManager = { saveDraft: jest.fn(), clearDraft: jest.fn() };
+			inst.syncPageInUrl = jest.fn();
+			inst.reloadAtPage = jest.fn();
+			inst.notifyUser = jest.fn();
+			inst.getMessage = jest.fn( ( key, fallback ) => fallback );
+			inst.apiManager.loadLayers = jest.fn( () => Promise.resolve( {
+				layers: [], imageUrl: '/thumb/pageN.jpg'
+			} ) );
+			inst.apiManager.savePageLayers = jest.fn( () => Promise.resolve( {} ) );
+			[
+				'performPageNavigation', 'applyPageData', 'stashCurrentPage',
+				'restoreBufferedPage', 'recoverFromFailedNavigation',
+				'resetPerPageState', 'refreshPageControls', 'unsavedPages',
+				'hasUnsavedChanges', 'save', 'saveBufferedPages',
+				'unsavedChangesMessage', 'discardPageChanges'
+			].forEach( ( m ) => {
+				inst[ m ] = LayersEditor.prototype[ m ].bind( inst );
+			} );
+			inst.saveCurrentPage = jest.fn( () => Promise.resolve( true ) );
+			return inst;
+		}
+
+		test( 'turning a page asks nothing and loses nothing', async () => {
+			const inst = pagedInstance( true );
+			inst.navigateToPage = LayersEditor.prototype.navigateToPage.bind( inst );
+			inst.dialogManager = { showSaveDiscardDialog: jest.fn() };
+
+			await inst.navigateToPage( 4 );
+
+			// The reader asked to turn a page, not to publish.
+			expect( inst.dialogManager.showSaveDiscardDialog ).not.toHaveBeenCalled();
+			expect( inst.page ).toBe( 4 );
+			expect( inst.pageBuffer.get( 1 ).layers ).toEqual( [ { id: 'a' } ] );
+		} );
+
+		test( 'a clean page is not buffered', async () => {
+			const inst = pagedInstance( false );
+
+			await inst.performPageNavigation( 4 );
+
+			expect( inst.pageBuffer.isEmpty() ).toBe( true );
+		} );
+
+		test( 'leaving a dirty page drafts it, because the buffer is memory only', async () => {
+			const inst = pagedInstance( true );
+
+			await inst.performPageNavigation( 4 );
+
+			expect( inst.draftManager.saveDraft ).toHaveBeenCalled();
+		} );
+
+		test( 'returning to an edited page restores it without asking the server', async () => {
+			const inst = pagedInstance( true );
+
+			await inst.performPageNavigation( 4 );
+			inst.apiManager.loadLayers.mockClear();
+			await inst.performPageNavigation( 1 );
+
+			expect( inst.apiManager.loadLayers ).not.toHaveBeenCalled();
+			expect( inst.layers ).toEqual( [ { id: 'a' } ] );
+			// It was unsaved when set aside and nothing has saved it since.
+			expect( inst.isDirtyFlag ).toBe( true );
+		} );
+
+		test( 'a page put back on screen leaves the buffer, and is saved once', async () => {
+			const inst = pagedInstance( true );
+
+			await inst.performPageNavigation( 4 );
+			await inst.performPageNavigation( 1 );
+
+			// The buffer holds pages that are not on screen. Leaving page 1 in
+			// would save it twice, and the held copy would go stale as soon as
+			// the reader touched anything.
+			expect( inst.pageBuffer.has( 1 ) ).toBe( false );
+			expect( inst.hasUnsavedChanges() ).toBe( true );
+
+			await inst.save();
+
+			expect( inst.apiManager.savePageLayers ).not.toHaveBeenCalled();
+			expect( inst.saveCurrentPage ).toHaveBeenCalledTimes( 1 );
+		} );
+
+		test( 'save writes every page that changed, in reading order', async () => {
+			const inst = pagedInstance( true );
+
+			await inst.performPageNavigation( 4 );
+			inst.isDirtyFlag = true;
+			inst.layers = [ { id: 'd' } ];
+			await inst.performPageNavigation( 7 );
+			inst.isDirtyFlag = false;
+
+			await inst.save();
+
+			const pagesWritten = inst.apiManager.savePageLayers.mock.calls
+				.map( ( call ) => call[ 0 ].page );
+			expect( pagesWritten ).toEqual( [ 1, 4 ] );
+			expect( inst.saveCurrentPage ).toHaveBeenCalled();
+			expect( inst.pageBuffer.isEmpty() ).toBe( true );
+		} );
+
+		test( 'a page that fails to save stays in the buffer', async () => {
+			const inst = pagedInstance( true );
+			await inst.performPageNavigation( 4 );
+			inst.isDirtyFlag = true;
+			inst.layers = [ { id: 'd' } ];
+			await inst.performPageNavigation( 7 );
+
+			inst.apiManager.savePageLayers = jest.fn( ( entry ) => (
+				entry.page === 4 ? Promise.reject( new Error( 'nope' ) ) : Promise.resolve( {} )
+			) );
+
+			await inst.save();
+
+			// Dropping it would be the worse failure: the work exists nowhere else.
+			expect( inst.pageBuffer.has( 4 ) ).toBe( true );
+			expect( inst.pageBuffer.has( 1 ) ).toBe( false );
+			expect( inst.notifyUser ).toHaveBeenCalledWith(
+				expect.stringContaining( '4' ), 'error'
+			);
+		} );
+
+		test( 'save takes the normal single-page path when nothing is buffered', async () => {
+			const inst = pagedInstance( true );
+
+			await inst.save();
+
+			expect( inst.apiManager.savePageLayers ).not.toHaveBeenCalled();
+			expect( inst.saveCurrentPage ).toHaveBeenCalled();
+		} );
+
+		test( 'unsaved work on a page left behind still counts as unsaved', async () => {
+			const inst = pagedInstance( true );
+
+			await inst.performPageNavigation( 4 );
+
+			// Page 4 itself is clean; page 1 is not.
+			expect( inst.isDirtyFlag ).toBe( false );
+			expect( inst.hasUnsavedChanges() ).toBe( true );
+			expect( inst.unsavedPages() ).toEqual( [ 1 ] );
+		} );
+
+		test( 'unsavedPages lists the current page alongside buffered ones', async () => {
+			const inst = pagedInstance( true );
+			await inst.performPageNavigation( 4 );
+			inst.isDirtyFlag = true;
+
+			expect( inst.unsavedPages() ).toEqual( [ 1, 4 ] );
+		} );
+
+		test( 'the leave prompt names the pages when more than one is unsaved', async () => {
+			const inst = pagedInstance( true );
+			await inst.performPageNavigation( 4 );
+			inst.isDirtyFlag = true;
+
+			expect( inst.unsavedChangesMessage() ).toContain( '1, 4' );
+		} );
+
+		test( 'discarding a page drops its buffered copy too', async () => {
+			const inst = pagedInstance( true );
+			await inst.performPageNavigation( 4 );
+			await inst.performPageNavigation( 1 );
+
+			inst.discardPageChanges();
+
+			expect( inst.pageBuffer.has( 1 ) ).toBe( false );
+			expect( inst.hasUnsavedChanges() ).toBe( false );
 		} );
 	} );
 } );
