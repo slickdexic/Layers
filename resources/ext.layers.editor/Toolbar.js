@@ -1574,14 +1574,18 @@
 					el.addEventListener( 'click', handler );
 				}
 			};
+			// Read the page at click time, not from the closure. `currentPage`
+			// above is the page the toolbar was built on, and since page turns
+			// happen in place the toolbar is not rebuilt - a captured value left
+			// Next permanently navigating to page 2.
 			track( prevBtn, () => {
 				if ( editor && typeof editor.navigateToPage === 'function' ) {
-					editor.navigateToPage( currentPage - 1 );
+					editor.navigateToPage( ( editor.page || 1 ) - 1 );
 				}
 			} );
 			track( nextBtn, () => {
 				if ( editor && typeof editor.navigateToPage === 'function' ) {
-					editor.navigateToPage( currentPage + 1 );
+					editor.navigateToPage( ( editor.page || 1 ) + 1 );
 				}
 			} );
 

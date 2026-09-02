@@ -4,6 +4,41 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.94] - 2026-09-02
+
+### Changed
+
+- **Turning a page of a PDF in the editor no longer reloads the document.** Each
+  page turn used to be a `window.location.href` navigation: it threw away the
+  undo stack, re-downloaded roughly a megabyte of editor source, and cost a full
+  round trip before anything appeared. Nothing about that was necessary — the
+  page raster and that page's layer set both come from the same `layersinfo`
+  call the editor already makes on load, and the server was already returning
+  the raster URL; the editor simply discarded it.
+
+  Paging is now effectively instant. Any failure still falls back to the old
+  full reload, with the page number restored first so the fallback URL and any
+  draft key written in between still describe the page you were actually on. A
+  page turn can degrade; it cannot strand you.
+
+  Save semantics are deliberately unchanged: navigation still asks
+  **Save / Discard / Cancel**, so at most one page is ever dirty. A per-page
+  dirty map and "Save all" are a separate piece of work.
+
+### Fixed
+
+- **The editor's Next/Previous page buttons only ever reached page 2.** They
+  captured the page number at the moment the toolbar was built and closed over
+  it, so Next always navigated to "page 1 + 1" no matter which page you were on.
+
+  This has been wrong for as long as the buttons have existed. It was invisible
+  because every page turn reloaded the document and rebuilt the toolbar with a
+  fresh value — the in-place navigation above is what made a stale closure
+  observable. Both handlers now read the current page at click time.
+
+  Reported from testing, not found by the suite; there was no coverage of the
+  page navigation group at all. There is now.
+
 ## [1.5.93] - 2026-09-02
 
 ### Fixed

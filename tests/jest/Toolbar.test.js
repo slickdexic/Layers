@@ -4172,4 +4172,71 @@ describe( 'Toolbar', function () {
 			global.mw.message = origMessage;
 		} );
 	} );
+
+	describe( 'page navigation buttons', () => {
+		function pagedToolbar() {
+			const editor = Object.assign( {}, mockEditor, { page: 1, pageCount: 11 } );
+			const el = document.createElement( 'div' );
+			document.body.appendChild( el );
+			// The constructor builds the nav group itself when pageCount > 1;
+			// calling createPageNavGroup() again would leave two groups in the DOM
+			// with only the second one being refreshed.
+			const tb = new Toolbar( { container: el, editor: editor } );
+			return { tb, editor, el };
+		}
+
+		// Regression: prev/next used to close over the page number the toolbar was
+		// built on. That was invisible while every page turn reloaded the document
+		// and rebuilt the toolbar, but once turns happen in place the toolbar
+		// survives, and Next navigated to page 2 for ever.
+		test( 'Next reads the current page at click time, not at build time', () => {
+			const { tb, editor, el } = pagedToolbar();
+			editor.navigateToPage = jest.fn();
+
+			el.querySelector( '.page-next-button' ).click();
+			expect( editor.navigateToPage ).toHaveBeenLastCalledWith( 2 );
+
+			// The editor has moved on; the toolbar was not rebuilt, only refreshed.
+			editor.page = 5;
+			tb.updatePageNavState();
+			el.querySelector( '.page-next-button' ).click();
+			expect( editor.navigateToPage ).toHaveBeenLastCalledWith( 6 );
+
+			editor.page = 10;
+			tb.updatePageNavState();
+			el.querySelector( '.page-next-button' ).click();
+			expect( editor.navigateToPage ).toHaveBeenLastCalledWith( 11 );
+		} );
+
+		test( 'Previous reads the current page at click time', () => {
+			const { tb, editor, el } = pagedToolbar();
+			editor.navigateToPage = jest.fn();
+
+			editor.page = 7;
+			tb.updatePageNavState();
+			el.querySelector( '.page-prev-button' ).click();
+
+			expect( editor.navigateToPage ).toHaveBeenLastCalledWith( 6 );
+		} );
+
+		test( 'Next is disabled on the last page', () => {
+			const { tb, editor, el } = pagedToolbar();
+
+			editor.page = 11;
+			tb.updatePageNavState();
+
+			expect( el.querySelector( '.page-next-button' ).disabled ).toBe( true );
+			expect( el.querySelector( '.page-prev-button' ).disabled ).toBe( false );
+		} );
+
+		test( 'is not rendered for a single-page file', () => {
+			const editor = Object.assign( {}, mockEditor, { page: 1, pageCount: 1 } );
+			const el = document.createElement( 'div' );
+			document.body.appendChild( el );
+			// eslint-disable-next-line no-new
+			new Toolbar( { container: el, editor: editor } );
+
+			expect( el.querySelector( '.page-next-button' ) ).toBeNull();
+		} );
+	} );
 } );

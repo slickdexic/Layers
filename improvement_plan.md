@@ -1,6 +1,6 @@
 # Layers Extension — Improvement Plan
 
-**Version:** 1.5.93
+**Version:** 1.5.94
 **Last updated:** September 2, 2026 — post-1.5.92 reprioritisation
 
 > ## 🎯 What is actually worth doing next (September 2, 2026)
