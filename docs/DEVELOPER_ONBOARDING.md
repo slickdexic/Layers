@@ -52,30 +52,41 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full module dependency graph.
 
 ### Windows: `git add` fails with "Permission denied" / "unable to index file"
 
-On Windows hosts with a real-time antivirus scanner (Norton, Defender, Sophos,
-CrowdStrike…), commits that touch many files fail intermittently:
+On some Windows volumes, commits that touch many files fail intermittently:
 
 ```
-error: open(".git/objects/xx/yyyy…"): Permission denied
+error: unable to write file .git/objects/xx/yyyy…: Permission denied
 error: unable to index file 'resources/…'
 fatal: adding files failed
 ```
 
-This is **not** a git bug, not a Docker bind-mount bug, and not repository
-corruption. Git writes each loose object, `chmod`s it to read-only, then renames
-it. The scanner opens the new file the instant it appears, so the rename hits a
-sharing violation that Windows surfaces as `Permission denied`. It scales with
-the number of new objects, which is why small commits look fine and large ones
-fail. The same cause explains `git stash` failing on this repo.
+This is a **git object-creation problem, not an antivirus problem.** Git for
+Windows is built with `OBJECT_CREATION_USES_RENAMES`, so a new loose object is
+written to a temp file and then *renamed* into `.git/objects`. On some volumes —
+reproducibly on an external USB drive here, never on the internal system disk —
+that rename intermittently fails. It scales with the number of objects created
+by a single git process, so small commits look fine and large ones fail. It also
+explains `git stash` appearing broken.
 
-**Permanent fix — add a scanner exclusion for the repository directory.** In
-Norton 360: *Settings → Antivirus → Scans and Risks → Items to Exclude from
-Auto-Protect, SONAR and Download Intelligence Detection → Add Folders*, and add
-the checkout (and ideally the whole `Docker` tree). Other products have an
-equivalent "exclusions" or "allow list" page.
+**Fix — tell git to create objects by hardlink instead:**
 
-**Workaround when you cannot change scanner settings** — use the bundled
-retry wrapper instead of `git add`:
+```
+git config core.createObject link
+```
+
+Measured on this repo, six interleaved rounds staging 250 new files each:
+
+| `core.createObject` | Failures |
+| ------------------- | -------- |
+| `link`              | 0 / 6    |
+| `rename`            | 5 / 6    |
+| unset (default)     | 5 / 6    |
+
+Antivirus is a plausible-sounding cause and was investigated first: disabling
+Norton Auto-Protect entirely changed nothing (still 5/5), and path exclusions
+changed nothing. Do not spend time there.
+
+**Fallback** — if the failure ever recurs, a retry wrapper is bundled:
 
 ```
 npm run git:add -- -A
@@ -83,8 +94,7 @@ npm run git:add -- path/to/file.js
 ```
 
 It runs the normal bulk `git add` first and only falls back to per-file retries
-with backoff when the scanner interferes. Measured on this repo, staging 250 new
-files: plain `git add -A` failed 5/5 runs, the wrapper failed 0/5.
+with backoff.
 
 
 ## Key Conventions
