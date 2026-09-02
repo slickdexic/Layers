@@ -416,7 +416,7 @@ against re-render cost.
 
 | Metric | Value |
 |--------|-------|
-| Jest tests | 14,233 passing (178 suites) |
+| Jest tests | 14,254 passing (178 suites) |
 | PHPUnit tests | 675 passing (37 test files) |
 | Statement coverage | 95.87% |
 | Branch coverage | 87.20% |
@@ -476,7 +476,7 @@ npm run test:js -- --coverage
 | Total JS lines | ~105,000 | ✅ Hand-written + generated data |
 | ES6 classes | 140 | ✅ 100% migrated |
 | God classes (>=1000 lines) | 28 | ✅ Well-delegated facades |
-| Tests passing | 14,233 | ✅ |
+| Tests passing | 14,254 | ✅ |
 | Tests failing | 0 | ✅ |
 | Statement coverage | 95.87% | ✅ Excellent |
 | Branch coverage | 87.20% | ✅ Target met |

@@ -7,6 +7,58 @@
 
 ---
 
+## 🔴 R5.02 — Open: the full-screen viewer can sit on "Loading layers…"
+forever
+
+**Found September 2, 2026 while A/B-testing R5.01.** Opening a layered PDF in
+the full-screen viewer sometimes never completes: the spinner stays, no image
+and no canvas appear, no error is shown and nothing is logged beyond pdf.js's
+usual font warnings (`TT: undefined function: 32`, `Required "glyf" table is
+not found`). Observed for at least 30 seconds; the same flow had completed in
+seconds earlier the same day, so it is intermittent rather than deterministic.
+
+**Not a regression from R5.01.** Confirmed by reverting the three viewer files
+to `HEAD` and repeating the flow: the pre-consolidation code hangs identically.
+File-name extraction is *not* implicated — the viewer logs `Opening lightbox
+for: Somepdf.pdf` and the `layersinfo` request returns 200 before the stall.
+
+**Why it presents as a hang rather than a failure.** `PdfRenderer` wraps the
+pdf.js *library handshake* in `_withTimeout()`, with a comment explaining that
+a promise which never settles leaves the user nothing to fall back to. The
+per-page *render* has no equivalent guard, so a stalled render has no deadline,
+no error path, and no fallback to the server-rendered raster that the viewer
+already has in hand.
+
+**Recommended fix:** give the page render the same bounded treatment as the
+handshake, and on expiry fall back to the server thumbnail with the layer
+canvas over it — degraded but usable — rather than leaving the spinner running.
+That is a smaller change than diagnosing the stall itself, and it converts an
+indefinite hang into a bounded, visible degradation regardless of the cause.
+
+---
+
+## ✅ R5.01 closed — one owner for file-name extraction — September 2, 2026
+
+The three implementations described below are now one. `UrlParser` gained
+`stripThumbnailPrefix()` (paged and lossy forms included) and
+`fileNameFromHref()` (both URL shapes, localised namespaces, `Image:` aliases,
+and a file-shape guard so an article link cannot be mistaken for a file); its
+own `src` fallback now strips prefixes, which it never did. `ViewerManager` and
+`LayersLightbox` delegate, and their local patterns are deleted rather than left
+as dead constants.
+
+`scripts/check-filename-extraction.js` fails the build if a fourth copy appears,
+and is wired into `npm test`. Verified in both directions: clean tree exits 0,
+and reintroducing a `\d+px-` constant exits 1 naming the file, line and
+replacement.
+
+The lightbox suite now loads the real `UrlParser` rather than stubbing it — they
+ship in the same ResourceLoader module, and a stub let the delegation return
+`null` silently, which is exactly the failure that made layered PDFs
+unopenable.
+
+---
+
 ## 🔴 R5 — Open finding: file-name extraction exists three times, and two
 copies are wrong
 
