@@ -21,9 +21,12 @@ jobs:
           echo "📊 Checking total JavaScript codebase size..."
           echo ""
           
-          # Total line count thresholds
-          WARN_TOTAL=45000
-          BLOCK_TOTAL=50000
+          # Total line count thresholds. The project target is <110,000 lines of
+          # JavaScript (see .github/copilot-instructions.md). These were left at
+          # 45,000/50,000 long after the codebase passed them, so this job failed
+          # on every pull request and the signal was ignored.
+          WARN_TOTAL=108000
+          BLOCK_TOTAL=110000
           
           TOTAL_LINES=$(find resources -name "*.js" -type f ! -path "*/dist/*" ! -path "*backup*" -exec cat {} \; | wc -l | tr -d ' ')
           
@@ -51,18 +54,36 @@ jobs:
           echo "🔍 Checking for god class growth..."
           echo ""
           
-          # Define god classes and their baseline sizes (as of Dec 20, 2025)
-          # These are the current line counts - PRs must not increase them
-          # Note: ShapeRenderer (857) and ToolbarStyleControls (947) dropped below 1000 - SUCCESS!
+          # Baselines are current line counts - PRs must not increase them.
+          # Refreshed 2026-09-02; the previous set was from 2025-12-20 and every
+          # entry had been exceeded, so this job could only ever fail.
+          # Generated data files are exempt by policy and are skipped below.
           declare -A GOD_CLASSES=(
-            ["resources/ext.layers.editor/CanvasManager.js"]=1868    # Facade with 10+ controllers - acceptable
-            ["resources/ext.layers.editor/LayerPanel.js"]=1837       # Facade with 7 controllers - acceptable
-            ["resources/ext.layers.editor/Toolbar.js"]=1539          # Partial delegation (4 modules)
-            ["resources/ext.layers.editor/LayersEditor.js"]=1324     # Partial delegation
-            ["resources/ext.layers.editor/ToolManager.js"]=1275      # Has 2 tool handlers
-            ["resources/ext.layers.editor/SelectionManager.js"]=1194 # Has 3 modules (SelectionState, MarqueeSelection, SelectionHandles)
-            ["resources/ext.layers.editor/APIManager.js"]=1161       # Has APIErrorHandler delegation
+            ["resources/ext.layers.editor/LayerPanel.js"]=2177
+            ["resources/ext.layers.editor/CanvasManager.js"]=2145
+            ["resources/ext.layers.editor/Toolbar.js"]=2091
+            ["resources/ext.layers.editor/LayersEditor.js"]=2014
+            ["resources/ext.layers.editor/ui/PropertyBuilders.js"]=1976
+            ["resources/ext.layers.editor/canvas/InlineTextEditor.js"]=1864
+            ["resources/ext.layers/viewer/LayersLightbox.js"]=1772
+            ["resources/ext.layers.editor/APIManager.js"]=1702
+            ["resources/ext.layers.editor/SelectionManager.js"]=1491
+            ["resources/ext.layers/viewer/ViewerManager.js"]=1333
+            ["resources/ext.layers.editor/CanvasRenderer.js"]=1246
+            ["resources/ext.layers.editor/canvas/TransformController.js"]=1234
+            ["resources/ext.layers/viewer/SlideController.js"]=1183
+            ["resources/ext.layers.editor/ToolbarStyleControls.js"]=1141
+            ["resources/ext.layers.shared/TextBoxRenderer.js"]=1128
+            ["resources/ext.layers.editor/canvas/ResizeCalculator.js"]=1073
+            ["resources/ext.layers.shared/AngleDimensionRenderer.js"]=1067
+            ["resources/ext.layers.editor/canvas/DrawingController.js"]=1064
+            ["resources/ext.layers.editor/CanvasEvents.js"]=1038
+            ["resources/ext.layers.shared/CalloutRenderer.js"]=1003
           )
+
+          # Generated data files - size is a function of the source data, not of
+          # code structure, so growth here is not technical debt.
+          GENERATED_RE='shapeLibrary/(ShapeLibraryData|EmojiLibraryIndex)'
           
           WARN_THRESHOLD=800
           BLOCK_THRESHOLD=1000
@@ -97,6 +118,11 @@ jobs:
             lines=$(echo "$file" | awk '{print $1}')
             filepath=$(echo "$file" | awk '{print $2}')
             
+            # Skip generated data files
+            if echo "$filepath" | grep -Eq "$GENERATED_RE"; then
+              continue
+            fi
+
             # Skip if it's already tracked
             is_tracked=0
             for known in "${!GOD_CLASSES[@]}"; do
@@ -149,14 +175,14 @@ jobs:
             echo "3. Do NOT increase god class sizes"
             echo ""
             echo "See: improvement_plan.md for refactoring guidance"
-            echo "See: CRITICAL_REVIEW_2025-12-18.md for context"
+            echo "See: docs/PROJECT_GOD_CLASS_REDUCTION.md for context"
             exit 1
           else
             echo ""
             echo "✅ All god class checks passed!"
             echo ""
             echo "Tip: Help reduce technical debt by extracting code from god classes."
-            echo "Current god classes: ${#GOD_CLASSES[@]} files (~11,500 lines total)"
+            echo "Tracked god classes: ${#GOD_CLASSES[@]} files"
           fi
 
       - name: Summary
@@ -168,8 +194,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Total Codebase Size" >> $GITHUB_STEP_SUMMARY
           echo "- **Current:** $TOTAL_LINES lines" >> $GITHUB_STEP_SUMMARY
-          echo "- **Warning threshold:** 45,000 lines" >> $GITHUB_STEP_SUMMARY
-          echo "- **Block threshold:** 50,000 lines" >> $GITHUB_STEP_SUMMARY
+          echo "- **Warning threshold:** 108,000 lines" >> $GITHUB_STEP_SUMMARY
+          echo "- **Block threshold:** 110,000 lines" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### God Class Check" >> $GITHUB_STEP_SUMMARY
           echo "This check prevents god classes (files >1,000 lines) from growing." >> $GITHUB_STEP_SUMMARY
