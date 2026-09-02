@@ -10,6 +10,14 @@
 	'use strict';
 
 	/**
+	 * Breathing room, in CSS pixels, that fitToScreen() leaves between the image
+	 * and the viewport edge, and between the image and the fixed toolbar. These
+	 * mirror the offsets in LayersLightbox.css; keep them in step.
+	 */
+	const EDGE_MARGIN = 16;
+	const TOOLBAR_GAP = 12;
+
+	/**
 	 * Whether a set reference names a specific layer set rather than a generic
 	 * wikitext intent such as 'on'. Prefers the shared rules in
 	 * ext.layers.shared/SetNameUtil.js and falls back to an equivalent local
@@ -256,6 +264,17 @@
 				this.zoomBy( 1.25 );
 			} );
 
+			this.fitBtn = document.createElement( 'button' );
+			this.fitBtn.type = 'button';
+			this.fitBtn.className = 'layers-lightbox-zoom-fit';
+			this.fitBtn.textContent = this.getMessage( 'layers-lightbox-fit', 'Fit' );
+			this.fitBtn.setAttribute( 'aria-label', this.getMessage( 'layers-zoom-fit', 'Fit to Window' ) );
+			this.fitBtn.title = this.getMessage( 'layers-zoom-fit', 'Fit to Window' ) + ' (F)';
+			this.fitBtn.addEventListener( 'click', ( e ) => {
+				e.stopPropagation();
+				this.fitToScreen();
+			} );
+
 			const zoomSep = document.createElement( 'span' );
 			zoomSep.className = 'layers-lightbox-toolbar-sep';
 
@@ -312,6 +331,7 @@
 			this.toolbar.appendChild( this.zoomOutBtn );
 			this.toolbar.appendChild( this.zoomIndicator );
 			this.toolbar.appendChild( this.zoomInBtn );
+			this.toolbar.appendChild( this.fitBtn );
 			this.toolbar.appendChild( zoomSep );
 			this.toolbar.appendChild( this.prevBtn );
 			this.toolbar.appendChild( this.pageIndicator );
@@ -319,11 +339,16 @@
 			this.toolbar.appendChild( this.printBtn );
 			this.toolbar.appendChild( this.downloadBtn );
 
-			// Assemble structure
-			this.container.appendChild( closeBtn );
-			this.container.appendChild( this.toolbar );
+			// The toolbar and close button are viewport chrome, not part of the
+			// image stage: they are siblings of the container, not children of it.
+			// While they lived inside the container they were positioned against the
+			// *unzoomed* image box, so zooming - which is a CSS transform and does
+			// not change layout size - left them stranded over or away from an image
+			// that had visibly grown past them.
 			this.container.appendChild( this.imageWrapper );
 			this.overlay.appendChild( this.container );
+			this.overlay.appendChild( this.toolbar );
+			this.overlay.appendChild( closeBtn );
 			document.body.appendChild( this.overlay );
 
 			// Add event listeners
@@ -334,12 +359,15 @@
 			this.overlay.addEventListener( 'click', this.boundClickHandler );
 			closeBtn.addEventListener( 'click', () => this.close() );
 
-			// Zoom + pan interaction on the image stage.
+			// Zoom + pan interaction. The wheel listens on the whole overlay, not
+			// just the image: in a full-screen viewer the dark surround is part of
+			// the canvas as far as the user is concerned, and a wheel that only
+			// worked while the pointer happened to be over the picture felt broken.
 			this.boundWheelHandler = ( e ) => this.handleWheel( e );
 			this.boundPanStart = ( e ) => this.startPan( e );
 			this.boundPanMove = ( e ) => this.movePan( e );
 			this.boundPanEnd = () => this.endPan();
-			this.imageWrapper.addEventListener( 'wheel', this.boundWheelHandler, { passive: false } );
+			this.overlay.addEventListener( 'wheel', this.boundWheelHandler, { passive: false } );
 			this.imageWrapper.addEventListener( 'mousedown', this.boundPanStart );
 			document.addEventListener( 'mousemove', this.boundPanMove );
 			document.addEventListener( 'mouseup', this.boundPanEnd );
@@ -665,6 +693,42 @@
 			this.panX = 0;
 			this.panY = 0;
 			this.applyTransform();
+		}
+
+		/**
+		 * Scale the image so it fills as much of the viewer as it can without
+		 * being cropped, and re-centre it.
+		 *
+		 * This is not the same as resetting to 100%. The stage is capped by CSS at
+		 * a fraction of the viewport, so a large image at zoom 1 is already
+		 * letterboxed, but a small one sits at its natural size surrounded by dead
+		 * space - fit scales that one up. Space taken by the fixed toolbar is
+		 * measured rather than assumed, so the image never ends up underneath it.
+		 *
+		 * @private
+		 */
+		fitToScreen() {
+			if ( !this.imageWrapper || !this.overlay ) {
+				return;
+			}
+			// offsetWidth/Height are layout values, so they report the unscaled box
+			// regardless of the transform currently applied.
+			const naturalW = this.imageWrapper.offsetWidth;
+			const naturalH = this.imageWrapper.offsetHeight;
+			if ( !naturalW || !naturalH ) {
+				return;
+			}
+
+			const chrome = this.toolbar ? this.toolbar.offsetHeight + TOOLBAR_GAP : 0;
+			const availW = this.overlay.clientWidth - EDGE_MARGIN * 2;
+			const availH = this.overlay.clientHeight - chrome * 2 - EDGE_MARGIN * 2;
+			if ( availW <= 0 || availH <= 0 ) {
+				return;
+			}
+
+			this.panX = 0;
+			this.panY = 0;
+			this.setZoom( Math.min( availW / naturalW, availH / naturalH ) );
 		}
 
 		/**
@@ -1518,6 +1582,11 @@
 					e.preventDefault();
 					this.resetZoom();
 					break;
+				case 'f':
+				case 'F':
+					e.preventDefault();
+					this.fitToScreen();
+					break;
 				case 'ArrowLeft':
 					if ( this.pageCount > 1 ) {
 						e.preventDefault();
@@ -1588,8 +1657,8 @@
 			}
 
 			// Remove zoom/pan listeners
-			if ( this.boundWheelHandler && this.imageWrapper ) {
-				this.imageWrapper.removeEventListener( 'wheel', this.boundWheelHandler );
+			if ( this.boundWheelHandler && this.overlay ) {
+				this.overlay.removeEventListener( 'wheel', this.boundWheelHandler );
 				this.boundWheelHandler = null;
 			}
 			if ( this.boundPanStart && this.imageWrapper ) {
@@ -1704,13 +1773,12 @@
 		 * @private
 		 */
 		extractFilenameFromTrigger( trigger ) {
-			// Try href first
+			// Prefer the link target: it names the file exactly, where a
+			// thumbnail URL only encodes a derived name.
 			const href = trigger.getAttribute( 'href' ) || '';
-
-			// Match File:Name.ext pattern
-			const fileMatch = href.match( /\/File:([^?#]+)/ );
-			if ( fileMatch ) {
-				return decodeURIComponent( fileMatch[ 1 ].replace( /_/g, ' ' ) );
+			const fromHref = this.fileNameFromHref( href );
+			if ( fromHref ) {
+				return fromHref;
 			}
 
 			// Try data attribute
@@ -1725,13 +1793,68 @@
 				const srcMatch = src.match( /\/([^/]+\.[a-zA-Z]+)(?:\?|$)/ );
 				if ( srcMatch ) {
 					let name = decodeURIComponent( srcMatch[ 1 ] );
-					// Remove thumbnail prefix
-					name = name.replace( /^\d+px-/, '' );
+					// MediaWiki thumbnail prefixes: "220px-", and for paged or
+					// layered source formats (PDF, DjVu, TIFF) also "page3-" and
+					// a "lossy-"/"lossless-" qualifier ahead of it.
+					name = name.replace( /^(?:lossy-|lossless-)?(?:page\d+-)?\d+px-/, '' );
 					return name;
 				}
 			}
 
 			return null;
+		}
+
+		/**
+		 * Pull the file name out of a File: page link.
+		 *
+		 * Handles both the pretty form (`/wiki/File:X.jpg`) and the query form
+		 * (`/index.php?title=File:X.jpg&layerset=…`). Only the pretty form used
+		 * to be recognised, so on any wiki that does not serve pretty URLs -
+		 * and on links that carry query parameters, which is every link the
+		 * viewer overlay builds for a named layer set - extraction fell through
+		 * to the thumbnail file name instead. For a raster image that happened
+		 * to give the right answer; for a PDF it produced
+		 * "page1-500px-Doc.pdf.jpg" and the API answered filenotfound, so the
+		 * lightbox could not open a layered PDF at all.
+		 *
+		 * The namespace prefix is not matched against "File", because it is
+		 * localised on non-English wikis. Anything before the first colon is
+		 * treated as the namespace.
+		 *
+		 * @param {string} href Link target
+		 * @return {string|null} File name, or null when the href names no file
+		 * @private
+		 */
+		fileNameFromHref( href ) {
+			if ( !href ) {
+				return null;
+			}
+
+			const queryMatch = href.match( /[?&]title=([^&#]+)/ );
+			let raw;
+			if ( queryMatch ) {
+				raw = queryMatch[ 1 ];
+			} else {
+				const path = href.split( /[?#]/ )[ 0 ];
+				raw = path.slice( path.lastIndexOf( '/' ) + 1 );
+			}
+
+			let decoded;
+			try {
+				decoded = decodeURIComponent( raw );
+			} catch ( e ) {
+				// Malformed percent-encoding: fall back to the raw segment.
+				decoded = raw;
+			}
+
+			const colon = decoded.indexOf( ':' );
+			if ( colon === -1 ) {
+				return null;
+			}
+			const name = decoded.slice( colon + 1 ).replace( /_/g, ' ' ).trim();
+			// Require something that looks like a file, so an ordinary article
+			// link cannot be mistaken for one.
+			return /\.[A-Za-z0-9]{2,5}$/.test( name ) ? name : null;
 		}
 	}
 

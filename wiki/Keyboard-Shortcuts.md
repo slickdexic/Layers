@@ -107,6 +107,25 @@ not require a mouse. All require at least one selected, unlocked layer.
 
 ---
 
+## Full-Screen Viewer Shortcuts
+
+These apply in the full-screen viewer opened from an image's **View full size**
+overlay, not in the editor.
+
+| Shortcut | Action |
+|----------|--------|
+| `Escape` | Close the viewer |
+| `+` / `=` | Zoom in |
+| `-` / `_` | Zoom out |
+| `0` | Reset zoom to 100% |
+| `F` | Fit the image to the window |
+| `←` / `→` | Previous / next page (multi-page files only) |
+
+The mouse wheel zooms anywhere in the viewer, and dragging pans once you are
+zoomed past 100%.
+
+---
+
 ## Drawing Modifiers
 
 These modifiers work while drawing shapes:

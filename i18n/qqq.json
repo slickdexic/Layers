@@ -657,6 +657,7 @@
 	"layers-lightbox-download": "Label for the button in the full-screen viewer that saves the marked-up document as a PDF",
 	"layers-lightbox-download-tooltip": "Tooltip for the download button in the full-screen viewer",
 	"layers-lightbox-export-generating": "Status message shown while the annotated PDF is being generated on the server",
+	"layers-lightbox-fit": "Short label for the button in the full-screen viewer that scales the image to fill the available space. Keep it brief; it sits in a compact toolbar beside Print and Download. The longer form {{msg-mw|layers-zoom-fit}} is used as its tooltip.",
 	"layers-lightbox-alt": "Alt text for the full-size image displayed in the layers lightbox viewer",
 
 	"layers-viewer-overlay-label": "Accessible label for the hover overlay toolbar on images with layers",

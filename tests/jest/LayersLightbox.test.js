@@ -308,10 +308,35 @@ describe( 'LayersLightbox', () => {
 
 			lightbox.open( { filename: 'Test.jpg' } );
 
-			const closeBtn = lightbox.container.querySelector( '.layers-lightbox-close' );
+			const closeBtn = lightbox.overlay.querySelector( '.layers-lightbox-close' );
 			expect( closeBtn ).not.toBeNull();
 			expect( closeBtn.getAttribute( 'type' ) ).toBe( 'button' );
 			expect( typeof closeBtn.getAttribute( 'aria-label' ) ).toBe( 'string' );
+		} );
+
+		it( 'should keep the toolbar and close button out of the zoomed stage', () => {
+			// They are viewport chrome. While they sat inside the container they
+			// were positioned against the image's *unzoomed* layout box, and a
+			// CSS transform does not change that box, so zooming left them
+			// stranded relative to an image that had visibly grown past them.
+			const lightbox = new LayersLightbox();
+
+			lightbox.open( { filename: 'Test.jpg' } );
+
+			expect( lightbox.toolbar.parentElement ).toBe( lightbox.overlay );
+			expect( lightbox.container.querySelector( '.layers-lightbox-toolbar' ) ).toBeNull();
+			expect( lightbox.container.querySelector( '.layers-lightbox-close' ) ).toBeNull();
+		} );
+
+		it( 'should offer a fit-to-screen control', () => {
+			const lightbox = new LayersLightbox();
+
+			lightbox.open( { filename: 'Test.jpg' } );
+
+			const fitBtn = lightbox.toolbar.querySelector( '.layers-lightbox-zoom-fit' );
+			expect( fitBtn ).not.toBeNull();
+			expect( fitBtn.getAttribute( 'type' ) ).toBe( 'button' );
+			expect( typeof fitBtn.getAttribute( 'aria-label' ) ).toBe( 'string' );
 		} );
 
 		it( 'should add event listeners', () => {
@@ -1856,6 +1881,57 @@ describe( 'LayersLightbox', () => {
 			const filename = lightbox.extractFilenameFromTrigger( trigger );
 
 			expect( filename ).toBeNull();
+		} );
+
+		// Regression: the href matcher only accepted a pretty path, so on a wiki
+		// serving /index.php?title=… - and on every link the overlay builds for a
+		// named set, which carries query parameters - extraction fell through to
+		// the thumbnail name. For a raster image that coincidentally worked; for a
+		// PDF it yielded "page1-500px-Doc.pdf.jpg" and the API answered
+		// filenotfound, so a layered PDF could not be opened at all.
+		it( 'should extract the filename from a query-style File: URL', () => {
+			const trigger = document.createElement( 'a' );
+			trigger.setAttribute( 'href', '/index.php?title=File:Somepdf.pdf&layerset=001' );
+
+			const lightbox = new LayersLightbox();
+
+			expect( lightbox.extractFilenameFromTrigger( trigger ) ).toBe( 'Somepdf.pdf' );
+		} );
+
+		it( 'should extract the filename from a localised namespace prefix', () => {
+			const trigger = document.createElement( 'a' );
+			trigger.setAttribute( 'href', '/index.php?title=Datei:Beispiel_Bild.jpg&layerset=on' );
+
+			const lightbox = new LayersLightbox();
+
+			expect( lightbox.extractFilenameFromTrigger( trigger ) ).toBe( 'Beispiel Bild.jpg' );
+		} );
+
+		it( 'should not mistake an ordinary article link for a file', () => {
+			const trigger = document.createElement( 'a' );
+			trigger.setAttribute( 'href', '/index.php?title=Help:Contents' );
+
+			const lightbox = new LayersLightbox();
+
+			expect( lightbox.extractFilenameFromTrigger( trigger ) ).toBeNull();
+		} );
+
+		it( 'should strip multi-page thumbnail prefixes from image src', () => {
+			const cases = [
+				[ 'page1-500px-Somepdf.pdf.jpg', 'Somepdf.pdf.jpg' ],
+				[ 'lossy-page3-800px-Scan.tiff.jpg', 'Scan.tiff.jpg' ],
+				[ 'lossless-page2-120px-Scan.tiff.png', 'Scan.tiff.png' ]
+			];
+			const lightbox = new LayersLightbox();
+
+			for ( const [ thumb, expected ] of cases ) {
+				const trigger = document.createElement( 'a' );
+				const img = document.createElement( 'img' );
+				img.src = 'http://example.com/images/thumb/' + thumb;
+				trigger.appendChild( img );
+
+				expect( lightbox.extractFilenameFromTrigger( trigger ) ).toBe( expected );
+			}
 		} );
 	} );
 

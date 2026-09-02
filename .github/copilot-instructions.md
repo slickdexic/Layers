@@ -519,7 +519,7 @@ Key documents that frequently need updates:
 - `wiki/*.md` — Various wiki documentation pages
 
 Common metrics to keep synchronized:
-- Test count (14,227 Jest tests in 178 suites; 675 PHPUnit tests)
+- Test count (14,233 Jest tests in 178 suites; 675 PHPUnit tests)
 - Coverage (95.87% statement, 87.20% branch — verified September 2, 2026)
 - JavaScript file count (161 files total, ~107,000 lines)
 - PHP file count (48 files, ~17,300 lines)

@@ -8,7 +8,7 @@
 	"descriptionmsg": "layers-desc",
 	"license-name": "GPL-2.0-or-later",
 	"type": "other",
-	"version": "1.5.91",
+	"version": "1.5.92",
 	"requires": {
 		"MediaWiki": ">= 1.44.0"
 	},
@@ -328,10 +328,12 @@
 				"layers-lightbox-download",
 				"layers-lightbox-download-tooltip",
 				"layers-lightbox-export-generating",
+				"layers-lightbox-fit",
 				"layers-export-incomplete",
 				"layers-zoom-in",
 				"layers-zoom-out",
 				"layers-zoom-reset",
+				"layers-zoom-fit",
 				"layers-page-prev",
 				"layers-page-next",
 				"layers-page-indicator",

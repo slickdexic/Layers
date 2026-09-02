@@ -748,6 +748,7 @@
 	"layers-lightbox-download": "Download",
 	"layers-lightbox-download-tooltip": "Download the marked-up document as a PDF",
 	"layers-lightbox-export-generating": "Generating annotated PDF…",
+	"layers-lightbox-fit": "Fit",
 	"layers-lightbox-alt": "Full size image with layers",
 
 	"layers-viewer-overlay-label": "Layer actions",

@@ -4,6 +4,56 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+## [1.5.92] - 2026-09-02
+
+### Fixed
+
+- **The full-screen viewer could not open a layered PDF at all.** The file name
+  was read from the trigger link with a pattern that only matched a pretty path
+  (`/wiki/File:X.jpg`). Every link the viewer overlay builds for a named layer
+  set carries query parameters, and a wiki that does not serve pretty URLs emits
+  `/index.php?title=File:X.jpg` — neither matched, so extraction fell through to
+  the thumbnail file name instead. For a raster image that coincidentally gave
+  the right answer; for a PDF it produced `page1-500px-Doc.pdf.jpg`, the API
+  answered `filenotfound`, and the viewer showed "Failed to load layer data".
+
+  The link target is now parsed properly: the `title` query parameter is
+  preferred, the namespace prefix is taken as anything before the first colon so
+  localised wikis work, and a result that does not look like a file name is
+  rejected so an ordinary article link cannot be mistaken for one. The
+  thumbnail fallback also learned MediaWiki's paged and lossy prefixes
+  (`page3-`, `lossy-page1-`, `lossless-page2-`).
+
+- **The viewer toolbar no longer drifts away from the image when you zoom.** The
+  toolbar and close button were positioned against the image's layout box. Zoom
+  is a CSS transform, which does not change that box, so the image grew and
+  moved while the controls stayed where the unzoomed image used to be. They are
+  now viewport chrome, pinned to the top of the viewer, which is how full-screen
+  media viewers behave.
+
+- **The toolbar and close button stayed legible over light images.** Once the
+  chrome floats over the stage, a zoomed image passes underneath it, and the old
+  white-on-`rgba(255,255,255,0.1)` treatment vanished completely against a white
+  PDF page — the close button became invisible. Both now sit on a dark scrim
+  that holds roughly 9:1 contrast whatever is behind them.
+
+### Added
+
+- **Fit-to-screen** in the full-screen viewer, as a **Fit** button and the `F`
+  key. This is not the same as resetting to 100%: the stage is capped at a
+  fraction of the viewport, so a large image at 100% is already letterboxed,
+  while a small one sits at natural size surrounded by dead space. Fit scales
+  either to fill the available area and re-centres, measuring the toolbar rather
+  than assuming its height so the image never lands underneath it.
+
+- **The mouse wheel now zooms anywhere in the viewer**, not only while the
+  pointer happens to be over the picture. In a full-screen viewer the dark
+  surround reads as part of the canvas, so a wheel that stopped working there
+  felt broken.
+
+- Full-screen viewer keyboard shortcuts are now documented in
+  `wiki/Keyboard-Shortcuts.md`; they had never been written down.
+
 ## [1.5.91] - 2026-09-02
 
 ### Fixed
