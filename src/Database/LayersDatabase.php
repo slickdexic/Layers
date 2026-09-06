@@ -190,6 +190,9 @@ class LayersDatabase {
 
 				$dataStructure = [
 					'revision' => $revision,
+					// Server-owned metadata survives pruning; never supplied by clients.
+					'ownerId' => $revision === 1 ? $userId :
+						( $this->getNamedSetOwner( $normalizedImgName, $sha1, $setName, $page ) ?? 0 ),
 					'schema' => 1,
 					'created' => $timestamp,
 					'layers' => $layersData,
@@ -904,9 +907,13 @@ class LayersDatabase {
 	 * @param string $setName The name of the layer set to delete
 	 * @param int|null $page Page number (1-based), or null for every page of a
 	 *        multi-page document
+	 * @param int|null $ownerId Required owner on every affected page; null for an authorized administrator
 	 * @return int|null Number of rows deleted, or null on error
+	 * @throws \DomainException When an affected page belongs to another/unknown owner
 	 */
-	public function deleteNamedSet( string $imgName, string $sha1, string $setName, ?int $page = 1 ): ?int {
+	public function deleteNamedSet(
+		string $imgName, string $sha1, string $setName, ?int $page = 1, ?int $ownerId = null
+	): ?int {
 		try {
 			$dbw = $this->getWriteDb();
 			if ( !$dbw ) {
@@ -937,6 +944,11 @@ class LayersDatabase {
 			$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 
 			try {
+				$authorizedIds = $this->requireSetOwnership( $dbw, $conds, $ownerId );
+				if ( $authorizedIds !== null ) {
+					// Do not include rows inserted after the ownership snapshot.
+					$conds['ls_id'] = $authorizedIds;
+				}
 				// Lock rows before deleting to prevent race with concurrent rename
 				$dbw->selectField(
 					'layer_sets',
@@ -969,6 +981,9 @@ class LayersDatabase {
 
 			return $rowsDeleted;
 		} catch ( \Throwable $e ) {
+			if ( $e instanceof \DomainException ) {
+				throw $e;
+			}
 			$this->logger->warning( 'Failed to delete named layer set: {message}', [
 				'message' => $e->getMessage(),
 				'setName' => $setName
@@ -979,7 +994,8 @@ class LayersDatabase {
 
 	/**
 	 * Get the owner (creator) user ID of a named layer set.
-	 * Returns the user ID of the first revision in the set.
+	 * Reads server-owned creator metadata, falling back only to revision 1.
+	 * Legacy sets whose first revision was pruned have unknown ownership.
 	 *
 	 * @param string $imgName The image name
 	 * @param string $sha1 The SHA1 hash of the image
@@ -994,21 +1010,91 @@ class LayersDatabase {
 			return null;
 		}
 
-		// Get the first revision (oldest) to find the original creator
+		$conds = [
+			'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+			'ls_img_sha1' => $sha1,
+			'ls_name' => $setName,
+			'ls_page' => max( 1, $page )
+		];
+		// New revisions carry the original owner even after revision 1 is pruned.
 		$row = $dbw->selectRow(
 			'layer_sets',
-			[ 'ls_user_id' ],
-			[
-				'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-				'ls_img_sha1' => $sha1,
-				'ls_name' => $setName,
-				'ls_page' => max( 1, $page )
-			],
+			[ 'ls_user_id', 'ls_revision', 'ls_json_blob' ],
+			$conds,
 			__METHOD__,
-			[ 'ORDER BY' => 'ls_revision ASC', 'LIMIT' => 1 ]
+			[ 'ORDER BY' => 'ls_revision DESC', 'LIMIT' => 1 ]
 		);
 
-		return $row ? (int)$row->ls_user_id : null;
+		if ( !$row ) {
+			return null;
+		}
+		$owner = $this->ownerFromRow( $row );
+		if ( $owner !== null ) {
+			return $owner;
+		}
+		$first = $dbw->selectRow(
+			'layer_sets', [ 'ls_user_id', 'ls_revision', 'ls_json_blob' ],
+			$conds + [ 'ls_revision' => 1 ], __METHOD__
+		);
+		return $first ? $this->ownerFromRow( $first ) : null;
+	}
+
+	/**
+	 * @param \stdClass $row Stored revision; JSON metadata is written only by saveLayerSet
+	 * @return int|null Original creator, never a later editor guessed from retention order
+	 */
+	private function ownerFromRow( $row ): ?int {
+		if ( (int)$row->ls_revision === 1 ) {
+			return (int)$row->ls_user_id > 0 ? (int)$row->ls_user_id : null;
+		}
+		$data = json_decode( (string)$row->ls_json_blob, true, self::JSON_DECODE_MAX_DEPTH );
+		$owner = is_array( $data ) ? ( $data['ownerId'] ?? null ) : null;
+		return is_int( $owner ) && $owner > 0 ? $owner : null;
+	}
+
+	/**
+	 * Check the entire mutation scope while holding row locks in its transaction.
+	 *
+	 * @param IDatabase $dbw Primary connection
+	 * @param array $conds Exact delete/rename source conditions
+	 * @param int|null $ownerId Required owner, or null for an authorized administrator
+	 * @return int[]|null Locked authorized revisions, or null for an administrator
+	 * @throws \DomainException If any page has a different or unknown creator
+	 */
+	private function requireSetOwnership( $dbw, array $conds, ?int $ownerId ): ?array {
+		if ( $ownerId === null ) {
+			return null;
+		}
+		$rows = $dbw->select(
+			'layer_sets', [ 'ls_id', 'ls_page', 'ls_revision', 'ls_user_id' ],
+			$conds, __METHOD__, [ 'FOR UPDATE', 'ORDER BY' => [ 'ls_page ASC', 'ls_revision DESC' ] ]
+		);
+		$owners = [];
+		$latest = [];
+		$ids = [];
+		foreach ( $rows as $row ) {
+			$ids[] = (int)$row->ls_id;
+			$page = (int)$row->ls_page;
+			$latest[$page] = $latest[$page] ?? $row;
+			if ( (int)$row->ls_revision === 1 ) {
+				$owners[$page] = $this->ownerFromRow( $row );
+			}
+		}
+		foreach ( $latest as $page => $row ) {
+			if ( !array_key_exists( $page, $owners ) ) {
+				// Avoid materializing every historical 2MB payload just to authorize.
+				$row->ls_json_blob = $dbw->selectField(
+					'layer_sets', 'ls_json_blob', [ 'ls_id' => (int)$row->ls_id ], __METHOD__
+				);
+				$owners[$page] = $this->ownerFromRow( $row );
+				unset( $row->ls_json_blob );
+			}
+			$owner = $owners[$page];
+			if ( $ownerId <= 0 || $owner !== $ownerId ) {
+				throw new \DomainException( 'Layer set ownership denied' );
+			}
+		}
+		return $ids;
 	}
 
 	/**
@@ -1020,10 +1106,12 @@ class LayersDatabase {
 	 * @param string $newName The new name for the layer set
 	 * @param int|null $page Page number (1-based), or null for every page of a
 	 *        multi-page document
+	 * @param int|null $ownerId Required owner on every affected page; null for an authorized administrator
 	 * @return bool True on success, false on failure
+	 * @throws \DomainException When an affected page belongs to another/unknown owner
 	 */
 	public function renameNamedSet(
-		string $imgName, string $sha1, string $oldName, string $newName, ?int $page = 1
+		string $imgName, string $sha1, string $oldName, string $newName, ?int $page = 1, ?int $ownerId = null
 	): bool {
 		try {
 			$dbw = $this->getWriteDb();
@@ -1048,6 +1136,15 @@ class LayersDatabase {
 			$dbw->startAtomic( __METHOD__, IDatabase::ATOMIC_CANCELABLE );
 
 			try {
+				$sourceConds = [
+					'ls_img_name' => $this->buildImageNameLookup( $imgName ),
+					'ls_img_sha1' => $sha1,
+					'ls_name' => $oldName
+				] + $pageCond;
+				$authorizedIds = $this->requireSetOwnership( $dbw, $sourceConds, $ownerId );
+				if ( $authorizedIds !== null ) {
+					$sourceConds['ls_id'] = $authorizedIds;
+				}
 				// Check if target name already exists (within transaction for consistency)
 				$existsCount = $dbw->selectField(
 					'layer_sets',
@@ -1072,11 +1169,7 @@ class LayersDatabase {
 				$dbw->update(
 					'layer_sets',
 					[ 'ls_name' => $newName ],
-					[
-						'ls_img_name' => $this->buildImageNameLookup( $imgName ),
-						'ls_img_sha1' => $sha1,
-						'ls_name' => $oldName
-					] + $pageCond,
+					$sourceConds,
 					__METHOD__
 				);
 
@@ -1109,6 +1202,9 @@ class LayersDatabase {
 
 			return true;
 		} catch ( \Throwable $e ) {
+			if ( $e instanceof \DomainException ) {
+				throw $e;
+			}
 			$this->logger->warning( 'Failed to rename named layer set: {message}', [
 				'message' => $e->getMessage(),
 				'oldName' => $oldName,

@@ -30,11 +30,9 @@ use MediaWiki\Title\Title;
  * They now live outside the document root and are served only through this
  * page, which re-checks `read` on the source file for the current user.
  *
- * The on-disk name is `<sha1>_<key>.pdf`, and the SHA1 half is taken from the
- * file the caller has just proven they may read. A caller therefore cannot use
- * a guessed or borrowed `key` to reach an export of some *other* file: the
- * worst case is reaching a differently-parameterised export of a file they are
- * already entitled to read.
+ * The on-disk name includes a digest of the canonical source title and export
+ * key. SHA1 alone cannot identify an annotation source: duplicate uploads may
+ * contain the same bytes but have different annotations and read restrictions.
  */
 class SpecialLayersExport extends SpecialPage {
 
@@ -84,7 +82,7 @@ class SpecialLayersExport extends SpecialPage {
 			return null;
 		}
 
-		$services = MediaWikiServices::getInstance();
+		$services = $this->getServices();
 		if ( !$services->getPermissionManager()->userCan( 'read', $this->getUser(), $title ) ) {
 			return null;
 		}
@@ -100,8 +98,14 @@ class SpecialLayersExport extends SpecialPage {
 			return null;
 		}
 
-		$path = RenderCache::getExportDir( $this->getConfig() ) . '/' . $fileKey . '_' . $key . '.pdf';
+		$path = RenderCache::getExportDir( $this->getConfig() ) . '/' .
+			RenderCache::exportFilename( $sha1, $title->getDBkey(), $key );
 		return is_file( $path ) ? $path : null;
+	}
+
+	/** @return MediaWikiServices */
+	protected function getServices() {
+		return MediaWikiServices::getInstance();
 	}
 
 	/**

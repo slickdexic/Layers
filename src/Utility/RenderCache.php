@@ -74,6 +74,19 @@ class RenderCache {
 	}
 
 	/**
+	 * Bind export delivery to the canonical source title as well as its bytes.
+	 * Old SHA1-only exports intentionally cannot be served under this name.
+	 *
+	 * @param string $sha1 Source file hash
+	 * @param string $imgName Canonical File title DB key
+	 * @param string $key Export request key
+	 * @return string Cache filename (compatible with artefact cleanup)
+	 */
+	public static function exportFilename( string $sha1, string $imgName, string $key ): string {
+		return self::artefactKey( $sha1 ) . '_' . hash( 'sha256', $imgName . "\0" . $key ) . '.pdf';
+	}
+
+	/**
 	 * Resolve the base upload directory, falling back to the system temp dir.
 	 *
 	 * @param Config $config

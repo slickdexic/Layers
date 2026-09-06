@@ -5,6 +5,7 @@ declare( strict_types=1 );
 namespace MediaWiki\Extension\Layers\Tests\Unit\SpecialPages;
 
 use MediaWiki\Extension\Layers\SpecialPages\SpecialLayersExport;
+use MediaWiki\Extension\Layers\Utility\RenderCache;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -14,6 +15,62 @@ use PHPUnit\Framework\TestCase;
  * @group Layers
  */
 class SpecialLayersExportTest extends TestCase {
+
+	/** @covers ::resolveExportPath */
+	public function testDuplicateContentCannotAuthorizeAnotherTitlesExport(): void {
+		$dir = sys_get_temp_dir() . '/layers-export-test-' . bin2hex( random_bytes( 6 ) );
+		mkdir( $dir );
+		$key = str_repeat( 'a', 32 );
+		$privatePath = $dir . '/' . RenderCache::exportFilename( 'abc123', 'Private.pdf', $key );
+		$publicPath = $dir . '/' . RenderCache::exportFilename( 'abc123', 'Public.pdf', $key );
+		$legacyPath = $dir . '/abc123_' . $key . '.pdf';
+		file_put_contents( $privatePath, 'private annotations' );
+		file_put_contents( $legacyPath, 'legacy unbound export' );
+		try {
+			$services = new class {
+				public function getPermissionManager() {
+					return new class {
+						public function userCan( $right, $user, $title ) {
+							return $title->getDBkey() === 'Public.pdf';
+						}
+					};
+				}
+
+				public function getRepoGroup() {
+					return new class {
+						public function findFile( $title ) {
+							return new class {
+								public function exists() {
+									return true;
+								}
+
+								public function getSha1() {
+									return 'abc123';
+								}
+							};
+						}
+					};
+				}
+			};
+			$special = $this->getMockBuilder( SpecialLayersExport::class )
+				->onlyMethods( [ 'getServices', 'getConfig' ] )->getMock();
+			$special->method( 'getServices' )->willReturn( $services );
+			$special->method( 'getConfig' )->willReturn( new \HashConfig( [ 'LayersExportDirectory' => $dir ] ) );
+			$method = new \ReflectionMethod( SpecialLayersExport::class, 'resolveExportPath' );
+			$method->setAccessible( true );
+			$this->assertNull( $method->invoke( $special, 'Private.pdf', $key ) );
+			$this->assertNull( $method->invoke( $special, 'Public.pdf', $key ) );
+			file_put_contents( $publicPath, 'public annotations' );
+			$this->assertSame( $publicPath, $method->invoke( $special, 'Public.pdf', $key ) );
+		} finally {
+			foreach ( [ $privatePath, $publicPath, $legacyPath ] as $path ) {
+				if ( is_file( $path ) ) {
+					unlink( $path );
+				}
+			}
+			rmdir( $dir );
+		}
+	}
 
 	/**
 	 * @param string $method

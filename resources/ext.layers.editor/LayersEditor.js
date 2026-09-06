@@ -1553,8 +1553,7 @@ class LayersEditor {
 			return Promise.resolve( false );
 		}
 
-		this.performPageNavigation( page );
-		return Promise.resolve( true );
+		return this.performPageNavigation( page ).then( () => true );
 	}
 
 	/**
@@ -1607,6 +1606,10 @@ class LayersEditor {
 			page: this.page,
 			layers: this.stateManager.get( 'layers' ) || [],
 			setName: this.stateManager.get( 'currentSetName' ) || '',
+			currentLayerSetId: this.stateManager.get( 'currentLayerSetId' ),
+			namedSets: this.stateManager.get( 'namedSets' ),
+			allLayerSets: this.stateManager.get( 'allLayerSets' ),
+			setRevisions: this.stateManager.get( 'setRevisions' ),
 			backgroundVisible: this.stateManager.get( 'backgroundVisible' ),
 			backgroundOpacity: this.stateManager.get( 'backgroundOpacity' ),
 			imageUrl: this.imageUrl,
@@ -1657,6 +1660,9 @@ class LayersEditor {
 	 * @private
 	 */
 	performPageNavigation ( page ) {
+		const generation = ( this.pageNavigationGeneration || 0 ) + 1;
+		this.pageNavigationGeneration = generation;
+		const isCurrent = () => !this.isDestroyed && this.pageNavigationGeneration === generation;
 		if ( !this.apiManager || typeof this.apiManager.loadLayers !== 'function' ) {
 			return Promise.resolve( this.reloadAtPage( page ) );
 		}
@@ -1681,12 +1687,15 @@ class LayersEditor {
 
 		return this.apiManager.loadLayers()
 			.then( ( data ) => {
-				if ( this.isDestroyed ) {
+				if ( !isCurrent() ) {
 					return;
 				}
 				this.applyPageData( data );
 			} )
 			.catch( ( error ) => {
+				if ( !isCurrent() ) {
+					return;
+				}
 				this.debugLog( '[LayersEditor] In-place page navigation failed:', error );
 				this.recoverFromFailedNavigation( previousPage, page );
 			} );
@@ -1719,8 +1728,13 @@ class LayersEditor {
 			this.pageBuffer.forget( previousPage );
 			this.restoreBufferedPage( held );
 		} else if ( this.apiManager ) {
+			const generation = this.pageNavigationGeneration;
 			this.apiManager.loadLayers()
-				.then( ( data ) => this.applyPageData( data ) )
+				.then( ( data ) => {
+					if ( !this.isDestroyed && this.pageNavigationGeneration === generation ) {
+						this.applyPageData( data );
+					}
+				} )
 				.catch( () => {} );
 		}
 
@@ -1763,9 +1777,23 @@ class LayersEditor {
 		}
 
 		if ( buffered && this.stateManager ) {
+			this.stateManager.set( 'currentSetName', buffered.setName || '' );
+			this.stateManager.set( 'currentLayerSetId', buffered.currentLayerSetId || null );
+			this.stateManager.set( 'namedSets', buffered.namedSets || [] );
+			this.stateManager.set( 'allLayerSets', buffered.allLayerSets || [] );
+			this.stateManager.set( 'setRevisions', buffered.setRevisions || [] );
+			this.stateManager.set( 'backgroundVisible', buffered.backgroundVisible !== false && buffered.backgroundVisible !== 0 );
+			this.stateManager.set( 'backgroundOpacity', buffered.backgroundOpacity ?? 1 );
 			this.stateManager.set( 'layers', buffered.layers || [] );
 			this.stateManager.set( 'baseWidth', buffered.baseWidth );
 			this.stateManager.set( 'baseHeight', buffered.baseHeight );
+			this.stateManager.set( 'isLoading', false );
+			if ( typeof this.buildSetSelector === 'function' ) {
+				this.buildSetSelector();
+			}
+			if ( typeof this.buildRevisionSelector === 'function' ) {
+				this.buildRevisionSelector();
+			}
 		}
 
 		const layers = this.stateManager ? ( this.stateManager.get( 'layers' ) || [] ) : [];
@@ -1949,7 +1977,9 @@ class LayersEditor {
 		if ( !buffered.length ) {
 			return this.saveCurrentPage();
 		}
-		return this.saveBufferedPages( buffered ).then( () => this.saveCurrentPage() );
+		return this.saveBufferedPages( buffered ).then( ( bufferedSaved ) =>
+			this.saveCurrentPage().then( ( currentSaved ) => bufferedSaved && currentSaved )
+		);
 	}
 
 	/**
@@ -2002,6 +2032,7 @@ class LayersEditor {
 				);
 			}
 			this.refreshPageControls();
+			return failed.length === 0;
 		} );
 	}
 
@@ -2172,7 +2203,7 @@ class LayersEditor {
 					}
 					if ( choice === 'save' ) {
 						Promise.resolve( this.save() ).then( ( ok ) => {
-							if ( ok !== false ) {
+							if ( ok === true && !this.hasUnsavedChanges() ) {
 								discardAndClose();
 							}
 						} );

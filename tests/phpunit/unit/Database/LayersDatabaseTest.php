@@ -72,6 +72,117 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 		);
 	}
 
+	/** @covers ::saveLayerSet @covers ::getNamedSetOwner @covers ::pruneOldRevisions */
+	public function testCreatorSurvivesPruningByAnotherEditor(): void {
+		$this->config = new \HashConfig( [
+			'LayersMaxBytes' => 2097152, 'LayersMaxNamedSets' => 15, 'LayersMaxRevisionsPerSet' => 1
+		] );
+		$latest = null;
+		$this->dbw->method( 'selectField' )->willReturnCallback(
+			static function ( $table, $field ) use ( &$latest ) {
+				return $field === 'MAX(ls_revision)' ? ( $latest->ls_revision ?? 0 ) : ( $latest ? 1 : 0 );
+			}
+		);
+		$this->dbw->method( 'selectRow' )->willReturnCallback(
+			static function ( $table, $fields, $conds ) use ( &$latest ) {
+				return isset( $conds['ls_revision'] ) && ( $latest->ls_revision ?? 0 ) !== $conds['ls_revision']
+					? false : $latest;
+			}
+		);
+		$this->dbw->method( 'insert' )->willReturnCallback(
+			static function ( $table, $row ) use ( &$latest ) {
+				// Model retention=1: only the newest saved row remains readable.
+				$latest = (object)$row;
+			}
+		);
+		$this->dbw->method( 'insertId' )->willReturn( 1 );
+		$this->dbw->method( 'timestamp' )->willReturn( '20260906120000' );
+		$this->dbw->method( 'selectFieldValues' )->willReturn( [ 1 ] );
+		$this->dbw->method( 'makeList' )->willReturn( '1' );
+		$this->dbw->method( 'affectedRows' )->willReturn( 1 );
+		$db = $this->createLayersDatabase();
+		foreach ( [ 10, 20, 30 ] as $userId ) {
+			$this->assertNotNull( $db->saveLayerSet(
+				'Test.pdf', [ 'sha1' => 'abc123', 'mime' => 'application/pdf' ], [], $userId, 'notes',
+				[ 'ownerId' => 99 ]
+			) );
+			$this->assertSame( 10, $db->getNamedSetOwner( 'Test.pdf', 'abc123', 'notes' ) );
+		}
+		$this->assertSame( 3, $latest->ls_revision );
+		$this->assertSame( 30, $latest->ls_user_id );
+	}
+
+	/** @covers ::getNamedSetOwner */
+	public function testPrunedLegacyCreatorIsUnknown(): void {
+		$this->dbw->method( 'selectRow' )->willReturnOnConsecutiveCalls(
+			(object)[ 'ls_revision' => 51, 'ls_user_id' => 20, 'ls_json_blob' => '{"layers":[]}' ], false
+		);
+		$this->assertNull( $this->createLayersDatabase()->getNamedSetOwner( 'Test.pdf', 'abc123', 'notes' ) );
+	}
+
+	/** @covers ::getNamedSetOwner */
+	public function testLegacyCreatorUsesRevisionOneRatherThanLatestEditor(): void {
+		$this->dbw->method( 'selectRow' )->willReturnOnConsecutiveCalls(
+			(object)[ 'ls_revision' => 2, 'ls_user_id' => 20, 'ls_json_blob' => '{}' ],
+			(object)[ 'ls_revision' => 1, 'ls_user_id' => 10, 'ls_json_blob' => '{}' ]
+		);
+		$this->assertSame( 10, $this->createLayersDatabase()->getNamedSetOwner( 'Test.pdf', 'abc123', 'notes' ) );
+	}
+
+	/**
+	 * @covers ::deleteNamedSet
+	 * @covers ::renameNamedSet
+	 * @dataProvider provideOwnershipMutations
+	 */
+	public function testMutationChecksEveryPageUnderLock( string $operation, bool $sameOwner ): void {
+		$rows = [
+			(object)[ 'ls_id' => 11, 'ls_page' => 1, 'ls_revision' => 1, 'ls_user_id' => 10, 'ls_json_blob' => '{}' ],
+			(object)[ 'ls_id' => 22, 'ls_page' => 2, 'ls_revision' => 3, 'ls_user_id' => 30,
+				'ls_json_blob' => json_encode( [ 'ownerId' => $sameOwner ? 10 : 20 ] ) ]
+		];
+		$this->dbw->expects( $this->once() )->method( 'startAtomic' );
+		$this->dbw->expects( $this->once() )->method( 'select' )->with(
+			'layer_sets', $this->anything(),
+			$this->callback( static function ( $conds ) {
+				return !isset( $conds['ls_page'] );
+			} ),
+			$this->anything(), $this->callback( static function ( $options ) {
+				return in_array( 'FOR UPDATE', $options );
+			} )
+		)->willReturn( $this->createResultWrapper( $rows ) );
+		$this->dbw->method( 'selectField' )->willReturnCallback(
+			static function ( $table, $field ) use ( $sameOwner ) {
+				return $field === 'ls_json_blob' ? json_encode( [ 'ownerId' => $sameOwner ? 10 : 20 ] ) : 0;
+			}
+		);
+		$this->dbw->method( 'affectedRows' )->willReturn( 2 );
+		$mutation = $this->dbw->expects( $sameOwner ? $this->once() : $this->never() )
+			->method( $operation === 'delete' ? 'delete' : 'update' );
+		$authorized = $this->callback( static function ( $conds ) {
+			// A concurrent new revision must not expand the authorized scope.
+			return $conds['ls_id'] === [ 11, 22 ];
+		} );
+		if ( $operation === 'delete' ) {
+			$mutation->with( 'layer_sets', $authorized );
+		} else {
+			$mutation->with( 'layer_sets', [ 'ls_name' => 'renamed' ], $authorized );
+		}
+		$this->dbw->expects( $sameOwner ? $this->never() : $this->once() )->method( 'cancelAtomic' );
+		if ( !$sameOwner ) {
+			$this->expectException( \DomainException::class );
+		}
+		$db = $this->createLayersDatabase();
+		$result = $operation === 'delete'
+			? $db->deleteNamedSet( 'Test.pdf', 'abc123', 'notes', null, 10 )
+			: $db->renameNamedSet( 'Test.pdf', 'abc123', 'notes', 'renamed', null, 10 );
+		$this->assertEquals( $operation === 'delete' ? 2 : true, $result );
+	}
+
+	/** @return array */
+	public static function provideOwnershipMutations(): array {
+		return [ [ 'delete', true ], [ 'delete', false ], [ 'rename', true ], [ 'rename', false ] ];
+	}
+
 	/**
 	 * Create a LayersDatabase instance with a LoadBalancer that returns null connections
 	 * Used for testing error paths when database is unavailable

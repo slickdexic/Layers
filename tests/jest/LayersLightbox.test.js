@@ -1440,6 +1440,125 @@ describe( 'LayersLightbox', () => {
 		} );
 	} );
 
+	describe( 'page loading races', () => {
+		let lightbox;
+		let previousViewer;
+
+		beforeEach( () => {
+			lightbox = new LayersLightbox();
+			lightbox.createOverlay();
+			lightbox.isOpen = true;
+			previousViewer = window.Layers.Viewer.LayersViewer;
+			window.Layers.Viewer.LayersViewer = MockLayersViewer;
+		} );
+
+		afterEach( () => {
+			lightbox.close( true );
+			window.Layers.Viewer.LayersViewer = previousViewer;
+		} );
+
+		it.each( [ true, false ] )( 'ignores detached thumbnail loads (upgrade loads first: %s)', async ( upgradeFirst ) => {
+			let upgrade;
+			lightbox.preparePageImageUrl = jest.fn( () => new Promise( ( resolve ) => {
+				upgrade = resolve;
+			} ) );
+			lightbox.currentPage = 2;
+			const data = { layers: [ { type: 'rectangle', x: 100 } ], baseWidth: 1275, baseHeight: 1650 };
+			const pending = lightbox.renderPageImage( 'Somepdf.pdf', 'thumbnail.jpg', data );
+			const thumbnail = lightbox.imageWrapper.querySelector( 'img' );
+			Object.defineProperty( thumbnail, 'naturalWidth', { value: 1275 } );
+			Object.defineProperty( thumbnail, 'naturalHeight', { value: 1650 } );
+			upgrade( 'data:image/png;base64,upgrade' );
+			await pending;
+			const current = lightbox.imageWrapper.querySelector( 'img' );
+			expect( thumbnail.parentNode ).toBeNull();
+			if ( upgradeFirst ) {
+				current.onload();
+				thumbnail.onload();
+			} else {
+				thumbnail.onload();
+				current.onload();
+			}
+			expect( MockLayersViewer ).toHaveBeenCalledTimes( 1 );
+			expect( MockLayersViewer.mock.calls[ 0 ][ 0 ].imageElement ).toBe( current );
+			expect( MockLayersViewer.mock.calls[ 0 ][ 0 ].layerData.baseWidth ).toBe( 1275 );
+			thumbnail.onerror();
+			expect( lightbox.imageWrapper.querySelector( 'img' ) ).toBe( current );
+		} );
+
+		it( 'releases the old viewer when navigation starts and ignores its pending image', () => {
+			lightbox.renderViewer( 'old.jpg', { layers: [] } );
+			const old = lightbox.imageWrapper.querySelector( 'img' );
+			old.onload();
+			lightbox.showLoading();
+			expect( mockViewer.destroy ).toHaveBeenCalledTimes( 1 );
+			expect( lightbox.viewer ).toBeNull();
+			old.onload();
+			old.onerror();
+			expect( MockLayersViewer ).toHaveBeenCalledTimes( 1 );
+			expect( lightbox.imageWrapper.querySelector( '.layers-lightbox-loading' ) ).not.toBeNull();
+		} );
+
+		it.each( [ false, true ] )( 'ignores an older API response (failure: %s)', async ( fail ) => {
+			let resolveOld;
+			let rejectOld;
+			mockApi.get.mockReturnValueOnce( new Promise( ( resolve, reject ) => {
+				resolveOld = resolve;
+				rejectOld = reject;
+			} ) ).mockResolvedValueOnce( { layersinfo: { page: 3, pageCount: 11, imageUrl: 'three.jpg' } } );
+			lightbox.renderPageImage = jest.fn();
+			const showError = jest.spyOn( lightbox, 'showError' );
+			const old = lightbox.fetchAndRender( 'Somepdf.pdf', null, 2 );
+			await lightbox.fetchAndRender( 'Somepdf.pdf', null, 3 );
+			if ( fail ) {
+				rejectOld( new Error( 'old failure' ) );
+			} else {
+				resolveOld( { layersinfo: { page: 2, pageCount: 11, imageUrl: 'two.jpg' } } );
+			}
+			await old;
+			expect( lightbox.currentPage ).toBe( 3 );
+			expect( lightbox.renderPageImage ).toHaveBeenCalledTimes( 1 );
+			expect( showError ).not.toHaveBeenCalled();
+		} );
+
+		it( 'ignores API completion from a closed session after reopening', async () => {
+			let finish;
+			mockApi.get.mockReturnValueOnce( new Promise( ( resolve ) => {
+				finish = resolve;
+			} ) );
+			const pending = lightbox.fetchAndRender( 'Old.pdf', null, 2 );
+			lightbox.close( true );
+			lightbox.open( { filename: 'New.png', imageUrl: 'new.png', layerData: { layers: [] } } );
+			const current = lightbox.imageWrapper.querySelector( 'img' );
+			finish( { layersinfo: { page: 2, pageCount: 11, imageUrl: 'old.jpg' } } );
+			await pending;
+			expect( lightbox.currentPage ).toBe( 1 );
+			expect( lightbox.imageWrapper.querySelector( 'img' ) ).toBe( current );
+		} );
+
+		it( 'does not let an old PDF upgrade change the new session page count', async () => {
+			let finish;
+			lightbox.isPdf = true;
+			lightbox._getPdfRenderer = () => ( {
+				isAvailable: () => true,
+				renderPage: () => new Promise( ( resolve ) => {
+					finish = resolve;
+				} )
+			} );
+			const pending = lightbox.preparePageImageUrl( 'Old.pdf', 2, 'old.jpg' );
+			lightbox.close( true );
+			lightbox.open( { filename: 'New.png', imageUrl: 'new.png', layerData: { layers: [] } } );
+			finish( { dataUrl: 'data:image/png;base64,old', pageCount: 11 } );
+			await pending;
+			expect( lightbox.pageCount ).toBe( 1 );
+		} );
+
+		it( 'preserves a fully transparent background', () => {
+			lightbox.renderViewer( 'page.jpg', { layers: [], backgroundOpacity: 0 } );
+			expect( lightbox.imageWrapper.querySelector( 'img' ).style.opacity ).toBe( '0' );
+		} );
+	} );
+
 	describe( 'renderViewer', () => {
 		it( 'should clear loading indicator', () => {
 			const lightbox = new LayersLightbox();
@@ -1957,6 +2076,7 @@ describe( 'LayersLightbox', () => {
 		it( 'should show error on image load failure', () => {
 			const lightbox = new LayersLightbox();
 			lightbox.createOverlay();
+			lightbox.isOpen = true;
 
 			lightbox.renderViewer( 'http://example.com/nonexistent.jpg', { layers: [] } );
 

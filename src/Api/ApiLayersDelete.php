@@ -97,7 +97,7 @@ class ApiLayersDelete extends ApiBase {
 		}
 
 		try {
-			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+			$db = $this->getLayersDatabase();
 
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
@@ -160,13 +160,12 @@ class ApiLayersDelete extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
-// Perform the delete. `allpages` covers every page of a multi-page
-					// document; without it a delete only clears the page the user
-					// happened to be viewing and silently left the rest behind.
-					$allPages = !empty( $params['allpages'] );
-					$rowsDeleted = $db->deleteNamedSet(
-						$imgName, $sha1, $setName, $allPages ? null : $page
-					);
+			// Recheck ownership of every affected page under the database locks.
+			$allPages = !empty( $params['allpages'] );
+			$rowsDeleted = $db->deleteNamedSet(
+				$imgName, $sha1, $setName, $allPages ? null : $page,
+				$user->isAllowed( 'layers-admin' ) ? null : $user->getId()
+			);
 
 			if ( $rowsDeleted === null ) {
 				$this->getLogger()->error( 'Failed to delete layer set', [
@@ -208,6 +207,8 @@ class ApiLayersDelete extends ApiBase {
 			// Re-throw API usage exceptions (permission denied, rate limited, etc.)
 			// so MediaWiki returns the specific error code to the client
 			throw $e;
+		} catch ( \DomainException $e ) {
+			$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during layer set delete: {message}', [
 				'message' => $e->getMessage(),
@@ -231,7 +232,7 @@ class ApiLayersDelete extends ApiBase {
 	 */
 	private function executeSlideDelete( $user, string $slidename, string $setName ): void {
 		try {
-			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+			$db = $this->getLayersDatabase();
 
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
@@ -258,7 +259,10 @@ class ApiLayersDelete extends ApiBase {
 			}
 
 			// Perform the delete
-			$rowsDeleted = $db->deleteNamedSet( $imgName, $sha1, $setName );
+			$rowsDeleted = $db->deleteNamedSet(
+				$imgName, $sha1, $setName, 1,
+				$user->isAllowed( 'layers-admin' ) ? null : $user->getId()
+			);
 
 			if ( $rowsDeleted === null ) {
 				$this->getLogger()->error( 'Failed to delete slide layer set', [
@@ -284,6 +288,8 @@ class ApiLayersDelete extends ApiBase {
 		} catch ( \MediaWiki\Api\ApiUsageException $e ) {
 			// Re-throw API usage exceptions (permission denied, rate limited, etc.)
 			throw $e;
+		} catch ( \DomainException $e ) {
+			$this->dieWithError( LayersConstants::ERROR_DELETE_PERMISSION_DENIED, 'permissiondenied' );
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during slide delete: {message}', [
 				'message' => $e->getMessage(),

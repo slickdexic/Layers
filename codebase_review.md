@@ -1,9 +1,326 @@
 # Layers MediaWiki Extension — Codebase Review
 
-**Review Date:** September 2, 2026
-**Version reviewed:** 1.5.92 (`main` @ `ab3ab6dd`, clean tree, all CI green)
-**Previous full review:** 1.5.85, August 31, 2026 — see "R4" below
-**Reviewer:** GitHub Copilot (Claude Opus 5)
+**Review Date:** September 6, 2026
+**Version reviewed:** 1.5.95 (`main` @ `ae15bcfa`, initially clean working tree)
+**Reviewer:** Codex
+**Current findings:** R6 below. Earlier reviews are retained as history, not as a statement of current correctness.
+
+**Publication checkpoint, September 6, 2026:** The complete current change set passed `npm test` (180 suites, 14,310 tests, and repository guards), `npm run test:php`, and PHPUnit (686 tests, 1,475 assertions, one skipped). The remediation sections below retain their original working-tree status as historical context. The page-owned history, search and Cargo work remains a proposal; this checkpoint contains the existing fixes and documentation, not implementation of those larger features.
+
+## Remediation — September 6, 2026 (working tree, not deployed)
+
+### History investigation — R6.19 (P1, open; documentation corrected)
+
+`src/Api/Traits/AuditTrailTrait.php::createAuditTrailEntry()` passes unchanged main-slot content to `PageUpdater::saveRevision()` and relies on a new summary/tag to create an audit entry. Ordinary null edits do not create revisions or Recent Changes entries; a successful status is not evidence that a new revision was written. Consequently the claim in `docs/proposals/REVISION_COMPLIANCE.md` that Tier 1 provides page history is incorrect. The default-disabled path is also best-effort after a separate layer-table commit and addresses the File page rather than the embedding article. It cannot satisfy a requirement that every published annotation change has a restorable owner-page revision. [MediaWiki null-edit behavior](https://www.mediawiki.org/wiki/Help:Dummy_edit#Null_edit)
+
+Evidence: production-source trace and official core behavior documentation; no live wiki edit was made to probe this. Corrected the proposal's completion claim and documented a replacement architecture in [Cargo, search and page-history proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md). The implementation issue remains open; this investigation does not enable or change audit behavior.
+
+### PDF lightbox follow-up — R6.18 (P1, fixed)
+
+The reported intermittent page-2 scaling failure has a reproducible image-load race. `renderViewer()` removed the previous image while its `onload` callback remained active. If that callback arrived after a PDF raster upgrade or page change, it constructed another viewer against the current wrapper using the detached image. `LayersViewer.resizeCanvasAndRender()` then fell back from its zero layout dimensions to its full natural dimensions. This could leave two canvases, with the oversized one covering the correctly fitted page.
+
+A read-only Chromium probe against `localhost:8080`, using page 2 of `Somepdf.pdf` and deliberately invoking the detached image's late callback, reproduced this with the original `HEAD` lightbox: the displayed image was **603×780**, but the wrapper contained canvases of **603×780 and 2048×2650**, and the active viewer referenced the detached image. The same probe with the working-tree fix produced **one 603×780 canvas**, referencing the displayed image. The API correctly reported the page's coordinate dimensions as 1275×1650. This establishes the race under controlled callback timing; it does not claim every intermittent browser failure has been eliminated.
+
+The fix rejects load/error callbacks whose image is no longer in the current wrapper. Navigation releases the previous viewer immediately. Request tokens prevent out-of-order API responses, errors and PDF upgrades from changing a newer page or reopened session, including its page count. An adjacent bug treating background opacity `0` as `1` is also fixed.
+
+Eight added regression cases cover both detached-image completion orders, stale image errors, viewer cleanup, stale API success/failure, close/reopen isolation, stale PDF page counts, and zero opacity. The full `npm test` pipeline passed with 180 suites / 14,309 tests before the final page-count guard; the final lightbox suite passed all 158 tests, and targeted ESLint passed after that guard. No PDF or saved annotation data was modified. Browser automation used a separate headless Chromium because the app browser tool could not initialize.
+
+### Initial repair batch
+
+**R6.01–R6.07 are fixed in the working tree and covered by regression tests.** The findings below describe the original `ae15bcfa` snapshot; this status section supersedes their original “open” status. R6.08–R6.17 remain open. The production rename execution test improves R6.15 coverage, but its existing substitute-validation and optional-control browser tests have not yet been repaired.
+
+| Finding | Change and verification |
+| --- | --- |
+| R6.01 | Restored the file rename database call. New API execution tests verify single-page/document-wide arguments, the owner identity supplied to the database, successful output, and permission denial. |
+| R6.02 | Delete and rename recheck every affected page's ownership while holding primary-database row locks. Non-admin mutations are restricted to the revision IDs actually authorized, so later inserts cannot expand their scope. Tests cover same-owner success and mixed-owner rollback for both operations. |
+| R6.03 | Each new stored revision carries a server-generated `ownerId`, copied from the established creator rather than the current editor. Legacy ownership is recovered only from revision 1. Tests cover repeated saves by different users with retention=1, legacy revision-1 fallback, and unknown ownership after legacy pruning. No schema migration is required. |
+| R6.04 | Multi-page save returns failure if any buffered save fails. Save-on-close requires explicit success and no remaining unsaved edits. The regression exercises failure, retention of the actual buffered entry, and successful retry/close. |
+| R6.05 | Buffered restores now restore set identity, background settings, revision context and selectors. A round-trip regression checks the next save payload, including hidden background and zero opacity. |
+| R6.06 | Page navigation generations and loader request identities reject stale success/failure callbacks before layer-state mutation. Tests cover out-of-order responses and return to a buffered page while an older request succeeds or fails. |
+| R6.07 | Export generation and delivery use a shared filename function binding the canonical source title and export key as well as file SHA1. A real resolver test rejects a restricted-title export through its readable same-content duplicate, rejects old unbound cache files, and permits a correctly bound public export. |
+
+**Verification:** `npm test` passed (180 suites, **14,302 tests**, plus all subsequent repository guards); `npm run test:php` passed; PHPUnit passed (**686 tests, 1,475 assertions, one skipped**). The two pre-existing duplicate test-stub PHPCS warnings remain. No coverage driver was available. No live-wiki database concurrency or browser E2E run was performed; automated row-lock/scope tests use controlled database doubles. The changes have not been committed, pushed, or deployed.
+
+**Compatibility details:** Existing exports using the old unbound filenames are deliberately no longer served; requesting an export regenerates it with the title binding. Existing sets whose creator revision was already pruned and which have no creator metadata remain editable, but owner-only deletion/renaming requires `layers-admin`. Lost historical ownership is not guessed or silently assigned to a later editor. Administrators retain their override. The configured revision-retention limit remains unchanged.
+
+## R6 — Critical review, September 6, 2026
+
+### Assessment and scope
+
+**This revision has release-blocking data-loss and authorization defects despite passing its automated checks.** The clearest examples are a missing database call in file-set renaming, a Save-on-close path that discards failed saves, and an export delivery check that can authorize the wrong file's annotations. The recent multi-page editor work is insufficiently integrated with saving, restoring state, and draft lifecycle management.
+
+There is substantial implementation and testing here. Calling its authors “lazy” would infer motives the code cannot establish. The demonstrable problems are incomplete changes, duplicated contracts, tests that sometimes test substitutes instead of production behavior, and comments that promise more than the implementation delivers. Broad statements such as “server-side rendering completed” and “all CI green” are not evidence that user workflows work.
+
+Reviewed the save/info/delete/rename/list/export APIs and their helpers, database revisions and ownership, validation, render cache and export delivery, server rendering, slide hooks, editor page navigation/buffering/saving/drafts, and test/build configuration. Traced relevant caller/callee paths and compared prior findings rather than treating historical open/closed labels as authoritative. This is a broad source review with targeted executable probes, **not an exhaustive line-by-line audit of every drawing tool or a live-wiki penetration test**.
+
+Evidence labels:
+
+- **Probe:** executed the actual production method in an isolated harness with controlled dependencies. This establishes the method's behavior, not a complete browser or production deployment reproduction.
+- **Source:** traced the production path and identified its concrete trigger and effect; not exercised against a live wiki.
+- **Pipeline:** directly inspected configuration/tests and ran the listed checks.
+
+### Verification performed
+
+| Check | Result |
+| --- | --- |
+| `npm test` | Exit 0: Grunt checks, **179 Jest suites / 14,296 tests**, and subsequent repository guard scripts passed. |
+| `php vendor/bin/phpunit --configuration phpunit.xml --do-not-cache-result` | Exit 0: **675 tests, 1,442 assertions, one skipped**. No coverage driver available; no new coverage percentage claimed. |
+| `npm run test:php` | Exit 0: syntax, coding-style and MinusX checks passed under the configured policy. PHPCS reported two duplicate test-stub class warnings (`Config`, `HashConfig`); warnings do not fail this command. |
+| Isolated JavaScript probes | Reproduced false success after a failed buffered save, buffer destruction on Save-on-close, out-of-order page application, and failure to restore buffered set/background settings. |
+| Isolated PHP probes | Reproduced duplicate-file export authorization failure, identical text-box render arguments despite changed styling, accepted generic-intent set names, and scalar payload normalization to valid empty layer arrays. |
+
+The scalar-payload probe copied the short format-dispatch branch from `ApiLayersSave` and then invoked the real validator; it did **not** send a save request. The editor probes loaded the actual source into a Node VM and invoked its prototype methods. The export probe invoked the actual private `resolveExportPath()` with a temporary fixture and permission/file-service stubs. It read no real restricted document.
+
+No live API writes, Playwright browser run, ImageMagick visual comparison, fresh advisory-database scan, or real database concurrency test was performed. No application source was changed. The findings below distinguish these limits from verified defects.
+
+### Prioritized findings
+
+**P1 = fix before release; P2 = significant correctness or assurance defect; P3 = lower-impact configuration defect.** All 17 findings are open at the reviewed commit. “Open” here does not imply that every finding is newly introduced or absent from all historical reviews.
+
+| ID | Priority | Finding | Evidence |
+| --- | --- | --- | --- |
+| R6.01 | P1 | File-set rename never performs the rename | Source |
+| R6.02 | P1 | All-pages deletion checks ownership on only one page | Source |
+| R6.03 | P1 | Revision pruning transfers destructive-operation ownership | Source |
+| R6.04 | P1 | Save-on-close discards pages whose saves failed | Probe |
+| R6.05 | P1 | Buffered page restoration retains another page's set/background | Probe |
+| R6.06 | P1 | Overlapping page loads apply stale results to the current page | Probe + source |
+| R6.07 | P1 | Export delivery can disclose another title's annotations | Probe |
+| R6.08 | P2 | Invalid scalar JSON is treated as an empty annotation set | Probe + source |
+| R6.09 | P2 | Valid explicit set names are reinterpreted as display directives | Probe + source |
+| R6.10 | P2 | Saving/discarding buffered pages leaves recoverable stale drafts | Source |
+| R6.11 | P2 | PDF export silently drops failed pages/overlays and loses warnings | Source |
+| R6.12 | P2 | Export omits background settings and supported text formatting | Probe + source |
+| R6.13 | P2 | Foreign files without a local description page skip backlink purging | Source |
+| R6.14 | P2 | Slide creation bypasses the configured creation rate bucket | Source |
+| R6.15 | P2 | Rename tests can pass without testing a production rename | Pipeline |
+| R6.16 | P2 | Blocking dependency audit excludes the vendored PDF runtime source | Pipeline |
+| R6.17 | P3 | First API save ignores the configured default set name | Source |
+
+### R6.01 — File-set rename has no database mutation
+
+**Location:** `src/Api/ApiLayersRename.php:148–171`, especially line 162.
+
+After validation and ownership checks, the file path contains a “Perform the rename” comment followed immediately by `if ( !$success )`. Nothing assigns `$success` or calls `renameNamedSet()` in this path. The only actual rename call in the class is in `executeSlideRename()` at line 349.
+
+**Trigger/effect:** submit an otherwise valid rename for an image or PDF set. It reaches an undefined variable and returns `renamefailed` (or reaches the exception/error handler depending on error handling). No rename takes place. Slides use a different path and are unaffected by this particular omission. This invalidates the earlier blanket claim that document-wide rename was fixed.
+
+**Fix/verification:** restore the database operation with the intended page scope, but first implement scope-correct authorization from R6.02. Add an API execution test that asserts both a successful response and persisted new name for an image and a multi-page file. Syntax/style checks cannot detect a missing business operation.
+
+### R6.02 — All-pages deletion authorizes a smaller scope than it deletes
+
+**Locations:** `src/Api/ApiLayersDelete.php:159–169`; `src/Api/Traits/LayersApiHelperTrait.php:122–140`; `src/Database/LayersDatabase.php:909–949`.
+
+The API calls `isOwnerOrAdmin(..., $page)` once. With `allpages`, it then calls `deleteNamedSet(..., null)`, which deliberately omits `ls_page` from the delete conditions. Ownership is stored/derived per page, so these are different authorization scopes.
+
+**Reproduction:** Alice owns set `notes` on PDF page 1; Bob owns `notes` on page 2. Alice requests deletion with `page=1&allpages=1`. Her page-1 ownership passes, but both pages' revision histories are deleted, including Bob's. Alice needs normal edit rights and a CSRF token; this is an authenticated authorization bypass, not an anonymous CSRF claim.
+
+**Fix/verification:** either establish persistent document-wide set ownership or check every affected page owner on the primary database in the mutation transaction. Test mixed owners and a non-admin caller. The same insufficient check already exists in file renaming at `ApiLayersRename.php:154`; restoring its missing database call without fixing authorization would expose the equivalent rename defect.
+
+### R6.03 — Pruning changes who is considered the original creator
+
+**Locations:** `src/Database/LayersDatabase.php:754–805` and `:990–1011`; `src/Api/Traits/LayersApiHelperTrait.php:130–140`.
+
+`getNamedSetOwner()` selects the oldest **remaining** revision's `ls_user_id`. `pruneOldRevisions()` deletes every revision outside the most recent N, including the original creator's revision. There is no independent immutable creator record in this lookup.
+
+**Reproduction:** with the default retention of 50, Alice creates a set and Bob makes 50 subsequent permitted saves. Alice's revision is pruned; the ownership query now returns Bob. Alice loses owner-only delete/rename rights and Bob gains them. With a lower configured retention, this takes fewer saves. Rate limits delay this sequence but do not prevent it.
+
+**Fix/verification:** keep creator identity separately from disposable revision history. Test retention overflow with multiple authors and assert ownership remains stable. This is specifically about the advertised owner-only destructive operations; ordinary collaborative saving is not itself being classified as unauthorized.
+
+### R6.04 — Save-on-close clears edits after a partial save failure
+
+**Locations:** `resources/ext.layers.editor/LayersEditor.js:1947–2005`, `:2141–2147`, `:2173–2177`.
+
+`saveBufferedPages()` catches each failure, retains that entry, displays an error, and still resolves normally. `save()` ignores the failed pages and returns the current page's save result. `cancel()` interprets that result as document-wide success and calls `discardAndClose()`, which clears the buffer and destroys the UI.
+
+**Actual probe output:**
+
+```text
+partial save: { result: true, remaining: [ 2 ] }
+Save on close: { closed: true, remaining: [] }
+```
+
+**Trigger/effect:** edit multiple pages, choose Save while closing, make a buffered page save fail while the current page succeeds. The editor closes and drops its retained in-memory edits despite having told the user they remain open. A local draft may survive, but storage may be unavailable/full; it is not a justification for discarding the active work.
+
+**Fix/verification:** return an aggregate result, and close only when every intended page is saved and `hasUnsavedChanges()` is false. Add a test of the complete `cancel → save → partial failure` chain, not only tests that the buffer retains entries before the close callback runs.
+
+### R6.05 — Returning to a buffered page can save into the wrong named set
+
+**Locations:** `resources/ext.layers.editor/LayersEditor.js:1606–1616`, `:1624–1640`, `:1744–1770`; `resources/ext.layers.editor/APIManager.js:1053–1107`.
+
+`stashCurrentPage()` records `setName`, `backgroundVisible`, and `backgroundOpacity`. `restoreBufferedPage()` passes them to `applyPageData()`, but its buffered branch restores only layers and base dimensions. The previous page's `currentSetName` and background settings remain in state. `buildSavePayload()` then reads those retained values for the current page.
+
+**Actual probe:** restoring an entry for set A with hidden background and opacity 0.2 while state contains set B, visible background and opacity 1 leaves:
+
+```text
+currentSetName: 'B', backgroundVisible: true, backgroundOpacity: 1, isDirty: true
+```
+
+**Trigger/effect:** edit page 1/set A, visit page 2/set B, return to buffered page 1, then save. Page-1 edits can be written to B rather than A and background choices are changed. Merely returning to the page changes the eventual save target.
+
+**Fix/verification:** restore the complete editing context and refresh set/revision controls consistently. Test a round trip between pages with different set names and background settings, asserting the final API payload, not just the layer array.
+
+### R6.06 — Page navigation has no stale-response guard
+
+**Locations:** `resources/ext.layers.editor/LayersEditor.js:1548–1557`, `:1659–1693`; `resources/ext.layers.editor/APIManager.js:309–327`; `resources/ext.layers.editor/Toolbar.js:1581–1589`, `:1653–1654`.
+
+Navigation updates `this.page` immediately and starts a load. Another navigation can start before it completes. Neither `loadLayers()`'s `processLayersData()` nor the navigation callback checks that its request still belongs to the current navigation. Toolbar page buttons check page boundaries, not loading state.
+
+**Actual probe:** request page 2, request page 3, resolve page 3 first and page 2 last:
+
+```text
+out-of-order navigation: { selected: 3, displayed: 2 }
+```
+
+The production API loader also mutates layer state before the outer callback runs. A guard only around `applyPageData()` would therefore be insufficient. Saving can associate the stale layers with the current page number.
+
+**Fix/verification:** capture a navigation generation/page at request creation and reject stale success and failure callbacks before any state mutation; alternatively serialize navigation consistently. Cover rapid Next/Previous, return-to-buffer while a fetch is pending, and a late rejection. Also return the real navigation promise rather than immediate “started” success where callers need completion.
+
+### R6.07 — Export authorization is bound to content hash, not source title
+
+**Locations:** `src/SpecialPages/SpecialLayersExport.php:82–103`; `src/Api/ApiLayersExport.php:169–178`.
+
+Delivery checks read permission on the caller-supplied `file`, obtains that file's SHA1, and opens `<sha1>_<supplied-key>.pdf`. It never verifies that the existing artifact was generated for that title. Two files with identical source bytes share the SHA1 but can have different Layers annotations and read restrictions.
+
+**Isolated reproduction:** create an export fixture for a restricted `Private.pdf`, make the permission stub deny that title and permit `Public.pdf`, and have both file objects return the same SHA1. Invoke the actual resolver with the existing export key:
+
+```json
+{"private_denied":true,"public_alias_resolves_private_export":true}
+```
+
+**Preconditions:** the caller knows an existing export key and can read a duplicate source file. This does not establish practical brute forcing of a 128-bit key. It demonstrates that a known URL/key is not reauthorized against the original title, contrary to the security contract. On installations with per-title read restrictions, the restricted annotations can be disclosed through the public duplicate.
+
+**Fix/verification:** bind stored artifacts to canonical source-title identity, preferably wiki/repository identity too, and verify that identity on delivery. Merely adding the title to the hash computed during generation is insufficient if delivery still accepts arbitrary existing hashes under a shared SHA1 directory. Add a two-title/same-content permission regression test.
+
+### R6.08 — Scalar payloads become successful empty-set validation
+
+**Locations:** `src/Api/ApiLayersSave.php:128–153`; `src/Validation/ServerSideLayerValidator.php:328–345`.
+
+JSON decoding is checked for syntax, but the top-level shape is not required to be an array or valid envelope. `$layersData` starts as `[]` and stays empty for scalar JSON. The validator deliberately accepts empty arrays, so malformed requests can proceed to save an empty revision rather than returning a validation error.
+
+**Probe:** the format-dispatch branch plus actual validator accepts `null`, `true`, `123`, and `"oops"` as valid `[]`. An envelope with `{"layers":null}` instead reaches a `TypeError` through the legacy-array branch. These are inconsistent responses to invalid structures.
+
+**Impact:** a client serialization defect can replace the current visible annotation set with an empty revision. Previous retained revisions may permit recovery; this is not a claim that every prior revision is immediately deleted.
+
+**Fix/verification:** reject scalar roots, malformed envelopes, and non-object layer entries before validation/storage. Keep explicit `[]` and `{"layers":[]}` as intentional empty-set saves. Assert invalid payloads never call the database.
+
+### R6.09 — Explicit set names collide with wikitext intents
+
+**Locations:** `src/Api/ApiLayersSave.php:114–120`, `:333–338`; `src/Utility/SetNameResolver.php:42–91`; `src/Validation/SetNameSanitizer.php:88–117`.
+
+Set-name validation allows `on`, `off`, `all`, `true`, `false`, `1`, and `0`; the code/documentation says no names are reserved. Saving interprets those explicit `setname` values through `isSpecificName()`, replaces them with an empty name, and resolves to whichever set was last saved.
+
+**Probe:** `on`, `1`, and `off` all return `isValid=true` and `isSpecificName=false`.
+
+**Reproduction:** create/rename a slide set to `on` (slide rename works), save another set B, then submit a save explicitly naming `on`. The save targets B. Alternatively, attempting to create a new set called `1` silently targets an existing latest set. Info's explicit-name lookup does not share the same interpretation, making load/save disagree.
+
+**Fix/verification:** separate parsing of wikitext display switches from explicit API set identifiers. Honor explicit names literally, or formally reserve/reject them everywhere with an error and migration strategy. Never silently redirect a named write.
+
+### R6.10 — Buffered-page drafts survive successful saves and explicit discard
+
+**Locations:** `resources/ext.layers.editor/LayersEditor.js:1597–1603`, `:1973–1977`, `:2130–2147`; `resources/ext.layers.editor/APIManager.js:1049`, `:1129–1134`, `:1201–1204`; `resources/ext.layers.editor/DraftManager.js:187–195`, `:484–490`.
+
+Leaving an edited page explicitly saves its draft under a page/set-specific key. A buffered save uses `silent: true`, skipping `handleSaveSuccess()` and therefore draft cleanup. The buffer entry is forgotten, but its draft remains. Closing/discarding clears only `getStorageKey()` for the currently displayed page before clearing the whole buffer.
+
+**Trigger/effect:** edit page 1, leave it, save all pages from page 2, then revisit page 1. A saved page can still offer stale unsaved-work recovery. Explicitly discard the document from page 2 and page 1's draft can likewise reappear. Recovering stale drafts can overwrite newer shared work on a later save.
+
+**Fix/verification:** make draft deletion accept explicit file/set/page identity; clear each successfully saved page's draft and every intentionally discarded page's draft. Preserve drafts for failed saves. Test storage keys across save, partial failure, discard, and editor restart.
+
+### R6.11 — PDF export treats failed output as complete output
+
+**Locations:** `src/Api/ApiLayersExport.php:184–213`, `:220–225`, `:253–272`.
+
+Three related failure paths undermine export integrity:
+
+1. If a page raster cannot be produced, the loop `continue`s. As long as one page succeeds, it stitches a PDF and reports the **original** `pageCount`, with no missing-page list.
+2. If compositing fails, `renderPageImage()` substitutes the unannotated base raster. A general render failure is not necessarily recorded in `droppedTypes`, so the export can omit annotations without an incomplete warning.
+3. Incomplete warnings are emitted only when `!$cached`; the same cached incomplete file is subsequently delivered without its warning metadata.
+
+**Reproduction conditions:** a transform failure on page 2 of a three-page document; a compositor timeout/failure with a working base transform; or repeat a request whose first result reported a dropped type.
+
+**Fix/verification:** fail the export when required pages/overlays fail, or explicitly report omitted pages and degraded overlays. Persist completeness metadata with the artifact and return it on cache hits. Test actual output-page count against response metadata and assert a failed overlay cannot be silently represented as success.
+
+### R6.12 — “All types rendered” does not mean export matches the editor
+
+**Locations:** `src/Api/ApiLayersExport.php:253–261`, `:281–292`; `src/ThumbnailRenderer.php:209–220`, `:444–510`.
+
+The export extracts only `data.layers`, dropping saved `backgroundVisible` and `backgroundOpacity`. The renderer always starts with the original base raster. A hidden/faded background therefore becomes fully visible in the exported PDF.
+
+Text-box rendering also uses plain `text` with simplified top-left placement. It does not consume `richText`, `textAlign`, or rotation. The same source has no general handling for the persisted gradient/blend-mode settings. Supporting each layer type's name is a much weaker guarantee than supporting its properties.
+
+**Actual probe:** invoke the real `buildLayerArguments()` for a text box, then add 45-degree rotation, right alignment, and bold rich-text runs. The command arguments are **identical**, and `getDroppedLayerTypes()` remains empty. This proves these properties are ignored; it is not a pixel-perfect rendering test.
+
+**Fix/verification:** pass the complete document/background model to export. Implement property fidelity or expose explicit, persistent degradation warnings. Add representative visual comparisons covering hidden backgrounds, text wrapping/alignment/rich text, rotation, and gradients. Revise the historical completion claim to reflect the actual supported feature matrix.
+
+### R6.13 — Foreign-file saves can leave embedding pages cached indefinitely
+
+**Location:** `src/Api/Traits/CacheInvalidationTrait.php:30–33`, `:60–66`; compare `src/Api/ApiLayersSave.php:254–258`.
+
+Saving intentionally supports foreign files without local File description pages. `invalidateCachesForFile()` immediately returns when `$title->exists()` is false. That also skips `purgeFileBacklinks()`, although local articles can embed that foreign file and contain cached layer markup.
+
+**Trigger/effect:** annotate an InstantCommons/shared file with no local description page, then read a previously cached local article embedding it. The save/delete operation does not enqueue the backlink purge; old layers can remain until another purge/expiry occurs. The fix for local File pages does not cover this supported foreign-file case.
+
+**Fix/verification:** conditionally purge the description page, but process embedding-page backlinks independently of description-page existence. Add a test with `exists=false` and real local backlinks. This finding is source-traced, not a measured cache lifetime on the local wiki.
+
+### R6.14 — Slide creation skips the creation rate limit
+
+**Locations:** `src/Api/ApiLayersSave.php:342–346` versus `:437–491`; `src/Security/RateLimiter.php:74–91`.
+
+The file path checks `editlayers-create` when a named set does not exist. `executeSlideSave()` goes from shared validation (which checks only `save`) to `saveLayerSet()` without that creation check. A new slide has a new synthetic image identity, so the per-image named-set cap is not a global cap on creating slides.
+
+**Trigger/effect:** exhaust or sharply restrict the creation bucket while leaving saves available; an editor can still create new slide names through `layerssave`. The repository's bucket-presence checker passes because the create check exists somewhere in the source, not because every creation route enforces it.
+
+**Fix/verification:** apply creation limits consistently to new slides/new slide sets and assert that a rejected creation bucket prevents a database insert. Existing-slide updates should retain the intended save-only behavior.
+
+### R6.15 — Tests provide false confidence around rename behavior
+
+**Locations:** `tests/phpunit/unit/Api/ApiLayersRenameValidationTest.php:10–49`; `tests/e2e/named-sets.spec.js:326–383`.
+
+The PHP test's `SetNameValidationHarness` reimplements a 50-character ASCII regex and never invokes production set-name validation or rename execution. Production validation supports Unicode/spaces and a different limit. An `@covers ApiLayersRename` annotation does not make this a production behavior test.
+
+The browser “can rename a named set” test nests actions and final assertions inside optional-element checks, including `if ( renameBtn )` and `if ( renameInput )`. If required controls are absent, the test can finish without verifying a rename. There is an E2E workflow; the problem is not that the repository has no browser tests.
+
+**Observed consequence:** the entire locally run unit/check pipeline passes with R6.01 present. This does not prove a fresh live E2E run would pass; no such run was performed here.
+
+**Fix/verification:** test actual API execution and persistent state, share the real validator, and make missing required controls fail browser tests. Add multi-page partial-failure and mixed-owner cases. Prefer these behavior tests over another source-text presence checker.
+
+### R6.16 — The blocking audit does not cover the shipped PDF dependency
+
+**Locations:** `.github/workflows/ci.yml:60–70`; `package.json:63`; `scripts/webpack.pdfjs.config.js:18–23`.
+
+CI labels `npm audit --omit=dev --audit-level=high` as the shipped-dependency gate. However, `pdfjs-dist` is a devDependency and is the source for JavaScript vendored into `resources/lib/pdfjs/` and delivered to users. The inclusive audit is advisory and ends with `|| true`.
+
+**Impact:** a future high/critical advisory affecting the vendored PDF runtime need not fail the supposed runtime-security gate. The npm production/dev classification does not describe what this extension actually ships. An audit of package-lock also needs to correspond to the committed vendored build, not merely the package currently installed during CI.
+
+**Fix/verification:** explicitly audit/track vendored runtime components and their actual shipped versions, and fail CI for applicable high/critical advisories. This is a verified coverage gap, **not a claim of a newly confirmed pdf.js CVE**. No fresh advisory lookup was done in this review.
+
+### R6.17 — The configured seed name is bypassed by API saves
+
+**Locations:** `src/Api/ApiLayersSave.php:333–338`, `:475–479`; `src/Validation/SetNameSanitizer.php:126–127`; `src/Database/LayersDatabase.php:102–104`.
+
+For the first unnamed save, the API calls `SetNameSanitizer::getDefaultName()`, which returns the fixed `LayersConstants::DEFAULT_SET_NAME` (`default`). It then passes that nonempty string to the database. The database consults `LayersDefaultSetName` only for an empty/null argument, so its configuration-aware fallback is bypassed.
+
+**Reproduction:** configure `LayersDefaultSetName = 'annotations'` and make an unnamed first API save on a new image/slide. The API seeds `default`, contrary to its documented configuration contract.
+
+**Fix/verification:** use the configured, validated seed consistently or let the database resolve the first unnamed set. Cover a non-default configuration value in API tests.
+
+### Engineering quality and remediation order
+
+The common pattern is incomplete integration, not a lack of helper classes. File and slide paths diverge; per-page and document-wide operations have incompatible success/ownership contracts; “silent” saving suppresses essential persistence cleanup as well as UI; and a renderer's type list is used as a proxy for visual completeness. More comments and more line-count coverage will not repair these contracts.
+
+1. Fix R6.01–R6.07 with behavior tests before shipping another feature release. Preserve failed edits, restore exact save context, and match authorization scope to the data being served/deleted.
+2. Fix write-target/input consistency and export integrity (R6.08–R6.12), then caching/rate-limit/configuration divergence.
+3. Replace substitute/no-op tests and correct the shipped-dependency gate. Keep regression tests focused on failure outcomes and persisted state.
+
+Positive evidence should also remain visible: write APIs declare CSRF/POST requirements; ordinary file writes check title edit permission; ownership checks explicitly exclude anonymous user ID 0; database delete/rename failures use cancelable atomic sections; the validator uses property/type allowlists; export delivery rejects malformed keys and checks read permission; shell calls generally pass arguments through MediaWiki's shell abstraction. These are useful protections, but R6.02/R6.03/R6.07 show why their mere presence does not prove correct authorization.
+
+No confirmed arbitrary code execution, SQL injection, or browser XSS exploit is asserted in this review. Converter-dependent SVG behavior, deployment-specific private-wiki policies, real concurrent database transactions, and visual equivalence across all tools still warrant dedicated testing. Their absence from the confirmed list is not a clean bill of health.
+
+### Historical review boundary
+
+Everything below this boundary predates R6. Preserve it as an audit trail, including its corrections and retractions. In particular, the old R5.02 “forever” claim was explicitly retracted; it is **not** being reopened here. Older “closed,” “completed,” metric and CI statements apply to their original scope/date and do not override R6's current findings.
+
+**Previous review header:** September 2, 2026; version 1.5.92 (`ab3ab6dd`); GitHub Copilot (Claude Opus 5). Previous full review: 1.5.85, August 31, 2026 (R4).
 
 ---
 

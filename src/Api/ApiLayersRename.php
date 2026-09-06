@@ -102,7 +102,7 @@ class ApiLayersRename extends ApiBase {
 		}
 
 		try {
-			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+			$db = $this->getLayersDatabase();
 
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
@@ -143,9 +143,8 @@ class ApiLayersRename extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_LAYERSET_NOT_FOUND, 'setnotfound' );
 			}
 
-// Check if new name already exists. A document-wide rename must
-					// not collide on any page, not just the current one.
-					$allPages = !empty( $params['allpages'] );
+			// A document-wide rename must not collide on any page.
+			$allPages = !empty( $params['allpages'] );
 			if ( $db->namedSetExists( $imgName, $sha1, $newName, $allPages ? null : $page ) ) {
 				$this->dieWithError( LayersConstants::ERROR_SETNAME_EXISTS, 'setnameexists' );
 			}
@@ -155,9 +154,11 @@ class ApiLayersRename extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
 			}
 
-// Perform the rename. `allpages` renames across the whole document;
-					// a per-page rename left the same set under two different names
-					// depending on which page the reader was on.
+			// Recheck ownership of every affected page under the database locks.
+			$success = $db->renameNamedSet(
+				$imgName, $sha1, $oldName, $newName, $allPages ? null : $page,
+				$user->isAllowed( 'layers-admin' ) ? null : $user->getId()
+			);
 
 			if ( !$success ) {
 				$this->getLogger()->error( 'Failed to rename layer set', [
@@ -195,6 +196,8 @@ class ApiLayersRename extends ApiBase {
 			// Re-throw API usage exceptions (permission denied, rate limited, etc.)
 			// so MediaWiki returns the specific error code to the client
 			throw $e;
+		} catch ( \DomainException $e ) {
+			$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during layer set rename: {message}', [
 				'message' => $e->getMessage(),
@@ -314,7 +317,7 @@ class ApiLayersRename extends ApiBase {
 		}
 
 		try {
-			$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+			$db = $this->getLayersDatabase();
 
 			// Verify database schema exists (via LayersApiHelperTrait)
 			$this->requireSchemaReady( $db );
@@ -346,7 +349,10 @@ class ApiLayersRename extends ApiBase {
 			}
 
 			// Perform the rename
-			$success = $db->renameNamedSet( $imgName, $sha1, $oldName, $newName );
+			$success = $db->renameNamedSet(
+				$imgName, $sha1, $oldName, $newName, 1,
+				$user->isAllowed( 'layers-admin' ) ? null : $user->getId()
+			);
 
 			if ( !$success ) {
 				$this->getLogger()->error( 'Failed to rename slide layer set', [
@@ -373,6 +379,8 @@ class ApiLayersRename extends ApiBase {
 		} catch ( \MediaWiki\Api\ApiUsageException $e ) {
 			// Re-throw API usage exceptions (permission denied, rate limited, etc.)
 			throw $e;
+		} catch ( \DomainException $e ) {
+			$this->dieWithError( LayersConstants::ERROR_RENAME_PERMISSION_DENIED, 'permissiondenied' );
 		} catch ( \Throwable $e ) {
 			$this->getLogger()->error( 'Exception during slide rename: {message}', [
 				'message' => $e->getMessage(),

@@ -391,6 +391,10 @@
 			if ( !this.imageWrapper ) {
 				return;
 			}
+			if ( this.viewer && typeof this.viewer.destroy === 'function' ) {
+				this.viewer.destroy();
+			}
+			this.viewer = null;
 			this.imageWrapper.innerHTML = '';
 			const loading = document.createElement( 'div' );
 			loading.className = 'layers-lightbox-loading';
@@ -406,6 +410,10 @@
 		 * @private
 		 */
 		fetchAndRender( filename, setName, page ) {
+			this._fetchToken = ( this._fetchToken || 0 ) + 1;
+			const token = this._fetchToken;
+			// Invalidate PDF upgrades as soon as navigation starts.
+			this._renderToken = ( this._renderToken || 0 ) + 1;
 			if ( typeof mw === 'undefined' || !mw.Api ) {
 				this.showError( 'API not available' );
 				return;
@@ -427,6 +435,9 @@
 			}
 
 			return api.get( params ).then( ( data ) => {
+				if ( token !== this._fetchToken ) {
+					return undefined;
+				}
 				if ( !data || !data.layersinfo ) {
 					this.showError( 'No layer data found' );
 					return undefined;
@@ -480,6 +491,9 @@
 				return this.renderPageImage( filename, imageUrl, layerData );
 
 			} ).catch( ( error ) => {
+				if ( token !== this._fetchToken ) {
+					return;
+				}
 				this.debugLog( 'API error:', error );
 				this.showError( 'Failed to load layer data' );
 			} );
@@ -544,10 +558,11 @@
 				return Promise.resolve( fallbackUrl );
 			}
 			const pdfUrl = this.resolvePdfSourceUrl( filename );
+			const token = this._renderToken;
 			return renderer.renderPage( pdfUrl, page, {} ).then( ( result ) => {
 				if ( result && result.dataUrl ) {
 					// pdf.js reports the authoritative page count.
-					if ( result.pageCount > this.pageCount ) {
+					if ( token === this._renderToken && result.pageCount > this.pageCount ) {
 						this.pageCount = result.pageCount;
 					}
 					return result.dataUrl;
@@ -1521,8 +1536,9 @@
 
 			// Handle image load
 			img.onload = () => {
-				// Guard against callback after close (P3-206)
-				if ( !this.imageWrapper || !this.isOpen ) {
+				// A replaced image may still finish decoding. Its detached layout
+				// has no display size and would create a full-resolution overlay.
+				if ( !this.imageWrapper || !this.isOpen || img.parentNode !== this.imageWrapper ) {
 					return;
 				}
 
@@ -1554,7 +1570,9 @@
 			};
 
 			img.onerror = () => {
-				this.showError( 'Failed to load image' );
+				if ( this.isOpen && this.imageWrapper && img.parentNode === this.imageWrapper ) {
+					this.showError( 'Failed to load image' );
+				}
 			};
 
 			// Apply background settings
@@ -1562,7 +1580,7 @@
 				img.style.visibility = 'hidden';
 				img.style.opacity = '0';
 			} else {
-				img.style.opacity = String( layerData.backgroundOpacity || 1 );
+				img.style.opacity = String( layerData.backgroundOpacity ?? 1 );
 			}
 
 			this.imageWrapper.appendChild( img );
@@ -1658,6 +1676,8 @@
 			}
 
 			this.debugLog( 'Closing lightbox' );
+			this._fetchToken = ( this._fetchToken || 0 ) + 1;
+			this._renderToken = ( this._renderToken || 0 ) + 1;
 
 			// Clean up viewer
 			if ( this.viewer && typeof this.viewer.destroy === 'function' ) {

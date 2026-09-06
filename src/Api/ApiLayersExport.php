@@ -174,7 +174,7 @@ class ApiLayersExport extends ApiBase {
 		if ( $outputDir === null ) {
 			$this->dieWithError( 'layers-export-pdf-failed', 'exportfailed' );
 		}
-		$outputPath = $outputDir . '/' . RenderCache::artefactKey( $sha1 ) . '_' . $cacheKey . '.pdf';
+		$outputPath = $outputDir . '/' . RenderCache::exportFilename( $sha1, $imgName, $cacheKey );
 
 		$cached = false;
 		if ( file_exists( $outputPath ) ) {

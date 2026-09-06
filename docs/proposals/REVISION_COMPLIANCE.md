@@ -1,6 +1,12 @@
 # Revision Compliance Architecture
 
-## Status: Tier 1 — Complete
+## Status: audit guarantee not implemented — corrected September 6, 2026
+
+The earlier completion claim below is incorrect. `AuditTrailTrait` re-saves unchanged main-slot content with `PageUpdater`; ordinary null edits do **not** create a page-history or Recent Changes entry, and their summaries are discarded. The operation is also best-effort after the separate Layers save. Enabling `LayersTrackChangesInRecentChanges` must not be represented as reliable revision compliance. See [MediaWiki's null-edit documentation](https://www.mediawiki.org/wiki/Help:Dummy_edit#Null_edit).
+
+The replacement design is [Cargo bindings, searchable annotations, and page-owned history](CARGO_SEARCH_PAGE_HISTORY.md): store page-owned Layers data in a real revision slot, preserve historical snapshots, and make search integration explicit. That design is proposed, not implemented. Log entries alone would improve notifications but would not provide restorable page content.
+
+## Historical proposal — superseded; claims below are not current guarantees
 
 This document describes the architecture for making Layers extension changes visible
 in MediaWiki's revision tracking infrastructure (Recent Changes, page history, watchlists).

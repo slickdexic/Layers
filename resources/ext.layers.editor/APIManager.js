@@ -303,6 +303,11 @@
 	 * Load layers for the current file
 	 */
 	loadLayers() {
+		const generation = this.editor.pageNavigationGeneration;
+		const request = ( this.pageLoadRequest || 0 ) + 1;
+		this.pageLoadRequest = request;
+		const isCurrent = () => this.editor && !this.editor.isDestroyed &&
+			this.editor.pageNavigationGeneration === generation && this.pageLoadRequest === request;
 		return new Promise( ( resolve, reject ) => {
 			// Set loading state to prevent user interactions during load
 			if ( this.editor.stateManager ) {
@@ -317,6 +322,10 @@
 				format: 'json',
 				formatversion: 2
 			} ).then( ( data ) => {
+				if ( !isCurrent() ) {
+					resolve( null );
+					return;
+				}
 				this.hideSpinner();
 				this.processLayersData( data );
 				// Clear loading state after processing
@@ -338,6 +347,10 @@
 					pageCount: parseInt( info.pageCount, 10 ) || null
 				} );
 			}, ( code, result ) => {
+				if ( !isCurrent() ) {
+					resolve( null );
+					return;
+				}
 				this.hideSpinner();
 				// Clear loading state on error
 				if ( this.editor.stateManager ) {

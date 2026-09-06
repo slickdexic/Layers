@@ -34,6 +34,11 @@ use MediaWiki\Title\Title;
  * Requires: ApiBase (for error methods) and ForeignFileHelperTrait (for getFileSha1).
  */
 trait LayersApiHelperTrait {
+	/** @return LayersDatabase */
+	protected function getLayersDatabase(): LayersDatabase {
+		return MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+	}
+
 	/**
 	 * Ensure the database schema is ready, or die with error.
 	 *
