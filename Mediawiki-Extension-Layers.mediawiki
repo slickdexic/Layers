@@ -113,7 +113,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 |-
 | <code>Special:EditSlide/SlideName</code> || Direct editor access for a specific slide
 |-
-| Custom canvas sizes || Any size from 100×100 to 4096×4096 pixels
+| Custom canvas sizes || Configurable dimensions; standard maximum defaults to 4096×4096. Entry-point limits differ, so verify unusual sizes in the editor
 |-
 | Background colors || Any CSS color or transparent
 |-

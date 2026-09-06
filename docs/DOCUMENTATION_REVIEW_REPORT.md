@@ -1,6 +1,33 @@
 # Documentation Review Report
 
 
+## Follow-up audit after user-reported omissions — September 6, 2026
+
+The earlier claim that all documentation was updated was too broad. Publication and link checks passed, but several retained guide bodies were not reconciled. Adding a status notice did not make contradictory content underneath accurate. This follow-up corrects the confirmed items below; it is not an assurance that every remaining statement or browser workflow has been verified.
+
+| Missed claim | Correction / evidence |
+| --- | --- |
+| Homepage release date presented as current-main status | Separate documentation update date, manifest version and unreleased changes; corrected before this follow-up |
+| Wikitext `on` table still said default, despite its new notice | Current-set semantics and literal `default` distinguished throughout the table/examples; `SetNameResolver` and thumbnail lookup |
+| Slide examples used `bgcolor` | Use `background`; `src/Hooks/SlideHooks.php` reads that parameter |
+| FAQ required autoconfirmation to create sets | Registered-user `editlayers` default; File-page edit checks also apply; `extension.json` and `ApiLayersSave` |
+| Named-set permission table omitted mandatory rights | Ownership override is additional to edit authorization, not a replacement; save/delete/rename APIs |
+| Copying to another image required PNG flattening | JSON Import Layers / Export Layers controls already exist; `Toolbar.js` and `ImportExportManager.js` |
+| FAQ said PNG was the only export | Document JSON transfer and file-backed PDF API, with fidelity limits |
+| FAQ said no hard layer limit | Count, bytes and complexity are enforced; manifest and save validation |
+| FAQ promised 100–200 ms overhead and old browser minimums | Remove unsupported benchmark and compatibility claims; require deployment measurements |
+| FAQ claimed WCAG and compared another extension without evidence | Remove conformance/comparison claims; distinguish implemented accessibility features from assessment |
+| FAQ said touch support did not exist | Touch handlers exist in `CanvasEvents.js`; mobile acceptance remains unverified |
+| Preset guide invented built-in names and Save from Selection action | Match `BuiltInPresets.js` and `PresetDropdown.js` |
+| Preset backup used `layers-presets-`; sharing wording implied UI support | Correct key `mw-layers-style-presets`; distinguish manager methods from absent dropdown import/export UI |
+| Troubleshooting called PHP tests a Composer installer | Tests use installed tools; they do not install dependencies (`package.json`) |
+| Troubleshooting assumed a test special page and unprefixed SQL table | Use actual ResourceLoader network responses and explain table prefixes |
+| Reader-specific template example depended on an unspecified username function | Remove unsupported example and explain that cached display conditions are not access control |
+| Slides promised full history and instant refresh | State retained revisions and possible need to reload an open article view |
+| Universal slide-size and CSS-color claims | Entry points use different dimension limits; colors are validated by `ColorValidator` |
+
+Residual verification limits: no fresh assistive-technology/browser matrix, complete UI walkthrough or exhaustive historical-document audit. Slide dimension limits are inconsistent between parser and API paths; this documentation correction does not fix that runtime inconsistency. Historical reports remain historical, including their original claims. Automated documentation checks validate references and selected structural consistency, not factual accuracy of prose.
+
 ## September 6, 2026 refresh
 
 This sweep targets the post-1.5.95 main checkpoint a3b20963, not a new release. It reconciles repository guides, GitHub wiki sources and all three `.mediawiki` files. Remote wiki content matched the checked-in source at the start; publication must be verified separately.

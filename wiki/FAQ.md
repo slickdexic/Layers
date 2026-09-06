@@ -10,7 +10,7 @@ Common questions about the Layers extension.
 
 ### What is Layers?
 
-Layers is a professional-grade, non-destructive image annotation extension for MediaWiki. It allows you to add text, shapes, arrows, and other annotations to images without modifying the original files.
+Layers adds editable text, shapes and annotations to images and PDF pages, and supports standalone slides without a background file.
 
 ### What does "non-destructive" mean?
 
@@ -24,11 +24,7 @@ Non-destructive means your original images are never changed. All annotations ar
 
 ### What browsers are supported?
 
-Layers works best in modern browsers:
-- Chrome/Chromium 90+
-- Firefox 90+
-- Safari 14+
-- Edge 90+ (Chromium-based)
+Use a current Chrome, Edge, Firefox or Safari release. No minimum-version browser matrix was verified for this documentation audit; test your organization's supported browsers and devices.
 
 ---
 
@@ -83,9 +79,7 @@ Use `layerset=off` or `layerset=none`:
 
 ### Can I copy layers between images?
 
-Not directly through the UI. Workaround:
-1. Export as PNG from the first image
-2. Import the PNG as an image layer in the second image
+Use the editor's JSON export and import controls to transfer editable layer data. Save the source first, export its JSON, then import it in the destination editor and inspect the result before saving. Different canvas dimensions can require repositioning. A PNG transfer flattens the annotations into one image and loses their individual editability.
 
 ### How do I undo changes?
 
@@ -100,9 +94,9 @@ Not directly through the UI. Workaround:
 ### Who can edit layers?
 
 By default:
-- All logged-in users can edit existing layer sets
-- Autoconfirmed users can create new layer sets
-- Administrators have full access
+- Registered users receive `editlayers` for creating and editing sets. There is no separate autoconfirmed creation requirement.
+- File-backed changes also require ordinary edit permission on the File page.
+- Administrators receive `layers-admin` for ownership overrides; the other authorization checks still apply.
 
 See [[Permissions]] for customization.
 
@@ -118,7 +112,7 @@ However, this is not recommended for public wikis.
 
 ### Who can delete layer sets?
 
-Only the owner (creator of the first revision) or administrators can delete layer sets.
+Deletion requires `editlayers` plus creator ownership or `layers-admin`; file-backed sets also require File-page edit permission. Legacy sets without recoverable creator metadata require the administrator override. See [[Permissions]].
 
 ### Why can't I see the "Edit Layers" tab?
 
@@ -182,14 +176,11 @@ No. Layers requires a connection to the MediaWiki server to load and save layer 
 
 ### How many layers is too many?
 
-There's no hard limit, but for best performance:
-- **< 50 layers**: Excellent performance
-- **50-100 layers**: Good performance
-- **100+ layers**: May experience lag
+The server enforces layer-count, payload-size and complexity limits. Defaults include 100 layers and a complexity budget of 100; expensive layer types can exhaust the budget before the count limit. Performance depends on shapes, effects, image sizes and the device.
 
 ### Do layers affect page load time?
 
-Slightly. The viewer JavaScript must load, and layer data must be fetched. For typical usage, this adds ~100-200ms.
+The viewer adds JavaScript, annotation data and rendering work. Measure representative pages on your own deployment; no general 100–200 ms overhead has been established.
 
 ### How can I improve performance?
 
@@ -200,16 +191,9 @@ Slightly. The viewer JavaScript must load, and layer data must be fetched. For t
 
 ## Comparison Questions
 
-### How is Layers different from Extension:ImageAnnotator?
+### How should I compare annotation extensions?
 
-| Feature | Layers | ImageAnnotator |
-|---------|--------|----------------|
-| Tools | 17 drawing tools | Basic annotations |
-| Style presets | Yes | No |
-| Named sets | Yes | No |
-| Slide Mode | Yes | No |
-| Non-destructive | Yes | Varies |
-| Accessibility | WCAG 2.1 | Basic |
+Compare the current workflows you need: image/PDF annotation, standalone slides, retained revisions, search, permissions and accessibility. The earlier feature comparison was not verified against the other extension and has been removed.
 
 ### Can I import annotations from other tools?
 
@@ -219,11 +203,7 @@ Not directly. You would need to:
 
 ### Can I export to other formats?
 
-Currently, you can:
-- Export as PNG with background
-- Export as PNG without background (transparent)
-
-SVG and other format exports are not yet available.
+The editor provides image export and editable-layer JSON import/export. File-backed annotations also have a server PDF export API with known fidelity limitations; see [[API Reference]] and [[Current Status]]. A registered SVG export workflow is not available.
 
 ---
 
@@ -231,8 +211,8 @@ SVG and other format exports are not yet available.
 
 ### Is Layers accessible?
 
-Yes! Layers follows WCAG 2.1 guidelines:
-- Full keyboard navigation
+The editor includes accessibility features, but this project does not claim a verified WCAG conformance level:
+- Keyboard commands
 - Screen reader support
 - Focus indicators
 - ARIA landmarks
@@ -285,7 +265,7 @@ Try:
 
 ### Is mobile editing supported?
 
-Not currently. Mobile/touch support is planned for a future release.
+Touch-event handling exists in the editor. That does not establish full mobile usability: test drawing, text entry, dialogs and saving on your target devices. A complete mobile acceptance test was not performed for this audit.
 
 ### Will there be collaboration features?
 

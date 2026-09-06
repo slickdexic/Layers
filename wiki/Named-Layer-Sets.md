@@ -141,14 +141,14 @@ In the editor, click the layer set dropdown to see:
 |--------|----------------|
 | Create set | `editlayers` |
 | Edit set | `editlayers` |
-| Delete set | Owner OR `layers-admin` right |
-| Rename set | Owner OR `layers-admin` right |
+| Delete set | `editlayers` plus (owner OR `layers-admin`); file-backed sets also require File-page edit permission |
+| Rename set | `editlayers` plus (owner OR `layers-admin`); file-backed sets also require File-page edit permission |
 
 ---
 
 ## Sets With No Name Given
 
-No set name is ever assumed to exist:
+The intended current-set behavior is described below. Some default-name paths remain inconsistent (R6.17); integrations should supply an explicit set name:
 
 - When you save without choosing a name, the image's most recently saved set is
   reused — whatever it is called
@@ -211,7 +211,7 @@ GET /api.php?action=layersinfo&filename=File:Example.jpg&setname=anatomy
 POST /api.php?action=layerssave
   filename=File:Example.jpg
   setname=anatomy
-  data=[...layers JSON...]
+  data={"layers":[]}
   token=CSRF_TOKEN
 ```
 

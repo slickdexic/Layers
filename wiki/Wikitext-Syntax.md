@@ -22,8 +22,8 @@ Add the `layerset` parameter to any file link to display annotations:
 
 | Value | Effect |
 |-------|--------|
-| `on` | Display the default layer set |
-| `default` | Display the default layer set (explicit) |
+| `on` | Display the current (most recently saved) set |
+| `default` | Display the set literally named `default` |
 | `<setname>` | Display a specific named layer set |
 | `off` | Explicitly disable layers |
 | `none` | Explicitly disable layers (alternative) |
@@ -118,7 +118,7 @@ Control what happens when users click on layered images with the `layerslink` pa
 <!-- Closing the editor returns you to THIS page -->
 [[File:Diagram.png|layerset=anatomy|layerslink=editor]]
 
-<!-- Click opens the layer editor with the default set -->
+<!-- Click opens the layer editor with the current set -->
 [[File:Diagram.png|layerset=on|layerslink=editor]]
 
 <!-- Click opens fullscreen lightbox viewer -->
@@ -254,13 +254,9 @@ File:Image3.png|layerset=off|Third image (no layers)
 
 ## Conditional Display
 
-### Show layers only for logged-in users
+### Reader-specific visibility
 
-Using ParserFunctions extension:
-
-```wikitext
-[[File:Diagram.png|400px|layerset={{#if:{{#username}}|on|off}}]]
-```
+Layers does not provide a user-name parser function or per-reader access rules for individual annotations. Do not use conditional wikitext as access control; page output may be cached and shared. Use the wiki's permission system for protected content.
 
 ### Different sets for different contexts
 
@@ -324,7 +320,7 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 | `layerset` | Named layer set to display | `layerset=english` |
 | `canvas` | Canvas size (WxH) | `canvas=1920x1080` |
 | `size` | Display size | `size=800x600` |
-| `bgcolor` | Background color | `bgcolor=#f0f0f0` |
+| `background` | Background color | `background=#f0f0f0` |
 | `noedit` | Hide edit overlay button | `noedit` |
 | `class` | CSS classes | `class=my-diagram` |
 
@@ -342,13 +338,13 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 {{#Slide: Infographic | canvas=1200x800 | size=600x400}}
 
 <!-- With background color -->
-{{#Slide: Blueprint | bgcolor=#e8f4fc}}
+{{#Slide: Blueprint | background=#e8f4fc}}
 
 <!-- View-only mode (no edit button) -->
 {{#Slide: Published | noedit}}
 
 <!-- Combined: specific layer set with styling -->
-{{#Slide: Technical | layerset=detailed | size=800x600 | bgcolor=#fff}}
+{{#Slide: Technical | layerset=detailed | size=800x600 | background=#fff}}
 ```
 
 See [[Slide Mode]] for complete documentation.
@@ -372,12 +368,12 @@ The `layers=` parameter is still fully supported for backwards compatibility:
 | Wikitext | Result |
 |----------|--------|
 | `[[File:X.png]]` | Image only, no layers |
-| `[[File:X.png\|layerset=on]]` | Image + default layers |
-| `[[File:X.png\|layerset=default]]` | Image + default layers |
+| `[[File:X.png\|layerset=on]]` | Image + current layers |
+| `[[File:X.png\|layerset=default]]` | Image + the set named `default` |
 | `[[File:X.png\|layerset=anatomy]]` | Image + "anatomy" layers |
 | `[[File:X.png\|layerset=off]]` | Image only, explicitly no layers |
 | `[[File:X.png\|layerset=none]]` | Image only, explicitly no layers |
-| `[[File:X.png\|layers=on]]` | Image + default layers (backwards compatible) |
+| `[[File:X.png\|layers=on]]` | Image + current layers (backwards compatible) |
 
 ---
 

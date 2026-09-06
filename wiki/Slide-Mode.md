@@ -129,9 +129,9 @@ This opens the full Layers editor with the slide loaded.
 | Feature | Description |
 |---------|-------------|
 | **All 17 Drawing Tools** | Full access to shapes, text, arrows, etc. |
-| **Custom Canvas Sizes** | Any size from 100×100 to 4096×4096 pixels |
-| **Background Colors** | Any CSS color or transparent |
-| **Instant Refresh** | Changes appear immediately after saving ✨ |
+| **Custom Canvas Sizes** | Configurable dimensions; standard maximum defaults to 4096×4096. Entry-point limits differ, so verify unusual sizes in the editor |
+| **Background Colors** | Validated colors such as `#ffffff` or `transparent`; not every CSS expression is accepted |
+| **Refresh after saving** | The editor updates after saving; already-open article views may need a reload |
 | **Lightbox View** | Full-size viewing with hover overlay |
 | **Version History** | Each slide maintains revision history |
 | **Shape Library** | 1,385 built-in shapes available |
@@ -187,7 +187,7 @@ Users need the `editlayers` right to create and edit slides (same as image layer
 Slides are stored in the `layer_sets` database table with:
 - Slide name as the identifier (instead of image filename)
 - Canvas dimensions stored in layer data
-- Full revision history support
+- Retained Layers revisions (50 per set by default), separate from article history
 
 ### API
 

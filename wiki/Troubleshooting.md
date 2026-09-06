@@ -31,7 +31,7 @@ Solutions for common issues with the Layers extension.
 
 4. **Clear caches:**
    ```bash
-   php maintenance/run.php rebuildLocalisationCache.php
+   php maintenance/run.php rebuildLocalisationCache
    ```
 
 ### Database Errors on Save
@@ -42,16 +42,14 @@ Solutions for common issues with the Layers extension.
 
 1. **Run database update:**
    ```bash
-   # MediaWiki 1.44+
-   php maintenance/run.php update.php
-   
-   # MediaWiki 1.39-1.43
-   php maintenance/update.php
+   # Run from the MediaWiki root on the supported main/1.43 installations
+   php maintenance/run.php update
    ```
 
 2. **Verify tables exist:**
    ```sql
    SHOW TABLES LIKE 'layer_sets';
+   -- Include your configured MediaWiki table prefix, if any.
    ```
 
 3. **Check database permissions:**
@@ -69,10 +67,8 @@ Solutions for common issues with the Layers extension.
    php composer.phar install
    ```
 
-2. **Or use npm wrapper:**
-   ```bash
-   npm run test:php  # Uses PHP Composer correctly
-   ```
+2. **Install before testing:**
+   `npm run test:php` runs installed PHP quality tools; it does not install Composer or dependencies.
 
 3. **Check PATH order:**
    - Ensure PHP Composer comes before Python in PATH
@@ -92,7 +88,7 @@ Solutions for common issues with the Layers extension.
    - Look for failed resource loads
 
 2. **Check ResourceLoader:**
-   - Visit `Special:JavaScriptTest/qunit` to verify JS loading
+   - Inspect failed `load.php` requests and their responses in the browser Network tab
    - Check for 404 errors in Network tab
 
 3. **Clear browser cache:**
@@ -109,7 +105,7 @@ Solutions for common issues with the Layers extension.
 **Solutions:**
 
 1. **Refresh the page:**
-   - State may be corrupted; refresh clears it
+   - Save or preserve unsaved work first; refreshing may discard it
 
 2. **Check for JavaScript errors:**
    - Open DevTools (F12) → Console
@@ -148,7 +144,7 @@ Solutions for common issues with the Layers extension.
    - What's the response?
 
 2. **Check permissions:**
-   - User must have `editlayers` right
+   - User must have `editlayers`; file-backed changes also need File-page edit permission
    - User must not be blocked
 
 3. **Check rate limiting:**
@@ -233,7 +229,7 @@ Solutions for common issues with the Layers extension.
 **Solutions:**
 
 1. **Reduce layer count:**
-   - Merge or delete unnecessary layers
+   - Remove unnecessary layers after saving a backup
    - Aim for < 50 layers
 
 2. **Reduce image size:**
@@ -244,7 +240,7 @@ Solutions for common issues with the Layers extension.
    - Free up browser resources
 
 4. **Check for memory leaks:**
-   - Refresh page periodically for long sessions
+   - Save successfully before reloading; reloading can discard unsaved work
 
 ### Saving Takes Too Long
 
@@ -312,7 +308,7 @@ $wgLayersMaxBytes = 4194304;  // 4 MB
 
 **Solution:**
 ```bash
-php maintenance/run.php update.php
+php maintenance/run.php update
 ```
 
 ---
@@ -322,7 +318,7 @@ php maintenance/run.php update.php
 ### Safari
 
 - Some older Safari versions have canvas issues
-- Ensure Safari 14+ for best experience
+- Use a current Safari release; the old minimum-version claim was not verified
 
 ### Firefox
 
@@ -336,7 +332,7 @@ php maintenance/run.php update.php
 
 ### Edge
 
-- Use Chromium-based Edge (version 79+)
+- Use a current Chromium-based Edge release
 - Legacy Edge not supported
 
 ---
