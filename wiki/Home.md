@@ -2,12 +2,15 @@
 
 Layers adds editable annotations to **images and PDF pages** and creates **standalone slides**. Use it for diagrams, visual instructions, labels and markup without changing uploaded originals.
 
+**Documentation updated: September 6, 2026.** This guide describes `main`, including fixes made after the 1.5.95 release.
+
 | Reference | Value |
 | --- | --- |
-| **Version (main)** | 1.5.95 |
-| **Release Date** | September 2, 2026 |
+| **Current main branch** | Includes unreleased ownership, save-safety, export-access and lightbox fixes; see [[Changelog]] |
+| **Manifest version** | 1.5.95 |
+| **Release date for this version** | September 2, 2026 |
 
-The manifest still matches that release; documentation reviewed September 6, 2026. The main branch contains fixes after that tag. See [[Changelog]] and [[Current Status]].
+The recent fixes and documentation refresh have been pushed to GitHub, but no new numbered release was created. The manifest still reports 1.5.95. See [[Current Status]] for the tested checkpoint and limitations.
 
 ## Choose a starting point
 

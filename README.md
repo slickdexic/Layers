@@ -7,7 +7,7 @@ Create annotations on **images and PDF pages**, or build **standalone slides** w
 
 > **Version:** 1.5.95 (September 2, 2026) — latest tagged release; manifest remains at this version.
 
- `main` includes subsequent fixes; see [Unreleased changes](CHANGELOG.md#unreleased). Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release. Use a currently supported core release.
+**Documentation updated: September 6, 2026.** `main` includes subsequent fixes; see [Unreleased changes](CHANGELOG.md#unreleased). Requirements: MediaWiki >=1.44 and the PHP/database versions required by your MediaWiki release. Use a currently supported core release.
 
 > **Current limitation:** Layers' own revision list is not the owning article's page history. Annotation full-text search and Cargo annotation tables are also not implemented. For SOPs or controlled documents, read [Current status and limitations](docs/CURRENT_STATUS.md) before deployment.
 

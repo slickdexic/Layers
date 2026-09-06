@@ -57,7 +57,7 @@ const DATE_FILES = [
 	},
 	{
 		file: 'wiki/Home.md',
-		pattern: /(\| \*\*Release Date\*\* \| )([^|]+?)( \|)/,
+		pattern: /(\| \*\*Release date for this version\*\* \| )([^|]+?)( \|)/,
 		format: 'long',
 		replacement: ( date ) => `$1${ date }$3`
 	}
@@ -88,8 +88,8 @@ const VERSION_FILES = [
 	},
 	{
 		file: 'wiki/Home.md',
-		pattern: /\*\*Version \(main\)\*\*\s*\|\s*(\d+\.\d+\.\d+)/,
-		replacement: ( version ) => `**Version (main)** | ${ version }`
+		pattern: /\*\*Manifest version\*\*\s*\|\s*(\d+\.\d+\.\d+)/,
+		replacement: ( version ) => `**Manifest version** | ${ version }`
 	},
 	{
 		file: 'wiki/Installation.md',
