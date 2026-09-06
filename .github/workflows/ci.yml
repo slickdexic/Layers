@@ -44,6 +44,9 @@ jobs:
       - name: Version consistency check
         run: node scripts/update-version.js --check
 
+      - name: Documentation consistency check
+        run: npm run check:docs
+
       - name: Lint/i18n (grunt)
         run: npm test
 

@@ -1,5 +1,7 @@
 # Slide Mode
 
+> **Current guidance — September 6, 2026:** Slides are standalone canvas content, not File attachments. Their Layers revisions are separate from the article embedding them; article revision capture, full-text indexing and Cargo annotation rows remain planned. `Special:Slides` searches names, not instruction text.
+
 *New in v1.5.22*
 
 Create standalone canvas graphics without requiring a base image. Perfect for diagrams, infographics, flowcharts, and presentations.
@@ -26,7 +28,7 @@ Use the `{{#Slide:}}` parser function to embed slides:
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| `layerset` | Named layer set to display (default: "default") | `layerset=anatomy` |
+| `layerset` | Named layer set to display (omitted/on: current set) | `layerset=anatomy` |
 | `canvas` | Canvas size (width×height) | `canvas=1920x1080` |
 | `size` | Display size on page | `size=800x600` |
 | `background` | Background color | `background=#f0f0f0` |
@@ -36,7 +38,7 @@ Use the `{{#Slide:}}` parser function to embed slides:
 ### Examples
 
 ```wikitext
-<!-- Basic slide (default layer set) -->
+<!-- Basic slide (current layer set) -->
 {{#Slide: MyDiagram}}
 
 <!-- Specific named layer set -->

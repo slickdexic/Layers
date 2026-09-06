@@ -1,5 +1,7 @@
 # Keyboard Shortcuts
 
+> **Current guidance — September 6, 2026:** Commands apply to the editor canvas; typing in text fields may consume the same keys. Use the in-editor shortcut help for context. Browser/OS shortcuts may take precedence.
+
 Master keyboard shortcuts for faster, more efficient editing.
 
 ---
@@ -26,6 +28,8 @@ Press **`Shift+?`** at any time to display the keyboard shortcuts help dialog.
 | `S` | Star | Draw stars |
 | `A` | Arrow | Draw arrows |
 | `L` | Line | Draw straight lines |
+| `M` | Marker | Numbered/lettered markers |
+| `D` | Dimension | Measurement annotations |
 
 > **Note:** The Zoom tool (`Z`) has been removed. Use the zoom controls in the View shortcuts instead.
 

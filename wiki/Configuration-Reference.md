@@ -1,509 +1,73 @@
-# Configuration Reference
+# Configuration reference
 
-Complete reference for all Layers extension configuration parameters.
+Reviewed September 6, 2026 against `extension.json` on main. Set overrides in `LocalSettings.php` after `wfLoadExtension( 'Layers' );`. Values below are extension defaults, not MediaWiki core defaults.
 
----
+## Registered settings
 
-## MediaWiki Core Settings
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `$wgLayersEnable` | `true` | Master switch for Layers extension functionality |
+| `$wgLayersDebug` | `false` | Enable verbose debug logging to the 'Layers' log channel. Set to true in LocalSettings.php for development. |
+| `$wgLayersMaxBytes` | `2097152` | Maximum JSON size per layer set in bytes |
+| `$wgLayersMaxLayerCount` | `100` | Maximum number of layers per layer set |
+| `$wgLayersMaxComplexity` | `100` | Maximum complexity score for a layer set. Each layer type has a cost (text: 2, image: 3, shapes: 1, etc). Total must not exceed this value. |
+| `$wgLayersMaxImageBytes` | `1048576` | Maximum size in bytes for imported image layers (base64 encoded). Default 1MB. Recommended: 512KB-2MB depending on storage capacity. |
+| `$wgLayersMaxImportSide` | `2048` | Maximum width/height in pixels for client-side downscaling of imported image layers before upload. Images larger than this on their longest side are resized to fit. Default 2048. |
+| `$wgLayersImportJpegQuality` | `0.8` | JPEG quality (0.1-1.0) used when re-encoding downscaled imported images to reduce payload size. Only applied when the re-encoded result is smaller than the original. Default 0.8. |
+| `$wgLayersMaxNamedSets` | `15` | Maximum number of named layer sets per image |
+| `$wgLayersMaxRevisionsPerSet` | `50` | Maximum revisions to keep per named layer set (older ones are pruned) |
+| `$wgLayersDefaultSetName` | `"default"` | Seed name for a new set, not an alias for the current set. Some paths remain inconsistent; use explicit descriptive set names. |
+| `$wgLayersDefaultFonts` | `36 font names; see font list below` | Available fonts in the layer editor. 32 fonts self-hosted as WOFF2 files (OFL) plus 4 system fonts. |
+| `$wgLayersMaxImageSize` | `4096` | Maximum image size for layer editing in pixels |
+| `$wgLayersImageMagickTimeout` | `30` | Timeout in seconds for ImageMagick operations |
+| `$wgLayersMaxImageDimensions` | `8192` | Maximum width/height for layer processing |
+| `$wgLayersPdfExportWidth` | `1600` | Render width in pixels for each page when exporting a marked-up file to PDF |
+| `$wgLayersPdfExportMaxPages` | `100` | Maximum number of pages allowed when exporting a marked-up file to PDF (0 = unlimited) |
+| `$wgLayersExportDirectory` | `""` | Directory for cached PDF exports. Must be outside the document root; exports are served through Special:LayersExport after a permission check. Empty uses $wgTmpDirectory/layers-export. |
+| `$wgLayersSlidesEnable` | `true` | Enable Slide Mode for creating canvas-based layers without a parent image |
+| `$wgLayersSlideDefaultWidth` | `800` | Default width for slides when not specified |
+| `$wgLayersSlideDefaultHeight` | `600` | Default height for slides when not specified |
+| `$wgLayersSlideMaxWidth` | `4096` | Maximum allowed slide width |
+| `$wgLayersSlideMaxHeight` | `4096` | Maximum allowed slide height |
+| `$wgLayersSlideDefaultBackground` | `"#ffffff"` | Default background color for slides |
+| `$wgLayersTrackChangesInRecentChanges` | `false` | Experimental legacy null-edit attempt, disabled by default. Does not provide reliable Recent Changes, watchlist or page-history records. See Current Status. |
 
-These are MediaWiki core settings that affect Layers functionality.
-
-### $wgEditPageFrameOptions
-
-**Required for `layerslink=editor-modal`** — MediaWiki blocks iframe embedding by default. To enable modal editor mode, you must allow same-origin framing.
-
-| Property | Value |
-|----------|-------|
-| Type | `string` |
-| Default | `'deny'` |
-| Required Value | `'SAMEORIGIN'` |
-
-```php
-// Enable iframe embedding for modal editor
-$wgEditPageFrameOptions = 'SAMEORIGIN';
-```
-
-> **Security Note:** This only allows framing from the same origin (your own wiki). External sites cannot embed your wiki pages.
-
----
-
-## Core Settings
-
-### $wgLayersEnable
-
-Master switch to enable or disable the extension.
-
-| Property | Value |
-|----------|-------|
-| Type | `boolean` |
-| Default | `true` |
+## Examples
 
 ```php
-// Disable Layers extension entirely
-$wgLayersEnable = false;
-```
-
-### $wgLayersDebug
-
-Enable debug logging to the 'Layers' log channel.
-
-| Property | Value |
-|----------|-------|
-| Type | `boolean` |
-| Default | `false` |
-
-```php
-// Disable debug logging in production
+wfLoadExtension( 'Layers' );
+$wgLayersMaxLayerCount = 200;
+$wgLayersMaxComplexity = 200;
+$wgLayersMaxNamedSets = 25;
 $wgLayersDebug = false;
 ```
 
-Logs are written to MediaWiki's logging system. View with:
-```bash
-tail -f /var/log/mediawiki/debug.log | grep Layers
-```
+Increasing layer count alone may not admit a complex drawing: size, complexity and imported-image limits also apply. Increasing limits raises storage/rendering costs. The client may impose additional limits.
 
-It also controls browser-console verbosity. With it off, the extension
-suppresses messages that describe expected behaviour or defects in an uploaded
-file that a wiki admin cannot act on — notably pdf.js font-recovery warnings
-such as `TT: undefined function: 32` and
-`Required "glyf" table is not found`, and the editor's notice that a PDF or
-TIFF is being loaded through MediaWiki's thumbnail API. Turn it on to see them.
+## Fonts
 
-### $wgLayersRejectAbortedRequests
+Arial, Verdana, Times New Roman, Courier New, Roboto, Open Sans, Lato, Montserrat, Noto Sans, Source Sans 3, PT Sans, Ubuntu, Inter, Poppins, Work Sans, Nunito, Raleway, DM Sans, Merriweather, Playfair Display, Lora, Libre Baskerville, EB Garamond, Crimson Text, Bebas Neue, Oswald, Archivo Black, Fredoka, Caveat, Dancing Script, Pacifico, Indie Flower, Source Code Pro, Fira Code, JetBrains Mono, IBM Plex Mono.
 
-Surface aborted API requests as rejections for debugging. When false (default), aborted requests are silently swallowed to match legacy behavior.
+Use fonts available to the browser and relevant export renderer. Browser and server font availability may differ; verify exports before distributing them.
 
-| Property | Value |
-|----------|-------|
-| Type | `boolean` |
-| Default | `false` |
+## Export storage
+
+`LayersExportDirectory` must be writable by the wiki and outside the web document root. An empty value uses the extension's directory under MediaWiki's temporary directory. Deliver exports through `Special:LayersExport`, which checks access; do not publish the cache directory directly. `LayersPdfExportMaxPages=0` removes the configured page cap, so use a finite limit for untrusted uploads.
+
+Old export filenames from before the source-title binding fix are no longer served. Regenerate exports. See [[Current Status]] for remaining fidelity and failed-page issues.
+
+## Same-origin editor modal
+
+`layerslink=editor-modal` uses an iframe. Where MediaWiki's framing policy blocks it, configure the core setting:
 
 ```php
-// Enable rejection on aborted API calls (debugging)
-$wgLayersRejectAbortedRequests = true;
+$wgEditPageFrameOptions = 'SAMEORIGIN';
 ```
 
-> **Tip:** This is useful when tracing cancellation bugs or fetch abort races. Production installs should keep the default `false` to avoid noisy logs.
+Also check your reverse proxy and CSP `frame-ancestors` policy. Do not disable framing protection globally. Core settings and their defaults depend on your MediaWiki version.
 
----
+## Rate limits and permissions
 
-## Size Limits
+The registered rate-limit buckets are `editlayers-save`, `editlayers-render`, `editlayers-list`, `editlayers-info`, `editlayers-delete`, `editlayers-rename` and `editlayers-create`. Defaults are in the manifest's `RateLimits` section and can be overridden through MediaWiki's `$wgRateLimits`. The slide-creation enforcement gap is tracked in [[Current Status]].
 
-### $wgLayersMaxBytes
-
-Maximum size of the JSON payload for a single layer set.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `2097152` (2 MB) |
-
-```php
-// Increase to 4 MB for complex annotations
-$wgLayersMaxBytes = 4194304;
-```
-
-### $wgLayersMaxLayerCount
-
-Maximum number of layers allowed in a single layer set.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `100` |
-
-```php
-// Allow up to 200 layers per set
-$wgLayersMaxLayerCount = 200;
-```
-
-### $wgLayersMaxNamedSets
-
-Maximum number of named layer sets per image.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `15` |
-
-```php
-// Allow up to 25 named sets per image
-$wgLayersMaxNamedSets = 25;
-```
-
-### $wgLayersMaxRevisionsPerSet
-
-Maximum number of revisions to keep per named layer set. Older revisions are automatically pruned.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `50` |
-
-```php
-// Keep up to 100 revisions per set
-$wgLayersMaxRevisionsPerSet = 100;
-```
-
-### $wgLayersMaxImageBytes
-
-Maximum size for imported image layers (stored as base64 data URLs).
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `1048576` (1 MB) |
-
-```php
-// Allow larger imported images (2 MB)
-$wgLayersMaxImageBytes = 2097152;
-```
-
-**Storage Impact:**
-
-| Setting | Actual Image Size | Use Case |
-|---------|-------------------|----------|
-| 512 KB | ~380 KB | Small icons, low bandwidth |
-| 1 MB (default) | ~750 KB | Balanced for most cases |
-| 2 MB | ~1.5 MB | High-quality images |
-| 4 MB | ~3 MB | Maximum recommended |
-
-> **Note:** Base64 encoding adds ~33% overhead.
-
-### $wgLayersMaxImportSide
-
-Maximum width/height (in pixels) an imported image may have before the editor
-downscales it client-side prior to upload. Images larger than this on their
-longest side are resized to fit, reducing payload size.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `2048` |
-
-```php
-// Allow larger imports before downscaling (e.g. 4K assets)
-$wgLayersMaxImportSide = 4096;
-```
-
-### $wgLayersImportJpegQuality
-
-JPEG quality (0.1–1.0) used when re-encoding a downscaled imported image. The
-re-encoded result is only kept when it is actually smaller than the original.
-
-| Property | Value |
-|----------|-------|
-| Type | `float` |
-| Default | `0.8` |
-
-```php
-// Higher quality, larger payloads
-$wgLayersImportJpegQuality = 0.92;
-```
-
-> **Note:** Both settings are exported to the client via
-> `MakeGlobalVariablesScript`, so administrator overrides take effect in the
-> browser-side import pipeline.
-
----
-
-## User Interface
-
-### $wgLayersContextAwareToolbar
-
-Enable context-aware toolbar that shows only relevant controls for the active tool.
-
-| Property | Value |
-|----------|-------|
-| Type | `boolean` |
-| Default | `true` |
-
-```php
-// Disable context-aware toolbar (show all controls always)
-$wgLayersContextAwareToolbar = false;
-```
-
-When enabled (default):
-- **Pointer tool**: Only tool buttons visible
-- **Shape tools** (rectangle, circle, etc.): Stroke/fill colors, stroke width
-- **Text tool**: Font size, text stroke, text shadow controls
-- **Arrow tool**: Stroke color, stroke width, arrow style
-- **Layer selection**: Controls adapt to selected layer types
-
-When disabled: All style controls are always visible (classic mode).
-
----
-
-## Image Processing
-
-### $wgLayersMaxImageSize
-
-Maximum image dimension (width or height) for editing.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `4096` |
-
-```php
-// Allow larger images (8K)
-$wgLayersMaxImageSize = 8192;
-```
-
-### $wgLayersMaxImageDimensions
-
-Maximum dimensions for image processing operations.
-
-| Property | Value |
-|----------|-------|
-| Type | `array` |
-| Default | `[ 'width' => 4096, 'height' => 4096 ]` |
-
-```php
-$wgLayersMaxImageDimensions = [
-    'width' => 8192,
-    'height' => 8192
-];
-```
-
-### $wgLayersImageMagickTimeout
-
-Timeout in seconds for ImageMagick operations.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `30` |
-
-```php
-// Increase timeout for very large images
-$wgLayersImageMagickTimeout = 60;
-```
-
----
-
-## PDF export
-
-### $wgLayersPdfExportWidth
-
-Render width in pixels for each page when exporting a marked-up file to PDF.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `1600` |
-
-### $wgLayersPdfExportMaxPages
-
-Maximum number of pages allowed in a single PDF export. `0` means unlimited.
-
-| Property | Value |
-|----------|-------|
-| Type | `integer` |
-| Default | `100` |
-
-### $wgLayersExportDirectory
-
-Filesystem directory used to cache generated PDF exports.
-
-| Property | Value |
-|----------|-------|
-| Type | `string` |
-| Default | `''` (uses `$wgTmpDirectory/layers-export`) |
-
-**This directory must not be web-accessible.** A generated export contains the
-full annotated document. Exports are never linked directly; the API returns a
-`Special:LayersExport` URL, and that page re-resolves the source `File:` title
-and re-checks the requesting user's `read` permission before streaming any
-bytes. Placing the cache under `$wgUploadDirectory` would defeat that check.
-
-```php
-// Explicit location outside the document root
-$wgLayersExportDirectory = '/var/cache/mediawiki/layers-export';
-```
-
-Exports accumulate — the filename embeds the layer set revision, so every save
-orphans the previous PDF. Reap them on a schedule:
-
-```bash
-php maintenance/run.php \
-    extensions/Layers/maintenance/purgeLayersRenderCache.php --max-age-days=30
-```
-
----
-
-## Naming
-
-### $wgLayersDefaultSetName
-
-Name given to the *first* layer set created for an image when the user did not
-name one. Set names are entirely user-defined and nothing is reserved; this
-value is only a seed for a brand-new set, never a name that is looked up or
-assumed to exist. When a caller supplies no set name, the extension operates on
-the image's most recently saved set, whatever it is called.
-
-| Property | Value |
-|----------|-------|
-| Type | `string` |
-| Default | `'default'` |
-
-```php
-// Seed new images' first set with a different name
-$wgLayersDefaultSetName = 'main';
-```
-
-### $wgLayersDefaultFonts
-
-List of fonts available in the editor.
-
-| Property | Value |
-|----------|-------|
-| Type | `array` |
-| Default | `['Arial', 'Roboto', 'Noto Sans', 'Times New Roman', 'Courier New']` |
-
-```php
-// Customize available fonts
-$wgLayersDefaultFonts = [
-    'Arial',
-    'Helvetica',
-    'Georgia',
-    'Verdana',
-    'Comic Sans MS'
-];
-```
-
----
-
-## Rate Limiting
-
-Since v1.5.83 the extension **ships defaults** for its own buckets, so it is
-protected out of the box. This is not cosmetic: `User::pingLimiter()` reports
-"not limited" for a bucket nobody configured, so before v1.5.83 every Layers
-rate limit was inert unless an admin had added one by hand.
-
-### Available Limit Keys
-
-There are exactly three. Earlier versions of this page listed
-`editlayers-create`, `editlayers-delete` and `editlayers-rename`; those keys are
-not used anywhere in the code and setting them does nothing.
-
-| Key | Action | Shipped default (per 60s) |
-|-----|--------|---------------------------|
-| `editlayers-save` | `layerssave` | 60 user / 20 anon / 15 newbie |
-| `editlayers-render` | `layerspdfexport` (ImageMagick) | 15 user / 5 anon / 5 newbie |
-| `editlayers-list` | `layerslist` (Special:Slides) | 120 user / 30 anon / 30 newbie |
-
-`ip` and `subnet` limits ship for each key as well.
-
-### Overriding the defaults
-
-Defaults are merged with `array_plus_2d`, so anything set in
-`LocalSettings.php` takes precedence per group:
-
-```php
-// Tighten the expensive one on a public wiki
-$wgRateLimits['editlayers-render']['user'] = [ 5, 60 ];
-$wgRateLimits['editlayers-render']['anon'] = [ 1, 60 ];
-
-// Relax saves on a trusted internal wiki
-$wgRateLimits['editlayers-save']['user'] = [ 300, 60 ];
-
-// No limit for bots
-$wgRateLimits['editlayers-save']['bot'] = [ 0, 0 ];
-```
-
-### Format
-
-```php
-$wgRateLimits['key']['group'] = [ $count, $seconds ];
-```
-
-- `$count` — Maximum number of actions
-- `$seconds` — Time period in seconds
-
----
-
-## Permissions
-
-### Available Rights
-
-| Right | Description |
-|-------|-------------|
-| `editlayers` | Create and edit layer sets |
-| `layers-admin` | Delete or rename any layer set or slide, regardless of owner |
-
-### Default Configuration
-
-```php
-// From extension.json defaults
-$wgGroupPermissions['*']['editlayers'] = false;        // Anonymous: no
-$wgGroupPermissions['user']['editlayers'] = true;      // Logged in: yes
-$wgGroupPermissions['sysop']['layers-admin'] = true;   // Admins: manage any set
-```
-
-### Custom Configuration Examples
-
-**Restrictive (only autoconfirmed can edit):**
-```php
-$wgGroupPermissions['user']['editlayers'] = false;
-$wgGroupPermissions['autoconfirmed']['editlayers'] = true;
-```
-
-**Open (anyone can view, registered can edit):**
-```php
-$wgGroupPermissions['user']['editlayers'] = true;
-```
-
-**Very restrictive (only specific group):**
-```php
-$wgGroupPermissions['*']['editlayers'] = false;
-$wgGroupPermissions['user']['editlayers'] = false;
-$wgGroupPermissions['layer-editors']['editlayers'] = true;
-```
-
----
-
-## Complete Example Configuration
-
-```php
-// Load extension
-wfLoadExtension( 'Layers' );
-
-// Basic settings
-$wgLayersEnable = true;
-$wgLayersDebug = false; // Disable in production
-
-// Size limits
-$wgLayersMaxBytes = 4194304;        // 4 MB
-$wgLayersMaxLayerCount = 150;
-$wgLayersMaxNamedSets = 20;
-$wgLayersMaxRevisionsPerSet = 75;
-$wgLayersMaxImageBytes = 2097152;   // 2 MB
-
-// Image processing
-$wgLayersMaxImageSize = 8192;
-$wgLayersImageMagickTimeout = 45;
-
-// Fonts
-$wgLayersDefaultFonts = [
-    'Arial', 'Helvetica', 'Roboto', 'Open Sans',
-    'Times New Roman', 'Georgia',
-    'Courier New', 'Monaco'
-];
-
-// Permissions
-$wgGroupPermissions['user']['editlayers'] = true;
-$wgGroupPermissions['sysop']['layers-admin'] = true;
-
-// Rate limiting
-$wgRateLimits['editlayers-save']['user'] = [ 60, 3600 ];
-$wgRateLimits['editlayers-save']['newbie'] = [ 10, 3600 ];
-```
-
----
-
-## See Also
-
-- [[Installation]] — Setup guide
-- [[Permissions]] — Detailed permissions configuration
-- [[Troubleshooting]] — Common issues
+See [[Permissions]] for group rights. Do not use an undocumented setting as a security boundary. In particular, `LayersRejectAbortedRequests` is not a registered server configuration setting in the current manifest.

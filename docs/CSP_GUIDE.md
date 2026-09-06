@@ -1,5 +1,7 @@
 # Layers Extension CSP Guide
 
+> **Current guidance — September 6, 2026:** Treat policy compatibility as deployment-specific. Browser PDF loading, workers, fonts, images and editor-modal framing must be tested against the actual response headers. See [security guidance](../SECURITY.md); no blanket strict-CSP certification is claimed.
+
 This guide helps you set a secure Content-Security-Policy (CSP) for MediaWiki with the Layers extension while keeping the editor and viewer fully functional.
 
 ## Key requirements

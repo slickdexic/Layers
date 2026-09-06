@@ -1,81 +1,21 @@
-# Layers GitHub Wiki
+# GitHub wiki source and publishing
 
-This folder contains the source files for the GitHub Wiki.
+This directory contains source pages for [the Layers GitHub wiki](https://github.com/slickdexic/Layers/wiki). This README is a maintainer guide and is excluded from publication.
 
-## Publishing to GitHub Wiki
+## Synchronization
 
-GitHub wikis are stored in a separate git repository. To publish these pages:
+1. Clone `https://github.com/slickdexic/Layers.wiki.git` into a separate directory.
+2. Fetch the wiki's current branch and reconcile any edits made directly on GitHub.
+3. Copy the Markdown pages from this directory except README.md. Preserve remote-only pages/assets; handle intentional removals explicitly.
+4. Stage changed/new pages, review the diff, commit, and push the wiki's actual current branch. Do not assume its branch name.
+5. Verify remote HEAD and compare published page contents with this source.
 
-### Option 1: Clone and Push (Recommended)
+GitHub's wiki is a separate repository: pushing main does not by itself prove wiki publication. The workflow in `.github/workflows/wiki-sync.yml` attempts publication; credentials and workflow status must be checked. Do not erase the remote wiki to make copying simpler.
 
-```bash
-# Clone the wiki repository
-git clone https://github.com/slickdexic/Layers.wiki.git
-cd Layers.wiki
+## Mirrors and links
 
-# Copy wiki files from the main repo
-cp -r ../Layers/wiki/*.md .
+`Changelog.md` exactly mirrors the root CHANGELOG.md. `Current-Status.md` exactly mirrors docs/CURRENT_STATUS.md; their links use full repository URLs so both render correctly. `_Sidebar.md` indexes reader-facing pages.
 
-# Commit and push
-git add .
-git commit -m "Update wiki documentation"
-git push origin master
-```
+Use `[[Page Name]]` for wiki navigation and standard Markdown for external links. When linking from a wiki page to repository files, use full GitHub URLs rather than `../docs/...`, which resolves inside the separate wiki repository.
 
-### Option 2: GitHub Web Interface
-
-1. Go to https://github.com/slickdexic/Layers/wiki
-2. Click "Create the first page" (or "New Page" for additional pages)
-3. Copy content from each `.md` file in this folder
-4. Save each page
-
-## Wiki Structure
-
-| File | Description |
-|------|-------------|
-| `Home.md` | Main landing page |
-| `_Sidebar.md` | Navigation sidebar (appears on all pages) |
-| `Installation.md` | Setup instructions |
-| `Quick-Start-Guide.md` | 5-minute tutorial |
-| `Drawing-Tools.md` | All 17 tools explained |
-| `Keyboard-Shortcuts.md` | Shortcut reference |
-| `Style-Presets.md` | Preset system guide |
-| `Named-Layer-Sets.md` | Multiple annotation sets |
-| `Alignment-and-Distribution.md` | Layout tools |
-| `Configuration-Reference.md` | All config parameters |
-| `Wikitext-Syntax.md` | Using layers in wiki pages |
-| `Permissions.md` | User rights configuration |
-| `Troubleshooting.md` | Problem solving |
-| `FAQ.md` | Frequently asked questions |
-| `Architecture-Overview.md` | System design |
-| `API-Reference.md` | Backend API documentation |
-| `Contributing-Guide.md` | How to contribute |
-| `Testing-Guide.md` | Running and writing tests |
-| `Changelog.md` | Version history |
-
-## Page Naming
-
-GitHub Wiki converts filenames to page titles:
-- `Quick-Start-Guide.md` → "Quick Start Guide" page
-- Access via: `https://github.com/slickdexic/Layers/wiki/Quick-Start-Guide`
-
-## Updating
-
-When making changes:
-1. Edit files in this `wiki/` folder
-2. Commit to main repository
-3. Copy to wiki repository and push
-
-This keeps wiki source versioned with the main codebase.
-
-## Wiki Links
-
-Use double brackets for internal wiki links:
-```markdown
-See [[Installation]] for setup instructions.
-```
-
-External links use standard markdown:
-```markdown
-[GitHub Repository](https://github.com/slickdexic/Layers)
-```
+Run `npm run check:docs` from the extension root before publishing. Historical audits live in the main repository, not copied into the wiki navigation. See [the repository maintenance guide](https://github.com/slickdexic/Layers/blob/main/docs/DOCUMENTATION_UPDATE_GUIDE.md).

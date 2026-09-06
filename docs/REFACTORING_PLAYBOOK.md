@@ -1,5 +1,7 @@
 # Refactoring Playbook: Best Practices Guide
 
+> **Current guidance — September 6, 2026:** Use current source and tests rather than historical line counts. See [architecture](ARCHITECTURE.md) and [current limitations](CURRENT_STATUS.md). Preserve save/ownership/session invariants across images, slides and PDF pages.
+
 **Purpose:** Comprehensive guide for maintaining code quality and managing file size in the Layers extension  
 **Audience:** Contributors, maintainers, and future refactoring efforts  
 **Status:** Living document based on Phase 1 learnings (January 2026)

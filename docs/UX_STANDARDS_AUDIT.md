@@ -1,5 +1,7 @@
 # UX Standards Audit - Layers Editor vs Industry Standards
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Date:** February 12, 2026  
 **Version:** 1.5.59  
 **Compared Against:** Figma, Canva, Adobe Photoshop, Sketch, Google Drawings

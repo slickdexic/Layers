@@ -1,5 +1,7 @@
 # Troubleshooting
 
+> **Current guidance — September 6, 2026:** For a failed multi-page save, keep the editor open and retry. For lightbox scaling issues, refresh assets and verify your checkout includes the post-1.5.95 fix. Legacy export caches must be regenerated. See [[Current Status]] for remaining draft, export and history issues.
+
 Solutions for common issues with the Layers extension.
 
 ---
@@ -49,7 +51,7 @@ Solutions for common issues with the Layers extension.
 
 2. **Verify tables exist:**
    ```sql
-   SHOW TABLES LIKE 'layers_sets';
+   SHOW TABLES LIKE 'layer_sets';
    ```
 
 3. **Check database permissions:**

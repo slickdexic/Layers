@@ -1,5 +1,7 @@
 # Using Layers in Wiki Articles
 
+> **Current guidance — September 6, 2026:** For maintained user examples see [Wikitext syntax](../wiki/Wikitext-Syntax.md). Parameters choose shared image/PDF/slide content, not an owner-page revision. Intent-like set names can still be ambiguous; use descriptive names.
+
 ## Layer Control in File Syntax
 
 The Layers extension supports controlling which layers are displayed using the `layerset=` parameter in standard MediaWiki file syntax:
@@ -14,7 +16,7 @@ Note: Overlays are opt-in. Layers are rendered only when the `layerset` paramete
 
 ## Layer Parameter Options
 
-### Show Default Layer Set
+### Show Current Layer Set
 
 ```text
 [[File:MyImage.jpg|500px|layerset=on|Caption]]

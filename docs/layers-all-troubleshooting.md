@@ -1,5 +1,7 @@
 # Troubleshooting: Layers not visible with `layers=all`
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 This guide captures the root cause and the precise fixes that resolved the long‑standing issue where overlays showed in the editor but did not render on article pages when using `layers=all`.
 
 ## Symptoms

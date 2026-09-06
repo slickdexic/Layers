@@ -1,419 +1,53 @@
-# Architecture Overview
-
-Technical architecture of the Layers extension for developers.
-
----
-
-## Design Principles
-
-1. **Separation of Concerns** — PHP handles MediaWiki integration and storage; JavaScript implements the editor UI
-2. **Non-Destructive Editing** — Original images are never modified
-3. **Validated Data** — All layer data is validated server-side before storage
-4. **Accessibility First** — WCAG 2.1 compliant with full keyboard support
-5. **Progressive Enhancement** — Viewer loads separately from editor for performance
-
----
-
-## System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        MediaWiki Core                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────────────┐    ┌──────────────────────────────────┐   │
-│  │   Layers PHP     │    │      Layers JavaScript           │   │
-│  │                  │    │                                   │   │
-│  │  • API Modules   │◄───┤  • Editor (~64K lines)            │   │
-│  │  • Hooks         │    │  • Viewer (~2.5K lines)           │   │
-│  │  • Database      │    │  • Shared (~8K lines)             │   │
-│  │  • Validation    │    │                                   │   │
-│  │  • Security      │    │                                   │   │
-│  └────────┬─────────┘    └──────────────────────────────────┘   │
-│           │                                                      │
-│           ▼                                                      │
-│  ┌──────────────────┐                                           │
-│  │    Database      │                                           │
-│  │   layers_sets    │                                           │
-│  └──────────────────┘                                           │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Backend Architecture (PHP)
-
-### Directory Structure
-
-```
-src/
-├── Api/
-│   ├── ApiLayersInfo.php      # Read layer data
-│   ├── ApiLayersSave.php      # Save layer data
-│   ├── ApiLayersDelete.php    # Delete layer sets
-│   ├── ApiLayersRename.php    # Rename layer sets
-│   ├── ApiLayersList.php      # List slides (NEW)
-│   └── Traits/
-│       └── ForeignFileHelperTrait.php  # Shared foreign file detection
-├── Action/
-│   └── EditLayersAction.php   # "Edit Layers" tab action
-├── Database/
-│   ├── LayersDatabase.php     # Database operations
-│   └── LayersSchemaManager.php # Schema management
-├── Hooks/
-│   ├── ...                    # MediaWiki hook handlers
-│   └── SlideHooks.php         # Slide parser function (NEW)
-├── Logging/
-│   ├── LayersLogger.php       # Logger factory
-│   ├── LoggerAwareTrait.php   # Trait for objects
-│   └── StaticLoggerAwareTrait.php # Trait for static contexts
-├── Security/
-│   └── RateLimiter.php        # Rate limiting
-├── SpecialPages/              # (NEW)
-│   ├── SpecialSlides.php      # Slide management page
-│   └── SpecialEditSlide.php   # Direct slide editor
-└── Validation/
-    ├── ColorValidator.php     # Color validation
-    ├── ServerSideLayerValidator.php # Layer validation
-    ├── SetNameSanitizer.php   # Set name sanitization
-    ├── SlideNameValidator.php # Slide name validation (NEW)
-    ├── TextSanitizer.php      # Text sanitization
-    └── ValidationResult.php   # Validation result container
-```
-
-### API Modules
-
-| Module | Method | Purpose |
-|--------|--------|---------|
-| `ApiLayersInfo` | GET | Fetch layer data and revisions |
-| `ApiLayersSave` | POST | Save layer set with CSRF token |
-| `ApiLayersDelete` | POST | Delete named layer set |
-| `ApiLayersRename` | POST | Rename named layer set |
-| `ApiLayersList` | GET | List all slides (NEW) |
-
-### Database Schema
-
-```sql
-CREATE TABLE layers_sets (
-    ls_id INT PRIMARY KEY AUTO_INCREMENT,
-    ls_img_name VARCHAR(255) NOT NULL,
-    ls_name VARCHAR(50) NOT NULL DEFAULT 'default',
-    ls_user_id INT NOT NULL,
-    ls_timestamp BINARY(14) NOT NULL,
-    ls_revision INT NOT NULL DEFAULT 1,
-    ls_data MEDIUMBLOB NOT NULL,
-    
-    INDEX idx_img_name (ls_img_name),
-    INDEX idx_img_name_name (ls_img_name, ls_name),
-    UNIQUE idx_img_name_name_rev (ls_img_name, ls_name, ls_revision)
-);
-```
-
-### Validation Pipeline
-
-```
-Input JSON
-    │
-    ▼
-┌─────────────────┐
-│ Size Validation │ ← $wgLayersMaxBytes
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ JSON Parsing    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Layer Count     │ ← $wgLayersMaxLayerCount
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Property        │ ← ALLOWED_PROPERTIES whitelist
-│ Whitelisting    │   (50+ fields)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Type Validation │ ← Numbers, strings, booleans
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Range Checks    │ ← Min/max values
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Color Sanitize  │ ← Prevent XSS via colors
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Text Sanitize   │ ← Strip HTML/dangerous protocols
-└────────┬────────┘
-         │
-         ▼
-Validated Output
-```
-
----
-
-## Frontend Architecture (JavaScript)
-
-### Module System
-
-```
-┌────────────────────────────────────────────────────────────────┐
-│                    ResourceLoader Modules                       │
-├───────────────────────┬────────────────────┬───────────────────┤
-│   ext.layers          │  ext.layers.shared │  ext.layers.editor│
-│   (Viewer Entry)      │  (Shared Code)     │  (Full Editor)    │
-│   ~2.5K lines         │  ~8K lines         │  ~64K lines       │
-├───────────────────────┴────────────────────┴───────────────────┤
-│                                                                 │
-│  Viewer loads: ext.layers + ext.layers.shared                  │
-│  Editor loads: ext.layers.editor (includes shared)             │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Core Classes
-
-```
-LayersEditor (entry point)
-    │
-    ├── ModuleRegistry
-    │   ├── UIManager
-    │   ├── EventManager
-    │   ├── APIManager
-    │   ├── ValidationManager
-    │   ├── StateManager
-    │   └── HistoryManager
-    │
-    ├── CanvasManager (facade → controllers)
-    │   ├── ZoomPanController
-    │   ├── TransformController
-    │   ├── HitTestController
-    │   ├── DrawingController
-    │   ├── ClipboardController
-    │   ├── RenderCoordinator
-    │   ├── InteractionController
-    │   ├── AlignmentController
-    │   ├── SmartGuidesController
-    │   └── TextInputController
-    │
-    ├── ToolManager (facade → handlers)
-    │   ├── TextToolHandler
-    │   ├── PathToolHandler
-    │   ├── ShapeFactory
-    │   ├── ToolRegistry
-    │   └── ToolStyles
-    │
-    ├── SelectionManager (facade → components)
-    │   ├── SelectionState
-    │   ├── MarqueeSelection
-    │   └── SelectionHandles
-    │
-    ├── Toolbar
-    │   └── ToolbarStyleControls
-    │       └── PresetStyleManager
-    │
-    └── LayerPanel
-        ├── BackgroundLayerController
-        ├── LayerItemFactory
-        ├── LayerListRenderer
-        ├── LayerDragDrop
-        └── PropertiesForm
-```
-
-### Rendering Pipeline
-
-```
-Shared Renderers (ext.layers.shared)
-─────────────────────────────────────
-LayerRenderer
-    ├── ShapeRenderer       ← Rectangles, circles, ellipses, polygons, stars
-    ├── ArrowRenderer       ← Arrows and lines
-    ├── TextRenderer        ← Single-line text
-    ├── TextBoxRenderer     ← Multi-line text boxes
-    ├── ShadowRenderer      ← Shadow effects
-    └── EffectsRenderer     ← Blur regions
-```
-
-### Data Flow
-
-```
-User Action
-    │
-    ▼
-EventManager (captures event)
-    │
-    ▼
-CanvasManager/ToolManager (processes action)
-    │
-    ▼
-StateManager (updates layer data)
-    │
-    ▼
-HistoryManager (saves undo state)
-    │
-    ▼
-CanvasRenderer (redraws canvas)
-    │
-    ▼
-User sees update
-```
-
-### API Communication
-
-```javascript
-// Read layers
-const api = new mw.Api();
-const response = await api.get({
-    action: 'layersinfo',
-    filename: 'File:Example.jpg',
-    setname: 'default'
-});
-
-// Save layers
-await api.postWithToken('csrf', {
-    action: 'layerssave',
-    filename: 'File:Example.jpg',
-    setname: 'default',
-    data: JSON.stringify(layers)
-});
-```
-
----
-
-## File Organization
-
-### JavaScript Files by Category
-
-| Category | Location | Purpose |
-|----------|----------|---------|
-| Entry Points | `ext.layers/`, `ext.layers.editor/` | Bootstrap code |
-| Canvas Controllers | `ext.layers.editor/canvas/` | Canvas operations |
-| Tools | `ext.layers.editor/tools/` | Tool implementations |
-| UI Controllers | `ext.layers.editor/ui/` | Panel components |
-| Editor Modules | `ext.layers.editor/editor/` | Editor utilities |
-| Shared Renderers | `ext.layers.shared/` | Rendering code |
-| Utilities | `ext.layers.editor/utils/` | Helper functions |
-
-### Code Metrics
-
-| Metric | Value |
-|--------|-------|
-| Total JavaScript Files | 157 |
-| Total Lines of Code | ~114,000 |
-| ES6 Classes | 140 (100% migrated) |
-| Test Suites | 172 |
-| Test Cases | 14,007 |
-| Code Coverage | 95.87% |
-
----
-
-## Design Patterns
-
-### Facade Pattern
-`CanvasManager`, `ToolManager`, and `SelectionManager` act as facades, delegating to specialized controllers.
-
-### Controller Pattern
-Each canvas controller handles a specific responsibility (zoom, drawing, hit testing, etc.).
-
-### Observer Pattern
-Style changes notify subscribers via `ToolStyles.subscribe()`.
-
-### Factory Pattern
-`ShapeFactory` creates layer objects based on tool type.
-
-### Registry Pattern
-`ToolRegistry` manages tool configurations.
-`ModuleRegistry` manages editor modules.
-
----
-
-## Security Model
-
-### Server-Side
-
-1. **CSRF Protection** — All write operations require valid tokens
-2. **Property Whitelist** — Only 50+ explicitly allowed fields
-3. **Type Validation** — Strict type checking for all values
-4. **Range Validation** — Numeric values bounded to safe ranges
-5. **Text Sanitization** — HTML and dangerous protocols stripped
-6. **Color Validation** — Prevents XSS via style injection
-7. **Rate Limiting** — MediaWiki's `pingLimiter` integration
-
-### Client-Side
-
-1. **Input Validation** — Pre-validation before API calls
-2. **Error Boundaries** — Graceful degradation on errors
-3. **CSP Compliance** — No inline scripts, safe blob URLs
-
----
-
-## Performance Considerations
-
-### Code Splitting
-
-- Viewer (~2.5K lines) loads separately from Editor (~64K lines)
-- Shared module (~8K lines) loaded by both
-- Shape/Emoji data (~40K lines, generated) loaded on demand
-- ResourceLoader handles dependency management
-
-### Rendering Optimization
-
-- Dirty region tracking via `RenderCoordinator`
-- Throttled/debounced render calls
-- Canvas state caching where possible
-
-### Memory Management
-
-- Event listener tracking via `EventTracker`
-- Proper cleanup in `destroy()` methods
-- Clipboard size limits
-
----
-
-## Testing Architecture
-
-### Unit Tests (Jest)
-
-```
-tests/jest/
-├── *.test.js           # Component tests
-├── unit/               # Pure unit tests
-├── canvas/             # Canvas controller tests
-└── tools/              # Tool handler tests
-```
-
-### Integration Tests (PHPUnit)
-
-```
-tests/phpunit/
-├── ApiLayersInfoTest.php
-├── ApiLayersSaveTest.php
-└── ...
-```
-
-### E2E Tests (Playwright)
-
-```
-tests/e2e/
-├── editor.spec.js
-└── viewer.spec.js
-```
-
----
-
-## See Also
-
-- [[API Reference]] — Detailed API documentation
-- [[Frontend Architecture]] — JavaScript module details
-- [[Contributing Guide]] — How to contribute
-- [[Testing Guide]] — Running and writing tests
+# Architecture overview
+
+Reviewed September 6, 2026. The current architecture supports images, PDF pages and standalone slides. It does not yet store annotations as MediaWiki article revisions.
+
+## Data and authority
+
+`layer_sets` is the authoritative annotation store. A row is a revision identified by source name/hash, set name and source document page. Slides use `Slide:{name}` and the `slide` hash sentinel. `ls_page` is a PDF page number, not a wiki page ID.
+
+The serialized envelope contains layers, background/canvas settings and revision metadata. New saves preserve a server-generated `ownerId`; the row's user is the editor of that revision. Pruning retains the configured number of revisions, so references to arbitrary old rows are not permanent history.
+
+File reads and writes apply the appropriate source permissions. Delete/rename also enforce creator or `layers-admin` authority across the affected scope. Slides currently have global Layers identities, not SOP-page ownership. The proposed page-owned mode is a different architecture and must not be inferred from current parser output.
+
+## Server components
+
+| Component | Responsibility |
+| --- | --- |
+| `extension.json`, `services.php` | ResourceLoader modules, hooks, settings, rights and service wiring |
+| `src/Api/` | Six Action API endpoints for reading, saving, deleting, renaming, listing slides and exporting files |
+| `src/Validation/` | Payload, text, color, set-name and slide-name validation |
+| `src/Database/` | Layer persistence, pruning, ownership and schema migration |
+| `src/Hooks/` | File/wikitext integration, slide parser function and Cargo gallery hints |
+| `src/SpecialPages/` | Slide management/editor and checked export delivery |
+| `src/ThumbnailRenderer.php`, `src/Utility/RenderCache.php` | Server rendering/cache support |
+
+Cargo's current integration chooses gallery sets from query-result fields. It is not a text-binding engine or a projection of annotation text into Cargo tables.
+
+## Browser components
+
+| Area | Responsibility |
+| --- | --- |
+| `resources/ext.layers.editor/` | Editor UI, state, history, input, selection and API orchestration |
+| `resources/ext.layers/` | Inline viewer and viewer integration |
+| `resources/ext.layers/viewer/` | Lightbox, PDF rasterization, printing/download and supporting utilities |
+| `resources/ext.layers.shared/` | Shared drawing primitives and rendering |
+| `resources/lib/pdfjs/` | Vendored PDF browser assets, loaded on demand |
+
+`LayersEditor` coordinates state/managers. `APIManager` applies fetched data only when its request and navigation generation are current. PDF page changes buffer edited pages; Save sends per-page writes, not a single atomic transaction. A successful current-page write does not establish that every buffered page saved.
+
+`LayersViewer` draws on a canvas sized to the displayed image using stored coordinate dimensions. `LayersLightbox` can replace a server thumbnail with a browser PDF raster. Detached image callbacks and superseded requests must not initialize an overlay on the replacement view. The shared drawing pipeline also supports standalone slides without a parent file.
+
+## Render, cache and export boundaries
+
+Layer changes invalidate the File page and its embedding backlinks where the current invalidation path can identify them. Cache invalidation is neither a page revision nor an annotation-search indexing contract.
+
+Client flattening and server ImageMagick export are separate implementations; server output still has property/failure limitations. Cached PDF delivery is bound to its source title and checked through `Special:LayersExport`. Do not expose the private cache directory directly.
+
+The legacy audit trait re-saves unchanged File-page content after a layer mutation. That is best-effort and does not guarantee a new MediaWiki revision. Do not build compliance or history-dependent integrations on it.
+
+## Development and future changes
+
+Use the [repository architecture guide](https://github.com/slickdexic/Layers/blob/main/docs/ARCHITECTURE.md) and source for implementation details. See [current limitations](https://github.com/slickdexic/Layers/wiki/Current-Status) and the [page-owned history/search/Cargo proposal](https://github.com/slickdexic/Layers/blob/main/docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md).
+
+The next storage design must make page revisions authoritative, then derive search text and Cargo rows from published revisions. Those features are not implemented. Absolute line counts and old coverage snapshots are omitted here because they are not architectural guarantees.

@@ -1,253 +1,43 @@
 # Permissions
 
-Configure user permissions for the Layers extension.
+Reviewed September 6, 2026. Rights come from `extension.json`; write checks live in the API modules and shared helpers.
 
----
+## Rights and defaults
 
-## Available Rights
+| Right | Purpose | Default groups |
+| --- | --- | --- |
+| `editlayers` | Create/edit annotation sets and slides | Logged-in users and sysops |
+| `layers-admin` | Delete/rename sets without being their creator | Sysops |
 
-| Right | Description | Actions Enabled |
-|-------|-------------|-----------------|
-| `editlayers` | Create and edit layer sets | Open editor, create sets, modify layers, save revisions |
-| `layers-admin` | Administer layer data | Delete or rename any layer set or slide, regardless of who created it |
-
----
-
-## Default Configuration
-
-As defined in `extension.json`:
+Anonymous users do not receive `editlayers` by default. Ordinary MediaWiki `delete` is **not** the Layers administrator override.
 
 ```php
-// Anonymous users (not logged in)
-$wgGroupPermissions['*']['editlayers'] = false;
-
-// Logged-in users
-$wgGroupPermissions['user']['editlayers'] = true;
-
-// Administrators
-$wgGroupPermissions['sysop']['editlayers'] = true;
+wfLoadExtension( 'Layers' );
+$wgGroupPermissions['user']['editlayers'] = false;
+$wgGroupPermissions['layer-editors']['editlayers'] = true;
 $wgGroupPermissions['sysop']['layers-admin'] = true;
 ```
 
----
+Assign custom groups through `Special:UserRights`. MediaWiki combines granted rights across groups; removing one group's grant does not remove a grant from another group.
 
-## Configuration Examples
+## Image and PDF writes
 
-### Standard Wiki (Default)
+Creating/saving requires `editlayers`, source read access and ordinary edit authority on the File page. Page protection, blocks and rate limits still apply. POST requests require a CSRF token.
 
-Most wikis can use the default configuration:
-- All logged-in users can create and edit layers
-- Admins have full control including library management
+Deleting or renaming additionally requires the original creator or `layers-admin`. For a document-wide operation (`allpages`), every affected PDF page's set must be authorized. Owning the current page's set does not authorize another creator's set on another page.
 
-```php
-wfLoadExtension( 'Layers' );
-// No additional configuration needed
-```
+Newly saved revisions carry server-generated creator metadata so pruning does not transfer ownership to a later editor. If an old set's creator revision was already pruned and no metadata survives, deletion/renaming requires `layers-admin`; editing remains possible. The server never accepts a client-supplied owner assignment.
 
-### Restricted Wiki
+## Standalone slides
 
-Only specific groups can edit layers:
+Slides use Layers-specific data identities and global Layers/read checks. They are not yet bound to an owning SOP article's revision or protection policy. Do not assume protecting the page containing `{{#Slide:...}}` protects the underlying shared slide. Page-owned publication is planned; see [[Current Status]].
 
-```php
-wfLoadExtension( 'Layers' );
+## Visibility is not authorization
 
-// Remove default permissions
-$wgGroupPermissions['user']['editlayers'] = false;
+`noedit`, `editable=no`, a hidden toolbar and a locked drawing layer are interface controls, not access controls. A user with API authorization may still edit. Read restrictions also need consideration in cached content, exports and slide listings; test any third-party access-control extension with your deployment.
 
-// Create a dedicated group
-$wgGroupPermissions['layer-editors']['editlayers'] = true;
-```
+## History and exports
 
-Add users to the group via `Special:UserRights`.
+The legacy `LayersTrackChangesInRecentChanges` setting does not guarantee an audit trail. Layer-set revisions are separate from article history.
 
-### Very Restrictive
-
-Only admins can edit layers:
-
-```php
-wfLoadExtension( 'Layers' );
-
-$wgGroupPermissions['*']['editlayers'] = false;
-$wgGroupPermissions['user']['editlayers'] = false;
-
-$wgGroupPermissions['sysop']['editlayers'] = true;
-```
-
----
-
-## Permission Checks
-
-### Editing Layers
-
-To create or edit layer sets:
-- User must have `editlayers` right
-- User must have read access to the file
-- **User must have `edit` permission on the file's page** (since v1.5.80)
-- User must not be rate-limited
-
-### Deleting Layer Sets
-
-To delete a named layer set:
-- User must have `edit` permission on the file's page
-- User must be the **owner** (created the first revision), OR
-- User must have the `delete` right (typically sysop)
-
-### Renaming Layer Sets
-
-To rename a named layer set:
-- User must have `edit` permission on the file's page
-- User must be the **owner** (created the first revision), OR
-- User must have the `delete` right (typically sysop)
-
-### Why the `edit` permission is required
-
-Layer data changes what a File page renders, so it is content. Before v1.5.80
-the write endpoints (`layerssave`, `layersdelete`, `layersrename`) checked only
-the global `editlayers` right, which meant page protection, namespace
-protection, cascading protection and blocks were all bypassed: a blocked user,
-or any user with `editlayers`, could alter the rendered output of a fully
-protected File page.
-
-All three endpoints now additionally require ordinary `edit` permission on the
-file's title.
-
-⚠️ **This is a behaviour change.** On wikis that restrict editing in `NS_FILE` —
-for example via `$wgNamespaceProtection[NS_FILE]`, cascading protection from a
-transcluding page, or individual page protection — layer saves that previously
-succeeded will now be rejected with a normal MediaWiki permission error. If you
-want a group to annotate files it cannot otherwise edit, grant that group the
-`edit` right on the File namespace.
-
----
-
-## Rate Limiting
-
-In addition to permission checks, rate limiting applies:
-
-```php
-// Limit saves for regular users
-$wgRateLimits['editlayers-save']['user'] = [ 30, 3600 ];  // 30 per hour
-
-// Stricter limits for new users
-$wgRateLimits['editlayers-save']['newbie'] = [ 5, 3600 ]; // 5 per hour
-
-// Limit new set creation
-$wgRateLimits['editlayers-create']['user'] = [ 10, 3600 ]; // 10 per hour
-```
-
----
-
-## Checking User Rights
-
-### In PHP
-
-```php
-$user = $this->getUser();
-
-if ( $user->isAllowed( 'editlayers' ) ) {
-    // User can create and edit layers
-}
-```
-
-### In JavaScript
-
-```javascript
-if ( mw.config.get( 'wgUserGroups' ).includes( 'sysop' ) ) {
-    // User is admin
-}
-
-// Or check via API
-const api = new mw.Api();
-const response = await api.get({
-    action: 'query',
-    meta: 'userinfo',
-    uiprop: 'rights'
-});
-
-if ( response.query.userinfo.rights.includes( 'editlayers' ) ) {
-    // User can edit layers
-}
-```
-
----
-
-## UI Visibility
-
-The "Edit layers" tab is shown based on permissions:
-
-| Condition | Tab Shown | Tab Clickable |
-|-----------|-----------|---------------|
-| No `editlayers` right | No | — |
-| Has `editlayers` right | Yes | Yes (full access) |
-
----
-
-## Ownership
-
-### Who is the Owner?
-
-The owner of a named layer set is the user who created the **first revision** of that set.
-
-### Owner Privileges
-
-Owners can:
-- Delete the layer set
-- Rename the layer set
-
-### Transferring Ownership
-
-Ownership cannot be directly transferred. Workaround:
-1. Admin deletes the set
-2. New owner creates a new set with the same content
-
----
-
-## Integration with MediaWiki
-
-Layers respects MediaWiki's permission system. Every statement in this section
-became true in **v1.5.80**; on earlier versions the write endpoints checked only
-the `editlayers` right and none of these restrictions were enforced.
-
-### Cascading Permissions
-
-If a file is on a protected page with cascading protection, layer writes are
-blocked, because cascading protection removes `edit` on the file's title.
-
-### Namespace Restrictions
-
-Layers only works in the File namespace. Layer writes require `edit` permission
-on the file's page, so `$wgNamespaceProtection[NS_FILE]` restricts them too.
-
-### Blocked Users
-
-Blocked users cannot edit layers, even if they have `editlayers` right.
-
----
-
-## Troubleshooting
-
-### "Edit layers" tab not visible
-
-1. Check `$wgGroupPermissions` in LocalSettings.php
-2. Verify user is logged in (if required)
-3. Check Special:UserRights for user's groups
-4. Ensure `$wgLayersEnable = true`
-
-### "Permission denied" error
-
-1. User may lack required right
-2. User may be blocked
-3. File may have cascading protection
-4. User may be rate-limited
-
-### Users can view but not edit
-
-Check that users have `editlayers` right, not just read access.
-
----
-
-## See Also
-
-- [[Configuration Reference]] — All settings
-- [[Installation]] — Setup guide
-- [[Troubleshooting]] — Common issues
+Server PDF export requires a CSRF-protected POST; downloading an existing export checks source access through `Special:LayersExport`. Keep export files outside the document root. See [[Configuration Reference]] and [[Current Status]].

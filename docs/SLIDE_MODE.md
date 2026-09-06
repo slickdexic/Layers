@@ -1,9 +1,11 @@
 # Slide Mode Implementation Plan
 
+> **Current guidance — September 6, 2026:** Standalone slides are a primary supported content type. This document contains the original implementation design and explicitly unimplemented sections; use [the current slide guide](../wiki/Slide-Mode.md) for behavior. SOP-page history, full-text search and Cargo annotation rows are still proposals.
+
 > **Status:** Implemented (Core Features)  
 > **Version:** 1.0  
 > **Date:** January 31, 2026  
-> **Current Release:** v1.5.66
+> **Historical release at writing:** v1.5.66
 
 ## Implementation Status
 
@@ -450,8 +452,8 @@ Special:Slides?action=create      → Create dialog
 | View Special:Slides | `read` |
 | Create slide | `editlayers` |
 | Edit slide | `editlayers` |
-| Delete slide | `editlayers` + (owner OR `delete`) |
-| Override lock=all | `delete` (admin) |
+| Delete slide | `editlayers` + (owner OR `layers-admin`) |
+| Override lock=all | `layers-admin` (admin) |
 
 ---
 
@@ -950,7 +952,7 @@ These items should be resolved during implementation:
    ```
 
 3. **Check if slide is locked:**
-   - If `lock=all` is set, only admins with `delete` right can edit
+   - If `lock=all` is set, only admins with `layers-admin` right can edit
    - If `editable=no` is set, the edit button is hidden
 
 4. **Verify CSS is loading:**

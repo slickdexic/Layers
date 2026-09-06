@@ -1,5 +1,7 @@
 # Layers MediaWiki Extension (Developer Specification)
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Last Updated:** December 29, 2025  
 **Version:** 1.2.11  
 **Status:** Core specification - some sections may need review against current implementation

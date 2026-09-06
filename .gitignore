@@ -87,3 +87,6 @@ coverage.json
 
 # Backup written by shapeLibrary/scripts/split-library.js; regenerate, never commit
 resources/ext.layers.editor/shapeLibrary/ShapeLibraryData.original.js
+
+# Locally generated JavaScript documentation; the curated API guide is maintained separately.
+docs/API.generated.md

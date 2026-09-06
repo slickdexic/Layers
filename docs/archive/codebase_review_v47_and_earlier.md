@@ -1,5 +1,7 @@
 # Codebase Review Archive - v47 and Earlier
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 This file archives historical codebase review findings from **v47 (March 10, 2026)**
 and earlier. These findings are preserved for reference but have all been addressed
 in subsequent releases.

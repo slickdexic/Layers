@@ -1,5 +1,7 @@
 # PHP Codebase Critical Review — Layers Extension
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Review Date:** June 2025  
 **Scope:** All PHP source files (~40 files, ~14,991 lines)  
 **Reviewer:** Automated Critical Review  

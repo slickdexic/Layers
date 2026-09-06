@@ -3,10 +3,12 @@
 |-
 | '''Extension''' || [[Extension:Layers]]
 |-
-| '''Description''' || Stores layer set revisions. Each row represents a single revision of a named layer set for an image file.
+| '''Description''' || Stores layer set revisions. Each row represents a single revision of a named layer set for an image, PDF page or standalone slide.
 |}
 
 The '''layer_sets''' table stores layer set revisions for the [[Extension:Layers|Layers]] extension. Multiple revisions can exist per set name, enabling version history.
+
+Documentation checked September 6, 2026 against <code>sql/tables/layer_sets.sql</code> and <code>LayersDatabase</code>. This is Layers-specific revision storage, '''not the MediaWiki page revision table'''. Use MediaWiki's database updater, not this reference, to install or migrate it.
 
 == Table Structure ==
 
@@ -15,13 +17,13 @@ The '''layer_sets''' table stores layer set revisions for the [[Extension:Layers
 |-
 | <code>ls_id</code> || int unsigned || No || Auto-increment || Primary key, unique identifier for each revision
 |-
-| <code>ls_img_name</code> || varchar(255) binary || No || — || Target image filename (e.g., "Example.jpg")
+| <code>ls_img_name</code> || varchar(255) binary || No || — || Normalized file name, or <code>Slide:{name}</code> for standalone slides
 |-
 | <code>ls_img_major_mime</code> || varchar(16) || No || — || Major MIME type (e.g., "image")
 |-
 | <code>ls_img_minor_mime</code> || varchar(100) || No || — || Minor MIME type (e.g., "jpeg", "png")
 |-
-| <code>ls_img_sha1</code> || varchar(32) || No || — || SHA-1 hash of the image file (for versioning)
+| <code>ls_img_sha1</code> || varchar(32) || No || — || Source file SHA-1; standalone slides use the sentinel <code>slide</code>
 |-
 | <code>ls_json_blob</code> || mediumblob || No || — || JSON-encoded layer data (validated, sanitized)
 |-
@@ -32,6 +34,8 @@ The '''layer_sets''' table stores layer set revisions for the [[Extension:Layers
 | <code>ls_revision</code> || int unsigned || No || 1 || Revision number within the named set (1, 2, 3...)
 |-
 | <code>ls_name</code> || varchar(255) || No || <code>default</code> || Named set identifier (e.g., "default", "anatomy-labels")
+|-
+| <code>ls_page</code> || smallint unsigned || No || 1 || Source PDF page number (1-based); images/slides use 1. This is not a MediaWiki page ID.
 |-
 | <code>ls_size</code> || int unsigned || No || 0 || Size of the JSON blob in bytes
 |-
@@ -45,7 +49,7 @@ The '''layer_sets''' table stores layer set revisions for the [[Extension:Layers
 |-
 | PRIMARY || <code>ls_id</code> || Primary || Unique row identifier
 |-
-| <code>ls_img_name_set_revision</code> || <code>ls_img_name</code>, <code>ls_img_sha1</code>, <code>ls_name</code>, <code>ls_revision</code> || Unique || Ensures unique revisions per named set and image version
+| <code>ls_img_name_set_page_revision</code> || <code>ls_img_name</code>, <code>ls_img_sha1</code>, <code>ls_name</code>, <code>ls_page</code>, <code>ls_revision</code> || Unique || Ensures unique revisions per named set and image version
 |-
 | <code>ls_img_lookup</code> || <code>ls_img_name</code>, <code>ls_img_sha1</code> || Index || Fast lookup by image name and hash
 |-
@@ -68,8 +72,9 @@ The <code>ls_json_blob</code> column contains a JSON structure:
 <syntaxhighlight lang="json">
 {
   "revision": 1,
+  "ownerId": 7,
   "schema": 1,
-  "created": "2026-01-03T12:00:00Z",
+  "created": "20260103120000",
   "layers": [
     {
       "id": "layer-abc123",
@@ -100,3 +105,8 @@ The <code>ls_json_blob</code> column contains a JSON structure:
 
 * [[Extension:Layers]] — Parent extension documentation
 * [[Extension:Layers#Configuration]] — Configuration parameters
+
+== Creator metadata and historical safety ==
+<code>ls_user_id</code> identifies the author of a particular revision. The JSON <code>ownerId</code> is server-generated original-creator metadata added on main after 1.5.95. It survives pruning; clients cannot assign it. Older rows may lack it. Only a retained revision 1 establishes legacy creator ownership; a later editor must not inherit ownership merely because older rows were deleted.
+
+Layer-set names can change and retained rows can be pruned or deleted. These IDs are not durable article-history references. The planned page-owned content model has not been implemented. Back up the Layers table together with the wiki database and required assets.

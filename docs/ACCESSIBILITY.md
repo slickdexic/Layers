@@ -1,5 +1,7 @@
 # Accessibility Guide
 
+> **Current guidance — September 6, 2026:** This describes implemented controls and design practices, not a complete accessibility certification. Canvas annotations do not automatically provide a readable/searchable transcript. The planned SOP text extraction is described in [the roadmap](proposals/CARGO_SEARCH_PAGE_HISTORY.md).
+
 **Last Updated:** February 2026
 
 This document describes the accessibility features of the Layers extension and provides guidance for contributors to maintain and improve accessibility compliance.
@@ -314,7 +316,9 @@ Document messages in `i18n/qqq.json`:
 }
 ```
 
-## WCAG 2.1 Compliance Status
+## Historical accessibility implementation checklist
+
+This checklist records earlier implementation assessments. It is not a current conformance audit or certification.
 
 | Criterion | Level | Status | Notes |
 |-----------|-------|--------|-------|

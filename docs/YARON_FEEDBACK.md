@@ -1,5 +1,7 @@
 # Yaron's Feedback on Layers Extension
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 This document captures feedback from Yaron (MediaWiki community member) during the 1.5.0-beta.3 review period. Items implemented immediately are noted; others are documented here for future consideration.
 
 ## Implemented in This Release

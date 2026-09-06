@@ -1,5 +1,7 @@
 # Frequently Asked Questions
 
+> **Current guidance — September 6, 2026:** Layers supports images, PDFs and standalone slides. Annotation text is not yet explicitly indexed by MediaWiki search; slide-name filters do not search textbox contents. Cargo annotation queries and page-owned history are planned, not available today.
+
 Common questions about the Layers extension.
 
 ---
@@ -18,7 +20,7 @@ Non-destructive means your original images are never changed. All annotations ar
 
 - **MediaWiki 1.44+**: Use the `main` branch
 - **MediaWiki 1.43.x**: Use the `REL1_43` branch (LTS until Dec 2027)
-- **MediaWiki 1.39 - 1.42**: Use the `REL1_39` branch (community maintained, MW 1.39 EOL Dec 31, 2025)
+- **MediaWiki 1.39 - 1.42**: `REL1_39` is unmaintained; upgrade MediaWiki for a maintained branch
 
 ### What browsers are supported?
 
@@ -132,7 +134,7 @@ Possible reasons:
 
 ### Where is layer data stored?
 
-Layer data is stored in a database table called `layers_sets`. Each row contains:
+Layer data is stored in a database table called `layer_sets`. Each row contains:
 - Image filename
 - Named set name
 - Revision number

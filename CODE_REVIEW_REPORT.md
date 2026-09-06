@@ -1,5 +1,7 @@
 # JavaScript Frontend Code Review Report
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Date:** June 2025  
 **Scope:** All JavaScript files under `resources/ext.layers.editor/` and `resources/ext.layers.shared/`  
 **Focus:** Security, logic bugs, state management, memory leaks, race conditions, rendering correctness

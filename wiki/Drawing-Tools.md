@@ -1,5 +1,7 @@
 # Drawing Tools
 
+> **Current guidance — September 6, 2026:** The tools apply to images, PDF pages and standalone slides. Client rendering and server PDF export have different fidelity; inspect exported output. Current history/search limitations are described in [[Current Status]].
+
 Layers provides **17 professional drawing tools** for comprehensive image annotation.
 
 ---

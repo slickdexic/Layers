@@ -1,5 +1,7 @@
 # Named Layer Sets
 
+> **Current guidance — September 6, 2026:** Sets use Layers-specific retained revisions. They do not lock content to an embedding article revision. Use descriptive names; intent-like names and some default-name paths still have open inconsistencies. Deletion/renaming requires creator ownership or `layers-admin`, with every affected PDF page checked.
+
 Organize multiple annotation sets per image for different purposes, audiences, or contributors.
 
 ---
@@ -139,8 +141,8 @@ In the editor, click the layer set dropdown to see:
 |--------|----------------|
 | Create set | `editlayers` |
 | Edit set | `editlayers` |
-| Delete set | Owner OR `delete` right (admin) |
-| Rename set | Owner OR `delete` right (admin) |
+| Delete set | Owner OR `layers-admin` right |
+| Rename set | Owner OR `layers-admin` right |
 
 ---
 

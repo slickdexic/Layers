@@ -1,5 +1,7 @@
 # InstantCommons / Foreign File Support
 
+> **Current guidance — September 6, 2026:** Foreign-file rendering remains supported, but missing local File pages can prevent backlink invalidation on some paths (R6.13). Do not infer private source access from a shared hash or publicly readable duplicate. See [current status](CURRENT_STATUS.md).
+
 **Added in:** v1.4.5 (January 2026)  
 **Updated:** v1.4.6 (January 2026) — TIFF support, SHA1 fallback lookup  
 **GitHub Issue:** #34

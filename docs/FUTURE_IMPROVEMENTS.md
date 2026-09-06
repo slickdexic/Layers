@@ -1,5 +1,7 @@
 # Future Improvements
 
+> **Current guidance — September 6, 2026:** Priority order superseding the older idea backlog below: **page-owned revision history → MediaWiki search for slide/annotation text → Cargo query/filter support**. All three content types are in scope. See [the implementation proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md).
+
 This document tracks **active** feature ideas for the Layers extension. For completed features, see `CHANGELOG.md` or the `docs/archive/` folder.
 
 **Last Updated:** February 12, 2026

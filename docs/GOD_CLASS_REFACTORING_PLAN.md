@@ -1,5 +1,7 @@
 # God Class Refactoring Plan
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Created:** January 11, 2026  
 **Updated:** February 14, 2026  
 **Author:** GitHub Copilot (GPT-5.3-Codex)  

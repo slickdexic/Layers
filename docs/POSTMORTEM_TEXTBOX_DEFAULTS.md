@@ -1,5 +1,7 @@
 # Postmortem: Textbox Default Stroke and Related Issues
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Date:** January 29, 2026  
 **Version:** 1.5.39  
 **Severity:** Medium (UX bug affecting new textbox creation)

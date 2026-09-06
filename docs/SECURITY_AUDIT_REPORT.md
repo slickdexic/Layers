@@ -1,5 +1,7 @@
 # Security Audit Report — MediaWiki Layers Extension v1.5.65
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Date:** June 2025 (last reviewed: April 2026)
 **Scope:** Full codebase — 44 PHP files (~15,689 lines), 157 JS files (~114,000 lines)
 **Methodology:** Manual static analysis against OWASP Top 10, MediaWiki-specific vectors, and 15 vulnerability classes (SQL injection, XSS, CSRF, SSRF, auth bypass, command injection, prototype pollution, path traversal, clickjacking, ReDoS, race conditions, info disclosure, deserialization, open redirect, wikitext injection)

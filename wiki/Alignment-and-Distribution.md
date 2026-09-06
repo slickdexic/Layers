@@ -1,5 +1,7 @@
 # Alignment and Distribution
 
+> **Current guidance — September 6, 2026:** Alignment and distribution change drawing geometry within the current image, PDF page or slide. They are not a change to an owning article revision; see [[Current Status]].
+
 Professional layout tools for precise positioning of layers.
 
 ---

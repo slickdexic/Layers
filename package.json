@@ -21,7 +21,7 @@
 		"typecheck": "tsc --noEmit",
 		"watch": "webpack --mode=development --watch",
 		"check:godclass": "bash scripts/pre-commit-god-class-check.sh",
-		"check:docs": "bash scripts/verify-docs.sh",
+		"check:docs": "node scripts/verify-docs.js",
 		"check:version": "node scripts/update-version.js --check",
 		"check:mw-compat": "node scripts/check-mw-compatibility.js",
 		"check:phprefs": "node scripts/check-php-class-refs.js",
@@ -40,7 +40,7 @@
 		"generate:emoji-index": "node resources/ext.layers.editor/shapeLibrary/scripts/generate-emoji-index.js",
 		"generate:emoji-bundle": "node resources/ext.layers.editor/shapeLibrary/scripts/generate-emoji-bundle.js --minify",
 		"docs": "jsdoc -c jsdoc.config.json",
-		"docs:markdown": "jsdoc2md resources/ext.layers.editor/*.js resources/ext.layers.shared/*.js > docs/API.md"
+		"docs:markdown": "jsdoc2md resources/ext.layers.editor/*.js resources/ext.layers.shared/*.js > docs/API.generated.md"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.29.0",

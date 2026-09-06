@@ -181,7 +181,7 @@
 			"value": "#ffffff"
 		},
 		"LayersTrackChangesInRecentChanges": {
-			"description": "When enabled, layer save/delete/rename operations create a null edit on the associated File: page, making the change visible in Recent Changes, page history, and watchlists. Requires the 'layers-data-change' change tag.",
+			"description": "Legacy, experimental audit attempt: re-saves unchanged File-page content after file layer save/delete/rename. Null edits do not reliably create revisions, Recent Changes, or watchlist entries. This is not a page-history compliance feature.",
 			"value": false
 		}
 	},

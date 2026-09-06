@@ -1,5 +1,7 @@
 # v1.2.8 Release Notes
 
+> **Historical record:** These release notes describe the version named above. See [current status](https://github.com/slickdexic/Layers/wiki/Current-Status) for current behavior and limitations.
+
 **Release Date:** December 27, 2025
 
 ## Bug Fixes

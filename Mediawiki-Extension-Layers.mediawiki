@@ -11,6 +11,7 @@
 |version         = 1.5.95
 |update          = 2026-09-02
 |download        = {{GithubDownload|slickdexic|Layers}}
+
 |readme          = [https://github.com/slickdexic/Layers/blob/main/README.md README]
 |changelog       = [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md CHANGELOG]
 |license         = GPL-2.0-or-later
@@ -20,7 +21,7 @@
 |needs-updatephp = yes
 |table1          = layer_sets
 |rights          = {{bulleted list|editlayers|layers-admin}}
-|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxImportSide|$wgLayersImportJpegQuality|$wgLayersMaxLayerCount|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions|$wgLayersPdfExportWidth|$wgLayersPdfExportMaxPages|$wgLayersExportDirectory|$wgLayersSlidesEnable|$wgLayersSlideDefaultWidth|$wgLayersSlideDefaultHeight|$wgLayersSlideMaxWidth|$wgLayersSlideMaxHeight|$wgLayersSlideDefaultBackground}}
+|parameters      = {{bulleted list|$wgLayersEnable|$wgLayersDebug|$wgLayersMaxBytes|$wgLayersMaxImageBytes|$wgLayersMaxImportSide|$wgLayersImportJpegQuality|$wgLayersMaxLayerCount|$wgLayersMaxComplexity|$wgLayersMaxNamedSets|$wgLayersMaxRevisionsPerSet|$wgLayersDefaultSetName|$wgLayersDefaultFonts|$wgLayersMaxImageSize|$wgLayersImageMagickTimeout|$wgLayersMaxImageDimensions|$wgLayersPdfExportWidth|$wgLayersPdfExportMaxPages|$wgLayersExportDirectory|$wgLayersSlidesEnable|$wgLayersSlideDefaultWidth|$wgLayersSlideDefaultHeight|$wgLayersSlideMaxWidth|$wgLayersSlideMaxHeight|$wgLayersSlideDefaultBackground|$wgLayersTrackChangesInRecentChanges}}
 |hook1           = BeforePageDisplay
 |hook2           = BitmapHandlerTransform
 |hook3           = FileDeleteComplete
@@ -34,17 +35,24 @@
 |hook11          = ParserMakeImageParams
 |hook12          = SkinTemplateNavigation::Universal
 |hook13          = ThumbnailBeforeProduceHTML
-|description     = A professional-grade, non-destructive image annotation system with 17 drawing tools, 1,385 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI), '''Slide Mode''' for standalone graphics, curved arrows, live preview, layer folders, style presets, named layer sets, and full keyboard accessibility.
+|description     = A non-destructive annotation system for images, PDFs and standalone slides with 17 drawing tools, 1,385 built-in shapes (ISO 7010, IEC 60417, ISO 7000, GHS, ECB, ANSI), '''Slide Mode''' for standalone graphics, curved arrows, live preview, layer folders, style presets, named layer sets, and keyboard editing controls.
 }}
 
-The '''Layers''' extension is a modern, non-destructive image annotation and editing tool for MediaWiki. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
+
+== Current status and scope ==
+Documentation reviewed September 6, 2026. Version 1.5.95 is the manifest/tag baseline; main includes subsequent ownership, save-safety, export-access and lightbox fixes. See [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md#unreleased Unreleased changes].
+
+Layers revision lists are separate from MediaWiki article history. The optional <code>LayersTrackChangesInRecentChanges</code> null-edit attempt does not provide a reliable audit trail. Annotation/slide text is not explicitly indexed by ordinary wiki search. Cargo currently selects layer sets in galleries; annotation text tables and field bindings are proposals. The next priorities are page-owned revisions, search, and Cargo query/filter support across images, PDFs and standalone slides.
+
+Server export has known fidelity and failed-page limitations. Read [https://github.com/slickdexic/Layers/wiki/Current-Status Current status] before using Layers for controlled SOPs. Use a supported MediaWiki release and its PHP/database requirements; the compatibility floor in this infobox is not a recommendation to use an end-of-life core release.
+The '''Layers''' extension supports annotations on images and PDF pages, and standalone slides without a background file. It enables users to add captions, callouts, highlights, shapes, and freehand drawings to images '''without altering the original file'''.
 
 All edits are stored as validated JSON and rendered client-side for precise positioning. The system fully integrates into MediaWiki's file pages and parser. Click the {{key press|'''Edit layers'''}} tab on any image's <code>File:</code> page to access the editor.
 
 == Why Layers? ==
 * '''Professional Tools:''' 17 [[#Drawing Tools|drawing tools]], style presets, live preview, industry-standard alignment, a rich selection of [[#Annotation Tools|built-in shapes and emoji]], and '''[[#Slide Mode (v1.5.22+)|Slide Mode]]''' for standalone graphics—everything needed to annotate like a pro.
 * '''Non-Destructive:''' Original images are never modified. Annotations are stored separately and can be versioned or removed at any time.
-* '''Accessible:''' WCAG 2.1 compliant with [[#Keyboard Shortcuts|full keyboard navigation]], screen reader support, and high-contrast indicators.
+* '''Accessible:''' Provides [[#Keyboard Shortcuts|full keyboard navigation]], ARIA labels, and high-contrast indicators. No formal WCAG conformance assessment is claimed.
 
 == Use Cases ==
 {| class="wikitable"
@@ -88,7 +96,7 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! Parameter !! Description !! Example
 |-
-| <code>layerset</code> || Named layer set to display (default: "default") || <code>layerset=anatomy</code>
+| <code>layerset</code> || Named layer set to display (omitted/on: current set) || <code>layerset=anatomy</code>
 |-
 | <code>canvas</code> || Canvas size in pixels || <code>canvas=1920x1080</code>
 |-
@@ -119,18 +127,18 @@ All edits are stored as validated JSON and rendered client-side for precise posi
 {| class="wikitable"
 ! MediaWiki Version !! Branch !! Current Version
 |-
-| 1.44+ || <code>main</code> || 1.5.78
+| 1.44+ || <code>main</code> || 1.5.95 manifest; main includes later fixes
 |-
-| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || 1.5.66
+| 1.43.x (LTS) || <code>[https://github.com/slickdexic/Layers/tree/REL1_43 REL1_43]</code> || Check branch manifest and changelog
 |-
-| 1.39 - 1.42 || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || 1.5.66
+| 1.39 - 1.42 (unmaintained) || <code>[https://github.com/slickdexic/Layers/tree/REL1_39 REL1_39]</code> || Check branch manifest and changelog
 |}
 {{ExtensionInstall
 |registration=required
 |db-update=yes
 |custom-steps=
 *Developers considering running tests, linting, etc. should run <code>composer install</code> and <code>npm install</code> within the newly created <code>Layers</code> directory.
-|download-link=Download the suitable binary for your MediaWiki version (either [https://github.com/slickdexic/Layers/archive/refs/heads/main.zip main], [https://github.com/slickdexic/Layers/archive/refs/heads/REL1_43.zip REL1_43] or [https://github.com/slickdexic/Layers/archive/refs/heads/REL1_39.zip REL1_39])
+|download-link=Download the suitable source archive for your MediaWiki version (either [https://github.com/slickdexic/Layers/archive/refs/heads/main.zip main], [https://github.com/slickdexic/Layers/archive/refs/heads/REL1_43.zip REL1_43] or [https://github.com/slickdexic/Layers/archive/refs/heads/REL1_39.zip REL1_39])
 }}
 
 == Configuration ==
@@ -207,8 +215,10 @@ rejected. Grant the affected group <code>edit</code> on the File namespace if
 you want it to keep annotating those files.}}
 
 === Maintenance ===
-Composited thumbnails are written to <code>&lt;upload&gt;/thumb/layers/</code>
-and exported PDFs to <code>&lt;upload&gt;/thumb/layers/export/</code>. Renders
+Composited thumbnails are written to <code>&lt;upload&gt;/thumb/layers/</code>.
+Exported PDFs are stored outside the document root, in a temporary-directory cache by default,
+or in <code>$wgLayersExportDirectory</code> when configured. Keep that directory private;
+<code>Special:LayersExport</code> checks source-file read permission when serving downloads. Renders
 belonging to a deleted file are purged automatically. Because export filenames
 include the layer set revision, each save orphans the previous export; run the
 reaper periodically to reclaim that space:
@@ -237,7 +247,7 @@ Add <code>--dry-run</code> to preview. Purged files are regenerated on demand.
 === Layer Management ===
 * '''Layer Folders''': Group layers into collapsible folders for organization. Visibility and lock states cascade to children.
 * '''Named Layer Sets''': Create multiple annotation sets per image (e.g., "default", "anatomy-labels", "step-by-step").
-* '''Revision History''': Automatically tracks up to 50 revisions per layer set with one-click restore.
+* '''Layer Revision List''': Retains 50 revisions per set and document page by default (configurable), with restore support. These are separate from article page history.
 * '''Lock & Visibility''': Lock layers to prevent accidental edits; toggle visibility for complex compositions.
 
 === Professional Workflow ===
@@ -371,9 +381,9 @@ Full keyboard accessibility with over 20 shortcuts:
 
 == Technical Details ==
 * '''Performance:''' Architecture splits the lightweight Viewer (~3,300 lines including overlay) from the Editor (~114k lines including generated shape/emoji data).
-* '''Stability:''' 14,296 Jest tests (179 suites) with 95.87% statement coverage and 87.20% branch coverage, plus 675 PHPUnit tests.
+* '''Stability:''' September 6, 2026 checkpoint: 14,310 Jest tests (180 suites); 686 PHPUnit tests with one skipped. Coverage was not remeasured. Passing tests do not establish every workflow or compliance guarantee.
 * '''Security:''' Property whitelisting (50+ fields), CSRF protection, and strict text sanitization.
-* '''Accessibility:''' WCAG 2.1 compliant with <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links.
+* '''Accessibility:''' Provides <code>prefers-reduced-motion</code> support, ARIA live regions, and skip links. No formal WCAG conformance assessment is claimed.
 
 == See also ==
 * [https://github.com/slickdexic/Layers/blob/main/CHANGELOG.md Full Changelog]

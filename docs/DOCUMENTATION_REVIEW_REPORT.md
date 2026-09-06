@@ -1,5 +1,18 @@
 # Documentation Review Report
 
+
+## September 6, 2026 refresh
+
+This sweep targets the post-1.5.95 main checkpoint a3b20963, not a new release. It reconciles repository guides, GitHub wiki sources and all three `.mediawiki` files. Remote wiki content matched the checked-in source at the start; publication must be verified separately.
+
+Corrected the wrong administrator right, omitted PDF-page schema key, misleading null-edit audit guarantee, obsolete search/Cargo implications, current-set semantics, browser-local preset sharing claim, stale branch advice and unsupported coverage/production-readiness claims. Replaced sprawling landing/API/architecture references with task-oriented current guides. API parameters were compared with the local wiki's paraminfo and source; configuration defaults came from the manifest.
+
+Historical audits/postmortems are preserved with explicit status notices. Licenses, attribution and conduct policy remain intact. See [documentation inventory](DOCUMENTATION_INVENTORY.md) for scope and [current status](CURRENT_STATUS.md) for actual feature/test claims. This is a documentation reconciliation, not a fresh exhaustive runtime audit.
+
+Validation for this refresh: documentation consistency and negative broken-link checks passed; release version/date checks, YAML parsing, checker lint, `npm test` and PHP quality checks passed. No new coverage measurement or full browser E2E run was performed.
+
+## Earlier documentation review — historical findings
+
 **Date:** February 15, 2026  
 **Scope:** All 35+ documentation files across `docs/`, `wiki/`, and root directory  
 **Method:** Every file read and cross-referenced against the actual codebase

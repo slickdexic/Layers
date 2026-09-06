@@ -1,5 +1,7 @@
 # Slides Feature Requirements
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Created:** January 22, 2026  
 **Status:** ✅ Implemented  
 **Priority:** HIGH

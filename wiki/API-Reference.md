@@ -1,719 +1,154 @@
-# API Reference
+# Action API reference
 
-Complete reference for the Layers extension API endpoints.
+Reviewed September 6, 2026 against the six modules in `extension.json`, their PHP implementations and the local wiki's `action=paraminfo` output. This describes current code, not the proposed page-owned API.
 
----
+Use MediaWiki's `api.php` with `format=json`. From ResourceLoader JavaScript, wait for `mediawiki.api` and create `new mw.Api()`. Read endpoints require the applicable read access; writes require `editlayers`, applicable File-page edit authority, a CSRF token and rate-limit checks. Delete/rename additionally require creator ownership or **`layers-admin`**, not the ordinary `delete` right. Slides are not yet bound to SOP-page permissions; see [[Permissions]].
 
-## Overview
+Never use a layer row ID as `oldid`. Responses and historical availability are affected by revision pruning. `layersinfo` may return `layerset: null`; handle that without treating it as a failed request. API errors appear under `error`; do not infer success from HTTP 200 alone.
 
-Layers provides six API endpoints through MediaWiki's Action API:
+## Actions and parameters
 
-| Action | Method | Purpose | Auth Required |
-|--------|--------|---------|---------------|
-| `layersinfo` | GET | Read layer data | Read access |
-| `layerslist` | GET | List all slides | Read access |
-| `layerssave` | POST | Save layer data | `editlayers` + CSRF |
-| `layersdelete` | POST | Delete layer set | Owner or admin + CSRF |
-| `layersrename` | POST | Rename layer set | Owner or admin + CSRF |
-| `layerspdfexport` | POST | Export an annotated PDF | Read access + CSRF |
+### layersinfo — GET
 
-> **Why `layerspdfexport` needs a token even though it changes no layer data.**
-> It rasterises up to `$wgLayersPdfExportMaxPages` pages with ImageMagick and
-> writes a file to disk. As a token-less GET (which is what it was before
-> v1.5.83) any third-party page could drive it from every logged-in visitor's
-> browser via `<img src="…">`. A request that spends unbounded server CPU is
-> not a read.
+Read an image/PDF page or standalone slide and its Layers revisions.
 
----
+| Parameter | Type | Default / range | Notes |
+| --- | --- | --- | --- |
+| `filename` | string | Not declared in metadata | Uploaded file title; a File: prefix is accepted. Use slidename instead for slides. |
+| `slidename` | string | Not declared in metadata | Standalone slide name, without the Slide: storage prefix. |
+| `layersetid` | integer | Not declared in metadata | Layers row ID, not a MediaWiki page revision ID. |
+| `setname` | string | Not declared in metadata | Explicit set name. Omission selects the current set on applicable paths; do not assume a literal default set. |
+| `limit` | integer | min 1; max 200 | Maximum results for this request. |
+| `offset` | integer | min 0 | Legacy numeric offset; prefer the returned continuation. |
+| `continue` | string | Not declared in metadata | Continuation returned by the previous response; return it unchanged. |
+| `page` | integer | 1; min 1 | 1-based source PDF page; images use page 1. Not a wiki page ID. |
 
-## layersinfo
+### layerssave — POST + CSRF
 
-Retrieve layer data and revision history for an image.
+Save a layer revision for an image/PDF page or standalone slide.
 
-### Request
+| Parameter | Type | Default / range | Notes |
+| --- | --- | --- | --- |
+| `filename` | string | Not declared in metadata | Uploaded file title; a File: prefix is accepted. Use slidename instead for slides. |
+| `slidename` | string | Not declared in metadata | Standalone slide name, without the Slide: storage prefix. |
+| `data` | string | Not declared in metadata | JSON string; see payload example below. Required by layerssave. |
+| `setname` | string | Not declared in metadata | Explicit set name. Omission selects the current set on applicable paths; do not assume a literal default set. |
+| `page` | integer | 1; min 1 | 1-based source PDF page; images use page 1. Not a wiki page ID. |
+| `token` | string | Not declared in metadata | CSRF token, supplied automatically by postWithToken. |
 
-```
-GET /api.php?action=layersinfo&filename=File:Example.jpg
-```
+### layersdelete — POST + CSRF
 
-### Parameters
+Delete a named set and its retained revisions.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `filename` | string | Yes | File title (with or without `File:` prefix) |
-| `layersetid` | integer | No | Specific revision ID to retrieve |
-| `setname` | string | No | Named set to retrieve (default: `default`) |
-| `limit` | integer | No | Max revisions to return (default: 50, max: 200) |
+| Parameter | Type | Default / range | Notes |
+| --- | --- | --- | --- |
+| `filename` | string | Not declared in metadata | Uploaded file title; a File: prefix is accepted. Use slidename instead for slides. |
+| `slidename` | string | Not declared in metadata | Standalone slide name, without the Slide: storage prefix. |
+| `setname` | string | Not declared in metadata | Explicit set name. Omission selects the current set on applicable paths; do not assume a literal default set. |
+| `page` | integer | 1; min 1 | 1-based source PDF page; images use page 1. Not a wiki page ID. |
+| `allpages` | boolean | Not declared in metadata | Presence enables document-wide delete/rename. Omit entirely for a single page; do not send false/0 as a substitute for omission. |
+| `token` | string | Not declared in metadata | CSRF token, supplied automatically by postWithToken. |
 
-### Response
+### layersrename — POST + CSRF
 
-```json
-{
-    "layersinfo": {
-        "layerset": {
-            "id": 123,
-            "imgName": "Example.jpg",
-            "name": "default",
-            "userId": 1,
-            "timestamp": "20251220120000",
-            "revision": 5,
-            "data": {
-                "revision": 5,
-                "schema": 1,
-                "created": "2025-12-20T12:00:00Z",
-                "layers": [
-                    {
-                        "id": "layer_1",
-                        "type": "rectangle",
-                        "x": 100,
-                        "y": 100,
-                        "width": 200,
-                        "height": 150,
-                        "stroke": "#ff0000",
-                        "strokeWidth": 2,
-                        "fill": "#ffff00",
-                        "fillOpacity": 0.5
-                    }
-                ]
-            },
-            "baseWidth": 1920,
-            "baseHeight": 1080
-        },
-        "page": 1,
-        "pageCount": 11,
-        "pagesWithLayers": [ 1, 2, 7 ],
-        "all_layersets": [
-            {
-                "ls_id": 123,
-                "ls_revision": 5,
-                "ls_name": "default",
-                "ls_user_id": 1,
-                "ls_user_name": "Admin",
-                "ls_timestamp": "20251220120000"
-            },
-            {
-                "ls_id": 122,
-                "ls_revision": 4,
-                "ls_name": "default",
-                "ls_user_id": 1,
-                "ls_user_name": "Admin",
-                "ls_timestamp": "20251219150000"
-            }
-        ],
-        "named_sets": [
-            {
-                "name": "default",
-                "revision_count": 5,
-                "latest_revision": 5,
-                "latest_timestamp": "20251220120000",
-                "latest_user_id": 1,
-                "latest_user_name": "Admin"
-            },
-            {
-                "name": "anatomy",
-                "revision_count": 3,
-                "latest_revision": 3,
-                "latest_timestamp": "20251218100000",
-                "latest_user_id": 2,
-                "latest_user_name": "Editor"
-            }
-        ]
-    }
-}
-```
+Rename a named set.
 
-### Response Fields
+| Parameter | Type | Default / range | Notes |
+| --- | --- | --- | --- |
+| `filename` | string | Not declared in metadata | Uploaded file title; a File: prefix is accepted. Use slidename instead for slides. |
+| `slidename` | string | Not declared in metadata | Standalone slide name, without the Slide: storage prefix. |
+| `oldname` | string | Not declared in metadata | Existing set name. Required. |
+| `newname` | string | Not declared in metadata | New set name. Required. |
+| `page` | integer | 1; min 1 | 1-based source PDF page; images use page 1. Not a wiki page ID. |
+| `allpages` | boolean | Not declared in metadata | Presence enables document-wide delete/rename. Omit entirely for a single page; do not send false/0 as a substitute for omission. |
+| `token` | string | Not declared in metadata | CSRF token, supplied automatically by postWithToken. |
 
-#### layerset
+### layerslist — GET
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | integer | Database row ID |
-| `imgName` | string | Image filename (without `File:`) |
-| `name` | string | Named set name |
-| `userId` | integer | User ID who saved this revision |
-| `timestamp` | string | MediaWiki timestamp format |
-| `revision` | integer | Revision number within this set |
-| `data` | object | The layer data structure |
-| `baseWidth` | integer | Original image width in pixels |
-| `baseHeight` | integer | Original image height in pixels |
+List standalone slides by name prefix; this is not annotation full-text search.
 
-#### data.layers[]
+| Parameter | Type | Default / range | Notes |
+| --- | --- | --- | --- |
+| `prefix` | string | Not declared in metadata | Slide-name prefix, not a text-content query. |
+| `limit` | limit | 50; min 1; max 500 | Maximum results for this request. |
+| `offset` | integer | 0; min 0 | Legacy numeric offset; prefer the returned continuation. |
+| `sort` | created, modified, name | name | Slide sorting mode. |
+| `continue` | string | Not declared in metadata | Continuation returned by the previous response; return it unchanged. |
 
-Each layer object contains properties based on its type. See [[Layer Data Format]] for complete field reference.
+### layerspdfexport — POST + CSRF
 
-### Errors
+Generate a cached server-rendered PDF for an uploaded file. Standalone slides are not supported by this server endpoint.
 
-| Code | Message | Cause |
-|------|---------|-------|
-| `layers-file-not-found` | File not found | Invalid filename |
-| `layers-layerset-not-found` | Layer set not found | Specified set/revision doesn't exist |
+| Parameter | Type | Default / range | Notes |
+| --- | --- | --- | --- |
+| `filename` | string | Not declared in metadata | Uploaded file title; a File: prefix is accepted. Use slidename instead for slides. |
+| `setname` | string | Not declared in metadata | Explicit set name. Omission selects the current set on applicable paths; do not assume a literal default set. |
+| `width` | integer | Not declared in metadata | Server render width in pixels; configured default and server limits apply. |
+| `token` | string | Not declared in metadata | CSRF token, supplied automatically by postWithToken. |
 
-### Examples
-
-**Get default set:**
-```
-/api.php?action=layersinfo&filename=File:Diagram.png
-```
-
-**Get specific named set:**
-```
-/api.php?action=layersinfo&filename=File:Diagram.png&setname=anatomy
-```
-
-**Get specific revision:**
-```
-/api.php?action=layersinfo&filename=File:Diagram.png&layersetid=42
-```
-
----
-
-## layerslist
-
-List all slides on the wiki with metadata. Used by Special:Slides.
-
-### Request
-
-```
-GET /api.php?action=layerslist&prefix=Process&limit=20&sort=modified
-```
-
-### Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `prefix` | string | No | Filter slides by name prefix |
-| `limit` | integer | No | Results per page (default: 50, max: 500) |
-| `offset` | integer | No | Pagination offset |
-| `sort` | string | No | Sort by: `name`, `created`, `modified` (default: `name`) |
-| `continue` | string | No | Continuation token for pagination |
-
-### Response
-
-```json
-{
-    "layerslist": {
-        "slides": [
-            {
-                "name": "ProcessDiagram",
-                "canvasWidth": 800,
-                "canvasHeight": 600,
-                "backgroundColor": "#ffffff",
-                "layerCount": 12,
-                "revisionCount": 5,
-                "created": "2026-01-15T10:00:00Z",
-                "modified": "2026-01-20T14:30:00Z",
-                "createdBy": "AdminUser",
-                "createdById": 1,
-                "modifiedBy": "EditorUser",
-                "modifiedById": 2
-            }
-        ],
-        "total": 42,
-        "continue": 50
-    }
-}
-```
-
-### Response Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `slides` | array | Array of slide objects |
-| `total` | integer | Total slides matching filter |
-| `continue` | integer | Offset for next page (omitted if no more results) |
-
-#### slides[]
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Slide name (unique identifier) |
-| `canvasWidth` | integer | Canvas width in pixels |
-| `canvasHeight` | integer | Canvas height in pixels |
-| `backgroundColor` | string | Background color |
-| `layerCount` | integer | Number of layers |
-| `revisionCount` | integer | Number of revisions |
-| `created` | string | ISO 8601 timestamp |
-| `modified` | string | ISO 8601 timestamp |
-| `createdBy` | string | Username who created slide |
-| `createdById` | integer | User ID who created slide |
-| `modifiedBy` | string | Username who last modified |
-| `modifiedById` | integer | User ID who last modified |
-
-### Errors
-
-| Code | Message | Cause |
-|------|---------|-------|
-| `ratelimited` | Rate limited | Too many requests |
-| `dbschema-missing` | Schema missing | Run maintenance/update.php |
-
-### JavaScript Example
+## Read examples
 
 ```javascript
 const api = new mw.Api();
-
-const response = await api.get({
-    action: 'layerslist',
-    prefix: 'Process',
-    limit: 20,
-    sort: 'modified'
-});
-
-for (const slide of response.layerslist.slides) {
-    console.log(slide.name, slide.layerCount, 'layers');
-}
+api.get( { action: 'layersinfo', filename: 'Diagram.png', setname: 'annotations' } );
+api.get( { action: 'layersinfo', slidename: 'SafetyProcedure', setname: 'instructions' } );
+api.get( { action: 'layersinfo', filename: 'Manual.pdf', page: 2, setname: 'annotations' } );
+api.get( { action: 'layerslist', prefix: 'Safety', limit: 20 } );
 ```
 
----
+`layersinfo` returns layer data beneath `layersinfo.layerset.data`, with revision/set metadata. File responses include page-aware `baseWidth`, `baseHeight`, `imageUrl`, `page` and `pageCount`; use the supplied coordinate dimensions rather than assuming the thumbnail's natural size. Fields such as `named_sets`, `all_layersets` and `set_revisions` vary with request mode. Some booleans are serialized as 0/1; preserve false and zero-opacity values.
 
-## layerssave
+## Save payload
 
-Save a layer set revision.
-
-### Request
-
-```
-POST /api.php
-Content-Type: application/x-www-form-urlencoded
-
-action=layerssave
-&filename=File:Example.jpg
-&setname=default
-&data=[{"id":"layer_1","type":"rectangle",...}]
-&token=CSRF_TOKEN
-```
-
-### Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `filename` | string | Yes | File title |
-| `data` | string | Yes | JSON array of layer objects |
-| `setname` | string | No | Named set (default: `default`) |
-| `token` | string | Yes | CSRF token |
-
-### Permissions
-
-- `editlayers` right
-- `edit` permission on the file's page (since v1.5.80) — page protection,
-  namespace protection, cascading protection and blocks all apply
-
-### Response
-
-```json
-{
-    "layerssave": {
-        "success": 1,
-        "layersetid": 124,
-        "result": "Success"
-    }
-}
-```
-
-### Validation
-
-The server validates all incoming data:
-
-1. **Size check** — Total payload ≤ `$wgLayersMaxBytes` (default 2 MB)
-2. **JSON parsing** — Must be valid JSON
-3. **Layer count** — ≤ `$wgLayersMaxLayerCount` (default 100)
-4. **Property whitelist** — Unknown properties are stripped
-5. **Type validation** — Each property must match expected type
-6. **Range validation** — Numeric values must be within bounds
-7. **Color sanitization** — Colors validated/sanitized
-8. **Text sanitization** — HTML and dangerous protocols stripped
-
-### Errors
-
-| Code | Message | Cause |
-|------|---------|-------|
-| `layers-invalid-filename` | Invalid filename | Bad filename format |
-| `layers-file-not-found` | File not found | File doesn't exist |
-| `layers-data-too-large` | Data too large | Exceeds `$wgLayersMaxBytes` |
-| `datatoolarge` | Data too large | Serialized set exceeded `$wgLayersMaxBytes` once wrapped for storage (since v1.5.80; previously surfaced as a generic save failure) |
-| `layers-json-parse-error` | JSON parse error | Invalid JSON |
-| `layers-invalid-data` | Invalid data | Validation failed |
-| `layers-rate-limited` | Rate limited | Too many saves |
-| `layers-max-sets-reached` | Max sets reached | Exceeds `$wgLayersMaxNamedSets` |
-| `layers-invalid-setname` | Invalid set name | Bad characters in name |
-| `layers-save-failed` | Save failed | Database error |
-| `dbschema-missing` | Schema missing | Run maintenance/update.php |
-
-### JavaScript Example
+Example for a standalone slide; replace slidename with filename and page for file annotations:
 
 ```javascript
-const api = new mw.Api();
-
-try {
-    const response = await api.postWithToken('csrf', {
-        action: 'layerssave',
-        filename: 'File:Example.jpg',
-        setname: 'default',
-        data: JSON.stringify(layers)
-    });
-    
-    if (response.layerssave.success) {
-        console.log('Saved revision:', response.layerssave.layersetid);
+api.postWithToken( 'csrf', {
+    action: 'layerssave',
+    slidename: 'SafetyProcedure',
+    setname: 'instructions',
+    data: JSON.stringify( {
+        canvasWidth: 1200,
+        canvasHeight: 800,
+        backgroundColor: '#ffffff',
+        backgroundVisible: true,
+        backgroundOpacity: 1,
+        layers: [ {
+            id: 'step-1', type: 'textbox', x: 40, y: 40,
+            width: 500, height: 100, text: 'Isolate the equipment',
+            fontSize: 28, fill: '#ffffff', stroke: '#000000'
+        } ]
+    } )
+} ).then( ( response ) => {
+    if ( !response.layerssave || !response.layerssave.success ) {
+        throw new Error( 'The annotation was not saved' );
     }
-} catch (error) {
-    console.error('Save failed:', error);
-}
-```
-
----
-
-## layersdelete
-
-Delete a named layer set and all its revisions.
-
-### Request
-
-```
-POST /api.php
-Content-Type: application/x-www-form-urlencoded
-
-action=layersdelete
-&filename=File:Example.jpg
-&setname=anatomy
-&token=CSRF_TOKEN
-```
-
-### Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `filename` | string | Yes | File title |
-| `setname` | string | Yes | Named set to delete |
-| `page` | integer | No | 1-based page of a multi-page file (default 1) |
-| `allpages` | boolean | No | Delete the set from every page of the document |
-| `token` | string | Yes | CSRF token |
-
-> **Multi-page files:** layer sets are stored per page. The editor sends
-> `allpages` for PDFs and DjVu files, because a set is one thing the user
-> named once — deleting it from only the page in view leaves copies behind
-> that the user believes are gone. (Since v1.5.86.)
-
-### Response
-
-```json
-{
-    "layersdelete": {
-        "success": 1,
-        "revisionsDeleted": 5
-    }
-}
-```
-
-### Permissions
-
-User must have `edit` permission on the file's page (since v1.5.80), and be:
-- **Owner** — Created the first revision of the set, OR
-- **Admin** — Has the `delete` right
-
-### Errors
-
-| Code | Message | Cause |
-|------|---------|-------|
-| `layers-file-not-found` | File not found | Invalid filename |
-| `layers-layerset-not-found` | Layer set not found | Set doesn't exist |
-| `permissiondenied` | Permission denied | Not owner or admin |
-| `layers-delete-failed` | Delete failed | Database error |
-
-### Warning
-
-⚠️ **This action is permanent.** All revisions of the named set are deleted and cannot be recovered.
-
----
-
-## layersrename
-
-Rename a named layer set.
-
-### Request
-
-```
-POST /api.php
-Content-Type: application/x-www-form-urlencoded
-
-action=layersrename
-&filename=File:Example.jpg
-&oldname=anatomy
-&newname=anatomical-labels
-&token=CSRF_TOKEN
-```
-
-### Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `filename` | string | Yes | File title |
-| `oldname` | string | Yes | Current set name |
-| `newname` | string | Yes | New set name |
-| `page` | integer | No | 1-based page of a multi-page file (default 1) |
-| `allpages` | boolean | No | Rename the set on every page of the document |
-| `token` | string | Yes | CSRF token |
-
-> **Multi-page files:** the editor sends `allpages` for PDFs and DjVu files.
-> Renaming one page at a time leaves the document with two names for the same
-> set depending on which page the reader is on. (Since v1.5.86.)
-
-### Response
-
-```json
-{
-    "layersrename": {
-        "success": 1,
-        "oldname": "anatomy",
-        "newname": "anatomical-labels"
-    }
-}
-```
-
-### Name Validation
-
-New name must:
-- Be 1-50 characters
-- Contain only `a-z`, `A-Z`, `0-9`, `-`, `_`
-- Not be `default` (reserved)
-- Not already exist for this image
-
-### Permissions
-
-User must have `edit` permission on the file's page (since v1.5.80), and be:
-- **Owner** — Created the first revision of the set, OR
-- **Admin** — Has the `delete` right
-
-### Errors
-
-| Code | Message | Cause |
-|------|---------|-------|
-| `layers-file-not-found` | File not found | Invalid filename |
-| `layers-layerset-not-found` | Layer set not found | Old name doesn't exist |
-| `layers-invalid-setname` | Invalid set name | Bad characters or reserved name |
-| `layers-setname-exists` | Name already exists | Conflict with existing set |
-| `permissiondenied` | Permission denied | Not owner or admin |
-
----
-
-## layerspdfexport
-
-Render a file's pages with their layer set composited on top and stitch the
-result into a single PDF. The PDF is cached outside the document root and a
-`Special:LayersExport` URL is returned, so delivery re-checks `read` on the
-source file for every request.
-
-### Request
-
-```
-POST /api.php
-Content-Type: application/x-www-form-urlencoded
-
-action=layerspdfexport
-&filename=Manual.pdf
-&setname=anatomy
-&token=CSRF_TOKEN
-```
-
-### Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `filename` | string | Yes | File title |
-| `setname` | string | No | Named layer set. Omitted resolves to the image's most recently saved set |
-| `width` | integer | No | Render width per page. Clamped to 200–4096 and snapped to 200px buckets |
-| `token` | string | Yes | CSRF token |
-
-> `width` is snapped to buckets deliberately: it forms part of the on-disk
-> cache key, so an unbounded value would let one caller force thousands of
-> distinct expensive renders.
-
-### Response
-
-```json
-{
-    "layerspdfexport": {
-        "success": 1,
-        "url": "/index.php?title=Special:LayersExport&file=Manual.pdf&key=…",
-        "pageCount": 12,
-        "setname": "anatomy",
-        "cached": 0
-    }
-}
-```
-
-### Incomplete exports
-
-The server compositor uses ImageMagick and has no primitive for some layer
-types. When any layer was skipped, the result carries:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `incomplete` | integer | `1` when at least one layer could not be drawn |
-| `droppedtypes` | array | The distinct layer types that were omitted |
-
-An API warning (`layers-export-incomplete`) is emitted alongside it, and the
-lightbox surfaces this to the user. Types currently omitted server-side:
-`callout`, `image`, `group`, `customShape`, `marker`, `dimension`,
-`angleDimension`, plus `blur` fills. The lightbox **Download** button
-composites client-side instead and is always complete — prefer it when
-fidelity matters.
-
-`incomplete` is not reported on a cache hit (`cached: 1`), because nothing was
-rendered on that request.
-
-### Permissions
-
-`read` on the file's page, plus a CSRF token and POST. Rate limited under the
-`editlayers-render` bucket.
-
-### Errors
-
-| Code | Message | Cause |
-|------|---------|-------|
-| `layers-file-not-found` | File not found | Invalid filename |
-| `layers-export-too-many-pages` | Too many pages | Exceeds `$wgLayersPdfExportMaxPages` |
-| `layers-export-pdf-failed` | Export failed | ImageMagick or filesystem failure |
-| `layers-rate-limited` | Rate limited | `editlayers-render` bucket exhausted |
-| `badaccess-group0` | Permission denied | No `read` on the file page |
-
-### JavaScript Example
-
-```javascript
-const api = new mw.Api();
-const data = await api.postWithToken( 'csrf', {
-    action: 'layerspdfexport',
-    format: 'json',
-    filename: 'Manual.pdf',
-    setname: 'anatomy'
 } );
-
-const result = data.layerspdfexport;
-if ( result.incomplete ) {
-    mw.notify( 'Omitted: ' + result.droppedtypes.join( ', ' ) );
-}
-window.open( result.url, '_blank', 'noopener' );
 ```
 
----
+The data field accepts the supported layer-array or object-with-layers form. Send the object form when supplying background/canvas settings. Do not send JSON scalars: their handling is a known open issue. Only validated properties survive; inspect `ServerSideLayerValidator` for the current schema. `ownerId` is generated by the server and is not an assignable client field.
 
-## Layer Data Format
-
-### Common Properties
-
-All layer types share these properties:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `id` | string | Unique layer identifier |
-| `type` | string | Layer type (see below) |
-| `visible` | boolean | Layer visibility |
-| `locked` | boolean | Layer locked state |
-| `name` | string | Optional layer name |
-| `opacity` | number | Overall opacity (0-1) |
-| `rotation` | number | Rotation in degrees |
-| `blendMode` | string | Blend mode |
-
-### Layer Types
-
-| Type | Properties |
-|------|------------|
-| `rectangle` | x, y, width, height, stroke, fill, strokeWidth, cornerRadius |
-| `circle` | x, y, radius, stroke, fill, strokeWidth |
-| `ellipse` | x, y, radiusX, radiusY, stroke, fill, strokeWidth |
-| `polygon` | x, y, radius, sides, stroke, fill, cornerRadius |
-| `star` | x, y, radius, innerRadius, points, pointRadius, valleyRadius |
-| `line` | x1, y1, x2, y2, stroke, strokeWidth |
-| `arrow` | x1, y1, x2, y2, stroke, strokeWidth, arrowhead, arrowSize, arrowStyle |
-| `path` | points[], stroke, strokeWidth |
-| `text` | x, y, text, fontFamily, fontSize, fontWeight, fontStyle, fill |
-| `textbox` | x, y, width, height, text, textAlign, verticalAlign, padding |
-| `blur` | x, y, width, height, blurRadius |
-| `image` | x, y, width, height, src (base64), originalWidth, originalHeight |
-
-### Style Properties
-
-| Property | Type | Range | Description |
-|----------|------|-------|-------------|
-| `stroke` | string | — | Stroke color (hex, rgba) |
-| `strokeWidth` | number | 0-50 | Stroke width in pixels |
-| `strokeOpacity` | number | 0-1 | Stroke opacity |
-| `fill` | string | — | Fill color or `blur` for frosted glass effect |
-| `fillOpacity` | number | 0-1 | Fill opacity |
-| `blurRadius` | number | 1-64 | Blur intensity when fill=blur (default: 12). Supported on all filled shapes including arrows (v1.2.7+) |
-
-### Shadow Properties
-
-| Property | Type | Range | Description |
-|----------|------|-------|-------------|
-| `shadow` | boolean | — | Enable shadow |
-| `shadowColor` | string | — | Shadow color |
-| `shadowBlur` | number | 0-50 | Blur radius |
-| `shadowOffsetX` | number | -50 to 50 | X offset |
-| `shadowOffsetY` | number | -50 to 50 | Y offset |
-| `shadowSpread` | number | 0-20 | Spread distance |
-
-### Text Properties
-
-| Property | Type | Options | Description |
-|----------|------|---------|-------------|
-| `fontFamily` | string | Arial, Roboto, etc. | Font name |
-| `fontSize` | number | 8-144 | Font size in pixels |
-| `fontWeight` | string | normal, bold | Font weight |
-| `fontStyle` | string | normal, italic | Font style |
-| `textAlign` | string | left, center, right | Horizontal alignment |
-| `verticalAlign` | string | top, middle, bottom | Vertical alignment |
-| `textStrokeColor` | string | — | Text outline color |
-| `textStrokeWidth` | number | 0-10 | Text outline width |
-| `textShadow` | boolean | — | Enable text shadow |
-
----
-
-## Rate Limiting
-
-Since v1.5.83 the extension **ships defaults** for its own rate-limit buckets.
-This matters: `User::pingLimiter()` reports "not limited" for a bucket nobody
-has configured, so before v1.5.83 every Layers rate limit was inert on a
-default install.
-
-Only three buckets exist — there is no `editlayers-create`, `-delete` or
-`-rename` key in the code:
-
-| Action | Used by | Shipped default (per 60s) |
-|--------|---------|---------------------------|
-| `editlayers-save` | `layerssave` | 60 user / 20 anon / 15 newbie |
-| `editlayers-render` | `layerspdfexport` | 15 user / 5 anon / 5 newbie |
-| `editlayers-list` | `layerslist` | 120 user / 30 anon / 30 newbie |
-
-`ip` and `subnet` limits are also shipped for each. Defaults are merged with
-`array_plus_2d`, so anything you set in `LocalSettings.php` wins:
-
-```php
-// Tighten the expensive one on a public wiki
-$wgRateLimits['editlayers-render']['user'] = [ 5, 60 ];
-$wgRateLimits['editlayers-render']['anon'] = [ 1, 60 ];
-```
-
----
-
-## CSRF Protection
-
-All POST endpoints require a valid CSRF token. Obtain via:
+## Delete and rename scope
 
 ```javascript
-const api = new mw.Api();
-const token = await api.getToken('csrf');
+api.postWithToken( 'csrf', {
+    action: 'layersrename', filename: 'Manual.pdf', page: 2,
+    oldname: 'draft-labels', newname: 'annotations'
+} );
 ```
 
-Or use `postWithToken` which handles this automatically:
+Omitting `allpages` confines the operation to page 2. A document-wide operation adds `allpages: true`, affects all matching PDF page sets, and checks every affected page's ownership under database locks. Delete removes retained revisions; confirm the intended scope in your application before submitting. Unknown legacy creator ownership requires `layers-admin` for destructive operations.
+
+## Export
 
 ```javascript
-await api.postWithToken('csrf', { action: 'layerssave', ... });
+api.postWithToken( 'csrf', {
+    action: 'layerspdfexport', filename: 'Manual.pdf', setname: 'annotations'
+} );
 ```
 
----
+Use the returned delivery URL; do not construct a path into the export cache. `Special:LayersExport` rechecks source access and the cache filename binds the source title. Existing old cache files need regeneration. The server endpoint operates on the document rather than accepting a page parameter. Client lightbox print/download is a different path and can support slides. Failed pages and rendering-property limitations remain open: inspect critical output, even when the request reports success.
 
-## See Also
+## Integration boundaries
 
-- [[Architecture Overview]] — System design
-- [[Named Layer Sets]] — Working with named sets
-- [[Configuration Reference]] — Server configuration
+No current parameter binds a set to a MediaWiki article revision, writes searchable annotation text, or creates Cargo annotation rows. These are proposals in [[Current Status]]. When integrating with a different deployed branch, inspect `api.php?action=paraminfo&modules=layersinfo|layerssave|layersdelete|layersrename|layerslist|layerspdfexport&format=json` and its source before relying on these contracts.

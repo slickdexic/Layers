@@ -1,86 +1,34 @@
-# Layers Extension Documentation
+# Layers documentation
 
-**Last Updated:** March 17, 2026
+Updated September 6, 2026. Current documentation covers images, PDFs and standalone slides. The main branch still reports 1.5.95 with subsequent fixes; a proposal is not a released capability.
 
-This directory contains technical documentation for the Layers MediaWiki extension. For user-facing documentation, see the [wiki/](../wiki/) directory.
+## Find the right guide
 
----
+| Audience/task | Start here |
+| --- | --- |
+| Understand current behavior and limitations | [Current status](CURRENT_STATUS.md) · [Known issues](KNOWN_ISSUES.md) |
+| Install, configure and upgrade | [Installation](../wiki/Installation.md) · [Configuration](../wiki/Configuration-Reference.md) · [Permissions](../wiki/Permissions.md) |
+| Create visual instructions | [Quick start](../wiki/Quick-Start-Guide.md) · [Slides](../wiki/Slide-Mode.md) · [Tools](../wiki/Drawing-Tools.md) |
+| Embed content and choose sets | [Wikitext](../wiki/Wikitext-Syntax.md) · [Named sets](../wiki/Named-Layer-Sets.md) |
+| Integrate with the current API | [API entry point](API.md) · [Action API reference](../wiki/API-Reference.md) |
+| Contribute code | [Contributing](../CONTRIBUTING.md) · [Architecture](ARCHITECTURE.md) · [Onboarding](DEVELOPER_ONBOARDING.md) · [Testing](../wiki/Testing-Guide.md) |
+| Investigate a defect | [Troubleshooting](../wiki/Troubleshooting.md) · [R6 review](../codebase_review.md) · [Security](../SECURITY.md) |
+| Plan controlled SOPs | [Page history, search and Cargo proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md) |
+| Maintain/publish docs | [Maintenance guide](DOCUMENTATION_UPDATE_GUIDE.md) · [Release guide](RELEASE_GUIDE.md) · [Wiki publishing](../wiki/README.md) |
+| Review documentation scope | [Inventory](DOCUMENTATION_INVENTORY.md) · [Documentation review](DOCUMENTATION_REVIEW_REPORT.md) |
 
-## Quick Links
+## Specialized references
 
-| Document | Description |
-|----------|-------------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | **Start here** - System architecture, module relationships, Mermaid diagrams |
-| [DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md) | Getting started guide for new contributors |
-| [API.md](API.md) | API endpoints reference (layersinfo, layerssave, layersdelete, layersrename, layerslist) |
-| [KNOWN_ISSUES.md](KNOWN_ISSUES.md) | Current bugs, limitations, and workarounds |
+[Accessibility](ACCESSIBILITY.md), [CSP](CSP_GUIDE.md), [foreign files](INSTANTCOMMONS_SUPPORT.md), [refactoring](REFACTORING_PLAYBOOK.md), and [branch policy](LTS_BRANCH_STRATEGY.md) describe specific implementation concerns. Design-era documents such as [Slide Mode](SLIDE_MODE.md) explicitly distinguish their original proposal from current user behavior.
 
----
+## Publication surfaces
 
-## Documentation Categories
+- `wiki/` is the maintained source for the separate [GitHub wiki](https://github.com/slickdexic/Layers/wiki).
+- [Mediawiki-Extension-Layers.mediawiki](../Mediawiki-Extension-Layers.mediawiki), [LayersGuide.mediawiki](../LayersGuide.mediawiki), and [Mediawiki-layer_sets-table.mediawiki](../Mediawiki-layer_sets-table.mediawiki) are source documents for MediaWiki publication. Editing them does not automatically update mediawiki.org.
+- [CHANGELOG.md](../CHANGELOG.md) and [Current status](CURRENT_STATUS.md) have exact wiki mirrors.
 
-### Core Architecture
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Module structure, delegation patterns, Mermaid diagrams
-- [RENDERING_ARCHITECTURE_ANALYSIS.md](RENDERING_ARCHITECTURE_ANALYSIS.md) - Canvas rendering pipeline analysis
+## Historical material
 
-### Developer Guides
-- [DEVELOPER_ONBOARDING.md](DEVELOPER_ONBOARDING.md) - Setup, testing, contribution workflow
-- [CSP_GUIDE.md](CSP_GUIDE.md) - Content Security Policy compliance
-- [LTS_BRANCH_STRATEGY.md](LTS_BRANCH_STRATEGY.md) - Long-term support versioning strategy
-- [REFACTORING_PLAYBOOK.md](REFACTORING_PLAYBOOK.md) - Patterns and process for safe refactoring
-- [DOCUMENTATION_UPDATE_GUIDE.md](DOCUMENTATION_UPDATE_GUIDE.md) - Checklist for doc updates on release
-- [RELEASE_GUIDE.md](RELEASE_GUIDE.md) - Release checklist and process
+[archive/](archive/) contains dated analyses, bug reports and completed design work. Other historical documents carry a notice at the top. Their metrics, file paths and resolved/open labels refer to their original investigation; use the current status and R6 review for present decisions. Historical records are preserved rather than rewritten to appear current.
 
-### Features
-- [NAMED_LAYER_SETS.md](NAMED_LAYER_SETS.md) - Multiple named annotation sets per image
-- [WIKITEXT_USAGE.md](WIKITEXT_USAGE.md) - Wikitext syntax for embedding layers
-- [SLIDE_MODE.md](SLIDE_MODE.md) - Slide presentation mode
-- [SHAPE_LIBRARY_PROPOSAL.md](SHAPE_LIBRARY_PROPOSAL.md) - Built-in shape library (1,385 shapes)
-- [INSTANTCOMMONS_SUPPORT.md](INSTANTCOMMONS_SUPPORT.md) - Foreign file / InstantCommons support
-
-### Quality & Standards
-- [ACCESSIBILITY.md](ACCESSIBILITY.md) - ARIA roles, keyboard navigation, screen reader support
-- [UX_STANDARDS_AUDIT.md](UX_STANDARDS_AUDIT.md) - UX consistency audit results
-- [PROJECT_GOD_CLASS_REDUCTION.md](PROJECT_GOD_CLASS_REDUCTION.md) - God class tracking and reduction plan
-
-### Troubleshooting & Postmortems
-- [KNOWN_ISSUES.md](KNOWN_ISSUES.md) - Current bugs and limitations
-- [layers-all-troubleshooting.md](layers-all-troubleshooting.md) - Layer visibility troubleshooting
-- [POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md](POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md) - Boolean serialization bug
-- [POSTMORTEM_IFRAME_MODAL_500_ERROR.md](POSTMORTEM_IFRAME_MODAL_500_ERROR.md) - Iframe modal HTTP 500
-- [POSTMORTEM_TEXTBOX_DEFAULTS.md](POSTMORTEM_TEXTBOX_DEFAULTS.md) - Textbox defaults regression
-
-### Planning & Proposals
-- [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) - Active feature proposals and ideas
-- [GOD_CLASS_REFACTORING_PLAN.md](GOD_CLASS_REFACTORING_PLAN.md) - Refactoring plan for large files
-- [SLIDES_REQUIREMENTS.md](SLIDES_REQUIREMENTS.md) - Slide mode feature requirements
-- [SLIDE_MODE_ISSUES.md](SLIDE_MODE_ISSUES.md) - Known slide mode issues
-
----
-
-## Archive
-
-The [archive/](archive/) directory contains completed feature requests, historical bug fixes, and superseded documentation. These are preserved for reference but are no longer actively maintained.
-
-**Archived documents include:**
-- Completed feature requests (Layer Groups, Auto-Create Layer Set, Context-Aware Toolbar, Enhanced Layerslink)
-- Historical bug fix documentation and postmortems
-- Original developer specification (guide.md)
-- One-time audits (Event Listener Audit, Structure Suite Status)
-- Full feature implementation history (FUTURE_IMPROVEMENTS_FULL.md)
-
----
-
-## Related Files
-
-| File | Location | Purpose |
-|------|----------|---------|
-| [README.md](../README.md) | Root | Project overview, installation, quick start |
-| [codebase_review.md](../codebase_review.md) | Root | Comprehensive code quality assessment |
-| [improvement_plan.md](../improvement_plan.md) | Root | Technical debt remediation roadmap |
-| [copilot-instructions.md](../.github/copilot-instructions.md) | .github | AI contributor guidelines |
-| [CHANGELOG.md](../CHANGELOG.md) | Root | Version history |
-
----
-
-*This index is maintained to reduce documentation sprawl. If you add a new document, please update this index.*
+License notices and the code of conduct are policy/attribution documents, not changing release metrics. Their substance is preserved.

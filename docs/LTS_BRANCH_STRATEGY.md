@@ -1,5 +1,7 @@
 # LTS Branch Strategy for Layers Extension
 
+> **Current guidance — September 6, 2026:** Main requires MediaWiki >=1.44. REL1_43 is separate; verify each new security backport rather than assuming parity. REL1_39 is unmaintained. Post-1.5.95 main fixes have not been verified on REL1_43 in this documentation checkpoint.
+
 This document outlines the branch strategy and support policy for the Layers extension.
 
 ---

@@ -1,5 +1,7 @@
 # Named Layer Sets Architecture
 
+> **Current guidance — September 6, 2026:** Current ownership uses original-creator metadata and `layers-admin`; older rows with pruned creator evidence require admin deletion/renaming. Layer revisions are separate from article history. See [current status](CURRENT_STATUS.md) for intent-like naming and default-path limitations.
+
 **Created:** January 2025  
 **Status:** ✅ Implemented (verified on v1.5.62)  
 **Version:** 1.3 (v57 verification refresh)

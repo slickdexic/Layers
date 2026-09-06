@@ -4,6 +4,26 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored file-set renaming and enforced creator/admin ownership across all affected document pages.
+- Preserved creator metadata through pruning; legacy sets with missing creator evidence require `layers-admin` for deletion/renaming.
+- Kept failed buffered saves open, restored page-specific set/background state and rejected stale editor responses.
+- Prevented late, detached lightbox images from attaching oversized overlays; ignored stale navigation/session callbacks and preserved zero opacity.
+- Bound cached server PDF exports to the source title, preventing cross-title access through same-content files. Old unbound caches require regeneration.
+
+### Documentation
+
+- Corrected the ineffective null-edit audit claim and documented remaining history, search and export limitations.
+- Refreshed image, PDF and standalone-slide guides, API/configuration/permission references, MediaWiki source pages and the GitHub wiki.
+- Defined the next priorities: page-owned revision history, searchable slide/annotation text, then Cargo query/filter support. These remain proposals.
+
+### Verification
+
+- September 6 checkpoint: 180 JavaScript suites / 14,310 tests; PHP QA passed; PHPUnit 686 tests / 1,475 assertions with one skipped. Coverage was not remeasured.
+- Security fixes in this section are on `main`; the corresponding `REL1_43` backport has not been verified. This is not a new tagged release.
+
+
 ## [1.5.95] - 2026-09-02
 
 ### Changed
@@ -450,84 +470,168 @@ client-side state, so one page's work leaked onto the next.
 ### Fixed
 
 - **Remote images (like Wikimedia Commons) no longer trigger lossy PDF exports.**
-  The client-side PDF export now requests CORS for remote images to avoid canvas
-  tainting, significantly reducing how often it falls back to the lossy
-  server-side export.
+  The lightbox PDF export prefers a lossless client-side compositor, but falls
+  back to the server-side compositor (which drops 7 of the 17 layer types) if
+  the client canvas becomes "tainted" by a cross-origin image. The viewer now
+  explicitly requests CORS (`crossorigin="anonymous"`) when loading images from
+  other domains, and falls back to a non-CORS request if the remote server
+  refuses. This prevents canvas tainting for properly configured remotes like
+  InstantCommons and drastically reduces how often the lossy server fallback
+  is used.
 
 ### Removed
 
 - **Dead server-side thumbnail compositing path.** `LayersFileTransform` and
-  `LayeredThumbnail` were removed as they were completely unreachable during
-  normal page rendering (which relies entirely on the browser to draw layers).
+  `LayeredThumbnail` have been removed. This code was intended to hook into
+  MediaWiki's `BitmapHandlerTransform` to bake layers into the thumbnail PNG
+  itself, but it was provably unreachable: the hook requires `layers` and
+  `layerData` in the params array, but `WikitextHooks` explicitly `unset`s
+  the `layers` param while normalizing it to `layerset`. Normal page rendering
+  has always injected layer data as HTML attributes for the browser to draw.
+  The server-side compositor (`ThumbnailRenderer`) remains, but its only
+  consumer is now the PDF export fallback.
 
 ## [1.5.84] - 2026-08-06
 
 ### Fixed
 
 - **A template that embeds the same image as the page could steal its layer
-  set.** The pre-parse wikitext scan cannot see images emitted by templates, but
-  its positional queue was consulted first — so once a template contributed an
-  occurrence, one image could be rendered with another's annotations. The render
-  side now detects that misalignment and falls back to the parse-order source,
-  which sees every occurrence. Pages where every image is written directly in the
-  wikitext are unaffected.
+  set.** Two sources feed the render side: `fileSetNames`, built by scanning raw
+  wikitext, and `fileParamLayerset`, recorded per occurrence during parsing. The
+  scan runs before template expansion, so it cannot see images emitted by
+  templates — but its queue was consulted *first* and indexed positionally. Once
+  a template contributed an occurrence, scan index N stopped meaning render
+  occurrence N, and one image was rendered with another's annotations.
+  `getFileParamsForRender()` now compares `fileParseCount` (which counts every
+  occurrence) against what the scan saw, and ignores the scan queue when it is
+  provably misaligned, falling back to the parse-order source that sees
+  everything. Behaviour is unchanged for pages where every occurrence is written
+  directly in the wikitext.
+
+  Note for the record: the original review entry (R2.12) diagnosed this as
+  "templates desynchronise the queue" and claimed template images were unhandled.
+  That was wrong — there is a designed fallback for them. The actual defect was
+  narrower and is what is fixed here.
 
 ### Notes
 
-- `REL1_43` received a security-only backport as **1.5.68-REL1_43**. `REL1_39` is
-  end-of-life and is now documented as unmaintained rather than recommended.
+- `REL1_43` received a security-only backport as **1.5.68-REL1_43** covering the
+  six defects fixed on `main` between v1.5.68 and v1.5.83 that had never been
+  carried over. `REL1_39` is end-of-life and is now documented as unmaintained
+  rather than recommended.
 
 ## [1.5.83] - 2026-08-06
 
-Remediation of the R2 critical review. Three of the five HIGH findings were the
-same failure mode: a v1.5.80 fix applied in one place and never propagated to
-the other structurally identical call sites. Two new gates close that class.
+Remediation of the R2 critical review (see `codebase_review.md` §R2). Three of
+the five HIGH findings were the *same* failure mode: a v1.5.80 fix written
+correctly in one place and never applied to the other structurally identical
+call sites, with no gate to catch it. Two new gates close that class.
 
 ### Security
 
-- `action=layerspdfexport` now requires POST and a CSRF token. As a token-less
-  GET it rasterised up to 100 pages with ImageMagick and wrote a PDF to disk,
-  so any third-party page could drive it from every logged-in visitor's browser.
-- Ships `$wgRateLimits` defaults. Without them `pingLimiter()` treats an
-  unconfigured bucket as unlimited, so all three Layers rate-limit keys were
-  decorative on a default install. Merged with `array_plus_2d`, so local
-  overrides still win.
+- **`action=layerspdfexport` now requires POST and a CSRF token.** It was a
+  token-less GET that rasterises up to `$wgLayersPdfExportMaxPages` pages with
+  ImageMagick, composites a layer set onto each, and writes a PDF to disk — so
+  any third-party page could embed
+  `<img src="…/api.php?action=layerspdfexport&filename=Big.pdf">` and turn every
+  logged-in visitor's browser into an amplifier against the wiki.
+- **Ships `$wgRateLimits` defaults.** `RateLimiter::checkRateLimit()` resolves to
+  `User::pingLimiter()`, which returns "not limited" for an unconfigured bucket.
+  `extension.json` declared no limits, so *all three* Layers rate-limit keys
+  (`editlayers-save`, `-render`, `-list`) were decorative on every default
+  install. Defaults are merged with `array_plus_2d`, so existing
+  `$wgRateLimits` overrides in `LocalSettings.php` still win.
 
 ### Fixed
 
-- Generated renders for foreign (InstantCommons) files could never be purged
-  and their PDF exports could never be delivered: the `foreign_<sha1>` fallback
-  identifier was rejected by three separate guards. One canonical
-  `RenderCache::artefactKey()` is now used by every producer and consumer.
-- `endAtomic()` in a catch block committed partial writes in three more places
-  (`deleteNamedSet`, `renameNamedSet`, and the schema revision-renumbering
-  migration). All now use `ATOMIC_CANCELABLE` + `cancelAtomic()`.
-- Pages embedding a file are now purged when its layer set changes; previously
-  only the `File:` page was, so articles served stale layer data.
-- `[[Image:…|layerset=…]]` and localised File-namespace aliases now work — the
-  scan and strip regexes disagreed, so the parameter was destroyed before it
-  could be queued.
-- `layerslink=` is no longer stripped from the whole page, only from file links.
-- `arrowsInside` and `reflexAngle` no longer revert to on after a reload.
-- PDF export no longer silently omits callouts, markers, dimensions, imported
-  images, groups and shape-library shapes: the gap is declared, gated, reported
-  in the API result and surfaced to the user.
-- Malformed gradient stops, rich-text runs and polygon points are rejected
-  instead of being silently discarded from an otherwise "successful" save.
-- Point coordinates, `originalWidth`/`originalHeight` and slide
-  `backgroundColor` are now validated.
-- Drafts are scoped per user, expired drafts are swept, and a full
-  `localStorage` quota is recovered from instead of permanently disabling
-  autosave.
-- The editor modal no longer leaks a `message` listener per iframe navigation.
-- `SlideHooks` warns once per parse when its query cap is reached.
+- **Generated renders for foreign (InstantCommons/ForeignDB) files could never
+  be purged, and their PDF exports could never be delivered.**
+  `ForeignFileHelper::getFileSha1()` falls back to `foreign_<sha1>` — 48
+  characters containing an underscore — and three separate guards rejected that
+  shape: `RenderCache::purgeBySha1()`, `RenderCache::ARTEFACT_PATTERN` and
+  `SpecialLayersExport`. Consequences: deleting a Commons-backed file left its
+  composited thumbnails and exported PDFs on disk permanently (the v1.5.80
+  privacy fix did not apply to them at all), the reaper walked past them
+  forever, and every PDF export of a Commons image did the full render and then
+  404'd at delivery. There is now one canonical `RenderCache::artefactKey()`
+  used by every producer and consumer.
+- **`endAtomic()` in a catch block committed partial writes in three more
+  places.** v1.5.80 fixed `saveLayerSet()` only. `deleteNamedSet()`,
+  `renameNamedSet()` and `LayersSchemaManager`'s revision-renumbering migration
+  still marked the section *successful* on failure — so a failed delete or
+  rename destroyed a subset of revisions while reporting failure to the user.
+  All now use `ATOMIC_CANCELABLE` + `cancelAtomic()`.
+- **Pages embedding a file were never purged after a layer set changed.**
+  `CacheInvalidationTrait`'s docblock claimed backlink invalidation; the body
+  only ever touched the `File:` page, so an article containing
+  `[[File:X|layerset=on]]` kept serving parser-cached HTML with the old layer
+  set. An `HTMLCacheUpdateJob` over the `imagelinks` backlinks is now queued.
+- **`[[Image:…|layerset=…]]` silently rendered no layers.** The three scan
+  regexes matched `File:` only while the strip regex matched `File:` and
+  `Image:`, so the parameter was destroyed before anything could queue it. All
+  four now share one alternation built from the wiki's actual File-namespace
+  name and aliases, so localised prefixes (`Datei:`, `Fichier:`, `Bild:`) work
+  too.
+- **`layerslink=` was stripped from the entire page**, not just from file links,
+  so a page documenting the syntax had its example silently deleted. It is now
+  removed inside the file-link callback alongside `layerset=`.
+- **`arrowsInside` and `reflexAngle` reverted to on after a reload.** They are in
+  the validator's boolean whitelist and in the client normalizer, but were
+  missing from `ApiLayersInfo::preserveLayerBooleans()`, so MediaWiki's API
+  dropped them when `false`. Fourth recurrence of the bug class in
+  `docs/POSTMORTEM_BACKGROUND_VISIBILITY_BUG.md`; now covered by a gate.
+- **PDF export silently omitted seven of the seventeen layer types.**
+  `ThumbnailRenderer` had a bare `default: return []`, so callouts, markers,
+  dimensions, angle dimensions, imported images, groups and every
+  shape-library/emoji shape vanished from exports with no warning. The gap is
+  now declared in `ThumbnailRenderer::UNSUPPORTED_SERVER_SIDE`, enforced by a
+  gate, reported as `incomplete`/`droppedtypes` in the API result, and surfaced
+  to the user as a notice pointing at the (complete) client-side Download.
+- **Validation silently discarded user content.** Malformed gradient stops,
+  rich-text runs and polygon points were skipped one-by-one while the save
+  still returned `success: 1` — so a ten-stop gradient with typos became a
+  two-stop one and formatting disappeared with no error. These are now strict
+  properties that fail the layer instead of being dropped.
+- Point coordinates are bounded to ±100000 like every other geometry field;
+  `1e308` was previously stored verbatim.
+- `originalWidth`/`originalHeight` now require 1–16384; negative "original"
+  image dimensions were accepted.
+- Slide `backgroundColor` is validated through `ColorValidator`. It reached
+  storage via `LayersDatabase::saveLayerSet()` and was the only colour in the
+  system that bypassed validation.
+- `RateLimiter::isComplexityAllowed()` no longer claims to "multiply complexity
+  by contained layers" for groups — children live in the same flat array and
+  are already costed individually. `angleDimension` was missing and fell to the
+  expensive default; the `blur` case was dead (blur is a fill, not a type).
+- **Drafts are scoped to the current user.** Keyed by filename alone, a shared
+  browser profile offered the next person the previous person's unsaved
+  annotations.
+- **`localStorage` quota exhaustion is now recoverable.** Nothing evicted drafts
+  for files the user would never reopen, so the origin quota filled up and every
+  consumer on the wiki started failing. Expired drafts are swept on editor open,
+  and a failed write triggers an aggressive sweep and one retry. `saveDraft()`
+  no longer gates on a write-probe, which failed for the same reason the real
+  write did.
+- The editor modal registered a `message` listener on every iframe `load`, so
+  any internal navigation (session expiry → login redirect) leaked a listener
+  and duplicated close handling. It is registered once per modal.
+- `SlideHooks` now warns once per parse when the 50-query cap is hit. Slides
+  past the cap render at configured defaults, which was previously undiagnosable
+  from the logs.
 
 ### Added
 
-- `npm run check:parallel` — asserts the hand-maintained boolean-property and
-  layer-type lists agree across PHP and JS.
-- `npm run check:atomicity` — fails on `endAtomic()` inside a `catch`. It found
-  a fourth occurrence the review had missed.
+- `scripts/check-parallel-lists.js` (`npm run check:parallel`) — asserts
+  set-equality of the hand-maintained lists that must agree across PHP and JS:
+  boolean properties across `ServerSideLayerValidator` ↔ `ApiLayersInfo` ↔
+  `LayerDataNormalizer`, and layer types across the validator ↔
+  `ThumbnailRenderer` (handled + explicitly declared unsupported) ↔
+  `RateLimiter`. Wired into `npm test`.
+- `scripts/check-atomicity.js` (`npm run check:atomicity`) — fails on any
+  `endAtomic()` inside a `catch` block, and on `cancelAtomic()` used without a
+  cancelable section. It found a fourth occurrence in `LayersSchemaManager`
+  that the review had missed. Wired into `npm test`.
+- `layers-export-incomplete` message.
 
 ## [1.5.82] - 2026-08-06
 
@@ -908,21 +1012,24 @@ the other structurally identical call sites. Two new gates close that class.
   `ThumbnailRenderer`, `ApiLayersExport` and `Hooks`.
 - `coverage.json` (9.5 MB), `coverage_output.txt` and two `codebase_review.md`
   backups are no longer tracked; `.gitignore` was extended so they cannot be
-  re-added.
-- `scripts/update-version.js` no longer silently skips `wiki/Installation.md`
-  and `improvement_plan.md`, which is why `--check` passed while
-  `wiki/Installation.md` still advertised 1.5.76.
+  re-added. Working copies are left in place.
+- `scripts/update-version.js` no longer reports `PATTERN NOT FOUND` for
+  `wiki/Installation.md` and `improvement_plan.md`. Both were silently skipped,
+  so `--check` passed while `wiki/Installation.md` still advertised 1.5.76.
 
 ### Documentation
-- The `edit` permission requirement and the behaviour change it implies are
-  documented in the README, the mediawiki.org page, [[Permissions]] and
-  [[API-Reference]].
-- `maintenance/purgeLayersRenderCache.php` is documented in the README and the
-  mediawiki.org page.
+- `README.md`, `Mediawiki-Extension-Layers.mediawiki`, `wiki/Permissions.md` and
+  `wiki/API-Reference.md` document the new `edit` permission requirement and the
+  behaviour change it implies.
+- `README.md` and the mediawiki.org page document
+  `maintenance/purgeLayersRenderCache.php`.
 - `docs/ACCESSIBILITY.md` records that the skip-link and ARIA landmark labels it
   claimed as resolved were in fact never shipped to the browser until now.
-- [[Permissions]] previously asserted that cascading protection blocked layer
-  edits. That was aspirational; it is true as of this release.
+- `.github/copilot-instructions.md` gains the three-way i18n contract, the
+  permission-gating rule for new write endpoints, the `ATOMIC_CANCELABLE`
+  requirement and the `RenderCache` purge requirement; stale metrics corrected.
+- `wiki/Permissions.md` previously asserted that cascading protection blocked
+  layer edits. That was aspirational; it is true as of this release.
 
 ## [1.5.79] - 2026-08-09
 
@@ -959,36 +1066,56 @@ the other structurally identical call sites. Two new gates close that class.
 
 ### Changed
 - **Text box & callout: character formatting is now on the floating toolbar
-  only.** Per-character controls (font, size, bold, italic, underline,
-  strikethrough, highlight, text colour, alignment) were duplicated on the
-  left properties panel where they conflicted with the inline editor. They now
-  live exclusively on the floating toolbar; the left panel keeps whole-object
-  properties (a new **Text Effects** section for text outline/stroke, text
-  shadow, box fill/border, size, alignment, callout tail). Simple single-line
-  `text` layers are unchanged.
+  only** — Per-character controls (font, size, bold, italic, underline,
+  strikethrough, highlight, text colour, alignment) were duplicated on the left
+  properties panel, where they applied to the whole layer and conflicted with
+  the inline editor. They now live exclusively on the floating toolbar (shown
+  while editing the text). The left panel keeps only whole-object properties: a
+  new **Text Effects** section (text outline/stroke), text shadow, box
+  fill/border, size, alignment and the callout tail. This matches the
+  object-vs-character split used by mainstream editors and removes the class of
+  panel/inline conflicts entirely. (Simple single-line `text` layers are
+  unchanged — they have a single uniform style.)
 
 ### Fixed
-- **Text could disappear when using left-panel controls mid-edit** — a
-  data-loss bug caused by the panel and inline editor both mutating the layer;
-  the panel now commits the inline edit first and `finishEditing` always writes
-  to the live layer.
-- **Panel font/size/bold/italic/colour now take effect on rich text** (applied
-  to every run, not just the overridden base) and **font size no longer
-  reverts** on text boxes / callouts.
-- **New text boxes remember your last font size**; the default was raised from
-  16 to 24.
-- **Inline text-toolbar font-size stepper** — replaced the clipped native
-  spinner with accessible custom −/+ buttons.
-- **Arrows no longer render as a malformed outline when scaled down.**
-- **Preselected inline font size is honoured when typing.**
-- **Preset icons** depict the full style (fill/gradient, stroke, tool shape);
-  saving a preset no longer drops a gradient fill; and **"Set as default"**
-  now actually seeds the tool's style.
-- **Revision history** — loading an old revision no longer risks saving into
-  the wrong named set, the history list reflects the loaded revision's set,
-  and the selector reliably highlights the loaded revision.
+- **Text boxes / callouts: property-panel controls could wipe the text** — While
+  a text box was being edited inline, clicking a left-panel format control
+  (Bold, font size, colour, …) operated on the temporarily-emptied layer and
+  committed the typed text to a stale object, so the text could vanish on the
+  next action or on clicking away. Panel format changes now commit the inline
+  edit first, re-read the current layer, and apply to every rich-text run; and
+  `finishEditing` always writes to the live layer so content can no longer be
+  lost.
+- **Text boxes: font/size/bold/italic/colour from the left panel now take
+  effect** — For rich-text layers these controls previously set only the base
+  property, which each run's own style overrides, so they appeared to do
+  nothing (or a toolbar resize was lost when toggling bold). They now apply to
+  all runs, preserving other per-run styling.
+- **New text boxes remember your last font size** — Creating a text/text
+  box/callout now adopts the font size you last used instead of always
+  resetting, and the default size was raised from 16 to 24 (16 was too small
+  for most annotations).
+- **Inline text toolbar font-size stepper** — Replaced the clipped native
+  number-spinner (its up arrow was cut off) with clear, fully-accessible custom
+  −/+ buttons.
+- **Preset arrow icons** — Arrow/line preset swatches are drawn horizontally
+  (previously a cramped diagonal) and use the preset's actual colour, so they
+  read clearly at icon size.
+- **Revision history: correct revision highlighted** — The revision dropdown now
+  compares ids numerically, so a loaded revision is reliably shown as selected
+  even when the API returns the id as a string.
 
 ### Added
+- **Preset icons now depict the full style** — Style-preset dropdown swatches
+  are drawn as a small SVG that reflects the preset's fill (solid *or*
+  gradient), stroke colour and stroke width, using a tool-appropriate shape
+  (glyph for text, arrow/line, ellipse, star, polygon, rounded rectangle)
+  instead of a single flat colour chip.
+- **"Set as default" preset now takes effect** — Setting a user preset as the
+  default for a tool now actually seeds that tool's style when the tool is
+  activated (previously the star only marked the default in the list but never
+  applied it). Built-in presets are never auto-applied, so a plain tool switch
+  never clobbers your current style.
 - **Full-screen viewer support for PDFs and multi-page files** — Clicking the
   "view full screen" overlay on a marked-up PDF now works. Previously the
   lightbox tried to load the raw `.pdf` into an `<img>` (which browsers cannot
@@ -1016,7 +1143,34 @@ the other structurally identical call sites. Two new gates close that class.
   render width, default 1600px) and `$wgLayersPdfExportMaxPages` (default 100).
 
 ### Fixed
-- **Saving layers on PDF pages other than page 1 silently failed** — Adding
+- **Loading an old revision could save into the wrong layer set** — When a
+  historical revision belonging to a different named set was loaded from the
+  revision-history dropdown, the editor left the active set name stale, so a
+  subsequent Save wrote the edit into the previously-viewed set instead of the
+  loaded revision's set. The client now syncs the active set name from the
+  loaded revision, and the `layersinfo` API's `layersetid` lookup now returns
+  that set's revision list so the history dropdown reflects the correct set.
+- **Font-size changes reverting on text boxes / callouts** — Changing the font
+  size from the left properties panel only updated the layer's base size, which
+  is overridden by each rich-text run's own size, so the change appeared to
+  revert. The control now also applies the new size to every rich-text run
+  (preserving other per-run styling).
+- **Preset styles not fully saved** — Saving a preset from a selected shape
+  dropped the gradient fill because the capture whitelist had drifted out of
+  sync with the storage whitelist; `gradient` is now captured.
+- **Preselected font size ignored when typing** — Choosing a font size in the
+  inline text toolbar before typing (with no selection) no longer reverts to the
+  default; the chosen size is applied as the layer's base so new text honours it.
+- **Arrows rendered as a malformed outline when scaled down** — A non-scaling
+  hard-coded minimum shaft width made heavily downscaled arrows (e.g. an image
+  shown at ~300px) render the shaft wider than the shrunken head, degenerating
+  the arrow polygon. The shaft floor is now sub-pixel so the shaft/head stay
+  proportional at any display size.
+- **Inline text-toolbar font-size spinner** — The size input now has an explicit
+  height so both native up/down spinner arrows are fully visible and centred.
+- Removed leftover debug `console.log` statements from the rich-text/font-size
+  code paths (approved `mw.log` logging retained).
+
   annotations to page 2+ of a multi-page PDF and clicking Save returned
   `savefailed` with nothing persisted. Two causes: (1) a stale unique index
   (`ls_img_name_set_revision`, missing the page column) survived on installations
@@ -1051,7 +1205,6 @@ the other structurally identical call sites. Two new gates close that class.
   possible (e.g. a cross-origin/tainted canvas) it falls back to the previous
   server-side export. The multi-page latent bug in the server compositor — scaling
   every page against page 1's dimensions — was also fixed by making it page-aware.
-- **Layer overlays not appearing for lower-case file references** — A
   `[[File:...]]` embed whose filename began with a lower-case letter in the
   wikitext (e.g. `[[File:somepdf.pdf|layerset=001]]`) silently rendered no
   overlays. The wikitext scanner keyed its layerset queue on the raw captured
@@ -1072,17 +1225,23 @@ the other structurally identical call sites. Two new gates close that class.
   layer sets and revision history, scoped to a `(file, page)` pair.
   - New `ls_page` column on the `layer_sets` table (defaults to `1`, so all
     existing images and single-page files are unaffected). A schema patch
-    (`patch-add-ls_page.sql`) migrates existing installations.
+    (`patch-add-ls_page.sql`) migrates existing installations and rebuilds
+    the unique key to include the page.
   - The editor toolbar shows a **page navigator** (previous / next plus a
-    "Page X / N" indicator) for multi-page files.
+    "Page X / N" indicator) for multi-page files. Switching pages reloads
+    the editor with the correct rasterized page, dimensions, and page-scoped
+    layer set. Unsaved changes are guarded before navigating.
   - Wikitext embeds respect the standard PDF `page` parameter, e.g.
-    `[[File:Doc.pdf|page=2|layerset=on]]`. The `{{#layeredfile:}}` parser
-    function accepts an optional `page=N` argument.
+    `[[File:Doc.pdf|page=2|layerset=on]]` shows the layer set saved for page
+    2. The `{{#layeredfile:}}` parser function accepts an optional `page=N`
+    argument. Viewer, lightbox, and freshness-check code paths propagate the
+    page via a `data-page` attribute.
   - The `layersinfo`, `layerssave`, `layersdelete`, and `layersrename` API
-    modules accept an optional `page` parameter; `layersinfo` returns `page`
-    and `pageCount`.
-  - Requires the **PdfHandler** extension for PDF rasterization. Without it,
-    PDFs are treated as single-page files.
+    modules accept an optional `page` parameter (1-based, clamped to the
+    file's page count). `layersinfo` returns `page` and `pageCount`.
+  - Requires the **PdfHandler** extension (plus Ghostscript/ImageMagick) for
+    PDF rasterization and page dimensions. Without it, PDFs are treated as
+    single-page files and behave exactly as before.
   - New i18n keys: `layers-page-nav-label`, `layers-page-prev`,
     `layers-page-next`, `layers-page-indicator`, `layers-page-unsaved-confirm`.
 
@@ -1113,15 +1272,18 @@ the other structurally identical call sites. Two new gates close that class.
   in `extension.json` nor exported to the client via
   `MakeGlobalVariablesScript`. As a result, administrator overrides were
   silently ignored and the client always used hardcoded defaults. All three
-  are now registered and exported (with safe fallbacks).
+  are now registered and exported (with safe fallbacks), so the client-side
+  downscale/compression honours the configured limits.
 - **"Data too large" save failures now recover gracefully** — When a save
   is rejected client-side for exceeding `$wgLayersMaxBytes`, the Save button
   is re-enabled and the user is notified with the configured byte limit,
   instead of leaving the editor in a stuck "saving" state.
 - **Broken build on `main`** — Image aspect-ratio linking shipped without
   updating the parallel `PropertiesForm.test.js` image-dimension tests,
-  leaving the Jest suite red. Updated the stale assertions and added a
-  regression test covering the `preserveAspectRatio: false` path.
+  leaving the Jest suite red. Updated the stale assertions to the linked
+  payloads and added a regression test covering the
+  `preserveAspectRatio: false` (unlocked) path, which previously had zero
+  coverage.
 
 ### Changed
 - **REL1_39 compatibility hardening** — Additional `method_exists()` /

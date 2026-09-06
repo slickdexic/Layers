@@ -1,5 +1,7 @@
 # Contributing Guide
 
+> **Current guidance — September 6, 2026:** Develop against main (manifest minimum MediaWiki 1.44) and a supported core runtime. REL1_43 backports require separate verification; REL1_39 is unmaintained. See [[Testing Guide]] for current commands and [[Current Status]] for dated metrics.
+
 Thank you for your interest in contributing to Layers! This guide explains how to get started.
 
 ---
@@ -23,7 +25,7 @@ Thank you for your interest in contributing to Layers! This guide explains how t
 
 - **PHP 8.1+** with Composer
 - **Node.js 18+** with npm
-- **MediaWiki 1.39+** installation
+- **MediaWiki 1.44+** installation for main
 - **Git**
 
 ### Clone and Install
@@ -68,7 +70,7 @@ If you have a local MediaWiki installation:
 
 - `main` — Latest stable code (MediaWiki 1.44+)
 - `REL1_43` — LTS for MediaWiki 1.43.x (full feature parity with main)
-- `REL1_39` — Legacy for MediaWiki 1.39-1.42 (community maintained)
+- `REL1_39` — Unmaintained legacy branch for MediaWiki 1.39-1.42
 - Feature branches — Create from `main`
 
 ### Creating a Feature Branch

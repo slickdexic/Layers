@@ -1,147 +1,44 @@
-# Quick Start Guide
+# Quick start
 
-Create your first image annotation in 5 minutes!
+This guide covers images, standalone slides and PDFs. First install Layers and confirm your account can edit layers; see [[Installation]] and [[Permissions]].
 
----
+## Annotate an image
 
-## Step 1: Open the Editor
-
-1. Navigate to any **File:** page (e.g., `File:Example.jpg`)
-2. Click the **"Edit Layers"** tab at the top of the page
-
-![Editor Tab Location](https://via.placeholder.com/600x100?text=Edit+Layers+Tab)
-
----
-
-## Step 2: Understand the Interface
-
-The editor has three main areas:
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│  TOOLBAR (top)                                                │
-│  [Pointer][Zoom][Text][Shapes...][Style Controls][Actions]   │
-├─────────────────┬────────────────────────────────────────────┤
-│  LAYER PANEL    │                                            │
-│                 │                                            │
-│  • Layer 1      │               CANVAS                       │
-│  • Layer 2      │           (your image)                     │
-│  • Background   │                                            │
-│                 │                                            │
-└─────────────────┴────────────────────────────────────────────┘
-```
-
-- **Toolbar**: Drawing tools and style controls
-- **Canvas**: Your image with annotations
-- **Layer Panel**: Manage layers, visibility, and order
-
----
-
-## Step 3: Add Your First Annotation
-
-### Add a Text Label
-
-1. Click the **Text tool** (T) in the toolbar, or press `T`
-2. Click on the canvas where you want the text
-3. Type your label text
-4. Press **Enter** or click **OK**
-
-### Add a Rectangle Highlight
-
-1. Click the **Rectangle tool** (R) in the toolbar, or press `R`
-2. Click and drag on the canvas to draw
-3. Release to complete the shape
-
-### Add an Arrow Callout
-
-1. Click the **Arrow tool** (A) in the toolbar, or press `A`
-2. Click the starting point
-3. Drag to the ending point
-4. Release to complete
-
----
-
-## Step 4: Style Your Annotations
-
-With a layer selected:
-
-1. **Stroke Color**: Click the color picker in the toolbar
-2. **Fill Color**: Click the fill color picker
-3. **Stroke Width**: Adjust the slider (0-50px)
-4. **Shadow**: Toggle on/off and adjust blur/offset
-
-> **Tip:** Save frequently-used styles as presets! See [[Style Presets]].
-
----
-
-## Step 5: Save Your Work
-
-1. Click the **Save** button in the toolbar, or press `Ctrl+S`
-2. Your annotations are now saved and visible to all users
-
----
-
-## Step 6: Display in Wiki Pages
-
-To show your annotations in a wiki article:
+1. Open an uploaded image's File page and choose **Edit Layers**.
+2. Add a textbox, callout or shape. Use the Pointer tool to select and position it.
+3. Save the set with a descriptive name, such as `annotations`.
+4. Embed it in an article:
 
 ```wikitext
-[[File:Example.jpg|layerset=on]]
+[[File:Diagram.png|600px|layerset=annotations]]
 ```
 
-Or use a specific named layer set:
+## Create a standalone slide
+
+1. Visit `Special:Slides` and create a slide, or open `Special:EditSlide/SafetyProcedure`.
+2. Add your instructions using textboxes/callouts and drawing tools, then save.
+3. Embed it:
 
 ```wikitext
-[[File:Example.jpg|layerset=anatomy]]
+{{#Slide: SafetyProcedure | size=800x600}}
 ```
 
-> **Note:** `layers=` is also supported for backwards compatibility.
+To specify creation dimensions in markup, add `canvas=1200x800`. Display size and canvas coordinates are different. Add `layerset=annotations` if you saved that named set. Slides need no placeholder image.
 
----
+## Annotate a PDF
 
-## Essential Keyboard Shortcuts
+The wiki must first display PDF thumbnails correctly. Open the File page, choose Edit Layers and navigate to the required page. Each PDF page has its own sets and dimensions.
 
-| Action | Shortcut |
-|--------|----------|
-| Pointer Tool | `V` |
-| Text Tool | `T` |
-| Rectangle Tool | `R` |
-| Arrow Tool | `A` |
-| Toggle Smart Guides | `;` |
-| Undo | `Ctrl+Z` |
-| Redo | `Ctrl+Y` |
-| Save | `Ctrl+S` |
-| Delete Selected | `Delete` |
-| Multi-Select | `Ctrl+Click` |
+```wikitext
+[[File:Manual.pdf|page=2|600px|layerset=annotations]]
+```
 
-Press `Shift+?` to see all shortcuts.
+Page turns keep edited pages in memory. Save writes changed pages one at a time. If a save fails, keep the editor open and retry; the whole document is not saved atomically. A browser refresh can lose unsaved in-memory work.
 
----
+## View and share
 
-## Tips for Better Annotations
+Use the lightbox action for a larger view. `layerslink=editor-modal` opens the editor in a modal when same-origin framing is configured. See [[Wikitext Syntax]] for click behavior and named sets. Check exported output when layout or complete document coverage matters; current export limitations are listed in [[Current Status]].
 
-### Use Consistent Colors
-Create a color scheme for your project and save it as presets.
+## Before using slides for controlled SOPs
 
-### Layer Order Matters
-Layers on top appear in front. Drag layers in the panel to reorder.
-
-### Use Named Sets for Different Purposes
-Create separate layer sets for different annotation purposes:
-- `default` — General annotations
-- `labels` — Text labels only
-- `highlights` — Color highlights
-- `tutorial` — Step-by-step guides
-
-### Zoom for Precision
-Use `Z` to switch to zoom mode, or scroll the mouse wheel to zoom in/out.
-
----
-
-## Next Steps
-
-- [[Drawing Tools]] — Master all 17 tools
-- [[Keyboard Shortcuts]] — Speed up your workflow
-- [[Style Presets]] — Save and reuse styles
-- [[Named Layer Sets]] — Organize multiple annotation sets
-- [[Slide Mode]] — Create standalone graphics without images
+Saving Layers does not reliably create an article history revision, and slide text is not yet integrated with wiki full-text search. Existing layer revisions and slide-name filtering do not replace those capabilities. See [[Current Status]] for the implementation roadmap.

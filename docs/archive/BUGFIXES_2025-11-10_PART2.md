@@ -1,5 +1,7 @@
 # Bug Fixes Part 2 - November 10, 2025
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 ## Issue #3: Missing markCanvasDirty() Method
 
 ### Error

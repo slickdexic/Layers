@@ -1,5 +1,7 @@
 # DEBUG: Canvas Layer Properties Panel Issue
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 ## Problem Statement
 When clicking the Canvas layer in Layer Manager (slide mode), the Properties Panel shows "Layer not found" instead of W×H and color controls.
 

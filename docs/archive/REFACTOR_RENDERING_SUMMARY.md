@@ -1,5 +1,7 @@
 # Refactoring Summary: Extract Rendering Logic
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 ## Overview
 Successfully extracted rendering logic from `CanvasManager.js` into a new `CanvasRenderer.js` module. This improves separation of concerns, making the codebase more modular and easier to test.
 

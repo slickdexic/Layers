@@ -1,5 +1,7 @@
 # Postmortem: Iframe Modal Editor 500 Error (February 2026)
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 ## Summary
 
 **Bug:** Clicking "Edit layers" on an image from an article page (iframe modal) returned HTTP 500 Internal Server Error, while:

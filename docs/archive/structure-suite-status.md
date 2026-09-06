@@ -1,5 +1,7 @@
 # MediaWiki structure suite tracker
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 _Last updated: 2025-11-15 (UTC)_
 
 This note logs the current status of `--testsuite structure` when executed inside the MediaWiki container. Keep it up to date each time we re-run `composer phpunit -- --testsuite structure` so that anyone can immediately see what remains before the Layers extension can be considered structure-suite clean.

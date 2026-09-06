@@ -1,156 +1,69 @@
-__NOTOC__
-= Wikitext Syntax =
-=== Basic Syntax ===
-Add the `layerset` parameter to any file link to display annotations:
+= Layers user guide =
+Documentation reviewed September 6, 2026 for version 1.5.95 and subsequent fixes on main. Layers supports '''images, PDF pages and standalone slides'''.
 
-<code><nowiki>[[File: Example.jpg | layerset=on]]</nowiki></code><br>
-'''Note:''' 'layers=' is also supported for backwards compatibility. Both parameters work identically.
-
-=== 'layerset=' Parameter Values ===
-{| class='wikitable'
-! Value !! Effect 
-|-
-| <code>on</code> || Display the default layer set
-|-
-| <code>default</code> || Display the default layer set (explicit)
-|-
-| <code>SetName</code> || Display a specific named layer set
-|-
-| <code>off</code> || Explicitly disable layers
-|-
-| <code>none</code> || Explicitly disable layers (alternative)
-|}
-
-=== Examples ===
-'''Default layer set:'''<br>
-<code><nowiki>[[File: Diagram.png | layerset=on]]</nowiki></code><br>
-<code><nowiki>[[File: Diagram.png | layerset=default]]</nowiki></code><br>
-Both of these display the default layer set on '''Diagram.png'''.
-
-'''Named layer sets:'''<br>
-<code><nowiki>[[File: Heart.png | layerset=anatomy]]</nowiki></code><br>
-<code><nowiki>[[File: Heart.png | layerset=blood-flow]]</nowiki></code></br>
-Both of these display '''Heart.png''' but with different layer sets.
-
-'''No layer sets:'''<br>
-<code><nowiki>[[File: Diagram.png | layerset=off]]</nowiki></code></br>
-<code><nowiki>[[File: Diagram.png | layerset=none]]</nowiki></code></br>
-<code><nowiki>[[File: Diagram.png]]</nowiki></code></br>
-These examples display '''Diagram.png''' with no layer set.
-
-=== Combining with Image Parameters ===
-The 'layerset' parameter works with all standard MediaWiki image parameters:<br>
-'''Thumbnails'''<br>
-<code><nowiki>[[File: Diagram.png | thumb | layerset=on | Diagram with annotations]]</nowiki></code></br>
-<code><nowiki>[[File: Diagram.png | thumb | 300px | layerset=anatomy | Anatomical labels]]</nowiki></code>
-
-'''Alignment'''<br>
-<code><nowiki>[[File: Diagram.png | left | layerset=on]]</nowiki></code></br>
-<code><nowiki>[[File: Diagram.png | center | layerset=on]]</nowiki></code></br>
-<code><nowiki>[[File: Diagram.png | right | layerset=on]]</nowiki></code>
-
-'''Size'''<br>
-<code><nowiki>[[File: Diagram.png | 200px | layerset=on]]</nowiki></code></br>
-<code><nowiki>[[File: Diagram.png | 300x200px | layerset=on]]</nowiki></code>
-
-'''Border and Framing'''<br>
-<code><nowiki>[[File: Diagram.png | border | layerset=on]]</nowiki></code></br>
-<code><nowiki>[[File: Diagram.png | frame | layerset=on | Caption text]]</nowiki></code></br>
-<code><nowiki>[[File: Diagram.png | frameless | layerset=on]]</nowiki></code>
-
-'''Complete Example'''<br>
-<code><nowiki>[[File: Human_Heart.png | thumb | 400px | right | border | layerset=anatomy | Human heart with anatomical labels]]</nowiki></code>
-
-=== Link Behavior (layerslink=) ===
-Control what happens when users click on layered images with the 'layerslink=' parameter:<br>
-'''Note:''' 'layerslink=' must be used together with 'layerset='. It controls the click behavior for images that have layers enabled. Without 'layerset=' or 'layers=', the 'layerslink=' parameter has no effect.
-{| class='wikitable'
-! Value !! Effect
-|-
-| (none) || Standard MediaWiki link to File page
-|-
-| 'editor' || Opens the layer editor, returns to originating page on close
-|-
-| 'editor-newtab' || Opens editor in a new browser tab
-|-
-| 'editor-modal' || Opens editor in overlay without navigation
-|-
-| 'viewer' || Opens fullscreen lightbox viewer
-|-
-| 'lightbox' || Alias for 'viewer'
-|}
-
-'''Examples'''<br>
-<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=editor]]</nowiki></code> Opens editor</br>
-<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=viewer]]</nowiki></code> Opens full size preview</br>
-<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=lightbox]]</nowiki></code> Same as 'viewer'</br>
-<code><nowiki>[[File: Diagram.png | layerset=anatomy]]</nowiki></code>Opens image's 'File:' page
-
-'''Advanced Editor Modes'''<br>
-For additional control over editor behavior:<br>
-<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=editor-newtab]]</nowiki></code> Opens the editor in a new tab<br>
-<code><nowiki>[[File: Diagram.png | layerset=anatomy | layerslink=editor-modal]]</nowiki></code> Opens the editor in an overlay (iframe).
-
-'''Note:''' 'layerslink=' is a deprecated feature with the new overlay buttons [[File:Layers-overlay-buttons.png]] (edit / view full size) that display on hover.<br>
-The 'Edit layers' button will open the Layers editor modally (overlay) so the user never leaves the page they are viewing. Saved edits are updated immediately on editor close.<br>
-The 'View full size' button opens a 'lightbox' (overlay) preview of the image. On overlay close, no navigation takes place, so the user remains on the same page.
-
-'''Link to editor'''<br>
-Direct linking to the editor is also possible:<br>
-<code>/wiki/File: Example.jpg?action=editlayers&setname=anatomy</code><br>
-Supported URL parameters:<br>
-- 'setname' - Layer set name to load<br>
-- 'layerset' - Alias for 'setname'</br>
-- 'layers' - Alias for 'setname' (backwards compatibility)
-
-=== Behavior Notes ===
-'''Non-existent Sets'''<br>
-If a named set doesn't exist, no layers are displayed (silent failure). The image shows without annotations.<br>
-<code><nowiki>[[File: Diagram.png | layerset=nonexistent]]</nowiki></code> If 'nonexistent' set doesn't exist, shows image only.<br>
-Overlay link to editor will appear when a layer set is included. Clicking 'Edit layers' will open the editor and create the new layer set.<br>
-Other 'layerslink=' parameters will also work once 'layerset=' is included.
-
-'''Case Sensitivity'''<br>
-Set names are case-sensitive.<br>
-<code><nowiki>[[File: Diagram.png | layerset=Anatomy]]</nowiki></code> is not the same as <code><nowiki>[[File: Diagram.png | layerset=anatomy]]</nowiki></code><br>
-
-'''Parameter Order'''<br>
-The 'layerset' parameter can appear anywhere in the parameter list:<br>
-<code><nowiki>[[File: Diagram.png | layerset=on | thumb | 300px]]</nowiki></code><br>
-<code><nowiki>[[File: Diagram.png | thumb | layerset=on | 300px]]</nowiki></code><br>
-<code><nowiki>[[File: Diagram.png | thumb | 300px | layerset=on]]</nowiki></code><br>
-All three examples behave exactly the same.
-
-= Slide Mode =
-Create standalone graphics without a base image using the <code><nowiki>{{#slide:}}</nowiki></code> parser function:<br>
-<code><nowiki>{{#slide: MySlideName}}</nowiki></code><br>
-<code><nowiki>{{#Slide: ... }}</nowiki></code> Capitalized 'Slide' is also supported for backwards compatibility.
-
-Just like images, slides support multiple named layer sets.
-
-'''Slide Parameters'''
+== Start with the right content type ==
 {| class="wikitable"
-! Parameter !! Description !! Example !! More
+! Content !! Editor !! Embed example
 |-
-| layerset || Named layer set to display || layerset=english || Same as with images
+| Image || Open its File page and choose Edit Layers || <code><nowiki>[[File:Diagram.png|600px|layerset=annotations]]</nowiki></code>
 |-
-|canvas || Canvas size (WxH) || canvas=1920x1080 || Only used when creating a new slide, otherwise ignored<br>Canvas dimensions can be changed in the editor
+| Standalone slide || <code>Special:Slides</code> or <code>Special:EditSlide/SafetyProcedure</code> || <code><nowiki>{{#Slide: SafetyProcedure|size=800x600}}</nowiki></code>
 |-
-| size || Display size || size=800x600 || Similar to images (px omitted). Aspect ratio is preserved without exceeding stated width and height
-|-
-| noedit || disables edit button || noedit || this prevents the 'Edit layers' overlay button
+| PDF page || Open its File page, choose Edit Layers and select the document page || <code><nowiki>[[File:Manual.pdf|page=2|600px|layerset=annotations]]</nowiki></code>
 |}
+Create and save the content and named sets before using these examples. PDF annotation requires working PDF thumbnails (normally PdfHandler). Slides need no background image or PDF dependency.
 
-'''Basic slide''' (default layer set)<br>
-<code><nowiki>{{#slide: MyDiagram}}</nowiki></code>
+== Select a named layer set ==
+{| class="wikitable"
+! Parameter !! Behavior
+|-
+| <code>layerset=on</code> || Select the current set; this is not necessarily a set named default
+|-
+| <code>layerset=default</code> || Request the set literally named default
+|-
+| <code>layerset=annotations</code> || Request the set named annotations
+|-
+| <code>layerset=none</code> or <code>layerset=off</code> || Disable annotations
+|}
+The older <code>layers=</code> spelling remains supported. Prefer descriptive names; names resembling intent values such as on/off/1 have inconsistent handling on some paths.
 
-'''Specific named layer set'''<br>
-<code><nowiki>{{#slide: MyDiagram | layerset=english}}</nowiki></code><br>
-<code><nowiki>{{#slide: MyDiagram | layerset=spanish}}</nowiki></code>
+<syntaxhighlight lang="wikitext">
+[[File:Diagram.png|thumb|400px|layerset=annotations|Equipment diagram]]
+[[File:Diagram.png|600px|layerset=on|layerslink=lightbox]]
+[[File:Diagram.png|600px|layerset=on|layerslink=editor-modal]]
+{{#Slide: SafetyProcedure|canvas=1200x800|size=800x600|layerset=instructions}}
+{{#Slide: SafetyProcedure|size=800x600|noedit}}
+</syntaxhighlight>
 
-'''Custom canvas and display size'''<br>
-<code><nowiki>{{#slide: Infographic | canvas=1200x800 | size=600x400}}</nowiki></code>
+For slides, <code>canvas=</code> controls creation dimensions; <code>size=</code> controls display dimensions. <code>noedit</code> hides an edit button, not API authorization. Editor-modal viewing requires compatible same-origin framing settings; see the installation/configuration guide.
 
-'''View-only mode'''<br>
-<code><nowiki>{{#slide: Published | noedit}}</nowiki></code>
-<headertabs />
+== Basic editing ==
+# Add textboxes, callouts, shapes or other drawing layers.
+# Use the Pointer tool to select, move, resize and rotate them.
+# Choose a descriptive set name, then save.
+# View the saved result in the article and lightbox.
+
+Use Ctrl+Z for undo, Ctrl+Y or Ctrl+Shift+Z for redo, 0 to fit, +/- to zoom, and Space-drag to pan. Keyboard behavior inside text fields differs from canvas commands. The editor's keyboard help is the reference for available commands.
+
+When editing a multi-page PDF, unsaved pages are held in memory. Save writes changed pages individually; this is not an atomic document save. Failed saves leave work unsaved. Keep the editor open and retry before closing the browser. Review recovery drafts before accepting them.
+
+== Permissions and retention ==
+The <code>editlayers</code> right controls editing. File annotations also require the applicable File-page editing authority. Deletion/renaming requires creator ownership or <code>layers-admin</code>; ordinary <code>delete</code> is not the override. Document-wide changes check every affected PDF page's set.
+
+New revisions preserve server-generated creator metadata. Legacy sets whose creator evidence was pruned require an administrator for deletion/renaming. Layers normally retains 50 revisions per set/document page; these are '''not MediaWiki article revisions'''. Deleting a set removes its retained data.
+
+== SOPs, search and Cargo ==
+Standalone slides can hold visual instructions, but current Layers saves do not reliably create history entries on their embedding article. The legacy history-tracking option does not fix this. Annotation text is not explicitly indexed by ordinary MediaWiki search; slide-name and editor-layer filters are different.
+
+Cargo galleries can choose a set from a query-result field. Textbox field bindings and Cargo tables containing annotation text are not implemented. The agreed development order is '''page revision history, MediaWiki search, then Cargo query/filter support'''.
+
+== Export and troubleshooting ==
+Client-side image export and lightbox print/download are separate from server PDF export. Server rendering and failed-page handling have known limitations; inspect important output against the viewer. Old server export cache entries may need regeneration after updating to the source-title binding fix.
+
+If something fails, record the branch/commit, content type, markup, browser and sanitized API/console errors. Never post confidential SOP text or tokens to public issues.
+
+== Further documentation ==
+* [https://github.com/slickdexic/Layers/wiki GitHub user guide]
+* [https://github.com/slickdexic/Layers/wiki/Current-Status Current status and limitations]
+* [https://github.com/slickdexic/Layers/wiki/API-Reference Action API reference]
+* [https://github.com/slickdexic/Layers/blob/main/docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md Revision, search and Cargo proposal]

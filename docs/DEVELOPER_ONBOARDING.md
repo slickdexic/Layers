@@ -1,5 +1,7 @@
 # Layers Extension Developer Onboarding & Architecture Overview
 
+> **Current guidance — September 6, 2026:** Use [current status](CURRENT_STATUS.md), [API contracts](API.md) and [the testing guide](../wiki/Testing-Guide.md) for the current main branch. Images, slides and PDF pages are equal test targets. Line counts and metrics below are older orientation snapshots, not current release gates.
+
 **Last Updated:** March 2026
 
 ## Introduction

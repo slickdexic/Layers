@@ -12,13 +12,12 @@ use MediaWiki\User\UserIdentity;
  * Trait for creating audit trail entries when layer data changes.
  *
  * When $wgLayersTrackChangesInRecentChanges is enabled, layer save/delete/rename
- * operations create a null edit on the associated File: page. This makes the
- * change visible in:
- * - Recent Changes (Special:RecentChanges)
- * - Page history (action=history)
- * - Watchlists (Special:Watchlist)
+ * operations attempt a null edit on the associated File: page. Unchanged
+ * content normally creates no new revision, so this does not guarantee
+ * Recent Changes, page history, or watchlist visibility.
  *
- * Each null edit is tagged with 'layers-data-change' for filtering.
+ * The requested tag is 'layers-data-change'. This best-effort legacy path is
+ * not a revision-compliance feature; see docs/proposals/REVISION_COMPLIANCE.md.
  *
  * Used by: ApiLayersSave, ApiLayersDelete, ApiLayersRename
  */

@@ -1,5 +1,7 @@
 # MediaWiki Layers Extension - Copilot Instructions
 
+> **Current guidance — September 6, 2026:** September 6 documentation checkpoint: consult [current status](../docs/CURRENT_STATUS.md) for implemented features and validation. Use `layers-admin` for the owner override, never generic `delete`. Do not claim null edits provide revision history, canvas text is automatically searchable, or Cargo field bindings/projections exist. Preserve coverage dates; never rewrite historical audits to look current.
+
 This guide is for contributors (human and AI) working on the Layers extension. It explains the architecture, API/data contracts, configuration, testing/build workflow, and security/i18n conventions you must follow.
 
 ## Branch Strategy
@@ -171,7 +173,7 @@ Base route: MediaWiki Action API. Client uses `new mw.Api()`.
 Contract note: The server persists a wrapped structure `{ revision, schema, created, layers }`. The client sends only the layers array as JSON string; the server performs validation/sanitization and constructs the full structure.
 
 - layersdelete (write)
-  - Rights: user must have 'editlayers', ordinary 'edit' permission on the file's page, AND be either the set owner (creator of first revision) or have 'delete' right (admin)
+  - Rights: user must have 'editlayers', ordinary 'edit' permission on the file's page, AND be either the set owner (creator of first revision) or have 'layers-admin' right
   - Token: needs CSRF token
   - Params: filename (string, required), setname (string, required), token (csrf)
   - Success payload (keyed by module name `layersdelete`): { success: 1, revisionsDeleted: N }
@@ -491,11 +493,11 @@ inline, blank lines grouping related keys). Edit them textually.
 - POST action=layersdelete (CSRF)
   - Params: filename, setname, token
   - Returns: { layersdelete: { success: 1, revisionsDeleted: N } }
-  - Permission: owner (first revision creator) or admin ('delete' right)
+  - Permission: owner (first revision creator) or admin ('layers-admin' right)
 - POST action=layersrename (CSRF)
   - Params: filename, oldname, newname, token
   - Returns: { layersrename: { success: 1, oldname, newname } }
-  - Permission: owner (first revision creator) or admin ('delete' right)
+  - Permission: owner (first revision creator) or admin ('layers-admin' right)
   - Validates: new name format (alphanumeric, hyphens, underscores, 1-255 chars), no conflicts, cannot rename to 'default'
 - POST action=layerspdfexport (CSRF) — **POST + token despite `isWriteMode() === false`**
   - Params: filename, setname?, width? (clamped 200-4096, snapped to 200px buckets), token

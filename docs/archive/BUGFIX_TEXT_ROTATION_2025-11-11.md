@@ -1,4 +1,6 @@
 # Bug Fix: Text Layer Rotation Selection Box Mismatch
+
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
 ## November 11, 2025
 
 ## Issue #5: Rotated Text Selection Box Disconnect

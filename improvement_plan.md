@@ -1,5 +1,7 @@
 # Layers Extension — Improvement Plan
 
+> **Current guidance — September 6, 2026:** Current baseline: manifest 1.5.95 plus main fixes through a3b20963. The next priorities are **page revision history, MediaWiki search, then Cargo query/filter support**, with slide-based SOPs central and images/PDFs equally covered. See [the proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md). Post-1.5.95 security fixes are not yet verified/backported to REL1_43; backport tracking remains open and this checkpoint is not a new release.
+
 **Version:** 1.5.95
 **Last updated:** September 2, 2026 — post-1.5.92 reprioritisation
 

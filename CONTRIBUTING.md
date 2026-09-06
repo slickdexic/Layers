@@ -1,5 +1,7 @@
 # Contributing to MediaWiki Layers
 
+> **Current guidance — September 6, 2026:** Current status and dated validation are maintained in [docs/CURRENT_STATUS.md](docs/CURRENT_STATUS.md). Cover images, standalone slides and PDF pages. The next priorities are page revision history, MediaWiki search and Cargo projection; do not document proposals as shipped behavior.
+
 Thanks for helping improve Layers! This guide covers local setup, how to run checks, and important code quality rules.
 
 ## Branch Workflow
@@ -21,7 +23,7 @@ This extension is feature-rich by design—**17 drawing tools**, multiple render
 **There is no arbitrary 50K or 75K limit.** The focus is on code quality, not line counts:
 - ✅ Well-structured with clear separation of concerns
 - ✅ Secure with CSRF protection, rate limiting, validation
-- ✅ Thoroughly tested (95.87% coverage, 14,007 tests)
+- ✅ Validated with dated test runs; see current status for scope and limitations
 - ✅ Properly delegated (god classes use controller patterns)
 
 ---

@@ -1,5 +1,7 @@
 # Bug Fix: Shadow Rendering Broken After ShadowRenderer Extraction (2025-12-11)
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 ## Summary
 Shadow rendering was completely broken for rectangles, circles, and other shapes after the ShadowRenderer.js extraction refactoring. The issue was that callback functions passed to `drawSpreadShadow()` and `drawSpreadShadowStroke()` were using the wrong canvas context.
 

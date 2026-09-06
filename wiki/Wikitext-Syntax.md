@@ -1,5 +1,7 @@
 # Wikitext Syntax
 
+> **Current guidance — September 6, 2026:** These parameters select existing shared content; they do not create an owner-page history binding. `layerset=on` means current set; `layerset=default` means the literal name. `noedit` and hidden controls are not authorization.
+
 Complete reference for using Layers in wikitext.
 
 ---
@@ -29,7 +31,7 @@ Add the `layerset` parameter to any file link to display annotations:
 ### Examples
 
 ```wikitext
-<!-- Enable default layers -->
+<!-- Enable the current layers -->
 [[File:Diagram.png|layerset=on]]
 
 <!-- Explicit default set -->
@@ -329,7 +331,7 @@ Create standalone graphics without a base image using the `{{#Slide:}}` parser f
 ### Examples
 
 ```wikitext
-<!-- Basic slide (default layer set) -->
+<!-- Basic slide (current layer set) -->
 {{#Slide: MyDiagram}}
 
 <!-- Specific named layer set -->

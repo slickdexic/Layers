@@ -2,6 +2,7 @@
 
 ### Getting Started
 * [[Home]]
+* [[Current Status]]
 * [[Installation]]
 * [[Quick Start Guide]]
 * [[Configuration Reference]]
@@ -11,7 +12,7 @@
 * [[Keyboard Shortcuts]]
 * [[Style Presets]]
 * [[Named Layer Sets]]
-* [[Slide Mode]] 🆕
+* [[Slide Mode]]
 * [[Alignment and Distribution]]
 * [[Wikitext Syntax]]
 
@@ -23,6 +24,7 @@
 
 ### Developer Documentation
 * [[Architecture Overview]]
+* [[Frontend Architecture]]
 * [[API Reference]]
 * [[Contributing Guide]]
 * [[Testing Guide]]

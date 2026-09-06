@@ -1,5 +1,7 @@
 # Style Presets
 
+> **Current guidance — September 6, 2026:** User presets are stored in the current browser. Share them by explicit export/import; localStorage does not synchronize between users or devices. Presets do not enforce a corporate approval policy.
+
 Save and reuse style configurations to maintain consistency across your annotations.
 
 ---
@@ -10,7 +12,7 @@ Style presets let you save a combination of style properties (colors, stroke wid
 
 - **Consistency** — Same styles across multiple images
 - **Efficiency** — No need to manually set properties each time
-- **Collaboration** — Share styles with other editors (via browser localStorage)
+- **Collaboration** — Share styles with other editors through preset export/import
 
 ---
 

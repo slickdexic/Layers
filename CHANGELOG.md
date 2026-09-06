@@ -4,6 +4,26 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored file-set renaming and enforced creator/admin ownership across all affected document pages.
+- Preserved creator metadata through pruning; legacy sets with missing creator evidence require `layers-admin` for deletion/renaming.
+- Kept failed buffered saves open, restored page-specific set/background state and rejected stale editor responses.
+- Prevented late, detached lightbox images from attaching oversized overlays; ignored stale navigation/session callbacks and preserved zero opacity.
+- Bound cached server PDF exports to the source title, preventing cross-title access through same-content files. Old unbound caches require regeneration.
+
+### Documentation
+
+- Corrected the ineffective null-edit audit claim and documented remaining history, search and export limitations.
+- Refreshed image, PDF and standalone-slide guides, API/configuration/permission references, MediaWiki source pages and the GitHub wiki.
+- Defined the next priorities: page-owned revision history, searchable slide/annotation text, then Cargo query/filter support. These remain proposals.
+
+### Verification
+
+- September 6 checkpoint: 180 JavaScript suites / 14,310 tests; PHP QA passed; PHPUnit 686 tests / 1,475 assertions with one skipped. Coverage was not remeasured.
+- Security fixes in this section are on `main`; the corresponding `REL1_43` backport has not been verified. This is not a new tagged release.
+
+
 ## [1.5.95] - 2026-09-02
 
 ### Changed

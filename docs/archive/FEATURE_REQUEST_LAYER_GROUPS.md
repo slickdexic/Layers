@@ -1,5 +1,7 @@
 # Feature Request: Layer Groups (Folders)
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 **Created:** December 28, 2025  
 **Completed:** December 29, 2025  
 **Status:** ✅ **IMPLEMENTED** (v1.2.13)  

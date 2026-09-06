@@ -1,5 +1,7 @@
 # Rotation Handle Fix - 2025-11-14
 
+> **Historical record:** Preserved as a dated audit, design or postmortem. Counts, status claims, branch advice and file locations below describe that earlier work, not current guarantees. See [current status](https://github.com/slickdexic/Layers/blob/main/docs/CURRENT_STATUS.md) and the active roadmap before acting on it.
+
 ## Issue
 User reported that "Layer rotation by grab-handle does not work".
 This was caused by `CanvasEvents.js` using `CanvasManager.hitTestSelectionHandles` which did not correctly delegate to `SelectionManager` when the renderer was not providing handles (or when `SelectionManager` was the source of truth for handles).
