@@ -11,9 +11,9 @@ Status: recommendations, not implemented-feature claims or delivery commitments.
 
 The direction is a dependable, searchable and reusable visual-content system for MediaWiki. Preserve quick annotation and freeform creativity while offering stronger document publishing where needed. Templates, structured fields and approval workflows should be optional; a user creating an illustration or presentation should not have to adopt an SOP workflow.
 
-### Active implementation: page-owned history (H1 of H1–H6)
+### Active implementation: page-owned history (H1/H2 internal milestones)
 
-The core persistence proof is implemented and tested against MediaWiki 1.45.3: genuine Layers-slot revisions, exact historical reads/restoration, stale-base and commit-time race rejection, no-op behavior and combined main/Layers saves. See [the implementation contract](docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for milestone gates and evidence. This is an internal primitive, not a user-facing history feature: schema validation, authorization/API, revision-aware viewers and adoption remain pending. H2 (the versioned document model) is next. General-purpose slides, images and PDFs remain equal participants.
+The core persistence proof is implemented and tested against MediaWiki 1.45.3: genuine Layers-slot revisions, exact historical reads/restoration, stale-base and commit-time race rejection, no-op behavior and combined main/Layers saves. See [the implementation contract](docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for milestone gates and evidence. This is an internal primitive, not a user-facing history feature: H2 now supplies an internal versioned document model, strict validation and canonical snapshots, with direct core-save rejection tests. See the [format contract](docs/PAGE_OWNED_DOCUMENT_FORMAT.md). Production registration, authorization/API, revision-aware viewers and adoption remain pending. H3 (owner authorization and exact source resolution) is next. General-purpose slides, images and PDFs remain equal participants.
 
 ### Active implementation: R6.08 — strict save payload containers
 

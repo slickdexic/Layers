@@ -16,6 +16,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Internal development
 
+- Added the internal version 1 mixed-surface snapshot schema and custom content model (H2), with strict lossless validation, stable references, canonical serialization and direct core-save rejection tests. Production registration remains disabled; existing saves are unchanged.
+
 - Added an unregistered page-revision persistence primitive and a separate real-core integration suite (H1). MediaWiki 1.45.3 tests cover history/restoration, stale and racing saves, no-ops and combined slots. No public history feature, migration or behavior change is enabled by this work.
 - Added a staged page-history implementation contract, explicitly covering general-purpose slides, images and PDFs.
 

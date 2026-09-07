@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "surfaces": [
+    {
+      "id": "presentation",
+      "kind": "slide",
+      "label": "Welcome",
+      "canvas": {
+        "width": 800,
+        "height": 600,
+        "backgroundColor": "#ffffff",
+        "backgroundVisible": true,
+        "backgroundOpacity": 1
+      },
+      "layers": [
+        {
+          "id": "title",
+          "type": "text",
+          "x": 40,
+          "y": 60,
+          "text": "Visual ideas — 世界",
+          "fontSize": 24,
+          "color": "#000000"
+        }
+      ],
+      "readingOrder": [
+        "title"
+      ]
+    },
+    {
+      "id": "diagram",
+      "kind": "image",
+      "label": "Annotated diagram",
+      "canvas": {
+        "width": 800,
+        "height": 600,
+        "backgroundColor": "#ffffff",
+        "backgroundVisible": true,
+        "backgroundOpacity": 1
+      },
+      "layers": [
+        {
+          "id": "title",
+          "type": "text",
+          "x": 40,
+          "y": 60,
+          "text": "Visual ideas — 世界",
+          "fontSize": 24,
+          "color": "#000000"
+        }
+      ],
+      "readingOrder": [
+        "title"
+      ],
+      "source": {
+        "repository": "local",
+        "fileTitle": "File:Diagram.png",
+        "timestamp": "20260906120000",
+        "sha1": "0000000000000000000000000000000",
+        "page": 1
+      }
+    },
+    {
+      "id": "reference",
+      "kind": "pdf",
+      "label": "Reference sheet",
+      "canvas": {
+        "width": 800,
+        "height": 600,
+        "backgroundColor": "#ffffff",
+        "backgroundVisible": true,
+        "backgroundOpacity": 1
+      },
+      "layers": [
+        {
+          "id": "title",
+          "type": "text",
+          "x": 40,
+          "y": 60,
+          "text": "Visual ideas — 世界",
+          "fontSize": 24,
+          "color": "#000000"
+        }
+      ],
+      "readingOrder": [
+        "title"
+      ],
+      "source": {
+        "repository": "local",
+        "fileTitle": "File:Reference.pdf",
+        "timestamp": "20260906120000",
+        "sha1": "1111111111111111111111111111111",
+        "page": 2
+      }
+    }
+  ]
+}

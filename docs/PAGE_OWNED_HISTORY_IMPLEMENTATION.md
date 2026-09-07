@@ -1,6 +1,6 @@
 # Page-owned Layers history: implementation contract
 
-Updated September 6, 2026. Feature status: **not available to users**. H1 is an internal, core-tested persistence primitive. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
+Updated September 6, 2026. Feature status: **not available to users**. H1 provides an internal, core-tested persistence primitive; H2 adds strict snapshot validation and a custom content model tested at the core save boundary. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
 
 This document is the implementation tracker for revision history. It supersedes SOP-specific framing in earlier proposals. Images, PDF annotations and general-purpose slides are equal participants. Presentations, diagrams, educational material, visual documents and SOPs are acceptance examples; none defines the universal data model.
 
@@ -31,11 +31,11 @@ This document is the implementation tracker for revision history. It supersedes 
 
 MediaWiki's installed `Storage/PageUpdater.php` documents that `grabParentRevision()` captures a primary-database compare-and-swap token, while `saveRevision()` rejects changes after that capture. It also explicitly states that it does not check user permissions. `setOriginalRevisionId()` identifies restored content; it is not a client edit-conflict guard. Those distinctions govern the adapter design. See [MCR documentation](https://www.mediawiki.org/wiki/Multi-Content_Revisions) for background.
 
-## Proposed document contract — H2 must finalize and version this
+## Document contract — H2 internal version 1
 
 The owner comes from the MediaWiki page/revision, not an editable JSON field. A slot contains a schema version and an ordered collection of stable documents/surfaces. Each surface records its stable ID, kind, label, dimensions, layer data, background settings and reading order where provided. Image/PDF surfaces also record the source file identity, immutable version reference and PDF page number where applicable. Slides do not require a fabricated file attachment.
 
-Do not freeze a public JSON schema from the H1 test fixtures: they are intentionally small, synthetic mixed-surface records that test storage, not annotation validation. H2 must specify required/optional properties, unknown-field behavior, numeric bounds, asset retention/retrieval, legacy import, canonical serialization and future schema migration. Render order, reading order and optional step numbering are separate concepts.
+The [internal version 1 format](PAGE_OWNED_DOCUMENT_FORMAT.md) now defines required/optional properties, strict rejection, numeric/resource bounds, source metadata, stable references and canonical serialization. Its mixed-surface fixture is separate from H1's synthetic storage records. Source resolution, retention, legacy import and future migrations remain explicit later gates. Render order, reading order and optional step numbering are separate concepts.
 
 Cargo values/bindings and reusable components need versioned extension points. No live query is permitted to rewrite an old revision's displayed value. A live dashboard mode, if added, needs a visibly different contract.
 
@@ -56,7 +56,7 @@ The server response must ultimately distinguish stale-base conflict, commit-time
 | Milestone | Scope | Acceptance / status |
 | --- | --- | --- |
 | H1: core persistence proof | Internal writer, genuine core/database tests, no public registration | Implemented; detailed evidence below |
-| H2: content model | Versioned schema, strict whole-document validation, canonicalization, custom content model and normal-slot registration | Pending; malformed content rejected through all supported core editing paths, not only a custom API |
+| H2: content model | Versioned schema, strict whole-document validation, canonicalization and custom content model | Internal implementation tested; direct core saves reject invalid snapshots. Production model/normal-slot registration deferred until H3 authority checks are ready |
 | H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | Pending; denied requests cannot read/write content, stale requests cannot overwrite |
 | H4: editor and historical viewer | Owner/revision context across editor, inline view, lightbox and export; stable IDs and pinned assets | Pending; oldid works for images, PDFs and slides with no latest-state fallback |
 | H5: adoption and lifecycle | Copy/adopt/pin workflow, legacy-route isolation, move/delete/undelete/rollback/suppression/import/export and repair tooling | Pending; one authority and round-trip recovery proven |
@@ -111,8 +111,22 @@ composer require --no-interaction --no-plugins --no-scripts \
 
 Resolved versions for this run: testing-access-wrapper 4.0.0, hamcrest-php 2.1.1, hamcrest-html-matchers 1.1.0. The initial core test run stopped because a helper was missing; no placeholder implementation was substituted. The runtime image did not have its own PHPUnit executable, so the extension's installed PHPUnit 9.6.36 was used with core bootstrapping.
 
+## H2 implementation and verification
+
+The [format contract](PAGE_OWNED_DOCUMENT_FORMAT.md) documents the internal schema, examples, limits, loss prevention and source-retention gates. `DocumentSchema` rejects malformed/ambiguous snapshots; `JsonSnapshotCodec` produces deterministic JSON; `LayersDocumentContent` and its handler enforce validation at core save time. The existing layer validator accepts optional fixed limits; existing no-argument callers retain their configured behavior. Model and normal-slot registration occur only inside core tests.
+
+Verification on September 6, 2026:
+
+- Snapshot unit tests: **66 tests / 74 assertions**, covering all three surface kinds, count boundaries, invalid/lossy fields, identity/group/reading references, duplicate keys and numeric overflow.
+- Full standalone PHP suite: **868 tests / 1,952 assertions / one existing skip**.
+- Combined real-core H1/H2 suite on MediaWiki **1.45.3 / PHP 8.3.31**: **19 tests / 49 assertions**, including the per-class database-prefix safeguards. H2 adds typed snapshot round trips, canonical no-ops, fixed limits and direct invalid-save rejection. A generic JsonContent object claiming the model ID is also rejected.
+
+Repository QA also passed: `npm test` (180 suites / 14,310 JavaScript tests and repository guards), PHP lint/style/MinusX, and documentation/version checks. PHP style reports two existing duplicate test-stub warnings; no new coverage percentage was measured.
+
+These tests do not establish authorization, source existence/retention, suppression behavior, actual rendering or import compatibility for every legacy drawing type. H2 does not wire the schema into existing API saves. A structural source reference is not evidence that asset bytes have been retained. See the format contract for the policy and remaining work.
+
 ## Outstanding risks and next implementation task
 
-H2 is next: finalize the versioned mixed-surface schema and custom content validation with examples for a presentation, diagram, annotated image and PDF. Establish source-version retention and namespace/ownership rules before exposing H3. The main compatibility floor is 1.44; the core-backed proof currently covers only 1.45.3. LTS work is separate.
+H3 is next: implement and test owner authorization, exact local source-version resolution and suppression-safe reads before exposing a public route. Production registration remains gated; source retention and lifecycle acceptance remain H5 requirements. The main compatibility floor is 1.44; the core-backed proof currently covers only 1.45.3. LTS work is separate.
 
-This change cannot make existing Layers edits visible in page history. No existing rows or user pages are migrated. H1 adds no public feature toggle because there is nothing safe to enable yet. Later rollout must include an opt-in gate, preflight adoption checks and a rollback policy that never silently falls back to mutable legacy content for adopted documents.
+This change cannot make existing Layers edits visible in page history. No existing rows or user pages are migrated. H1/H2 add no public feature toggle because there is nothing safe to enable yet. Later rollout must include an opt-in gate, preflight adoption checks and a rollback policy that never silently falls back to mutable legacy content for adopted documents.

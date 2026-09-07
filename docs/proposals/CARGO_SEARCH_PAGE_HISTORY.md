@@ -1,6 +1,6 @@
 # Page-owned history, searchable content, and Cargo integration
 
-Status: proposed architecture, September 6, 2026. The original investigation made no feature or configuration changes. Implementation now starts with an internal MCR persistence proof; see [the implementation contract](../PAGE_OWNED_HISTORY_IMPLEMENTATION.md). Public page-owned history remains unavailable.
+Status: proposed architecture, September 6, 2026. The original investigation made no feature or configuration changes. Implementation now includes an internal MCR persistence proof and versioned snapshot model; see [the implementation contract](../PAGE_OWNED_HISTORY_IMPLEMENTATION.md). Public page-owned history remains unavailable.
 
 ## Recommendation
 

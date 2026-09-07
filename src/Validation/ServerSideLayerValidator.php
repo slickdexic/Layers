@@ -278,10 +278,22 @@ class ServerSideLayerValidator {
 	/** @var int Fallback for $wgLayersMaxImageBytes when config is unavailable */
 	private const DEFAULT_MAX_IMAGE_BYTES = 1048576;
 
-	public function __construct() {
+	/**
+	 * @param int|null $maxLayers Fixed profile limit, or null for wiki configuration
+	 * @param int|null $maxImageBytes Fixed profile limit, or null for wiki configuration
+	 */
+	public function __construct( ?int $maxLayers = null, ?int $maxImageBytes = null ) {
 		$this->textSanitizer = new TextSanitizer();
 		$this->colorValidator = new ColorValidator();
 		$this->loadConfig();
+		foreach ( [ 'maxLayers' => $maxLayers, 'maxImageBytes' => $maxImageBytes ] as $key => $limit ) {
+			if ( $limit !== null ) {
+				if ( $limit < 1 ) {
+					throw new \InvalidArgumentException( 'Validation limits must be positive.' );
+				}
+				$this->config[$key] = $limit;
+			}
+		}
 	}
 
 	/**

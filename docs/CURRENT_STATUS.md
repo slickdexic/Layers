@@ -4,7 +4,7 @@ Reviewed September 6, 2026 against `main` commit `a3b20963`. The extension manif
 
 ## History implementation progress
 
-H1, the internal page-revision persistence proof, is now implemented and tested against MediaWiki 1.45.3. It creates genuine revisions, preserves page text, reads/restores historical content and rejects stale/racing writes. **This is not wired into the editor or public APIs and does not make existing Layers saves revision-compliant.** Content validation, authorization, historical viewers and adoption remain pending. See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for gates and evidence.
+H1, the internal page-revision persistence proof, is now implemented and tested against MediaWiki 1.45.3. It creates genuine revisions, preserves page text, reads/restores historical content and rejects stale/racing writes. **This is not wired into the editor or public APIs and does not make existing Layers saves revision-compliant.** H2 now adds an internal versioned snapshot model and strict validation tested at the core save boundary. Production registration, authorization, historical viewers and adoption remain pending. See the [format contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_DOCUMENT_FORMAT.md) for limits and source-retention requirements. See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for gates and evidence.
 
 ## Supported content
 

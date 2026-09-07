@@ -31,10 +31,10 @@ The internal page-history persistence proof has a separate suite using MediaWiki
 MW_INSTALL_PATH=/path/to/mediawiki php vendor/bin/phpunit -c tests/phpunit/core.xml
 ```
 
-See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for setup, optional test-helper autoloading and limits. On MediaWiki 1.45.3/PHP 8.3.31 this suite passed 8 tests / 21 assertions, including a deterministic race between real page updaters. This proves the internal persistence behavior, not public API permissions, visual rendering or complete page-history support.
+See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for setup, optional test-helper autoloading and limits. On MediaWiki 1.45.3/PHP 8.3.31 the combined H1/H2 suite passed 19 tests / 49 assertions, including a deterministic race between real page updaters and strict custom-model validation on direct core saves. This proves the internal persistence behavior, not public API permissions, visual rendering or complete page-history support.
 
 ## Dated checkpoints
 
 September 6, 2026, commit `a3b20963`: 180 JavaScript suites / 14,310 tests; 686 PHPUnit tests / 1,475 assertions with one skipped. PHP QA passed with two pre-existing duplicate test-stub warnings. Coverage was not remeasured. See [[Current Status]] for limitations and browser-probe scope.
 
-The R6.08 follow-up expanded the standalone PHP suite to 802 tests / 1,878 assertions, with one existing skip. Core-backed results above are a separate suite.
+The R6.08 follow-up expanded the standalone PHP suite to 802 tests / 1,878 assertions, with one existing skip. H2 subsequently expanded it to 868 tests / 1,952 assertions, with the same existing skip. Core-backed results above are a separate suite.
