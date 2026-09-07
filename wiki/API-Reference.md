@@ -36,6 +36,8 @@ Save a layer revision for an image/PDF page or standalone slide.
 | `page` | integer | 1; min 1 | 1-based source PDF page; images use page 1. Not a wiki page ID. |
 | `token` | string | Not declared in metadata | CSRF token, supplied automatically by postWithToken. |
 
+Save payloads must be a JSON array of layer objects, or an object containing a `layers` array of layer objects. `[]` and `{"layers":[]}` explicitly clear annotations. Scalars, `{}`, object maps and non-object layer entries are rejected with `validationfailed`; malformed JSON returns `invalidjson`. Post-1.5.95 main includes this guard. See the [save payload contract](https://github.com/slickdexic/Layers/blob/main/docs/SAVE_PAYLOAD_CONTRACT.md).
+
 ### layersdelete — POST + CSRF
 
 Delete a named set and its retained revisions.

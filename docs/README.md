@@ -8,12 +8,12 @@ Updated September 6, 2026. Current documentation covers images, PDFs and standal
 | --- | --- |
 | Understand current behavior and limitations | [Current status](CURRENT_STATUS.md) · [Known issues](KNOWN_ISSUES.md) |
 | Install, configure and upgrade | [Installation](../wiki/Installation.md) · [Configuration](../wiki/Configuration-Reference.md) · [Permissions](../wiki/Permissions.md) |
-| Create visual instructions | [Quick start](../wiki/Quick-Start-Guide.md) · [Slides](../wiki/Slide-Mode.md) · [Tools](../wiki/Drawing-Tools.md) |
+| Create diagrams, presentations and annotations | [Quick start](../wiki/Quick-Start-Guide.md) · [Slides](../wiki/Slide-Mode.md) · [Tools](../wiki/Drawing-Tools.md) |
 | Embed content and choose sets | [Wikitext](../wiki/Wikitext-Syntax.md) · [Named sets](../wiki/Named-Layer-Sets.md) |
-| Integrate with the current API | [API entry point](API.md) · [Action API reference](../wiki/API-Reference.md) |
+| Integrate with the current API | [API entry point](API.md) · [Action API reference](../wiki/API-Reference.md) · [Save payload contract](SAVE_PAYLOAD_CONTRACT.md) |
 | Contribute code | [Contributing](../CONTRIBUTING.md) · [Architecture](ARCHITECTURE.md) · [Onboarding](DEVELOPER_ONBOARDING.md) · [Testing](../wiki/Testing-Guide.md) |
 | Investigate a defect | [Troubleshooting](../wiki/Troubleshooting.md) · [R6 review](../codebase_review.md) · [Security](../SECURITY.md) |
-| Plan controlled SOPs | [Page history, search and Cargo proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md) |
+| Plan revision-controlled visual content | [Page history, search and Cargo proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md) |
 | Maintain/publish docs | [Maintenance guide](DOCUMENTATION_UPDATE_GUIDE.md) · [Release guide](RELEASE_GUIDE.md) · [Wiki publishing](../wiki/README.md) |
 | Review documentation scope | [Inventory](DOCUMENTATION_INVENTORY.md) · [Documentation review](DOCUMENTATION_REVIEW_REPORT.md) |
 

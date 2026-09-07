@@ -1,9 +1,145 @@
 # Layers Extension — Improvement Plan
 
-> **Current guidance — September 6, 2026:** Current baseline: manifest 1.5.95 plus main fixes through a3b20963. The next priorities are **page revision history, MediaWiki search, then Cargo query/filter support**, with slide-based SOPs central and images/PDFs equally covered. See [the proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md). Post-1.5.95 security fixes are not yet verified/backported to REL1_43; backport tracking remains open and this checkpoint is not a new release.
+> **Current guidance — September 6, 2026:** Layers supports image annotations, PDF annotations and standalone slides as equal content types. Slides are a general-purpose canvas for presentations, diagrams, educational material, infographics, visual documents, dashboards and more. SOPs are one application, not the definition of the product. The agreed foundation priorities remain **page revision history, MediaWiki search, then Cargo query/filter support**. See [the architecture proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md) for technical context; its SOP examples illustrate one use case rather than restricting scope. Post-1.5.95 fixes are not yet verified/backported to REL1_43; this plan does not announce a release.
 
 **Version:** 1.5.95
-**Last updated:** September 2, 2026 — post-1.5.92 reprioritisation
+**Last updated:** September 6, 2026 — product improvement roadmap and general-purpose slide scope
+
+## Product improvement roadmap
+
+Status: recommendations, not implemented-feature claims or delivery commitments. This roadmap supersedes the ordering in the historical backlog below. Existing capabilities should be improved or completed where appropriate, rather than reintroduced under new names. Current defects and evidence remain in [known issues](docs/KNOWN_ISSUES.md) and [the codebase review](codebase_review.md).
+
+The direction is a dependable, searchable and reusable visual-content system for MediaWiki. Preserve quick annotation and freeform creativity while offering stronger document publishing where needed. Templates, structured fields and approval workflows should be optional; a user creating an illustration or presentation should not have to adopt an SOP workflow.
+
+### Active implementation: R6.08 — strict save payload containers
+
+Selected as the first bounded stabilization task before the larger history architecture. Implemented the shared decoder guard and production-path regression tests for image, PDF and standalone-slide saves. See [save payload contract and implementation record](docs/SAVE_PAYLOAD_CONTRACT.md) for accepted formats, errors, evidence, compatibility and remaining scope. The full standalone PHP suite passed (802 tests, 1,878 assertions, one skipped); live-wiki integration and LTS backports remain unverified. This does not complete the revision-history milestone.
+
+### 1. Trustworthy saving and page revision history
+
+- Bind published Layers documents to an owning wiki page and write their content through real page revisions. Make adoption of existing shared sets explicit and provide migration/rollback tooling.
+- Save all edited surfaces belonging to one owner-page editing session together. Publish nothing if that revision write fails; derived indexes and caches must be rebuildable.
+- Detect stale edits before overwriting another contributor's work, preserve both versions, and offer a useful conflict comparison.
+- Make historical viewing, undo and restoration resolve the corresponding annotations, canvas settings and background asset versions. Never silently substitute current content for a missing historical asset.
+- Add readable change summaries, text/property differences and visual comparison through side-by-side or overlaid views.
+- Support copied reusable content and references pinned to a published revision. Clearly identify live references: they cannot guarantee that every change appears in the consuming page's own history.
+
+MediaWiki multi-content revisions are the proposed storage foundation, not a substitute for testing permissions, old revisions, suppression, deletion, restoration and export. [MediaWiki MCR documentation](https://www.mediawiki.org/wiki/Multi-Content_Revisions)
+
+Acceptance: a published visual change has a corresponding owner-page revision; restoring a revision restores its content across images, PDFs and standalone slides.
+
+### 2. Searchable text and an accessible text view
+
+- Build one ordered text extractor for textboxes, callouts and other textual annotations, reusable by search, accessibility, export and Cargo.
+- Search should find words present only in the visual content, show useful excerpts and link to the matching slide/image/document page and annotation.
+- Provide a text view with author-defined reading order, headings and descriptions. Drawing stack order is not necessarily reading order.
+- Preserve Unicode and rich-text word order; test identifiers, multilingual content and backend-specific search limitations.
+- Index the current published content, excluding private drafts and suppressed content. Verify full reindexing and deletion, not just incremental updates.
+
+Acceptance examples: find a presentation by text in one slide, a diagram by an equipment label, or an annotated PDF by a callout. Search must work on the supported MediaWiki backend without requiring Cargo.
+
+### 3. A simpler editor with advanced capability available
+
+| Area | Proposed improvement |
+| --- | --- |
+| Toolbar | Compact everyday tools with advanced tools grouped by purpose |
+| Properties | Contextual controls for the selected object; common settings immediately available |
+| Navigation | Thumbnails for slide collections and document pages, with dirty/error indicators |
+| Save feedback | Distinguish unsaved work, recovered/saved drafts and published content |
+| Text editing | Predictable wrapping, direct editing and visible overflow warnings |
+| Layer panel | Improve text/name/type filtering, object isolation and discovery of hidden/locked objects |
+| Commands | Searchable action menu for alignment, export and other less visible operations |
+| Starting content | Offer blank canvas, text, image or template without forcing a document type |
+
+Preserve zoom, working position and selection where appropriate during navigation. Test keyboard and touch interactions, focus handling and assistive-technology behavior rather than claiming accessibility from ARIA attributes alone.
+
+### 4. General-purpose slides and reusable design
+
+Slides should support individual freeform canvases and coherent collections. Their design must accommodate presentations, explanatory diagrams, lesson material, posters, infographics, planning boards and visual procedures equally.
+
+- Ordered collections with duplicate, drag-to-reorder, thumbnails, contents and direct links.
+- Presentation playback and reader navigation, alongside ordinary inline wiki embedding.
+- Shared layouts, typography, backgrounds, headers/footers and optional numbering across a collection.
+- Templates for varied uses: title/content slides, comparisons, diagrams, posters, timelines and instructions. Blank-canvas creation remains first-class.
+- Reusable visual components, with an explicit choice between copying and referencing a specific published version.
+- Consistent printing/export of a collection and application of layout changes across selected slides.
+- Keep geometry and text editable; make cross-canvas JSON transfer easier and explain how different dimensions are handled.
+
+Corporate branding and instruction templates are useful optional applications, not mandatory slide structure. Shared components must not silently alter revision-pinned publications.
+
+### 5. Optional structured content and validation
+
+Allow authors to attach meaning to annotations without replacing ordinary freeform text. Possible roles include title, caption, label, reference, equipment identifier, measurement, warning and instruction. A measurement could hold a value, unit and tolerance instead of only a formatted string.
+
+Use this structure for useful authoring checks: missing units, duplicate numbering, overflowing text, broken references and missing descriptions. Provide optional document-type checks rather than enforcing procedure rules on every canvas. Keep visual stack order, reading order and any step sequence distinct.
+
+### 6. Cargo queries and reviewed field bindings
+
+First expose published annotation records: owning page, revision, surface identifier, layer ID, text, type and optional tags or structured fields. Support query/filter use cases such as finding diagrams mentioning an asset, presentations about a topic, or visual instructions containing a particular criterion. Derived tables need a rebuild and retry process.
+
+Second allow textboxes/callouts to display selected Cargo fields. In revision-controlled publishing, snapshot the resolved value at publication; subsequent source changes should offer an update for review. Explicit live-data mode can serve dashboards, but must be visibly distinguished from a pinned historical document. Historical viewing must never execute today's query and present its result as yesterday's content.
+
+Cargo supplies storage/query facilities; Layers still needs a deliberate adapter and permission-safe indexing policy. [Cargo storage](https://www.mediawiki.org/wiki/Extension:Cargo/Storing_data), [Cargo queries](https://www.mediawiki.org/wiki/Extension:Cargo/Querying_data)
+
+### 7. Safe drafts, comments and collaboration
+
+- Recoverable drafts with clear author, target document and timestamps; reliable cleanup after save/discard.
+- Advisory notices when another contributor is editing, followed by conflict protection at save time.
+- Comments anchored to an annotation and revision so their context survives later edits.
+- Optional draft/publish separation and review/approval of an exact revision.
+- Evaluate live co-editing after reliable asynchronous collaboration; do not let it delay safe saving and useful review.
+
+An illustration, classroom diagram or informal presentation should remain easy to publish without an approval process. Controlled documents can opt into stricter workflows once the revision foundation exists.
+
+### 8. Reliable exports and portable content
+
+- Fix omitted-page/overlay failures first. An export must faithfully represent its selected revision or clearly report failure/limitations.
+- Establish a shared rendering contract and visual fixtures for text, fonts, backgrounds, transparency, rotation and effects across editor, viewer and export.
+- Add collection titles, optional revision metadata and page numbering for document exports.
+- Offer a portable package of structured Layers content and required assets, building on existing JSON transfer.
+- Consider archival renditions with versioned assets/fonts where long-term appearance matters. Retaining structured data alone does not guarantee identical future pixels.
+
+### 9. Performance guided by representative measurements
+
+| Workload | Measure |
+| --- | --- |
+| Small annotated image | Viewer startup and resource transfer |
+| Text-heavy standalone slide | Typing latency and redraw time |
+| Complex diagram | Selection, dragging, hit testing and memory |
+| Long presentation or annotated document | Navigation latency and memory accumulation |
+| Article with many canvases | Initial load and off-screen work |
+
+Investigate optional-library loading, lazy initialization of off-screen canvases, caches keyed by immutable revision, selective redraws and suitable background-worker tasks. Establish budgets from measured baselines and compare before/after on representative devices. Do not promise speedups from code size or refactoring alone; preserve correctness when removing reloads or changing asynchronous work.
+
+### 10. Engineering, security and documentation quality
+
+- Version the document format and provide explicit migrations and rollback paths.
+- Consolidate inconsistent name, dimension, permission and save rules across entry points.
+- Prioritize real-workflow browser tests for all three content types, alongside focused unit/integration checks.
+- Exercise interrupted saves, stale responses, concurrent edits, failed exports and asset permission changes.
+- Audit shipped assets, including vendored dependencies, rather than only production package declarations.
+- Add administrator diagnostics for failed jobs, indexing, cache/export status and actionable errors without exposing private content.
+- Verify documentation examples against real parser/API/UI behavior. Link/version checks do not establish prose accuracy; preserve dated historical reports and maintain an evidence log for current claims.
+- Improve subsystems incrementally with migration and rollback support instead of undertaking a wholesale rewrite.
+
+### Delivery sequence and acceptance milestones
+
+Stabilization precedes architectural expansion. The agreed major-feature order remains **history → search → Cargo**; bounded UI and accessibility improvements can accompany these stages without delaying them.
+
+| Stage | Outcome |
+| --- | --- |
+| Stabilize | Resolve remaining save, validation, authorization, draft and export defects |
+| Trust | Page-owned revisions, historical rendering and conflict protection |
+| Discover | Search, text view, reading order and direct annotation links |
+| Integrate | Queryable Cargo records, then reviewed bindings and explicit live-data semantics |
+| Author | Broader slide collections, templates, reusable components and editor refinements |
+| Collaborate | Revision-bound comments and optional review/approval workflows |
+
+The first end-to-end foundation milestone should prove editing, a genuine page revision, text search, comparison, restoration and accurate export. Exercise it with a standalone presentation/diagram, an annotated image and a multi-page PDF; include a slide-based SOP as an additional controlled-document scenario. No single example should become the only acceptance fixture or dictate the universal canvas model.
+
+## Historical backlog and review snapshots
+
+The dated material below is retained for evidence and continuity. Its ranking, counts and statements such as “current” apply to their original dates, not to the roadmap above. Revalidate an older finding before implementation; do not treat an old completed label as proof of present behavior.
 
 > ## 🎯 What is actually worth doing next (September 2, 2026)
 >

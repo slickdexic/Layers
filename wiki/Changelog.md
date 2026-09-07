@@ -6,6 +6,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Fixed
 
+- Rejected malformed save payload containers before persistence across image, PDF and slide routes; preserved explicit empty-list clears (R6.08).
+
 - Restored file-set renaming and enforced creator/admin ownership across all affected document pages.
 - Preserved creator metadata through pruning; legacy sets with missing creator evidence require `layers-admin` for deletion/renaming.
 - Kept failed buffered saves open, restored page-specific set/background state and rejected stale editor responses.
@@ -19,6 +21,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Defined the next priorities: page-owned revision history, searchable slide/annotation text, then Cargo query/filter support. These remain proposals.
 
 ### Verification
+
+- R6.08 follow-up: 116 new targeted cases passed; full PHPUnit 802 tests / 1,878 assertions / one skipped. PHP QA, documentation/version checks and `npm test` passed. No new coverage or live-wiki integration claim.
 
 - September 6 checkpoint: 180 JavaScript suites / 14,310 tests; PHP QA passed; PHPUnit 686 tests / 1,475 assertions with one skipped. Coverage was not remeasured.
 - Security fixes in this section are on `main`; the corresponding `REL1_43` backport has not been verified. This is not a new tagged release.

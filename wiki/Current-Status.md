@@ -33,9 +33,11 @@ For slide-based SOPs, do not treat the current extension as providing controlled
 
 Old unbound export cache files are intentionally not served; regenerate the export. Legacy sets whose creator revision was already pruned and which lack creator metadata require `layers-admin` for deletion/renaming. They remain editable. No schema migration was added by these fixes.
 
+R6.08 follow-up on September 6: strict save-container validation now rejects malformed requests before writes. Explicit empty-list clears remain supported. Standalone PHPUnit passed 802 tests / 1,878 assertions with one skipped; see the [implementation record](https://github.com/slickdexic/Layers/blob/main/docs/SAVE_PAYLOAD_CONTRACT.md). The original checkpoint results below are retained as dated evidence.
+
 ## Open findings
 
-The [codebase review](https://github.com/slickdexic/Layers/blob/main/codebase_review.md) records the evidence and severity. Remaining findings include malformed save-payload handling, intent-like set names, stale draft cleanup, incomplete/error-prone exports, foreign-file cache invalidation, slide creation rate limiting, misleading substitute tests, vendored dependency auditing, default-set naming inconsistencies, and the unreliable audit option (R6.19). This list is a scope statement, not an exhaustive security certification.
+The [codebase review](https://github.com/slickdexic/Layers/blob/main/codebase_review.md) records the evidence and severity. Remaining findings include intent-like set names, stale draft cleanup, incomplete/error-prone exports, foreign-file cache invalidation, slide creation rate limiting, misleading substitute tests, vendored dependency auditing, default-set naming inconsistencies, and the unreliable audit option (R6.19). This list is a scope statement, not an exhaustive security certification.
 
 ## Verification snapshot
 

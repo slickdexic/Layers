@@ -82,6 +82,45 @@ class ApiLayersSave extends ApiBase {
 	private ?LoggerInterface $logger = null;
 
 	/**
+	 * Decode only supported save containers; malformed input must never clear a set.
+	 *
+	 * Keep JSON objects distinct from arrays until the container has been checked.
+	 * Associative decoding alone collapses both {} and [] to an empty PHP array.
+	 *
+	 * @param string $data Size-checked JSON request data
+	 * @return array Legacy layer list or envelope with a layers list
+	 */
+	private function parseSavePayload( string $data ): array {
+		try {
+			$decoded = json_decode( $data, false, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
+		} catch ( \JsonException $e ) {
+			$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
+		}
+
+		$layers = $decoded instanceof \stdClass ? ( $decoded->layers ?? null ) : $decoded;
+		if ( !is_array( $layers ) ) {
+			$this->dieWithError(
+				[ LayersConstants::ERROR_VALIDATION_FAILED,
+					'Expected a JSON array of layer objects or an object containing a layers array.' ],
+				'validationfailed'
+			);
+		}
+		foreach ( $layers as $layer ) {
+			if ( !$layer instanceof \stdClass ) {
+				$this->dieWithError(
+					[ LayersConstants::ERROR_VALIDATION_FAILED, 'Each layer must be a JSON object.' ],
+					'validationfailed'
+				);
+			}
+		}
+
+		// Existing validators expect associative arrays, including nested properties.
+		// Release the typed tree before decoding into that established representation.
+		unset( $decoded, $layers, $layer );
+		return json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
+	}
+
+	/**
 	 * Shared validation pipeline for save operations.
 	 *
 	 * Both execute() and executeSlideSave() share the same validation steps:
@@ -101,7 +140,7 @@ class ApiLayersSave extends ApiBase {
 	 * @throws ApiUsageException On any validation failure
 	 */
 	private function validateAndParseLayers( $user, array $params ): array {
-		$db = MediaWikiServices::getInstance()->get( 'LayersDatabase' );
+		$db = $this->getLayersDatabase();
 
 		if ( !$db->isSchemaReady() ) {
 			$this->dieWithError(
@@ -125,12 +164,7 @@ class ApiLayersSave extends ApiBase {
 			$this->dieWithError( LayersConstants::ERROR_DATA_TOO_LARGE, 'datatoolarge' );
 		}
 
-		// Parse JSON
-		try {
-			$rawData = json_decode( $data, true, self::JSON_DECODE_MAX_DEPTH, JSON_THROW_ON_ERROR );
-		} catch ( \JsonException $e ) {
-			$this->dieWithError( LayersConstants::ERROR_JSON_PARSE, 'invalidjson' );
-		}
+		$rawData = $this->parseSavePayload( $data );
 
 		// Handle both old and new data formats
 		$layersData = [];

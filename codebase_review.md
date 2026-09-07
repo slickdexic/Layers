@@ -7,6 +7,10 @@
 
 **Publication checkpoint, September 6, 2026:** The complete current change set passed `npm test` (180 suites, 14,310 tests, and repository guards), `npm run test:php`, and PHPUnit (686 tests, 1,475 assertions, one skipped). The remediation sections below retain their original working-tree status as historical context. The page-owned history, search and Cargo work remains a proposal; this checkpoint contains the existing fixes and documentation, not implementation of those larger features.
 
+## R6.08 follow-up — strict payload containers, September 6, 2026
+
+Implemented a shared production decoder guard: reject scalar/object-map payloads, missing or non-array `layers`, and non-object layer entries before persistence. Explicit empty arrays remain valid. Regression coverage includes 28 decoder cases and 88 execution cases across image, PDF and both slide routes, asserting zero writes on rejection. Full standalone PHPUnit: 802 tests / 1,878 assertions / one skipped; no live-wiki integration or coverage measurement claimed. See [the contract and implementation record](docs/SAVE_PAYLOAD_CONTRACT.md). This supersedes the original open R6.08 finding and earlier status below; R6.09–R6.17 and R6.19 remain open.
+
 ## Remediation — September 6, 2026 (working tree, not deployed)
 
 ### History investigation — R6.19 (P1, open; documentation corrected)
