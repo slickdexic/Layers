@@ -13,7 +13,7 @@ Run checks from the extension root. Install development dependencies with `npm c
 
 For a targeted regression: `npx jest tests/jest/LayersLightbox.test.js --runInBand`.
 
-Playwright's default server is `http://localhost:8080`; override `MW_SERVER` for a dedicated test wiki. Read the test fixtures and authentication requirements before running E2E: tests may create or change wiki content. Do not point an automated write suite at a production SOP wiki. Install the browser runtime required by the checked-in Playwright dependency.
+Playwright's default server is `http://localhost:8080`; override `MW_SERVER` for a dedicated test wiki. Read the test fixtures and authentication requirements before running E2E: tests may create or change wiki content. Do not point an automated write suite at a production wiki. Install the browser runtime required by the checked-in Playwright dependency.
 
 ## Meaningful regression coverage
 
@@ -23,6 +23,18 @@ Cover images, standalone slides and PDF pages. For asynchronous viewers/editors,
 
 Database doubles establish call scope; they do not establish live transaction/concurrency behavior. Native revision-history, search and Cargo integration must eventually have real-wiki acceptance tests before being advertised.
 
-## Current checkpoint
+## Core-backed revision tests
+
+The internal page-history persistence proof has a separate suite using MediaWiki's real integration harness and isolated test tables. It does not run under the extension's standalone stub bootstrap. Use a disposable development wiki with core test dependencies and set `MW_INSTALL_PATH`:
+
+```sh
+MW_INSTALL_PATH=/path/to/mediawiki php vendor/bin/phpunit -c tests/phpunit/core.xml
+```
+
+See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for setup, optional test-helper autoloading and limits. On MediaWiki 1.45.3/PHP 8.3.31 this suite passed 8 tests / 21 assertions, including a deterministic race between real page updaters. This proves the internal persistence behavior, not public API permissions, visual rendering or complete page-history support.
+
+## Dated checkpoints
 
 September 6, 2026, commit `a3b20963`: 180 JavaScript suites / 14,310 tests; 686 PHPUnit tests / 1,475 assertions with one skipped. PHP QA passed with two pre-existing duplicate test-stub warnings. Coverage was not remeasured. See [[Current Status]] for limitations and browser-probe scope.
+
+The R6.08 follow-up expanded the standalone PHP suite to 802 tests / 1,878 assertions, with one existing skip. Core-backed results above are a separate suite.

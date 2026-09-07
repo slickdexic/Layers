@@ -13,7 +13,7 @@ Updated September 6, 2026. Current documentation covers images, PDFs and standal
 | Integrate with the current API | [API entry point](API.md) · [Action API reference](../wiki/API-Reference.md) · [Save payload contract](SAVE_PAYLOAD_CONTRACT.md) |
 | Contribute code | [Contributing](../CONTRIBUTING.md) · [Architecture](ARCHITECTURE.md) · [Onboarding](DEVELOPER_ONBOARDING.md) · [Testing](../wiki/Testing-Guide.md) |
 | Investigate a defect | [Troubleshooting](../wiki/Troubleshooting.md) · [R6 review](../codebase_review.md) · [Security](../SECURITY.md) |
-| Plan revision-controlled visual content | [Page history, search and Cargo proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md) |
+| Plan revision-controlled visual content | [Implementation contract](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) · [Page history, search and Cargo proposal](proposals/CARGO_SEARCH_PAGE_HISTORY.md) |
 | Maintain/publish docs | [Maintenance guide](DOCUMENTATION_UPDATE_GUIDE.md) · [Release guide](RELEASE_GUIDE.md) · [Wiki publishing](../wiki/README.md) |
 | Review documentation scope | [Inventory](DOCUMENTATION_INVENTORY.md) · [Documentation review](DOCUMENTATION_REVIEW_REPORT.md) |
 

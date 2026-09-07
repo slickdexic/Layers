@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="core-bootstrap.php" cacheResultFile="../../.phpunit.cache/core-results" failOnWarning="true" failOnRisky="true">
+  <testsuites><testsuite name="Layers core integration"><directory>core</directory></testsuite></testsuites>
+</phpunit>

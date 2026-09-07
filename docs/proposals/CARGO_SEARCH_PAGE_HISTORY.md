@@ -1,10 +1,10 @@
 # Page-owned history, searchable content, and Cargo integration
 
-Status: proposed architecture, September 6, 2026. No feature implementation or wiki configuration changes made by this investigation.
+Status: proposed architecture, September 6, 2026. The original investigation made no feature or configuration changes. Implementation now starts with an internal MCR persistence proof; see [the implementation contract](../PAGE_OWNED_HISTORY_IMPLEMENTATION.md). Public page-owned history remains unavailable.
 
 ## Recommendation
 
-The agreed priority order is **revision history, MediaWiki search, then Cargo query/filter support**. Images, PDFs and standalone slides are equal participants in one content model. A slide-based SOP is the primary acceptance scenario, not an adaptation of a PDF workflow.
+The agreed priority order is **revision history, MediaWiki search, then Cargo query/filter support**. Images, PDFs and standalone slides are equal participants in one content model. Slides are a general-purpose canvas. Presentations, diagrams, educational material and SOPs are examples, alongside image and PDF annotations; no single example defines the model.
 
 Build **page-owned publishing** first, with real MediaWiki revisions. Next make its text searchable. Then publish annotation text into a rebuildable Cargo table so it can be queried, filtered and joined to other business data. Reading a Cargo field into a textbox remains useful, but is a subsequent capability rather than the primary Cargo deliverable.
 
@@ -38,7 +38,7 @@ Proposed slot contents:
 | Stable document/set identifiers | Renaming a display label does not break embeds |
 | Surface kind: image, PDF page or standalone slide | Keeps source-specific behavior explicit |
 | Source file identity and exact file version, where applicable | Image/PDF annotations stay aligned with the original upload; slides need no dummy file |
-| Stable surface ID, dimensions and order; PDF page number where applicable | Identifies slides/sheets and preserves geometry and SOP reading order |
+| Stable surface ID, dimensions and order; PDF page number where applicable | Identifies slides/sheets and preserves geometry and author-defined reading order |
 | Layers, ordering, backgrounds and styles | Reconstructs the saved annotation state |
 | Cargo binding definitions and resolved values | Preserves both provenance and displayed text |
 | Rendering/schema version where necessary | Supports future compatibility decisions |

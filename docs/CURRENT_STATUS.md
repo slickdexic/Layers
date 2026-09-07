@@ -2,6 +2,10 @@
 
 Reviewed September 6, 2026 against `main` commit `a3b20963`. The extension manifest still reports **1.5.95**; fixes after the September 2 tag are on `main` and described under **Unreleased**. A checkout of the tag does not include those fixes.
 
+## History implementation progress
+
+H1, the internal page-revision persistence proof, is now implemented and tested against MediaWiki 1.45.3. It creates genuine revisions, preserves page text, reads/restores historical content and rejects stale/racing writes. **This is not wired into the editor or public APIs and does not make existing Layers saves revision-compliant.** Content validation, authorization, historical viewers and adoption remain pending. See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for gates and evidence.
+
 ## Supported content
 
 Layers annotates **images**, individual **PDF pages**, and **standalone slides**. Slides do not need a background file. Text, callouts, drawing tools, named sets and the canvas viewer are shared across these uses. PDF rendering additionally depends on MediaWiki's document thumbnail support.

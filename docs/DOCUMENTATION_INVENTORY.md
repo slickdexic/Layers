@@ -115,3 +115,4 @@ The current source checkpoint is a3b20963 (manifest 1.5.95 plus main fixes). Loc
 | [wiki/Wikitext-Syntax.md](../wiki/Wikitext-Syntax.md) | Wiki source: maintained reference or navigation |
 | [wiki/_Sidebar.md](../wiki/_Sidebar.md) | Wiki source: maintained reference or navigation |
 | [docs/SAVE_PAYLOAD_CONTRACT.md](SAVE_PAYLOAD_CONTRACT.md) | Maintained implementation contract added September 6, 2026 |
+| [docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) | Active implementation contract: H1 proof, H2–H6 pending |

@@ -14,6 +14,11 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 - Prevented late, detached lightbox images from attaching oversized overlays; ignored stale navigation/session callbacks and preserved zero opacity.
 - Bound cached server PDF exports to the source title, preventing cross-title access through same-content files. Old unbound caches require regeneration.
 
+### Internal development
+
+- Added an unregistered page-revision persistence primitive and a separate real-core integration suite (H1). MediaWiki 1.45.3 tests cover history/restoration, stale and racing saves, no-ops and combined slots. No public history feature, migration or behavior change is enabled by this work.
+- Added a staged page-history implementation contract, explicitly covering general-purpose slides, images and PDFs.
+
 ### Documentation
 
 - Corrected the ineffective null-edit audit claim and documented remaining history, search and export limitations.
