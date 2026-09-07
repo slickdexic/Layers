@@ -1,6 +1,6 @@
 # Page-owned Layers history: implementation contract
 
-Updated September 6, 2026. Feature status: **not available to users**. H1 provides an internal, core-tested persistence primitive; H2 adds strict snapshot validation and a custom content model tested at the core save boundary. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
+Updated September 7, 2026. Feature status: **not available to users**. H1 provides an internal, core-tested persistence primitive; H2 adds strict snapshot validation and a custom content model tested at the core save boundary. H3a adds an internal owner-permission and exact-revision access boundary. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
 
 This document is the implementation tracker for revision history. It supersedes SOP-specific framing in earlier proposals. Images, PDF annotations and general-purpose slides are equal participants. Presentations, diagrams, educational material, visual documents and SOPs are acceptance examples; none defines the universal data model.
 
@@ -57,7 +57,7 @@ The server response must ultimately distinguish stale-base conflict, commit-time
 | --- | --- | --- |
 | H1: core persistence proof | Internal writer, genuine core/database tests, no public registration | Implemented; detailed evidence below |
 | H2: content model | Versioned schema, strict whole-document validation, canonicalization and custom content model | Internal implementation tested; direct core saves reject invalid snapshots. Production model/normal-slot registration deferred until H3 authority checks are ready |
-| H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | Pending; denied requests cannot read/write content, stale requests cannot overwrite |
+| H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | In progress: H3a owner/revision access tested internally; source validation, complete service and public boundary pending |
 | H4: editor and historical viewer | Owner/revision context across editor, inline view, lightbox and export; stable IDs and pinned assets | Pending; oldid works for images, PDFs and slides with no latest-state fallback |
 | H5: adoption and lifecycle | Copy/adopt/pin workflow, legacy-route isolation, move/delete/undelete/rollback/suppression/import/export and repair tooling | Pending; one authority and round-trip recovery proven |
 | H6: release readiness | Browser and operational tests, feature flag, upgrade/rollback documentation, support matrix, staged rollout | Pending; no compliance claim until all required gates pass |
@@ -125,8 +125,33 @@ Repository QA also passed: `npm test` (180 suites / 14,310 JavaScript tests and 
 
 These tests do not establish authorization, source existence/retention, suppression behavior, actual rendering or import compatibility for every legacy drawing type. H2 does not wire the schema into existing API saves. A structural source reference is not evidence that asset bytes have been retained. See the format contract for the policy and remaining work.
 
+## H3a: owner authorization and historical snapshot access
+
+Implemented September 7, 2026 in `src/Revision/PageHistoryAccess.php`, without production service/endpoint registration. This is one part of H3, not a complete authorized save service.
+
+`assertCanEdit()` requires a title that can represent a local page, ordinary read access, `editlayers`, and the ordinary `edit` action. It uses Authority's authorization methods rather than UI-oriented permission hints. For an absent owner, it also requires `createpage` or `createtalk` as appropriate. Owner existence is refreshed from the primary database. A future save service must call this immediately before publication with the same owner and actor supplied to the writer; the helper does not itself write or eliminate all permission-change races.
+
+`read()` requires an explicit positive revision ID and owner read access before looking up revision data. It refreshes owner identity and the requested revision from the primary database, verifies that the revision belongs to that owner, and requires a valid typed Layers snapshot. It never substitutes the current revision or legacy content. The returned value contains snapshot content only, not revision author/comment metadata whose visibility needs separate checks.
+
+The stored revision visibility bitfield is checked explicitly, followed by core's user-aware content access. This also rejects inconsistent current revisions with hidden text flags, even though core normally prevents hiding the current revision and optimizes away that check. Missing, wrong-owner, hidden, unsupported and invalid snapshot requests share the internal `layers-revision-unavailable` error; edit denials use `layers-owner-edit-denied`. These are not yet localized public API errors. Operational storage exceptions still require mapping at the future request boundary.
+
+### Verification and limits
+
+The combined real-core suite passed **41 tests / 94 assertions** on MediaWiki **1.45.3 / PHP 8.3.31**. H3a contributes 22 tests including the harness safeguard. Coverage includes:
+
+- Required read/edit/Layers rights, new-page and talk-page creation rights.
+- A protected owner and a real database block denying an otherwise eligible editor.
+- Exact historical content after a later revision, and no fallback for another owner's revision, a missing revision, an absent owner or a revision without a Layers slot.
+- Ordinary readers denied hidden/suppressed historical content, while a reviewer with `deletedtext` can read ordinary hidden text.
+- Denied read access performing no revision lookup (an Authority/lookup mock verifies call order).
+- Defensive denial of an inconsistent current revision carrying hidden text flags.
+
+Standalone PHPUnit also passed (868 tests / 1,952 assertions / one existing skip), along with PHP syntax/style/file-mode checks, PHP reference/compatibility guards, and documentation/version checks. PHP style retains two existing duplicate test-stub warnings. JavaScript tests were not rerun for this PHP-only internal change; the H2 result above remains dated evidence.
+
+The visibility fixtures update isolated test-table flags; they do not exercise the RevisionDelete UI, log visibility, full suppression/undelete lifecycle or concurrent suppression. The absent-owner case uses a nonexistent page, not an actual deletion workflow. Page-move/restore races, partial blocks, cascading protection, restricted tokens, privileged suppressed-content reads and the 1.44 runtime remain additional acceptance work. Source-file existence, permission, version retention and PDF page validity are **not** established by this helper. Request controls (CSRF/POST/rate limits), combined publication orchestration, historical rendering and adoption remain pending.
+
 ## Outstanding risks and next implementation task
 
-H3 is next: implement and test owner authorization, exact local source-version resolution and suppression-safe reads before exposing a public route. Production registration remains gated; source retention and lifecycle acceptance remain H5 requirements. The main compatibility floor is 1.44; the core-backed proof currently covers only 1.45.3. LTS work is separate.
+Next is H3b: exact local source-version resolution and access checks, followed by the complete authorized publication service and request boundary. H3a owner/revision access is implemented internally, but must be integrated and retested with those gates before exposing a public route. Production registration remains gated; source retention and lifecycle acceptance remain H5 requirements. The main compatibility floor is 1.44; the core-backed proof currently covers only 1.45.3. LTS work is separate.
 
-This change cannot make existing Layers edits visible in page history. No existing rows or user pages are migrated. H1/H2 add no public feature toggle because there is nothing safe to enable yet. Later rollout must include an opt-in gate, preflight adoption checks and a rollback policy that never silently falls back to mutable legacy content for adopted documents.
+This change cannot make existing Layers edits visible in page history. No existing rows or user pages are migrated. H1/H2/H3a add no public feature toggle because there is nothing safe to enable yet. Later rollout must include an opt-in gate, preflight adoption checks and a rollback policy that never silently falls back to mutable legacy content for adopted documents.

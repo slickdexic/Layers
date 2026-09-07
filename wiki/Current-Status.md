@@ -1,10 +1,10 @@
 # Current status and limitations
 
-Reviewed September 6, 2026 against `main` commit `a3b20963`. The extension manifest still reports **1.5.95**; fixes after the September 2 tag are on `main` and described under **Unreleased**. A checkout of the tag does not include those fixes.
+Baseline reviewed September 6, 2026 against `main` commit `a3b20963`. The extension manifest still reports **1.5.95**; fixes after the September 2 tag are on `main` and described under **Unreleased**. A checkout of the tag does not include those fixes.
 
 ## History implementation progress
 
-H1, the internal page-revision persistence proof, is now implemented and tested against MediaWiki 1.45.3. It creates genuine revisions, preserves page text, reads/restores historical content and rejects stale/racing writes. **This is not wired into the editor or public APIs and does not make existing Layers saves revision-compliant.** H2 now adds an internal versioned snapshot model and strict validation tested at the core save boundary. Production registration, authorization, historical viewers and adoption remain pending. See the [format contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_DOCUMENT_FORMAT.md) for limits and source-retention requirements. See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for gates and evidence.
+H1, the internal page-revision persistence proof, is now implemented and tested against MediaWiki 1.45.3. It creates genuine revisions, preserves page text, reads/restores historical content and rejects stale/racing writes. **This is not wired into the editor or public APIs and does not make existing Layers saves revision-compliant.** H2 now adds an internal versioned snapshot model and strict validation tested at the core save boundary. September 7: H3a adds internal owner edit/create authorization and historical snapshot access tests, including protected/blocked edits and hidden revisions (combined core suite: 41 tests / 94 assertions). Production registration, source validation, complete publication service/API, historical viewers and adoption remain pending. See the [format contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_DOCUMENT_FORMAT.md) for limits and source-retention requirements. See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for gates and evidence.
 
 ## Supported content
 
