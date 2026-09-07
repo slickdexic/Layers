@@ -31,7 +31,7 @@ The internal page-history persistence proof has a separate suite using MediaWiki
 MW_INSTALL_PATH=/path/to/mediawiki php vendor/bin/phpunit -c tests/phpunit/core.xml
 ```
 
-See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for setup, optional test-helper autoloading and limits. On MediaWiki 1.45.3/PHP 8.3.31 the combined H1/H2/H3a suite passed 41 tests / 94 assertions on September 7, 2026. It covers internal persistence, strict custom-model validation, owner authorization and historical snapshot access. Hidden-revision fixtures use isolated database flags; the full suppression lifecycle, source validation, public API permissions and visual rendering remain unverified. See the contract for exact coverage and limits.
+See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for setup, optional test-helper autoloading and limits. On MediaWiki 1.45.3/PHP 8.3.31 the combined H1/H2/H3a/H3b suite passed 62 tests / 154 assertions on September 7, 2026. It covers internal persistence, strict custom-model validation, owner authorization, historical snapshot access and source validation. Source tests combine controlled file doubles with a real temporary image upload/replacement and archived-version lookup. Hidden-revision fixtures use isolated database flags; the full suppression lifecycle, real PDF handler behavior, public API permissions and visual rendering remain unverified. See the contract for exact coverage and limits.
 
 ## Dated checkpoints
 

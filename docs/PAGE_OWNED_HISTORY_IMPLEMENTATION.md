@@ -1,6 +1,6 @@
 # Page-owned Layers history: implementation contract
 
-Updated September 7, 2026. Feature status: **not available to users**. H1 provides an internal, core-tested persistence primitive; H2 adds strict snapshot validation and a custom content model tested at the core save boundary. H3a adds an internal owner-permission and exact-revision access boundary. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
+Updated September 7, 2026. Feature status: **not available to users**. H1 provides an internal, core-tested persistence primitive; H2 adds strict snapshot validation and a custom content model tested at the core save boundary. H3a adds an internal owner-permission and exact-revision access boundary; H3b adds exact local source-version validation. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
 
 This document is the implementation tracker for revision history. It supersedes SOP-specific framing in earlier proposals. Images, PDF annotations and general-purpose slides are equal participants. Presentations, diagrams, educational material, visual documents and SOPs are acceptance examples; none defines the universal data model.
 
@@ -57,7 +57,7 @@ The server response must ultimately distinguish stale-base conflict, commit-time
 | --- | --- | --- |
 | H1: core persistence proof | Internal writer, genuine core/database tests, no public registration | Implemented; detailed evidence below |
 | H2: content model | Versioned schema, strict whole-document validation, canonicalization and custom content model | Internal implementation tested; direct core saves reject invalid snapshots. Production model/normal-slot registration deferred until H3 authority checks are ready |
-| H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | In progress: H3a owner/revision access tested internally; source validation, complete service and public boundary pending |
+| H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | In progress: H3a owner/revision access and H3b source resolver tested internally; complete service, request boundary and further source/lifecycle acceptance pending |
 | H4: editor and historical viewer | Owner/revision context across editor, inline view, lightbox and export; stable IDs and pinned assets | Pending; oldid works for images, PDFs and slides with no latest-state fallback |
 | H5: adoption and lifecycle | Copy/adopt/pin workflow, legacy-route isolation, move/delete/undelete/rollback/suppression/import/export and repair tooling | Pending; one authority and round-trip recovery proven |
 | H6: release readiness | Browser and operational tests, feature flag, upgrade/rollback documentation, support matrix, staged rollout | Pending; no compliance claim until all required gates pass |
@@ -150,8 +150,33 @@ Standalone PHPUnit also passed (868 tests / 1,952 assertions / one existing skip
 
 The visibility fixtures update isolated test-table flags; they do not exercise the RevisionDelete UI, log visibility, full suppression/undelete lifecycle or concurrent suppression. The absent-owner case uses a nonexistent page, not an actual deletion workflow. Page-move/restore races, partial blocks, cascading protection, restricted tokens, privileged suppressed-content reads and the 1.44 runtime remain additional acceptance work. Source-file existence, permission, version retention and PDF page validity are **not** established by this helper. Request controls (CSRF/POST/rate limits), combined publication orchestration, historical rendering and adoption remain pending.
 
+## H3b: exact local source-version validation
+
+Implemented September 7, 2026 in `src/Revision/SourceVersionResolver.php`. This remains an internal publication gate, not a registered service, API or historical renderer. It accepts a schema-valid complete snapshot and an Authority, returning resolved server-side File objects keyed by surface ID. Slides produce no file lookup and require no fabricated attachment. Image/PDF sources each undergo:
+
+1. Canonical local File-title parsing (`File:` plus MediaWiki DB-key spelling, including underscores), followed by source-page read authorization before lookup.
+2. LocalRepo lookup with the exact timestamp, redirects disabled and latest metadata requested. No foreign repository search or private-file option is used.
+3. Verification of the returned repository, filename, timestamp and stored SHA-1, and rejection of invisible/deleted file content.
+4. Physical backend existence checking, since a database file row alone does not prove bytes are present.
+5. PDF MIME type and an available integer page count sufficient for the requested page; image media type must be BITMAP or DRAWING. An unknown PDF page count fails explicitly.
+
+Hidden source versions cannot be republished through this gate, including by privileged users: ordinary rendering must not create public thumbnails from private bytes. Privileged historical asset inspection needs a separate protected delivery design. The resolver itself neither renders nor grants permission to expose a file URL. Source access must also be enforced when historical content is rendered, independently of owner-page access.
+
+All unavailable/mismatched sources use `layers-source-unavailable`; invalid snapshots retain the schema validation failure. No snapshot is repaired or rewritten, and no partial result is returned when any source fails. Storage/handler operational exceptions still need mapping by the eventual request boundary. The stored hash is compared with metadata; bytes are not rehashed on each call. This does not detect arbitrary out-of-band storage corruption or provide retention.
+
+### Verification and limits
+
+The combined core suite passed **62 tests / 154 assertions** on MediaWiki **1.45.3 / PHP 8.3.31**. The source suite contributes **21 tests / 60 assertions**, including the core safeguard:
+
+- Controlled repository/file doubles cover exact lookup options, valid image/PDF references, missing/foreign/hidden files, returned-title/timestamp/hash mismatches, missing paths/bytes, incompatible types, unavailable/insufficient PDF page counts, denied access before lookup, canonical titles, invalid snapshots and attachment-free slides.
+- One genuine LocalRepo scenario uploads a PNG, replaces it at a later timestamp, resolves the original as an OldLocalFile with its original hash, then rejects it after its historical file-content flag is hidden. Storage is a temporary FSFileBackend and database tables are isolated by core. No live uploaded file is modified.
+
+The real-upload test proves current/archived image lookup; PDF metadata/rendering, real file moves/deletion/undelete, concurrent visibility/storage changes, foreign-file adoption and retention remain unverified. The hidden-file flag is set directly in isolated test tables, not through the deletion UI. The resolver checks source reference identity and availability at lookup time; a later render or publication must not rely indefinitely on these results.
+
+Standalone PHPUnit also passed (868 tests / 1,952 assertions / one existing skip), with PHP QA, reference/compatibility and documentation/version checks. JavaScript tests were not rerun for this internal PHP-only change. No coverage percentage was measured.
+
 ## Outstanding risks and next implementation task
 
-Next is H3b: exact local source-version resolution and access checks, followed by the complete authorized publication service and request boundary. H3a owner/revision access is implemented internally, but must be integrated and retested with those gates before exposing a public route. Production registration remains gated; source retention and lifecycle acceptance remain H5 requirements. The main compatibility floor is 1.44; the core-backed proof currently covers only 1.45.3. LTS work is separate.
+Next is H3c: combine owner authorization, whole-document/source validation and revision writing in one publication service, with stable failure mapping and end-to-end denied-write tests. Then add the request boundary and its CSRF/POST/rate controls. H3a/H3b are internal components and must be integrated and retested before exposing a public route. Production registration remains gated; source retention and lifecycle acceptance remain H5 requirements. The main compatibility floor is 1.44; the core-backed proof currently covers only 1.45.3. LTS work is separate.
 
-This change cannot make existing Layers edits visible in page history. No existing rows or user pages are migrated. H1/H2/H3a add no public feature toggle because there is nothing safe to enable yet. Later rollout must include an opt-in gate, preflight adoption checks and a rollback policy that never silently falls back to mutable legacy content for adopted documents.
+This change cannot make existing Layers edits visible in page history. No existing rows or user pages are migrated. H1/H2/H3a/H3b add no public feature toggle because there is nothing safe to enable yet. Later rollout must include an opt-in gate, preflight adoption checks and a rollback policy that never silently falls back to mutable legacy content for adopted documents.
