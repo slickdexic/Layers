@@ -1,6 +1,6 @@
 # Page-owned Layers history: implementation contract
 
-Updated September 7, 2026. Feature status: **not available to users**. H1 provides an internal, core-tested persistence primitive; H2 adds strict snapshot validation and a custom content model tested at the core save boundary. H3a adds an internal owner-permission and exact-revision access boundary; H3b adds exact local source-version validation. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
+Updated September 7, 2026. Feature status: **not available to users**. H1 provides an internal, core-tested persistence primitive; H2 adds strict snapshot validation and a custom content model tested at the core save boundary. H3a adds an internal owner-permission and exact-revision access boundary; H3b adds exact local source-version validation. H3c connects these components in an internal publication service. No public endpoint, slot registration, editor change, adoption or migration is enabled. Existing Layers saves still use `layer_sets` and do not meet the page-history guarantee.
 
 This document is the implementation tracker for revision history. It supersedes SOP-specific framing in earlier proposals. Images, PDF annotations and general-purpose slides are equal participants. Presentations, diagrams, educational material, visual documents and SOPs are acceptance examples; none defines the universal data model.
 
@@ -57,7 +57,7 @@ The server response must ultimately distinguish stale-base conflict, commit-time
 | --- | --- | --- |
 | H1: core persistence proof | Internal writer, genuine core/database tests, no public registration | Implemented; detailed evidence below |
 | H2: content model | Versioned schema, strict whole-document validation, canonicalization and custom content model | Internal implementation tested; direct core saves reject invalid snapshots. Production model/normal-slot registration deferred until H3 authority checks are ready |
-| H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | In progress: H3a owner/revision access and H3b source resolver tested internally; complete service, request boundary and further source/lifecycle acceptance pending |
+| H3: authorized service/API | Owner resolution, read/edit/create authority, CSRF, limits, base revision, stable error mapping, suppression-safe historical reads | In progress: H3a/H3b access/source gates and H3c publication service tested internally; request boundary, registration and further source/lifecycle acceptance pending |
 | H4: editor and historical viewer | Owner/revision context across editor, inline view, lightbox and export; stable IDs and pinned assets | Pending; oldid works for images, PDFs and slides with no latest-state fallback |
 | H5: adoption and lifecycle | Copy/adopt/pin workflow, legacy-route isolation, move/delete/undelete/rollback/suppression/import/export and repair tooling | Pending; one authority and round-trip recovery proven |
 | H6: release readiness | Browser and operational tests, feature flag, upgrade/rollback documentation, support matrix, staged rollout | Pending; no compliance claim until all required gates pass |
@@ -175,8 +175,46 @@ The real-upload test proves current/archived image lookup; PDF metadata/renderin
 
 Standalone PHPUnit also passed (868 tests / 1,952 assertions / one existing skip), with PHP QA, reference/compatibility and documentation/version checks. JavaScript tests were not rerun for this internal PHP-only change. No coverage percentage was measured.
 
+## H3c: integrated publication service
+
+Implemented September 7, 2026 in `src/Revision/PagePublicationService.php`, with typed internal failures in `PublicationException.php`. The service is deliberately not registered or exposed as an endpoint. Existing API/editor saves still use the legacy store.
+
+The service takes a resolved owner Title, request Authority, explicit base revision, complete snapshot JSON, summary and optional WikitextContent for the main slot. It returns only the committed revision ID (or unchanged ID for a successful no-op), rather than exposing revision metadata.
+
+The sequence is now executable:
+
+1. Check owner edit eligibility using `assertCanPrepareEdit()`. This uses core's non-committing `definitelyCan()` checks and denies ineligible callers before source lookup.
+2. Reject negative bases and creation without main content. If main content is supplied, require the owner's current/default model to be wikitext; this interface cannot change content models. Existing non-wikitext main slots may be preserved when no main edit is supplied.
+3. Validate and canonicalize the complete snapshot, then run exact local source resolution using the same Authority.
+4. Recheck owner read/edit/create authorization with `assertCanEdit()` immediately before preparing the write. This uses secure core write checks; a permission revoked during validation prevents saving. Write authorization is counted once per action, rather than in both phases.
+5. Build the page updater internally for that owner/actor and invoke the revision writer. Its base check and core compare-and-swap reject stale/competing changes. Both supplied slots commit together.
+
+The service cannot make permissions, file storage and revision insertion one atomic system-wide transaction. Source disappearance or visibility changes after resolution and permission changes after final authorization remain lifecycle/concurrency acceptance work. The final owner check closes the validation interval but does not claim to eliminate every race. Core converts the supplied Authority to its actor identity for attribution inside the updater; authorization remains the service's responsibility.
+
+### Internal failure contract
+
+| Error | Meaning |
+| --- | --- |
+| `layers-owner-edit-denied` | Preliminary or final owner authorization failed |
+| `layers-invalid-publication-request` | Invalid base/creation arguments rejected before or by the writer |
+| `layers-main-model-change-denied` | A supplied main edit would target a non-wikitext owner |
+| `layers-invalid-snapshot` | Whole-document validation failed |
+| `layers-source-unavailable` | A required source is denied, missing or mismatched |
+| `layers-edit-conflict` | Writer found a different parent from the requested base |
+| `layers-revision-save-failed` | Core rejected the write, including the writer's generic late-conflict failure |
+
+These are internal codes, not a public localized API contract. Previous exceptions retain diagnostics for server-side investigation and must never be serialized to clients. Unexpected infrastructure/handler failures can still escape these expected-failure mappings; the request boundary must supply a generic operational error and preserve unsaved work. Late commit conflicts still share the generic save-failure code; refine that distinction before finalizing the public response contract.
+
+### Verification and limits
+
+The combined core suite passed **75 tests / 188 assertions** on MediaWiki **1.45.3 / PHP 8.3.31**. H3c contributes **13 tests / 34 assertions**, including the harness safeguard. It proves genuine create/update/no-op revisions, actor/summary/main-slot preservation, and exact historical reads through the integrated service. Invalid snapshots, unavailable sources, denied permissions and stale/negative bases leave the current revision unchanged. New-owner requests without main content create no page.
+
+A controlled source callback revokes permissions or performs a competing genuine revision during validation; the pending save is denied or conflicts, preserving the winner. A JSON owner cannot be changed to wikitext through this interface, but can receive a Layers slot while retaining its JSON main content. An Authority mock verifies one write-authorization call per action. The successful publication scenarios use general-purpose slides; real archived-image retrieval is covered separately by H3b, while end-to-end publication of real image/PDF sources still needs acceptance coverage.
+
+Standalone PHPUnit passed **868 tests / 1,952 assertions / one existing skip**. PHP syntax/style/file-mode checks, PHP reference/compatibility guards and documentation/version checks passed. Two existing duplicate test-stub style warnings remain. JavaScript tests and browser tests were not rerun for this internal PHP-only change; no coverage percentage was measured.
+
 ## Outstanding risks and next implementation task
 
-Next is H3c: combine owner authorization, whole-document/source validation and revision writing in one publication service, with stable failure mapping and end-to-end denied-write tests. Then add the request boundary and its CSRF/POST/rate controls. H3a/H3b are internal components and must be integrated and retested before exposing a public route. Production registration remains gated; source retention and lifecycle acceptance remain H5 requirements. The main compatibility floor is 1.44; the core-backed proof currently covers only 1.45.3. LTS work is separate.
+Next is H3d: a gated request boundary with POST/CSRF/rate/size controls, explicit owner/base parameters and localized failure responses. Define/test registration and enablement so direct core edits cannot bypass the intended admission rules. H3a/H3b/H3c are connected internally; request, source-lifecycle and rollout gates remain before exposing normal user writes. Production registration remains gated; source retention and lifecycle acceptance remain H5 requirements. The main compatibility floor is 1.44; the core-backed proof currently covers only 1.45.3. LTS work is separate.
 
-This change cannot make existing Layers edits visible in page history. No existing rows or user pages are migrated. H1/H2/H3a/H3b add no public feature toggle because there is nothing safe to enable yet. Later rollout must include an opt-in gate, preflight adoption checks and a rollback policy that never silently falls back to mutable legacy content for adopted documents.
+This change cannot make existing Layers edits visible in page history. No existing rows or user pages are migrated. H1/H2/H3a/H3b/H3c add no public feature toggle because there is nothing safe to enable yet. Later rollout must include an opt-in gate, preflight adoption checks and a rollback policy that never silently falls back to mutable legacy content for adopted documents.

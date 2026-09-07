@@ -4,7 +4,16 @@ Baseline reviewed September 6, 2026 against `main` commit `a3b20963`. The extens
 
 ## History implementation progress
 
-H1, the internal page-revision persistence proof, is now implemented and tested against MediaWiki 1.45.3. It creates genuine revisions, preserves page text, reads/restores historical content and rejects stale/racing writes. **This is not wired into the editor or public APIs and does not make existing Layers saves revision-compliant.** H2 now adds an internal versioned snapshot model and strict validation tested at the core save boundary. September 7: H3a adds internal owner edit/create authorization and historical snapshot access tests, including protected/blocked edits and hidden revisions (combined core suite: 41 tests / 94 assertions). H3b adds internal exact local source validation, including a real temporary image upload/replacement test (combined core suite now 62 tests / 154 assertions). Production registration, complete publication service/API, historical viewers and adoption remain pending. See the [format contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_DOCUMENT_FORMAT.md) for limits and source-retention requirements. See the [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for gates and evidence.
+**Page-owned history is not wired into the editor or public APIs. Existing Layers saves remain on the legacy path and are not revision-compliant.** Internal progress as of September 7, 2026:
+
+| Stage | Implemented internally |
+| --- | --- |
+| H1/H2 | Genuine revision persistence and a strict versioned snapshot model |
+| H3a | Owner edit/create authorization and visibility-aware exact historical reads |
+| H3b | Exact local source validation, including a real archived-image upload/replacement test |
+| H3c | Integrated publication service with final permission rechecks, combined-slot saves and conflict handling |
+
+The combined core suite passed **75 tests / 188 assertions** on MediaWiki 1.45.3. Production registration/API, historical viewers, source retention and adoption remain pending. See the [format contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_DOCUMENT_FORMAT.md) and [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for exact evidence, limits and remaining gates.
 
 ## Supported content
 

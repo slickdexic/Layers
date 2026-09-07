@@ -16,6 +16,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Internal development
 
+- Connected owner authorization, snapshot/source validation and revision writing in an internal publication service (H3c). Final permission rechecks, model-change protection and competing-edit regression tests pass. No public endpoint or editor behavior is enabled.
+
 - Added internal exact local source-version validation (H3b): source read access, title/timestamp/hash checks, visible backend files, image/PDF types and PDF page bounds. A real temporary-upload test confirms archived-image resolution after replacement. No public save path is enabled.
 
 - Added internal owner edit/create authorization and exact historical snapshot access (H3a), including owner identity and revision visibility checks. Core tests cover protected/blocked edits and hidden revisions. Source validation, the complete save service and public API remain pending.

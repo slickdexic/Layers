@@ -3,7 +3,7 @@
 > **Current guidance — September 6, 2026:** Layers supports image annotations, PDF annotations and standalone slides as equal content types. Slides are a general-purpose canvas for presentations, diagrams, educational material, infographics, visual documents, dashboards and more. SOPs are one application, not the definition of the product. The agreed foundation priorities remain **page revision history, MediaWiki search, then Cargo query/filter support**. See [the architecture proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md) for technical context; its SOP examples illustrate one use case rather than restricting scope. Post-1.5.95 fixes are not yet verified/backported to REL1_43; this plan does not announce a release.
 
 **Version:** 1.5.95
-**Last updated:** September 7, 2026 — internal owner/revision access and source validation
+**Last updated:** September 7, 2026 — integrated internal publication service
 
 ## Product improvement roadmap
 
@@ -13,7 +13,7 @@ The direction is a dependable, searchable and reusable visual-content system for
 
 ### Active implementation: page-owned history (H1/H2 complete internally; H3 in progress)
 
-The core persistence proof is implemented and tested against MediaWiki 1.45.3: genuine Layers-slot revisions, exact historical reads/restoration, stale-base and commit-time race rejection, no-op behavior and combined main/Layers saves. See [the implementation contract](docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for milestone gates and evidence. This is an internal primitive, not a user-facing history feature: H2 now supplies an internal versioned document model, strict validation and canonical snapshots, with direct core-save rejection tests. See the [format contract](docs/PAGE_OWNED_DOCUMENT_FORMAT.md). H3a now adds tested owner edit/create authorization and exact historical snapshot access with visibility checks. H3b now validates exact accessible local source versions, with a real archived-image regression test. Production registration, complete publication service/API, revision-aware viewers and adoption remain pending. H3c (combined authorized publication service) is next. General-purpose slides, images and PDFs remain equal participants.
+The core persistence proof is implemented and tested against MediaWiki 1.45.3: genuine Layers-slot revisions, exact historical reads/restoration, stale-base and commit-time race rejection, no-op behavior and combined main/Layers saves. See [the implementation contract](docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for milestone gates and evidence. This is an internal primitive, not a user-facing history feature: H2 now supplies an internal versioned document model, strict validation and canonical snapshots, with direct core-save rejection tests. See the [format contract](docs/PAGE_OWNED_DOCUMENT_FORMAT.md). H3a now adds tested owner edit/create authorization and exact historical snapshot access with visibility checks. H3b now validates exact accessible local source versions, with a real archived-image regression test. H3c connects these gates in an internal publication service with final permission rechecks and genuine revision tests. Production registration/API, revision-aware viewers and adoption remain pending. H3d (gated request boundary and admission controls) is next. General-purpose slides, images and PDFs remain equal participants.
 
 ### Active implementation: R6.08 — strict save payload containers
 

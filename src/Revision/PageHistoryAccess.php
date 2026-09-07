@@ -31,13 +31,32 @@ class PageHistoryAccess {
 	 * @throws \DomainException On denied access
 	 */
 	public function assertCanEdit( Title $owner, Authority $authority ): void {
-		if ( !$owner->canExist() || !$authority->authorizeRead( 'read', $owner ) ||
-			!$authority->authorizeWrite( 'editlayers', $owner ) ||
-			!$authority->authorizeWrite( 'edit', $owner ) ) {
+		$this->checkEdit( $owner, $authority, true );
+	}
+
+	/**
+	 * Non-committing preflight; must be followed by assertCanEdit before writing.
+	 * @param Title $owner
+	 * @param Authority $authority
+	 */
+	public function assertCanPrepareEdit( Title $owner, Authority $authority ): void {
+		$this->checkEdit( $owner, $authority, false );
+	}
+
+	/**
+	 * @param Title $owner
+	 * @param Authority $authority
+	 * @param bool $authorize Use secure write authorization and count rate-limit hits
+	 */
+	private function checkEdit( Title $owner, Authority $authority, bool $authorize ): void {
+		$read = $authorize ? 'authorizeRead' : 'definitelyCan';
+		$write = $authorize ? 'authorizeWrite' : 'definitelyCan';
+		if ( !$owner->canExist() || !$authority->$read( 'read', $owner ) ||
+			!$authority->$write( 'editlayers', $owner ) || !$authority->$write( 'edit', $owner ) ) {
 			throw new \DomainException( 'layers-owner-edit-denied' );
 		}
 		if ( !$owner->getArticleID( IDBAccessObject::READ_LATEST ) &&
-			!$authority->authorizeWrite( $owner->isTalkPage() ? 'createtalk' : 'createpage', $owner ) ) {
+			!$authority->$write( $owner->isTalkPage() ? 'createtalk' : 'createpage', $owner ) ) {
 			throw new \DomainException( 'layers-owner-edit-denied' );
 		}
 	}

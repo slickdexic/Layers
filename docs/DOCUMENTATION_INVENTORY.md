@@ -115,5 +115,5 @@ The current source checkpoint is a3b20963 (manifest 1.5.95 plus main fixes). Loc
 | [wiki/Wikitext-Syntax.md](../wiki/Wikitext-Syntax.md) | Wiki source: maintained reference or navigation |
 | [wiki/_Sidebar.md](../wiki/_Sidebar.md) | Wiki source: maintained reference or navigation |
 | [docs/SAVE_PAYLOAD_CONTRACT.md](SAVE_PAYLOAD_CONTRACT.md) | Maintained implementation contract added September 6, 2026 |
-| [docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) | Active implementation contract: H1/H2 internal implementation, H3a access and H3b sources tested, remaining H3–H6 work pending |
+| [docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) | Active implementation contract: H1/H2 internal implementation, H3a access, H3b sources and H3c publication tested, remaining H3–H6 work pending |
 | [docs/PAGE_OWNED_DOCUMENT_FORMAT.md](PAGE_OWNED_DOCUMENT_FORMAT.md) | Internal H2 snapshot format and validation/retention contract; no public registration |
