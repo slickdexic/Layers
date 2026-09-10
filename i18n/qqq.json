@@ -918,5 +918,20 @@
 	"layers-validation-fillopacity-invalid": "Validation error shown when the fill opacity is not a number. See also {{msg-mw|layers-validation-opacity-invalid}}.",
 	"layers-validation-fillopacity-range": "Validation error shown when the fill opacity is out of range. Parameters:\n* $1 - the minimum allowed value\n* $2 - the maximum allowed value",
 	"layers-validation-strokeopacity-invalid": "Validation error shown when the stroke opacity is not a number. See also {{msg-mw|layers-validation-opacity-invalid}}.",
-	"layers-validation-strokeopacity-range": "Validation error shown when the stroke opacity is out of range. Parameters:\n* $1 - the minimum allowed value\n* $2 - the maximum allowed value"
+	"layers-validation-strokeopacity-range": "Validation error shown when the stroke opacity is out of range. Parameters:\n* $1 - the minimum allowed value\n* $2 - the maximum allowed value",
+	"layers-publication-disabled": "Used by the unregistered experimental page-owned publishing API. Page-owned Layers publishing is not enabled.",
+	"layers-publication-failed": "Used by the unregistered experimental page-owned publishing API. Layers could not confirm that the page was saved. Check its latest revision before retrying.",
+	"layers-owner-edit-denied": "Used by the unregistered experimental page-owned publishing API. You do not have permission to publish Layers on this page.",
+	"layers-invalid-publication-request": "Used by the unregistered experimental page-owned publishing API. The owner page, base revision or page-creation content is invalid.",
+	"layers-main-model-change-denied": "Used by the unregistered experimental page-owned publishing API. Layers publishing cannot change the page content model.",
+	"layers-invalid-snapshot": "Used by the unregistered experimental page-owned publishing API. The Layers document is invalid or unsupported. Your changes were not saved.",
+	"layers-source-unavailable": "Used by the unregistered experimental page-owned publishing API. A required source file version is unavailable or does not match this document.",
+	"layers-edit-conflict": "Used by the unregistered experimental page-owned publishing API. The page changed while you were editing. Reload its latest revision before retrying.",
+	"layers-revision-save-failed": "Used by the unregistered experimental page-owned publishing API. MediaWiki could not confirm that the Layers revision was saved. Check the latest page revision before retrying.",
+	"apihelp-layerspublish-summary": "Used by the unregistered experimental page-owned publishing API. Experimental page-owned Layers publishing. Not registered for normal requests.",
+	"apihelp-layerspublish-param-owner": "Used by the unregistered experimental page-owned publishing API. Owning wiki page title.",
+	"apihelp-layerspublish-param-baserevid": "Used by the unregistered experimental page-owned publishing API. Expected owner revision ID; zero for page creation.",
+	"apihelp-layerspublish-param-data": "Used by the unregistered experimental page-owned publishing API. Complete versioned Layers snapshot as JSON.",
+	"apihelp-layerspublish-param-maintext": "Used by the unregistered experimental page-owned publishing API. Optional simultaneous wikitext edit; required for a new owner page.",
+	"apihelp-layerspublish-param-summary": "Used by the unregistered experimental page-owned publishing API. Edit summary, at most 500 UTF-8 bytes."
 }

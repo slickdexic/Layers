@@ -924,5 +924,20 @@
 	"layers-validation-fillopacity-invalid": "Invalid fill opacity value",
 	"layers-validation-fillopacity-range": "Fill opacity must be between $1 and $2",
 	"layers-validation-strokeopacity-invalid": "Invalid stroke opacity value",
-	"layers-validation-strokeopacity-range": "Stroke opacity must be between $1 and $2"
+	"layers-validation-strokeopacity-range": "Stroke opacity must be between $1 and $2",
+	"layers-publication-disabled": "Page-owned Layers publishing is not enabled.",
+	"layers-publication-failed": "Layers could not confirm that the page was saved. Check its latest revision before retrying.",
+	"layers-owner-edit-denied": "You do not have permission to publish Layers on this page.",
+	"layers-invalid-publication-request": "The owner page, base revision or page-creation content is invalid.",
+	"layers-main-model-change-denied": "Layers publishing cannot change the page content model.",
+	"layers-invalid-snapshot": "The Layers document is invalid or unsupported. Your changes were not saved.",
+	"layers-source-unavailable": "A required source file version is unavailable or does not match this document.",
+	"layers-edit-conflict": "The page changed while you were editing. Reload its latest revision before retrying.",
+	"layers-revision-save-failed": "MediaWiki could not confirm that the Layers revision was saved. Check the latest page revision before retrying.",
+	"apihelp-layerspublish-summary": "Experimental page-owned Layers publishing. Not registered for normal requests.",
+	"apihelp-layerspublish-param-owner": "Owning wiki page title.",
+	"apihelp-layerspublish-param-baserevid": "Expected owner revision ID; zero for page creation.",
+	"apihelp-layerspublish-param-data": "Complete versioned Layers snapshot as JSON.",
+	"apihelp-layerspublish-param-maintext": "Optional simultaneous wikitext edit; required for a new owner page.",
+	"apihelp-layerspublish-param-summary": "Edit summary, at most 500 UTF-8 bytes."
 }

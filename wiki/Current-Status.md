@@ -4,7 +4,7 @@ Baseline reviewed September 6, 2026 against `main` commit `a3b20963`. The extens
 
 ## History implementation progress
 
-**Page-owned history is not wired into the editor or public APIs. Existing Layers saves remain on the legacy path and are not revision-compliant.** Internal progress as of September 7, 2026:
+**Page-owned history is not wired into the editor or public APIs. Existing Layers saves remain on the legacy path and are not revision-compliant.** Internal progress as of September 10, 2026:
 
 | Stage | Implemented internally |
 | --- | --- |
@@ -12,8 +12,9 @@ Baseline reviewed September 6, 2026 against `main` commit `a3b20963`. The extens
 | H3a | Owner edit/create authorization and visibility-aware exact historical reads |
 | H3b | Exact local source validation, including a real archived-image upload/replacement test |
 | H3c | Integrated publication service with final permission rechecks, combined-slot saves and conflict handling |
+| H3d (partial) | Unregistered API request boundary with POST/CSRF, input limits, rate limiting and safe errors |
 
-The combined core suite passed **75 tests / 188 assertions** on MediaWiki 1.45.3. Production registration/API, historical viewers, source retention and adoption remain pending. See the [format contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_DOCUMENT_FORMAT.md) and [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for exact evidence, limits and remaining gates.
+The combined core suite passed **96 tests / 244 assertions** on MediaWiki 1.45.3. Alternate-path admission, production registration, HTTP/browser acceptance, historical viewers, source retention and adoption remain pending. The experimental [API contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_API_CONTRACT.md) does not describe a normally available endpoint. See the [format contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_DOCUMENT_FORMAT.md) and [implementation contract](https://github.com/slickdexic/Layers/blob/main/docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md) for exact evidence, limits and remaining gates.
 
 ## Supported content
 

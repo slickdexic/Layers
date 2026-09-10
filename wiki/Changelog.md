@@ -16,6 +16,8 @@ All notable changes to the Layers MediaWiki Extension will be documented in this
 
 ### Internal development
 
+- Added an unregistered, closed-by-default page-owned publishing API boundary (H3d request proof), with POST/CSRF protections, bounded inputs, shared save-rate limiting and fixed localized errors. Core-dispatcher tests pass; production registration and alternate-path admission remain gated.
+
 - Connected owner authorization, snapshot/source validation and revision writing in an internal publication service (H3c). Final permission rechecks, model-change protection and competing-edit regression tests pass. No public endpoint or editor behavior is enabled.
 
 - Added internal exact local source-version validation (H3b): source read access, title/timestamp/hash checks, visible backend files, image/PDF types and PDF page bounds. A real temporary-upload test confirms archived-image resolution after replacement. No public save path is enabled.
