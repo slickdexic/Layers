@@ -2,7 +2,7 @@
 
 September 6, 2026 reconciliation. Scope includes repository-owned Markdown and all `.mediawiki` files, GitHub wiki sources and historical records. The table distinguishes active references from historical evidence; it does not claim every historical implementation detail was revalidated. Licenses, source asset notices, COPYING and conduct policy are preserved. Generated coverage/output logs are diagnostics, not maintained documentation.
 
-The current source checkpoint is a3b20963 (manifest 1.5.95 plus main fixes). Local API metadata and schema/configuration source were used for reference checks. Local file targets and wiki page links in maintained documents are checked automatically (section anchors are not checked); archive paths and remote HTTP targets are not exhaustively validated. Publication must also be verified against the separate wiki repository.
+The September 6 reconciliation used source checkpoint a3b20963 (manifest 1.5.95 plus main fixes); it is not the latest code checkpoint. Subsequent active contracts and the September 10 implementation handoff plan are listed below. Local API metadata and schema/configuration source were used for reference checks. Local file targets and wiki page links in maintained documents are checked automatically (section anchors are not checked); archive paths and remote HTTP targets are not exhaustively validated. Publication must also be verified against the separate wiki repository.
 
 | Document | Treatment |
 | --- | --- |
@@ -118,3 +118,4 @@ The current source checkpoint is a3b20963 (manifest 1.5.95 plus main fixes). Loc
 | [docs/PAGE_OWNED_HISTORY_IMPLEMENTATION.md](PAGE_OWNED_HISTORY_IMPLEMENTATION.md) | Active implementation contract: H1/H2 internal implementation, H3a access, H3b sources and H3c publication and H3d request boundary tested, remaining H3–H6 work pending |
 | [docs/PAGE_OWNED_DOCUMENT_FORMAT.md](PAGE_OWNED_DOCUMENT_FORMAT.md) | Internal H2 snapshot format and validation/retention contract; no public registration |
 | [docs/PAGE_OWNED_API_CONTRACT.md](PAGE_OWNED_API_CONTRACT.md) | Experimental unregistered API contract, test evidence and admission gates |
+| [docs/IMPLEMENTATION_HANDOFF_PLAN.md](IMPLEMENTATION_HANDOFF_PLAN.md) | Ordered junior task packets, lead design gates, dependencies and acceptance criteria; September 10 baseline e03504ec |

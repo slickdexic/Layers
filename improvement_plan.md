@@ -3,7 +3,11 @@
 > **Current guidance — September 6, 2026:** Layers supports image annotations, PDF annotations and standalone slides as equal content types. Slides are a general-purpose canvas for presentations, diagrams, educational material, infographics, visual documents, dashboards and more. SOPs are one application, not the definition of the product. The agreed foundation priorities remain **page revision history, MediaWiki search, then Cargo query/filter support**. See [the architecture proposal](docs/proposals/CARGO_SEARCH_PAGE_HISTORY.md) for technical context; its SOP examples illustrate one use case rather than restricting scope. Post-1.5.95 fixes are not yet verified/backported to REL1_43; this plan does not announce a release.
 
 **Version:** 1.5.95
-**Last updated:** September 10, 2026 — internal API request-boundary proof
+**Last updated:** September 10, 2026 — ordered implementation handoff plan
+
+## Implementation assignments
+
+Use the [implementation handoff plan](docs/IMPLEMENTATION_HANDOFF_PLAN.md) to assign work: 15 bounded junior-engineer packets, eight lead-owned milestones, dependencies and acceptance criteria. Start juniors with J01 (literal set names), followed by J02/J03; J04 (production rename tests) can proceed independently. The lead retains L01 (alternate save admission), then the architecture and security gates for history, search and Cargo. This is a task queue, not a claim that those changes are implemented.
 
 ## Product improvement roadmap
 

@@ -6,6 +6,8 @@ This document is the implementation tracker for revision history. It supersedes 
 
 ## Outcome and non-negotiable invariants
 
+For assignment order and bounded junior-engineer tasks, use the [implementation handoff plan](IMPLEMENTATION_HANDOFF_PLAN.md). This document remains the authority for the history implementation and its evidence; planned assignments do not change milestone status.
+
 1. Published owner-page Layers content exists only as part of a committed MediaWiki revision.
 2. One owner-page editing session publishes its changed surfaces and any corresponding main-slot changes together.
 3. Every historical render resolves the requested revision and its pinned assets. Missing/inaccessible content fails explicitly; it never falls back to latest.
