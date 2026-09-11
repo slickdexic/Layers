@@ -134,9 +134,7 @@ class SetNameResolver {
 		?string $fallbackDefault = null
 	): string {
 		if ( self::hasExplicitName( $requested ) ) {
-			if ( !SetNameSanitizer::isValid( $requested ) ||
-				SetNameSanitizer::sanitize( $requested ) !== $requested
-			) {
+			if ( !SetNameSanitizer::isCanonical( $requested ) ) {
 				throw new \InvalidArgumentException( 'Invalid explicit set name' );
 			}
 			return $requested;

@@ -53,13 +53,14 @@ class ApiLayersDelete extends ApiBase {
 		$params = $this->extractRequestParams();
 		$requestedFilename = $params['filename'] ?? null;
 		$slidename = $params['slidename'] ?? null;
-		$setName = SetNameSanitizer::sanitize( $params['setname'] );
+		$rawSetName = isset( $params['setname'] ) ? (string)$params['setname'] : '';
 
-		// Deleting is destructive, so the caller must identify a real set rather
-		// than relying on any assumed name.
-		if ( !SetNameSanitizer::isValid( $setName ) ) {
+		// Deleting is destructive, so the caller must identify a real set literally.
+		// Malformed or noncanonical identifiers fail before mutation.
+		if ( !SetNameSanitizer::isCanonical( $rawSetName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
+		$setName = $rawSetName;
 
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );

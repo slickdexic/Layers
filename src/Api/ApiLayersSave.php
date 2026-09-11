@@ -154,8 +154,7 @@ class ApiLayersSave extends ApiBase {
 		// a malformed explicit identifier to a different, sanitized or latest set.
 		$rawSetName = isset( $params['setname'] ) ? (string)$params['setname'] : null;
 		if ( SetNameResolver::hasExplicitName( $rawSetName ) &&
-			( !SetNameSanitizer::isValid( $rawSetName ) ||
-				SetNameSanitizer::sanitize( $rawSetName ) !== $rawSetName )
+			!SetNameSanitizer::isCanonical( $rawSetName )
 		) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}

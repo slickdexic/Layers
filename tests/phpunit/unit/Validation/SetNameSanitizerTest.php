@@ -370,4 +370,76 @@ class SetNameSanitizerTest extends \MediaWikiUnitTestCase {
 			);
 		}
 	}
+
+	/**
+	 * @covers ::isCanonical
+	 * @dataProvider provideCanonicalSetNames
+	 */
+	public function testIsCanonicalAcceptsCanonicalNames( string $name ): void {
+		$this->assertTrue(
+			SetNameSanitizer::isCanonical( $name ),
+			"isCanonical() should accept strictly canonical literal name: $name"
+		);
+	}
+
+	/**
+	 * @return array<string, array{0: string}>
+	 */
+	public static function provideCanonicalSetNames(): array {
+		return [
+			'single char' => [ 'a' ],
+			'literal 0' => [ '0' ],
+			'literal 1' => [ '1' ],
+			'literal on' => [ 'on' ],
+			'literal off' => [ 'off' ],
+			'default' => [ 'default' ],
+			'alphanumeric and hyphens' => [ 'my-layer-set' ],
+			'with underscore' => [ 'anatomy_labels' ],
+			'with single space' => [ 'Set 1' ],
+			'with multiple single spaces' => [ 'three word name' ],
+			'Cyrillic unicode' => [ 'набор' ],
+			'Latin accented unicode' => [ 'Étiquette' ],
+			'Japanese unicode' => [ '日本語' ],
+			'Arabic unicode' => [ 'مجموعة' ],
+			'exact 255 chars' => [ str_repeat( 'a', 255 ) ],
+			'exact 255 multibyte chars' => [ str_repeat( 'ä', 255 ) ],
+		];
+	}
+
+	/**
+	 * @covers ::isCanonical
+	 * @dataProvider provideNoncanonicalSetNames
+	 */
+	public function testIsCanonicalRejectsNoncanonicalNames( ?string $name ): void {
+		$this->assertFalse(
+			SetNameSanitizer::isCanonical( $name ),
+			"isCanonical() should reject noncanonical name: " . json_encode( $name )
+		);
+	}
+
+	/**
+	 * @return array<string, array{0: ?string}>
+	 */
+	public static function provideNoncanonicalSetNames(): array {
+		return [
+			'null' => [ null ],
+			'empty string' => [ '' ],
+			'whitespace only' => [ '   ' ],
+			'leading whitespace' => [ ' test' ],
+			'trailing whitespace' => [ 'test ' ],
+			'surrounding whitespace' => [ '  test  ' ],
+			'consecutive spaces' => [ 'a  b' ],
+			'tab character' => [ "a\tb" ],
+			'newline character' => [ "a\nb" ],
+			'null byte' => [ "a\x00b" ],
+			'path separator forward slash' => [ 'my/set' ],
+			'path separator backslash' => [ "my\\set" ],
+			'HTML/XSS tags' => [ '<script>' ],
+			'disallowed symbols' => [ 'set@1' ],
+			'dollar sign' => [ 'set$name' ],
+			'emoji' => [ 'set🔥' ],
+			'exceeds 255 chars' => [ str_repeat( 'a', 256 ) ],
+			'exceeds 255 multibyte chars' => [ str_repeat( 'ä', 256 ) ],
+		];
+	}
 }

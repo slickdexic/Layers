@@ -54,8 +54,20 @@ class ApiLayersRename extends ApiBase {
 		$params = $this->extractRequestParams();
 		$requestedFilename = $params['filename'] ?? null;
 		$slidename = $params['slidename'] ?? null;
-		$oldName = SetNameSanitizer::sanitize( $params['oldname'] );
-		$newName = SetNameSanitizer::sanitize( $params['newname'] );
+		$rawOldName = isset( $params['oldname'] ) ? (string)$params['oldname'] : '';
+		$rawNewName = isset( $params['newname'] ) ? (string)$params['newname'] : '';
+
+		// Canonical set identifiers are literal; malformed or noncanonical identifiers fail before mutation
+		if ( !SetNameSanitizer::isCanonical( $rawOldName ) ) {
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
+		}
+
+		if ( !SetNameSanitizer::isCanonical( $rawNewName ) ) {
+			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
+		}
+
+		$oldName = $rawOldName;
+		$newName = $rawNewName;
 
 		// Require editlayers permission
 		$this->checkUserRightsAny( 'editlayers' );
@@ -89,16 +101,6 @@ class ApiLayersRename extends ApiBase {
 				[ 'apierror-missingparam', 'filename' ],
 				'missingparam'
 			);
-		}
-
-		// Validate old name format using central validator
-		if ( !SetNameSanitizer::isValid( $oldName ) ) {
-			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
-		}
-
-		// Validate new name format using central validator
-		if ( !SetNameSanitizer::isValid( $newName ) ) {
-			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 
 		try {
@@ -302,17 +304,8 @@ class ApiLayersRename extends ApiBase {
 	 * @param string $newName The new set name
 	 */
 	private function executeSlideRename( $user, string $slidename, string $oldName, string $newName ): void {
-		// Sanitize names using central sanitizer (consistency with file rename path)
-		$oldName = SetNameSanitizer::sanitize( $oldName );
-		$newName = SetNameSanitizer::sanitize( $newName );
-
-		// Validate old name format
-		if ( !SetNameSanitizer::isValid( $oldName ) ) {
-			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
-		}
-
-		// Validate new name format
-		if ( !SetNameSanitizer::isValid( $newName ) ) {
+		// Canonical set identifiers are literal; malformed or noncanonical identifiers fail before mutation
+		if ( !SetNameSanitizer::isCanonical( $oldName ) || !SetNameSanitizer::isCanonical( $newName ) ) {
 			$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
 		}
 

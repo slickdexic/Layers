@@ -89,7 +89,16 @@ class ApiLayersInfo extends ApiBase {
 		$filename = $params['filename'] ?? null;
 		$slidename = $params['slidename'] ?? null;
 		$layerSetId = $params['layersetid'] ?? null;
-		$setName = isset( $params['setname'] ) ? SetNameSanitizer::sanitize( $params['setname'] ) : null;
+		$rawSetName = isset( $params['setname'] ) ? (string)$params['setname'] : null;
+		$setName = null;
+		if ( $rawSetName !== null && $rawSetName !== '' ) {
+			// Explicit set query must be a canonical identifier. Noncanonical input must fail
+			// rather than silently selecting a sanitized name or falling back to latest by recency.
+			if ( !SetNameSanitizer::isCanonical( $rawSetName ) ) {
+				$this->dieWithError( LayersConstants::ERROR_INVALID_SETNAME, 'invalidsetname' );
+			}
+			$setName = $rawSetName;
+		}
 		$limit = isset( $params['limit'] ) ? (int)$params['limit'] : 50;
 		$limit = max( 1, min( $limit, 200 ) );
 		$offset = isset( $params['offset'] ) ? (int)$params['offset'] : 0;

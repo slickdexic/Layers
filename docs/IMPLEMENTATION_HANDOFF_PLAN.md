@@ -289,8 +289,8 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J03 | Reviewed | `9b8a0d5e`; production-route unit tests pass; live concurrency not claimed |
 | J04 | Unit work reviewed; browser acceptance pending | `be126dd6`; required button assertions strengthened; J18 remains |
 | J05 | Partially complete after corrections | `9819921f`; buffered snapshot/draft races corrected; storage identity remains J16 |
-| J16 | Complete on branch | `codex/j16-unambiguous-draft-identity`; injective v2 tuple encoding, safe legacy migration/quota fallback, user/wiki sweep isolation, foreground save audit documented |
-| J17 | Ready after J16 in default queue | Remaining mutation identifier validation |
+| J16 | Complete on branch | `codex/j16-unambiguous-draft-identity` (`e26eaa7d`); injective v2 tuple encoding, safe legacy migration/quota fallback, user/wiki sweep isolation, foreground save audit documented |
+| J17 | Complete on branch | `codex/j17-mutation-identifier-alignment` (`5e3524c1`); canonical literal validation via `SetNameSanitizer::isCanonical`, silent rewriting/character stripping eliminated across rename, delete, info and save, redirection guards verified |
 | J18 | Ready with isolated browser prerequisites | Live rename persistence and named-set test corrections |
 | L01 | Next lead work; not implemented | Write and prove admission design |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |

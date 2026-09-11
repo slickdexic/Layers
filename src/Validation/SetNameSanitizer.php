@@ -118,6 +118,30 @@ class SetNameSanitizer {
 	}
 
 	/**
+	 * Check whether a supplied layer set name is in canonical literal form.
+	 *
+	 * A set name is canonical if:
+	 * 1. It is a non-empty string.
+	 * 2. It satisfies isValid() (no control characters, no path separators, only allowed
+	 *    Unicode letters/numbers, underscores, hyphens, and spaces, length <= 255).
+	 * 3. It equals its sanitized form verbatim without any character stripping,
+	 *    whitespace trimming, repeated space collapse, or length truncation.
+	 *
+	 * Use this method on mutation and explicit query boundaries to reject noncanonical
+	 * or malformed identifiers upfront instead of silently rewriting them to different sets.
+	 *
+	 * @param string|null $setName The raw set name to validate
+	 * @return bool True if strictly canonical and literal, false otherwise
+	 */
+	public static function isCanonical( ?string $setName ): bool {
+		if ( $setName === null || $setName === '' ) {
+			return false;
+		}
+
+		return self::isValid( $setName ) && self::sanitize( $setName ) === $setName;
+	}
+
+	/**
 	 * Name used for the first set created for an image or slide when the caller
 	 * supplied none. This is an authoritative seed for a brand-new row, not a
 	 * name that is looked up or assumed to exist.

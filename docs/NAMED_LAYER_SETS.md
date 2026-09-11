@@ -124,6 +124,12 @@ The rules live in one place per side and every call site routes through them:
 - Consecutive whitespace collapsed to single space
 - Control chars and path separators (`/`, `\\`) removed before whitelist filtering
 
+**Canonical Set Identifiers and Mutation Boundary Integrity** (`SetNameSanitizer::isCanonical`):
+- All mutation endpoints (`layerssave`, `layersrename`, `layersdelete`) and explicit set queries (`layersinfo` with non-empty `setname`) enforce that supplied set names are literal and strictly canonical.
+- A set name is canonical if it satisfies `isValid()` and equals its sanitized form verbatim without character stripping, HTML/tag removal, whitespace trimming, space collapsing, or length truncation (`SetNameSanitizer::isCanonical($name)`).
+- Malformed, noncanonical, or whitespace-padded identifiers are rejected upfront with `layers-invalid-setname` (`invalidsetname`) before mutation or DB queries, preventing silent rewriting and accidental redirection to other sets.
+- Omission (`null` or `''`) remains the only permitted implicit path for documented recency fallback on `layerssave` and `layersinfo`. No set names (such as `'0'`, `'default'`, or `'on'`) are reserved.
+
 ### Database Implementation
 
 The `ls_name` column directly on `layer_sets` provides named set
