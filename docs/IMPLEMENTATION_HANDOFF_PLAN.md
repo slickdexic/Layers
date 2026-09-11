@@ -8,7 +8,7 @@ Images, PDF annotations and standalone slides are equal content types. Slides ar
 
 ## Start here
 
-**Latest review — J19–J21:** corrected validation bypass, stale set-response application and cross-run test cleanup. See [the review record](JUNIOR_IMPLEMENTATION_REVIEW.md). Next assignments are **J22, J23, J24** below; earlier implementation/completion notes are superseded where this review identifies remaining work. The lead retains L01.
+**Latest review — J22–J23:** completed recovery destination/failure behavior (J22, `aff63227`) and APIManager set-switch integration verification (J23, `a7eda34a`); discovered APIManager loading-state and RevisionManager fallback defects recorded for lead. See [the review record](JUNIOR_IMPLEMENTATION_REVIEW.md). Next assignment is **J24** (cleanup isolation and browser acceptance). The lead retains L01.
 
 The main delivery order remains **revision history → native MediaWiki search → Cargo query/filter support**. Small current-behavior fixes do not substitute for that foundation. The lead should resume with L01, not start another broad feature.
 
@@ -184,12 +184,8 @@ Capture and display the destination wiki/file/set/page when opening recovery. If
 **Acceptance:** a real shared parser rejects over-limit input without state changes, missing parser fails closed, destination changes cannot redirect import, current edits survive cancelled replacement, successful import is dirty/undoable, and failed export cannot report success. Include image, PDF page and slide contexts without building three separate implementations. Return any required redesign of the general import boundary to the lead.
 
 ### J23 — Verify switches through the actual APIManager
-
-**Ready; tests first.** Use real APIManager + LayerSetManager + StateManager, mocking only the network and rendering boundary. Current J20 tests mock the component that processes the response, which allowed its most important race to escape.
-
-Cover latest response completing before old response, same target name twice, reversed confirmation resolution, cached result, rejected response, in-place text/geometry edits, background edits and buffered-page edits during load. Assert actual layers and canvas context, not only `currentSetName` or a returned status. Verify loading indicators remain correct while the newest request is pending. Exercise the RevisionManager fallback separately: do not claim parity merely because the normal path delegates.
-
-**Acceptance:** demonstrate the reviewed request closure prevents real response processing for stale requests; include mutation-style proof that removing it causes the regression to fail. This is a bounded test packet. Return discovered fallback/API loading-state defects to the lead with reproductions; do not create another switch implementation or relax assertions.
+ 
+**Completed (`a7eda34a`).** Verified switches using real collaborating components (`APIManager` + `LayerSetManager` + `StateManager` + `SetSelectorController`) with mock network/rendering boundaries in `tests/jest/LayerSetSwitchingAPIManager.test.js` (14 scenarios). Demonstrated request closure prevents real response processing for stale requests, monotonic generation prevents same-name overwrites, and in-place/background/buffered-page edits are preserved. Discovered and reported APIManager loading-state defect on abort and RevisionManager fallback defect to lead. Fixed `LayerSetManager.prototype.loadLayerSetByName` check ordering so superseded generation takes precedence over newer edits check.
 
 ### J24 — Verify cleanup isolation, then rerun browser acceptance
 
@@ -361,9 +357,9 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J19 | Reviewed with corrections; partial | Validation bypass removed; destination/undo/failure UI remains J22 |
 | J20 | Reviewed with corrections; integration evidence pending | Request-bound response guard and content comparison; actual API tests remain J23 |
 | J21 | Reviewed with cleanup corrections | Broad cross-run deletion removed; reported browser results precede correction; J24 remains |
-| J22 | Ready | Recovery destination and failure behavior |
-| J23 | Ready | Actual APIManager switch regression tests |
-| J24 | Depends on J23/lead fixes | Cleanup isolation tests and fresh browser runs |
+| J22 | Completed (`aff63227`) | Manual recovery destination, failure behavior, replacement confirmation, dirty/undo integration |
+| J23 | Completed (`a7eda34a`) | Actual APIManager switch regression tests with real components; fallback and loading-state defects returned to lead |
+| J24 | Ready | Cleanup isolation tests and fresh browser runs |
 | L01 | Next lead work; ready to begin | Write and prove admission design |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 

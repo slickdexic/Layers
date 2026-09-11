@@ -1,4 +1,35 @@
-# Junior implementation review — J01–J21
+# Junior implementation review — J01–J23
+
+## J22–J23 review — September 11, 2026
+
+Reviewed commits `aff63227` (`codex/j22-recovery-behavior`) and `a7eda34a` (`codex/j23-switch-apimanager-verification`).
+
+### J22: Manual recovery destination and failure behavior (`aff63227`)
+- **Scope:** Captured and displayed destination context (wiki, file, set, page) in the recovery dialog; detected destination drift while dialog is open and rejected import with reopened requirement; localized failure notices on schema/size rejection with dialog preservation; dirty-state confirmation before replacing newer unsaved work; integrated with editor history (`saveState`) so successful recovery is cleanly undoable; preserved legacy storage records untouched on success/failure/cancel.
+- **Verification:** 181 Jest suites / 14,393 tests passed; 1,070 PHPUnit tests passed.
+
+### J23: Verify switches through the actual APIManager (`a7eda34a`)
+- **Scope:** Real collaborating components (`APIManager` + `LayerSetManager` + `StateManager` + `SetSelectorController`), mocking only the network boundary (`mw.Api.prototype.get` returning deferred jqXHR objects) and rendering boundary (`canvasManager.renderLayers`).
+- **Test Suite:** `tests/jest/LayerSetSwitchingAPIManager.test.js` (14 comprehensive scenarios).
+  1. Latest response completing before old response (request-bound closure prevents stale response application).
+  2. Mutation-style proof: removing request closure causes stale response to process and corrupt state; confirms `LayerSetManager` supplies protective closure.
+  3. Same target name twice with distinct payloads: monotonic generation prevents older same-name payload from overwriting newer.
+  4. Reversed confirmation resolution: older confirmation resolving late cannot trigger load or overwrite newer state.
+  5. Cached result respects request closure: superseded or dirty loads do not apply cached data.
+  6. Rejected network response: preserves current set, layers, and dirty state; restores selector dropdown.
+  7. In-place text/geometry edits during load: detected by snapshot and preserved.
+  8. Background edits during load: detected and preserved.
+  9. Buffered-page edits during load: detected and preserved.
+  10. Actual layer models, dimensions, and canvas context asserted upon switch success.
+  11. Loading indicator and spinner state during single and overlapping loads.
+  12. Discovered defects reproduced and documented for lead review.
+- **LayerSetManager Ordering Correction:** Corrected `loadLayerSetByName` evaluation order so that generation supersede check (`switchId !== this._switchGeneration`) occurs before newer edits check, and APIManager `{ superseded: true }` check occurs after newer edits check. This prevents superseded switches from misclassifying as newer edits, while preserving proper `newer_edits` notification and selector restoration when user edits occur during flight.
+- **Defects Returned to Lead:**
+  1. **APIManager Loading-State Defect on Abort:** In `APIManager.js` (lines 940–946), when `_trackRequest('loadSetByName', req2)` aborts `req1`, `req1`'s abort handler unconditionally executes `this.hideSpinner()` and `this.editor.stateManager.set('isLoading', false)`. This prematurely clears the spinner and loading state while `req2` is still actively in-flight over the network. Reproduced in scenario 11.
+  2. **RevisionManager Fallback Defect:** When `LayerSetManager` is absent (e.g., fallback mode), `RevisionManager.prototype.loadLayerSetByName` invokes `apiManager.loadLayersBySetName(targetSetName)` directly without passing a `shouldApply` closure or tracking monotonic generation numbers. If overlapping requests occur in fallback mode, a stale response arriving second will overwrite a newer completed response. Reproduced in scenario 12.
+- **Verification:** 182 Jest suites / 14,407 tests passed; 1,070 PHPUnit tests passed; documentation and lint checks passed.
+
+Next assignment: **J24** (Cleanup isolation tests and browser acceptance).
 
 ## J19–J21 review — September 11, 2026
 
