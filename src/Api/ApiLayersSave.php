@@ -368,7 +368,7 @@ class ApiLayersSave extends ApiBase {
 			// silently sprouting a second set under the configured seed name.
 			if ( $setName === '' ) {
 				$setName = SetNameResolver::latestName( $db, $fileDbKey, $sha1, $page )
-					?? SetNameSanitizer::getDefaultName();
+					?? SetNameSanitizer::getDefaultName( $this->getConfig() );
 			}
 
 					// Creating a set is a different cost from updating one: each new set is
@@ -416,6 +416,8 @@ class ApiLayersSave extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 			}
 		} catch ( ApiUsageException $e ) {
+			throw $e;
+		} catch ( \ConfigException $e ) {
 			throw $e;
 		} catch ( \OverflowException $e ) {
 			// Named set limit reached - return specific error for user feedback
@@ -509,7 +511,7 @@ class ApiLayersSave extends ApiBase {
 			if ( $setName === '' ) {
 				$setName = SetNameResolver::latestName(
 					$db, $normalizedName, LayersConstants::TYPE_SLIDE
-				) ?? SetNameSanitizer::getDefaultName();
+				) ?? SetNameSanitizer::getDefaultName( $this->getConfig() );
 			}
 
 			// Merge slide settings into background settings for storage
@@ -536,6 +538,8 @@ class ApiLayersSave extends ApiBase {
 				$this->dieWithError( LayersConstants::ERROR_SAVE_FAILED, 'savefailed' );
 			}
 		} catch ( ApiUsageException $e ) {
+			throw $e;
+		} catch ( \ConfigException $e ) {
 			throw $e;
 		} catch ( \OverflowException $e ) {
 			$this->dieWithError( $e->getMessage(), 'maxsetsreached' );

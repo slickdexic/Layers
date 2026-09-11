@@ -11,7 +11,9 @@ declare( strict_types=1 );
 
 namespace MediaWiki\Extension\Layers\Validation;
 
+use MediaWiki\Config\Config;
 use MediaWiki\Extension\Layers\LayersConstants;
+use MediaWiki\MediaWikiServices;
 
 /**
  * Provides sanitization for layer set names.
@@ -117,13 +119,53 @@ class SetNameSanitizer {
 	}
 
 	/**
-	 * Name used for the first set created for an image when the caller supplied
-	 * none. This is a seed for a brand-new row, not a name that is looked up or
-	 * assumed to exist.
+	 * Name used for the first set created for an image or slide when the caller
+	 * supplied none. This is an authoritative seed for a brand-new row, not a
+	 * name that is looked up or assumed to exist.
 	 *
+	 * When a Config instance is supplied (or when MediaWikiServices is available),
+	 * the value of $wgLayersDefaultSetName (LayersDefaultSetName) is consulted.
+	 * If omitted or set to the default, 'default' is returned.
+	 * If configured to a valid set name, that name is returned.
+	 * If set to an invalid value (does not satisfy isValid()), a \ConfigException is
+	 * thrown rather than silently coercing or corrupting database records.
+	 *
+	 * @param Config|null $config Configuration instance, if available
 	 * @return string The configured seed name
+	 * @throws \ConfigException When LayersDefaultSetName is configured with an invalid set name
 	 */
-	public static function getDefaultName(): string {
-		return LayersConstants::DEFAULT_SET_NAME;
+	public static function getDefaultName( ?Config $config = null ): string {
+		if ( $config === null && class_exists( MediaWikiServices::class ) ) {
+			try {
+				$services = MediaWikiServices::getInstance();
+				if ( method_exists( $services, 'getMainConfig' ) ) {
+					$config = $services->getMainConfig();
+				}
+			} catch ( \Throwable $e ) {
+				$config = null;
+			}
+		}
+
+		if ( $config === null ) {
+			return LayersConstants::DEFAULT_SET_NAME;
+		}
+
+		try {
+			$raw = $config->get( 'LayersDefaultSetName' );
+		} catch ( \Throwable $e ) {
+			return LayersConstants::DEFAULT_SET_NAME;
+		}
+
+		if ( $raw === null || $raw === LayersConstants::DEFAULT_SET_NAME ) {
+			return LayersConstants::DEFAULT_SET_NAME;
+		}
+
+		if ( !is_string( $raw ) || !self::isValid( $raw ) ) {
+			throw new \ConfigException(
+				'Invalid LayersDefaultSetName configuration: value must be a valid layer set name.'
+			);
+		}
+
+		return self::sanitize( $raw );
 	}
 }

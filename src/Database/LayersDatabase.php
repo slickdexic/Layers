@@ -14,6 +14,7 @@ namespace MediaWiki\Extension\Layers\Database;
 use MediaWiki\Config\Config;
 use MediaWiki\Extension\Layers\LayersConstants;
 use MediaWiki\Extension\Layers\Validation\ColorValidator;
+use MediaWiki\Extension\Layers\Validation\SetNameSanitizer;
 use Psr\Log\LoggerInterface;
 use Wikimedia\Rdbms\IConnectionProvider;
 use Wikimedia\Rdbms\IDatabase;
@@ -100,7 +101,7 @@ class LayersDatabase {
 		// A row has to be stored under some name. Only reached when the caller
 		// could not resolve one, i.e. this is the first set for the image.
 		if ( $setName === null || $setName === '' ) {
-			$setName = $this->config->get( 'LayersDefaultSetName' );
+			$setName = SetNameSanitizer::getDefaultName( $this->config );
 		}
 
 		// Log via injected logger (respects MediaWiki logging configuration)

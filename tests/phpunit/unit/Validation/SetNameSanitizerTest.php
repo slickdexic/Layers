@@ -250,6 +250,38 @@ class SetNameSanitizerTest extends \MediaWikiUnitTestCase {
 	 */
 	public function testGetDefaultName() {
 		$this->assertEquals( 'default', SetNameSanitizer::getDefaultName() );
+
+		$defaultConfig = new \HashConfig( [ 'LayersDefaultSetName' => 'default' ] );
+		$this->assertEquals( 'default', SetNameSanitizer::getDefaultName( $defaultConfig ) );
+
+		$customConfig = new \HashConfig( [ 'LayersDefaultSetName' => 'annotations' ] );
+		$this->assertEquals( 'annotations', SetNameSanitizer::getDefaultName( $customConfig ) );
+
+		$trimmedConfig = new \HashConfig( [ 'LayersDefaultSetName' => '  my_seed_set  ' ] );
+		$this->assertEquals( 'my_seed_set', SetNameSanitizer::getDefaultName( $trimmedConfig ) );
+	}
+
+	/**
+	 * @covers ::getDefaultName
+	 * @dataProvider provideInvalidDefaultSetNameConfig
+	 */
+	public function testGetDefaultNameWithInvalidConfigThrows( $invalidValue ) {
+		$config = new \HashConfig( [ 'LayersDefaultSetName' => $invalidValue ] );
+		$this->expectException( \ConfigException::class );
+		SetNameSanitizer::getDefaultName( $config );
+	}
+
+	public static function provideInvalidDefaultSetNameConfig(): array {
+		return [
+			'empty string' => [ '' ],
+			'whitespace only' => [ '   ' ],
+			'path separator slash' => [ 'invalid/name' ],
+			'path separator backslash' => [ 'invalid\\name' ],
+			'control character' => [ "inv\x00alid" ],
+			'special characters' => [ 'bad@name#1' ],
+			'non-string integer' => [ 12345 ],
+			'non-string array' => [ [ 'annotations' ] ],
+		];
 	}
 
 	/**

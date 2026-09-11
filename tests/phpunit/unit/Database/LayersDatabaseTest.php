@@ -689,6 +689,73 @@ class LayersDatabaseTest extends \MediaWikiUnitTestCase {
 	/**
 	 * @covers ::saveLayerSet
 	 */
+	public function testSaveLayerSetWithEmptySetNameUsesConfiguredDefaultSetName(): void {
+		$this->config = new \HashConfig( [
+			'LayersDefaultSetName' => 'annotations',
+			'LayersMaxBytes' => 2097152,
+			'LayersMaxLayerCount' => 100,
+			'LayersMaxNamedSets' => 15,
+			'LayersMaxRevisionsPerSet' => 25,
+		] );
+
+		$this->dbr->method( 'selectField' )
+			->willReturnOnConsecutiveCalls( 0, 0, 0 );
+
+		$this->dbw->method( 'selectField' )->willReturn( 0 );
+		$this->dbw->method( 'timestamp' )->willReturn( '20231209120000' );
+		$this->dbw->method( 'startAtomic' )->willReturn( true );
+		$this->dbw->method( 'endAtomic' )->willReturn( true );
+		$this->dbw->method( 'insertId' )->willReturn( 77 );
+		$this->dbw->method( 'selectFieldValues' )->willReturn( [ 77 ] );
+		$this->dbw->method( 'affectedRows' )->willReturn( 0 );
+
+		$insertedSetName = null;
+		$this->dbw->expects( $this->once() )
+			->method( 'insert' )
+			->willReturnCallback( static function ( $table, $row ) use ( &$insertedSetName ) {
+				$insertedSetName = $row['ls_name'] ?? null;
+				return true;
+			} );
+
+		$db = $this->createLayersDatabase();
+		$result = $db->saveLayerSet(
+			'Test.jpg',
+			[ 'mime' => 'image/jpeg', 'sha1' => 'abc123' ],
+			[],
+			1,
+			''
+		);
+
+		$this->assertEquals( 77, $result );
+		$this->assertEquals( 'annotations', $insertedSetName );
+	}
+
+	/**
+	 * @covers ::saveLayerSet
+	 */
+	public function testSaveLayerSetWithInvalidConfiguredDefaultSetNameThrowsConfigException(): void {
+		$this->config = new \HashConfig( [
+			'LayersDefaultSetName' => 'invalid/slash',
+			'LayersMaxBytes' => 2097152,
+			'LayersMaxLayerCount' => 100,
+			'LayersMaxNamedSets' => 15,
+			'LayersMaxRevisionsPerSet' => 25,
+		] );
+
+		$db = $this->createLayersDatabase();
+		$this->expectException( \ConfigException::class );
+		$db->saveLayerSet(
+			'Test.jpg',
+			[ 'mime' => 'image/jpeg', 'sha1' => 'abc123' ],
+			[],
+			1,
+			''
+		);
+	}
+
+	/**
+	 * @covers ::saveLayerSet
+	 */
 	public function testSaveLayerSetInvalidParameters(): void {
 		$this->logger->expects( $this->once() )
 			->method( 'error' )

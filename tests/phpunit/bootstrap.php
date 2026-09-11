@@ -74,6 +74,11 @@ namespace {
 		}
 	}
 
+	if ( !class_exists( 'ConfigException' ) ) {
+		class ConfigException extends \RuntimeException {
+		}
+	}
+
 	if ( !class_exists( 'Title' ) ) {
 		class Title {
 			/** @var int */
