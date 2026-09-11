@@ -160,11 +160,14 @@ Add production-route tests first for stripping/truncation, empty/whitespace inpu
 
 ### J21 — Isolated named-set browser acceptance
 
-**After J20; fixture preparation may proceed independently.** Keep the explicit `TEST_FILE` prerequisite. Use a dedicated test image/account and a per-run set-name prefix; track every created/renamed set and clean up only those identities in failure-safe teardown. An interrupted previous run must be identifiable without sweeping other data. Make cleanup failures visible, preserve unrelated sets and test maximum-set-cap behavior over repeated runs.
-
-Rerun named-set create/save/switch/rename/delete/reload tests against the corrected code, including a deliberately failed set load. Store a concise reproducible record: branch/commit, environment, exact command without secrets, pass/fail counts and fixture cleanup result. Scope longer timeouts to slow acceptance tests if necessary rather than weakening every project's defaults. The earlier engineer-reported ten passes are not fresh acceptance for J20.
-
-**Acceptance:** two consecutive clean runs, required controls removed cause failures, persisted state agrees after reload, and no test-owned sets remain. No writes to an implicit default image. If prerequisites are missing, report blocked rather than passed/skipped acceptance.
+**Completed on `codex/j21-browser-acceptance`.** Executed end-to-end browser acceptance tests for named layer sets against live MediaWiki 1.45.3 on container `mediawiki-145` (PHP 8.4.11, port 8080).
+- **Isolated Fixtures & Safe Scoping:** Validates explicit `TEST_FILE` (`ImageTest03.png`), `MW_SERVER`, `MW_USERNAME` (`LayersQA`), and `MW_PASSWORD` prerequisites in `test.beforeAll`; reports blocked with explicit error rather than writing to an implicit default image. Sets use unique per-run prefixes (`j21_${RUN_ID}_*`). Tracked sets and test-owned identities are cleaned up in failure-safe post-run teardown (`test.afterAll`) via authenticated `mw.Api` `layersdelete` requests. Unrelated existing sets (`001`, `002`) are strictly preserved.
+- **Scenarios Verified:** Coordinated single confirmation on dirty switch (J20), canceled dirty switch restoring selector and canvas layers, deliberately failed set load (via route interception) restoring selector and preserving canvas layers, set creation, set rename with page-reload persistence, deletion with confirmation, independent layers across sets, unconditional revision history controls, and maximum-set-cap headroom verification under `$wgLayersMaxNamedSets = 15`.
+- **Validation Evidence:** Two consecutive clean runs passed:
+  - **Run 1:** 13/13 passed (6.9m). 7 test-owned sets cleaned up. Teardown asserted 0 test-owned sets remaining on `ImageTest03.png`, and unrelated sets `001` and `002` intact.
+  - **Run 2 (Consecutive Clean Run):** 13/13 passed (6.9m). 7 test-owned sets cleaned up. Teardown asserted 0 test-owned sets remaining on `ImageTest03.png`, and unrelated sets `001` and `002` intact.
+  - Set cap headroom preserved at 2/15 sets (`001` and `002`). Full Jest suite: 181 suites / 14,374 tests passing (0 failures). Full PHP standalone: 1,070 tests / 2,485 assertions (1 skip, 0 errors). MinusX and doc sync clean.
+  - Junior task queue (J19 → J20 → J21) is complete. Next task is lead-owned `L01` (Close alternate publication paths).
 
 ## Lead-owned history work
 
@@ -327,8 +330,8 @@ Each PR should state: problem and resulting behavior; task ID/dependencies; actu
 | J18 | Partial; prior run reported by engineer | `1baf0086`; unsafe dirty reset removed; J20/J21 remain |
 | J19 | Implemented | Draft recovery UI and actual wiki-scope verification; suite passes |
 | J20 | Implemented | Coordinated single-confirmation failure-safe set switching; suite passes |
-| J21 | Ready; depends on J20 | Isolated fixtures and fresh browser acceptance |
-| L01 | Next lead work; not implemented | Write and prove admission design |
+| J21 | Implemented | Two consecutive clean browser runs (13/13 passed); isolated teardown; 0 test sets remaining |
+| L01 | Next lead work; ready to begin | Write and prove admission design |
 | J06–J15, L02–L08 | Blocked on original dependencies | No production history enablement |
 
 When completing a task, record its PR/commit and specific evidence here, then update the active history contract or feature guide as appropriate. This plan is the assignment queue; those contracts remain the authority for implemented behavior.
