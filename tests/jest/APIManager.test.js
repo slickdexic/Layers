@@ -1471,6 +1471,26 @@ describe( 'APIManager', function () {
 			expect( apiManager.handleSaveSuccess ).toHaveBeenCalledWith( response );
 		} );
 
+		it( 'should call handleSilentSaveSuccess on silent save success without touching UI', async function () {
+			const mockResolve = jest.fn();
+			const mockReject = jest.fn();
+			const payload = { action: 'layerssave', data: '[]' };
+			const response = { layerssave: { success: 1 } };
+
+			apiManager.api.postWithToken = jest.fn().mockResolvedValue( response );
+			apiManager.handleSaveSuccess = jest.fn();
+			apiManager.handleSilentSaveSuccess = jest.fn();
+			apiManager.enableSaveButton = jest.fn();
+			mockEditor.uiManager.hideSpinner.mockClear();
+
+			await apiManager.performSaveWithRetry( payload, 0, mockResolve, mockReject, { silent: true } );
+
+			expect( apiManager.handleSilentSaveSuccess ).toHaveBeenCalledWith( response );
+			expect( apiManager.handleSaveSuccess ).not.toHaveBeenCalled();
+			expect( mockEditor.uiManager.hideSpinner ).not.toHaveBeenCalled();
+			expect( apiManager.enableSaveButton ).not.toHaveBeenCalled();
+		} );
+
 		it( 'should retry on retryable error', async function () {
 			jest.useFakeTimers();
 			const mockResolve = jest.fn();
@@ -1626,6 +1646,46 @@ describe( 'APIManager', function () {
 			apiManager.handleSaveSuccess( { layerssave: { success: 0 } } );
 
 			expect( apiManager.handleSaveError ).toHaveBeenCalled();
+		} );
+	} );
+
+	describe( 'handleSilentSaveSuccess', function () {
+		it( 'should invalidate cache and clear freshness cache on success', function () {
+			apiManager._invalidateCache = jest.fn();
+			apiManager.clearFreshnessCache = jest.fn();
+
+			apiManager.handleSilentSaveSuccess( {
+				layerssave: { success: 1 }
+			} );
+
+			expect( apiManager._invalidateCache ).toHaveBeenCalledWith( mockEditor.filename );
+			expect( apiManager.clearFreshnessCache ).toHaveBeenCalled();
+		} );
+
+		it( 'should not invalidate cache when response is not successful', function () {
+			apiManager._invalidateCache = jest.fn();
+			apiManager.clearFreshnessCache = jest.fn();
+
+			apiManager.handleSilentSaveSuccess( {
+				layerssave: { success: 0 }
+			} );
+
+			expect( apiManager._invalidateCache ).not.toHaveBeenCalled();
+			expect( apiManager.clearFreshnessCache ).not.toHaveBeenCalled();
+		} );
+
+		it( 'should handle missing or malformed response data gracefully', function () {
+			apiManager._invalidateCache = jest.fn();
+			apiManager.clearFreshnessCache = jest.fn();
+
+			expect( function () {
+				apiManager.handleSilentSaveSuccess( null );
+				apiManager.handleSilentSaveSuccess( {} );
+				apiManager.handleSilentSaveSuccess( { layerssave: null } );
+			} ).not.toThrow();
+
+			expect( apiManager._invalidateCache ).not.toHaveBeenCalled();
+			expect( apiManager.clearFreshnessCache ).not.toHaveBeenCalled();
 		} );
 	} );
 

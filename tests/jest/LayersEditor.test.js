@@ -3233,7 +3233,7 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 				'restoreBufferedPage', 'recoverFromFailedNavigation',
 				'resetPerPageState', 'refreshPageControls', 'unsavedPages',
 				'hasUnsavedChanges', 'save', 'saveBufferedPages',
-				'unsavedChangesMessage', 'discardPageChanges'
+				'unsavedChangesMessage', 'discardPageChanges', 'cancel'
 			].forEach( ( m ) => {
 				inst[ m ] = LayersEditor.prototype[ m ].bind( inst );
 			} );
@@ -3376,7 +3376,7 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 			expect( inst.unsavedChangesMessage() ).toContain( '1, 4' );
 		} );
 
-		test( 'discarding a page drops its buffered copy too', async () => {
+		test( 'discarding a page drops its buffered copy and clears its exact draft', async () => {
 			const inst = pagedInstance( true );
 			await inst.performPageNavigation( 4 );
 			await inst.performPageNavigation( 1 );
@@ -3385,6 +3385,91 @@ describe( 'LayersEditor - branch coverage gaps', () => {
 
 			expect( inst.pageBuffer.has( 1 ) ).toBe( false );
 			expect( inst.hasUnsavedChanges() ).toBe( false );
+			expect( inst.draftManager.clearDraft ).toHaveBeenCalledWith( {
+				filename: inst.filename,
+				setName: '001',
+				page: 1
+			} );
+		} );
+
+		test( 'saveBufferedPages clears draft per page on success with maxTimestamp', async () => {
+			const inst = pagedInstance( true );
+			await inst.performPageNavigation( 4 );
+			inst.isDirtyFlag = true;
+			inst.layers = [ { id: 'd' } ];
+			await inst.performPageNavigation( 7 );
+			inst.isDirtyFlag = false;
+
+			inst.draftManager.clearDraft.mockClear();
+			await inst.save();
+
+			expect( inst.draftManager.clearDraft ).toHaveBeenCalledWith( expect.objectContaining( {
+				filename: inst.filename,
+				setName: '001',
+				page: 1,
+				maxTimestamp: expect.any( Number )
+			} ) );
+			expect( inst.draftManager.clearDraft ).toHaveBeenCalledWith( expect.objectContaining( {
+				filename: inst.filename,
+				setName: '001',
+				page: 4,
+				maxTimestamp: expect.any( Number )
+			} ) );
+		} );
+
+		test( 'a page that fails to save stays in the buffer and retains its draft', async () => {
+			const inst = pagedInstance( true );
+			await inst.performPageNavigation( 4 );
+			inst.isDirtyFlag = true;
+			inst.layers = [ { id: 'd' } ];
+			await inst.performPageNavigation( 7 );
+
+			inst.apiManager.savePageLayers = jest.fn( ( entry ) => (
+				entry.page === 4 ? Promise.reject( new Error( 'nope' ) ) : Promise.resolve( {} )
+			) );
+
+			inst.draftManager.clearDraft.mockClear();
+			await inst.save();
+
+			// Page 1 succeeded -> cleared
+			expect( inst.draftManager.clearDraft ).toHaveBeenCalledWith( expect.objectContaining( {
+				page: 1
+			} ) );
+			// Page 4 failed -> NOT cleared
+			const clearedPages = inst.draftManager.clearDraft.mock.calls.map( ( c ) => c[ 0 ] && c[ 0 ].page );
+			expect( clearedPages ).not.toContain( 4 );
+			expect( inst.pageBuffer.has( 4 ) ).toBe( true );
+		} );
+
+		test( 'cancel discarding changes clears drafts for all dirty buffered pages and active page', async () => {
+			const inst = pagedInstance( true );
+			await inst.performPageNavigation( 4 );
+			inst.isDirtyFlag = true;
+			inst.layers = [ { id: 'd' } ];
+			await inst.performPageNavigation( 7 );
+			inst.isDirtyFlag = true;
+
+			inst.dialogManager = {
+				showSaveDiscardDialog: jest.fn().mockResolvedValue( 'discard' )
+			};
+			inst.uiManager = { destroy: jest.fn() };
+			inst.eventManager = { destroy: jest.fn() };
+
+			inst.draftManager.clearDraft.mockClear();
+			inst.cancel( false );
+
+			await Promise.resolve();
+
+			expect( inst.draftManager.clearDraft ).toHaveBeenCalledWith( expect.objectContaining( {
+				filename: inst.filename,
+				page: 1
+			} ) );
+			expect( inst.draftManager.clearDraft ).toHaveBeenCalledWith( expect.objectContaining( {
+				filename: inst.filename,
+				page: 4
+			} ) );
+			expect( inst.draftManager.clearDraft ).toHaveBeenCalledWith();
+			expect( inst.pageBuffer.isEmpty() ).toBe( true );
 		} );
 	} );
 } );

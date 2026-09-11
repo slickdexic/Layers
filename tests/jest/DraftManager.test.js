@@ -398,6 +398,121 @@ describe( 'DraftManager', function () {
 
 			expect( global.localStorage.removeItem ).toHaveBeenCalled();
 		} );
+
+		it( 'should forward options to clearDraft', function () {
+			jest.spyOn( draftManager, 'clearDraft' );
+			const opts = { page: 3, maxTimestamp: 12345 };
+			draftManager.onSaveSuccess( opts );
+			expect( draftManager.clearDraft ).toHaveBeenCalledWith( opts );
+		} );
+	} );
+
+	describe( 'exact draft targeting and storage keys', function () {
+		it( 'should build storage keys with user scope, sanitized filename, hash, and set name', function () {
+			const key = draftManager.buildStorageKey( 'Doc.pdf', 'Set 1', 1 );
+			expect( key ).toContain( 'Doc.pdf' );
+			expect( key ).toContain( 'Set_1' );
+			expect( key ).not.toContain( '-p1' );
+		} );
+
+		it( 'should include page suffix when page > 1', function () {
+			const key = draftManager.buildStorageKey( 'Doc.pdf', 'Set 1', 3 );
+			expect( key ).toContain( 'Doc.pdf' );
+			expect( key ).toContain( 'Set_1' );
+			expect( key.endsWith( '-p3' ) ).toBe( true );
+		} );
+
+		it( 'should handle missing, null, or fallback arguments in buildStorageKey', function () {
+			const keyDefault = draftManager.buildStorageKey();
+			expect( keyDefault ).toBe( draftManager.storageKey + '-' );
+
+			const keyWithContext = draftManager.buildStorageKey( 'Test_Image.jpg', 'default', 1 );
+			expect( keyWithContext ).toBe( draftManager.getStorageKey() );
+
+			const keyNull = draftManager.buildStorageKey( null, null, null );
+			expect( typeof keyNull ).toBe( 'string' );
+		} );
+
+		it( 'should resolve getStorageKey with numeric page argument', function () {
+			const page1Key = draftManager.getStorageKey();
+			const page2Key = draftManager.getStorageKey( 2 );
+
+			expect( page2Key ).toBe( page1Key + '-p2' );
+		} );
+
+		it( 'should resolve getStorageKey with explicit options object', function () {
+			const explicitKey = draftManager.getStorageKey( {
+				filename: 'Other_File.png',
+				setName: 'custom-set',
+				page: 4
+			} );
+
+			expect( explicitKey ).toContain( 'Other_File.png' );
+			expect( explicitKey ).toContain( 'custom-set' );
+			expect( explicitKey.endsWith( '-p4' ) ).toBe( true );
+		} );
+
+		it( 'should clear only the targeted draft when an explicit page is specified', function () {
+			const keyPage1 = draftManager.getStorageKey( 1 );
+			const keyPage2 = draftManager.getStorageKey( 2 );
+
+			mockLocalStorage[ keyPage1 ] = JSON.stringify( { timestamp: 100 } );
+			mockLocalStorage[ keyPage2 ] = JSON.stringify( { timestamp: 200 } );
+
+			draftManager.clearDraft( 2 );
+
+			expect( mockLocalStorage[ keyPage2 ] ).toBeUndefined();
+			expect( mockLocalStorage[ keyPage1 ] ).toBeDefined();
+		} );
+
+		it( 'should clear only the targeted draft when explicit file, set, and page options are specified', function () {
+			const targetOpts = { filename: 'Target_Image.jpg', setName: 'reviewed', page: 2 };
+			const targetKey = draftManager.getStorageKey( targetOpts );
+			const currentKey = draftManager.getStorageKey();
+
+			mockLocalStorage[ targetKey ] = JSON.stringify( { timestamp: 100 } );
+			mockLocalStorage[ currentKey ] = JSON.stringify( { timestamp: 200 } );
+
+			draftManager.clearDraft( targetOpts );
+
+			expect( mockLocalStorage[ targetKey ] ).toBeUndefined();
+			expect( mockLocalStorage[ currentKey ] ).toBeDefined();
+		} );
+
+		it( 'should preserve newer drafts when maxTimestamp is older than stored draft', function () {
+			const targetKey = draftManager.getStorageKey( 3 );
+			mockLocalStorage[ targetKey ] = JSON.stringify( {
+				timestamp: 5000,
+				layers: [ { id: 'newer' } ]
+			} );
+
+			draftManager.clearDraft( { page: 3, maxTimestamp: 4000 } );
+
+			expect( mockLocalStorage[ targetKey ] ).toBeDefined();
+		} );
+
+		it( 'should delete drafts when maxTimestamp is equal to or newer than stored draft', function () {
+			const targetKey = draftManager.getStorageKey( 3 );
+			mockLocalStorage[ targetKey ] = JSON.stringify( {
+				timestamp: 5000,
+				layers: [ { id: 'in-flight' } ]
+			} );
+
+			draftManager.clearDraft( { page: 3, maxTimestamp: 5000 } );
+
+			expect( mockLocalStorage[ targetKey ] ).toBeUndefined();
+		} );
+
+		it( 'should safely delete corrupted non-JSON drafts when maxTimestamp is provided', function () {
+			const targetKey = draftManager.getStorageKey( 3 );
+			mockLocalStorage[ targetKey ] = 'corrupted-non-json';
+
+			expect( function () {
+				draftManager.clearDraft( { page: 3, maxTimestamp: 5000 } );
+			} ).not.toThrow();
+
+			expect( mockLocalStorage[ targetKey ] ).toBeUndefined();
+		} );
 	} );
 
 	describe( 'getDraftInfo', function () {

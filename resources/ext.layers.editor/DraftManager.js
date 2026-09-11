@@ -52,16 +52,10 @@
 			// Append a short FNV-1a hash of the original filename to prevent key
 			// collisions when two filenames sanitize to the same string
 			// (e.g. "Foo/bar.jpg" and "Foo_bar.jpg" both become "Foo_bar.jpg")
-			const _fnv = ( s ) => {
-				let h = 2166136261;
-				for ( let i = 0; i < s.length; i++ ) {
-					h = Math.imul( h ^ s.charCodeAt( i ), 16777619 ) >>> 0;
-				}
-				return ( h >>> 0 ).toString( 36 ).slice( 0, 4 );			};
 			this.storageKey = STORAGE_KEY_PREFIX +
 				DraftManager.getUserScope() + '-' +
 				this.filename.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
-				'_' + _fnv( this.filename );
+				'_' + DraftManager.fnv1a( this.filename );
 			this.autoSaveTimer = null;
 			this.debounceTimer = null;
 			this.isRecoveryMode = false;
@@ -86,6 +80,21 @@
 			}
 			const id = mw.config.get( 'wgUserId' );
 			return id ? 'u' + id : 'anon';
+		}
+
+		/**
+		 * Short FNV-1a hash of a string for collision avoidance in storage keys
+		 *
+		 * @param {string} s Input string
+		 * @return {string} 4-character base36 hash
+		 */
+		static fnv1a( s ) {
+			s = ( s !== undefined && s !== null ) ? String( s ) : '';
+			let h = 2166136261;
+			for ( let i = 0; i < s.length; i++ ) {
+				h = Math.imul( h ^ s.charCodeAt( i ), 16777619 ) >>> 0;
+			}
+			return ( h >>> 0 ).toString( 36 ).slice( 0, 4 );
 		}
 
 		/**
@@ -174,24 +183,79 @@
 		 *
 		 * @return {string} Storage key
 		 */
-/**
-			 * Build the storage key for the current set and page.
-			 *
-			 * Multi-page files (PDF) keep a separate draft per page. Without the
-			 * page qualifier every page of a document shared one slot, so paging
-			 * through a PDF restored the previous page's layers onto the next one
-			 * and editing page 2 destroyed page 1's draft.
-			 *
-			 * @return {string} Storage key
-			 */
-			getStorageKey() {
-				const setName = this.editor.stateManager ?
+		/**
+		 * Build a storage key for an explicit file, set name, and page.
+		 *
+		 * @param {string} [filename] Target filename
+		 * @param {string} [setName] Target set name
+		 * @param {number|string} [page] Target page number
+		 * @return {string} Storage key
+		 */
+		buildStorageKey( filename, setName, page ) {
+			const file = ( filename !== undefined && filename !== null ) ?
+				String( filename ) :
+				( this.filename || '' );
+			const set = ( setName !== undefined && setName !== null ) ?
+				String( setName ) :
+				'';
+			const pageNum = Math.max( 1, parseInt( page, 10 ) || 1 );
+			const pageSuffix = pageNum > 1 ? '-p' + pageNum : '';
+
+			// If targeting the instance's filename, reuse this.storageKey prefix
+			if ( file === this.filename && this.storageKey ) {
+				return this.storageKey + '-' + set.replace( /[^a-zA-Z0-9_.-]/g, '_' ) + pageSuffix;
+			}
+
+			return STORAGE_KEY_PREFIX +
+				DraftManager.getUserScope() + '-' +
+				file.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
+				'_' + DraftManager.fnv1a( file ) + '-' +
+				set.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
+				pageSuffix;
+		}
+
+		/**
+		 * Build the storage key for the current set and page, or an explicit target context.
+		 *
+		 * Multi-page files (PDF) keep a separate draft per page. Without the
+		 * page qualifier every page of a document shared one slot, so paging
+		 * through a PDF restored the previous page's layers onto the next one
+		 * and editing page 2 destroyed page 1's draft.
+		 *
+		 * @param {Object|number} [options] Target context options or explicit page number
+		 * @param {string} [options.filename] Explicit filename
+		 * @param {string} [options.setName] Explicit set name
+		 * @param {number|string} [options.page] Explicit page number
+		 * @return {string} Storage key
+		 */
+		getStorageKey( options ) {
+			let filename;
+			let setName;
+			let page;
+
+			if ( typeof options === 'number' ) {
+				page = options;
+			} else if ( options && typeof options === 'object' ) {
+				filename = options.filename;
+				setName = options.setName;
+				page = options.page;
+			}
+
+			if ( filename === undefined ) {
+				filename = this.filename;
+			}
+			if ( setName === undefined ) {
+				setName = ( this.editor && this.editor.stateManager ) ?
 					this.editor.stateManager.get( 'currentSetName' ) || '' :
 					'';
-				const page = Math.max( 1, parseInt( this.editor.page, 10 ) || 1 );
-				const pageSuffix = page > 1 ? '-p' + page : '';
-				return this.storageKey + '-' + setName.replace( /[^a-zA-Z0-9_.-]/g, '_' ) +
-					pageSuffix;
+			}
+			if ( page === undefined ) {
+				page = ( this.editor && this.editor.page !== undefined ) ?
+					this.editor.page :
+					1;
+			}
+
+			return this.buildStorageKey( filename, setName, page );
 		}
 
 		/**
@@ -479,17 +543,44 @@
 		}
 
 		/**
-		 * Clear the stored draft
+		 * Clear the stored draft for the current context or an explicit target.
+		 *
+		 * @param {Object|number} [options] Target context options or explicit page number
+		 * @param {string} [options.filename] Explicit filename
+		 * @param {string} [options.setName] Explicit set name
+		 * @param {number|string} [options.page] Explicit page number
+		 * @param {number} [options.maxTimestamp] Only delete if stored draft timestamp <= maxTimestamp
 		 */
-		clearDraft() {
+		clearDraft( options ) {
 			if ( !this.isStorageAvailable() ) {
 				return;
 			}
 
 			try {
-				localStorage.removeItem( this.getStorageKey() );
+				const targetKey = this.getStorageKey( options );
+
+				if ( options && typeof options === 'object' && typeof options.maxTimestamp === 'number' ) {
+					const existing = localStorage.getItem( targetKey );
+					if ( existing ) {
+						try {
+							const parsed = JSON.parse( existing );
+							if ( parsed && typeof parsed.timestamp === 'number' && parsed.timestamp > options.maxTimestamp ) {
+								// In-flight race protection: a newer draft was written
+								// while the earlier save was in flight. Retain it.
+								if ( typeof mw !== 'undefined' && mw.log ) {
+									mw.log( '[DraftManager] Preserving newer draft created while save was in flight' );
+								}
+								return;
+							}
+						} catch ( parseError ) {
+							// Unparseable draft can be safely removed
+						}
+					}
+				}
+
+				localStorage.removeItem( targetKey );
 				if ( typeof mw !== 'undefined' && mw.log ) {
-					mw.log( '[DraftManager] Draft cleared' );
+					mw.log( '[DraftManager] Draft cleared for key:', targetKey );
 				}
 			} catch ( e ) {
 				// Ignore errors when clearing
@@ -661,9 +752,11 @@
 		/**
 		 * Called when a successful save occurs
 		 * Clears the draft since changes are now persisted
+		 *
+		 * @param {Object|number} [options] Target context options or explicit page number
 		 */
-		onSaveSuccess() {
-			this.clearDraft();
+		onSaveSuccess( options ) {
+			this.clearDraft( options );
 		}
 
 		/**

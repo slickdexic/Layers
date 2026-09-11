@@ -1144,6 +1144,8 @@
 				this.hideSpinner();
 				this.enableSaveButton();
 				this.handleSaveSuccess( data );
+			} else {
+				this.handleSilentSaveSuccess( data );
 			}
 			resolve( data );
 		}, ( code, result ) => {
@@ -1193,6 +1195,23 @@
 	enableSaveButton() {
 		if ( this.editor && this.editor.toolbar && this.editor.toolbar.saveButton ) {
 			this.editor.toolbar.saveButton.disabled = false;
+		}
+	}
+
+	/**
+	 * Perform persistence cleanup for a silent save without triggering
+	 * foreground UI elements (spinner, button state, notifications).
+	 *
+	 * @param {Object} data API response
+	 */
+	handleSilentSaveSuccess( data ) {
+		if ( data && data.layerssave && data.layerssave.success ) {
+			// Invalidate API response cache for this file since data has changed
+			this._invalidateCache( this.editor.filename );
+
+			// Clear the FreshnessChecker cache for this file so FR-10 will check
+			// the API for fresh data when the user views the page after saving.
+			this.clearFreshnessCache();
 		}
 	}
 

@@ -1566,7 +1566,14 @@ class LayersEditor {
 	 */
 	discardPageChanges () {
 		if ( this.draftManager && typeof this.draftManager.clearDraft === 'function' ) {
-			this.draftManager.clearDraft();
+			const currentSetName = this.stateManager ?
+				this.stateManager.get( 'currentSetName' ) :
+				'';
+			this.draftManager.clearDraft( {
+				filename: this.filename,
+				setName: currentSetName,
+				page: this.page
+			} );
 		}
 		if ( this.pageBuffer ) {
 			this.pageBuffer.forget( this.page );
@@ -2001,9 +2008,18 @@ class LayersEditor {
 			if ( !entry ) {
 				return writeNext( index + 1 );
 			}
+			const saveStartTime = Date.now();
 			return this.apiManager.savePageLayers( entry )
 				.then( () => {
 					this.pageBuffer.forget( page );
+					if ( this.draftManager && typeof this.draftManager.clearDraft === 'function' ) {
+						this.draftManager.clearDraft( {
+							filename: this.filename,
+							setName: entry.setName,
+							page: page,
+							maxTimestamp: saveStartTime
+						} );
+					}
 				} )
 				.catch( ( error ) => {
 					// Left in the buffer deliberately: the work still exists
@@ -2174,7 +2190,21 @@ class LayersEditor {
 				this.stateManager.set( 'isDirty', false );
 			}
 			if ( this.pageBuffer ) {
+				const dirtyPages = this.pageBuffer.dirtyPages ? this.pageBuffer.dirtyPages() : [];
+				dirtyPages.forEach( ( p ) => {
+					const entry = this.pageBuffer.get( p );
+					if ( this.draftManager && typeof this.draftManager.clearDraft === 'function' ) {
+						this.draftManager.clearDraft( {
+							filename: this.filename,
+							setName: entry ? entry.setName : undefined,
+							page: p
+						} );
+					}
+				} );
 				this.pageBuffer.clear();
+			}
+			if ( this.draftManager && typeof this.draftManager.clearDraft === 'function' ) {
+				this.draftManager.clearDraft();
 			}
 			if ( this.eventManager && typeof this.eventManager.destroy === 'function' ) {
 				this.eventManager.destroy();
